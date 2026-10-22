@@ -124,6 +124,38 @@ describe('CancelPanel', () => {
     expect(html).not.toContain('Free cancellation')
   })
 
+  // Release 6: a stay of several rooms is cancelled whole; the question names every room, one by one.
+  it('lists every room of a combination in the question, each with its guests and its own total', () => {
+    const stay: PortalBooking = {
+      ...booking, kind: 'stay', id: 41, title: 'Sea view + Garden', total: 360, currency: 'EUR',
+      rooms: [
+        { id: 41, reference: 'BK-101', title: 'Sea view', guests: 2, total: 200, status: 'confirmed' },
+        { id: 42, reference: 'BK-102', title: 'Garden', guests: 1, total: 160, status: 'confirmed' },
+      ],
+    }
+    const html = panel({ stage: 'asking', booking: stay })
+    expect(html).toContain('Every room of this booking is cancelled together:')
+    const items = html.match(/<li[^>]*>.*?<\/li>/g) ?? []
+    expect(items).toHaveLength(2)
+    expect(items[0]).toContain('Sea view')
+    expect(items[0]).toContain('2 guests')
+    expect(items[0]).toContain('200')
+    expect(items[1]).toContain('Garden')
+    expect(items[1]).toContain('1 guest')
+    expect(items[1]).toContain('160')
+    expect(html.indexOf('Every room')).toBeLessThan(html.indexOf('We will refund'))
+    expect(html).toContain('360')
+  })
+
+  it('lists no rooms for a single booking, or before the member asks to cancel', () => {
+    expect(panel({ stage: 'asking' })).not.toContain('Every room of this booking')
+    const stay: PortalBooking = { ...booking, kind: 'stay', rooms: [
+      { id: 41, reference: 'BK-101', title: 'Sea view', guests: 2, total: 200, status: 'confirmed' },
+      { id: 42, reference: 'BK-102', title: 'Garden', guests: 1, total: 160, status: 'confirmed' },
+    ] }
+    expect(panel({ booking: stay })).not.toContain('Every room of this booking')
+  })
+
   it('says nothing for a booking that is over', () => {
     expect(panel({ offer: 'none', booking: { ...booking, can_cancel: false, status: 'completed' } })).toBe('')
   })

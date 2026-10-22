@@ -571,7 +571,8 @@ class PublicConfirmRescueGuardTest extends TestCase
 
         $mirror = BookingMirror::withoutGlobalScopes()->where('stripe_payment_intent_id', $own)->sole();
         $this->assertSame('authorized', $mirror->payment_status, 'the booking stands, its payment authorised');
-        $this->assertSame([['retrieve', $own]], $this->calls, 'only confirm() read it; nothing was cancelled');
+        // Release 6: confirm() read it, then the engine read it once more under the hold's lock; nothing was cancelled.
+        $this->assertSame([['retrieve', $own], ['retrieve', $own]], $this->calls, 'only read; nothing was cancelled');
         $this->assertRefused($own, 'carried_by_booking', 'service_runtime');
     }
 
@@ -731,7 +732,11 @@ class PublicConfirmRescueGuardTest extends TestCase
         $this->trace = [];
         $this->confirm($body + ['payment_intent_id' => 'pi_bare']);
         $this->assertRefused('pi_bare', 'not_widget_payment', 'validation');
-        $this->assertNotContains('begin', $this->trace, 'a refusal opens no transaction');
+        // Release 6: the staff alert after the refusal's audit row has its own savepoint (inside this test's transaction).
+        $audit = collect($this->trace)->filter(fn ($e) => str_starts_with($e, 'sql:insert into "audit_logs"'))->keys()->last();
+        $this->assertNotNull($audit, 'the refusal writes its audit row');
+        $refusalTrace = array_slice($this->trace, 0, (int) $audit + 1);
+        $this->assertNotContains('begin', $refusalTrace, 'a refusal opens no transaction');
 
         $own = $this->ownIntent($hold);
         $this->trace = [];

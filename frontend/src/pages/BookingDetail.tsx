@@ -104,6 +104,9 @@ export function BookingDetail() {
   const b = booking
   const nights = b.arrival_date && b.departure_date ? Math.ceil((new Date(b.departure_date).getTime() - new Date(b.arrival_date).getTime()) / 86400000) : 0
   const balanceDue = b.balance_due ?? Math.max(0, (b.price_total || 0) - (b.price_paid || 0))
+  // Release 6: a room of a multi-room stay shows the group's one payment (carried by its lead room).
+  const group: { payment_intent_id: string | null; lead_id: number; is_lead: boolean; rooms: { id: number }[] } | null = b.group_payment ?? null
+  const paymentRef: string | null = b.stripe_payment_intent_id || group?.payment_intent_id || null
 
   return (
     <div className="space-y-6">
@@ -279,16 +282,16 @@ export function BookingDetail() {
                     payment intent is attached OR the booking came through
                     the mock channel. Gives staff one-click access to the
                     Stripe dashboard + refund button. */}
-                {(b.payment_method === 'stripe' || b.payment_method === 'mock' || b.stripe_payment_intent_id) && (
+                {(b.payment_method === 'stripe' || b.payment_method === 'mock' || paymentRef) && (
                   <div className="mb-5 p-4 rounded-xl" style={{ background: 'var(--legacy-panel-50)', border: `1px solid ${hxWhite(0.06)}` }}>
                     <div className="flex items-center justify-between mb-3">
                       <h4 className="text-[10px] uppercase tracking-wider text-gray-500 font-bold flex items-center gap-2">
                         <CreditCard size={12} className={b.payment_method === 'mock' ? 'text-amber-400' : 'text-blue-400'} />
                         {b.payment_method === 'mock' ? 'Mock payment' : 'Stripe payment'}
                       </h4>
-                      {b.stripe_payment_intent_id && b.payment_method !== 'mock' && (
+                      {paymentRef && b.payment_method !== 'mock' && (
                         <a
-                          href={`https://dashboard.stripe.com/payments/${b.stripe_payment_intent_id}`}
+                          href={`https://dashboard.stripe.com/payments/${paymentRef}`}
                           target="_blank"
                           rel="noreferrer"
                           className="text-[11px] text-blue-400 hover:underline inline-flex items-center gap-1"
@@ -298,11 +301,18 @@ export function BookingDetail() {
                       )}
                     </div>
                     <div className="space-y-1.5 text-xs">
-                      {b.stripe_payment_intent_id && (
+                      {paymentRef && (
                         <div className="flex justify-between gap-3">
-                          <span className="text-gray-500">{t('bookingDetail.financial.intent_id', 'Intent ID')}</span>
-                          <span className="text-gray-300 font-mono truncate text-right">{b.stripe_payment_intent_id}</span>
+                          <span className="text-gray-500">{group ? t('bookingDetail.financial.group_intent_id', 'Group payment ID') : t('bookingDetail.financial.intent_id', 'Intent ID')}</span>
+                          <span className="text-gray-300 font-mono truncate text-right">{paymentRef}</span>
                         </div>
+                      )}
+                      {group && (
+                        <p className="text-[11px] text-gray-500">
+                          {group.is_lead
+                            ? t('bookingDetail.financial.group_lead_note', { count: group.rooms.length, defaultValue: 'One payment for all {{count}} rooms of this booking, carried by this room.' })
+                            : <>{t('bookingDetail.financial.group_follower_note', 'One payment for every room of this booking, carried by its lead room')} <Link to={`/bookings/${group.lead_id}`} className="text-blue-400 hover:underline">#{group.lead_id}</Link></>}
+                        </p>
                       )}
                       <div className="flex justify-between">
                         <span className="text-gray-500">{t('bookingDetail.financial.method', 'Method')}</span>

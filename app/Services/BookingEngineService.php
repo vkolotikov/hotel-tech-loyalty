@@ -18,6 +18,7 @@ use App\Models\Guest;
 use App\Models\HotelSetting;
 use App\Models\LoyaltyMember;
 use App\Models\Organization;
+use App\Services\Booking\PaymentUnverifiable;
 use App\Services\Booking\StayConfirmHooks;
 use App\Support\AdvisoryLock;
 use Illuminate\Support\Facades\DB;
@@ -65,6 +66,34 @@ class BookingEngineService
         );
     }
 
+    /**
+     * The currency the venue sells its stays in: `booking_currency` (Settings → Booking), upper-cased — the one the
+     * member portal reports for stays (StayCatalogue::rules(), PortalBootstrap::paymentMode()) and the widget's own
+     * config() shows; EUR when it is not set. Release 6: a hold, the Smoobu receipt and the confirm response carry it
+     * instead of a literal EUR, so for a EUR venue every answer is exactly what it was.
+     */
+    public static function stayCurrency(): string
+    {
+        $currency = strtoupper(trim((string) HotelSetting::getValue('booking_currency', 'EUR')));
+
+        return $currency !== '' ? $currency : 'EUR';
+    }
+
+    /**
+     * An amount as the Smoobu receipt (the reservation's assistant notice) writes it: "€12.50" for EUR, exactly as it
+     * always read; another currency by its code, "USD 12.50" — and a zero-decimal one without decimals, "JPY 12000".
+     */
+    public static function receiptMoney(float $amount, string $currency): string
+    {
+        $code = strtoupper($currency);
+        if ($code === 'EUR' || $code === '') {
+            return '€' . number_format($amount, 2, '.', '');
+        }
+        $decimals = StripeService::smallestUnitOf(1.0, $code) === 1 ? 0 : 2;
+
+        return $code . ' ' . number_format($amount, $decimals, '.', '');
+    }
+
     /** Create a price quote with hold token. */
     public function quote(array $data): array
     {
@@ -100,6 +129,9 @@ class BookingEngineService
 
         $extrasTotal = $this->calcExtras($extras, (int) $adults, (int) $children, $nights);
         $grossTotal  = $roomTotal + $extrasTotal;
+        // The venue's own stay currency, not a literal EUR (release 6): the
+        // hold carries it to the confirm, the receipt and the response.
+        $currency    = self::stayCurrency();
 
         $holdToken = Str::random(48);
         BookingHold::create([
@@ -118,7 +150,7 @@ class BookingEngineService
                 'extras'          => $extras,
                 'extras_total'    => $extrasTotal,
                 'gross_total'     => $grossTotal,
-                'currency'        => 'EUR',
+                'currency'        => $currency,
                 'price_per_night' => $rates['price_per_night'] ?? round($roomTotal / $nights, 2),
             ],
         ]);
@@ -136,7 +168,7 @@ class BookingEngineService
             'room_total'      => $roomTotal,
             'extras_total'    => $extrasTotal,
             'gross_total'     => $grossTotal,
-            'currency'        => 'EUR',
+            'currency'        => $currency,
             'price_per_night' => $rates['price_per_night'] ?? round($roomTotal / $nights, 2),
         ];
     }
@@ -192,6 +224,7 @@ class BookingEngineService
         $this->assertExtrasMeetLeadTime($extras, $checkIn);
         $extrasTotal = $this->calcExtras($extras, (int) $adults, (int) $children, $nights);
         $grossTotal  = $roomTotalSum + $extrasTotal;
+        $currency    = self::stayCurrency(); // the venue's own, as quote() (release 6)
 
         $holdToken = Str::random(48);
         BookingHold::create([
@@ -210,7 +243,7 @@ class BookingEngineService
                 'extras'          => $extras,
                 'extras_total'    => $extrasTotal,
                 'gross_total'     => round($grossTotal, 2),
-                'currency'        => 'EUR',
+                'currency'        => $currency,
             ],
         ]);
 
@@ -227,7 +260,7 @@ class BookingEngineService
             'room_total'      => round($roomTotalSum, 2),
             'extras_total'    => $extrasTotal,
             'gross_total'     => round($grossTotal, 2),
-            'currency'        => 'EUR',
+            'currency'        => $currency,
         ];
     }
 
@@ -273,7 +306,7 @@ class BookingEngineService
                     'check_in'          => $existingMirror->arrival_date?->toDateString(),
                     'check_out'         => $existingMirror->departure_date?->toDateString(),
                     'gross_total'       => $grossTotal,
-                    'currency'          => 'EUR',
+                    'currency'          => self::stayCurrency(),
                     'pms_synced'        => $existingMirror->internal_status !== 'pending_pms_sync',
                     'replayed'          => true,
                     'replay_source'     => 'payment_intent',
@@ -563,6 +596,14 @@ class BookingEngineService
                 throw new SmoobuUnavailable('PMS unavailable — try again', 0, $e);
             }
 
+            // Release 6: the public widget's payment, read again now that this
+            // request holds the room and the hold row, before the PMS is asked
+            // (assertWidgetPaymentStillPayable()). The member portal's own is
+            // re-checked by its hook, under `pi:`.
+            if ($hooks === null) {
+                $this->assertWidgetPaymentStillPayable($data, $failures);
+            }
+
             // The caller's last word before the PMS is asked (see StayConfirmHooks).
             $hooks?->beforeReservation($payload);
 
@@ -634,6 +675,10 @@ class BookingEngineService
                 $roomTotal = (float) ($payload['room_total'] ?? ($grossTotal - ($payload['extras_total'] ?? 0)));
                 $roomPerNight = $nights > 0 ? round($roomTotal / $nights, 2) : 0.0;
                 $assistantSections = [];
+                // The receipt in the hold's own currency (release 6): "€12.50" for
+                // EUR exactly as before, "USD 12.50" for another (receiptMoney()).
+                $currency = (string) ($payload['currency'] ?? self::stayCurrency());
+                $money = fn (float $v): string => self::receiptMoney($v, $currency);
 
                 // Source + payment block.
                 $fromPortal = ($payload['channel_name'] ?? null) === 'Member portal';
@@ -644,16 +689,16 @@ class BookingEngineService
                 if ($paymentIntentId) {
                     $methodLabel = $paymentMethod === 'mock' ? 'Mock' : 'Stripe';
                     $sourceLines[] = sprintf(
-                        'Payment: %s (€%s paid)',
+                        'Payment: %s (%s paid)',
                         $methodLabel,
-                        number_format($paidAmount, 2, '.', '')
+                        $money($paidAmount)
                     );
                     $sourceLines[] = 'Stripe ref: ' . $paymentIntentId;
                     $sourceLines[] = 'Paid at: ' . now()->toIso8601String();
                 } elseif ($isPaid) {
-                    $sourceLines[] = sprintf('Payment: marked paid (€%s)', number_format($paidAmount, 2, '.', ''));
+                    $sourceLines[] = sprintf('Payment: marked paid (%s)', $money($paidAmount));
                 } else {
-                    $sourceLines[] = sprintf('Payment: unpaid (€%s due)', number_format($grossTotal, 2, '.', ''));
+                    $sourceLines[] = sprintf('Payment: unpaid (%s due)', $money($grossTotal));
                 }
                 $assistantSections[] = implode("\n", $sourceLines);
 
@@ -702,34 +747,34 @@ class BookingEngineService
                 // seeing from channel-pulled bookings.
                 $breakdownLines = [];
                 $breakdownLines[] = sprintf(
-                    'Accommodation: %d night%s × €%s = €%s',
+                    'Accommodation: %d night%s × %s = %s',
                     $nights,
                     $nights === 1 ? '' : 's',
-                    number_format($roomPerNight, 2, '.', ''),
-                    number_format($roomTotal, 2, '.', '')
+                    $money($roomPerNight),
+                    $money($roomTotal)
                 );
                 if (!empty($extrasSnapshot)) {
                     $breakdownLines[] = 'Extras:';
                     foreach ($extrasSnapshot as $ex) {
                         $breakdownLines[] = sprintf(
-                            '  · %s%s = €%s',
+                            '  · %s%s = %s',
                             $ex['name'],
                             $ex['quantity'] > 1
-                                ? ' ×' . $ex['quantity'] . ' @ €' . number_format($ex['unit_price'], 2, '.', '')
+                                ? ' ×' . $ex['quantity'] . ' @ ' . $money((float) $ex['unit_price'])
                                 : '',
-                            number_format($ex['line_total'], 2, '.', '')
+                            $money((float) $ex['line_total'])
                         );
                     }
                 }
                 if ($discount > 0) {
                     $breakdownLines[] = sprintf(
-                        '%s: -€%s',
+                        '%s: -%s',
                         (string) ($payload['discount_label'] ?? 'Member discount'),
-                        number_format($discount, 2, '.', '')
+                        $money($discount)
                     );
                 }
                 $breakdownLines[] = '─────────────';
-                $breakdownLines[] = 'Total: €' . number_format($grossTotal, 2, '.', '');
+                $breakdownLines[] = 'Total: ' . $money($grossTotal);
                 $assistantSections[] = implode("\n", $breakdownLines);
 
                 // Build Smoobu priceElements array — basePrice for the
@@ -753,7 +798,7 @@ class BookingEngineService
                     // Smoobu's own sum of the elements equals `price`.
                     'amount'       => round($roomTotal - $discount, 2),
                     'quantity'     => $nights,
-                    'currencyCode' => 'EUR',
+                    'currencyCode' => $currency,
                     'sortOrder'    => 1,
                 ];
                 $sortOrder = 2;
@@ -763,7 +808,7 @@ class BookingEngineService
                         'name'         => $ex['name'],
                         'amount'       => $ex['line_total'],
                         'quantity'     => $ex['quantity'],
-                        'currencyCode' => 'EUR',
+                        'currencyCode' => $currency,
                         'sortOrder'    => $sortOrder++,
                     ];
                 }
@@ -1087,7 +1132,8 @@ class BookingEngineService
             'check_in'          => $payload['check_in'],
             'check_out'         => $payload['check_out'],
             'gross_total'       => $payload['gross_total'],
-            'currency'          => 'EUR',
+            // The hold's own currency — the venue's (release 6); EUR as before for a EUR venue.
+            'currency'          => (string) ($payload['currency'] ?? self::stayCurrency()),
             // Empty array when Smoobu didn't return a breakdown — the
             // widget renders this section only when there's something
             // to show, so an empty array is safely rendered as nothing.
@@ -1783,15 +1829,62 @@ class BookingEngineService
             }
         }
 
+        // The receipt's currency: the hold's own, the venue's (release 6).
+        $comboCurrency = (string) ($payload['currency'] ?? self::stayCurrency());
+        // What the locks below found refused (a room taken, the payment no
+        // longer payable): written once the transaction has rolled back, as
+        // confirm() writes its own (R5-6).
+        $failed = [];
+
         try {
             \Illuminate\Support\Facades\DB::transaction(function () use (
-                &$mirrors, &$succeededSmoobu,
+                &$mirrors, &$succeededSmoobu, &$failed,
                 $rooms, $hold, $guest, $guestId, $orgId, $groupId,
                 $checkIn, $checkOut, $nights, $adults, $children,
                 $paymentMethod, $paymentStatus, $piId, $data, $payload,
-                $idempotencyKey, $requestId, $comboChannelId, $comboExtrasSnapshot,
+                $idempotencyKey, $requestId, $comboChannelId, $comboExtrasSnapshot, $comboCurrency,
             ) {
-                $hold->update(['status' => 'consumed']);
+                // Release 6 (R4-8's line of work): the widget's combination
+                // takes what the portal's does (confirmMemberCombo()) — every
+                // room's `room:{org}:{unit}` lock once, ascending, then the hold
+                // row, then every room re-checked against our bookings and the
+                // PMS under those locks — so a room taken meanwhile is refused
+                // instead of booked twice. Nothing else of it changes.
+                foreach (\App\Services\Booking\StayCombination::roomLockKeys((int) $orgId, array_column($rooms, 'unit_id')) as $roomLock) {
+                    AdvisoryLock::within($roomLock);
+                }
+
+                $locked = BookingHold::where('id', $hold->id)->lockForUpdate()->first();
+                if (!$locked || !$locked->isActive()) {
+                    throw new \RuntimeException('Hold expired or not found');
+                }
+
+                $needed = [];
+                $names = [];
+                foreach ($rooms as $room) {
+                    $unit = (string) $room['unit_id'];
+                    $needed[$unit] = ($needed[$unit] ?? 0) + 1;
+                    $names[$unit] ??= (string) ($room['unit_name'] ?? 'Room');
+                }
+                foreach ($needed as $unit => $count) {
+                    try {
+                        $this->assertComboRoomStillFree($orgId, (string) $unit, $count, $checkIn, $checkOut, $failed, dailyAnswerSuffices: true);
+                    } catch (SmoobuUnavailable $e) {
+                        throw $e;
+                    } catch (\RuntimeException $e) {
+                        // The PMS client's own connection error is an outage, not a taken room.
+                        if (self::isTransientSmoobuError($e->getMessage())) {
+                            throw new SmoobuUnavailable('PMS unavailable — try again', 0, $e);
+                        }
+                        // The combination's own answer for a room it cannot have.
+                        throw new \RuntimeException("Room \"{$names[$unit]}\" is no longer available. Please choose a different combination.", 0, $e);
+                    }
+                }
+
+                // Release 6: the payment read again under the hold's lock, before the PMS is asked (as confirm()).
+                $this->assertWidgetPaymentStillPayable($data, $failed);
+
+                $locked->update(['status' => 'consumed']);
 
                 foreach ($rooms as $idx => $room) {
                     $apartmentId = $room['unit_id'];
@@ -1834,7 +1927,7 @@ class BookingEngineService
                         ),
                         'amount'       => round((float) $roomTotal, 2),
                         'quantity'     => (int) $nights,
-                        'currencyCode' => 'EUR',
+                        'currencyCode' => $comboCurrency,
                         'sortOrder'    => 1,
                     ];
                     if ($isFirstRoom && !empty($comboExtrasSnapshot)) {
@@ -1845,7 +1938,7 @@ class BookingEngineService
                                 'name'         => $ex['name'],
                                 'amount'       => $ex['line_total'],
                                 'quantity'     => $ex['quantity'],
-                                'currencyCode' => 'EUR',
+                                'currencyCode' => $comboCurrency,
                                 'sortOrder'    => $sortOrder++,
                             ];
                         }
@@ -1858,25 +1951,25 @@ class BookingEngineService
                         $assistantLines[] = 'Stripe ref: ' . $piId;
                     }
                     $assistantLines[] = sprintf(
-                        'Accommodation: %d night%s = €%s',
+                        'Accommodation: %d night%s = %s',
                         (int) $nights,
                         $nights === 1 ? '' : 's',
-                        number_format((float) $roomTotal, 2, '.', ''),
+                        self::receiptMoney((float) $roomTotal, $comboCurrency),
                     );
                     if ($isFirstRoom && !empty($comboExtrasSnapshot)) {
                         $assistantLines[] = 'Extras (charged on this reservation):';
                         foreach ($comboExtrasSnapshot as $ex) {
                             $assistantLines[] = sprintf(
-                                '  · %s%s = €%s',
+                                '  · %s%s = %s',
                                 $ex['name'],
                                 $ex['quantity'] > 1
-                                    ? ' ×' . $ex['quantity'] . ' @ €' . number_format($ex['unit_price'], 2, '.', '')
+                                    ? ' ×' . $ex['quantity'] . ' @ ' . self::receiptMoney((float) $ex['unit_price'], $comboCurrency)
                                     : '',
-                                number_format($ex['line_total'], 2, '.', ''),
+                                self::receiptMoney((float) $ex['line_total'], $comboCurrency),
                             );
                         }
                     }
-                    $assistantLines[] = 'Room total: €' . number_format($smoobuRoomPrice, 2, '.', '');
+                    $assistantLines[] = 'Room total: ' . self::receiptMoney($smoobuRoomPrice, $comboCurrency);
 
                     $smoobuPayload = [
                         'arrivalDate'   => $checkIn,
@@ -1973,6 +2066,8 @@ class BookingEngineService
                                 ]);
                             } catch (\Throwable) {}
                         }
+                        // Already cancelled (or audited) here: the outer catch must not cancel them again.
+                        $succeededSmoobu = [];
                         throw new \RuntimeException(
                             "Room \"{$unitName}\" is no longer available. Please choose a different combination.",
                             0,
@@ -2025,7 +2120,30 @@ class BookingEngineService
                     $mirrors[] = $mirror;
                 }
             });
+        } catch (SmoobuUnavailable $e) {
+            // Release 6: the re-check under the room locks could not ask the PMS
+            // (before any reservation was made). The 503 confirm() answers.
+            $this->logComboFailures($failed, $data, $requestId, $idempotencyKey);
+            try {
+                AuditLog::create([
+                    'organization_id' => $orgId,
+                    'action'          => 'booking.confirm.pms_transient_skip',
+                    'subject_type'    => 'booking_hold',
+                    'subject_id'      => $hold->id ?? null,
+                    'new_values'      => ['unit_ids' => array_column($rooms, 'unit_id'), 'check_in' => $checkIn, 'check_out' => $checkOut, 'request_id' => $requestId, 'error' => $e->getMessage()],
+                    'description'     => 'Smoobu live re-check failed transiently for a widget combination; confirm aborted with 503 so the guest can retry.',
+                ]);
+            } catch (\Throwable) {
+                // Audit best-effort.
+            }
+            throw new \Symfony\Component\HttpKernel\Exception\HttpException(503, 'PMS is temporarily unavailable. Please try again in a moment.', $e);
         } catch (\RuntimeException $e) {
+            // A reservation this call made and nothing will carry (a write that
+            // failed after it): cancelled again, as the portal's combination does.
+            if ($succeededSmoobu !== []) {
+                $this->cancelComboReservations(array_map(fn ($r) => (string) ($r['id'] ?? ''), $succeededSmoobu), $orgId, $groupId, $guest, $checkIn, $checkOut, $e, 'widget');
+            }
+            $this->logComboFailures($failed, $data, $requestId, $idempotencyKey);
             throw $e;
         } catch (\Throwable $e) {
             // Audit 2026-06-01 finding C3: PHP \Error (TypeError, undefined
@@ -2358,7 +2476,7 @@ class BookingEngineService
             'check_in'          => $checkIn,
             'check_out'         => $checkOut,
             'gross_total'       => (float) $payload['gross_total'],
-            'currency'          => 'EUR',
+            'currency'          => (string) ($payload['currency'] ?? self::stayCurrency()),
         ];
 
         if ($idempotencyKey) {
@@ -2398,6 +2516,62 @@ class BookingEngineService
     }
 
     /**
+     * Release 6, item 8: the public widget's payment, read again once this
+     * request holds the room lock(s) and the hold row, right before the PMS is
+     * asked and the mirror is written. The controller checked it before the
+     * locks; between that check and here a failing second request of the same
+     * guest (same hold, same payment) could have had its rescue cancel it —
+     * the rescue locks this same hold row before it cancels, so once the row is
+     * ours the payment cannot be cancelled until this transaction ends.
+     *
+     * Only a real Stripe payment is read (not a test-mode `pi_mock_` one, not
+     * the mock gateway, not while the venue's Stripe is off — the controller
+     * verified nothing then either), with the short timeout of a call under a
+     * lock (StripeService::underLock()). Anything but `succeeded` or
+     * `requires_capture` — cancelled, or no such payment — is refused with the
+     * widget's own sentence, "Payment has not been completed." A Stripe that
+     * cannot be asked is PaymentUnverifiable: nothing is known, so the
+     * controller answers 503 and releases nothing. Either way the transaction
+     * rolls back before anything is written; the refusal is added to $failed
+     * (written after the rollback). The member portal checks its own payment
+     * in PortalStayHooks::beforeReservation(), under `pi:`.
+     *
+     * @param list<array{0: string, 1: string, 2?: bool}> $failed
+     *
+     * @throws PaymentUnverifiable
+     * @throws \RuntimeException
+     */
+    private function assertWidgetPaymentStillPayable(array $data, array &$failed): void
+    {
+        $piId = (string) ($data['payment_intent_id'] ?? '');
+        if ($piId === '' || str_starts_with($piId, 'pi_mock_') || ($data['payment_method'] ?? null) === 'mock') {
+            return;
+        }
+        $stripe = app(StripeService::class);
+        if (!$stripe->isEnabled()) {
+            return;
+        }
+
+        try {
+            $intent = StripeService::underLock(fn () => $stripe->retrievePaymentIntent($piId));
+        } catch (\Throwable $e) {
+            $code = method_exists($e, 'getStripeCode') ? (string) $e->getStripeCode() : '';
+            $http = method_exists($e, 'getHttpStatus') ? (int) $e->getHttpStatus() : 0;
+            if (!($e instanceof \Stripe\Exception\ApiErrorException && ($code === 'resource_missing' || $http === 404))) {
+                $failed[] = ['payment_check_failed', 'The payment could not be read under the lock: ' . mb_substr($e->getMessage(), 0, 300), false];
+                throw new PaymentUnverifiable(PaymentUnverifiable::MESSAGE, 0, $e);
+            }
+            $intent = null; // Stripe has no such payment: it was never completed
+        }
+
+        $status = is_array($intent) ? (string) ($intent['status'] ?? '') : (string) ($intent->status ?? '');
+        if (!in_array($status, ['succeeded', 'requires_capture'], true)) {
+            $failed[] = ['payment_not_completed', 'Payment no longer payable at confirm (status: ' . ($status !== '' ? $status : 'none') . ')'];
+            throw new \RuntimeException('Payment has not been completed.');
+        }
+    }
+
+    /**
      * One room of a member combination, re-checked under its lock the way
      * confirm() re-checks its one room: our own bookings first (the room's
      * inventory less what is booked over these dates must cover $needed — a
@@ -2407,8 +2581,18 @@ class BookingEngineService
      * room throws confirm()'s own refusal, its failure added to $failed (the
      * caller logs it once its transaction has rolled back); a PMS that cannot
      * be asked fails closed (SmoobuUnavailable).
+     *
+     * The public widget's combination (release 6) runs the same re-check with
+     * $dailyAnswerSuffices: when the PMS has just answered the per-day rates —
+     * it was reached — without any row for this room, a failing second read of
+     * the same rates (the aggregate) is taken as "no data" and the room is
+     * judged on its own base price, as the availability search that offered it
+     * was, instead of failing the whole combination closed. Every other answer
+     * is the member combination's: a room the PMS says is taken is refused, and
+     * a PMS that could not be asked at all (the per-day read failed too, or the
+     * second opinion on a "taken" answer failed) is SmoobuUnavailable.
      */
-    private function assertComboRoomStillFree(?int $orgId, string $apartmentId, int $needed, string $checkIn, string $checkOut, array &$failed): void
+    private function assertComboRoomStillFree(?int $orgId, string $apartmentId, int $needed, string $checkIn, string $checkOut, array &$failed, bool $dailyAnswerSuffices = false): void
     {
         // The room by its PMS id, or — only when it has none — by its own id
         // (StayQuoteService's rule, so a PMS id never matches another room's key).
@@ -2450,8 +2634,10 @@ class BookingEngineService
 
             $dailyAvailable = false;
             $dailyHadData   = false;
+            $dailyAnswered  = false;
             try {
                 $daily  = $this->smoobu->getDailyRates($checkIn, $checkOut, [$apartmentId]);
+                $dailyAnswered = true;
                 $perDay = $daily[$apartmentId] ?? null;
                 if (is_array($perDay) && !empty($perDay) && !empty($nights)) {
                     $dailyHadData = true;
@@ -2469,7 +2655,18 @@ class BookingEngineService
             }
 
             if (!$dailyHadData || !$dailyAvailable) {
-                $liveRates = $this->smoobu->getRates($checkIn, $checkOut, [$apartmentId]);
+                try {
+                    $liveRates = $this->smoobu->getRates($checkIn, $checkOut, [$apartmentId]);
+                } catch (\Throwable $e) {
+                    // The widget's combination only: the PMS was reached and its
+                    // per-day answer had no row for this room — no data, judged
+                    // on the base price below (see the docblock).
+                    if (!$dailyAnswerSuffices || !$dailyAnswered || $dailyHadData) {
+                        throw $e;
+                    }
+                    Log::info('Combination live recheck: aggregate rates read failed after a per-day answer without this room — judging it on its base price', ['org_id' => $orgId, 'unit_id' => $apartmentId, 'error' => $e->getMessage()]);
+                    $liveRates = [];
+                }
                 $liveData  = $liveRates['data'] ?? $liveRates;
                 $unitLive  = $liveData[$apartmentId] ?? null;
 
@@ -2507,13 +2704,14 @@ class BookingEngineService
      * the rollback would take them along. Best effort: a log that cannot be
      * written never hides the refusal itself.
      *
-     * @param list<array{0: string, 1: string}> $failed
+     * @param list<array{0: string, 1: string, 2?: bool}> $failed  the third element false: no enquiry for staff (a payment Stripe could not be asked about — the guest confirms again)
      */
     private function logComboFailures(array $failed, array $data, ?string $requestId, ?string $idempotencyKey): void
     {
-        foreach ($failed as [$code, $message]) {
+        foreach ($failed as $failure) {
+            [$code, $message] = $failure;
             try {
-                $this->logSubmission('failure', $code, $message, $data, $requestId, $idempotencyKey);
+                $this->logSubmission('failure', $code, $message, $data, $requestId, $idempotencyKey, enquiry: $failure[2] ?? true);
             } catch (\Throwable $e) {
                 Log::warning('Combination confirm: failure not logged', ['code' => $code, 'error' => $e->getMessage()]);
             }
@@ -2581,7 +2779,9 @@ class BookingEngineService
      */
     private function memberComboReservation(array $payload, array $room, array $share, array $extras, array $guest, array $data, int $index, int $count, string $groupId, int $nights, bool $isPaid, int $channelId): array
     {
-        $money     = fn (float $v) => number_format($v, 2, '.', '');
+        // The hold's own currency (release 6): "€12.50" for EUR as before, "USD 12.50" otherwise.
+        $currency  = (string) ($payload['currency'] ?? self::stayCurrency());
+        $money     = fn (float $v) => self::receiptMoney($v, $currency);
         $roomTotal = round((float) ($room['room_total'] ?? 0), 2);
         $price     = round((float) $share['total'], 2);
         $discount  = round((float) $share['discount'], 2);
@@ -2591,33 +2791,33 @@ class BookingEngineService
 
         $source = ['Booked via: Member portal', sprintf('Combination %s — room %d of %d (one booking, one payment)', $groupId, $index + 1, $count)];
         if ($piId) {
-            $source[] = sprintf('Payment: %s (€%s paid for this room)', ($data['payment_method'] ?? null) === 'mock' ? 'Mock' : 'Stripe', $money($paid));
+            $source[] = sprintf('Payment: %s (%s paid for this room)', ($data['payment_method'] ?? null) === 'mock' ? 'Mock' : 'Stripe', $money($paid));
             $source[] = 'Stripe ref: ' . $piId;
             $source[] = 'Paid at: ' . now()->toIso8601String();
         } elseif ($isPaid) {
-            $source[] = sprintf('Payment: marked paid (€%s)', $money($paid));
+            $source[] = sprintf('Payment: marked paid (%s)', $money($paid));
         } else {
-            $source[] = sprintf('Payment: unpaid (€%s due)', $money($price));
+            $source[] = sprintf('Payment: unpaid (%s due)', $money($price));
         }
 
         $perNight = round($roomTotal / max(1, $nights), 2);
-        $lines = [sprintf('Accommodation: %d night%s × €%s = €%s', $nights, $nights === 1 ? '' : 's', $money($perNight), $money($roomTotal))];
+        $lines = [sprintf('Accommodation: %d night%s × %s = %s', $nights, $nights === 1 ? '' : 's', $money($perNight), $money($roomTotal))];
         if ($extras !== []) {
             $lines[] = 'Extras (charged on this reservation):';
             foreach ($extras as $ex) {
                 $lines[] = sprintf(
-                    '  · %s%s = €%s',
+                    '  · %s%s = %s',
                     $ex['name'],
-                    $ex['quantity'] > 1 ? ' ×' . $ex['quantity'] . ' @ €' . $money((float) $ex['unit_price']) : '',
+                    $ex['quantity'] > 1 ? ' ×' . $ex['quantity'] . ' @ ' . $money((float) $ex['unit_price']) : '',
                     $money((float) $ex['line_total']),
                 );
             }
         }
         if ($discount > 0) {
-            $lines[] = sprintf("%s (this room's share): -€%s", (string) ($payload['discount_label'] ?? 'Member discount'), $money($discount));
+            $lines[] = sprintf("%s (this room's share): -%s", (string) ($payload['discount_label'] ?? 'Member discount'), $money($discount));
         }
         $lines[] = '─────────────';
-        $lines[] = 'Room total: €' . $money($price);
+        $lines[] = 'Room total: ' . $money($price);
 
         $elements = [[
             'type'         => 'basePrice',
@@ -2625,12 +2825,12 @@ class BookingEngineService
             // The discount's share comes off the accommodation line, so the PMS's own sum equals `price`.
             'amount'       => round($roomTotal - $discount, 2),
             'quantity'     => $nights,
-            'currencyCode' => 'EUR',
+            'currencyCode' => $currency,
             'sortOrder'    => 1,
         ]];
         $sortOrder = 2;
         foreach ($extras as $ex) {
-            $elements[] = ['type' => 'addon', 'name' => $ex['name'], 'amount' => $ex['line_total'], 'quantity' => $ex['quantity'], 'currencyCode' => 'EUR', 'sortOrder' => $sortOrder++];
+            $elements[] = ['type' => 'addon', 'name' => $ex['name'], 'amount' => $ex['line_total'], 'quantity' => $ex['quantity'], 'currencyCode' => $currency, 'sortOrder' => $sortOrder++];
         }
 
         $reservation = [
@@ -2667,8 +2867,8 @@ class BookingEngineService
         return array_filter($reservation, fn ($v) => $v !== null && $v !== '');
     }
 
-    /** Cancels the PMS reservations a combination confirm made before it failed; one it cannot cancel is audited for staff. */
-    private function cancelComboReservations(array $made, ?int $orgId, string $groupId, array $guest, string $checkIn, string $checkOut, \Throwable $cause): void
+    /** Cancels the PMS reservations a combination confirm made before it failed; one it cannot cancel is audited for staff. $source: `member_portal`, or `widget` (release 6). */
+    private function cancelComboReservations(array $made, ?int $orgId, string $groupId, array $guest, string $checkIn, string $checkOut, \Throwable $cause, string $source = 'member_portal'): void
     {
         $failed = [];
         foreach ($made as $reservationId) {
@@ -2698,9 +2898,9 @@ class BookingEngineService
                     'guest_email'       => $guest['email'] ?? null,
                     'check_in'          => $checkIn,
                     'check_out'         => $checkOut,
-                    'source'            => 'member_portal',
+                    'source'            => $source,
                 ],
-                'description'     => 'A member-portal combination was not booked but left ' . count($failed)
+                'description'     => ($source === 'widget' ? 'A widget combination' : 'A member-portal combination') . ' was not booked but left ' . count($failed)
                     . ' Smoobu reservation(s) live. Cancel manually in Smoobu admin: ' . implode(', ', $failed),
             ]);
         } catch (\Throwable) {

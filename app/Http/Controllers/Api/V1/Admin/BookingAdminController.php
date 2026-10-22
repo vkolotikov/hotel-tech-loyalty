@@ -348,6 +348,32 @@ class BookingAdminController extends Controller
         $arr = $booking->toArray();
         $arr['balance_due'] = round(($booking->price_total ?? 0) - ($booking->price_paid ?? 0), 2);
 
+        // Release 6: a room of a multi-room stay — one payment for every room,
+        // carried by the lead room (GroupPayment) — shows that payment's
+        // reference on every room, labelled as the group's. Null for one room.
+        $arr['group_payment'] = null;
+        if (!empty($booking->booking_group_id)) {
+            $rooms = BookingMirror::withoutGlobalScopes()
+                ->where('organization_id', $booking->organization_id)
+                ->where('booking_group_id', $booking->booking_group_id)
+                ->orderBy('id')
+                ->get(['id', 'apartment_name', 'booking_reference', 'stripe_payment_intent_id', 'price_total']);
+            if ($rooms->count() > 1) {
+                $lead = \App\Services\Booking\GroupPayment::lead($rooms);
+                $arr['group_payment'] = [
+                    'payment_intent_id' => (string) $lead->stripe_payment_intent_id !== '' ? (string) $lead->stripe_payment_intent_id : null,
+                    'lead_id'           => (int) $lead->id,
+                    'is_lead'           => (int) $lead->id === (int) $booking->id,
+                    'total'             => round((float) $rooms->sum(fn (BookingMirror $m) => (float) ($m->price_total ?? 0)), 2),
+                    'rooms'             => $rooms->map(fn (BookingMirror $m) => [
+                        'id'        => (int) $m->id,
+                        'name'      => $m->apartment_name,
+                        'reference' => $m->booking_reference,
+                    ])->values()->all(),
+                ];
+            }
+        }
+
         // Related submissions
         $arr['submissions'] = BookingSubmission::where('reservation_id', $booking->reservation_id)
             ->orWhere('booking_reference', $booking->booking_reference)

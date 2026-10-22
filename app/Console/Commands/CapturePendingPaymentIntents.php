@@ -413,7 +413,12 @@ class CapturePendingPaymentIntents extends Command
                 }
                 AdvisoryLock::within('pi:' . $piId);
 
-                return $this->decideBookingGroup($stripe, $rows, $sweptIds, $piId, false, $audits, $alerts, $fallback);
+                // Under the rows' locks and `pi:`: the short Stripe timeout
+                // (StripeService::underLock()) — a timeout is a failed
+                // retrieve/capture/cancel like any other, left for the next run.
+                return StripeService::underLock(function () use ($stripe, $rows, $sweptIds, $piId, &$audits, &$alerts, &$fallback) {
+                    return $this->decideBookingGroup($stripe, $rows, $sweptIds, $piId, false, $audits, $alerts, $fallback);
+                });
             });
         } catch (\Throwable $e) {
             Log::error('Capture cron — booking group transaction failed', [
@@ -784,7 +789,10 @@ class CapturePendingPaymentIntents extends Command
                 }
                 AdvisoryLock::within('pi:' . $piId);
 
-                return $this->decideServiceBooking($stripe, $fresh, $piId, false, $audits, $fallback);
+                // Under the row lock and `pi:`: the short Stripe timeout (StripeService::underLock()).
+                return StripeService::underLock(function () use ($stripe, $fresh, $piId, &$audits, &$fallback) {
+                    return $this->decideServiceBooking($stripe, $fresh, $piId, false, $audits, $fallback);
+                });
             });
         } catch (\Throwable $e) {
             Log::error('Capture cron (service) — booking transaction failed', ['service_booking_id' => $booking->id, 'pi_id' => $piId, 'error' => $e->getMessage()]);

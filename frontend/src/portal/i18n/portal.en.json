@@ -56,7 +56,7 @@
     "payment_status": { "deposit_only": "Deposit paid", "deposit_paid": "Deposit paid, the rest at the venue", "unpaid": "Pay at the venue", "authorized": "Card held", "paid": "Paid", "refunded": "Refunded", "failed": "Payment failed", "partially_refunded": "Partly refunded",
       "open": "Payment open", "pending": "Payment pending", "disputed": "Payment under review", "invoice_waiting": "Invoice pending", "channel_managed": "Handled by your booking channel", "capture_expired": "Card hold expired", "cancelled": "Payment cancelled", "mock": "Test payment" },
     "not_found": "We could not find that booking.",
-    "cancel": "Cancel booking", "cancel_title": "Cancel this booking?", "cancel_keep": "Keep it", "cancel_confirm": "Yes, cancel it", "cancelling": "Cancelling…",
+    "cancel": "Cancel booking", "cancel_title": "Cancel this booking?", "cancel_rooms": "Every room of this booking is cancelled together:", "cancel_keep": "Keep it", "cancel_confirm": "Yes, cancel it", "cancelling": "Cancelling…",
     "cancel_until": "Free cancellation until", "cancel_ended": "Free cancellation ended",
     "cancel_refund": "We will refund {{amount}} to the card you paid with.", "cancel_release": "The hold on your card will be released. Nothing is charged.",
     "cancel_deposit": "We will refund your deposit of {{amount}} to the card you paid with.", "cancel_nothing": "Nothing has been charged for this booking.", "cancel_money_venue": "This booking was paid at {{venue}}. They will arrange any refund with you.",

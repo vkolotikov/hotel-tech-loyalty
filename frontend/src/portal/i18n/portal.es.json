@@ -56,7 +56,7 @@
     "payment_status": { "deposit_only": "Depósito pagado", "deposit_paid": "Depósito pagado, el resto en el local", "unpaid": "Pago en el local", "authorized": "Tarjeta retenida", "paid": "Pagado", "refunded": "Reembolsado", "failed": "Pago fallido", "partially_refunded": "Reembolsado parcialmente",
       "open": "Pago pendiente", "pending": "Pago en proceso", "disputed": "Pago en revisión", "invoice_waiting": "Factura pendiente", "channel_managed": "Gestionado por su canal de reserva", "capture_expired": "Retención de tarjeta caducada", "cancelled": "Pago cancelado", "mock": "Pago de prueba" },
     "not_found": "No pudimos encontrar esa reserva.",
-    "cancel": "Cancelar la reserva", "cancel_title": "¿Cancelar esta reserva?", "cancel_keep": "Mantenerla", "cancel_confirm": "Sí, cancelar", "cancelling": "Cancelando…",
+    "cancel": "Cancelar la reserva", "cancel_title": "¿Cancelar esta reserva?", "cancel_rooms": "Todas las habitaciones de esta reserva se cancelan juntas:", "cancel_keep": "Mantenerla", "cancel_confirm": "Sí, cancelar", "cancelling": "Cancelando…",
     "cancel_until": "Cancelación gratuita hasta el", "cancel_ended": "La cancelación gratuita terminó el",
     "cancel_refund": "Le devolveremos {{amount}} a la tarjeta con la que pagó.", "cancel_release": "Se liberará el importe retenido en su tarjeta. No se cobra nada.",
     "cancel_deposit": "Le devolveremos su depósito de {{amount}} a la tarjeta con la que pagó.", "cancel_nothing": "No se ha cobrado nada por esta reserva.", "cancel_money_venue": "Esta reserva se pagó en {{venue}}. Ellos gestionarán con usted cualquier reembolso.",

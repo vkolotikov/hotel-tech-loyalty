@@ -329,7 +329,9 @@ class PortalStayBookingController extends Controller
         if ($pi === null) {
             try {
                 // No fourth-argument `allow_redirects`: redirect methods are allowed (see paymentIntent()).
-                $created = $stripe->createPaymentIntent($pricing->total, "Stay: {$p['unit_name']} ({$p['check_in']} — {$p['check_out']})", [
+                // Under the hold row's lock: the short Stripe timeout (StripeService::underLock()); a
+                // timeout is a connection error, answered by paymentUnavailable() like any outage.
+                $created = StripeService::underLock(fn () => $stripe->createPaymentIntent($pricing->total, "Stay: {$p['unit_name']} ({$p['check_in']} — {$p['check_out']})", [
                     'kind'              => 'portal_stay_booking',
                     'org_id'            => $orgId,
                     'member_id'         => $memberId,
@@ -338,7 +340,7 @@ class PortalStayBookingController extends Controller
                     // the webhook's orphan recovery writes a "Website" booking).
                     'portal_hold_token' => $hold->hold_token,
                     'total'             => number_format($pricing->total, 2, '.', ''),
-                ], []);
+                ], []));
             } catch (\Throwable $e) {
                 Log::warning('portal.stay_payment_intent_failed', ['org' => $orgId, 'error' => $e->getMessage()]);
                 return $this->paymentUnavailable($orgId, $memberId, $hold->hold_token, $e);

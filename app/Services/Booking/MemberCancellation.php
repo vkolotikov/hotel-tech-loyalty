@@ -117,7 +117,9 @@ final class MemberCancellation
         }
 
         try {
-            return DB::transaction(function () use ($orgId, $bookingId) {
+            // The row lock and `pi:` are held to the end: every Stripe call in
+            // here has the short timeout (StripeService::underLock()).
+            return DB::transaction(fn () => StripeService::underLock(function () use ($orgId, $bookingId) {
                 $b = ServiceBooking::withoutGlobalScopes()
                     ->where('organization_id', $orgId)
                     ->whereKey($bookingId)
@@ -166,7 +168,7 @@ final class MemberCancellation
                     couponReleased: $this->coupons->release($b->discount_source, $b->discount_source_id ? (int) $b->discount_source_id : null, (string) $b->booking_reference),
                     pointsReversed: $this->reverseAndCount('service_booking', (int) $b->id, "Appointment {$b->booking_reference} cancelled"),
                 );
-            });
+            }));
         } finally {
             if ($ambient === null) {
                 app()->forgetInstance('current_organization_id');
@@ -238,7 +240,8 @@ final class MemberCancellation
             }
 
             try {
-                $phase1 = DB::transaction(function () use ($orgId, $mirrorId) {
+                // Under the row lock and `pi:`: the short Stripe timeout (StripeService::underLock()).
+                $phase1 = DB::transaction(fn () => StripeService::underLock(function () use ($orgId, $mirrorId) {
                     $m = BookingMirror::withoutGlobalScopes()
                         ->where('organization_id', $orgId)
                         ->whereKey($mirrorId)
@@ -301,7 +304,7 @@ final class MemberCancellation
 
                     $amount = round((float) $m->price_total, 2);
                     return ['mode' => 'finished', 'mirrorId' => $m->id, 'outcome' => $this->writeStayCancellation($m, 'released', $amount, ['payment_status' => 'cancelled'], false)];
-                });
+                }));
 
                 if ($phase1['mode'] === 'finished') {
                     return $phase1['outcome']->withPms($this->cancelAtPmsAfterCommit($phase1['mirrorId']));
@@ -497,7 +500,8 @@ final class MemberCancellation
         }
 
         try {
-            $phase1 = DB::transaction(function () use ($orgId, $groupId) {
+            // Under the rows' locks and `pi:`: the short Stripe timeout (StripeService::underLock()).
+            $phase1 = DB::transaction(fn () => StripeService::underLock(function () use ($orgId, $groupId) {
                 $rooms = $this->lockCombination($orgId, $groupId);
                 $decision = self::combinationDecision($rooms);
                 $this->assertAllowed($decision['policy']);
@@ -545,7 +549,7 @@ final class MemberCancellation
                 }
 
                 return ['mode' => 'finished', 'outcome' => $this->writeCombinationCancellation($rooms, 'released', self::sumOf($rooms, 'price_total'), ['payment_status' => 'cancelled'])];
-            });
+            }));
 
             if ($phase1['mode'] === 'finished') {
                 return $phase1['outcome']->withPms($this->cancelCombinationAtPms($orgId, $groupId));
