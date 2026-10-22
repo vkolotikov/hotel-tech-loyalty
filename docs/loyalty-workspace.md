@@ -353,6 +353,20 @@ reports (Twilio's status callbacks); no receipts for the full admin's own push c
 - **`docs/appointments-workspace.md`** used to say points are reversed on the full admin's member page; the full admin
   has no such screen. Reversal is the workspace's, on the member's page.
 
+## Tests on PostgreSQL
+
+The suites run on SQLite with hand-built schemas, which miss NOT NULL columns and indexes production has. Release 5
+ran them against a PostgreSQL database built from every migration (the recipe is in CLAUDE.md): it found two live
+bugs (member erasure and a member's own deletion wrote NULL into `loyalty_members.qr_code_token`) and one more in the
+engine (an extra of the legacy JSON setting has a text id, which PostgreSQL refused against `booking_extras.id`), all
+fixed. Every release-5 test file passes there. What still fails on PostgreSQL fails on the test's own data, not on
+the code — every error was traced (2026-10-23): members without `qr_code_token`/`referral_code`/`tier_id`/`joined_at`,
+ledger lines without `balance_after`, `service_bookings` without `booking_reference`, `hotel_settings` without `type`,
+tiers with a factory-only `qualification_model`, codes longer than their column, a second organisation created while
+the first is bound (`brands_org_default_unique`), and tables some traits create twice. Counts on 2026-10-23: workspace
+279/309, Member 292/329, Admin 81/89, Booking 356/529, Stripe 37/37. The workspace's shared member fixture now gives
+production's NOT NULL columns; the older files are worth the same care when next touched.
+
 ## Deploying
 
 - Release 4 is live (`main` 097432a, pushed 2026-10-22), built from branch commit a7e87ae: the next release's change
