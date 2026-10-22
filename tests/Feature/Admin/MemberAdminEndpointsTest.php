@@ -215,7 +215,9 @@ class MemberAdminEndpointsTest extends TestCase
         $grace = $this->grace->fresh();
         $user = $user->fresh();
         $this->assertFalse($grace->is_active);
-        $this->assertNull($grace->qr_code_token);
+        // The old QR code no longer names her; the column is NOT NULL and unique in production, so a fresh value replaces it.
+        $this->assertNotSame('abc', $grace->qr_code_token);
+        $this->assertStringStartsWith('erased-', (string) $grace->qr_code_token);
         $this->assertNull($grace->expo_push_token);
         $this->assertSame('GRACE1', $grace->referral_code);
         $this->assertSame('LS-' . str_pad((string) $user->id, 6, '0', STR_PAD_LEFT), $grace->member_number);

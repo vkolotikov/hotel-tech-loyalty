@@ -63,7 +63,9 @@ final class MemberErasure
 
             $member->update([
                 'is_active'       => false,
-                'qr_code_token'   => null,
+                // NOT NULL and unique in production (2024_01_01_000003): a fresh random value, so the old QR code and
+                // wallet pass stop naming the member (null was refused by PostgreSQL and the erasure failed).
+                'qr_code_token'   => 'erased-' . Str::random(48),
                 'expo_push_token' => null,
             ]);
 

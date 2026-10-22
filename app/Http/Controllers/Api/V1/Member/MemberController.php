@@ -293,7 +293,9 @@ class MemberController extends Controller
                 if ($member) {
                     $member->update([
                         'is_active'       => false,
-                        'qr_code_token'   => null,
+                        // NOT NULL and unique in production: a fresh random value retires the old QR code (null was
+                        // refused by PostgreSQL, so the deletion failed and the member stayed).
+                        'qr_code_token'   => 'erased-' . \Illuminate\Support\Str::random(48),
                         'last_activity_at'=> now(),
                     ]);
                 }
