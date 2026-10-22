@@ -984,9 +984,10 @@ calls, audit rows and log lines. Five things differ:
 - **Redirect returns** (release 4): if the bank opens a new tab, the member's note is lost (the booking is still made).
   An SPA bundle loaded before the deploy can strand a redirect payment (the sweeper releases it) and sends no grant.
 - **Pay at the venue when Stripe is unreachable** (release 4): a fallback does not extend the hold. The setting is
-  switched in the Appointments workspace only; with that workspace switched off for an organisation
-  (`php artisan workspace:appointments <organisation id> --off`), the setting stays as it was and nothing on screen can
-  change it — switch the workspace on, change it, switch it off again.
+  switched in the Appointments workspace's Setup, or — with that workspace switched off
+  (`php artisan workspace:appointments <organisation id> --off`) — by
+  `php artisan portal:pay-at-venue <organisation id> --on|--off|--status` (release 6; audited
+  `booking.pay_at_venue_changed`).
 - **No shorter Stripe timeout for a call made under a lock.** Every Stripe call inside the `pi:` lock (or
   the room/slot lock) uses the same client timeout as everywhere else; a slow Stripe response holds the
   lock for that long. Reported, not changed.
