@@ -81,6 +81,9 @@ trait SetsUpLoyaltyWorkspace
             'lifetime_points' => 0,
             'is_active'       => true,
             'joined_at'       => now()->subMonths(3),
+            // NOT NULL in production (enrolment fills them); a test member has them too, so the suite runs on PostgreSQL.
+            'qr_code_token'   => bin2hex(random_bytes(16)),
+            'referral_code'   => strtoupper(bin2hex(random_bytes(4))),
         ]);
     }
 
@@ -97,7 +100,7 @@ trait SetsUpLoyaltyWorkspace
         app()->instance('current_organization_id', $org->id);
         $tier = LoyaltyTier::create(['name' => 'Bronze', 'min_points' => 0, 'earn_rate' => 1, 'sort_order' => 1, 'is_active' => true]);
         $user = User::create(['organization_id' => $org->id, 'name' => 'Someone Else', 'email' => uniqid('', false) . '-else@example.test', 'password' => bcrypt('secret-pass-1'), 'user_type' => 'member']);
-        $member = LoyaltyMember::create(['organization_id' => $org->id, 'user_id' => $user->id, 'tier_id' => $tier->id, 'member_number' => 'ES-000001', 'current_points' => 900, 'lifetime_points' => 900, 'is_active' => true]);
+        $member = LoyaltyMember::create(['organization_id' => $org->id, 'user_id' => $user->id, 'tier_id' => $tier->id, 'member_number' => 'ES-000001', 'current_points' => 900, 'lifetime_points' => 900, 'is_active' => true, 'qr_code_token' => bin2hex(random_bytes(16)), 'referral_code' => strtoupper(bin2hex(random_bytes(4)))]);
         app()->instance('current_organization_id', $prior);
 
         return ['org' => $org, 'tier' => $tier, 'member' => $member];

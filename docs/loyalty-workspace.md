@@ -57,7 +57,7 @@ staff member restricted to one brand is still held to it by the `brand` middlewa
 | Members | `GET members?q&tier_id&state&sort&page` (50 a page, with `figures`), `GET find?q`, `GET members/{id}`, `GET members/{id}/history?page` (25 a page) |
 | Points | `POST members/{id}/award`, `POST members/{id}/redeem` (`points`, `reason`, `idempotency_key`), `POST members/{id}/history/{line}/reverse` (`reason`) |
 | Requests | `GET requests?state=waiting|approved|done&page`, `POST requests/{id}/approve`, `/done`, `/decline` (`reason`) |
-| Scan | `POST scan` (`code`) |
+| Scan | `POST scan` (`code`); release 5: `GET members/{id}/cards`, `POST members/{id}/cards` (`uid`), `POST members/{id}/cards/{card}/off` (AccessMap `admin/loyalty/members/{id}/cards`: every active staff member, as Edit details) |
 | Program | `GET program`; `POST/PUT program/tiers[/{id}]`, `POST program/tiers/{id}/benefits`, `DELETE program/tiers/{id}/benefits/{tierBenefit}`, `POST/PUT program/benefits[/{id}]`, `POST/PUT/DELETE program/boosts[/{id}]` |
 | Rewards | `GET/POST rewards`, `PUT rewards/{id}`; `GET redemptions?state=pending|done|all&page`, `POST redemptions/{id}/fulfil`, `/cancel`; `GET/POST offers`, `PUT offers/{id}`; `GET referrals?page`; `POST/DELETE rewards/{id}/image`, `POST/DELETE offers/{id}/image` |
 | Members (release 2) | `POST members`, `PUT members/{id}`, `PUT members/{id}/tier`, `POST members/{id}/deactivate`, `/reactivate`, `/erase` (`confirm_name`), `GET members/{id}/card`, `POST members/{id}/welcome`; `GET members/duplicates`, `POST members/merge`; `GET/POST members/imports`, `GET members/imports/{batch}`, `POST members/imports/{batch}/run`, `/cancel`; `GET members/export` (CSV) |
@@ -71,7 +71,7 @@ staff member restricted to one brand is still held to it by the `brand` middlewa
 Refusals are `{error, message}`; the workspace shows its own words for each code (`lib/errors.ts`,
 `program/errors.ts`, `rewards/errors.ts`), never the server's sentence. Codes: `not_found`, `manager_only`,
 `not_allowed` (with `need`), `not_enough_points` (with `balance`), `cannot_reverse`, `already_reversed`, `wrong_state`
-(with `state`), the scan's `not_found`, `expired`, `revoked`, `used_up`, `inactive`; a form's field errors are
+(with `state`), the scan's `not_found`, `expired`, `revoked`, `used_up`, `inactive` (a switched-off card adds `card: "off"`), and since release 5 the cards' `card_in_use`, `card_elsewhere`, `bad_uid`; a form's field errors are
 Laravel's 422. With `ADMIN_ACCESS_MODE=enforce` the access middleware may refuse first (`not_allowed`,
 `no_capability`); the workspace reads those as the same missing right. Release 2 adds, each with its own words in the
 area's `errors.ts`: members `member_limit` (402), `no_tier`, `bad_tier`, `name_mismatch`, `already_erased`, `too_soon`
@@ -110,6 +110,22 @@ All server tests are in `tests/Feature/LoyaltyWorkspace/` unless named otherwise
 - **Scan finds only this organisation's members.** A secure QR token carries no organisation, so one whose member is
   another organisation's reads as not found and is not used up; every scan is recorded in `scan_events` with the full
   admin's result words (`ScanTest`). The workspace's scan asks no AI for an upsell line.
+- **One tolerant reader of codes** (release 5, `App\Services\Loyalty\Cards\CodeReader` through `CardLookup`; the full
+  admin's `scan/qr` reads through it too, its answers unchanged). In order: a leading `#` and spaces dropped (the
+  wallet pass shows `#LS-001001`); the app's v2 JSON; that JSON bent by a scanner's keyboard layout (German and Russian
+  typed back key for key; otherwise the value after `member…number`); the v1 JSON's token; a link carrying a number or
+  token; a secure token, then the legacy `qr_code_token` (the wallet pass's barcode); an NFC ID in hex with any
+  separators; a member number in any case with or without its hyphen (an exact match first); the digits alone (four or
+  more) when exactly one member's number ends with them, never a guess between two; a decimal NFC ID as keyboard-style
+  readers type it (4- or 7-byte, both byte orders). Tests: `CodeReaderTest`, `ScanTest`, `ScanEndpointsTest`.
+- **NFC cards** (`App\Services\Loyalty\Cards\NfcCards`): an ID is stored lower-case hex without separators (a decimal
+  entry converted; 8, 14 or 20 digits read as hex, as printed on cards). `nfc_cards.uid` is unique across every
+  organisation (`nfc_cards_uid_unique`), so a link compares normalised against every stored form: another
+  organisation's card → `card_elsewhere` (409, never saying whose); active for another member here → `card_in_use`
+  (409, naming nobody); already this member's → 200, nothing written; switched off here → the same row given again,
+  never a second row. Linking leaves the member's QR code and wallet pass alone (the full admin's own `nfc-cards`
+  link still sets `qr_code_token` to the card's ID and stores the ID as typed). Link and switch-off are audited
+  (`nfc_card_linked`, `nfc_deactivated`).
 - **Redemptions have one writer**, `App\Services\Loyalty\RedemptionActions`, called by the full admin and the
   workspace: a pending cancel gives the points back by reversing the debit and returns the stock; a cancel of a
   fulfilled one is bookkeeping only (`RedemptionsTest`; `tests/Feature/Admin/RewardRedemptionActionsTest.php` proves
@@ -268,7 +284,11 @@ Spec: `docs/superpowers/specs/2026-10-22-loyalty-release-4-design.md` (the membe
   address (`members/membersQuery.ts`). **A member's page**: points and the way to the next tier, the tier's benefits,
   the requests that wait, Award and Redeem (A and R), the whole history with a manager's Reverse.
   **Requests**: Waiting, Approved, Done, read every 60 s. **Program** and **Rewards**: §4.5 and §4.6 of the spec.
-  **Scan**: one field for a card reader or a typed member number; Enter sends; the field keeps the focus.
+  **Scan**: the field for a keyboard-style reader or a typed code (Enter sends; the field keeps the focus); since release 5
+  also "Scan with camera" (any modern browser over https; the decoder loads only when used), "Tap NFC card" (Chrome on
+  Android; elsewhere the page says so) and "USB reader" (Chrome or Edge on a desk computer, the full admin's WebHID hook).
+  A card no member has offers "Link this card". **A member's page** lists their NFC cards: link (tap, USB reader or
+  typed ID), switch off.
 - **Find** (Ctrl/⌘ K or "/") searches members on the server from two letters; S opens Scan; ? lists the shortcuts.
 - **Words.** `src/loyalty/i18n/loyalty.<lang>.json`, `program.<lang>.json`, `rewards.<lang>.json` in five languages,
   read under `loyalty.*`, `loyalty.program.*`, `loyalty.rewards.*`. `loyaltyLocales.test.ts` keeps the key sets
@@ -322,6 +342,12 @@ reports (Twilio's status callbacks); no receipts for the full admin's own push c
   deleted; an import previewed but never run or cancelled keeps its file in its row.
 - **Finding duplicates**: a phone written with characters outside the separators the `REPLACE` chain strips (letters,
   `#`, …) is compared in PHP; if nearly every phone is written that way, that step loads them all.
+- **Scan** (release 5): NFC in a web page works only in Chrome on Android (an iPhone scans the QR code with the camera or
+  types the number); a USB NFC reader needs Chrome or Edge on a desk computer. Keyboard layouts other than German and
+  Russian that bend digits or use dead keys (French AZERTY, Spanish…) are not typed back key for key; the generic
+  member-number reading covers most of them. Decimal reader formats other than 4- and 7-byte IDs (e.g. Wiegand) are not
+  read. The normalised and digits-alone lookups read the organisation's members without an index. The full admin's own
+  `nfc-cards` and `nfc/issue` still store IDs as typed, so they can add a second row for a card the workspace stored.
 - **A brand is chosen only on create.** With one brand nothing shows; editing a reward, offer or boost shows its brand
   but does not move it.
 - **`docs/appointments-workspace.md`** used to say points are reversed on the full admin's member page; the full admin
@@ -329,10 +355,17 @@ reports (Twilio's status callbacks); no receipts for the full admin's own push c
 
 ## Deploying
 
-- Release 3 is live (`main` f344b74, deployed 2026-10-22), built from branch commit 763e1b0: the next release's change
-  list is `git diff --name-status 763e1b0 <tip>`. Release 2 went out as `main` 7549f28 from 22b99d0, release 1 as
-  05f3ad1 from 5895004.
-- Release 4 (not yet deployed) runs six migrations, each tried on PostgreSQL with rollback: `2026_10_23_140000` (the
+- Release 4 is live (`main` 097432a, pushed 2026-10-22), built from branch commit a7e87ae: the next release's change
+  list is `git diff --name-status a7e87ae <tip>`.
+- Release 5 (not yet deployed): no migration, no new scheduled command. New routes: `GET/POST members/{id}/cards`,
+  `POST members/{id}/cards/{card}/off` (workspace). Full-admin and shared files it changes on purpose: the full admin's
+  `ScanController::scanQr` (reads through `CardLookup`) and `pages/Scan.tsx` (the camera sends the whole code),
+  `BookingAdminController::refund` (a room of a group defaults to its own remaining total), `BookingRefundService`,
+  `CapturePendingPaymentIntents`, `BookingPublicController` (the payment webhooks; the widget's paid combination writes
+  the payment on the lead room only), `BookingEngineService`, `MemberErasure` and the member `MemberController`
+  (deletion writes a fresh QR token instead of null). Release 3 went out as `main` f344b74 from 763e1b0, release 2 as
+  7549f28 from 22b99d0, release 1 as 05f3ad1 from 5895004.
+- Release 4 runs six migrations, each tried on PostgreSQL with rollback: `2026_10_23_140000` (the
   index `points_transactions_org_created_index`, built `CONCURRENTLY` outside a transaction; a failed half-built index is
   dropped and built again on the next run), `140100` (`earn_rate_events.times_venue_at`, nullable), `150000`
   (`loyalty_members.sms_consent`, default false), `150010` (the tables `sms_campaigns`, `sms_campaign_deliveries`),
@@ -371,6 +404,18 @@ reports (Twilio's status callbacks); no receipts for the full admin's own push c
 - Scan one member's QR code from the member app on a phone, and type one member number.
 - On Program, check the tiers and their colours; on Rewards, the catalogue and pending redemptions.
 - Reload admin tabs left open across the deploy.
+
+### After the release 5 deploy (owner, signed in)
+
+- Scan on a phone: "Scan with camera" and a member's QR code from the app (and a wallet pass); type `#` and the number
+  as the pass shows it. On an Android phone in Chrome: "Tap NFC card" with a card, then "Link this card" to a member;
+  tap it again and the member opens. At the desk: a USB reader in Chrome, or a keyboard-style reader in the field.
+- A member's page: the NFC cards section lists the card; switch it off and scan it again (it says switched off).
+- The full admin's Scan → Start Camera reads the app's QR code again.
+- Members: delete a test member (it now works); as a test member, delete the account in the portal's Profile.
+- Portal (a hotel venue): a party too big for one room is offered rooms together; book a two-room stay with a test
+  card; in the full admin the lead room shows the payment, both rooms are paid after capture; cancel it in the portal
+  and check one refund in Stripe.
 
 ### After the release 4 deploy (owner, signed in)
 

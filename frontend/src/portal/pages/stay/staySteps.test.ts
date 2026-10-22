@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { newPayVisit } from '../book/steps'
 import type { StayQuote } from '../../lib/types'
 import {
-  addDays, afterStayConfirmError, afterStayQuoteError, datesProblem, initialStayState, nightsBetween, payView, perNightShown, retryConfirmArgs, showCardUnavailable, stayBounceArgs, stayCatalogueGuard, stayChargeLine, stayFocusTarget, stayIntentErrorKind, stayPayNoticeKind, stayQuoteBody, stayReducer, type StayState,
+  addDays, afterStayConfirmError, afterStayQuoteError, chosenRoomsLabel, datesProblem, hasRoomChoice, initialStayState, nightsBetween, payView, perNightShown, retryConfirmArgs, showCardUnavailable, stayBounceArgs, stayCatalogueGuard, stayChargeLine, stayFocusTarget, stayIntentErrorKind, stayPayNoticeKind, stayQuoteBody, stayReducer, stayRoomChoices, type StayState,
 } from './staySteps'
 
 const rules = { currency: 'EUR', min_nights: 2, max_nights: 14 }
@@ -117,6 +117,52 @@ describe('stayQuoteBody', () => {
       unit_id: '101', check_in: '2026-10-10', check_out: '2026-10-12', adults: 2, children: 1,
       extras: [{ id: '3', quantity: 1 }, { id: '5', quantity: 1 }], coupon: { redemption_id: 9 },
     })
+  })
+})
+
+// Release 5, part C: a combination — several rooms for one party, one stay.
+describe('combinations', () => {
+  it('chooses several rooms together, never alongside one room, and loses them with the dates or the party', () => {
+    const one = stayReducer({ ...picked, step: 'room' }, { type: 'pickRoom', roomId: '101' })
+    const together = stayReducer(one, { type: 'pickRooms', roomIds: ['101', '102'] })
+    expect(together).toMatchObject({ step: 'review', roomId: null, roomIds: ['101', '102'], quote: null, notice: null })
+    expect(stayReducer(together, { type: 'pickRoom', roomId: '102' })).toMatchObject({ roomId: '102', roomIds: null })
+    expect(stayReducer(together, { type: 'setDates', checkIn: '2026-10-11', checkOut: '2026-10-13' }).roomIds).toBeNull()
+    expect(stayReducer(together, { type: 'setGuests', adults: 3, children: 0 }).roomIds).toBeNull()
+    expect(stayReducer(together, { type: 'bounce', to: 'room', code: 'room_unavailable', clearRoom: true }).roomIds).toBeNull()
+    expect(stayReducer(together, { type: 'bounce', to: 'review', code: 'price_changed', clearRoom: false }).roomIds).toEqual(['101', '102'])
+  })
+
+  it('asks for the price of the rooms together, by unit_ids and never with a unit_id', () => {
+    const body = stayQuoteBody({ ...picked, roomIds: ['101', '102'], extras: ['3'] })
+    expect(body).toEqual({ unit_ids: ['101', '102'], check_in: '2026-10-10', check_out: '2026-10-12', adults: 2, children: 1, extras: [{ id: '3', quantity: 1 }], coupon: null })
+    expect(body).not.toHaveProperty('unit_id')
+    expect(stayQuoteBody({ ...picked, roomId: '101' })).not.toHaveProperty('unit_ids')
+  })
+
+  it('has a choice to price with one room or two or more together', () => {
+    expect(hasRoomChoice({ roomId: null, roomIds: null })).toBe(false)
+    expect(hasRoomChoice({ roomId: '101', roomIds: null })).toBe(true)
+    expect(hasRoomChoice({ roomId: null, roomIds: ['101', '102'] })).toBe(true)
+    expect(hasRoomChoice({ roomId: null, roomIds: ['101'] })).toBe(false)
+  })
+
+  it('names the chosen rooms together until the quote does, and nothing for a room it does not know', () => {
+    const rooms = [{ id: '101', name: 'Sea view' }, { id: '102', name: 'Garden' }]
+    expect(chosenRoomsLabel({ roomId: null, roomIds: ['101', '102'] }, rooms)).toBe('Sea view + Garden')
+    expect(chosenRoomsLabel({ roomId: '102', roomIds: null }, rooms)).toBe('Garden')
+    expect(chosenRoomsLabel({ roomId: null, roomIds: ['101', '999'] }, rooms)).toBeNull()
+    expect(chosenRoomsLabel({ roomId: null, roomIds: null }, rooms)).toBeNull()
+  })
+
+  it('offers rooms, else combinations, else the venue (an older server), else nothing', () => {
+    const room = { id: '101' } as never
+    const combo = { key: '101+102' } as never
+    expect(stayRoomChoices({ rooms: [room], party_too_large: false, combinations: [] })).toBe('rooms')
+    expect(stayRoomChoices({ rooms: [], party_too_large: true, combinations: [combo] })).toBe('combinations')
+    expect(stayRoomChoices({ rooms: [], party_too_large: true })).toBe('contact')
+    expect(stayRoomChoices({ rooms: [], party_too_large: true, combinations: [] })).toBe('contact')
+    expect(stayRoomChoices({ rooms: [], party_too_large: false })).toBe('none')
   })
 })
 

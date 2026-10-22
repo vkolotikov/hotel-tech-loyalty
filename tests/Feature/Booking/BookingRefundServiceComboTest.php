@@ -11,8 +11,6 @@ use App\Services\LoyaltyService;
 use App\Services\SmoobuClient;
 use App\Services\StripeService;
 use Database\Factories\BookingMirrorFactory;
-use Database\Factories\LoyaltyMemberFactory;
-use Database\Factories\LoyaltyTierFactory;
 use Database\Factories\OrganizationFactory;
 use Database\Factories\PointsTransactionFactory;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
@@ -87,20 +85,42 @@ class BookingRefundServiceComboTest extends TestCase
         parent::tearDown();
     }
 
-    /** Seed N mirrors sharing the same booking_group_id + PI. */
+    /**
+     * Seed N mirrors sharing the same booking_group_id and ONE PI. Release 5:
+     * the first (the lead) carries the PI and the others none — production's
+     * `booking_mirror_org_pi_unique` (now in the test schema too) refuses a
+     * second row with it, so every room carrying it was never a real shape.
+     */
     private function makeComboMirrors(int $count, string $groupId, string $piId, float $perRoomPrice = 250.0): array
     {
         $mirrors = [];
         for ($i = 0; $i < $count; $i++) {
             $mirrors[] = BookingMirrorFactory::new()->paid()->create([
                 'booking_group_id'          => $groupId,
-                'stripe_payment_intent_id'  => $piId,
+                'stripe_payment_intent_id'  => $i === 0 ? $piId : null,
                 'reservation_id'            => 'SM-COMBO-' . $i . '-' . uniqid(),
                 'price_total'               => $perRoomPrice,
                 'guest_email'               => 'combo-guest@example.test',
             ]);
         }
         return $mirrors;
+    }
+
+    /**
+     * A member as production's schema takes one (this file runs on
+     * PostgreSQL too): a user, a tier, and the member's NOT NULL
+     * `qr_code_token` / `referral_code` — the factories carry test-only
+     * columns (`qualification_model`) PostgreSQL does not have.
+     */
+    private function loyaltyMember(int $points): \App\Models\LoyaltyMember
+    {
+        $tier = \App\Models\LoyaltyTier::create(['organization_id' => $this->orgId, 'name' => 'Bronze', 'min_points' => 0, 'is_active' => true]);
+        $user = \App\Models\User::create(['name' => 'Combo Guest', 'email' => 'combo_' . uniqid('', true) . '@example.test', 'password' => bcrypt('secret-pass-1'), 'user_type' => 'member', 'organization_id' => $this->orgId]);
+        $has = fn (string $c) => \Illuminate\Support\Facades\Schema::hasColumn('loyalty_members', $c);
+
+        return \App\Models\LoyaltyMember::create(['organization_id' => $this->orgId, 'user_id' => $user->id, 'tier_id' => $tier->id, 'member_number' => 'M-' . strtoupper(uniqid()), 'current_points' => $points, 'lifetime_points' => $points, 'is_active' => true]
+            + ($has('qr_code_token') ? ['qr_code_token' => bin2hex(random_bytes(16))] : [])
+            + ($has('referral_code') ? ['referral_code' => strtoupper(bin2hex(random_bytes(4)))] : []));
     }
 
     private function fakeStripeRefund(string $id): \Stripe\Refund
@@ -213,8 +233,7 @@ class BookingRefundServiceComboTest extends TestCase
         $piId = 'pi_test_combo_loyalty_' . uniqid();
         [$a, $b] = $this->makeComboMirrors(2, $groupId, $piId);
 
-        $tier = LoyaltyTierFactory::new()->bronze()->create();
-        $member = LoyaltyMemberFactory::new()->inTier($tier->id)->withPoints(300)->create();
+        $member = $this->loyaltyMember(300);
 
         // 2 earn rows, one per mirror.
         PointsTransactionFactory::new()
@@ -323,6 +342,56 @@ class BookingRefundServiceComboTest extends TestCase
         $newValues = is_string($auditRow->new_values) ? json_decode($auditRow->new_values, true) : $auditRow->new_values;
         $this->assertSame(3, (int) $newValues['sibling_count'],
             'sibling_count MUST reflect the actual combo size — gives ops a forensic signal.');
+    }
+
+    /* ─── Release 5: the payment is the lead room's ─── */
+
+    public function test_a_refund_asked_on_a_room_that_carries_no_payment_is_the_lead_rooms(): void
+    {
+        // The admin's "Issue refund" on the second room of a combination:
+        // that room carries no intent (the lead does), so the refund — its
+        // lock, its attempt row, the one Stripe call — is the lead's, and
+        // every room is recorded.
+        $groupId = (string) \Illuminate\Support\Str::uuid();
+        $piId = 'pi_test_combo_follower_' . uniqid();
+        [$a, $b] = $this->makeComboMirrors(2, $groupId, $piId);
+
+        $this->stripe->shouldReceive('refund')->once()->with($piId, null, null)->andReturn($this->fakeStripeRefund('re_follower_001'));
+        $this->smoobu->shouldReceive('cancelReservation')->twice()->andReturn([]);
+        $this->loyalty->shouldReceive('reverseTransaction')->andReturn(new PointsTransaction());
+
+        $outcome = $this->service->applyRefund($b);
+
+        $this->assertTrue($outcome['is_full']);
+        foreach ([$a, $b] as $m) {
+            $m->refresh();
+            $this->assertSame('refunded', $m->payment_status);
+            $this->assertEquals(250.0, (float) $m->refunded_amount, 'each room its own share');
+        }
+        $attempt = \App\Models\RefundAttempt::query()->sole();
+        $this->assertSame($a->id, (int) $attempt->mirror_id, "the attempt row is the lead's — the charge.refunded webhook's freshness check finds it there");
+        $this->assertSame($piId, $attempt->payment_intent_id);
+        Mail::assertQueued(BookingRefundMail::class, fn (BookingRefundMail $m) => $m->refundAmount === 500.0 && str_contains($m->bookingReference, ', '));
+    }
+
+    public function test_a_partial_refund_of_a_combination_is_partial_on_every_room(): void
+    {
+        $groupId = (string) \Illuminate\Support\Str::uuid();
+        $piId = 'pi_test_combo_partial_' . uniqid();
+        [$a, $b] = $this->makeComboMirrors(2, $groupId, $piId);
+
+        $this->stripe->shouldReceive('refund')->once()->with($piId, 300.0, null)->andReturn($this->fakeStripeRefund('re_partial_001'));
+        $this->smoobu->shouldNotReceive('cancelReservation');
+        $this->loyalty->shouldNotReceive('reverseTransaction');
+
+        $outcome = $this->service->applyRefund($a, 300.0);
+
+        $this->assertFalse($outcome['is_full'], '300 of the 500 payment is partial, though it covers the lead room\'s 250');
+        foreach ([$a, $b] as $m) {
+            $m->refresh();
+            $this->assertSame('partially_refunded', $m->payment_status);
+            $this->assertEquals(150.0, (float) $m->refunded_amount);
+        }
     }
 
     /* ─── Single-mirror path unchanged ─── */

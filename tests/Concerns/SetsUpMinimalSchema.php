@@ -141,6 +141,7 @@ trait SetsUpMinimalSchema
                 $table->index(['organization_id', 'stripe_payment_intent_id']);
             });
         }
+        $this->addBookingMirrorPaymentRule();
 
         if (!Schema::hasTable('refund_attempts')) {
             Schema::create('refund_attempts', function ($table) {
@@ -399,6 +400,22 @@ trait SetsUpMinimalSchema
     protected function addServiceBookingPaymentRule(): void
     {
         (require base_path('database/migrations/2026_10_01_100000_service_bookings_unique_payment.php'))->up();
+    }
+
+    /**
+     * One payment, one stay row: production's partial unique index
+     * `booking_mirror_org_pi_unique` (migration 2026_06_01_120000, whose own
+     * statements are PostgreSQL's), written here in the form sqlite also
+     * understands, so every booking test fails at a second row carrying the
+     * same PaymentIntent exactly as PostgreSQL would (release 5, part C: a
+     * combination's lead room carries the payment, its other rooms none).
+     */
+    protected function addBookingMirrorPaymentRule(): void
+    {
+        if (!Schema::hasTable('booking_mirror') || !Schema::hasColumn('booking_mirror', 'stripe_payment_intent_id')) {
+            return;
+        }
+        \Illuminate\Support\Facades\DB::statement('CREATE UNIQUE INDEX IF NOT EXISTS booking_mirror_org_pi_unique ON booking_mirror (organization_id, stripe_payment_intent_id) WHERE stripe_payment_intent_id IS NOT NULL');
     }
 
     /**

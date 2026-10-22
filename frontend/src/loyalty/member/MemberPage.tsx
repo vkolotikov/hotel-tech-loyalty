@@ -30,6 +30,7 @@ import { StatusDialog } from '../membership/StatusDialog'
 import { DetailsCard } from './DetailsCard'
 import { lineType, memberActions, offersReverse, type PointsMode } from './memberMath'
 import { MoreMenu } from './MoreMenu'
+import { NfcCards } from './NfcCards'
 import { PointsDialog } from './PointsDialog'
 import { ReverseDialog } from './ReverseDialog'
 
@@ -38,7 +39,8 @@ import { ReverseDialog } from './ReverseDialog'
  * tier's benefits, the requests that wait for staff, Award and Redeem, and the whole points history with Reverse for a
  * manager. Release 2 (§4.1) adds their details with Edit details, the card, and a More menu (Resend the welcome email;
  * a manager's Change tier, Deactivate / Reactivate, Delete). A deleted member shows only what stays: the number and
- * the history. What the workspace does not do (bookings, CRM) is one link away in the full admin.
+ * the history. Release 5 adds the member's NFC cards (link, switch off). What the workspace does not do (bookings,
+ * CRM) is one link away in the full admin.
  */
 export function MemberPage() {
   const { id: raw } = useParams()
@@ -207,6 +209,8 @@ function Member({ detail, locale }: { detail: MemberDetail; locale: string }) {
       </div>
 
       <DetailsCard member={member} locale={locale} timeZone={timeZone} />
+
+      <NfcCards member={member} locale={locale} timeZone={timeZone} />
 
       <History memberId={member.id} balance={member.points} locale={locale} />
 

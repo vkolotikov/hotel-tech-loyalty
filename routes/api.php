@@ -1380,6 +1380,10 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
                 Route::post('requests/{id}/decline', [\App\Http\Controllers\Api\V1\Admin\Loyalty\RequestController::class, 'decline'])->whereNumber('id');
                 Route::post('requests/{id}/done', [\App\Http\Controllers\Api\V1\Admin\Loyalty\RequestController::class, 'done'])->whereNumber('id');
                 Route::post('scan', [\App\Http\Controllers\Api\V1\Admin\Loyalty\ScanController::class, 'scan']);
+                // Release 5 (spec 2026-10-23 §3): a member's NFC cards — the list, link, switch off
+                Route::get('members/{id}/cards', [\App\Http\Controllers\Api\V1\Admin\Loyalty\CardsController::class, 'index'])->whereNumber('id');
+                Route::post('members/{id}/cards', [\App\Http\Controllers\Api\V1\Admin\Loyalty\CardsController::class, 'store'])->whereNumber('id');
+                Route::post('members/{id}/cards/{card}/off', [\App\Http\Controllers\Api\V1\Admin\Loyalty\CardsController::class, 'off'])->whereNumber(['id', 'card']);
                 Route::get('program', [\App\Http\Controllers\Api\V1\Admin\Loyalty\ProgramController::class, 'show']);
                 Route::post('program/tiers', [\App\Http\Controllers\Api\V1\Admin\Loyalty\ProgramController::class, 'storeTier']);
                 Route::put('program/tiers/{id}', [\App\Http\Controllers\Api\V1\Admin\Loyalty\ProgramController::class, 'updateTier'])->whereNumber('id');

@@ -137,8 +137,10 @@ Multi-tenant Laravel 13 + React (Vite, TypeScript) SaaS with four sub-brands. Pr
   pricing by type in `BookingEngineService::extraUnits()` (R4-3); nothing else in the widget changed. A widget stay
   becomes a member's only at award time, through `BookingPointsService::certainMemberForStay()` (one member, linked
   guest, same email, active, verified address). Never write one PaymentIntent on several `booking_mirror` rows: the
-  partial unique index `booking_mirror_org_pi_unique` refuses it on PostgreSQL (combination stays wait for the
-  lead-room design, release-4 spec §7). A portal payment-intent never calls Stripe under a room or slot lock the
+  partial unique index `booking_mirror_org_pi_unique` refuses it on PostgreSQL. Release 5: a combination's lead room
+  carries the intent and the other rooms are reached through `booking_group_id` — every path that finds rows by an
+  intent goes through `App\Services\Booking\GroupPayment` (`rows()`, `payer()`, `allocateRefund()`), never a bare
+  `where('stripe_payment_intent_id', …)->first()` that would leave the other rooms behind. A portal payment-intent never calls Stripe under a room or slot lock the
   confirms take: a stay's takes its hold row then `pi:`, an appointment's a member-scoped `psi:` key then `pi:`; an
   earlier intent is reused or released only through `PortalPaymentIntentGuard::reuseOrRelease()`, and nothing new is
   made beside one whose fate is unknown. State shared across requests lives in `SharedCache` (production's default
@@ -184,6 +186,15 @@ Multi-tenant Laravel 13 + React (Vite, TypeScript) SaaS with four sub-brands. Pr
   and every boost save stamps `times_venue_at`. Test fixtures never look like real credentials (GitHub push protection
   refuses an `AC` + 32-hex Twilio SID). SQLite test schemas lack production's unique and partial indexes: a new write
   to a table with one gets a test that creates that index, or a check on PostgreSQL.
+- Release 5 (`docs/superpowers/specs/2026-10-23-loyalty-release-5-design.md`): a scanned or typed code is read only by
+  `App\Services\Loyalty\Cards\CodeReader` through `CardLookup` (the full admin's `scan/qr` too); an NFC card is linked
+  or switched off only by `App\Services\Loyalty\Cards\NfcCards` (`nfc_cards.uid` is unique across all organisations).
+- Testing against PostgreSQL (the SQLite schemas miss NOT NULL columns and indexes production has): build a database
+  from every migration, then run a test file with `DB_CONNECTION=pgsql DB_DATABASE=<that database>` (and its host and
+  credentials) in the environment — phpunit.xml's `<env>` entries are not forced, and the schema traits skip tables
+  that exist. Release 5 found two live bugs this way (member erasure and self-deletion wrote NULL into
+  `loyalty_members.qr_code_token`). Older tests whose own data the real schema refuses are listed in
+  `docs/loyalty-workspace.md`.
 
 ## Appointments-workspace code rules
 

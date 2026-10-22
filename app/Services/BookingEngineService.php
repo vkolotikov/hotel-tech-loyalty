@@ -259,13 +259,20 @@ class BookingEngineService
                 ->where('stripe_payment_intent_id', $piId)
                 ->first();
             if ($existingMirror) {
+                // A room group's payment is on its lead room (GroupPayment):
+                // the replay answers the lead, with what the one payment paid
+                // for all the group's rooms.
+                $grossTotal = (float) ($existingMirror->price_total ?? 0);
+                if (!empty($existingMirror->booking_group_id)) {
+                    $grossTotal = round((float) \App\Services\Booking\GroupPayment::rows((int) $orgId, (string) $piId)->sum(fn (BookingMirror $m) => (float) ($m->price_total ?? 0)), 2);
+                }
                 return [
                     'reservation_id'    => $existingMirror->reservation_id,
                     'booking_reference' => $existingMirror->booking_reference,
                     'mirror_id'         => $existingMirror->id,
                     'check_in'          => $existingMirror->arrival_date?->toDateString(),
                     'check_out'         => $existingMirror->departure_date?->toDateString(),
-                    'gross_total'       => (float) ($existingMirror->price_total ?? 0),
+                    'gross_total'       => $grossTotal,
                     'currency'          => 'EUR',
                     'pms_synced'        => $existingMirror->internal_status !== 'pending_pms_sync',
                     'replayed'          => true,
@@ -314,11 +321,21 @@ class BookingEngineService
             $hold->save();
         }
 
+        // The member portal's own submissions (it is the only caller that
+        // passes hooks) record what was asked for — the hold's dates, party,
+        // room(s) and price — which logSubmission() and the follow-up enquiry
+        // read from `hold` (release 5). The public widget's submissions are
+        // left exactly as they were.
+        if ($hooks !== null) {
+            $data['hold'] = $payload;
+        }
+
         // Combo bookings branch off into their own confirm path that
         // loops over each room, creates per-room Smoobu reservations,
-        // and links all mirrors via a shared booking_group_id.
+        // and links all mirrors via a shared booking_group_id. The member
+        // portal's hooks travel with it (only the portal passes any).
         if (!empty($payload['is_combo'])) {
-            return $this->confirmCombo($data, $hold, $payload, $guest, $orgId, $idempotencyKey, $requestId, $ip);
+            return $this->confirmCombo($data, $hold, $payload, $guest, $orgId, $idempotencyKey, $requestId, $ip, $hooks);
         }
 
         // Try to link or create a CRM guest (outside the lock — idempotent by email).
@@ -1675,12 +1692,28 @@ class BookingEngineService
      *     succeeded Smoobu reservations → rollback DB → throw.
      *   • Transient Smoobu error → mark that room pending_pms_sync,
      *     continue. The retry cron picks it up.
+     *
+     * The single payment is carried by the FIRST room's mirror only (the
+     * lead): `booking_mirror_org_pi_unique` allows one row per intent, and
+     * every path that finds rows by the intent brings the lead's group along
+     * (App\Services\Booking\GroupPayment). Release 5, R4-8/R5-4 — the only
+     * change to the widget's combination.
+     *
+     * With hooks (the member portal — the only caller that passes any) a
+     * combination takes confirmMemberCombo() instead: the room locks and the
+     * re-checks the single-room confirm() has. Without hooks (the public
+     * widget) everything below runs as it always has.
      */
     public function confirmCombo(
         array $data, BookingHold $hold, array $payload,
         array $guest, ?int $orgId,
         ?string $idempotencyKey, ?string $requestId, ?string $ip,
+        ?StayConfirmHooks $hooks = null,
     ): array {
+        if ($hooks !== null) {
+            return $this->confirmMemberCombo($data, $hold, $payload, $guest, $orgId, $idempotencyKey, $requestId, $ip, $hooks);
+        }
+
         $rooms    = $payload['rooms'] ?? [];
         $checkIn  = $payload['check_in'];
         $checkOut = $payload['check_out'];
@@ -1968,7 +2001,9 @@ class BookingEngineService
                         'price_paid'               => $paymentStatus === PaymentStatus::Paid->value ? $smoobuRoomPrice : 0,
                         'payment_method'           => $paymentMethod,
                         'payment_status'           => $paymentStatus,
-                        'stripe_payment_intent_id' => $piId,
+                        // The lead room carries the one payment; the other
+                        // rooms follow it by booking_group_id (GroupPayment).
+                        'stripe_payment_intent_id' => $isFirstRoom ? $piId : null,
                         'internal_status'          => $internalStatus,
                         'synced_at'                => $pmsResult ? now() : null,
                         // Extras only attach to the FIRST room mirror;
@@ -2068,6 +2103,598 @@ class BookingEngineService
         }
 
         return $response;
+    }
+
+    /**
+     * A member-portal combination (App\Services\Booking\StayCombination): one
+     * stay, two or three rooms, one payment — booked with everything the
+     * single-room confirm() does for its one room, for every room:
+     *
+     *   1. every room's lock, `room:{org}:{unit}` (StayCombination::roomLockKeys():
+     *      each unit once, ascending unit id), before anything else;
+     *   2. the hold row (`lockForUpdate`), re-checked still active;
+     *   3. every room re-checked under those locks — our own bookings, counting
+     *      how many of one unit this combination needs, then the PMS's live
+     *      answer — exactly as confirm() re-checks its room
+     *      (assertComboRoomStillFree());
+     *   4. the caller's last word (PortalStayHooks::beforeReservation(): the
+     *      `pi:` lock, the payment re-checked under it, the coupon taken) before
+     *      the PMS is asked anything. The hold row is the only booking row
+     *      locked here, and it is locked before `pi:`; no `booking_mirror` row
+     *      is ever locked;
+     *   5. one PMS reservation per room;
+     *   6. one mirror per room, linked by booking_group_id, each with its own
+     *      share of the price (StayCombination::shares(): the shares add up to
+     *      the hold's total to the cent) and its own part of the party. The
+     *      FIRST room (the lead) carries the one PaymentIntent of the whole
+     *      combination; the other rooms carry none (`booking_mirror_org_pi_unique`
+     *      allows one row per intent) and follow the lead by booking_group_id
+     *      (GroupPayment) at capture, refund, dispute and cancellation.
+     *
+     * All or nothing: the hold, the coupon and every mirror are written in one
+     * transaction, and a failure after a PMS reservation was made — a room the
+     * PMS refuses, a write that fails, the commit — cancels every reservation
+     * this call made (one it cannot cancel is audited as
+     * `booking.combo.orphan_smoobu_reservation`) before the exception goes on
+     * to the caller, which releases the payment. A transient PMS error on one
+     * room's reservation leaves that room local-only (`pending_pms_sync`) — the
+     * single-room rule; the retry job sends it on.
+     */
+    private function confirmMemberCombo(
+        array $data, BookingHold $hold, array $payload,
+        array $guest, ?int $orgId,
+        ?string $idempotencyKey, ?string $requestId, ?string $ip,
+        StayConfirmHooks $hooks,
+    ): array {
+        $rooms = array_values(is_array($payload['rooms'] ?? null) ? $payload['rooms'] : []);
+        if (count($rooms) < \App\Services\Booking\StayCombination::MIN_ROOMS || count($rooms) > \App\Services\Booking\StayCombination::MAX_ROOMS) {
+            $this->logSubmission('failure', 'hold_expired', 'Combination hold names no rooms', $data, $requestId, $idempotencyKey);
+            throw new \RuntimeException('Hold expired or not found');
+        }
+        $checkIn  = (string) $payload['check_in'];
+        $checkOut = (string) $payload['check_out'];
+        $nights   = max(1, (int) round((strtotime($checkOut) - strtotime($checkIn)) / 86400));
+
+        // The guest the caller names, only when it is really this organisation's — as confirm().
+        $namedGuestId = isset($data['guest_id']) ? (int) $data['guest_id'] : null;
+        $guestId = ($namedGuestId && Guest::withoutGlobalScopes()->where('organization_id', $orgId)->whereKey($namedGuestId)->exists())
+            ? $namedGuestId
+            : $this->linkOrCreateGuest($guest, $orgId);
+
+        $paymentIntentId = $data['payment_intent_id'] ?? null;
+        $paymentMethod   = $data['payment_method'] ?? null;
+        $paymentStatus   = $data['payment_status'] ?? ($paymentIntentId ? PaymentStatus::Paid->value : null);
+        // What the PMS is told was paid: confirm()'s own rule.
+        $isPaid = $paymentStatus === PaymentStatus::Paid->value || !empty($paymentIntentId);
+
+        $shares = \App\Services\Booking\StayCombination::shares(
+            array_map(fn (array $r) => (float) ($r['room_total'] ?? 0), $rooms),
+            (float) ($payload['extras_total'] ?? 0),
+            (float) $payload['gross_total'],
+        );
+        $extrasSnapshot = $this->comboExtrasSnapshot($payload);
+        $groupId = (string) Str::uuid();
+        // The PMS reservations this call has made — cancelled again if nothing is written.
+        $made = [];
+        // The rooms this call could not get (taken here, at the PMS, refused
+        // by it): logged once the transaction has rolled back, so the
+        // submission row and the staff's follow-up enquiry survive it.
+        $failed = [];
+
+        try {
+            [$mirrors, $results] = DB::transaction(function () use (
+                $hold, $payload, $rooms, $orgId, $data, $guest, $guestId, $requestId, $idempotencyKey, $hooks,
+                $checkIn, $checkOut, $nights, $shares, $extrasSnapshot, $groupId, $isPaid,
+                $paymentIntentId, $paymentMethod, $paymentStatus, &$made, &$failed,
+            ) {
+                // 1. Every room's lock, in one order, before anything else.
+                foreach (\App\Services\Booking\StayCombination::roomLockKeys((int) $orgId, array_column($rooms, 'unit_id')) as $roomLock) {
+                    AdvisoryLock::within($roomLock);
+                }
+
+                // 2. The hold, under the room locks.
+                $locked = BookingHold::where('id', $hold->id)->lockForUpdate()->first();
+                if (!$locked || !$locked->isActive()) {
+                    $this->logSubmission('failure', 'hold_expired', 'Hold expired or consumed', $data, $requestId, $idempotencyKey);
+                    throw new \RuntimeException('Hold expired or not found');
+                }
+
+                // 3. Every room still free, on our side and on the PMS's.
+                $needed = [];
+                foreach ($rooms as $room) {
+                    $unit = (string) $room['unit_id'];
+                    $needed[$unit] = ($needed[$unit] ?? 0) + 1;
+                }
+                foreach ($needed as $unit => $count) {
+                    $this->assertComboRoomStillFree($orgId, (string) $unit, $count, $checkIn, $checkOut, $failed);
+                }
+
+                // 4. The caller's last word, before the PMS is asked.
+                $hooks->beforeReservation($payload);
+
+                // 5. One reservation per room.
+                $results = [];
+                $live = [];
+                foreach ($rooms as $i => $room) {
+                    $pmsResult = null;
+                    try {
+                        $channelId = (int) ($this->smoobu->resolveDirectChannelId(true) ?: 0);
+                        $pmsResult = $this->smoobu->createReservation($this->memberComboReservation(
+                            $payload, $room, $shares[$i], $i === 0 ? $extrasSnapshot : [], $guest, $data,
+                            $i, count($rooms), $groupId, $nights, $isPaid, $channelId,
+                        ));
+                    } catch (\Throwable $e) {
+                        $msg = $e->getMessage();
+                        if (!self::isTransientSmoobuError($msg)) {
+                            $failed[] = ['pms_rejected', $msg];
+                            Log::warning('Smoobu hard-rejected a combination room (no local fallback)', ['org_id' => $orgId, 'unit_id' => $room['unit_id'], 'group' => $groupId, 'error' => $msg]);
+                            throw stripos($msg, 'Smoobu channel configuration') !== false
+                                ? new \RuntimeException('Booking could not be confirmed because of a PMS configuration issue on our side. Your card has NOT been charged. Please contact support so we can complete this booking for you.', 0, $e)
+                                : new \RuntimeException('Booking could not be confirmed: this room is no longer available. Please choose another.', 0, $e);
+                        }
+                        Log::warning('Smoobu transient error on a combination room — falling back to a local-only mirror', ['org_id' => $orgId, 'unit_id' => $room['unit_id'], 'group' => $groupId, 'error' => $msg]);
+                        $this->logSubmission('warning', 'pms_transient', $msg, $data, $requestId, $idempotencyKey);
+                    }
+                    if ($pmsResult) {
+                        $made[] = (string) ($pmsResult['id'] ?? '');
+                    }
+                    $live[$i] = (bool) $pmsResult;
+                    $results[$i] = $pmsResult ?: [
+                        'id'           => 'LOCAL-' . strtoupper(Str::random(10)),
+                        'reference-id' => 'LOC-' . strtoupper(substr(md5(uniqid('', true)), 0, 8)),
+                    ];
+                }
+
+                $locked->update(['status' => 'consumed']);
+
+                // 6. One mirror per room.
+                $mirrors = [];
+                foreach ($rooms as $i => $room) {
+                    $roomPayload = $this->comboRoomPayload($payload, $room, $shares[$i], $i === 0);
+                    $total = $shares[$i]['total'];
+                    $mirror = BookingMirror::create([
+                        'organization_id'          => $orgId,
+                        'booking_group_id'         => $groupId,
+                        'reservation_id'           => (string) ($results[$i]['id'] ?? ''),
+                        'booking_reference'        => $results[$i]['reference-id'] ?? null,
+                        'booking_type'             => 'reservation',
+                        'booking_state'            => 'confirmed',
+                        'apartment_id'             => (string) $room['unit_id'],
+                        'apartment_name'           => (string) ($room['unit_name'] ?? 'Room'),
+                        'channel_name'             => $payload['channel_name'] ?? \App\Services\Booking\StayCombination::CHANNEL,
+                        'guest_id'                 => $guestId,
+                        'guest_name'               => trim(($guest['first_name'] ?? '') . ' ' . ($guest['last_name'] ?? '')),
+                        'guest_email'              => $guest['email'] ?? null,
+                        'guest_phone'              => $guest['phone'] ?? null,
+                        'adults'                   => (int) ($room['adults'] ?? $payload['adults'] ?? 1),
+                        'children'                 => (int) ($room['children'] ?? 0),
+                        'arrival_date'             => $checkIn,
+                        'departure_date'           => $checkOut,
+                        'price_total'              => $total,
+                        'price_paid'               => $paymentStatus === PaymentStatus::Paid->value ? $total : null,
+                        'payment_status'           => $paymentStatus,
+                        'payment_method'           => $paymentMethod,
+                        // The lead carries the payment; the others follow it (GroupPayment).
+                        'stripe_payment_intent_id' => $i === 0 ? $paymentIntentId : null,
+                        'internal_status'          => $live[$i] ? 'confirmed' : 'pending_pms_sync',
+                        'synced_at'                => $live[$i] ? now() : null,
+                        // The extras belong to the first room, as the PMS bills them.
+                        'extras_json'              => $i === 0 ? $extrasSnapshot : [],
+                    ] + $this->memberColumns($roomPayload, $data));
+                    $this->persistPriceElements($mirror, $roomPayload, $orgId);
+                    $mirrors[] = $mirror;
+                }
+
+                // The first room is the lead: the hold remembers it and the coupon carries its reference.
+                $hooks->afterMirror($mirrors[0], $payload);
+
+                return [$mirrors, $results];
+            });
+        } catch (SmoobuUnavailable $e) {
+            // The live re-check could not ask the PMS — before any reservation
+            // was made; the transaction rolled back. 503, as confirm() answers.
+            $this->cancelComboReservations($made, $orgId, $groupId, $guest, $checkIn, $checkOut, $e);
+            try {
+                AuditLog::create([
+                    'organization_id' => $orgId,
+                    'action'          => 'booking.confirm.pms_transient_skip',
+                    'subject_type'    => 'booking_hold',
+                    'subject_id'      => $hold->id ?? null,
+                    'new_values'      => ['unit_ids' => array_column($rooms, 'unit_id'), 'check_in' => $checkIn, 'check_out' => $checkOut, 'request_id' => $requestId, 'error' => $e->getMessage()],
+                    'description'     => 'Smoobu live re-check failed transiently for a combination; confirm aborted with 503 so the member can retry.',
+                ]);
+            } catch (\Throwable) {
+                // Audit best-effort.
+            }
+            throw new \Symfony\Component\HttpKernel\Exception\HttpException(503, 'PMS is temporarily unavailable. Please try again in a moment.', $e);
+        } catch (\Throwable $e) {
+            // Nothing was written, so nothing may stay booked at the PMS either.
+            $this->cancelComboReservations($made, $orgId, $groupId, $guest, $checkIn, $checkOut, $e);
+            $this->logComboFailures($failed, $data, $requestId, $idempotencyKey);
+            throw $e;
+        }
+
+        if ($guestId) {
+            $g = Guest::withoutGlobalScopes()->find($guestId);
+            if ($g) {
+                $lifecycle = app(GuestLifecycleService::class);
+                if (strtotime($checkOut) < strtotime('today')) {
+                    $lifecycle->recordStay($g, $checkIn, $checkOut, null, (float) $payload['gross_total']);
+                    foreach ($mirrors as $m) {
+                        $m->update(['lifecycle_counted_at' => now()]);
+                    }
+                } else {
+                    $lifecycle->recordActivity($g);
+                }
+            }
+        }
+
+        $response = [
+            'success'           => true,
+            'is_combo'          => true,
+            'booking_group_id'  => $groupId,
+            'booking_reference' => $results[0]['reference-id'] ?? null,
+            'reservation_id'    => (string) ($results[0]['id'] ?? ''),
+            'mirror_id'         => $mirrors[0]->id,
+            'rooms'             => array_map(fn (BookingMirror $m) => [
+                'mirror_id'         => $m->id,
+                'reservation_id'    => $m->reservation_id,
+                'booking_reference' => $m->booking_reference,
+                'apartment_name'    => $m->apartment_name,
+                'price_total'       => (float) $m->price_total,
+            ], $mirrors),
+            'unit_name'         => $payload['unit_name'] ?? null,
+            'check_in'          => $checkIn,
+            'check_out'         => $checkOut,
+            'gross_total'       => (float) $payload['gross_total'],
+            'currency'          => 'EUR',
+        ];
+
+        if ($idempotencyKey) {
+            try {
+                BookingIdempotencyKey::create([
+                    'idempotency_key' => $idempotencyKey,
+                    'request_hash'    => md5(json_encode($data)),
+                    'response_json'   => $response,
+                    'status_code'     => 201,
+                    'expires_at'      => now()->addHours(24),
+                ]);
+            } catch (\Throwable) {}
+        }
+
+        $this->logSubmission('success', null, null, array_merge($data, $response), $requestId, $idempotencyKey, $response, $guestId);
+
+        foreach ($mirrors as $i => $m) {
+            AuditLog::create([
+                'action'       => 'booking.confirmed',
+                'subject_type' => 'booking_mirror',
+                'subject_id'   => $m->id,
+                'new_values'   => [
+                    'reservation_id'    => $m->reservation_id,
+                    'booking_reference' => $m->booking_reference,
+                    'booking_group_id'  => $groupId,
+                    'room'              => ($i + 1) . '/' . count($mirrors),
+                ],
+                'description'  => 'Booking confirmed · ref ' . ($m->booking_reference ?: '—') . ' · combination room ' . ($i + 1) . '/' . count($mirrors),
+                'ip_address'   => $ip,
+            ]);
+        }
+
+        // One confirmation for the whole stay (the hold's own totals and names).
+        $this->sendBookingEmails($guest, $payload, $response, $orgId);
+
+        return $response;
+    }
+
+    /**
+     * One room of a member combination, re-checked under its lock the way
+     * confirm() re-checks its one room: our own bookings first (the room's
+     * inventory less what is booked over these dates must cover $needed — a
+     * combination may hold two of one room type), then the PMS's live answer
+     * (per-day rates, then the aggregate rates, then the room's own base price
+     * when the PMS has nothing at all, as the availability search does). A taken
+     * room throws confirm()'s own refusal, its failure added to $failed (the
+     * caller logs it once its transaction has rolled back); a PMS that cannot
+     * be asked fails closed (SmoobuUnavailable).
+     */
+    private function assertComboRoomStillFree(?int $orgId, string $apartmentId, int $needed, string $checkIn, string $checkOut, array &$failed): void
+    {
+        // The room by its PMS id, or — only when it has none — by its own id
+        // (StayQuoteService's rule, so a PMS id never matches another room's key).
+        $room = \App\Models\BookingRoom::withoutGlobalScopes()
+            ->where('organization_id', $orgId)
+            ->where(function ($q) use ($apartmentId) {
+                $q->where('pms_id', $apartmentId);
+                if (ctype_digit($apartmentId)) {
+                    $q->orWhere(fn ($q2) => $q2->where('id', (int) $apartmentId)->where(fn ($q3) => $q3->whereNull('pms_id')->orWhere('pms_id', '')));
+                }
+            })
+            ->first();
+        $inventory = max(1, (int) ($room->inventory_count ?? 1));
+
+        $booked = BookingMirror::withoutGlobalScopes()
+            ->where('organization_id', $orgId)
+            ->where('apartment_id', $apartmentId)
+            ->whereNotIn('booking_state', ['cancelled'])
+            ->where(function ($q) {
+                $q->whereNull('internal_status')->orWhereNotIn('internal_status', ['cancelled']);
+            })
+            ->where('arrival_date', '<', $checkOut)
+            ->where('departure_date', '>', $checkIn)
+            ->count();
+
+        if ($booked + $needed > $inventory) {
+            $failed[] = ['inventory_unavailable', 'Room no longer available for selected dates'];
+            throw new \RuntimeException('This room is no longer available for the selected dates. Please choose another.');
+        }
+
+        try {
+            $nights = [];
+            $cur    = new \DateTime($checkIn);
+            $endDt  = new \DateTime($checkOut);
+            while ($cur < $endDt) {
+                $nights[] = $cur->format('Y-m-d');
+                $cur->modify('+1 day');
+            }
+
+            $dailyAvailable = false;
+            $dailyHadData   = false;
+            try {
+                $daily  = $this->smoobu->getDailyRates($checkIn, $checkOut, [$apartmentId]);
+                $perDay = $daily[$apartmentId] ?? null;
+                if (is_array($perDay) && !empty($perDay) && !empty($nights)) {
+                    $dailyHadData = true;
+                    $dailyAvailable = true;
+                    foreach ($nights as $d) {
+                        $day = $perDay[$d] ?? null;
+                        if (!$day || !($day['available'] ?? false) || (float) ($day['price'] ?? 0) <= 0) {
+                            $dailyAvailable = false;
+                            break;
+                        }
+                    }
+                }
+            } catch (\Throwable $e) {
+                Log::info('Combination live recheck: daily rates fetch failed, falling back to aggregate', ['org_id' => $orgId, 'unit_id' => $apartmentId, 'error' => $e->getMessage()]);
+            }
+
+            if (!$dailyHadData || !$dailyAvailable) {
+                $liveRates = $this->smoobu->getRates($checkIn, $checkOut, [$apartmentId]);
+                $liveData  = $liveRates['data'] ?? $liveRates;
+                $unitLive  = $liveData[$apartmentId] ?? null;
+
+                $aggregateAvailable = $unitLive !== null
+                    && ($unitLive['available'] ?? false)
+                    && (float) ($unitLive['price'] ?? 0) > 0;
+
+                if (!$aggregateAvailable) {
+                    $aggregateHadData = $unitLive !== null
+                        && (isset($unitLive['available']) || isset($unitLive['price']));
+
+                    if ($dailyHadData || $aggregateHadData) {
+                        $failed[] = ['pms_unavailable', 'PMS reports unit unavailable at confirm'];
+                        throw new \RuntimeException('This room was just booked through another channel. Please choose another.');
+                    }
+                    if ((float) ($room->base_price ?? 0) <= 0) {
+                        $failed[] = ['pms_unavailable', 'PMS has no data and room has no base_price at confirm'];
+                        throw new \RuntimeException('This room was just booked through another channel. Please choose another.');
+                    }
+                    Log::info('Combination live recheck: no Smoobu data — accepting via base_price fallback (matches availability)', ['org_id' => $orgId, 'unit_id' => $apartmentId]);
+                }
+            }
+        } catch (\RuntimeException $e) {
+            throw $e;
+        } catch (\Throwable $e) {
+            Log::warning('Live availability re-check failed at a combination confirm — failing closed', ['org_id' => $orgId, 'unit_id' => $apartmentId, 'error' => $e->getMessage()]);
+            throw new SmoobuUnavailable('PMS unavailable — try again', 0, $e);
+        }
+    }
+
+    /**
+     * The rooms a member combination's confirm could not get, logged once
+     * its transaction has rolled back (a submission row each and, through
+     * logSubmission(), the staff's follow-up enquiry) — logged inside it,
+     * the rollback would take them along. Best effort: a log that cannot be
+     * written never hides the refusal itself.
+     *
+     * @param list<array{0: string, 1: string}> $failed
+     */
+    private function logComboFailures(array $failed, array $data, ?string $requestId, ?string $idempotencyKey): void
+    {
+        foreach ($failed as [$code, $message]) {
+            try {
+                $this->logSubmission('failure', $code, $message, $data, $requestId, $idempotencyKey);
+            } catch (\Throwable $e) {
+                Log::warning('Combination confirm: failure not logged', ['code' => $code, 'error' => $e->getMessage()]);
+            }
+        }
+    }
+
+    /** The extras of a combination as the mirror keeps them — priced by extrasLines(), the arithmetic its total was built from. */
+    private function comboExtrasSnapshot(array $payload): array
+    {
+        $extras = is_array($payload['extras'] ?? null) ? $payload['extras'] : [];
+        if ($extras === []) {
+            return [];
+        }
+        $types = [];
+        foreach ($this->loadExtrasConfig() as $def) {
+            $types[(string) ($def['id'] ?? '')] = (string) ($def['price_type'] ?? $def['type'] ?? 'per_stay');
+        }
+        $out = [];
+        // The whole party's stay: the extras are the combination's, not one room's.
+        $nights = max(1, (int) round((strtotime((string) $payload['check_out']) - strtotime((string) $payload['check_in'])) / 86400));
+        foreach ($this->extrasLines($extras, max(1, (int) ($payload['adults'] ?? 1)), (int) ($payload['children'] ?? 0), $nights) as $line) {
+            if ($line['name'] === '') {
+                continue;
+            }
+            $out[] = [
+                'id'         => $line['id'],
+                'name'       => $line['name'],
+                'price_type' => $types[$line['id']] ?? 'per_stay',
+                'unit_price' => round((float) $line['unit_price'], 2),
+                'quantity'   => max(1, (int) $line['quantity']),
+                'line_total' => round((float) $line['line_total'], 2),
+            ];
+        }
+
+        return $out;
+    }
+
+    /**
+     * The hold's payload as one room of the combination sees it: its own room,
+     * its own share of the price (list, discount, total), and the extras only
+     * on the first room. The party's own adult count stays — an extra charged
+     * per guest is the whole party's.
+     */
+    private function comboRoomPayload(array $payload, array $room, array $share, bool $isFirst): array
+    {
+        return array_merge($payload, [
+            'unit_id'         => (string) $room['unit_id'],
+            'unit_name'       => (string) ($room['unit_name'] ?? 'Room'),
+            'room_total'      => round((float) ($room['room_total'] ?? 0), 2),
+            'price_per_night' => (float) ($room['price_per_night'] ?? 0),
+            'extras'          => $isFirst ? ($payload['extras'] ?? []) : [],
+            'extras_total'    => $isFirst ? (float) ($payload['extras_total'] ?? 0) : 0.0,
+            'list_total'      => $share['list'],
+            'discount'        => $share['discount'],
+            'gross_total'     => $share['total'],
+        ]);
+    }
+
+    /**
+     * One room's PMS reservation: confirm()'s member-portal reservation, for
+     * this room's share — its own part of the party, its own price (the
+     * discount's share off its accommodation line), the extras on the first
+     * room only — and a note that names the combination, so staff see the
+     * rooms belong together.
+     */
+    private function memberComboReservation(array $payload, array $room, array $share, array $extras, array $guest, array $data, int $index, int $count, string $groupId, int $nights, bool $isPaid, int $channelId): array
+    {
+        $money     = fn (float $v) => number_format($v, 2, '.', '');
+        $roomTotal = round((float) ($room['room_total'] ?? 0), 2);
+        $price     = round((float) $share['total'], 2);
+        $discount  = round((float) $share['discount'], 2);
+        $paid      = $isPaid ? $price : 0.0;
+        $piId      = $data['payment_intent_id'] ?? null;
+        $notice    = trim((string) ($data['special_requests'] ?? $guest['special_requests'] ?? ''));
+
+        $source = ['Booked via: Member portal', sprintf('Combination %s — room %d of %d (one booking, one payment)', $groupId, $index + 1, $count)];
+        if ($piId) {
+            $source[] = sprintf('Payment: %s (€%s paid for this room)', ($data['payment_method'] ?? null) === 'mock' ? 'Mock' : 'Stripe', $money($paid));
+            $source[] = 'Stripe ref: ' . $piId;
+            $source[] = 'Paid at: ' . now()->toIso8601String();
+        } elseif ($isPaid) {
+            $source[] = sprintf('Payment: marked paid (€%s)', $money($paid));
+        } else {
+            $source[] = sprintf('Payment: unpaid (€%s due)', $money($price));
+        }
+
+        $perNight = round($roomTotal / max(1, $nights), 2);
+        $lines = [sprintf('Accommodation: %d night%s × €%s = €%s', $nights, $nights === 1 ? '' : 's', $money($perNight), $money($roomTotal))];
+        if ($extras !== []) {
+            $lines[] = 'Extras (charged on this reservation):';
+            foreach ($extras as $ex) {
+                $lines[] = sprintf(
+                    '  · %s%s = €%s',
+                    $ex['name'],
+                    $ex['quantity'] > 1 ? ' ×' . $ex['quantity'] . ' @ €' . $money((float) $ex['unit_price']) : '',
+                    $money((float) $ex['line_total']),
+                );
+            }
+        }
+        if ($discount > 0) {
+            $lines[] = sprintf("%s (this room's share): -€%s", (string) ($payload['discount_label'] ?? 'Member discount'), $money($discount));
+        }
+        $lines[] = '─────────────';
+        $lines[] = 'Room total: €' . $money($price);
+
+        $elements = [[
+            'type'         => 'basePrice',
+            'name'         => sprintf('%s × %d night%s', (string) ($room['unit_name'] ?? 'Accommodation'), $nights, $nights === 1 ? '' : 's'),
+            // The discount's share comes off the accommodation line, so the PMS's own sum equals `price`.
+            'amount'       => round($roomTotal - $discount, 2),
+            'quantity'     => $nights,
+            'currencyCode' => 'EUR',
+            'sortOrder'    => 1,
+        ]];
+        $sortOrder = 2;
+        foreach ($extras as $ex) {
+            $elements[] = ['type' => 'addon', 'name' => $ex['name'], 'amount' => $ex['line_total'], 'quantity' => $ex['quantity'], 'currencyCode' => 'EUR', 'sortOrder' => $sortOrder++];
+        }
+
+        $reservation = [
+            'apartmentId'      => (int) $room['unit_id'],
+            'arrivalDate'      => $payload['check_in'],
+            'departureDate'    => $payload['check_out'],
+            'firstName'        => $guest['first_name'] ?? '',
+            'lastName'         => $guest['last_name'] ?? '',
+            'email'            => $guest['email'] ?? '',
+            'phone'            => $guest['phone'] ?? '',
+            'country'          => $guest['country'] ?? null,
+            'adults'           => (int) ($room['adults'] ?? $payload['adults'] ?? 1),
+            'children'         => (int) ($room['children'] ?? 0),
+            'price'            => $price,
+            'price-paid'       => $paid,
+            'priceStatus'      => $paid > 0 ? 1 : 0,
+            'prepayment'       => $paid,
+            'prepaymentStatus' => $paid > 0 ? 1 : 0,
+            'prepayment-paid'  => $paid > 0,
+            'priceElements'    => $elements,
+            'language'         => 'en',
+            'notice'           => $notice ?: null,
+            'assistant-notice' => implode("\n─────────────\n", [implode("\n", $source), implode("\n", $lines)]),
+            'type'             => 'reservation',
+        ];
+        // A share of the discount larger than the accommodation line cannot be shown as a base price; `price` stays the truth.
+        if ($discount > $roomTotal) {
+            unset($reservation['priceElements']);
+        }
+        if ($channelId > 0) {
+            $reservation['channelId'] = $channelId;
+        }
+
+        return array_filter($reservation, fn ($v) => $v !== null && $v !== '');
+    }
+
+    /** Cancels the PMS reservations a combination confirm made before it failed; one it cannot cancel is audited for staff. */
+    private function cancelComboReservations(array $made, ?int $orgId, string $groupId, array $guest, string $checkIn, string $checkOut, \Throwable $cause): void
+    {
+        $failed = [];
+        foreach ($made as $reservationId) {
+            if ($reservationId === '') {
+                continue;
+            }
+            try {
+                $this->smoobu->cancelReservation($reservationId);
+            } catch (\Throwable $e) {
+                $failed[] = $reservationId;
+                Log::error('Combination rollback: could not cancel Smoobu reservation', ['smoobu_id' => $reservationId, 'error' => $e->getMessage()]);
+            }
+        }
+        if ($failed === []) {
+            return;
+        }
+        try {
+            AuditLog::create([
+                'organization_id' => $orgId,
+                'action'          => 'booking.combo.orphan_smoobu_reservation',
+                'subject_type'    => 'smoobu_reservation',
+                'subject_id'      => null,
+                'new_values'      => [
+                    'booking_group_id'  => $groupId,
+                    'orphan_smoobu_ids' => $failed,
+                    'cause'             => mb_substr($cause->getMessage(), 0, 300),
+                    'guest_email'       => $guest['email'] ?? null,
+                    'check_in'          => $checkIn,
+                    'check_out'         => $checkOut,
+                    'source'            => 'member_portal',
+                ],
+                'description'     => 'A member-portal combination was not booked but left ' . count($failed)
+                    . ' Smoobu reservation(s) live. Cancel manually in Smoobu admin: ' . implode(', ', $failed),
+            ]);
+        } catch (\Throwable) {
+            // best effort
+        }
     }
 
     public function sendBookingEmails(array $guest, array $payload, array $response, ?int $orgId): void
@@ -2682,7 +3309,8 @@ class BookingEngineService
             'guest_email'       => $guest['email'] ?? null,
             'guest_phone'       => $guest['phone'] ?? null,
             'unit_id'           => $payload['unit_id'] ?? $data['unit_id'] ?? null,
-            'unit_name'         => $payload['unit_name'] ?? null,
+            // A combination's rooms named together can be longer than the column (120).
+            'unit_name'         => isset($payload['unit_name']) ? mb_substr((string) $payload['unit_name'], 0, 120) : null,
             'check_in'          => $payload['check_in'] ?? null,
             'check_out'         => $payload['check_out'] ?? null,
             'adults'            => $payload['adults'] ?? null,
@@ -2706,13 +3334,19 @@ class BookingEngineService
             $orgId = app()->bound('current_organization_id') ? app('current_organization_id') : null;
             if (!$orgId) return;
 
+            // Each write below runs in its own SAVEPOINT (a nested
+            // DB::transaction()): this is called from inside the confirm's
+            // own transaction too, and on PostgreSQL a refused statement —
+            // swallowed here — would otherwise abort the WHOLE surrounding
+            // transaction (release 5).
+
             // Reuse linkOrCreateGuest so the failed-submission flow goes
             // through the same auto-Bronze + lifecycle hooks as a successful
             // booking — the customer ends up in Members regardless.
-            $guestId = $this->linkOrCreateGuest($guest, $orgId);
+            $guestId = \Illuminate\Support\Facades\DB::transaction(fn () => $this->linkOrCreateGuest($guest, $orgId));
             if (!$guestId) return;
 
-            $inquiry = \App\Models\Inquiry::create([
+            $inquiry = \Illuminate\Support\Facades\DB::transaction(fn () => \App\Models\Inquiry::create([
                 'organization_id' => $orgId,
                 'guest_id'        => $guestId,
                 'inquiry_type'    => 'Room Reservation',
@@ -2723,10 +3357,10 @@ class BookingEngineService
                 'check_out'       => $payload['check_out'] ?? null,
                 'num_adults'      => $payload['adults'] ?? null,
                 'num_children'    => $payload['children'] ?? null,
-                'room_type_requested' => $payload['unit_name'] ?? null,
+                'room_type_requested' => isset($payload['unit_name']) ? mb_substr((string) $payload['unit_name'], 0, 100) : null,
                 'total_value'     => $payload['gross_total'] ?? null,
                 'notes'           => "Booking widget failed: {$failCode} — {$failMsg}",
-            ]);
+            ] + (is_array($payload['rooms'] ?? null) && $payload['rooms'] !== [] ? ['num_rooms' => count($payload['rooms'])] : [])));
 
             // Surface a realtime toast so staff know to follow up before the
             // would-be guest goes cold. Hooks the existing realtime poll bus
@@ -2737,12 +3371,12 @@ class BookingEngineService
                 $dates     = ($payload['check_in'] ?? null) && ($payload['check_out'] ?? null)
                     ? " ({$payload['check_in']} → {$payload['check_out']})"
                     : '';
-                app(\App\Services\RealtimeEventService::class)->dispatch(
+                \Illuminate\Support\Facades\DB::transaction(fn () => app(\App\Services\RealtimeEventService::class)->dispatch(
                     'inquiry',
                     'Booking widget failed — follow up',
                     "{$guestName}" . ($unit ? " · {$unit}" : '') . $dates,
                     ['inquiry_id' => $inquiry->id, 'reason' => $failCode]
-                );
+                ));
             } catch (\Throwable $notifyError) {
                 \Illuminate\Support\Facades\Log::warning('Realtime dispatch failed for rescue inquiry', [
                     'error' => $notifyError->getMessage(),

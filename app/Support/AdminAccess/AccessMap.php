@@ -68,6 +68,7 @@ final class AccessMap
         'admin/loyalty/currency'                => ['manager',            'manager',            'loyalty'],       // The venue's currency in Card & app (release 4, R4-5; manager, as the appointments Setup)
         'admin/loyalty/push'                    => ['staff',              'manager',            'loyalty'],       // Push messages to a segment (release 3; changes and sending: manager)
         'admin/loyalty/sms'                     => ['staff',              'manager',            'loyalty'],       // SMS campaigns through the venue's Twilio (release 4; changes, tests and sending: manager)
+        'admin/loyalty/members/{id}/cards'      => ['staff',              'staff',              'loyalty'],       // Release 5: a member's NFC cards (link, switch off: every staff member, as Edit details and admin/nfc-cards)
 
         // ── The caller's own account
         'admin/branding'                        => ['staff',              'manager',            'account'],       // The theme every page reads, the workspace included (ruling R1)

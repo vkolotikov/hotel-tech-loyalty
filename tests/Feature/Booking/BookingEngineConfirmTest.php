@@ -607,4 +607,126 @@ class BookingEngineConfirmTest extends TestCase
 
         Mail::assertQueued(BookingMembershipMail::class);
     }
+
+    // ── The widget's own combination (release 5, R4-8/R5-4) ─────────────────
+
+    /** A two-room hold as BookingEngineService::quoteCombo() writes it: 101 Sea view (200.00) + 102 Garden (160.00). */
+    protected function comboHold(array $payload = []): BookingHold
+    {
+        $this->seedRoom($this->org->id, ['pms_id' => '102', 'name' => 'Garden', 'slug' => 'garden', 'base_price' => 80, 'sort_order' => 1]);
+
+        return BookingHold::create([
+            'hold_token'   => Str::random(48),
+            'status'       => 'active',
+            'expires_at'   => now()->addMinutes(10),
+            'payload_json' => array_merge([
+                'is_combo' => true,
+                'rooms'    => [
+                    ['unit_id' => '101', 'unit_name' => 'Sea view', 'room_total' => 200.0, 'price_per_night' => 100.0, 'max_guests' => 2],
+                    ['unit_id' => '102', 'unit_name' => 'Garden', 'room_total' => 160.0, 'price_per_night' => 80.0, 'max_guests' => 2],
+                ],
+                'check_in' => $this->checkIn, 'check_out' => $this->checkOut, 'nights' => 2,
+                'adults' => 4, 'children' => 0,
+                'room_total' => 360.0, 'extras' => [], 'extras_total' => 0.0, 'gross_total' => 360.0, 'currency' => 'EUR',
+            ], $payload),
+        ]);
+    }
+
+    /**
+     * The one change to the widget's combination: its single payment is on
+     * the lead room only, so a paid combination now books on production's
+     * `booking_mirror_org_pi_unique` (which the test schema has) instead of
+     * failing at its second room. Everything else — the rows' other columns,
+     * the response, the Smoobu reservations — is what the widget always got.
+     */
+    public function test_a_paid_widget_combination_books_every_room_with_the_payment_on_the_lead_room(): void
+    {
+        $this->smoobuAccepts();
+        $sent = [];
+        $next = 555101;
+        $this->smoobu->shouldReceive('createReservation')->twice()->andReturnUsing(function (array $p) use (&$sent, &$next) {
+            $sent[] = $p;
+            $id = $next++;
+            return ['id' => $id, 'reference-id' => 'BK-' . $id];
+        });
+        $hold = $this->comboHold();
+
+        $res = $this->engine->confirm(['hold_token' => $hold->hold_token, 'guest' => $this->guest(), 'payment_intent_id' => 'pi_widget_combo', 'payment_method' => 'stripe', 'payment_status' => 'authorized']);
+
+        $rows = BookingMirror::withoutGlobalScopes()->where('organization_id', $this->org->id)->orderBy('id')->get();
+        $this->assertCount(2, $rows);
+        $this->assertSame(['pi_widget_combo', null], $rows->pluck('stripe_payment_intent_id')->all(), 'the lead room carries the payment, the other room follows it');
+        $this->assertNotNull($rows[0]->booking_group_id);
+        $this->assertSame($rows[0]->booking_group_id, $rows[1]->booking_group_id);
+        foreach ($rows as $m) {
+            $this->assertSame('Website', $m->channel_name);
+            $this->assertSame('authorized', $m->payment_status);
+            $this->assertSame('stripe', $m->payment_method);
+            $this->assertNull($m->member_id);
+        }
+        $this->assertEquals([200.0, 160.0], $rows->pluck('price_total')->map(fn ($p) => (float) $p)->all());
+        $this->assertSame('consumed', $hold->fresh()->status);
+
+        // The widget's response, as it always was.
+        $this->assertSame(['booking_group_id', 'is_combo', 'rooms', 'check_in', 'check_out', 'gross_total', 'currency'], array_keys($res));
+        $this->assertTrue($res['is_combo']);
+        $this->assertSame($rows[0]->booking_group_id, $res['booking_group_id']);
+        $this->assertSame([$rows[0]->id, $rows[1]->id], array_column($res['rooms'], 'mirror_id'));
+        $this->assertSame(['BK-555101', 'BK-555102'], array_column($res['rooms'], 'booking_reference'));
+        $this->assertSame(360.0, $res['gross_total']);
+        $this->assertSame('EUR', $res['currency']);
+
+        // Smoobu is told each room exactly as before, the payment named on each.
+        $this->assertCount(2, $sent);
+        $this->assertSame([101, 102], array_column($sent, 'apartmentId'));
+        $this->assertEquals([200.0, 160.0], array_column($sent, 'price'));
+        $this->assertSame([0, 0], array_column($sent, 'priceStatus'), 'an authorised (not yet captured) payment, as before');
+        foreach ($sent as $p) {
+            $this->assertStringContainsString('Stripe ref: pi_widget_combo', $p['assistant-notice']);
+            $this->assertSame(4, $p['adults']);
+            $this->assertSame(7, $p['channelId']);
+        }
+        Mail::assertQueued(BookingConfirmationMail::class, 1);
+    }
+
+    public function test_a_widget_combination_paid_in_mock_mode_carries_its_mock_payment_on_the_lead_room(): void
+    {
+        $this->smoobuAccepts();
+        $next = 555201;
+        $this->smoobu->shouldReceive('createReservation')->twice()->andReturnUsing(function () use (&$next) {
+            $id = $next++;
+            return ['id' => $id, 'reference-id' => 'BK-' . $id];
+        });
+        $hold = $this->comboHold();
+
+        $this->engine->confirm(['hold_token' => $hold->hold_token, 'guest' => $this->guest(), 'payment_intent_id' => 'pi_mock_combo', 'payment_method' => 'mock', 'payment_status' => 'paid']);
+
+        $rows = BookingMirror::withoutGlobalScopes()->where('organization_id', $this->org->id)->orderBy('id')->get();
+        $this->assertSame(['pi_mock_combo', null], $rows->pluck('stripe_payment_intent_id')->all());
+        $this->assertSame(['paid', 'paid'], $rows->pluck('payment_status')->all());
+        $this->assertEquals([200.0, 160.0], $rows->pluck('price_paid')->map(fn ($p) => (float) $p)->all());
+    }
+
+    /** A retry with the same payment answers the lead room, with what the one payment paid for every room. */
+    public function test_a_widget_retry_with_a_combinations_payment_answers_the_lead_room(): void
+    {
+        $this->smoobuAccepts();
+        $next = 555301;
+        $this->smoobu->shouldReceive('createReservation')->twice()->andReturnUsing(function () use (&$next) {
+            $id = $next++;
+            return ['id' => $id, 'reference-id' => 'BK-' . $id];
+        });
+        $hold = $this->comboHold();
+        $this->engine->confirm(['hold_token' => $hold->hold_token, 'guest' => $this->guest(), 'payment_intent_id' => 'pi_widget_combo', 'payment_method' => 'stripe', 'payment_status' => 'authorized']);
+        $lead = BookingMirror::withoutGlobalScopes()->where('organization_id', $this->org->id)->orderBy('id')->first();
+
+        $replay = $this->engine->confirm(['hold_token' => $hold->hold_token, 'guest' => $this->guest(), 'payment_intent_id' => 'pi_widget_combo']);
+
+        $this->assertTrue($replay['replayed']);
+        $this->assertSame('payment_intent', $replay['replay_source']);
+        $this->assertSame($lead->id, $replay['mirror_id']);
+        $this->assertSame('BK-555301', $replay['booking_reference']);
+        $this->assertSame(360.0, $replay['gross_total'], "the whole payment's total, not the lead room's own share");
+        $this->assertSame(2, BookingMirror::withoutGlobalScopes()->where('organization_id', $this->org->id)->count());
+    }
 }

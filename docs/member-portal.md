@@ -345,8 +345,13 @@ payment was already captured, for both kinds:
   policy and refund it in the Stripe dashboard (Payments → the intent id from the audit row →
   Refund). A staff-cancelled booking whose card is still only held is handled for you: the job cancels
   the hold and writes `service_booking.capture.cancelled_booking` / `booking.capture.cancelled_booking`.
-  A stay's group of rooms (one PaymentIntent for several rows) is decided once per intent, not once
-  per row.
+  A stay's group of rooms (release 5: the lead room carries the PaymentIntent, the other rooms none,
+  linked by `booking_group_id`) is decided once per payment, not once per row; `--limit` counts payments
+  and never cuts a group. **Refunding one room of a group** in the full admin: with no amount it refunds
+  that room's own remaining total (422 "This room has nothing left to refund." at zero); a refund made in
+  the Stripe dashboard goes first to the room it was made for, then to the group's cancelled rooms, and
+  only the rest is shared in proportion. Only a room refunded in full loses its points and is cancelled at
+  Smoobu; the others stay booked.
 - **A card hold left by a browser that closed between authorisation and confirm.** No booking row
   carries the intent, so the capture job cannot see it. `php artisan bookings:release-orphan-portal-holds` runs
   every thirty minutes and releases one from 45 minutes after the card was actually authorised
@@ -464,9 +469,19 @@ A member books a room at `/portal/book/stay` in four steps: dates and party, roo
 | `POST member/portal/stays/payment-intent {hold_token}` | a PaymentIntent for the hold's total; extends the hold to fifteen minutes |
 | `POST member/portal/stays/confirm {hold_token, payment_intent_id?, special_requests?}` | books through `BookingEngineService::confirm()` |
 
-**What is sold.** Single rooms only. The engine can offer two or three rooms together to a large
-party; the portal does not sell those (`confirmCombo()` has no room lock and no re-checks) and
-`availability` reports `party_too_large` instead. The room/Smoobu half and the membership half of
+**What is sold.** Single rooms, and since release 5 two or three rooms together when no single room sleeps
+the party (`availability` lists `combinations`; "Choose these rooms"; every room needs an adult). A combination is
+one booking: one hold (the party's totals at its top level, each room's own party and price share inside), one
+confirm (`BookingEngineService::confirmMemberCombo()`: every room's `room:{org}:{unit}` lock once, ascending, then the
+hold row, then — in the hook — `pi:`; each room re-checked against our inventory and Smoobu; all or nothing, Smoobu
+reservations already made cancelled on any failure, an orphan audited `booking.combo.orphan_smoobu_reservation`), one
+PaymentIntent on the lead room's `booking_mirror` row only (the others NULL, linked by `booking_group_id`; the
+partial unique index `booking_mirror_org_pi_unique` holds). Every path that finds rows by the intent brings the other
+rooms along (`App\Services\Booking\GroupPayment`): the capture job, the `payment_intent.succeeded` / `.canceled` /
+dispute webhooks, `charge.refunded` and `applyRefund()`; each room is paid its own total and earns points on it. A
+member cancels the whole combination or nothing: money back once, then every room cancelled; a room staff changed on
+its own, a dispute or a partial refund makes it the venue's. The bookings list shows it once ("Sea view + Garden").
+The room/Smoobu half and the membership half of
 "can this venue's stays be booked" are two separate checks, in two different places:
 `BookingCapability::staysBookableOnline($orgId)` answers only whether the venue has an active room
 and the Smoobu integration switched on — nothing about membership. `capabilities.stays` in the
@@ -570,7 +585,7 @@ Backend: `App\Services\Booking\MemberCancellation` (`cancelService()`, `cancelSt
 | | Appointment | Stay |
 |---|---|---|
 | Status | `pending`, `confirmed` | `new`, `confirmed`, `pending_pms_sync` |
-| Also | payment not refunded, partially refunded, disputed or channel-managed | booked directly (`channel_name` `Website` or `Member portal`), not part of a room group (`booking_group_id` null), payment not refunded, partially refunded, disputed or channel-managed |
+| Also | payment not refunded, partially refunded, disputed or channel-managed | booked directly (`channel_name` `Website` or `Member portal`), not part of a room group (`booking_group_id` null) — or, since release 5, a portal combination cancelled whole (every room in a cancellable state, the payment on the lead), payment not refunded, partially refunded, disputed or channel-managed |
 | Until | start − `services_cancel_hours` (default 24) | arrival at the check-in time (default 15:00), venue time zone, − `booking_cancel_hours` (default 48) |
 
 The "Also" row is one shared list (`CancellationPolicy::MONEY_TOUCHED`) used by both `forService()`
@@ -996,13 +1011,18 @@ calls, audit rows and log lines. Five things differ:
   "today", so a stay is awarded on the first run after its venue's day of departure has ended.
 - **A widget stay earns only for a verified address.** A member who never verified their email (a self-registered one
   who did not claim the account) does not earn for widget stays until they do; the award looks back 60 days.
-- **Combination stays** in the portal (two or three rooms for one party): deferred again (R4-7). The build used one
-  PaymentIntent on every room row, which `booking_mirror_org_pi_unique` refuses; the next release puts the payment on
-  the lead room (`docs/superpowers/specs/2026-10-22-loyalty-release-4-design.md` §7). The portal tells a party too
-  large for one room to contact the venue. **The public widget's own paid combination** has the same flaw today: it
-  writes the payment on every room row, so on PostgreSQL a paid combination fails at its second room, rolls back,
-  cancels its Smoobu reservations and rescues the payment (found reading the code, not run end to end; R4-8, fixed in
-  the next release). Unpaid widget combinations work.
+- **Combination stays** (release 5): points are rounded per room; every room needs an adult; two units of one room
+  type send two Smoobu reservations; the full admin shows the Stripe reference on the lead room only, and
+  `php artisan bookings:retry-pms-sync` writes no "Stripe ref" line in a following room's Smoobu note; the portal's
+  cancel panel names the rooms in its title, not one by one. The public widget's paid combination now books (the
+  payment on the lead room only, R5-4); its replay by payment answers the group's total; it still has no room lock or
+  re-check of its own (unchanged). Rows from before June 2026 whose payment the 06-01 migration suffixed `_dup…` are
+  not treated as following rooms.
+- **Refund events** (release 5): `charge.refunded` records from the charge's cumulative `amount_refunded`, only the part
+  not yet recorded on the payment's rooms, never backwards. A refund event that arrives within 60 seconds of a refund
+  this application recorded is skipped by the freshness check (`RefundAttempt`); the cumulative read catches it up
+  on the next refund event — if none follows, compare the rooms with the Stripe dashboard. A lost dispute records
+  nothing (`applyRefund()` refuses a disputed row): every room stays `disputed`.
 - **Extras pricing (release 4, R4-3).** `BookingEngineService::extraUnits()` charges each extra as the full admin set it:
   per stay once, per night × nights, per person × guests (adults and children; the legacy `per_guest` too), per person
   per night × both, all × quantity. Smoobu's lines, `extras_json`, the admin's line items and both mails use the same
@@ -1023,10 +1043,8 @@ calls, audit rows and log lines. Five things differ:
   `payment_not_payable`, but does **not** release the intent (this code cannot prove it is actually
   dead, only that it cannot currently confirm it is still payable); an intent no booking ever carries is
   left for the sweeper.
-- The **capture job's** per-run counters and printed lines are cut by `--limit` (default 200): a
-  sibling row of a multi-room stay that `--limit` excludes from this run is still locked and
-  captured/released with the rest of its group for money correctness, but does not appear in this
-  run's own tally.
+- The **capture job's** `--limit` (default 200) counts payments: a group of rooms is never cut in two, so a run may
+  touch a few more rows than the limit.
 - The `svc:` (any master) and `svcm:` (named master) slot locks do not serialise each other (an
   "anyone available" confirm and a named-master confirm for the same master).
 - The engine's literal `EUR` in holds, the Smoobu receipt and the confirm response; the portal reports

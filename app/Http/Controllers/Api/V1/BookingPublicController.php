@@ -1366,23 +1366,79 @@ class BookingPublicController extends Controller
     {
         try {
             $query = \App\Models\BookingMirror::withoutGlobalScopes()
-                ->where('stripe_payment_intent_id', $intentId)
-                ->whereIn('payment_status', ['authorized', 'pending', '']);
+                ->where('stripe_payment_intent_id', $intentId);
             if ($orgId) {
                 $query->where('organization_id', $orgId);
             }
-            $query->get()->each(function ($mirror) {
-                $mirror->update([
-                    'payment_status' => 'paid',
-                    'payment_method' => $mirror->payment_method ?: 'stripe',
-                    'price_paid'     => $mirror->price_total,
-                ]);
-            });
+            // The row that carries the intent and — for a room group — the
+            // rooms that follow it with none of their own (GroupPayment,
+            // release 5: the lead carries the one payment), each still
+            // authorised/pending, each paid its own total. Each room is
+            // written on its own (its own savepoint, conditioned on the status
+            // just read): one that fails never keeps the others unpaid, and a
+            // second run changes nothing.
+            $carriers = $query->get();
+            $carriers->concat($carriers->flatMap(fn ($lead) => \App\Services\Booking\GroupPayment::followers($lead)))
+                ->filter(fn ($m) => $m->payment_status !== null && in_array((string) $m->payment_status, ['authorized', 'pending', ''], true))
+                ->each(fn ($mirror) => $this->payRoom($mirror, (float) $mirror->price_total, $mirror->payment_method ?: 'stripe', $intentId));
         } catch (\Throwable $e) {
             // Don't let a mirror update failure fail the response.
             \Illuminate\Support\Facades\Log::warning('Booking capture — mirror flip to paid failed', [
                 'pi_id' => $intentId,
                 'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
+     * `payment_intent.succeeded` for an intent a row already carries, that
+     * row still before capture: it is paid. One room keeps the write it
+     * always had (`price_paid` = the intent's amount). A room group's lead
+     * and the rooms that follow it (GroupPayment, release 5: the lead
+     * carries the one payment) are each paid their own total, a room already
+     * past capture (refunded, disputed…) left as it is.
+     *
+     * @param list<?string> $preCaptureStates
+     */
+    private function markSucceededRows(\App\Models\BookingMirror $carrier, \Stripe\PaymentIntent $intent, array $preCaptureStates, bool $withCarrier = true): void
+    {
+        $followers = \App\Services\Booking\GroupPayment::followers($carrier);
+        if ($withCarrier) {
+            if ($followers->isEmpty()) {
+                // One room: the write it always had.
+                $carrier->update([
+                    'payment_status' => 'paid',
+                    'payment_method' => 'stripe',
+                    'price_paid'     => $intent->amount / 100,
+                ]);
+            } else {
+                $this->payRoom($carrier, (float) $carrier->price_total, 'stripe', (string) $intent->id);
+            }
+        }
+        foreach ($followers as $room) {
+            if (in_array($room->payment_status, $preCaptureStates, true)) {
+                $this->payRoom($room, (float) $room->price_total, 'stripe', (string) $intent->id);
+            }
+        }
+    }
+
+    /**
+     * One room of a payment marked paid on its own: its own savepoint, and
+     * only while its status is still the one just read (a room another writer
+     * moved on is left as it is). A failure is logged and never stops the
+     * other rooms.
+     */
+    private function payRoom(\App\Models\BookingMirror $room, float $paid, string $method, string $intentId): void
+    {
+        $observed = $room->payment_status;
+        try {
+            \Illuminate\Support\Facades\DB::transaction(fn () => \App\Models\BookingMirror::withoutGlobalScopes()
+                ->whereKey($room->id)
+                ->where(fn ($q) => $observed === null ? $q->whereNull('payment_status') : $q->where('payment_status', $observed))
+                ->update(['payment_status' => 'paid', 'payment_method' => $method, 'price_paid' => $paid]));
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('Booking capture — mirror flip to paid failed', [
+                'pi_id' => $intentId, 'mirror_id' => $room->id, 'error' => $e->getMessage(),
             ]);
         }
     }
@@ -1588,11 +1644,12 @@ class BookingPublicController extends Controller
             // pre-payment state.
             $preCaptureStates = ['pending', 'authorized', null];
             if ($mirror && in_array($mirror->payment_status, $preCaptureStates, true)) {
-                $mirror->update([
-                    'payment_status' => 'paid',
-                    'payment_method' => 'stripe',
-                    'price_paid'     => $intent->amount / 100,
-                ]);
+                $this->markSucceededRows($mirror, $intent, $preCaptureStates);
+            } elseif ($mirror && $mirror->payment_status === 'paid') {
+                // Release 5: the lead is paid already; a room that follows it
+                // and was left open (a write that failed, a status changed by
+                // hand) is paid with it now.
+                $this->markSucceededRows($mirror, $intent, $preCaptureStates, false);
             } elseif ($mirror && !in_array($mirror->payment_status, $preCaptureStates, true) && $mirror->payment_status !== 'paid') {
                 // Mirror already moved past 'paid' (refunded / disputed /
                 // partially_refunded). Log + leave untouched.
@@ -1677,11 +1734,7 @@ class BookingPublicController extends Controller
                                 ->first();
 
                             if ($existingMirror && in_array($existingMirror->payment_status, ['pending', 'authorized', null], true)) {
-                                $existingMirror->update([
-                                    'payment_status' => 'paid',
-                                    'payment_method' => 'stripe',
-                                    'price_paid'     => $intent->amount / 100,
-                                ]);
+                                $this->markSucceededRows($existingMirror, $intent, ['pending', 'authorized', null]);
                                 \Illuminate\Support\Facades\Log::info('Stripe orphan-recovery race resolved — flipped existing mirror to paid', [
                                     'org_id'    => $orgId,
                                     'pi_id'     => $intent->id,
@@ -1851,28 +1904,39 @@ class BookingPublicController extends Controller
             ]);
             return;
         }
-        if (in_array($mirror->payment_status, ['refunded', 'partially_refunded', 'cancelled', 'paid'], true)) {
-            // Already moved to a terminal state — don't clobber.
+        $terminal = ['refunded', 'partially_refunded', 'cancelled', 'paid'];
+        // The lead carries the payment; a room group's other rooms follow it
+        // (GroupPayment, release 5) — each room not yet past it is cancelled,
+        // with its own audit row. The rooms are gathered before anything is
+        // skipped: a room left open when its lead already moved on is still
+        // reached. A row already in a terminal state is never clobbered.
+        $rooms = collect([$mirror])->concat(\App\Services\Booking\GroupPayment::followers($mirror))
+            ->filter(fn ($m) => !in_array($m->payment_status, $terminal, true))
+            ->values();
+        if ($rooms->isEmpty()) {
             return;
         }
-        try {
-            $mirror->update(['payment_status' => 'cancelled']);
-            \App\Models\AuditLog::create([
-                'organization_id' => $orgId,
-                'action'          => 'booking.payment.canceled',
-                'subject_type'    => 'booking_mirror',
-                'subject_id'      => $mirror->id,
-                'new_values'      => [
-                    'payment_intent_id'   => $piId,
-                    'cancellation_reason' => (string) ($intent->cancellation_reason ?? ''),
-                    'prior_status'        => $mirror->getOriginal('payment_status'),
-                ],
-                'description'     => "Stripe PI {$piId} canceled (reason=" . ($intent->cancellation_reason ?: 'unspecified') . ")",
-            ]);
-        } catch (\Throwable $e) {
-            \Illuminate\Support\Facades\Log::warning('payment_intent.canceled handler failed', [
-                'mirror_id' => $mirror->id, 'error' => $e->getMessage(),
-            ]);
+        foreach ($rooms as $room) {
+            try {
+                $prior = $room->payment_status;
+                $room->update(['payment_status' => 'cancelled']);
+                \App\Models\AuditLog::create([
+                    'organization_id' => $orgId,
+                    'action'          => 'booking.payment.canceled',
+                    'subject_type'    => 'booking_mirror',
+                    'subject_id'      => $room->id,
+                    'new_values'      => [
+                        'payment_intent_id'   => $piId,
+                        'cancellation_reason' => (string) ($intent->cancellation_reason ?? ''),
+                        'prior_status'        => $prior,
+                    ],
+                    'description'     => "Stripe PI {$piId} canceled (reason=" . ($intent->cancellation_reason ?: 'unspecified') . ")",
+                ]);
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning('payment_intent.canceled handler failed', [
+                    'mirror_id' => $room->id, 'error' => $e->getMessage(),
+                ]);
+            }
         }
     }
 
@@ -1980,20 +2044,58 @@ class BookingPublicController extends Controller
             return;
         }
 
-        // Find the most recent refund on the charge.
-        $refunds = $charge->refunds->data ?? [];
-        if (empty($refunds)) return;
-        $latest = end($refunds);
-        $refundId = is_object($latest) ? $latest->id : ($latest['id'] ?? null);
-        $refundAmt = is_object($latest)
-            ? $latest->amount / 100
-            : (($latest['amount'] ?? 0) / 100);
+        // What Stripe has refunded on this charge so far, read from the
+        // charge's own cumulative `amount_refunded` (release 5) — the way
+        // recordServiceBookingRefund() reads it, in the charge's currency.
+        // `charge.refunds` is not always on the event, and Stripe lists it
+        // NEWEST first: its last entry is the OLDEST refund, so a second
+        // partial refund used to match the stored last_refund_id and was
+        // never recorded. What is new is what Stripe now reports beyond what
+        // the stay — every room of a multi-room stay, whose one payment the
+        // lead carries (GroupPayment) — has recorded; equal is a redelivery,
+        // lower an older event arriving late: the stored amount never moves
+        // backwards.
+        $refunds = [];
+        try {
+            $refunds = $charge->refunds->data ?? [];
+        } catch (\Throwable) {
+            $refunds = [];
+        }
+        $newest = null;
+        foreach ($refunds as $r) {
+            $created = is_object($r) ? ($r->created ?? null) : ($r['created'] ?? null);
+            if ($newest === null || ($created !== null && ($newest['created'] === null || $created > $newest['created']))) {
+                $newest = [
+                    'id'      => is_object($r) ? ($r->id ?? null) : ($r['id'] ?? null),
+                    'created' => $created,
+                    'reason'  => is_object($r) ? ($r->reason ?? null) : ($r['reason'] ?? null),
+                    'amount'  => (int) (is_object($r) ? ($r->amount ?? 0) : ($r['amount'] ?? 0)),
+                ];
+            }
+        }
+        $currency = strtolower((string) ($charge->currency ?? 'eur'));
+        $refundedMinor = isset($charge->amount_refunded)
+            ? (int) $charge->amount_refunded
+            : (int) array_sum(array_map(fn ($r) => (int) (is_object($r) ? ($r->amount ?? 0) : ($r['amount'] ?? 0)), $refunds));
+        $refundedTotal = round($this->centsToMajorUnits($refundedMinor, $currency), 2);
+        $refundId = $newest['id'] ?? null;
+
+        $recorded = round((float) \App\Services\Booking\GroupPayment::rows($orgId, (string) $paymentIntentId)->sum(fn ($m) => (float) ($m->refunded_amount ?? 0)), 2);
+        $refundAmt = round($refundedTotal - $recorded, 2);
+        if ($refundAmt <= 0.004) {
+            \Illuminate\Support\Facades\Log::info('Stripe charge.refunded webhook — nothing new to record', [
+                'mirror_id' => $mirror->id,
+                'refunded'  => $refundedTotal,
+                'recorded'  => $recorded,
+            ]);
+            return;
+        }
 
         // Idempotency: if we already processed this exact refund id
         // (admin-initiated path persists last_refund_id before the webhook
         // can arrive), skip to avoid double-reversing loyalty points or
         // re-sending the email.
-        if ($mirror->last_refund_id === $refundId) {
+        if ($refundId !== null && $mirror->last_refund_id === $refundId) {
             \Illuminate\Support\Facades\Log::info('Stripe charge.refunded webhook — already processed', [
                 'mirror_id' => $mirror->id,
                 'refund_id' => $refundId,
@@ -2008,14 +2110,12 @@ class BookingPublicController extends Controller
             // requested_by_customer). The refund silently went through
             // without a reason. Pass through Stripe's actual reason value
             // when present; let null mean null.
-            $stripeReason = is_object($latest)
-                ? ($latest->reason ?? null)
-                : ($latest['reason'] ?? null);
+            $stripeReason = $newest['reason'] ?? null;
             app(\App\Services\BookingRefundService::class)->applyRefund(
                 $mirror,
                 $refundAmt,
                 $stripeReason,
-                $refundId,
+                $refundId ?? $mirror->last_refund_id,
                 false, // refund already exists on Stripe — don't issue a second one
                 null,
             );
@@ -2232,15 +2332,20 @@ class BookingPublicController extends Controller
                 ]);
             }
         } elseif (in_array($status, ['won', 'warning_closed'], true)) {
-            // Funds reinstated — restore status only if we'd marked it disputed.
+            // Funds reinstated — restore status only if we'd marked it disputed:
+            // the lead and every room of its group that follows it
+            // (GroupPayment, release 5), as flagDisputed() marked them.
             if ($mirror->payment_status === 'disputed') {
-                $mirror->update(['payment_status' => 'paid']);
-                \App\Models\AuditLog::record('booking_dispute_won', $mirror,
-                    ['dispute_id' => $dispute->id, 'status' => $status],
-                    ['payment_status' => 'paid'],
-                    null,
-                    "Stripe dispute resolved in our favour on booking #{$mirror->id}",
-                );
+                $rooms = collect([$mirror])->concat(\App\Services\Booking\GroupPayment::followers($mirror)->filter(fn ($m) => $m->payment_status === 'disputed'));
+                foreach ($rooms as $room) {
+                    $room->update(['payment_status' => 'paid']);
+                    \App\Models\AuditLog::record('booking_dispute_won', $room,
+                        ['dispute_id' => $dispute->id, 'status' => $status],
+                        ['payment_status' => 'paid'],
+                        null,
+                        "Stripe dispute resolved in our favour on booking #{$room->id}",
+                    );
+                }
             }
         }
     }

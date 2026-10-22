@@ -1,4 +1,4 @@
-import type { AvailableRoom, CouponRef, StayQuote, StayQuoteBody, StayRules } from '../../lib/types'
+import type { AvailableRoom, CouponRef, StayAvailability, StayQuote, StayQuoteBody, StayRoom, StayRules } from '../../lib/types'
 import type { PayVisit } from '../book/steps'
 
 export type StayStep = 'dates' | 'room' | 'review' | 'pay'
@@ -13,6 +13,9 @@ export interface StayState {
   children: number
   /** A room's id is a string: the PMS id when the room has one. */
   roomId: string | null
+  /** Release 5, part C: the rooms of a combination the server offered (two or three, in its order), booked as one
+   *  stay; null when the member chose one room. Never both: choosing either clears the other. */
+  roomIds: string[] | null
   /** Extra ids; one of each. */
   extras: string[]
   coupon: CouponRef | null
@@ -25,7 +28,7 @@ export interface StayState {
 }
 
 export const initialStayState: StayState = {
-  step: 'dates', checkIn: null, checkOut: null, adults: 2, children: 0, roomId: null, extras: [], coupon: null, requests: '',
+  step: 'dates', checkIn: null, checkOut: null, adults: 2, children: 0, roomId: null, roomIds: null, extras: [], coupon: null, requests: '',
   notice: null, quote: null, visit: null,
 }
 
@@ -36,6 +39,8 @@ export type StayAction =
   | { type: 'setGuests'; adults: number; children: number }
   | { type: 'search' }
   | { type: 'pickRoom'; roomId: string }
+  /** A combination: several rooms for one party, chosen together. */
+  | { type: 'pickRooms'; roomIds: string[] }
   | { type: 'patchReview'; patch: StayReviewPatch }
   /** Review's Continue: the requests typed there travel WITH the step change. */
   | { type: 'continueToPay'; requests: string; quote: StayQuote; visit: PayVisit }
@@ -63,14 +68,16 @@ export function stayReducer(state: StayState, action: StayAction): StayState {
     // `paid`, so these actions can't fire against a live one anyway.
     case 'setDates': {
       const checkOut = action.checkIn && action.checkOut && action.checkOut > action.checkIn ? action.checkOut : null
-      return { ...state, checkIn: action.checkIn, checkOut, roomId: null, quote: null, notice: null }
+      return { ...state, checkIn: action.checkIn, checkOut, roomId: null, roomIds: null, quote: null, notice: null }
     }
     case 'setGuests':
-      return { ...state, adults: action.adults, children: action.children, roomId: null, quote: null, notice: null }
+      return { ...state, adults: action.adults, children: action.children, roomId: null, roomIds: null, quote: null, notice: null }
     case 'search':
       return { ...state, step: 'room', notice: null }
     case 'pickRoom':
-      return { ...state, roomId: action.roomId, quote: null, notice: null, step: 'review' }
+      return { ...state, roomId: action.roomId, roomIds: null, quote: null, notice: null, step: 'review' }
+    case 'pickRooms':
+      return { ...state, roomId: null, roomIds: [...action.roomIds], quote: null, notice: null, step: 'review' }
     case 'patchReview': {
       // Blurring the special-requests field (StayReviewStep's own onBlur) must not clear
       // a bounce notice that's already showing on Review — it costs nothing and asks for no new price, so
@@ -89,6 +96,7 @@ export function stayReducer(state: StayState, action: StayAction): StayState {
         ...state,
         step: action.to,
         roomId: action.clearRoom ? null : state.roomId,
+        roomIds: action.clearRoom ? null : state.roomIds,
         quote: null,
         visit: null,
         notice: { step: action.to, code: action.code },
@@ -124,10 +132,11 @@ export function datesProblem(checkIn: string | null, checkOut: string | null, ru
   return null
 }
 
-/** The requests are sent at confirm, never here: they cost nothing, so they must not ask for a new price. */
+/** The requests are sent at confirm, never here: they cost nothing, so they must not ask for a new price. A
+ *  combination (release 5) names its rooms as `unit_ids`, one room as `unit_id` — never both. */
 export function stayQuoteBody(state: StayState): StayQuoteBody {
   return {
-    unit_id: state.roomId!,
+    ...(state.roomIds !== null ? { unit_ids: [...state.roomIds] } : { unit_id: state.roomId! }),
     check_in: state.checkIn!,
     check_out: state.checkOut!,
     adults: state.adults,
@@ -135,6 +144,31 @@ export function stayQuoteBody(state: StayState): StayQuoteBody {
     extras: state.extras.map(id => ({ id, quantity: 1 })),
     coupon: state.coupon,
   }
+}
+
+/** Whether the member has chosen what to book — one room, or a combination of two or more — so Review can ask for
+ *  its price. */
+export function hasRoomChoice(state: Pick<StayState, 'roomId' | 'roomIds'>): boolean {
+  return state.roomId !== null || (state.roomIds !== null && state.roomIds.length >= 2)
+}
+
+/** What Review names before its quote arrives: the chosen room, or the combination's rooms together ("Sea view +
+ *  Garden", the server's own joining), from the catalogue. Null when the catalogue does not know a room. */
+export function chosenRoomsLabel(state: Pick<StayState, 'roomId' | 'roomIds'>, rooms: Pick<StayRoom, 'id' | 'name'>[]): string | null {
+  const ids = state.roomIds ?? (state.roomId !== null ? [state.roomId] : [])
+  const names = ids.map(id => rooms.find(r => r.id === id)?.name)
+  return names.length > 0 && names.every(n => !!n) ? names.join(' + ') : null
+}
+
+/** What the room step offers for a search (release 5): the rooms that sleep the party; else the combinations the server
+ *  sells as one stay; else — an older server that found combinations it does not sell — the venue's contact; else
+ *  nothing is free. */
+export type StayRoomChoices = 'rooms' | 'combinations' | 'contact' | 'none'
+
+export function stayRoomChoices(free: Pick<StayAvailability, 'rooms' | 'party_too_large' | 'combinations'>): StayRoomChoices {
+  if (free.rooms.length > 0) return 'rooms'
+  if ((free.combinations ?? []).length > 0) return 'combinations'
+  return free.party_too_large ? 'contact' : 'none'
 }
 
 export type StayFocusTarget = { kind: 'notice' } | { kind: 'heading'; step: StayStep }

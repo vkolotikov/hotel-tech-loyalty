@@ -86,7 +86,8 @@ class PortalPaymentReturnController extends Controller
                 $answer['stay'] = [
                     'hold_token'  => $hold->hold_token,
                     'hold_active' => $hold->isActive(),
-                    'room'        => ['id' => (string) ($p['unit_id'] ?? ''), 'name' => (string) ($p['unit_name'] ?? '')],
+                    // A combination's hold names no one room: its lead room's id, and all the rooms by name (release 5).
+                    'room'        => ['id' => (string) ($p['unit_id'] ?? ($p['rooms'][0]['unit_id'] ?? '')), 'name' => (string) ($p['unit_name'] ?? '')],
                     'check_in'    => (string) ($p['check_in'] ?? ''),
                     'check_out'   => (string) ($p['check_out'] ?? ''),
                     'nights'      => (int) ($p['nights'] ?? 0),
