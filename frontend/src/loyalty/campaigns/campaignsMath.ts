@@ -24,7 +24,7 @@ export const SENDING_REFRESH_MS = 10_000
 
 // ─── The tabs ─────────────────────────────────────────────────────────────
 
-export const CAMPAIGN_TABS = ['campaigns', 'segments', 'push'] as const
+export const CAMPAIGN_TABS = ['campaigns', 'segments', 'push', 'sms'] as const
 export type CampaignTab = typeof CAMPAIGN_TABS[number]
 
 /** The tab an address names (`?tab=segments`); Campaigns for none or anything else. */
@@ -51,12 +51,16 @@ export function tabAfter(current: CampaignTab, key: string): CampaignTab | null 
 
 // ─── A campaign's state ───────────────────────────────────────────────────
 
-export const CAMPAIGN_STATUSES = ['draft', 'sending', 'sent', 'failed', 'cancelled'] as const
+export const CAMPAIGN_STATUSES = ['draft', 'scheduled', 'sending', 'sent', 'failed', 'cancelled'] as const
 
-/** A draft waits (amber), sending is under way (teal), sent is done (green), failed is red, cancelled and anything else grey. */
+/**
+ * A draft waits (amber), a scheduled one (release 4) and one sending are under way (teal), sent is done (green), failed
+ * is red, cancelled and anything else grey.
+ */
 export function statusTone(status: string): Tone {
   switch (status) {
     case 'draft': return 'pending'
+    case 'scheduled':
     case 'sending': return 'approved'
     case 'sent': return 'fulfilled'
     case 'failed': return 'declined'

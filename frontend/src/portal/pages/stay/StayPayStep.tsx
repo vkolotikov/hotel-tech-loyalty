@@ -9,7 +9,8 @@ import { Button } from '../../ui/Button'
 import { Card } from '../../ui/Card'
 import { Notice } from '../../ui/Notice'
 import { Skeleton } from '../../ui/Skeleton'
-import type { PayVisit } from '../book/steps'
+import { canTryOnlineAgain, payAtVenueGrantOf, retryOnlineVisit, type PayVisit } from '../book/steps'
+import { stashForReturn } from '../book/returnStash'
 import { StayPriceBreakdown } from './StayPriceBreakdown'
 import { afterStayConfirmError, payView, retryConfirmArgs, showCardUnavailable, stayBounceArgs, stayIntentErrorKind, stayPayNoticeKind, type StayIntentAnswer, type StayState } from './staySteps'
 import type { PortalBooking, StayQuote } from '../../lib/types'
@@ -64,6 +65,9 @@ export function StayPayStep({ quote, state, visit, onVisitChange, onBack, onDone
   const intentErrorCode = intent.isError ? apiErrorCode(intent.error) : null
   const intentKind = intentErrorCode !== null ? stayIntentErrorKind(intentErrorCode) : null
   const nothingToCharge = visit.noCard || intentKind === 'nothing_to_charge'
+  // Release 4, part C: a `pay_at_venue` answer given because online payment is unavailable carries the server's
+  // grant (`payAtVenueGrantOf`) — the confirm sends it back, and the member is told why there is nothing to pay now.
+  const atVenueGrant = visit.atVenueGrant ?? (intent.isError ? payAtVenueGrantOf(intent.error) : null)
   const holdGone = intentKind === 'hold_gone'
   // The breakdown needs to tell `nothing_to_pay` and `pay_at_venue` APART (unlike
   // `nothingToCharge` above, which deliberately merges them for the "offer Confirm without a card" button) —
@@ -81,7 +85,7 @@ export function StayPayStep({ quote, state, visit, onVisitChange, onBack, onDone
   const retryIntent = () => onVisitChange({ nonce: freshId() })
 
   useEffect(() => {
-    if (nothingToCharge && !visit.noCard) onVisitChange({ noCard: true })
+    if (nothingToCharge && !visit.noCard) onVisitChange({ noCard: true, atVenueGrant: intent.isError ? payAtVenueGrantOf(intent.error) : null })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [nothingToCharge])
 
@@ -94,7 +98,11 @@ export function StayPayStep({ quote, state, visit, onVisitChange, onBack, onDone
 
   const confirm = useMutation({
     mutationFn: (vars: { paymentIntentId: string | null; paid: boolean }) =>
-      portalApi.stayConfirm({ hold_token: quote.hold_token, payment_intent_id: vars.paymentIntentId, special_requests: state.requests || null }),
+      portalApi.stayConfirm({
+        hold_token: quote.hold_token, payment_intent_id: vars.paymentIntentId, special_requests: state.requests || null,
+        // Only for a stay without a card, and only the server's own grant (release 4, part C).
+        ...(vars.paymentIntentId === null && atVenueGrant ? { pay_at_venue_grant: atVenueGrant } : {}),
+      }),
     onSuccess: (r, vars) => {
       // `vars.paid` — the paid state AT THE TIME of THIS confirm attempt, from react-query's own recorded
       // mutation variables, never the (possibly since-changed) `visit` prop closure.
@@ -131,7 +139,12 @@ export function StayPayStep({ quote, state, visit, onVisitChange, onBack, onDone
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [confirm.isError, confirmErrorCode, confirmPaid])
 
-  const onPayStart = () => onVisitChange({ held: true })
+  const onPayStart = () => {
+    // Release 4, part C: should the method leave for a bank, the return page books the hold the server names for
+    // this payment; this tab only keeps the member's requests for it (never a price or a room).
+    if (intent.data) stashForReturn(intent.data.payment_intent_id, { notes: state.requests || undefined })
+    onVisitChange({ held: true })
+  }
   const onPayFailed = () => onVisitChange({ held: false })
   const onPaid = (paymentIntentId: string) => {
     onVisitChange({ paymentIntentId, paid: true, held: true })
@@ -190,9 +203,20 @@ export function StayPayStep({ quote, state, visit, onVisitChange, onBack, onDone
          view shows no separate notice repeating it with no amount ("Nothing to pay now. Settle up
          when you visit."). */}
       {!noKey && view === 'at_venue' && (
-        <Button type="button" full loading={confirm.isPending} onClick={confirmWithoutCard}>
-          {t('portal.stay.confirm', 'Confirm stay')}
-        </Button>
+        <>
+          {/* Release 4, part C: said plainly why a venue that takes cards asks for nothing now. */}
+          {atVenueGrant && (
+            <Notice tone="warning">
+              {t('portal.payment.at_venue_fallback', 'Online payment is unavailable right now. You can still book now and pay at the venue.')}{' '}
+              {canTryOnlineAgain(atVenueGrant, confirm.isPending ? 'pending' : confirm.isError ? 'error' : confirm.isSuccess ? 'success' : 'idle') && (
+                <button type="button" className="underline" onClick={() => onVisitChange(retryOnlineVisit(freshId))}>{t('portal.payment.pay_online_again', 'Try paying online again')}</button>
+              )}
+            </Notice>
+          )}
+          <Button type="button" full loading={confirm.isPending} onClick={confirmWithoutCard}>
+            {t('portal.stay.confirm', 'Confirm stay')}
+          </Button>
+        </>
       )}
 
       {!noKey && view === 'loading_card' && (

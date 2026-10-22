@@ -65,6 +65,36 @@ export interface PortalMember {
   member_since: string
   user: { id: number; name: string; email: string; phone: string | null; language: string | null; nationality?: string | null; avatar_url?: string | null; date_of_birth?: string | null }
   benefits: BenefitPreview[]
+  /** Release 4, part A: the kinds of message, as the server reads them (PortalBootstrap::member()). A kind switched
+   *  off is not sent at all — no push, no inbox row (NotificationService::send()). */
+  notification_preferences?: NotificationPreferences
+  /** Release 4, part F: "Offers by SMS", off until the member turns it on. Absent until the server sends it; the
+   *  portal shows the switch only then. */
+  sms_consent?: boolean
+}
+
+/** The categories of NotificationService::CATEGORIES, the keys PUT member/profile `notification_preferences` takes. */
+export type MessageKind = 'offers' | 'points' | 'tier' | 'stays'
+export type NotificationPreferences = Record<MessageKind, boolean>
+
+/**
+ * One notification kept for the member's inbox — a `push_notifications` row, every column, as
+ * `GET /v1/member/notifications` answers it (Laravel's paginator; MemberNotificationsTest pins the shape).
+ */
+export interface InboxNotification {
+  id: number
+  member_id: number
+  type: string
+  title: string
+  body: string | null
+  data: Record<string, unknown> | null
+  channel: string | null
+  campaign_id: number | null
+  is_sent: boolean
+  sent_at: string | null
+  read_at: string | null
+  created_at: string
+  updated_at: string
 }
 
 export interface PortalBootstrap {
@@ -238,9 +268,12 @@ export interface Quote {
 
 export interface ResolvedCoupon { kind: 'offer' | 'reward'; coupon: CouponRef; label: string; type: 'percent_discount' | 'fixed_amount'; value: number; value_label: string; valid_until: string | null }
 
-export interface ConfirmBody extends QuoteBody { payment_intent_id?: string | null; notes?: string | null }
+/** `pay_at_venue_grant` (release 4, part C): the server's own grant from a `pay_at_venue` answer given because
+ *  online payment was unavailable — sent back as it came, never made here. */
+export interface ConfirmBody extends QuoteBody { payment_intent_id?: string | null; notes?: string | null; pay_at_venue_grant?: string | null }
 
-export interface PaymentIntentReply { client_secret: string; payment_intent_id: string; amount: number; currency: string }
+/** `reused` (release 4, part C): the server handed back the intent an earlier call made for the same hold or slot. */
+export interface PaymentIntentReply { client_secret: string; payment_intent_id: string; amount: number; currency: string; reused?: boolean; hold_expires_at?: string }
 
 // ─── Stay booking (the stay flow) ───────────────────────────────────────────
 //
@@ -306,7 +339,28 @@ export interface StayQuote {
   policy: { cancellation_policy: string | null; cancel_hours: number; check_in_time: string; check_out_time: string }
 }
 
-export interface StayConfirmBody { hold_token: string; payment_intent_id?: string | null; special_requests?: string | null }
+export interface StayConfirmBody { hold_token: string; payment_intent_id?: string | null; special_requests?: string | null; pay_at_venue_grant?: string | null }
+
+/**
+ * Release 4, part C — `GET member/portal/payments/{id}` (PortalPaymentReturnController): what a payment the member
+ * came back with from a bank redirect is for, read by the server from the payment's own metadata. `state`:
+ * `authorised` (confirm it), `processing` (the bank has not answered yet), `failed` (nothing was taken), `booked`
+ * (a booking already carries it). `service`/`stay` is null when the booking can no longer be rebuilt (a stay's hold
+ * is gone, or the payment predates the return).
+ */
+export interface PaymentReturn {
+  kind: BookingKind
+  state: 'authorised' | 'processing' | 'failed' | 'booked'
+  payment_intent_id: string
+  amount: number
+  currency: string
+  booking: PortalBooking | null
+  service: { body: QuoteBody; name: string; master: string | null; start_at: string } | null
+  stay: {
+    hold_token: string; hold_active: boolean; room: { id: string; name: string }
+    check_in: string; check_out: string; nights: number; adults: number; children: number
+  } | null
+}
 
 /** Anything that carries a coupon verdict — a service quote or a stay quote. */
 export interface Priced { coupon: Quote['coupon'] }

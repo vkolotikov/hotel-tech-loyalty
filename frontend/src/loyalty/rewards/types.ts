@@ -6,6 +6,8 @@ import type { Paged } from '../lib/types'
  */
 export interface Reward {
   id: number
+  /** The brand it is offered on (release 4); a change keeps it. */
+  brand_id?: number | null
   name: string
   description: string | null
   terms: string | null
@@ -36,11 +38,26 @@ export interface PictureLimits {
   types: string[]
 }
 
+/** A brand a new reward, offer or boost may be put on (release 4; LoyaltyForms::brands). */
+export interface BrandOption {
+  id: number
+  name: string
+  is_default: boolean
+}
+
+/** The brands this staff member may put a new row on, the default first, and the one a new form starts on. */
+export interface BrandOptions {
+  list: BrandOption[]
+  default: number | null
+}
+
 /** The lists the reward form chooses from, served by the server (LoyaltyForms), and the picture's limits. */
 export interface RewardOptions {
   discount_types: string[]
   applies_to: string[]
   image: PictureLimits
+  /** Release 4. */
+  brands?: BrandOptions
 }
 
 export interface Catalogue {
@@ -62,6 +79,8 @@ export interface RewardBody {
   /** The venue's wall clock, `YYYY-MM-DDTHH:mm`, or null for none. */
   expires_at: string | null
   is_active: boolean
+  /** Release 4: the brand a new reward goes on, sent only when there is a choice. */
+  brand?: number
 }
 
 export type RedemptionState = 'pending' | 'fulfilled' | 'cancelled'
@@ -87,6 +106,8 @@ export interface RedemptionsPage extends Paged {
 
 export interface Offer {
   id: number
+  /** The brand it runs on (release 4); a change keeps it. */
+  brand_id?: number | null
   title: string
   description: string | null
   type: string
@@ -112,6 +133,8 @@ export interface OfferOptions {
   types: string[]
   applies_to: string[]
   image: PictureLimits
+  /** Release 4. */
+  brands?: BrandOptions
 }
 
 export interface OffersList {
@@ -134,6 +157,8 @@ export interface OfferBody {
   is_featured: boolean
   /** Only on a change: a new offer is made active. */
   is_active?: boolean
+  /** Release 4: the brand a new offer goes on, sent only when there is a choice. */
+  brand?: number
 }
 
 export interface Referral {

@@ -110,7 +110,8 @@
     "no_category": "No kind chosen yet",
     "no_segment": "No segment",
     "no_title": "No title yet",
-    "none": "No push messages yet. Make one, choose its kind and a segment, and send it."
+    "none": "No push messages yet. Make one, choose its kind and a segment, and send it.",
+    "scheduled": "Goes out {{when}}"
   },
   "load": {
     "error": {
@@ -227,13 +228,43 @@
     "nobody": "Nobody in {{segment}} can receive it.",
     "over": "It would reach {{number}} members, more than {{limit}}, the most one message may. Narrow the segment.",
     "title": "Send this push message",
-    "will_push": "It will push to {{number}} members of {{segment}}, starting now."
+    "will_push": "It will push to {{number}} members of {{segment}}, starting now.",
+    "about_now": "About {{number}} members of {{segment}} could receive it now. It goes to whoever can receive it at that moment, counted then.",
+    "schedule": "Schedule for {{when}}"
   },
   "status": {
     "cancelled": "Cancelled",
     "draft": "Draft",
     "failed": "Failed",
     "sending": "Sending",
-    "sent": "Sent"
+    "sent": "Sent",
+    "scheduled": "Scheduled"
+  },
+  "schedule": {
+    "error": {
+      "already_started": "This message was already started. The page now shows how far it got.",
+      "changed": "The message changed since this page showed it. Check it, then schedule it again.",
+      "bad_time": "Choose another time.",
+      "incomplete": "The message is not ready to send. The page now shows what it still needs.",
+      "no_audience": "Choose who receives it first.",
+      "no_category": "Choose what kind of message it is first.",
+      "bad_rule": "Its segment has a rule that cannot be used. Fix the segment first.",
+      "not_found": "This push message no longer exists.",
+      "manager_only": "Only an owner or a manager can work with push messages.",
+      "not_allowed": "Only an owner or a manager can work with push messages.",
+      "feature_locked": "Your plan does not include push messages.",
+      "network": "No connection. Reload the page to see whether it was scheduled before you try again.",
+      "unknown": "It may not have been scheduled. Reload the page to see its state before you try again."
+    }
+  },
+  "unschedule": {
+    "error": {
+      "not_scheduled": "It is no longer waiting: it started, or was taken back already. The page now shows it as it is.",
+      "not_found": "This push message no longer exists.",
+      "manager_only": "Only an owner or a manager can work with push messages.",
+      "not_allowed": "Only an owner or a manager can work with push messages.",
+      "network": "No connection: it is still scheduled. Try again.",
+      "unknown": "It could not be taken back. Please try again."
+    }
   }
 }

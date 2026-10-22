@@ -17,6 +17,8 @@ import { TierChip } from '../ui/TierChip'
 import '../theme/insights.css'
 import { insightsApi, insightsKey } from './api'
 import { AtRiskList } from './AtRiskList'
+import { CohortsCard } from './CohortsCard'
+import { MoneyCard } from './MoneyCard'
 import { BarList, type BarRow } from './charts/BarList'
 import { ColumnChart } from './charts/ColumnChart'
 import { LineChart } from './charts/LineChart'
@@ -37,7 +39,8 @@ const ENGAGEMENT_ORDER: readonly EngagementGroup[] = ['new', 'active', 'at_risk'
 /**
  * Insights (spec 2026-10-21 release 2 §5): how the programme is doing over 30 days, 90 days or 12 months — the
  * figures, members over time, points in and out, reward redemptions, the tiers and their movement, points due to
- * expire, engagement and balances — and the members gone quiet. The period and the quiet days live in the address
+ * expire, engagement and balances, since release 4 the money members bring and cohort retention — and the members
+ * gone quiet. The period and the quiet days live in the address
  * (`?period=`, `?quiet=`). For managers and staff who may see analytics; anyone else who opens it by its address sees
  * a calm notice, and the server refuses them anyway. Every figure is the server's, counted on the venue's clock.
  */
@@ -92,6 +95,8 @@ export function InsightsPage() {
       {view && data && !isEmptyProgramme(data) && (
         <div className={`space-y-6 ${query.isFetching ? 'opacity-80' : ''}`}>
           <InsightsView data={data} tiers={boot.programme.tiers} theme={look.resolved} locale={locale} />
+          <MoneyCard period={period} locale={locale} />
+          <CohortsCard locale={locale} />
           <AtRiskList quiet={quiet} onQuiet={(days) => go({ quiet: days })} tiers={boot.programme.tiers} theme={look.resolved} locale={locale} timeZone={boot.venue.timezone} />
         </div>
       )}

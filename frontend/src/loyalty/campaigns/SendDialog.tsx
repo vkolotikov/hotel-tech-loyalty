@@ -1,15 +1,19 @@
+import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { Send } from 'lucide-react'
+import { CalendarClock, Send } from 'lucide-react'
 import { Button } from '../../workspace/ui/Button'
 import { Dialog } from '../../workspace/ui/Dialog'
 import { Notice } from '../../workspace/ui/Notice'
 import { Skeleton } from '../../workspace/ui/Skeleton'
+import { useBoot } from '../LoyaltyProvider'
 import { failureOf } from '../lib/api'
 import { points } from '../lib/format'
 import { afterCampaignChange, audienceKey, campaignKey, campaignsApi } from './api'
 import { confirmationOf, sendRefusalRefreshes } from './campaignsMath'
 import { Refusal } from './parts'
+import { WhenChoice } from './ScheduleParts'
+import { badTimeReason, defaultSendAt, laterProblem, scheduledWhen, scheduleRefusalRefreshes, timeProblemOf, venueClockNow, type SendMode } from './scheduleMath'
 import type { Audience, Campaign } from './types'
 import { NOT_REACHED_WORDS } from './words'
 
@@ -20,12 +24,29 @@ import { NOT_REACHED_WORDS } from './words'
  * names that number, and the server starts nothing if the number or the draft changed meanwhile (`audience_changed`,
  * `changed`): the person is asked again with the new number. Before Send it names any double-braced word in the saved
  * subject or body that no tag fills (the server's `unknown_tags`): members would read it as written.
+ *
+ * Release 4: Send later. The same step offers a time on the venue's clock instead; the count is then "about this many
+ * now" (it goes to whoever is eligible when it starts) and Schedule sets it, on the draft shown.
  */
 export function SendDialog({ campaign, onClose }: { campaign: Campaign; onClose: () => void }) {
   const { t, i18n } = useTranslation()
   const locale = i18n.language || 'en'
+  const boot = useBoot()
+  const timeZone = boot.venue.timezone
   const client = useQueryClient()
+  const [mode, setMode] = useState<SendMode>('now')
+  const [at, setAt] = useState(() => defaultSendAt(boot.venue.today))
+  const [tried, setTried] = useState(false)
   const audience = useQuery({ queryKey: audienceKey(campaign.id), queryFn: () => campaignsApi.audience(campaign.id), retry: false, staleTime: 0 })
+  const schedule = useMutation({
+    mutationFn: (sendAt: string) => campaignsApi.schedule(campaign.id, { send_at: sendAt, revision: campaign.revision }),
+    onSuccess: (answer) => {
+      client.setQueryData(campaignKey(campaign.id), { campaign: answer.campaign, options: answer.options })
+      afterCampaignChange(client, campaign.id)
+      onClose()
+    },
+    onError: (error) => { if (scheduleRefusalRefreshes(failureOf(error).code)) void client.invalidateQueries({ queryKey: campaignKey(campaign.id) }) },
+  })
   const send = useMutation({
     mutationFn: (recipients: number) => campaignsApi.send(campaign.id, { recipients, revision: campaign.revision }),
     onSuccess: (answer) => {
@@ -42,11 +63,16 @@ export function SendDialog({ campaign, onClose }: { campaign: Campaign; onClose:
   const a = audience.data?.audience
   const said = a ? confirmationOf(a) : null
   const failure = send.isError ? failureOf(send.error) : null
+  const scheduleFailure = schedule.isError ? failureOf(schedule.error) : null
+  const later = mode === 'later'
+  const busy = send.isPending || schedule.isPending
 
   return (
-    <Dialog title={t('loyalty.campaigns.send.title', 'Send this campaign')} onClose={onClose} busy={send.isPending}>
+    <Dialog title={t('loyalty.campaigns.send.title', 'Send this campaign')} onClose={onClose} busy={busy}>
       <div className="space-y-4 text-sm text-a-text">
         <p className="font-medium">{campaign.subject}</p>
+        <WhenChoice mode={mode} at={at} timeZone={timeZone} problem={later ? timeProblemOf(at, timeZone, tried, scheduleFailure) : null}
+          onMode={(next) => { setMode(next); send.reset(); schedule.reset() }} onAt={(next) => { setAt(next); if (schedule.isError) schedule.reset() }} />
         {audience.isError && <Refusal family="audience" failure={failureOf(audience.error)} />}
         {!a && !audience.isError && (
           <div role="status" className="space-y-2">
@@ -54,23 +80,40 @@ export function SendDialog({ campaign, onClose }: { campaign: Campaign; onClose:
             <Skeleton className="h-5 w-3/4" /><Skeleton className="h-5 w-1/2" />
           </div>
         )}
-        {a && said && <Numbers audience={a} said={said} locale={locale} />}
+        {a && said && !later && <Numbers audience={a} said={said} locale={locale} />}
+        {a && said && later && (
+          <p data-confirmation="later">
+            {t('loyalty.campaigns.send.about_now', 'About {{number}} members of {{segment}} could receive it now. It goes to whoever can receive it at that moment, counted then.', {
+              number: points(said.reached, locale), segment: a.segment.name,
+            })}
+          </p>
+        )}
         {said?.state === 'ok' && campaign.unknown_tags.length > 0 && (
           <div data-unknown-tags="">
             <Notice tone="warning">{t('loyalty.campaigns.send.unknown_tags', 'The email holds {{tags}}, which no tag fills: members will read it as written.', { tags: campaign.unknown_tags.join(', ') })}</Notice>
           </div>
         )}
-        {said?.state === 'ok' && (
+        {said?.state === 'ok' && !later && (
           <p className="text-a-text-2">{t('loyalty.campaigns.send.final', 'Once it starts it can be stopped, but emails already sent cannot be taken back.')}</p>
         )}
         {failure && <Refusal family="send" failure={failure} vars={{ reached: points(Number(failure.extra.reached ?? 0), locale), limit: points(Number(failure.extra.limit ?? a?.limit ?? 0), locale) }} />}
+        {scheduleFailure && !badTimeReason(scheduleFailure) && <Refusal family="schedule" failure={scheduleFailure} />}
 
         <div className="flex flex-wrap justify-end gap-2 pt-1">
-          <Button type="button" variant="secondary" onClick={onClose} disabled={send.isPending}>{t('loyalty.campaigns.send.keep', 'Not now')}</Button>
-          {said?.state === 'ok' && (
+          <Button type="button" variant="secondary" onClick={onClose} disabled={busy}>{t('loyalty.campaigns.send.keep', 'Not now')}</Button>
+          {said?.state === 'ok' && !later && (
             <Button type="button" variant="danger" loading={send.isPending} disabled={audience.isFetching} onClick={() => send.mutate(said.reached)}>
               <Send size={15} aria-hidden />
               {t('loyalty.campaigns.send.confirm', 'Send to {{number}} members', { number: points(said.reached, locale) })}
+            </Button>
+          )}
+          {said && later && (
+            <Button type="button" loading={schedule.isPending} onClick={() => {
+              setTried(true)
+              if (laterProblem(at, venueClockNow(timeZone)) === null) schedule.mutate(at)
+            }}>
+              <CalendarClock size={15} aria-hidden />
+              {t('loyalty.campaigns.send.schedule', 'Schedule for {{when}}', { when: scheduledWhen(at, locale) })}
             </Button>
           )}
         </div>

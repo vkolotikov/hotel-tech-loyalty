@@ -55,6 +55,7 @@ const options: CampaignOptions = {
 const HTML = '<div style="max-width:600px"><h1>Autumn at Lumière</h1></div>'
 const draft = (more: Partial<Campaign> = {}): Campaign => ({
   id: 7, name: 'Autumn', subject: 'Our autumn', status: 'draft', segment: { id: 3, name: 'Gold' }, recipient_count: 0, sent_count: 0, failed_count: 0, sent_at: null,
+  scheduled_at: null, scheduled_for: null, schedule_problem: null,
   created_at: '2026-10-20T08:00:00+00:00', updated_at: '2026-10-20T09:00:00+00:00', segment_id: 3, editable_here: true,
   body_blocks: [
     { id: 'h1', type: 'heading', text: 'Autumn at Lumière', level: 1, align: 'center', color: '#1a1a1a' },
@@ -203,7 +204,9 @@ describe('The confirmation', () => {
     if (audience) client.setQueryData(audienceKey(7), { audience })
     return renderToStaticMarkup(
       <QueryClientProvider client={client}>
-        <SendDialog campaign={draft({ unknown_tags: unknown })} onClose={() => {}} />
+        <LoyaltyContext.Provider value={{ data: boot(manager, true), isLoading: false, isError: false, error: null, refetch: () => {} }}>
+          <SendDialog campaign={draft({ unknown_tags: unknown })} onClose={() => {}} />
+        </LoyaltyContext.Provider>
       </QueryClientProvider>,
     )
   }
@@ -224,6 +227,10 @@ describe('The confirmation', () => {
     expect(text(dialog(audience()))).not.toContain('which no tag fills')
     expect(words).toContain('emails already sent cannot be taken back')
     expect(button(html, 'Send to 950 members')).toContain('Send to 950 members')
+    // Release 4: now or later; now is chosen first.
+    expect(html).toMatch(/<input type="radio"[^>]*checked=""[^>]*value="now"/)
+    expect(words).toContain('Send later')
+    expect(html).not.toContain('type="datetime-local"')
   })
 
   it('offers no Send when nobody can receive it, or more than one campaign may reach', () => {

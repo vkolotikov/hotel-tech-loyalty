@@ -5,7 +5,7 @@ import type { Paged } from '../lib/types'
  * strings shown on the venue's clock. The categories and every limit come from the server (`options`).
  */
 
-export type PushStatus = 'draft' | 'sending' | 'sent' | 'failed' | 'cancelled'
+export type PushStatus = 'draft' | 'scheduled' | 'sending' | 'sent' | 'failed' | 'cancelled'
 
 /** How far a message got, from its delivery rows: each member counted once, by how it went. */
 export interface PushResults {
@@ -33,6 +33,9 @@ export interface PushRow {
   /** The members it was handed when it started. */
   recipient_count: number
   results: PushResults
+  /** Release 4, send later: the instant it is (or was) due, and the same on the venue's clock (`YYYY-MM-DDTHH:mm`). */
+  scheduled_at: string | null
+  scheduled_for: string | null
   sent_at: string | null
   created_at: string | null
   updated_at: string | null
@@ -47,6 +50,8 @@ export interface Push extends PushRow {
   segment_id: number | null
   /** What the saved draft still lacks: `title`, `body`, `category`. */
   missing: string[]
+  /** Why a scheduled message did not start when it was due (a code), on a failed message; null otherwise. */
+  schedule_problem: string | null
   last_progress_at: string | null
   created_by: string | null
   sent_by: string | null

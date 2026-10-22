@@ -5,6 +5,7 @@ import { Button } from '../../ui/Button'
 import { Notice } from '../../ui/Notice'
 import { stripeAppearance, stripeFor } from '../../lib/stripe'
 import { payOutcome, type PayResult } from './payOutcome'
+import { portalReturnUrl } from './steps'
 
 interface Props {
   clientSecret: string
@@ -99,7 +100,10 @@ function PayForm({ onPayStart, onPayFailed, onPaid, payLabel, paymentFailedMessa
     setError(null)
     let result: PayResult
     try {
-      result = await stripe.confirmPayment({ elements, redirect: 'if_required', confirmParams: { return_url: window.location.href } })
+      // Release 4, part C: a redirect-based method (a bank, a wallet) leaves the page for the bank and comes back
+      // to the portal's return page, which asks the server what the payment is for and confirms it; a card that
+      // needs no redirect answers right here, as before (`redirect: 'if_required'`).
+      result = await stripe.confirmPayment({ elements, redirect: 'if_required', confirmParams: { return_url: portalReturnUrl(window.location.origin) } })
     } catch (e) {
       // Stripe's real result is typed to always resolve, never reject — but if it ever does (fix round 3,
       // minor C), treat it exactly like a returned `{ error }`, not as an unhandled rejection that leaves

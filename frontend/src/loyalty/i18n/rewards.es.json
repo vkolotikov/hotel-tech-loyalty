@@ -4,6 +4,12 @@
     "services": "Solo servicios",
     "stays": "Solo estancias"
   },
+  "brand": {
+    "hint": "A cuál de sus marcas pertenece.",
+    "label": "Marca",
+    "refused": "Elija una de las marcas de la lista.",
+    "saved": "Marca: {{name}}. Se queda en esta marca."
+  },
   "cancel": {
     "body": "{{points}} puntos vuelven a {{name}} y la recompensa vuelve al stock si este es limitado. El código deja de funcionar.",
     "confirm": "Cancelar canje",

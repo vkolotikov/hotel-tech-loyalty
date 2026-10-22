@@ -346,6 +346,10 @@
         "currency_mismatch": "Stripe nimmt Zahlungen in einer anderen Währung an als Ihre Preise. Gleichen Sie sie an, um Anzahlungen zu nehmen."
       }
     },
+    "pay_at_venue": {
+      "on": "Buchungen mit Zahlung vor Ort annehmen, wenn die Online-Zahlung nicht verfügbar ist",
+      "note": "Für Mitglieder, die im Mitgliederportal buchen: Ist der Kartenzahlungsdienst nicht erreichbar, können sie trotzdem buchen und vor Ort bezahlen. Die Buchung wird als Zahlung vor Ort markiert."
+    },
     "title": "Einrichtung",
     "load_failed": "Die Einrichtung konnte nicht geladen werden. Bitte versuchen Sie es erneut.",
     "read_only": "Nur Inhaber oder Manager können die Einrichtung ändern. Hier können Sie sie ansehen und unter Team Ihre eigene Abwesenheit eintragen.",

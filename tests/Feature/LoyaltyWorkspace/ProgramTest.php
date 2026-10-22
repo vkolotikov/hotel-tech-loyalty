@@ -65,6 +65,7 @@ class ProgramTest extends TestCase
 
         $response->assertJsonPath('boosts.0', [
             'id'           => $live->id,
+            'brand_id'     => $this->brandId,
             'name'         => 'Double days',
             'description'  => null,
             'multiplier'   => 2,
@@ -74,6 +75,7 @@ class ProgramTest extends TestCase
             'tier_ids'     => [$this->tiers['gold']->id],
             'is_active'    => true,
             'state'        => 'live',
+            'check_time'   => false,
         ]);
 
         $response->assertJsonPath('options.categories', ['accommodation', 'dining', 'wellness', 'transport', 'recognition', 'points', 'access', 'discount', 'other'])
@@ -257,9 +259,9 @@ class ProgramTest extends TestCase
         ]))->assertCreated();
         $id = $response->json('boost.id');
         $response->assertJsonPath('boost', [
-            'id' => $id, 'name' => 'Weekend double', 'description' => 'Twice the points.', 'multiplier' => 2,
+            'id' => $id, 'brand_id' => $this->brandId, 'name' => 'Weekend double', 'description' => 'Twice the points.', 'multiplier' => 2,
             'starts_at' => '2026-10-04T00:00:00+00:00', 'ends_at' => '2026-10-11T00:00:00+00:00',
-            'days_of_week' => [5, 6], 'tier_ids' => [$gold], 'is_active' => true, 'state' => 'live',
+            'days_of_week' => [5, 6], 'tier_ids' => [$gold], 'is_active' => true, 'state' => 'live', 'check_time' => false,
         ]);
         $this->assertSame([$gold], EarnRateEvent::query()->find($id)->tier_ids);
 

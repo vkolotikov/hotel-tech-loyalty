@@ -363,6 +363,8 @@ trait SetsUpLoyaltyWorkspace
                 $t->text('tier_ids')->nullable();
                 $t->unsignedBigInteger('property_id')->nullable();
                 $t->boolean('is_active')->default(true);
+                // Release 4 (R4-6): the times were saved as the venue's wall clock.
+                $t->timestamp('times_venue_at')->nullable();
                 $t->timestamps();
             });
         }

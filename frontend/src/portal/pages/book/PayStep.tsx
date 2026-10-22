@@ -10,7 +10,8 @@ import { Notice } from '../../ui/Notice'
 import { Skeleton } from '../../ui/Skeleton'
 import { PriceBreakdown } from './PriceBreakdown'
 import { quoteBody } from './ReviewStep'
-import { afterConfirmError, type BookState, type PayVisit } from './steps'
+import { afterConfirmError, canTryOnlineAgain, payAtVenueGrantOf, retryOnlineVisit, type BookState, type PayVisit } from './steps'
+import { stashForReturn } from './returnStash'
 import type { PortalBooking, Quote } from '../../lib/types'
 
 const StripePayment = lazy(() => import('./StripePayment'))
@@ -62,7 +63,7 @@ export function PayStep({ quote, state, visit, onVisitChange, onBack, onDone }: 
   // the Confirm button used to be.
   const intent = useQuery({
     queryKey: ['portal-payment-intent', visit.nonce],
-    queryFn: () => portalApi.paymentIntent(body),
+    queryFn: () => portalApi.paymentIntent(body, visit.idempotencyKey),
     enabled: online && !!publishableKey && !visit.paid && !visit.noCard,
     staleTime: Infinity,
     gcTime: 0,
@@ -75,6 +76,9 @@ export function PayStep({ quote, state, visit, onVisitChange, onBack, onDone }: 
   const intentErrorCode = intent.isError ? apiErrorCode(intent.error) : null
   const nothingToCharge = visit.noCard || (intentErrorCode !== null && NOTHING_TO_CHARGE.has(intentErrorCode))
   const payAtVenue = !online || nothingToCharge
+  // Release 4, part C: a `pay_at_venue` answer given because online payment is unavailable carries the server's
+  // grant (`payAtVenueGrantOf`) — the confirm sends it back, and the member is told why there is nothing to pay now.
+  const atVenueGrant = visit.atVenueGrant ?? (intent.isError ? payAtVenueGrantOf(intent.error) : null)
   // A genuine payment-intent failure gets a fresh nonce, not a refetch of the same one — refetching would
   // keep re-asking under the identity that already failed; a new nonce is a clean, one-shot new request.
   const retryIntent = () => onVisitChange({ nonce: freshId() })
@@ -84,13 +88,17 @@ export function PayStep({ quote, state, visit, onVisitChange, onBack, onDone }: 
   // field survives even if some future change ever clears that cache entry — the point of owning this on
   // `visit` in the first place (see steps.ts) is that nothing here depends on a query still holding it.
   useEffect(() => {
-    if (nothingToCharge && !visit.noCard) onVisitChange({ noCard: true })
+    if (nothingToCharge && !visit.noCard) onVisitChange({ noCard: true, atVenueGrant: intent.isError ? payAtVenueGrantOf(intent.error) : null })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [nothingToCharge])
 
   const confirm = useMutation({
     mutationFn: (paymentIntentId: string | null) =>
-      portalApi.confirm({ ...body, notes: state.notes || null, payment_intent_id: paymentIntentId }, visit.idempotencyKey),
+      portalApi.confirm({
+        ...body, notes: state.notes || null, payment_intent_id: paymentIntentId,
+        // Only for a booking without a card, and only the server's own grant (release 4, part C).
+        ...(paymentIntentId === null && atVenueGrant ? { pay_at_venue_grant: atVenueGrant } : {}),
+      }, visit.idempotencyKey),
     onSuccess: r => {
       // Only when a real intent was captured: the pay-at-venue/nothing-to-charge paths never had one, and
       // removing a query that's disabled anyway (see `enabled` above) but whose cached "nothing to charge"
@@ -147,7 +155,12 @@ export function PayStep({ quote, state, visit, onVisitChange, onBack, onDone }: 
   // Pay — before Stripe has answered at all (finding M3): `paid` alone would leave a gap, while
   // `stripe.confirmPayment()` is in flight, where the strip was still clickable. `onPayFailed` releases
   // that lock again on a card that was never actually captured.
-  const onPayStart = () => onVisitChange({ held: true })
+  const onPayStart = () => {
+    // Release 4, part C: should the method leave for a bank, the return page books from the server's own record of
+    // this payment; this tab only keeps the member's note and this visit's key for it (never a price or a slot).
+    if (intent.data) stashForReturn(intent.data.payment_intent_id, { notes: state.notes || undefined, idempotencyKey: visit.idempotencyKey })
+    onVisitChange({ held: true })
+  }
   const onPayFailed = () => onVisitChange({ held: false })
   const onPaid = (paymentIntentId: string) => {
     onVisitChange({ paymentIntentId, paid: true, held: true })
@@ -174,7 +187,16 @@ export function PayStep({ quote, state, visit, onVisitChange, onBack, onDone }: 
 
       {!noKey && payAtVenue && (
         <>
-          <Notice tone="info">{t('portal.book.pay_at_venue_note', 'Nothing to pay now. Settle up when you visit.')}</Notice>
+          {atVenueGrant ? (
+            <Notice tone="warning">
+              {t('portal.payment.at_venue_fallback', 'Online payment is unavailable right now. You can still book now and pay at the venue.')}{' '}
+              {canTryOnlineAgain(atVenueGrant, confirm.isPending ? 'pending' : confirm.isError ? 'error' : confirm.isSuccess ? 'success' : 'idle') && (
+                <button type="button" className="underline" onClick={() => onVisitChange(retryOnlineVisit(freshId))}>{t('portal.payment.pay_online_again', 'Try paying online again')}</button>
+              )}
+            </Notice>
+          ) : (
+            <Notice tone="info">{t('portal.book.pay_at_venue_note', 'Nothing to pay now. Settle up when you visit.')}</Notice>
+          )}
           <Button type="button" full loading={confirm.isPending} onClick={() => confirm.mutate(null)}>
             {confirm.isPending ? t('portal.book.confirming', 'Confirming…') : t('portal.book.confirm', 'Confirm booking')}
           </Button>

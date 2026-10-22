@@ -1,0 +1,319 @@
+{
+  "status": {
+    "draft": "Borrador",
+    "scheduled": "Programado",
+    "sending": "Enviando",
+    "sent": "Enviada",
+    "failed": "Fallida",
+    "cancelled": "Cancelada"
+  },
+  "not_reached": {
+    "no_consent": "{{number}} no activaron las ofertas por SMS",
+    "no_phone": "{{number}} no tienen número de teléfono",
+    "bad_phone": "{{number}} tienen un número sin prefijo del país (debe empezar por + y el prefijo)",
+    "same_phone": "{{number}} comparten número con otro miembro al que llega, que recibe el único SMS"
+  },
+  "blocker": {
+    "twilio": "Configure primero la cuenta de Twilio del establecimiento.",
+    "unsaved": "Primero guarde sus cambios.",
+    "body": "Escriba el texto.",
+    "no_segment": "Elija quién la recibe.",
+    "segment_gone": "Su segmento ya no existe. Elija otro.",
+    "segment_problem": "Su segmento tiene una regla que no se puede usar. Corrija primero el segmento."
+  },
+  "problem": {
+    "name": "Dé un nombre a la campaña, de hasta {{max}} caracteres.",
+    "body_long": "Limite el texto a {{max}} caracteres.",
+    "segment_gone": "Ese segmento ya no existe. Elija otro."
+  },
+  "setting": {
+    "account_sid": "Twilio Account SID",
+    "auth_token": "Twilio Auth Token",
+    "phone_number": "Twilio Phone Number (número de teléfono)"
+  },
+  "setting_state": {
+    "missing": "{{setting}}: aún sin configurar",
+    "wrong": "{{setting}}: no tiene una forma que Twilio acepte"
+  },
+  "encoding": {
+    "gsm7": "Alfabeto SMS estándar",
+    "ucs2": "Unicode"
+  },
+  "outcome": {
+    "sent": "Enviada",
+    "failed": "No enviado",
+    "skipped": "Omitidas",
+    "pending": "En curso"
+  },
+  "outcome_hint": {
+    "sent": "Twilio aceptó el SMS. La entrega al teléfono corresponde a la red.",
+    "failed": "Twilio rechazó el SMS para ese número o no se pudo contactar. Los motivos están abajo.",
+    "skipped": "Desactivaron los SMS, perdieron su número o se desactivaron después de que empezara.",
+    "pending": "Se les estaba enviando cuando el envío se detuvo. No se les vuelve a enviar."
+  },
+  "twilio": {
+    "20003": "Twilio rechazó el Account SID o el Auth Token. Revíselos en Ajustes → Integraciones.",
+    "20005": "La cuenta de Twilio no está activa. Revísela en Twilio.",
+    "21211": "El número no es un número de teléfono válido.",
+    "21408": "El envío a este país no está activado en Twilio (Messaging, Geo permissions).",
+    "21606": "El número de Twilio del establecimiento no puede enviar SMS. Revise el número en Twilio.",
+    "21608": "Una cuenta de prueba de Twilio solo envía a números verificados en Twilio.",
+    "21610": "El número respondió STOP al número de Twilio del establecimiento. Su consentimiento de SMS está ahora desactivado.",
+    "21612": "Twilio no puede enviar desde el número del establecimiento a este número.",
+    "21614": "El número no puede recibir SMS (no es un móvil).",
+    "21617": "El texto es demasiado largo para un mensaje."
+  },
+  "failure": {
+    "unreachable": "No se pudo contactar con Twilio.",
+    "not_ready": "La cuenta de Twilio del establecimiento no está configurada.",
+    "job_failed": "El envío se detuvo tras errores repetidos.",
+    "other": "Twilio lo rechazó ({{reason}})."
+  },
+  "load": {
+    "error": {
+      "not_found": "Esta campaña SMS ya no existe.",
+      "manager_only": "Solo un propietario o un gerente puede trabajar con campañas SMS.",
+      "not_allowed": "Solo un propietario o un gerente puede trabajar con campañas SMS.",
+      "feature_locked": "Su plan no incluye campañas.",
+      "network": "Sin conexión. Compruebe la red e inténtelo de nuevo.",
+      "unknown": "No se pudo cargar. Inténtelo de nuevo."
+    }
+  },
+  "create": {
+    "error": {
+      "manager_only": "Solo un propietario o un gerente puede trabajar con campañas SMS.",
+      "not_allowed": "Solo un propietario o un gerente puede trabajar con campañas SMS.",
+      "feature_locked": "Su plan no incluye campañas.",
+      "network": "Sin conexión: no se ha creado ninguna campaña. Inténtelo de nuevo.",
+      "unknown": "No se ha podido crear la campaña. Inténtelo de nuevo."
+    }
+  },
+  "save": {
+    "error": {
+      "not_a_draft": "Esta campaña ya no es un borrador: se envió o programó mientras tanto. La página la muestra ahora tal como está.",
+      "not_found": "Esta campaña SMS ya no existe.",
+      "invalid": "Revise los campos marcados abajo.",
+      "manager_only": "Solo un propietario o un gerente puede trabajar con campañas SMS.",
+      "not_allowed": "Solo un propietario o un gerente puede trabajar con campañas SMS.",
+      "feature_locked": "Su plan no incluye campañas.",
+      "network": "Sin conexión: no se guardó nada. Inténtelo de nuevo.",
+      "unknown": "No se pudo guardar el borrador. Inténtelo de nuevo."
+    }
+  },
+  "audience": {
+    "error": {
+      "no_audience": "Elija primero quién la recibe.",
+      "bad_rule": "Su segmento tiene una regla que no se puede usar. Corrija primero el segmento.",
+      "not_found": "Esta campaña SMS ya no existe.",
+      "manager_only": "Solo un propietario o un gerente puede trabajar con campañas SMS.",
+      "not_allowed": "Solo un propietario o un gerente puede trabajar con campañas SMS.",
+      "network": "Sin conexión: no se pudo contar a quién llegaría.",
+      "unknown": "No se pudo contar a quién llegaría. Inténtelo de nuevo."
+    }
+  },
+  "test": {
+    "error": {
+      "no_phone": "Su cuenta no tiene número de teléfono para la prueba. Necesita uno con + y el prefijo del país.",
+      "bad_phone": "El número de teléfono de su cuenta no tiene prefijo del país. Debe empezar por + y el prefijo del país.",
+      "not_ready": "La cuenta de Twilio del establecimiento no está configurada. Un superadministrador la configura en Ajustes → Integraciones.",
+      "incomplete": "Escriba primero el texto.",
+      "test_failed": "Twilio no aceptó la prueba.",
+      "not_found": "Esta campaña SMS ya no existe.",
+      "manager_only": "Solo un propietario o un gerente puede trabajar con campañas SMS.",
+      "not_allowed": "Solo un propietario o un gerente puede trabajar con campañas SMS.",
+      "feature_locked": "Su plan no incluye campañas.",
+      "network": "Sin conexión: puede que la prueba se haya enviado o no. Revise su teléfono antes de intentarlo de nuevo.",
+      "unknown": "No se ha podido enviar la prueba. Inténtelo de nuevo."
+    }
+  },
+  "send": {
+    "error": {
+      "already_started": "Esta campaña ya se inició. La página muestra ahora hasta dónde ha llegado.",
+      "changed": "La campaña ha cambiado desde que esta página la mostró. Revísela y vuelva a enviarla.",
+      "audience_changed": "Ahora llegaría a {{reached}} miembros. Compruebe el número y vuelva a enviarla.",
+      "incomplete": "La campaña no está lista para enviarse. La página muestra ahora lo que le falta.",
+      "not_ready": "La cuenta de Twilio del establecimiento no está configurada. Un superadministrador la configura en Ajustes → Integraciones.",
+      "no_audience": "Elija primero quién la recibe.",
+      "bad_rule": "Su segmento tiene una regla que no se puede usar. Corrija primero el segmento.",
+      "nobody_to_send_to": "Nadie en este segmento puede recibirlo.",
+      "too_many": "Llegaría a más de {{limit}} miembros, el máximo para una campaña. Reduzca el segmento.",
+      "not_started": "No se ha podido poner la campaña en cola. No se envió nada; inténtelo de nuevo.",
+      "not_found": "Esta campaña SMS ya no existe.",
+      "manager_only": "Solo un propietario o un gerente puede trabajar con campañas SMS.",
+      "not_allowed": "Solo un propietario o un gerente puede trabajar con campañas SMS.",
+      "feature_locked": "Su plan no incluye campañas.",
+      "network": "Sin conexión. Recargue la página para ver si empezó antes de volver a pulsar Enviar.",
+      "unknown": "Puede que no haya empezado. Recargue la página para ver su estado antes de volver a pulsar Enviar."
+    },
+    "counting": "Contando a quién llegará…",
+    "title": "Enviar este SMS",
+    "about_now": "Ahora podrían recibirlo unos {{number}} miembros de {{segment}}, unos {{segments}} SMS. Se envía a quienes puedan recibirlo en ese momento, contados entonces.",
+    "final": "Una vez iniciado se puede detener, pero los SMS ya enviados no se pueden recuperar. Twilio factura al establecimiento cada parte de SMS.",
+    "keep": "Ahora no",
+    "confirm": "Enviar SMS a {{number}} miembros",
+    "schedule": "Programar para el {{when}}",
+    "will_text": "Enviará un SMS a {{number}} miembros de {{segment}}, a partir de ahora.",
+    "cost_long": "Son {{segments}} SMS en total: algunas copias ocupan más de un SMS y cada parte se factura.",
+    "cost": "Son {{segments}} SMS en total, uno por persona.",
+    "nobody": "Nadie de {{segment}} puede recibirla.",
+    "over": "Llegaría a {{number}} miembros, más de {{limit}}, el máximo para una campaña. Reduzca el segmento.",
+    "left_out": "{{number}} de sus {{members}} miembros no la recibirán:"
+  },
+  "schedule": {
+    "error": {
+      "already_started": "Esta campaña ya se inició. La página muestra ahora hasta dónde ha llegado.",
+      "changed": "La campaña cambió desde que esta página la mostró. Revísela y vuelva a programarla.",
+      "bad_time": "Elija otra hora.",
+      "incomplete": "La campaña no está lista para enviarse. La página muestra ahora lo que le falta.",
+      "not_ready": "La cuenta de Twilio del establecimiento no está configurada. Un superadministrador la configura en Ajustes → Integraciones.",
+      "no_audience": "Elija primero quién la recibe.",
+      "bad_rule": "Su segmento tiene una regla que no se puede usar. Corrija primero el segmento.",
+      "not_found": "Esta campaña SMS ya no existe.",
+      "manager_only": "Solo un propietario o un gerente puede trabajar con campañas SMS.",
+      "not_allowed": "Solo un propietario o un gerente puede trabajar con campañas SMS.",
+      "feature_locked": "Su plan no incluye campañas.",
+      "network": "Sin conexión. Vuelva a cargar la página para ver si se programó antes de intentarlo de nuevo.",
+      "unknown": "Puede que no se haya programado. Vuelva a cargar la página para ver su estado antes de intentarlo de nuevo."
+    }
+  },
+  "unschedule": {
+    "error": {
+      "not_scheduled": "Ya no está en espera: comenzó o ya se retiró. La página lo muestra ahora tal como está.",
+      "not_found": "Esta campaña SMS ya no existe.",
+      "manager_only": "Solo un propietario o un gerente puede trabajar con campañas SMS.",
+      "not_allowed": "Solo un propietario o un gerente puede trabajar con campañas SMS.",
+      "network": "Sin conexión: sigue programado. Inténtelo de nuevo.",
+      "unknown": "No se pudo retirar. Inténtelo de nuevo."
+    }
+  },
+  "cancel": {
+    "error": {
+      "not_sending": "Esta campaña ya no se está enviando. La página la muestra ahora tal como está.",
+      "not_found": "Esta campaña SMS ya no existe.",
+      "manager_only": "Solo un propietario o un gerente puede trabajar con campañas SMS.",
+      "not_allowed": "Solo un propietario o un gerente puede trabajar con campañas SMS.",
+      "network": "Sin conexión: puede que siga enviándose. Inténtelo de nuevo.",
+      "unknown": "No se pudo detener el envío. Inténtelo de nuevo."
+    },
+    "title": "¿Detener el envío de {{name}}?",
+    "confirm": "Detener el envío",
+    "keep": "Seguir enviando",
+    "body": "Ya se enviaron {{sent}} SMS y quedan enviados. El resto no se envía; se detiene antes del siguiente miembro."
+  },
+  "duplicate": {
+    "error": {
+      "not_found": "Esta campaña SMS ya no existe.",
+      "manager_only": "Solo un propietario o un gerente puede trabajar con campañas SMS.",
+      "not_allowed": "Solo un propietario o un gerente puede trabajar con campañas SMS.",
+      "feature_locked": "Su plan no incluye campañas.",
+      "network": "Sin conexión: no se creó ninguna copia. Inténtelo de nuevo.",
+      "unknown": "No se pudo crear la copia. Inténtelo de nuevo."
+    }
+  },
+  "remove": {
+    "error": {
+      "not_a_draft": "Solo se puede eliminar un borrador. La página lo muestra ahora tal como está.",
+      "not_found": "Esta campaña SMS ya no existe.",
+      "manager_only": "Solo un propietario o un gerente puede trabajar con campañas SMS.",
+      "not_allowed": "Solo un propietario o un gerente puede trabajar con campañas SMS.",
+      "network": "Sin conexión: no se eliminó nada. Inténtelo de nuevo.",
+      "unknown": "No se pudo eliminar el borrador. Inténtelo de nuevo."
+    }
+  },
+  "member": {
+    "label": "Ofertas por SMS",
+    "on": "Activado por el miembro",
+    "off": "Desactivado"
+  },
+  "copy_name": "{{name}} (copia)",
+  "editor": {
+    "unsaved": "Cambios sin guardar",
+    "save": "Guardar borrador",
+    "test": "Enviarme una prueba",
+    "send": "Enviar…",
+    "test_sent": "Se envió una prueba a {{phone}}, con «[TEST]» antes del texto.",
+    "before_send": "Antes de poder enviarla:",
+    "heading": "El texto",
+    "name": "Nombre",
+    "name_hint": "Solo lo ve el personal.",
+    "body": "Texto",
+    "body_example": "p. ej. Hola, {{first}}: puntos dobles en {{venue}} hasta el domingo. Responda STOP para darse de baja.",
+    "length_hint": "Contado con su propio nombre en las etiquetas; la copia de cada miembro se cuenta con el suyo, y Enviar indica el total.",
+    "stop_hint": "En muchos países los SMS de marketing deben indicar cómo dejar de recibirlos, por ejemplo «Responda STOP para darse de baja».",
+    "unknown_tags": "{{tags}} llegará a los miembros tal cual: ninguna etiqueta con ese nombre se rellena.",
+    "audience": "Quién la recibe",
+    "audience_hint": "Solo lo reciben los miembros del segmento que activaron las ofertas por SMS y tienen un número con el prefijo del país. Enviar muestra primero el número exacto.",
+    "choose_segment": "Elija un segmento",
+    "segment_problem": "{{name}} (hay que corregir una regla)",
+    "segment_option": "{{name}} · {{number}} miembros",
+    "segment_gone": "Un segmento que ya no existe",
+    "duplicate": "Duplicar",
+    "delete": "Eliminar borrador"
+  },
+  "preview": {
+    "heading": "En un teléfono",
+    "no_from": "El número del establecimiento",
+    "no_text": "Su texto",
+    "sample": "Con su propio nombre en las etiquetas, como las tiene su prueba. La copia de cada miembro tiene las suyas.",
+    "caption": "Así se ve en un teléfono. Los teléfonos varían."
+  },
+  "tags": {
+    "title": "Etiquetas",
+    "where": "Una etiqueta se coloca donde está el cursor en el texto. La copia de cada miembro muestra sus propios datos.",
+    "no_room": "No hay espacio para esa etiqueta en el texto."
+  },
+  "reach": {
+    "save_first": "Guarde el borrador para contar a quién llega.",
+    "choose": "Elija un segmento para ver a quién llega.",
+    "counted": "Ahora llegaría a {{number}} de los {{members}} miembros de {{segment}}: {{segments}} SMS en total."
+  },
+  "delete": {
+    "title": "¿Eliminar {{name}}?",
+    "confirm": "Eliminar borrador",
+    "keep": "Conservarlo",
+    "body": "El borrador se elimina para siempre. No se envió nada desde él."
+  },
+  "results": {
+    "to": "Para {{segment}}",
+    "by": "Enviada por {{name}}",
+    "title": "Cómo va el envío",
+    "of": "De",
+    "parts": "Partes de SMS",
+    "progress": "Procesadas hasta ahora",
+    "sending": "Enviando, en lotes de 50. Esta página se actualiza cada 10 segundos.",
+    "done": "Enviada el {{when}}.",
+    "stopped": "El envío se detuvo antes del final: se enviaron {{sent}}, el resto no.",
+    "cancelled": "Cancelada: se enviaron {{sent}} antes de detenerse.",
+    "last_progress": "Último lote: {{when}}.",
+    "outcome_count": "{{outcome}}: {{number}}",
+    "why_failed": "Por qué Twilio no los envió",
+    "failure_count": "{{number}}:",
+    "gone": "No se llegó a {{number}}: su ficha de miembro se eliminó o se fusionó después de empezar el envío.",
+    "delivery": "Enviado significa que Twilio lo aceptó; si cada teléfono lo recibió se ve en los registros de Twilio.",
+    "message": "El texto",
+    "cancel": "Detener el envío"
+  },
+  "list": {
+    "no_segment": "Sin segmento",
+    "new_name": "Nuevo SMS, {{day}}",
+    "line": "Un texto breve a los teléfonos de los miembros de un segmento que activaron las ofertas por SMS, enviado desde el número de Twilio del establecimiento.",
+    "new": "Nuevo SMS",
+    "none": "Todavía no hay campañas SMS. Cree una, escriba el texto, elija un segmento y envíela.",
+    "no_text": "Aún sin texto",
+    "edited": "Editada el {{day}}",
+    "scheduled": "Se envía: {{when}}",
+    "counts": "{{sent}} de {{total}} enviados"
+  },
+  "plan_locked": "Su plan no incluye campañas, así que tampoco hay campañas SMS.",
+  "back": "Todas las campañas SMS",
+  "setup": {
+    "title": "Los SMS se envían a través de la cuenta de Twilio del establecimiento, que aún no está configurada.",
+    "where": "Un superadministrador la introduce en el panel completo: Ajustes → Integraciones → Twilio. Necesita el Account SID, el Auth Token y el número desde el que se envían los SMS (con + y el prefijo del país), o en su lugar un Messaging Service SID.",
+    "billing": "Twilio factura al establecimiento cada parte de SMS enviada.",
+    "open": "Abrir Ajustes → Integraciones en el panel completo"
+  },
+  "length": {
+    "line": "{{chars}} de {{max}} caracteres · {{segments}} SMS (hasta {{per}} caracteres cada uno) · {{alphabet}}",
+    "unicode": "Estos caracteres lo convierten en Unicode, que admite menos caracteres por SMS: {{chars}}"
+  }
+}

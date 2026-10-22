@@ -346,6 +346,10 @@
         "currency_mismatch": "Stripe encaisse dans une autre devise que vos prix. Alignez-les pour prendre des acomptes."
       }
     },
+    "pay_at_venue": {
+      "on": "Accepter les réservations à payer sur place quand le paiement en ligne est indisponible",
+      "note": "Pour les membres qui réservent dans l’espace membre : si le service de paiement par carte est injoignable, ils peuvent quand même réserver et payer sur place. La réservation est marquée à payer sur place."
+    },
     "title": "Configuration",
     "load_failed": "La configuration n’a pas pu être chargée. Veuillez réessayer.",
     "read_only": "Seuls un propriétaire ou un manager peuvent modifier la configuration. Vous pouvez la consulter ici et gérer vos propres absences dans Équipe.",

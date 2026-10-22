@@ -10,11 +10,13 @@ export const TAB_WORDS: Record<string, string> = {
   campaigns: 'Campaigns',
   segments: 'Segments',
   push: 'Push messages',
+  sms: 'SMS',
 }
 
-/** A campaign's status (EmailCampaign::STATUS_*). */
+/** A campaign's status (EmailCampaign::STATUS_*, and release 4's `scheduled`). */
 export const STATUS_WORDS: Record<string, string> = {
   draft: 'Draft',
+  scheduled: 'Scheduled',
   sending: 'Sending',
   sent: 'Sent',
   failed: 'Failed',
@@ -148,6 +150,28 @@ export const TAG_WORDS: Record<string, string> = {
   current_year: 'Year',
 }
 
+/** Why a time cannot be chosen (scheduleMath.ts `laterProblem`, the server's `bad_time` reasons, SendLater). */
+export const SCHEDULE_REASON_WORDS: Record<string, string> = {
+  format: 'Choose a date and a time.',
+  past: 'Choose a time at least two minutes from now.',
+  too_far: 'Choose a time within a year from now.',
+  not_on_clock: 'The clocks change then: that time does not exist on the venue’s clock. Choose another.',
+}
+
+/** Why a scheduled send did not start when it was due (the start services' codes). */
+export const SCHEDULE_PROBLEM_WORDS: Record<string, string> = {
+  nobody_to_send_to: 'nobody in its segment could receive it then.',
+  too_many: 'it would have reached more members than one send may.',
+  no_audience: 'its segment no longer existed.',
+  bad_rule: 'its segment had a rule that cannot be used.',
+  no_category: 'it had no kind of message.',
+  incomplete: 'it was not complete.',
+  not_editable_here: 'it was changed in the full admin.',
+  not_ready: 'the venue’s Twilio account was not set up.',
+  feature_locked: 'the plan no longer included it.',
+  workspace_off: 'HexaTech Loyalty was switched off for the venue.',
+}
+
 /** The families above by the key prefix they are read under. */
 export const WORD_FAMILIES: Record<string, Record<string, string>> = {
   tab: TAB_WORDS,
@@ -164,4 +188,6 @@ export const WORD_FAMILIES: Record<string, Record<string, string>> = {
   blocker: BLOCKER_WORDS,
   not_reached: NOT_REACHED_WORDS,
   tag: TAG_WORDS,
+  schedule_reason: SCHEDULE_REASON_WORDS,
+  schedule_problem: SCHEDULE_PROBLEM_WORDS,
 }

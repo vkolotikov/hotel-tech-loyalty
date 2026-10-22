@@ -110,7 +110,8 @@
     "no_category": "Tipo aún sin elegir",
     "no_segment": "Sin segmento",
     "no_title": "Aún sin título",
-    "none": "Aún no hay notificaciones push. Cree una, elija su tipo y un segmento, y envíela."
+    "none": "Aún no hay notificaciones push. Cree una, elija su tipo y un segmento, y envíela.",
+    "scheduled": "Se envía: {{when}}"
   },
   "load": {
     "error": {
@@ -227,13 +228,43 @@
     "nobody": "Nadie de {{segment}} puede recibirla.",
     "over": "Llegaría a {{number}} miembros, más de {{limit}}, el máximo para una notificación. Reduzca el segmento.",
     "title": "Enviar esta notificación push",
-    "will_push": "Se enviará a {{number}} miembros de {{segment}}, a partir de ahora."
+    "will_push": "Se enviará a {{number}} miembros de {{segment}}, a partir de ahora.",
+    "about_now": "Ahora podrían recibirlo unos {{number}} miembros de {{segment}}. Se envía a quienes puedan recibirlo en ese momento, contados entonces.",
+    "schedule": "Programar para el {{when}}"
   },
   "status": {
     "cancelled": "Cancelada",
     "draft": "Borrador",
     "failed": "Fallida",
     "sending": "Enviando",
-    "sent": "Enviada"
+    "sent": "Enviada",
+    "scheduled": "Programado"
+  },
+  "schedule": {
+    "error": {
+      "already_started": "Esta notificación ya se inició. La página muestra ahora cómo va el envío.",
+      "changed": "El mensaje cambió desde que esta página lo mostró. Revíselo y vuelva a programarlo.",
+      "bad_time": "Elija otra hora.",
+      "incomplete": "La notificación no está lista para enviarse. La página muestra ahora lo que le falta.",
+      "no_audience": "Elija primero quién la recibe.",
+      "no_category": "Elija primero el tipo de mensaje.",
+      "bad_rule": "Su segmento tiene una regla que no se puede usar. Corrija primero el segmento.",
+      "not_found": "Esta notificación push ya no existe.",
+      "manager_only": "Solo un propietario o un responsable puede trabajar con notificaciones push.",
+      "not_allowed": "Solo un propietario o un responsable puede trabajar con notificaciones push.",
+      "feature_locked": "Su plan no incluye notificaciones push.",
+      "network": "Sin conexión. Vuelva a cargar la página para ver si se programó antes de intentarlo de nuevo.",
+      "unknown": "Puede que no se haya programado. Vuelva a cargar la página para ver su estado antes de intentarlo de nuevo."
+    }
+  },
+  "unschedule": {
+    "error": {
+      "not_scheduled": "Ya no está en espera: comenzó o ya se retiró. La página lo muestra ahora tal como está.",
+      "not_found": "Esta notificación push ya no existe.",
+      "manager_only": "Solo un propietario o un responsable puede trabajar con notificaciones push.",
+      "not_allowed": "Solo un propietario o un responsable puede trabajar con notificaciones push.",
+      "network": "Sin conexión: sigue programado. Inténtelo de nuevo.",
+      "unknown": "No se pudo retirar. Inténtelo de nuevo."
+    }
   }
 }

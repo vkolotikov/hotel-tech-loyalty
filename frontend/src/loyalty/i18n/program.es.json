@@ -231,6 +231,10 @@
     "take_off_label": "Quitar {{benefit}} de {{tier}}",
     "title": "Niveles"
   },
+  "time_check": {
+    "dialog": "Revise estas horas: la promoción se guardó antes de que las horas de las promociones se leyeran en todas partes según la hora del establecimiento. Si se guardó por última vez en la administración completa, pueden estar desplazadas por la diferencia del establecimiento con UTC. Al guardarla, quedan marcadas como revisadas.",
+    "row": "Revise la hora: esta promoción se guardó antes de que las horas de las promociones se leyeran en todas partes según la hora del establecimiento. Si se guardó por última vez en la administración completa, puede empezar y terminar con unas horas de diferencia. Ábrala, revise las horas y guárdela."
+  },
   "title": "Programa",
   "value_phrase": {
     "fixed_amount": "{{amount}} de descuento",

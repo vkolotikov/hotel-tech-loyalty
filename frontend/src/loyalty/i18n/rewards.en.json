@@ -4,6 +4,12 @@
     "services": "Services only",
     "stays": "Stays only"
   },
+  "brand": {
+    "hint": "Which of your brands it belongs to.",
+    "label": "Brand",
+    "refused": "Choose one of the brands listed.",
+    "saved": "Brand: {{name}}. It stays on this brand."
+  },
   "cancel": {
     "body": "{{points}} points go back to {{name}}, and the reward returns to stock if it has a limit. The code stops working.",
     "confirm": "Cancel redemption",

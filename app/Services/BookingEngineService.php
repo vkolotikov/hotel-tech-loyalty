@@ -98,7 +98,7 @@ class BookingEngineService
         // the hotel needs the lead time IN FULL before arrival.
         $this->assertExtrasMeetLeadTime($extras, $checkIn);
 
-        $extrasTotal = $this->calcExtras($extras, $adults);
+        $extrasTotal = $this->calcExtras($extras, (int) $adults, (int) $children, $nights);
         $grossTotal  = $roomTotal + $extrasTotal;
 
         $holdToken = Str::random(48);
@@ -190,7 +190,7 @@ class BookingEngineService
         }
 
         $this->assertExtrasMeetLeadTime($extras, $checkIn);
-        $extrasTotal = $this->calcExtras($extras, $adults);
+        $extrasTotal = $this->calcExtras($extras, (int) $adults, (int) $children, $nights);
         $grossTotal  = $roomTotalSum + $extrasTotal;
 
         $holdToken = Str::random(48);
@@ -654,12 +654,12 @@ class BookingEngineService
                         $name     = (string) ($def['name'] ?? $extraId);
                         $unit     = (float)  ($def['price'] ?? 0);
                         $priceType = (string) ($def['price_type'] ?? $def['type'] ?? 'per_stay');
-                        // calcExtras() multiplies per_guest extras by adults.
-                        // Mirror that here so the snapshot's line_total ==
-                        // what the customer was actually charged for.
-                        $effectiveUnit = $priceType === 'per_guest'
-                            ? round($unit * max(1, (int) $payload['adults']), 2)
-                            : $unit;
+                        // calcExtras()'s own rule (extraUnits(), R4-3: per
+                        // night, per person, per person per night), so the
+                        // snapshot's line_total == what the customer was
+                        // actually charged for.
+                        $units = self::extraUnits($priceType, (int) $payload['adults'], (int) ($payload['children'] ?? 0), $nights);
+                        $effectiveUnit = $units === 1 ? $unit : round($unit * $units, 2);
                         $lineTotal = round($effectiveUnit * $qty, 2);
                         if ($name === '') continue;
 
@@ -1725,9 +1725,9 @@ class BookingEngineService
                 if ($name === '') continue;
                 $unit      = (float) ($def['price'] ?? 0);
                 $priceType = (string) ($def['price_type'] ?? $def['type'] ?? 'per_stay');
-                $effectiveUnit = $priceType === 'per_guest'
-                    ? round($unit * max(1, (int) $adults), 2)
-                    : $unit;
+                // calcExtras()'s own rule (extraUnits(), R4-3), as quoteCombo() charged it.
+                $units = self::extraUnits($priceType, (int) $adults, (int) $children, (int) $nights);
+                $effectiveUnit = $units === 1 ? $unit : round($unit * $units, 2);
                 $comboExtrasSnapshot[] = [
                     'id'         => $extraId,
                     'name'       => $name,
@@ -2101,7 +2101,11 @@ class BookingEngineService
                 $def = $allExtras->firstWhere('id', $item['id'] ?? '');
                 if ($def) {
                     $qty = max(1, (int) ($item['quantity'] ?? 1));
-                    $unitPrice = (float) ($def['price'] ?? 0);
+                    // As charged: calcExtras()'s own rule (R4-3), from the stay the payload describes.
+                    $unitPrice = (float) ($def['price'] ?? 0) * self::extraUnits(
+                        $def['price_type'] ?? $def['type'] ?? 'per_stay',
+                        (int) ($payload['adults'] ?? 1), (int) ($payload['children'] ?? 0), (int) ($payload['nights'] ?? 1),
+                    );
                     $extrasBreakdown[] = [
                         'name' => $def['name'] ?? 'Extra',
                         'quantity' => $qty,
@@ -2444,6 +2448,7 @@ class BookingEngineService
         // so the admin sees the same labels the customer picked.
         $extras    = $payload['extras'] ?? [];
         $adults    = (int) ($payload['adults'] ?? 1);
+        $children  = (int) ($payload['children'] ?? 0);
         $allExtras = empty($extras) ? collect() : collect($this->loadExtrasConfig());
 
         foreach ($extras as $item) {
@@ -2452,10 +2457,9 @@ class BookingEngineService
             $def     = $allExtras->firstWhere('id', $extraId);
             if (!$def) continue;
 
-            $unitPrice = (float) ($def['price'] ?? 0);
-            if (($def['type'] ?? 'per_stay') === 'per_guest') {
-                $unitPrice *= max(1, $adults);
-            }
+            // One of the extra for this stay, by calcExtras()'s own rule (R4-3).
+            $unitPrice = (float) ($def['price'] ?? 0)
+                * self::extraUnits($def['price_type'] ?? $def['type'] ?? 'per_stay', $adults, $children, $nights);
 
             BookingPriceElement::create([
                 'organization_id'  => $orgId,
@@ -2510,7 +2514,7 @@ class BookingEngineService
                     'id'    => (string) $e->id,
                     'name'  => $e->name,
                     'price' => (float) $e->price,
-                    // calcExtras() checks `type` for per_guest pricing;
+                    // Legacy readers check `type` for the pricing type;
                     // the DB column is `price_type`, so alias.
                     'type'  => $e->price_type ?? 'per_stay',
                     'price_type' => $e->price_type ?? 'per_stay',
@@ -2582,13 +2586,38 @@ class BookingEngineService
     }
 
     /**
+     * How many times an extra's price is charged for one of it in this stay
+     * (R4-3, owner 2026-10-22: "charge correctly"), as the full admin sets
+     * it (Bookings → Extras, `price_type`): per night × nights, per person ×
+     * guests, per person per night × both, otherwise once per stay. Guests
+     * are adults and children: the admin screen says "per person". `per_guest`
+     * (a legacy type the admin screen never offered) is per person, and
+     * `per_person_per_night` reads as `per_person_night`. The one rule every
+     * line, total, receipt and mail of a stay's extras is built from.
+     */
+    public static function extraUnits(mixed $type, int $adults, int $children, int $nights): int
+    {
+        $guests = max(1, $adults + max(0, $children));
+        $nights = max(1, $nights);
+
+        return match (is_string($type) ? $type : '') {
+            'per_night'                                => $nights,
+            'per_person', 'per_guest'                  => $guests,
+            'per_person_night', 'per_person_per_night' => $guests * $nights,
+            default                                    => 1,
+        };
+    }
+
+    /**
      * The selected extras as priced lines — the one arithmetic every total
-     * is built from. `line_total` is left unrounded, exactly as calcExtras()
-     * has always summed it, so the total below is bit-for-bit what it was.
+     * is built from. `unit_price` is one of the extra for this stay (its
+     * price × extraUnits()), `line_total` that × quantity, left unrounded
+     * exactly as calcExtras() has always summed it, so a per-stay extra's
+     * total is bit-for-bit what it was.
      *
      * @return list<array{id: string, name: string, unit_price: float, quantity: int, line_total: float}>
      */
-    public function extrasLines(array $extras, int $adults): array
+    public function extrasLines(array $extras, int $adults, int $children, int $nights): array
     {
         // Single source of truth — loadExtrasConfig() prefers the
         // booking_extras DB table (what the widget shows) over the legacy
@@ -2606,7 +2635,7 @@ class BookingEngineService
 
             $price = (float) ($def['price'] ?? 0);
             $type  = $def['price_type'] ?? $def['type'] ?? 'per_stay';
-            $unit  = $type === 'per_guest' ? $price * $adults : $price;
+            $unit  = $price * self::extraUnits($type, $adults, $children, $nights);
 
             $lines[] = [
                 'id'         => $extraId,
@@ -2625,10 +2654,10 @@ class BookingEngineService
         return $lines;
     }
 
-    private function calcExtras(array $extras, int $adults): float
+    private function calcExtras(array $extras, int $adults, int $children, int $nights): float
     {
         $total = 0.0;
-        foreach ($this->extrasLines($extras, $adults) as $line) {
+        foreach ($this->extrasLines($extras, $adults, $children, $nights) as $line) {
             $total += $line['line_total'];
         }
 

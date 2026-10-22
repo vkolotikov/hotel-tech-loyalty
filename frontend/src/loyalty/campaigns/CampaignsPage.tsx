@@ -8,6 +8,7 @@ import { CAMPAIGN_TABS, searchFor, tabAfter, tabFrom, type CampaignTab } from '.
 import { SegmentsTab } from './SegmentsTab'
 import { TAB_WORDS } from './words'
 import { PushTab } from '../push/PushTab'
+import { SmsTab } from '../sms/SmsTab'
 
 /**
  * Campaigns (spec 2026-10-21 release 2 §6), a manager's area: email campaigns to the programme's members, and the
@@ -24,7 +25,7 @@ export function CampaignsPage() {
 
   return (
     <div className="space-y-5 px-4 py-6 lg:px-6">
-      <PageHeader title={t('loyalty.campaigns.title', 'Campaigns')} line={t('loyalty.campaigns.line', 'Email your members, and the segments you send to.')} />
+      <PageHeader title={t('loyalty.campaigns.title', 'Campaigns')} line={t('loyalty.campaigns.line', 'Email, push messages and SMS to your members, and the segments you send them to.')} />
 
       {!boot.staff.can.manage_campaigns ? (
         <div className="max-w-xl">
@@ -59,6 +60,7 @@ export function CampaignsPage() {
             ))}
             {tab === 'segments' && <SegmentsTab />}
             {tab === 'push' && <PushTab />}
+            {tab === 'sms' && <SmsTab />}
           </div>
         </>
       )}

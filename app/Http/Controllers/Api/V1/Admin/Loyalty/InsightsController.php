@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Api\V1\Admin\Loyalty;
 
 use App\Http\Controllers\Controller;
+use App\Services\Loyalty\Insights\InsightsCohorts;
+use App\Services\Loyalty\Insights\InsightsMoney;
 use App\Services\Loyalty\Insights\InsightsPeriod;
 use App\Services\Loyalty\Insights\LoyaltyInsights;
 use App\Services\Loyalty\LoyaltyAccess;
@@ -32,6 +34,32 @@ class InsightsController extends Controller
         $request->validate(['period' => ['nullable', 'string', Rule::in(InsightsPeriod::CHOICES)]]);
 
         return response()->json(LoyaltyInsights::for(
+            (int) app('current_organization_id'),
+            (string) ($request->query('period') ?: InsightsPeriod::DEFAULT),
+        ));
+    }
+
+    /**
+     * `GET insights/cohorts` (release 4): members by the venue month they joined, the last twelve, and how many were
+     * active in each month since (InsightsCohorts' definitions).
+     */
+    public function cohorts(Request $request): JsonResponse
+    {
+        LoyaltyAccess::requireInsights($request->user());
+
+        return response()->json(InsightsCohorts::for((int) app('current_organization_id')));
+    }
+
+    /**
+     * `GET insights/money?period=30d|90d|12m` (release 4): the money members brought in the period — paid stays and
+     * appointments they booked, in the venue's currency — beside every booking's (InsightsMoney's definitions).
+     */
+    public function money(Request $request): JsonResponse
+    {
+        LoyaltyAccess::requireInsights($request->user());
+        $request->validate(['period' => ['nullable', 'string', Rule::in(InsightsPeriod::CHOICES)]]);
+
+        return response()->json(InsightsMoney::for(
             (int) app('current_organization_id'),
             (string) ($request->query('period') ?: InsightsPeriod::DEFAULT),
         ));

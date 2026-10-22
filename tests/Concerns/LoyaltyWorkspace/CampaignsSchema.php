@@ -57,7 +57,8 @@ trait CampaignsSchema
                 $t->timestamps();
             });
         }
-        foreach (['body_blocks' => 'text', 'last_progress_at' => 'timestamp'] as $column => $type) {
+        // Release 4's send later adds scheduled_at (2026_10_23_150100).
+        foreach (['body_blocks' => 'text', 'last_progress_at' => 'timestamp', 'scheduled_at' => 'timestamp'] as $column => $type) {
             if (!Schema::hasColumn('email_campaigns', $column)) {
                 Schema::table('email_campaigns', fn (Blueprint $t) => $t->{$type}($column)->nullable());
             }

@@ -281,7 +281,8 @@ class PortalStayBookingTest extends MemberEndpointTestCase
             return $amount === 180.0
                 && $meta['kind'] === 'portal_stay_booking' && $meta['org_id'] === $this->org->id && $meta['member_id'] === $this->member->id
                 && $meta['portal_hold_token'] === $hold && !array_key_exists('hold_token', $meta)
-                && $options === ['allow_redirects' => 'never'];
+                // Release 4, part C: redirect-based methods allowed — the portal has a return page now.
+                && $options === [];
         })->andReturn(['client_secret' => 'pi_1_secret', 'payment_intent_id' => 'pi_1']);
 
         $this->flushHeaders();

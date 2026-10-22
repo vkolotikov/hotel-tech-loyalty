@@ -129,5 +129,28 @@
       "network": "No connection. Check the network and try again.",
       "unknown": "Insights could not be loaded. Please try again."
     }
+  },
+  "cohorts": {
+    "cell": "{{active}} of {{members}} active",
+    "joined": "Joined",
+    "line": "Members by the month they joined, and the share of them who earned or spent points in that month and each month after. The last twelve months.",
+    "members": "Members",
+    "month_after": "+{{months}}",
+    "month_zero": "Month joined",
+    "none": "Nobody joined in the last twelve months.",
+    "title": "Cohort retention"
+  },
+  "money": {
+    "all": "Of {{total}} paid in all",
+    "bookings": "Bookings: {{number}}",
+    "currency_line": "In {{currency}}",
+    "line": "Paid stays and appointments members booked in this period, by the day they booked: what they paid, less what went back.",
+    "members": "Members brought",
+    "none": "No paid bookings in this period yet.",
+    "other_currency": "Paid bookings by members in another currency, not added in: {{number}}.",
+    "services": "Appointments",
+    "share": "Share of all paid bookings",
+    "stays": "Stays",
+    "title": "Money members bring"
   }
 }

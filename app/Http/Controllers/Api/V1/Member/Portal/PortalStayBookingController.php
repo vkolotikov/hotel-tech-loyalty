@@ -16,6 +16,7 @@ use App\Services\Booking\MemberPricing;
 use App\Services\Booking\PaymentAlreadyUsed;
 use App\Services\Booking\PaymentMismatch;
 use App\Services\Booking\PaymentUnverifiable;
+use App\Services\Booking\PayAtVenueFallback;
 use App\Services\Booking\PortalPaymentIntentGuard;
 use App\Services\Booking\PortalStayHooks;
 use App\Services\Booking\PortalStayNotifier;
@@ -31,6 +32,7 @@ use App\Services\Portal\PortalBootstrap;
 use App\Services\StripeService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 
@@ -177,18 +179,54 @@ class PortalStayBookingController extends Controller
         }
     }
 
+    /** Hold payload key: the intent the last payment-intent call gave for this hold (never `stripe_payment_intent_id`, the public widget's key the public rescue reads). */
+    public const HOLD_INTENT_KEY = 'portal_payment_intent_id';
+
+    /** Hold payload key: how many times a payment-intent call has extended the hold. */
+    public const HOLD_EXTENSIONS_KEY = 'portal_intent_extensions';
+
+    /**
+     * How many times payment-intent calls may extend one hold, each to
+     * fifteen minutes from the call. Three covers every honest path — the
+     * first visit to Pay, a "try again" after Stripe did not answer, a pay
+     * again after a failed bank redirect — and keeps a hold to well under an
+     * hour (ten minutes from the quote plus at most 3 × 15). A hold reserves
+     * no room and freezes the price it was quoted at, so past that the member
+     * checks the price again (Review asks for a fresh quote, which re-checks
+     * the room and the price); the payment-intent call still answers, it only
+     * stops moving the expiry.
+     */
+    public const MAX_HOLD_EXTENSIONS = 3;
+
     /**
      * A Stripe PaymentIntent for what the hold costs this member today,
      * carrying the organisation, the member and the hold in its metadata so
      * confirm() can check all three before trusting it.
+     *
+     * Release 4, part C:
+     * - Redirect-based payment methods the account enables are allowed: the
+     *   portal returns to `/portal/book/return`, which asks the server what
+     *   the intent is for (PortalPaymentReturnController) and confirms the
+     *   hold named in its metadata (`portal_hold_token`).
+     * - One hold per card: the hold remembers its last intent
+     *   (HOLD_INTENT_KEY); a second call reuses it when it can still be paid
+     *   for the same amount, and otherwise releases it first, through
+     *   PortalPaymentIntentGuard::reuseOrRelease(). Under the hold row, then
+     *   `pi:` — no room lock (see below).
+     * - The hold's expiry is extended at most MAX_HOLD_EXTENSIONS times.
+     * - When Stripe cannot be reached and the venue takes such bookings to
+     *   pay at the venue (PayAtVenueFallback), the answer is `409
+     *   pay_at_venue` with a grant the confirm accepts.
      */
-    public function paymentIntent(Request $request, StripeService $stripe): JsonResponse
+    public function paymentIntent(Request $request, StripeService $stripe, PortalPaymentIntentGuard $guard): JsonResponse
     {
         if ($refusal = $this->notBookableFor($request)) {
             return $refusal;
         }
         $data = $request->validate(['hold_token' => 'required|string|max:64']);
         $member = $this->provisioner->ensureForUser($request->user());
+        $orgId = (int) app('current_organization_id');
+        $memberId = (int) $member->id;
 
         $ready = $this->readyHold($request, $member, $data['hold_token']);
         if ($ready instanceof JsonResponse) {
@@ -203,32 +241,115 @@ class PortalStayBookingController extends Controller
             return response()->json(['error' => 'nothing_to_pay', 'message' => 'There is nothing to pay online for this booking.'], 409);
         }
 
-        $p = $hold->payload_json;
         try {
-            $pi = $stripe->createPaymentIntent($pricing->total, "Stay: {$p['unit_name']} ({$p['check_in']} — {$p['check_out']})", [
-                'kind'              => 'portal_stay_booking',
-                'org_id'            => (int) app('current_organization_id'),
-                'member_id'         => (int) $member->id,
-                // Not `hold_token`: that key belongs to the public widget's
-                // intents (StripeService derives an idempotency key from it and
-                // the webhook's orphan recovery writes a "Website" booking).
-                'portal_hold_token' => $hold->hold_token,
-                'total'             => number_format($pricing->total, 2, '.', ''),
-            ], ['allow_redirects' => 'never']);
-        } catch (\Throwable $e) {
-            Log::warning('portal.stay_payment_intent_failed', ['org' => app('current_organization_id'), 'error' => $e->getMessage()]);
-            return response()->json(['error' => 'payment_unavailable', 'message' => 'Online payment is unavailable right now. Please try again in a moment.'], 503);
+            // No room lock: the public widget's confirms take `room:{org}:{unit}`
+            // too, and a slow Stripe call here must hold up nobody else's
+            // booking. The hold row (a booking row) is what serialises this
+            // hold's calls — and this call with the hold's own confirm, which
+            // takes the room lock, then this same row, then `pi:`.
+            return DB::transaction(fn () => $this->intentForHold((int) $hold->id, $pricing, $stripe, $guard, $orgId, $memberId));
+        } catch (PaymentUnverifiable $e) {
+            // The hold's earlier intent could not be read, or not released: no second intent is minted beside it.
+            Log::warning('portal.stay_payment_intent_previous_unreadable', ['org' => $orgId, 'hold' => $hold->id, 'error' => $e->getMessage()]);
+            return $this->paymentUnavailable($orgId, $memberId, $hold->hold_token, $e);
+        }
+    }
+
+    /**
+     * In one transaction: the hold row locked and read again (a confirm of it
+     * may have just consumed it), the earlier intent reused or released (`pi:`
+     * — after the hold row, never before), a new one minted if needed, and
+     * the hold — a row this transaction already holds, so no new row lock is
+     * taken while `pi:` is held — told which intent it has and, up to the
+     * cap, given fifteen more minutes. No path takes `pi:` and then a hold
+     * row, so the order cannot cycle.
+     */
+    private function intentForHold(int $holdId, PricingResult $pricing, StripeService $stripe, PortalPaymentIntentGuard $guard, int $orgId, int $memberId): JsonResponse
+    {
+        $hold = BookingHold::withoutGlobalScopes()->where('organization_id', $orgId)->whereKey($holdId)->lockForUpdate()->first();
+        if (!$hold || !$hold->isActive()) {
+            return response()->json(['error' => 'hold_expired', 'message' => 'This took a little too long. Please check the price again.'], 409);
+        }
+        $p = $hold->payload_json;
+
+        $pi = null;
+        $previous = $p[self::HOLD_INTENT_KEY] ?? null;
+        if (is_string($previous) && $previous !== '') {
+            $token = $hold->hold_token;
+            $reused = $guard->reuseOrRelease($previous, $orgId, $memberId, 'portal_stay_booking', $pricing->total,
+                fn (array $m) => hash_equals($token, (string) ($m['portal_hold_token'] ?? '')));
+            if ($reused !== null) {
+                $pi = ['client_secret' => (string) $this->field($reused, 'client_secret'), 'payment_intent_id' => (string) $this->field($reused, 'id'), 'reused' => true];
+            }
         }
 
-        // Entering a card takes longer than a quote lasts.
-        $hold->forceFill(['expires_at' => now()->addMinutes(15)])->save();
+        if ($pi === null) {
+            try {
+                // No fourth-argument `allow_redirects`: redirect methods are allowed (see paymentIntent()).
+                $created = $stripe->createPaymentIntent($pricing->total, "Stay: {$p['unit_name']} ({$p['check_in']} — {$p['check_out']})", [
+                    'kind'              => 'portal_stay_booking',
+                    'org_id'            => $orgId,
+                    'member_id'         => $memberId,
+                    // Not `hold_token`: that key belongs to the public widget's
+                    // intents (StripeService derives an idempotency key from it and
+                    // the webhook's orphan recovery writes a "Website" booking).
+                    'portal_hold_token' => $hold->hold_token,
+                    'total'             => number_format($pricing->total, 2, '.', ''),
+                ], []);
+            } catch (\Throwable $e) {
+                Log::warning('portal.stay_payment_intent_failed', ['org' => $orgId, 'error' => $e->getMessage()]);
+                return $this->paymentUnavailable($orgId, $memberId, $hold->hold_token, $e);
+            }
+            $pi = $created + ['reused' => false];
+        }
+
+        // Entering a card takes longer than a quote lasts — but only so many times (MAX_HOLD_EXTENSIONS).
+        $extensions = (int) ($p[self::HOLD_EXTENSIONS_KEY] ?? 0);
+        $changes = [self::HOLD_INTENT_KEY => $pi['payment_intent_id']];
+        $expires = $hold->expires_at;
+        if ($extensions < self::MAX_HOLD_EXTENSIONS) {
+            $changes[self::HOLD_EXTENSIONS_KEY] = $extensions + 1;
+            $expires = $expires->greaterThan(now()->addMinutes(15)) ? $expires : now()->addMinutes(15);
+        }
+        $hold->forceFill(['payload_json' => array_merge($p, $changes), 'expires_at' => $expires])->save();
 
         return response()->json([
             'client_secret'     => $pi['client_secret'],
             'payment_intent_id' => $pi['payment_intent_id'],
             'amount'            => $pricing->total,
             'currency'          => $pricing->currency,
+            'reused'            => $pi['reused'],
+            'hold_expires_at'   => $expires->toIso8601String(),
         ]);
+    }
+
+    /**
+     * Stripe could not give a payment: today's retryable 503, or — only when
+     * Stripe could not be reached or is overloaded
+     * (PayAtVenueFallback::isStripeUnreachable()) and the venue takes such
+     * bookings to pay at the venue — 409 `pay_at_venue` with the grant the
+     * confirm accepts for this member and this hold (booked once).
+     */
+    private function paymentUnavailable(int $orgId, int $memberId, string $holdToken, \Throwable $cause): JsonResponse
+    {
+        if (PayAtVenueFallback::isStripeUnreachable($cause) && PayAtVenueFallback::enabled()) {
+            Log::warning('portal.pay_at_venue_fallback_offered', ['org' => $orgId, 'member' => $memberId, 'kind' => 'stay']);
+
+            return response()->json([
+                'error'              => 'pay_at_venue',
+                'reason'             => PayAtVenueFallback::REASON,
+                'pay_at_venue_grant' => PayAtVenueFallback::grant('stay', $orgId, $memberId, $holdToken),
+                'message'            => 'Online payment is unavailable right now. You can book now and pay at the venue.',
+            ], 409);
+        }
+
+        return response()->json(['error' => 'payment_unavailable', 'message' => 'Online payment is unavailable right now. Please try again in a moment.'], 503);
+    }
+
+    /** A Stripe\PaymentIntent's field; tolerates an array too (test doubles). */
+    private function field(mixed $pi, string $key): mixed
+    {
+        return is_array($pi) ? ($pi[$key] ?? null) : ($pi->{$key} ?? null);
     }
 
     /**
@@ -247,6 +368,7 @@ class PortalStayBookingController extends Controller
             'hold_token'        => 'required|string|max:64',
             'payment_intent_id' => 'nullable|string|max:255',
             'special_requests'  => 'nullable|string|max:2000',
+            'pay_at_venue_grant' => 'nullable|string|max:4000',
         ]);
         $orgId = (int) app('current_organization_id');
         $user = $request->user();
@@ -286,6 +408,14 @@ class PortalStayBookingController extends Controller
         [$hold, $pricing] = $ready;
 
         $online = PortalBootstrap::paymentMode($pricing->currency)['mode'] === 'online' && $pricing->total > 0;
+        // Release 4, part C: online payment was unavailable at the payment-intent call and the venue takes
+        // such bookings to pay at the venue — with no payment in the request, the grant for this member and
+        // this hold turns it into the ordinary at-venue stay (`open`, `pay_at_venue`), nothing new.
+        $fallback = $online && !$piId
+            && PayAtVenueFallback::allows($data['pay_at_venue_grant'] ?? null, 'stay', $orgId, $memberId, $hold->hold_token);
+        if ($fallback) {
+            $online = false;
+        }
         if ($online && !$piId) {
             return response()->json(['error' => 'payment_required', 'message' => 'Please complete the payment first.'], 422);
         }
@@ -394,6 +524,7 @@ class PortalStayBookingController extends Controller
                 }
 
                 Log::error('portal.stay_confirm_failed_after_commit', ['org' => $orgId, 'mirror' => $booked->id, 'exception' => get_class($e), 'error' => $e->getMessage()]);
+                $this->afterCardless($booked, $hold, $online, $fallback, $orgId, $memberId, $guard);
                 return $this->booked($booked, $online);
             }
             return $this->fail($this->confirmError($e, $orgId, $piId), $piId, $orgId, $memberId, $guard);
@@ -421,7 +552,30 @@ class PortalStayBookingController extends Controller
             return response()->json(['error' => 'confirm_failed', 'message' => 'We could not complete the booking. Please contact the venue before trying again.'], 500);
         }
 
+        $this->afterCardless($booked, $hold, $online, $fallback, $orgId, $memberId, $guard);
         return $this->booked($booked, $online);
+    }
+
+    /**
+     * Release 4, part C, after a stay committed without a card. A pay-at-venue
+     * fallback booking gets its audit row; and the intent an earlier
+     * payment-intent call recorded on the hold has no use any more, so it is
+     * released through the guard — never one a booking carries, never another
+     * member's or organisation's (release()'s own rules; best effort, logged).
+     * After the commit, outside every lock.
+     */
+    private function afterCardless(BookingMirror $booked, ?BookingHold $hold, bool $online, bool $fallback, int $orgId, int $memberId, PortalPaymentIntentGuard $guard): void
+    {
+        if ($fallback) {
+            PayAtVenueFallback::audit($orgId, $memberId, 'booking_mirror', (int) $booked->id, (string) $booked->booking_reference);
+        }
+        if ($online || !$hold) {
+            return;
+        }
+        $recorded = BookingHold::withoutGlobalScopes()->whereKey($hold->id)->first()?->payload_json[self::HOLD_INTENT_KEY] ?? null;
+        if (is_string($recorded) && $recorded !== '' && $recorded !== $booked->stripe_payment_intent_id) {
+            $guard->release($recorded, $orgId, $memberId);
+        }
     }
 
     /**

@@ -132,6 +132,19 @@ Multi-tenant Laravel 13 + React (Vite, TypeScript) SaaS with four sub-brands. Pr
   the public widget and the admin SPA stay exactly as they are — untouched by this rule.
 - The venue's time zone comes from `PortalBootstrap::timezone()` only; never read `organizations.timezone`
   or `hotel_timezone` directly in portal code.
+- Release 4: the public services confirm accepts only this booking's own payment (`assertPaysThisBooking()`: kind,
+  organisation, service, start, amount, the venue's Stripe currency) — owner-approved widget change R4-2, as is extras
+  pricing by type in `BookingEngineService::extraUnits()` (R4-3); nothing else in the widget changed. A widget stay
+  becomes a member's only at award time, through `BookingPointsService::certainMemberForStay()` (one member, linked
+  guest, same email, active, verified address). Never write one PaymentIntent on several `booking_mirror` rows: the
+  partial unique index `booking_mirror_org_pi_unique` refuses it on PostgreSQL (combination stays wait for the
+  lead-room design, release-4 spec §7). A portal payment-intent never calls Stripe under a room or slot lock the
+  confirms take: a stay's takes its hold row then `pi:`, an appointment's a member-scoped `psi:` key then `pi:`; an
+  earlier intent is reused or released only through `PortalPaymentIntentGuard::reuseOrRelease()`, and nothing new is
+  made beside one whose fate is unknown. State shared across requests lives in `SharedCache` (production's default
+  cache is each container's own files). The pay-at-venue grant is offered only when Stripe is unreachable
+  (`PayAtVenueFallback::isStripeUnreachable()`) and pays for one booking; the return endpoint
+  (`member/portal/payments/{pi}`) only reads.
 - Runbook: `docs/member-portal.md` (`## Stays (phase 3)`, `## Cancellation (phase 3)`,
   `## The public confirm's payment rescue`, `## After a deploy`, `## When money looks wrong`,
   `## Known limits`) — read it before touching stays, cancellation or the public confirm's failure handling.
@@ -163,6 +176,14 @@ Multi-tenant Laravel 13 + React (Vite, TypeScript) SaaS with four sub-brands. Pr
   means "kept for the member's inbox". Email campaigns and push messages record each member in their deliveries table
   before sending (at most once); tags are filled only by `App\Services\Email\CampaignTags`, escaped in the body.
   A zone name read from settings goes through `App\Support\TimeZones` (via `PortalBootstrap::namedZone()`).
+- Release 4 (`docs/superpowers/specs/2026-10-22-loyalty-release-4-design.md`): an SMS goes only through the venue's own
+  Twilio rows (`App\Services\Sms\TwilioSms`, never the platform's `TWILIO_*` values), only to a member with
+  `sms_consent`, recorded in `sms_campaign_deliveries` before the send; the Auth Token is never answered, logged or
+  audited. A scheduled email, push or SMS starts only through its own start service's conditional update
+  (`php artisan loyalty:send-scheduled`). Boost times are the venue's wall clock on both sides (`LoyaltyForms::instant`),
+  and every boost save stamps `times_venue_at`. Test fixtures never look like real credentials (GitHub push protection
+  refuses an `AC` + 32-hex Twilio SID). SQLite test schemas lack production's unique and partial indexes: a new write
+  to a table with one gets a test that creates that index, or a check on PostgreSQL.
 
 ## Appointments-workspace code rules
 

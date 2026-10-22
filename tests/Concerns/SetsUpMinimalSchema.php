@@ -616,6 +616,12 @@ trait SetsUpMinimalSchema
     {
         $this->setUpLoyaltySchema();
 
+        // BookingPointsService matches a widget stay only to a verified address (release 4 §2 A).
+        if (!Schema::hasColumn('users', 'email_verified_at')) {
+            Schema::table('users', function ($table) {
+                $table->timestamp('email_verified_at')->nullable();
+            });
+        }
         if (!Schema::hasColumn('loyalty_tiers', 'soft_landing')) {
             Schema::table('loyalty_tiers', function ($table) {
                 $table->boolean('soft_landing')->default(false);

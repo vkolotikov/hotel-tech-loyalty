@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { useLocation } from 'react-router-dom'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import toast from 'react-hot-toast'
@@ -8,7 +9,7 @@ import { logoutAndRedirect } from '../../lib/logout'
 import { Card } from '../ui/Card'
 import { Button } from '../ui/Button'
 import { Field, INPUT_CLASS } from '../ui/Field'
-import { Toggle } from '../ui/Toggle'
+import { MessagesCard } from './profile/MessagesCard'
 import { LanguageSelect } from './profile/LanguageSelect'
 import { PasswordSheet } from './profile/PasswordSheet'
 import { DeleteAccountSheet } from './profile/DeleteAccountSheet'
@@ -20,6 +21,13 @@ export function Profile() {
   const { data } = usePortal()
   const [password, setPassword] = useState(false)
   const [remove, setRemove] = useState(false)
+  const { hash } = useLocation()
+  const ready = !!data?.member
+
+  // The inbox links to /portal/profile#messages; a client-side navigation does not scroll to a hash on its own.
+  useEffect(() => {
+    if (ready && hash === '#messages') document.getElementById('messages')?.scrollIntoView({ block: 'start' })
+  }, [hash, ready])
 
   const save = useMutation({
     mutationFn: portalApi.updateProfile,
@@ -65,16 +73,7 @@ export function Profile() {
         </Card>
       </form>
 
-      {member && (
-        <Card className="p-4">
-          <h2 className="text-sm font-semibold mb-2">{t('portal.profile.communication', 'Communication')}</h2>
-          <Toggle label={t('portal.profile.marketing', 'Offers and news by email')} hint={t('portal.profile.marketing_hint', 'Occasional emails about rewards, offers and events. You can turn this off at any time.')}
-            checked={!!member.marketing_consent} disabled={save.isPending} onChange={v => save.mutate({ marketing_consent: v })} />
-          <Toggle label={t('portal.profile.push', 'Push notifications')} hint={t('portal.profile.push_hint', 'Points updates and reminders on your phone.')}
-            checked={!!member.push_notifications} disabled={save.isPending} onChange={v => save.mutate({ push_notifications: v })} />
-          <p className="text-[11px] text-p-text-2 pt-2 leading-relaxed">{t('portal.profile.service_messages', "You'll still receive service messages about your account — password resets, booking confirmations and similar — regardless of these settings.")}</p>
-        </Card>
-      )}
+      {member && <MessagesCard member={member} />}
 
       {data.capabilities.loyalty && <ReferralCard />}
 

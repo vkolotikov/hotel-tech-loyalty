@@ -9,7 +9,8 @@ const options: PushOptions = { categories: ['offers', 'points', 'tier', 'stays']
 const none = { sent: 0, failed: 0, inbox_only: 0, skipped: 0, pending: 0 }
 const draft = (more: Partial<Push> = {}): Push => ({
   id: 7, name: 'Autumn', title: 'Double points', category: 'offers', status: 'draft', segment: { id: 3, name: 'Gold' }, recipient_count: 0, results: none,
-  sent_at: null, created_at: null, updated_at: null, body: 'All week.', segment_id: 3, missing: [], last_progress_at: null, created_by: 'Ada', sent_by: null,
+  sent_at: null, scheduled_at: null, scheduled_for: null, schedule_problem: null,
+  created_at: null, updated_at: null, body: 'All week.', segment_id: 3, missing: [], last_progress_at: null, created_by: 'Ada', sent_by: null,
   revision: '2026-10-20T09:00:00+00:00', ...more,
 })
 const segments: SegmentChoice[] = [{ id: 3, name: 'Gold', members: 40, problem: null }, { id: 9, name: 'Lapsed', members: 4, problem: { index: 0, reason: 'unknown_op' } }]

@@ -27,6 +27,7 @@ export interface SettingsDraft {
   allow_master_choice: boolean; points_on_bookings: boolean
   client_messages_staff_default: boolean; client_messages_reminder_hours: number; client_messages_language: string
   deposits_on: boolean; deposit_percent: string
+  pay_at_venue_when_unavailable: boolean
 }
 
 // eslint-disable-next-line react-refresh/only-export-components
@@ -37,6 +38,7 @@ export function settingsDraftOf(s: SetupSettings): SettingsDraft {
     client_messages_staff_default: s.client_messages_staff_default, client_messages_reminder_hours: s.client_messages_reminder_hours,
     client_messages_language: s.client_messages_language,
     deposits_on: s.deposits_on, deposit_percent: String(s.deposit_percent),
+    pay_at_venue_when_unavailable: s.pay_at_venue_when_unavailable ?? false,
   }
 }
 
@@ -57,6 +59,7 @@ export function changedSettings(draft: SettingsDraft, s: SetupSettings): Setting
   if (draft.deposits_on !== s.deposits_on) body.deposits_on = draft.deposits_on
   // Switching on sends the percent too: what Setup proposes (20%) is not stored yet.
   if (draft.deposits_on && (!s.deposits_on || Number(draft.deposit_percent) !== s.deposit_percent)) body.deposit_percent = Number(draft.deposit_percent)
+  if (draft.pay_at_venue_when_unavailable !== (s.pay_at_venue_when_unavailable ?? false)) body.pay_at_venue_when_unavailable = draft.pay_at_venue_when_unavailable
   return body
 }
 
@@ -152,6 +155,14 @@ export function SettingsTab({ data, refresh }: { data: SetupPayload; refresh: ()
               <input type="checkbox" checked={draft.allow_master_choice} onChange={(e) => set({ allow_master_choice: e.target.checked })} />
               {t('appointments.setup.settings.choose_person', 'Clients may choose the person')}
             </label>
+            {/* Release 4, part C: the member portal's own fallback when Stripe cannot be reached. */}
+            <div className="space-y-1">
+              <label className="flex items-center gap-2 text-sm text-a-text">
+                <input type="checkbox" checked={draft.pay_at_venue_when_unavailable} onChange={(e) => set({ pay_at_venue_when_unavailable: e.target.checked })} />
+                {t('appointments.setup.pay_at_venue.on', 'Take bookings to pay at the venue when online payment is unavailable')}
+              </label>
+              <p className="text-xs text-a-text-2">{t('appointments.setup.pay_at_venue.note', 'For members booking in the member portal: when the card payment service cannot be reached, they can still book and pay at the venue. The booking is marked to pay at the venue.')}</p>
+            </div>
           </section>
 
           <section aria-labelledby="settings-deposits" className="space-y-3">

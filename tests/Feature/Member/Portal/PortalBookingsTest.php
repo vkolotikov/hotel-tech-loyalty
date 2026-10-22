@@ -499,4 +499,112 @@ class PortalBookingsTest extends MemberEndpointTestCase
         $b = $this->withToken($token)->getJson(self::LIST . "/service/{$old}")->assertOk()->json();
         $this->assertSame('cancelled', $b['payment_status']);
     }
+
+    // ─── Release 4 §2 A: a stay moves from upcoming to past at check-out on the venue's clock ─────────────────────
+
+    /** The ids the list answers for one scope, at the moment the test clock says. */
+    private function idsIn(string $token, string $scope): array
+    {
+        $this->flushHeaders();
+
+        return array_column($this->withToken($token)->getJson(self::LIST . "?scope={$scope}")->assertOk()->json('data'), 'id');
+    }
+
+    private function venueZone(Organization $org, string $zone): void
+    {
+        if (!Schema::hasColumn('organizations', 'timezone')) {
+            Schema::table('organizations', fn ($t) => $t->string('timezone', 64)->nullable());
+        }
+        DB::table('organizations')->where('id', $org->id)->update(['timezone' => $zone]);
+    }
+
+    /**
+     * Departure 12 October at a Riga venue (check-out 11:00, the default): the
+     * stay is upcoming at 10:30 Riga — 07:30 UTC, when the old rule (midnight
+     * UTC on the departure day) had already called it past — and past at
+     * 11:30 Riga. The DTO keeps its plain dates.
+     */
+    public function test_a_stay_is_upcoming_until_check_out_on_its_departure_day_on_the_venues_clock(): void
+    {
+        $org = $this->tenant();
+        $this->venueZone($org, 'Europe/Riga');
+        ['token' => $token, 'member' => $member] = $this->member($org);
+        $id = $this->stay($org, ['member_id' => $member->id, 'channel_name' => 'Member portal', 'internal_status' => 'checked-in', 'arrival_date' => '2026-10-10', 'departure_date' => '2026-10-12']);
+
+        $this->travelTo(\Carbon\CarbonImmutable::parse('2026-10-12 07:30:00', 'UTC')); // 10:30 in Riga
+        $this->assertSame([$id], $this->idsIn($token, 'upcoming'));
+        $this->assertSame([], $this->idsIn($token, 'past'));
+        $this->flushHeaders();
+        $dto = $this->withToken($token)->getJson(self::LIST . "/stay/{$id}")->assertOk()->json();
+        $this->assertSame(['2026-10-10', '2026-10-12', 'in_progress'], [$dto['starts_at'], $dto['ends_at'], $dto['status']]);
+
+        $this->travelTo(\Carbon\CarbonImmutable::parse('2026-10-12 08:30:00', 'UTC')); // 11:30 in Riga
+        $this->assertSame([], $this->idsIn($token, 'upcoming'));
+        $this->assertSame([$id], $this->idsIn($token, 'past'));
+    }
+
+    /**
+     * West of UTC the old rule moved a stay to past the evening BEFORE it
+     * ended: midnight UTC on 12 October is 20:00 on the 11th in New York.
+     */
+    public function test_a_stay_west_of_utc_is_still_upcoming_the_evening_before_departure(): void
+    {
+        $org = $this->tenant();
+        $this->venueZone($org, 'America/New_York');
+        ['token' => $token, 'member' => $member] = $this->member($org);
+        $id = $this->stay($org, ['member_id' => $member->id, 'arrival_date' => '2026-10-10', 'departure_date' => '2026-10-12']);
+
+        $this->travelTo(\Carbon\CarbonImmutable::parse('2026-10-12 01:00:00', 'UTC')); // 21:00 on 11 October in New York
+        $this->assertSame([$id], $this->idsIn($token, 'upcoming'));
+
+        $this->travelTo(\Carbon\CarbonImmutable::parse('2026-10-12 15:30:00', 'UTC')); // 11:30 on 12 October in New York
+        $this->assertSame([$id], $this->idsIn($token, 'past'));
+        $this->flushHeaders();
+        $this->withToken($token)->getJson('/api/v1/member/portal')->assertOk()->assertJsonPath('counts.upcoming_bookings', 0);
+    }
+
+    /** The stay's own check-out time (the PMS sends one per booking) wins over the venue's setting, which wins over 11:00. */
+    public function test_the_stays_own_check_out_time_then_the_venues_setting_decide_the_moment(): void
+    {
+        $this->ensureColumns('booking_mirror', ['check_out_time' => 'string']);
+        $org = $this->tenant();
+        $this->venueZone($org, 'Europe/Riga');
+        DB::table('hotel_settings')->insert([
+            'organization_id' => $org->id, 'key' => 'booking_policies', 'value' => json_encode(['check_out_time' => '12:00']),
+            'type' => 'json', 'group' => 'booking', 'created_at' => now(), 'updated_at' => now(),
+        ]);
+        ['token' => $token, 'member' => $member] = $this->member($org);
+        $venueTime = $this->stay($org, ['member_id' => $member->id, 'arrival_date' => '2026-10-10', 'departure_date' => '2026-10-12']);
+        $ownTime = $this->stay($org, ['member_id' => $member->id, 'arrival_date' => '2026-10-10', 'departure_date' => '2026-10-12', 'check_out_time' => '14:00:00']);
+
+        $this->travelTo(\Carbon\CarbonImmutable::parse('2026-10-12 08:30:00', 'UTC')); // 11:30 in Riga
+        $this->assertEqualsCanonicalizing([$venueTime, $ownTime], $this->idsIn($token, 'upcoming'));
+
+        $this->travelTo(\Carbon\CarbonImmutable::parse('2026-10-12 09:30:00', 'UTC')); // 12:30 in Riga
+        $this->assertSame([$ownTime], $this->idsIn($token, 'upcoming'));
+
+        $this->travelTo(\Carbon\CarbonImmutable::parse('2026-10-12 11:30:00', 'UTC')); // 14:30 in Riga
+        $this->assertSame([], $this->idsIn($token, 'upcoming'));
+        $this->assertEqualsCanonicalizing([$venueTime, $ownTime], $this->idsIn($token, 'past'));
+    }
+
+    /**
+     * A widget stay that the daily award recorded as the member's
+     * (BookingPointsService) is listed as theirs, but whatever the PMS holds
+     * in its `notice` stays with the venue: only special requests typed in
+     * the portal are the member's notes.
+     */
+    public function test_a_widget_stay_recorded_as_the_members_does_not_show_the_pms_notice(): void
+    {
+        $org = $this->tenant();
+        ['token' => $token, 'member' => $member] = $this->member($org);
+        $widget = $this->stay($org, ['member_id' => $member->id, 'channel_name' => 'Website', 'notice' => 'Staff: late arrival']);
+        $portal = $this->stay($org, ['member_id' => $member->id, 'channel_name' => 'Member portal', 'notice' => 'Quiet room please']);
+
+        $this->assertEqualsCanonicalizing([$widget, $portal], $this->idsIn($token, 'upcoming'));
+        $this->flushHeaders();
+        $this->assertNull($this->withToken($token)->getJson(self::LIST . "/stay/{$widget}")->assertOk()->json('notes'));
+        $this->flushHeaders();
+        $this->assertSame('Quiet room please', $this->withToken($token)->getJson(self::LIST . "/stay/{$portal}")->assertOk()->json('notes'));
+    }
 }

@@ -187,5 +187,29 @@ describe('Rewards (spec 2026-10-21 §4.6)', () => {
     expect(field).toMatch(/<img src="\/storage\/x.jpg" alt="Breakfast for two" loading="lazy"/)
     expect(field).toContain('accept="image/jpeg,image/png,image/webp"')
   })
-})
 
+  it('names the brand of a new reward or offer only when there is more than one, and shows a saved one\'s (release 4)', () => {
+    const inDialog = (node: ReactNode) => renderToStaticMarkup(
+      <QueryClientProvider client={new QueryClient()}>
+        <LoyaltyContext.Provider value={{ data: boot(can({ manage_rewards: true })), isLoading: false, isError: false, error: null, refetch: () => {} }}>{node}</LoyaltyContext.Provider>
+      </QueryClientProvider>,
+    )
+    const two = { list: [{ id: 1, name: 'Lumière Spa', is_default: true }, { id: 2, name: 'Lumière Hotel', is_default: false }], default: 1 }
+    const one = { list: [{ id: 1, name: 'Lumière Spa', is_default: true }], default: 1 }
+
+    // One brand: nothing changes on screen.
+    expect(inDialog(<RewardDialog reward={null} options={{ ...catalogue.options, brands: one }} onClose={() => {}} />)).not.toContain('data-brand')
+    expect(inDialog(<OfferDialog offer={null} options={offers.options} onClose={() => {}} />)).not.toContain('data-brand')
+
+    const fresh = inDialog(<RewardDialog reward={null} options={{ ...catalogue.options, brands: two }} onClose={() => {}} />)
+    expect(fresh).toMatch(/<select data-brand=""[^>]*><option value="1" selected="">Lumière Spa<\/option><option value="2">Lumière Hotel<\/option><\/select>/)
+    expect(text(fresh)).toContain('Which of your brands it belongs to.')
+    expect(inDialog(<OfferDialog offer={null} options={{ ...offers.options, brands: two }} onClose={() => {}} />)).toContain('<select data-brand=""')
+
+    const saved = inDialog(<RewardDialog reward={{ ...catalogue.rewards[0], brand_id: 2 }} options={{ ...catalogue.options, brands: two }} onClose={() => {}} />)
+    expect(saved).not.toContain('<select data-brand')
+    expect(text(saved)).toContain('Brand: Lumière Hotel. It stays on this brand.')
+    expect(text(inDialog(<OfferDialog offer={{ ...offers.offers[0], brand_id: 1 }} options={{ ...offers.options, brands: two }} onClose={() => {}} />)))
+      .toContain('Brand: Lumière Spa. It stays on this brand.')
+  })
+})

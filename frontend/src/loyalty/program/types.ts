@@ -1,3 +1,5 @@
+import type { BrandOptions } from '../rewards/types'
+
 /**
  * What `GET /v1/admin/loyalty/program` answers and what its writes take (spec 2026-10-21 §4.5, ProgramController).
  * Boost instants are UTC ISO strings; a wall clock the workspace sends (`YYYY-MM-DDTHH:mm`) is the venue's.
@@ -45,6 +47,8 @@ export type BoostState = 'live' | 'upcoming' | 'ended' | 'off'
 
 export interface Boost {
   id: number
+  /** The brand it runs on (release 4); a change keeps it. */
+  brand_id?: number | null
   name: string
   description: string | null
   multiplier: number
@@ -56,6 +60,11 @@ export interface Boost {
   tier_ids: number[] | null
   is_active: boolean
   state: string
+  /**
+   * Release 4 (R4-6): its times were last saved before every save read them as the venue's wall clock, at a venue
+   * not on UTC — the full admin stored such a time as if it were UTC. Saving the boost clears it.
+   */
+  check_time?: boolean
 }
 
 /** The lists a form may choose from, served by the server (LoyaltyForms), never kept here. */
@@ -64,6 +73,8 @@ export interface ProgramOptions {
   fulfillment_modes: string[]
   value_types: string[]
   applies_to: string[]
+  /** Release 4: the brands a new boost may be put on. */
+  brands?: BrandOptions
 }
 
 export interface Program {
@@ -109,4 +120,6 @@ export interface BoostBody {
   days_of_week: number[] | null
   tier_ids: number[] | null
   is_active: boolean
+  /** Release 4: the brand a new boost goes on, sent only when there is a choice. */
+  brand?: number
 }

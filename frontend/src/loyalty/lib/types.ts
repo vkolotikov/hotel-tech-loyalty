@@ -138,6 +138,8 @@ export interface MemberDetail {
     nationality: string | null
     date_of_birth: string | null
     marketing_consent: boolean
+    /** Release 4 (R4-4): the member's own "Offers by SMS"; absent from a server before release 4. */
+    sms_consent?: boolean
     tier_override_until: string | null
     is_erased: boolean
   }

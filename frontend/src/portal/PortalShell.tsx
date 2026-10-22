@@ -1,10 +1,11 @@
 import type { ReactNode } from 'react'
 import { NavLink } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { Home, Gift, CalendarDays, CalendarPlus, User, LogOut } from 'lucide-react'
+import { Home, Gift, CalendarDays, CalendarPlus, User, LogOut, Bell } from 'lucide-react'
 import { useAuthStore } from '../stores/authStore'
 import { logoutAndRedirect } from '../lib/logout'
 import { usePortal } from './PortalProvider'
+import { badgeText } from './pages/inbox/inboxState'
 import { Notice } from './ui/Notice'
 import { Button } from './ui/Button'
 import { PageSkeleton } from './ui/Skeleton'
@@ -17,7 +18,9 @@ const MOBILE_COLS: Record<number, string> = { 3: 'grid-cols-3', 4: 'grid-cols-4'
  * The member's frame: venue name up top, a thumb-reachable bar on phones,
  * tabs from `sm`. Destinations follow what the venue can do — no Rewards
  * for a clinic, no Book for a venue that sells neither appointments nor stays — so
- * nothing points at a page that would be empty.
+ * nothing points at a page that would be empty. The inbox is the bell in the
+ * header, at every width, with the unread count on it: a sixth tab would not
+ * fit the phone bar, nor the tab strip at `sm` in the longer languages.
  */
 export function PortalShell({ children }: { children: ReactNode }) {
   const { t } = useTranslation()
@@ -31,6 +34,9 @@ export function PortalShell({ children }: { children: ReactNode }) {
     { to: '/portal/bookings', label: t('portal.nav.bookings', 'Bookings'), icon: CalendarDays, end: false, show: true, badge: data?.counts.upcoming_bookings ?? 0 },
     { to: '/portal/profile', label: t('portal.nav.profile', 'Profile'), icon: User, end: false, show: true, badge: 0 },
   ].filter(i => i.show)
+  // The inbox needs a membership row: the member endpoints answer for a member only.
+  const unread = badgeText(data?.counts.unread_notifications ?? 0)
+  const showInbox = !!data?.member
 
   const firstName = user?.name?.split(' ')[0]
   const status = (error as { response?: { status?: number; data?: { error?: string } } })?.response
@@ -52,6 +58,18 @@ export function PortalShell({ children }: { children: ReactNode }) {
           </div>
           <div className="flex items-center gap-2 shrink-0">
             {firstName && <span className="hidden sm:inline text-sm text-p-text-2">{t('portal.shell.greeting', 'Hello, {{name}}', { name: firstName })}</span>}
+            {showInbox && (
+              <NavLink to="/portal/inbox" title={t('portal.nav.inbox', 'Inbox')}
+                className={({ isActive }) => `relative flex items-center justify-center w-11 h-11 rounded-p-control transition-colors ${isActive ? 'text-p-accent-deep bg-p-accent/10' : 'text-p-text-2 hover:text-p-text'}`}>
+                <Bell size={19} aria-hidden />
+                <span className="sr-only">{t('portal.nav.inbox', 'Inbox')}</span>
+                {unread && (
+                  <span data-inbox-badge="" className="absolute top-1 right-0.5 min-w-[18px] text-center rounded-full bg-p-accent text-p-accent-ink text-[10px] font-bold px-1">
+                    {unread}<span className="sr-only"> {t('portal.inbox.unread', 'Unread')}</span>
+                  </span>
+                )}
+              </NavLink>
+            )}
             <button
               onClick={() => { void logoutAndRedirect('/login') }}
               className="flex items-center gap-1.5 text-xs text-p-text-2 hover:text-p-text rounded-p-control px-2 min-h-11"

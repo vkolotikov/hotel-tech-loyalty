@@ -4,6 +4,12 @@
     "services": "Prestations uniquement",
     "stays": "Séjours uniquement"
   },
+  "brand": {
+    "hint": "La marque à laquelle cela appartient.",
+    "label": "Marque",
+    "refused": "Choisissez l’une des marques de la liste.",
+    "saved": "Marque : {{name}}. Cela reste sur cette marque."
+  },
   "cancel": {
     "body": "{{points}} points reviennent à {{name}}, et la récompense retourne en stock si celui-ci est limité. Le code cesse d’être valable.",
     "confirm": "Annuler l’échange",

@@ -1,7 +1,7 @@
 import { addDays, isDateKey } from '../../workspace/lib/wallClock'
 import type { Can } from '../lib/types'
 import { decimalOf, isWall, numberIn, serverProblems, wallOf, wholeIn, type Problems, type Tone } from '../lib/forms'
-import type { Offer, OfferBody, OfferOptions, PictureLimits, RedemptionFilter, Reward, RewardBody, RewardOptions } from './types'
+import type { BrandOptions, Offer, OfferBody, OfferOptions, PictureLimits, RedemptionFilter, Reward, RewardBody, RewardOptions } from './types'
 
 /**
  * Rewards' decisions (spec 2026-10-21 §4.6, §5), kept out of the components so they can be tested: the tab an address
@@ -290,6 +290,33 @@ export const OFFER_FIELDS: Record<string, string> = {
 export function offerValue(type: string, value: number, phrased: string[]): 'phrase' | 'number' | null {
   if (!value) return null
   return phrased.includes(type) ? 'phrase' : 'number'
+}
+
+// ─── The brand (release 4) ────────────────────────────────────────────────
+
+/**
+ * Whether a form names a brand: only when the server offers more than one (an organisation with one brand, or a
+ * staff member held to one, sees nothing new). Rewards, Offers and Program's boosts share these.
+ */
+export function brandChoice(options: BrandOptions | undefined): boolean {
+  return (options?.list.length ?? 0) > 1
+}
+
+/** The brand a new form starts on: the server's default, else the first offered; null when there is nothing to choose. */
+export function initialBrand(options: BrandOptions | undefined): number | null {
+  if (!options || !brandChoice(options)) return null
+  return options.list.some(b => b.id === options.default) ? options.default : (options.list[0]?.id ?? null)
+}
+
+/** A saved row's brand by name, shown (not changed) when there is a choice; null otherwise or when it is not offered. */
+export function brandName(id: number | null | undefined, options: BrandOptions | undefined): string | null {
+  if (!options || !brandChoice(options) || id === null || id === undefined) return null
+  return options.list.find(b => b.id === id)?.name ?? null
+}
+
+/** What a new row's body adds for its brand: `brand` when one was chosen, nothing otherwise (the server's default). */
+export function brandPart(brand: number | null): { brand?: number } {
+  return brand === null ? {} : { brand }
 }
 
 // ─── A picture ────────────────────────────────────────────────────────────

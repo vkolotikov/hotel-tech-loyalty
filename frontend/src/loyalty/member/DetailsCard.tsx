@@ -22,6 +22,7 @@ export function DetailsCard({ member, locale, timeZone }: { member: MemberProfil
       member.date_of_birth ? formatDate(member.date_of_birth, locale, { day: 'numeric', month: 'long', year: 'numeric' }) : none],
     ['marketing', t('loyalty.membership.page.marketing', 'Marketing emails'),
       member.marketing_consent ? t('loyalty.membership.page.marketing_yes', 'Agreed') : t('loyalty.membership.page.marketing_no', 'Not agreed')],
+    ['sms', t('loyalty.sms.member.label', 'Offers by SMS'), member.sms_consent ? t('loyalty.sms.member.on', 'Turned on by the member') : t('loyalty.sms.member.off', 'Off')],
     ['number', t('loyalty.membership.page.number', 'Member number'), member.member_number ?? none],
     ['joined', t('loyalty.membership.page.joined', 'Joined'), day(member.joined_at, locale, timeZone) || none],
   ]

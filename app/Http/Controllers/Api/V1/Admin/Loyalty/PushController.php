@@ -8,6 +8,7 @@ use App\Models\MemberSegment;
 use App\Models\NotificationCampaign;
 use App\Models\User;
 use App\Services\Booking\Setup\OwnRows;
+use App\Services\Loyalty\Campaigns\SendLater;
 use App\Services\Loyalty\LoyaltyAccess;
 use App\Services\Loyalty\LoyaltyRefused;
 use App\Services\Loyalty\Push\PushMessage;
@@ -29,6 +30,8 @@ use Illuminate\Validation\Rule;
  * Managers only, reads included, as email campaigns (AccessMap `admin/loyalty/push` records reads as staff; this
  * controller is stricter). Send is PushStart's one conditional update; cancel and delete are conditional too, so two
  * people pressing at once act once. Every change, send and cancel is audited.
+ *
+ * Release 4 (§5): send later (`schedule`, `unschedule`; PushStart), started by `loyalty:send-scheduled` when due.
  */
 class PushController extends Controller
 {
@@ -184,6 +187,36 @@ class PushController extends Controller
         return response()->json(self::answer($this->message($id)));
     }
 
+    /**
+     * Send later: `{send_at, revision}` — a time on the venue's clock (`YYYY-MM-DDTHH:mm`) and the draft shown; on a
+     * scheduled message, a new time. Answers the message and how many it would reach now (`about`): it goes to whoever
+     * can receive it when it starts.
+     */
+    public function schedule(Request $request, int $id): JsonResponse
+    {
+        $user = $request->user();
+        LoyaltyAccess::requireManager($user);
+        $message = $this->message($id);
+        $data = $request->validate([
+            'send_at'  => 'required|string|max:32',
+            'revision' => 'required|string|max:64',
+        ]);
+
+        $done = $this->start->schedule($message, $user, $data['send_at'], $data['revision']);
+
+        return response()->json(self::answer($this->message($id)) + ['about' => $done['about']]);
+    }
+
+    /** A scheduled message back to a draft. */
+    public function unschedule(Request $request, int $id): JsonResponse
+    {
+        $user = $request->user();
+        LoyaltyAccess::requireManager($user);
+        $this->start->unschedule($this->message($id), $user);
+
+        return response()->json(self::answer($this->message($id)));
+    }
+
     /** Stop a message while it sends; the job checks before each chunk, so what went out stays out. */
     public function cancel(Request $request, int $id): JsonResponse
     {
@@ -290,6 +323,8 @@ class PushController extends Controller
             'segment'         => $segmentId !== null && isset($context['segments'][$segmentId]) ? ['id' => $segmentId, 'name' => $context['segments'][$segmentId]] : null,
             'recipient_count' => (int) $m->target_count,
             'results'         => $results,
+            'scheduled_at'    => $m->scheduled_at?->toIso8601String(),
+            'scheduled_for'   => SendLater::wallOf($m->scheduled_at, (int) $m->organization_id),
             'sent_at'         => $m->sent_at?->toIso8601String(),
             'created_at'      => $m->created_at?->toIso8601String(),
             'updated_at'      => $m->updated_at?->toIso8601String(),
@@ -311,6 +346,9 @@ class PushController extends Controller
             'body'             => (string) $m->body,
             'segment_id'       => $m->member_segment_id !== null ? (int) $m->member_segment_id : null,
             'missing'          => PushMessage::incomplete($m),
+            // Why a scheduled message did not start when it was due (PushStart::startScheduled), as a code.
+            'schedule_problem' => $m->status === PushMessage::STATUS_FAILED && is_array($m->data) && is_string($m->data['schedule_problem'] ?? null)
+                ? $m->data['schedule_problem'] : null,
             'last_progress_at' => $last !== null ? Carbon::parse($last, 'UTC')->toIso8601String() : null,
             'created_by'       => $context['users'][(int) $m->created_by] ?? null,
             'sent_by'          => $context['users'][(int) $m->sent_by_user_id] ?? null,

@@ -346,6 +346,10 @@
         "currency_mismatch": "Stripe takes payments in another currency than your prices. Make them the same to take deposits."
       }
     },
+    "pay_at_venue": {
+      "on": "Take bookings to pay at the venue when online payment is unavailable",
+      "note": "For members booking in the member portal: when the card payment service cannot be reached, they can still book and pay at the venue. The booking is marked to pay at the venue."
+    },
     "title": "Setup",
     "load_failed": "Setup could not be loaded. Please try again.",
     "read_only": "Only an owner or a manager can change setup. You can see it here and manage your own time off under Team.",

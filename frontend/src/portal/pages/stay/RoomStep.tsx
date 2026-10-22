@@ -5,6 +5,7 @@ import { usePortal } from '../../PortalProvider'
 import { apiErrorCode, bookErrorFallback, bookErrorKey, portalApi } from '../../lib/portalApi'
 import { formatDay } from '../../lib/dates'
 import { formatMoney } from '../../lib/money'
+import { counted } from '../../lib/plural'
 import { Button } from '../../ui/Button'
 import { Card } from '../../ui/Card'
 import { EmptyState } from '../../ui/EmptyState'
@@ -96,7 +97,7 @@ function RoomCard({ room, nights, onPick }: { room: AvailableRoom; nights: numbe
             <p className="font-p-display text-xl leading-tight">{room.name}</p>
             {room.short_description && <p className="text-sm text-p-text-2 mt-0.5">{room.short_description}</p>}
             <p className="text-xs text-p-text-2 mt-1">
-              {t('portal.stay.sleeps', 'Sleeps {{count}}', { count: room.max_guests })}
+              {counted(t, 'stay.sleeps', room.max_guests)}
               {room.bed_type && ` · ${room.bed_type}`}
               {room.size && ` · ${room.size}`}
             </p>

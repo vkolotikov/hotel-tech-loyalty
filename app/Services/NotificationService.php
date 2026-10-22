@@ -241,14 +241,15 @@ class NotificationService
      * request that fails, or an answer without tickets, counts every push as not accepted; nothing is thrown.
      *
      * @param list<array{to: string, title: string, body: string, data?: array<string, mixed>}> $messages
-     * @return list<array{ok: bool, error: ?string}> `error` is Expo's code (`DeviceNotRegistered`, …) or the transport's
+     * @return list<array{ok: bool, error: ?string, ticket: ?string}> `error` is Expo's code (`DeviceNotRegistered`, …)
+     *   or the transport's; `ticket` the id of an accepted push's ticket, by which its receipt is read later (release 4)
      */
     public function pushMany(array $messages): array
     {
         if ($messages === []) {
             return [];
         }
-        $all = fn (string $error) => array_fill(0, count($messages), ['ok' => false, 'error' => $error]);
+        $all = fn (string $error) => array_fill(0, count($messages), ['ok' => false, 'error' => $error, 'ticket' => null]);
 
         try {
             $response = Http::withHeaders([
@@ -284,7 +285,8 @@ class NotificationService
             $ticket = is_array($tickets[$i] ?? null) ? $tickets[$i] : [];
             $ok = ($ticket['status'] ?? null) === 'ok';
             $error = $ticket['details']['error'] ?? ($ticket === [] ? 'no_ticket' : 'refused');
-            $out[] = ['ok' => $ok, 'error' => $ok ? null : mb_substr((string) $error, 0, 40)];
+            $ticketId = $ok && is_string($ticket['id'] ?? null) && $ticket['id'] !== '' ? mb_substr($ticket['id'], 0, 64) : null;
+            $out[] = ['ok' => $ok, 'error' => $ok ? null : mb_substr((string) $error, 0, 40), 'ticket' => $ticketId];
         }
 
         return $out;

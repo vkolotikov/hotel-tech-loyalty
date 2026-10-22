@@ -218,6 +218,14 @@ export function boostState(raw: string): BoostState {
   return (STATES as string[]).includes(raw) ? (raw as BoostState) : 'off'
 }
 
+/**
+ * Whether a boost asks for its times to be checked (R4-6): the server's `check_time` — saved before the fix by the
+ * full admin, whose times may be off by the venue's offset — while it can still give points (an ended one cannot).
+ */
+export function needsTimeCheck(boost: Pick<Boost, 'check_time' | 'state'>): boolean {
+  return boost.check_time === true && boostState(boost.state) !== 'ended'
+}
+
 /** Live reads as done-green, upcoming as approved-teal, ended and off as the quiet grey. */
 export function boostTone(state: BoostState): Tone {
   return state === 'live' ? 'fulfilled' : state === 'upcoming' ? 'approved' : 'cancelled'

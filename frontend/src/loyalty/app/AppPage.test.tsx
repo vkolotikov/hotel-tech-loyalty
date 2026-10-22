@@ -16,9 +16,10 @@ vi.mock('../../lib/api', () => ({ api: {}, resolveImage: (url: string | null | u
 
 import { LoyaltyContext } from '../LoyaltyProvider'
 import type { Bootstrap, Can, Features } from '../lib/types'
-import { LOOK_KEY, WALLET_KEY } from './api'
+import { CURRENCY_KEY, LOOK_KEY, WALLET_KEY } from './api'
 import { AppPage } from './AppPage'
-import type { LookAnswer, Wallet } from './types'
+import { CurrencyEditor } from './CurrencyTab'
+import type { CurrencyPreview, LookAnswer, Wallet } from './types'
 
 const can = (more: Partial<Can> = {}): Can => ({ award: false, redeem: false, reverse: false, manage_program: false, manage_rewards: false, manage_members: false, view_insights: false, manage_campaigns: false, manage_app: false, ...more })
 const boot = (c: Can, features: Features = { campaigns: true, wallet: true, push: true }): Bootstrap => ({
@@ -53,6 +54,7 @@ const render = (search: string, c: Can, features?: Features) => {
   const client = new QueryClient()
   client.setQueryData(WALLET_KEY, { wallet })
   client.setQueryData(LOOK_KEY, look)
+  client.setQueryData(CURRENCY_KEY, { currency: 'EUR', options: ['EUR', 'GBP', 'USD'] })
   return renderToStaticMarkup(
     <QueryClientProvider client={client}>
       <MemoryRouter initialEntries={[`/loyalty/app${search}`]}>
@@ -140,5 +142,38 @@ describe('Card & app (release 2 §7)', () => {
     expect(svg).toContain('href="/storage/org-1/logos/logo.png"')
     expect(svg).toContain('Lumière Spa')
     expect(html).toMatch(/role="img" aria-labelledby="[^"]+"/)
+  })
+})
+
+describe('Card & app: the currency (release 4, R4-5)', () => {
+  const editor = (preview: CurrencyPreview | null = null) => renderToStaticMarkup(
+    <QueryClientProvider client={new QueryClient()}>
+      <CurrencyEditor answer={{ currency: 'EUR', options: ['EUR', 'GBP', 'USD'] }} initialPreview={preview} />
+    </QueryClientProvider>,
+  )
+
+  it('is the third tab, and shows the venue\'s currency chosen from the server\'s list', () => {
+    const html = render('?tab=currency', manager)
+    expect(html).toMatch(/role="tab" id="app-tab-currency" aria-selected="true"[^>]*tabindex="0"[^>]*>Currency</)
+    expect(html).toContain('<option value="EUR" selected="">EUR · Euro</option>')
+    expect(html).toContain('<option value="GBP">GBP · British Pound</option>')
+    expect(text(html)).toContain('Changing it relabels prices; it never converts them.')
+    // Nothing chosen yet: Save does nothing.
+    expect(html).toMatch(/<button type="button" disabled=""[^>]*>Save currency<\/button>/)
+  })
+
+  it('says what the change means before it is saved, with the way to keep the old one', () => {
+    const html = text(editor({
+      dry_run: true, from: 'EUR', to: 'GBP', relabel: { services: 3, extras: 1 }, payments: { mismatch: true, currency: 'EUR' },
+      bookings: { total: 12, upcoming: 4 }, stays: { currency: 'EUR' },
+    }))
+    expect(html).toContain('Before you change EUR to GBP:')
+    expect(html).toContain('Online payments are set up in EUR. Bookings priced in GBP would be paid at the venue until Stripe takes GBP')
+    expect(html).toContain('12 appointments were booked in another currency (4 still to come).')
+    expect(html).toContain('Stays are priced in EUR, set in the full admin’s booking settings.')
+    expect(html).toContain('3 services and 1 extras get the GBP label.')
+    expect(html).toContain('Change to GBP')
+    expect(html).toContain('Keep EUR')
+    expect(html).not.toContain('Save currency')
   })
 })

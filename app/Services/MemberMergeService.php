@@ -40,7 +40,10 @@ use Illuminate\Support\Facades\Schema;
  *    else the winner's — and the person is still never emailed it again;
  *  - push_message_deliveries (campaign_id, member_id): where both accounts
  *    were sent the same push message, the winner's row stays, and the person
- *    is still never pushed it again.
+ *    is still never pushed it again;
+ *  - sms_campaign_deliveries (campaign_id, member_id, release 4): where both
+ *    accounts were texted the same SMS campaign, one row stays — the one that
+ *    says sent, else the winner's — and the person is never texted it again.
  * Every dropped row is kept in the merge's snapshot (`member_merges.merged_data`,
  * under `dropped`); the points they paid stay in the ledger, which moves whole.
  *
@@ -80,6 +83,7 @@ class MemberMergeService
         'campaign_recipients'  => ['loyalty_member_id'],
         'email_campaign_deliveries' => ['member_id'],
         'push_message_deliveries'   => ['member_id'],
+        'sms_campaign_deliveries'   => ['member_id'],
         'review_invitations'   => ['loyalty_member_id'],
         'review_submissions'   => ['loyalty_member_id'],
         'guests'               => ['member_id'],
@@ -129,6 +133,7 @@ class MemberMergeService
                 'referrals'     => $this->dedupeReferrals($winner->id, $loser->id),
                 'email_campaign_deliveries' => $this->dedupeDeliveries($winner->id, $loser->id),
                 'push_message_deliveries'   => $this->dedupePushDeliveries($winner->id, $loser->id),
+                'sms_campaign_deliveries'   => $this->dedupeSmsDeliveries($winner->id, $loser->id),
             ];
 
             // 2) Every other row that names the loser now names the winner. Tables and columns are checked first:
@@ -305,6 +310,28 @@ class MemberMergeService
     }
 
     /**
+     * Where both members have a row for the same SMS campaign (sms_campaign_deliveries, unique per campaign and member,
+     * release 4), one stays: the one that says `sent`, else the winner's; the other is deleted. Either row keeps the
+     * campaign from texting the person again. @return list<array<string, mixed>> the rows deleted
+     */
+    private function dedupeSmsDeliveries(int $winnerId, int $loserId): array
+    {
+        if (!Schema::hasTable('sms_campaign_deliveries')) {
+            return [];
+        }
+        $winnerRows = DB::table('sms_campaign_deliveries')->where('member_id', $winnerId)->get()->keyBy('campaign_id');
+        $dropped = [];
+        foreach (DB::table('sms_campaign_deliveries')->where('member_id', $loserId)->whereIn('campaign_id', $winnerRows->keys()->all())->get() as $loserRow) {
+            $winnerRow = $winnerRows[$loserRow->campaign_id];
+            $gone = $loserRow->status === 'sent' && $winnerRow->status !== 'sent' ? $winnerRow : $loserRow;
+            DB::table('sms_campaign_deliveries')->where('id', $gone->id)->delete();
+            $dropped[] = (array) $gone;
+        }
+
+        return $dropped;
+    }
+
+    /**
      * The referrals that would collide or turn into a self-referral once the loser's columns name the winner: those
      * between the two, and the loser's where the winner has the same one. @return list<array<string, mixed>> the rows
      * deleted
@@ -331,13 +358,20 @@ class MemberMergeService
 
     /**
      * Find candidate duplicates within the current tenant scope. Pairs are
-     * matched on shared email (case-insensitive), shared phone, or shared
-     * NFC uid. Returns at most $limit suggestion pairs sorted by strength.
+     * matched on shared email (case-insensitive, spaces around it ignored) or
+     * shared phone (its digits, seven at least). Returns at most $limit
+     * suggestion pairs, email matches first; in each group the oldest member
+     * is the one to keep.
+     *
+     * Release 4 (part E): the database finds the groups, PHP no longer loads
+     * every member. candidates() reads only the members that share an email
+     * or a phone with another member, with keys at least as coarse as the
+     * exact ones below; the exact grouping then runs on them as it always
+     * did, so the pairs, their order and the keeper are unchanged
+     * (tests/Feature/Loyalty/MemberDuplicatesFinderTest.php pinned them first).
      */
     public function findDuplicates(int $limit = 50, ?int $organizationId = null): array
     {
-        // Suggestions are organization-scoped. Pulls into PHP for simplicity —
-        // member counts in a single tenant are small enough that this is fine.
         // IMPORTANT: this uses raw DB::table so the TenantScope global scope on
         // LoyaltyMember does NOT apply automatically. We must filter by org id
         // ourselves — otherwise admins would see (and try to merge) members
@@ -348,16 +382,7 @@ class MemberMergeService
             return [];
         }
 
-        $rows = DB::table('loyalty_members as m')
-            ->join('users as u', 'u.id', '=', 'm.user_id')
-            ->where('m.organization_id', $organizationId)
-            ->select(
-                'm.id', 'm.organization_id', 'm.member_number', 'm.lifetime_points',
-                'm.current_points', 'm.created_at', 'm.last_activity_at',
-                'u.name', 'u.email', 'u.phone'
-            )
-            ->orderBy('m.created_at')
-            ->get();
+        $rows = self::candidates((int) $organizationId);
 
         $byEmail = [];
         $byPhone = [];
@@ -398,5 +423,87 @@ class MemberMergeService
         usort($pairs, fn($a, $b) => ($a['reason'] === 'shared_email' ? 0 : 1) <=> ($b['reason'] === 'shared_email' ? 0 : 1));
 
         return array_slice($pairs, 0, $limit);
+    }
+
+    /** The columns a pair carries (both duplicates screens read them). */
+    private const DUPLICATE_COLUMNS = [
+        'm.id', 'm.organization_id', 'm.member_number', 'm.lifetime_points',
+        'm.current_points', 'm.created_at', 'm.last_activity_at',
+        'u.name', 'u.email', 'u.phone',
+    ];
+
+    /**
+     * An email's key in SQL: lower case, with every space, tab and line break taken out. Coarser than the exact key
+     * (lower case, trimmed), never finer, so every exact group is inside one SQL group. Literals, no bindings: the
+     * same expression is grouped on (portable SQL, PostgreSQL and SQLite).
+     */
+    private const EMAIL_KEY = "LOWER(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(u.email, ' ', ''), '\t', ''), '\n', ''), '\r', ''), '\v', ''))";
+
+    /** A phone without the separators phones are written with — MemberDirectory's REPLACE chain, and `.` and `/`. */
+    private const PHONE_KEY = "REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(u.phone, ' ', ''), '-', ''), '(', ''), ')', ''), '+', ''), '.', ''), '/', '')";
+
+    /**
+     * Who may be in a duplicate group, oldest first (created_at, then id), each row with DUPLICATE_COLUMNS:
+     *  - members whose email key another member shares;
+     *  - members whose phone, without its separators, is seven digits or more and shared by another member;
+     *  - a phone with anything else in it ("tel. 26 123 456", "7700#900#123") cannot be grouped in portable SQL: those
+     *    few are read with their phones, their digits taken in PHP, and the plain phones with the same digits added.
+     * Only the members in groups of two or more are loaded; findDuplicates() then groups them exactly.
+     *
+     * @return list<object>
+     */
+    private static function candidates(int $orgId): array
+    {
+        $members = fn () => DB::table('loyalty_members as m')
+            ->join('users as u', 'u.id', '=', 'm.user_id')
+            ->where('m.organization_id', $orgId);
+
+        $emails = $members()->whereNotNull('u.email')->where('u.email', '<>', '')
+            ->selectRaw('m.id AS id, ' . self::EMAIL_KEY . ' AS k');
+        $sharedEmail = DB::query()->fromSub($emails, 'e1')->select('e1.id')
+            ->whereIn('e1.k', DB::query()->fromSub($emails, 'e2')->select('e2.k')->groupBy('e2.k')->havingRaw('COUNT(*) >= 2'));
+
+        $rest = self::PHONE_KEY;
+        foreach (range(0, 9) as $digit) {
+            $rest = "REPLACE({$rest}, '{$digit}', '')";
+        }
+        $phones = $members()->whereNotNull('u.phone')->where('u.phone', '<>', '')
+            ->selectRaw('m.id AS id, u.phone AS phone, ' . self::PHONE_KEY . " AS k, {$rest} AS rest");
+        $plain = fn (string $as) => DB::query()->fromSub($phones, $as)->where("{$as}.rest", '')->whereRaw("LENGTH({$as}.k) >= 7");
+        $sharedPhone = $plain('p1')->select('p1.id')
+            ->whereIn('p1.k', $plain('p2')->select('p2.k')->groupBy('p2.k')->havingRaw('COUNT(*) >= 2'));
+
+        $byId = [];
+        $rows = $members()->select(self::DUPLICATE_COLUMNS)
+            ->where(fn ($w) => $w->whereIn('m.id', $sharedEmail)->orWhereIn('m.id', $sharedPhone))
+            ->get();
+        foreach ($rows as $row) {
+            $byId[(int) $row->id] = $row;
+        }
+
+        // The odd phones: their own digits, and the plain phones that have the same.
+        $odd = [];
+        foreach (DB::query()->fromSub($phones, 'p')->where('p.rest', '<>', '')->select('p.id', 'p.phone')->get() as $row) {
+            $digits = preg_replace('/\D+/', '', (string) $row->phone);
+            if (strlen($digits) >= 7) {
+                $odd[(int) $row->id] = $digits;
+            }
+        }
+        $extra = array_keys($odd);
+        foreach (array_chunk(array_values(array_unique($odd)), 500) as $keys) {
+            foreach ($plain('p')->whereIn('p.k', $keys)->pluck('p.id') as $id) {
+                $extra[] = (int) $id;
+            }
+        }
+        foreach (array_chunk(array_values(array_diff(array_unique($extra), array_keys($byId))), 500) as $ids) {
+            foreach ($members()->select(self::DUPLICATE_COLUMNS)->whereIn('m.id', $ids)->get() as $row) {
+                $byId[(int) $row->id] = $row;
+            }
+        }
+
+        $rows = array_values($byId);
+        usort($rows, fn ($a, $b) => [(string) $a->created_at, (int) $a->id] <=> [(string) $b->created_at, (int) $b->id]);
+
+        return $rows;
     }
 }

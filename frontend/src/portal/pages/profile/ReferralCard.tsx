@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { Check, Copy, Share2 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { portalApi } from '../../lib/portalApi'
+import { counted } from '../../lib/plural'
 import { Card } from '../../ui/Card'
 import { Button } from '../../ui/Button'
 
@@ -39,7 +40,7 @@ export function ReferralCard() {
       ) : (
         <p className="text-xs text-p-text-2">{t('portal.profile.invite_unavailable', 'Referral links are not available yet.')}</p>
       )}
-      {data.total_referrals > 0 && <p className="text-[11px] text-p-text-2 mt-2">{t('portal.profile.invite_stats', '{{count}} friends joined', { count: data.total_referrals })}</p>}
+      {data.total_referrals > 0 && <p className="text-[11px] text-p-text-2 mt-2">{counted(t, 'profile.invite_stats', data.total_referrals)}</p>}
     </Card>
   )
 }

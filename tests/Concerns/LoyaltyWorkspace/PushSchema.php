@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\Schema;
  * in sqlite, as the migrations build them: push_notifications (2024_01_01_000011, with its campaign link), the push
  * columns of loyalty_members (2024_01_01_000003, 2026_05_12_190000), notification_campaigns (2024_01_01_000012 and
  * the columns later migrations added, with this release's 2026_10_22_110000) and push_message_deliveries (the same
- * migration). Every table and column is guarded, so a narrower table another suite built first is widened rather
+ * migration, with release 4's Expo receipt columns, 2026_10_23_150200). Every table and column is guarded, so a narrower table another suite built first is widened rather
  * than replaced. No foreign keys: the tests' hand-built tables carry none; the unique pair the job's insert-or-skip
  * rests on is kept.
  *
@@ -97,6 +97,12 @@ trait PushSchema
                 $t->index('member_id');
             });
         }
+        // Release 4's Expo receipts (2026_10_23_150200).
+        $this->pushColumns('push_message_deliveries', [
+            'ticket_id'  => fn (Blueprint $t) => $t->string('ticket_id', 64)->nullable(),
+            'token_hash' => fn (Blueprint $t) => $t->string('token_hash', 64)->nullable(),
+            'receipt_at' => fn (Blueprint $t) => $t->timestamp('receipt_at')->nullable(),
+        ]);
     }
 
     /** The plan's `push_notifications` feature, which the push routes need (`feature:push_notifications`). */

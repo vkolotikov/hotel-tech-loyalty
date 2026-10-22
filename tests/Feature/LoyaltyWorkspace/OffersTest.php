@@ -38,7 +38,7 @@ class OffersTest extends TestCase
         $this->assertSame(['Paused', 'Summer', 'Winter', 'Autumn spa'], array_column($response->json('offers'), 'title'));
         $this->assertSame(['off', 'ended', 'upcoming', 'live'], array_column($response->json('offers'), 'state'));
         $response->assertJsonPath('offers.3', [
-            'id' => $live->id, 'title' => 'Autumn spa', 'description' => '15% off treatments.', 'type' => 'discount', 'value' => 15,
+            'id' => $live->id, 'brand_id' => $this->brandId, 'title' => 'Autumn spa', 'description' => '15% off treatments.', 'type' => 'discount', 'value' => 15,
             'code' => 'AUTUMN15', 'applies_to' => 'services', 'tier_ids' => [$this->tiers['gold']->id], 'start_date' => '2026-10-05',
             'end_date' => '2026-10-31', 'usage_limit' => 100, 'times_used' => 7, 'per_member_limit' => 1, 'is_active' => true,
             'is_featured' => true, 'image_url' => null, 'state' => 'live',
@@ -71,7 +71,7 @@ class OffersTest extends TestCase
 
         $id = $response->json('offer.id');
         $response->assertJsonPath('offer', [
-            'id' => $id, 'title' => 'Welcome', 'description' => 'Ten percent off the first visit.', 'type' => 'discount', 'value' => 10,
+            'id' => $id, 'brand_id' => $this->brandId, 'title' => 'Welcome', 'description' => 'Ten percent off the first visit.', 'type' => 'discount', 'value' => 10,
             'code' => 'WELCOME10', 'applies_to' => 'all', 'tier_ids' => [$gold], 'start_date' => '2026-10-05', 'end_date' => '2026-11-05',
             'usage_limit' => 50, 'times_used' => 0, 'per_member_limit' => null, 'is_active' => true, 'is_featured' => false, 'image_url' => null,
             'state' => 'live',

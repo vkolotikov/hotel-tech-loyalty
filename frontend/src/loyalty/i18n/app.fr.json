@@ -27,6 +27,31 @@
     "text_secondary": "Texte discret",
     "warning": "Avertissement"
   },
+  "currency": {
+    "before": "Avant de passer de {{from}} à {{to}} :",
+    "confirm": "Passer en {{to}}",
+    "error": {
+      "invalid": "Choisissez une devise dans la liste.",
+      "manager_only": "Seul un propriétaire ou un responsable peut modifier la carte et l’appli.",
+      "network": "Pas de connexion : rien n’a été enregistré. Réessayez.",
+      "no_capability": "Seul un propriétaire ou un responsable peut modifier la carte et l’appli.",
+      "not_allowed": "Seul un propriétaire ou un responsable peut modifier la carte et l’appli.",
+      "unknown": "La devise n’a pas pu être enregistrée. Veuillez réessayer."
+    },
+    "field": "Devise",
+    "keep": "Garder {{from}}",
+    "line": "La devise de vos prix et des montants que voient les membres. Le portail membre, les offres, les analyses et la configuration des rendez-vous lisent ce seul réglage. La changer renomme la devise des prix ; elle ne les convertit jamais.",
+    "save": "Enregistrer la devise",
+    "saved": "Enregistré. Les prix et les montants s’affichent maintenant en {{currency}}.",
+    "title": "Devise",
+    "unsaved": "Pas encore enregistré.",
+    "warn": {
+      "bookings": "Rendez-vous réservés dans une autre devise : {{total}} (dont à venir : {{upcoming}}). Ils gardent la devise dans laquelle ils ont été réservés.",
+      "payments": "Les paiements en ligne sont configurés en {{currency}}. Les réservations dont les prix sont en {{to}} seraient payées sur place tant que Stripe n’accepte pas {{to}} (administration complète : Paramètres → Intégrations).",
+      "relabel": "Les prestations ({{services}}) et les extras ({{extras}}) passent en {{to}}. Les montants de leurs prix restent les mêmes.",
+      "stays": "Les séjours ont des prix en {{currency}}, réglés dans les paramètres de réservation de l’administration complète. Ce champ ne les change pas."
+    }
+  },
   "file": {
     "apple_cert": "Certificat Pass Type ID",
     "apple_wwdr": "Certificat Apple WWDR",
@@ -157,6 +182,7 @@
   },
   "tab": {
     "app": "Application membre",
+    "currency": "Devise",
     "wallet": "Pass Wallet"
   },
   "tabs": "Rubriques de la carte et de l’appli",

@@ -19,6 +19,7 @@ use App\Services\Booking\MemberPricing;
 use App\Services\Booking\PaymentAlreadyUsed;
 use App\Services\Booking\PaymentMismatch;
 use App\Services\Booking\PaymentUnverifiable;
+use App\Services\Booking\PayAtVenueFallback;
 use App\Services\Booking\PortalBookingNotifier;
 use App\Services\Booking\PortalPaymentIntentGuard;
 use App\Services\Booking\ServiceCatalogue;
@@ -32,6 +33,7 @@ use App\Services\Portal\PortalBootstrap;
 use App\Services\ServiceSchedulingService;
 use App\Services\StripeService;
 use App\Support\AdvisoryLock;
+use App\Support\SharedCache;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Database\UniqueConstraintViolationException;
@@ -195,57 +197,206 @@ class PortalServiceBookingController extends Controller
         }
     }
 
+    /** How long the record of a slot's last intent is kept (release 4, part C: one hold per card). */
+    private const SLOT_INTENT_TTL_HOURS = 3;
+
     /**
      * A Stripe PaymentIntent for the same discounted total the quote would
      * report, carrying the organisation and the member in its metadata so
      * confirm() (Task 9) can check both before trusting the PI.
+     *
+     * Release 4, part C:
+     * - Redirect-based payment methods the account enables are allowed (no
+     *   `allow_redirects: 'never'`): the portal now has a return page
+     *   (`/portal/book/return`, PortalPaymentReturnController). So that the
+     *   return can restore the booking from the server, the metadata also
+     *   names the requested person, the party size, the extras and the
+     *   chosen coupon — everything that decides the price and the slot.
+     * - One hold per card: the slot's last intent for this member (kept in
+     *   the shared cache under slotIntentKey()) is reused when it can still be
+     *   paid for exactly this booking, and released first otherwise — through
+     *   PortalPaymentIntentGuard::reuseOrRelease(), under the member's own
+     *   `psi:` key and then `pi:`, never one a booking carries or another
+     *   member's. Nothing is minted beside an earlier intent that could not
+     *   be read or released.
+     * - When Stripe cannot be reached and the venue has switched on
+     *   PayAtVenueFallback, the answer is `409 pay_at_venue` with a grant the
+     *   confirm accepts, under this visit's Idempotency-Key, to book at the
+     *   venue.
      */
-    public function paymentIntent(Request $request, ServiceQuoteBuilder $builder, StripeService $stripe): JsonResponse
+    public function paymentIntent(Request $request, ServiceQuoteBuilder $builder, StripeService $stripe, PortalPaymentIntentGuard $guard): JsonResponse
     {
         $data = $this->storedStart($request->validate(self::QUOTE_RULES));
         $member = $this->provisioner->ensureForUser($request->user());
         if (!$member) {
             return response()->json(['error' => 'no_membership', 'message' => 'Your membership is not set up yet.'], 422);
         }
+        $orgId = (int) app('current_organization_id');
+        $memberId = (int) $member->id;
 
         try {
             $b = $this->buildQuote($request, $data, $builder);
         } catch (\Throwable $e) {
             return $this->quoteError($e);
         }
+        if ($refusal = $this->notChargeable($b)) {
+            return $refusal;
+        }
 
+        // The pay-at-venue grant, if one is offered below, is for this Pay
+        // visit's one booking: the visit's Idempotency-Key (the header the
+        // confirm will carry). No key, no grant (an older client): the 503.
+        $visitKey = PayAtVenueFallback::visitKey($request->header('Idempotency-Key'));
+        $target = $visitKey !== null ? PayAtVenueFallback::serviceTarget((int) $b['service']->id, $data['start_at'], $visitKey) : null;
+
+        // Only this member's own key for this slot (`psi:`), then `pi:` inside
+        // reuseOrRelease() — never the slot keys (`svc:`/`svcm:`) the public
+        // widget's and the portal's confirms take, so a slow Stripe call here
+        // can hold up nobody else's booking. The price was decided above, with
+        // no lock (the quote is free); confirm() decides it again under its own.
+        $lockKey = 'psi:' . $orgId . ':' . $memberId . ':' . (int) $b['service']->id . ':' . hash('sha256', $data['start_at']);
+        try {
+            return AdvisoryLock::transaction($lockKey, fn () => $this->intentForSlot($b, $data, $stripe, $guard, $orgId, $memberId, $target));
+        } catch (PaymentUnverifiable $e) {
+            // The slot's earlier intent could not be read, or not released: no second intent is minted beside it.
+            Log::warning('portal.payment_intent_previous_unreadable', ['org' => $orgId, 'error' => $e->getMessage()]);
+            return $this->paymentUnavailable($orgId, $memberId, $target, $e);
+        }
+    }
+
+    /** `pay_at_venue` / `nothing_to_pay` for a quote that takes no online payment, else null. */
+    private function notChargeable(array $b): ?JsonResponse
+    {
         if ($b['payment']['mode'] !== 'online') {
             return response()->json(['error' => 'pay_at_venue', 'message' => 'This venue takes payment at the venue.'], 409);
         }
-
-        $total = $b['pricing']->total;
-        if ($total <= 0) {
+        if ($b['pricing']->total <= 0) {
             return response()->json(['error' => 'nothing_to_pay', 'message' => 'There is nothing to pay online for this booking.'], 409);
         }
 
-        try {
-            $pi = $stripe->createPaymentIntent($total, "Service booking: {$b['service']->name}", [
-                'kind'       => 'portal_service_booking',
-                'org_id'     => (int) app('current_organization_id'),
-                'member_id'  => (int) $member->id,
-                'service_id' => (int) $b['service']->id,
-                'start_at'   => $b['q']['start']->toIso8601String(),
-                'total'      => number_format($total, 2, '.', ''),
-            ], ['allow_redirects' => 'never']);
-        } catch (\Throwable $e) {
-            Log::warning('portal.payment_intent_failed', ['org' => app('current_organization_id'), 'error' => $e->getMessage()]);
-            return response()->json(['error' => 'payment_unavailable', 'message' => 'Online payment is unavailable right now. Please try again in a moment.'], 503);
+        return null;
+    }
+
+    /**
+     * Under the member's own `psi:` key: reuse the slot's last intent or
+     * release it, then mint one. The slot is this member, this service, this
+     * stored start — the person, the extras or the coupon may differ (then
+     * the old intent is not "for this booking" and is released). The record
+     * lives in the shared cache (SharedCache: the database in production), so
+     * every container sees it; `psi:` serialises its read-decide-write.
+     */
+    private function intentForSlot(array $b, array $data, StripeService $stripe, PortalPaymentIntentGuard $guard, int $orgId, int $memberId, ?string $target): JsonResponse
+    {
+        $total = $b['pricing']->total;
+        $meta = $this->intentMetadata($b, $data, $orgId, $memberId);
+        $slotKey = self::slotIntentKey($orgId, $memberId, (int) $b['service']->id, $data['start_at']);
+
+        $previous = SharedCache::store()->get($slotKey);
+        if (is_string($previous) && $previous !== '') {
+            $reused = $guard->reuseOrRelease($previous, $orgId, $memberId, 'portal_service_booking', $total, fn (array $m) => $this->sameServiceTarget($m, $meta));
+            if ($reused !== null) {
+                return $this->intentReply((string) self::field($reused, 'client_secret'), (string) self::field($reused, 'id'), $total, $b['pricing']->currency, true);
+            }
         }
 
+        try {
+            // No fourth-argument `allow_redirects`: redirect methods are allowed (see paymentIntent()).
+            $pi = $stripe->createPaymentIntent($total, "Service booking: {$b['service']->name}", $meta, []);
+        } catch (\Throwable $e) {
+            Log::warning('portal.payment_intent_failed', ['org' => $orgId, 'error' => $e->getMessage()]);
+            return $this->paymentUnavailable($orgId, $memberId, $target, $e);
+        }
+        SharedCache::store()->put($slotKey, $pi['payment_intent_id'], now()->addHours(self::SLOT_INTENT_TTL_HOURS));
+
+        return $this->intentReply($pi['client_secret'], $pi['payment_intent_id'], $total, $b['pricing']->currency, false);
+    }
+
+    /** The cache key of the last intent this member was given for this slot. */
+    public static function slotIntentKey(int $orgId, int $memberId, int $serviceId, string $storedStart): string
+    {
+        return 'portal:slot-intent:' . $orgId . ':' . $memberId . ':' . $serviceId . ':' . hash('sha256', $storedStart);
+    }
+
+    /**
+     * The intent's metadata: the original keys confirm() and the guard check
+     * (kind, org, member, service, start, total), and — release 4 — what the
+     * payment return needs to rebuild the same booking on the server: the
+     * requested person (empty for "anyone"), the party size, the extras as
+     * `[[id, quantity], …]` and the coupon the member chose (`offer:<id>`,
+     * `redemption:<id>` or empty). Never `hold_token` (the widget's key).
+     */
+    private function intentMetadata(array $b, array $data, int $orgId, int $memberId): array
+    {
+        $coupon = CouponSelection::fromArray($data['coupon'] ?? null);
+
+        return [
+            'kind'       => 'portal_service_booking',
+            'org_id'     => $orgId,
+            'member_id'  => $memberId,
+            'service_id' => (int) $b['service']->id,
+            'start_at'   => $b['q']['start']->toIso8601String(),
+            'total'      => number_format($b['pricing']->total, 2, '.', ''),
+            'master_id'  => isset($data['master_id']) ? (string) (int) $data['master_id'] : '',
+            'party_size' => (string) (int) ($data['party_size'] ?? 1),
+            'extras'     => json_encode(array_map(fn (array $e) => [(int) $e['id'], (int) ($e['quantity'] ?? 1)], array_values($data['extras'] ?? []))),
+            'coupon'     => $coupon === null ? '' : ($coupon->isOffer() ? 'offer:' . $coupon->memberOfferId : 'redemption:' . $coupon->redemptionId),
+        ];
+    }
+
+    /** Whether an earlier intent's metadata names exactly the booking $meta describes (the amount is the guard's own check). */
+    private function sameServiceTarget(array $m, array $meta): bool
+    {
+        foreach (['service_id', 'start_at', 'master_id', 'party_size', 'extras', 'coupon'] as $k) {
+            if ((string) ($m[$k] ?? '') !== (string) $meta[$k]) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * Stripe could not give a payment: today's retryable 503, or — only when
+     * Stripe could not be reached or is overloaded
+     * (PayAtVenueFallback::isStripeUnreachable()), the venue takes bookings
+     * to pay at the venue in that case, and the visit sent its key — 409
+     * `pay_at_venue` with the grant the confirm accepts for this member's one
+     * booking of this slot.
+     */
+    private function paymentUnavailable(int $orgId, int $memberId, ?string $target, \Throwable $cause): JsonResponse
+    {
+        if ($target !== null && PayAtVenueFallback::isStripeUnreachable($cause) && PayAtVenueFallback::enabled()) {
+            Log::warning('portal.pay_at_venue_fallback_offered', ['org' => $orgId, 'member' => $memberId, 'kind' => 'service']);
+
+            return response()->json([
+                'error'              => 'pay_at_venue',
+                'reason'             => PayAtVenueFallback::REASON,
+                'pay_at_venue_grant' => PayAtVenueFallback::grant('service', $orgId, $memberId, $target),
+                'message'            => 'Online payment is unavailable right now. You can book now and pay at the venue.',
+            ], 409);
+        }
+
+        return response()->json(['error' => 'payment_unavailable', 'message' => 'Online payment is unavailable right now. Please try again in a moment.'], 503);
+    }
+
+    private function intentReply(string $clientSecret, string $id, float $total, string $currency, bool $reused): JsonResponse
+    {
         // No JSON_PRESERVE_ZERO_FRACTION here either — see index()'s comment
         // on the same point; the test's assertJsonPath cases compare amounts
         // against bare integers such as 54.
         return response()->json([
-            'client_secret'      => $pi['client_secret'],
-            'payment_intent_id'  => $pi['payment_intent_id'],
-            'amount'             => $total,
-            'currency'           => $b['pricing']->currency,
+            'client_secret'     => $clientSecret,
+            'payment_intent_id' => $id,
+            'amount'            => $total,
+            'currency'          => $currency,
+            'reused'            => $reused,
         ]);
+    }
+
+    /** A Stripe\PaymentIntent's field; tolerates an array too (test doubles). */
+    private static function field(mixed $pi, string $key): mixed
+    {
+        return is_array($pi) ? ($pi[$key] ?? null) : ($pi->{$key} ?? null);
     }
 
     /**
@@ -344,7 +495,12 @@ class PortalServiceBookingController extends Controller
         // form (the venue-offset string or an old tab's `+00:00`) hashes the
         // same, since the `+00:00` form is left as-is — so a key computed
         // under the old, unnormalised format still replays.
-        $data = $this->storedStart($request->validate(self::QUOTE_RULES + ['payment_intent_id' => 'nullable|string|max:255', 'notes' => 'nullable|string|max:2000']));
+        $data = $this->storedStart($request->validate(self::QUOTE_RULES + ['payment_intent_id' => 'nullable|string|max:255', 'notes' => 'nullable|string|max:2000', 'pay_at_venue_grant' => 'nullable|string|max:4000']));
+        // Release 4, part C: the pay-at-venue grant (PayAtVenueFallback) is not part of the booking — it is
+        // kept out of the idempotency hash and of the stored submission, so a retry with or without it
+        // replays the same booking, and a pre-release key still hashes the same.
+        $grant = $data['pay_at_venue_grant'] ?? null;
+        unset($data['pay_at_venue_grant']);
         $key = trim((string) $request->header('Idempotency-Key'));
         if (strlen($key) < 8 || strlen($key) > 80) {
             return response()->json(['error' => 'idempotency_key_required', 'message' => 'Send an Idempotency-Key header of 8 to 80 characters.'], 422);
@@ -388,6 +544,15 @@ class PortalServiceBookingController extends Controller
             return $this->fail(response()->json(['error' => 'confirm_failed', 'message' => 'We could not complete the booking. Please try again.'], 500), $piId, $orgId, $memberId, $guard);
         }
         $online = $pre['payment']['mode'] === 'online' && $pre['pricing']->total > 0;
+        // Release 4, part C: Stripe could not be reached at the payment-intent call and the venue takes such
+        // bookings to pay at the venue — with no payment in the request, the grant for this member, this slot
+        // and THIS Idempotency-Key (one booking: another key is not covered, the same key replays above)
+        // turns it into the ordinary at-venue booking (payment_status `unpaid`), nothing new.
+        $fallback = $online && !$piId
+            && PayAtVenueFallback::allows($grant, 'service', $orgId, $memberId, PayAtVenueFallback::serviceTarget((int) $pre['service']->id, $data['start_at'], $key));
+        if ($fallback) {
+            $online = false;
+        }
         if ($online && !$piId) {
             // Can't have an intent by definition — nothing to release.
             return response()->json(['error' => 'payment_required', 'message' => 'Please complete the payment first.'], 422);
@@ -450,7 +615,35 @@ class PortalServiceBookingController extends Controller
         }
 
         $this->afterConfirm($booking->fresh(['service', 'master', 'extras']), $online);
+        if ($fallback) {
+            PayAtVenueFallback::audit($orgId, $memberId, 'service_booking', (int) $booking->id, (string) $booking->booking_reference);
+        }
+        if (!$online) {
+            $this->releaseSlotIntent($orgId, $memberId, (int) $pre['service']->id, $data['start_at'], $guard);
+        }
         return response()->json(['booking' => MemberBookingQuery::serviceDto($booking->fresh(['service', 'master'])), 'replayed' => false], 201);
+    }
+
+    /**
+     * Release 4, part C: a booking just committed without a card (pay at the
+     * venue — the fallback, or a venue that turned cards off mid-flow) leaves
+     * no use for the intent an earlier payment-intent call recorded for this
+     * slot; it is released through the guard (never one a booking carries,
+     * never another member's or organisation's; best effort, logged) and the
+     * record forgotten. After the commit, outside every lock.
+     */
+    private function releaseSlotIntent(int $orgId, int $memberId, int $serviceId, string $storedStart, PortalPaymentIntentGuard $guard): void
+    {
+        $slotKey = self::slotIntentKey($orgId, $memberId, $serviceId, $storedStart);
+        try {
+            $previous = SharedCache::store()->get($slotKey);
+            if (is_string($previous) && $previous !== '') {
+                $guard->release($previous, $orgId, $memberId);
+            }
+            SharedCache::store()->forget($slotKey);
+        } catch (\Throwable $e) {
+            Log::warning('portal.slot_intent_release_failed', ['org' => $orgId, 'error' => $e->getMessage()]);
+        }
     }
 
     /**

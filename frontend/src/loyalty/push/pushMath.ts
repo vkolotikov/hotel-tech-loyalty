@@ -26,10 +26,14 @@ export function messageFrom(search: string): number | null {
 
 // ─── A message's state ────────────────────────────────────────────────────
 
-/** A draft waits (amber), sending is under way (teal), sent is done (green), failed is red, cancelled and anything else grey. */
+/**
+ * A draft waits (amber), a scheduled one (release 4) and one sending are under way (teal), sent is done (green), failed
+ * is red, cancelled and anything else grey.
+ */
 export function statusTone(status: string): Tone {
   switch (status) {
     case 'draft': return 'pending'
+    case 'scheduled':
     case 'sending': return 'approved'
     case 'sent': return 'fulfilled'
     case 'failed': return 'declined'

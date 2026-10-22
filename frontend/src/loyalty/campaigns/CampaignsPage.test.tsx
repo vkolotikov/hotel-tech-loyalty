@@ -37,11 +37,11 @@ const manager = can({ manage_campaigns: true, manage_program: true })
 const list: CampaignsList = {
   page: 1, pages: 1, total: 3,
   campaigns: [
-    { id: 7, name: 'Autumn', subject: 'Our autumn', status: 'draft', segment: { id: 3, name: 'Gold' }, recipient_count: 0, sent_count: 0, failed_count: 0, sent_at: null,
+    { id: 7, name: 'Autumn', subject: 'Our autumn', status: 'draft', segment: { id: 3, name: 'Gold' }, recipient_count: 0, sent_count: 0, failed_count: 0, sent_at: null, scheduled_at: null, scheduled_for: null,
       created_at: '2026-10-20T08:00:00+00:00', updated_at: '2026-10-20T09:00:00+00:00' },
-    { id: 6, name: 'Summer', subject: 'Our summer', status: 'sent', segment: { id: 3, name: 'Gold' }, recipient_count: 1200, sent_count: 1195, failed_count: 5,
+    { id: 6, name: 'Summer', subject: 'Our summer', status: 'sent', segment: { id: 3, name: 'Gold' }, recipient_count: 1200, sent_count: 1195, failed_count: 5, scheduled_at: null, scheduled_for: null,
       sent_at: '2026-08-01T10:00:00+00:00', created_at: '2026-07-30T08:00:00+00:00', updated_at: '2026-08-01T10:00:00+00:00' },
-    { id: 5, name: 'Spring', subject: '', status: 'sending', segment: null, recipient_count: 400, sent_count: 100, failed_count: 0, sent_at: null, created_at: null, updated_at: null },
+    { id: 5, name: 'Spring', subject: '', status: 'sending', segment: null, recipient_count: 400, sent_count: 100, failed_count: 0, sent_at: null, scheduled_at: null, scheduled_for: null, created_at: null, updated_at: null },
   ],
 }
 const options: SegmentOptions = {

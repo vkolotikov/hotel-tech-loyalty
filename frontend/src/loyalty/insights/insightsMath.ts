@@ -1,6 +1,6 @@
 import { formatDate } from '../../workspace/lib/wallClock'
 import type { Can, TierRef } from '../lib/types'
-import type { Band, BucketKind, Insights, Period } from './types'
+import type { Band, BucketKind, CohortRow, Insights, Money, Period } from './types'
 
 /**
  * Insights' decisions (spec 2026-10-21 release 2 §5), kept out of the components so they can be tested by string:
@@ -114,6 +114,38 @@ export function tierOf(id: number, tiers: readonly TierRef[]): TierRef | null {
 /** Nothing to show yet: no member has joined. Points and charts appear once members join and earn. */
 export function isEmptyProgramme(data: Insights): boolean {
   return data.tiles.members === 0
+}
+
+// ─── Cohorts and money (release 4) ───────────────────────────────────────
+
+/** The share of a cohort active in a month, in whole per cent; null for a month of a cohort nobody joined. */
+export function retentionShare(active: number, members: number): number | null {
+  return members > 0 ? Math.round((Math.max(0, active) / members) * 100) : null
+}
+
+/** How strongly a cell of the retention table is shaded: 0 for none, then four steps up to the whole cohort. */
+export function heatStep(share: number | null): 0 | 1 | 2 | 3 | 4 {
+  if (share === null || share <= 0) return 0
+  if (share < 25) return 1
+  if (share < 50) return 2
+  if (share < 75) return 3
+  return 4
+}
+
+/** The table's columns: month 0 (the one they joined) to the oldest cohort's last, eleven months after. */
+export function cohortOffsets(rows: readonly CohortRow[]): number[] {
+  const longest = Math.max(0, ...rows.map(r => r.active.length))
+  return Array.from({ length: longest }, (_, i) => i)
+}
+
+/** Nobody joined in any of the twelve months: the card says so instead of drawing an empty table. */
+export function noCohorts(rows: readonly CohortRow[]): boolean {
+  return rows.every(r => r.members === 0)
+}
+
+/** Nothing was paid in the period, by members or anyone: the card says so instead of drawing zeros. */
+export function noMoney(money: Money): boolean {
+  return money.all.total === 0 && money.members.total === 0 && money.other_currency.bookings === 0
 }
 
 // ─── Scales ───────────────────────────────────────────────────────────────

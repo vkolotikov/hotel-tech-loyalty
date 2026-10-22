@@ -84,7 +84,7 @@ final class StayQuoteService
         $orgId = (int) app('current_organization_id');
         $adults = (int) ($data['adults'] ?? 2);
         $children = (int) ($data['children'] ?? 0);
-        $this->assertStayAllowed($data['check_in'], $data['check_out']);
+        $nights = $this->assertStayAllowed($data['check_in'], $data['check_out']);
 
         // Mirror StayCatalogue's own key (`pms_id ?: id`): a room is found
         // by its PMS id, or — only when it HAS no PMS id — by its numeric
@@ -127,7 +127,7 @@ final class StayQuoteService
         // quote's lines. It prices an unknown id as nothing and skips it; the
         // portal refuses it instead of holding a stay with an extra that is
         // not there.
-        $lines = $this->engine->extrasLines($extras, $adults);
+        $lines = $this->engine->extrasLines($extras, $adults, $children, $nights);
         if (count($lines) !== count($extras)) {
             throw new StayQuoteException('invalid_stay', 'One of the extras you chose is not offered here.', 422);
         }

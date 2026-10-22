@@ -83,6 +83,27 @@ export interface LookAnswer {
   options: LookOptions
 }
 
+/** `GET currency` (release 4, R4-5; CurrencyController): the venue's currency and the ISO 4217 codes to choose from. */
+export interface CurrencyAnswer {
+  currency: string
+  options: string[]
+}
+
+/** `PUT currency` with `dry_run`: what setting `to` would mean now; every figure is the server's. */
+export interface CurrencyPreview {
+  dry_run: true
+  from: string
+  to: string
+  /** The services and extras whose prices get the new label (never converted). */
+  relabel: { services: number; extras: number }
+  /** Online payments are set up in another currency (`currency`): bookings would be paid at the venue. */
+  payments: { mismatch: boolean; currency: string | null }
+  /** Appointments already booked in another currency; they keep theirs. */
+  bookings: { total: number; upcoming: number }
+  /** Stays are priced in their own currency, which this field does not change; null when that is not the case. */
+  stays: { currency: string } | null
+}
+
 export interface LookBody {
   colors: Colors
   card_style: string

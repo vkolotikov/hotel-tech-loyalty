@@ -27,15 +27,19 @@ class EarnRateEvent extends Model
         'organization_id', 'brand_id', 'name', 'description',
         'multiplier', 'starts_at', 'ends_at',
         'days_of_week', 'tier_ids', 'property_id', 'is_active',
+        // Release 4 (R4-6): set by every save of the times as the venue's wall clock, from either admin; null on a
+        // boost last saved before that (the workspace asks for its times to be checked).
+        'times_venue_at',
     ];
 
     protected $casts = [
-        'multiplier'   => 'decimal:2',
-        'starts_at'    => 'datetime',
-        'ends_at'      => 'datetime',
-        'days_of_week' => 'array',
-        'tier_ids'     => 'array',
-        'is_active'    => 'boolean',
+        'multiplier'     => 'decimal:2',
+        'starts_at'      => 'datetime',
+        'ends_at'        => 'datetime',
+        'days_of_week'   => 'array',
+        'tier_ids'       => 'array',
+        'is_active'      => 'boolean',
+        'times_venue_at' => 'datetime',
     ];
 
     public function scopeActiveNow(Builder $q): Builder

@@ -300,7 +300,8 @@ class NotificationServiceSendTest extends TestCase
             ['to' => 'ExponentPushToken[c]', 'title' => 'T', 'body' => 'B'],
         ]);
 
-        $this->assertSame([['ok' => true, 'error' => null], ['ok' => false, 'error' => 'DeviceNotRegistered'], ['ok' => true, 'error' => null]], $out);
+        // Release 4: an accepted push's ticket id comes back too (its receipt is read later by it).
+        $this->assertSame([['ok' => true, 'error' => null, 'ticket' => 'a'], ['ok' => false, 'error' => 'DeviceNotRegistered', 'ticket' => null], ['ok' => true, 'error' => null, 'ticket' => 'c']], $out);
         $this->assertSame(1, $this->pushesToExpo());
         Http::assertSent(fn (Request $r) => count($r->data()) === 3 && $r->data()[0]['to'] === 'ExponentPushToken[a]');
         $this->assertSame([], $this->service->pushMany([]));
@@ -309,14 +310,14 @@ class NotificationServiceSendTest extends TestCase
     public function test_push_many_counts_every_push_as_not_accepted_when_the_request_fails(): void
     {
         $this->expo = fn () => Http::response(['errors' => []], 503);
-        $this->assertSame([['ok' => false, 'error' => 'http_503'], ['ok' => false, 'error' => 'http_503']],
+        $this->assertSame([['ok' => false, 'error' => 'http_503', 'ticket' => null], ['ok' => false, 'error' => 'http_503', 'ticket' => null]],
             $this->service->pushMany([['to' => 'x', 'title' => 'T', 'body' => 'B'], ['to' => 'y', 'title' => 'T', 'body' => 'B']]));
 
         $this->expo = fn () => throw new \RuntimeException('connection refused');
-        $this->assertSame([['ok' => false, 'error' => 'unreachable']], $this->service->pushMany([['to' => 'x', 'title' => 'T', 'body' => 'B']]));
+        $this->assertSame([['ok' => false, 'error' => 'unreachable', 'ticket' => null]], $this->service->pushMany([['to' => 'x', 'title' => 'T', 'body' => 'B']]));
 
         $this->expo = fn () => Http::response(['data' => [['status' => 'ok']]], 200);
-        $this->assertSame([['ok' => true, 'error' => null], ['ok' => false, 'error' => 'no_ticket']],
+        $this->assertSame([['ok' => true, 'error' => null, 'ticket' => null], ['ok' => false, 'error' => 'no_ticket', 'ticket' => null]],
             $this->service->pushMany([['to' => 'x', 'title' => 'T', 'body' => 'B'], ['to' => 'y', 'title' => 'T', 'body' => 'B']]));
     }
 }

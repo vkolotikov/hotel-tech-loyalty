@@ -231,6 +231,10 @@
     "take_off_label": "{{benefit}} aus {{tier}} entfernen",
     "title": "Stufen"
   },
+  "time_check": {
+    "dialog": "Prüfen Sie diese Zeiten: Die Aktion wurde gespeichert, bevor Aktionszeiten überall nach der Uhrzeit des Hauses gelesen wurden. Wurde sie zuletzt in der vollständigen Verwaltung gespeichert, können die Zeiten um den Abstand des Hauses zu UTC verschoben sein. Nach dem Speichern gelten sie als geprüft.",
+    "row": "Zeit prüfen: Diese Aktion wurde gespeichert, bevor Aktionszeiten überall nach der Uhrzeit des Hauses gelesen wurden. Wurde sie zuletzt in der vollständigen Verwaltung gespeichert, kann sie einige Stunden zu früh oder zu spät beginnen und enden. Öffnen, Zeiten prüfen und speichern."
+  },
   "title": "Programm",
   "value_phrase": {
     "fixed_amount": "{{amount}} Rabatt",

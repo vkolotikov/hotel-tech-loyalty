@@ -39,6 +39,11 @@ import pushRu from './push.ru.json'
 import pushDe from './push.de.json'
 import pushFr from './push.fr.json'
 import pushEs from './push.es.json'
+import smsEn from './sms.en.json'
+import smsRu from './sms.ru.json'
+import smsDe from './sms.de.json'
+import smsFr from './sms.fr.json'
+import smsEs from './sms.es.json'
 
 /**
  * HexaTech Loyalty's words, kept out of the admin's common.json so a session
@@ -47,15 +52,15 @@ import pushEs from './push.es.json'
  * `t('loyalty.members.title')`; each area with its own files sits under its
  * name: `loyalty.program`, `loyalty.rewards`, and release 2's
  * `loyalty.membership`, `loyalty.insights`, `loyalty.campaigns`, `loyalty.app`, and release 3's
- * `loyalty.push`.
+ * `loyalty.push`, and release 4's `loyalty.sms`.
  * Registered when the chunk loads.
  */
 export const LOYALTY_LOCALE_FILES = {
-  en: { ...en, program: programEn, rewards: rewardsEn, membership: membershipEn, insights: insightsEn, campaigns: campaignsEn, app: appEn, push: pushEn },
-  ru: { ...ru, program: programRu, rewards: rewardsRu, membership: membershipRu, insights: insightsRu, campaigns: campaignsRu, app: appRu, push: pushRu },
-  de: { ...de, program: programDe, rewards: rewardsDe, membership: membershipDe, insights: insightsDe, campaigns: campaignsDe, app: appDe, push: pushDe },
-  fr: { ...fr, program: programFr, rewards: rewardsFr, membership: membershipFr, insights: insightsFr, campaigns: campaignsFr, app: appFr, push: pushFr },
-  es: { ...es, program: programEs, rewards: rewardsEs, membership: membershipEs, insights: insightsEs, campaigns: campaignsEs, app: appEs, push: pushEs },
+  en: { ...en, program: programEn, rewards: rewardsEn, membership: membershipEn, insights: insightsEn, campaigns: campaignsEn, app: appEn, push: pushEn, sms: smsEn },
+  ru: { ...ru, program: programRu, rewards: rewardsRu, membership: membershipRu, insights: insightsRu, campaigns: campaignsRu, app: appRu, push: pushRu, sms: smsRu },
+  de: { ...de, program: programDe, rewards: rewardsDe, membership: membershipDe, insights: insightsDe, campaigns: campaignsDe, app: appDe, push: pushDe, sms: smsDe },
+  fr: { ...fr, program: programFr, rewards: rewardsFr, membership: membershipFr, insights: insightsFr, campaigns: campaignsFr, app: appFr, push: pushFr, sms: smsFr },
+  es: { ...es, program: programEs, rewards: rewardsEs, membership: membershipEs, insights: insightsEs, campaigns: campaignsEs, app: appEs, push: pushEs, sms: smsEs },
 } as const
 
 let registered = false

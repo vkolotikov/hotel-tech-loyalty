@@ -7,6 +7,7 @@ import { Button } from '../../workspace/ui/Button'
 import { Notice } from '../../workspace/ui/Notice'
 import { Skeleton } from '../../workspace/ui/Skeleton'
 import { formatDate } from '../../workspace/lib/wallClock'
+import { isScheduled, scheduledWhen } from '../campaigns/scheduleMath'
 import { useBoot } from '../LoyaltyProvider'
 import { failureOf } from '../lib/api'
 import { day, points } from '../lib/format'
@@ -106,7 +107,9 @@ function PushItem({ push: m, locale, timeZone }: { push: PushRow; locale: string
         <span className="basis-40 text-sm tabular-nums text-a-text-2">
           {m.status === 'draft'
             ? (when ? t('loyalty.push.list.edited', 'Edited {{day}}', { day: day(when, locale, timeZone) }) : '')
-            : t('loyalty.push.list.counts', '{{sent}} of {{total}} pushed', { sent: points(m.results.sent, locale), total: points(progress.total, locale) })}
+            : isScheduled(m.status)
+              ? t('loyalty.push.list.scheduled', 'Goes out {{when}}', { when: scheduledWhen(m.scheduled_for, locale) })
+              : t('loyalty.push.list.counts', '{{sent}} of {{total}} pushed', { sent: points(m.results.sent, locale), total: points(progress.total, locale) })}
         </span>
         <StatusBadge status={m.status} />
       </Link>

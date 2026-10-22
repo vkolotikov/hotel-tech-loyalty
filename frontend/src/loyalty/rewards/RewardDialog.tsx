@@ -11,8 +11,9 @@ import { Check, FormField, FormFoot } from '../ui/formParts'
 import { named, wallInput } from '../lib/forms'
 import { CATALOGUE_KEY, rewardsApi } from './api'
 import { ERRORS } from './errors'
+import { BrandField } from './parts'
 import { PictureField } from './PictureField'
-import { MAX_COST, MAX_DISCOUNT, MAX_PER_MEMBER, MAX_STOCK, rewardBody, rewardFormOf, rewardProblems, rewardServerProblems, type RewardForm } from './rewardsMath'
+import { MAX_COST, MAX_DISCOUNT, MAX_PER_MEMBER, MAX_STOCK, brandPart, initialBrand, rewardBody, rewardFormOf, rewardProblems, rewardServerProblems, type RewardForm } from './rewardsMath'
 import type { Reward, RewardOptions } from './types'
 import { APPLIES_TO_WORDS, DISCOUNT_TYPE_WORDS, REWARD_PROBLEM_WORDS } from './words'
 
@@ -22,7 +23,8 @@ const INPUT = 'w-full rounded-lg border border-a-border bg-a-surface px-3 py-2 t
  * Add a reward to the catalogue or change one (spec 2026-10-21 §4.6): what members see (name, description, terms,
  * category), what it costs in points, how many there are and how many one member may take, an optional typed discount
  * and what it applies to, an expiry on the venue's clock, and whether it is offered. A saved reward's picture is
- * changed here too, at once (PictureField, release 2 §7); a new one gets its picture once it is saved.
+ * changed here too, at once (PictureField, release 2 §7); a new one gets its picture once it is saved. With more than
+ * one brand, a new reward names its brand and a saved one shows it (release 4).
  */
 export function RewardDialog({ reward, options, onClose }: { reward: Reward | null; options: RewardOptions; onClose: () => void }) {
   const { t } = useTranslation()
@@ -33,10 +35,11 @@ export function RewardDialog({ reward, options, onClose }: { reward: Reward | nu
   const [form, setForm] = useState<RewardForm>(() => rewardFormOf(reward, options, zone))
   const [tried, setTried] = useState(false)
   const [picture, setPicture] = useState<string | null>(reward?.image_url ?? null)
+  const [brand, setBrand] = useState<number | null>(() => initialBrand(options.brands))
 
   const refresh = () => { void client.invalidateQueries({ queryKey: CATALOGUE_KEY }) }
   const save = useMutation({
-    mutationFn: () => (reward ? rewardsApi.updateReward(reward.id, rewardBody(form)) : rewardsApi.createReward(rewardBody(form))),
+    mutationFn: () => (reward ? rewardsApi.updateReward(reward.id, rewardBody(form)) : rewardsApi.createReward({ ...rewardBody(form), ...brandPart(brand) })),
     onSuccess: () => { refresh(); onClose() },
     onError: (error) => { if (failureOf(error).code === 'not_found') refresh() },
   })
@@ -69,6 +72,9 @@ export function RewardDialog({ reward, options, onClose }: { reward: Reward | nu
           <input ref={first} type="text" value={form.name} maxLength={191} onChange={(e) => update({ name: e.target.value })} className={INPUT}
             placeholder={t('loyalty.rewards.reward.name_example', 'e.g. Breakfast for two')} />
         </FormField>
+
+        <BrandField options={options.brands} value={brand} saved={reward ? (reward.brand_id ?? null) : undefined}
+          refused={!!failure?.fields?.brand} onChange={(id) => { setBrand(id); if (save.isError) save.reset() }} />
 
         <div className="grid gap-4 sm:grid-cols-2">
           <FormField label={t('loyalty.rewards.reward.points_cost', 'Points it costs')} problem={problem('points_cost')}>

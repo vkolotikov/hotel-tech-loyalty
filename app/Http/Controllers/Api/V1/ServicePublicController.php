@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Models\BookingMirror;
 use App\Models\HotelSetting;
 use App\Models\Service;
 use App\Models\ServiceBooking;
@@ -15,6 +16,7 @@ use App\Services\Appointments\Money\DepositRefused;
 use App\Services\Appointments\Money\Deposits;
 use App\Services\Booking\ExtraLeadTimeException;
 use App\Services\Booking\PaymentAlreadyUsed;
+use App\Services\Booking\PaymentMismatch;
 use App\Services\Booking\ServiceCatalogue;
 use App\Services\Booking\ServiceQuoteBuilder;
 use App\Services\Booking\VenueNotice;
@@ -31,6 +33,12 @@ use Illuminate\Support\Facades\DB;
  */
 class ServicePublicController extends Controller
 {
+    /**
+     * The metadata `kind` paymentIntent() writes on a full payment, and the
+     * only one confirm() accepts as a full payment (R4-2).
+     */
+    public const PAYMENT_KIND = 'service_booking';
+
     /** GET /v1/services/config — returns categories, services, masters, extras, style. */
     public function config(Request $request): JsonResponse
     {
@@ -440,11 +448,13 @@ class ServicePublicController extends Controller
                 }
 
                 // One payment pays for one booking: a payment a booking of
-                // this organisation already carries is refused before the
-                // insert, a mock id (`pi_mock_`) as much as a real one.
+                // this organisation already carries — an appointment, or
+                // (R4-2) a stay — is refused before the insert, a mock id
+                // (`pi_mock_`) as much as a real one.
                 $paymentIntentId = (string) ($data['payment_intent_id'] ?? '');
                 if ($paymentIntentId !== ''
-                    && ServiceBooking::withoutGlobalScopes()->where('organization_id', $orgId)->where('stripe_payment_intent_id', $paymentIntentId)->exists()) {
+                    && (ServiceBooking::withoutGlobalScopes()->where('organization_id', $orgId)->where('stripe_payment_intent_id', $paymentIntentId)->exists()
+                        || BookingMirror::withoutGlobalScopes()->where('organization_id', $orgId)->where('stripe_payment_intent_id', $paymentIntentId)->exists())) {
                     throw new PaymentAlreadyUsed();
                 }
 
@@ -458,6 +468,9 @@ class ServicePublicController extends Controller
                     // A deposit pays only a booking that takes one: switched off or repriced since the card form, it must
                     // not pass for the whole price.
                     throw new DepositRefused('deposit_mismatch', 'The deposit does not match this booking. Your card was not charged; please try again.');
+                } elseif ($intent !== null) {
+                    // R4-2: a full payment pays only this booking — worked out here from the price in the lock.
+                    self::assertPaysThisBooking($intent, (int) $orgId, (int) $service->id, $reservation['start'], round($servicePrice + $extrasTotal, 2), app(StripeService::class)->currency());
                 }
 
                 $booking = ServiceBooking::create([
@@ -504,6 +517,11 @@ class ServicePublicController extends Controller
             return response()->json(['error' => $e->getMessage(), 'code' => $e->reason], 422);
         } catch (PaymentAlreadyUsed) {
             return $this->paymentAlreadyUsed($orgId, $idempotency, $data);
+        } catch (PaymentMismatch $e) {
+            // R4-2: not this booking's payment. Answered as the deposit refusal is (422, a sentence and a code), and
+            // nothing is cancelled: the payment may be another booking's, another venue's, or another payer's.
+            $this->logSubmission($orgId, $idempotency, $data, null, 'failed', 'payment_mismatch');
+            return response()->json(['error' => $e->getMessage(), 'code' => 'payment_mismatch'], 422);
         } catch (UniqueConstraintViolationException $e) {
             // Two confirms naming the same payment at the same moment both pass
             // the check above; the unique index on service_bookings
@@ -613,6 +631,38 @@ class ServicePublicController extends Controller
                 ->where('organization_id', $orgId)
                 ->where('stripe_payment_intent_id', $paymentIntentId)
                 ->exists();
+    }
+
+    /**
+     * R4-2: the full payment pays exactly this booking — the venue's own
+     * payment (retrieved with its own Stripe key, its metadata naming this
+     * organisation), made by paymentIntent() (`kind` PAYMENT_KIND) for this
+     * service at this time, for the amount the server prices, in the currency
+     * paymentIntent() charges in (the venue's Stripe currency — not the
+     * service's: a venue whose two differ was charged that way before R4-2 and
+     * still books), through the one conversion every comparison with a Stripe
+     * amount uses. The time is compared as the venue's wall clock, as the
+     * deposit's is (both sides come from the scheduler's own start).
+     *
+     * @throws PaymentMismatch
+     */
+    private static function assertPaysThisBooking(mixed $intent, int $orgId, int $serviceId, \DateTimeInterface|string $start, float $total, string $currency): void
+    {
+        $meta = Deposits::metadataOf($intent);
+        try {
+            $paidStart = \App\Services\Appointments\VenueClock::wall((string) ($meta['start_at'] ?? ''));
+        } catch (\Throwable) {
+            $paidStart = null; // not a time at all: not this booking's
+        }
+        $pays = ($meta['kind'] ?? null) === self::PAYMENT_KIND
+            && (int) ($meta['org_id'] ?? 0) === $orgId
+            && (int) ($meta['service_id'] ?? 0) === $serviceId
+            && $paidStart !== null && $paidStart === \App\Services\Appointments\VenueClock::wall($start)
+            && strtoupper((string) ($intent->currency ?? '')) === strtoupper($currency)
+            && (int) ($intent->amount ?? -1) === app(StripeService::class)->toSmallestUnit($total, $currency);
+        if (!$pays) {
+            throw new PaymentMismatch('The payment does not match this booking. Please pay again.');
+        }
     }
 
     /**

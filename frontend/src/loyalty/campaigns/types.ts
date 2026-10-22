@@ -80,7 +80,7 @@ export interface SegmentPreview {
 
 // ─── Campaigns ────────────────────────────────────────────────────────────
 
-export type CampaignStatus = 'draft' | 'sending' | 'sent' | 'failed' | 'cancelled'
+export type CampaignStatus = 'draft' | 'scheduled' | 'sending' | 'sent' | 'failed' | 'cancelled'
 export type Align = 'left' | 'center' | 'right'
 
 /** A body block in the full admin's EmailBlockBuilder format, the subset the workspace writes. */
@@ -103,6 +103,9 @@ export interface CampaignRow {
   recipient_count: number
   sent_count: number
   failed_count: number
+  /** Release 4, send later: the instant it is (or was) due, and the same on the venue's clock (`YYYY-MM-DDTHH:mm`). */
+  scheduled_at: string | null
+  scheduled_for: string | null
   sent_at: string | null
   created_at: string | null
   updated_at: string | null
@@ -127,6 +130,8 @@ export interface Campaign extends CampaignRow {
   unknown_tags: string[]
   /** What the saved draft still lacks: `subject`, `body`, `button:<index>`. */
   missing: string[]
+  /** Why a scheduled send did not start when it was due (a code), on a failed campaign; null otherwise. */
+  schedule_problem: string | null
   last_progress_at: string | null
   created_by: string | null
   sent_by: string | null

@@ -4,14 +4,15 @@ import { Notice } from '../../workspace/ui/Notice'
 import { PageHeader } from '../../workspace/ui/PageHeader'
 import { useBoot } from '../LoyaltyProvider'
 import { APP_TABS, appAccess, searchFor, tabAfter, tabFrom, type AppTab } from './appMath'
+import { CurrencyTab } from './CurrencyTab'
 import { LookTab } from './LookTab'
 import { WalletTab } from './WalletTab'
 import { TAB_WORDS } from './words'
 
 /**
  * Card & app (release 2 §7): the wallet pass members add to Apple Wallet and Google Wallet, and how the member app
- * looks. A manager's (`manage_app`); anyone else who opens it by address reads why. The tab lives in the address
- * (`?tab=wallet|app`), so a link opens the same one.
+ * looks, and since release 4 the venue's currency (R4-5). A manager's (`manage_app`); anyone else who opens it by
+ * address reads why. The tab lives in the address (`?tab=wallet|app|currency`), so a link opens the same one.
  */
 export function AppPage() {
   const { t } = useTranslation()
@@ -56,7 +57,7 @@ export function AppPage() {
       </div>
 
       <div id="app-panel" role="tabpanel" aria-labelledby={`app-tab-${tab}`} className="space-y-5">
-        {tab === 'wallet' ? <WalletTab wallet={access.wallet} /> : <LookTab />}
+        {tab === 'wallet' ? <WalletTab wallet={access.wallet} /> : tab === 'currency' ? <CurrencyTab /> : <LookTab />}
       </div>
     </div>
   )

@@ -97,7 +97,8 @@
     "none": "Aucune campagne pour l’instant. Créez-en une, choisissez un segment, écrivez l’e-mail et envoyez-le.",
     "no_subject": "Pas encore d’objet",
     "edited": "Modifiée le {{day}}",
-    "counts": "{{sent}} envoyés sur {{total}} · {{failed}} échecs"
+    "counts": "{{sent}} envoyés sur {{total}} · {{failed}} échecs",
+    "scheduled": "Part le {{when}}"
   },
   "cancel": {
     "title": "Arrêter l’envoi de {{name}} ?",
@@ -114,7 +115,7 @@
     }
   },
   "title": "Campagnes",
-  "line": "Écrivez à vos membres, et gérez les segments auxquels vous envoyez.",
+  "line": "E-mails, notifications push et SMS à vos membres, et les segments auxquels vous les envoyez.",
   "tabs": "Rubriques des campagnes",
   "segment": {
     "edit_title": "Modifier {{name}}",
@@ -204,19 +205,23 @@
       "network": "Pas de connexion. Rechargez la page pour voir si l’envoi a commencé avant d’appuyer de nouveau sur Envoyer.",
       "unknown": "L’envoi n’a peut-être pas commencé. Rechargez la page pour voir son état avant d’appuyer de nouveau sur Envoyer."
     },
-    "unknown_tags": "L’e-mail contient {{tags}}, qu’aucune balise ne remplit : les membres le liront tel quel."
+    "unknown_tags": "L’e-mail contient {{tags}}, qu’aucune balise ne remplit : les membres le liront tel quel.",
+    "about_now": "Environ {{number}} membres de {{segment}} pourraient le recevoir maintenant. Il part à ceux qui pourront le recevoir à ce moment-là, comptés alors.",
+    "schedule": "Programmer pour le {{when}}"
   },
   "tab": {
     "campaigns": "Campagnes",
     "segments": "Segments",
-    "push": "Notifications push"
+    "push": "Notifications push",
+    "sms": "SMS"
   },
   "status": {
     "draft": "Brouillon",
     "sending": "En cours d’envoi",
     "sent": "Envoyée",
     "failed": "Échec",
-    "cancelled": "Annulée"
+    "cancelled": "Annulée",
+    "scheduled": "Programmé"
   },
   "rule_type": {
     "tier": "Niveau",
@@ -407,6 +412,70 @@
       "not_allowed": "Seul un propriétaire ou un responsable peut travailler sur les campagnes.",
       "network": "Pas de connexion : rien n’a été supprimé. Réessayez.",
       "unknown": "Le brouillon n’a pas pu être supprimé. Veuillez réessayer."
+    }
+  },
+  "schedule_reason": {
+    "format": "Choisissez une date et une heure.",
+    "past": "Choisissez une heure au moins deux minutes après maintenant.",
+    "too_far": "Choisissez une heure dans l’année qui vient.",
+    "not_on_clock": "Le changement d’heure tombe alors : cette heure n’existe pas à l’heure de l’établissement. Choisissez-en une autre."
+  },
+  "schedule_problem": {
+    "nobody_to_send_to": "personne dans son segment ne pouvait le recevoir à ce moment-là.",
+    "too_many": "il aurait atteint plus de membres qu’un envoi ne le peut.",
+    "no_audience": "son segment n’existait plus.",
+    "bad_rule": "son segment avait une règle inutilisable.",
+    "no_category": "il n’avait pas de type de message.",
+    "incomplete": "il n’était pas complet.",
+    "not_editable_here": "il a été modifié dans l’administration complète.",
+    "not_ready": "le compte Twilio de l’établissement n’était pas configuré.",
+    "feature_locked": "l’offre ne l’incluait plus.",
+    "workspace_off": "HexaTech Loyalty était désactivé pour l’établissement."
+  },
+  "schedule": {
+    "error": {
+      "already_started": "Cette campagne a déjà été lancée. La page montre désormais où en est l’envoi.",
+      "changed": "La campagne a changé depuis que cette page l’a affichée. Vérifiez-la, puis programmez-la à nouveau.",
+      "bad_time": "Choisissez une autre heure.",
+      "incomplete": "La campagne n’est pas prête à partir. La page montre désormais ce qu’il lui manque.",
+      "no_audience": "Choisissez d’abord qui la reçoit.",
+      "bad_rule": "Son segment contient une règle inutilisable. Corrigez d’abord le segment.",
+      "not_editable_here": "Cette campagne s’envoie depuis l’admin complète.",
+      "not_found": "Cette campagne n’existe plus.",
+      "manager_only": "Seul un propriétaire ou un responsable peut travailler sur les campagnes.",
+      "not_allowed": "Seul un propriétaire ou un responsable peut travailler sur les campagnes.",
+      "feature_locked": "Votre formule n’inclut pas les campagnes e-mail.",
+      "network": "Pas de connexion. Rechargez la page pour voir s’il a été programmé avant de réessayer.",
+      "unknown": "Il n’a peut-être pas été programmé. Rechargez la page pour voir son état avant de réessayer."
+    },
+    "when": "Quand il part",
+    "now": "Envoyer maintenant",
+    "later": "Envoyer plus tard",
+    "at": "Date et heure",
+    "zone": "Selon l’heure de l’établissement ({{zone}}).",
+    "title": "Programmé",
+    "goes_out": "Il part le {{when}}, à l’heure de l’établissement.",
+    "whoever": "Il part à ceux qui pourront le recevoir à ce moment-là, comptés alors. D’ici là, il peut être déplacé ou repris en brouillon.",
+    "by": "Programmé par {{name}}",
+    "move": "Changer l’heure",
+    "take_back": "Reprendre en brouillon",
+    "back_title": "Le reprendre en brouillon ?",
+    "back_confirm": "Reprendre",
+    "back_keep": "Le garder programmé",
+    "back_body": "Rien n’est envoyé. Il redevient un brouillon, à modifier ou à envoyer à un autre moment.",
+    "move_title": "Changer le moment d’envoi",
+    "move_keep": "Garder l’heure",
+    "move_confirm": "Le déplacer",
+    "did_not_start": "Il était prévu le {{when}} mais n’a pas commencé : {{why}} Rien n’a été envoyé. Dupliquez-le pour l’envoyer à nouveau."
+  },
+  "unschedule": {
+    "error": {
+      "not_scheduled": "Il n’attend plus : il a commencé, ou a déjà été repris. La page l’affiche maintenant tel qu’il est.",
+      "not_found": "Cette campagne n’existe plus.",
+      "manager_only": "Seul un propriétaire ou un responsable peut travailler sur les campagnes.",
+      "not_allowed": "Seul un propriétaire ou un responsable peut travailler sur les campagnes.",
+      "network": "Pas de connexion : il est toujours programmé. Réessayez.",
+      "unknown": "Impossible de le reprendre. Veuillez réessayer."
     }
   }
 }

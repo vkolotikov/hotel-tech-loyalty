@@ -11,6 +11,7 @@ import { day, points } from '../lib/format'
 import { Pager } from '../ui/Pager'
 import { afterCampaignChange, campaignKey, campaignsApi, campaignsKey } from './api'
 import { campaignPath, progressOf } from './campaignsMath'
+import { isScheduled, scheduledWhen } from './scheduleMath'
 import { Empty, LoadFailed, Loading, Refusal, StatusBadge, TabHead } from './parts'
 import type { CampaignRow } from './types'
 
@@ -79,7 +80,9 @@ function CampaignItem({ campaign: c, locale, timeZone }: { campaign: CampaignRow
         <span className="basis-40 text-sm tabular-nums text-a-text-2">
           {c.status === 'draft'
             ? (when ? t('loyalty.campaigns.list.edited', 'Edited {{day}}', { day: day(when, locale, timeZone) }) : '')
-            : t('loyalty.campaigns.list.counts', '{{sent}} of {{total}} sent · {{failed}} failed', {
+            : isScheduled(c.status)
+              ? t('loyalty.campaigns.list.scheduled', 'Goes out {{when}}', { when: scheduledWhen(c.scheduled_for, locale) })
+              : t('loyalty.campaigns.list.counts', '{{sent}} of {{total}} sent · {{failed}} failed', {
               sent: points(c.sent_count, locale), failed: points(c.failed_count, locale), total: points(progress.total, locale),
             })}
         </span>
