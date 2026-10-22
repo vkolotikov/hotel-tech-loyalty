@@ -254,8 +254,12 @@ class BookingRefundService
 
         // ── Step 2: compute is_full + new refunded total.
         $priceTotal = (float) ($mirror->price_total ?? 0);
-        $thisRefund = (float) ($amount ?? $priceTotal);
         $alreadyRefunded = (float) ($mirror->refunded_amount ?? 0);
+        // A full refund (no amount) gives back what is left — Stripe refunds the
+        // rest of the charge — so a stay partly refunded before is recorded at
+        // its total, never above it (release 6: the row is read under the lock,
+        // so what was refunded before is known here). Unchanged when nothing was.
+        $thisRefund = (float) ($amount ?? max(0.0, round($priceTotal - $alreadyRefunded, 2)));
         $cumulative = round($alreadyRefunded + $thisRefund, 2);
         // Floating-point safety: 1¢ tolerance for "is this the full amount?"
         $isFull = $amount === null || $cumulative >= ($priceTotal - 0.01);

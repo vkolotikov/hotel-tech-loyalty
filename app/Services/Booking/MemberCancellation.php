@@ -604,6 +604,12 @@ final class MemberCancellation
             $done = $this->stayRefund->applyRefund(GroupPayment::lead($rooms), null, 'requested_by_customer', null, true, null);
         } catch (\Throwable $e) {
             if (!$this->isChargeAlreadyRefunded($e)) {
+                // Release 6: applyRefund() reads the rows again under its refund
+                // lock — a refund the webhook recorded in the gap is refused there
+                // as already done. Money back in full finishes the cancellation.
+                if ($inFull($rooms = $this->readCombination($orgId, $groupId))) {
+                    return $this->finishRefundedCombination($orgId, $groupId, self::sumOf($rooms, 'refunded_amount'), null);
+                }
                 Log::error('portal.stay_refund_failed', ['org' => $orgId, 'group' => $groupId, 'payment_intent' => $pi, 'error' => $e->getMessage()]);
                 throw new CancellationException('refund_failed', 'We could not return the payment just now, so the booking was not cancelled. Please try again in a moment.', 502);
             }
@@ -800,6 +806,13 @@ final class MemberCancellation
             $done = $this->stayRefund->applyRefund($m, null, 'requested_by_customer', null, true, null);
         } catch (\Throwable $e) {
             if (!$this->isChargeAlreadyRefunded($e)) {
+                // Release 6: applyRefund() reads the row again under its refund
+                // lock — a refund the webhook recorded in the gap is refused there
+                // as already done. Money back in full finishes the cancellation.
+                $now = $this->readStay($orgId, $mirrorId);
+                if (self::isRefundedInFull((string) $now->payment_status, $now->refunded_amount, $now->price_total)) {
+                    return $this->finishRefundedStay($orgId, $mirrorId, round((float) $now->refunded_amount, 2), false, null);
+                }
                 Log::error('portal.stay_refund_failed', ['org' => $orgId, 'mirror' => $mirrorId, 'payment_intent' => $pi, 'error' => $e->getMessage()]);
                 throw new CancellationException('refund_failed', 'We could not return the payment just now, so the booking was not cancelled. Please try again in a moment.', 502);
             }

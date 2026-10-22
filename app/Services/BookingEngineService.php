@@ -1759,7 +1759,14 @@ class BookingEngineService
      * With hooks (the member portal — the only caller that passes any) a
      * combination takes confirmMemberCombo() instead: the room locks and the
      * re-checks the single-room confirm() has. Without hooks (the public
-     * widget) everything below runs as it always has.
+     * widget), release 6 (R4-8's line of work) adds the same locks and
+     * re-checks before anything else: every room's `room:{org}:{unit}` lock
+     * once, ascending, then the hold row, every room re-checked against our
+     * bookings and the PMS (a room taken meanwhile is refused with this
+     * method's own "Room … is no longer available" answer), then the payment
+     * read again (assertWidgetPaymentStillPayable()); a failure after a
+     * reservation was made cancels it again. Everything else below runs as it
+     * always has.
      */
     public function confirmCombo(
         array $data, BookingHold $hold, array $payload,
