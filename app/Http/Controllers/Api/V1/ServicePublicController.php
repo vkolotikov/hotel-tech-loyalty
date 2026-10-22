@@ -470,7 +470,7 @@ class ServicePublicController extends Controller
                     throw new DepositRefused('deposit_mismatch', 'The deposit does not match this booking. Your card was not charged; please try again.');
                 } elseif ($intent !== null) {
                     // R4-2: a full payment pays only this booking — worked out here from the price in the lock.
-                    self::assertPaysThisBooking($intent, (int) $orgId, (int) $service->id, $reservation['start'], round($servicePrice + $extrasTotal, 2), (string) ($service->currency ?: 'EUR'));
+                    self::assertPaysThisBooking($intent, (int) $orgId, (int) $service->id, $reservation['start'], round($servicePrice + $extrasTotal, 2), app(StripeService::class)->currency());
                 }
 
                 $booking = ServiceBooking::create([
@@ -637,8 +637,10 @@ class ServicePublicController extends Controller
      * R4-2: the full payment pays exactly this booking — the venue's own
      * payment (retrieved with its own Stripe key, its metadata naming this
      * organisation), made by paymentIntent() (`kind` PAYMENT_KIND) for this
-     * service at this time, for the amount the server prices in the service's
-     * currency, through the one conversion every comparison with a Stripe
+     * service at this time, for the amount the server prices, in the currency
+     * paymentIntent() charges in (the venue's Stripe currency — not the
+     * service's: a venue whose two differ was charged that way before R4-2 and
+     * still books), through the one conversion every comparison with a Stripe
      * amount uses. The time is compared as the venue's wall clock, as the
      * deposit's is (both sides come from the scheduler's own start).
      *

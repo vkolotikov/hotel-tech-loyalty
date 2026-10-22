@@ -23,6 +23,13 @@ cancel either kind themselves inside the venue's cancellation window (`## Cancel
 - The `member/portal` prefix sits behind `member.only` (403 `member_only` for staff tokens,
   403 `portal_disabled` when the `portal_enabled` setting is false).
 - Everything else the portal calls is the mobile app's member API, unchanged.
+- Release 4: the inbox (`/portal/inbox`, the bell in the header with the unread count) reads the app's own
+  `GET member/notifications` and its mark-read calls, unchanged; opening a message marks it read. Profile's message
+  switches save through `PUT member/profile` (`notification_preferences` by kind, `push_notifications`,
+  `email_notifications`, `marketing_consent`, and `sms_consent`); the bootstrap's member carries
+  `notification_preferences` as the server reads them (a kind is on unless switched off — off means not sent at all,
+  not even to the inbox), and `sms_consent` only where the venue's own Twilio account is set up. Count phrases use
+  plural keys (`_one/_few/_many/_other`) through `lib/plural.ts`.
 - Public: `GET /api/v1/public/join/{token}` carries `theme`; `GET /manifest.webmanifest?app=portal`
   is the portal's install manifest.
 
@@ -245,7 +252,18 @@ stripe_payment_intent_id <> ''` — a booking with no payment (NULL or the empty
 id in another organisation is another organisation's own. It binds every writer of the column: the member
 portal's service confirm and the public services confirm (`POST /api/v1/services/confirm`). The other writers
 of `service_bookings` (the chat widget's booking, the admin screens, the capture job, cancellation and refund)
-write no payment id or only read it. Stays are not covered: a stay's payment id lives in `booking_mirror`.
+write no payment id or only read it. The index covers `service_bookings` only (a stay's payment id lives in
+`booking_mirror`, under its own index `booking_mirror_org_pi_unique`); since release 4 the public services confirm's
+pre-check also refuses a payment a stay of the organisation carries.
+
+**This booking's own payment (release 4, R4-2).** The public services confirm accepts a full payment only when it is
+this booking's (`ServicePublicController::assertPaysThisBooking()`, under the slot lock, beside the deposit check): the
+venue's own intent, metadata `kind` = `service_booking` (what the services payment step writes), `org_id` this
+organisation, `service_id` and `start_at` this booking's, in the venue's Stripe currency (the currency the payment step
+charges in), for the amount the server prices under the lock. Anything else is answered 422
+`{"error": "The payment does not match this booking. Please pay again.", "code": "payment_mismatch"}` (the shape of
+the deposit refusal), logged as a failed submission `payment_mismatch`, and nothing is cancelled: the payment may be
+another booking's, another venue's or another payer's.
 
 **The migration.** `2026_10_01_100000_service_bookings_unique_payment` creates the index and nothing else. It
 is guarded and never fails a deploy on data it did not expect: with no `service_bookings` table or no payment
@@ -483,6 +501,17 @@ is left unstamped, so a stay that is captured late is picked up and awarded on a
 command only looks at stays whose departure date is within the last 60 days, so an unstamped row is
 not rescanned forever. Off entirely when the venue's `points_on_bookings` setting is off, or loyalty
 itself is off.
+
+**A stay booked through the public widget** (release 4) earns too, when it certainly belongs to one member
+(`BookingPointsService::certainMemberForStay()`): the stay names a guest and an email; the guest is this
+organisation's and linked to a member; exactly one member of the organisation (active or not) has a user whose email
+is the booking's (case and spaces ignored); and that member is the guest's, active, with a verified address
+(`users.email_verified_at` — a guest link alone is made by email at sign-up, before anyone proved the address).
+Anything less earns nothing. Nothing changes at booking time; when the stay is due (departed, paid, points on), the
+award writes `booking_mirror.member_id` once, only while it is empty, and awards as for a portal stay. From then on the
+Smoobu sync treats it as the member's stay (its `paid` status kept, its price elements no longer refreshed) and the
+portal lists it under Past. The first run after the release-4 deploy also awards matched widget stays that departed
+in the last 60 days.
 
 **Frontend.** Routes `/portal/book` (chooser), `/portal/book/stay`, `/portal/book/appointment`
 (`frontend/src/portal/PortalApp.tsx`, `BookEntry.tsx`). After the card is authorised, the pay step
@@ -869,6 +898,7 @@ calls, audit rows and log lines. Five things differ:
 | An authorisation still sits on a member's card and `php artisan bookings:release-orphan-portal-holds --dry-run` does not list it | The sweeper fails closed: it never releases an intent whose authorisation time it cannot read back from Stripe (see "Known limits") | Look at the payment intent directly in the Stripe dashboard; an uncaptured authorisation lapses at Stripe on its own after about seven days, and the venue can cancel it there sooner |
 | A service confirm answered `payment_mismatch` and the member's card shows the charge still held | A `ServiceBookingSubmission` row with `outcome = failed`, `error_message = payment_not_payable` (written by `writeBooking()`'s own re-check) — this re-check never releases the intent itself | Nothing further needed if a booking now carries the intent (check `service_bookings.stripe_payment_intent_id`); otherwise it is an orphan and the sweeper or `php artisan diag:orphan-stripe-pis` handles it as above |
 | A guest of the public services widget was told "This payment has already been used for a booking." | A `ServiceBookingSubmission` row with `outcome = failed`, `error_message = payment already used`, and the request's `customer_email`; the booking that carries the payment: `service_bookings.stripe_payment_intent_id` | Nothing to undo: the refused request created no booking and touched no payment. If the guest has no booking, find the one that carries the payment (a retry, or the same payment used twice) and tell them it stands |
+| A guest of the public services widget was told "The payment does not match this booking. Please pay again." (422 `payment_mismatch`, release 4) | A `ServiceBookingSubmission` row with `outcome = failed`, `error_message = payment_mismatch`: the payment named in the request is not this booking's — another amount or currency, not made by the services payment step (`kind` not `service_booking`), another organisation, service or time (a repriced master under "any staff member" too) | Nothing was booked, captured or cancelled. The guest pays again; the refused authorisation lapses at Stripe in about seven days, or cancel it in the Stripe dashboard once no booking carries it |
 | A guest says their card shows a pending amount after a failed public booking | Audit rows `booking.confirm.pi_rescue_refused`, `booking.confirm.pi_rescue_failed` or `booking.confirm.pi_rescue_restricted_key` for that payment intent (`php artisan diag:recent-confirm-failures --org=<organisation id>` lists every `booking.confirm.*` row); with none of them, the log line `Booking confirm PI rescue: pi_rescue_checks_failed`. The row's `reason` and `confirm_context.stage` say why the rescue left it alone (see "The public confirm's payment rescue") | If the reason is `carried_by_booking`, do nothing: a booking has that payment and the capture job captures it. For any other reason, first check that no booking carries the intent (`service_bookings.stripe_payment_intent_id`, `booking_mirror.stripe_payment_intent_id`), then open it in the Stripe dashboard by the id in the row: cancel an authorised (`requires_capture`) one, or let it lapse at Stripe on its own after about seven days; refund a captured (`succeeded`) one only if it is the guest's payment for this failed booking |
 
 ## Known limits
@@ -886,11 +916,10 @@ calls, audit rows and log lines. Five things differ:
   without a live payment. The capture job finds the payment cancelled on its next run and records it
   (`booking.capture.expired`, payment status `cancelled`). Closing it needs the engine to re-check the
   payment under its own lock, and the engine is unchanged.
-- **The public services confirm accepts any authorised payment of the account.**
-  `ServicePublicController::confirm()` checks only that the payment named in the request is `succeeded` or
-  `requires_capture`; it does not check its amount, its service or whose it is (its metadata). The one-payment
-  rule covers `service_bookings` only, so a payment that a STAY already carries (`booking_mirror`) is still
-  accepted there.
+- **A payment the public services confirm refuses as not this booking's is not released** (release 4): it may be
+  another booking's or another payer's, so the confirm never cancels it; an authorisation lapses at Stripe in about
+  seven days. With "any staff member", if the confirm assigns a master priced differently from the one the payment
+  step priced, the payment no longer matches and the guest pays again.
 - **A retry of a public services booking without the `Idempotency-Key` is refused, not replayed.** With "any
   staff member" chosen and another master free, the retry passes the slot check, meets the one-payment rule
   and is answered 409 "This payment has already been used for a booking."; the first booking stands, and
@@ -923,24 +952,26 @@ calls, audit rows and log lines. Five things differ:
   list — so for a venue with `booking_cancel_hours = 0` (cancellable right up to the actual check-in time),
   the window between midnight and check-in time is not actually usable: the sync closes it early. Reported,
   not changed.
-- **Two day boundaries do not follow the venue's zone.** A stay moves from upcoming to past at 00:00 UTC
-  on its departure date: `MemberBookingQuery` reads the departure date as midnight in the application's zone
-  and compares it with the current time, so it happens neither at check-out nor on the venue's clock. And
-  `php artisan bookings:award-stay-points` runs at 04:15 in the scheduler's zone (the application zone, `UTC`); it
-  judges each stay's departure on its own venue's "today", so a stay is awarded on the first run after its
-  venue's day of departure has ended.
-- **Only a portal-booked stay earns points.** `BookingPointsService::awardForStay()` requires
-  `booking_mirror.member_id`; a stay made through the public widget and later matched to a member by email
-  never earns, even once cancellation/refund is out of the picture.
-- **`portal.bookings.nights_guests` has no plural forms** in Russian or English (`"2 ночей · 2 гостей"`,
-  `"1 nights · 1 guests"` for a one-night stay) — a proper fix needs plural-aware keys in five locales, not
-  built.
-- **Combination stays** in the portal: `confirmCombo()` needs a room lock and the re-checks the
-  single-room confirm has. Deferred; the portal tells a party too large for one room to contact the
-  venue.
-- **Extras pricing on stays.** `BookingEngineService::extrasLines()` charges price × quantity for
-  every extra the admin can save (`per_night`, `per_person`, `per_person_night` are not multiplied).
-  The portal shows the engine's own line totals. Changing it changes what the public widget charges.
+- **A stay is upcoming until check-out time on its departure day, on the venue's clock** (release 4:
+  `MemberBookingQuery`, the stay's own `check_out_time`, else the venue's setting, else 11:00, in the zone
+  `AppointmentClock::zoneFor()` reads from `PortalBootstrap::timezone()`). `php artisan bookings:award-stay-points` runs
+  at 04:15 in the scheduler's zone (the application zone, `UTC`); it judges each stay's departure on its own venue's
+  "today", so a stay is awarded on the first run after its venue's day of departure has ended.
+- **A widget stay earns only for a verified address.** A member who never verified their email (a self-registered one
+  who did not claim the account) does not earn for widget stays until they do; the award looks back 60 days.
+- **Combination stays** in the portal (two or three rooms for one party): deferred again (R4-7). The build used one
+  PaymentIntent on every room row, which `booking_mirror_org_pi_unique` refuses; the next release puts the payment on
+  the lead room (`docs/superpowers/specs/2026-10-22-loyalty-release-4-design.md` §7). The portal tells a party too
+  large for one room to contact the venue. **The public widget's own paid combination** has the same flaw today: it
+  writes the payment on every room row, so on PostgreSQL a paid combination fails at its second room, rolls back,
+  cancels its Smoobu reservations and rescues the payment (found reading the code, not run end to end; R4-8, fixed in
+  the next release). Unpaid widget combinations work.
+- **Extras pricing (release 4, R4-3).** `BookingEngineService::extraUnits()` charges each extra as the full admin set it:
+  per stay once, per night × nights, per person × guests (adults and children; the legacy `per_guest` too), per person
+  per night × both, all × quantity. Smoobu's lines, `extras_json`, the admin's line items and both mails use the same
+  rule. The public stays widget's own sidebar still adds each extra's catalogue price once (the widget's screen is
+  unchanged), so it can read lower than the payment step's total. A hold quoted before the deploy is charged its old
+  total but itemised with the new rule.
 - **Redirect-based payment methods** stay off in the portal (`allow_redirects: 'never'`); a return
   handler would have to restore the flow's state after the redirect.
 - **"Pay at the venue although we take cards"** when Stripe is unavailable needs a venue setting;

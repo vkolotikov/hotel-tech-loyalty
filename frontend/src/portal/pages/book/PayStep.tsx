@@ -10,7 +10,7 @@ import { Notice } from '../../ui/Notice'
 import { Skeleton } from '../../ui/Skeleton'
 import { PriceBreakdown } from './PriceBreakdown'
 import { quoteBody } from './ReviewStep'
-import { afterConfirmError, payAtVenueGrantOf, retryOnlineVisit, type BookState, type PayVisit } from './steps'
+import { afterConfirmError, canTryOnlineAgain, payAtVenueGrantOf, retryOnlineVisit, type BookState, type PayVisit } from './steps'
 import { stashForReturn } from './returnStash'
 import type { PortalBooking, Quote } from '../../lib/types'
 
@@ -63,7 +63,7 @@ export function PayStep({ quote, state, visit, onVisitChange, onBack, onDone }: 
   // the Confirm button used to be.
   const intent = useQuery({
     queryKey: ['portal-payment-intent', visit.nonce],
-    queryFn: () => portalApi.paymentIntent(body),
+    queryFn: () => portalApi.paymentIntent(body, visit.idempotencyKey),
     enabled: online && !!publishableKey && !visit.paid && !visit.noCard,
     staleTime: Infinity,
     gcTime: 0,
@@ -190,7 +190,9 @@ export function PayStep({ quote, state, visit, onVisitChange, onBack, onDone }: 
           {atVenueGrant ? (
             <Notice tone="warning">
               {t('portal.payment.at_venue_fallback', 'Online payment is unavailable right now. You can still book now and pay at the venue.')}{' '}
-              <button type="button" className="underline" onClick={() => onVisitChange(retryOnlineVisit(freshId))}>{t('portal.payment.pay_online_again', 'Try paying online again')}</button>
+              {canTryOnlineAgain(atVenueGrant, confirm.isPending ? 'pending' : confirm.isError ? 'error' : confirm.isSuccess ? 'success' : 'idle') && (
+                <button type="button" className="underline" onClick={() => onVisitChange(retryOnlineVisit(freshId))}>{t('portal.payment.pay_online_again', 'Try paying online again')}</button>
+              )}
             </Notice>
           ) : (
             <Notice tone="info">{t('portal.book.pay_at_venue_note', 'Nothing to pay now. Settle up when you visit.')}</Notice>

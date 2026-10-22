@@ -256,8 +256,10 @@ class PortalPaymentIntentGuard
     /**
      * Release 4, part C — one hold per card. A portal `payment-intent` call
      * for a hold or slot that already has an intent from an earlier call
-     * hands that intent to this method first, inside the caller's own room
-     * or slot lock (taken before this `pi:` lock — CLAUDE.md's order).
+     * hands that intent to this method first, inside the caller's own lock —
+     * the hold row (a booking row, locked before this `pi:` lock — CLAUDE.md's
+     * order) for a stay, the member's own `psi:` advisory key for an
+     * appointment — never a room or slot key the widget also takes.
      *
      * Returns the intent when it can simply be paid again: this
      * organisation's and this member's own (metadata), of $kind, for this
@@ -269,7 +271,10 @@ class PortalPaymentIntentGuard
      * organisation or member (those are left exactly as they are). An intent
      * Stripe says does not exist is null. A retrieve that fails is
      * PaymentUnverifiable: nothing is known, nothing is cancelled, and the
-     * caller must not mint a second intent beside one it could not read.
+     * caller must not mint a second intent beside one it could not read. A
+     * cancel that fails is PaymentUnverifiable too, for the same reason: the
+     * earlier intent's fate is then unknown (its cause is kept as the
+     * exception's previous, so the caller can tell an outage from a refusal).
      *
      * "Carried, read, then cancel" is one step under the `pi:` lock, like
      * release(): a confirm spending this very intent either finishes first
@@ -304,7 +309,16 @@ class PortalPaymentIntentGuard
             }
 
             if ($this->status($pi) !== 'canceled') {
-                $this->cancel($piId, 'abandoned');
+                // Not release()'s best effort: the caller mints a new intent on a
+                // null, and none may be minted beside one whose fate is unknown.
+                // A cancel Stripe refuses or never answers is PaymentUnverifiable,
+                // the same as an intent that could not be read.
+                try {
+                    $this->stripe->cancelPaymentIntent($piId, 'abandoned');
+                } catch (\Throwable $e) {
+                    Log::warning('portal.payment_intent_release_failed', ['payment_intent' => $piId, 'error' => $e->getMessage()]);
+                    throw new PaymentUnverifiable('The earlier payment could not be released: ' . $e->getMessage(), 0, $e);
+                }
             }
 
             return null;

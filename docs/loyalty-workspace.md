@@ -61,11 +61,12 @@ staff member restricted to one brand is still held to it by the `brand` middlewa
 | Program | `GET program`; `POST/PUT program/tiers[/{id}]`, `POST program/tiers/{id}/benefits`, `DELETE program/tiers/{id}/benefits/{tierBenefit}`, `POST/PUT program/benefits[/{id}]`, `POST/PUT/DELETE program/boosts[/{id}]` |
 | Rewards | `GET/POST rewards`, `PUT rewards/{id}`; `GET redemptions?state=pending|done|all&page`, `POST redemptions/{id}/fulfil`, `/cancel`; `GET/POST offers`, `PUT offers/{id}`; `GET referrals?page`; `POST/DELETE rewards/{id}/image`, `POST/DELETE offers/{id}/image` |
 | Members (release 2) | `POST members`, `PUT members/{id}`, `PUT members/{id}/tier`, `POST members/{id}/deactivate`, `/reactivate`, `/erase` (`confirm_name`), `GET members/{id}/card`, `POST members/{id}/welcome`; `GET members/duplicates`, `POST members/merge`; `GET/POST members/imports`, `GET members/imports/{batch}`, `POST members/imports/{batch}/run`, `/cancel`; `GET members/export` (CSV) |
-| Insights | `GET insights?period=30d|90d|12m`, `GET insights/at-risk?days=` (7–365) |
+| Insights | `GET insights?period=30d|90d|12m`, `GET insights/at-risk?days=` (7–365); release 4: `GET insights/cohorts`, `GET insights/money?period=` |
 | Segments | `GET segments`, `GET segments/options`, `POST segments/preview`, `POST segments`, `PUT/DELETE segments/{id}` |
-| Campaigns (`feature:campaigns`) | `GET/POST campaigns`, `GET/PUT/DELETE campaigns/{id}`, `GET campaigns/{id}/audience`, `POST campaigns/{id}/test`, `/send` (`recipients`, `revision`), `/cancel`, `/duplicate` |
-| Push messages (`feature:push_notifications`, release 3) | `GET/POST push`, `GET/PUT/DELETE push/{id}`, `GET push/{id}/audience`, `POST push/{id}/send` (`recipients`, `revision`), `/cancel`, `/duplicate` |
-| Card & app | `GET/PUT wallet`, `POST wallet/apple-cert`, `/apple-wwdr`, `/google-service-account` (`feature:wallet`); `GET/PUT app-look`, `POST app-look/logo` |
+| Campaigns (`feature:campaigns`) | `GET/POST campaigns`, `GET/PUT/DELETE campaigns/{id}`, `GET campaigns/{id}/audience`, `POST campaigns/{id}/test`, `/send` (`recipients`, `revision`), `/cancel`, `/duplicate`; release 4: `/schedule` (`send_at` on the venue's clock, `YYYY-MM-DDTHH:mm`, and `revision`), `/unschedule` |
+| Push messages (`feature:push_notifications`, release 3) | `GET/POST push`, `GET/PUT/DELETE push/{id}`, `GET push/{id}/audience`, `POST push/{id}/send` (`recipients`, `revision`), `/cancel`, `/duplicate`; release 4: `/schedule`, `/unschedule` |
+| SMS (`feature:campaigns`, release 4) | `GET/POST sms`, `GET/PUT/DELETE sms/{id}`, `GET sms/{id}/audience`, `POST sms/{id}/test`, `/send` (`recipients`, `revision`), `/schedule`, `/unschedule`, `/cancel`, `/duplicate` |
+| Card & app | `GET/PUT wallet`, `POST wallet/apple-cert`, `/apple-wwdr`, `/google-service-account` (`feature:wallet`); `GET/PUT app-look`, `POST app-look/logo`; release 4: `GET currency`, `PUT currency` (`currency`, `dry_run`) |
 
 Refusals are `{error, message}`; the workspace shows its own words for each code (`lib/errors.ts`,
 `program/errors.ts`, `rewards/errors.ts`), never the server's sentence. Codes: `not_found`, `manager_only`,
@@ -78,7 +79,9 @@ area's `errors.ts`: members `member_limit` (402), `no_tier`, `bad_tier`, `name_m
 `no_email_column`; campaigns `bad_rule` (with the rule's index), `in_use`, `no_audience`, `incomplete`,
 `nobody_to_send_to`, `too_many`, `audience_changed`, `changed`, `already_started`, `not_started`, `not_a_draft`,
 `not_sending`, `not_editable_here`, `suppressed`, `test_failed`; push messages (release 3) the same start codes plus
-`no_category`; card & app's file checks (`not_pkcs12`,
+`no_category`; release 4: SMS the same start codes plus `not_ready` (the venue's Twilio account is not set up) and
+`no_phone` (a test SMS to a sender with no phone number), and send later's `bad_time` (not 2 minutes to a year ahead,
+or a time a clock change skips) and `not_scheduled`; card & app's file checks (`not_pkcs12`,
 `cert_unreadable`, `not_certificate`, `not_json`, `not_service_account`); `feature_locked` (402) without the plan's
 feature.
 
@@ -199,6 +202,58 @@ Spec: `docs/superpowers/specs/2026-10-22-loyalty-release-3-design.md`.
   `MemberMergeService::MEMBER_COLUMNS`; a merge keeps the `sent` row (email) or the kept member's (push) where both
   members have one.
 
+### Release 4
+
+Spec: `docs/superpowers/specs/2026-10-22-loyalty-release-4-design.md` (the member portal's part is in
+`docs/member-portal.md`).
+
+- **SMS** (`App\Services\Sms\{TwilioSms,PhoneNumber,SmsText}`, `Loyalty\Sms\{SmsMessage,SmsAudience,SmsStart}`,
+  `SendSmsCampaignChunk`): its own tables, `sms_campaigns` and `sms_campaign_deliveries` (unique campaign + member,
+  written before the send, at most once). It reaches active members of the segment with `loyalty_members.sms_consent`
+  on (off until the member turns it on in the portal's Profile, R4-4) and a phone that reads as E.164 (spaces and
+  dashes dropped, `00` read as `+`); members sharing a number get one SMS. It goes only through the venue's own Twilio
+  account (Settings → Integrations: Account SID, Auth Token, and an E.164 number, a Messaging Service SID `MG…` or a
+  sender name), never the platform's `TWILIO_*` environment values; the token is read from its row for the request's
+  authentication and never answered, logged or audited. Length: GSM-7 160 for one SMS, 153 a part; UCS-2 70 and 67
+  (server and screen follow one rule, tested against one cases file); the confirmation counts every member's copy with
+  their own tags filled. Chunks of 50; a 429 puts the member back and retries a minute later; a 401/403 fails the
+  campaign; Twilio's STOP error (21610) switches the member's consent off. "Sent" means Twilio accepted it.
+  `sms_campaign_deliveries` is in `MemberMergeService::MEMBER_COLUMNS` (a merge keeps the sent row). The portal offers
+  the switch only where the venue's Twilio account is set up (`PortalBootstrap` sends `member.sms_consent` then).
+- **Send later** (`Campaigns\SendLater`) for email campaigns, push messages and SMS: a time on the venue's clock, stored
+  as an instant, 2 minutes to a year ahead (a time a clock change skips is refused). The confirmation says "about N
+  now"; `php artisan loyalty:send-scheduled` (every minute) starts each due one through its own start service with one
+  conditional update (`scheduled` → `sending`), to whoever is eligible then, once however many runs overlap. A
+  scheduled one cannot be edited or deleted until it is taken back to a draft; it can be moved. One that cannot start
+  (plan or workspace off, nobody eligible, over the cap, its segment gone or broken, Twilio not set) is marked failed
+  with the reason and sends nothing.
+- **Expo receipts** (`Loyalty\Push\ExpoReceipts`): each push stores Expo's ticket id and a SHA-256 of the device token on
+  its `push_message_deliveries` row; `php artisan loyalty:push-receipts` (every 15 minutes) reads the receipts of tickets
+  15 minutes to 24 hours old, marks refusals failed and recounts `sent_count`; on `DeviceNotRegistered` it clears the
+  member's `expo_push_token` only if it is still that device.
+- **Inbox rows from the full admin's sends.** The full admin's bulk message and segment send keep an inbox row
+  (`NotificationService::keep()`) for every member they reach who did not switch that kind off, app or no app; the
+  push still needs push on and a device. Their answers mean what they meant: `push_sent` counts members with push on
+  and a token; `skipped`, `total`, `email_sent`, `email_skipped` unchanged.
+- **Insights**: cohort retention (members by the venue month they joined; "active" in a month = a ledger line Insights
+  already counts as issued or redeemed — reversals, expiries, deductions and refunds of cancelled redemptions do not
+  count; the last twelve months) and the money members bring (stays and appointments booked in the period by a member
+  of this organisation, by `member_id` or a linked guest, never by email alone: a stay's `price_paid − refunded_amount`
+  without mock-mode stays, an appointment's `AppointmentMoney` taken less returned; only the venue's currency is
+  summed, others counted). The ledger's reads have an index, `points_transactions_org_created_index`, built
+  `CONCURRENTLY` on PostgreSQL.
+- **Brand choice**: with more than one brand, a new reward, offer or boost names its brand (`brand` in the body; this
+  organisation's brands the staff member may use, from `LoyaltyForms::brands()`); editing shows it, does not change it.
+- **Currency in Card & app** (R4-5): writes through `BookingRules::write` (the setting booking setup writes), audited
+  `loyalty.currency_changed`; a dry run first warns about online payments in another currency, appointments booked in
+  another, stays priced apart and the prices relabelled (never converted). Managers.
+- **Boost times** (R4-6): the full admin's boost save reads a time without an offset as the venue's wall clock
+  (`LoyaltyForms::instant`) and its form and list show venue times; every save from either side stamps
+  `earn_rate_events.times_venue_at`. A boost without it, at a venue not on UTC and not yet ended, says "check the time"
+  until saved again (every boost saved before release 4 is flagged: nothing records who saved it).
+- **Duplicates** group in the database (lowercased email; phone digits by the nested `REPLACE` chain), then load only
+  the members in groups of two or more; the same pairs and suggested keeper as before.
+
 ## The workspace (`/loyalty`, `frontend/src/loyalty/`)
 
 - **Where it lives.** A lazily loaded app on the shared core (`src/workspace/`): own chunk, own shell, no full-admin
@@ -234,24 +289,30 @@ Spec: `docs/superpowers/specs/2026-10-22-loyalty-release-3-design.md`.
 
 ## What the workspace does not do
 
-No SMS and no bulk message from the members list; no scheduling of campaigns or push messages; no cohort retention
-or booking figures in Insights; no brand choice. The full admin keeps these.
+No bulk message from the members list (the full admin's bulk message and segment send keep it); no SMS delivery
+reports (Twilio's status callbacks); no receipts for the full admin's own push campaigns.
 
 ## Known limits
 
-- **Boost times made in the full admin.** The full admin's boost form sends the time it shows without an offset and
-  it is stored as if it were UTC; the workspace reads stored instants in the venue's zone. A boost made in the full
-  admin at 18:00 in Riga therefore shows here at 21:00 (the full admin's own list shows the same 21:00 in a Riga
-  browser). Boosts made or saved in the workspace are right. A fix belongs to the full admin's form.
+- **Boosts saved before release 4** say "check the time" until a manager opens and saves each one (at a venue not on
+  UTC): one the full admin saved then was stored as if its wall-clock time were UTC and may be hours off; one the
+  workspace saved is right but flagged too, since nothing recorded who saved it.
 - **The currency** is the member portal's: `organizations.currency`, which defaults to USD, before the
-  `services_currency` setting. A venue that never ran booking setup shows USD in both until its currency is set.
+  `services_currency` setting. A venue that never ran booking setup shows USD until its currency is set (Card & app →
+  Currency, or booking setup). Changing it relabels prices; it never converts them.
+- **SMS**: "sent" is Twilio's acceptance, not delivery (no status callbacks). Deleting a segment a scheduled send uses
+  makes that send fail (`no_audience`) when it is due. If a member's number changes after Send, two members who then
+  share it could both be texted. The Twilio Auth Token is stored as Settings → Integrations has always stored it, in
+  plain text in `hotel_settings` (not in `HotelSetting::ENCRYPTED_KEYS`).
+- **Send later** needs the scheduler (every minute) and a queue worker running; a full-admin duplicate of a scheduled
+  email copies its `scheduled_at` (harmless: the copy is a draft until scheduled). The full admin's email and
+  notification lists show status `scheduled`; their Send refuses one, their Delete allows it.
 - **At most once means a stopped worker can drop a member.** A member whose email or push was under way when a worker
   died keeps a `pending` delivery row and is not tried again. A Reset in the full admin right after a Cancel, while a
   chunk is still running, could email that chunk's members again on the next Send.
 - **Tags** are escaped but not URL-encoded inside a link; `{{current_year}}` follows the server's clock (UTC).
-- **Push messages reach app users only.** The full admin's bulk message and segment send still keep inbox rows only for
-  members with push on and a device; the full admin's Notifications list shows the workspace's push messages without
-  their recipients.
+- **Push messages reach app users only** (the inbox row reaches everyone who did not switch the kind off). The full
+  admin's Notifications list shows the workspace's push messages without their recipients.
 - **A wallet certificate password cleared before release 2** stays cleared: the full admin's form used to wipe it on
   every save (fixed in release 2, below). Card & app's readiness then says the certificate does not open; upload the
   .p12 again with its password.
@@ -259,9 +320,10 @@ or booking figures in Insights; no brand choice. The full admin keeps these.
   them unreadable (Card & app then says they are gone; upload them again). A WWDR certificate uploaded as DER through
   the full admin still does not sign (the workspace converts it to PEM). Old files left on a server's disk are never
   deleted; an import previewed but never run or cancelled keeps its file in its row.
-- **Finding duplicates** loads the organisation's members into PHP (the shared service, unchanged).
-- **New rows land on the default brand.** Rewards, offers and boosts created in the workspace go to the
-  organisation's default brand, as in the full admin's "All brands".
+- **Finding duplicates**: a phone written with characters outside the separators the `REPLACE` chain strips (letters,
+  `#`, …) is compared in PHP; if nearly every phone is written that way, that step loads them all.
+- **A brand is chosen only on create.** With one brand nothing shows; editing a reward, offer or boost shows its brand
+  but does not move it.
 - **`docs/appointments-workspace.md`** used to say points are reversed on the full admin's member page; the full admin
   has no such screen. Reversal is the workspace's, on the member's page.
 
@@ -270,6 +332,18 @@ or booking figures in Insights; no brand choice. The full admin keeps these.
 - Release 3 is live (`main` f344b74, deployed 2026-10-22), built from branch commit 763e1b0: the next release's change
   list is `git diff --name-status 763e1b0 <tip>`. Release 2 went out as `main` 7549f28 from 22b99d0, release 1 as
   05f3ad1 from 5895004.
+- Release 4 (not yet deployed) runs six migrations, each tried on PostgreSQL with rollback: `2026_10_23_140000` (the
+  index `points_transactions_org_created_index`, built `CONCURRENTLY` outside a transaction; a failed half-built index is
+  dropped and built again on the next run), `140100` (`earn_rate_events.times_venue_at`, nullable), `150000`
+  (`loyalty_members.sms_consent`, default false), `150010` (the tables `sms_campaigns`, `sms_campaign_deliveries`),
+  `150100` (`email_campaigns.scheduled_at`, nullable), `150200` (three nullable columns on `push_message_deliveries`).
+  Two new scheduled commands: `php artisan loyalty:send-scheduled` (every minute) and `php artisan loyalty:push-receipts`
+  (every 15 minutes). New member-facing route: `GET /api/v1/member/portal/payments/{paymentIntent}`. Full-admin files it
+  changes on purpose: `EarnRateEventController` and `pages/EarnRateEvents.tsx` (boost times), `MemberAdminController`
+  (bulk message) and `SegmentAdminController` (segment send) (inbox rows), `pages/BookingExtras.tsx` (how each extra is
+  charged), `MemberMergeService` (duplicates, a new member column), `NotificationService` (`pushMany()` returns Expo's
+  ticket), the member `MemberController` (`sms_consent`), and the booking files of `docs/member-portal.md`'s release-4
+  section.
 - Release 3 runs five migrations, each tried on PostgreSQL with rollback: `2026_10_22_100000` and `100100` (nullable
   columns for the wallet files and an import's file), `110000` (four nullable columns on `notification_campaigns`, the
   table `push_message_deliveries`), `110100` (one `UPDATE` marking earlier notifications sent and read), `120000` (the
@@ -298,13 +372,26 @@ or booking figures in Insights; no brand choice. The full admin keeps these.
 - On Program, check the tiers and their colours; on Rewards, the catalogue and pending redemptions.
 - Reload admin tabs left open across the deploy.
 
+### After the release 4 deploy (owner, signed in)
+
+- Settings → Integrations → Twilio (a super admin): the Account SID, the Auth Token and the number SMS go from (with +
+  and the country code) or a Messaging Service SID. In Twilio: Geo permissions for the countries you text; a trial
+  account sends only to numbers verified in Twilio.
+- Campaigns → SMS: the tab no longer says Twilio is missing; send yourself a test (your staff profile needs a phone);
+  turn on "Offers by SMS" as a test member in the portal's Profile and send a real one to a one-member segment.
+- Send later: schedule a test email to yourself five minutes ahead; it goes out at that minute.
+- Program: boosts saved before the deploy say "check the time"; open each, check its times on the venue's clock, save.
+- Insights: the cohort table and "Money members bring" against what you know.
+- Card & app → Currency: it shows the venue's currency (do not change it unless it is wrong).
+- Portal (as a member): the bell opens the inbox; Profile's message switches; a stay or appointment booked and paid.
+
 ### After the release 3 deploy (owner, signed in)
 
 - Card & app → Wallet pass: upload the Apple certificate (with its password), the WWDR certificate and the Google key
   again; readiness should then say ready. Add a pass to a phone from the member app.
 - Campaigns: in a draft, use a tag from the tag bar and send yourself a test (your own name is filled in).
 - Push messages: write one to a small segment; the confirmation names who has the app; send it and check a phone.
-- Member app: the notifications inbox shows what was sent. (The web portal has no inbox page yet; it only counts unread.)
+- Member app: the notifications inbox shows what was sent. (The web portal has its own inbox since release 4.)
 
 ### After the release 2 deploy (owner, signed in)
 

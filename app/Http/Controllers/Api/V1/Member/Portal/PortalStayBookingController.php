@@ -30,9 +30,9 @@ use App\Services\MemberProvisioner;
 use App\Services\Portal\MemberBookingQuery;
 use App\Services\Portal\PortalBootstrap;
 use App\Services\StripeService;
-use App\Support\AdvisoryLock;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 
@@ -211,11 +211,11 @@ class PortalStayBookingController extends Controller
      * - One hold per card: the hold remembers its last intent
      *   (HOLD_INTENT_KEY); a second call reuses it when it can still be paid
      *   for the same amount, and otherwise releases it first, through
-     *   PortalPaymentIntentGuard::reuseOrRelease(). Under the room lock, then
-     *   the hold row, then `pi:` — the confirm's own order.
+     *   PortalPaymentIntentGuard::reuseOrRelease(). Under the hold row, then
+     *   `pi:` — no room lock (see below).
      * - The hold's expiry is extended at most MAX_HOLD_EXTENSIONS times.
-     * - When Stripe cannot give a payment and the venue takes such bookings
-     *   to pay at the venue (PayAtVenueFallback), the answer is `409
+     * - When Stripe cannot be reached and the venue takes such bookings to
+     *   pay at the venue (PayAtVenueFallback), the answer is `409
      *   pay_at_venue` with a grant the confirm accepts.
      */
     public function paymentIntent(Request $request, StripeService $stripe, PortalPaymentIntentGuard $guard): JsonResponse
@@ -242,21 +242,27 @@ class PortalStayBookingController extends Controller
         }
 
         try {
-            return AdvisoryLock::transaction("room:{$orgId}:{$hold->payload_json['unit_id']}", fn () => $this->intentForHold((int) $hold->id, $pricing, $stripe, $guard, $orgId, $memberId));
+            // No room lock: the public widget's confirms take `room:{org}:{unit}`
+            // too, and a slow Stripe call here must hold up nobody else's
+            // booking. The hold row (a booking row) is what serialises this
+            // hold's calls — and this call with the hold's own confirm, which
+            // takes the room lock, then this same row, then `pi:`.
+            return DB::transaction(fn () => $this->intentForHold((int) $hold->id, $pricing, $stripe, $guard, $orgId, $memberId));
         } catch (PaymentUnverifiable $e) {
-            // The hold's earlier intent could not be read: no second intent is minted beside it.
+            // The hold's earlier intent could not be read, or not released: no second intent is minted beside it.
             Log::warning('portal.stay_payment_intent_previous_unreadable', ['org' => $orgId, 'hold' => $hold->id, 'error' => $e->getMessage()]);
-            return $this->paymentUnavailable($orgId, $memberId, $hold->hold_token);
+            return $this->paymentUnavailable($orgId, $memberId, $hold->hold_token, $e);
         }
     }
 
     /**
-     * Inside the room lock: the hold row locked and read again (a confirm of
-     * it may have just consumed it), the earlier intent reused or released
-     * (`pi:` — after the room lock and the hold row, never before), a new one
-     * minted if needed, and the hold — a row this transaction already holds,
-     * so no new row lock is taken while `pi:` is held — told which intent it
-     * has and, up to the cap, given fifteen more minutes.
+     * In one transaction: the hold row locked and read again (a confirm of it
+     * may have just consumed it), the earlier intent reused or released (`pi:`
+     * — after the hold row, never before), a new one minted if needed, and
+     * the hold — a row this transaction already holds, so no new row lock is
+     * taken while `pi:` is held — told which intent it has and, up to the
+     * cap, given fifteen more minutes. No path takes `pi:` and then a hold
+     * row, so the order cannot cycle.
      */
     private function intentForHold(int $holdId, PricingResult $pricing, StripeService $stripe, PortalPaymentIntentGuard $guard, int $orgId, int $memberId): JsonResponse
     {
@@ -292,7 +298,7 @@ class PortalStayBookingController extends Controller
                 ], []);
             } catch (\Throwable $e) {
                 Log::warning('portal.stay_payment_intent_failed', ['org' => $orgId, 'error' => $e->getMessage()]);
-                return $this->paymentUnavailable($orgId, $memberId, $hold->hold_token);
+                return $this->paymentUnavailable($orgId, $memberId, $hold->hold_token, $e);
             }
             $pi = $created + ['reused' => false];
         }
@@ -318,14 +324,15 @@ class PortalStayBookingController extends Controller
     }
 
     /**
-     * Stripe could not give a payment: today's retryable 503, or — when the
-     * venue takes such bookings to pay at the venue (PayAtVenueFallback) —
-     * 409 `pay_at_venue` with the grant the confirm accepts for this member
-     * and this hold.
+     * Stripe could not give a payment: today's retryable 503, or — only when
+     * Stripe could not be reached or is overloaded
+     * (PayAtVenueFallback::isStripeUnreachable()) and the venue takes such
+     * bookings to pay at the venue — 409 `pay_at_venue` with the grant the
+     * confirm accepts for this member and this hold (booked once).
      */
-    private function paymentUnavailable(int $orgId, int $memberId, string $holdToken): JsonResponse
+    private function paymentUnavailable(int $orgId, int $memberId, string $holdToken, \Throwable $cause): JsonResponse
     {
-        if (PayAtVenueFallback::enabled()) {
+        if (PayAtVenueFallback::isStripeUnreachable($cause) && PayAtVenueFallback::enabled()) {
             Log::warning('portal.pay_at_venue_fallback_offered', ['org' => $orgId, 'member' => $memberId, 'kind' => 'stay']);
 
             return response()->json([
@@ -517,9 +524,7 @@ class PortalStayBookingController extends Controller
                 }
 
                 Log::error('portal.stay_confirm_failed_after_commit', ['org' => $orgId, 'mirror' => $booked->id, 'exception' => get_class($e), 'error' => $e->getMessage()]);
-                if ($fallback) {
-                    PayAtVenueFallback::audit($orgId, $memberId, 'booking_mirror', (int) $booked->id, (string) $booked->booking_reference);
-                }
+                $this->afterCardless($booked, $hold, $online, $fallback, $orgId, $memberId, $guard);
                 return $this->booked($booked, $online);
             }
             return $this->fail($this->confirmError($e, $orgId, $piId), $piId, $orgId, $memberId, $guard);
@@ -547,10 +552,30 @@ class PortalStayBookingController extends Controller
             return response()->json(['error' => 'confirm_failed', 'message' => 'We could not complete the booking. Please contact the venue before trying again.'], 500);
         }
 
+        $this->afterCardless($booked, $hold, $online, $fallback, $orgId, $memberId, $guard);
+        return $this->booked($booked, $online);
+    }
+
+    /**
+     * Release 4, part C, after a stay committed without a card. A pay-at-venue
+     * fallback booking gets its audit row; and the intent an earlier
+     * payment-intent call recorded on the hold has no use any more, so it is
+     * released through the guard — never one a booking carries, never another
+     * member's or organisation's (release()'s own rules; best effort, logged).
+     * After the commit, outside every lock.
+     */
+    private function afterCardless(BookingMirror $booked, ?BookingHold $hold, bool $online, bool $fallback, int $orgId, int $memberId, PortalPaymentIntentGuard $guard): void
+    {
         if ($fallback) {
             PayAtVenueFallback::audit($orgId, $memberId, 'booking_mirror', (int) $booked->id, (string) $booked->booking_reference);
         }
-        return $this->booked($booked, $online);
+        if ($online || !$hold) {
+            return;
+        }
+        $recorded = BookingHold::withoutGlobalScopes()->whereKey($hold->id)->first()?->payload_json[self::HOLD_INTENT_KEY] ?? null;
+        if (is_string($recorded) && $recorded !== '' && $recorded !== $booked->stripe_payment_intent_id) {
+            $guard->release($recorded, $orgId, $memberId);
+        }
     }
 
     /**

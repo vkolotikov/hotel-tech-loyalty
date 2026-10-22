@@ -186,9 +186,20 @@ export function portalReturnUrl(origin: string): string {
 }
 
 /** The visit after the member asks to try paying online again from the pay-at-venue notice: a fresh nonce (one
- *  new payment-intent request), and neither "no card" nor the grant any more. Nothing was ever authorised. */
+ *  new payment-intent request), neither "no card" nor the grant any more, and a fresh Idempotency-Key — the old
+ *  key belonged to the at-venue booking the grant was for, and a card booking under it could only ever answer
+ *  `idempotency_conflict` with its new intent left authorised. Nothing was ever authorised on this visit. */
 export function retryOnlineVisit(random: () => string): Partial<PayVisit> {
-  return { nonce: random(), noCard: false, atVenueGrant: null }
+  return { nonce: random(), idempotencyKey: random(), noCard: false, atVenueGrant: null }
+}
+
+/**
+ * Whether the pay-at-venue notice may offer "Try paying online again": only while no confirm has been sent on this
+ * visit. Once one has (pending, failed, or done), the member may only resend that same confirm — its answer may have
+ * been lost while the at-venue booking was made, and paying online beside it would book, or charge, a second time.
+ */
+export function canTryOnlineAgain(atVenueGrant: string | null, confirm: 'idle' | 'pending' | 'error' | 'success'): boolean {
+  return atVenueGrant !== null && confirm === 'idle'
 }
 
 /** False from the moment the member presses Pay (`held`) through a captured card (`paid`) — the step strip

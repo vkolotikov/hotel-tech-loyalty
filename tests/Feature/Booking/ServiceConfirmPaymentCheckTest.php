@@ -153,6 +153,18 @@ class ServiceConfirmPaymentCheckTest extends MemberEndpointTestCase
         $this->assertSame([], $this->failedReasons());
     }
 
+    /**
+     * The widget's payment-intent charges in the venue's Stripe currency, whatever the service's own label says (as
+     * before R4-2); the check compares with that currency, so a venue whose two differ still books.
+     */
+    public function test_a_venue_whose_services_are_labelled_in_another_currency_still_books_with_its_stripe_payment(): void
+    {
+        DB::table('services')->where('id', $this->service->id)->update(['currency' => 'GBP']);
+
+        $this->confirm(['payment_intent_id' => $this->pay('pi_eur')])->assertStatus(201);
+        $this->assertSame(['pi_eur'], $this->captured);
+    }
+
     public function test_this_bookings_own_payment_already_taken_books_as_paid(): void
     {
         $this->confirm(['payment_intent_id' => $this->pay('pi_taken', [], ['status' => 'succeeded'])])->assertStatus(201);

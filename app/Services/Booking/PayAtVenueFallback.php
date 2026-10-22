@@ -13,11 +13,13 @@ use Illuminate\Support\Facades\Log;
  * (release 4, part C). Off by default; switched in the Appointments
  * workspace's Setup → Settings (App\Services\Booking\Setup\BookingRules).
  *
- * When it is on and a portal `payment-intent` call cannot get a payment
- * from Stripe, the call answers `409 pay_at_venue` (reason
- * `payment_unavailable`) together with a grant: a short-lived, encrypted
- * and signed note (Laravel's Crypt, the application key) that names the
- * organisation, the member and the very hold or slot. The confirm accepts a
+ * When it is on and a portal `payment-intent` call cannot reach Stripe
+ * (isStripeUnreachable() — never for any other Stripe error), the call
+ * answers `409 pay_at_venue` (reason `payment_unavailable`) together with a
+ * grant: a short-lived, encrypted and signed note (Laravel's Crypt, the
+ * application key) that names the organisation, the member and the very
+ * booking — a stay's hold, or an appointment's service, start and the Pay
+ * visit's Idempotency-Key (serviceTarget()). The confirm accepts a
  * booking without a payment only with a grant that still names all three,
  * has not expired, and only while the setting is still on — then it books
  * through the portal's ordinary at-venue path, exactly as for a venue that
@@ -102,9 +104,48 @@ final class PayAtVenueFallback
         }
     }
 
-    /** The target string of a service slot: the service and its stored (venue wall-clock) start. */
-    public static function serviceTarget(int $serviceId, string $storedStart): string
+    /**
+     * Whether a failure means Stripe could not be reached or is overloaded —
+     * the only case the fallback is for: a connection failure
+     * (ApiConnectionException), rate limiting (RateLimitException), or any
+     * Stripe API error with an HTTP status of 500 or more; and a
+     * PaymentUnverifiable (or anything) whose cause is one of those. A revoked
+     * or restricted key, an account Stripe refuses, an amount below Stripe's
+     * minimum — every other error — is not "unavailable": it keeps the
+     * ordinary 503, so a broken set-up never quietly turns every portal
+     * booking into an unpaid one.
+     */
+    public static function isStripeUnreachable(?\Throwable $e): bool
     {
-        return $serviceId . '|' . $storedStart;
+        for ($depth = 0; $e !== null && $depth < 5; $depth++, $e = $e->getPrevious()) {
+            if ($e instanceof \Stripe\Exception\ApiConnectionException || $e instanceof \Stripe\Exception\RateLimitException) {
+                return true;
+            }
+            if ($e instanceof \Stripe\Exception\ApiErrorException && (int) $e->getHttpStatus() >= 500) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * The target string of one appointment booking: the service, its stored
+     * (venue wall-clock) start, and the Pay visit's own Idempotency-Key. The
+     * key makes a grant good for exactly one booking — the confirm sends the
+     * same key (a replay of it answers the booking it made), and a confirm
+     * under any other key is not covered.
+     */
+    public static function serviceTarget(int $serviceId, string $storedStart, string $idempotencyKey): string
+    {
+        return $serviceId . '|' . $storedStart . '|' . $idempotencyKey;
+    }
+
+    /** The Pay visit's Idempotency-Key from a request, when it is one the confirm would accept (8–80 characters), else null. */
+    public static function visitKey(?string $header): ?string
+    {
+        $key = trim((string) $header);
+
+        return strlen($key) >= 8 && strlen($key) <= 80 ? $key : null;
     }
 }

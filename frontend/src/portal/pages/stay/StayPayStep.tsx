@@ -9,7 +9,7 @@ import { Button } from '../../ui/Button'
 import { Card } from '../../ui/Card'
 import { Notice } from '../../ui/Notice'
 import { Skeleton } from '../../ui/Skeleton'
-import { payAtVenueGrantOf, retryOnlineVisit, type PayVisit } from '../book/steps'
+import { canTryOnlineAgain, payAtVenueGrantOf, retryOnlineVisit, type PayVisit } from '../book/steps'
 import { stashForReturn } from '../book/returnStash'
 import { StayPriceBreakdown } from './StayPriceBreakdown'
 import { afterStayConfirmError, payView, retryConfirmArgs, showCardUnavailable, stayBounceArgs, stayIntentErrorKind, stayPayNoticeKind, type StayIntentAnswer, type StayState } from './staySteps'
@@ -208,7 +208,9 @@ export function StayPayStep({ quote, state, visit, onVisitChange, onBack, onDone
           {atVenueGrant && (
             <Notice tone="warning">
               {t('portal.payment.at_venue_fallback', 'Online payment is unavailable right now. You can still book now and pay at the venue.')}{' '}
-              <button type="button" className="underline" onClick={() => onVisitChange(retryOnlineVisit(freshId))}>{t('portal.payment.pay_online_again', 'Try paying online again')}</button>
+              {canTryOnlineAgain(atVenueGrant, confirm.isPending ? 'pending' : confirm.isError ? 'error' : confirm.isSuccess ? 'success' : 'idle') && (
+                <button type="button" className="underline" onClick={() => onVisitChange(retryOnlineVisit(freshId))}>{t('portal.payment.pay_online_again', 'Try paying online again')}</button>
+              )}
             </Notice>
           )}
           <Button type="button" full loading={confirm.isPending} onClick={confirmWithoutCard}>

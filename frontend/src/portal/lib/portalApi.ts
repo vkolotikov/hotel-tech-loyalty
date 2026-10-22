@@ -53,7 +53,10 @@ export const portalApi = {
   availability: (serviceId: number, masterId: number | null, date: string): Promise<{ slots: Slot[] }> =>
     api.get('/v1/member/portal/services/availability', { params: { service_id: serviceId, master_id: masterId ?? undefined, date } }).then(r => r.data),
   quote: (body: QuoteBody): Promise<Quote> => api.post('/v1/member/portal/services/quote', body).then(r => r.data),
-  paymentIntent: (body: QuoteBody): Promise<PaymentIntentReply> => api.post('/v1/member/portal/services/payment-intent', body).then(r => r.data),
+  // The visit's Idempotency-Key travels with it (release 4, part C): a pay-at-venue grant, if the server offers one,
+  // is for the one booking the confirm under that same key makes.
+  paymentIntent: (body: QuoteBody, idempotencyKey?: string): Promise<PaymentIntentReply> =>
+    api.post('/v1/member/portal/services/payment-intent', body, idempotencyKey ? { headers: { 'Idempotency-Key': idempotencyKey } } : undefined).then(r => r.data),
   confirm: (body: ConfirmBody, idempotencyKey: string): Promise<{ booking: PortalBooking; replayed: boolean }> =>
     api.post('/v1/member/portal/services/confirm', body, { headers: { 'Idempotency-Key': idempotencyKey } }).then(r => r.data),
   resolveCoupon: (code: string): Promise<ResolvedCoupon> => api.post('/v1/member/portal/coupons/resolve', { code }).then(r => r.data),
