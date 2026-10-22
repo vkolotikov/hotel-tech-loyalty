@@ -356,7 +356,14 @@ reports (Twilio's status callbacks); no receipts for the full admin's own push c
 ## Deploying
 
 - Release 4 is live (`main` 097432a, pushed 2026-10-22), built from branch commit a7e87ae: the next release's change
-  list is `git diff --name-status a7e87ae <tip>`. Release 3 went out as `main` f344b74 from 763e1b0, release 2 as
+  list is `git diff --name-status a7e87ae <tip>`.
+- Release 5 (not yet deployed): no migration, no new scheduled command. New routes: `GET/POST members/{id}/cards`,
+  `POST members/{id}/cards/{card}/off` (workspace). Full-admin and shared files it changes on purpose: the full admin's
+  `ScanController::scanQr` (reads through `CardLookup`) and `pages/Scan.tsx` (the camera sends the whole code),
+  `BookingAdminController::refund` (a room of a group defaults to its own remaining total), `BookingRefundService`,
+  `CapturePendingPaymentIntents`, `BookingPublicController` (the payment webhooks; the widget's paid combination writes
+  the payment on the lead room only), `BookingEngineService`, `MemberErasure` and the member `MemberController`
+  (deletion writes a fresh QR token instead of null). Release 3 went out as `main` f344b74 from 763e1b0, release 2 as
   7549f28 from 22b99d0, release 1 as 05f3ad1 from 5895004.
 - Release 4 runs six migrations, each tried on PostgreSQL with rollback: `2026_10_23_140000` (the
   index `points_transactions_org_created_index`, built `CONCURRENTLY` outside a transaction; a failed half-built index is
@@ -397,6 +404,18 @@ reports (Twilio's status callbacks); no receipts for the full admin's own push c
 - Scan one member's QR code from the member app on a phone, and type one member number.
 - On Program, check the tiers and their colours; on Rewards, the catalogue and pending redemptions.
 - Reload admin tabs left open across the deploy.
+
+### After the release 5 deploy (owner, signed in)
+
+- Scan on a phone: "Scan with camera" and a member's QR code from the app (and a wallet pass); type `#` and the number
+  as the pass shows it. On an Android phone in Chrome: "Tap NFC card" with a card, then "Link this card" to a member;
+  tap it again and the member opens. At the desk: a USB reader in Chrome, or a keyboard-style reader in the field.
+- A member's page: the NFC cards section lists the card; switch it off and scan it again (it says switched off).
+- The full admin's Scan → Start Camera reads the app's QR code again.
+- Members: delete a test member (it now works); as a test member, delete the account in the portal's Profile.
+- Portal (a hotel venue): a party too big for one room is offered rooms together; book a two-room stay with a test
+  card; in the full admin the lead room shows the payment, both rooms are paid after capture; cancel it in the portal
+  and check one refund in Stripe.
 
 ### After the release 4 deploy (owner, signed in)
 

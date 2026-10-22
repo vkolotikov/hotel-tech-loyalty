@@ -72,4 +72,42 @@ class GroupPaymentTest extends TestCase
         $this->expectException(\Illuminate\Database\UniqueConstraintViolationException::class);
         $this->row(['booking_group_id' => 'g-1', 'stripe_payment_intent_id' => 'pi_twice']);
     }
+
+    // ── allocateRefund(): where a part of the one payment that comes back belongs ──
+
+    /** @return list<array{id: int, total: float, refunded: float, cancelled: bool}> */
+    private function rooms(array ...$rooms): array
+    {
+        return array_map(fn (array $r) => ['id' => $r[0], 'total' => (float) $r[1], 'refunded' => (float) ($r[2] ?? 0), 'cancelled' => (bool) ($r[3] ?? false)], $rooms);
+    }
+
+    public function test_a_refund_for_one_room_goes_to_that_room_first(): void
+    {
+        $this->assertSame([1 => 0.0, 2 => 160.0], GroupPayment::allocateRefund($this->rooms([1, 200], [2, 160]), 160.0, 2));
+        $this->assertSame([1 => 10.0, 2 => 160.0], GroupPayment::allocateRefund($this->rooms([1, 200], [2, 160]), 170.0, 2), 'beyond the room, to the rest');
+    }
+
+    public function test_a_cancelled_room_takes_the_money_before_the_live_rooms(): void
+    {
+        $this->assertSame([1 => 0.0, 2 => 160.0], GroupPayment::allocateRefund($this->rooms([1, 200], [2, 160, 0, true]), 160.0));
+        $this->assertSame([1 => 0.0, 2 => 100.0], GroupPayment::allocateRefund($this->rooms([1, 200], [2, 160, 60, true]), 40.0), 'up to what it has left');
+        $this->assertSame([1 => 20.0, 2 => 160.0], GroupPayment::allocateRefund($this->rooms([1, 200], [2, 160, 0, true]), 180.0), 'the rest to the live rooms');
+    }
+
+    public function test_the_rest_is_shared_in_proportion_and_adds_up_to_the_cent(): void
+    {
+        $after = GroupPayment::allocateRefund($this->rooms([1, 100], [2, 100], [3, 100]), 100.0);
+        $this->assertEqualsWithDelta(100.0, array_sum($after), 0.0001);
+        $this->assertSame([1 => 33.34, 2 => 33.33, 3 => 33.33], $after);
+
+        $after = GroupPayment::allocateRefund($this->rooms([1, 200, 50], [2, 160]), 90.0);
+        $this->assertEqualsWithDelta(140.0, array_sum($after), 0.0001, 'what was refunded before, plus this refund');
+        $this->assertSame([1 => 93.55, 2 => 46.45], $after, 'in proportion to what each room has LEFT (150 : 160): 43.55 + 46.45');
+    }
+
+    public function test_no_room_is_refunded_more_than_it_cost(): void
+    {
+        $this->assertSame([1 => 200.0, 2 => 160.0], GroupPayment::allocateRefund($this->rooms([1, 200], [2, 160]), 999.0, 1));
+        $this->assertSame([1 => 200.0, 2 => 160.0], GroupPayment::allocateRefund($this->rooms([1, 200, 200], [2, 160, 160]), 10.0));
+    }
 }

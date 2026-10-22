@@ -856,6 +856,55 @@ class CapturePendingPaymentIntentsTest extends TestCase
         $this->assertStringContainsString('Found 2 pending capture(s): 2 room booking(s)', Artisan::output());
     }
 
+    /**
+     * Review fix (release 5): a room that follows a lead already `paid` but
+     * was itself left `authorized` (one room's write failed) is found by the
+     * sweep through its lead — it carries no intent of its own — and paid.
+     */
+    public function test_a_room_left_authorized_behind_its_paid_lead_is_paid_by_the_sweep(): void
+    {
+        $group = 'grp-' . uniqid();
+        $lead = $this->comboRow($group, 'pi_test_stranded_1', ['price_total' => 200, 'payment_status' => 'paid', 'price_paid' => 200]);
+        $other = $this->comboRow($group, 'pi_test_stranded_1', ['price_total' => 160]);
+        $stripe = $this->enabledStripe('succeeded');
+        $stripe->shouldNotReceive('capturePaymentIntent');
+        $stripe->shouldNotReceive('cancelPaymentIntent');
+
+        $this->runCron();
+
+        $this->assertStringNotContainsString('No pending captures', Artisan::output());
+        $this->assertSame('paid', \DB::table('booking_mirror')->where('id', $other)->value('payment_status'));
+        $this->assertEquals(160.0, (float) \DB::table('booking_mirror')->where('id', $other)->value('price_paid'));
+        $this->assertEquals(200.0, (float) \DB::table('booking_mirror')->where('id', $lead)->value('price_paid'), 'the paid lead is left as it is');
+    }
+
+    public function test_a_stale_room_left_authorized_behind_its_paid_lead_is_paid_by_the_stale_path(): void
+    {
+        $group = 'grp-' . uniqid();
+        $lead = $this->comboRow($group, 'pi_test_stranded_stale_1', ['price_total' => 200, 'payment_status' => 'paid', 'price_paid' => 200, 'created_at' => now()->subDays(10), 'updated_at' => now()->subDays(10)]);
+        $other = $this->comboRow($group, 'pi_test_stranded_stale_1', ['price_total' => 160, 'created_at' => now()->subDays(10), 'updated_at' => now()->subDays(10)]);
+        $this->enabledStripe('succeeded');
+
+        $this->runCron();
+
+        $this->assertSame('paid', \DB::table('booking_mirror')->where('id', $other)->value('payment_status'));
+        $this->assertSame('paid', \DB::table('booking_mirror')->where('id', $lead)->value('payment_status'));
+        $this->assertEquals(200.0, (float) \DB::table('booking_mirror')->where('id', $lead)->value('price_paid'));
+    }
+
+    public function test_a_stale_room_left_authorized_behind_its_lead_follows_an_expired_authorisation(): void
+    {
+        $group = 'grp-' . uniqid();
+        $lead = $this->comboRow($group, 'pi_test_stranded_stale_2', ['price_total' => 200, 'payment_status' => 'capture_expired', 'created_at' => now()->subDays(10), 'updated_at' => now()->subDays(10)]);
+        $other = $this->comboRow($group, 'pi_test_stranded_stale_2', ['price_total' => 160, 'created_at' => now()->subDays(10), 'updated_at' => now()->subDays(10)]);
+        $this->enabledStripe('canceled');
+
+        $this->runCron();
+
+        $this->assertSame('capture_expired', \DB::table('booking_mirror')->where('id', $other)->value('payment_status'));
+        $this->assertSame(1, $this->audits('booking.capture.auth_expired'), 'one audit, for the room that was still open');
+    }
+
     // ── Console output for an ordinary (non-cancelled) group reads the same
     //    as N independent single-room sweeps. ────────────────────────────
 

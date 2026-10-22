@@ -263,4 +263,134 @@ class GroupPaymentWebhooksTest extends TestCase
         $this->assertSame('paid', $this->row($id)->payment_status);
         $this->assertEquals(199.0, (float) $this->row($id)->price_paid);
     }
+
+    // ── Review fixes (release 5): rooms left behind, room-by-room refunds, the newest refund ──
+
+    /** A room that follows the lead but was left open is cancelled although the lead already was. */
+    public function test_payment_intent_canceled_reaches_a_room_left_open_after_its_lead(): void
+    {
+        [$lead, $other] = $this->group();
+        DB::table('booking_mirror')->where('id', $lead)->update(['payment_status' => 'cancelled']);
+
+        $this->deliver('payment_intent.canceled', ['status' => 'canceled', 'cancellation_reason' => 'automatic'] + $this->intent());
+
+        $this->assertSame('cancelled', $this->row($other)->payment_status);
+        $this->assertSame([$other], DB::table('audit_logs')->where('action', 'booking.payment.canceled')->pluck('subject_id')->map(fn ($id) => (int) $id)->all());
+    }
+
+    /** A room that follows a lead already paid, but was left `authorized`, is paid when the payment's success arrives. */
+    public function test_payment_intent_succeeded_pays_a_room_left_open_after_its_paid_lead(): void
+    {
+        [$lead, $other] = $this->group();
+        DB::table('booking_mirror')->where('id', $lead)->update(['payment_status' => 'paid', 'price_paid' => 200]);
+
+        $this->deliver('payment_intent.succeeded', $this->intent());
+
+        $this->assertSame('paid', $this->row($other)->payment_status);
+        $this->assertEquals(160.0, (float) $this->row($other)->price_paid);
+        $this->assertEquals(200.0, (float) $this->row($lead)->price_paid, 'the paid lead is left as it is');
+    }
+
+    /** markMirrorPaid() writes each room on its own: one that fails never keeps the others unpaid, and a second run changes nothing. */
+    public function test_the_widgets_capture_pays_each_room_on_its_own_and_twice_is_once(): void
+    {
+        [$lead, $other] = $this->group();
+        $controller = app(BookingPublicController::class);
+        $fail = true;
+        DB::beforeExecuting(function (string $query, array $bindings) use ($lead, &$fail) {
+            if ($fail && str_starts_with(strtolower(ltrim($query)), 'update') && str_contains($query, 'booking_mirror') && in_array($lead, $bindings, false)) {
+                throw new \RuntimeException('simulated write failure');
+            }
+        });
+
+        (new \ReflectionMethod($controller, 'markMirrorPaid'))->invoke($controller, 'pi_group_1', $this->org->id);
+
+        $this->assertSame('authorized', $this->row($lead)->payment_status, 'the failing room is left for the capture job');
+        $this->assertSame('paid', $this->row($other)->payment_status, 'the other room is paid all the same');
+
+        $fail = false;
+        (new \ReflectionMethod($controller, 'markMirrorPaid'))->invoke($controller, 'pi_group_1', $this->org->id);
+        (new \ReflectionMethod($controller, 'markMirrorPaid'))->invoke($controller, 'pi_group_1', $this->org->id);
+        $this->assertSame(['paid', 'paid'], [$this->row($lead)->payment_status, $this->row($other)->payment_status]);
+        $this->assertEquals([200.0, 160.0], [(float) $this->row($lead)->price_paid, (float) $this->row($other)->price_paid]);
+    }
+
+    /**
+     * The capture job flags a room staff cancelled on its own (`needs_refund`);
+     * the operator refunds that room's amount in the Stripe dashboard. The
+     * refund belongs to the cancelled room: it is refunded in full, the live
+     * room keeps `paid` (so it still earns its points) and its reservation.
+     */
+    public function test_a_dashboard_refund_of_a_cancelled_rooms_amount_goes_to_that_room(): void
+    {
+        [$lead, $cancelled] = $this->group('paid');
+        DB::table('booking_mirror')->where('id', $cancelled)->update(['internal_status' => 'cancelled', 'booking_state' => 'cancelled']);
+        $cancelledRes = $this->row($cancelled)->reservation_id;
+        $this->smoobu->shouldReceive('cancelReservation')->once()->with($cancelledRes)->andReturn([]);
+
+        $this->deliver('charge.refunded', $this->charge(16000, [['id' => 're_room_1', 'object' => 'refund', 'amount' => 16000, 'created' => 100]]));
+
+        $this->assertSame('refunded', $this->row($cancelled)->payment_status);
+        $this->assertEquals(160.0, (float) $this->row($cancelled)->refunded_amount);
+        $this->assertSame('paid', $this->row($lead)->payment_status, 'never partially_refunded for money that was not its');
+        $this->assertNull($this->row($lead)->refunded_amount);
+        $this->assertSame('confirmed', $this->row($lead)->booking_state);
+        Mail::assertQueued(BookingRefundMail::class, fn (BookingRefundMail $m) => $m->unitName === 'Garden' && $m->refundAmount === 160.0 && !$m->isFull);
+    }
+
+    /** Stripe lists refunds newest first: a second partial refund is recorded (the cumulative amount), and an older event arriving late moves nothing back. */
+    public function test_a_second_partial_refund_of_a_single_room_is_recorded_and_never_moves_back(): void
+    {
+        $id = DB::table('booking_mirror')->insertGetId([
+            'organization_id' => $this->org->id, 'reservation_id' => 'R-' . uniqid(), 'booking_state' => 'confirmed', 'internal_status' => 'confirmed',
+            'guest_email' => 'ada@example.test', 'price_total' => 200, 'price_paid' => 200, 'payment_status' => 'paid', 'payment_method' => 'stripe',
+            'stripe_payment_intent_id' => 'pi_single_2', 'created_at' => now(), 'updated_at' => now(),
+        ]);
+        $charge = fn (int $refunded, array $refunds) => ['id' => 'ch_single_2', 'object' => 'charge', 'payment_intent' => 'pi_single_2', 'amount' => 20000, 'amount_captured' => 20000,
+            'amount_refunded' => $refunded, 'currency' => 'eur', 'refunded' => $refunded >= 20000, 'metadata' => ['org_id' => (string) $this->org->id],
+            'refunds' => ['object' => 'list', 'data' => $refunds]];
+        $first = ['id' => 're_first', 'object' => 'refund', 'amount' => 5000, 'created' => 100];
+        $second = ['id' => 're_second', 'object' => 'refund', 'amount' => 3000, 'created' => 200];
+
+        $this->deliver('charge.refunded', $charge(5000, [$first]));
+        $this->assertEquals(50.0, (float) $this->row($id)->refunded_amount);
+
+        $this->travel(2)->minutes(); // past the kept 60-second freshness gate the first recording opened
+        $this->deliver('charge.refunded', $charge(8000, [$second, $first]));
+        $this->assertSame('partially_refunded', $this->row($id)->payment_status);
+        $this->assertEquals(80.0, (float) $this->row($id)->refunded_amount, 'the second refund is recorded too');
+        $this->assertSame('re_second', $this->row($id)->last_refund_id, 'the newest refund, not the oldest');
+
+        $this->travel(2)->minutes();
+        $this->deliver('charge.refunded', $charge(5000, [$first]));
+        $this->assertEquals(80.0, (float) $this->row($id)->refunded_amount, 'an older event arriving late moves nothing back');
+        Mail::assertQueued(BookingRefundMail::class, 2);
+    }
+
+    public function test_a_second_partial_refund_of_a_combination_is_recorded_on_its_rooms(): void
+    {
+        [$lead, $other] = $this->group('paid');
+        $this->smoobu->shouldNotReceive('cancelReservation');
+
+        $this->deliver('charge.refunded', $this->charge(9000, [['id' => 're_g1', 'object' => 'refund', 'amount' => 9000, 'created' => 100]]));
+        $this->travel(2)->minutes();
+        $this->deliver('charge.refunded', $this->charge(18000, [['id' => 're_g2', 'object' => 'refund', 'amount' => 9000, 'created' => 200], ['id' => 're_g1', 'object' => 'refund', 'amount' => 9000, 'created' => 100]]));
+
+        $this->assertEqualsWithDelta(180.0, (float) $this->row($lead)->refunded_amount + (float) $this->row($other)->refunded_amount, 0.001);
+        $this->assertSame(['partially_refunded', 'partially_refunded'], [$this->row($lead)->payment_status, $this->row($other)->payment_status]);
+        $this->assertSame('re_g2', $this->row($lead)->last_refund_id);
+    }
+
+    /** A charge event without its `refunds` list (newer API versions) is still recorded, from `amount_refunded`. */
+    public function test_a_refund_event_without_its_refunds_list_is_still_recorded(): void
+    {
+        [$lead, $other] = $this->group('paid');
+        $this->smoobu->shouldReceive('cancelReservation')->twice()->andReturn([]);
+        $charge = $this->charge(36000, []);
+        unset($charge['refunds']);
+
+        $this->deliver('charge.refunded', $charge);
+
+        $this->assertSame(['refunded', 'refunded'], [$this->row($lead)->payment_status, $this->row($other)->payment_status]);
+    }
 }
