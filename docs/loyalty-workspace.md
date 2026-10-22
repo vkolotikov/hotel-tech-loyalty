@@ -369,10 +369,9 @@ production's NOT NULL columns; the older files are worth the same care when next
 
 ## Deploying
 
-- Release 5 is live (`main` 8a04f86, pushed 2026-10-23), built from branch commit 6adf121: the next release's change
-  list is `git diff --name-status 6adf121 <tip>`.
-  Waiting for the next deploy: R5-6 (failed widget bookings leave staff an enquiry; `BookingEngineService` only, no
-  migration). Release 4 went out as `main` 097432a from a7e87ae.
+- Release 5b is live (`main` 5b481aa, pushed 2026-10-23: R5-6, failed widget bookings leave staff an enquiry), built
+  from branch commit ea8b364: the next release's change list is `git diff --name-status ea8b364 <tip>`. Release 5
+  went out as `main` 8a04f86 from 6adf121. Release 4 went out as `main` 097432a from a7e87ae.
 - Release 5: no migration, no new scheduled command. New routes: `GET/POST members/{id}/cards`,
   `POST members/{id}/cards/{card}/off` (workspace). Full-admin and shared files it changes on purpose: the full admin's
   `ScanController::scanQr` (reads through `CardLookup`) and `pages/Scan.tsx` (the camera sends the whole code),
