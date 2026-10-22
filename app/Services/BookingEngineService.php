@@ -3177,7 +3177,9 @@ class BookingEngineService
         if (empty($selected)) return;
 
         $orgId = app()->bound('current_organization_id') ? app('current_organization_id') : null;
-        $ids = collect($selected)->pluck('id')->filter()->map(fn ($id) => (string) $id)->all();
+        // Only numeric ids can be catalogue rows: an extra of the legacy JSON setting has a text id ("breakfast") and no
+        // row, and PostgreSQL refuses a text value against the bigint `id` (the whole booking failed there).
+        $ids = collect($selected)->pluck('id')->filter()->map(fn ($id) => (string) $id)->filter(fn (string $id) => ctype_digit($id))->values()->all();
         if (empty($ids)) return;
 
         // Catalog rows. Cast to string so a numeric or stringified id
