@@ -4,7 +4,6 @@ import { StayPriceBreakdown } from './StayPriceBreakdown'
 import { StayReviewStep, stayQuoteQueryOptions } from './StayReviewStep'
 import { initialStayState, stayQuoteBody, type StayState } from './staySteps'
 import { stayCatalogue, stayQuote, stayVenue } from './stayTestUtils'
-import type { StayQuote } from '../../lib/types'
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -163,41 +162,5 @@ describe('StayReviewStep', () => {
     expect(options.gcTime).toBe(0)
     expect(options.staleTime).toBe(0)
     expect(options.retry).toBe(false)
-  })
-})
-
-// Release 4, part D: several rooms for one party, priced and booked as one stay.
-describe('a combination', () => {
-  const combo: StayQuote = {
-    ...stayQuote,
-    room: { id: '101', name: 'Sea view + Garden' }, adults: 4,
-    lines: { ...stayQuote.lines, room_total: 380, price_per_night: 190 },
-    rooms: [
-      { id: '101', name: 'Sea view', room_total: 200, price_per_night: 100, adults: 2, children: 0 },
-      { id: '102', name: 'Garden', room_total: 180, price_per_night: 90, adults: 2, children: 1 },
-    ],
-  }
-  const together: StayState = { ...state, roomId: null, roomIds: ['101', '102'], adults: 4, children: 1 }
-
-  it('itemises each room at its own price, the server\'s', () => {
-    const html = render(<StayPriceBreakdown quote={combo} />, stayVenue)
-    expect(html).toContain('Sea view · nights: 2')
-    expect(html).toContain('Garden · nights: 2')
-    expect(html).toContain('180.00')
-    expect(html).not.toContain('Sea view + Garden · nights')
-  })
-
-  it('names the rooms, who sleeps where, and that they are one booking', () => {
-    const html = render(review(together), stayVenue, c => c.setQueryData(stayQuoteQueryOptions(stayQuoteBody(together)).queryKey, combo))
-    expect(html).toContain('Sea view + Garden')
-    expect(html).toContain('Sea view — adults: 2 · children: 0')
-    expect(html).toContain('Garden — adults: 2 · children: 1')
-    expect(html).toContain('One booking for all these rooms: one payment, and they are cancelled together.')
-  })
-
-  it('names the rooms from the catalogue before the price arrives', () => {
-    const html = render(review(together), stayVenue)
-    expect(html).toContain('Sea view + Garden')
-    expect(html).toMatch(/<button[^>]*disabled=""[^>]*>Continue/)
   })
 })

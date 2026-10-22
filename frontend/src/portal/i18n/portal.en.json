@@ -172,7 +172,6 @@
     "max_nights_many": "The longest stay you can book online is {{count}} nights.", "max_nights_other": "The longest stay you can book online is {{count}} nights.",
     "no_rooms": "No rooms are free for these dates.", "change_dates": "Change dates",
     "party_too_large": "No single room fits your party. Please contact {{venue}} and we will arrange it.",
-    "together_intro": "No single room sleeps your party, but these rooms do together. Each choice is one booking: paid once, and changed or cancelled together.", "choose_together": "Choose these rooms", "room_party": "{{room}} — adults: {{adults}} · children: {{children}}", "together_note": "One booking for all these rooms: one payment, and they are cancelled together.",
     "sleeps_one": "Sleeps {{count}}", "sleeps_few": "Sleeps {{count}}", "sleeps_many": "Sleeps {{count}}", "sleeps_other": "Sleeps {{count}}",
     "per_night": "{{price}} a night", "total_for_stay": "Total for your stay", "choose": "Choose",
     "extras": "Add-ons", "requests": "Special requests", "requests_hint": "Optional", "room_line": "{{room}} · nights: {{count}}",

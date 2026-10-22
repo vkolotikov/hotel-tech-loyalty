@@ -110,7 +110,8 @@
     "no_category": "Noch keine Art gewählt",
     "no_segment": "Kein Segment",
     "no_title": "Noch kein Titel",
-    "none": "Noch keine Push-Nachrichten. Legen Sie eine an, wählen Sie ihre Art und ein Segment und senden Sie sie."
+    "none": "Noch keine Push-Nachrichten. Legen Sie eine an, wählen Sie ihre Art und ein Segment und senden Sie sie.",
+    "scheduled": "Geht hinaus: {{when}}"
   },
   "load": {
     "error": {
@@ -227,13 +228,43 @@
     "nobody": "Niemand in {{segment}} kann sie erhalten.",
     "over": "Sie würde {{number}} Mitglieder erreichen, mehr als {{limit}}, das Höchste für eine Nachricht. Grenzen Sie das Segment ein.",
     "title": "Diese Push-Nachricht senden",
-    "will_push": "Sie geht ab sofort an {{number}} Mitglieder von {{segment}}."
+    "will_push": "Sie geht ab sofort an {{number}} Mitglieder von {{segment}}.",
+    "about_now": "Jetzt könnten es etwa {{number}} Mitglieder von {{segment}} erhalten. Es geht an alle, die es zu diesem Zeitpunkt erhalten können, dann gezählt.",
+    "schedule": "Planen für {{when}}"
   },
   "status": {
     "cancelled": "Abgebrochen",
     "draft": "Entwurf",
     "failed": "Fehlgeschlagen",
     "sending": "Wird gesendet",
-    "sent": "Gesendet"
+    "sent": "Gesendet",
+    "scheduled": "Geplant"
+  },
+  "schedule": {
+    "error": {
+      "already_started": "Diese Nachricht wurde bereits gestartet. Die Seite zeigt jetzt, wie weit sie kam.",
+      "changed": "Die Nachricht hat sich geändert, seit diese Seite sie gezeigt hat. Prüfen Sie sie und planen Sie sie erneut.",
+      "bad_time": "Wählen Sie eine andere Zeit.",
+      "incomplete": "Die Nachricht ist noch nicht bereit zum Senden. Die Seite zeigt jetzt, was noch fehlt.",
+      "no_audience": "Wählen Sie zuerst, wer sie erhält.",
+      "no_category": "Wählen Sie zuerst die Art der Nachricht.",
+      "bad_rule": "Das Segment hat eine Regel, die sich nicht anwenden lässt. Korrigieren Sie zuerst das Segment.",
+      "not_found": "Diese Push-Nachricht gibt es nicht mehr.",
+      "manager_only": "Nur Inhaber oder Manager können mit Push-Nachrichten arbeiten.",
+      "not_allowed": "Nur Inhaber oder Manager können mit Push-Nachrichten arbeiten.",
+      "feature_locked": "Ihr Tarif enthält keine Push-Nachrichten.",
+      "network": "Keine Verbindung. Laden Sie die Seite neu, um zu sehen, ob es geplant wurde, bevor Sie es erneut versuchen.",
+      "unknown": "Es wurde möglicherweise nicht geplant. Laden Sie die Seite neu, um den Stand zu sehen, bevor Sie es erneut versuchen."
+    }
+  },
+  "unschedule": {
+    "error": {
+      "not_scheduled": "Es wartet nicht mehr: Es hat begonnen oder wurde bereits zurückgenommen. Die Seite zeigt es jetzt, wie es ist.",
+      "not_found": "Diese Push-Nachricht gibt es nicht mehr.",
+      "manager_only": "Nur Inhaber oder Manager können mit Push-Nachrichten arbeiten.",
+      "not_allowed": "Nur Inhaber oder Manager können mit Push-Nachrichten arbeiten.",
+      "network": "Keine Verbindung: Es ist noch geplant. Versuchen Sie es erneut.",
+      "unknown": "Es konnte nicht zurückgenommen werden. Bitte versuchen Sie es erneut."
+    }
   }
 }

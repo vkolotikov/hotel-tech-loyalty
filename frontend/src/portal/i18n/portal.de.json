@@ -172,7 +172,6 @@
     "max_nights_many": "Online buchbar sind höchstens {{count}} Nächte.", "max_nights_other": "Online buchbar sind höchstens {{count}} Nächte.",
     "no_rooms": "Für diese Daten ist kein Zimmer frei.", "change_dates": "Daten ändern",
     "party_too_large": "Kein einzelnes Zimmer bietet Platz für Ihre Gruppe. Bitte wenden Sie sich an {{venue}}, wir kümmern uns darum.",
-    "together_intro": "Kein einzelnes Zimmer bietet Platz für Ihre Gruppe, diese Zimmer zusammen schon. Jede Auswahl ist eine Buchung: einmal bezahlt und nur gemeinsam geändert oder storniert.", "choose_together": "Diese Zimmer wählen", "room_party": "{{room}} — Erwachsene: {{adults}} · Kinder: {{children}}", "together_note": "Eine Buchung für alle diese Zimmer: eine Zahlung, und sie werden gemeinsam storniert.",
     "sleeps_one": "Für {{count}} Gast", "sleeps_few": "Für bis zu {{count}} Gäste", "sleeps_many": "Für bis zu {{count}} Gäste", "sleeps_other": "Für bis zu {{count}} Gäste",
     "per_night": "{{price}} pro Nacht", "total_for_stay": "Gesamtpreis für Ihren Aufenthalt", "choose": "Auswählen",
     "extras": "Extras", "requests": "Besondere Wünsche", "requests_hint": "Optional", "room_line": "{{room}} · Nächte: {{count}}",

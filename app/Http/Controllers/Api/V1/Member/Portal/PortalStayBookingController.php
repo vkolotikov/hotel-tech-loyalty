@@ -22,7 +22,6 @@ use App\Services\Booking\PortalStayHooks;
 use App\Services\Booking\PortalStayNotifier;
 use App\Services\Booking\PricingResult;
 use App\Services\Booking\StayCatalogue;
-use App\Services\Booking\StayCombination;
 use App\Services\Booking\StayQuoteException;
 use App\Services\Booking\StayQuoteService;
 use App\Services\BookingEngineService;
@@ -40,10 +39,8 @@ use Symfony\Component\HttpKernel\Exception\HttpException;
 /**
  * The member's own copy of the booking widget's stay sequence: rooms,
  * availability, quote, payment intent, confirm. Every action runs under
- * the member's organisation (tenant middleware), sells one room — or, when
- * no single room sleeps the party, two or three rooms together as one
- * booking with one payment (StayCombination, release 4 part D) — and
- * recomputes prices on the server.
+ * the member's organisation (tenant middleware), sells single rooms only —
+ * never room combinations — and recomputes prices on the server.
  */
 class PortalStayBookingController extends Controller
 {
@@ -113,44 +110,12 @@ class PortalStayBookingController extends Controller
             ];
         }
 
-        // When no single room sleeps the party the engine offers two or three
-        // rooms together (AvailabilityService::findCombinations()); the
-        // portal sells them as one booking (StayCombination), each priced for
-        // the member on its combined list total. A combination that cannot
-        // put an adult in every room is not offered — the quote would refuse
-        // it. The quote and the confirm price and check everything again.
-        $adults = (int) ($data['adults'] ?? 2);
-        $children = (int) ($data['children'] ?? 0);
-        $combinations = [];
-        foreach ($rooms === [] ? ($found['combinations'] ?? []) : [] as $combo) {
-            $parts = array_values($combo['rooms'] ?? []);
-            if (StayCombination::party(array_map(fn (array $r) => (int) $r['max_guests'], $parts), $adults, $children) === null) {
-                continue;
-            }
-            $total = (float) $combo['total_price'];
-            $price = $member
-                ? $this->pricing->quote($member, $total, $currency, BookingScope::Stays)
-                : $this->pricing->quoteWithoutMember($total, $currency);
-            $combinations[] = [
-                'key'          => implode('+', array_map(fn (array $r) => (string) $r['id'], $parts)),
-                'rooms'        => array_map(fn (array $r) => [
-                    'id' => (string) $r['id'], 'name' => (string) $r['name'], 'max_guests' => (int) $r['max_guests'],
-                    'total_price' => (float) $r['total_price'], 'image' => ($r['image'] ?? null) ?: null,
-                ], $parts),
-                'sleeps'       => (int) $combo['total_guests'],
-                'total_price'  => $total,
-                'member_total' => $price->total,
-                'currency'     => $currency,
-            ];
-        }
-
         return response()->json([
             'rooms'  => $rooms,
             'nights' => $nights,
-            // No single room fits, but rooms together could (the combinations
-            // below, when there are any the portal can sell).
+            // The engine can offer two or three rooms together; the portal
+            // sells single rooms only and says so instead.
             'party_too_large' => $rooms === [] && !empty($found['combinations']),
-            'combinations'    => $combinations,
         ]);
     }
 
@@ -174,11 +139,7 @@ class PortalStayBookingController extends Controller
         };
 
         return [
-            // One room (`unit_id`) or a combination of two or three (`unit_ids`, StayCombination) — never both.
-            'unit_id' => 'required_without:unit_ids|prohibits:unit_ids|string|max:20',
-            'unit_ids' => 'required_without:unit_id|array|min:' . StayCombination::MIN_ROOMS . '|max:' . StayCombination::MAX_ROOMS,
-            'unit_ids.*' => 'bail|required|string|max:20',
-            'check_in' => 'required|date_format:Y-m-d', 'check_out' => 'required|date_format:Y-m-d|after:check_in',
+            'unit_id' => 'required|string|max:20', 'check_in' => 'required|date_format:Y-m-d', 'check_out' => 'required|date_format:Y-m-d|after:check_in',
             'adults' => 'nullable|integer|min:1|max:20', 'children' => 'nullable|integer|min:0|max:10',
             'extras' => 'nullable|array|max:20',
             // `bail` stops at the first failed rule for the field — without
@@ -210,11 +171,7 @@ class PortalStayBookingController extends Controller
         $data = $request->validate($this->quoteRules());
 
         try {
-            $quote = !empty($data['unit_ids'])
-                ? $this->quotes->quoteCombination($request->user(), $member, $data)
-                : $this->quotes->quote($request->user(), $member, $data);
-
-            return response()->json($this->quotes->payload($quote));
+            return response()->json($this->quotes->payload($this->quotes->quote($request->user(), $member, $data)));
         } catch (StayQuoteException $e) {
             return $this->refuse($e);
         } catch (CouponException $e) {
@@ -285,19 +242,7 @@ class PortalStayBookingController extends Controller
         }
 
         try {
-            // The hold's room lock — or, for a combination, every room's, in
-            // StayCombination's one order (the confirm's own) — then the hold row, then `pi:`.
-            $roomLocks = StayCombination::roomLockKeys($orgId, !empty($hold->payload_json['is_combo'])
-                ? array_column($hold->payload_json['rooms'] ?? [], 'unit_id')
-                : [$hold->payload_json['unit_id']]);
-
-            return AdvisoryLock::transaction(array_shift($roomLocks), function () use ($roomLocks, $hold, $pricing, $stripe, $guard, $orgId, $memberId) {
-                foreach ($roomLocks as $roomLock) {
-                    AdvisoryLock::within($roomLock);
-                }
-
-                return $this->intentForHold((int) $hold->id, $pricing, $stripe, $guard, $orgId, $memberId);
-            });
+            return AdvisoryLock::transaction("room:{$orgId}:{$hold->payload_json['unit_id']}", fn () => $this->intentForHold((int) $hold->id, $pricing, $stripe, $guard, $orgId, $memberId));
         } catch (PaymentUnverifiable $e) {
             // The hold's earlier intent could not be read: no second intent is minted beside it.
             Log::warning('portal.stay_payment_intent_previous_unreadable', ['org' => $orgId, 'hold' => $hold->id, 'error' => $e->getMessage()]);

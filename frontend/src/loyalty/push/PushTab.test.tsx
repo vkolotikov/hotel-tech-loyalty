@@ -187,7 +187,9 @@ describe('The send confirmation', () => {
     return renderToStaticMarkup(
       <QueryClientProvider client={client}>
         <MemoryRouter>
-          <PushSendDialog push={message()} onClose={() => {}} />
+          <LoyaltyContext.Provider value={{ data: boot(manager), isLoading: false, isError: false, error: null, refetch: () => {} }}>
+            <PushSendDialog push={message()} onClose={() => {}} />
+          </LoyaltyContext.Provider>
         </MemoryRouter>
       </QueryClientProvider>,
     )

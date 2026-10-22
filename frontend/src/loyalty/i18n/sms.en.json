@@ -1,1 +1,319 @@
-{}
+{
+  "status": {
+    "draft": "Draft",
+    "scheduled": "Scheduled",
+    "sending": "Sending",
+    "sent": "Sent",
+    "failed": "Failed",
+    "cancelled": "Cancelled"
+  },
+  "not_reached": {
+    "no_consent": "{{number}} have not turned on offers by SMS",
+    "no_phone": "{{number}} have no phone number",
+    "bad_phone": "{{number}} have a number without its country code (it must start with + and the country code)",
+    "same_phone": "{{number}} share a number with another member it reaches, who gets the one SMS"
+  },
+  "blocker": {
+    "twilio": "Set up the venue’s Twilio account first.",
+    "unsaved": "Save your changes first.",
+    "body": "Write the text.",
+    "no_segment": "Choose who receives it.",
+    "segment_gone": "Its segment no longer exists. Choose another.",
+    "segment_problem": "Its segment has a rule that cannot be used. Fix the segment first."
+  },
+  "problem": {
+    "name": "Give the campaign a name, up to {{max}} characters.",
+    "body_long": "Keep the text to {{max}} characters.",
+    "segment_gone": "That segment no longer exists. Choose another."
+  },
+  "setting": {
+    "account_sid": "Twilio Account SID",
+    "auth_token": "Twilio Auth Token",
+    "phone_number": "Twilio Phone Number"
+  },
+  "setting_state": {
+    "missing": "{{setting}}: not set yet",
+    "wrong": "{{setting}}: not in a form Twilio takes"
+  },
+  "encoding": {
+    "gsm7": "Standard SMS alphabet",
+    "ucs2": "Unicode"
+  },
+  "outcome": {
+    "sent": "Sent",
+    "failed": "Not sent",
+    "skipped": "Passed over",
+    "pending": "Under way"
+  },
+  "outcome_hint": {
+    "sent": "Twilio took the SMS. Delivery to the phone is the network’s.",
+    "failed": "Twilio refused the SMS for that number, or could not be reached. The reasons are below.",
+    "skipped": "They turned SMS off, lost their number or were switched off after it started.",
+    "pending": "They were being sent to when sending stopped. They are not sent to again."
+  },
+  "twilio": {
+    "20003": "Twilio refused the Account SID or the Auth Token. Check them in Settings → Integrations.",
+    "20005": "The Twilio account is not active. Check it in Twilio.",
+    "21211": "The number is not a valid phone number.",
+    "21408": "Sending to this country is not switched on in Twilio (Messaging, Geo permissions).",
+    "21606": "The venue’s Twilio number cannot send SMS. Check the number in Twilio.",
+    "21608": "A Twilio trial account sends only to numbers verified in Twilio.",
+    "21610": "The number replied STOP to the venue’s Twilio number. Their SMS consent is now off.",
+    "21612": "Twilio cannot send from the venue’s number to this number.",
+    "21614": "The number cannot receive SMS (it is not a mobile number).",
+    "21617": "The text is too long for one message."
+  },
+  "failure": {
+    "unreachable": "Twilio could not be reached.",
+    "not_ready": "The venue’s Twilio account is not set up.",
+    "job_failed": "Sending stopped after repeated errors.",
+    "other": "Twilio refused it ({{reason}})."
+  },
+  "load": {
+    "error": {
+      "not_found": "This SMS campaign no longer exists.",
+      "manager_only": "Only an owner or a manager can work with SMS campaigns.",
+      "not_allowed": "Only an owner or a manager can work with SMS campaigns.",
+      "feature_locked": "Your plan does not include campaigns.",
+      "network": "No connection. Check the network and try again.",
+      "unknown": "This could not be loaded. Please try again."
+    }
+  },
+  "create": {
+    "error": {
+      "manager_only": "Only an owner or a manager can work with SMS campaigns.",
+      "not_allowed": "Only an owner or a manager can work with SMS campaigns.",
+      "feature_locked": "Your plan does not include campaigns.",
+      "network": "No connection: no campaign was made. Try again.",
+      "unknown": "The campaign could not be made. Please try again."
+    }
+  },
+  "save": {
+    "error": {
+      "not_a_draft": "This campaign is no longer a draft: it was sent or scheduled meanwhile. The page now shows it as it is.",
+      "not_found": "This SMS campaign no longer exists.",
+      "invalid": "Check the fields marked below.",
+      "manager_only": "Only an owner or a manager can work with SMS campaigns.",
+      "not_allowed": "Only an owner or a manager can work with SMS campaigns.",
+      "feature_locked": "Your plan does not include campaigns.",
+      "network": "No connection: nothing was saved. Try again.",
+      "unknown": "The draft could not be saved. Please try again."
+    }
+  },
+  "audience": {
+    "error": {
+      "no_audience": "Choose who receives it first.",
+      "bad_rule": "Its segment has a rule that cannot be used. Fix the segment first.",
+      "not_found": "This SMS campaign no longer exists.",
+      "manager_only": "Only an owner or a manager can work with SMS campaigns.",
+      "not_allowed": "Only an owner or a manager can work with SMS campaigns.",
+      "network": "No connection: who it would reach could not be counted.",
+      "unknown": "Who it would reach could not be counted. Please try again."
+    }
+  },
+  "test": {
+    "error": {
+      "no_phone": "Your account has no phone number to send the test to. It needs one with + and the country code.",
+      "bad_phone": "The phone number on your account has no country code. It must start with + and the country code.",
+      "not_ready": "The venue’s Twilio account is not set up. A super admin sets it in Settings → Integrations.",
+      "incomplete": "Write the text first.",
+      "test_failed": "Twilio did not take the test.",
+      "not_found": "This SMS campaign no longer exists.",
+      "manager_only": "Only an owner or a manager can work with SMS campaigns.",
+      "not_allowed": "Only an owner or a manager can work with SMS campaigns.",
+      "feature_locked": "Your plan does not include campaigns.",
+      "network": "No connection: the test may or may not have gone. Check your phone before you try again.",
+      "unknown": "The test could not be sent. Please try again."
+    }
+  },
+  "send": {
+    "error": {
+      "already_started": "This campaign was already started. The page now shows how far it got.",
+      "changed": "The campaign changed since this page showed it. Check it, then send again.",
+      "audience_changed": "The number of members it would reach is now {{reached}}. Check the number, then send again.",
+      "incomplete": "The campaign is not ready to send. The page now shows what it still needs.",
+      "not_ready": "The venue’s Twilio account is not set up. A super admin sets it in Settings → Integrations.",
+      "no_audience": "Choose who receives it first.",
+      "bad_rule": "Its segment has a rule that cannot be used. Fix the segment first.",
+      "nobody_to_send_to": "Nobody in this segment can receive it.",
+      "too_many": "It would reach more than {{limit}} members, the most one campaign may. Narrow the segment.",
+      "not_started": "The campaign could not be queued. Nothing was sent; please try again.",
+      "not_found": "This SMS campaign no longer exists.",
+      "manager_only": "Only an owner or a manager can work with SMS campaigns.",
+      "not_allowed": "Only an owner or a manager can work with SMS campaigns.",
+      "feature_locked": "Your plan does not include campaigns.",
+      "network": "No connection. Reload the page to see whether it started before you press Send again.",
+      "unknown": "It may not have started. Reload the page to see its state before you press Send again."
+    },
+    "counting": "Counting who it will reach…",
+    "title": "Send this SMS",
+    "about_now": "About {{number}} members of {{segment}} could receive it now, about {{segments}} SMS. It goes to whoever can receive it at that moment, counted then.",
+    "final": "Once it starts it can be stopped, but SMS already sent cannot be taken back. Twilio bills the venue for each SMS part.",
+    "keep": "Not now",
+    "confirm": "Text {{number}} members",
+    "schedule": "Schedule for {{when}}",
+    "will_text": "It will text {{number}} members of {{segment}}, starting now.",
+    "cost_long": "That is {{segments}} SMS in all: some copies are longer than one SMS, and each part is billed.",
+    "cost": "That is {{segments}} SMS in all, one each.",
+    "nobody": "Nobody in {{segment}} can receive it.",
+    "over": "It would reach {{number}} members, more than {{limit}}, the most one campaign may. Narrow the segment.",
+    "left_out": "{{number}} of its {{members}} members will not get it:"
+  },
+  "schedule": {
+    "error": {
+      "already_started": "This campaign was already started. The page now shows how far it got.",
+      "changed": "The campaign changed since this page showed it. Check it, then schedule it again.",
+      "bad_time": "Choose another time.",
+      "incomplete": "The campaign is not ready to send. The page now shows what it still needs.",
+      "not_ready": "The venue’s Twilio account is not set up. A super admin sets it in Settings → Integrations.",
+      "no_audience": "Choose who receives it first.",
+      "bad_rule": "Its segment has a rule that cannot be used. Fix the segment first.",
+      "not_found": "This SMS campaign no longer exists.",
+      "manager_only": "Only an owner or a manager can work with SMS campaigns.",
+      "not_allowed": "Only an owner or a manager can work with SMS campaigns.",
+      "feature_locked": "Your plan does not include campaigns.",
+      "network": "No connection. Reload the page to see whether it was scheduled before you try again.",
+      "unknown": "It may not have been scheduled. Reload the page to see its state before you try again."
+    }
+  },
+  "unschedule": {
+    "error": {
+      "not_scheduled": "It is no longer waiting: it started, or was taken back already. The page now shows it as it is.",
+      "not_found": "This SMS campaign no longer exists.",
+      "manager_only": "Only an owner or a manager can work with SMS campaigns.",
+      "not_allowed": "Only an owner or a manager can work with SMS campaigns.",
+      "network": "No connection: it is still scheduled. Try again.",
+      "unknown": "It could not be taken back. Please try again."
+    }
+  },
+  "cancel": {
+    "error": {
+      "not_sending": "This campaign is no longer sending. The page now shows it as it is.",
+      "not_found": "This SMS campaign no longer exists.",
+      "manager_only": "Only an owner or a manager can work with SMS campaigns.",
+      "not_allowed": "Only an owner or a manager can work with SMS campaigns.",
+      "network": "No connection: it may still be sending. Try again.",
+      "unknown": "It could not be stopped. Please try again."
+    },
+    "title": "Stop sending {{name}}?",
+    "confirm": "Stop sending",
+    "keep": "Keep sending",
+    "body": "{{sent}} SMS already went out and stay sent. The rest are not sent; it stops before the next member."
+  },
+  "duplicate": {
+    "error": {
+      "not_found": "This SMS campaign no longer exists.",
+      "manager_only": "Only an owner or a manager can work with SMS campaigns.",
+      "not_allowed": "Only an owner or a manager can work with SMS campaigns.",
+      "feature_locked": "Your plan does not include campaigns.",
+      "network": "No connection: no copy was made. Try again.",
+      "unknown": "The copy could not be made. Please try again."
+    }
+  },
+  "remove": {
+    "error": {
+      "not_a_draft": "Only a draft can be deleted. The page now shows it as it is.",
+      "not_found": "This SMS campaign no longer exists.",
+      "manager_only": "Only an owner or a manager can work with SMS campaigns.",
+      "not_allowed": "Only an owner or a manager can work with SMS campaigns.",
+      "network": "No connection: nothing was deleted. Try again.",
+      "unknown": "The draft could not be deleted. Please try again."
+    }
+  },
+  "member": {
+    "label": "Offers by SMS",
+    "on": "Turned on by the member",
+    "off": "Off"
+  },
+  "copy_name": "{{name}} (copy)",
+  "editor": {
+    "unsaved": "Changes not saved",
+    "save": "Save draft",
+    "test": "Send me a test",
+    "send": "Send…",
+    "test_sent": "A test went to {{phone}}, with “[TEST]” before the text.",
+    "before_send": "Before it can be sent:",
+    "heading": "The text",
+    "name": "Name",
+    "name_hint": "Only staff see it.",
+    "body": "Text",
+    "body_example": "e.g. Hi {{first}}, double points at {{venue}} until Sunday. Reply STOP to opt out.",
+    "length_hint": "Counted with your own name in the tags; each member’s copy is counted with theirs, and Send says the total.",
+    "stop_hint": "Many countries require marketing SMS to say how to stop them, for example “Reply STOP to opt out”.",
+    "unknown_tags": "{{tags}} will reach members as written: no tag of that name is filled in.",
+    "audience": "Who receives it",
+    "audience_hint": "Only the segment’s members who turned on offers by SMS and have a phone number with its country code get it. Send shows the exact number first.",
+    "choose_segment": "Choose a segment",
+    "segment_problem": "{{name}} (a rule needs fixing)",
+    "segment_option": "{{name}} · {{number}} members",
+    "segment_gone": "A segment that no longer exists",
+    "duplicate": "Duplicate",
+    "delete": "Delete draft"
+  },
+  "preview": {
+    "heading": "On a phone",
+    "no_from": "The venue’s number",
+    "no_text": "Your text",
+    "sample": "With your own name in the tags, as your test has them. Each member’s copy has theirs.",
+    "caption": "How it shows on a phone. Phones differ."
+  },
+  "tags": {
+    "title": "Tags",
+    "where": "A tag goes where the cursor is in the text. Each member’s copy shows their own.",
+    "no_room": "There is no room for that tag in the text."
+  },
+  "reach": {
+    "save_first": "Save the draft to count who it reaches.",
+    "choose": "Choose a segment to see who it reaches.",
+    "counted": "It would reach {{number}} of the {{members}} members of {{segment}} now: {{segments}} SMS in all."
+  },
+  "delete": {
+    "title": "Delete {{name}}?",
+    "confirm": "Delete draft",
+    "keep": "Keep it",
+    "body": "The draft goes for good. Nothing was sent from it."
+  },
+  "results": {
+    "to": "To {{segment}}",
+    "by": "Sent by {{name}}",
+    "title": "How far it got",
+    "of": "Of",
+    "parts": "SMS parts",
+    "progress": "Handled so far",
+    "sending": "Sending, in batches of 50. This page updates every 10 seconds.",
+    "done": "Sent {{when}}.",
+    "stopped": "Sending stopped before the end: {{sent}} were sent, the rest were not.",
+    "cancelled": "Cancelled: {{sent}} were sent before it stopped.",
+    "last_progress": "Last batch {{when}}.",
+    "outcome_count": "{{outcome}}: {{number}}",
+    "why_failed": "Why Twilio did not send them",
+    "failure_count": "{{number}}:",
+    "gone": "{{number}} were not reached: their member record was deleted or merged after it started.",
+    "delivery": "Sent means Twilio took it; whether each phone received it is shown in Twilio’s own logs.",
+    "message": "The text",
+    "cancel": "Stop sending"
+  },
+  "list": {
+    "no_segment": "No segment",
+    "new_name": "New SMS, {{day}}",
+    "line": "A short text to the phones of a segment’s members who turned on offers by SMS, sent from the venue’s own Twilio number.",
+    "new": "New SMS",
+    "none": "No SMS campaigns yet. Make one, write the text, choose a segment and send it.",
+    "no_text": "No text yet",
+    "edited": "Edited {{day}}",
+    "scheduled": "Goes out {{when}}",
+    "counts": "{{sent}} of {{total}} sent"
+  },
+  "plan_locked": "Your plan does not include campaigns, so SMS campaigns are not available either.",
+  "back": "All SMS campaigns",
+  "setup": {
+    "title": "SMS goes out through the venue’s own Twilio account, which is not set up yet.",
+    "where": "A super admin enters it in the full admin: Settings → Integrations → Twilio. It needs the Account SID, the Auth Token and the number SMS are sent from (with + and the country code), or a Messaging Service SID in its place.",
+    "billing": "Twilio bills the venue for every SMS part sent.",
+    "open": "Open Settings → Integrations in the full admin"
+  },
+  "length": {
+    "line": "{{chars}} of {{max}} characters · {{segments}} SMS (up to {{per}} characters each) · {{alphabet}}",
+    "unicode": "These characters make it Unicode, which fits fewer characters in each SMS: {{chars}}"
+  }
+}

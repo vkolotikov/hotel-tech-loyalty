@@ -97,7 +97,8 @@
     "none": "Aún no hay campañas. Cree una, elija un segmento, escriba el correo y envíelo.",
     "no_subject": "Aún sin asunto",
     "edited": "Editada el {{day}}",
-    "counts": "{{sent}} de {{total}} enviados · {{failed}} fallidos"
+    "counts": "{{sent}} de {{total}} enviados · {{failed}} fallidos",
+    "scheduled": "Se envía: {{when}}"
   },
   "cancel": {
     "title": "¿Detener el envío de {{name}}?",
@@ -204,19 +205,23 @@
       "network": "Sin conexión. Vuelva a cargar la página para ver si el envío empezó antes de pulsar Enviar otra vez.",
       "unknown": "Puede que el envío no haya empezado. Vuelva a cargar la página para ver su estado antes de pulsar Enviar otra vez."
     },
-    "unknown_tags": "El correo contiene {{tags}}, que ninguna etiqueta rellena: los miembros lo leerán tal cual."
+    "unknown_tags": "El correo contiene {{tags}}, que ninguna etiqueta rellena: los miembros lo leerán tal cual.",
+    "about_now": "Ahora podrían recibirlo unos {{number}} miembros de {{segment}}. Se envía a quienes puedan recibirlo en ese momento, contados entonces.",
+    "schedule": "Programar para el {{when}}"
   },
   "tab": {
     "campaigns": "Campañas",
     "segments": "Segmentos",
-    "push": "Notificaciones push"
+    "push": "Notificaciones push",
+    "sms": "SMS"
   },
   "status": {
     "draft": "Borrador",
     "sending": "Enviando",
     "sent": "Enviada",
     "failed": "Fallida",
-    "cancelled": "Cancelada"
+    "cancelled": "Cancelada",
+    "scheduled": "Programado"
   },
   "rule_type": {
     "tier": "Nivel",
@@ -407,6 +412,68 @@
       "not_allowed": "Solo un propietario o un responsable puede trabajar con campañas.",
       "network": "Sin conexión: no se ha eliminado nada. Inténtelo de nuevo.",
       "unknown": "No se ha podido eliminar el borrador. Inténtelo de nuevo."
+    }
+  },
+  "schedule_reason": {
+    "format": "Elija una fecha y una hora.",
+    "past": "Elija una hora al menos dos minutos a partir de ahora.",
+    "too_far": "Elija una hora dentro de un año a partir de ahora.",
+    "not_on_clock": "Entonces cambia la hora: esa hora no existe según el reloj del establecimiento. Elija otra."
+  },
+  "schedule_problem": {
+    "nobody_to_send_to": "nadie de su segmento podía recibirlo en ese momento.",
+    "too_many": "habría llegado a más miembros de los que permite un envío.",
+    "no_audience": "su segmento ya no existía.",
+    "bad_rule": "su segmento tenía una regla que no se puede usar.",
+    "no_category": "no tenía tipo de mensaje.",
+    "incomplete": "no estaba completo.",
+    "not_editable_here": "se cambió en el panel completo.",
+    "not_ready": "la cuenta de Twilio del establecimiento no estaba configurada."
+  },
+  "schedule": {
+    "error": {
+      "already_started": "Esta campaña ya se inició. La página muestra ahora hasta dónde ha llegado.",
+      "changed": "La campaña cambió desde que esta página la mostró. Revísela y vuelva a programarla.",
+      "bad_time": "Elija otra hora.",
+      "incomplete": "La campaña no está lista para enviarse. La página muestra ahora lo que le falta.",
+      "no_audience": "Elija primero quién la recibe.",
+      "bad_rule": "Su segmento tiene una regla que no se puede usar. Corrija primero el segmento.",
+      "not_editable_here": "Esta campaña se envía desde el admin completo.",
+      "not_found": "Esta campaña ya no existe.",
+      "manager_only": "Solo un propietario o un responsable puede trabajar con campañas.",
+      "not_allowed": "Solo un propietario o un responsable puede trabajar con campañas.",
+      "feature_locked": "Su plan no incluye campañas de correo.",
+      "network": "Sin conexión. Vuelva a cargar la página para ver si se programó antes de intentarlo de nuevo.",
+      "unknown": "Puede que no se haya programado. Vuelva a cargar la página para ver su estado antes de intentarlo de nuevo."
+    },
+    "when": "Cuándo se envía",
+    "now": "Enviar ahora",
+    "later": "Enviar más tarde",
+    "at": "Fecha y hora",
+    "zone": "Según la hora del establecimiento ({{zone}}).",
+    "title": "Programado",
+    "goes_out": "Se envía el {{when}}, según la hora del establecimiento.",
+    "whoever": "Se envía a quienes puedan recibirlo en ese momento, contados entonces. Hasta entonces se puede mover o devolver a borrador.",
+    "by": "Programado por {{name}}",
+    "move": "Cambiar la hora",
+    "take_back": "Devolver a borrador",
+    "back_title": "¿Devolverlo a borrador?",
+    "back_confirm": "Retirar",
+    "back_keep": "Mantenerlo programado",
+    "back_body": "No se envía nada. Vuelve a ser un borrador, para cambiarlo o enviarlo en otro momento.",
+    "move_title": "Cambiar cuándo se envía",
+    "move_keep": "Mantener la hora",
+    "move_confirm": "Moverlo",
+    "did_not_start": "Estaba previsto para el {{when}} pero no comenzó: {{why}} No se envió nada. Duplíquelo para enviarlo de nuevo."
+  },
+  "unschedule": {
+    "error": {
+      "not_scheduled": "Ya no está en espera: comenzó o ya se retiró. La página lo muestra ahora tal como está.",
+      "not_found": "Esta campaña ya no existe.",
+      "manager_only": "Solo un propietario o un responsable puede trabajar con campañas.",
+      "not_allowed": "Solo un propietario o un responsable puede trabajar con campañas.",
+      "network": "Sin conexión: sigue programado. Inténtelo de nuevo.",
+      "unknown": "No se pudo retirar. Inténtelo de nuevo."
     }
   }
 }

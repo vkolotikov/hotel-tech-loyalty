@@ -97,7 +97,8 @@
     "none": "No campaigns yet. Make one, choose a segment, write the email and send it.",
     "no_subject": "No subject yet",
     "edited": "Edited {{day}}",
-    "counts": "{{sent}} of {{total}} sent · {{failed}} failed"
+    "counts": "{{sent}} of {{total}} sent · {{failed}} failed",
+    "scheduled": "Goes out {{when}}"
   },
   "cancel": {
     "title": "Stop sending {{name}}?",
@@ -204,19 +205,23 @@
       "network": "No connection. Reload the page to see whether it started before you press Send again.",
       "unknown": "It may not have started. Reload the page to see its state before you press Send again."
     },
-    "unknown_tags": "The email holds {{tags}}, which no tag fills: members will read it as written."
+    "unknown_tags": "The email holds {{tags}}, which no tag fills: members will read it as written.",
+    "about_now": "About {{number}} members of {{segment}} could receive it now. It goes to whoever can receive it at that moment, counted then.",
+    "schedule": "Schedule for {{when}}"
   },
   "tab": {
     "campaigns": "Campaigns",
     "segments": "Segments",
-    "push": "Push messages"
+    "push": "Push messages",
+    "sms": "SMS"
   },
   "status": {
     "draft": "Draft",
     "sending": "Sending",
     "sent": "Sent",
     "failed": "Failed",
-    "cancelled": "Cancelled"
+    "cancelled": "Cancelled",
+    "scheduled": "Scheduled"
   },
   "rule_type": {
     "tier": "Tier",
@@ -407,6 +412,68 @@
       "not_allowed": "Only an owner or a manager can work with campaigns.",
       "network": "No connection: nothing was deleted. Try again.",
       "unknown": "The draft could not be deleted. Please try again."
+    }
+  },
+  "schedule_reason": {
+    "format": "Choose a date and a time.",
+    "past": "Choose a time at least two minutes from now.",
+    "too_far": "Choose a time within a year from now.",
+    "not_on_clock": "The clocks change then: that time does not exist on the venue’s clock. Choose another."
+  },
+  "schedule_problem": {
+    "nobody_to_send_to": "nobody in its segment could receive it then.",
+    "too_many": "it would have reached more members than one send may.",
+    "no_audience": "its segment no longer existed.",
+    "bad_rule": "its segment had a rule that cannot be used.",
+    "no_category": "it had no kind of message.",
+    "incomplete": "it was not complete.",
+    "not_editable_here": "it was changed in the full admin.",
+    "not_ready": "the venue’s Twilio account was not set up."
+  },
+  "schedule": {
+    "error": {
+      "already_started": "This campaign was already started. The page now shows how far it got.",
+      "changed": "The campaign changed since this page showed it. Check it, then schedule it again.",
+      "bad_time": "Choose another time.",
+      "incomplete": "The campaign is not ready to send. The page now shows what it still needs.",
+      "no_audience": "Choose who receives it first.",
+      "bad_rule": "Its segment has a rule that cannot be used. Fix the segment first.",
+      "not_editable_here": "This campaign is sent from the full admin.",
+      "not_found": "This campaign no longer exists.",
+      "manager_only": "Only an owner or a manager can work with campaigns.",
+      "not_allowed": "Only an owner or a manager can work with campaigns.",
+      "feature_locked": "Your plan does not include email campaigns.",
+      "network": "No connection. Reload the page to see whether it was scheduled before you try again.",
+      "unknown": "It may not have been scheduled. Reload the page to see its state before you try again."
+    },
+    "when": "When it goes out",
+    "now": "Send now",
+    "later": "Send later",
+    "at": "Date and time",
+    "zone": "On the venue’s clock ({{zone}}).",
+    "title": "Scheduled",
+    "goes_out": "It goes out {{when}}, on the venue’s clock.",
+    "whoever": "It goes to whoever can receive it at that moment, counted then. Until then it can be moved or taken back to a draft.",
+    "by": "Scheduled by {{name}}",
+    "move": "Change time",
+    "take_back": "Take back to a draft",
+    "back_title": "Take it back to a draft?",
+    "back_confirm": "Take back",
+    "back_keep": "Keep it scheduled",
+    "back_body": "Nothing is sent. It becomes a draft again, to change or to send another time.",
+    "move_title": "Change when it goes out",
+    "move_keep": "Keep the time",
+    "move_confirm": "Move it",
+    "did_not_start": "It was due {{when}} but did not start: {{why}} Nothing was sent. Duplicate it to send it again."
+  },
+  "unschedule": {
+    "error": {
+      "not_scheduled": "It is no longer waiting: it started, or was taken back already. The page now shows it as it is.",
+      "not_found": "This campaign no longer exists.",
+      "manager_only": "Only an owner or a manager can work with campaigns.",
+      "not_allowed": "Only an owner or a manager can work with campaigns.",
+      "network": "No connection: it is still scheduled. Try again.",
+      "unknown": "It could not be taken back. Please try again."
     }
   }
 }

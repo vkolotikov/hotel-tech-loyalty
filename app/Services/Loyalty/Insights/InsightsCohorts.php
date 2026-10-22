@@ -50,9 +50,9 @@ final class InsightsCohorts
             ->whereRaw("{$joined} >= ? AND {$joined} < ?", [$bounds[0], $bounds[self::MONTHS]]);
 
         $sizes = array_fill(0, self::MONTHS, 0);
-        $members = $inRange(DB::table('loyalty_members as lm'))->selectRaw("{$cohortSql} AS cohort", $cohortBindings);
-        foreach (DB::query()->fromSub($members, 'c')->selectRaw('c.cohort AS cohort, COUNT(*) AS n')->groupBy('c.cohort')->get() as $row) {
-            $sizes[(int) $row->cohort] = (int) $row->n;
+        $members = $inRange(DB::table('loyalty_members as lm'))->selectRaw("{$cohortSql} AS cohort_ix", $cohortBindings);
+        foreach (DB::query()->fromSub($members, 'c')->selectRaw('c.cohort_ix AS cohort_ix, COUNT(*) AS n')->groupBy('c.cohort_ix')->get() as $row) {
+            $sizes[(int) $row->cohort_ix] = (int) $row->n;
         }
 
         [$monthSql, $monthBindings] = self::monthOf('pt.created_at', $bounds);
@@ -68,15 +68,15 @@ final class InsightsCohorts
                 ->where(fn ($x) => $x->where('pt.type', 'redeem')->where('pt.points', '<>', 0))
                 ->orWhere(fn ($x) => $x->where('pt.points', '>', 0)
                     ->whereRaw("NOT (COALESCE(pt.type, '') = 'adjust' AND COALESCE(pt.description, '') LIKE ?)", [LoyaltyInsights::REFUND_PREFIX . '%'])))
-            ->selectRaw("pt.member_id AS member_id, {$cohortSql} AS cohort, {$monthSql} AS month", [...$cohortBindings, ...$monthBindings]);
+            ->selectRaw("pt.member_id AS member_id, {$cohortSql} AS cohort_ix, {$monthSql} AS month_ix", [...$cohortBindings, ...$monthBindings]);
 
         $active = array_map(fn (int $i) => array_fill(0, self::MONTHS - $i, 0), range(0, self::MONTHS - 1));
         $counts = DB::query()->fromSub($lines, 'a')
-            ->selectRaw('a.cohort AS cohort, a.month AS month, COUNT(DISTINCT a.member_id) AS n')
-            ->groupBy('a.cohort', 'a.month')->get();
+            ->selectRaw('a.cohort_ix AS cohort_ix, a.month_ix AS month_ix, COUNT(DISTINCT a.member_id) AS n')
+            ->groupBy('a.cohort_ix', 'a.month_ix')->get();
         foreach ($counts as $row) {
-            $cohort = (int) $row->cohort;
-            $offset = (int) $row->month - $cohort;
+            $cohort = (int) $row->cohort_ix;
+            $offset = (int) $row->month_ix - $cohort;
             if (isset($active[$cohort][$offset])) {
                 $active[$cohort][$offset] = (int) $row->n;
             }

@@ -13,7 +13,7 @@ import { Skeleton } from '../../ui/Skeleton'
 import { Toggle } from '../../ui/Toggle'
 import { CouponField } from '../book/CouponField'
 import { StayPriceBreakdown } from './StayPriceBreakdown'
-import { afterStayQuoteError, chosenRoomsLabel, stayQuoteBody, type StayReviewPatch, type StayState } from './staySteps'
+import { afterStayQuoteError, stayQuoteBody, type StayReviewPatch, type StayState } from './staySteps'
 import type { CouponRef, StayCatalogue, StayQuote, StayQuoteBody } from '../../lib/types'
 
 export interface StayReviewStepProps {
@@ -74,8 +74,7 @@ export function StayReviewStep({ catalogue, state, onChange, onBack, onBounce, o
     onChange({ coupon: c })
   }
 
-  // One room's name, or a combination's rooms together (part D), until the quote names them itself.
-  const roomsLabel = chosenRoomsLabel(state, catalogue.rooms)
+  const room = catalogue.rooms.find(r => r.id === state.roomId)
   const policy = quote.data?.policy
 
   return (
@@ -83,14 +82,9 @@ export function StayReviewStep({ catalogue, state, onChange, onBack, onBounce, o
       <h2 tabIndex={-1} data-step-heading="review" className="sr-only">{t('portal.stay.heading_review', 'Check the details')}</h2>
       <Card className="p-4 flex items-start justify-between gap-4">
         <div className="min-w-0">
-          <p className="font-medium">{quote.data?.room.name ?? roomsLabel}</p>
+          <p className="font-medium">{quote.data?.room.name ?? room?.name}</p>
           <p className="text-sm text-p-text-2">{state.checkIn && formatDay(state.checkIn, i18n.language)} – {state.checkOut && formatDay(state.checkOut, i18n.language)}</p>
           <p className="text-sm text-p-text-2">{t('portal.stay.guests_line', 'Adults: {{adults}} · children: {{children}}', { adults: state.adults, children: state.children })}</p>
-          {/* Who sleeps where — the server's own split of the party (StayCombination::party()). */}
-          {quote.data?.rooms?.map((r, i) => (
-            <p key={`${r.id}-${i}`} className="text-sm text-p-text-2">{t('portal.stay.room_party', '{{room}} — adults: {{adults}} · children: {{children}}', { room: r.name, adults: r.adults, children: r.children })}</p>
-          ))}
-          {state.roomIds !== null && <p className="text-xs text-p-text-2 mt-1">{t('portal.stay.together_note', 'One booking for all these rooms: one payment, and they are cancelled together.')}</p>}
         </div>
         <Button type="button" variant="ghost" size="sm" onClick={onBack}>{t('portal.book.change', 'Change')}</Button>
       </Card>

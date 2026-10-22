@@ -110,7 +110,8 @@
     "no_category": "Type pas encore choisi",
     "no_segment": "Aucun segment",
     "no_title": "Pas encore de titre",
-    "none": "Aucune notification push pour l’instant. Créez-en une, choisissez son type et un segment, puis envoyez-la."
+    "none": "Aucune notification push pour l’instant. Créez-en une, choisissez son type et un segment, puis envoyez-la.",
+    "scheduled": "Part le {{when}}"
   },
   "load": {
     "error": {
@@ -227,13 +228,43 @@
     "nobody": "Personne dans {{segment}} ne peut la recevoir.",
     "over": "Elle toucherait {{number}} membres, plus de {{limit}}, le maximum pour une notification. Réduisez le segment.",
     "title": "Envoyer cette notification push",
-    "will_push": "Elle partira vers {{number}} membres de {{segment}}, dès maintenant."
+    "will_push": "Elle partira vers {{number}} membres de {{segment}}, dès maintenant.",
+    "about_now": "Environ {{number}} membres de {{segment}} pourraient le recevoir maintenant. Il part à ceux qui pourront le recevoir à ce moment-là, comptés alors.",
+    "schedule": "Programmer pour le {{when}}"
   },
   "status": {
     "cancelled": "Annulée",
     "draft": "Brouillon",
     "failed": "Échec",
     "sending": "En cours d’envoi",
-    "sent": "Envoyée"
+    "sent": "Envoyée",
+    "scheduled": "Programmé"
+  },
+  "schedule": {
+    "error": {
+      "already_started": "Cette notification a déjà été lancée. La page affiche désormais où en est l’envoi.",
+      "changed": "Le message a changé depuis que cette page l’a affiché. Vérifiez-le, puis programmez-le à nouveau.",
+      "bad_time": "Choisissez une autre heure.",
+      "incomplete": "La notification n’est pas prête à partir. La page affiche désormais ce qu’il lui manque.",
+      "no_audience": "Choisissez d’abord qui la reçoit.",
+      "no_category": "Choisissez d’abord le type de message.",
+      "bad_rule": "Son segment contient une règle inutilisable. Corrigez d’abord le segment.",
+      "not_found": "Cette notification push n’existe plus.",
+      "manager_only": "Seul un propriétaire ou un responsable peut travailler sur les notifications push.",
+      "not_allowed": "Seul un propriétaire ou un responsable peut travailler sur les notifications push.",
+      "feature_locked": "Votre formule n’inclut pas les notifications push.",
+      "network": "Pas de connexion. Rechargez la page pour voir s’il a été programmé avant de réessayer.",
+      "unknown": "Il n’a peut-être pas été programmé. Rechargez la page pour voir son état avant de réessayer."
+    }
+  },
+  "unschedule": {
+    "error": {
+      "not_scheduled": "Il n’attend plus : il a commencé, ou a déjà été repris. La page l’affiche maintenant tel qu’il est.",
+      "not_found": "Cette notification push n’existe plus.",
+      "manager_only": "Seul un propriétaire ou un responsable peut travailler sur les notifications push.",
+      "not_allowed": "Seul un propriétaire ou un responsable peut travailler sur les notifications push.",
+      "network": "Pas de connexion : il est toujours programmé. Réessayez.",
+      "unknown": "Impossible de le reprendre. Veuillez réessayer."
+    }
   }
 }

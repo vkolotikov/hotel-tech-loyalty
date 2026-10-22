@@ -132,9 +132,6 @@ export interface PortalBooking {
   paid_online: boolean
   /** Part H: a deposit charged on the venue's booking page (the rest is paid at the venue); null otherwise. */
   deposit?: { amount: number } | null
-  /** Release 4, part D: a stay of several rooms booked as one (MemberBookingQuery::combinationDto()) lists them;
-   *  the booking's own total, guests and `can_cancel` are the whole combination's. Absent for one room. */
-  rooms?: { id: number; reference: string; title: string; guests: number | null; total: number; status: string }[]
 }
 
 export interface Paginated<T> { data: T[]; meta: { scope: string; page: number; per_page: number; total: number } }
@@ -314,29 +311,12 @@ export interface AvailableRoom {
   price_per_night: number; total_price: number; member_total: number; currency: string; min_stay: number
 }
 
-/** Release 4, part D: two or three rooms that together sleep a party no single room does, offered by
- *  `PortalStayBookingController::availability()` when `rooms` is empty — booked as one stay, paid once. Every
- *  number is the server's; the quote prices it again. */
-export interface AvailableCombination {
-  key: string
-  rooms: { id: string; name: string; max_guests: number; total_price: number; image: string | null }[]
-  sleeps: number
-  total_price: number
-  member_total: number
-  currency: string
-}
+export interface StayAvailability { rooms: AvailableRoom[]; nights: number; party_too_large: boolean }
 
-/** `combinations` (part D) is absent from an older server; an empty list means no combination is offered. */
-export interface StayAvailability { rooms: AvailableRoom[]; nights: number; party_too_large: boolean; combinations?: AvailableCombination[] }
-
-/** One room (`unit_id`) or a combination of two or three (`unit_ids`, part D) — never both. */
 export interface StayQuoteBody {
-  unit_id?: string; unit_ids?: string[]; check_in: string; check_out: string; adults: number; children: number
+  unit_id: string; check_in: string; check_out: string; adults: number; children: number
   extras?: { id: string; quantity?: number }[]; coupon?: CouponRef | null
 }
-
-/** A combination quote's own room: its list price and who sleeps in it (StayQuoteService::payload()). */
-export interface StayQuoteRoom { id: string; name: string; room_total: number; price_per_night: number; adults: number; children: number }
 
 export interface StayQuoteLine { id: string; name: string; unit_price: number; quantity: number; line_total: number }
 
@@ -350,8 +330,6 @@ export interface StayQuote {
   adults: number
   children: number
   lines: { room_total: number; price_per_night: number; extras: StayQuoteLine[]; extras_total: number }
-  /** A combination's rooms (part D); absent for one room. `room` then names them all together. */
-  rooms?: StayQuoteRoom[]
   list_amount: number
   discount: Quote['discount']
   coupon: Quote['coupon']

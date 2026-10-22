@@ -1,1 +1,319 @@
-{}
+{
+  "status": {
+    "draft": "Entwurf",
+    "scheduled": "Geplant",
+    "sending": "Wird gesendet",
+    "sent": "Gesendet",
+    "failed": "Fehlgeschlagen",
+    "cancelled": "Abgebrochen"
+  },
+  "not_reached": {
+    "no_consent": "{{number}} haben Angebote per SMS nicht eingeschaltet",
+    "no_phone": "{{number}} haben keine Telefonnummer",
+    "bad_phone": "{{number}} haben eine Nummer ohne Landesvorwahl (sie muss mit + und der Landesvorwahl beginnen)",
+    "same_phone": "{{number}} teilen eine Nummer mit einem anderen erreichten Mitglied, das die eine SMS erhält"
+  },
+  "blocker": {
+    "twilio": "Richten Sie zuerst das Twilio-Konto des Hauses ein.",
+    "unsaved": "Speichern Sie zuerst Ihre Änderungen.",
+    "body": "Schreiben Sie den Text.",
+    "no_segment": "Wählen Sie, wer sie erhält.",
+    "segment_gone": "Ihr Segment gibt es nicht mehr. Wählen Sie ein anderes.",
+    "segment_problem": "Das Segment hat eine Regel, die sich nicht anwenden lässt. Korrigieren Sie zuerst das Segment."
+  },
+  "problem": {
+    "name": "Geben Sie der Kampagne einen Namen mit bis zu {{max}} Zeichen.",
+    "body_long": "Halten Sie den Text bei höchstens {{max}} Zeichen.",
+    "segment_gone": "Dieses Segment gibt es nicht mehr. Wählen Sie ein anderes."
+  },
+  "setting": {
+    "account_sid": "Twilio Account SID",
+    "auth_token": "Twilio Auth Token",
+    "phone_number": "Twilio Phone Number (Telefonnummer)"
+  },
+  "setting_state": {
+    "missing": "{{setting}}: noch nicht eingetragen",
+    "wrong": "{{setting}}: nicht in einer Form, die Twilio annimmt"
+  },
+  "encoding": {
+    "gsm7": "Standard-SMS-Alphabet",
+    "ucs2": "Unicode"
+  },
+  "outcome": {
+    "sent": "Gesendet",
+    "failed": "Nicht gesendet",
+    "skipped": "Übersprungen",
+    "pending": "In Arbeit"
+  },
+  "outcome_hint": {
+    "sent": "Twilio hat die SMS angenommen. Die Zustellung ans Telefon übernimmt das Netz.",
+    "failed": "Twilio hat die SMS für diese Nummer abgelehnt oder war nicht erreichbar. Die Gründe stehen unten.",
+    "skipped": "Sie haben SMS ausgeschaltet, ihre Nummer verloren oder wurden nach dem Start deaktiviert.",
+    "pending": "An sie wurde gerade gesendet, als der Versand stoppte. Es wird nicht erneut an sie gesendet."
+  },
+  "twilio": {
+    "20003": "Twilio hat die Account SID oder das Auth Token abgelehnt. Prüfen Sie sie unter Einstellungen → Integrationen.",
+    "20005": "Das Twilio-Konto ist nicht aktiv. Prüfen Sie es in Twilio.",
+    "21211": "Die Nummer ist keine gültige Telefonnummer.",
+    "21408": "Das Senden in dieses Land ist in Twilio nicht eingeschaltet (Messaging, Geo permissions).",
+    "21606": "Die Twilio-Nummer des Hauses kann keine SMS senden. Prüfen Sie die Nummer in Twilio.",
+    "21608": "Ein Twilio-Testkonto sendet nur an Nummern, die in Twilio bestätigt sind.",
+    "21610": "Die Nummer hat der Twilio-Nummer des Hauses STOP geantwortet. Die SMS-Zustimmung ist jetzt aus.",
+    "21612": "Twilio kann von der Nummer des Hauses nicht an diese Nummer senden.",
+    "21614": "Die Nummer kann keine SMS empfangen (keine Mobilnummer).",
+    "21617": "Der Text ist für eine Nachricht zu lang."
+  },
+  "failure": {
+    "unreachable": "Twilio war nicht erreichbar.",
+    "not_ready": "Das Twilio-Konto des Hauses ist nicht eingerichtet.",
+    "job_failed": "Das Senden wurde nach wiederholten Fehlern angehalten.",
+    "other": "Twilio hat es abgelehnt ({{reason}})."
+  },
+  "load": {
+    "error": {
+      "not_found": "Diese SMS-Kampagne gibt es nicht mehr.",
+      "manager_only": "Nur Inhaber oder Manager können mit SMS-Kampagnen arbeiten.",
+      "not_allowed": "Nur Inhaber oder Manager können mit SMS-Kampagnen arbeiten.",
+      "feature_locked": "Ihr Tarif enthält keine Kampagnen.",
+      "network": "Keine Verbindung. Bitte prüfen Sie das Netzwerk und versuchen Sie es erneut.",
+      "unknown": "Das ließ sich nicht laden. Bitte versuchen Sie es erneut."
+    }
+  },
+  "create": {
+    "error": {
+      "manager_only": "Nur Inhaber oder Manager können mit SMS-Kampagnen arbeiten.",
+      "not_allowed": "Nur Inhaber oder Manager können mit SMS-Kampagnen arbeiten.",
+      "feature_locked": "Ihr Tarif enthält keine Kampagnen.",
+      "network": "Keine Verbindung: Es wurde keine Kampagne angelegt. Bitte versuchen Sie es erneut.",
+      "unknown": "Die Kampagne konnte nicht angelegt werden. Bitte versuchen Sie es erneut."
+    }
+  },
+  "save": {
+    "error": {
+      "not_a_draft": "Diese Kampagne ist kein Entwurf mehr: Sie wurde inzwischen gesendet oder geplant. Die Seite zeigt sie jetzt, wie sie ist.",
+      "not_found": "Diese SMS-Kampagne gibt es nicht mehr.",
+      "invalid": "Prüfen Sie die unten markierten Felder.",
+      "manager_only": "Nur Inhaber oder Manager können mit SMS-Kampagnen arbeiten.",
+      "not_allowed": "Nur Inhaber oder Manager können mit SMS-Kampagnen arbeiten.",
+      "feature_locked": "Ihr Tarif enthält keine Kampagnen.",
+      "network": "Keine Verbindung: Es wurde nichts gespeichert. Bitte versuchen Sie es erneut.",
+      "unknown": "Der Entwurf ließ sich nicht speichern. Bitte versuchen Sie es erneut."
+    }
+  },
+  "audience": {
+    "error": {
+      "no_audience": "Wählen Sie zuerst, wer sie erhält.",
+      "bad_rule": "Das Segment hat eine Regel, die sich nicht anwenden lässt. Korrigieren Sie zuerst das Segment.",
+      "not_found": "Diese SMS-Kampagne gibt es nicht mehr.",
+      "manager_only": "Nur Inhaber oder Manager können mit SMS-Kampagnen arbeiten.",
+      "not_allowed": "Nur Inhaber oder Manager können mit SMS-Kampagnen arbeiten.",
+      "network": "Keine Verbindung: Es ließ sich nicht zählen, wen sie erreicht.",
+      "unknown": "Es ließ sich nicht zählen, wen sie erreicht. Bitte versuchen Sie es erneut."
+    }
+  },
+  "test": {
+    "error": {
+      "no_phone": "Ihr Konto hat keine Telefonnummer für den Test. Es braucht eine mit + und Landesvorwahl.",
+      "bad_phone": "Die Telefonnummer Ihres Kontos hat keine Landesvorwahl. Sie muss mit + und der Landesvorwahl beginnen.",
+      "not_ready": "Das Twilio-Konto des Hauses ist nicht eingerichtet. Ein Super-Admin richtet es unter Einstellungen → Integrationen ein.",
+      "incomplete": "Schreiben Sie zuerst den Text.",
+      "test_failed": "Twilio hat den Test nicht angenommen.",
+      "not_found": "Diese SMS-Kampagne gibt es nicht mehr.",
+      "manager_only": "Nur Inhaber oder Manager können mit SMS-Kampagnen arbeiten.",
+      "not_allowed": "Nur Inhaber oder Manager können mit SMS-Kampagnen arbeiten.",
+      "feature_locked": "Ihr Tarif enthält keine Kampagnen.",
+      "network": "Keine Verbindung: Der Test ist vielleicht hinausgegangen, vielleicht nicht. Prüfen Sie Ihr Telefon, bevor Sie es erneut versuchen.",
+      "unknown": "Der Test konnte nicht gesendet werden. Bitte versuchen Sie es erneut."
+    }
+  },
+  "send": {
+    "error": {
+      "already_started": "Diese Kampagne wurde bereits gestartet. Die Seite zeigt jetzt, wie weit sie ist.",
+      "changed": "Die Kampagne hat sich geändert, seit diese Seite sie zeigte. Prüfen Sie sie und senden Sie dann erneut.",
+      "audience_changed": "Sie würde jetzt {{reached}} Mitglieder erreichen. Prüfen Sie die Zahl und senden Sie erneut.",
+      "incomplete": "Die Kampagne ist noch nicht bereit. Die Seite zeigt jetzt, was noch fehlt.",
+      "not_ready": "Das Twilio-Konto des Hauses ist nicht eingerichtet. Ein Super-Admin richtet es unter Einstellungen → Integrationen ein.",
+      "no_audience": "Wählen Sie zuerst, wer sie erhält.",
+      "bad_rule": "Das Segment hat eine Regel, die sich nicht anwenden lässt. Korrigieren Sie zuerst das Segment.",
+      "nobody_to_send_to": "Niemand in diesem Segment kann es erhalten.",
+      "too_many": "Es würde mehr als {{limit}} Mitglieder erreichen, das Höchste, was eine Kampagne darf. Grenzen Sie das Segment ein.",
+      "not_started": "Die Kampagne konnte nicht eingereiht werden. Es wurde nichts gesendet; bitte versuchen Sie es erneut.",
+      "not_found": "Diese SMS-Kampagne gibt es nicht mehr.",
+      "manager_only": "Nur Inhaber oder Manager können mit SMS-Kampagnen arbeiten.",
+      "not_allowed": "Nur Inhaber oder Manager können mit SMS-Kampagnen arbeiten.",
+      "feature_locked": "Ihr Tarif enthält keine Kampagnen.",
+      "network": "Keine Verbindung. Laden Sie die Seite neu und prüfen Sie, ob der Versand begonnen hat, bevor Sie erneut auf Senden drücken.",
+      "unknown": "Möglicherweise hat sie nicht begonnen. Laden Sie die Seite neu und prüfen Sie ihren Stand, bevor Sie erneut auf Senden drücken."
+    },
+    "counting": "Es wird gezählt, wen sie erreicht…",
+    "title": "Diese SMS senden",
+    "about_now": "Jetzt könnten es etwa {{number}} Mitglieder von {{segment}} erhalten, etwa {{segments}} SMS. Es geht an alle, die es zu diesem Zeitpunkt erhalten können, dann gezählt.",
+    "final": "Nach dem Start lässt es sich anhalten, aber bereits gesendete SMS lassen sich nicht zurückholen. Twilio berechnet dem Haus jeden SMS-Teil.",
+    "keep": "Nicht jetzt",
+    "confirm": "SMS an {{number}} Mitglieder",
+    "schedule": "Planen für {{when}}",
+    "will_text": "Es schreibt {{number}} Mitgliedern von {{segment}} eine SMS, ab sofort.",
+    "cost_long": "Das sind insgesamt {{segments}} SMS: Manche Kopien sind länger als eine SMS, und jeder Teil wird berechnet.",
+    "cost": "Das sind insgesamt {{segments}} SMS, je eine.",
+    "nobody": "Niemand in {{segment}} kann sie erhalten.",
+    "over": "Es würde {{number}} Mitglieder erreichen, mehr als {{limit}}, das Höchste, was eine Kampagne darf. Grenzen Sie das Segment ein.",
+    "left_out": "{{number}} seiner {{members}} Mitglieder erhalten sie nicht:"
+  },
+  "schedule": {
+    "error": {
+      "already_started": "Diese Kampagne wurde bereits gestartet. Die Seite zeigt jetzt, wie weit sie ist.",
+      "changed": "Die Kampagne hat sich geändert, seit diese Seite sie gezeigt hat. Prüfen Sie sie und planen Sie sie erneut.",
+      "bad_time": "Wählen Sie eine andere Zeit.",
+      "incomplete": "Die Kampagne ist noch nicht bereit. Die Seite zeigt jetzt, was noch fehlt.",
+      "not_ready": "Das Twilio-Konto des Hauses ist nicht eingerichtet. Ein Super-Admin richtet es unter Einstellungen → Integrationen ein.",
+      "no_audience": "Wählen Sie zuerst, wer sie erhält.",
+      "bad_rule": "Das Segment hat eine Regel, die sich nicht anwenden lässt. Korrigieren Sie zuerst das Segment.",
+      "not_found": "Diese SMS-Kampagne gibt es nicht mehr.",
+      "manager_only": "Nur Inhaber oder Manager können mit SMS-Kampagnen arbeiten.",
+      "not_allowed": "Nur Inhaber oder Manager können mit SMS-Kampagnen arbeiten.",
+      "feature_locked": "Ihr Tarif enthält keine Kampagnen.",
+      "network": "Keine Verbindung. Laden Sie die Seite neu, um zu sehen, ob es geplant wurde, bevor Sie es erneut versuchen.",
+      "unknown": "Es wurde möglicherweise nicht geplant. Laden Sie die Seite neu, um den Stand zu sehen, bevor Sie es erneut versuchen."
+    }
+  },
+  "unschedule": {
+    "error": {
+      "not_scheduled": "Es wartet nicht mehr: Es hat begonnen oder wurde bereits zurückgenommen. Die Seite zeigt es jetzt, wie es ist.",
+      "not_found": "Diese SMS-Kampagne gibt es nicht mehr.",
+      "manager_only": "Nur Inhaber oder Manager können mit SMS-Kampagnen arbeiten.",
+      "not_allowed": "Nur Inhaber oder Manager können mit SMS-Kampagnen arbeiten.",
+      "network": "Keine Verbindung: Es ist noch geplant. Versuchen Sie es erneut.",
+      "unknown": "Es konnte nicht zurückgenommen werden. Bitte versuchen Sie es erneut."
+    }
+  },
+  "cancel": {
+    "error": {
+      "not_sending": "Diese Kampagne wird nicht mehr gesendet. Die Seite zeigt jetzt den aktuellen Stand.",
+      "not_found": "Diese SMS-Kampagne gibt es nicht mehr.",
+      "manager_only": "Nur Inhaber oder Manager können mit SMS-Kampagnen arbeiten.",
+      "not_allowed": "Nur Inhaber oder Manager können mit SMS-Kampagnen arbeiten.",
+      "network": "Keine Verbindung: Der Versand läuft vielleicht noch. Bitte versuchen Sie es erneut.",
+      "unknown": "Der Versand ließ sich nicht stoppen. Bitte versuchen Sie es erneut."
+    },
+    "title": "Versand von {{name}} stoppen?",
+    "confirm": "Versand stoppen",
+    "keep": "Weiter senden",
+    "body": "{{sent}} SMS sind bereits hinausgegangen und bleiben gesendet. Der Rest wird nicht gesendet; es hält vor dem nächsten Mitglied an."
+  },
+  "duplicate": {
+    "error": {
+      "not_found": "Diese SMS-Kampagne gibt es nicht mehr.",
+      "manager_only": "Nur Inhaber oder Manager können mit SMS-Kampagnen arbeiten.",
+      "not_allowed": "Nur Inhaber oder Manager können mit SMS-Kampagnen arbeiten.",
+      "feature_locked": "Ihr Tarif enthält keine Kampagnen.",
+      "network": "Keine Verbindung: Es wurde keine Kopie angelegt. Bitte versuchen Sie es erneut.",
+      "unknown": "Die Kopie ließ sich nicht anlegen. Bitte versuchen Sie es erneut."
+    }
+  },
+  "remove": {
+    "error": {
+      "not_a_draft": "Nur ein Entwurf lässt sich löschen. Die Seite zeigt ihn jetzt so, wie er ist.",
+      "not_found": "Diese SMS-Kampagne gibt es nicht mehr.",
+      "manager_only": "Nur Inhaber oder Manager können mit SMS-Kampagnen arbeiten.",
+      "not_allowed": "Nur Inhaber oder Manager können mit SMS-Kampagnen arbeiten.",
+      "network": "Keine Verbindung: Es wurde nichts gelöscht. Bitte versuchen Sie es erneut.",
+      "unknown": "Der Entwurf ließ sich nicht löschen. Bitte versuchen Sie es erneut."
+    }
+  },
+  "member": {
+    "label": "Angebote per SMS",
+    "on": "Vom Mitglied eingeschaltet",
+    "off": "Aus"
+  },
+  "copy_name": "{{name}} (Kopie)",
+  "editor": {
+    "unsaved": "Änderungen nicht gespeichert",
+    "save": "Entwurf speichern",
+    "test": "Test an mich senden",
+    "send": "Senden…",
+    "test_sent": "Ein Test ging an {{phone}}, mit „[TEST]“ vor dem Text.",
+    "before_send": "Bevor sie gesendet werden kann:",
+    "heading": "Der Text",
+    "name": "Name",
+    "name_hint": "Nur für das Team sichtbar.",
+    "body": "Text",
+    "body_example": "z. B. Hallo {{first}}, doppelte Punkte bei {{venue}} bis Sonntag. Antworten Sie STOP zum Abmelden.",
+    "length_hint": "Gezählt mit Ihrem eigenen Namen in den Platzhaltern; jede Kopie wird mit den Angaben des Mitglieds gezählt, und Senden nennt die Summe.",
+    "stop_hint": "In vielen Ländern müssen Werbe-SMS sagen, wie man sie abbestellt, zum Beispiel „Antworten Sie STOP zum Abmelden“.",
+    "unknown_tags": "{{tags}} erreicht die Mitglieder so, wie es dasteht: Kein Platzhalter dieses Namens wird ausgefüllt.",
+    "audience": "Wer sie erhält",
+    "audience_hint": "Nur Mitglieder des Segments, die Angebote per SMS eingeschaltet haben und eine Telefonnummer mit Landesvorwahl haben, erhalten es. Senden zeigt zuerst die genaue Zahl.",
+    "choose_segment": "Segment wählen",
+    "segment_problem": "{{name}} (eine Regel muss korrigiert werden)",
+    "segment_option": "{{name}} · {{number}} Mitglieder",
+    "segment_gone": "Ein Segment, das es nicht mehr gibt",
+    "duplicate": "Duplizieren",
+    "delete": "Entwurf löschen"
+  },
+  "preview": {
+    "heading": "Auf dem Telefon",
+    "no_from": "Die Nummer des Hauses",
+    "no_text": "Ihr Text",
+    "sample": "Mit Ihrem eigenen Namen in den Platzhaltern, wie Ihr Test sie hat. Jede Kopie hat die Angaben des Mitglieds.",
+    "caption": "So erscheint es auf einem Telefon. Telefone unterscheiden sich."
+  },
+  "tags": {
+    "title": "Platzhalter",
+    "where": "Ein Platzhalter kommt dorthin, wo der Cursor im Text steht. Jede Kopie zeigt die Angaben des jeweiligen Mitglieds.",
+    "no_room": "Für diesen Platzhalter ist im Text kein Platz."
+  },
+  "reach": {
+    "save_first": "Speichern Sie den Entwurf, um zu zählen, wen sie erreicht.",
+    "choose": "Wählen Sie ein Segment, um zu sehen, wen es erreicht.",
+    "counted": "Es würde jetzt {{number}} der {{members}} Mitglieder von {{segment}} erreichen: insgesamt {{segments}} SMS."
+  },
+  "delete": {
+    "title": "{{name}} löschen?",
+    "confirm": "Entwurf löschen",
+    "keep": "Behalten",
+    "body": "Der Entwurf wird endgültig gelöscht. Aus ihm wurde nichts gesendet."
+  },
+  "results": {
+    "to": "An {{segment}}",
+    "by": "Gesendet von {{name}}",
+    "title": "Wie weit sie kam",
+    "of": "Von",
+    "parts": "SMS-Teile",
+    "progress": "Bisher bearbeitet",
+    "sending": "Wird gesendet, in Paketen zu 50. Diese Seite aktualisiert sich alle 10 Sekunden.",
+    "done": "Gesendet am {{when}}.",
+    "stopped": "Der Versand brach vor dem Ende ab: {{sent}} wurden gesendet, der Rest nicht.",
+    "cancelled": "Abgebrochen: {{sent}} wurden vor dem Stopp gesendet.",
+    "last_progress": "Letztes Paket {{when}}.",
+    "outcome_count": "{{outcome}}: {{number}}",
+    "why_failed": "Warum Twilio sie nicht gesendet hat",
+    "failure_count": "{{number}}:",
+    "gone": "{{number}} wurden nicht erreicht: Ihr Mitgliedsdatensatz wurde nach dem Start gelöscht oder zusammengeführt.",
+    "delivery": "Gesendet heißt, Twilio hat es angenommen; ob jedes Telefon es erhalten hat, zeigen die Protokolle von Twilio.",
+    "message": "Der Text",
+    "cancel": "Versand stoppen"
+  },
+  "list": {
+    "no_segment": "Kein Segment",
+    "new_name": "Neue SMS, {{day}}",
+    "line": "Ein kurzer Text an die Telefone der Mitglieder eines Segments, die Angebote per SMS eingeschaltet haben, gesendet von der eigenen Twilio-Nummer des Hauses.",
+    "new": "Neue SMS",
+    "none": "Noch keine SMS-Kampagnen. Legen Sie eine an, schreiben Sie den Text, wählen Sie ein Segment und senden Sie sie.",
+    "no_text": "Noch kein Text",
+    "edited": "Bearbeitet am {{day}}",
+    "scheduled": "Geht hinaus: {{when}}",
+    "counts": "{{sent}} von {{total}} gesendet"
+  },
+  "plan_locked": "Ihr Tarif enthält keine Kampagnen, daher sind auch SMS-Kampagnen nicht verfügbar.",
+  "back": "Alle SMS-Kampagnen",
+  "setup": {
+    "title": "SMS gehen über das eigene Twilio-Konto des Hauses hinaus, das noch nicht eingerichtet ist.",
+    "where": "Ein Super-Admin trägt es im vollen Admin ein: Einstellungen → Integrationen → Twilio. Nötig sind die Account SID, das Auth Token und die Nummer, von der die SMS gehen (mit + und Landesvorwahl), oder an ihrer Stelle eine Messaging Service SID.",
+    "billing": "Twilio berechnet dem Haus jeden gesendeten SMS-Teil.",
+    "open": "Einstellungen → Integrationen im vollen Admin öffnen"
+  },
+  "length": {
+    "line": "{{chars}} von {{max}} Zeichen · {{segments}} SMS (je bis zu {{per}} Zeichen) · {{alphabet}}",
+    "unicode": "Diese Zeichen machen es zu Unicode, das weniger Zeichen pro SMS fasst: {{chars}}"
+  }
+}

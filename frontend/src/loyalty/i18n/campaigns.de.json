@@ -97,7 +97,8 @@
     "none": "Noch keine Kampagnen. Legen Sie eine an, wählen Sie ein Segment, schreiben Sie die E-Mail und senden Sie sie.",
     "no_subject": "Noch kein Betreff",
     "edited": "Bearbeitet {{day}}",
-    "counts": "{{sent}} von {{total}} gesendet · {{failed}} fehlgeschlagen"
+    "counts": "{{sent}} von {{total}} gesendet · {{failed}} fehlgeschlagen",
+    "scheduled": "Geht hinaus: {{when}}"
   },
   "cancel": {
     "title": "Versand von {{name}} stoppen?",
@@ -204,19 +205,23 @@
       "network": "Keine Verbindung. Laden Sie die Seite neu, um zu sehen, ob der Versand begonnen hat, bevor Sie erneut auf Senden drücken.",
       "unknown": "Der Versand hat möglicherweise nicht begonnen. Laden Sie die Seite neu und prüfen Sie den Stand, bevor Sie erneut auf Senden drücken."
     },
-    "unknown_tags": "Die E-Mail enthält {{tags}}, das kein Platzhalter ausfüllt: Mitglieder lesen es so, wie es dasteht."
+    "unknown_tags": "Die E-Mail enthält {{tags}}, das kein Platzhalter ausfüllt: Mitglieder lesen es so, wie es dasteht.",
+    "about_now": "Jetzt könnten es etwa {{number}} Mitglieder von {{segment}} erhalten. Es geht an alle, die es zu diesem Zeitpunkt erhalten können, dann gezählt.",
+    "schedule": "Planen für {{when}}"
   },
   "tab": {
     "campaigns": "Kampagnen",
     "segments": "Segmente",
-    "push": "Push-Nachrichten"
+    "push": "Push-Nachrichten",
+    "sms": "SMS"
   },
   "status": {
     "draft": "Entwurf",
     "sending": "Wird gesendet",
     "sent": "Gesendet",
     "failed": "Fehlgeschlagen",
-    "cancelled": "Abgebrochen"
+    "cancelled": "Abgebrochen",
+    "scheduled": "Geplant"
   },
   "rule_type": {
     "tier": "Stufe",
@@ -407,6 +412,68 @@
       "not_allowed": "Nur Inhaber oder Manager können mit Kampagnen arbeiten.",
       "network": "Keine Verbindung: Es wurde nichts gelöscht. Bitte versuchen Sie es erneut.",
       "unknown": "Der Entwurf konnte nicht gelöscht werden. Bitte versuchen Sie es erneut."
+    }
+  },
+  "schedule_reason": {
+    "format": "Wählen Sie ein Datum und eine Uhrzeit.",
+    "past": "Wählen Sie eine Zeit mindestens zwei Minuten ab jetzt.",
+    "too_far": "Wählen Sie eine Zeit innerhalb eines Jahres ab jetzt.",
+    "not_on_clock": "Dann wird die Uhr umgestellt: Diese Zeit gibt es nach der Uhr des Hauses nicht. Wählen Sie eine andere."
+  },
+  "schedule_problem": {
+    "nobody_to_send_to": "niemand in seinem Segment konnte es zu diesem Zeitpunkt erhalten.",
+    "too_many": "es hätte mehr Mitglieder erreicht, als ein Versand darf.",
+    "no_audience": "sein Segment gab es nicht mehr.",
+    "bad_rule": "sein Segment hatte eine Regel, die sich nicht verwenden lässt.",
+    "no_category": "es hatte keine Nachrichtenart.",
+    "incomplete": "es war nicht vollständig.",
+    "not_editable_here": "es wurde im vollen Admin geändert.",
+    "not_ready": "das Twilio-Konto des Hauses war nicht eingerichtet."
+  },
+  "schedule": {
+    "error": {
+      "already_started": "Diese Kampagne wurde bereits gestartet. Die Seite zeigt jetzt, wie weit sie ist.",
+      "changed": "Die Kampagne hat sich geändert, seit diese Seite sie gezeigt hat. Prüfen Sie sie und planen Sie sie erneut.",
+      "bad_time": "Wählen Sie eine andere Zeit.",
+      "incomplete": "Die Kampagne ist noch nicht bereit. Die Seite zeigt jetzt, was noch fehlt.",
+      "no_audience": "Wählen Sie zuerst, wer sie erhält.",
+      "bad_rule": "Das Segment hat eine Regel, die sich nicht anwenden lässt. Korrigieren Sie zuerst das Segment.",
+      "not_editable_here": "Diese Kampagne wird aus dem vollständigen Admin gesendet.",
+      "not_found": "Diese Kampagne gibt es nicht mehr.",
+      "manager_only": "Nur Inhaber oder Manager können mit Kampagnen arbeiten.",
+      "not_allowed": "Nur Inhaber oder Manager können mit Kampagnen arbeiten.",
+      "feature_locked": "Ihr Tarif enthält keine E-Mail-Kampagnen.",
+      "network": "Keine Verbindung. Laden Sie die Seite neu, um zu sehen, ob es geplant wurde, bevor Sie es erneut versuchen.",
+      "unknown": "Es wurde möglicherweise nicht geplant. Laden Sie die Seite neu, um den Stand zu sehen, bevor Sie es erneut versuchen."
+    },
+    "when": "Wann es hinausgeht",
+    "now": "Jetzt senden",
+    "later": "Später senden",
+    "at": "Datum und Uhrzeit",
+    "zone": "Nach der Uhrzeit des Hauses ({{zone}}).",
+    "title": "Geplant",
+    "goes_out": "Es geht {{when}} hinaus, nach der Uhr des Hauses.",
+    "whoever": "Es geht an alle, die es zu diesem Zeitpunkt erhalten können, dann gezählt. Bis dahin kann es verschoben oder zum Entwurf zurückgenommen werden.",
+    "by": "Geplant von {{name}}",
+    "move": "Zeit ändern",
+    "take_back": "Zum Entwurf zurücknehmen",
+    "back_title": "Zum Entwurf zurücknehmen?",
+    "back_confirm": "Zurücknehmen",
+    "back_keep": "Geplant lassen",
+    "back_body": "Nichts wird gesendet. Es wird wieder ein Entwurf, zum Ändern oder um es zu einer anderen Zeit zu senden.",
+    "move_title": "Ändern, wann es hinausgeht",
+    "move_keep": "Zeit behalten",
+    "move_confirm": "Verschieben",
+    "did_not_start": "Es war für {{when}} geplant, hat aber nicht begonnen: {{why}} Nichts wurde gesendet. Duplizieren Sie es, um es erneut zu senden."
+  },
+  "unschedule": {
+    "error": {
+      "not_scheduled": "Es wartet nicht mehr: Es hat begonnen oder wurde bereits zurückgenommen. Die Seite zeigt es jetzt, wie es ist.",
+      "not_found": "Diese Kampagne gibt es nicht mehr.",
+      "manager_only": "Nur Inhaber oder Manager können mit Kampagnen arbeiten.",
+      "not_allowed": "Nur Inhaber oder Manager können mit Kampagnen arbeiten.",
+      "network": "Keine Verbindung: Es ist noch geplant. Versuchen Sie es erneut.",
+      "unknown": "Es konnte nicht zurückgenommen werden. Bitte versuchen Sie es erneut."
     }
   }
 }
