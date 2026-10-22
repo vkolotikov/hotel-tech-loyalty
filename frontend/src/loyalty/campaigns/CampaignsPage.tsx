@@ -25,7 +25,7 @@ export function CampaignsPage() {
 
   return (
     <div className="space-y-5 px-4 py-6 lg:px-6">
-      <PageHeader title={t('loyalty.campaigns.title', 'Campaigns')} line={t('loyalty.campaigns.line', 'Email your members, and the segments you send to.')} />
+      <PageHeader title={t('loyalty.campaigns.title', 'Campaigns')} line={t('loyalty.campaigns.line', 'Email, push messages and SMS to your members, and the segments you send them to.')} />
 
       {!boot.staff.can.manage_campaigns ? (
         <div className="max-w-xl">

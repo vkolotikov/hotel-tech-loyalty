@@ -10,6 +10,7 @@ use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Laravel\Sanctum\Sanctum;
+use Tests\Concerns\LoyaltyWorkspace\SmsSchema;
 use Tests\Feature\Member\MemberEndpointTestCase;
 
 /**
@@ -21,6 +22,8 @@ use Tests\Feature\Member\MemberEndpointTestCase;
  */
 class PortalBootstrapTest extends MemberEndpointTestCase
 {
+    use SmsSchema;
+
     private const ENDPOINT = '/api/v1/member/portal';
 
     protected function setUp(): void
@@ -263,6 +266,31 @@ class PortalBootstrapTest extends MemberEndpointTestCase
             ['offers' => true, 'points' => true, 'tier' => false, 'stays' => true],
             $this->withToken($token)->getJson(self::ENDPOINT)->assertOk()->json('member.notification_preferences'),
         );
+    }
+
+    /**
+     * "Offers by SMS" (R4-4) is offered only where the venue can send an SMS through its own Twilio account: the member
+     * carries `sms_consent` then (off until they turn it on), and not at all otherwise, so Profile shows no switch.
+     */
+    public function test_the_sms_opt_in_is_offered_only_where_the_venue_can_send_sms(): void
+    {
+        $org = $this->tenant();
+        $this->buildSmsSchema();
+        ['token' => $token] = $this->member($org);
+
+        $this->assertArrayNotHasKey('sms_consent', $this->withToken($token)->getJson(self::ENDPOINT)->assertOk()->json('member'));
+
+        $this->twilioSettings($org->id, token: null); // no Auth Token: the venue cannot send yet
+        $this->flushHeaders();
+        $this->assertArrayNotHasKey('sms_consent', $this->withToken($token)->getJson(self::ENDPOINT)->assertOk()->json('member'));
+
+        $this->twilioSettings($org->id);
+        $this->flushHeaders();
+        $this->assertFalse($this->withToken($token)->getJson(self::ENDPOINT)->assertOk()->json('member.sms_consent'));
+
+        $this->withToken($token)->putJson('/api/v1/member/profile', ['sms_consent' => true])->assertOk();
+        $this->flushHeaders();
+        $this->assertTrue($this->withToken($token)->getJson(self::ENDPOINT)->assertOk()->json('member.sms_consent'));
     }
 
     public function test_a_member_gets_venue_capabilities_and_their_card(): void

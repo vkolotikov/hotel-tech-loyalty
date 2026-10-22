@@ -115,7 +115,7 @@
     }
   },
   "title": "Campaigns",
-  "line": "Email your members, and the segments you send to.",
+  "line": "Email, push messages and SMS to your members, and the segments you send them to.",
   "tabs": "Campaigns areas",
   "segment": {
     "edit_title": "Change {{name}}",

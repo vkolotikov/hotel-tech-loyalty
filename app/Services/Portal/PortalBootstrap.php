@@ -13,6 +13,7 @@ use App\Services\DiscountService;
 use App\Services\IndustryPrompts\IndustryPromptService;
 use App\Services\LoyaltyService;
 use App\Services\NotificationService;
+use App\Services\Sms\TwilioSms;
 use App\Services\StripeService;
 use App\Support\TimeZones;
 use Carbon\CarbonImmutable;
@@ -337,6 +338,12 @@ final class PortalBootstrap
         $summary['notification_preferences'] = [];
         foreach (NotificationService::CATEGORIES as $category) {
             $summary['notification_preferences'][$category] = !NotificationService::optsOut($member->notification_preferences, $category);
+        }
+
+        // Release 4 R4-4: "Offers by SMS", only where the venue can send one (its own Twilio account is set up), so a
+        // member is never asked for a consent nothing uses. Absent otherwise; Profile then shows no switch.
+        if (app(TwilioSms::class)->readiness((int) $member->organization_id)['ready']) {
+            $summary['sms_consent'] = (bool) $member->sms_consent;
         }
 
         return $summary;

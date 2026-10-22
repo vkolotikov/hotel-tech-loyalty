@@ -115,7 +115,7 @@
     }
   },
   "title": "Kampagnen",
-  "line": "E-Mails an Ihre Mitglieder und die Segmente, an die Sie sie senden.",
+  "line": "E-Mails, Push-Nachrichten und SMS an Ihre Mitglieder und die Segmente, an die Sie sie senden.",
   "tabs": "Bereiche der Kampagnen",
   "segment": {
     "edit_title": "{{name}} bearbeiten",

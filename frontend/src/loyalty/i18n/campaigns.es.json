@@ -115,7 +115,7 @@
     }
   },
   "title": "Campañas",
-  "line": "Escriba a sus miembros y gestione los segmentos a los que envía.",
+  "line": "Correos, notificaciones push y SMS a sus miembros, y los segmentos a los que los envía.",
   "tabs": "Secciones de campañas",
   "segment": {
     "edit_title": "Editar {{name}}",

@@ -115,7 +115,7 @@
     }
   },
   "title": "Campagnes",
-  "line": "Écrivez à vos membres, et gérez les segments auxquels vous envoyez.",
+  "line": "E-mails, notifications push et SMS à vos membres, et les segments auxquels vous les envoyez.",
   "tabs": "Rubriques des campagnes",
   "segment": {
     "edit_title": "Modifier {{name}}",
