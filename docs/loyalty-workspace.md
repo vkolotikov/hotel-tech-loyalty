@@ -304,7 +304,7 @@ or booking figures in Insights; no brand choice. The full admin keeps these.
   again; readiness should then say ready. Add a pass to a phone from the member app.
 - Campaigns: in a draft, use a tag from the tag bar and send yourself a test (your own name is filled in).
 - Push messages: write one to a small segment; the confirmation names who has the app; send it and check a phone.
-- Member app and portal: the notifications inbox shows what was sent.
+- Member app: the notifications inbox shows what was sent. (The web portal has no inbox page yet; it only counts unread.)
 
 ### After the release 2 deploy (owner, signed in)
 
