@@ -45,6 +45,7 @@ class BookingExtraController extends Controller
         // validate() returns the validated payload but we don't want the
         // UploadedFile leaking into the model array.
         unset($data['image']);
+        $data = self::withoutEmptyRequired($data);
 
         $data['organization_id'] = app('current_organization_id');
 
@@ -82,6 +83,7 @@ class BookingExtraController extends Controller
             'is_active'   => 'nullable|boolean',
         ]);
         unset($data['image']);
+        $data = self::withoutEmptyRequired($data);
 
         if ($request->hasFile('image')) {
             try {
@@ -100,5 +102,14 @@ class BookingExtraController extends Controller
     {
         BookingExtra::findOrFail($id)->delete();
         return response()->json(['message' => 'Extra deleted']);
+    }
+
+    /**
+     * A field sent empty (null) keeps the stored value — or, for a new extra, its column's default: every column but
+     * these is NOT NULL (lead time 0 = no notice needed, price 0, …), so writing null is a database error.
+     */
+    private static function withoutEmptyRequired(array $data): array
+    {
+        return array_filter($data, fn ($value, string $field) => $value !== null || in_array($field, ['description', 'icon', 'category'], true), ARRAY_FILTER_USE_BOTH);
     }
 }

@@ -24,6 +24,7 @@ use Symfony\Component\Mime\Email;
 use Symfony\Component\Mime\RawMessage;
 use Tests\Concerns\LoyaltyWorkspace\CampaignsSchema;
 use Tests\Concerns\SetsUpLoyaltyWorkspace;
+use Tests\Concerns\WritesHotelSettings;
 use Tests\TestCase;
 
 /**
@@ -34,7 +35,7 @@ use Tests\TestCase;
  */
 class CampaignDeliveriesTest extends TestCase
 {
-    use CampaignsSchema, DatabaseTransactions, SetsUpLoyaltyWorkspace;
+    use CampaignsSchema, DatabaseTransactions, SetsUpLoyaltyWorkspace, WritesHotelSettings;
 
     private MailManager $outbox;
 
@@ -251,7 +252,7 @@ class CampaignDeliveriesTest extends TestCase
     {
         $tricky = $this->reachable("{{email}}\r\nBcc: evil@example.test", 'tricky@example.test');
         $campaign = $this->sending('Hello {{member.name}}', 'Hello {{member.name}} & {{hotel_name}}', 1);
-        DB::table('hotel_settings')->insert(['organization_id' => $this->org->id, 'key' => 'mail_from_name', 'value' => 'Lumière & Co', 'created_at' => now(), 'updated_at' => now()]);
+        DB::table('hotel_settings')->insert($this->settingRow(['organization_id' => $this->org->id, 'key' => 'mail_from_name', 'value' => 'Lumière & Co', 'created_at' => now(), 'updated_at' => now()]));
 
         $this->runChunk($campaign, [$tricky->id]);
         [$mail] = $this->sent();

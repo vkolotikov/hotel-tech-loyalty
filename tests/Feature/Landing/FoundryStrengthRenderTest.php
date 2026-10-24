@@ -58,7 +58,7 @@ class FoundryStrengthRenderTest extends TestCase
 
     private function makeBrand(?string $logoUrl): void
     {
-        Brand::withoutGlobalScopes()->create([
+        Brand::withoutGlobalScopes()->forceCreate([ // forceCreate: `id` is not fillable, and the page names brand 1
             'id' => 1, 'organization_id' => 1, 'name' => 'Foundry', 'logo_url' => $logoUrl,
         ]);
     }
@@ -784,6 +784,7 @@ class FoundryStrengthRenderTest extends TestCase
     public function test_an_active_review_form_wires_the_feedback_link_with_the_authors_star(): void
     {
         ReviewForm::create([
+            'type' => 'basic',
             'organization_id' => 1, 'name' => 'Member notes', 'embed_key' => 'abc123',
             'is_active' => true, 'allow_anonymous' => true,
         ]);
@@ -799,14 +800,14 @@ class FoundryStrengthRenderTest extends TestCase
 
     public function test_the_chat_launcher_mounts_in_the_reserved_slot(): void
     {
-        ChatWidgetConfig::create(['organization_id' => 1, 'widget_key' => 'wk-123', 'is_enabled' => true]);
+        ChatWidgetConfig::create(['api_key' => \Illuminate\Support\Str::random(48), 'organization_id' => 1, 'widget_key' => '7a3c1f2e-5b4d-4e6f-8a9b-0c1d2e3f4a5b', 'is_enabled' => true]);
 
         $this->seedLikeTheKit();
         $body = $this->body();
 
         $this->assertStringContainsString('data-ai-widget-slot', $body);
         $this->assertStringContainsString('class="ai-launcher"', $body);
-        $this->assertStringContainsString('/chat-frame/wk-123', $body);
+        $this->assertStringContainsString('/chat-frame/7a3c1f2e-5b4d-4e6f-8a9b-0c1d2e3f4a5b', $body);
     }
 
     // ─── Hostile values ───────────────────────────────────────────────────

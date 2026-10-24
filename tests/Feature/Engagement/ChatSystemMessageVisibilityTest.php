@@ -60,6 +60,7 @@ class ChatSystemMessageVisibilityTest extends TestCase
         app()->instance('current_organization_id', $org->id);
 
         ChatWidgetConfig::create([
+            'api_key' => \Illuminate\Support\Str::random(48),
             'organization_id' => $this->orgId,
             'widget_key'      => self::WIDGET_KEY,
             'is_active'       => true,
@@ -171,6 +172,7 @@ class ChatSystemMessageVisibilityTest extends TestCase
                 $t->unsignedBigInteger('organization_id');
                 $t->unsignedBigInteger('brand_id')->nullable();
                 $t->string('widget_key', 64);
+                $t->string('api_key', 64)->nullable();
                 $t->boolean('is_active')->default(true);
                 $t->text('welcome_message')->nullable();
                 $t->timestamps();

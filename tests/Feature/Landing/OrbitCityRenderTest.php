@@ -77,7 +77,7 @@ class OrbitCityRenderTest extends TestCase
 
     private function makeBrand(?string $logoUrl): void
     {
-        Brand::withoutGlobalScopes()->create([
+        Brand::withoutGlobalScopes()->forceCreate([ // forceCreate: `id` is not fillable, and the page names brand 1
             'id' => 1, 'organization_id' => 1, 'name' => 'ORBIT', 'logo_url' => $logoUrl,
         ]);
     }
@@ -970,6 +970,7 @@ class OrbitCityRenderTest extends TestCase
     public function test_an_active_review_form_wires_the_feedback_link(): void
     {
         ReviewForm::create([
+            'type' => 'basic',
             'organization_id' => 1, 'name' => 'Guest notes', 'embed_key' => 'abc123',
             'is_active' => true, 'allow_anonymous' => true,
         ]);
@@ -986,7 +987,8 @@ class OrbitCityRenderTest extends TestCase
     public function test_the_chat_launcher_mounts_in_the_reserved_slot(): void
     {
         ChatWidgetConfig::create([
-            'organization_id' => 1, 'widget_key' => 'wk-123', 'is_enabled' => true,
+            'api_key' => \Illuminate\Support\Str::random(48),
+            'organization_id' => 1, 'widget_key' => '7a3c1f2e-5b4d-4e6f-8a9b-0c1d2e3f4a5b', 'is_enabled' => true,
         ]);
 
         $this->seedLikeTheKit();
@@ -995,7 +997,7 @@ class OrbitCityRenderTest extends TestCase
         $this->assertStringContainsString('data-ai-widget-slot', $body);
         $this->assertStringContainsString('class="ai-panel"', $body);
         $this->assertStringContainsString('class="ai-launcher"', $body);
-        $this->assertStringContainsString('/chat-frame/wk-123', $body);
+        $this->assertStringContainsString('/chat-frame/7a3c1f2e-5b4d-4e6f-8a9b-0c1d2e3f4a5b', $body);
     }
 
     public function test_no_chat_widget_leaves_the_slot_reserved_and_empty(): void
@@ -1012,6 +1014,7 @@ class OrbitCityRenderTest extends TestCase
     public function test_the_footer_hub_prints_the_authors_columns_from_the_record(): void
     {
         ReviewForm::create([
+            'type' => 'basic',
             'organization_id' => 1, 'name' => 'Guest notes', 'embed_key' => 'abc123',
             'is_active' => true, 'allow_anonymous' => true,
         ]);

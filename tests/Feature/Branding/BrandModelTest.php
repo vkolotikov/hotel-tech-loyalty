@@ -106,6 +106,7 @@ class BrandModelTest extends TestCase
 
     public function test_is_default_casts_to_boolean(): void
     {
+        $this->replaceTheDefaultBrand();
         $default = Brand::create([
             'organization_id' => $this->orgId,
             'name'            => 'Westin Default',
@@ -220,6 +221,7 @@ class BrandModelTest extends TestCase
         // scoped controller's "single config per brand" lookup
         // MUST honor this so the admin's view matches their
         // selection — even if no default brand exists at all.
+        $this->replaceTheDefaultBrand();
         Brand::create([
             'organization_id' => $this->orgId,
             'name'            => 'Default brand',
@@ -296,6 +298,7 @@ class BrandModelTest extends TestCase
         // the default (matches the `brands_org_default_unique`
         // partial unique semantics in prod: WHERE deleted_at
         // IS NULL).
+        $this->replaceTheDefaultBrand();
         $brand = Brand::create([
             'organization_id' => $this->orgId,
             'name'            => 'Going-to-delete brand',
@@ -464,6 +467,7 @@ class BrandModelTest extends TestCase
         \DB::table('brands')->insert([
             'organization_id' => $orgB->id,
             'name'            => 'Org B brand',
+            'slug'            => 'org-b-brand',
             'widget_token'    => 'b-token',
             'is_default'      => false,
             'sort_order'      => 0,
@@ -477,5 +481,17 @@ class BrandModelTest extends TestCase
             $this->assertSame($this->orgId, (int) $b->organization_id,
                 'TenantScope MUST exclude cross-org brands.');
         }
+    }
+
+    /**
+     * An organisation has one default brand (production's partial unique
+     * `brands_org_default_unique`), and Organization::booted made one when
+     * the test's organisation was created. A test that creates the default
+     * itself removes that one first, so its brand is the organisation's
+     * default rather than a second one.
+     */
+    private function replaceTheDefaultBrand(): void
+    {
+        Brand::withoutGlobalScopes()->where('organization_id', $this->orgId)->where('is_default', true)->forceDelete();
     }
 }

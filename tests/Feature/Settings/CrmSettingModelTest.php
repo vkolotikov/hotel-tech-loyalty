@@ -197,12 +197,16 @@ class CrmSettingModelTest extends TestCase
     {
         // Field Manager v3 stores null when a layout is unset
         // — the deep-merge in useSettings() handles null →
-        // defaults.
-        $row = CrmSetting::create([
+        // defaults. crm_settings.value is NOT NULL in production,
+        // so the unset layout is the JSON literal null.
+        $id = \Illuminate\Support\Facades\DB::table('crm_settings')->insertGetId([
             'organization_id' => $this->orgId,
             'key'             => 'task_fields',
-            'value'           => null,
+            'value'           => 'null',
+            'created_at'      => now(),
+            'updated_at'      => now(),
         ]);
+        $row = CrmSetting::findOrFail($id);
 
         $this->assertNull($row->fresh()->value);
     }

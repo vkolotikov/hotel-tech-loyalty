@@ -5,6 +5,7 @@ namespace Tests\Feature\LoyaltyWorkspace;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Tests\Concerns\StartsFromABlankDatabase;
 use Tests\TestCase;
 
 /**
@@ -15,6 +16,16 @@ use Tests\TestCase;
  */
 class Release4MigrationsTest extends TestCase
 {
+    use StartsFromABlankDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        // The migrations build their tables from nothing; on PostgreSQL built from every migration that is a schema
+        // of the test's own (outside a transaction: the ledger's index is built CONCURRENTLY).
+        $this->startFromABlankDatabaseOutsideATransaction();
+    }
+
     private function migration(string $file): object
     {
         return require base_path("database/migrations/{$file}");
@@ -28,7 +39,8 @@ class Release4MigrationsTest extends TestCase
 
     public function test_the_ledger_gets_its_organisation_and_time_index_outside_a_transaction_and_loses_it_again(): void
     {
-        foreach (['organizations', 'users'] as $table) {
+        // What the ledger's own migration points at (PostgreSQL checks a foreign key's table as it is created).
+        foreach (['organizations', 'users', 'loyalty_members'] as $table) {
             Schema::create($table, fn (Blueprint $t) => $t->id());
             DB::table($table)->insert(['id' => 1]);
         }

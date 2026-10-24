@@ -2,6 +2,8 @@
 namespace Tests\Concerns;
 
 use App\Models\LandingPage;
+use App\Models\ReviewSubmission;
+use App\Models\Service;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
@@ -88,12 +90,27 @@ trait SetsUpLandingSchema
      * bare brand row is written for a fixed brand id that has none — a name, a
      * slug and a token, no logo, so the page keeps its monogram — under the
      * page's organisation. Nothing in either row is something a page reads.
+     *
+     * A review, too, always came in through one of the venue's review forms
+     * (review_submissions.form_id is NOT NULL, a foreign key): a review a test
+     * writes without naming one is filed under the venue's retired "Reviews"
+     * form — inactive and without an embed key, so it never becomes the page's
+     * feedback link and changes nothing a page shows.
+     *
+     * And a service row holds what production's columns hold: services.price
+     * and services.duration_minutes are NOT NULL (defaults 0 and 60), and the
+     * Services screen sends 0 for an empty price and refuses an empty
+     * duration. A service a test saves without either is stored with those
+     * values here, as it would be there — so a test that relies on a stored
+     * "no price" or "no duration" shows, on PostgreSQL, what a real page
+     * prints for that row.
      */
     private function givePagesTheirTenant(): void
     {
-        if (DB::getDriverName() !== 'pgsql') {
+        if (DB::getDriverName() !== 'pgsql' || $this->landingTenantGiven) {
             return;
         }
+        $this->landingTenantGiven = true;
 
         $this->clearTheMigrationsOrganisation();
         foreach ([1, 2] as $orgId) {
@@ -106,16 +123,66 @@ trait SetsUpLandingSchema
         }
 
         LandingPage::creating(function (LandingPage $page): void {
-            $brandId = $page->brand_id;
-            if ($brandId === null || DB::table('brands')->where('id', $brandId)->exists()) {
+            if ($page->brand_id !== null) {
+                $this->landingBrandExists((int) $page->brand_id, (int) $page->organization_id);
+            }
+        });
+
+        Service::saving(function (Service $service): void {
+            if ($service->price === null) {
+                $service->price = 0;
+            }
+            if ($service->duration_minutes === null) {
+                $service->duration_minutes = 60;
+            }
+        });
+
+        ReviewSubmission::creating(function (ReviewSubmission $review): void {
+            if ($review->form_id !== null) {
                 return;
             }
-            DB::table('brands')->insert([
-                'id' => $brandId, 'organization_id' => $page->organization_id, 'name' => 'Brand ' . $brandId,
-                'slug' => 'brand-' . $brandId, 'widget_token' => 'wt-brand-' . $brandId . '-' . bin2hex(random_bytes(6)),
-                'is_default' => false, 'created_at' => now(), 'updated_at' => now(),
-            ]);
+            // BelongsToOrganization stamps the bound tenant in its own creating hook, which may run after this one.
+            $orgId = $review->organization_id ?? (app()->bound('current_organization_id') ? app('current_organization_id') : null);
+            if ($orgId) {
+                $review->form_id = $this->landingReviewFormId((int) $orgId);
+            }
         });
+    }
+
+    /** Whether givePagesTheirTenant() has already run in this test (both setUp helpers call it). */
+    private bool $landingTenantGiven = false;
+
+    /**
+     * A fixed brand id a page names, as a bare row (no logo) of the page's organisation, on PostgreSQL; for a test
+     * that writes landing_pages through the query builder, which no model event sees. A no-op on sqlite.
+     */
+    protected function landingBrandExists(int $brandId, int $orgId = 1): void
+    {
+        if (DB::getDriverName() !== 'pgsql' || DB::table('brands')->where('id', $brandId)->exists()) {
+            return;
+        }
+        DB::table('brands')->insert([
+            'id' => $brandId, 'organization_id' => $orgId, 'name' => 'Brand ' . $brandId,
+            'slug' => 'brand-' . $brandId, 'widget_token' => 'wt-brand-' . $brandId . '-' . bin2hex(random_bytes(6)),
+            'is_default' => false, 'created_at' => now(), 'updated_at' => now(),
+        ]);
+    }
+
+    /**
+     * The venue's retired "Reviews" form a review is filed under (see givePagesTheirTenant()); for a test that writes
+     * review_submissions through the query builder. Null on sqlite, where the column may stay empty.
+     */
+    protected function landingReviewFormId(int $orgId): ?int
+    {
+        if (DB::getDriverName() !== 'pgsql') {
+            return null;
+        }
+
+        return DB::table('review_forms')->where('organization_id', $orgId)->where('name', 'Reviews (retired)')->value('id')
+            ?? DB::table('review_forms')->insertGetId([
+                'organization_id' => $orgId, 'name' => 'Reviews (retired)', 'type' => 'basic',
+                'is_active' => false, 'is_default' => false, 'created_at' => now(), 'updated_at' => now(),
+            ]);
     }
 
     /**
@@ -379,11 +446,15 @@ trait SetsUpLandingSchema
                 // same-origin chat embed; is_active is what tells it whether
                 // it may embed one at all.
                 $table->string('widget_key', 64)->nullable();
+                // NOT NULL in production (getForOrg() makes one).
+                $table->string('api_key', 64)->nullable();
                 $table->boolean('is_active')->default(true);
                 $table->text('business_hours')->nullable();
                 $table->string('timezone')->nullable();
                 $table->timestamps();
             });
         }
+
+        $this->givePagesTheirTenant();
     }
 }

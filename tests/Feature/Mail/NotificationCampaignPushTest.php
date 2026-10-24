@@ -117,9 +117,9 @@ class NotificationCampaignPushTest extends TestCase
             'email' => 'member_' . uniqid('', true) . '@example.test', 'password' => 'Sup3rSecret!1',
         ]);
 
-        $member = LoyaltyMember::withoutGlobalScopes()->create([
-            'organization_id' => $org->id, 'user_id' => $user->id, 'is_active' => true,
-        ]);
+        $member = LoyaltyMember::withoutGlobalScopes()->create($this->memberRequired([
+            'organization_id' => $org->id, 'user_id' => $user->id, 'member_number' => 'M-' . $user->id, 'is_active' => true,
+        ]));
         DB::table('loyalty_members')->where('id', $member->id)->update([
             'expo_push_token'    => 'ExponentPushToken[test-device]',
             'push_notifications' => true,
@@ -127,6 +127,7 @@ class NotificationCampaignPushTest extends TestCase
 
         $campaign = NotificationCampaign::withoutGlobalScopes()->create([
             'organization_id' => $org->id,
+            'name'            => 'Weekend double points',
             'title'           => 'Weekend double points',
             'body'            => 'Every stay this weekend earns double.',
             'channel'         => 'push',

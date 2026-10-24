@@ -171,9 +171,10 @@ class ProvisionLoyaltyProgrammeTest extends TestCase
     public function test_a_paused_programme_with_members_is_also_left_alone(): void
     {
         [$clinic, $tier] = $this->pausedOrg();
-        LoyaltyMember::withoutGlobalScopes()->create([
-            'organization_id' => $clinic->id, 'user_id' => 1, 'tier_id' => $tier->id, 'member_number' => 'HL-1',
-        ]);
+        // A member as enrolment makes one: their own user, a QR token and a referral code (NOT NULL in production).
+        LoyaltyMember::withoutGlobalScopes()->create($this->memberRequired([
+            'organization_id' => $clinic->id, 'tier_id' => $tier->id, 'member_number' => 'HL-1',
+        ]));
 
         $this->artisan('loyalty:provision-programme', ['--all' => true, '--apply' => true])->assertExitCode(0);
 

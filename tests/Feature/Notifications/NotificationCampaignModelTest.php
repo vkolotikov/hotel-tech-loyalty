@@ -305,6 +305,8 @@ class NotificationCampaignModelTest extends TestCase
         \DB::table('notification_campaigns')->insert([
             'organization_id' => $orgB,
             'name'            => 'Org B campaign',
+            'title'           => 'Org B push title',
+            'body'            => 'Org B push body',
             'channel'         => 'push',
             'status'          => 'draft',
             'created_at'      => now(),

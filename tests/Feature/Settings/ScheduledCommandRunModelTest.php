@@ -120,6 +120,7 @@ class ScheduledCommandRunModelTest extends TestCase
         $run = ScheduledCommandRun::create([
             'command'     => 'engagement:send-daily-summary',
             'status'      => 'success',
+            'started_at'  => now(),
             'duration_ms' => '2500',
         ]);
 
@@ -287,19 +288,25 @@ class ScheduledCommandRunModelTest extends TestCase
         // diag:scheduled-health uses
         // ScheduledCommandRun::where(command,…)->latest()->first()
         // to surface the most-recent outcome per command. Lock
-        // the ordering by created_at desc.
+        // the ordering by created_at desc. Each run is recorded when it
+        // ran, as the scheduler hook writes it; rows written within the same
+        // second tie on created_at, and a tie has no order on PostgreSQL.
+        $now = now();
+        $this->travelTo($now->copy()->subHours(2));
         ScheduledCommandRun::create([
             'command'    => 'multi-run-cmd',
             'status'     => 'success',
-            'started_at' => now()->subHours(2),
-            'finished_at'=> now()->subHours(2),
+            'started_at' => now(),
+            'finished_at'=> now(),
         ]);
+        $this->travelTo($now->copy()->subMinutes(5));
         $latest = ScheduledCommandRun::create([
             'command'    => 'multi-run-cmd',
             'status'     => 'failed',
-            'started_at' => now()->subMinutes(5),
-            'finished_at'=> now()->subMinutes(5),
+            'started_at' => now(),
+            'finished_at'=> now(),
         ]);
+        $this->travelTo($now);
         ScheduledCommandRun::create([
             'command'    => 'other-cmd',
             'status'     => 'success',

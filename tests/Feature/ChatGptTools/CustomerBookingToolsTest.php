@@ -17,11 +17,12 @@ use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Testing\Fluent\AssertableJson;
 use Tests\Concerns\SetsUpMinimalSchema;
+use Tests\Concerns\ClearsTheMigrationsOrganisation;
 use Tests\TestCase;
 
 class CustomerBookingToolsTest extends TestCase
 {
-    use DatabaseTransactions;
+    use DatabaseTransactions, ClearsTheMigrationsOrganisation;
     use SetsUpMinimalSchema;
 
     private User $staff;
@@ -35,16 +36,10 @@ class CustomerBookingToolsTest extends TestCase
         Http::preventStrayRequests();
         Mail::fake();
         $this->setUpBookingAdminSchema();
-        Schema::table('organizations', function ($t) {
-            $t->string('timezone')->nullable();
-            $t->string('currency')->nullable();
-            $t->timestamp('saas_deleted_at')->nullable();
-        });
-        Schema::table('guests', function ($t) {
-            $t->text('passport_no')->nullable();
-            $t->timestamp('last_activity_at')->nullable();
-        });
-        Schema::create('staff', function ($t) {
+        // Columns production has; added only where the sqlite tables lack them.
+        $this->addColumnsIfMissing('organizations', ['timezone' => 'string', 'currency' => 'string', 'saas_deleted_at' => 'timestamp']);
+        $this->addColumnsIfMissing('guests', ['passport_no' => 'text', 'last_activity_at' => 'timestamp']);
+        if (!Schema::hasTable('staff')) Schema::create('staff', function ($t) {
             $t->id();
             $t->unsignedBigInteger('organization_id');
             $t->unsignedBigInteger('user_id');
@@ -52,20 +47,22 @@ class CustomerBookingToolsTest extends TestCase
             $t->boolean('is_active')->default(true);
             $t->timestamps();
         });
-        Schema::create('brands', function ($t) {
+        if (!Schema::hasTable('brands')) Schema::create('brands', function ($t) {
             $t->id();
             $t->unsignedBigInteger('organization_id');
             $t->string('name');
+            $t->string('slug')->nullable();
+            $t->string('widget_token')->nullable();
             $t->timestamps();
             $t->softDeletes();
         });
-        Schema::create('brand_user', function ($t) {
+        if (!Schema::hasTable('brand_user')) Schema::create('brand_user', function ($t) {
             $t->unsignedBigInteger('user_id');
             $t->unsignedBigInteger('brand_id');
             $t->string('role')->nullable();
             $t->timestamps();
         });
-        Schema::create('guest_activities', function ($t) {
+        if (!Schema::hasTable('guest_activities')) Schema::create('guest_activities', function ($t) {
             $t->id();
             $t->unsignedBigInteger('guest_id');
             $t->string('type');
@@ -73,7 +70,7 @@ class CustomerBookingToolsTest extends TestCase
             $t->string('performed_by')->nullable();
             $t->timestamps();
         });
-        Schema::create('reservations', function ($t) {
+        if (!Schema::hasTable('reservations')) Schema::create('reservations', function ($t) {
             $t->id();
             $t->unsignedBigInteger('organization_id');
             $t->unsignedBigInteger('brand_id')->nullable();
@@ -89,7 +86,7 @@ class CustomerBookingToolsTest extends TestCase
             $t->text('notes')->nullable();
             $t->timestamps();
         });
-        Schema::create('service_bookings', function ($t) {
+        if (!Schema::hasTable('service_bookings')) Schema::create('service_bookings', function ($t) {
             $t->id();
             $t->unsignedBigInteger('organization_id');
             $t->unsignedBigInteger('brand_id')->nullable();
@@ -101,6 +98,7 @@ class CustomerBookingToolsTest extends TestCase
             $t->string('customer_email')->nullable();
             $t->timestamp('start_at');
             $t->timestamp('end_at');
+            $t->integer('duration_minutes')->nullable();
             $t->string('status')->default('confirmed');
             $t->string('payment_status')->default('unpaid');
             $t->decimal('total_amount')->default(0);
@@ -110,20 +108,22 @@ class CustomerBookingToolsTest extends TestCase
             $t->text('meta')->nullable();
             $t->timestamps();
         });
-        Schema::table('booking_mirror', function ($t) {
-            $t->unsignedBigInteger('guest_id')->nullable();
-            $t->text('raw_json')->nullable();
-            $t->string('guest_app_url')->nullable();
-        });
-        Schema::table('booking_price_elements', function ($t) {
-            $t->string('currency_code', 3)->nullable();
-        });
+        $this->addColumnsIfMissing('booking_mirror', ['guest_id' => 'unsignedBigInteger', 'raw_json' => 'text', 'guest_app_url' => 'string']);
+        if (!Schema::hasColumn('booking_price_elements', 'currency_code')) {
+            Schema::table('booking_price_elements', fn ($t) => $t->string('currency_code', 3)->nullable());
+        }
+        if (!Schema::hasColumn('booking_price_elements', 'reservation_id')) {
+            Schema::table('booking_price_elements', fn ($t) => $t->string('reservation_id', 30)->nullable());
+        }
+        // Production's NOT NULL columns and foreign keys are satisfied (slugs, a password, a reservation's guest and
+        // property, a price element's reservation); the migrations' own organisation 1 is replaced on PostgreSQL.
+        $this->clearTheMigrationsOrganisation();
         DB::table('organizations')->insert([
-            ['id' => 1, 'name' => 'Connected organization', 'is_active' => true, 'timezone' => 'Europe/Riga', 'currency' => 'EUR'],
-            ['id' => 2, 'name' => 'Other organization', 'is_active' => true, 'timezone' => 'UTC', 'currency' => 'GBP'],
+            ['id' => 1, 'name' => 'Connected organization', 'slug' => 'connected-organization', 'is_active' => true, 'timezone' => 'Europe/Riga', 'currency' => 'EUR'],
+            ['id' => 2, 'name' => 'Other organization', 'slug' => 'other-organization', 'is_active' => true, 'timezone' => 'UTC', 'currency' => 'GBP'],
         ]);
         DB::table('users')->insert(['id' => 1, 'organization_id' => 1, 'email' => 'staff@example.test',
-            'name' => 'Reception', 'user_type' => 'staff']);
+            'name' => 'Reception', 'password' => 'unused', 'user_type' => 'staff']);
         DB::table('staff')->insert(['id' => 1, 'organization_id' => 1, 'user_id' => 1]);
         $this->staff = User::findOrFail(1);
         $this->actingAs($this->staff);
@@ -214,7 +214,7 @@ class CustomerBookingToolsTest extends TestCase
     public function test_archived_brand_assignment_does_not_turn_into_unrestricted_access(): void
     {
         $this->reservation(1, 1, 1);
-        DB::table('brands')->insert(['id' => 1, 'organization_id' => 1, 'name' => 'Archived', 'deleted_at' => now()]);
+        DB::table('brands')->insert(['id' => 1, 'organization_id' => 1, 'name' => 'Archived', 'slug' => 'archived', 'widget_token' => 'wt-archived', 'deleted_at' => now()]);
         DB::table('brand_user')->insert(['user_id' => 1, 'brand_id' => 1]);
         $result = HexaTechServer::tool(ListBookings::class, ['kind' => 'reservation', 'from' => '2026-09-01', 'to' => '2026-09-30']);
         $result->assertOk();
@@ -224,7 +224,7 @@ class CustomerBookingToolsTest extends TestCase
     public function test_bookings_respect_all_assigned_brands_and_tenant_for_reads_and_writes(): void
     {
         foreach ([1, 2, 3] as $id) {
-            DB::table('brands')->insert(['id' => $id, 'organization_id' => 1, 'name' => 'Brand '.$id]);
+            DB::table('brands')->insert(['id' => $id, 'organization_id' => 1, 'name' => 'Brand '.$id, 'slug' => 'brand-'.$id, 'widget_token' => 'wt-brand-'.$id]);
             $this->reservation($id, 1, $id);
             $this->service($id, 1, $id);
         }
@@ -264,7 +264,7 @@ class CustomerBookingToolsTest extends TestCase
         $result->assertOk()->assertDontSee(['PROVIDER_SECRET', 'MANAGEMENT_SECRET']);
         $this->assertSame([1], array_column($this->data($result)['bookings'], 'id'));
         HexaTechServer::tool(GetBooking::class, ['kind' => 'room', 'booking_id' => 2])->assertHasErrors();
-        DB::table('hotel_settings')->insert(['organization_id' => 1, 'key' => 'smoobu_enabled', 'value' => 'false']);
+        DB::table('hotel_settings')->insert(['organization_id' => 1, 'key' => 'smoobu_enabled', 'value' => 'false', 'type' => 'boolean', 'group' => 'integrations']);
         HexaTechServer::tool(GetBooking::class, ['kind' => 'room', 'booking_id' => 1])->assertHasErrors();
     }
 
@@ -302,16 +302,17 @@ class CustomerBookingToolsTest extends TestCase
             $this->room($id, 1);
         }
         DB::table('booking_price_elements')->insert([
-            ['organization_id' => 1, 'booking_mirror_id' => 1, 'currency_code' => 'EUR'],
-            ['organization_id' => 1, 'booking_mirror_id' => 1, 'currency_code' => 'eur'],
+            ['organization_id' => 1, 'booking_mirror_id' => 1, 'reservation_id' => 'external-1', 'currency_code' => 'EUR'],
+            ['organization_id' => 1, 'booking_mirror_id' => 1, 'reservation_id' => 'external-1', 'currency_code' => 'eur'],
             // An incorrectly linked foreign row must neither set nor conflict with currency.
-            ['organization_id' => 2, 'booking_mirror_id' => 1, 'currency_code' => 'USD'],
-            ['organization_id' => 2, 'booking_mirror_id' => 2, 'currency_code' => 'USD'],
-            ['organization_id' => 1, 'booking_mirror_id' => 3, 'currency_code' => 'EUR'],
-            ['organization_id' => 1, 'booking_mirror_id' => 3, 'currency_code' => 'GBP'],
-            ['organization_id' => 1, 'booking_mirror_id' => 4, 'currency_code' => 'EUR'],
-            ['organization_id' => 1, 'booking_mirror_id' => 4, 'currency_code' => null],
-            ['organization_id' => 1, 'booking_mirror_id' => 5, 'currency_code' => '?'],
+            ['organization_id' => 2, 'booking_mirror_id' => 1, 'reservation_id' => 'external-1', 'currency_code' => 'USD'],
+            ['organization_id' => 2, 'booking_mirror_id' => 2, 'reservation_id' => 'external-2', 'currency_code' => 'USD'],
+            ['organization_id' => 1, 'booking_mirror_id' => 3, 'reservation_id' => 'external-3', 'currency_code' => 'EUR'],
+            ['organization_id' => 1, 'booking_mirror_id' => 3, 'reservation_id' => 'external-3', 'currency_code' => 'GBP'],
+            ['organization_id' => 1, 'booking_mirror_id' => 4, 'reservation_id' => 'external-4', 'currency_code' => 'EUR'],
+            // No currency: production's column is NOT NULL, so a price element without one holds an empty code.
+            ['organization_id' => 1, 'booking_mirror_id' => 4, 'reservation_id' => 'external-4', 'currency_code' => ''],
+            ['organization_id' => 1, 'booking_mirror_id' => 5, 'reservation_id' => 'external-5', 'currency_code' => '?'],
         ]);
         $list = HexaTechServer::tool(ListBookings::class, ['kind' => 'room', 'from' => '2026-09-09', 'to' => '2026-09-09']);
         $list->assertOk();
@@ -389,7 +390,13 @@ class CustomerBookingToolsTest extends TestCase
         HexaTechServer::tool(AddCustomerNote::class, ['customer_id' => 2, 'body' => 'No', 'request_id' => self::REQUEST_ID])->assertHasErrors();
         // Fail the audit INSERT after the note and last-activity write have run,
         // proving the transaction actually rolls both changes back.
-        DB::unprepared("CREATE TRIGGER fail_chatgpt_audit BEFORE INSERT ON audit_logs BEGIN SELECT RAISE(ABORT, 'Test audit failure'); END");
+        if (DB::getDriverName() === 'pgsql') {
+            // The same failure in PostgreSQL's trigger syntax (removed again by the test's rollback).
+            DB::unprepared("CREATE FUNCTION fail_chatgpt_audit() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'Test audit failure'; END $$");
+            DB::unprepared('CREATE TRIGGER fail_chatgpt_audit BEFORE INSERT ON audit_logs FOR EACH ROW EXECUTE FUNCTION fail_chatgpt_audit()');
+        } else {
+            DB::unprepared("CREATE TRIGGER fail_chatgpt_audit BEFORE INSERT ON audit_logs BEGIN SELECT RAISE(ABORT, 'Test audit failure'); END");
+        }
         HexaTechServer::tool(AddCustomerNote::class, ['customer_id' => 1, 'body' => 'No', 'request_id' => self::REQUEST_ID])->assertHasErrors();
         $this->assertDatabaseCount('guest_activities', 0);
         $this->assertNull(DB::table('guests')->where('id', 1)->value('last_activity_at'));
@@ -428,17 +435,42 @@ class CustomerBookingToolsTest extends TestCase
 
     private function reservation(int $id, int $org, ?int $brand): void
     {
+        // A reservation is a guest's, at one of the venue's properties (both NOT NULL foreign keys in production).
+        $guestId = DB::table('guests')->insertGetId(['organization_id' => $org, 'full_name' => 'Reservation Guest '.$id]);
         DB::table('reservations')->insert(['id' => $id, 'organization_id' => $org, 'brand_id' => $brand,
+            'guest_id' => $guestId, 'property_id' => $this->propertyOf($org),
             'confirmation_no' => 'RES-'.$id, 'check_in' => '2026-09-09', 'check_out' => '2026-09-10',
             'notes' => 'Original reservation note']);
+    }
+
+    /** The organisation's property, where the schema has the table (sqlite's here does not). */
+    private function propertyOf(int $org): ?int
+    {
+        if (!Schema::hasTable('properties')) {
+            return null;
+        }
+
+        return DB::table('properties')->where('organization_id', $org)->value('id')
+            ?? DB::table('properties')->insertGetId(['organization_id' => $org, 'name' => 'Main house', 'code' => 'MAIN' . $org]);
+    }
+
+    private function addColumnsIfMissing(string $table, array $columns): void
+    {
+        foreach ($columns as $column => $type) {
+            if (!Schema::hasColumn($table, $column)) {
+                Schema::table($table, fn ($t) => $t->{$type}($column)->nullable());
+            }
+        }
     }
 
     private function service(int $id, int $org, ?int $brand, string $start = '2026-09-09 10:00:00'): void
     {
         DB::table('service_bookings')->insert(['id' => $id, 'organization_id' => $org, 'brand_id' => $brand,
-            'booking_reference' => 'SVC-'.$id, 'start_at' => $start, 'end_at' => $start,
+            'booking_reference' => 'SVC-'.$id, 'status' => 'confirmed', 'start_at' => $start, 'end_at' => $start, 'duration_minutes' => 0,
+            'service_id' => 1, 'customer_email' => 'appointment@example.test',
             'customer_name' => 'Appointment Customer', 'staff_notes' => 'Original service note',
-            'stripe_payment_intent_id' => 'PAYMENT_SECRET', 'meta' => '{"token":"PROVIDER_SECRET"}']);
+            // One payment, one booking (production's service_bookings_org_pi_unique).
+            'stripe_payment_intent_id' => 'PAYMENT_SECRET_'.$id, 'meta' => '{"token":"PROVIDER_SECRET"}']);
     }
 
     private function room(int $id, int $org): void

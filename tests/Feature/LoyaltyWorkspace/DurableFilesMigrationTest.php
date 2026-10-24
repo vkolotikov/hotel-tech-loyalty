@@ -5,6 +5,7 @@ namespace Tests\Feature\LoyaltyWorkspace;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Tests\Concerns\StartsFromABlankDatabase;
 use Tests\TestCase;
 
 /**
@@ -14,6 +15,16 @@ use Tests\TestCase;
  */
 class DurableFilesMigrationTest extends TestCase
 {
+    use StartsFromABlankDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        // The migrations build their tables from nothing; on PostgreSQL built from every migration that is a schema
+        // of the test's own (outside a transaction: the ledger's index is built CONCURRENTLY).
+        $this->startFromABlankDatabaseOutsideATransaction();
+    }
+
     private const WALLET = ['apple_cert_content', 'apple_wwdr_content', 'google_service_account_content'];
 
     private function migration(string $file): object

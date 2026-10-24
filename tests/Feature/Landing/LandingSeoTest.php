@@ -237,7 +237,8 @@ class LandingSeoTest extends TestCase
             'organization_id' => 1, 'brand_id' => 6, 'name' => 'Hours Co', 'is_active' => true,
         ]);
         ChatWidgetConfig::create([
-            'organization_id' => 1, 'brand_id' => 6, 'widget_key' => 'wk-hours',
+            'api_key' => \Illuminate\Support\Str::random(48),
+            'organization_id' => 1, 'brand_id' => 6, 'widget_key' => '4d2e8f1a-3c5b-4a7e-9f0d-6b1c2a3e4f5d',
             'is_active' => true,
             'business_hours' => [
                 'mon' => [['open' => '09:00', 'close' => '17:00']],

@@ -9,19 +9,21 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
+use Tests\Concerns\ClearsTheMigrationsOrganisation;
 use Tests\Concerns\SetsUpMinimalSchema;
 use Tests\TestCase;
 
 class ServiceBookingNoteAppendTest extends TestCase
 {
-    use DatabaseTransactions, SetsUpMinimalSchema;
+    use ClearsTheMigrationsOrganisation, DatabaseTransactions, SetsUpMinimalSchema;
 
     protected function setUp(): void
     {
         parent::setUp();
         Http::preventStrayRequests();
         $this->setUpBookingRefundSchema();
-        Schema::create('service_bookings', function ($table): void {
+        // Only where the database lacks them: one built from every migration has both.
+        if (!Schema::hasTable('service_bookings')) Schema::create('service_bookings', function ($table): void {
             $table->id();
             $table->unsignedBigInteger('organization_id');
             $table->unsignedBigInteger('brand_id')->nullable();
@@ -33,25 +35,42 @@ class ServiceBookingNoteAppendTest extends TestCase
             $table->timestamp('cancelled_at')->nullable();
             $table->string('cancellation_reason')->nullable();
             $table->text('staff_notes')->nullable();
+            // NOT NULL in production (see serviceBookingRequired()).
+            $table->string('customer_name')->nullable();
+            $table->string('customer_email')->nullable();
+            $table->timestamp('start_at')->nullable();
+            $table->timestamp('end_at')->nullable();
+            $table->integer('duration_minutes')->nullable();
             $table->timestamps();
         });
-        Schema::create('service_booking_extras', function ($table): void {
+        if (!Schema::hasTable('services')) Schema::create('services', function ($table): void {
+            $table->id();
+            $table->unsignedBigInteger('organization_id');
+            $table->unsignedBigInteger('brand_id')->nullable();
+            $table->string('name');
+            $table->timestamps();
+        });
+        if (!Schema::hasTable('service_booking_extras')) Schema::create('service_booking_extras', function ($table): void {
             $table->id();
             $table->unsignedBigInteger('organization_id');
             $table->unsignedBigInteger('service_booking_id');
         });
-        DB::table('organizations')->insert(['id' => 1, 'name' => 'Test workspace']);
-        DB::table('users')->insert(['id' => 1, 'organization_id' => 1,
-            'name' => 'Reception', 'email' => 'reception@example.test', 'user_type' => 'staff']);
+        $this->clearTheMigrationsOrganisation(); // this test owns organisation 1
+        DB::table('organizations')->insert(['id' => 1, 'name' => 'Test workspace', 'slug' => 'test-workspace']);
+        DB::table('users')->insert(['id' => 1, 'organization_id' => 1, 'name' => 'Reception',
+            'email' => 'reception@example.test', 'password' => bcrypt('unused-password'), 'user_type' => 'staff']);
         $this->actingAs(User::findOrFail(1));
 
         // Exercise the actual controller and tenant/staff middleware with a
         // local SQLite fixture, without contacting subscription services.
         Route::patch('/_test/service-bookings/{id}/status', [ServiceBookingController::class, 'updateStatus'])
             ->middleware(['tenant', 'admin']);
-        DB::table('service_bookings')->insert(['id' => 1, 'organization_id' => 1,
+        // A booking is always for a service (service_id is NOT NULL in production).
+        $serviceId = DB::table('services')->insertGetId(['organization_id' => 1, 'name' => 'Quiet room massage',
+            'created_at' => now(), 'updated_at' => now()]);
+        DB::table('service_bookings')->insert($this->serviceBookingRequired(['id' => 1, 'organization_id' => 1, 'service_id' => $serviceId,
             'brand_id' => 10, 'booking_reference' => 'SVC-NOTE-TEST',
-            'staff_notes' => '[2026-09-09 via ChatGPT] Quiet room requested.']);
+            'staff_notes' => '[2026-09-09 via ChatGPT] Quiet room requested.']));
     }
 
     public function test_portal_append_preserves_latest_notes_and_updates_other_fields(): void
@@ -114,8 +133,9 @@ class ServiceBookingNoteAppendTest extends TestCase
 
     public function test_append_cannot_cross_the_existing_tenant_or_brand_scope(): void
     {
-        DB::table('service_bookings')->insert(['id' => 2, 'organization_id' => 2,
-            'brand_id' => 10, 'booking_reference' => 'SVC-OTHER-TENANT', 'staff_notes' => 'Private.']);
+        $this->organisationsExist([2]);
+        DB::table('service_bookings')->insert($this->serviceBookingRequired(['id' => 2, 'organization_id' => 2,
+            'brand_id' => 10, 'booking_reference' => 'SVC-OTHER-TENANT', 'staff_notes' => 'Private.']));
         $this->patchJson('/_test/service-bookings/2/status', ['append_staff_note' => 'Forbidden'])
             ->assertNotFound();
 

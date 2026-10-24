@@ -12,11 +12,13 @@ use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\URL;
 use Tests\Concerns\SetsUpMinimalSchema;
+use Illuminate\Foundation\Testing\DatabaseTransactions;
+use Tests\Concerns\ClearsTheMigrationsOrganisation;
 use Tests\TestCase;
 
 class LeadWorkflowTest extends TestCase
 {
-    use SetsUpMinimalSchema;
+    use DatabaseTransactions, SetsUpMinimalSchema, ClearsTheMigrationsOrganisation;
 
     protected function setUp(): void
     {
@@ -28,58 +30,69 @@ class LeadWorkflowTest extends TestCase
         URL::forceRootUrl('http://localhost');
         $this->setUpCrmPresetSchema();
         $this->setUpBookingRefundSchema(); // Includes the production audit-log columns.
-        Schema::table('organizations', fn ($t) => $t->timestamp('saas_deleted_at')->nullable());
-        Schema::table('inquiries', function ($t) {
-            $t->unsignedBigInteger('guest_id')->nullable();
-            $t->unsignedBigInteger('property_id')->nullable();
-            foreach (['event_name', 'notes', 'special_requests', 'next_task_notes', 'custom_data', 'currency'] as $field) {
-                $t->text($field)->nullable();
+        // Columns production has; added only where the sqlite tables above lack them.
+        if (!Schema::hasColumn('organizations', 'saas_deleted_at')) {
+            Schema::table('organizations', fn ($t) => $t->timestamp('saas_deleted_at')->nullable());
+        }
+        foreach (['guest_id', 'property_id', 'event_name', 'notes', 'special_requests', 'next_task_notes', 'custom_data', 'currency'] as $field) {
+            if (!Schema::hasColumn('inquiries', $field)) {
+                Schema::table('inquiries', fn ($t) => in_array($field, ['guest_id', 'property_id'], true)
+                    ? $t->unsignedBigInteger($field)->nullable()
+                    : $t->text($field)->nullable());
             }
-        });
-        Schema::create('staff', function ($t) {
+        }
+        if (!Schema::hasTable('staff')) Schema::create('staff', function ($t) {
             $t->id(); $t->unsignedBigInteger('organization_id'); $t->unsignedBigInteger('user_id'); $t->boolean('is_active')->default(true);
         });
-        Schema::create('brand_user', function ($t) {
+        if (!Schema::hasTable('brand_user')) Schema::create('brand_user', function ($t) {
             $t->unsignedBigInteger('brand_id'); $t->unsignedBigInteger('user_id');
         });
-        Schema::create('visitors', function ($t) {
+        if (!Schema::hasTable('visitors')) Schema::create('visitors', function ($t) {
             $t->id(); $t->unsignedBigInteger('organization_id'); $t->unsignedBigInteger('brand_id')->nullable(); $t->unsignedBigInteger('guest_id');
+            $t->string('visitor_key', 64)->nullable();
         });
-        Schema::create('chat_conversations', function ($t) {
+        if (!Schema::hasTable('chat_conversations')) Schema::create('chat_conversations', function ($t) {
             $t->id(); $t->unsignedBigInteger('organization_id'); $t->unsignedBigInteger('brand_id')->nullable();
             $t->unsignedBigInteger('visitor_id')->nullable(); $t->unsignedBigInteger('inquiry_id')->nullable();
             $t->string('channel')->default('web'); $t->string('status')->default('open');
             $t->timestamp('last_message_at')->nullable(); $t->timestamps();
         });
-        Schema::create('chat_messages', function ($t) {
+        if (!Schema::hasTable('chat_messages')) Schema::create('chat_messages', function ($t) {
             $t->id(); $t->unsignedBigInteger('organization_id'); $t->unsignedBigInteger('conversation_id');
             $t->string('sender_type'); $t->text('content'); $t->string('content_type')->default('text');
             $t->string('attachment_type')->nullable(); $t->boolean('is_read')->default(false); $t->timestamps();
         });
-        Schema::create('activities', function ($t) {
+        if (!Schema::hasTable('activities')) Schema::create('activities', function ($t) {
             $t->id(); $t->unsignedBigInteger('organization_id'); $t->unsignedBigInteger('brand_id')->nullable();
             $t->unsignedBigInteger('inquiry_id'); $t->unsignedBigInteger('guest_id')->nullable();
             $t->string('type'); $t->string('direction')->nullable(); $t->string('subject')->nullable();
             $t->text('body')->nullable(); $t->text('metadata')->nullable(); $t->unsignedBigInteger('created_by')->nullable();
             $t->timestamp('occurred_at')->nullable(); $t->timestamps();
         });
-        Schema::create('inquiry_attachments', function ($t) {
+        if (!Schema::hasTable('inquiry_attachments')) Schema::create('inquiry_attachments', function ($t) {
             $t->id(); $t->unsignedBigInteger('organization_id'); $t->unsignedBigInteger('inquiry_id');
             $t->string('filename'); $t->string('mime_type')->nullable(); $t->integer('size_bytes')->nullable();
             $t->text('note')->nullable(); $t->text('url')->nullable(); $t->timestamps();
         });
-        DB::table('organizations')->insert([['id' => 1, 'name' => 'Workspace'], ['id' => 2, 'name' => 'Foreign']]);
-        DB::table('users')->insert(['id' => 1, 'organization_id' => 1, 'name' => 'Staff', 'email' => 'staff@example.test', 'user_type' => 'staff']);
+        // Production's NOT NULL columns and foreign keys are satisfied: slugs, a password and widget tokens, stages
+        // numbered as the tests name them, a second customer for another lead (the migrations' own organisation 1 is
+        // replaced on PostgreSQL by this test's).
+        $this->clearTheMigrationsOrganisation();
+        DB::table('organizations')->insert([['id' => 1, 'name' => 'Workspace', 'slug' => 'workspace'], ['id' => 2, 'name' => 'Foreign', 'slug' => 'foreign']]);
+        DB::table('users')->insert(['id' => 1, 'organization_id' => 1, 'name' => 'Staff', 'email' => 'staff@example.test', 'password' => 'unused', 'user_type' => 'staff']);
         DB::table('staff')->insert(['organization_id' => 1, 'user_id' => 1]);
-        DB::table('brands')->insert([['id' => 1, 'organization_id' => 1, 'name' => 'Cards'], ['id' => 2, 'organization_id' => 1, 'name' => 'Other brand']]);
+        DB::table('brands')->insert([['id' => 1, 'organization_id' => 1, 'name' => 'Cards', 'slug' => 'cards', 'widget_token' => 'wt-lead-workflow-cards'],
+            ['id' => 2, 'organization_id' => 1, 'name' => 'Other brand', 'slug' => 'other-brand', 'widget_token' => 'wt-lead-workflow-other']]);
         DB::table('brand_user')->insert(['user_id' => 1, 'brand_id' => 1]);
-        DB::table('guests')->insert(['id' => 1, 'organization_id' => 1, 'full_name' => 'Sample Customer', 'email' => 'customer@example.test']);
-        DB::table('pipelines')->insert(['id' => 1, 'organization_id' => 1, 'brand_id' => 1, 'name' => 'Sales']);
+        DB::table('guests')->insert([['id' => 1, 'organization_id' => 1, 'full_name' => 'Sample Customer', 'email' => 'customer@example.test'],
+            ['id' => 2, 'organization_id' => 1, 'full_name' => 'Another Customer', 'email' => 'another@example.test']]);
+        DB::table('pipelines')->insert(['id' => 1, 'organization_id' => 1, 'brand_id' => 1, 'name' => 'Sales', 'slug' => 'sales']);
+        $stage = 0;
         foreach (['New' => 'open', 'Preparing proposal' => 'open', 'Order won' => 'won', 'Not proceeding' => 'lost'] as $name => $kind) {
-            DB::table('pipeline_stages')->insert(['organization_id' => 1, 'pipeline_id' => 1, 'name' => $name, 'kind' => $kind]);
+            DB::table('pipeline_stages')->insert(['id' => ++$stage, 'organization_id' => 1, 'pipeline_id' => 1, 'name' => $name, 'slug' => \Illuminate\Support\Str::slug($name), 'kind' => $kind]);
         }
-        DB::table('inquiry_lost_reasons')->insert(['id' => 1, 'organization_id' => 1, 'label' => 'Budget']);
-        DB::table('inquiry_lost_reasons')->insert(['id' => 2, 'organization_id' => 2, 'label' => 'FOREIGN_REASON']);
+        DB::table('inquiry_lost_reasons')->insert(['id' => 1, 'organization_id' => 1, 'label' => 'Budget', 'slug' => 'budget']);
+        DB::table('inquiry_lost_reasons')->insert(['id' => 2, 'organization_id' => 2, 'label' => 'FOREIGN_REASON', 'slug' => 'foreign-reason']);
         $this->lead(1);
         $this->actingAs(User::findOrFail(1));
         app()->instance('current_organization_id', 1);
@@ -92,7 +105,7 @@ class LeadWorkflowTest extends TestCase
             'special_requests' => 'Delivery next month', 'custom_data' => '{"quantity":200,"token":"DO_NOT_EXPOSE"}']);
         DB::table('custom_fields')->insert(['organization_id' => 1, 'entity' => 'inquiry', 'key' => 'quantity', 'label' => 'Quantity', 'type' => 'number', 'is_active' => true]);
         DB::table('inquiry_attachments')->insert(['organization_id' => 1, 'inquiry_id' => 1, 'filename' => 'Proposal.pdf', 'url' => 'https://private.test/SECRET_URL']);
-        DB::table('activities')->insert(['id' => 1, 'organization_id' => 1, 'inquiry_id' => 1, 'type' => 'email', 'body' => '<p>Previous proposal: 200 cards</p>']);
+        DB::table('activities')->insert(['id' => 1, 'organization_id' => 1, 'inquiry_id' => 1, 'type' => 'email', 'body' => '<p>Previous proposal: 200 cards</p>', 'occurred_at' => now()]);
         $this->callTool('get_lead', ['lead_id' => 1])->assertOk()->assertJsonPath('result.isError', false)
             ->assertJsonPath('result.structuredContent.lead.notes.text', 'Customer wants 200 PVC cards')
             ->assertJsonPath('result.structuredContent.lead.custom_fields.0.value.text', '200')
@@ -104,7 +117,8 @@ class LeadWorkflowTest extends TestCase
 
     public function test_direct_and_legacy_chat_links_are_bounded_and_exclude_other_leads_brands_and_tenants(): void
     {
-        DB::table('visitors')->insert(['id' => 1, 'organization_id' => 1, 'brand_id' => 1, 'guest_id' => 1]);
+        DB::table('visitors')->insert(['id' => 1, 'organization_id' => 1, 'brand_id' => 1, 'guest_id' => 1, 'visitor_key' => 'visitor-1']);
+        $this->lead(999, ['guest_id' => 2]); // another customer's lead, which conversation 5 belongs to
         foreach ([1 => [], 2 => ['inquiry_id' => null], 3 => ['organization_id' => 2],
             4 => ['brand_id' => 2], 5 => ['inquiry_id' => 999]] as $id => $extra) {
             DB::table('chat_conversations')->insert(array_merge(['id' => $id, 'organization_id' => 1, 'brand_id' => 1, 'inquiry_id' => 1, 'visitor_id' => 1], $extra));
@@ -126,8 +140,9 @@ class LeadWorkflowTest extends TestCase
     {
         DB::table('chat_conversations')->insert(['id' => 1, 'organization_id' => 1, 'brand_id' => 1, 'inquiry_id' => 1]);
         foreach ([['visitor', 'Need embossed cards', 1], ['ai', 'We can discuss options', 1],
-            ['system', 'PRIVATE_PROMPT', 1], ['visitor', 'FOREIGN_MESSAGE', 2], ['agent', str_repeat('a', 6001), 1]] as $row) {
-            DB::table('chat_messages')->insert(['organization_id' => $row[2], 'conversation_id' => 1, 'sender_type' => $row[0], 'content' => $row[1]]);
+            ['system', 'PRIVATE_PROMPT', 1], ['visitor', 'FOREIGN_MESSAGE', 2], ['agent', str_repeat('a', 6001), 1]] as $i => $row) {
+            // Numbered from 1, as the cursors below name them.
+            DB::table('chat_messages')->insert(['id' => $i + 1, 'organization_id' => $row[2], 'conversation_id' => 1, 'sender_type' => $row[0], 'content' => $row[1]]);
         }
         $this->callTool('get_lead_conversation', ['lead_id' => 1, 'conversation_id' => 1, 'limit' => 1])
             ->assertJsonPath('result.structuredContent.messages.0.content.text', 'Need embossed cards')->assertJsonPath('result.structuredContent.next_after_id', 1);
@@ -142,7 +157,7 @@ class LeadWorkflowTest extends TestCase
     {
         foreach ([1 => [], 2 => [], 3 => ['organization_id' => 2], 4 => ['brand_id' => 2]] as $id => $extra) {
             DB::table('activities')->insert(array_merge(['id' => $id, 'organization_id' => 1, 'brand_id' => 1, 'inquiry_id' => 1,
-                'type' => 'note', 'body' => str_repeat('a', 12001)], $extra));
+                'type' => 'note', 'body' => str_repeat('a', 12001), 'occurred_at' => now()], $extra));
         }
         $this->callTool('list_lead_activities', ['lead_id' => 1, 'limit' => 1])
             ->assertJsonPath('result.structuredContent.activities.0.id', 2)->assertJsonPath('result.structuredContent.activities.0.body.truncated', true)
@@ -198,6 +213,10 @@ class LeadWorkflowTest extends TestCase
 
     public function test_won_keeps_crm_semantics_and_property_conversion_requires_portal(): void
     {
+        if (Schema::hasTable('properties')) {
+            // The venue's property the lead names (inquiries.property_id is a foreign key in production).
+            DB::table('properties')->insert(['id' => 10, 'organization_id' => 1, 'name' => 'Riga', 'code' => 'RIGA10']);
+        }
         DB::table('inquiries')->where('id', 1)->update(['property_id' => 10]);
         $this->callTool('get_lead', ['lead_id' => 1])->assertJsonPath('result.structuredContent.status_options.2.available_in_plugin', false);
         $this->callTool('update_lead_status', $this->statusArgs(3))->assertJsonPath('result.isError', true)->assertSee('reservation conversion');
@@ -223,7 +242,7 @@ class LeadWorkflowTest extends TestCase
         $this->callTool('update_lead_status', $args)->assertJsonPath('result.isError', true)->assertSee('changed since it was read');
         DB::table('inquiries')->where('id', 1)->update(['pipeline_id' => null]);
         DB::table('pipelines')->where('id', 1)->update(['is_default' => true]);
-        DB::table('pipelines')->insert(['id' => 2, 'organization_id' => 1, 'brand_id' => 1, 'name' => 'Duplicate default', 'is_default' => true]);
+        DB::table('pipelines')->insert(['id' => 2, 'organization_id' => 1, 'brand_id' => 1, 'name' => 'Duplicate default', 'slug' => 'duplicate-default', 'is_default' => true]);
         $this->callTool('get_lead', ['lead_id' => 1])->assertJsonCount(0, 'result.structuredContent.status_options');
         $this->callTool('update_lead_status', $this->statusArgs(2))->assertJsonPath('result.isError', true);
     }

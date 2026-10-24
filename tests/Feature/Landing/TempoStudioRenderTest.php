@@ -59,7 +59,7 @@ class TempoStudioRenderTest extends TestCase
 
     private function makeBrand(?string $logoUrl): void
     {
-        Brand::withoutGlobalScopes()->create([
+        Brand::withoutGlobalScopes()->forceCreate([ // forceCreate: `id` is not fillable, and the page names brand 1
             'id' => 1, 'organization_id' => 1, 'name' => 'Tempo', 'logo_url' => $logoUrl,
         ]);
     }
@@ -484,7 +484,8 @@ class TempoStudioRenderTest extends TestCase
             $hours[$day] = [['open' => '06:00', 'close' => '22:00']];
         }
         ChatWidgetConfig::create([
-            'organization_id' => 1, 'widget_key' => 'wk-hours', 'is_enabled' => true,
+            'api_key' => \Illuminate\Support\Str::random(48),
+            'organization_id' => 1, 'widget_key' => '4d2e8f1a-3c5b-4a7e-9f0d-6b1c2a3e4f5d', 'is_enabled' => true,
             'business_hours' => $hours,
         ]);
 
@@ -788,7 +789,7 @@ class TempoStudioRenderTest extends TestCase
 
     public function test_an_active_review_form_wires_the_feedback_link_with_the_authors_star(): void
     {
-        ReviewForm::create(['organization_id' => 1, 'name' => 'Member notes', 'embed_key' => 'abc123', 'is_active' => true, 'allow_anonymous' => true]);
+        ReviewForm::create(['type' => 'basic', 'organization_id' => 1, 'name' => 'Member notes', 'embed_key' => 'abc123', 'is_active' => true, 'allow_anonymous' => true]);
 
         $this->seedLikeTheKit();
         $body = $this->body();
@@ -802,14 +803,14 @@ class TempoStudioRenderTest extends TestCase
 
     public function test_the_chat_launcher_mounts_in_the_reserved_slot(): void
     {
-        ChatWidgetConfig::create(['organization_id' => 1, 'widget_key' => 'wk-123', 'is_enabled' => true]);
+        ChatWidgetConfig::create(['api_key' => \Illuminate\Support\Str::random(48), 'organization_id' => 1, 'widget_key' => '7a3c1f2e-5b4d-4e6f-8a9b-0c1d2e3f4a5b', 'is_enabled' => true]);
 
         $this->seedLikeTheKit();
         $body = $this->body();
 
         $this->assertStringContainsString('data-ai-widget-slot', $body);
         $this->assertStringContainsString('class="ai-launcher"', $body);
-        $this->assertStringContainsString('/chat-frame/wk-123', $body);
+        $this->assertStringContainsString('/chat-frame/7a3c1f2e-5b4d-4e6f-8a9b-0c1d2e3f4a5b', $body);
     }
 
     // ─── Hostile values ───────────────────────────────────────────────────

@@ -6,7 +6,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * For a test that writes its own organisation 1 (or other fixed ids beside it).
+ * For a test that writes its own organisation 1, or names organisations by fixed ids.
  *
  * On sqlite every test starts from an empty database. A PostgreSQL database
  * built from every migration (CLAUDE.md, "Testing against PostgreSQL") is not
@@ -42,5 +42,30 @@ trait ClearsTheMigrationsOrganisation
             }
         }
         DB::table('organizations')->where('id', 1)->where('slug', 'default')->delete();
+    }
+
+    /**
+     * The organisations a test names by fixed id, as bare rows (a name and a slug, nothing a test reads), on
+     * PostgreSQL, where production's foreign keys need them; organisation 1 replaces the migrations' own. On sqlite
+     * nothing is written: no key asks for the rows there, and the test's data stays exactly what it was.
+     *
+     * @param list<int> $ids
+     */
+    protected function organisationsExist(array $ids): void
+    {
+        if (DB::getDriverName() !== 'pgsql') {
+            return;
+        }
+        if (in_array(1, $ids, true)) {
+            $this->clearTheMigrationsOrganisation();
+        }
+        foreach ($ids as $id) {
+            if (!DB::table('organizations')->where('id', $id)->exists()) {
+                DB::table('organizations')->insert([
+                    'id' => $id, 'name' => "Organization {$id}", 'slug' => "organization-{$id}",
+                    'created_at' => now(), 'updated_at' => now(),
+                ]);
+            }
+        }
     }
 }

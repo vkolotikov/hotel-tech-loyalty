@@ -7,6 +7,7 @@ use Database\Factories\OrganizationFactory;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\Schema;
 use Tests\Concerns\SetsUpMinimalSchema;
+use Tests\Concerns\ComparesJsonColumns;
 use Tests\TestCase;
 
 /**
@@ -38,7 +39,7 @@ use Tests\TestCase;
  */
 class TaskModelTest extends TestCase
 {
-    use DatabaseTransactions;
+    use DatabaseTransactions, ComparesJsonColumns;
     use SetsUpMinimalSchema;
 
     private int $orgId;
@@ -305,7 +306,7 @@ class TaskModelTest extends TestCase
 
         $task = $this->task(['custom_data' => $payload]);
 
-        $this->assertSame($payload, $task->fresh()->custom_data);
+        $this->assertSameJson($payload, $task->fresh()->custom_data); // jsonb keeps its own key order
     }
 
     public function test_recurring_rule_round_trips_through_array_cast(): void

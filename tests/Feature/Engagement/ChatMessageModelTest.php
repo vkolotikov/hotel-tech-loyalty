@@ -7,6 +7,7 @@ use Database\Factories\OrganizationFactory;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\Schema;
 use Tests\Concerns\SetsUpMinimalSchema;
+use Tests\Concerns\ComparesJsonColumns;
 use Tests\TestCase;
 
 /**
@@ -44,8 +45,12 @@ class ChatMessageModelTest extends TestCase
 {
     use DatabaseTransactions;
     use SetsUpMinimalSchema;
+    use ComparesJsonColumns;
 
     private int $orgId;
+
+    /** The conversation the messages belong to (production's foreign key needs it to exist). */
+    private int $conversationId;
 
     protected function setUp(): void
     {
@@ -95,6 +100,14 @@ class ChatMessageModelTest extends TestCase
         $org = OrganizationFactory::new()->create();
         $this->orgId = $org->id;
         app()->instance('current_organization_id', $org->id);
+        $this->conversationId = $this->conversationOf($org->id);
+    }
+
+    private function conversationOf(int $orgId): int
+    {
+        return (int) \DB::table('chat_conversations')->insertGetId([
+            'organization_id' => $orgId, 'status' => 'active', 'created_at' => now(), 'updated_at' => now(),
+        ]);
     }
 
     protected function tearDown(): void
@@ -109,7 +122,7 @@ class ChatMessageModelTest extends TestCase
     {
         return ChatMessage::create(array_merge([
             'organization_id' => $this->orgId,
-            'conversation_id' => 1,
+            'conversation_id' => $this->conversationId,
             'sender_type'     => 'visitor',
             'content'         => 'Test message',
             'created_at'      => now(),
@@ -230,7 +243,7 @@ class ChatMessageModelTest extends TestCase
 
         $msg = $this->message(['metadata' => $payload]);
 
-        $this->assertSame($payload, $msg->fresh()->metadata);
+        $this->assertSameJson($payload, $msg->fresh()->metadata);
     }
 
     public function test_attachments_data_round_trips_through_array_cast(): void
@@ -245,7 +258,7 @@ class ChatMessageModelTest extends TestCase
 
         $msg = $this->message(['attachments_data' => $attachments]);
 
-        $this->assertSame($attachments, $msg->fresh()->attachments_data);
+        $this->assertSameJson($attachments, $msg->fresh()->attachments_data);
     }
 
     public function test_created_at_casts_to_carbon(): void
@@ -310,7 +323,7 @@ class ChatMessageModelTest extends TestCase
         $this->message(['content' => 'Org A msg']);
         \DB::table('chat_messages')->insert([
             'organization_id' => $orgB,
-            'conversation_id' => 1,
+            'conversation_id' => $this->conversationOf($orgB),
             'sender_type'     => 'visitor',
             'content'         => 'Org B msg',
             'created_at'      => now(),

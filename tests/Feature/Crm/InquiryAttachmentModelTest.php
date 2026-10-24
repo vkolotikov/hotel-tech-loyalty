@@ -50,7 +50,7 @@ use Tests\TestCase;
 class InquiryAttachmentModelTest extends TestCase
 {
     use DatabaseTransactions;
-    use SetsUpMinimalSchema;
+    use SetsUpMinimalSchema, \Tests\Concerns\WritesRowsForeignKeysNeed;
 
     private int $orgId;
 
@@ -78,6 +78,9 @@ class InquiryAttachmentModelTest extends TestCase
         $org = OrganizationFactory::new()->create();
         $this->orgId = $org->id;
         app()->instance('current_organization_id', $org->id);
+        // The enquiries the rows below name by id (a foreign key in production).
+        $this->rowsExist('inquiries', [1, 500]);
+        $this->rowsExist('users', [42]); // the uploader one test names
     }
 
     protected function tearDown(): void

@@ -72,7 +72,7 @@ class NocturneRitualRenderTest extends TestCase
      */
     private function makeBrand(?string $logoUrl): void
     {
-        Brand::withoutGlobalScopes()->create([
+        Brand::withoutGlobalScopes()->forceCreate([ // forceCreate: `id` is not fillable, and the page names brand 1
             'id' => 1, 'organization_id' => 1, 'name' => 'Nocturne', 'logo_url' => $logoUrl,
         ]);
     }
@@ -795,7 +795,8 @@ class NocturneRitualRenderTest extends TestCase
     public function test_the_chat_launcher_mounts_in_the_reserved_slot(): void
     {
         ChatWidgetConfig::create([
-            'organization_id' => 1, 'brand_id' => 1, 'widget_key' => 'wk-nocturne', 'is_active' => true,
+            'api_key' => \Illuminate\Support\Str::random(48),
+            'organization_id' => 1, 'brand_id' => 1, 'widget_key' => '9e8d7c6b-5a4f-4e3d-8c2b-1a0f9e8d7c6b', 'is_active' => true,
         ]);
 
         $this->seedLikeTheKit();
@@ -807,7 +808,7 @@ class NocturneRitualRenderTest extends TestCase
             '/data-ai-widget-slot[^>]*>.*?<iframe class="ai-panel".*?<button class="ai-launcher"/s',
             $body
         );
-        $this->assertStringContainsString('/chat-frame/wk-nocturne', $body);
+        $this->assertStringContainsString('/chat-frame/9e8d7c6b-5a4f-4e3d-8c2b-1a0f9e8d7c6b', $body);
         // A slot holding a real control is not aria-hidden.
         $this->assertDoesNotMatchRegularExpression('/data-ai-widget-slot aria-hidden/', $body);
     }
@@ -825,7 +826,8 @@ class NocturneRitualRenderTest extends TestCase
     public function test_a_switched_off_chat_widget_is_not_embedded(): void
     {
         ChatWidgetConfig::create([
-            'organization_id' => 1, 'brand_id' => 1, 'widget_key' => 'wk-off', 'is_active' => false,
+            'api_key' => \Illuminate\Support\Str::random(48),
+            'organization_id' => 1, 'brand_id' => 1, 'widget_key' => '1f2e3d4c-5b6a-4978-8a9b-0c1d2e3f4a5c', 'is_active' => false,
         ]);
 
         $this->seedLikeTheKit();
@@ -1530,7 +1532,8 @@ class NocturneRitualRenderTest extends TestCase
     public function test_a_page_with_no_ledger_lines_still_publishes_the_week(): void
     {
         ChatWidgetConfig::create([
-            'organization_id' => 1, 'brand_id' => 1, 'widget_key' => 'wk-hours', 'is_active' => true,
+            'api_key' => \Illuminate\Support\Str::random(48),
+            'organization_id' => 1, 'brand_id' => 1, 'widget_key' => '4d2e8f1a-3c5b-4a7e-9f0d-6b1c2a3e4f5d', 'is_active' => true,
             'business_hours' => [
                 'mon' => [['open' => '10:00', 'close' => '21:00']],
                 'tue' => [['open' => '10:00', 'close' => '21:00']],

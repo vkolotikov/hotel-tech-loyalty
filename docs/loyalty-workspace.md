@@ -365,16 +365,46 @@ reports (Twilio's status callbacks); no receipts for the full admin's own push c
 ## Tests on PostgreSQL
 
 The suites run on SQLite with hand-built schemas, which miss NOT NULL columns and indexes production has. Release 5
-ran them against a PostgreSQL database built from every migration (the recipe is in CLAUDE.md): it found two live
-bugs (member erasure and a member's own deletion wrote NULL into `loyalty_members.qr_code_token`) and one more in the
-engine (an extra of the legacy JSON setting has a text id, which PostgreSQL refused against `booking_extras.id`), all
-fixed. Every release-5 test file passes there. What still fails on PostgreSQL fails on the test's own data, not on
-the code — every error was traced (2026-10-23): members without `qr_code_token`/`referral_code`/`tier_id`/`joined_at`,
-ledger lines without `balance_after`, `service_bookings` without `booking_reference`, `hotel_settings` without `type`,
-tiers with a factory-only `qualification_model`, codes longer than their column, a second organisation created while
-the first is bound (fixed in release 6), and tables some traits create twice. Counts on 2026-10-23: workspace
-279/309, Member 292/329, Admin 81/89, Booking 356/529, Stripe 37/37. The workspace's shared member fixture now gives
-production's NOT NULL columns; the older files are worth the same care when next touched.
+ran them against a PostgreSQL database built from every migration and found three live bugs (member erasure and a
+member's own deletion wrote NULL into `loyalty_members.qr_code_token`; an extra of the legacy JSON setting had a text
+id), all fixed. Release 6 (part T) gave the older tests data production's schema accepts: failures on PostgreSQL went
+from 2384 to the ones listed below, and every suite still passes on SQLite.
+
+**Running them.** Build a database from every migration, then:
+
+```
+set -a; . <file holding DB_HOST, DB_PORT, DB_USERNAME and DB_PASSWORD>; set +a
+scripts/test-pg.sh <test database> [test paths …]
+```
+
+It runs one directory or top-level file at a time (never a bare `php artisan test`), prints
+`<path> | exit <code> | <Tests: line>` and up to eight FAILED names per run, refuses a database whose name does not
+contain "test", never prints the credentials, and gives up on a lock after a minute so a stuck run fails instead of
+hanging. Its header says how to build or copy the database. Shared test helpers: `TestCase` moves PostgreSQL
+sequences above 100000 so tests' fixed ids never collide; `StartsFromABlankDatabase` gives a migration test an empty
+schema of its own; `ClearsTheMigrationsOrganisation`, `WritesRowsForeignKeysNeed` and `WritesHotelSettings` write the
+rows production's foreign keys and NOT NULL columns need. A test that must see a unique index refuse an insert raises
+that refusal just before the statement on PostgreSQL (a real failure would abort the test's own transaction, which
+production never has); on SQLite the real index still runs.
+
+**Still failing on PostgreSQL, on purpose** (2026-10-24):
+
+- **Application code, reported and not changed in release 6:**
+  - Landing pages read a service's price `0` and duration `60` (the columns' NOT NULL defaults) as a real price and
+    length, so a priceless menu prints €0 / 60 min instead of the author's priceless layout (`app/Landing/Money.php`;
+    17 render tests of the Ember, MaisonVela, Forma, Luma, Ardea, Numa and Tempo templates). How "no price" should
+    be stored and shown is the owner's call, and landing pages deploy by their own recipe.
+  - `BelongsToBrand` gives a row created with no brand the organisation's default brand, also for
+    `NotificationCampaign` and `SpecialOffer`, whose NULL brand is documented as "every brand"
+    (`NotificationCampaignModelTest`, `SpecialOfferModelTest`). The fill-in is deliberate (rows stay visible when
+    staff filter by brand); which one wins is the owner's call.
+- **Fixed in release 6** (their tests now pass on PostgreSQL): an emptied field in the full admin's extras, services
+  and voice-agent forms, and an emptied tier colour in the workspace, wrote NULL into a NOT NULL column (a 500); a
+  failed public services booking whose error text was longer than 255 characters left no submission row.
+- **Test states production cannot hold** (18 tests, kept for SQLite): a member with no tier, no user or no referral
+  code; a tier assessment with no old tier; an organisation with no currency; a widget config with no key; two
+  organisations sharing a hold token; two default pipelines in one organisation; a landing redirect outliving its page;
+  an extra or a voice config holding NULL in a NOT NULL column.
 
 ## Deploying
 

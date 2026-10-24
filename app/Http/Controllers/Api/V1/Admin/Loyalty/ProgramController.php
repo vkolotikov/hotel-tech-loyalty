@@ -80,6 +80,8 @@ class ProgramController extends Controller
         ]));
         // At the end of the ladder, as TierController::store places a tier the form gave no order.
         $data['sort_order'] = (int) LoyaltyTier::query()->max('sort_order') + 1;
+        // No colour chosen: the column's own default, named here so every database stores the same.
+        $data['color_hex'] ??= self::DEFAULT_TIER_COLOR;
 
         $tier = LoyaltyTier::create($data);
 
@@ -411,11 +413,20 @@ class ProgramController extends Controller
         };
     }
 
-    /** @return array<string, mixed> The tier's columns from the form's fields (`color` is stored as `color_hex`). */
+    /** `loyalty_tiers.color_hex`'s default (2024_01_01_000002). */
+    private const DEFAULT_TIER_COLOR = '#CD7F32';
+
+    /**
+     * @return array<string, mixed> The tier's columns from the form's fields (`color` is stored as `color_hex`). An
+     * empty colour (the form sends null) keeps the tier's colour — a new tier gets the column's default
+     * (DEFAULT_TIER_COLOR): `color_hex` is NOT NULL, and the full admin and the member app read it.
+     */
     private static function tierColumns(array $data): array
     {
         if (array_key_exists('color', $data)) {
-            $data['color_hex'] = $data['color'];
+            if ($data['color'] !== null) {
+                $data['color_hex'] = $data['color'];
+            }
             unset($data['color']);
         }
 

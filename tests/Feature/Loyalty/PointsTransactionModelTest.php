@@ -90,6 +90,7 @@ class PointsTransactionModelTest extends TestCase
             'type'            => 'earn',
             'points'          => 100,
             'balance_after'   => 100,
+            'description'     => 'Earned', // NOT NULL in production
         ], $attrs));
     }
 
@@ -285,19 +286,28 @@ class PointsTransactionModelTest extends TestCase
         $orgA = $this->orgId;
         $orgB = OrganizationFactory::new()->create()->id;
 
+        // Each line is a member's of its own organisation (member_id is a foreign key in production), with its
+        // balance and description (NOT NULL there).
+        $memberB = \DB::table('loyalty_members')->insertGetId($this->memberRequired([
+            'organization_id' => $orgB, 'member_number' => 'MN-orgB-ledger', 'created_at' => now(), 'updated_at' => now(),
+        ]));
         \DB::table('points_transactions')->insert([
             'organization_id' => $orgA,
             'member_id'       => $this->memberId,
             'type'            => 'earn',
             'points'          => 100,
+            'balance_after'   => 100,
+            'description'     => 'Earned',
             'created_at'      => now(),
             'updated_at'      => now(),
         ]);
         \DB::table('points_transactions')->insert([
             'organization_id' => $orgB,
-            'member_id'       => 999,
+            'member_id'       => $memberB,
             'type'            => 'earn',
             'points'          => 100,
+            'balance_after'   => 100,
+            'description'     => 'Earned',
             'created_at'      => now(),
             'updated_at'      => now(),
         ]);

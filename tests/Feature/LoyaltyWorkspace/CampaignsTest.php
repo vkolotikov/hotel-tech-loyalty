@@ -18,6 +18,7 @@ use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Queue;
 use Tests\Concerns\LoyaltyWorkspace\CampaignsSchema;
 use Tests\Concerns\SetsUpLoyaltyWorkspace;
+use Tests\Concerns\ComparesJsonColumns;
 use Tests\TestCase;
 
 /**
@@ -26,7 +27,7 @@ use Tests\TestCase;
  */
 class CampaignsTest extends TestCase
 {
-    use DatabaseTransactions, SetsUpLoyaltyWorkspace, CampaignsSchema;
+    use DatabaseTransactions, SetsUpLoyaltyWorkspace, CampaignsSchema, ComparesJsonColumns;
 
     /** The builder's renderBlocksToHtml() for blocks() (campaignsMirror.test.ts pins the builder to the same string). */
     private const GOLDEN = '<div style="font-family:-apple-system,Segoe UI,Helvetica,Arial,sans-serif;max-width:600px;margin:0 auto;background:#ffffff;color:#1a1a1a;">'
@@ -208,7 +209,7 @@ class CampaignsTest extends TestCase
 
         $this->assertSame(self::GOLDEN, $campaign->body_html);
         // Stored in the builder's own shape, so the full admin opens the draft in its visual editor.
-        $this->assertSame($this->blocks(), $campaign->body_blocks);
+        $this->assertSameJson($this->blocks(), $campaign->body_blocks);
         $this->asManager()->getJson($this->api("campaigns/{$campaign->id}"))->assertOk()
             ->assertJsonPath('campaign.body_html', self::GOLDEN)
             ->assertJsonPath('campaign.subject', 'Our autumn')
@@ -243,7 +244,7 @@ class CampaignsTest extends TestCase
         $this->assertStringContainsString('href="mailto:hello@lumiere.example"', $html);
         $this->assertStringNotContainsString('<script', $html);
         // A missing look takes the builder's default.
-        $this->assertSame(['id' => 't', 'type' => 'text', 'text' => '<script>alert(1)</script>', 'color' => '#555555', 'align' => 'left', 'fontSize' => 15], $campaign->fresh()->body_blocks[0]);
+        $this->assertSameJson(['id' => 't', 'type' => 'text', 'text' => '<script>alert(1)</script>', 'color' => '#555555', 'align' => 'left', 'fontSize' => 15], $campaign->fresh()->body_blocks[0]);
     }
 
     public function test_a_draft_made_in_the_full_admin_with_an_image_or_its_own_html_is_read_only_here(): void
@@ -446,10 +447,12 @@ class CampaignsTest extends TestCase
     {
         $platinum = $this->tiers['platinum']->id;
         $now = now()->toDateTimeString();
+        $password = bcrypt('secret-pass-1'); // NOT NULL in production, as the members' card codes below are
         foreach (array_chunk(range(1, CampaignsTestLimit::OVER), 500) as $chunk) {
             $first = DB::table('users')->max('id') + 1;
-            DB::table('users')->insert(array_map(fn ($i) => ['organization_id' => $this->org->id, 'name' => "Bulk {$i}", 'email' => "bulk{$i}@example.test", 'user_type' => 'member', 'created_at' => $now, 'updated_at' => $now], $chunk));
+            DB::table('users')->insert(array_map(fn ($i) => ['organization_id' => $this->org->id, 'name' => "Bulk {$i}", 'email' => "bulk{$i}@example.test", 'password' => $password, 'user_type' => 'member', 'created_at' => $now, 'updated_at' => $now], $chunk));
             DB::table('loyalty_members')->insert(array_map(fn ($n) => ['organization_id' => $this->org->id, 'user_id' => $first + $n, 'tier_id' => $platinum, 'member_number' => 'B-' . ($first + $n),
+                'qr_code_token' => 'bulk-qr-' . ($first + $n), 'referral_code' => 'BULK' . ($first + $n),
                 'is_active' => true, 'marketing_consent' => true, 'email_notifications' => true, 'created_at' => $now, 'updated_at' => $now], array_keys($chunk)));
         }
         $segment = $this->makeSegment('Platinum', ['operator' => 'AND', 'filters' => [['type' => 'tier', 'op' => 'in', 'value' => [$platinum]]]]);

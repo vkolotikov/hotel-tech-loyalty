@@ -209,8 +209,9 @@ Multi-tenant Laravel 13 + React (Vite, TypeScript) SaaS with four sub-brands. Pr
   from every migration, then run a test file with `DB_CONNECTION=pgsql DB_DATABASE=<that database>` (and its host and
   credentials) in the environment — phpunit.xml's `<env>` entries are not forced, and the schema traits skip tables
   that exist. Release 5 found two live bugs this way (member erasure and self-deletion wrote NULL into
-  `loyalty_members.qr_code_token`). Older tests whose own data the real schema refuses are listed in
-  `docs/loyalty-workspace.md`.
+  `loyalty_members.qr_code_token`). `scripts/test-pg.sh <test database> [paths…]` runs the suites there (release 6);
+  the few tests that still fail on PostgreSQL on purpose are listed in `docs/loyalty-workspace.md` — a new failure
+  there is new. New test data gives production's NOT NULL columns and never a state the real schema refuses.
 
 ## Appointments-workspace code rules
 

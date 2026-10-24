@@ -55,7 +55,7 @@ use Tests\TestCase;
 class ActivityModelTest extends TestCase
 {
     use DatabaseTransactions;
-    use SetsUpMinimalSchema;
+    use SetsUpMinimalSchema, \Tests\Concerns\WritesRowsForeignKeysNeed;
 
     private int $orgId;
 
@@ -104,6 +104,8 @@ class ActivityModelTest extends TestCase
         $org = OrganizationFactory::new()->create();
         $this->orgId = $org->id;
         app()->instance('current_organization_id', $org->id);
+        // The enquiries the rows below name by id (a foreign key in production).
+        $this->rowsExist('inquiries', [111, 999, 4242, 5555, 9999]);
     }
 
     protected function tearDown(): void

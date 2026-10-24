@@ -7,6 +7,7 @@ use Database\Factories\OrganizationFactory;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\Schema;
 use Tests\Concerns\SetsUpMinimalSchema;
+use Tests\Concerns\ComparesJsonColumns;
 use Tests\TestCase;
 
 /**
@@ -45,7 +46,7 @@ use Tests\TestCase;
  */
 class CorporateAccountModelTest extends TestCase
 {
-    use DatabaseTransactions;
+    use DatabaseTransactions, ComparesJsonColumns;
     use SetsUpMinimalSchema;
 
     private int $orgId;
@@ -203,7 +204,7 @@ class CorporateAccountModelTest extends TestCase
 
         $a = $this->account(['custom_data' => $payload]);
 
-        $this->assertSame($payload, $a->fresh()->custom_data);
+        $this->assertSameJson($payload, $a->fresh()->custom_data); // jsonb keeps its own key order
     }
 
     public function test_null_custom_data_persists_as_null(): void

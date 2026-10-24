@@ -6,6 +6,7 @@ use App\Models\EmailVerificationCode;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Tests\TestCase;
 
 /**
@@ -35,6 +36,8 @@ use Tests\TestCase;
  */
 class VerificationCodeCleanupTest extends TestCase
 {
+    use DatabaseTransactions;
+
     private const ENDPOINT = '/api/v1/auth/send-code';
 
     protected function setUp(): void

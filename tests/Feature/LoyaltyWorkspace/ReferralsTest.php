@@ -56,8 +56,10 @@ class ReferralsTest extends TestCase
             ->assertJsonPath('referrals', [])
             ->assertJsonPath('pages', 1);
 
+        // One referral per referee (referrals_referrer_id_referee_id_unique): Ada brought in 26 guests.
         foreach (range(1, 26) as $i) {
-            Referral::create(['referrer_id' => $this->ada->id, 'referee_id' => $this->grace->id, 'status' => 'pending']);
+            $referee = $this->makeMember("Referee {$i}", "referee{$i}@example.test");
+            Referral::create(['referrer_id' => $this->ada->id, 'referee_id' => $referee->id, 'status' => 'pending']);
         }
 
         $this->asStaffMember()->getJson($this->api('referrals'))->assertJsonCount(25, 'referrals')->assertJsonPath('pages', 2);

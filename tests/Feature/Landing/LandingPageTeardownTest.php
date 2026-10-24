@@ -218,6 +218,7 @@ class LandingPageTeardownTest extends TestCase
     private function siblingBrand(Organization $org): int
     {
         return (int) DB::table('brands')->insertGetId([
+            'widget_token' => bin2hex(random_bytes(16)),
             'organization_id' => $org->id,
             'name'            => 'Glamour Northside',
             'slug'            => 'glamour-northside-' . uniqid(),

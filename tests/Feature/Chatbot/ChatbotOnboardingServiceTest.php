@@ -13,6 +13,7 @@ use Database\Factories\OrganizationFactory;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\Schema;
 use Tests\Concerns\SetsUpMinimalSchema;
+use Tests\Concerns\WritesHotelSettings;
 use Tests\TestCase;
 
 /**
@@ -28,7 +29,7 @@ use Tests\TestCase;
  */
 class ChatbotOnboardingServiceTest extends TestCase
 {
-    use DatabaseTransactions;
+    use DatabaseTransactions, WritesHotelSettings;
     use SetsUpMinimalSchema;
 
     private ChatbotOnboardingService $onboarding;
@@ -74,6 +75,8 @@ class ChatbotOnboardingServiceTest extends TestCase
                 $table->unsignedBigInteger('organization_id');
                 $table->string('key', 100);
                 $table->text('value')->nullable();
+                $table->string('type', 20)->nullable(); // NOT NULL in production
+                $table->string('group')->nullable();    // NOT NULL in production
                 $table->timestamps();
             });
         }
@@ -84,6 +87,7 @@ class ChatbotOnboardingServiceTest extends TestCase
                 $table->unsignedBigInteger('organization_id');
                 $table->unsignedBigInteger('brand_id')->nullable();
                 $table->string('widget_key', 64)->nullable();
+                $table->string('api_key', 64)->nullable(); // NOT NULL in production
                 $table->string('company_name')->nullable();
                 $table->string('welcome_title')->nullable();
                 $table->string('welcome_subtitle')->nullable();
@@ -134,7 +138,9 @@ class ChatbotOnboardingServiceTest extends TestCase
         ChatWidgetConfig::withoutGlobalScopes()->create([
             'organization_id' => $org->id,
             'brand_id'        => $brandId,
-            'widget_key'      => 'wk_' . $org->id,
+            // As signup makes them (ChatWidgetConfig): a uuid key, a random api key.
+            'widget_key'      => (string) \Illuminate\Support\Str::uuid(),
+            'api_key'         => \Illuminate\Support\Str::random(48),
             'company_name'    => $org->name,
         ]);
 
@@ -209,11 +215,11 @@ class ChatbotOnboardingServiceTest extends TestCase
         // forceFill, not create: organization_id is not in HotelSetting's
         // $fillable, so a mass-assigned create() silently drops it and the row
         // lands with a null tenant.
-        (new \App\Models\HotelSetting())->forceFill([
+        (new \App\Models\HotelSetting())->forceFill($this->settingRow([
             'organization_id' => $orgId,
             'key'             => 'company_phone',
             'value'           => '+44 20 7123 4567',
-        ])->save();
+        ]))->save();
 
         $prefill = $this->onboarding->state($orgId)['prefill'];
 

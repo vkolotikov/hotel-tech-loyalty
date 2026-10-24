@@ -207,6 +207,7 @@ class IndustryPresetServiceApplyTest extends TestCase
             ->first();
 
         $inquiry = Inquiry::create([
+            'guest_id' => $this->guestRequired(),
             'organization_id'   => $this->orgId,
             'pipeline_id'       => $hotelWon->pipeline_id,
             'pipeline_stage_id' => $hotelWon->id,
@@ -251,6 +252,7 @@ class IndustryPresetServiceApplyTest extends TestCase
             ->first();
 
         Inquiry::create([
+            'guest_id' => $this->guestRequired(),
             'organization_id'   => $this->orgId,
             'pipeline_id'       => $lostStage->pipeline_id,
             'pipeline_stage_id' => $lostStage->id,

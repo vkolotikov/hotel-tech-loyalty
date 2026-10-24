@@ -1,6 +1,6 @@
 #!/bin/bash
 # Runs the PHP test suites on PostgreSQL, one test directory or top-level test file at a time
-# (the same list and order as the SQLite runner), and prints one line per run:
+# (never a bare `artisan test`, which segfaults), and prints one line per run:
 #
 #   <path> | exit <code> | <the "Tests:" summary line>
 #       FAILED <test name>            (up to 8 per run)
@@ -21,7 +21,10 @@
 # Building the database (once, or after a run leaves it dirty; tests use DatabaseTransactions and normally
 # leave it as they found it):
 #   createdb -O <database owner> hexa_test
-#   DB_CONNECTION=pgsql DB_DATABASE=hexa_test php8.4 artisan migrate --force    (with DB_HOST etc. exported)
+#   DB_CONNECTION=pgsql DB_DATABASE=hexa_test php artisan migrate --force    (with DB_HOST etc. exported)
+# The runs use the PHP binary in $PHP (default php8.4).
+# or keep one such database untouched as a template and copy it for each run:
+#   createdb -O <database owner> -T <template database> hexa_test
 #
 # PostgreSQL's server log shows the first failing statement behind any "current transaction is aborted".
 

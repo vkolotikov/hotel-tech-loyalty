@@ -9,6 +9,7 @@ use Database\Factories\OrganizationFactory;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\DB;
 use Tests\Concerns\SetsUpMinimalSchema;
+use Tests\Concerns\WritesRowsForeignKeysNeed;
 use Tests\TestCase;
 
 /**
@@ -43,6 +44,7 @@ class EngagementDailySummaryServiceTest extends TestCase
 {
     use DatabaseTransactions;
     use SetsUpMinimalSchema;
+    use WritesRowsForeignKeysNeed;
 
     private EngagementDailySummaryService $service;
 
@@ -72,7 +74,10 @@ class EngagementDailySummaryServiceTest extends TestCase
         // Pre-setup-wizard orgs may have null timezone. Fall back
         // to UTC so the summary still fires (with a slightly off
         // window — better than nothing).
-        $org = OrganizationFactory::new()->create(['timezone' => null]);
+        // organizations.timezone is NOT NULL DEFAULT 'UTC' in production, so a
+        // null reaches orgNow() only on a model whose attribute is unset in memory.
+        $org = OrganizationFactory::new()->create();
+        $org->timezone = null;
 
         $now = $this->service->orgNow($org);
 
@@ -224,6 +229,7 @@ class EngagementDailySummaryServiceTest extends TestCase
 
         DB::table('visitors')->insert([
             'organization_id' => $org->id,
+            'visitor_key'     => 'visitor-yesterday',
             'is_lead'         => true,
             'created_at'      => $yesterdayMidday,
             'updated_at'      => $yesterdayMidday,
@@ -255,8 +261,8 @@ class EngagementDailySummaryServiceTest extends TestCase
         $twoDaysAgo = $orgNow->copy()->subDays(2)->startOfDay()->addHours(10);
 
         DB::table('visitors')->insert([
-            ['organization_id' => $org->id, 'is_lead' => true, 'created_at' => $today, 'updated_at' => $today],
-            ['organization_id' => $org->id, 'is_lead' => true, 'created_at' => $twoDaysAgo, 'updated_at' => $twoDaysAgo],
+            ['organization_id' => $org->id, 'visitor_key' => 'visitor-today', 'is_lead' => true, 'created_at' => $today, 'updated_at' => $today],
+            ['organization_id' => $org->id, 'visitor_key' => 'visitor-two-days-ago', 'is_lead' => true, 'created_at' => $twoDaysAgo, 'updated_at' => $twoDaysAgo],
         ]);
 
         // Yesterday window count — should NOT include the two
@@ -282,6 +288,7 @@ class EngagementDailySummaryServiceTest extends TestCase
         $orgNow = $this->service->orgNow($org);
         $yesterday = $orgNow->copy()->subDay()->startOfDay()->addHours(12);
 
+        $this->rowsExist('users', [1]); // the human assignee
         DB::table('chat_conversations')->insert([
             // AI-handled (resolved + ai_enabled=true + no assignee)
             ['organization_id' => $org->id, 'status' => 'resolved', 'ai_enabled' => true,  'assigned_to' => null,

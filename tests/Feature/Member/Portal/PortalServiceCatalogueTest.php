@@ -38,6 +38,8 @@ class PortalServiceCatalogueTest extends MemberEndpointTestCase
         $row->organization_id = $this->org->id;
         $row->key = $key;
         $row->value = $value;
+        // NOT NULL in production: the type the settings registry gives such a value (BookingRules::write()).
+        $row->type ??= match (true) { in_array($value, ['true', 'false'], true) => 'boolean', ctype_digit($value) => 'integer', default => 'string' };
         $row->group = 'booking';
         $row->save();
         HotelSetting::flushCacheFor($this->org->id);

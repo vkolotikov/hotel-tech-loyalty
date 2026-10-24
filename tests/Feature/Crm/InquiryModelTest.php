@@ -157,6 +157,7 @@ class InquiryModelTest extends TestCase
     private function inquiry(array $attrs = []): Inquiry
     {
         return Inquiry::create(array_merge([
+            'guest_id' => $this->guestRequired(),
             'organization_id' => $this->orgId,
             'inquiry_type'    => 'individual',
             'status'          => 'New',
@@ -433,12 +434,14 @@ class InquiryModelTest extends TestCase
 
         \DB::table('inquiries')->insert([
             'organization_id' => $orgA,
+            'guest_id'        => $this->guestRequired($orgA),
             'status'          => 'New',
             'created_at'      => now(),
             'updated_at'      => now(),
         ]);
         \DB::table('inquiries')->insert([
             'organization_id' => $orgB,
+            'guest_id'        => $this->guestRequired($orgB),
             'status'          => 'New',
             'created_at'      => now(),
             'updated_at'      => now(),

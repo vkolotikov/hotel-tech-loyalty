@@ -8,6 +8,7 @@ use Database\Factories\LoyaltyTierFactory;
 use Database\Factories\OrganizationFactory;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Tests\Concerns\SetsUpMinimalSchema;
+use Tests\Concerns\ComparesJsonColumns;
 use Tests\TestCase;
 
 /**
@@ -42,7 +43,7 @@ use Tests\TestCase;
  */
 class LoyaltyMemberModelTest extends TestCase
 {
-    use DatabaseTransactions;
+    use DatabaseTransactions, ComparesJsonColumns;
     use SetsUpMinimalSchema;
 
     private int $orgId;
@@ -99,12 +100,12 @@ class LoyaltyMemberModelTest extends TestCase
 
     private function member(array $attrs = []): LoyaltyMember
     {
-        return LoyaltyMember::create(array_merge([
+        return LoyaltyMember::create($this->memberRequired(array_merge([
             'organization_id' => $this->orgId,
             'tier_id'         => $this->tierId,
             'member_number'   => 'MN-' . uniqid(),
             'is_active'       => true,
-        ], $attrs));
+        ], $attrs)));
     }
 
     /* ─── Boolean casts (5) ─── */
@@ -237,7 +238,7 @@ class LoyaltyMemberModelTest extends TestCase
 
         $member = $this->member(['notification_preferences' => $prefs]);
 
-        $this->assertSame($prefs, $member->fresh()->notification_preferences);
+        $this->assertSameJson($prefs, $member->fresh()->notification_preferences); // jsonb keeps its own key order
     }
 
     /* ─── Relationships + FK locks ─── */
@@ -334,21 +335,21 @@ class LoyaltyMemberModelTest extends TestCase
         $orgA = $this->orgId;
         $orgB = OrganizationFactory::new()->create()->id;
 
-        \DB::table('loyalty_members')->insert([
+        \DB::table('loyalty_members')->insert($this->memberRequired([
             'organization_id' => $orgA,
             'tier_id'         => $this->tierId,
             'member_number'   => 'MN-orgA',
             'is_active'       => true,
             'created_at'      => now(),
             'updated_at'      => now(),
-        ]);
-        \DB::table('loyalty_members')->insert([
+        ]));
+        \DB::table('loyalty_members')->insert($this->memberRequired([
             'organization_id' => $orgB,
             'member_number'   => 'MN-orgB',
             'is_active'       => true,
             'created_at'      => now(),
             'updated_at'      => now(),
-        ]);
+        ]));
 
         // org A context — should see only org A's member (plus
         // the one created by setUp's $this->member()).

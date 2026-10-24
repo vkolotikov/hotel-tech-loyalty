@@ -287,18 +287,20 @@ class OrganizationSetupServiceTest extends TestCase
         // TESTH02 (then 03, etc.). Without this, registration
         // crashes with a 23505 unique violation.
         $orgA = OrganizationFactory::new()->create([
-            'name' => 'Test Hotel A', 'slug' => 'testhotelABC', 'industry' => 'hotel',
+            'name' => 'Test Hotel A', 'slug' => 'testhotel-a', 'industry' => 'hotel',
         ]);
         app()->instance('current_organization_id', $orgA->id);
         $this->service->setupDefaults($orgA);
         $codeA = Property::where('organization_id', $orgA->id)->value('code');
 
-        // Reset context and create a second org with the SAME
-        // slug — slug substring becomes the base, so the code
-        // would collide without the suffix loop.
+        // Reset context and create a second org whose slug starts
+        // the SAME — slug substring (its first five characters)
+        // becomes the base, so the code would collide without the
+        // suffix loop. (Slugs themselves are unique in production:
+        // organizations_slug_unique.)
         app()->forgetInstance('current_organization_id');
         $orgB = OrganizationFactory::new()->create([
-            'name' => 'Test Hotel B', 'slug' => 'testhotelABC', 'industry' => 'hotel',
+            'name' => 'Test Hotel B', 'slug' => 'testhotel-b', 'industry' => 'hotel',
         ]);
         app()->instance('current_organization_id', $orgB->id);
         $this->service->setupDefaults($orgB);

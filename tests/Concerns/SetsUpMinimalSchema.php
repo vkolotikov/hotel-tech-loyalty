@@ -285,6 +285,8 @@ trait SetsUpMinimalSchema
             Schema::create('visitors', function ($table) {
                 $table->bigIncrements('id');
                 $table->unsignedBigInteger('organization_id');
+                // NOT NULL in production, unique per organisation.
+                $table->string('visitor_key', 64)->nullable();
                 $table->boolean('is_lead')->default(false);
                 $table->string('current_page')->nullable();
                 $table->string('display_name')->nullable();
@@ -396,6 +398,80 @@ trait SetsUpMinimalSchema
             });
         }
         $this->addServiceBookingPaymentRule();
+    }
+
+    /**
+     * A guest of the organisation (the bound one unless named), written the way
+     * a contact is stored, for a row whose production column guest_id is NOT
+     * NULL with a foreign key — an enquiry, a reservation. Returns its id.
+     */
+    protected function guestRequired(?int $orgId = null, string $name = 'Test Guest'): int
+    {
+        $orgId ??= app()->bound('current_organization_id') ? (int) app('current_organization_id') : null;
+
+        return (int) \Illuminate\Support\Facades\DB::table('guests')->insertGetId([
+            'organization_id' => $orgId, 'full_name' => $name, 'created_at' => now(), 'updated_at' => now(),
+        ]);
+    }
+
+    /**
+     * What production's `reservations` holds NOT NULL: its guest and property
+     * (foreign keys) and its dates. A guest is written for the reservation's
+     * organisation, and its property where the schema has a properties table
+     * (the sqlite tables of a test often have none and no key that asks for
+     * one); dates only when the row names none. The test's own columns win.
+     *
+     * @return array<string, mixed>
+     */
+    protected function reservationRequired(array $row = []): array
+    {
+        $db = \Illuminate\Support\Facades\DB::class;
+        $orgId = $row['organization_id'] ?? (app()->bound('current_organization_id') ? (int) app('current_organization_id') : null);
+
+        $row['guest_id'] ??= $this->guestRequired($orgId);
+        if (($row['property_id'] ?? null) === null && Schema::hasTable('properties')) {
+            $row['property_id'] = $db::table('properties')->where('organization_id', $orgId)->value('id')
+                ?? $db::table('properties')->insertGetId([
+                    'organization_id' => $orgId, 'name' => 'Main house', 'code' => 'MAIN-' . strtoupper(bin2hex(random_bytes(3))),
+                    'created_at' => now(), 'updated_at' => now(),
+                ]);
+        }
+        if (!array_key_exists('check_in', $row)) {
+            $row['check_in'] = now()->addDays(7)->toDateString();
+        }
+        if (!array_key_exists('check_out', $row)) {
+            $row['check_out'] = now()->addDays(9)->toDateString();
+        }
+
+        return $row;
+    }
+
+    /**
+     * What production's `loyalty_members` holds NOT NULL that enrolment fills —
+     * the member's user, a tier of the venue (its lowest, else a Bronze made for
+     * it), a QR token and a referral code (both unique) — filled the way
+     * enrolment fills them, for a test that writes a member row itself. The
+     * test's own columns win.
+     *
+     * @return array<string, mixed>
+     */
+    protected function memberRequired(array $row = []): array
+    {
+        $db = \Illuminate\Support\Facades\DB::class;
+        $orgId = $row['organization_id'] ?? (app()->bound('current_organization_id') ? app('current_organization_id') : null);
+
+        $row['user_id'] ??= $db::table('users')->insertGetId([
+            'organization_id' => $orgId, 'name' => 'Member', 'email' => 'member-' . bin2hex(random_bytes(6)) . '@example.test',
+            'password' => 'unused', 'user_type' => 'member', 'created_at' => now(), 'updated_at' => now(),
+        ]);
+        $row['tier_id'] ??= $db::table('loyalty_tiers')->where('organization_id', $orgId)->orderBy('min_points')->value('id')
+            ?? $db::table('loyalty_tiers')->insertGetId([
+                'organization_id' => $orgId, 'name' => 'Bronze', 'min_points' => 0, 'created_at' => now(), 'updated_at' => now(),
+            ]);
+        $row['qr_code_token'] ??= bin2hex(random_bytes(16));
+        $row['referral_code'] ??= strtoupper(bin2hex(random_bytes(4)));
+
+        return $row;
     }
 
     /**
@@ -699,6 +775,8 @@ trait SetsUpMinimalSchema
             ['min_nights', 'integer'],
             ['min_stays',  'integer'],
             ['min_spend',  'decimal'],
+            // Production: NOT NULL, default 90 (assessTier's grace period).
+            ['grace_period_days', 'integer'],
         ];
         Schema::table('loyalty_tiers', function ($table) use ($extraCols) {
             foreach ($extraCols as [$col, $type]) {
@@ -967,6 +1045,8 @@ trait SetsUpMinimalSchema
             Schema::create('inquiries', function ($table) {
                 $table->bigIncrements('id');
                 $table->unsignedBigInteger('organization_id');
+                // NOT NULL in production: an enquiry is a guest's (see guestRequired()).
+                $table->unsignedBigInteger('guest_id')->nullable();
                 $table->unsignedBigInteger('brand_id')->nullable();
                 $table->unsignedBigInteger('pipeline_id')->nullable();
                 $table->unsignedBigInteger('pipeline_stage_id')->nullable();

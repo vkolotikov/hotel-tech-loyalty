@@ -77,11 +77,13 @@ class PipelineSchemaTest extends TestCase
         // CRITICAL: drives "which pipeline is active" — the lead
         // detail's pipeline selector defaults to is_default=true.
         $defaultPipe = Pipeline::create([
+            'slug' => 'slug-' . bin2hex(random_bytes(4)),
             'organization_id' => $this->orgId,
             'name'            => 'Sales',
             'is_default'      => true,
         ]);
         $secondary = Pipeline::create([
+            'slug' => 'slug-' . bin2hex(random_bytes(4)),
             'organization_id' => $this->orgId,
             'name'            => 'MICE',
             'is_default'      => false,
@@ -98,6 +100,7 @@ class PipelineSchemaTest extends TestCase
         // Out-of-order stages would jumble the kanban (Won before
         // Open, Lost before In-Progress).
         $pipeline = Pipeline::create([
+            'slug' => 'slug-' . bin2hex(random_bytes(4)),
             'organization_id' => $this->orgId,
             'name'            => 'Sales',
             'is_default'      => true,
@@ -105,6 +108,7 @@ class PipelineSchemaTest extends TestCase
 
         // Insert in non-sequential order — sort_order MUST drive.
         PipelineStage::create([
+            'slug' => 'slug-' . bin2hex(random_bytes(4)),
             'organization_id' => $this->orgId,
             'pipeline_id'     => $pipeline->id,
             'name'            => 'Won',
@@ -112,6 +116,7 @@ class PipelineSchemaTest extends TestCase
             'sort_order'      => 30,
         ]);
         PipelineStage::create([
+            'slug' => 'slug-' . bin2hex(random_bytes(4)),
             'organization_id' => $this->orgId,
             'pipeline_id'     => $pipeline->id,
             'name'            => 'New',
@@ -119,6 +124,7 @@ class PipelineSchemaTest extends TestCase
             'sort_order'      => 10,
         ]);
         PipelineStage::create([
+            'slug' => 'slug-' . bin2hex(random_bytes(4)),
             'organization_id' => $this->orgId,
             'pipeline_id'     => $pipeline->id,
             'name'            => 'Negotiating',
@@ -136,6 +142,7 @@ class PipelineSchemaTest extends TestCase
     public function test_pipeline_inquiries_relationship_is_has_many(): void
     {
         $pipeline = Pipeline::create([
+            'slug' => 'slug-' . bin2hex(random_bytes(4)),
             'organization_id' => $this->orgId,
             'name'            => 'Sales',
         ]);
@@ -149,6 +156,7 @@ class PipelineSchemaTest extends TestCase
     public function test_pipeline_sort_order_casts_to_integer(): void
     {
         $pipeline = Pipeline::create([
+            'slug' => 'slug-' . bin2hex(random_bytes(4)),
             'organization_id' => $this->orgId,
             'name'            => 'Sales',
             'sort_order'      => '5', // string input
@@ -167,12 +175,14 @@ class PipelineSchemaTest extends TestCase
         // Convert-to-reservation trigger (won) or skip the
         // lost_reason capture (lost).
         $pipeline = Pipeline::create([
+            'slug' => 'slug-' . bin2hex(random_bytes(4)),
             'organization_id' => $this->orgId,
             'name'            => 'Sales',
         ]);
 
         foreach (['open', 'won', 'lost'] as $kind) {
             $stage = PipelineStage::create([
+                'slug' => 'slug-' . bin2hex(random_bytes(4)),
                 'organization_id' => $this->orgId,
                 'pipeline_id'     => $pipeline->id,
                 'name'            => ucfirst($kind),
@@ -191,11 +201,13 @@ class PipelineSchemaTest extends TestCase
         // does arithmetic on this (e.g. forecast revenue
         // calculation).
         $pipeline = Pipeline::create([
+            'slug' => 'slug-' . bin2hex(random_bytes(4)),
             'organization_id' => $this->orgId,
             'name'            => 'Sales',
         ]);
 
         $stage = PipelineStage::create([
+            'slug' => 'slug-' . bin2hex(random_bytes(4)),
             'organization_id'         => $this->orgId,
             'pipeline_id'             => $pipeline->id,
             'name'                    => 'Negotiating',
@@ -210,10 +222,12 @@ class PipelineSchemaTest extends TestCase
     public function test_pipeline_stage_pipeline_relationship_is_belongs_to(): void
     {
         $pipeline = Pipeline::create([
+            'slug' => 'slug-' . bin2hex(random_bytes(4)),
             'organization_id' => $this->orgId,
             'name'            => 'Sales',
         ]);
         $stage = PipelineStage::create([
+            'slug' => 'slug-' . bin2hex(random_bytes(4)),
             'organization_id' => $this->orgId,
             'pipeline_id'     => $pipeline->id,
             'name'            => 'New',
@@ -230,10 +244,12 @@ class PipelineSchemaTest extends TestCase
     public function test_pipeline_stage_inquiries_relationship_is_has_many(): void
     {
         $pipeline = Pipeline::create([
+            'slug' => 'slug-' . bin2hex(random_bytes(4)),
             'organization_id' => $this->orgId,
             'name'            => 'Sales',
         ]);
         $stage = PipelineStage::create([
+            'slug' => 'slug-' . bin2hex(random_bytes(4)),
             'organization_id' => $this->orgId,
             'pipeline_id'     => $pipeline->id,
             'name'            => 'New',
@@ -254,11 +270,13 @@ class PipelineSchemaTest extends TestCase
         // deactivate so historical funnel keeps labels (per
         // IndustryPresetService::apply contract).
         $active = InquiryLostReason::create([
+            'slug' => 'slug-' . bin2hex(random_bytes(4)),
             'organization_id' => $this->orgId,
             'label'           => 'Price',
             'is_active'       => true,
         ]);
         $hidden = InquiryLostReason::create([
+            'slug' => 'slug-' . bin2hex(random_bytes(4)),
             'organization_id' => $this->orgId,
             'label'           => 'Deprecated reason',
             'is_active'       => false,
@@ -272,6 +290,7 @@ class PipelineSchemaTest extends TestCase
     public function test_inquiry_lost_reason_sort_order_casts_to_integer(): void
     {
         $reason = InquiryLostReason::create([
+            'slug' => 'slug-' . bin2hex(random_bytes(4)),
             'organization_id' => $this->orgId,
             'label'           => 'Price',
             'sort_order'      => '3',
@@ -288,6 +307,7 @@ class PipelineSchemaTest extends TestCase
         // reason chart depends on this — regression to convention
         // silently breaks the chart.
         $reason = InquiryLostReason::create([
+            'slug' => 'slug-' . bin2hex(random_bytes(4)),
             'organization_id' => $this->orgId,
             'label'           => 'Price',
         ]);
@@ -302,6 +322,7 @@ class PipelineSchemaTest extends TestCase
     public function test_pipeline_auto_fills_organization_id_from_bound_context(): void
     {
         $pipeline = Pipeline::create([
+            'slug' => 'slug-' . bin2hex(random_bytes(4)),
             'name'            => 'Sales',
             'organization_id' => $this->orgId,
         ]);
@@ -315,6 +336,7 @@ class PipelineSchemaTest extends TestCase
         $orgB = OrganizationFactory::new()->create()->id;
 
         \DB::table('pipeline_stages')->insert([
+            'slug' => 'slug-' . bin2hex(random_bytes(4)),
             'organization_id' => $orgA,
             'pipeline_id'     => 1,
             'name'            => 'Org A stage',
@@ -323,6 +345,7 @@ class PipelineSchemaTest extends TestCase
             'updated_at'      => now(),
         ]);
         \DB::table('pipeline_stages')->insert([
+            'slug' => 'slug-' . bin2hex(random_bytes(4)),
             'organization_id' => $orgB,
             'pipeline_id'     => 1,
             'name'            => 'Org B stage',
@@ -344,12 +367,14 @@ class PipelineSchemaTest extends TestCase
         $orgB = OrganizationFactory::new()->create()->id;
 
         \DB::table('inquiry_lost_reasons')->insert([
+            'slug' => 'slug-' . bin2hex(random_bytes(4)),
             'organization_id' => $orgA,
             'label'           => 'Org A reason',
             'created_at'      => now(),
             'updated_at'      => now(),
         ]);
         \DB::table('inquiry_lost_reasons')->insert([
+            'slug' => 'slug-' . bin2hex(random_bytes(4)),
             'organization_id' => $orgB,
             'label'           => 'Org B reason',
             'created_at'      => now(),

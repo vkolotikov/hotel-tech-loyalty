@@ -35,21 +35,31 @@ class TaskInquiryMirrorTest extends TestCase
         parent::setUp();
         $this->setUpCrmPresetSchema();
 
-        Schema::table('inquiries', function ($table) {
-            $table->unsignedBigInteger('guest_id')->nullable();
-            $table->string('next_task_type', 50)->nullable();
-            $table->date('next_task_due')->nullable();
-            $table->text('next_task_notes')->nullable();
-            $table->boolean('next_task_completed')->default(false);
-        });
+        // Only the columns the table lacks: the CRM preset schema already has guest_id,
+        // and a database built from every migration has all of them.
+        $columns = [
+            'guest_id' => fn ($table) => $table->unsignedBigInteger('guest_id')->nullable(),
+            'next_task_type' => fn ($table) => $table->string('next_task_type', 50)->nullable(),
+            'next_task_due' => fn ($table) => $table->date('next_task_due')->nullable(),
+            'next_task_notes' => fn ($table) => $table->text('next_task_notes')->nullable(),
+            'next_task_completed' => fn ($table) => $table->boolean('next_task_completed')->default(false),
+        ];
+        foreach ($columns as $name => $add) {
+            if (!Schema::hasColumn('inquiries', $name)) {
+                Schema::table('inquiries', $add);
+            }
+        }
 
         // SQLite ignores VARCHAR limits. Enforce the production varchar(50)
         // boundary so the original long-title mirror fails in this fixture.
-        DB::unprepared("CREATE TRIGGER inquiry_task_title_length BEFORE UPDATE ON inquiries
-            WHEN length(NEW.next_task_type) > 50
-            BEGIN SELECT RAISE(ABORT, 'next_task_type exceeds 50 characters'); END");
+        // PostgreSQL enforces the column's own varchar(50).
+        if (DB::getDriverName() === 'sqlite') {
+            DB::unprepared("CREATE TRIGGER inquiry_task_title_length BEFORE UPDATE ON inquiries
+                WHEN length(NEW.next_task_type) > 50
+                BEGIN SELECT RAISE(ABORT, 'next_task_type exceeds 50 characters'); END");
+        }
 
-        Schema::create('tasks', function ($table) {
+        if (!Schema::hasTable('tasks')) Schema::create('tasks', function ($table) {
             $table->id();
             $table->unsignedBigInteger('organization_id');
             $table->unsignedBigInteger('brand_id')->nullable();
@@ -68,7 +78,7 @@ class TaskInquiryMirrorTest extends TestCase
             $table->timestamps();
         });
 
-        Schema::create('activities', function ($table) {
+        if (!Schema::hasTable('activities')) Schema::create('activities', function ($table) {
             $table->id();
             $table->unsignedBigInteger('organization_id');
             $table->unsignedBigInteger('brand_id')->nullable();
@@ -90,7 +100,7 @@ class TaskInquiryMirrorTest extends TestCase
             'email' => 'task-owner@example.test',
             'password' => 'test-only-password',
         ]);
-        $this->inquiry = Inquiry::create(['status' => 'New', 'brand_id' => 11]);
+        $this->inquiry = Inquiry::create(['status' => 'New', 'brand_id' => 11, 'guest_id' => $this->guestRequired()]);
         $this->controller = app(TaskController::class);
     }
 
@@ -274,13 +284,14 @@ class TaskInquiryMirrorTest extends TestCase
     {
         $otherOrg = OrganizationFactory::new()->create();
         $foreignInquiry = Inquiry::withoutEvents(fn () => Inquiry::create([
-            'organization_id' => $otherOrg->id, 'status' => 'New', 'next_task_type' => 'Other tenant task',
+            'organization_id' => $otherOrg->id, 'guest_id' => $this->guestRequired($otherOrg->id),
+            'status' => 'New', 'next_task_type' => 'Other tenant task',
         ]));
         $foreignTask = Task::withoutEvents(fn () => Task::create([
             'organization_id' => $otherOrg->id, 'inquiry_id' => $this->inquiry->id,
             'title' => 'Foreign task must not be mirrored', 'type' => 'custom', 'due_at' => '2020-01-01',
         ]));
-        $unrelated = Inquiry::create(['status' => 'New', 'next_task_type' => 'Unrelated task']);
+        $unrelated = Inquiry::create(['status' => 'New', 'next_task_type' => 'Unrelated task', 'guest_id' => $this->guestRequired()]);
         app()->instance('current_brand_id', 22);
 
         $this->createTask(['title' => 'Own organization task', 'due_at' => '2026-09-10']);
@@ -305,8 +316,7 @@ class TaskInquiryMirrorTest extends TestCase
         $beforeTasks = DB::table('tasks')->orderBy('id')->get()->toArray();
         $beforeInquiries = DB::table('inquiries')->orderBy('id')->get()->toArray();
         $beforeActivities = DB::table('activities')->orderBy('id')->get()->toArray();
-        DB::unprepared("CREATE TRIGGER reject_inquiry_mirror BEFORE UPDATE ON inquiries
-            BEGIN SELECT RAISE(ABORT, 'Simulated mirror write failure'); END");
+        $this->rejectEveryInquiryUpdate('Simulated mirror write failure');
 
         try {
             match ($action) {
@@ -324,5 +334,24 @@ class TaskInquiryMirrorTest extends TestCase
         $this->assertEquals($beforeTasks, DB::table('tasks')->orderBy('id')->get()->toArray());
         $this->assertEquals($beforeInquiries, DB::table('inquiries')->orderBy('id')->get()->toArray());
         $this->assertEquals($beforeActivities, DB::table('activities')->orderBy('id')->get()->toArray());
+    }
+
+    /**
+     * Every UPDATE of an inquiry fails with $message, the way a failed mirror write would. SQLite raises it
+     * from a trigger; PostgreSQL from a trigger function. Both are created inside the test's transaction and
+     * go with its rollback.
+     */
+    private function rejectEveryInquiryUpdate(string $message): void
+    {
+        if (DB::getDriverName() === 'pgsql') {
+            DB::unprepared("CREATE FUNCTION reject_inquiry_mirror() RETURNS trigger LANGUAGE plpgsql AS \$\$
+                BEGIN RAISE EXCEPTION '{$message}'; END \$\$");
+            DB::unprepared('CREATE TRIGGER reject_inquiry_mirror BEFORE UPDATE ON inquiries
+                FOR EACH ROW EXECUTE FUNCTION reject_inquiry_mirror()');
+
+            return;
+        }
+        DB::unprepared("CREATE TRIGGER reject_inquiry_mirror BEFORE UPDATE ON inquiries
+            BEGIN SELECT RAISE(ABORT, '{$message}'); END");
     }
 }

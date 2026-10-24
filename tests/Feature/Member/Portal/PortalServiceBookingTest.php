@@ -57,6 +57,8 @@ class PortalServiceBookingTest extends MemberEndpointTestCase
         $row->organization_id = $this->org->id;
         $row->key = $key;
         $row->value = $value;
+        // NOT NULL in production: the type the settings registry gives such a value (BookingRules::write()).
+        $row->type ??= match (true) { in_array($value, ['true', 'false'], true) => 'boolean', ctype_digit($value) => 'integer', default => 'string' };
         $row->group = 'booking';
         $row->save();
         HotelSetting::flushCacheFor($this->org->id);
@@ -114,8 +116,9 @@ class PortalServiceBookingTest extends MemberEndpointTestCase
 
     private function pendingReward(float $value, string $type = 'fixed_amount'): RewardRedemption
     {
+        // The code within reward_redemptions.code's varchar(16).
         $reward = Reward::create(['organization_id' => $this->org->id, 'name' => 'Spa reward', 'points_cost' => 100, 'discount_type' => $type, 'discount_value' => $value, 'is_active' => true]);
-        return RewardRedemption::create(['organization_id' => $this->org->id, 'member_id' => $this->member->id, 'reward_id' => $reward->id, 'points_spent' => 100, 'code' => 'REW-' . strtoupper(uniqid()), 'status' => RewardRedemption::STATUS_PENDING]);
+        return RewardRedemption::create(['organization_id' => $this->org->id, 'member_id' => $this->member->id, 'reward_id' => $reward->id, 'points_spent' => 100, 'code' => 'REW-' . strtoupper(substr(uniqid(), -8)), 'status' => RewardRedemption::STATUS_PENDING]);
     }
 
     public function test_quote_itemises_the_member_price_and_reports_pay_at_venue_without_stripe(): void

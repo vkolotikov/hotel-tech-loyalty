@@ -7,6 +7,7 @@ use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Tests\Concerns\SetsUpMinimalSchema;
+use Tests\Concerns\ClearsTheMigrationsOrganisation;
 use Tests\TestCase;
 
 /**
@@ -30,12 +31,13 @@ use Tests\TestCase;
  */
 class ServiceBookingSourceTest extends TestCase
 {
-    use DatabaseTransactions, SetsUpMinimalSchema;
+    use DatabaseTransactions, SetsUpMinimalSchema, ClearsTheMigrationsOrganisation;
 
     protected function setUp(): void
     {
         parent::setUp();
         $this->setUpMinimalSchema();
+        $this->clearTheMigrationsOrganisation(); // this test writes its own organisation 1
 
         DB::table('organizations')->insert([
             'id' => 1, 'name' => 'Nocturne', 'slug' => 'nocturne', 'widget_token' => 'wt-source-test-token',

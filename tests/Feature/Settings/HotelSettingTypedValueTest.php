@@ -86,8 +86,12 @@ class HotelSettingTypedValueTest extends TestCase
 
     private function setting(array $attrs): HotelSetting
     {
+        // `type` and `group` are NOT NULL in production; a row that names
+        // neither is a plain string setting, as the settings screen writes one.
         return HotelSetting::create(array_merge([
             'organization_id' => $this->orgId,
+            'type' => 'string',
+            'group' => 'general',
         ], $attrs));
     }
 
@@ -189,9 +193,12 @@ class HotelSettingTypedValueTest extends TestCase
     {
         // Most settings (booking_currency, company_name) carry
         // no type and surface as strings.
+        // hotel_settings.type is NOT NULL in production, so a null type reaches
+        // the accessor only on a model whose attribute is unset in memory.
         $row = $this->setting([
-            'key' => 'booking_currency', 'type' => null, 'value' => 'EUR',
+            'key' => 'booking_currency', 'value' => 'EUR',
         ]);
+        $row->type = null;
 
         $this->assertSame('EUR', $row->typed_value);
         $this->assertIsString($row->typed_value);

@@ -57,7 +57,7 @@ use Tests\TestCase;
 class GuestMergeServiceTest extends TestCase
 {
     use DatabaseTransactions;
-    use SetsUpMinimalSchema;
+    use SetsUpMinimalSchema, \Tests\Concerns\WritesRowsForeignKeysNeed;
 
     private GuestMergeService $service;
 
@@ -68,6 +68,8 @@ class GuestMergeServiceTest extends TestCase
 
         $org = OrganizationFactory::new()->create();
         app()->instance('current_organization_id', $org->id);
+        // The loyalty members the guests below name by id (guests.member_id is a foreign key in production).
+        $this->rowsExist('loyalty_members', [101, 202, 555, 777, 888]);
 
         $this->service = new GuestMergeService();
     }

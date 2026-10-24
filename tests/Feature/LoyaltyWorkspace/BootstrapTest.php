@@ -8,12 +8,13 @@ use App\Models\HotelSetting;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\DB;
 use Tests\Concerns\SetsUpLoyaltyWorkspace;
+use Tests\Concerns\WritesHotelSettings;
 use Tests\TestCase;
 
 /** What the workspace knows before it draws (spec 2026-10-21 §6.4). */
 class BootstrapTest extends TestCase
 {
-    use DatabaseTransactions, SetsUpLoyaltyWorkspace;
+    use DatabaseTransactions, SetsUpLoyaltyWorkspace, WritesHotelSettings;
 
     protected function setUp(): void
     {
@@ -23,7 +24,7 @@ class BootstrapTest extends TestCase
 
     public function test_it_names_the_workspace_the_organisation_the_venue_and_the_ladder(): void
     {
-        HotelSetting::withoutGlobalScopes()->create(['organization_id' => $this->org->id, 'key' => 'primary_color', 'value' => '#7C3AED']);
+        HotelSetting::withoutGlobalScopes()->create($this->settingRow(['organization_id' => $this->org->id, 'key' => 'primary_color', 'value' => '#7C3AED', 'group' => 'appearance']));
 
         $this->asManager()->getJson($this->api('bootstrap'))
             ->assertOk()
@@ -74,7 +75,7 @@ class BootstrapTest extends TestCase
             ->assertJsonPath('features', ['campaigns' => true, 'wallet' => false, 'push' => true]);
 
         DB::table('organizations')->where('id', $this->org->id)->update(['currency' => null, 'plan_features' => null]);
-        HotelSetting::withoutGlobalScopes()->create(['organization_id' => $this->org->id, 'key' => 'services_currency', 'value' => 'chf']);
+        HotelSetting::withoutGlobalScopes()->create($this->settingRow(['organization_id' => $this->org->id, 'key' => 'services_currency', 'value' => 'chf']));
 
         $this->asStaffMember()->getJson($this->api('bootstrap'))
             ->assertJsonPath('venue.currency', 'CHF')

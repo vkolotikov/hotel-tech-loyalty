@@ -262,6 +262,7 @@ class IndustryPresetServiceTest extends TestCase
         $this->assertNotNull($oldWonStage);
 
         $inquiry = Inquiry::create([
+            'guest_id' => $this->guestRequired(),
             'pipeline_stage_id' => $oldWonStage->id,
             'pipeline_id'       => $oldWonStage->pipeline_id,
             'status'            => $oldWonStage->name,
@@ -286,6 +287,7 @@ class IndustryPresetServiceTest extends TestCase
         $oldOpenStage = PipelineStage::where('kind', 'open')->first();
 
         $inquiry = Inquiry::create([
+            'guest_id' => $this->guestRequired(),
             'pipeline_stage_id' => $oldOpenStage->id,
             'pipeline_id'       => $oldOpenStage->pipeline_id,
             'status'            => $oldOpenStage->name,
@@ -308,6 +310,7 @@ class IndustryPresetServiceTest extends TestCase
         $oldStage = PipelineStage::where('kind', 'open')->first();
 
         $inquiry = Inquiry::create([
+            'guest_id' => $this->guestRequired(),
             'pipeline_stage_id' => $oldStage->id,
             'pipeline_id'       => $oldStage->pipeline_id,
             'status'            => $oldStage->name,
@@ -346,6 +349,7 @@ class IndustryPresetServiceTest extends TestCase
             'Hotel preset must seed "Unavailable for those dates" (hotel-specific label).');
 
         $inq = Inquiry::create([
+            'guest_id' => $this->guestRequired(),
             'lost_reason_id' => $reasonInUse->id,
             'status'         => 'Lost',
         ]);
@@ -386,6 +390,7 @@ class IndustryPresetServiceTest extends TestCase
         $this->assertNotNull($sharedReason);
 
         Inquiry::create([
+            'guest_id' => $this->guestRequired(),
             'lost_reason_id' => $sharedReason->id,
             'status'         => 'Lost',
         ]);

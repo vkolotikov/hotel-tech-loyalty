@@ -463,8 +463,10 @@ class PushTest extends TestCase
     {
         $now = now()->toDateTimeString();
         $first = (int) DB::table('users')->max('id') + 1;
-        DB::table('users')->insert(array_map(fn ($i) => ['organization_id' => $this->org->id, 'name' => "Bulk {$i}", 'email' => "bulk{$i}@example.test", 'user_type' => 'member', 'created_at' => $now, 'updated_at' => $now], range(1, 130)));
+        $password = bcrypt('secret-pass-1'); // NOT NULL in production, as the members' card codes below are
+        DB::table('users')->insert(array_map(fn ($i) => ['organization_id' => $this->org->id, 'name' => "Bulk {$i}", 'email' => "bulk{$i}@example.test", 'password' => $password, 'user_type' => 'member', 'created_at' => $now, 'updated_at' => $now], range(1, 130)));
         DB::table('loyalty_members')->insert(array_map(fn ($n) => ['organization_id' => $this->org->id, 'user_id' => $first + $n, 'tier_id' => $this->tiers['silver']->id, 'member_number' => 'B-' . ($first + $n),
+            'qr_code_token' => 'bulk-qr-' . ($first + $n), 'referral_code' => 'BULK' . ($first + $n),
             'is_active' => true, 'push_notifications' => true, 'expo_push_token' => self::token("bulk-{$n}"), 'created_at' => $now, 'updated_at' => $now], range(0, 129)));
         $message = $this->readyDraft();
         $this->send($message, 130)->assertOk();

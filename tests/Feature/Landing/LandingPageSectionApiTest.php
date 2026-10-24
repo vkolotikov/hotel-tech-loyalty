@@ -137,6 +137,8 @@ class LandingPageSectionApiTest extends TestCase
     private function makeSiblingBrand(Organization $org): int
     {
         return (int) DB::table('brands')->insertGetId([
+            'widget_token' => bin2hex(random_bytes(16)),
+            'slug' => 'brand-' . bin2hex(random_bytes(4)),
             'organization_id' => $org->id,
             'name'            => $org->name . ' Two',
             'is_default'      => false,

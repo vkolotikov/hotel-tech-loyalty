@@ -5,6 +5,7 @@ namespace Tests\Feature\Planner;
 use App\Models\CrmSetting;
 use App\Models\PlannerTask;
 use App\Models\Staff;
+use App\Models\User;
 use App\Services\PlannerPresetService;
 use Database\Factories\OrganizationFactory;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
@@ -122,7 +123,10 @@ class PlannerGroupRestoreTest extends TestCase
         CrmSetting::create(['key' => 'planner_employee_prefs', 'value' => json_encode([
             'Anna' => ['groups' => ['Design Studio'], 'tasks' => []],
         ])]);
-        Staff::create(['organization_id' => $this->orgId, 'planner_skills' => ['Card Production', 'Packaging']]);
+        // A staff profile is a user's (staff.user_id is NOT NULL in production).
+        $user = User::create(['organization_id' => $this->orgId, 'name' => 'Anna', 'email' => 'anna-planner@example.test',
+            'password' => 'test-only-password']);
+        Staff::create(['organization_id' => $this->orgId, 'user_id' => $user->id, 'planner_skills' => ['Card Production', 'Packaging']]);
         foreach (['Packaging', 'sales', 'Card Production', '', null] as $group) {
             PlannerTask::create(['organization_id' => $this->orgId, 'title' => 'T', 'task_group' => $group]);
         }

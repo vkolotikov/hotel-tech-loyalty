@@ -61,7 +61,7 @@ class TierQualificationWindowTest extends TestCase
         $this->bronze = LoyaltyTierFactory::new()->bronze()->create();
         $this->bronze->forceFill(['min_points' => 0, 'sort_order' => 1])->save();
 
-        $this->gold = LoyaltyTierFactory::new()->create();
+        $this->gold = LoyaltyTierFactory::new()->gold()->create(); // never a second Bronze: (organization_id, name) is unique
         $this->gold->forceFill([
             'name' => 'Gold', 'min_points' => 1000, 'sort_order' => 2, 'is_active' => true,
         ])->save();
@@ -122,6 +122,8 @@ class TierQualificationWindowTest extends TestCase
             'member_id'  => $member->id,
             'type'       => 'earn',
             'points'     => $points,
+            'balance_after' => $points, // NOT NULL in production, as is the description
+            'description'   => 'Earned',
             'created_at' => $when,
             'updated_at' => $when,
         ])->save();
@@ -166,12 +168,13 @@ class TierQualificationWindowTest extends TestCase
         // Spending points does not un-earn them.
         PointsTransaction::create([
             'member_id' => $member->id, 'type' => 'redeem', 'points' => -300,
+            'balance_after' => 1200, 'description' => 'Redeemed', // NOT NULL in production
         ]);
         // A reversed row has its own offsetting entry; counting it twice
         // would understate the window.
         PointsTransaction::create([
             'member_id' => $member->id, 'type' => 'earn', 'points' => 250,
-            'is_reversed' => true,
+            'is_reversed' => true, 'balance_after' => 1450, 'description' => 'Earned',
         ]);
 
         $this->assertSame(500, $this->service->qualifyingPointsFor($member->fresh()));

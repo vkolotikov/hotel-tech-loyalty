@@ -1002,7 +1002,9 @@ class ServicePublicController extends Controller
                 'customer_email'     => $data['customer_email'] ?? null,
                 'customer_name'      => $data['customer_name'] ?? null,
                 'request_payload'    => $data,
-                'error_message'      => $error,
+                // The column is varchar(255): a longer message (PostgreSQL's unique-violation text, say) would make
+                // this row fail to save, and the failure would go unrecorded.
+                'error_message'      => $error !== null ? mb_substr($error, 0, 255) : null,
             ]);
         } catch (\Throwable) {
             // swallow — submission log must never block the booking

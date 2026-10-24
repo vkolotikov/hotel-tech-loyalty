@@ -113,6 +113,7 @@ class SpecialOfferModelTest extends TestCase
         return SpecialOffer::create(array_merge([
             'organization_id' => $this->orgId,
             'title'           => 'Test offer',
+            'description'     => 'Twenty percent off', // NOT NULL in production
             'type'            => 'percent_off',
             'value'           => 20.00,
             'start_date'      => now()->subDay(),
@@ -334,6 +335,7 @@ class SpecialOfferModelTest extends TestCase
         \DB::table('special_offers')->insert([
             'organization_id' => $orgB,
             'title'           => 'Org B offer',
+            'description'     => 'Ten percent off',
             'type'            => 'percent_off',
             'value'           => 10.00,
             'start_date'      => now()->subDay(),

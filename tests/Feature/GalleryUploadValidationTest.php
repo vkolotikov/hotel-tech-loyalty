@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 use Tests\Concerns\SetsUpMinimalSchema;
+use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Tests\TestCase;
 
 /**
@@ -35,7 +36,7 @@ use Tests\TestCase;
  */
 class GalleryUploadValidationTest extends TestCase
 {
-    use SetsUpMinimalSchema;
+    use DatabaseTransactions, SetsUpMinimalSchema;
 
     private Organization $org;
     private User $user;

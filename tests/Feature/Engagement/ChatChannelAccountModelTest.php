@@ -7,7 +7,9 @@ use Database\Factories\OrganizationFactory;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Schema;
+use Tests\Concerns\ComparesJsonColumns;
 use Tests\Concerns\SetsUpMinimalSchema;
+use Tests\Concerns\WritesRowsForeignKeysNeed;
 use Tests\TestCase;
 
 /**
@@ -61,7 +63,9 @@ use Tests\TestCase;
 class ChatChannelAccountModelTest extends TestCase
 {
     use DatabaseTransactions;
+    use ComparesJsonColumns;
     use SetsUpMinimalSchema;
+    use WritesRowsForeignKeysNeed;
 
     private int $orgId;
 
@@ -286,7 +290,7 @@ class ChatChannelAccountModelTest extends TestCase
 
         $account = $this->account(['meta_config' => $cfg]);
 
-        $this->assertSame($cfg, $account->fresh()->meta_config);
+        $this->assertSameJson($cfg, $account->fresh()->meta_config);
     }
 
     public function test_token_scopes_round_trips_through_array_cast(): void
@@ -326,6 +330,7 @@ class ChatChannelAccountModelTest extends TestCase
     {
         // FK is 'connected_by_user_id' (NOT the conventional
         // 'connected_by'). Lock the explicit name.
+        $this->rowsExist('users', [42]);
         $account = $this->account(['connected_by_user_id' => 42]);
         $rel = $account->connectedBy();
 

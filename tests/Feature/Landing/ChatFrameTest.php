@@ -46,6 +46,7 @@ class ChatFrameTest extends TestCase
     private function widget(array $attributes = []): ChatWidgetConfig
     {
         return ChatWidgetConfig::create($attributes + [
+            'api_key' => \Illuminate\Support\Str::random(48),
             'organization_id' => 1,
             'brand_id'        => 1,
             'widget_key'      => self::KEY,

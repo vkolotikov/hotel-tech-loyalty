@@ -57,8 +57,15 @@ class PointExpiryBucketConsumeTest extends TestCase
 
     private function bucket(int $original, int $remaining): PointExpiryBucket
     {
+        // A bucket is the member's, opened by the award that earned it (both NOT NULL foreign keys in production).
+        $member = \Database\Factories\LoyaltyMemberFactory::new()->withPoints($original)->create();
+        $award = \Database\Factories\PointsTransactionFactory::new()->create([
+            'member_id' => $member->id, 'points' => $original, 'qualifying_points' => $original, 'balance_after' => $original,
+        ]);
+
         return PointExpiryBucket::create([
-            'member_id'        => 1, // arbitrary; not gated by tenant scope
+            'member_id'        => $member->id,
+            'transaction_id'   => $award->id,
             'original_points'  => $original,
             'remaining_points' => $remaining,
             'earned_at'        => now()->toDateString(),

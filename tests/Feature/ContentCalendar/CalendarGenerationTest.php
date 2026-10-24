@@ -18,12 +18,14 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Schema;
 use Mockery;
 use PHPUnit\Framework\Attributes\DataProvider;
+use Tests\Concerns\MakesATableUnreadable;
 use Tests\Concerns\SetsUpMinimalSchema;
+use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Tests\TestCase;
 
 class CalendarGenerationTest extends TestCase
 {
-    use SetsUpMinimalSchema;
+    use DatabaseTransactions, MakesATableUnreadable, SetsUpMinimalSchema;
 
     private ContentPlannerProfile $profile;
 
@@ -33,14 +35,24 @@ class CalendarGenerationTest extends TestCase
         Http::preventStrayRequests();
         config(['services.anthropic.api_key' => 'calendar-test-key']);
         $this->setUpKnowledgeSchema();
-        (require database_path('migrations/2026_07_08_000000_create_content_planner_tables.php'))->up();
-        (require database_path('migrations/2026_07_08_200000_upgrade_content_planner_tables.php'))->up();
+        // Each migration only where the database lacks what it makes: a database built from
+        // every migration (PostgreSQL) has them all already.
+        if (!Schema::hasTable('content_planner_profiles')) {
+            (require database_path('migrations/2026_07_08_000000_create_content_planner_tables.php'))->up();
+            (require database_path('migrations/2026_07_08_200000_upgrade_content_planner_tables.php'))->up();
+        }
         // Release 4a tells the AI the window's key dates (spec 2026-10-16 §3.6): the brand's holiday settings and own
         // events, and the venue's zone (VenueClock reads `hotel_timezone` from hotel_settings) for the country guess.
-        (require database_path('migrations/2026_10_16_100000_add_holiday_settings_to_content_planner_profiles.php'))->up();
-        (require database_path('migrations/2026_10_16_100100_create_content_planner_key_dates_table.php'))->up();
+        if (!Schema::hasColumn('content_planner_profiles', 'holiday_country')) {
+            (require database_path('migrations/2026_10_16_100000_add_holiday_settings_to_content_planner_profiles.php'))->up();
+        }
+        if (!Schema::hasTable('content_planner_key_dates')) {
+            (require database_path('migrations/2026_10_16_100100_create_content_planner_key_dates_table.php'))->up();
+        }
         // Release 6: every AI call's context reads the brand's website summary (spec 2026-10-20 §3.6).
-        (require database_path('migrations/2026_10_20_100000_create_content_sites_table.php'))->up();
+        if (!Schema::hasTable('content_sites')) {
+            (require database_path('migrations/2026_10_20_100000_create_content_sites_table.php'))->up();
+        }
         if (!Schema::hasTable('hotel_settings')) {
             Schema::create('hotel_settings', function ($t) {
                 $t->bigIncrements('id');
@@ -62,7 +74,8 @@ class CalendarGenerationTest extends TestCase
         $this->profile = ContentPlannerProfile::create(['name' => 'Test profile', 'brand_id' => $brandId]);
         ContentPlannerChannel::create(['planner_profile_id' => $this->profile->id, 'brand_id' => $brandId,
             'platform' => 'linkedin', 'label' => 'LinkedIn', 'active' => true]);
-        DB::table('users')->insert(['id' => 7, 'organization_id' => $org->id, 'email' => 'calendar@example.test', 'user_type' => 'staff']);
+        DB::table('users')->insert(['id' => 7, 'organization_id' => $org->id, 'name' => 'Calendar Staff',
+            'email' => 'calendar@example.test', 'password' => bcrypt('unused-password'), 'user_type' => 'staff']);
         $this->actingAs(User::findOrFail(7));
         $knowledge = Mockery::mock(ContentKnowledgeService::class);
         $knowledge->shouldReceive('summarizeForAi')->andReturn('Test business context.');
@@ -182,7 +195,8 @@ class CalendarGenerationTest extends TestCase
 
     public function test_local_database_failure_is_not_a_provider_503(): void
     {
-        Schema::drop('content_planner_ai_generations');
+        // The table is "gone" without a failing statement, which on PostgreSQL would abort the test's transaction.
+        $this->makeTableUnreadable('content_planner_ai_generations');
         Http::fakeSequence()->push($this->message([$this->item('2026-09-07')]));
 
         $this->generationStops('2026-09-07', '2026-09-13');
