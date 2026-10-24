@@ -149,6 +149,18 @@ Multi-tenant Laravel 13 + React (Vite, TypeScript) SaaS with four sub-brands. Pr
   cache is each container's own files). The pay-at-venue grant is offered only when Stripe is unreachable
   (`PayAtVenueFallback::isStripeUnreachable()`) and pays for one booking; the return endpoint
   (`member/portal/payments/{pi}`) only reads.
+- Release 6 (`docs/superpowers/specs/2026-10-23-loyalty-release-6-design.md`, "all remaining improvements", owner
+  2026-10-23): a stay's refunds are written only under the payment's refund lock (`refund:{payer}`, in `SharedCache`) —
+  `applyRefund()` around its Stripe call and stamp, `recordStripeRefund()` for the `charge.refunded` webhook, which
+  records only Stripe's cumulative `amount_refunded` beyond what the rooms hold; no time window. Stripe's figure counts
+  refunds only, so what a lost dispute took is kept apart in `dispute_lost_amount` and left out of every such compare
+  (`recordLostDispute()`, one transaction for all rooms; the booking itself is staff's). A refund Stripe hands back
+  (`StripeService::wasReplayed()`, or an id already recorded) records nothing new beyond Stripe's own total; a refund
+  that times out is `RefundOutcomeUnknown`, never "failed". Every Stripe call made under a lock goes through
+  `StripeService::underLock()` (5 s / 15 s). The widget's stay confirm takes every room's lock (ascending), then the
+  hold row, and re-reads its payment there before Smoobu; a payment it cannot check leaves staff the enquiry and
+  runs the rescue. The rescue alerts staff only for a payment Stripe could read in the venue's account. Currency is
+  the venue's, never a literal EUR; zero-decimal amounts go through `toSmallestUnit()`/`fromSmallestUnit()`.
 - Runbook: `docs/member-portal.md` (`## Stays (phase 3)`, `## Cancellation (phase 3)`,
   `## The public confirm's payment rescue`, `## After a deploy`, `## When money looks wrong`,
   `## Known limits`) — read it before touching stays, cancellation or the public confirm's failure handling.
@@ -191,6 +203,8 @@ Multi-tenant Laravel 13 + React (Vite, TypeScript) SaaS with four sub-brands. Pr
 - Release 5 (`docs/superpowers/specs/2026-10-23-loyalty-release-5-design.md`): a scanned or typed code is read only by
   `App\Services\Loyalty\Cards\CodeReader` through `CardLookup` (the full admin's `scan/qr` too); an NFC card is linked
   or switched off only by `App\Services\Loyalty\Cards\NfcCards` (`nfc_cards.uid` is unique across all organisations).
+  Release 6: enrolment, the full admin's NFC and scan endpoints link cards through `NfcCards` too; a card never
+  replaces a member's QR token.
 - Testing against PostgreSQL (the SQLite schemas miss NOT NULL columns and indexes production has): build a database
   from every migration, then run a test file with `DB_CONNECTION=pgsql DB_DATABASE=<that database>` (and its host and
   credentials) in the environment — phpunit.xml's `<env>` entries are not forced, and the schema traits skip tables

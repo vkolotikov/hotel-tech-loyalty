@@ -36,6 +36,28 @@ as `main` 5b481aa, built from branch ea8b364). The list is every known limit lef
 6. **Boosts flagged "check the time"** can be confirmed together by a manager ("These times are right").
 7. **Campaign tags inside a link are URL-encoded**; `{{current_year}}` follows the venue's clock.
 
+### Independent review of part M (commit 4f8d74f)
+
+A read-only review of part M's money changes found six things, all fixed with tests on SQLite and PostgreSQL:
+
+1. A refund Stripe answered too late, retried after its webhook recorded the money without the refund's id (API
+   versions since 2022-11-15 send no `refunds` list), was recorded twice. Now a refund Stripe hands back
+   (`Idempotent-Replayed`, or an id already recorded) is recorded only as far as Stripe's own refunded total, read
+   under the lock, exceeds what the rooms hold; staff are told "No new refund was made" (409). A refund that times out
+   is "may or may not have been made — retry only the same amount" (504), never "failed".
+2. A widget confirm whose payment could not be checked under the lock left the guest's card held for days with no
+   booking: the widget cannot confirm again with it. Now the rescue runs and staff get the enquiry.
+3. A lost dispute counted against Stripe's refunds-only `amount_refunded`, so later refunds were under-recorded. Now
+   it is kept apart (`dispute_lost_amount`, migration 2026_10_23_160000) and left out of the compare.
+4. A lost dispute on a stay was recorded room by room, and a failure was acknowledged to Stripe. Now one transaction;
+   a failure keeps nothing and Stripe delivers the event again.
+5. The rescue alert could be raised by anyone posting a made-up id, and by a double submit. Now only for a payment
+   Stripe could read in the venue's account.
+6. The widget's combination booked a room on its base price when the PMS had answered for that room and a second read
+   failed. Now only a room the per-day answer leaves out altogether is judged on its base price.
+
+Left as it is: a webhook refund larger than a single room's price is recorded as made (the money did go back).
+
 ## 3. Test-suite health (part T, after M and P)
 
 The older tests that fail on PostgreSQL only because of their own data get data the real schema accepts, so every

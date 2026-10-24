@@ -365,6 +365,24 @@ payment was already captured, for both kinds:
   possibly-unordered `refunds` list, and never moving the stored amount backwards on a re-delivered or
   out-of-order event) — including a service booking with no member, which used to be logged and
   otherwise ignored.
+- **A lost dispute** (release 6). `charge.dispute.closed` with status `lost` records the money as gone back on every
+  room of the payment (each its own share; `refunded`, or `partially_refunded` for a dispute of part of it;
+  `last_refund_id` = `dispute_<dispute id>`) and on a service booking, reverses the points of every room now refunded
+  in full, and writes `booking_dispute_lost` (one per room) or `service_booking.dispute_lost`. The booking itself is
+  left as it is: no Smoobu cancellation, no `booking_state` change, no mail — staff decide whether the guest still
+  stays, and cancel it themselves if not. What the dispute took is also kept apart in `dispute_lost_amount`, because
+  Stripe's refunded total leaves it out: a refund made afterwards (or reported afterwards) is recorded in full. All
+  rooms are recorded in one transaction; if it fails, nothing is kept and the webhook answers an error, so Stripe
+  delivers the event again.
+- **A refund in the full admin that Stripe did not answer in time** (release 6). Stripe calls made under the refund
+  lock wait at most 15 seconds. When that runs out the refund may or may not have been made: staff see "Stripe did not
+  answer in time…" (504 `refund_outcome_unknown`), nothing is recorded, and the refund's own `charge.refunded` webhook
+  records it if Stripe made it. A retry of exactly the same amount is safe: Stripe hands the same refund back (the
+  idempotency key is the payment and the amount) and it is recorded once. A different amount would be a second refund.
+- **"No new refund was made"** (409 `no_new_refund`, release 6): Stripe handed back a refund of the same amount it had
+  already made on this payment within its 24 hours (the retry above, or a second refund of the same amount). Only what
+  is not yet recorded is recorded (Stripe's own refunded total, read under the lock). To give back more within the
+  day, refund in the Stripe dashboard: the webhook records it.
 - **What `pending` means for capture.** With `services_require_staff_confirmation` on, a portal booking
   is written `pending`; the capture job skips it, and captures it on the first run after staff
   confirm it (every ten minutes, while the booking is between five minutes and six days old). If
@@ -481,6 +499,12 @@ rooms along (`App\Services\Booking\GroupPayment`): the capture job, the `payment
 dispute webhooks, `charge.refunded` and `applyRefund()`; each room is paid its own total and earns points on it. A
 member cancels the whole combination or nothing: money back once, then every room cancelled; a room staff changed on
 its own, a dispute or a partial refund makes it the venue's. The bookings list shows it once ("Sea view + Garden").
+Release 6: the public widget's combination takes the same room locks (every room once, ascending, then the hold row)
+and re-checks every room under them; a room taken meanwhile is refused ("no longer available"), nothing is written and
+a reservation already made at Smoobu is cancelled again. A room the PMS's per-day answer leaves out altogether is
+judged on its base price, as the availability search offered it; a room it answers for is judged as a single room is.
+The full admin shows the group's payment on every room, `php artisan bookings:retry-pms-sync` writes the Stripe
+reference line on every room, and the portal's cancel panel lists the rooms (`portal.bookings.cancel_rooms`).
 The room/Smoobu half and the membership half of
 "can this venue's stays be booked" are two separate checks, in two different places:
 `BookingCapability::staysBookableOnline($orgId)` answers only whether the venue has an active room
@@ -735,9 +759,20 @@ column says which.
 The public stay confirm (`POST /api/v1/booking/confirm`, `BookingPublicController::confirm()`) authorises a
 guest's card first and books second. When it fails after that, `rescuePaymentIntentOnConfirmFailure()`
 releases the money, so the guest's bank does not show a pending amount for days with no booking behind it.
-It runs at four stages, recorded as `confirm_context.stage`: `validation` (the body failed validation),
+It runs at five stages, recorded as `confirm_context.stage`: `validation` (the body failed validation),
 `service_http` (the engine answered an HTTP error, e.g. a 503 from the PMS), `service_runtime` (a refusal
-such as a taken room, or a payment check that failed) and `unhandled` (any other exception).
+such as a taken room, or a payment check that failed), `payment_check` (release 6: the engine's re-read of the
+payment under the hold's lock could not reach Stripe) and `unhandled` (any other exception).
+
+**The payment read again under the hold's lock** (release 6). Once the confirm holds its room lock(s) and the hold
+row, and before Smoobu is asked, `BookingEngineService` reads the widget's payment again with the short timeout. A
+payment no longer `requires_capture` or `succeeded` (cancelled by a racing request's rescue, say) is refused with
+"Payment has not been completed." (`service_runtime`) and nothing is written. A Stripe that cannot be asked answers
+503 `payment_check_failed` with the sentence "We could not check your payment just now, so the booking was not
+made. …": the widget cannot confirm again with a payment it already confirmed at Stripe, so the rescue runs (stage
+`payment_check`; a payment it cannot read is left alone as `unreadable`) and staff get the "Booking widget failed"
+enquiry to follow the guest up. A confirm of the same hold can no longer be overtaken into a stay without a live
+payment.
 
 **The rule.** The rescue gives back only a payment that no booking carries and whose metadata carries this
 request's own hold token (`hold_token`, which the stay widget's `paymentIntent()` writes for the hold).
@@ -771,6 +806,11 @@ The checks run in that order: `carried_by_booking`, then `unreadable`, then the 
   `payment_intent_id`, `original_error`, `original_class`, `confirm_context` (with the `stage`), `reason`,
   and, where they belong, `kind` or `retrieve_error`. No card data and no metadata value other than `kind`
   is recorded.
+- Release 6: a refusal of a payment Stripe could read in this venue's account also tells staff as it happens: a
+  realtime notification `booking.pi_rescue_refused` ("A failed booking's payment needs a look", linked to
+  `/audit?action=booking.confirm.pi_rescue_refused`). `unreadable` and `carried_by_booking` raise none — anyone can
+  post an id Stripe cannot read, and a double submit finds its booking — their audit rows record them. The
+  notification has its own try, so it never changes the answer or the record.
 - A payment that was given back writes `booking.confirm.pi_cancelled` or `booking.confirm.pi_refunded`. A
   Stripe call that failed writes `booking.confirm.pi_rescue_failed` (an unknown intent status writes the
   same action with `reason = unknown_status`); a refund a restricted Stripe key refused writes
@@ -829,6 +869,9 @@ calls, audit rows and log lines. Five things differ:
   - `2026_10_01_100000_service_bookings_unique_payment` creates the index `service_bookings_org_pi_unique`
     (see "One payment, one service booking"), or, when it finds a payment id repeated within one
     organisation, creates nothing and writes a warning to the log. Either way it is recorded as run.
+- Release 6 adds `2026_10_23_160000_add_dispute_lost_amount_to_bookings`: one nullable column,
+  `dispute_lost_amount`, on `booking_mirror` and `service_bookings` (a catalogue change on PostgreSQL, guarded,
+  reversible). NULL reads as nothing lost to a dispute.
 - **Check that the one-payment index exists.** Each step below is a command to type exactly as written; a
   placeholder in angle brackets is something to replace, brackets included.
   1. `php artisan migrate:status` lists `2026_10_01_100000_service_bookings_unique_payment` as `Ran`. This
@@ -883,18 +926,23 @@ calls, audit rows and log lines. Five things differ:
   | `php artisan bookings:prune-holds` | daily, 03:45 | deletes expired `booking_holds` rows |
 
 - Settings to check in the hosting panel:
+  - **The refund lock is in the database** (release 6): `refund:{the row that carries the payment}` lives in
+    `SharedCache` (the database store, table `cache_locks`, which every container sees), whatever the default
+    cache store is. The staff refund, a member's cancellation and the `charge.refunded` webhook all take it, so
+    a refund is recorded exactly once with no time window. A webhook that finds it held waits up to 10 seconds
+    (`services.stripe.refund_lock_wait`, optional) and then answers 500, so Stripe delivers it again.
   - **Which cache store production uses** (the `CACHE_DRIVER`/`CACHE_STORE` environment setting;
     Laravel's own default is `file`). `MemberCancellation::cancelStay()`'s `cancel_in_progress` lock
-    and `BookingRefundService::applyRefund()`'s `refund:` lock are cache locks — on a store that is
-    local to one instance (`file`, `array`) they do **not** span multiple app instances behind a load
-    balancer. Consequence of that: two instances can both start a cancel or a refund attempt for the
-    same booking at once, which can duplicate an audit row or a mail, but the money itself cannot be
-    refunded twice — the `pi:` advisory lock and the row lock inside the database, not the cache
-    lock, are what stop that. A shared store (`redis`, `database`, `memcached`) removes even the
-    duplicate-mail/audit risk.
+    is a lock in that store — on a store that is local to one instance (`file`, `array`) it does **not**
+    span multiple app instances behind a load balancer. Consequence of that: two instances can both start
+    a cancel of the same booking at once, which can duplicate an audit row or a mail, but the money itself
+    cannot be refunded twice — the refund lock above, the `pi:` advisory lock and the row lock are what
+    stop that. A shared store (`redis`, `database`, `memcached`) removes even the duplicate-mail/audit risk.
   - Stripe webhooks must deliver `charge.refunded` (in addition to whatever the account already
     sends) — it is how a dashboard refund, an async settlement reversal, or a refund made from
-    another instance reaches `service_bookings.refunded_amount`.
+    another instance reaches `service_bookings.refunded_amount` and a stay's rooms — and, since
+    release 6, `charge.dispute.created` and `charge.dispute.closed`, which flag a disputed payment
+    and record a lost one.
   - Settings → Booking is reachable for every industry now; check the two cancellation-hours fields
     (`services_cancel_hours`, `booking_cancel_hours`; default 24 / 48) are what the venue actually
     wants — the portal enforces the number, the policy text next to it is only what the member reads.
@@ -947,6 +995,10 @@ calls, audit rows and log lines. Five things differ:
 | A service confirm answered `payment_mismatch` and the member's card shows the charge still held | A `ServiceBookingSubmission` row with `outcome = failed`, `error_message = payment_not_payable` (written by `writeBooking()`'s own re-check) — this re-check never releases the intent itself | Nothing further needed if a booking now carries the intent (check `service_bookings.stripe_payment_intent_id`); otherwise it is an orphan and the sweeper or `php artisan diag:orphan-stripe-pis` handles it as above |
 | A guest of the public services widget was told "This payment has already been used for a booking." | A `ServiceBookingSubmission` row with `outcome = failed`, `error_message = payment already used`, and the request's `customer_email`; the booking that carries the payment: `service_bookings.stripe_payment_intent_id` | Nothing to undo: the refused request created no booking and touched no payment. If the guest has no booking, find the one that carries the payment (a retry, or the same payment used twice) and tell them it stands |
 | A guest of the public services widget was told "The payment does not match this booking. Please pay again." (422 `payment_mismatch`, release 4) | A `ServiceBookingSubmission` row with `outcome = failed`, `error_message = payment_mismatch`: the payment named in the request is not this booking's — another amount or currency, not made by the services payment step (`kind` not `service_booking`), another organisation, service or time (a repriced master under "any staff member" too) | Nothing was booked, captured or cancelled. The guest pays again; the refused authorisation lapses at Stripe in about seven days, or cancel it in the Stripe dashboard once no booking carries it |
+| A stay or a service booking shows `refunded` but the guest still stays, or the venue lost a chargeback (release 6) | Audit rows `booking_dispute_lost` (one per room of the payment) or `service_booking.dispute_lost`, with the dispute id and reason; `last_refund_id` = `dispute_<dispute id>`; `dispute_lost_amount` = what the dispute took | Nothing to undo: the bank took the money back and the points were reversed. The booking was left as it is — staff decide whether to cancel it (in the admin; Smoobu separately for a stay) |
+| A dashboard refund does not show on a stay after a minute (release 6) | The log line `charge.refunded webhook — refund lock busy; Stripe will deliver again` (another refund of the payment held the lock): Stripe was answered 500 and delivers the event again, with its own back-off | Wait for Stripe's next delivery (the Stripe dashboard's webhook view shows the attempts); it records whatever is still new. Do not record the refund by hand |
+| A widget guest was told "We could not check your payment just now, so the booking was not made." (503 `payment_check_failed`, release 6) | A "Booking widget failed: payment_check_failed" enquiry; the audit row `booking.confirm.pi_cancelled` (the card was released) or `booking.confirm.pi_rescue_refused` with reason `unreadable` (Stripe was still unreachable, so the payment was left alone) | Contact the guest from the enquiry. If the payment was left alone, check that no booking carries it and cancel the authorisation in the Stripe dashboard (or let it lapse in about seven days) |
+| Staff were told "No new refund was made" (409) or "Stripe did not answer in time" (504) on a refund (release 6) | The booking's refund amount and the payment in the Stripe dashboard; `refund_attempts` for the booking (an attempt that timed out carries the error) | See "Payments an operator must handle by hand": retry only exactly the same amount; to give back more the same day, refund in the Stripe dashboard |
 | A guest says their card shows a pending amount after a failed public booking | Audit rows `booking.confirm.pi_rescue_refused`, `booking.confirm.pi_rescue_failed` or `booking.confirm.pi_rescue_restricted_key` for that payment intent (`php artisan diag:recent-confirm-failures --org=<organisation id>` lists every `booking.confirm.*` row); with none of them, the log line `Booking confirm PI rescue: pi_rescue_checks_failed`. The row's `reason` and `confirm_context.stage` say why the rescue left it alone (see "The public confirm's payment rescue") | If the reason is `carried_by_booking`, do nothing: a booking has that payment and the capture job captures it. For any other reason, first check that no booking carries the intent (`service_bookings.stripe_payment_intent_id`, `booking_mirror.stripe_payment_intent_id`), then open it in the Stripe dashboard by the id in the row: cancel an authorised (`requires_capture`) one, or let it lapse at Stripe on its own after about seven days; refund a captured (`succeeded`) one only if it is the guest's payment for this failed booking |
 
 ## Known limits
@@ -956,14 +1008,6 @@ calls, audit rows and log lines. Five things differ:
   or "Payment has not been completed. Status: …" for a payment Stripe knows, and "Unable to verify payment:
   No such payment_intent: …" for one it does not. That text is the public confirm's own and is unchanged;
   the rescue (see "The public confirm's payment rescue") adds no signal of its own.
-- **A confirm of the same hold can be overtaken just before it locks the hold.** A public confirm that has
-  passed its payment check but has not yet reached `BookingEngineService::confirm()`'s lock of the hold row
-  (it reads the hold unlocked, links the guest and takes the room lock first) is not waited for by the
-  rescue. If a failing second request of the same guest, naming the same payment and the same hold, runs
-  its rescue in that gap, it cancels the payment; the first confirm then locks the hold and writes the stay
-  without a live payment. The capture job finds the payment cancelled on its next run and records it
-  (`booking.capture.expired`, payment status `cancelled`). Closing it needs the engine to re-check the
-  payment under its own lock, and the engine is unchanged.
 - **A payment the public services confirm refuses as not this booking's is not released** (release 4): it may be
   another booking's or another payer's, so the confirm never cancels it; an authorisation lapses at Stripe in about
   seven days. With "any staff member", if the confirm assigns a master priced differently from the one the payment
@@ -976,8 +1020,6 @@ calls, audit rows and log lines. Five things differ:
   violation the one-payment rule does not explain is answered 409 with the exception's own message; any other
   failure is answered 500 "Failed to create booking: …" with its message. Only the payment rule has a plain
   sentence.
-- **Nothing alerts on a rescue refusal.** A refusal is an audit row and a warning line, with no realtime
-  event and no mail; it is found by looking (see "When money looks wrong").
 - **One hold per card, within one quote** (release 4). A new quote or a reload makes a new hold, and the older hold's
   intent is left for the sweeper. The engine saves the hold during a confirm and can overwrite the hold's record of its
   intent if a payment-intent call lands at that moment (the sweeper then releases the unrecorded one).
@@ -988,9 +1030,12 @@ calls, audit rows and log lines. Five things differ:
   (`php artisan workspace:appointments <organisation id> --off`) — by
   `php artisan portal:pay-at-venue <organisation id> --on|--off|--status` (release 6; audited
   `booking.pay_at_venue_changed`).
-- **No shorter Stripe timeout for a call made under a lock.** Every Stripe call inside the `pi:` lock (or
-  the room/slot lock) uses the same client timeout as everywhere else; a slow Stripe response holds the
-  lock for that long. Reported, not changed.
+- **Stripe calls under a lock wait at most 15 seconds** (release 6, `StripeService::underLock()`: 5 s to connect,
+  15 s to read): the portal's payment guard and confirms, member cancellations, the capture job, the refund path
+  (and its read of the charge), the widget's payment re-check and the rescue's call under its locks. A call that
+  runs out of time is "Stripe could not be reached" (`payment_check_failed` / 503, nothing released or written; a
+  refund is `refund_outcome_unknown`). The Appointments workspace's own card refund (`AppointmentMoney`, under the
+  booking row and `pi:`) and every call made outside a lock keep Stripe's defaults (30 s / 80 s).
 - **The Smoobu sync's pins**, exactly as `BookingEngineService::upsertBookingFromData()` has them: a
   mirror's `payment_status` is kept as it is (Smoobu's own read is discarded) when it is currently
   `refunded`, `partially_refunded`, `disputed`, `cancelled`, `canceled`, `authorized` or `capture_expired`
@@ -1013,17 +1058,13 @@ calls, audit rows and log lines. Five things differ:
 - **A widget stay earns only for a verified address.** A member who never verified their email (a self-registered one
   who did not claim the account) does not earn for widget stays until they do; the award looks back 60 days.
 - **Combination stays** (release 5): points are rounded per room; every room needs an adult; two units of one room
-  type send two Smoobu reservations; the full admin shows the Stripe reference on the lead room only, and
-  `php artisan bookings:retry-pms-sync` writes no "Stripe ref" line in a following room's Smoobu note; the portal's
-  cancel panel names the rooms in its title, not one by one. The public widget's paid combination now books (the
-  payment on the lead room only, R5-4); its replay by payment answers the group's total; it still has no room lock or
-  re-check of its own (unchanged). Rows from before June 2026 whose payment the 06-01 migration suffixed `_dup…` are
-  not treated as following rooms.
-- **Refund events** (release 5): `charge.refunded` records from the charge's cumulative `amount_refunded`, only the part
-  not yet recorded on the payment's rooms, never backwards. A refund event that arrives within 60 seconds of a refund
-  this application recorded is skipped by the freshness check (`RefundAttempt`); the cumulative read catches it up
-  on the next refund event — if none follows, compare the rooms with the Stripe dashboard. A lost dispute records
-  nothing (`applyRefund()` refuses a disputed row): every room stays `disputed`.
+  type send two Smoobu reservations. The public widget's paid combination books with the payment on the lead room
+  only (R5-4); its replay by payment answers the group's total. Rows from before June 2026 whose payment the 06-01
+  migration suffixed `_dup…` are not treated as following rooms.
+- **Refund events** (release 6): `charge.refunded` records from the charge's cumulative `amount_refunded`, only the part
+  not yet recorded on the payment's rooms (what lost disputes took left out), never backwards, under the refund lock
+  — no time window. A refund larger than a single room's price (a charge larger than the stay's total) is recorded
+  as it was made, above `price_total`.
 - **Extras pricing (release 4, R4-3).** `BookingEngineService::extraUnits()` charges each extra as the full admin set it:
   per stay once, per night × nights, per person × guests (adults and children; the legacy `per_guest` too), per person
   per night × both, all × quantity. Smoobu's lines, `extras_json`, the admin's line items and both mails use the same
@@ -1046,14 +1087,12 @@ calls, audit rows and log lines. Five things differ:
   left for the sweeper.
 - The **capture job's** `--limit` (default 200) counts payments: a group of rooms is never cut in two, so a run may
   touch a few more rows than the limit.
-- The `svc:` (any master) and `svcm:` (named master) slot locks do not serialise each other (an
-  "anyone available" confirm and a named-master confirm for the same master).
-- The engine's literal `EUR` in holds, the Smoobu receipt and the confirm response; the portal reports
-  `booking_currency` and takes online payment only when it equals Stripe's currency.
-- **Zero-decimal currencies in the refund webhook, for stays only** (`$latest->amount / 100`, a bare
-  division with no currency check, in the `booking_mirror` branch of `charge.refunded`). The service
-  booking branch (`recordServiceBookingRefund()`) already converts by currency and is zero-decimal
-  aware.
+- **"Any staff member" and a named master** (release 6, pinned): an "any" confirm takes the `svcm:` lock of every
+  master it may pick, so it and a named-master confirm of the same master serialise.
+- **Currency** (release 6): holds, the Smoobu receipt, the confirm response and the confirmation mail carry the
+  venue's currency (a EUR venue's answers are byte-identical); the widget refuses to create a payment when the
+  booking's currency is not the venue's Stripe currency. Every stay money path converts zero-decimal currencies
+  (yen) by `StripeService::toSmallestUnit()` / `fromSmallestUnit()`.
 - **Cancellation fees and partial refunds** are not built — a member cancellation is always a full
   refund or nothing.
 - A venue with **no membership programme at all** (no `LoyaltyTier` row) has no portal booking for
