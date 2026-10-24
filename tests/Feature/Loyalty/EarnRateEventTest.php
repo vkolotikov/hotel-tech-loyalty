@@ -54,7 +54,7 @@ use Tests\TestCase;
 class EarnRateEventTest extends TestCase
 {
     use DatabaseTransactions;
-    use SetsUpMinimalSchema;
+    use SetsUpMinimalSchema, \Tests\Concerns\WritesRowsForeignKeysNeed;
 
     private int $orgId;
     private int $tierId;
@@ -89,6 +89,8 @@ class EarnRateEventTest extends TestCase
 
         $tier = LoyaltyTierFactory::new()->bronze()->create();
         $this->tierId = $tier->id;
+        // The property the gated events below name (earn_rate_events.property_id is a foreign key in production).
+        $this->rowsExist('properties', [100]);
     }
 
     protected function tearDown(): void

@@ -109,6 +109,7 @@ class LandingOnboardingTest extends TestCase
     private function makeUser(Organization $org): User
     {
         return User::create([
+            'password' => 'secret-pass-1',
             'name'            => 'Staff',
             'email'           => 'staff_' . uniqid() . '@example.test',
             'organization_id' => $org->id,
@@ -153,6 +154,8 @@ class LandingOnboardingTest extends TestCase
     private function makeSiblingBrand(Organization $org): int
     {
         return (int) DB::table('brands')->insertGetId([
+            'widget_token' => bin2hex(random_bytes(16)),
+            'slug' => 'brand-' . bin2hex(random_bytes(4)),
             'organization_id' => $org->id,
             'name'            => $org->name . ' Two',
             'is_default'      => false,
@@ -173,6 +176,7 @@ class LandingOnboardingTest extends TestCase
     private function makeProperty(array $attributes = []): Property
     {
         return Property::create(array_merge([
+            'code' => 'P' . strtoupper(bin2hex(random_bytes(4))),
             'name'      => 'Glamour Salon',
             'phone'     => '+371 20000000',
             'email'     => 'hello@glamour.test',
@@ -260,6 +264,7 @@ class LandingOnboardingTest extends TestCase
         ]);
 
         DB::table('properties')->insert([
+            'code' => 'P' . strtoupper(bin2hex(random_bytes(4))),
             'organization_id' => $this->org->id,
             'brand_id'        => $sibling,
             'name'            => 'Sibling Site',
@@ -355,6 +360,7 @@ class LandingOnboardingTest extends TestCase
         // preferOwnBrand() exists to prevent -- only this time printed into
         // the form the tenant is about to confirm.
         DB::table('properties')->insert([
+            'code' => 'P' . strtoupper(bin2hex(random_bytes(4))),
             'organization_id' => $this->org->id,
             'brand_id'        => $this->brandId + 99,
             'name'            => 'Sibling Site',
@@ -1492,6 +1498,7 @@ class LandingOnboardingTest extends TestCase
 
     public function test_the_suggested_slug_steps_around_an_address_another_tenant_holds(): void
     {
+        $this->organisationsExist([$this->org->id + 999]); // the other tenant (a foreign key in production)
         DB::table('landing_pages')->insert([
             'organization_id' => $this->org->id + 999,
             'brand_id'        => null,
@@ -1704,6 +1711,7 @@ class LandingOnboardingTest extends TestCase
 
     public function test_apply_refuses_a_slug_another_tenant_already_holds(): void
     {
+        $this->organisationsExist([$this->org->id + 999]); // the other tenant (a foreign key in production)
         DB::table('landing_pages')->insert([
             'organization_id' => $this->org->id + 999,
             'brand_id'        => null,

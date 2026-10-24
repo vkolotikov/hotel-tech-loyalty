@@ -232,8 +232,24 @@
     "title": "Niveles"
   },
   "time_check": {
+    "all_line": "Algunas promociones piden revisar sus horas. Si las horas mostradas son correctas, confírmelas todas a la vez.",
+    "confirm_all": "Estas horas son correctas",
+    "confirm_body": "Estas promociones se guardaron antes de que las horas de las promociones se leyeran en todas partes según la hora del establecimiento. Compruebe que cada una empieza y termina como se muestra, según la hora del establecimiento ({{zone}}). Al confirmar quedan marcadas como revisadas y no cambia ninguna hora; si alguna es incorrecta, elija «Todavía no» y corríjala.",
+    "confirm_title": "¿Son correctas estas horas?",
     "dialog": "Revise estas horas: la promoción se guardó antes de que las horas de las promociones se leyeran en todas partes según la hora del establecimiento. Si se guardó por última vez en la administración completa, pueden estar desplazadas por la diferencia del establecimiento con UTC. Al guardarla, quedan marcadas como revisadas.",
+    "keep": "Todavía no",
     "row": "Revise la hora: esta promoción se guardó antes de que las horas de las promociones se leyeran en todas partes según la hora del establecimiento. Si se guardó por última vez en la administración completa, puede empezar y terminar con unas horas de diferencia. Ábrala, revise las horas y guárdela."
+  },
+  "times": {
+    "error": {
+      "invalid": "Una de estas promociones ya no está en el programa. La página la muestra ahora tal como está; no se ha confirmado nada.",
+      "manager_only": "Solo un propietario o un responsable puede modificar el programa.",
+      "network": "Sin conexión: no se ha confirmado nada. Inténtelo de nuevo.",
+      "no_capability": "Solo un propietario o un responsable puede modificar el programa.",
+      "not_allowed": "Solo un propietario o un responsable puede modificar el programa.",
+      "not_found": "Una de estas promociones ya no está en el programa. La página la muestra ahora tal como está; no se ha confirmado nada.",
+      "unknown": "No se han podido confirmar las horas. Inténtelo de nuevo."
+    }
   },
   "title": "Programa",
   "value_phrase": {

@@ -25,7 +25,8 @@ use Illuminate\Support\Facades\DB;
  *  4. a link carrying a member number or a token;
  *  5. a secure QR token, then the legacy `qr_code_token`;
  *  6. an NFC card's ID in hex, however the reader spaced it;
- *  7. a member number in any case, with or without its hyphen;
+ *  7. a member number in any case, with or without its hyphen; then, since release 6, one a keyboard layout bent
+ *     (German, Russian, French, Spanish), typed back (CodeReader::numberForms);
  *  8. the digits alone, when exactly one member's number ends with them (two or more: not found, never a guess);
  *  9. an NFC card's ID in decimal (a 4- or 7-byte ID, either byte order), then a hex ID in the other byte order.
  *
@@ -123,6 +124,13 @@ final class CardLookup
         [$member, $result] = $this->byNumber($code);
         if ($member !== null) {
             return new CardRead('manual', CardRead::NUMBER, $member, $result, $code);
+        }
+        // A member number a scanner's keyboard layout bent (release 6: `LS)àà&àà&` on AZERTY), typed back.
+        foreach (CodeReader::numberForms($code) as $typed) {
+            [$member, $result] = $this->byNumber($typed);
+            if ($member !== null) {
+                return new CardRead('manual', CardRead::NUMBER, $member, $result, $typed);
+            }
         }
 
         $digits = CodeReader::digits($code);

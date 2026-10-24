@@ -73,7 +73,8 @@ final class LoyaltyForms
     }
 
     /**
-     * The brands a new reward, offer or boost may be put on (release 4 part E), for this staff member: this
+     * The brands a reward, offer or boost may be put on (release 4 part E; since release 6 moved to on a change too),
+     * for this staff member: this
      * organisation's brands that are not deleted, the default first, then in their order. A request bound to one
      * brand (a staff member assigned to one only, or a brand picked) offers that one; a staff member assigned to some
      * brands offers those (the `brand` middleware's rule); everyone else, a platform admin included, every brand.
@@ -110,9 +111,10 @@ final class LoyaltyForms
     }
 
     /**
-     * The rule for the brand a new row names, sent as `brand` (an id; not `brand_id`, which every workspace call
-     * carries in its address as `all` and Laravel would read as the field): one of brands()' list. Absent or null,
-     * the model's own hook picks the brand as before (the request's brand, else the organisation's default).
+     * The rule for the brand a row names, sent as `brand` (an id; not `brand_id`, which every workspace call carries
+     * in its address as `all` and Laravel would read as the field): one of brands()' list. Absent or null, a new row's
+     * brand is the model's own hook's (the request's brand, else the organisation's default) and a saved row keeps
+     * its own; named on a change (release 6), the row moves to that brand.
      *
      * @return list<mixed>
      */

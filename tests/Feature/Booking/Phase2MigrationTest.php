@@ -2,13 +2,21 @@
 
 namespace Tests\Feature\Booking;
 
+use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\Schema;
 use Tests\Concerns\SetsUpMinimalSchema;
+use Tests\Concerns\StartsFromABlankDatabase;
 use Tests\TestCase;
 
 class Phase2MigrationTest extends TestCase
 {
-    use SetsUpMinimalSchema;
+    use DatabaseTransactions, SetsUpMinimalSchema, StartsFromABlankDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->startFromABlankDatabase();
+    }
 
     private function migration(): object
     {

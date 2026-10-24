@@ -71,7 +71,7 @@ class OrganicWellnessRenderTest extends TestCase
 
     private function makeBrand(?string $logoUrl): void
     {
-        Brand::withoutGlobalScopes()->create([
+        Brand::withoutGlobalScopes()->forceCreate([ // forceCreate: `id` is not fillable, and the page names brand 1
             'id' => 1, 'organization_id' => 1, 'name' => 'Morrow', 'logo_url' => $logoUrl,
         ]);
     }
@@ -96,6 +96,7 @@ class OrganicWellnessRenderTest extends TestCase
     private function seedLikeTheKit(string $industry = 'beauty', ?string $firstServiceImage = '/storage/facial-clay.webp'): LandingPage
     {
         Property::create([
+            'code' => 'P' . strtoupper(bin2hex(random_bytes(4))),
             'organization_id' => 1, 'brand_id' => 1, 'name' => 'Morrow & Moss',
             'phone' => '+371 20 000 000', 'email' => 'hello@morrowandmoss.example',
             'address' => '18 Linden Lane', 'city' => 'Riga', 'country' => 'Latvia',
@@ -488,6 +489,7 @@ class OrganicWellnessRenderTest extends TestCase
     public function test_a_business_with_no_conjunction_gets_the_lockup_it_always_had(): void
     {
         Property::create([
+            'code' => 'P' . strtoupper(bin2hex(random_bytes(4))),
             'organization_id' => 1, 'brand_id' => 1, 'name' => 'Morrow Studio', 'is_active' => true,
         ]);
 
@@ -502,6 +504,7 @@ class OrganicWellnessRenderTest extends TestCase
     public function test_an_ampersand_inside_a_word_is_not_emphasised(): void
     {
         Property::create([
+            'code' => 'P' . strtoupper(bin2hex(random_bytes(4))),
             'organization_id' => 1, 'brand_id' => 1, 'name' => 'R&D Skin Lab', 'is_active' => true,
         ]);
 
@@ -514,6 +517,7 @@ class OrganicWellnessRenderTest extends TestCase
     public function test_a_hostile_business_name_never_reaches_the_lockup_unescaped(): void
     {
         Property::create([
+            'code' => 'P' . strtoupper(bin2hex(random_bytes(4))),
             'organization_id' => 1, 'brand_id' => 1, 'name' => '<script>x</script> & Moss', 'is_active' => true,
         ]);
 
@@ -648,7 +652,7 @@ class OrganicWellnessRenderTest extends TestCase
 
     public function test_an_unrated_review_draws_no_stars(): void
     {
-        Property::create(['organization_id' => 1, 'brand_id' => 1, 'name' => 'Morrow & Moss', 'is_active' => true]);
+        Property::create(['code' => 'P' . strtoupper(bin2hex(random_bytes(4))), 'organization_id' => 1, 'brand_id' => 1, 'name' => 'Morrow & Moss', 'is_active' => true]);
         ReviewSubmission::create([
             'organization_id' => 1, 'anonymous_name' => 'Quiet guest', 'overall_rating' => null,
             'comment' => 'A calm hour.', 'is_featured' => true, 'submitted_at' => now(),
@@ -810,6 +814,7 @@ class OrganicWellnessRenderTest extends TestCase
     public function test_an_active_review_form_wires_the_feedback_link(): void
     {
         ReviewForm::create([
+            'type' => 'basic',
             'organization_id' => 1, 'name' => 'Guest notes', 'embed_key' => 'abc123',
             'is_active' => true, 'allow_anonymous' => true,
         ]);
@@ -824,7 +829,8 @@ class OrganicWellnessRenderTest extends TestCase
     public function test_the_chat_launcher_mounts_in_the_reserved_slot(): void
     {
         ChatWidgetConfig::create([
-            'organization_id' => 1, 'widget_key' => 'wk-123', 'is_enabled' => true,
+            'api_key' => \Illuminate\Support\Str::random(48),
+            'organization_id' => 1, 'widget_key' => '7a3c1f2e-5b4d-4e6f-8a9b-0c1d2e3f4a5b', 'is_enabled' => true,
         ]);
 
         $this->seedLikeTheKit();
@@ -833,7 +839,7 @@ class OrganicWellnessRenderTest extends TestCase
         $this->assertStringContainsString('data-ai-widget-slot', $body);
         $this->assertStringContainsString('class="ai-panel"', $body);
         $this->assertStringContainsString('class="ai-launcher"', $body);
-        $this->assertStringContainsString('/chat-frame/wk-123', $body);
+        $this->assertStringContainsString('/chat-frame/7a3c1f2e-5b4d-4e6f-8a9b-0c1d2e3f4a5b', $body);
     }
 
     public function test_no_chat_widget_leaves_the_slot_reserved_and_empty(): void
@@ -1215,6 +1221,7 @@ class OrganicWellnessRenderTest extends TestCase
     public function test_the_footer_hub_counts_the_columns_it_really_has(): void
     {
         ReviewForm::create([
+            'type' => 'basic',
             'organization_id' => 1, 'name' => 'Guest notes', 'embed_key' => 'abc123',
             'is_active' => true, 'allow_anonymous' => true,
         ]);

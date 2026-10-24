@@ -7,6 +7,7 @@ use App\Services\IntegrationStatus;
 use Database\Factories\OrganizationFactory;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Tests\Concerns\SetsUpMinimalSchema;
+use Tests\Concerns\WritesHotelSettings;
 use Tests\TestCase;
 
 /**
@@ -47,7 +48,7 @@ use Tests\TestCase;
  */
 class IntegrationStatusTest extends TestCase
 {
-    use DatabaseTransactions;
+    use DatabaseTransactions, WritesHotelSettings;
     use SetsUpMinimalSchema;
 
     protected function setUp(): void
@@ -118,11 +119,11 @@ class IntegrationStatusTest extends TestCase
                 ->where('organization_id', $orgId)
                 ->where('key', 'smoobu_enabled')
                 ->delete();
-            HotelSetting::create([
+            HotelSetting::create($this->settingRow([
                 'organization_id' => $orgId,
                 'key'             => 'smoobu_enabled',
                 'value'           => $val,
-            ]);
+            ]));
 
             $this->assertTrue(IntegrationStatus::isEnabled('smoobu'),
                 "Value '{$val}' MUST classify as enabled.");
@@ -142,11 +143,11 @@ class IntegrationStatusTest extends TestCase
                 ->where('organization_id', $orgId)
                 ->where('key', 'smoobu_enabled')
                 ->delete();
-            HotelSetting::create([
+            HotelSetting::create($this->settingRow([
                 'organization_id' => $orgId,
                 'key'             => 'smoobu_enabled',
                 'value'           => $val,
-            ]);
+            ]));
 
             $this->assertFalse(IntegrationStatus::isEnabled('smoobu'),
                 "Value '{$val}' MUST classify as DISABLED.");
@@ -160,11 +161,11 @@ class IntegrationStatusTest extends TestCase
         // null for '' which falsy-casts.
         $orgId = $this->bindOrg();
 
-        HotelSetting::create([
+        HotelSetting::create($this->settingRow([
             'organization_id' => $orgId,
             'key'             => 'smoobu_enabled',
             'value'           => '',
-        ]);
+        ]));
 
         $this->assertFalse(IntegrationStatus::isEnabled('smoobu'),
             'Empty string → MUST be DISABLED (admin deliberately cleared).');
@@ -181,13 +182,13 @@ class IntegrationStatusTest extends TestCase
         $orgB = OrganizationFactory::new()->create()->id;
 
         // Disable in org A.
-        \DB::table('hotel_settings')->insert([
+        \DB::table('hotel_settings')->insert($this->settingRow([
             'organization_id' => $orgA,
             'key'             => 'smoobu_enabled',
             'value'           => 'false',
             'created_at'      => now(),
             'updated_at'      => now(),
-        ]);
+        ]));
 
         // Org A: disabled.
         app()->instance('current_organization_id', $orgA);
@@ -209,11 +210,11 @@ class IntegrationStatusTest extends TestCase
         // Disabling smoobu MUST NOT touch stripe / hubspot / etc.
         $orgId = $this->bindOrg();
 
-        HotelSetting::create([
+        HotelSetting::create($this->settingRow([
             'organization_id' => $orgId,
             'key'             => 'smoobu_enabled',
             'value'           => 'false',
-        ]);
+        ]));
 
         $this->assertFalse(IntegrationStatus::isEnabled('smoobu'),
             'Pre-condition: smoobu disabled.');
@@ -235,11 +236,11 @@ class IntegrationStatusTest extends TestCase
         // TenantScope.
         $orgId = $this->bindOrg();
 
-        HotelSetting::create([
+        HotelSetting::create($this->settingRow([
             'organization_id' => $orgId,
             'key'             => 'stripe_enabled',
             'value'           => 'false',
-        ]);
+        ]));
 
         // Even though we're outside the TenantMiddleware, the call
         // MUST return the persisted state.
@@ -258,21 +259,21 @@ class IntegrationStatusTest extends TestCase
         $orgId = $this->bindOrg();
 
         // Seed under the OFFICIAL key name.
-        HotelSetting::create([
+        HotelSetting::create($this->settingRow([
             'organization_id' => $orgId,
             'key'             => 'mailchimp_enabled',
             'value'           => 'false',
-        ]);
+        ]));
 
         $this->assertFalse(IntegrationStatus::isEnabled('mailchimp'),
             'integration id "mailchimp" MUST map to key "mailchimp_enabled".');
 
         // Same value under a wrong key MUST NOT take effect.
-        HotelSetting::create([
+        HotelSetting::create($this->settingRow([
             'organization_id' => $orgId,
             'key'             => 'sendgrid-enabled', // hyphen, not underscore
             'value'           => 'false',
-        ]);
+        ]));
 
         $this->assertTrue(IntegrationStatus::isEnabled('sendgrid'),
             'Wrong-format key MUST be ignored — default-on stands.');

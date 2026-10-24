@@ -117,7 +117,9 @@ final class MemberCancellation
         }
 
         try {
-            return DB::transaction(function () use ($orgId, $bookingId) {
+            // The row lock and `pi:` are held to the end: every Stripe call in
+            // here has the short timeout (StripeService::underLock()).
+            return DB::transaction(fn () => StripeService::underLock(function () use ($orgId, $bookingId) {
                 $b = ServiceBooking::withoutGlobalScopes()
                     ->where('organization_id', $orgId)
                     ->whereKey($bookingId)
@@ -166,7 +168,7 @@ final class MemberCancellation
                     couponReleased: $this->coupons->release($b->discount_source, $b->discount_source_id ? (int) $b->discount_source_id : null, (string) $b->booking_reference),
                     pointsReversed: $this->reverseAndCount('service_booking', (int) $b->id, "Appointment {$b->booking_reference} cancelled"),
                 );
-            });
+            }));
         } finally {
             if ($ambient === null) {
                 app()->forgetInstance('current_organization_id');
@@ -238,7 +240,8 @@ final class MemberCancellation
             }
 
             try {
-                $phase1 = DB::transaction(function () use ($orgId, $mirrorId) {
+                // Under the row lock and `pi:`: the short Stripe timeout (StripeService::underLock()).
+                $phase1 = DB::transaction(fn () => StripeService::underLock(function () use ($orgId, $mirrorId) {
                     $m = BookingMirror::withoutGlobalScopes()
                         ->where('organization_id', $orgId)
                         ->whereKey($mirrorId)
@@ -301,7 +304,7 @@ final class MemberCancellation
 
                     $amount = round((float) $m->price_total, 2);
                     return ['mode' => 'finished', 'mirrorId' => $m->id, 'outcome' => $this->writeStayCancellation($m, 'released', $amount, ['payment_status' => 'cancelled'], false)];
-                });
+                }));
 
                 if ($phase1['mode'] === 'finished') {
                     return $phase1['outcome']->withPms($this->cancelAtPmsAfterCommit($phase1['mirrorId']));
@@ -497,7 +500,8 @@ final class MemberCancellation
         }
 
         try {
-            $phase1 = DB::transaction(function () use ($orgId, $groupId) {
+            // Under the rows' locks and `pi:`: the short Stripe timeout (StripeService::underLock()).
+            $phase1 = DB::transaction(fn () => StripeService::underLock(function () use ($orgId, $groupId) {
                 $rooms = $this->lockCombination($orgId, $groupId);
                 $decision = self::combinationDecision($rooms);
                 $this->assertAllowed($decision['policy']);
@@ -545,7 +549,7 @@ final class MemberCancellation
                 }
 
                 return ['mode' => 'finished', 'outcome' => $this->writeCombinationCancellation($rooms, 'released', self::sumOf($rooms, 'price_total'), ['payment_status' => 'cancelled'])];
-            });
+            }));
 
             if ($phase1['mode'] === 'finished') {
                 return $phase1['outcome']->withPms($this->cancelCombinationAtPms($orgId, $groupId));
@@ -600,6 +604,12 @@ final class MemberCancellation
             $done = $this->stayRefund->applyRefund(GroupPayment::lead($rooms), null, 'requested_by_customer', null, true, null);
         } catch (\Throwable $e) {
             if (!$this->isChargeAlreadyRefunded($e)) {
+                // Release 6: applyRefund() reads the rows again under its refund
+                // lock — a refund the webhook recorded in the gap is refused there
+                // as already done. Money back in full finishes the cancellation.
+                if ($inFull($rooms = $this->readCombination($orgId, $groupId))) {
+                    return $this->finishRefundedCombination($orgId, $groupId, self::sumOf($rooms, 'refunded_amount'), null);
+                }
                 Log::error('portal.stay_refund_failed', ['org' => $orgId, 'group' => $groupId, 'payment_intent' => $pi, 'error' => $e->getMessage()]);
                 throw new CancellationException('refund_failed', 'We could not return the payment just now, so the booking was not cancelled. Please try again in a moment.', 502);
             }
@@ -796,6 +806,13 @@ final class MemberCancellation
             $done = $this->stayRefund->applyRefund($m, null, 'requested_by_customer', null, true, null);
         } catch (\Throwable $e) {
             if (!$this->isChargeAlreadyRefunded($e)) {
+                // Release 6: applyRefund() reads the row again under its refund
+                // lock — a refund the webhook recorded in the gap is refused there
+                // as already done. Money back in full finishes the cancellation.
+                $now = $this->readStay($orgId, $mirrorId);
+                if (self::isRefundedInFull((string) $now->payment_status, $now->refunded_amount, $now->price_total)) {
+                    return $this->finishRefundedStay($orgId, $mirrorId, round((float) $now->refunded_amount, 2), false, null);
+                }
                 Log::error('portal.stay_refund_failed', ['org' => $orgId, 'mirror' => $mirrorId, 'payment_intent' => $pi, 'error' => $e->getMessage()]);
                 throw new CancellationException('refund_failed', 'We could not return the payment just now, so the booking was not cancelled. Please try again in a moment.', 502);
             }

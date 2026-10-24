@@ -20,7 +20,7 @@ class BootstrapAccentTest extends TestCase
 
     private function brand(int $orgId, string $value): void
     {
-        DB::table('hotel_settings')->insert(['organization_id' => $orgId, 'key' => 'primary_color', 'value' => $value, 'created_at' => now(), 'updated_at' => now()]);
+        DB::table('hotel_settings')->insert(['organization_id' => $orgId, 'key' => 'primary_color', 'value' => $value, 'type' => 'string', 'group' => 'appearance', 'created_at' => now(), 'updated_at' => now()]);
     }
 
     public function test_it_sends_the_brand_colour_in_lower_case(): void

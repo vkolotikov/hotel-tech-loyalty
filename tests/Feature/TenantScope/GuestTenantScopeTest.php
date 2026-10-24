@@ -159,6 +159,7 @@ class GuestTenantScopeTest extends TestCase
         $g1 = Guest::create([
             'first_name' => 'Alice',
             'last_name'  => 'In-A',
+            'full_name'  => 'Alice In-A',
             'email'      => 'alice@orgA.test',
         ]);
         $this->assertSame($orgA->id, $g1->organization_id);
@@ -168,6 +169,7 @@ class GuestTenantScopeTest extends TestCase
         $g2 = Guest::create([
             'first_name' => 'Bob',
             'last_name'  => 'In-B',
+            'full_name'  => 'Bob In-B',
             'email'      => 'bob@orgB.test',
         ]);
         $this->assertSame($orgB->id, $g2->organization_id);
@@ -181,6 +183,7 @@ class GuestTenantScopeTest extends TestCase
         $g3 = Guest::create([
             'first_name'      => 'Mallory',
             'last_name'       => 'Tampered',
+            'full_name'       => 'Mallory Tampered',
             'email'           => 'mallory@example.test',
             'organization_id' => $orgB->id,  // attacker-supplied wrong org
         ]);

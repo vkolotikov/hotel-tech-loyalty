@@ -87,6 +87,22 @@ class MemberOfferModelTest extends TestCase
         $this->memberId = $member->id;
     }
 
+    /**
+     * The offer a claim names: on PostgreSQL a real one, each claim its own (member_offers.offer_id is a foreign key
+     * and (member_id, offer_id) unique in production); the sqlite schema here has no offers table, and offer 1 stands.
+     */
+    private function offerId(): int
+    {
+        if (!Schema::hasTable('special_offers')) {
+            return 1;
+        }
+
+        return (int) \DB::table('special_offers')->insertGetId([
+            'organization_id' => $this->orgId, 'title' => 'Welcome', 'description' => 'Ten off', 'type' => 'discount',
+            'value' => 10, 'start_date' => now()->subDay(), 'end_date' => now()->addDays(30), 'created_at' => now(), 'updated_at' => now(),
+        ]);
+    }
+
     protected function tearDown(): void
     {
         if (app()->bound('current_organization_id')) {
@@ -99,7 +115,7 @@ class MemberOfferModelTest extends TestCase
     {
         return MemberOffer::create(array_merge([
             'member_id' => $this->memberId,
-            'offer_id'  => 1,
+            'offer_id'  => $this->offerId(),
             'status'    => 'claimed',
         ], $attrs));
     }
@@ -256,14 +272,13 @@ class MemberOfferModelTest extends TestCase
         // future contributor doesn't accidentally call
         // MemberOffer::all() expecting tenant isolation.
         $orgB = OrganizationFactory::new()->create();
-        \DB::table('loyalty_members')->insert([
+        \DB::table('loyalty_members')->insert($this->memberRequired([
             'organization_id' => $orgB->id,
-            'tier_id'         => null,
             'member_number'   => 'MN-orgB-test',
             'is_active'       => true,
             'created_at'      => now(),
             'updated_at'      => now(),
-        ]);
+        ]));
         $otherMemberId = \DB::table('loyalty_members')
             ->where('member_number', 'MN-orgB-test')
             ->value('id');
@@ -271,7 +286,7 @@ class MemberOfferModelTest extends TestCase
         $this->memberOffer(); // org A member
         \DB::table('member_offers')->insert([
             'member_id'    => $otherMemberId,
-            'offer_id'     => 1,
+            'offer_id'     => $this->offerId(),
             'status'       => 'claimed',
             'ai_generated' => false,
             'created_at'   => now(),

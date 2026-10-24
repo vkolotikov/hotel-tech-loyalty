@@ -26,9 +26,10 @@ class MembersTest extends TestCase
     {
         $base = $this->asStaffMember()->getJson($this->api('members'))->json('figures.new_this_month');
 
-        // Imported today with last year's join date: not new. Made today with no join date: new, by the day it was made.
+        // Imported today with last year's join date: not new. Made today: new, by the day it was made (enrolment
+        // stamps the join date with the row; joined_at is NOT NULL in production).
         $this->makeMember('Imported Member', 'imported@example.test', ['joined_at' => now()->subYear()]);
-        $this->makeMember('Walk-in Member', 'walkin@example.test', ['joined_at' => null]);
+        $this->makeMember('Walk-in Member', 'walkin@example.test', ['joined_at' => now()]);
 
         $this->asStaffMember()->getJson($this->api('members'))->assertJsonPath('figures.new_this_month', $base + 1);
     }

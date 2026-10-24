@@ -132,11 +132,11 @@ class ReservationModelTest extends TestCase
 
     private function reservation(array $attrs = []): Reservation
     {
-        return Reservation::create(array_merge([
+        return Reservation::create($this->reservationRequired(array_merge([
             'organization_id' => $this->orgId,
             'confirmation_no' => 'CN-' . uniqid(),
             'status'          => 'Confirmed',
-        ], $attrs));
+        ], $attrs)));
     }
 
     /* ─── Date casts ─── */
@@ -320,20 +320,20 @@ class ReservationModelTest extends TestCase
         $orgA = $this->orgId;
         $orgB = OrganizationFactory::new()->create()->id;
 
-        \DB::table('reservations')->insert([
+        \DB::table('reservations')->insert($this->reservationRequired([
             'organization_id' => $orgA,
             'confirmation_no' => 'A-001',
             'status'          => 'Confirmed',
             'created_at'      => now(),
             'updated_at'      => now(),
-        ]);
-        \DB::table('reservations')->insert([
+        ]));
+        \DB::table('reservations')->insert($this->reservationRequired([
             'organization_id' => $orgB,
             'confirmation_no' => 'B-001',
             'status'          => 'Confirmed',
             'created_at'      => now(),
             'updated_at'      => now(),
-        ]);
+        ]));
 
         $aRows = Reservation::all();
         $this->assertCount(1, $aRows);

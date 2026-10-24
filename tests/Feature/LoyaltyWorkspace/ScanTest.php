@@ -137,6 +137,23 @@ class ScanTest extends TestCase
         $this->nobody('{@type@:@hotel_loyalty@,@member_number@:@LS-009009@,@version@:2}');
     }
 
+    public function test_french_and_spanish_layouts_the_apps_code_and_a_bare_member_number(): void
+    {
+        // Release 6: a US-layout scanner's keys as AZERTY and the Spanish layout type them (CodeReader's key maps).
+        $this->ada->update(['member_number' => 'LS-001001']);
+        $this->grace->update(['member_number' => 'EL-000123']);
+
+        $this->finds('¨%type%M%hotel°loyqlty%;%,e,ber°nu,ber%M%LS)àà&àà&%;%version%Mé£', $this->ada, 'qr');
+        $this->finds("^¨type¨Ñ¨hotel?loyalty¨,¨member?number¨Ñ¨LS'001001¨,¨version¨Ñ2*", $this->ada, 'qr');
+        $this->finds("^¨type¨Ñ¨hotel?loyalty¨,¨member?number¨ÑËL'000123¨,¨version¨Ñ2*", $this->grace, 'qr');
+        $this->finds('LS)àà&àà&', $this->ada, 'manual');
+        $this->finds("LS'001001", $this->ada, 'manual');
+        $this->finds('#EL)ààà&é"', $this->grace, 'manual');
+        $this->finds('LSß001001', $this->ada, 'manual');
+        $this->nobody('LS)àà(àà(');
+        $this->nobody("^¨type¨Ñ¨hotel?loyalty¨,¨member?number¨Ñ¨LS'009009¨,¨version¨Ñ2*");
+    }
+
     public function test_the_older_apps_token_a_link_and_the_wallet_pass_legacy_token(): void
     {
         $token = QrToken::create(['member_id' => $this->grace->id, 'token' => str_repeat('k', 64), 'signature' => 'x', 'issued_at' => now(), 'expires_at' => now()->addMinutes(30), 'max_uses' => 2]);

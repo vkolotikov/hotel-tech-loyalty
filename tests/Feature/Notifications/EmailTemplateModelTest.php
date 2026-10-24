@@ -11,6 +11,7 @@ use Database\Factories\OrganizationFactory;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\Schema;
 use Tests\Concerns\SetsUpMinimalSchema;
+use Tests\Concerns\WritesHotelSettings;
 use Tests\TestCase;
 
 /**
@@ -50,7 +51,7 @@ use Tests\TestCase;
  */
 class EmailTemplateModelTest extends TestCase
 {
-    use DatabaseTransactions;
+    use DatabaseTransactions, WritesHotelSettings;
     use SetsUpMinimalSchema;
 
     private int $orgId;
@@ -119,6 +120,7 @@ class EmailTemplateModelTest extends TestCase
         ]);
 
         $user = User::create([
+            'password' => 'secret-pass-1',
             'organization_id' => $this->orgId,
             'name'            => 'Alice Smith',
             'email'           => 'alice@example.com',
@@ -132,6 +134,8 @@ class EmailTemplateModelTest extends TestCase
             'current_points'    => 1500,
             'lifetime_points'   => 5200,
             'referral_code'     => 'REF-ALICE',
+            // NOT NULL in production: every member has a card code.
+            'qr_code_token'     => 'qr-alice-' . $user->id,
             'is_active'         => true,
         ]);
     }
@@ -290,11 +294,11 @@ class EmailTemplateModelTest extends TestCase
     {
         // Pulls from HotelSetting::getValue('company_name', 'Hotel
         // Loyalty'). Lock the integration.
-        HotelSetting::create([
+        HotelSetting::create($this->settingRow([
             'organization_id' => $this->orgId,
             'key'             => 'company_name',
             'value'           => 'Forrest Glamp',
-        ]);
+        ]));
 
         $member = $this->member();
         $template = $this->template([

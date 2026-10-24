@@ -35,57 +35,63 @@ trait SetsUpStayBookingSchema
         // schema hides real NOT NULL bugs: a required column the engine
         // forgets would pass silently on sqlite and break every first
         // confirm on Postgres.
-        Schema::dropIfExists('booking_price_elements');
-        Schema::create('booking_price_elements', function (Blueprint $table) {
-            $table->bigIncrements('id');
-            $table->unsignedBigInteger('organization_id');
-            $table->unsignedBigInteger('booking_mirror_id');
-            $table->string('reservation_id', 30);
-            $table->string('remote_price_element_id', 30)->nullable();
-            $table->string('element_type', 40)->nullable();
-            $table->string('name', 180)->nullable();
-            $table->decimal('amount', 12, 2)->nullable();
-            $table->integer('quantity')->default(1);
-            $table->decimal('tax', 8, 2)->nullable();
-            $table->string('currency_code', 3)->default('EUR');
-            $table->smallInteger('sort_order')->default(0);
-            $table->text('raw_json')->nullable();
-            $table->timestamp('synced_at')->nullable();
-            $table->timestamps();
-            $table->index('booking_mirror_id');
-            $table->index('organization_id');
-        });
+        // On PostgreSQL built from the migrations the production table is already
+        // there (it has `element_type`): it is kept, never replaced.
+        if (!Schema::hasColumn('booking_price_elements', 'element_type')) {
+            Schema::dropIfExists('booking_price_elements');
+            Schema::create('booking_price_elements', function (Blueprint $table) {
+                $table->bigIncrements('id');
+                $table->unsignedBigInteger('organization_id');
+                $table->unsignedBigInteger('booking_mirror_id');
+                $table->string('reservation_id', 30);
+                $table->string('remote_price_element_id', 30)->nullable();
+                $table->string('element_type', 40)->nullable();
+                $table->string('name', 180)->nullable();
+                $table->decimal('amount', 12, 2)->nullable();
+                $table->integer('quantity')->default(1);
+                $table->decimal('tax', 8, 2)->nullable();
+                $table->string('currency_code', 3)->default('EUR');
+                $table->smallInteger('sort_order')->default(0);
+                $table->text('raw_json')->nullable();
+                $table->timestamp('synced_at')->nullable();
+                $table->timestamps();
+                $table->index('booking_mirror_id');
+                $table->index('organization_id');
+            });
+        }
 
-        Schema::dropIfExists('booking_submissions');
-        Schema::create('booking_submissions', function (Blueprint $table) {
-            $table->bigIncrements('id');
-            $table->unsignedBigInteger('organization_id');
-            $table->unsignedBigInteger('brand_id')->nullable();
-            $table->string('request_id', 64)->nullable();
-            $table->string('idempotency_key', 128)->nullable();
-            $table->string('outcome', 20);
-            $table->string('failure_code', 60)->nullable();
-            $table->text('failure_message')->nullable();
-            $table->string('booking_reference', 60)->nullable();
-            $table->string('reservation_id', 60)->nullable();
-            $table->unsignedBigInteger('guest_id')->nullable();
-            $table->string('guest_name', 180)->nullable();
-            $table->string('guest_email', 180)->nullable();
-            $table->string('guest_phone', 40)->nullable();
-            $table->string('unit_id', 20)->nullable();
-            $table->string('unit_name', 120)->nullable();
-            $table->date('check_in')->nullable();
-            $table->date('check_out')->nullable();
-            $table->smallInteger('adults')->nullable();
-            $table->smallInteger('children')->nullable();
-            $table->decimal('gross_total', 12, 2)->nullable();
-            $table->string('payment_method', 40)->nullable();
-            $table->string('payment_status', 40)->nullable();
-            $table->text('payload_json')->nullable();
-            $table->timestamps();
-            $table->index('organization_id');
-            $table->index('created_at');
-        });
+        if (!Schema::hasColumn('booking_submissions', 'outcome')) {
+            Schema::dropIfExists('booking_submissions');
+            Schema::create('booking_submissions', function (Blueprint $table) {
+                $table->bigIncrements('id');
+                $table->unsignedBigInteger('organization_id');
+                $table->unsignedBigInteger('brand_id')->nullable();
+                $table->string('request_id', 64)->nullable();
+                $table->string('idempotency_key', 128)->nullable();
+                $table->string('outcome', 20);
+                $table->string('failure_code', 60)->nullable();
+                $table->text('failure_message')->nullable();
+                $table->string('booking_reference', 60)->nullable();
+                $table->string('reservation_id', 60)->nullable();
+                $table->unsignedBigInteger('guest_id')->nullable();
+                $table->string('guest_name', 180)->nullable();
+                $table->string('guest_email', 180)->nullable();
+                $table->string('guest_phone', 40)->nullable();
+                $table->string('unit_id', 20)->nullable();
+                $table->string('unit_name', 120)->nullable();
+                $table->date('check_in')->nullable();
+                $table->date('check_out')->nullable();
+                $table->smallInteger('adults')->nullable();
+                $table->smallInteger('children')->nullable();
+                $table->decimal('gross_total', 12, 2)->nullable();
+                $table->string('payment_method', 40)->nullable();
+                $table->string('payment_status', 40)->nullable();
+                $table->text('payload_json')->nullable();
+                $table->timestamps();
+                $table->index('organization_id');
+                $table->index('created_at');
+            });
+        }
 
         $this->ensureStayColumns('booking_mirror', [
             'booking_type'       => fn (Blueprint $t) => $t->string('booking_type', 40)->nullable(),
@@ -124,6 +130,8 @@ trait SetsUpStayBookingSchema
             'points_awarded_at'  => fn (Blueprint $t) => $t->timestamp('points_awarded_at')->nullable(),
             'cancelled_at'       => fn (Blueprint $t) => $t->timestamp('cancelled_at')->nullable(),
             'cancellation_reason' => fn (Blueprint $t) => $t->string('cancellation_reason', 60)->nullable(),
+            // Release 6 (2026_10_23_160000): what a lost dispute took, kept apart from refunds.
+            'dispute_lost_amount' => fn (Blueprint $t) => $t->decimal('dispute_lost_amount', 10, 2)->nullable(),
         ]);
 
         // booking_price_elements and booking_submissions are built in full,
@@ -150,6 +158,14 @@ trait SetsUpStayBookingSchema
                 $t->bigIncrements('id');
                 $t->unsignedBigInteger('organization_id');
                 $t->string('stripe_payment_intent_id')->nullable();
+                // Production's NOT NULL columns (SetsUpMinimalSchema::serviceBookingRequired()).
+                $t->string('booking_reference', 20)->nullable();
+                $t->unsignedBigInteger('service_id')->nullable();
+                $t->string('customer_name')->nullable();
+                $t->string('customer_email')->nullable();
+                $t->timestamp('start_at')->nullable();
+                $t->timestamp('end_at')->nullable();
+                $t->integer('duration_minutes')->nullable();
                 $t->timestamps();
                 $t->index('organization_id');
             });

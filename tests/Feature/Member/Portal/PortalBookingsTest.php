@@ -160,13 +160,13 @@ class PortalBookingsTest extends MemberEndpointTestCase
 
     private function serviceBooking(Organization $org, array $attrs): int
     {
-        return DB::table('service_bookings')->insertGetId(array_merge([
-            'organization_id' => $org->id, 'booking_reference' => 'SVC-' . strtoupper(uniqid()),
+        return DB::table('service_bookings')->insertGetId($this->serviceBookingRequired(array_merge([
+            'organization_id' => $org->id, 'booking_reference' => 'SVC-' . strtoupper(substr(uniqid(), -8)),
             'customer_name' => 'Someone', 'customer_email' => 'other@example.test',
             'start_at' => now()->addDays(3), 'end_at' => now()->addDays(3)->addHour(),
             'status' => 'confirmed', 'payment_status' => 'unpaid', 'total_amount' => 60, 'currency' => 'EUR',
             'created_at' => now(), 'updated_at' => now(),
-        ], $attrs));
+        ], $attrs)));
     }
 
     private function stay(Organization $org, array $attrs): int
@@ -187,7 +187,7 @@ class PortalBookingsTest extends MemberEndpointTestCase
         ['token' => $token, 'member' => $member, 'user' => $user] = $this->member($org);
         $this->verifyEmail($user->id); // this test proves the email rule too, so it needs a verified address
         $guestId = DB::table('guests')->insertGetId([
-            'organization_id' => $org->id, 'member_id' => $member->id, 'first_name' => 'App', 'last_name' => 'Member',
+            'organization_id' => $org->id, 'member_id' => $member->id, 'first_name' => 'App', 'last_name' => 'Member', 'full_name' => 'App Member',
             'email' => 'linked@example.test', 'created_at' => now(), 'updated_at' => now(),
         ]);
 
@@ -334,7 +334,7 @@ class PortalBookingsTest extends MemberEndpointTestCase
         $org = $this->tenant();
         ['token' => $token, 'member' => $member] = $this->member($org);
         $guestId = DB::table('guests')->insertGetId([
-            'organization_id' => $org->id, 'member_id' => $member->id, 'first_name' => 'A', 'last_name' => 'B',
+            'organization_id' => $org->id, 'member_id' => $member->id, 'first_name' => 'A', 'last_name' => 'B', 'full_name' => 'A B',
             'email' => 'x@example.test', 'created_at' => now(), 'updated_at' => now(),
         ]);
         $this->stay($org, ['guest_id' => $guestId]);

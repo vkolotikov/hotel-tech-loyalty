@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Tests\Concerns\LoyaltyWorkspace\PushSchema;
 use Tests\Concerns\SetsUpMinimalSchema;
+use Tests\Concerns\WritesRowsForeignKeysNeed;
 use Tests\TestCase;
 
 /**
@@ -34,7 +35,7 @@ use Tests\TestCase;
  */
 class NotificationServiceSendTest extends TestCase
 {
-    use DatabaseTransactions;
+    use DatabaseTransactions, WritesRowsForeignKeysNeed;
     use SetsUpMinimalSchema;
     use PushSchema;
 
@@ -277,6 +278,7 @@ class NotificationServiceSendTest extends TestCase
     public function test_keep_links_the_row_to_a_campaign_when_told(): void
     {
         $member = $this->pushyMember();
+        $this->rowsExist('notification_campaigns', [77]); // the campaign the row is kept for
 
         $id = $this->service->keep($member, ['type' => 'message_offers', 'title' => 'T', 'body' => 'B', 'campaign_id' => 77]);
 

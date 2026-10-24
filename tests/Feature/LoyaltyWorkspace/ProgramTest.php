@@ -140,12 +140,18 @@ class ProgramTest extends TestCase
         ]);
         $this->assertTrue(AuditLog::query()->where('action', 'tier_created')->where('subject_id', $id)->exists());
 
+        // The form sends an emptied colour as null: the tier keeps its colour (`color_hex` is NOT NULL in production).
         $this->asManager()->putJson($this->api("program/tiers/{$id}"), ['earn_rate' => 2.5, 'is_active' => false, 'color' => null])
             ->assertOk()
             ->assertJsonPath('tier.name', 'Diamond')
             ->assertJsonPath('tier.earn_rate', 2.5)
             ->assertJsonPath('tier.is_active', false)
-            ->assertJsonPath('tier.color', null);
+            ->assertJsonPath('tier.color', '#1E3A8A');
+
+        // A tier added with no colour gets the column's default.
+        $this->asManager()->postJson($this->api('program/tiers'), ['name' => 'Opal', 'color' => null, 'min_points' => 12000, 'earn_rate' => 2])
+            ->assertCreated()
+            ->assertJsonPath('tier.color', '#CD7F32');
 
         $this->asManager()->putJson($this->api("program/tiers/{$this->tiers['gold']->id}"), ['min_points' => 1200])
             ->assertJsonPath('tier.members', 1)

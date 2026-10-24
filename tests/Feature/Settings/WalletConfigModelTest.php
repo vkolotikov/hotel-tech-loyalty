@@ -446,7 +446,11 @@ class WalletConfigModelTest extends TestCase
     public function test_is_active_casts_to_boolean(): void
     {
         $on = $this->config(['is_active' => true]);
+        // One configuration per organisation (wallet_configs_organization_id_unique),
+        // so the switched-off one belongs to another organisation.
+        app()->instance('current_organization_id', OrganizationFactory::new()->create()->id);
         $off = $this->config(['is_active' => false]);
+        app()->instance('current_organization_id', $this->orgId);
 
         $this->assertTrue($on->is_active);
         $this->assertFalse($off->is_active);

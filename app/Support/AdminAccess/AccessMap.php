@@ -49,6 +49,7 @@ final class AccessMap
         'admin/loyalty'                         => ['staff',              'staff',              'loyalty'],       // HexaTech Loyalty; award and redeem keep their capabilities (LoyaltyAccess)
         'admin/loyalty/members/{id}/history'    => ['staff',              'manager',            'loyalty'],       // A member's ledger; reversing a line is a manager's correction
         'admin/loyalty/program'                 => ['staff',              'manager',            'loyalty'],       // Tiers, benefits, boost events (the full admin's Program is manager-only)
+        'admin/loyalty/program/boosts/confirm-times' => ['manager',       'manager',            'loyalty'],       // Release 6: "These times are right" for boosts flagged "check the time" (manager)
         'admin/loyalty/rewards'                 => ['staff',              'can_manage_offers',  'loyalty'],       // The rewards catalogue (changes: can_manage_offers, as admin/rewards)
         'admin/loyalty/offers'                  => ['staff',              'can_manage_offers',  'loyalty'],       // Offers (changes: can_manage_offers, as admin/offers)
         'admin/loyalty/redemptions'             => ['staff',              'can_redeem_points',  'loyalty'],       // Fulfil or cancel a redemption (can_redeem_points, as the full admin's routes)

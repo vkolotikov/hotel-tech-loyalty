@@ -67,6 +67,9 @@ trait SeedsDiscountFixture
             'tier_id' => $tier->id,
             'member_number' => 'HL-1',
             'current_points' => 500,
+            // NOT NULL and unique in production (enrolment fills them).
+            'qr_code_token' => bin2hex(random_bytes(16)),
+            'referral_code' => strtoupper(bin2hex(random_bytes(4))),
         ]);
     }
 
@@ -249,7 +252,9 @@ trait SeedsDiscountFixture
             'member_id' => $this->member->id,
             'reward_id' => $reward->id,
             'points_spent' => 100,
-            'code' => 'REW-TEST0001',
+            // Unique per organisation in production (reward_redemptions_organization_id_code_unique), at most 16
+            // characters: the venue's first redemption is REW-TEST0001 (the code tests type), the next REW-TEST0002.
+            'code' => sprintf('REW-TEST%04d', RewardRedemption::withoutGlobalScopes()->where('organization_id', $this->orgId)->count() + 1),
             'status' => 'pending',
         ]);
     }

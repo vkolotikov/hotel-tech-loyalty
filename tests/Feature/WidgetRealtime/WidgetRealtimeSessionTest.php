@@ -10,10 +10,14 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use PHPUnit\Framework\Attributes\DataProvider;
+use Illuminate\Foundation\Testing\DatabaseTransactions;
+use Tests\Concerns\ClearsTheMigrationsOrganisation;
 use Tests\TestCase;
 
 class WidgetRealtimeSessionTest extends TestCase
 {
+    use DatabaseTransactions, ClearsTheMigrationsOrganisation;
+
     private const KEY = '4cbf87b1-21eb-4ae2-8b58-3e854b0127df';
     private const ENDPOINT = '/api/v1/widget/'.self::KEY.'/realtime-session';
     private const UPSTREAM = 'https://api.openai.com/v1/realtime/client_secrets';
@@ -24,20 +28,21 @@ class WidgetRealtimeSessionTest extends TestCase
         Http::preventStrayRequests();
         config(['services.openai.api_key' => 'test-server-only-key']);
         Cache::flush();
-        Schema::create('chat_widget_configs', function ($t) {
+        if (!Schema::hasTable('chat_widget_configs')) Schema::create('chat_widget_configs', function ($t) {
             $t->id();
             $t->unsignedBigInteger('organization_id');
             $t->unsignedBigInteger('brand_id');
             $t->string('widget_key');
+            $t->string('api_key')->nullable();
             $t->boolean('is_active');
             $t->string('company_name')->nullable();
         });
-        Schema::create('chatbot_behavior_configs', function ($t) {
+        if (!Schema::hasTable('chatbot_behavior_configs')) Schema::create('chatbot_behavior_configs', function ($t) {
             $t->id();
             $t->unsignedBigInteger('organization_id');
             $t->unsignedBigInteger('brand_id');
         });
-        Schema::create('voice_agent_configs', function ($t) {
+        if (!Schema::hasTable('voice_agent_configs')) Schema::create('voice_agent_configs', function ($t) {
             $t->id();
             $t->unsignedBigInteger('organization_id');
             $t->boolean('is_active');
@@ -48,8 +53,9 @@ class WidgetRealtimeSessionTest extends TestCase
             $t->text('voice_instructions')->nullable();
             $t->float('temperature')->nullable();
         });
+        $this->organisationsExist([19, 20]);
         DB::table('chat_widget_configs')->insert(['organization_id' => 19, 'brand_id' => 23,
-            'widget_key' => self::KEY, 'is_active' => true, 'company_name' => 'Test venue']);
+            'widget_key' => self::KEY, 'api_key' => str_repeat('k', 48), 'is_active' => true, 'company_name' => 'Test venue']);
         DB::table('voice_agent_configs')->insert(['organization_id' => 19, 'is_active' => true,
             'realtime_enabled' => true, 'realtime_model' => 'gpt-4o-realtime-preview', 'voice' => 'alloy',
             'language' => 'fr', 'voice_instructions' => 'Answer only from the venue knowledge.', 'temperature' => 1.5]);

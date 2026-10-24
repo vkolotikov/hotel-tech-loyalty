@@ -200,7 +200,8 @@ class MembershipTest extends TestCase
         $user->forceFill(['phone' => '+371 2000 0000', 'date_of_birth' => '1990-04-01', 'nationality' => 'LV'])->save();
         $user->createToken('mobile-app');
         NfcCard::create(['member_id' => $this->grace->id, 'uid' => '04:11:22', 'is_active' => true]);
-        DB::table('points_transactions')->insert(['organization_id' => $this->org->id, 'member_id' => $this->grace->id, 'points' => 200, 'type' => 'earn', 'created_at' => now(), 'updated_at' => now()]);
+        DB::table('points_transactions')->insert(['organization_id' => $this->org->id, 'member_id' => $this->grace->id, 'points' => 200, 'type' => 'earn',
+            'description' => 'Earn', 'balance_after' => 200, 'created_at' => now(), 'updated_at' => now()]);
 
         $this->asManager()->postJson($this->api("members/{$this->grace->id}/erase"), ['confirm_name' => 'Grace'])
             ->assertStatus(422)->assertJsonPath('error', 'name_mismatch');

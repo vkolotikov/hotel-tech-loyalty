@@ -12,12 +12,13 @@ use App\Support\LandingSlug;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\DB;
 use Tests\Concerns\SetsUpContentSchema;
+use Tests\Concerns\WritesHotelSettings;
 use Tests\TestCase;
 
 /** A brand's link-in-bio page on the public host (spec 2026-10-19 §6.1–§6.3). Today is Monday 5 October 2026, 06:00 UTC. */
 class BioPageTest extends TestCase
 {
-    use DatabaseTransactions, SetsUpContentSchema;
+    use DatabaseTransactions, SetsUpContentSchema, WritesHotelSettings;
 
     protected function setUp(): void
     {
@@ -110,7 +111,7 @@ class BioPageTest extends TestCase
         $style('#f5d90a', '#14161a');
         // No brand colour: Content's accent, then the platform's own.
         DB::table('brands')->where('id', $this->brandId)->update(['primary_color' => null]);
-        DB::table('hotel_settings')->insert(['organization_id' => $this->org->id, 'key' => 'primary_color', 'value' => '#7c3aed', 'created_at' => now(), 'updated_at' => now()]);
+        DB::table('hotel_settings')->insert($this->settingRow(['organization_id' => $this->org->id, 'key' => 'primary_color', 'value' => '#7c3aed', 'group' => 'appearance', 'created_at' => now(), 'updated_at' => now()]));
         $style('#7c3aed', '#ffffff');
         DB::table('hotel_settings')->where('key', 'primary_color')->delete();
         $style('#2d6a4f', '#ffffff');

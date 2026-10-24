@@ -233,13 +233,19 @@ class MenuRowFieldsMigrationTest extends TestCase
             'industry' => 'restaurant', 'status' => 'published', 'theme' => '[]',
             'created_at' => now(), 'updated_at' => now(),
         ];
-        foreach ([
+        $shapes = [
             ['null-content',    null],
             ['string-content',  json_encode('just a string')],
             ['string-services', json_encode(['services' => 'not a map'])],
             ['list-prefix',     json_encode(['services' => ['price_prefix' => ['From']]])],
-            ['broken-json',     '{not json'],
-        ] as $i => [$slug, $content]) {
+        ];
+        // Text that is not JSON at all only where the column can hold it: production's landing_pages.content is
+        // `json`, which refuses it (PostgreSQL checks the text on insert), so there the other shapes are all it meets.
+        if (DB::getDriverName() !== 'pgsql') {
+            $shapes[] = ['broken-json', '{not json'];
+        }
+        foreach ($shapes as $i => [$slug, $content]) {
+            $this->landingBrandExists($i + 1); // the page's brand (a foreign key in production)
             DB::table('landing_pages')->insert($base + ['brand_id' => $i + 1, 'slug' => $slug, 'content' => $content]);
         }
 

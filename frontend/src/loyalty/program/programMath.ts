@@ -226,6 +226,14 @@ export function needsTimeCheck(boost: Pick<Boost, 'check_time' | 'state'>): bool
   return boost.check_time === true && boostState(boost.state) !== 'ended'
 }
 
+/**
+ * The boosts a manager may confirm together with "These times are right" (release 6): those that ask for their times
+ * to be checked, in Program's order. The server stamps each one still flagged and changes no time.
+ */
+export function timeCheckList<B extends Pick<Boost, 'check_time' | 'state'>>(boosts: B[]): B[] {
+  return boosts.filter(needsTimeCheck)
+}
+
 /** Live reads as done-green, upcoming as approved-teal, ended and off as the quiet grey. */
 export function boostTone(state: BoostState): Tone {
   return state === 'live' ? 'fulfilled' : state === 'upcoming' ? 'approved' : 'cancelled'

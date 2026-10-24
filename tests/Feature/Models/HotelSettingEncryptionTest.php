@@ -8,6 +8,7 @@ use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Tests\Concerns\SetsUpMinimalSchema;
+use Tests\Concerns\WritesHotelSettings;
 use Tests\TestCase;
 
 /**
@@ -45,7 +46,7 @@ use Tests\TestCase;
  */
 class HotelSettingEncryptionTest extends TestCase
 {
-    use DatabaseTransactions;
+    use DatabaseTransactions, WritesHotelSettings;
     use SetsUpMinimalSchema;
 
     protected function setUp(): void
@@ -74,12 +75,13 @@ class HotelSettingEncryptionTest extends TestCase
         // into Postgres in plaintext.
         $plaintext = 'sk_live_super_secret_stripe_key_value_12345';
 
-        HotelSetting::create([
+        HotelSetting::create($this->settingRow([
             'key'   => 'stripe_secret_key',
             'value' => $plaintext,
-        ]);
+        ]));
 
         $rawValue = DB::table('hotel_settings')
+            ->where('organization_id', app('current_organization_id'))
             ->where('key', 'stripe_secret_key')
             ->value('value');
 
@@ -98,10 +100,10 @@ class HotelSettingEncryptionTest extends TestCase
         // "invalid key format."
         $plaintext = 'whsec_test_webhook_signing_secret_abcdef';
 
-        HotelSetting::create([
+        HotelSetting::create($this->settingRow([
             'key'   => 'stripe_webhook_secret',
             'value' => $plaintext,
-        ]);
+        ]));
 
         $row = HotelSetting::where('key', 'stripe_webhook_secret')->first();
 
@@ -118,12 +120,13 @@ class HotelSettingEncryptionTest extends TestCase
         // unusable ciphertext.
         $value = 'EUR';
 
-        HotelSetting::create([
+        HotelSetting::create($this->settingRow([
             'key'   => 'booking_currency',
             'value' => $value,
-        ]);
+        ]));
 
         $rawValue = DB::table('hotel_settings')
+            ->where('organization_id', app('current_organization_id'))
             ->where('key', 'booking_currency')
             ->value('value');
 
@@ -142,14 +145,14 @@ class HotelSettingEncryptionTest extends TestCase
 
         // Insert raw plaintext via DB::table to bypass the saving hook.
         $org = app('current_organization_id');
-        DB::table('hotel_settings')->insert([
+        DB::table('hotel_settings')->insert($this->settingRow([
             'organization_id' => $org,
             'key'             => 'stripe_secret_key',
             'value'           => $legacyPlaintext,
             'scope'           => 'company',
             'created_at'      => now(),
             'updated_at'      => now(),
-        ]);
+        ]));
 
         $row = HotelSetting::where('key', 'stripe_secret_key')->first();
 
@@ -167,10 +170,10 @@ class HotelSettingEncryptionTest extends TestCase
         // making the secret unrecoverable.
         $plaintext = 'sk_live_idempotency_test_key_98765';
 
-        $row = HotelSetting::create([
+        $row = HotelSetting::create($this->settingRow([
             'key'   => 'stripe_secret_key',
             'value' => $plaintext,
-        ]);
+        ]));
 
         $firstCiphertext = DB::table('hotel_settings')
             ->where('id', $row->id)
@@ -210,10 +213,10 @@ class HotelSettingEncryptionTest extends TestCase
         $plaintext = 'whsec_idempotency_direct_test';
         $alreadyCipher = Crypt::encryptString($plaintext);
 
-        $row = HotelSetting::create([
+        $row = HotelSetting::create($this->settingRow([
             'key'   => 'stripe_webhook_secret',
             'value' => $alreadyCipher,
-        ]);
+        ]));
 
         $stored = DB::table('hotel_settings')
             ->where('id', $row->id)
@@ -237,12 +240,13 @@ class HotelSettingEncryptionTest extends TestCase
         foreach (HotelSetting::ENCRYPTED_KEYS as $key) {
             $unique = "test_value_for_{$key}_" . bin2hex(random_bytes(8));
 
-            HotelSetting::create([
+            HotelSetting::create($this->settingRow([
                 'key'   => $key,
                 'value' => $unique,
-            ]);
+            ]));
 
             $raw = DB::table('hotel_settings')
+                ->where('organization_id', app('current_organization_id'))
                 ->where('key', $key)
                 ->value('value');
             $this->assertNotSame($unique, $raw,

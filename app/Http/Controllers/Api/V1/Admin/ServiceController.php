@@ -82,6 +82,7 @@ class ServiceController extends Controller
             $data['price_is_from'] = (bool) $data['price_is_from'];
         }
 
+        $data = self::withoutEmptyRequired($data);
         $masterIds = $data['master_ids'] ?? [];
         unset($data['image'], $data['master_ids']);
 
@@ -151,6 +152,7 @@ class ServiceController extends Controller
             $data['price_is_from'] = (bool) $data['price_is_from'];
         }
 
+        $data = self::withoutEmptyRequired($data);
         $masterIds = $data['master_ids'] ?? null;
         unset($data['image'], $data['master_ids']);
 
@@ -219,5 +221,24 @@ class ServiceController extends Controller
             $sync[(int) $mid] = ['organization_id' => $orgId];
         }
         $service->masters()->sync($sync);
+    }
+
+    /**
+     * NOT NULL columns sent empty (null — an empty form field through ConvertEmptyStringsToNull): no price is 0, as the
+     * column stores it; the others keep their value, or a new service's column default. Writing null is a database
+     * error on PostgreSQL.
+     */
+    private static function withoutEmptyRequired(array $data): array
+    {
+        if (array_key_exists('price', $data) && $data['price'] === null) {
+            $data['price'] = 0;
+        }
+        foreach (['name', 'duration_minutes', 'buffer_after_minutes', 'currency', 'sort_order', 'is_active'] as $field) {
+            if (array_key_exists($field, $data) && $data[$field] === null) {
+                unset($data[$field]);
+            }
+        }
+
+        return $data;
     }
 }

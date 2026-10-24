@@ -185,6 +185,19 @@ class ScanEndpointsTest extends TestCase
         $this->assertSame(2, AuditLog::where('action', 'qr_scanned')->where('subject_id', $this->ada->id)->count());
     }
 
+    public function test_french_and_spanish_layouts_find_the_member_in_the_same_answer(): void
+    {
+        // Release 6: the app's code and a bare member number as AZERTY and the Spanish layout type a US scanner's keys.
+        $this->ada->update(['member_number' => 'LS-001001']);
+
+        $this->assertMemberAnswer($this->qr('¨%type%M%hotel°loyqlty%;%,e,ber°nu,ber%M%LS)àà&àà&%;%version%Mé£'), $this->ada->fresh());
+        $this->assertSame(['LS-001001', 'success'], [$this->lastScan()->token_value, $this->lastScan()->result]);
+        $this->assertMemberAnswer($this->qr("^¨type¨Ñ¨hotel?loyalty¨,¨member?number¨Ñ¨LS'001001¨,¨version¨Ñ2*"), $this->ada->fresh());
+        $this->assertMemberAnswer($this->qr('LS)àà&àà&'), $this->ada->fresh());
+        $this->assertMemberAnswer($this->qr("LS'001001"), $this->ada->fresh());
+        $this->qr("^¨type¨Ñ¨hotel?loyalty¨,¨member?number¨Ñ¨LS'009009¨,¨version¨Ñ2*")->assertStatus(404)->assertExactJson(['message' => 'Member not found']);
+    }
+
     public function test_a_bent_code_naming_nobody_says_member_not_found_and_another_organisations_token_is_not_used_up(): void
     {
         $this->qr('Ü@member_number@Ö@LS-999999@Ü')->assertStatus(404)->assertExactJson(['message' => 'Member not found']);
@@ -226,17 +239,20 @@ class ScanEndpointsTest extends TestCase
             ->assertStatus(404)->assertExactJson(['message' => 'This card has been deactivated', 'status' => 'card_inactive', 'uid' => '0455667788']);
     }
 
-    public function test_link_nfc_card_links_it_makes_it_the_qr_token_and_refuses_an_active_duplicate(): void
+    public function test_link_nfc_card_links_it_and_refuses_an_active_duplicate(): void
     {
+        $token = $this->grace->qr_code_token;
         $response = $this->asStaffMember()->postJson($this->admin('nfc-cards'), ['member_id' => $this->grace->id, 'uid' => '04:AA:BB:CC'])
             ->assertCreated()
             ->assertJsonPath('message', 'NFC card linked')
             ->assertJsonPath('card.member_id', $this->grace->id)
-            ->assertJsonPath('card.uid', '04:AA:BB:CC')
+            ->assertJsonPath('card.uid', '04aabbcc')
             ->assertJsonPath('card.card_type', 'standard')
             ->assertJsonPath('card.is_active', true);
 
-        $this->assertSame('04:AA:BB:CC', $this->grace->fresh()->qr_code_token);
+        // Release 6 (spec 2026-10-23 §2 item 2): the ID is stored as NfcCards stores it, and the member's QR code is
+        // left alone (it used to be set to the card's ID; tests/Feature/Admin/NfcLinkEndpointsTest.php says why not).
+        $this->assertSame($token, $this->grace->fresh()->qr_code_token);
         $this->assertSame(1, AuditLog::where('action', 'nfc_card_linked')->where('subject_id', $response->json('card.id'))->count());
 
         $this->asStaffMember()->postJson($this->admin('nfc-cards'), ['member_id' => $this->ada->id, 'uid' => '04:AA:BB:CC'])

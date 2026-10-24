@@ -10,12 +10,13 @@ use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\DB;
 use Tests\Concerns\LoyaltyWorkspace\CampaignsSchema;
 use Tests\Concerns\SetsUpLoyaltyWorkspace;
+use Tests\Concerns\ComparesJsonColumns;
 use Tests\TestCase;
 
 /** Segments (spec 2026-10-21 release 2 §6): rules that never match everyone by accident, tenant scope, roles. */
 class SegmentsTest extends TestCase
 {
-    use DatabaseTransactions, SetsUpLoyaltyWorkspace, CampaignsSchema;
+    use DatabaseTransactions, SetsUpLoyaltyWorkspace, CampaignsSchema, ComparesJsonColumns;
 
     protected function setUp(): void
     {
@@ -56,7 +57,7 @@ class SegmentsTest extends TestCase
             ->assertJsonPath('segment.problem', null);
 
         $segment = MemberSegment::query()->findOrFail($response->json('segment.id'));
-        $this->assertSame(['operator' => 'AND', 'filters' => [
+        $this->assertSameJson(['operator' => 'AND', 'filters' => [
             ['type' => 'tier', 'op' => 'in', 'value' => [$this->tiers['gold']->id]],
             ['type' => 'activity', 'op' => 'inactive_over', 'value' => 30],
             ['type' => 'earn', 'op' => 'none'],

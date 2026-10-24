@@ -209,8 +209,13 @@ class NfcCardModelTest extends TestCase
         $orgA = $this->orgId;
         $orgB = OrganizationFactory::new()->create()->id;
 
+        // Each card is a member's of its own organisation (nfc_cards.member_id is NOT NULL, a foreign key, in production).
+        $memberB = \DB::table('loyalty_members')->insertGetId($this->memberRequired([
+            'organization_id' => $orgB, 'member_number' => 'MN-orgB-card', 'created_at' => now(), 'updated_at' => now(),
+        ]));
         \DB::table('nfc_cards')->insert([
             'organization_id' => $orgA,
+            'member_id'       => $this->memberId,
             'uid'             => 'CARD-A',
             'is_active'       => true,
             'created_at'      => now(),
@@ -218,6 +223,7 @@ class NfcCardModelTest extends TestCase
         ]);
         \DB::table('nfc_cards')->insert([
             'organization_id' => $orgB,
+            'member_id'       => $memberB,
             'uid'             => 'CARD-B',
             'is_active'       => true,
             'created_at'      => now(),

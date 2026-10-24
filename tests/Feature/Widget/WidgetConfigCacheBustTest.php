@@ -109,13 +109,18 @@ class WidgetConfigCacheBustTest extends TestCase
         parent::tearDown();
     }
 
-    /** Helper: create a widget config row + bind tenant context. */
-    private function widgetConfig(string $widgetKey = 'test_widget_key_abc123'): ChatWidgetConfig
+    /**
+     * Helper: create a widget config row + bind tenant context. A widget key is a
+     * uuid (chat_widget_configs.widget_key is `uuid` in production; the model
+     * makes one with Str::uuid()), so the keys here are fixed uuids.
+     */
+    private function widgetConfig(string $widgetKey = '00000000-0000-4000-8000-000000000000'): ChatWidgetConfig
     {
         $org = OrganizationFactory::new()->create();
         app()->instance('current_organization_id', $org->id);
 
         return ChatWidgetConfig::create([
+            'api_key' => \Illuminate\Support\Str::random(48),
             'widget_key'      => $widgetKey,
             'company_name'    => 'Test Hotel',
             'header_title'    => 'Chat with us',
@@ -133,13 +138,13 @@ class WidgetConfigCacheBustTest extends TestCase
     {
         // CRITICAL: the cache MUST drop on any save so admin tweaks
         // propagate within seconds, not up to 60s (the cache TTL).
-        $config = $this->widgetConfig('test_save_key_001');
+        $config = $this->widgetConfig('00000000-0000-4000-8000-000000000001');
 
         // Pre-seed the cache as if a recent /config request set it.
-        Cache::put($this->cacheKeyFor('test_save_key_001'),
+        Cache::put($this->cacheKeyFor('00000000-0000-4000-8000-000000000001'),
             ['stale_payload' => true], 60);
         $this->assertNotNull(
-            Cache::get($this->cacheKeyFor('test_save_key_001')),
+            Cache::get($this->cacheKeyFor('00000000-0000-4000-8000-000000000001')),
             'Pre-condition: cache key seeded.',
         );
 
@@ -147,7 +152,7 @@ class WidgetConfigCacheBustTest extends TestCase
         $config->update(['header_title' => 'New header']);
 
         $this->assertNull(
-            Cache::get($this->cacheKeyFor('test_save_key_001')),
+            Cache::get($this->cacheKeyFor('00000000-0000-4000-8000-000000000001')),
             'CRITICAL: ChatWidgetConfig saved MUST bust widget:config:{key}.',
         );
     }
@@ -162,16 +167,17 @@ class WidgetConfigCacheBustTest extends TestCase
 
         // Pre-seed a stale entry (e.g. a probe hit /config before
         // any row existed).
-        Cache::put($this->cacheKeyFor('test_create_key_002'),
+        Cache::put($this->cacheKeyFor('00000000-0000-4000-8000-000000000002'),
             ['empty_probe' => true], 60);
 
         ChatWidgetConfig::create([
-            'widget_key'   => 'test_create_key_002',
+            'api_key' => \Illuminate\Support\Str::random(48),
+            'widget_key'   => '00000000-0000-4000-8000-000000000002',
             'company_name' => 'New Hotel',
         ]);
 
         $this->assertNull(
-            Cache::get($this->cacheKeyFor('test_create_key_002')),
+            Cache::get($this->cacheKeyFor('00000000-0000-4000-8000-000000000002')),
             'create() MUST also bust the cache (saved event fires).',
         );
     }
@@ -182,15 +188,15 @@ class WidgetConfigCacheBustTest extends TestCase
         // any cached payload MUST drop too — else the widget on
         // the customer site would keep serving the deleted config
         // for up to 60s.
-        $config = $this->widgetConfig('test_delete_key_003');
+        $config = $this->widgetConfig('00000000-0000-4000-8000-000000000003');
 
-        Cache::put($this->cacheKeyFor('test_delete_key_003'),
+        Cache::put($this->cacheKeyFor('00000000-0000-4000-8000-000000000003'),
             ['stale' => true], 60);
 
         $config->delete();
 
         $this->assertNull(
-            Cache::get($this->cacheKeyFor('test_delete_key_003')),
+            Cache::get($this->cacheKeyFor('00000000-0000-4000-8000-000000000003')),
             'delete() MUST bust the cache.',
         );
     }
@@ -201,19 +207,19 @@ class WidgetConfigCacheBustTest extends TestCase
         // widget_key, not the org id. The cache key MUST match
         // that lookup format. Pre-fix testing: bust by org id
         // would miss the widget_key-keyed cache entirely.
-        $config = $this->widgetConfig('test_key_format_004');
+        $config = $this->widgetConfig('00000000-0000-4000-8000-000000000004');
 
         // Seed the WRONG key format (org-id based) — bust MUST
         // ignore it because the implementation keys on widget_key.
         Cache::put('widget:config:1', ['org_keyed' => true], 60);
         // Seed the RIGHT format.
-        Cache::put($this->cacheKeyFor('test_key_format_004'),
+        Cache::put($this->cacheKeyFor('00000000-0000-4000-8000-000000000004'),
             ['widget_keyed' => true], 60);
 
         $config->update(['header_title' => 'X']);
 
         $this->assertNull(
-            Cache::get($this->cacheKeyFor('test_key_format_004')),
+            Cache::get($this->cacheKeyFor('00000000-0000-4000-8000-000000000004')),
             'The widget_key-format MUST be busted.',
         );
         $this->assertNotNull(
@@ -232,6 +238,7 @@ class WidgetConfigCacheBustTest extends TestCase
         app()->instance('current_organization_id', $org->id);
 
         $config = ChatWidgetConfig::create([
+            'api_key' => \Illuminate\Support\Str::random(48),
             'widget_key'   => null,
             'company_name' => 'Legacy config',
         ]);
@@ -252,9 +259,9 @@ class WidgetConfigCacheBustTest extends TestCase
         // ChatWidgetConfig widget_key. Admin adds a "show after 5s"
         // rule — the widget cache MUST drop so the new rule fires
         // on the next visitor.
-        $config = $this->widgetConfig('test_popup_save_005');
+        $config = $this->widgetConfig('00000000-0000-4000-8000-000000000005');
 
-        Cache::put($this->cacheKeyFor('test_popup_save_005'),
+        Cache::put($this->cacheKeyFor('00000000-0000-4000-8000-000000000005'),
             ['popup_rules' => []], 60);
 
         PopupRule::create([
@@ -262,57 +269,60 @@ class WidgetConfigCacheBustTest extends TestCase
             'widget_config_id' => $config->id,
             'name'             => 'Welcome popup',
             'trigger_type'     => 'time_on_page',
+            'message'         => 'Can we help?', // NOT NULL in production
             'delay_seconds'    => 5,
             'is_active'        => true,
         ]);
 
         $this->assertNull(
-            Cache::get($this->cacheKeyFor('test_popup_save_005')),
+            Cache::get($this->cacheKeyFor('00000000-0000-4000-8000-000000000005')),
             'CRITICAL: creating a PopupRule MUST bust the widget config cache.',
         );
     }
 
     public function test_updating_popup_rule_busts_cache(): void
     {
-        $config = $this->widgetConfig('test_popup_update_006');
+        $config = $this->widgetConfig('00000000-0000-4000-8000-000000000006');
 
         $rule = PopupRule::create([
             'organization_id'  => app('current_organization_id'),
             'widget_config_id' => $config->id,
             'name'             => 'Initial',
             'trigger_type'     => 'time_on_page',
+            'message'         => 'Can we help?', // NOT NULL in production
             'delay_seconds'    => 5,
         ]);
 
-        Cache::put($this->cacheKeyFor('test_popup_update_006'),
+        Cache::put($this->cacheKeyFor('00000000-0000-4000-8000-000000000006'),
             ['old_rules' => true], 60);
 
         $rule->update(['delay_seconds' => 10]);
 
         $this->assertNull(
-            Cache::get($this->cacheKeyFor('test_popup_update_006')),
+            Cache::get($this->cacheKeyFor('00000000-0000-4000-8000-000000000006')),
             'Updating a PopupRule MUST bust the cache.',
         );
     }
 
     public function test_deleting_popup_rule_busts_cache(): void
     {
-        $config = $this->widgetConfig('test_popup_delete_007');
+        $config = $this->widgetConfig('00000000-0000-4000-8000-000000000007');
 
         $rule = PopupRule::create([
             'organization_id'  => app('current_organization_id'),
             'widget_config_id' => $config->id,
             'name'             => 'To delete',
             'trigger_type'     => 'exit_intent',
+            'message'         => 'Can we help?', // NOT NULL in production
         ]);
 
-        Cache::put($this->cacheKeyFor('test_popup_delete_007'),
+        Cache::put($this->cacheKeyFor('00000000-0000-4000-8000-000000000007'),
             ['rules' => 1], 60);
 
         $rule->delete();
 
         $this->assertNull(
-            Cache::get($this->cacheKeyFor('test_popup_delete_007')),
+            Cache::get($this->cacheKeyFor('00000000-0000-4000-8000-000000000007')),
             'Deleting a PopupRule MUST bust the cache.',
         );
     }
@@ -331,6 +341,7 @@ class WidgetConfigCacheBustTest extends TestCase
             'organization_id' => $org->id,
             'name'            => 'Orphan rule',
             'trigger_type'    => 'time_on_page',
+            'message'         => 'Can we help?', // NOT NULL in production
         ]);
 
         // The save (which fires the hook with no widget_key
@@ -352,7 +363,8 @@ class WidgetConfigCacheBustTest extends TestCase
         $orgA = OrganizationFactory::new()->create();
         app()->instance('current_organization_id', $orgA->id);
         $configA = ChatWidgetConfig::create([
-            'widget_key'   => 'org_a_widget_key',
+            'api_key' => \Illuminate\Support\Str::random(48),
+            'widget_key'   => '00000000-0000-4000-8000-000000000008',
             'company_name' => 'Org A',
         ]);
 
@@ -360,14 +372,15 @@ class WidgetConfigCacheBustTest extends TestCase
         $orgB = OrganizationFactory::new()->create();
         app()->instance('current_organization_id', $orgB->id);
         $configB = ChatWidgetConfig::create([
-            'widget_key'   => 'org_b_widget_key',
+            'api_key' => \Illuminate\Support\Str::random(48),
+            'widget_key'   => '00000000-0000-4000-8000-000000000009',
             'company_name' => 'Org B',
         ]);
 
         // Seed both caches.
-        Cache::put($this->cacheKeyFor('org_a_widget_key'),
+        Cache::put($this->cacheKeyFor('00000000-0000-4000-8000-000000000008'),
             ['payload' => 'A'], 60);
-        Cache::put($this->cacheKeyFor('org_b_widget_key'),
+        Cache::put($this->cacheKeyFor('00000000-0000-4000-8000-000000000009'),
             ['payload' => 'B'], 60);
 
         // Save org A.
@@ -376,10 +389,10 @@ class WidgetConfigCacheBustTest extends TestCase
         $configA->update(['header_title' => 'New A header']);
 
         // Org A's cache MUST be busted.
-        $this->assertNull(Cache::get($this->cacheKeyFor('org_a_widget_key')));
+        $this->assertNull(Cache::get($this->cacheKeyFor('00000000-0000-4000-8000-000000000008')));
         // Org B's cache MUST stay intact.
         $this->assertNotNull(
-            Cache::get($this->cacheKeyFor('org_b_widget_key')),
+            Cache::get($this->cacheKeyFor('00000000-0000-4000-8000-000000000009')),
             'Org A save MUST NOT touch org B\'s cache.',
         );
     }

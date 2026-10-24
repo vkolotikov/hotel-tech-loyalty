@@ -41,10 +41,14 @@ class CancellationPolicyTest extends TestCase
 
     private function setting(string $key, string $value): void
     {
-        $row = new HotelSetting();
+        // One row per venue and key (production's unique index): a second write changes it, as Setup's does.
+        $row = HotelSetting::withoutGlobalScopes()->firstOrNew(['organization_id' => $this->org->id, 'key' => $key]);
         $row->organization_id = $this->org->id;
         $row->key = $key;
         $row->value = $value;
+        // NOT NULL in production: each key's type and group as the settings registry writes them.
+        $row->type = ['booking_policies' => 'json'][$key] ?? 'integer';
+        $row->group = 'booking';
         $row->save();
         HotelSetting::flushCacheFor($this->org->id);
     }

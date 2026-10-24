@@ -7,6 +7,7 @@ use App\Models\User;
 use Database\Factories\OrganizationFactory;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\Schema;
+use Tests\Concerns\ComparesJsonColumns;
 use Tests\Concerns\SetsUpMinimalSchema;
 use Tests\TestCase;
 
@@ -51,6 +52,7 @@ use Tests\TestCase;
 class EmailCampaignModelTest extends TestCase
 {
     use DatabaseTransactions;
+    use ComparesJsonColumns;
     use SetsUpMinimalSchema;
 
     private int $orgId;
@@ -117,6 +119,7 @@ class EmailCampaignModelTest extends TestCase
             'organization_id' => $this->orgId,
             'name'            => 'Test Campaign',
             'subject'         => 'Test Subject',
+            'body_html'       => '<p>Test body</p>',
             'status'          => EmailCampaign::STATUS_DRAFT,
         ], $attrs));
     }
@@ -166,7 +169,7 @@ class EmailCampaignModelTest extends TestCase
 
         $campaign = $this->campaign(['body_blocks' => $blocks]);
 
-        $this->assertSame($blocks, $campaign->fresh()->body_blocks,
+        $this->assertSameJson($blocks, $campaign->fresh()->body_blocks,
             'body_blocks MUST round-trip exactly (6 block types intact).');
     }
 
@@ -275,6 +278,8 @@ class EmailCampaignModelTest extends TestCase
         \DB::table('email_campaigns')->insert([
             'organization_id' => $orgA,
             'name'            => 'Org A campaign',
+            'subject'         => 'Org A subject',
+            'body_html'       => '<p>Org A body</p>',
             'status'          => 'draft',
             'created_at'      => now(),
             'updated_at'      => now(),
@@ -282,6 +287,8 @@ class EmailCampaignModelTest extends TestCase
         \DB::table('email_campaigns')->insert([
             'organization_id' => $orgB,
             'name'            => 'Org B campaign',
+            'subject'         => 'Org B subject',
+            'body_html'       => '<p>Org B body</p>',
             'status'          => 'sent',
             'created_at'      => now(),
             'updated_at'      => now(),

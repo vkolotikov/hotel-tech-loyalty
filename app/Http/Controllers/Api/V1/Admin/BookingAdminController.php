@@ -348,6 +348,32 @@ class BookingAdminController extends Controller
         $arr = $booking->toArray();
         $arr['balance_due'] = round(($booking->price_total ?? 0) - ($booking->price_paid ?? 0), 2);
 
+        // Release 6: a room of a multi-room stay — one payment for every room,
+        // carried by the lead room (GroupPayment) — shows that payment's
+        // reference on every room, labelled as the group's. Null for one room.
+        $arr['group_payment'] = null;
+        if (!empty($booking->booking_group_id)) {
+            $rooms = BookingMirror::withoutGlobalScopes()
+                ->where('organization_id', $booking->organization_id)
+                ->where('booking_group_id', $booking->booking_group_id)
+                ->orderBy('id')
+                ->get(['id', 'apartment_name', 'booking_reference', 'stripe_payment_intent_id', 'price_total']);
+            if ($rooms->count() > 1) {
+                $lead = \App\Services\Booking\GroupPayment::lead($rooms);
+                $arr['group_payment'] = [
+                    'payment_intent_id' => (string) $lead->stripe_payment_intent_id !== '' ? (string) $lead->stripe_payment_intent_id : null,
+                    'lead_id'           => (int) $lead->id,
+                    'is_lead'           => (int) $lead->id === (int) $booking->id,
+                    'total'             => round((float) $rooms->sum(fn (BookingMirror $m) => (float) ($m->price_total ?? 0)), 2),
+                    'rooms'             => $rooms->map(fn (BookingMirror $m) => [
+                        'id'        => (int) $m->id,
+                        'name'      => $m->apartment_name,
+                        'reference' => $m->booking_reference,
+                    ])->values()->all(),
+                ];
+            }
+        }
+
         // Related submissions
         $arr['submissions'] = BookingSubmission::where('reservation_id', $booking->reservation_id)
             ->orWhere('booking_reference', $booking->booking_reference)
@@ -428,12 +454,28 @@ class BookingAdminController extends Controller
                 $request->user(),
                 $forRoomId,
             );
+        } catch (\App\Services\Booking\RefundOutcomeUnknown $e) {
+            // Stripe did not answer in time: the refund may have been made.
+            return response()->json(['error' => $e->getMessage(), 'code' => \App\Services\Booking\RefundOutcomeUnknown::CODE], 504);
         } catch (\RuntimeException $e) {
             return response()->json(['error' => $e->getMessage()], 422);
         } catch (\Throwable $e) {
             return response()->json([
                 'error' => 'Stripe refund failed: ' . $e->getMessage(),
             ], 502);
+        }
+
+        // Stripe handed back a refund it had already made for this payment and
+        // amount (within its 24 hours) instead of making a new one (release 6).
+        if (!empty($outcome['no_new_refund'])) {
+            return response()->json([
+                'error' => 'No new refund was made: Stripe returned a refund of this amount that it had already made on this payment in the last 24 hours. '
+                    . (!empty($outcome['recorded_later'])
+                        ? 'If it does not show on this booking yet, it will once Stripe confirms it.'
+                        : 'It is already recorded on this booking.')
+                    . ' To give back more, make the refund in the Stripe dashboard: it is recorded here automatically.',
+                'code' => 'no_new_refund',
+            ], 409);
         }
 
         // Return the updated booking row PLUS the side-effect summary so

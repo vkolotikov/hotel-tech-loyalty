@@ -60,6 +60,71 @@ class StripeService
     }
 
     /**
+     * Connect and read timeouts, in seconds, for a Stripe call made while a lock is held — `pi:`, a booking row
+     * (`booking_mirror`, `service_bookings`, `booking_holds`), a room or slot lock, or the `refund:` lock (release 6,
+     * item 5). Stripe's own defaults (30 s to connect, 80 s to read) stay for every call made outside a lock.
+     */
+    public const LOCKED_CONNECT_TIMEOUT = 5;
+    public const LOCKED_READ_TIMEOUT = 15;
+
+    private static ?\Stripe\HttpClient\CurlClient $lockedHttpClient = null;
+
+    /**
+     * Runs $call with every Stripe request it makes sent through a client with the short timeouts above, then puts
+     * back the client that was there before — also when $call throws. stripe-php keeps one HTTP client for the whole
+     * process (`ApiRequestor::setHttpClient()`), so the swap covers exactly the requests made inside $call, by any
+     * StripeService, and nothing after it. A request that runs out of time throws
+     * `\Stripe\Exception\ApiConnectionException` — what every caller under a lock already answers as "Stripe could
+     * not be reached" (PaymentUnverifiable / 503, nothing released, nothing written). Static on purpose: a test's
+     * Mockery double of this class still runs the real swap around its own fake calls.
+     *
+     * @template T
+     * @param callable(): T $call
+     * @return T
+     */
+    public static function underLock(callable $call): mixed
+    {
+        $previous = \Stripe\ApiRequestor::httpClient();
+        \Stripe\ApiRequestor::setHttpClient(self::lockedHttpClient());
+        try {
+            return $call();
+        } finally {
+            \Stripe\ApiRequestor::setHttpClient($previous);
+        }
+    }
+
+    /**
+     * Whether Stripe answered with $object by replaying an earlier request that had the same idempotency key — its
+     * `Idempotent-Replayed: true` header: nothing new was made at Stripe this time. A refund's key is the payment and
+     * the amount (refund()), so a retry of a refund Stripe made but answered too late, and a second refund of the same
+     * amount within Stripe's 24 hours, both come back this way. False for an answer that carries no response (a test
+     * double built without one).
+     */
+    public static function wasReplayed(\Stripe\StripeObject $object): bool
+    {
+        $headers = $object->getLastResponse()?->headers;
+        if ($headers === null) {
+            return false;
+        }
+        $value = $headers['Idempotent-Replayed'] ?? $headers['idempotent-replayed'] ?? null;
+
+        return $value === true || (is_string($value) && strtolower(trim($value)) === 'true');
+    }
+
+    /** The short-timeout client underLock() sends through (one per process). */
+    public static function lockedHttpClient(): \Stripe\HttpClient\CurlClient
+    {
+        if (self::$lockedHttpClient === null) {
+            $client = new \Stripe\HttpClient\CurlClient();
+            $client->setConnectTimeout(self::LOCKED_CONNECT_TIMEOUT);
+            $client->setTimeout(self::LOCKED_READ_TIMEOUT);
+            self::$lockedHttpClient = $client;
+        }
+
+        return self::$lockedHttpClient;
+    }
+
+    /**
      * Create a PaymentIntent for the given amount (in the org's currency).
      *
      * @param float  $amount      Amount in major units (e.g. 150.00 EUR)
@@ -278,7 +343,16 @@ class StripeService
      */
     public function toSmallestUnit(float $amount, ?string $currency = null): int
     {
-        $currency ??= $this->currency();
+        return self::smallestUnitOf($amount, $currency ?? $this->currency());
+    }
+
+    /**
+     * toSmallestUnit() for a currency the caller names — static, so a caller
+     * holding only the currency (or a test's double of this class) converts by
+     * the same zero-decimal list.
+     */
+    public static function smallestUnitOf(float $amount, string $currency): int
+    {
         if (in_array(strtolower($currency), self::ZERO_DECIMAL, true)) {
             return (int) round($amount);
         }

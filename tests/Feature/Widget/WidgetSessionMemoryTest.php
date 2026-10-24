@@ -8,6 +8,7 @@ use Database\Factories\OrganizationFactory;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\Schema;
 use Tests\Concerns\SetsUpMinimalSchema;
+use Tests\Concerns\WritesRowsForeignKeysNeed;
 use Tests\TestCase;
 
 /**
@@ -27,7 +28,7 @@ use Tests\TestCase;
  */
 class WidgetSessionMemoryTest extends TestCase
 {
-    use DatabaseTransactions;
+    use DatabaseTransactions, WritesRowsForeignKeysNeed;
     use SetsUpMinimalSchema;
 
     protected function setUp(): void
@@ -137,6 +138,7 @@ class WidgetSessionMemoryTest extends TestCase
                 $t->unsignedBigInteger('organization_id');
                 $t->unsignedBigInteger('brand_id')->nullable();
                 $t->string('widget_key', 64);
+                $t->string('api_key', 64)->nullable(); // NOT NULL in production
                 $t->boolean('is_active')->default(true);
                 $t->timestamps();
             });
@@ -169,6 +171,7 @@ class WidgetSessionMemoryTest extends TestCase
         ChatWidgetConfig::withoutGlobalScopes()->create([
             'organization_id' => $org->id,
             'widget_key'      => $key,
+            'api_key'         => \Illuminate\Support\Str::random(48), // NOT NULL in production
             'is_active'       => true,
         ]);
 
@@ -220,7 +223,7 @@ class WidgetSessionMemoryTest extends TestCase
     public function test_init_retains_consented_campaign_path_and_freezes_it_after_an_enquiry(): void
     {
         $this->travelTo(\Carbon\Carbon::parse('2026-09-12 12:00:00', 'UTC'));
-        [, $key] = $this->makeWidget();
+        [$orgId, $key] = $this->makeWidget();
         $touch = fn ($channel, $campaign, $at) => ['channel'=>$channel,'campaign_id'=>$campaign,'observed_at'=>$at,'evidence'=>'utm'];
         $meta = $touch('meta','12345','2026-09-11T12:00:00Z');
         $google = $touch('google','45678','2026-09-12T10:00:00Z');
@@ -232,6 +235,7 @@ class WidgetSessionMemoryTest extends TestCase
         $this->postJson("/api/v1/widget/{$key}/init", $payload)->assertOk();
         $conversation = \App\Models\ChatConversation::where('session_id', $payload['session_id'])->firstOrFail();
         $this->assertSame(['meta','google'], array_column($conversation->marketing_attribution['touches'], 'channel'));
+        $this->rowsExist('inquiries', [12], ['organization_id' => $orgId]); // the enquiry the chat became
         $conversation->inquiry_id = 12;
         $conversation->save();
         $payload['attribution']['touches'][] = $touch('chatgpt','late','2026-09-12T11:00:00Z');

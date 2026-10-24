@@ -77,7 +77,7 @@ class NorthlineRetreatRenderTest extends TestCase
 
     private function makeBrand(?string $logoUrl): void
     {
-        Brand::withoutGlobalScopes()->create([
+        Brand::withoutGlobalScopes()->forceCreate([ // forceCreate: `id` is not fillable, and the page names brand 1
             'id' => 1, 'organization_id' => 1, 'name' => 'Northline', 'logo_url' => $logoUrl,
         ]);
     }
@@ -123,6 +123,7 @@ class NorthlineRetreatRenderTest extends TestCase
     private function seedLikeTheKit(string $industry = 'hotel'): LandingPage
     {
         Property::create([
+            'code' => 'P' . strtoupper(bin2hex(random_bytes(4))),
             'organization_id' => 1, 'brand_id' => 1, 'name' => 'Northline',
             'phone' => '+371 20 000 228', 'email' => 'stay@northline.example',
             'address' => 'Gauja region', 'country' => 'Latvia',
@@ -516,6 +517,7 @@ class NorthlineRetreatRenderTest extends TestCase
     public function test_the_initials_skip_a_conjunction_and_stop_at_two(): void
     {
         Property::create([
+            'code' => 'P' . strtoupper(bin2hex(random_bytes(4))),
             'organization_id' => 1, 'brand_id' => 1, 'name' => 'Aera & Co Hotels', 'is_active' => true,
         ]);
 
@@ -651,7 +653,7 @@ class NorthlineRetreatRenderTest extends TestCase
 
     public function test_a_host_with_no_bio_is_introduced_by_their_title(): void
     {
-        Property::create(['organization_id' => 1, 'brand_id' => 1, 'name' => 'Northline', 'is_active' => true]);
+        Property::create(['code' => 'P' . strtoupper(bin2hex(random_bytes(4))), 'organization_id' => 1, 'brand_id' => 1, 'name' => 'Northline', 'is_active' => true]);
         ServiceMaster::create([
             'organization_id' => 1, 'brand_id' => 1, 'name' => 'Eva Ozola',
             'title' => 'Owner and host', 'sort_order' => 0, 'is_active' => true,
@@ -695,7 +697,7 @@ class NorthlineRetreatRenderTest extends TestCase
 
     public function test_an_anonymous_note_is_a_verified_guest_with_its_own_star_count(): void
     {
-        Property::create(['organization_id' => 1, 'brand_id' => 1, 'name' => 'Northline', 'city' => 'Riga', 'is_active' => true]);
+        Property::create(['code' => 'P' . strtoupper(bin2hex(random_bytes(4))), 'organization_id' => 1, 'brand_id' => 1, 'name' => 'Northline', 'city' => 'Riga', 'is_active' => true]);
         ReviewSubmission::create([
             'organization_id' => 1, 'anonymous_name' => null, 'overall_rating' => 4,
             'comment' => 'A calm three nights.', 'is_featured' => true, 'submitted_at' => now(),
@@ -825,6 +827,7 @@ class NorthlineRetreatRenderTest extends TestCase
     public function test_a_business_with_a_conjunction_gets_the_authors_em_in_both_lockups(): void
     {
         Property::create([
+            'code' => 'P' . strtoupper(bin2hex(random_bytes(4))),
             'organization_id' => 1, 'brand_id' => 1, 'name' => 'Northline & Co', 'is_active' => true,
         ]);
 
@@ -844,6 +847,7 @@ class NorthlineRetreatRenderTest extends TestCase
     public function test_a_hostile_business_name_never_reaches_the_lockup_unescaped(): void
     {
         Property::create([
+            'code' => 'P' . strtoupper(bin2hex(random_bytes(4))),
             'organization_id' => 1, 'brand_id' => 1, 'name' => '<script>x</script> & Co', 'is_active' => true,
         ]);
 
@@ -962,6 +966,7 @@ class NorthlineRetreatRenderTest extends TestCase
     public function test_an_active_review_form_wires_the_feedback_link(): void
     {
         ReviewForm::create([
+            'type' => 'basic',
             'organization_id' => 1, 'name' => 'Guest notes', 'embed_key' => 'abc123',
             'is_active' => true, 'allow_anonymous' => true,
         ]);
@@ -978,7 +983,8 @@ class NorthlineRetreatRenderTest extends TestCase
     public function test_the_chat_launcher_mounts_in_the_reserved_slot(): void
     {
         ChatWidgetConfig::create([
-            'organization_id' => 1, 'widget_key' => 'wk-123', 'is_enabled' => true,
+            'api_key' => \Illuminate\Support\Str::random(48),
+            'organization_id' => 1, 'widget_key' => '7a3c1f2e-5b4d-4e6f-8a9b-0c1d2e3f4a5b', 'is_enabled' => true,
         ]);
 
         $this->seedLikeTheKit();
@@ -987,7 +993,7 @@ class NorthlineRetreatRenderTest extends TestCase
         $this->assertStringContainsString('data-ai-widget-slot', $body);
         $this->assertStringContainsString('class="ai-panel"', $body);
         $this->assertStringContainsString('class="ai-launcher"', $body);
-        $this->assertStringContainsString('/chat-frame/wk-123', $body);
+        $this->assertStringContainsString('/chat-frame/7a3c1f2e-5b4d-4e6f-8a9b-0c1d2e3f4a5b', $body);
     }
 
     public function test_no_chat_widget_leaves_the_slot_reserved_and_empty(): void
@@ -1004,6 +1010,7 @@ class NorthlineRetreatRenderTest extends TestCase
     public function test_the_footer_hub_prints_the_authors_columns_from_the_record(): void
     {
         ReviewForm::create([
+            'type' => 'basic',
             'organization_id' => 1, 'name' => 'Guest notes', 'embed_key' => 'abc123',
             'is_active' => true, 'allow_anonymous' => true,
         ]);

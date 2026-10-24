@@ -24,6 +24,7 @@ use Stripe\Exception\InvalidRequestException;
 use Stripe\PaymentIntent;
 use Stripe\Refund;
 use Symfony\Component\HttpKernel\Exception\HttpException;
+use Tests\Concerns\MakesATableUnreadable;
 use Tests\Concerns\SetsUpMinimalSchema;
 use Tests\Concerns\SetsUpStayBookingSchema;
 use Tests\TestCase;
@@ -59,7 +60,7 @@ use Tests\TestCase;
  */
 class PublicConfirmRescueGuardTest extends TestCase
 {
-    use DatabaseTransactions, SetsUpMinimalSchema, SetsUpStayBookingSchema;
+    use DatabaseTransactions, SetsUpMinimalSchema, SetsUpStayBookingSchema, MakesATableUnreadable;
 
     private const URL = '/api/v1/booking/confirm';
     private const TOKEN = 'wtok_rescue_guard';
@@ -338,7 +339,7 @@ class PublicConfirmRescueGuardTest extends TestCase
     /** 2. A confirmed appointment's payment (a service_bookings row carries it). */
     public function test_the_payment_of_a_confirmed_appointment_is_left_alone(): void
     {
-        $id = DB::table('service_bookings')->insertGetId(['organization_id' => $this->org->id, 'stripe_payment_intent_id' => 'pi_appt', 'created_at' => now(), 'updated_at' => now()]);
+        $id = DB::table('service_bookings')->insertGetId($this->serviceBookingRequired(['organization_id' => $this->org->id, 'stripe_payment_intent_id' => 'pi_appt', 'created_at' => now(), 'updated_at' => now()]));
         $before = (array) DB::table('service_bookings')->find($id);
         $this->intents['pi_appt'] = $this->intent('pi_appt', 'requires_capture', [
             'kind' => 'portal_service_booking', 'org_id' => (string) $this->org->id, 'member_id' => '41', 'service_id' => '7', 'start_at' => '2026-10-20T10:00:00+00:00',
@@ -571,7 +572,8 @@ class PublicConfirmRescueGuardTest extends TestCase
 
         $mirror = BookingMirror::withoutGlobalScopes()->where('stripe_payment_intent_id', $own)->sole();
         $this->assertSame('authorized', $mirror->payment_status, 'the booking stands, its payment authorised');
-        $this->assertSame([['retrieve', $own]], $this->calls, 'only confirm() read it; nothing was cancelled');
+        // Release 6: confirm() read it, then the engine read it once more under the hold's lock; nothing was cancelled.
+        $this->assertSame([['retrieve', $own], ['retrieve', $own]], $this->calls, 'only read; nothing was cancelled');
         $this->assertRefused($own, 'carried_by_booking', 'service_runtime');
     }
 
@@ -705,6 +707,7 @@ class PublicConfirmRescueGuardTest extends TestCase
         $row->organization_id = $this->org->id;
         $row->key = 'booking_mock_mode';
         $row->value = 'true';
+        $row->type = 'boolean';
         $row->group = 'booking';
         $row->save();
         \App\Models\HotelSetting::flushCacheFor($this->org->id);
@@ -731,7 +734,11 @@ class PublicConfirmRescueGuardTest extends TestCase
         $this->trace = [];
         $this->confirm($body + ['payment_intent_id' => 'pi_bare']);
         $this->assertRefused('pi_bare', 'not_widget_payment', 'validation');
-        $this->assertNotContains('begin', $this->trace, 'a refusal opens no transaction');
+        // Release 6: the staff alert after the refusal's audit row has its own savepoint (inside this test's transaction).
+        $audit = collect($this->trace)->filter(fn ($e) => str_starts_with($e, 'sql:insert into "audit_logs"'))->keys()->last();
+        $this->assertNotNull($audit, 'the refusal writes its audit row');
+        $refusalTrace = array_slice($this->trace, 0, (int) $audit + 1);
+        $this->assertNotContains('begin', $refusalTrace, 'a refusal opens no transaction');
 
         $own = $this->ownIntent($hold);
         $this->trace = [];
@@ -762,7 +769,7 @@ class PublicConfirmRescueGuardTest extends TestCase
         $body = ['hold_token' => $hold->hold_token, 'guest' => ['first_name' => 'Ada'], 'payment_intent_id' => $own];
         $missing = $this->confirm(['payment_intent_id' => 'pi_does_not_exist'] + $body);
 
-        Schema::drop('service_bookings');
+        $this->makeTableUnreadable('service_bookings');
         $res = $this->confirm($body);
 
         $this->assertSame([], $this->calls, 'Stripe is not asked, nothing is cancelled');

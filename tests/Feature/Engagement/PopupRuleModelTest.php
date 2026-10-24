@@ -7,6 +7,8 @@ use Database\Factories\OrganizationFactory;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\Schema;
 use Tests\Concerns\SetsUpMinimalSchema;
+use Tests\Concerns\WritesRowsForeignKeysNeed;
+use Tests\Concerns\ComparesJsonColumns;
 use Tests\TestCase;
 
 /**
@@ -47,6 +49,8 @@ class PopupRuleModelTest extends TestCase
 {
     use DatabaseTransactions;
     use SetsUpMinimalSchema;
+    use WritesRowsForeignKeysNeed;
+    use ComparesJsonColumns;
 
     private int $orgId;
 
@@ -127,6 +131,7 @@ class PopupRuleModelTest extends TestCase
             'is_active'       => true,
             'trigger_type'    => 'time_on_page',
             'trigger_value'   => '30',
+            'message'         => 'Can we help you plan your stay?',
             'priority'        => 0,
         ], $attrs));
     }
@@ -229,7 +234,7 @@ class PopupRuleModelTest extends TestCase
 
         $rule = $this->rule(['quick_replies' => $replies]);
 
-        $this->assertSame($replies, $rule->fresh()->quick_replies);
+        $this->assertSameJson($replies, $rule->fresh()->quick_replies);
     }
 
     public function test_empty_quick_replies_array_round_trips(): void
@@ -287,6 +292,7 @@ class PopupRuleModelTest extends TestCase
             'organization_id' => $this->orgId,
             'name'            => 'Brand new rule',
             'trigger_type'    => 'scroll',
+            'message'         => 'Still looking? Ask us anything.',
             'is_active'       => true,
         ]);
 
@@ -301,6 +307,7 @@ class PopupRuleModelTest extends TestCase
     {
         // CRITICAL: FK is 'widget_config_id' (NOT
         // 'chat_widget_config_id'). Lock the explicit name.
+        $this->rowsExist('chat_widget_configs', [100]);
         $rule = $this->rule(['widget_config_id' => 100]);
         $rel = $rule->widgetConfig();
 
@@ -333,6 +340,7 @@ class PopupRuleModelTest extends TestCase
             'organization_id'   => $orgB,
             'name'              => 'Org B rule',
             'trigger_type'      => 'scroll',
+            'message'           => 'Org B popup message',
             'is_active'         => true,
             'priority'          => 0,
             'impressions_count' => 0,

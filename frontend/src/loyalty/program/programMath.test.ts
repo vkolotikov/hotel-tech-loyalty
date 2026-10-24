@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Can } from '../lib/types'
-import { BENEFIT_FIELDS, BOOST_FIELDS, benefitBody, benefitChoices, benefitFormOf, benefitProblems, boostBody, boostFormOf, boostProblems, boostState, boostTone, existingOn, needsTimeCheck, needsAmount, programActions, thresholds, tierBenefitBody, tierBenefitFormOf, tierBenefitProblems, tierBenefitServerProblems, tierBody, tierFormOf, tierProblems, typedValue, weekdayName, weekdaysText } from './programMath'
+import { BENEFIT_FIELDS, BOOST_FIELDS, benefitBody, benefitChoices, benefitFormOf, benefitProblems, boostBody, boostFormOf, boostProblems, boostState, boostTone, existingOn, needsTimeCheck, needsAmount, timeCheckList, programActions, thresholds, tierBenefitBody, tierBenefitFormOf, tierBenefitProblems, tierBenefitServerProblems, tierBody, tierFormOf, tierProblems, typedValue, weekdayName, weekdaysText } from './programMath'
 import { chosenTiers, decimalOf, named, serverProblems, toggled, wallInput, wallOf } from '../lib/forms'
 import type { Benefit, Boost, ProgramOptions, Tier } from './types'
 
@@ -208,5 +208,14 @@ describe('a boost saved before its times were the venue\'s (R4-6)', () => {
     expect(['live', 'upcoming', 'off', 'ended'].map(state => needsTimeCheck({ check_time: true, state }))).toEqual([true, true, true, false])
     expect(needsTimeCheck({ check_time: false, state: 'live' })).toBe(false)
     expect(needsTimeCheck({ state: 'live' })).toBe(false)
+  })
+
+  it('lists for "These times are right" the boosts that ask for the check, in order (release 6)', () => {
+    const boosts = [
+      { id: 1, check_time: true, state: 'live' }, { id: 2, check_time: true, state: 'ended' },
+      { id: 3, check_time: false, state: 'upcoming' }, { id: 4, check_time: true, state: 'off' }, { id: 5, state: 'live' },
+    ]
+    expect(timeCheckList(boosts).map(b => b.id)).toEqual([1, 4])
+    expect(timeCheckList([])).toEqual([])
   })
 })

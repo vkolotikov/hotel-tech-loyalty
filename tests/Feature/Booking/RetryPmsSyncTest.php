@@ -198,4 +198,65 @@ class RetryPmsSyncTest extends TestCase
         $this->assertSame('cancelled', $fresh->internal_status);
         $this->assertSame(0, (int) $fresh->pms_sync_attempts);
     }
+
+    /** The Smoobu reservation the retry sends, captured. */
+    private function sent(): \Closure
+    {
+        $sent = [];
+        $this->smoobu->shouldReceive('createReservation')->andReturnUsing(function (array $p) use (&$sent) {
+            $sent[] = $p;
+            return ['id' => 777100 + count($sent), 'reference-id' => 'BK-RETRY' . (100 + count($sent))];
+        });
+
+        return function () use (&$sent) {
+            return $sent;
+        };
+    }
+
+    /** Release 6, item 10: a room that follows its group's lead (no payment of its own) names the group's payment too. */
+    public function test_a_following_room_of_a_group_names_the_groups_stripe_reference_in_its_note(): void
+    {
+        $this->pending(['booking_group_id' => 'grp-retry', 'apartment_id' => '101', 'stripe_payment_intent_id' => 'pi_group_retry', 'payment_method' => 'stripe', 'payment_status' => 'paid', 'price_paid' => 200, 'internal_status' => 'confirmed', 'reservation_id' => '777050']);
+        $this->pending(['booking_group_id' => 'grp-retry', 'apartment_id' => '102', 'apartment_name' => 'Garden', 'payment_method' => 'stripe', 'payment_status' => 'paid', 'price_total' => 160, 'price_paid' => 160]);
+        $sent = $this->sent();
+
+        $this->sweep();
+
+        $this->assertCount(1, $sent(), 'only the room still waiting is pushed');
+        $this->assertSame(102, $sent()[0]['apartmentId']);
+        $this->assertStringContainsString('Stripe ref: pi_group_retry', $sent()[0]['assistant-notice']);
+    }
+
+    public function test_a_single_room_without_a_payment_names_none_and_a_eur_receipt_is_as_before(): void
+    {
+        $this->pending();
+        $sent = $this->sent();
+
+        $this->sweep();
+
+        $notice = $sent()[0]['assistant-notice'];
+        $this->assertStringNotContainsString('Stripe ref:', $notice);
+        $this->assertStringContainsString('Payment: unpaid (€200.00 due)', $notice);
+        $this->assertStringContainsString('Total: €200.00', $notice);
+        $this->assertSame(['EUR'], array_values(array_unique(array_column($sent()[0]['priceElements'], 'currencyCode'))));
+    }
+
+    /** Release 6, item 7: the venue's own stay currency on the retry's receipt too. */
+    public function test_a_usd_venues_retry_receipt_is_in_usd(): void
+    {
+        app()->instance('current_organization_id', $this->org->id); // the setting is the venue's own
+        \App\Models\HotelSetting::withoutGlobalScopes()->create(['organization_id' => $this->org->id, 'key' => 'booking_currency', 'value' => 'USD', 'type' => 'string', 'group' => 'booking']);
+        \App\Models\HotelSetting::flushCacheFor($this->org->id);
+        app()->forgetInstance('current_organization_id'); // the command binds each row's venue itself
+        $this->pending(['stripe_payment_intent_id' => 'pi_usd_retry', 'payment_method' => 'stripe', 'payment_status' => 'paid', 'price_paid' => 200]);
+        $sent = $this->sent();
+
+        $this->sweep();
+
+        $notice = $sent()[0]['assistant-notice'];
+        $this->assertStringContainsString('Stripe ref: pi_usd_retry', $notice);
+        $this->assertStringContainsString('Payment: Stripe (USD 200.00 paid)', $notice);
+        $this->assertStringContainsString('Total: USD 200.00', $notice);
+        $this->assertSame(['USD'], array_values(array_unique(array_column($sent()[0]['priceElements'], 'currencyCode'))));
+    }
 }

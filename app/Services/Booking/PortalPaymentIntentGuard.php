@@ -118,7 +118,8 @@ class PortalPaymentIntentGuard
         if ($owned) {
             AdvisoryLock::transaction('pi:' . $piId, function () use ($piId, $orgId) {
                 if (!$this->carried($piId, $orgId)) {
-                    $this->cancel($piId, 'abandoned');
+                    // Under `pi:`: the short Stripe timeout (StripeService::underLock()).
+                    StripeService::underLock(fn () => $this->cancel($piId, 'abandoned'));
                 }
             });
         }
@@ -170,7 +171,9 @@ class PortalPaymentIntentGuard
      */
     public function assertStillPayable(string $piId): void
     {
-        $pi = $this->retrieveForCheck($piId);
+        // Always called under `pi:` (and a room or slot lock): the short Stripe
+        // timeout (StripeService::underLock()); a timeout is PaymentUnverifiable.
+        $pi = StripeService::underLock(fn () => $this->retrieveForCheck($piId));
 
         if (!in_array($this->status($pi), ['succeeded', 'requires_capture'], true)) {
             throw new PaymentMismatch();
@@ -229,7 +232,8 @@ class PortalPaymentIntentGuard
             return;
         }
 
-        AdvisoryLock::transaction('pi:' . $piId, function () use ($piId, $orgId, $memberId) {
+        // Every Stripe call below is made under `pi:`: the short timeout (StripeService::underLock()).
+        AdvisoryLock::transaction('pi:' . $piId, fn () => StripeService::underLock(function () use ($piId, $orgId, $memberId) {
             if ($this->carried($piId, $orgId)) {
                 return;
             }
@@ -247,7 +251,7 @@ class PortalPaymentIntentGuard
             }
 
             $this->cancel($piId, 'abandoned');
-        });
+        }));
     }
 
     /** The statuses in which an intent has taken no money and can still be paid through the Payment Element. */
@@ -286,7 +290,8 @@ class PortalPaymentIntentGuard
      */
     public function reuseOrRelease(string $piId, int $orgId, int $memberId, string $kind, float $total, callable $isForThisTarget): mixed
     {
-        return AdvisoryLock::transaction('pi:' . $piId, function () use ($piId, $orgId, $memberId, $kind, $total, $isForThisTarget) {
+        // Every Stripe call below is made under `pi:`: the short timeout (StripeService::underLock()).
+        return AdvisoryLock::transaction('pi:' . $piId, fn () => StripeService::underLock(function () use ($piId, $orgId, $memberId, $kind, $total, $isForThisTarget) {
             if ($this->carried($piId, $orgId)) {
                 return null;
             }
@@ -322,7 +327,7 @@ class PortalPaymentIntentGuard
             }
 
             return null;
-        });
+        }));
     }
 
     /**
@@ -398,7 +403,8 @@ class PortalPaymentIntentGuard
      */
     public function releaseOrphan(string $piId, int $orgId, int $olderThanEpoch): bool
     {
-        return (bool) AdvisoryLock::transaction('pi:' . $piId, function () use ($piId, $orgId, $olderThanEpoch) {
+        // Every Stripe call below is made under `pi:`: the short timeout (StripeService::underLock()).
+        return (bool) AdvisoryLock::transaction('pi:' . $piId, fn () => StripeService::underLock(function () use ($piId, $orgId, $olderThanEpoch) {
             if ($this->carried($piId, $orgId)) {
                 return false;
             }
@@ -433,7 +439,7 @@ class PortalPaymentIntentGuard
             }
 
             return true;
-        });
+        }));
     }
 
     /**

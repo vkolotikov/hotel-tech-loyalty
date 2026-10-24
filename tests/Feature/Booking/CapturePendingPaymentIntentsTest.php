@@ -281,14 +281,14 @@ class CapturePendingPaymentIntentsTest extends TestCase
 
     private function serviceBooking(string $status, string $pi, string $paymentStatus = 'authorized'): int
     {
-        return \DB::table('service_bookings')->insertGetId([
+        return \DB::table('service_bookings')->insertGetId($this->serviceBookingRequired([
             'organization_id'          => app('current_organization_id'),
             'status'                   => $status,
             'payment_status'           => $paymentStatus,
             'stripe_payment_intent_id' => $pi,
             'created_at'               => now()->subHour(),
             'updated_at'               => now()->subHour(),
-        ]);
+        ]));
     }
 
     private function audits(string $action): int

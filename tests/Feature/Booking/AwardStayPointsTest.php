@@ -83,7 +83,7 @@ class AwardStayPointsTest extends TestCase
 
     public function test_no_points_when_the_venue_switched_them_off_or_runs_no_programme(): void
     {
-        HotelSetting::withoutGlobalScopes()->create(['organization_id' => $this->orgId, 'key' => 'points_on_bookings', 'value' => 'false']);
+        HotelSetting::withoutGlobalScopes()->create(['organization_id' => $this->orgId, 'key' => 'points_on_bookings', 'value' => 'false', 'type' => 'boolean', 'group' => 'loyalty']);
         HotelSetting::flushCacheFor($this->orgId);
         $stayA = $this->stay();
         $this->assertNull(app(BookingPointsService::class)->awardForStay($stayA));
@@ -281,6 +281,7 @@ class AwardStayPointsTest extends TestCase
         $id = DB::table('loyalty_members')->insertGetId([
             'organization_id' => $orgId, 'user_id' => $userId, 'tier_id' => $this->member->tier_id, 'member_number' => 'HL-T' . $userId,
             'current_points' => 0, 'lifetime_points' => 0, 'is_active' => $active, 'created_at' => now(), 'updated_at' => now(),
+            'qr_code_token' => bin2hex(random_bytes(16)), 'referral_code' => strtoupper(bin2hex(random_bytes(4))),
         ]);
 
         return LoyaltyMember::withoutGlobalScopes()->findOrFail($id);

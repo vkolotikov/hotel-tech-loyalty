@@ -56,7 +56,7 @@
     "payment_status": { "deposit_only": "Anzahlung bezahlt", "deposit_paid": "Anzahlung bezahlt, der Rest vor Ort", "unpaid": "Zahlung vor Ort", "authorized": "Karte vorgemerkt", "paid": "Bezahlt", "refunded": "Erstattet", "failed": "Zahlung fehlgeschlagen", "partially_refunded": "Teilweise erstattet",
       "open": "Zahlung offen", "pending": "Zahlung in Bearbeitung", "disputed": "Zahlung wird geprüft", "invoice_waiting": "Rechnung ausstehend", "channel_managed": "Über Ihren Buchungskanal abgewickelt", "capture_expired": "Kartenreservierung abgelaufen", "cancelled": "Zahlung storniert", "mock": "Testzahlung" },
     "not_found": "Diese Buchung konnte nicht gefunden werden.",
-    "cancel": "Buchung stornieren", "cancel_title": "Diese Buchung stornieren?", "cancel_keep": "Behalten", "cancel_confirm": "Ja, stornieren", "cancelling": "Wird storniert…",
+    "cancel": "Buchung stornieren", "cancel_title": "Diese Buchung stornieren?", "cancel_rooms": "Alle Zimmer dieser Buchung werden zusammen storniert:", "cancel_keep": "Behalten", "cancel_confirm": "Ja, stornieren", "cancelling": "Wird storniert…",
     "cancel_until": "Kostenlose Stornierung bis", "cancel_ended": "Die kostenlose Stornierung endete am",
     "cancel_refund": "Wir erstatten {{amount}} auf die Karte, mit der Sie bezahlt haben.", "cancel_release": "Die Reservierung des Betrags auf Ihrer Karte wird aufgehoben. Es wird nichts abgebucht.",
     "cancel_deposit": "Wir erstatten Ihre Anzahlung von {{amount}} auf die Karte, mit der Sie bezahlt haben.", "cancel_nothing": "Für diese Buchung wurde nichts abgebucht.", "cancel_money_venue": "Diese Buchung wurde bei {{venue}} bezahlt. Eine Rückerstattung wird direkt mit Ihnen dort geklärt.",

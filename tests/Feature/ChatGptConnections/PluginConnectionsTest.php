@@ -10,10 +10,13 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
 use Laravel\Passport\ClientRepository;
 use Laravel\Passport\Passport;
+use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Tests\TestCase;
 
 class PluginConnectionsTest extends TestCase
 {
+    use DatabaseTransactions;
+
     private const ENDPOINT = '/api/v1/auth/plugin-connections';
 
     private string $clientId;
@@ -26,7 +29,7 @@ class PluginConnectionsTest extends TestCase
 
         config(['chatgpt.enabled' => true, 'chatgpt.organization_ids' => [10], 'chatgpt.all_organizations' => false]);
 
-        Schema::create('users', function (Blueprint $table): void {
+        if (!Schema::hasTable('users')) Schema::create('users', function (Blueprint $table): void {
             $table->id();
             $table->string('name');
             $table->string('email');
@@ -36,7 +39,7 @@ class PluginConnectionsTest extends TestCase
             $table->rememberToken();
             $table->timestamps();
         });
-        Schema::create('personal_access_tokens', function (Blueprint $table): void {
+        if (!Schema::hasTable('personal_access_tokens')) Schema::create('personal_access_tokens', function (Blueprint $table): void {
             $table->id();
             $table->morphs('tokenable');
             $table->string('name');
@@ -46,10 +49,15 @@ class PluginConnectionsTest extends TestCase
             $table->timestamp('expires_at')->nullable();
             $table->timestamps();
         });
-        foreach (glob(database_path('migrations/2016_06_01_*oauth*.php')) as $path) {
-            (require $path)->up();
+        // The OAuth tables as their migrations build them (already there on PostgreSQL built from every migration).
+        if (!Schema::hasTable('oauth_clients')) {
+            foreach (glob(database_path('migrations/2016_06_01_*oauth*.php')) as $path) {
+                (require $path)->up();
+            }
         }
-        (require database_path('migrations/2026_09_09_120000_bind_plugin_oauth_grants_to_organization.php'))->up();
+        if (!Schema::hasColumn('oauth_auth_codes', 'plugin_organization_id')) {
+            (require database_path('migrations/2026_09_09_120000_bind_plugin_oauth_grants_to_organization.php'))->up();
+        }
 
         DB::table('users')->insert([
             ['id' => 1, 'name' => 'First Staff', 'email' => 'first@example.test', 'password' => 'unused', 'user_type' => 'staff', 'organization_id' => 10],
@@ -78,7 +86,7 @@ class PluginConnectionsTest extends TestCase
         $this->signIn();
         $response = $this->getJson(self::ENDPOINT)->assertOk()
             ->assertJsonPath('enabled', true)->assertJsonPath('configured', true)
-            ->assertJsonCount(1, 'connections')->assertJsonPath('connections.0.id', 'own');
+            ->assertJsonCount(1, 'connections')->assertJsonPath('connections.0.id', self::tokenId('own'));
         $entry = $response->json('connections.0');
         $this->assertEqualsCanonicalizing(['id', 'name', 'scopes', 'created_at', 'expires_at'], array_keys($entry));
         $this->assertSame(['mcp:use'], $entry['scopes']);
@@ -97,7 +105,7 @@ class PluginConnectionsTest extends TestCase
 
         $this->signIn();
         $this->getJson(self::ENDPOINT)->assertOk()->assertJsonCount(1, 'connections')
-            ->assertJsonPath('connections.0.id', 'refreshable');
+            ->assertJsonPath('connections.0.id', self::tokenId('refreshable'));
     }
 
     public function test_disconnect_revokes_own_tokens_and_pending_codes_without_touching_other_access(): void
@@ -118,16 +126,16 @@ class PluginConnectionsTest extends TestCase
         $this->signIn();
         $this->deleteJson(self::ENDPOINT)->assertOk()->assertExactJson(['success' => true]);
         foreach (['own', 'rotated-parent'] as $id) {
-            $this->assertTrue(Passport::token()->newQuery()->findOrFail($id)->revoked);
+            $this->assertTrue(Passport::token()->newQuery()->findOrFail(self::tokenId($id))->revoked);
         }
         foreach (['own-refresh', 'old-refresh'] as $id) {
-            $this->assertTrue(Passport::refreshToken()->newQuery()->findOrFail($id)->revoked);
+            $this->assertTrue(Passport::refreshToken()->newQuery()->findOrFail(self::tokenId($id))->revoked);
         }
-        $this->assertTrue(Passport::authCode()->newQuery()->findOrFail('pending')->revoked);
+        $this->assertTrue(Passport::authCode()->newQuery()->findOrFail(self::tokenId('pending'))->revoked);
         foreach (['colleague', 'previous-workspace', 'other-client'] as $id) {
-            $this->assertFalse(Passport::token()->newQuery()->findOrFail($id)->revoked);
-            $this->assertFalse(Passport::refreshToken()->newQuery()->findOrFail($id.'-refresh')->revoked);
-            $this->assertFalse(Passport::authCode()->newQuery()->findOrFail($id.'-code')->revoked);
+            $this->assertFalse(Passport::token()->newQuery()->findOrFail(self::tokenId($id))->revoked);
+            $this->assertFalse(Passport::refreshToken()->newQuery()->findOrFail(self::tokenId($id.'-refresh'))->revoked);
+            $this->assertFalse(Passport::authCode()->newQuery()->findOrFail(self::tokenId($id.'-code'))->revoked);
         }
         $this->assertSame(1, DB::table('personal_access_tokens')->count());
         Auth::forgetGuards();
@@ -145,7 +153,7 @@ class PluginConnectionsTest extends TestCase
         $this->signIn();
         $this->getJson(self::ENDPOINT)->assertOk()->assertJsonPath('enabled', false)->assertJsonCount(1, 'connections');
         $this->deleteJson(self::ENDPOINT)->assertOk();
-        $this->assertTrue(Passport::refreshToken()->newQuery()->findOrFail('own-refresh')->revoked);
+        $this->assertTrue(Passport::refreshToken()->newQuery()->findOrFail(self::tokenId('own-refresh'))->revoked);
     }
 
     public function test_unconfigured_integration_has_safe_empty_state_and_idempotent_disconnect(): void
@@ -164,7 +172,7 @@ class PluginConnectionsTest extends TestCase
         $this->signIn();
         $this->getJson(self::ENDPOINT)->assertOk()->assertJsonPath('enabled', false)->assertJsonCount(1, 'connections');
         $this->deleteJson(self::ENDPOINT)->assertOk();
-        $this->assertTrue(Passport::token()->newQuery()->findOrFail('own')->revoked);
+        $this->assertTrue(Passport::token()->newQuery()->findOrFail(self::tokenId('own'))->revoked);
     }
 
     public function test_guests_members_and_staff_without_workspace_cannot_manage_grants(): void
@@ -177,7 +185,7 @@ class PluginConnectionsTest extends TestCase
             $this->getJson(self::ENDPOINT)->assertForbidden();
             $this->deleteJson(self::ENDPOINT)->assertForbidden();
         }
-        $this->assertFalse(Passport::token()->newQuery()->findOrFail('own')->revoked);
+        $this->assertFalse(Passport::token()->newQuery()->findOrFail(self::tokenId('own'))->revoked);
     }
 
     public function test_all_revocations_roll_back_if_pending_code_update_fails(): void
@@ -185,13 +193,19 @@ class PluginConnectionsTest extends TestCase
         $this->accessToken('own');
         $this->refreshToken('own-refresh', 'own');
         $this->authCode('pending');
-        DB::unprepared("CREATE TRIGGER refuse_code_revocation BEFORE UPDATE ON oauth_auth_codes BEGIN SELECT RAISE(ABORT, 'test transaction failure'); END");
+        if (DB::getDriverName() === 'pgsql') {
+            // The same refusal in PostgreSQL's own trigger syntax (removed again by the test's rollback).
+            DB::unprepared("CREATE FUNCTION refuse_code_revocation() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'test transaction failure'; END $$");
+            DB::unprepared('CREATE TRIGGER refuse_code_revocation BEFORE UPDATE ON oauth_auth_codes FOR EACH ROW EXECUTE FUNCTION refuse_code_revocation()');
+        } else {
+            DB::unprepared("CREATE TRIGGER refuse_code_revocation BEFORE UPDATE ON oauth_auth_codes BEGIN SELECT RAISE(ABORT, 'test transaction failure'); END");
+        }
 
         $this->signIn();
         $this->deleteJson(self::ENDPOINT)->assertStatus(500);
-        $this->assertFalse(Passport::token()->newQuery()->findOrFail('own')->revoked);
-        $this->assertFalse(Passport::refreshToken()->newQuery()->findOrFail('own-refresh')->revoked);
-        $this->assertFalse(Passport::authCode()->newQuery()->findOrFail('pending')->revoked);
+        $this->assertFalse(Passport::token()->newQuery()->findOrFail(self::tokenId('own'))->revoked);
+        $this->assertFalse(Passport::refreshToken()->newQuery()->findOrFail(self::tokenId('own-refresh'))->revoked);
+        $this->assertFalse(Passport::authCode()->newQuery()->findOrFail(self::tokenId('pending'))->revoked);
     }
 
     public function test_management_routes_do_not_depend_on_subscription_brand_or_plugin_enablement(): void
@@ -211,10 +225,19 @@ class PluginConnectionsTest extends TestCase
         $this->withToken(User::findOrFail($userId)->createToken('app-session')->plainTextToken);
     }
 
+    /**
+     * A token id as Passport writes one: 80 characters, the width of production's `char(80)` id columns
+     * (PostgreSQL pads a shorter value with spaces, and the endpoint answers the stored id).
+     */
+    private static function tokenId(string $name): string
+    {
+        return str_pad($name, 80, '0');
+    }
+
     private function accessToken(string $id, array $override = []): void
     {
         Passport::token()->newQuery()->create(array_merge([
-            'id' => $id, 'user_id' => 1, 'plugin_organization_id' => 10, 'client_id' => $this->clientId,
+            'id' => self::tokenId($id), 'user_id' => 1, 'plugin_organization_id' => 10, 'client_id' => $this->clientId,
             'name' => null, 'scopes' => ['mcp:use'], 'revoked' => false, 'expires_at' => now()->addHour(),
         ], $override));
     }
@@ -222,14 +245,14 @@ class PluginConnectionsTest extends TestCase
     private function refreshToken(string $id, string $accessTokenId, array $override = []): void
     {
         Passport::refreshToken()->newQuery()->create(array_merge([
-            'id' => $id, 'access_token_id' => $accessTokenId, 'revoked' => false, 'expires_at' => now()->addDays(30),
+            'id' => self::tokenId($id), 'access_token_id' => self::tokenId($accessTokenId), 'revoked' => false, 'expires_at' => now()->addDays(30),
         ], $override));
     }
 
     private function authCode(string $id, array $override = []): void
     {
         Passport::authCode()->newQuery()->create(array_merge([
-            'id' => $id, 'user_id' => 1, 'plugin_organization_id' => 10, 'client_id' => $this->clientId,
+            'id' => self::tokenId($id), 'user_id' => 1, 'plugin_organization_id' => 10, 'client_id' => $this->clientId,
             'scopes' => json_encode(['mcp:use']), 'revoked' => false, 'expires_at' => now()->addMinutes(10),
         ], $override));
     }

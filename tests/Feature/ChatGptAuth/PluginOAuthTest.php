@@ -7,6 +7,7 @@ use App\Models\PluginUser;
 use App\Models\User;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
+use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
@@ -20,10 +21,13 @@ use Lcobucci\JWT\Encoding\JoseEncoder;
 use Lcobucci\JWT\Signer\Key\InMemory;
 use Lcobucci\JWT\Signer\Rsa\Sha256;
 use Lcobucci\JWT\Token\Parser;
+use Tests\Concerns\ClearsTheMigrationsOrganisation;
 use Tests\TestCase;
 
 class PluginOAuthTest extends TestCase
 {
+    use DatabaseTransactions, ClearsTheMigrationsOrganisation;
+
     private const ORIGIN = 'https://app.hexa-tech.uk';
 
     private const CALLBACK = 'https://chatgpt.com/connector_platform/oauth/callback';
@@ -59,7 +63,7 @@ class PluginOAuthTest extends TestCase
         ]);
         URL::forceRootUrl(self::ORIGIN);
         URL::forceScheme('https');
-        Schema::create('users', function (Blueprint $table) {
+        if (!Schema::hasTable('users')) Schema::create('users', function (Blueprint $table) {
             $table->id();
             $table->string('name');
             $table->string('email');
@@ -69,9 +73,10 @@ class PluginOAuthTest extends TestCase
             $table->rememberToken();
             $table->timestamps();
         });
-        Schema::create('organizations', function (Blueprint $table) {
+        if (!Schema::hasTable('organizations')) Schema::create('organizations', function (Blueprint $table) {
             $table->id();
             $table->string('name');
+            $table->string('slug')->nullable();
             $table->boolean('is_active')->default(true);
             $table->timestamp('saas_deleted_at')->nullable();
             $table->string('saas_org_id')->nullable();
@@ -79,13 +84,13 @@ class PluginOAuthTest extends TestCase
             $table->timestamp('trial_end')->nullable();
             $table->timestamp('entitlements_synced_at')->nullable();
         });
-        Schema::create('staff', function (Blueprint $table) {
+        if (!Schema::hasTable('staff')) Schema::create('staff', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('user_id');
             $table->unsignedBigInteger('organization_id');
             $table->boolean('is_active')->default(true);
         });
-        Schema::create('personal_access_tokens', function (Blueprint $table) {
+        if (!Schema::hasTable('personal_access_tokens')) Schema::create('personal_access_tokens', function (Blueprint $table) {
             $table->id();
             $table->morphs('tokenable');
             $table->string('name');
@@ -95,11 +100,17 @@ class PluginOAuthTest extends TestCase
             $table->timestamp('expires_at')->nullable();
             $table->timestamps();
         });
-        foreach (glob(database_path('migrations/2016_06_01_*oauth*.php')) as $path) {
-            (require $path)->up();
+        // The OAuth tables as their migrations build them (already there on PostgreSQL built from every migration).
+        if (!Schema::hasTable('oauth_clients')) {
+            foreach (glob(database_path('migrations/2016_06_01_*oauth*.php')) as $path) {
+                (require $path)->up();
+            }
         }
-        (require database_path('migrations/2026_09_09_120000_bind_plugin_oauth_grants_to_organization.php'))->up();
-        DB::table('organizations')->insert(['id' => 1, 'name' => 'Test Hotel']);
+        if (!Schema::hasColumn('oauth_auth_codes', 'plugin_organization_id')) {
+            (require database_path('migrations/2026_09_09_120000_bind_plugin_oauth_grants_to_organization.php'))->up();
+        }
+        $this->clearTheMigrationsOrganisation();
+        DB::table('organizations')->insert(['id' => 1, 'name' => 'Test Hotel', 'slug' => 'test-hotel', 'subscription_status' => 'ACTIVE']);
         DB::table('users')->insert(['id' => 1, 'name' => 'Staff', 'email' => 'staff@example.test',
             'password' => 'unused', 'user_type' => 'staff', 'organization_id' => 1]);
         DB::table('staff')->insert(['user_id' => 1, 'organization_id' => 1]);
@@ -275,7 +286,7 @@ class PluginOAuthTest extends TestCase
     {
         $this->freezeTime();
         $tokensA = $this->exchange($this->approve())->assertOk()->json();
-        DB::table('organizations')->insert(['id' => 2, 'name' => 'Second business']);
+        DB::table('organizations')->insert(['id' => 2, 'name' => 'Second business', 'slug' => 'second-business', 'subscription_status' => 'ACTIVE']);
         DB::table('users')->insert(['id' => 2, 'name' => 'Second staff', 'email' => 'second@example.test',
             'password' => 'unused', 'user_type' => 'staff', 'organization_id' => 2]);
         DB::table('staff')->insert(['user_id' => 2, 'organization_id' => 2]);

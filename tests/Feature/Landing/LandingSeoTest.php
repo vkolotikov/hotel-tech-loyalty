@@ -82,6 +82,7 @@ class LandingSeoTest extends TestCase
         // there_is_no_property), so the happy path needs an actual name.
         $page = $this->published(1, 'glamour-salon', 'other');
         Property::create([
+            'code' => 'P' . strtoupper(bin2hex(random_bytes(4))),
             'organization_id' => 1, 'brand_id' => 1, 'name' => 'Glamour Salon', 'is_active' => true,
         ]);
 
@@ -103,6 +104,7 @@ class LandingSeoTest extends TestCase
     {
         $page = $this->published(3, 'contact-fields');
         Property::create([
+            'code' => 'P' . strtoupper(bin2hex(random_bytes(4))),
             'organization_id' => 1, 'brand_id' => 3, 'name' => 'Glamour & Co',
             'address' => '12 High Street', 'city' => 'Leeds', 'country' => 'GB',
             'phone' => '+44 113 000 0000', 'email' => 'hello@glamour.test',
@@ -147,6 +149,7 @@ class LandingSeoTest extends TestCase
     {
         $page = $this->published(20, 'blank-name');
         Property::create([
+            'code' => 'P' . strtoupper(bin2hex(random_bytes(4))),
             'organization_id' => 1, 'brand_id' => 20, 'name' => '   ', 'is_active' => true,
         ]);
 
@@ -164,6 +167,7 @@ class LandingSeoTest extends TestCase
     {
         $page = $this->published(19, 'zero-name');
         Property::create([
+            'code' => 'P' . strtoupper(bin2hex(random_bytes(4))),
             'organization_id' => 1, 'brand_id' => 19, 'name' => '0', 'is_active' => true,
         ]);
 
@@ -182,6 +186,7 @@ class LandingSeoTest extends TestCase
     {
         $page = $this->published(9, 'no-address-fields');
         Property::create([
+            'code' => 'P' . strtoupper(bin2hex(random_bytes(4))),
             'organization_id' => 1, 'brand_id' => 9, 'name' => 'No Fixed Address Ltd',
             'is_active' => true,
         ]);
@@ -203,6 +208,7 @@ class LandingSeoTest extends TestCase
     {
         $page = $this->published(5, 'xss-name');
         Property::create([
+            'code' => 'P' . strtoupper(bin2hex(random_bytes(4))),
             'organization_id' => 1, 'brand_id' => 5,
             'name' => 'Evil</script><script>alert(1)</script>',
             'is_active' => true,
@@ -227,10 +233,12 @@ class LandingSeoTest extends TestCase
     {
         $page = $this->published(6, 'hours-page');
         Property::create([
+            'code' => 'P' . strtoupper(bin2hex(random_bytes(4))),
             'organization_id' => 1, 'brand_id' => 6, 'name' => 'Hours Co', 'is_active' => true,
         ]);
         ChatWidgetConfig::create([
-            'organization_id' => 1, 'brand_id' => 6, 'widget_key' => 'wk-hours',
+            'api_key' => \Illuminate\Support\Str::random(48),
+            'organization_id' => 1, 'brand_id' => 6, 'widget_key' => '4d2e8f1a-3c5b-4a7e-9f0d-6b1c2a3e4f5d',
             'is_active' => true,
             'business_hours' => [
                 'mon' => [['open' => '09:00', 'close' => '17:00']],
@@ -272,6 +280,7 @@ class LandingSeoTest extends TestCase
     {
         $page = $this->published(15, 'url-page');
         Property::create([
+            'code' => 'P' . strtoupper(bin2hex(random_bytes(4))),
             'organization_id' => 1, 'brand_id' => 15, 'name' => 'Url Co', 'is_active' => true,
         ]);
 
@@ -284,6 +293,7 @@ class LandingSeoTest extends TestCase
     {
         $page = $this->published(16, 'desc-page');
         Property::create([
+            'code' => 'P' . strtoupper(bin2hex(random_bytes(4))),
             'organization_id' => 1, 'brand_id' => 16, 'name' => 'Desc Co', 'is_active' => true,
         ]);
         $page->update(['seo' => ['description' => 'A calm, considered salon.']]);
@@ -302,6 +312,7 @@ class LandingSeoTest extends TestCase
     {
         $page = $this->published(17, 'rated-page');
         Property::create([
+            'code' => 'P' . strtoupper(bin2hex(random_bytes(4))),
             'organization_id' => 1, 'brand_id' => 17, 'name' => 'Rated Co', 'is_active' => true,
         ]);
 
@@ -346,6 +357,7 @@ class LandingSeoTest extends TestCase
     {
         $page = $this->published(18, 'unrated-page');
         Property::create([
+            'code' => 'P' . strtoupper(bin2hex(random_bytes(4))),
             'organization_id' => 1, 'brand_id' => 18, 'name' => 'Unrated Co', 'is_active' => true,
         ]);
 
@@ -383,6 +395,7 @@ class LandingSeoTest extends TestCase
     {
         $page = $this->published(19, 'band-hidden');
         Property::create([
+            'code' => 'P' . strtoupper(bin2hex(random_bytes(4))),
             'organization_id' => 1, 'brand_id' => 19, 'name' => 'Hidden Co', 'is_active' => true,
         ]);
 
@@ -418,6 +431,7 @@ class LandingSeoTest extends TestCase
     {
         $page = $this->published(20, 'band-shown');
         Property::create([
+            'code' => 'P' . strtoupper(bin2hex(random_bytes(4))),
             'organization_id' => 1, 'brand_id' => 20, 'name' => 'Shown Co', 'is_active' => true,
         ]);
 
@@ -473,6 +487,7 @@ class LandingSeoTest extends TestCase
     {
         $page = $this->published($brandId, $slug);
         Property::create([
+            'code' => 'P' . strtoupper(bin2hex(random_bytes(4))),
             'organization_id' => 1, 'brand_id' => $brandId, 'name' => 'Off Co', 'is_active' => true,
         ]);
         $this->fourFeaturedReviews();
@@ -550,6 +565,7 @@ class LandingSeoTest extends TestCase
         // without changing the INDUSTRY value under test.
         $page = $this->published(10, 'schema-type-' . str_replace('_', '-', $industry), $industry);
         Property::create([
+            'code' => 'P' . strtoupper(bin2hex(random_bytes(4))),
             'organization_id' => 1, 'brand_id' => 10, 'name' => 'Business Co', 'is_active' => true,
         ]);
 
@@ -629,6 +645,7 @@ class LandingSeoTest extends TestCase
         foreach ($cases as $label => [$industry, $brandId, $slug]) {
             $page = $this->published($brandId, $slug, $industry);
             Property::create([
+                'code' => 'P' . strtoupper(bin2hex(random_bytes(4))),
                 'organization_id' => 1, 'brand_id' => $brandId, 'name' => 'Business Co', 'is_active' => true,
             ]);
 
@@ -640,6 +657,7 @@ class LandingSeoTest extends TestCase
         // The contrast: a genuinely resolved industry still gets its subtype.
         $page = $this->published(32, 'resolved-industry', 'beauty');
         Property::create([
+            'code' => 'P' . strtoupper(bin2hex(random_bytes(4))),
             'organization_id' => 1, 'brand_id' => 32, 'name' => 'Resolved Co', 'is_active' => true,
         ]);
 

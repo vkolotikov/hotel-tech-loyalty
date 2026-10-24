@@ -42,9 +42,12 @@ class InsightsTest extends TestCase
     /** A ledger line of Ada's (unless told otherwise), at a stored UTC time. */
     private function line(int $points, string $type, string $at, array $more = []): PointsTransaction
     {
+        $memberId = $more['member_id'] ?? $this->ada->id;
         $line = PointsTransaction::withoutGlobalScopes()->create($more + [
-            'member_id' => $this->ada->id, 'type' => $type, 'points' => $points, 'description' => ucfirst($type),
+            'member_id' => $memberId, 'type' => $type, 'points' => $points, 'description' => ucfirst($type),
             'idempotency_key' => uniqid('t', true),
+            // NOT NULL in production: the member's balance as the line leaves it.
+            'balance_after' => (int) DB::table('loyalty_members')->where('id', $memberId)->value('current_points'),
         ]);
         $line->forceFill(['created_at' => $at])->save();
 
@@ -245,7 +248,8 @@ class InsightsTest extends TestCase
         // Ada and Grace were written today but joined on 5 July; an import kept a member's join date of 2025.
         $this->makeMember('Imported Ivy', 'ivy@example.test', ['joined_at' => '2025-01-01 10:00:00']);
         $this->makeMember('Lin New', 'lin@example.test', ['joined_at' => '2026-10-01 12:00:00']);
-        $max = $this->makeMember('Max Plain', 'max@example.test', ['joined_at' => null, 'is_active' => false]);
+        // Enrolled on 20 September: enrolment stamps the join date with the row (joined_at is NOT NULL in production).
+        $max = $this->makeMember('Max Plain', 'max@example.test', ['joined_at' => '2026-09-20 08:00:00', 'is_active' => false]);
         $max->forceFill(['created_at' => '2026-09-20 08:00:00'])->save();
         $this->otherOrganization();
 
@@ -314,7 +318,9 @@ class InsightsTest extends TestCase
         ['silver' => $silver, 'gold' => $gold] = $this->tiers;
         $goldPlus = LoyaltyTier::create(['name' => 'Gold Plus', 'min_points' => 1000, 'sort_order' => 2, 'is_active' => true]);
         $moved = function (?int $from, ?int $to, string $at, ?int $memberId = null) {
-            $row = TierAssessment::withoutGlobalScopes()->create(['member_id' => $memberId ?? $this->grace->id, 'old_tier_id' => $from, 'new_tier_id' => $to, 'reason' => 'points']);
+            // The assessment window is NOT NULL in production (LoyaltyService writes the year the move was judged on).
+            $row = TierAssessment::withoutGlobalScopes()->create(['member_id' => $memberId ?? $this->grace->id, 'old_tier_id' => $from, 'new_tier_id' => $to, 'reason' => 'points',
+                'assessment_window_start' => '2025-10-01', 'assessment_window_end' => '2026-10-01']);
             $row->forceFill(['created_at' => $at])->save();
         };
         $moved($silver->id, $gold->id, '2026-10-01 10:00:00');
@@ -342,8 +348,15 @@ class InsightsTest extends TestCase
     public function test_points_due_to_expire_by_month_and_those_overdue(): void
     {
         $bucket = function (int $memberId, int $points, string $expires, array $more = []) {
+            // A bucket is the earn line's (transaction_id is NOT NULL in production).
+            $earn = PointsTransaction::withoutGlobalScopes()->create([
+                'member_id' => $memberId, 'type' => 'earn', 'points' => $points, 'description' => 'Earn',
+                'idempotency_key' => uniqid('e', true), 'balance_after' => $points,
+            ]);
+            $earn->forceFill(['created_at' => '2025-01-01 10:00:00'])->save();
+
             return PointExpiryBucket::withoutGlobalScopes()->create($more + [
-                'member_id' => $memberId, 'original_points' => $points, 'remaining_points' => $points,
+                'member_id' => $memberId, 'transaction_id' => $earn->id, 'original_points' => $points, 'remaining_points' => $points,
                 'earned_at' => '2025-01-01', 'expires_at' => $expires,
             ]);
         };

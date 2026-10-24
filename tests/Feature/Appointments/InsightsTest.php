@@ -55,6 +55,8 @@ class InsightsTest extends TestCase
         $row->organization_id = $this->org->id;
         $row->key = 'services_cancel_hours';
         $row->value = (string) $hours;
+        $row->type = 'integer';
+        $row->group = 'booking';
         $row->save();
         HotelSetting::flushCacheFor($this->org->id);
     }

@@ -8,6 +8,7 @@ use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Tests\Concerns\SetsUpMinimalSchema;
+use Tests\Concerns\WritesHotelSettings;
 use Tests\TestCase;
 
 /**
@@ -44,7 +45,7 @@ use Tests\TestCase;
  */
 class HotelSettingEncryptedKeysTest extends TestCase
 {
-    use DatabaseTransactions;
+    use DatabaseTransactions, WritesHotelSettings;
     use SetsUpMinimalSchema;
 
     private int $orgId;
@@ -98,10 +99,10 @@ class HotelSettingEncryptedKeysTest extends TestCase
     {
         $plaintext = 'sk_test_REAL_STRIPE_SECRET_KEY_LOOKING_VALUE_12345';
 
-        HotelSetting::create([
+        HotelSetting::create($this->settingRow([
             'key'   => 'stripe_secret_key',
             'value' => $plaintext,
-        ]);
+        ]));
 
         // Pull the RAW column value via the query builder (bypasses
         // the model accessor) — that's what an attacker reading the
@@ -125,10 +126,10 @@ class HotelSettingEncryptedKeysTest extends TestCase
         // the loop drops out before the 4th" class of bug.
         foreach (HotelSetting::ENCRYPTED_KEYS as $i => $key) {
             $plaintext = "PLAINTEXT_VALUE_{$i}";
-            HotelSetting::create([
+            HotelSetting::create($this->settingRow([
                 'key'   => $key,
                 'value' => $plaintext,
-            ]);
+            ]));
 
             $raw = DB::table('hotel_settings')
                 ->where('organization_id', $this->orgId)
@@ -147,10 +148,10 @@ class HotelSettingEncryptedKeysTest extends TestCase
         // Non-credential keys (booking_currency, company_name,
         // etc.) MUST persist as plain text — those are queried
         // directly via ->value('value') / ->typed_value / etc.
-        HotelSetting::create([
+        HotelSetting::create($this->settingRow([
             'key'   => 'booking_currency',
             'value' => 'EUR',
-        ]);
+        ]));
 
         $raw = DB::table('hotel_settings')
             ->where('organization_id', $this->orgId)
@@ -166,10 +167,10 @@ class HotelSettingEncryptedKeysTest extends TestCase
         // Defensive: encrypting an empty string would produce a
         // ciphertext-looking blob for a "deliberately cleared"
         // value, breaking the "is the secret set?" check.
-        HotelSetting::create([
+        HotelSetting::create($this->settingRow([
             'key'   => 'stripe_secret_key',
             'value' => '',
-        ]);
+        ]));
 
         $raw = DB::table('hotel_settings')
             ->where('organization_id', $this->orgId)
@@ -182,10 +183,10 @@ class HotelSettingEncryptedKeysTest extends TestCase
 
     public function test_null_value_is_not_encrypted(): void
     {
-        HotelSetting::create([
+        HotelSetting::create($this->settingRow([
             'key'   => 'stripe_secret_key',
             'value' => null,
-        ]);
+        ]));
 
         $raw = DB::table('hotel_settings')
             ->where('organization_id', $this->orgId)
@@ -201,10 +202,10 @@ class HotelSettingEncryptedKeysTest extends TestCase
     public function test_reading_value_attribute_returns_plaintext_transparently(): void
     {
         $plaintext = 'sk_test_ACCESSOR_TEST_VALUE';
-        HotelSetting::create([
+        HotelSetting::create($this->settingRow([
             'key'   => 'stripe_secret_key',
             'value' => $plaintext,
-        ]);
+        ]));
 
         // Re-fetch — Eloquent's accessor must decrypt transparently.
         $row = HotelSetting::where('key', 'stripe_secret_key')->first();
@@ -215,10 +216,10 @@ class HotelSettingEncryptedKeysTest extends TestCase
 
     public function test_reading_value_for_non_encrypted_key_returns_raw_unchanged(): void
     {
-        HotelSetting::create([
+        HotelSetting::create($this->settingRow([
             'key'   => 'company_name',
             'value' => 'Forrest Glamp',
-        ]);
+        ]));
 
         $row = HotelSetting::where('key', 'company_name')->first();
 
@@ -235,13 +236,13 @@ class HotelSettingEncryptedKeysTest extends TestCase
         //
         // Raw INSERT bypasses the saving event so no encryption
         // happens at write-time.
-        DB::table('hotel_settings')->insert([
+        DB::table('hotel_settings')->insert($this->settingRow([
             'organization_id' => $this->orgId,
             'key'             => 'stripe_webhook_secret',
             'value'           => 'whsec_LEGACY_PLAINTEXT_VALUE',
             'created_at'      => now(),
             'updated_at'      => now(),
-        ]);
+        ]));
 
         $row = HotelSetting::where('key', 'stripe_webhook_secret')->first();
 
@@ -255,13 +256,13 @@ class HotelSettingEncryptedKeysTest extends TestCase
         // row gets touched (any save), it lands as ciphertext. Old
         // bytes never resurface in DB snapshots after the next
         // routine settings update.
-        DB::table('hotel_settings')->insert([
+        DB::table('hotel_settings')->insert($this->settingRow([
             'organization_id' => $this->orgId,
             'key'             => 'booking_smoobu_api_key',
             'value'           => 'API_KEY_LEGACY_PLAINTEXT',
             'created_at'      => now(),
             'updated_at'      => now(),
-        ]);
+        ]));
 
         // Touch the row via the model (triggers `saving` event).
         $row = HotelSetting::where('key', 'booking_smoobu_api_key')->first();
@@ -289,10 +290,10 @@ class HotelSettingEncryptedKeysTest extends TestCase
         // and the value becomes unreadable.
         $plaintext = 'sk_test_IDEMPOTENT_VALUE';
 
-        $row = HotelSetting::create([
+        $row = HotelSetting::create($this->settingRow([
             'key'   => 'stripe_secret_key',
             'value' => $plaintext,
-        ]);
+        ]));
 
         // Touch the row 3 more times — each save runs through the
         // saving event.
@@ -317,14 +318,14 @@ class HotelSettingEncryptedKeysTest extends TestCase
         // defeated by the cache layer. Verify via the public
         // getValue() API — the cached path goes through
         // cachedMapFor.
-        HotelSetting::create([
+        HotelSetting::create($this->settingRow([
             'key'   => 'stripe_secret_key',
             'value' => 'sk_test_SHOULD_NOT_REACH_CACHE',
-        ]);
-        HotelSetting::create([
+        ]));
+        HotelSetting::create($this->settingRow([
             'key'   => 'booking_currency',
             'value' => 'EUR',
-        ]);
+        ]));
 
         // Non-encrypted key surfaces via the cache normally.
         $this->assertSame('EUR', HotelSetting::getValue('booking_currency'));
@@ -349,10 +350,10 @@ class HotelSettingEncryptedKeysTest extends TestCase
         $orgA = $this->orgId;
         $orgB = OrganizationFactory::new()->create()->id;
 
-        HotelSetting::create([
+        HotelSetting::create($this->settingRow([
             'key'   => 'stripe_secret_key',
             'value' => 'sk_test_ORG_A_SECRET',
-        ]);
+        ]));
 
         // Switch tenant context to org B.
         app()->forgetInstance('current_organization_id');

@@ -6,9 +6,10 @@
   },
   "brand": {
     "hint": "Which of your brands it belongs to.",
+    "keep": "Keep it where it is",
     "label": "Brand",
-    "refused": "Choose one of the brands listed.",
-    "saved": "Brand: {{name}}. It stays on this brand."
+    "move_hint": "Which of your brands it belongs to. Choosing another moves it there when you save.",
+    "refused": "Choose one of the brands listed."
   },
   "cancel": {
     "body": "{{points}} points go back to {{name}}, and the reward returns to stock if it has a limit. The code stops working.",

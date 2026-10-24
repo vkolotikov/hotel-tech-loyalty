@@ -268,7 +268,8 @@ class LoyaltyPresetServiceTest extends TestCase
     public function test_a_clinic_that_already_has_members_keeps_its_own_choice_about_points(): void
     {
         $tier = LoyaltyTierFactory::new()->create(['organization_id' => $this->orgId, 'name' => 'Bronze']);
-        LoyaltyMember::withoutGlobalScopes()->create(['organization_id' => $this->orgId, 'user_id' => 1, 'tier_id' => $tier->id, 'member_number' => 'HL-1']);
+        // A member as enrolment makes one: their own user, a QR token and a referral code (NOT NULL in production).
+        LoyaltyMember::withoutGlobalScopes()->create($this->memberRequired(['organization_id' => $this->orgId, 'tier_id' => $tier->id, 'member_number' => 'HL-1']));
 
         $summary = $this->service->apply('medical', $this->orgId);
 

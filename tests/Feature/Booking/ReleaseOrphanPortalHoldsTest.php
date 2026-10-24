@@ -35,6 +35,8 @@ class ReleaseOrphanPortalHoldsTest extends TestCase
         $row->organization_id = $this->org->id;
         $row->key = 'booking_payment_enabled';
         $row->value = 'true';
+        $row->type = 'boolean'; // NOT NULL in production; the settings screen saves an `_enabled` key as boolean
+        $row->group = 'integrations';
         $row->save();
 
         $this->stripe = Mockery::mock(StripeService::class);
@@ -204,6 +206,8 @@ class ReleaseOrphanPortalHoldsTest extends TestCase
         $row->organization_id = $org2->id;
         $row->key = 'booking_payment_enabled';
         $row->value = 'true';
+        $row->type = 'boolean'; // NOT NULL in production; the settings screen saves an `_enabled` key as boolean
+        $row->group = 'integrations';
         $row->save();
 
         $orphan2 = PaymentIntent::constructFrom([

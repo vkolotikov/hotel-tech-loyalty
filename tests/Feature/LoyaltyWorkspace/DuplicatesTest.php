@@ -80,7 +80,8 @@ class DuplicatesTest extends TestCase
         $twin = $this->adasTwin();
         $reward = Reward::create(['name' => 'Coffee', 'points_cost' => 50]);
         $redemption = RewardRedemption::create(['member_id' => $twin->id, 'reward_id' => $reward->id, 'points_spent' => 50, 'code' => 'RW-TWIN', 'status' => 'fulfilled']);
-        DB::table('points_transactions')->insert(['organization_id' => $this->org->id, 'member_id' => $twin->id, 'points' => 120, 'type' => 'earn', 'created_at' => now(), 'updated_at' => now()]);
+        DB::table('points_transactions')->insert(['organization_id' => $this->org->id, 'member_id' => $twin->id, 'points' => 120, 'type' => 'earn',
+            'description' => 'Earn', 'balance_after' => 120, 'created_at' => now(), 'updated_at' => now()]);
 
         $this->asManager()->postJson($this->api('members/merge'), ['keep_id' => $this->ada->id, 'merge_id' => $twin->id, 'reason' => ' One guest, two sign-ups '])
             ->assertOk()

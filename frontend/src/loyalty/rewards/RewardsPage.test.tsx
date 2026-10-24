@@ -188,7 +188,7 @@ describe('Rewards (spec 2026-10-21 §4.6)', () => {
     expect(field).toContain('accept="image/jpeg,image/png,image/webp"')
   })
 
-  it('names the brand of a new reward or offer only when there is more than one, and shows a saved one\'s (release 4)', () => {
+  it('names the brand of a reward or offer only when there is more than one, new or saved (release 4, release 6)', () => {
     const inDialog = (node: ReactNode) => renderToStaticMarkup(
       <QueryClientProvider client={new QueryClient()}>
         <LoyaltyContext.Provider value={{ data: boot(can({ manage_rewards: true })), isLoading: false, isError: false, error: null, refetch: () => {} }}>{node}</LoyaltyContext.Provider>
@@ -206,10 +206,15 @@ describe('Rewards (spec 2026-10-21 §4.6)', () => {
     expect(text(fresh)).toContain('Which of your brands it belongs to.')
     expect(inDialog(<OfferDialog offer={null} options={{ ...offers.options, brands: two }} onClose={() => {}} />)).toContain('<select data-brand=""')
 
+    // A saved one starts on its own brand and may be moved (release 6).
     const saved = inDialog(<RewardDialog reward={{ ...catalogue.rewards[0], brand_id: 2 }} options={{ ...catalogue.options, brands: two }} onClose={() => {}} />)
-    expect(saved).not.toContain('<select data-brand')
-    expect(text(saved)).toContain('Brand: Lumière Hotel. It stays on this brand.')
-    expect(text(inDialog(<OfferDialog offer={{ ...offers.offers[0], brand_id: 1 }} options={{ ...offers.options, brands: two }} onClose={() => {}} />)))
-      .toContain('Brand: Lumière Spa. It stays on this brand.')
+    expect(saved).toMatch(/<select data-brand=""[^>]*><option value="1">Lumière Spa<\/option><option value="2" selected="">Lumière Hotel<\/option><\/select>/)
+    expect(text(saved)).toContain('Which of your brands it belongs to. Choosing another moves it there when you save.')
+    expect(inDialog(<OfferDialog offer={{ ...offers.offers[0], brand_id: 1 }} options={{ ...offers.options, brands: two }} onClose={() => {}} />))
+      .toMatch(/<select data-brand=""[^>]*><option value="1" selected="">Lumière Spa<\/option><option value="2">Lumière Hotel<\/option><\/select>/)
+    // On a brand not offered (or none), it starts on "Keep it where it is".
+    expect(inDialog(<RewardDialog reward={{ ...catalogue.rewards[0], brand_id: 9 }} options={{ ...catalogue.options, brands: two }} onClose={() => {}} />))
+      .toMatch(/<select data-brand=""[^>]*><option value="" selected="">Keep it where it is<\/option><option value="1">Lumière Spa<\/option>/)
+    expect(inDialog(<OfferDialog offer={{ ...offers.offers[0], brand_id: 1 }} options={{ ...offers.options, brands: one }} onClose={() => {}} />)).not.toContain('data-brand')
   })
 })

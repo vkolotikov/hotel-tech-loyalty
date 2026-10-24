@@ -32,6 +32,9 @@ class VoiceAgentController extends Controller
             'language'           => 'nullable|string|max:10',
             'temperature'        => 'nullable|numeric|min:0|max:2',
         ]);
+        // A setting sent empty (null) keeps the stored one, or the column's default for a new config: every column but
+        // the instructions is NOT NULL.
+        $validated = array_filter($validated, fn ($value, string $field) => $value !== null || $field === 'voice_instructions', ARRAY_FILTER_USE_BOTH);
 
         try {
             $orgId = $request->user()->organization_id;

@@ -128,8 +128,9 @@ class ExportEndpointsTest extends TestCase
     public function test_inquiries_export_xlsx_includes_guest_contact_details(): void
     {
         $guest    = $this->makeGuest();
-        $pipeline = Pipeline::create(['organization_id' => $this->orgId, 'name' => 'Sales', 'is_default' => true]);
+        $pipeline = Pipeline::create(['slug' => 'slug-' . bin2hex(random_bytes(4)), 'organization_id' => $this->orgId, 'name' => 'Sales', 'is_default' => true]);
         $stage    = PipelineStage::create([
+            'slug' => 'slug-' . bin2hex(random_bytes(4)),
             'organization_id' => $this->orgId, 'pipeline_id' => $pipeline->id,
             'name' => 'Negotiation', 'kind' => 'open', 'sort_order' => 1,
         ]);

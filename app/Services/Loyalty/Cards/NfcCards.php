@@ -27,8 +27,12 @@ use Illuminate\Support\Facades\DB;
  * A unique violation on the insert (someone linked the same card a moment before) is answered by reading the card
  * again and applying the same rules, never by the violation alone.
  *
- * Linking does not change the member's QR code (`qr_code_token`) or wallet pass, unlike the full admin's
- * `nfc-cards`. Link and switch-off are audited (`nfc_card_linked`, `nfc_deactivated`, the full admin's words).
+ * Linking does not change the member's QR code (`qr_code_token`) or wallet pass. Link and switch-off are audited
+ * (`nfc_card_linked`, `nfc_deactivated`, the full admin's words).
+ *
+ * Since release 6 (spec 2026-10-23 §2 item 2) the full admin's `nfc-cards` (ScanController::linkNfcCard) and
+ * `nfc/issue` (NfcController::issue) link through link() too, in their own answers: the same normalised ID, the same
+ * rules, no second row for a card stored in another form.
  */
 final class NfcCards
 {
@@ -40,17 +44,20 @@ final class NfcCards
     }
 
     /**
-     * Link a card to the member (the rules above).
+     * Link a card to the member (the rules above). `$cardType` is a new row's type (a card linked again keeps its
+     * own); `$via` names the screen in the audit; `$audited` false leaves the audit to a caller that keeps its own
+     * (the full admin's `nfc/issue` audits `nfc_issued`, as it always has).
      *
      * @return array{card: NfcCard, linked: bool} `linked` is false when it already was this member's active card
      */
-    public function link(LoyaltyMember $member, string $entry, User $by): array
+    public function link(LoyaltyMember $member, string $entry, User $by, string $cardType = 'standard', string $via = 'loyalty', bool $audited = true): array
     {
         $read = CodeReader::cardUid($entry)
             ?? throw new LoyaltyRefused('bad_uid', 'This is not a card ID.', 422);
         $forms = [$read['uid'], ...$read['also']];
+        $how = ['via' => $via, 'audited' => $audited];
 
-        $answer = $this->linkKnown($member, $forms, $by);
+        $answer = $this->linkKnown($member, $forms, $by, $how);
         if ($answer !== null) {
             return $answer;
         }
@@ -59,17 +66,19 @@ final class NfcCards
             $card = DB::transaction(fn () => NfcCard::create([
                 'member_id' => $member->id,
                 'uid'       => $read['uid'],
-                'card_type' => 'standard',
+                'card_type' => $cardType,
                 'issued_at' => now(),
                 'issued_by' => $by->id,
                 'is_active' => true,
             ]));
         } catch (UniqueConstraintViolationException $e) {
             // Someone stored this ID a moment ago: answer by what is stored now.
-            return $this->linkKnown($member, $forms, $by) ?? throw $e;
+            return $this->linkKnown($member, $forms, $by, $how) ?? throw $e;
         }
 
-        AuditLog::record('nfc_card_linked', $card, ['member_id' => $member->id, 'uid' => $card->uid, 'via' => 'loyalty'], [], $by);
+        if ($audited) {
+            AuditLog::record('nfc_card_linked', $card, ['member_id' => $member->id, 'uid' => $card->uid, 'via' => $via], [], $by);
+        }
 
         return ['card' => $card, 'linked' => true];
     }
@@ -104,9 +113,10 @@ final class NfcCards
      * The rules for an ID some row already holds, in any organisation; null when no row does.
      *
      * @param list<string> $forms
+     * @param array{via: string, audited: bool} $how
      * @return array{card: NfcCard, linked: bool}|null
      */
-    private function linkKnown(LoyaltyMember $member, array $forms, User $by, bool $again = true): ?array
+    private function linkKnown(LoyaltyMember $member, array $forms, User $by, array $how, bool $again = true): ?array
     {
         $rows = NfcCard::withoutGlobalScopes()->whereIn(DB::raw(CodeReader::UID_SQL), $forms)->orderBy('id')->get();
         if ($rows->isEmpty()) {
@@ -133,12 +143,14 @@ final class NfcCards
         $changed = NfcCard::query()->whereKey($off->id)->where('is_active', false)->update($changes);
         if ($changed !== 1) {
             // Linked by someone else between the read and the write: the rules again, once, on what is there now.
-            return $again ? $this->linkKnown($member, $forms, $by, false)
+            return $again ? $this->linkKnown($member, $forms, $by, $how, false)
                 : throw new LoyaltyRefused('card_in_use', 'This card is linked to another member.', 409);
         }
         $card = NfcCard::query()->findOrFail($off->id);
-        AuditLog::record('nfc_card_linked', $card, ['member_id' => $member->id, 'uid' => $card->uid, 'via' => 'loyalty', 'relinked' => true],
-            ['member_id' => (int) $off->member_id, 'is_active' => false], $by);
+        if ($how['audited']) {
+            AuditLog::record('nfc_card_linked', $card, ['member_id' => $member->id, 'uid' => $card->uid, 'via' => $how['via'], 'relinked' => true],
+                ['member_id' => (int) $off->member_id, 'is_active' => false], $by);
+        }
 
         return ['card' => $card, 'linked' => true];
     }

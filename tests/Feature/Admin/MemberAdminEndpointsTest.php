@@ -69,7 +69,7 @@ class MemberAdminEndpointsTest extends TestCase
         $this->assertSame(1, AuditLog::where('action', 'member_created')->where('subject_id', $member->id)->count());
     }
 
-    public function test_store_with_a_password_skips_the_invite_and_a_chosen_card_becomes_the_qr_token(): void
+    public function test_store_with_a_password_skips_the_invite_and_links_the_chosen_card(): void
     {
         $response = $this->asManager()->postJson($this->admin('members'), [
             'name' => 'Edsger Dijkstra', 'email' => 'edsger@example.test', 'password' => 'long-enough-1', 'nfc_uid' => '04:AB:CD:EF',
@@ -79,10 +79,22 @@ class MemberAdminEndpointsTest extends TestCase
             ->assertJsonPath('email_sent', false);
 
         $member = LoyaltyMember::query()->findOrFail($response->json('member.id'));
-        $this->assertSame('04:AB:CD:EF', $member->qr_code_token);
-        $this->assertSame(1, NfcCard::query()->where('member_id', $member->id)->where('uid', '04:AB:CD:EF')->count());
+        // Release 6: the card is linked through NfcCards (its ID stored normalised); the member keeps their own QR code.
+        $this->assertNotSame('04:AB:CD:EF', $member->qr_code_token);
+        $this->assertSame(1, NfcCard::query()->where('member_id', $member->id)->where('uid', '04abcdef')->count());
         $this->assertSame(0, EmailVerificationCode::where('email', 'edsger@example.test')->count());
         Mail::assertNothingSent();
+    }
+
+    public function test_store_with_a_card_another_member_has_creates_nobody_and_says_so_on_the_card_field(): void
+    {
+        NfcCard::create(['member_id' => $this->grace->id, 'uid' => '04abcdef', 'is_active' => true]);
+
+        $this->asManager()->postJson($this->admin('members'), [
+            'name' => 'Edsger Dijkstra', 'email' => 'edsger@example.test', 'password' => 'long-enough-1', 'nfc_uid' => '04:AB:CD:EF',
+        ])->assertStatus(422)->assertJsonValidationErrors('nfc_uid');
+
+        $this->assertSame(0, \App\Models\User::query()->where('email', 'edsger@example.test')->count(), 'the enrolment rolled back');
     }
 
     public function test_store_without_sending_keeps_the_invite_code_and_says_the_email_failed(): void
@@ -107,6 +119,8 @@ class MemberAdminEndpointsTest extends TestCase
             ->assertJsonPath('error', 'Your plan allows up to 2 loyalty members. Upgrade your plan to add more, or remove an existing one first.');
 
         $this->org->forceFill(['plan_features' => []])->save();
+        // A programme without tiers has no members either (a member's tier is a NOT NULL foreign key in production).
+        LoyaltyMember::query()->delete();
         LoyaltyTier::query()->delete();
         $this->asManager()->postJson($this->admin('members'), ['name' => 'No Tier', 'email' => 'notier@example.test'])
             ->assertStatus(422)
@@ -133,7 +147,8 @@ class MemberAdminEndpointsTest extends TestCase
 
     public function test_resend_says_why_it_could_not(): void
     {
-        $this->grace->forceFill(['user_id' => null])->save();
+        // A member's user is NOT NULL in production; what the venue can lack is an address on that user.
+        $this->grace->user->forceFill(['email' => ''])->save();
         $this->asManager()->postJson($this->admin("members/{$this->grace->id}/resend-welcome"))
             ->assertStatus(422)->assertExactJson(['message' => 'Member has no email on file']);
 
@@ -208,7 +223,7 @@ class MemberAdminEndpointsTest extends TestCase
         $user->createToken('mobile-app');
         NfcCard::create(['member_id' => $this->grace->id, 'uid' => '04:11:22', 'is_active' => true]);
         $this->grace->update(['expo_push_token' => 'ExponentPushToken[x]', 'qr_code_token' => 'abc', 'referral_code' => 'GRACE1']);
-        DB::table('points_transactions')->insert(['organization_id' => $this->org->id, 'member_id' => $this->grace->id, 'points' => 200, 'type' => 'earn', 'created_at' => now(), 'updated_at' => now()]);
+        DB::table('points_transactions')->insert(['organization_id' => $this->org->id, 'member_id' => $this->grace->id, 'points' => 200, 'type' => 'earn', 'balance_after' => 200, 'description' => 'Earned', 'created_at' => now(), 'updated_at' => now()]);
 
         $this->asManager()->deleteJson($this->admin("members/{$this->grace->id}"))->assertOk()->assertExactJson(['success' => true, 'message' => 'Member deleted']);
 

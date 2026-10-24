@@ -312,6 +312,7 @@ class ServiceConfirmOnePaymentTest extends MemberEndpointTestCase
         $row->organization_id = $this->org->id;
         $row->key = 'booking_mock_mode';
         $row->value = 'true';
+        $row->type = 'boolean'; // as the seeded template types it (NOT NULL in production)
         $row->group = 'booking';
         $row->save();
         HotelSetting::flushCacheFor($this->org->id);
@@ -350,7 +351,8 @@ class ServiceConfirmOnePaymentTest extends MemberEndpointTestCase
         $message = (string) $res->json('error');
         $this->assertSame(['error'], array_keys($res->json()));
         $this->assertStringContainsString('booking_reference', $message);
-        $this->assertSame([$message], $this->failedReasons());
+        // The submission row keeps the first 255 characters: production's `error_message` is varchar(255) (release 6).
+        $this->assertSame([mb_substr($message, 0, 255)], $this->failedReasons());
         $this->assertSame(1, $this->rows()->count());
     }
 
@@ -374,7 +376,8 @@ class ServiceConfirmOnePaymentTest extends MemberEndpointTestCase
         $this->assertSame(['error'], array_keys($res->json()));
         $this->assertNotSame(self::USED, $message);
         $this->assertStringContainsString('booking_reference', $message);
-        $this->assertSame([$message], $this->failedReasons());
+        // The submission row keeps the first 255 characters: production's `error_message` is varchar(255) (release 6).
+        $this->assertSame([mb_substr($message, 0, 255)], $this->failedReasons());
         $this->assertSame(1, $this->rows()->count());
         $this->assertSame([], $captured);
     }

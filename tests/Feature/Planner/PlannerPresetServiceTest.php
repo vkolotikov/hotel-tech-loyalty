@@ -241,7 +241,8 @@ class PlannerPresetServiceTest extends TestCase
         $firstName = $presets[0]['name'];
 
         PlannerTemplate::create([
-            'name' => mb_strtoupper($firstName), // CAPITAL VERSION
+            'name'  => mb_strtoupper($firstName), // CAPITAL VERSION
+            'title' => 'Admin\'s own briefing',
         ]);
 
         $summary = $this->service->apply('hotel');

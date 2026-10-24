@@ -58,7 +58,7 @@ class FoundryStrengthRenderTest extends TestCase
 
     private function makeBrand(?string $logoUrl): void
     {
-        Brand::withoutGlobalScopes()->create([
+        Brand::withoutGlobalScopes()->forceCreate([ // forceCreate: `id` is not fillable, and the page names brand 1
             'id' => 1, 'organization_id' => 1, 'name' => 'Foundry', 'logo_url' => $logoUrl,
         ]);
     }
@@ -95,6 +95,7 @@ class FoundryStrengthRenderTest extends TestCase
     private function seedLikeTheKit(string $industry = 'fitness'): LandingPage
     {
         Property::create([
+            'code' => 'P' . strtoupper(bin2hex(random_bytes(4))),
             'organization_id' => 1, 'brand_id' => 1, 'name' => 'Foundry',
             'phone' => '+371 20 000 822', 'email' => 'train@foundry.example',
             'address' => '8 Sporta iela', 'city' => 'Riga', 'country' => 'Latvia',
@@ -599,7 +600,7 @@ class FoundryStrengthRenderTest extends TestCase
 
     public function test_an_unrated_note_draws_no_stars(): void
     {
-        Property::create(['organization_id' => 1, 'brand_id' => 1, 'name' => 'Foundry', 'is_active' => true]);
+        Property::create(['code' => 'P' . strtoupper(bin2hex(random_bytes(4))), 'organization_id' => 1, 'brand_id' => 1, 'name' => 'Foundry', 'is_active' => true]);
         ReviewSubmission::create([
             'organization_id' => 1, 'anonymous_name' => null, 'overall_rating' => null,
             'comment' => 'A calm hour.', 'is_featured' => true, 'submitted_at' => now(),
@@ -720,6 +721,7 @@ class FoundryStrengthRenderTest extends TestCase
     public function test_a_hostile_business_name_never_reaches_the_lockup_unescaped(): void
     {
         Property::create([
+            'code' => 'P' . strtoupper(bin2hex(random_bytes(4))),
             'organization_id' => 1, 'brand_id' => 1, 'name' => '<script>x</script> & Co', 'is_active' => true,
         ]);
 
@@ -782,6 +784,7 @@ class FoundryStrengthRenderTest extends TestCase
     public function test_an_active_review_form_wires_the_feedback_link_with_the_authors_star(): void
     {
         ReviewForm::create([
+            'type' => 'basic',
             'organization_id' => 1, 'name' => 'Member notes', 'embed_key' => 'abc123',
             'is_active' => true, 'allow_anonymous' => true,
         ]);
@@ -797,14 +800,14 @@ class FoundryStrengthRenderTest extends TestCase
 
     public function test_the_chat_launcher_mounts_in_the_reserved_slot(): void
     {
-        ChatWidgetConfig::create(['organization_id' => 1, 'widget_key' => 'wk-123', 'is_enabled' => true]);
+        ChatWidgetConfig::create(['api_key' => \Illuminate\Support\Str::random(48), 'organization_id' => 1, 'widget_key' => '7a3c1f2e-5b4d-4e6f-8a9b-0c1d2e3f4a5b', 'is_enabled' => true]);
 
         $this->seedLikeTheKit();
         $body = $this->body();
 
         $this->assertStringContainsString('data-ai-widget-slot', $body);
         $this->assertStringContainsString('class="ai-launcher"', $body);
-        $this->assertStringContainsString('/chat-frame/wk-123', $body);
+        $this->assertStringContainsString('/chat-frame/7a3c1f2e-5b4d-4e6f-8a9b-0c1d2e3f4a5b', $body);
     }
 
     // ─── Hostile values ───────────────────────────────────────────────────

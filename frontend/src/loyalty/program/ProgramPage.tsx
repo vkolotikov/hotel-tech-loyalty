@@ -1,8 +1,9 @@
 import { useState, type ReactNode } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { Pencil, Plus, Trash2, X } from 'lucide-react'
+import { CheckCheck, Pencil, Plus, Trash2, X } from 'lucide-react'
 import { Button } from '../../workspace/ui/Button'
+import { Dialog } from '../../workspace/ui/Dialog'
 import { Notice } from '../../workspace/ui/Notice'
 import { PageHeader } from '../../workspace/ui/PageHeader'
 import { Skeleton } from '../../workspace/ui/Skeleton'
@@ -19,7 +20,7 @@ import { BenefitDialog } from './BenefitDialog'
 import { BoostDialog } from './BoostDialog'
 import { ERRORS } from './errors'
 import { ConfirmDialog, ToneBadge } from '../ui/formParts'
-import { activeTone, boostState, boostTone, needsTimeCheck, programActions, thresholds, typedValue, weekdaysText } from './programMath'
+import { activeTone, boostState, boostTone, needsTimeCheck, programActions, thresholds, timeCheckList, typedValue, weekdaysText } from './programMath'
 import { chosenTiers, decimal, named } from '../lib/forms'
 import { TierBenefitDialog } from './TierBenefitDialog'
 import { TierDialog } from './TierDialog'
@@ -34,6 +35,7 @@ type Open =
   | { kind: 'benefit'; benefit: Benefit | null }
   | { kind: 'boost'; boost: Boost | null }
   | { kind: 'remove_boost'; boost: Boost }
+  | { kind: 'confirm_times'; boosts: Boost[] }
 
 /**
  * Program (spec 2026-10-21 §4.5): the tier ladder with what reaches each tier and what it gives, the benefit catalogue,
@@ -86,6 +88,7 @@ export function ProgramPage() {
       {data && open?.kind === 'benefit' && <BenefitDialog benefit={open.benefit} options={data.options} onClose={close} />}
       {data && open?.kind === 'boost' && <BoostDialog boost={open.boost} tiers={data.tiers} brands={data.options.brands} onClose={close} />}
       {open?.kind === 'remove_boost' && <RemoveBoost boost={open.boost} onClose={close} />}
+      {open?.kind === 'confirm_times' && <ConfirmTimes boosts={open.boosts} locale={locale} timeZone={boot.venue.timezone} onClose={close} />}
     </div>
   )
 }
@@ -299,12 +302,23 @@ function Boosts({ program, manage, theme, locale, timeZone, onOpen }: {
   program: Program; manage: boolean; theme: ThemeName; locale: string; timeZone: string; onOpen: (open: Open) => void
 }) {
   const { t } = useTranslation()
+  const flagged = timeCheckList(program.boosts)
   return (
     <section aria-labelledby="program-boosts" className="space-y-3">
       <SectionHead id="program-boosts" title={t('loyalty.program.boosts.title', 'Boost events')}>
         {manage && <Button size="sm" onClick={() => onOpen({ kind: 'boost', boost: null })}><Plus size={15} aria-hidden />{t('loyalty.program.boosts.add', 'Add boost')}</Button>}
       </SectionHead>
       <p className="text-sm text-a-text-2">{t('loyalty.program.boosts.line', 'Times on the venue’s clock ({{zone}}).', { zone: timeZone })}</p>
+      {manage && flagged.length > 0 && (
+        <div data-time-check-all="" className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xl border border-a-border bg-a-surface-2 px-4 py-3">
+          <p className="min-w-0 flex-1 text-sm text-a-text">
+            {t('loyalty.program.time_check.all_line', 'Some boosts ask for their times to be checked. If the times shown are right, confirm them together.')}
+          </p>
+          <Button size="sm" variant="secondary" onClick={() => onOpen({ kind: 'confirm_times', boosts: flagged })}>
+            <CheckCheck size={15} aria-hidden />{t('loyalty.program.time_check.confirm_all', 'These times are right')}
+          </Button>
+        </div>
+      )}
       {program.boosts.length === 0
         ? <Empty>{t('loyalty.program.boosts.none', 'No boosts. A boost multiplies the points members earn for a while, such as a double points weekend.')}</Empty>
         : (
@@ -361,6 +375,46 @@ export function BoostRow({ boost, tiers, manage, theme, locale, timeZone, onOpen
         </div>
       )}
     </li>
+  )
+}
+
+/**
+ * "These times are right" (release 6): the boosts that ask for their times to be checked, each with its times on the
+ * venue's clock as Program shows them; confirming marks them as checked on the server and changes no time. A manager
+ * whose boost is wrong keeps it ("Not yet") and corrects it in its own dialog.
+ */
+export function ConfirmTimes({ boosts, locale, timeZone, onClose }: { boosts: Boost[]; locale: string; timeZone: string; onClose: () => void }) {
+  const { t } = useTranslation()
+  const client = useQueryClient()
+  const confirm = useMutation({
+    mutationFn: () => programApi.confirmTimes(boosts.map(b => b.id)),
+    onSuccess: () => { afterProgramChange(client); onClose() },
+    onError: (error) => { if (['not_found', 'invalid'].includes(failureOf(error).code)) afterProgramChange(client) },
+  })
+  const failure = confirm.isError ? failureOf(confirm.error) : null
+  return (
+    <Dialog title={t('loyalty.program.time_check.confirm_title', 'Are these times right?')} onClose={onClose} busy={confirm.isPending}>
+      <div className="space-y-4">
+        <p className="text-sm text-a-text">
+          {t('loyalty.program.time_check.confirm_body', 'These boosts were saved before boost times were read on the venue’s clock everywhere. Check that each starts and ends as shown, on the venue’s clock ({{zone}}). Confirming marks them as checked and changes no time; if one is wrong, choose Not yet and correct it.', { zone: timeZone })}
+        </p>
+        <ul data-time-check-list="" className="divide-y divide-a-border overflow-hidden rounded-xl border border-a-border">
+          {boosts.map(boost => (
+            <li key={boost.id} data-time-check-boost={boost.id} className="space-y-0.5 px-3 py-2">
+              <p className="text-sm font-medium text-a-text">{boost.name}</p>
+              <p className="text-sm tabular-nums text-a-text-2">
+                {t('loyalty.program.boosts.range', '{{from}} – {{to}}', { from: when(boost.starts_at, locale, timeZone), to: when(boost.ends_at, locale, timeZone) })}
+              </p>
+            </li>
+          ))}
+        </ul>
+        {failure && <Notice tone="danger">{t(...refusalKey('loyalty.program', ERRORS, 'times', failure))}</Notice>}
+        <div className="flex flex-wrap justify-end gap-2 pt-1">
+          <Button type="button" variant="secondary" onClick={onClose} disabled={confirm.isPending}>{t('loyalty.program.time_check.keep', 'Not yet')}</Button>
+          <Button type="button" loading={confirm.isPending} onClick={() => confirm.mutate()}>{t('loyalty.program.time_check.confirm_all', 'These times are right')}</Button>
+        </div>
+      </div>
+    </Dialog>
   )
 }
 

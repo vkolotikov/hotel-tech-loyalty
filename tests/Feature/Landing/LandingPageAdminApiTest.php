@@ -102,6 +102,7 @@ class LandingPageAdminApiTest extends TestCase
     private function makeUser(Organization $org): User
     {
         return User::create([
+            'password' => 'secret-pass-1',
             'name'            => 'Staff',
             'email'           => 'staff_' . uniqid() . '@example.test',
             'organization_id' => $org->id,
@@ -174,6 +175,8 @@ class LandingPageAdminApiTest extends TestCase
     private function makeSiblingBrand(Organization $org): int
     {
         return (int) DB::table('brands')->insertGetId([
+            'widget_token' => bin2hex(random_bytes(16)),
+            'slug' => 'brand-' . bin2hex(random_bytes(4)),
             'organization_id' => $org->id,
             'name'            => $org->name . ' Two',
             'is_default'      => false,
@@ -1370,6 +1373,25 @@ class LandingPageAdminApiTest extends TestCase
         $first = $this->create('first-page')['page'];
         $this->assertNotNull($first['brand_id'], 'BelongsToBrand did not substitute the default brand.');
 
+        if (DB::getDriverName() === 'pgsql') {
+            // The (organization_id, brand_id) index's own refusal, raised before the INSERT reaches the database and
+            // only when the pair already holds a page, as the index decides. On PostgreSQL a real failed statement
+            // would abort the transaction this test runs in, and the controller's follow-up questions with it;
+            // production runs store() outside any transaction, so its follow-ups do answer.
+            DB::connection()->beforeExecuting(function (string $query, array $bindings, $connection) {
+                if (!preg_match('/^insert into "landing_pages" \(([^)]*)\)/', $query, $m)) {
+                    return;
+                }
+                $columns = array_map(fn (string $c) => trim($c, ' "'), explode(',', $m[1]));
+                $row = array_combine($columns, array_slice($bindings, 0, count($columns)));
+                if (($row['brand_id'] ?? null) !== null && DB::table('landing_pages')
+                    ->where('organization_id', $row['organization_id'])->where('brand_id', $row['brand_id'])->exists()) {
+                    throw new UniqueConstraintViolationException($connection->getName(), $query, $bindings,
+                        new \PDOException('SQLSTATE[23505]: Unique violation: 7 ERROR:  duplicate key value violates unique constraint "landing_pages_org_brand_unique"'));
+                }
+            });
+        }
+
         try {
             $this->create('second-page');
             $this->fail('The unique index was allowed to surface as a 500.');
@@ -1506,7 +1528,20 @@ class LandingPageAdminApiTest extends TestCase
         $brandless = $this->makeBrandlessOrg();
         $this->actAs($this->makeUser($brandless), null);
 
-        DB::statement('CREATE UNIQUE INDEX tmp_one_template_only ON landing_pages (template_key)');
+        if (DB::getDriverName() === 'pgsql') {
+            // The same violation, raised before the INSERT reaches the database. On PostgreSQL a real failed
+            // statement would abort the transaction this test runs in, and the controller's follow-up questions
+            // (LandingPageGuard::slugIsTaken()) with it; production runs store() outside any transaction, so its
+            // follow-ups do answer. The exception is the one PostgreSQL raises for an index of this name.
+            DB::connection()->beforeExecuting(function (string $query, array $bindings, $connection) {
+                if (str_starts_with($query, 'insert into "landing_pages"')) {
+                    throw new UniqueConstraintViolationException($connection->getName(), $query, $bindings,
+                        new \PDOException('SQLSTATE[23505]: Unique violation: 7 ERROR:  duplicate key value violates unique constraint "tmp_one_template_only"'));
+                }
+            });
+        } else {
+            DB::statement('CREATE UNIQUE INDEX tmp_one_template_only ON landing_pages (template_key)');
+        }
 
         try {
             $this->create('second-page');

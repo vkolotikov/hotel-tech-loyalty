@@ -9,10 +9,13 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Schema;
 use Laravel\Passport\ClientRepository;
 use Laravel\Passport\Passport;
+use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Tests\TestCase;
 
 class ChatGptSetupCommandsTest extends TestCase
 {
+    use DatabaseTransactions;
+
     private const CALLBACK = 'https://chatgpt.com/connector_platform/oauth/callback';
 
     private const LOOPBACK = 'http://127.0.0.1:45678/oauth/callback';
@@ -23,17 +26,23 @@ class ChatGptSetupCommandsTest extends TestCase
     {
         parent::setUp();
         Http::preventStrayRequests();
-        foreach (glob(database_path('migrations/2016_06_01_*oauth*.php')) as $path) {
-            (require $path)->up();
+        // The OAuth tables as their migrations build them (already there on PostgreSQL built from every migration).
+        if (!Schema::hasTable('oauth_clients')) {
+            foreach (glob(database_path('migrations/2016_06_01_*oauth*.php')) as $path) {
+                (require $path)->up();
+            }
         }
-        (require database_path('migrations/2026_09_09_120000_bind_plugin_oauth_grants_to_organization.php'))->up();
-        Schema::create('organizations', function (Blueprint $table) {
+        if (!Schema::hasColumn('oauth_auth_codes', 'plugin_organization_id')) {
+            (require database_path('migrations/2026_09_09_120000_bind_plugin_oauth_grants_to_organization.php'))->up();
+        }
+        if (!Schema::hasTable('organizations')) Schema::create('organizations', function (Blueprint $table) {
             $table->id();
             $table->string('name');
+            $table->string('slug')->nullable();
             $table->boolean('is_active')->default(true);
             $table->timestamp('saas_deleted_at')->nullable();
         });
-        DB::table('organizations')->insert(['id' => 2, 'name' => 'FDS Cards']);
+        DB::table('organizations')->insert(['id' => 2, 'name' => 'FDS Cards', 'slug' => 'fds-cards']);
         if (self::$keys === null) {
             // Test-only keys stay in memory. Never call passport:keys from setup.
             $options = ['private_key_bits' => 2048, 'private_key_type' => OPENSSL_KEYTYPE_RSA];

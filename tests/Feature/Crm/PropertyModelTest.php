@@ -252,6 +252,7 @@ class PropertyModelTest extends TestCase
         $orgB = OrganizationFactory::new()->create()->id;
 
         \DB::table('properties')->insert([
+            'code' => 'P' . strtoupper(bin2hex(random_bytes(4))),
             'organization_id' => $orgA,
             'name'            => 'Org A property',
             'is_active'       => true,
@@ -259,6 +260,7 @@ class PropertyModelTest extends TestCase
             'updated_at'      => now(),
         ]);
         \DB::table('properties')->insert([
+            'code' => 'P' . strtoupper(bin2hex(random_bytes(4))),
             'organization_id' => $orgB,
             'name'            => 'Org B property',
             'is_active'       => true,

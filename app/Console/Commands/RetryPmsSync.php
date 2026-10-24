@@ -5,6 +5,8 @@ namespace App\Console\Commands;
 use App\Console\Commands\Concerns\ReleasesScheduleLock;
 use App\Models\AuditLog;
 use App\Models\BookingMirror;
+use App\Services\Booking\GroupPayment;
+use App\Services\BookingEngineService;
 use App\Services\IntegrationStatus;
 use App\Services\SmoobuClient;
 use Illuminate\Console\Command;
@@ -127,6 +129,9 @@ class RetryPmsSync extends Command
                         $extrasTotal += (float) ($ex['line_total'] ?? 0);
                     }
                     $roomTotal = round(max(0.0, $priceTotal - $extrasTotal), 2);
+                    // The venue's stay currency, as the confirm's own receipt (release 6): EUR as before for a EUR venue.
+                    $currency = BookingEngineService::stayCurrency();
+                    $money = fn (float $v): string => BookingEngineService::receiptMoney($v, $currency);
 
                     // Build priceElements (basePrice + addons).
                     $priceElements = [];
@@ -140,7 +145,7 @@ class RetryPmsSync extends Command
                         ),
                         'amount'       => $roomTotal,
                         'quantity'     => $nights,
-                        'currencyCode' => 'EUR',
+                        'currencyCode' => $currency,
                         'sortOrder'    => 1,
                     ];
                     $sortOrder = 2;
@@ -150,7 +155,7 @@ class RetryPmsSync extends Command
                             'name'         => (string) ($ex['name'] ?? 'Extra'),
                             'amount'       => (float) ($ex['line_total'] ?? 0),
                             'quantity'     => max(1, (int) ($ex['quantity'] ?? 1)),
-                            'currencyCode' => 'EUR',
+                            'currencyCode' => $currency,
                             'sortOrder'    => $sortOrder++,
                         ];
                     }
@@ -161,23 +166,30 @@ class RetryPmsSync extends Command
                     // the same level of context.
                     $assistantLines = [];
                     $assistantLines[] = 'Booked via: Website / Direct widget (PMS-sync retry)';
-                    if ($mirror->stripe_payment_intent_id) {
-                        $assistantLines[] = 'Stripe ref: ' . $mirror->stripe_payment_intent_id;
+                    // A room that follows its group's lead (release 5: one payment,
+                    // carried by the lead — GroupPayment) names that payment too,
+                    // as the confirm's own note does on every room (release 6).
+                    $stripeRef = (string) $mirror->stripe_payment_intent_id;
+                    if ($stripeRef === '' && !empty($mirror->booking_group_id)) {
+                        $stripeRef = (string) GroupPayment::payer($mirror)->stripe_payment_intent_id;
+                    }
+                    if ($stripeRef !== '') {
+                        $assistantLines[] = 'Stripe ref: ' . $stripeRef;
                     }
                     if ($pricePaid > 0) {
                         $assistantLines[] = sprintf(
-                            'Payment: Stripe (€%s paid)',
-                            number_format($pricePaid, 2, '.', ''),
+                            'Payment: Stripe (%s paid)',
+                            $money($pricePaid),
                         );
                     } else {
-                        $assistantLines[] = sprintf('Payment: unpaid (€%s due)', number_format($priceTotal, 2, '.', ''));
+                        $assistantLines[] = sprintf('Payment: unpaid (%s due)', $money($priceTotal));
                     }
                     $assistantLines[] = '─────────────';
                     $assistantLines[] = sprintf(
-                        'Accommodation: %d night%s = €%s',
+                        'Accommodation: %d night%s = %s',
                         $nights,
                         $nights === 1 ? '' : 's',
-                        number_format($roomTotal, 2, '.', ''),
+                        $money($roomTotal),
                     );
                     if (!empty($extras)) {
                         $assistantLines[] = 'Extras:';
@@ -187,15 +199,15 @@ class RetryPmsSync extends Command
                             $line  = (float) ($ex['line_total'] ?? 0);
                             $name  = (string) ($ex['name'] ?? 'Extra');
                             $assistantLines[] = sprintf(
-                                '  · %s%s = €%s',
+                                '  · %s%s = %s',
                                 $name,
-                                $qty > 1 ? ' ×' . $qty . ' @ €' . number_format($unit, 2, '.', '') : '',
-                                number_format($line, 2, '.', ''),
+                                $qty > 1 ? ' ×' . $qty . ' @ ' . $money($unit) : '',
+                                $money($line),
                             );
                         }
                     }
                     $assistantLines[] = '─────────────';
-                    $assistantLines[] = 'Total: €' . number_format($priceTotal, 2, '.', '');
+                    $assistantLines[] = 'Total: ' . $money($priceTotal);
 
                     // Use resolveDirectChannelId (non-strict on cron — we
                     // don't want to blow up a retry over a channel config

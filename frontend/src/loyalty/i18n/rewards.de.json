@@ -6,9 +6,10 @@
   },
   "brand": {
     "hint": "Zu welcher Ihrer Marken es gehört.",
+    "keep": "Unverändert lassen",
     "label": "Marke",
-    "refused": "Wählen Sie eine der aufgeführten Marken.",
-    "saved": "Marke: {{name}}. Es bleibt bei dieser Marke."
+    "move_hint": "Zu welcher Ihrer Marken es gehört. Wählen Sie eine andere, wird es beim Speichern dorthin verschoben.",
+    "refused": "Wählen Sie eine der aufgeführten Marken."
   },
   "cancel": {
     "body": "{{points}} Punkte gehen an {{name}} zurück, und die Prämie kehrt in den Bestand zurück, falls dieser begrenzt ist. Der Code wird ungültig.",

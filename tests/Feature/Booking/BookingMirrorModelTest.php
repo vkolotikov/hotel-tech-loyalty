@@ -8,6 +8,7 @@ use App\Scopes\IntegrationDataScope;
 use Database\Factories\BookingMirrorFactory;
 use Database\Factories\OrganizationFactory;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
+use Tests\Concerns\ComparesJsonColumns;
 use Tests\Concerns\SetsUpMinimalSchema;
 use Tests\TestCase;
 
@@ -46,6 +47,7 @@ class BookingMirrorModelTest extends TestCase
 {
     use DatabaseTransactions;
     use SetsUpMinimalSchema;
+    use ComparesJsonColumns;
 
     private int $orgId;
 
@@ -133,6 +135,8 @@ class BookingMirrorModelTest extends TestCase
             'organization_id' => $this->orgId,
             'key'             => 'smoobu_enabled',
             'value'           => 'false',
+            'type'            => 'boolean', // NOT NULL in production; how the settings screen saves an `_enabled` key
+            'group'           => 'integrations',
         ]);
 
         // Now: scope filters everything out.
@@ -150,6 +154,8 @@ class BookingMirrorModelTest extends TestCase
             'organization_id' => $this->orgId,
             'key'             => 'smoobu_enabled',
             'value'           => 'false',
+            'type'            => 'boolean', // NOT NULL in production; how the settings screen saves an `_enabled` key
+            'group'           => 'integrations',
         ]);
 
         // With scope: empty.
@@ -168,6 +174,8 @@ class BookingMirrorModelTest extends TestCase
             'organization_id' => $this->orgId,
             'key'             => 'smoobu_enabled',
             'value'           => 'true',
+            'type'            => 'boolean', // NOT NULL in production; how the settings screen saves an `_enabled` key
+            'group'           => 'integrations',
         ]);
 
         $this->assertSame(1, BookingMirror::count());
@@ -297,7 +305,7 @@ class BookingMirrorModelTest extends TestCase
 
         $mirror = BookingMirrorFactory::new()->create(['raw_json' => $rawPayload]);
 
-        $this->assertSame($rawPayload, $mirror->fresh()->raw_json);
+        $this->assertSameJson($rawPayload, $mirror->fresh()->raw_json);
     }
 
     public function test_extras_json_round_trips_through_array_cast(): void

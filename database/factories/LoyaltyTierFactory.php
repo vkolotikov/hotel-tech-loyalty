@@ -20,7 +20,6 @@ class LoyaltyTierFactory extends Factory
             'earn_rate'           => 1.0,
             'sort_order'          => 1,
             'color_hex'           => '#c9a84c',
-            'qualification_model' => 'rolling_12',
         ];
     }
 

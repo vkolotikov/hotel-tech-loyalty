@@ -6,39 +6,73 @@ use App\Services\BusinessOutcomeReport;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Foundation\Testing\DatabaseTransactions;
+use Tests\Concerns\ClearsTheMigrationsOrganisation;
 use Tests\TestCase;
 
 class BusinessOutcomeReportTest extends TestCase
 {
+    use DatabaseTransactions, ClearsTheMigrationsOrganisation;
+
     protected function setUp(): void
     {
         parent::setUp();
         $this->travelTo(\Carbon\Carbon::parse('2026-09-11 12:00:00', 'UTC'));
-        Schema::create('chat_conversations', function (Blueprint $t) {
+        // The rows below are what production holds: each belongs to an organisation that exists, an enquiry has
+        // its guest, a conversation names an enquiry that exists, a message has content, a page view its visitor.
+        if (!Schema::hasTable('organizations')) Schema::create('organizations', function (Blueprint $t) {
+            $t->id(); $t->string('name'); $t->string('slug');
+        });
+        if (!Schema::hasTable('guests')) Schema::create('guests', function (Blueprint $t) {
+            $t->id(); $t->integer('organization_id'); $t->string('full_name');
+        });
+        if (!Schema::hasTable('visitors')) Schema::create('visitors', function (Blueprint $t) {
+            $t->id(); $t->integer('organization_id'); $t->string('visitor_key', 64);
+        });
+        $this->clearTheMigrationsOrganisation();
+        foreach ([1, 2, 17] as $org) {
+            DB::table('organizations')->insert(['id' => $org, 'name' => "Organization {$org}", 'slug' => "organization-{$org}"]);
+        }
+        if (!Schema::hasTable('chat_conversations')) Schema::create('chat_conversations', function (Blueprint $t) {
             $t->id(); $t->integer('organization_id'); $t->string('page_url'); $t->integer('inquiry_id')->nullable(); $t->string('channel')->nullable();
             $t->string('entry_source_channel')->nullable(); $t->string('entry_source_site')->nullable();
             $t->json('marketing_attribution')->nullable();
         });
-        Schema::create('chat_messages', function (Blueprint $t) {
-            $t->id(); $t->integer('organization_id'); $t->integer('conversation_id'); $t->string('sender_type'); $t->timestamp('created_at');
+        if (!Schema::hasTable('chat_messages')) Schema::create('chat_messages', function (Blueprint $t) {
+            $t->id(); $t->integer('organization_id'); $t->integer('conversation_id'); $t->string('sender_type'); $t->text('content')->nullable(); $t->timestamp('created_at');
         });
-        Schema::create('inquiries', function (Blueprint $t) {
-            $t->id(); $t->integer('organization_id'); $t->timestamp('created_at'); $t->string('external_source')->nullable();
+        if (!Schema::hasTable('inquiries')) Schema::create('inquiries', function (Blueprint $t) {
+            $t->id(); $t->integer('organization_id'); $t->integer('guest_id')->nullable(); $t->timestamp('created_at'); $t->string('external_source')->nullable();
         });
+    }
+
+    /** A saved enquiry with its guest (inquiries.guest_id is NOT NULL, a foreign key). */
+    private function inquiry(int $id, int $org, string $createdAt, ?string $externalSource = null): void
+    {
+        $guestId = DB::table('guests')->insertGetId(['organization_id' => $org, 'full_name' => 'Guest ' . $id]);
+        DB::table('inquiries')->insert(['id' => $id, 'organization_id' => $org, 'guest_id' => $guestId, 'created_at' => $createdAt, 'external_source' => $externalSource]);
+    }
+
+    /** The visitor a page view belongs to (visitor_page_views.visitor_id is a foreign key). */
+    private function visitor(int $id): void
+    {
+        DB::table('visitors')->insert(['id' => $id, 'organization_id' => 1, 'visitor_key' => 'visitor-' . $id]);
     }
 
     public function test_visitor_activity_and_saved_leads_are_distinct_and_tenant_isolated(): void
     {
+        $this->inquiry(1, 1, '2026-09-11 10:01:00');
+        $this->inquiry(2, 2, '2026-09-11 10:01:00');
+        $this->inquiry(3, 1, '2026-09-11 10:01:00');
         foreach ([[1,1,'https://fdscards.lv/?private=secret',1], [2,2,'https://fdscards.lv/',2], [3,1,'https://unowned.test/',3], [4,1,'https://fdscards.lv/',1]] as [$id,$org,$url,$inquiry]) {
             DB::table('chat_conversations')->insert(['id'=>$id,'organization_id'=>$org,'page_url'=>$url,'inquiry_id'=>$inquiry,'channel'=>'widget']);
-            DB::table('chat_messages')->insert(['id'=>$id,'organization_id'=>$org,'conversation_id'=>$id,'sender_type'=>'visitor','created_at'=>'2026-09-11 10:00:00']);
+            DB::table('chat_messages')->insert(['id'=>$id,'organization_id'=>$org,'conversation_id'=>$id,'sender_type'=>'visitor','content'=>'Hello','created_at'=>'2026-09-11 10:00:00']);
         }
         DB::table('chat_messages')->insert([
-            ['organization_id'=>1,'conversation_id'=>1,'sender_type'=>'ai','created_at'=>'2026-09-11 10:00:01'],
-            ['organization_id'=>1,'conversation_id'=>1,'sender_type'=>'visitor','created_at'=>'2026-09-11 10:01:00'],
-            ['organization_id'=>2,'conversation_id'=>1,'sender_type'=>'visitor','created_at'=>'2026-09-11 10:02:00'],
+            ['organization_id'=>1,'conversation_id'=>1,'sender_type'=>'ai','content'=>'Hello','created_at'=>'2026-09-11 10:00:01'],
+            ['organization_id'=>1,'conversation_id'=>1,'sender_type'=>'visitor','content'=>'Hello','created_at'=>'2026-09-11 10:01:00'],
+            ['organization_id'=>2,'conversation_id'=>1,'sender_type'=>'visitor','content'=>'Hello','created_at'=>'2026-09-11 10:02:00'],
         ]);
-        DB::table('inquiries')->insert(['id'=>1,'organization_id'=>1,'created_at'=>'2026-09-11 10:01:00','external_source'=>null]);
         $p = app(BusinessOutcomeReport::class)->build(1);
         $this->assertSame(3, collect($p['rows'])->where('kind','chat_message')->count());
         $this->assertSame(2, collect($p['rows'])->where('kind','chat_started')->count());
@@ -53,8 +87,8 @@ class BusinessOutcomeReportTest extends TestCase
     {
         DB::table('chat_conversations')->insert(['id'=>1,'organization_id'=>1,'page_url'=>'https://hexa-academy.lv/','channel'=>'widget']);
         DB::table('chat_messages')->insert([
-            ['organization_id'=>1,'conversation_id'=>1,'sender_type'=>'visitor','created_at'=>'2025-01-01 10:00:00'],
-            ['organization_id'=>1,'conversation_id'=>1,'sender_type'=>'visitor','created_at'=>'2026-09-11 10:00:00'],
+            ['organization_id'=>1,'conversation_id'=>1,'sender_type'=>'visitor','content'=>'Hello','created_at'=>'2025-01-01 10:00:00'],
+            ['organization_id'=>1,'conversation_id'=>1,'sender_type'=>'visitor','content'=>'Hello','created_at'=>'2026-09-11 10:00:00'],
         ]);
         $p = app(BusinessOutcomeReport::class)->build(1);
         $this->assertCount(1,$p['rows']);
@@ -64,7 +98,7 @@ class BusinessOutcomeReportTest extends TestCase
 
     public function test_entry_campaign_is_sanitized_and_later_or_conflicting_sources_are_not_used(): void
     {
-        DB::table('inquiries')->insert(['id'=>1, 'organization_id'=>1, 'created_at'=>'2026-09-11 10:01:00']);
+        $this->inquiry(1, 1, '2026-09-11 10:01:00');
         $conversation = new \App\Models\ChatConversation;
         BusinessOutcomeReport::captureEntry($conversation, 'https://fdscards.lv/?utm_source=facebook&utm_medium=paid_social&email=private@example.test');
         $conversation->exists = true;
@@ -72,7 +106,7 @@ class BusinessOutcomeReportTest extends TestCase
         $this->assertSame('meta', $conversation->entry_source_channel);
         DB::table('chat_conversations')->insert(['id'=>1,'organization_id'=>1,'page_url'=>'https://fdscards.lv/?utm_source=google&utm_medium=cpc','inquiry_id'=>1,'channel'=>'widget',
             'entry_source_channel'=>$conversation->entry_source_channel,'entry_source_site'=>$conversation->entry_source_site]);
-        DB::table('chat_messages')->insert(['organization_id'=>1,'conversation_id'=>1,'sender_type'=>'visitor','created_at'=>'2026-09-11 10:00:00']);
+        DB::table('chat_messages')->insert(['organization_id'=>1,'conversation_id'=>1,'sender_type'=>'visitor','content'=>'Hello','created_at'=>'2026-09-11 10:00:00']);
         $p = app(BusinessOutcomeReport::class)->build(1);
         $this->assertSame('meta', collect($p['rows'])->firstWhere('kind','chat_lead')['source_channel']);
         $this->assertStringNotContainsString('private@example.test', json_encode($p));
@@ -88,7 +122,7 @@ class BusinessOutcomeReportTest extends TestCase
 
     public function test_report_requires_its_own_key_and_binds_the_organization_on_server(): void
     {
-        Schema::create('business_report_keys', function (Blueprint $t) {
+        if (!Schema::hasTable('business_report_keys')) Schema::create('business_report_keys', function (Blueprint $t) {
             $t->integer('organization_id'); $t->string('token_hash');
         });
         DB::table('business_report_keys')->insert(['organization_id'=>17,'token_hash'=>hash('sha256',str_repeat('a',64))]);
@@ -101,14 +135,14 @@ class BusinessOutcomeReportTest extends TestCase
     public function test_saved_enquiry_exports_only_its_observed_campaigns_before_conversion(): void
     {
         $touch = fn ($channel, $campaign, $time) => ['channel'=>$channel,'campaign_id'=>$campaign,'observed_at'=>$time,'evidence'=>'utm', 'private'=>'secret'];
+        $this->inquiry(1, 1, '2026-09-11 10:01:00');
         DB::table('chat_conversations')->insert(['id'=>1,'organization_id'=>1,'page_url'=>'https://fds-cards.co.uk/?email=private@example.test',
             'inquiry_id'=>1,'channel'=>'widget','entry_source_site'=>'fds-lv','entry_source_channel'=>'meta',
             'marketing_attribution'=>json_encode(['version'=>1,'site'=>'fds-lv','truncated'=>false,'touches'=>[
                 $touch('meta','meta-123','2026-09-10T10:00:00Z'), $touch('google','google-456','2026-09-11T09:00:00Z'),
                 $touch('chatgpt','too-late','2026-09-11T11:00:00Z'),
             ]])]);
-        DB::table('chat_messages')->insert(['organization_id'=>1,'conversation_id'=>1,'sender_type'=>'visitor','created_at'=>'2026-09-11 10:00:00']);
-        DB::table('inquiries')->insert(['id'=>1,'organization_id'=>1,'created_at'=>'2026-09-11 10:01:00']);
+        DB::table('chat_messages')->insert(['organization_id'=>1,'conversation_id'=>1,'sender_type'=>'visitor','content'=>'Hello','created_at'=>'2026-09-11 10:00:00']);
         $report = app(BusinessOutcomeReport::class)->build(1);
         $lead = collect($report['rows'])->firstWhere('kind','chat_lead');
         $this->assertSame('fds-lv', $lead['site'], 'Resuming on a UK page must not move the original Latvian enquiry.');
@@ -125,12 +159,13 @@ class BusinessOutcomeReportTest extends TestCase
         // opens the chat. captureEntry saw only /pricing and a google.com referrer, so a paid
         // click was filed as free organic search on every conversation that did not start on the
         // landing page -- which is nearly all of them.
-        Schema::create('visitor_page_views', function (Blueprint $t) {
-            $t->id(); $t->integer('visitor_id'); $t->text('url'); $t->text('referrer')->nullable(); $t->timestamp('viewed_at');
+        if (!Schema::hasTable('visitor_page_views')) Schema::create('visitor_page_views', function (Blueprint $t) {
+            $t->id(); $t->integer('organization_id'); $t->integer('visitor_id'); $t->text('url'); $t->text('referrer')->nullable(); $t->timestamp('viewed_at');
         });
+        $this->visitor(7);
         DB::table('visitor_page_views')->insert([
-            ['visitor_id'=>7,'url'=>'https://fdscards.lv/?gclid=EAIaIQobChMItest','referrer'=>'https://www.google.com/','viewed_at'=>'2026-09-11 09:00:00'],
-            ['visitor_id'=>7,'url'=>'https://fdscards.lv/pricing','referrer'=>'https://fdscards.lv/','viewed_at'=>'2026-09-11 09:04:00'],
+            ['organization_id'=>1,'visitor_id'=>7,'url'=>'https://fdscards.lv/?gclid=EAIaIQobChMItest','referrer'=>'https://www.google.com/','viewed_at'=>'2026-09-11 09:00:00'],
+            ['organization_id'=>1,'visitor_id'=>7,'url'=>'https://fdscards.lv/pricing','referrer'=>'https://fdscards.lv/','viewed_at'=>'2026-09-11 09:04:00'],
         ]);
 
         $conversation = new \App\Models\ChatConversation;
@@ -155,8 +190,8 @@ class BusinessOutcomeReportTest extends TestCase
     {
         // Without this, organic search, social and plain referrals were all 'unknown', which made
         // traffic we could see indistinguishable from traffic we could not.
-        Schema::create('visitor_page_views', function (Blueprint $t) {
-            $t->id(); $t->integer('visitor_id'); $t->text('url'); $t->text('referrer')->nullable(); $t->timestamp('viewed_at');
+        if (!Schema::hasTable('visitor_page_views')) Schema::create('visitor_page_views', function (Blueprint $t) {
+            $t->id(); $t->integer('organization_id'); $t->integer('visitor_id'); $t->text('url'); $t->text('referrer')->nullable(); $t->timestamp('viewed_at');
         });
         $cases = [
             ['https://www.google.com/search?q=metal+cards', 'organic'],
@@ -167,14 +202,16 @@ class BusinessOutcomeReportTest extends TestCase
             ['', 'unknown'],
         ];
         foreach ($cases as $i => [$referrer, $expected]) {
-            DB::table('visitor_page_views')->insert(['visitor_id'=>100+$i,'url'=>'https://fdscards.lv/','referrer'=>$referrer ?: null,'viewed_at'=>'2026-09-11 09:00:00']);
+            $this->visitor(100 + $i);
+            DB::table('visitor_page_views')->insert(['organization_id'=>1,'visitor_id'=>100+$i,'url'=>'https://fdscards.lv/','referrer'=>$referrer ?: null,'viewed_at'=>'2026-09-11 09:00:00']);
             $conversation = new \App\Models\ChatConversation;
             BusinessOutcomeReport::captureEntry($conversation, 'https://fdscards.lv/', 100+$i);
             $this->assertSame($expected, $conversation->entry_source_channel, "referrer {$referrer} should classify as {$expected}");
         }
 
         // A campaign tag still outranks the referrer it arrived with.
-        DB::table('visitor_page_views')->insert(['visitor_id'=>200,'url'=>'https://fdscards.lv/?utm_source=google&utm_medium=cpc','referrer'=>'https://www.google.com/','viewed_at'=>'2026-09-11 09:00:00']);
+        $this->visitor(200);
+        DB::table('visitor_page_views')->insert(['organization_id'=>1,'visitor_id'=>200,'url'=>'https://fdscards.lv/?utm_source=google&utm_medium=cpc','referrer'=>'https://www.google.com/','viewed_at'=>'2026-09-11 09:00:00']);
         $paid = new \App\Models\ChatConversation;
         BusinessOutcomeReport::captureEntry($paid, 'https://fdscards.lv/', 200);
         $this->assertSame('google', $paid->entry_source_channel);
@@ -191,11 +228,11 @@ class BusinessOutcomeReportTest extends TestCase
             // spread across days would have been trimmed to eleven before the cap ever applied.
             $touches[] = ['channel'=>'meta','campaign_id'=>'campaign-'.$i,'observed_at'=>sprintf('2026-09-10T%02d:00:00Z', $i),'evidence'=>'utm'];
         }
+        $this->inquiry(1, 1, '2026-09-11 10:01:00');
         DB::table('chat_conversations')->insert(['id'=>1,'organization_id'=>1,'page_url'=>'https://fdscards.lv/','inquiry_id'=>1,'channel'=>'widget',
             'entry_source_site'=>'fds-lv','entry_source_channel'=>'meta',
             'marketing_attribution'=>json_encode(['version'=>1,'site'=>'fds-lv','truncated'=>false,'touches'=>$touches])]);
-        DB::table('chat_messages')->insert(['organization_id'=>1,'conversation_id'=>1,'sender_type'=>'visitor','created_at'=>'2026-09-11 10:00:00']);
-        DB::table('inquiries')->insert(['id'=>1,'organization_id'=>1,'created_at'=>'2026-09-11 10:01:00']);
+        DB::table('chat_messages')->insert(['organization_id'=>1,'conversation_id'=>1,'sender_type'=>'visitor','content'=>'Hello','created_at'=>'2026-09-11 10:00:00']);
 
         $report = app(BusinessOutcomeReport::class)->build(1);
         $lead = collect($report['rows'])->firstWhere('kind','chat_lead');

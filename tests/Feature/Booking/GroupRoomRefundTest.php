@@ -175,4 +175,47 @@ class GroupRoomRefundTest extends TestCase
         $this->assertSame('refunded', $this->row($id)->payment_status);
         $this->assertEquals(200.0, (float) $this->row($id)->refunded_amount);
     }
+
+    // ── Release 6, item 10: the booking detail shows the group's payment on every room ──
+
+    private function show(int $id): array
+    {
+        return app(BookingAdminController::class)->show($id)->getData(true);
+    }
+
+    public function test_the_detail_of_a_following_room_names_the_groups_payment_carried_by_the_lead(): void
+    {
+        [$lead, $other] = $this->group();
+
+        $detail = $this->show($other);
+
+        $this->assertNull($detail['stripe_payment_intent_id'], 'the room itself still carries none');
+        $this->assertSame('pi_room_1', $detail['group_payment']['payment_intent_id']);
+        $this->assertSame($lead, $detail['group_payment']['lead_id']);
+        $this->assertFalse($detail['group_payment']['is_lead']);
+        $this->assertEquals(360.0, $detail['group_payment']['total']);
+        $this->assertSame([$lead, $other], array_column($detail['group_payment']['rooms'], 'id'));
+        $this->assertSame(['Sea view', 'Garden'], array_column($detail['group_payment']['rooms'], 'name'));
+    }
+
+    public function test_the_detail_of_the_lead_room_says_it_carries_the_groups_payment(): void
+    {
+        [$lead] = $this->group();
+
+        $detail = $this->show($lead);
+
+        $this->assertSame('pi_room_1', $detail['stripe_payment_intent_id']);
+        $this->assertTrue($detail['group_payment']['is_lead']);
+        $this->assertSame($lead, $detail['group_payment']['lead_id']);
+    }
+
+    public function test_the_detail_of_a_single_room_has_no_group_payment(): void
+    {
+        $id = $this->room(['apartment_name' => 'Sea view', 'reservation_id' => '880301', 'price_total' => 200, 'stripe_payment_intent_id' => 'pi_single_detail']);
+
+        $detail = $this->show($id);
+
+        $this->assertSame('pi_single_detail', $detail['stripe_payment_intent_id']);
+        $this->assertNull($detail['group_payment']);
+    }
 }

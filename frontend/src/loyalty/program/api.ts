@@ -20,6 +20,9 @@ export const programApi = {
   createBoost: (body: BoostBody): Promise<{ boost: Boost }> => watched(api.post(loyaltyUrl('program/boosts'), body)),
   updateBoost: (id: number, body: BoostBody): Promise<{ boost: Boost }> => watched(api.put(loyaltyUrl(`program/boosts/${id}`), body)),
   removeBoost: (id: number): Promise<{ ok: boolean }> => watched(api.delete(loyaltyUrl(`program/boosts/${id}`))),
+  /** Release 6: "These times are right" — stamps the named boosts still flagged, changes no time (a manager's). */
+  confirmTimes: (ids: number[]): Promise<{ confirmed: number[]; unchanged: number[] }> =>
+    watched(api.post(loyaltyUrl('program/boosts/confirm-times'), { ids })),
 }
 
 export const PROGRAM_KEY = ['loyalty', 'program'] as const

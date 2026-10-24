@@ -160,6 +160,23 @@ class ServiceMenuRowFieldsApiTest extends TestCase
         $this->assertFalse((bool) $this->stored($service->id)->price_is_from);
     }
 
+    /**
+     * Release 6 (found on PostgreSQL): an emptied price is 0, as `services.price` (NOT NULL DEFAULT 0) stores "no
+     * price"; an emptied order keeps its value — never a null written into a NOT NULL column.
+     */
+    public function test_an_emptied_price_is_zero_and_an_emptied_order_keeps_its_value(): void
+    {
+        $json = $this->controller()->store($this->request($this->menu(['price' => null, 'sort_order' => null])))->getData(true);
+        $this->assertEquals(0, (float) $json['price']);
+
+        $service = Service::create($this->menu(['organization_id' => 1, 'brand_id' => 1, 'is_active' => true, 'sort_order' => 7]));
+        $this->controller()->update($this->request(['price' => null, 'sort_order' => null], 'PUT'), $service->id);
+
+        $row = DB::table('services')->where('id', $service->id)->first(['price', 'sort_order']);
+        $this->assertEquals(0, (float) $row->price);
+        $this->assertSame(7, (int) $row->sort_order);
+    }
+
     // ─── Bounds ──────────────────────────────────────────────────────────
 
     /** One line of a menu cell, never a paragraph: 120 characters fit, 121 do not. */

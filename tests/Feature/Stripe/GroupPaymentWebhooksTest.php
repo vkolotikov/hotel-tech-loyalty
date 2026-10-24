@@ -193,15 +193,36 @@ class GroupPaymentWebhooksTest extends TestCase
         Mail::assertQueued(BookingRefundMail::class, fn (BookingRefundMail $m) => $m->refundAmount === 225.0 && !$m->isFull);
     }
 
+    /**
+     * Release 6: no 60-second window — our own refund in flight holds the payment's refund lock (on the lead), and the
+     * webhook's compare-and-write waits for it. One that cannot get it in time records nothing and has Stripe deliver
+     * again; the redelivery, once our refund has stamped the rooms, records nothing new: once, never twice.
+     */
     public function test_a_refund_of_ours_still_in_flight_on_the_lead_is_not_applied_twice(): void
     {
         [$lead, $other] = $this->group('paid');
         RefundAttempt::create(['organization_id' => $this->org->id, 'mirror_id' => $lead, 'payment_intent_id' => 'pi_group_1', 'requested_at' => now()]);
+        config(['services.stripe.refund_lock_wait' => 0]);
+        $lock = \App\Support\SharedCache::store()->lock("refund:{$lead}", 30);
+        $this->assertTrue($lock->get(), 'our refund holds the lock');
+        $event = ['id' => 'evt_ours_1', 'object' => 'event', 'type' => 'charge.refunded', 'data' => ['object' => $this->charge(36000, [['id' => 're_ours_1', 'object' => 'refund', 'amount' => 36000]])]];
 
-        $this->deliver('charge.refunded', $this->charge(36000, [['id' => 're_ours_1', 'object' => 'refund', 'amount' => 36000]]));
+        $this->postJson('/api/v1/booking/webhooks/stripe', $event, ['Stripe-Signature' => 't=1,v1=test'])->assertStatus(500);
 
         $this->assertSame('paid', $this->row($lead)->payment_status);
         $this->assertSame('paid', $this->row($other)->payment_status);
+        $this->assertSame(0, DB::table('stripe_webhook_events')->where('event_id', 'evt_ours_1')->count(), 'Stripe delivers it again');
+        Mail::assertNothingQueued();
+
+        // Our refund finishes: it stamps every room, then lets go of the lock.
+        DB::table('booking_mirror')->where('id', $lead)->update(['payment_status' => 'refunded', 'refunded_amount' => 200, 'last_refund_id' => 're_ours_1']);
+        DB::table('booking_mirror')->where('id', $other)->update(['payment_status' => 'refunded', 'refunded_amount' => 160, 'last_refund_id' => 're_ours_1']);
+        $lock->release();
+
+        $this->postJson('/api/v1/booking/webhooks/stripe', $event, ['Stripe-Signature' => 't=1,v1=test'])->assertOk();
+
+        $this->assertEquals([200.0, 160.0], [(float) $this->row($lead)->refunded_amount, (float) $this->row($other)->refunded_amount]);
+        $this->assertSame(0, DB::table('audit_logs')->where('action', 'booking_refunded')->count(), 'nothing recorded a second time');
         Mail::assertNothingQueued();
     }
 

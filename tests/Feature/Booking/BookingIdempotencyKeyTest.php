@@ -6,6 +6,7 @@ use App\Models\BookingIdempotencyKey;
 use Database\Factories\OrganizationFactory;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
+use Tests\Concerns\ComparesJsonColumns;
 use Tests\Concerns\SetsUpMinimalSchema;
 use Tests\TestCase;
 
@@ -58,6 +59,7 @@ class BookingIdempotencyKeyTest extends TestCase
 {
     use DatabaseTransactions;
     use SetsUpMinimalSchema;
+    use ComparesJsonColumns;
 
     protected function setUp(): void
     {
@@ -155,7 +157,7 @@ class BookingIdempotencyKeyTest extends TestCase
         ]);
 
         $row = BookingIdempotencyKey::where('idempotency_key', 'idemp_response_shape')->first();
-        $this->assertSame($original, $row->response_json,
+        $this->assertSameJson($original, $row->response_json,
             'Cached response MUST round-trip through array cast (Stripe metadata, mirror_id, etc.).');
     }
 
@@ -319,7 +321,7 @@ class BookingIdempotencyKeyTest extends TestCase
         $this->assertNotNull($existing);
         $this->assertTrue($existing->isValid(),
             'Pre-check Layer 1 MUST find a valid row.');
-        $this->assertSame($cachedResponse, $existing->response_json,
+        $this->assertSameJson($cachedResponse, $existing->response_json,
             'Cached response MUST replay exactly.');
     }
 }

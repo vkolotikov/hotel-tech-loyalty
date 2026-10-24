@@ -56,7 +56,7 @@
     "payment_status": { "deposit_only": "Acompte payé", "deposit_paid": "Acompte payé, le reste sur place", "unpaid": "Paiement sur place", "authorized": "Carte pré-autorisée", "paid": "Payé", "refunded": "Remboursé", "failed": "Échec du paiement", "partially_refunded": "Partiellement remboursé",
       "open": "Paiement en attente", "pending": "Paiement en cours", "disputed": "Paiement en cours d'examen", "invoice_waiting": "Facture en attente", "channel_managed": "Géré par votre canal de réservation", "capture_expired": "Empreinte bancaire expirée", "cancelled": "Paiement annulé", "mock": "Paiement de test" },
     "not_found": "Impossible de trouver cette réservation.",
-    "cancel": "Annuler la réservation", "cancel_title": "Annuler cette réservation ?", "cancel_keep": "La garder", "cancel_confirm": "Oui, annuler", "cancelling": "Annulation…",
+    "cancel": "Annuler la réservation", "cancel_title": "Annuler cette réservation ?", "cancel_rooms": "Toutes les chambres de cette réservation sont annulées ensemble :", "cancel_keep": "La garder", "cancel_confirm": "Oui, annuler", "cancelling": "Annulation…",
     "cancel_until": "Annulation gratuite jusqu'au", "cancel_ended": "L'annulation gratuite a pris fin le",
     "cancel_refund": "Nous rembourserons {{amount}} sur la carte utilisée pour le paiement.", "cancel_release": "Le montant bloqué sur votre carte sera libéré. Rien n'est débité.",
     "cancel_deposit": "Nous rembourserons votre acompte de {{amount}} sur la carte utilisée pour payer.", "cancel_nothing": "Rien n'a été débité pour cette réservation.", "cancel_money_venue": "Cette réservation a été payée chez {{venue}}. C'est avec eux que vous réglerez tout remboursement.",

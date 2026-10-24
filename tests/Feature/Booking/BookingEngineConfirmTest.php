@@ -397,14 +397,16 @@ class BookingEngineConfirmTest extends TestCase
     public function test_a_member_hold_stamps_the_member_the_discount_the_channel_and_the_notes(): void
     {
         $this->smoobuAccepts();
-        $guest = Guest::withoutGlobalScopes()->create(['organization_id' => $this->org->id, 'first_name' => 'Ada', 'last_name' => 'Lovelace', 'full_name' => 'Ada Lovelace', 'email' => 'other-address@example.test', 'member_id' => 41]);
-        $hold = $this->memberHold();
+        // The member's own guest names a member that exists (guests.member_id is a foreign key in production).
+        $member = $this->unwelcomedMember('member-' . uniqid() . '@example.test');
+        $guest = Guest::withoutGlobalScopes()->create(['organization_id' => $this->org->id, 'first_name' => 'Ada', 'last_name' => 'Lovelace', 'full_name' => 'Ada Lovelace', 'email' => 'other-address@example.test', 'member_id' => $member->id]);
+        $hold = $this->memberHold(['member_id' => $member->id]);
 
         $this->engine->confirm(['hold_token' => $hold->hold_token, 'guest' => $this->guest(), 'guest_id' => $guest->id, 'special_requests' => 'Quiet room please', 'payment_status' => 'open', 'payment_method' => 'pay_at_venue'], null, null, null, $this->memberHooks());
 
         $mirror = BookingMirror::withoutGlobalScopes()->where('organization_id', $this->org->id)->sole();
         $this->assertSame('Member portal', $mirror->channel_name);
-        $this->assertSame(41, (int) $mirror->member_id);
+        $this->assertSame($member->id, (int) $mirror->member_id);
         $this->assertSame($guest->id, (int) $mirror->guest_id, 'the member\'s own guest, not one found by email');
         $this->assertEquals(200.0, (float) $mirror->list_total);
         $this->assertEquals(20.0, (float) $mirror->discount_amount);
@@ -581,7 +583,8 @@ class BookingEngineConfirmTest extends TestCase
     {
         $tier = LoyaltyTier::create(['organization_id' => $this->org->id, 'name' => 'Gold', 'min_points' => 0, 'is_active' => true]);
         $user = User::create(['name' => 'Ada Lovelace', 'email' => $email, 'password' => bcrypt('secret-pass-1'), 'user_type' => 'member', 'organization_id' => $this->org->id]);
-        return LoyaltyMember::create(['organization_id' => $this->org->id, 'user_id' => $user->id, 'tier_id' => $tier->id, 'member_number' => 'HL-' . uniqid(), 'current_points' => 0]);
+        return LoyaltyMember::create(['organization_id' => $this->org->id, 'user_id' => $user->id, 'tier_id' => $tier->id, 'member_number' => 'HL-' . uniqid(), 'current_points' => 0,
+            'qr_code_token' => bin2hex(random_bytes(16)), 'referral_code' => strtoupper(bin2hex(random_bytes(4)))]);
     }
 
     public function test_a_member_booking_mail_carries_the_discount_and_no_membership_invitation(): void

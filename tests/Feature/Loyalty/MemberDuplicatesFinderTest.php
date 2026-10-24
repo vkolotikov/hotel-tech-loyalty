@@ -59,7 +59,8 @@ class MemberDuplicatesFinderTest extends TestCase
         $a = $this->person('Phone A', 'a@example.test', '+371 26 123 456', 1);
         $b = $this->person('Phone B', 'b@example.test', '(+371) 26-123-456', 2);
         $c = $this->person('Phone C', 'c@example.test', '371.26.123.456', 3);
-        $d = $this->person('Phone D', 'd@example.test', 'tel: 371/26 123 456 (mobile)', 4);
+        // users.phone is varchar(20) in production: words and separators around the digits, within that.
+        $d = $this->person('Phone D', 'd@example.test', 'tel: 371/26 123 456', 4);
         // Six digits are too few to be sure; the same six digits are no match.
         $this->person('Short E', 'e@example.test', '12-34-56', 5);
         $this->person('Short F', 'f@example.test', '123456', 6);
@@ -77,7 +78,7 @@ class MemberDuplicatesFinderTest extends TestCase
     public function test_an_odd_phone_alone_in_the_database_still_finds_its_plain_twin(): void
     {
         $plain = $this->person('Plain', 'plain@example.test', '4420794600', 1);
-        $odd = $this->person('Odd', 'odd@example.test', 'Tel 44 207 946 00 / home', 2);
+        $odd = $this->person('Odd', 'odd@example.test', 'Tel 4420794600/home', 2);
         $oddTwin = $this->person('Odd twin', 'oddtwin@example.test', 'mob: 7700 900 123', 3);
         $oddTwo = $this->person('Odd two', 'oddtwo@example.test', '7700#900#123', 4);
 
@@ -146,7 +147,7 @@ class MemberDuplicatesFinderTest extends TestCase
         $a = $this->person('Pair A', 'pair@example.test', null, 20);
         $b = $this->person('Pair B', 'PAIR@example.test', null, 21);
         $c = $this->person('Phone C', 'c@example.test', '+1 555 999 8888', 22);
-        $d = $this->person('Odd D', 'd@example.test', 'mobile 1 555 999 8888', 23);
+        $d = $this->person('Odd D', 'd@example.test', 'mob 1 555 999 8888', 23);
 
         $candidates = new \ReflectionMethod(MemberMergeService::class, 'candidates');
         $loaded = array_map(fn ($row) => (int) $row->id, $candidates->invoke(null, $this->org->id));

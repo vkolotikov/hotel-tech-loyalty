@@ -50,4 +50,14 @@ export const ERRORS: Record<string, Record<string, string>> = {
     network: OFFLINE,
     unknown: 'The boost could not be saved. Please try again.',
   },
+  // Release 6: "These times are right" for the boosts that ask for their times to be checked.
+  times: {
+    manager_only: RIGHT,
+    not_allowed: RIGHT,
+    no_capability: RIGHT,
+    not_found: 'One of these boosts is no longer in the programme. The page now shows it as it is; nothing was confirmed.',
+    invalid: 'One of these boosts is no longer in the programme. The page now shows it as it is; nothing was confirmed.',
+    network: 'No connection: nothing was confirmed. Try again.',
+    unknown: 'The times could not be confirmed. Please try again.',
+  },
 }

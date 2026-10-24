@@ -9,6 +9,7 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Storage;
 use Tests\Concerns\SetsUpLoyaltyWorkspace;
+use Tests\Concerns\ComparesJsonColumns;
 use Tests\TestCase;
 
 /**
@@ -18,7 +19,7 @@ use Tests\TestCase;
  */
 class AppLookTest extends TestCase
 {
-    use DatabaseTransactions, SetsUpLoyaltyWorkspace;
+    use DatabaseTransactions, SetsUpLoyaltyWorkspace, ComparesJsonColumns;
 
     private const SAPPHIRE = [
         'primary' => '#3b82f6', 'background' => '#0a0f1e', 'surface' => '#111827', 'secondary' => '#1f2937', 'text' => '#f8fafc',
@@ -147,7 +148,8 @@ class AppLookTest extends TestCase
         HotelSetting::query()->where('group', 'mobile_app')->delete();
         $this->asManager()->putJson($this->api('app-look'), $this->look(['preset' => 'royal_sapphire']))->assertOk();
 
-        $this->assertSame($fullAdmin['theme'], $this->theme());
+        // The same settings, whichever side wrote them; an object's key order is the rows' and means nothing.
+        $this->assertSameJson($fullAdmin['theme'], $this->theme());
         $this->assertSame($fullAdmin['rows'], $this->rows());
         $this->assertSame('#3b82f6', $this->theme()['mobile_theme']['mobile_primary_color']);
     }

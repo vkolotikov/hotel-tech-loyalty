@@ -58,7 +58,7 @@ staff member restricted to one brand is still held to it by the `brand` middlewa
 | Points | `POST members/{id}/award`, `POST members/{id}/redeem` (`points`, `reason`, `idempotency_key`), `POST members/{id}/history/{line}/reverse` (`reason`) |
 | Requests | `GET requests?state=waiting|approved|done&page`, `POST requests/{id}/approve`, `/done`, `/decline` (`reason`) |
 | Scan | `POST scan` (`code`); release 5: `GET members/{id}/cards`, `POST members/{id}/cards` (`uid`), `POST members/{id}/cards/{card}/off` (AccessMap `admin/loyalty/members/{id}/cards`: every active staff member, as Edit details) |
-| Program | `GET program`; `POST/PUT program/tiers[/{id}]`, `POST program/tiers/{id}/benefits`, `DELETE program/tiers/{id}/benefits/{tierBenefit}`, `POST/PUT program/benefits[/{id}]`, `POST/PUT/DELETE program/boosts[/{id}]` |
+| Program | `GET program`; `POST/PUT program/tiers[/{id}]`, `POST program/tiers/{id}/benefits`, `DELETE program/tiers/{id}/benefits/{tierBenefit}`, `POST/PUT program/benefits[/{id}]`, `POST/PUT/DELETE program/boosts[/{id}]`; release 6: `POST program/boosts/confirm-times` (`ids`), `brand` on the boost, reward and offer PUTs |
 | Rewards | `GET/POST rewards`, `PUT rewards/{id}`; `GET redemptions?state=pending|done|all&page`, `POST redemptions/{id}/fulfil`, `/cancel`; `GET/POST offers`, `PUT offers/{id}`; `GET referrals?page`; `POST/DELETE rewards/{id}/image`, `POST/DELETE offers/{id}/image` |
 | Members (release 2) | `POST members`, `PUT members/{id}`, `PUT members/{id}/tier`, `POST members/{id}/deactivate`, `/reactivate`, `/erase` (`confirm_name`), `GET members/{id}/card`, `POST members/{id}/welcome`; `GET members/duplicates`, `POST members/merge`; `GET/POST members/imports`, `GET members/imports/{batch}`, `POST members/imports/{batch}/run`, `/cancel`; `GET members/export` (CSV) |
 | Insights | `GET insights?period=30d|90d|12m`, `GET insights/at-risk?days=` (7–365); release 4: `GET insights/cohorts`, `GET insights/money?period=` |
@@ -112,20 +112,34 @@ All server tests are in `tests/Feature/LoyaltyWorkspace/` unless named otherwise
   admin's result words (`ScanTest`). The workspace's scan asks no AI for an upsell line.
 - **One tolerant reader of codes** (release 5, `App\Services\Loyalty\Cards\CodeReader` through `CardLookup`; the full
   admin's `scan/qr` reads through it too, its answers unchanged). In order: a leading `#` and spaces dropped (the
-  wallet pass shows `#LS-001001`); the app's v2 JSON; that JSON bent by a scanner's keyboard layout (German and Russian
-  typed back key for key; otherwise the value after `member…number`); the v1 JSON's token; a link carrying a number or
+  wallet pass shows `#LS-001001`); the app's v2 JSON; that JSON bent by a scanner's keyboard layout (German, Russian and,
+  since release 6, French AZERTY and Spanish typed back key for key; otherwise the value after `member…number`); the v1 JSON's token; a link carrying a number or
   token; a secure token, then the legacy `qr_code_token` (the wallet pass's barcode); an NFC ID in hex with any
   separators; a member number in any case with or without its hyphen (an exact match first); the digits alone (four or
   more) when exactly one member's number ends with them, never a guess between two; a decimal NFC ID as keyboard-style
-  readers type it (4- or 7-byte, both byte orders). Tests: `CodeReaderTest`, `ScanTest`, `ScanEndpointsTest`.
+  readers type it (4- or 7-byte, both byte orders); last, a bare member number a layout bent (`LS)àà&àà&`, `LSß001001`), read
+  back only when the code holds characters a number never has. Tests: `CodeReaderTest`, `ScanTest`, `ScanEndpointsTest`.
 - **NFC cards** (`App\Services\Loyalty\Cards\NfcCards`): an ID is stored lower-case hex without separators (a decimal
   entry converted; 8, 14 or 20 digits read as hex, as printed on cards). `nfc_cards.uid` is unique across every
   organisation (`nfc_cards_uid_unique`), so a link compares normalised against every stored form: another
   organisation's card → `card_elsewhere` (409, never saying whose); active for another member here → `card_in_use`
   (409, naming nobody); already this member's → 200, nothing written; switched off here → the same row given again,
-  never a second row. Linking leaves the member's QR code and wallet pass alone (the full admin's own `nfc-cards`
-  link still sets `qr_code_token` to the card's ID and stores the ID as typed). Link and switch-off are audited
+  never a second row. Linking leaves the member's QR code and wallet pass alone. Since release 6 the full admin links
+  through it too — `nfc-cards`, `nfc/issue` and member creation with a card — so its IDs are stored the same way, its
+  answers keep their messages (another organisation's card or member is now refused), and a card no longer replaces the
+  member's `qr_code_token`; `scan/nfc` compares the normalised forms. Link and switch-off are audited
   (`nfc_card_linked`, `nfc_deactivated`).
+- **Default brand** (release 6): `Organization::ensureDefaultBrand()` gives a new organisation its own default brand
+  whatever tenant is bound; `php artisan brands:ensure-default [--org=<organisation id>] [--apply]` repairs any
+  organisation without one (dry run by default).
+- **Boost times confirmed together** (release 6): `POST program/boosts/confirm-times` (`ids`; AccessMap
+  `admin/loyalty/program/boosts/confirm-times`, managers) stamps `times_venue_at` on each named boost still flagged, by
+  a conditional update, never changing a time; audited `earn_rate_event_times_confirmed`; answers `{confirmed,
+  unchanged}`. Program shows managers "These times are right" with the flagged boosts on the venue's clock.
+- **Brand on edit** (release 6): with more than one brand, a reward's, offer's or boost's brand can be moved on edit
+  (`brand` sent only when it changes, checked against `LoyaltyForms::brands()`).
+- **Campaign tags in links** (release 6): inside an `href` a filled tag is URL-encoded (`rawurlencode`, `@` kept in a
+  `mailto:`); elsewhere HTML-escaped as before; `{{current_year}}` follows the venue's clock.
 - **Redemptions have one writer**, `App\Services\Loyalty\RedemptionActions`, called by the full admin and the
   workspace: a pending cancel gives the points back by reversing the debit and returns the stock; a cancel of a
   fulfilled one is bookkeeping only (`RedemptionsTest`; `tests/Feature/Admin/RewardRedemptionActionsTest.php` proves
@@ -314,9 +328,9 @@ reports (Twilio's status callbacks); no receipts for the full admin's own push c
 
 ## Known limits
 
-- **Boosts saved before release 4** say "check the time" until a manager opens and saves each one (at a venue not on
-  UTC): one the full admin saved then was stored as if its wall-clock time were UTC and may be hours off; one the
-  workspace saved is right but flagged too, since nothing recorded who saved it.
+- **Boosts saved before release 4** say "check the time" (at a venue not on UTC) until a manager saves each one or
+  confirms them together ("These times are right", release 6): one the full admin saved then was stored as if its
+  wall-clock time were UTC and may be hours off; one the workspace saved is right but flagged too.
 - **The currency** is the member portal's: `organizations.currency`, which defaults to USD, before the
   `services_currency` setting. A venue that never ran booking setup shows USD until its currency is set (Card & app →
   Currency, or booking setup). Changing it relabels prices; it never converts them.
@@ -330,7 +344,6 @@ reports (Twilio's status callbacks); no receipts for the full admin's own push c
 - **At most once means a stopped worker can drop a member.** A member whose email or push was under way when a worker
   died keeps a `pending` delivery row and is not tried again. A Reset in the full admin right after a Cancel, while a
   chunk is still running, could email that chunk's members again on the next Send.
-- **Tags** are escaped but not URL-encoded inside a link; `{{current_year}}` follows the server's clock (UTC).
 - **Push messages reach app users only** (the inbox row reaches everyone who did not switch the kind off). The full
   admin's Notifications list shows the workspace's push messages without their recipients.
 - **A wallet certificate password cleared before release 2** stays cleared: the full admin's form used to wipe it on
@@ -343,36 +356,61 @@ reports (Twilio's status callbacks); no receipts for the full admin's own push c
 - **Finding duplicates**: a phone written with characters outside the separators the `REPLACE` chain strips (letters,
   `#`, …) is compared in PHP; if nearly every phone is written that way, that step loads them all.
 - **Scan** (release 5): NFC in a web page works only in Chrome on Android (an iPhone scans the QR code with the camera or
-  types the number); a USB NFC reader needs Chrome or Edge on a desk computer. Keyboard layouts other than German and
-  Russian that bend digits or use dead keys (French AZERTY, Spanish…) are not typed back key for key; the generic
-  member-number reading covers most of them. Decimal reader formats other than 4- and 7-byte IDs (e.g. Wiegand) are not
-  read. The normalised and digits-alone lookups read the organisation's members without an index. The full admin's own
-  `nfc-cards` and `nfc/issue` still store IDs as typed, so they can add a second row for a card the workspace stored.
-- **A brand is chosen only on create.** With one brand nothing shows; editing a reward, offer or boost shows its brand
-  but does not move it.
+  types the number); a USB NFC reader needs Chrome or Edge on a desk computer. Keyboard layouts other than German, Russian,
+  French AZERTY and Spanish are not typed back key for key; the generic member-number reading covers most of them. Decimal reader formats other than 4- and 7-byte IDs (e.g. Wiegand) are not
+  read. The normalised and digits-alone lookups read the organisation's members without an index.
 - **`docs/appointments-workspace.md`** used to say points are reversed on the full admin's member page; the full admin
   has no such screen. Reversal is the workspace's, on the member's page.
 
 ## Tests on PostgreSQL
 
 The suites run on SQLite with hand-built schemas, which miss NOT NULL columns and indexes production has. Release 5
-ran them against a PostgreSQL database built from every migration (the recipe is in CLAUDE.md): it found two live
-bugs (member erasure and a member's own deletion wrote NULL into `loyalty_members.qr_code_token`) and one more in the
-engine (an extra of the legacy JSON setting has a text id, which PostgreSQL refused against `booking_extras.id`), all
-fixed. Every release-5 test file passes there. What still fails on PostgreSQL fails on the test's own data, not on
-the code — every error was traced (2026-10-23): members without `qr_code_token`/`referral_code`/`tier_id`/`joined_at`,
-ledger lines without `balance_after`, `service_bookings` without `booking_reference`, `hotel_settings` without `type`,
-tiers with a factory-only `qualification_model`, codes longer than their column, a second organisation created while
-the first is bound (`brands_org_default_unique`), and tables some traits create twice. Counts on 2026-10-23: workspace
-279/309, Member 292/329, Admin 81/89, Booking 356/529, Stripe 37/37. The workspace's shared member fixture now gives
-production's NOT NULL columns; the older files are worth the same care when next touched.
+ran them against a PostgreSQL database built from every migration and found three live bugs (member erasure and a
+member's own deletion wrote NULL into `loyalty_members.qr_code_token`; an extra of the legacy JSON setting had a text
+id), all fixed. Release 6 (part T) gave the older tests data production's schema accepts: failures on PostgreSQL went
+from 2384 to the ones listed below, and every suite still passes on SQLite.
+
+**Running them.** Build a database from every migration, then:
+
+```
+set -a; . <file holding DB_HOST, DB_PORT, DB_USERNAME and DB_PASSWORD>; set +a
+scripts/test-pg.sh <test database> [test paths …]
+```
+
+It runs one directory or top-level file at a time (never a bare `php artisan test`), prints
+`<path> | exit <code> | <Tests: line>` and up to eight FAILED names per run, refuses a database whose name does not
+contain "test", never prints the credentials, and gives up on a lock after a minute so a stuck run fails instead of
+hanging. Its header says how to build or copy the database. Shared test helpers: `TestCase` moves PostgreSQL
+sequences above 100000 so tests' fixed ids never collide; `StartsFromABlankDatabase` gives a migration test an empty
+schema of its own; `ClearsTheMigrationsOrganisation`, `WritesRowsForeignKeysNeed` and `WritesHotelSettings` write the
+rows production's foreign keys and NOT NULL columns need. A test that must see a unique index refuse an insert raises
+that refusal just before the statement on PostgreSQL (a real failure would abort the test's own transaction, which
+production never has); on SQLite the real index still runs.
+
+**Still failing on PostgreSQL, on purpose** (2026-10-24):
+
+- **Application code, reported and not changed in release 6:**
+  - Landing pages read a service's price `0` and duration `60` (the columns' NOT NULL defaults) as a real price and
+    length, so a priceless menu prints €0 / 60 min instead of the author's priceless layout (`app/Landing/Money.php`;
+    17 render tests of the Ember, MaisonVela, Forma, Luma, Ardea, Numa and Tempo templates). How "no price" should
+    be stored and shown is the owner's call, and landing pages deploy by their own recipe.
+  - `BelongsToBrand` gives a row created with no brand the organisation's default brand, also for
+    `NotificationCampaign` and `SpecialOffer`, whose NULL brand is documented as "every brand"
+    (`NotificationCampaignModelTest`, `SpecialOfferModelTest`). The fill-in is deliberate (rows stay visible when
+    staff filter by brand); which one wins is the owner's call.
+- **Fixed in release 6** (their tests now pass on PostgreSQL): an emptied field in the full admin's extras, services
+  and voice-agent forms, and an emptied tier colour in the workspace, wrote NULL into a NOT NULL column (a 500); a
+  failed public services booking whose error text was longer than 255 characters left no submission row.
+- **Test states production cannot hold** (18 tests, kept for SQLite): a member with no tier, no user or no referral
+  code; a tier assessment with no old tier; an organisation with no currency; a widget config with no key; two
+  organisations sharing a hold token; two default pipelines in one organisation; a landing redirect outliving its page;
+  an extra or a voice config holding NULL in a NOT NULL column.
 
 ## Deploying
 
-- Release 5 is live (`main` 8a04f86, pushed 2026-10-23), built from branch commit 6adf121: the next release's change
-  list is `git diff --name-status 6adf121 <tip>`.
-  Waiting for the next deploy: R5-6 (failed widget bookings leave staff an enquiry; `BookingEngineService` only, no
-  migration). Release 4 went out as `main` 097432a from a7e87ae.
+- Release 5b is live (`main` 5b481aa, pushed 2026-10-23: R5-6, failed widget bookings leave staff an enquiry), built
+  from branch commit ea8b364: the next release's change list is `git diff --name-status ea8b364 <tip>`. Release 5
+  went out as `main` 8a04f86 from 6adf121. Release 4 went out as `main` 097432a from a7e87ae.
 - Release 5: no migration, no new scheduled command. New routes: `GET/POST members/{id}/cards`,
   `POST members/{id}/cards/{card}/off` (workspace). Full-admin and shared files it changes on purpose: the full admin's
   `ScanController::scanQr` (reads through `CardLookup`) and `pages/Scan.tsx` (the camera sends the whole code),

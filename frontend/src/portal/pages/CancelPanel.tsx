@@ -95,6 +95,23 @@ export function CancelPanel({ booking: b, venue, offer, stage, error, result, on
   return (
     <div role="group" aria-labelledby="p-cancel-title" className="rounded-p-card border border-p-border p-4 space-y-3">
       <p id="p-cancel-title" ref={headingRef} tabIndex={-1} className="font-semibold">{t('portal.bookings.cancel_title', 'Cancel this booking?')}</p>
+      {/* Release 6: a stay of several rooms is cancelled whole — each room is named before the member says yes. */}
+      {b.rooms && b.rooms.length > 1 && (
+        <div className="text-sm space-y-1">
+          <p className="text-p-text-2">{t('portal.bookings.cancel_rooms', 'Every room of this booking is cancelled together:')}</p>
+          <ul className="rounded-p-card border border-p-border px-3">
+            {b.rooms.map(r => (
+              <li key={r.id} className="flex justify-between gap-4 py-2 border-b border-p-border last:border-0">
+                <span className="text-p-text">
+                  {r.title}
+                  {r.guests ? <span className="text-p-text-2"> · {counted(t, 'bookings.guest_count', r.guests)}</span> : null}
+                </span>
+                <span className="text-right text-p-text-2">{money(r.total, b.currency)}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
       <div className="text-sm text-p-text-2 space-y-1">
         {promise === 'refund' && <p>{t('portal.bookings.cancel_refund', 'We will refund {{amount}} to the card you paid with.', { amount: money(b.total, b.currency) })}</p>}
         {promise === 'release' && <p>{t('portal.bookings.cancel_release', 'The hold on your card will be released. Nothing is charged.')}</p>}

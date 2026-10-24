@@ -68,6 +68,7 @@ class DropToneColumnMigrationTest extends TestCase
     /** The rows themselves are untouched: a section keeps its key, order and content. */
     public function test_dropping_the_column_keeps_every_other_column_and_row(): void
     {
+        $this->landingBrandExists(1); // the page's brand (a foreign key in production)
         DB::table('landing_pages')->insert([
             'id' => 1, 'organization_id' => 1, 'brand_id' => 1, 'slug' => 'vela', 'template_key' => 'maison_vela',
             'industry' => 'restaurant', 'status' => 'published', 'content' => '{}', 'theme' => '[]',
@@ -98,6 +99,7 @@ class DropToneColumnMigrationTest extends TestCase
         $this->assertTrue(Schema::hasColumn('landing_page_sections', 'tone'));
 
         // Nullable, so a row that says nothing about it still inserts.
+        $this->landingBrandExists(1); // the page's brand (a foreign key in production)
         DB::table('landing_pages')->insert([
             'id' => 1, 'organization_id' => 1, 'brand_id' => 1, 'slug' => 'vela', 'template_key' => 'maison_vela',
             'industry' => 'restaurant', 'status' => 'published', 'content' => '{}', 'theme' => '[]',

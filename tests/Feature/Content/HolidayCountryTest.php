@@ -20,7 +20,8 @@ class HolidayCountryTest extends TestCase
 
     private function venue(?string $country, ?string $zone): void
     {
-        $this->org->forceFill(['country' => $country, 'timezone' => $zone])->save();
+        // No zone of its own: organizations.timezone is NOT NULL DEFAULT 'UTC' in production, so that is what it holds.
+        $this->org->forceFill(['country' => $country, 'timezone' => $zone ?? 'UTC'])->save();
         // VenueClock memoises the zone per request.
         app()->forgetScopedInstances();
     }

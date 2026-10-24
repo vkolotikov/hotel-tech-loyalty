@@ -105,6 +105,11 @@ class LoyaltyServiceAssessTierTest extends TestCase
             'min_points' => 5000, 'sort_order' => 3,
             'is_active'  => true,
         ]);
+        // The plain ladder these tests describe: no soft landing, no grace period. Production's columns default to a
+        // soft landing and a 90-day grace (loyalty_tiers.soft_landing / grace_period_days), so the ladder says so.
+        foreach ([$bronze, $silver, $gold] as $tier) {
+            $tier->forceFill(['soft_landing' => false, 'grace_period_days' => 0])->save();
+        }
         Cache::flush(); // ensure fresh tier set
         return ['bronze' => $bronze, 'silver' => $silver, 'gold' => $gold];
     }

@@ -7,6 +7,7 @@ use Database\Factories\OrganizationFactory;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\Schema;
 use Tests\Concerns\SetsUpMinimalSchema;
+use Tests\Concerns\ComparesJsonColumns;
 use Tests\TestCase;
 
 /**
@@ -53,7 +54,7 @@ use Tests\TestCase;
  */
 class LeadFormModelTest extends TestCase
 {
-    use DatabaseTransactions;
+    use DatabaseTransactions, ComparesJsonColumns;
     use SetsUpMinimalSchema;
 
     private int $orgId;
@@ -321,7 +322,7 @@ class LeadFormModelTest extends TestCase
 
         $form = $this->form(['design' => $custom]);
 
-        $this->assertSame($custom, $form->fresh()->design);
+        $this->assertSameJson($custom, $form->fresh()->design);
     }
 
     public function test_is_active_casts_to_boolean(): void

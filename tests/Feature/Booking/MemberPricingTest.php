@@ -71,7 +71,7 @@ class MemberPricingTest extends TestCase
     public function test_ensure_guest_for_member_links_by_email_then_creates_once(): void
     {
         $svc = app(GuestMemberLinkService::class);
-        $existing = Guest::withoutEvents(fn () => Guest::create(['organization_id' => $this->orgId, 'first_name' => 'Ada', 'last_name' => 'L', 'email' => 'ADA@example.test']));
+        $existing = Guest::withoutEvents(fn () => Guest::create(['organization_id' => $this->orgId, 'first_name' => 'Ada', 'last_name' => 'L', 'full_name' => 'Ada L', 'email' => 'ADA@example.test']));
         $g1 = $svc->ensureGuestForMember($this->member);
         $this->assertSame($existing->id, $g1->id);
         $this->assertSame($this->member->id, (int) $g1->member_id);
@@ -118,9 +118,12 @@ class MemberPricingTest extends TestCase
      */
     public function test_a_created_guest_is_clamped_to_the_guest_column_lengths(): void
     {
-        $name = str_repeat('Ä', 150) . ' ' . str_repeat('Ö', 149); // 300 characters, multibyte
+        // As long as production's users columns allow (name and email 255, phone 20): the name and the email are
+        // longer than the guest's columns; a user's phone always fits the guest's 50 and is copied whole.
+        $name = str_repeat('Ä', 127) . ' ' . str_repeat('Ö', 127); // 255 characters, multibyte
         $email = str_repeat('e', 150) . '@example.test';
-        $this->member->user->forceFill(['name' => $name, 'email' => $email, 'phone' => str_repeat('7', 60)])->save();
+        $phone = str_repeat('7', 20);
+        $this->member->user->forceFill(['name' => $name, 'email' => $email, 'phone' => $phone])->save();
 
         $guest = app(GuestMemberLinkService::class)->ensureGuestForMember($this->member->fresh());
 
@@ -129,6 +132,6 @@ class MemberPricingTest extends TestCase
         $this->assertSame(200, mb_strlen($guest->full_name));
         $this->assertSame(mb_substr($name, 0, 200), $guest->full_name);
         $this->assertSame(150, mb_strlen($guest->email));
-        $this->assertSame(50, mb_strlen($guest->phone));
+        $this->assertSame($phone, $guest->phone);
     }
 }

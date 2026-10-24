@@ -9,11 +9,17 @@ use App\Models\NfcCard;
 use App\Models\ScanEvent;
 use App\Models\TierBenefit;
 use App\Models\BenefitEntitlement;
+use App\Services\Booking\Setup\OwnRows;
 use App\Services\Loyalty\CardLookup;
 use App\Services\Loyalty\Cards\CardRead;
+use App\Services\Loyalty\Cards\CodeReader;
+use App\Services\Loyalty\Cards\NfcCards;
+use App\Services\Loyalty\LoyaltyRefused;
 use App\Services\OpenAiService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class ScanController extends Controller
 {
@@ -79,13 +85,21 @@ class ScanController extends Controller
         return $this->buildScanResponse($member, $request->user());
     }
 
+    /**
+     * A tapped card to its member. Since release 6 the card is compared as NfcCards stores it (CodeReader::UID_SQL):
+     * the ID however the reader spaced it, and the forms the same card may be stored under (a decimal entry as hex,
+     * the other byte order), an active row before a switched-off one. The answers and their messages are as before.
+     */
     public function scanNfc(Request $request): JsonResponse
     {
         $validated = $request->validate(['uid' => 'required|string']);
         $uid = strtolower(str_replace([':', '-', ' '], '', $validated['uid']));
+        $card = CodeReader::cardUid($validated['uid']);
+        $forms = array_values(array_unique([$uid, ...($card ? [$card['uid'], ...$card['also']] : [])]));
+        $stored = fn (NfcCard $c) => strtolower(str_replace([':', '-', ' ', '.', '_'], '', (string) $c->uid));
 
-        // Look for active card first
-        $nfcCard = NfcCard::whereRaw("LOWER(REPLACE(REPLACE(REPLACE(uid, ':', ''), '-', ''), ' ', '')) = ?", [$uid])
+        $nfcCard = NfcCard::query()->whereIn(DB::raw(CodeReader::UID_SQL), $forms)->get()
+            ->sortBy(fn (NfcCard $c) => [$c->is_active ? 0 : 1, array_search($stored($c), $forms, true), $c->id])
             ->first();
 
         if (!$nfcCard) {
@@ -127,39 +141,39 @@ class ScanController extends Controller
         return $this->buildScanResponse($member, $request->user());
     }
 
-    public function linkNfcCard(Request $request): JsonResponse
+    /**
+     * Link a card to a member. Since release 6 (spec 2026-10-23 §2 item 2) through NfcCards, in this endpoint's own
+     * answers: the ID stored normalised (lower-case hex, no separators, a decimal entry converted) and compared in
+     * every form against every organisation's cards. Active for any member here (this one included) is the 422 it
+     * always was; another organisation's card is a 422 that names nobody; a card switched off here is linked again on
+     * its own row; an entry that is no card ID is a field error on `uid`. The member must be this organisation's (a
+     * field error on `member_id`, as an unknown id always was). The member's QR code (`qr_code_token`) is no longer
+     * set to the card's ID: nothing needs the ID there (scan/nfc and both Scans find the card by its row), the copy
+     * replaced the member's wallet-pass barcode, and as a unique 64-character column it refused a card linked again.
+     */
+    public function linkNfcCard(Request $request, NfcCards $cards): JsonResponse
     {
         $validated = $request->validate([
-            'member_id' => 'required|exists:loyalty_members,id',
+            'member_id' => ['required', 'bail', 'integer', OwnRows::rule('loyalty_members')],
             'uid'       => 'required|string|max:100',
             'card_type' => 'nullable|string|max:50',
         ]);
+        $member = LoyaltyMember::query()->findOrFail((int) $validated['member_id']);
 
-        // Check if this UID is already assigned
-        $existing = NfcCard::where('uid', $validated['uid'])->where('is_active', true)->first();
-        if ($existing) {
+        try {
+            $result = $cards->link($member, $validated['uid'], $request->user(), $validated['card_type'] ?? 'standard', 'admin');
+        } catch (LoyaltyRefused $refused) {
+            return match ($refused->errorCode) {
+                'bad_uid'        => throw ValidationException::withMessages(['uid' => 'The uid is not an NFC card ID.']),
+                'card_elsewhere' => response()->json(['message' => 'This NFC card cannot be linked here'], 422),
+                default          => response()->json(['message' => 'This NFC card is already linked to a member'], 422),
+            };
+        }
+        if (!$result['linked']) {
             return response()->json(['message' => 'This NFC card is already linked to a member'], 422);
         }
 
-        $card = NfcCard::create([
-            'member_id' => $validated['member_id'],
-            'uid'       => $validated['uid'],
-            'card_type' => $validated['card_type'] ?? 'standard',
-            'issued_at' => now(),
-            'issued_by' => $request->user()->id,
-            'is_active' => true,
-        ]);
-
-        // Also set the member's qr_code_token to the NFC UID for unified identification
-        LoyaltyMember::where('id', $validated['member_id'])
-            ->update(['qr_code_token' => $validated['uid']]);
-
-        AuditLog::record('nfc_card_linked', $card, [
-            'member_id' => $validated['member_id'],
-            'uid'       => $validated['uid'],
-        ], [], $request->user());
-
-        return response()->json(['message' => 'NFC card linked', 'card' => $card], 201);
+        return response()->json(['message' => 'NFC card linked', 'card' => $result['card']], 201);
     }
 
     private function buildScanResponse(LoyaltyMember $member, $staff): JsonResponse

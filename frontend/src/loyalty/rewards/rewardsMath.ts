@@ -302,21 +302,24 @@ export function brandChoice(options: BrandOptions | undefined): boolean {
   return (options?.list.length ?? 0) > 1
 }
 
-/** The brand a new form starts on: the server's default, else the first offered; null when there is nothing to choose. */
-export function initialBrand(options: BrandOptions | undefined): number | null {
+/**
+ * The brand a form starts on; null when there is nothing to choose. A new row (`saved` undefined) starts on the
+ * server's default, else the first offered. A saved row (release 6: its brand can be changed) starts on its own brand
+ * when it is offered, else on null — it stays where it is unless another is chosen.
+ */
+export function initialBrand(options: BrandOptions | undefined, saved?: number | null): number | null {
   if (!options || !brandChoice(options)) return null
+  if (saved !== undefined) return saved !== null && options.list.some(b => b.id === saved) ? saved : null
   return options.list.some(b => b.id === options.default) ? options.default : (options.list[0]?.id ?? null)
 }
 
-/** A saved row's brand by name, shown (not changed) when there is a choice; null otherwise or when it is not offered. */
-export function brandName(id: number | null | undefined, options: BrandOptions | undefined): string | null {
-  if (!options || !brandChoice(options) || id === null || id === undefined) return null
-  return options.list.find(b => b.id === id)?.name ?? null
-}
-
-/** What a new row's body adds for its brand: `brand` when one was chosen, nothing otherwise (the server's default). */
-export function brandPart(brand: number | null): { brand?: number } {
-  return brand === null ? {} : { brand }
+/**
+ * What a body adds for its brand: `brand` when one was chosen — for a saved row (`saved` given) only when it is another
+ * than the row's own, which moves the row there — and nothing otherwise (a new row: the server's default; a saved one
+ * keeps its brand).
+ */
+export function brandPart(brand: number | null, saved?: number | null): { brand?: number } {
+  return brand === null || (saved !== undefined && brand === saved) ? {} : { brand }
 }
 
 // ─── A picture ────────────────────────────────────────────────────────────

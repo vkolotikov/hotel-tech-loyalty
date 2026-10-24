@@ -7,6 +7,7 @@ use Database\Factories\OrganizationFactory;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\Schema;
 use Tests\Concerns\SetsUpMinimalSchema;
+use Tests\Concerns\ComparesJsonColumns;
 use Tests\TestCase;
 
 /**
@@ -48,7 +49,7 @@ use Tests\TestCase;
  */
 class BookingSubmissionTest extends TestCase
 {
-    use DatabaseTransactions;
+    use DatabaseTransactions, ComparesJsonColumns;
     use SetsUpMinimalSchema;
 
     private int $orgId;
@@ -242,7 +243,7 @@ class BookingSubmissionTest extends TestCase
 
         $row = $this->submission(['payload_json' => $payload]);
 
-        $this->assertSame($payload, $row->fresh()->payload_json);
+        $this->assertSameJson($payload, $row->fresh()->payload_json);
     }
 
     /* ─── Guest fields persist ─── */

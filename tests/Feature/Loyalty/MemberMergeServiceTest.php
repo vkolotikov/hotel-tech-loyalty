@@ -114,7 +114,8 @@ class MemberMergeServiceTest extends TestCase
 
     private function makeMember(int $points = 0): LoyaltyMember
     {
-        $tier = LoyaltyTierFactory::new()->bronze()->create();
+        // The venue's one Bronze tier (production's loyalty_tiers (organization_id, name) is unique).
+        $tier = \App\Models\LoyaltyTier::query()->where('name', 'Bronze')->first() ?? LoyaltyTierFactory::new()->bronze()->create();
         return LoyaltyMemberFactory::new()
             ->inTier($tier->id)
             ->withPoints($points)
@@ -165,9 +166,9 @@ class MemberMergeServiceTest extends TestCase
 
         DB::table('points_transactions')->insert([
             ['organization_id' => app('current_organization_id'), 'member_id' => $loser->id,
-             'type' => 'earn', 'points' => 100, 'created_at' => now(), 'updated_at' => now()],
+             'type' => 'earn', 'points' => 100, 'balance_after' => 100, 'description' => 'Earned', 'created_at' => now(), 'updated_at' => now()],
             ['organization_id' => app('current_organization_id'), 'member_id' => $loser->id,
-             'type' => 'earn', 'points' => 250, 'created_at' => now(), 'updated_at' => now()],
+             'type' => 'earn', 'points' => 250, 'balance_after' => 350, 'description' => 'Earned', 'created_at' => now(), 'updated_at' => now()],
         ]);
 
         $result = $this->service->merge($winner, $loser);
@@ -316,10 +317,10 @@ class MemberMergeServiceTest extends TestCase
 
         DB::table('guests')->insert([
             ['organization_id' => app('current_organization_id'),
-             'member_id' => $loser->id, 'email' => 'a@b.test',
+             'member_id' => $loser->id, 'full_name' => 'Guest A', 'email' => 'a@b.test',
              'created_at' => now(), 'updated_at' => now()],
             ['organization_id' => app('current_organization_id'),
-             'member_id' => $loser->id, 'email' => 'c@d.test',
+             'member_id' => $loser->id, 'full_name' => 'Guest C', 'email' => 'c@d.test',
              'created_at' => now(), 'updated_at' => now()],
         ]);
 
@@ -379,6 +380,8 @@ class MemberMergeServiceTest extends TestCase
             'member_id'       => $loser->id,
             'type'            => 'earn',
             'points'          => 100,
+            'balance_after'   => 100,
+            'description'     => 'Earned',
             'created_at'      => now(),
             'updated_at'      => now(),
         ]);
@@ -469,6 +472,7 @@ class MemberMergeServiceTest extends TestCase
     {
         $winner = $this->makeMember();
         $loser  = $this->makeMember();
+        $this->parentRowsExist('special_offers', [7, 8, 9]); // the offers the claims name (a foreign key in production)
         DB::table('member_offers')->insert([
             ['member_id' => $winner->id, 'offer_id' => 7, 'status' => 'available', 'used_at' => null, 'created_at' => now(), 'updated_at' => now()],
             ['member_id' => $loser->id, 'offer_id' => 7, 'status' => 'used', 'used_at' => now()->subDay(), 'created_at' => now(), 'updated_at' => now()],
@@ -491,6 +495,7 @@ class MemberMergeServiceTest extends TestCase
     {
         $winner = $this->makeMember();
         $loser  = $this->makeMember();
+        $this->parentRowsExist('email_campaigns', [1, 2, 3]); // the campaigns the deliveries belong to
         DB::table('email_campaign_deliveries')->insert([
             ['campaign_id' => 1, 'member_id' => $winner->id, 'status' => 'failed', 'created_at' => now(), 'updated_at' => now()],
             ['campaign_id' => 1, 'member_id' => $loser->id, 'status' => 'sent', 'created_at' => now(), 'updated_at' => now()],
@@ -512,6 +517,7 @@ class MemberMergeServiceTest extends TestCase
     {
         $winner = $this->makeMember();
         $loser  = $this->makeMember();
+        $this->parentRowsExist('notification_campaigns', [1, 2]); // the campaigns the deliveries belong to
         DB::table('push_message_deliveries')->insert([
             ['campaign_id' => 1, 'member_id' => $winner->id, 'status' => 'inbox_only', 'reason' => 'no_device', 'created_at' => now(), 'updated_at' => now()],
             ['campaign_id' => 1, 'member_id' => $loser->id, 'status' => 'sent', 'reason' => null, 'created_at' => now(), 'updated_at' => now()],
@@ -561,8 +567,9 @@ class MemberMergeServiceTest extends TestCase
         $winner->update(['referred_by' => $loser->id]);
         $sponsor = $this->makeMember();
         $loser->update(['referred_by' => $sponsor->id]);
-        DB::table('qr_tokens')->insert(['member_id' => $loser->id, 'token' => 'tok-1', 'is_revoked' => false, 'created_at' => now(), 'updated_at' => now()]);
-        DB::table('member_merges')->insert(['surviving_member_id' => $loser->id, 'merged_member_id' => 999999, 'created_at' => now(), 'updated_at' => now()]);
+        // Production's NOT NULL columns, where the sqlite table has them.
+        DB::table('qr_tokens')->insert($this->onlyColumnsOf('qr_tokens', ['member_id' => $loser->id, 'token' => 'tok-1', 'signature' => 'sig-1', 'issued_at' => now(), 'expires_at' => now()->addHour(), 'is_revoked' => false, 'created_at' => now(), 'updated_at' => now()]));
+        DB::table('member_merges')->insert($this->onlyColumnsOf('member_merges', ['surviving_member_id' => $loser->id, 'merged_member_id' => 999999, 'merged_data' => '{}', 'created_at' => now(), 'updated_at' => now()]));
 
         $this->service->merge($winner->fresh(), $loser->fresh());
 
@@ -578,7 +585,7 @@ class MemberMergeServiceTest extends TestCase
     {
         $winner = $this->makeMember();
         $loser  = $this->makeMember(300);
-        DB::table('points_transactions')->insert(['organization_id' => app('current_organization_id'), 'member_id' => $loser->id, 'type' => 'earn', 'points' => 300, 'created_at' => now(), 'updated_at' => now()]);
+        DB::table('points_transactions')->insert(['organization_id' => app('current_organization_id'), 'member_id' => $loser->id, 'type' => 'earn', 'points' => 300, 'balance_after' => 300, 'description' => 'Earned', 'created_at' => now(), 'updated_at' => now()]);
 
         $this->service->merge($winner, $loser, null, 'Same guest, two sign-ups');
 
@@ -591,19 +598,38 @@ class MemberMergeServiceTest extends TestCase
         $this->assertSame("Member #{$loser->member_number} merged into #{$winner->member_number}", $audit->description);
     }
 
-    /** One row, its NOT NULL columns given plain values, the named ones as asked. @param array<string, mixed> $values */
-    private function insertRow(string $table, array $values): int
+    /**
+     * One row, its NOT NULL columns given plain values the column accepts, the named ones as asked. A NOT NULL
+     * column with a foreign key (PostgreSQL built from the migrations has them; the sqlite tables do not) names a
+     * row made the same way in the table it points at, so the row is one production could hold.
+     *
+     * @param array<string, mixed> $values
+     */
+    private function insertRow(string $table, array $values, int $depth = 0): int
     {
+        $parents = [];
+        foreach (Schema::getForeignKeys($table) as $fk) {
+            if (count($fk['columns']) === 1) {
+                $parents[$fk['columns'][0]] = $fk['foreign_table'];
+            }
+        }
+
         $row = [];
         foreach (Schema::getColumns($table) as $col) {
-            if ($col['name'] === 'id' || $col['nullable'] || $col['default'] !== null) {
+            if ($col['name'] === 'id' || $col['nullable'] || $col['default'] !== null || array_key_exists($col['name'], $values)) {
                 continue;
             }
             $type = strtolower((string) $col['type_name']);
+            $length = preg_match('/\((\d+)\)/', (string) $col['type'], $m) ? (int) $m[1] : null;
             $row[$col['name']] = match (true) {
+                isset($parents[$col['name']]) && $col['name'] !== 'organization_id' && $depth < 4
+                    => $this->insertRow($parents[$col['name']], [], $depth + 1),
                 str_contains($type, 'int'), str_contains($type, 'numeric'), str_contains($type, 'decimal') => 1,
                 str_contains($type, 'date'), str_contains($type, 'time') => now()->toDateTimeString(),
-                default => 'x-' . uniqid(),
+                str_contains($type, 'bool') => true,
+                str_contains($type, 'json') => '{}',
+                $type === 'uuid' => (string) \Illuminate\Support\Str::uuid(),
+                default => substr('x-' . uniqid(), 0, $length ?? 64),
             };
         }
         if (Schema::hasColumn($table, 'organization_id')) {
@@ -611,6 +637,30 @@ class MemberMergeServiceTest extends TestCase
         }
 
         return (int) DB::table($table)->insertGetId(array_merge($row, $values));
+    }
+
+    /**
+     * Rows with these ids in a table another row names, where the schema has the table (PostgreSQL built from the
+     * migrations, whose foreign key asks for them); the sqlite schema of this test has none and no key to satisfy.
+     *
+     * @param list<int> $ids
+     */
+    private function parentRowsExist(string $table, array $ids): void
+    {
+        if (!Schema::hasTable($table)) {
+            return;
+        }
+        foreach ($ids as $id) {
+            if (!DB::table($table)->where('id', $id)->exists()) {
+                $this->insertRow($table, ['id' => $id]);
+            }
+        }
+    }
+
+    /** @param array<string, mixed> $row @return array<string, mixed> the row without the columns this schema lacks */
+    private function onlyColumnsOf(string $table, array $row): array
+    {
+        return array_intersect_key($row, array_flip(Schema::getColumnListing($table)));
     }
 
     /** The other member column a row of `referrals` needs. @return array<string, int> */

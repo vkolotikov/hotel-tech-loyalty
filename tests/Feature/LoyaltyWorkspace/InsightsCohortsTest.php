@@ -33,6 +33,8 @@ class InsightsCohortsTest extends TestCase
     {
         $line = PointsTransaction::withoutGlobalScopes()->create($more + [
             'member_id' => $memberId, 'type' => $type, 'points' => $points, 'description' => ucfirst($type), 'idempotency_key' => uniqid('c', true),
+            // NOT NULL in production: the member's balance as the line leaves it.
+            'balance_after' => (int) DB::table('loyalty_members')->where('id', $memberId)->value('current_points'),
         ]);
         $line->forceFill(['created_at' => $at])->save();
 
@@ -89,7 +91,8 @@ class InsightsCohortsTest extends TestCase
         $ivy = $this->makeMember('Imported Ivy', 'ivy@example.test', ['joined_at' => '2025-11-15 10:00:00']);
         $this->line($ivy->id, 10, 'earn', '2025-10-20 10:00:00');                  // before the months, and before she joined
         $this->line($ivy->id, 10, 'earn', '2025-12-01 10:00:00');                  // December: month 1
-        $lin = $this->makeMember('Lin New', 'lin@example.test', ['joined_at' => null]);
+        // Enrolment stamps the join date with the row (joined_at is NOT NULL in production).
+        $lin = $this->makeMember('Lin New', 'lin@example.test', ['joined_at' => '2026-10-02 08:00:00']);
         $lin->forceFill(['created_at' => '2026-10-02 08:00:00'])->save();          // joined: the row's own date
         $this->line($lin->id, 5, 'earn', '2026-10-03 10:00:00');
         $old = $this->makeMember('Old Otto', 'otto@example.test', ['joined_at' => '2024-03-01 10:00:00']);

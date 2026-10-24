@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import type { Can } from '../lib/types'
 import { serverProblems } from '../lib/forms'
 import {
-  OFFER_FIELDS, brandChoice, brandName, brandPart, initialBrand, megabytes, offerBody, offerFormOf, offerProblems, offerState, offerTone, offerValue, pictureProblem, redemptionActions, redemptionTone, referralTone,
+  OFFER_FIELDS, brandChoice, brandPart, initialBrand, megabytes, offerBody, offerFormOf, offerProblems, offerState, offerTone, offerValue, pictureProblem, redemptionActions, redemptionTone, referralTone,
   rewardBody, rewardDiscount, rewardFormOf, rewardProblems, rewardServerProblems, rewardsActions, searchFor, stockOf, tabAfter, tabFrom, typeChoices,
 } from './rewardsMath'
 import type { Offer, OfferOptions, Reward, RewardOptions } from './types'
@@ -170,7 +170,7 @@ describe('a picture before it is sent (release 2 §7)', () => {
   })
 })
 
-describe('the brand of a new reward, offer or boost (release 4)', () => {
+describe('the brand of a reward, offer or boost (release 4, changed on edit since release 6)', () => {
   const two = { list: [{ id: 1, name: 'Spa', is_default: true }, { id: 2, name: 'Hotel', is_default: false }], default: 1 }
 
   it('offers a choice only for more than one brand', () => {
@@ -187,15 +187,20 @@ describe('the brand of a new reward, offer or boost (release 4)', () => {
     expect(initialBrand(undefined)).toBeNull()
   })
 
-  it('names a saved row\'s brand when there is a choice and the brand is offered', () => {
-    expect(brandName(2, two)).toBe('Hotel')
-    expect(brandName(7, two)).toBeNull()
-    expect(brandName(null, two)).toBeNull()
-    expect(brandName(1, { list: [{ id: 1, name: 'Spa', is_default: true }], default: 1 })).toBeNull()
+  it('starts a saved row on its own brand when it is offered, else on nothing (release 6)', () => {
+    expect(initialBrand(two, 2)).toBe(2)
+    expect(initialBrand({ ...two, default: 2 }, 1)).toBe(1)
+    expect(initialBrand(two, 7)).toBeNull()
+    expect(initialBrand(two, null)).toBeNull()
+    expect(initialBrand({ list: [{ id: 1, name: 'Spa', is_default: true }], default: 1 }, 1)).toBeNull()
   })
 
-  it('sends `brand` only when one was chosen', () => {
+  it('sends `brand` only when one was chosen, and for a saved row only when it is another (release 6)', () => {
     expect(brandPart(2)).toEqual({ brand: 2 })
     expect(brandPart(null)).toEqual({})
+    expect(brandPart(2, 1)).toEqual({ brand: 2 })
+    expect(brandPart(2, null)).toEqual({ brand: 2 })
+    expect(brandPart(2, 2)).toEqual({})
+    expect(brandPart(null, 2)).toEqual({})
   })
 })

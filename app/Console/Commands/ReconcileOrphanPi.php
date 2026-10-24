@@ -130,7 +130,7 @@ class ReconcileOrphanPi extends Command
         $piStatus = (string) $pi->status;
         $piAmount = (int) ($pi->amount ?? 0);
         $piCurrency = strtoupper((string) ($pi->currency ?? ''));
-        $piAmountMajor = round($piAmount / 100, 2);
+        $piAmountMajor = StripeService::fromSmallestUnit($piAmount, (string) ($pi->currency ?? '')); // zero-decimal aware (release 6)
 
         $this->line("PaymentIntent <info>{$intentId}</info>");
         $this->line("  status     = <comment>{$piStatus}</comment>");
@@ -363,7 +363,7 @@ class ReconcileOrphanPi extends Command
         $smoobuId  = (string) ($smoobuMatch['id'] ?? '');
         $smoobuRef = (string) ($smoobuMatch['reference-id'] ?? '');
         $piId      = (string) $pi->id;
-        $amountMaj = round(((int) ($pi->amount ?? 0)) / 100, 2);
+        $amountMaj = StripeService::fromSmallestUnit((int) ($pi->amount ?? 0), (string) ($pi->currency ?? '')); // zero-decimal aware (release 6)
 
         $this->info('=== PATH A — Smoobu match exists, rebuild BookingMirror ===');
         $this->line("  WOULD create BookingMirror with:");
@@ -515,7 +515,7 @@ class ReconcileOrphanPi extends Command
         StripeService $stripe,
     ): int {
         $piId      = (string) $pi->id;
-        $amountMaj = round(((int) ($pi->amount ?? 0)) / 100, 2);
+        $amountMaj = StripeService::fromSmallestUnit((int) ($pi->amount ?? 0), (string) ($pi->currency ?? '')); // zero-decimal aware (release 6)
 
         $this->warn('=== PATH B — no Smoobu match, refund the PI ===');
         $this->line("  WOULD refund payment intent: {$piId}");

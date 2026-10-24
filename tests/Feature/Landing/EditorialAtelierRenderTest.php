@@ -76,7 +76,7 @@ class EditorialAtelierRenderTest extends TestCase
 
     private function makeBrand(?string $logoUrl): void
     {
-        Brand::withoutGlobalScopes()->create([
+        Brand::withoutGlobalScopes()->forceCreate([ // forceCreate: `id` is not fillable, and the page names brand 1
             'id' => 1, 'organization_id' => 1, 'name' => 'Elan', 'logo_url' => $logoUrl,
         ]);
     }
@@ -102,6 +102,7 @@ class EditorialAtelierRenderTest extends TestCase
     private function seedLikeTheKit(string $industry = 'beauty'): LandingPage
     {
         Property::create([
+            'code' => 'P' . strtoupper(bin2hex(random_bytes(4))),
             'organization_id' => 1, 'brand_id' => 1, 'name' => 'Élan Atelier',
             'phone' => '+44 20 7946 0284', 'email' => 'hello@elanatelier.example',
             'address' => '48 Harper Street', 'city' => 'Soho', 'country' => 'United Kingdom',
@@ -681,6 +682,7 @@ class EditorialAtelierRenderTest extends TestCase
     public function test_an_active_review_form_wires_the_feedback_link(): void
     {
         ReviewForm::create([
+            'type' => 'basic',
             'organization_id' => 1, 'name' => 'Guest notes', 'embed_key' => 'abc123',
             'is_active' => true, 'allow_anonymous' => true,
         ]);
@@ -696,6 +698,7 @@ class EditorialAtelierRenderTest extends TestCase
     public function test_an_inactive_review_form_is_not_linked(): void
     {
         ReviewForm::create([
+            'type' => 'basic',
             'organization_id' => 1, 'name' => 'Guest notes', 'embed_key' => 'abc123',
             'is_active' => false, 'allow_anonymous' => true,
         ]);
@@ -708,7 +711,8 @@ class EditorialAtelierRenderTest extends TestCase
     public function test_the_chat_launcher_mounts_in_the_reserved_slot(): void
     {
         ChatWidgetConfig::create([
-            'organization_id' => 1, 'widget_key' => 'wk-123', 'is_enabled' => true,
+            'api_key' => \Illuminate\Support\Str::random(48),
+            'organization_id' => 1, 'widget_key' => '7a3c1f2e-5b4d-4e6f-8a9b-0c1d2e3f4a5b', 'is_enabled' => true,
         ]);
 
         $this->seedLikeTheKit();
@@ -717,7 +721,7 @@ class EditorialAtelierRenderTest extends TestCase
         $this->assertStringContainsString('data-ai-widget-slot', $body);
         $this->assertStringContainsString('class="ai-panel"', $body);
         $this->assertStringContainsString('class="ai-launcher"', $body);
-        $this->assertStringContainsString('/chat-frame/wk-123', $body);
+        $this->assertStringContainsString('/chat-frame/7a3c1f2e-5b4d-4e6f-8a9b-0c1d2e3f4a5b', $body);
     }
 
     public function test_no_chat_widget_leaves_the_slot_reserved_and_empty(): void
@@ -1346,6 +1350,7 @@ class EditorialAtelierRenderTest extends TestCase
     public function test_the_footer_hub_counts_the_columns_it_really_has(): void
     {
         ReviewForm::create([
+            'type' => 'basic',
             'organization_id' => 1, 'name' => 'Guest notes', 'embed_key' => 'abc123',
             'is_active' => true, 'allow_anonymous' => true,
         ]);

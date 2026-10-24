@@ -19,7 +19,7 @@ import { LoyaltyContext } from '../LoyaltyProvider'
 import type { Bootstrap, Can } from '../lib/types'
 import { PROGRAM_KEY } from './api'
 import { BoostDialog } from './BoostDialog'
-import { ProgramPage } from './ProgramPage'
+import { ConfirmTimes, ProgramPage } from './ProgramPage'
 import type { Program } from './types'
 
 const can = (more: Partial<Can> = {}): Can => ({ award: true, redeem: true, reverse: false, manage_program: false, manage_rewards: false, manage_members: false, view_insights: false, manage_campaigns: false, manage_app: false, ...more })
@@ -131,7 +131,33 @@ describe('Program (spec 2026-10-21 §4.5, §5)', () => {
     expect(render(can({ manage_program: true }))).not.toContain('data-time-check')
   })
 
-  it('in the boost dialog: the time check, and the brand only when there is more than one (release 4)', () => {
+  it('offers a manager "These times are right" for the boosts that ask for the check, and nobody else (release 6)', () => {
+    const flagged: Program = { ...program, boosts: program.boosts.map(b => ({ ...b, check_time: true })) }
+    const html = render(can({ manage_program: true }), flagged)
+    expect(html.match(/data-time-check-all=""/g)).toHaveLength(1)
+    expect(text(html)).toContain('Some boosts ask for their times to be checked. If the times shown are right, confirm them together. These times are right')
+    expect(render(can(), flagged)).not.toContain('data-time-check-all')
+    expect(render(can({ manage_program: true }))).not.toContain('data-time-check-all')
+    // Only an ended boost is flagged: nothing to confirm.
+    const ended: Program = { ...program, boosts: program.boosts.map(b => ({ ...b, check_time: b.state === 'ended' })) }
+    expect(render(can({ manage_program: true }), ended)).not.toContain('data-time-check-all')
+  })
+
+  it('lists the boosts to confirm with their times on the venue\'s clock (release 6)', () => {
+    const html = renderToStaticMarkup(
+      <QueryClientProvider client={new QueryClient()}>
+        <ConfirmTimes boosts={[{ ...program.boosts[0], check_time: true }]} locale="en" timeZone="Europe/Riga" onClose={() => {}} />
+      </QueryClientProvider>,
+    )
+    const words = text(html)
+    expect(words).toContain('Are these times right?')
+    expect(words).toContain('Check that each starts and ends as shown, on the venue’s clock (Europe/Riga). Confirming marks them as checked and changes no time')
+    expect(html).toMatch(/data-time-check-boost="3"[\s\S]*Double weekend[\s\S]*Oct 24, 10:00 – Oct 25, 23:59/)
+    expect(words).toContain('Not yet')
+    expect(words).toContain('These times are right')
+  })
+
+  it('in the boost dialog: the time check, and the brand only when there is more than one, new or saved (release 4, 6)', () => {
     const inDialog = (node: ReactNode) => renderToStaticMarkup(
       <QueryClientProvider client={new QueryClient()}>
         <LoyaltyContext.Provider value={{ data: boot(can({ manage_program: true })), isLoading: false, isError: false, error: null, refetch: () => {} }}>{node}</LoyaltyContext.Provider>
@@ -140,7 +166,8 @@ describe('Program (spec 2026-10-21 §4.5, §5)', () => {
     const two = { list: [{ id: 1, name: 'Lumière Spa', is_default: true }, { id: 2, name: 'Lumière Hotel', is_default: false }], default: 1 }
     const flagged = text(inDialog(<BoostDialog boost={{ ...program.boosts[0], check_time: true, brand_id: 2 }} tiers={program.tiers} brands={two} onClose={() => {}} />))
     expect(flagged).toContain('Check these times: this boost was saved before boost times were read on the venue’s clock everywhere')
-    expect(flagged).toContain('Brand: Lumière Hotel. It stays on this brand.')
+    expect(inDialog(<BoostDialog boost={{ ...program.boosts[0], brand_id: 2 }} tiers={program.tiers} brands={two} onClose={() => {}} />))
+      .toMatch(/<select data-brand=""[^>]*><option value="1">Lumière Spa<\/option><option value="2" selected="">Lumière Hotel<\/option><\/select>/)
     expect(inDialog(<BoostDialog boost={null} tiers={program.tiers} brands={two} onClose={() => {}} />)).toContain('<select data-brand=""')
     const plain = inDialog(<BoostDialog boost={program.boosts[0]} tiers={program.tiers} onClose={() => {}} />)
     expect(plain).not.toContain('Check these times')

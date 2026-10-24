@@ -72,7 +72,7 @@ class MaisonVelaRenderTest extends TestCase
 
     private function makeBrand(?string $logoUrl): void
     {
-        Brand::withoutGlobalScopes()->create([
+        Brand::withoutGlobalScopes()->forceCreate([ // forceCreate: `id` is not fillable, and the page names brand 1
             'id' => 1, 'organization_id' => 1, 'name' => 'Maison', 'logo_url' => $logoUrl,
         ]);
     }
@@ -97,6 +97,7 @@ class MaisonVelaRenderTest extends TestCase
     private function seedLikeTheKit(string $industry = 'restaurant'): LandingPage
     {
         Property::create([
+            'code' => 'P' . strtoupper(bin2hex(random_bytes(4))),
             'organization_id' => 1, 'brand_id' => 1, 'name' => 'Maison Vela',
             'phone' => '+371 20 000 181', 'email' => 'table@maisonvela.example',
             'address' => '21 Elizabetes iela', 'city' => 'Riga', 'country' => 'Latvia',
@@ -829,7 +830,7 @@ class MaisonVelaRenderTest extends TestCase
 
     public function test_a_restaurant_below_the_aggregate_floor_shows_no_score_anywhere(): void
     {
-        Property::create(['organization_id' => 1, 'brand_id' => 1, 'name' => 'Maison Vela', 'is_active' => true]);
+        Property::create(['code' => 'P' . strtoupper(bin2hex(random_bytes(4))), 'organization_id' => 1, 'brand_id' => 1, 'name' => 'Maison Vela', 'is_active' => true]);
 
         foreach (range(1, 3) as $i) {
             ReviewSubmission::create([
@@ -1020,6 +1021,7 @@ class MaisonVelaRenderTest extends TestCase
     public function test_an_active_review_form_wires_the_feedback_link(): void
     {
         ReviewForm::create([
+            'type' => 'basic',
             'organization_id' => 1, 'name' => 'Diner notes', 'embed_key' => 'abc123',
             'is_active' => true, 'allow_anonymous' => true,
         ]);
@@ -1034,7 +1036,8 @@ class MaisonVelaRenderTest extends TestCase
     public function test_the_chat_launcher_mounts_in_the_reserved_slot(): void
     {
         ChatWidgetConfig::create([
-            'organization_id' => 1, 'widget_key' => 'wk-123', 'is_enabled' => true,
+            'api_key' => \Illuminate\Support\Str::random(48),
+            'organization_id' => 1, 'widget_key' => '7a3c1f2e-5b4d-4e6f-8a9b-0c1d2e3f4a5b', 'is_enabled' => true,
         ]);
 
         $this->seedLikeTheKit();
@@ -1043,7 +1046,7 @@ class MaisonVelaRenderTest extends TestCase
         $this->assertStringContainsString('data-ai-widget-slot', $body);
         $this->assertStringContainsString('class="ai-panel"', $body);
         $this->assertStringContainsString('class="ai-launcher"', $body);
-        $this->assertStringContainsString('/chat-frame/wk-123', $body);
+        $this->assertStringContainsString('/chat-frame/7a3c1f2e-5b4d-4e6f-8a9b-0c1d2e3f4a5b', $body);
     }
 
     public function test_no_chat_widget_leaves_the_slot_reserved_and_empty(): void
@@ -1105,6 +1108,7 @@ class MaisonVelaRenderTest extends TestCase
     public function test_the_wordmark_sets_a_conjunction_in_the_shared_primitives_em(): void
     {
         Property::create([
+            'code' => 'P' . strtoupper(bin2hex(random_bytes(4))),
             'organization_id' => 1, 'brand_id' => 1, 'name' => 'Ember & Vine', 'is_active' => true,
         ]);
 
@@ -1126,6 +1130,7 @@ class MaisonVelaRenderTest extends TestCase
     public function test_a_hostile_business_name_never_reaches_the_lockup_unescaped(): void
     {
         Property::create([
+            'code' => 'P' . strtoupper(bin2hex(random_bytes(4))),
             'organization_id' => 1, 'brand_id' => 1, 'name' => '<script>x</script> & Vela', 'is_active' => true,
         ]);
 

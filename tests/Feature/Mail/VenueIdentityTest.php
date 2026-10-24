@@ -7,6 +7,7 @@ use App\Models\Organization;
 use App\Services\MailIdentityService;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Tests\TestCase;
 
 /**
@@ -28,6 +29,8 @@ use Tests\TestCase;
  */
 class VenueIdentityTest extends TestCase
 {
+    use DatabaseTransactions;
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -36,6 +39,7 @@ class VenueIdentityTest extends TestCase
             Schema::create('organizations', function (Blueprint $t) {
                 $t->id();
                 $t->string('name')->nullable();
+                $t->string('slug')->nullable();
                 $t->string('email')->nullable();
                 $t->timestamps();
             });
@@ -46,6 +50,8 @@ class VenueIdentityTest extends TestCase
                 $t->unsignedBigInteger('organization_id')->nullable();
                 $t->string('key');
                 $t->text('value')->nullable();
+                $t->string('type')->nullable();
+                $t->string('group')->nullable();
                 $t->timestamps();
             });
         }
@@ -64,7 +70,7 @@ class VenueIdentityTest extends TestCase
     private function org(array $attrs = []): Organization
     {
         $o = new Organization();
-        $o->forceFill(array_merge(['name' => 'The Tasting Room', 'email' => null], $attrs));
+        $o->forceFill(array_merge(['name' => 'The Tasting Room', 'slug' => 'tasting-room-' . uniqid(), 'email' => null], $attrs));
         $o->save();
         return $o;
     }
@@ -116,6 +122,8 @@ class VenueIdentityTest extends TestCase
             'organization_id' => $org->id,
             'key'             => MailIdentityService::KEY_FROM_NAME,
             'value'           => 'Tasting Room Reservations',
+            'type'            => 'string', // NOT NULL in production, as the settings screen saves the key
+            'group'           => 'integrations',
         ])->save();
 
         $this->assertSame('Tasting Room Reservations', $this->identity($org->id)['from_name']);
@@ -129,6 +137,8 @@ class VenueIdentityTest extends TestCase
             'organization_id' => $org->id,
             'key'             => MailIdentityService::KEY_REPLY_TO,
             'value'           => 'not-an-email-address',
+            'type'            => 'string',
+            'group'           => 'integrations',
         ])->save();
 
         $this->assertNull($this->identity($org->id)['reply_to'],

@@ -79,7 +79,7 @@ class NumaSkinLabRenderTest extends TestCase
 
     private function makeBrand(?string $logoUrl): void
     {
-        Brand::withoutGlobalScopes()->create([
+        Brand::withoutGlobalScopes()->forceCreate([ // forceCreate: `id` is not fillable, and the page names brand 1
             'id' => 1, 'organization_id' => 1, 'name' => 'Numa', 'logo_url' => $logoUrl,
         ]);
     }
@@ -123,6 +123,7 @@ class NumaSkinLabRenderTest extends TestCase
     private function seedLikeTheKit(string $industry = 'medical'): LandingPage
     {
         Property::create([
+            'code' => 'P' . strtoupper(bin2hex(random_bytes(4))),
             'organization_id' => 1, 'brand_id' => 1, 'name' => 'Numa Skin Lab',
             'phone' => '+371 20 000 634', 'email' => 'hello@numaskin.example',
             'address' => '7 Dzirnavu iela', 'city' => 'Riga', 'country' => 'Latvia',
@@ -723,7 +724,7 @@ class NumaSkinLabRenderTest extends TestCase
 
     public function test_a_specialist_with_no_bio_is_introduced_by_their_title(): void
     {
-        Property::create(['organization_id' => 1, 'brand_id' => 1, 'name' => 'Numa', 'is_active' => true]);
+        Property::create(['code' => 'P' . strtoupper(bin2hex(random_bytes(4))), 'organization_id' => 1, 'brand_id' => 1, 'name' => 'Numa', 'is_active' => true]);
         ServiceMaster::create([
             'organization_id' => 1, 'brand_id' => 1, 'name' => 'Dr. Nora Kļava',
             'title' => 'Physician', 'sort_order' => 0, 'is_active' => true,
@@ -762,7 +763,7 @@ class NumaSkinLabRenderTest extends TestCase
 
     public function test_an_anonymous_patient_is_a_verified_patient_and_no_score_is_invented(): void
     {
-        Property::create(['organization_id' => 1, 'brand_id' => 1, 'name' => 'Numa', 'city' => 'Riga', 'is_active' => true]);
+        Property::create(['code' => 'P' . strtoupper(bin2hex(random_bytes(4))), 'organization_id' => 1, 'brand_id' => 1, 'name' => 'Numa', 'city' => 'Riga', 'is_active' => true]);
         ReviewSubmission::create([
             'organization_id' => 1, 'anonymous_name' => null, 'overall_rating' => 5,
             'comment' => 'A calm hour.', 'is_featured' => true, 'submitted_at' => now(),
@@ -886,6 +887,7 @@ class NumaSkinLabRenderTest extends TestCase
     public function test_a_business_with_a_conjunction_gets_the_authors_em_in_both_lockups(): void
     {
         Property::create([
+            'code' => 'P' . strtoupper(bin2hex(random_bytes(4))),
             'organization_id' => 1, 'brand_id' => 1, 'name' => 'Numa & Co', 'is_active' => true,
         ]);
 
@@ -898,6 +900,7 @@ class NumaSkinLabRenderTest extends TestCase
     public function test_a_hostile_business_name_never_reaches_the_lockup_unescaped(): void
     {
         Property::create([
+            'code' => 'P' . strtoupper(bin2hex(random_bytes(4))),
             'organization_id' => 1, 'brand_id' => 1, 'name' => '<script>x</script> & Co', 'is_active' => true,
         ]);
 
@@ -1021,6 +1024,7 @@ class NumaSkinLabRenderTest extends TestCase
     public function test_an_active_review_form_wires_the_feedback_link(): void
     {
         ReviewForm::create([
+            'type' => 'basic',
             'organization_id' => 1, 'name' => 'Patient signals', 'embed_key' => 'abc123',
             'is_active' => true, 'allow_anonymous' => true,
         ]);
@@ -1036,7 +1040,8 @@ class NumaSkinLabRenderTest extends TestCase
     public function test_the_chat_launcher_mounts_in_the_reserved_slot(): void
     {
         ChatWidgetConfig::create([
-            'organization_id' => 1, 'widget_key' => 'wk-123', 'is_enabled' => true,
+            'api_key' => \Illuminate\Support\Str::random(48),
+            'organization_id' => 1, 'widget_key' => '7a3c1f2e-5b4d-4e6f-8a9b-0c1d2e3f4a5b', 'is_enabled' => true,
         ]);
 
         $this->seedLikeTheKit();
@@ -1045,7 +1050,7 @@ class NumaSkinLabRenderTest extends TestCase
         $this->assertStringContainsString('data-ai-widget-slot', $body);
         $this->assertStringContainsString('class="ai-panel"', $body);
         $this->assertStringContainsString('class="ai-launcher"', $body);
-        $this->assertStringContainsString('/chat-frame/wk-123', $body);
+        $this->assertStringContainsString('/chat-frame/7a3c1f2e-5b4d-4e6f-8a9b-0c1d2e3f4a5b', $body);
     }
 
     public function test_no_chat_widget_leaves_the_slot_reserved_and_empty(): void
@@ -1062,6 +1067,7 @@ class NumaSkinLabRenderTest extends TestCase
     public function test_the_footer_hub_prints_the_authors_columns_from_the_record(): void
     {
         ReviewForm::create([
+            'type' => 'basic',
             'organization_id' => 1, 'name' => 'Patient signals', 'embed_key' => 'abc123',
             'is_active' => true, 'allow_anonymous' => true,
         ]);

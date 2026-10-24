@@ -49,7 +49,7 @@ use Tests\TestCase;
 class ReferralModelTest extends TestCase
 {
     use DatabaseTransactions;
-    use SetsUpMinimalSchema;
+    use SetsUpMinimalSchema, \Tests\Concerns\WritesRowsForeignKeysNeed;
 
     private int $orgId;
     private int $referrerId;
@@ -219,7 +219,9 @@ class ReferralModelTest extends TestCase
         // Lock the documented lifecycle: pending → qualified →
         // rewarded; expired is the unfilled deadline branch.
         foreach (['pending', 'qualified', 'rewarded', 'expired'] as $status) {
-            $referral = $this->referral(['status' => $status]);
+            // Each its own referee: production's referrals (referrer_id, referee_id) is unique.
+            $referee = LoyaltyMemberFactory::new()->create();
+            $referral = $this->referral(['status' => $status, 'referee_id' => $referee->id]);
             $this->assertSame($status, $referral->fresh()->status);
         }
     }
@@ -285,6 +287,7 @@ class ReferralModelTest extends TestCase
             'created_at'      => now(),
             'updated_at'      => now(),
         ]);
+        $this->rowsExist('loyalty_members', [999, 998], ['organization_id' => $orgB]); // org B's members (foreign keys in production)
         \DB::table('referrals')->insert([
             'organization_id' => $orgB,
             'referrer_id'     => 999,

@@ -17,11 +17,12 @@ use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Testing\Fluent\AssertableJson;
 use Tests\Concerns\SetsUpMinimalSchema;
+use Tests\Concerns\ClearsTheMigrationsOrganisation;
 use Tests\TestCase;
 
 class LeadToolsTest extends TestCase
 {
-    use DatabaseTransactions;
+    use DatabaseTransactions, ClearsTheMigrationsOrganisation;
     use SetsUpMinimalSchema;
 
     private User $staff;
@@ -34,34 +35,49 @@ class LeadToolsTest extends TestCase
             'chatgpt.url' => 'http://localhost', 'app.url' => 'http://localhost', 'app.timezone' => 'UTC']);
         URL::forceRootUrl('http://localhost');
         $this->setUpMinimalSchema();
-        Schema::table('organizations', function ($t) {
-            $t->string('timezone')->nullable();
-            $t->timestamp('saas_deleted_at')->nullable();
-        });
-        Schema::table('guests', fn ($t) => $t->text('passport_no')->nullable());
-        Schema::create('staff', function ($t) {
+        // Columns production has; added only where the sqlite tables lack them.
+        if (!Schema::hasColumn('organizations', 'timezone')) {
+            Schema::table('organizations', fn ($t) => $t->string('timezone')->nullable());
+        }
+        if (!Schema::hasColumn('organizations', 'saas_deleted_at')) {
+            Schema::table('organizations', fn ($t) => $t->timestamp('saas_deleted_at')->nullable());
+        }
+        if (!Schema::hasColumn('guests', 'passport_no')) {
+            Schema::table('guests', fn ($t) => $t->text('passport_no')->nullable());
+        }
+        if (!Schema::hasTable('staff')) Schema::create('staff', function ($t) {
             $t->id();
             $t->unsignedBigInteger('organization_id');
             $t->unsignedBigInteger('user_id');
             $t->boolean('is_active')->default(true);
         });
-        Schema::create('brands', function ($t) {
+        if (!Schema::hasTable('brands')) Schema::create('brands', function ($t) {
             $t->id();
             $t->unsignedBigInteger('organization_id');
             $t->string('name');
+            $t->string('slug')->nullable();
+            $t->string('widget_token')->nullable();
             $t->softDeletes();
         });
-        Schema::create('brand_user', function ($t) {
+        if (!Schema::hasTable('brand_user')) Schema::create('brand_user', function ($t) {
             $t->unsignedBigInteger('brand_id');
             $t->unsignedBigInteger('user_id');
         });
-        Schema::create('pipeline_stages', function ($t) {
+        if (!Schema::hasTable('pipelines')) Schema::create('pipelines', function ($t) {
             $t->id();
             $t->unsignedBigInteger('organization_id');
             $t->string('name');
+            $t->string('slug');
+        });
+        if (!Schema::hasTable('pipeline_stages')) Schema::create('pipeline_stages', function ($t) {
+            $t->id();
+            $t->unsignedBigInteger('organization_id');
+            $t->unsignedBigInteger('pipeline_id');
+            $t->string('name');
+            $t->string('slug');
             $t->string('kind');
         });
-        Schema::create('inquiries', function ($t) {
+        if (!Schema::hasTable('inquiries')) Schema::create('inquiries', function ($t) {
             $t->id();
             $t->unsignedBigInteger('organization_id');
             $t->unsignedBigInteger('guest_id')->nullable();
@@ -78,22 +94,29 @@ class LeadToolsTest extends TestCase
             $t->date('next_task_due')->nullable();
             $t->timestamps();
         });
+        // Production's NOT NULL columns and foreign keys are satisfied: slugs, a password, widget tokens, each stage in
+        // a pipeline (the migrations' own organisation 1 is replaced on PostgreSQL by this test's).
+        $this->clearTheMigrationsOrganisation();
         DB::table('organizations')->insert([
-            ['id' => 1, 'name' => 'Connected workspace', 'timezone' => 'Europe/Riga'],
-            ['id' => 2, 'name' => 'Foreign workspace', 'timezone' => 'UTC'],
+            ['id' => 1, 'name' => 'Connected workspace', 'slug' => 'connected-workspace', 'timezone' => 'Europe/Riga'],
+            ['id' => 2, 'name' => 'Foreign workspace', 'slug' => 'foreign-workspace', 'timezone' => 'UTC'],
         ]);
         DB::table('users')->insert(['id' => 1, 'organization_id' => 1,
-            'email' => 'staff@example.test', 'name' => 'Reception', 'user_type' => 'staff']);
+            'email' => 'staff@example.test', 'name' => 'Reception', 'password' => 'unused', 'user_type' => 'staff']);
         DB::table('staff')->insert(['user_id' => 1, 'organization_id' => 1]);
         DB::table('brands')->insert([
-            ['id' => 1, 'organization_id' => 1, 'name' => 'First brand'],
-            ['id' => 2, 'organization_id' => 1, 'name' => 'Second brand'],
-            ['id' => 3, 'organization_id' => 2, 'name' => 'FOREIGN_BRAND'],
-            ['id' => 4, 'organization_id' => 1, 'name' => 'Unassigned brand'],
+            ['id' => 1, 'organization_id' => 1, 'name' => 'First brand', 'slug' => 'first-brand', 'widget_token' => 'wt-lead-tools-1'],
+            ['id' => 2, 'organization_id' => 1, 'name' => 'Second brand', 'slug' => 'second-brand', 'widget_token' => 'wt-lead-tools-2'],
+            ['id' => 3, 'organization_id' => 2, 'name' => 'FOREIGN_BRAND', 'slug' => 'foreign-brand', 'widget_token' => 'wt-lead-tools-3'],
+            ['id' => 4, 'organization_id' => 1, 'name' => 'Unassigned brand', 'slug' => 'unassigned-brand', 'widget_token' => 'wt-lead-tools-4'],
+        ]);
+        DB::table('pipelines')->insert([
+            ['id' => 1, 'organization_id' => 1, 'name' => 'Sales', 'slug' => 'sales'],
+            ['id' => 2, 'organization_id' => 2, 'name' => 'Foreign sales', 'slug' => 'foreign-sales'],
         ]);
         DB::table('pipeline_stages')->insert([
-            ['id' => 1, 'organization_id' => 1, 'name' => 'Call scheduled', 'kind' => 'open'],
-            ['id' => 2, 'organization_id' => 2, 'name' => 'FOREIGN_STAGE', 'kind' => 'won'],
+            ['id' => 1, 'organization_id' => 1, 'pipeline_id' => 1, 'name' => 'Call scheduled', 'slug' => 'call-scheduled', 'kind' => 'open'],
+            ['id' => 2, 'organization_id' => 2, 'pipeline_id' => 2, 'name' => 'FOREIGN_STAGE', 'slug' => 'foreign-stage', 'kind' => 'won'],
         ]);
         DB::table('guests')->insert([
             ['id' => 1, 'organization_id' => 1, 'full_name' => 'Sample Customer', 'company' => '100% Cards',

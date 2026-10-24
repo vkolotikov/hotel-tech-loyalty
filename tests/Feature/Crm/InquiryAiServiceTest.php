@@ -117,6 +117,7 @@ class InquiryAiServiceTest extends TestCase
     private function inquiry(array $attrs = []): Inquiry
     {
         return Inquiry::create(array_merge([
+            'guest_id' => $this->guestRequired(),
             'organization_id' => $this->orgId,
             'status'          => 'open',
         ], $attrs));

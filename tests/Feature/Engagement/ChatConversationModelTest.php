@@ -7,6 +7,7 @@ use Database\Factories\OrganizationFactory;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\Schema;
 use Tests\Concerns\SetsUpMinimalSchema;
+use Tests\Concerns\WritesRowsForeignKeysNeed;
 use Tests\TestCase;
 
 /**
@@ -37,6 +38,7 @@ class ChatConversationModelTest extends TestCase
 {
     use DatabaseTransactions;
     use SetsUpMinimalSchema;
+    use WritesRowsForeignKeysNeed;
 
     private int $orgId;
 
@@ -223,6 +225,7 @@ class ChatConversationModelTest extends TestCase
         // Unassigned = no agent claimed it yet. Drives the
         // "needs an agent" filter in the inbox.
         $this->conv(['assigned_to' => null]);
+        $this->rowsExist('users', [42]);
         $this->conv(['assigned_to' => 42]); // assigned
 
         $unassigned = ChatConversation::unassigned()->get();

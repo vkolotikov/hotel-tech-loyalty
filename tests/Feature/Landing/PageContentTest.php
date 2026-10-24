@@ -296,9 +296,11 @@ class PageContentTest extends TestCase
         // that actually grew, and cannot go flaky on a loaded machine the
         // way a wall-clock budget would.
         $rows = [];
+        $formId = $this->landingReviewFormId(1);
         for ($i = 0; $i < 3000; $i++) {
             $rows[] = [
                 'organization_id' => 1,
+                'form_id'         => $formId,
                 'overall_rating'  => ($i % 5) + 1,
                 'comment'         => 'c' . $i,
                 // Not featured, so the twelve-row testimonial query returns
@@ -375,14 +377,14 @@ class PageContentTest extends TestCase
         // rows share brand_id 1 on purpose: if either query ever lost its
         // organization_id filter, the brand filter alone would still match
         // org 2's row, and an unordered first() could return it.
-        ChatWidgetConfig::create(['organization_id' => 1, 'brand_id' => 1,
+        ChatWidgetConfig::create(['widget_key' => (string) \Illuminate\Support\Str::uuid(), 'api_key' => \Illuminate\Support\Str::random(48), 'organization_id' => 1, 'brand_id' => 1,
             'business_hours' => ['mon' => [['open' => '09:00', 'close' => '17:00']]]]);
-        ChatWidgetConfig::create(['organization_id' => 2, 'brand_id' => 1,
+        ChatWidgetConfig::create(['widget_key' => (string) \Illuminate\Support\Str::uuid(), 'api_key' => \Illuminate\Support\Str::random(48), 'organization_id' => 2, 'brand_id' => 1,
             'business_hours' => ['mon' => [['open' => '00:00', 'close' => '23:59']]]]);
 
-        Property::create(['organization_id' => 1, 'brand_id' => 1, 'name' => 'Ours',
+        Property::create(['code' => 'P' . strtoupper(bin2hex(random_bytes(4))), 'organization_id' => 1, 'brand_id' => 1, 'name' => 'Ours',
             'phone' => '111', 'address' => 'Our street', 'is_active' => true]);
-        Property::create(['organization_id' => 2, 'brand_id' => 1, 'name' => 'Theirs',
+        Property::create(['code' => 'P' . strtoupper(bin2hex(random_bytes(4))), 'organization_id' => 2, 'brand_id' => 1, 'name' => 'Theirs',
             'phone' => '222', 'address' => 'Their street', 'is_active' => true]);
 
         $content = PageContent::for($this->page(1));
@@ -399,9 +401,9 @@ class PageContentTest extends TestCase
         // organization_id filter, org 2's row is the ONLY row matching the
         // brand filter, so it would leak through deterministically rather
         // than by lucky insertion order.
-        ChatWidgetConfig::create(['organization_id' => 2, 'brand_id' => 1,
+        ChatWidgetConfig::create(['widget_key' => (string) \Illuminate\Support\Str::uuid(), 'api_key' => \Illuminate\Support\Str::random(48), 'organization_id' => 2, 'brand_id' => 1,
             'business_hours' => ['mon' => [['open' => '00:00', 'close' => '23:59']]]]);
-        Property::create(['organization_id' => 2, 'brand_id' => 1, 'name' => 'Theirs',
+        Property::create(['code' => 'P' . strtoupper(bin2hex(random_bytes(4))), 'organization_id' => 2, 'brand_id' => 1, 'name' => 'Theirs',
             'phone' => '222', 'address' => 'Their street', 'is_active' => true]);
 
         $content = PageContent::for($this->page(1));
@@ -436,17 +438,17 @@ class PageContentTest extends TestCase
         // alone even if the brand filter were missing entirely. Creating
         // the sibling first means the test only passes if the brand filter
         // actually excludes it.
-        Property::create(['organization_id' => 1, 'brand_id' => 2, 'name' => 'Sibling Site',
+        Property::create(['code' => 'P' . strtoupper(bin2hex(random_bytes(4))), 'organization_id' => 1, 'brand_id' => 2, 'name' => 'Sibling Site',
             'phone' => '222', 'address' => 'B', 'is_active' => true]);
-        Property::create(['organization_id' => 1, 'brand_id' => 1, 'name' => 'Our Site',
+        Property::create(['code' => 'P' . strtoupper(bin2hex(random_bytes(4))), 'organization_id' => 1, 'brand_id' => 1, 'name' => 'Our Site',
             'phone' => '111', 'address' => 'A', 'is_active' => true]);
 
         // Same reasoning for hours: nothing previously proved this query
         // was brand-filtered at all - deleting the filter left the suite
         // green. Sibling created first, same as Property above.
-        ChatWidgetConfig::create(['organization_id' => 1, 'brand_id' => 2,
+        ChatWidgetConfig::create(['widget_key' => (string) \Illuminate\Support\Str::uuid(), 'api_key' => \Illuminate\Support\Str::random(48), 'organization_id' => 1, 'brand_id' => 2,
             'business_hours' => ['mon' => [['open' => '00:00', 'close' => '23:59']]]]);
-        ChatWidgetConfig::create(['organization_id' => 1, 'brand_id' => 1,
+        ChatWidgetConfig::create(['widget_key' => (string) \Illuminate\Support\Str::uuid(), 'api_key' => \Illuminate\Support\Str::random(48), 'organization_id' => 1, 'brand_id' => 1,
             'business_hours' => ['mon' => [['open' => '09:00', 'close' => '17:00']]]]);
 
         $content = PageContent::for($this->page(orgId: 1, brandId: 1));
@@ -461,11 +463,11 @@ class PageContentTest extends TestCase
     {
         // A bare first() with no order is genuinely nondeterministic on
         // Postgres, and a deactivated location is publishable.
-        Property::create(['organization_id' => 1, 'brand_id' => 1, 'name' => 'Closed',
+        Property::create(['code' => 'P' . strtoupper(bin2hex(random_bytes(4))), 'organization_id' => 1, 'brand_id' => 1, 'name' => 'Closed',
             'phone' => '000', 'is_active' => false]);
-        $open = Property::create(['organization_id' => 1, 'brand_id' => 1, 'name' => 'Open',
+        $open = Property::create(['code' => 'P' . strtoupper(bin2hex(random_bytes(4))), 'organization_id' => 1, 'brand_id' => 1, 'name' => 'Open',
             'phone' => '999', 'is_active' => true]);
-        Property::create(['organization_id' => 1, 'brand_id' => 1, 'name' => 'AlsoOpen',
+        Property::create(['code' => 'P' . strtoupper(bin2hex(random_bytes(4))), 'organization_id' => 1, 'brand_id' => 1, 'name' => 'AlsoOpen',
             'phone' => '888', 'is_active' => true]);
 
         $content = PageContent::for($this->page(1));
@@ -479,9 +481,9 @@ class PageContentTest extends TestCase
         // would hand this brand-1 page an unrelated, unassigned property
         // instead of its own. The brand's own row must win regardless of
         // which was created first.
-        Property::create(['organization_id' => 1, 'brand_id' => null, 'name' => 'Unassigned Site',
+        Property::create(['code' => 'P' . strtoupper(bin2hex(random_bytes(4))), 'organization_id' => 1, 'brand_id' => null, 'name' => 'Unassigned Site',
             'phone' => '555', 'address' => 'Nowhere', 'is_active' => true]);
-        Property::create(['organization_id' => 1, 'brand_id' => 1, 'name' => 'Brand 1 Site',
+        Property::create(['code' => 'P' . strtoupper(bin2hex(random_bytes(4))), 'organization_id' => 1, 'brand_id' => 1, 'name' => 'Brand 1 Site',
             'phone' => '111', 'address' => 'Somewhere', 'is_active' => true]);
 
         $content = PageContent::for($this->page(orgId: 1, brandId: 1));
@@ -494,9 +496,9 @@ class PageContentTest extends TestCase
         // Same shape as the contact test above, and for the same reason:
         // hours() had no ordering at all, so an unassigned config could win
         // over the brand's own nondeterministically.
-        ChatWidgetConfig::create(['organization_id' => 1, 'brand_id' => null,
+        ChatWidgetConfig::create(['widget_key' => (string) \Illuminate\Support\Str::uuid(), 'api_key' => \Illuminate\Support\Str::random(48), 'organization_id' => 1, 'brand_id' => null,
             'business_hours' => ['mon' => [['open' => '00:00', 'close' => '23:59']]]]);
-        ChatWidgetConfig::create(['organization_id' => 1, 'brand_id' => 1,
+        ChatWidgetConfig::create(['widget_key' => (string) \Illuminate\Support\Str::uuid(), 'api_key' => \Illuminate\Support\Str::random(48), 'organization_id' => 1, 'brand_id' => 1,
             'business_hours' => ['mon' => [['open' => '09:00', 'close' => '17:00']]]]);
 
         $hours = PageContent::for($this->page(orgId: 1, brandId: 1))->hours;
@@ -517,9 +519,9 @@ class PageContentTest extends TestCase
         // Brand 7's row is created FIRST on purpose: plain id ordering
         // would hand it the page, so this only passes if the preference
         // itself ranks the org-level row above it.
-        Property::create(['organization_id' => 1, 'brand_id' => 7, 'name' => 'Some Brand Site',
+        Property::create(['code' => 'P' . strtoupper(bin2hex(random_bytes(4))), 'organization_id' => 1, 'brand_id' => 7, 'name' => 'Some Brand Site',
             'phone' => '777', 'address' => 'Theirs', 'is_active' => true]);
-        Property::create(['organization_id' => 1, 'brand_id' => null, 'name' => 'Org Site',
+        Property::create(['code' => 'P' . strtoupper(bin2hex(random_bytes(4))), 'organization_id' => 1, 'brand_id' => null, 'name' => 'Org Site',
             'phone' => '555', 'address' => 'Ours', 'is_active' => true]);
 
         $content = PageContent::for($this->page(orgId: 1, brandId: null));
@@ -533,9 +535,9 @@ class PageContentTest extends TestCase
         // Same shape as the property test above: brand 7's config created
         // first, so id ordering alone would publish brand 7's all-hours
         // week on a page that belongs to no brand.
-        ChatWidgetConfig::create(['organization_id' => 1, 'brand_id' => 7,
+        ChatWidgetConfig::create(['widget_key' => (string) \Illuminate\Support\Str::uuid(), 'api_key' => \Illuminate\Support\Str::random(48), 'organization_id' => 1, 'brand_id' => 7,
             'business_hours' => ['mon' => [['open' => '00:00', 'close' => '23:59']]]]);
-        ChatWidgetConfig::create(['organization_id' => 1, 'brand_id' => null,
+        ChatWidgetConfig::create(['widget_key' => (string) \Illuminate\Support\Str::uuid(), 'api_key' => \Illuminate\Support\Str::random(48), 'organization_id' => 1, 'brand_id' => null,
             'business_hours' => ['mon' => [['open' => '09:00', 'close' => '17:00']]]]);
 
         $hours = PageContent::for($this->page(orgId: 1, brandId: null))->hours;
@@ -551,7 +553,7 @@ class PageContentTest extends TestCase
 
     public function test_hours_is_null_when_business_hours_is_empty(): void
     {
-        ChatWidgetConfig::create(['organization_id' => 1, 'brand_id' => 1, 'business_hours' => []]);
+        ChatWidgetConfig::create(['widget_key' => (string) \Illuminate\Support\Str::uuid(), 'api_key' => \Illuminate\Support\Str::random(48), 'organization_id' => 1, 'brand_id' => 1, 'business_hours' => []]);
 
         $this->assertNull(PageContent::for($this->page(1))->hours);
     }
@@ -566,7 +568,7 @@ class PageContentTest extends TestCase
         // treated an absent day as "unknown, not open"; the re-review found
         // that would silently drop a venue's explicitly-closed days (e.g.
         // Sunday) from the page instead of showing "Closed".
-        ChatWidgetConfig::create(['organization_id' => 1, 'brand_id' => 1, 'business_hours' => [
+        ChatWidgetConfig::create(['widget_key' => (string) \Illuminate\Support\Str::uuid(), 'api_key' => \Illuminate\Support\Str::random(48), 'organization_id' => 1, 'brand_id' => 1, 'business_hours' => [
             'mon' => [['open' => '09:00', 'close' => '17:00']],
             'tue' => [],
         ]]);
@@ -589,7 +591,7 @@ class PageContentTest extends TestCase
         // Sunday, because the editor's own UI deletes a toggled-off day's
         // key rather than writing []. Sunday must still read as closed, not
         // vanish as "unknown".
-        ChatWidgetConfig::create(['organization_id' => 1, 'brand_id' => 1, 'business_hours' => [
+        ChatWidgetConfig::create(['widget_key' => (string) \Illuminate\Support\Str::uuid(), 'api_key' => \Illuminate\Support\Str::random(48), 'organization_id' => 1, 'brand_id' => 1, 'business_hours' => [
             'mon' => [['open' => '09:00', 'close' => '17:00']],
             'tue' => [['open' => '09:00', 'close' => '17:00']],
             'wed' => [['open' => '09:00', 'close' => '17:00']],
@@ -611,7 +613,7 @@ class PageContentTest extends TestCase
         // that field rather than removing the day. The editor's own UI and
         // the widget both treat that as closed; this must match or a
         // landing page would show the day as open with blank times.
-        ChatWidgetConfig::create(['organization_id' => 1, 'brand_id' => 1, 'business_hours' => [
+        ChatWidgetConfig::create(['widget_key' => (string) \Illuminate\Support\Str::uuid(), 'api_key' => \Illuminate\Support\Str::random(48), 'organization_id' => 1, 'brand_id' => 1, 'business_hours' => [
             'mon' => [['open' => '', 'close' => '']],
         ]]);
 
@@ -631,9 +633,9 @@ class PageContentTest extends TestCase
             'is_active' => true, 'price' => 10]);
         ServiceMaster::create(['organization_id' => 1, 'brand_id' => null, 'name' => 'Unassigned Stylist',
             'is_active' => true]);
-        Property::create(['organization_id' => 1, 'brand_id' => null, 'name' => 'Unassigned Site',
+        Property::create(['code' => 'P' . strtoupper(bin2hex(random_bytes(4))), 'organization_id' => 1, 'brand_id' => null, 'name' => 'Unassigned Site',
             'phone' => '555', 'address' => 'Nowhere', 'is_active' => true]);
-        ChatWidgetConfig::create(['organization_id' => 1, 'brand_id' => null,
+        ChatWidgetConfig::create(['widget_key' => (string) \Illuminate\Support\Str::uuid(), 'api_key' => \Illuminate\Support\Str::random(48), 'organization_id' => 1, 'brand_id' => null,
             'business_hours' => ['mon' => [['open' => '09:00', 'close' => '17:00']]]]);
 
         $content = PageContent::for($this->page(orgId: 1, brandId: 1));
@@ -657,7 +659,7 @@ class PageContentTest extends TestCase
      */
     public function test_a_content_contact_override_wins_for_its_own_field_only(): void
     {
-        Property::create(['organization_id' => 1, 'brand_id' => 1, 'name' => 'Ours',
+        Property::create(['code' => 'P' . strtoupper(bin2hex(random_bytes(4))), 'organization_id' => 1, 'brand_id' => 1, 'name' => 'Ours',
             'phone' => '111', 'email' => 'old@ours.test', 'address' => 'Old St',
             'city' => 'Riga', 'country' => 'LV', 'currency' => 'EUR', 'is_active' => true]);
 
@@ -683,7 +685,7 @@ class PageContentTest extends TestCase
      */
     public function test_a_blank_content_contact_override_falls_back_to_the_property(): void
     {
-        Property::create(['organization_id' => 1, 'brand_id' => 1, 'name' => 'Ours',
+        Property::create(['code' => 'P' . strtoupper(bin2hex(random_bytes(4))), 'organization_id' => 1, 'brand_id' => 1, 'name' => 'Ours',
             'phone' => '111', 'is_active' => true]);
 
         $page = $this->page(1);
@@ -717,7 +719,7 @@ class PageContentTest extends TestCase
      */
     public function test_an_email_only_property_counts_as_a_contact_section(): void
     {
-        Property::create(['organization_id' => 1, 'brand_id' => 1, 'name' => 'Ours',
+        Property::create(['code' => 'P' . strtoupper(bin2hex(random_bytes(4))), 'organization_id' => 1, 'brand_id' => 1, 'name' => 'Ours',
             'email' => 'hello@ours.test', 'is_active' => true]);
 
         $content = PageContent::for($this->page(1));
