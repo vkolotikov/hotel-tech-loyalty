@@ -53,8 +53,8 @@ class MessageSettingsTest extends TestCase
     public function test_a_stored_value_outside_the_choices_reads_as_the_default(): void
     {
         DB::table('hotel_settings')->insert([
-            ['organization_id' => $this->org->id, 'key' => MessageSettings::REMINDER_HOURS, 'value' => '7', 'created_at' => now(), 'updated_at' => now()],
-            ['organization_id' => $this->org->id, 'key' => MessageSettings::LANGUAGE, 'value' => 'xx', 'created_at' => now(), 'updated_at' => now()],
+            ['organization_id' => $this->org->id, 'key' => MessageSettings::REMINDER_HOURS, 'value' => '7', 'type' => 'integer', 'group' => 'booking', 'created_at' => now(), 'updated_at' => now()],
+            ['organization_id' => $this->org->id, 'key' => MessageSettings::LANGUAGE, 'value' => 'xx', 'type' => 'string', 'group' => 'booking', 'created_at' => now(), 'updated_at' => now()],
         ]);
 
         $this->assertSame(['staff_default' => false, 'reminder_hours' => 0, 'language' => 'en'], MessageSettings::read($this->org->id));

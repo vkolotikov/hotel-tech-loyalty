@@ -98,6 +98,7 @@ class FeaturedReviewWriteTest extends TestCase
     private function user(Organization $org): User
     {
         return User::create([
+            'password' => 'secret-pass-1',
             'name'            => 'Staff',
             'email'           => 'staff_' . uniqid() . '@example.test',
             'organization_id' => $org->id,

@@ -383,11 +383,44 @@ trait SetsUpMinimalSchema
                 $table->decimal('price_total', 12, 2)->default(0);
                 $table->decimal('price_paid', 12, 2)->nullable();
                 $table->string('internal_status', 32)->nullable();
+                // Production's NOT NULL columns (see serviceBookingRequired()).
+                $table->string('booking_reference', 20)->nullable();
+                $table->unsignedBigInteger('service_id')->nullable();
+                $table->string('customer_name')->nullable();
+                $table->string('customer_email')->nullable();
+                $table->timestamp('start_at')->nullable();
+                $table->timestamp('end_at')->nullable();
+                $table->integer('duration_minutes')->nullable();
                 $table->timestamps();
                 $table->index('organization_id');
             });
         }
         $this->addServiceBookingPaymentRule();
+    }
+
+    /**
+     * The columns production's `service_bookings` holds NOT NULL with no default
+     * (2026_04_18_100001), filled the way a real booking fills them, for a test
+     * that writes a row with DB::table() rather than ServiceBooking::create()
+     * (whose creating hook makes the reference). The test's own columns win;
+     * a test whose code path reads the service passes its real `service_id`
+     * (production has no foreign key on it; the payment paths never read it).
+     *
+     * @return array<string, mixed>
+     */
+    protected function serviceBookingRequired(array $row = []): array
+    {
+        $start = \Illuminate\Support\Carbon::parse($row['start_at'] ?? now()->addDay()->setTime(10, 0));
+
+        return $row + [
+            'booking_reference' => 'SVC-' . strtoupper(\Illuminate\Support\Str::random(8)),
+            'service_id'        => $row['service_id'] ?? 1,
+            'customer_name'     => 'Test Client',
+            'customer_email'    => 'client@example.test',
+            'start_at'          => $start->toDateTimeString(),
+            'end_at'            => $start->copy()->addMinutes((int) ($row['duration_minutes'] ?? 60))->toDateTimeString(),
+            'duration_minutes'  => 60,
+        ];
     }
 
     /**
@@ -1275,6 +1308,15 @@ trait SetsUpMinimalSchema
                 $table->index('tier_id');
                 $table->index('user_id');
             });
+        }
+
+        // Production's NOT NULL, unique identity columns of a member (enrolment
+        // fills them). Fixture members carry them so the suites also run on
+        // PostgreSQL built from the migrations; nullable here like the rest.
+        foreach (['qr_code_token' => 64, 'referral_code' => 20] as $col => $length) {
+            if (!Schema::hasColumn('loyalty_members', $col)) {
+                Schema::table('loyalty_members', fn ($table) => $table->string($col, $length)->nullable());
+            }
         }
 
         // reverseTransaction now realigns expiry buckets, so every caller

@@ -98,6 +98,7 @@ class EmberTableRenderTest extends TestCase
     private function seedLikeTheKit(string $industry = 'restaurant'): LandingPage
     {
         Property::create([
+            'code' => 'P' . strtoupper(bin2hex(random_bytes(4))),
             'organization_id' => 1, 'brand_id' => 1, 'name' => 'Ember Table',
             'phone' => '+371 20 000 346', 'email' => 'table@ember.example',
             'address' => '14 Miera iela', 'city' => 'Riga', 'country' => 'Latvia',
@@ -851,7 +852,7 @@ class EmberTableRenderTest extends TestCase
 
     public function test_a_restaurant_below_the_aggregate_floor_shows_no_score_anywhere(): void
     {
-        Property::create(['organization_id' => 1, 'brand_id' => 1, 'name' => 'Ember Table', 'is_active' => true]);
+        Property::create(['code' => 'P' . strtoupper(bin2hex(random_bytes(4))), 'organization_id' => 1, 'brand_id' => 1, 'name' => 'Ember Table', 'is_active' => true]);
 
         foreach (range(1, 3) as $i) {
             ReviewSubmission::create([
@@ -1146,6 +1147,7 @@ class EmberTableRenderTest extends TestCase
     public function test_a_one_word_business_gets_a_single_letter_mark(): void
     {
         Property::create([
+            'code' => 'P' . strtoupper(bin2hex(random_bytes(4))),
             'organization_id' => 1, 'brand_id' => 1, 'name' => 'Ember', 'is_active' => true,
         ]);
 
@@ -1157,6 +1159,7 @@ class EmberTableRenderTest extends TestCase
     public function test_the_wordmark_sets_a_conjunction_in_the_shared_primitives_em(): void
     {
         Property::create([
+            'code' => 'P' . strtoupper(bin2hex(random_bytes(4))),
             'organization_id' => 1, 'brand_id' => 1, 'name' => 'Ember & Vine', 'is_active' => true,
         ]);
 
@@ -1169,6 +1172,7 @@ class EmberTableRenderTest extends TestCase
     public function test_a_hostile_business_name_never_reaches_the_lockup_unescaped(): void
     {
         Property::create([
+            'code' => 'P' . strtoupper(bin2hex(random_bytes(4))),
             'organization_id' => 1, 'brand_id' => 1, 'name' => '<script>x</script> & Table', 'is_active' => true,
         ]);
 

@@ -128,6 +128,7 @@ class LandingPageTeardownTest extends TestCase
     private function user(Organization $org, string $type = 'staff'): User
     {
         return User::create([
+            'password' => 'secret-pass-1',
             'name'            => 'Staff',
             'email'           => 'staff_' . uniqid() . '@example.test',
             'organization_id' => $org->id,
@@ -171,6 +172,7 @@ class LandingPageTeardownTest extends TestCase
         }
 
         Property::create([
+            'code' => 'P' . strtoupper(bin2hex(random_bytes(4))),
             'organization_id' => $org->id,
             'brand_id'        => $brandId,
             'name'            => 'Glamour Salon',

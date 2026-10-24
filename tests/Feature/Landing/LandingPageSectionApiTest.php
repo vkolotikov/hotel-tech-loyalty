@@ -91,6 +91,7 @@ class LandingPageSectionApiTest extends TestCase
     private function makeUser(Organization $org): User
     {
         return User::create([
+            'password' => 'secret-pass-1',
             'name'            => 'Staff',
             'email'           => 'staff_' . uniqid() . '@example.test',
             'organization_id' => $org->id,

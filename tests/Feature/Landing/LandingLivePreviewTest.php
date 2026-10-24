@@ -125,6 +125,7 @@ class LandingLivePreviewTest extends TestCase
     private function makeUser(Organization $org): User
     {
         return User::create([
+            'password' => 'secret-pass-1',
             'name'            => 'Staff',
             'email'           => 'staff_' . uniqid() . '@example.test',
             'organization_id' => $org->id,
@@ -424,6 +425,7 @@ class LandingLivePreviewTest extends TestCase
     public function test_a_draft_can_carry_an_industry_and_the_pane_speaks_its_words(): void
     {
         Property::create([
+            'code' => 'P' . strtoupper(bin2hex(random_bytes(4))),
             'organization_id' => $this->org->id, 'brand_id' => $this->page->brand_id, 'name' => 'Glamour',
             'phone' => '+371 20 000 000', 'email' => 'hello@glamour.example', 'address' => '1 High Street',
             'city' => 'Riga', 'country' => 'Latvia', 'currency' => 'EUR', 'timezone' => 'Europe/Riga', 'is_active' => true,

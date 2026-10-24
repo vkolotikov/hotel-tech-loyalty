@@ -119,7 +119,12 @@ class EmailCampaignEndpointsTest extends TestCase
         // Every active member of the segment is handed over; the job checks consent before each chunk.
         Queue::assertPushed(SendEmailCampaignChunk::class, 1);
         $job = Queue::pushed(SendEmailCampaignChunk::class)->first();
-        $this->assertSame([(int) $campaign->id, [$this->ada->id, $this->grace->id], 0], [$job->campaignId, $job->memberIds, $job->offset]);
+        // The segment's members in no particular order (the query has none; PostgreSQL's row order is not SQLite's).
+        $handedOver = $job->memberIds;
+        sort($handedOver);
+        $expected = [$this->ada->id, $this->grace->id];
+        sort($expected);
+        $this->assertSame([(int) $campaign->id, $expected, 0], [$job->campaignId, $handedOver, $job->offset]);
         $this->assertSame([], $this->sent());
 
         $job->handle(app(EmailComplianceService::class));

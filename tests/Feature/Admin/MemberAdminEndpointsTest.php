@@ -119,6 +119,8 @@ class MemberAdminEndpointsTest extends TestCase
             ->assertJsonPath('error', 'Your plan allows up to 2 loyalty members. Upgrade your plan to add more, or remove an existing one first.');
 
         $this->org->forceFill(['plan_features' => []])->save();
+        // A programme without tiers has no members either (a member's tier is a NOT NULL foreign key in production).
+        LoyaltyMember::query()->delete();
         LoyaltyTier::query()->delete();
         $this->asManager()->postJson($this->admin('members'), ['name' => 'No Tier', 'email' => 'notier@example.test'])
             ->assertStatus(422)
@@ -145,7 +147,8 @@ class MemberAdminEndpointsTest extends TestCase
 
     public function test_resend_says_why_it_could_not(): void
     {
-        $this->grace->forceFill(['user_id' => null])->save();
+        // A member's user is NOT NULL in production; what the venue can lack is an address on that user.
+        $this->grace->user->forceFill(['email' => ''])->save();
         $this->asManager()->postJson($this->admin("members/{$this->grace->id}/resend-welcome"))
             ->assertStatus(422)->assertExactJson(['message' => 'Member has no email on file']);
 
@@ -220,7 +223,7 @@ class MemberAdminEndpointsTest extends TestCase
         $user->createToken('mobile-app');
         NfcCard::create(['member_id' => $this->grace->id, 'uid' => '04:11:22', 'is_active' => true]);
         $this->grace->update(['expo_push_token' => 'ExponentPushToken[x]', 'qr_code_token' => 'abc', 'referral_code' => 'GRACE1']);
-        DB::table('points_transactions')->insert(['organization_id' => $this->org->id, 'member_id' => $this->grace->id, 'points' => 200, 'type' => 'earn', 'created_at' => now(), 'updated_at' => now()]);
+        DB::table('points_transactions')->insert(['organization_id' => $this->org->id, 'member_id' => $this->grace->id, 'points' => 200, 'type' => 'earn', 'balance_after' => 200, 'description' => 'Earned', 'created_at' => now(), 'updated_at' => now()]);
 
         $this->asManager()->deleteJson($this->admin("members/{$this->grace->id}"))->assertOk()->assertExactJson(['success' => true, 'message' => 'Member deleted']);
 

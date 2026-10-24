@@ -1,6 +1,8 @@
 <?php
 namespace Tests\Concerns;
 
+use App\Models\LandingPage;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 /**
@@ -11,7 +13,7 @@ use Illuminate\Support\Facades\Schema;
  */
 trait SetsUpLandingSchema
 {
-    use SetsUpMinimalSchema;
+    use SetsUpMinimalSchema, ClearsTheMigrationsOrganisation;
 
     protected function setUpLandingSchema(): void
     {
@@ -68,6 +70,52 @@ trait SetsUpLandingSchema
                 $table->timestamps();
             });
         }
+
+        $this->givePagesTheirTenant();
+    }
+
+    /**
+     * A page's organisation and brand exist in production: landing_pages has
+     * foreign keys to both, and so do the brands, properties and review rows a
+     * page reads. Most landing tests name `organization_id => 1`, `brand_id =>
+     * 1` (or another fixed brand) and never needed the rows on sqlite, which
+     * enforces neither key. On PostgreSQL built from every migration,
+     * organisation 1 is the migrations' own single-tenant install (see
+     * ClearsTheMigrationsOrganisation), whose widget token and settings a page
+     * would read; it is replaced by a bare organisation 1 and 2 — a name and a
+     * slug, no widget token (the booking frame still needs
+     * seedWidgetOrganization()), no settings. And before any page is created a
+     * bare brand row is written for a fixed brand id that has none — a name, a
+     * slug and a token, no logo, so the page keeps its monogram — under the
+     * page's organisation. Nothing in either row is something a page reads.
+     */
+    private function givePagesTheirTenant(): void
+    {
+        if (DB::getDriverName() !== 'pgsql') {
+            return;
+        }
+
+        $this->clearTheMigrationsOrganisation();
+        foreach ([1, 2] as $orgId) {
+            if (!DB::table('organizations')->where('id', $orgId)->exists()) {
+                DB::table('organizations')->insert([
+                    'id' => $orgId, 'name' => 'Test Organization', 'slug' => 'test-organization-' . $orgId,
+                    'created_at' => now(), 'updated_at' => now(),
+                ]);
+            }
+        }
+
+        LandingPage::creating(function (LandingPage $page): void {
+            $brandId = $page->brand_id;
+            if ($brandId === null || DB::table('brands')->where('id', $brandId)->exists()) {
+                return;
+            }
+            DB::table('brands')->insert([
+                'id' => $brandId, 'organization_id' => $page->organization_id, 'name' => 'Brand ' . $brandId,
+                'slug' => 'brand-' . $brandId, 'widget_token' => 'wt-brand-' . $brandId . '-' . bin2hex(random_bytes(6)),
+                'is_default' => false, 'created_at' => now(), 'updated_at' => now(),
+            ]);
+        });
     }
 
     /**
@@ -124,6 +172,10 @@ trait SetsUpLandingSchema
     protected function seedWidgetOrganization(int $id = 1, string $token = 'wt-landing-test-token'): void
     {
         if (\Illuminate\Support\Facades\DB::table('organizations')->where('id', $id)->exists()) {
+            // The bare tenant givePagesTheirTenant() writes on PostgreSQL has no token yet: it gets this one.
+            \Illuminate\Support\Facades\DB::table('organizations')->where('id', $id)
+                ->where(fn ($q) => $q->whereNull('widget_token')->orWhere('widget_token', ''))
+                ->update(['widget_token' => $token]);
             return;
         }
 
@@ -301,6 +353,8 @@ trait SetsUpLandingSchema
                 $table->unsignedBigInteger('organization_id');
                 $table->unsignedBigInteger('brand_id')->nullable();
                 $table->string('name');
+                // NOT NULL and unique per organisation in production.
+                $table->string('code', 20)->nullable();
                 $table->string('email')->nullable();
                 $table->string('phone')->nullable();
                 $table->string('address')->nullable();

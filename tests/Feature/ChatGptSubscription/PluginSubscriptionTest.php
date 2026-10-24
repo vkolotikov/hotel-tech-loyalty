@@ -16,10 +16,14 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Sleep;
 use Symfony\Component\HttpFoundation\Response;
+use Illuminate\Foundation\Testing\DatabaseTransactions;
+use Tests\Concerns\ClearsTheMigrationsOrganisation;
 use Tests\TestCase;
 
 class PluginSubscriptionTest extends TestCase
 {
+    use DatabaseTransactions, ClearsTheMigrationsOrganisation;
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -30,9 +34,10 @@ class PluginSubscriptionTest extends TestCase
             'chatgpt.billing_user_ids' => [],
             'chatgpt.subscription_max_age_seconds' => 300,
         ]);
-        Schema::create('organizations', function (Blueprint $table): void {
+        if (!Schema::hasTable('organizations')) Schema::create('organizations', function (Blueprint $table): void {
             $table->id();
             $table->string('name');
+            $table->string('slug')->nullable();
             $table->boolean('is_active')->default(true);
             $table->string('saas_org_id')->nullable();
             $table->timestamp('saas_deleted_at')->nullable();
@@ -45,22 +50,24 @@ class PluginSubscriptionTest extends TestCase
             $table->json('entitled_products')->nullable();
             $table->timestamps();
         });
-        Schema::create('users', function (Blueprint $table): void {
+        if (!Schema::hasTable('users')) Schema::create('users', function (Blueprint $table): void {
             $table->id();
             $table->string('name');
             $table->string('email');
+            $table->string('password')->nullable();
             $table->string('user_type');
             $table->unsignedBigInteger('organization_id');
             $table->timestamps();
         });
-        Schema::create('staff', function (Blueprint $table): void {
+        if (!Schema::hasTable('staff')) Schema::create('staff', function (Blueprint $table): void {
             $table->id();
             $table->unsignedBigInteger('user_id');
             $table->unsignedBigInteger('organization_id');
             $table->boolean('is_active')->default(true);
         });
+        $this->clearTheMigrationsOrganisation();
         DB::table('organizations')->insert([
-            'id' => 1, 'name' => 'Business', 'saas_org_id' => 'org-a',
+            'id' => 1, 'name' => 'Business', 'slug' => 'business', 'saas_org_id' => 'org-a',
             'subscription_status' => 'ACTIVE', 'plan_features' => '{"crm":"true"}',
             'plan_slug' => 'growth', 'entitled_products' => '["crm"]',
             'entitlements_synced_at' => now()->subDay(),
@@ -472,7 +479,7 @@ class PluginSubscriptionTest extends TestCase
     private function staffUser(int $id, int $orgId, string $email, array $staffOverride = []): void
     {
         DB::table('users')->insert(['id' => $id, 'name' => 'Test Staff', 'email' => $email,
-            'user_type' => 'staff', 'organization_id' => $orgId]);
+            'password' => 'unused', 'user_type' => 'staff', 'organization_id' => $orgId]);
         DB::table('staff')->insert(array_merge(['user_id' => $id, 'organization_id' => $orgId, 'is_active' => true], $staffOverride));
     }
 

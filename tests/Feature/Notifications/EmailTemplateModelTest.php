@@ -119,6 +119,7 @@ class EmailTemplateModelTest extends TestCase
         ]);
 
         $user = User::create([
+            'password' => 'secret-pass-1',
             'organization_id' => $this->orgId,
             'name'            => 'Alice Smith',
             'email'           => 'alice@example.com',

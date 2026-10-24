@@ -109,6 +109,7 @@ class LandingOnboardingTest extends TestCase
     private function makeUser(Organization $org): User
     {
         return User::create([
+            'password' => 'secret-pass-1',
             'name'            => 'Staff',
             'email'           => 'staff_' . uniqid() . '@example.test',
             'organization_id' => $org->id,
@@ -173,6 +174,7 @@ class LandingOnboardingTest extends TestCase
     private function makeProperty(array $attributes = []): Property
     {
         return Property::create(array_merge([
+            'code' => 'P' . strtoupper(bin2hex(random_bytes(4))),
             'name'      => 'Glamour Salon',
             'phone'     => '+371 20000000',
             'email'     => 'hello@glamour.test',

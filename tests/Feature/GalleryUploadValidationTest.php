@@ -63,6 +63,7 @@ class GalleryUploadValidationTest extends TestCase
             'industry' => 'beauty',
         ]);
         $this->user = User::create([
+            'password' => 'secret-pass-1',
             'name'            => 'Staff',
             'email'           => 'staff_' . uniqid() . '@example.test',
             'organization_id' => $this->org->id,

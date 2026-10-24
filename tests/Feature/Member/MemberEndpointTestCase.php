@@ -96,12 +96,22 @@ abstract class MemberEndpointTestCase extends TestCase
             'subscription_status' => 'ACTIVE',
         ]);
 
+        // The tier is this organisation's even when another one is bound (a second tenant() call after a request):
+        // BelongsToOrganization stamps the bound organisation on create, and production's (organization_id, name)
+        // unique index refuses a second Bronze there.
+        $prior = app()->bound('current_organization_id') ? app('current_organization_id') : null;
+        app()->forgetInstance('current_organization_id');
+
         LoyaltyTier::create([
             'organization_id' => $org->id,
             'name'            => 'Bronze',
             'min_points'      => 0,
             'is_active'       => true,
         ]);
+
+        if ($prior !== null) {
+            app()->instance('current_organization_id', $prior);
+        }
 
         return $org;
     }

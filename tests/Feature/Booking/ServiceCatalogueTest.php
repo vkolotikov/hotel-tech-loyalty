@@ -20,7 +20,7 @@ class ServiceCatalogueTest extends TestCase
         $orgId = \App\Models\Organization::create(['name' => 'Numa', 'slug' => 'numa'])->id;
         app()->instance('current_organization_id', $orgId);
         ['service' => $service, 'master' => $master] = $this->seedBookableService($orgId);
-        HotelSetting::withoutGlobalScopes()->create(['organization_id' => $orgId, 'key' => 'services_max_advance_days', 'value' => '30']);
+        HotelSetting::withoutGlobalScopes()->create(['organization_id' => $orgId, 'key' => 'services_max_advance_days', 'value' => '30', 'type' => 'integer', 'group' => 'booking']);
         HotelSetting::flushCacheFor($orgId);
 
         $c = app(ServiceCatalogue::class)->build($orgId);

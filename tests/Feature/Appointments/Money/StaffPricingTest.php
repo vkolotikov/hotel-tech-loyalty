@@ -57,7 +57,10 @@ class StaffPricingTest extends TestCase
 
     public function test_a_non_member_is_quoted_the_list_price_and_may_not_use_a_coupon(): void
     {
-        $this->client = $this->seedClient(['email' => 'nm@example.test', 'email_key' => 'nm@example.test']);
+        // A client without an email: a loyalty venue enrols every client WITH one as a member on creation
+        // (Guest::created, auto-Bronze), which the sqlite schema used to let fail quietly.
+        $this->client = $this->seedClient();
+        $this->assertNull($this->client->fresh()->member_id);
         $this->quote()->assertOk()->assertJsonPath('member', false)->assertJsonPath('total_amount', 60);
         $this->quote(['coupon' => ['member_offer_id' => 1]])->assertStatus(422)->assertJsonPath('error', 'coupon_not_found');
     }

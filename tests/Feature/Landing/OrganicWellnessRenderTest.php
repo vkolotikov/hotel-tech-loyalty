@@ -96,6 +96,7 @@ class OrganicWellnessRenderTest extends TestCase
     private function seedLikeTheKit(string $industry = 'beauty', ?string $firstServiceImage = '/storage/facial-clay.webp'): LandingPage
     {
         Property::create([
+            'code' => 'P' . strtoupper(bin2hex(random_bytes(4))),
             'organization_id' => 1, 'brand_id' => 1, 'name' => 'Morrow & Moss',
             'phone' => '+371 20 000 000', 'email' => 'hello@morrowandmoss.example',
             'address' => '18 Linden Lane', 'city' => 'Riga', 'country' => 'Latvia',
@@ -488,6 +489,7 @@ class OrganicWellnessRenderTest extends TestCase
     public function test_a_business_with_no_conjunction_gets_the_lockup_it_always_had(): void
     {
         Property::create([
+            'code' => 'P' . strtoupper(bin2hex(random_bytes(4))),
             'organization_id' => 1, 'brand_id' => 1, 'name' => 'Morrow Studio', 'is_active' => true,
         ]);
 
@@ -502,6 +504,7 @@ class OrganicWellnessRenderTest extends TestCase
     public function test_an_ampersand_inside_a_word_is_not_emphasised(): void
     {
         Property::create([
+            'code' => 'P' . strtoupper(bin2hex(random_bytes(4))),
             'organization_id' => 1, 'brand_id' => 1, 'name' => 'R&D Skin Lab', 'is_active' => true,
         ]);
 
@@ -514,6 +517,7 @@ class OrganicWellnessRenderTest extends TestCase
     public function test_a_hostile_business_name_never_reaches_the_lockup_unescaped(): void
     {
         Property::create([
+            'code' => 'P' . strtoupper(bin2hex(random_bytes(4))),
             'organization_id' => 1, 'brand_id' => 1, 'name' => '<script>x</script> & Moss', 'is_active' => true,
         ]);
 
@@ -648,7 +652,7 @@ class OrganicWellnessRenderTest extends TestCase
 
     public function test_an_unrated_review_draws_no_stars(): void
     {
-        Property::create(['organization_id' => 1, 'brand_id' => 1, 'name' => 'Morrow & Moss', 'is_active' => true]);
+        Property::create(['code' => 'P' . strtoupper(bin2hex(random_bytes(4))), 'organization_id' => 1, 'brand_id' => 1, 'name' => 'Morrow & Moss', 'is_active' => true]);
         ReviewSubmission::create([
             'organization_id' => 1, 'anonymous_name' => 'Quiet guest', 'overall_rating' => null,
             'comment' => 'A calm hour.', 'is_featured' => true, 'submitted_at' => now(),

@@ -144,6 +144,7 @@ class AuditLogTest extends TestCase
         $user = User::create([
             'email' => 'admin@example.com',
             'name'  => 'Admin',
+            'password' => 'secret-pass-1', // NOT NULL in production
         ]);
 
         AuditLog::record('guest.merged', null, [], [], $user);

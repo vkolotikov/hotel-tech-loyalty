@@ -72,7 +72,7 @@ class PointsPreviewTest extends TestCase
     public function test_points_for_bookings_switched_off_is_its_own_reason(): void
     {
         $f = $this->seedPointsFixture();
-        HotelSetting::withoutGlobalScopes()->create(['organization_id' => $f['orgId'], 'key' => 'points_on_bookings', 'value' => 'false']);
+        HotelSetting::withoutGlobalScopes()->create(['organization_id' => $f['orgId'], 'key' => 'points_on_bookings', 'value' => 'false', 'type' => 'boolean', 'group' => 'loyalty']);
         HotelSetting::flushCacheFor($f['orgId']);
         $booking = $this->pointsBooking($f['orgId'], $f['member'], ['status' => 'confirmed']);
         $service = app(BookingPointsService::class);

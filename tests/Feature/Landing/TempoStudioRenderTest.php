@@ -95,6 +95,7 @@ class TempoStudioRenderTest extends TestCase
     private function seedLikeTheKit(string $industry = 'fitness'): LandingPage
     {
         Property::create([
+            'code' => 'P' . strtoupper(bin2hex(random_bytes(4))),
             'organization_id' => 1, 'brand_id' => 1, 'name' => 'Tempo',
             'phone' => '+371 20 000 933', 'email' => 'move@tempo.example',
             'address' => '21 Dzirnavu iela', 'city' => 'Riga', 'country' => 'Latvia',
@@ -565,7 +566,7 @@ class TempoStudioRenderTest extends TestCase
 
     public function test_a_session_with_neither_duration_nor_price_draws_no_ledger(): void
     {
-        Property::create(['organization_id' => 1, 'brand_id' => 1, 'name' => 'Tempo', 'is_active' => true]);
+        Property::create(['code' => 'P' . strtoupper(bin2hex(random_bytes(4))), 'organization_id' => 1, 'brand_id' => 1, 'name' => 'Tempo', 'is_active' => true]);
         Service::create(['organization_id' => 1, 'brand_id' => 1, 'name' => 'Open gym', 'sort_order' => 0, 'is_active' => true]);
 
         $this->published(['hero' => ['headline' => 'Tempo']]);
@@ -661,7 +662,7 @@ class TempoStudioRenderTest extends TestCase
 
     public function test_below_the_aggregate_floor_the_eyebrow_is_the_kicker_alone(): void
     {
-        Property::create(['organization_id' => 1, 'brand_id' => 1, 'name' => 'Tempo', 'is_active' => true]);
+        Property::create(['code' => 'P' . strtoupper(bin2hex(random_bytes(4))), 'organization_id' => 1, 'brand_id' => 1, 'name' => 'Tempo', 'is_active' => true]);
         ReviewSubmission::create(['organization_id' => 1, 'anonymous_name' => null, 'overall_rating' => null, 'comment' => 'A good hour.', 'is_featured' => true, 'submitted_at' => now()]);
 
         $this->published(['hero' => ['headline' => 'Tempo'], 'reviews' => ['kicker' => 'Member signal']]);
@@ -739,7 +740,7 @@ class TempoStudioRenderTest extends TestCase
 
     public function test_a_hostile_business_name_never_reaches_the_lockup_unescaped(): void
     {
-        Property::create(['organization_id' => 1, 'brand_id' => 1, 'name' => '<script>x</script> & Co', 'is_active' => true]);
+        Property::create(['code' => 'P' . strtoupper(bin2hex(random_bytes(4))), 'organization_id' => 1, 'brand_id' => 1, 'name' => '<script>x</script> & Co', 'is_active' => true]);
 
         $this->published(['hero' => ['headline' => 'Tempo']]);
         $body = $this->body();

@@ -124,7 +124,7 @@ class RemindersTest extends TestCase
     {
         $due = $this->at('2026-10-06 06:00:00');
         DB::table('hotel_settings')->insert([
-            'organization_id' => 999999, 'key' => 'client_messages_reminder_hours', 'value' => '24', 'created_at' => now(), 'updated_at' => now(),
+            'organization_id' => 999999, 'key' => 'client_messages_reminder_hours', 'value' => '24', 'type' => 'integer', 'group' => 'booking', 'created_at' => now(), 'updated_at' => now(),
         ]);
 
         $this->runReminders();

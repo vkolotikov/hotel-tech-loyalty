@@ -5,7 +5,10 @@ namespace Tests\Feature\Booking;
 use App\Models\BookingMirror;
 use App\Models\BookingPriceElement;
 use App\Models\Guest;
+use App\Models\LoyaltyMember;
+use App\Models\LoyaltyTier;
 use App\Models\Organization;
+use App\Models\User;
 use App\Services\BookingEngineService;
 use App\Services\SmoobuClient;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
@@ -66,17 +69,29 @@ class BookingEngineSyncPinTest extends TestCase
         ], $over);
     }
 
+    /** A member of the venue: guests.member_id is a foreign key in production, so the member's guest names a real one. */
+    private function member(): LoyaltyMember
+    {
+        $this->setUpLoyaltySchema();
+        $tier = LoyaltyTier::create(['organization_id' => $this->org->id, 'name' => 'Gold', 'min_points' => 0, 'is_active' => true]);
+        $user = User::create(['name' => 'Ada L', 'email' => 'member-' . uniqid() . '@example.test', 'password' => bcrypt('secret-pass-1'), 'user_type' => 'member', 'organization_id' => $this->org->id]);
+
+        return LoyaltyMember::create(['organization_id' => $this->org->id, 'user_id' => $user->id, 'tier_id' => $tier->id, 'member_number' => 'HL-' . uniqid(),
+            'qr_code_token' => bin2hex(random_bytes(16)), 'referral_code' => strtoupper(bin2hex(random_bytes(4)))]);
+    }
+
     public function test_the_sync_keeps_the_portal_fields(): void
     {
-        $guest = Guest::withoutGlobalScopes()->create(['organization_id' => $this->org->id, 'first_name' => 'Ada', 'last_name' => 'L', 'full_name' => 'Ada L', 'email' => 'members-own@example.test', 'member_id' => 41]);
-        $mirror = $this->mirror(['guest_id' => $guest->id, 'discount_amount' => 20, 'list_total' => 200, 'discount_label' => 'Gold']);
+        $member = $this->member();
+        $guest = Guest::withoutGlobalScopes()->create(['organization_id' => $this->org->id, 'first_name' => 'Ada', 'last_name' => 'L', 'full_name' => 'Ada L', 'email' => 'members-own@example.test', 'member_id' => $member->id]);
+        $mirror = $this->mirror(['guest_id' => $guest->id, 'discount_amount' => 20, 'list_total' => 200, 'discount_label' => 'Gold', 'member_id' => $member->id]);
 
         $this->engine->upsertBookingFromData($this->smoobu());
 
         $fresh = $mirror->fresh();
         $this->assertSame('Member portal', $fresh->channel_name);
         $this->assertSame($guest->id, (int) $fresh->guest_id, 'the email lookup found no guest; the member\'s link must survive');
-        $this->assertSame(41, (int) $fresh->member_id);
+        $this->assertSame($member->id, (int) $fresh->member_id);
         $this->assertEquals(20.0, (float) $fresh->discount_amount);
         $this->assertSame('open', $fresh->payment_status);
     }

@@ -97,6 +97,7 @@ class LumaGardenRenderTest extends TestCase
     private function seedLikeTheKit(string $industry = 'restaurant'): LandingPage
     {
         Property::create([
+            'code' => 'P' . strtoupper(bin2hex(random_bytes(4))),
             'organization_id' => 1, 'brand_id' => 1, 'name' => 'Luma Garden',
             'phone' => '+371 20 000 212', 'email' => 'table@lumagarden.example',
             'address' => '12 Garden Lane', 'city' => 'Riga', 'country' => 'Latvia',
@@ -811,7 +812,7 @@ class LumaGardenRenderTest extends TestCase
 
     public function test_a_restaurant_below_the_aggregate_floor_shows_no_score_anywhere(): void
     {
-        Property::create(['organization_id' => 1, 'brand_id' => 1, 'name' => 'Luma Garden', 'is_active' => true]);
+        Property::create(['code' => 'P' . strtoupper(bin2hex(random_bytes(4))), 'organization_id' => 1, 'brand_id' => 1, 'name' => 'Luma Garden', 'is_active' => true]);
 
         foreach (range(1, 3) as $i) {
             ReviewSubmission::create([
@@ -1097,6 +1098,7 @@ class LumaGardenRenderTest extends TestCase
     public function test_a_one_word_business_name_gets_no_emphasis(): void
     {
         Property::create([
+            'code' => 'P' . strtoupper(bin2hex(random_bytes(4))),
             'organization_id' => 1, 'brand_id' => 1, 'name' => 'Luma', 'is_active' => true,
         ]);
 
@@ -1111,6 +1113,7 @@ class LumaGardenRenderTest extends TestCase
     public function test_a_conjunction_beats_the_tail(): void
     {
         Property::create([
+            'code' => 'P' . strtoupper(bin2hex(random_bytes(4))),
             'organization_id' => 1, 'brand_id' => 1, 'name' => 'Hart & Bloom', 'is_active' => true,
         ]);
 
@@ -1124,6 +1127,7 @@ class LumaGardenRenderTest extends TestCase
     public function test_a_hostile_business_name_never_reaches_the_lockup_unescaped(): void
     {
         Property::create([
+            'code' => 'P' . strtoupper(bin2hex(random_bytes(4))),
             'organization_id' => 1, 'brand_id' => 1, 'name' => 'Luma <script>x</script>', 'is_active' => true,
         ]);
 

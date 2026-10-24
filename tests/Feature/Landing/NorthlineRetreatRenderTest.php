@@ -123,6 +123,7 @@ class NorthlineRetreatRenderTest extends TestCase
     private function seedLikeTheKit(string $industry = 'hotel'): LandingPage
     {
         Property::create([
+            'code' => 'P' . strtoupper(bin2hex(random_bytes(4))),
             'organization_id' => 1, 'brand_id' => 1, 'name' => 'Northline',
             'phone' => '+371 20 000 228', 'email' => 'stay@northline.example',
             'address' => 'Gauja region', 'country' => 'Latvia',
@@ -516,6 +517,7 @@ class NorthlineRetreatRenderTest extends TestCase
     public function test_the_initials_skip_a_conjunction_and_stop_at_two(): void
     {
         Property::create([
+            'code' => 'P' . strtoupper(bin2hex(random_bytes(4))),
             'organization_id' => 1, 'brand_id' => 1, 'name' => 'Aera & Co Hotels', 'is_active' => true,
         ]);
 
@@ -651,7 +653,7 @@ class NorthlineRetreatRenderTest extends TestCase
 
     public function test_a_host_with_no_bio_is_introduced_by_their_title(): void
     {
-        Property::create(['organization_id' => 1, 'brand_id' => 1, 'name' => 'Northline', 'is_active' => true]);
+        Property::create(['code' => 'P' . strtoupper(bin2hex(random_bytes(4))), 'organization_id' => 1, 'brand_id' => 1, 'name' => 'Northline', 'is_active' => true]);
         ServiceMaster::create([
             'organization_id' => 1, 'brand_id' => 1, 'name' => 'Eva Ozola',
             'title' => 'Owner and host', 'sort_order' => 0, 'is_active' => true,
@@ -695,7 +697,7 @@ class NorthlineRetreatRenderTest extends TestCase
 
     public function test_an_anonymous_note_is_a_verified_guest_with_its_own_star_count(): void
     {
-        Property::create(['organization_id' => 1, 'brand_id' => 1, 'name' => 'Northline', 'city' => 'Riga', 'is_active' => true]);
+        Property::create(['code' => 'P' . strtoupper(bin2hex(random_bytes(4))), 'organization_id' => 1, 'brand_id' => 1, 'name' => 'Northline', 'city' => 'Riga', 'is_active' => true]);
         ReviewSubmission::create([
             'organization_id' => 1, 'anonymous_name' => null, 'overall_rating' => 4,
             'comment' => 'A calm three nights.', 'is_featured' => true, 'submitted_at' => now(),
@@ -825,6 +827,7 @@ class NorthlineRetreatRenderTest extends TestCase
     public function test_a_business_with_a_conjunction_gets_the_authors_em_in_both_lockups(): void
     {
         Property::create([
+            'code' => 'P' . strtoupper(bin2hex(random_bytes(4))),
             'organization_id' => 1, 'brand_id' => 1, 'name' => 'Northline & Co', 'is_active' => true,
         ]);
 
@@ -844,6 +847,7 @@ class NorthlineRetreatRenderTest extends TestCase
     public function test_a_hostile_business_name_never_reaches_the_lockup_unescaped(): void
     {
         Property::create([
+            'code' => 'P' . strtoupper(bin2hex(random_bytes(4))),
             'organization_id' => 1, 'brand_id' => 1, 'name' => '<script>x</script> & Co', 'is_active' => true,
         ]);
 

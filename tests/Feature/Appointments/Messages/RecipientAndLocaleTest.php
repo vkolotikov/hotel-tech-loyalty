@@ -51,7 +51,8 @@ class RecipientAndLocaleTest extends TestCase
 
         $this->assertSame('fr', MessageLocale::for($booking, 'es'));
 
-        User::whereKey($this->member->user_id)->update(['language' => null]);
+        // users.language is NOT NULL in production (default 'en'): a language the messages do not speak stands for none.
+        User::whereKey($this->member->user_id)->update(['language' => 'lv']);
         $this->assertSame('de', MessageLocale::for($booking->fresh(), 'es'));
 
         $client->update(['preferred_language' => 'Latvian']);

@@ -102,6 +102,7 @@ class EditorialAtelierRenderTest extends TestCase
     private function seedLikeTheKit(string $industry = 'beauty'): LandingPage
     {
         Property::create([
+            'code' => 'P' . strtoupper(bin2hex(random_bytes(4))),
             'organization_id' => 1, 'brand_id' => 1, 'name' => 'Élan Atelier',
             'phone' => '+44 20 7946 0284', 'email' => 'hello@elanatelier.example',
             'address' => '48 Harper Street', 'city' => 'Soho', 'country' => 'United Kingdom',

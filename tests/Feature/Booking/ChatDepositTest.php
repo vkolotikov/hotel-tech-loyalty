@@ -42,7 +42,7 @@ class ChatDepositTest extends TestCase
             });
         }
         $this->key = (string) Str::uuid();
-        DB::table('chat_widget_configs')->insert(['organization_id' => $this->org->id, 'widget_key' => $this->key, 'company_name' => 'Lumière Salon', 'is_active' => true, 'created_at' => now(), 'updated_at' => now()]);
+        DB::table('chat_widget_configs')->insert(['organization_id' => $this->org->id, 'widget_key' => $this->key, 'api_key' => Str::random(48), 'company_name' => 'Lumière Salon', 'is_active' => true, 'created_at' => now(), 'updated_at' => now()]);
         $this->org->forceFill(['widget_token' => 'wt-lumiere'])->save();
     }
 

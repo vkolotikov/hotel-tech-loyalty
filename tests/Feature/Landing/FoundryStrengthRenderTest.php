@@ -95,6 +95,7 @@ class FoundryStrengthRenderTest extends TestCase
     private function seedLikeTheKit(string $industry = 'fitness'): LandingPage
     {
         Property::create([
+            'code' => 'P' . strtoupper(bin2hex(random_bytes(4))),
             'organization_id' => 1, 'brand_id' => 1, 'name' => 'Foundry',
             'phone' => '+371 20 000 822', 'email' => 'train@foundry.example',
             'address' => '8 Sporta iela', 'city' => 'Riga', 'country' => 'Latvia',
@@ -599,7 +600,7 @@ class FoundryStrengthRenderTest extends TestCase
 
     public function test_an_unrated_note_draws_no_stars(): void
     {
-        Property::create(['organization_id' => 1, 'brand_id' => 1, 'name' => 'Foundry', 'is_active' => true]);
+        Property::create(['code' => 'P' . strtoupper(bin2hex(random_bytes(4))), 'organization_id' => 1, 'brand_id' => 1, 'name' => 'Foundry', 'is_active' => true]);
         ReviewSubmission::create([
             'organization_id' => 1, 'anonymous_name' => null, 'overall_rating' => null,
             'comment' => 'A calm hour.', 'is_featured' => true, 'submitted_at' => now(),
@@ -720,6 +721,7 @@ class FoundryStrengthRenderTest extends TestCase
     public function test_a_hostile_business_name_never_reaches_the_lockup_unescaped(): void
     {
         Property::create([
+            'code' => 'P' . strtoupper(bin2hex(random_bytes(4))),
             'organization_id' => 1, 'brand_id' => 1, 'name' => '<script>x</script> & Co', 'is_active' => true,
         ]);
 

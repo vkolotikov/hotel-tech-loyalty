@@ -98,6 +98,7 @@ class NocturneRitualRenderTest extends TestCase
     private function seedLikeTheKit(string $industry = 'beauty'): LandingPage
     {
         Property::create([
+            'code' => 'P' . strtoupper(bin2hex(random_bytes(4))),
             'organization_id' => 1, 'brand_id' => 1, 'name' => 'Nocturne Bathhouse',
             'phone' => '+44 (0) 1225 555 014', 'email' => 'hello@nocturnebathhouse.example',
             'address' => '18 Wren Street', 'city' => 'Bath', 'country' => 'United Kingdom',
@@ -392,6 +393,7 @@ class NocturneRitualRenderTest extends TestCase
     public function test_a_bare_page_renders_the_designs_photographs_and_no_empty_bands(): void
     {
         Property::create([
+            'code' => 'P' . strtoupper(bin2hex(random_bytes(4))),
             'organization_id' => 1, 'brand_id' => 1, 'name' => 'Nocturne', 'is_active' => true,
         ]);
 
@@ -701,6 +703,7 @@ class NocturneRitualRenderTest extends TestCase
         $this->seedWidgetOrganization();
 
         Property::create([
+            'code' => 'P' . strtoupper(bin2hex(random_bytes(4))),
             'organization_id' => 1, 'brand_id' => 1, 'name' => 'Nocturne', 'is_active' => true,
         ]);
         Service::create([
@@ -1195,6 +1198,7 @@ class NocturneRitualRenderTest extends TestCase
     public function test_the_page_publishes_a_share_image_and_names_it_in_its_structured_data(): void
     {
         Property::create([
+            'code' => 'P' . strtoupper(bin2hex(random_bytes(4))),
             'organization_id' => 1, 'brand_id' => 1, 'name' => 'Nocturne', 'is_active' => true,
         ]);
 
@@ -1219,6 +1223,7 @@ class NocturneRitualRenderTest extends TestCase
     public function test_a_page_with_no_upload_shares_as_the_designs_own_photograph(): void
     {
         Property::create([
+            'code' => 'P' . strtoupper(bin2hex(random_bytes(4))),
             'organization_id' => 1, 'brand_id' => 1, 'name' => 'Nocturne', 'is_active' => true,
         ]);
 
@@ -1240,6 +1245,7 @@ class NocturneRitualRenderTest extends TestCase
     public function test_the_brands_own_logo_replaces_the_monogram(): void
     {
         Property::create([
+            'code' => 'P' . strtoupper(bin2hex(random_bytes(4))),
             'organization_id' => 1, 'brand_id' => 1, 'name' => 'Nocturne', 'is_active' => true,
         ]);
         $this->makeBrand('/storage/brands/mark.svg');
@@ -1256,6 +1262,7 @@ class NocturneRitualRenderTest extends TestCase
     public function test_a_hostile_brand_logo_never_reaches_the_page(): void
     {
         Property::create([
+            'code' => 'P' . strtoupper(bin2hex(random_bytes(4))),
             'organization_id' => 1, 'brand_id' => 1, 'name' => 'Nocturne', 'is_active' => true,
         ]);
         $this->makeBrand('javascript:alert(1)');

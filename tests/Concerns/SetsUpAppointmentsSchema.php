@@ -118,6 +118,8 @@ trait SetsUpAppointmentsSchema
 
         $fixture = $this->seedPointsFixture('Lumière Salon');
         $this->org = Organization::findOrFail($fixture['orgId']);
+        // The venue prices in euros, as its service does (production's column is NOT NULL and defaults to USD).
+        $this->org->forceFill(['currency' => 'EUR'])->save();
         $this->member = $fixture['member'];
         $this->tier = $fixture['tier'];
         // Every organisation has the workspace unless it was switched off.

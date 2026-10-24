@@ -103,12 +103,18 @@ trait SeedsPointsFixture
             'member_number'   => 'HL-' . $user->id,
             'current_points'  => 0,
             'lifetime_points' => 0,
+            // NOT NULL and unique in production (enrolment fills them).
+            'qr_code_token'   => bin2hex(random_bytes(16)),
+            'referral_code'   => strtoupper(bin2hex(random_bytes(4))),
         ]);
 
         HotelSetting::withoutGlobalScopes()->create([
             'organization_id' => $orgId,
             'key'             => 'points_per_currency',
             'value'           => (string) $pointsPerCurrency,
+            // NOT NULL in production; OrganizationSetupService writes the setting as this type and group.
+            'type'            => 'number',
+            'group'           => 'loyalty',
         ]);
         HotelSetting::flushCacheFor($orgId);
 

@@ -66,6 +66,8 @@ class BookingPointsServiceTest extends TestCase
             'organization_id' => $this->orgId,
             'key'             => 'points_on_bookings',
             'value'           => 'false',
+            'type'            => 'boolean',
+            'group'           => 'loyalty',
         ]);
         HotelSetting::flushCacheFor($this->orgId);
 
@@ -119,6 +121,8 @@ class BookingPointsServiceTest extends TestCase
             'organization_id' => $otherOrgId,
             'key'             => 'points_per_currency',
             'value'           => '1000',
+            'type'            => 'number',
+            'group'           => 'loyalty',
             'created_at'      => now(),
             'updated_at'      => now(),
         ]);

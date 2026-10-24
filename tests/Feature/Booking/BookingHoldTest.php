@@ -6,6 +6,7 @@ use App\Models\BookingHold;
 use Database\Factories\OrganizationFactory;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
+use Tests\Concerns\ComparesJsonColumns;
 use Tests\Concerns\SetsUpMinimalSchema;
 use Tests\TestCase;
 
@@ -56,6 +57,7 @@ class BookingHoldTest extends TestCase
 {
     use DatabaseTransactions;
     use SetsUpMinimalSchema;
+    use ComparesJsonColumns;
 
     private int $orgId;
 
@@ -203,7 +205,7 @@ class BookingHoldTest extends TestCase
         ]);
 
         $hold = BookingHold::where('hold_token', 'token_payload_roundtrip')->first();
-        $this->assertSame($payload, $hold->payload_json,
+        $this->assertSameJson($payload, $hold->payload_json,
             'payload_json MUST round-trip exactly (rooms + guest + extras + totals all intact).');
     }
 

@@ -287,6 +287,7 @@ class LandingPageEntitlementTest extends TestCase
         $org = $this->orgWith(['reviews' => true, 'campaigns' => true], 'growth');
 
         Sanctum::actingAs(User::create([
+            'password' => 'secret-pass-1',
             'name'            => 'Staff',
             'email'           => 'staff_' . uniqid() . '@example.test',
             'organization_id' => $org->id,
@@ -344,6 +345,7 @@ class LandingPageEntitlementTest extends TestCase
     private function runTheGate(Organization $org): Response
     {
         $user = User::create([
+            'password' => 'secret-pass-1',
             'name'            => 'Staff',
             'email'           => 'staff_' . uniqid() . '@example.test',
             'organization_id' => $org->id,

@@ -194,6 +194,7 @@ class OrganizationIndustryResyncTest extends TestCase
             $page->sections()->create(['key' => $key, 'enabled' => true, 'sort' => $i]);
         }
         Property::create([
+            'code' => 'P' . strtoupper(bin2hex(random_bytes(4))),
             'organization_id' => $org->id, 'brand_id' => $brand->id, 'name' => 'Hexa Academy',
             'phone' => '+371 20000000', 'address' => '1 Main St', 'city' => 'Riga',
             'country' => 'Latvia', 'is_active' => true,
@@ -258,6 +259,7 @@ class OrganizationIndustryResyncTest extends TestCase
             $page->sections()->create(['key' => $key, 'enabled' => true, 'sort' => $i]);
         }
         Property::create([
+            'code' => 'P' . strtoupper(bin2hex(random_bytes(4))),
             'organization_id' => $org->id, 'brand_id' => $brand->id, 'name' => 'Hexa Academy',
             'phone' => '+371 20000000', 'address' => '1 Main St', 'city' => 'Riga',
             'country' => 'Latvia', 'is_active' => true,

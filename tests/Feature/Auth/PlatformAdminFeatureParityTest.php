@@ -95,6 +95,7 @@ class PlatformAdminFeatureParityTest extends TestCase
             'name'      => 'Platform Admin',
             'email'     => 'admin@hotel-tech.ai',
             'user_type' => 'staff',
+            'password'  => 'secret-pass-1', // NOT NULL in production
         ]);
 
         $body = $this->callSubscription($user);
@@ -122,6 +123,7 @@ class PlatformAdminFeatureParityTest extends TestCase
             'name'      => 'Local Dev User',
             'email'     => 'dev@example.test',
             'user_type' => 'staff',
+            'password'  => 'secret-pass-1', // NOT NULL in production
         ]);
 
         $body = $this->callSubscription($user);

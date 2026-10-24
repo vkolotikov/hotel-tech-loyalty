@@ -145,6 +145,7 @@ class AppointmentPresenterTest extends TestCase
         PointsTransaction::create([
             'organization_id' => $this->org->id, 'member_id' => $this->member->id, 'points' => 900, 'type' => 'earn',
             'reference_type' => 'service_booking', 'reference_id' => $booking->id, 'description' => 'Appointment',
+            'balance_after' => 900,
         ]);
 
         $this->assertSame(900, $this->presenter()->detail($booking)['loyalty']['awarded']);

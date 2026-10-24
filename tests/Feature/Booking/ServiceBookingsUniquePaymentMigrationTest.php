@@ -3,9 +3,11 @@
 namespace Tests\Feature\Booking;
 
 use Illuminate\Database\UniqueConstraintViolationException;
+use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
+use Tests\Concerns\StartsFromABlankDatabase;
 use Tests\TestCase;
 
 /**
@@ -16,7 +18,15 @@ use Tests\TestCase;
  */
 class ServiceBookingsUniquePaymentMigrationTest extends TestCase
 {
+    use DatabaseTransactions, StartsFromABlankDatabase;
+
     private const INDEX = 'service_bookings_org_pi_unique';
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->startFromABlankDatabase();
+    }
 
     private function migration(): object
     {
@@ -55,7 +65,7 @@ class ServiceBookingsUniquePaymentMigrationTest extends TestCase
 
         $this->row(1, 'pi_one');
         try {
-            $this->row(1, 'pi_one');
+            DB::transaction(fn () => $this->row(1, 'pi_one')); // a savepoint: PostgreSQL aborts the transaction a failed statement runs in
             $this->fail('A second booking on the same payment in the same organisation must be refused.');
         } catch (UniqueConstraintViolationException) {
             // the database's own answer
