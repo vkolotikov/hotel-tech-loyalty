@@ -140,6 +140,9 @@ describe('the verdict band (release 8 §2)', () => {
     expect(say(offline.reason)).toBe('No connection. Try again.')
     expect(failureVerdict({ status: 500, code: 'unknown', extra: {} }).tone).toBe('trouble')
     expect(failureVerdict({ status: 403, code: 'no_capability', extra: {} }).reason?.key).toBe('loyalty.scan.error.unknown')
+    // The same scan sent again while the first is still being handled: grey, with its own sentence, never "No access".
+    const busy = failureVerdict({ status: 409, code: 'in_progress', extra: {} })
+    expect([busy.tone, say(busy.headline), say(busy.reason)]).toEqual(['trouble', 'Try again', 'This scan is still being handled. Try again in a moment.'])
     // The place or the event itself is gone: not the card's fault — choose again.
     const gone = failureVerdict({ status: 404, code: 'not_found', extra: { gone: 'place' } })
     expect(gone.tone).toBe('trouble')

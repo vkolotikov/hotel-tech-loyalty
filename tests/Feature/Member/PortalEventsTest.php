@@ -128,15 +128,21 @@ class PortalEventsTest extends TestCase
         $this->asGrace()->getJson(self::URL)->assertOk()->assertJsonPath('attended', [['id' => $event->id, 'title' => 'Yoga', 'starts_at' => '2026-10-03T08:00', 'points' => 50]]);
     }
 
-    public function test_the_menu_offers_events_while_one_is_coming_and_a_venue_without_a_programme_shows_none(): void
+    public function test_the_menu_offers_events_while_one_for_the_members_tier_is_coming_and_a_venue_without_a_programme_shows_none(): void
     {
         $events = app(PortalEvents::class);
-        $this->assertFalse($events->offered($this->org->id));
+        $this->assertFalse($events->offered($this->grace));
         $this->makeEvent(['status' => 'draft']);
         $this->makeEvent(['starts_at' => '2026-10-01 18:00:00', 'ends_at' => '2026-10-01 21:00:00']);
-        $this->assertFalse($events->offered($this->org->id));
-        $this->makeEvent(['starts_at' => '2026-10-05 08:00:00', 'ends_at' => '2026-10-05 10:00:00']);
-        $this->assertTrue($events->offered($this->org->id));
+        $this->assertFalse($events->offered($this->grace));
+
+        // An event for Gold only: Ada (Gold) is offered the page, Grace is not — it would be empty for her.
+        $this->makeEvent(['starts_at' => '2026-10-05 08:00:00', 'ends_at' => '2026-10-05 10:00:00'], [$this->tiers['gold']->id]);
+        $this->assertTrue($events->offered($this->ada));
+        $this->assertFalse($events->offered($this->grace));
+
+        $this->makeEvent(['starts_at' => '2026-10-06 08:00:00', 'ends_at' => '2026-10-06 10:00:00']);
+        $this->assertTrue($events->offered($this->grace));
 
         LoyaltyTier::query()->update(['is_active' => false]);
         $this->asGrace()->getJson(self::URL)->assertOk()->assertExactJson(['upcoming' => [], 'attended' => []]);

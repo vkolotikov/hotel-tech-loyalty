@@ -36,7 +36,8 @@ cancel either kind themselves inside the venue's cancellation window (`## Cancel
 - Release 8 (`docs/loyalty-workspace.md` "Release 8"): the bootstrap's `member.membership` (`valid_until`, `state`:
   active | expiring | expired | off) — the membership card says "Member until …" or "Your membership ended on … — ask
   the team to renew" (the member can still sign in and see everything); progress reads in the programme's measure
-  ("3 more visits to Gold"). `capabilities.events` while the venue has a published event that has not ended: an
+  ("3 more visits to Gold"). `capabilities.events` while a published event the member's tier may attend has not
+  ended (`PortalEvents::offered()`, the page's own filter, so the menu never leads to an empty page): an
   **Events** page (`/portal/events`, `pages/events/`, `GET member/portal/events`, `POST`/`DELETE
   member/portal/events/{id}/sign-up`) with the upcoming events the member's tier may attend — Sign up, Cancel, Full, or
   why not — and those attended; Home shows the next event signed up for. The menu shows Events while the phone bar

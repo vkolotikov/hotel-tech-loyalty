@@ -11,7 +11,8 @@ use App\Models\PointsTransaction;
 /**
  * What the member portal shows of events (release 8, spec 2026-10-25 §4). Reads only; signing up is EventSignUp's.
  *
- * - offered(): the venue has a published event that has not ended — the portal bootstrap's `capabilities.events`.
+ * - offered(): the venue has a published event that has not ended and admits the member's tier — the portal bootstrap's
+ *   `capabilities.events`, so the menu never leads to an empty page.
  * - forMember(): the published events that have not ended and admit the member's tier (every member, or one of its
  *   tiers), soonest first, each with what the member can do — `my` (`signed_up` | `none`), `can_sign_up`, `why_not`
  *   (EventSignUp::refusal()'s code while the event takes sign-ups, else null), `can_cancel` (until the start) — and the
@@ -26,25 +27,21 @@ class PortalEvents
     /** How many upcoming events the page lists. */
     public const UPCOMING = 50;
 
-    /** Whether the venue has a published event that has not ended (the portal's menu offers Events then). */
-    public function offered(int $orgId): bool
+    /** Whether the venue has a published event that has not ended and admits the member's tier (the portal's menu offers Events then). */
+    public function offered(LoyaltyMember $member): bool
     {
         if (!\Illuminate\Support\Facades\Schema::hasTable('loyalty_events')) {
             return false;
         }
 
-        return LoyaltyEvent::withoutGlobalScopes()->where('organization_id', $orgId)->where('status', LoyaltyEvent::PUBLISHED)
-            ->where('ends_at', '>', EventClock::now($orgId))->exists();
+        return $this->upcoming($member)->exists();
     }
 
     /** @return array{upcoming: list<array<string, mixed>>, attended: list<array<string, mixed>>} */
     public function forMember(LoyaltyMember $member): array
     {
         $orgId = (int) $member->organization_id;
-        $events = LoyaltyEvent::withoutGlobalScopes()->where('organization_id', $orgId)->where('status', LoyaltyEvent::PUBLISHED)
-            ->where('ends_at', '>', EventClock::now($orgId))
-            ->where(fn ($q) => $q->where('admits', 'all')->orWhereIn('id', fn ($s) => $s->select('loyalty_event_id')->from('loyalty_event_tiers')->where('tier_id', (int) ($member->tier_id ?? 0))))
-            ->orderBy('starts_at')->orderBy('id')->limit(self::UPCOMING)
+        $events = $this->upcoming($member)->orderBy('starts_at')->orderBy('id')->limit(self::UPCOMING)
             ->with(['place' => fn ($q) => $q->withoutGlobalScopes()])->get();
 
         $counts = EventRows::counts($orgId, $events->pluck('id')->map(fn ($id) => (int) $id)->all());
@@ -57,6 +54,16 @@ class PortalEvents
             'upcoming' => $events->map(fn (LoyaltyEvent $e) => self::row($e, $member, $counts[(int) $e->id], $mine->get($e->id), in_array((int) $e->id, $inside, true)))->values()->all(),
             'attended' => $this->attended($member),
         ];
+    }
+
+    /** The published events that have not ended and admit the member's tier (every member, or one of its tiers). */
+    private function upcoming(LoyaltyMember $member): \Illuminate\Database\Eloquent\Builder
+    {
+        $orgId = (int) $member->organization_id;
+
+        return LoyaltyEvent::withoutGlobalScopes()->where('organization_id', $orgId)->where('status', LoyaltyEvent::PUBLISHED)
+            ->where('ends_at', '>', EventClock::now($orgId))
+            ->where(fn ($q) => $q->where('admits', 'all')->orWhereIn('id', fn ($s) => $s->select('loyalty_event_id')->from('loyalty_event_tiers')->where('tier_id', (int) ($member->tier_id ?? 0))));
     }
 
     /** One event as the member sees it (also the sign-up endpoints' answer). @return array<string, mixed> */

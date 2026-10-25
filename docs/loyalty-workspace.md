@@ -396,7 +396,8 @@ visits or spend, and a scan screen that is easy on location).
   `scan_events` row (`scan_type access`, `access_place_id`, `result` granted/denied, `action_taken` the reason; never
   the raw code) and answers the verdict, the member and the tier's benefits; a code that names nobody is logged as a
   refusal with no member. A replay with the same key answers the first result (`ScanReplay`, 10 minutes; a kept success is never replaced by a
-  refusal; a keyed scan at an event waits for a copy before it, or answers `409 in_progress`)
+  refusal; a keyed scan at an event waits for a copy before it, or answers `409 in_progress`, which the scan screen
+  shows as a grey "Try again" with "This scan is still being handled")
   (`PlacesTest`, `ScanAccessTest`). `CardLookup` names a switched-off member for a scan with a place or an event
   (`CardRead::namedMember()`); the desk scan and the full admin's scan behave as before.
 - **A membership's end date** (`Members\MembershipValidity`, the only writer; stored as a plain `Y-m-d`): managers set
@@ -532,8 +533,7 @@ reports (Twilio's status callbacks); no receipts for the full admin's own push c
   until their next build, which can read `GET /v1/member/stamps` and `GET /v1/member/credit`; the portal and the
   workspace show both. Pushes are in English, as every other push. (Release 8 judges every member by the programme's
   `tier_progress_by`.) A referral pending from before release 7 was already paid at sign-up.
-- **Release 8.** The portal menu offers Events when any published event has not ended, even if none is for the
-  member's tier (the page then says nothing is planned). A change to a published event's tiers that would leave out
+- **Release 8.** A change to a published event's tiers that would leave out
   members who signed up is refused (`409 signed_up_outside`, naming them) until their sign-ups are cancelled; a member
   whose own tier changed after signing up keeps the sign-up and is refused at the door. A cancelled event's sign-ups
   stay as history. Two accounts of one person that both attended an event keep both points lines after a merge (the
@@ -594,7 +594,10 @@ files on disk): run them one after the other.
   from branch commit 63651b8: the next release's change list is `git diff --name-status 63651b8 <tip>`. It was checked
   by content (every source file on `main` equal to the branch, the three migrations and the reminder's schedule
   present, the `LoyaltyApp` chunk carrying the new scan screen); the live site could not be reached from the build
-  environment. Release 7 went out as `main` ffabebf from 40ffdaf (ways to earn and reward). Release 6b went out as
+  environment. Two small release 8 follow-ups are on the branch after 63651b8 and not yet live: the portal menu
+  offers Events only when an event the member's tier may attend is coming (`PortalEvents::offered()`), and the scan
+  screen words a `409 in_progress` answer. They ride the next deploy (the change list above picks them up). Release 7
+  went out as `main` ffabebf from 40ffdaf (ways to earn and reward). Release 6b went out as
   `main` 65b3415 from 8ac5a62 (campaigns and offers with no brand are every brand's), release 6 as 7835cf0 from
   1a37e68, release 5b as 5b481aa from ea8b364, release 5 as 8a04f86 from 6adf121, release 4 as 097432a from a7e87ae.
   Neither release 6 nor 6b could be checked on the live site from the build environment either (its network policy

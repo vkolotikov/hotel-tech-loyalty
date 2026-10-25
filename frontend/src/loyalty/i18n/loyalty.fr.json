@@ -235,6 +235,7 @@
     "close": "Fermer",
     "error": {
       "expired": "Ce QR code a expiré. Demandez au membre de rouvrir sa carte.",
+      "in_progress": "Ce scan est encore en cours de traitement. Réessayez dans un instant.",
       "inactive": "Le compte de ce membre est désactivé.",
       "invalid": "Scannez une carte ou saisissez un numéro de membre.",
       "network": "Pas de connexion. Réessayez.",

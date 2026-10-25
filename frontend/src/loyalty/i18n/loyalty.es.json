@@ -235,6 +235,7 @@
     "close": "Cerrar",
     "error": {
       "expired": "Este código QR ha caducado. Pida al miembro que vuelva a abrir su tarjeta.",
+      "in_progress": "Este escaneo aún se está procesando. Inténtelo de nuevo en un momento.",
       "inactive": "La cuenta de este miembro está desactivada.",
       "invalid": "Escanee una tarjeta o escriba un número de miembro.",
       "network": "Sin conexión. Inténtelo de nuevo.",

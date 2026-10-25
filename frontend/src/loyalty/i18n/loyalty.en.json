@@ -235,6 +235,7 @@
     "close": "Close",
     "error": {
       "expired": "This QR code has expired. Ask the member to open their card again.",
+      "in_progress": "This scan is still being handled. Try again in a moment.",
       "inactive": "This member’s account is switched off.",
       "invalid": "Scan a card or type a member number.",
       "network": "No connection. Try again.",
