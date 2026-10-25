@@ -756,6 +756,10 @@ class BookingRefundService
      */
     private function reverseLoyaltyPoints(BookingMirror $mirror, ?User $staff): int
     {
+        // Release 7: the stay's visit goes back with its points — its stamp (an open card only), its cashback, its tier
+        // counts — each effect in its own transaction (a savepoint here, under a lost dispute's).
+        app(\App\Services\Loyalty\Visits\VisitRecorder::class)->reversed((int) $mirror->organization_id, 'booking_mirror', (int) $mirror->id, $staff);
+
         $txs = PointsTransaction::withoutGlobalScopes()
             ->where('reference_type', 'booking_mirror')
             ->where('reference_id', $mirror->id)

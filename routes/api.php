@@ -346,6 +346,9 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
             Route::post('profile/avatar',   [MemberController::class, 'uploadAvatar']);
             Route::delete('account',        [MemberController::class, 'deleteAccount']);
             Route::get('card',              [MemberController::class, 'card']);
+            // Release 7 (spec 2026-10-25 §2–3): the stamp card and cashback credit, for the app's next build.
+            Route::get('stamps',            [\App\Http\Controllers\Api\V1\Member\StampController::class, 'show']);
+            Route::get('credit',            [\App\Http\Controllers\Api\V1\Member\CreditController::class, 'show']);
             // Mints a single-use, 2-minute URL for the Apple Wallet pass.
             // Authenticated by header, so the member's long-lived Sanctum
             // token never has to travel in a query string (and therefore into
@@ -429,6 +432,9 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
                 ->middleware('throttle:30,1,portal-stays-payment-intent');
             Route::post('stays/confirm', [\App\Http\Controllers\Api\V1\Member\Portal\PortalStayBookingController::class, 'confirm'])
                 ->middleware('throttle:30,1,portal-stays-confirm');
+            // Release 7 (spec 2026-10-25 §2–3): the member's stamp card and cashback credit (read only).
+            Route::get('stamps', [\App\Http\Controllers\Api\V1\Member\StampController::class, 'show']);
+            Route::get('credit', [\App\Http\Controllers\Api\V1\Member\CreditController::class, 'show']);
             // Release 4, part C: what a payment the member returns with from a bank redirect is for (read only).
             Route::get('payments/{paymentIntent}', [\App\Http\Controllers\Api\V1\Member\Portal\PortalPaymentReturnController::class, 'show'])
                 ->where('paymentIntent', 'pi_[A-Za-z0-9_]{1,200}')
@@ -1406,6 +1412,20 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
                 Route::post('offers', [\App\Http\Controllers\Api\V1\Admin\Loyalty\OfferController::class, 'store']);
                 Route::put('offers/{id}', [\App\Http\Controllers\Api\V1\Admin\Loyalty\OfferController::class, 'update'])->whereNumber('id');
                 Route::get('referrals', [\App\Http\Controllers\Api\V1\Admin\Loyalty\ReferralController::class, 'index']);
+
+                // ── Release 7 (spec 2026-10-25): ways to earn and reward
+                // §1 the programme's options and the setup wizard (manager changes)
+                Route::get('options', [\App\Http\Controllers\Api\V1\Admin\Loyalty\OptionsController::class, 'show']);
+                Route::put('options', [\App\Http\Controllers\Api\V1\Admin\Loyalty\OptionsController::class, 'update']);
+                Route::post('options/setup', [\App\Http\Controllers\Api\V1\Admin\Loyalty\OptionsController::class, 'setup']);
+                Route::post('options/setup/skip', [\App\Http\Controllers\Api\V1\Admin\Loyalty\OptionsController::class, 'skip']);
+                // §2 a check-in or a purchase at the desk; the member's stamp card
+                Route::post('members/{id}/check-in', [\App\Http\Controllers\Api\V1\Admin\Loyalty\VisitController::class, 'checkIn'])->whereNumber('id');
+                Route::get('members/{id}/stamps', [\App\Http\Controllers\Api\V1\Admin\Loyalty\VisitController::class, 'stamps'])->whereNumber('id');
+                // §3 cashback credit: the lines, spending at the desk, a manager's correction
+                Route::get('members/{id}/credit', [\App\Http\Controllers\Api\V1\Admin\Loyalty\CreditController::class, 'show'])->whereNumber('id');
+                Route::post('members/{id}/credit/spend', [\App\Http\Controllers\Api\V1\Admin\Loyalty\CreditController::class, 'spend'])->whereNumber('id');
+                Route::post('members/{id}/credit/adjust', [\App\Http\Controllers\Api\V1\Admin\Loyalty\CreditController::class, 'adjust'])->whereNumber('id');
 
                 // ── Release 2 (spec 2026-10-21 release 2): members, complete (§4)
                 Route::post('members', [\App\Http\Controllers\Api\V1\Admin\Loyalty\MembershipController::class, 'store']);

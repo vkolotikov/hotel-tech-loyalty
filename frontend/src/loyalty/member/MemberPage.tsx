@@ -31,6 +31,8 @@ import { DetailsCard } from './DetailsCard'
 import { lineType, memberActions, offersReverse, type PointsMode } from './memberMath'
 import { MoreMenu } from './MoreMenu'
 import { NfcCards } from './NfcCards'
+import { CreditPanel } from '../credit/CreditPanel'
+import { VisitsPanel } from '../visits/VisitsPanel'
 import { PointsDialog } from './PointsDialog'
 import { ReverseDialog } from './ReverseDialog'
 
@@ -207,6 +209,10 @@ function Member({ detail, locale }: { detail: MemberDetail; locale: string }) {
             : <ul className="divide-y divide-a-border">{detail.requests.map(r => <RequestRow key={r.id} request={r} showMember={false} compact />)}</ul>}
         </section>
       </div>
+
+      {/* Release 7: the stamp card with Check in and Add a purchase, and cashback credit — each when the venue uses it. */}
+      <VisitsPanel member={member} locale={locale} timeZone={timeZone} />
+      <CreditPanel member={member} locale={locale} timeZone={timeZone} />
 
       <DetailsCard member={member} locale={locale} timeZone={timeZone} />
 

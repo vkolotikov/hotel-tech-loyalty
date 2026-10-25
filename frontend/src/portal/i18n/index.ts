@@ -4,6 +4,16 @@ import ru from './portal.ru.json'
 import de from './portal.de.json'
 import fr from './portal.fr.json'
 import es from './portal.es.json'
+import stampsEn from './stamps.en.json'
+import stampsRu from './stamps.ru.json'
+import stampsDe from './stamps.de.json'
+import stampsFr from './stamps.fr.json'
+import stampsEs from './stamps.es.json'
+import creditEn from './credit.en.json'
+import creditRu from './credit.ru.json'
+import creditDe from './credit.de.json'
+import creditFr from './credit.fr.json'
+import creditEs from './credit.es.json'
 
 /**
  * The member portal's strings, kept out of the admin's common.json so a
@@ -12,7 +22,15 @@ import es from './portal.es.json'
  * namespace, so call sites read `t('portal.nav.home')` — dotted keys the
  * locale sweep in src/i18n/localeCompleteness.test.ts can see.
  */
-export const PORTAL_LOCALE_FILES = { en, ru, de, fr, es } as const
+// Release 7 (spec 2026-10-25): the stamp card's and cashback credit's words, in their own files, under
+// `portal.stamps` and `portal.credit`.
+export const PORTAL_LOCALE_FILES = {
+  en: { ...en, stamps: stampsEn, credit: creditEn },
+  ru: { ...ru, stamps: stampsRu, credit: creditRu },
+  de: { ...de, stamps: stampsDe, credit: creditDe },
+  fr: { ...fr, stamps: stampsFr, credit: creditFr },
+  es: { ...es, stamps: stampsEs, credit: creditEs },
+} as const
 
 let registered = false
 

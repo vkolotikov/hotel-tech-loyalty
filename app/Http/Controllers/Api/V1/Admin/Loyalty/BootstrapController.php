@@ -66,11 +66,30 @@ class BootstrapController extends Controller
                         'min_points' => (int) $t->min_points,
                         'is_active'  => (bool) $t->is_active,
                     ])->values(),
+                // Release 7: which ways to earn and reward the venue uses, for the screens that offer them.
+                'ways'  => self::ways($orgId),
             ],
             'counts'       => [
                 'members'          => LoyaltyMember::query()->where('is_active', true)->count(),
                 'requests_waiting' => BenefitEntitlement::query()->whereIn('status', RequestQueue::WAITING)->count(),
             ],
         ]);
+    }
+
+    /** @return array<string, mixed> The options the workspace's screens read (ProgrammeOptions; release 7). */
+    private static function ways(int $orgId): array
+    {
+        $o = \App\Services\Loyalty\Programme\ProgrammeOptions::for($orgId);
+
+        return [
+            'stamps'           => (bool) $o['stamps_enabled'],
+            'stamps_per_card'  => (int) $o['stamps_per_card'],
+            'checkin'          => (bool) $o['checkin_enabled'],
+            'checkin_points'   => (int) $o['checkin_points'],
+            'desk_earn'        => (bool) $o['desk_earn_enabled'],
+            'cashback'         => (bool) $o['cashback_enabled'],
+            'cashback_percent' => (float) $o['cashback_percent'],
+            'setup_done'       => $o['programme_setup_completed_at'] !== null,
+        ];
     }
 }

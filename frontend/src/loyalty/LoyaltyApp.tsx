@@ -13,6 +13,8 @@ import { MemberPage } from './member/MemberPage'
 import { DuplicatesPage } from './membership/DuplicatesPage'
 import { ImportPage } from './membership/ImportPage'
 import { MembersPage } from './members/MembersPage'
+import { OptionsPage } from './options/OptionsPage'
+import { SetupWizard } from './options/SetupWizard'
 import { ProgramPage } from './program/ProgramPage'
 import { RequestsPage } from './requests/RequestsPage'
 import { RewardsPage } from './rewards/RewardsPage'
@@ -43,6 +45,8 @@ export function LoyaltyApp() {
           <Route path="members/:id" element={<MemberPage />} />
           <Route path="requests" element={<RequestsPage />} />
           <Route path="program" element={<ProgramPage />} />
+          <Route path="options" element={<OptionsPage />} />
+          <Route path="options/setup" element={<SetupWizard />} />
           <Route path="rewards" element={<RewardsPage />} />
           <Route path="campaigns" element={<CampaignsPage />} />
           <Route path="campaigns/:id" element={<CampaignPage />} />

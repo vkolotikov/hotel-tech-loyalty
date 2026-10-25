@@ -87,6 +87,11 @@ class MemberMergeService
         'review_invitations'   => ['loyalty_member_id'],
         'review_submissions'   => ['loyalty_member_id'],
         'guests'               => ['member_id'],
+        // Release 7: the stamp card (mergeStamps() renumbers the loser's cards and drops a second stamp of one day
+        // first) and cashback credit (mergeCredit() adds the balances; the lines move).
+        'stamps'               => ['member_id'],
+        'stamp_cards'          => ['member_id'],
+        'credit_transactions'  => ['member_id'],
         // An earlier merge into the loser now reads as a merge into the winner (its foreign key would otherwise stop
         // the loser's deletion).
         'member_merges'        => ['surviving_member_id'],
@@ -134,6 +139,9 @@ class MemberMergeService
                 'email_campaign_deliveries' => $this->dedupeDeliveries($winner->id, $loser->id),
                 'push_message_deliveries'   => $this->dedupePushDeliveries($winner->id, $loser->id),
                 'sms_campaign_deliveries'   => $this->dedupeSmsDeliveries($winner->id, $loser->id),
+                // Release 7: before the generic move below.
+                'stamps'                    => $this->mergeStamps($winner, $loser),
+                'credit_transactions'       => $this->mergeCredit($winner, $loser),
             ];
 
             // 2) Every other row that names the loser now names the winner. Tables and columns are checked first:
@@ -505,5 +513,24 @@ class MemberMergeService
         usort($rows, fn ($a, $b) => [(string) $a->created_at, (int) $a->id] <=> [(string) $b->created_at, (int) $b->id]);
 
         return $rows;
+    }
+
+    /**
+     * Release 7 (spec 2026-10-25 §2): the loser's stamp cards and stamps, made to fit the winner's before the generic
+     * move (the cards' numbers and the one-stamp-a-day rule are unique per member). Answers how many were dropped.
+     * PRE-WIRED STUB: part S implements it.
+     */
+    private function mergeStamps(LoyaltyMember $winner, LoyaltyMember $loser): int
+    {
+        return 0;
+    }
+
+    /**
+     * Release 7 (spec 2026-10-25 §3): the loser's cashback credit added to the winner's balance before the generic move
+     * carries the lines over. Answers 0 (nothing is dropped). PRE-WIRED STUB: part C implements it.
+     */
+    private function mergeCredit(LoyaltyMember $winner, LoyaltyMember $loser): int
+    {
+        return 0;
     }
 }

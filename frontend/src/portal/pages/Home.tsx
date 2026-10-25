@@ -13,6 +13,8 @@ import { Money } from '../ui/Money'
 import { EmptyState } from '../ui/EmptyState'
 import { Skeleton } from '../ui/Skeleton'
 import { MemberCard } from './MemberCard'
+import { CreditBalance } from './credit/CreditBalance'
+import { StampCard } from './stamps/StampCard'
 import { statusLabel, statusTone } from './BookingRow'
 import { activityTypeLabel } from './Activity'
 
@@ -39,6 +41,9 @@ export function Home() {
   return (
     <div className="space-y-5">
       {member && <MemberCard member={member} loyalty={capabilities.loyalty} />}
+      {/* Release 7: the stamp card and cashback credit, each when the venue uses it. */}
+      {member && capabilities.loyalty && <StampCard />}
+      {member && capabilities.loyalty && <CreditBalance />}
 
       <section>
         <h2 className="text-sm font-semibold text-p-text mb-2">{t('portal.home.next_booking', 'Your next {{noun}}', { noun: vocab('booking') })}</h2>

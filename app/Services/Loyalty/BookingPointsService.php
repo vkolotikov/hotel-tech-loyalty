@@ -10,6 +10,8 @@ use App\Models\LoyaltyMember;
 use App\Models\PointsTransaction;
 use App\Models\ServiceBooking;
 use App\Models\User;
+use App\Services\Loyalty\Visits\Visit;
+use App\Services\Loyalty\Visits\VisitRecorder;
 use App\Services\LoyaltyService;
 use App\Services\Portal\PortalBootstrap;
 use Illuminate\Support\Facades\DB;
@@ -40,10 +42,13 @@ final class BookingPointsService
     {
         $orgId = (int) $booking->organization_id;
 
-        if ($booking->status !== 'completed' || $booking->points_awarded_at !== null || !$booking->member_id) {
+        if ($booking->status !== 'completed' || !$booking->member_id || $booking->payment_status === 'refunded') {
             return null;
         }
-        if ($booking->payment_status === 'refunded' || (float) $booking->total_amount <= 0) {
+        // Release 7: the visit — stamp card, cashback, referral, tier counts — counts even with points on bookings
+        // off; VisitRecorder is idempotent by the booking, so a repeated call here records nothing twice.
+        $this->recordAppointmentVisit($booking);
+        if ($booking->points_awarded_at !== null || (float) $booking->total_amount <= 0) {
             return null;
         }
         if (!$this->pointsOnBookingsEnabled($orgId) || !PortalBootstrap::loyaltyOn($orgId)) {
@@ -120,6 +125,9 @@ final class BookingPointsService
      */
     public function reverseForServiceBooking(ServiceBooking $booking, ?User $staff = null): int
     {
+        // Release 7: the visit goes back too — its stamp (an open card only), its cashback, its tier counts.
+        app(VisitRecorder::class)->reversed((int) $booking->organization_id, 'service_booking', (int) $booking->id, $staff);
+
         $total = 0;
         $txs = PointsTransaction::withoutGlobalScopes()
             ->where('reference_type', 'service_booking')->where('reference_id', $booking->id)
@@ -271,11 +279,13 @@ final class BookingPointsService
     {
         $orgId = (int) $mirror->organization_id;
 
-        if (!$this->stayIsDue($mirror)) {
+        // Release 7: a stay that is over counts as a visit even with points on bookings off (no points then).
+        $pointsDue = $this->stayIsDue($mirror);
+        if (!$pointsDue && !$this->stayVisitIsDue($mirror)) {
             return null;
         }
 
-        return $this->underBookingOrg($orgId, function () use ($mirror, $orgId) {
+        return $this->underBookingOrg($orgId, function () use ($mirror, $orgId, $pointsDue) {
             $memberId = $this->memberIdForStay($mirror);
             if ($memberId === null || !$this->recordMember($mirror, $memberId)) {
                 return null;
@@ -286,6 +296,12 @@ final class BookingPointsService
                 ->with('tier')
                 ->first();
             if (!$member) {
+                return null;
+            }
+
+            if (!$pointsDue) {
+                $this->recordStayVisit($member, $mirror);
+
                 return null;
             }
 
@@ -316,8 +332,66 @@ final class BookingPointsService
             // looked at again every night.
             DB::table('booking_mirror')->where('id', $mirror->id)->update(['points_awarded_at' => now()]);
 
+            $this->recordStayVisit($member, $mirror);
+
             return $tx;
         });
+    }
+
+    /**
+     * Release 7: a stay that is over, at a venue whose points on bookings are off, still counts as the member's visit
+     * (stayIsDue() without that one switch). Nothing stamps such a stay, so the nightly run calls this again until it
+     * leaves the look-back; VisitRecorder records a stay once.
+     */
+    public function stayVisitIsDue(BookingMirror $mirror): bool
+    {
+        $orgId = (int) $mirror->organization_id;
+        if ((!$mirror->member_id && !$mirror->guest_id) || $mirror->points_awarded_at !== null || !$mirror->departure_date) {
+            return false;
+        }
+        if (in_array((string) $mirror->internal_status, ['cancelled', 'no-show', 'no_show'], true) || (string) $mirror->booking_state === 'cancelled') {
+            return false;
+        }
+        if (!$this->stayPaymentIsCollected($mirror) || (float) $mirror->price_total <= 0) {
+            return false;
+        }
+        if ($mirror->departure_date->toDateString() >= PortalBootstrap::venueToday($orgId)->toDateString()) {
+            return false;
+        }
+
+        return PortalBootstrap::loyaltyOn($orgId) && $this->memberIdForStay($mirror) !== null;
+    }
+
+    /** Release 7: a completed appointment is the member's visit (VisitRecorder), on the appointment's own day. */
+    private function recordAppointmentVisit(ServiceBooking $booking): void
+    {
+        $orgId = (int) $booking->organization_id;
+        if (!PortalBootstrap::loyaltyOn($orgId)) {
+            return;
+        }
+        $this->underBookingOrg($orgId, function () use ($booking, $orgId) {
+            $member = LoyaltyMember::withoutGlobalScopes()->where('organization_id', $orgId)->whereKey($booking->member_id)->first();
+            if (!$member) {
+                return;
+            }
+            // The stored start is the venue's wall clock (never converted): its date is the visit's venue day.
+            $start = (string) ($booking->getRawOriginal('start_at') ?? '');
+            $day = preg_match('/^\d{4}-\d{2}-\d{2}/', $start) ? substr($start, 0, 10) : PortalBootstrap::venueToday($orgId)->toDateString();
+            app(VisitRecorder::class)->record($member, new Visit(
+                Visit::APPOINTMENT, 'service_booking', (int) $booking->id, round((float) $booking->total_amount, 2), $day,
+            ));
+        });
+    }
+
+    /** Release 7: a finished stay is the member's visit, on its departure day, with its nights (the tier counters). */
+    private function recordStayVisit(LoyaltyMember $member, BookingMirror $mirror): void
+    {
+        $nights = $mirror->arrival_date && $mirror->departure_date
+            ? max(1, (int) $mirror->arrival_date->diffInDays($mirror->departure_date))
+            : null;
+        app(VisitRecorder::class)->record($member, new Visit(
+            Visit::STAY, 'booking_mirror', (int) $mirror->id, round((float) $mirror->price_total, 2), $mirror->departure_date->toDateString(), null, $nights,
+        ));
     }
 
     /**
