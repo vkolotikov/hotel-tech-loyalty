@@ -87,6 +87,11 @@ stamp card, cashback earning and referral qualification for a visit.
   completed/paid/member checks and **before** the points-on-bookings gate (a venue with points off still stamps);
   `reverseForServiceBooking()` and `BookingRefundService`'s stay points reversal; the desk check-in (below).
   Idempotent: a reference is recorded once (unique index), so the existing repeated calls are safe.
+- **From the day it was switched on** (found by the review): a booking's visit counts for the stamp card and cashback
+  only when its venue day is on or after the day the venue switched that option on (`ProgrammeOptions::onSince()`,
+  `countsVisitOn()`), so a booking completed months ago earns nothing when it is touched again. A full refund takes the
+  visit back whether or not points were given (`AppointmentMoney::afterRefunds()` no longer waits for
+  `points_awarded_at`).
 
 **Tables** (new, nullable-free where production needs it):
 

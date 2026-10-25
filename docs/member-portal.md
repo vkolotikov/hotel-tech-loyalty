@@ -30,8 +30,18 @@ cancel either kind themselves inside the venue's cancellation window (`## Cancel
   `notification_preferences` as the server reads them (a kind is on unless switched off — off means not sent at all,
   not even to the inbox), and `sms_consent` only where the venue's own Twilio account is set up. Count phrases use
   plural keys (`_one/_few/_many/_other`) through `lib/plural.ts`.
-- Public: `GET /api/v1/public/join/{token}` carries `theme`; `GET /manifest.webmanifest?app=portal`
-  is the portal's install manifest.
+- Public: `GET /api/v1/public/join/{token}` carries `theme`, and since release 7 `welcome_bonus` read through
+  `ProgrammeOptions` (500 for a venue that never set it) and `referrals` (false: the form asks for no referral code);
+  `GET /manifest.webmanifest?app=portal` is the portal's install manifest.
+- Release 7 (`docs/loyalty-workspace.md` "Release 7"): Home shows the stamp card (`pages/stamps/`,
+  `GET member/portal/stamps` — `{enabled: false}` when the venue does not use it and the member has no card) and the
+  credit balance with its recent lines (`pages/credit/`, `GET member/portal/credit`, nothing while cashback is off and
+  the balance is 0); credit is spent at the desk only, so the portal only reads it. The app's member API has the same
+  two reads (`GET member/stamps`, `GET member/credit`) for its next build. Offers: a bonus-points offer reads
+  "+500 points" and pays them when claimed; free nights, upgrades and cashback offers say the venue gives them in
+  person. The referral card hides itself when the venue switched referrals off and says the reward comes after the
+  friend's first visit. Words in `portal/i18n/stamps.<lang>.json` and `credit.<lang>.json` under `portal.stamps` and
+  `portal.credit`.
 
 ## Frontend rules (enforced by `frontend/src/portal/tokens.test.ts`)
 
@@ -412,6 +422,11 @@ through the query builder and fires no model events. Idempotent on the booking's
 `points_awarded_at` timestamp and the ledger's `booking_points_service_{id}` key; a zero-point
 completion still stamps `points_awarded_at` so it is never retried. Refunded or zero-amount
 bookings award nothing.
+
+Release 7: before the points, the same call records the visit (`App\Services\Loyalty\Visits\VisitRecorder`): a stamp
+and cashback credit when the venue uses them — also with `points_on_bookings` off — each once per booking, and only
+for a visit on or after the day the venue switched that option on. A full refund takes the visit back
+(`AppointmentMoney::afterRefunds()`, with points on or off).
 
 ### Admin fields and `php artisan loyalty:type-benefits`
 
