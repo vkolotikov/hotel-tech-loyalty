@@ -404,9 +404,12 @@ production never has); on SQLite the real index still runs.
 
 ## Deploying
 
-- Release 6 is live (`main` 7835cf0, pushed 2026-10-25 on the owner's word), built from branch commit 1a37e68: the
-  next release's change list is `git diff --name-status 1a37e68 <tip>`. Release 5b went out as `main` 5b481aa from
-  ea8b364, release 5 as 8a04f86 from 6adf121, release 4 as 097432a from a7e87ae.
+- Release 6b is live (`main` 65b3415, pushed 2026-10-25 on the owner's word: campaigns and offers with no brand are
+  every brand's), built from branch commit 8ac5a62: the next release's change list is
+  `git diff --name-status 8ac5a62 <tip>`. Release 6 went out as `main` 7835cf0 from 1a37e68, release 5b as 5b481aa
+  from ea8b364, release 5 as 8a04f86 from 6adf121, release 4 as 097432a from a7e87ae. Neither release 6 nor 6b could
+  be checked on the live site from the build environment (its network policy refuses `app.hexa-tech.uk`): `main` was
+  checked by content instead (every source file equal to the branch, the built bundle carrying the new strings).
 - Release 6: one migration, `2026_10_23_160000_add_dispute_lost_amount_to_bookings` (a nullable column on
   `booking_mirror` and `service_bookings`); no new scheduled command. New commands
   `php artisan brands:ensure-default [--org=<organisation id>] [--apply]` and
@@ -422,7 +425,7 @@ production never has); on SQLite the real index still runs.
   `CapturePendingPaymentIntents`. Owner decisions at deploy (2026-10-25): a landing page keeps showing a stored price
   0 and length 60 as they are; campaigns and offers saved for every brand stay every brand (built after the deploy,
   below).
-- **Every brand, for campaigns and offers** (owner 2026-10-25, on the branch after release 6): a `NotificationCampaign`
+- **Every brand, for campaigns and offers** (owner 2026-10-25, release 6b): a `NotificationCampaign`
   or `SpecialOffer` created with no brand keeps an empty `brand_id` — every brand's — instead of getting the default
   brand (`EVERY_BRAND_WHEN_EMPTY` on the model; `BelongsToBrand` fills nothing in for it), and a brand's own view lists
   those rows beside its own (`BrandScope`: that brand or none). Every other brand-scoped row still gets the default.
