@@ -10,6 +10,7 @@ use App\Models\RewardRedemption;
 use App\Models\Stamp;
 use App\Models\StampCard;
 use App\Models\User;
+use App\Services\Loyalty\Members\MemberErasure;
 use App\Services\Loyalty\Programme\ProgrammeOptions;
 use App\Services\Loyalty\RedemptionActions;
 use App\Services\Loyalty\Visits\Visit;
@@ -27,13 +28,17 @@ use Illuminate\Support\Facades\Log;
  * - A visit (a completed appointment, a finished stay, a desk check-in or purchase) gives one stamp — at most one per
  *   member per venue day, and a reference (`service_booking`, `booking_mirror`, `scan_event` + id) is stamped once, so
  *   the callers' repeated calls (the nightly stay sweep) record nothing twice.
+ * - A visit counts from the venue day the stamp card was switched on (ProgrammeOptions::countsVisitOn): a booking
+ *   completed before then, touched again later (a status change, the nightly stay sweep), gives no stamp. A deleted or
+ *   erased member gets none; a switched-off one still does, as with points and cashback.
  * - The open card is created on the first stamp with the venue's `stamps_per_card` then; a later change of the number
- *   applies to new cards only. A card that fills is completed in the same transaction: `points` gives
- *   `stamp_reward_points` through LoyaltyService (a `bonus` line, not qualifying, key `stamp_card_{card id}`),
- *   `reward` a free pending redemption of the chosen catalogue reward through RedemptionActions — or, when that reward
- *   is gone, switched off or out of stock, the points instead (audited `loyalty.stamp_reward_missing`). The next card
- *   opens on the next stamp. After the commit the member is told ("Your card is full!"); a push that fails never fails
- *   the stamp.
+ *   applies to new cards only. A card that fills is completed in the same transaction. `points` gives
+ *   `stamp_reward_points` there, through LoyaltyService (a `bonus` line, not qualifying, key `stamp_card_{card id}`).
+ *   `reward` gives a free pending redemption of the chosen catalogue reward through RedemptionActions — after that
+ *   transaction commits (settleRewards()), so the reward row's lock is never taken under the member row's (a member
+ *   redeeming that reward locks the reward row, then the member row) — or, when that reward is gone, switched off or out
+ *   of stock, the points instead (audited `loyalty.stamp_reward_missing`). The next card opens on the next stamp. Then
+ *   the member is told ("Your card is full!"); a push that fails never fails the stamp.
  * - A refunded or cancelled booking's stamp comes off while its card is open; a completed card stands (audited
  *   `loyalty.stamp_kept`).
  *
@@ -61,7 +66,9 @@ class StampCards
     }
 
     /**
-     * Stamp the member's card for a visit. Null when the venue's stamp card is off (`stamps_enabled`).
+     * Stamp the member's card for a visit. Null when the stamp card does not count this visit — it is off
+     * (`stamps_enabled`), or the visit's venue day is before the day it was switched on — or the member was deleted or
+     * erased.
      *
      * The answer:
      * - a stamp was added: `['added' => true, 'card' => Card, 'completed' => null | Completed]`, where `card` is the card
@@ -71,60 +78,117 @@ class StampCards
      *
      * with `Card = ['id' => int, 'number' => int, 'stamps_count' => int, 'stamps_needed' => int, 'completed_at' => ?string
      * (ISO 8601)]` and `Completed = ['card_id' => int, 'number' => int, 'reward' => ['kind' => 'points', 'points' => int]
-     * | ['kind' => 'reward', 'redemption_id' => int, 'reward_name' => string, 'code' => string]]`.
+     * | ['kind' => 'reward', 'redemption_id' => int, 'reward_name' => string, 'code' => string]]`. A free reward is issued
+     * once this stamp's transaction has committed; while a caller's own transaction is still open (or when it could not
+     * be issued yet — the next stamp tries again) the reward reads
+     * `['kind' => 'reward', 'redemption_id' => null, 'reward_name' => string, 'code' => null, 'pending' => true]`.
      *
      * @return array<string, mixed>|null
      */
     public function stamp(LoyaltyMember $member, Visit $visit): ?array
     {
         $orgId = (int) $member->organization_id;
-        $options = ProgrammeOptions::for($orgId);
-        if (!$options['stamps_enabled']) {
-            return null;
-        }
         if (!in_array($visit->source, self::SOURCES, true)) {
             throw new \InvalidArgumentException("Unknown visit source {$visit->source}");
         }
         $day = self::venueDay($visit->venueDay);
+        if (!ProgrammeOptions::countsVisitOn($orgId, 'stamps_enabled', $day)) {
+            return null;
+        }
+        $options = ProgrammeOptions::for($orgId);
 
-        return $this->underOrg($orgId, fn () => DB::transaction(function () use ($member, $visit, $orgId, $options, $day) {
-            $locked = LoyaltyMember::withoutGlobalScopes()->where('organization_id', $orgId)->whereKey($member->id)->lockForUpdate()->firstOrFail();
+        $after = null;
+        // Closures, not arrow functions, down to the after-commit one: $after must be this one, by reference.
+        $answer = $this->underOrg($orgId, function () use ($member, $visit, $orgId, $options, $day, &$after) {
+            return DB::transaction(function () use ($member, $visit, $orgId, $options, $day, &$after) {
+                $locked = LoyaltyMember::withoutGlobalScopes()->with('user')->where('organization_id', $orgId)->whereKey($member->id)->lockForUpdate()->first();
+                if ($locked === null || MemberErasure::isErased($locked)) {
+                    return null;
+                }
 
-            $refused = $this->refusal($orgId, (int) $locked->id, $visit->referenceType, $visit->referenceId, $day);
-            if ($refused !== null) {
-                return $refused;
+                $refused = $this->refusal($orgId, (int) $locked->id, $visit->referenceType, $visit->referenceId, $day);
+                if ($refused !== null) {
+                    return $refused;
+                }
+
+                $card = $this->openCard($orgId, (int) $locked->id) ?? $this->newCard($orgId, (int) $locked->id, (int) $options['stamps_per_card']);
+                $stamp = (new Stamp())->forceFill([
+                    'organization_id' => $orgId,
+                    'member_id'       => (int) $locked->id,
+                    'stamp_card_id'   => (int) $card->id,
+                    'source'          => $visit->source,
+                    'reference_type'  => $visit->referenceId !== null ? $visit->referenceType : null,
+                    'reference_id'    => $visit->referenceType !== null ? $visit->referenceId : null,
+                    'venue_day'       => $day,
+                    'created_by'      => $visit->by?->id,
+                ]);
+                try {
+                    // Its own savepoint: a unique index that still refuses it leaves the transaction usable on PostgreSQL.
+                    DB::transaction(fn () => $stamp->save());
+                } catch (UniqueConstraintViolationException) {
+                    return $this->refusal($orgId, (int) $locked->id, $visit->referenceType, $visit->referenceId, $day)
+                        ?? ['added' => false, 'reason' => 'already_recorded', 'card' => $this->cardRow($this->openCard($orgId, (int) $locked->id))];
+                }
+
+                $card->stamps_count = (int) $card->stamps_count + 1;
+                $card->save();
+
+                $completed = null;
+                if ($card->stamps_count >= (int) $card->stamps_needed) {
+                    $completed = $this->complete($card, $locked, $options);
+                }
+                // After the commit, with no lock held: a free reward is issued (this card's, and any an earlier run left
+                // unissued), then the member is told.
+                $memberId = (int) $locked->id;
+                DB::afterCommit(function () use ($orgId, $memberId, $completed, &$after) {
+                    $after = $this->afterStamp($orgId, $memberId, $completed);
+                });
+
+                return ['added' => true, 'card' => $this->cardRow($card), 'completed' => $completed];
+            });
+        });
+
+        // Without a caller's transaction the commit has happened: the answer says what the card gave.
+        if (is_array($answer) && $answer['added'] && $answer['completed'] !== null && $after !== null) {
+            $answer['completed'] = $after;
+        }
+
+        return $answer;
+    }
+
+    /**
+     * Gives the free reward of each of the member's completed cards that is still owed one (`reward_kind` `reward`, no
+     * redemption and no points yet): normally the card a stamp has just completed, run after that stamp's transaction
+     * committed; also any card an earlier run could not finish. Takes no lock of the member's while it holds the
+     * reward's.
+     *
+     * Per card, idempotent by the card: the redemption is issued under the reward row's lock and written on the card by
+     * a conditional update, in one transaction — a run that finds the card already rewarded rolls its redemption back.
+     * A reward that can no longer be had (gone, switched off, out of stock, or none chosen) gives `stamp_reward_points`
+     * instead (key `stamp_card_{id}`, audited `loyalty.stamp_reward_missing`), under the member row's lock, written on the
+     * card the same conditional way.
+     *
+     * @return array<int, array{card_id: int, number: int, reward: array<string, mixed>}> what each card gave, by card id
+     */
+    public function settleRewards(int $orgId, int $memberId): array
+    {
+        return $this->underOrg($orgId, function () use ($orgId, $memberId) {
+            $owed = StampCard::withoutGlobalScopes()->where('organization_id', $orgId)->where('member_id', $memberId)
+                ->whereNotNull('completed_at')->where('reward_kind', StampCard::KIND_REWARD)
+                ->whereNull('reward_redemption_id')->whereNull('reward_points_transaction_id')->orderBy('number')->get();
+            $member = $owed->isEmpty() ? null : LoyaltyMember::withoutGlobalScopes()->where('organization_id', $orgId)->whereKey($memberId)->first();
+            if ($member === null) {
+                return [];
+            }
+            $options = ProgrammeOptions::for($orgId);
+
+            $out = [];
+            foreach ($owed as $card) {
+                $out[(int) $card->id] = ['card_id' => (int) $card->id, 'number' => (int) $card->number, 'reward' => $this->giveReward($card, $member, $options)];
             }
 
-            $card = $this->openCard($orgId, (int) $locked->id) ?? $this->newCard($orgId, (int) $locked->id, (int) $options['stamps_per_card']);
-            $stamp = (new Stamp())->forceFill([
-                'organization_id' => $orgId,
-                'member_id'       => (int) $locked->id,
-                'stamp_card_id'   => (int) $card->id,
-                'source'          => $visit->source,
-                'reference_type'  => $visit->referenceId !== null ? $visit->referenceType : null,
-                'reference_id'    => $visit->referenceType !== null ? $visit->referenceId : null,
-                'venue_day'       => $day,
-                'created_by'      => $visit->by?->id,
-            ]);
-            try {
-                // Its own savepoint: a unique index that still refuses it leaves the transaction usable on PostgreSQL.
-                DB::transaction(fn () => $stamp->save());
-            } catch (UniqueConstraintViolationException) {
-                return $this->refusal($orgId, (int) $locked->id, $visit->referenceType, $visit->referenceId, $day)
-                    ?? ['added' => false, 'reason' => 'already_recorded', 'card' => $this->cardRow($this->openCard($orgId, (int) $locked->id))];
-            }
-
-            $card->stamps_count = (int) $card->stamps_count + 1;
-            $card->save();
-
-            $completed = null;
-            if ($card->stamps_count >= (int) $card->stamps_needed) {
-                $completed = $this->complete($card, $locked, $options);
-                DB::afterCommit(fn () => $this->tell($orgId, (int) $locked->id, $completed));
-            }
-
-            return ['added' => true, 'card' => $this->cardRow($card), 'completed' => $completed];
-        }));
+            return $out;
+        });
     }
 
     /**
@@ -146,7 +210,7 @@ class StampCards
         if ($card->completed_at !== null) {
             $last = Stamp::withoutGlobalScopes()->where('organization_id', $orgId)->where('stamp_card_id', $card->id)->max('id');
             if ((int) $last === (int) $stamp->id) {
-                $completed = ['card_id' => (int) $card->id, 'number' => (int) $card->number, 'reward' => $this->given($orgId, $card)];
+                $completed = ['card_id' => (int) $card->id, 'number' => (int) $card->number, 'reward' => $this->cardReward($orgId, $card)];
             }
         }
 
@@ -203,7 +267,8 @@ class StampCards
      * [Stamp + {card_number}] (the last 20), cards: [Card + {reward: Given}] (the last 20 completed) } }`, where
      * `reward` is what a full card gives now (`{kind: 'points', points}` or `{kind: 'reward', reward_id, reward_name}`),
      * `Stamp = {venue_day: 'Y-m-d', source}` and `Given` is what a completed card gave: `{kind: 'points', points}` or
-     * `{kind: 'reward', redemption_id, reward_name, code, status}`. For staff (`$forStaff`) a stamp also carries `id`,
+     * `{kind: 'reward', redemption_id, reward_name, code, status}` (a reward still owed: `redemption_id` and `code` null,
+     * `pending: true`, status `owed`). For staff (`$forStaff`) a stamp also carries `id`,
      * `reference_type`, `reference_id`, `by` (the staff member's name) and `at` (ISO 8601); the member's own view
      * leaves them out.
      *
@@ -317,7 +382,7 @@ class StampCards
                 $loserOpen->delete();
             }
             $open->save();
-            $this->settle($orgId, $winner, $open, $next);
+            $this->completeMerged($orgId, $winner, $open, $next);
 
             return $dropped;
         }));
@@ -325,10 +390,10 @@ class StampCards
 
     /**
      * After a merge put two open cards together: while the open card holds as many stamps as it needs, it is completed
-     * as stamp() completes one (the winner's reward, the push after the commit), its latest stamps beyond that moving
-     * to the next card.
+     * as stamp() completes one (the winner's reward — a free one issued after the merge commits — and the push), its
+     * latest stamps beyond that moving to the next card.
      */
-    private function settle(int $orgId, LoyaltyMember $winner, StampCard $open, int $number): void
+    private function completeMerged(int $orgId, LoyaltyMember $winner, StampCard $open, int $number): void
     {
         $options = ProgrammeOptions::for($orgId);
         while ((int) $open->stamps_count >= (int) $open->stamps_needed) {
@@ -338,7 +403,7 @@ class StampCards
             $open->stamps_count = (int) $open->stamps_needed;
             $open->save();
             $completed = $this->complete($open, $winner, $options);
-            DB::afterCommit(fn () => $this->tell($orgId, (int) $winner->id, $completed));
+            DB::afterCommit(fn () => $this->afterStamp($orgId, (int) $winner->id, $completed));
             if ($extra->isEmpty()) {
                 return;
             }
@@ -370,8 +435,9 @@ class StampCards
     }
 
     /**
-     * A full card completed: its reward given and written on it. `reward` with a reward that can still be had gives a
-     * free redemption; anything else gives the points (a missing reward audited first).
+     * A full card completed, under the member row's lock. `points` gives the points here. `reward` marks the card owed
+     * its free reward (no lock of the reward's is taken under the member's): settleRewards() issues it once this
+     * transaction has committed. A `reward` card with no reward chosen gives the points, audited as a missing reward.
      *
      * @param array<string, mixed> $options
      * @return array{card_id: int, number: int, reward: array<string, mixed>}
@@ -379,29 +445,113 @@ class StampCards
     private function complete(StampCard $card, LoyaltyMember $member, array $options): array
     {
         $orgId = (int) $card->organization_id;
-        $why = "Stamp card {$card->number} complete";
+        $done = ['card_id' => (int) $card->id, 'number' => (int) $card->number];
 
+        if ($options['stamp_reward_kind'] === StampCard::KIND_REWARD && $options['stamp_reward_id'] !== null) {
+            $card->forceFill(['completed_at' => now(), 'reward_kind' => StampCard::KIND_REWARD])->save();
+
+            return $done + ['reward' => $this->owedReward($orgId, $options)];
+        }
         if ($options['stamp_reward_kind'] === StampCard::KIND_REWARD) {
-            $redemption = $options['stamp_reward_id'] !== null
-                ? $this->redemptions->issueFree($member, (int) $options['stamp_reward_id'], $why)
-                : null;
-            if ($redemption !== null) {
-                $card->forceFill(['completed_at' => now(), 'reward_kind' => StampCard::KIND_REWARD, 'reward_redemption_id' => (int) $redemption->id])->save();
+            $this->missing($orgId, $card, $member, $options);
+        }
+        $line = $this->awardCardPoints($card, $member, $options);
+        $card->forceFill(['completed_at' => now(), 'reward_kind' => StampCard::KIND_POINTS, 'reward_points_transaction_id' => (int) $line->id])->save();
 
-                return ['card_id' => (int) $card->id, 'number' => (int) $card->number, 'reward' => [
-                    'kind' => StampCard::KIND_REWARD, 'redemption_id' => (int) $redemption->id,
-                    'reward_name' => (string) ($redemption->reward?->name ?? ''), 'code' => (string) $redemption->code,
-                ]];
+        return $done + ['reward' => ['kind' => StampCard::KIND_POINTS, 'points' => (int) $line->points]];
+    }
+
+    /**
+     * One owed card's reward (settleRewards()). First the free redemption: under the reward row's lock (RedemptionActions)
+     * and written on the card by a conditional update, in one transaction. When it cannot be had, the points: under the
+     * member row's lock, written on the card the same way. Either way a run that finds the card rewarded already rolls
+     * back what it wrote and answers what the card gave.
+     *
+     * @param array<string, mixed> $options
+     * @return array<string, mixed> the reward, as stamp()'s `completed.reward`
+     */
+    private function giveReward(StampCard $card, LoyaltyMember $member, array $options): array
+    {
+        $orgId = (int) $card->organization_id;
+        $owed = fn () => StampCard::withoutGlobalScopes()->whereKey($card->id)->whereNull('reward_redemption_id')->whereNull('reward_points_transaction_id');
+        $rewardId = $options['stamp_reward_kind'] === StampCard::KIND_REWARD ? $options['stamp_reward_id'] : null;
+
+        try {
+            if ($rewardId !== null) {
+                $redemption = DB::transaction(function () use ($card, $member, $rewardId, $owed) {
+                    $redemption = $this->redemptions->issueFree($member, (int) $rewardId, "Stamp card {$card->number} complete");
+                    if ($redemption !== null && $owed()->update(['reward_redemption_id' => (int) $redemption->id]) === 0) {
+                        throw new RewardAlreadyGiven();
+                    }
+
+                    return $redemption;
+                });
+                if ($redemption !== null) {
+                    return ['kind' => StampCard::KIND_REWARD, 'redemption_id' => (int) $redemption->id,
+                        'reward_name' => (string) ($redemption->reward?->name ?? ''), 'code' => (string) $redemption->code];
+                }
             }
-            $this->audit($orgId, 'loyalty.stamp_reward_missing', 'stamp_card', (int) $card->id,
-                ['reward_id' => $options['stamp_reward_id'], 'member_id' => (int) $member->id, 'points_instead' => (int) $options['stamp_reward_points']], null,
-                "Stamp card {$card->number}'s reward could not be given; points instead");
+
+            $line = DB::transaction(function () use ($card, $member, $options, $rewardId, $owed, $orgId) {
+                LoyaltyMember::withoutGlobalScopes()->where('organization_id', $orgId)->whereKey($member->id)->lockForUpdate()->first();
+                if (!$owed()->exists()) {
+                    throw new RewardAlreadyGiven();
+                }
+                if ($rewardId !== null) {
+                    $this->missing($orgId, $card, $member, $options);
+                }
+                $line = $this->awardCardPoints($card, $member, $options);
+                if ($owed()->update(['reward_kind' => StampCard::KIND_POINTS, 'reward_points_transaction_id' => (int) $line->id]) === 0) {
+                    throw new RewardAlreadyGiven();
+                }
+
+                return $line;
+            });
+
+            return ['kind' => StampCard::KIND_POINTS, 'points' => (int) $line->points];
+        } catch (RewardAlreadyGiven) {
+            return $this->cardReward($orgId, $card->fresh() ?? $card);
+        }
+    }
+
+    /**
+     * After a stamp's transaction committed (or a merge's): any free reward owed is issued, then the member is told —
+     * of the card this stamp completed, and of any earlier card whose reward is issued only now. Answers this stamp's
+     * completed card with what it gave. Nothing here fails the stamp: a reward not issued now is issued on the next one.
+     *
+     * @param array<string, mixed>|null $completed
+     * @return array<string, mixed>|null
+     */
+    private function afterStamp(int $orgId, int $memberId, ?array $completed): ?array
+    {
+        $given = [];
+        try {
+            $given = $this->settleRewards($orgId, $memberId);
+        } catch (\Throwable $e) {
+            Log::warning('stamp card: a free reward was not issued yet: ' . $e->getMessage(), ['org' => $orgId, 'member' => $memberId]);
+        }
+        if ($completed !== null && isset($given[$completed['card_id']])) {
+            $completed = $given[$completed['card_id']];
+        }
+        foreach ($given as $cardId => $card) {
+            if ($completed === null || $cardId !== $completed['card_id']) {
+                $this->tell($orgId, $memberId, $card);
+            }
+        }
+        if ($completed !== null) {
+            $this->tell($orgId, $memberId, $completed);
         }
 
-        $line = $this->loyalty->awardPoints(
+        return $completed;
+    }
+
+    /** A full card's `stamp_reward_points` (a `bonus` line, not qualifying, once per card). @param array<string, mixed> $options */
+    private function awardCardPoints(StampCard $card, LoyaltyMember $member, array $options): PointsTransaction
+    {
+        return $this->loyalty->awardPoints(
             member:         $member,
             points:         (int) $options['stamp_reward_points'],
-            description:    $why,
+            description:    "Stamp card {$card->number} complete",
             type:           'bonus',
             referenceType:  'stamp_card',
             referenceId:    (int) $card->id,
@@ -410,20 +560,47 @@ class StampCards
             idempotencyKey: "stamp_card_{$card->id}",
             qualifying:     false,
         );
-        $card->forceFill(['completed_at' => now(), 'reward_kind' => StampCard::KIND_POINTS, 'reward_points_transaction_id' => (int) $line->id])->save();
-
-        return ['card_id' => (int) $card->id, 'number' => (int) $card->number, 'reward' => ['kind' => StampCard::KIND_POINTS, 'points' => (int) $line->points]];
     }
 
-    /** The member is told their card is full, and what it gave. Never a reason for the stamp to fail. @param array<string, mixed> $completed */
+    /** @param array<string, mixed> $options */
+    private function missing(int $orgId, StampCard $card, LoyaltyMember $member, array $options): void
+    {
+        $this->audit($orgId, 'loyalty.stamp_reward_missing', 'stamp_card', (int) $card->id,
+            ['reward_id' => $options['stamp_reward_id'], 'member_id' => (int) $member->id, 'points_instead' => (int) $options['stamp_reward_points']], null,
+            "Stamp card {$card->number}'s reward could not be given; points instead");
+    }
+
+    /**
+     * A card's reward while it is owed (completed, the free reward not issued yet). @param array<string, mixed> $options
+     * @return array<string, mixed>
+     */
+    private function owedReward(int $orgId, array $options): array
+    {
+        $name = $options['stamp_reward_id'] !== null
+            ? Reward::withoutGlobalScopes()->where('organization_id', $orgId)->whereKey((int) $options['stamp_reward_id'])->value('name')
+            : null;
+
+        return ['kind' => StampCard::KIND_REWARD, 'redemption_id' => null, 'reward_name' => (string) ($name ?? ''), 'code' => null, 'pending' => true];
+    }
+
+    /** What a completed card gave, as stamp()'s `completed.reward`. @return array<string, mixed>|null */
+    private function cardReward(int $orgId, StampCard $card): ?array
+    {
+        $given = $this->given($orgId, $card);
+        unset($given['status']);
+
+        return $given;
+    }
+
+    /** The member is told their card is full, and what it gave (an owed reward is told once issued). Never a reason for the stamp to fail. @param array<string, mixed> $completed */
     private function tell(int $orgId, int $memberId, array $completed): void
     {
         try {
             $member = LoyaltyMember::withoutGlobalScopes()->where('organization_id', $orgId)->whereKey($memberId)->first();
-            if (!$member) {
+            $reward = $completed['reward'] ?? null;
+            if (!$member || !is_array($reward) || ($reward['pending'] ?? false)) {
                 return;
             }
-            $reward = $completed['reward'];
             $body = $reward['kind'] === StampCard::KIND_REWARD
                 ? "Your free {$reward['reward_name']} is waiting. Show code {$reward['code']} at the desk."
                 : "You earned {$reward['points']} bonus points. A new card starts with your next visit.";
@@ -474,12 +651,16 @@ class StampCards
             ->whereIn('id', $redemptions->pluck('reward_id')->unique()->all())->pluck('name', 'id');
 
         $out = [];
+        $owed = null;
         foreach ($cards as $card) {
             if ($card->reward_kind === StampCard::KIND_REWARD && ($r = $redemptions->get($card->reward_redemption_id))) {
                 $out[$card->id] = ['kind' => StampCard::KIND_REWARD, 'redemption_id' => (int) $r->id, 'reward_name' => (string) ($names[$r->reward_id] ?? ''),
                     'code' => (string) $r->code, 'status' => (string) $r->status];
             } elseif ($card->reward_kind === StampCard::KIND_POINTS) {
                 $out[$card->id] = ['kind' => StampCard::KIND_POINTS, 'points' => (int) ($lines[$card->reward_points_transaction_id] ?? 0)];
+            } elseif ($card->reward_kind === StampCard::KIND_REWARD && $card->reward_redemption_id === null) {
+                // Owed: the free reward is issued after the stamp's commit (or on the next stamp).
+                $out[$card->id] = ($owed ??= $this->owedReward($orgId, ProgrammeOptions::for($orgId))) + ['status' => 'owed'];
             }
         }
 

@@ -4,7 +4,6 @@ namespace Tests\Feature\Member;
 
 use App\Models\LoyaltyTier;
 use App\Models\User;
-use App\Services\Loyalty\Programme\ProgrammeOptions;
 use App\Services\Loyalty\Stamps\StampCards;
 use App\Services\Loyalty\Visits\Visit;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
@@ -48,7 +47,7 @@ class StampCardEndpointTest extends TestCase
 
     public function test_the_member_sees_their_own_card_without_staff_details(): void
     {
-        ProgrammeOptions::save($this->org->id, ['stamps_enabled' => true, 'stamps_per_card' => 3, 'stamp_reward_points' => 150], $this->manager);
+        $this->saveOptionsOn('2026-09-01', $this->org->id, ['stamps_enabled' => true, 'stamps_per_card' => 3, 'stamp_reward_points' => 150], $this->manager);
         $stamps = app(StampCards::class);
         $stamps->stamp($this->grace, new Visit(Visit::CHECK_IN, 'scan_event', 4, null, '2026-10-04', $this->staffMember));
         $stamps->stamp($this->ada, new Visit(Visit::CHECK_IN, 'scan_event', 5, null, '2026-10-04', $this->staffMember));
@@ -70,9 +69,9 @@ class StampCardEndpointTest extends TestCase
 
     public function test_a_card_kept_after_the_venue_switched_it_off_still_shows_as_off(): void
     {
-        ProgrammeOptions::save($this->org->id, ['stamps_enabled' => true], $this->manager);
+        $this->saveOptionsOn('2026-09-01', $this->org->id, ['stamps_enabled' => true], $this->manager);
         app(StampCards::class)->stamp($this->grace, new Visit(Visit::APPOINTMENT, 'service_booking', 9, 40.0, '2026-10-04'));
-        ProgrammeOptions::save($this->org->id, ['stamps_enabled' => false], $this->manager);
+        $this->saveOptionsOn('2026-09-01', $this->org->id, ['stamps_enabled' => false], $this->manager);
 
         $this->asGrace()->getJson('/api/v1/member/portal/stamps')->assertOk()
             ->assertJsonPath('enabled', false)
@@ -81,7 +80,7 @@ class StampCardEndpointTest extends TestCase
 
     public function test_a_venue_without_a_programme_shows_no_card(): void
     {
-        ProgrammeOptions::save($this->org->id, ['stamps_enabled' => true], $this->manager);
+        $this->saveOptionsOn('2026-09-01', $this->org->id, ['stamps_enabled' => true], $this->manager);
         LoyaltyTier::query()->update(['is_active' => false]);
 
         $this->asGrace()->getJson('/api/v1/member/portal/stamps')->assertOk()->assertExactJson(['enabled' => false]);

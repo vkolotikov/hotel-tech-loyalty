@@ -13,10 +13,13 @@ export interface StampCardRow {
   completed_at: string | null
 }
 
-/** What a full card gave, as a stamp answers it (StampCards::complete). */
+/**
+ * What a full card gave, as a stamp answers it (StampCards::stamp). A free reward is issued just after the stamp's own
+ * transaction; until then (rarely seen) it is `pending`, without a redemption or a code.
+ */
 export type CardReward =
   | { kind: 'points'; points: number }
-  | { kind: 'reward'; redemption_id: number; reward_name: string; code?: string }
+  | { kind: 'reward'; redemption_id: number | null; reward_name: string; code?: string | null; pending?: boolean }
 
 /**
  * StampCards::stamp()'s answer: a stamp added (with the card after it, and what the card gave when this stamp filled
@@ -64,10 +67,10 @@ export interface StampEntry {
   at?: string | null
 }
 
-/** What a completed card gave, on the history. */
+/** What a completed card gave, on the history (a reward still owed: `pending`, status `owed`, no redemption yet). */
 export type GivenReward =
   | { kind: 'points'; points: number }
-  | { kind: 'reward'; redemption_id: number; reward_name: string; code: string; status: string }
+  | { kind: 'reward'; redemption_id: number | null; reward_name: string; code: string | null; status: string; pending?: boolean }
 
 /** `GET members/{id}/stamps` (StampCards::forMember, with staff details). */
 export interface StampsView {

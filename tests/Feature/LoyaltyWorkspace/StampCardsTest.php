@@ -42,10 +42,10 @@ class StampCardsTest extends TestCase
         $this->stamps = app(StampCards::class);
     }
 
-    /** @param array<string, mixed> $changes */
+    /** The options, switched on before the visits these tests stamp (1 September). @param array<string, mixed> $changes */
     private function setOptions(array $changes): void
     {
-        ProgrammeOptions::save($this->org->id, $changes, $this->manager);
+        $this->saveOptionsOn('2026-09-01', $this->org->id, $changes, $this->manager);
     }
 
     private function visit(string $day, ?int $ref = null, string $source = Visit::APPOINTMENT, string $type = 'service_booking'): Visit
@@ -240,6 +240,103 @@ class StampCardsTest extends TestCase
         $this->assertSame(['added' => false, 'reason' => 'already_today'], ['added' => $answer['added'], 'reason' => $answer['reason']]);
         $this->assertSame(2, Stamp::withoutGlobalScopes()->where('member_id', $this->grace->id)->count());
         $this->assertSame(1, (int) $card->fresh()->stamps_count, 'the refused stamp counted nothing');
+    }
+
+    public function test_visits_from_before_the_stamp_card_was_switched_on_give_no_stamp(): void
+    {
+        // Switched on today (5 October): an appointment of yesterday touched again now, or a stay the nightly sweep
+        // finds, is not stamped; today's visit is.
+        ProgrammeOptions::save($this->org->id, ['stamps_enabled' => true], $this->manager);
+
+        $this->assertNull($this->stamps->stamp($this->grace, $this->visit('2026-10-04', 1)));
+        $this->assertNull($this->stamps->stamp($this->grace, $this->visit('2026-09-20', 2, Visit::STAY, 'booking_mirror')));
+        $this->assertTrue($this->stamps->stamp($this->grace, $this->visit('2026-10-05', 3))['added']);
+        $this->assertSame(1, Stamp::withoutGlobalScopes()->count());
+    }
+
+    public function test_a_deleted_or_erased_member_gets_no_stamp_and_a_switched_off_one_still_does(): void
+    {
+        $this->setOptions(['stamps_enabled' => true]);
+        \App\Models\User::query()->whereKey($this->grace->user_id)->update(['email' => \App\Services\Loyalty\Members\MemberErasure::stubEmail($this->grace->id)]);
+        $this->assertNull($this->stamps->stamp($this->grace, $this->visit('2026-10-05', 1)));
+
+        $this->ada->forceFill(['is_active' => false])->save();
+        $this->assertTrue($this->stamps->stamp($this->ada, $this->visit('2026-10-05', 2))['added']);
+
+        $gone = $this->makeMember('Gone Member', 'gone@example.test');
+        LoyaltyMember::withoutGlobalScopes()->whereKey($gone->id)->delete();
+        $this->assertNull($this->stamps->stamp($gone, $this->visit('2026-10-05', 3)));
+
+        $this->assertSame([$this->ada->id], Stamp::withoutGlobalScopes()->pluck('member_id')->map(fn ($id) => (int) $id)->all());
+    }
+
+    public function test_a_free_reward_is_issued_only_once_the_stamps_transaction_has_committed(): void
+    {
+        // A member redeeming the same reward locks the reward row, then the member row: the stamp's transaction (member
+        // row) never takes the reward row's lock, so the redemption waits for the outermost commit.
+        $coffee = Reward::create(['name' => 'Coffee', 'points_cost' => 300, 'stock' => 3, 'is_active' => true]);
+        $this->setOptions(['stamps_enabled' => true, 'stamps_per_card' => 2, 'stamp_reward_kind' => 'reward', 'stamp_reward_id' => $coffee->id]);
+        $this->stamps->stamp($this->grace, $this->visit('2026-10-04', 1));
+
+        DB::transaction(function () use ($coffee) {
+            $full = $this->stamps->stamp($this->grace, $this->visit('2026-10-05', 2));
+            $this->assertSame(['kind' => 'reward', 'redemption_id' => null, 'reward_name' => 'Coffee', 'code' => null, 'pending' => true], $full['completed']['reward']);
+            $this->assertSame(0, RewardRedemption::withoutGlobalScopes()->count());
+            $this->assertSame(3, (int) $coffee->fresh()->stock);
+            $this->assertFalse(DB::table('push_notifications')->where('type', StampCards::PUSH_TYPE)->exists(), 'told once it is issued');
+        });
+
+        $redemption = RewardRedemption::withoutGlobalScopes()->where('member_id', $this->grace->id)->firstOrFail();
+        $card = StampCard::withoutGlobalScopes()->where('member_id', $this->grace->id)->firstOrFail();
+        $this->assertSame(['reward', $redemption->id, null], [$card->reward_kind, $card->reward_redemption_id, $card->reward_points_transaction_id]);
+        $this->assertSame(2, (int) $coffee->fresh()->stock);
+        $this->assertSame(1, DB::table('push_notifications')->where('member_id', $this->grace->id)->where('type', StampCards::PUSH_TYPE)->count());
+    }
+
+    public function test_a_reward_gone_by_the_time_it_is_issued_gives_the_points_and_a_repeat_gives_nothing_more(): void
+    {
+        $coffee = Reward::create(['name' => 'Coffee', 'points_cost' => 300, 'stock' => 1, 'is_active' => true]);
+        $this->setOptions(['stamps_enabled' => true, 'stamps_per_card' => 2, 'stamp_reward_kind' => 'reward', 'stamp_reward_id' => $coffee->id, 'stamp_reward_points' => 60]);
+        $this->stamps->stamp($this->grace, $this->visit('2026-10-04', 1));
+
+        DB::transaction(function () use ($coffee) {
+            $this->stamps->stamp($this->grace, $this->visit('2026-10-05', 2));
+            // The last one goes to someone else before this card's commit.
+            $coffee->forceFill(['stock' => 0])->save();
+        });
+
+        $card = StampCard::withoutGlobalScopes()->where('member_id', $this->grace->id)->firstOrFail();
+        $this->assertSame('points', $card->reward_kind);
+        $this->assertNotNull($card->reward_points_transaction_id);
+        $this->assertSame(0, RewardRedemption::withoutGlobalScopes()->count());
+        $this->assertSame(260, (int) $this->grace->fresh()->current_points);
+        $this->assertTrue(AuditLog::query()->where('action', 'loyalty.stamp_reward_missing')->where('subject_id', $card->id)->exists());
+
+        $this->assertSame([], $this->stamps->settleRewards($this->org->id, $this->grace->id));
+        $this->assertSame(260, (int) $this->grace->fresh()->current_points);
+    }
+
+    public function test_a_reward_an_earlier_run_left_owed_is_issued_by_the_next_stamp_once(): void
+    {
+        $coffee = Reward::create(['name' => 'Coffee', 'points_cost' => 300, 'stock' => null, 'is_active' => true]);
+        $this->setOptions(['stamps_enabled' => true, 'stamps_per_card' => 3, 'stamp_reward_kind' => 'reward', 'stamp_reward_id' => $coffee->id]);
+        // Card 1 was completed, and the run that was to issue its reward stopped (a lost worker): it is owed one.
+        $owed = DB::table('stamp_cards')->insertGetId(['organization_id' => $this->org->id, 'member_id' => $this->grace->id, 'number' => 1, 'stamps_needed' => 2,
+            'stamps_count' => 2, 'completed_at' => now()->subDay(), 'reward_kind' => 'reward', 'created_at' => now(), 'updated_at' => now()]);
+        $history = $this->stamps->forMember($this->grace)['history']['cards'][0]['reward'];
+        $this->assertSame(['pending' => true, 'status' => 'owed', 'reward_name' => 'Coffee'], ['pending' => $history['pending'], 'status' => $history['status'], 'reward_name' => $history['reward_name']]);
+
+        $next = $this->stamps->stamp($this->grace, $this->visit('2026-10-05', 1));
+        $this->assertSame([2, null], [$next['card']['number'], $next['completed']]);
+
+        $redemption = RewardRedemption::withoutGlobalScopes()->where('member_id', $this->grace->id)->firstOrFail();
+        $this->assertSame($redemption->id, (int) DB::table('stamp_cards')->where('id', $owed)->value('reward_redemption_id'));
+        $this->assertSame(1, DB::table('push_notifications')->where('member_id', $this->grace->id)->where('type', StampCards::PUSH_TYPE)->count());
+
+        // A repeat — another stamp, or a direct call — issues nothing more.
+        $this->assertSame([], $this->stamps->settleRewards($this->org->id, $this->grace->id));
+        $this->stamps->stamp($this->grace, $this->visit('2026-10-06', 2));
+        $this->assertSame(1, RewardRedemption::withoutGlobalScopes()->count());
     }
 
     public function test_a_bad_day_or_source_is_refused(): void

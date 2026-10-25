@@ -119,9 +119,10 @@ final class RedemptionActions
      * and the reward's per-member limit — a rule for spending points — does not apply to it. Audited
      * `reward_redemption_issued`; fulfilled and cancelled like any other.
      *
-     * Under the reward row's lock, in the caller's transaction when there is one (a savepoint). Null, with nothing
-     * written, when the reward is not this organisation's or can no longer be had (switched off, expired, out of
-     * stock): the caller then gives something else.
+     * Under the reward row's lock, in the caller's transaction when there is one (a savepoint). Never call it holding a
+     * member row's lock: a member's own redemption locks the reward row, then the member row (StampCards issues it after
+     * the stamp's transaction has committed). Null, with nothing written, when the reward is not this organisation's or
+     * can no longer be had (switched off, expired, out of stock): the caller then gives something else.
      */
     public function issueFree(LoyaltyMember $member, int $rewardId, string $why, ?User $by = null): ?RewardRedemption
     {

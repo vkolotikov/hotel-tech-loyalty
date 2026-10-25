@@ -197,6 +197,68 @@ class DeskVisitTest extends TestCase
         $this->assertSame(['scan_event', (int) $row->id], [$line[0]->reference_type, (int) $line[0]->reference_id]);
     }
 
+    public function test_a_key_sent_again_with_another_body_is_refused_and_earns_nothing(): void
+    {
+        $this->setOptions(['checkin_enabled' => true, 'desk_earn_enabled' => true, 'cashback_enabled' => true, 'cashback_percent' => 5]);
+
+        // A check-in, then the same key with an amount: no purchase ever recorded, so no points, cashback or spend.
+        $this->checkIn($this->grace->id, ['idempotency_key' => 'k-1'])->assertOk();
+        $this->checkIn($this->grace->id, ['idempotency_key' => 'k-1', 'amount' => 1000])->assertStatus(409)->assertJsonPath('error', 'key_reused');
+
+        // A purchase of 0.10 (no points, cashback below a cent), then the same key with 900.
+        $this->checkIn($this->grace->id, ['idempotency_key' => 'k-2', 'amount' => 0.10])->assertOk()->assertJsonPath('points.purchase', 0)->assertJsonPath('credit', null);
+        $this->checkIn($this->grace->id, ['idempotency_key' => 'k-2', 'amount' => 900])->assertStatus(409)->assertJsonPath('error', 'key_reused');
+        // Another note is another request too.
+        $this->checkIn($this->grace->id, ['idempotency_key' => 'k-2', 'amount' => 0.10, 'note' => 'Something else'])->assertStatus(409)->assertJsonPath('error', 'key_reused');
+
+        $this->assertSame(0, DB::table('credit_transactions')->where('member_id', $this->grace->id)->count());
+        $this->assertSame(0, PointsTransaction::withoutGlobalScopes()->where('member_id', $this->grace->id)->count());
+        $this->assertSame(2, ScanEvent::withoutGlobalScopes()->where('member_id', $this->grace->id)->count());
+        $this->assertSame(200, (int) $this->grace->fresh()->current_points);
+
+        // The same body again is the first request's answer.
+        $this->checkIn($this->grace->id, ['idempotency_key' => 'k-2', 'amount' => 0.1])->assertOk()->assertJsonPath('already_today', true)->assertJsonPath('credit', null);
+        $this->assertSame(2, ScanEvent::withoutGlobalScopes()->where('member_id', $this->grace->id)->count());
+    }
+
+    public function test_an_awards_key_never_names_a_desk_visits_line(): void
+    {
+        $this->setOptions(['desk_earn_enabled' => true]);
+        $this->asStaffMember()->postJson($this->api("members/{$this->grace->id}/award"), ['points' => 7, 'reason' => 'Crafted', 'idempotency_key' => 'K:purchase'])->assertOk();
+
+        $this->checkIn($this->grace->id, ['idempotency_key' => 'K', 'amount' => 40])->assertOk()->assertJsonPath('points.purchase', 40)->assertJsonPath('points.balance', 247);
+        $this->assertSame([7, 40], PointsTransaction::withoutGlobalScopes()->where('member_id', $this->grace->id)->orderBy('id')->pluck('points')->map(fn ($p) => (int) $p)->all());
+    }
+
+    public function test_reversing_a_desk_visits_points_line_undoes_its_cashback_and_its_stamp(): void
+    {
+        $this->setOptions(['desk_earn_enabled' => true, 'cashback_enabled' => true, 'cashback_percent' => 5, 'stamps_enabled' => true, 'stamps_per_card' => 10]);
+        // 10000 typed instead of 100: 10000 points, 500.00 credit, a stamp.
+        $this->checkIn($this->grace->id, ['amount' => 10000, 'idempotency_key' => 'typo'])->assertOk()->assertJsonPath('credit.amount', 500)->assertJsonPath('stamp.added', true);
+        $line = PointsTransaction::withoutGlobalScopes()->where('member_id', $this->grace->id)->where('type', 'earn')->firstOrFail();
+
+        $this->asManager()->postJson($this->api("members/{$this->grace->id}/history/{$line->id}/reverse"), ['reason' => 'Typed 10000 for 100'])->assertOk()
+            ->assertJsonPath('member.points', 200);
+
+        $this->assertSame(0.0, (float) DB::table('loyalty_members')->where('id', $this->grace->id)->value('credit_balance'));
+        $this->assertSame(['earn', 'reverse'], DB::table('credit_transactions')->where('member_id', $this->grace->id)->orderBy('id')->pluck('type')->all());
+        $this->assertSame(0, Stamp::withoutGlobalScopes()->where('member_id', $this->grace->id)->count());
+        $this->assertSame(0, (int) DB::table('stamp_cards')->where('member_id', $this->grace->id)->value('stamps_count'));
+    }
+
+    public function test_a_reversed_desk_visit_never_takes_the_credit_below_zero(): void
+    {
+        $this->setOptions(['desk_earn_enabled' => true, 'cashback_enabled' => true, 'cashback_percent' => 5]);
+        $this->checkIn($this->grace->id, ['amount' => 10000])->assertOk()->assertJsonPath('credit.balance', 500);
+        $this->asStaffMember()->postJson($this->api("members/{$this->grace->id}/credit/spend"), ['amount' => 300, 'idempotency_key' => 'lunch'])->assertOk();
+        $line = PointsTransaction::withoutGlobalScopes()->where('member_id', $this->grace->id)->where('type', 'earn')->firstOrFail();
+
+        $this->asManager()->postJson($this->api("members/{$this->grace->id}/history/{$line->id}/reverse"), ['reason' => 'Typed 10000 for 100'])->assertOk();
+
+        $this->assertSame(0.0, (float) DB::table('loyalty_members')->where('id', $this->grace->id)->value('credit_balance'));
+        $this->assertTrue(\App\Models\AuditLog::query()->where('action', 'credit.reverse_short')->exists());
+    }
+
     public function test_two_taps_with_different_keys_give_one_check_in_and_one_stamp(): void
     {
         $this->setOptions(['checkin_enabled' => true, 'checkin_points' => 10, 'stamps_enabled' => true]);

@@ -323,17 +323,20 @@ options page). Visits, stamps and credit belong to the whole programme: the full
   (`VisitRefundTest`).
 - **The stamp card** (`Loyalty\Stamps\StampCards`, the only writer of `stamps` and `stamp_cards`): one stamp per member
   per venue day (unique index `stamps_member_day_unique`) and one per reference; the open card takes the number of
-  stamps the option said when it opened; a card that fills completes in the same transaction — points
-  (`awardPoints` key `stamp_card_{id}`, not qualifying) or a free reward (`RedemptionActions::issueFree`, a pending
-  redemption at 0 points with its code; a reward gone, off or out of stock gives the points instead,
-  `loyalty.stamp_reward_missing`) — then a push "Your card is full!" (type `stamp_card_full`, the points opt-out). An
-  erased member gets no stamp (`StampCardsTest`, `StampMergeTest`).
+  stamps the option said when it opened; a card that fills completes in the same transaction. Points are written
+  there (`awardPoints` key `stamp_card_{id}`, not qualifying). A free reward is given after the commit, with no member
+  lock held (the member's own redeem locks the reward, then the member): `StampCards::settleRewards()` issues it
+  (`RedemptionActions::issueFree`, a pending redemption at 0 points with its code) and stamps the card by a
+  conditional update; a reward gone, off or out of stock gives the points instead (`loyalty.stamp_reward_missing`); a
+  card left owed is settled by the member's next stamp. Then a push "Your card is full!" (type `stamp_card_full`, the
+  points opt-out). An erased member gets no stamp (`StampCardsTest`, `StampMergeTest`).
 - **At the desk** (`Loyalty\Visits\DeskVisit`, `POST members/{id}/check-in`): the day's first desk visit is its
   check-in (`checkin_points` once a day, a `bonus` line); an amount needs earning at the desk on and earns
   `pointsForSpend()` as a qualifying `earn` line with the amount spent; a second visit the same day answers
   `already_today` and still takes a purchase. Each request writes one `scan_events` row (`scan_type desk`,
-  `action_taken check_in`), the reference of its stamp and cashback. A replay with the same key answers the first
-  result and writes nothing; with another body, `key_reused`. Reversing a desk visit's points line (Reverse on the
+  `action_taken check_in`; its `token_value` records the request's key, amount and note), the reference of its stamp
+  and cashback. A replay with the same key answers the first result and writes nothing; with another amount or note,
+  `key_reused`. Desk keys are their own (`loyalty-desk:{org}:{member}:{key}`), never an Award's. Reversing a desk visit's points line (Reverse on the
   member's history) takes its visit back too (`DeskVisitTest`).
 - **Cashback credit** (`Loyalty\Credit\CreditLedger`, the only writer of `credit_transactions` and
   `loyalty_members.credit_balance`, which is not fillable): every line under the member row lock in its own

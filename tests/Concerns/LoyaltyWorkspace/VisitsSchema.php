@@ -2,6 +2,9 @@
 
 namespace Tests\Concerns\LoyaltyWorkspace;
 
+use App\Models\User;
+use App\Services\Loyalty\Programme\ProgrammeOptions;
+use Carbon\CarbonImmutable;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
@@ -11,6 +14,7 @@ use Illuminate\Support\Facades\Schema;
  * other hand-built tables. Guarded: a table another suite built first is left as it is.
  *
  * Called as buildVisitsSchema() (Laravel calls setUp<TraitName>() itself, before the base tables exist).
+ * saveOptionsOn() switches options on as of an earlier day, so the visits a test stamps after it count.
  */
 trait VisitsSchema
 {
@@ -47,6 +51,24 @@ trait VisitsSchema
                 $t->unique(['organization_id', 'member_id', 'venue_day'], 'stamps_member_day_unique');
                 $t->unique(['organization_id', 'reference_type', 'reference_id'], 'stamps_reference_unique');
             });
+        }
+    }
+
+    /**
+     * Saves the venue's options as if on an earlier day (the clock moved there and back): ProgrammeOptions keeps the day
+     * the stamp card and cashback were switched on, and visits before it never count, so a test that stamps visits of
+     * past days switches them on before those days.
+     *
+     * @param array<string, mixed> $changes
+     */
+    protected function saveOptionsOn(string $day, int $orgId, array $changes, ?User $by): void
+    {
+        $now = CarbonImmutable::now();
+        $this->travelTo(CarbonImmutable::parse("{$day} 12:00:00"));
+        try {
+            ProgrammeOptions::save($orgId, $changes, $by);
+        } finally {
+            $this->travelTo($now);
         }
     }
 }

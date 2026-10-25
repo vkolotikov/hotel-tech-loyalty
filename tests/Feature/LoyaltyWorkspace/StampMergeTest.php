@@ -6,7 +6,6 @@ use App\Models\LoyaltyMember;
 use App\Models\PointsTransaction;
 use App\Models\Stamp;
 use App\Models\StampCard;
-use App\Services\Loyalty\Programme\ProgrammeOptions;
 use App\Services\Loyalty\Stamps\StampCards;
 use App\Services\Loyalty\Visits\Visit;
 use App\Services\MemberMergeService;
@@ -65,7 +64,7 @@ class StampMergeTest extends TestCase
 
     public function test_a_day_both_have_keeps_the_winners_stamp_and_the_merge_records_the_dropped_one(): void
     {
-        ProgrammeOptions::save($this->org->id, ['stamps_enabled' => true, 'stamps_per_card' => 10], $this->manager);
+        $this->saveOptionsOn('2026-09-01', $this->org->id, ['stamps_enabled' => true, 'stamps_per_card' => 10], $this->manager);
         $this->stampDays($this->ada, 1, 3);
         $this->stampDays($this->grace, 3, 4);
 
@@ -81,7 +80,7 @@ class StampMergeTest extends TestCase
 
     public function test_completed_cards_are_kept_the_losers_after_the_winners_and_the_open_card_last(): void
     {
-        ProgrammeOptions::save($this->org->id, ['stamps_enabled' => true, 'stamps_per_card' => 2], $this->manager);
+        $this->saveOptionsOn('2026-09-01', $this->org->id, ['stamps_enabled' => true, 'stamps_per_card' => 2], $this->manager);
         $this->stampDays($this->ada, 1, 2, 3);          // Ada: card 1 complete, card 2 open with 1
         $this->stampDays($this->grace, 11, 12, 13, 14); // Grace: cards 1 and 2 complete
 
@@ -96,7 +95,7 @@ class StampMergeTest extends TestCase
 
     public function test_the_losers_open_card_alone_becomes_the_winners_open_card(): void
     {
-        ProgrammeOptions::save($this->org->id, ['stamps_enabled' => true, 'stamps_per_card' => 2], $this->manager);
+        $this->saveOptionsOn('2026-09-01', $this->org->id, ['stamps_enabled' => true, 'stamps_per_card' => 2], $this->manager);
         $this->stampDays($this->ada, 1, 2);    // Ada: card 1 complete, nothing open
         $this->stampDays($this->grace, 5);     // Grace: card 1 open with 1
 
@@ -107,7 +106,7 @@ class StampMergeTest extends TestCase
 
     public function test_two_open_cards_that_fill_one_complete_it_for_the_winner_and_the_latest_stamps_open_the_next(): void
     {
-        ProgrammeOptions::save($this->org->id, ['stamps_enabled' => true, 'stamps_per_card' => 3, 'stamp_reward_points' => 100], $this->manager);
+        $this->saveOptionsOn('2026-09-01', $this->org->id, ['stamps_enabled' => true, 'stamps_per_card' => 3, 'stamp_reward_points' => 100], $this->manager);
         $this->stampDays($this->ada, 1, 2);
         $this->stampDays($this->grace, 3, 4);
 

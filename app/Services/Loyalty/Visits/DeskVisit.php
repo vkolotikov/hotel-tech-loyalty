@@ -34,13 +34,16 @@ use Illuminate\Validation\ValidationException;
  *   check-in points.
  * - A purchase earns `LoyaltyService::pointsForSpend()` (tier rate, boosts, a tier's multiplier) as an `earn` line with
  *   the amount spent, qualifying, as a booking does.
- * - Every request writes one `scan_events` row (`scan_type` `desk`, `action_taken` `check_in`, the request's key in
- *   `token_value`, `transaction_id` the line it wrote), under the member row's lock with its points lines, then — after
- *   the commit — hands the visit to VisitRecorder (`scan_event` + the row's id: the stamp, the cashback, the referral,
- *   the tier counts). Two taps at once wait on the lock: one check-in, one stamp.
- * - Idempotent the workspace's way (PointsController::key()): the key is kept per organisation and member; the lines'
- *   keys are `<key>:checkin` and `<key>:purchase`. A request sent again with its key writes nothing new and answers
- *   what the first one did.
+ * - Every request writes one `scan_events` row (`scan_type` `desk`, `action_taken` `check_in`, `transaction_id` the
+ *   line it wrote) under the member row's lock with its points lines, then — after the commit — hands the visit to
+ *   VisitRecorder (`scan_event` + the row's id: the stamp, the cashback, the referral, the tier counts). Two taps at
+ *   once wait on the lock: one check-in, one stamp. The workspace's Reverse of one of its points lines undoes the visit
+ *   too (MemberLedger).
+ * - Idempotent the workspace's way (as PointsController::key(), with a prefix of its own, so an Award's key can never
+ *   name a desk visit's line): `loyalty-desk:{org}:{member}:{key}`, the lines' keys that with `:checkin` and
+ *   `:purchase`. The row keeps the request in `token_value` — `desk <sha1 of the key> <amount or -> <the note's hash>`
+ *   (requestMark()). A request sent again with its key writes nothing new and answers what the first one did, its
+ *   visit built from the first one's amount; the same key with another amount or note is 409 `key_reused`.
  */
 final class DeskVisit
 {
@@ -86,18 +89,24 @@ final class DeskVisit
             self::checkAmount($amount, PortalBootstrap::currency($org));
         }
         $note = $note !== null && trim($note) !== '' ? mb_substr(trim($note), 0, 200) : null;
-        $base = $key !== null && $key !== '' ? "loyalty-ws:{$orgId}:{$member->id}:{$key}" : null;
+        $base = $key !== null && $key !== '' ? "loyalty-desk:{$orgId}:{$member->id}:{$key}" : null;
         $zone = PortalBootstrap::timezone($org);
 
         $done = DB::transaction(function () use ($member, $orgId, $options, $amount, $note, $base, $zone, $by) {
             $locked = LoyaltyMember::withoutGlobalScopes()->where('organization_id', $orgId)->whereKey($member->id)->lockForUpdate()->firstOrFail();
 
             $row = $base === null ? null : ScanEvent::withoutGlobalScopes()->where('organization_id', $orgId)->where('member_id', $locked->id)
-                ->where('action_taken', self::ACTION)->where('token_value', $base)->first();
+                ->where('scan_type', self::SCAN_TYPE)->where('action_taken', self::ACTION)->where('token_value', 'like', self::keyMark($base) . ' %')->first();
             if ($row !== null) {
+                // The same key is the same request: its body must be the first one's, whose amount the visit is built from.
+                if ((string) $row->token_value !== self::requestMark($base, $amount, $note)) {
+                    throw new LoyaltyRefused('key_reused', 'This retry key was used for a different visit.', 409);
+                }
+
                 return [
                     'row'      => $row,
                     'replay'   => true,
+                    'amount'   => self::markedAmount((string) $row->token_value),
                     'already'  => $this->earlierThatDay($orgId, (int) $locked->id, $row, $zone),
                     'checkin'  => $this->line($orgId, (int) $locked->id, "{$base}:checkin"),
                     'purchase' => $this->line($orgId, (int) $locked->id, "{$base}:purchase"),
@@ -111,7 +120,7 @@ final class DeskVisit
                 'staff_id'        => $by->id,
                 'property_id'     => $by->property_id ?? null,
                 'scan_type'       => self::SCAN_TYPE,
-                'token_value'     => $base,
+                'token_value'     => $base !== null ? self::requestMark($base, $amount, $note) : null,
                 'result'          => 'success',
                 'action_taken'    => self::ACTION,
                 'device_id'       => mb_substr((string) request()?->header('X-Device-Id', ''), 0, 100) ?: null,
@@ -168,13 +177,14 @@ final class DeskVisit
                 'description'     => $amount !== null ? "A purchase of {$amount} at the desk" : 'A check-in at the desk',
             ]);
 
-            return ['row' => $row, 'replay' => false, 'already' => $already, 'checkin' => $checkin, 'purchase' => $purchase];
+            return ['row' => $row, 'replay' => false, 'amount' => $amount, 'already' => $already, 'checkin' => $checkin, 'purchase' => $purchase];
         });
 
         /** @var ScanEvent $row */
         $row = $done['row'];
         $day = CarbonImmutable::parse($row->created_at)->setTimezone($zone)->toDateString();
-        $visit = new Visit($amount !== null ? Visit::PURCHASE : Visit::CHECK_IN, 'scan_event', (int) $row->id, $amount, $day, $by);
+        $spent = $done['amount'];
+        $visit = new Visit($spent !== null ? Visit::PURCHASE : Visit::CHECK_IN, 'scan_event', (int) $row->id, $spent, $day, $by);
         $outcome = $this->visits->record($member->fresh() ?? $member, $visit);
 
         $stamp = $outcome->stamp;
@@ -213,6 +223,26 @@ final class DeskVisit
             ->where('created_at', '<', $day->addDay()->setTimezone($stored)->format('Y-m-d H:i:s'))
             ->when($row !== null, fn ($q) => $q->where('id', '<', $row->id))
             ->exists();
+    }
+
+    /** The start of a keyed request's `token_value`: the key, hashed (fixed length, nothing LIKE reads as a pattern). */
+    private static function keyMark(string $base): string
+    {
+        return 'desk ' . sha1($base);
+    }
+
+    /** A keyed request as its row keeps it: the key, the amount (two decimals, or `-`) and the note's hash. */
+    private static function requestMark(string $base, ?float $amount, ?string $note): string
+    {
+        return self::keyMark($base) . ' ' . ($amount === null ? '-' : number_format($amount, 2, '.', '')) . ' ' . substr(sha1($note ?? ''), 0, 16);
+    }
+
+    /** The amount a request's row kept (requestMark()), or null for a check-in without one. */
+    private static function markedAmount(string $mark): ?float
+    {
+        $amount = explode(' ', $mark)[2] ?? '-';
+
+        return is_numeric($amount) ? (float) $amount : null;
     }
 
     private function line(int $orgId, int $memberId, string $key): ?PointsTransaction
