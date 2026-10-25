@@ -408,9 +408,23 @@ production never has); on SQLite the real index still runs.
 
 ## Deploying
 
-- Release 5b is live (`main` 5b481aa, pushed 2026-10-23: R5-6, failed widget bookings leave staff an enquiry), built
-  from branch commit ea8b364: the next release's change list is `git diff --name-status ea8b364 <tip>`. Release 5
-  went out as `main` 8a04f86 from 6adf121. Release 4 went out as `main` 097432a from a7e87ae.
+- Release 6 is live (`main` 7835cf0, pushed 2026-10-25 on the owner's word), built from branch commit 1a37e68: the
+  next release's change list is `git diff --name-status 1a37e68 <tip>`. Release 5b went out as `main` 5b481aa from
+  ea8b364, release 5 as 8a04f86 from 6adf121, release 4 as 097432a from a7e87ae.
+- Release 6: one migration, `2026_10_23_160000_add_dispute_lost_amount_to_bookings` (a nullable column on
+  `booking_mirror` and `service_bookings`); no new scheduled command. New commands
+  `php artisan brands:ensure-default [--org=<organisation id>] [--apply]` and
+  `php artisan portal:pay-at-venue <organisation id> --on|--off|--status`; new route
+  `POST program/boosts/confirm-times` (workspace). Widget changes in it, all under the owner's "all remaining
+  improvements": the stay widget's combination takes the room locks and re-checks under them; a stay confirm re-reads
+  its payment under the hold's lock (a payment it cannot check: 503 "the booking was not made", the rescue and a staff
+  enquiry); a failed services booking's long error text is cut to 255 characters so it is logged. Full-admin and
+  shared files it changes on purpose: `BookingDetail.tsx` (a group's payment on every room) and the refund answers
+  (409 `no_new_refund`, 504 `refund_outcome_unknown`), the extras, services and voice-agent controllers (an emptied
+  field keeps its value), `NfcController`/`ScanController` (cards through `NfcCards`), `BookingRefundService`,
+  `StripeService`, `BookingPublicController`, `BookingEngineService`, `MemberCancellation`, `PortalPaymentIntentGuard`,
+  `CapturePendingPaymentIntents`. Owner decisions at deploy (2026-10-25): a landing page keeps showing a stored price
+  0 and length 60 as they are; campaigns and offers saved for every brand stay every brand (a follow-up).
 - Release 5: no migration, no new scheduled command. New routes: `GET/POST members/{id}/cards`,
   `POST members/{id}/cards/{card}/off` (workspace). Full-admin and shared files it changes on purpose: the full admin's
   `ScanController::scanQr` (reads through `CardLookup`) and `pages/Scan.tsx` (the camera sends the whole code),

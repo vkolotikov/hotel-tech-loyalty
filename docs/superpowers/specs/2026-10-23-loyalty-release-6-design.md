@@ -1,6 +1,7 @@
 # HexaTech Loyalty, release 6 — the remaining limits closed (design)
 
-Status: owner's request of 2026-10-23 ("deploy please and do all remaining improvements"). Builds on release 5b (live
+Status: deployed 2026-10-25 as `main` 7835cf0 (from branch 1a37e68). Owner's request of 2026-10-23 ("deploy please
+and do all remaining improvements"). Builds on release 5b (live
 as `main` 5b481aa, built from branch ea8b364). The list is every known limit left in `docs/member-portal.md` and
 `docs/loyalty-workspace.md` that can be closed in code; Twilio stays out (owner, 2026-10-23: "No need Twilio for now").
 
