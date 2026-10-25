@@ -387,7 +387,7 @@ visits or spend, and a scan screen that is easy on location).
 - **Who gets in** is decided only by `Loyalty\Access\AccessDecision` (reads only), in this order: erased (staff's
   erasure or the member's own deletion), switched off, expired (`membership_valid_until` before the venue's today —
   the last day still lets in), place switched off, tier not admitted (`allowed_tiers` in ladder order), then for an
-  event: not open (published, from two hours before the start to the end, compared as the venue's wall clock), full
+  event: not open (published, from two hours before the start until the end — the end itself shut —, compared as the venue's wall clock), full
   (a walk-in takes a place only while one is left after the standing sign-ups — as a sign-up does), not signed up
   (sign-up on, walk-ins off); else welcome. A member already checked in at the event is welcomed again
   (`AccessDecisionTest`).
@@ -395,7 +395,8 @@ visits or spend, and a scan screen that is easy on location).
   switched off instead of deleted once it has entries or an event names it; audited. A scan at a place writes one
   `scan_events` row (`scan_type access`, `access_place_id`, `result` granted/denied, `action_taken` the reason; never
   the raw code) and answers the verdict, the member and the tier's benefits; a code that names nobody is logged as a
-  refusal with no member. A replay with the same key answers the first result (`ScanReplay`, 10 minutes)
+  refusal with no member. A replay with the same key answers the first result (`ScanReplay`, 10 minutes; a kept success is never replaced by a
+  refusal; a keyed scan at an event waits for a copy before it, or answers `409 in_progress`)
   (`PlacesTest`, `ScanAccessTest`). `CardLookup` names a switched-off member for a scan with a place or an event
   (`CardRead::namedMember()`); the desk scan and the full admin's scan behave as before.
 - **A membership's end date** (`Members\MembershipValidity`, the only writer; stored as a plain `Y-m-d`): managers set

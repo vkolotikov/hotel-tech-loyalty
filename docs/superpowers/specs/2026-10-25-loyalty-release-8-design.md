@@ -42,7 +42,7 @@ nothing sets a member's judging model). No places, no membership end date, no ev
 | `expired` | no | `membership_valid_until` is before the venue's today |
 | `place_off` | no | the place is switched off |
 | `tier_not_allowed` | no | the place (or event) admits chosen tiers and the member's tier is not one |
-| `event_not_open` | no | an event that is not published, cancelled, or not open now (from 2 hours before its start to its end, on the venue's clock) |
+| `event_not_open` | no | an event that is not published, cancelled, or not open now (from 2 hours before its start until its end, the end itself shut, on the venue's clock) |
 | `event_full` | no | a capacity reached by those checked in, and this member is not signed up |
 | `not_signed_up` | no | an event with sign-up whose walk-ins are off, and this member did not sign up |
 | `welcome` | yes | everything else |

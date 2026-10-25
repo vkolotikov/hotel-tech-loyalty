@@ -25,7 +25,7 @@ use Illuminate\Support\Facades\DB;
  *  5. `tier_not_allowed` — the place, or the event, admits chosen tiers and the member's tier is not one of them (a
  *                          member without a tier is not one either); `allowed_tiers` names them in the ladder's order;
  *  6. for an event: `event_not_open` (not published, or now on the venue's clock is outside its start less two hours to
- *     its end), `event_full` (no place left for a walk-in: the standing sign-ups and the walk-ins fill the capacity, and this member
+ *     its end, the end itself excluded), `event_full` (no place left for a walk-in: the standing sign-ups and the walk-ins fill the capacity, and this member
  *     did not sign up), `not_signed_up`
  *     (sign-up on, walk-ins off, and no sign-up standing); a member already checked in passes the last two, so a second
  *     scan reads as "already in", not as "full";
@@ -111,7 +111,9 @@ class AccessDecision
 
     /**
      * Whether an event's doors are open at this wall-clock minute (`YYYY-MM-DDTHH:mm` on the venue's clock): from
-     * OPENS_BEFORE_MINUTES before its start to its end, both included. The stored times are read as written.
+     * OPENS_BEFORE_MINUTES before its start (included) until its end (excluded). The end's own minute is closed: from
+     * its first second every screen says the event has ended (EventClock::hasEnded, `ends_at <= now`), so the door must
+     * not let a walk-in in during it. The stored times are read as written.
      */
     public static function isOpen(LoyaltyEvent $event, string $nowWall): bool
     {
@@ -122,7 +124,7 @@ class AccessDecision
         }
         $opens = $start->subMinutes(self::OPENS_BEFORE_MINUTES)->format(VenueClock::WALL);
 
-        return $nowWall >= $opens && $nowWall <= $end;
+        return $nowWall >= $opens && $nowWall < $end;
     }
 
     /** Whole days from one `Y-m-d` to another (negative when the second is earlier). */

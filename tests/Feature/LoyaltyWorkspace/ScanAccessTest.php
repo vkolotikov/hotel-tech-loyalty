@@ -11,7 +11,9 @@ use App\Models\ScanEvent;
 use App\Models\TierBenefit;
 use App\Services\Loyalty\Access\AccessPlaces;
 use App\Services\Loyalty\Access\AccessVerdict;
+use App\Services\Loyalty\Access\ScanReplay;
 use App\Services\Loyalty\Events\EventCheckIn;
+use App\Support\SharedCache;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Testing\TestResponse;
@@ -227,6 +229,45 @@ class ScanAccessTest extends TestCase
         $this->scan(['code' => $this->ada->member_number, 'event_id' => $event->id])->assertOk()
             ->assertJsonPath('checked_in', false)->assertJsonPath('verdict.granted', true);
         $this->assertNotNull($this->scan(['code' => $this->ada->member_number, 'event_id' => $event->id])->json('already_in'));
+    }
+
+    public function test_a_keyed_scan_at_an_event_waits_for_the_copy_before_it_and_reads_a_one_use_code_once(): void
+    {
+        $event = $this->event();
+        $token = QrToken::create(['member_id' => $this->ada->id, 'token' => str_repeat('e', 64), 'signature' => 'x', 'issued_at' => now(), 'expires_at' => now()->addMinutes(30), 'max_uses' => 1]);
+        $body = ['code' => $token->token, 'event_id' => $event->id, 'idempotency_key' => 'event-scan-2'];
+        config(['loyalty.scan_lock_wait' => 0]);
+
+        // The first copy holds the key's lock: the second does not read the code, write, or check anyone in.
+        $held = SharedCache::store()->lock((string) ScanReplay::for($this->org->id, 'event-scan-2', [])->lockKey(), 30);
+        $this->assertTrue($held->get());
+        $this->scan($body)->assertStatus(409)->assertJsonPath('error', 'in_progress');
+        $this->assertSame([0, 0, 0], [ScanEvent::query()->count(), DB::table('loyalty_event_attendances')->count(), (int) $token->fresh()->use_count]);
+        $held->release();
+
+        // Once it is done, a copy answers its answer: the member checked in, not "used up".
+        $first = $this->scan($body)->assertOk()->assertJsonPath('checked_in', true)->json();
+        $this->assertSame($first, $this->scan($body)->assertOk()->json());
+        $this->assertSame([1, 1, 1], [ScanEvent::query()->count(), DB::table('loyalty_event_attendances')->count(), (int) $token->fresh()->use_count]);
+        // The lock was given back each time.
+        $this->assertTrue(SharedCache::store()->lock((string) ScanReplay::for($this->org->id, 'event-scan-2', [])->lockKey(), 30)->get());
+    }
+
+    public function test_a_kept_success_is_never_replaced_by_a_refusal(): void
+    {
+        // Two copies of one scan that both ran (a lock outlived): the one that let the member in stands.
+        $replay = ScanReplay::for($this->org->id, 'race-1', ['code' => 'x', 'event_id' => 1]);
+        $replay->keep(200, ['checked_in' => true]);
+        $replay->keep(404, ['error' => 'used_up']);
+        $this->assertSame(['status' => 200, 'body' => ['checked_in' => true]], $replay->seen());
+
+        // A refusal kept first gives way to a success, and a second refusal changes nothing.
+        $other = ScanReplay::for($this->org->id, 'race-2', ['code' => 'x', 'event_id' => 1]);
+        $other->keep(404, ['error' => 'not_found']);
+        $other->keep(404, ['error' => 'used_up']);
+        $this->assertSame(['status' => 404, 'body' => ['error' => 'not_found']], $other->seen());
+        $other->keep(200, ['checked_in' => true]);
+        $this->assertSame(200, $other->seen()['status']);
     }
 
     public function test_a_switched_off_member_at_an_event_is_shown_and_refused(): void

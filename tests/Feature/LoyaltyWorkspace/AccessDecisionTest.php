@@ -9,6 +9,7 @@ use App\Services\Appointments\VenueClock;
 use App\Services\Loyalty\Access\AccessDecision;
 use App\Services\Loyalty\Access\AccessPlaces;
 use App\Services\Loyalty\Access\AccessVerdict;
+use App\Services\Loyalty\Events\EventClock;
 use App\Services\Loyalty\Members\MemberErasure;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
@@ -227,12 +228,14 @@ class AccessDecisionTest extends TestCase
 
     // ─── 6. An event ─────────────────────────────────────────────────────
 
-    public function test_an_event_is_open_from_two_hours_before_its_start_to_its_end_only_when_published(): void
+    public function test_an_event_is_open_from_two_hours_before_its_start_until_its_end_only_when_published(): void
     {
         // Now is 09:00 on the venue's clock (UTC).
         $this->assertTrue($this->decide($this->ada, null, $this->event(['starts_at' => '2026-10-05 11:00:00', 'ends_at' => '2026-10-05 13:00:00']))->granted);
         $this->assertSame('event_not_open', $this->decide($this->ada, null, $this->event(['starts_at' => '2026-10-05 11:01:00', 'ends_at' => '2026-10-05 13:00:00']))->reason);
-        $this->assertTrue($this->decide($this->ada, null, $this->event(['starts_at' => '2026-10-05 07:00:00', 'ends_at' => '2026-10-05 09:00:00']))->granted);
+        $this->assertTrue($this->decide($this->ada, null, $this->event(['starts_at' => '2026-10-05 07:00:00', 'ends_at' => '2026-10-05 09:01:00']))->granted);
+        // The end's own minute is closed: the event has ended.
+        $this->assertSame('event_not_open', $this->decide($this->ada, null, $this->event(['starts_at' => '2026-10-05 07:00:00', 'ends_at' => '2026-10-05 09:00:00']))->reason);
         $this->assertSame('event_not_open', $this->decide($this->ada, null, $this->event(['starts_at' => '2026-10-05 07:00:00', 'ends_at' => '2026-10-05 08:59:00']))->reason);
 
         $this->assertSame('event_not_open', $this->decide($this->ada, null, $this->event(['status' => LoyaltyEvent::DRAFT]))->reason);
@@ -252,8 +255,22 @@ class AccessDecisionTest extends TestCase
 
         $this->assertTrue(AccessDecision::isOpen($event, '2026-10-05T12:00'));
         $this->assertFalse(AccessDecision::isOpen($event, '2026-10-05T11:59'));
-        $this->assertTrue(AccessDecision::isOpen($event, '2026-10-05T16:00'));
+        $this->assertTrue(AccessDecision::isOpen($event, '2026-10-05T15:59'));
+        $this->assertFalse(AccessDecision::isOpen($event, '2026-10-05T16:00'));
         $this->assertFalse(AccessDecision::isOpen($event, '2026-10-05T16:01'));
+    }
+
+    public function test_the_door_shuts_when_every_screen_says_the_event_has_ended(): void
+    {
+        // An event ending at 21:00: at 20:59:59 it is on and lets a walk-in in; at 21:00:00 and 21:00:40 it has ended
+        // (EventClock, to the second) and the door says so too.
+        $event = $this->event(['starts_at' => '2026-10-05 19:00:00', 'ends_at' => '2026-10-05 21:00:00']);
+        foreach (['20:59:00' => true, '20:59:59' => true, '21:00:00' => false, '21:00:40' => false] as $at => $open) {
+            $this->travelTo(CarbonImmutable::parse("2026-10-05 {$at}"));
+            $this->assertSame(!$open, EventClock::hasEnded($event->fresh()), $at);
+            $verdict = $this->decide($this->grace, null, $event);
+            $this->assertSame($open ? 'welcome' : 'event_not_open', $verdict->reason, $at);
+        }
     }
 
     public function test_the_member_checks_come_before_the_events_and_an_events_tiers_are_checked(): void

@@ -10,6 +10,12 @@ use App\Support\SharedCache;
  * first scan's answer — its status and body — and writes no second entry; the same key with another code, place or
  * event is 409 `key_reused`. Kept per organisation in SharedCache (production's default cache is each container's own
  * files) for SECONDS: a door retries within moments, and a key is never meant to stand for a scan an hour later.
+ *
+ * Copies of one keyed scan are taken one at a time — a place's under an advisory lock in its transaction (PlaceScan),
+ * an event's under a SharedCache lock (EventScan, whose check-in must commit before its visit runs) — so the second
+ * waits for the first and answers its answer. Should two copies still both run (a lock outlived), a kept success is
+ * never replaced by a refusal: a refusal is kept only where nothing is (Repository::add, one atomic write), so a member
+ * who was let in never reads red on a retry.
  */
 final class ScanReplay
 {
@@ -32,7 +38,7 @@ final class ScanReplay
         return $this->key !== null;
     }
 
-    /** The advisory lock a keyed scan is taken under, so a retry racing the first waits for its answer. */
+    /** The lock a keyed scan is taken under (advisory at a place, SharedCache at an event), so a retry racing the first waits for its answer. */
     public function lockKey(): ?string
     {
         return $this->key;
@@ -55,11 +61,21 @@ final class ScanReplay
         return ['status' => (int) $seen['status'], 'body' => (array) $seen['body']];
     }
 
-    /** @param array<string, mixed> $body */
+    /**
+     * Keep this answer for the key's retries: a success always, a refusal only where no answer is kept yet.
+     *
+     * @param array<string, mixed> $body
+     */
     public function keep(int $status, array $body): void
     {
-        if ($this->key !== null) {
-            SharedCache::store()->put($this->key, ['hash' => $this->hash, 'status' => $status, 'body' => $body], self::SECONDS);
+        if ($this->key === null) {
+            return;
+        }
+        $kept = ['hash' => $this->hash, 'status' => $status, 'body' => $body];
+        if ($status >= 200 && $status < 300) {
+            SharedCache::store()->put($this->key, $kept, self::SECONDS);
+        } else {
+            SharedCache::store()->add($this->key, $kept, self::SECONDS);
         }
     }
 }

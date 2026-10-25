@@ -6,7 +6,10 @@ use App\Models\LoyaltyEvent;
 use App\Models\User;
 use App\Services\Loyalty\CardLookup;
 use App\Services\Loyalty\Events\EventCheckIn;
+use App\Services\Loyalty\LoyaltyRefused;
 use App\Services\Loyalty\MemberDirectory;
+use App\Support\SharedCache;
+use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -21,11 +24,20 @@ use Illuminate\Support\Facades\DB;
  * `action_taken`.
  *
  * Sent again with its idempotency key, the scan answers the first answer (ScanReplay) and reads the code no second
- * time; the key goes on to EventCheckIn, whose own retry rule (one check-in per member and event) holds when two
- * copies of a scan race.
+ * time. Copies of one keyed scan are taken one at a time under a SharedCache lock on the key — not an advisory lock in a
+ * transaction, since EventCheckIn must commit before its after-commit visit runs: a second copy arriving while the
+ * first is checking in waits for it and answers its answer, so a single-use QR code is read once and the member is not
+ * shown "used up". A copy that cannot get the lock within LOCK_WAIT_SECONDS is 409 `in_progress` (nothing written; the
+ * door retries). The key goes on to EventCheckIn too, whose own rule (one check-in per member and event) stands behind.
  */
 final class EventScan
 {
+    /** How long a keyed scan's lock lives if its holder never lets go: longer than a check-in with its visit takes. */
+    public const LOCK_SECONDS = 30;
+
+    /** How long a second copy of a keyed scan waits for the first (`loyalty.scan_lock_wait`, default this). */
+    public const LOCK_WAIT_SECONDS = 10;
+
     public function __construct(
         private readonly CardLookup $cards,
         private readonly EventCheckIn $checkIn,
@@ -35,7 +47,7 @@ final class EventScan
     /**
      * `{ status, body }`: 200 with `{ member, verdict: checkIn's verdict + { event: {id, title}, entry_id (the check-in's
      * scan row) }, checked_in, already_in, signed_up, points, stamp, benefits }`, or the code's refusal (404 `{ error,
-     * message[, card] }`).
+     * message[, card] }`), or — a keyed copy still waiting on the first — 409 `in_progress`.
      *
      * @return array{status: int, body: array<string, mixed>}
      */
@@ -43,10 +55,32 @@ final class EventScan
     {
         $orgId = (int) $event->organization_id;
         $replay = ScanReplay::for($orgId, $key, ['code' => trim($code), 'event_id' => (int) $event->id]);
-        if (($seen = $replay->seen()) !== null) {
-            return $seen;
+        if (!$replay->keyed()) {
+            return $this->attempt($event, $code, $by, null, $replay);
         }
 
+        $lock = SharedCache::store()->lock((string) $replay->lockKey(), self::LOCK_SECONDS);
+        try {
+            $lock->block(max(0, (int) config('loyalty.scan_lock_wait', self::LOCK_WAIT_SECONDS)));
+        } catch (LockTimeoutException) {
+            throw new LoyaltyRefused('in_progress', 'This scan is still being handled. Try again in a moment.', 409);
+        }
+        try {
+            return $replay->seen() ?? $this->attempt($event, $code, $by, $key, $replay);
+        } finally {
+            // Always released: the next copy never waits out the lock's life.
+            $lock->release();
+        }
+    }
+
+    /**
+     * One scan, read and handed to the check-in, its answer kept for the key's retries.
+     *
+     * @return array{status: int, body: array<string, mixed>}
+     */
+    private function attempt(LoyaltyEvent $event, string $code, User $by, ?string $key, ScanReplay $replay): array
+    {
+        $orgId = (int) $event->organization_id;
         $read = DB::transaction(function () use ($code, $by, $event, $orgId) {
             $read = $this->cards->read(trim($code), $by);
             if ($read->namedMember() === null) {
