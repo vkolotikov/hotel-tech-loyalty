@@ -44,6 +44,11 @@ class LoyaltyMember extends Model
         'qualifying_spend' => 'decimal:2',
         // Release 7: cashback credit — written only by App\Services\Loyalty\Credit\CreditLedger (never mass-assigned).
         'credit_balance' => 'decimal:2',
+        // Release 8: the membership's optional end date (only App\Services\Loyalty\Members\MembershipValidity writes
+        // it, never mass-assigned), the end date the reminder went out for, and the visits counted for tier progress.
+        'membership_valid_until' => 'date',
+        'membership_reminded_for' => 'date',
+        'qualifying_visits' => 'integer',
     ];
 
     public function user(): BelongsTo

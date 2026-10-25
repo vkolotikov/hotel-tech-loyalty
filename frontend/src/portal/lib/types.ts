@@ -17,6 +17,8 @@ export interface PortalCapabilities {
   stays: boolean
   chat: boolean
   payments: { services: boolean; stays: boolean; publishable_key: string | null }
+  /** Release 8: the venue has a published event that has not ended; the menu offers Events. */
+  events?: boolean
 }
 
 export interface PortalPolicies {
@@ -71,6 +73,8 @@ export interface PortalMember {
   /** Release 4, part F: "Offers by SMS", off until the member turns it on. Absent until the server sends it; the
    *  portal shows the switch only then. */
   sms_consent?: boolean
+  /** Release 8: the membership's end date (Y-m-d, or null: no end) and its state. */
+  membership?: { valid_until: string | null; state: 'active' | 'expiring' | 'expired' | 'off' }
 }
 
 /** The categories of NotificationService::CATEGORIES, the keys PUT member/profile `notification_preferences` takes. */

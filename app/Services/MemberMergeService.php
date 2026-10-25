@@ -93,6 +93,9 @@ class MemberMergeService
         'stamp_cards'          => ['member_id'],
         'credit_transactions'  => ['member_id'],
         'tier_qualification_counts' => ['member_id'], // what each visit added to the counters, which the merge adds up
+        // Release 8: event sign-ups and check-ins, one per member per event (mergeEvents() drops the loser's duplicates first).
+        'loyalty_event_registrations' => ['member_id'],
+        'loyalty_event_attendances'   => ['member_id'],
         // An earlier merge into the loser now reads as a merge into the winner (its foreign key would otherwise stop
         // the loser's deletion).
         'member_merges'        => ['surviving_member_id'],
@@ -143,6 +146,7 @@ class MemberMergeService
                 // Release 7: before the generic move below.
                 'stamps'                    => $this->mergeStamps($winner, $loser),
                 'credit_transactions'       => $this->mergeCredit($winner, $loser),
+                'loyalty_event_registrations' => $this->mergeEvents($winner, $loser),
             ];
 
             // 2) Every other row that names the loser now names the winner. Tables and columns are checked first:
@@ -531,6 +535,21 @@ class MemberMergeService
         }
 
         return app(\App\Services\Loyalty\Stamps\StampCards::class)->beforeMerge($winner, $loser);
+    }
+
+    /**
+     * Release 8 (spec 2026-10-25 §4): an event both members signed up for or attended keeps the winner's row (one per
+     * member per event: the unique indexes); the loser's other rows move with the generic move. Answers how many rows
+     * were dropped.
+     */
+    private function mergeEvents(LoyaltyMember $winner, LoyaltyMember $loser): int
+    {
+        // An older database, or a test's narrower schema, without events: nothing to merge.
+        if (!Schema::hasTable('loyalty_event_registrations') || !Schema::hasTable('loyalty_event_attendances')) {
+            return 0;
+        }
+
+        return app(\App\Services\Loyalty\Events\EventMerge::class)->beforeMerge($winner, $loser);
     }
 
     /**

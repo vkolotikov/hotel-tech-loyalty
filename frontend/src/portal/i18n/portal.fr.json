@@ -1,5 +1,5 @@
 {
-  "nav": { "home": "Accueil", "book": "Réserver", "rewards": "Récompenses", "bookings": "Réservations", "profile": "Profil", "activity": "Activité", "inbox": "Messages" },
+  "nav": { "home": "Accueil", "book": "Réserver", "rewards": "Récompenses", "bookings": "Réservations", "profile": "Profil", "activity": "Activité", "inbox": "Messages", "events": "Événements" },
   "common": {
     "loading": "Chargement…", "retry": "Réessayer", "error": "Une erreur est survenue. Veuillez réessayer.",
     "save": "Enregistrer les modifications", "saved": "Enregistré", "cancel": "Annuler", "confirm": "Confirmer", "close": "Fermer",

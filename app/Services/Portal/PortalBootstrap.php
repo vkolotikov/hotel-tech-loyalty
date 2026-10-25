@@ -309,6 +309,8 @@ final class PortalBootstrap
             'services' => $hasMember && $this->capability->appointmentsBookable($org->id),
             'stays'    => $hasMember && $this->capability->staysBookableOnline($org->id),
             'chat'     => true,
+            // Release 8 (spec 2026-10-25 §4): the menu offers Events while the venue has a published event that has not ended.
+            'events'   => $hasMember && $loyalty && app(\App\Services\Loyalty\Events\PortalEvents::class)->offered((int) $org->id),
             'payments' => [
                 'services'        => $payServices,
                 'stays'           => $payStays,
@@ -332,6 +334,9 @@ final class PortalBootstrap
                 'value_amount' => $tb->value_amount !== null ? (float) $tb->value_amount : null,
             ])->values()->all()
             : [];
+
+        // Release 8 (spec 2026-10-25 §3): the membership's end date and its state (active, expiring, expired, off).
+        $summary['membership'] = \App\Services\Loyalty\Members\MembershipValidity::summaryFor($member);
 
         // Release 4 §2 A: the kinds of message as the server reads them — on unless the member switched the kind off
         // (NotificationService::optsOut()) — so Profile shows the switches PUT member/profile saves.

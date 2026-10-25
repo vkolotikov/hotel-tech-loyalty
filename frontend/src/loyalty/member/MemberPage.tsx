@@ -32,6 +32,7 @@ import { lineType, memberActions, offersReverse, type PointsMode } from './membe
 import { MoreMenu } from './MoreMenu'
 import { NfcCards } from './NfcCards'
 import { CreditPanel } from '../credit/CreditPanel'
+import { ValidityCard } from '../membership/ValidityCard'
 import { VisitsPanel } from '../visits/VisitsPanel'
 import { PointsDialog } from './PointsDialog'
 import { ReverseDialog } from './ReverseDialog'
@@ -209,6 +210,9 @@ function Member({ detail, locale }: { detail: MemberDetail; locale: string }) {
             : <ul className="divide-y divide-a-border">{detail.requests.map(r => <RequestRow key={r.id} request={r} showMember={false} compact />)}</ul>}
         </section>
       </div>
+
+      {/* Release 8: the membership — valid until, Extend (managers). */}
+      <ValidityCard member={member} locale={locale} timeZone={timeZone} />
 
       {/* Release 7: the stamp card with Check in and Add a purchase, and cashback credit — each when the venue uses it. */}
       <VisitsPanel member={member} locale={locale} timeZone={timeZone} />

@@ -75,6 +75,11 @@ final class AccessMap
         'admin/loyalty/members/{id}/stamps'     => ['staff',              'staff',              'loyalty'],       // Release 7: a member's stamp card (read only)
         'admin/loyalty/members/{id}/credit'     => ['staff',              'can_redeem_points',  'loyalty'],       // Release 7: cashback credit; spending it at the desk is can_redeem_points, as Redeem
         'admin/loyalty/members/{id}/credit/adjust' => ['manager',         'manager',            'loyalty'],       // Release 7: a manager's correction of a member's credit
+        'admin/loyalty/places'                  => ['staff',              'manager',            'loyalty'],       // Release 8: places and who may enter them (changes: manager, as Program); entries read by every staff member
+        'admin/loyalty/members/{id}/validity'   => ['manager',            'manager',            'loyalty'],       // Release 8: a membership's end date (manager, as a tier change)
+        'admin/loyalty/events'                  => ['staff',              'can_manage_offers',  'loyalty'],       // Release 8: events (changes: can_manage_offers, as offers)
+        'admin/loyalty/events/{id}/sign-ups'    => ['staff',              'staff',              'loyalty'],       // Release 8: signing a member up for an event, or cancelling (every staff member, at the desk)
+        'admin/loyalty/events/{id}/check-in'    => ['staff',              'staff',              'loyalty'],       // Release 8: checking a member in at an event (every staff member; the points are the event's)
 
         // ── The caller's own account
         'admin/branding'                        => ['staff',              'manager',            'account'],       // The theme every page reads, the workspace included (ruling R1)

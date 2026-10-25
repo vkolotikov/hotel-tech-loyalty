@@ -1,5 +1,5 @@
 {
-  "nav": { "home": "Home", "book": "Book", "rewards": "Rewards", "bookings": "Bookings", "profile": "Profile", "activity": "Activity", "inbox": "Inbox" },
+  "nav": { "home": "Home", "book": "Book", "rewards": "Rewards", "bookings": "Bookings", "profile": "Profile", "activity": "Activity", "inbox": "Inbox", "events": "Events" },
   "common": {
     "loading": "Loading…", "retry": "Try again", "error": "Something went wrong. Please try again.",
     "save": "Save changes", "saved": "Saved", "cancel": "Cancel", "confirm": "Confirm", "close": "Close",

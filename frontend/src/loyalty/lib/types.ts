@@ -74,6 +74,9 @@ export interface MemberRow {
   last_activity_at: string | null
   /** Release 7 (spec 2026-10-25 §3): cashback credit in the venue's currency (CreditLedger); absent from a server before release 7. */
   credit_balance?: number
+  /** Release 8: the membership's end date (Y-m-d, or null: no end) and its state. */
+  valid_until?: string | null
+  membership_state?: 'active' | 'expiring' | 'expired' | 'off'
 }
 
 export interface Figures {

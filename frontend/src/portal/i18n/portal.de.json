@@ -1,5 +1,5 @@
 {
-  "nav": { "home": "Start", "book": "Buchen", "rewards": "Prämien", "bookings": "Buchungen", "profile": "Profil", "activity": "Verlauf", "inbox": "Nachrichten" },
+  "nav": { "home": "Start", "book": "Buchen", "rewards": "Prämien", "bookings": "Buchungen", "profile": "Profil", "activity": "Verlauf", "inbox": "Nachrichten", "events": "Events" },
   "common": {
     "loading": "Wird geladen…", "retry": "Erneut versuchen", "error": "Etwas ist schiefgelaufen. Bitte versuchen Sie es erneut.",
     "save": "Änderungen speichern", "saved": "Gespeichert", "cancel": "Abbrechen", "confirm": "Bestätigen", "close": "Schließen",

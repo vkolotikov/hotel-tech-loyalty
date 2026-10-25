@@ -1,5 +1,5 @@
 {
-  "nav": { "home": "Inicio", "book": "Reservar", "rewards": "Recompensas", "bookings": "Reservas", "profile": "Perfil", "activity": "Actividad", "inbox": "Mensajes" },
+  "nav": { "home": "Inicio", "book": "Reservar", "rewards": "Recompensas", "bookings": "Reservas", "profile": "Perfil", "activity": "Actividad", "inbox": "Mensajes", "events": "Eventos" },
   "common": {
     "loading": "Cargando…", "retry": "Reintentar", "error": "Algo salió mal. Inténtelo de nuevo.",
     "save": "Guardar cambios", "saved": "Guardado", "cancel": "Cancelar", "confirm": "Confirmar", "close": "Cerrar",
