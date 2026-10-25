@@ -1,64 +1,127 @@
-import { useCallback, useMemo, useRef, useState, type ReactNode } from 'react'
-import { Link } from 'react-router-dom'
-import { useMutation, useQuery } from '@tanstack/react-query'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { Camera, Link2, Minus, Nfc, Plus, ScanLine, Square, Usb } from 'lucide-react'
+import { Camera, Link2, Maximize2, Nfc, ScanLine, Square, Usb } from 'lucide-react'
 import { Button } from '../../workspace/ui/Button'
 import { Notice } from '../../workspace/ui/Notice'
 import { PageHeader } from '../../workspace/ui/PageHeader'
-import { Skeleton } from '../../workspace/ui/Skeleton'
-import { useApi, useBoot } from '../LoyaltyProvider'
-import { failureOf, type ApiFailure } from '../lib/api'
+import { useBoot } from '../LoyaltyProvider'
+import { failureOf, newPressKey, type ApiFailure } from '../lib/api'
 import { errorKey } from '../lib/errors'
-import { points } from '../lib/format'
-import { memberPath } from '../lib/links'
-import { useLook } from '../lib/look'
 import type { MemberRow } from '../lib/types'
-import { PointsDialog } from '../member/PointsDialog'
-import { memberActions, type PointsMode } from '../member/memberMath'
-import { RequestRow } from '../requests/RequestRow'
-import { TierChip } from '../ui/TierChip'
 import { CameraScanner } from './CameraScanner'
+import { ContextPicker } from './ContextPicker'
 import { LinkCardDialog } from './LinkCardDialog'
+import { ScannedCard } from './ScannedCard'
+import { afterGone, afterScan, contextBody, eventsTodayKey, placesKey, scanApi, type ScanAnswer } from './scanApi'
+import {
+  DESK, activePlaces, contextFromSearch, doorPath, loadContext, openEvents, resolveContext, saveContext, venueWallNow, type ScanContext,
+} from './scanContext'
 import {
   cameraAttempt, cardToLink, detectEnv, fieldAttempt, modeState, nfcState, refocusAfter, scanTrouble, usbAttempt,
   type Attempt, type NfcPanelState, type ScanEnv, type ScanMode,
 } from './scanMath'
+import { TodayHere } from './TodayHere'
+import { useToday } from './useToday'
 import { UsbReader } from './UsbReader'
 import { useWebNfc } from './useWebNfc'
-import { CreditSummary } from '../credit/CreditSummary'
-import { DeskActions } from '../visits/DeskActions'
+import { answerVerdict, failureVerdict, goneContext, showsToday, type VerdictFacts } from './verdict'
+import { Announcer, VerdictCard } from './VerdictCard'
 
 const INPUT = 'w-full rounded-xl border border-a-border bg-a-surface px-4 py-3 font-a-mono text-base text-a-text'
 
+/** What the page shows after a scan: the desk's member card, or a verdict at a place or an event (answer or refusal). */
+type Shown =
+  | { kind: 'desk'; member: MemberRow; key: number; linked: boolean }
+  | { kind: 'verdict'; context: ScanContext; attempt: Attempt; answer: ScanAnswer | null; failure: ApiFailure | null; key: number }
+  | { kind: 'linked'; member: MemberRow; key: number }
+
 /**
- * Scan (spec 2026-10-21 §4.7; release 5, spec 2026-10-23 §3). Four ways in, one endpoint (`POST scan`), which reads
- * whatever it is given (CardLookup): "Scan with camera" (the rear camera, the decoder loaded only then), "Tap NFC
- * card" (Web NFC, Chrome on Android), "USB reader" (WebHID, Chrome or Edge at a desk), and the field, for a reader
- * that types (it ends with Enter, which sends) or a person; the field keeps the focus after the field's and the USB
- * reader's scans. Found: the member's card with Award, Redeem and their open requests. A card no member has, or one
- * switched off here, offers "Link this card".
+ * Scan (spec 2026-10-21 §4.7; release 5, spec 2026-10-23 §3; release 8, spec 2026-10-25 §2). "Scanning for" at the
+ * top: the desk, a place or an event, remembered on this device (scanContext.ts); an address that names one
+ * (`?event=5`, an event's Start check-in) chooses it. Four ways in, one endpoint (`POST scan`), which reads whatever
+ * it is given (CardLookup): the camera, NFC (Chrome on Android), a USB reader (WebHID), and the field, for a reader
+ * that types (Enter sends) or a person; the field keeps the focus after the field's and the USB reader's scans.
+ *
+ * At the desk: the member's card (Award, Redeem, Check in, credit, requests); a card nobody has offers "Link this
+ * card". At a place or an event: the verdict (verdict.ts) — green, amber or red, said aloud — and "Today here".
  */
 export function ScanPage() {
-  const { t } = useTranslation()
-  const api = useApi()
+  const { t, i18n } = useTranslation()
+  const locale = i18n.language || 'en'
+  const boot = useBoot()
+  const client = useQueryClient()
+  const location = useLocation()
+  const navigate = useNavigate()
   const env = useMemo(() => detectEnv(), [])
+  const named = contextFromSearch(location.search)
+  const [wanted, setWanted] = useState<ScanContext>(() => {
+    const first = named ?? loadContext()
+    // An event's Start check-in names it in the address: chosen as if tapped, so the next visit opens on it too.
+    if (named) saveContext(named)
+    return first
+  })
+
+  const places = useQuery({ queryKey: placesKey, queryFn: scanApi.places, staleTime: 60_000, retry: 1 })
+  const events = useQuery({ queryKey: eventsTodayKey, queryFn: scanApi.eventsToday, staleTime: 60_000, refetchInterval: 60_000, retry: 1 })
+  const timeZone = boot.venue.timezone
+  const nowWall = venueWallNow(timeZone)
+  const placeList = places.data ? activePlaces(places.data.places) : undefined
+  const eventList = events.data ? openEvents(events.data.events, nowWall) : undefined
+  const resolved = resolveContext(wanted, placeList, eventList)
+  const context = resolved.context
+  const facts: VerdictFacts = { locale, today: boot.venue.today, nowWall, timeZone, place: resolved.place, event: resolved.event }
+  const today = useToday(context, timeZone)
+
   const [mode, setMode] = useState<ScanMode | null>(null)
   const [code, setCode] = useState('')
-  const [shown, setShown] = useState<{ member: MemberRow; key: number; linked: boolean } | null>(null)
+  const [shown, setShown] = useState<Shown | null>(null)
   const [linking, setLinking] = useState<string | null>(null)
   const field = useRef<HTMLInputElement>(null)
+  const result = useRef<HTMLDivElement>(null)
+  // On a phone the answer is below the fold: each new one is brought into view (no further than needed).
+  useEffect(() => {
+    if (!shown || typeof window === 'undefined') return
+    const still = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+    result.current?.scrollIntoView({ block: 'nearest', behavior: still ? 'auto' : 'smooth' })
+  }, [shown])
+  /** The desk again, remembered, when the place or event scanned for is gone (the verdict on screen says why). */
+  const fallBack = () => {
+    setWanted(DESK)
+    saveContext(DESK)
+    if (named) navigate({ pathname: location.pathname, search: '' }, { replace: true })
+  }
+
   const scan = useMutation({
-    mutationFn: (attempt: Attempt) => api.scan(attempt.code),
+    mutationFn: ({ attempt, context: at }: { attempt: Attempt; context: ScanContext }) =>
+      scanApi.scan({ code: attempt.code, idempotency_key: newPressKey(), ...contextBody(at) }),
     onMutate: () => setShown(null),
-    onSuccess: (data) => setShown({ member: data.member, key: Date.now(), linked: false }),
-    onSettled: (_data, _error, attempt) => {
+    onSuccess: (answer, { attempt, context: at }) => {
+      setShown(at.kind === 'desk'
+        ? { kind: 'desk', member: answer.member, key: Date.now(), linked: false }
+        : { kind: 'verdict', context: at, attempt, answer, failure: null, key: Date.now() })
+      afterScan(client, at, answer.member?.id ?? null)
+    },
+    onError: (error, { attempt, context: at }) => {
+      // A refused code is a red verdict at a place or an event (and is logged there); the desk says it as before.
+      if (at.kind === 'desk') return
+      const failure = failureOf(error)
+      setShown({ kind: 'verdict', context: at, attempt, answer: null, failure, key: Date.now() })
+      afterScan(client, at, null)
+      // The place or event no longer exists: the page falls back to the desk, and the band says so.
+      const gone = goneContext(failure)
+      if (gone) { afterGone(client, gone); fallBack() }
+    },
+    onSettled: (_data, _error, { attempt }) => {
       if (attempt.source === 'field') setCode('')
       if (refocusAfter(attempt.source)) field.current?.focus()
     },
   })
-  const { mutate } = scan
-  const send = useCallback((attempt: Attempt | null) => { if (attempt && attempt.code !== '') mutate(attempt) }, [mutate])
+  // Each scan is sent for the context chosen when it is read (useWebNfc keeps the latest of this function).
+  const send = (attempt: Attempt | null) => {
+    if (attempt && attempt.code !== '') scan.mutate({ attempt, context })
+  }
   const nfc = useWebNfc(send)
 
   // A press starts NFC at once (the browser asks for the permission only from a press); the active mode's own button stops it.
@@ -70,42 +133,97 @@ export function ScanPage() {
   }
   const stopMode = () => { if (mode === 'nfc') nfc.stop(); setMode(null) }
 
-  const failure = scan.isError ? failureOf(scan.error) : null
-  const attempt = scan.variables ?? null
+  const chooseContext = (next: ScanContext) => {
+    setWanted(next)
+    saveContext(next)
+    scan.reset()
+    setShown(null)
+    // The address no longer decides once someone chose: a reload keeps the choice.
+    if (named) navigate({ pathname: location.pathname, search: '' }, { replace: true })
+    field.current?.focus()
+  }
+
+  const deskFailure = scan.isError && scan.variables?.context.kind === 'desk' ? failureOf(scan.error) : null
+  const attempt = scan.variables?.attempt ?? null
+  const verdict = shown?.kind === 'verdict'
+    ? (shown.answer ? answerVerdict(shown.answer, facts) : failureVerdict(shown.failure!))
+    : null
+  const verdictLink = shown?.kind === 'verdict' && shown.failure ? cardToLink(scanTrouble(shown.failure, shown.attempt), shown.attempt) : null
 
   return (
     <div className="space-y-5 px-4 py-6 lg:px-6">
-      <PageHeader title={t('loyalty.scan.title', 'Scan')} line={t('loyalty.scan.line', 'Scan the member app’s QR code or a card, or type a member number.')} />
+      <PageHeader title={t('loyalty.scan.title', 'Scan')} line={t('loyalty.scan.line', 'Scan the member app’s QR code or a card, or type a member number.')}>
+        {context.kind !== 'desk' && (
+          <Link to={doorPath(context)} className="hidden items-center gap-2 rounded-full bg-a-accent px-4 py-2.5 text-sm font-semibold text-a-accent-ink shadow-a-sm hover:bg-a-accent-deep sm:inline-flex">
+            <Maximize2 size={16} aria-hidden />{t('loyalty.door.open_door', 'Door mode')}
+          </Link>
+        )}
+      </PageHeader>
 
-      <div className="grid max-w-2xl grid-cols-1 gap-2 sm:grid-cols-3" role="group" aria-label={t('loyalty.scan.ways', 'Ways to scan')}>
-        <ModeButton active={mode === 'camera'} onClick={() => choose('camera')} icon={<Camera size={18} aria-hidden />} label={t('loyalty.scan.mode_camera', 'Scan with camera')} />
-        <ModeButton active={mode === 'nfc'} onClick={() => choose('nfc')} icon={<Nfc size={18} aria-hidden />} label={t('loyalty.scan.mode_nfc', 'Tap NFC card')} />
-        <ModeButton active={mode === 'usb'} onClick={() => choose('usb')} icon={<Usb size={18} aria-hidden />} label={t('loyalty.scan.mode_usb', 'USB reader')} />
+      <div className="max-w-3xl space-y-5">
+        <ContextPicker resolved={resolved} onChoose={chooseContext} choices={{
+          places: placeList,
+          events: eventList,
+          loading: places.isPending || events.isPending,
+          failed: places.isError || events.isError,
+          canSetUp: places.data?.can_change ?? false,
+        }} />
+
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3" role="group" aria-label={t('loyalty.scan.ways', 'Ways to scan')}>
+          <ModeButton active={mode === 'camera'} onClick={() => choose('camera')} icon={<Camera size={18} aria-hidden />} label={t('loyalty.scan.mode_camera', 'Scan with camera')} />
+          <ModeButton active={mode === 'nfc'} onClick={() => choose('nfc')} icon={<Nfc size={18} aria-hidden />} label={t('loyalty.scan.mode_nfc', 'Tap NFC card')} />
+          <ModeButton active={mode === 'usb'} onClick={() => choose('usb')} icon={<Usb size={18} aria-hidden />} label={t('loyalty.scan.mode_usb', 'USB reader')} />
+        </div>
+
+        {mode !== null && (
+          <div>
+            {mode === 'camera' && <CameraPanel env={env} onCode={(text) => { setMode(null); send(cameraAttempt(text)) }} onStop={stopMode} />}
+            {mode === 'nfc' && <NfcPanel state={nfcState(env, nfc.listening, nfc.trouble)} onStart={nfc.start} onStop={stopMode} />}
+            {mode === 'usb' && <UsbReader onUid={(uid) => send(usbAttempt(uid))} />}
+          </div>
+        )}
+
+        <form className="flex gap-2" onSubmit={(e) => { e.preventDefault(); send(fieldAttempt(code)) }}>
+          <label className="min-w-0 flex-1">
+            <span className="sr-only">{t('loyalty.scan.field', 'Card, QR code or member number')}</span>
+            <input ref={field} value={code} onChange={(e) => setCode(e.target.value)} autoFocus autoComplete="off" spellCheck={false}
+              placeholder={t('loyalty.scan.placeholder', 'Scan or type…')} className={INPUT} />
+          </label>
+          <Button type="submit" loading={scan.isPending}><ScanLine size={16} aria-hidden />{t('loyalty.scan.find', 'Find')}</Button>
+        </form>
+
+        <div ref={result} className="scroll-mt-4 space-y-5">
+        {/* The desk, as releases 5–7 left it. */}
+        {deskFailure && attempt && <ScanTroubleNotice failure={deskFailure} attempt={attempt} onLink={setLinking} />}
+        {shown?.kind === 'desk' && shown.linked && <Notice tone="success">{t('loyalty.scan.linked', 'The card is linked to {{name}}. Their next tap finds them.', { name: shown.member.name || shown.member.member_number || '' })}</Notice>}
+        {shown?.kind === 'desk' && <ScannedCard key={`${shown.member.id}-${shown.key}`} member={shown.member} />}
+
+        {/* A place or an event: the verdict, said aloud (the region is always there, so a new verdict is announced). */}
+        <Announcer view={verdict} />
+        {verdict && (
+          <VerdictCard key={shown!.key} view={verdict}>
+            {verdictLink !== null && (
+              <Button className="py-3 text-base" onClick={() => setLinking(verdictLink)}><Link2 size={16} aria-hidden />{t('loyalty.scan.link_card', 'Link this card')}</Button>
+            )}
+          </VerdictCard>
+        )}
+        {shown?.kind === 'linked' && (
+          <Notice tone="success">{t('loyalty.door.linked', 'The card is linked to {{name}}. Scan it again to let them in.', { name: shown.member.name || shown.member.member_number || '' })}</Notice>
+        )}
+        </div>
+
+        {showsToday(context) && <TodayHere today={today} locale={locale} />}
       </div>
 
-      {mode !== null && (
-        <div className="max-w-2xl">
-          {mode === 'camera' && <CameraPanel env={env} onCode={(text) => { setMode(null); send(cameraAttempt(text)) }} onStop={stopMode} />}
-          {mode === 'nfc' && <NfcPanel state={nfcState(env, nfc.listening, nfc.trouble)} onStart={nfc.start} onStop={stopMode} />}
-          {mode === 'usb' && <UsbReader onUid={(uid) => send(usbAttempt(uid))} />}
-        </div>
-      )}
-
-      <form className="flex max-w-2xl gap-2" onSubmit={(e) => { e.preventDefault(); send(fieldAttempt(code)) }}>
-        <label className="min-w-0 flex-1">
-          <span className="sr-only">{t('loyalty.scan.field', 'Card, QR code or member number')}</span>
-          <input ref={field} value={code} onChange={(e) => setCode(e.target.value)} autoFocus autoComplete="off" spellCheck={false}
-            placeholder={t('loyalty.scan.placeholder', 'Scan or type…')} className={INPUT} />
-        </label>
-        <Button type="submit" loading={scan.isPending}><ScanLine size={16} aria-hidden />{t('loyalty.scan.find', 'Find')}</Button>
-      </form>
-
-      {failure && attempt && <ScanTroubleNotice failure={failure} attempt={attempt} onLink={setLinking} />}
-      {shown?.linked && <div className="max-w-2xl"><Notice tone="success">{t('loyalty.scan.linked', 'The card is linked to {{name}}. Their next tap finds them.', { name: shown.member.name || shown.member.member_number || '' })}</Notice></div>}
-      {shown && <ScannedCard key={`${shown.member.id}-${shown.key}`} member={shown.member} />}
       {linking !== null && (
         <LinkCardDialog uid={linking} onClose={() => setLinking(null)}
-          onLinked={(member) => { setLinking(null); scan.reset(); setShown({ member, key: Date.now(), linked: true }) }} />
+          onLinked={(member) => {
+            setLinking(null)
+            scan.reset()
+            if (context.kind === 'desk') setShown({ member, key: Date.now(), kind: 'desk', linked: true })
+            else setShown({ kind: 'linked', member, key: Date.now() })
+            field.current?.focus()
+          }} />
       )}
     </div>
   )
@@ -174,61 +292,5 @@ export function ScanTroubleNotice({ failure, attempt, onLink }: { failure: ApiFa
         <Button className="py-3 text-base" onClick={() => onLink(card)}><Link2 size={16} aria-hidden />{t('loyalty.scan.link_card', 'Link this card')}</Button>
       )}
     </div>
-  )
-}
-
-/** The member a scan found: name, tier, points; Award and Redeem; the tier's benefits and what they asked for. */
-function ScannedCard({ member }: { member: MemberRow }) {
-  const { t, i18n } = useTranslation()
-  const locale = i18n.language || 'en'
-  const boot = useBoot()
-  const api = useApi()
-  const look = useLook()
-  const [dialog, setDialog] = useState<PointsMode | null>(null)
-  const detail = useQuery({ queryKey: ['loyalty', 'member', member.id], queryFn: () => api.member(member.id) })
-  const now = detail.data?.member ?? member
-  const tier = boot.programme.tiers.find(tr => tr.id === now.tier_id) ?? null
-  const actions = memberActions(boot.staff.can)
-
-  return (
-    <section aria-label={now.name} className="max-w-2xl space-y-4 rounded-2xl border border-a-border bg-a-surface p-5 shadow-a-sm animate-a-pop">
-      <div className="flex flex-wrap items-start gap-3">
-        <div className="min-w-0 flex-1 space-y-1.5">
-          <Link to={memberPath(now.id)} className="block font-a-display text-3xl text-a-text hover:underline">{now.name || now.member_number}</Link>
-          <div className="flex flex-wrap items-center gap-2 text-sm text-a-text-2">
-            <TierChip tier={tier} theme={look.resolved} />
-            {now.member_number && <span className="font-a-mono">{now.member_number}</span>}
-          </div>
-        </div>
-        <p className="text-right">
-          <span className="block font-a-display text-4xl font-light tabular-nums text-a-text">{points(now.points, locale)}</span>
-          <span className="text-xs text-a-text-2">{t('loyalty.scan.points', 'points')}</span>
-        </p>
-      </div>
-      <div className="flex flex-wrap gap-2">
-        {actions.award && <Button onClick={() => setDialog('award')}><Plus size={15} aria-hidden />{t('loyalty.member.award', 'Award points')}</Button>}
-        {actions.redeem && <Button variant="secondary" onClick={() => setDialog('redeem')}><Minus size={15} aria-hidden />{t('loyalty.member.redeem', 'Redeem points')}</Button>}
-        <Link to={memberPath(now.id)} className="inline-flex items-center rounded-full px-3 py-2 text-sm font-semibold text-a-accent-text hover:bg-a-accent/10">{t('loyalty.scan.open', 'Open member')}</Link>
-      </div>
-      {/* Release 7: Check in and Add a purchase; the credit balance and Use credit — each when the venue uses it. */}
-      <DeskActions member={now} />
-      <CreditSummary member={now} />
-      {!detail.data && detail.isLoading && <Skeleton className="h-16" />}
-      {detail.data && detail.data.benefits.length > 0 && (
-        <div className="space-y-1">
-          <p className="text-xs font-medium text-a-text-2">{t('loyalty.member.benefits_title', 'Tier benefits')}</p>
-          <ul className="flex flex-wrap gap-2">
-            {detail.data.benefits.map(b => <li key={b.id} className="rounded-full bg-a-surface-2 px-2.5 py-1 text-xs text-a-text">{b.name}{b.value ? ` · ${b.value}` : ''}</li>)}
-          </ul>
-        </div>
-      )}
-      {detail.data && detail.data.requests.length > 0 && (
-        <div className="space-y-1">
-          <p className="text-xs font-medium text-a-text-2">{t('loyalty.member.requests_title', 'Requests')}</p>
-          <ul className="-mx-5 divide-y divide-a-border">{detail.data.requests.map(r => <RequestRow key={r.id} request={r} showMember={false} compact />)}</ul>
-        </div>
-      )}
-      {dialog && <PointsDialog mode={dialog} memberId={now.id} name={now.name} balance={now.points} onClose={() => setDialog(null)} />}
-    </section>
   )
 }

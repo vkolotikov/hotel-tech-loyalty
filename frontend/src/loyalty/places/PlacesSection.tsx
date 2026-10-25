@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
+import { useLocation } from 'react-router-dom'
 import { MapPin, Pencil, Plus } from 'lucide-react'
 import { Button } from '../../workspace/ui/Button'
 import { Notice } from '../../workspace/ui/Notice'
@@ -39,9 +40,15 @@ export function PlacesSection({ manage }: { manage: boolean }) {
   const close = () => setOpen(null)
   const data = query.data
   const change = manage && (data?.can_change ?? false)
+  // Scan's "Set up places" opens Program at #places: the router does not scroll to an anchor, so once the places are
+  // drawn the section is brought into view.
+  const { hash } = useLocation()
+  useEffect(() => {
+    if (hash === '#places' && data) document.getElementById('places')?.scrollIntoView({ block: 'start' })
+  }, [hash, data])
 
   return (
-    <section aria-labelledby="program-places" className="space-y-3">
+    <section id="places" aria-labelledby="program-places" className="scroll-mt-20 space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <SectionTitle><span id="program-places">{t('loyalty.places.title', 'Places')}</span></SectionTitle>
         {change && (
