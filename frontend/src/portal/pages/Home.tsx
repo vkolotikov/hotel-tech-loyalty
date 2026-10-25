@@ -15,6 +15,7 @@ import { Skeleton } from '../ui/Skeleton'
 import { MemberCard } from './MemberCard'
 import { CreditBalance } from './credit/CreditBalance'
 import { StampCard } from './stamps/StampCard'
+import { NextEvent } from './events/NextEvent'
 import { statusLabel, statusTone } from './BookingRow'
 import { activityTypeLabel } from './Activity'
 
@@ -40,10 +41,13 @@ export function Home() {
 
   return (
     <div className="space-y-5">
-      {member && <MemberCard member={member} loyalty={capabilities.loyalty} />}
+      {/* Release 8: the card's progress line reads in the programme's terms, a spend in the venue's currency. */}
+      {member && <MemberCard member={member} loyalty={capabilities.loyalty} currency={venue.currency} />}
       {/* Release 7: the stamp card and cashback credit, each when the venue uses it. */}
       {member && capabilities.loyalty && <StampCard />}
       {member && capabilities.loyalty && <CreditBalance />}
+      {/* Release 8: the next event the member signed up for. */}
+      {member && capabilities.events && <NextEvent />}
 
       <section>
         <h2 className="text-sm font-semibold text-p-text mb-2">{t('portal.home.next_booking', 'Your next {{noun}}', { noun: vocab('booking') })}</h2>

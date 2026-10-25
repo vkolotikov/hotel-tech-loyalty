@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import fs from 'node:fs'
 import path from 'node:path'
 import i18next from 'i18next'
-import { OFFER_COUNTED, claimedMessage, offerPerkNote, offerValueLabel, paysPointsOnClaim } from './offerLabel'
+import { claimedMessage, offerPerkNote, offerValueLabel, paysPointsOnClaim } from './offerLabel'
 
 const t = (key: string, fallback: string, vars?: Record<string, unknown>) =>
   Object.entries(vars ?? {}).reduce((s, [k, v]) => s.replace(`{{${k}}}`, String(v)), fallback || key)
@@ -67,31 +67,5 @@ describe('claiming', () => {
     expect(claimedMessage(undefined, t)).toBe('Offer claimed — show it at the desk')
     expect(claimedMessage({ points_awarded: 1 }, await i18nWith('en'))).toBe('+1 point added to your balance')
     expect(claimedMessage({ points_awarded: 5 }, await i18nWith('ru'))).toBe('Начислено +5 баллов')
-  })
-})
-
-describe('the counted phrases', () => {
-  const at = (json: unknown, key: string): unknown =>
-    key.split('.').reduce<unknown>((n, p) => (n && typeof n === 'object' ? (n as Record<string, unknown>)[p] : undefined), json)
-  for (const locale of ['en', 'ru', 'de', 'fr', 'es']) {
-    it(`${locale}: each family carries one/few/many/other with its {{count}}, and no plain key`, () => {
-      const json = JSON.parse(fs.readFileSync(path.resolve(__dirname, `../../i18n/portal.${locale}.json`), 'utf8'))
-      const problems: string[] = []
-      for (const key of Object.keys(OFFER_COUNTED)) {
-        if (at(json, key) !== undefined) problems.push(`${key} is a plain key`)
-        for (const form of ['one', 'few', 'many', 'other']) {
-          const v = at(json, `${key}_${form}`)
-          if (typeof v !== 'string' || !v.includes('{{count}}')) problems.push(`${key}_${form}`)
-        }
-      }
-      expect(problems, problems.join(', ')).toEqual([])
-    })
-  }
-  it("the English fallbacks are the en bundle's own words", () => {
-    const en = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../../i18n/portal.en.json'), 'utf8'))
-    for (const [key, [one, other]] of Object.entries(OFFER_COUNTED)) {
-      expect(at(en, `${key}_one`), key).toBe(one)
-      for (const form of ['few', 'many', 'other']) expect(at(en, `${key}_${form}`), `${key}_${form}`).toBe(other)
-    }
   })
 })

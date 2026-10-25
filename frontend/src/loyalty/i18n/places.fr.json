@@ -1,0 +1,127 @@
+{
+  "title": "Lieux",
+  "line": "Là où les membres scannent leur carte, et les niveaux autorisés à entrer.",
+  "add": "Ajouter un lieu",
+  "add_first": "Ajouter l’entrée",
+  "list": "Lieux",
+  "none_manager": "Aucun lieu pour l’instant. Ajoutez d’abord votre entrée : les scans y diront qui peut entrer.",
+  "none": "Aucun lieu pour l’instant. Un propriétaire ou un manager les ajoute ici.",
+  "switched_on": "Activé",
+  "switched_off": "Désactivé",
+  "edit": "Modifier",
+  "who": "Qui peut entrer",
+  "every_member": "Tous les membres",
+  "tiers_let_in": "Niveaux admis",
+  "today": "Aujourd’hui : entrés {{granted}} · refusés {{denied}}",
+  "today_none": "Aucune entrée aujourd’hui",
+  "see_entries": "voir les entrées à {{place}}",
+  "removed": "{{name}} a été supprimé.",
+  "removed_off": "{{name}} a déjà un historique : il a donc été désactivé plutôt que supprimé. Ses entrées sont conservées.",
+  "tier": {
+    "every": "Accès : tous les lieux",
+    "some": "Accès : {{places}}",
+    "nowhere": "Accès : aucun lieu pour l’instant"
+  },
+  "dialog": {
+    "new_title": "Ajouter un lieu",
+    "edit_title": "Modifier {{name}}",
+    "name": "Nom",
+    "name_hint": "Le nom que l’équipe et les membres lui donnent : Entrée principale, Salon VIP, Spa…",
+    "name_example": "p. ex. Entrée principale",
+    "who": "Qui peut entrer",
+    "every_member": "Tous les membres",
+    "every_member_hint": "Tout membre dont l’adhésion est activée et non expirée.",
+    "only_tiers": "Seulement ces niveaux",
+    "only_tiers_hint": "Les membres des niveaux cochés. Les autres apprennent pourquoi ils ne peuvent pas entrer.",
+    "tiers": "Niveaux autorisés à entrer",
+    "no_tiers": "Votre programme n’a encore aucun niveau en service. Ajoutez-en un d’abord dans Niveaux.",
+    "description": "Description",
+    "description_hint": "Facultatif, 300 caractères au plus : horaires, tenue exigée, ce que l’équipe doit savoir.",
+    "active": "Activé",
+    "active_hint": "Désactivé, un scan ici ne laisse entrer personne et l’écran de scan ne le propose pas.",
+    "remove": "Supprimer le lieu",
+    "save": "Enregistrer le lieu",
+    "create": "Ajouter le lieu"
+  },
+  "remove": {
+    "title": "Supprimer {{name}} ?",
+    "body": "Les scans ne laisseront plus entrer personne ici. Un lieu qui a déjà des entrées, ou où se tient un événement, est désactivé à la place, pour garder son historique.",
+    "confirm": "Supprimer le lieu",
+    "keep": "Le garder",
+    "error": {
+      "manager_only": "Seul un propriétaire ou un manager peut modifier les lieux.",
+      "not_allowed": "Seul un propriétaire ou un manager peut modifier les lieux.",
+      "no_capability": "Seul un propriétaire ou un manager peut modifier les lieux.",
+      "not_found": "Ce lieu n’existe plus. La liste montre maintenant les lieux tels qu’ils sont.",
+      "network": "Pas de connexion : rien n’a été supprimé. Réessayez.",
+      "unknown": "Le lieu n’a pas pu être supprimé. Veuillez réessayer."
+    }
+  },
+  "entries": {
+    "title": "Entrées à {{place}}",
+    "day": "Jour",
+    "previous_day": "Le jour d’avant",
+    "next_day": "Le jour d’après",
+    "today": "Aujourd’hui",
+    "counts": "entrés {{granted}} · refusés {{denied}}",
+    "none": "Personne n’a scanné sa carte ici ce jour-là.",
+    "list": "Scans, du plus récent au plus ancien",
+    "let_in": "Entré :",
+    "refused": "Refusé :",
+    "unknown_code": "Carte ou code inconnu",
+    "by": "par {{name}}",
+    "error": {
+      "not_found": "Ce lieu n’existe plus.",
+      "invalid": "Choisissez un jour.",
+      "network": "Pas de connexion. Vérifiez le réseau et réessayez.",
+      "unknown": "Les entrées n’ont pas pu être chargées. Veuillez réessayer."
+    }
+  },
+  "load": {
+    "error": {
+      "network": "Pas de connexion. Vérifiez le réseau et réessayez.",
+      "unknown": "Les lieux n’ont pas pu être chargés. Veuillez réessayer."
+    }
+  },
+  "place": {
+    "error": {
+      "manager_only": "Seul un propriétaire ou un manager peut modifier les lieux.",
+      "not_allowed": "Seul un propriétaire ou un manager peut modifier les lieux.",
+      "no_capability": "Seul un propriétaire ou un manager peut modifier les lieux.",
+      "name_taken": "Un autre lieu porte déjà ce nom. Choisissez-en un autre.",
+      "key_reused": "Ceci a déjà été envoyé avec d’autres informations. Fermez la fenêtre et rouvrez-la.",
+      "not_found": "Ce lieu n’existe plus. La liste montre maintenant les lieux tels qu’ils sont.",
+      "invalid": "Vérifiez les champs signalés ci-dessous.",
+      "network": "Pas de connexion : rien n’a été enregistré. Réessayez.",
+      "unknown": "Le lieu n’a pas pu être enregistré. Veuillez réessayer."
+    }
+  },
+  "reason": {
+    "welcome": "Entré",
+    "member_erased": "Membre supprimé",
+    "member_off": "Adhésion désactivée",
+    "expired": "Adhésion expirée",
+    "place_off": "Lieu désactivé",
+    "tier_not_allowed": "Niveau non admis ici",
+    "event_not_open": "Événement non ouvert",
+    "event_full": "Événement complet",
+    "not_signed_up": "Pas inscrit",
+    "unknown": "Non admis"
+  },
+  "refusal": {
+    "not_found": "Aucun membre n’a cette carte ou ce numéro",
+    "expired": "Le QR code avait expiré",
+    "revoked": "Le QR code avait été remplacé",
+    "used_up": "QR code déjà utilisé",
+    "inactive": "Carte désactivée",
+    "unknown": "Code non reconnu"
+  },
+  "problem": {
+    "name": "Donnez un nom au lieu.",
+    "name_long": "80 caractères au plus.",
+    "name_taken": "Un autre lieu porte déjà ce nom.",
+    "admits": "Choisissez qui peut entrer.",
+    "tiers": "Cochez au moins un niveau.",
+    "description": "300 caractères au plus."
+  }
+}

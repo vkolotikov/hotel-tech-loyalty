@@ -217,6 +217,15 @@ Multi-tenant Laravel 13 + React (Vite, TypeScript) SaaS with four sub-brands. Pr
   the member row lock, in integer cents, its `balance_after` equal to `credit_balance` after every write, never below
   zero, spent at the desk only (online payments and the public widget never touch credit). A free reward is issued
   only by `RedemptionActions::issueFree()`.
+- Release 8 (`docs/superpowers/specs/2026-10-25-loyalty-release-8-design.md`, owner 2026-10-25, every industry): who
+  gets in at a place or an event is decided only by `Loyalty\Access\AccessDecision` (reads only; erased, off,
+  expired, place off, tier, then the event's window, room and sign-up — the order is the spec's); places are written
+  only by `Access\AccessPlaces`, a membership's end date only by `Members\MembershipValidity` (a plain `Y-m-d`, never
+  through the model's date cast), events only by `Events\*` (`EventCheckIn` takes the member row lock, then the event
+  row lock). A scan never stores the raw code. Event times are the venue's wall clock, stored as written, never
+  converted. Tiers are judged by the programme's `tier_progress_by` (points, visits — one per member per venue day —
+  or spend), never by the member column `tier_qualification_model`; progress comes from
+  `LoyaltyService::tierProgress()`.
 - Testing against PostgreSQL (the SQLite schemas miss NOT NULL columns and indexes production has): build a database
   from every migration, then run a test file with `DB_CONNECTION=pgsql DB_DATABASE=<that database>` (and its host and
   credentials) in the environment — phpunit.xml's `<env>` entries are not forced, and the schema traits skip tables

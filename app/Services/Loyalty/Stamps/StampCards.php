@@ -50,7 +50,7 @@ use Illuminate\Support\Facades\Log;
 class StampCards
 {
     /** A stamp's source: the visit that gave it (Visit::*). */
-    public const SOURCES = [Visit::APPOINTMENT, Visit::STAY, Visit::CHECK_IN, Visit::PURCHASE];
+    public const SOURCES = [Visit::APPOINTMENT, Visit::STAY, Visit::CHECK_IN, Visit::PURCHASE, Visit::EVENT];
 
     /** The push a full card sends (NotificationService::send; a type of its own, so no opt-out category hides it). */
     public const PUSH_TYPE = 'stamp_card_full';

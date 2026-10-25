@@ -23,6 +23,8 @@ final class ImportProblems
         '/^Over your plan member limit/'                  => 'member_limit',
         '/^Could not create: /'                           => 'not_created',
         '/^Could not read this row /'                     => 'unreadable',
+        // Release 8: a membership end date that is not a day.
+        '/^The membership end date \'.*\' is not a day written YYYY-MM-DD$/s' => 'bad_valid_until',
     ];
 
     /**

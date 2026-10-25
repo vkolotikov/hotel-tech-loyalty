@@ -30,7 +30,7 @@ class LoyaltyTier extends Model
     protected $fillable = [
         'organization_id', 'name', 'description', 'min_points', 'max_points',
         'earn_rate', 'bonus_nights', 'color_hex', 'icon', 'perks',
-        'min_nights', 'min_stays', 'min_spend',
+        'min_nights', 'min_stays', 'min_spend', 'min_visits',
         'qualification_window', 'grace_period_days',
         'soft_landing', 'invitation_only',
         'sort_order', 'is_active',
@@ -41,6 +41,7 @@ class LoyaltyTier extends Model
         'is_active' => 'boolean',
         'earn_rate' => 'decimal:2',
         'min_spend' => 'decimal:2',
+        'min_visits' => 'integer',
         'soft_landing' => 'boolean',
         'invitation_only' => 'boolean',
     ];

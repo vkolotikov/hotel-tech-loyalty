@@ -4,8 +4,9 @@ import { loyaltyUrl, watched } from '../lib/api'
 import type { MemberFilters } from '../lib/types'
 import { exportParams } from './membershipMath'
 import type {
-  CardData, DetailsBody, DuplicatePair, EnrolAnswer, EnrolBody, ImportBatch, ImportPreview, ImportsList, MemberAnswer, MergeBody, TierBody,
+  CardData, DetailsBody, DuplicatePair, EnrolAnswer, EnrolBody, ImportBatch, ImportPreview, ImportsList, MemberAnswer, MergeBody, TierBody, ValidityAnswer,
 } from './types'
+import type { ValidityBody } from './validityMath'
 
 /** The members area's calls (spec 2026-10-21 release 2 §4.2): a member's account, duplicates and merge, import, export. */
 export const membershipApi = {
@@ -17,6 +18,8 @@ export const membershipApi = {
   erase: (id: number, confirmName: string): Promise<MemberAnswer> => watched(api.post(loyaltyUrl(`members/${id}/erase`), { confirm_name: confirmName })),
   card: (id: number): Promise<CardData> => watched(api.get(loyaltyUrl(`members/${id}/card`))),
   welcome: (id: number): Promise<{ sent_to: string }> => watched(api.post(loyaltyUrl(`members/${id}/welcome`))),
+  /** Release 8: a membership's end date — set, extend or remove it (a manager's). */
+  validity: (id: number, body: ValidityBody): Promise<ValidityAnswer> => watched(api.put(loyaltyUrl(`members/${id}/validity`), body)),
 
   duplicates: (): Promise<{ pairs: DuplicatePair[] }> => watched(api.get(loyaltyUrl('members/duplicates'))),
   merge: (body: MergeBody): Promise<MemberAnswer> => watched(api.post(loyaltyUrl('members/merge'), body)),

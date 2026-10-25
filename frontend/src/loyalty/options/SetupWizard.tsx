@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import {
   Briefcase, Building2, Check, ChevronLeft, ChevronRight, Dumbbell, GraduationCap, House, ShoppingBag, Sparkles, Star, Stethoscope,
-  Utensils, type LucideIcon,
+  Ticket, Users, Utensils, type LucideIcon,
 } from 'lucide-react'
 import { Button } from '../../workspace/ui/Button'
 import { Dialog } from '../../workspace/ui/Dialog'
@@ -19,7 +19,7 @@ import { named } from '../lib/forms'
 import { ERRORS } from './errors'
 import { OPTIONS_KEY, afterOptionsChange, optionsApi } from './optionsApi'
 import {
-  KEEP, STEPS, configurable, formProblems, keepsTiers, presetOf, recommendedForm, reviewOf, sentenceOf, serverProblems, setupBody,
+  KEEP, STEPS, alwaysOn, configurable, formProblems, keepsTiers, presetOf, recommendedForm, reviewOf, sentenceOf, serverProblems, setupBody,
   startChoice, stepAfter, waysWith, previewOptions, type OptionsForm, type Problems, type Step,
 } from './optionsMath'
 import { LoadFailed, Loading, Sentence, WayFields, WayIcon } from './parts'
@@ -31,6 +31,8 @@ import { PRESET_LINE_WORDS, PRESET_WORDS, STEP_WORDS } from './words'
 const PRESET_ICONS: Record<string, LucideIcon> = {
   'building-2': Building2, sparkles: Sparkles, utensils: Utensils, dumbbell: Dumbbell, stethoscope: Stethoscope, star: Star,
   'graduation-cap': GraduationCap, briefcase: Briefcase, home: House, 'shopping-bag': ShoppingBag,
+  // Release 8: the general memberships.
+  users: Users, ticket: Ticket,
 }
 
 /**
@@ -320,11 +322,13 @@ export function Choose({ answer, form, keep, choice, ctx, onChange }: {
           const wf = form[way.key]
           if (!wf) return null
           const title = wayTitle(ctx.say, way.key)
+          // Release 8: a card that is always on (how members move up) is ticked and stays ticked.
+          const fixed = alwaysOn(way)
           return (
             <label key={way.key} data-tick={way.key} data-checked={wf.on ? '' : undefined}
-              className={`flex cursor-pointer gap-3 rounded-2xl border p-4 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-a-accent-text ${wf.on ? 'border-a-accent-text bg-a-accent/10' : 'border-a-border bg-a-surface hover:bg-a-surface-2'}`}>
-              <input type="checkbox" checked={wf.on} onChange={(e) => onChange({ ...form, [way.key]: { ...wf, on: e.target.checked } })}
-                className="mt-1 h-4 w-4 shrink-0 rounded border-a-border accent-a-accent-text" />
+              className={`flex gap-3 rounded-2xl border p-4 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-a-accent-text ${fixed ? '' : 'cursor-pointer'} ${wf.on ? 'border-a-accent-text bg-a-accent/10' : 'border-a-border bg-a-surface hover:bg-a-surface-2'}`}>
+              <input type="checkbox" checked={wf.on} disabled={fixed} onChange={(e) => onChange({ ...form, [way.key]: { ...wf, on: e.target.checked } })}
+                className="mt-1 h-4 w-4 shrink-0 rounded border-a-border accent-a-accent-text disabled:opacity-60" />
               <span className="min-w-0 flex-1 space-y-1">
                 <span className="flex items-center gap-2">
                   <WayIcon way={way.key} on={wf.on} />

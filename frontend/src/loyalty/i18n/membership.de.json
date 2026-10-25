@@ -100,7 +100,8 @@
       "member_limit": "Über der Mitgliedergrenze des Tarifs.",
       "not_created": "Das Mitglied konnte nicht angelegt werden.",
       "unreadable": "Diese Zeile konnte nicht gelesen werden: Sie hat mehr Werte, als die Datei Spalten hat.",
-      "other": "Diese Zeile wurde nicht importiert."
+      "other": "Diese Zeile wurde nicht importiert.",
+      "bad_valid_until": "Das Datum „gültig bis“ ist kein Tag. Schreiben Sie es als JJJJ-MM-TT, z. B. 2027-10-03."
     },
     "kind": {
       "skipped": "Übersprungen",
@@ -125,7 +126,8 @@
       "joined_at": "Beitritt",
       "date_of_birth": "Geburtsdatum",
       "marketing_consent": "Marketing-Einwilligung",
-      "external_id": "Kundennummer"
+      "external_id": "Kundennummer",
+      "valid_until": "Gültig bis"
     },
     "error": {
       "manager_only": "Das kann nur ein Inhaber oder Manager.",
@@ -142,7 +144,8 @@
       "not_found": "Dieser Import ist nicht mehr vorhanden.",
       "network": "Keine Verbindung. Der Import ist dort stehen geblieben, wo er war; drücken Sie „Fortsetzen“, um weiterzumachen.",
       "unknown": "Der Import ist stehen geblieben. Was importiert wurde, bleibt; drücken Sie „Fortsetzen“, um weiterzumachen."
-    }
+    },
+    "valid_until_hint": "Gültig bis: der letzte Tag jeder Mitgliedschaft als JJJJ-MM-TT (z. B. 2027-10-03). Leer lassen für eine Mitgliedschaft, die nie endet."
   },
   "erase": {
     "title": "{{name}} löschen",
@@ -233,7 +236,12 @@
       "invalid": "Prüfen Sie die markierten Felder.",
       "network": "Keine Verbindung: Es wurde nichts gespeichert. Versuchen Sie es erneut.",
       "unknown": "Das Mitglied konnte nicht hinzugefügt werden. Bitte versuchen Sie es erneut."
-    }
+    },
+    "valid_until": "Gültig bis (optional)",
+    "valid_until_hint": "Der letzte Tag einer Mitgliedschaft auf Zeit. Leer lassen für eine, die nie endet.",
+    "undated": "{{name}} wurde hinzugefügt, aber das Enddatum wurde nicht gespeichert. Legen Sie es auf der Seite des Mitglieds unter „Mitgliedschaft“ fest.",
+    "open_member": "Seite öffnen",
+    "close": "Schließen"
   },
   "card": {
     "title": "Mitgliedskarte",
@@ -316,7 +324,15 @@
     "duplicates": "Doppelte",
     "import": "Importieren",
     "export": "Exportieren",
-    "add": "Mitglied hinzufügen"
+    "add": "Mitglied hinzufügen",
+    "state": {
+      "expiring": "Läuft bald ab",
+      "expired": "Abgelaufen"
+    },
+    "expiring_count": "{{n}} laufen bald ab",
+    "expired_count": "{{n}} abgelaufen",
+    "ends": "Endet {{day}}",
+    "ended": "Abgelaufen {{day}}"
   },
   "load": {
     "error": {
@@ -346,5 +362,82 @@
       "network": "Keine Verbindung. Prüfen Sie das Netzwerk und versuchen Sie es erneut.",
       "unknown": "Die Datei konnte nicht erstellt werden. Bitte versuchen Sie es erneut."
     }
+  },
+  "validity": {
+    "title": "Mitgliedschaft",
+    "state": {
+      "active": "Aktiv",
+      "expiring": "Endet bald",
+      "expired": "Abgelaufen",
+      "off": "Ausgeschaltet"
+    },
+    "extend_action": "Verlängern",
+    "extend_by": "Verlängern um",
+    "extend": {
+      "1m": "+1 Monat",
+      "3m": "+3 Monate",
+      "6m": "+6 Monate",
+      "1y": "+1 Jahr"
+    },
+    "from_end": "Ab dem jetzigen Ende, {{day}}.",
+    "from_today": "Ab heute.",
+    "new_end": "bis {{day}}",
+    "set": "Datum festlegen",
+    "remove": "Enddatum entfernen",
+    "saved": "Gespeichert: gültig bis {{day}}.",
+    "saved_none": "Gespeichert: Die Mitgliedschaft hat kein Enddatum.",
+    "managers_only": "Nur ein Inhaber oder Manager kann das Enddatum ändern.",
+    "none": "Kein Enddatum",
+    "until": "Gültig bis {{day}}",
+    "ends_today": "Endet heute",
+    "ends_tomorrow": "Endet morgen",
+    "ends_in": "Endet in {{days}} Tagen",
+    "expired_on": "Abgelaufen am {{day}}",
+    "none_line": "Die Mitgliedschaft endet nie. Geben Sie ein Enddatum an, wenn ein Mitglied sie für eine bestimmte Zeit kauft.",
+    "left_line": "Noch {{left}}.",
+    "left": {
+      "years_one": "1 Jahr",
+      "years_many": "{{n}} Jahre",
+      "months_one": "1 Monat",
+      "months_many": "{{n}} Monate",
+      "days_one": "1 Tag",
+      "days_many": "{{n}} Tage"
+    },
+    "expiring_line": "Gültig bis {{day}}. Danach wird der Zutritt verweigert, bis sie verlängert wird.",
+    "expired_line": "Der Zutritt wird verweigert, bis sie verlängert wird. Punkte und Verlauf bleiben, und am Empfang wird das Mitglied weiter bedient.",
+    "off_line": "Das Konto ist ausgeschaltet, deshalb wird der Zutritt unabhängig vom Datum verweigert.",
+    "problem": {
+      "date": "Wählen Sie einen Tag.",
+      "past": "Wählen Sie heute oder einen späteren Tag."
+    },
+    "set_title": "Gültig bis",
+    "set_label": "Letzter Tag der Mitgliedschaft",
+    "set_hint": "An diesem Tag wird das Mitglied noch eingelassen, ab dem Tag danach nicht mehr.",
+    "set_preview": "Gültig bis {{day}}.",
+    "set_save": "Datum speichern",
+    "remove_title": "Enddatum entfernen?",
+    "remove_confirm": "Enddatum entfernen",
+    "remove_keep": "Behalten",
+    "remove_body": "Die Mitgliedschaft von {{name}} endet dann nie, und der Zutritt richtet sich nur nach der Stufe.",
+    "error": {
+      "manager_only": "Das kann nur ein Inhaber oder Manager.",
+      "not_allowed": "Das kann nur ein Inhaber oder Manager.",
+      "no_capability": "Das kann nur ein Inhaber oder Manager.",
+      "already_erased": "Dieses Mitglied wurde gelöscht. Nur seine Nummer und sein Punkteverlauf bleiben erhalten.",
+      "not_found": "Dieses Mitglied ist nicht mehr in Ihrem Programm.",
+      "network": "Keine Verbindung: Es wurde nichts gespeichert. Versuchen Sie es erneut.",
+      "key_reused": "Gerade wurde eine andere Änderung gemacht. Die Seite zeigt jetzt das aktuelle Enddatum; versuchen Sie es erneut, falls es nicht stimmt.",
+      "invalid": "Wählen Sie heute oder einen späteren Tag.",
+      "unknown": "Das Enddatum konnte nicht gespeichert werden. Nichts wurde geändert; bitte versuchen Sie es erneut."
+    }
+  },
+  "progress": {
+    "visits_sofar_one": "1 Besuch zählt für die Stufen.",
+    "visits_sofar_many": "{{n}} Besuche zählen für die Stufen.",
+    "spend_sofar": "{{amount}} ausgegeben, die für die Stufen zählen.",
+    "ready": "Erfüllt {{tier}}: Der Wechsel kommt mit dem nächsten Besuch oder den nächsten Punkten.",
+    "visit_one": "Noch 1 Besuch bis {{tier}}",
+    "visits_many": "Noch {{n}} Besuche bis {{tier}}",
+    "spend": "Noch {{amount}} bis {{tier}}"
   }
 }

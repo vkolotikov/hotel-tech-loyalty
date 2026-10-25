@@ -5,6 +5,7 @@ namespace Tests\Feature\Loyalty;
 use App\Models\LoyaltyMember;
 use App\Models\LoyaltyTier;
 use App\Models\TierAssessment;
+use App\Services\Loyalty\Programme\ProgrammeOptions;
 use App\Services\Loyalty\Visits\TierCounters;
 use App\Services\Loyalty\Visits\Visit;
 use App\Services\Loyalty\Visits\VisitRecorder;
@@ -13,6 +14,7 @@ use Illuminate\Support\Facades\DB;
 use Tests\Concerns\LoyaltyWorkspace\CreditSchema;
 use Tests\Concerns\LoyaltyWorkspace\MembershipSchema;
 use Tests\Concerns\LoyaltyWorkspace\TierCountsSchema;
+use Tests\Concerns\LoyaltyWorkspace\ValiditySchema;
 use Tests\Concerns\LoyaltyWorkspace\VisitsSchema;
 use Tests\Concerns\SetsUpLoyaltyWorkspace;
 use Tests\TestCase;
@@ -21,11 +23,13 @@ use Tests\TestCase;
  * The tier qualification counters (release 7, spec 2026-10-25 §4.3): a finished stay adds its nights, one stay and its
  * spend; a completed appointment and a desk purchase their spend; a check-in without an amount nothing. Once per
  * reference (the nightly stay sweep calls again), a reversal takes back exactly what was added and never below zero,
- * and the tier is assessed after — for a member judged on the counters, through assessTier()'s own rules.
+ * and the tier is assessed after — when the programme moves members by a counter (release 8: `tier_progress_by` visits
+ * or spend; the member's own `tier_qualification_model`, which nothing ever set, is no longer read), through
+ * assessTier()'s own rules. Release 8's visits are TierProgressVisitsTest's.
  */
 class TierCountersTest extends TestCase
 {
-    use DatabaseTransactions, SetsUpLoyaltyWorkspace, MembershipSchema, VisitsSchema, CreditSchema, TierCountsSchema;
+    use DatabaseTransactions, SetsUpLoyaltyWorkspace, MembershipSchema, VisitsSchema, CreditSchema, TierCountsSchema, ValiditySchema;
 
     protected function setUp(): void
     {
@@ -35,6 +39,7 @@ class TierCountersTest extends TestCase
         $this->buildVisitsSchema();
         $this->buildCreditSchema();
         $this->buildTierCountsSchema();
+        $this->buildValiditySchema();
     }
 
     private function counters(): TierCounters
@@ -74,7 +79,11 @@ class TierCountersTest extends TestCase
         $this->counters()->count($this->grace, new Visit(Visit::PURCHASE, null, null, 99.0, '2026-10-05')); // no reference: never counted
 
         $this->assertSame([0, 0, '66.30'], $this->read($this->grace));
-        $this->assertSame(2, DB::table('tier_qualification_counts')->count());
+        // Release 8: the plain check-in is recorded as a visit of its day (the purchase already counted the day's visit),
+        // adding nothing; the visit without a reference is not recorded at all.
+        $this->assertSame(3, DB::table('tier_qualification_counts')->count());
+        $this->assertSame(2, DB::table('tier_qualification_counts')->where('spend', '>', 0)->count());
+        $this->assertSame(['0', '0.00'], (fn ($r) => [(string) $r->visits, number_format((float) $r->spend, 2, '.', '')])(DB::table('tier_qualification_counts')->where('reference_id', 9)->first()));
     }
 
     public function test_a_reversal_takes_back_exactly_what_was_added_never_below_zero_and_once(): void
@@ -108,10 +117,10 @@ class TierCountersTest extends TestCase
         $this->assertSame([2, 1, '80.00'], $this->read($this->grace));
     }
 
-    public function test_a_member_judged_on_nights_climbs_when_the_nights_are_counted(): void
+    public function test_a_programme_by_spend_moves_a_member_up_when_the_spend_is_counted(): void
     {
-        $this->nightsLadder();
-        $this->grace->forceFill(['tier_qualification_model' => 'nights'])->save();
+        $this->spendLadder();
+        ProgrammeOptions::save($this->org->id, ['tier_progress_by' => 'spend'], $this->manager);
 
         $this->counters()->count($this->grace, $this->stay(800, 6, 500));
         $this->assertSame($this->tiers['silver']->id, (int) $this->grace->fresh()->tier_id);
@@ -119,7 +128,19 @@ class TierCountersTest extends TestCase
         $this->counters()->count($this->grace, $this->stay(801, 4, 300));
         $this->assertSame($this->tiers['gold']->id, (int) $this->grace->fresh()->tier_id);
         $this->assertSame(1, TierAssessment::where('member_id', $this->grace->id)->count());
-        $this->assertSame(10, (int) TierAssessment::where('member_id', $this->grace->id)->value('qualifying_nights_at_assessment'));
+        $this->assertSame('800.00', number_format((float) TierAssessment::where('member_id', $this->grace->id)->value('qualifying_spend_at_assessment'), 2, '.', ''));
+    }
+
+    public function test_the_members_own_qualification_model_is_no_longer_read(): void
+    {
+        // A member column nothing ever set: a programme by points (the default) does not assess on a visit, whatever it says.
+        $this->spendLadder();
+        $this->grace->forceFill(['tier_qualification_model' => 'spend'])->save();
+
+        $this->counters()->count($this->grace, $this->stay(850, 6, 5000));
+
+        $this->assertSame($this->tiers['silver']->id, (int) $this->grace->fresh()->tier_id);
+        $this->assertSame(0, TierAssessment::where('member_id', $this->grace->id)->count());
     }
 
     public function test_a_member_judged_on_points_is_not_reassessed_by_a_visit(): void
@@ -134,12 +155,12 @@ class TierCountersTest extends TestCase
         $this->assertSame(0, TierAssessment::where('member_id', $this->ada->id)->count());
     }
 
-    public function test_a_demotion_by_nights_keeps_the_downgrade_rules_even_on_one_points_floor(): void
+    public function test_a_demotion_by_spend_keeps_the_downgrade_rules_even_on_one_points_floor(): void
     {
-        // Two tiers on the same points floor, apart only in nights: the move's direction is read on the nights ladder,
+        // Two tiers on the same points floor, apart only in spend: the move's direction is read on the spend ladder,
         // so the grace period holds the tier (before, "no direction" skipped every downgrade rule and dropped at once).
-        $this->nightsLadder(sharedPointsFloor: true);
-        $this->grace->forceFill(['tier_qualification_model' => 'nights'])->save();
+        $this->spendLadder(sharedPointsFloor: true);
+        ProgrammeOptions::save($this->org->id, ['tier_progress_by' => 'spend'], $this->manager);
         $this->counters()->count($this->grace, $this->stay(1000, 12, 900));
         $this->assertSame($this->tiers['gold']->id, (int) $this->grace->fresh()->tier_id);
 
@@ -194,11 +215,11 @@ class TierCountersTest extends TestCase
         $this->assertSame([2, 1, '160.00'], $this->read($this->grace), 'the failed reversal changed nothing');
     }
 
-    /** Silver from 0 nights, Gold from 10, Platinum from 30 (on their own points floors, or all on 0). */
-    private function nightsLadder(bool $sharedPointsFloor = false): void
+    /** Silver from 0 spent, Gold from 700, Platinum from 2,000 (on their own points floors, or all on 0). */
+    private function spendLadder(bool $sharedPointsFloor = false): void
     {
-        foreach (['silver' => 0, 'gold' => 10, 'platinum' => 30] as $name => $nights) {
-            $this->tiers[$name]->forceFill(['min_nights' => $nights, 'grace_period_days' => 30, 'soft_landing' => false]
+        foreach (['silver' => 0, 'gold' => 700, 'platinum' => 2000] as $name => $spend) {
+            $this->tiers[$name]->forceFill(['min_spend' => $spend, 'grace_period_days' => 30, 'soft_landing' => false]
                 + ($sharedPointsFloor ? ['min_points' => 0] : []))->save();
         }
         LoyaltyTier::flushCacheFor($this->org->id);

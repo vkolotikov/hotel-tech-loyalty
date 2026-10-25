@@ -45,12 +45,18 @@ export interface SayContext {
 
 // ─── Form ↔ options ───────────────────────────────────────────────────────
 
-/** Whether the way is on in these options: its switch, or its number above 0. */
+/**
+ * Whether the way is on in these options: its switch, or its number above 0. A card with neither is always on (release
+ * 8's "How members move up": a choice, never off).
+ */
 export function isOn(way: Way, options: Options): boolean {
   if (way.switch) return options[way.switch] === true
   if (way.zero_off) return Number(options[way.zero_off] ?? 0) > 0
-  return false
+  return true
 }
+
+/** A card that cannot be switched off: no switch and no number whose 0 is off (release 8's "How members move up"). */
+export const alwaysOn = (way: Way): boolean => way.switch === null && way.zero_off === null
 
 /** An option's value as its input shows it. */
 function textOf(value: OptionValue): string {
@@ -300,6 +306,13 @@ export function sentenceOf(wayKey: string, o: Options, ctx: SayContext): string 
       return o.desk_earn_enabled === true ? sentence('desk_earn', ctx) : sentence('desk_earn_off', ctx)
     case 'cashback':
       return o.cashback_enabled === true ? sentence('cashback', ctx, { percent: decimal(num(o.cashback_percent), locale) }) : sentence('cashback_off', ctx)
+    // Release 8: how members move between tiers, and what they read about it.
+    case 'tier_progress':
+      return o.tier_progress_by === 'visits'
+        ? sentence('tier_progress_visits', ctx)
+        : o.tier_progress_by === 'spend'
+          ? sentence('tier_progress_spend', ctx)
+          : sentence('tier_progress_points', ctx)
     default:
       return ''
   }

@@ -53,6 +53,8 @@ final class ProgrammeOptions
         // Cashback credit
         'cashback_enabled'            => ['bool', false, 'Cashback Credit On'],
         'cashback_percent'            => ['decimal', 5.0, 'Cashback Percent'],
+        // How members move up (release 8, spec 2026-10-25 §3, R8-4): what assessTier() and every progress line read
+        'tier_progress_by'            => ['enum:points|visits|spend', 'points', 'Tier Progress By'],
         // The wizard
         'programme_setup_completed_at' => ['time', null, 'Programme Setup Completed'],
     ];
@@ -74,7 +76,8 @@ final class ProgrammeOptions
     /**
      * The ways to earn and be rewarded as the options page and the wizard show them, one card each (release 7 §1): the
      * option that switches the way on (`switch`), or the number whose 0 means off (`zero_off`: no expiry, no bonus),
-     * and the options the card sets. The workspace draws its cards from this list; it keeps no copy.
+     * and the options the card sets. The workspace draws its cards from this list; it keeps no copy. A card with
+     * neither is always on (release 8's "How members move up": a choice, never off).
      *
      * @var array<string, array{switch?: string, zero_off?: string, fields: list<string>}>
      */
@@ -88,6 +91,7 @@ final class ProgrammeOptions
         'check_in'        => ['switch' => 'checkin_enabled', 'fields' => ['checkin_points']],
         'desk_earn'       => ['switch' => 'desk_earn_enabled', 'fields' => []],
         'cashback'        => ['switch' => 'cashback_enabled', 'fields' => ['cashback_percent']],
+        'tier_progress'   => ['fields' => ['tier_progress_by']],
     ];
 
     /** A field that counts only while another option holds a value: [that option, the value]. */
@@ -159,6 +163,51 @@ final class ProgrammeOptions
         }
 
         return $out;
+    }
+
+    /** The container key of perRequest()'s memo (a scoped instance: a new one for every request and every queued job). */
+    private const MEMO = 'loyalty.programme-options.memo';
+
+    /** How long perRequest() trusts what it read, in seconds, within one request, job or command run. */
+    public const MEMO_SECONDS = 60;
+
+    /**
+     * One option of the organisation, typed as for() types it, read from the database once per request or queued job
+     * (and again after MEMO_SECONDS in a long command): for a hot path that asks on every earn or assessment (release 8's
+     * `tier_progress_by`, read by every assessTier()). Never through HotelSetting's settings map, which is each
+     * container's own file cache for half an hour — a venue's switch must hold on every container from the next request.
+     * A save in this process forgets what was read (save(), markSetUp()).
+     */
+    public static function perRequest(int $orgId, string $key): mixed
+    {
+        if (!array_key_exists($key, self::OPTIONS)) {
+            throw new \InvalidArgumentException("Unknown loyalty option {$key}");
+        }
+        $memo = self::memo();
+        $seen = $memo[$orgId] ?? null;
+        if (!is_array($seen) || time() - $seen['at'] > self::MEMO_SECONDS) {
+            $seen = ['at' => time(), 'options' => self::for($orgId)];
+            $memo[$orgId] = $seen;
+        }
+
+        return $seen['options'][$key];
+    }
+
+    /** @return \ArrayObject<int, array{at: int, options: array<string, mixed>}> */
+    private static function memo(): \ArrayObject
+    {
+        $app = app();
+        if (!$app->bound(self::MEMO)) {
+            $app->scoped(self::MEMO, fn () => new \ArrayObject());
+        }
+
+        return $app->make(self::MEMO);
+    }
+
+    /** What perRequest() read for the organisation is read again next time (its options were just written). */
+    private static function forgetRead(int $orgId): void
+    {
+        unset(self::memo()[$orgId]);
     }
 
     /** One option of the organisation, typed (its default when never set). */
@@ -309,6 +358,7 @@ final class ProgrammeOptions
             }
         }));
         HotelSetting::flushCacheFor($orgId);
+        self::forgetRead($orgId);
     }
 
     /**

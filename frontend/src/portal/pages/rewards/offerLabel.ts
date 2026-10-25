@@ -1,23 +1,9 @@
 import type { Offer } from '../../lib/types'
+import { counted } from '../../lib/plural'
 
 type T = (key: string, fallback: string, vars?: Record<string, unknown>) => string
 
 const kind = (offer: Offer) => String(offer.type ?? '').toLowerCase()
-
-/**
- * The two phrases here that agree with their number, each a family of four keys in every bundle (`<key>_one`, `_few`,
- * `_many`, `_other`), asked for the way lib/plural.ts's counted() asks: the key is built, never a literal a plural
- * cannot reach. offerLabel.test.ts proves every bundle carries all four forms.
- */
-export const OFFER_COUNTED = {
-  'rewards.bonus_points': ['+{{count}} point', '+{{count}} points'],
-  'rewards.claimed_points': ['+{{count}} point added to your balance', '+{{count}} points added to your balance'],
-} as const
-
-function counted(t: T, key: keyof typeof OFFER_COUNTED, count: number): string {
-  const [one, other] = OFFER_COUNTED[key]
-  return t(`portal.${key}`, other, { count, defaultValue_one: one })
-}
 
 /**
  * "15% off" / "25 off" / "2x points" / "+500 points" — only for types with a number the member gets. A bonus_points

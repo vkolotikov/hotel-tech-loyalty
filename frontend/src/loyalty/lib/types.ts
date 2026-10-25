@@ -43,7 +43,8 @@ export interface Bootstrap {
   venue: { timezone: string; timezone_named: boolean; today: DateKey; currency: string }
   features: Features
   staff: { id: number; name: string; role: string | null; can: Can }
-  programme: { on: boolean; tiers: TierRef[]; ways?: Ways }
+  /** `progress_by` (release 8): how members move between tiers (ProgrammeOptions `tier_progress_by`); absent before release 8. */
+  programme: { on: boolean; tiers: TierRef[]; ways?: Ways; progress_by?: 'points' | 'visits' | 'spend' }
   counts: { members: number; requests_waiting: number }
 }
 
@@ -74,6 +75,9 @@ export interface MemberRow {
   last_activity_at: string | null
   /** Release 7 (spec 2026-10-25 §3): cashback credit in the venue's currency (CreditLedger); absent from a server before release 7. */
   credit_balance?: number
+  /** Release 8: the membership's end date (Y-m-d, or null: no end) and its state. */
+  valid_until?: string | null
+  membership_state?: 'active' | 'expiring' | 'expired' | 'off'
 }
 
 export interface Figures {
@@ -83,6 +87,9 @@ export interface Figures {
   average_points: number
   /** Active members per tier id. */
   tiers: Record<string, number>
+  /** Release 8: switched-on members whose membership ends within 30 days, and those whose membership has ended. */
+  expiring?: number
+  expired?: number
 }
 
 export interface Paged {
@@ -97,7 +104,8 @@ export interface MembersPage extends Paged {
 }
 
 export type MemberSort = 'recent' | 'points' | 'name' | 'activity'
-export type MemberState = 'active' | 'inactive' | 'all'
+/** Release 8 adds the membership's end: `expiring` (≤ 30 days left) and `expired`, switched-on members only. */
+export type MemberState = 'active' | 'inactive' | 'expiring' | 'expired' | 'all'
 
 export interface MemberFilters {
   q: string

@@ -1,0 +1,36 @@
+/*
+ * The scan screen's verdict band (release 8, spec 2026-10-25 §2): green to let in, amber to let in with a warning, red
+ * to refuse, the surface's grey when no answer came. One vivid fill per tone in both themes — a door tablet is read
+ * from a step away, in a bright lobby or a dark club — each with the ink that reads on it at 4.5:1 or better
+ * (verdictPalette.test.ts). The words and the icon say the same as the colour (verdict.ts). Every rule is scoped under
+ * [data-loyalty]; door mode puts that attribute on its own root, outside the shell.
+ */
+
+[data-loyalty] {
+  --l-go: 21 128 61;
+  --l-go-ink: 255 255 255;
+  --l-warn: 245 180 60;
+  --l-warn-ink: 20 24 28;
+  --l-stop: 185 28 28;
+  --l-stop-ink: 255 255 255;
+}
+
+[data-loyalty] [data-tone="granted"] { --l-v: var(--l-go); --l-v-ink: var(--l-go-ink); }
+[data-loyalty] [data-tone="warning"] { --l-v: var(--l-warn); --l-v-ink: var(--l-warn-ink); }
+[data-loyalty] [data-tone="denied"] { --l-v: var(--l-stop); --l-v-ink: var(--l-stop-ink); }
+[data-loyalty] [data-tone="trouble"] { --l-v: var(--a-surface-2); --l-v-ink: var(--a-text); }
+
+[data-loyalty] .l-verdict {
+  background-color: rgb(var(--l-v, var(--a-surface-2)));
+  color: rgb(var(--l-v-ink, var(--a-text)));
+}
+
+/* The icon's disc on the band: the band's own ink, faint. */
+[data-loyalty] .l-verdict-disc {
+  background-color: rgb(var(--l-v-ink, var(--a-text)) / 0.16);
+}
+
+/* Door mode's countdown under the verdict: the ink, a little stronger. */
+[data-loyalty] .l-verdict-bar {
+  background-color: rgb(var(--l-v-ink, var(--a-text)) / 0.45);
+}

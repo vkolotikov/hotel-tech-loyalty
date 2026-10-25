@@ -23,6 +23,18 @@ export interface EnrolAnswer extends MemberAnswer {
   email_sent: boolean
 }
 
+/**
+ * What `PUT members/{id}/validity` answers (release 8, spec 2026-10-25 §3; ValidityController): the member as their page
+ * shows them, the end date (Y-m-d, or null: it never ends) and its state; whether this call changed it, and whether it
+ * was a retry of an earlier press (`replayed`: the first answer, nothing written).
+ */
+export interface ValidityAnswer extends MemberAnswer {
+  valid_until: string | null
+  state: 'active' | 'expiring' | 'expired' | 'off'
+  changed: boolean
+  replayed: boolean
+}
+
 export interface DetailsBody {
   name: string
   email: string

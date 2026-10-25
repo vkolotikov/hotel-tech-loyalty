@@ -93,6 +93,9 @@ class MemberMergeService
         'stamp_cards'          => ['member_id'],
         'credit_transactions'  => ['member_id'],
         'tier_qualification_counts' => ['member_id'], // what each visit added to the counters, which the merge adds up
+        // Release 8: event sign-ups and check-ins, one per member per event (mergeEvents() drops the loser's duplicates first).
+        'loyalty_event_registrations' => ['member_id'],
+        'loyalty_event_attendances'   => ['member_id'],
         // An earlier merge into the loser now reads as a merge into the winner (its foreign key would otherwise stop
         // the loser's deletion).
         'member_merges'        => ['surviving_member_id'],
@@ -143,6 +146,7 @@ class MemberMergeService
                 // Release 7: before the generic move below.
                 'stamps'                    => $this->mergeStamps($winner, $loser),
                 'credit_transactions'       => $this->mergeCredit($winner, $loser),
+                'loyalty_event_registrations' => $this->mergeEvents($winner, $loser),
             ];
 
             // 2) Every other row that names the loser now names the winner. Tables and columns are checked first:
@@ -192,6 +196,20 @@ class MemberMergeService
             $winner->qualifying_nights  = (int) ($winner->qualifying_nights ?? 0) + (int) ($loser->qualifying_nights ?? 0);
             $winner->qualifying_stays   = (int) ($winner->qualifying_stays  ?? 0) + (int) ($loser->qualifying_stays  ?? 0);
             $winner->qualifying_spend   = (float) ($winner->qualifying_spend ?? 0) + (float) ($loser->qualifying_spend ?? 0);
+            // Release 8: visits counted for tier progress, one per venue day: the loser's counter rows name the winner
+            // now (step 2), so a day both accounts visited keeps one visit and the count is read again from the rows
+            // (LoyaltyService::mergeVisitDays()); the membership keeps the later end date (a duplicate without one
+            // never lifts the winner's), written as MembershipValidity writes it.
+            if (Schema::hasColumn('loyalty_members', 'qualifying_visits')) {
+                if (Schema::hasTable('tier_qualification_counts') && Schema::hasColumn('tier_qualification_counts', 'venue_day')) {
+                    app(\App\Services\LoyaltyService::class)->mergeVisitDays($winner);
+                } else {
+                    $winner->qualifying_visits = (int) ($winner->qualifying_visits ?? 0) + (int) ($loser->qualifying_visits ?? 0);
+                }
+            }
+            if (Schema::hasColumn('loyalty_members', 'membership_valid_until')) {
+                \App\Services\Loyalty\Members\MembershipValidity::keptOnMerge($winner, $loser);
+            }
 
             // Adopt any card or code the loser had if the winner doesn't. Both are unique columns, so the loser row
             // goes first (5) and the winner is saved after it.
@@ -531,6 +549,21 @@ class MemberMergeService
         }
 
         return app(\App\Services\Loyalty\Stamps\StampCards::class)->beforeMerge($winner, $loser);
+    }
+
+    /**
+     * Release 8 (spec 2026-10-25 §4): an event both members signed up for or attended keeps the winner's row (one per
+     * member per event: the unique indexes); the loser's other rows move with the generic move. Answers how many rows
+     * were dropped.
+     */
+    private function mergeEvents(LoyaltyMember $winner, LoyaltyMember $loser): int
+    {
+        // An older database, or a test's narrower schema, without events: nothing to merge.
+        if (!Schema::hasTable('loyalty_event_registrations') || !Schema::hasTable('loyalty_event_attendances')) {
+            return 0;
+        }
+
+        return app(\App\Services\Loyalty\Events\EventMerge::class)->beforeMerge($winner, $loser);
     }
 
     /**

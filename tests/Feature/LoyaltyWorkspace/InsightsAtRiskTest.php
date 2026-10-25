@@ -45,7 +45,7 @@ class InsightsAtRiskTest extends TestCase
             'id' => $longest->id, 'name' => 'Long Gone', 'email' => $longest->user->email, 'phone' => null,
             'member_number' => $longest->member_number, 'tier_id' => $this->tiers['gold']->id, 'points' => 640, 'lifetime_points' => 0,
             'is_active' => true, 'joined_at' => '2026-07-05T09:00:00+00:00', 'last_activity_at' => '2026-03-01T10:00:00+00:00',
-            'credit_balance' => 0, 'days_quiet' => 218,
+            'credit_balance' => 0, 'valid_until' => null, 'membership_state' => 'active', 'days_quiet' => 218,
         ])->assertJsonPath('members.1.days_quiet', 60);
     }
 

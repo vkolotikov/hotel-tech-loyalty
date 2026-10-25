@@ -7,6 +7,7 @@ import { BenefitsTab } from './rewards/BenefitsTab'
 import { CatalogueTab } from './rewards/CatalogueTab'
 import { OffersTab } from './rewards/OffersTab'
 import { CodesTab } from './rewards/CodesTab'
+import { EventsLink } from './events/EventsLink'
 
 const TABS = ['benefits', 'catalogue', 'offers', 'codes'] as const
 type Tab = (typeof TABS)[number]
@@ -26,6 +27,7 @@ export function Rewards() {
           <span className="text-sm text-p-text-2">{counted(t, 'rewards.you_have', data.member.current_points)}</span>
         )}
       </div>
+      <EventsLink />
       <Tabs
         value={tab}
         onChange={key => setParams({ tab: key }, { replace: true })}

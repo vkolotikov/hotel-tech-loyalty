@@ -71,6 +71,9 @@ class MemberImportService
         'date_of_birth'     => ['dateofbirth', 'dob', 'birthday', 'birthdate'],
         'marketing_consent' => ['marketingconsent', 'marketing', 'consent', 'optin', 'newsletter', 'subscribed'],
         'external_id'       => ['externalid', 'legacyid', 'customerid', 'customerno', 'membershipno', 'membernumber', 'accountnumber'],
+        // HexaTech Loyalty release 8: the membership's end date, YYYY-MM-DD (MembershipValidity writes it). Only names
+        // that say "membership" or "valid": a bare "expiry" could be a points column.
+        'valid_until'       => ['validuntil', 'validto', 'membershipvaliduntil', 'membershipend', 'membershipenddate', 'membershipexpiry', 'membershipexpires', 'membershipexpirydate'],
     ];
 
     /** Delimiters we sniff for, in preference order. */
@@ -359,6 +362,15 @@ class MemberImportService
                 continue;
             }
 
+            // Release 8: a membership end date must be a real day written YYYY-MM-DD (a past one is the member's history:
+            // they come in expired). Empty: the membership never ends.
+            if ($parsed['valid_until'] !== null && !\App\Services\Loyalty\Members\MembershipValidity::isDay($parsed['valid_until'])) {
+                $results[] = $this->row($line, $parsed['email'], 'error',
+                    "The membership end date '" . Str::limit($parsed['valid_until'], 40) . "' is not a day written YYYY-MM-DD");
+                $errCount++;
+                continue;
+            }
+
             if ($okCount >= $capRemaining) {
                 $results[] = $this->row($line, $parsed['email'], 'skip',
                     'Over your plan member limit' . ($planLimit ? " ({$planLimit})" : ''));
@@ -501,7 +513,7 @@ class MemberImportService
                         'updated_at'      => now(),
                     ]);
 
-                    return LoyaltyMember::create([
+                    $member = LoyaltyMember::create([
                         'user_id'           => $userId,
                         'organization_id'   => $orgId,
                         'tier_id'           => $p['tier']->id,
@@ -514,6 +526,10 @@ class MemberImportService
                         'marketing_consent' => $p['marketing_consent'] ?? false,
                         'joined_at'         => $p['joined_at'] ?? now(),
                     ]);
+                    // HexaTech Loyalty release 8: the membership's end date, through its one writer.
+                    \App\Services\Loyalty\Members\MembershipValidity::onCreate($member, $p['valid_until'] ?? null);
+
+                    return $member;
                 });
             } catch (\Illuminate\Database\UniqueConstraintViolationException $e) {
                 if ($attempt >= 5 || !str_contains($e->getMessage(), 'member_number')) {
@@ -688,6 +704,7 @@ class MemberImportService
             'date_of_birth'     => $this->toDate($row['date_of_birth'] ?? null),
             'marketing_consent' => $this->toBool($row['marketing_consent'] ?? null),
             'external_id'       => trim((string) ($row['external_id'] ?? '')) ?: null,
+            'valid_until'       => trim((string) ($row['valid_until'] ?? '')) ?: null,
         ];
     }
 

@@ -20,6 +20,9 @@ export const COUNTED = {
   'rewards.you_have': ['You have {{count}} point', 'You have {{count}} points'],
   'rewards.points_needed': ['{{count}} more point needed', '{{count}} more points needed'],
   'rewards.redeem_body': ["This spends {{count}} point. You'll get a code to show at the desk.", "This spends {{count}} points. You'll get a code to show at the desk."],
+  // Release 7: a bonus-points offer's value and what claiming it added (pages/rewards/offerLabel.ts).
+  'rewards.bonus_points': ['+{{count}} point', '+{{count}} points'],
+  'rewards.claimed_points': ['+{{count}} point added to your balance', '+{{count}} points added to your balance'],
   'activity.entries': ['{{count}} entry', '{{count}} entries'],
   'profile.invite_stats': ['{{count}} friend joined', '{{count}} friends joined'],
   'join.with_bonus': ['Start with {{count}} point on us.', 'Start with {{count}} points on us.'],

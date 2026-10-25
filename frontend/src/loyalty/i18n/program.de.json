@@ -146,7 +146,9 @@
     "nights": "Nächte bis zur Stufe",
     "points": "Punkte bis zur Stufe",
     "spend": "Umsatz bis zur Stufe",
-    "stays": "Aufenthalte bis zur Stufe"
+    "stays": "Aufenthalte bis zur Stufe",
+    "visits": "Besuche bis zur Stufe",
+    "not_set": "Nicht festgelegt"
   },
   "tier": {
     "active": "Aktiv",
@@ -178,9 +180,18 @@
       "description": "Bitte prüfen Sie die Beschreibung.",
       "earn_rate": "Geben Sie eine Sammelrate von 0 bis 99,99 ein, z. B. 1,5.",
       "min_points": "Geben Sie eine ganze Punktzahl von 0 bis 10.000.000 ein.",
-      "name": "Bitte geben Sie der Stufe einen Namen."
+      "name": "Bitte geben Sie der Stufe einen Namen.",
+      "min_visits": "Geben Sie eine ganze Zahl an Besuchen von 0 bis 100.000 ein oder lassen Sie das Feld leer.",
+      "min_spend": "Geben Sie einen Betrag von 0 bis 100.000.000 ein, z. B. 250, oder lassen Sie das Feld leer."
     },
-    "save": "Stufe speichern"
+    "save": "Stufe speichern",
+    "min_visits": "Besuche bis zu dieser Stufe",
+    "min_visits_hint": "Einer pro Tag zählt: Termine, Aufenthalte, Check-ins, Käufe und Veranstaltungen. Leer: Niemand steigt durch Besuche in diese Stufe auf.",
+    "min_spend": "Ausgaben bis zu dieser Stufe",
+    "min_spend_hint": "In {{currency}}, was Mitglieder bei ihren Besuchen ausgegeben haben. Leer: Niemand steigt durch Ausgaben in diese Stufe auf.",
+    "measure_visits": "Mitglieder wechseln die Stufe nach ihren Besuchen.",
+    "measure_spend": "Mitglieder wechseln die Stufe nach ihren Ausgaben.",
+    "measure_change": "Unter „Sammeln & Prämien“ ändern"
   },
   "tier_benefit": {
     "add_title": "Vorteil für {{tier}} hinzufügen",

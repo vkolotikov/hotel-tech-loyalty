@@ -1,5 +1,5 @@
 {
-  "nav": { "home": "Accueil", "book": "Réserver", "rewards": "Récompenses", "bookings": "Réservations", "profile": "Profil", "activity": "Activité", "inbox": "Messages" },
+  "nav": { "home": "Accueil", "book": "Réserver", "rewards": "Récompenses", "bookings": "Réservations", "profile": "Profil", "activity": "Activité", "inbox": "Messages", "events": "Événements" },
   "common": {
     "loading": "Chargement…", "retry": "Réessayer", "error": "Une erreur est survenue. Veuillez réessayer.",
     "save": "Enregistrer les modifications", "saved": "Enregistré", "cancel": "Annuler", "confirm": "Confirmer", "close": "Fermer",
@@ -11,6 +11,8 @@
     "balance": "Solde de points", "progress_to": "Progression vers {{tier}}",
     "lifetime_one": "{{count}} gagné au total", "lifetime_few": "{{count}} gagnés au total", "lifetime_many": "{{count}} gagnés au total", "lifetime_other": "{{count}} gagnés au total",
     "points_to_go_one": "Encore {{count}} point", "points_to_go_few": "Encore {{count}} points", "points_to_go_many": "Encore {{count}} points", "points_to_go_other": "Encore {{count}} points",
+    "visits_to_go_one": "Encore {{count}} visite", "visits_to_go_few": "Encore {{count}} visites", "visits_to_go_many": "Encore {{count}} visites", "visits_to_go_other": "Encore {{count}} visites", "spend_to_go": "Encore {{amount}}",
+    "membership_until": "Membre jusqu’au {{day}}", "membership_ended": "Votre adhésion a pris fin le {{day}} — demandez à l’équipe de la renouveler",
     "member_number": "Numéro de membre", "show_at_counter": "Présentez ceci à l'accueil pour gagner ou utiliser vos points.",
     "next_booking": "Votre prochain {{noun}}", "no_upcoming": "Rien de réservé pour l'instant.", "view_booking": "Voir",
     "quick_rewards": "Utiliser des points", "quick_rewards_hint": "Parcourir le catalogue de récompenses",

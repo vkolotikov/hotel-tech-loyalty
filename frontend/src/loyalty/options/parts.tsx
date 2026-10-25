@@ -1,7 +1,7 @@
 import { useId, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { Cake, Coins, DoorOpen, Gift, Hourglass, PiggyBank, ShoppingBag, Sparkles, Stamp, Users, type LucideIcon } from 'lucide-react'
+import { Cake, Coins, DoorOpen, Gift, Hourglass, PiggyBank, ShoppingBag, Sparkles, Stamp, TrendingUp, Users, type LucideIcon } from 'lucide-react'
 import { Button } from '../../workspace/ui/Button'
 import { Notice } from '../../workspace/ui/Notice'
 import { Skeleton } from '../../workspace/ui/Skeleton'
@@ -29,6 +29,7 @@ const WAY_ICONS: Record<string, LucideIcon> = {
   check_in: DoorOpen,
   desk_earn: ShoppingBag,
   cashback: PiggyBank,
+  tier_progress: TrendingUp,
 }
 
 export function WayIcon({ way, on }: { way: string; on: boolean }) {

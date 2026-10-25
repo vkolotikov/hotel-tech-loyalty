@@ -28,6 +28,11 @@
     "stamp_reward_kind": {
       "points": "Des points",
       "reward": "Une récompense"
+    },
+    "tier_progress_by": {
+      "points": "Les points",
+      "visits": "Les visites",
+      "spend": "Les dépenses"
     }
   },
   "choose_reward": "Choisir une récompense…",
@@ -44,7 +49,8 @@
     "stamp_reward_kind": "Une carte pleine donne",
     "stamp_reward_points": "Points d’une carte pleine",
     "stamps_per_card": "Tampons par carte",
-    "welcome_bonus_points": "Points à l’inscription"
+    "welcome_bonus_points": "Points à l’inscription",
+    "tier_progress_by": "Les membres progressent selon"
   },
   "hint": {
     "cashback_percent": "Le crédit s’utilise uniquement à l’accueil ; il n’est jamais versé en argent.",
@@ -92,7 +98,9 @@
     "real_estate": "Immobilier",
     "restaurant": "Restaurant et café",
     "retail": "Boutique et commerce",
-    "simple_two_tier": "Simple, deux niveaux"
+    "simple_two_tier": "Simple, deux niveaux",
+    "members_club": "Club de membres",
+    "events_community": "Événements et communauté"
   },
   "preset_line": {
     "beauty": "Welcome, Devotee et Inner Circle. Récompense les visites régulières.",
@@ -105,7 +113,9 @@
     "real_estate": "Client, Preferred et Partner. Récompense les recommandations et les clients fidèles.",
     "restaurant": "Regular, Loyalist et Insider. Les récompenses arrivent vite, même pour de petites dépenses.",
     "retail": "Member, Insider et VIP. Des achats fréquents et modestes ; les récompenses arrivent tôt.",
-    "simple_two_tier": "Member et VIP. Facile à gérer pour toute petite entreprise."
+    "simple_two_tier": "Member et VIP. Facile à gérer pour toute petite entreprise.",
+    "members_club": "Member, Regular et Insider. Les membres progressent selon leur fréquence de venue.",
+    "events_community": "Newcomer, Regular et Ambassador. Chaque événement et chaque visite compte, avec une carte à tampons."
   },
   "problem": {
     "choice": "Choisissez l’une des options.",
@@ -146,7 +156,10 @@
     "stamp_card_reward": "Les membres reçoivent un tampon par visite, un par jour. Une carte compte {{stamps}} tampons ; une carte pleine donne « {{reward}} ».",
     "stamp_card_reward_unset": "Les membres reçoivent un tampon par visite, un par jour. Une carte compte {{stamps}} tampons ; une carte pleine donne une récompense de votre choix.",
     "welcome_bonus": "Les nouveaux membres reçoivent {{points}} à l’inscription.",
-    "welcome_bonus_off": "Les nouveaux membres ne reçoivent pas de bonus de bienvenue."
+    "welcome_bonus_off": "Les nouveaux membres ne reçoivent pas de bonus de bienvenue.",
+    "tier_progress_points": "Les membres progressent en gagnant des points. Ils voient « 1 250 points avant Gold ».",
+    "tier_progress_visits": "Les membres progressent selon leur fréquence de venue : une visite par jour compte, quelle que soit la dépense. Ils voient « Encore 3 visites avant Gold ».",
+    "tier_progress_spend": "Les membres progressent selon ce qu’ils dépensent lors de leurs visites. Ils voient « Encore 120 € avant Gold »."
   },
   "setup": {
     "error": {
@@ -184,7 +197,8 @@
     "points_on_spend": "Points sur les dépenses",
     "referrals": "Parrainages",
     "stamp_card": "Carte à tampons",
-    "welcome_bonus": "Bonus de bienvenue"
+    "welcome_bonus": "Bonus de bienvenue",
+    "tier_progress": "Comment les membres progressent"
   },
   "way_line": {
     "birthday_bonus": "Des points pour l’anniversaire du membre.",
@@ -195,7 +209,8 @@
     "points_on_spend": "Des points pour les réservations terminées, selon le montant dépensé.",
     "referrals": "Des points pour avoir amené un ami, pour tous les deux.",
     "stamp_card": "Un tampon par visite ; une carte pleine donne une récompense.",
-    "welcome_bonus": "Des points pour l’inscription."
+    "welcome_bonus": "Des points pour l’inscription.",
+    "tier_progress": "Ce qui fait passer un membre au niveau suivant. Un changement ne déplace personne tout de suite : le niveau suit à la prochaine visite ou aux prochains points."
   },
   "ways_link": "Façons de gagner",
   "ways_title": "Comment les membres gagnent et ce qu’ils reçoivent",

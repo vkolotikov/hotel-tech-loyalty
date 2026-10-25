@@ -35,6 +35,12 @@ use Illuminate\Validation\Validator as FormValidator;
 class ProgramController extends Controller
 {
     private const COLOR = 'regex:/^#[0-9a-fA-F]{6}$/';
+    /**
+     * Release 8 (spec 2026-10-25 §3): the floors a tier sets on the other measures the programme can move members by
+     * (`tier_progress_by`). Empty means the tier is not reached on that measure. `min_spend` is decimal(12,2).
+     */
+    private const MAX_MIN_VISITS = 100000;
+    private const MAX_MIN_SPEND = 100000000;
     /** loyalty_tiers.earn_rate is decimal(4,2): a larger rate would fail in the database, not in the form. */
     private const MAX_EARN_RATE = 99.99;
 
@@ -74,6 +80,8 @@ class ProgramController extends Controller
             'name'        => 'required|string|max:255',
             'color'       => ['nullable', 'string', self::COLOR],
             'min_points'  => 'required|integer|min:0|max:10000000',
+            'min_visits'  => 'sometimes|nullable|integer|min:0|max:' . self::MAX_MIN_VISITS,
+            'min_spend'   => 'sometimes|nullable|numeric|min:0|max:' . self::MAX_MIN_SPEND,
             'earn_rate'   => 'required|numeric|min:0|max:' . self::MAX_EARN_RATE,
             'description' => 'nullable|string',
             'is_active'   => 'sometimes|boolean',
@@ -99,6 +107,8 @@ class ProgramController extends Controller
             'name'        => 'sometimes|required|string|max:255',
             'color'       => ['sometimes', 'nullable', 'string', self::COLOR],
             'min_points'  => 'sometimes|integer|min:0|max:10000000',
+            'min_visits'  => 'sometimes|nullable|integer|min:0|max:' . self::MAX_MIN_VISITS,
+            'min_spend'   => 'sometimes|nullable|numeric|min:0|max:' . self::MAX_MIN_SPEND,
             'earn_rate'   => 'sometimes|numeric|min:0|max:' . self::MAX_EARN_RATE,
             'description' => 'sometimes|nullable|string',
             'is_active'   => 'sometimes|boolean',
@@ -336,6 +346,8 @@ class ProgramController extends Controller
             'min_nights'  => $t->min_nights !== null ? (int) $t->min_nights : null,
             'min_stays'   => $t->min_stays !== null ? (int) $t->min_stays : null,
             'min_spend'   => $t->min_spend !== null ? (float) $t->min_spend : null,
+            // Release 8: the visits floor (`tier_progress_by` visits).
+            'min_visits'  => $t->min_visits !== null ? (int) $t->min_visits : null,
             'earn_rate'   => (float) $t->earn_rate,
             'is_active'   => (bool) $t->is_active,
             'sort_order'  => (int) $t->sort_order,
@@ -423,6 +435,9 @@ class ProgramController extends Controller
      */
     private static function tierColumns(array $data): array
     {
+        if (array_key_exists('min_spend', $data) && $data['min_spend'] !== null) {
+            $data['min_spend'] = round((float) $data['min_spend'], 2);
+        }
         if (array_key_exists('color', $data)) {
             if ($data['color'] !== null) {
                 $data['color_hex'] = $data['color'];

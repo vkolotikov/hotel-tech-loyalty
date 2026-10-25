@@ -13,15 +13,18 @@ import { errorKey, refusalKey } from '../lib/errors'
 import { day, points } from '../lib/format'
 import { memberPath } from '../lib/links'
 import { useLook } from '../lib/look'
-import type { MemberFilters, MemberRow, MemberSort, MemberState, TierRef } from '../lib/types'
+import type { Figures, MemberRow, MemberSort, TierRef } from '../lib/types'
 import { Pager } from '../ui/Pager'
 import { TierChip } from '../ui/TierChip'
+import { ToneBadge } from '../ui/formParts'
+import { formatDate } from '../../workspace/lib/wallClock'
+import { stateTone } from '../membership/validityMath'
 import { AddMemberDialog } from '../membership/AddMemberDialog'
 import { membershipApi } from '../membership/api'
 import { ERRORS as MEMBERSHIP_ERRORS } from '../membership/errors'
 import { exportFileName, listActions } from '../membership/membershipMath'
 import { SetupBanner } from '../options/SetupBanner'
-import { filtersFrom, searchFor, toggleTier, withChange } from './membersQuery'
+import { asMemberFilters, filtersFrom, searchFor, toggleTier, withChange, type ListFilters, type ListState } from './membersQuery'
 
 const INPUT = 'rounded-lg border border-a-border bg-a-surface px-2.5 py-1.5 text-sm text-a-text'
 /** A manager's tool in the header, a link that looks like the secondary button beside it. */
@@ -31,7 +34,9 @@ const TOOL = 'inline-flex items-center gap-2 rounded-full border border-a-border
  * Members, the workspace's home (spec 2026-10-21 §4.2): the numbers line, the tiers as chips, a search, the state and
  * the order; 50 a page. Everything chosen lives in the address, so a list can be shared and survives a reload. A row
  * opens the member's page. Release 2 (§4.1): Add member for everyone; for a manager Import, Export (the list as it is
- * filtered now) and Duplicates.
+ * filtered now) and Duplicates. Release 8 (spec 2026-10-25 §3): Show also offers the members whose membership is
+ * expiring soon or has expired, the numbers line counts them (each count opens that list), and a row says when a
+ * membership ends soon or has ended.
  */
 export function MembersPage() {
   const { t, i18n } = useTranslation()
@@ -43,7 +48,7 @@ export function MembersPage() {
   const navigate = useNavigate()
   const tiers = boot.programme.tiers
   const filters = useMemo(() => filtersFrom(location.search, tiers.map(tier => tier.id)), [location.search, tiers])
-  const apply = (next: MemberFilters) => navigate({ pathname: '/loyalty', search: searchFor(next) }, { replace: true })
+  const apply = (next: ListFilters) => navigate({ pathname: '/loyalty', search: searchFor(next) }, { replace: true })
 
   // The search box shows each letter at once; the list is asked once typing pauses. Back or a link brings the address's words.
   const [typed, setTyped] = useState(filters.q)
@@ -58,17 +63,18 @@ export function MembersPage() {
     return () => window.clearTimeout(timer)
   }, [typed, filters, navigate])
 
-  const query = useQuery({ queryKey: ['loyalty', 'members', filters], queryFn: () => api.members(filters), placeholderData: keepPreviousData })
+  const query = useQuery({ queryKey: ['loyalty', 'members', filters], queryFn: () => api.members(asMemberFilters(filters)), placeholderData: keepPreviousData })
   const page = query.data
   const tierOf = (id: number | null): TierRef | null => tiers.find(tier => tier.id === id) ?? null
-  const figures = page?.figures
+  // Release 8 adds `expiring` and `expired` to the figures (MemberDirectory::figures); a server before it sends neither.
+  const figures = page?.figures as (Figures & { expiring?: number; expired?: number }) | undefined
   const timeZone = boot.venue.timezone
   const actions = listActions(boot.staff.can)
   const [adding, setAdding] = useState(false)
 
   // The file comes through the same client as every call; the browser saves it under the venue's day.
   const download = useMutation({
-    mutationFn: () => membershipApi.exportMembers(filters),
+    mutationFn: () => membershipApi.exportMembers(asMemberFilters(filters)),
     onSuccess: (blob) => {
       const link = document.createElement('a')
       link.href = URL.createObjectURL(blob)
@@ -86,6 +92,17 @@ export function MembersPage() {
             {t('loyalty.members.figures', '{{active}} active of {{total}} · {{new}} joined this month · {{average}} points on average', {
               active: points(figures.active, locale), total: points(figures.total, locale), new: points(figures.new_this_month, locale), average: points(figures.average_points, locale),
             })}
+            {(['expiring', 'expired'] as const).filter(state => (figures[state] ?? 0) > 0).map(state => (
+              <span key={state}>
+                {' · '}
+                <button type="button" data-figure={state} onClick={() => apply(withChange(filters, { state }))}
+                  className={`font-medium underline-offset-2 hover:underline ${state === 'expired' ? 'text-a-danger' : 'text-a-text'}`}>
+                  {state === 'expiring'
+                    ? t('loyalty.membership.list.expiring_count', '{{n}} expiring soon', { n: points(figures.expiring ?? 0, locale) })
+                    : t('loyalty.membership.list.expired_count', '{{n}} expired', { n: points(figures.expired ?? 0, locale) })}
+                </button>
+              </span>
+            ))}
           </p>
         )}>
         {actions.tools && (
@@ -137,10 +154,12 @@ export function MembersPage() {
         </label>
         <label className="flex items-center gap-2 text-sm text-a-text-2">
           {t('loyalty.members.state', 'Show')}
-          <select value={filters.state} onChange={(e) => apply(withChange(filters, { state: e.target.value as MemberState }))} className={INPUT}>
+          <select value={filters.state} onChange={(e) => apply(withChange(filters, { state: e.target.value as ListState }))} className={INPUT}>
             <option value="active">{t('loyalty.members.state_active', 'Active')}</option>
             <option value="inactive">{t('loyalty.members.state_inactive', 'Switched off')}</option>
             <option value="all">{t('loyalty.members.state_all', 'All')}</option>
+            <option value="expiring">{t('loyalty.membership.list.state.expiring', 'Expiring soon')}</option>
+            <option value="expired">{t('loyalty.membership.list.state.expired', 'Expired')}</option>
           </select>
         </label>
         <label className="flex items-center gap-2 text-sm text-a-text-2">
@@ -196,6 +215,7 @@ export function MembersPage() {
                     <td className="px-4 py-2.5">
                       <Link to={memberPath(m.id)} className="block font-medium text-a-text hover:underline">{m.name || m.email || `#${m.id}`}</Link>
                       <span className="block text-xs text-a-text-2">{[m.member_number, m.email].filter(Boolean).join(' · ')}</span>
+                      <EndsBadge member={m} locale={locale} />
                     </td>
                     <td className="px-4 py-2.5"><TierChip tier={tierOf(m.tier_id)} theme={look.resolved} size="sm" /></td>
                     <td className="px-4 py-2.5 text-right font-semibold tabular-nums text-a-text">{points(m.points, locale)}</td>
@@ -225,6 +245,7 @@ function MemberCard({ member: m, tier, theme, locale }: { member: MemberRow; tie
         <span className="min-w-0 flex-1">
           <span className="block truncate font-medium text-a-text">{m.name || m.email || `#${m.id}`}</span>
           <span className="block truncate text-xs text-a-text-2">{m.member_number}</span>
+          <EndsBadge member={m} locale={locale} />
         </span>
         <span className="flex shrink-0 flex-col items-end gap-1">
           <span className="text-sm font-semibold tabular-nums text-a-text">{t('loyalty.common.points_count', '{{points}} pts', { points: points(m.points, locale) })}</span>
@@ -232,5 +253,24 @@ function MemberCard({ member: m, tier, theme, locale }: { member: MemberRow; tie
         </span>
       </Link>
     </li>
+  )
+}
+
+/**
+ * A row's membership when it needs looking at (release 8): "Ends 20 Oct" (amber) within 30 days, "Expired 1 Sep" (red)
+ * after; nothing for a membership without an end, one far off, or a switched-off member (the list's own state says it).
+ */
+function EndsBadge({ member: m, locale }: { member: MemberRow; locale: string }) {
+  const { t } = useTranslation()
+  if (!m.valid_until || (m.membership_state !== 'expiring' && m.membership_state !== 'expired')) return null
+  const day = formatDate(m.valid_until, locale, { day: 'numeric', month: 'short', year: 'numeric' })
+  return (
+    <span className="mt-1 block">
+      <ToneBadge tone={stateTone(m.membership_state)}>
+        {m.membership_state === 'expiring'
+          ? t('loyalty.membership.list.ends', 'Ends {{day}}', { day })
+          : t('loyalty.membership.list.ended', 'Expired {{day}}', { day })}
+      </ToneBadge>
+    </span>
   )
 }

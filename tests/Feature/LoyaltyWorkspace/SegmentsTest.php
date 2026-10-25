@@ -137,7 +137,7 @@ class SegmentsTest extends TestCase
 
         $this->assertCount(10, $response->json('sample'));
         $this->assertSame('Guest 11', $response->json('sample.0.name'));
-        $this->assertSame(['id', 'name', 'email', 'phone', 'member_number', 'tier_id', 'points', 'lifetime_points', 'is_active', 'joined_at', 'last_activity_at', 'credit_balance'], array_keys($response->json('sample.0')));
+        $this->assertSame(['id', 'name', 'email', 'phone', 'member_number', 'tier_id', 'points', 'lifetime_points', 'is_active', 'joined_at', 'last_activity_at', 'credit_balance', 'valid_until', 'membership_state'], array_keys($response->json('sample.0')));
 
         $this->asManager()->postJson($this->api('segments/preview'), ['operator' => 'AND', 'filters' => [['type' => 'tier', 'op' => 'in', 'value' => []]]])
             ->assertStatus(422)->assertJsonPath('error', 'bad_rule')->assertJsonPath('reason', 'no_value');

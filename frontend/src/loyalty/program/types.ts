@@ -24,6 +24,8 @@ export interface Tier {
   min_nights: number | null
   min_stays: number | null
   min_spend: number | null
+  /** Release 8: the visits that reach it when the programme moves members by visits (`tier_progress_by`); absent before. */
+  min_visits?: number | null
   earn_rate: number
   is_active: boolean
   sort_order: number
@@ -88,6 +90,9 @@ export interface TierBody {
   name: string
   color: string | null
   min_points: number
+  /** Release 8: the floors on the other measures, sent when the form carries them (null: not reached on that measure). */
+  min_visits?: number | null
+  min_spend?: number | null
   earn_rate: number
   description: string | null
   is_active: boolean

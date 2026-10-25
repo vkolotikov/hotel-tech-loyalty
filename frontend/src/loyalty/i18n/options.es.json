@@ -28,6 +28,11 @@
     "stamp_reward_kind": {
       "points": "Puntos",
       "reward": "Una recompensa"
+    },
+    "tier_progress_by": {
+      "points": "Puntos",
+      "visits": "Visitas",
+      "spend": "Gasto"
     }
   },
   "choose_reward": "Elija una recompensa…",
@@ -44,7 +49,8 @@
     "stamp_reward_kind": "Una tarjeta completa da",
     "stamp_reward_points": "Puntos por una tarjeta completa",
     "stamps_per_card": "Sellos por tarjeta",
-    "welcome_bonus_points": "Puntos al unirse"
+    "welcome_bonus_points": "Puntos al unirse",
+    "tier_progress_by": "Los miembros suben por"
   },
   "hint": {
     "cashback_percent": "El crédito solo se usa en el mostrador; nunca se paga en dinero.",
@@ -92,7 +98,9 @@
     "real_estate": "Inmobiliaria",
     "restaurant": "Restaurante y cafetería",
     "retail": "Tienda y comercio",
-    "simple_two_tier": "Sencillo, dos niveles"
+    "simple_two_tier": "Sencillo, dos niveles",
+    "members_club": "Club de socios",
+    "events_community": "Eventos y comunidad"
   },
   "preset_line": {
     "beauty": "Welcome, Devotee e Inner Circle. Premia las visitas habituales.",
@@ -105,7 +113,9 @@
     "real_estate": "Client, Preferred y Partner. Premia las recomendaciones y los clientes que repiten.",
     "restaurant": "Regular, Loyalist e Insider. Las recompensas llegan rápido incluso con gastos pequeños.",
     "retail": "Member, Insider y VIP. Compras pequeñas y frecuentes; las recompensas llegan pronto.",
-    "simple_two_tier": "Member y VIP. Fácil de llevar para cualquier pequeño negocio."
+    "simple_two_tier": "Member y VIP. Fácil de llevar para cualquier pequeño negocio.",
+    "members_club": "Member, Regular e Insider. Los miembros suben según cuánto vienen.",
+    "events_community": "Newcomer, Regular y Ambassador. Cuenta cada evento y cada visita, con tarjeta de sellos."
   },
   "problem": {
     "choice": "Elija una de las opciones.",
@@ -146,7 +156,10 @@
     "stamp_card_reward": "Los miembros reciben un sello por visita, uno al día. Una tarjeta tiene {{stamps}} sellos; una tarjeta completa da «{{reward}}».",
     "stamp_card_reward_unset": "Los miembros reciben un sello por visita, uno al día. Una tarjeta tiene {{stamps}} sellos; una tarjeta completa da la recompensa que usted elija.",
     "welcome_bonus": "Los miembros nuevos reciben {{points}} al unirse.",
-    "welcome_bonus_off": "Los miembros nuevos no reciben bono de bienvenida."
+    "welcome_bonus_off": "Los miembros nuevos no reciben bono de bienvenida.",
+    "tier_progress_points": "Los miembros suben al ganar puntos. Ven «1.250 puntos para Gold».",
+    "tier_progress_visits": "Los miembros suben según cuánto vienen: cuenta una visita al día, gasten lo que gasten. Ven «3 visitas más para Gold».",
+    "tier_progress_spend": "Los miembros suben según lo que gastan en sus visitas. Ven «120 € más para Gold»."
   },
   "setup": {
     "error": {
@@ -184,7 +197,8 @@
     "points_on_spend": "Puntos por gasto",
     "referrals": "Referidos",
     "stamp_card": "Tarjeta de sellos",
-    "welcome_bonus": "Bono de bienvenida"
+    "welcome_bonus": "Bono de bienvenida",
+    "tier_progress": "Cómo suben los miembros"
   },
   "way_line": {
     "birthday_bonus": "Puntos en el cumpleaños del miembro.",
@@ -195,7 +209,8 @@
     "points_on_spend": "Puntos por las reservas completadas, según lo gastado.",
     "referrals": "Puntos por traer a un amigo, para los dos.",
     "stamp_card": "Un sello por visita; una tarjeta completa da una recompensa.",
-    "welcome_bonus": "Puntos por unirse."
+    "welcome_bonus": "Puntos por unirse.",
+    "tier_progress": "Lo que lleva a un miembro al siguiente nivel. Un cambio no mueve a nadie de inmediato: el nivel se actualiza con la próxima visita o los próximos puntos."
   },
   "ways_link": "Formas de ganar",
   "ways_title": "Cómo ganan los miembros y qué reciben",

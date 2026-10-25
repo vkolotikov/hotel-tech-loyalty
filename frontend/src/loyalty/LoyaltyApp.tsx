@@ -8,6 +8,8 @@ import { LoyaltyShell } from './LoyaltyShell'
 import { AppPage } from './app/AppPage'
 import { CampaignPage } from './campaigns/CampaignPage'
 import { CampaignsPage } from './campaigns/CampaignsPage'
+import { EventPage } from './events/EventPage'
+import { EventsPage } from './events/EventsPage'
 import { InsightsPage } from './insights/InsightsPage'
 import { MemberPage } from './member/MemberPage'
 import { DuplicatesPage } from './membership/DuplicatesPage'
@@ -18,6 +20,7 @@ import { SetupWizard } from './options/SetupWizard'
 import { ProgramPage } from './program/ProgramPage'
 import { RequestsPage } from './requests/RequestsPage'
 import { RewardsPage } from './rewards/RewardsPage'
+import { DoorPage } from './scan/DoorPage'
 import { ScanPage } from './scan/ScanPage'
 
 registerWorkspaceLocales()
@@ -35,6 +38,11 @@ export function LoyaltyApp() {
   if (!token) return <Navigate to={loginPath(location)} replace />
   if (user?.user_type === 'member') return <Navigate to="/portal" replace />
 
+  // Release 8: door mode is a full-screen scanner for a tablet at an entrance — no menus, so outside the shell.
+  if (location.pathname.startsWith('/loyalty/scan/door')) {
+    return <LoyaltyProvider><DoorPage /></LoyaltyProvider>
+  }
+
   return (
     <LoyaltyProvider>
       <LoyaltyShell>
@@ -48,6 +56,8 @@ export function LoyaltyApp() {
           <Route path="options" element={<OptionsPage />} />
           <Route path="options/setup" element={<SetupWizard />} />
           <Route path="rewards" element={<RewardsPage />} />
+          <Route path="events" element={<EventsPage />} />
+          <Route path="events/:id" element={<EventPage />} />
           <Route path="campaigns" element={<CampaignsPage />} />
           <Route path="campaigns/:id" element={<CampaignPage />} />
           <Route path="insights" element={<InsightsPage />} />

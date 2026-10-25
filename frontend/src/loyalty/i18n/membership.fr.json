@@ -100,7 +100,8 @@
       "member_limit": "Au-delà de la limite de membres de la formule.",
       "not_created": "Le membre n’a pas pu être créé.",
       "unreadable": "Cette ligne n’a pas pu être lue : elle a plus de valeurs que le fichier n’a de colonnes.",
-      "other": "Cette ligne n’a pas été importée."
+      "other": "Cette ligne n’a pas été importée.",
+      "bad_valid_until": "La date « valable jusqu’au » n’est pas un jour. Écrivez-la AAAA-MM-JJ, par ex. 2027-10-03."
     },
     "kind": {
       "skipped": "Passée",
@@ -125,7 +126,8 @@
       "joined_at": "Adhésion",
       "date_of_birth": "Date de naissance",
       "marketing_consent": "Consentement marketing",
-      "external_id": "Numéro client"
+      "external_id": "Numéro client",
+      "valid_until": "Valable jusqu’au"
     },
     "error": {
       "manager_only": "Seul un propriétaire ou un responsable peut faire cela.",
@@ -142,7 +144,8 @@
       "not_found": "Cet import n’est plus là.",
       "network": "Pas de connexion. L’import s’est arrêté là où il en était ; appuyez sur Reprendre pour continuer.",
       "unknown": "L’import s’est arrêté. Ce qui a été importé reste ; appuyez sur Reprendre pour continuer."
-    }
+    },
+    "valid_until_hint": "Valable jusqu’au : le dernier jour de chaque adhésion, écrit AAAA-MM-JJ (par ex. 2027-10-03). Laissez vide pour une adhésion sans fin."
   },
   "erase": {
     "title": "Supprimer {{name}}",
@@ -233,7 +236,12 @@
       "invalid": "Vérifiez les champs signalés ci-dessous.",
       "network": "Pas de connexion : rien n’a été enregistré. Réessayez.",
       "unknown": "Le membre n’a pas pu être ajouté. Veuillez réessayer."
-    }
+    },
+    "valid_until": "Valable jusqu’au (facultatif)",
+    "valid_until_hint": "Le dernier jour d’une adhésion achetée pour une durée. Laissez vide pour une adhésion sans fin.",
+    "undated": "{{name}} a été ajouté, mais la date de fin n’a pas été enregistrée. Fixez-la sur sa page, sous Adhésion.",
+    "open_member": "Ouvrir sa page",
+    "close": "Fermer"
   },
   "card": {
     "title": "Carte de membre",
@@ -316,7 +324,15 @@
     "duplicates": "Doublons",
     "import": "Importer",
     "export": "Exporter",
-    "add": "Ajouter un membre"
+    "add": "Ajouter un membre",
+    "state": {
+      "expiring": "Expire bientôt",
+      "expired": "Expirée"
+    },
+    "expiring_count": "{{n}} expirent bientôt",
+    "expired_count": "{{n}} expirées",
+    "ends": "Fin le {{day}}",
+    "ended": "Expirée le {{day}}"
   },
   "load": {
     "error": {
@@ -346,5 +362,82 @@
       "network": "Pas de connexion. Vérifiez le réseau et réessayez.",
       "unknown": "Le fichier n’a pas pu être créé. Veuillez réessayer."
     }
+  },
+  "validity": {
+    "title": "Adhésion",
+    "state": {
+      "active": "Active",
+      "expiring": "Se termine bientôt",
+      "expired": "Expirée",
+      "off": "Désactivée"
+    },
+    "extend_action": "Prolonger",
+    "extend_by": "Prolonger de",
+    "extend": {
+      "1m": "+1 mois",
+      "3m": "+3 mois",
+      "6m": "+6 mois",
+      "1y": "+1 an"
+    },
+    "from_end": "À partir de la fin actuelle, le {{day}}.",
+    "from_today": "À partir d’aujourd’hui.",
+    "new_end": "jusqu’au {{day}}",
+    "set": "Fixer une date",
+    "remove": "Retirer la date de fin",
+    "saved": "Enregistré : valable jusqu’au {{day}}.",
+    "saved_none": "Enregistré : l’adhésion n’a pas de date de fin.",
+    "managers_only": "Seul un propriétaire ou un responsable peut changer la date de fin.",
+    "none": "Pas de date de fin",
+    "until": "Valable jusqu’au {{day}}",
+    "ends_today": "Se termine aujourd’hui",
+    "ends_tomorrow": "Se termine demain",
+    "ends_in": "Se termine dans {{days}} jours",
+    "expired_on": "Expirée le {{day}}",
+    "none_line": "L’adhésion ne se termine jamais. Donnez-lui une date de fin quand un membre l’achète pour une durée.",
+    "left_line": "Il reste {{left}}.",
+    "left": {
+      "years_one": "1 an",
+      "years_many": "{{n}} ans",
+      "months_one": "1 mois",
+      "months_many": "{{n}} mois",
+      "days_one": "1 jour",
+      "days_many": "{{n}} jours"
+    },
+    "expiring_line": "Valable jusqu’au {{day}}. Ensuite, l’entrée est refusée jusqu’au renouvellement.",
+    "expired_line": "L’entrée est refusée jusqu’au renouvellement. Les points et l’historique restent, et l’accueil peut toujours servir le membre.",
+    "off_line": "Le compte est désactivé : l’entrée est refusée quelle que soit la date.",
+    "problem": {
+      "date": "Choisissez un jour.",
+      "past": "Choisissez aujourd’hui ou un jour suivant."
+    },
+    "set_title": "Valable jusqu’au",
+    "set_label": "Dernier jour de l’adhésion",
+    "set_hint": "Le membre entre encore ce jour-là ; l’entrée est refusée à partir du lendemain.",
+    "set_preview": "Valable jusqu’au {{day}}.",
+    "set_save": "Enregistrer la date",
+    "remove_title": "Retirer la date de fin ?",
+    "remove_confirm": "Retirer la date de fin",
+    "remove_keep": "La garder",
+    "remove_body": "L’adhésion de {{name}} ne se terminera jamais, et l’entrée dépendra de son seul niveau.",
+    "error": {
+      "manager_only": "Seul un propriétaire ou un responsable peut faire cela.",
+      "not_allowed": "Seul un propriétaire ou un responsable peut faire cela.",
+      "no_capability": "Seul un propriétaire ou un responsable peut faire cela.",
+      "already_erased": "Ce membre a été supprimé. Seuls son numéro et son historique de points sont conservés.",
+      "not_found": "Ce membre ne fait plus partie de votre programme.",
+      "network": "Pas de connexion : rien n’a été enregistré. Réessayez.",
+      "key_reused": "Une autre modification vient d’être faite. La page montre la date de fin actuelle ; réessayez si ce n’est pas ce que vous vouliez.",
+      "invalid": "Choisissez aujourd’hui ou un jour suivant.",
+      "unknown": "La date de fin n’a pas pu être enregistrée. Rien n’a changé ; veuillez réessayer."
+    }
+  },
+  "progress": {
+    "visits_sofar_one": "1 visite comptée pour les niveaux.",
+    "visits_sofar_many": "{{n}} visites comptées pour les niveaux.",
+    "spend_sofar": "{{amount}} dépensés, comptés pour les niveaux.",
+    "ready": "Remplit les conditions de {{tier}} : le passage se fera à la prochaine visite ou aux prochains points.",
+    "visit_one": "Encore 1 visite avant {{tier}}",
+    "visits_many": "Encore {{n}} visites avant {{tier}}",
+    "spend": "Encore {{amount}} avant {{tier}}"
   }
 }

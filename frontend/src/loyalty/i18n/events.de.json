@@ -1,0 +1,257 @@
+{
+  "card": {
+    "every_member": "Alle Mitglieder",
+    "visit": "Zählt als Besuch"
+  },
+  "dialog": {
+    "edit_title": "„{{title}}“ ändern",
+    "new_title": "Neue Veranstaltung",
+    "title": "Was ist es?",
+    "title_example": "z. B. Weinprobe, Yogastunde, Mitgliederabend",
+    "when": "Wann",
+    "date": "Tag",
+    "start": "Beginn",
+    "end": "Ende",
+    "later_day": "Endet an einem späteren Tag",
+    "end_date": "Letzter Tag",
+    "clock": "Nach der Uhr Ihres Hauses ({{zone}}).",
+    "lasts": "Dauer: {{hours}} Std. {{minutes}} Min.",
+    "where": "Wo",
+    "where_label": "Ort",
+    "elsewhere": "Woanders …",
+    "nowhere": "Nicht angegeben",
+    "location": "Wo genau",
+    "location_hint": "Optional: ein Raum, eine Adresse. Orte, die Sie unter Programm anlegen, können Sie hier wählen.",
+    "location_example": "z. B. Die Terrasse, 2. Stock",
+    "who": "Wer kommen darf",
+    "every_member": "Alle Mitglieder",
+    "chosen_tiers": "Ausgewählte Stufen",
+    "tiers": "Zugelassene Stufen",
+    "gives": "Was die Teilnahme bringt",
+    "points": "Punkte",
+    "points_hint": "Beim Einchecken gutgeschrieben. 0 für keine.",
+    "visit": "Zählt als Besuch",
+    "visit_hint": "Ein Stempel auf der Stempelkarte und Fortschritt zur nächsten Stufe, wo Stufen nach Besuchen gehen.",
+    "sign_up_section": "Anmeldung",
+    "sign_up": "Mitglieder melden sich im Portal an",
+    "sign_up_hint": "Sie sehen die Veranstaltung, melden sich an oder sagen ab; Sie sehen, wer kommt.",
+    "walk_ins": "Ohne Anmeldung willkommen",
+    "walk_ins_on": "Mitglieder ohne Anmeldung können eingecheckt werden, solange Plätze frei sind.",
+    "walk_ins_off": "Nur angemeldete Mitglieder kommen hinein.",
+    "capacity": "Plätze",
+    "capacity_hint": "Leer: keine Grenze. Jede Anmeldung und jeder Gast ohne Anmeldung belegt einen Platz.",
+    "no_limit": "Keine Grenze",
+    "description": "Beschreibung",
+    "description_hint": "Optional. Mitglieder lesen sie im Portal.",
+    "told": "Ändern sich Zeit oder Ort, bekommen die angemeldeten Mitglieder eine Nachricht im Posteingang und eine Push-Mitteilung.",
+    "save_draft": "Als Entwurf speichern",
+    "publish": "Veröffentlichen",
+    "save": "Änderungen speichern"
+  },
+  "page": {
+    "back": "Veranstaltungen",
+    "signed_up": "Angemeldet",
+    "checked_in": "Eingecheckt",
+    "walk_ins": "Ohne Anmeldung",
+    "room_left": "Freie Plätze",
+    "start_check_in": "Einchecken starten",
+    "door_mode": "Eingangsmodus",
+    "by_name": "Nach Namen einchecken",
+    "add_member": "Mitglied hinzufügen",
+    "publish": "Veröffentlichen",
+    "edit": "Bearbeiten",
+    "cancel_event": "Veranstaltung absagen",
+    "delete": "Entwurf löschen",
+    "draft_note": "Ein Entwurf: Mitglieder sehen ihn nicht, und niemand kann sich anmelden oder einchecken, bis Sie ihn veröffentlichen.",
+    "people": "Personen",
+    "nobody_signed_up": "Noch niemand hat sich angemeldet. Mitglieder melden sich im Portal an, oder Sie fügen sie hier hinzu.",
+    "nobody_in": "Noch niemand ist eingecheckt. Starten Sie das Einchecken, wenn die Türen öffnen.",
+    "find_member": "Mitglied suchen",
+    "check_in": "Einchecken",
+    "group_signed_up": "Angemeldet",
+    "group_walk_ins": "Ohne Anmeldung",
+    "group_in": "Eingecheckt",
+    "group_cancelled": "Abgesagt",
+    "cancel_sign_up": "Anmeldung stornieren"
+  },
+  "add": {
+    "title": "Mitglied zu „{{title}}“ hinzufügen",
+    "sign_up": "Anmelden",
+    "done": "Angemeldet: {{names}}",
+    "close": "Fertig"
+  },
+  "cancel": {
+    "title": "„{{title}}“ absagen?",
+    "confirm": "Veranstaltung absagen",
+    "keep": "Behalten",
+    "effect": "Mitglieder sehen sie nicht mehr im Portal, und niemand kann einchecken. Anmeldungen und Check-ins bleiben auf der Seite der Veranstaltung.",
+    "told": "Die angemeldeten Mitglieder ({{members}}) bekommen eine Nachricht im Posteingang und eine Push-Mitteilung: „{{title}} ist abgesagt“.",
+    "nobody": "Niemand hat sich angemeldet, also wird niemand benachrichtigt.",
+    "reason": "Ein Satz für sie (optional)",
+    "reason_example": "z. B. Es sind Gewitter angesagt; wir nennen bald einen neuen Termin."
+  },
+  "delete": {
+    "title": "Entwurf „{{title}}“ löschen?",
+    "confirm": "Entwurf löschen",
+    "keep": "Behalten",
+    "effect": "Mitglieder haben ihn nie gesehen. Das lässt sich nicht rückgängig machen."
+  },
+  "title": "Veranstaltungen",
+  "line": "Verkostungen, Kurse, Mitgliederabende: wer kommen darf, was die Teilnahme bringt, und Einchecken am Eingang.",
+  "new": "Neue Veranstaltung",
+  "tabs": "Veranstaltungen",
+  "empty": {
+    "upcoming": "Keine anstehenden Veranstaltungen. Planen Sie eine: Mitglieder melden sich im Portal an, und Sie checken sie am Eingang ein.",
+    "past": "Vergangene Veranstaltungen erscheinen hier, mit allen, die da waren.",
+    "drafts": "Keine Entwürfe. Eine als Entwurf gespeicherte Veranstaltung bleibt hier, bis Sie sie veröffentlichen."
+  },
+  "read_only": "Veranstaltungen legen Manager und Mitarbeitende an, die Angebote verwalten dürfen.",
+  "picker": {
+    "placeholder": "Name, E-Mail, Telefon oder Mitgliedsnummer",
+    "two_letters": "Geben Sie mindestens zwei Buchstaben ein.",
+    "searching": "Suche …",
+    "none": "Kein Mitglied passt."
+  },
+  "tab": {
+    "upcoming": "Anstehend",
+    "past": "Vergangen",
+    "drafts": "Entwürfe"
+  },
+  "phase": {
+    "draft": "Entwurf",
+    "upcoming": "Veröffentlicht",
+    "on_now": "Läuft gerade",
+    "ended": "Beendet",
+    "cancelled": "Abgesagt"
+  },
+  "problem": {
+    "title": "Geben Sie der Veranstaltung einen Namen.",
+    "date": "Wählen Sie den Tag.",
+    "start": "Wählen Sie den Beginn.",
+    "end": "Wählen Sie das Ende.",
+    "ends_at": "Das Ende muss nach dem Beginn liegen. Für eine Veranstaltung über Mitternacht hinaus wählen Sie „Endet an einem späteren Tag“.",
+    "too_long": "Eine Veranstaltung dauert höchstens 14 Tage.",
+    "place_id": "Wählen Sie einen Ihrer Orte.",
+    "location": "Geben Sie den Ort mit höchstens 200 Zeichen an.",
+    "description": "Höchstens 2.000 Zeichen.",
+    "tier_ids": "Wählen Sie mindestens eine Stufe.",
+    "points": "Punkte: eine ganze Zahl von 0 bis 100.000.",
+    "capacity": "Plätze: eine ganze Zahl von 1 bis 100.000, oder leer lassen für keine Grenze.",
+    "walk_ins": "Ohne Anmeldung müssen alle willkommen sein – sonst kann niemand kommen."
+  },
+  "reason": {
+    "welcome": "Eingecheckt: {{name}}",
+    "already_in": "{{name}} wurde um {{time}} eingecheckt",
+    "member_erased": "Kein Zutritt: Dieses Mitglied wurde gelöscht.",
+    "member_off": "Kein Zutritt: Die Mitgliedschaft von {{name}} ist ausgeschaltet.",
+    "expired": "Kein Zutritt: Die Mitgliedschaft ist am {{date}} abgelaufen.",
+    "place_off": "Kein Zutritt: Dieser Ort ist ausgeschaltet.",
+    "tier_not_allowed": "Kein Zutritt: nur für {{tiers}} – {{name}} ist {{tier}}.",
+    "event_not_open": "Kein Zutritt: Das Einchecken für diese Veranstaltung ist gerade nicht offen.",
+    "event_full": "Kein Zutritt: Die Veranstaltung ist voll.",
+    "not_signed_up": "Kein Zutritt: {{name}} hat sich nicht angemeldet, und ohne Anmeldung geht es nicht.",
+    "unknown": "Kein Zutritt."
+  },
+  "person": {
+    "in": "Eingecheckt {{time}}",
+    "walk_in": "Ohne Anmeldung · {{time}}",
+    "signed_up": "Angemeldet",
+    "cancelled": "Abgesagt"
+  },
+  "outside": {
+    "all": "Angemeldet und dann ausgeschlossen: {{names}}.",
+    "some": "Angemeldet und dann ausgeschlossen: {{names}} und {{others}}."
+  },
+  "count": {
+    "signed_up_one": "{{n}} angemeldet",
+    "signed_up_few": "{{n}} angemeldet",
+    "signed_up_many": "{{n}} angemeldet",
+    "signed_up_other": "{{n}} angemeldet",
+    "places_left_one": "{{n}} Platz frei",
+    "places_left_few": "{{n}} Plätze frei",
+    "places_left_many": "{{n}} Plätze frei",
+    "places_left_other": "{{n}} Plätze frei",
+    "checked_in_one": "{{n}} eingecheckt",
+    "checked_in_few": "{{n}} eingecheckt",
+    "checked_in_many": "{{n}} eingecheckt",
+    "checked_in_other": "{{n}} eingecheckt",
+    "walk_ins_one": "{{n}} ohne Anmeldung",
+    "walk_ins_few": "{{n}} ohne Anmeldung",
+    "walk_ins_many": "{{n}} ohne Anmeldung",
+    "walk_ins_other": "{{n}} ohne Anmeldung",
+    "points_plus_one": "+{{n}} Punkt",
+    "points_plus_few": "+{{n}} Punkte",
+    "points_plus_many": "+{{n}} Punkte",
+    "points_plus_other": "+{{n}} Punkte",
+    "places_one": "{{n}} Platz",
+    "places_few": "{{n}} Plätze",
+    "places_many": "{{n}} Plätze",
+    "places_other": "{{n}} Plätze",
+    "members_one": "{{n}} Mitglied",
+    "members_few": "{{n}} Mitglieder",
+    "members_many": "{{n}} Mitglieder",
+    "members_other": "{{n}} Mitglieder",
+    "others_one": "{{n}} weiteres",
+    "others_few": "{{n}} weitere",
+    "others_many": "{{n}} weitere",
+    "others_other": "{{n}} weitere"
+  },
+  "load": {
+    "error": {
+      "not_found": "Diese Veranstaltung ist nicht mehr in Ihrem Programm.",
+      "network": "Keine Verbindung. Prüfen Sie das Netz und versuchen Sie es erneut.",
+      "unknown": "Die Veranstaltungen konnten nicht geladen werden. Bitte versuchen Sie es erneut."
+    }
+  },
+  "save": {
+    "error": {
+      "invalid": "Prüfen Sie die unten markierten Felder.",
+      "event_ended": "Diese Veranstaltung ist schon vorbei. Ändern Sie die Zeit, um sie zu veröffentlichen, oder speichern Sie sie als Entwurf.",
+      "wrong_state": "Diese Veranstaltung wurde abgesagt und lässt sich nicht mehr ändern.",
+      "signed_up_outside": "Einige angemeldete Mitglieder gehören nicht zu den gewählten Stufen. Stornieren Sie zuerst ihre Anmeldungen auf der Seite der Veranstaltung, oder behalten Sie ihre Stufen.",
+      "key_reused": "Das wurde schon mit anderen Angaben gespeichert. Schließen Sie den Dialog und versuchen Sie es erneut.",
+      "not_allowed": "Ihr Konto darf Veranstaltungen nicht ändern. Ein Manager kann „Angebote verwalten“ unter Team im vollen Admin erlauben.",
+      "no_capability": "Ihr Konto darf Veranstaltungen nicht ändern. Ein Manager kann „Angebote verwalten“ unter Team im vollen Admin erlauben.",
+      "not_found": "Diese Veranstaltung ist nicht mehr in Ihrem Programm.",
+      "network": "Keine Verbindung: Nichts wurde gespeichert. Versuchen Sie es erneut.",
+      "unknown": "Die Veranstaltung konnte nicht gespeichert werden. Bitte versuchen Sie es erneut."
+    }
+  },
+  "life": {
+    "error": {
+      "event_ended": "Diese Veranstaltung ist schon vorbei.",
+      "wrong_state": "Jemand hat diese Veranstaltung inzwischen geändert. Die Seite zeigt sie jetzt, wie sie ist.",
+      "not_a_draft": "Nur ein Entwurf kann gelöscht werden. Eine veröffentlichte Veranstaltung sagen Sie stattdessen ab.",
+      "not_allowed": "Ihr Konto darf Veranstaltungen nicht ändern. Ein Manager kann „Angebote verwalten“ unter Team im vollen Admin erlauben.",
+      "no_capability": "Ihr Konto darf Veranstaltungen nicht ändern. Ein Manager kann „Angebote verwalten“ unter Team im vollen Admin erlauben.",
+      "not_found": "Diese Veranstaltung ist nicht mehr in Ihrem Programm.",
+      "network": "Keine Verbindung: Nichts wurde gespeichert. Versuchen Sie es erneut.",
+      "unknown": "Das hat nicht geklappt. Nichts wurde geändert; bitte versuchen Sie es erneut."
+    }
+  },
+  "people": {
+    "error": {
+      "sign_up_closed": "Diese Veranstaltung nimmt gerade keine Anmeldungen an.",
+      "event_full": "Die Veranstaltung ist voll.",
+      "tier_not_allowed": "Diese Veranstaltung ist für andere Stufen.",
+      "membership_expired": "Die Mitgliedschaft dieses Mitglieds endet vor der Veranstaltung.",
+      "inactive": "Das Konto dieses Mitglieds ist ausgeschaltet.",
+      "already_signed_up": "Dieses Mitglied ist schon angemeldet.",
+      "already_in": "Dieses Mitglied ist schon eingecheckt.",
+      "not_signed_up": "Dieses Mitglied ist nicht angemeldet.",
+      "cancel_closed": "Diese Veranstaltung ist vorbei.",
+      "invalid": "Wählen Sie eines Ihrer Mitglieder.",
+      "not_found": "Dieses Mitglied oder diese Veranstaltung ist nicht mehr in Ihrem Programm.",
+      "network": "Keine Verbindung: Nichts wurde gespeichert. Versuchen Sie es erneut.",
+      "unknown": "Das hat nicht geklappt. Nichts wurde geändert; bitte versuchen Sie es erneut."
+    }
+  },
+  "check_in": {
+    "error": {
+      "invalid": "Wählen Sie eines Ihrer Mitglieder.",
+      "not_found": "Dieses Mitglied oder diese Veranstaltung ist nicht mehr in Ihrem Programm.",
+      "network": "Keine Verbindung: Nichts wurde gespeichert. Versuchen Sie es erneut.",
+      "unknown": "Das Einchecken hat nicht geklappt. Bitte versuchen Sie es erneut."
+    }
+  }
+}

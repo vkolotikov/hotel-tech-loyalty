@@ -15,6 +15,8 @@ final class Visit
     public const STAY = 'stay';
     public const CHECK_IN = 'check_in';
     public const PURCHASE = 'purchase';
+    /** Release 8: a check-in at an event (reference `loyalty_event_attendance` + id, the event's venue day). */
+    public const EVENT = 'event';
 
     public function __construct(
         public readonly string $source,

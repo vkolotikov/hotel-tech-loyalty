@@ -47,6 +47,7 @@ class ProgramTest extends TestCase
             'min_nights'  => null,
             'min_stays'   => null,
             'min_spend'   => null,
+            'min_visits'  => null,
             'earn_rate'   => 1.25,
             'is_active'   => true,
             'sort_order'  => 2,
@@ -135,7 +136,7 @@ class ProgramTest extends TestCase
         $id = $response->json('tier.id');
         $response->assertJsonPath('tier', [
             'id' => $id, 'name' => 'Diamond', 'description' => 'For the few.', 'color' => '#1E3A8A', 'min_points' => 9000,
-            'min_nights' => null, 'min_stays' => null, 'min_spend' => null, 'earn_rate' => 2, 'is_active' => true,
+            'min_nights' => null, 'min_stays' => null, 'min_spend' => null, 'min_visits' => null, 'earn_rate' => 2, 'is_active' => true,
             'sort_order' => 4, 'members' => 0, 'benefits' => [],
         ]);
         $this->assertTrue(AuditLog::query()->where('action', 'tier_created')->where('subject_id', $id)->exists());

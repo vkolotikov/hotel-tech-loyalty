@@ -20,6 +20,12 @@ const filled = (text: string): boolean => text.trim() !== ''
 /** The server's bounds for a tier (ProgramController: min_points ≤ 10,000,000; earn_rate is decimal(4,2)). */
 export const MAX_MIN_POINTS = 10_000_000
 export const MAX_EARN_RATE = 99.99
+/** Release 8: the bounds of the visits and spend floors (ProgramController). */
+export const MAX_MIN_VISITS = 100_000
+export const MAX_MIN_SPEND = 100_000_000
+
+/** How the programme moves members between tiers (the bootstrap's `progress_by`, ProgrammeOptions `tier_progress_by`). */
+export type ProgressBy = 'points' | 'visits' | 'spend'
 
 export interface TierForm {
   name: string
@@ -28,6 +34,9 @@ export interface TierForm {
   earn_rate: string
   description: string
   is_active: boolean
+  /** Release 8: the visits and spend floors as typed; a form without them sends neither. */
+  min_visits?: string
+  min_spend?: string
 }
 
 export function tierFormOf(tier: Tier | null): TierForm {
@@ -39,25 +48,44 @@ export function tierFormOf(tier: Tier | null): TierForm {
     earn_rate: String(tier.earn_rate),
     description: tier.description ?? '',
     is_active: tier.is_active,
+    min_visits: tier.min_visits === null || tier.min_visits === undefined ? '' : String(tier.min_visits),
+    min_spend: tier.min_spend === null ? '' : String(tier.min_spend),
   }
+}
+
+/** The floor the tier form shows, by the programme's measure (the others stay as they are, hidden). */
+export function floorField(by: ProgressBy): 'min_points' | 'min_visits' | 'min_spend' {
+  return by === 'visits' ? 'min_visits' : by === 'spend' ? 'min_spend' : 'min_points'
 }
 
 export const isHex = (text: string): boolean => /^#[0-9a-fA-F]{6}$/.test(text.trim())
 
-export function tierProblems(form: TierForm): Problems {
+/**
+ * What the tier form refuses before sending. The visits and spend floors (release 8) may be left empty — the tier is
+ * then not reached on that measure — and are checked only when the programme moves members by them (the form shows them
+ * only then).
+ */
+export function tierProblems(form: TierForm, by: ProgressBy = 'points'): Problems {
   const out: Problems = {}
   if (!filled(form.name)) out.name = 'name'
   if (filled(form.color) && !isHex(form.color)) out.color = 'color'
   if (!wholeIn(form.min_points, 0, MAX_MIN_POINTS)) out.min_points = 'min_points'
   if (!numberIn(form.earn_rate, 0, MAX_EARN_RATE)) out.earn_rate = 'earn_rate'
+  if (by === 'visits' && filled(form.min_visits ?? '') && !wholeIn(form.min_visits ?? '', 0, MAX_MIN_VISITS)) out.min_visits = 'min_visits'
+  if (by === 'spend' && filled(form.min_spend ?? '') && !numberIn(form.min_spend ?? '', 0, MAX_MIN_SPEND)) out.min_spend = 'min_spend'
   return out
 }
+
+/** A typed floor as sent: empty is none (null), else the number. */
+const floorOf = (text: string, decimals: boolean): number | null => (filled(text) ? (decimals ? decimalOf(text) : Number(text.trim())) : null)
 
 export function tierBody(form: TierForm): TierBody {
   return {
     name: form.name.trim(),
     color: filled(form.color) ? form.color.trim().toLowerCase() : null,
     min_points: Number(form.min_points.trim()),
+    ...(form.min_visits !== undefined ? { min_visits: floorOf(form.min_visits, false) } : {}),
+    ...(form.min_spend !== undefined ? { min_spend: floorOf(form.min_spend, true) } : {}),
     earn_rate: decimalOf(form.earn_rate) ?? 0,
     description: filled(form.description) ? form.description.trim() : null,
     is_active: form.is_active,
@@ -65,14 +93,20 @@ export function tierBody(form: TierForm): TierBody {
 }
 
 export const TIER_FIELDS: Record<string, string> = {
-  name: 'name', color: 'color', min_points: 'min_points', earn_rate: 'earn_rate', description: 'description',
+  name: 'name', color: 'color', min_points: 'min_points', earn_rate: 'earn_rate', description: 'description', min_visits: 'min_visits', min_spend: 'min_spend',
 }
 
-export type Threshold = 'points' | 'nights' | 'stays' | 'spend'
+export type Threshold = 'points' | 'nights' | 'stays' | 'spend' | 'visits'
 
-/** What it takes to reach a tier: points always, nights, stays and spend where the tier sets them. */
-export function thresholds(tier: Tier): { kind: Threshold; value: number }[] {
-  const out: { kind: Threshold; value: number }[] = [{ kind: 'points', value: tier.min_points }]
+/**
+ * What it takes to reach a tier, on the programme's measure (release 8): by points, points always and nights, stays
+ * and spend where the tier sets them, as before; by visits or spend, that floor alone — `null` when the tier has none
+ * (it is then not reached by it).
+ */
+export function thresholds(tier: Tier, by: ProgressBy = 'points'): { kind: Threshold; value: number | null }[] {
+  if (by === 'visits') return [{ kind: 'visits', value: tier.min_visits ?? null }]
+  if (by === 'spend') return [{ kind: 'spend', value: tier.min_spend }]
+  const out: { kind: Threshold; value: number | null }[] = [{ kind: 'points', value: tier.min_points }]
   if (tier.min_nights !== null) out.push({ kind: 'nights', value: tier.min_nights })
   if (tier.min_stays !== null) out.push({ kind: 'stays', value: tier.min_stays })
   if (tier.min_spend !== null) out.push({ kind: 'spend', value: tier.min_spend })

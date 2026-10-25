@@ -1,0 +1,257 @@
+{
+  "card": {
+    "every_member": "Tous les membres",
+    "visit": "Compte comme une visite"
+  },
+  "dialog": {
+    "edit_title": "Modifier « {{title}} »",
+    "new_title": "Nouvel événement",
+    "title": "De quoi s’agit-il ?",
+    "title_example": "p. ex. Dégustation de vins, Cours de yoga, Soirée des membres",
+    "when": "Quand",
+    "date": "Jour",
+    "start": "Début",
+    "end": "Fin",
+    "later_day": "Se termine un autre jour",
+    "end_date": "Dernier jour",
+    "clock": "À l’heure de votre établissement ({{zone}}).",
+    "lasts": "Durée : {{hours}} h {{minutes}} min.",
+    "where": "Où",
+    "where_label": "Lieu",
+    "elsewhere": "Ailleurs…",
+    "nowhere": "Non précisé",
+    "location": "Où exactement",
+    "location_hint": "Facultatif : une salle, une adresse. Les lieux ajoutés dans Programme peuvent être choisis ici.",
+    "location_example": "p. ex. La terrasse, 2e étage",
+    "who": "Qui peut venir",
+    "every_member": "Tous les membres",
+    "chosen_tiers": "Niveaux choisis",
+    "tiers": "Niveaux admis",
+    "gives": "Ce que la participation apporte",
+    "points": "Points",
+    "points_hint": "Crédités à l’arrivée. 0 pour aucun.",
+    "visit": "Compte comme une visite",
+    "visit_hint": "Un tampon sur la carte de fidélité, et une progression vers le niveau suivant là où les niveaux se gagnent par visites.",
+    "sign_up_section": "Inscription",
+    "sign_up": "Les membres s’inscrivent sur le portail",
+    "sign_up_hint": "Ils voient l’événement, s’inscrivent ou annulent ; vous voyez qui vient.",
+    "walk_ins": "Venue sans inscription acceptée",
+    "walk_ins_on": "Les membres non inscrits peuvent être enregistrés tant qu’il reste des places.",
+    "walk_ins_off": "Seuls les membres inscrits entrent.",
+    "capacity": "Places",
+    "capacity_hint": "Vide : sans limite. Chaque inscription et chaque venue sans inscription occupe une place.",
+    "no_limit": "Sans limite",
+    "description": "Description",
+    "description_hint": "Facultatif. Les membres la lisent sur le portail.",
+    "told": "Si l’heure ou le lieu change, les membres inscrits reçoivent un message dans leur boîte et une notification push.",
+    "save_draft": "Enregistrer le brouillon",
+    "publish": "Publier",
+    "save": "Enregistrer les modifications"
+  },
+  "page": {
+    "back": "Événements",
+    "signed_up": "Inscrits",
+    "checked_in": "Arrivés",
+    "walk_ins": "Sans inscription",
+    "room_left": "Places restantes",
+    "start_check_in": "Commencer l’accueil",
+    "door_mode": "Mode entrée",
+    "by_name": "Enregistrer par le nom",
+    "add_member": "Ajouter un membre",
+    "publish": "Publier",
+    "edit": "Modifier",
+    "cancel_event": "Annuler l’événement",
+    "delete": "Supprimer le brouillon",
+    "draft_note": "Un brouillon : les membres ne le voient pas, et personne ne peut s’inscrire ni être enregistré avant que vous le publiiez.",
+    "people": "Participants",
+    "nobody_signed_up": "Personne ne s’est encore inscrit. Les membres s’inscrivent sur le portail, ou ajoutez-les ici.",
+    "nobody_in": "Personne n’est encore arrivé. Commencez l’accueil à l’ouverture des portes.",
+    "find_member": "Trouver le membre",
+    "check_in": "Enregistrer l’arrivée",
+    "group_signed_up": "Inscrits",
+    "group_walk_ins": "Sans inscription",
+    "group_in": "Arrivés",
+    "group_cancelled": "Annulés",
+    "cancel_sign_up": "Annuler l’inscription"
+  },
+  "add": {
+    "title": "Ajouter un membre à « {{title}} »",
+    "sign_up": "Inscrire",
+    "done": "Inscrits : {{names}}",
+    "close": "Terminé"
+  },
+  "cancel": {
+    "title": "Annuler « {{title}} » ?",
+    "confirm": "Annuler l’événement",
+    "keep": "Le garder",
+    "effect": "Les membres ne le voient plus sur le portail et personne ne peut plus être enregistré. Les inscriptions et les arrivées restent sur la page de l’événement.",
+    "told": "Les membres inscrits ({{members}}) reçoivent un message dans leur boîte et une notification push : « {{title}} est annulé ».",
+    "nobody": "Personne ne s’est inscrit, donc personne n’est prévenu.",
+    "reason": "Un mot pour eux (facultatif)",
+    "reason_example": "p. ex. Des orages sont annoncés ; nous fixerons bientôt une nouvelle date."
+  },
+  "delete": {
+    "title": "Supprimer le brouillon « {{title}} » ?",
+    "confirm": "Supprimer le brouillon",
+    "keep": "Le garder",
+    "effect": "Les membres ne l’ont jamais vu. C’est définitif."
+  },
+  "title": "Événements",
+  "line": "Dégustations, cours, soirées des membres : qui peut venir, ce que la participation apporte, et l’accueil à l’entrée.",
+  "new": "Nouvel événement",
+  "tabs": "Événements",
+  "empty": {
+    "upcoming": "Aucun événement à venir. Prévoyez-en un : les membres s’inscrivent sur le portail, et vous les enregistrez à l’entrée.",
+    "past": "Les événements terminés s’affichent ici, avec qui est venu.",
+    "drafts": "Aucun brouillon. Un événement enregistré en brouillon reste ici jusqu’à sa publication."
+  },
+  "read_only": "Les événements sont créés par les responsables et le personnel autorisé à gérer les offres.",
+  "picker": {
+    "placeholder": "Nom, e-mail, téléphone ou numéro de membre",
+    "two_letters": "Tapez au moins deux lettres.",
+    "searching": "Recherche…",
+    "none": "Aucun membre ne correspond."
+  },
+  "tab": {
+    "upcoming": "À venir",
+    "past": "Passés",
+    "drafts": "Brouillons"
+  },
+  "phase": {
+    "draft": "Brouillon",
+    "upcoming": "Publié",
+    "on_now": "En cours",
+    "ended": "Terminé",
+    "cancelled": "Annulé"
+  },
+  "problem": {
+    "title": "Donnez un nom à l’événement.",
+    "date": "Choisissez le jour.",
+    "start": "Choisissez l’heure de début.",
+    "end": "Choisissez l’heure de fin.",
+    "ends_at": "La fin doit venir après le début. Pour un événement qui dépasse minuit, cochez « Se termine un autre jour ».",
+    "too_long": "Un événement dure au plus 14 jours.",
+    "place_id": "Choisissez l’un de vos lieux.",
+    "location": "Indiquez le lieu en 200 caractères au plus.",
+    "description": "2 000 caractères au plus.",
+    "tier_ids": "Choisissez au moins un niveau.",
+    "points": "Points : un nombre entier de 0 à 100 000.",
+    "capacity": "Places : un nombre entier de 1 à 100 000, ou laissez vide pour aucune limite.",
+    "walk_ins": "Sans inscription, la venue libre doit être acceptée — sinon personne ne peut venir."
+  },
+  "reason": {
+    "welcome": "Arrivée enregistrée : {{name}}",
+    "already_in": "{{name}} est arrivé(e) à {{time}}",
+    "member_erased": "Accès refusé : ce membre a été supprimé.",
+    "member_off": "Accès refusé : l’adhésion de {{name}} est désactivée.",
+    "expired": "Accès refusé : l’adhésion a expiré le {{date}}.",
+    "place_off": "Accès refusé : ce lieu est désactivé.",
+    "tier_not_allowed": "Accès refusé : réservé à {{tiers}} — {{name}} est {{tier}}.",
+    "event_not_open": "Accès refusé : l’accueil de cet événement n’est pas ouvert pour le moment.",
+    "event_full": "Accès refusé : l’événement est complet.",
+    "not_signed_up": "Accès refusé : {{name}} ne s’est pas inscrit(e), et la venue sans inscription n’est pas acceptée.",
+    "unknown": "Accès refusé."
+  },
+  "person": {
+    "in": "Arrivé(e) à {{time}}",
+    "walk_in": "Sans inscription · {{time}}",
+    "signed_up": "Inscrit(e)",
+    "cancelled": "Annulé"
+  },
+  "outside": {
+    "all": "Inscrits et exclus : {{names}}.",
+    "some": "Inscrits et exclus : {{names}} et {{others}}."
+  },
+  "count": {
+    "signed_up_one": "{{n}} inscrit",
+    "signed_up_few": "{{n}} inscrits",
+    "signed_up_many": "{{n}} inscrits",
+    "signed_up_other": "{{n}} inscrits",
+    "places_left_one": "{{n}} place restante",
+    "places_left_few": "{{n}} places restantes",
+    "places_left_many": "{{n}} places restantes",
+    "places_left_other": "{{n}} places restantes",
+    "checked_in_one": "{{n}} arrivé",
+    "checked_in_few": "{{n}} arrivés",
+    "checked_in_many": "{{n}} arrivés",
+    "checked_in_other": "{{n}} arrivés",
+    "walk_ins_one": "{{n}} sans inscription",
+    "walk_ins_few": "{{n}} sans inscription",
+    "walk_ins_many": "{{n}} sans inscription",
+    "walk_ins_other": "{{n}} sans inscription",
+    "points_plus_one": "+{{n}} point",
+    "points_plus_few": "+{{n}} points",
+    "points_plus_many": "+{{n}} points",
+    "points_plus_other": "+{{n}} points",
+    "places_one": "{{n}} place",
+    "places_few": "{{n}} places",
+    "places_many": "{{n}} places",
+    "places_other": "{{n}} places",
+    "members_one": "{{n}} membre",
+    "members_few": "{{n}} membres",
+    "members_many": "{{n}} membres",
+    "members_other": "{{n}} membres",
+    "others_one": "{{n}} autre",
+    "others_few": "{{n}} autres",
+    "others_many": "{{n}} autres",
+    "others_other": "{{n}} autres"
+  },
+  "load": {
+    "error": {
+      "not_found": "Cet événement ne fait plus partie de votre programme.",
+      "network": "Pas de connexion. Vérifiez le réseau et réessayez.",
+      "unknown": "Les événements n’ont pas pu être chargés. Veuillez réessayer."
+    }
+  },
+  "save": {
+    "error": {
+      "invalid": "Vérifiez les champs signalés ci-dessous.",
+      "event_ended": "Cet événement est déjà terminé. Changez ses horaires pour le publier, ou enregistrez-le en brouillon.",
+      "wrong_state": "Cet événement a été annulé : il ne peut plus être modifié.",
+      "signed_up_outside": "Certains membres inscrits ne font pas partie des niveaux choisis. Annulez d’abord leurs inscriptions sur la page de l’événement, ou gardez leurs niveaux.",
+      "key_reused": "Ceci a déjà été enregistré avec d’autres informations. Fermez la fenêtre et réessayez.",
+      "not_allowed": "Votre compte ne peut pas modifier les événements. Un responsable peut autoriser « Gérer les offres » dans Équipe, dans l’administration complète.",
+      "no_capability": "Votre compte ne peut pas modifier les événements. Un responsable peut autoriser « Gérer les offres » dans Équipe, dans l’administration complète.",
+      "not_found": "Cet événement ne fait plus partie de votre programme.",
+      "network": "Pas de connexion : rien n’a été enregistré. Réessayez.",
+      "unknown": "L’événement n’a pas pu être enregistré. Veuillez réessayer."
+    }
+  },
+  "life": {
+    "error": {
+      "event_ended": "Cet événement est déjà terminé.",
+      "wrong_state": "Quelqu’un a modifié cet événement entre-temps. La page l’affiche maintenant tel qu’il est.",
+      "not_a_draft": "Seul un brouillon peut être supprimé. Annulez plutôt un événement publié.",
+      "not_allowed": "Votre compte ne peut pas modifier les événements. Un responsable peut autoriser « Gérer les offres » dans Équipe, dans l’administration complète.",
+      "no_capability": "Votre compte ne peut pas modifier les événements. Un responsable peut autoriser « Gérer les offres » dans Équipe, dans l’administration complète.",
+      "not_found": "Cet événement ne fait plus partie de votre programme.",
+      "network": "Pas de connexion : rien n’a été enregistré. Réessayez.",
+      "unknown": "Cela n’a pas fonctionné. Rien n’a changé ; veuillez réessayer."
+    }
+  },
+  "people": {
+    "error": {
+      "sign_up_closed": "Cet événement ne prend pas d’inscriptions pour le moment.",
+      "event_full": "L’événement est complet.",
+      "tier_not_allowed": "Cet événement est réservé à d’autres niveaux.",
+      "membership_expired": "L’adhésion de ce membre se termine avant l’événement.",
+      "inactive": "Le compte de ce membre est désactivé.",
+      "already_signed_up": "Ce membre est déjà inscrit.",
+      "already_in": "L’arrivée de ce membre est déjà enregistrée.",
+      "not_signed_up": "Ce membre n’est pas inscrit.",
+      "cancel_closed": "Cet événement est terminé.",
+      "invalid": "Choisissez l’un de vos membres.",
+      "not_found": "Ce membre ou cet événement ne fait plus partie de votre programme.",
+      "network": "Pas de connexion : rien n’a été enregistré. Réessayez.",
+      "unknown": "Cela n’a pas fonctionné. Rien n’a changé ; veuillez réessayer."
+    }
+  },
+  "check_in": {
+    "error": {
+      "invalid": "Choisissez l’un de vos membres.",
+      "not_found": "Ce membre ou cet événement ne fait plus partie de votre programme.",
+      "network": "Pas de connexion : rien n’a été enregistré. Réessayez.",
+      "unknown": "L’arrivée n’a pas été enregistrée. Veuillez réessayer."
+    }
+  }
+}

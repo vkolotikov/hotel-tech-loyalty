@@ -15,6 +15,7 @@ export const WAY_WORDS: Record<string, string> = {
   check_in: 'Check-in',
   desk_earn: 'Earn at the desk',
   cashback: 'Cashback credit',
+  tier_progress: 'How members move up',
 }
 
 /** What each way is, in a line under its title. */
@@ -28,6 +29,7 @@ export const WAY_LINE_WORDS: Record<string, string> = {
   check_in: 'Staff check a member in at the desk after a scan.',
   desk_earn: 'Staff add a purchase made at the desk after a scan.',
   cashback: 'Part of what members spend comes back as credit for the desk.',
+  tier_progress: 'What takes a member to the next tier. A change moves nobody at once: each member’s tier follows at their next visit or points.',
 }
 
 /** An option's field label (ProgrammeOptions::OPTIONS). */
@@ -45,6 +47,7 @@ export const FIELD_WORDS: Record<string, string> = {
   stamp_reward_id: 'Reward for a full card',
   checkin_points: 'Points for a check-in',
   cashback_percent: 'Credit back, as a % of the spend',
+  tier_progress_by: 'Members move up by',
 }
 
 /** A line under a field, where one helps. */
@@ -65,6 +68,13 @@ export const REFERRAL_ON_WORDS: Record<string, string> = {
 export const REWARD_KIND_WORDS: Record<string, string> = {
   points: 'Points',
   reward: 'A reward',
+}
+
+/** How members move between tiers (release 8, ProgrammeOptions `tier_progress_by`). */
+export const PROGRESS_BY_WORDS: Record<string, string> = {
+  points: 'Points',
+  visits: 'Visits',
+  spend: 'Spend',
 }
 
 /** Amounts as a sentence holds them: the one/many form is chosen by optionsMath.ts. */
@@ -99,6 +109,9 @@ export const SENTENCE_WORDS: Record<string, string> = {
   desk_earn_off: 'Purchases at the desk earn nothing.',
   cashback: 'Members get {{percent}}% of what they spend back as credit, to use at the desk.',
   cashback_off: 'No cashback credit.',
+  tier_progress_points: 'Members move up as they earn points. They see “1,250 points to Gold”.',
+  tier_progress_visits: 'Members move up by how often they come: one visit a day counts, whatever they spend. They see “3 more visits to Gold”.',
+  tier_progress_spend: 'Members move up by what they spend at their visits. They see “€120 more to Gold”.',
 }
 
 /** What stops a field, before sending or from the server's field errors (optionsMath.ts `wayProblems`). */
@@ -122,6 +135,8 @@ export const PRESET_WORDS: Record<string, string> = {
   professional_services: 'Professional services',
   real_estate: 'Property',
   retail: 'Shop and retail',
+  members_club: 'Members’ club',
+  events_community: 'Events and community',
 }
 
 /** A starting programme in a line; the server's description for one not listed. */
@@ -137,6 +152,8 @@ export const PRESET_LINE_WORDS: Record<string, string> = {
   professional_services: 'Client, Preferred and Partner. Large, rare jobs, where referrals count most.',
   real_estate: 'Client, Preferred and Partner. Rewards referrals and repeat clients.',
   retail: 'Member, Insider and VIP. Frequent small purchases; rewards land early.',
+  members_club: 'Member, Regular and Insider. Members move up by how often they come.',
+  events_community: 'Newcomer, Regular and Ambassador. Every event and visit counts, with a stamp card.',
 }
 
 /** The wizard's steps (optionsMath.ts `STEPS`). */
@@ -155,6 +172,7 @@ export const WORD_FAMILIES: Record<string, Record<string, string>> = {
   hint: HINT_WORDS,
   'choice.referral_reward_on': REFERRAL_ON_WORDS,
   'choice.stamp_reward_kind': REWARD_KIND_WORDS,
+  'choice.tier_progress_by': PROGRESS_BY_WORDS,
   amount: AMOUNT_WORDS,
   sentence: SENTENCE_WORDS,
   problem: PROBLEM_WORDS,
@@ -167,4 +185,5 @@ export const WORD_FAMILIES: Record<string, Record<string, string>> = {
 export const CHOICE_WORDS: Record<string, Record<string, string>> = {
   referral_reward_on: REFERRAL_ON_WORDS,
   stamp_reward_kind: REWARD_KIND_WORDS,
+  tier_progress_by: PROGRESS_BY_WORDS,
 }

@@ -100,7 +100,8 @@
       "member_limit": "Over the plan’s member limit.",
       "not_created": "The member could not be created.",
       "unreadable": "This row could not be read: it has more values than the file has columns.",
-      "other": "This row was not imported."
+      "other": "This row was not imported.",
+      "bad_valid_until": "The valid-until date is not a day. Write it as YYYY-MM-DD, e.g. 2027-10-03."
     },
     "kind": {
       "skipped": "Passed over",
@@ -125,7 +126,8 @@
       "joined_at": "Joined",
       "date_of_birth": "Date of birth",
       "marketing_consent": "Marketing consent",
-      "external_id": "Customer number"
+      "external_id": "Customer number",
+      "valid_until": "Valid until"
     },
     "error": {
       "manager_only": "Only an owner or a manager can do this.",
@@ -142,7 +144,8 @@
       "not_found": "This import is no longer here.",
       "network": "No connection. The import stopped where it was; press Continue to go on.",
       "unknown": "The import stopped. What was imported stays; press Continue to go on."
-    }
+    },
+    "valid_until_hint": "Valid until: the last day of each membership, written YYYY-MM-DD (e.g. 2027-10-03). Leave it empty for a membership that never ends."
   },
   "erase": {
     "title": "Delete {{name}}",
@@ -233,7 +236,12 @@
       "invalid": "Check the fields marked below.",
       "network": "No connection: nothing was saved. Try again.",
       "unknown": "The member could not be added. Please try again."
-    }
+    },
+    "valid_until": "Valid until (optional)",
+    "valid_until_hint": "The last day of a membership bought for a time. Leave it empty for one that never ends.",
+    "undated": "{{name}} was added, but the end date was not saved. Set it on their page under Membership.",
+    "open_member": "Open their page",
+    "close": "Close"
   },
   "card": {
     "title": "Member card",
@@ -316,7 +324,15 @@
     "duplicates": "Duplicates",
     "import": "Import",
     "export": "Export",
-    "add": "Add member"
+    "add": "Add member",
+    "state": {
+      "expiring": "Expiring soon",
+      "expired": "Expired"
+    },
+    "expiring_count": "{{n}} expiring soon",
+    "expired_count": "{{n}} expired",
+    "ends": "Ends {{day}}",
+    "ended": "Expired {{day}}"
   },
   "load": {
     "error": {
@@ -346,5 +362,82 @@
       "network": "No connection. Check the network and try again.",
       "unknown": "The file could not be made. Please try again."
     }
+  },
+  "validity": {
+    "title": "Membership",
+    "state": {
+      "active": "Active",
+      "expiring": "Ending soon",
+      "expired": "Expired",
+      "off": "Switched off"
+    },
+    "extend_action": "Extend",
+    "extend_by": "Extend by",
+    "extend": {
+      "1m": "+1 month",
+      "3m": "+3 months",
+      "6m": "+6 months",
+      "1y": "+1 year"
+    },
+    "from_end": "From the current end, {{day}}.",
+    "from_today": "From today.",
+    "new_end": "until {{day}}",
+    "set": "Set a date",
+    "remove": "Remove the end date",
+    "saved": "Saved: valid until {{day}}.",
+    "saved_none": "Saved: the membership has no end date.",
+    "managers_only": "Only an owner or a manager can change the end date.",
+    "none": "No end date",
+    "until": "Valid until {{day}}",
+    "ends_today": "Ends today",
+    "ends_tomorrow": "Ends tomorrow",
+    "ends_in": "Ends in {{days}} days",
+    "expired_on": "Expired on {{day}}",
+    "none_line": "The membership never ends. Give it an end date when a member buys one for a time.",
+    "left_line": "{{left}} left.",
+    "left": {
+      "years_one": "1 year",
+      "years_many": "{{n}} years",
+      "months_one": "1 month",
+      "months_many": "{{n}} months",
+      "days_one": "1 day",
+      "days_many": "{{n}} days"
+    },
+    "expiring_line": "Valid until {{day}}. After it, places refuse entry until it is renewed.",
+    "expired_line": "Places refuse entry until it is renewed. Points and history stay, and the desk can still serve the member.",
+    "off_line": "The account is switched off, so places refuse entry whatever the date.",
+    "problem": {
+      "date": "Choose a day.",
+      "past": "Choose today or a later day."
+    },
+    "set_title": "Valid until",
+    "set_label": "Last day of the membership",
+    "set_hint": "The member is let in on this day and refused from the day after.",
+    "set_preview": "Valid until {{day}}.",
+    "set_save": "Save the date",
+    "remove_title": "Remove the end date?",
+    "remove_confirm": "Remove the end date",
+    "remove_keep": "Keep it",
+    "remove_body": "The membership of {{name}} will never end, and places let them in by their tier alone.",
+    "error": {
+      "manager_only": "Only an owner or a manager can do this.",
+      "not_allowed": "Only an owner or a manager can do this.",
+      "no_capability": "Only an owner or a manager can do this.",
+      "already_erased": "This member was deleted. Only their number and points history are kept.",
+      "not_found": "This member is not in your programme any more.",
+      "network": "No connection: nothing was saved. Try again.",
+      "key_reused": "Another change was just made. The page now shows the end date as it is; try again if it is not what you wanted.",
+      "invalid": "Choose today or a later day.",
+      "unknown": "The end date could not be saved. Nothing was changed; please try again."
+    }
+  },
+  "progress": {
+    "visits_sofar_one": "1 visit counted towards the tiers.",
+    "visits_sofar_many": "{{n}} visits counted towards the tiers.",
+    "spend_sofar": "{{amount}} spent towards the tiers.",
+    "ready": "Qualifies for {{tier}}: the move comes with the next visit or points.",
+    "visit_one": "1 more visit to {{tier}}",
+    "visits_many": "{{n}} more visits to {{tier}}",
+    "spend": "{{amount}} more to {{tier}}"
   }
 }

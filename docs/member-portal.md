@@ -33,6 +33,15 @@ cancel either kind themselves inside the venue's cancellation window (`## Cancel
 - Public: `GET /api/v1/public/join/{token}` carries `theme`, and since release 7 `welcome_bonus` read through
   `ProgrammeOptions` (500 for a venue that never set it) and `referrals` (false: the form asks for no referral code);
   `GET /manifest.webmanifest?app=portal` is the portal's install manifest.
+- Release 8 (`docs/loyalty-workspace.md` "Release 8"): the bootstrap's `member.membership` (`valid_until`, `state`:
+  active | expiring | expired | off) — the membership card says "Member until …" or "Your membership ended on … — ask
+  the team to renew" (the member can still sign in and see everything); progress reads in the programme's measure
+  ("3 more visits to Gold"). `capabilities.events` while the venue has a published event that has not ended: an
+  **Events** page (`/portal/events`, `pages/events/`, `GET member/portal/events`, `POST`/`DELETE
+  member/portal/events/{id}/sign-up`) with the upcoming events the member's tier may attend — Sign up, Cancel, Full, or
+  why not — and those attended; Home shows the next event signed up for. The menu shows Events while the phone bar
+  keeps at most five entries; otherwise Home's card and the Rewards page link to it. Words in
+  `portal/i18n/events.<lang>.json` under `portal.events`.
 - Release 7 (`docs/loyalty-workspace.md` "Release 7"): Home shows the stamp card (`pages/stamps/`,
   `GET member/portal/stamps` — `{enabled: false}` when the venue does not use it and the member has no card) and the
   credit balance with its recent lines (`pages/credit/`, `GET member/portal/credit`, nothing while cashback is off and

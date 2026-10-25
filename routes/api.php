@@ -435,6 +435,10 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
             // Release 7 (spec 2026-10-25 §2–3): the member's stamp card and cashback credit (read only).
             Route::get('stamps', [\App\Http\Controllers\Api\V1\Member\StampController::class, 'show']);
             Route::get('credit', [\App\Http\Controllers\Api\V1\Member\CreditController::class, 'show']);
+            // Release 8 (spec 2026-10-25 §4): events the member may attend, and signing up or cancelling.
+            Route::get('events', [\App\Http\Controllers\Api\V1\Member\Portal\PortalEventController::class, 'index']);
+            Route::post('events/{id}/sign-up', [\App\Http\Controllers\Api\V1\Member\Portal\PortalEventController::class, 'signUp'])->whereNumber('id');
+            Route::delete('events/{id}/sign-up', [\App\Http\Controllers\Api\V1\Member\Portal\PortalEventController::class, 'cancelSignUp'])->whereNumber('id');
             // Release 4, part C: what a payment the member returns with from a bank redirect is for (read only).
             Route::get('payments/{paymentIntent}', [\App\Http\Controllers\Api\V1\Member\Portal\PortalPaymentReturnController::class, 'show'])
                 ->where('paymentIntent', 'pi_[A-Za-z0-9_]{1,200}')
@@ -1426,6 +1430,25 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
                 Route::get('members/{id}/credit', [\App\Http\Controllers\Api\V1\Admin\Loyalty\CreditController::class, 'show'])->whereNumber('id');
                 Route::post('members/{id}/credit/spend', [\App\Http\Controllers\Api\V1\Admin\Loyalty\CreditController::class, 'spend'])->whereNumber('id');
                 Route::post('members/{id}/credit/adjust', [\App\Http\Controllers\Api\V1\Admin\Loyalty\CreditController::class, 'adjust'])->whereNumber('id');
+
+                // ── Release 8 (spec 2026-10-25): places and access (§1), a membership's end date (§3), events (§4)
+                Route::get('places', [\App\Http\Controllers\Api\V1\Admin\Loyalty\PlaceController::class, 'index']);
+                Route::post('places', [\App\Http\Controllers\Api\V1\Admin\Loyalty\PlaceController::class, 'store']);
+                Route::put('places/{id}', [\App\Http\Controllers\Api\V1\Admin\Loyalty\PlaceController::class, 'update'])->whereNumber('id');
+                Route::delete('places/{id}', [\App\Http\Controllers\Api\V1\Admin\Loyalty\PlaceController::class, 'destroy'])->whereNumber('id');
+                Route::get('places/{id}/entries', [\App\Http\Controllers\Api\V1\Admin\Loyalty\PlaceController::class, 'entries'])->whereNumber('id');
+                Route::put('members/{id}/validity', [\App\Http\Controllers\Api\V1\Admin\Loyalty\ValidityController::class, 'update'])->whereNumber('id');
+                Route::get('events', [\App\Http\Controllers\Api\V1\Admin\Loyalty\EventController::class, 'index']);
+                Route::post('events', [\App\Http\Controllers\Api\V1\Admin\Loyalty\EventController::class, 'store']);
+                Route::get('events/{id}', [\App\Http\Controllers\Api\V1\Admin\Loyalty\EventController::class, 'show'])->whereNumber('id');
+                Route::put('events/{id}', [\App\Http\Controllers\Api\V1\Admin\Loyalty\EventController::class, 'update'])->whereNumber('id');
+                Route::delete('events/{id}', [\App\Http\Controllers\Api\V1\Admin\Loyalty\EventController::class, 'destroy'])->whereNumber('id');
+                Route::post('events/{id}/publish', [\App\Http\Controllers\Api\V1\Admin\Loyalty\EventController::class, 'publish'])->whereNumber('id');
+                Route::post('events/{id}/cancel', [\App\Http\Controllers\Api\V1\Admin\Loyalty\EventController::class, 'cancel'])->whereNumber('id');
+                Route::get('events/{id}/people', [\App\Http\Controllers\Api\V1\Admin\Loyalty\EventController::class, 'people'])->whereNumber('id');
+                Route::post('events/{id}/sign-ups', [\App\Http\Controllers\Api\V1\Admin\Loyalty\EventController::class, 'signUp'])->whereNumber('id');
+                Route::delete('events/{id}/sign-ups/{memberId}', [\App\Http\Controllers\Api\V1\Admin\Loyalty\EventController::class, 'cancelSignUp'])->whereNumber('id')->whereNumber('memberId');
+                Route::post('events/{id}/check-in', [\App\Http\Controllers\Api\V1\Admin\Loyalty\EventController::class, 'checkIn'])->whereNumber('id');
 
                 // ── Release 2 (spec 2026-10-21 release 2): members, complete (§4)
                 Route::post('members', [\App\Http\Controllers\Api\V1\Admin\Loyalty\MembershipController::class, 'store']);

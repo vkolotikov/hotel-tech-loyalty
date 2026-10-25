@@ -1,5 +1,5 @@
 {
-  "nav": { "home": "Главная", "book": "Записаться", "rewards": "Награды", "bookings": "Записи", "profile": "Профиль", "activity": "История", "inbox": "Сообщения" },
+  "nav": { "home": "Главная", "book": "Записаться", "rewards": "Награды", "bookings": "Записи", "profile": "Профиль", "activity": "История", "inbox": "Сообщения", "events": "События" },
   "common": {
     "loading": "Загрузка…", "retry": "Повторить", "error": "Что-то пошло не так. Попробуйте ещё раз.",
     "save": "Сохранить изменения", "saved": "Сохранено", "cancel": "Отмена", "confirm": "Подтвердить", "close": "Закрыть",
@@ -11,6 +11,8 @@
     "balance": "Баланс баллов", "progress_to": "Прогресс до уровня {{tier}}",
     "lifetime_one": "Всего заработан {{count}} балл", "lifetime_few": "Всего заработано {{count}} балла", "lifetime_many": "Всего заработано {{count}} баллов", "lifetime_other": "Всего заработано {{count}} балла",
     "points_to_go_one": "Остался {{count}} балл", "points_to_go_few": "Осталось {{count}} балла", "points_to_go_many": "Осталось {{count}} баллов", "points_to_go_other": "Осталось {{count}} балла",
+    "visits_to_go_one": "Ещё {{count}} визит", "visits_to_go_few": "Ещё {{count}} визита", "visits_to_go_many": "Ещё {{count}} визитов", "visits_to_go_other": "Ещё {{count}} визита", "spend_to_go": "Осталось {{amount}}",
+    "membership_until": "Участник до {{day}}", "membership_ended": "Ваше членство закончилось {{day}} — попросите команду продлить его",
     "member_number": "Номер участника", "show_at_counter": "Покажите это на стойке, чтобы копить или тратить баллы.",
     "next_booking": "Ваш следующий {{noun}}", "no_upcoming": "Пока ничего не забронировано.", "view_booking": "Просмотреть",
     "quick_rewards": "Потратить баллы", "quick_rewards_hint": "Посмотреть каталог наград",

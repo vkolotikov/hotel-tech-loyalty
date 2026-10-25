@@ -180,6 +180,10 @@ function ChooseFile({ columns, busy, failure, onChoose, onReset }: {
             {columns.map(c => <li key={c} className="rounded-full bg-a-surface-2 px-2.5 py-0.5 text-xs text-a-text">{t(...wordOf('import.column', c))}</li>)}
           </ul>
           <p className="text-xs text-a-text-2">{t('loyalty.membership.import.columns_hint', 'Common spellings are understood (“E-mail”, “Surname”, “Balance”…); other columns are left out and named in the preview.')}</p>
+          {/* Release 8: a membership's end date, written one way. */}
+          {columns.includes('valid_until') && (
+            <p data-valid-until-hint="" className="text-xs text-a-text-2">{t('loyalty.membership.import.valid_until_hint', 'Valid until: the last day of each membership, written YYYY-MM-DD (e.g. 2027-10-03). Leave it empty for a membership that never ends.')}</p>
+          )}
         </div>
       )}
     </section>

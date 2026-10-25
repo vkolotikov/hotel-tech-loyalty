@@ -59,6 +59,21 @@ import creditRu from './credit.ru.json'
 import creditDe from './credit.de.json'
 import creditFr from './credit.fr.json'
 import creditEs from './credit.es.json'
+import placesEn from './places.en.json'
+import placesRu from './places.ru.json'
+import placesDe from './places.de.json'
+import placesFr from './places.fr.json'
+import placesEs from './places.es.json'
+import eventsEn from './events.en.json'
+import eventsRu from './events.ru.json'
+import eventsDe from './events.de.json'
+import eventsFr from './events.fr.json'
+import eventsEs from './events.es.json'
+import doorEn from './door.en.json'
+import doorRu from './door.ru.json'
+import doorDe from './door.de.json'
+import doorFr from './door.fr.json'
+import doorEs from './door.es.json'
 
 /**
  * HexaTech Loyalty's words, kept out of the admin's common.json so a session
@@ -67,15 +82,16 @@ import creditEs from './credit.es.json'
  * `t('loyalty.members.title')`; each area with its own files sits under its
  * name: `loyalty.program`, `loyalty.rewards`, and release 2's
  * `loyalty.membership`, `loyalty.insights`, `loyalty.campaigns`, `loyalty.app`, and release 3's
- * `loyalty.push`, release 4's `loyalty.sms`, and release 7's `loyalty.options`, `loyalty.visits` and `loyalty.credit`.
+ * `loyalty.push`, release 4's `loyalty.sms`, release 7's `loyalty.options`, `loyalty.visits` and `loyalty.credit`, and release 8's
+ * `loyalty.places`, `loyalty.events` and `loyalty.door` (the scan screen's verdicts and door mode).
  * Registered when the chunk loads.
  */
 export const LOYALTY_LOCALE_FILES = {
-  en: { ...en, program: programEn, rewards: rewardsEn, membership: membershipEn, insights: insightsEn, campaigns: campaignsEn, app: appEn, push: pushEn, sms: smsEn, options: optionsEn, visits: visitsEn, credit: creditEn },
-  ru: { ...ru, program: programRu, rewards: rewardsRu, membership: membershipRu, insights: insightsRu, campaigns: campaignsRu, app: appRu, push: pushRu, sms: smsRu, options: optionsRu, visits: visitsRu, credit: creditRu },
-  de: { ...de, program: programDe, rewards: rewardsDe, membership: membershipDe, insights: insightsDe, campaigns: campaignsDe, app: appDe, push: pushDe, sms: smsDe, options: optionsDe, visits: visitsDe, credit: creditDe },
-  fr: { ...fr, program: programFr, rewards: rewardsFr, membership: membershipFr, insights: insightsFr, campaigns: campaignsFr, app: appFr, push: pushFr, sms: smsFr, options: optionsFr, visits: visitsFr, credit: creditFr },
-  es: { ...es, program: programEs, rewards: rewardsEs, membership: membershipEs, insights: insightsEs, campaigns: campaignsEs, app: appEs, push: pushEs, sms: smsEs, options: optionsEs, visits: visitsEs, credit: creditEs },
+  en: { ...en, program: programEn, rewards: rewardsEn, membership: membershipEn, insights: insightsEn, campaigns: campaignsEn, app: appEn, push: pushEn, sms: smsEn, options: optionsEn, visits: visitsEn, credit: creditEn, places: placesEn, events: eventsEn, door: doorEn },
+  ru: { ...ru, program: programRu, rewards: rewardsRu, membership: membershipRu, insights: insightsRu, campaigns: campaignsRu, app: appRu, push: pushRu, sms: smsRu, options: optionsRu, visits: visitsRu, credit: creditRu, places: placesRu, events: eventsRu, door: doorRu },
+  de: { ...de, program: programDe, rewards: rewardsDe, membership: membershipDe, insights: insightsDe, campaigns: campaignsDe, app: appDe, push: pushDe, sms: smsDe, options: optionsDe, visits: visitsDe, credit: creditDe, places: placesDe, events: eventsDe, door: doorDe },
+  fr: { ...fr, program: programFr, rewards: rewardsFr, membership: membershipFr, insights: insightsFr, campaigns: campaignsFr, app: appFr, push: pushFr, sms: smsFr, options: optionsFr, visits: visitsFr, credit: creditFr, places: placesFr, events: eventsFr, door: doorFr },
+  es: { ...es, program: programEs, rewards: rewardsEs, membership: membershipEs, insights: insightsEs, campaigns: campaignsEs, app: appEs, push: pushEs, sms: smsEs, options: optionsEs, visits: visitsEs, credit: creditEs, places: placesEs, events: eventsEs, door: doorEs },
 } as const
 
 let registered = false

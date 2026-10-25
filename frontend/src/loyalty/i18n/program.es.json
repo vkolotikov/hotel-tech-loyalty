@@ -146,7 +146,9 @@
     "nights": "Noches para alcanzarlo",
     "points": "Puntos para alcanzarlo",
     "spend": "Gasto para alcanzarlo",
-    "stays": "Estancias para alcanzarlo"
+    "stays": "Estancias para alcanzarlo",
+    "visits": "Visitas para alcanzarlo",
+    "not_set": "Sin definir"
   },
   "tier": {
     "active": "Activo",
@@ -178,9 +180,18 @@
       "description": "Revise la descripción.",
       "earn_rate": "Introduzca una tasa de 0 a 99,99, p. ej. 1,5.",
       "min_points": "Introduzca un número entero de puntos de 0 a 10.000.000.",
-      "name": "Dé un nombre al nivel."
+      "name": "Dé un nombre al nivel.",
+      "min_visits": "Escriba un número entero de visitas de 0 a 100.000, o déjelo vacío.",
+      "min_spend": "Escriba un importe de 0 a 100.000.000, p. ej., 250, o déjelo vacío."
     },
-    "save": "Guardar nivel"
+    "save": "Guardar nivel",
+    "min_visits": "Visitas para alcanzar este nivel",
+    "min_visits_hint": "Cuenta una al día: citas, estancias, registros, compras y eventos. Vacío: nadie sube a él por visitas.",
+    "min_spend": "Gasto para alcanzar este nivel",
+    "min_spend_hint": "En {{currency}}, lo que los miembros gastaron en sus visitas. Vacío: nadie sube a él por gasto.",
+    "measure_visits": "Los miembros cambian de nivel según sus visitas.",
+    "measure_spend": "Los miembros cambian de nivel según lo que gastan.",
+    "measure_change": "Cámbielo en Formas de ganar"
   },
   "tier_benefit": {
     "add_title": "Añadir un beneficio a {{tier}}",

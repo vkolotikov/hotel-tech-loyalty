@@ -1,0 +1,127 @@
+{
+  "title": "Places",
+  "line": "Where members scan in, and which tiers may enter.",
+  "add": "Add a place",
+  "add_first": "Add the entrance",
+  "list": "Places",
+  "none_manager": "No places yet. Add your entrance first: scans there say who may come in.",
+  "none": "No places yet. An owner or a manager adds them here.",
+  "switched_on": "Switched on",
+  "switched_off": "Switched off",
+  "edit": "Edit",
+  "who": "Who may enter",
+  "every_member": "Every member",
+  "tiers_let_in": "Tiers let in",
+  "today": "Today: {{granted}} in · {{denied}} refused",
+  "today_none": "No entries today",
+  "see_entries": "see the entries at {{place}}",
+  "removed": "{{name}} was removed.",
+  "removed_off": "{{name}} has a history, so it was switched off instead. Its entries stay.",
+  "tier": {
+    "every": "Can enter: every place",
+    "some": "Can enter: {{places}}",
+    "nowhere": "Can enter: no place yet"
+  },
+  "dialog": {
+    "new_title": "Add a place",
+    "edit_title": "Change {{name}}",
+    "name": "Name",
+    "name_hint": "What staff and members call it, such as Main entrance, VIP lounge or Spa.",
+    "name_example": "e.g. Main entrance",
+    "who": "Who may enter",
+    "every_member": "Every member",
+    "every_member_hint": "Anyone whose membership is switched on and not expired.",
+    "only_tiers": "Only these tiers",
+    "only_tiers_hint": "Members of the tiers you tick. Everyone else hears why not.",
+    "tiers": "Tiers that may enter",
+    "no_tiers": "Your programme has no tiers in use yet. Add one under Tiers first.",
+    "description": "Description",
+    "description_hint": "Optional, up to 300 characters: opening hours, a dress code, what staff should know.",
+    "active": "Switched on",
+    "active_hint": "Switched off, a scan here lets nobody in and the scan screen does not offer it.",
+    "remove": "Remove place",
+    "save": "Save place",
+    "create": "Add place"
+  },
+  "remove": {
+    "title": "Remove {{name}}?",
+    "body": "Scans stop letting anyone in here. A place that already has entries, or that an event is held at, is switched off instead, so its history stays.",
+    "confirm": "Remove place",
+    "keep": "Keep it",
+    "error": {
+      "manager_only": "Only an owner or a manager can change places.",
+      "not_allowed": "Only an owner or a manager can change places.",
+      "no_capability": "Only an owner or a manager can change places.",
+      "not_found": "This place is no longer there. The list now shows the places as they are.",
+      "network": "No connection: nothing was removed. Try again.",
+      "unknown": "The place could not be removed. Please try again."
+    }
+  },
+  "entries": {
+    "title": "Entries at {{place}}",
+    "day": "Day",
+    "previous_day": "The day before",
+    "next_day": "The day after",
+    "today": "Today",
+    "counts": "{{granted}} in · {{denied}} refused",
+    "none": "Nobody scanned in here on this day.",
+    "list": "Scans, newest first",
+    "let_in": "Let in:",
+    "refused": "Refused:",
+    "unknown_code": "Unknown card or code",
+    "by": "by {{name}}",
+    "error": {
+      "not_found": "This place is no longer there.",
+      "invalid": "Choose a day.",
+      "network": "No connection. Check the network and try again.",
+      "unknown": "The entries could not be loaded. Please try again."
+    }
+  },
+  "load": {
+    "error": {
+      "network": "No connection. Check the network and try again.",
+      "unknown": "The places could not be loaded. Please try again."
+    }
+  },
+  "place": {
+    "error": {
+      "manager_only": "Only an owner or a manager can change places.",
+      "not_allowed": "Only an owner or a manager can change places.",
+      "no_capability": "Only an owner or a manager can change places.",
+      "name_taken": "Another place already has this name. Choose another.",
+      "key_reused": "This was already sent with other details. Close the dialog and open it again.",
+      "not_found": "This place is no longer there. The list now shows the places as they are.",
+      "invalid": "Check the fields marked below.",
+      "network": "No connection: nothing was saved. Try again.",
+      "unknown": "The place could not be saved. Please try again."
+    }
+  },
+  "reason": {
+    "welcome": "Let in",
+    "member_erased": "Member deleted",
+    "member_off": "Membership switched off",
+    "expired": "Membership expired",
+    "place_off": "Place switched off",
+    "tier_not_allowed": "Tier not let in here",
+    "event_not_open": "Event not open",
+    "event_full": "Event full",
+    "not_signed_up": "Not signed up",
+    "unknown": "Not let in"
+  },
+  "refusal": {
+    "not_found": "No member has this card or number",
+    "expired": "QR code had expired",
+    "revoked": "QR code had been replaced",
+    "used_up": "QR code already used",
+    "inactive": "Card switched off",
+    "unknown": "Code not recognised"
+  },
+  "problem": {
+    "name": "Give the place a name.",
+    "name_long": "At most 80 characters.",
+    "name_taken": "Another place already has this name.",
+    "admits": "Choose who may enter.",
+    "tiers": "Tick at least one tier.",
+    "description": "At most 300 characters."
+  }
+}
