@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1\Member;
 use App\Http\Controllers\Controller;
 use App\Models\MemberOffer;
 use App\Models\SpecialOffer;
+use App\Services\Loyalty\Offers\OfferBonus;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -49,6 +50,11 @@ class OfferController extends Controller
         ]);
     }
 
+    /**
+     * Claims an offer for the member. Release 7 (spec 2026-10-25 §4.1): a `bonus_points` offer pays its points here
+     * (OfferBonus, key `offer_bonus_{claim id}`) and the claim is used at once; claiming it again answers the same
+     * claim and pays nothing more. The answer carries `points_awarded` (0 for every other kind of offer).
+     */
     public function claim(Request $request, int $offerId): JsonResponse
     {
         $member = $request->user()->loyaltyMember;
@@ -62,8 +68,10 @@ class OfferController extends Controller
             return response()->json(['error' => 'wrong_tier', 'message' => 'This offer is for another membership level.'], 422);
         }
 
+        $bonus = app(OfferBonus::class);
+        $points = 0;
         try {
-            $memberOffer = DB::transaction(function () use ($member, $offer, $offerId) {
+            $memberOffer = DB::transaction(function () use ($member, $offer, $offerId, $bonus, &$points) {
                 // Lock the offer row before reading the counter. `times_used`
                 // was previously incremented unconditionally with no check at
                 // all, so a capped promotion had no cap — a "first 100 guests"
@@ -71,6 +79,23 @@ class OfferController extends Controller
                 // "4,812 / 100 used". Under load, two claims could also both
                 // read 99 and both proceed.
                 $locked = SpecialOffer::whereKey($offer->id)->lockForUpdate()->firstOrFail();
+
+                // Release 7: the member's own bonus_points claim, before the
+                // limits (which count it). One held from before release 7, or
+                // offered to the member and not yet claimed, pays now; one
+                // already paid answers again, paying nothing more (its key).
+                $held = OfferBonus::paysPoints($locked)
+                    ? MemberOffer::where('member_id', $member->id)->where('offer_id', $offerId)->first()
+                    : null;
+                if ($held) {
+                    $paid = OfferBonus::paidLine($held);
+                    if ($paid === null && $held->used_at !== null) {
+                        abort(422, 'You have already used this offer.');
+                    }
+                    $points = (int) ($paid ?? $bonus->pay($held, $locked, $member))->points;
+
+                    return $held;
+                }
 
                 if ($locked->usage_limit !== null && (int) $locked->times_used >= (int) $locked->usage_limit) {
                     abort(422, 'This offer has been fully claimed.');
@@ -110,12 +135,16 @@ class OfferController extends Controller
 
                 $locked->increment('times_used');
 
+                // Release 7: a bonus_points offer gives its points now, and
+                // there is nothing left to show at the desk.
+                $points = (int) ($bonus->pay($claim, $locked, $member)?->points ?? 0);
+
                 return $claim;
             });
         } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
             return response()->json(['message' => $e->getMessage()], $e->getStatusCode());
         }
 
-        return response()->json(['message' => 'Offer claimed!', 'member_offer' => $memberOffer]);
+        return response()->json(['message' => 'Offer claimed!', 'member_offer' => $memberOffer, 'points_awarded' => $points]);
     }
 }

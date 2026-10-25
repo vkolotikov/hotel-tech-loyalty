@@ -87,6 +87,12 @@ class MemberMergeService
         'review_invitations'   => ['loyalty_member_id'],
         'review_submissions'   => ['loyalty_member_id'],
         'guests'               => ['member_id'],
+        // Release 7: the stamp card (mergeStamps() renumbers the loser's cards and drops a second stamp of one day
+        // first) and cashback credit (mergeCredit() adds the balances; the lines move).
+        'stamps'               => ['member_id'],
+        'stamp_cards'          => ['member_id'],
+        'credit_transactions'  => ['member_id'],
+        'tier_qualification_counts' => ['member_id'], // what each visit added to the counters, which the merge adds up
         // An earlier merge into the loser now reads as a merge into the winner (its foreign key would otherwise stop
         // the loser's deletion).
         'member_merges'        => ['surviving_member_id'],
@@ -134,6 +140,9 @@ class MemberMergeService
                 'email_campaign_deliveries' => $this->dedupeDeliveries($winner->id, $loser->id),
                 'push_message_deliveries'   => $this->dedupePushDeliveries($winner->id, $loser->id),
                 'sms_campaign_deliveries'   => $this->dedupeSmsDeliveries($winner->id, $loser->id),
+                // Release 7: before the generic move below.
+                'stamps'                    => $this->mergeStamps($winner, $loser),
+                'credit_transactions'       => $this->mergeCredit($winner, $loser),
             ];
 
             // 2) Every other row that names the loser now names the winner. Tables and columns are checked first:
@@ -505,5 +514,41 @@ class MemberMergeService
         usort($rows, fn ($a, $b) => [(string) $a->created_at, (int) $a->id] <=> [(string) $b->created_at, (int) $b->id]);
 
         return $rows;
+    }
+
+    /**
+     * Release 7 (spec 2026-10-25 §2): the loser's stamp cards and stamps, made to fit the winner's before the generic
+     * move (the cards' numbers and the one-stamp-a-day rule are unique per member). Answers how many were dropped.
+     * StampCards decides (StampCards::beforeMerge): a day both have keeps the winner's stamp; completed cards are kept,
+     * the loser's numbered after the winner's; two open cards become one, completed as a stamp completes it if that
+     * fills it.
+     */
+    private function mergeStamps(LoyaltyMember $winner, LoyaltyMember $loser): int
+    {
+        // An older database, or a test's narrower schema, without the stamp card: nothing to fit.
+        if (!Schema::hasTable('stamps') || !Schema::hasTable('stamp_cards')) {
+            return 0;
+        }
+
+        return app(\App\Services\Loyalty\Stamps\StampCards::class)->beforeMerge($winner, $loser);
+    }
+
+    /**
+     * Release 7 (spec 2026-10-25 §3): the loser's cashback credit added to the winner's balance before the generic move
+     * carries the lines over. Answers 0 (nothing is dropped).
+     */
+    private function mergeCredit(LoyaltyMember $winner, LoyaltyMember $loser): int
+    {
+        // An older database, or a test's narrower schema, without cashback credit: nothing to add up.
+        if (!Schema::hasTable('credit_transactions') || !Schema::hasColumn('loyalty_members', 'credit_balance')) {
+            return 0;
+        }
+        // The ledger writes it, as every credit line (both rows are already locked here): the loser's balance out to 0,
+        // then in on the winner, whose line is the newest — so once the generic move below makes the loser's lines the
+        // winner's, the latest of them states the sum. The winner instance is told the new balance without it becoming
+        // a change of its own, so the save() at the end leaves the stored balance as the ledger wrote it.
+        app(\App\Services\Loyalty\Credit\CreditLedger::class)->mergeInto($winner, $loser);
+
+        return 0;
     }
 }

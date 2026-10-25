@@ -12,8 +12,9 @@ use App\Models\Organization;
 use App\Models\Staff;
 use App\Models\User;
 use App\Services\GuestMemberLinkService;
+use App\Services\Loyalty\Programme\ProgrammeOptions;
+use App\Services\Loyalty\Visits\ReferralRewards;
 use App\Services\LoyaltyService;
-use App\Models\HotelSetting;
 use App\Services\QrCodeService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -28,6 +29,7 @@ class AuthController extends Controller
         protected LoyaltyService $loyaltyService,
         protected QrCodeService $qrService,
         protected GuestMemberLinkService $linkService,
+        protected ReferralRewards $referrals,
     ) {}
 
     public function register(Request $request): JsonResponse
@@ -118,16 +120,9 @@ class AuthController extends Controller
             ], 422);
         }
 
-        // Find referrer if code provided — scoped to same org
-        $referredBy = null;
-        if (!empty($validated['referral_code'])) {
-            $referrerQuery = LoyaltyMember::withoutGlobalScopes()
-                ->where('referral_code', $validated['referral_code']);
-            if ($orgId) {
-                $referrerQuery->where('organization_id', $orgId);
-            }
-            $referredBy = $referrerQuery->first();
-        }
+        // Find referrer if code provided — scoped to same org. Release 7: a venue
+        // whose referrals are off ignores the code (ReferralRewards::referrerFor).
+        $referredBy = $this->referrals->referrerFor((int) $orgId, $validated['referral_code'] ?? null);
 
         try {
             $result = \DB::transaction(function () use ($validated, $orgId, $defaultTier, $referredBy) {
@@ -151,45 +146,33 @@ class AuthController extends Controller
                     'referral_code'      => $this->qrService->generateReferralCode(),
                     'referred_by'        => $referredBy?->id,
                     'joined_at'          => now(),
-                    'points_expiry_date' => now()->addMonths((int) ($orgId ? HotelSetting::getValue('points_expiry_months', 24) : 24)),
+                    // Null when the venue's points never expire (release 7: expiry 0 = never).
+                    'points_expiry_date' => $this->loyaltyService->expiresOn((int) $orgId),
                 ]);
 
                 // Award welcome bonus inside the same transaction — if it
                 // fails, the whole registration rolls back instead of
                 // leaving a zero-point orphan.
-                $welcomeBonus = (int) ($orgId ? HotelSetting::getValue('welcome_bonus_points', 500) : 500);
+                $welcomeBonus = (int) ProgrammeOptions::get((int) $orgId, 'welcome_bonus_points');
                 if ($welcomeBonus > 0) {
                     $this->loyaltyService->awardPoints($member, $welcomeBonus, 'Welcome bonus points', 'bonus');
                 }
 
+                // Record the referral in the ledger so the member-side
+                // /v1/member/referral endpoint (which reads from
+                // `referrals`) shows total_referrals + earnings, and
+                // staff can see the network in the admin referrals page.
+                // Pre-fix this row was never written — the bonuses
+                // landed in points_transactions but the loyalty_members
+                // referrals() relation was always empty.
+                //
+                // Release 7 (spec 2026-10-25 §4.5): the row starts
+                // `pending` and both bonuses are paid at the friend's
+                // first visit (ReferralRewards::qualify), unless the
+                // venue's `referral_reward_on` is `signup` — then they
+                // are paid here, inside this transaction, as before.
                 if ($referredBy) {
-                    $referrerBonus = (int) ($orgId ? HotelSetting::getValue('referrer_bonus_points', 250) : 250);
-                    $refereeBonus  = (int) ($orgId ? HotelSetting::getValue('referee_bonus_points', 250) : 250);
-                    $this->loyaltyService->awardPoints($referredBy, $referrerBonus, "Referral: {$user->name} joined", 'referral');
-                    $this->loyaltyService->awardPoints($member, $refereeBonus, 'Referral bonus for joining via referral', 'referral');
-
-                    // Record the referral in the ledger so the member-side
-                    // /v1/member/referral endpoint (which reads from
-                    // `referrals`) shows total_referrals + earnings, and
-                    // staff can see the network in the admin referrals page.
-                    // Pre-fix this row was never written — the bonuses
-                    // landed in points_transactions but the loyalty_members
-                    // referrals() relation was always empty.
-                    //
-                    // Status starts at 'rewarded' because we already paid
-                    // out. If a future iteration wants gated bonuses
-                    // (e.g. "unlock the referrer bonus after the referee's
-                    // first stay") this is the single field to change.
-                    \App\Models\Referral::create([
-                        'organization_id'         => $orgId,
-                        'referrer_id'             => $referredBy->id,
-                        'referee_id'              => $member->id,
-                        'status'                  => 'rewarded',
-                        'referrer_points_awarded' => $referrerBonus,
-                        'referee_points_awarded'  => $refereeBonus,
-                        'qualified_at'            => now(),
-                        'rewarded_at'             => now(),
-                    ]);
+                    $this->referrals->signedUp($member, $referredBy);
                 }
 
                 return ['user' => $user, 'member' => $member];

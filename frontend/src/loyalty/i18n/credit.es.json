@@ -1,0 +1,95 @@
+{
+  "title": "Saldo",
+  "use_action": "Usar saldo",
+  "adjust_action": "Corregir",
+  "earning": "Los miembros recuperan el {{percent}} % de lo que gastan como saldo, para usar en recepción.",
+  "off": "El cashback está desactivado: no se gana saldo nuevo, y este saldo todavía puede usarse en recepción.",
+  "none": "Todavía no hay saldo.",
+  "history": "Historial del saldo",
+  "by": "por {{name}}",
+  "line_balance": "saldo {{amount}}",
+  "use_title": "Usar el saldo de {{name}}",
+  "adjust_title": "Corregir el saldo de {{name}}",
+  "amount": "Importe ({{currency}})",
+  "adjust_hint": "Un signo menos resta saldo, p. ej. -5.",
+  "note": "Nota (opcional)",
+  "note_hint": "El miembro la ve en el historial de su saldo.",
+  "note_example": "p. ej. Comida para dos",
+  "reason": "Motivo",
+  "reason_example": "p. ej. Faltó el cashback de una visita",
+  "balance_now": "Saldo ahora: {{amount}}",
+  "balance_then": "Saldo después: {{amount}}",
+  "use_do": "Descontar saldo",
+  "adjust_do": "Guardar la corrección",
+  "line": {
+    "earn_appointment": "Cashback por una cita",
+    "earn_stay": "Cashback por una estancia",
+    "earn_purchase": "Cashback por una compra",
+    "earn": "Cashback",
+    "spend": "Usado en recepción",
+    "reverse": "Cashback retirado (reembolsado o cancelado)",
+    "merge": "Trasladado al unir dos membresías",
+    "forfeit": "Perdido al eliminar al miembro",
+    "adjust": "Corrección",
+    "other": "Otro"
+  },
+  "done": {
+    "use": "Se descontaron {{amount}}. Saldo ahora: {{balance}}.",
+    "adjust": "Corregido en {{amount}}. Saldo ahora: {{balance}}."
+  },
+  "load": {
+    "error": {
+      "not_found": "Este miembro ya no está en tu programa.",
+      "network": "Sin conexión. Revisa la red e inténtalo de nuevo.",
+      "unknown": "No se pudo cargar el saldo. Inténtalo de nuevo."
+    }
+  },
+  "use": {
+    "problem": {
+      "amount": "Escribe un importe mayor que cero.",
+      "decimals": "La moneda del establecimiento no admite tantos decimales.",
+      "too_large": "Es más de lo que un solo paso puede descontar.",
+      "over_balance": "El miembro solo tiene {{balance}} de saldo.",
+      "below_zero": "El saldo no puede bajar de cero.",
+      "reason": "Indica por qué."
+    },
+    "error": {
+      "credit_short": "El miembro solo tiene {{balance}} de saldo.",
+      "bad_amount": "Escribe un importe mayor que cero que admita la moneda del establecimiento.",
+      "bad_currency": "La moneda del establecimiento no está definida. Un responsable puede definirla en Tarjeta y app.",
+      "already_erased": "Este miembro fue eliminado; su saldo se perdió.",
+      "key_reused": "Esta pulsación ya se usó para otra cosa. Cierra el diálogo e inténtalo de nuevo.",
+      "not_allowed": "Tu cuenta no puede hacer esto. Un responsable puede cambiarlo en Equipo, en la administración completa.",
+      "no_capability": "Tu cuenta no puede hacer esto. Un responsable puede cambiarlo en Equipo, en la administración completa.",
+      "invalid": "Revisa el importe.",
+      "not_found": "Este miembro ya no está en tu programa.",
+      "network": "Sin conexión: no se guardó nada. Inténtalo de nuevo.",
+      "unknown": "No se pudo usar el saldo. No se descontó nada; inténtalo de nuevo."
+    }
+  },
+  "adjust": {
+    "problem": {
+      "amount": "Escribe un importe distinto de cero: con signo menos para restar saldo.",
+      "decimals": "La moneda del establecimiento no admite tantos decimales.",
+      "too_large": "Es más de lo que una sola corrección puede mover.",
+      "over_balance": "El miembro solo tiene {{balance}} de saldo.",
+      "below_zero": "El saldo no puede bajar de cero: el miembro tiene {{balance}}.",
+      "reason": "Indica por qué se corrige el saldo."
+    },
+    "error": {
+      "credit_short": "El saldo no puede bajar de cero: el miembro tiene {{balance}}.",
+      "bad_amount": "Escribe un importe distinto de cero que admita la moneda del establecimiento.",
+      "bad_currency": "La moneda del establecimiento no está definida. Un responsable puede definirla en Tarjeta y app.",
+      "reason_required": "Indica por qué se corrige el saldo.",
+      "already_erased": "Este miembro fue eliminado; su saldo se perdió.",
+      "key_reused": "Esta pulsación ya se usó para otra cosa. Cierra el diálogo e inténtalo de nuevo.",
+      "manager_only": "Solo un propietario o un responsable puede corregir el saldo.",
+      "not_allowed": "Solo un propietario o un responsable puede corregir el saldo.",
+      "no_capability": "Solo un propietario o un responsable puede corregir el saldo.",
+      "invalid": "Revisa el importe y el motivo.",
+      "not_found": "Este miembro ya no está en tu programa.",
+      "network": "Sin conexión: no se guardó nada. Inténtalo de nuevo.",
+      "unknown": "No se pudo corregir el saldo. No se cambió nada; inténtalo de nuevo."
+    }
+  }
+}

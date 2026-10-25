@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { BarChart3, CreditCard, Crown, Gift, Inbox, Mail, ScanLine, Search, Users } from 'lucide-react'
+import { BarChart3, CreditCard, Crown, Gift, Inbox, Mail, ScanLine, Search, Sparkles, Users } from 'lucide-react'
 import { WorkspaceShell, type WorkspaceNavItem } from '../workspace/WorkspaceShell'
 import type { FindTarget } from '../workspace/find/findCore'
 import { firstLetter } from '../workspace/lib/firstLetter'
@@ -83,6 +83,8 @@ export function LoyaltyShell({ children }: { children: ReactNode }) {
     { to: '/loyalty', end: false, icon: Users, label: t('loyalty.nav.members', 'Members') },
     { to: '/loyalty/requests', end: false, icon: Inbox, label: t('loyalty.nav.requests', 'Requests'), count: data?.counts.requests_waiting },
     { to: '/loyalty/program', end: false, icon: Crown, label: t('loyalty.nav.program', 'Program'), phone: false },
+    // Release 7: the ways to earn and reward the venue uses, and the setup wizard.
+    { to: '/loyalty/options', end: false, icon: Sparkles, label: t('loyalty.nav.options', 'Ways to earn'), phone: false },
     { to: '/loyalty/rewards', end: false, icon: Gift, label: t('loyalty.nav.rewards', 'Rewards'), phone: false },
     ...(can?.manage_campaigns ? [{ to: '/loyalty/campaigns', end: false, icon: Mail, label: t('loyalty.nav.campaigns', 'Campaigns'), phone: false }] : []),
     ...(can?.view_insights ? [{ to: '/loyalty/insights', end: false, icon: BarChart3, label: t('loyalty.nav.insights', 'Insights'), phone: false }] : []),

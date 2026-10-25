@@ -4,6 +4,7 @@ namespace App\Services\Loyalty;
 
 use App\Models\LoyaltyMember;
 use App\Services\Appointments\VenueClock;
+use App\Services\Loyalty\Credit\CreditLedger;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
 
@@ -134,6 +135,8 @@ final class MemberDirectory
             'is_active'        => (bool) $m->is_active,
             'joined_at'        => ($m->joined_at ?? $m->created_at)?->toIso8601String(),
             'last_activity_at' => $m->last_activity_at?->toIso8601String(),
+            // Release 7 (spec 2026-10-25 §3): cashback credit, in the venue's currency (CreditLedger keeps it).
+            'credit_balance'   => CreditLedger::major(CreditLedger::cents($m->getAttributes()['credit_balance'] ?? null)),
         ];
     }
 

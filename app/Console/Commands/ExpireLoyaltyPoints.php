@@ -19,6 +19,10 @@ use Illuminate\Console\Command;
  * expired buckets silently succeeded (the bucket's remaining_points stayed
  * positive in the DB even though the bucket's expires_at had passed).
  *
+ * A bucket with no expires_at never expires (release 7: a venue whose
+ * points_expiry_months is 0, "never", writes its buckets without a date);
+ * the sweep passes over it.
+ *
  * Hourly cadence: 1h is the largest practical "you might have already
  * spent these points" window we want a member to experience. Daily would
  * leave a member redeeming expired points for up to 24h after midnight.

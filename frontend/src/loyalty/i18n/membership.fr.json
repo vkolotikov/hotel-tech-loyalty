@@ -159,11 +159,13 @@
       "birthday": "La date de naissance",
       "push": "Les notifications push de l’app",
       "cards": "Ses cartes et codes QR",
-      "sign_in": "Sa connexion à l’app et au portail"
+      "sign_in": "Sa connexion à l’app et au portail",
+      "credit": "Le crédit non utilisé"
     },
     "stays": {
       "number": "Le numéro de membre",
-      "history": "L’historique des points, les réservations et les échanges de récompenses, pour que les chiffres concordent"
+      "history": "L’historique des points, les réservations et les échanges de récompenses, pour que les chiffres concordent",
+      "visits": "L’historique des tampons et du crédit"
     },
     "error": {
       "manager_only": "Seul un propriétaire ou un responsable peut faire cela.",
@@ -265,7 +267,9 @@
       "requests": "Les demandes d’avantages",
       "cards": "Les cartes et codes QR",
       "messages": "Les notifications, avis et e-mails de campagne",
-      "guests": "Le lien avec la fiche client dans le CRM"
+      "guests": "Le lien avec la fiche client dans le CRM",
+      "stamps": "Les tampons et cartes à tampons (un tampon par jour)",
+      "credit": "Le crédit, ajouté au solde du membre gardé"
     },
     "error": {
       "manager_only": "Seul un propriétaire ou un responsable peut faire cela.",

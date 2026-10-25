@@ -119,6 +119,7 @@ class NotificationService
     public const TYPE_TO_CATEGORY = [
         'points_earned'   => 'points',
         'points_expiry'   => 'points',
+        'stamp_card_full' => 'points', // release 7: a full stamp card is what it gave, like points earned
         'tier_upgrade'    => 'tier',
         'tier_downgrade'  => 'tier',
         'new_offer'       => 'offers',

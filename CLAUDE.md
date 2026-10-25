@@ -207,6 +207,16 @@ Multi-tenant Laravel 13 + React (Vite, TypeScript) SaaS with four sub-brands. Pr
   replaces a member's QR token. Campaigns and offers created with no brand are every brand's (owner 2026-10-25):
   their models declare `EVERY_BRAND_WHEN_EMPTY`, so `BelongsToBrand` fills in no default and `BrandScope` shows them
   in every brand's view; every other brand-scoped model keeps the default-brand fill-in.
+- Release 7 (`docs/superpowers/specs/2026-10-25-loyalty-release-7-design.md`, owner 2026-10-25): a venue's loyalty
+  options are read and written only through `App\Services\Loyalty\Programme\ProgrammeOptions` (its keys and defaults;
+  a new reader of an option key reads it there). A visit's effects — stamp, cashback, referral, tier counters — run
+  only through `Loyalty\Visits\VisitRecorder`, each in its own transaction and idempotent by the visit's reference
+  (a desk request's is its `scan_events` row); a booking's visit counts only from the venue day the option was
+  switched on (`ProgrammeOptions::countsVisitOn()`), and a full refund takes it back with points on or off. Stamps are
+  written only by `Loyalty\Stamps\StampCards`, credit only by `Loyalty\Credit\CreditLedger`: every credit line under
+  the member row lock, in integer cents, its `balance_after` equal to `credit_balance` after every write, never below
+  zero, spent at the desk only (online payments and the public widget never touch credit). A free reward is issued
+  only by `RedemptionActions::issueFree()`.
 - Testing against PostgreSQL (the SQLite schemas miss NOT NULL columns and indexes production has): build a database
   from every migration, then run a test file with `DB_CONNECTION=pgsql DB_DATABASE=<that database>` (and its host and
   credentials) in the environment — phpunit.xml's `<env>` entries are not forced, and the schema traits skip tables

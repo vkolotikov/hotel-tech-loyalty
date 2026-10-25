@@ -45,6 +45,15 @@ export const OFFER_TYPE_WORDS: Record<string, string> = {
   fixed_amount: 'Amount off',
 }
 
+/** What claiming an offer of a kind does (release 7): shown under Kind in the offer dialog. */
+export const OFFER_KIND_NOTE_WORDS: Record<string, string> = {
+  bonus_points: 'Claiming it adds the points to the member’s balance at once.',
+  points_multiplier: 'While claimed, the member earns at this multiple — the better of it and any running boost, never both.',
+  free_night: 'A perk your team gives in person: the member shows the claimed offer.',
+  upgrade: 'A perk your team gives in person: the member shows the claimed offer.',
+  cashback: 'A perk your team gives in person. For money back on every visit, switch on Cashback credit in Ways to earn.',
+}
+
 /** An offer's value as a sentence, for the types whose value has one meaning (rewardsMath.ts `offerValue`). */
 export const OFFER_VALUE_WORDS: Record<string, string> = {
   discount: '{{value}}% off',
@@ -125,6 +134,7 @@ export const WORD_FAMILIES: Record<string, Record<string, string>> = {
   redemption_filter: REDEMPTION_FILTER_WORDS,
   offer_state: OFFER_STATE_WORDS,
   offer_type: OFFER_TYPE_WORDS,
+  offer_kind_note: OFFER_KIND_NOTE_WORDS,
   offer_value: OFFER_VALUE_WORDS,
   discount_type: DISCOUNT_TYPE_WORDS,
   discount_phrase: DISCOUNT_PHRASE_WORDS,

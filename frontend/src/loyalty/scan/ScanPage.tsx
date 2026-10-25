@@ -26,6 +26,8 @@ import {
 } from './scanMath'
 import { UsbReader } from './UsbReader'
 import { useWebNfc } from './useWebNfc'
+import { CreditSummary } from '../credit/CreditSummary'
+import { DeskActions } from '../visits/DeskActions'
 
 const INPUT = 'w-full rounded-xl border border-a-border bg-a-surface px-4 py-3 font-a-mono text-base text-a-text'
 
@@ -208,6 +210,9 @@ function ScannedCard({ member }: { member: MemberRow }) {
         {actions.redeem && <Button variant="secondary" onClick={() => setDialog('redeem')}><Minus size={15} aria-hidden />{t('loyalty.member.redeem', 'Redeem points')}</Button>}
         <Link to={memberPath(now.id)} className="inline-flex items-center rounded-full px-3 py-2 text-sm font-semibold text-a-accent-text hover:bg-a-accent/10">{t('loyalty.scan.open', 'Open member')}</Link>
       </div>
+      {/* Release 7: Check in and Add a purchase; the credit balance and Use credit — each when the venue uses it. */}
+      <DeskActions member={now} />
+      <CreditSummary member={now} />
       {!detail.data && detail.isLoading && <Skeleton className="h-16" />}
       {detail.data && detail.data.benefits.length > 0 && (
         <div className="space-y-1">

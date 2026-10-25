@@ -116,6 +116,7 @@ describe('the area an address shows', () => {
     expect(areaOf('/loyalty/members/5')).toBe('members')
     expect(areaOf('/loyalty/nowhere')).toBe('members')
     expect(areaOf('/loyalty/requests')).toBe('requests')
+    expect(areaOf('/loyalty/options/setup')).toBe('options')
     expect(areaOf('/loyalty/rewards')).toBe('rewards')
     expect(areaOf('/loyalty/members/duplicates')).toBe('members')
     expect(areaOf('/loyalty/campaigns/4')).toBe('campaigns')

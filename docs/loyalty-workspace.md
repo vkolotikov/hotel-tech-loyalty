@@ -44,6 +44,10 @@ never offer what the server refuses. A deactivated staff row counts for nothing;
 | Segments: read the list | every active staff member; build, change and preview them: managers |
 | Campaigns: everything, reads included (drafts are unpublished words) | managers; with the plan's `campaigns` |
 | Card & app: wallet pass (with the plan's `wallet`), the member app's look and logo | managers |
+| Ways to earn (release 7): read the options | every active staff member; change them, run or skip the setup wizard: managers |
+| Check in a member, add a purchase at the desk | `can_award_points` (as Award) |
+| Use a member's credit at the desk | `can_redeem_points` (as Redeem); correct a balance (adjust, with a reason): managers |
+| Read a member's stamp card and credit lines | every active staff member |
 
 ## The API
 
@@ -67,6 +71,9 @@ staff member restricted to one brand is still held to it by the `brand` middlewa
 | Push messages (`feature:push_notifications`, release 3) | `GET/POST push`, `GET/PUT/DELETE push/{id}`, `GET push/{id}/audience`, `POST push/{id}/send` (`recipients`, `revision`), `/cancel`, `/duplicate`; release 4: `/schedule`, `/unschedule` |
 | SMS (`feature:campaigns`, release 4) | `GET/POST sms`, `GET/PUT/DELETE sms/{id}`, `GET sms/{id}/audience`, `POST sms/{id}/test`, `/send` (`recipients`, `revision`), `/schedule`, `/unschedule`, `/cancel`, `/duplicate` |
 | Card & app | `GET/PUT wallet`, `POST wallet/apple-cert`, `/apple-wwdr`, `/google-service-account` (`feature:wallet`); `GET/PUT app-look`, `POST app-look/logo`; release 4: `GET currency`, `PUT currency` (`currency`, `dry_run`) |
+| Ways to earn (release 7) | `GET options`, `PUT options` (`options`: a partial change), `POST options/setup` (`preset`, `options`, `idempotency_key`), `POST options/setup/skip` |
+| Visits (release 7) | `POST members/{id}/check-in` (`amount`, `note`, `idempotency_key`), `GET members/{id}/stamps` |
+| Credit (release 7) | `GET members/{id}/credit?page` (25 a page), `POST members/{id}/credit/spend` (`amount`, `note`, `idempotency_key`), `POST members/{id}/credit/adjust` (`amount`, signed, `reason`, `idempotency_key`) |
 
 Refusals are `{error, message}`; the workspace shows its own words for each code (`lib/errors.ts`,
 `program/errors.ts`, `rewards/errors.ts`), never the server's sentence. Codes: `not_found`, `manager_only`,
@@ -83,7 +90,11 @@ area's `errors.ts`: members `member_limit` (402), `no_tier`, `bad_tier`, `name_m
 `no_phone` (a test SMS to a sender with no phone number), and send later's `bad_time` (not 2 minutes to a year ahead,
 or a time a clock change skips) and `not_scheduled`; card & app's file checks (`not_pkcs12`,
 `cert_unreadable`, `not_certificate`, `not_json`, `not_service_account`); `feature_locked` (402) without the plan's
-feature.
+feature. Release 7 adds, each in its area's `errors.ts`: the options' `key_reused` (a setup key sent with another body) and
+a preset's field error; the desk's `option_off` (neither check-in nor earning at the desk is on), `desk_earn_off`,
+`amount_required`, `inactive` (a switched-off or deleted member) and `key_reused`; credit's `credit_short` (with
+`balance`, `currency`), `bad_amount` (with `decimals`, `max`, `currency`), `reason_required`, `already_erased`,
+`key_reused` and `bad_currency`.
 
 ## Rules the code keeps (and the tests that keep them)
 
@@ -284,6 +295,77 @@ Spec: `docs/superpowers/specs/2026-10-22-loyalty-release-4-design.md` (the membe
 - **Duplicates** group in the database (lowercased email; phone digits by the nested `REPLACE` chain), then load only
   the members in groups of two or more; the same pairs and suggested keeper as before.
 
+### Release 7
+
+Spec: `docs/superpowers/specs/2026-10-25-loyalty-release-7-design.md` (owner 2026-10-25: the stamp card, check-in and
+earning at the desk, cashback credit spent at the desk only, the half-built parts finished, a setup wizard and an
+options page). Visits, stamps and credit belong to the whole programme: the full admin's screens do not show them.
+
+- **Options** (`Loyalty\Programme\ProgrammeOptions`, the one reader and writer): `hotel_settings` keys, the engine's
+  existing ones under their old names, each answered typed with its default; a save validates (bounds, an active
+  reward of this organisation for a full card), writes under the organisation named whatever tenant is bound, flushes
+  the settings cache and audits `loyalty.options_changed` with the old and new values (a repeat writes no audit).
+  `programme_setup_completed_at` is the wizard's only. `stamps_enabled` and `cashback_enabled` keep the venue day they
+  were switched on (`*_since`, `onSince()`): **a booking's visit from before that day earns no stamp and no cashback**
+  when it is touched later (a status change, Award points, the nightly stay sweep); switched off and on again, visits
+  count from the new day (`OptionsTest`).
+- **The wizard's apply** (`ProgrammeSetup`): a preset only on an organisation with no tier at all (one with tiers keeps
+  them: `reason: has_tiers`); the options are checked before the preset is applied; one setup at a time per
+  organisation (advisory lock `loyalty-setup:{org}`); the same `idempotency_key` answers the first outcome for a day
+  (`SharedCache`), with another body `key_reused` (`OptionsSetupTest`).
+- **A visit** (`Loyalty\Visits\VisitRecorder`, the one hook): a completed appointment (its venue day, `total_amount`),
+  a finished stay (departure day, nights, `price_total`), a desk check-in or a desk purchase. Its effects — the stamp,
+  cashback, referral qualification, tier counters — each run in their own transaction (a savepoint under a caller's),
+  idempotent by the visit's reference; one that throws is logged, audited `loyalty.visit_effect_failed`, and never
+  fails the others or the booking. It runs after the booking's own writes and also while points on bookings are off.
+  A full refund (an appointment's at the desk, a stay's) takes the visit back — the stamp off an open card (a complete
+  card stands, `loyalty.stamp_kept`), the cashback reversed, the counts taken back — with points on or off
+  (`VisitRefundTest`).
+- **The stamp card** (`Loyalty\Stamps\StampCards`, the only writer of `stamps` and `stamp_cards`): one stamp per member
+  per venue day (unique index `stamps_member_day_unique`) and one per reference; the open card takes the number of
+  stamps the option said when it opened; a card that fills completes in the same transaction. Points are written
+  there (`awardPoints` key `stamp_card_{id}`, not qualifying). A free reward is given after the commit, with no member
+  lock held (the member's own redeem locks the reward, then the member): `StampCards::settleRewards()` issues it
+  (`RedemptionActions::issueFree`, a pending redemption at 0 points with its code) and stamps the card by a
+  conditional update; a reward gone, off or out of stock gives the points instead (`loyalty.stamp_reward_missing`); a
+  card left owed is settled by the member's next stamp. Then a push "Your card is full!" (type `stamp_card_full`, the
+  points opt-out). An erased member gets no stamp (`StampCardsTest`, `StampMergeTest`).
+- **At the desk** (`Loyalty\Visits\DeskVisit`, `POST members/{id}/check-in`): the day's first desk visit is its
+  check-in (`checkin_points` once a day, a `bonus` line); an amount needs earning at the desk on and earns
+  `pointsForSpend()` as a qualifying `earn` line with the amount spent; a second visit the same day answers
+  `already_today` and still takes a purchase. Each request writes one `scan_events` row (`scan_type desk`,
+  `action_taken check_in`; its `token_value` records the request's key, amount and note), the reference of its stamp
+  and cashback. A replay with the same key answers the first result and writes nothing; with another amount or note,
+  `key_reused`. Desk keys are their own (`loyalty-desk:{org}:{member}:{key}`), never an Award's. Reversing a desk visit's points line (Reverse on the
+  member's history) takes its visit back too (`DeskVisitTest`).
+- **Cashback credit** (`Loyalty\Credit\CreditLedger`, the only writer of `credit_transactions` and
+  `loyalty_members.credit_balance`, which is not fillable): every line under the member row lock in its own
+  transaction, in integer cents, with `balance_after` — **the latest line's `balance_after` is the member's balance
+  after every write** (`CreditLedgerTest`). Earned at `cashback_percent` of a visit's spend, rounded down (a
+  zero-decimal currency to the unit), once per reference (`cashback_{type}_{id}`), never on a visit without a
+  reference or below the smallest unit. Spent at the desk only (R7-2), never above the balance (`credit_short`); a
+  manager's adjust needs a reason. A reversal takes back what is left, never below zero; the shortfall is audited
+  `credit.reverse_short` (what was spent stays spent). A merge adds the loser's balance to the winner's (two `adjust`
+  lines); an erasure — the staff's or the member's own deletion — keeps the lines and forfeits the balance (an `adjust`
+  to zero, `credit.forfeited_on_erasure`). Lines carry the venue's currency (`PortalBootstrap::currency()`).
+- **Offers** (`Loyalty\Offers\OfferBonus`): a `bonus_points` offer pays its points when claimed (key
+  `offer_bonus_{claim}`, the claim `used` at once); a claimed, live `points_multiplier` offer is a personal boost — the
+  better of it and the running boosts, never both, capped at 10 — then the tier's multiplier as before. `free_night`,
+  `upgrade` and `cashback` offers are perks staff give in person; the offer dialog and the portal say so
+  (`OfferBonusClaimTest`, `OfferMultiplierEarnTest`).
+- **Tier counters** (`Visits\TierCounters` through `LoyaltyService::countQualifyingVisit()`): a stay adds its nights,
+  one stay and its spend; any visit with an amount adds its spend; once per reference (`tier_qualification_counts`); a
+  reversal takes back exactly that. `assessTier()` then runs for members judged on nights, stays, spend or hybrid
+  (`TierCountersTest`).
+- **Expiry 0 = never**: a points bucket without `expires_at`, skipped by the expiry sweep and the liability report;
+  dated buckets are spent first (`PointsNeverExpireTest`).
+- **Referrals** (`Visits\ReferralRewards`): by default a referral pays at the friend's first visit (both bonuses once,
+  keys `referral_{id}_referrer` / `_referee`, by a conditional update from `pending`); `referral_reward_on = signup`
+  pays at sign-up as before; `referral_enabled = false` hides the link, ignores a code at sign-up and takes the field
+  off the join page (`ReferralRewardsTest`).
+- `stamps`, `stamp_cards`, `credit_transactions` and `tier_qualification_counts` are in
+  `MemberMergeService::MEMBER_COLUMNS`.
+
 ## The workspace (`/loyalty`, `frontend/src/loyalty/`)
 
 - **Where it lives.** A lazily loaded app on the shared core (`src/workspace/`): own chunk, own shell, no full-admin
@@ -320,6 +402,18 @@ Spec: `docs/superpowers/specs/2026-10-22-loyalty-release-4-design.md` (the membe
   `words.ts`/`errors.ts` by itself; `tokens.test.ts` checks every stylesheet in the folder.
 - **Eight areas.** The side panel lists Campaigns, Insights and Card & app only to whoever may use them; on a phone
   the top bar keeps Members, Requests and Scan and the others are in the phone menu (`WorkspaceNavItem.phone`).
+- **Ways to earn** (release 7, `options/`): one card per way — points on spend, expiry, welcome and birthday bonuses,
+  referrals, the stamp card, check-in, earning at the desk, cashback credit — each with its switch, a sentence of what
+  members get that follows the fields, and Save; then Tiers, Rewards, Offers and Boosts with their counts. Read-only to
+  staff who are not managers. **The setup wizard** (`/loyalty/options/setup`): your business (the presets, the
+  industry's first; a venue with tiers keeps them), choose, configure, review; a banner on Members and Ways to earn
+  offers it to managers until it is applied or skipped. The cards and fields come from the server (`ways`, `fields`).
+- **The stamp card and the desk** (`visits/`): a member's page shows the card (filled and empty circles), completed
+  cards and recent stamps; the Scan result and a member's page offer Check in and Add a purchase while those options
+  are on, and say what happened ("+1 stamp — 7 of 10", "+45 points", "+€2.25 credit", "Already checked in today").
+- **Credit** (`credit/`): the balance on the Scan result and a member's page while cashback is on or the member has a
+  balance; Use credit (Redeem's right) and, for managers, Adjust; the credit lines on the member's page. The Delete and
+  Merge dialogs say what happens to credit and stamps.
 
 ## What the workspace does not do
 
@@ -361,6 +455,13 @@ reports (Twilio's status callbacks); no receipts for the full admin's own push c
   read. The normalised and digits-alone lookups read the organisation's members without an index.
 - **`docs/appointments-workspace.md`** used to say points are reversed on the full admin's member page; the full admin
   has no such screen. Reversal is the workspace's, on the member's page.
+- **Release 7.** Credit never expires (no expiry in this release). A line keeps the currency it was written in; after
+  a currency change the balance is shown in the new one (relabelled, never converted). The mobile apps are compiled
+  bundles (`public/app`, `public/staff`; their source is not in this repository): they show neither stamps nor credit
+  until their next build, which can read `GET /v1/member/stamps` and `GET /v1/member/credit`; the portal and the
+  workspace show both. Pushes are in English, as every other push. Only members judged on nights, stays, spend or
+  hybrid are reassessed by a visit, and nothing in the app sets a member's `tier_qualification_model`: every member is
+  judged on points today. A referral pending from before release 7 was already paid at sign-up.
 
 ## Tests on PostgreSQL
 
@@ -387,7 +488,12 @@ rows production's foreign keys and NOT NULL columns need. A test that must see a
 that refusal just before the statement on PostgreSQL (a real failure would abort the test's own transaction, which
 production never has); on SQLite the real index still runs.
 
-**Still failing on PostgreSQL, on purpose** (2026-10-24):
+**Environment for a full run.** Export `APP_ENV=testing` and the array drivers (`CACHE_STORE`, `CACHE_DRIVER`,
+`SESSION_DRIVER` `array`, `QUEUE_CONNECTION=sync`, `MAIL_MAILER=array`) after sourcing the credentials file: a local
+server's file cache and environment make the register throttle answer 429 across runs.
+
+**Still failing on PostgreSQL, on purpose** (2026-10-24; the release 7 run of 2026-10-25 failed the same 37 tests —
+18 in `Feature/Landing`, 19 elsewhere — and nothing new, with 6822 passing):
 
 - **Application code, reported and not changed in release 6:**
   - Landing pages read a service's price `0` and duration `60` (the columns' NOT NULL defaults) as a real price and
@@ -397,16 +503,38 @@ production never has); on SQLite the real index still runs.
 - **Fixed in release 6** (their tests now pass on PostgreSQL): an emptied field in the full admin's extras, services
   and voice-agent forms, and an emptied tier colour in the workspace, wrote NULL into a NOT NULL column (a 500); a
   failed public services booking whose error text was longer than 255 characters left no submission row.
-- **Test states production cannot hold** (18 tests, kept for SQLite): a member with no tier, no user or no referral
-  code; a tier assessment with no old tier; an organisation with no currency; a widget config with no key; two
-  organisations sharing a hold token; two default pipelines in one organisation; a landing redirect outliving its page;
-  an extra or a voice config holding NULL in a NOT NULL column.
+- **Test states production cannot hold** (20 tests, kept for SQLite): a member with no tier, no user or no referral
+  code; a member's user with no email; a tier assessment with no old tier; an organisation with no currency; a widget
+  config with no key; two organisations sharing a hold token; two default pipelines in one organisation; a landing
+  redirect outliving its page; an extra or a voice config holding NULL in a NOT NULL column.
 
 ## Deploying
 
-- Release 6 is live (`main` 7835cf0, pushed 2026-10-25 on the owner's word), built from branch commit 1a37e68: the
-  next release's change list is `git diff --name-status 1a37e68 <tip>`. Release 5b went out as `main` 5b481aa from
-  ea8b364, release 5 as 8a04f86 from 6adf121, release 4 as 097432a from a7e87ae.
+- Release 6b is live (`main` 65b3415, pushed 2026-10-25 on the owner's word: campaigns and offers with no brand are
+  every brand's), built from branch commit 8ac5a62: the next release's change list is
+  `git diff --name-status 8ac5a62 <tip>`. Release 6 went out as `main` 7835cf0 from 1a37e68, release 5b as 5b481aa
+  from ea8b364, release 5 as 8a04f86 from 6adf121, release 4 as 097432a from a7e87ae. Neither release 6 nor 6b could
+  be checked on the live site from the build environment (its network policy refuses `app.hexa-tech.uk`): `main` was
+  checked by content instead (every source file equal to the branch, the built bundle carrying the new strings).
+- **Release 7** (ways to earn and reward; not deployed yet — deploy on the owner's word, by the recipe below). Four
+  migrations, each tried on PostgreSQL with rollback, adding tables and defaulted or nullable columns only:
+  `2026_10_25_100000_create_stamp_tables` (`stamp_cards`, `stamps`), `110000_create_credit_ledger`
+  (`credit_transactions`, `loyalty_members.credit_balance` default 0), `120000_point_expiry_can_be_never`
+  (`point_expiry_buckets.expires_at` nullable; its rollback refuses while a NULL exists) and
+  `130000_create_tier_qualification_counts`. No new scheduled command or artisan command. New workspace routes:
+  `options` (GET/PUT), `options/setup`, `options/setup/skip`, `members/{id}/check-in`, `members/{id}/stamps`,
+  `members/{id}/credit` (GET), `members/{id}/credit/spend`, `members/{id}/credit/adjust`; new member routes:
+  `GET /v1/member/stamps`, `/v1/member/credit`, `/v1/member/portal/stamps`, `/v1/member/portal/credit`. Every option
+  starts as it was (stamps, check-in, earning at the desk and cashback off); referrals switch to "first visit" for new
+  sign-ups. Full-admin and shared files it changes on purpose: `AuthController` (sign-up: referrals and expiry
+  through the options), `PublicJoinController` (the welcome bonus 500 where it showed 0; `referrals`),
+  `Admin/DiscountController::useOffer` (an unpaid bonus-points claim is paid once), the member `OfferController`,
+  `ReferralController` and `MemberController` (self-deletion forfeits credit), `LoyaltyService` (multiplier offers,
+  expiry 0, tier counters, `assessTier`'s direction on the model's floor), `ExpireLoyaltyPoints`,
+  `BookingPointsService` and `BookingRefundService` (the visit hook), `AppointmentMoney::afterRefunds` (takes a visit
+  back with points off too), `MemberMergeService`, `MemberErasure`, `MemberEnrolment`, `NotificationService` (the
+  full card's push type), `RedemptionActions` (`issueFree`), `MemberLedger` (reversing a desk line), `LoyaltyPresetService`
+  (each preset's recommended options), the portal's Join, offers and referral card.
 - Release 6: one migration, `2026_10_23_160000_add_dispute_lost_amount_to_bookings` (a nullable column on
   `booking_mirror` and `service_bookings`); no new scheduled command. New commands
   `php artisan brands:ensure-default [--org=<organisation id>] [--apply]` and
@@ -422,7 +550,7 @@ production never has); on SQLite the real index still runs.
   `CapturePendingPaymentIntents`. Owner decisions at deploy (2026-10-25): a landing page keeps showing a stored price
   0 and length 60 as they are; campaigns and offers saved for every brand stay every brand (built after the deploy,
   below).
-- **Every brand, for campaigns and offers** (owner 2026-10-25, on the branch after release 6): a `NotificationCampaign`
+- **Every brand, for campaigns and offers** (owner 2026-10-25, release 6b): a `NotificationCampaign`
   or `SpecialOffer` created with no brand keeps an empty `brand_id` — every brand's — instead of getting the default
   brand (`EVERY_BRAND_WHEN_EMPTY` on the model; `BelongsToBrand` fills nothing in for it), and a brand's own view lists
   those rows beside its own (`BrandScope`: that brand or none). Every other brand-scoped row still gets the default.
@@ -476,6 +604,18 @@ production never has); on SQLite the real index still runs.
 - Scan one member's QR code from the member app on a phone, and type one member number.
 - On Program, check the tiers and their colours; on Rewards, the catalogue and pending redemptions.
 - Reload admin tabs left open across the deploy.
+
+### After the release 7 deploy (owner, signed in)
+
+- As a manager, open `/loyalty`: the banner offers the setup wizard. Run it on a test venue (or Not now on a real one,
+  then open Ways to earn) and check the sentences say what members get.
+- Switch on the stamp card (e.g. 3 stamps, 50 points), check-in and earning at the desk, and cashback (5%). On Scan,
+  find a test member: Check in (+1 stamp), then Add a purchase of 10 (points and +0.50 credit); a second Check in the
+  same day says "Already checked in today".
+- On the member's page: the stamp card and the credit balance; Use credit 0.50, then try 1.00 more (refused: not
+  enough credit). As a manager, Adjust +1.00 with a reason, then −1.00.
+- In the portal as that member: Home shows the stamp card and "Credit: €0.00" (or the venue's currency).
+- Switch the test options off again if the venue does not use them.
 
 ### After the release 5 deploy (owner, signed in)
 

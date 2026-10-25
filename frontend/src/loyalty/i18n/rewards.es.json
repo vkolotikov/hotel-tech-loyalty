@@ -114,6 +114,13 @@
     "points_multiplier": "Multiplicador de puntos",
     "upgrade": "Mejora de categoría"
   },
+  "offer_kind_note": {
+    "bonus_points": "Al canjearla, los puntos se suman al saldo del miembro en el acto.",
+    "cashback": "Una ventaja que tu equipo da en persona. Para devolver dinero en cada visita, activa el Crédito de cashback en Formas de ganar.",
+    "free_night": "Una ventaja que tu equipo da en persona: el miembro muestra la oferta canjeada.",
+    "points_multiplier": "Mientras está canjeada, el miembro acumula con este multiplicador: el mejor entre él y un impulso en curso, nunca ambos.",
+    "upgrade": "Una ventaja que tu equipo da en persona: el miembro muestra la oferta canjeada."
+  },
   "offer_value": {
     "bonus_points": "{{value}} puntos extra",
     "discount": "{{value}} % de descuento",

@@ -1,0 +1,73 @@
+{
+  "title": "Besuche",
+  "check_in": "Einchecken",
+  "add_purchase": "Einkauf erfassen",
+  "purchase_title": "Einkauf für {{name}} erfassen",
+  "amount": "Betrag ({{currency}})",
+  "amount_hint": "Bringt Punkte zu Ihrem Satz.",
+  "amount_hint_cashback": "Bringt Punkte zu Ihrem Satz und {{percent}} % als Guthaben zurück.",
+  "amount_is": "Ein Einkauf über {{amount}}",
+  "note": "Notiz (optional)",
+  "note_hint": "Steht in der Punktezeile im Verlauf des Mitglieds.",
+  "note_example": "z. B. Mittagessen für zwei",
+  "add": "Einkauf erfassen",
+  "card_label": "{{have}} von {{needed}} Stempeln",
+  "card_line": "{{have}} von {{needed}} — noch {{left}}",
+  "completed": "Volle Karten: {{cards}}",
+  "off": "Die Stempelkarte ist ausgeschaltet: Diese Karte behält ihre Stempel, bekommt aber keine neuen.",
+  "recent": "Letzte Stempel",
+  "cards": "Volle Karten",
+  "card_number": "Karte {{number}}",
+  "said": {
+    "already_today": "Heute schon eingecheckt",
+    "checked_in": "Eingecheckt",
+    "checkin_points": "+{{points}} Punkte fürs Einchecken",
+    "purchase_points": "+{{points}} Punkte",
+    "stamp": "+1 Stempel — {{have}} von {{needed}}",
+    "stamp_had": "Der Stempel von heute ist schon auf der Karte",
+    "card_points": "Karte voll! +{{points}} Punkte",
+    "card_reward": "Karte voll! Gratis-Prämie: {{reward}}",
+    "credit": "+{{amount}} Guthaben"
+  },
+  "source": {
+    "appointment": "Termin",
+    "stay": "Aufenthalt",
+    "check_in": "Check-in",
+    "purchase": "Einkauf"
+  },
+  "given": {
+    "points": "+{{points}} Punkte",
+    "reward": "Gratis-Prämie: {{reward}}"
+  },
+  "gives": {
+    "points": "Eine volle Karte bringt {{points}} Punkte.",
+    "reward": "Eine volle Karte bringt gratis: {{reward}}."
+  },
+  "problem": {
+    "amount": "Geben Sie den Betrag des Einkaufs ein, über 0.",
+    "too_much": "Der Betrag darf höchstens {{max}} sein.",
+    "decimals": "Der Betrag hat höchstens zwei Nachkommastellen.",
+    "whole": "Beträge in {{currency}} sind ganze Zahlen."
+  },
+  "load": {
+    "error": {
+      "not_found": "Dieses Mitglied ist nicht mehr in Ihrem Programm.",
+      "network": "Keine Verbindung. Prüfen Sie das Netzwerk und versuchen Sie es erneut.",
+      "unknown": "Die Stempelkarte konnte nicht geladen werden. Bitte versuchen Sie es erneut."
+    }
+  },
+  "desk": {
+    "error": {
+      "option_off": "Einchecken und Sammeln am Empfang sind ausgeschaltet. Ein Manager kann sie unter „Sammeln & Prämien“ einschalten.",
+      "desk_earn_off": "Sammeln am Empfang ist ausgeschaltet. Ein Manager kann es unter „Sammeln & Prämien“ einschalten.",
+      "amount_required": "Geben Sie den Betrag des Einkaufs ein.",
+      "inactive": "Das Konto dieses Mitglieds ist deaktiviert.",
+      "not_allowed": "Ihr Konto darf keine Punkte gutschreiben. Ein Manager kann das unter Team im vollständigen Admin erlauben.",
+      "no_capability": "Ihr Konto darf keine Punkte gutschreiben. Ein Manager kann das unter Team im vollständigen Admin erlauben.",
+      "invalid": "Prüfen Sie den Betrag: über 0, höchstens 1.000.000, in den Einheiten Ihrer Währung.",
+      "not_found": "Dieses Mitglied ist nicht mehr in Ihrem Programm.",
+      "network": "Keine Verbindung: Es wurde nichts gespeichert. Versuchen Sie es erneut.",
+      "unknown": "Das hat nicht geklappt. Es wurde nichts gespeichert; bitte versuchen Sie es erneut."
+    }
+  }
+}

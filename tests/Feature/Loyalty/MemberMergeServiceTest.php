@@ -11,9 +11,11 @@ use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Tests\Concerns\LoyaltyWorkspace\CampaignDeliveriesSchema;
+use Tests\Concerns\LoyaltyWorkspace\CreditSchema;
 use Tests\Concerns\LoyaltyWorkspace\MembershipSchema;
 use Tests\Concerns\LoyaltyWorkspace\PushSchema;
 use Tests\Concerns\LoyaltyWorkspace\SmsSchema;
+use Tests\Concerns\LoyaltyWorkspace\VisitsSchema;
 use Tests\Concerns\SetsUpMinimalSchema;
 use Tests\TestCase;
 
@@ -83,6 +85,9 @@ class MemberMergeServiceTest extends TestCase
     use CampaignDeliveriesSchema;
     use PushSchema;
     use SmsSchema;
+    use VisitsSchema;
+    use CreditSchema;
+    use \Tests\Concerns\LoyaltyWorkspace\TierCountsSchema;
 
     private MemberMergeService $service;
 
@@ -94,6 +99,9 @@ class MemberMergeServiceTest extends TestCase
         $this->buildCampaignDeliveriesSchema();
         $this->buildPushSchema();
         $this->buildSmsSchema();
+        $this->buildVisitsSchema();
+        $this->buildCreditSchema();
+        $this->buildTierCountsSchema();
 
         $org = OrganizationFactory::new()->create();
         app()->instance('current_organization_id', $org->id);

@@ -3,18 +3,31 @@
 namespace App\Http\Controllers\Api\V1\Member;
 
 use App\Http\Controllers\Controller;
+use App\Services\Loyalty\Programme\ProgrammeOptions;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class ReferralController extends Controller
 {
+    /**
+     * The member's code, the link to share and what their referrals earned. Release 7 (spec 2026-10-25 §4.5): a venue
+     * with referrals off answers `enabled: false` and no code or link to share (the history stays); `reward_on` says
+     * when both are rewarded (`first_visit`: at the friend's first visit; `signup`: when they join) and the two
+     * bonuses say how much.
+     */
     public function index(Request $request): JsonResponse
     {
         $member = $request->user()->loyaltyMember()->with('referrals.referee.user')->firstOrFail();
+        $options = ProgrammeOptions::for((int) $member->organization_id);
+        $enabled = (bool) $options['referral_enabled'];
 
         return response()->json([
-            'referral_code' => $member->referral_code,
-            'referral_link' => $this->referralLink($member),
+            'enabled' => $enabled,
+            'reward_on' => $options['referral_reward_on'],
+            'referrer_bonus_points' => $enabled ? (int) $options['referrer_bonus_points'] : 0,
+            'referee_bonus_points' => $enabled ? (int) $options['referee_bonus_points'] : 0,
+            'referral_code' => $enabled ? $member->referral_code : null,
+            'referral_link' => $enabled ? $this->referralLink($member) : null,
             'total_referrals' => $member->referrals()->count(),
             'rewarded_referrals' => $member->referrals()->where('status', 'rewarded')->count(),
             'total_points_earned' => $member->referrals()->sum('referrer_points_awarded'),

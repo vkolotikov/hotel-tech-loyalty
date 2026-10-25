@@ -156,7 +156,8 @@
     "scan": "Escanear",
     "campaigns": "Campañas",
     "insights": "Análisis",
-    "app": "Tarjeta y app"
+    "app": "Tarjeta y app",
+    "options": "Formas de ganar"
   },
   "points": {
     "error": {

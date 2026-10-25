@@ -5,7 +5,6 @@ namespace App\Services\Loyalty\Members;
 use App\Mail\WelcomeMemberMail;
 use App\Models\AuditLog;
 use App\Models\EmailVerificationCode;
-use App\Models\HotelSetting;
 use App\Models\LoyaltyMember;
 use App\Models\LoyaltyTier;
 use App\Models\Organization;
@@ -14,6 +13,7 @@ use App\Services\AnalyticsService;
 use App\Services\GuestMemberLinkService;
 use App\Services\Loyalty\Cards\NfcCards;
 use App\Services\Loyalty\LoyaltyRefused;
+use App\Services\Loyalty\Programme\ProgrammeOptions;
 use App\Services\LoyaltyService;
 use App\Services\PlanLimitGuard;
 use App\Services\QrCodeService;
@@ -73,10 +73,13 @@ final class MemberEnrolment
         }
 
         $inviteFlow = empty($data['password']);
-        $welcomeBonus = (int) HotelSetting::getValue('welcome_bonus_points', 500);
+        // Required: TenantScope fails closed, so a member user without an organisation signs in to nothing.
+        $orgId = $by->organization_id ?? (app()->bound('current_organization_id') ? app('current_organization_id') : null);
+        // Release 7: the venue's option, read through ProgrammeOptions (500 when never set, as before).
+        $welcomeBonus = (int) ProgrammeOptions::get((int) $orgId, 'welcome_bonus_points');
         $sendEmail = $sendWelcome ?? $inviteFlow;
 
-        [$member, $inviteCode] = DB::transaction(function () use ($data, $by, $tier, $inviteFlow, $welcomeBonus) {
+        [$member, $inviteCode] = DB::transaction(function () use ($data, $by, $tier, $inviteFlow, $welcomeBonus, $orgId) {
             $user = User::create([
                 'name'      => $data['name'],
                 'email'     => $data['email'],
@@ -84,9 +87,7 @@ final class MemberEnrolment
                 'password'  => Hash::make($data['password'] ?? Str::random(40)),
                 'phone'     => $data['phone'] ?? null,
                 'user_type' => 'member',
-                // Required: TenantScope fails closed, so a member user without an organisation signs in to nothing.
-                'organization_id' => $by->organization_id
-                    ?? (app()->bound('current_organization_id') ? app('current_organization_id') : null),
+                'organization_id' => $orgId,
             ]);
 
             $member = LoyaltyMember::create([

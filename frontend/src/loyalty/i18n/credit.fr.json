@@ -1,0 +1,95 @@
+{
+  "title": "Crédit",
+  "use_action": "Utiliser le crédit",
+  "adjust_action": "Corriger",
+  "earning": "Les membres récupèrent {{percent}} % de ce qu’ils dépensent en crédit, à utiliser à l’accueil.",
+  "off": "Le cashback est désactivé : rien de nouveau n’est gagné, et ce crédit peut toujours être utilisé à l’accueil.",
+  "none": "Pas encore de crédit.",
+  "history": "Historique du crédit",
+  "by": "par {{name}}",
+  "line_balance": "crédit {{amount}}",
+  "use_title": "Utiliser le crédit de {{name}}",
+  "adjust_title": "Corriger le crédit de {{name}}",
+  "amount": "Montant ({{currency}})",
+  "adjust_hint": "Un signe moins retire du crédit, par ex. -5.",
+  "note": "Note (facultative)",
+  "note_hint": "Le membre la voit dans l’historique de son crédit.",
+  "note_example": "par ex. Déjeuner pour deux",
+  "reason": "Motif",
+  "reason_example": "par ex. Cashback oublié sur une visite",
+  "balance_now": "Crédit actuel : {{amount}}",
+  "balance_then": "Crédit après : {{amount}}",
+  "use_do": "Retirer le crédit",
+  "adjust_do": "Enregistrer la correction",
+  "line": {
+    "earn_appointment": "Cashback sur un rendez-vous",
+    "earn_stay": "Cashback sur un séjour",
+    "earn_purchase": "Cashback sur un achat",
+    "earn": "Cashback",
+    "spend": "Utilisé à l’accueil",
+    "reverse": "Cashback repris (remboursé ou annulé)",
+    "merge": "Transféré lors de la fusion de deux adhésions",
+    "forfeit": "Perdu lors de la suppression du membre",
+    "adjust": "Correction",
+    "other": "Autre"
+  },
+  "done": {
+    "use": "{{amount}} retiré. Crédit actuel : {{balance}}.",
+    "adjust": "Corrigé de {{amount}}. Crédit actuel : {{balance}}."
+  },
+  "load": {
+    "error": {
+      "not_found": "Ce membre ne fait plus partie de votre programme.",
+      "network": "Pas de connexion. Vérifiez le réseau et réessayez.",
+      "unknown": "Le crédit n’a pas pu être chargé. Veuillez réessayer."
+    }
+  },
+  "use": {
+    "problem": {
+      "amount": "Saisissez un montant supérieur à zéro.",
+      "decimals": "La devise de l’établissement n’accepte pas autant de décimales.",
+      "too_large": "C’est plus qu’une seule opération ne peut retirer.",
+      "over_balance": "Le membre n’a que {{balance}} de crédit.",
+      "below_zero": "Le crédit ne peut pas passer sous zéro.",
+      "reason": "Indiquez pourquoi."
+    },
+    "error": {
+      "credit_short": "Le membre n’a que {{balance}} de crédit.",
+      "bad_amount": "Saisissez un montant supérieur à zéro que la devise de l’établissement accepte.",
+      "bad_currency": "La devise de l’établissement n’est pas définie. Un responsable peut la définir dans Carte et appli.",
+      "already_erased": "Ce membre a été supprimé ; son crédit a été perdu.",
+      "key_reused": "Ce clic a déjà servi pour autre chose. Fermez la fenêtre et réessayez.",
+      "not_allowed": "Votre compte ne peut pas faire cela. Un responsable peut le modifier dans Équipe, dans l’administration complète.",
+      "no_capability": "Votre compte ne peut pas faire cela. Un responsable peut le modifier dans Équipe, dans l’administration complète.",
+      "invalid": "Vérifiez le montant.",
+      "not_found": "Ce membre ne fait plus partie de votre programme.",
+      "network": "Pas de connexion : rien n’a été enregistré. Réessayez.",
+      "unknown": "Le crédit n’a pas pu être utilisé. Rien n’a été retiré ; veuillez réessayer."
+    }
+  },
+  "adjust": {
+    "problem": {
+      "amount": "Saisissez un montant différent de zéro : avec un signe moins pour retirer du crédit.",
+      "decimals": "La devise de l’établissement n’accepte pas autant de décimales.",
+      "too_large": "C’est plus qu’une seule correction ne peut déplacer.",
+      "over_balance": "Le membre n’a que {{balance}} de crédit.",
+      "below_zero": "Le crédit ne peut pas passer sous zéro : le membre a {{balance}}.",
+      "reason": "Indiquez pourquoi le crédit est corrigé."
+    },
+    "error": {
+      "credit_short": "Le crédit ne peut pas passer sous zéro : le membre a {{balance}}.",
+      "bad_amount": "Saisissez un montant différent de zéro que la devise de l’établissement accepte.",
+      "bad_currency": "La devise de l’établissement n’est pas définie. Un responsable peut la définir dans Carte et appli.",
+      "reason_required": "Indiquez pourquoi le crédit est corrigé.",
+      "already_erased": "Ce membre a été supprimé ; son crédit a été perdu.",
+      "key_reused": "Ce clic a déjà servi pour autre chose. Fermez la fenêtre et réessayez.",
+      "manager_only": "Seul un propriétaire ou un responsable peut corriger le crédit.",
+      "not_allowed": "Seul un propriétaire ou un responsable peut corriger le crédit.",
+      "no_capability": "Seul un propriétaire ou un responsable peut corriger le crédit.",
+      "invalid": "Vérifiez le montant et le motif.",
+      "not_found": "Ce membre ne fait plus partie de votre programme.",
+      "network": "Pas de connexion : rien n’a été enregistré. Réessayez.",
+      "unknown": "Le crédit n’a pas pu être corrigé. Rien n’a été modifié ; veuillez réessayer."
+    }
+  }
+}

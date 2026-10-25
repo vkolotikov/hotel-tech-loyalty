@@ -17,7 +17,7 @@ import { BrandField } from './parts'
 import { PictureField } from './PictureField'
 import { MAX_OFFER_VALUE, OFFER_FIELDS, brandPart, initialBrand, offerBody, offerFormOf, offerProblems, typeChoices, type OfferForm } from './rewardsMath'
 import type { BrandChoice, Offer, OfferOptions } from './types'
-import { APPLIES_TO_WORDS, OFFER_PROBLEM_WORDS, OFFER_TYPE_WORDS } from './words'
+import { APPLIES_TO_WORDS, OFFER_KIND_NOTE_WORDS, OFFER_PROBLEM_WORDS, OFFER_TYPE_WORDS } from './words'
 
 const INPUT = 'w-full rounded-lg border border-a-border bg-a-surface px-3 py-2 text-sm text-a-text'
 
@@ -90,7 +90,8 @@ export function OfferDialog({ offer, options, onClose }: { offer: Offer | null; 
           : <p className="text-xs text-a-text-2">{t('loyalty.rewards.picture.after_save_offer', 'You can add a picture once the offer is saved.')}</p>}
 
         <div className="grid gap-4 sm:grid-cols-2">
-          <FormField label={t('loyalty.rewards.offer.type', 'Kind')} problem={problem('type')}>
+          <FormField label={t('loyalty.rewards.offer.type', 'Kind')} problem={problem('type')}
+            hint={OFFER_KIND_NOTE_WORDS[form.type] ? word('loyalty.rewards.offer_kind_note', OFFER_KIND_NOTE_WORDS, form.type) : undefined}>
             <select value={form.type} onChange={(e) => update({ type: e.target.value })} className={INPUT}>
               {form.type === '' && <option value="">{t('loyalty.rewards.offer.choose', 'Choose…')}</option>}
               {typeChoices(options.types, current).map(value => <option key={value} value={value}>{word('loyalty.rewards.offer_type', OFFER_TYPE_WORDS, value)}</option>)}

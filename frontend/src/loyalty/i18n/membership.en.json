@@ -159,11 +159,13 @@
       "birthday": "The date of birth",
       "push": "The app’s push notifications",
       "cards": "Their cards and QR codes",
-      "sign_in": "Their sign-in to the app and the portal"
+      "sign_in": "Their sign-in to the app and the portal",
+      "credit": "Any unspent credit"
     },
     "stays": {
       "number": "The member number",
-      "history": "The points history, bookings and redemptions, so the figures still add up"
+      "history": "The points history, bookings and redemptions, so the figures still add up",
+      "visits": "The stamp card and credit history"
     },
     "error": {
       "manager_only": "Only an owner or a manager can do this.",
@@ -265,7 +267,9 @@
       "requests": "Benefit requests",
       "cards": "Cards and QR codes",
       "messages": "Notifications, reviews and campaign emails",
-      "guests": "The link to the guest record in the CRM"
+      "guests": "The link to the guest record in the CRM",
+      "stamps": "Stamps and stamp cards (one stamp per day)",
+      "credit": "Credit, added to the kept member’s balance"
     },
     "error": {
       "manager_only": "Only an owner or a manager can do this.",

@@ -1,0 +1,19 @@
+{
+  "balance": "Crédit : {{amount}}",
+  "at_desk": "Utilisez-le à l’accueil : demandez à l’équipe de le déduire de votre note.",
+  "off": "Aucun nouveau crédit n’est gagné ; celui que vous avez peut toujours être utilisé à l’accueil.",
+  "none": "Dès votre prochaine visite, vous récupérez du crédit sur ce que vous dépensez.",
+  "recent": "Crédit récent",
+  "line": {
+    "earn_appointment": "Cashback sur un rendez-vous",
+    "earn_stay": "Cashback sur un séjour",
+    "earn_purchase": "Cashback sur un achat",
+    "earn": "Cashback",
+    "spend": "Utilisé à l’accueil",
+    "reverse": "Cashback repris (remboursé ou annulé)",
+    "merge": "Transféré depuis votre autre adhésion",
+    "forfeit": "Perdu",
+    "adjust": "Correction",
+    "other": "Autre"
+  }
+}

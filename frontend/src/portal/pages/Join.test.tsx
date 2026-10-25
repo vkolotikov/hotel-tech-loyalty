@@ -19,9 +19,11 @@ vi.mock('../../stores/authStore', () => ({ useAuthStore: (sel: (s: { setAuth: ()
 vi.mock('../../lib/api', () => ({ api: { get: () => new Promise(() => {}), post: () => new Promise(() => {}) } }))
 vi.mock('../i18n', () => ({ registerPortalLocales: () => {} }))
 
-function render(path: string) {
+function render(path: string, context?: Record<string, unknown>) {
+  const client = new QueryClient()
+  if (context) client.setQueryData(['join-context', 'abc'], context)
   return renderToStaticMarkup(
-    <QueryClientProvider client={new QueryClient()}><MemoryRouter initialEntries={[path]}><Join /></MemoryRouter></QueryClientProvider>,
+    <QueryClientProvider client={client}><MemoryRouter initialEntries={[path]}><Join /></MemoryRouter></QueryClientProvider>,
   )
 }
 
@@ -34,5 +36,11 @@ describe('Join', () => {
   })
   it('shows a skeleton while the venue context loads', () => {
     expect(render('/portal/join?org=abc')).toContain('aria-busy="true"')
+  })
+  it('asks for a referral code only while the venue uses referrals', () => {
+    const open = { organization: { id: 1, name: 'Numa Skin Lab' }, accepting_joins: true, welcome_bonus: 500 }
+    expect(render('/portal/join?org=abc', open)).toContain('name="referral_code"')
+    expect(render('/portal/join?org=abc', { ...open, referrals: true })).toContain('name="referral_code"')
+    expect(render('/portal/join?org=abc', { ...open, referrals: false })).not.toContain('name="referral_code"')
   })
 })

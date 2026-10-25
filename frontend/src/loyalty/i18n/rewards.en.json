@@ -114,6 +114,13 @@
     "points_multiplier": "Points multiplier",
     "upgrade": "Upgrade"
   },
+  "offer_kind_note": {
+    "bonus_points": "Claiming it adds the points to the member’s balance at once.",
+    "cashback": "A perk your team gives in person. For money back on every visit, switch on Cashback credit in Ways to earn.",
+    "free_night": "A perk your team gives in person: the member shows the claimed offer.",
+    "points_multiplier": "While claimed, the member earns at this multiple — the better of it and any running boost, never both.",
+    "upgrade": "A perk your team gives in person: the member shows the claimed offer."
+  },
   "offer_value": {
     "bonus_points": "{{value}} bonus points",
     "discount": "{{value}}% off",

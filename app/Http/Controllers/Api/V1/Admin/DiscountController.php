@@ -7,6 +7,7 @@ use App\Models\AuditLog;
 use App\Models\LoyaltyMember;
 use App\Models\MemberOffer;
 use App\Services\DiscountService;
+use App\Services\Loyalty\Offers\OfferBonus;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -75,7 +76,8 @@ class DiscountController extends Controller
     {
         try {
             $orgId = app('current_organization_id');
-            $claim = DB::transaction(function () use ($memberOfferId, $orgId) {
+            $staff = $request->user();
+            $claim = DB::transaction(function () use ($memberOfferId, $orgId, $staff) {
                 // MemberOffer is deliberately not tenant-scoped (see the
                 // model doc-block) — every query site anchors to a member
                 // instead. This one didn't: any authenticated staff account
@@ -92,6 +94,17 @@ class DiscountController extends Controller
                 }
                 if ($claim->used_at !== null) {
                     abort(422, 'This offer has already been used.');
+                }
+
+                // Release 7: a bonus_points claim made before its points were
+                // paid at claiming gets them now, once (OfferBonus's key), and
+                // is marked used with them.
+                $offer = \App\Models\SpecialOffer::withoutGlobalScopes()->whereKey($claim->offer_id)->where('organization_id', $orgId)->first();
+                if (OfferBonus::paysPoints($offer)) {
+                    $member = LoyaltyMember::withoutGlobalScopes()->where('organization_id', $orgId)->whereKey($claim->member_id)->firstOrFail();
+                    app(OfferBonus::class)->pay($claim, $offer, $member, $staff);
+
+                    return $claim;
                 }
 
                 $claim->forceFill([

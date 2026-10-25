@@ -1,0 +1,243 @@
+{
+  "amount": {
+    "months_many": "{{months}} meses",
+    "months_one": "1 mes",
+    "points_many": "{{points}} puntos",
+    "points_one": "1 punto"
+  },
+  "banner": {
+    "line": "Elija cómo ganan los miembros y qué reciben a cambio, en cuatro pasos cortos. Podrá cambiarlo todo más adelante.",
+    "not_now": "Ahora no",
+    "skip_body": "Ahora no cambia nada y esta sugerencia no volverá a aparecer. Puede abrir la configuración en cualquier momento desde «Formas de ganar».",
+    "skip_confirm": "Omitir la configuración",
+    "skip_keep": "Volver",
+    "skip_title": "¿Omitir la configuración?",
+    "start": "Empezar",
+    "title": "Configure su programa en pocos minutos"
+  },
+  "card": {
+    "save": "Guardar",
+    "saved": "Guardado. Los miembros lo reciben desde ahora.",
+    "unsaved": "Todavía sin guardar."
+  },
+  "choice": {
+    "referral_reward_on": {
+      "first_visit": "Tras la primera visita del amigo",
+      "signup": "En cuanto el amigo se une"
+    },
+    "stamp_reward_kind": {
+      "points": "Puntos",
+      "reward": "Una recompensa"
+    }
+  },
+  "choose_reward": "Elija una recompensa…",
+  "field": {
+    "birthday_bonus_points": "Puntos en su cumpleaños",
+    "cashback_percent": "Crédito devuelto, en % del gasto",
+    "checkin_points": "Puntos por cada registro",
+    "points_expiry_months": "Meses hasta que caducan los puntos",
+    "points_per_currency": "Puntos por cada {{money}} gastado",
+    "referee_bonus_points": "Puntos para el amigo",
+    "referral_reward_on": "Cuándo los reciben",
+    "referrer_bonus_points": "Puntos para el miembro que recomienda",
+    "stamp_reward_id": "Recompensa por una tarjeta completa",
+    "stamp_reward_kind": "Una tarjeta completa da",
+    "stamp_reward_points": "Puntos por una tarjeta completa",
+    "stamps_per_card": "Sellos por tarjeta",
+    "welcome_bonus_points": "Puntos al unirse"
+  },
+  "hint": {
+    "cashback_percent": "El crédito solo se usa en el mostrador; nunca se paga en dinero.",
+    "checkin_points": "Con 0, la visita cuenta sin dar puntos.",
+    "points_per_currency": "Los niveles superiores lo multiplican por su tasa de acumulación.",
+    "stamp_reward_id": "De su catálogo de recompensas. El miembro recibe un código para mostrar en el mostrador.",
+    "stamps_per_card": "Un cambio se aplica a las tarjetas nuevas; las ya empezadas mantienen su número."
+  },
+  "line": "Cómo ganan puntos los miembros y qué reciben a cambio. Active o desactive cada forma y ajuste sus valores; los miembros ven al instante cualquier cambio guardado.",
+  "load": {
+    "error": {
+      "network": "Sin conexión. Compruebe la red e inténtelo de nuevo.",
+      "unknown": "No se pudieron cargar los ajustes del programa. Inténtelo de nuevo."
+    }
+  },
+  "no_rewards": "Su catálogo aún no tiene recompensas. Añada una en Recompensas, o deje que una tarjeta completa dé puntos.",
+  "open_rewards": "Abrir Recompensas",
+  "open_wizard": "Asistente de configuración",
+  "part": {
+    "boosts": "Promociones de puntos",
+    "boosts_count": "En curso o próximas",
+    "boosts_line": "Más puntos durante un tiempo, como un fin de semana de puntos dobles.",
+    "offers": "Ofertas",
+    "offers_count": "Activadas",
+    "offers_line": "Ofertas para miembros durante un tiempo, como un descuento o puntos extra.",
+    "open_offers": "Abrir ofertas",
+    "open_program": "Abrir Programa",
+    "open_rewards": "Abrir Recompensas",
+    "rewards": "Recompensas",
+    "rewards_count": "En el catálogo",
+    "rewards_line": "En qué gastan los miembros sus puntos.",
+    "tiers": "Niveles",
+    "tiers_count": "En la escala",
+    "tiers_line": "Los niveles que suben los miembros al ganar puntos, cada uno con sus beneficios."
+  },
+  "parts_title": "El resto de su programa",
+  "preset": {
+    "beauty": "Belleza y spa",
+    "education": "Educación",
+    "fitness": "Fitness",
+    "hotel_classic": "Hotel, cinco niveles",
+    "hotel_lite": "Hotel, tres niveles",
+    "medical": "Clínica",
+    "professional_services": "Servicios profesionales",
+    "real_estate": "Inmobiliaria",
+    "restaurant": "Restaurante y cafetería",
+    "retail": "Tienda y comercio",
+    "simple_two_tier": "Sencillo, dos niveles"
+  },
+  "preset_line": {
+    "beauty": "Welcome, Devotee e Inner Circle. Premia las visitas habituales.",
+    "education": "Learner, Scholar y Alumni. Premia el estudio más que el gasto.",
+    "fitness": "Member, Plus y Pro. Premia venir a entrenar.",
+    "hotel_classic": "De Bronze a Diamond. Puntos en cada estancia; los niveles superiores acumulan más rápido.",
+    "hotel_lite": "Member, Plus y Elite. Sencillo, para hoteles pequeños y boutique.",
+    "medical": "Patient y Care Plus. Citas prioritarias; los puntos por reservas empiezan desactivados.",
+    "professional_services": "Client, Preferred y Partner. Encargos grandes y poco frecuentes, donde lo que más cuenta son las recomendaciones.",
+    "real_estate": "Client, Preferred y Partner. Premia las recomendaciones y los clientes que repiten.",
+    "restaurant": "Regular, Loyalist e Insider. Las recompensas llegan rápido incluso con gastos pequeños.",
+    "retail": "Member, Insider y VIP. Compras pequeñas y frecuentes; las recompensas llegan pronto.",
+    "simple_two_tier": "Member y VIP. Fácil de llevar para cualquier pequeño negocio."
+  },
+  "problem": {
+    "choice": "Elija una de las opciones.",
+    "number": "Introduzca un número de {{min}} a {{max}}, p. ej. 2,5.",
+    "reward": "Elija la recompensa de una tarjeta completa.",
+    "whole": "Introduzca un número entero de {{min}} a {{max}}."
+  },
+  "read_only": "Solo un propietario o un responsable puede cambiar estos ajustes. Los ve tal como están.",
+  "save": {
+    "error": {
+      "invalid": "Revise los campos marcados.",
+      "manager_only": "Solo un propietario o un responsable puede modificar el programa.",
+      "network": "Sin conexión: no se ha guardado nada. Inténtelo de nuevo.",
+      "no_capability": "Solo un propietario o un responsable puede modificar el programa.",
+      "not_allowed": "Solo un propietario o un responsable puede modificar el programa.",
+      "unknown": "No se pudo guardar. Inténtelo de nuevo."
+    }
+  },
+  "sentence": {
+    "birthday_bonus": "Los miembros reciben {{points}} en su cumpleaños.",
+    "birthday_bonus_off": "Los miembros no reciben nada en su cumpleaños.",
+    "cashback": "Los miembros recuperan el {{percent}} % de lo que gastan como crédito, para usar en el mostrador.",
+    "cashback_off": "Sin crédito de cashback.",
+    "check_in_off": "Sin registro de visitas en el mostrador.",
+    "check_in_points": "El equipo registra la visita de los miembros en el mostrador, una vez al día: cada registro da {{points}} y cuenta como visita.",
+    "check_in_visit": "El equipo registra la visita de los miembros en el mostrador, una vez al día: cada registro cuenta como visita.",
+    "desk_earn": "El equipo añade una compra en el mostrador tras escanear, y el miembro gana puntos por ella.",
+    "desk_earn_off": "Las compras en el mostrador no dan nada.",
+    "points_expiry": "Los puntos caducan {{months}} después de ganarlos.",
+    "points_expiry_off": "Los puntos nunca caducan.",
+    "points_on_spend": "Los miembros reciben {{points}} por cada {{money}} que gastan.",
+    "points_on_spend_off": "Las reservas no dan puntos.",
+    "referrals_first_visit": "Un miembro que recomienda a un amigo recibe {{referrer}} y el amigo {{referee}}, cuando el amigo ha hecho su primera visita.",
+    "referrals_off": "Los miembros no tienen enlace de recomendación.",
+    "referrals_signup": "Un miembro que recomienda a un amigo recibe {{referrer}} y el amigo {{referee}}, en cuanto el amigo se une.",
+    "stamp_card_off": "Sin tarjeta de sellos.",
+    "stamp_card_points": "Los miembros reciben un sello por visita, uno al día. Una tarjeta tiene {{stamps}} sellos; una tarjeta completa da {{points}}.",
+    "stamp_card_reward": "Los miembros reciben un sello por visita, uno al día. Una tarjeta tiene {{stamps}} sellos; una tarjeta completa da «{{reward}}».",
+    "stamp_card_reward_unset": "Los miembros reciben un sello por visita, uno al día. Una tarjeta tiene {{stamps}} sellos; una tarjeta completa da la recompensa que usted elija.",
+    "welcome_bonus": "Los miembros nuevos reciben {{points}} al unirse.",
+    "welcome_bonus_off": "Los miembros nuevos no reciben bono de bienvenida."
+  },
+  "setup": {
+    "error": {
+      "invalid": "Hay elecciones que revisar. Compruebe los pasos marcados y aplique de nuevo.",
+      "key_reused": "Esta configuración cambió después de enviarla. Aplíquela de nuevo.",
+      "manager_only": "Solo un propietario o un responsable puede modificar el programa.",
+      "network": "Sin conexión: la configuración no se aplicó. Inténtelo de nuevo; nada se aplica dos veces.",
+      "no_capability": "Solo un propietario o un responsable puede modificar el programa.",
+      "not_allowed": "Solo un propietario o un responsable puede modificar el programa.",
+      "unknown": "No se pudo aplicar la configuración. Inténtelo de nuevo."
+    }
+  },
+  "skip": {
+    "error": {
+      "manager_only": "Solo un propietario o un responsable puede modificar el programa.",
+      "network": "Sin conexión. Inténtelo de nuevo.",
+      "no_capability": "Solo un propietario o un responsable puede modificar el programa.",
+      "not_allowed": "Solo un propietario o un responsable puede modificar el programa.",
+      "unknown": "No ha funcionado. Inténtelo de nuevo."
+    }
+  },
+  "step": {
+    "business": "Su negocio",
+    "choose": "Elegir",
+    "configure": "Ajustar",
+    "review": "Revisar"
+  },
+  "title": "Formas de ganar",
+  "way": {
+    "birthday_bonus": "Bono de cumpleaños",
+    "cashback": "Crédito de cashback",
+    "check_in": "Registro de visita",
+    "desk_earn": "Ganar en el mostrador",
+    "points_expiry": "Caducidad de los puntos",
+    "points_on_spend": "Puntos por gasto",
+    "referrals": "Referidos",
+    "stamp_card": "Tarjeta de sellos",
+    "welcome_bonus": "Bono de bienvenida"
+  },
+  "way_line": {
+    "birthday_bonus": "Puntos en el cumpleaños del miembro.",
+    "cashback": "Parte de lo que gastan los miembros vuelve como crédito para el mostrador.",
+    "check_in": "El equipo registra la visita de un miembro en el mostrador tras escanear.",
+    "desk_earn": "El equipo añade una compra hecha en el mostrador tras escanear.",
+    "points_expiry": "Los puntos sin usar caducan al cabo de un tiempo, lo que hace volver a los miembros.",
+    "points_on_spend": "Puntos por las reservas completadas, según lo gastado.",
+    "referrals": "Puntos por traer a un amigo, para los dos.",
+    "stamp_card": "Un sello por visita; una tarjeta completa da una recompensa.",
+    "welcome_bonus": "Puntos por unirse."
+  },
+  "ways_link": "Formas de ganar",
+  "ways_title": "Cómo ganan los miembros y qué reciben",
+  "wizard": {
+    "apply": "Aplicar",
+    "back": "Atrás",
+    "business_keep_line": "Su programa ya tiene niveles, así que los conserva junto con sus recompensas. Los siguientes pasos eligen las formas de ganar que los acompañan.",
+    "business_line": "Elija lo más parecido. Crea niveles y un primer catálogo de recompensas, que podrá cambiar más adelante.",
+    "business_title": "¿Qué tipo de negocio es?",
+    "choose_keep_line": "Marcado: lo que su programa usa hoy. Marque lo que quiere que tengan los miembros.",
+    "choose_line": "Marcado: lo que sugerimos para «{{preset}}». Marque lo que quiere que tengan los miembros.",
+    "choose_title": "¿Cómo deben ganar y ser recompensados los miembros?",
+    "configure_title": "Ajuste los valores",
+    "done_built": "Niveles añadidos: {{tiers}}. Recompensas añadidas: {{rewards}}. Las formas de ganar están ajustadas.",
+    "done_kept": "Sus niveles y recompensas siguen como estaban; las formas de ganar están ajustadas.",
+    "done_title": "Su programa está configurado",
+    "fix_fields": "Revise los campos marcados.",
+    "keep": "Conservar mis niveles y recompensas",
+    "keep_line": "Niveles: {{tiers}}. Recompensas en el catálogo: {{rewards}}. No cambia nada en ellos.",
+    "line": "Cuatro pasos cortos. Podrá cambiarlo todo más adelante en «Formas de ganar».",
+    "managers_only": "Solo un propietario o un responsable puede configurar el programa.",
+    "next": "Siguiente",
+    "none_on": "No hay ninguna forma de ganar marcada: los miembros no ganarían nada. Vuelva atrás y marque al menos una, o aplique tal como está.",
+    "nothing_to_set": "Nada que ajustar: las formas elegidas no tienen valores. Pase a la revisión.",
+    "preset_rewards": "Recompensas como {{names}}",
+    "preset_tiers": "Niveles: {{names}}",
+    "presets_greyed": "Los programas de inicio solo crean los niveles de un establecimiento nuevo. Se muestran aquí como referencia.",
+    "review_keep": "Sus niveles y recompensas se quedan como están.",
+    "review_off": "Sin usar: {{ways}}. Puede activar cualquiera más adelante en «Formas de ganar».",
+    "review_preset": "Parte de «{{preset}}»: los niveles {{tiers}} y un primer catálogo de recompensas.",
+    "review_title": "Lo que recibirán los miembros",
+    "skip": "Omitir la configuración",
+    "skip_body": "Lo que ha elegido aquí no se guarda y el programa se queda como está. Puede volver a abrir la configuración en cualquier momento desde «Formas de ganar».",
+    "skip_confirm": "Omitir la configuración",
+    "skip_keep": "Seguir",
+    "skip_title": "¿Omitir la configuración?",
+    "step_of": "Paso {{n}} de {{total}}",
+    "steps": "Pasos",
+    "suggested": "Sugerido para su negocio",
+    "title": "Configurar su programa",
+    "to_configure": "Volver a ajustar",
+    "to_members": "Ir a Miembros",
+    "to_options": "Ir a «Formas de ganar»"
+  }
+}

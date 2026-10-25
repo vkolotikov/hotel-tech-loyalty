@@ -1,0 +1,19 @@
+{
+  "balance": "Saldo: {{amount}}",
+  "at_desk": "Úsalo en recepción: pide al equipo que lo descuente de tu cuenta.",
+  "off": "Ya no se gana saldo nuevo; el que tienes todavía puede usarse en recepción.",
+  "none": "Desde tu próxima visita recuperas saldo de lo que gastas.",
+  "recent": "Saldo reciente",
+  "line": {
+    "earn_appointment": "Cashback por una cita",
+    "earn_stay": "Cashback por una estancia",
+    "earn_purchase": "Cashback por una compra",
+    "earn": "Cashback",
+    "spend": "Usado en recepción",
+    "reverse": "Cashback retirado (reembolsado o cancelado)",
+    "merge": "Trasladado desde tu otra membresía",
+    "forfeit": "Perdido",
+    "adjust": "Corrección",
+    "other": "Otro"
+  }
+}

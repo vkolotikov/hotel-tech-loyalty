@@ -159,11 +159,13 @@
       "birthday": "La fecha de nacimiento",
       "push": "Las notificaciones push de la app",
       "cards": "Sus tarjetas y códigos QR",
-      "sign_in": "Su acceso a la app y al portal"
+      "sign_in": "Su acceso a la app y al portal",
+      "credit": "El saldo sin usar"
     },
     "stays": {
       "number": "El número de miembro",
-      "history": "El historial de puntos, las reservas y los canjes, para que las cifras sigan cuadrando"
+      "history": "El historial de puntos, las reservas y los canjes, para que las cifras sigan cuadrando",
+      "visits": "El historial de sellos y del saldo"
     },
     "error": {
       "manager_only": "Solo un propietario o un responsable puede hacer esto.",
@@ -265,7 +267,9 @@
       "requests": "Las solicitudes de ventajas",
       "cards": "Las tarjetas y códigos QR",
       "messages": "Las notificaciones, reseñas y emails de campaña",
-      "guests": "El vínculo con la ficha del huésped en el CRM"
+      "guests": "El vínculo con la ficha del huésped en el CRM",
+      "stamps": "Los sellos y las tarjetas de sellos (un sello por día)",
+      "credit": "El saldo, sumado al del miembro que se conserva"
     },
     "error": {
       "manager_only": "Solo un propietario o un responsable puede hacer esto.",

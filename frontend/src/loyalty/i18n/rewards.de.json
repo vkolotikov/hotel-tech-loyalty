@@ -114,6 +114,13 @@
     "points_multiplier": "Punkte-Multiplikator",
     "upgrade": "Upgrade"
   },
+  "offer_kind_note": {
+    "bonus_points": "Beim Einlösen werden die Punkte sofort dem Konto des Mitglieds gutgeschrieben.",
+    "cashback": "Eine Leistung, die Ihr Team persönlich gewährt. Für Geld zurück bei jedem Besuch schalten Sie Cashback-Guthaben unter „Sammeln & Prämien“ ein.",
+    "free_night": "Eine Leistung, die Ihr Team persönlich gewährt: Das Mitglied zeigt das eingelöste Angebot.",
+    "points_multiplier": "Solange eingelöst, sammelt das Mitglied mit diesem Faktor — dem besseren aus ihm und einem laufenden Boost, nie beiden.",
+    "upgrade": "Eine Leistung, die Ihr Team persönlich gewährt: Das Mitglied zeigt das eingelöste Angebot."
+  },
   "offer_value": {
     "bonus_points": "{{value}} Bonuspunkte",
     "discount": "{{value}} % Rabatt",

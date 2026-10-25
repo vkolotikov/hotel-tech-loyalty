@@ -3,12 +3,15 @@
 namespace App\Services\Loyalty;
 
 use App\Models\AuditLog;
+use App\Models\LoyaltyMember;
 use App\Models\PointsTransaction;
+use App\Models\Reward;
 use App\Models\RewardRedemption;
 use App\Models\User;
 use App\Services\AnalyticsService;
 use App\Services\LoyaltyService;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 /**
  * Fulfilling and cancelling a reward redemption: the one writer both the full
@@ -104,6 +107,66 @@ final class RedemptionActions
         AuditLog::record('reward_redemption_cancelled', $row,
             ['status' => 'cancelled'], ['status' => $row->getOriginal('status')],
             $by, "Redemption {$row->code} cancelled");
+        AnalyticsService::clearDashboardCache();
+
+        return $row;
+    }
+
+    /**
+     * Release 7 (spec 2026-10-25 §2): a free redemption of a catalogue reward — what a full stamp card gives. Like the
+     * member's own redemption (`Member/RewardController::redeem`) it is pending, with the code the member shows at the
+     * desk, and it takes one from a limited stock; it costs no points (`points_spent` 0, so a cancel gives none back),
+     * and the reward's per-member limit — a rule for spending points — does not apply to it. Audited
+     * `reward_redemption_issued`; fulfilled and cancelled like any other.
+     *
+     * Under the reward row's lock, in the caller's transaction when there is one (a savepoint). Never call it holding a
+     * member row's lock: a member's own redemption locks the reward row, then the member row (StampCards issues it after
+     * the stamp's transaction has committed). Null, with nothing written, when the reward is not this organisation's or
+     * can no longer be had (switched off, expired, out of stock): the caller then gives something else.
+     */
+    public function issueFree(LoyaltyMember $member, int $rewardId, string $why, ?User $by = null): ?RewardRedemption
+    {
+        $orgId = (int) $member->organization_id;
+
+        $row = DB::transaction(function () use ($member, $orgId, $rewardId, $why) {
+            $reward = Reward::withoutGlobalScopes()->where('organization_id', $orgId)->whereKey($rewardId)->lockForUpdate()->first();
+            if (!$reward || !$reward->isRedeemable()) {
+                return null;
+            }
+            if ($reward->stock !== null) {
+                // By the row, not the model: a brand bound in this request must not narrow the update to nothing.
+                Reward::withoutGlobalScopes()->whereKey($reward->id)->where('stock', '>', 0)->decrement('stock');
+            }
+
+            // The member's own redemption's code: REW- and eight letters or digits, unique in the organisation.
+            $code = null;
+            for ($i = 0; $i < 4 && $code === null; $i++) {
+                $try = 'REW-' . strtoupper(Str::random(8));
+                if (!RewardRedemption::withoutGlobalScopes()->where('organization_id', $orgId)->where('code', $try)->exists()) {
+                    $code = $try;
+                }
+            }
+
+            $row = new RewardRedemption();
+            $row->forceFill([
+                'organization_id' => $orgId,
+                'member_id'       => (int) $member->id,
+                'reward_id'       => (int) $reward->id,
+                'points_spent'    => 0,
+                'code'            => $code ?? 'REW-' . strtoupper(Str::random(12)),
+                'status'          => RewardRedemption::STATUS_PENDING,
+                'notes'           => mb_substr($why, 0, 500),
+            ])->save();
+
+            return $row->setRelation('reward', $reward);
+        });
+        if ($row === null) {
+            return null;
+        }
+
+        AuditLog::record('reward_redemption_issued', $row,
+            ['status' => 'pending', 'reward_id' => (int) $row->reward_id, 'points_spent' => 0, 'why' => $why], [],
+            $by, "Redemption {$row->code} issued free for {$row->reward?->name}: {$why}");
         AnalyticsService::clearDashboardCache();
 
         return $row;

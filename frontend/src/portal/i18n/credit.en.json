@@ -1,0 +1,19 @@
+{
+  "balance": "Credit: {{amount}}",
+  "at_desk": "Spend it at the desk: ask the team to take it off your bill.",
+  "off": "New credit is no longer earned; what you have can still be spent at the desk.",
+  "none": "You get credit back on what you spend, from your next visit.",
+  "recent": "Recent credit",
+  "line": {
+    "earn_appointment": "Cashback on an appointment",
+    "earn_stay": "Cashback on a stay",
+    "earn_purchase": "Cashback on a purchase",
+    "earn": "Cashback",
+    "spend": "Spent at the desk",
+    "reverse": "Cashback taken back (refunded or cancelled)",
+    "merge": "Moved from your other membership",
+    "forfeit": "Forfeited",
+    "adjust": "Correction",
+    "other": "Other"
+  }
+}

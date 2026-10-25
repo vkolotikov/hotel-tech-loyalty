@@ -6,6 +6,7 @@ use App\Models\LoyaltyMember;
 use App\Models\PointsTransaction;
 use App\Models\User;
 use App\Scopes\BrandScope;
+use App\Services\Loyalty\Visits\VisitRecorder;
 use App\Services\LoyaltyService;
 use Illuminate\Support\Facades\DB;
 
@@ -46,10 +47,16 @@ final class MemberLedger
     /**
      * Undo one of the member's lines. It must be theirs, not a reversal itself, and not reversed already; the check
      * is made again under the row's lock by the service.
+     *
+     * Release 7: a line of a desk visit (DeskVisit's check-in or purchase line, referenced `scan_event` + the visit's
+     * row) undoes the visit too, once the line's lock is released — VisitRecorder::reversed(): its stamp comes off an
+     * open card, its cashback goes back (never below zero), its tier spend is taken back. Each of those is idempotent,
+     * so reversing the visit's other line as well changes nothing more.
      */
     public function reverse(LoyaltyMember $member, int $lineId, string $reason, User $by): PointsTransaction
     {
-        return DB::transaction(function () use ($member, $lineId, $reason, $by) {
+        $deskVisit = null;
+        $reversal = DB::transaction(function () use ($member, $lineId, $reason, $by, &$deskVisit) {
             $line = $this->lines($member)->whereKey($lineId)->lockForUpdate()->first();
             if (!$line) {
                 throw LoyaltyRefused::notFound();
@@ -60,10 +67,19 @@ final class MemberLedger
             if ($line->is_reversed) {
                 throw new LoyaltyRefused('already_reversed', 'This line was already reversed.', 409);
             }
+            if ($line->reference_type === 'scan_event' && $line->reference_id !== null) {
+                $deskVisit = (int) $line->reference_id;
+            }
 
             // This transaction holds the line's lock, so the service's own re-check sees what was checked here.
             return $this->loyalty->reverseTransaction($line, $reason, $by);
         });
+
+        if ($deskVisit !== null) {
+            app(VisitRecorder::class)->reversed((int) $member->organization_id, 'scan_event', $deskVisit, $by);
+        }
+
+        return $reversal;
     }
 
     /** A line as the history shows it. @return array<string, mixed> */

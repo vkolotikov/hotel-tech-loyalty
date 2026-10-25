@@ -1,0 +1,95 @@
+{
+  "title": "Guthaben",
+  "use_action": "Guthaben einlösen",
+  "adjust_action": "Korrigieren",
+  "earning": "Mitglieder bekommen {{percent}}% ihrer Ausgaben als Guthaben zurück, einzulösen am Empfang.",
+  "off": "Cashback ist ausgeschaltet: Neues wird nicht gutgeschrieben, dieses Guthaben kann am Empfang weiter eingelöst werden.",
+  "none": "Noch kein Guthaben.",
+  "history": "Guthabenverlauf",
+  "by": "von {{name}}",
+  "line_balance": "Guthaben {{amount}}",
+  "use_title": "Guthaben von {{name}} einlösen",
+  "adjust_title": "Guthaben von {{name}} korrigieren",
+  "amount": "Betrag ({{currency}})",
+  "adjust_hint": "Ein Minuszeichen zieht Guthaben ab, z. B. -5.",
+  "note": "Notiz (optional)",
+  "note_hint": "Das Mitglied sieht sie in seinem Guthabenverlauf.",
+  "note_example": "z. B. Mittagessen für zwei",
+  "reason": "Grund",
+  "reason_example": "z. B. Cashback für einen Besuch fehlte",
+  "balance_now": "Guthaben jetzt: {{amount}}",
+  "balance_then": "Guthaben danach: {{amount}}",
+  "use_do": "Guthaben abziehen",
+  "adjust_do": "Korrektur speichern",
+  "line": {
+    "earn_appointment": "Cashback für einen Termin",
+    "earn_stay": "Cashback für einen Aufenthalt",
+    "earn_purchase": "Cashback für einen Einkauf",
+    "earn": "Cashback",
+    "spend": "Am Empfang eingelöst",
+    "reverse": "Cashback zurückgenommen (erstattet oder storniert)",
+    "merge": "Beim Zusammenführen zweier Mitgliedschaften übertragen",
+    "forfeit": "Verfallen, als das Mitglied gelöscht wurde",
+    "adjust": "Korrektur",
+    "other": "Sonstiges"
+  },
+  "done": {
+    "use": "{{amount}} abgezogen. Guthaben jetzt: {{balance}}.",
+    "adjust": "Um {{amount}} korrigiert. Guthaben jetzt: {{balance}}."
+  },
+  "load": {
+    "error": {
+      "not_found": "Dieses Mitglied ist nicht mehr in Ihrem Programm.",
+      "network": "Keine Verbindung. Prüfen Sie das Netzwerk und versuchen Sie es erneut.",
+      "unknown": "Das Guthaben konnte nicht geladen werden. Bitte versuchen Sie es erneut."
+    }
+  },
+  "use": {
+    "problem": {
+      "amount": "Geben Sie einen Betrag über null ein.",
+      "decimals": "Die Währung des Hauses hat nicht so viele Nachkommastellen.",
+      "too_large": "Das ist mehr, als ein Schritt abziehen darf.",
+      "over_balance": "Das Mitglied hat nur {{balance}} Guthaben.",
+      "below_zero": "Das Guthaben kann nicht unter null fallen.",
+      "reason": "Sagen Sie, warum."
+    },
+    "error": {
+      "credit_short": "Das Mitglied hat nur {{balance}} Guthaben.",
+      "bad_amount": "Geben Sie einen Betrag über null ein, den die Währung des Hauses darstellen kann.",
+      "bad_currency": "Die Währung des Hauses ist nicht festgelegt. Eine Führungskraft kann sie unter „Karte & App“ festlegen.",
+      "already_erased": "Dieses Mitglied wurde gelöscht; sein Guthaben ist verfallen.",
+      "key_reused": "Dieser Klick wurde schon für etwas anderes verwendet. Schließen Sie den Dialog und versuchen Sie es erneut.",
+      "not_allowed": "Ihr Konto darf das nicht. Eine Führungskraft kann das unter „Team“ im vollständigen Admin ändern.",
+      "no_capability": "Ihr Konto darf das nicht. Eine Führungskraft kann das unter „Team“ im vollständigen Admin ändern.",
+      "invalid": "Prüfen Sie den Betrag.",
+      "not_found": "Dieses Mitglied ist nicht mehr in Ihrem Programm.",
+      "network": "Keine Verbindung: Nichts wurde gespeichert. Versuchen Sie es erneut.",
+      "unknown": "Das Guthaben konnte nicht eingelöst werden. Nichts wurde abgezogen; bitte versuchen Sie es erneut."
+    }
+  },
+  "adjust": {
+    "problem": {
+      "amount": "Geben Sie einen Betrag ungleich null ein: mit Minuszeichen, um Guthaben abzuziehen.",
+      "decimals": "Die Währung des Hauses hat nicht so viele Nachkommastellen.",
+      "too_large": "Das ist mehr, als eine Korrektur bewegen darf.",
+      "over_balance": "Das Mitglied hat nur {{balance}} Guthaben.",
+      "below_zero": "Das Guthaben kann nicht unter null fallen: Das Mitglied hat {{balance}}.",
+      "reason": "Sagen Sie, warum das Guthaben korrigiert wird."
+    },
+    "error": {
+      "credit_short": "Das Guthaben kann nicht unter null fallen: Das Mitglied hat {{balance}}.",
+      "bad_amount": "Geben Sie einen Betrag ungleich null ein, den die Währung des Hauses darstellen kann.",
+      "bad_currency": "Die Währung des Hauses ist nicht festgelegt. Eine Führungskraft kann sie unter „Karte & App“ festlegen.",
+      "reason_required": "Sagen Sie, warum das Guthaben korrigiert wird.",
+      "already_erased": "Dieses Mitglied wurde gelöscht; sein Guthaben ist verfallen.",
+      "key_reused": "Dieser Klick wurde schon für etwas anderes verwendet. Schließen Sie den Dialog und versuchen Sie es erneut.",
+      "manager_only": "Nur Inhaber oder Führungskräfte können Guthaben korrigieren.",
+      "not_allowed": "Nur Inhaber oder Führungskräfte können Guthaben korrigieren.",
+      "no_capability": "Nur Inhaber oder Führungskräfte können Guthaben korrigieren.",
+      "invalid": "Prüfen Sie den Betrag und den Grund.",
+      "not_found": "Dieses Mitglied ist nicht mehr in Ihrem Programm.",
+      "network": "Keine Verbindung: Nichts wurde gespeichert. Versuchen Sie es erneut.",
+      "unknown": "Das Guthaben konnte nicht korrigiert werden. Nichts wurde geändert; bitte versuchen Sie es erneut."
+    }
+  }
+}

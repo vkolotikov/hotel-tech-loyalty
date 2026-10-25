@@ -43,8 +43,21 @@ export interface Bootstrap {
   venue: { timezone: string; timezone_named: boolean; today: DateKey; currency: string }
   features: Features
   staff: { id: number; name: string; role: string | null; can: Can }
-  programme: { on: boolean; tiers: TierRef[] }
+  programme: { on: boolean; tiers: TierRef[]; ways?: Ways }
   counts: { members: number; requests_waiting: number }
+}
+
+/** Release 7 (spec 2026-10-25): which ways to earn and reward the venue uses (ProgrammeOptions), for the screens that offer them. */
+export interface Ways {
+  stamps: boolean
+  stamps_per_card: number
+  checkin: boolean
+  checkin_points: number
+  desk_earn: boolean
+  cashback: boolean
+  cashback_percent: number
+  /** The setup wizard was applied or skipped (`programme_setup_completed_at`). */
+  setup_done: boolean
 }
 
 export interface MemberRow {
@@ -59,6 +72,8 @@ export interface MemberRow {
   is_active: boolean
   joined_at: string | null
   last_activity_at: string | null
+  /** Release 7 (spec 2026-10-25 §3): cashback credit in the venue's currency (CreditLedger); absent from a server before release 7. */
+  credit_balance?: number
 }
 
 export interface Figures {

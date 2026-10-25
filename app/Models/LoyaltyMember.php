@@ -42,6 +42,8 @@ class LoyaltyMember extends Model
         'tier_override_until' => 'datetime',
         'tier_locked' => 'boolean',
         'qualifying_spend' => 'decimal:2',
+        // Release 7: cashback credit — written only by App\Services\Loyalty\Credit\CreditLedger (never mass-assigned).
+        'credit_balance' => 'decimal:2',
     ];
 
     public function user(): BelongsTo

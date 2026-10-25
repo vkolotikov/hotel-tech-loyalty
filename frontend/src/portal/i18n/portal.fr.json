@@ -41,6 +41,10 @@
     "already_claimed_offer": "Déjà utilisée — voir ci-dessus", "fully_claimed": "Entièrement utilisée", "used_on": "Utilisée le {{date}}",
     "valid_until": "Valable jusqu'au {{date}}", "ready_to_use": "Prête à l'emploi — présentez ceci à l'accueil", "ends": "Se termine le {{date}}",
     "percent_off": "{{value}} % de réduction", "amount_off": "{{value}} de réduction", "points_multiplier": "Points x{{value}}",
+    "bonus_points_one": "+{{count}} point", "bonus_points_few": "+{{count}} points", "bonus_points_many": "+{{count}} points", "bonus_points_other": "+{{count}} points",
+    "claimed_points_one": "+{{count}} point ajouté à votre solde", "claimed_points_few": "+{{count}} points ajoutés à votre solde", "claimed_points_many": "+{{count}} points ajoutés à votre solde", "claimed_points_other": "+{{count}} points ajoutés à votre solde",
+    "perk_free_night": "Une nuit offerte par l'établissement — présentez ceci à la réservation ou à l'arrivée.", "perk_upgrade": "Un surclassement offert par l'établissement — présentez ceci à l'arrivée.",
+    "perk_cashback": "Un remboursement offert par l'établissement à l'accueil — présentez ceci au paiement.", "points_added_on": "Points ajoutés le {{date}}",
     "codes_empty": "Les codes que vous échangez seront conservés ici.", "code_pending": "À présenter à l'accueil", "code_fulfilled": "Utilisé", "code_cancelled": "Annulé",
     "codes_hint": "Chaque code fonctionne une seule fois. L'établissement le marque comme utilisé lorsque vous le présentez."
   },
@@ -78,7 +82,7 @@
   "activity": { "title": "Activité",
     "entries_one": "{{count}} entrée", "entries_few": "{{count}} entrées", "entries_many": "{{count}} entrées", "entries_other": "{{count}} entrées",
     "empty": "Aucune activité de points pour l'instant. Votre première visite apparaîtra ici.", "balance": "solde {{count}}", "reversed": "annulé",
-    "type": { "earn": "Gagné", "bonus": "Bonus", "redeem": "Échangé", "adjust": "Ajustement", "expire": "Expiré", "reverse": "Annulé" } },
+    "type": { "earn": "Gagné", "bonus": "Bonus", "redeem": "Échangé", "adjust": "Ajustement", "expire": "Expiré", "reverse": "Annulé", "referral": "Parrainage" } },
   "inbox": {
     "title": "Messages", "mark_all": "Tout marquer comme lu", "mark_failed": "Impossible de marquer vos messages comme lus. Veuillez réessayer.", "unread": "Non lu",
     "empty_title": "Rien pour l'instant", "empty_body": "Quand {{venue}} vous enverra des nouvelles de vos points, de vos offres, de votre niveau ou de vos réservations, vous les trouverez ici.",
@@ -97,6 +101,7 @@
     "sms": "Offres par SMS", "sms_hint": "Des SMS sur les offres, au {{phone}}. Désactivé tant que vous ne l'activez pas.", "sms_needs_phone": "Ajoutez votre numéro de téléphone ci-dessus pour recevoir les offres par SMS.",
     "service_messages": "Vous recevrez toujours les messages de service liés à votre compte (réinitialisation du mot de passe, confirmations de réservation, etc.), quels que soient ces réglages.",
     "invite_title": "Inviter un ami", "invite_body": "Partagez votre lien — vous serez tous les deux récompensés lorsqu'il rejoindra.", "invite_share": "Partager mon lien", "invite_copy": "Copier le lien",
+    "invite_body_first_visit": "Partagez votre lien — vous serez tous les deux récompensés après la première visite de votre ami.",
     "invite_stats_one": "{{count}} ami a rejoint", "invite_stats_few": "{{count}} amis ont rejoint", "invite_stats_many": "{{count}} amis ont rejoint", "invite_stats_other": "{{count}} amis ont rejoint",
     "invite_unavailable": "Les liens de parrainage ne sont pas encore disponibles.",
     "password_title": "Mot de passe", "password_change": "Changer le mot de passe", "password_current": "Mot de passe actuel", "password_new": "Nouveau mot de passe",

@@ -1,0 +1,73 @@
+{
+  "title": "Visits",
+  "check_in": "Check in",
+  "add_purchase": "Add a purchase",
+  "purchase_title": "Add a purchase for {{name}}",
+  "amount": "Amount ({{currency}})",
+  "amount_hint": "Earns points at your rate.",
+  "amount_hint_cashback": "Earns points at your rate, and {{percent}}% back as credit.",
+  "amount_is": "A purchase of {{amount}}",
+  "note": "Note (optional)",
+  "note_hint": "Shows on the points line in the member’s history.",
+  "note_example": "e.g. Lunch for two",
+  "add": "Add the purchase",
+  "card_label": "{{have}} of {{needed}} stamps",
+  "card_line": "{{have}} of {{needed}} — {{left}} to go",
+  "completed": "Cards completed: {{cards}}",
+  "off": "The stamp card is switched off: this card keeps its stamps but gets no new ones.",
+  "recent": "Recent stamps",
+  "cards": "Completed cards",
+  "card_number": "Card {{number}}",
+  "said": {
+    "already_today": "Already checked in today",
+    "checked_in": "Checked in",
+    "checkin_points": "+{{points}} check-in points",
+    "purchase_points": "+{{points}} points",
+    "stamp": "+1 stamp — {{have}} of {{needed}}",
+    "stamp_had": "Today’s stamp is already on the card",
+    "card_points": "Card complete! +{{points}} points",
+    "card_reward": "Card complete! Free reward: {{reward}}",
+    "credit": "+{{amount}} credit"
+  },
+  "source": {
+    "appointment": "Appointment",
+    "stay": "Stay",
+    "check_in": "Check-in",
+    "purchase": "Purchase"
+  },
+  "given": {
+    "points": "+{{points}} points",
+    "reward": "Free reward: {{reward}}"
+  },
+  "gives": {
+    "points": "A full card gives {{points}} points.",
+    "reward": "A full card gives a free {{reward}}."
+  },
+  "problem": {
+    "amount": "Enter the amount of the purchase, above 0.",
+    "too_much": "The amount can be at most {{max}}.",
+    "decimals": "The amount has at most two decimals.",
+    "whole": "Amounts in {{currency}} are whole numbers."
+  },
+  "load": {
+    "error": {
+      "not_found": "This member is not in your programme any more.",
+      "network": "No connection. Check the network and try again.",
+      "unknown": "The stamp card could not be loaded. Please try again."
+    }
+  },
+  "desk": {
+    "error": {
+      "option_off": "Check-in and earning at the desk are switched off. A manager can switch them on under Ways to earn.",
+      "desk_earn_off": "Earning at the desk is switched off. A manager can switch it on under Ways to earn.",
+      "amount_required": "Enter the amount of the purchase.",
+      "inactive": "This member’s account is switched off.",
+      "not_allowed": "Your account may not award points. A manager can allow it under Team in the full admin.",
+      "no_capability": "Your account may not award points. A manager can allow it under Team in the full admin.",
+      "invalid": "Check the amount: above 0, at most 1,000,000, in your currency’s units.",
+      "not_found": "This member is not in your programme any more.",
+      "network": "No connection: nothing was saved. Try again.",
+      "unknown": "That did not work. Nothing was saved; please try again."
+    }
+  }
+}
