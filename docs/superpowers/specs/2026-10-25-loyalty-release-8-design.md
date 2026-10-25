@@ -58,14 +58,15 @@ nothing sets a member's judging model). No places, no membership end date, no ev
   (`scan_type access`, `access_place_id`, `result granted|denied`, `action_taken` = the reason). Answer
   `{ member, verdict: AccessVerdict + { place: {id,name}, entry_id }, benefits: [{name, value, category}] }`. A code
   that names nobody keeps its refusal (`not_found`, `expired`, `revoked`, `used_up`) and is logged as `denied`.
-- With an event: delegated to part E's `EventCheckIn::checkIn()` (§4); the answer adds `event {id,title}`,
+- With an event: delegated to part E's `EventCheckIn::checkIn()` (§4), which writes the event's own scan row
+  (`scan_type event`, every attempt) and the attendance; the answer adds `event {id,title}`,
   `checked_in` (bool), `already_in` (time) and `signed_up` (bool), `points` (given now).
 - A replay with the same `idempotency_key` answers the first result without a second entry.
 
 **Entries:** `GET places/{id}/entries?day=Y-m-d` — that venue day's scans at the place (time on the venue's clock,
 member, granted/denied, reason, staff), newest first, 50 a page; and `today` counts in the places list.
 
-**Setup (easy):** a **Places** tab on Program (beside Tiers and Benefits): each place a card — name, "Who may enter":
+**Setup (easy):** a **Places** section on Program (after Tiers and Benefits): each place a card — name, "Who may enter":
 *Every member* or tick tiers (the tiers as coloured chips), switched on/off, today's entries count, Edit; Add a place
 (a dialog with the same three fields). A tier card on the Tiers tab shows "Can enter: Main entrance, Spa" (read from
 the places — one source). Read: every active staff member; changes: managers. AccessMap:
@@ -122,8 +123,8 @@ One page, `/loyalty/scan`, rebuilt around a **"Scanning for"** choice at the top
 - Program's tier form shows the floor of the chosen measure ("Visits to reach this tier", "Spend to reach this tier"),
   the others hidden; progress everywhere (workspace member page and Scan, portal Home) reads "3 more visits to Gold" /
   "€120 more to Gold" from the server.
-- Two presets for general memberships: **Members' club** (tiers by visits, places Main entrance and Lounge) and
-  **Events & community** (tiers by visits, events, stamps), offered in the setup wizard.
+- Two presets for general memberships: **Members' club** (tiers by visits) and **Events & community** (tiers by visits,
+  stamps on), offered in the setup wizard. A preset adds no places: the venue adds its own (§1).
 
 ## 4. Events (part E)
 
@@ -157,8 +158,9 @@ Scan with this event chosen), add a member, cancel the event (signed-up members 
 Managers and `can_manage_offers` create and change events (AccessMap `admin/loyalty/events` →
 `['staff', 'can_manage_offers', 'loyalty']`).
 
-**Portal:** an **Events** page (`/portal/events`, in the menu when the venue has a published upcoming event the member
-may attend): upcoming events open to the member's tier — when, where, points, "Sign up" / "You're signed up · Cancel",
+**Portal:** an **Events** page (`/portal/events`, in the menu when the venue has a published event that has not ended
+— the phone bar holds at most five entries, so where Events would be a sixth it is reached from Home's card and the
+Rewards page instead): upcoming events open to the member's tier — when, where, points, "Sign up" / "You're signed up · Cancel",
 "Full"; past events the member attended. Home shows the next event the member signed up for. Member endpoints
 `GET member/portal/events`, `POST member/portal/events/{id}/sign-up`, `DELETE member/portal/events/{id}/sign-up`.
 
