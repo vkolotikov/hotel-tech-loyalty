@@ -162,6 +162,38 @@ class OptionsTest extends TestCase
         $this->assertSame(0, HotelSetting::withoutGlobalScopes()->where('organization_id', $ours)->where('key', 'stamps_enabled')->count());
     }
 
+    public function test_a_way_that_earns_on_a_booking_counts_visits_from_the_day_it_was_switched_on(): void
+    {
+        $orgId = $this->org->id;
+        $today = \App\Services\Portal\PortalBootstrap::venueToday($orgId)->toDateString();
+        $before = \App\Services\Portal\PortalBootstrap::venueToday($orgId)->subMonths(2)->toDateString();
+        $this->assertFalse(ProgrammeOptions::countsVisitOn($orgId, 'stamps_enabled', $today), 'off: nothing counts');
+
+        $this->asManager()->putJson($this->api('options'), ['options' => ['stamps_enabled' => true, 'cashback_enabled' => true]])->assertOk();
+
+        $this->assertSame($today, ProgrammeOptions::onSince($orgId, 'stamps_enabled'));
+        $this->assertSame($today, ProgrammeOptions::onSince($orgId, 'cashback_enabled'));
+        $this->assertTrue(ProgrammeOptions::countsVisitOn($orgId, 'stamps_enabled', $today));
+        $this->assertFalse(ProgrammeOptions::countsVisitOn($orgId, 'stamps_enabled', $before), 'a booking from before the switch earns no stamp');
+        $this->assertFalse(ProgrammeOptions::countsVisitOn($orgId, 'cashback_enabled', $before));
+
+        // Saving it on again is no switch: the day stays. The page shows none of this.
+        HotelSetting::withoutGlobalScopes()->where('organization_id', $orgId)->where('key', 'stamps_enabled_since')->update(['value' => $before]);
+        HotelSetting::flushCacheFor($orgId);
+        $this->asManager()->putJson($this->api('options'), ['options' => ['stamps_enabled' => true]])->assertOk()
+            ->assertJsonMissingPath('options.stamps_enabled_since');
+        $this->assertSame($before, ProgrammeOptions::onSince($orgId, 'stamps_enabled'));
+
+        // Off and on again: visits count from the new day.
+        $this->asManager()->putJson($this->api('options'), ['options' => ['stamps_enabled' => false]])->assertOk();
+        $this->asManager()->putJson($this->api('options'), ['options' => ['stamps_enabled' => true]])->assertOk();
+        $this->assertSame($today, ProgrammeOptions::onSince($orgId, 'stamps_enabled'));
+
+        // An option on before the day was kept (no row) refuses no visit.
+        HotelSetting::withoutGlobalScopes()->where('organization_id', $orgId)->where('key', 'cashback_enabled_since')->delete();
+        $this->assertTrue(ProgrammeOptions::countsVisitOn($orgId, 'cashback_enabled', $before));
+    }
+
     public function test_every_field_is_checked_and_a_refused_change_writes_nothing(): void
     {
         $retired = Reward::create(['name' => 'Retired', 'points_cost' => 50, 'is_active' => false]);

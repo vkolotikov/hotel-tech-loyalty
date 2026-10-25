@@ -190,7 +190,7 @@ final class AppointmentMoney
     public function afterRefunds(ServiceBooking $b, User $actor): void
     {
         $s = self::summary($b);
-        if ($b->points_awarded_at === null || $s['paid_in'] <= 0 || $s['paid_back'] < $s['paid_in'] - 0.004) {
+        if ($s['paid_in'] <= 0 || $s['paid_back'] < $s['paid_in'] - 0.004) {
             return;
         }
         try {

@@ -5,11 +5,11 @@ namespace App\Services\Loyalty;
 use App\Enums\PaymentStatus;
 use App\Models\BookingMirror;
 use App\Models\Guest;
-use App\Models\HotelSetting;
 use App\Models\LoyaltyMember;
 use App\Models\PointsTransaction;
 use App\Models\ServiceBooking;
 use App\Models\User;
+use App\Services\Loyalty\Programme\ProgrammeOptions;
 use App\Services\Loyalty\Visits\Visit;
 use App\Services\Loyalty\Visits\VisitRecorder;
 use App\Services\LoyaltyService;
@@ -443,14 +443,10 @@ final class BookingPointsService
         return $status === PaymentStatus::Open->value && (string) $mirror->payment_method === 'pay_at_venue';
     }
 
+    /** The venue's "points on spend" option (release 7: read through ProgrammeOptions, on when never set). */
     public function pointsOnBookingsEnabled(int $orgId): bool
     {
-        $raw = HotelSetting::withoutGlobalScopes()
-            ->where('organization_id', $orgId)
-            ->where('key', 'points_on_bookings')
-            ->value('value');
-
-        return $raw === null || filter_var($raw, FILTER_VALIDATE_BOOLEAN);
+        return (bool) ProgrammeOptions::get($orgId, 'points_on_bookings');
     }
 
     /** Run $fn with current_organization_id bound to $orgId, then restore whatever was bound before. */

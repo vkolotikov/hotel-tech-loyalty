@@ -187,6 +187,7 @@ final class ProgrammeOptions
 
         $before = self::for($orgId);
         self::write($orgId, $clean);
+        self::markSwitchedOn($orgId, $before, $clean);
         $after = self::for($orgId);
 
         $changed = array_filter(array_keys($clean), fn (string $k) => $before[$k] !== $after[$k]);
@@ -210,6 +211,58 @@ final class ProgrammeOptions
     }
 
     /**
+     * The ways that earn on a booking's visit (a stay, an appointment) count visits from the venue day they were switched
+     * on: a booking completed or departed before then earns no stamp and no cashback when it is touched later (a status
+     * change, the nightly stay sweep). Kept beside the option, not in OPTIONS: nobody sets it but the switch.
+     */
+    public const ON_SINCE = [
+        'stamps_enabled'   => 'stamps_enabled_since',
+        'cashback_enabled' => 'cashback_enabled_since',
+    ];
+
+    /**
+     * The venue day (Y-m-d) the option was last switched on, or null when that was never recorded (the option was on
+     * before release 7 kept the day, or was never switched on here): no earlier visit is then refused.
+     */
+    public static function onSince(int $orgId, string $option): ?string
+    {
+        if (!isset(self::ON_SINCE[$option])) {
+            throw new \InvalidArgumentException("No switched-on day is kept for {$option}");
+        }
+        $raw = HotelSetting::withoutGlobalScopes()->where('organization_id', $orgId)->where('key', self::ON_SINCE[$option])->value('value');
+
+        return is_string($raw) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $raw) ? $raw : null;
+    }
+
+    /** Whether a visit on this venue day counts for the option (on, and on or after the day it was switched on). */
+    public static function countsVisitOn(int $orgId, string $option, string $venueDay): bool
+    {
+        if (!self::get($orgId, $option)) {
+            return false;
+        }
+        $since = self::onSince($orgId, $option);
+
+        return $since === null || $venueDay >= $since;
+    }
+
+    /**
+     * Records today (on the venue's clock) for every ON_SINCE option this change switched from off to on.
+     *
+     * @param array<string, mixed> $before
+     * @param array<string, mixed> $clean
+     */
+    private static function markSwitchedOn(int $orgId, array $before, array $clean): void
+    {
+        $today = null;
+        foreach (self::ON_SINCE as $option => $key) {
+            if (($clean[$option] ?? null) === true && $before[$option] !== true) {
+                $today ??= \App\Services\Portal\PortalBootstrap::venueToday($orgId)->toDateString();
+                self::writeRaw($orgId, $key, $today, 'Switched On Since');
+            }
+        }
+    }
+
+    /**
      * The wizard was applied or skipped: stamps `programme_setup_completed_at` (now) and answers it. The caller audits
      * what happened (`loyalty.programme_setup` / `loyalty.programme_setup_skipped`), so the stamp writes no
      * `loyalty.options_changed` row of its own.
@@ -228,25 +281,47 @@ final class ProgrammeOptions
      *
      * @param array<string, mixed> $clean
      */
+    /** One row outside OPTIONS (a switched-on day), written as write() writes, under the organisation named. */
+    private static function writeRaw(int $orgId, string $key, string $value, string $label): void
+    {
+        self::underOrg($orgId, function () use ($orgId, $key, $value, $label) {
+            $row = HotelSetting::withoutGlobalScopes()->firstOrNew(['organization_id' => $orgId, 'key' => $key]);
+            if (!$row->exists) {
+                $row->forceFill(['organization_id' => $orgId, 'type' => 'string', 'group' => 'loyalty', 'label' => $label]);
+            }
+            $row->value = $value;
+            $row->save();
+        });
+        HotelSetting::flushCacheFor($orgId);
+    }
+
     private static function write(int $orgId, array $clean): void
     {
-        // A new row takes the BOUND tenant's organisation (BelongsToOrganization's creating hook), so the organisation
-        // named is bound while writing — a console or queued caller with another tenant bound writes this one's rows.
+        self::underOrg($orgId, fn () => DB::transaction(function () use ($orgId, $clean) {
+            foreach ($clean as $key => $value) {
+                [$type, , $label] = self::OPTIONS[$key];
+                $row = HotelSetting::withoutGlobalScopes()->firstOrNew(['organization_id' => $orgId, 'key' => $key]);
+                if (!$row->exists) {
+                    $row->forceFill(['organization_id' => $orgId, 'type' => self::rowType($type), 'group' => 'loyalty', 'label' => $label]);
+                }
+                $row->value = self::store($type, $value);
+                $row->save();
+            }
+        }));
+        HotelSetting::flushCacheFor($orgId);
+    }
+
+    /**
+     * A new row takes the BOUND tenant's organisation (BelongsToOrganization's creating hook), so the organisation named
+     * is bound while writing — a console or queued caller with another tenant bound writes this one's rows.
+     */
+    private static function underOrg(int $orgId, \Closure $work): void
+    {
         $bound = app()->bound('current_organization_id');
         $prior = $bound ? app('current_organization_id') : null;
         app()->instance('current_organization_id', $orgId);
         try {
-            DB::transaction(function () use ($orgId, $clean) {
-                foreach ($clean as $key => $value) {
-                    [$type, , $label] = self::OPTIONS[$key];
-                    $row = HotelSetting::withoutGlobalScopes()->firstOrNew(['organization_id' => $orgId, 'key' => $key]);
-                    if (!$row->exists) {
-                        $row->forceFill(['organization_id' => $orgId, 'type' => self::rowType($type), 'group' => 'loyalty', 'label' => $label]);
-                    }
-                    $row->value = self::store($type, $value);
-                    $row->save();
-                }
-            });
+            $work();
         } finally {
             if ($bound) {
                 app()->instance('current_organization_id', $prior);
@@ -254,7 +329,6 @@ final class ProgrammeOptions
                 app()->forgetInstance('current_organization_id');
             }
         }
-        HotelSetting::flushCacheFor($orgId);
     }
 
     /**
