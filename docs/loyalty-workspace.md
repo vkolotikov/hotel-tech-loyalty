@@ -48,6 +48,10 @@ never offer what the server refuses. A deactivated staff row counts for nothing;
 | Check in a member, add a purchase at the desk | `can_award_points` (as Award) |
 | Use a member's credit at the desk | `can_redeem_points` (as Redeem); correct a balance (adjust, with a reason): managers |
 | Read a member's stamp card and credit lines | every active staff member |
+| Places (release 8): read them and their entries | every active staff member; add, change, switch off: managers |
+| Scan at a place or an event; sign a member up for an event or check one in by hand | every active staff member (an event's points are the event's) |
+| Events: create, change, publish, cancel | managers and `can_manage_offers` (as offers) |
+| A membership's end date: set, extend, remove | managers (as a tier change) |
 
 ## The API
 
@@ -74,6 +78,9 @@ staff member restricted to one brand is still held to it by the `brand` middlewa
 | Ways to earn (release 7) | `GET options`, `PUT options` (`options`: a partial change), `POST options/setup` (`preset`, `options`, `idempotency_key`), `POST options/setup/skip` |
 | Visits (release 7) | `POST members/{id}/check-in` (`amount`, `note`, `idempotency_key`), `GET members/{id}/stamps` |
 | Credit (release 7) | `GET members/{id}/credit?page` (25 a page), `POST members/{id}/credit/spend` (`amount`, `note`, `idempotency_key`), `POST members/{id}/credit/adjust` (`amount`, signed, `reason`, `idempotency_key`) |
+| Places (release 8) | `GET places`, `POST places`, `PUT places/{id}` (`name`, `description`, `admits` all\|tiers, `tier_ids`, `is_active`, `sort_order`, `idempotency_key`), `DELETE places/{id}` (switched off instead once it has entries or an event names it), `GET places/{id}/entries?day=&page=` (50 a page); `POST scan` takes `place_id` or `event_id` |
+| Membership (release 8) | `PUT members/{id}/validity` (`valid_until` Y-m-d\|null, or `extend` 1m\|3m\|6m\|1y; `idempotency_key`); `GET members?state=expiring\|expired` |
+| Events (release 8) | `GET events?when=upcoming\|today\|past\|drafts&page=`, `POST events`, `GET/PUT/DELETE events/{id}`, `POST events/{id}/publish`, `/cancel` (`reason`), `GET events/{id}/people?page=`, `POST events/{id}/sign-ups` (`member_id`), `DELETE events/{id}/sign-ups/{memberId}`, `POST events/{id}/check-in` (`member_id`) |
 
 Refusals are `{error, message}`; the workspace shows its own words for each code (`lib/errors.ts`,
 `program/errors.ts`, `rewards/errors.ts`), never the server's sentence. Codes: `not_found`, `manager_only`,
@@ -94,7 +101,12 @@ feature. Release 7 adds, each in its area's `errors.ts`: the options' `key_reuse
 a preset's field error; the desk's `option_off` (neither check-in nor earning at the desk is on), `desk_earn_off`,
 `amount_required`, `inactive` (a switched-off or deleted member) and `key_reused`; credit's `credit_short` (with
 `balance`, `currency`), `bad_amount` (with `decimals`, `max`, `currency`), `reason_required`, `already_erased`,
-`key_reused` and `bad_currency`.
+`key_reused` and `bad_currency`. Release 8 adds: places' `name_taken` and `manager_only`; a scan at a place or event answers a verdict (`granted`,
+`reason`: `welcome`, `member_erased`, `member_off`, `expired`, `place_off`, `tier_not_allowed`, `event_not_open`,
+`event_full`, `not_signed_up`) rather than a refusal, and a place or event of another organisation is 404 with
+`gone`; validity's field errors and `already_erased`; events' `event_ended`, `wrong_state` (with `state`),
+`not_a_draft`, and sign-ups' `sign_up_closed`, `inactive`, `membership_expired`, `tier_not_allowed`,
+`already_signed_up`, `already_in`, `event_full`, `not_signed_up`, `cancel_closed`.
 
 ## Rules the code keeps (and the tests that keep them)
 
@@ -366,6 +378,51 @@ options page). Visits, stamps and credit belong to the whole programme: the full
 - `stamps`, `stamp_cards`, `credit_transactions` and `tier_qualification_counts` are in
   `MemberMergeService::MEMBER_COLUMNS`.
 
+### Release 8
+
+Spec: `docs/superpowers/specs/2026-10-25-loyalty-release-8-design.md` (owner 2026-10-25: membership for every industry
+— places that admit chosen tiers, an optional end date, events with portal sign-up and check-in, tiers by points,
+visits or spend, and a scan screen that is easy on location).
+
+- **Who gets in** is decided only by `Loyalty\Access\AccessDecision` (reads only), in this order: erased (staff's
+  erasure or the member's own deletion), switched off, expired (`membership_valid_until` before the venue's today —
+  the last day still lets in), place switched off, tier not admitted (`allowed_tiers` in ladder order), then for an
+  event: not open (published, from two hours before the start to the end, compared as the venue's wall clock), full
+  (a walk-in takes a place only while one is left after the standing sign-ups — as a sign-up does), not signed up
+  (sign-up on, walk-ins off); else welcome. A member already checked in at the event is welcomed again
+  (`AccessDecisionTest`).
+- **Places** (`Access\AccessPlaces`, the only writer): a name unique per organisation, every member or chosen tiers,
+  switched off instead of deleted once it has entries or an event names it; audited. A scan at a place writes one
+  `scan_events` row (`scan_type access`, `access_place_id`, `result` granted/denied, `action_taken` the reason; never
+  the raw code) and answers the verdict, the member and the tier's benefits; a code that names nobody is logged as a
+  refusal with no member. A replay with the same key answers the first result (`ScanReplay`, 10 minutes)
+  (`PlacesTest`, `ScanAccessTest`). `CardLookup` names a switched-off member for a scan with a place or an event
+  (`CardRead::namedMember()`); the desk scan and the full admin's scan behave as before.
+- **A membership's end date** (`Members\MembershipValidity`, the only writer; stored as a plain `Y-m-d`): managers set
+  a date, extend by 1/3/6/12 months from the later of today and the current end (a month without that day ends on its
+  last day), or remove it; audited `member.validity_changed`; a changed date allows a new reminder. The member's state:
+  `active`, `expiring` (≤ 30 days), `expired`, `off`. An expired member keeps earning and spending at the desk; only
+  places and events refuse. `php artisan loyalty:membership-reminders` (daily 08:37) keeps an inbox message and a push
+  14 days before the end, once per end date, on each venue's clock (`ValidityTest`, `ValidityRemindersTest`).
+  Add member and the import (`valid_until`, YYYY-MM-DD) take one too.
+- **Tier progress** (`tier_progress_by`: points | visits | spend, a card on Ways to earn): a visit of any source —
+  appointment, stay, check-in, purchase, event — adds one to `qualifying_visits`, once per member per venue day (every
+  visit writes a `tier_qualification_counts` row, so a reversal can hand the day's visit to another that day);
+  `assessTier()` judges every member by the programme's option (`min_visits`, `min_spend`; the member column
+  `tier_qualification_model` is no longer read) with the window, grace, lock and soft-landing rules as for points;
+  progress reads in those terms everywhere (`LoyaltyService::tierProgress()`) (`TierProgressTest`). Two presets:
+  Members' club and Events & community (by visits); a preset adds no places.
+- **Events** (`Events\EventEditor`, `EventSignUp`, `EventCheckIn`): times are the venue's wall clock, stored as written;
+  draft → published → cancelled; a published event's change of time or place, and its cancellation, keep an inbox
+  message for each member signed up (pushes 100 at a time). A sign-up needs the event published and not ended, sign-up
+  on, the member's tier admitted, the membership standing and a place left; one per member per event. A check-in takes
+  the member row lock, then the event row lock, then `AccessDecision`: one attendance per member per event, the event's
+  points (`bonus`, key `event_{event}_{member}`), a scan row for every attempt, and — after the commit — the visit
+  through `VisitRecorder` (stamp, referral, tier progress) (`EventsTest`, `EventSignUpTest`, `EventCheckInTest`).
+- `loyalty_event_registrations` and `loyalty_event_attendances` are in `MemberMergeService::MEMBER_COLUMNS` (one per
+  event survives, `EventMerge`); a merge adds the visits and keeps the later end date (a duplicate without one never
+  lifts the winner's).
+
 ## The workspace (`/loyalty`, `frontend/src/loyalty/`)
 
 - **Where it lives.** A lazily loaded app on the shared core (`src/workspace/`): own chunk, own shell, no full-admin
@@ -414,6 +471,19 @@ options page). Visits, stamps and credit belong to the whole programme: the full
 - **Credit** (`credit/`): the balance on the Scan result and a member's page while cashback is on or the member has a
   balance; Use credit (Redeem's right) and, for managers, Adjust; the credit lines on the member's page. The Delete and
   Merge dialogs say what happens to credit and stamps.
+- **Places** (release 8, `places/`): a section on Program — each place, who may enter (every member or tier chips),
+  today's entries; managers add and change them. Each tier card says where it can enter.
+- **The scan screen** (release 8, `scan/`): "Scanning for" — Desk, a place, or an event today — remembered on the
+  device (or `?place=`, `?event=`, `?desk` in the address). At a place or event the answer is a verdict: green
+  "Welcome, Ada", amber when the membership ends within 14 days, red "No access" with the reason in a sentence that
+  names the facts, red "Card not recognised", grey "Try again" when the network fails (never "No access"); then the
+  member, tier, end date and benefits, and "Today here". **Door mode** (`/loyalty/scan/door`): full screen for a tablet
+  at the entrance — continuous camera or reader, a duplicate within 3 seconds ignored, the verdict clearing after 4
+  seconds, an optional sound, the screen kept awake.
+- **Events** (release 8, `events/`): upcoming, past and drafts; New event in one dialog; an event's page with its
+  numbers and people, Start check-in and Door mode (the Scan page with the event chosen), check in by name, add a member.
+- **Membership** (release 8): a member's page shows the end date with Extend / Set a date / Remove (managers); the
+  members list shows Expiring soon and Expired; progress follows the programme's measure.
 
 ## What the workspace does not do
 
@@ -459,9 +529,13 @@ reports (Twilio's status callbacks); no receipts for the full admin's own push c
   a currency change the balance is shown in the new one (relabelled, never converted). The mobile apps are compiled
   bundles (`public/app`, `public/staff`; their source is not in this repository): they show neither stamps nor credit
   until their next build, which can read `GET /v1/member/stamps` and `GET /v1/member/credit`; the portal and the
-  workspace show both. Pushes are in English, as every other push. Only members judged on nights, stays, spend or
-  hybrid are reassessed by a visit, and nothing in the app sets a member's `tier_qualification_model`: every member is
-  judged on points today. A referral pending from before release 7 was already paid at sign-up.
+  workspace show both. Pushes are in English, as every other push. (Release 8 judges every member by the programme's
+  `tier_progress_by`.) A referral pending from before release 7 was already paid at sign-up.
+- **Release 8.** The portal menu offers Events when any published event has not ended, even if none is for the
+  member's tier (the page then says nothing is planned). Changing a published event's tiers keeps the sign-ups of
+  members no longer admitted (the door refuses them); a cancelled event's sign-ups stay as history. On visits or spend,
+  the member app's compiled bundle labels the progress number "points" until its next build. The two-tone sound and
+  NFC in door mode were not tried on a real device.
 
 ## Tests on PostgreSQL
 
@@ -519,6 +593,21 @@ server's file cache and environment make the register throttle answer 429 across
   Neither release 6 nor 6b could be checked on the live site from the build environment either (its network policy
   refuses `app.hexa-tech.uk`): `main` was checked by content instead (every source file equal to the branch, the
   built bundle carrying the new strings).
+- **Release 8** (membership for every industry; not deployed yet — deploy on the owner's word, by the recipe below).
+  Three migrations, each tried on PostgreSQL with rollback, adding tables and defaulted or nullable columns only:
+  `2026_10_25_140000_create_access_places` (`access_places`, `access_place_tiers`, `scan_events.access_place_id` and
+  `loyalty_event_id`), `140100_add_membership_validity_and_visits` (`loyalty_members.membership_valid_until`,
+  `membership_reminded_for`, `qualifying_visits`; `loyalty_tiers.min_visits`; `tier_qualification_counts.visits`,
+  `venue_day`) and `150000_create_loyalty_events` (events, their tiers, sign-ups, check-ins). One new scheduled
+  command: `php artisan loyalty:membership-reminders [--org=<organisation id>]` (daily 08:37). New workspace routes:
+  `places` (GET, POST, PUT, DELETE, `{id}/entries`), `members/{id}/validity`, `events` (GET, POST, GET/PUT/DELETE
+  `{id}`, `publish`, `cancel`, `people`, `sign-ups`, `check-in`); `POST scan` takes `place_id` / `event_id`. New member
+  routes: `GET member/portal/events`, `POST/DELETE member/portal/events/{id}/sign-up`. Nothing changes for members
+  until a venue adds a place, an end date or an event, or switches tier progress to visits or spend. Full-admin and
+  shared files it changes on purpose: `LoyaltyService` (tier assessment by the programme's measure, `tierProgress()`,
+  visits), `LoyaltyPresetService` (two presets — the full admin's preset picker lists them too), `MemberImportService`
+  (the full admin's import reads `valid_until` too), `MemberEnrolment`, `MemberMergeService`, `CardLookup`/`CardRead`,
+  `PortalBootstrap` (`capabilities.events`, `member.membership`), `routes/console.php`.
 - **Release 7** (ways to earn and reward; live as `main` ffabebf, 2026-10-25). Four
   migrations, each tried on PostgreSQL with rollback, adding tables and defaulted or nullable columns only:
   `2026_10_25_100000_create_stamp_tables` (`stamp_cards`, `stamps`), `110000_create_credit_ledger`
@@ -607,6 +696,17 @@ server's file cache and environment make the register throttle answer 429 across
 - Scan one member's QR code from the member app on a phone, and type one member number.
 - On Program, check the tiers and their colours; on Rewards, the catalogue and pending redemptions.
 - Reload admin tabs left open across the deploy.
+
+### After the release 8 deploy (owner, signed in)
+
+- Program → Places: add "Main entrance" (every member) and a lounge for your top tier. Each tier card says where it can
+  enter.
+- Scan: choose the lounge under "Scanning for" and scan a member of a lower tier (red, with the reason), then the
+  entrance (green). Try Door mode on a tablet or phone.
+- A member's page: Extend their membership by a month; the members list shows Expiring soon when it is within 30 days.
+- Events: create one for today, publish it, Start check-in, scan a member (+points, "Already checked in" the second
+  time); in the portal the member sees it under Events.
+- Ways to earn: "How members move up" stays on Points unless you choose otherwise.
 
 ### After the release 7 deploy (owner, signed in)
 
