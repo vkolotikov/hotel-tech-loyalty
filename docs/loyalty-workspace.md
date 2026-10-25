@@ -590,16 +590,17 @@ files on disk): run them one after the other.
 
 ## Deploying
 
-- Release 7 is live (`main` ffabebf, pushed 2026-10-25 on the owner's word: ways to earn and reward), built from
-  branch commit 40ffdaf: the next release's change list is `git diff --name-status 40ffdaf <tip>`. It was checked by
-  content (every source file on `main` equal to the branch, the four migrations present, the `LoyaltyApp` chunk
-  carrying "Ways to earn"); the live site could not be reached from the build environment. Release 6b went out as
+- Release 8 is live (`main` 3ffe5c5, pushed 2026-10-25 on the owner's word: membership for every industry), built
+  from branch commit 63651b8: the next release's change list is `git diff --name-status 63651b8 <tip>`. It was checked
+  by content (every source file on `main` equal to the branch, the three migrations and the reminder's schedule
+  present, the `LoyaltyApp` chunk carrying the new scan screen); the live site could not be reached from the build
+  environment. Release 7 went out as `main` ffabebf from 40ffdaf (ways to earn and reward). Release 6b went out as
   `main` 65b3415 from 8ac5a62 (campaigns and offers with no brand are every brand's), release 6 as 7835cf0 from
   1a37e68, release 5b as 5b481aa from ea8b364, release 5 as 8a04f86 from 6adf121, release 4 as 097432a from a7e87ae.
   Neither release 6 nor 6b could be checked on the live site from the build environment either (its network policy
   refuses `app.hexa-tech.uk`): `main` was checked by content instead (every source file equal to the branch, the
   built bundle carrying the new strings).
-- **Release 8** (membership for every industry; not deployed yet — deploy on the owner's word, by the recipe below).
+- **Release 8** (membership for every industry; live as `main` 3ffe5c5, 2026-10-25).
   Three migrations, each tried on PostgreSQL with rollback, adding tables and defaulted or nullable columns only:
   `2026_10_25_140000_create_access_places` (`access_places`, `access_place_tiers`, `scan_events.access_place_id` and
   `loyalty_event_id`), `140100_add_membership_validity_and_visits` (`loyalty_members.membership_valid_until`,
