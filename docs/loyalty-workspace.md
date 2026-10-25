@@ -510,13 +510,16 @@ server's file cache and environment make the register throttle answer 429 across
 
 ## Deploying
 
-- Release 6b is live (`main` 65b3415, pushed 2026-10-25 on the owner's word: campaigns and offers with no brand are
-  every brand's), built from branch commit 8ac5a62: the next release's change list is
-  `git diff --name-status 8ac5a62 <tip>`. Release 6 went out as `main` 7835cf0 from 1a37e68, release 5b as 5b481aa
-  from ea8b364, release 5 as 8a04f86 from 6adf121, release 4 as 097432a from a7e87ae. Neither release 6 nor 6b could
-  be checked on the live site from the build environment (its network policy refuses `app.hexa-tech.uk`): `main` was
-  checked by content instead (every source file equal to the branch, the built bundle carrying the new strings).
-- **Release 7** (ways to earn and reward; not deployed yet — deploy on the owner's word, by the recipe below). Four
+- Release 7 is live (`main` ffabebf, pushed 2026-10-25 on the owner's word: ways to earn and reward), built from
+  branch commit 40ffdaf: the next release's change list is `git diff --name-status 40ffdaf <tip>`. It was checked by
+  content (every source file on `main` equal to the branch, the four migrations present, the `LoyaltyApp` chunk
+  carrying "Ways to earn"); the live site could not be reached from the build environment. Release 6b went out as
+  `main` 65b3415 from 8ac5a62 (campaigns and offers with no brand are every brand's), release 6 as 7835cf0 from
+  1a37e68, release 5b as 5b481aa from ea8b364, release 5 as 8a04f86 from 6adf121, release 4 as 097432a from a7e87ae.
+  Neither release 6 nor 6b could be checked on the live site from the build environment either (its network policy
+  refuses `app.hexa-tech.uk`): `main` was checked by content instead (every source file equal to the branch, the
+  built bundle carrying the new strings).
+- **Release 7** (ways to earn and reward; live as `main` ffabebf, 2026-10-25). Four
   migrations, each tried on PostgreSQL with rollback, adding tables and defaulted or nullable columns only:
   `2026_10_25_100000_create_stamp_tables` (`stamp_cards`, `stamps`), `110000_create_credit_ledger`
   (`credit_transactions`, `loyalty_members.credit_balance` default 0), `120000_point_expiry_can_be_never`
