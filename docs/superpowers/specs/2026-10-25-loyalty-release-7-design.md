@@ -53,7 +53,7 @@ there are.
 - `POST options/setup` → the wizard's apply: `{ preset?, options }`. When the organisation has no tier at all and a
   preset is named, the preset is applied first (`LoyaltyPresetService::apply`, which never touches an organisation
   with members); then the options are saved and `programme_setup_completed_at` stamped. Manager only. Idempotent by
-  `Idempotency-Key`.
+  key (see below).
 - `POST options/setup/skip` stamps `programme_setup_completed_at` without changing anything.
 - AccessMap: `admin/loyalty/options` → `['staff', 'manager', 'loyalty']`.
 
@@ -104,7 +104,10 @@ issue path (pending, a code the member shows), then the next card opens; the mem
 `remove()` for reversals. `forMember()` for screens.
 
 **Desk check-in and purchase** (`App\Services\Loyalty\Visits\DeskVisit`, workspace endpoint
-`POST members/{id}/check-in` with `Idempotency-Key`; body `{ amount?: number, note?: string }`):
+`POST members/{id}/check-in`; body `{ amount?: number, note?: string, idempotency_key?: string }`):
+
+- A desk request writes one `scan_events` row; its visit is referenced as `scan_event` + that row's id (the stamp's
+  and the cashback's reference).
 
 - `checkin_enabled` or `desk_earn_enabled` must be on (409 `option_off`); an amount needs `desk_earn_enabled`.
 - Once per member per venue day as a check-in: a second the same day answers 200 with `already_today: true` and still
@@ -135,8 +138,8 @@ issue path (pending, a code the member shows), then the next card opens; the mem
   manager's correction.
 - Earned on every visit with a spend (`VisitRecorder`): a completed appointment's `total_amount`, a finished stay's
   `price_total`, a desk purchase's amount — only while `cashback_enabled`. Never earned on credit itself.
-- **Spending is at the desk only (R7-2):** workspace `POST members/{id}/credit/spend` `{ amount, note? }` with
-  `Idempotency-Key`; `can_redeem_points` (LoyaltyAccess::REDEEM), as Redeem. AccessMap
+- **Spending is at the desk only (R7-2):** workspace `POST members/{id}/credit/spend` `{ amount, note?,
+  idempotency_key? }`; `can_redeem_points` (LoyaltyAccess::REDEEM), as Redeem. AccessMap
   `admin/loyalty/members/{id}/credit` → `['staff', 'can_redeem_points', 'loyalty']`; `GET members/{id}/credit` (the
   lines). A manager's `adjust` with a reason.
 - **Screens**: a member's page and the Scan result show the balance and "Use credit"; the history lists credit lines.
@@ -179,6 +182,9 @@ issue path (pending, a code the member shows), then the next card opens; the mem
 - The mobile apps are compiled bundles in `public/app` and `public/staff` (their source is not in this repository):
   stamps and credit are visible in the portal and the workspace; the member API endpoints are there for the app's next
   build.
+- Every workspace write is idempotent the workspace's way (as Award and Redeem, `PointsController::key()`): a body
+  field `idempotency_key`, kept per organisation and member (the `Idempotency-Key` header is accepted when the body has
+  none); a replay writes nothing new and answers the first result.
 - Every new table with a member column goes into `MemberMergeService::MEMBER_COLUMNS`; every string in five
   locales; new SQL runs on PostgreSQL and SQLite; migrations add tables and nullable or defaulted columns only.
 
