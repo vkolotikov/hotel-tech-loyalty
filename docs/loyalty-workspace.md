@@ -570,8 +570,10 @@ production never has); on SQLite the real index still runs.
 `SESSION_DRIVER` `array`, `QUEUE_CONNECTION=sync`, `MAIL_MAILER=array`) after sourcing the credentials file: a local
 server's file cache and environment make the register throttle answer 429 across runs.
 
-**Still failing on PostgreSQL, on purpose** (2026-10-24; the release 7 run of 2026-10-25 failed the same 37 tests —
-18 in `Feature/Landing`, 19 elsewhere — and nothing new, with 6822 passing):
+**Still failing on PostgreSQL, on purpose** (2026-10-24; the release 7 and release 8 runs of 2026-10-25 failed the
+same 37 tests — 18 in `Feature/Landing`, 19 elsewhere — and nothing new, with 6822 and 6962 passing). Running the
+SQLite and PostgreSQL suites at the same time in one working tree can fail `DurableFilesTest` (both write the same
+files on disk): run them one after the other.
 
 - **Application code, reported and not changed in release 6:**
   - Landing pages read a service's price `0` and duration `60` (the columns' NOT NULL defaults) as a real price and
