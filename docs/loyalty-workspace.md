@@ -488,7 +488,12 @@ rows production's foreign keys and NOT NULL columns need. A test that must see a
 that refusal just before the statement on PostgreSQL (a real failure would abort the test's own transaction, which
 production never has); on SQLite the real index still runs.
 
-**Still failing on PostgreSQL, on purpose** (2026-10-24):
+**Environment for a full run.** Export `APP_ENV=testing` and the array drivers (`CACHE_STORE`, `CACHE_DRIVER`,
+`SESSION_DRIVER` `array`, `QUEUE_CONNECTION=sync`, `MAIL_MAILER=array`) after sourcing the credentials file: a local
+server's file cache and environment make the register throttle answer 429 across runs.
+
+**Still failing on PostgreSQL, on purpose** (2026-10-24; the release 7 run of 2026-10-25 failed the same 37 tests —
+18 in `Feature/Landing`, 19 elsewhere — and nothing new, with 6822 passing):
 
 - **Application code, reported and not changed in release 6:**
   - Landing pages read a service's price `0` and duration `60` (the columns' NOT NULL defaults) as a real price and
@@ -498,10 +503,10 @@ production never has); on SQLite the real index still runs.
 - **Fixed in release 6** (their tests now pass on PostgreSQL): an emptied field in the full admin's extras, services
   and voice-agent forms, and an emptied tier colour in the workspace, wrote NULL into a NOT NULL column (a 500); a
   failed public services booking whose error text was longer than 255 characters left no submission row.
-- **Test states production cannot hold** (18 tests, kept for SQLite): a member with no tier, no user or no referral
-  code; a tier assessment with no old tier; an organisation with no currency; a widget config with no key; two
-  organisations sharing a hold token; two default pipelines in one organisation; a landing redirect outliving its page;
-  an extra or a voice config holding NULL in a NOT NULL column.
+- **Test states production cannot hold** (20 tests, kept for SQLite): a member with no tier, no user or no referral
+  code; a member's user with no email; a tier assessment with no old tier; an organisation with no currency; a widget
+  config with no key; two organisations sharing a hold token; two default pipelines in one organisation; a landing
+  redirect outliving its page; an extra or a voice config holding NULL in a NOT NULL column.
 
 ## Deploying
 
