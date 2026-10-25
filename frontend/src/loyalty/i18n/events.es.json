@@ -1,1 +1,248 @@
-{}
+{
+  "card": {
+    "every_member": "Todos los miembros",
+    "visit": "Cuenta como visita"
+  },
+  "dialog": {
+    "edit_title": "Cambiar «{{title}}»",
+    "new_title": "Nuevo evento",
+    "title": "¿Qué es?",
+    "title_example": "p. ej. Cata de vinos, Clase de yoga, Noche de miembros",
+    "when": "Cuándo",
+    "date": "Día",
+    "start": "Empieza",
+    "end": "Termina",
+    "later_day": "Termina otro día",
+    "end_date": "Último día",
+    "clock": "Según el reloj de tu negocio ({{zone}}).",
+    "lasts": "Dura {{hours}} h {{minutes}} min.",
+    "where": "Dónde",
+    "where_label": "Lugar",
+    "elsewhere": "En otro sitio…",
+    "nowhere": "Sin indicar",
+    "location": "Dónde exactamente",
+    "location_hint": "Opcional: una sala, una dirección. Los lugares que añadas en Programa se pueden elegir aquí.",
+    "location_example": "p. ej. La terraza, 2.ª planta",
+    "who": "Quién puede venir",
+    "every_member": "Todos los miembros",
+    "chosen_tiers": "Niveles elegidos",
+    "tiers": "Niveles admitidos",
+    "gives": "Qué da asistir",
+    "points": "Puntos",
+    "points_hint": "Se dan al registrar la entrada. 0 para ninguno.",
+    "visit": "Cuenta como visita",
+    "visit_hint": "Un sello en la tarjeta de sellos y avance hacia el siguiente nivel donde los niveles van por visitas.",
+    "sign_up_section": "Inscripción",
+    "sign_up": "Los miembros se apuntan en el portal",
+    "sign_up_hint": "Ven el evento, se apuntan o cancelan; tú ves quién viene.",
+    "walk_ins": "Se puede venir sin inscripción",
+    "walk_ins_on": "A los miembros sin inscripción se les puede registrar la entrada mientras queden plazas.",
+    "walk_ins_off": "Solo entran los miembros apuntados.",
+    "capacity": "Plazas",
+    "capacity_hint": "Vacío: sin límite. Cada inscripción y cada asistente sin inscripción ocupa una plaza.",
+    "no_limit": "Sin límite",
+    "description": "Descripción",
+    "description_hint": "Opcional. Los miembros la leen en el portal.",
+    "told": "Si cambian la hora o el lugar, los miembros apuntados reciben un mensaje en su bandeja y una notificación push.",
+    "save_draft": "Guardar como borrador",
+    "publish": "Publicar",
+    "save": "Guardar cambios"
+  },
+  "page": {
+    "back": "Eventos",
+    "signed_up": "Apuntados",
+    "checked_in": "Han entrado",
+    "walk_ins": "Sin inscripción",
+    "room_left": "Plazas libres",
+    "start_check_in": "Empezar a registrar entradas",
+    "door_mode": "Modo puerta",
+    "by_name": "Registrar por nombre",
+    "add_member": "Añadir un miembro",
+    "publish": "Publicar",
+    "edit": "Editar",
+    "cancel_event": "Cancelar evento",
+    "delete": "Eliminar borrador",
+    "draft_note": "Un borrador: los miembros no lo ven, y nadie puede apuntarse ni entrar hasta que lo publiques.",
+    "people": "Personas",
+    "nobody_signed_up": "Aún no se ha apuntado nadie. Los miembros se apuntan en el portal, o añádelos aquí.",
+    "nobody_in": "Aún no ha entrado nadie. Empieza a registrar entradas cuando abran las puertas.",
+    "find_member": "Busca al miembro",
+    "check_in": "Registrar entrada",
+    "group_signed_up": "Apuntados",
+    "group_walk_ins": "Sin inscripción",
+    "group_in": "Han entrado",
+    "group_cancelled": "Cancelados",
+    "cancel_sign_up": "Cancelar inscripción"
+  },
+  "add": {
+    "title": "Añadir un miembro a «{{title}}»",
+    "sign_up": "Apuntar",
+    "done": "Apuntados: {{names}}",
+    "close": "Listo"
+  },
+  "cancel": {
+    "title": "¿Cancelar «{{title}}»?",
+    "confirm": "Cancelar el evento",
+    "keep": "Mantenerlo",
+    "effect": "Los miembros dejan de verlo en el portal y nadie puede entrar. Las inscripciones y las entradas siguen en la página del evento.",
+    "told": "Los miembros apuntados ({{members}}) reciben un mensaje en su bandeja y una notificación push: «{{title}} se cancela».",
+    "nobody": "No se ha apuntado nadie, así que no se avisa a nadie.",
+    "reason": "Unas palabras para ellos (opcional)",
+    "reason_example": "p. ej. Anuncian tormentas; pronto pondremos una nueva fecha."
+  },
+  "delete": {
+    "title": "¿Eliminar el borrador «{{title}}»?",
+    "confirm": "Eliminar borrador",
+    "keep": "Mantenerlo",
+    "effect": "Los miembros nunca lo vieron. No se puede deshacer."
+  },
+  "title": "Eventos",
+  "line": "Catas, clases, noches de miembros: quién puede venir, qué da asistir y el registro de entrada en la puerta.",
+  "new": "Nuevo evento",
+  "tabs": "Eventos",
+  "empty": {
+    "upcoming": "No hay eventos próximos. Planea uno: los miembros se apuntan en el portal y tú registras su entrada en la puerta.",
+    "past": "Aquí aparecen los eventos que ya han terminado, con quién vino.",
+    "drafts": "No hay borradores. Un evento guardado como borrador se queda aquí hasta que lo publiques."
+  },
+  "read_only": "Los eventos los crean los responsables y el personal que puede gestionar ofertas.",
+  "picker": {
+    "placeholder": "Nombre, email, teléfono o número de miembro",
+    "two_letters": "Escribe al menos dos letras.",
+    "searching": "Buscando…",
+    "none": "Ningún miembro coincide."
+  },
+  "tab": {
+    "upcoming": "Próximos",
+    "past": "Pasados",
+    "drafts": "Borradores"
+  },
+  "phase": {
+    "draft": "Borrador",
+    "upcoming": "Publicado",
+    "on_now": "En curso",
+    "ended": "Terminado",
+    "cancelled": "Cancelado"
+  },
+  "problem": {
+    "title": "Ponle un nombre al evento.",
+    "date": "Elige el día.",
+    "start": "Elige cuándo empieza.",
+    "end": "Elige cuándo termina.",
+    "ends_at": "El final debe ser después del inicio. Para un evento que pasa de medianoche, marca «Termina otro día».",
+    "too_long": "Un evento dura como máximo 14 días.",
+    "place_id": "Elige uno de tus lugares.",
+    "location": "Indica dónde, en 200 caracteres como máximo.",
+    "description": "2.000 caracteres como máximo.",
+    "tier_ids": "Elige al menos un nivel.",
+    "points": "Puntos: un número entero de 0 a 100.000.",
+    "capacity": "Plazas: un número entero de 1 a 100.000, o déjalo vacío para no poner límite.",
+    "walk_ins": "Sin inscripción hay que admitir a quien venga; si no, nadie podría asistir."
+  },
+  "reason": {
+    "welcome": "Entrada registrada: {{name}}",
+    "already_in": "{{name}} entró a las {{time}}",
+    "member_erased": "Sin acceso: este miembro fue eliminado.",
+    "member_off": "Sin acceso: la membresía de {{name}} está desactivada.",
+    "expired": "Sin acceso: la membresía caducó el {{date}}.",
+    "place_off": "Sin acceso: este lugar está desactivado.",
+    "tier_not_allowed": "Sin acceso: solo para {{tiers}} — {{name}} es {{tier}}.",
+    "event_not_open": "Sin acceso: el registro de entrada de este evento no está abierto ahora.",
+    "event_full": "Sin acceso: el evento está completo.",
+    "not_signed_up": "Sin acceso: {{name}} no se apuntó y no se admite entrar sin inscripción.",
+    "unknown": "Sin acceso."
+  },
+  "person": {
+    "in": "Entró a las {{time}}",
+    "walk_in": "Sin inscripción · {{time}}",
+    "signed_up": "Apuntado",
+    "cancelled": "Cancelado"
+  },
+  "count": {
+    "signed_up_one": "{{n}} apuntado",
+    "signed_up_few": "{{n}} apuntados",
+    "signed_up_many": "{{n}} apuntados",
+    "signed_up_other": "{{n}} apuntados",
+    "places_left_one": "queda {{n}} plaza",
+    "places_left_few": "quedan {{n}} plazas",
+    "places_left_many": "quedan {{n}} plazas",
+    "places_left_other": "quedan {{n}} plazas",
+    "checked_in_one": "{{n}} ha entrado",
+    "checked_in_few": "{{n}} han entrado",
+    "checked_in_many": "{{n}} han entrado",
+    "checked_in_other": "{{n}} han entrado",
+    "walk_ins_one": "{{n}} sin inscripción",
+    "walk_ins_few": "{{n}} sin inscripción",
+    "walk_ins_many": "{{n}} sin inscripción",
+    "walk_ins_other": "{{n}} sin inscripción",
+    "points_plus_one": "+{{n}} punto",
+    "points_plus_few": "+{{n}} puntos",
+    "points_plus_many": "+{{n}} puntos",
+    "points_plus_other": "+{{n}} puntos",
+    "places_one": "{{n}} plaza",
+    "places_few": "{{n}} plazas",
+    "places_many": "{{n}} plazas",
+    "places_other": "{{n}} plazas",
+    "members_one": "{{n}} miembro",
+    "members_few": "{{n}} miembros",
+    "members_many": "{{n}} miembros",
+    "members_other": "{{n}} miembros"
+  },
+  "load": {
+    "error": {
+      "not_found": "Este evento ya no está en tu programa.",
+      "network": "Sin conexión. Comprueba la red e inténtalo de nuevo.",
+      "unknown": "No se pudieron cargar los eventos. Inténtalo de nuevo."
+    }
+  },
+  "save": {
+    "error": {
+      "invalid": "Revisa los campos marcados abajo.",
+      "event_ended": "Este evento ya ha terminado. Cambia sus horas para publicarlo, o guárdalo como borrador.",
+      "wrong_state": "Este evento se canceló: ya no se puede cambiar.",
+      "key_reused": "Esto ya se guardó con otros datos. Cierra el cuadro e inténtalo de nuevo.",
+      "not_allowed": "Tu cuenta no puede cambiar eventos. Un responsable puede permitir «Gestionar ofertas» en Equipo, en la administración completa.",
+      "no_capability": "Tu cuenta no puede cambiar eventos. Un responsable puede permitir «Gestionar ofertas» en Equipo, en la administración completa.",
+      "not_found": "Este evento ya no está en tu programa.",
+      "network": "Sin conexión: no se guardó nada. Inténtalo de nuevo.",
+      "unknown": "No se pudo guardar el evento. Inténtalo de nuevo."
+    }
+  },
+  "life": {
+    "error": {
+      "event_ended": "Este evento ya ha terminado.",
+      "wrong_state": "Alguien cambió este evento mientras tanto. La página lo muestra ahora tal como está.",
+      "not_a_draft": "Solo se puede eliminar un borrador. Un evento publicado se cancela.",
+      "not_allowed": "Tu cuenta no puede cambiar eventos. Un responsable puede permitir «Gestionar ofertas» en Equipo, en la administración completa.",
+      "no_capability": "Tu cuenta no puede cambiar eventos. Un responsable puede permitir «Gestionar ofertas» en Equipo, en la administración completa.",
+      "not_found": "Este evento ya no está en tu programa.",
+      "network": "Sin conexión: no se guardó nada. Inténtalo de nuevo.",
+      "unknown": "No ha funcionado. No se cambió nada; inténtalo de nuevo."
+    }
+  },
+  "people": {
+    "error": {
+      "sign_up_closed": "Este evento no admite inscripciones ahora.",
+      "event_full": "El evento está completo.",
+      "tier_not_allowed": "Este evento es para otros niveles.",
+      "membership_expired": "La membresía de este miembro termina antes del evento.",
+      "inactive": "La cuenta de este miembro está desactivada.",
+      "already_signed_up": "Este miembro ya está apuntado.",
+      "already_in": "Este miembro ya ha entrado.",
+      "not_signed_up": "Este miembro no está apuntado.",
+      "cancel_closed": "Este evento ya ha terminado.",
+      "invalid": "Elige a uno de tus miembros.",
+      "not_found": "Este miembro o este evento ya no está en tu programa.",
+      "network": "Sin conexión: no se guardó nada. Inténtalo de nuevo.",
+      "unknown": "No ha funcionado. No se cambió nada; inténtalo de nuevo."
+    }
+  },
+  "check_in": {
+    "error": {
+      "invalid": "Elige a uno de tus miembros.",
+      "not_found": "Este miembro o este evento ya no está en tu programa.",
+      "network": "Sin conexión: no se guardó nada. Inténtalo de nuevo.",
+      "unknown": "No se pudo registrar la entrada. Inténtalo de nuevo."
+    }
+  }
+}

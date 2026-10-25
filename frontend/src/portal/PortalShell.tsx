@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { NavLink } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { Home, Gift, CalendarDays, CalendarPlus, User, LogOut, Bell } from 'lucide-react'
+import { Home, Gift, CalendarDays, CalendarPlus, User, LogOut, Bell, Ticket } from 'lucide-react'
 import { useAuthStore } from '../stores/authStore'
 import { logoutAndRedirect } from '../lib/logout'
 import { usePortal } from './PortalProvider'
@@ -31,9 +31,11 @@ export function PortalShell({ children }: { children: ReactNode }) {
     { to: '/portal', label: t('portal.nav.home', 'Home'), icon: Home, end: true, show: true, badge: 0 },
     { to: '/portal/book', label: t('portal.nav.book', 'Book'), icon: CalendarPlus, end: false, show: !!data?.capabilities.services || !!data?.capabilities.stays, badge: 0 },
     { to: '/portal/rewards', label: t('portal.nav.rewards', 'Rewards'), icon: Gift, end: false, show: !!data?.capabilities.loyalty, badge: 0 },
+    // Release 8: Events while the venue has one coming — never as a sixth item (then Home's card and Rewards lead there).
+    { to: '/portal/events', label: t('portal.nav.events', 'Events'), icon: Ticket, end: false, show: !!data?.capabilities.events, badge: 0 },
     { to: '/portal/bookings', label: t('portal.nav.bookings', 'Bookings'), icon: CalendarDays, end: false, show: true, badge: data?.counts.upcoming_bookings ?? 0 },
     { to: '/portal/profile', label: t('portal.nav.profile', 'Profile'), icon: User, end: false, show: true, badge: 0 },
-  ].filter(i => i.show)
+  ].filter(i => i.show).filter((i, _, shown) => i.to !== '/portal/events' || shown.length <= 5)
   // The inbox needs a membership row: the member endpoints answer for a member only.
   const unread = badgeText(data?.counts.unread_notifications ?? 0)
   const showInbox = !!data?.member

@@ -1,1 +1,248 @@
-{}
+{
+  "card": {
+    "every_member": "Every member",
+    "visit": "Counts as a visit"
+  },
+  "dialog": {
+    "edit_title": "Change {{title}}",
+    "new_title": "New event",
+    "title": "What is it?",
+    "title_example": "e.g. Wine tasting, Yoga class, Members’ night",
+    "when": "When",
+    "date": "Day",
+    "start": "Starts",
+    "end": "Ends",
+    "later_day": "Ends on a later day",
+    "end_date": "Last day",
+    "clock": "On your venue’s clock ({{zone}}).",
+    "lasts": "Lasts {{hours}} h {{minutes}} min.",
+    "where": "Where",
+    "where_label": "Place",
+    "elsewhere": "Somewhere else…",
+    "nowhere": "Not said",
+    "location": "Where exactly",
+    "location_hint": "Optional: a room, an address. Places you add under Program can be chosen here.",
+    "location_example": "e.g. The terrace, 2nd floor",
+    "who": "Who may come",
+    "every_member": "Every member",
+    "chosen_tiers": "Chosen tiers",
+    "tiers": "Tiers let in",
+    "gives": "What attending gives",
+    "points": "Points",
+    "points_hint": "Given at check-in. 0 for none.",
+    "visit": "Counts as a visit",
+    "visit_hint": "A stamp on the stamp card, and progress towards the next tier where tiers go by visits.",
+    "sign_up_section": "Sign-up",
+    "sign_up": "Members sign up in the portal",
+    "sign_up_hint": "They see the event, sign up or cancel; you see who is coming.",
+    "walk_ins": "Walk-ins welcome",
+    "walk_ins_on": "Members who did not sign up can be checked in while places are left.",
+    "walk_ins_off": "Only members who signed up get in.",
+    "capacity": "Places",
+    "capacity_hint": "Empty: no limit. Each sign-up and each walk-in takes a place.",
+    "no_limit": "No limit",
+    "description": "Description",
+    "description_hint": "Optional. Members read it in the portal.",
+    "told": "If the time or place changes, the members signed up get an inbox message and a push.",
+    "save_draft": "Save as draft",
+    "publish": "Publish",
+    "save": "Save changes"
+  },
+  "page": {
+    "back": "Events",
+    "signed_up": "Signed up",
+    "checked_in": "Checked in",
+    "walk_ins": "Walk-ins",
+    "room_left": "Places left",
+    "start_check_in": "Start check-in",
+    "door_mode": "Door mode",
+    "by_name": "Check in by name",
+    "add_member": "Add a member",
+    "publish": "Publish",
+    "edit": "Edit",
+    "cancel_event": "Cancel event",
+    "delete": "Delete draft",
+    "draft_note": "A draft: members do not see it, and nobody can sign up or check in until you publish it.",
+    "people": "People",
+    "nobody_signed_up": "Nobody has signed up yet. Members sign up in the portal, or add them here.",
+    "nobody_in": "Nobody has checked in yet. Start check-in when the doors open.",
+    "find_member": "Find the member",
+    "check_in": "Check in",
+    "group_signed_up": "Signed up",
+    "group_walk_ins": "Walk-ins",
+    "group_in": "Checked in",
+    "group_cancelled": "Cancelled",
+    "cancel_sign_up": "Cancel sign-up"
+  },
+  "add": {
+    "title": "Add a member to {{title}}",
+    "sign_up": "Sign up",
+    "done": "Signed up: {{names}}",
+    "close": "Done"
+  },
+  "cancel": {
+    "title": "Cancel {{title}}?",
+    "confirm": "Cancel the event",
+    "keep": "Keep it",
+    "effect": "Members no longer see it in the portal and nobody can check in. Sign-ups and check-ins stay on the event’s page.",
+    "told": "An inbox message and a push go to the members signed up ({{members}}): “{{title}} is cancelled”.",
+    "nobody": "Nobody has signed up, so nobody is told.",
+    "reason": "A line for them (optional)",
+    "reason_example": "e.g. The forecast is storms; we will set a new date soon."
+  },
+  "delete": {
+    "title": "Delete the draft {{title}}?",
+    "confirm": "Delete draft",
+    "keep": "Keep it",
+    "effect": "Members never saw it. This cannot be undone."
+  },
+  "title": "Events",
+  "line": "Tastings, classes, members’ nights: who may come, what attending gives, and check-in at the door.",
+  "new": "New event",
+  "tabs": "Events",
+  "empty": {
+    "upcoming": "No events coming up. Plan one: members can sign up in the portal, and you check them in at the door.",
+    "past": "Events that have ended show here, with who came.",
+    "drafts": "No drafts. An event saved as a draft stays here until you publish it."
+  },
+  "read_only": "Managers and staff allowed to manage offers create events.",
+  "picker": {
+    "placeholder": "Name, email, phone or member number",
+    "two_letters": "Type at least two letters.",
+    "searching": "Searching…",
+    "none": "No member matches."
+  },
+  "tab": {
+    "upcoming": "Upcoming",
+    "past": "Past",
+    "drafts": "Drafts"
+  },
+  "phase": {
+    "draft": "Draft",
+    "upcoming": "Published",
+    "on_now": "On now",
+    "ended": "Ended",
+    "cancelled": "Cancelled"
+  },
+  "problem": {
+    "title": "Give the event a name.",
+    "date": "Choose the day.",
+    "start": "Choose when it starts.",
+    "end": "Choose when it ends.",
+    "ends_at": "The end must be after the start. For an event past midnight, tick “Ends on a later day”.",
+    "too_long": "An event lasts at most 14 days.",
+    "place_id": "Choose one of your places.",
+    "location": "Say where, in at most 200 characters.",
+    "description": "At most 2,000 characters.",
+    "tier_ids": "Choose at least one tier.",
+    "points": "Points: a whole number from 0 to 100,000.",
+    "capacity": "Places: a whole number from 1 to 100,000, or leave it empty for no limit.",
+    "walk_ins": "With sign-up off, walk-ins must be welcome — otherwise nobody can come."
+  },
+  "reason": {
+    "welcome": "Checked in: {{name}}",
+    "already_in": "{{name}} was checked in at {{time}}",
+    "member_erased": "No access: this member was deleted.",
+    "member_off": "No access: {{name}}’s membership is switched off.",
+    "expired": "No access: the membership expired on {{date}}.",
+    "place_off": "No access: this place is switched off.",
+    "tier_not_allowed": "No access: for {{tiers}} only — {{name}} is {{tier}}.",
+    "event_not_open": "No access: check-in for this event is not open now.",
+    "event_full": "No access: the event is full.",
+    "not_signed_up": "No access: {{name}} did not sign up, and walk-ins are off.",
+    "unknown": "No access."
+  },
+  "person": {
+    "in": "Checked in {{time}}",
+    "walk_in": "Walk-in · {{time}}",
+    "signed_up": "Signed up",
+    "cancelled": "Cancelled"
+  },
+  "count": {
+    "signed_up_one": "{{n}} signed up",
+    "signed_up_few": "{{n}} signed up",
+    "signed_up_many": "{{n}} signed up",
+    "signed_up_other": "{{n}} signed up",
+    "places_left_one": "{{n}} place left",
+    "places_left_few": "{{n}} places left",
+    "places_left_many": "{{n}} places left",
+    "places_left_other": "{{n}} places left",
+    "checked_in_one": "{{n}} checked in",
+    "checked_in_few": "{{n}} checked in",
+    "checked_in_many": "{{n}} checked in",
+    "checked_in_other": "{{n}} checked in",
+    "walk_ins_one": "{{n}} walk-in",
+    "walk_ins_few": "{{n}} walk-ins",
+    "walk_ins_many": "{{n}} walk-ins",
+    "walk_ins_other": "{{n}} walk-ins",
+    "points_plus_one": "+{{n}} point",
+    "points_plus_few": "+{{n}} points",
+    "points_plus_many": "+{{n}} points",
+    "points_plus_other": "+{{n}} points",
+    "places_one": "{{n}} place",
+    "places_few": "{{n}} places",
+    "places_many": "{{n}} places",
+    "places_other": "{{n}} places",
+    "members_one": "{{n}} member",
+    "members_few": "{{n}} members",
+    "members_many": "{{n}} members",
+    "members_other": "{{n}} members"
+  },
+  "load": {
+    "error": {
+      "not_found": "This event is not in your programme any more.",
+      "network": "No connection. Check the network and try again.",
+      "unknown": "The events could not be loaded. Please try again."
+    }
+  },
+  "save": {
+    "error": {
+      "invalid": "Check the fields marked below.",
+      "event_ended": "This event has already ended. Change its times to publish it, or save it as a draft.",
+      "wrong_state": "This event was cancelled: it cannot be changed any more.",
+      "key_reused": "This was already saved with other details. Close the dialog and try again.",
+      "not_allowed": "Your account may not change events. A manager can allow “Manage offers” under Team in the full admin.",
+      "no_capability": "Your account may not change events. A manager can allow “Manage offers” under Team in the full admin.",
+      "not_found": "This event is not in your programme any more.",
+      "network": "No connection: nothing was saved. Try again.",
+      "unknown": "The event could not be saved. Please try again."
+    }
+  },
+  "life": {
+    "error": {
+      "event_ended": "This event has already ended.",
+      "wrong_state": "Someone changed this event meanwhile. The page now shows it as it is.",
+      "not_a_draft": "Only a draft can be deleted. Cancel a published event instead.",
+      "not_allowed": "Your account may not change events. A manager can allow “Manage offers” under Team in the full admin.",
+      "no_capability": "Your account may not change events. A manager can allow “Manage offers” under Team in the full admin.",
+      "not_found": "This event is not in your programme any more.",
+      "network": "No connection: nothing was saved. Try again.",
+      "unknown": "That did not work. Nothing was changed; please try again."
+    }
+  },
+  "people": {
+    "error": {
+      "sign_up_closed": "This event does not take sign-ups now.",
+      "event_full": "The event is full.",
+      "tier_not_allowed": "This event is for other tiers.",
+      "membership_expired": "This member’s membership ends before the event.",
+      "inactive": "This member’s account is switched off.",
+      "already_signed_up": "This member is already signed up.",
+      "already_in": "This member has already checked in.",
+      "not_signed_up": "This member is not signed up.",
+      "cancel_closed": "This event has ended.",
+      "invalid": "Choose one of your members.",
+      "not_found": "This member or event is not in your programme any more.",
+      "network": "No connection: nothing was saved. Try again.",
+      "unknown": "That did not work. Nothing was changed; please try again."
+    }
+  },
+  "check_in": {
+    "error": {
+      "invalid": "Choose one of your members.",
+      "not_found": "This member or event is not in your programme any more.",
+      "network": "No connection: nothing was saved. Try again.",
+      "unknown": "The check-in did not go through. Please try again."
+    }
+  }
+}

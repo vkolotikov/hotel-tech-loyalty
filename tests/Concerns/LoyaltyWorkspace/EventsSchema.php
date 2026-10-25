@@ -75,4 +75,34 @@ trait EventsSchema
             });
         }
     }
+
+    /**
+     * An event of the bound organisation, written as EventEditor writes one (times as stored digits), published and
+     * open to every member unless told otherwise; `$tierIds` are its tiers (with `admits` `tiers`).
+     *
+     * @param array<string, mixed> $attributes
+     * @param list<int>            $tierIds
+     */
+    protected function makeEvent(array $attributes = [], array $tierIds = []): \App\Models\LoyaltyEvent
+    {
+        $event = new \App\Models\LoyaltyEvent();
+        $event->forceFill($attributes + [
+            'organization_id' => (int) app('current_organization_id'),
+            'title'           => 'Wine tasting',
+            'starts_at'       => '2026-10-05 18:00:00',
+            'ends_at'         => '2026-10-05 21:00:00',
+            'points'          => 50,
+            'counts_as_visit' => true,
+            'admits'          => $tierIds === [] ? 'all' : 'tiers',
+            'sign_up'         => false,
+            'walk_ins'        => true,
+            'status'          => 'published',
+        ]);
+        $event->save();
+        foreach ($tierIds as $tierId) {
+            \Illuminate\Support\Facades\DB::table('loyalty_event_tiers')->insert(['loyalty_event_id' => $event->id, 'tier_id' => $tierId]);
+        }
+
+        return $event;
+    }
 }
