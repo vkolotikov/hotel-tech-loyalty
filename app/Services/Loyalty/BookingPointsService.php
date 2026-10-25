@@ -56,10 +56,10 @@ final class BookingPointsService
         }
 
         // LoyaltyService::pointsForSpend() reads points_per_currency (and
-        // awardPoints() reads points_expiry_months) through
-        // HotelSetting::getValue(), which is keyed off whatever org happens
-        // to be bound to the container right now -- not necessarily this
-        // booking's own org. The member's `tier` relation is scoped the
+        // awardPoints() reads points_expiry_months) through the bound
+        // organisation's cached settings map, which is keyed off whatever org
+        // happens to be bound to the container right now -- not necessarily
+        // this booking's own org. The member's `tier` relation is scoped the
         // same way (LoyaltyTier's own tenant scope), so it has to be
         // eager-loaded under the same binding too, not fetched first and
         // bound after. Bind the booking's org for the duration of the

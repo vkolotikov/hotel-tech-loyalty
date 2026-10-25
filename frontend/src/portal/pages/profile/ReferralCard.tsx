@@ -8,13 +8,17 @@ import { counted } from '../../lib/plural'
 import { Card } from '../../ui/Card'
 import { Button } from '../../ui/Button'
 
+/** Release 7: the referral answer also says whether the venue runs referrals, and when both friends are rewarded. */
+type ReferralReply = Awaited<ReturnType<typeof portalApi.referral>> & { enabled?: boolean; reward_on?: 'first_visit' | 'signup' }
+
 /** The link, not just the code: a friend who taps it lands on the venue's join page with the code filled in. */
 export function ReferralCard() {
   const { t } = useTranslation()
   const [copied, setCopied] = useState(false)
-  const { data } = useQuery({ queryKey: ['portal-referral'], queryFn: portalApi.referral })
+  const { data } = useQuery<ReferralReply>({ queryKey: ['portal-referral'], queryFn: portalApi.referral })
   const link = data?.referral_link
-  if (!data) return null
+  // A venue with referrals off has nothing to invite to (release 7).
+  if (!data || data.enabled === false) return null
 
   const share = async () => {
     if (!link) return
@@ -28,7 +32,11 @@ export function ReferralCard() {
   return (
     <Card className="p-4">
       <h2 className="text-sm font-semibold mb-1">{t('portal.profile.invite_title', 'Invite a friend')}</h2>
-      <p className="text-xs text-p-text-2 mb-3">{t('portal.profile.invite_body', "Share your link — you'll both be rewarded when they join.")}</p>
+      <p className="text-xs text-p-text-2 mb-3">
+        {data.reward_on === 'signup'
+          ? t('portal.profile.invite_body', "Share your link — you'll both be rewarded when they join.")
+          : t('portal.profile.invite_body_first_visit', "Share your link — you'll both be rewarded after your friend's first visit.")}
+      </p>
       {link ? (
         <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
           <code className="flex-1 min-w-0 truncate bg-p-surface-2 border border-p-border rounded-p-control px-3 py-2 text-xs">{link}</code>

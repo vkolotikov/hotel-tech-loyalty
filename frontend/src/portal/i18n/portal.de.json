@@ -41,6 +41,10 @@
     "already_claimed_offer": "Bereits eingelöst — siehe oben", "fully_claimed": "Vollständig eingelöst", "used_on": "Verwendet am {{date}}",
     "valid_until": "Gültig bis {{date}}", "ready_to_use": "Einsatzbereit — bitte am Empfang zeigen", "ends": "Endet am {{date}}",
     "percent_off": "{{value}}% Rabatt", "amount_off": "{{value}} Rabatt", "points_multiplier": "{{value}}-fache Punkte",
+    "bonus_points_one": "+{{count}} Punkt", "bonus_points_few": "+{{count}} Punkte", "bonus_points_many": "+{{count}} Punkte", "bonus_points_other": "+{{count}} Punkte",
+    "claimed_points_one": "+{{count}} Punkt Ihrem Konto gutgeschrieben", "claimed_points_few": "+{{count}} Punkte Ihrem Konto gutgeschrieben", "claimed_points_many": "+{{count}} Punkte Ihrem Konto gutgeschrieben", "claimed_points_other": "+{{count}} Punkte Ihrem Konto gutgeschrieben",
+    "perk_free_night": "Eine Gratisnacht vom Haus — bitte bei der Buchung oder Anreise zeigen.", "perk_upgrade": "Ein Upgrade vom Haus — bitte bei der Ankunft zeigen.",
+    "perk_cashback": "Cashback vom Haus, am Empfang — bitte beim Bezahlen zeigen.", "points_added_on": "Punkte gutgeschrieben am {{date}}",
     "codes_empty": "Eingelöste Codes werden hier gesammelt.", "code_pending": "Am Empfang zeigen", "code_fulfilled": "Verwendet", "code_cancelled": "Storniert",
     "codes_hint": "Jeder Code funktioniert einmal. Das Unternehmen markiert ihn bei Vorlage als verwendet."
   },
@@ -78,7 +82,7 @@
   "activity": { "title": "Verlauf",
     "entries_one": "{{count}} Eintrag", "entries_few": "{{count}} Einträge", "entries_many": "{{count}} Einträge", "entries_other": "{{count}} Einträge",
     "empty": "Noch keine Punkteaktivität. Ihr erster Besuch erscheint hier.", "balance": "Stand {{count}}", "reversed": "rückgängig gemacht",
-    "type": { "earn": "Gesammelt", "bonus": "Bonus", "redeem": "Eingelöst", "adjust": "Anpassung", "expire": "Verfallen", "reverse": "Rückgängig gemacht" } },
+    "type": { "earn": "Gesammelt", "bonus": "Bonus", "redeem": "Eingelöst", "adjust": "Anpassung", "expire": "Verfallen", "reverse": "Rückgängig gemacht", "referral": "Empfehlung" } },
   "inbox": {
     "title": "Nachrichten", "mark_all": "Alle als gelesen markieren", "mark_failed": "Ihre Nachrichten konnten nicht als gelesen markiert werden. Bitte versuchen Sie es erneut.", "unread": "Ungelesen",
     "empty_title": "Noch nichts da", "empty_body": "Wenn {{venue}} Ihnen Neuigkeiten zu Ihren Punkten, Angeboten, Ihrer Stufe oder Ihren Buchungen schickt, finden Sie sie hier.",
@@ -97,6 +101,7 @@
     "sms": "Angebote per SMS", "sms_hint": "SMS zu Angeboten an {{phone}}. Aus, bis Sie es einschalten.", "sms_needs_phone": "Tragen Sie oben Ihre Telefonnummer ein, um Angebote per SMS zu erhalten.",
     "service_messages": "Servicemitteilungen zu Ihrem Konto – Passwort-Zurücksetzen, Buchungsbestätigungen und Ähnliches – erhalten Sie unabhängig von diesen Einstellungen.",
     "invite_title": "Einen Freund einladen", "invite_body": "Teilen Sie Ihren Link — Sie beide werden belohnt, sobald er beitritt.", "invite_share": "Meinen Link teilen", "invite_copy": "Link kopieren",
+    "invite_body_first_visit": "Teilen Sie Ihren Link — Sie beide werden nach dem ersten Besuch Ihres Freundes belohnt.",
     "invite_stats_one": "{{count}} Freund beigetreten", "invite_stats_few": "{{count}} Freunde beigetreten", "invite_stats_many": "{{count}} Freunde beigetreten", "invite_stats_other": "{{count}} Freunde beigetreten",
     "invite_unavailable": "Empfehlungslinks sind noch nicht verfügbar.",
     "password_title": "Passwort", "password_change": "Passwort ändern", "password_current": "Aktuelles Passwort", "password_new": "Neues Passwort",

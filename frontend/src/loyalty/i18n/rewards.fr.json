@@ -114,6 +114,13 @@
     "points_multiplier": "Multiplicateur de points",
     "upgrade": "Surclassement"
   },
+  "offer_kind_note": {
+    "bonus_points": "En le réclamant, le membre reçoit les points sur son solde aussitôt.",
+    "cashback": "Un avantage que votre équipe offre en personne. Pour rendre de l’argent à chaque visite, activez le Crédit cashback dans Façons de gagner.",
+    "free_night": "Un avantage que votre équipe offre en personne : le membre montre l’offre réclamée.",
+    "points_multiplier": "Tant qu’il est réclamé, le membre cumule à ce multiple — le meilleur entre lui et un boost en cours, jamais les deux.",
+    "upgrade": "Un avantage que votre équipe offre en personne : le membre montre l’offre réclamée."
+  },
   "offer_value": {
     "bonus_points": "{{value}} points bonus",
     "discount": "{{value}} % de remise",

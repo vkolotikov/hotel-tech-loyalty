@@ -9,7 +9,7 @@ import { Button } from '../../ui/Button'
 import { EmptyState } from '../../ui/EmptyState'
 import { Notice } from '../../ui/Notice'
 import { PageSkeleton } from '../../ui/Skeleton'
-import { offerValueLabel } from './offerLabel'
+import { claimedMessage, offerPerkNote, offerValueLabel, paysPointsOnClaim } from './offerLabel'
 
 export function OffersTab() {
   const { t, i18n } = useTranslation()
@@ -17,7 +17,15 @@ export function OffersTab() {
   const { data, isLoading, isError, refetch } = useQuery({ queryKey: ['portal-offers'], queryFn: portalApi.offers })
   const claim = useMutation({
     mutationFn: portalApi.claimOffer,
-    onSuccess: () => { toast.success(t('portal.rewards.claimed', 'Offer claimed — show it at the desk')); void qc.invalidateQueries({ queryKey: ['portal-offers'] }) },
+    onSuccess: reply => {
+      toast.success(claimedMessage(reply, t))
+      void qc.invalidateQueries({ queryKey: ['portal-offers'] })
+      // A bonus_points offer added points (release 7): the balance and the history moved.
+      if (Number(reply?.points_awarded ?? 0) > 0) {
+        void qc.invalidateQueries({ queryKey: ['portal-bootstrap'] })
+        void qc.invalidateQueries({ queryKey: ['portal-activity'] })
+      }
+    },
     onError: e => toast.error(apiMessage(e, t('portal.rewards.claim_failed', 'Could not claim that offer'))),
   })
 
@@ -37,18 +45,21 @@ export function OffersTab() {
           {claimed.map(c => {
             const used = !!c.used_at
             const label = c.offer ? offerValueLabel(c.offer, t) : null
+            const perk = c.offer ? offerPerkNote(c.offer, t) : null
             return (
               <Card key={c.id} className={`p-4 ${used ? 'opacity-60' : 'border-p-accent/40'}`}>
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <h3 className="text-sm font-semibold truncate">{c.offer?.title}</h3>
                     {c.offer?.description && <p className="text-xs text-p-text-2 mt-0.5 line-clamp-2">{c.offer.description}</p>}
+                    {perk && <p className="text-xs text-p-text-2 mt-1">{perk}</p>}
                   </div>
                   {label && <span className="shrink-0 text-sm font-bold text-p-accent-deep">{label}</span>}
                 </div>
                 <p className="mt-3 flex items-center gap-1.5 text-[11px] text-p-text-2">
                   <BadgeCheck size={13} className={used ? '' : 'text-p-success'} aria-hidden />
-                  {used ? t('portal.rewards.used_on', 'Used {{date}}', { date: formatDay(c.used_at!, lang) })
+                  {used && paysPointsOnClaim(c.offer) ? t('portal.rewards.points_added_on', 'Points added {{date}}', { date: formatDay(c.used_at!, lang) })
+                    : used ? t('portal.rewards.used_on', 'Used {{date}}', { date: formatDay(c.used_at!, lang) })
                     : c.offer?.end_date ? t('portal.rewards.valid_until', 'Valid until {{date}}', { date: formatDay(c.offer.end_date, lang) })
                     : t('portal.rewards.ready_to_use', 'Ready to use — show this at the desk')}
                 </p>
@@ -64,6 +75,7 @@ export function OffersTab() {
           <EmptyState icon={<Sparkles size={18} aria-hidden />} title={t('portal.rewards.offers_empty', "No offers right now. We'll let you know when something arrives.")} />
         ) : available.map(o => {
           const label = offerValueLabel(o, t)
+          const perk = offerPerkNote(o, t)
           const full = o.usage_limit != null && (o.times_used ?? 0) >= o.usage_limit
           return (
             <Card key={o.id} className="overflow-hidden">
@@ -73,6 +85,7 @@ export function OffersTab() {
                   <div className="min-w-0">
                     <h3 className="text-sm font-semibold truncate">{o.title}</h3>
                     {o.description && <p className="text-xs text-p-text-2 mt-0.5">{o.description}</p>}
+                    {perk && <p className="text-xs text-p-text-2 mt-1">{perk}</p>}
                   </div>
                   {label && <span className="shrink-0 text-sm font-bold text-p-accent-deep">{label}</span>}
                 </div>

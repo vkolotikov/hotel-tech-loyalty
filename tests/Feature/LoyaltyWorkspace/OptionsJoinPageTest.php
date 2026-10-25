@@ -24,4 +24,15 @@ class OptionsJoinPageTest extends MemberEndpointTestCase
         ProgrammeOptions::save($org->id, ['welcome_bonus_points' => 0], null);
         $this->getJson($url)->assertOk()->assertJsonPath('welcome_bonus', 0);
     }
+
+    public function test_the_join_page_asks_for_a_referral_code_only_while_referrals_are_on(): void
+    {
+        $org = $this->tenant('Numa Skin Lab');
+        $url = '/api/v1/public/join/' . $org->fresh()->widget_token;
+
+        $this->getJson($url)->assertOk()->assertJsonPath('referrals', true);
+
+        ProgrammeOptions::save($org->id, ['referral_enabled' => false], null);
+        $this->getJson($url)->assertOk()->assertJsonPath('referrals', false);
+    }
 }

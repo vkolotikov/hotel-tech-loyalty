@@ -19,6 +19,8 @@ interface JoinContext {
   accepting_joins: boolean
   starting_tier?: string
   welcome_bonus?: number
+  /** Release 7: false when the venue switched referrals off (sign-up then ignores a code). */
+  referrals?: boolean
   theme?: PortalThemeInput & { logo_url?: string | null }
   error?: string
 }
@@ -90,9 +92,11 @@ export function Join() {
         <Field label={t('portal.join.phone', 'Phone (optional)')}><input name="phone" type="tel" autoComplete="tel" className={INPUT_CLASS} /></Field>
         <Field label={t('portal.join.password', 'Password')} hint={t('portal.profile.password_hint', 'At least 8 characters')}><input name="password" type="password" required minLength={8} autoComplete="new-password" className={INPUT_CLASS} /></Field>
         <Field label={t('portal.join.password_confirm', 'Confirm password')}><input name="password_confirmation" type="password" required minLength={8} autoComplete="new-password" className={INPUT_CLASS} /></Field>
-        <Field label={t('portal.join.referral', 'Referral code (optional)')} hint={refCode ? t('portal.join.referral_prefilled', "Your friend's code is filled in — you'll both be rewarded") : t('portal.join.referral_hint', "If a friend gave you a code, you'll both be rewarded")}>
-          <input name="referral_code" defaultValue={refCode} autoComplete="off" className={INPUT_CLASS} />
-        </Field>
+        {ctx.referrals !== false && (
+          <Field label={t('portal.join.referral', 'Referral code (optional)')} hint={refCode ? t('portal.join.referral_prefilled', "Your friend's code is filled in — you'll both be rewarded") : t('portal.join.referral_hint', "If a friend gave you a code, you'll both be rewarded")}>
+            <input name="referral_code" defaultValue={refCode} autoComplete="off" className={INPUT_CLASS} />
+          </Field>
+        )}
         <Button type="submit" full loading={register.isPending}>{t('portal.join.submit', 'Create my membership')}</Button>
       </form>
 

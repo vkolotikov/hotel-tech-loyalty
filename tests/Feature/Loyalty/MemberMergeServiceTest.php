@@ -87,6 +87,7 @@ class MemberMergeServiceTest extends TestCase
     use SmsSchema;
     use VisitsSchema;
     use CreditSchema;
+    use \Tests\Concerns\LoyaltyWorkspace\TierCountsSchema;
 
     private MemberMergeService $service;
 
@@ -100,6 +101,7 @@ class MemberMergeServiceTest extends TestCase
         $this->buildSmsSchema();
         $this->buildVisitsSchema();
         $this->buildCreditSchema();
+        $this->buildTierCountsSchema();
 
         $org = OrganizationFactory::new()->create();
         app()->instance('current_organization_id', $org->id);

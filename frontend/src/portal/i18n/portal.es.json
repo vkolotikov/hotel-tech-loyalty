@@ -41,6 +41,10 @@
     "already_claimed_offer": "Ya reclamada — vea arriba", "fully_claimed": "Totalmente reclamada", "used_on": "Usada el {{date}}",
     "valid_until": "Válida hasta {{date}}", "ready_to_use": "Lista para usar — muestre esto en recepción", "ends": "Termina el {{date}}",
     "percent_off": "{{value}}% de descuento", "amount_off": "{{value}} de descuento", "points_multiplier": "Puntos x{{value}}",
+    "bonus_points_one": "+{{count}} punto", "bonus_points_few": "+{{count}} puntos", "bonus_points_many": "+{{count}} puntos", "bonus_points_other": "+{{count}} puntos",
+    "claimed_points_one": "+{{count}} punto añadido a su saldo", "claimed_points_few": "+{{count}} puntos añadidos a su saldo", "claimed_points_many": "+{{count}} puntos añadidos a su saldo", "claimed_points_other": "+{{count}} puntos añadidos a su saldo",
+    "perk_free_night": "Una noche gratis del establecimiento — muestre esto al reservar o al llegar.", "perk_upgrade": "Una mejora del establecimiento — muestre esto al llegar.",
+    "perk_cashback": "Reembolso del establecimiento en recepción — muestre esto al pagar.", "points_added_on": "Puntos añadidos el {{date}}",
     "codes_empty": "Los códigos que canjee se guardarán aquí.", "code_pending": "Muestre en recepción", "code_fulfilled": "Usado", "code_cancelled": "Cancelado",
     "codes_hint": "Cada código funciona una sola vez. El establecimiento lo marcará como usado al presentarlo."
   },
@@ -78,7 +82,7 @@
   "activity": { "title": "Actividad",
     "entries_one": "{{count}} entrada", "entries_few": "{{count}} entradas", "entries_many": "{{count}} entradas", "entries_other": "{{count}} entradas",
     "empty": "Aún no hay actividad de puntos. Su primera visita aparecerá aquí.", "balance": "saldo {{count}}", "reversed": "revertido",
-    "type": { "earn": "Ganado", "bonus": "Bono", "redeem": "Canjeado", "adjust": "Ajuste", "expire": "Caducado", "reverse": "Revertido" } },
+    "type": { "earn": "Ganado", "bonus": "Bono", "redeem": "Canjeado", "adjust": "Ajuste", "expire": "Caducado", "reverse": "Revertido", "referral": "Referido" } },
   "inbox": {
     "title": "Mensajes", "mark_all": "Marcar todo como leído", "mark_failed": "No se pudieron marcar sus mensajes como leídos. Inténtelo de nuevo.", "unread": "No leído",
     "empty_title": "Todavía no hay nada", "empty_body": "Cuando {{venue}} le envíe novedades sobre sus puntos, ofertas, su nivel o sus reservas, las encontrará aquí.",
@@ -97,6 +101,7 @@
     "sms": "Ofertas por SMS", "sms_hint": "SMS sobre ofertas al {{phone}}. Desactivado hasta que usted lo active.", "sms_needs_phone": "Añada su número de teléfono arriba para recibir ofertas por SMS.",
     "service_messages": "Seguirá recibiendo mensajes de servicio sobre su cuenta (restablecimiento de contraseña, confirmaciones de reserva y similares) independientemente de estos ajustes.",
     "invite_title": "Invitar a un amigo", "invite_body": "Comparta su enlace — ambos serán recompensados cuando se una.", "invite_share": "Compartir mi enlace", "invite_copy": "Copiar enlace",
+    "invite_body_first_visit": "Comparta su enlace — ambos serán recompensados tras la primera visita de su amigo.",
     "invite_stats_one": "{{count}} amigo se ha unido", "invite_stats_few": "{{count}} amigos se han unido", "invite_stats_many": "{{count}} amigos se han unido", "invite_stats_other": "{{count}} amigos se han unido",
     "invite_unavailable": "Los enlaces de referidos aún no están disponibles.",
     "password_title": "Contraseña", "password_change": "Cambiar contraseña", "password_current": "Contraseña actual", "password_new": "Nueva contraseña",

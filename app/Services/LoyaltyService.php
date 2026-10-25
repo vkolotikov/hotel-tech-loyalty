@@ -13,6 +13,7 @@ use App\Models\PointExpiryBucket;
 use App\Models\PointsTransaction;
 use App\Models\TierAssessment;
 use App\Models\User;
+use App\Services\Loyalty\Programme\ProgrammeOptions;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -102,15 +103,14 @@ class LoyaltyService
                 'approved_at'      => $approvalStatus === 'auto_approved' ? now() : null,
             ]);
 
-            // Create expiry bucket for earned points
-            $expiryMonths = (int) HotelSetting::getValue('points_expiry_months', 24);
+            // Create expiry bucket for earned points (no expiry date when the venue's points never expire).
             $bucket = PointExpiryBucket::create([
                 'member_id'        => $member->id,
                 'transaction_id'   => $transaction->id,
                 'original_points'  => $points,
                 'remaining_points' => $points,
                 'earned_at'        => now()->toDateString(),
-                'expires_at'       => now()->addMonths($expiryMonths)->toDateString(),
+                'expires_at'       => $this->expiresOn((int) $member->organization_id),
             ]);
 
             $transaction->update(['expiry_bucket_id' => $bucket->id]);
@@ -191,9 +191,13 @@ class LoyaltyService
                 throw new \RuntimeException("Insufficient points. Available: {$member->current_points}, Requested: {$points}");
             }
 
-            // Consume from oldest expiry buckets first
+            // Consume from oldest expiry buckets first; points that never expire go last (an explicit order: SQLite
+            // and MySQL put an empty date first, PostgreSQL last).
             $remaining = $points;
-            $buckets = $member->activeExpiryBuckets()->get();
+            $buckets = $member->activeExpiryBuckets()->reorder()
+                ->orderByRaw('CASE WHEN expires_at IS NULL THEN 1 ELSE 0 END')
+                ->orderBy('expires_at')->orderBy('id')
+                ->get();
 
             foreach ($buckets as $bucket) {
                 if ($remaining <= 0) break;
@@ -290,7 +294,6 @@ class LoyaltyService
 
         if ($points < 0) {
             $restored = -$points;
-            $expiryMonths = (int) HotelSetting::getValue('points_expiry_months', 24);
 
             PointExpiryBucket::create([
                 'member_id'        => $member->id,
@@ -298,9 +301,40 @@ class LoyaltyService
                 'original_points'  => $restored,
                 'remaining_points' => $restored,
                 'earned_at'        => now()->toDateString(),
-                'expires_at'       => now()->addMonths($expiryMonths)->toDateString(),
+                'expires_at'       => $this->expiresOn((int) $member->organization_id),
             ]);
         }
+    }
+
+    /**
+     * The day points earned now expire, from the venue's `points_expiry_months` (read through ProgrammeOptions, for
+     * the organisation named — never whichever tenant is bound): null when it is 0, points that never expire (release
+     * 7, spec 2026-10-25 §4.4; until then 0 expired them at once). A bucket without a date is passed over by the
+     * expiry sweep and the monthly report.
+     */
+    public function expiresOn(int $orgId): ?string
+    {
+        $months = (int) $this->option($orgId, 'points_expiry_months');
+
+        return $months > 0 ? now()->addMonths($months)->toDateString() : null;
+    }
+
+    /**
+     * One programme option of the organisation named, as ProgrammeOptions gives it — its key, its type, its default
+     * when the venue never set it or left it empty — read from the organisation's cached settings map, which every
+     * settings write flushes (ProgrammeOptions::save() too). The points path asks on every earn, every completed visit
+     * and every appointment's points preview, so once the map is cached it costs no query (spec §1: an engine reader
+     * "reads the same key with the same default"). Only the numeric options the engine reads here.
+     */
+    private function option(int $orgId, string $key): int|float
+    {
+        [$type, $default] = ProgrammeOptions::OPTIONS[$key];
+        $raw = $this->underOrg($orgId, fn () => HotelSetting::getValue($key));
+        if ($raw === null || $raw === '' || !is_numeric($raw)) {
+            return $default;
+        }
+
+        return $type === 'int' ? (int) $raw : round((float) $raw, 2);
     }
 
     public function reverseTransaction(
@@ -386,7 +420,7 @@ class LoyaltyService
      */
     public function pointsForSpend(LoyaltyMember $member, float $amount, ?int $propertyId = null, ?int $outletId = null): int
     {
-        $base = (float) HotelSetting::getValue('points_per_currency', 1);
+        $base = (float) $this->option((int) $member->organization_id, 'points_per_currency');
         if ($base <= 0) {
             $base = 1.0;
         }
@@ -408,8 +442,10 @@ class LoyaltyService
         // We pick the highest (not the product of all matches) so two
         // overlapping campaigns can't accidentally combine into a
         // surprise 6x for a member. Stable, predictable behaviour for
-        // a marketing surface that has to be auditable.
-        $multiplier = $this->bestActiveMultiplier($member, $propertyId);
+        // a marketing surface that has to be auditable. Release 7: a
+        // claimed `points_multiplier` offer is the member's own boost
+        // and joins the same "highest wins" (never multiplied in).
+        $multiplier = max($this->bestActiveMultiplier($member, $propertyId), $this->bestOfferMultiplier($member));
 
         // A tier may also carry a standing `points_multiplier` benefit
         // ("Gold earns 2x"). It composes with the event multiplier because
@@ -438,7 +474,9 @@ class LoyaltyService
     {
         $when = $when ?: now();
         try {
-            $events = \App\Models\EarnRateEvent::activeNow()->get();
+            // In its own savepoint when a caller's transaction is open: on
+            // PostgreSQL a failing read would otherwise abort the caller's.
+            $events = DB::transaction(fn () => \App\Models\EarnRateEvent::activeNow()->get());
         } catch (\Throwable $e) {
             // Table missing during a deploy window: don't blow up the
             // earn flow — just skip the boost.
@@ -450,6 +488,54 @@ class LoyaltyService
             $m = (float) $event->multiplier;
             if ($m > $best) $best = $m;
         }
+        return $best;
+    }
+
+    /** An offer's multiplier counts up to the boosts' own ceiling (a boost is 1–10x): a typo never pays 500x. */
+    public const OFFER_MULTIPLIER_MAX = 10.0;
+
+    /**
+     * The member's own boost (release 7, spec 2026-10-25 §4.2): the highest multiplier among the `points_multiplier`
+     * offers they have claimed and not used, live now — the offer this organisation's and switched on, today inside
+     * its dates, the claim not past its own expiry (DiscountService's rule for a claimed offer). 1.0 when none.
+     * pointsForSpend() takes the higher of this and the best running boost. Read-only; the claim is not used up by
+     * earning — it lasts as long as the offer.
+     */
+    public function bestOfferMultiplier(?LoyaltyMember $member): float
+    {
+        if ($member === null || !$member->id) {
+            return 1.0;
+        }
+        try {
+            // In its own savepoint, as bestActiveMultiplier()'s read.
+            $claims = DB::transaction(fn () => DB::table('member_offers as mo')
+                ->join('special_offers as so', 'so.id', '=', 'mo.offer_id')
+                ->where('mo.member_id', $member->id)
+                ->where('mo.status', 'claimed')
+                ->whereNull('mo.used_at')
+                ->where('so.organization_id', $member->organization_id)
+                ->where('so.type', 'points_multiplier')
+                ->where('so.is_active', true)
+                ->get(['so.value', 'so.start_date', 'so.end_date', 'mo.expires_at']));
+        } catch (\Throwable) {
+            // A database without the offer tables (a narrower test schema): no offer boost.
+            return 1.0;
+        }
+
+        $best = 1.0;
+        foreach ($claims as $claim) {
+            if ($claim->start_date && \Illuminate\Support\Carbon::parse($claim->start_date)->startOfDay()->isFuture()) {
+                continue;
+            }
+            if ($claim->end_date && \Illuminate\Support\Carbon::parse($claim->end_date)->endOfDay()->isPast()) {
+                continue;
+            }
+            if ($claim->expires_at && \Illuminate\Support\Carbon::parse($claim->expires_at)->isPast()) {
+                continue;
+            }
+            $best = max($best, min((float) $claim->value, self::OFFER_MULTIPLIER_MAX));
+        }
+
         return $best;
     }
 
@@ -493,8 +579,9 @@ class LoyaltyService
         //
         // min_points is the same axis the tier was chosen on, so the two can
         // no longer disagree. Ties are no move.
-        $newFloor = (int) $appropriateTier->min_points;
-        $oldFloor = (int) $currentTier->min_points;
+        //
+        // Release 7: on the axis the member is judged on (ladderFloors()).
+        [$newFloor, $oldFloor] = $this->ladderFloors($member, $appropriateTier, $currentTier);
         $isUpgrade = $newFloor > $oldFloor;
         $isDowngrade = $newFloor < $oldFloor;
 
@@ -636,6 +723,170 @@ class LoyaltyService
         }
 
         return true;
+    }
+
+    /**
+     * Where the two tiers stand on the ladder the member is judged on, so that a move's direction — and with it the
+     * downgrade rules above (tier lock, grace period, override, soft landing) — follows the member's qualification
+     * model: `nights`, `stays` and `spend` compare those floors; `points` and `hybrid` the points floor, as before.
+     * Release 7 made the counters move (TierCounters), and a demotion by nights between two tiers on the same points
+     * floor read as no direction at all and skipped every one of those rules. Two tiers level on the model's axis
+     * fall back to the points floor.
+     *
+     * @return array{0: float, 1: float} the new tier's floor, then the current tier's
+     */
+    private function ladderFloors(LoyaltyMember $member, LoyaltyTier $new, LoyaltyTier $current): array
+    {
+        $column = match ($member->tier_qualification_model ?? 'points') {
+            'nights' => 'min_nights',
+            'stays'  => 'min_stays',
+            'spend'  => 'min_spend',
+            default  => null,
+        };
+        if ($column !== null) {
+            $newFloor = (float) ($new->{$column} ?? 0);
+            $oldFloor = (float) ($current->{$column} ?? 0);
+            if ($newFloor !== $oldFloor) {
+                return [$newFloor, $oldFloor];
+            }
+        }
+
+        return [(float) $new->min_points, (float) $current->min_points];
+    }
+
+    /**
+     * Adds what one visit counts towards the member's tier qualification (release 7, spec 2026-10-25 §4.3) —
+     * `qualifying_nights`, `qualifying_stays`, `qualifying_spend` — then assesses the tier when the member is judged on
+     * them (judgedOnCounters()). The counters' one writer (the merge adds two members' up);
+     * App\Services\Loyalty\Visits\TierCounters is its caller.
+     *
+     * Once per reference: the row in `tier_qualification_counts` records what this one added, so a repeated call (the
+     * nightly stay sweep) adds nothing and a reversal takes back exactly that. Under the member row lock, in its own
+     * transaction (a savepoint inside a caller's). Nothing to add writes nothing.
+     *
+     * @return bool whether this call counted the visit
+     */
+    public function countQualifyingVisit(LoyaltyMember $member, string $referenceType, int $referenceId, int $nights, int $stays, float $spend): bool
+    {
+        $nights = max(0, $nights);
+        $stays = max(0, $stays);
+        $spend = round(max(0.0, $spend), 2);
+        if ($nights === 0 && $stays === 0 && $spend <= 0) {
+            return false;
+        }
+        $orgId = (int) $member->organization_id;
+
+        // Every statement inside the transaction (a savepoint in a caller's), as in uncountQualifyingVisit().
+        return $this->underOrg($orgId, fn () => DB::transaction(function () use ($member, $orgId, $referenceType, $referenceId, $nights, $stays, $spend) {
+            $locked = LoyaltyMember::withoutGlobalScopes()->where('organization_id', $orgId)->whereKey($member->id)->lockForUpdate()->first();
+            if (!$locked) {
+                return false;
+            }
+            $counted = DB::table('tier_qualification_counts')
+                ->where('organization_id', $orgId)->where('reference_type', $referenceType)->where('reference_id', $referenceId)
+                ->exists();
+            if ($counted) {
+                return false;
+            }
+
+            DB::table('tier_qualification_counts')->insert([
+                'organization_id' => $orgId,
+                'member_id'       => $locked->id,
+                'reference_type'  => $referenceType,
+                'reference_id'    => $referenceId,
+                'nights'          => $nights,
+                'stays'           => $stays,
+                'spend'           => $spend,
+                'created_at'      => now(),
+                'updated_at'      => now(),
+            ]);
+            $locked->forceFill([
+                'qualifying_nights' => (int) $locked->qualifying_nights + $nights,
+                'qualifying_stays'  => (int) $locked->qualifying_stays + $stays,
+                'qualifying_spend'  => round((float) $locked->qualifying_spend + $spend, 2),
+            ])->save();
+
+            if ($this->judgedOnCounters($locked)) {
+                $this->assessTier($locked->fresh());
+            }
+            $member->refresh();
+
+            return true;
+        }));
+    }
+
+    /**
+     * A refunded or cancelled visit: takes back exactly what countQualifyingVisit() added for this reference — never
+     * below zero — and assesses the tier again (through its own downgrade rules) when the member is judged on the
+     * counters. Once: the row is stamped `reversed_at`, and a reference already taken back (or never counted) changes
+     * nothing.
+     *
+     * @return bool whether this call took anything back
+     */
+    public function uncountQualifyingVisit(int $orgId, string $referenceType, int $referenceId): bool
+    {
+        // Every statement inside the transaction — a savepoint in a caller's (a refund's points reversal): on PostgreSQL
+        // a failing one then rolls back only this, and the caller's transaction stays usable.
+        return $this->underOrg($orgId, fn () => DB::transaction(function () use ($orgId, $referenceType, $referenceId) {
+            $row = DB::table('tier_qualification_counts')
+                ->where('organization_id', $orgId)->where('reference_type', $referenceType)->where('reference_id', $referenceId)
+                ->whereNull('reversed_at')
+                ->first();
+            if (!$row) {
+                return false;
+            }
+            $member = LoyaltyMember::withoutGlobalScopes()->where('organization_id', $orgId)->whereKey($row->member_id)->lockForUpdate()->first();
+            if (!$member) {
+                return false;
+            }
+            // Conditional, under the member's lock: a second reversal of the same visit takes nothing.
+            $taken = DB::table('tier_qualification_counts')->where('id', $row->id)->whereNull('reversed_at')
+                ->update(['reversed_at' => now(), 'updated_at' => now()]);
+            if ($taken === 0) {
+                return false;
+            }
+
+            $member->forceFill([
+                'qualifying_nights' => max(0, (int) $member->qualifying_nights - (int) $row->nights),
+                'qualifying_stays'  => max(0, (int) $member->qualifying_stays - (int) $row->stays),
+                'qualifying_spend'  => max(0.0, round((float) $member->qualifying_spend - (float) $row->spend, 2)),
+            ])->save();
+
+            if ($this->judgedOnCounters($member)) {
+                $this->assessTier($member->fresh(), null, 'reversal');
+            }
+
+            return true;
+        }));
+    }
+
+    /**
+     * Whether the member's tier reads the counters (`nights`, `stays`, `spend`, or `hybrid` with points): only then can
+     * a counted or reversed visit move it, so only then is the tier assessed — a member judged on points is assessed
+     * when points move (awardPoints(), reverseTransaction()), never by a visit that changed nothing they are judged on.
+     */
+    private function judgedOnCounters(LoyaltyMember $member): bool
+    {
+        return in_array($member->tier_qualification_model ?? 'points', ['nights', 'stays', 'spend', 'hybrid'], true);
+    }
+
+    /** Run $fn with the organisation bound (the tier ladder and the assessment rows are tenant-scoped), then restore. */
+    private function underOrg(int $orgId, callable $fn): mixed
+    {
+        $prior = app()->bound('current_organization_id') ? app('current_organization_id') : null;
+        if ((int) $prior === $orgId) {
+            return $fn();
+        }
+        app()->instance('current_organization_id', $orgId);
+        try {
+            return $fn();
+        } finally {
+            if ($prior !== null) {
+                app()->instance('current_organization_id', $prior);
+            } else {
+                app()->forgetInstance('current_organization_id');
+            }
+        }
     }
 
     /**
@@ -941,7 +1192,9 @@ class LoyaltyService
             return 0;
         }
 
-        $buckets = PointExpiryBucket::where('expires_at', '<', now())
+        // A bucket without a date never expires (release 7: the venue's expiry is 0, "never").
+        $buckets = PointExpiryBucket::whereNotNull('expires_at')
+            ->where('expires_at', '<', now())
             ->where('is_expired', false)
             ->where('remaining_points', '>', 0)
             ->whereIn('member_id', $memberIds)
@@ -1024,12 +1277,15 @@ class LoyaltyService
 
         $totalOutstanding = LoyaltyMember::where('is_active', true)->sum('current_points');
 
-        $ymSql = DB::getDriverName() === 'pgsql'
-            ? "TO_CHAR(expires_at, 'YYYY-MM')"
-            : "DATE_FORMAT(expires_at, '%Y-%m')";
+        $ymSql = match (DB::getDriverName()) {
+            'pgsql'  => "TO_CHAR(expires_at, 'YYYY-MM')",
+            'sqlite' => "strftime('%Y-%m', expires_at)",
+            default  => "DATE_FORMAT(expires_at, '%Y-%m')",
+        };
 
-        $expirySchedule = PointExpiryBucket::where('is_expired', false)
-            ->where('remaining_points', '>', 0)
+        // Points that never expire (no date, release 7) are outstanding but in no month of the schedule.
+        $live = fn () => PointExpiryBucket::where('is_expired', false)->where('remaining_points', '>', 0);
+        $expirySchedule = $live()->whereNotNull('expires_at')
             ->selectRaw("{$ymSql} as month, SUM(remaining_points) as points")
             ->groupBy('month')
             ->orderBy('month')
@@ -1040,6 +1296,7 @@ class LoyaltyService
             'estimated_liability_currency'=> round($totalOutstanding * $rate, 2),
             'currency_rate'               => $rate,
             'expiry_schedule_by_month'    => $expirySchedule,
+            'never_expiring_points'       => (int) $live()->whereNull('expires_at')->sum('remaining_points'),
         ];
     }
 

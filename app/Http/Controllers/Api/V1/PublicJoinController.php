@@ -67,6 +67,8 @@ class PublicJoinController extends Controller
             // Shown on the form as the reason to bother signing up: what sign-up awards, read the way it reads it
             // (ProgrammeOptions, 500 for a venue that never set it — not 0, which promised nothing).
             'welcome_bonus'   => (int) ProgrammeOptions::get((int) $org->id, 'welcome_bonus_points'),
+            // Release 7: with referrals off, sign-up ignores a code, so the form asks for none.
+            'referrals'       => (bool) ProgrammeOptions::get((int) $org->id, 'referral_enabled'),
             // The page paints the venue before any session exists.
             'theme'           => \App\Services\Portal\PortalTheme::for($org),
         ]);

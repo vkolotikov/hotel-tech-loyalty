@@ -41,6 +41,10 @@
     "already_claimed_offer": "Already claimed — see above", "fully_claimed": "Fully claimed", "used_on": "Used {{date}}",
     "valid_until": "Valid until {{date}}", "ready_to_use": "Ready to use — show this at the desk", "ends": "Ends {{date}}",
     "percent_off": "{{value}}% off", "amount_off": "{{value}} off", "points_multiplier": "{{value}}x points",
+    "bonus_points_one": "+{{count}} point", "bonus_points_few": "+{{count}} points", "bonus_points_many": "+{{count}} points", "bonus_points_other": "+{{count}} points",
+    "claimed_points_one": "+{{count}} point added to your balance", "claimed_points_few": "+{{count}} points added to your balance", "claimed_points_many": "+{{count}} points added to your balance", "claimed_points_other": "+{{count}} points added to your balance",
+    "perk_free_night": "A free night, given by the venue — show this when you book or arrive.", "perk_upgrade": "An upgrade, given by the venue — show this when you arrive.",
+    "perk_cashback": "Cashback, given by the venue at the desk — show this when you pay.", "points_added_on": "Points added {{date}}",
     "codes_empty": "Codes you redeem will be kept here.", "code_pending": "Show at the desk", "code_fulfilled": "Used", "code_cancelled": "Cancelled",
     "codes_hint": "Each code works once. The venue marks it used when you present it."
   },
@@ -78,7 +82,7 @@
   "activity": { "title": "Activity",
     "entries_one": "{{count}} entry", "entries_few": "{{count}} entries", "entries_many": "{{count}} entries", "entries_other": "{{count}} entries",
     "empty": "No points activity yet. Your first visit will show up here.", "balance": "balance {{count}}", "reversed": "reversed",
-    "type": { "earn": "Earned", "bonus": "Bonus", "redeem": "Redeemed", "adjust": "Adjustment", "expire": "Expired", "reverse": "Reversed" } },
+    "type": { "earn": "Earned", "bonus": "Bonus", "redeem": "Redeemed", "adjust": "Adjustment", "expire": "Expired", "reverse": "Reversed", "referral": "Referral" } },
   "inbox": {
     "title": "Inbox", "mark_all": "Mark all as read", "mark_failed": "Could not mark your messages as read. Please try again.", "unread": "Unread",
     "empty_title": "Nothing here yet", "empty_body": "When {{venue}} sends you news about your points, offers, your level or your bookings, you will find it here.",
@@ -97,6 +101,7 @@
     "sms": "Offers by SMS", "sms_hint": "Text messages about offers, to {{phone}}. Off until you turn it on.", "sms_needs_phone": "Add your phone number above to get offers by SMS.",
     "service_messages": "You'll still receive service messages about your account — password resets, booking confirmations and similar — regardless of these settings.",
     "invite_title": "Invite a friend", "invite_body": "Share your link — you'll both be rewarded when they join.", "invite_share": "Share my link", "invite_copy": "Copy link",
+    "invite_body_first_visit": "Share your link — you'll both be rewarded after your friend's first visit.",
     "invite_stats_one": "{{count}} friend joined", "invite_stats_few": "{{count}} friends joined", "invite_stats_many": "{{count}} friends joined", "invite_stats_other": "{{count}} friends joined",
     "invite_unavailable": "Referral links are not available yet.",
     "password_title": "Password", "password_change": "Change password", "password_current": "Current password", "password_new": "New password",
