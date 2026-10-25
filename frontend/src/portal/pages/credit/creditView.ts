@@ -29,10 +29,7 @@ export const creditApi = {
 
 export const CREDIT_KEY = ['portal-credit'] as const
 
-/** How many lines Home shows under the balance. */
-export const RECENT_LINES = 5
-
-/** Whether Home shows credit: the venue gives cashback, or the member still holds some. */
+/** Whether the portal shows credit (Home's tile, Activity's Credit tab): the venue gives cashback, or the member still holds some. */
 export function showsCredit(credit: Pick<MemberCredit, 'enabled' | 'balance'> | undefined): boolean {
   return credit !== undefined && (credit.enabled || credit.balance > 0)
 }
@@ -59,7 +56,7 @@ export const LINE_WORDS: Record<CreditLineKind, string> = {
   earn_purchase: 'Cashback on a purchase',
   earn: 'Cashback',
   spend: 'Spent at the desk',
-  reverse: 'Cashback taken back (refunded or cancelled)',
+  reverse: 'Cashback taken back',
   merge: 'Moved from your other membership',
   forfeit: 'Forfeited',
   adjust: 'Correction',

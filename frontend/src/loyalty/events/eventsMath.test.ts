@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
-  bodyOf, checkInSentence, counted, outsideLine, dateBlock, durationMinutes, eventActions, formOf, formProblems, newForm, numbersLine, peopleGroups, personLine,
+  bodyOf, checkInSentence, counted, listOf, moreItems, outsideLine, dateBlock, durationMinutes, eventActions, formOf, formProblems, newForm, numbersLine, peopleGroups, personLine,
   phaseTone, scanContextFor, scanPathFor, doorPathFor, tabAfter, tabFrom, timeRange, wallNow, whenLine, whereOf, type Say,
 } from './eventsMath'
 import type { CheckInAnswer, EventPerson, LoyaltyEventRow } from './types'
@@ -87,6 +87,14 @@ describe('what the event’s page offers', () => {
     expect(eventActions(event({ status: 'cancelled', phase: 'cancelled' }), true, now)).toMatchObject({ edit: false, cancel: false, checkIn: false })
   })
 
+  it('keeps the rest of the actions in the More menu, in order, and only those this person may take', () => {
+    expect(moreItems(eventActions(event(), true, now))).toEqual(['add', 'edit', 'cancel'])
+    expect(moreItems(eventActions(event(), false, now))).toEqual(['add'])
+    expect(moreItems(eventActions(event({ sign_up: false }), false, now))).toEqual([])
+    expect(moreItems(eventActions(event({ status: 'draft', phase: 'draft' }), true, now))).toEqual(['edit', 'delete'])
+    expect(moreItems(eventActions(event({ status: 'cancelled', phase: 'cancelled' }), true, now))).toEqual([])
+  })
+
   it('hands Scan this event as its choice', () => {
     expect(JSON.parse(scanContextFor(7))).toEqual({ kind: 'event', id: 7 })
     expect(scanPathFor(7)).toBe('/loyalty/scan?event=7')
@@ -169,7 +177,13 @@ describe('check-in by name', () => {
 
   it('says why not, in words', () => {
     expect(checkInSentence(answer({ checked_in: false }, { granted: false, reason: 'tier_not_allowed', allowed_tiers: ['Gold', 'Platinum'] }), 'Ada', say, 'en').text)
-      .toBe('No access: for Gold, Platinum only — Ada is Silver.')
+      .toBe('No access: for Gold and Platinum only — Ada is Silver.')
+    // A member without a tier is told so, not "Ada is ."; an event that lets no tier in says that.
+    expect(checkInSentence(answer({ checked_in: false }, { granted: false, reason: 'tier_not_allowed', allowed_tiers: ['Gold'], tier: null }), 'Ada', say, 'en').text)
+      .toBe('No access: for Gold only — Ada has no tier.')
+    expect(checkInSentence(answer({ checked_in: false }, { granted: false, reason: 'tier_not_allowed', allowed_tiers: [] }), 'Ada', say, 'en').text)
+      .toBe('No access: no tier is let in to this event.')
+    expect(listOf(['Gold', 'Silver', 'Platinum'], 'ru')).toBe('Gold, Silver и Platinum')
     expect(checkInSentence(answer({ checked_in: false }, { granted: false, reason: 'expired', valid_until: '2026-10-03' }), 'Ada', say, 'en').text)
       .toBe('No access: the membership expired on Oct 3, 2026.')
     expect(checkInSentence(answer({ checked_in: false }, { granted: false, reason: 'something_new' }), 'Ada', say, 'en')).toEqual({ tone: 'danger', text: 'No access.', points: null })

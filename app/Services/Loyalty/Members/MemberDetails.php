@@ -51,7 +51,9 @@ final class MemberDetails
         $tierChanged = isset($member['tier_id']) && (int) $member['tier_id'] !== (int) $oldTierId;
         if ($tierChanged) {
             $member['tier_effective_from'] = now()->toDateString();
-            $member['tier_effective_until'] = now()->addYear()->toDateString();
+            // Release 9: no grace deadline a year ahead (that held the tier against every downgrade for a year); a dip
+            // starts the grace clock, and "keep until" (tier_override_until) is how staff hold a tier on purpose.
+            $member['tier_effective_until'] = null;
             $member['tier_review_date'] = now()->addYear()->toDateString();
         }
 

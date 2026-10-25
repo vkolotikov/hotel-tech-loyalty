@@ -1,8 +1,8 @@
 {
   "balance": "Guthaben: {{amount}}",
-  "at_desk": "Lösen Sie es am Empfang ein: Bitten Sie das Team, es von Ihrer Rechnung abzuziehen.",
-  "off": "Neues Guthaben wird nicht mehr gutgeschrieben; Ihr Guthaben können Sie weiter am Empfang einlösen.",
-  "none": "Ab Ihrem nächsten Besuch bekommen Sie einen Teil Ihrer Ausgaben als Guthaben zurück.",
+  "at_desk": "Lösen Sie es am Empfang ein.",
+  "off": "Kein neues Guthaben mehr; lösen Sie Ihres am Empfang ein.",
+  "none": "Guthaben gibt es ab Ihrem nächsten Besuch.",
   "recent": "Letzte Guthabenbewegungen",
   "line": {
     "earn_appointment": "Cashback für einen Termin",
@@ -10,7 +10,7 @@
     "earn_purchase": "Cashback für einen Einkauf",
     "earn": "Cashback",
     "spend": "Am Empfang eingelöst",
-    "reverse": "Cashback zurückgenommen (erstattet oder storniert)",
+    "reverse": "Cashback zurückgenommen",
     "merge": "Von Ihrer anderen Mitgliedschaft übertragen",
     "forfeit": "Verfallen",
     "adjust": "Korrektur",

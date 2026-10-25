@@ -2,7 +2,6 @@
   "title": "Saldo",
   "use_action": "Usar saldo",
   "adjust_action": "Corregir",
-  "earning": "Los miembros recuperan el {{percent}} % de lo que gastan como saldo, para usar en recepción.",
   "off": "El cashback está desactivado: no se gana saldo nuevo, y este saldo todavía puede usarse en recepción.",
   "none": "Todavía no hay saldo.",
   "history": "Historial del saldo",

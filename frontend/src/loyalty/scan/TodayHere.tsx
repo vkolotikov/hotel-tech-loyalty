@@ -1,25 +1,37 @@
 import { useTranslation } from 'react-i18next'
-import { Check, X } from 'lucide-react'
+import { Check, ClipboardList, Ticket, UserPlus, X, type LucideIcon } from 'lucide-react'
 import { Skeleton } from '../../workspace/ui/Skeleton'
 import { points } from '../lib/format'
 import type { Today } from './useToday'
 import { useSay } from './useSay'
 
-/** Today's numbers as short phrases: "Let in: 23", "Refused: 2" / "Checked in: 12", "Signed up: 30", "Places left: 8". */
+/** Today's numbers as small pills, each with its icon: "Let in: 23", "Refused: 2" / "Checked in: 12", "Signed up: 30", "Places left: 8". */
 export function TodayCounts({ today, locale }: { today: Today; locale: string }) {
   const { t } = useTranslation()
   const c = today.counts
   if (!c) return null
   const n = (v: number) => points(v, locale)
-  const parts = c.kind === 'place'
-    ? [t('loyalty.door.today_let_in', 'Let in: {{number}}', { number: n(c.granted) }), t('loyalty.door.today_refused', 'Refused: {{number}}', { number: n(c.denied) })]
-    : [
-        t('loyalty.door.today_checked_in', 'Checked in: {{number}}', { number: n(c.checkedIn) }),
-        t('loyalty.door.today_signed_up', 'Signed up: {{number}}', { number: n(c.signedUp) }),
-        ...(c.walkIns > 0 ? [t('loyalty.door.today_walk_ins', 'Walk-ins: {{number}}', { number: n(c.walkIns) })] : []),
-        ...(c.roomLeft !== null ? [t('loyalty.door.today_room_left', 'Places left: {{number}}', { number: n(c.roomLeft) })] : []),
+  const parts: [LucideIcon, string, string][] = c.kind === 'place'
+    ? [
+        [Check, 'l-plus', t('loyalty.door.today_let_in', 'Let in: {{number}}', { number: n(c.granted) })],
+        [X, 'l-minus', t('loyalty.door.today_refused', 'Refused: {{number}}', { number: n(c.denied) })],
       ]
-  return <p data-today-counts="" className="text-sm text-a-text-2">{parts.join(' · ')}</p>
+    : [
+        [Check, 'l-plus', t('loyalty.door.today_checked_in', 'Checked in: {{number}}', { number: n(c.checkedIn) })],
+        // Without sign-up there is nobody signed up and everyone is a walk-in: "Checked in" says it all.
+        ...(c.signUp !== false ? [[ClipboardList, '', t('loyalty.door.today_signed_up', 'Signed up: {{number}}', { number: n(c.signedUp) })] as [LucideIcon, string, string]] : []),
+        ...(c.signUp !== false && c.walkIns > 0 ? [[UserPlus, '', t('loyalty.door.today_walk_ins', 'Walk-ins: {{number}}', { number: n(c.walkIns) })] as [LucideIcon, string, string]] : []),
+        ...(c.roomLeft !== null ? [[Ticket, '', t('loyalty.door.today_room_left', 'Places left: {{number}}', { number: n(c.roomLeft) })] as [LucideIcon, string, string]] : []),
+      ]
+  return (
+    <ul data-today-counts="" className="flex flex-wrap gap-1.5">
+      {parts.map(([Icon, tone, words]) => (
+        <li key={words} className="inline-flex items-center gap-1.5 rounded-full bg-a-surface-2 px-2.5 py-1 text-xs font-medium text-a-text">
+          <Icon size={13} strokeWidth={2.5} aria-hidden className={tone || 'text-a-text-2'} />{words}
+        </li>
+      ))}
+    </ul>
+  )
 }
 
 /** "Today here" under the scanner: today's numbers and the latest who came in (or were turned away), newest first. */
@@ -28,7 +40,7 @@ export function TodayHere({ today, locale }: { today: Today; locale: string }) {
   const say = useSay()
   return (
     <section aria-labelledby="scan-today" data-today="" className="space-y-3 rounded-2xl border border-a-border bg-a-surface p-5">
-      <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
         <h2 id="scan-today" className="font-a-display text-xl text-a-text">{t('loyalty.door.today_title', 'Today here')}</h2>
         <TodayCounts today={today} locale={locale} />
       </div>

@@ -1,6 +1,5 @@
 {
   "back": "Retour au scan",
-  "benefits": "Avantages",
   "check": "Vérifier",
   "checking": "Vérification…",
   "choose_failed": "Impossible de charger les lieux et les événements. Vérifiez la connexion, puis rechargez la page.",
@@ -16,9 +15,6 @@
   "leave": "Quitter le mode entrée",
   "leave_line": "Cet écran cesse de faire entrer les membres jusqu’à ce que le mode entrée soit rouvert.",
   "leave_title": "Quitter le mode entrée ?",
-  "line_desk": "Trouvez un membre, puis attribuez ou échangez des points, ou enregistrez sa visite.",
-  "line_event": "Chaque scan enregistre le membre à {{event}} ({{hours}}).",
-  "line_place": "Chaque scan décide si le membre peut entrer à {{place}}, et l’enregistre.",
   "linked": "La carte est associée à {{name}}. Scannez-la à nouveau pour le faire entrer.",
   "loading_places": "Chargement des lieux et des événements…",
   "next": "Membre suivant",
@@ -28,7 +24,7 @@
   "places": "Lieux",
   "places_failed": "Impossible de charger les lieux et les événements. L’accueil fonctionne comme d’habitude ; ils apparaîtront au retour de la connexion.",
   "ready": "Prêt — scannez le membre suivant",
-  "ready_line": "Un QR code, une carte ou un numéro de membre : la réponse s’affiche ici quelques secondes.",
+  "renew": "Renouveler pour 1 an",
   "retry": "Réessayer",
   "scanning_for": "Scanner pour",
   "set_up_places": "Configurer les lieux",
@@ -52,14 +48,10 @@
   "unavailable": "Le mode entrée n’a pas pu démarrer",
   "unavailable_line": "Vérifiez la connexion, puis réessayez.",
   "way_camera": "Démarrer la caméra",
-  "way_camera_line": "Les membres présentent leur QR code devant cet écran.",
   "way_nfc": "Approcher les cartes NFC",
-  "way_nfc_line": "Les membres approchent leur carte du dos de cet appareil.",
   "way_usb": "Lecteur USB",
-  "way_usb_line": "Un lecteur de cartes branché sur cet appareil.",
   "headline": {
-    "welcome": "Bienvenue, {{name}}",
-    "welcome_plain": "Bienvenue",
+    "welcome": "Bienvenue",
     "no_access": "Accès refusé",
     "card_unknown": "Carte non reconnue",
     "trouble": "Réessayez",
@@ -97,11 +89,14 @@
     "signed_up": "Sur inscription",
     "walk_in": "Sans inscription",
     "already_in": "Entrée déjà enregistrée à {{time}}",
+    "already_in_on": "Déjà enregistré(e) le {{date}} à {{time}}",
+    "points_one": "+1 point",
     "points": "+{{points}} points"
   },
   "validity": {
     "until": "Valable jusqu’au {{date}}",
     "ending": "Valable jusqu’au {{date}} — se termine dans {{days}} jours",
+    "ending_tomorrow": "Valable jusqu’au {{date}} — se termine demain",
     "ending_today": "Valable jusqu’à aujourd’hui",
     "ended": "Adhésion terminée le {{date}}"
   }

@@ -39,7 +39,7 @@ export function MessagesCard({ member }: { member: PortalMember }) {
     offers: { label: t('portal.profile.kind_offers', 'Offers'), hint: t('portal.profile.kind_offers_hint', 'New offers, and offers about to end.') },
     points: { label: t('portal.profile.kind_points', 'Points'), hint: t('portal.profile.kind_points_hint', 'Points you earn, and points about to expire.') },
     tier: { label: t('portal.profile.kind_tier', 'Your level'), hint: t('portal.profile.kind_tier_hint', 'When your membership level changes.') },
-    stays: { label: t('portal.profile.kind_stays', 'Your {{noun}}', { noun }), hint: t('portal.profile.kind_stays_hint', 'Reminders and news about your {{noun}}.', { noun }) },
+    stays: { label: t('portal.profile.kind_stays', 'Your {{noun}}', { noun }), hint: t('portal.profile.kind_stays_hint', 'Reminders and news.') },
   }
   const sms = smsSwitch(member)
   const busy = save.isPending

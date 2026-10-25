@@ -33,6 +33,16 @@ cancel either kind themselves inside the venue's cancellation window (`## Cancel
 - Public: `GET /api/v1/public/join/{token}` carries `theme`, and since release 7 `welcome_bonus` read through
   `ProgrammeOptions` (500 for a venue that never set it) and `referrals` (false: the form asks for no referral code);
   `GET /manifest.webmanifest?app=portal` is the portal's install manifest.
+- Release 9 (`docs/loyalty-workspace.md` "Release 9", the owner's review and redesign, 2026-10-25): the membership card
+  shows the tier in the text colour (the tier's own colour only on its icon, border and bar, lightened to 3:1 on the
+  dark card), every number with its separators (`lib/plural.ts` `counted()` formats `{{count}}` in the member's
+  language), the end date in amber when it ends within 30 days, and "Your <tier> benefits" from `member.benefits` (See
+  all → Rewards → Benefits). Home's next booking says what it is (a stay or the industry's appointment, one whole
+  sentence per kind), the credit is a compact tile (its lines moved to Activity → Credit), activity days are the
+  venue's. Events: an event still on is listed once (under "Coming up", checked in — `attended` lists only ended
+  ones), and an event without sign-up says what its door would (`why_not`: `inactive`, `membership_expired`,
+  `event_full`) instead of "just come along". The points progress comes from `tierProgress()` (never an
+  invitation-only tier). Rewards decides from the server's `can_afford` / `remaining_for_me`.
 - Release 8 (`docs/loyalty-workspace.md` "Release 8"): the bootstrap's `member.membership` (`valid_until`, `state`:
   active | expiring | expired | off) — the membership card says "Member until …" or "Your membership ended on … — ask
   the team to renew" (the member can still sign in and see everything); progress reads in the programme's measure

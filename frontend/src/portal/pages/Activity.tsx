@@ -1,14 +1,21 @@
 import { useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
+import { Clock, Gift, Minus, Plus, Sparkles, Undo2, UserPlus, type LucideIcon } from 'lucide-react'
+import { usePortal } from '../PortalProvider'
 import { portalApi } from '../lib/portalApi'
-import { formatDay, resolveLocale } from '../lib/dates'
+import { resolveLocale } from '../lib/dates'
 import { counted } from '../lib/plural'
 import { Card } from '../ui/Card'
 import { Button } from '../ui/Button'
 import { EmptyState } from '../ui/EmptyState'
 import { Notice } from '../ui/Notice'
 import { PageSkeleton } from '../ui/Skeleton'
+import { Tabs } from '../ui/Tabs'
+import { CreditHistory } from './credit/CreditBalance'
+import { CREDIT_KEY, creditApi, showsCredit } from './credit/creditView'
+import { instantDay } from './homeMath'
 
 // The en bundle's own text for each activity type, passed as i18next's
 // default value — matching statusLabel/paymentLabel in BookingRow.tsx — so a
@@ -21,6 +28,14 @@ const ACTIVITY_TYPE_LABEL: Record<string, string> = {
   adjust: 'Adjustment',
   expire: 'Expired',
   reverse: 'Reversed',
+}
+
+/** A picture for each kind of points line, beside its words (a kind it does not know reads by its sign). */
+const ACTIVITY_ICON: Record<string, LucideIcon> = { bonus: Sparkles, redeem: Gift, expire: Clock, reverse: Undo2, referral: UserPlus }
+
+// eslint-disable-next-line react-refresh/only-export-components
+export function activityIcon(type: string, points: number): LucideIcon {
+  return ACTIVITY_ICON[type] ?? (points >= 0 ? Plus : Minus)
 }
 
 // activityTypeLabel lives beside the row that is its main consumer (Home
@@ -37,39 +52,75 @@ export function activityTypeLabel(
   return t(`portal.activity.type.${type}`, ACTIVITY_TYPE_LABEL[type] ?? type)
 }
 
+type Tab = 'points' | 'credit'
+
+/**
+ * The member's history: their points lines and — while the venue gives cashback or the member holds some — their
+ * credit (release 9: the credit's history lives here, Home shows only its balance). The tab survives reload via ?tab=.
+ */
 export function Activity() {
+  const { t } = useTranslation()
+  const [params, setParams] = useSearchParams()
+  const { data: credit } = useQuery({ queryKey: CREDIT_KEY, queryFn: creditApi.show, staleTime: 60_000 })
+  const hasCredit = !!credit && showsCredit(credit)
+  const tab: Tab = hasCredit && params.get('tab') === 'credit' ? 'credit' : 'points'
+
+  return (
+    <div className="space-y-4">
+      <h1 className="font-p-display text-2xl">{t('portal.activity.title', 'Activity')}</h1>
+      {hasCredit && (
+        <Tabs
+          value={tab}
+          onChange={key => setParams({ tab: key }, { replace: true })}
+          items={[
+            { key: 'points', label: t('portal.activity.tab_points', 'Points') },
+            { key: 'credit', label: t('portal.activity.tab_credit', 'Credit') },
+          ]}
+        />
+      )}
+      {tab === 'credit' && credit ? <CreditHistory credit={credit} /> : <PointsHistory />}
+    </div>
+  )
+}
+
+function PointsHistory() {
   const { t, i18n } = useTranslation()
+  const { data: boot } = usePortal()
   const [page, setPage] = useState(1)
   const { data, isLoading, isError, refetch, isFetching } = useQuery({
     queryKey: ['portal-activity', page], queryFn: () => portalApi.pointsHistory(page), placeholderData: keepPreviousData,
   })
   const typeLabel = (type: string) => activityTypeLabel(t, type)
   const locale = resolveLocale(i18n.language)
+  const tz = boot?.venue.timezone
 
   if (isLoading) return <PageSkeleton />
   if (isError) return <div className="space-y-3"><Notice tone="danger">{t('portal.common.error', 'Something went wrong. Please try again.')}</Notice><Button variant="secondary" onClick={() => { void refetch() }}>{t('portal.common.retry', 'Try again')}</Button></div>
 
   const rows = data?.data ?? []
   return (
-    <div className="space-y-4">
-      <div className="flex items-baseline justify-between">
-        <h1 className="font-p-display text-2xl">{t('portal.activity.title', 'Activity')}</h1>
-        {!!data?.total && <span className="text-xs text-p-text-2 tabular-nums">{counted(t, 'activity.entries', data.total)}</span>}
-      </div>
+    <div className="space-y-3">
+      {!!data?.total && <p className="text-xs text-p-text-2 tabular-nums">{counted(t, 'activity.entries', data.total, i18n.language)}</p>}
       {rows.length === 0 ? <EmptyState title={t('portal.activity.empty', 'No points activity yet. Your first visit will show up here.')} /> : (
         <Card className="overflow-hidden divide-y divide-p-border">
-          {rows.map(a => (
-            <div key={a.id} className="flex items-center justify-between gap-3 px-4 py-3">
-              <div className="min-w-0">
-                <p className={`text-sm truncate ${a.is_reversed ? 'line-through text-p-text-2' : ''}`}>{a.description || typeLabel(a.type)}</p>
-                <p className="text-[11px] text-p-text-2">{typeLabel(a.type)} · {formatDay(a.created_at, i18n.language)}{a.is_reversed && ` · ${t('portal.activity.reversed', 'reversed')}`}</p>
+          {rows.map(a => {
+            const Icon = activityIcon(a.type, a.points)
+            return (
+              <div key={a.id} className="flex items-center gap-3 px-4 py-3">
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${a.points >= 0 ? 'bg-p-success/10 text-p-success' : 'bg-p-surface-2 text-p-text-2'}`}><Icon size={15} aria-hidden /></div>
+                <div className="min-w-0 flex-1">
+                  <p className={`text-sm truncate ${a.is_reversed ? 'line-through text-p-text-2' : ''}`}>{a.description || typeLabel(a.type)}</p>
+                  <p className="text-[11px] text-p-text-2">
+                    {a.description ? `${typeLabel(a.type)} · ` : ''}{instantDay(a.created_at, i18n.language, tz)}{a.is_reversed && ` · ${t('portal.activity.reversed', 'reversed')}`}
+                  </p>
+                </div>
+                <div className="shrink-0 text-right">
+                  <span className={`text-sm font-semibold tabular-nums ${a.points >= 0 ? 'text-p-success' : 'text-p-text-2'}`}>{a.points >= 0 ? '+' : ''}{a.points.toLocaleString(locale)}</span>
+                  {a.balance_after != null && <p className="text-[10px] text-p-text-2 tabular-nums">{t('portal.activity.balance', 'balance {{count}}', { replace: { count: a.balance_after.toLocaleString(locale) } })}</p>}
+                </div>
               </div>
-              <div className="shrink-0 text-right">
-                <span className={`text-sm font-semibold tabular-nums ${a.points >= 0 ? 'text-p-success' : 'text-p-text-2'}`}>{a.points >= 0 ? '+' : ''}{a.points.toLocaleString(locale)}</span>
-                {a.balance_after != null && <p className="text-[10px] text-p-text-2 tabular-nums">{t('portal.activity.balance', 'balance {{count}}', { count: a.balance_after })}</p>}
-              </div>
-            </div>
-          ))}
+            )
+          })}
         </Card>
       )}
       {(data?.last_page ?? 1) > 1 && (

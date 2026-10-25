@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest'
+import fs from 'node:fs'
+import path from 'node:path'
 import { money } from '../lib/format'
 import type { Can, Ways } from '../lib/types'
 import type { DeskAnswer } from './visitsApi'
@@ -6,6 +8,7 @@ import {
   amountProblem, circles, currencyDigits, deskButtons, deskSentences, givenSentence, parseAmount, problemSentence, rewardSentence, shownCard, showVisits,
   sourceSentence,
 } from './visitsMath'
+import { SOURCE_WORDS } from './words'
 
 const ways = (more: Partial<Ways> = {}): Ways => ({
   stamps: false, stamps_per_card: 10, checkin: false, checkin_points: 0, desk_earn: false, cashback: false, cashback_percent: 5, setup_done: true, ...more,
@@ -113,10 +116,33 @@ describe('the history’s words', () => {
   it('names each source and what a card gave or gives', () => {
     expect(text(sourceSentence('check_in'))).toBe('Check-in')
     expect(sourceSentence('stay').key).toBe('loyalty.visits.source.stay')
-    expect(text(sourceSentence('something_new'))).toBe('something_new')
+    expect(text(sourceSentence('event'))).toBe('Event')
+    // A source the workspace does not know yet reads as a visit, never as the server's raw code.
+    expect(sourceSentence('something_new')).toEqual({ key: 'loyalty.visits.source.other', fallback: 'Visit' })
+    expect(sourceSentence('toString').key).toBe('loyalty.visits.source.other')
     expect(text(givenSentence({ kind: 'points', points: 100 }, 'en'))).toBe('+100 points')
     expect(text(givenSentence({ kind: 'reward', redemption_id: 1, reward_name: 'Coffee', code: 'REW-1', status: 'pending' }, 'en'))).toBe('Free reward: Coffee')
     expect(text(rewardSentence({ kind: 'points', points: 1000 }, 'en'))).toBe('A full card gives 1,000 points.')
     expect(text(rewardSentence({ kind: 'reward', reward_id: 2, reward_name: 'Coffee' }, 'en'))).toBe('A full card gives a free Coffee.')
+  })
+})
+
+describe('the stamp sources the server writes', () => {
+  /** StampCards::SOURCES, read from the server's source: each is a Visit:: constant whose value is the stored source. */
+  function serverSources(): string[] {
+    const root = path.resolve(__dirname, '../../../..')
+    const cards = fs.readFileSync(path.join(root, 'app/Services/Loyalty/Stamps/StampCards.php'), 'utf8')
+    const visit = fs.readFileSync(path.join(root, 'app/Services/Loyalty/Visits/Visit.php'), 'utf8')
+    const list = /const SOURCES\s*=\s*\[([^\]]*)\]/.exec(cards)?.[1] ?? ''
+    const values = Object.fromEntries([...visit.matchAll(/const ([A-Z_]+)\s*=\s*'([a-z_]+)'/g)].map(m => [m[1], m[2]]))
+    return [...list.matchAll(/Visit::([A-Z_]+)/g)].map(m => values[m[1]] ?? `unknown constant ${m[1]}`)
+  }
+
+  it('names every one of them in words (a new source on the server fails here until it has a label)', () => {
+    const sources = serverSources()
+    expect(sources.length).toBeGreaterThanOrEqual(5)
+    expect(sources).toContain('event')
+    expect(sources.filter(source => !(source in SOURCE_WORDS))).toEqual([])
+    for (const source of sources) expect(sourceSentence(source).key).toBe(`loyalty.visits.source.${source}`)
   })
 })

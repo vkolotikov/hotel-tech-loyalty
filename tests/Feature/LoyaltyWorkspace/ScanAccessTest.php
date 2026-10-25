@@ -89,7 +89,7 @@ class ScanAccessTest extends TestCase
             'place'           => ['id' => $this->lounge->id, 'name' => 'VIP lounge'],
             'entry_id'        => (int) $row->id,
         ], $response->json('verdict'));
-        $this->assertSame([['name' => 'Late checkout', 'value' => 'Until 2 pm', 'category' => 'accommodation']], $response->json('benefits'));
+        $this->assertSame([['name' => 'Late checkout', 'value' => 'Until 2 pm', 'category' => 'accommodation', 'value_type' => 'text', 'value_amount' => null]], $response->json('benefits'));
         $this->assertNotNull($this->ada->fresh()->last_activity_at);
     }
 

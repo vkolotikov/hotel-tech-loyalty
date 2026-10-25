@@ -128,6 +128,27 @@ class PortalEventsTest extends TestCase
         $this->asGrace()->getJson(self::URL)->assertOk()->assertJsonPath('attended', [['id' => $event->id, 'title' => 'Yoga', 'starts_at' => '2026-10-03T08:00', 'points' => 50]]);
     }
 
+    public function test_an_event_without_sign_up_says_what_its_door_would_and_one_still_on_is_listed_once(): void
+    {
+        // Now is 09:00 on the 5th. A walk-in evening with one place, already taken by Ada.
+        $evening = $this->makeEvent(['title' => 'Open evening', 'capacity' => 1]);
+        DB::table('loyalty_event_attendances')->insert(['organization_id' => $this->org->id, 'loyalty_event_id' => $evening->id, 'member_id' => $this->ada->id, 'checked_in_at' => now(), 'walk_in' => true, 'created_at' => now(), 'updated_at' => now()]);
+        $this->asGrace()->getJson(self::URL)->assertOk()->assertJsonPath('upcoming.0.why_not', 'event_full');
+
+        // A membership over before the day it begins: the door would refuse, so the page says so.
+        $morning = $this->makeEvent(['title' => 'Morning class', 'starts_at' => '2026-10-07 08:00:00', 'ends_at' => '2026-10-07 09:00:00']);
+        DB::table('loyalty_members')->where('id', $this->grace->id)->update(['membership_valid_until' => '2026-10-06']);
+        $json = $this->asGrace()->getJson(self::URL)->assertOk()->json('upcoming');
+        $this->assertSame(['event_full', 'membership_expired'], array_column($json, 'why_not'));
+        $this->assertNotNull($morning->id);
+
+        // Ada, inside the evening still on: under "Coming up", checked in — not also under "You came to".
+        $ada = $this->actingAs(User::query()->findOrFail($this->ada->user_id), 'sanctum')->getJson(self::URL)->assertOk()->json();
+        $this->assertTrue($ada['upcoming'][0]['checked_in']);
+        $this->assertNull($ada['upcoming'][0]['why_not']);
+        $this->assertSame([], $ada['attended']);
+    }
+
     public function test_the_menu_offers_events_while_one_for_the_members_tier_is_coming_and_a_venue_without_a_programme_shows_none(): void
     {
         $events = app(PortalEvents::class);

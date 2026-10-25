@@ -425,6 +425,50 @@ visits or spend, and a scan screen that is easy on location).
   event survives, `EventMerge`); a merge adds the visits and keeps the later end date (a duplicate without one never
   lifts the winner's).
 
+### Release 9
+
+Owner 2026-10-25: "double review and fix … all user and admin flow … modern, easy to use, minimized copy, more icons,
+no duplicated info". Four independent reviews (scan and access, tiers, the staff screens, the portal) and a redesign of
+the scan screen, door mode, the member page and list, Program, Ways to earn, Events and the portal's loyalty screens.
+
+- **Tier moves** (`LoyaltyService::assessTier()`): a move's direction is `compareOnLadder()` — the measure's floors,
+  then the points floors, then `sort_order`; level on all three is no move (a staff-only tier with no visits floor no
+  longer loses its member with no rule applied, logged as a downgrade). Soft landing steps one tier down the measure's
+  own ladder (the highest active, non-invitation tier with a floor on the measure between the two), never by the list's
+  order. The grace period runs from the first assessment that would drop the member: a move (automatic, the workspace's
+  or the full admin's Change tier) no longer writes `tier_effective_until` a year ahead — that held every tier for a
+  year after any move and then gave no grace at all — and qualifying again stops a running clock. "Keep until"
+  (`tier_override_until`) is how staff hold a tier on purpose. Members moved before release 9 keep the year-ahead date
+  they have (it runs out on its own) (`TierMovesTest`).
+- **Progress** never points at an invitation-only tier on any measure, and the points summary (portal, member app,
+  full admin, `LoyaltyMember::getProgressToNextTier()`) goes through `tierProgress()` on the programme's basis.
+- **The active tiers** are read once per request or job (at most a minute in a long one), never from the cache: on
+  Laravel Cloud the default cache is each container's own files, which kept an old ladder for half an hour.
+- **Events and the door**: at an event the membership is judged on the day the event begins, as its sign-up is — a
+  night past midnight no longer refuses at 00:30 a member it let in at 23:00. `events?when=today` lists an event
+  starting just after midnight once its doors are open (two hours before). A check-in answers `already_in_at` (the
+  venue's wall clock with its day) beside `already_in`. The people answer carries `latest`: the last eight check-ins by
+  their real time (the scan screen's "Today here"). An event scan's tier chip is the member's tier after the visit (a
+  visit can move it), the one the benefits are read from. A deleted member's standing sign-ups for events not ended are
+  cancelled (`EventSignUp::releaseAll()`, after a staff erasure and a member's own deletion); a member switched off keeps
+  theirs (`EventSignUpTest`, `EventsTest`, `AccessDecisionTest`).
+- **Benefits** carry their typed value (`value_type`, `value_amount`) to the scan answer and the member page: a benefit
+  given no wording says "15% off"; one with wording says the wording only (Program shows the typed value as the chip's
+  tip).
+- **The scan screen**: two columns from a laptop (what to scan for and how, then the answer and today's list); one row
+  of "Scanning for" chips (bell, door, calendar — no headings on screen); short way buttons; the band says "Welcome"
+  and the member's name is written once beneath it, with their initials; a refusal shows no benefits; "Renew for 1
+  year" on a run-out membership for a manager (then the member is scanned again by number); "Try again" on a scan that
+  got no answer, which — like the same code scanned again within 10 minutes at the same place — reuses the scan's key,
+  so the server replays what it already did instead of refusing a used QR code; a second code typed while the first is
+  checked is kept. At an event without sign-up the screen says neither "Signed up" nor "Walk-in". Door mode lost its
+  explanatory lines.
+- **The member page**: each fact once (identity and contact in the header only), an icon and a short title per card,
+  two columns from a laptop, the less used actions in the ⋯ menu; stamps from events say "Event" (every server source
+  has a label, `visitsMath.test.ts` reads them from `StampCards.php`); Extend takes a new key after a refusal.
+- **Program, Ways to earn, Events**: tiers as a numbered ladder, no "In use" pills or explanatory sentences, icon
+  actions, compact figures; the event page's less used actions in a More menu; check-in by name says "has no tier".
+
 ## The workspace (`/loyalty`, `frontend/src/loyalty/`)
 
 - **Where it lives.** A lazily loaded app on the shared core (`src/workspace/`): own chunk, own shell, no full-admin
@@ -541,6 +585,13 @@ reports (Twilio's status callbacks); no receipts for the full admin's own push c
   progress number "points" until its next build. The two-tone sound and NFC in door mode were not tried on a real
   device.
 
+- **Release 9.** Points that a line marks "not qualifying for tier" (check-in, event, birthday, welcome bonuses) still
+  count towards points tiers on the lifetime basis (`qualifyingPointsFor()` reads `lifetime_points`) — changing it
+  would move members, so it waits for the owner's word. A member switched off keeps their event sign-ups (and the place
+  they hold). The membership reminders run at 08:37 UTC for every venue (each on its own day), early morning in the
+  Americas. Tiers are not re-assessed on a schedule: "keep until", a grace period's end and the windowed basis take
+  effect at the member's next award, refund or visit.
+
 ## Tests on PostgreSQL
 
 The suites run on SQLite with hand-built schemas, which miss NOT NULL columns and indexes production has. Release 5
@@ -594,9 +645,10 @@ files on disk): run them one after the other.
   from branch commit 63651b8: the next release's change list is `git diff --name-status 63651b8 <tip>`. It was checked
   by content (every source file on `main` equal to the branch, the three migrations and the reminder's schedule
   present, the `LoyaltyApp` chunk carrying the new scan screen); the live site could not be reached from the build
-  environment. Two small release 8 follow-ups are on the branch after 63651b8 and not yet live: the portal menu
-  offers Events only when an event the member's tier may attend is coming (`PortalEvents::offered()`), and the scan
-  screen words a `409 in_progress` answer. They ride the next deploy (the change list above picks them up). Release 7
+  environment. Not yet live, on the branch after 63651b8: two release 8 follow-ups (the portal menu offers Events only
+  when an event the member's tier may attend is coming; the scan screen words a `409 in_progress` answer) and release
+  9 (the review's fixes and the redesign, no migration). They ride the next deploy (the change list above picks them
+  up). Release 7
   went out as `main` ffabebf from 40ffdaf (ways to earn and reward). Release 6b went out as
   `main` 65b3415 from 8ac5a62 (campaigns and offers with no brand are every brand's), release 6 as 7835cf0 from
   1a37e68, release 5b as 5b481aa from ea8b364, release 5 as 8a04f86 from 6adf121, release 4 as 097432a from a7e87ae.
@@ -706,6 +758,15 @@ files on disk): run them one after the other.
 - Scan one member's QR code from the member app on a phone, and type one member number.
 - On Program, check the tiers and their colours; on Rewards, the catalogue and pending redemptions.
 - Reload admin tabs left open across the deploy.
+
+### After the release 9 deploy (owner, signed in)
+
+- Scan on a laptop: the answer sits beside the scanner. Scan a member whose membership ran out: red, then "Renew for 1
+  year" turns it green.
+- A member's page: email and phone in the header only; Edit, Card and the ⋯ menu in the top right.
+- Program: the tiers read as a ladder; Events: open one and find Add a member, Edit and Cancel under More.
+- Portal on a phone: the tier name is readable on the card, numbers have their separators, the tier's benefits sit
+  under the progress bar.
 
 ### After the release 8 deploy (owner, signed in)
 

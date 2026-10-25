@@ -15,8 +15,8 @@ use App\Models\PointsTransaction;
  *   `capabilities.events`, so the menu never leads to an empty page.
  * - forMember(): the published events that have not ended and admit the member's tier (every member, or one of its
  *   tiers), soonest first, each with what the member can do — `my` (`signed_up` | `none`), `can_sign_up`, `why_not`
- *   (EventSignUp::refusal()'s code while the event takes sign-ups, else null), `can_cancel` (until the start) — and the
- *   events the member attended, newest first, with the points the check-in gave. Times are the venue's wall clock
+ *   (EventSignUp::refusal()'s code while the event takes sign-ups; for one without, what its door would say — release 9), `can_cancel` (until the start) — and the
+ *   events the member attended that have ended, newest first, with the points the check-in gave. Times are the venue's wall clock
  *   (`YYYY-MM-DDTHH:mm`), as the workspace's.
  */
 class PortalEvents
@@ -75,6 +75,9 @@ class PortalEvents
         $signedUp = $registration !== null && $registration->status === EventRegistration::SIGNED_UP;
         $refusal = $event->sign_up && !$signedUp ? EventSignUp::refusal($event, $member, $counts, $registration, $attended) : null;
         $capacity = $event->capacity !== null ? (int) $event->capacity : null;
+        // An event without sign-up: what its door would say to this member (release 9), so the page never says "just come
+        // along" to someone it will refuse.
+        $doorSays = !$event->sign_up && !$attended ? self::walkInRefusal($event, $member, $capacity, $counts) : null;
 
         return [
             'id'          => (int) $event->id,
@@ -91,9 +94,30 @@ class PortalEvents
             'my'          => $signedUp ? 'signed_up' : 'none',
             'checked_in'  => $attended,
             'can_sign_up' => $event->sign_up && !$signedUp && $refusal === null,
-            'why_not'     => $refusal?->errorCode,
+            'why_not'     => $refusal?->errorCode ?? $doorSays,
             'can_cancel'  => $signedUp && !$attended && EventSignUp::canCancel($event, EventSignUp::PORTAL),
         ];
+    }
+
+    /**
+     * Why the door of an event without sign-up would turn this member away, in EventSignUp's codes, or null: switched
+     * off or deleted (`inactive`), the membership over by the day it begins (`membership_expired`, AccessDecision's own
+     * day), or no place left (`event_full`). The tier is the page's own filter.
+     *
+     * @param array{signed_up: int, walk_ins: int} $counts
+     */
+    private static function walkInRefusal(LoyaltyEvent $event, LoyaltyMember $member, ?int $capacity, array $counts): ?string
+    {
+        $member->loadMissing('user');
+        if (!$member->is_active || \App\Services\Loyalty\Members\MemberErasure::isErased($member) || \App\Services\Loyalty\Members\MemberErasure::isSelfDeleted($member)) {
+            return 'inactive';
+        }
+        $validUntil = $member->membership_valid_until?->toDateString();
+        if ($validUntil !== null && $validUntil < EventClock::day($event)) {
+            return 'membership_expired';
+        }
+
+        return EventRows::roomLeft($capacity, $counts) === 0 ? 'event_full' : null;
     }
 
     /** @return list<array{id: int, title: string, starts_at: ?string, points: int}> */
@@ -109,7 +133,8 @@ class PortalEvents
         $points = PointsTransaction::withoutGlobalScopes()->where('organization_id', $orgId)
             ->whereIn('id', $rows->pluck('points_transaction_id')->filter()->all())->pluck('points', 'id');
 
-        return $rows->filter(fn (EventAttendance $a) => $events->has($a->loyalty_event_id))->map(fn (EventAttendance $a) => [
+        // Only events that have ended: one still on is under "Coming up", checked in (release 9: it was listed in both).
+        return $rows->filter(fn (EventAttendance $a) => $events->has($a->loyalty_event_id) && EventClock::hasEnded($events[$a->loyalty_event_id]))->map(fn (EventAttendance $a) => [
             'id'        => (int) $a->loyalty_event_id,
             'title'     => (string) $events[$a->loyalty_event_id]->title,
             'starts_at' => EventClock::wall($events[$a->loyalty_event_id]->starts_at),

@@ -549,7 +549,15 @@ class LoyaltyService
         $currentTier = $member->tier;
         $appropriateTier = $this->getTierForMember($member);
 
-        if (!$appropriateTier || $appropriateTier->id === $member->tier_id) {
+        if (!$appropriateTier) {
+            return false;
+        }
+        if ($appropriateTier->id === $member->tier_id) {
+            // Qualifying again stops a grace clock that was running (release 9): the next dip gets its full grace.
+            if ($member->tier_effective_until !== null && $currentTier && (int) ($currentTier->grace_period_days ?? 0) > 0) {
+                $member->update(['tier_effective_until' => null]);
+            }
+
             return false;
         }
 
@@ -558,7 +566,7 @@ class LoyaltyService
             $member->update([
                 'tier_id'             => $appropriateTier->id,
                 'tier_effective_from' => now()->toDateString(),
-                'tier_effective_until'=> now()->addYear()->toDateString(),
+                'tier_effective_until'=> null,
                 'tier_review_date'    => now()->addYear()->toDateString(),
             ]);
             return true;
@@ -578,12 +586,20 @@ class LoyaltyService
         // analytics were all wrong for anyone affected.
         //
         // min_points is the same axis the tier was chosen on, so the two can
-        // no longer disagree. Ties are no move.
+        // no longer disagree.
         //
-        // Release 7: on the axis the member is judged on (ladderFloors()).
-        [$newFloor, $oldFloor] = $this->ladderFloors($member, $appropriateTier, $currentTier);
-        $isUpgrade = $newFloor > $oldFloor;
-        $isDowngrade = $newFloor < $oldFloor;
+        // Release 7: on the axis the member is judged on. Release 9: two tiers
+        // level on every floor are placed by sort_order, and level there too
+        // is no move at all — a move with no direction would pass over the
+        // lock, "keep until", grace and soft landing (every one of them asks
+        // "is this a downgrade?") and be logged as a downgrade besides.
+        $column = self::FLOOR_COLUMNS[$this->progressBy((int) $member->organization_id)];
+        $direction = $this->compareOnLadder($column, $appropriateTier, $currentTier);
+        if ($direction === 0) {
+            return false;
+        }
+        $isUpgrade = $direction > 0;
+        $isDowngrade = $direction < 0;
 
         // Prevent downgrade if tier is locked (invitation tier, etc.)
         if ($isDowngrade && $member->tier_locked) {
@@ -597,7 +613,10 @@ class LoyaltyService
         // On the first assessment that would drop a member, start the clock
         // instead and leave them where they are; only drop them once it has
         // run out. `tier_effective_until` was already being written and
-        // never read, so it becomes the deadline.
+        // never read, so it becomes the deadline. Release 9: a move no longer
+        // writes it a year ahead (which held every tier for a year after any
+        // move and then gave no grace at all): it is null until a dip starts
+        // the clock, and qualifying again or moving clears it.
         //
         // Applies regardless of qualification basis because it can only ever
         // DELAY a downgrade — it never promotes anyone or extends a benefit
@@ -641,14 +660,23 @@ class LoyaltyService
             return false;
         }
 
-        // Soft landing: only drop one tier at a time
+        // Soft landing: only drop one tier at a time — one step down the
+        // measure's own ladder (release 9; sort_order is the list's order,
+        // which a venue adding a tier never keeps in ladder order, so it
+        // could "land" a member on a tier above the one they had): the
+        // highest active, non-invitation tier with a floor on the measure
+        // that stands below the current tier and above the one qualified for.
         if ($isDowngrade && $currentTier->soft_landing) {
-            $oneTierDown = LoyaltyTier::where('is_active', true)
-                ->where('sort_order', '<', $currentTier->sort_order)
-                ->orderByDesc('sort_order')
+            $oneTierDown = LoyaltyTier::withoutGlobalScopes()
+                ->where('organization_id', $member->organization_id)
+                ->where('is_active', true)
+                ->get()
+                ->reject(fn (LoyaltyTier $t) => (bool) ($t->invitation_only ?? false) || $t->{$column} === null)
+                ->filter(fn (LoyaltyTier $t) => $this->compareOnLadder($column, $t, $currentTier) < 0 && $this->compareOnLadder($column, $t, $appropriateTier) > 0)
+                ->sort(fn (LoyaltyTier $x, LoyaltyTier $y) => $this->compareOnLadder($column, $y, $x))
                 ->first();
 
-            if ($oneTierDown && $oneTierDown->sort_order > $appropriateTier->sort_order) {
+            if ($oneTierDown) {
                 $appropriateTier = $oneTierDown;
             }
         }
@@ -671,9 +699,9 @@ class LoyaltyService
         $member->update([
             'tier_id'             => $appropriateTier->id,
             'tier_effective_from' => now()->toDateString(),
-            // Resets any grace clock that was running: the member has moved,
+            // Clears any grace clock that was running: the member has moved,
             // so the old deadline no longer describes anything.
-            'tier_effective_until'=> now()->addYear()->toDateString(),
+            'tier_effective_until'=> null,
             'tier_review_date'    => now()->addYear()->toDateString(),
         ]);
 
@@ -726,23 +754,25 @@ class LoyaltyService
     }
 
     /**
-     * Where the two tiers stand on the ladder the member is judged on, so that a move's direction — and with it the
-     * downgrade rules above (tier lock, grace period, override, soft landing) — follows the programme's measure
-     * (release 8, `tier_progress_by`): `visits` compares the visits floors, `spend` the spend floors, `points` the
-     * points floor, as before. Release 7 read the member's own qualification model here, so that a demotion between two
-     * tiers on the same points floor still had a direction; two tiers level on the measure's axis fall back to the
-     * points floor the same way.
+     * Which of two tiers stands higher on the ladder the member is judged on (1: the first, -1: the second, 0: level),
+     * so that a move's direction — and with it the downgrade rules above (tier lock, grace period, override, soft
+     * landing) — follows the programme's measure (release 8, `tier_progress_by`): `visits` compares the visits floors,
+     * `spend` the spend floors, `points` the points floor, as before. Two tiers level on the measure's axis fall back to
+     * the points floor (ladderPlaces()), and level there to sort_order (release 9: a venue on visits leaves every points
+     * floor 0, so a staff-only tier with no visits floor stood level with the bottom tier, and a member put on it by
+     * hand was moved off it with no rule applied). Level on all three is 0: no move.
      *
      * A tier without a floor on the measure (an invitation-only top tier, a tier the venue left unset) is not on the
      * measure's ladder at all, so it is never read as floor 0: the two tiers are then placed by their points floors.
-     * Otherwise a member put on such a tier by hand would read as climbing when the measure took them to any tier,
-     * and the lock, "keep until", grace and soft landing would all be passed over.
-     *
-     * @return array{0: float, 1: float} the new tier's floor, then the current tier's
      */
-    private function ladderFloors(LoyaltyMember $member, LoyaltyTier $new, LoyaltyTier $current): array
+    private function compareOnLadder(string $column, LoyaltyTier $a, LoyaltyTier $b): int
     {
-        return $this->ladderPlaces(self::FLOOR_COLUMNS[$this->progressBy((int) $member->organization_id)], $new, $current);
+        [$floorA, $floorB] = $this->ladderPlaces($column, $a, $b);
+        if ($floorA !== $floorB) {
+            return $floorA <=> $floorB;
+        }
+
+        return (int) $a->sort_order <=> (int) $b->sort_order;
     }
 
     /**
@@ -1088,13 +1118,13 @@ class LoyaltyService
      *
      * @return array{by: string, qualifying: int|float, next_tier: ?array{id: int, name: string, min_points: int, floor: int|float}, needed: int|float, percent: int}
      */
-    public function tierProgress(LoyaltyMember $member): array
+    public function tierProgress(LoyaltyMember $member, ?string $measure = null): array
     {
         $orgId = (int) $member->organization_id;
 
-        return $this->underOrg($orgId, function () use ($member, $orgId) {
+        return $this->underOrg($orgId, function () use ($member, $orgId, $measure) {
             $member->loadMissing('tier');
-            $by = $this->progressBy($orgId);
+            $by = $measure !== null && isset(self::FLOOR_COLUMNS[$measure]) ? $measure : $this->progressBy($orgId);
             $column = self::FLOOR_COLUMNS[$by];
             $money = $by === 'spend';
             $qualifying = match ($by) {
@@ -1107,9 +1137,10 @@ class LoyaltyService
 
             // The next tier is above the member's own on the ladder (ladderPlaces(), as assessTier() reads a move's
             // direction) and has a floor on the measure: never a tier below or level with theirs — a member put on an
-            // invitation-only top tier has none.
+            // invitation-only top tier has none. Never an invitation-only tier on any measure (release 9): the
+            // assessment never moves anyone into one, so progress towards it would stop at "0 to go" for ever.
             $next = LoyaltyTier::cachedActiveForCurrentOrg()
-                ->reject(fn (LoyaltyTier $t) => $by !== 'points' && (bool) ($t->invitation_only ?? false))
+                ->reject(fn (LoyaltyTier $t) => (bool) ($t->invitation_only ?? false))
                 ->filter(fn (LoyaltyTier $t) => $t->{$column} !== null && ($current === null
                     ? (float) $t->{$column} > $floor
                     : (int) $t->id !== (int) $current->id && $this->isAbove($column, $t, $current)))
@@ -1327,11 +1358,8 @@ class LoyaltyService
     private function summaryProgress(LoyaltyMember $member): array
     {
         $by = $this->progressBy((int) $member->organization_id);
-        if ($by === 'points') {
-            $progress = $member->getProgressToNextTier();
-
-            return $progress + ['by' => 'points', 'needed' => (int) $progress['points_needed']];
-        }
+        // Release 9: points too through tierProgress() — the assessment's own basis (a windowed programme counts the
+        // window, not lifetime points) and never an invitation-only tier.
         $p = $this->tierProgress($member);
         $next = $p['next_tier'] ? $this->underOrg((int) $member->organization_id, fn () => LoyaltyTier::query()->find($p['next_tier']['id'])) : null;
 

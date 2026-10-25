@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { Check, Gift } from 'lucide-react'
+import { Check, Coins, Gift } from 'lucide-react'
 import { portalApi, apiMessage } from '../../lib/portalApi'
 import type { Reward } from '../../lib/types'
 import { resolveLocale } from '../../lib/dates'
@@ -42,17 +42,22 @@ export function CatalogueTab() {
 
   return (
     <div className="space-y-4">
+      <p className="inline-flex items-center gap-1.5 rounded-full bg-p-accent/10 text-p-accent-deep px-3 py-1 text-xs font-semibold tabular-nums">
+        <Coins size={13} aria-hidden />{counted(t, 'rewards.you_have', balance, i18n.language)}
+      </p>
       {error && <Notice tone="danger">{error}</Notice>}
       {code && <Notice tone="success">{t('portal.rewards.redeemed_prefix', 'Redeemed — your code is')} <span className="font-mono">{code}</span></Notice>}
       {rewards.length === 0 && <EmptyState icon={<Gift size={18} aria-hidden />} title={t('portal.rewards.catalogue_empty', 'No rewards are available right now. Check back soon.')} />}
       <div className="grid sm:grid-cols-2 gap-3">
         {rewards.map(r => {
-          const short = Math.max(0, r.points_cost - balance)
-          const limitReached = r.per_member_limit != null && r.claimed_by_me >= r.per_member_limit
+          // The server decides (RewardController: can_afford, remaining_for_me); the shortfall only words it.
+          const limitReached = r.remaining_for_me === 0
           const outOfStock = r.in_stock === false
+          const short = r.can_afford ? 0 : Math.max(1, r.points_cost - balance)
           return (
             <Card key={r.id} className="overflow-hidden flex flex-col">
-              {r.image_url && <img src={r.image_url} alt="" className="w-full h-28 object-cover" loading="lazy" />}
+              {/* A picture that does not load is left out rather than drawn as a broken box. */}
+              {r.image_url && <img src={r.image_url} alt="" className="w-full h-28 object-cover" loading="lazy" onError={e => { e.currentTarget.hidden = true }} />}
               <div className="p-4 flex flex-col gap-2 grow">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
@@ -65,7 +70,7 @@ export function CatalogueTab() {
                 <div className="mt-auto pt-2">
                   {limitReached ? <p className="flex items-center gap-1.5 text-xs text-p-text-2"><Check size={13} aria-hidden /> {t('portal.rewards.already_claimed', 'Already claimed')}</p>
                   : outOfStock ? <p className="text-xs text-p-text-2">{t('portal.rewards.out_of_stock', 'Out of stock')}</p>
-                  : short > 0 ? <p className="text-xs text-p-text-2 tabular-nums">{counted(t, 'rewards.points_needed', short)}</p>
+                  : short > 0 ? <p className="text-xs text-p-text-2 tabular-nums">{counted(t, 'rewards.points_needed', short, i18n.language)}</p>
                   : <Button full onClick={() => { setError(null); setConfirming(r) }}>{t('portal.rewards.redeem', 'Redeem')}</Button>}
                 </div>
               </div>
@@ -83,7 +88,7 @@ export function CatalogueTab() {
           <Button loading={redeem.isPending} onClick={() => confirming && redeem.mutate(confirming.id)}>{t('portal.common.confirm', 'Confirm')}</Button>
         </>}
       >
-        <p className="text-p-text-2">{counted(t, 'rewards.redeem_body', confirming?.points_cost ?? 0)}</p>
+        <p className="text-p-text-2">{counted(t, 'rewards.redeem_body', confirming?.points_cost ?? 0, i18n.language)}</p>
       </Sheet>
     </div>
   )

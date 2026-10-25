@@ -186,7 +186,9 @@ class MemberAdminEndpointsTest extends TestCase
 
         $grace = $this->grace->fresh();
         $this->assertSame('2026-10-05', $grace->tier_effective_from->toDateString());
-        $this->assertSame('2027-10-05', $grace->tier_effective_until->toDateString());
+        // Release 9: no grace deadline a year ahead (it held the tier against every downgrade for a year); "keep until"
+        // (tier_override_until, below) is how a tier is held on purpose.
+        $this->assertNull($grace->tier_effective_until);
         $this->assertSame('2027-10-05', $grace->tier_review_date->toDateString());
         $this->assertSame('2027-01-31', $grace->tier_override_until->toDateString());
         $audit = AuditLog::where('action', 'tier_override')->firstOrFail();

@@ -33,7 +33,7 @@ export function NextEvent() {
           {event.where && <p className="text-xs text-p-text-2 flex items-center gap-1"><MapPin size={12} aria-hidden /><span className="truncate">{event.where}</span></p>}
         </div>
         <span className="shrink-0 inline-flex items-center gap-1 text-xs font-semibold text-p-accent-deep">
-          {t('portal.events.see_all', EVENT_WORDS.see_all)}<ArrowRight size={14} aria-hidden />
+          <span className="sr-only sm:not-sr-only">{t('portal.events.see_all', EVENT_WORDS.see_all)}</span><ArrowRight size={14} aria-hidden />
         </span>
       </Card>
     </Link>

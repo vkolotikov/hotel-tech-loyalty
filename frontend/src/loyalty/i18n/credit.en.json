@@ -2,7 +2,6 @@
   "title": "Credit",
   "use_action": "Use credit",
   "adjust_action": "Adjust",
-  "earning": "Members get {{percent}}% of what they spend back as credit, to use at the desk.",
   "off": "Cashback is switched off: nothing new is earned, and this credit can still be used at the desk.",
   "none": "No credit yet.",
   "history": "Credit history",

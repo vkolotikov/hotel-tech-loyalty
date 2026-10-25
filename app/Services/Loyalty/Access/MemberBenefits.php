@@ -8,11 +8,12 @@ use App\Models\TierBenefit;
 /**
  * What a member's tier gives, as the scan at a place or an event shows it beside the verdict (release 8, spec
  * 2026-10-25 §1): the tier's benefits that are on, each with its benefit that is on, as the member's page lists them
- * (MemberController::show) — `{ name, value, category }`, in the order they were given to the tier. Reads only.
+ * (MemberController::show) — `{ name, value, category, value_type, value_amount }`, in the order they were given to the
+ * tier; the typed value (release 9) lets a screen say "15% off" for a benefit given no wording. Reads only.
  */
 final class MemberBenefits
 {
-    /** @return list<array{name: string, value: ?string, category: ?string}> */
+    /** @return list<array{name: string, value: ?string, category: ?string, value_type: ?string, value_amount: ?float}> */
     public static function of(LoyaltyMember $member): array
     {
         if ($member->tier_id === null) {
@@ -27,9 +28,11 @@ final class MemberBenefits
             ->get()
             ->filter(fn (TierBenefit $tb) => $tb->benefit !== null && $tb->benefit->is_active)
             ->map(fn (TierBenefit $tb) => [
-                'name'     => (string) $tb->benefit->name,
-                'value'    => $tb->value,
-                'category' => $tb->benefit->category,
+                'name'         => (string) $tb->benefit->name,
+                'value'        => $tb->value,
+                'category'     => $tb->benefit->category,
+                'value_type'   => $tb->value_type,
+                'value_amount' => $tb->value_amount !== null ? (float) $tb->value_amount : null,
             ])->values()->all();
     }
 }

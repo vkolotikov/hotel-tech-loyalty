@@ -1,5 +1,6 @@
 import { isDateKey } from '../../workspace/lib/wallClock'
 import type { Can, MemberRow } from '../lib/types'
+import { LEFT_WORDS } from './words'
 
 /**
  * A membership's end date on the workspace's screens (release 8, spec 2026-10-25 §3), kept out of the components so it
@@ -104,4 +105,26 @@ export function setBody(date: string | null, key: string): ValidityBody {
 
 export function extendBody(choice: Extension, key: string): ValidityBody {
   return { extend: choice, idempotency_key: key }
+}
+
+/**
+ * Whether a failed change takes a new key for the next press: yes when the server answered with a refusal (4xx — it
+ * wrote nothing; `key_reused` included, which a kept key would meet forever), no for a lost answer or a server error,
+ * where the change may have been written and the same key makes a retry of the same change a replay.
+ */
+export function renewsKey(failure: { status: number }): boolean {
+  return failure.status >= 400 && failure.status < 500
+}
+
+/** How a sentence is said: `t` with its English and values. */
+export type Say = (key: string, fallback: string, vars?: Record<string, unknown>) => string
+
+/** "1 year 2 months", "3 months 4 days", "12 days": the two largest parts there are. */
+export function leftText(left: { years: number; months: number; days: number }, say: Say): string {
+  const part = (unit: 'years' | 'months' | 'days', n: number) => n === 1
+    ? say(`loyalty.membership.validity.left.${unit}_one`, LEFT_WORDS[`${unit}_one`])
+    : say(`loyalty.membership.validity.left.${unit}_many`, LEFT_WORDS[`${unit}_many`], { n: String(n) })
+  const all = ([['years', left.years], ['months', left.months], ['days', left.days]] as const).filter(([, n]) => n > 0)
+  if (all.length === 0) return part('days', 0)
+  return all.slice(0, 2).map(([unit, n]) => part(unit, n)).join(' ')
 }

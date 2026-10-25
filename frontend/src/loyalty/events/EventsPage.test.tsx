@@ -117,30 +117,48 @@ describe('an event’s page', () => {
     expect(words).toContain('Door mode')
     expect(html).toContain('href="/loyalty/scan/door?event=7"')
     expect(words).toContain('Check in by name')
-    expect(words).toContain('Add a member')
-    expect(words).toContain('Edit')
-    expect(words).toContain('Cancel event')
+    // Add a member, Edit and Cancel event wait under More (eventsMath.test.ts moreItems says which).
+    expect(html).toMatch(/data-event-more=""[\s\S]*?aria-label="More"[^>]*aria-haspopup="menu"|data-event-more=""[\s\S]*?aria-haspopup="menu"[^>]*aria-label="More"/)
     expect(words).not.toContain('Delete draft')
-    expect(words).toContain('Signed up · 2')
+    // Each number once: the tiles count them, the groups do not repeat them.
+    expect(words).toContain('Signed up Grace Hopper')
+    expect(words).not.toContain('Signed up · 2')
     expect(words).toContain('Checked in 18:04')
-    expect(words).toContain('Walk-ins · 1')
+    expect(words).toContain('Walk-ins Ada Lovelace')
     expect(words).toContain('Walk-in · 18:10')
     expect(words).toContain('Cancel sign-up')
   })
 
+  it('at an event without sign-up, everyone who came is simply checked in: no walk-ins', () => {
+    const event = row({ sign_up: false, phase: 'on_now', counts: { signed_up: 0, checked_in: 1, walk_ins: 1, room_left: 39 } })
+    const words = text(render(<EventPage />, '/loyalty/events/7', (c) => {
+      seed(event, false)(c)
+      c.setQueryData(['loyalty', 'event', 7, 'people', 1], {
+        event, counts: event.counts, page: 1, pages: 1, total: 1,
+        people: [{ member: { id: 32, name: 'Ada Lovelace', member_number: 'LS-000032', tier: null }, signed_up_at: null, cancelled_at: null, checked_in_at: '18:10', walk_in: true, source: null }],
+      })
+    }))
+    expect(words).toMatch(/Checked in 1 Places left 39/)
+    expect(words).not.toContain('Walk-in')
+    expect(words).toContain('Checked in Ada Lovelace')
+    expect(words).toContain('Checked in 18:10')
+  })
+
   it('a member of staff without the right to change events still checks in and signs up', () => {
-    const words = text(render(<EventPage />, '/loyalty/events/7', seed(row(), false)))
+    const html = render(<EventPage />, '/loyalty/events/7', seed(row(), false))
+    const words = text(html)
     expect(words).toContain('Start check-in')
-    expect(words).toContain('Add a member')
+    expect(html).toContain('data-event-more')
     expect(words).not.toContain('Edit')
     expect(words).not.toContain('Cancel event')
   })
 
   it('a draft says members do not see it and offers Publish and Delete draft', () => {
-    const words = text(render(<EventPage />, '/loyalty/events/7', seed(row({ status: 'draft', phase: 'draft', starts_at: '2099-10-09T18:00', ends_at: '2099-10-09T21:00' }), true)))
+    const html = render(<EventPage />, '/loyalty/events/7', seed(row({ status: 'draft', phase: 'draft', starts_at: '2099-10-09T18:00', ends_at: '2099-10-09T21:00' }), true))
+    const words = text(html)
     expect(words).toContain('A draft: members do not see it')
     expect(words).toContain('Publish')
-    expect(words).toContain('Delete draft')
+    expect(html).toContain('data-event-more')
     expect(words).not.toContain('Start check-in')
   })
 })
@@ -160,7 +178,10 @@ describe('the one dialog', () => {
     expect(words).toContain('Save as draft')
     expect(words).toContain('Publish')
     expect(words).toContain('On your venue’s clock (Europe/Riga).')
-    expect(words).toContain('Lasts 3 h 00 min.')
+    expect(html).toMatch(/data-duration=""[^>]*>[\s\S]*?3 h 00 min/)
+    // Only the hints that prevent a mistake are left.
+    expect(words).not.toContain('Given at check-in')
+    expect(words).not.toContain('Optional. Members read it in the portal.')
   })
 
   it('a published event saves its changes and says the members signed up are told', () => {

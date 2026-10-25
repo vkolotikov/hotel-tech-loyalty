@@ -100,12 +100,22 @@ describe('Ways to earn (release 7 §1)', () => {
     expect(text(stamps)).not.toContain('Points for a full card')
   })
 
-  it('gives a manager a Save on each card, off until something changed, and the wizard', () => {
+  it('gives a manager working switches and the wizard; a card shows its Save only once something changed', () => {
     const html = page(true)
-    expect((html.match(/type="submit"/g) ?? []).length).toBe(9)
-    expect(card(html, 'cashback')).toMatch(/<button type="submit" disabled=""/)
+    expect((html.match(/role="switch"[^>]*disabled=""/g) ?? []).length).toBe(0)
+    expect((html.match(/role="switch"/g) ?? []).length).toBe(9)
+    // Untouched cards have nothing to press (WayCard shows Save and "Not saved yet." while a change waits).
+    expect(html).not.toContain('type="submit"')
+    expect(text(html)).not.toContain('Not saved yet.')
     expect(html).toContain('href="/loyalty/options/setup"')
     expect(text(html)).not.toContain('You see them as they are.')
+  })
+
+  it('says each way once: its title and what members get, no line restating it', () => {
+    const words = text(page(true))
+    expect(words).not.toContain('Points for joining.')
+    expect(words).not.toContain('How members earn points and what they get back.')
+    expect(words).toContain('Points on spend Members get 1 point for every €1 they spend.')
   })
 
   it('shows anyone else the options read-only, and says why', () => {
@@ -120,6 +130,7 @@ describe('Ways to earn (release 7 §1)', () => {
   it('links the rest of the programme with how many there are', () => {
     const html = page(true)
     const words = text(html)
+    expect(words).not.toContain('Open Program')
     expect(words).toContain('Tiers 3 In the ladder')
     expect(words).toContain('Rewards 2 In the catalogue')
     expect(words).toContain('Offers 2 Switched on')

@@ -29,7 +29,7 @@ import type { PortalBootstrap } from '../../lib/types'
 import { EventsLink } from './EventsLink'
 import { EventsPage } from './EventsPage'
 import { NextEvent } from './NextEvent'
-import { ERROR_WORDS, EVENT_COUNTED, EVENT_WORDS, WHY_WORDS, actionOf, counted, errorPhrase, nextEvent, noteOf, timeRange, whenPhrase } from './eventMath'
+import { ERROR_WORDS, EVENT_COUNTED, EVENT_WORDS, WHY_WORDS, actionOf, counted, errorPhrase, eventsInMenu, nextEvent, noteOf, pastEvents, timeRange, whenPhrase, whyPhrase } from './eventMath'
 import type { PortalEvent, PortalEvents } from './eventsApi'
 
 const event = (more: Partial<PortalEvent> = {}): PortalEvent => ({
@@ -72,6 +72,21 @@ describe('what an event offers the member', () => {
     expect(actionOf(event({ checked_in: true, my: 'signed_up' }))).toEqual({ kind: 'checked_in' })
   })
 
+  it('an event without sign-up says why the door would refuse this member, else just come along', () => {
+    const walkIn = (more: Partial<PortalEvent> = {}) => event({ sign_up: false, can_sign_up: false, ...more })
+    expect(actionOf(walkIn())).toEqual({ kind: 'come_along' })
+    expect(actionOf(walkIn({ why_not: 'event_full' }))).toEqual({ kind: 'full' })
+    expect(actionOf(walkIn({ why_not: 'inactive' }))).toEqual({ kind: 'why_not', code: 'inactive' })
+    expect(actionOf(walkIn({ why_not: 'membership_expired' }))).toEqual({ kind: 'why_not', code: 'membership_expired' })
+    expect(noteOf(walkIn({ why_not: 'inactive' }), 'en')).toBeNull()
+
+    const expired = { ...base, member: { membership: { valid_until: '2026-10-01', state: 'expired' } } } as unknown as PortalBootstrap
+    const words = text(render(<EventsPage />, answer([walkIn({ why_not: 'membership_expired' }), walkIn({ id: 8, title: 'Gala', why_not: 'event_full' })]), expired))
+    expect(words).toContain('Your membership has ended')
+    expect(words).toContain('Full')
+    expect(words).not.toContain('just come along')
+  })
+
   it('a line under it: places left, sign-up needed, or that it has started', () => {
     expect(noteOf(event({ room_left: 1 }), 'en')).toEqual(counted('places_left', 1, 'en'))
     expect(noteOf(event({ capacity: null, room_left: null, walk_ins: false }), 'en')?.key).toBe('portal.events.sign_up_needed')
@@ -93,6 +108,25 @@ describe('what an event offers the member', () => {
     expect(nextEvent(answer([a]))).toEqual({ event: a, mine: false })
     expect(nextEvent(answer([]))).toBeNull()
     expect(nextEvent(undefined)).toBeNull()
+    // An event the member is already checked in to is never Home's, not even as the one open to them.
+    const inNow = event({ id: 3, my: 'signed_up', checked_in: true })
+    expect(nextEvent(answer([inNow, a]))).toEqual({ event: a, mine: false })
+    expect(nextEvent(answer([inNow]))).toBeNull()
+  })
+
+  it('an event the member came to that is still on is listed once, under Coming up', () => {
+    const on = event({ id: 2, my: 'signed_up', checked_in: true })
+    const data = answer([on], [{ id: 2, title: 'Wine tasting', starts_at: '2026-10-09T18:00', points: 50 }, { id: 1, title: 'Yoga', starts_at: '2026-10-03T08:00', points: 50 }])
+    expect(pastEvents(data).map(e => e.id)).toEqual([1])
+    const words = text(render(<EventsPage />, data))
+    expect(words.split('Wine tasting').length - 1).toBe(1)
+    expect(words).toContain('Yoga')
+  })
+
+  it('a membership that has already ended says so, not that it ends before the event', () => {
+    expect(whyPhrase('membership_expired', 'active').key).toBe('portal.events.why.membership_expired')
+    expect(whyPhrase('membership_expired', 'expired')).toEqual({ key: 'portal.events.why.membership_ended', fallback: WHY_WORDS.membership_ended, options: {} })
+    expect(whyPhrase('tier_not_allowed', 'expired').key).toBe('portal.events.why.tier_not_allowed')
   })
 
   it('a refusal reads in the member’s words', () => {
@@ -141,9 +175,16 @@ describe('Home’s card and the way in', () => {
     expect(render(<NextEvent />, answer([]))).toBe('')
   })
 
-  it('the Rewards header links to Events while the venue has one', () => {
-    expect(render(<EventsLink />)).toContain('href="/portal/events"')
-    expect(render(<EventsLink />, undefined, { ...base, capabilities: { ...base.capabilities, events: false } })).toBe('')
+  it('the Rewards header links to Events while the venue has one and the menu does not show it', () => {
+    const caps = (more: Partial<PortalBootstrap['capabilities']>) => ({ ...base, capabilities: { ...base.capabilities, ...more } })
+    expect(render(<EventsLink />, undefined, caps({ services: true }))).toContain('href="/portal/events"')
+    expect(render(<EventsLink />)).toBe('')
+    expect(render(<EventsLink />, undefined, caps({ services: true, events: false }))).toBe('')
+    // The same rule as the menu's: Events is there exactly when Rewards does not link to it.
+    for (const more of [{}, { services: true }, { stays: true }, { loyalty: false }, { loyalty: false, services: true }]) {
+      const shell = render(<PortalShell><p>page</p></PortalShell>, undefined, caps(more))
+      expect(shell.includes('href="/portal/events"'), JSON.stringify(more)).toBe(eventsInMenu(caps(more).capabilities))
+    }
   })
 
   it('the menu holds Events as a fifth item, never a sixth', () => {

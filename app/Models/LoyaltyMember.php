@@ -139,19 +139,23 @@ class LoyaltyMember extends Model
             ->orderBy('expires_at');
     }
 
+    /**
+     * Points to the next tier, in the shape the full admin, the member app and the assistant read (`percentage`,
+     * `points_needed`, `next_tier`). Release 9: through LoyaltyService::tierProgress() on points, so it agrees with the
+     * assessment — the programme's basis (a windowed programme counts the window, not lifetime points), never an
+     * invitation-only tier the assessment would not move anyone into, never a negative share for a member set by hand.
+     */
     public function getProgressToNextTier(): array
     {
-        $nextTier = $this->tier->getNextTier();
-        if (!$nextTier) {
+        $p = app(\App\Services\LoyaltyService::class)->tierProgress($this, 'points');
+        if ($p['next_tier'] === null) {
             return ['percentage' => 100, 'points_needed' => 0, 'next_tier' => null];
         }
-        $pointsNeeded = $nextTier->min_points - $this->lifetime_points;
-        $rangeSize = $nextTier->min_points - $this->tier->min_points;
-        $progress = min(100, (($this->lifetime_points - $this->tier->min_points) / $rangeSize) * 100);
+
         return [
-            'percentage' => round($progress, 1),
-            'points_needed' => max(0, $pointsNeeded),
-            'next_tier' => $nextTier,
+            'percentage'    => $p['percent'],
+            'points_needed' => (int) $p['needed'],
+            'next_tier'     => LoyaltyTier::withoutGlobalScopes()->where('organization_id', $this->organization_id)->find($p['next_tier']['id']),
         ];
     }
 }

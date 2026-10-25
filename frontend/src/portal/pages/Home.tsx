@@ -1,11 +1,12 @@
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { ArrowRight, CalendarDays, CalendarPlus, Gift, Sparkles } from 'lucide-react'
+import { ArrowRight, BedDouble, CalendarDays, CalendarPlus, ChevronRight, Gift, Sparkles } from 'lucide-react'
 import { usePortal } from '../PortalProvider'
 import { portalApi } from '../lib/portalApi'
 import { useVocab } from '../lib/vocab'
 import { formatDay, resolveLocale } from '../lib/dates'
+import { counted } from '../lib/plural'
 import { Card } from '../ui/Card'
 import { Chip } from '../ui/Chip'
 import { DateTime } from '../ui/DateTime'
@@ -17,12 +18,13 @@ import { CreditBalance } from './credit/CreditBalance'
 import { StampCard } from './stamps/StampCard'
 import { NextEvent } from './events/NextEvent'
 import { statusLabel, statusTone } from './BookingRow'
-import { activityTypeLabel } from './Activity'
+import { activityIcon, activityTypeLabel } from './Activity'
+import { instantDay, nextHeading } from './homeMath'
 
 /**
  * First screenful answers what a member opens the portal for: how many
- * points, what level, what to show at the desk, and when they are next
- * expected. Everything else is one tap away.
+ * points, what level and what it gives, what to show at the desk, and when
+ * they are next expected. Everything else is one tap away.
  */
 export function Home() {
   const { t, i18n } = useTranslation()
@@ -38,27 +40,39 @@ export function Home() {
   const bookLabel = capabilities.stays && !capabilities.services
     ? t('portal.stay.cta_home', 'Book a stay')
     : t('portal.book.cta_home', 'Book {{noun}}', { noun: vocab('booking') })
+  // The heading names what is shown: a stay as a stay, an appointment in the venue's word (one sentence per kind).
+  const heading = nextHeading(next?.kind, capabilities, venue.industry)
+  const NextIcon = next?.kind === 'stay' ? BedDouble : CalendarDays
+  const locale = resolveLocale(i18n.language)
 
   return (
     <div className="space-y-5">
       {/* Release 8: the card's progress line reads in the programme's terms, a spend in the venue's currency. */}
       {member && <MemberCard member={member} loyalty={capabilities.loyalty} currency={venue.currency} />}
-      {/* Release 7: the stamp card and cashback credit, each when the venue uses it. */}
-      {member && capabilities.loyalty && <StampCard />}
-      {member && capabilities.loyalty && <CreditBalance />}
+
+      {/* Release 7: the stamp card and cashback credit, each when the venue uses it — side by side where there is room,
+          one filling the row when the other is not there. */}
+      {member && capabilities.loyalty && (
+        <div className="flex flex-wrap gap-3 empty:hidden [&>*]:grow [&>*]:basis-72">
+          <StampCard />
+          <CreditBalance />
+        </div>
+      )}
+
       {/* Release 8: the next event the member signed up for. */}
       {member && capabilities.events && <NextEvent />}
 
       <section>
-        <h2 className="text-sm font-semibold text-p-text mb-2">{t('portal.home.next_booking', 'Your next {{noun}}', { noun: vocab('booking') })}</h2>
+        <h2 className="text-sm font-semibold text-p-text mb-2">{t(heading.key, heading.fallback)}</h2>
         {next ? (
           <Link to={`/portal/bookings/${next.kind}/${next.id}`} className="block">
             <Card className="p-4 p-lift flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-p-accent/10 text-p-accent-deep flex items-center justify-center shrink-0"><CalendarDays size={18} aria-hidden /></div>
+              <div className="w-10 h-10 rounded-full bg-p-accent/10 text-p-accent-deep flex items-center justify-center shrink-0"><NextIcon size={18} aria-hidden /></div>
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-semibold truncate">{next.title}</p>
                 <p className="text-xs text-p-text-2">
                   {next.starts_at && <DateTime iso={next.starts_at} mode={next.kind === 'stay' ? 'day' : 'datetime'} />}
+                  {next.kind === 'stay' && next.nights ? ` · ${counted(t, 'bookings.night_count', next.nights, i18n.language)}` : ''}
                   {next.subtitle && next.kind === 'service' && ` · ${next.subtitle}`}
                 </p>
               </div>
@@ -91,17 +105,17 @@ export function Home() {
       {capabilities.loyalty && (
         <div className="grid grid-cols-2 gap-3">
           <Link to="/portal/rewards?tab=catalogue" className="block">
-            <Card className="p-4 p-lift h-full">
-              <Gift size={18} className="text-p-accent-deep mb-2" aria-hidden />
-              <p className="text-sm font-semibold">{t('portal.home.quick_rewards', 'Spend points')}</p>
-              <p className="text-[11px] text-p-text-2">{t('portal.home.quick_rewards_hint', 'Browse the rewards catalogue')}</p>
+            <Card className="p-4 p-lift h-full flex items-center gap-3">
+              <div className="w-9 h-9 rounded-full bg-p-accent/10 text-p-accent-deep flex items-center justify-center shrink-0"><Gift size={17} aria-hidden /></div>
+              <p className="text-sm font-semibold min-w-0 flex-1">{t('portal.home.quick_rewards', 'Spend points')}</p>
+              <ChevronRight size={16} className="shrink-0 text-p-text-2 hidden sm:block" aria-hidden />
             </Card>
           </Link>
           <Link to="/portal/rewards?tab=offers" className="block">
-            <Card className="p-4 p-lift h-full">
-              <Sparkles size={18} className="text-p-accent-deep mb-2" aria-hidden />
-              <p className="text-sm font-semibold">{t('portal.home.quick_offers', 'Your offers')}</p>
-              <p className="text-[11px] text-p-text-2">{t('portal.home.quick_offers_hint', 'Discounts available to you')}</p>
+            <Card className="p-4 p-lift h-full flex items-center gap-3">
+              <div className="w-9 h-9 rounded-full bg-p-accent/10 text-p-accent-deep flex items-center justify-center shrink-0"><Sparkles size={17} aria-hidden /></div>
+              <p className="text-sm font-semibold min-w-0 flex-1">{t('portal.home.quick_offers', 'Your offers')}</p>
+              <ChevronRight size={16} className="shrink-0 text-p-text-2 hidden sm:block" aria-hidden />
             </Card>
           </Link>
         </div>
@@ -111,19 +125,23 @@ export function Home() {
         <section>
           <div className="flex items-center justify-between mb-2">
             <h2 className="text-sm font-semibold">{t('portal.home.recent_activity', 'Recent activity')}</h2>
-            <Link to="/portal/activity" className="flex items-center gap-1 text-xs text-p-accent-deep">{t('portal.common.see_all', 'See all')} <ArrowRight size={12} aria-hidden /></Link>
+            <Link to="/portal/activity" className="flex items-center gap-1 text-xs font-semibold text-p-accent-deep min-h-11 -my-3 px-1">{t('portal.common.see_all', 'See all')} <ArrowRight size={12} aria-hidden /></Link>
           </div>
           {member.recent_activity?.length ? (
             <Card className="overflow-hidden divide-y divide-p-border">
-              {member.recent_activity.map(a => (
-                <div key={a.id} className="flex items-center justify-between gap-3 px-4 py-3">
-                  <div className="min-w-0">
-                    <p className="text-sm truncate">{a.description || activityTypeLabel(t, a.type)}</p>
-                    <p className="text-[11px] text-p-text-2">{formatDay(a.created_at, i18n.language)}</p>
+              {member.recent_activity.map(a => {
+                const Icon = activityIcon(a.type, a.points)
+                return (
+                  <div key={a.id} className="flex items-center gap-3 px-4 py-2.5">
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${a.points >= 0 ? 'bg-p-success/10 text-p-success' : 'bg-p-surface-2 text-p-text-2'}`}><Icon size={15} aria-hidden /></div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm truncate">{a.description || activityTypeLabel(t, a.type)}</p>
+                      <p className="text-[11px] text-p-text-2">{instantDay(a.created_at, i18n.language, venue.timezone)}</p>
+                    </div>
+                    <span className={`shrink-0 text-sm font-semibold tabular-nums ${a.points >= 0 ? 'text-p-success' : 'text-p-text-2'}`}>{a.points >= 0 ? '+' : ''}{a.points.toLocaleString(locale)}</span>
                   </div>
-                  <span className={`shrink-0 text-sm font-semibold tabular-nums ${a.points >= 0 ? 'text-p-success' : 'text-p-text-2'}`}>{a.points >= 0 ? '+' : ''}{a.points.toLocaleString(resolveLocale(i18n.language))}</span>
-                </div>
-              ))}
+                )
+              })}
             </Card>
           ) : (
             <EmptyState title={t('portal.home.no_activity', 'Your points will appear here after your first visit.')} />

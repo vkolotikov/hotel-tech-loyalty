@@ -2,7 +2,6 @@
   "title": "Guthaben",
   "use_action": "Guthaben einlösen",
   "adjust_action": "Korrigieren",
-  "earning": "Mitglieder bekommen {{percent}}% ihrer Ausgaben als Guthaben zurück, einzulösen am Empfang.",
   "off": "Cashback ist ausgeschaltet: Neues wird nicht gutgeschrieben, dieses Guthaben kann am Empfang weiter eingelöst werden.",
   "none": "Noch kein Guthaben.",
   "history": "Guthabenverlauf",

@@ -2,16 +2,16 @@ import { useEffect, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { useLocation } from 'react-router-dom'
-import { MapPin, Pencil, Plus } from 'lucide-react'
+import { ChevronRight, DoorOpen, MapPin, Pencil, Plus, ScanLine } from 'lucide-react'
 import { Button } from '../../workspace/ui/Button'
 import { Notice } from '../../workspace/ui/Notice'
 import { Skeleton } from '../../workspace/ui/Skeleton'
-import { SectionTitle } from '../../workspace/ui/Typography'
 import type { ThemeName } from '../../workspace/theme/accent'
 import { failureOf } from '../lib/api'
 import { refusalKey } from '../lib/errors'
 import { useLook } from '../lib/look'
 import { activeTone } from '../program/programMath'
+import { IconButton, SectionHead } from '../program/parts'
 import { ConfirmDialog, ToneBadge } from '../ui/formParts'
 import { TierChip } from '../ui/TierChip'
 import { EntriesDialog } from './EntriesDialog'
@@ -49,15 +49,13 @@ export function PlacesSection({ manage }: { manage: boolean }) {
 
   return (
     <section id="places" aria-labelledby="program-places" className="scroll-mt-20 space-y-3">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <SectionTitle><span id="program-places">{t('loyalty.places.title', 'Places')}</span></SectionTitle>
+      <SectionHead id="program-places" icon={MapPin} title={t('loyalty.places.title', 'Places')}>
         {change && (
           <Button size="sm" onClick={() => { setSaid(null); setOpen({ kind: 'place', place: null }) }}>
             <Plus size={15} aria-hidden />{t('loyalty.places.add', 'Add a place')}
           </Button>
         )}
-      </div>
-      <p className="text-sm text-a-text-2">{t('loyalty.places.line', 'Where members scan in, and which tiers may enter.')}</p>
+      </SectionHead>
 
       {said && <Notice tone="success">{t(...said)}</Notice>}
       <PlacesBody query={query} change={change} theme={look.resolved} onOpen={(next) => { setSaid(null); setOpen(next) }} />
@@ -116,48 +114,58 @@ function PlacesBody({ query, change, theme, onOpen }: {
     )
   }
   return (
-    <ul aria-label={t('loyalty.places.list', 'Places')} className="grid gap-3 xl:grid-cols-2">
+    <ul aria-label={t('loyalty.places.list', 'Places')} className="grid gap-3 lg:grid-cols-2">
       {data.places.map(place => <PlaceCard key={place.id} place={place} change={change} theme={theme} onOpen={onOpen} />)}
     </ul>
   )
 }
 
-/** A place: its name, whether it is switched on, who may enter (every member, or the tiers' own chips), today's entries. */
+/**
+ * A place: its name (and "Switched off" on one that is), its note in one line, who may enter (every member, or the
+ * tiers' own chips), and today's entries, which open the entries list.
+ */
 export function PlaceCard({ place, change, theme, onOpen }: { place: Place; change: boolean; theme: ThemeName; onOpen: (open: Open) => void }) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const who = whoMayEnter(place)
   return (
-    <li data-place={place.id} className="space-y-3 rounded-2xl border border-a-border bg-a-surface p-4">
-      <div className="flex flex-wrap items-center gap-2">
-        <MapPin size={16} aria-hidden className="shrink-0 text-a-text-2" />
-        <p className="min-w-0 truncate font-medium text-a-text">{place.name}</p>
-        <ToneBadge tone={activeTone(place.is_active)}>
-          {place.is_active ? t('loyalty.places.switched_on', 'Switched on') : t('loyalty.places.switched_off', 'Switched off')}
-        </ToneBadge>
+    <li data-place={place.id} className="flex flex-col gap-3 rounded-2xl border border-a-border bg-a-surface p-4">
+      <div className="flex items-start gap-3">
+        <span aria-hidden className={`inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${place.is_active ? 'bg-a-accent/10 text-a-accent-text' : 'bg-a-surface-2 text-a-text-2'}`}>
+          <MapPin size={16} />
+        </span>
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+            <p className={`min-w-0 truncate font-medium ${place.is_active ? 'text-a-text' : 'text-a-text-2'}`}>{place.name}</p>
+            {!place.is_active && <ToneBadge tone={activeTone(false)}>{t('loyalty.places.switched_off', 'Switched off')}</ToneBadge>}
+          </div>
+          {place.description && <p className="truncate text-xs text-a-text-2" title={place.description}>{place.description}</p>}
+        </div>
         {change && (
-          <Button size="sm" variant="ghost" className="ml-auto" onClick={() => onOpen({ kind: 'place', place })}>
-            <Pencil size={14} aria-hidden />{t('loyalty.places.edit', 'Edit')}<span className="sr-only"> {place.name}</span>
-          </Button>
+          <span className="-mr-2 -mt-1.5">
+            <IconButton icon={Pencil} label={t('loyalty.places.edit', 'Edit')} name={place.name} onClick={() => onOpen({ kind: 'place', place })} />
+          </span>
         )}
       </div>
 
-      {place.description && <p className="text-sm text-a-text-2">{place.description}</p>}
-
-      <div className="space-y-1.5">
-        <p className="text-xs font-medium text-a-text-2">{t('loyalty.places.who', 'Who may enter')}</p>
-        {who.kind === 'every'
-          ? <p className="text-sm text-a-text">{t('loyalty.places.every_member', 'Every member')}</p>
-          : (
-            <ul aria-label={t('loyalty.places.tiers_let_in', 'Tiers let in')} className="flex flex-wrap gap-1.5">
-              {who.tiers.map(tier => <li key={tier.id}><TierChip tier={tier} theme={theme} size="sm" /></li>)}
-            </ul>
-          )}
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+        <div className="flex min-w-0 flex-wrap items-center gap-1.5 text-sm text-a-text" title={t('loyalty.places.who', 'Who may enter')}>
+          <DoorOpen size={15} aria-hidden className="shrink-0 text-a-text-2" />
+          <span className="sr-only">{t('loyalty.places.who', 'Who may enter')}</span>
+          {who.kind === 'every'
+            ? <span>{t('loyalty.places.every_member', 'Every member')}</span>
+            : (
+              <ul aria-label={t('loyalty.places.tiers_let_in', 'Tiers let in')} className="flex flex-wrap gap-1.5">
+                {who.tiers.map(tier => <li key={tier.id}><TierChip tier={tier} theme={theme} size="sm" /></li>)}
+              </ul>
+            )}
+        </div>
+        <button type="button" onClick={() => onOpen({ kind: 'entries', place })}
+          className="-mr-1 inline-flex min-h-11 items-center gap-1.5 rounded-full px-2 text-sm font-medium tabular-nums text-a-accent-text hover:bg-a-accent/10 sm:min-h-8">
+          <ScanLine size={15} aria-hidden />
+          {t(...todayWords(place.today, i18n.language || 'en'))}<span className="sr-only">: {t('loyalty.places.see_entries', 'see the entries at {{place}}', { place: place.name })}</span>
+          <ChevronRight size={14} aria-hidden />
+        </button>
       </div>
-
-      <button type="button" onClick={() => onOpen({ kind: 'entries', place })}
-        className="text-sm font-medium tabular-nums text-a-accent-text underline-offset-2 hover:underline">
-        {t(...todayWords(place.today))}<span className="sr-only">: {t('loyalty.places.see_entries', 'see the entries at {{place}}', { place: place.name })}</span>
-      </button>
     </li>
   )
 }

@@ -45,9 +45,9 @@ export function WayIcon({ way, on }: { way: string; on: boolean }) {
  * An on/off switch: a real button that says whether it is on (`role="switch"`), Space and Enter toggle it. Its label
  * is the way's title, read by a screen reader with its state.
  */
-export function Switch({ on, label, disabled = false, onChange }: { on: boolean; label: string; disabled?: boolean; onChange: (on: boolean) => void }) {
+export function Switch({ on, label, title, disabled = false, onChange }: { on: boolean; label: string; title?: string; disabled?: boolean; onChange: (on: boolean) => void }) {
   return (
-    <button type="button" role="switch" aria-checked={on} aria-label={label} disabled={disabled} onClick={() => onChange(!on)}
+    <button type="button" role="switch" aria-checked={on} aria-label={label} title={title} disabled={disabled} onClick={() => onChange(!on)}
       className={`relative inline-flex h-7 w-12 shrink-0 items-center rounded-full border transition duration-150 disabled:cursor-not-allowed disabled:opacity-60 ${on ? 'border-transparent bg-a-accent' : 'border-a-border bg-a-surface-2'}`}>
       <span aria-hidden className={`inline-block h-5 w-5 rounded-full shadow-a-sm transition duration-150 ${on ? 'translate-x-6 bg-a-accent-ink' : 'translate-x-1 bg-a-surface'}`} />
     </button>
@@ -95,7 +95,7 @@ export function WayFields({ way, form, fields, rewards, problems, disabled, curr
         if (def?.type === 'enum') {
           return (
             <ChoiceField key={key} name={key} label={labelText} choices={def.choices ?? []} value={form.values[key] ?? ''} problem={problem}
-              disabled={disabled} onChange={(value) => onChange(key, value)} />
+              hint={hint ? t(...hint) : undefined} disabled={disabled} onChange={(value) => onChange(key, value)} />
           )
         }
         return (
@@ -116,20 +116,22 @@ export function WayFields({ way, form, fields, rewards, problems, disabled, curr
 }
 
 /** A choice of the server's values, as a group of radio buttons (the arrow keys move between them). */
-function ChoiceField({ name, label, choices, value, problem, disabled, onChange }: {
+function ChoiceField({ name, label, choices, value, problem, hint, disabled, onChange }: {
   name: string
   label: string
   choices: string[]
   value: string
   problem: string | null
+  hint?: string
   disabled: boolean
   onChange: (value: string) => void
 }) {
   const { t } = useTranslation()
   const id = useId()
   const words = CHOICE_WORDS[name] ?? {}
+  const described = [hint ? `${id}-hint` : '', problem ? `${id}-problem` : ''].filter(Boolean).join(' ')
   return (
-    <fieldset data-field={name} className="sm:col-span-2" aria-describedby={problem ? `${id}-problem` : undefined}>
+    <fieldset data-field={name} className="sm:col-span-2" aria-describedby={described || undefined}>
       <legend className="mb-1 block text-xs font-medium text-a-text-2">{label}</legend>
       <div className="flex flex-wrap gap-2">
         {choices.map(choice => {
@@ -143,6 +145,7 @@ function ChoiceField({ name, label, choices, value, problem, disabled, onChange 
           )
         })}
       </div>
+      {hint && <p id={`${id}-hint`} className="mt-1 text-xs text-a-text-2">{hint}</p>}
       {problem && <p id={`${id}-problem`} className="mt-1 text-xs font-medium text-a-danger">{problem}</p>}
     </fieldset>
   )

@@ -18,8 +18,9 @@ export interface Choices {
 }
 
 /**
- * "Scanning for" (spec 2026-10-25 §2): the desk, each place switched on, each event open now or later today — one tap
- * each, grouped, the chosen one pressed; a line saying what a scan does there, and Door mode for a place or an event.
+ * "Scanning for" (spec 2026-10-25 §2; release 9 made it one row): the desk, each place switched on, each event open now
+ * or later today — one tap each, the chosen one pressed. The icon says which kind it is (bell, door, calendar), so the
+ * groups need no headings on screen (they keep theirs for a screen reader); Door mode for a place or an event.
  */
 export function ContextPicker({ resolved, choices, onChoose }: { resolved: Resolved; choices: Choices; onChoose: (context: ScanContext) => void }) {
   const { t } = useTranslation()
@@ -29,22 +30,20 @@ export function ContextPicker({ resolved, choices, onChoose }: { resolved: Resol
   const on = (c: ScanContext) => sameContext(context, c)
 
   return (
-    <section aria-labelledby="scan-for" className="space-y-3 rounded-2xl border border-a-border bg-a-surface p-4 sm:p-5">
+    <section aria-labelledby="scan-for" className="space-y-2.5">
       <div className="flex flex-wrap items-center gap-3">
         <h2 id="scan-for" className="text-xs font-semibold uppercase tracking-wide text-a-text-2">{t('loyalty.door.scanning_for', 'Scanning for')}</h2>
         {context.kind !== 'desk' && (
-          <Link to={doorPath(context)} className="ml-auto inline-flex items-center gap-2 rounded-full sm:hidden border border-a-border bg-a-surface px-4 py-2 text-sm font-semibold text-a-text hover:bg-a-surface-2">
-            <Maximize2 size={15} aria-hidden />{t('loyalty.door.open_door', 'Door mode')}
+          <Link to={doorPath(context)} className="ml-auto inline-flex items-center gap-1.5 rounded-full sm:hidden border border-a-border bg-a-surface px-3 py-1.5 text-sm font-semibold text-a-text hover:bg-a-surface-2">
+            <Maximize2 size={14} aria-hidden />{t('loyalty.door.open_door', 'Door mode')}
           </Link>
         )}
       </div>
 
-      <div className="space-y-3">
-        <div role="group" aria-labelledby="scan-for" className="flex flex-wrap gap-2">
-          <Choice on={on({ kind: 'desk' })} onClick={() => onChoose({ kind: 'desk' })} icon={<ConciergeBell size={16} aria-hidden />}>
-            {t('loyalty.door.desk', 'Desk')}
-          </Choice>
-        </div>
+      <div className="flex flex-wrap gap-2">
+        <Choice on={on({ kind: 'desk' })} onClick={() => onChoose({ kind: 'desk' })} icon={<ConciergeBell size={16} aria-hidden />}>
+          {t('loyalty.door.desk', 'Desk')}
+        </Choice>
         {places.length > 0 && (
           <Group label={t('loyalty.door.places', 'Places')}>
             {places.map(p => (
@@ -64,10 +63,10 @@ export function ContextPicker({ resolved, choices, onChoose }: { resolved: Resol
           </Group>
         )}
         {choices.loading && (
-          <div className="flex gap-2" role="status">
+          <span className="contents" role="status">
             <span className="sr-only">{t('loyalty.door.loading_places', 'Loading places and events…')}</span>
             <Skeleton className="h-11 w-36 rounded-full" /><Skeleton className="h-11 w-28 rounded-full" />
-          </div>
+          </span>
         )}
       </div>
 
@@ -80,28 +79,13 @@ export function ContextPicker({ resolved, choices, onChoose }: { resolved: Resol
           </Link>
         </p>
       )}
-      <ContextLine resolved={resolved} />
     </section>
   )
 }
 
-/** What a scan does in the chosen context, in a sentence. */
-function ContextLine({ resolved }: { resolved: Resolved }) {
-  const { t } = useTranslation()
-  const line = resolved.pending ? t('loyalty.door.loading_places', 'Loading places and events…')
-    : resolved.place ? t('loyalty.door.line_place', 'Each scan decides whether the member may enter {{place}}, and records it.', { place: resolved.place.name })
-    : resolved.event ? t('loyalty.door.line_event', 'Each scan checks the member in to {{event}} ({{hours}}).', { event: resolved.event.title, hours: eventHours(resolved.event) })
-    : t('loyalty.door.line_desk', 'Find a member, then award or redeem points or check them in.')
-  return <p data-context-line="" className="text-sm text-a-text">{line}</p>
-}
-
+/** A group of choices in the row: no heading on screen (the icons say the kind), its name for a screen reader. */
 function Group({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <div role="group" aria-label={label} className="space-y-1.5">
-      <p aria-hidden className="text-xs font-medium text-a-text-2">{label}</p>
-      <div className="flex flex-wrap gap-2">{children}</div>
-    </div>
-  )
+  return <span role="group" aria-label={label} className="contents">{children}</span>
 }
 
 /** One context to scan for: a real button that says whether it is the chosen one. */
@@ -109,9 +93,9 @@ function Choice({ on, onClick, icon, children }: { on: boolean; onClick: () => v
   return (
     <button type="button" aria-pressed={on} onClick={onClick}
       className={`inline-flex min-h-11 items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition-colors ${on
-        ? 'border-a-accent-text bg-a-accent/10 text-a-text shadow-a-sm'
+        ? 'border-transparent bg-a-accent text-a-accent-ink shadow-a-sm'
         : 'border-a-border bg-a-surface text-a-text-2 hover:bg-a-surface-2 hover:text-a-text'}`}>
-      {on ? <Check size={16} aria-hidden className="text-a-accent-text" /> : icon}
+      {on ? <Check size={16} aria-hidden /> : icon}
       {children}
     </button>
   )

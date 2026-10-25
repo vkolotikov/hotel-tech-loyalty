@@ -23,7 +23,9 @@ import {
   DESK, activePlaces, contextFromSearch, contextSearch, eventHours, loadContext, openEvents, resolveContext, saveContext, venueWallNow,
   type Resolved, type ScanContext,
 } from './scanContext'
-import { cameraAttempt, detectEnv, fieldAttempt, modeState, nfcState, usbAttempt, type Attempt, type ScanMode } from './scanMath'
+import {
+  cameraAttempt, detectEnv, fieldAttempt, gotNoAnswer, keyFor, modeState, nfcState, usbAttempt, type Attempt, type ScanMode, type Unanswered,
+} from './scanMath'
 import { NfcPanel } from './ScanPage'
 import { TodayCounts } from './TodayHere'
 import { useToday } from './useToday'
@@ -35,6 +37,7 @@ import {
 } from './verdict'
 import { useSay } from './useSay'
 import { Announcer, DoorVerdict } from './VerdictCard'
+import { useTypedPhrase } from './useTypedPhrase'
 
 /**
  * Door mode (release 8, spec 2026-10-25 §2): a full-screen scanner for a tablet or a phone at an entrance, outside the
@@ -229,7 +232,10 @@ function DoorScanner({ resolved, nowWall, onGone }: { resolved: Resolved; nowWal
   const seen = useRef<Seen>({})
   const busy = useRef(false)
   const queued = useRef<Attempt | null>(null)
-  const facts: VerdictFacts = { locale, today: boot.venue.today, nowWall, timeZone, place: resolved.place, event: resolved.event }
+  // The last scan that got no answer: the member scanning again reuses its key, so the server replays what it did.
+  const unanswered = useRef<Unanswered | null>(null)
+  const typedPhrase = useTypedPhrase()
+  const facts: VerdictFacts = { locale, today: boot.venue.today, nowWall, timeZone, place: resolved.place, event: resolved.event, typedPhrase }
   const live = useRef({ facts, sound })
   useEffect(() => { live.current = { facts, sound } })
 
@@ -242,9 +248,18 @@ function DoorScanner({ resolved, nowWall, onGone }: { resolved: Resolved; nowWal
   }
 
   const scan = useMutation({
-    mutationFn: (attempt: Attempt) => scanApi.scan({ code: attempt.code, idempotency_key: newPressKey(), ...contextBody(context) }),
+    mutationFn: (attempt: Attempt) => {
+      const where = contextSearch(context) || 'desk'
+      const key = keyFor(attempt.code, where, unanswered.current, Date.now(), newPressKey)
+      return scanApi.scan({ code: attempt.code, idempotency_key: key, ...contextBody(context) })
+        .catch((error: unknown) => {
+          unanswered.current = gotNoAnswer(failureOf(error)) ? { code: attempt.code, where, key, at: Date.now() } : null
+          throw error
+        })
+    },
     onMutate: () => { busy.current = true },
     onSuccess: (answer) => {
+      unanswered.current = null
       show(answerVerdict(answer, live.current.facts))
       afterScan(client, context, answer.member?.id ?? null)
     },
@@ -371,13 +386,12 @@ function DoorScanner({ resolved, nowWall, onGone }: { resolved: Resolved; nowWal
               {way !== null && (scan.isPending ? <Loader2 size={30} className="shrink-0 animate-spin" aria-hidden /> : <ScanLine size={32} aria-hidden className="shrink-0 text-a-accent-text" />)}
               {scan.isPending ? t('loyalty.door.checking', 'Checking…') : t('loyalty.door.ready', 'Ready — scan the next member')}
             </p>
-            <p className="text-base text-a-text-2">{t('loyalty.door.ready_line', 'A QR code, a card or a member number: the answer shows here for a few seconds.')}</p>
           </div>
           {way === null && (
-            <div role="group" aria-label={t('loyalty.scan.ways', 'Ways to scan')} className="grid gap-3 sm:grid-cols-2">
-              <WayButton icon={<Camera size={30} aria-hidden />} title={t('loyalty.door.way_camera', 'Start the camera')} line={t('loyalty.door.way_camera_line', 'Members hold their QR code up to this screen.')} onClick={() => chooseWay('camera')} />
-              {env.webNfc && <WayButton icon={<Nfc size={30} aria-hidden />} title={t('loyalty.door.way_nfc', 'Tap NFC cards')} line={t('loyalty.door.way_nfc_line', 'Members tap their card on the back of this device.')} onClick={() => chooseWay('nfc')} />}
-              {env.webHid && <WayButton icon={<Usb size={30} aria-hidden />} title={t('loyalty.door.way_usb', 'USB reader')} line={t('loyalty.door.way_usb_line', 'A card reader plugged into this device.')} onClick={() => chooseWay('usb')} />}
+            <div role="group" aria-label={t('loyalty.scan.ways', 'Ways to scan')} className="flex flex-wrap justify-center gap-3">
+              <WayButton icon={<Camera size={30} aria-hidden />} title={t('loyalty.door.way_camera', 'Start the camera')} onClick={() => chooseWay('camera')} />
+              {env.webNfc && <WayButton icon={<Nfc size={30} aria-hidden />} title={t('loyalty.door.way_nfc', 'Tap NFC cards')} onClick={() => chooseWay('nfc')} />}
+              {env.webHid && <WayButton icon={<Usb size={30} aria-hidden />} title={t('loyalty.door.way_usb', 'USB reader')} onClick={() => chooseWay('usb')} />}
             </div>
           )}
           <form className="flex w-full gap-2" onSubmit={(e) => { e.preventDefault(); offer(fieldAttempt(code)) }}>
@@ -424,15 +438,13 @@ function DoorScanner({ resolved, nowWall, onGone }: { resolved: Resolved; nowWal
   )
 }
 
-function WayButton({ icon, title, line, onClick }: { icon: ReactNode; title: string; line: string; onClick: () => void }) {
+/** A way in, as a square tile: its icon and a word (the icon says what it is; no sentence beneath). */
+function WayButton({ icon, title, onClick }: { icon: ReactNode; title: string; onClick: () => void }) {
   return (
     <button type="button" onClick={onClick}
-      className="flex min-h-24 items-center gap-4 rounded-2xl border border-a-border bg-a-surface px-5 py-4 text-left shadow-a-sm transition-colors hover:border-a-accent-text hover:bg-a-surface-2">
-      <span className="grid h-14 w-14 shrink-0 place-items-center rounded-full bg-a-accent/10 text-a-accent-text">{icon}</span>
-      <span className="min-w-0">
-        <span className="block text-xl font-semibold text-a-text">{title}</span>
-        <span className="block text-sm text-a-text-2">{line}</span>
-      </span>
+      className="flex w-40 flex-col items-center gap-3 rounded-2xl border border-a-border bg-a-surface px-4 py-5 text-center shadow-a-sm transition-colors hover:border-a-accent-text hover:bg-a-surface-2 sm:w-44">
+      <span className="grid h-14 w-14 place-items-center rounded-full bg-a-accent/10 text-a-accent-text">{icon}</span>
+      <span className="text-base font-semibold text-a-text">{title}</span>
     </button>
   )
 }

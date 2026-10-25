@@ -56,6 +56,9 @@ class MemberController extends Controller
                 'name'        => (string) $tb->benefit->name,
                 'category'    => $tb->benefit->category,
                 'value'       => $tb->value,
+                // Release 9: the typed value, so a benefit given no wording still says "15% off".
+                'value_type'   => $tb->value_type,
+                'value_amount' => $tb->value_amount !== null ? (float) $tb->value_amount : null,
                 'description' => $tb->custom_description ?? $tb->benefit->description,
             ])->values();
 

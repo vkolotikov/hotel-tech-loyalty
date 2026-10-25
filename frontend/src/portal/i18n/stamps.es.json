@@ -1,6 +1,5 @@
 {
   "title": "Tarjeta de sellos",
-  "count": "{{have}} de {{needed}}",
   "label": "{{have}} de {{needed}} sellos",
   "full": "Su tarjeta está completa: su recompensa está en camino.",
   "reward_free": "Su recompensa: {{reward}} gratis",

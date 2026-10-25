@@ -1,12 +1,10 @@
 {
   "title": "Lieux",
-  "line": "Là où les membres scannent leur carte, et les niveaux autorisés à entrer.",
   "add": "Ajouter un lieu",
   "add_first": "Ajouter l’entrée",
   "list": "Lieux",
   "none_manager": "Aucun lieu pour l’instant. Ajoutez d’abord votre entrée : les scans y diront qui peut entrer.",
   "none": "Aucun lieu pour l’instant. Un propriétaire ou un manager les ajoute ici.",
-  "switched_on": "Activé",
   "switched_off": "Désactivé",
   "edit": "Modifier",
   "who": "Qui peut entrer",
@@ -68,7 +66,6 @@
     "list": "Scans, du plus récent au plus ancien",
     "let_in": "Entré :",
     "refused": "Refusé :",
-    "unknown_code": "Carte ou code inconnu",
     "by": "par {{name}}",
     "error": {
       "not_found": "Ce lieu n’existe plus.",

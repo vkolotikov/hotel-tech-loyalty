@@ -1,12 +1,10 @@
 {
   "title": "Places",
-  "line": "Where members scan in, and which tiers may enter.",
   "add": "Add a place",
   "add_first": "Add the entrance",
   "list": "Places",
   "none_manager": "No places yet. Add your entrance first: scans there say who may come in.",
   "none": "No places yet. An owner or a manager adds them here.",
-  "switched_on": "Switched on",
   "switched_off": "Switched off",
   "edit": "Edit",
   "who": "Who may enter",
@@ -68,7 +66,6 @@
     "list": "Scans, newest first",
     "let_in": "Let in:",
     "refused": "Refused:",
-    "unknown_code": "Unknown card or code",
     "by": "by {{name}}",
     "error": {
       "not_found": "This place is no longer there.",

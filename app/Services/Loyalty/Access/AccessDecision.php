@@ -20,7 +20,9 @@ use Illuminate\Support\Facades\DB;
  *
  *  1. `member_erased`    — deleted, by staff (MemberErasure::isErased) or by the member (isSelfDeleted);
  *  2. `member_off`       — switched off (`is_active` false);
- *  3. `expired`          — `membership_valid_until` before the venue's today (the last day itself still lets in);
+ *  3. `expired`          — `membership_valid_until` before the venue's today (the last day itself still lets in); at an
+ *                          event, before the day it begins (release 9: as its sign-up judges, so a night that runs past
+ *                          midnight does not refuse at 00:30 a member it let in at 23:00);
  *  4. `place_off`        — the place is switched off;
  *  5. `tier_not_allowed` — the place, or the event, admits chosen tiers and the member's tier is not one of them (a
  *                          member without a tier is not one either); `allowed_tiers` names them in the ladder's order;
@@ -72,7 +74,7 @@ class AccessDecision
         if (!$member->is_active) {
             return $verdict(AccessVerdict::MEMBER_OFF);
         }
-        if ($validUntil !== null && $validUntil < $today) {
+        if ($validUntil !== null && $validUntil < ($event !== null ? \App\Services\Loyalty\Events\EventClock::day($event) : $today)) {
             return $verdict(AccessVerdict::EXPIRED);
         }
         if ($place !== null && !$place->is_active) {

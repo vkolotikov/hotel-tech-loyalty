@@ -62,10 +62,13 @@ const events: EventRow[] = [{ id: 5, title: 'Wine tasting', starts_at: '2026-10-
 const facts: VerdictFacts = { locale: 'en', today: '2026-10-21', nowWall: '2026-10-21T19:00', timeZone: 'Europe/Riga' }
 
 describe('the Scan page (release 5)', () => {
-  it('offers the camera, NFC and the USB reader as big buttons, and keeps the field for readers that type', () => {
+  it('offers the camera, NFC and the USB reader as short buttons, and keeps the field for readers that type', () => {
     const html = render(<ScanPage />)
     const words = text(html)
-    for (const way of ['Scan with camera', 'Tap NFC card', 'USB reader', 'Find']) expect(words).toContain(way)
+    for (const way of ['Camera', 'NFC card', 'USB reader', 'Find']) expect(words).toContain(way)
+    // No subtitle restating the title; the answer's place says the scanner is ready.
+    expect(words).not.toContain('Scan the member app')
+    expect(words).toContain('Ready — scan the next member')
     expect(html).toContain('placeholder="Scan or type…"')
     expect(html).toMatch(/<input[^>]*autofocus/i)
     // The three ways, none pressed (the desk is the context pressed above them).
@@ -111,12 +114,11 @@ describe('the Scan page (release 5)', () => {
 })
 
 describe('Scanning for (release 8 §2)', () => {
-  it('opens on the desk: pressed, said in a sentence, no door mode and no "Today here"', () => {
+  it('opens on the desk: pressed, no door mode and no "Today here"', () => {
     const html = render(<ScanPage />)
     const words = text(html)
     expect(words).toContain('Scanning for')
     expect(html).toMatch(/aria-pressed="true"[^>]*>.*?Desk/)
-    expect(words).toContain('Find a member, then award or redeem points or check them in.')
     expect(words).not.toContain('Door mode')
     expect(words).not.toContain('Today here')
     // The announcement region is there, silent until a verdict.
@@ -134,19 +136,22 @@ describe('Scanning for (release 8 §2)', () => {
     expect(text(render(<ScanPage />, '/loyalty/scan?event=5'))).toContain('Today here')
   })
 
-  it('lists the desk, each place and each event open today, grouped, the chosen one pressed and said', () => {
+  it('lists the desk, each place and each event open today in one row, the kinds named for a screen reader, the chosen one pressed', () => {
     const resolved = resolveContext({ kind: 'place', id: 3 }, places, events)
     const html = render(<ContextPicker resolved={resolved} onChoose={() => {}} choices={{ places, events, loading: false, failed: false, canSetUp: true }} />)
     const words = text(html)
-    for (const choice of ['Desk', 'Places', 'VIP lounge', 'Spa', 'Events today', 'Wine tasting', '18:00–23:00']) expect(words).toContain(choice)
+    for (const choice of ['Desk', 'VIP lounge', 'Spa', 'Wine tasting', '18:00–23:00']) expect(words).toContain(choice)
+    // No headings on screen: the icons say the kind; the groups keep their names for a screen reader.
+    expect(words).not.toContain('Events today')
+    expect(html).toContain('role="group" aria-label="Places"')
+    expect(html).toContain('role="group" aria-label="Events today"')
     expect(html.match(/aria-pressed="true"/g)).toHaveLength(1)
     expect(html).toMatch(/aria-pressed="true"[^>]*>.*?VIP lounge/)
-    expect(words).toContain('Each scan decides whether the member may enter VIP lounge, and records it.')
     expect(html).toContain('href="/loyalty/scan/door?place=3"')
     expect(words).not.toContain('Set up places')
 
-    const atEvent = text(render(<ContextPicker resolved={resolveContext({ kind: 'event', id: 5 }, places, events)} onChoose={() => {}} choices={{ places, events, loading: false, failed: false, canSetUp: false }} />))
-    expect(atEvent).toContain('Each scan checks the member in to Wine tasting (18:00–23:00).')
+    const atEvent = render(<ContextPicker resolved={resolveContext({ kind: 'event', id: 5 }, places, events)} onChoose={() => {}} choices={{ places, events, loading: false, failed: false, canSetUp: false }} />)
+    expect(atEvent).toMatch(/aria-pressed="true"[^>]*>.*?Wine tasting/)
   })
 
   it('offers a manager "Set up places" when there are none; says so when the lists could not be loaded', () => {
@@ -171,8 +176,11 @@ describe('the verdict on the scan page', () => {
     const words = text(html)
     expect(html).toContain('data-tone="granted"')
     expect(html).toContain('<svg')
-    expect(words).toContain('Welcome, Ada')
-    expect(words).toContain('Ada Lovelace')
+    // The band says "Welcome"; the name is written once, beneath it, with the member's initials.
+    expect(words).toContain('Welcome')
+    expect(words).not.toContain('Welcome, Ada')
+    expect(words.match(/Ada/g)).toHaveLength(1)
+    expect(words).toContain('AL')
     expect(html).toContain('href="/loyalty/members/7"')
     expect(words).toContain('Silver')
     expect(words).toContain('LS-001007')
@@ -190,6 +198,9 @@ describe('the verdict on the scan page', () => {
     expect(words).toContain('Gold and Platinum only — Ada is Silver.')
     expect(words).toContain('Ada Lovelace')
     expect(render(<VerdictCard view={view} />)).toContain('data-tone="denied"')
+    // At a closed door the tier's benefits are beside the point.
+    const withBenefits = answerVerdict({ member: member(), verdict: { granted: false, reason: 'expired', valid_until: '2026-10-01', expires_in_days: null, tier: null, allowed_tiers: [] }, benefits: [{ name: 'Lounge access', value: null, category: 'access' }] }, facts)
+    expect(text(render(<VerdictCard view={withBenefits} />))).not.toContain('Lounge access')
   })
 
   it('a code that names nobody: "Card not recognised" with no member; the announcement says the band', () => {
@@ -224,12 +235,12 @@ describe('Today here', () => {
       ],
     })} />)
     const words = text(html)
-    for (const part of ['Today here', 'Let in: 23 · Refused: 2', '19:05', 'Ada Lovelace', 'LS-001007', 'Let in', '19:01', 'No member', 'Card not recognised']) expect(words).toContain(part)
+    for (const part of ['Today here', 'Let in: 23 Refused: 2', '19:05', 'Ada Lovelace', 'LS-001007', 'Let in', '19:01', 'No member', 'Card not recognised']) expect(words).toContain(part)
   })
 
   it('an event’s numbers; nobody yet; loading; a list that could not be loaded', () => {
     expect(text(render(<TodayHere locale="en" today={today({ counts: { kind: 'event', checkedIn: 12, signedUp: 30, walkIns: 3, roomLeft: 8 } })} />)))
-      .toContain('Checked in: 12 · Signed up: 30 · Walk-ins: 3 · Places left: 8')
+      .toContain('Checked in: 12 Signed up: 30 Walk-ins: 3 Places left: 8')
     expect(text(render(<TodayHere locale="en" today={today({ counts: { kind: 'event', checkedIn: 0, signedUp: 0, walkIns: 0, roomLeft: null } })} />)))
       .toContain('Nobody scanned in yet today.')
     expect(render(<TodayHere locale="en" today={today({ isLoading: true })} />)).toContain('animate-pulse')

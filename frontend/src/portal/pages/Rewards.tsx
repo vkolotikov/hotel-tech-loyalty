@@ -1,7 +1,5 @@
 import { useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { usePortal } from '../PortalProvider'
-import { counted } from '../lib/plural'
 import { Tabs } from '../ui/Tabs'
 import { BenefitsTab } from './rewards/BenefitsTab'
 import { CatalogueTab } from './rewards/CatalogueTab'
@@ -12,22 +10,18 @@ import { EventsLink } from './events/EventsLink'
 const TABS = ['benefits', 'catalogue', 'offers', 'codes'] as const
 type Tab = (typeof TABS)[number]
 
-/** One destination for everything the level earns; the tab survives reload via ?tab=. */
+/** One destination for everything the level earns; the tab survives reload via ?tab=. The balance is the Catalogue's. */
 export function Rewards() {
   const { t } = useTranslation()
-  const { data } = usePortal()
   const [params, setParams] = useSearchParams()
   const tab: Tab = (TABS as readonly string[]).includes(params.get('tab') ?? '') ? (params.get('tab') as Tab) : 'benefits'
 
   return (
     <div className="space-y-4">
-      <div className="flex items-baseline justify-between gap-3">
+      <div className="flex items-center justify-between gap-3">
         <h1 className="font-p-display text-2xl">{t('portal.rewards.title', 'Rewards')}</h1>
-        {data?.member && (
-          <span className="text-sm text-p-text-2">{counted(t, 'rewards.you_have', data.member.current_points)}</span>
-        )}
+        <EventsLink />
       </div>
-      <EventsLink />
       <Tabs
         value={tab}
         onChange={key => setParams({ tab: key }, { replace: true })}

@@ -116,6 +116,13 @@ final class MemberErasure
         AuditLog::record('member_deleted', $member, [],
             ['member_number' => $number, 'email' => $email, 'name' => $name],
             $by, "Member #{$number} ({$email}) anonymised");
+        // Release 9: the places the member held at events go back (EventSignUp, the only writer of sign-ups). After the
+        // erasure, never failing it: a sign-up left standing only holds a place.
+        try {
+            app(\App\Services\Loyalty\Events\EventSignUp::class)->releaseAll($member, \App\Services\Loyalty\Events\EventSignUp::STAFF, $by);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('member erasure: event sign-ups not released', ['member_id' => $member->id, 'error' => $e->getMessage()]);
+        }
         AnalyticsService::clearDashboardCache();
 
         return $member;

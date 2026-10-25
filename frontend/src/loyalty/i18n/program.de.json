@@ -39,7 +39,6 @@
   },
   "benefits": {
     "add": "Vorteil hinzufügen",
-    "line": "Der Katalog, aus dem die Stufen ihre Vorteile wählen.",
     "none": "Der Katalog ist leer. Vorteile wie ein später Check-out oder ein Begrüßungsgetränk werden hier angelegt und dann Stufen zugewiesen.",
     "switch_off": "Deaktivieren",
     "switch_on": "Aktivieren",
@@ -95,7 +94,6 @@
     "add": "Aktion hinzufügen",
     "every_day": "Jeden Tag",
     "every_tier": "Alle Stufen",
-    "line": "Zeiten nach der Uhrzeit des Hauses ({{zone}}).",
     "none": "Keine Aktionen. Eine Aktion vervielfacht eine Zeit lang die Punkte, die Mitglieder sammeln – etwa doppelte Punkte am Wochenende.",
     "range": "{{from}} – {{to}}",
     "remove": "Entfernen",
@@ -120,8 +118,6 @@
     "staff_approved": "Nach Freigabe durch das Team",
     "voucher": "Gutschein"
   },
-  "in_use": "Aktiv",
-  "line": "Die Stufen, die Mitglieder erreichen, ihre Vorteile und Punkte-Aktionen.",
   "load": {
     "error": {
       "network": "Keine Verbindung. Bitte prüfen Sie das Netzwerk und versuchen Sie es erneut.",

@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { CheckCircle2, MapPin, Sparkles } from 'lucide-react'
+import { usePortal } from '../../PortalProvider'
 import { apiErrorCode } from '../../lib/portalApi'
 import { Button } from '../../ui/Button'
 import { Card } from '../../ui/Card'
@@ -18,6 +19,7 @@ export function EventCard({ event }: { event: PortalEvent }) {
   const { t, i18n } = useTranslation()
   const locale = i18n.language
   const client = useQueryClient()
+  const { data: boot } = usePortal()
   const block = dateBlock(event.starts_at, locale)
   const when = whenPhrase(event, locale)
   const action = actionOf(event)
@@ -32,10 +34,10 @@ export function EventCard({ event }: { event: PortalEvent }) {
   const failed = signUp.isError ? signUp.error : cancel.isError ? cancel.error : null
   const error = failed ? errorPhrase(apiErrorCode(failed)) : null
   const points = event.points > 0 ? counted('points', event.points, locale) : null
-  const why = action.kind === 'why_not' ? whyPhrase(action.code) : null
+  const why = action.kind === 'why_not' ? whyPhrase(action.code, boot?.member?.membership?.state) : null
 
   return (
-    <Card className="p-4" data-event={event.id}>
+    <Card className="p-4 h-full" data-event={event.id}>
       <div className="flex gap-3">
         <div aria-hidden className="w-12 shrink-0 rounded-p-control bg-p-accent/10 text-p-accent-deep flex flex-col items-center justify-center py-1.5">
           <span className="text-[11px] font-semibold uppercase">{block.weekday}</span>

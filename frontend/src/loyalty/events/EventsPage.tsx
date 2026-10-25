@@ -9,6 +9,7 @@ import { PageHeader } from '../../workspace/ui/PageHeader'
 import { Skeleton } from '../../workspace/ui/Skeleton'
 import { failureOf } from '../lib/api'
 import { refusalKey } from '../lib/errors'
+import { points } from '../lib/format'
 import { useLook } from '../lib/look'
 import { Pager } from '../ui/Pager'
 import { EventCard } from './EventCard'
@@ -40,8 +41,7 @@ export function EventsPage() {
 
   return (
     <div className="space-y-5 px-4 py-6 lg:px-6">
-      <PageHeader title={t('loyalty.events.title', 'Events')}
-        line={t('loyalty.events.line', 'Tastings, classes, members’ nights: who may come, what attending gives, and check-in at the door.')}>
+      <PageHeader title={t('loyalty.events.title', 'Events')}>
         {data?.can_change && (
           <Button onClick={() => setCreating(true)}><CalendarPlus size={16} aria-hidden />{t('loyalty.events.new', 'New event')}</Button>
         )}
@@ -61,7 +61,7 @@ export function EventsPage() {
               }}
               className={`inline-flex items-center gap-2 rounded-full border px-3.5 py-1.5 text-sm font-medium ${tab === name ? 'border-transparent bg-a-accent text-a-accent-ink' : 'border-a-border bg-a-surface text-a-text-2 hover:text-a-text'}`}>
               {t(`loyalty.events.tab.${name}`, TAB_WORDS[name])}
-              {total !== undefined && total > 0 && <span className="tabular-nums opacity-80">{total}</span>}
+              {total !== undefined && total > 0 && <span className="tabular-nums opacity-80">{points(total, locale)}</span>}
             </button>
           )
         })}

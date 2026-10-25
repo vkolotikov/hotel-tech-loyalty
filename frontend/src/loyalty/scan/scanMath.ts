@@ -186,6 +186,39 @@ export function isRepeat(previous: { code: string; at: number } | null, code: st
   return previous !== null && previous.code === code && now - previous.at < REPEAT_MS
 }
 
+// ─── A scan that got no answer ────────────────────────────────────────────
+
+/**
+ * The last scan that got no answer (release 9): no connection, the server's trouble, or still being checked. Sent again
+ * with its own key, the server answers what it already did (ScanReplay keeps a scan's answer 10 minutes) — so a member
+ * let in whose answer was lost is not refused next time as "already used", nor counted twice.
+ */
+export interface Unanswered {
+  code: string
+  /** Where it was scanned for (`desk`, `place:3`, `event:5`): the key is reused only for the same place. */
+  where: string
+  key: string
+  at: number
+}
+
+/** How long a key may be sent again: the server keeps a scan's answer this long. */
+export const REPLAY_MS = 10 * 60_000
+
+/** A failure that is no answer at all: nothing came back, the server failed, or the same scan is still being checked. */
+export function gotNoAnswer(failure: ApiFailure): boolean {
+  return failure.status === 0 || failure.status >= 500 || failure.code === 'in_progress' || failure.code === 'network'
+}
+
+/** The key for a scan: the unanswered scan's own when it is the same code at the same place within the window, else a new one. */
+export function keyFor(code: string, where: string, last: Unanswered | null, now: number, fresh: () => string): string {
+  return last !== null && last.code === code && last.where === where && now - last.at < REPLAY_MS ? last.key : fresh()
+}
+
+/** What the field keeps after a scan: empty, unless a reader that types already began the next code meanwhile. */
+export function fieldAfter(current: string, sent: string): string {
+  return current.trim() === sent ? '' : current
+}
+
 /** Whether the field takes the focus back after a scan: not after the camera or a tap, which a phone's keyboard would cover. */
 export function refocusAfter(source: Source): boolean {
   return source === 'field' || source === 'usb'

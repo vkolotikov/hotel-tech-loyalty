@@ -11,6 +11,7 @@ use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\DB;
 use Tests\Concerns\LoyaltyWorkspace\AccessSchema;
 use Tests\Concerns\LoyaltyWorkspace\EventsSchema;
+use Tests\Concerns\LoyaltyWorkspace\MembershipSchema;
 use Tests\Concerns\LoyaltyWorkspace\PushSchema;
 use Tests\Concerns\LoyaltyWorkspace\ValiditySchema;
 use Tests\Concerns\SetsUpLoyaltyWorkspace;
@@ -25,7 +26,7 @@ use Tests\TestCase;
  */
 class EventSignUpTest extends TestCase
 {
-    use DatabaseTransactions, SetsUpLoyaltyWorkspace, AccessSchema, EventsSchema, ValiditySchema, PushSchema;
+    use DatabaseTransactions, SetsUpLoyaltyWorkspace, AccessSchema, EventsSchema, ValiditySchema, PushSchema, MembershipSchema;
 
     protected function setUp(): void
     {
@@ -35,6 +36,7 @@ class EventSignUpTest extends TestCase
         $this->buildEventsSchema();
         $this->buildValiditySchema();
         $this->buildPushSchema();
+        $this->buildMembershipSchema();
     }
 
     private function refusal(callable $run): string
@@ -191,6 +193,24 @@ class EventSignUpTest extends TestCase
         $this->assertSame(['Alan Turing', 'Grace Hopper', 'Ada Lovelace', 'Edsger Dijkstra'], array_column(array_column($people, 'member'), 'name'));
         $this->assertSame(['19:02', true, null], [$people[2]['checked_in_at'], $people[2]['walk_in'], $people[2]['source']], 'the check-in on the venue’s clock');
         $this->assertNotNull($people[3]['cancelled_at']);
+    }
+
+    public function test_a_deleted_member_gives_back_the_places_they_held(): void
+    {
+        // A two-place evening: Grace and Ada signed up, so a walk-in finds it full. A past event keeps its history.
+        $evening = $this->makeEvent(['sign_up' => true, 'capacity' => 2, 'starts_at' => '2026-10-09 18:00:00', 'ends_at' => '2026-10-09 21:00:00']);
+        $past = $this->makeEvent(['sign_up' => true, 'starts_at' => '2026-10-04 18:00:00', 'ends_at' => '2026-10-04 21:00:00']);
+        app(EventSignUp::class)->signUp($evening, $this->grace, EventSignUp::PORTAL);
+        app(EventSignUp::class)->signUp($evening, $this->ada, EventSignUp::PORTAL);
+        DB::table('loyalty_event_registrations')->insert(['organization_id' => $this->org->id, 'loyalty_event_id' => $past->id, 'member_id' => $this->grace->id, 'status' => 'signed_up', 'source' => 'portal', 'signed_up_at' => now()->subDays(2), 'created_at' => now(), 'updated_at' => now()]);
+
+        app(\App\Services\Loyalty\Members\MemberErasure::class)->erase($this->grace->fresh(), $this->manager);
+
+        $this->assertSame('cancelled', EventSignUp::registrationOf($evening->fresh(), $this->grace->id)?->status);
+        $this->assertSame('signed_up', EventSignUp::registrationOf($evening->fresh(), $this->ada->id)?->status);
+        $this->assertSame('signed_up', EventSignUp::registrationOf($past->fresh(), $this->grace->id)?->status, 'an ended event keeps its history');
+        $this->assertSame(1, \App\Services\Loyalty\Events\EventRows::roomLeft(2, \App\Services\Loyalty\Events\EventRows::countsOf($evening->fresh())));
+        $this->assertSame(1, AuditLog::query()->where('action', 'loyalty.event_sign_up_cancelled')->where('subject_id', $this->grace->id)->count());
     }
 
     public function test_a_member_of_another_organisation_is_a_field_error(): void

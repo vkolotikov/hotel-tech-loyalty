@@ -13,7 +13,6 @@
   "add": "Add the purchase",
   "card_label": "{{have}} of {{needed}} stamps",
   "card_line": "{{have}} of {{needed}} — {{left}} to go",
-  "completed": "Cards completed: {{cards}}",
   "off": "The stamp card is switched off: this card keeps its stamps but gets no new ones.",
   "recent": "Recent stamps",
   "cards": "Completed cards",
@@ -33,7 +32,9 @@
     "appointment": "Appointment",
     "stay": "Stay",
     "check_in": "Check-in",
-    "purchase": "Purchase"
+    "purchase": "Purchase",
+    "event": "Event",
+    "other": "Visit"
   },
   "given": {
     "points": "+{{points}} points",

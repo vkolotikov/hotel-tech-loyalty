@@ -53,13 +53,10 @@
     "tier_progress_by": "Members move up by"
   },
   "hint": {
-    "cashback_percent": "Credit is spent at the desk only; it is never paid out.",
-    "checkin_points": "0 counts the visit without giving points.",
     "points_per_currency": "Higher tiers multiply it by their earn rate.",
-    "stamp_reward_id": "From your rewards catalogue. The member gets a code to show at the desk.",
-    "stamps_per_card": "A change applies to new cards; cards already started keep their number."
+    "stamps_per_card": "A change applies to new cards; cards already started keep their number.",
+    "tier_progress_by": "A change moves nobody at once: each member’s tier follows at their next visit or points."
   },
-  "line": "How members earn points and what they get back. Switch a way on or off and set its numbers; members see a saved change at once.",
   "load": {
     "error": {
       "network": "No connection. Check the network and try again.",
@@ -72,19 +69,12 @@
   "part": {
     "boosts": "Boosts",
     "boosts_count": "On now or coming up",
-    "boosts_line": "Extra points for a while, such as a double points weekend.",
     "offers": "Offers",
     "offers_count": "Switched on",
-    "offers_line": "Deals for members for a while, such as a discount or bonus points.",
-    "open_offers": "Open offers",
-    "open_program": "Open Program",
-    "open_rewards": "Open Rewards",
     "rewards": "Rewards",
     "rewards_count": "In the catalogue",
-    "rewards_line": "What members spend their points on.",
     "tiers": "Tiers",
-    "tiers_count": "In the ladder",
-    "tiers_line": "The levels members climb as they earn, each with its benefits."
+    "tiers_count": "In the ladder"
   },
   "parts_title": "The rest of your programme",
   "preset": {

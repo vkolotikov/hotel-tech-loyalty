@@ -10,7 +10,7 @@ import { ERRORS } from './errors'
 import { afterOptionsChange, optionsApi } from './optionsApi'
 import { changesOf, previewOptions, sentenceOf, serverProblems, wayFormOf, wayProblems, type WayForm } from './optionsMath'
 import { Sentence, Switch, WayFields, WayIcon } from './parts'
-import { useSay, wayLine, wayTitle } from './say'
+import { useSay, wayTitle } from './say'
 import type { OptionsAnswer, Way } from './types'
 
 /**
@@ -66,12 +66,9 @@ export function WayCard({ way, answer, manage }: { way: Way; answer: OptionsAnsw
   return (
     <form data-way={way.key} data-on={form.on ? '' : undefined} aria-labelledby={titleId} noValidate onSubmit={submit}
       className="flex flex-col gap-4 rounded-2xl border border-a-border bg-a-surface p-4 sm:p-5">
-      <div className="flex items-start gap-3">
+      <div className="flex items-center gap-3">
         <WayIcon way={way.key} on={form.on} />
-        <div className="min-w-0 flex-1">
-          <h3 id={titleId} className="font-a-display text-xl font-normal leading-snug text-a-text">{title}</h3>
-          <p className="text-sm text-a-text-2">{wayLine(say, way.key)}</p>
-        </div>
+        <h3 id={titleId} className="min-w-0 flex-1 self-center font-a-display text-xl font-normal leading-snug text-a-text">{title}</h3>
         {switchable && <Switch on={form.on} label={title} disabled={!manage || busy} onChange={(on) => edit({ ...form, on })} />}
       </div>
 
@@ -86,10 +83,11 @@ export function WayCard({ way, answer, manage }: { way: Way; answer: OptionsAnsw
       {failure && <Notice tone="danger">{t(...refusalKey('loyalty.options', ERRORS, 'save', failure))}</Notice>}
       {save.isSuccess && !dirty && <Notice tone="success">{t('loyalty.options.card.saved', 'Saved. Members get this from now on.')}</Notice>}
 
-      {manage && (
+      {/* Save shows once something changed (Enter in a field saves too); an untouched card has nothing to press. */}
+      {manage && (dirty || busy) && (
         <div className="mt-auto flex flex-wrap items-center justify-end gap-3">
-          {dirty && <p className="text-sm text-a-text-2">{t('loyalty.options.card.unsaved', 'Not saved yet.')}</p>}
-          <Button type="submit" size="sm" disabled={!dirty} loading={busy}>
+          <p className="text-sm text-a-text-2">{t('loyalty.options.card.unsaved', 'Not saved yet.')}</p>
+          <Button type="submit" size="sm" loading={busy}>
             {t('loyalty.options.card.save', 'Save')}<span className="sr-only"> {title}</span>
           </Button>
         </div>

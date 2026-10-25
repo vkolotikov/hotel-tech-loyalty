@@ -226,6 +226,14 @@ Multi-tenant Laravel 13 + React (Vite, TypeScript) SaaS with four sub-brands. Pr
   converted. Tiers are judged by the programme's `tier_progress_by` (points, visits — one per member per venue day —
   or spend), never by the member column `tier_qualification_model`; progress comes from
   `LoyaltyService::tierProgress()`.
+- Release 9 (owner 2026-10-25, review and redesign; `docs/loyalty-workspace.md` "Release 9"): a tier move's direction is
+  `LoyaltyService::compareOnLadder()` (the measure's floors, then points floors, then `sort_order`; level is no move);
+  soft landing steps down the measure's own ladder; a move never writes `tier_effective_until` (it is the grace clock,
+  started by the first dip, stopped by qualifying again); progress never names an invitation-only tier and every points
+  summary goes through `tierProgress()`; the active tiers are read per request (`LoyaltyTier::cachedActiveForCurrentOrg`),
+  never from the cache. At an event the membership is judged on the day it begins (door and sign-up alike). A deleted
+  member's standing sign-ups are released by `EventSignUp::releaseAll()`. A scan that got no answer is sent again with
+  its own key (`scanMath.keyFor`), never a fresh one. Every fact once per screen; a verdict names the member once.
 - Testing against PostgreSQL (the SQLite schemas miss NOT NULL columns and indexes production has): build a database
   from every migration, then run a test file with `DB_CONNECTION=pgsql DB_DATABASE=<that database>` (and its host and
   credentials) in the environment — phpunit.xml's `<env>` entries are not forced, and the schema traits skip tables

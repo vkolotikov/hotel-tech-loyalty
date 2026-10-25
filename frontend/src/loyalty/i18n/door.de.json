@@ -1,6 +1,5 @@
 {
   "back": "Zurück zum Scannen",
-  "benefits": "Vorteile",
   "check": "Prüfen",
   "checking": "Wird geprüft…",
   "choose_failed": "Orte und Veranstaltungen konnten nicht geladen werden. Prüfen Sie die Verbindung und laden Sie die Seite neu.",
@@ -16,9 +15,6 @@
   "leave": "Einlassmodus beenden",
   "leave_line": "Dieser Bildschirm lässt keine Mitglieder mehr ein, bis der Einlassmodus wieder geöffnet wird.",
   "leave_title": "Einlassmodus beenden?",
-  "line_desk": "Finden Sie ein Mitglied, dann vergeben oder lösen Sie Punkte ein oder checken Sie es ein.",
-  "line_event": "Jeder Scan checkt das Mitglied bei {{event}} ein ({{hours}}).",
-  "line_place": "Jeder Scan entscheidet, ob das Mitglied {{place}} betreten darf, und hält es fest.",
   "linked": "Die Karte ist mit {{name}} verknüpft. Scannen Sie sie erneut, um einzulassen.",
   "loading_places": "Orte und Veranstaltungen werden geladen…",
   "next": "Nächstes Mitglied",
@@ -28,7 +24,7 @@
   "places": "Orte",
   "places_failed": "Orte und Veranstaltungen konnten nicht geladen werden. Der Empfang funktioniert wie gewohnt; sie erscheinen, sobald die Verbindung wieder da ist.",
   "ready": "Bereit — scannen Sie das nächste Mitglied",
-  "ready_line": "Ein QR-Code, eine Karte oder eine Mitgliedsnummer: Die Antwort erscheint hier für einige Sekunden.",
+  "renew": "Um 1 Jahr verlängern",
   "retry": "Erneut versuchen",
   "scanning_for": "Scannen für",
   "set_up_places": "Orte einrichten",
@@ -52,14 +48,10 @@
   "unavailable": "Der Einlassmodus konnte nicht starten",
   "unavailable_line": "Prüfen Sie die Verbindung und versuchen Sie es erneut.",
   "way_camera": "Kamera starten",
-  "way_camera_line": "Mitglieder halten ihren QR-Code vor diesen Bildschirm.",
   "way_nfc": "NFC-Karten auflegen",
-  "way_nfc_line": "Mitglieder halten ihre Karte an die Rückseite dieses Geräts.",
   "way_usb": "USB-Lesegerät",
-  "way_usb_line": "Ein an dieses Gerät angeschlossenes Kartenlesegerät.",
   "headline": {
-    "welcome": "Willkommen, {{name}}",
-    "welcome_plain": "Willkommen",
+    "welcome": "Willkommen",
     "no_access": "Kein Zutritt",
     "card_unknown": "Karte nicht erkannt",
     "trouble": "Bitte erneut versuchen",
@@ -97,11 +89,14 @@
     "signed_up": "Angemeldet",
     "walk_in": "Ohne Anmeldung",
     "already_in": "Bereits um {{time}} eingecheckt",
+    "already_in_on": "Bereits am {{date}} um {{time}} eingecheckt",
+    "points_one": "+1 Punkt",
     "points": "+{{points}} Punkte"
   },
   "validity": {
     "until": "Gültig bis {{date}}",
     "ending": "Gültig bis {{date}} — endet in {{days}} Tagen",
+    "ending_tomorrow": "Gültig bis {{date}} — endet morgen",
     "ending_today": "Gültig bis heute",
     "ended": "Mitgliedschaft am {{date}} beendet"
   }

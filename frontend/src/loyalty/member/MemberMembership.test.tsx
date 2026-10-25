@@ -16,7 +16,7 @@ vi.mock('../../lib/api', () => ({ api: {}, resolveImage: (url: string | null | u
 
 import { LoyaltyContext } from '../LoyaltyProvider'
 import type { Bootstrap, Can, HistoryPage, MemberDetail } from '../lib/types'
-import { leftText } from '../membership/ValidityCard'
+import { leftText } from '../membership/validityMath'
 import { LEFT_WORDS } from '../membership/words'
 import { progressLine, type ProgressIn } from './memberMath'
 import { MemberPage } from './MemberPage'
@@ -85,12 +85,12 @@ describe('the Membership card on a member’s page', () => {
   it('says a membership without an end, one ending soon and one that ended, each in its words', () => {
     const none = text(render(can(true), detail()))
     expect(none).toContain('No end date')
-    expect(none).toContain('The membership never ends.')
+    expect(none).not.toContain('never ends')
     expect(none).not.toContain('Remove the end date')
 
     const soon = render(can(true), detail({ valid_until: '2026-10-10', membership_state: 'expiring' }))
     expect(text(soon)).toContain('Ends in 5 days')
-    expect(text(soon)).toContain('Ending soon')
+    expect(text(soon)).toContain('After it, places refuse entry until it is renewed.')
     expect(soon).toContain('data-state="pending"')
     expect(text(render(can(true), detail({ valid_until: '2026-10-05', membership_state: 'expiring' })))).toContain('Ends today')
 
@@ -98,13 +98,29 @@ describe('the Membership card on a member’s page', () => {
     expect(text(gone)).toContain('Expired on Oct 3, 2026')
     expect(text(gone)).toContain('Places refuse entry until it is renewed.')
     expect(gone).toContain('data-state="declined"')
+    // Said once: the state's colour and icon are on the headline, with no second "Expired" badge.
+    expect(text(gone).match(/Expired/g)).toHaveLength(1)
+  })
+
+  it('a switched-off member says so once, in the header; the card says only what follows', () => {
+    const off = text(render(can(true), detail({ is_active: false, valid_until: '2027-12-08', membership_state: 'off' })))
+    expect(off.match(/switched off/gi)).toHaveLength(1)
+    expect(off).toContain('Account switched off')
+    expect(off).toContain('Valid until Dec 8, 2027')
+    expect(off).toContain('Places refuse entry whatever the date.')
+  })
+
+  it('shows the time left on the status line, with no state badge beside it', () => {
+    const html = render(can(true), detail({ valid_until: '2027-12-08', membership_state: 'active' }))
+    expect(html).toContain('data-state="fulfilled"')
+    expect(html.match(/data-state=/g)).toHaveLength(1)
+    expect(text(html)).not.toContain('Active')
   })
 
   it('is read-only for staff who are not managers', () => {
     const words = text(render(can(false), detail({ valid_until: '2027-12-08', membership_state: 'active' })))
     expect(words).toContain('Valid until Dec 8, 2027')
-    expect(words).toContain('Only an owner or a manager can change the end date.')
-    expect(words).not.toContain('Set a date')
+    for (const action of ['Extend', 'Set a date', 'Remove the end date']) expect(words).not.toContain(action)
   })
 
   it('says the time left in its two largest parts', () => {

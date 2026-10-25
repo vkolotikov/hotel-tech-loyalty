@@ -3,7 +3,7 @@ import type { MemberRow } from '../lib/types'
 import type { EntryRow, EventPerson, EventRow, ScanAnswer, Verdict } from './scanApi'
 import {
   CLEAR_AFTER_MS, DUPLICATE_MS, answerVerdict, clearsAfter, clockOf, dayWords, daysBetween, deskValidity, entryLine, eventClosed, eventFacts,
-  failureVerdict, firstName, goneContext, isDuplicate, listWords, nextSeen, peopleLines, showsToday, soundOf, soundOn, takesKeyToField, warningSentence,
+  failureVerdict, firstName, goneContext, isDuplicate, listWords, nextSeen, peopleLines, renewable, showsToday, soundOf, soundOn, takesKeyToField, warningSentence,
   type Sentence, type VerdictFacts,
 } from './verdict'
 
@@ -23,11 +23,11 @@ const event: EventRow = { id: 5, title: 'Wine tasting', starts_at: '2026-10-25T1
 const say = (s: Sentence | null) => (s ? s.fallback.replace(/\{\{(\w+)\}\}/g, (_, k) => s.vars?.[k] ?? `{{${k}}}`) : null)
 
 describe('the verdict band (release 8 §2)', () => {
-  it('a welcome is green with a check and the member’s first name, the member and their benefits beneath', () => {
+  it('a welcome is green with a check and "Welcome" (the name is written once, beneath), the member and their benefits', () => {
     const view = answerVerdict(answer({}, { benefits: [{ name: 'Lounge access', value: null, category: 'access' }, { name: 'Late check-out', value: '14:00', category: 'stay' }] }), facts)
     expect(view.tone).toBe('granted')
     expect(view.mark).toBe('check')
-    expect(say(view.headline)).toBe('Welcome, Ada')
+    expect(say(view.headline)).toBe('Welcome')
     expect(view.headline.key).toBe('loyalty.door.headline.welcome')
     expect(view.reason).toBeNull()
     expect(view.member?.id).toBe(7)
@@ -35,6 +35,13 @@ describe('the verdict band (release 8 §2)', () => {
     expect(view.benefits).toEqual(['Lounge access', 'Late check-out · 14:00'])
     expect(view.validity).toBeNull()
     expect(view.facts).toEqual([])
+  })
+
+  it('a benefit given no wording says its typed value', () => {
+    const typed = answerVerdict(answer({}, { benefits: [{ name: 'Member price', value: null, category: 'discount', value_type: 'percent_discount', value_amount: 15 }, { name: 'Spa', value: null, category: null, value_type: 'text', value_amount: null }] }), facts)
+    expect(typed.benefits).toEqual(['Member price · 15% off', 'Spa'])
+    const said = answerVerdict(answer({}, { benefits: [{ name: 'Member price', value: null, category: 'discount', value_type: 'percent_discount', value_amount: 15 }] }), { ...facts, typedPhrase: (_t, n) => `−${n} %` })
+    expect(said.benefits).toEqual(['Member price · −15 %'])
   })
 
   it('a member without a name is welcomed plainly', () => {
@@ -45,13 +52,23 @@ describe('the verdict band (release 8 §2)', () => {
     const view = answerVerdict(answer({ valid_until: '2026-10-30', expires_in_days: 5 }), facts)
     expect(view.tone).toBe('warning')
     expect(view.mark).toBe('alert')
-    expect(say(view.headline)).toBe('Welcome, Ada')
+    expect(say(view.headline)).toBe('Welcome')
     expect(say(view.reason)).toBe('Membership ends in 5 days.')
     expect(say(view.validity)).toBe(`Valid until ${dayWords('2026-10-30', facts.today, 'en')}`)
     expect(say(warningSentence(0))).toBe('Membership ends today.')
     expect(say(warningSentence(1))).toBe('Membership ends tomorrow.')
     expect(warningSentence(null)).toBeNull()
     expect(warningSentence(15)).toBeNull()
+  })
+
+  it('only a run-out membership offers renewal on the spot; a refusal carries no benefits', () => {
+    expect(renewable(answer({ granted: false, reason: 'expired', valid_until: '2026-10-01' }))).toBe(true)
+    expect(renewable(answer({ granted: false, reason: 'member_off' }))).toBe(false)
+    expect(renewable(answer({ granted: false, reason: 'tier_not_allowed' }))).toBe(false)
+    expect(renewable(answer())).toBe(false)
+    expect(renewable(null)).toBe(false)
+    const refused = answerVerdict(answer({ granted: false, reason: 'expired', valid_until: '2026-10-01' }, { benefits: [{ name: 'Lounge access', value: null, category: 'access' }] }), facts)
+    expect(refused.benefits).toEqual([])
   })
 
   it('a refusal is red with a cross, "No access" and the reason in words', () => {
@@ -170,6 +187,7 @@ describe('the desk’s card: the membership’s end', () => {
     expect(soon.tone).toBe('warning')
     expect(say(soon.sentence)).toBe(`${until('2026-11-06')} — ends in 12 days`)
     expect(say(deskValidity({ valid_until: today, membership_state: 'expiring' }, today, 'en')!.sentence)).toBe('Valid until today')
+    expect(say(deskValidity({ valid_until: '2026-10-26', membership_state: 'expiring' }, today, 'en')!.sentence)).toBe(`${until('2026-10-26')} — ends tomorrow`)
     const over = deskValidity({ valid_until: '2026-10-03', membership_state: 'expired' }, today, 'en')!
     expect(over.tone).toBe('danger')
     expect(say(over.sentence)).toBe(`Membership ended on ${dayWords('2026-10-03', today, 'en')}`)
@@ -208,6 +226,24 @@ describe('Today here', () => {
     const lines = peopleLines([person(1, '2026-10-25T16:05:00+00:00'), person(2, null), person(3, '2026-10-25T17:10:00+00:00', true)], 'Europe/Riga')
     expect(lines.map(l => [l.name, l.time, say(l.label)])).toEqual([['M3', '19:10', 'Walk-in'], ['M1', '18:05', 'Signed up']])
     expect(peopleLines(Array.from({ length: 12 }, (_, i) => person(i + 1, `2026-10-25T1${i % 10}:00`)), 'UTC')).toHaveLength(8)
+    // The server's latest come newest first by real time: kept in that order across midnight.
+    const latest = peopleLines([person(4, '00:10', true), person(5, '23:50')], 'UTC', { sorted: true })
+    expect(latest.map(l => l.name)).toEqual(['M4', 'M5'])
+    // An event without sign-up stores everyone as a walk-in: the line just says they are in.
+    expect(peopleLines([person(6, '19:00', true)], 'UTC', { signUp: false }).map(l => say(l.label))).toEqual(['Checked in'])
+  })
+
+  it('a check-in of another day of a long event says its day', () => {
+    const at = { event: { id: 5, title: 'Festival' } }
+    expect(eventFacts(answer(at, { already_in: '19:02', already_in_at: '2026-10-23T19:02' }), 'en', 'UTC', true, '2026-10-25').map(say))
+      .toEqual([`Already checked in on ${dayWords('2026-10-23', '2026-10-25', 'en')} at 19:02`])
+    expect(eventFacts(answer(at, { already_in: '19:02', already_in_at: '2026-10-25T19:02' }), 'en', 'UTC', true, '2026-10-25').map(say)).toEqual(['Already checked in at 19:02'])
+  })
+
+  it('an event without sign-up says neither "Signed up" nor "Walk-in"; one point is singular', () => {
+    const at = { event: { id: 5, title: 'Wine tasting' } }
+    expect(eventFacts(answer(at, { checked_in: true, signed_up: false, points: 1 }), 'en', 'UTC', false).map(say)).toEqual(['Checked in', '+1 point'])
+    expect(eventFacts(answer(at, { checked_in: true, signed_up: false }), 'en', 'UTC', true).map(say)).toEqual(['Checked in', 'Walk-in'])
   })
 
   it('reads a time sent as HH:mm, as a wall clock or as an instant', () => {

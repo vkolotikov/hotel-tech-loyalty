@@ -65,6 +65,10 @@ describe('what one can scan for', () => {
     ]
     expect(openEvents(list, '2026-10-25T15:30').map(e => e.id)).toEqual([7, 5, 1])
     expect(openEvents(list, '2026-10-25T23:30').map(e => e.id)).toEqual([5])
+    // One starting at 00:30 tomorrow is there from 22:30 tonight, when its doors open.
+    const late = [...list, event(8, { starts_at: '2026-10-26T00:30', ends_at: '2026-10-26T03:00' })]
+    expect(openEvents(late, '2026-10-25T22:00').map(e => e.id)).toEqual([5])
+    expect(openEvents(late, '2026-10-25T22:30').map(e => e.id)).toEqual([5, 8])
   })
 
   it('only the places switched on', () => {

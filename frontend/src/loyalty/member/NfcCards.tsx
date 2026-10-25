@@ -1,12 +1,11 @@
 import { useMemo, useState, type FormEvent } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { Nfc, PowerOff, Usb } from 'lucide-react'
+import { Nfc, Plus, PowerOff, Usb } from 'lucide-react'
 import { Button } from '../../workspace/ui/Button'
 import { Dialog } from '../../workspace/ui/Dialog'
 import { Notice } from '../../workspace/ui/Notice'
 import { Skeleton } from '../../workspace/ui/Skeleton'
-import { Eyebrow } from '../../workspace/ui/Typography'
 import { failureOf } from '../lib/api'
 import { ERRORS, errorKey, refusalKey } from '../lib/errors'
 import { day } from '../lib/format'
@@ -15,6 +14,7 @@ import { afterCardChange, cardsApi, cardsKey, type NfcCardRow } from '../scan/ca
 import { detectEnv, hexWithColons, shortUid } from '../scan/scanMath'
 import { UsbReader } from '../scan/UsbReader'
 import { useWebNfc } from '../scan/useWebNfc'
+import { CARD, CardHead } from './CardHead'
 import { cardActions } from './memberMath'
 
 const INPUT = 'w-full rounded-xl border border-a-border bg-a-surface px-4 py-3 font-a-mono text-base text-a-text'
@@ -34,13 +34,12 @@ export function NfcCards({ member, locale, timeZone }: { member: { id: number; n
   const cards = query.data?.cards ?? []
 
   return (
-    <section aria-labelledby="cards-title" className="space-y-3 rounded-2xl border border-a-border bg-a-surface p-5">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <Eyebrow><span id="cards-title">{t('loyalty.member.cards_title', 'NFC cards')}</span></Eyebrow>
+    <section aria-labelledby="cards-title" className={CARD}>
+      <CardHead id="cards-title" icon={Nfc} title={t('loyalty.member.cards_title', 'NFC cards')}>
         {actions.link && (
-          <Button size="sm" variant="secondary" onClick={() => { setDone(null); setDialog('link') }}><Nfc size={15} aria-hidden />{t('loyalty.member.cards_link', 'Link NFC card')}</Button>
+          <Button size="sm" variant="secondary" onClick={() => { setDone(null); setDialog('link') }}><Plus size={15} aria-hidden />{t('loyalty.member.cards_link', 'Link NFC card')}</Button>
         )}
-      </div>
+      </CardHead>
       {done === 'linked' && <Notice tone="success">{t('loyalty.member.cards_linked', 'The card is linked. Scan finds the member by it now.')}</Notice>}
       {done === 'already' && <Notice tone="info">{t('loyalty.member.cards_already', 'This card was already linked to this member.')}</Notice>}
       {done === 'off' && <Notice tone="success">{t('loyalty.member.cards_switched_off', 'The card is switched off. Scan no longer finds the member by it.')}</Notice>}

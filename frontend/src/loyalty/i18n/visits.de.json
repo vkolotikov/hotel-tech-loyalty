@@ -13,7 +13,6 @@
   "add": "Einkauf erfassen",
   "card_label": "{{have}} von {{needed}} Stempeln",
   "card_line": "{{have}} von {{needed}} — noch {{left}}",
-  "completed": "Volle Karten: {{cards}}",
   "off": "Die Stempelkarte ist ausgeschaltet: Diese Karte behält ihre Stempel, bekommt aber keine neuen.",
   "recent": "Letzte Stempel",
   "cards": "Volle Karten",
@@ -33,7 +32,9 @@
     "appointment": "Termin",
     "stay": "Aufenthalt",
     "check_in": "Check-in",
-    "purchase": "Einkauf"
+    "purchase": "Einkauf",
+    "event": "Veranstaltung",
+    "other": "Besuch"
   },
   "given": {
     "points": "+{{points}} Punkte",

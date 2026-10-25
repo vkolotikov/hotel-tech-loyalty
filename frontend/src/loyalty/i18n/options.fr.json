@@ -53,13 +53,10 @@
     "tier_progress_by": "Les membres progressent selon"
   },
   "hint": {
-    "cashback_percent": "Le crédit s’utilise uniquement à l’accueil ; il n’est jamais versé en argent.",
-    "checkin_points": "Avec 0, la visite compte sans donner de points.",
     "points_per_currency": "Les niveaux supérieurs le multiplient par leur taux de gain.",
-    "stamp_reward_id": "Dans votre catalogue de récompenses. Le membre reçoit un code à présenter à l’accueil.",
-    "stamps_per_card": "Un changement vaut pour les nouvelles cartes ; les cartes commencées gardent leur nombre."
+    "stamps_per_card": "Un changement vaut pour les nouvelles cartes ; les cartes commencées gardent leur nombre.",
+    "tier_progress_by": "Un changement ne déplace personne tout de suite : le niveau suit à la prochaine visite ou aux prochains points."
   },
-  "line": "Comment les membres gagnent des points et ce qu’ils reçoivent en retour. Activez ou désactivez chaque façon et réglez ses valeurs ; les membres voient tout changement enregistré aussitôt.",
   "load": {
     "error": {
       "network": "Pas de connexion. Vérifiez le réseau et réessayez.",
@@ -72,19 +69,12 @@
   "part": {
     "boosts": "Boosts de points",
     "boosts_count": "En cours ou à venir",
-    "boosts_line": "Plus de points pendant un temps, comme un week-end à points doublés.",
     "offers": "Offres",
     "offers_count": "Activées",
-    "offers_line": "Des offres pour les membres pendant un temps, comme une remise ou des points bonus.",
-    "open_offers": "Ouvrir les offres",
-    "open_program": "Ouvrir Programme",
-    "open_rewards": "Ouvrir Récompenses",
     "rewards": "Récompenses",
     "rewards_count": "Dans le catalogue",
-    "rewards_line": "Ce contre quoi les membres échangent leurs points.",
     "tiers": "Niveaux",
-    "tiers_count": "Dans l’échelle",
-    "tiers_line": "Les niveaux que les membres gravissent en gagnant des points, chacun avec ses avantages."
+    "tiers_count": "Dans l’échelle"
   },
   "parts_title": "Le reste de votre programme",
   "preset": {

@@ -86,7 +86,7 @@ function EntriesBody({ query, day, today, locale, onPage }: {
       <p role="status" className="text-sm text-a-text">
         <span className="font-medium">{dayName}</span>
         {' · '}
-        {t(...countsWords(data.counts))}
+        {t(...countsWords(data.counts, locale))}
       </p>
       {data.entries.length > 0 && (
         <ol aria-label={t('loyalty.places.entries.list', 'Scans, newest first')} className="divide-y divide-a-border overflow-hidden rounded-xl border border-a-border">
@@ -113,12 +113,16 @@ export function EntryRow({ entry }: { entry: Entry }) {
           <span className="sr-only">{entry.granted ? t('loyalty.places.entries.let_in', 'Let in:') : t('loyalty.places.entries.refused', 'Refused:')} </span>
           {entry.member
             ? <><span className="font-medium">{entry.member.name}</span>{entry.member.member_number && <span className="ml-2 font-a-mono text-xs text-a-text-2">{entry.member.member_number}</span>}</>
-            : <span className="font-medium">{t('loyalty.places.entries.unknown_code', 'Unknown card or code')}</span>}
+            : <span className="font-medium">{reason}</span>}
         </p>
-        <p className="text-xs text-a-text-2">
-          {reason}
-          {entry.by && <> · {t('loyalty.places.entries.by', 'by {{name}}', { name: entry.by })}</>}
-        </p>
+        {/* Without a member the code's refusal is the line itself; it is not said again under it. */}
+        {(entry.member || entry.by) && (
+          <p className="text-xs text-a-text-2">
+            {entry.member && reason}
+            {entry.member && entry.by && ' · '}
+            {entry.by && t('loyalty.places.entries.by', 'by {{name}}', { name: entry.by })}
+          </p>
+        )}
       </div>
     </li>
   )

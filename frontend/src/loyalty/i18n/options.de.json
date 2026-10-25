@@ -53,13 +53,10 @@
     "tier_progress_by": "Mitglieder steigen auf nach"
   },
   "hint": {
-    "cashback_percent": "Guthaben wird nur an der Theke eingelöst; es wird nie ausgezahlt.",
-    "checkin_points": "Bei 0 zählt der Besuch, ohne Punkte zu geben.",
     "points_per_currency": "Höhere Stufen multiplizieren den Wert mit ihrer Sammelrate.",
-    "stamp_reward_id": "Aus Ihrem Prämienkatalog. Das Mitglied erhält einen Code, den es an der Theke vorzeigt.",
-    "stamps_per_card": "Eine Änderung gilt für neue Karten; begonnene Karten behalten ihre Anzahl."
+    "stamps_per_card": "Eine Änderung gilt für neue Karten; begonnene Karten behalten ihre Anzahl.",
+    "tier_progress_by": "Eine Änderung verschiebt niemanden sofort: Die Stufe folgt beim nächsten Besuch oder den nächsten Punkten."
   },
-  "line": "Wie Mitglieder Punkte sammeln und was sie zurückbekommen. Schalten Sie Wege ein oder aus und legen Sie ihre Werte fest; Mitglieder sehen eine gespeicherte Änderung sofort.",
   "load": {
     "error": {
       "network": "Keine Verbindung. Prüfen Sie das Netzwerk und versuchen Sie es erneut.",
@@ -72,19 +69,12 @@
   "part": {
     "boosts": "Punkte-Aktionen",
     "boosts_count": "Laufend oder geplant",
-    "boosts_line": "Eine Zeit lang mehr Punkte, etwa doppelte Punkte am Wochenende.",
     "offers": "Angebote",
     "offers_count": "Eingeschaltet",
-    "offers_line": "Zeitlich begrenzte Angebote für Mitglieder, etwa ein Rabatt oder Bonuspunkte.",
-    "open_offers": "Angebote öffnen",
-    "open_program": "Programm öffnen",
-    "open_rewards": "Prämien öffnen",
     "rewards": "Prämien",
     "rewards_count": "Im Katalog",
-    "rewards_line": "Wofür Mitglieder ihre Punkte einlösen.",
     "tiers": "Stufen",
-    "tiers_count": "In der Stufenleiter",
-    "tiers_line": "Die Stufen, die Mitglieder beim Sammeln erreichen, jede mit ihren Vorteilen."
+    "tiers_count": "In der Stufenleiter"
   },
   "parts_title": "Der Rest Ihres Programms",
   "preset": {

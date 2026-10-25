@@ -14,7 +14,6 @@ class LoyaltyTier extends Model
     use BelongsToOrganization;
 
     /** Cache TTL for the per-org active-tiers collection. */
-    private const CACHE_TTL = 1800;
 
     /**
      * Every field TierController validates must be here.
@@ -91,17 +90,39 @@ class LoyaltyTier extends Model
             return static::where('is_active', true)->orderBy('min_points')->get();
         }
 
-        return Cache::remember(
-            "org:{$orgId}:loyalty_tiers_active",
-            self::CACHE_TTL,
-            fn () => static::where('is_active', true)->orderBy('min_points')->get()
-        );
+        // Release 9: read once per request or job (and at most a minute in a long one), never kept in the cache: on
+        // Laravel Cloud the default cache is each container's own files, so a tier switched off or a floor changed held
+        // on the other containers for half an hour — members were assessed into a tier that was no longer offered.
+        $memo = self::memo();
+        $seen = $memo[$orgId] ?? null;
+        if (!is_array($seen) || time() - $seen['at'] > self::MEMO_SECONDS) {
+            $seen = ['at' => time(), 'tiers' => static::where('is_active', true)->orderBy('min_points')->get()];
+            $memo[$orgId] = $seen;
+        }
+
+        return $seen['tiers'];
+    }
+
+    private const MEMO = 'loyalty.tiers.active';
+
+    private const MEMO_SECONDS = 60;
+
+    /** @return \ArrayObject<int, array{at: int, tiers: Collection<int, self>}> */
+    private static function memo(): \ArrayObject
+    {
+        $app = app();
+        if (!$app->bound(self::MEMO)) {
+            $app->scoped(self::MEMO, fn () => new \ArrayObject());
+        }
+
+        return $app->make(self::MEMO);
     }
 
     public static function flushCacheFor(?int $orgId): void
     {
         if ($orgId) {
             Cache::forget("org:{$orgId}:loyalty_tiers_active");
+            unset(self::memo()[$orgId]);
         }
     }
 }

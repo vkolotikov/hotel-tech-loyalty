@@ -60,11 +60,11 @@ function render(node: ReactElement, b: Bootstrap, data?: CreditPage) {
 const text = (html: string) => html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ')
 
 describe('the credit on a member’s page', () => {
-  it('shows the balance, what members earn, Use credit and the history in the venue’s currency', () => {
+  it('shows the balance, Use credit and the history in the venue’s currency, and not the rate again (release 9)', () => {
     const words = text(render(<CreditPanel member={member(7.5)} locale="en" timeZone="Europe/Riga" />, boot(can(), ways(true)), page))
     expect(words).toContain('Credit')
     expect(words).toContain('€7.50')
-    expect(words).toContain('Members get 5% of what they spend back as credit, to use at the desk.')
+    expect(words).not.toContain('Members get')
     expect(words).toContain('Use credit')
     expect(words).not.toContain('Adjust')
     expect(words).toContain('−€4.90')

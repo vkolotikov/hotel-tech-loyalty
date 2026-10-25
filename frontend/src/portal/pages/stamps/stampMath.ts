@@ -45,7 +45,6 @@ export interface Phrase {
 /** The English of the card's words: the plain ones, and the plural families as [one, other]. */
 export const STAMP_WORDS = {
   title: 'Stamp card',
-  count: '{{have}} of {{needed}}',
   label: '{{have}} of {{needed}} stamps',
   full: 'Your card is full: your reward is on its way.',
   reward_free: 'Your reward: a free {{reward}}',

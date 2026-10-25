@@ -10,8 +10,7 @@
 
 /** The band's first line. */
 export const HEADLINE_WORDS = {
-  welcome: 'Welcome, {{name}}',
-  welcome_plain: 'Welcome',
+  welcome: 'Welcome',
   no_access: 'No access',
   card_unknown: 'Card not recognised',
   trouble: 'Try again',
@@ -55,13 +54,16 @@ export const FACT_WORDS = {
   signed_up: 'Signed up',
   walk_in: 'Walk-in',
   already_in: 'Already checked in at {{time}}',
+  already_in_on: 'Already checked in on {{date}} at {{time}}',
   points: '+{{points}} points',
+  points_one: '+1 point',
 } as const
 
 /** The membership's end date under the member's name (the verdict and the desk's card). */
 export const VALIDITY_WORDS = {
   until: 'Valid until {{date}}',
   ending: 'Valid until {{date}} — ends in {{days}} days',
+  ending_tomorrow: 'Valid until {{date}} — ends tomorrow',
   ending_today: 'Valid until today',
   ended: 'Membership ended on {{date}}',
 } as const

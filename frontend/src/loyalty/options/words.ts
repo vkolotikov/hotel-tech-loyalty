@@ -50,13 +50,11 @@ export const FIELD_WORDS: Record<string, string> = {
   tier_progress_by: 'Members move up by',
 }
 
-/** A line under a field, where one helps. */
+/** A line under a field, only where it prevents a mistake (the card's sentence already says the rest). */
 export const HINT_WORDS: Record<string, string> = {
   points_per_currency: 'Higher tiers multiply it by their earn rate.',
   stamps_per_card: 'A change applies to new cards; cards already started keep their number.',
-  stamp_reward_id: 'From your rewards catalogue. The member gets a code to show at the desk.',
-  checkin_points: '0 counts the visit without giving points.',
-  cashback_percent: 'Credit is spent at the desk only; it is never paid out.',
+  tier_progress_by: 'A change moves nobody at once: each member’s tier follows at their next visit or points.',
 }
 
 /** A choice of an option whose values the server lists. */

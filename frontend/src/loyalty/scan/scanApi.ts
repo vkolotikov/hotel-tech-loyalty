@@ -36,6 +36,8 @@ export interface EventRow {
   place: { id: number; name: string } | null
   location: string | null
   status: 'draft' | 'published' | 'cancelled'
+  /** Whether members sign up first; without it everyone is stored as a walk-in, and the screen says neither. */
+  sign_up?: boolean
 }
 
 export interface EventsAnswer {
@@ -69,6 +71,9 @@ export interface BenefitBadge {
   name: string
   value: string | null
   category: string | null
+  /** Release 9: the typed value (MemberBenefits), so a benefit given no wording still says "15% off". */
+  value_type?: string | null
+  value_amount?: number | null
 }
 
 /**
@@ -82,6 +87,8 @@ export interface ScanAnswer {
   benefits?: BenefitBadge[]
   checked_in?: boolean
   already_in?: string | null
+  /** Release 9: the same with its day (`YYYY-MM-DDTHH:mm`, the venue's wall clock), for an event of several days. */
+  already_in_at?: string | null
   signed_up?: boolean
   points?: number
   /** The stamp an event's visit gave (StampCards), or null when the stamp card is off. */
@@ -121,6 +128,9 @@ export interface EventPerson {
 export interface PeopleAnswer {
   counts: { signed_up: number; checked_in: number; walk_ins: number; room_left: number | null }
   people: EventPerson[]
+  /** Release 9: the latest check-ins, newest first by their real time (EventRows::latestCheckIns). */
+  latest?: EventPerson[]
+  event?: { sign_up: boolean }
 }
 
 export const scanApi = {
@@ -154,9 +164,11 @@ export function afterScan(client: QueryClient, context: ScanContext, memberId: n
   if (context.kind === 'event') {
     void client.invalidateQueries({ queryKey: ['loyalty', 'event', context.id] })
     void client.invalidateQueries({ queryKey: ['loyalty', 'events'] })
+    // A check-in writes points, a history line and a stamp: the member's page reads all three again.
     if (memberId !== null) {
-      void client.invalidateQueries({ queryKey: ['loyalty', 'member', memberId] })
-      void client.invalidateQueries({ queryKey: ['loyalty', 'members'] })
+      for (const queryKey of [['loyalty', 'member', memberId], ['loyalty', 'history', memberId], ['loyalty', 'stamps', memberId], ['loyalty', 'members']]) {
+        void client.invalidateQueries({ queryKey })
+      }
     }
   }
 }

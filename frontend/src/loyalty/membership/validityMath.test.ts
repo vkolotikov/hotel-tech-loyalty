@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { Can } from '../lib/types'
 import {
-  EXTENSIONS, addMonthsTo, dateProblem, daysBetween, extendBody, extendedEnd, headlineOf, setBody, stateTone, timeLeft, validityActions,
+  EXTENSIONS, addMonthsTo, dateProblem, daysBetween, extendBody, extendedEnd, headlineOf, renewsKey, setBody, stateTone, timeLeft, validityActions,
 } from './validityMath'
 
 const can = (manager: boolean): Can => ({
@@ -63,5 +63,16 @@ describe('a membership’s end date (release 8 §3)', () => {
     expect(setBody('2027-10-03', 'k1')).toEqual({ valid_until: '2027-10-03', idempotency_key: 'k1' })
     expect(setBody(null, 'k2')).toEqual({ valid_until: null, idempotency_key: 'k2' })
     expect(extendBody('6m', 'k3')).toEqual({ extend: '6m', idempotency_key: 'k3' })
+  })
+
+  it('takes a new key after a refusal the server answered, and keeps it after a lost answer or a server error', () => {
+    // key_reused (409) would otherwise come back on every press after a lost answer and another choice.
+    expect(renewsKey({ status: 409 })).toBe(true)
+    expect(renewsKey({ status: 422 })).toBe(true)
+    expect(renewsKey({ status: 403 })).toBe(true)
+    // The change may have been written: the same key makes the same press a replay, written once.
+    expect(renewsKey({ status: 0 })).toBe(false)
+    expect(renewsKey({ status: 500 })).toBe(false)
+    expect(renewsKey({ status: 503 })).toBe(false)
   })
 })

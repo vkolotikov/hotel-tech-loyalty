@@ -46,6 +46,8 @@ export const REASON_WORDS: Record<string, string> = {
   expired: 'No access: the membership expired on {{date}}.',
   place_off: 'No access: this place is switched off.',
   tier_not_allowed: 'No access: for {{tiers}} only — {{name}} is {{tier}}.',
+  tier_not_allowed_no_tier: 'No access: for {{tiers}} only — {{name}} has no tier.',
+  tier_not_allowed_none: 'No access: no tier is let in to this event.',
   event_not_open: 'No access: check-in for this event is not open now.',
   event_full: 'No access: the event is full.',
   not_signed_up: 'No access: {{name}} did not sign up, and walk-ins are off.',

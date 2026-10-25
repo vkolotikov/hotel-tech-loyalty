@@ -160,6 +160,28 @@ final class EventRows
         return ['people' => $people, 'page' => $page, 'pages' => $pages, 'total' => $total];
     }
 
+    /**
+     * The latest check-ins, newest first by when they really happened (release 9): the scan screen's "Today here".
+     * people() pages by sign-up and shows a check-in as the venue's 'HH:mm', which sorts 00:10 before 23:50 and leaves
+     * the walk-ins behind the 200 sign-ups of its first page.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public static function latestCheckIns(LoyaltyEvent $event, int $limit = 8): array
+    {
+        $orgId = (int) $event->organization_id;
+        $attendances = EventAttendance::withoutGlobalScopes()->where('organization_id', $orgId)->where('loyalty_event_id', $event->id)
+            ->orderByDesc('checked_in_at')->orderByDesc('id')->limit($limit)->get();
+        $memberIds = $attendances->pluck('member_id')->map(fn ($id) => (int) $id)->all();
+        $members = LoyaltyMember::withoutGlobalScopes()->where('organization_id', $orgId)->whereIn('id', $memberIds)
+            ->with(['user:id,name', 'tier' => fn ($q) => $q->withoutGlobalScopes()])->get()->keyBy('id');
+        $registrations = EventRegistration::withoutGlobalScopes()->where('organization_id', $orgId)->where('loyalty_event_id', $event->id)
+            ->whereIn('member_id', $memberIds)->get()->keyBy('member_id');
+
+        return $attendances->map(fn (EventAttendance $a) => self::personRow($members->get($a->member_id), (int) $a->member_id, $registrations->get($a->member_id), $a, $orgId))
+            ->values()->all();
+    }
+
     /** One member of an event's people, as people() lists them (the sign-up endpoints answer it). @return array<string, mixed> */
     public static function person(LoyaltyEvent $event, int $memberId): array
     {

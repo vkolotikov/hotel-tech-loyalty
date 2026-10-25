@@ -39,7 +39,6 @@
   },
   "benefits": {
     "add": "Ajouter un avantage",
-    "line": "Le catalogue dans lequel les niveaux choisissent leurs avantages.",
     "none": "Le catalogue est vide. Les avantages, comme un départ tardif ou une boisson de bienvenue, sont créés ici puis attribués aux niveaux.",
     "switch_off": "Désactiver",
     "switch_on": "Activer",
@@ -95,7 +94,6 @@
     "add": "Ajouter un boost",
     "every_day": "Tous les jours",
     "every_tier": "Tous les niveaux",
-    "line": "Heures selon l’horloge de l’établissement ({{zone}}).",
     "none": "Aucun boost. Un boost multiplie pendant un temps les points gagnés par les membres, comme un week-end à points doublés.",
     "range": "{{from}} – {{to}}",
     "remove": "Supprimer",
@@ -120,8 +118,6 @@
     "staff_approved": "Validé par l’équipe",
     "voucher": "Bon"
   },
-  "in_use": "Actif",
-  "line": "Les niveaux que gravissent les membres, leurs avantages et les boosts de points.",
   "load": {
     "error": {
       "network": "Pas de connexion. Vérifiez le réseau et réessayez.",

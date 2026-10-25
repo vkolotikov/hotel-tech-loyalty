@@ -2,6 +2,7 @@ import { useId, useMemo, useState, type ReactNode } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
+import { CalendarClock, Gift, Globe, MapPin, Timer, UserPlus, Users, type LucideIcon } from 'lucide-react'
 import { Dialog } from '../../workspace/ui/Dialog'
 import { Button } from '../../workspace/ui/Button'
 import { Notice } from '../../workspace/ui/Notice'
@@ -91,7 +92,7 @@ export function EventDialog({ event, options, onClose }: { event: LoyaltyEventRo
             placeholder={t('loyalty.events.dialog.title_example', 'e.g. Wine tasting, Yoga class, Members’ night')} />
         </FormField>
 
-        <Section title={t('loyalty.events.dialog.when', 'When')}>
+        <Section icon={CalendarClock} title={t('loyalty.events.dialog.when', 'When')}>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
             <div className="col-span-2 sm:col-span-1">
               <FormField label={t('loyalty.events.dialog.date', 'Day')} problem={problem('date')}>
@@ -112,13 +113,22 @@ export function EventDialog({ event, options, onClose }: { event: LoyaltyEventRo
               <input type="date" value={form.end_date} min={form.date} onChange={(e) => update({ end_date: e.target.value })} className={INPUT} />
             </FormField>
           )}
-          <p className="text-xs text-a-text-2">
-            {t('loyalty.events.dialog.clock', 'On your venue’s clock ({{zone}}).', { zone: boot.venue.timezone })}
-            {minutes !== null && <> {t('loyalty.events.dialog.lasts', 'Lasts {{hours}} h {{minutes}} min.', { hours: Math.floor(minutes / 60), minutes: String(minutes % 60).padStart(2, '0') })}</>}
+          {/* How long it lasts (a slip in AM/PM shows here) and whose clock the times are on. */}
+          <p className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-a-text-2">
+            {minutes !== null && (
+              <span data-duration="" className="inline-flex items-center gap-1.5 font-medium text-a-text">
+                <Timer size={13} aria-hidden />{t('loyalty.events.dialog.duration', '{{hours}} h {{minutes}} min', { hours: Math.floor(minutes / 60), minutes: String(minutes % 60).padStart(2, '0') })}
+              </span>
+            )}
+            <span className="inline-flex items-center gap-1.5" title={t('loyalty.events.dialog.clock', 'On your venue’s clock ({{zone}}).', { zone: boot.venue.timezone })}>
+              <Globe size={13} aria-hidden />
+              <span className="sr-only">{t('loyalty.events.dialog.clock', 'On your venue’s clock ({{zone}}).', { zone: boot.venue.timezone })}</span>
+              <span aria-hidden>{boot.venue.timezone}</span>
+            </span>
           </p>
         </Section>
 
-        <Section title={t('loyalty.events.dialog.where', 'Where')}>
+        <Section icon={MapPin} title={t('loyalty.events.dialog.where', 'Where')}>
           {places.length > 0 && (
             <FormField label={t('loyalty.events.dialog.where_label', 'Place')} problem={problem('place_id')}>
               <select value={whereValue} className={INPUT} onChange={(e) => {
@@ -133,8 +143,7 @@ export function EventDialog({ event, options, onClose }: { event: LoyaltyEventRo
             </FormField>
           )}
           {(places.length === 0 || form.where === 'location') && (
-            <FormField label={places.length === 0 ? t('loyalty.events.dialog.where_label', 'Place') : t('loyalty.events.dialog.location', 'Where exactly')} problem={problem('location')}
-              hint={places.length === 0 ? t('loyalty.events.dialog.location_hint', 'Optional: a room, an address. Places you add under Program can be chosen here.') : undefined}>
+            <FormField label={places.length === 0 ? t('loyalty.events.dialog.where_label', 'Place') : t('loyalty.events.dialog.location', 'Where exactly')} problem={problem('location')}>
               <input type="text" value={form.location} maxLength={200} className={INPUT}
                 onChange={(e) => update({ location: e.target.value, where: 'location', place_id: null })}
                 placeholder={t('loyalty.events.dialog.location_example', 'e.g. The terrace, 2nd floor')} />
@@ -142,7 +151,7 @@ export function EventDialog({ event, options, onClose }: { event: LoyaltyEventRo
           )}
         </Section>
 
-        <Section title={t('loyalty.events.dialog.who', 'Who may come')}>
+        <Section icon={Users} title={t('loyalty.events.dialog.who', 'Who may come')}>
           <div className="flex flex-wrap gap-2" role="group" aria-label={t('loyalty.events.dialog.who', 'Who may come')}>
             <Toggle on={form.admits === 'all'} onClick={() => update({ admits: 'all' })}>{t('loyalty.events.dialog.every_member', 'Every member')}</Toggle>
             {tiers.length > 0 && <Toggle on={form.admits === 'tiers'} onClick={() => update({ admits: 'tiers' })}>{t('loyalty.events.dialog.chosen_tiers', 'Chosen tiers')}</Toggle>}
@@ -162,39 +171,34 @@ export function EventDialog({ event, options, onClose }: { event: LoyaltyEventRo
           )}
         </Section>
 
-        <Section title={t('loyalty.events.dialog.gives', 'What attending gives')}>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <FormField label={t('loyalty.events.dialog.points', 'Points')} problem={problem('points')}
-              hint={t('loyalty.events.dialog.points_hint', 'Given at check-in. 0 for none.')}>
+        <Section icon={Gift} title={t('loyalty.events.dialog.gives', 'What attending gives')}>
+          <div className="grid items-end gap-3 sm:grid-cols-2">
+            <FormField label={t('loyalty.events.dialog.points', 'Points')} problem={problem('points')}>
               <input type="number" inputMode="numeric" min={0} max={MAX_POINTS} step={1} value={form.points} onChange={(e) => update({ points: e.target.value })} className={INPUT} />
             </FormField>
+            <div className="sm:pb-2.5">
+              <Check label={t('loyalty.events.dialog.visit', 'Counts as a visit')} checked={form.counts_as_visit} onChange={(on) => update({ counts_as_visit: on })} />
+            </div>
           </div>
-          <Check label={t('loyalty.events.dialog.visit', 'Counts as a visit')} checked={form.counts_as_visit} onChange={(on) => update({ counts_as_visit: on })}
-            hint={t('loyalty.events.dialog.visit_hint', 'A stamp on the stamp card, and progress towards the next tier where tiers go by visits.')} />
         </Section>
 
-        <Section title={t('loyalty.events.dialog.sign_up_section', 'Sign-up')}>
+        <Section icon={UserPlus} title={t('loyalty.events.dialog.sign_up_section', 'Sign-up')}>
           <Check label={t('loyalty.events.dialog.sign_up', 'Members sign up in the portal')} checked={form.sign_up}
-            onChange={(on) => update({ sign_up: on, ...(on ? {} : { walk_ins: true }) })}
-            hint={t('loyalty.events.dialog.sign_up_hint', 'They see the event, sign up or cancel; you see who is coming.')} />
+            onChange={(on) => update({ sign_up: on, ...(on ? {} : { walk_ins: true }) })} />
           {form.sign_up && (
             <Check label={t('loyalty.events.dialog.walk_ins', 'Walk-ins welcome')} checked={form.walk_ins} onChange={(on) => update({ walk_ins: on })}
-              hint={form.walk_ins
-                ? t('loyalty.events.dialog.walk_ins_on', 'Members who did not sign up can be checked in while places are left.')
-                : t('loyalty.events.dialog.walk_ins_off', 'Only members who signed up get in.')} />
+              hint={form.walk_ins ? undefined : t('loyalty.events.dialog.walk_ins_off', 'Only members who signed up get in.')} />
           )}
           {problem('walk_ins') && <p className="text-xs font-medium text-a-danger">{problem('walk_ins')}</p>}
           <div className="grid gap-3 sm:grid-cols-2">
-            <FormField label={t('loyalty.events.dialog.capacity', 'Places')} problem={problem('capacity')}
-              hint={t('loyalty.events.dialog.capacity_hint', 'Empty: no limit. Each sign-up and each walk-in takes a place.')}>
+            <FormField label={t('loyalty.events.dialog.capacity', 'Places')} problem={problem('capacity')}>
               <input type="number" inputMode="numeric" min={1} max={MAX_CAPACITY} step={1} value={form.capacity} onChange={(e) => update({ capacity: e.target.value })} className={INPUT}
                 placeholder={t('loyalty.events.dialog.no_limit', 'No limit')} />
             </FormField>
           </div>
         </Section>
 
-        <FormField label={t('loyalty.events.dialog.description', 'Description')} problem={problem('description')}
-          hint={t('loyalty.events.dialog.description_hint', 'Optional. Members read it in the portal.')}>
+        <FormField label={t('loyalty.events.dialog.description', 'Description')} problem={problem('description')}>
           <textarea value={form.description} rows={3} maxLength={2000} onChange={(e) => update({ description: e.target.value })} className={INPUT} />
         </FormField>
 
@@ -225,11 +229,13 @@ export function EventDialog({ event, options, onClose }: { event: LoyaltyEventRo
   )
 }
 
-/** A short section of the dialog under its heading. */
-function Section({ title, children }: { title: string; children: ReactNode }) {
+/** A short section of the dialog under its heading and mark. */
+function Section({ icon: Icon, title, children }: { icon: LucideIcon; title: string; children: ReactNode }) {
   return (
     <fieldset className="space-y-3 border-t border-a-border pt-4">
-      <legend className="float-left mb-1 w-full text-xs font-semibold uppercase tracking-wide text-a-text-2">{title}</legend>
+      <legend className="float-left mb-1 flex w-full items-center gap-2 text-xs font-semibold uppercase tracking-wide text-a-text-2">
+        <Icon size={14} aria-hidden className="text-a-accent-text" />{title}
+      </legend>
       <div className="clear-both space-y-3">{children}</div>
     </fieldset>
   )

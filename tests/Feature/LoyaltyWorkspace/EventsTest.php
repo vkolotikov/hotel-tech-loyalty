@@ -321,6 +321,35 @@ class EventsTest extends TestCase
         $this->assertNotNull($now->id + $later->id + $off->id + $past->id + $morning->id + $draft->id);
     }
 
+    public function test_today_lists_an_event_starting_after_midnight_once_its_doors_are_open(): void
+    {
+        // The venue's clock (Riga, UTC+3) reads 23:00 on the 5th at 20:00 UTC; an event at 00:30 on the 6th opens at 22:30.
+        $this->org->forceFill(['timezone' => 'Europe/Riga'])->save();
+        app()->forgetScopedInstances();
+        $this->makeEvent(['title' => 'Midnight', 'starts_at' => '2026-10-06 00:30:00', 'ends_at' => '2026-10-06 03:00:00']);
+        $titles = fn () => array_column($this->asStaffMember()->getJson($this->api('events?when=today'))->assertOk()->json('events'), 'title');
+
+        $this->travelTo(\Carbon\CarbonImmutable::parse('2026-10-05 19:00:00'));
+        $this->assertNotContains('Midnight', $titles(), '22:00: its doors are not open yet');
+        $this->travelTo(\Carbon\CarbonImmutable::parse('2026-10-05 20:00:00'));
+        $this->assertContains('Midnight', $titles(), '23:00: its doors are open');
+    }
+
+    public function test_the_people_answer_names_the_latest_check_ins_by_their_real_time_across_midnight(): void
+    {
+        $event = $this->makeEvent(['title' => 'Late night', 'starts_at' => '2026-10-05 22:00:00', 'ends_at' => '2026-10-06 02:00:00', 'sign_up' => true]);
+        app(EventSignUp::class)->signUp($event, $this->grace, EventSignUp::PORTAL);
+        // Grace came in before midnight, Ada (a walk-in) after it: 'HH:mm' alone would sort Ada last.
+        DB::table('loyalty_event_attendances')->insert(['organization_id' => $this->org->id, 'loyalty_event_id' => $event->id, 'member_id' => $this->grace->id, 'checked_in_at' => '2026-10-05 20:50:00', 'walk_in' => false, 'created_at' => now(), 'updated_at' => now()]);
+        DB::table('loyalty_event_attendances')->insert(['organization_id' => $this->org->id, 'loyalty_event_id' => $event->id, 'member_id' => $this->ada->id, 'checked_in_at' => '2026-10-05 21:10:00', 'walk_in' => true, 'created_at' => now(), 'updated_at' => now()]);
+
+        $json = $this->asStaffMember()->getJson($this->api("events/{$event->id}/people"))->assertOk()->json();
+        $this->assertSame([$this->ada->id, $this->grace->id], array_column(array_column($json['latest'], 'member'), 'id'));
+        $this->assertSame([true, false], array_column($json['latest'], 'walk_in'));
+        // The paged list keeps its own order: sign-ups first.
+        $this->assertSame($this->grace->id, $json['people'][0]['member']['id']);
+    }
+
     public function test_only_managers_and_staff_who_manage_offers_change_events_and_every_staff_member_reads_them(): void
     {
         $event = $this->makeEvent(['status' => 'draft']);
