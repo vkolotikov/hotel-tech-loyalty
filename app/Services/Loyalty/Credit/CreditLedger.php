@@ -55,8 +55,9 @@ final class CreditLedger
 
     /**
      * Cashback on a visit with a spend (VisitRecorder is the only caller): `cashback_percent` of the amount, rounded down
-     * to the cent (a zero-decimal currency: to the unit). Nothing — null — when cashback is off, the visit names no
-     * reference or no positive amount, the cashback rounds below the smallest unit, or the member was deleted.
+     * to the cent (a zero-decimal currency: to the unit). Nothing — null — when cashback is off or the visit's venue day
+     * is before the day it was switched on (ProgrammeOptions::countsVisitOn), the visit names no reference or no positive
+     * amount, the cashback rounds below the smallest unit, or the member was deleted (by staff or by themselves).
      *
      * Once per reference (key `cashback_{type}_{id}`): a repeat — the nightly stay run calls again — writes nothing and
      * answers the line already written, as the first call did; a reference already earned on by another member answers
@@ -70,11 +71,12 @@ final class CreditLedger
         if ($visit->referenceType === null || $visit->referenceId === null || $visit->amount === null || !($visit->amount > 0)) {
             return null;
         }
-        $options = ProgrammeOptions::for($orgId);
-        if (!$options['cashback_enabled']) {
+        // On, and the visit on or after the venue day cashback was switched on: an old booking touched again (a status
+        // change, the nightly stay sweep) earns nothing for the time before the venue gave cashback.
+        if (!ProgrammeOptions::countsVisitOn($orgId, 'cashback_enabled', $visit->venueDay)) {
             return null;
         }
-        $percent = (float) $options['cashback_percent'];
+        $percent = (float) ProgrammeOptions::get($orgId, 'cashback_percent');
         [$min, $max] = ProgrammeOptions::BOUNDS['cashback_percent'];
         if ($percent < $min || $percent > $max) {
             // A stored rate outside the options' bounds was never saved through ProgrammeOptions: no money on it.
@@ -84,7 +86,7 @@ final class CreditLedger
         }
 
         return $this->underOrg($orgId, function () use ($member, $visit, $orgId, $percent) {
-            if (MemberErasure::isErased($member)) {
+            if (self::isDeleted($member)) {
                 return null;
             }
             $currency = $this->currency($orgId);
@@ -147,7 +149,9 @@ final class CreditLedger
 
     /**
      * A manager's correction (the caller checks the manager): a signed amount and the reason, never below zero (422
-     * `credit_short`), never on a deleted member (409 `already_erased`); audited `credit.adjusted`.
+     * `credit_short`), never on a deleted member (409 `already_erased`); audited `credit.adjusted`. In a zero-decimal
+     * currency it moves whole units, but one that takes the balance to exactly zero may move cents: a residue kept from
+     * before the venue changed its currency (which relabels, never converts) can always be cleared.
      *
      * @return array{line: array<string, mixed>, balance: float, currency: string, replayed: bool}
      */
@@ -162,9 +166,16 @@ final class CreditLedger
         return $this->underOrg($orgId, function () use ($member, $signedAmount, $reason, $by, $key, $orgId) {
             $this->refuseErased($member);
             $currency = $this->currency($orgId);
-            $cents = self::amountCents($signedAmount, $currency, true);
+            $cents = self::amountCents($signedAmount, $currency, true, false);
+            $unit = self::unitCents($currency);
 
-            [$line, $replayed] = $this->write($member, CreditTransaction::ADJUST, fn () => $cents, $key, [
+            [$line, $replayed] = $this->write($member, CreditTransaction::ADJUST, function (int $balance) use ($cents, $unit, $currency) {
+                if ($cents % $unit !== 0 && $balance + $cents !== 0) {
+                    throw self::badAmount($currency);
+                }
+
+                return $cents;
+            }, $key, [
                 'note'       => mb_substr($reason, 0, 500),
                 'created_by' => $by->id,
             ], $currency, function (CreditTransaction $line, int $before, int $after) use ($member, $by, $reason, $currency, $orgId) {
@@ -225,15 +236,17 @@ final class CreditLedger
     }
 
     /**
-     * Erasure (MemberErasure, inside its transaction): the balance is forfeited — an `adjust` line to zero, "Forfeited at
-     * erasure", audited `credit.forfeited_on_erasure` with the amount. The ledger rows stay (money records). Nothing is
-     * written for a balance of zero. Answers the amount forfeited.
+     * Erasure — by staff (MemberErasure) or the member's own account deletion (`$byTheMember`, the app and the portal),
+     * each inside its own transaction: the balance is forfeited — an `adjust` line to zero, "Forfeited at erasure",
+     * audited `credit.forfeited_on_erasure` with the amount. The ledger rows stay (money records). Nothing is written for
+     * a balance of zero. A member's own deletion names no staff member on the line; the audit names the account.
+     * Answers the amount forfeited.
      */
-    public function forfeitOnErasure(LoyaltyMember $member, ?User $by): float
+    public function forfeitOnErasure(LoyaltyMember $member, ?User $by, bool $byTheMember = false): float
     {
         $orgId = (int) $member->organization_id;
 
-        return $this->underOrg($orgId, function () use ($member, $by, $orgId) {
+        return $this->underOrg($orgId, function () use ($member, $by, $byTheMember, $orgId) {
             // An erasure never fails for want of a currency: the member's own lines' when the venue's is unusable.
             $currency = $this->currency($orgId, false, $this->lastCurrency($orgId, [(int) $member->id]));
             // The key names the member's state: a second erasure writes nothing (the balance is 0), and one after new
@@ -248,11 +261,11 @@ final class CreditLedger
                 'reference_type' => self::REF_ERASURE,
                 'reference_id'   => (int) $member->id,
                 'note'           => 'Forfeited at erasure',
-                'created_by'     => $by?->id,
-            ], $currency, function (CreditTransaction $line, int $before) use ($member, $by, $currency, $orgId) {
+                'created_by'     => $byTheMember ? null : $by?->id,
+            ], $currency, function (CreditTransaction $line, int $before) use ($member, $by, $byTheMember, $currency, $orgId) {
                 $this->audit($orgId, (int) $member->id, $by, 'credit.forfeited_on_erasure', [
-                    'line_id' => (int) $line->id, 'amount' => self::major($before), 'currency' => $currency,
-                ], 'Credit of ' . self::decimal($before) . " {$currency} forfeited at erasure");
+                    'line_id' => (int) $line->id, 'amount' => self::major($before), 'currency' => $currency, 'by_the_member' => $byTheMember,
+                ], 'Credit of ' . self::decimal($before) . " {$currency} forfeited at erasure" . ($byTheMember ? ' (the member deleted their account)' : ''));
             });
 
             return self::major($forfeited);
@@ -385,9 +398,10 @@ final class CreditLedger
 
     /**
      * An amount a person typed, in cents: refused (422 `bad_amount`, with the currency's decimals) when it is not
-     * positive (or, `$signed`, zero), larger than MAX_AMOUNT, or has more decimals than the currency.
+     * positive (or, `$signed`, zero), larger than MAX_AMOUNT, or has more decimals than the column — or than the currency,
+     * unless `$wholeUnits` is false (a correction, which checks that rule against the balance under the lock).
      */
-    public static function amountCents(float $amount, string $currency, bool $signed): int
+    public static function amountCents(float $amount, string $currency, bool $signed, bool $wholeUnits = true): int
     {
         $unit = self::unitCents($currency);
         $scaled = $amount * 100;
@@ -396,14 +410,19 @@ final class CreditLedger
             || abs($scaled - $cents) > 0.0001
             || ($signed ? $cents === 0 : $cents <= 0)
             || abs($cents) > self::MAX_AMOUNT * 100
-            || $cents % $unit !== 0;
+            || ($wholeUnits && $cents % $unit !== 0);
         if ($bad) {
-            throw new LoyaltyRefused('bad_amount', 'Type an amount in the venue’s currency.', 422, [
-                'decimals' => $unit === 100 ? 0 : 2, 'max' => self::MAX_AMOUNT, 'currency' => $currency,
-            ]);
+            throw self::badAmount($currency);
         }
 
         return $cents;
+    }
+
+    private static function badAmount(string $currency): LoyaltyRefused
+    {
+        return new LoyaltyRefused('bad_amount', 'Type an amount in the venue’s currency.', 422, [
+            'decimals' => self::unitCents($currency) === 100 ? 0 : 2, 'max' => self::MAX_AMOUNT, 'currency' => $currency,
+        ]);
     }
 
     public static function earnKey(string $referenceType, int $referenceId): string
@@ -556,9 +575,18 @@ final class CreditLedger
         return CreditTransaction::withoutGlobalScopes()->where('organization_id', $orgId)->whereIn('member_id', $memberIds)->orderByDesc('id')->value('currency');
     }
 
+    /**
+     * Deleted by staff (MemberErasure) or by themselves (the app's and the portal's account deletion): such a member
+     * earns, spends and is corrected no more — their balance was forfeited when the account went.
+     */
+    private static function isDeleted(LoyaltyMember $member): bool
+    {
+        return MemberErasure::isErased($member) || MemberErasure::isSelfDeleted($member);
+    }
+
     private function refuseErased(LoyaltyMember $member): void
     {
-        if (MemberErasure::isErased($member)) {
+        if (self::isDeleted($member)) {
             throw new LoyaltyRefused('already_erased', 'This member was deleted.', 409);
         }
     }

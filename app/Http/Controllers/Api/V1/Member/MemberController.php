@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Api\V1\Member;
 
 use App\Http\Controllers\Controller;
+use App\Services\Loyalty\Credit\CreditLedger;
+use App\Services\Loyalty\Members\MemberErasure;
 use App\Services\LoyaltyService;
 use App\Services\QrCodeService;
 use Illuminate\Http\JsonResponse;
@@ -10,6 +12,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\ValidationException;
 
 class MemberController extends Controller
@@ -277,9 +280,17 @@ class MemberController extends Controller
 
         try {
             DB::transaction(function () use ($user, $member) {
+                // Release 7 (spec 2026-10-25 §3): the cashback credit is forfeited, as at a staff erasure — an `adjust`
+                // line to zero, audited `credit.forfeited_on_erasure` — written by the ledger under the member row's
+                // lock, in a savepoint of this transaction: a deletion that fails keeps the balance. The ledger rows stay.
+                if ($member && Schema::hasTable('credit_transactions') && Schema::hasColumn('loyalty_members', 'credit_balance')) {
+                    app(CreditLedger::class)->forfeitOnErasure($member, $user, byTheMember: true);
+                }
+
                 // Anonymize user-identifying fields. Keep the row so FKs
                 // (points_transactions, bookings, audit_logs) stay valid.
-                $deletedEmail = 'deleted-' . $user->id . '-' . time() . '@deleted.local';
+                // The stub address is MemberErasure's, which the credit ledger recognises as a member's own deletion.
+                $deletedEmail = MemberErasure::selfDeletedEmail((int) $user->id);
                 $user->update([
                     'name'          => 'Deleted Member',
                     'email'         => $deletedEmail,

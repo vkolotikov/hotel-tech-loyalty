@@ -56,6 +56,16 @@ describe('amounts', () => {
     expect(creditProblem('adjust', '20', 'Goodwill', 0, 2)).toBeNull()
   })
 
+  it('lets Adjust clear a residue of cents in a zero-decimal currency, and only to exactly zero', () => {
+    expect(creditProblem('adjust', '-0.4', 'Left from euros', 0.4, 0)).toBeNull()
+    expect(creditProblem('adjust', '-1.4', 'Left from euros', 1.4, 0)).toBeNull()
+    expect(creditAfter('adjust', 1.4, '-1.4', 0)).toBe(0)
+    expect(creditProblem('adjust', '-0.4', 'Not all of it', 1.4, 0)).toBe('decimals')
+    expect(creditProblem('adjust', '0.5', 'Up', 0, 0)).toBe('decimals')
+    expect(creditProblem('adjust', '-0.405', 'Too fine', 0.405, 0)).toBe('decimals')
+    expect(creditProblem('use', '0.4', '', 0.4, 0)).toBe('decimals')
+  })
+
   it('says the credit after the step, in cents, or nothing while it cannot be sent', () => {
     expect(creditAfter('use', 12.4, '4.9', 2)).toBe(7.5)
     expect(creditAfter('use', 0.3, '0.1', 2)).toBe(0.2)

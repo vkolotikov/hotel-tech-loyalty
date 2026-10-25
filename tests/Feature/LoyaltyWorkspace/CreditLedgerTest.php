@@ -197,6 +197,49 @@ class CreditLedgerTest extends TestCase
         $this->assertSame(0, CreditLedger::cents($this->balance($this->grace)));
     }
 
+    public function test_a_member_who_deleted_their_own_account_earns_spends_and_is_corrected_no_more_even_when_switched_back_on(): void
+    {
+        $this->ledger->adjust($this->grace, 5.0, 'Before the deletion', $this->manager, 'a-0');
+        $this->grace->user->forceFill(['email' => MemberErasure::selfDeletedEmail((int) $this->grace->user_id)])->save();
+        // Staff switched the membership back on afterwards: the account is still the deleted one.
+        $member = LoyaltyMember::withoutGlobalScopes()->with('user')->findOrFail($this->grace->id);
+        $this->assertTrue(MemberErasure::isSelfDeleted($member));
+        $this->assertFalse(MemberErasure::isErased($member));
+
+        $this->assertNull($this->ledger->earnCashback($member, $this->visit(100.0)));
+        $this->assertSame('already_erased', $this->refusal(fn () => $this->ledger->spend($member, 1.0, $this->staffMember, null, 's-1'))->errorCode);
+        $this->assertSame('already_erased', $this->refusal(fn () => $this->ledger->adjust($member, 1.0, 'Back', $this->manager, 'a-1'))->errorCode);
+        $this->assertCount(1, $this->lines($this->grace));
+
+        // Another member's id in the stub, or a real address, is not a deletion.
+        $this->ada->user->forceFill(['email' => 'deleted-' . ((int) $this->ada->user_id + 1) . '-1761400000@deleted.local'])->save();
+        $this->assertFalse(MemberErasure::isSelfDeleted(LoyaltyMember::withoutGlobalScopes()->with('user')->findOrFail($this->ada->id)));
+        $this->assertFalse(MemberErasure::isSelfDeleted($this->makeMember('Real Person', 'real@example.test')));
+    }
+
+    public function test_a_visit_from_before_cashback_was_switched_on_earns_nothing(): void
+    {
+        // Switched on on 5 October (setUp): a visit of the 4th, touched again today, earns nothing; the 5th and later do.
+        $this->assertSame('2026-10-05', ProgrammeOptions::onSince($this->org->id, 'cashback_enabled'));
+        $this->assertNull($this->ledger->earnCashback($this->grace, new Visit(Visit::APPOINTMENT, 'service_booking', 70, 100.0, '2026-10-04')));
+        $this->assertSame(5.0, $this->ledger->earnCashback($this->grace, new Visit(Visit::APPOINTMENT, 'service_booking', 71, 100.0, '2026-10-05'))['amount']);
+        $this->assertSame(5.0, $this->ledger->earnCashback($this->grace, new Visit(Visit::STAY, 'booking_mirror', 72, 100.0, '2026-10-06'))['amount']);
+
+        // Off, then on again on the 20th: the visits of the 10th (while it was off) earn nothing.
+        ProgrammeOptions::save($this->org->id, ['cashback_enabled' => false], $this->manager);
+        $this->travelTo(\Carbon\CarbonImmutable::parse('2026-10-20 09:00:00'));
+        ProgrammeOptions::save($this->org->id, ['cashback_enabled' => true], $this->manager);
+        $this->assertNull($this->ledger->earnCashback($this->grace, new Visit(Visit::APPOINTMENT, 'service_booking', 73, 100.0, '2026-10-10')));
+        $this->assertSame(5.0, $this->ledger->earnCashback($this->grace, new Visit(Visit::APPOINTMENT, 'service_booking', 74, 100.0, '2026-10-20'))['amount']);
+
+        // A venue whose switched-on day was never kept (on before release 7 kept it): no earlier visit is refused.
+        DB::table('hotel_settings')->where('organization_id', $this->org->id)->where('key', ProgrammeOptions::ON_SINCE['cashback_enabled'])->delete();
+        \App\Models\HotelSetting::flushCacheFor($this->org->id);
+        $this->assertSame(5.0, $this->ledger->earnCashback($this->grace, new Visit(Visit::APPOINTMENT, 'service_booking', 75, 100.0, '2026-09-01'))['amount']);
+        $this->assertCount(4, $this->lines($this->grace));
+        $this->assertLedgerHolds($this->grace, 'earns from the switched-on day');
+    }
+
     // ─── Spending at the desk ────────────────────────────────────────────────
 
     public function test_spending_takes_credit_off_and_is_refused_above_the_balance(): void
@@ -265,6 +308,28 @@ class CreditLedgerTest extends TestCase
 
         $this->assertSame(['already_erased', 409], [($e = $this->refusal(fn () => $this->ledger->spend($this->grace->fresh(), 1.0, $this->staffMember, null, 'k')))->errorCode, $e->status]);
         $this->assertSame('already_erased', $this->refusal(fn () => $this->ledger->adjust($this->grace->fresh(), 5.0, 'Back', $this->manager, 'a'))->errorCode);
+    }
+
+    public function test_a_residue_of_cents_after_a_change_to_a_zero_decimal_currency_can_be_corrected_to_exactly_zero(): void
+    {
+        $this->ledger->adjust($this->grace, 1.4, 'Goodwill in euros', $this->manager, 'a-1');
+        $this->org->forceFill(['currency' => 'JPY'])->save();
+
+        // Yen move in whole units: the desk cannot take 0.40 off, nor a correction leave cents behind.
+        $this->assertSame('bad_amount', $this->refusal(fn () => $this->ledger->spend($this->grace, 0.4, $this->staffMember, null, 's-1'))->errorCode);
+        $this->assertSame('bad_amount', $this->refusal(fn () => $this->ledger->adjust($this->grace, -0.4, 'Part of it', $this->manager, 'a-2'))->errorCode);
+        $this->assertSame('bad_amount', $this->refusal(fn () => $this->ledger->adjust($this->grace, 0.5, 'Half a yen', $this->manager, 'a-3'))->errorCode);
+        $this->assertSame(140, CreditLedger::cents($this->balance($this->grace)));
+
+        // A correction to exactly zero may: the whole residue goes.
+        $done = $this->ledger->adjust($this->grace, -1.4, 'Left from euros', $this->manager, 'a-4');
+        $this->assertSame([0.0, -1.4, 'JPY'], [$done['balance'], $done['line']['amount'], $done['currency']]);
+        $this->assertTrue($this->ledger->adjust($this->grace, -1.4, 'Left from euros', $this->manager, 'a-4')['replayed']);
+        $this->assertCount(2, $this->lines($this->grace));
+        $this->assertLedgerHolds($this->grace, 'residue cleared');
+
+        // Whole yen still move as before.
+        $this->assertSame(100.0, $this->ledger->adjust($this->grace, 100.0, 'Goodwill', $this->manager, 'a-5')['balance']);
     }
 
     public function test_a_currency_that_is_not_a_three_letter_code_is_refused_for_a_write(): void

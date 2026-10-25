@@ -42,6 +42,29 @@ final class MemberErasure
         return $member->user !== null && $member->user->email === self::stubEmail((int) $member->id);
     }
 
+    /**
+     * The stub address a member's own account deletion (the app's and the portal's `DELETE member/account`) gives the
+     * account: it names the user's own id and the moment, and can never receive mail.
+     */
+    public static function selfDeletedEmail(int $userId): string
+    {
+        return "deleted-{$userId}-" . time() . '@deleted.local';
+    }
+
+    /**
+     * Whether the member deleted their own account (release 7: cashback credit is forfeited then, and earns, spends and
+     * is corrected no more). Recognised by that stub address with the account's own user id — the form self-deletion has
+     * always written — whatever happened to the membership after it. Not isErased(): the workspace's screens keep
+     * treating such a member as they always have.
+     */
+    public static function isSelfDeleted(LoyaltyMember $member): bool
+    {
+        $email = $member->user?->email;
+
+        return is_string($email) && $member->user_id !== null
+            && preg_match('/^deleted-' . (int) $member->user_id . '-\d+@deleted\.local$/', $email) === 1;
+    }
+
     public function erase(LoyaltyMember $member, User $by): LoyaltyMember
     {
         $user = $member->user;

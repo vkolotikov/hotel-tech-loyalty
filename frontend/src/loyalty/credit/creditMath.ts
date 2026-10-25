@@ -59,12 +59,15 @@ function tooPrecise(n: number, decimals: number): boolean {
 
 /**
  * Use credit takes an amount above zero, at most the balance; Adjust a signed amount other than zero that leaves the
- * balance at zero or above, and a reason. Either keeps to the currency's decimals and the largest amount.
+ * balance at zero or above, and a reason. Either keeps to the currency's decimals and the largest amount — except an
+ * Adjust that takes the balance to exactly zero, which may move cents (a residue kept from before the venue changed to
+ * a zero-decimal currency; the server's CreditLedger::adjust has the same rule).
  */
 export function creditProblem(mode: CreditMode, typed: string, reason: string, balance: number, decimals: number): CreditProblem | null {
   const n = parseAmount(typed)
   if (n === null || (mode === 'use' ? n <= 0 : n === 0)) return 'amount'
-  if (tooPrecise(n, decimals)) return 'decimals'
+  const clearsResidue = mode === 'adjust' && !tooPrecise(n, 2) && toCents(balance) + toCents(n) === 0
+  if (tooPrecise(n, decimals) && !clearsResidue) return 'decimals'
   if (Math.abs(n) > MAX_CREDIT) return 'too_large'
   if (mode === 'use' && toCents(n) > toCents(balance)) return 'over_balance'
   if (mode === 'adjust' && toCents(balance) + toCents(n) < 0) return 'below_zero'
