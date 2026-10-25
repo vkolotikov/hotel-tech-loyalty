@@ -25,7 +25,8 @@ use Illuminate\Support\Facades\DB;
  *  5. `tier_not_allowed` — the place, or the event, admits chosen tiers and the member's tier is not one of them (a
  *                          member without a tier is not one either); `allowed_tiers` names them in the ladder's order;
  *  6. for an event: `event_not_open` (not published, or now on the venue's clock is outside its start less two hours to
- *     its end), `event_full` (a capacity the check-ins reached, and this member did not sign up), `not_signed_up`
+ *     its end), `event_full` (no place left for a walk-in: the standing sign-ups and the walk-ins fill the capacity, and this member
+ *     did not sign up), `not_signed_up`
  *     (sign-up on, walk-ins off, and no sign-up standing); a member already checked in passes the last two, so a second
  *     scan reads as "already in", not as "full";
  *  7. `welcome`.
@@ -96,7 +97,9 @@ class AccessDecision
         if ($counts['mine_in']) {
             return $verdict(AccessVerdict::WELCOME);
         }
-        if ($event->capacity !== null && $counts['checked_in'] >= (int) $event->capacity && !$counts['signed_up']) {
+        // A walk-in takes a place only while one is left after the standing sign-ups (EventRows::roomLeft(), the rule a
+        // sign-up follows too): members who signed up but have not arrived keep theirs, and always get in.
+        if ($event->capacity !== null && !$counts['signed_up'] && $counts['held'] + $counts['walk_ins'] >= (int) $event->capacity) {
             return $verdict(AccessVerdict::EVENT_FULL);
         }
         if ($event->sign_up && !$event->walk_ins && !$counts['signed_up']) {
@@ -176,22 +179,24 @@ class AccessDecision
     }
 
     /**
-     * The event's counts in one query: those checked in, whether this member is one of them, and whether this member's
-     * sign-up stands.
+     * The event's counts in one query: the places held (standing sign-ups) and taken by walk-ins, whether this member is
+     * checked in, and whether this member's sign-up stands.
      *
-     * @return array{checked_in: int, mine_in: bool, signed_up: bool}
+     * @return array{held: int, walk_ins: int, mine_in: bool, signed_up: bool}
      */
     private static function counts(LoyaltyEvent $event, int $memberId): array
     {
         $row = DB::selectOne(
-            'SELECT (SELECT COUNT(*) FROM loyalty_event_attendances WHERE loyalty_event_id = ?) AS checked_in,'
+            'SELECT (SELECT COUNT(*) FROM loyalty_event_registrations WHERE loyalty_event_id = ? AND status = ?) AS held,'
+            . ' (SELECT COUNT(*) FROM loyalty_event_attendances WHERE loyalty_event_id = ? AND walk_in = ?) AS walk_ins,'
             . ' (SELECT COUNT(*) FROM loyalty_event_attendances WHERE loyalty_event_id = ? AND member_id = ?) AS mine_in,'
             . ' (SELECT COUNT(*) FROM loyalty_event_registrations WHERE loyalty_event_id = ? AND member_id = ? AND status = ?) AS signed_up',
-            [$event->id, $event->id, $memberId, $event->id, $memberId, EventRegistration::SIGNED_UP],
+            [$event->id, EventRegistration::SIGNED_UP, $event->id, true, $event->id, $memberId, $event->id, $memberId, EventRegistration::SIGNED_UP],
         );
 
         return [
-            'checked_in' => (int) ($row->checked_in ?? 0),
+            'held'       => (int) ($row->held ?? 0),
+            'walk_ins'   => (int) ($row->walk_ins ?? 0),
             'mine_in'    => (int) ($row->mine_in ?? 0) > 0,
             'signed_up'  => (int) ($row->signed_up ?? 0) > 0,
         ];

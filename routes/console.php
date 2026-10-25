@@ -190,6 +190,12 @@ Schedule::command('loyalty:push-receipts')
     ->everyFifteenMinutes()
     ->withoutOverlapping(15);
 
+// HexaTech Loyalty release 8 §3: "your membership ends on …", two weeks ahead, once per end date (the mark is written
+// before the message, so a second run reminds nobody twice). Each organisation's days are its own venue clock's.
+Schedule::command('loyalty:membership-reminders')
+    ->dailyAt('08:37')
+    ->withoutOverlapping(30);
+
 // Prune expired BookingHold + BookingIdempotencyKey rows. Holds carry guest
 // PII (name/email/phone) in payload_json; abandoned-cart rows accumulating
 // forever is both a Postgres bloat issue (jsonb ~2KB/row at the quote rate)

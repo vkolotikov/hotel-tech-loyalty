@@ -53,6 +53,8 @@ final class ProgrammeOptions
         // Cashback credit
         'cashback_enabled'            => ['bool', false, 'Cashback Credit On'],
         'cashback_percent'            => ['decimal', 5.0, 'Cashback Percent'],
+        // How members move up (release 8, spec 2026-10-25 §3, R8-4): what assessTier() and every progress line read
+        'tier_progress_by'            => ['enum:points|visits|spend', 'points', 'Tier Progress By'],
         // The wizard
         'programme_setup_completed_at' => ['time', null, 'Programme Setup Completed'],
     ];
@@ -74,7 +76,8 @@ final class ProgrammeOptions
     /**
      * The ways to earn and be rewarded as the options page and the wizard show them, one card each (release 7 §1): the
      * option that switches the way on (`switch`), or the number whose 0 means off (`zero_off`: no expiry, no bonus),
-     * and the options the card sets. The workspace draws its cards from this list; it keeps no copy.
+     * and the options the card sets. The workspace draws its cards from this list; it keeps no copy. A card with
+     * neither is always on (release 8's "How members move up": a choice, never off).
      *
      * @var array<string, array{switch?: string, zero_off?: string, fields: list<string>}>
      */
@@ -88,6 +91,7 @@ final class ProgrammeOptions
         'check_in'        => ['switch' => 'checkin_enabled', 'fields' => ['checkin_points']],
         'desk_earn'       => ['switch' => 'desk_earn_enabled', 'fields' => []],
         'cashback'        => ['switch' => 'cashback_enabled', 'fields' => ['cashback_percent']],
+        'tier_progress'   => ['fields' => ['tier_progress_by']],
     ];
 
     /** A field that counts only while another option holds a value: [that option, the value]. */
@@ -159,6 +163,36 @@ final class ProgrammeOptions
         }
 
         return $out;
+    }
+
+    /**
+     * One option of the organisation from its cached settings map (HotelSetting's, flushed by every settings write and so
+     * by save()), typed as for() types it: for a hot path that asks on every earn or assessment (release 8's
+     * `tier_progress_by`, read by every assessTier()), where for() would query each time.
+     */
+    public static function cached(int $orgId, string $key): mixed
+    {
+        if (!array_key_exists($key, self::OPTIONS)) {
+            throw new \InvalidArgumentException("Unknown loyalty option {$key}");
+        }
+        [$type, $default] = self::OPTIONS[$key];
+        $bound = app()->bound('current_organization_id');
+        $prior = $bound ? app('current_organization_id') : null;
+        app()->instance('current_organization_id', $orgId);
+        try {
+            $raw = HotelSetting::getValue($key);
+        } finally {
+            if ($bound) {
+                app()->instance('current_organization_id', $prior);
+            } else {
+                app()->forgetInstance('current_organization_id');
+            }
+        }
+        if (is_bool($raw)) {
+            $raw = $raw ? 'true' : 'false';
+        }
+
+        return $raw === null ? $default : self::cast($type, is_scalar($raw) ? (string) $raw : null, $default);
     }
 
     /** One option of the organisation, typed (its default when never set). */

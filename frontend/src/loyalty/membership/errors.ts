@@ -104,6 +104,18 @@ export const ERRORS: Record<string, Record<string, string>> = {
     network: 'No connection. The import stopped where it was; press Continue to go on.',
     unknown: 'The import stopped. What was imported stays; press Continue to go on.',
   },
+  // Release 8: a membership's end date (MembershipValidity on the server).
+  validity: {
+    manager_only: MANAGERS,
+    not_allowed: MANAGERS,
+    no_capability: MANAGERS,
+    already_erased: ERASED,
+    not_found: GONE,
+    key_reused: 'Another change was just made. The page now shows the end date as it is; try again if it is not what you wanted.',
+    invalid: 'Choose today or a later day.',
+    network: OFFLINE,
+    unknown: 'The end date could not be saved. Nothing was changed; please try again.',
+  },
   export: {
     manager_only: MANAGERS,
     not_allowed: MANAGERS,

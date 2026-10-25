@@ -158,6 +158,8 @@ class LoyaltyPresetService
      *   preset's cheaper rewards; a gym checks members in, since attendance is what it rewards.
      * - Businesses that take payment at a counter (restaurants, shops, the generic small business) earn at the desk.
      * - Cashback stays off everywhere: it is money, and a venue switches it on knowingly.
+     * - How members move up (release 8, `tier_progress_by`): by points everywhere, as before, except the two general
+     *   memberships, whose ladders are by visits — a club checks members in, a community collects a stamp each time.
      *
      * @var array<string, array<string, bool|int|float|string>>
      */
@@ -173,6 +175,9 @@ class LoyaltyPresetService
         'professional_services' => ['birthday_bonus_points' => 100],
         'real_estate'           => ['birthday_bonus_points' => 100],
         'retail'                => ['birthday_bonus_points' => 100, 'desk_earn_enabled' => true],
+        // Release 8 (spec 2026-10-25 §3): memberships for any venue, tiers by visits.
+        'members_club'          => ['birthday_bonus_points' => 100, 'checkin_enabled' => true, 'checkin_points' => 10, 'tier_progress_by' => 'visits'],
+        'events_community'      => ['birthday_bonus_points' => 100, 'stamps_enabled' => true, 'stamps_per_card' => 8, 'stamp_reward_kind' => 'points', 'stamp_reward_points' => 300, 'checkin_enabled' => true, 'tier_progress_by' => 'visits'],
     ];
 
     /**
@@ -534,6 +539,13 @@ class LoyaltyPresetService
                     );
                     $summary['points_on_bookings'] = (bool) $preset['points_on_bookings'];
                 }
+
+                // Release 8: a ladder built on visits is judged on visits wherever the preset is applied (the full
+                // admin's picker too), through the options' one writer. Only on a clean replace, as above.
+                if (isset($preset['tier_progress_by'])) {
+                    \App\Services\Loyalty\Programme\ProgrammeOptions::save($organizationId, ['tier_progress_by' => $preset['tier_progress_by']], null);
+                    $summary['tier_progress_by'] = $preset['tier_progress_by'];
+                }
             } else {
                 $summary['welcome_bonus_preserved'] = true;
             }
@@ -893,6 +905,70 @@ class LoyaltyPresetService
                 ['name' => 'Early Access',   'code' => 'early_access',   'description' => 'Shop sales before the public',     'category' => 'retail'],
                 ['name' => 'Free Returns',   'code' => 'free_returns',   'description' => 'Returns at no cost',               'category' => 'service'],
                 ['name' => 'Birthday Treat', 'code' => 'birthday_treat', 'description' => 'A gift in your birthday month',    'category' => 'gift'],
+            ],
+        ],
+
+        // ─── Release 8 (spec 2026-10-25 §3): memberships for any venue ───────
+        // A club, a community or a venue running events rewards coming back,
+        // whatever was spent: both ladders are by visits (`tier_progress_by`),
+        // with a points floor beside it so the ladder still reads if a venue
+        // switches to points. A preset adds no places: the venue adds its own.
+
+        'members_club' => [
+            'label'         => 'Members\' club — Visit ladder',
+            'description'   => 'Member to Regular to Insider. Members move up by how often they come, not by what they spend.',
+            'icon'          => 'users',
+            'welcome_bonus' => 100,
+            'points_per_currency' => 5,
+            'points_expiry_months' => 24,
+            'referrer_bonus' => 250,
+            'referee_bonus' => 150,
+            'tier_progress_by' => 'visits',
+            'tiers' => [
+                ['name' => 'Member',  'min_points' => 0,    'min_visits' => 0,  'earn_rate' => 1.0,  'color_hex' => '#94a3b8', 'perks' => ['Members-only events', 'Birthday treat']],
+                ['name' => 'Regular', 'min_points' => 1000, 'min_visits' => 10, 'earn_rate' => 1.25, 'color_hex' => '#0ea5e9', 'perks' => ['A guest pass every month', 'Priority booking']],
+                ['name' => 'Insider', 'min_points' => 3000, 'min_visits' => 30, 'earn_rate' => 1.5,  'color_hex' => '#7c3aed', 'perks' => ['Insider evenings', 'A guest pass every week', 'First to hear of new events']],
+            ],
+            'rewards' => [
+                ['name' => 'Drink on Us',      'points_cost' => 150,  'category' => 'food_beverage', 'description' => 'A drink from the bar.'],
+                ['name' => 'Guest Pass',       'points_cost' => 300,  'category' => 'guest',         'description' => 'Bring a friend for a visit.'],
+                ['name' => 'Club Merchandise', 'points_cost' => 800,  'category' => 'retail',        'description' => 'A piece from the club shop.'],
+                ['name' => 'One Month Free',   'points_cost' => 3000, 'category' => 'membership',    'description' => 'A month of membership, on us.'],
+            ],
+            'benefits' => [
+                ['name' => 'Members-only Events', 'code' => 'members_events',   'description' => 'Invitations to members-only evenings', 'category' => 'access'],
+                ['name' => 'Guest Pass',          'code' => 'guest_pass',       'description' => 'Bring a guest for free',               'category' => 'access'],
+                ['name' => 'Priority Booking',    'code' => 'priority_booking', 'description' => 'First pick of popular slots',          'category' => 'service'],
+                ['name' => 'Birthday Treat',      'code' => 'birthday_treat',   'description' => 'A treat in your birthday month',       'category' => 'gift'],
+            ],
+        ],
+
+        'events_community' => [
+            'label'         => 'Events & community — Visit ladder',
+            'description'   => 'Newcomer to Regular to Ambassador. Every event and visit counts towards the next tier, with a stamp card on top.',
+            'icon'          => 'ticket',
+            'welcome_bonus' => 50,
+            'points_per_currency' => 5,
+            'points_expiry_months' => 24,
+            'referrer_bonus' => 200,
+            'referee_bonus' => 100,
+            'tier_progress_by' => 'visits',
+            'tiers' => [
+                ['name' => 'Newcomer',   'min_points' => 0,    'min_visits' => 0,  'earn_rate' => 1.0,  'color_hex' => '#fbbf24', 'perks' => ['Event news first', 'Member price on tickets']],
+                ['name' => 'Regular',    'min_points' => 500,  'min_visits' => 5,  'earn_rate' => 1.25, 'color_hex' => '#f97316', 'perks' => ['Early sign-up for events', 'A drink at every event']],
+                ['name' => 'Ambassador', 'min_points' => 2000, 'min_visits' => 15, 'earn_rate' => 1.5,  'color_hex' => '#dc2626', 'perks' => ['Reserved seats', 'Bring a friend free', 'Meet the hosts']],
+            ],
+            'rewards' => [
+                ['name' => 'Free Drink',     'points_cost' => 100,  'category' => 'food_beverage', 'description' => 'A drink at the next event.'],
+                ['name' => 'Bring a Friend', 'points_cost' => 400,  'category' => 'guest',         'description' => 'A friend comes with you, free.'],
+                ['name' => 'Event Ticket',   'points_cost' => 600,  'category' => 'event',         'description' => 'A ticket to an event of your choice.'],
+                ['name' => 'VIP Evening',    'points_cost' => 2000, 'category' => 'vip',           'description' => 'An evening with the hosts, for two.'],
+            ],
+            'benefits' => [
+                ['name' => 'Early Sign-up',  'code' => 'early_signup',   'description' => 'Sign up for events before everyone else', 'category' => 'access'],
+                ['name' => 'Reserved Seats', 'code' => 'reserved_seats', 'description' => 'A seat kept for you at events',          'category' => 'access'],
+                ['name' => 'Member Price',   'code' => 'member_price',   'description' => 'Member price on tickets',                'category' => 'discount'],
+                ['name' => 'Bring a Friend', 'code' => 'bring_friend',   'description' => 'A friend comes along for free',          'category' => 'access'],
             ],
         ],
     ];

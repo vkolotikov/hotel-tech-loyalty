@@ -36,6 +36,12 @@ class ProgrammeOptionsTest extends TestCase
     public function test_a_card_has_a_switch_or_a_number_whose_zero_is_off_never_both(): void
     {
         foreach (ProgrammeOptions::ways() as $way) {
+            // Release 8: a card with neither is always on — only "How members move up", a choice that is never off.
+            if ($way['switch'] === null && $way['zero_off'] === null) {
+                $this->assertSame('tier_progress', $way['key']);
+                $this->assertSame(['tier_progress_by'], $way['fields']);
+                continue;
+            }
             $this->assertTrue(($way['switch'] === null) !== ($way['zero_off'] === null), $way['key']);
             if ($way['switch'] !== null) {
                 $this->assertSame('bool', ProgrammeOptions::fields()[$way['switch']]['type'], $way['key']);
@@ -101,6 +107,14 @@ class ProgrammeOptionsTest extends TestCase
         $gym = $service->recommendedOptions('fitness');
         $this->assertTrue($gym['checkin_enabled']);
         $this->assertTrue($gym['stamps_enabled']);
+
+        // Release 8: every preset says how members move up — by points, but for the two general memberships, by visits.
+        $this->assertSame('points', $hotel['tier_progress_by']);
+        $this->assertSame('points', $gym['tier_progress_by']);
+        $this->assertSame('visits', $service->recommendedOptions('members_club')['tier_progress_by']);
+        $community = $service->recommendedOptions('events_community');
+        $this->assertSame('visits', $community['tier_progress_by']);
+        $this->assertTrue($community['stamps_enabled']);
 
         // An industry alias resolves as apply() resolves it.
         $this->assertSame($service->recommendedOptions('restaurant'), $service->recommendedOptions('hospitality'));

@@ -11,6 +11,8 @@
     "balance": "Saldo de puntos", "progress_to": "Progreso hacia {{tier}}",
     "lifetime_one": "{{count}} ganado en total", "lifetime_few": "{{count}} ganados en total", "lifetime_many": "{{count}} ganados en total", "lifetime_other": "{{count}} ganados en total",
     "points_to_go_one": "Falta {{count}} punto", "points_to_go_few": "Faltan {{count}} puntos", "points_to_go_many": "Faltan {{count}} puntos", "points_to_go_other": "Faltan {{count}} puntos",
+    "visits_to_go_one": "Falta {{count}} visita", "visits_to_go_few": "Faltan {{count}} visitas", "visits_to_go_many": "Faltan {{count}} visitas", "visits_to_go_other": "Faltan {{count}} visitas", "spend_to_go": "Faltan {{amount}}",
+    "membership_until": "Miembro hasta el {{day}}", "membership_ended": "Su membresía terminó el {{day}}: pida al equipo que la renueve",
     "member_number": "Número de socio", "show_at_counter": "Muestre esto en recepción para ganar o canjear puntos.",
     "next_booking": "Su próximo {{noun}}", "no_upcoming": "Aún no hay nada reservado.", "view_booking": "Ver",
     "quick_rewards": "Canjear puntos", "quick_rewards_hint": "Explore el catálogo de recompensas",

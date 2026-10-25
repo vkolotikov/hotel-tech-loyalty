@@ -286,6 +286,22 @@ class AccessDecisionTest extends TestCase
         $this->assertTrue($this->decide($this->grace, null, $roomy)->granted);
     }
 
+    public function test_places_held_by_members_who_signed_up_are_not_given_to_walk_ins(): void
+    {
+        // Two places, both signed up for, nobody arrived yet: the door counts the places as a sign-up does.
+        $event = $this->event(['capacity' => 2, 'sign_up' => true, 'walk_ins' => true]);
+        $alan = $this->makeMember('Alan Turing', 'alan@example.test');
+        $this->signUp($event, $this->ada);
+        $this->signUp($event, $alan);
+
+        $this->assertSame('event_full', $this->decide($this->grace, null, $event)->reason);
+        $this->assertTrue($this->decide($this->ada, null, $event)->granted, 'a member who signed up keeps the place');
+
+        // One cancels: the place is free for a walk-in.
+        DB::table('loyalty_event_registrations')->where('member_id', $alan->id)->update(['status' => 'cancelled']);
+        $this->assertTrue($this->decide($this->grace, null, $event)->granted);
+    }
+
     public function test_sign_up_without_walk_ins_needs_a_standing_sign_up(): void
     {
         $event = $this->event(['sign_up' => true, 'walk_ins' => false]);

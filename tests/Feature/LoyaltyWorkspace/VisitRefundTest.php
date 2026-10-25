@@ -26,7 +26,7 @@ use Tests\TestCase;
  */
 class VisitRefundTest extends TestCase
 {
-    use DatabaseTransactions, SetsUpAppointmentsSchema, CreditSchema, VisitsSchema, TierCountsSchema;
+    use DatabaseTransactions, SetsUpAppointmentsSchema, CreditSchema, VisitsSchema, TierCountsSchema, \Tests\Concerns\LoyaltyWorkspace\ValiditySchema;
 
     protected function setUp(): void
     {
@@ -35,6 +35,8 @@ class VisitRefundTest extends TestCase
         $this->buildCreditSchema();
         $this->buildVisitsSchema();
         $this->buildTierCountsSchema();
+        // Release 8: the counters' visits and venue day.
+        $this->buildValiditySchema();
     }
 
     /** @return array{earned: int, stamps: int, reversed: int, stamps_after: int, balance: string, awarded: bool} */

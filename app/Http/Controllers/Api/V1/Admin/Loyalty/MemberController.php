@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Api\V1\Admin\Loyalty;
 
 use App\Http\Controllers\Controller;
 use App\Models\LoyaltyMember;
-use App\Models\LoyaltyTier;
 use App\Models\TierBenefit;
 use App\Services\Loyalty\LoyaltyRefused;
 use App\Services\Loyalty\MemberDirectory;
@@ -63,7 +62,8 @@ class MemberController extends Controller
         return response()->json([
             // Release 2 (§4.1): the details block, the tier's hold and whether the member was deleted (MemberProfile).
             'member'   => MemberProfile::of($member),
-            'progress' => self::progress($member, $loyalty),
+            // Release 8: progress in the programme's own terms — points, visits or spend (tier_progress_by).
+            'progress' => $loyalty->tierProgress($member),
             'benefits' => $benefits,
             // The member's requests that still wait for staff: waiting, then approved.
             'requests' => collect([
@@ -79,31 +79,6 @@ class MemberController extends Controller
     {
         return response()->json($ledger->page($this->member($id), (int) $request->query('page', 1)));
     }
-
-    /**
-     * How far the member is from the next tier, on the points the programme judges them by (lifetime, or the
-     * window's when the programme counts a window): null where no tier is above theirs.
-     *
-     * @return array{qualifying: int, next_tier: ?array{id: int, name: string, min_points: int}, needed: int, percent: int}
-     */
-    public static function progress(LoyaltyMember $member, LoyaltyService $loyalty): array
-    {
-        $qualifying = $loyalty->qualifyingPointsFor($member);
-        $floor = (int) ($member->tier?->min_points ?? 0);
-        $next = LoyaltyTier::query()->where('is_active', true)->where('min_points', '>', $floor)->orderBy('min_points')->first();
-        if (!$next) {
-            return ['qualifying' => $qualifying, 'next_tier' => null, 'needed' => 0, 'percent' => 100];
-        }
-        $span = max(1, (int) $next->min_points - $floor);
-
-        return [
-            'qualifying' => $qualifying,
-            'next_tier'  => ['id' => (int) $next->id, 'name' => (string) $next->name, 'min_points' => (int) $next->min_points],
-            'needed'     => max(0, (int) $next->min_points - $qualifying),
-            'percent'    => (int) max(0, min(100, floor(($qualifying - $floor) * 100 / $span))),
-        ];
-    }
-
     /** One of this organisation's members (the tenant scope), or 404. */
     private function member(int $id): LoyaltyMember
     {

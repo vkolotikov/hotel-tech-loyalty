@@ -89,6 +89,7 @@ export const IMPORT_PROBLEM_WORDS: Record<string, string> = {
   member_limit: 'Over the plan’s member limit.',
   not_created: 'The member could not be created.',
   unreadable: 'This row could not be read: it has more values than the file has columns.',
+  bad_valid_until: 'The valid-until date is not a day. Write it as YYYY-MM-DD, e.g. 2027-10-03.',
   other: 'This row was not imported.',
 }
 
@@ -121,6 +122,45 @@ export const COLUMN_WORDS: Record<string, string> = {
   date_of_birth: 'Date of birth',
   marketing_consent: 'Marketing consent',
   external_id: 'Customer number',
+  valid_until: 'Valid until',
+}
+
+/** A membership's state (release 8, MembershipValidity on the server). */
+export const VALIDITY_STATE_WORDS: Record<string, string> = {
+  active: 'Active',
+  expiring: 'Ending soon',
+  expired: 'Expired',
+  off: 'Switched off',
+}
+
+/** Extend's quick choices (validityMath.ts `EXTENSIONS`). */
+export const EXTEND_WORDS: Record<string, string> = {
+  '1m': '+1 month',
+  '3m': '+3 months',
+  '6m': '+6 months',
+  '1y': '+1 year',
+}
+
+/** How long a membership has left, in parts; the one/many form is chosen by ValidityCard. */
+export const LEFT_WORDS: Record<string, string> = {
+  years_one: '1 year',
+  years_many: '{{n}} years',
+  months_one: '1 month',
+  months_many: '{{n}} months',
+  days_one: '1 day',
+  days_many: '{{n}} days',
+}
+
+/** What stops Set a date (validityMath.ts `dateProblem`). */
+export const VALIDITY_PROBLEM_WORDS: Record<string, string> = {
+  date: 'Choose a day.',
+  past: 'Choose today or a later day.',
+}
+
+/** The members list's validity states (release 8: Show → Expiring soon, Expired). */
+export const LIST_STATE_WORDS: Record<string, string> = {
+  expiring: 'Expiring soon',
+  expired: 'Expired',
 }
 
 /** The families above by the key prefix they are read under. */
@@ -137,6 +177,11 @@ export const WORD_FAMILIES: Record<string, Record<string, string>> = {
   'import.kind': IMPORT_KIND_WORDS,
   'import.state': IMPORT_STATE_WORDS,
   'import.column': COLUMN_WORDS,
+  'validity.state': VALIDITY_STATE_WORDS,
+  'validity.extend': EXTEND_WORDS,
+  'validity.left': LEFT_WORDS,
+  'validity.problem': VALIDITY_PROBLEM_WORDS,
+  'list.state': LIST_STATE_WORDS,
 }
 
 /** The key and English of a word of a family, or of the family's `other` (or the value itself) for one it lacks. */

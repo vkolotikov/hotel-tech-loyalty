@@ -13,7 +13,7 @@ import type { ThemeName } from '../../workspace/theme/accent'
 import { useBoot } from '../LoyaltyProvider'
 import { failureOf, type ApiFailure } from '../lib/api'
 import { refusalKey } from '../lib/errors'
-import { amountOf, points, when } from '../lib/format'
+import { amountOf, money, points, when } from '../lib/format'
 import { useLook } from '../lib/look'
 import { TierChip } from '../ui/TierChip'
 import { PROGRAM_KEY, afterProgramChange, programApi } from './api'
@@ -139,6 +139,10 @@ function Tiers({ program, manage, theme, locale, onOpen }: { program: Program; m
 /** One tier: its chip, whether it is in use, what reaches it, its earn rate, its members and its benefits. */
 export function TierCard({ tier, manage, theme, locale, onOpen }: { tier: Tier; manage: boolean; theme: ThemeName; locale: string; onOpen: (open: Open) => void }) {
   const { t } = useTranslation()
+  // Release 8: what reaches the tier, on the programme's measure (points, visits or spend).
+  const boot = useBoot()
+  const by = boot.programme.progress_by ?? 'points'
+  const currency = boot.venue.currency
   return (
     <li data-tier={tier.id} className="space-y-3 rounded-2xl border border-a-border bg-a-surface p-4">
       <div className="flex flex-wrap items-center gap-2">
@@ -152,10 +156,14 @@ export function TierCard({ tier, manage, theme, locale, onOpen }: { tier: Tier; 
       </div>
 
       <dl className="grid grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-3">
-        {thresholds(tier).map(th => (
+        {thresholds(tier, by).map(th => (
           <div key={th.kind}>
             <dt className="text-xs text-a-text-2">{t(`loyalty.program.threshold.${th.kind}`, THRESHOLD_WORDS[th.kind])}</dt>
-            <dd className="text-sm font-semibold tabular-nums text-a-text">{th.kind === 'spend' ? decimal(th.value, locale) : points(th.value, locale)}</dd>
+            <dd className="text-sm font-semibold tabular-nums text-a-text">
+              {th.value === null
+                ? <span className="font-normal text-a-text-2">{t('loyalty.program.threshold.not_set', 'Not set')}</span>
+                : th.kind === 'spend' ? (by === 'spend' ? money(th.value, currency, locale) : decimal(th.value, locale)) : points(th.value, locale)}
+            </dd>
           </div>
         ))}
         <div>

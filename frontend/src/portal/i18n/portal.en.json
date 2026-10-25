@@ -11,6 +11,8 @@
     "balance": "Points balance", "progress_to": "Progress to {{tier}}",
     "lifetime_one": "{{count}} earned all time", "lifetime_few": "{{count}} earned all time", "lifetime_many": "{{count}} earned all time", "lifetime_other": "{{count}} earned all time",
     "points_to_go_one": "{{count}} point to go", "points_to_go_few": "{{count}} points to go", "points_to_go_many": "{{count}} points to go", "points_to_go_other": "{{count}} points to go",
+    "visits_to_go_one": "{{count}} more visit to go", "visits_to_go_few": "{{count}} more visits to go", "visits_to_go_many": "{{count}} more visits to go", "visits_to_go_other": "{{count}} more visits to go", "spend_to_go": "{{amount}} to go",
+    "membership_until": "Member until {{day}}", "membership_ended": "Your membership ended on {{day}} — ask the team to renew",
     "member_number": "Member number", "show_at_counter": "Show this at the counter to earn or redeem.",
     "next_booking": "Your next {{noun}}", "no_upcoming": "Nothing booked yet.", "view_booking": "View",
     "quick_rewards": "Spend points", "quick_rewards_hint": "Browse the rewards catalogue",

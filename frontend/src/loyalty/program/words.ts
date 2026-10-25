@@ -63,6 +63,7 @@ export const THRESHOLD_WORDS: Record<string, string> = {
   nights: 'Nights to reach',
   stays: 'Stays to reach',
   spend: 'Spend to reach',
+  visits: 'Visits to reach',
 }
 
 /** What stops the tier form, before sending or from the server's field errors (programMath.ts `tierProblems`). */
@@ -72,6 +73,8 @@ export const TIER_PROBLEM_WORDS: Record<string, string> = {
   min_points: 'Enter a whole number of points from 0 to 10,000,000.',
   earn_rate: 'Enter an earn rate from 0 to 99.99, e.g. 1.5.',
   description: 'Check the description.',
+  min_visits: 'Enter a whole number of visits from 0 to 100,000, or leave it empty.',
+  min_spend: 'Enter an amount from 0 to 100,000,000, e.g. 250, or leave it empty.',
 }
 
 /** What stops the benefit form (programMath.ts `benefitProblems`). */

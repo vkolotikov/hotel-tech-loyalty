@@ -11,6 +11,8 @@
     "balance": "Punktestand", "progress_to": "Fortschritt bis {{tier}}",
     "lifetime_one": "{{count}} insgesamt gesammelt", "lifetime_few": "{{count}} insgesamt gesammelt", "lifetime_many": "{{count}} insgesamt gesammelt", "lifetime_other": "{{count}} insgesamt gesammelt",
     "points_to_go_one": "Noch {{count}} Punkt", "points_to_go_few": "Noch {{count}} Punkte", "points_to_go_many": "Noch {{count}} Punkte", "points_to_go_other": "Noch {{count}} Punkte",
+    "visits_to_go_one": "Noch {{count}} Besuch", "visits_to_go_few": "Noch {{count}} Besuche", "visits_to_go_many": "Noch {{count}} Besuche", "visits_to_go_other": "Noch {{count}} Besuche", "spend_to_go": "Noch {{amount}}",
+    "membership_until": "Mitglied bis {{day}}", "membership_ended": "Ihre Mitgliedschaft endete am {{day}} – bitten Sie das Team um eine Verlängerung",
     "member_number": "Mitgliedsnummer", "show_at_counter": "Zeigen Sie dies am Empfang, um Punkte zu sammeln oder einzulösen.",
     "next_booking": "Ihr nächster {{noun}}", "no_upcoming": "Noch nichts gebucht.", "view_booking": "Ansehen",
     "quick_rewards": "Punkte einlösen", "quick_rewards_hint": "Prämienkatalog ansehen",

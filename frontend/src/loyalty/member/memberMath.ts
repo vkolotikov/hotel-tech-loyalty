@@ -1,4 +1,4 @@
-import type { Can, LedgerLine } from '../lib/types'
+import type { Can, LedgerLine, Progress } from '../lib/types'
 
 export type PointsMode = 'award' | 'redeem'
 
@@ -47,3 +47,32 @@ export function offersReverse(line: LedgerLine, can: Can): boolean {
 export const LINE_TYPES = ['earn', 'bonus', 'adjust', 'redeem', 'expire', 'reverse', 'referral'] as const
 export type LineType = typeof LINE_TYPES[number] | 'other'
 export const lineType = (type: string): LineType => ((LINE_TYPES as readonly string[]).includes(type) ? (type as LineType) : 'other')
+
+// ─── Progress to the next tier (release 8, spec 2026-10-25 §3) ────────────
+
+/** How the venue's members move between tiers (ProgrammeOptions `tier_progress_by`). */
+export type ProgressBy = 'points' | 'visits' | 'spend'
+
+/**
+ * The member page's progress as the server sends it: release 8 adds the measure (`by`) and the next tier's floor on it
+ * (LoyaltyService::tierProgress()); an answer without them is the points reading it always was.
+ */
+export type ProgressIn = Omit<Progress, 'next_tier'> & {
+  by?: ProgressBy
+  next_tier: (NonNullable<Progress['next_tier']> & { floor?: number }) | null
+}
+
+/**
+ * Which sentence the progress line says, in the programme's terms: `top` (no tier above), `ready` (the floor is
+ * reached; the move comes with the next assessment), else what is still needed — `points` ("1,250 more to reach Gold"),
+ * `visit` / `visits` ("1 more visit to Gold", "3 more visits to Gold") or `spend` ("€120 more to Gold"). The numbers
+ * are the server's.
+ */
+export function progressLine(progress: ProgressIn): { kind: 'top' | 'ready' | 'points' | 'visit' | 'visits' | 'spend'; by: ProgressBy; needed: number; tier: string | null } {
+  const by: ProgressBy = progress.by ?? 'points'
+  const tier = progress.next_tier?.name ?? null
+  if (!progress.next_tier) return { kind: 'top', by, needed: 0, tier }
+  if (progress.needed <= 0) return { kind: 'ready', by, needed: 0, tier }
+  if (by === 'visits') return { kind: progress.needed === 1 ? 'visit' : 'visits', by, needed: progress.needed, tier }
+  return { kind: by === 'spend' ? 'spend' : 'points', by, needed: progress.needed, tier }
+}

@@ -727,23 +727,18 @@ class LoyaltyService
 
     /**
      * Where the two tiers stand on the ladder the member is judged on, so that a move's direction — and with it the
-     * downgrade rules above (tier lock, grace period, override, soft landing) — follows the member's qualification
-     * model: `nights`, `stays` and `spend` compare those floors; `points` and `hybrid` the points floor, as before.
-     * Release 7 made the counters move (TierCounters), and a demotion by nights between two tiers on the same points
-     * floor read as no direction at all and skipped every one of those rules. Two tiers level on the model's axis
-     * fall back to the points floor.
+     * downgrade rules above (tier lock, grace period, override, soft landing) — follows the programme's measure
+     * (release 8, `tier_progress_by`): `visits` compares the visits floors, `spend` the spend floors, `points` the
+     * points floor, as before. Release 7 read the member's own qualification model here, so that a demotion between two
+     * tiers on the same points floor still had a direction; two tiers level on the measure's axis fall back to the
+     * points floor the same way.
      *
      * @return array{0: float, 1: float} the new tier's floor, then the current tier's
      */
     private function ladderFloors(LoyaltyMember $member, LoyaltyTier $new, LoyaltyTier $current): array
     {
-        $column = match ($member->tier_qualification_model ?? 'points') {
-            'nights' => 'min_nights',
-            'stays'  => 'min_stays',
-            'spend'  => 'min_spend',
-            default  => null,
-        };
-        if ($column !== null) {
+        $column = self::FLOOR_COLUMNS[$this->progressBy((int) $member->organization_id)];
+        if ($column !== 'min_points') {
             $newFloor = (float) ($new->{$column} ?? 0);
             $oldFloor = (float) ($current->{$column} ?? 0);
             if ($newFloor !== $oldFloor) {
@@ -754,30 +749,48 @@ class LoyaltyService
         return [(float) $new->min_points, (float) $current->min_points];
     }
 
+    /** The tier column each measure of `tier_progress_by` reads a tier's floor from. */
+    public const FLOOR_COLUMNS = ['points' => 'min_points', 'visits' => 'min_visits', 'spend' => 'min_spend'];
+
+    /**
+     * How the venue's members move between tiers (release 8, spec 2026-10-25 §3, R8-4): `points` (the default, as
+     * always), `visits` or `spend` — ProgrammeOptions' `tier_progress_by`, read from the cached settings map (every
+     * assessment asks). The member column `tier_qualification_model` is no longer read: nothing ever set it.
+     */
+    public function progressBy(int $orgId): string
+    {
+        $by = ProgrammeOptions::cached($orgId, 'tier_progress_by');
+
+        return isset(self::FLOOR_COLUMNS[$by]) ? $by : 'points';
+    }
+
     /**
      * Adds what one visit counts towards the member's tier qualification (release 7, spec 2026-10-25 §4.3) —
-     * `qualifying_nights`, `qualifying_stays`, `qualifying_spend` — then assesses the tier when the member is judged on
-     * them (judgedOnCounters()). The counters' one writer (the merge adds two members' up);
-     * App\Services\Loyalty\Visits\TierCounters is its caller.
+     * `qualifying_nights`, `qualifying_stays`, `qualifying_spend` and, since release 8, `qualifying_visits` — then
+     * assesses the tier when the programme moves members by visits or spend (judgedOnCounters()). The counters' one
+     * writer (the merge adds two members' up); App\Services\Loyalty\Visits\TierCounters is its caller.
      *
      * Once per reference: the row in `tier_qualification_counts` records what this one added, so a repeated call (the
-     * nightly stay sweep) adds nothing and a reversal takes back exactly that. Under the member row lock, in its own
-     * transaction (a savepoint inside a caller's). Nothing to add writes nothing.
+     * nightly stay sweep) adds nothing and a reversal takes back exactly that. A visit with a venue day counts one visit,
+     * once per member per venue day (release 8): a second visit the same day adds nothing to the visits — its spend still
+     * counts — and its row keeps the day, so a reversal of the day's counted visit can pass the visit on to it. Under the
+     * member row lock, in its own transaction (a savepoint inside a caller's). A visit without a venue day and with
+     * nothing to add writes nothing.
      *
      * @return bool whether this call counted the visit
      */
-    public function countQualifyingVisit(LoyaltyMember $member, string $referenceType, int $referenceId, int $nights, int $stays, float $spend): bool
+    public function countQualifyingVisit(LoyaltyMember $member, string $referenceType, int $referenceId, int $nights, int $stays, float $spend, ?string $venueDay = null): bool
     {
         $nights = max(0, $nights);
         $stays = max(0, $stays);
         $spend = round(max(0.0, $spend), 2);
-        if ($nights === 0 && $stays === 0 && $spend <= 0) {
+        if ($venueDay === null && $nights === 0 && $stays === 0 && $spend <= 0) {
             return false;
         }
         $orgId = (int) $member->organization_id;
 
         // Every statement inside the transaction (a savepoint in a caller's), as in uncountQualifyingVisit().
-        return $this->underOrg($orgId, fn () => DB::transaction(function () use ($member, $orgId, $referenceType, $referenceId, $nights, $stays, $spend) {
+        return $this->underOrg($orgId, fn () => DB::transaction(function () use ($member, $orgId, $referenceType, $referenceId, $nights, $stays, $spend, $venueDay) {
             $locked = LoyaltyMember::withoutGlobalScopes()->where('organization_id', $orgId)->whereKey($member->id)->lockForUpdate()->first();
             if (!$locked) {
                 return false;
@@ -788,8 +801,14 @@ class LoyaltyService
             if ($counted) {
                 return false;
             }
+            // One visit per member per venue day, checked under the member's lock (two visits at once cannot both count).
+            // A day's later visit is still recorded, with no visit of its own: should the counted one be taken back,
+            // the day's visit passes to it (uncountQualifyingVisit()).
+            $visits = $venueDay !== null && !DB::table('tier_qualification_counts')
+                ->where('organization_id', $orgId)->where('member_id', $locked->id)->where('venue_day', $venueDay)
+                ->whereNull('reversed_at')->where('visits', '>', 0)->exists() ? 1 : 0;
 
-            DB::table('tier_qualification_counts')->insert([
+            $row = [
                 'organization_id' => $orgId,
                 'member_id'       => $locked->id,
                 'reference_type'  => $referenceType,
@@ -799,12 +818,21 @@ class LoyaltyService
                 'spend'           => $spend,
                 'created_at'      => now(),
                 'updated_at'      => now(),
-            ]);
-            $locked->forceFill([
+            ];
+            if ($venueDay !== null) {
+                $row += ['visits' => $visits, 'venue_day' => $venueDay];
+            }
+            DB::table('tier_qualification_counts')->insert($row);
+
+            $counters = [
                 'qualifying_nights' => (int) $locked->qualifying_nights + $nights,
                 'qualifying_stays'  => (int) $locked->qualifying_stays + $stays,
                 'qualifying_spend'  => round((float) $locked->qualifying_spend + $spend, 2),
-            ])->save();
+            ];
+            if ($visits > 0) {
+                $counters['qualifying_visits'] = (int) $locked->qualifying_visits + $visits;
+            }
+            $locked->forceFill($counters)->save();
 
             if ($this->judgedOnCounters($locked)) {
                 $this->assessTier($locked->fresh());
@@ -817,9 +845,10 @@ class LoyaltyService
 
     /**
      * A refunded or cancelled visit: takes back exactly what countQualifyingVisit() added for this reference — never
-     * below zero — and assesses the tier again (through its own downgrade rules) when the member is judged on the
-     * counters. Once: the row is stamped `reversed_at`, and a reference already taken back (or never counted) changes
-     * nothing.
+     * below zero — and assesses the tier again (through its own downgrade rules) when the programme moves members by
+     * visits or spend. Once: the row is stamped `reversed_at`, and a reference already taken back (or never counted)
+     * changes nothing. A day's counted visit taken back while another visit of that venue day still stands passes the
+     * visit on to it (release 8): the member was there that day, so the day keeps its one visit.
      *
      * @return bool whether this call took anything back
      */
@@ -846,11 +875,27 @@ class LoyaltyService
                 return false;
             }
 
-            $member->forceFill([
+            $visits = (int) ($row->visits ?? 0);
+            $day = $row->venue_day ?? null;
+            if ($visits > 0 && $day !== null) {
+                $heir = DB::table('tier_qualification_counts')
+                    ->where('organization_id', $orgId)->where('member_id', $member->id)->where('venue_day', $day)
+                    ->whereNull('reversed_at')->where('visits', 0)->orderBy('id')->value('id');
+                if ($heir !== null) {
+                    DB::table('tier_qualification_counts')->where('id', $heir)->update(['visits' => 1, 'updated_at' => now()]);
+                    $visits = 0;
+                }
+            }
+
+            $counters = [
                 'qualifying_nights' => max(0, (int) $member->qualifying_nights - (int) $row->nights),
                 'qualifying_stays'  => max(0, (int) $member->qualifying_stays - (int) $row->stays),
                 'qualifying_spend'  => max(0.0, round((float) $member->qualifying_spend - (float) $row->spend, 2)),
-            ])->save();
+            ];
+            if ($visits > 0) {
+                $counters['qualifying_visits'] = max(0, (int) $member->qualifying_visits - $visits);
+            }
+            $member->forceFill($counters)->save();
 
             if ($this->judgedOnCounters($member)) {
                 $this->assessTier($member->fresh(), null, 'reversal');
@@ -861,13 +906,13 @@ class LoyaltyService
     }
 
     /**
-     * Whether the member's tier reads the counters (`nights`, `stays`, `spend`, or `hybrid` with points): only then can
-     * a counted or reversed visit move it, so only then is the tier assessed — a member judged on points is assessed
-     * when points move (awardPoints(), reverseTransaction()), never by a visit that changed nothing they are judged on.
+     * Whether the programme moves members by a counter (`visits` or `spend`, release 8): only then can a counted or
+     * reversed visit move a tier, so only then is the tier assessed — a programme by points assesses when points move
+     * (awardPoints(), reverseTransaction()), never by a visit that changed nothing members are judged on.
      */
     private function judgedOnCounters(LoyaltyMember $member): bool
     {
-        return in_array($member->tier_qualification_model ?? 'points', ['nights', 'stays', 'spend', 'hybrid'], true);
+        return $this->progressBy((int) $member->organization_id) !== 'points';
     }
 
     /** Run $fn with the organisation bound (the tier ladder and the assessment rows are tenant-scoped), then restore. */
@@ -961,17 +1006,98 @@ class LoyaltyService
         };
     }
 
+    /**
+     * The tier a member qualifies for on the programme's measure (release 8, `tier_progress_by`): the points they are
+     * judged on (qualifyingPointsFor()), their visits (qualifyingVisitsFor(), against `min_visits`) or their spend
+     * (qualifyingSpendFor(), against `min_spend`). A tier without a floor on the measure is not reached by it.
+     */
     public function getTierForMember(LoyaltyMember $member): ?LoyaltyTier
     {
-        $model = $member->tier_qualification_model ?? 'points';
-
-        return match ($model) {
-            'nights' => $this->getTierByNights($member->qualifying_nights),
-            'stays'  => $this->getTierByStays($member->qualifying_stays),
-            'spend'  => $this->getTierBySpend($member->qualifying_spend),
-            'hybrid' => $this->getTierHybrid($member),
+        return match ($this->progressBy((int) $member->organization_id)) {
+            'visits' => $this->getTierByVisits($this->qualifyingVisitsFor($member)),
+            'spend'  => $this->getTierBySpend($this->qualifyingSpendFor($member)),
             default  => $this->getTierForPoints($this->qualifyingPointsFor($member)),
         };
+    }
+
+    /**
+     * The visits a member is judged on: `qualifying_visits` under the `lifetime` basis, else the visits counted inside
+     * the tier's window (the counter rows not taken back), as qualifyingPointsFor() reads points.
+     */
+    public function qualifyingVisitsFor(LoyaltyMember $member): int
+    {
+        if ($this->qualificationBasis() === self::BASIS_LIFETIME) {
+            return (int) ($member->qualifying_visits ?? 0);
+        }
+
+        return (int) $this->windowedCounts($member)->sum('visits');
+    }
+
+    /** The spend a member is judged on: `qualifying_spend`, or inside the tier's window under the `windowed` basis. */
+    public function qualifyingSpendFor(LoyaltyMember $member): float
+    {
+        if ($this->qualificationBasis() === self::BASIS_LIFETIME) {
+            return round((float) ($member->qualifying_spend ?? 0), 2);
+        }
+
+        return round((float) $this->windowedCounts($member)->sum('spend'), 2);
+    }
+
+    /** The member's counter rows inside their tier's qualification window, not taken back. */
+    private function windowedCounts(LoyaltyMember $member): \Illuminate\Database\Query\Builder
+    {
+        $start = $this->windowStartFor($member, $member->tier?->qualification_window ?? 'rolling_12');
+
+        return DB::table('tier_qualification_counts')
+            ->where('organization_id', (int) $member->organization_id)->where('member_id', $member->id)
+            ->whereNull('reversed_at')->where('created_at', '>=', $start);
+    }
+
+    /**
+     * How far the member is from the next tier, in the programme's terms (release 8): the measure (`by`), what the
+     * member has on it, the next tier with its floor, what is still needed ("3 more visits", "€120 more", "1,250 points")
+     * and how far along, 0–100. On points it is the workspace's reading as before (the points the member is judged on,
+     * the next active tier by `min_points`); on visits and spend the next active tier, not invitation-only, whose floor
+     * on the measure is above the member's tier's. Null `next_tier` where no tier is above.
+     *
+     * @return array{by: string, qualifying: int|float, next_tier: ?array{id: int, name: string, min_points: int, floor: int|float}, needed: int|float, percent: int}
+     */
+    public function tierProgress(LoyaltyMember $member): array
+    {
+        $orgId = (int) $member->organization_id;
+
+        return $this->underOrg($orgId, function () use ($member, $orgId) {
+            $member->loadMissing('tier');
+            $by = $this->progressBy($orgId);
+            $column = self::FLOOR_COLUMNS[$by];
+            $money = $by === 'spend';
+            $qualifying = match ($by) {
+                'visits' => $this->qualifyingVisitsFor($member),
+                'spend'  => $this->qualifyingSpendFor($member),
+                default  => $this->qualifyingPointsFor($member),
+            };
+            $floor = $money ? (float) ($member->tier?->{$column} ?? 0) : (int) ($member->tier?->{$column} ?? 0);
+
+            $next = LoyaltyTier::cachedActiveForCurrentOrg()
+                ->reject(fn (LoyaltyTier $t) => $by !== 'points' && (bool) ($t->invitation_only ?? false))
+                ->filter(fn (LoyaltyTier $t) => $t->{$column} !== null && (float) $t->{$column} > $floor)
+                ->sortBy(fn (LoyaltyTier $t) => (float) $t->{$column})
+                ->first();
+            if (!$next) {
+                return ['by' => $by, 'qualifying' => $qualifying, 'next_tier' => null, 'needed' => 0, 'percent' => 100];
+            }
+            $target = $money ? round((float) $next->{$column}, 2) : (int) $next->{$column};
+            $span = max($money ? 0.01 : 1, $target - $floor);
+            $needed = $money ? round(max(0.0, $target - $qualifying), 2) : max(0, $target - $qualifying);
+
+            return [
+                'by'         => $by,
+                'qualifying' => $qualifying,
+                'next_tier'  => ['id' => (int) $next->id, 'name' => (string) $next->name, 'min_points' => (int) $next->min_points, 'floor' => $target],
+                'needed'     => $needed,
+                'percent'    => (int) max(0, min(100, floor(($qualifying - $floor) * 100 / $span))),
+            ];
+        });
     }
 
     /**
@@ -1043,6 +1169,15 @@ class LoyaltyService
             ->first();
     }
 
+    private function getTierByVisits(int $visits): ?LoyaltyTier
+    {
+        return LoyaltyTier::cachedActiveForCurrentOrg()
+            ->reject(fn (LoyaltyTier $t) => (bool) ($t->invitation_only ?? false))
+            ->filter(fn (LoyaltyTier $t) => $t->min_visits !== null && (int) $t->min_visits <= $visits)
+            ->sortByDesc('min_visits')
+            ->first();
+    }
+
     private function getTierBySpend(float $spend): ?LoyaltyTier
     {
         return LoyaltyTier::cachedActiveForCurrentOrg()
@@ -1052,28 +1187,13 @@ class LoyaltyService
             ->first();
     }
 
-    private function getTierHybrid(LoyaltyMember $member): ?LoyaltyTier
-    {
-        // Hybrid: qualify by ANY of the thresholds (most generous)
-        return LoyaltyTier::cachedActiveForCurrentOrg()
-            ->reject(fn (LoyaltyTier $t) => (bool) ($t->invitation_only ?? false))
-            ->filter(function (LoyaltyTier $t) use ($member) {
-                return $t->min_points <= $member->lifetime_points
-                    || ($t->min_nights !== null && $t->min_nights <= $member->qualifying_nights)
-                    || ($t->min_stays  !== null && $t->min_stays  <= $member->qualifying_stays)
-                    || ($t->min_spend  !== null && $t->min_spend  <= $member->qualifying_spend);
-            })
-            ->sortByDesc('sort_order')
-            ->first();
-    }
-
     /**
      * Get member dashboard summary data.
      */
     public function getMemberSummary(LoyaltyMember $member): array
     {
         $member->loadMissing(['tier', 'user', 'guests']);
-        $progress = $member->getProgressToNextTier();
+        $progress = $this->summaryProgress($member);
         $recentTransactions = $member->pointsTransactions()
             ->where('is_reversed', false)
             ->orderByDesc('created_at')
@@ -1120,6 +1240,35 @@ class LoyaltyService
                 $member->user->only('id', 'name', 'email', 'phone', 'nationality', 'language', 'avatar_url'),
                 ['date_of_birth' => $member->user->date_of_birth?->format('Y-m-d')],
             ),
+        ];
+    }
+
+    /**
+     * The member summary's `progress` (the portal's and the member app's), in the programme's terms (release 8). On
+     * points it is exactly what it always was (LoyaltyMember::getProgressToNextTier(): `percentage`, `points_needed`,
+     * `next_tier`), with `by` and `needed` beside it; on visits or spend the same three keys follow the measure
+     * (tierProgress()) — `points_needed` then holds the visits, or the spend in whole units, still to go, for the
+     * member app's compiled screens, which read only that key — and `needed` is exact.
+     *
+     * @return array{percentage: float|int, points_needed: int, next_tier: ?LoyaltyTier, by: string, needed: int|float}
+     */
+    private function summaryProgress(LoyaltyMember $member): array
+    {
+        $by = $this->progressBy((int) $member->organization_id);
+        if ($by === 'points') {
+            $progress = $member->getProgressToNextTier();
+
+            return $progress + ['by' => 'points', 'needed' => (int) $progress['points_needed']];
+        }
+        $p = $this->tierProgress($member);
+        $next = $p['next_tier'] ? $this->underOrg((int) $member->organization_id, fn () => LoyaltyTier::query()->find($p['next_tier']['id'])) : null;
+
+        return [
+            'percentage'    => $next ? $p['percent'] : 100,
+            'points_needed' => $next ? (int) ceil((float) $p['needed']) : 0,
+            'next_tier'     => $next,
+            'by'            => $by,
+            'needed'        => $next ? $p['needed'] : 0,
         ];
     }
 

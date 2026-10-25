@@ -10,7 +10,7 @@ import { Eyebrow, SectionTitle } from '../../workspace/ui/Typography'
 import { useApi, useBoot } from '../LoyaltyProvider'
 import { failureOf } from '../lib/api'
 import { errorKey, refusalKey } from '../lib/errors'
-import { day, points, signedPoints, when } from '../lib/format'
+import { day, money, points, signedPoints, when } from '../lib/format'
 import { fullAdminMemberPath } from '../lib/links'
 import { useLook } from '../lib/look'
 import { onShortcuts } from '../lib/shortcuts'
@@ -28,7 +28,7 @@ import { ERRORS as MEMBERSHIP_ERRORS } from '../membership/errors'
 import { moreItems, pageActions, waitMinutes, type MoreItem } from '../membership/membershipMath'
 import { StatusDialog } from '../membership/StatusDialog'
 import { DetailsCard } from './DetailsCard'
-import { lineType, memberActions, offersReverse, type PointsMode } from './memberMath'
+import { lineType, memberActions, offersReverse, progressLine, type PointsMode, type ProgressIn } from './memberMath'
 import { MoreMenu } from './MoreMenu'
 import { NfcCards } from './NfcCards'
 import { CreditPanel } from '../credit/CreditPanel'
@@ -173,18 +173,7 @@ function Member({ detail, locale }: { detail: MemberDetail; locale: string }) {
           <Eyebrow><span id="points-title">{t('loyalty.member.points_title', 'Points')}</span></Eyebrow>
           <p className="font-a-display text-5xl font-light tabular-nums text-a-text">{points(member.points, locale)}</p>
           <p className="text-sm text-a-text-2">{t('loyalty.member.lifetime', '{{points}} earned in all', { points: points(member.lifetime_points, locale) })}</p>
-          {progress.next_tier ? (
-            <div className="space-y-1.5">
-              <div role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress.percent}
-                aria-label={t('loyalty.member.progress_label', 'Progress to {{tier}}', { tier: progress.next_tier.name })}
-                className="h-2 overflow-hidden rounded-full bg-a-surface-2">
-                <div className="h-full rounded-full bg-a-accent" style={{ width: `${progress.percent}%` }} />
-              </div>
-              <p className="text-sm text-a-text-2">{t('loyalty.member.to_next', '{{points}} more to reach {{tier}}', { points: points(progress.needed, locale), tier: progress.next_tier.name })}</p>
-            </div>
-          ) : (
-            <p className="text-sm text-a-text-2">{t('loyalty.member.top_tier', 'In the top tier.')}</p>
-          )}
+          <ProgressBlock progress={progress} locale={locale} currency={boot.venue.currency} />
         </section>
 
         <section aria-labelledby="benefits-title" className="space-y-3 rounded-2xl border border-a-border bg-a-surface p-5">
@@ -230,6 +219,47 @@ function Member({ detail, locale }: { detail: MemberDetail; locale: string }) {
       {dialog === 'tier' && <ChangeTierDialog member={member} onClose={() => setDialog(null)} />}
       {(dialog === 'deactivate' || dialog === 'reactivate') && <StatusDialog member={member} mode={dialog} onClose={() => setDialog(null)} />}
       {dialog === 'erase' && <EraseDialog member={member} onClose={() => setDialog(null)} />}
+    </div>
+  )
+}
+
+/**
+ * How far the member is from the next tier, in the programme's terms (release 8, spec 2026-10-25 §3): "1,250 more to
+ * reach Gold", "3 more visits to Gold", "€120 more to Gold"; what the member has on a measure other than points; and
+ * the bar. The numbers and the measure are the server's (an answer without `by` reads as points, as before).
+ */
+function ProgressBlock({ progress, locale, currency }: { progress: ProgressIn; locale: string; currency: string }) {
+  const { t } = useTranslation()
+  const line = progressLine(progress)
+  const sofar = line.by === 'visits'
+    ? (progress.qualifying === 1
+      ? t('loyalty.membership.progress.visits_sofar_one', '1 visit counted towards the tiers.')
+      : t('loyalty.membership.progress.visits_sofar_many', '{{n}} visits counted towards the tiers.', { n: points(progress.qualifying, locale) }))
+    : line.by === 'spend'
+      ? t('loyalty.membership.progress.spend_sofar', '{{amount}} spent towards the tiers.', { amount: money(progress.qualifying, currency, locale) })
+      : null
+  const sentence = (() => {
+    switch (line.kind) {
+      case 'top': return t('loyalty.member.top_tier', 'In the top tier.')
+      case 'ready': return t('loyalty.membership.progress.ready', 'Qualifies for {{tier}}: the move comes with the next visit or points.', { tier: line.tier ?? '' })
+      case 'visit': return t('loyalty.membership.progress.visit_one', '1 more visit to {{tier}}', { tier: line.tier ?? '' })
+      case 'visits': return t('loyalty.membership.progress.visits_many', '{{n}} more visits to {{tier}}', { n: points(line.needed, locale), tier: line.tier ?? '' })
+      case 'spend': return t('loyalty.membership.progress.spend', '{{amount}} more to {{tier}}', { amount: money(line.needed, currency, locale), tier: line.tier ?? '' })
+      default: return t('loyalty.member.to_next', '{{points}} more to reach {{tier}}', { points: points(line.needed, locale), tier: line.tier ?? '' })
+    }
+  })()
+
+  return (
+    <div data-progress-by={line.by} className="space-y-1.5">
+      {sofar && <p className="text-sm text-a-text-2">{sofar}</p>}
+      {progress.next_tier && (
+        <div role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress.percent}
+          aria-label={t('loyalty.member.progress_label', 'Progress to {{tier}}', { tier: progress.next_tier.name })}
+          className="h-2 overflow-hidden rounded-full bg-a-surface-2">
+          <div className="h-full rounded-full bg-a-accent" style={{ width: `${progress.percent}%` }} />
+        </div>
+      )}
+      <p className="text-sm text-a-text-2">{sentence}</p>
     </div>
   )
 }

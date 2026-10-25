@@ -50,7 +50,8 @@ class OptionsTest extends TestCase
             ->assertJsonPath('options.programme_setup_completed_at', null);
 
         $this->assertSame(
-            ['points_on_spend', 'points_expiry', 'welcome_bonus', 'birthday_bonus', 'referrals', 'stamp_card', 'check_in', 'desk_earn', 'cashback'],
+            // Release 8: "How members move up" (tier_progress), a card that is always on.
+            ['points_on_spend', 'points_expiry', 'welcome_bonus', 'birthday_bonus', 'referrals', 'stamp_card', 'check_in', 'desk_earn', 'cashback', 'tier_progress'],
             array_column($response->json('ways'), 'key'),
         );
         $response->assertJsonPath('ways.0', ['key' => 'points_on_spend', 'switch' => 'points_on_bookings', 'zero_off' => null, 'fields' => ['points_per_currency']])

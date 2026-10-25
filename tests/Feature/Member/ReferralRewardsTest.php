@@ -29,7 +29,7 @@ use Tests\Concerns\LoyaltyWorkspace\VisitsSchema;
  */
 class ReferralRewardsTest extends MemberEndpointTestCase
 {
-    use VisitsSchema, CreditSchema, TierCountsSchema;
+    use VisitsSchema, CreditSchema, TierCountsSchema, \Tests\Concerns\LoyaltyWorkspace\ValiditySchema;
 
     protected function setUp(): void
     {
@@ -52,6 +52,8 @@ class ReferralRewardsTest extends MemberEndpointTestCase
         $this->buildVisitsSchema();
         $this->buildCreditSchema();
         $this->buildTierCountsSchema();
+        // Release 8: the counters' visits and venue day.
+        $this->buildValiditySchema();
     }
 
     /** The venue's options, written under its own organisation. */

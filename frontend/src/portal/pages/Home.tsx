@@ -41,7 +41,8 @@ export function Home() {
 
   return (
     <div className="space-y-5">
-      {member && <MemberCard member={member} loyalty={capabilities.loyalty} />}
+      {/* Release 8: the card's progress line reads in the programme's terms, a spend in the venue's currency. */}
+      {member && <MemberCard member={member} loyalty={capabilities.loyalty} currency={venue.currency} />}
       {/* Release 7: the stamp card and cashback credit, each when the venue uses it. */}
       {member && capabilities.loyalty && <StampCard />}
       {member && capabilities.loyalty && <CreditBalance />}

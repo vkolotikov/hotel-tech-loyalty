@@ -28,6 +28,11 @@
     "stamp_reward_kind": {
       "points": "Points",
       "reward": "A reward"
+    },
+    "tier_progress_by": {
+      "points": "Points",
+      "visits": "Visits",
+      "spend": "Spend"
     }
   },
   "choose_reward": "Choose a reward…",
@@ -44,7 +49,8 @@
     "stamp_reward_kind": "A full card gives",
     "stamp_reward_points": "Points for a full card",
     "stamps_per_card": "Stamps on a card",
-    "welcome_bonus_points": "Points when they join"
+    "welcome_bonus_points": "Points when they join",
+    "tier_progress_by": "Members move up by"
   },
   "hint": {
     "cashback_percent": "Credit is spent at the desk only; it is never paid out.",
@@ -92,7 +98,9 @@
     "real_estate": "Property",
     "restaurant": "Restaurant and café",
     "retail": "Shop and retail",
-    "simple_two_tier": "Simple, two tiers"
+    "simple_two_tier": "Simple, two tiers",
+    "members_club": "Members’ club",
+    "events_community": "Events and community"
   },
   "preset_line": {
     "beauty": "Welcome, Devotee and Inner Circle. Rewards regular visits.",
@@ -105,7 +113,9 @@
     "real_estate": "Client, Preferred and Partner. Rewards referrals and repeat clients.",
     "restaurant": "Regular, Loyalist and Insider. Rewards come quickly at small spends.",
     "retail": "Member, Insider and VIP. Frequent small purchases; rewards land early.",
-    "simple_two_tier": "Member and VIP. Easy to run for any small business."
+    "simple_two_tier": "Member and VIP. Easy to run for any small business.",
+    "members_club": "Member, Regular and Insider. Members move up by how often they come.",
+    "events_community": "Newcomer, Regular and Ambassador. Every event and visit counts, with a stamp card."
   },
   "problem": {
     "choice": "Choose one of the options.",
@@ -146,7 +156,10 @@
     "stamp_card_reward": "Members collect a stamp for each visit, one a day. A card holds {{stamps}} stamps; a full card gives {{reward}}.",
     "stamp_card_reward_unset": "Members collect a stamp for each visit, one a day. A card holds {{stamps}} stamps; a full card gives a reward you choose.",
     "welcome_bonus": "New members get {{points}} when they join.",
-    "welcome_bonus_off": "New members get no welcome bonus."
+    "welcome_bonus_off": "New members get no welcome bonus.",
+    "tier_progress_points": "Members move up as they earn points. They see “1,250 points to Gold”.",
+    "tier_progress_visits": "Members move up by how often they come: one visit a day counts, whatever they spend. They see “3 more visits to Gold”.",
+    "tier_progress_spend": "Members move up by what they spend at their visits. They see “€120 more to Gold”."
   },
   "setup": {
     "error": {
@@ -184,7 +197,8 @@
     "points_on_spend": "Points on spend",
     "referrals": "Referrals",
     "stamp_card": "Stamp card",
-    "welcome_bonus": "Welcome bonus"
+    "welcome_bonus": "Welcome bonus",
+    "tier_progress": "How members move up"
   },
   "way_line": {
     "birthday_bonus": "Points on the member’s birthday.",
@@ -195,7 +209,8 @@
     "points_on_spend": "Points for completed bookings, by what was spent.",
     "referrals": "Points for bringing a friend, for both of them.",
     "stamp_card": "A stamp for each visit; a full card gives a reward.",
-    "welcome_bonus": "Points for joining."
+    "welcome_bonus": "Points for joining.",
+    "tier_progress": "What takes a member to the next tier. A change moves nobody at once: each member’s tier follows at their next visit or points."
   },
   "ways_link": "Ways to earn",
   "ways_title": "How members earn and what they get",

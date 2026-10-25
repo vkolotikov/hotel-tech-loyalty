@@ -28,6 +28,11 @@
     "stamp_reward_kind": {
       "points": "Punkte",
       "reward": "Eine Prämie"
+    },
+    "tier_progress_by": {
+      "points": "Punkten",
+      "visits": "Besuchen",
+      "spend": "Ausgaben"
     }
   },
   "choose_reward": "Prämie wählen…",
@@ -44,7 +49,8 @@
     "stamp_reward_kind": "Eine volle Karte bringt",
     "stamp_reward_points": "Punkte für eine volle Karte",
     "stamps_per_card": "Stempel pro Karte",
-    "welcome_bonus_points": "Punkte beim Beitritt"
+    "welcome_bonus_points": "Punkte beim Beitritt",
+    "tier_progress_by": "Mitglieder steigen auf nach"
   },
   "hint": {
     "cashback_percent": "Guthaben wird nur an der Theke eingelöst; es wird nie ausgezahlt.",
@@ -92,7 +98,9 @@
     "real_estate": "Immobilien",
     "restaurant": "Restaurant und Café",
     "retail": "Laden und Einzelhandel",
-    "simple_two_tier": "Einfach, zwei Stufen"
+    "simple_two_tier": "Einfach, zwei Stufen",
+    "members_club": "Mitgliederclub",
+    "events_community": "Veranstaltungen und Community"
   },
   "preset_line": {
     "beauty": "Welcome, Devotee und Inner Circle. Belohnt regelmäßige Besuche.",
@@ -105,7 +113,9 @@
     "real_estate": "Client, Preferred und Partner. Belohnt Empfehlungen und wiederkehrende Kunden.",
     "restaurant": "Regular, Loyalist und Insider. Prämien kommen schon bei kleinen Beträgen schnell.",
     "retail": "Member, Insider und VIP. Häufige kleine Einkäufe; Prämien kommen früh.",
-    "simple_two_tier": "Member und VIP. Leicht zu führen für jedes kleine Unternehmen."
+    "simple_two_tier": "Member und VIP. Leicht zu führen für jedes kleine Unternehmen.",
+    "members_club": "Member, Regular und Insider. Mitglieder steigen danach auf, wie oft sie kommen.",
+    "events_community": "Newcomer, Regular und Ambassador. Jede Veranstaltung und jeder Besuch zählt, mit Stempelkarte."
   },
   "problem": {
     "choice": "Wählen Sie eine der Möglichkeiten.",
@@ -146,7 +156,10 @@
     "stamp_card_reward": "Mitglieder sammeln einen Stempel pro Besuch, einen am Tag. Eine Karte hat {{stamps}} Stempel; eine volle Karte bringt „{{reward}}“.",
     "stamp_card_reward_unset": "Mitglieder sammeln einen Stempel pro Besuch, einen am Tag. Eine Karte hat {{stamps}} Stempel; eine volle Karte bringt eine Prämie Ihrer Wahl.",
     "welcome_bonus": "Neue Mitglieder erhalten beim Beitritt {{points}}.",
-    "welcome_bonus_off": "Neue Mitglieder erhalten keinen Willkommensbonus."
+    "welcome_bonus_off": "Neue Mitglieder erhalten keinen Willkommensbonus.",
+    "tier_progress_points": "Mitglieder steigen mit ihren Punkten auf. Sie sehen „1.250 Punkte bis Gold“.",
+    "tier_progress_visits": "Mitglieder steigen danach auf, wie oft sie kommen: Ein Besuch pro Tag zählt, egal was sie ausgeben. Sie sehen „Noch 3 Besuche bis Gold“.",
+    "tier_progress_spend": "Mitglieder steigen nach ihren Ausgaben bei Besuchen auf. Sie sehen „Noch 120 € bis Gold“."
   },
   "setup": {
     "error": {
@@ -184,7 +197,8 @@
     "points_on_spend": "Punkte für Umsatz",
     "referrals": "Empfehlungen",
     "stamp_card": "Stempelkarte",
-    "welcome_bonus": "Willkommensbonus"
+    "welcome_bonus": "Willkommensbonus",
+    "tier_progress": "Wie Mitglieder aufsteigen"
   },
   "way_line": {
     "birthday_bonus": "Punkte zum Geburtstag des Mitglieds.",
@@ -195,7 +209,8 @@
     "points_on_spend": "Punkte für abgeschlossene Buchungen, nach dem ausgegebenen Betrag.",
     "referrals": "Punkte für einen geworbenen Freund, für beide.",
     "stamp_card": "Ein Stempel pro Besuch; eine volle Karte bringt eine Prämie.",
-    "welcome_bonus": "Punkte für den Beitritt."
+    "welcome_bonus": "Punkte für den Beitritt.",
+    "tier_progress": "Was ein Mitglied in die nächste Stufe bringt. Eine Änderung verschiebt niemanden sofort: Die Stufe folgt beim nächsten Besuch oder den nächsten Punkten."
   },
   "ways_link": "Sammeln & Prämien",
   "ways_title": "Wie Mitglieder sammeln und was sie erhalten",

@@ -68,6 +68,8 @@ class BootstrapController extends Controller
                     ])->values(),
                 // Release 7: which ways to earn and reward the venue uses, for the screens that offer them.
                 'ways'  => self::ways($orgId),
+                // Release 8 (§3): how members move between tiers — `points`, `visits` or `spend` (ProgrammeOptions).
+                'progress_by' => app(\App\Services\LoyaltyService::class)->progressBy($orgId),
             ],
             'counts'       => [
                 'members'          => LoyaltyMember::query()->where('is_active', true)->count(),

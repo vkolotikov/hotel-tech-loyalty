@@ -100,7 +100,8 @@
       "member_limit": "Por encima del límite de miembros del plan.",
       "not_created": "No se pudo crear el miembro.",
       "unreadable": "No se pudo leer esta fila: tiene más valores que columnas el archivo.",
-      "other": "Esta fila no se importó."
+      "other": "Esta fila no se importó.",
+      "bad_valid_until": "La fecha «válida hasta» no es un día. Escríbala como AAAA-MM-DD, p. ej., 2027-10-03."
     },
     "kind": {
       "skipped": "Omitida",
@@ -125,7 +126,8 @@
       "joined_at": "Alta",
       "date_of_birth": "Fecha de nacimiento",
       "marketing_consent": "Consentimiento de marketing",
-      "external_id": "Número de cliente"
+      "external_id": "Número de cliente",
+      "valid_until": "Válida hasta"
     },
     "error": {
       "manager_only": "Solo un propietario o un responsable puede hacer esto.",
@@ -142,7 +144,8 @@
       "not_found": "Esta importación ya no está.",
       "network": "Sin conexión. La importación se detuvo donde estaba; pulse Continuar para seguir.",
       "unknown": "La importación se detuvo. Lo importado se queda; pulse Continuar para seguir."
-    }
+    },
+    "valid_until_hint": "Válida hasta: el último día de cada membresía, escrito AAAA-MM-DD (p. ej., 2027-10-03). Déjelo vacío para una membresía que no termina."
   },
   "erase": {
     "title": "Eliminar a {{name}}",
@@ -233,7 +236,12 @@
       "invalid": "Revise los campos marcados.",
       "network": "Sin conexión: no se guardó nada. Inténtelo de nuevo.",
       "unknown": "No se pudo añadir el miembro. Inténtelo de nuevo."
-    }
+    },
+    "valid_until": "Válida hasta (opcional)",
+    "valid_until_hint": "El último día de una membresía comprada por un tiempo. Déjelo vacío para una que no termina.",
+    "undated": "{{name}} se añadió, pero la fecha de fin no se guardó. Fíjela en su página, en Membresía.",
+    "open_member": "Abrir su página",
+    "close": "Cerrar"
   },
   "card": {
     "title": "Tarjeta de miembro",
@@ -316,7 +324,15 @@
     "duplicates": "Duplicados",
     "import": "Importar",
     "export": "Exportar",
-    "add": "Añadir miembro"
+    "add": "Añadir miembro",
+    "state": {
+      "expiring": "Vence pronto",
+      "expired": "Vencida"
+    },
+    "expiring_count": "{{n}} vencen pronto",
+    "expired_count": "{{n}} vencidas",
+    "ends": "Termina el {{day}}",
+    "ended": "Venció el {{day}}"
   },
   "load": {
     "error": {
@@ -346,5 +362,82 @@
       "network": "Sin conexión. Compruebe la red e inténtelo de nuevo.",
       "unknown": "No se pudo crear el archivo. Inténtelo de nuevo."
     }
+  },
+  "validity": {
+    "title": "Membresía",
+    "state": {
+      "active": "Activa",
+      "expiring": "Termina pronto",
+      "expired": "Vencida",
+      "off": "Desactivada"
+    },
+    "extend_action": "Prolongar",
+    "extend_by": "Prolongar",
+    "extend": {
+      "1m": "+1 mes",
+      "3m": "+3 meses",
+      "6m": "+6 meses",
+      "1y": "+1 año"
+    },
+    "from_end": "Desde el final actual, {{day}}.",
+    "from_today": "Desde hoy.",
+    "new_end": "hasta el {{day}}",
+    "set": "Fijar una fecha",
+    "remove": "Quitar la fecha de fin",
+    "saved": "Guardado: válida hasta el {{day}}.",
+    "saved_none": "Guardado: la membresía no tiene fecha de fin.",
+    "managers_only": "Solo un propietario o un responsable puede cambiar la fecha de fin.",
+    "none": "Sin fecha de fin",
+    "until": "Válida hasta el {{day}}",
+    "ends_today": "Termina hoy",
+    "ends_tomorrow": "Termina mañana",
+    "ends_in": "Termina en {{days}} días",
+    "expired_on": "Venció el {{day}}",
+    "none_line": "La membresía no termina nunca. Póngale una fecha de fin cuando un miembro la compre por un tiempo.",
+    "left_line": "Quedan {{left}}.",
+    "left": {
+      "years_one": "1 año",
+      "years_many": "{{n}} años",
+      "months_one": "1 mes",
+      "months_many": "{{n}} meses",
+      "days_one": "1 día",
+      "days_many": "{{n}} días"
+    },
+    "expiring_line": "Válida hasta el {{day}}. Después, se niega la entrada hasta que se renueve.",
+    "expired_line": "Se niega la entrada hasta que se renueve. Los puntos y el historial se conservan, y el mostrador puede seguir atendiendo al miembro.",
+    "off_line": "La cuenta está desactivada, así que se niega la entrada sea cual sea la fecha.",
+    "problem": {
+      "date": "Elija un día.",
+      "past": "Elija hoy o un día posterior."
+    },
+    "set_title": "Válida hasta",
+    "set_label": "Último día de la membresía",
+    "set_hint": "Ese día el miembro aún puede entrar; desde el día siguiente, no.",
+    "set_preview": "Válida hasta el {{day}}.",
+    "set_save": "Guardar la fecha",
+    "remove_title": "¿Quitar la fecha de fin?",
+    "remove_confirm": "Quitar la fecha de fin",
+    "remove_keep": "Mantenerla",
+    "remove_body": "La membresía de {{name}} no terminará nunca, y la entrada dependerá solo de su nivel.",
+    "error": {
+      "manager_only": "Solo un propietario o un responsable puede hacer esto.",
+      "not_allowed": "Solo un propietario o un responsable puede hacer esto.",
+      "no_capability": "Solo un propietario o un responsable puede hacer esto.",
+      "already_erased": "Este miembro fue eliminado. Solo se conservan su número y su historial de puntos.",
+      "not_found": "Este miembro ya no está en su programa.",
+      "network": "Sin conexión: no se guardó nada. Inténtelo de nuevo.",
+      "key_reused": "Se acaba de hacer otro cambio. La página muestra la fecha de fin actual; inténtelo de nuevo si no es lo que quería.",
+      "invalid": "Elija hoy o un día posterior.",
+      "unknown": "No se pudo guardar la fecha de fin. No cambió nada; inténtelo de nuevo."
+    }
+  },
+  "progress": {
+    "visits_sofar_one": "1 visita contada para los niveles.",
+    "visits_sofar_many": "{{n}} visitas contadas para los niveles.",
+    "spend_sofar": "{{amount}} gastados que cuentan para los niveles.",
+    "ready": "Cumple con {{tier}}: el cambio llega con la próxima visita o los próximos puntos.",
+    "visit_one": "1 visita más para {{tier}}",
+    "visits_many": "{{n}} visitas más para {{tier}}",
+    "spend": "{{amount}} más para {{tier}}"
   }
 }
