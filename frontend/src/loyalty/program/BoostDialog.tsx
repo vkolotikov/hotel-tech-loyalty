@@ -16,7 +16,7 @@ import { BOOST_FIELDS, MAX_MULTIPLIER, MIN_MULTIPLIER, WEEK, boostBody, boostFor
 import { serverProblems, toggled, wallInput } from '../lib/forms'
 import { BrandField } from '../rewards/parts'
 import { brandPart, initialBrand } from '../rewards/rewardsMath'
-import type { BrandOptions } from '../rewards/types'
+import type { BrandChoice, BrandOptions } from '../rewards/types'
 import { needsTimeCheck } from './programMath'
 import type { Boost, Tier } from './types'
 import { BOOST_PROBLEM_WORDS } from './words'
@@ -44,7 +44,7 @@ export function BoostDialog({ boost, tiers, brands, onClose }: { boost: Boost | 
   const [form, setForm] = useState<BoostForm>(() => boostFormOf(boost, zone, boot.venue.today))
   const [tried, setTried] = useState(false)
   const saved = boost ? (boost.brand_id ?? null) : undefined
-  const [brand, setBrand] = useState<number | null>(() => initialBrand(brands, saved))
+  const [brand, setBrand] = useState<BrandChoice>(() => initialBrand(brands, saved))
 
   const save = useMutation({
     mutationFn: () => (boost ? programApi.updateBoost(boost.id, { ...boostBody(form), ...brandPart(brand, saved) }) : programApi.createBoost({ ...boostBody(form), ...brandPart(brand) })),

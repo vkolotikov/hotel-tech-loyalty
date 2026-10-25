@@ -394,10 +394,6 @@ production never has); on SQLite the real index still runs.
     length, so a priceless menu prints €0 / 60 min instead of the author's priceless layout (`app/Landing/Money.php`;
     17 render tests of the Ember, MaisonVela, Forma, Luma, Ardea, Numa and Tempo templates). How "no price" should
     be stored and shown is the owner's call, and landing pages deploy by their own recipe.
-  - `BelongsToBrand` gives a row created with no brand the organisation's default brand, also for
-    `NotificationCampaign` and `SpecialOffer`, whose NULL brand is documented as "every brand"
-    (`NotificationCampaignModelTest`, `SpecialOfferModelTest`). The fill-in is deliberate (rows stay visible when
-    staff filter by brand); which one wins is the owner's call.
 - **Fixed in release 6** (their tests now pass on PostgreSQL): an emptied field in the full admin's extras, services
   and voice-agent forms, and an emptied tier colour in the workspace, wrote NULL into a NOT NULL column (a 500); a
   failed public services booking whose error text was longer than 255 characters left no submission row.
@@ -424,7 +420,15 @@ production never has); on SQLite the real index still runs.
   field keeps its value), `NfcController`/`ScanController` (cards through `NfcCards`), `BookingRefundService`,
   `StripeService`, `BookingPublicController`, `BookingEngineService`, `MemberCancellation`, `PortalPaymentIntentGuard`,
   `CapturePendingPaymentIntents`. Owner decisions at deploy (2026-10-25): a landing page keeps showing a stored price
-  0 and length 60 as they are; campaigns and offers saved for every brand stay every brand (a follow-up).
+  0 and length 60 as they are; campaigns and offers saved for every brand stay every brand (built after the deploy,
+  below).
+- **Every brand, for campaigns and offers** (owner 2026-10-25, on the branch after release 6): a `NotificationCampaign`
+  or `SpecialOffer` created with no brand keeps an empty `brand_id` — every brand's — instead of getting the default
+  brand (`EVERY_BRAND_WHEN_EMPTY` on the model; `BelongsToBrand` fills nothing in for it), and a brand's own view lists
+  those rows beside its own (`BrandScope`: that brand or none). Every other brand-scoped row still gets the default.
+  Sending and members' offers never filtered by brand, so who receives a campaign or sees an offer is unchanged. The
+  workspace's offer dialog offers "Every brand" (`brand: "every"`, `LoyaltyForms::brandOrEveryRule()`) to staff who
+  work for every brand, and a new offer starts there; staff held to some brands put offers on those only.
 - Release 5: no migration, no new scheduled command. New routes: `GET/POST members/{id}/cards`,
   `POST members/{id}/cards/{card}/off` (workspace). Full-admin and shared files it changes on purpose: the full admin's
   `ScanController::scanQr` (reads through `CardLookup`) and `pages/Scan.tsx` (the camera sends the whole code),

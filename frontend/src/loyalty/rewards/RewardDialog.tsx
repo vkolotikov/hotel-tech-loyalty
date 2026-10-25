@@ -14,7 +14,7 @@ import { ERRORS } from './errors'
 import { BrandField } from './parts'
 import { PictureField } from './PictureField'
 import { MAX_COST, MAX_DISCOUNT, MAX_PER_MEMBER, MAX_STOCK, brandPart, initialBrand, rewardBody, rewardFormOf, rewardProblems, rewardServerProblems, type RewardForm } from './rewardsMath'
-import type { Reward, RewardOptions } from './types'
+import type { BrandChoice, Reward, RewardOptions } from './types'
 import { APPLIES_TO_WORDS, DISCOUNT_TYPE_WORDS, REWARD_PROBLEM_WORDS } from './words'
 
 const INPUT = 'w-full rounded-lg border border-a-border bg-a-surface px-3 py-2 text-sm text-a-text'
@@ -36,7 +36,7 @@ export function RewardDialog({ reward, options, onClose }: { reward: Reward | nu
   const [tried, setTried] = useState(false)
   const [picture, setPicture] = useState<string | null>(reward?.image_url ?? null)
   const saved = reward ? (reward.brand_id ?? null) : undefined
-  const [brand, setBrand] = useState<number | null>(() => initialBrand(options.brands, saved))
+  const [brand, setBrand] = useState<BrandChoice>(() => initialBrand(options.brands, saved))
 
   const refresh = () => { void client.invalidateQueries({ queryKey: CATALOGUE_KEY }) }
   const save = useMutation({

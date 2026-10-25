@@ -121,5 +121,5 @@ export interface BoostBody {
   tier_ids: number[] | null
   is_active: boolean
   /** Release 4: the brand a new boost goes on, sent only when there is a choice; release 6: on a change, another moves it. */
-  brand?: number
+  brand?: number | 'every'
 }

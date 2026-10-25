@@ -123,8 +123,34 @@ final class LoyaltyForms
         return ['sometimes', 'nullable', 'integer', Rule::in(array_column(self::brands($user, $orgId)['list'], 'id'))];
     }
 
+    /** What a request sends as `brand` for "every brand" (an offer, owner 2026-10-25): stored as an empty `brand_id`. */
+    public const EVERY_BRAND = 'every';
+
     /**
-     * Validated fields with the chosen `brand` as the `brand_id` column; without a choice the column is left out.
+     * Whether this staff member may put a row on every brand: no brand is bound to the request and they work for all
+     * of the organisation's brands (no brand assignment, or the platform's admin). Staff assigned to some brands only
+     * put rows on those.
+     */
+    public static function everyBrand(User $user): bool
+    {
+        if (app()->bound('current_brand_id') && app('current_brand_id')) {
+            return false;
+        }
+
+        return $user->user_type !== 'staff' || $user->isPlatformAdmin() || !$user->brands()->exists();
+    }
+
+    /** brandRule() that also takes EVERY_BRAND when the staff member may use it (everyBrand()). @return list<mixed> */
+    public static function brandOrEveryRule(User $user, int $orgId): array
+    {
+        $ids = array_column(self::brands($user, $orgId)['list'], 'id');
+
+        return ['sometimes', 'nullable', Rule::in(self::everyBrand($user) ? [...$ids, self::EVERY_BRAND] : $ids)];
+    }
+
+    /**
+     * Validated fields with the chosen `brand` as the `brand_id` column — EVERY_BRAND as an empty one; without a
+     * choice the column is left out.
      *
      * @param array<string, mixed> $data
      * @return array<string, mixed>
@@ -133,7 +159,9 @@ final class LoyaltyForms
     {
         $brand = $data['brand'] ?? null;
         unset($data['brand']);
-        if ($brand !== null) {
+        if ($brand === self::EVERY_BRAND) {
+            $data['brand_id'] = null;
+        } elseif ($brand !== null) {
             $data['brand_id'] = (int) $brand;
         }
 

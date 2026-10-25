@@ -16,7 +16,9 @@ use Tests\TestCase;
  * boost may be put on — this organisation's, not deleted, the default first, narrowed to a staff member's own brands —
  * and a new one names its brand as `brand`; without one it lands where it always did (the default brand). Every brand
  * id is checked against that list. Since release 6 a change may name another of those brands and moves the row there;
- * without one it keeps the brand it has.
+ * without one it keeps the brand it has. An offer is the exception since the owner's decision of 2026-10-25: without a
+ * brand it is every brand's (no default brand is filled in), `every` names that choice — offered only to staff who work
+ * for every brand — and a brand's own view lists every brand's offers beside its own.
  */
 class BrandChoiceTest extends TestCase
 {
@@ -61,7 +63,7 @@ class BrandChoiceTest extends TestCase
                     ['id' => $this->second->id, 'name' => 'Second Studio', 'is_default' => false],
                 ],
                 'default' => $this->brandId,
-            ], $this->brandOptions($area), $area);
+            ] + ($area === 'offers' ? ['every' => true] : []), $this->brandOptions($area), $area);
         }
     }
 
@@ -71,8 +73,9 @@ class BrandChoiceTest extends TestCase
             $named = $this->asManager()->postJson($this->api("{$path}?brand_id=all"), $body + ['brand' => $this->second->id])->assertCreated();
             $named->assertJsonPath("{$key}.brand_id", $this->second->id);
 
+            // Without a brand: the default brand, except an offer, which is every brand's (owner 2026-10-25).
             $plain = $this->asManager()->postJson($this->api("{$path}?brand_id=all"), ['code' => null] + $body)->assertCreated();
-            $plain->assertJsonPath("{$key}.brand_id", $this->brandId);
+            $plain->assertJsonPath("{$key}.brand_id", $area === 'offers' ? null : $this->brandId);
         }
         $this->assertSame(1, Reward::query()->where('brand_id', $this->second->id)->count());
         $this->assertSame(1, SpecialOffer::query()->where('brand_id', $this->second->id)->count());
@@ -101,7 +104,8 @@ class BrandChoiceTest extends TestCase
         DB::table('brand_user')->insert(['brand_id' => $this->second->id, 'user_id' => $this->manager->id, 'created_at' => now(), 'updated_at' => now()]);
 
         foreach ($this->areas() as $area => [$path, $body, $key]) {
-            $this->assertSame(['list' => [['id' => $this->second->id, 'name' => 'Second Studio', 'is_default' => false]], 'default' => $this->second->id], $this->brandOptions($area), $area);
+            $this->assertSame(['list' => [['id' => $this->second->id, 'name' => 'Second Studio', 'is_default' => false]], 'default' => $this->second->id]
+                + ($area === 'offers' ? ['every' => false] : []), $this->brandOptions($area), $area);
             $this->asManager()->postJson($this->api("{$path}?brand_id=all"), $body + ['brand' => $this->brandId])
                 ->assertStatus(422)->assertJsonValidationErrors(['brand']);
             $this->asManager()->postJson($this->api("{$path}?brand_id=all"), $body)->assertCreated()->assertJsonPath("{$key}.brand_id", $this->second->id);
@@ -151,7 +155,9 @@ class BrandChoiceTest extends TestCase
                     ->assertStatus(422)->assertJsonValidationErrors(['brand']);
             }
         }
-        $this->assertSame(3, Reward::query()->where('brand_id', $this->brandId)->count() + SpecialOffer::query()->where('brand_id', $this->brandId)->count() + EarnRateEvent::query()->where('brand_id', $this->brandId)->count());
+        // Nothing moved: the reward and the boost on the default brand, the offer still every brand's.
+        $this->assertSame(2, Reward::query()->where('brand_id', $this->brandId)->count() + EarnRateEvent::query()->where('brand_id', $this->brandId)->count());
+        $this->assertSame(1, SpecialOffer::query()->whereNull('brand_id')->count());
     }
 
     public function test_a_staff_member_held_to_some_brands_cannot_move_a_row_to_another(): void
@@ -172,5 +178,49 @@ class BrandChoiceTest extends TestCase
             $this->asManager()->putJson($this->api("{$path}/{$ids[$area]}?brand_id=all"), $body + ['brand' => $third->id])
                 ->assertOk()->assertJsonPath("{$key}.brand_id", $third->id);
         }
+    }
+
+    /** Owner 2026-10-25: an offer can be put on every brand by name, moved there from a brand, and back. */
+    public function test_an_offer_named_for_every_brand_has_none_and_can_move_to_and_from_a_brand(): void
+    {
+        [$path, $body, $key] = $this->areas()['offers'];
+        $id = $this->asManager()->postJson($this->api("{$path}?brand_id=all"), $body + ['brand' => 'every'])
+            ->assertCreated()->assertJsonPath("{$key}.brand_id", null)->json("{$key}.id");
+
+        $this->asManager()->putJson($this->api("{$path}/{$id}?brand_id=all"), $body + ['brand' => $this->second->id])
+            ->assertOk()->assertJsonPath("{$key}.brand_id", $this->second->id);
+        $this->asManager()->putJson($this->api("{$path}/{$id}?brand_id=all"), $body + ['brand' => 'every'])
+            ->assertOk()->assertJsonPath("{$key}.brand_id", null);
+
+        // Only an offer takes `every`: a reward or a boost is put on one brand.
+        foreach (['rewards', 'boosts'] as $area) {
+            [$p, $b] = $this->areas()[$area];
+            $this->asManager()->postJson($this->api("{$p}?brand_id=all"), $b + ['brand' => 'every'])->assertStatus(422)->assertJsonValidationErrors(['brand']);
+        }
+    }
+
+    public function test_a_staff_member_held_to_some_brands_cannot_put_an_offer_on_every_brand(): void
+    {
+        DB::table('staff')->where('user_id', $this->manager->id)->update(['can_manage_offers' => true]);
+        DB::table('brand_user')->insert(['brand_id' => $this->second->id, 'user_id' => $this->manager->id, 'created_at' => now(), 'updated_at' => now()]);
+        [$path, $body] = $this->areas()['offers'];
+
+        $this->asManager()->postJson($this->api("{$path}?brand_id=all"), $body + ['brand' => 'every'])
+            ->assertStatus(422)->assertJsonValidationErrors(['brand']);
+        $this->assertSame(0, SpecialOffer::query()->whereNull('brand_id')->count());
+    }
+
+    /** A brand's own view lists its offers and every brand's, never another brand's. */
+    public function test_a_brands_view_lists_every_brands_offers_beside_its_own(): void
+    {
+        [$path, $body, $key] = $this->areas()['offers'];
+        $every = $this->asManager()->postJson($this->api("{$path}?brand_id=all"), ['title' => 'For all'] + $body + ['brand' => 'every'])->assertCreated()->json("{$key}.id");
+        $theirs = $this->asManager()->postJson($this->api("{$path}?brand_id=all"), ['title' => 'Default only'] + $body + ['brand' => $this->brandId])->assertCreated()->json("{$key}.id");
+        $ours = $this->asManager()->postJson($this->api("{$path}?brand_id=all"), ['title' => 'Second only'] + $body + ['brand' => $this->second->id])->assertCreated()->json("{$key}.id");
+
+        $listed = collect($this->asManager()->getJson($this->api("{$path}?brand_id={$this->second->id}"))->assertOk()->json('offers'))->pluck('id')->all();
+
+        $this->assertEqualsCanonicalizing([$every, $ours], $listed);
+        $this->assertNotContains($theirs, $listed);
     }
 }

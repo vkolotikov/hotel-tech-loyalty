@@ -16,7 +16,7 @@ import { ERRORS } from './errors'
 import { BrandField } from './parts'
 import { PictureField } from './PictureField'
 import { MAX_OFFER_VALUE, OFFER_FIELDS, brandPart, initialBrand, offerBody, offerFormOf, offerProblems, typeChoices, type OfferForm } from './rewardsMath'
-import type { Offer, OfferOptions } from './types'
+import type { BrandChoice, Offer, OfferOptions } from './types'
 import { APPLIES_TO_WORDS, OFFER_PROBLEM_WORDS, OFFER_TYPE_WORDS } from './words'
 
 const INPUT = 'w-full rounded-lg border border-a-border bg-a-surface px-3 py-2 text-sm text-a-text'
@@ -40,7 +40,7 @@ export function OfferDialog({ offer, options, onClose }: { offer: Offer | null; 
   const [tried, setTried] = useState(false)
   const [picture, setPicture] = useState<string | null>(offer?.image_url ?? null)
   const saved = offer ? (offer.brand_id ?? null) : undefined
-  const [brand, setBrand] = useState<number | null>(() => initialBrand(options.brands, saved))
+  const [brand, setBrand] = useState<BrandChoice>(() => initialBrand(options.brands, saved))
   const tiers = boot.programme.tiers
 
   const refresh = () => { void client.invalidateQueries({ queryKey: OFFERS_KEY }) }

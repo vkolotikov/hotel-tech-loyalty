@@ -25,8 +25,10 @@ use Illuminate\Validation\ValidationException;
  * Offers are brand-scoped: read as the request's brand binding gives,
  * created on the brand the request names (release 4: one of the options'
  * brands, which are this organisation's and the staff member's), else on the
- * one the model's own hook picks. Since release 6 a change may name another
- * of those brands and moves the offer there; without one it keeps its brand.
+ * one the model's own hook picks — none, which is every brand (owner,
+ * 2026-10-25; `every` names it, for staff who work for every brand). Since
+ * release 6 a change may name another of those brands and moves the offer
+ * there; without one it keeps its brand.
  */
 class OfferController extends Controller
 {
@@ -42,8 +44,9 @@ class OfferController extends Controller
                 ->map(fn (SpecialOffer $o) => self::row($o, $today))->values(),
             'options' => [
                 'types' => LoyaltyForms::OFFER_TYPES, 'applies_to' => LoyaltyForms::appliesTo(), 'image' => ImageController::limits('offers'),
-                // Release 4: the brands a new offer may be put on (one: nothing to choose).
-                'brands' => LoyaltyForms::brands($request->user(), $orgId),
+                // Release 4: the brands a new offer may be put on (one: nothing to choose); `every`: whether this staff
+                // member may put it on every brand (owner 2026-10-25: an offer with no brand is every brand's).
+                'brands' => LoyaltyForms::brands($request->user(), $orgId) + ['every' => LoyaltyForms::everyBrand($request->user())],
             ],
         ]);
     }
@@ -66,7 +69,7 @@ class OfferController extends Controller
             'usage_limit'      => 'nullable|integer|min:1',
             'per_member_limit' => 'nullable|integer|min:1',
             'is_featured'      => 'boolean',
-            'brand'            => LoyaltyForms::brandRule($request->user(), (int) app('current_organization_id')),
+            'brand'            => LoyaltyForms::brandOrEveryRule($request->user(), (int) app('current_organization_id')),
         ]);
         $this->refuseTakenCode($data['code'] ?? null);
         $data = LoyaltyForms::withBrand($data);
@@ -107,8 +110,9 @@ class OfferController extends Controller
             'per_member_limit' => 'sometimes|nullable|integer|min:1',
             'is_featured'      => 'sometimes|boolean',
             'is_active'        => 'sometimes|boolean',
-            // Release 6: another of the options' brands moves the offer there; absent, it keeps its own.
-            'brand'            => LoyaltyForms::brandRule($request->user(), (int) app('current_organization_id')),
+            // Release 6: another of the options' brands moves the offer there (or `every`, to every brand); absent, it
+            // keeps its own.
+            'brand'            => LoyaltyForms::brandOrEveryRule($request->user(), (int) app('current_organization_id')),
         ]);
         if (array_key_exists('code', $data)) {
             $this->refuseTakenCode($data['code'], $offer);

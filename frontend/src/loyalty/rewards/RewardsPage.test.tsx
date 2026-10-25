@@ -216,5 +216,15 @@ describe('Rewards (spec 2026-10-21 §4.6)', () => {
     expect(inDialog(<RewardDialog reward={{ ...catalogue.rewards[0], brand_id: 9 }} options={{ ...catalogue.options, brands: two }} onClose={() => {}} />))
       .toMatch(/<select data-brand=""[^>]*><option value="" selected="">Keep it where it is<\/option><option value="1">Lumière Spa<\/option>/)
     expect(inDialog(<OfferDialog offer={{ ...offers.offers[0], brand_id: 1 }} options={{ ...offers.options, brands: one }} onClose={() => {}} />)).not.toContain('data-brand')
+
+    // An offer, for staff who work for every brand (owner 2026-10-25): "Every brand" first, where a new one and a
+    // brandless one start; one on a brand starts on its brand.
+    const every = { ...two, every: true }
+    expect(inDialog(<OfferDialog offer={null} options={{ ...offers.options, brands: every }} onClose={() => {}} />))
+      .toMatch(/<select data-brand=""[^>]*><option value="every" selected="">Every brand<\/option><option value="1">Lumière Spa<\/option><option value="2">Lumière Hotel<\/option><\/select>/)
+    expect(inDialog(<OfferDialog offer={{ ...offers.offers[0], brand_id: null }} options={{ ...offers.options, brands: every }} onClose={() => {}} />))
+      .toMatch(/<option value="every" selected="">Every brand<\/option>/)
+    expect(inDialog(<OfferDialog offer={{ ...offers.offers[0], brand_id: 2 }} options={{ ...offers.options, brands: every }} onClose={() => {}} />))
+      .toMatch(/<option value="every">Every brand<\/option><option value="1">Lumière Spa<\/option><option value="2" selected="">Lumière Hotel<\/option>/)
   })
 })

@@ -15,7 +15,9 @@ use Illuminate\Database\Eloquent\Scope;
  *    "All brands" admin SPA mode), this scope NO-OPs and lets the org-level
  *    scope continue to filter. That preserves existing behaviour for every
  *    code path that hasn't been brand-aware'd yet.
- *  - When brand is bound to a non-null id, queries filter by that brand.
+ *  - When brand is bound to a non-null id, queries filter by that brand —
+ *    and, for a model whose empty brand means every brand
+ *    (EVERY_BRAND_WHEN_EMPTY: campaigns and offers), its rows with no brand.
  *  - When brand is bound to null explicitly, that's the SPA's "All brands"
  *    selection — also a no-op so admins see everything in the org.
  *
@@ -33,7 +35,13 @@ class BrandScope implements Scope
         $brandId = app('current_brand_id');
 
         if ($brandId) {
-            $builder->where($model->getTable() . '.brand_id', $brandId);
+            $column = $model->getTable() . '.brand_id';
+            // A model whose empty brand means every brand (campaigns, offers) shows those rows in every brand's view too.
+            if (method_exists($model, 'everyBrandWhenEmpty') && $model::everyBrandWhenEmpty($model)) {
+                $builder->where(fn (Builder $q) => $q->where($column, $brandId)->orWhereNull($column));
+            } else {
+                $builder->where($column, $brandId);
+            }
         }
     }
 }

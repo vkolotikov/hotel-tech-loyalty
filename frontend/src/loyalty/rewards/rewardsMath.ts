@@ -1,7 +1,7 @@
 import { addDays, isDateKey } from '../../workspace/lib/wallClock'
 import type { Can } from '../lib/types'
 import { decimalOf, isWall, numberIn, serverProblems, wallOf, wholeIn, type Problems, type Tone } from '../lib/forms'
-import type { BrandOptions, Offer, OfferBody, OfferOptions, PictureLimits, RedemptionFilter, Reward, RewardBody, RewardOptions } from './types'
+import type { BrandChoice, BrandOptions, Offer, OfferBody, OfferOptions, PictureLimits, RedemptionFilter, Reward, RewardBody, RewardOptions } from './types'
 
 /**
  * Rewards' decisions (spec 2026-10-21 §4.6, §5), kept out of the components so they can be tested: the tab an address
@@ -303,23 +303,31 @@ export function brandChoice(options: BrandOptions | undefined): boolean {
 }
 
 /**
- * The brand a form starts on; null when there is nothing to choose. A new row (`saved` undefined) starts on the
- * server's default, else the first offered. A saved row (release 6: its brand can be changed) starts on its own brand
- * when it is offered, else on null — it stays where it is unless another is chosen.
+ * The brand a form starts on; null when there is nothing to choose. A new row (`saved` undefined) starts on every brand
+ * when the options offer it (an offer, owner 2026-10-25), else on the server's default, else the first offered. A saved
+ * row (release 6: its brand can be changed) starts on its own brand when it is offered — on every brand when it has none
+ * and every brand is offered — else on null: it stays where it is unless another is chosen.
  */
-export function initialBrand(options: BrandOptions | undefined, saved?: number | null): number | null {
+export function initialBrand(options: BrandOptions | undefined, saved?: number | null): BrandChoice {
   if (!options || !brandChoice(options)) return null
-  if (saved !== undefined) return saved !== null && options.list.some(b => b.id === saved) ? saved : null
+  const every = options.every === true
+  if (saved !== undefined) {
+    if (saved === null) return every ? 'every' : null
+    return options.list.some(b => b.id === saved) ? saved : null
+  }
+  if (every) return 'every'
   return options.list.some(b => b.id === options.default) ? options.default : (options.list[0]?.id ?? null)
 }
 
 /**
- * What a body adds for its brand: `brand` when one was chosen — for a saved row (`saved` given) only when it is another
- * than the row's own, which moves the row there — and nothing otherwise (a new row: the server's default; a saved one
- * keeps its brand).
+ * What a body adds for its brand: `brand` when one was chosen — for a saved row (`saved` given) only when it differs from
+ * where the row is, which moves the row there — and nothing otherwise (a new row: the server's own, every brand for an
+ * offer; a saved one keeps its brand).
  */
-export function brandPart(brand: number | null, saved?: number | null): { brand?: number } {
-  return brand === null || (saved !== undefined && brand === saved) ? {} : { brand }
+export function brandPart(brand: BrandChoice, saved?: number | null): { brand?: number | 'every' } {
+  if (brand === null) return {}
+  if (saved !== undefined && (brand === saved || (brand === 'every' && saved === null))) return {}
+  return { brand }
 }
 
 // ─── A picture ────────────────────────────────────────────────────────────

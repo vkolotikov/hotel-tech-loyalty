@@ -12,10 +12,12 @@ class SpecialOffer extends Model
 
     /**
      * brand_id semantics: NULL = "applies to all brands in the org"
-     * (the offer is org-wide), specific id = brand-targeted offer.
-     * Controllers wanting both rows can opt out of the BrandScope via
-     * `withoutGlobalScope(BrandScope::class)`.
+     * (the offer is org-wide), specific id = brand-targeted offer. An offer
+     * created with no brand stays NULL (no default brand is filled in) and shows
+     * in every brand's view (owner, 2026-10-25; BelongsToBrand, BrandScope).
      */
+    public const EVERY_BRAND_WHEN_EMPTY = true;
+
     protected $fillable = [
         'organization_id', 'brand_id', 'title', 'description', 'type', 'value', 'code', 'applies_to',
         'tier_ids', 'start_date', 'end_date',
