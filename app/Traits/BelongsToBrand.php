@@ -34,6 +34,13 @@ trait BelongsToBrand
                 return;
             }
 
+            // A model whose empty brand means "every brand" (EVERY_BRAND_WHEN_EMPTY:
+            // campaigns and offers, owner 2026-10-25) keeps it empty; BrandScope
+            // shows such a row in every brand's view.
+            if (self::everyBrandWhenEmpty($model)) {
+                return;
+            }
+
             // Defense-in-depth: when no brand context is bound (admin
             // operating in "All brands" mode, console commands, queue jobs)
             // AND the row has an organization_id, fall back to that org's
@@ -53,6 +60,17 @@ trait BelongsToBrand
                 }
             }
         });
+    }
+
+    /**
+     * Whether $model declares that an empty `brand_id` means every brand of the organisation (the constant
+     * EVERY_BRAND_WHEN_EMPTY = true): no default brand is filled in for it, and BrandScope shows it under every brand.
+     */
+    public static function everyBrandWhenEmpty(object $model): bool
+    {
+        $constant = $model::class . '::EVERY_BRAND_WHEN_EMPTY';
+
+        return defined($constant) && constant($constant) === true;
     }
 
     public function brand(): BelongsTo

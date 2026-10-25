@@ -204,7 +204,9 @@ Multi-tenant Laravel 13 + React (Vite, TypeScript) SaaS with four sub-brands. Pr
   `App\Services\Loyalty\Cards\CodeReader` through `CardLookup` (the full admin's `scan/qr` too); an NFC card is linked
   or switched off only by `App\Services\Loyalty\Cards\NfcCards` (`nfc_cards.uid` is unique across all organisations).
   Release 6: enrolment, the full admin's NFC and scan endpoints link cards through `NfcCards` too; a card never
-  replaces a member's QR token.
+  replaces a member's QR token. Campaigns and offers created with no brand are every brand's (owner 2026-10-25):
+  their models declare `EVERY_BRAND_WHEN_EMPTY`, so `BelongsToBrand` fills in no default and `BrandScope` shows them
+  in every brand's view; every other brand-scoped model keeps the default-brand fill-in.
 - Testing against PostgreSQL (the SQLite schemas miss NOT NULL columns and indexes production has): build a database
   from every migration, then run a test file with `DB_CONNECTION=pgsql DB_DATABASE=<that database>` (and its host and
   credentials) in the environment — phpunit.xml's `<env>` entries are not forced, and the schema traits skip tables

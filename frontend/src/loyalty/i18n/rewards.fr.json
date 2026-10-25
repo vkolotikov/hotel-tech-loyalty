@@ -9,7 +9,8 @@
     "keep": "Laisser tel quel",
     "label": "Marque",
     "move_hint": "La marque à laquelle cela appartient. En choisir une autre l’y déplace à l’enregistrement.",
-    "refused": "Choisissez l’une des marques de la liste."
+    "refused": "Choisissez l’une des marques de la liste.",
+    "every": "Toutes les marques"
   },
   "cancel": {
     "body": "{{points}} points reviennent à {{name}}, et la récompense retourne en stock si celui-ci est limité. Le code cesse d’être valable.",

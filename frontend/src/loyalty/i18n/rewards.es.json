@@ -9,7 +9,8 @@
     "keep": "Dejar como está",
     "label": "Marca",
     "move_hint": "A cuál de sus marcas pertenece. Si elige otra, se mueve allí al guardar.",
-    "refused": "Elija una de las marcas de la lista."
+    "refused": "Elija una de las marcas de la lista.",
+    "every": "Todas las marcas"
   },
   "cancel": {
     "body": "{{points}} puntos vuelven a {{name}} y la recompensa vuelve al stock si este es limitado. El código deja de funcionar.",

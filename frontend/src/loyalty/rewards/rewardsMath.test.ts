@@ -203,4 +203,20 @@ describe('the brand of a reward, offer or boost (release 4, changed on edit sinc
     expect(brandPart(2, 2)).toEqual({})
     expect(brandPart(null, 2)).toEqual({})
   })
+
+  it('offers every brand an offer to staff who may use it: new and brandless ones start there (owner 2026-10-25)', () => {
+    const every = { ...two, every: true }
+    expect(initialBrand(every)).toBe('every')
+    expect(initialBrand(every, null)).toBe('every')
+    expect(initialBrand(every, 2)).toBe(2)
+    expect(initialBrand(every, 7)).toBeNull()
+    expect(initialBrand({ list: [{ id: 1, name: 'Spa', is_default: true }], default: 1, every: true })).toBeNull()
+  })
+
+  it('sends every brand only when it moves the row: a new offer, or a saved one on a brand', () => {
+    expect(brandPart('every')).toEqual({ brand: 'every' })
+    expect(brandPart('every', 2)).toEqual({ brand: 'every' })
+    expect(brandPart('every', null)).toEqual({})
+    expect(brandPart(2, null)).toEqual({ brand: 2 })
+  })
 })

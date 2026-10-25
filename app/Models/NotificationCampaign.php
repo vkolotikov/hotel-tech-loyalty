@@ -13,9 +13,12 @@ class NotificationCampaign extends Model
 
     /**
      * brand_id semantics: NULL = "targets all brands' members" (org-wide
-     * campaign), specific id = brand-targeted campaign. Same opt-out
-     * pattern as SpecialOffer when both rows are needed.
+     * campaign), specific id = brand-targeted campaign. A campaign created with
+     * no brand stays NULL (no default brand is filled in) and shows in every
+     * brand's view (owner, 2026-10-25; BelongsToBrand, BrandScope).
      */
+    public const EVERY_BRAND_WHEN_EMPTY = true;
+
     protected $fillable = [
         'organization_id', 'brand_id', 'property_id', 'name', 'segment_rules', 'title', 'body', 'data',
         'channel', 'email_template_id', 'email_subject', 'email_sent_count',

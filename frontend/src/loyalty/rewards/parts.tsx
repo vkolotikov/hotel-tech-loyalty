@@ -8,7 +8,7 @@ import { refusalKey } from '../lib/errors'
 import { FormField } from '../ui/formParts'
 import { ERRORS } from './errors'
 import { brandChoice } from './rewardsMath'
-import type { BrandOptions } from './types'
+import type { BrandChoice, BrandOptions } from './types'
 
 /** What every Rewards tab shows while it loads, when it could not load, and when there is nothing yet. */
 export function Loading() {
@@ -49,16 +49,17 @@ export function TabHead({ line, children }: { line: ReactNode; children?: ReactN
  * The brand of a reward, an offer or a boost (release 4), only where there is more than one to choose: a new one picks
  * it (the server's default chosen to begin with); a saved one (release 6) starts on the brand it is on and moves to
  * another chosen here when saved. A saved row whose brand is not one offered (no brand, or one this staff member does
- * not work for) starts on "Keep it where it is". `refused` is the server's field error (`brand`): a brand that is no
- * longer offered.
+ * not work for) starts on "Keep it where it is". An offer also offers "Every brand" to staff who work for every brand
+ * (owner 2026-10-25: an offer with no brand is every brand's) — a new offer starts there, and a saved one with no brand
+ * shows it. `refused` is the server's field error (`brand`): a brand that is no longer offered.
  */
 export function BrandField({ options, value, saved, refused, onChange }: {
   options: BrandOptions | undefined
-  value: number | null
+  value: BrandChoice
   /** The saved row's brand; undefined for a new one. */
   saved?: number | null
   refused?: boolean
-  onChange: (id: number | null) => void
+  onChange: (id: BrandChoice) => void
 }) {
   const { t } = useTranslation()
   if (!options || !brandChoice(options)) return null
@@ -67,9 +68,10 @@ export function BrandField({ options, value, saved, refused, onChange }: {
     <FormField label={t('loyalty.rewards.brand.label', 'Brand')}
       hint={editing ? t('loyalty.rewards.brand.move_hint', 'Which of your brands it belongs to. Choosing another moves it there when you save.') : t('loyalty.rewards.brand.hint', 'Which of your brands it belongs to.')}
       problem={refused ? t('loyalty.rewards.brand.refused', 'Choose one of the brands listed.') : null}>
-      <select data-brand="" value={value ?? ''} onChange={(e) => onChange(e.target.value === '' ? null : Number(e.target.value))}
+      <select data-brand="" value={value ?? ''} onChange={(e) => onChange(e.target.value === '' ? null : e.target.value === 'every' ? 'every' : Number(e.target.value))}
         className="w-full rounded-lg border border-a-border bg-a-surface px-3 py-2 text-sm text-a-text">
         {editing && value === null && <option value="">{t('loyalty.rewards.brand.keep', 'Keep it where it is')}</option>}
+        {options.every && <option value="every">{t('loyalty.rewards.brand.every', 'Every brand')}</option>}
         {options.list.map(brand => <option key={brand.id} value={brand.id}>{brand.name}</option>)}
       </select>
     </FormField>

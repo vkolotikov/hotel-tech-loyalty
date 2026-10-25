@@ -49,7 +49,12 @@ export interface BrandOption {
 export interface BrandOptions {
   list: BrandOption[]
   default: number | null
+  /** Offers only (owner 2026-10-25): whether this staff member may put one on every brand — an offer with no brand is every brand's. */
+  every?: boolean
 }
+
+/** A brand chosen in a form: a brand's id, every brand (offers), or nothing (a saved row stays where it is). */
+export type BrandChoice = number | 'every' | null
 
 /** The lists the reward form chooses from, served by the server (LoyaltyForms), and the picture's limits. */
 export interface RewardOptions {
@@ -80,7 +85,7 @@ export interface RewardBody {
   expires_at: string | null
   is_active: boolean
   /** Release 4: the brand a new reward goes on, sent only when there is a choice; release 6: on a change, another moves it. */
-  brand?: number
+  brand?: number | 'every'
 }
 
 export type RedemptionState = 'pending' | 'fulfilled' | 'cancelled'
@@ -158,7 +163,7 @@ export interface OfferBody {
   /** Only on a change: a new offer is made active. */
   is_active?: boolean
   /** Release 4: the brand a new offer goes on, sent only when there is a choice; release 6: on a change, another moves it. */
-  brand?: number
+  brand?: number | 'every'
 }
 
 export interface Referral {
