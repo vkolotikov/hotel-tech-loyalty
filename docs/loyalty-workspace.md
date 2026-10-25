@@ -533,10 +533,13 @@ reports (Twilio's status callbacks); no receipts for the full admin's own push c
   workspace show both. Pushes are in English, as every other push. (Release 8 judges every member by the programme's
   `tier_progress_by`.) A referral pending from before release 7 was already paid at sign-up.
 - **Release 8.** The portal menu offers Events when any published event has not ended, even if none is for the
-  member's tier (the page then says nothing is planned). Changing a published event's tiers keeps the sign-ups of
-  members no longer admitted (the door refuses them); a cancelled event's sign-ups stay as history. On visits or spend,
-  the member app's compiled bundle labels the progress number "points" until its next build. The two-tone sound and
-  NFC in door mode were not tried on a real device.
+  member's tier (the page then says nothing is planned). A change to a published event's tiers that would leave out
+  members who signed up is refused (`409 signed_up_outside`, naming them) until their sign-ups are cancelled; a member
+  whose own tier changed after signing up keeps the sign-up and is refused at the door. A cancelled event's sign-ups
+  stay as history. Two accounts of one person that both attended an event keep both points lines after a merge (the
+  ledger is history; a manager reverses one by hand). On visits or spend, the member app's compiled bundle labels the
+  progress number "points" until its next build. The two-tone sound and NFC in door mode were not tried on a real
+  device.
 
 ## Tests on PostgreSQL
 

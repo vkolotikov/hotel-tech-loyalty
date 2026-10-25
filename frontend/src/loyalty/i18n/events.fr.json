@@ -158,6 +158,10 @@
     "signed_up": "Inscrit(e)",
     "cancelled": "Annulé"
   },
+  "outside": {
+    "all": "Inscrits et exclus : {{names}}.",
+    "some": "Inscrits et exclus : {{names}} et {{others}}."
+  },
   "count": {
     "signed_up_one": "{{n}} inscrit",
     "signed_up_few": "{{n}} inscrits",
@@ -186,7 +190,11 @@
     "members_one": "{{n}} membre",
     "members_few": "{{n}} membres",
     "members_many": "{{n}} membres",
-    "members_other": "{{n}} membres"
+    "members_other": "{{n}} membres",
+    "others_one": "{{n}} autre",
+    "others_few": "{{n}} autres",
+    "others_many": "{{n}} autres",
+    "others_other": "{{n}} autres"
   },
   "load": {
     "error": {
@@ -200,6 +208,7 @@
       "invalid": "Vérifiez les champs signalés ci-dessous.",
       "event_ended": "Cet événement est déjà terminé. Changez ses horaires pour le publier, ou enregistrez-le en brouillon.",
       "wrong_state": "Cet événement a été annulé : il ne peut plus être modifié.",
+      "signed_up_outside": "Certains membres inscrits ne font pas partie des niveaux choisis. Annulez d’abord leurs inscriptions sur la page de l’événement, ou gardez leurs niveaux.",
       "key_reused": "Ceci a déjà été enregistré avec d’autres informations. Fermez la fenêtre et réessayez.",
       "not_allowed": "Votre compte ne peut pas modifier les événements. Un responsable peut autoriser « Gérer les offres » dans Équipe, dans l’administration complète.",
       "no_capability": "Votre compte ne peut pas modifier les événements. Un responsable peut autoriser « Gérer les offres » dans Équipe, dans l’administration complète.",

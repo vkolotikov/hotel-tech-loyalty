@@ -26,7 +26,8 @@ use Illuminate\Validation\Rule;
  *   organisation's places) or `location` (≤ 200; a place wins), `admits` `all` | `tiers` with `tier_ids` (this
  *   organisation's, at least one for `tiers`), `points` (0–100,000), `counts_as_visit`, `sign_up`, `walk_ins` (one of
  *   the two must be on, or nobody could come) and `capacity` (1–100,000, or none). A change takes only the fields it
- *   names; the event as it then stands is checked whole.
+ *   names, merged into the event as it stands under its row lock; the whole is checked there. A published event's
+ *   change may not leave out a member who signed up (`signed_up_outside`, 409): their sign-ups are cancelled first.
  * - The life: draft → published → cancelled. A draft can be deleted (`not_a_draft` otherwise: a published event is
  *   cancelled instead, so its sign-ups and check-ins stay); publishing needs an event that has not ended
  *   (`event_ended`); a cancelled event changes no more (`wrong_state`, with `state`), and neither is a draft cancelled.
@@ -95,17 +96,24 @@ final class EventEditor
         return $event->fresh() ?? $event;
     }
 
-    /** @param array<string, mixed> $input only the fields that change */
+    /**
+     * A change: the fields named, merged into the event as it stands under its row lock (two managers saving at once
+     * each change what they named, the second on top of the first), checked whole and written in that transaction.
+     *
+     * @param array<string, mixed> $input only the fields that change
+     */
     public function change(LoyaltyEvent $event, array $input, User $by): LoyaltyEvent
     {
         $orgId = (int) $event->organization_id;
-        $data = $this->validate($orgId, array_merge(self::formOf($event), array_intersect_key($input, array_flip(self::FIELDS))));
+        $input = array_intersect_key($input, array_flip(self::FIELDS));
 
-        $told = DB::transaction(function () use ($event, $data, $by, $orgId) {
+        $told = DB::transaction(function () use ($event, $input, $by, $orgId) {
             $locked = $this->lock($event);
             if ($locked->status === LoyaltyEvent::CANCELLED) {
                 throw new LoyaltyRefused('wrong_state', 'A cancelled event cannot be changed.', 409, ['state' => $locked->status]);
             }
+            $data = $this->validate($orgId, array_merge(self::formOf($locked), $input));
+            $this->refuseStranding($locked, $data);
             $before = self::audited($locked, $this->tierIds($locked));
             $wasWhen = [EventClock::digits($locked->starts_at), EventClock::digits($locked->ends_at)];
             $wasWhere = EventRows::where($locked);
@@ -137,6 +145,46 @@ final class EventEditor
         }
 
         return $fresh;
+    }
+
+    /**
+     * A published event's change may not leave out a member who signed up and has not come yet: their sign-up would
+     * hold a place they could never use, the portal would stop showing them the event (so they could not cancel) and
+     * the door would refuse them, untold. Such a change is refused (409 `signed_up_outside`, with `count` and up to five
+     * `members` names) until those sign-ups are cancelled from the event's people. Only what the change itself leaves
+     * out counts — a member already outside the old tiers (their tier changed since) does not block an unrelated edit.
+     * A draft has no sign-ups and changes freely.
+     *
+     * @param array{admits: string, tier_ids: list<int>} $data
+     */
+    private function refuseStranding(LoyaltyEvent $locked, array $data): void
+    {
+        if ($locked->status !== LoyaltyEvent::PUBLISHED || $data['admits'] !== 'tiers') {
+            return;
+        }
+        $wasAll = $locked->admits !== 'tiers';
+        $was = $this->tierIds($locked);
+        $orgId = (int) $locked->organization_id;
+
+        $left = EventRegistration::withoutGlobalScopes()
+            ->from('loyalty_event_registrations as r')
+            ->join('loyalty_members as m', 'm.id', '=', 'r.member_id')
+            ->where('r.organization_id', $orgId)->where('r.loyalty_event_id', $locked->id)->where('r.status', EventRegistration::SIGNED_UP)
+            ->whereNotExists(fn ($q) => $q->selectRaw('1')->from('loyalty_event_attendances as a')
+                ->whereColumn('a.loyalty_event_id', 'r.loyalty_event_id')->whereColumn('a.member_id', 'r.member_id'))
+            ->where(fn ($q) => $q->whereNull('m.tier_id')->orWhereNotIn('m.tier_id', $data['tier_ids']))
+            ->when(!$wasAll, fn ($q) => $q->whereIn('m.tier_id', $was === [] ? [0] : $was))
+            ->orderBy('r.signed_up_at')->orderBy('r.id')
+            ->pluck('r.member_id')->map(fn ($id) => (int) $id)->all();
+        if ($left === []) {
+            return;
+        }
+
+        $names = LoyaltyMember::withoutGlobalScopes()->where('organization_id', $orgId)->whereIn('id', array_slice($left, 0, 5))->with('user:id,name')->get()
+            ->sortBy(fn (LoyaltyMember $m) => array_search((int) $m->id, $left, true))
+            ->map(fn (LoyaltyMember $m) => (string) ($m->user?->name ?? $m->member_number ?? ''))->values()->all();
+
+        throw new LoyaltyRefused('signed_up_outside', 'Members signed up are not in the tiers chosen; cancel their sign-ups first.', 409, ['count' => count($left), 'members' => $names]);
     }
 
     public function publish(LoyaltyEvent $event, User $by): LoyaltyEvent

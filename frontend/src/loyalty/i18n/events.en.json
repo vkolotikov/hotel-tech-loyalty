@@ -158,6 +158,10 @@
     "signed_up": "Signed up",
     "cancelled": "Cancelled"
   },
+  "outside": {
+    "all": "Signed up and left out: {{names}}.",
+    "some": "Signed up and left out: {{names}} and {{others}}."
+  },
   "count": {
     "signed_up_one": "{{n}} signed up",
     "signed_up_few": "{{n}} signed up",
@@ -186,7 +190,11 @@
     "members_one": "{{n}} member",
     "members_few": "{{n}} members",
     "members_many": "{{n}} members",
-    "members_other": "{{n}} members"
+    "members_other": "{{n}} members",
+    "others_one": "{{n}} other",
+    "others_few": "{{n}} others",
+    "others_many": "{{n}} others",
+    "others_other": "{{n}} others"
   },
   "load": {
     "error": {
@@ -200,6 +208,7 @@
       "invalid": "Check the fields marked below.",
       "event_ended": "This event has already ended. Change its times to publish it, or save it as a draft.",
       "wrong_state": "This event was cancelled: it cannot be changed any more.",
+      "signed_up_outside": "Some members who signed up are not in the tiers you chose. Cancel their sign-ups on the event’s page first, or keep their tiers.",
       "key_reused": "This was already saved with other details. Close the dialog and try again.",
       "not_allowed": "Your account may not change events. A manager can allow “Manage offers” under Team in the full admin.",
       "no_capability": "Your account may not change events. A manager can allow “Manage offers” under Team in the full admin.",

@@ -17,6 +17,7 @@ export const ERRORS: Record<string, Record<string, string>> = {
     invalid: 'Check the fields marked below.',
     event_ended: 'This event has already ended. Change its times to publish it, or save it as a draft.',
     wrong_state: 'This event was cancelled: it cannot be changed any more.',
+    signed_up_outside: 'Some members who signed up are not in the tiers you chose. Cancel their sign-ups on the event’s page first, or keep their tiers.',
     key_reused: 'This was already saved with other details. Close the dialog and try again.',
     not_allowed: CHANGE_RIGHT,
     no_capability: CHANGE_RIGHT,

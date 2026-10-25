@@ -2,7 +2,7 @@ import { addDays, dateOf, formatDate, isDateKey, minutesOf, timeOf, type DateKey
 import type { Problems, Tone } from '../lib/forms'
 import { points as grouped } from '../lib/format'
 import type { CheckInAnswer, EventBody, EventPerson, EventPhase, EventsTab, LoyaltyEventRow } from './types'
-import { COUNTED, PERSON_WORDS, REASON_WORDS, type CountedKey } from './words'
+import { COUNTED, OUTSIDE_WORDS, PERSON_WORDS, REASON_WORDS, type CountedKey } from './words'
 
 /**
  * The Events area's decisions (release 8, spec 2026-10-25 §4), kept out of the components so they can be tested by
@@ -302,6 +302,19 @@ export function durationMinutes(form: EventForm): number | null {
   const days = form.later_day ? endsLater(form) : 0
   const total = days * 1440 + minutesOf(form.end) - minutesOf(form.start)
   return total > 0 ? total : null
+}
+
+/**
+ * Who a change of a published event's tiers would leave out (the server's 409 `signed_up_outside`, with `count` and up
+ * to five `members` names): "Signed up and left out: Grace Hopper and 3 others." Null when the refusal names nobody.
+ */
+export function outsideLine(extra: Record<string, unknown>, say: Say, locale: string): string | null {
+  const names = Array.isArray(extra.members) ? extra.members.filter((n): n is string => typeof n === 'string' && n !== '') : []
+  if (names.length === 0) return null
+  const count = typeof extra.count === 'number' && extra.count > names.length ? extra.count : names.length
+  return count > names.length
+    ? say('loyalty.events.outside.some', OUTSIDE_WORDS.some, { names: names.join(', '), others: counted(say, 'others', count - names.length, locale) })
+    : say('loyalty.events.outside.all', OUTSIDE_WORDS.all, { names: names.join(', ') })
 }
 
 // ─── Check-in by name ─────────────────────────────────────────────────────

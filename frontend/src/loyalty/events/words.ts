@@ -52,6 +52,12 @@ export const REASON_WORDS: Record<string, string> = {
   unknown: 'No access.',
 }
 
+/** Who a change of tiers would leave out (eventsMath.ts `outsideLine`, the server's `signed_up_outside`). */
+export const OUTSIDE_WORDS = {
+  all: 'Signed up and left out: {{names}}.',
+  some: 'Signed up and left out: {{names}} and {{others}}.',
+} as const
+
 /** A person's line on the event's page (eventsMath.ts `personState`). */
 export const PERSON_WORDS = {
   in: 'Checked in {{time}}',
@@ -73,6 +79,7 @@ export const COUNTED = {
   points_plus: ['+{{n}} point', '+{{n}} points'],
   places: ['{{n}} place', '{{n}} places'],
   members: ['{{n}} member', '{{n}} members'],
+  others: ['{{n}} other', '{{n}} others'],
 } as const satisfies Record<string, readonly [string, string]>
 
 export type CountedKey = keyof typeof COUNTED
@@ -88,5 +95,6 @@ export const WORD_FAMILIES: Record<string, Record<string, string>> = {
   problem: PROBLEM_WORDS,
   reason: REASON_WORDS,
   person: PERSON_WORDS,
+  outside: OUTSIDE_WORDS,
   count: COUNTED_FORMS,
 }

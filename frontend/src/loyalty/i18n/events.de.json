@@ -158,6 +158,10 @@
     "signed_up": "Angemeldet",
     "cancelled": "Abgesagt"
   },
+  "outside": {
+    "all": "Angemeldet und dann ausgeschlossen: {{names}}.",
+    "some": "Angemeldet und dann ausgeschlossen: {{names}} und {{others}}."
+  },
   "count": {
     "signed_up_one": "{{n}} angemeldet",
     "signed_up_few": "{{n}} angemeldet",
@@ -186,7 +190,11 @@
     "members_one": "{{n}} Mitglied",
     "members_few": "{{n}} Mitglieder",
     "members_many": "{{n}} Mitglieder",
-    "members_other": "{{n}} Mitglieder"
+    "members_other": "{{n}} Mitglieder",
+    "others_one": "{{n}} weiteres",
+    "others_few": "{{n}} weitere",
+    "others_many": "{{n}} weitere",
+    "others_other": "{{n}} weitere"
   },
   "load": {
     "error": {
@@ -200,6 +208,7 @@
       "invalid": "Prüfen Sie die unten markierten Felder.",
       "event_ended": "Diese Veranstaltung ist schon vorbei. Ändern Sie die Zeit, um sie zu veröffentlichen, oder speichern Sie sie als Entwurf.",
       "wrong_state": "Diese Veranstaltung wurde abgesagt und lässt sich nicht mehr ändern.",
+      "signed_up_outside": "Einige angemeldete Mitglieder gehören nicht zu den gewählten Stufen. Stornieren Sie zuerst ihre Anmeldungen auf der Seite der Veranstaltung, oder behalten Sie ihre Stufen.",
       "key_reused": "Das wurde schon mit anderen Angaben gespeichert. Schließen Sie den Dialog und versuchen Sie es erneut.",
       "not_allowed": "Ihr Konto darf Veranstaltungen nicht ändern. Ein Manager kann „Angebote verwalten“ unter Team im vollen Admin erlauben.",
       "no_capability": "Ihr Konto darf Veranstaltungen nicht ändern. Ein Manager kann „Angebote verwalten“ unter Team im vollen Admin erlauben.",

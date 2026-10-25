@@ -16,7 +16,7 @@ import { Check, FormField, Toggle } from '../ui/formParts'
 import { TierChip } from '../ui/TierChip'
 import { ERRORS } from './errors'
 import { afterEventChange, eventsApi } from './eventsApi'
-import { EVENT_FIELDS, FIELD_OF, MAX_CAPACITY, MAX_POINTS, bodyOf, counted, durationMinutes, formOf, formProblems, newForm, type EventForm, type Say } from './eventsMath'
+import { EVENT_FIELDS, FIELD_OF, MAX_CAPACITY, MAX_POINTS, bodyOf, counted, durationMinutes, formOf, formProblems, newForm, outsideLine, type EventForm, type Say } from './eventsMath'
 import type { EventOptions, LoyaltyEventRow } from './types'
 import { PROBLEM_WORDS } from './words'
 
@@ -80,6 +80,7 @@ export function EventDialog({ event, options, onClose }: { event: LoyaltyEventRo
   const minutes = durationMinutes(form)
   const whereValue = form.where === 'place' && form.place_id !== null ? `place:${form.place_id}` : form.where
   const told = event?.status === 'published' && event.counts.signed_up > 0
+  const outside = failure?.code === 'signed_up_outside' ? outsideLine(failure.extra, say, locale) : null
 
   return (
     <Dialog title={event ? t('loyalty.events.dialog.edit_title', 'Change {{title}}', { title: event.title }) : t('loyalty.events.dialog.new_title', 'New event')}
@@ -201,7 +202,12 @@ export function EventDialog({ event, options, onClose }: { event: LoyaltyEventRo
           <p className="text-xs text-a-text-2">{t('loyalty.events.dialog.told', 'If the time or place changes, the members signed up get an inbox message and a push.')}{' '}
             <span className="font-medium text-a-text">{counted(say, 'signed_up', event.counts.signed_up, locale)}</span></p>
         )}
-        {failure && <Notice tone="danger">{t(...refusalKey('loyalty.events', ERRORS, 'save', failure))}</Notice>}
+        {failure && (
+          <Notice tone="danger">
+            {t(...refusalKey('loyalty.events', ERRORS, 'save', failure))}
+            {outside && <span className="mt-1 block font-medium">{outside}</span>}
+          </Notice>
+        )}
 
         <div className="flex flex-wrap justify-end gap-2 pt-1">
           <Button type="button" variant="ghost" onClick={onClose} disabled={save.isPending}>{t('loyalty.common.cancel', 'Cancel')}</Button>

@@ -150,6 +150,57 @@ class EventsTest extends TestCase
         $this->assertSame(['title' => 'Autumn members’ night'], $audit->new_values);
     }
 
+    public function test_a_change_is_merged_into_the_event_as_it_stands_not_as_the_caller_last_read_it(): void
+    {
+        $event = $this->makeEvent(['title' => 'Wine tasting', 'starts_at' => '2026-10-09 18:00:00', 'ends_at' => '2026-10-09 21:00:00', 'capacity' => 40]);
+        $stale = \App\Models\LoyaltyEvent::query()->findOrFail($event->id);
+
+        // Another manager renames it meanwhile; this one changes only the places, from the copy read before.
+        $this->asManager()->putJson($this->api("events/{$event->id}"), ['title' => 'Autumn wine tasting'])->assertOk();
+        app(\App\Services\Loyalty\Events\EventEditor::class)->change($stale, ['capacity' => 30], $this->manager);
+
+        $this->assertSame(['Autumn wine tasting', 30], [(string) $event->fresh()->title, (int) $event->fresh()->capacity]);
+    }
+
+    public function test_a_published_event_cannot_leave_out_members_signed_up_until_their_sign_ups_are_cancelled(): void
+    {
+        $event = $this->makeEvent(['starts_at' => '2026-10-09 18:00:00', 'ends_at' => '2026-10-09 21:00:00', 'sign_up' => true, 'walk_ins' => false, 'capacity' => 2]);
+        app(EventSignUp::class)->signUp($event, $this->grace, EventSignUp::PORTAL);
+        app(EventSignUp::class)->signUp($event, $this->ada, EventSignUp::PORTAL);
+        $goldOnly = ['admits' => 'tiers', 'tier_ids' => [$this->tiers['gold']->id, $this->tiers['platinum']->id]];
+
+        $this->asManager()->putJson($this->api("events/{$event->id}"), $goldOnly + ['title' => 'Gold evening'])->assertStatus(409)
+            ->assertJsonPath('error', 'signed_up_outside')
+            ->assertJsonPath('count', 1)
+            ->assertJsonPath('members', ['Grace Hopper']);
+        $this->assertSame(['all', 'Wine tasting'], [(string) $event->fresh()->admits, (string) $event->fresh()->title], 'nothing changed');
+        $this->assertSame(0, DB::table('loyalty_event_tiers')->where('loyalty_event_id', $event->id)->count());
+
+        // Grace's sign-up cancelled from the people list: the change goes through, and Ada keeps her place.
+        $this->asStaffMember()->deleteJson($this->api("events/{$event->id}/sign-ups/{$this->grace->id}"))->assertOk();
+        $this->asManager()->putJson($this->api("events/{$event->id}"), $goldOnly)->assertOk()->assertJsonPath('event.admits', 'tiers')->assertJsonPath('event.counts.signed_up', 1);
+
+        // Narrowing further to Platinum would leave out Ada (Gold).
+        $this->asManager()->putJson($this->api("events/{$event->id}"), ['tier_ids' => [$this->tiers['platinum']->id]])->assertStatus(409)->assertJsonPath('members', ['Ada Lovelace']);
+    }
+
+    public function test_only_what_the_change_leaves_out_counts_and_members_already_inside_never_block_it(): void
+    {
+        $event = $this->makeEvent(['sign_up' => true, 'starts_at' => '2026-10-05 08:00:00', 'ends_at' => '2026-10-05 12:00:00'], [$this->tiers['silver']->id, $this->tiers['gold']->id]);
+        app(EventSignUp::class)->signUp($event, $this->grace, EventSignUp::PORTAL);
+        app(EventSignUp::class)->signUp($event, $this->ada, EventSignUp::PORTAL);
+        // Grace has come in already; Ada has since moved to Platinum, which the event never let in.
+        DB::table('loyalty_event_attendances')->insert(['organization_id' => $this->org->id, 'loyalty_event_id' => $event->id, 'member_id' => $this->grace->id, 'checked_in_at' => now(), 'walk_in' => false, 'created_at' => now(), 'updated_at' => now()]);
+        DB::table('loyalty_members')->where('id', $this->ada->id)->update(['tier_id' => $this->tiers['platinum']->id]);
+
+        $this->asManager()->putJson($this->api("events/{$event->id}"), ['title' => 'Renamed'])->assertOk();
+        $this->asManager()->putJson($this->api("events/{$event->id}"), ['tier_ids' => [$this->tiers['gold']->id]])->assertOk();
+
+        // A draft has nobody signed up: it changes freely.
+        $draft = $this->makeEvent(['status' => 'draft']);
+        $this->asManager()->putJson($this->api("events/{$draft->id}"), ['admits' => 'tiers', 'tier_ids' => [$this->tiers['gold']->id]])->assertOk();
+    }
+
     public function test_publish_cancel_and_delete_follow_the_events_life(): void
     {
         $draft = $this->asManager()->postJson($this->api('events'), $this->form())->json('event.id');

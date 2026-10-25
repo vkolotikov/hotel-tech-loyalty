@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
-  bodyOf, checkInSentence, counted, dateBlock, durationMinutes, eventActions, formOf, formProblems, newForm, numbersLine, peopleGroups, personLine,
+  bodyOf, checkInSentence, counted, outsideLine, dateBlock, durationMinutes, eventActions, formOf, formProblems, newForm, numbersLine, peopleGroups, personLine,
   phaseTone, scanContextFor, scanPathFor, doorPathFor, tabAfter, tabFrom, timeRange, wallNow, whenLine, whereOf, type Say,
 } from './eventsMath'
 import type { CheckInAnswer, EventPerson, LoyaltyEventRow } from './types'
@@ -143,6 +143,15 @@ describe('the one dialog', () => {
     expect(durationMinutes(ok)).toBe(180)
     expect(durationMinutes({ ...ok, end: '02:00', later_day: true, end_date: '2026-10-06' })).toBe(8 * 60)
     expect(durationMinutes({ ...ok, end: '17:00' })).toBeNull()
+  })
+})
+
+describe('a change that would leave members out', () => {
+  it('names them, and how many more', () => {
+    expect(outsideLine({ count: 1, members: ['Grace Hopper'] }, say, 'en')).toBe('Signed up and left out: Grace Hopper.')
+    expect(outsideLine({ count: 6, members: ['A', 'B', 'C', 'D', 'E'] }, say, 'en')).toBe('Signed up and left out: A, B, C, D, E and 1 other.')
+    expect(outsideLine({ count: 8, members: ['A', 'B', 'C', 'D', 'E'] }, say, 'en')).toBe('Signed up and left out: A, B, C, D, E and 3 others.')
+    expect(outsideLine({}, say, 'en')).toBeNull()
   })
 })
 
