@@ -1,1 +1,16 @@
-{}
+{
+  "title": "Tarjeta de sellos",
+  "count": "{{have}} de {{needed}}",
+  "label": "{{have}} de {{needed}} sellos",
+  "full": "Su tarjeta está completa: su recompensa está en camino.",
+  "reward_free": "Su recompensa: {{reward}} gratis",
+  "completed": "Tarjetas completas: {{cards}}",
+  "to_go_one": "Falta {{count}} visita para su recompensa",
+  "to_go_few": "Faltan {{count}} visitas para su recompensa",
+  "to_go_many": "Faltan {{count}} visitas para su recompensa",
+  "to_go_other": "Faltan {{count}} visitas para su recompensa",
+  "reward_points_one": "Su recompensa: {{points}} punto",
+  "reward_points_few": "Su recompensa: {{points}} puntos",
+  "reward_points_many": "Su recompensa: {{points}} puntos",
+  "reward_points_other": "Su recompensa: {{points}} puntos"
+}

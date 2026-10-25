@@ -1,1 +1,16 @@
-{}
+{
+  "title": "Carte à tampons",
+  "count": "{{have}} sur {{needed}}",
+  "label": "{{have}} tampons sur {{needed}}",
+  "full": "Votre carte est complète : votre récompense arrive.",
+  "reward_free": "Votre récompense offerte : {{reward}}",
+  "completed": "Cartes complètes : {{cards}}",
+  "to_go_one": "Encore {{count}} visite avant votre récompense",
+  "to_go_few": "Encore {{count}} visites avant votre récompense",
+  "to_go_many": "Encore {{count}} visites avant votre récompense",
+  "to_go_other": "Encore {{count}} visites avant votre récompense",
+  "reward_points_one": "Votre récompense : {{points}} point",
+  "reward_points_few": "Votre récompense : {{points}} points",
+  "reward_points_many": "Votre récompense : {{points}} points",
+  "reward_points_other": "Votre récompense : {{points}} points"
+}

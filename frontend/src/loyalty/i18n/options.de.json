@@ -1,1 +1,243 @@
-{}
+{
+  "amount": {
+    "months_many": "{{months}} Monate",
+    "months_one": "1 Monat",
+    "points_many": "{{points}} Punkte",
+    "points_one": "1 Punkt"
+  },
+  "banner": {
+    "line": "Legen Sie in vier kurzen Schritten fest, wie Mitglieder sammeln und was sie zurückbekommen. Sie können alles später ändern.",
+    "not_now": "Nicht jetzt",
+    "skip_body": "Jetzt ändert sich nichts, und dieser Vorschlag erscheint nicht wieder. Sie können die Einrichtung jederzeit unter „Sammeln & Prämien“ öffnen.",
+    "skip_confirm": "Einrichtung überspringen",
+    "skip_keep": "Zurück",
+    "skip_title": "Einrichtung überspringen?",
+    "start": "Starten",
+    "title": "Richten Sie Ihr Programm in wenigen Minuten ein"
+  },
+  "card": {
+    "save": "Speichern",
+    "saved": "Gespeichert. Mitglieder erhalten das ab sofort.",
+    "unsaved": "Noch nicht gespeichert."
+  },
+  "choice": {
+    "referral_reward_on": {
+      "first_visit": "Nach dem ersten Besuch des Freundes",
+      "signup": "Sobald der Freund beitritt"
+    },
+    "stamp_reward_kind": {
+      "points": "Punkte",
+      "reward": "Eine Prämie"
+    }
+  },
+  "choose_reward": "Prämie wählen…",
+  "field": {
+    "birthday_bonus_points": "Punkte zum Geburtstag",
+    "cashback_percent": "Guthaben zurück, in % des Umsatzes",
+    "checkin_points": "Punkte pro Check-in",
+    "points_expiry_months": "Monate, bis Punkte verfallen",
+    "points_per_currency": "Punkte je {{money}} Umsatz",
+    "referee_bonus_points": "Punkte für den Freund",
+    "referral_reward_on": "Wann sie sie erhalten",
+    "referrer_bonus_points": "Punkte für das empfehlende Mitglied",
+    "stamp_reward_id": "Prämie für eine volle Karte",
+    "stamp_reward_kind": "Eine volle Karte bringt",
+    "stamp_reward_points": "Punkte für eine volle Karte",
+    "stamps_per_card": "Stempel pro Karte",
+    "welcome_bonus_points": "Punkte beim Beitritt"
+  },
+  "hint": {
+    "cashback_percent": "Guthaben wird nur an der Theke eingelöst; es wird nie ausgezahlt.",
+    "checkin_points": "Bei 0 zählt der Besuch, ohne Punkte zu geben.",
+    "points_per_currency": "Höhere Stufen multiplizieren den Wert mit ihrer Sammelrate.",
+    "stamp_reward_id": "Aus Ihrem Prämienkatalog. Das Mitglied erhält einen Code, den es an der Theke vorzeigt.",
+    "stamps_per_card": "Eine Änderung gilt für neue Karten; begonnene Karten behalten ihre Anzahl."
+  },
+  "line": "Wie Mitglieder Punkte sammeln und was sie zurückbekommen. Schalten Sie Wege ein oder aus und legen Sie ihre Werte fest; Mitglieder sehen eine gespeicherte Änderung sofort.",
+  "load": {
+    "error": {
+      "network": "Keine Verbindung. Prüfen Sie das Netzwerk und versuchen Sie es erneut.",
+      "unknown": "Die Einstellungen des Programms konnten nicht geladen werden. Bitte versuchen Sie es erneut."
+    }
+  },
+  "no_rewards": "Ihr Katalog enthält noch keine Prämien. Legen Sie unter „Prämien“ eine an, oder lassen Sie eine volle Karte Punkte bringen.",
+  "open_rewards": "Prämien öffnen",
+  "open_wizard": "Einrichtungsassistent",
+  "part": {
+    "boosts": "Punkte-Aktionen",
+    "boosts_count": "Laufend oder geplant",
+    "boosts_line": "Eine Zeit lang mehr Punkte, etwa doppelte Punkte am Wochenende.",
+    "offers": "Angebote",
+    "offers_count": "Eingeschaltet",
+    "offers_line": "Zeitlich begrenzte Angebote für Mitglieder, etwa ein Rabatt oder Bonuspunkte.",
+    "open_offers": "Angebote öffnen",
+    "open_program": "Programm öffnen",
+    "open_rewards": "Prämien öffnen",
+    "rewards": "Prämien",
+    "rewards_count": "Im Katalog",
+    "rewards_line": "Wofür Mitglieder ihre Punkte einlösen.",
+    "tiers": "Stufen",
+    "tiers_count": "In der Stufenleiter",
+    "tiers_line": "Die Stufen, die Mitglieder beim Sammeln erreichen, jede mit ihren Vorteilen."
+  },
+  "parts_title": "Der Rest Ihres Programms",
+  "preset": {
+    "beauty": "Kosmetik und Spa",
+    "education": "Bildung",
+    "fitness": "Fitness",
+    "hotel_classic": "Hotel, fünf Stufen",
+    "hotel_lite": "Hotel, drei Stufen",
+    "medical": "Praxis und Klinik",
+    "professional_services": "Freiberufliche Dienstleistungen",
+    "real_estate": "Immobilien",
+    "restaurant": "Restaurant und Café",
+    "retail": "Laden und Einzelhandel",
+    "simple_two_tier": "Einfach, zwei Stufen"
+  },
+  "preset_line": {
+    "beauty": "Welcome, Devotee und Inner Circle. Belohnt regelmäßige Besuche.",
+    "education": "Learner, Scholar und Alumni. Belohnt das Lernen statt der Ausgaben.",
+    "fitness": "Member, Plus und Pro. Belohnt das Training vor Ort.",
+    "hotel_classic": "Von Bronze bis Diamond. Punkte für jeden Aufenthalt; höhere Stufen sammeln schneller.",
+    "hotel_lite": "Member, Plus und Elite. Einfach, für kleinere und Boutique-Hotels.",
+    "medical": "Patient und Care Plus. Bevorzugte Termine; Punkte für Buchungen sind anfangs aus.",
+    "professional_services": "Client, Preferred und Partner. Große, seltene Aufträge, bei denen Empfehlungen am meisten zählen.",
+    "real_estate": "Client, Preferred und Partner. Belohnt Empfehlungen und wiederkehrende Kunden.",
+    "restaurant": "Regular, Loyalist und Insider. Prämien kommen schon bei kleinen Beträgen schnell.",
+    "retail": "Member, Insider und VIP. Häufige kleine Einkäufe; Prämien kommen früh.",
+    "simple_two_tier": "Member und VIP. Leicht zu führen für jedes kleine Unternehmen."
+  },
+  "problem": {
+    "choice": "Wählen Sie eine der Möglichkeiten.",
+    "number": "Geben Sie eine Zahl von {{min}} bis {{max}} ein, z. B. 2,5.",
+    "reward": "Wählen Sie die Prämie für eine volle Karte.",
+    "whole": "Geben Sie eine ganze Zahl von {{min}} bis {{max}} ein."
+  },
+  "read_only": "Nur ein Inhaber oder Manager kann das ändern. Sie sehen die Einstellungen, wie sie sind.",
+  "save": {
+    "error": {
+      "invalid": "Prüfen Sie die markierten Felder.",
+      "manager_only": "Nur ein Inhaber oder Manager kann das Programm ändern.",
+      "network": "Keine Verbindung: Es wurde nichts gespeichert. Bitte versuchen Sie es erneut.",
+      "no_capability": "Nur ein Inhaber oder Manager kann das Programm ändern.",
+      "not_allowed": "Nur ein Inhaber oder Manager kann das Programm ändern.",
+      "unknown": "Das konnte nicht gespeichert werden. Bitte versuchen Sie es erneut."
+    }
+  },
+  "sentence": {
+    "birthday_bonus": "Mitglieder erhalten {{points}} zum Geburtstag.",
+    "birthday_bonus_off": "Mitglieder erhalten zum Geburtstag nichts.",
+    "cashback": "Mitglieder erhalten {{percent}} % ihrer Ausgaben als Guthaben zurück, einzulösen an der Theke.",
+    "cashback_off": "Kein Cashback-Guthaben.",
+    "check_in_off": "Kein Check-in an der Theke.",
+    "check_in_points": "Das Team checkt Mitglieder an der Theke ein, einmal am Tag: Jeder Check-in bringt {{points}} und zählt als Besuch.",
+    "check_in_visit": "Das Team checkt Mitglieder an der Theke ein, einmal am Tag: Jeder Check-in zählt als Besuch.",
+    "desk_earn": "Das Team erfasst nach dem Scannen einen Einkauf an der Theke, und das Mitglied sammelt dafür Punkte.",
+    "desk_earn_off": "Einkäufe an der Theke bringen nichts.",
+    "points_expiry": "Punkte verfallen {{months}} nach ihrer Gutschrift.",
+    "points_expiry_off": "Punkte verfallen nie.",
+    "points_on_spend": "Mitglieder erhalten {{points}} je {{money}} Umsatz.",
+    "points_on_spend_off": "Buchungen bringen keine Punkte.",
+    "referrals_first_visit": "Ein Mitglied, das einen Freund empfiehlt, erhält {{referrer}} und der Freund {{referee}}, sobald der Freund zum ersten Mal da war.",
+    "referrals_off": "Mitglieder haben keinen Empfehlungslink.",
+    "referrals_signup": "Ein Mitglied, das einen Freund empfiehlt, erhält {{referrer}} und der Freund {{referee}}, sobald der Freund beitritt.",
+    "stamp_card_off": "Keine Stempelkarte.",
+    "stamp_card_points": "Mitglieder sammeln einen Stempel pro Besuch, einen am Tag. Eine Karte hat {{stamps}} Stempel; eine volle Karte bringt {{points}}.",
+    "stamp_card_reward": "Mitglieder sammeln einen Stempel pro Besuch, einen am Tag. Eine Karte hat {{stamps}} Stempel; eine volle Karte bringt „{{reward}}“.",
+    "stamp_card_reward_unset": "Mitglieder sammeln einen Stempel pro Besuch, einen am Tag. Eine Karte hat {{stamps}} Stempel; eine volle Karte bringt eine Prämie Ihrer Wahl.",
+    "welcome_bonus": "Neue Mitglieder erhalten beim Beitritt {{points}}.",
+    "welcome_bonus_off": "Neue Mitglieder erhalten keinen Willkommensbonus."
+  },
+  "setup": {
+    "error": {
+      "invalid": "Einige Angaben brauchen einen zweiten Blick. Prüfen Sie die markierten Schritte und wenden Sie die Einrichtung erneut an.",
+      "key_reused": "Diese Einrichtung wurde nach dem Senden geändert. Wenden Sie sie erneut an.",
+      "manager_only": "Nur ein Inhaber oder Manager kann das Programm ändern.",
+      "network": "Keine Verbindung: Die Einrichtung wurde nicht angewendet. Versuchen Sie es erneut; nichts wird doppelt angewendet.",
+      "no_capability": "Nur ein Inhaber oder Manager kann das Programm ändern.",
+      "not_allowed": "Nur ein Inhaber oder Manager kann das Programm ändern.",
+      "unknown": "Die Einrichtung konnte nicht angewendet werden. Bitte versuchen Sie es erneut."
+    }
+  },
+  "skip": {
+    "error": {
+      "manager_only": "Nur ein Inhaber oder Manager kann das Programm ändern.",
+      "network": "Keine Verbindung. Bitte versuchen Sie es erneut.",
+      "no_capability": "Nur ein Inhaber oder Manager kann das Programm ändern.",
+      "not_allowed": "Nur ein Inhaber oder Manager kann das Programm ändern.",
+      "unknown": "Das hat nicht geklappt. Bitte versuchen Sie es erneut."
+    }
+  },
+  "step": {
+    "business": "Ihr Unternehmen",
+    "choose": "Auswählen",
+    "configure": "Einstellen",
+    "review": "Prüfen"
+  },
+  "title": "Sammeln & Prämien",
+  "way": {
+    "birthday_bonus": "Geburtstagsbonus",
+    "cashback": "Cashback-Guthaben",
+    "check_in": "Check-in",
+    "desk_earn": "Sammeln an der Theke",
+    "points_expiry": "Verfall der Punkte",
+    "points_on_spend": "Punkte für Umsatz",
+    "referrals": "Empfehlungen",
+    "stamp_card": "Stempelkarte",
+    "welcome_bonus": "Willkommensbonus"
+  },
+  "way_line": {
+    "birthday_bonus": "Punkte zum Geburtstag des Mitglieds.",
+    "cashback": "Ein Teil der Ausgaben kommt als Guthaben für die Theke zurück.",
+    "check_in": "Das Team checkt ein Mitglied nach dem Scannen an der Theke ein.",
+    "desk_earn": "Das Team erfasst nach dem Scannen einen Einkauf an der Theke.",
+    "points_expiry": "Ungenutzte Punkte verfallen nach einer Weile – das holt Mitglieder zurück.",
+    "points_on_spend": "Punkte für abgeschlossene Buchungen, nach dem ausgegebenen Betrag.",
+    "referrals": "Punkte für einen geworbenen Freund, für beide.",
+    "stamp_card": "Ein Stempel pro Besuch; eine volle Karte bringt eine Prämie.",
+    "welcome_bonus": "Punkte für den Beitritt."
+  },
+  "ways_link": "Sammeln & Prämien",
+  "ways_title": "Wie Mitglieder sammeln und was sie erhalten",
+  "wizard": {
+    "apply": "Anwenden",
+    "back": "Zurück",
+    "business_keep_line": "Ihr Programm hat bereits Stufen, also behält es sie und seine Prämien. Die nächsten Schritte wählen die Wege zum Sammeln, die dazukommen.",
+    "business_line": "Wählen Sie das Passendste. Es richtet Stufen und einen ersten Prämienkatalog ein, die Sie später ändern können.",
+    "business_title": "Was für ein Unternehmen ist das?",
+    "choose_keep_line": "Angehakt ist, was Ihr Programm heute nutzt. Haken Sie an, was Mitglieder haben sollen.",
+    "choose_line": "Angehakt ist, was wir für „{{preset}}“ empfehlen. Haken Sie an, was Mitglieder haben sollen.",
+    "choose_title": "Wie sollen Mitglieder sammeln und belohnt werden?",
+    "configure_title": "Werte festlegen",
+    "done_built": "Hinzugefügte Stufen: {{tiers}}. Hinzugefügte Prämien: {{rewards}}. Die Wege zum Sammeln sind eingestellt.",
+    "done_kept": "Ihre Stufen und Prämien sind geblieben, wie sie waren; die Wege zum Sammeln sind eingestellt.",
+    "done_title": "Ihr Programm ist eingerichtet",
+    "fix_fields": "Prüfen Sie die markierten Felder.",
+    "keep": "Meine Stufen und Prämien behalten",
+    "keep_line": "Stufen: {{tiers}}. Prämien im Katalog: {{rewards}}. Daran ändert sich nichts.",
+    "line": "Vier kurze Schritte. Sie können später alles unter „Sammeln & Prämien“ ändern.",
+    "managers_only": "Nur ein Inhaber oder Manager kann das Programm einrichten.",
+    "next": "Weiter",
+    "none_on": "Kein Weg zum Sammeln ist angehakt: Mitglieder würden nichts erhalten. Gehen Sie zurück und haken Sie mindestens einen an, oder wenden Sie es so an.",
+    "nothing_to_set": "Nichts festzulegen: Die gewählten Wege haben keine Werte. Weiter zur Prüfung.",
+    "preset_rewards": "Prämien wie {{names}}",
+    "preset_tiers": "Stufen: {{names}}",
+    "presets_greyed": "Startprogramme richten nur die Stufen eines neuen Betriebs ein. Sie werden hier zur Orientierung gezeigt.",
+    "review_keep": "Ihre Stufen und Prämien bleiben, wie sie sind.",
+    "review_off": "Nicht genutzt: {{ways}}. Sie können jeden davon später unter „Sammeln & Prämien“ einschalten.",
+    "review_preset": "Beginnt mit „{{preset}}“: den Stufen {{tiers}} und einem ersten Prämienkatalog.",
+    "review_title": "Was Mitglieder erhalten",
+    "skip": "Einrichtung überspringen",
+    "skip_body": "Was Sie hier gewählt haben, wird nicht gespeichert, und das Programm bleibt, wie es ist. Sie können die Einrichtung jederzeit unter „Sammeln & Prämien“ wieder öffnen.",
+    "skip_confirm": "Einrichtung überspringen",
+    "skip_keep": "Weitermachen",
+    "skip_title": "Einrichtung überspringen?",
+    "step_of": "Schritt {{n}} von {{total}}",
+    "steps": "Schritte",
+    "suggested": "Empfohlen für Ihr Unternehmen",
+    "title": "Programm einrichten",
+    "to_configure": "Zurück zum Einstellen",
+    "to_members": "Zu den Mitgliedern",
+    "to_options": "Zu „Sammeln & Prämien“"
+  }
+}

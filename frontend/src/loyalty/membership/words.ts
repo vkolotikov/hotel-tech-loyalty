@@ -48,12 +48,14 @@ export const ERASE_GOES_WORDS: Record<string, string> = {
   push: 'The app’s push notifications',
   cards: 'Their cards and QR codes',
   sign_in: 'Their sign-in to the app and the portal',
+  credit: 'Any unspent credit',
 }
 
 /** What the Delete dialog lists as staying (membershipMath.ts `ERASE_STAYS`). */
 export const ERASE_STAYS_WORDS: Record<string, string> = {
   number: 'The member number',
   history: 'The points history, bookings and redemptions, so the figures still add up',
+  visits: 'The stamp card and credit history',
 }
 
 /** Why two members look like one person (DuplicatesController). */
@@ -72,6 +74,8 @@ export const MERGE_MOVES_WORDS: Record<string, string> = {
   cards: 'Cards and QR codes',
   messages: 'Notifications, reviews and campaign emails',
   guests: 'The link to the guest record in the CRM',
+  stamps: 'Stamps and stamp cards (one stamp per day)',
+  credit: 'Credit, added to the kept member’s balance',
 }
 
 /** A row an import did not take (ImportProblems on the server). */

@@ -1,7 +1,8 @@
 import { useState, type ReactNode } from 'react'
+import { Link } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { CheckCheck, Pencil, Plus, Trash2, X } from 'lucide-react'
+import { CheckCheck, Pencil, Plus, Sparkles, Trash2, X } from 'lucide-react'
 import { Button } from '../../workspace/ui/Button'
 import { Dialog } from '../../workspace/ui/Dialog'
 import { Notice } from '../../workspace/ui/Notice'
@@ -56,7 +57,12 @@ export function ProgramPage() {
   return (
     <div className="space-y-8 px-4 py-6 lg:px-6">
       <PageHeader title={t('loyalty.program.title', 'Program')} line={t('loyalty.program.line', 'The tiers members climb, the benefits they give, and points boosts.')}
-        below={!manage && <p data-read-only="" className="text-sm text-a-text-2">{t('loyalty.program.read_only', 'Only an owner or a manager can change the programme.')}</p>} />
+        below={!manage && <p data-read-only="" className="text-sm text-a-text-2">{t('loyalty.program.read_only', 'Only an owner or a manager can change the programme.')}</p>}>
+        {/* Release 7: the other ways to earn (points on spend, bonuses, stamps, check-in, cashback) are set there. */}
+        <Link to="/loyalty/options" className="inline-flex items-center gap-2 rounded-full border border-a-border bg-a-surface px-4 py-2.5 text-sm font-semibold text-a-text hover:bg-a-surface-2">
+          <Sparkles size={15} aria-hidden />{t('loyalty.options.ways_link', 'Ways to earn')}
+        </Link>
+      </PageHeader>
 
       {query.isError && !data && (
         <div className="max-w-xl space-y-3">

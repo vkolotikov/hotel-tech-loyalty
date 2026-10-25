@@ -1,1 +1,95 @@
-{}
+{
+  "title": "Credit",
+  "use_action": "Use credit",
+  "adjust_action": "Adjust",
+  "earning": "Members get {{percent}}% of what they spend back as credit, to use at the desk.",
+  "off": "Cashback is switched off: nothing new is earned, and this credit can still be used at the desk.",
+  "none": "No credit yet.",
+  "history": "Credit history",
+  "by": "by {{name}}",
+  "line_balance": "credit {{amount}}",
+  "use_title": "Use credit of {{name}}",
+  "adjust_title": "Correct the credit of {{name}}",
+  "amount": "Amount ({{currency}})",
+  "adjust_hint": "A minus sign takes credit off, e.g. -5.",
+  "note": "Note (optional)",
+  "note_hint": "The member sees it in their credit history.",
+  "note_example": "e.g. Lunch for two",
+  "reason": "Reason",
+  "reason_example": "e.g. Cashback missed on a visit",
+  "balance_now": "Credit now: {{amount}}",
+  "balance_then": "Credit after: {{amount}}",
+  "use_do": "Take off credit",
+  "adjust_do": "Save the correction",
+  "line": {
+    "earn_appointment": "Cashback on an appointment",
+    "earn_stay": "Cashback on a stay",
+    "earn_purchase": "Cashback on a purchase",
+    "earn": "Cashback",
+    "spend": "Used at the desk",
+    "reverse": "Cashback taken back (refunded or cancelled)",
+    "merge": "Moved at a merge of two memberships",
+    "forfeit": "Forfeited when the member was deleted",
+    "adjust": "Correction",
+    "other": "Other"
+  },
+  "done": {
+    "use": "Took {{amount}} off. Credit now: {{balance}}.",
+    "adjust": "Corrected by {{amount}}. Credit now: {{balance}}."
+  },
+  "load": {
+    "error": {
+      "not_found": "This member is not in your programme any more.",
+      "network": "No connection. Check the network and try again.",
+      "unknown": "The credit could not be loaded. Please try again."
+    }
+  },
+  "use": {
+    "problem": {
+      "amount": "Type an amount above zero.",
+      "decimals": "The venue’s currency does not take that many decimals.",
+      "too_large": "That is more than one step may take off.",
+      "over_balance": "The member has only {{balance}} in credit.",
+      "below_zero": "Credit cannot go below zero.",
+      "reason": "Say why."
+    },
+    "error": {
+      "credit_short": "The member has only {{balance}} in credit.",
+      "bad_amount": "Type an amount the venue’s currency can hold, above zero.",
+      "bad_currency": "The venue’s currency is not set. A manager can set it under Card & app.",
+      "already_erased": "This member was deleted; their credit was forfeited.",
+      "key_reused": "This press was already used for something else. Close the dialog and try again.",
+      "not_allowed": "Your account may not do this. A manager can change that under Team in the full admin.",
+      "no_capability": "Your account may not do this. A manager can change that under Team in the full admin.",
+      "invalid": "Check the amount.",
+      "not_found": "This member is not in your programme any more.",
+      "network": "No connection: nothing was saved. Try again.",
+      "unknown": "The credit could not be used. Nothing was taken off; please try again."
+    }
+  },
+  "adjust": {
+    "problem": {
+      "amount": "Type an amount other than zero: with a minus sign to take credit off.",
+      "decimals": "The venue’s currency does not take that many decimals.",
+      "too_large": "That is more than one correction may move.",
+      "over_balance": "The member has only {{balance}} in credit.",
+      "below_zero": "Credit cannot go below zero: the member has {{balance}}.",
+      "reason": "Say why the credit is corrected."
+    },
+    "error": {
+      "credit_short": "Credit cannot go below zero: the member has {{balance}}.",
+      "bad_amount": "Type an amount the venue’s currency can hold, other than zero.",
+      "bad_currency": "The venue’s currency is not set. A manager can set it under Card & app.",
+      "reason_required": "Say why the credit is corrected.",
+      "already_erased": "This member was deleted; their credit was forfeited.",
+      "key_reused": "This press was already used for something else. Close the dialog and try again.",
+      "manager_only": "Only an owner or a manager can correct credit.",
+      "not_allowed": "Only an owner or a manager can correct credit.",
+      "no_capability": "Only an owner or a manager can correct credit.",
+      "invalid": "Check the amount and the reason.",
+      "not_found": "This member is not in your programme any more.",
+      "network": "No connection: nothing was saved. Try again.",
+      "unknown": "The credit could not be corrected. Nothing was changed; please try again."
+    }
+  }
+}

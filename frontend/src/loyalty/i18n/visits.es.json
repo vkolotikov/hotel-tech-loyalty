@@ -1,1 +1,73 @@
-{}
+{
+  "title": "Visitas",
+  "check_in": "Registrar visita",
+  "add_purchase": "Añadir una compra",
+  "purchase_title": "Añadir una compra de {{name}}",
+  "amount": "Importe ({{currency}})",
+  "amount_hint": "Da puntos según su tasa.",
+  "amount_hint_cashback": "Da puntos según su tasa y devuelve un {{percent}} % como crédito.",
+  "amount_is": "Una compra de {{amount}}",
+  "note": "Nota (opcional)",
+  "note_hint": "Aparece en la línea de puntos del historial del miembro.",
+  "note_example": "p. ej., Almuerzo para dos",
+  "add": "Añadir la compra",
+  "card_label": "{{have}} de {{needed}} sellos",
+  "card_line": "{{have}} de {{needed}} — faltan {{left}}",
+  "completed": "Tarjetas completas: {{cards}}",
+  "off": "La tarjeta de sellos está desactivada: esta tarjeta conserva sus sellos, pero no recibe más.",
+  "recent": "Últimos sellos",
+  "cards": "Tarjetas completas",
+  "card_number": "Tarjeta {{number}}",
+  "said": {
+    "already_today": "Ya registró su visita hoy",
+    "checked_in": "Visita registrada",
+    "checkin_points": "+{{points}} puntos por la visita",
+    "purchase_points": "+{{points}} puntos",
+    "stamp": "+1 sello — {{have}} de {{needed}}",
+    "stamp_had": "El sello de hoy ya está en la tarjeta",
+    "card_points": "¡Tarjeta completa! +{{points}} puntos",
+    "card_reward": "¡Tarjeta completa! Recompensa gratis: {{reward}}",
+    "credit": "+{{amount}} de crédito"
+  },
+  "source": {
+    "appointment": "Cita",
+    "stay": "Estancia",
+    "check_in": "Visita",
+    "purchase": "Compra"
+  },
+  "given": {
+    "points": "+{{points}} puntos",
+    "reward": "Recompensa gratis: {{reward}}"
+  },
+  "gives": {
+    "points": "Una tarjeta completa da {{points}} puntos.",
+    "reward": "Una tarjeta completa regala: {{reward}}."
+  },
+  "problem": {
+    "amount": "Escriba el importe de la compra, mayor que 0.",
+    "too_much": "El importe puede ser como máximo {{max}}.",
+    "decimals": "El importe tiene como máximo dos decimales.",
+    "whole": "Los importes en {{currency}} son números enteros."
+  },
+  "load": {
+    "error": {
+      "not_found": "Este miembro ya no está en su programa.",
+      "network": "Sin conexión. Compruebe la red e inténtelo de nuevo.",
+      "unknown": "No se pudo cargar la tarjeta de sellos. Inténtelo de nuevo."
+    }
+  },
+  "desk": {
+    "error": {
+      "option_off": "El registro de visitas y ganar en recepción están desactivados. Un responsable puede activarlos en «Formas de ganar».",
+      "desk_earn_off": "Ganar en recepción está desactivado. Un responsable puede activarlo en «Formas de ganar».",
+      "amount_required": "Escriba el importe de la compra.",
+      "inactive": "La cuenta de este miembro está desactivada.",
+      "not_allowed": "Su cuenta no puede otorgar puntos. Un responsable puede permitirlo en Equipo, en el admin completo.",
+      "no_capability": "Su cuenta no puede otorgar puntos. Un responsable puede permitirlo en Equipo, en el admin completo.",
+      "invalid": "Revise el importe: mayor que 0, como máximo 1.000.000, en las unidades de su moneda.",
+      "not_found": "Este miembro ya no está en su programa.",
+      "network": "Sin conexión: no se guardó nada. Inténtelo de nuevo.",
+      "unknown": "No funcionó. No se guardó nada; inténtelo de nuevo."
+    }
+  }
+}

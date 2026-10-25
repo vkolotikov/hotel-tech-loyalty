@@ -1,1 +1,16 @@
-{}
+{
+  "title": "Stamp card",
+  "count": "{{have}} of {{needed}}",
+  "label": "{{have}} of {{needed}} stamps",
+  "full": "Your card is full: your reward is on its way.",
+  "reward_free": "Your reward: a free {{reward}}",
+  "completed": "Cards completed: {{cards}}",
+  "to_go_one": "{{count}} more visit to your reward",
+  "to_go_few": "{{count}} more visits to your reward",
+  "to_go_many": "{{count}} more visits to your reward",
+  "to_go_other": "{{count}} more visits to your reward",
+  "reward_points_one": "Your reward: {{points}} point",
+  "reward_points_few": "Your reward: {{points}} points",
+  "reward_points_many": "Your reward: {{points}} points",
+  "reward_points_other": "Your reward: {{points}} points"
+}

@@ -1,1 +1,16 @@
-{}
+{
+  "title": "Stempelkarte",
+  "count": "{{have}} von {{needed}}",
+  "label": "{{have}} von {{needed}} Stempeln",
+  "full": "Ihre Karte ist voll: Ihre Prämie ist unterwegs.",
+  "reward_free": "Ihre Prämie: gratis {{reward}}",
+  "completed": "Volle Karten: {{cards}}",
+  "to_go_one": "Noch {{count}} Besuch bis zu Ihrer Prämie",
+  "to_go_few": "Noch {{count}} Besuche bis zu Ihrer Prämie",
+  "to_go_many": "Noch {{count}} Besuche bis zu Ihrer Prämie",
+  "to_go_other": "Noch {{count}} Besuche bis zu Ihrer Prämie",
+  "reward_points_one": "Ihre Prämie: {{points}} Punkt",
+  "reward_points_few": "Ihre Prämie: {{points}} Punkte",
+  "reward_points_many": "Ihre Prämie: {{points}} Punkte",
+  "reward_points_other": "Ihre Prämie: {{points}} Punkte"
+}

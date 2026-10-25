@@ -159,11 +159,13 @@
       "birthday": "Das Geburtsdatum",
       "push": "Die Push-Benachrichtigungen der App",
       "cards": "Karten und QR-Codes",
-      "sign_in": "Die Anmeldung in der App und im Portal"
+      "sign_in": "Die Anmeldung in der App und im Portal",
+      "credit": "Nicht eingelöstes Guthaben"
     },
     "stays": {
       "number": "Die Mitgliedsnummer",
-      "history": "Der Punkteverlauf, Buchungen und Einlösungen, damit die Zahlen weiter stimmen"
+      "history": "Der Punkteverlauf, Buchungen und Einlösungen, damit die Zahlen weiter stimmen",
+      "visits": "Der Stempel- und Guthabenverlauf"
     },
     "error": {
       "manager_only": "Das kann nur ein Inhaber oder Manager.",
@@ -265,7 +267,9 @@
       "requests": "Anfragen zu Vorteilen",
       "cards": "Karten und QR-Codes",
       "messages": "Benachrichtigungen, Bewertungen und Kampagnen-E-Mails",
-      "guests": "Die Verknüpfung mit dem Gästedatensatz im CRM"
+      "guests": "Die Verknüpfung mit dem Gästedatensatz im CRM",
+      "stamps": "Stempel und Stempelkarten (ein Stempel pro Tag)",
+      "credit": "Das Guthaben, zu dem des bleibenden Mitglieds addiert"
     },
     "error": {
       "manager_only": "Das kann nur ein Inhaber oder Manager.",

@@ -16,7 +16,8 @@ use Illuminate\Validation\ValidationException;
  *
  * Every option is answered typed, with its default when the venue never set it; `save()` validates a partial change,
  * writes it (a new row gets group `loyalty`), flushes the settings cache and audits `loyalty.options_changed` with the
- * old and new values.
+ * old and new values. `programme_setup_completed_at` is the wizard's alone (`markSetUp()`, called by ProgrammeSetup);
+ * a change that names it is refused. `ways()` and `fields()` describe the options for the workspace's cards.
  */
 final class ProgrammeOptions
 {
@@ -71,6 +72,77 @@ final class ProgrammeOptions
     ];
 
     /**
+     * The ways to earn and be rewarded as the options page and the wizard show them, one card each (release 7 §1): the
+     * option that switches the way on (`switch`), or the number whose 0 means off (`zero_off`: no expiry, no bonus),
+     * and the options the card sets. The workspace draws its cards from this list; it keeps no copy.
+     *
+     * @var array<string, array{switch?: string, zero_off?: string, fields: list<string>}>
+     */
+    public const WAYS = [
+        'points_on_spend' => ['switch' => 'points_on_bookings', 'fields' => ['points_per_currency']],
+        'points_expiry'   => ['zero_off' => 'points_expiry_months', 'fields' => ['points_expiry_months']],
+        'welcome_bonus'   => ['zero_off' => 'welcome_bonus_points', 'fields' => ['welcome_bonus_points']],
+        'birthday_bonus'  => ['zero_off' => 'birthday_bonus_points', 'fields' => ['birthday_bonus_points']],
+        'referrals'       => ['switch' => 'referral_enabled', 'fields' => ['referrer_bonus_points', 'referee_bonus_points', 'referral_reward_on']],
+        'stamp_card'      => ['switch' => 'stamps_enabled', 'fields' => ['stamps_per_card', 'stamp_reward_kind', 'stamp_reward_points', 'stamp_reward_id']],
+        'check_in'        => ['switch' => 'checkin_enabled', 'fields' => ['checkin_points']],
+        'desk_earn'       => ['switch' => 'desk_earn_enabled', 'fields' => []],
+        'cashback'        => ['switch' => 'cashback_enabled', 'fields' => ['cashback_percent']],
+    ];
+
+    /** A field that counts only while another option holds a value: [that option, the value]. */
+    public const SHOWN_WHEN = [
+        'stamp_reward_points' => ['stamp_reward_kind', 'points'],
+        'stamp_reward_id'     => ['stamp_reward_kind', 'reward'],
+    ];
+
+    /** Written only by the setup wizard's apply and skip (markSetUp()), never by a change. */
+    public const WIZARD_ONLY = ['programme_setup_completed_at'];
+
+    /**
+     * The cards, as the workspace reads them.
+     *
+     * @return list<array{key: string, switch: ?string, zero_off: ?string, fields: list<string>}>
+     */
+    public static function ways(): array
+    {
+        $out = [];
+        foreach (self::WAYS as $key => $way) {
+            $out[] = ['key' => $key, 'switch' => $way['switch'] ?? null, 'zero_off' => $way['zero_off'] ?? null, 'fields' => $way['fields']];
+        }
+
+        return $out;
+    }
+
+    /**
+     * Each option a change may name: its type (`bool`, `int`, `decimal`, `enum`, `reward`), its default, its bounds,
+     * its choices and when it counts — so the workspace checks a field as the server will, without a copy of the rules.
+     *
+     * @return array<string, array{type: string, default: mixed, min: float|int|null, max: float|int|null, choices: ?list<string>, when: ?array{field: string, is: string}}>
+     */
+    public static function fields(): array
+    {
+        $out = [];
+        foreach (self::OPTIONS as $key => [$type, $default]) {
+            if (in_array($key, self::WIZARD_ONLY, true)) {
+                continue;
+            }
+            $enum = str_starts_with($type, 'enum:');
+            $when = self::SHOWN_WHEN[$key] ?? null;
+            $out[$key] = [
+                'type'    => $enum ? 'enum' : $type,
+                'default' => $default,
+                'min'     => self::BOUNDS[$key][0] ?? null,
+                'max'     => self::BOUNDS[$key][1] ?? null,
+                'choices' => $enum ? explode('|', substr($type, 5)) : null,
+                'when'    => $when ? ['field' => $when[0], 'is' => $when[1]] : null,
+            ];
+        }
+
+        return $out;
+    }
+
+    /**
      * Every option of the organisation, typed, defaults filled in.
      *
      * @return array<string, mixed>
@@ -114,18 +186,7 @@ final class ProgrammeOptions
         }
 
         $before = self::for($orgId);
-        DB::transaction(function () use ($orgId, $clean) {
-            foreach ($clean as $key => $value) {
-                [$type, , $label] = self::OPTIONS[$key];
-                $row = HotelSetting::withoutGlobalScopes()->firstOrNew(['organization_id' => $orgId, 'key' => $key]);
-                if (!$row->exists) {
-                    $row->forceFill(['organization_id' => $orgId, 'type' => self::rowType($type), 'group' => 'loyalty', 'label' => $label]);
-                }
-                $row->value = self::store($type, $value);
-                $row->save();
-            }
-        });
-        HotelSetting::flushCacheFor($orgId);
+        self::write($orgId, $clean);
         $after = self::for($orgId);
 
         $changed = array_filter(array_keys($clean), fn (string $k) => $before[$k] !== $after[$k]);
@@ -149,7 +210,55 @@ final class ProgrammeOptions
     }
 
     /**
-     * The changes, typed and checked; unknown keys are refused.
+     * The wizard was applied or skipped: stamps `programme_setup_completed_at` (now) and answers it. The caller audits
+     * what happened (`loyalty.programme_setup` / `loyalty.programme_setup_skipped`), so the stamp writes no
+     * `loyalty.options_changed` row of its own.
+     */
+    public static function markSetUp(int $orgId): string
+    {
+        $at = now()->toIso8601String();
+        self::write($orgId, ['programme_setup_completed_at' => $at]);
+
+        return $at;
+    }
+
+    /**
+     * Writes typed values (a new row gets group `loyalty`, its type and label) and flushes the settings cache, inside
+     * a transaction (a savepoint when the caller has one open).
+     *
+     * @param array<string, mixed> $clean
+     */
+    private static function write(int $orgId, array $clean): void
+    {
+        // A new row takes the BOUND tenant's organisation (BelongsToOrganization's creating hook), so the organisation
+        // named is bound while writing — a console or queued caller with another tenant bound writes this one's rows.
+        $bound = app()->bound('current_organization_id');
+        $prior = $bound ? app('current_organization_id') : null;
+        app()->instance('current_organization_id', $orgId);
+        try {
+            DB::transaction(function () use ($orgId, $clean) {
+                foreach ($clean as $key => $value) {
+                    [$type, , $label] = self::OPTIONS[$key];
+                    $row = HotelSetting::withoutGlobalScopes()->firstOrNew(['organization_id' => $orgId, 'key' => $key]);
+                    if (!$row->exists) {
+                        $row->forceFill(['organization_id' => $orgId, 'type' => self::rowType($type), 'group' => 'loyalty', 'label' => $label]);
+                    }
+                    $row->value = self::store($type, $value);
+                    $row->save();
+                }
+            });
+        } finally {
+            if ($bound) {
+                app()->instance('current_organization_id', $prior);
+            } else {
+                app()->forgetInstance('current_organization_id');
+            }
+        }
+        HotelSetting::flushCacheFor($orgId);
+    }
+
+    /**
+     * The changes, typed and checked; unknown keys are refused, and so is the wizard's own stamp (WIZARD_ONLY).
      *
      * @param array<string, mixed> $changes
      * @return array<string, mixed>
@@ -161,6 +270,10 @@ final class ProgrammeOptions
         foreach ($changes as $key => $value) {
             if (!array_key_exists($key, self::OPTIONS)) {
                 $errors[$key] = ['This is not a loyalty option.'];
+                continue;
+            }
+            if (in_array($key, self::WIZARD_ONLY, true)) {
+                $errors[$key] = ['This is set by the setup wizard.'];
                 continue;
             }
             [$type] = self::OPTIONS[$key];
@@ -178,10 +291,15 @@ final class ProgrammeOptions
             }
             $clean[$key] = $typed;
         }
-        // A full card that gives a reward needs one.
-        $kind = $clean['stamp_reward_kind'] ?? null;
-        if ($kind === 'reward' && !array_key_exists('stamp_reward_id', $clean) && self::get($orgId, 'stamp_reward_id') === null) {
-            $errors['stamp_reward_id'] = ['Choose the reward a full card gives.'];
+        // A full card that gives a reward needs one: the kind and the reward as they will stand after the change (an
+        // emptied reward under a stored `reward` kind is refused too). Checked only when the change names either.
+        if (!isset($errors['stamp_reward_kind']) && !isset($errors['stamp_reward_id'])
+            && (array_key_exists('stamp_reward_kind', $clean) || array_key_exists('stamp_reward_id', $clean))) {
+            $kind = array_key_exists('stamp_reward_kind', $clean) ? $clean['stamp_reward_kind'] : self::get($orgId, 'stamp_reward_kind');
+            $reward = array_key_exists('stamp_reward_id', $clean) ? $clean['stamp_reward_id'] : self::get($orgId, 'stamp_reward_id');
+            if ($kind === 'reward' && $reward === null) {
+                $errors['stamp_reward_id'] = ['Choose the reward a full card gives.'];
+            }
         }
         if ($errors !== []) {
             throw ValidationException::withMessages($errors);
@@ -222,7 +340,9 @@ final class ProgrammeOptions
                 if ($value === null || $value === '') {
                     return null;
                 }
-                $own = is_numeric($value) && Reward::withoutGlobalScopes()->where('organization_id', $orgId)->whereKey((int) $value)->exists();
+                // One of this organisation's rewards that members can still be given (the picker lists the active ones).
+                $own = is_numeric($value) && Reward::withoutGlobalScopes()->where('organization_id', $orgId)->whereKey((int) $value)
+                    ->where('is_active', true)->exists();
                 if ($own) {
                     return (int) $value;
                 }

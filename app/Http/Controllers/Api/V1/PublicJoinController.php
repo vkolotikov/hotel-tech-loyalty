@@ -4,8 +4,8 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Models\Brand;
-use App\Models\HotelSetting;
 use App\Models\LoyaltyTier;
+use App\Services\Loyalty\Programme\ProgrammeOptions;
 use Illuminate\Http\JsonResponse;
 
 /**
@@ -64,8 +64,9 @@ class PublicJoinController extends Controller
             ],
             'accepting_joins' => true,
             'starting_tier'   => $tier->name,
-            // Shown on the form as the reason to bother signing up.
-            'welcome_bonus'   => (int) HotelSetting::getValue('welcome_bonus_points', 0),
+            // Shown on the form as the reason to bother signing up: what sign-up awards, read the way it reads it
+            // (ProgrammeOptions, 500 for a venue that never set it — not 0, which promised nothing).
+            'welcome_bonus'   => (int) ProgrammeOptions::get((int) $org->id, 'welcome_bonus_points'),
             // The page paints the venue before any session exists.
             'theme'           => \App\Services\Portal\PortalTheme::for($org),
         ]);

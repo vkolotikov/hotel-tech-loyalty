@@ -1,1 +1,73 @@
-{}
+{
+  "title": "Visites",
+  "check_in": "Enregistrer la visite",
+  "add_purchase": "Ajouter un achat",
+  "purchase_title": "Ajouter un achat pour {{name}}",
+  "amount": "Montant ({{currency}})",
+  "amount_hint": "Rapporte des points à votre taux.",
+  "amount_hint_cashback": "Rapporte des points à votre taux, et {{percent}} % en crédit.",
+  "amount_is": "Un achat de {{amount}}",
+  "note": "Note (facultatif)",
+  "note_hint": "Figure sur la ligne de points dans l’historique du membre.",
+  "note_example": "p. ex. Déjeuner pour deux",
+  "add": "Ajouter l’achat",
+  "card_label": "{{have}} tampons sur {{needed}}",
+  "card_line": "{{have}} sur {{needed}} — encore {{left}}",
+  "completed": "Cartes complètes : {{cards}}",
+  "off": "La carte de fidélité à tampons est désactivée : cette carte garde ses tampons mais n’en reçoit plus.",
+  "recent": "Derniers tampons",
+  "cards": "Cartes complètes",
+  "card_number": "Carte {{number}}",
+  "said": {
+    "already_today": "Visite déjà enregistrée aujourd’hui",
+    "checked_in": "Visite enregistrée",
+    "checkin_points": "+{{points}} points de visite",
+    "purchase_points": "+{{points}} points",
+    "stamp": "+1 tampon — {{have}} sur {{needed}}",
+    "stamp_had": "Le tampon du jour est déjà sur la carte",
+    "card_points": "Carte complète ! +{{points}} points",
+    "card_reward": "Carte complète ! Récompense offerte : {{reward}}",
+    "credit": "+{{amount}} de crédit"
+  },
+  "source": {
+    "appointment": "Rendez-vous",
+    "stay": "Séjour",
+    "check_in": "Visite",
+    "purchase": "Achat"
+  },
+  "given": {
+    "points": "+{{points}} points",
+    "reward": "Récompense offerte : {{reward}}"
+  },
+  "gives": {
+    "points": "Une carte complète rapporte {{points}} points.",
+    "reward": "Une carte complète offre : {{reward}}."
+  },
+  "problem": {
+    "amount": "Saisissez le montant de l’achat, supérieur à 0.",
+    "too_much": "Le montant peut être au plus de {{max}}.",
+    "decimals": "Le montant a au plus deux décimales.",
+    "whole": "Les montants en {{currency}} sont des nombres entiers."
+  },
+  "load": {
+    "error": {
+      "not_found": "Ce membre ne fait plus partie de votre programme.",
+      "network": "Pas de connexion. Vérifiez le réseau et réessayez.",
+      "unknown": "La carte à tampons n’a pas pu être chargée. Veuillez réessayer."
+    }
+  },
+  "desk": {
+    "error": {
+      "option_off": "L’enregistrement des visites et les gains à l’accueil sont désactivés. Un responsable peut les activer dans « Façons de gagner ».",
+      "desk_earn_off": "Les gains à l’accueil sont désactivés. Un responsable peut les activer dans « Façons de gagner ».",
+      "amount_required": "Saisissez le montant de l’achat.",
+      "inactive": "Le compte de ce membre est désactivé.",
+      "not_allowed": "Votre compte ne peut pas attribuer de points. Un responsable peut l’autoriser dans Équipe, dans l’admin complète.",
+      "no_capability": "Votre compte ne peut pas attribuer de points. Un responsable peut l’autoriser dans Équipe, dans l’admin complète.",
+      "invalid": "Vérifiez le montant : supérieur à 0, au plus 1 000 000, dans les unités de votre devise.",
+      "not_found": "Ce membre ne fait plus partie de votre programme.",
+      "network": "Pas de connexion : rien n’a été enregistré. Réessayez.",
+      "unknown": "Cela n’a pas fonctionné. Rien n’a été enregistré ; veuillez réessayer."
+    }
+  }
+}

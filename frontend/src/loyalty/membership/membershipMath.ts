@@ -188,8 +188,8 @@ export function eraseReady(typed: string, name: string): boolean {
 }
 
 /** What goes and what stays when a member is deleted (the dialog's two lists, by word key). */
-export const ERASE_GOES = ['name', 'email', 'phone', 'birthday', 'push', 'cards', 'sign_in'] as const
-export const ERASE_STAYS = ['number', 'history'] as const
+export const ERASE_GOES = ['name', 'email', 'phone', 'birthday', 'push', 'cards', 'sign_in', 'credit'] as const
+export const ERASE_STAYS = ['number', 'history', 'visits'] as const
 
 // ─── The welcome email ────────────────────────────────────────────────────
 
@@ -220,7 +220,7 @@ export function pointsAfterMerge(keep: MemberRow, merge: MemberRow): { points: n
 }
 
 /** What moves to the kept member (the merge dialog's list, by word key): all of it (R2-3). */
-export const MERGE_MOVES = ['history', 'bookings', 'redemptions', 'referrals', 'requests', 'cards', 'messages', 'guests'] as const
+export const MERGE_MOVES = ['history', 'bookings', 'redemptions', 'referrals', 'requests', 'cards', 'messages', 'guests', 'stamps', 'credit'] as const
 
 export const mergeProblems = (reason: string): Problems => (reason.trim().length < 2 ? { reason: 'reason' } : {})
 

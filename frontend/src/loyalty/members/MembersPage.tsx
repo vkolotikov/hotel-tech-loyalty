@@ -20,6 +20,7 @@ import { AddMemberDialog } from '../membership/AddMemberDialog'
 import { membershipApi } from '../membership/api'
 import { ERRORS as MEMBERSHIP_ERRORS } from '../membership/errors'
 import { exportFileName, listActions } from '../membership/membershipMath'
+import { SetupBanner } from '../options/SetupBanner'
 import { filtersFrom, searchFor, toggleTier, withChange } from './membersQuery'
 
 const INPUT = 'rounded-lg border border-a-border bg-a-surface px-2.5 py-1.5 text-sm text-a-text'
@@ -103,6 +104,9 @@ export function MembersPage() {
           {t('loyalty.members.scan', 'Scan a card')}
         </Link>
       </PageHeader>
+
+      {/* Release 7: a manager is offered the programme's setup wizard until it is applied or skipped. */}
+      <SetupBanner />
 
       {download.isError && (
         <div className="max-w-xl"><Notice tone="danger">{t(...refusalKey('loyalty.membership', MEMBERSHIP_ERRORS, 'export', failureOf(download.error)))}</Notice></div>

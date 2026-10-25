@@ -7,7 +7,9 @@ use App\Models\LoyaltyMember;
 use App\Models\NfcCard;
 use App\Models\User;
 use App\Services\AnalyticsService;
+use App\Services\Loyalty\Credit\CreditLedger;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
 /**
@@ -18,7 +20,8 @@ use Illuminate\Support\Str;
  * What goes: the person's name (now "Deleted Member"), email (a stub that can never receive mail), phone, nationality,
  * photo, date of birth (R2-4: the full admin kept it before), password, every sign-in token, the push token, the QR
  * token and the NFC cards; the account is switched off. What stays: the member number, the referral code, the points
- * history, bookings and the CRM guest link, so the ledger and the reports still add up.
+ * history, bookings and the CRM guest link, so the ledger and the reports still add up. Release 7: the cashback credit
+ * ledger stays too, and its balance is forfeited (a line to zero, audited).
  *
  * A member is recognised as deleted by that stub email, which names the member's own id and nothing else can carry
  * (`isErased`). The audit row is written once the deletion has succeeded (the full admin wrote it before, and kept it
@@ -46,7 +49,14 @@ final class MemberErasure
         $email = $user?->email;
         $name = $user?->name;
 
-        DB::transaction(function () use ($user, $member) {
+        DB::transaction(function () use ($user, $member, $by) {
+            // Release 7 (spec 2026-10-25 §3): the cashback credit is forfeited — an `adjust` line to zero, audited
+            // `credit.forfeited_on_erasure` — and its ledger rows stay (money records). The ledger writes it, under the
+            // member row's lock, in a savepoint of this transaction: an erasure that fails keeps the balance.
+            if (Schema::hasTable('credit_transactions') && Schema::hasColumn('loyalty_members', 'credit_balance')) {
+                app(CreditLedger::class)->forfeitOnErasure($member, $by);
+            }
+
             // Every session and API token: the member app's sign-in answers 401 from now on.
             if ($user) {
                 try {

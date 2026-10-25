@@ -86,8 +86,14 @@ function readLocale(locale: string): unknown {
   const common = JSON.parse(fs.readFileSync(path.join(LOCALES_DIR, locale, 'common.json'), 'utf8'))
   // The member portal registers its bundle under `portal` at runtime
   // (src/portal/i18n/index.ts); resolve `portal.*` keys the same way.
-  const portalFile = path.join(SRC_DIR, 'portal/i18n', `portal.${locale}.json`)
-  const portal = fs.existsSync(portalFile) ? JSON.parse(fs.readFileSync(portalFile, 'utf8')) : {}
+  // Release 7 adds area bundles beside it, registered under `portal.<area>` (stamps, credit): every <area>.<lang>.json there.
+  const portalPart = (name: string) => {
+    const file = path.join(SRC_DIR, 'portal/i18n', `${name}.${locale}.json`)
+    return fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, 'utf8')) : {}
+  }
+  const portalAreas = fs.readdirSync(path.join(SRC_DIR, 'portal/i18n'))
+    .map(f => /^([a-z]+)\.en\.json$/.exec(f)?.[1]).filter((n): n is string => !!n && n !== 'portal')
+  const portal = { ...portalPart('portal'), ...Object.fromEntries(portalAreas.map(n => [n, portalPart(n)])) }
   // The appointments workspace registers its bundle under `appointments`
   // the same way (src/appointments/i18n/index.ts).
   const appointmentsFile = path.join(SRC_DIR, 'appointments/i18n', `appointments.${locale}.json`)

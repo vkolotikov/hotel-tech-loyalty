@@ -1,1 +1,16 @@
-{}
+{
+  "title": "Карточка отметок",
+  "count": "{{have}} из {{needed}}",
+  "label": "Отметок: {{have}} из {{needed}}",
+  "full": "Карточка заполнена: награда уже в пути.",
+  "reward_free": "Ваша награда: {{reward}} бесплатно",
+  "completed": "Заполнено карточек: {{cards}}",
+  "to_go_one": "Ещё {{count}} визит до награды",
+  "to_go_few": "Ещё {{count}} визита до награды",
+  "to_go_many": "Ещё {{count}} визитов до награды",
+  "to_go_other": "Ещё {{count}} визита до награды",
+  "reward_points_one": "Ваша награда: {{points}} балл",
+  "reward_points_few": "Ваша награда: {{points}} балла",
+  "reward_points_many": "Ваша награда: {{points}} баллов",
+  "reward_points_other": "Ваша награда: {{points}} балла"
+}

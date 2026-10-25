@@ -148,6 +148,66 @@ class LoyaltyPresetService
 
     public const NO_PROGRAMME_INDUSTRIES = [];
 
+    /**
+     * What each preset recommends for the ways to earn the venue chooses itself (release 7, spec 2026-10-25 §1), beside
+     * the point economics the preset already carries (points per unit, expiry, welcome and referral bonuses, points on
+     * bookings), which recommendedOptions() reads from PRESETS so there is one copy of them. A key left out keeps
+     * ProgrammeOptions' default (stamps, check-in, earning at the desk and cashback off).
+     *
+     * - Visit-led businesses (beauty, restaurants, fitness) get a stamp card, its full card worth about one of the
+     *   preset's cheaper rewards; a gym checks members in, since attendance is what it rewards.
+     * - Businesses that take payment at a counter (restaurants, shops, the generic small business) earn at the desk.
+     * - Cashback stays off everywhere: it is money, and a venue switches it on knowingly.
+     *
+     * @var array<string, array<string, bool|int|float|string>>
+     */
+    public const RECOMMENDED_WAYS = [
+        'hotel_classic'         => ['birthday_bonus_points' => 500],
+        'hotel_lite'            => ['birthday_bonus_points' => 250],
+        'beauty'                => ['birthday_bonus_points' => 200, 'stamps_enabled' => true, 'stamps_per_card' => 8, 'stamp_reward_kind' => 'points', 'stamp_reward_points' => 400],
+        'restaurant'            => ['birthday_bonus_points' => 200, 'stamps_enabled' => true, 'stamps_per_card' => 10, 'stamp_reward_kind' => 'points', 'stamp_reward_points' => 200, 'desk_earn_enabled' => true],
+        'fitness'               => ['birthday_bonus_points' => 200, 'stamps_enabled' => true, 'stamps_per_card' => 10, 'stamp_reward_kind' => 'points', 'stamp_reward_points' => 300, 'checkin_enabled' => true, 'checkin_points' => 10],
+        'medical'               => ['birthday_bonus_points' => 50],
+        'simple_two_tier'       => ['birthday_bonus_points' => 100, 'desk_earn_enabled' => true],
+        'education'             => ['birthday_bonus_points' => 150],
+        'professional_services' => ['birthday_bonus_points' => 100],
+        'real_estate'           => ['birthday_bonus_points' => 100],
+        'retail'                => ['birthday_bonus_points' => 100, 'desk_earn_enabled' => true],
+    ];
+
+    /**
+     * The options a preset recommends, as ProgrammeOptions names them: every way's switch and numbers (the stamp card's
+     * reward is never chosen for the venue — a preset's rewards do not exist before it is applied). Additive: apply()
+     * does not read it; the workspace's setup wizard pre-ticks and pre-fills its cards from it.
+     *
+     * @return array<string, bool|int|float|string>
+     */
+    public function recommendedOptions(string $key): array
+    {
+        $resolvedKey = self::ALIASES[$key] ?? $key;
+        $preset = self::PRESETS[$resolvedKey] ?? null;
+        if (!$preset) {
+            throw new \InvalidArgumentException("Unknown membership preset '{$key}'.");
+        }
+
+        $defaults = \App\Services\Loyalty\Programme\ProgrammeOptions::fields();
+        $out = [];
+        foreach ($defaults as $option => $field) {
+            if ($field['default'] !== null) {
+                $out[$option] = $field['default'];
+            }
+        }
+
+        return array_merge($out, array_filter([
+            'points_on_bookings'    => array_key_exists('points_on_bookings', $preset) ? (bool) $preset['points_on_bookings'] : null,
+            'points_per_currency'   => isset($preset['points_per_currency']) ? (float) $preset['points_per_currency'] : null,
+            'points_expiry_months'  => $preset['points_expiry_months'] ?? null,
+            'welcome_bonus_points'  => (int) ($preset['welcome_bonus'] ?? 500),
+            'referrer_bonus_points' => $preset['referrer_bonus'] ?? null,
+            'referee_bonus_points'  => $preset['referee_bonus'] ?? null,
+        ], fn ($v) => $v !== null), self::RECOMMENDED_WAYS[$resolvedKey] ?? []);
+    }
+
     private const ALIASES = [
         'hotel'       => 'hotel_classic',
         'hospitality' => 'restaurant',

@@ -72,6 +72,8 @@ export interface MemberRow {
   is_active: boolean
   joined_at: string | null
   last_activity_at: string | null
+  /** Release 7 (spec 2026-10-25 §3): cashback credit in the venue's currency (CreditLedger); absent from a server before release 7. */
+  credit_balance?: number
 }
 
 export interface Figures {

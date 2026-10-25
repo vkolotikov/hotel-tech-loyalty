@@ -1,1 +1,243 @@
-{}
+{
+  "amount": {
+    "months_many": "{{months}} months",
+    "months_one": "1 month",
+    "points_many": "{{points}} points",
+    "points_one": "1 point"
+  },
+  "banner": {
+    "line": "Choose how members earn and what they get back, in four short steps. You can change everything later.",
+    "not_now": "Not now",
+    "skip_body": "Nothing changes now, and this suggestion will not come back. You can open the setup any time from Ways to earn.",
+    "skip_confirm": "Skip setup",
+    "skip_keep": "Back",
+    "skip_title": "Skip the setup?",
+    "start": "Start",
+    "title": "Set up your programme in a few minutes"
+  },
+  "card": {
+    "save": "Save",
+    "saved": "Saved. Members get this from now on.",
+    "unsaved": "Not saved yet."
+  },
+  "choice": {
+    "referral_reward_on": {
+      "first_visit": "After the friend’s first visit",
+      "signup": "As soon as the friend joins"
+    },
+    "stamp_reward_kind": {
+      "points": "Points",
+      "reward": "A reward"
+    }
+  },
+  "choose_reward": "Choose a reward…",
+  "field": {
+    "birthday_bonus_points": "Points on their birthday",
+    "cashback_percent": "Credit back, as a % of the spend",
+    "checkin_points": "Points for a check-in",
+    "points_expiry_months": "Months until points expire",
+    "points_per_currency": "Points for each {{money}} spent",
+    "referee_bonus_points": "Points for the friend",
+    "referral_reward_on": "When they get them",
+    "referrer_bonus_points": "Points for the member who refers",
+    "stamp_reward_id": "Reward for a full card",
+    "stamp_reward_kind": "A full card gives",
+    "stamp_reward_points": "Points for a full card",
+    "stamps_per_card": "Stamps on a card",
+    "welcome_bonus_points": "Points when they join"
+  },
+  "hint": {
+    "cashback_percent": "Credit is spent at the desk only; it is never paid out.",
+    "checkin_points": "0 counts the visit without giving points.",
+    "points_per_currency": "Higher tiers multiply it by their earn rate.",
+    "stamp_reward_id": "From your rewards catalogue. The member gets a code to show at the desk.",
+    "stamps_per_card": "A change applies to new cards; cards already started keep their number."
+  },
+  "line": "How members earn points and what they get back. Switch a way on or off and set its numbers; members see a saved change at once.",
+  "load": {
+    "error": {
+      "network": "No connection. Check the network and try again.",
+      "unknown": "The programme’s options could not be loaded. Please try again."
+    }
+  },
+  "no_rewards": "Your catalogue has no rewards yet. Add one under Rewards, or let a full card give points.",
+  "open_rewards": "Open Rewards",
+  "open_wizard": "Setup wizard",
+  "part": {
+    "boosts": "Boosts",
+    "boosts_count": "On now or coming up",
+    "boosts_line": "Extra points for a while, such as a double points weekend.",
+    "offers": "Offers",
+    "offers_count": "Switched on",
+    "offers_line": "Deals for members for a while, such as a discount or bonus points.",
+    "open_offers": "Open offers",
+    "open_program": "Open Program",
+    "open_rewards": "Open Rewards",
+    "rewards": "Rewards",
+    "rewards_count": "In the catalogue",
+    "rewards_line": "What members spend their points on.",
+    "tiers": "Tiers",
+    "tiers_count": "In the ladder",
+    "tiers_line": "The levels members climb as they earn, each with its benefits."
+  },
+  "parts_title": "The rest of your programme",
+  "preset": {
+    "beauty": "Beauty and spa",
+    "education": "Education",
+    "fitness": "Fitness",
+    "hotel_classic": "Hotel, five tiers",
+    "hotel_lite": "Hotel, three tiers",
+    "medical": "Clinic",
+    "professional_services": "Professional services",
+    "real_estate": "Property",
+    "restaurant": "Restaurant and café",
+    "retail": "Shop and retail",
+    "simple_two_tier": "Simple, two tiers"
+  },
+  "preset_line": {
+    "beauty": "Welcome, Devotee and Inner Circle. Rewards regular visits.",
+    "education": "Learner, Scholar and Alumni. Rewards study rather than spend.",
+    "fitness": "Member, Plus and Pro. Rewards coming in to train.",
+    "hotel_classic": "Bronze to Diamond. Points for every stay; higher tiers earn faster.",
+    "hotel_lite": "Member, Plus and Elite. Simple, for smaller and boutique hotels.",
+    "medical": "Patient and Care Plus. Priority booking; points for bookings start off.",
+    "professional_services": "Client, Preferred and Partner. Large, rare jobs, where referrals count most.",
+    "real_estate": "Client, Preferred and Partner. Rewards referrals and repeat clients.",
+    "restaurant": "Regular, Loyalist and Insider. Rewards come quickly at small spends.",
+    "retail": "Member, Insider and VIP. Frequent small purchases; rewards land early.",
+    "simple_two_tier": "Member and VIP. Easy to run for any small business."
+  },
+  "problem": {
+    "choice": "Choose one of the options.",
+    "number": "Enter a number from {{min}} to {{max}}, e.g. 2.5.",
+    "reward": "Choose the reward a full card gives.",
+    "whole": "Enter a whole number from {{min}} to {{max}}."
+  },
+  "read_only": "Only an owner or a manager can change these. You see them as they are.",
+  "save": {
+    "error": {
+      "invalid": "Check the fields marked below.",
+      "manager_only": "Only an owner or a manager can change the programme.",
+      "network": "No connection: nothing was saved. Try again.",
+      "no_capability": "Only an owner or a manager can change the programme.",
+      "not_allowed": "Only an owner or a manager can change the programme.",
+      "unknown": "This could not be saved. Please try again."
+    }
+  },
+  "sentence": {
+    "birthday_bonus": "Members get {{points}} on their birthday.",
+    "birthday_bonus_off": "Members get nothing on their birthday.",
+    "cashback": "Members get {{percent}}% of what they spend back as credit, to use at the desk.",
+    "cashback_off": "No cashback credit.",
+    "check_in_off": "No check-in at the desk.",
+    "check_in_points": "Staff check members in at the desk, once a day: each check-in gives {{points}} and counts as a visit.",
+    "check_in_visit": "Staff check members in at the desk, once a day: each check-in counts as a visit.",
+    "desk_earn": "Staff add a purchase at the desk after a scan, and the member earns points for it.",
+    "desk_earn_off": "Purchases at the desk earn nothing.",
+    "points_expiry": "Points expire {{months}} after they are earned.",
+    "points_expiry_off": "Points never expire.",
+    "points_on_spend": "Members get {{points}} for every {{money}} they spend.",
+    "points_on_spend_off": "Bookings earn no points.",
+    "referrals_first_visit": "A member who refers a friend gets {{referrer}} and the friend gets {{referee}}, once the friend has made a first visit.",
+    "referrals_off": "Members have no referral link.",
+    "referrals_signup": "A member who refers a friend gets {{referrer}} and the friend gets {{referee}}, as soon as the friend joins.",
+    "stamp_card_off": "No stamp card.",
+    "stamp_card_points": "Members collect a stamp for each visit, one a day. A card holds {{stamps}} stamps; a full card gives {{points}}.",
+    "stamp_card_reward": "Members collect a stamp for each visit, one a day. A card holds {{stamps}} stamps; a full card gives {{reward}}.",
+    "stamp_card_reward_unset": "Members collect a stamp for each visit, one a day. A card holds {{stamps}} stamps; a full card gives a reward you choose.",
+    "welcome_bonus": "New members get {{points}} when they join.",
+    "welcome_bonus_off": "New members get no welcome bonus."
+  },
+  "setup": {
+    "error": {
+      "invalid": "Some choices need another look. Check the steps marked and apply again.",
+      "key_reused": "This setup changed after it was sent. Apply it again.",
+      "manager_only": "Only an owner or a manager can change the programme.",
+      "network": "No connection: the setup was not applied. Try again; nothing is applied twice.",
+      "no_capability": "Only an owner or a manager can change the programme.",
+      "not_allowed": "Only an owner or a manager can change the programme.",
+      "unknown": "The setup could not be applied. Please try again."
+    }
+  },
+  "skip": {
+    "error": {
+      "manager_only": "Only an owner or a manager can change the programme.",
+      "network": "No connection. Try again.",
+      "no_capability": "Only an owner or a manager can change the programme.",
+      "not_allowed": "Only an owner or a manager can change the programme.",
+      "unknown": "That did not work. Please try again."
+    }
+  },
+  "step": {
+    "business": "Your business",
+    "choose": "Choose",
+    "configure": "Configure",
+    "review": "Review"
+  },
+  "title": "Ways to earn",
+  "way": {
+    "birthday_bonus": "Birthday bonus",
+    "cashback": "Cashback credit",
+    "check_in": "Check-in",
+    "desk_earn": "Earn at the desk",
+    "points_expiry": "Points expiry",
+    "points_on_spend": "Points on spend",
+    "referrals": "Referrals",
+    "stamp_card": "Stamp card",
+    "welcome_bonus": "Welcome bonus"
+  },
+  "way_line": {
+    "birthday_bonus": "Points on the member’s birthday.",
+    "cashback": "Part of what members spend comes back as credit for the desk.",
+    "check_in": "Staff check a member in at the desk after a scan.",
+    "desk_earn": "Staff add a purchase made at the desk after a scan.",
+    "points_expiry": "Unused points run out after a while, which brings members back.",
+    "points_on_spend": "Points for completed bookings, by what was spent.",
+    "referrals": "Points for bringing a friend, for both of them.",
+    "stamp_card": "A stamp for each visit; a full card gives a reward.",
+    "welcome_bonus": "Points for joining."
+  },
+  "ways_link": "Ways to earn",
+  "ways_title": "How members earn and what they get",
+  "wizard": {
+    "apply": "Apply",
+    "back": "Back",
+    "business_keep_line": "Your programme already has tiers, so it keeps them and its rewards. The next steps choose the ways to earn that go with them.",
+    "business_line": "Choose the closest. It sets up tiers and a first rewards catalogue, which you can change later.",
+    "business_title": "What kind of business is this?",
+    "choose_keep_line": "Ticked: what your programme uses today. Tick what you want members to have.",
+    "choose_line": "Ticked: what we suggest for {{preset}}. Tick what you want members to have.",
+    "choose_title": "How should members earn and be rewarded?",
+    "configure_title": "Set the numbers",
+    "done_built": "Tiers added: {{tiers}}. Rewards added: {{rewards}}. The ways to earn are set.",
+    "done_kept": "Your tiers and rewards stayed as they were; the ways to earn are set.",
+    "done_title": "Your programme is set up",
+    "fix_fields": "Check the fields marked below.",
+    "keep": "Keep my tiers and rewards",
+    "keep_line": "Tiers: {{tiers}}. Rewards in the catalogue: {{rewards}}. Nothing in them changes.",
+    "line": "Four short steps. You can change everything later under Ways to earn.",
+    "managers_only": "Only an owner or a manager can set up the programme.",
+    "next": "Next",
+    "none_on": "No way to earn is ticked: members would earn nothing. Go back and tick at least one, or apply as it is.",
+    "nothing_to_set": "Nothing to set: the ways you chose have no numbers. Go on to the review.",
+    "preset_rewards": "Rewards such as {{names}}",
+    "preset_tiers": "Tiers: {{names}}",
+    "presets_greyed": "Starting programmes set up a new venue’s tiers only. They are shown here for reference.",
+    "review_keep": "Your tiers and rewards stay as they are.",
+    "review_off": "Not used: {{ways}}. Switch any of them on later under Ways to earn.",
+    "review_preset": "Starts from {{preset}}: the tiers {{tiers}} and a first rewards catalogue.",
+    "review_title": "What members will get",
+    "skip": "Skip setup",
+    "skip_body": "Nothing you chose here is saved, and the programme stays as it is. You can open the setup again any time from Ways to earn.",
+    "skip_confirm": "Skip setup",
+    "skip_keep": "Keep going",
+    "skip_title": "Skip the setup?",
+    "step_of": "Step {{n}} of {{total}}",
+    "steps": "Steps",
+    "suggested": "Suggested for your business",
+    "title": "Set up your programme",
+    "to_configure": "Back to Configure",
+    "to_members": "Go to Members",
+    "to_options": "Go to Ways to earn"
+  }
+}
