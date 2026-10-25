@@ -27,6 +27,8 @@ import { TierBenefitDialog } from './TierBenefitDialog'
 import { TierDialog } from './TierDialog'
 import type { Benefit, Boost, Program, Tier, TierBenefit } from './types'
 import { APPLIES_TO_WORDS, BOOST_STATE_WORDS, CATEGORY_WORDS, FULFILLMENT_WORDS, THRESHOLD_WORDS, VALUE_PHRASE_WORDS } from './words'
+import { PlacesSection } from '../places/PlacesSection'
+import { TierPlaces } from '../places/TierPlaces'
 
 /** Which dialog is open, with what it works on. */
 type Open =
@@ -82,6 +84,8 @@ export function ProgramPage() {
         <>
           <Tiers program={data} manage={manage} theme={look.resolved} locale={locale} onOpen={setOpen} />
           <Benefits program={data} manage={manage} onOpen={setOpen} />
+          {/* Release 8: places and the tiers each admits. */}
+          <PlacesSection manage={manage} />
           <Boosts program={data} manage={manage} theme={look.resolved} locale={locale} timeZone={boot.venue.timezone} onOpen={setOpen} />
         </>
       )}
@@ -163,6 +167,9 @@ export function TierCard({ tier, manage, theme, locale, onOpen }: { tier: Tier; 
           <dd className="text-sm font-semibold tabular-nums text-a-text">{points(tier.members, locale)}</dd>
         </div>
       </dl>
+
+      {/* Release 8: the places this tier can enter. */}
+      <TierPlaces tierId={tier.id} />
 
       {tier.description && <p className="text-sm text-a-text-2">{tier.description}</p>}
 
