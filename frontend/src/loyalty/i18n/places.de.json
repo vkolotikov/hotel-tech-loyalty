@@ -1,1 +1,127 @@
-{}
+{
+  "title": "Bereiche",
+  "line": "Wo Mitglieder einchecken und welche Stufen eintreten dürfen.",
+  "add": "Bereich hinzufügen",
+  "add_first": "Eingang hinzufügen",
+  "list": "Bereiche",
+  "none_manager": "Noch keine Bereiche. Fügen Sie zuerst Ihren Eingang hinzu: Scans dort zeigen, wer hinein darf.",
+  "none": "Noch keine Bereiche. Inhaber oder Manager legen sie hier an.",
+  "switched_on": "Eingeschaltet",
+  "switched_off": "Ausgeschaltet",
+  "edit": "Bearbeiten",
+  "who": "Wer darf eintreten",
+  "every_member": "Alle Mitglieder",
+  "tiers_let_in": "Zugelassene Stufen",
+  "today": "Heute: {{granted}} eingelassen · {{denied}} abgewiesen",
+  "today_none": "Heute keine Eintritte",
+  "see_entries": "Eintritte in {{place}} ansehen",
+  "removed": "{{name}} wurde entfernt.",
+  "removed_off": "{{name}} hat bereits einen Verlauf und wurde deshalb ausgeschaltet statt gelöscht. Die Eintritte bleiben erhalten.",
+  "tier": {
+    "every": "Zutritt: alle Bereiche",
+    "some": "Zutritt: {{places}}",
+    "nowhere": "Zutritt: noch kein Bereich"
+  },
+  "dialog": {
+    "new_title": "Bereich hinzufügen",
+    "edit_title": "{{name}} ändern",
+    "name": "Name",
+    "name_hint": "Wie Team und Mitglieder ihn nennen, etwa Haupteingang, VIP-Lounge oder Spa.",
+    "name_example": "z. B. Haupteingang",
+    "who": "Wer darf eintreten",
+    "every_member": "Alle Mitglieder",
+    "every_member_hint": "Jedes Mitglied, dessen Mitgliedschaft eingeschaltet und nicht abgelaufen ist.",
+    "only_tiers": "Nur diese Stufen",
+    "only_tiers_hint": "Mitglieder der angekreuzten Stufen. Alle anderen erfahren, warum nicht.",
+    "tiers": "Stufen mit Zutritt",
+    "no_tiers": "Ihr Programm hat noch keine aktive Stufe. Legen Sie zuerst unter Stufen eine an.",
+    "description": "Beschreibung",
+    "description_hint": "Optional, bis zu 300 Zeichen: Öffnungszeiten, Dresscode, was das Team wissen sollte.",
+    "active": "Eingeschaltet",
+    "active_hint": "Ausgeschaltet lässt ein Scan hier niemanden ein, und der Scan-Bildschirm bietet den Bereich nicht an.",
+    "remove": "Bereich entfernen",
+    "save": "Bereich speichern",
+    "create": "Bereich hinzufügen"
+  },
+  "remove": {
+    "title": "{{name}} entfernen?",
+    "body": "Scans lassen hier niemanden mehr ein. Ein Bereich mit Eintritten oder einer Veranstaltung wird stattdessen ausgeschaltet, damit sein Verlauf erhalten bleibt.",
+    "confirm": "Bereich entfernen",
+    "keep": "Behalten",
+    "error": {
+      "manager_only": "Nur Inhaber oder Manager können Bereiche ändern.",
+      "not_allowed": "Nur Inhaber oder Manager können Bereiche ändern.",
+      "no_capability": "Nur Inhaber oder Manager können Bereiche ändern.",
+      "not_found": "Diesen Bereich gibt es nicht mehr. Die Liste zeigt die Bereiche, wie sie jetzt sind.",
+      "network": "Keine Verbindung: Es wurde nichts entfernt. Bitte erneut versuchen.",
+      "unknown": "Der Bereich konnte nicht entfernt werden. Bitte erneut versuchen."
+    }
+  },
+  "entries": {
+    "title": "Eintritte in {{place}}",
+    "day": "Tag",
+    "previous_day": "Der Tag davor",
+    "next_day": "Der Tag danach",
+    "today": "Heute",
+    "counts": "{{granted}} eingelassen · {{denied}} abgewiesen",
+    "none": "An diesem Tag hat hier niemand eingecheckt.",
+    "list": "Scans, neueste zuerst",
+    "let_in": "Eingelassen:",
+    "refused": "Abgewiesen:",
+    "unknown_code": "Unbekannte Karte oder unbekannter Code",
+    "by": "von {{name}}",
+    "error": {
+      "not_found": "Diesen Bereich gibt es nicht mehr.",
+      "invalid": "Wählen Sie einen Tag.",
+      "network": "Keine Verbindung. Prüfen Sie das Netzwerk und versuchen Sie es erneut.",
+      "unknown": "Die Eintritte konnten nicht geladen werden. Bitte erneut versuchen."
+    }
+  },
+  "load": {
+    "error": {
+      "network": "Keine Verbindung. Prüfen Sie das Netzwerk und versuchen Sie es erneut.",
+      "unknown": "Die Bereiche konnten nicht geladen werden. Bitte erneut versuchen."
+    }
+  },
+  "place": {
+    "error": {
+      "manager_only": "Nur Inhaber oder Manager können Bereiche ändern.",
+      "not_allowed": "Nur Inhaber oder Manager können Bereiche ändern.",
+      "no_capability": "Nur Inhaber oder Manager können Bereiche ändern.",
+      "name_taken": "Ein anderer Bereich trägt bereits diesen Namen. Wählen Sie einen anderen.",
+      "key_reused": "Dies wurde bereits mit anderen Angaben gesendet. Schließen Sie das Fenster und öffnen Sie es erneut.",
+      "not_found": "Diesen Bereich gibt es nicht mehr. Die Liste zeigt die Bereiche, wie sie jetzt sind.",
+      "invalid": "Prüfen Sie die markierten Felder.",
+      "network": "Keine Verbindung: Es wurde nichts gespeichert. Bitte erneut versuchen.",
+      "unknown": "Der Bereich konnte nicht gespeichert werden. Bitte erneut versuchen."
+    }
+  },
+  "reason": {
+    "welcome": "Eingelassen",
+    "member_erased": "Mitglied gelöscht",
+    "member_off": "Mitgliedschaft ausgeschaltet",
+    "expired": "Mitgliedschaft abgelaufen",
+    "place_off": "Bereich ausgeschaltet",
+    "tier_not_allowed": "Stufe hier nicht zugelassen",
+    "event_not_open": "Veranstaltung nicht geöffnet",
+    "event_full": "Veranstaltung voll",
+    "not_signed_up": "Nicht angemeldet",
+    "unknown": "Nicht eingelassen"
+  },
+  "refusal": {
+    "not_found": "Kein Mitglied hat diese Karte oder Nummer",
+    "expired": "QR-Code war abgelaufen",
+    "revoked": "QR-Code war ersetzt worden",
+    "used_up": "QR-Code bereits verwendet",
+    "inactive": "Karte ausgeschaltet",
+    "unknown": "Code nicht erkannt"
+  },
+  "problem": {
+    "name": "Geben Sie dem Bereich einen Namen.",
+    "name_long": "Höchstens 80 Zeichen.",
+    "name_taken": "Ein anderer Bereich trägt bereits diesen Namen.",
+    "admits": "Wählen Sie, wer eintreten darf.",
+    "tiers": "Kreuzen Sie mindestens eine Stufe an.",
+    "description": "Höchstens 300 Zeichen."
+  }
+}

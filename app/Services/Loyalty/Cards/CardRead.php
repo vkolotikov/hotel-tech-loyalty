@@ -49,4 +49,15 @@ final class CardRead
     {
         return $this->result === 'success' && $this->member !== null;
     }
+
+    /**
+     * The member the code names whatever their state (release 8, spec 2026-10-25 §1): found, or switched off — a scan
+     * at a place or an event shows them and lets AccessDecision say why they may not enter. Null for a code that names
+     * nobody, a secure token that cannot be used, and a card that was switched off (its holder may not be the member).
+     * The desk's scan and the full admin's keep found().
+     */
+    public function namedMember(): ?LoyaltyMember
+    {
+        return $this->member !== null && !$this->cardOff && in_array($this->result, ['success', 'inactive_member'], true) ? $this->member : null;
+    }
 }

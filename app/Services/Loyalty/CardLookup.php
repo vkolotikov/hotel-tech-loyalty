@@ -63,14 +63,23 @@ final class CardLookup
         ]);
 
         if (!$read->found()) {
-            // A switched-off card of ours says so beside the code, so the desk can link it again.
-            throw new LoyaltyRefused(self::REFUSALS[$result] ?? 'not_found', 'No member for this code.', 404, $read->cardOff ? ['card' => 'off'] : []);
+            throw self::refusal($read);
         }
 
         $member->update(['last_activity_at' => now()]);
         AuditLog::record($read->kind === 'nfc' ? 'nfc_scanned' : 'qr_scanned', $member, [], [], $by);
 
         return $member;
+    }
+
+    /**
+     * The refusal for a code that names no member Scan may use, by the result the scan log keeps (`not_found`,
+     * `revoked`, `expired`, `used_up`, `inactive`). A switched-off card of ours says so beside the code, so the desk can
+     * link it again. Release 8's scan at a place or an event answers its refusals with it too.
+     */
+    public static function refusal(CardRead $read): LoyaltyRefused
+    {
+        return new LoyaltyRefused(self::REFUSALS[$read->result] ?? 'not_found', 'No member for this code.', 404, $read->cardOff ? ['card' => 'off'] : []);
     }
 
     /** What the code names, read tolerantly; nothing is logged. `$by` is noted on a card's last scan. */

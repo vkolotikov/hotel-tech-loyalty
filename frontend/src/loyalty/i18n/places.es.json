@@ -1,1 +1,127 @@
-{}
+{
+  "title": "Espacios",
+  "line": "Dónde escanean los miembros su tarjeta y qué niveles pueden entrar.",
+  "add": "Añadir espacio",
+  "add_first": "Añadir la entrada",
+  "list": "Espacios",
+  "none_manager": "Todavía no hay espacios. Añada primero su entrada: los escaneos allí dirán quién puede pasar.",
+  "none": "Todavía no hay espacios. Un propietario o un gerente los añade aquí.",
+  "switched_on": "Activado",
+  "switched_off": "Desactivado",
+  "edit": "Editar",
+  "who": "Quién puede entrar",
+  "every_member": "Todos los miembros",
+  "tiers_let_in": "Niveles admitidos",
+  "today": "Hoy: entraron {{granted}} · rechazados {{denied}}",
+  "today_none": "Hoy no hay entradas",
+  "see_entries": "ver las entradas en {{place}}",
+  "removed": "{{name}} se ha eliminado.",
+  "removed_off": "{{name}} ya tiene historial, así que se ha desactivado en lugar de eliminarse. Sus entradas se conservan.",
+  "tier": {
+    "every": "Acceso: todos los espacios",
+    "some": "Acceso: {{places}}",
+    "nowhere": "Acceso: ningún espacio todavía"
+  },
+  "dialog": {
+    "new_title": "Añadir un espacio",
+    "edit_title": "Cambiar {{name}}",
+    "name": "Nombre",
+    "name_hint": "Cómo lo llaman el equipo y los miembros: Entrada principal, Sala VIP, Spa…",
+    "name_example": "p. ej., Entrada principal",
+    "who": "Quién puede entrar",
+    "every_member": "Todos los miembros",
+    "every_member_hint": "Cualquier miembro cuya membresía esté activada y no haya caducado.",
+    "only_tiers": "Solo estos niveles",
+    "only_tiers_hint": "Los miembros de los niveles marcados. Los demás sabrán por qué no.",
+    "tiers": "Niveles que pueden entrar",
+    "no_tiers": "Su programa aún no tiene niveles en uso. Añada uno primero en Niveles.",
+    "description": "Descripción",
+    "description_hint": "Opcional, hasta 300 caracteres: horario, código de vestimenta, lo que el equipo debe saber.",
+    "active": "Activado",
+    "active_hint": "Desactivado, un escaneo aquí no deja entrar a nadie y la pantalla de escaneo no lo ofrece.",
+    "remove": "Eliminar espacio",
+    "save": "Guardar espacio",
+    "create": "Añadir espacio"
+  },
+  "remove": {
+    "title": "¿Eliminar {{name}}?",
+    "body": "Los escaneos dejarán de dar acceso aquí. Un espacio que ya tiene entradas, o en el que se celebra un evento, se desactiva en su lugar para conservar su historial.",
+    "confirm": "Eliminar espacio",
+    "keep": "Conservarlo",
+    "error": {
+      "manager_only": "Solo un propietario o un gerente puede cambiar los espacios.",
+      "not_allowed": "Solo un propietario o un gerente puede cambiar los espacios.",
+      "no_capability": "Solo un propietario o un gerente puede cambiar los espacios.",
+      "not_found": "Este espacio ya no existe. La lista muestra ahora los espacios tal como están.",
+      "network": "Sin conexión: no se ha eliminado nada. Inténtelo de nuevo.",
+      "unknown": "No se pudo eliminar el espacio. Inténtelo de nuevo."
+    }
+  },
+  "entries": {
+    "title": "Entradas en {{place}}",
+    "day": "Día",
+    "previous_day": "El día anterior",
+    "next_day": "El día siguiente",
+    "today": "Hoy",
+    "counts": "entraron {{granted}} · rechazados {{denied}}",
+    "none": "Nadie escaneó su tarjeta aquí ese día.",
+    "list": "Escaneos, primero los más recientes",
+    "let_in": "Entró:",
+    "refused": "Rechazado:",
+    "unknown_code": "Tarjeta o código desconocido",
+    "by": "por {{name}}",
+    "error": {
+      "not_found": "Este espacio ya no existe.",
+      "invalid": "Elija un día.",
+      "network": "Sin conexión. Compruebe la red e inténtelo de nuevo.",
+      "unknown": "No se pudieron cargar las entradas. Inténtelo de nuevo."
+    }
+  },
+  "load": {
+    "error": {
+      "network": "Sin conexión. Compruebe la red e inténtelo de nuevo.",
+      "unknown": "No se pudieron cargar los espacios. Inténtelo de nuevo."
+    }
+  },
+  "place": {
+    "error": {
+      "manager_only": "Solo un propietario o un gerente puede cambiar los espacios.",
+      "not_allowed": "Solo un propietario o un gerente puede cambiar los espacios.",
+      "no_capability": "Solo un propietario o un gerente puede cambiar los espacios.",
+      "name_taken": "Otro espacio ya tiene este nombre. Elija otro.",
+      "key_reused": "Esto ya se envió con otros datos. Cierre la ventana y vuelva a abrirla.",
+      "not_found": "Este espacio ya no existe. La lista muestra ahora los espacios tal como están.",
+      "invalid": "Revise los campos marcados.",
+      "network": "Sin conexión: no se ha guardado nada. Inténtelo de nuevo.",
+      "unknown": "No se pudo guardar el espacio. Inténtelo de nuevo."
+    }
+  },
+  "reason": {
+    "welcome": "Entró",
+    "member_erased": "Miembro eliminado",
+    "member_off": "Membresía desactivada",
+    "expired": "Membresía caducada",
+    "place_off": "Espacio desactivado",
+    "tier_not_allowed": "Nivel no admitido aquí",
+    "event_not_open": "Evento no abierto",
+    "event_full": "Evento completo",
+    "not_signed_up": "Sin inscripción",
+    "unknown": "No admitido"
+  },
+  "refusal": {
+    "not_found": "Ningún miembro tiene esta tarjeta o número",
+    "expired": "El código QR había caducado",
+    "revoked": "El código QR había sido sustituido",
+    "used_up": "Código QR ya usado",
+    "inactive": "Tarjeta desactivada",
+    "unknown": "Código no reconocido"
+  },
+  "problem": {
+    "name": "Dé un nombre al espacio.",
+    "name_long": "80 caracteres como máximo.",
+    "name_taken": "Otro espacio ya tiene este nombre.",
+    "admits": "Elija quién puede entrar.",
+    "tiers": "Marque al menos un nivel.",
+    "description": "300 caracteres como máximo."
+  }
+}
