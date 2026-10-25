@@ -733,20 +733,35 @@ class LoyaltyService
      * tiers on the same points floor still had a direction; two tiers level on the measure's axis fall back to the
      * points floor the same way.
      *
+     * A tier without a floor on the measure (an invitation-only top tier, a tier the venue left unset) is not on the
+     * measure's ladder at all, so it is never read as floor 0: the two tiers are then placed by their points floors.
+     * Otherwise a member put on such a tier by hand would read as climbing when the measure took them to any tier,
+     * and the lock, "keep until", grace and soft landing would all be passed over.
+     *
      * @return array{0: float, 1: float} the new tier's floor, then the current tier's
      */
     private function ladderFloors(LoyaltyMember $member, LoyaltyTier $new, LoyaltyTier $current): array
     {
-        $column = self::FLOOR_COLUMNS[$this->progressBy((int) $member->organization_id)];
-        if ($column !== 'min_points') {
-            $newFloor = (float) ($new->{$column} ?? 0);
-            $oldFloor = (float) ($current->{$column} ?? 0);
-            if ($newFloor !== $oldFloor) {
-                return [$newFloor, $oldFloor];
+        return $this->ladderPlaces(self::FLOOR_COLUMNS[$this->progressBy((int) $member->organization_id)], $new, $current);
+    }
+
+    /**
+     * Where two tiers stand on the ladder of a measure's column: by that floor when both tiers have one and they differ,
+     * else by their points floors.
+     *
+     * @return array{0: float, 1: float}
+     */
+    private function ladderPlaces(string $column, LoyaltyTier $a, LoyaltyTier $b): array
+    {
+        if ($column !== 'min_points' && $a->{$column} !== null && $b->{$column} !== null) {
+            $floorA = (float) $a->{$column};
+            $floorB = (float) $b->{$column};
+            if ($floorA !== $floorB) {
+                return [$floorA, $floorB];
             }
         }
 
-        return [(float) $new->min_points, (float) $current->min_points];
+        return [(float) $a->min_points, (float) $b->min_points];
     }
 
     /** The tier column each measure of `tier_progress_by` reads a tier's floor from. */
@@ -754,12 +769,13 @@ class LoyaltyService
 
     /**
      * How the venue's members move between tiers (release 8, spec 2026-10-25 §3, R8-4): `points` (the default, as
-     * always), `visits` or `spend` — ProgrammeOptions' `tier_progress_by`, read from the cached settings map (every
-     * assessment asks). The member column `tier_qualification_model` is no longer read: nothing ever set it.
+     * always), `visits` or `spend` — ProgrammeOptions' `tier_progress_by`, read from the database once per request or
+     * job (ProgrammeOptions::perRequest(); every assessment asks). The member column `tier_qualification_model` is no
+     * longer read: nothing ever set it.
      */
     public function progressBy(int $orgId): string
     {
-        $by = ProgrammeOptions::cached($orgId, 'tier_progress_by');
+        $by = ProgrammeOptions::perRequest($orgId, 'tier_progress_by');
 
         return isset(self::FLOOR_COLUMNS[$by]) ? $by : 'points';
     }
@@ -857,15 +873,25 @@ class LoyaltyService
         // Every statement inside the transaction — a savepoint in a caller's (a refund's points reversal): on PostgreSQL
         // a failing one then rolls back only this, and the caller's transaction stays usable.
         return $this->underOrg($orgId, fn () => DB::transaction(function () use ($orgId, $referenceType, $referenceId) {
-            $row = DB::table('tier_qualification_counts')
+            $memberId = DB::table('tier_qualification_counts')
                 ->where('organization_id', $orgId)->where('reference_type', $referenceType)->where('reference_id', $referenceId)
+                ->whereNull('reversed_at')
+                ->value('member_id');
+            if ($memberId === null) {
+                return false;
+            }
+            $member = LoyaltyMember::withoutGlobalScopes()->where('organization_id', $orgId)->whereKey($memberId)->lockForUpdate()->first();
+            if (!$member) {
+                return false;
+            }
+            // Read again under the member's lock: another reversal of a visit of the same day may have passed the day's
+            // visit to this row meanwhile, and what is taken back must be what the row holds now.
+            $row = DB::table('tier_qualification_counts')
+                ->where('organization_id', $orgId)->where('member_id', $member->id)
+                ->where('reference_type', $referenceType)->where('reference_id', $referenceId)
                 ->whereNull('reversed_at')
                 ->first();
             if (!$row) {
-                return false;
-            }
-            $member = LoyaltyMember::withoutGlobalScopes()->where('organization_id', $orgId)->whereKey($row->member_id)->lockForUpdate()->first();
-            if (!$member) {
                 return false;
             }
             // Conditional, under the member's lock: a second reversal of the same visit takes nothing.
@@ -1076,11 +1102,17 @@ class LoyaltyService
                 'spend'  => $this->qualifyingSpendFor($member),
                 default  => $this->qualifyingPointsFor($member),
             };
-            $floor = $money ? (float) ($member->tier?->{$column} ?? 0) : (int) ($member->tier?->{$column} ?? 0);
+            $current = $member->tier;
+            $floor = $money ? (float) ($current?->{$column} ?? 0) : (int) ($current?->{$column} ?? 0);
 
+            // The next tier is above the member's own on the ladder (ladderPlaces(), as assessTier() reads a move's
+            // direction) and has a floor on the measure: never a tier below or level with theirs — a member put on an
+            // invitation-only top tier has none.
             $next = LoyaltyTier::cachedActiveForCurrentOrg()
                 ->reject(fn (LoyaltyTier $t) => $by !== 'points' && (bool) ($t->invitation_only ?? false))
-                ->filter(fn (LoyaltyTier $t) => $t->{$column} !== null && (float) $t->{$column} > $floor)
+                ->filter(fn (LoyaltyTier $t) => $t->{$column} !== null && ($current === null
+                    ? (float) $t->{$column} > $floor
+                    : (int) $t->id !== (int) $current->id && $this->isAbove($column, $t, $current)))
                 ->sortBy(fn (LoyaltyTier $t) => (float) $t->{$column})
                 ->first();
             if (!$next) {
@@ -1167,6 +1199,46 @@ class LoyaltyService
             ->filter(fn (LoyaltyTier $t) => $t->min_stays !== null && $t->min_stays <= $stays)
             ->sortByDesc('min_stays')
             ->first();
+    }
+
+    /**
+     * Whether a tier stands above another on a measure's ladder: on the measure's floor when both have one (level is not
+     * above), else on the points floor.
+     */
+    private function isAbove(string $column, LoyaltyTier $tier, LoyaltyTier $than): bool
+    {
+        if ($column !== 'min_points' && $tier->{$column} !== null && $than->{$column} !== null) {
+            return (float) $tier->{$column} > (float) $than->{$column};
+        }
+
+        return (float) $tier->min_points > (float) $than->min_points;
+    }
+
+    /**
+     * After a merge (MemberMergeService, under both members' locks, once the loser's rows name the winner): a venue day
+     * both accounts visited counts one visit, as it would have for one member — every row of the day but the earliest
+     * loses its visit — and `qualifying_visits` is set again from the rows not taken back, which is how it is kept
+     * (countQualifyingVisit() and uncountQualifyingVisit() add and take back exactly what the rows hold). The windowed
+     * basis reads the same rows (qualifyingVisitsFor()). Sets the attribute on the winner; the merge saves it.
+     */
+    public function mergeVisitDays(LoyaltyMember $winner): int
+    {
+        $orgId = (int) $winner->organization_id;
+        $rows = fn () => DB::table('tier_qualification_counts')
+            ->where('organization_id', $orgId)->where('member_id', $winner->id)->whereNull('reversed_at');
+
+        $twice = $rows()->whereNotNull('venue_day')->where('visits', '>', 0)
+            ->selectRaw('venue_day, MIN(id) AS first_id, COUNT(*) AS n')->groupBy('venue_day')->get()
+            ->filter(fn ($day) => (int) $day->n > 1);
+        foreach ($twice as $day) {
+            $rows()->where('venue_day', $day->venue_day)->where('visits', '>', 0)->where('id', '!=', $day->first_id)
+                ->update(['visits' => 0, 'updated_at' => now()]);
+        }
+
+        $visits = (int) $rows()->sum('visits');
+        $winner->qualifying_visits = $visits;
+
+        return $visits;
     }
 
     private function getTierByVisits(int $visits): ?LoyaltyTier

@@ -165,34 +165,49 @@ final class ProgrammeOptions
         return $out;
     }
 
+    /** The container key of perRequest()'s memo (a scoped instance: a new one for every request and every queued job). */
+    private const MEMO = 'loyalty.programme-options.memo';
+
+    /** How long perRequest() trusts what it read, in seconds, within one request, job or command run. */
+    public const MEMO_SECONDS = 60;
+
     /**
-     * One option of the organisation from its cached settings map (HotelSetting's, flushed by every settings write and so
-     * by save()), typed as for() types it: for a hot path that asks on every earn or assessment (release 8's
-     * `tier_progress_by`, read by every assessTier()), where for() would query each time.
+     * One option of the organisation, typed as for() types it, read from the database once per request or queued job
+     * (and again after MEMO_SECONDS in a long command): for a hot path that asks on every earn or assessment (release 8's
+     * `tier_progress_by`, read by every assessTier()). Never through HotelSetting's settings map, which is each
+     * container's own file cache for half an hour — a venue's switch must hold on every container from the next request.
+     * A save in this process forgets what was read (save(), markSetUp()).
      */
-    public static function cached(int $orgId, string $key): mixed
+    public static function perRequest(int $orgId, string $key): mixed
     {
         if (!array_key_exists($key, self::OPTIONS)) {
             throw new \InvalidArgumentException("Unknown loyalty option {$key}");
         }
-        [$type, $default] = self::OPTIONS[$key];
-        $bound = app()->bound('current_organization_id');
-        $prior = $bound ? app('current_organization_id') : null;
-        app()->instance('current_organization_id', $orgId);
-        try {
-            $raw = HotelSetting::getValue($key);
-        } finally {
-            if ($bound) {
-                app()->instance('current_organization_id', $prior);
-            } else {
-                app()->forgetInstance('current_organization_id');
-            }
-        }
-        if (is_bool($raw)) {
-            $raw = $raw ? 'true' : 'false';
+        $memo = self::memo();
+        $seen = $memo[$orgId] ?? null;
+        if (!is_array($seen) || time() - $seen['at'] > self::MEMO_SECONDS) {
+            $seen = ['at' => time(), 'options' => self::for($orgId)];
+            $memo[$orgId] = $seen;
         }
 
-        return $raw === null ? $default : self::cast($type, is_scalar($raw) ? (string) $raw : null, $default);
+        return $seen['options'][$key];
+    }
+
+    /** @return \ArrayObject<int, array{at: int, options: array<string, mixed>}> */
+    private static function memo(): \ArrayObject
+    {
+        $app = app();
+        if (!$app->bound(self::MEMO)) {
+            $app->scoped(self::MEMO, fn () => new \ArrayObject());
+        }
+
+        return $app->make(self::MEMO);
+    }
+
+    /** What perRequest() read for the organisation is read again next time (its options were just written). */
+    private static function forgetRead(int $orgId): void
+    {
+        unset(self::memo()[$orgId]);
     }
 
     /** One option of the organisation, typed (its default when never set). */
@@ -343,6 +358,7 @@ final class ProgrammeOptions
             }
         }));
         HotelSetting::flushCacheFor($orgId);
+        self::forgetRead($orgId);
     }
 
     /**

@@ -17,7 +17,8 @@ use Illuminate\Validation\ValidationException;
 /**
  * A membership's end date: set, extend or remove it (release 8, spec 2026-10-25 §3) — `PUT members/{id}/validity`, a
  * manager's (as a tier change; AccessMap `admin/loyalty/members/{id}/validity`). The writing and its rules are
- * MembershipValidity's; this checks who asks, names this organisation's member only, and refuses a deleted one.
+ * MembershipValidity's; this checks who asks, names this organisation's member only, and refuses a deleted one (by staff
+ * or by the member).
  *
  * Body: `{ valid_until: 'Y-m-d' | null }` or `{ extend: '1m' | '3m' | '6m' | '1y' }`, and `idempotency_key` (or the
  * `Idempotency-Key` header when the body has none), kept per organisation and member. Answer: `{ member, valid_until,
@@ -29,7 +30,8 @@ class ValidityController extends Controller
     {
         LoyaltyAccess::requireManager($request->user());
         $member = LoyaltyMember::query()->with('user')->find($id) ?? throw LoyaltyRefused::notFound();
-        if (MemberErasure::isErased($member)) {
+        // Deleted by staff, or by the member themselves: nothing is left to hold a membership.
+        if (MemberErasure::isErased($member) || MemberErasure::isSelfDeleted($member)) {
             throw new LoyaltyRefused('already_erased', 'This member was deleted.', 409);
         }
         $data = $request->validate([

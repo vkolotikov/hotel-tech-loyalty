@@ -231,9 +231,22 @@ class MemberMergeServiceTest extends TestCase
 
     public function test_visits_add_up_and_the_later_end_date_is_kept(): void
     {
-        // Release 8: visits counted for tier progress sum like the other counters; the membership keeps the later end.
+        // Release 8: visits counted for tier progress add up, one per venue day (a day both visited is
+        // TierProgressMergeTest's); the count is read again from the counter rows, as the counters keep it. The
+        // membership keeps the later end.
         $winner = $this->makeMember();
         $loser = $this->makeMember();
+        $visits = function (LoyaltyMember $m, array $days): void {
+            static $ref = 0;
+            foreach ($days as $day) {
+                DB::table('tier_qualification_counts')->insert([
+                    'organization_id' => $m->organization_id, 'member_id' => $m->id, 'reference_type' => 'scan_event', 'reference_id' => ++$ref,
+                    'nights' => 0, 'stays' => 0, 'spend' => 0, 'visits' => 1, 'venue_day' => $day, 'created_at' => now(), 'updated_at' => now(),
+                ]);
+            }
+        };
+        $visits($winner, ['2026-10-01', '2026-10-02', '2026-10-03', '2026-10-04']);
+        $visits($loser, ['2026-10-05', '2026-10-06', '2026-10-07']);
         DB::table('loyalty_members')->where('id', $winner->id)->update(['qualifying_visits' => 4, 'membership_valid_until' => '2026-12-01']);
         DB::table('loyalty_members')->where('id', $loser->id)->update(['qualifying_visits' => 3, 'membership_valid_until' => '2027-06-30']);
 

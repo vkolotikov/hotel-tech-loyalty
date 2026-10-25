@@ -304,4 +304,76 @@ class TierProgressTest extends TestCase
         $this->assertSame(1, $this->visits($this->grace));
         HotelSetting::flushCacheFor($this->org->id);
     }
+
+    /**
+     * Review fix (release 8): a tier with no floor on the measure — here an invitation-only Platinum — is not read as
+     * floor 0. Ada, put on it by hand with the tier locked and kept until a day ahead, reaches Gold's 3 visits: that is
+     * a move DOWN the ladder (on points, 5,000 to 1,000), so the lock and "keep until" hold, and she is told nothing.
+     */
+    public function test_a_tier_without_a_floor_on_the_measure_is_never_read_as_floor_zero(): void
+    {
+        $this->by('visits');
+        $this->tiers['platinum']->forceFill(['min_visits' => null, 'invitation_only' => true, 'grace_period_days' => 0, 'soft_landing' => false])->save();
+        LoyaltyTier::flushCacheFor($this->org->id);
+        $this->ada->forceFill(['tier_id' => $this->tiers['platinum']->id, 'tier_locked' => true, 'tier_override_until' => now()->addMonth()])->save();
+
+        foreach ([1, 2, 3] as $day) {
+            $this->visit($this->ada, $day, "2026-10-0{$day}");
+        }
+
+        $this->assertSame('Platinum', $this->tierOf($this->ada));
+        $this->assertSame(0, TierAssessment::where('member_id', $this->ada->id)->count());
+        $this->assertSame(0, AuditLog::query()->whereIn('action', ['tier_upgraded', 'tier_downgraded'])->count());
+
+        // Unlocked, "keep until" still holds her.
+        $this->ada->forceFill(['tier_locked' => false])->save();
+        $this->visit($this->ada, 4, '2026-10-04');
+        $this->assertSame('Platinum', $this->tierOf($this->ada));
+
+        // With neither, the move is read as what it is: a downgrade, recorded as one.
+        $this->ada->forceFill(['tier_override_until' => null])->save();
+        $this->visit($this->ada, 5, '2026-10-05');
+        $this->assertSame('Gold', $this->tierOf($this->ada));
+        $this->assertSame(1, AuditLog::query()->where('action', 'tier_downgraded')->count());
+        $this->assertSame(0, AuditLog::query()->where('action', 'tier_upgraded')->count());
+    }
+
+    /** Review fix: "next" is only ever a tier above the member's own on the ladder, with a floor on the measure. */
+    public function test_progress_never_offers_a_tier_below_or_level_with_the_members_own(): void
+    {
+        $service = app(LoyaltyService::class);
+        $this->by('visits');
+        $this->tiers['platinum']->forceFill(['min_visits' => null, 'invitation_only' => true])->save();
+        LoyaltyTier::flushCacheFor($this->org->id);
+
+        // On Platinum (no visits floor, the top of the points ladder): nothing above — not "3 more visits to Gold".
+        $this->ada->forceFill(['tier_id' => $this->tiers['platinum']->id])->save();
+        $this->assertNull($service->tierProgress($this->ada->fresh())['next_tier']);
+
+        // On Gold, with only an invitation-only tier above: nothing either.
+        $this->ada->forceFill(['tier_id' => $this->tiers['gold']->id])->save();
+        $this->assertNull($service->tierProgress($this->ada->fresh())['next_tier']);
+
+        // A tier level with the member's own on the measure is not "next".
+        $this->tiers['platinum']->forceFill(['min_visits' => 3, 'invitation_only' => false])->save();
+        LoyaltyTier::flushCacheFor($this->org->id);
+        $this->assertNull($service->tierProgress($this->ada->fresh())['next_tier']);
+
+        // From Silver, Gold is next (3 visits), Platinum past it.
+        $this->assertSame('Gold', $service->tierProgress($this->grace->fresh())['next_tier']['name']);
+    }
+
+    /** Review fix: a switch of the measure holds at once in this process too, and a later read is the database's. */
+    public function test_the_measure_is_read_from_the_database_not_the_settings_file_cache(): void
+    {
+        $service = app(LoyaltyService::class);
+        $this->assertSame('points', $service->progressBy((int) $this->org->id));
+        $this->by('visits');
+        $this->assertSame('visits', $service->progressBy((int) $this->org->id));
+
+        // Another container's switch: the row changes behind this one's back and the settings cache is not flushed here.
+        DB::table('hotel_settings')->where('organization_id', $this->org->id)->where('key', 'tier_progress_by')->update(['value' => 'spend']);
+        app()->forgetScopedInstances();
+        $this->assertSame('spend', $service->progressBy((int) $this->org->id), 'the next request reads the database');
+    }
 }

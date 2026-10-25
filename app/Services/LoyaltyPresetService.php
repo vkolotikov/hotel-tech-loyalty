@@ -540,12 +540,13 @@ class LoyaltyPresetService
                     $summary['points_on_bookings'] = (bool) $preset['points_on_bookings'];
                 }
 
-                // Release 8: a ladder built on visits is judged on visits wherever the preset is applied (the full
-                // admin's picker too), through the options' one writer. Only on a clean replace, as above.
-                if (isset($preset['tier_progress_by'])) {
-                    \App\Services\Loyalty\Programme\ProgrammeOptions::save($organizationId, ['tier_progress_by' => $preset['tier_progress_by']], null);
-                    $summary['tier_progress_by'] = $preset['tier_progress_by'];
-                }
+                // Release 8: the new ladder is judged on the measure it was built for, wherever the preset is applied
+                // (the full admin's picker too), through the options' one writer — a ladder by visits on visits, every
+                // other on points. Always, on a clean replace: tiers by points left judged by visits (a club preset,
+                // then a hotel one) would have no visits floor at all, and nobody could ever move up.
+                $progressBy = $preset['tier_progress_by'] ?? 'points';
+                \App\Services\Loyalty\Programme\ProgrammeOptions::save($organizationId, ['tier_progress_by' => $progressBy], null);
+                $summary['tier_progress_by'] = $progressBy;
             } else {
                 $summary['welcome_bonus_preserved'] = true;
             }

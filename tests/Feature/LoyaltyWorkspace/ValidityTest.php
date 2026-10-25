@@ -132,6 +132,9 @@ class ValidityTest extends TestCase
 
         $this->grace->user->forceFill(['email' => MemberErasure::stubEmail((int) $this->grace->id)])->save();
         $this->change($this->grace->id, ['valid_until' => '2027-01-01'])->assertStatus(409)->assertJsonPath('error', 'already_erased');
+        // A member who deleted their own account is refused the same way.
+        $this->ada->user->forceFill(['email' => MemberErasure::selfDeletedEmail((int) $this->ada->user_id)])->save();
+        $this->change($this->ada->id, ['valid_until' => '2027-01-01'])->assertStatus(409)->assertJsonPath('error', 'already_erased');
 
         $this->assertSame(0, AuditLog::query()->where('action', 'member.validity_changed')->count());
         $this->assertSame([null, null], $this->stored($this->grace));

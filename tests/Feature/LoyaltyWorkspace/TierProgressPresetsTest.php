@@ -99,4 +99,26 @@ class TierProgressPresetsTest extends TestCase
         app(LoyaltyPresetService::class)->apply('fitness', (int) $other->id);
         $this->assertSame('points', ProgrammeOptions::get((int) $other->id, 'tier_progress_by'));
     }
+
+    /**
+     * Review fix: a clean replace always says how its ladder is judged. The club's ladder by visits, then the hotel's by
+     * points from the full admin's picker (still no member): the hotel's tiers have no visits floor, so the venue must
+     * be judged by points again, or nobody could ever move up.
+     */
+    public function test_a_points_preset_applied_after_a_visits_one_puts_the_measure_back_to_points(): void
+    {
+        [$venue] = $this->newVenue();
+        app()->instance('current_organization_id', $venue->id);
+        $presets = app(LoyaltyPresetService::class);
+
+        $presets->apply('members_club', (int) $venue->id);
+        $this->assertSame('visits', ProgrammeOptions::get((int) $venue->id, 'tier_progress_by'));
+
+        $summary = $presets->apply('hotel_classic', (int) $venue->id);
+
+        $this->assertTrue($summary['replaced']);
+        $this->assertSame('points', $summary['tier_progress_by']);
+        $this->assertSame('points', ProgrammeOptions::get((int) $venue->id, 'tier_progress_by'));
+        $this->assertSame([], LoyaltyTier::withoutGlobalScopes()->where('organization_id', $venue->id)->whereNotNull('min_visits')->pluck('name')->all());
+    }
 }

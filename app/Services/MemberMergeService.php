@@ -196,10 +196,16 @@ class MemberMergeService
             $winner->qualifying_nights  = (int) ($winner->qualifying_nights ?? 0) + (int) ($loser->qualifying_nights ?? 0);
             $winner->qualifying_stays   = (int) ($winner->qualifying_stays  ?? 0) + (int) ($loser->qualifying_stays  ?? 0);
             $winner->qualifying_spend   = (float) ($winner->qualifying_spend ?? 0) + (float) ($loser->qualifying_spend ?? 0);
-            // Release 8: visits counted for tier progress add up too; the membership keeps the later end date (a
-            // duplicate without one never lifts the winner's), written as MembershipValidity writes it.
+            // Release 8: visits counted for tier progress, one per venue day: the loser's counter rows name the winner
+            // now (step 2), so a day both accounts visited keeps one visit and the count is read again from the rows
+            // (LoyaltyService::mergeVisitDays()); the membership keeps the later end date (a duplicate without one
+            // never lifts the winner's), written as MembershipValidity writes it.
             if (Schema::hasColumn('loyalty_members', 'qualifying_visits')) {
-                $winner->qualifying_visits = (int) ($winner->qualifying_visits ?? 0) + (int) ($loser->qualifying_visits ?? 0);
+                if (Schema::hasTable('tier_qualification_counts') && Schema::hasColumn('tier_qualification_counts', 'venue_day')) {
+                    app(\App\Services\LoyaltyService::class)->mergeVisitDays($winner);
+                } else {
+                    $winner->qualifying_visits = (int) ($winner->qualifying_visits ?? 0) + (int) ($loser->qualifying_visits ?? 0);
+                }
             }
             if (Schema::hasColumn('loyalty_members', 'membership_valid_until')) {
                 \App\Services\Loyalty\Members\MembershipValidity::keptOnMerge($winner, $loser);
