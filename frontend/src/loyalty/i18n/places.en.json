@@ -3,8 +3,6 @@
   "add": "Add a place",
   "add_first": "Add the entrance",
   "list": "Places",
-  "none_manager": "No places yet. Add your entrance first: scans there say who may come in.",
-  "none": "No places yet. An owner or a manager adds them here.",
   "switched_off": "Switched off",
   "edit": "Edit",
   "who": "Who may enter",
@@ -120,5 +118,15 @@
     "admits": "Choose who may enter.",
     "tiers": "Tick at least one tier.",
     "description": "At most 300 characters."
+  },
+  "get_started": {
+    "title": "Add your first entrance",
+    "line": "Give staff a clear place to check memberships and see who may come in.",
+    "s1_title": "Name your entrance",
+    "s1_line": "For example, Main entrance or Reception.",
+    "s2_title": "Choose who may enter",
+    "s2_line": "Every member, or only the tiers you tick.",
+    "s3_title": "Start checking members",
+    "s3_line": "Open Scan and choose this entrance."
   }
 }

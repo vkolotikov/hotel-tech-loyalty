@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest'
+import { sectionAfter } from '../ui/sections'
 import type { Can } from '../lib/types'
 import {
-  appAccess, appleRgb, applyPreset, chosenPreset, currencyChanged, currencyLabel, currencyWarnings, fileState, hexOf, lookBody, lookChanged, lookFormOf, lookProblems, lookServerProblems, passReady,
-  pickerValue, previewPaint, previewTier, replaces, rgbHex, searchFor, svgId, tabAfter, tabFrom, walletBody, walletFormOf, walletProblems,
+  APP_TABS, appAccess, appleRgb, applyPreset, chosenPreset, currencyChanged, currencyLabel, currencyWarnings, fileState, hexOf, lookBody, lookChanged, lookFormOf, lookProblems, lookServerProblems, passReady,
+  pickerValue, previewPaint, previewTier, replaces, rgbHex, searchFor, svgId, tabFrom, walletBody, walletFormOf, walletProblems,
   walletServerProblems, walletShownProblems,
 } from './appMath'
 import type { CurrencyPreview, Look, LookOptions, Wallet } from './types'
@@ -41,13 +42,13 @@ describe('the tab in the address and who sees the page (release 2 §7)', () => {
   })
 
   it('moves with the arrows, Home and End, wrapping; nothing for another key', () => {
-    expect(tabAfter('wallet', 'ArrowRight')).toBe('app')
-    expect(tabAfter('app', 'ArrowRight')).toBe('currency')
-    expect(tabAfter('currency', 'ArrowRight')).toBe('wallet')
-    expect(tabAfter('wallet', 'ArrowLeft')).toBe('currency')
-    expect(tabAfter('app', 'Home')).toBe('wallet')
-    expect(tabAfter('wallet', 'End')).toBe('currency')
-    expect(tabAfter('wallet', 'Enter')).toBeNull()
+    expect(sectionAfter(APP_TABS, 'wallet', 'ArrowRight')).toBe('app')
+    expect(sectionAfter(APP_TABS, 'app', 'ArrowRight')).toBe('currency')
+    expect(sectionAfter(APP_TABS, 'currency', 'ArrowRight')).toBe('wallet')
+    expect(sectionAfter(APP_TABS, 'wallet', 'ArrowLeft')).toBe('currency')
+    expect(sectionAfter(APP_TABS, 'app', 'Home')).toBe('wallet')
+    expect(sectionAfter(APP_TABS, 'wallet', 'End')).toBe('currency')
+    expect(sectionAfter(APP_TABS, 'wallet', 'Enter')).toBeNull()
   })
 
   it('is a manager\'s page; the wallet pass also needs the plan', () => {

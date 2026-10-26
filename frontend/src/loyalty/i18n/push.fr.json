@@ -110,7 +110,6 @@
     "no_category": "Type pas encore choisi",
     "no_segment": "Aucun segment",
     "no_title": "Pas encore de titre",
-    "none": "Aucune notification push pour l’instant. Créez-en une, choisissez son type et un segment, puis envoyez-la.",
     "scheduled": "Part le {{when}}"
   },
   "load": {
@@ -266,5 +265,15 @@
       "network": "Pas de connexion : il est toujours programmé. Réessayez.",
       "unknown": "Impossible de le reprendre. Veuillez réessayer."
     }
+  },
+  "get_started": {
+    "title": "Envoyez votre première notification push",
+    "line": "Un court message sur le téléphone des membres qui ont l’appli. Il reste aussi dans leur boîte de réception de l’appli.",
+    "s1_title": "Rédigez-la",
+    "s1_line": "Un titre et une ligne ou deux.",
+    "s2_title": "Choisissez qui la reçoit",
+    "s2_line": "Un segment de vos membres.",
+    "s3_title": "Envoyez-la ou programmez-la",
+    "s3_line": "Maintenant, ou à l’heure choisie."
   }
 }

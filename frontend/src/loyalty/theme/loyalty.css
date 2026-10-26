@@ -1,10 +1,10 @@
 /*
  * HexaTech Loyalty's own rules. The Atelier fonts, tokens and the rules every
  * workspace shares live in src/workspace/theme/workspace.css; this file sets
- * the cards frame's navy palette (the same values as Content's, spec
- * 2026-10-21 Loyalty §6.1 — loyaltyContrast.test.ts proves them equal to
- * NAVY_SURFACES) and adds what only Loyalty draws: a request's state, a
- * ledger line's sign and a tier's chip. Every rule is scoped under
+ * Loyalty's palette — since release 10 the owner's Figma navy in Dark
+ * (loyaltyContrast.test.ts proves it equal to LOYALTY_SURFACES) — and adds
+ * what only Loyalty draws: a request's state, a ledger line's sign, a tier's
+ * chip, the colour families and the section cards. Every rule is scoped under
  * [data-loyalty], which sits beside [data-workspace] on Loyalty's root.
  * Values are RGB triplets, read as rgb(var(--…)) like the Atelier tokens.
  */
@@ -16,8 +16,8 @@
   --a-border: 221 227 234;
   --a-text: 27 36 48;
   --a-text-2: 84 98 114;
-  --a-side: 28 35 44;
-  --a-side-2: 35 44 58;
+  --a-side: 17 27 41;
+  --a-side-2: 26 39 56;
   --a-side-text: 232 238 244;
   --a-side-text-2: 150 165 185;
   /* A benefit request's state: a tone for the dot, and for text over a 12 % tint of itself. */
@@ -34,37 +34,61 @@
   /* Colour families (design pass 2026-10-26): one hue per kind of thing, so a page reads by colour — earning green,
      bonuses rose, rules violet, rewards amber, offers blue. An element names its family with data-hue; .l-hue-* paint
      with it (see the end of this file). */
-  --l-hue-earn: 22 112 64;
-  --l-hue-bonus: 176 38 102;
+  --l-hue-earn: 19 103 58;
+  --l-hue-bonus: 161 35 93;
   --l-hue-rule: 98 64 190;
-  --l-hue-gift: 138 80 0;
+  --l-hue-gift: 134 78 0;
   --l-hue-offer: 13 94 140;
+  /* Release 10 (the owner's section colours): tiers blue, places teal. */
+  --l-hue-tier: 28 76 210;
+  --l-hue-place: 15 102 95;
+  /* Each family's fill — the chosen section card, a Get started panel: a pale 12 % of it on white. */
+  --l-hue-earn-bg: 227 237 231;
+  --l-hue-bonus-bg: 244 229 236;
+  --l-hue-rule-bg: 236 232 247;
+  --l-hue-gift-bg: 240 234 224;
+  --l-hue-offer-bg: 226 236 241;
+  --l-hue-tier-bg: 228 234 250;
+  --l-hue-place-bg: 226 237 236;
+  --l-hue-off-bg: 235 236 237;
 }
 
 [data-loyalty][data-theme="dark"] {
-  /* The owner's navy (Content spec 2026-10-21 §3.1). */
-  --a-canvas: 32 40 54;
-  --a-surface: 36 44 58;
-  --a-surface-2: 41 48 63;
-  --a-border: 51 62 78;
-  --a-text: 232 238 244;
-  --a-text-2: 150 165 185;
-  --a-side: 28 35 44;
-  --a-side-2: 35 44 58;
-  --a-side-text: 232 238 244;
-  --a-side-text-2: 150 165 185;
-  --l-st-waiting: 240 179 90;
-  --l-st-approved: 94 200 214;
-  --l-st-done: 95 211 154;
-  --l-st-declined: 255 140 152;
-  --l-st-off: 163 173 184;
-  --l-plus: 95 211 154;
-  --l-minus: 255 140 152;
-  --l-hue-earn: 95 211 154;
-  --l-hue-bonus: 255 138 190;
-  --l-hue-rule: 181 160 255;
-  --l-hue-gift: 240 179 90;
-  --l-hue-offer: 125 196 245;
+  /* The owner's navy, from the Figma drafts (release 10): cards stand off the canvas, an inset a step darker. */
+  --a-canvas: 24 34 49;
+  --a-surface: 41 56 75;
+  --a-surface-2: 31 44 62;
+  --a-border: 69 87 110;
+  --a-text: 245 247 251;
+  --a-text-2: 184 199 220;
+  --a-side: 17 27 41;
+  --a-side-2: 26 39 56;
+  --a-side-text: 245 247 251;
+  --a-side-text-2: 184 199 220;
+  --l-st-waiting: 241 184 100;
+  --l-st-approved: 130 212 222;
+  --l-st-done: 114 216 166;
+  --l-st-declined: 255 175 184;
+  --l-st-off: 192 199 206;
+  --l-plus: 114 216 166;
+  --l-minus: 255 175 184;
+  --l-hue-earn: 116 217 170;
+  --l-hue-bonus: 255 169 207;
+  --l-hue-rule: 210 187 255;
+  --l-hue-gift: 243 209 140;
+  --l-hue-offer: 140 203 247;
+  --l-hue-tier: 153 200 255;
+  --l-hue-place: 136 224 211;
+  /* The owner's fills (Figma 163:88 variables: selected #203a5f, violetBg #352b4a, tealBg #183e3c, goldBg #493a20),
+     and fills of the same depth for green, rose and sky. */
+  --l-hue-earn-bg: 27 61 47;
+  --l-hue-bonus-bg: 74 38 57;
+  --l-hue-rule-bg: 53 43 74;
+  --l-hue-gift-bg: 73 58 32;
+  --l-hue-offer-bg: 24 59 82;
+  --l-hue-tier-bg: 32 58 95;
+  --l-hue-place-bg: 24 62 60;
+  --l-hue-off-bg: 43 54 70;
 }
 
 [data-loyalty] [data-state="pending"],
@@ -113,12 +137,14 @@
 /* A colour family (data-hue): an icon's tile, a word, a soft wash behind a line, an edge, a bar, a picture's stand-in.
    "off" is the grey of something switched off. Every hue reads at 4.5:1 on the surfaces and over its own 12 % tint
    (loyaltyContrast.test.ts). */
-[data-loyalty] [data-hue="earn"] { --l-hue: var(--l-hue-earn); }
-[data-loyalty] [data-hue="bonus"] { --l-hue: var(--l-hue-bonus); }
-[data-loyalty] [data-hue="rule"] { --l-hue: var(--l-hue-rule); }
-[data-loyalty] [data-hue="gift"] { --l-hue: var(--l-hue-gift); }
-[data-loyalty] [data-hue="offer"] { --l-hue: var(--l-hue-offer); }
-[data-loyalty] [data-hue="off"] { --l-hue: var(--l-st-off); }
+[data-loyalty] [data-hue="earn"] { --l-hue: var(--l-hue-earn); --l-hue-bg: var(--l-hue-earn-bg); }
+[data-loyalty] [data-hue="bonus"] { --l-hue: var(--l-hue-bonus); --l-hue-bg: var(--l-hue-bonus-bg); }
+[data-loyalty] [data-hue="rule"] { --l-hue: var(--l-hue-rule); --l-hue-bg: var(--l-hue-rule-bg); }
+[data-loyalty] [data-hue="gift"] { --l-hue: var(--l-hue-gift); --l-hue-bg: var(--l-hue-gift-bg); }
+[data-loyalty] [data-hue="offer"] { --l-hue: var(--l-hue-offer); --l-hue-bg: var(--l-hue-offer-bg); }
+[data-loyalty] [data-hue="tier"] { --l-hue: var(--l-hue-tier); --l-hue-bg: var(--l-hue-tier-bg); }
+[data-loyalty] [data-hue="place"] { --l-hue: var(--l-hue-place); --l-hue-bg: var(--l-hue-place-bg); }
+[data-loyalty] [data-hue="off"] { --l-hue: var(--l-st-off); --l-hue-bg: var(--l-hue-off-bg); }
 
 [data-loyalty] .l-hue-tile {
   background-color: rgb(var(--l-hue, var(--l-st-off)) / 0.12);
@@ -143,4 +169,18 @@
 
 [data-loyalty] .l-hue-fade {
   background-image: linear-gradient(135deg, rgb(var(--l-hue, var(--l-st-off)) / 0.24), rgb(var(--l-hue, var(--l-st-off)) / 0.06));
+}
+
+/* Release 10 (the owner's Figma, section navigation 171:401): the chosen section's card, on its family's fill and
+   outlined in it (its title in the colour, the text and the secondary text all read on the fill,
+   loyaltyContrast.test.ts); and the panel an empty section teaches in (163:322, 163:400). */
+[data-loyalty] .l-hue-card {
+  background-color: rgb(var(--l-hue-bg, var(--a-surface-2)));
+  border-color: rgb(var(--l-hue, var(--l-st-off)));
+  box-shadow: inset 0 0 0 1px rgb(var(--l-hue, var(--l-st-off)));
+}
+
+[data-loyalty] .l-hue-panel {
+  background-color: rgb(var(--l-hue-bg, var(--a-surface-2)));
+  border-color: rgb(var(--l-hue, var(--l-st-off)) / 0.45);
 }

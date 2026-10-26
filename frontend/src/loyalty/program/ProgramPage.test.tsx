@@ -20,6 +20,7 @@ import type { Bootstrap, Can } from '../lib/types'
 import { PROGRAM_KEY } from './api'
 import { BoostDialog } from './BoostDialog'
 import { ConfirmTimes, ProgramPage } from './ProgramPage'
+import { PROGRAM_SECTIONS, programSearch, type ProgramSection } from './programMath'
 import type { Program } from './types'
 
 const can = (more: Partial<Can> = {}): Can => ({ award: true, redeem: true, reverse: false, manage_program: false, manage_rewards: false, manage_members: false, view_insights: false, manage_campaigns: false, manage_app: false, ...more })
@@ -53,12 +54,14 @@ const program: Program = {
   options: { categories: ['accommodation', 'other'], fulfillment_modes: ['on_request', 'voucher'], value_types: ['text', 'percent_discount'], applies_to: ['all', 'stays'] },
 }
 
-const render = (c: Can, data: Program | null = program) => {
+// Release 10: one section at a time, chosen in the address (`?tab=`); Tiers when none is named.
+const render = (c: Can, data: Program | null = program, section: ProgramSection | string = 'tiers') => {
   const client = new QueryClient()
   if (data) client.setQueryData(PROGRAM_KEY, data)
+  const entry = section.startsWith('#') || section.startsWith('?') ? `/loyalty/program${section}` : `/loyalty/program${programSearch(section as ProgramSection)}`
   return renderToStaticMarkup(
     <QueryClientProvider client={client}>
-      <MemoryRouter>
+      <MemoryRouter initialEntries={[entry]}>
         <LoyaltyContext.Provider value={{ data: boot(c), isLoading: false, isError: false, error: null, refetch: () => {} }}>
           <ProgramPage />
         </LoyaltyContext.Provider>
@@ -67,6 +70,8 @@ const render = (c: Can, data: Program | null = program) => {
   )
 }
 const text = (html: string) => html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ')
+/** Every section, one after the other, as a manager or staff would page through them. */
+const everySection = (c: Can, data: Program = program) => PROGRAM_SECTIONS.map(section => render(c, data, section)).join('')
 
 describe('Program (spec 2026-10-21 §4.5, §5)', () => {
   it('shows the ladder in order with what reaches each tier, its earn rate, members, state and benefits', () => {
@@ -88,13 +93,16 @@ describe('Program (spec 2026-10-21 §4.5, §5)', () => {
   })
 
   it('names the catalogue\'s categories and ways of giving, and shows a value it has no word for as sent', () => {
-    const words = text(render(can()))
+    const words = text(render(can(), program, 'benefits'))
     expect(words).toContain('Accommodation · On request')
     expect(words).toContain('spa · Voucher')
+    // Release 10 (the owner's Benefit library): which tiers give each one, or that none does yet.
+    expect(words).toContain('Late checkout Accommodation · On request Given by Gold')
+    expect(words).toContain('Spa ritual spa · Voucher No tier gives it yet')
   })
 
   it('shows boosts on the venue\'s clock with their days, tiers and state', () => {
-    const html = render(can())
+    const html = render(can(), program, 'boosts')
     const words = text(html)
     expect(words).toContain('Oct 24, 10:00 – Oct 25, 23:59 · Sat, Sun')
     expect(words).toContain('Upcoming')
@@ -105,11 +113,11 @@ describe('Program (spec 2026-10-21 §4.5, §5)', () => {
   })
 
   it('gives a manager every action', () => {
-    const words = text(render(can({ manage_program: true })))
+    const words = text(everySection(can({ manage_program: true })))
     for (const action of ['Add tier', 'Edit Gold', 'Add benefit Gold', 'Change Late checkout', 'Add benefit', 'Edit Late checkout', 'Add boost', 'Edit Double weekend', 'Remove Double weekend']) {
       expect(words).toContain(action)
     }
-    const html = render(can({ manage_program: true }))
+    const html = everySection(can({ manage_program: true }))
     expect(html).toContain('aria-label="Take Late checkout off Gold"')
     // A catalogue entry is switched on and off by its switch, which says its state.
     expect(html).toMatch(/role="switch" aria-checked="true" aria-label="Late checkout" title="Switch off"/)
@@ -120,13 +128,15 @@ describe('Program (spec 2026-10-21 §4.5, §5)', () => {
   })
 
   it('shows staff everything, read-only, and says why', () => {
-    const html = render(can({ manage_rewards: true }))
+    const html = everySection(can({ manage_rewards: true }))
     const words = text(html)
     expect(words).toContain('Only an owner or a manager can change the programme.')
     expect(words).toContain('Late checkout · Until 2 pm')
     for (const action of ['Add tier', 'Edit', 'Add benefit', 'Switch off', 'Add boost', 'Remove']) expect(words).not.toContain(action)
     expect(html).not.toContain('Take Late checkout off Gold')
-    expect(html).not.toContain('<button')
+    // The only buttons are the section cards and the figure that leads to Benefits: nothing that changes anything.
+    const buttons = [...html.matchAll(/<button[^>]*>/g)].map(m => m[0]).filter(b => !b.includes('role="tab"') && !b.includes('data-leads=""'))
+    expect(buttons).toEqual([])
   })
 
   it('waits for the programme with a quiet stand-in', () => {
@@ -135,23 +145,77 @@ describe('Program (spec 2026-10-21 §4.5, §5)', () => {
 
   it('asks for a boost\'s times to be checked when they were saved before the fix, until it ends (R4-6)', () => {
     const flagged: Program = { ...program, boosts: program.boosts.map(b => ({ ...b, check_time: true })) }
-    const html = render(can({ manage_program: true }), flagged)
+    const html = render(can({ manage_program: true }), flagged, 'boosts')
     expect(html.match(/data-time-check=""/g)).toHaveLength(1)
     expect(html).toMatch(/data-boost="3"[\s\S]*data-time-check=""[\s\S]*data-boost="4"/)
     expect(text(html)).toContain('Check the time: saved before boost times were read on the venue’s clock everywhere. If it was last saved in the full admin')
-    expect(render(can({ manage_program: true }))).not.toContain('data-time-check')
+    expect(render(can({ manage_program: true }), program, 'boosts')).not.toContain('data-time-check')
   })
 
   it('offers a manager "These times are right" for the boosts that ask for the check, and nobody else (release 6)', () => {
     const flagged: Program = { ...program, boosts: program.boosts.map(b => ({ ...b, check_time: true })) }
-    const html = render(can({ manage_program: true }), flagged)
+    const html = render(can({ manage_program: true }), flagged, 'boosts')
     expect(html.match(/data-time-check-all=""/g)).toHaveLength(1)
     expect(text(html)).toContain('Some boosts ask for their times to be checked. If the times shown are right, confirm them together. These times are right')
-    expect(render(can(), flagged)).not.toContain('data-time-check-all')
-    expect(render(can({ manage_program: true }))).not.toContain('data-time-check-all')
+    expect(render(can(), flagged, 'boosts')).not.toContain('data-time-check-all')
+    expect(render(can({ manage_program: true }), program, 'boosts')).not.toContain('data-time-check-all')
     // Only an ended boost is flagged: nothing to confirm.
     const ended: Program = { ...program, boosts: program.boosts.map(b => ({ ...b, check_time: b.state === 'ended' })) }
-    expect(render(can({ manage_program: true }), ended)).not.toContain('data-time-check-all')
+    expect(render(can({ manage_program: true }), ended, 'boosts')).not.toContain('data-time-check-all')
+  })
+
+  it('is one section at a time, chosen on its card in its colour and kept in the address (release 10, the owner\'s Figma)', () => {
+    const html = render(can())
+    // Four cards in the owner's colours: tiers blue, benefits violet, places teal, boosts gold.
+    expect(html).toMatch(/role="tablist" aria-label="Program sections"/)
+    for (const [section, hue] of [['tiers', 'tier'], ['benefits', 'rule'], ['places', 'place'], ['boosts', 'gift']]) {
+      expect(html).toMatch(new RegExp(`id="program-section-${section}" aria-selected="(true|false)"[^>]*data-section="${section}" data-hue="${hue}"`))
+    }
+    expect(html).toMatch(/id="program-section-tiers" aria-selected="true"[^>]*tabindex="0"[^>]*class="[^"]*l-hue-card/)
+    expect(text(html)).toContain('Tiers 2 Levels and what reaches them Benefits 2 Perks each tier includes Places Entrances and who may enter Boost events 2 Extra points for a while')
+    // Each section opens with what it is for, in its colour, and shows only its own content.
+    expect(html).toMatch(/data-section-intro="" data-hue="tier"[^>]*>Members move up the ladder as they earn\./)
+    const benefits = render(can(), program, 'benefits')
+    expect(benefits).toMatch(/id="program-section-benefits" aria-selected="true"/)
+    expect(benefits).toMatch(/aria-labelledby="program-section-benefits"/)
+    expect(text(benefits)).toContain('Create a benefit once, then give it to any tier.')
+    expect(benefits).not.toContain('data-tier="1"')
+    expect(benefits).not.toContain('data-boost="3"')
+    // An unknown section is Tiers; #places, the address Scan and the Guide opened before, is Places.
+    expect(render(can(), program, '?tab=nothing')).toMatch(/id="program-section-tiers" aria-selected="true"/)
+    expect(render(can(), program, '#places')).toMatch(/id="program-section-places" aria-selected="true"/)
+  })
+
+  it('opens Tiers with the ladder in figures, the catalogue one press away', () => {
+    const html = render(can())
+    const words = text(html)
+    expect(words).toContain('Tiers in the ladder 2 1 switched off')
+    expect(words).toContain('Members in a tier 1,230')
+    expect(words).toContain('Benefits to give 2 in the catalogue')
+    expect(html).toMatch(/data-figure="benefits" data-hue="rule"><button type="button" data-leads=""/)
+  })
+
+  it('teaches an empty section how to start, with the action for a manager and who has it for anyone else (the owner\'s 163:322, 163:400)', () => {
+    const empty: Program = { ...program, tiers: [], benefits: [], boosts: [] }
+    const tiers = render(can({ manage_program: true }), empty)
+    expect(tiers).toMatch(/data-get-started="tiers" data-hue="tier"/)
+    expect(text(tiers)).toContain('Get started Add your first tier')
+    expect(text(tiers)).toContain('1 Name it Members see the name on their card and in the app. 2 Set what reaches it')
+    expect(text(tiers)).toContain('Add tier')
+    const benefits = text(render(can({ manage_program: true }), empty, 'benefits'))
+    expect(benefits).toContain('Create your first benefit')
+    expect(benefits).toContain('3 Give it to tiers On Tiers, press Add benefit on each tier that should have it.')
+    // A boost is optional, and comes with an example in figures.
+    const boosts = render(can({ manage_program: true }), empty, 'boosts')
+    expect(boosts).toMatch(/data-get-started="boosts" data-hue="gift"/)
+    expect(text(boosts)).toContain('Optional Give members a reason to come back')
+    expect(text(boosts)).toContain('Example Double-points weekend 100 → 200 points ×2 boost · Saturday and Sunday')
+    expect(text(boosts)).toContain('Add boost')
+    // Staff read the same steps, and who sets it up.
+    const staff = text(render(can(), empty, 'boosts'))
+    expect(staff).toContain('Give members a reason to come back')
+    expect(staff).toContain('An owner or a manager sets this up.')
+    expect(staff).not.toContain('Add boost')
   })
 
   it('lists the boosts to confirm with their times on the venue\'s clock (release 6)', () => {

@@ -305,5 +305,13 @@
     "referrals_give_nothing": "{{points}} points à chacun",
     "expiry_short": "Expiration après {{months}} mois",
     "checkin_counts_only": "{{points}} points par passage"
+  },
+  "line": "Comment les membres gagnent des points, les bonus qu’ils reçoivent, et les règles qui gardent le tout équitable.",
+  "tab_caption": {
+    "overview": "Où en est votre programme",
+    "earn": "Points et tampons pour les visites et les achats",
+    "bonus": "Cadeaux de bienvenue, d’anniversaire et de parrainage",
+    "rule": "Comment les membres montent et quand les points expirent",
+    "more": "Autres façons proposées par votre programme"
   }
 }

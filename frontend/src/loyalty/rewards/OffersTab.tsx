@@ -14,11 +14,12 @@ import { chosenTiers, named } from '../lib/forms'
 import { TierChip } from '../ui/TierChip'
 import { OFFERS_KEY, rewardsApi } from './api'
 import { OfferDialog } from './OfferDialog'
-import { Empty, LoadFailed, Loading, TabHead } from './parts'
+import { LoadFailed, Loading, TabHead } from './parts'
 import { offerState, offerTone, offerValue } from './rewardsMath'
 import type { Offer } from './types'
 import { APPLIES_TO_WORDS, OFFER_STATE_WORDS, OFFER_TYPE_WORDS, OFFER_VALUE_WORDS } from './words'
 import { mediaUrl } from '../lib/api'
+import { GetStarted } from '../ui/GetStarted'
 
 const DAY: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'short', year: 'numeric' }
 
@@ -47,14 +48,23 @@ export function OffersTab({ manage }: { manage: boolean }) {
         <p>{t('loyalty.rewards.offers.line', 'Special offers members see in the app and the portal.')}</p>
         {!manage && <p data-read-only="">{t('loyalty.rewards.offers.read_only', 'Only staff allowed to manage offers can add or change them.')}</p>}
       </>}>
-        {manage && data && (
+        {manage && data && data.offers.length > 0 && (
           <Button size="sm" onClick={() => setEditing({ offer: null })}><Plus size={15} aria-hidden />{t('loyalty.rewards.offers.add', 'Add offer')}</Button>
         )}
       </TabHead>
 
       {query.isError && !data && <LoadFailed error={query.error} onRetry={() => { void query.refetch() }} />}
       {!data && query.isLoading && <Loading />}
-      {data && data.offers.length === 0 && <Empty>{t('loyalty.rewards.offers.none', 'No offers yet.')}</Empty>}
+      {data && data.offers.length === 0 && (
+        <GetStarted name="offers" hue="offer" optional who={null} title={t('loyalty.rewards.get_started.offers.title', 'Make your first offer')}
+          line={t('loyalty.rewards.get_started.offers.line', 'An offer is a deal members see in the app and the portal for a while, such as 20 % off on an autumn weekend.')}
+          steps={[
+              { title: t('loyalty.rewards.get_started.offers.s1_title', 'Choose its kind and value'), line: t('loyalty.rewards.get_started.offers.s1_line', 'A discount, bonus points, an upgrade, a free night and more.') },
+              { title: t('loyalty.rewards.get_started.offers.s2_title', 'Set its days'), line: t('loyalty.rewards.get_started.offers.s2_line', 'A first and a last day; switch it off any time.') },
+              { title: t('loyalty.rewards.get_started.offers.s3_title', 'Choose who sees it'), line: t('loyalty.rewards.get_started.offers.s3_line', 'Every tier, or only the tiers you pick.') },
+            ]}
+          action={manage && <Button onClick={() => setEditing({ offer: null })}><Plus size={15} aria-hidden />{t('loyalty.rewards.offers.add', 'Add offer')}</Button>} />
+      )}
       {data && data.offers.length > 0 && (
         <ul className="divide-y divide-a-border overflow-hidden rounded-2xl border border-a-border bg-a-surface">
           {data.offers.map(offer => (

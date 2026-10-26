@@ -1,4 +1,4 @@
-import { NAVY_SURFACES, contrast, triplet, type ThemeName } from '../../workspace/theme/accent'
+import { LOYALTY_SURFACES, contrast, triplet, type ThemeName } from '../../workspace/theme/accent'
 
 const WHITE = '#ffffff'
 const INK = '#14181c'
@@ -29,7 +29,7 @@ export function tierPaint(color: string | null | undefined, theme: ThemeName): T
   const onWhite = contrast(WHITE, fill)
   const onInk = contrast(INK, fill)
   const ink = onWhite >= 4.5 ? WHITE : onInk >= 4.5 ? INK : onWhite >= onInk ? WHITE : INK
-  const surface = NAVY_SURFACES[theme].surface
+  const surface = LOYALTY_SURFACES[theme].surface
 
   return {
     style: { '--l-tier': triplet(fill), '--l-tier-ink': triplet(ink) },

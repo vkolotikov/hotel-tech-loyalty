@@ -94,7 +94,6 @@
   "new": "Nuevo evento",
   "tabs": "Eventos",
   "empty": {
-    "upcoming": "No hay eventos próximos. Planea uno: los miembros se apuntan en el portal y tú registras su entrada en la puerta.",
     "past": "Aquí aparecen los eventos que ya han terminado, con quién vino.",
     "drafts": "No hay borradores. Un evento guardado como borrador se queda aquí hasta que lo publiques."
   },
@@ -248,5 +247,15 @@
       "network": "Sin conexión: no se guardó nada. Inténtalo de nuevo.",
       "unknown": "No se pudo registrar la entrada. Inténtalo de nuevo."
     }
+  },
+  "get_started": {
+    "title": "Planifique su primer evento",
+    "line": "Una cata, una clase o una noche para miembros: se apuntan en el portal y el equipo los registra en la puerta.",
+    "s1_title": "Póngale nombre y horario",
+    "s1_line": "Un día y horas según el reloj de su local, y dónde se celebra.",
+    "s2_title": "Elija quién puede venir",
+    "s2_line": "Todos los miembros o algunos niveles, con inscripción en el portal si quiere.",
+    "s3_title": "Publíquelo",
+    "s3_line": "Los miembros lo ven en el portal; regístrelos con Escanear ese día."
   }
 }

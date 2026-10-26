@@ -12,10 +12,11 @@ import { ConfirmDialog } from '../ui/formParts'
 import { afterSegmentChange, campaignsApi, OPTIONS_KEY, SEGMENTS_KEY } from './api'
 import { kindOf, reasonBounds, tierNames } from './campaignsMath'
 import { ERRORS } from './errors'
-import { Empty, LoadFailed, Loading, TabHead } from './parts'
+import { LoadFailed, Loading, TabHead } from './parts'
 import { SegmentDialog } from './SegmentDialog'
 import type { Rule, Segment, SegmentOptions } from './types'
 import { OPERATOR_WORDS, REASON_WORDS, RULE_OP_WORDS, RULE_TYPE_WORDS } from './words'
+import { GetStarted } from '../ui/GetStarted'
 
 /**
  * Segments (spec 2026-10-21 release 2 §6): the saved audiences, the full admin's too, each with its rules in words, how
@@ -36,12 +37,21 @@ export function SegmentsTab() {
   return (
     <>
       <TabHead line={<p>{t('loyalty.campaigns.segments.line', 'Who a campaign goes to: members chosen by tier, activity, points, when they joined, or everyone.')}</p>}>
-        {opts && <Button size="sm" onClick={() => setOpen({ kind: 'edit', segment: null })}><Plus size={15} aria-hidden />{t('loyalty.campaigns.segments.new', 'New segment')}</Button>}
+        {opts && list && list.length > 0 && <Button size="sm" onClick={() => setOpen({ kind: 'edit', segment: null })}><Plus size={15} aria-hidden />{t('loyalty.campaigns.segments.new', 'New segment')}</Button>}
       </TabHead>
 
       {failed && !(list && opts) && <LoadFailed error={failed} onRetry={() => { void segments.refetch(); void options.refetch() }} />}
       {!(list && opts) && !failed && <Loading />}
-      {list && opts && list.length === 0 && <Empty>{t('loyalty.campaigns.segments.none', 'No segments yet. A segment chooses the members a campaign goes to.')}</Empty>}
+      {list && opts && list.length === 0 && (
+        <GetStarted name="segments" hue="rule" title={t('loyalty.campaigns.get_started.segments.title', 'Make your first segment')}
+          line={t('loyalty.campaigns.get_started.segments.line', 'A segment is a group of members an email, a push message or an SMS goes to.')}
+          steps={[
+              { title: t('loyalty.campaigns.get_started.segments.s1_title', 'Name it'), line: t('loyalty.campaigns.get_started.segments.s1_line', 'For example, Gold members or Not seen for 60 days.') },
+              { title: t('loyalty.campaigns.get_started.segments.s2_title', 'Choose its rules'), line: t('loyalty.campaigns.get_started.segments.s2_line', 'Tier, activity, points or when they joined, or everyone.') },
+              { title: t('loyalty.campaigns.get_started.segments.s3_title', 'Send to it'), line: t('loyalty.campaigns.get_started.segments.s3_line', 'Pick it when you send an email, a push message or an SMS.') },
+            ]}
+          action={<Button onClick={() => setOpen({ kind: 'edit', segment: null })}><Plus size={15} aria-hidden />{t('loyalty.campaigns.segments.new', 'New segment')}</Button>} />
+      )}
       {list && opts && list.length > 0 && (
         <ul className="grid gap-3 md:grid-cols-2">
           {list.map(s => (

@@ -305,5 +305,13 @@
     "referrals_give_nothing": "{{points}} puntos a cada uno",
     "expiry_short": "Caducar a los {{months}} meses",
     "checkin_counts_only": "{{points}} puntos por visita"
+  },
+  "line": "Cómo ganan puntos los miembros, los bonos que reciben y las reglas que lo mantienen justo.",
+  "tab_caption": {
+    "overview": "Cómo está su programa",
+    "earn": "Puntos y sellos por visitas y compras",
+    "bonus": "Regalos de bienvenida, cumpleaños y por recomendar",
+    "rule": "Cómo suben los miembros y cuándo caducan los puntos",
+    "more": "Otras formas que ofrece su programa"
   }
 }

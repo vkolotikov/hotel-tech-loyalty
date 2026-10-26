@@ -94,7 +94,6 @@
   "new": "New event",
   "tabs": "Events",
   "empty": {
-    "upcoming": "No events coming up. Plan one: members can sign up in the portal, and you check them in at the door.",
     "past": "Events that have ended show here, with who came.",
     "drafts": "No drafts. An event saved as a draft stays here until you publish it."
   },
@@ -248,5 +247,15 @@
       "network": "No connection: nothing was saved. Try again.",
       "unknown": "The check-in did not go through. Please try again."
     }
+  },
+  "get_started": {
+    "title": "Plan your first event",
+    "line": "A tasting, a class or a members’ night: members sign up in the portal, and staff check them in at the door.",
+    "s1_title": "Name it and set the time",
+    "s1_line": "A day and times on your venue’s clock, and where it is held.",
+    "s2_title": "Choose who may come",
+    "s2_line": "Every member or some tiers, with a sign-up in the portal if you want one.",
+    "s3_title": "Publish it",
+    "s3_line": "Members see it in the portal; check them in with Scan on the day."
   }
 }

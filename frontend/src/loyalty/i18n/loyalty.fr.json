@@ -25,7 +25,11 @@
     "points_count": "{{points}} pts",
     "previous": "Précédent",
     "reload": "Recharger la page",
-    "retry": "Réessayer"
+    "retry": "Réessayer",
+    "get_started": "Pour commencer",
+    "optional": "Facultatif",
+    "example": "Exemple",
+    "managers_set_up": "Un propriétaire ou un responsable s’en charge."
   },
   "find": {
     "actions": "Actions",
@@ -129,7 +133,6 @@
     "col_points": "Points",
     "col_tier": "Niveau",
     "count": "Membres : {{count}}",
-    "figures": "Actifs : {{active}} sur {{total}} · Inscrits ce mois-ci : {{new}} · Points en moyenne : {{average}}",
     "never": "Pas encore",
     "none": "Aucun membre pour l’instant. Ils s’inscrivent via l’app membre, le portail ou le widget de réservation.",
     "none_match": "Aucun membre ne correspond.",
@@ -146,7 +149,16 @@
     "state_all": "Tous",
     "state_inactive": "Désactivés",
     "tiers": "Niveaux",
-    "title": "Membres"
+    "title": "Membres",
+    "line": "Trouvez un membre, voyez où il en est, et accueillez les nouveaux.",
+    "tiles": "Les membres en chiffres",
+    "tile": {
+      "active": "Membres actifs",
+      "active_note": "sur {{total}}",
+      "joined": "Inscrits ce mois-ci",
+      "average": "Points en moyenne",
+      "average_note": "par membre"
+    }
   },
   "nav": {
     "members": "Membres",

@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest'
+import { sectionAfter } from '../ui/sections'
 import type { Can } from '../lib/types'
 import { serverProblems } from '../lib/forms'
 import {
-  OFFER_FIELDS, brandChoice, brandPart, initialBrand, megabytes, offerBody, offerFormOf, offerProblems, offerState, offerTone, offerValue, pictureProblem, redemptionActions, redemptionTone, referralTone,
-  rewardBody, rewardDiscount, rewardFormOf, rewardProblems, rewardServerProblems, rewardsActions, searchFor, stockOf, tabAfter, tabFrom, typeChoices,
+  REWARD_TABS, OFFER_FIELDS, brandChoice, brandPart, initialBrand, megabytes, offerBody, offerFormOf, offerProblems, offerState, offerTone, offerValue, pictureProblem, redemptionActions, redemptionTone, referralTone,
+  rewardBody, rewardDiscount, rewardFormOf, rewardProblems, rewardServerProblems, rewardsActions, searchFor, stockOf, tabFrom, typeChoices,
 } from './rewardsMath'
 import type { Offer, OfferOptions, Reward, RewardOptions } from './types'
 
@@ -35,12 +36,12 @@ describe('the tab in the address (spec 2026-10-21 §4.6)', () => {
   })
 
   it('moves between tabs with the arrows, wrapping, and with Home and End', () => {
-    expect(tabAfter('catalogue', 'ArrowRight')).toBe('redemptions')
-    expect(tabAfter('referrals', 'ArrowRight')).toBe('catalogue')
-    expect(tabAfter('catalogue', 'ArrowLeft')).toBe('referrals')
-    expect(tabAfter('offers', 'Home')).toBe('catalogue')
-    expect(tabAfter('offers', 'End')).toBe('referrals')
-    expect(tabAfter('offers', 'Enter')).toBeNull()
+    expect(sectionAfter(REWARD_TABS, 'catalogue', 'ArrowRight')).toBe('redemptions')
+    expect(sectionAfter(REWARD_TABS, 'referrals', 'ArrowRight')).toBe('catalogue')
+    expect(sectionAfter(REWARD_TABS, 'catalogue', 'ArrowLeft')).toBe('referrals')
+    expect(sectionAfter(REWARD_TABS, 'offers', 'Home')).toBe('catalogue')
+    expect(sectionAfter(REWARD_TABS, 'offers', 'End')).toBe('referrals')
+    expect(sectionAfter(REWARD_TABS, 'offers', 'Enter')).toBeNull()
   })
 })
 

@@ -99,7 +99,7 @@ describe('door mode (release 8 §2)', () => {
 
     const none = render(<DoorChooser choices={{ places: [], events: [], loading: false, failed: false, canSetUp: true }} onChoose={() => {}} />)
     expect(text(none)).toContain('There is no place, and no event today, to scan for.')
-    expect(none).toContain('href="/loyalty/program#places"')
+    expect(none).toContain('href="/loyalty/program?tab=places"')
   })
 })
 

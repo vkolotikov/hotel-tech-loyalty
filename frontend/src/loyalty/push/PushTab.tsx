@@ -13,11 +13,12 @@ import { failureOf } from '../lib/api'
 import { day, points } from '../lib/format'
 import { Pager } from '../ui/Pager'
 import { afterPushChange, pushApi, pushKey, pushListKey } from './api'
-import { CategoryName, Empty, LoadFailed, Loading, Refusal, StatusBadge } from './parts'
+import { CategoryName, LoadFailed, Loading, Refusal, StatusBadge } from './parts'
 import { PushEditor } from './PushEditor'
 import { PushResults } from './PushResults'
 import { isLive, messageFrom, PUSH_REFRESH_MS, progressOf, pushSearch, viewOf } from './pushMath'
 import type { PushRow } from './types'
+import { GetStarted } from '../ui/GetStarted'
 
 /**
  * Push messages (spec 2026-10-22 release 3 §5), the Campaigns page's third tab (`?tab=push`), a manager's: a title and
@@ -69,13 +70,24 @@ function PushList() {
         <p className="min-w-0 flex-1 text-sm text-a-text-2">
           {t('loyalty.push.list.line', 'A short message to the phones of a segment’s members who have the app. Each one also stays in their inbox in the app.')}
         </p>
-        <Button size="sm" loading={create.isPending} onClick={() => create.mutate()}><Plus size={15} aria-hidden />{t('loyalty.push.list.new', 'New push message')}</Button>
+        {data && data.messages.length > 0 && (
+          <Button size="sm" loading={create.isPending} onClick={() => create.mutate()}><Plus size={15} aria-hidden />{t('loyalty.push.list.new', 'New push message')}</Button>
+        )}
       </div>
       {create.isError && <Refusal family="create" failure={failureOf(create.error)} />}
 
       {query.isError && !data && <LoadFailed error={query.error} onRetry={() => { void query.refetch() }} />}
       {!data && query.isLoading && <Loading />}
-      {data && data.messages.length === 0 && <Empty>{t('loyalty.push.list.none', 'No push messages yet. Make one, choose its kind and a segment, and send it.')}</Empty>}
+      {data && data.messages.length === 0 && (
+        <GetStarted name="push" hue="bonus" title={t('loyalty.push.get_started.title', 'Send your first push message')}
+          line={t('loyalty.push.get_started.line', 'A short message to the phones of members who have the app. It also stays in their inbox in the app.')}
+          steps={[
+              { title: t('loyalty.push.get_started.s1_title', 'Write it'), line: t('loyalty.push.get_started.s1_line', 'A title and a line or two.') },
+              { title: t('loyalty.push.get_started.s2_title', 'Choose who gets it'), line: t('loyalty.push.get_started.s2_line', 'A segment of your members.') },
+              { title: t('loyalty.push.get_started.s3_title', 'Send it or schedule it'), line: t('loyalty.push.get_started.s3_line', 'Now, or at a time you pick.') },
+            ]}
+          action={<Button loading={create.isPending} onClick={() => create.mutate()}><Plus size={15} aria-hidden />{t('loyalty.push.list.new', 'New push message')}</Button>} />
+      )}
       {data && data.messages.length > 0 && (
         <>
           <ul className={`divide-y divide-a-border overflow-hidden rounded-2xl border border-a-border bg-a-surface ${query.isFetching ? 'opacity-70' : ''}`}>

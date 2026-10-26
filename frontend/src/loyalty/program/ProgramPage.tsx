@@ -1,8 +1,8 @@
-import { useState, type ReactNode } from 'react'
-import { Link } from 'react-router-dom'
+import { useState } from 'react'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { Award, CalendarDays, CheckCheck, Gift, Pencil, Plus, Sparkles, Trash2, TrendingUp, Users, X, Zap } from 'lucide-react'
+import { Award, CalendarDays, CheckCheck, Crown, Gift, MapPin, Pencil, Plus, Sparkles, Trash2, TrendingUp, Users, X, Zap } from 'lucide-react'
 import { Button } from '../../workspace/ui/Button'
 import { Dialog } from '../../workspace/ui/Dialog'
 import { Notice } from '../../workspace/ui/Notice'
@@ -20,15 +20,23 @@ import { BenefitDialog } from './BenefitDialog'
 import { BoostDialog } from './BoostDialog'
 import { ERRORS } from './errors'
 import { ConfirmDialog, ToneBadge } from '../ui/formParts'
-import { activeTone, boostState, boostTone, needsTimeCheck, programActions, thresholds, timeCheckList, typedValue, weekdaysText } from './programMath'
+import {
+  activeTone, boostState, boostTone, needsTimeCheck, programActions, programSearch, programSectionFrom, thresholds, timeCheckList, typedValue, weekdaysText,
+  type ProgramSection,
+} from './programMath'
 import { chosenTiers, decimal, named } from '../lib/forms'
 import { TierBenefitDialog } from './TierBenefitDialog'
 import { TierDialog } from './TierDialog'
 import type { Benefit, Boost, Program, Tier, TierBenefit } from './types'
 import { APPLIES_TO_WORDS, BOOST_STATE_WORDS, CATEGORY_WORDS, FULFILLMENT_WORDS, THRESHOLD_WORDS, VALUE_PHRASE_WORDS } from './words'
 import { PlacesSection } from '../places/PlacesSection'
+import { PLACES_KEY, placesApi } from '../places/placesApi'
 import { TierPlaces } from '../places/TierPlaces'
 import { Switch } from '../options/parts'
+import { FigureTile, FigureTiles } from '../ui/FigureTiles'
+import { GetStarted, GetStartedExample, SectionIntro } from '../ui/GetStarted'
+import { SectionCards, SectionCount } from '../ui/SectionCards'
+import type { Hue } from '../ui/sections'
 import { IconButton, SectionHead } from './parts'
 
 /** Which dialog is open, with what it works on. */
@@ -41,10 +49,15 @@ type Open =
   | { kind: 'remove_boost'; boost: Boost }
   | { kind: 'confirm_times'; boosts: Boost[] }
 
+/** Each section's colour (the owner's drafts: tiers blue, benefits violet, places teal, boosts gold). */
+const SECTION_HUE: Record<ProgramSection, Hue> = { tiers: 'tier', benefits: 'rule', places: 'place', boosts: 'gift' }
+
 /**
  * Program (spec 2026-10-21 §4.5): the tier ladder with what reaches each tier and what it gives, the benefit catalogue,
- * and the boost events that multiply points for a while. Everyone reads it; a manager adds and changes (§5) — for
- * anyone else the page has no action at all, and says why.
+ * the places members may enter and the boost events that multiply points for a while. Everyone reads it; a manager adds
+ * and changes (§5) — for anyone else the page has no action at all, and says why. Release 10 (the owner's Figma
+ * 163:88–163:400): one section at a time, chosen on its card and kept in the address; each opens with a line of what it
+ * is for, and an empty one teaches how to start.
  */
 export function ProgramPage() {
   const { t, i18n } = useTranslation()
@@ -52,14 +65,22 @@ export function ProgramPage() {
   const boot = useBoot()
   const look = useLook()
   const query = useQuery({ queryKey: PROGRAM_KEY, queryFn: programApi.program })
+  // The same call (and key) as the Places section's own, for its card's count.
+  const places = useQuery({ queryKey: PLACES_KEY, queryFn: placesApi.list })
   const { manage } = programActions(boot.staff.can)
   const [open, setOpen] = useState<Open | null>(null)
   const close = () => setOpen(null)
   const data = query.data
+  const location = useLocation()
+  const navigate = useNavigate()
+  const section = programSectionFrom(location.search, location.hash)
+  const go = (next: ProgramSection) => navigate({ pathname: '/loyalty/program', search: programSearch(next) }, { replace: true })
+  const count = (n: number | undefined) => (n === undefined ? undefined : <SectionCount value={points(n, locale)} />)
 
   return (
-    <div className="space-y-8 px-4 py-6 lg:px-6">
-      <PageHeader title={t('loyalty.program.title', 'Program')}
+    <div className="space-y-6 px-4 py-6 lg:px-6">
+      <PageHeader stacked title={t('loyalty.program.title', 'Program')}
+        line={t('loyalty.program.line', 'Your tiers, what each gives, where members may enter, and the boosts that bring them back.')}
         below={!manage && <p data-read-only="" className="text-sm text-a-text-2">{t('loyalty.program.read_only', 'Only an owner or a manager can change the programme.')}</p>}>
         {/* Release 7: the other ways to earn (points on spend, bonuses, stamps, check-in, cashback) are set there. */}
         <Link to="/loyalty/options" className="inline-flex items-center gap-2 rounded-full border border-a-border bg-a-surface px-4 py-2.5 text-sm font-semibold text-a-text hover:bg-a-surface-2">
@@ -67,29 +88,37 @@ export function ProgramPage() {
         </Link>
       </PageHeader>
 
-      {query.isError && !data && (
-        <div className="max-w-xl space-y-3">
-          <Notice tone="danger">{t(...refusalKey('loyalty.program', ERRORS, 'load', failureOf(query.error)))}</Notice>
-          <Button variant="secondary" onClick={() => { void query.refetch() }}>{t('loyalty.common.retry', 'Try again')}</Button>
-        </div>
-      )}
-      {!data && query.isLoading && (
-        <div role="status" className="space-y-3">
-          <span className="sr-only">{t('loyalty.common.loading', 'Loading…')}</span>
-          <div className="grid gap-3 xl:grid-cols-2"><Skeleton className="h-40" /><Skeleton className="h-40" /></div>
-          <Skeleton className="h-32" />
-        </div>
-      )}
+      <SectionCards label={t('loyalty.program.sections', 'Program sections')} idPrefix="program-section" panelId="program-panel" value={section} onChange={go}
+        items={[
+          { id: 'tiers', icon: Crown, hue: SECTION_HUE.tiers, title: t('loyalty.program.tiers.title', 'Tiers'), caption: t('loyalty.program.section.tiers', 'Levels and what reaches them'), badge: count(data?.tiers.length) },
+          { id: 'benefits', icon: Gift, hue: SECTION_HUE.benefits, title: t('loyalty.program.benefits.title', 'Benefits'), caption: t('loyalty.program.section.benefits', 'Perks each tier includes'), badge: count(data?.benefits.length) },
+          { id: 'places', icon: MapPin, hue: SECTION_HUE.places, title: t('loyalty.places.title', 'Places'), caption: t('loyalty.program.section.places', 'Entrances and who may enter'), badge: count(places.data?.places.length) },
+          { id: 'boosts', icon: Zap, hue: SECTION_HUE.boosts, title: t('loyalty.program.boosts.title', 'Boost events'), caption: t('loyalty.program.section.boosts', 'Extra points for a while'), badge: count(data?.boosts.length) },
+        ]} />
 
-      {data && (
-        <>
-          <Tiers program={data} manage={manage} theme={look.resolved} locale={locale} onOpen={setOpen} />
-          <Benefits program={data} manage={manage} onOpen={setOpen} />
-          {/* Release 8: places and the tiers each admits. */}
-          <PlacesSection manage={manage} />
-          <Boosts program={data} manage={manage} theme={look.resolved} locale={locale} timeZone={boot.venue.timezone} onOpen={setOpen} />
-        </>
-      )}
+      <div id="program-panel" role="tabpanel" aria-labelledby={`program-section-${section}`} className="space-y-5">
+        <SectionIntro hue={SECTION_HUE[section]}>{t(`loyalty.program.intro.${section}`, INTRO_WORDS[section])}</SectionIntro>
+
+        {section !== 'places' && query.isError && !data && (
+          <div className="max-w-xl space-y-3">
+            <Notice tone="danger">{t(...refusalKey('loyalty.program', ERRORS, 'load', failureOf(query.error)))}</Notice>
+            <Button variant="secondary" onClick={() => { void query.refetch() }}>{t('loyalty.common.retry', 'Try again')}</Button>
+          </div>
+        )}
+        {section !== 'places' && !data && query.isLoading && (
+          <div role="status" className="space-y-3">
+            <span className="sr-only">{t('loyalty.common.loading', 'Loading…')}</span>
+            <div className="grid gap-3 xl:grid-cols-2"><Skeleton className="h-40" /><Skeleton className="h-40" /></div>
+            <Skeleton className="h-32" />
+          </div>
+        )}
+
+        {data && section === 'tiers' && <Tiers program={data} manage={manage} theme={look.resolved} locale={locale} onOpen={setOpen} go={go} />}
+        {data && section === 'benefits' && <Benefits program={data} manage={manage} onOpen={setOpen} />}
+        {/* Release 8: places and the tiers each admits. */}
+        {section === 'places' && <PlacesSection manage={manage} />}
+        {data && section === 'boosts' && <Boosts program={data} manage={manage} theme={look.resolved} locale={locale} timeZone={boot.venue.timezone} onOpen={setOpen} />}
+      </div>
 
       {data && open?.kind === 'tier' && <TierDialog tier={open.tier} onClose={close} />}
       {data && open?.kind === 'tier_benefit' && (
@@ -104,28 +133,52 @@ export function ProgramPage() {
   )
 }
 
-function Empty({ children }: { children: ReactNode }) {
-  return <p className="rounded-xl border border-dashed border-a-border px-4 py-6 text-center text-sm text-a-text-2">{children}</p>
+/** Each section's opening line: what it is for, in a sentence. */
+const INTRO_WORDS: Record<ProgramSection, string> = {
+  tiers: 'Members move up the ladder as they earn. Each tier sets its earn rate, its benefits and where it may enter.',
+  benefits: 'Create a benefit once, then give it to any tier. A change here reaches every tier that gives it.',
+  places: 'Entrances where staff check memberships. Each says which tiers may come in, and Scan uses it at the door.',
+  boosts: 'A boost multiplies the points members earn for a while. Outside it, your normal earning rules stay in place.',
 }
 
 // ─── Tiers ─────────────────────────────────────────────────────────────────
 
-function Tiers({ program, manage, theme, locale, onOpen }: { program: Program; manage: boolean; theme: ThemeName; locale: string; onOpen: (open: Open) => void }) {
+function Tiers({ program, manage, theme, locale, onOpen, go }: {
+  program: Program; manage: boolean; theme: ThemeName; locale: string; onOpen: (open: Open) => void; go: (section: ProgramSection) => void
+}) {
   const { t } = useTranslation()
+  const add = () => onOpen({ kind: 'tier', tier: null })
+  if (program.tiers.length === 0) {
+    return (
+      <GetStarted name="tiers" hue="tier" title={t('loyalty.program.get_started.tiers.title', 'Add your first tier')}
+        line={t('loyalty.program.get_started.tiers.line', 'A tier is a level members reach, such as Silver or Gold, with its own earn rate and benefits. The programme starts once a tier is in use.')}
+        steps={[
+          { title: t('loyalty.program.get_started.tiers.s1_title', 'Name it'), line: t('loyalty.program.get_started.tiers.s1_line', 'Members see the name on their card and in the app.') },
+          { title: t('loyalty.program.get_started.tiers.s2_title', 'Set what reaches it'), line: t('loyalty.program.get_started.tiers.s2_line', 'Points, visits or spend, as Ways to earn sets how members move up.') },
+          { title: t('loyalty.program.get_started.tiers.s3_title', 'Give it benefits'), line: t('loyalty.program.get_started.tiers.s3_line', 'A welcome drink, late checkout or a discount, from the benefit catalogue.') },
+        ]}
+        action={manage && <Button onClick={add}><Plus size={15} aria-hidden />{t('loyalty.program.tiers.add', 'Add tier')}</Button>} />
+    )
+  }
+  const off = program.tiers.filter(tier => !tier.is_active).length
+  const members = program.tiers.reduce((sum, tier) => sum + tier.members, 0)
   return (
-    <section aria-labelledby="program-tiers" className="space-y-3">
-      <SectionHead id="program-tiers" icon={Award} title={t('loyalty.program.tiers.title', 'Tiers')}>
-        {manage && <Button size="sm" onClick={() => onOpen({ kind: 'tier', tier: null })}><Plus size={15} aria-hidden />{t('loyalty.program.tiers.add', 'Add tier')}</Button>}
+    <section aria-labelledby="program-tiers" className="space-y-4">
+      <FigureTiles label={t('loyalty.program.figures.label', 'The ladder in figures')}>
+        <FigureTile name="tiers" icon={Crown} hue="tier" label={t('loyalty.program.figures.tiers', 'Tiers in the ladder')} value={points(program.tiers.length, locale)}
+          note={off > 0 ? t('loyalty.program.figures.tiers_off', '{{n}} switched off', { n: points(off, locale) }) : undefined} />
+        <FigureTile name="members" icon={Users} label={t('loyalty.program.figures.members', 'Members in a tier')} value={points(members, locale)} />
+        <FigureTile name="benefits" icon={Gift} hue="rule" label={t('loyalty.program.figures.benefits', 'Benefits to give')} value={points(program.benefits.length, locale)}
+          note={t('loyalty.program.figures.benefits_note', 'in the catalogue')} onClick={() => go('benefits')} />
+      </FigureTiles>
+      <SectionHead id="program-tiers" icon={Award} hue="tier" title={t('loyalty.program.tiers.title', 'Tiers')}>
+        {manage && <Button size="sm" onClick={add}><Plus size={15} aria-hidden />{t('loyalty.program.tiers.add', 'Add tier')}</Button>}
       </SectionHead>
-      {program.tiers.length === 0
-        ? <Empty>{manage ? t('loyalty.program.tiers.none_manager', 'No tiers yet. Add the first one: the programme starts once a tier is in use.') : t('loyalty.program.tiers.none', 'No tiers yet.')}</Empty>
-        : (
-          <ol aria-label={t('loyalty.program.tiers.ladder', 'The ladder, from the first tier up')}>
-            {program.tiers.map((tier, i) => (
-              <TierCard key={tier.id} tier={tier} step={i + 1} last={i === program.tiers.length - 1} manage={manage} theme={theme} locale={locale} onOpen={onOpen} />
-            ))}
-          </ol>
-        )}
+      <ol aria-label={t('loyalty.program.tiers.ladder', 'The ladder, from the first tier up')}>
+        {program.tiers.map((tier, i) => (
+          <TierCard key={tier.id} tier={tier} step={i + 1} last={i === program.tiers.length - 1} manage={manage} theme={theme} locale={locale} onOpen={onOpen} />
+        ))}
+      </ol>
     </section>
   )
 }
@@ -274,15 +327,27 @@ function TakeOff({ tier, tb, onClose }: { tier: Tier; tb: TierBenefit; onClose: 
 function Benefits({ program, manage, onOpen }: { program: Program; manage: boolean; onOpen: (open: Open) => void }) {
   const { t } = useTranslation()
   return (
-    <section aria-labelledby="program-benefits" className="space-y-3">
-      <SectionHead id="program-benefits" icon={Gift} title={t('loyalty.program.benefits.title', 'Benefits')}>
-        {manage && <Button size="sm" onClick={() => onOpen({ kind: 'benefit', benefit: null })}><Plus size={15} aria-hidden />{t('loyalty.program.benefits.add', 'Add benefit')}</Button>}
-      </SectionHead>
+    <section aria-labelledby={program.benefits.length > 0 ? 'program-benefits' : undefined} className="space-y-3">
+      {/* An empty catalogue is its Get started panel alone: one heading, one action (the owner's 163:322). */}
+      {program.benefits.length > 0 && (
+        <SectionHead id="program-benefits" icon={Gift} hue="rule" title={t('loyalty.program.benefits.title', 'Benefits')}>
+          {manage && <Button size="sm" onClick={() => onOpen({ kind: 'benefit', benefit: null })}><Plus size={15} aria-hidden />{t('loyalty.program.benefits.add', 'Add benefit')}</Button>}
+        </SectionHead>
+      )}
       {program.benefits.length === 0
-        ? <Empty>{t('loyalty.program.benefits.none', 'The catalogue is empty. Benefits such as late checkout or a welcome drink are added here, then given to tiers.')}</Empty>
+        ? (
+          <GetStarted name="benefits" hue="rule" title={t('loyalty.program.get_started.benefits.title', 'Create your first benefit')}
+            line={t('loyalty.program.get_started.benefits.line', 'Benefits are what a tier gives its members. Create one here, then give it to the tiers that should have it.')}
+            steps={[
+              { title: t('loyalty.program.get_started.benefits.s1_title', 'Name it'), line: t('loyalty.program.get_started.benefits.s1_line', 'Late checkout, a welcome drink, 10 % off services.') },
+              { title: t('loyalty.program.get_started.benefits.s2_title', 'Choose how it is given'), line: t('loyalty.program.get_started.benefits.s2_line', 'Automatically, on request, or once staff approve it.') },
+              { title: t('loyalty.program.get_started.benefits.s3_title', 'Give it to tiers'), line: t('loyalty.program.get_started.benefits.s3_line', 'On Tiers, press Add benefit on each tier that should have it.') },
+            ]}
+            action={manage && <Button onClick={() => onOpen({ kind: 'benefit', benefit: null })}><Plus size={15} aria-hidden />{t('loyalty.program.benefits.add', 'Add benefit')}</Button>} />
+        )
         : (
           <ul className="grid gap-2 lg:grid-cols-2">
-            {program.benefits.map(b => <BenefitRow key={b.id} benefit={b} manage={manage} onOpen={onOpen} />)}
+            {program.benefits.map(b => <BenefitRow key={b.id} benefit={b} tiers={program.tiers} manage={manage} onOpen={onOpen} />)}
           </ul>
         )}
     </section>
@@ -290,10 +355,11 @@ function Benefits({ program, manage, onOpen }: { program: Program; manage: boole
 }
 
 /**
- * A catalogue entry: its name, and its category and how it is given in one line. A manager edits it and switches it on
+ * A catalogue entry: its name, and its category and how it is given in one line, then the tiers that give it (release
+ * 10, the owner's Benefit library 163:244: "Included in"), or that none does yet. A manager edits it and switches it on
  * or off with its switch (which shows its state); anyone else sees "Switched off" on one that is.
  */
-export function BenefitRow({ benefit: b, manage, onOpen }: { benefit: Benefit; manage: boolean; onOpen: (open: Open) => void }) {
+export function BenefitRow({ benefit: b, tiers, manage, onOpen }: { benefit: Benefit; tiers: Tier[]; manage: boolean; onOpen: (open: Open) => void }) {
   const { t } = useTranslation()
   const client = useQueryClient()
   const [failure, setFailure] = useState<ApiFailure | null>(null)
@@ -306,15 +372,21 @@ export function BenefitRow({ benefit: b, manage, onOpen }: { benefit: Benefit; m
   const category = named('loyalty.program.category', CATEGORY_WORDS, b.category)
   const mode = named('loyalty.program.fulfillment_mode', FULFILLMENT_WORDS, b.fulfillment_mode)
   const kind = [category ? t(...category) : b.category, mode ? t(...mode) : b.fulfillment_mode].filter(Boolean).join(' · ')
+  const givenBy = tiers.filter(tier => tier.benefits.some(tb => tb.benefit_id === b.id)).map(tier => tier.name)
 
   return (
     <li data-benefit={b.id} className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl border border-a-border bg-a-surface px-3 py-2.5">
-      <span aria-hidden className={`inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${b.is_active ? 'bg-a-accent/10 text-a-accent-text' : 'bg-a-surface-2 text-a-text-2'}`}>
+      <span aria-hidden data-hue={b.is_active ? 'rule' : 'off'} className="l-hue-tile inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg">
         <Gift size={16} />
       </span>
       <div className="min-w-0 flex-1">
         <p className={`truncate font-medium ${b.is_active ? 'text-a-text' : 'text-a-text-2'}`}>{b.name}</p>
         {kind && <p className="truncate text-xs text-a-text-2">{kind}</p>}
+        <p data-given-by="" className="truncate text-xs text-a-text-2">
+          {givenBy.length > 0
+            ? t('loyalty.program.benefits.given_by', 'Given by {{tiers}}', { tiers: givenBy.join(' · ') })
+            : t('loyalty.program.benefits.given_by_none', 'No tier gives it yet')}
+        </p>
       </div>
       {!manage && !b.is_active && <ToneBadge tone={activeTone(false)}>{t('loyalty.program.switched_off', 'Switched off')}</ToneBadge>}
       {manage && (
@@ -338,10 +410,12 @@ function Boosts({ program, manage, theme, locale, timeZone, onOpen }: {
   const { t } = useTranslation()
   const flagged = timeCheckList(program.boosts)
   return (
-    <section aria-labelledby="program-boosts" className="space-y-3">
-      <SectionHead id="program-boosts" icon={Zap} title={t('loyalty.program.boosts.title', 'Boost events')}>
-        {manage && <Button size="sm" onClick={() => onOpen({ kind: 'boost', boost: null })}><Plus size={15} aria-hidden />{t('loyalty.program.boosts.add', 'Add boost')}</Button>}
-      </SectionHead>
+    <section aria-labelledby={program.boosts.length > 0 ? 'program-boosts' : undefined} className="space-y-3">
+      {program.boosts.length > 0 && (
+        <SectionHead id="program-boosts" icon={Zap} hue="gift" title={t('loyalty.program.boosts.title', 'Boost events')}>
+          {manage && <Button size="sm" onClick={() => onOpen({ kind: 'boost', boost: null })}><Plus size={15} aria-hidden />{t('loyalty.program.boosts.add', 'Add boost')}</Button>}
+        </SectionHead>
+      )}
       {manage && flagged.length > 0 && (
         <div data-time-check-all="" className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xl border border-a-border bg-a-surface-2 px-4 py-3">
           <p className="min-w-0 flex-1 text-sm text-a-text">
@@ -353,7 +427,21 @@ function Boosts({ program, manage, theme, locale, timeZone, onOpen }: {
         </div>
       )}
       {program.boosts.length === 0
-        ? <Empty>{t('loyalty.program.boosts.none', 'No boosts. A boost multiplies the points members earn for a while, such as a double points weekend.')}</Empty>
+        ? (
+          <GetStarted name="boosts" hue="gift" optional title={t('loyalty.program.get_started.boosts.title', 'Give members a reason to come back')}
+            line={t('loyalty.program.get_started.boosts.line', 'A boost multiplies the points members earn for a set time. Start with a simple double-points weekend.')}
+            steps={[
+              { title: t('loyalty.program.get_started.boosts.s1_title', 'Name it and choose the multiplier'), line: t('loyalty.program.get_started.boosts.s1_line', '×2 doubles every point earned while it runs.') },
+              { title: t('loyalty.program.get_started.boosts.s2_title', 'Set when it runs'), line: t('loyalty.program.get_started.boosts.s2_line', 'Dates and times on your venue’s clock, and the days of the week.') },
+              { title: t('loyalty.program.get_started.boosts.s3_title', 'Choose who gets it'), line: t('loyalty.program.get_started.boosts.s3_line', 'Every tier, or only the tiers you pick.') },
+            ]}
+            action={manage && <Button onClick={() => onOpen({ kind: 'boost', boost: null })}><Plus size={15} aria-hidden />{t('loyalty.program.boosts.add', 'Add boost')}</Button>}
+            example={(
+              <GetStartedExample hue="gift" title={t('loyalty.program.get_started.boosts.example_title', 'Double-points weekend')}
+                figures={t('loyalty.program.get_started.boosts.example_figures', '{{from}} → {{to}} points', { from: points(100, locale), to: points(200, locale) })}
+                line={t('loyalty.program.get_started.boosts.example_line', '×2 boost · Saturday and Sunday')} />
+            )} />
+        )
         : (
           <ul className="grid gap-2 lg:grid-cols-2">
             {program.boosts.map(boost => (

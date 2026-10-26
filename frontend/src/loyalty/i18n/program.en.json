@@ -39,10 +39,11 @@
   },
   "benefits": {
     "add": "Add benefit",
-    "none": "The catalogue is empty. Benefits such as late checkout or a welcome drink are added here, then given to tiers.",
     "switch_off": "Switch off",
     "switch_on": "Switch on",
-    "title": "Benefits"
+    "title": "Benefits",
+    "given_by": "Given by {{tiers}}",
+    "given_by_none": "No tier gives it yet"
   },
   "boost": {
     "active": "On",
@@ -94,7 +95,6 @@
     "add": "Add boost",
     "every_day": "Every day",
     "every_tier": "Every tier",
-    "none": "No boosts. A boost multiplies the points members earn for a while, such as a double points weekend.",
     "range": "{{from}} – {{to}}",
     "remove": "Remove",
     "title": "Boost events"
@@ -233,8 +233,6 @@
     "ladder": "The ladder, from the first tier up",
     "members": "Members",
     "no_benefits": "This tier gives no benefit yet.",
-    "none": "No tiers yet.",
-    "none_manager": "No tiers yet. Add the first one: the programme starts once a tier is in use.",
     "take_off_label": "Take {{benefit}} off {{tier}}",
     "title": "Tiers"
   },
@@ -270,5 +268,62 @@
     "percent_discount": "Percentage discount",
     "points_multiplier": "Points multiplier",
     "text": "Wording only"
+  },
+  "line": "Your tiers, what each gives, where members may enter, and the boosts that bring them back.",
+  "sections": "Program sections",
+  "section": {
+    "tiers": "Levels and what reaches them",
+    "benefits": "Perks each tier includes",
+    "places": "Entrances and who may enter",
+    "boosts": "Extra points for a while"
+  },
+  "intro": {
+    "tiers": "Members move up the ladder as they earn. Each tier sets its earn rate, its benefits and where it may enter.",
+    "benefits": "Create a benefit once, then give it to any tier. A change here reaches every tier that gives it.",
+    "places": "Entrances where staff check memberships. Each says which tiers may come in, and Scan uses it at the door.",
+    "boosts": "A boost multiplies the points members earn for a while. Outside it, your normal earning rules stay in place."
+  },
+  "figures": {
+    "label": "The ladder in figures",
+    "tiers": "Tiers in the ladder",
+    "tiers_off": "{{n}} switched off",
+    "members": "Members in a tier",
+    "benefits": "Benefits to give",
+    "benefits_note": "in the catalogue"
+  },
+  "get_started": {
+    "tiers": {
+      "title": "Add your first tier",
+      "line": "A tier is a level members reach, such as Silver or Gold, with its own earn rate and benefits. The programme starts once a tier is in use.",
+      "s1_title": "Name it",
+      "s1_line": "Members see the name on their card and in the app.",
+      "s2_title": "Set what reaches it",
+      "s2_line": "Points, visits or spend, as Ways to earn sets how members move up.",
+      "s3_title": "Give it benefits",
+      "s3_line": "A welcome drink, late checkout or a discount, from the benefit catalogue."
+    },
+    "benefits": {
+      "title": "Create your first benefit",
+      "line": "Benefits are what a tier gives its members. Create one here, then give it to the tiers that should have it.",
+      "s1_title": "Name it",
+      "s1_line": "Late checkout, a welcome drink, 10 % off services.",
+      "s2_title": "Choose how it is given",
+      "s2_line": "Automatically, on request, or once staff approve it.",
+      "s3_title": "Give it to tiers",
+      "s3_line": "On Tiers, press Add benefit on each tier that should have it."
+    },
+    "boosts": {
+      "title": "Give members a reason to come back",
+      "line": "A boost multiplies the points members earn for a set time. Start with a simple double-points weekend.",
+      "s1_title": "Name it and choose the multiplier",
+      "s1_line": "×2 doubles every point earned while it runs.",
+      "s2_title": "Set when it runs",
+      "s2_line": "Dates and times on your venue’s clock, and the days of the week.",
+      "s3_title": "Choose who gets it",
+      "s3_line": "Every tier, or only the tiers you pick.",
+      "example_title": "Double-points weekend",
+      "example_figures": "{{from}} → {{to}} points",
+      "example_line": "×2 boost · Saturday and Sunday"
+    }
   }
 }

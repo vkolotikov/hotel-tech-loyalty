@@ -22,7 +22,6 @@
     "add": "Add reward",
     "fulfilled": "Fulfilled",
     "line": "What members can spend their points on.",
-    "none": "The catalogue is empty. Rewards added here show in the member app and the portal.",
     "none_left": "None left",
     "offered": "Offered",
     "per_member": "Per member",
@@ -43,7 +42,7 @@
     "percent_discount": "Percentage off"
   },
   "edit": "Edit",
-  "line": "What members spend their points on, and what brings them back.",
+  "line": "What members spend their points on, the codes they bring to the desk, and the offers and referrals that bring them back.",
   "load": {
     "error": {
       "network": "No connection. Check the network and try again.",
@@ -136,7 +135,6 @@
     "every_tier": "Every tier",
     "featured": "Featured",
     "line": "Special offers members see in the app and the portal.",
-    "none": "No offers yet.",
     "per_member": "Up to {{limit}} per member",
     "read_only": "Only staff allowed to manage offers can add or change them.",
     "used": "Used: {{used}}",
@@ -273,5 +271,33 @@
   },
   "tabs": "Rewards areas",
   "title": "Rewards",
-  "tab_waiting": "waiting at the desk"
+  "tab_waiting": "waiting at the desk",
+  "tab_caption": {
+    "catalogue": "What members spend points on",
+    "redemptions": "Codes to hand over at the desk",
+    "offers": "Deals for members, for a while",
+    "referrals": "Friends your members bring"
+  },
+  "get_started": {
+    "catalogue": {
+      "title": "Add your first reward",
+      "line": "Rewards are what members spend their points on. They show in the member app and the portal.",
+      "s1_title": "Name it and set its cost",
+      "s1_line": "A free coffee for 200 points, a treatment for 2,000.",
+      "s2_title": "Add a picture",
+      "s2_line": "Optional, but a photo helps members choose.",
+      "s3_title": "Hand it over at the desk",
+      "s3_line": "Members get a code; staff hand the reward over on Redemptions."
+    },
+    "offers": {
+      "title": "Make your first offer",
+      "line": "An offer is a deal members see in the app and the portal for a while, such as 20 % off on an autumn weekend.",
+      "s1_title": "Choose its kind and value",
+      "s1_line": "A discount, bonus points, an upgrade, a free night and more.",
+      "s2_title": "Set its days",
+      "s2_line": "A first and a last day; switch it off any time.",
+      "s3_title": "Choose who sees it",
+      "s3_line": "Every tier, or only the tiers you pick."
+    }
+  }
 }

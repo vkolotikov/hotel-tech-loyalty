@@ -305,5 +305,13 @@
     "referrals_give_nothing": "Je {{points}} Punkte für beide",
     "expiry_short": "Verfall nach {{months}} Monaten",
     "checkin_counts_only": "{{points}} Punkte pro Check-in"
+  },
+  "line": "Wie Mitglieder Punkte sammeln, welche Boni sie bekommen, und die Regeln, die alles fair halten.",
+  "tab_caption": {
+    "overview": "Wo Ihr Programm steht",
+    "earn": "Punkte und Stempel für Besuche und Umsatz",
+    "bonus": "Geschenke zum Start, zum Geburtstag und für Empfehlungen",
+    "rule": "Wie Mitglieder aufsteigen und wann Punkte verfallen",
+    "more": "Weitere Wege in Ihrem Programm"
   }
 }

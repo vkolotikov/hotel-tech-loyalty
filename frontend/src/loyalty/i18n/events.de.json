@@ -94,7 +94,6 @@
   "new": "Neue Veranstaltung",
   "tabs": "Veranstaltungen",
   "empty": {
-    "upcoming": "Keine anstehenden Veranstaltungen. Planen Sie eine: Mitglieder melden sich im Portal an, und Sie checken sie am Eingang ein.",
     "past": "Vergangene Veranstaltungen erscheinen hier, mit allen, die da waren.",
     "drafts": "Keine Entwürfe. Eine als Entwurf gespeicherte Veranstaltung bleibt hier, bis Sie sie veröffentlichen."
   },
@@ -248,5 +247,15 @@
       "network": "Keine Verbindung: Nichts wurde gespeichert. Versuchen Sie es erneut.",
       "unknown": "Das Einchecken hat nicht geklappt. Bitte versuchen Sie es erneut."
     }
+  },
+  "get_started": {
+    "title": "Planen Sie Ihre erste Veranstaltung",
+    "line": "Eine Verkostung, ein Kurs oder ein Mitgliederabend: Mitglieder melden sich im Portal an, das Team checkt sie an der Tür ein.",
+    "s1_title": "Benennen und Zeit festlegen",
+    "s1_line": "Ein Tag und Uhrzeiten nach der Uhr Ihres Hauses, und wo sie stattfindet.",
+    "s2_title": "Wählen, wer kommen darf",
+    "s2_line": "Jedes Mitglied oder einige Stufen, auf Wunsch mit Anmeldung im Portal.",
+    "s3_title": "Veröffentlichen",
+    "s3_line": "Mitglieder sehen sie im Portal; am Tag mit Scannen einchecken."
   }
 }

@@ -51,7 +51,7 @@ describe('the Guide (owner 2026-10-26)', () => {
     expect(html.match(/data-guide-step=/g)).toHaveLength(5)
     expect(html.match(/data-guide-faq=/g)).toHaveLength(FAQ.length)
     // Each step and card opens the page where it is done.
-    expect(html).toContain('href="/loyalty/program#places"')
+    expect(html).toContain('href="/loyalty/program?tab=places"')
     expect(html).toContain('href="/loyalty/scan"')
   })
 
@@ -93,7 +93,7 @@ describe('the Guide (owner 2026-10-26)', () => {
     const routes = new Set([...app.matchAll(/path="([^"]+)"/g)].map(m => `/loyalty/${m[1]}`.replace(/\/$/, '')))
     routes.add('/loyalty')
     for (const to of [...STEPS.map(s => s.to), ...FEATURES.map(f => f.to), ...FAQ.flatMap(f => (f.to ? [f.to] : []))]) {
-      expect(routes, to).toContain(to.split('#')[0])
+      expect(routes, to).toContain(to.split(/[?#]/)[0])
     }
   })
 })

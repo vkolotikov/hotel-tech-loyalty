@@ -17,7 +17,7 @@ export type FaqId =
 export const STEPS: readonly { id: StepId; to: string }[] = [
   { id: 'tiers', to: '/loyalty/program' },
   { id: 'earn', to: '/loyalty/options' },
-  { id: 'places', to: '/loyalty/program#places' },
+  { id: 'places', to: '/loyalty/program?tab=places' },
   { id: 'members', to: '/loyalty' },
   { id: 'scan', to: '/loyalty/scan' },
 ]
@@ -28,7 +28,7 @@ export const FEATURES: readonly { id: FeatureId; to: string; needs?: keyof Can }
   { id: 'door', to: '/loyalty/scan' },
   { id: 'members', to: '/loyalty' },
   { id: 'tiers', to: '/loyalty/program' },
-  { id: 'places', to: '/loyalty/program#places' },
+  { id: 'places', to: '/loyalty/program?tab=places' },
   { id: 'events', to: '/loyalty/events' },
   { id: 'earn', to: '/loyalty/options' },
   { id: 'rewards', to: '/loyalty/rewards' },
@@ -58,7 +58,7 @@ export const FAQ: readonly { id: FaqId; topic: TopicId; to?: string }[] = [
   { id: 'sign_up', topic: 'events', to: '/loyalty/events' },
   { id: 'give_points', topic: 'rewards', to: '/loyalty/scan' },
   { id: 'redeem', topic: 'rewards', to: '/loyalty/requests' },
-  { id: 'boosts', topic: 'rewards', to: '/loyalty/program' },
+  { id: 'boosts', topic: 'rewards', to: '/loyalty/program?tab=boosts' },
   { id: 'portal_what', topic: 'portal' },
   { id: 'portal_card', topic: 'portal' },
 ]

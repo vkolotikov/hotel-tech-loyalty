@@ -235,6 +235,12 @@ Multi-tenant Laravel 13 + React (Vite, TypeScript) SaaS with four sub-brands. Pr
   has; saved as sent, it clears its own check); the earn rate is its own always-on card (`earn_rate`) because
   `points_per_currency` serves bookings and the desk alike. No `#…` link in the workspace (`<base href="/">` sends it
   to the site root); jump within a page with a button that scrolls.
+- Release 10 (owner 2026-10-26, from the owner's Figma; `docs/loyalty-workspace.md` "Release 10, the frame"): a page's
+  sections are `loyalty/ui/SectionCards` (filters stay pills), an empty list is a `GetStarted` panel holding the one
+  action (hide the header's add button while it shows), figures are `FigureTiles`; colour only through the families
+  (`data-hue`, `.l-hue-*`, each tone with its `--l-hue-*-bg` fill — a new family gets both and a line in
+  `loyaltyContrast.test.ts`). Loyalty's palette is `LOYALTY_SURFACES` (the drafts' navy); Content keeps `NAVY_SURFACES`.
+  Spanish strings address staff as usted.
 - Release 9 (owner 2026-10-25, review and redesign; `docs/loyalty-workspace.md` "Release 9"): a tier move's direction is
   `LoyaltyService::compareOnLadder()` (the measure's floors, then points floors, then `sort_order`; level is no move);
   soft landing steps down the measure's own ladder; a move never writes `tier_effective_until` (it is the grace clock,

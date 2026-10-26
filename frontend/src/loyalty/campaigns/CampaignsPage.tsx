@@ -1,14 +1,21 @@
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
+import { BellRing, Mail, MessageSquareText, UsersRound, type LucideIcon } from 'lucide-react'
 import { Notice } from '../../workspace/ui/Notice'
 import { PageHeader } from '../../workspace/ui/PageHeader'
 import { useBoot } from '../LoyaltyProvider'
 import { CampaignsTab } from './CampaignsTab'
-import { CAMPAIGN_TABS, searchFor, tabAfter, tabFrom, type CampaignTab } from './campaignsMath'
+import { CAMPAIGN_TABS, searchFor, tabFrom, type CampaignTab } from './campaignsMath'
 import { SegmentsTab } from './SegmentsTab'
-import { TAB_WORDS } from './words'
+import { TAB_CAPTION_WORDS, TAB_WORDS } from './words'
+import { SectionCards } from '../ui/SectionCards'
+import type { Hue } from '../ui/sections'
 import { PushTab } from '../push/PushTab'
 import { SmsTab } from '../sms/SmsTab'
+
+const TAB_ICONS: Record<CampaignTab, LucideIcon> = { campaigns: Mail, segments: UsersRound, push: BellRing, sms: MessageSquareText }
+/** Each tab's colour (release 10): emails blue, segments violet, push rose, SMS green. */
+const TAB_HUE: Record<CampaignTab, Hue> = { campaigns: 'tier', segments: 'rule', push: 'bonus', sms: 'earn' }
 
 /**
  * Campaigns (spec 2026-10-21 release 2 §6), a manager's area: email campaigns to the programme's members, and the
@@ -25,7 +32,7 @@ export function CampaignsPage() {
 
   return (
     <div className="space-y-5 px-4 py-6 lg:px-6">
-      <PageHeader title={t('loyalty.campaigns.title', 'Campaigns')} line={t('loyalty.campaigns.line', 'Email, push messages and SMS to your members, and the segments you send them to.')} />
+      <PageHeader stacked title={t('loyalty.campaigns.title', 'Campaigns')} line={t('loyalty.campaigns.line', 'Email, push messages and SMS to your members, and the segments you send them to.')} />
 
       {!boot.staff.can.manage_campaigns ? (
         <div className="max-w-xl">
@@ -33,22 +40,12 @@ export function CampaignsPage() {
         </div>
       ) : (
         <>
-          <div role="tablist" aria-label={t('loyalty.campaigns.tabs', 'Campaigns areas')} className="flex flex-wrap gap-2">
-            {CAMPAIGN_TABS.map(name => (
-              // One tab stop; the arrow keys, Home and End move between the tabs.
-              <button key={name} type="button" role="tab" id={`campaigns-tab-${name}`} aria-selected={tab === name} aria-controls="campaigns-panel"
-                tabIndex={tab === name ? 0 : -1} onClick={() => go(name)} onKeyDown={(e) => {
-                  const next = tabAfter(tab, e.key)
-                  if (next === null) return
-                  e.preventDefault()
-                  go(next)
-                  document.getElementById(`campaigns-tab-${next}`)?.focus()
-                }}
-                className={`inline-flex items-center gap-2 rounded-full border px-3.5 py-1.5 text-sm font-medium ${tab === name ? 'border-transparent bg-a-accent text-a-accent-ink' : 'border-a-border bg-a-surface text-a-text-2 hover:text-a-text'}`}>
-                {t(`loyalty.campaigns.tab.${name}`, TAB_WORDS[name])}
-              </button>
-            ))}
-          </div>
+          <SectionCards label={t('loyalty.campaigns.tabs', 'Campaigns areas')} idPrefix="campaigns-tab" panelId="campaigns-panel" value={tab} onChange={go}
+            items={CAMPAIGN_TABS.map(name => ({
+              id: name, icon: TAB_ICONS[name], hue: TAB_HUE[name],
+              title: t(`loyalty.campaigns.tab.${name}`, TAB_WORDS[name]),
+              caption: t(`loyalty.campaigns.tab_caption.${name}`, TAB_CAPTION_WORDS[name]),
+            }))} />
 
           <div id="campaigns-panel" role="tabpanel" aria-labelledby={`campaigns-tab-${tab}`} className="space-y-4">
             {tab === 'campaigns' && (boot.features.campaigns ? <CampaignsTab /> : (

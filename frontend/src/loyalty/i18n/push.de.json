@@ -110,7 +110,6 @@
     "no_category": "Noch keine Art gewählt",
     "no_segment": "Kein Segment",
     "no_title": "Noch kein Titel",
-    "none": "Noch keine Push-Nachrichten. Legen Sie eine an, wählen Sie ihre Art und ein Segment und senden Sie sie.",
     "scheduled": "Geht hinaus: {{when}}"
   },
   "load": {
@@ -266,5 +265,15 @@
       "network": "Keine Verbindung: Es ist noch geplant. Versuchen Sie es erneut.",
       "unknown": "Es konnte nicht zurückgenommen werden. Bitte versuchen Sie es erneut."
     }
+  },
+  "get_started": {
+    "title": "Senden Sie Ihre erste Push-Nachricht",
+    "line": "Eine kurze Nachricht aufs Telefon von Mitgliedern mit der App. Sie bleibt auch in ihrem Posteingang in der App.",
+    "s1_title": "Schreiben",
+    "s1_line": "Ein Titel und ein, zwei Zeilen.",
+    "s2_title": "Empfänger wählen",
+    "s2_line": "Ein Segment Ihrer Mitglieder.",
+    "s3_title": "Senden oder planen",
+    "s3_line": "Jetzt oder zu einer gewählten Zeit."
   }
 }

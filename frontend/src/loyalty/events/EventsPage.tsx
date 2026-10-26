@@ -19,6 +19,7 @@ import { EVENTS_KEY, eventsApi } from './eventsApi'
 import { EVENT_TABS, searchFor, tabAfter, tabFrom } from './eventsMath'
 import type { EventsList, EventsTab } from './types'
 import { TAB_WORDS } from './words'
+import { GetStarted } from '../ui/GetStarted'
 
 /**
  * Events (release 8, spec 2026-10-25 §4): Upcoming, Past and Drafts, each event a card that opens its page; New event
@@ -80,7 +81,7 @@ export function EventsPage() {
             {[0, 1, 2, 3].map(i => <Skeleton key={i} className="h-28 rounded-2xl" />)}
           </div>
         )}
-        {data && data.events.length === 0 && <EmptyTab tab={tab} data={data} onCreate={() => setCreating(true)} />}
+        {data && data.events.length === 0 && <EmptyTab tab={tab} data={data} />}
         {data && data.events.length > 0 && (
           <ul className="grid gap-3 lg:grid-cols-2">
             {data.events.map(event => <EventCard key={event.id} event={event} theme={look.resolved} locale={locale} />)}
@@ -94,23 +95,32 @@ export function EventsPage() {
   )
 }
 
-/** A tab with nothing in it says what would be there, and offers New event where that is the next step. */
-function EmptyTab({ tab, data, onCreate }: { tab: EventsTab; data: EventsList; onCreate: () => void }) {
+/**
+ * A tab with nothing in it says what would be there. Nothing coming up teaches how to plan one (release 10, the owner's
+ * Figma); New event stays in the page's header.
+ */
+function EmptyTab({ tab, data }: { tab: EventsTab; data: EventsList }) {
   const { t } = useTranslation()
-  const words: Record<EventsTab, string> = {
-    upcoming: t('loyalty.events.empty.upcoming', 'No events coming up. Plan one: members can sign up in the portal, and you check them in at the door.'),
+  if (tab === 'upcoming') {
+    return (
+      <GetStarted name="events" hue="offer" title={t('loyalty.events.get_started.title', 'Plan your first event')}
+        line={t('loyalty.events.get_started.line', 'A tasting, a class or a members’ night: members sign up in the portal, and staff check them in at the door.')}
+        steps={[
+              { title: t('loyalty.events.get_started.s1_title', 'Name it and set the time'), line: t('loyalty.events.get_started.s1_line', 'A day and times on your venue’s clock, and where it is held.') },
+              { title: t('loyalty.events.get_started.s2_title', 'Choose who may come'), line: t('loyalty.events.get_started.s2_line', 'Every member or some tiers, with a sign-up in the portal if you want one.') },
+              { title: t('loyalty.events.get_started.s3_title', 'Publish it'), line: t('loyalty.events.get_started.s3_line', 'Members see it in the portal; check them in with Scan on the day.') },
+            ]}
+        // New event stays in the page's header for whoever may create one; anyone else reads who does.
+        who={data.can_change ? null : t('loyalty.events.read_only', 'Managers and staff allowed to manage offers create events.')} />
+    )
+  }
+  const words: Record<Exclude<EventsTab, 'upcoming'>, string> = {
     past: t('loyalty.events.empty.past', 'Events that have ended show here, with who came.'),
     drafts: t('loyalty.events.empty.drafts', 'No drafts. An event saved as a draft stays here until you publish it.'),
   }
   return (
     <div className="rounded-2xl border border-dashed border-a-border px-4 py-10 text-center">
       <p className="mx-auto max-w-md text-sm text-a-text-2">{words[tab]}</p>
-      {tab === 'upcoming' && data.can_change && (
-        <Button className="mt-4" variant="secondary" onClick={onCreate}><CalendarPlus size={16} aria-hidden />{t('loyalty.events.new', 'New event')}</Button>
-      )}
-      {tab === 'upcoming' && !data.can_change && (
-        <p className="mt-2 text-xs text-a-text-2">{t('loyalty.events.read_only', 'Managers and staff allowed to manage offers create events.')}</p>
-      )}
     </div>
   )
 }

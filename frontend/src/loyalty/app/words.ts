@@ -137,8 +137,16 @@ export const LOOK_PROBLEM_WORDS: Record<string, string> = {
 }
 
 /** The families above by the key prefix they are read under. */
+/** A tab card's line of what it holds (release 10). */
+export const TAB_CAPTION_WORDS: Record<string, string> = {
+  wallet: 'The card in Apple and Google Wallet',
+  app: 'The member app’s colours and logo',
+  currency: 'The money your prices are in',
+}
+
 export const WORD_FAMILIES: Record<string, Record<string, string>> = {
   tab: TAB_WORDS,
+  tab_caption: TAB_CAPTION_WORDS,
   missing: MISSING_WORDS,
   file: FILE_WORDS,
   file_line: FILE_LINE_WORDS,

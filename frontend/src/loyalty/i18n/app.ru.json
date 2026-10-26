@@ -185,6 +185,11 @@
     "currency": "Валюта",
     "wallet": "Карта в Wallet"
   },
+  "tab_caption": {
+    "app": "Цвета и логотип приложения участника",
+    "currency": "Валюта ваших цен",
+    "wallet": "Карта в Apple Wallet и Google Wallet"
+  },
   "tabs": "Разделы карты и приложения",
   "title": "Карта и приложение",
   "upload": {

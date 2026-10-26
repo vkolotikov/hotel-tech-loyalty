@@ -22,7 +22,6 @@
     "add": "Añadir recompensa",
     "fulfilled": "Entregadas",
     "line": "En qué pueden gastar sus puntos los miembros.",
-    "none": "El catálogo está vacío. Las recompensas que añada aquí aparecen en la aplicación de miembros y en el portal.",
     "none_left": "Agotada",
     "offered": "Disponible",
     "per_member": "Por miembro",
@@ -43,7 +42,7 @@
     "percent_discount": "Porcentaje de descuento"
   },
   "edit": "Editar",
-  "line": "En qué gastan sus puntos los miembros y qué los hace volver.",
+  "line": "En qué gastan sus puntos los miembros, los códigos que traen al mostrador y las ofertas y recomendaciones que les hacen volver.",
   "load": {
     "error": {
       "network": "Sin conexión. Compruebe la red e inténtelo de nuevo.",
@@ -136,7 +135,6 @@
     "every_tier": "Todos los niveles",
     "featured": "Destacada",
     "line": "Ofertas especiales que los miembros ven en la aplicación y en el portal.",
-    "none": "Aún no hay ofertas.",
     "per_member": "Hasta {{limit}} por miembro",
     "read_only": "Solo el personal autorizado a gestionar ofertas puede añadirlas o modificarlas.",
     "used": "Usos: {{used}}",
@@ -273,5 +271,33 @@
   },
   "tabs": "Secciones de recompensas",
   "title": "Recompensas",
-  "tab_waiting": "esperan en el mostrador"
+  "tab_waiting": "esperan en el mostrador",
+  "tab_caption": {
+    "catalogue": "En qué se gastan los puntos",
+    "redemptions": "Códigos para entregar en el mostrador",
+    "offers": "Ofertas para miembros, por un tiempo",
+    "referrals": "Amigos que traen sus miembros"
+  },
+  "get_started": {
+    "catalogue": {
+      "title": "Añada su primera recompensa",
+      "line": "Las recompensas son aquello en lo que los miembros gastan sus puntos. Aparecen en la app de miembros y en el portal.",
+      "s1_title": "Póngale nombre y precio",
+      "s1_line": "Un café gratis por 200 puntos, un tratamiento por 2.000.",
+      "s2_title": "Añada una foto",
+      "s2_line": "Opcional, pero una foto ayuda a elegir.",
+      "s3_title": "Entréguela en el mostrador",
+      "s3_line": "El miembro recibe un código; el equipo entrega la recompensa en Canjes."
+    },
+    "offers": {
+      "title": "Cree su primera oferta",
+      "line": "Una oferta es una ventaja que los miembros ven un tiempo en la app y en el portal, como un 20 % un fin de semana de otoño.",
+      "s1_title": "Elija su tipo y su valor",
+      "s1_line": "Un descuento, puntos extra, una mejora, una noche gratis y más.",
+      "s2_title": "Fije sus días",
+      "s2_line": "Un primer y un último día; desactívela cuando quiera.",
+      "s3_title": "Elija quién la ve",
+      "s3_line": "Todos los niveles o solo los que elija."
+    }
+  }
 }

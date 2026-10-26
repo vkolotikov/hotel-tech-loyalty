@@ -94,7 +94,6 @@
     "new_name": "New campaign, {{day}}",
     "line": "Emails to the members of a segment. Only members who agreed to marketing email receive them.",
     "new": "New campaign",
-    "none": "No campaigns yet. Make one, choose a segment, write the email and send it.",
     "no_subject": "No subject yet",
     "edited": "Edited {{day}}",
     "counts": "{{sent}} of {{total}} sent · {{failed}} failed",
@@ -162,7 +161,6 @@
   "segments": {
     "line": "Who a campaign goes to: members chosen by tier, activity, points, when they joined, or everyone.",
     "new": "New segment",
-    "none": "No segments yet. A segment chooses the members a campaign goes to.",
     "problem": "Rule {{n}} cannot be used: {{why}} No campaign is sent to this segment until it is fixed.",
     "members": "Members now",
     "last_sent": "Last sent",
@@ -476,6 +474,34 @@
       "not_allowed": "Only an owner or a manager can work with campaigns.",
       "network": "No connection: it is still scheduled. Try again.",
       "unknown": "It could not be taken back. Please try again."
+    }
+  },
+  "tab_caption": {
+    "campaigns": "Emails to a group of members",
+    "segments": "Groups of members to send to",
+    "push": "Messages to the member app",
+    "sms": "Text messages to phones"
+  },
+  "get_started": {
+    "campaigns": {
+      "title": "Send your first email campaign",
+      "line": "Write once, send to the members of a segment. Only members who agreed to marketing email receive it.",
+      "s1_title": "Make a segment",
+      "s1_line": "On Segments, choose who it goes to: a tier, activity, or everyone.",
+      "s2_title": "Write the email",
+      "s2_line": "A subject, then text, pictures and buttons; tags add each member’s name and points.",
+      "s3_title": "Send it or schedule it",
+      "s3_line": "Check how many it reaches, then send now or at a time you pick."
+    },
+    "segments": {
+      "title": "Make your first segment",
+      "line": "A segment is a group of members an email, a push message or an SMS goes to.",
+      "s1_title": "Name it",
+      "s1_line": "For example, Gold members or Not seen for 60 days.",
+      "s2_title": "Choose its rules",
+      "s2_line": "Tier, activity, points or when they joined, or everyone.",
+      "s3_title": "Send to it",
+      "s3_line": "Pick it when you send an email, a push message or an SMS."
     }
   }
 }

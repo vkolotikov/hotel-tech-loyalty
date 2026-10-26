@@ -1,18 +1,19 @@
 import type { ReactNode } from 'react'
 import type { LucideIcon } from 'lucide-react'
 import { SectionTitle } from '../../workspace/ui/Typography'
+import type { Hue } from '../ui/sections'
 
 /**
  * Pieces Program's sections (tiers, benefits, places, boosts) and the event's page share: a section's head with its
  * mark, and a row's obvious action as an icon.
  */
 
-/** A section's title with its mark, and its action at the end of the row. */
-export function SectionHead({ id, title, icon: Icon, children }: { id: string; title: string; icon: LucideIcon; children?: ReactNode }) {
+/** A section's title with its mark (in the section's colour where it has one, release 10), and its action at the end of the row. */
+export function SectionHead({ id, title, icon: Icon, hue, children }: { id: string; title: string; icon: LucideIcon; hue?: Hue; children?: ReactNode }) {
   return (
     <div className="flex flex-wrap items-center justify-between gap-2">
       <div className="flex items-center gap-2.5">
-        <span aria-hidden className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-a-accent/10 text-a-accent-text">
+        <span aria-hidden data-hue={hue} className={`inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${hue ? 'l-hue-tile' : 'bg-a-accent/10 text-a-accent-text'}`}>
           <Icon size={16} />
         </span>
         <SectionTitle><span id={id}>{title}</span></SectionTitle>

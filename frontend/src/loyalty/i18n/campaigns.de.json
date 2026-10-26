@@ -94,7 +94,6 @@
     "new_name": "Neue Kampagne, {{day}}",
     "line": "E-Mails an die Mitglieder eines Segments. Nur Mitglieder, die Werbe-E-Mails zugestimmt haben, erhalten sie.",
     "new": "Neue Kampagne",
-    "none": "Noch keine Kampagnen. Legen Sie eine an, wählen Sie ein Segment, schreiben Sie die E-Mail und senden Sie sie.",
     "no_subject": "Noch kein Betreff",
     "edited": "Bearbeitet {{day}}",
     "counts": "{{sent}} von {{total}} gesendet · {{failed}} fehlgeschlagen",
@@ -162,7 +161,6 @@
   "segments": {
     "line": "An wen eine Kampagne geht: Mitglieder nach Stufe, Aktivität, Punkten, Beitrittsdatum – oder alle.",
     "new": "Neues Segment",
-    "none": "Noch keine Segmente. Ein Segment bestimmt, an welche Mitglieder eine Kampagne geht.",
     "problem": "Regel {{n}} kann nicht verwendet werden: {{why}} Bis sie korrigiert ist, wird an dieses Segment keine Kampagne gesendet.",
     "members": "Mitglieder jetzt",
     "last_sent": "Zuletzt gesendet",
@@ -476,6 +474,34 @@
       "not_allowed": "Nur Inhaber oder Manager können mit Kampagnen arbeiten.",
       "network": "Keine Verbindung: Es ist noch geplant. Versuchen Sie es erneut.",
       "unknown": "Es konnte nicht zurückgenommen werden. Bitte versuchen Sie es erneut."
+    }
+  },
+  "tab_caption": {
+    "campaigns": "E-Mails an eine Gruppe von Mitgliedern",
+    "segments": "Mitgliedergruppen für den Versand",
+    "push": "Nachrichten an die Mitglieder-App",
+    "sms": "SMS aufs Telefon"
+  },
+  "get_started": {
+    "campaigns": {
+      "title": "Senden Sie Ihre erste E-Mail-Kampagne",
+      "line": "Einmal schreiben, an die Mitglieder eines Segments senden. Nur Mitglieder, die Werbe-E-Mails zugestimmt haben, erhalten sie.",
+      "s1_title": "Ein Segment anlegen",
+      "s1_line": "Unter Segmente wählen, an wen sie geht: eine Stufe, Aktivität oder alle.",
+      "s2_title": "Die E-Mail schreiben",
+      "s2_line": "Ein Betreff, dann Text, Bilder und Buttons; Tags fügen Namen und Punkte jedes Mitglieds ein.",
+      "s3_title": "Senden oder planen",
+      "s3_line": "Prüfen, wie viele sie erreicht, dann jetzt senden oder zu einer gewählten Zeit."
+    },
+    "segments": {
+      "title": "Legen Sie Ihr erstes Segment an",
+      "line": "Ein Segment ist eine Gruppe von Mitgliedern, an die eine E-Mail, eine Push-Nachricht oder eine SMS geht.",
+      "s1_title": "Benennen",
+      "s1_line": "Zum Beispiel Gold-Mitglieder oder Seit 60 Tagen nicht gesehen.",
+      "s2_title": "Regeln wählen",
+      "s2_line": "Stufe, Aktivität, Punkte oder Beitrittsdatum, oder alle.",
+      "s3_title": "Daran senden",
+      "s3_line": "Beim Senden einer E-Mail, Push-Nachricht oder SMS auswählen."
     }
   }
 }

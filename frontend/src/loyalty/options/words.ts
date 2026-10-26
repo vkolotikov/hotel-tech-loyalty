@@ -203,6 +203,15 @@ export const STAGE_WORDS: Record<string, string> = {
   keep: 'Stays active',
 }
 
+/** A section card's line of what it holds (release 10): the Overview, then groups.ts `GROUP_ORDER`. */
+export const TAB_CAPTION_WORDS: Record<string, string> = {
+  overview: 'Where your programme stands',
+  earn: 'Points and stamps for visits and spending',
+  bonus: 'Welcome, birthday and referral gifts',
+  rule: 'How members move up and when points expire',
+  more: 'Other ways your programme offers',
+}
+
 /** The page's sections (groups.ts `GROUP_ORDER`). */
 export const GROUP_WORDS: Record<string, string> = {
   earn: 'Earn points',
@@ -215,6 +224,7 @@ export const GROUP_WORDS: Record<string, string> = {
 export const WORD_FAMILIES: Record<string, Record<string, string>> = {
   advice: ADVICE_WORDS,
   fix: FIX_WORDS,
+  tab_caption: TAB_CAPTION_WORDS,
   stage: STAGE_WORDS,
   group: GROUP_WORDS,
   way: WAY_WORDS,

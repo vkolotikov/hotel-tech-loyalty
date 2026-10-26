@@ -1,7 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { useLocation } from 'react-router-dom'
 import { ChevronRight, DoorOpen, MapPin, Pencil, Plus, ScanLine } from 'lucide-react'
 import { Button } from '../../workspace/ui/Button'
 import { Notice } from '../../workspace/ui/Notice'
@@ -13,6 +12,7 @@ import { useLook } from '../lib/look'
 import { activeTone } from '../program/programMath'
 import { IconButton, SectionHead } from '../program/parts'
 import { ConfirmDialog, ToneBadge } from '../ui/formParts'
+import { GetStarted } from '../ui/GetStarted'
 import { TierChip } from '../ui/TierChip'
 import { EntriesDialog } from './EntriesDialog'
 import { ERRORS } from './errors'
@@ -40,17 +40,12 @@ export function PlacesSection({ manage }: { manage: boolean }) {
   const close = () => setOpen(null)
   const data = query.data
   const change = manage && (data?.can_change ?? false)
-  // Scan's "Set up places" opens Program at #places: the router does not scroll to an anchor, so once the places are
-  // drawn the section is brought into view.
-  const { hash } = useLocation()
-  useEffect(() => {
-    if (hash === '#places' && data) document.getElementById('places')?.scrollIntoView({ block: 'start' })
-  }, [hash, data])
 
   return (
     <section id="places" aria-labelledby="program-places" className="scroll-mt-20 space-y-3">
-      <SectionHead id="program-places" icon={MapPin} title={t('loyalty.places.title', 'Places')}>
-        {change && (
+      <SectionHead id="program-places" icon={MapPin} hue="place" title={t('loyalty.places.title', 'Places')}>
+        {/* With no place yet, the Get started panel below holds the one action. */}
+        {change && (data?.places.length ?? 0) > 0 && (
           <Button size="sm" onClick={() => { setSaid(null); setOpen({ kind: 'place', place: null }) }}>
             <Plus size={15} aria-hidden />{t('loyalty.places.add', 'Add a place')}
           </Button>
@@ -97,19 +92,21 @@ function PlacesBody({ query, change, theme, onOpen }: {
     )
   }
   if (data.places.length === 0) {
+    // Release 10 (the owner's Figma 163:322): the empty section teaches, in the places' colour.
     return (
-      <div data-places-empty="" className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-a-border px-4 py-6 text-center">
-        <MapPin size={20} aria-hidden className="text-a-text-2" />
-        <p className="max-w-md text-sm text-a-text-2">
-          {change
-            ? t('loyalty.places.none_manager', 'No places yet. Add your entrance first: scans there say who may come in.')
-            : t('loyalty.places.none', 'No places yet. An owner or a manager adds them here.')}
-        </p>
-        {change && (
-          <Button size="sm" variant="secondary" onClick={() => onOpen({ kind: 'place', place: null })}>
-            <Plus size={15} aria-hidden />{t('loyalty.places.add_first', 'Add the entrance')}
-          </Button>
-        )}
+      <div data-places-empty="">
+        <GetStarted name="places" hue="place" title={t('loyalty.places.get_started.title', 'Add your first entrance')}
+          line={t('loyalty.places.get_started.line', 'Give staff a clear place to check memberships and see who may come in.')}
+          steps={[
+            { title: t('loyalty.places.get_started.s1_title', 'Name your entrance'), line: t('loyalty.places.get_started.s1_line', 'For example, Main entrance or Reception.') },
+            { title: t('loyalty.places.get_started.s2_title', 'Choose who may enter'), line: t('loyalty.places.get_started.s2_line', 'Every member, or only the tiers you tick.') },
+            { title: t('loyalty.places.get_started.s3_title', 'Start checking members'), line: t('loyalty.places.get_started.s3_line', 'Open Scan and choose this entrance.') },
+          ]}
+          action={change && (
+            <Button onClick={() => onOpen({ kind: 'place', place: null })}>
+              <Plus size={15} aria-hidden />{t('loyalty.places.add_first', 'Add the entrance')}
+            </Button>
+          )} />
       </div>
     )
   }

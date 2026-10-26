@@ -78,8 +78,9 @@ describe('Card & app (release 2 §7)', () => {
 
   it('shows the two tabs, the address\'s selected and the only tab stop', () => {
     const html = render('?tab=app', manager)
-    expect(html).toMatch(/role="tab" id="app-tab-app" aria-selected="true"[^>]*tabindex="0"[^>]*>Member app</)
-    expect(html).toMatch(/role="tab" id="app-tab-wallet" aria-selected="false"[^>]*tabindex="-1"[^>]*>Wallet pass</)
+    // Release 10: each tab is a card in its colour with a line of what it holds.
+    expect(html).toMatch(/role="tab" id="app-tab-app" aria-selected="true"[^>]*tabindex="0"[^>]*data-hue="tier"[\s\S]*?<span>Member app<\/span>[\s\S]*?The member app’s colours and logo/)
+    expect(html).toMatch(/role="tab" id="app-tab-wallet" aria-selected="false"[^>]*tabindex="-1"[^>]*data-hue="gift"[\s\S]*?<span>Wallet pass<\/span>[\s\S]*?The card in Apple and Google Wallet/)
     expect(render('', manager)).toMatch(/id="app-tab-wallet" aria-selected="true"/)
   })
 
@@ -154,7 +155,7 @@ describe('Card & app: the currency (release 4, R4-5)', () => {
 
   it('is the third tab, and shows the venue\'s currency chosen from the server\'s list', () => {
     const html = render('?tab=currency', manager)
-    expect(html).toMatch(/role="tab" id="app-tab-currency" aria-selected="true"[^>]*tabindex="0"[^>]*>Currency</)
+    expect(html).toMatch(/role="tab" id="app-tab-currency" aria-selected="true"[^>]*tabindex="0"[^>]*data-hue="earn"[\s\S]*?<span>Currency<\/span>/)
     expect(html).toContain('<option value="EUR" selected="">EUR · Euro</option>')
     expect(html).toContain('<option value="GBP">GBP · British Pound</option>')
     expect(text(html)).toContain('Changing it relabels prices; it never converts them.')

@@ -185,6 +185,11 @@
     "currency": "Currency",
     "wallet": "Wallet pass"
   },
+  "tab_caption": {
+    "app": "The member app’s colours and logo",
+    "currency": "The money your prices are in",
+    "wallet": "The card in Apple and Google Wallet"
+  },
   "tabs": "Card and app areas",
   "title": "Card & app",
   "upload": {

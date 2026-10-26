@@ -94,7 +94,6 @@
     "new_name": "Nueva campaña, {{day}}",
     "line": "Correos a los miembros de un segmento. Solo los reciben los miembros que aceptaron el correo de marketing.",
     "new": "Nueva campaña",
-    "none": "Aún no hay campañas. Cree una, elija un segmento, escriba el correo y envíelo.",
     "no_subject": "Aún sin asunto",
     "edited": "Editada el {{day}}",
     "counts": "{{sent}} de {{total}} enviados · {{failed}} fallidos",
@@ -162,7 +161,6 @@
   "segments": {
     "line": "A quién va una campaña: miembros elegidos por nivel, actividad, puntos, fecha de alta, o todos.",
     "new": "Nuevo segmento",
-    "none": "Aún no hay segmentos. Un segmento elige los miembros a los que va una campaña.",
     "problem": "La regla {{n}} no se puede usar: {{why}} No se envía ninguna campaña a este segmento hasta corregirla.",
     "members": "Miembros ahora",
     "last_sent": "Último envío",
@@ -476,6 +474,34 @@
       "not_allowed": "Solo un propietario o un responsable puede trabajar con campañas.",
       "network": "Sin conexión: sigue programado. Inténtelo de nuevo.",
       "unknown": "No se pudo retirar. Inténtelo de nuevo."
+    }
+  },
+  "tab_caption": {
+    "campaigns": "Correos a un grupo de miembros",
+    "segments": "Grupos de miembros a quienes enviar",
+    "push": "Mensajes a la app de miembros",
+    "sms": "SMS a los teléfonos"
+  },
+  "get_started": {
+    "campaigns": {
+      "title": "Envíe su primera campaña de correo",
+      "line": "Escriba una vez y envíe a los miembros de un segmento. Solo la reciben quienes aceptaron correos de marketing.",
+      "s1_title": "Cree un segmento",
+      "s1_line": "En Segmentos, elija a quién va: un nivel, la actividad o todos.",
+      "s2_title": "Escriba el correo",
+      "s2_line": "Un asunto y luego texto, imágenes y botones; las etiquetas añaden el nombre y los puntos de cada miembro.",
+      "s3_title": "Envíela o prográmela",
+      "s3_line": "Compruebe a cuántos llega y envíe ahora o a la hora que elija."
+    },
+    "segments": {
+      "title": "Cree su primer segmento",
+      "line": "Un segmento es un grupo de miembros al que va un correo, una notificación push o un SMS.",
+      "s1_title": "Póngale nombre",
+      "s1_line": "Por ejemplo, Miembros Oro o Sin venir desde hace 60 días.",
+      "s2_title": "Elija sus reglas",
+      "s2_line": "Nivel, actividad, puntos o fecha de alta, o todos.",
+      "s3_title": "Envíele",
+      "s3_line": "Elíjalo al enviar un correo, una notificación push o un SMS."
     }
   }
 }

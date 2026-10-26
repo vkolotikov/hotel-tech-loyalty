@@ -110,7 +110,6 @@
     "no_category": "No kind chosen yet",
     "no_segment": "No segment",
     "no_title": "No title yet",
-    "none": "No push messages yet. Make one, choose its kind and a segment, and send it.",
     "scheduled": "Goes out {{when}}"
   },
   "load": {
@@ -266,5 +265,15 @@
       "network": "No connection: it is still scheduled. Try again.",
       "unknown": "It could not be taken back. Please try again."
     }
+  },
+  "get_started": {
+    "title": "Send your first push message",
+    "line": "A short message to the phones of members who have the app. It also stays in their inbox in the app.",
+    "s1_title": "Write it",
+    "s1_line": "A title and a line or two.",
+    "s2_title": "Choose who gets it",
+    "s2_line": "A segment of your members.",
+    "s3_title": "Send it or schedule it",
+    "s3_line": "Now, or at a time you pick."
   }
 }

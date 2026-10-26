@@ -31,10 +31,6 @@ export function LoadFailed({ error, onRetry }: { error: unknown; onRetry: () => 
   )
 }
 
-export function Empty({ children }: { children: ReactNode }) {
-  return <p className="rounded-xl border border-dashed border-a-border px-4 py-8 text-center text-sm text-a-text-2">{children}</p>
-}
-
 /** A tab's own line and its main action. */
 export function TabHead({ line, children }: { line: ReactNode; children?: ReactNode }) {
   return (

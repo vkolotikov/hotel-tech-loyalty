@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { keepPreviousData, useMutation, useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { ArrowDownUp, Download, ListFilter, Loader2, MoreHorizontal, ScanLine, Search, Upload, UserPlus, Users } from 'lucide-react'
+import { ArrowDownUp, Coins, Download, ListFilter, Loader2, MoreHorizontal, ScanLine, Search, Upload, UserPlus, Users } from 'lucide-react'
 import { Button } from '../../workspace/ui/Button'
 import { Notice } from '../../workspace/ui/Notice'
 import { PageHeader } from '../../workspace/ui/PageHeader'
@@ -15,6 +15,7 @@ import { day, points } from '../lib/format'
 import { memberPath } from '../lib/links'
 import { useLook } from '../lib/look'
 import type { Figures, MemberRow, MemberSort, TierRef } from '../lib/types'
+import { FigureTile, FigureTiles } from '../ui/FigureTiles'
 import { Pager } from '../ui/Pager'
 import { TierChip } from '../ui/TierChip'
 import { ToneBadge } from '../ui/formParts'
@@ -33,7 +34,7 @@ const INPUT = 'rounded-lg border border-a-border bg-a-surface px-2.5 py-2.5 text
 const TOOL = 'flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm text-a-text hover:bg-a-surface-2 focus:bg-a-surface-2 focus:outline-none'
 
 /**
- * Members, the workspace's home (spec 2026-10-21 §4.2): the numbers line, the tiers as chips, a search, the state and
+ * Members, the workspace's home (spec 2026-10-21 §4.2): the figures (release 10: as tiles), the tiers as chips, a search, the state and
  * the order; 50 a page. Everything chosen lives in the address, so a list can be shared and survives a reload. A row
  * opens the member's page. Release 2 (§4.1): Add member for everyone; for a manager Import, Export (the list as it is
  * filtered now) and Duplicates — release 9 puts these three under the ⋯ menu at the header's end. Release 8 (spec 2026-10-25 §3): Show also offers the members whose membership is
@@ -88,25 +89,7 @@ export function MembersPage() {
 
   return (
     <div className="space-y-5 px-4 py-6 lg:px-6">
-      <PageHeader title={t('loyalty.members.title', 'Members')}
-        below={figures && (
-          <p data-figures="" className="text-sm text-a-text-2">
-            {t('loyalty.members.figures', '{{active}} active of {{total}} · {{new}} joined this month · {{average}} points on average', {
-              active: points(figures.active, locale), total: points(figures.total, locale), new: points(figures.new_this_month, locale), average: points(figures.average_points, locale),
-            })}
-            {(['expiring', 'expired'] as const).filter(state => (figures[state] ?? 0) > 0).map(state => (
-              <span key={state}>
-                {' · '}
-                <button type="button" data-figure={state} onClick={() => apply(withChange(filters, { state }))}
-                  className={`font-medium underline-offset-2 hover:underline ${state === 'expired' ? 'text-a-danger' : 'text-a-text'}`}>
-                  {state === 'expiring'
-                    ? t('loyalty.membership.list.expiring_count', '{{n}} expiring soon', { n: points(figures.expiring ?? 0, locale) })
-                    : t('loyalty.membership.list.expired_count', '{{n}} expired', { n: points(figures.expired ?? 0, locale) })}
-                </button>
-              </span>
-            ))}
-          </p>
-        )}>
+      <PageHeader stacked title={t('loyalty.members.title', 'Members')} line={t('loyalty.members.line', 'Find a member, see where they stand, and welcome new ones.')}>
         {actions.add && (
           <Button variant="secondary" onClick={() => setAdding(true)}><UserPlus size={15} aria-hidden />{t('loyalty.membership.list.add', 'Add member')}</Button>
         )}
@@ -120,6 +103,31 @@ export function MembersPage() {
           </SideMenu>
         )}
       </PageHeader>
+
+      {/* Release 10 (the owner's Figma 131:3945): the figures as tiles; the memberships ending or ended open their list. */}
+      {figures && (
+        <div data-figures="" className="space-y-2">
+          <FigureTiles label={t('loyalty.members.tiles', 'Members in figures')}>
+            <FigureTile name="active" icon={Users} hue="tier" label={t('loyalty.members.tile.active', 'Active members')} value={points(figures.active, locale)}
+              note={t('loyalty.members.tile.active_note', 'of {{total}}', { total: points(figures.total, locale) })} />
+            <FigureTile name="joined" icon={UserPlus} hue="bonus" label={t('loyalty.members.tile.joined', 'Joined this month')} value={points(figures.new_this_month, locale)} />
+            <FigureTile name="average" icon={Coins} hue="earn" label={t('loyalty.members.tile.average', 'Average points')} value={points(figures.average_points, locale)}
+              note={t('loyalty.members.tile.average_note', 'per member')} />
+          </FigureTiles>
+          {(['expiring', 'expired'] as const).some(state => (figures[state] ?? 0) > 0) && (
+            <p className="flex flex-wrap gap-2 text-sm">
+              {(['expiring', 'expired'] as const).filter(state => (figures[state] ?? 0) > 0).map(state => (
+                <button key={state} type="button" data-figure={state} onClick={() => apply(withChange(filters, { state }))}
+                  className={`rounded-full border border-a-border bg-a-surface px-3 py-1 font-medium hover:bg-a-surface-2 ${state === 'expired' ? 'text-a-danger' : 'text-a-text'}`}>
+                  {state === 'expiring'
+                    ? t('loyalty.membership.list.expiring_count', '{{n}} expiring soon', { n: points(figures.expiring ?? 0, locale) })
+                    : t('loyalty.membership.list.expired_count', '{{n}} expired', { n: points(figures.expired ?? 0, locale) })}
+                </button>
+              ))}
+            </p>
+          )}
+        </div>
+      )}
 
       {/* Release 7: a manager is offered the programme's setup wizard until it is applied or skipped. */}
       <SetupBanner />

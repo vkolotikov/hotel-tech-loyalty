@@ -587,6 +587,32 @@ the scan screen, door mode, the member page and list, Program, Ways to earn, Eve
   in `FAQ` (`guideMath.ts`) and its `_q`/`_a` in all five bundles. `guide.test.tsx` checks every link the Guide opens
   against the routes in `LoyaltyApp.tsx`, so a renamed page fails it. The motion (`animate-a-sweep`, `animate-a-float`,
   in `tailwind.config.js`) is stilled under reduced motion like the rest.
+- **Release 10, the frame from the owner's Figma** (`docs/superpowers/specs/2026-10-26-loyalty-release-10-design.md`;
+  Figma file `5MtOVFZKvXk5x0mJ8Trm6g`, page Prototype): "easy to manage … for non-experienced users … sections a bit
+  contrast one to another". The parts, and where a new page takes them from:
+  - *Palette.* Loyalty's own `LOYALTY_SURFACES` (`workspace/theme/accent.ts`): in Dark the drafts' navy — canvas
+    `#182231`, cards `#29384b`, edges `#45576e`, side panel `#111b29`, text `#f5f7fb` / `#b8c7dc`; Light as before with
+    the deeper side panel. Content keeps `NAVY_SURFACES`. The shell, the door and tier chips compute the accent against
+    it; `loyaltyContrast.test.ts` proves the tokens, every pair, every family on its fill, and the shared tones.
+  - *Colour families* (`data-hue`, `ui/sections.ts` `Hue`): earn green, bonus rose, rule violet, gift amber, offer sky,
+    and since release 10 tier blue and place teal. Each has a tone (`--l-hue-*`) and a fill (`--l-hue-*-bg`; in Dark
+    the drafts' own `#203a5f`, `#352b4a`, `#183e3c`, `#493a20`); `.l-hue-card` is the chosen section, `.l-hue-panel`
+    a section's opening line and a Get started panel.
+  - *Sections as cards* (`ui/SectionCards.tsx`, the drafts' 171:401): icon in the colour, title, count, a line of what
+    it holds; a tab list with one tab stop (`sectionAfter`). Program (Tiers blue, Benefits violet, Places teal, Boost
+    events gold — `?tab=`, and the old `#places` still opens Places), Ways to earn (Overview blue, then its sections),
+    Rewards (catalogue amber, codes teal, offers sky, referrals rose), Campaigns (emails blue, segments violet, push
+    rose, SMS green), Card & app (wallet amber, app blue, currency green). Filters (Events, Requests) stay pills.
+  - *A page says what it is for*: `PageHeader stacked` puts its line under the title (other workspaces unchanged);
+    each Program section opens with its line in its colour (`SectionIntro`).
+  - *Figures as tiles* (`ui/FigureTiles.tsx`): Members (active, joined this month, average points; expiring and
+    expired stay buttons that filter), Tiers (tiers, members in a tier, benefits — the last leads to Benefits).
+  - *An empty list teaches* (`ui/GetStarted.tsx`, the drafts' 163:322 and 163:400): chip, heading, three numbered
+    steps, the one action (the header's add button is hidden while the list is empty, so there is never a second),
+    an example in figures where it helps (boosts: 100 → 200 points). On tiers, benefits, places, boosts, rewards,
+    offers, email campaigns, segments, push messages, SMS and upcoming events (New event stays in the header).
+  - *Benefits say where they are used* ("Given by Silver · Gold", or that no tier gives one yet).
+  - Spanish addresses staff as *usted*, as the rest of the workspace does (Campaigns, Push and Insights test it).
 
 ## What the workspace does not do
 

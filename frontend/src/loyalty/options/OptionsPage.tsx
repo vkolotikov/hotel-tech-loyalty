@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next'
 import { Coins, Gift, LayoutDashboard, SlidersHorizontal, Sparkles, WandSparkles, type LucideIcon } from 'lucide-react'
 import { PageHeader } from '../../workspace/ui/PageHeader'
 import { points } from '../lib/format'
-import { GROUP_HUE, groupOf, groupsOf, pageFrom, searchOf, tabAfter, tabsOf, type OptionsTab, type WayGroup } from './groups'
+import { GROUP_HUE, groupOf, groupsOf, pageFrom, searchOf, tabsOf, type OptionsTab, type WayGroup } from './groups'
 import { OPTIONS_KEY, optionsApi } from './optionsApi'
 import { isOn } from './optionsMath'
 import { LoadFailed, Loading } from './parts'
@@ -13,7 +13,8 @@ import { SetupBanner } from './SetupBanner'
 import type { Options, OptionsAnswer, Way } from './types'
 import { WayCard } from './WayCard'
 import { Overview } from './Overview'
-import { ADVICE_WORDS, GROUP_WORDS } from './words'
+import { ADVICE_WORDS, GROUP_WORDS, TAB_CAPTION_WORDS } from './words'
+import { SectionCards, SectionCount } from '../ui/SectionCards'
 
 const GROUP_ICONS: Record<WayGroup, LucideIcon> = { earn: Coins, bonus: Gift, rule: SlidersHorizontal, more: Sparkles }
 
@@ -43,7 +44,8 @@ export function OptionsPage() {
 
   return (
     <div className="space-y-6 px-4 py-6 lg:px-6">
-      <PageHeader title={t('loyalty.options.title', 'Ways to earn')}
+      <PageHeader stacked title={t('loyalty.options.title', 'Ways to earn')}
+        line={t('loyalty.options.line', 'How members earn points, the bonuses they are given, and the rules that keep it fair.')}
         below={data && !data.can_change && (
           <p data-read-only="" className="text-sm text-a-text-2">{t('loyalty.options.read_only', 'Only an owner or a manager can change these. You see them as they are.')}</p>
         )}>
@@ -75,49 +77,30 @@ export function OptionsPage() {
 const onCount = (ways: Way[], options: Options) => ways.filter(way => isOn(way, options)).length
 
 /**
- * The tabs: the Overview (with how many warnings wait, in the waiting colour) and each section in its colour with how
- * many of its ways are on. One tab stop; the arrow keys, Home and End move between the tabs.
+ * The sections as cards (release 10, the owner's Figma 171:401): the Overview (with how many warnings wait, in the
+ * waiting colour) and each section in its colour with a line of what it holds and how many of its ways are on.
  */
 function TabBar({ answer, tab, go }: { answer: OptionsAnswer; tab: OptionsTab; go: (tab: OptionsTab) => void }) {
   const { t, i18n } = useTranslation()
   const locale = i18n.language || 'en'
-  const tabs = tabsOf(answer.ways)
   const groups = groupsOf(answer.ways)
   const warnings = (answer.advice ?? []).filter(a => a.level === 'warn' && ADVICE_WORDS[a.code]).length
 
   return (
-    <div role="tablist" aria-label={t('loyalty.options.tabs', 'Ways to earn areas')} className="flex flex-wrap gap-2">
-      {tabs.map(name => {
-        const on = tab === name
+    <SectionCards label={t('loyalty.options.tabs', 'Ways to earn areas')} idPrefix="options-tab" panelId="options-panel" value={tab} onChange={go}
+      items={tabsOf(answer.ways).map(name => {
         const group = name === 'overview' ? null : groups.find(g => g.group === name)
-        const Icon = name === 'overview' ? LayoutDashboard : GROUP_ICONS[name]
-        return (
-          <button key={name} type="button" role="tab" id={`options-tab-${name}`} aria-selected={on} aria-controls="options-panel" tabIndex={on ? 0 : -1}
-            data-hue={name === 'overview' ? undefined : GROUP_HUE[name]} onClick={() => go(name)}
-            onKeyDown={(e) => {
-              const next = tabAfter(tabs, tab, e.key)
-              if (next === null) return
-              e.preventDefault()
-              go(next)
-              document.getElementById(`options-tab-${next}`)?.focus()
-            }}
-            className={`inline-flex min-h-10 items-center gap-2 rounded-full border py-1.5 pl-1.5 pr-3.5 text-sm font-medium ${on ? 'border-transparent bg-a-accent text-a-accent-ink' : 'border-a-border bg-a-surface text-a-text hover:bg-a-surface-2'}`}>
-            <span aria-hidden className={`inline-flex h-7 w-7 items-center justify-center rounded-full ${on ? 'bg-a-accent-ink/20' : name === 'overview' ? 'bg-a-surface-2 text-a-text-2' : 'l-hue-tile'}`}><Icon size={15} /></span>
-            <span>{name === 'overview' ? t('loyalty.options.tab_overview', 'Overview') : t(`loyalty.options.group.${name}`, GROUP_WORDS[name])}</span>
-            {group && (
-              <span data-tab-count="" className={`text-xs tabular-nums ${on ? '' : 'text-a-text-2'}`}>
-                {points(onCount(group.ways, answer.options), locale)}/{points(group.ways.length, locale)}
-              </span>
-            )}
-            {name === 'overview' && warnings > 0 && (
-              <span data-tab-count="" data-state="pending" className={`rounded-full px-2 text-xs font-bold tabular-nums ${on ? 'bg-a-accent-ink/20' : 'l-st-tint l-st-text'}`}>
-                {points(warnings, locale)}<span className="sr-only"> {t('loyalty.options.to_check', 'to check')}</span>
-              </span>
-            )}
-          </button>
-        )
-      })}
-    </div>
+        return {
+          id: name,
+          icon: name === 'overview' ? LayoutDashboard : GROUP_ICONS[name],
+          hue: name === 'overview' ? 'tier' : GROUP_HUE[name],
+          title: name === 'overview' ? t('loyalty.options.tab_overview', 'Overview') : t(`loyalty.options.group.${name}`, GROUP_WORDS[name]),
+          caption: t(`loyalty.options.tab_caption.${name}`, TAB_CAPTION_WORDS[name]),
+          badge: group
+            ? <SectionCount value={`${points(onCount(group.ways, answer.options), locale)}/${points(group.ways.length, locale)}`} />
+            : warnings > 0 ? <SectionCount waiting value={points(warnings, locale)} waitingLabel={t('loyalty.options.to_check', 'to check')} /> : undefined,
+        }
+      })} />
   )
 }
 

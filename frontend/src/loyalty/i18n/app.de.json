@@ -185,6 +185,11 @@
     "currency": "Währung",
     "wallet": "Wallet-Pass"
   },
+  "tab_caption": {
+    "app": "Farben und Logo der Mitglieder-App",
+    "currency": "Die Währung Ihrer Preise",
+    "wallet": "Die Karte in Apple und Google Wallet"
+  },
   "tabs": "Bereiche von Karte & App",
   "title": "Karte & App",
   "upload": {

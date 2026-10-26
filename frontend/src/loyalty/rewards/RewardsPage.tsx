@@ -10,10 +10,14 @@ import { CatalogueTab } from './CatalogueTab'
 import { OffersTab } from './OffersTab'
 import { RedemptionsTab } from './RedemptionsTab'
 import { ReferralsTab } from './ReferralsTab'
-import { REWARD_TABS, rewardsActions, searchFor, tabAfter, tabFrom, type RewardTab } from './rewardsMath'
-import { TAB_WORDS } from './words'
+import { REWARD_TABS, rewardsActions, searchFor, tabFrom, type RewardTab } from './rewardsMath'
+import { TAB_CAPTION_WORDS, TAB_WORDS } from './words'
+import { SectionCards, SectionCount } from '../ui/SectionCards'
+import type { Hue } from '../ui/sections'
 
 const TAB_ICONS: Record<RewardTab, LucideIcon> = { catalogue: Gift, redemptions: Ticket, offers: Tag, referrals: Users }
+/** Each tab's colour (release 10): rewards amber, codes at the desk teal, offers blue, referrals rose. */
+const TAB_HUE: Record<RewardTab, Hue> = { catalogue: 'gift', redemptions: 'place', offers: 'offer', referrals: 'bonus' }
 
 /**
  * Rewards (spec 2026-10-21 §4.6): the catalogue members spend points on, the redemption codes they bring to the desk,
@@ -35,39 +39,21 @@ export function RewardsPage() {
 
   return (
     <div className="space-y-5 px-4 py-6 lg:px-6">
-      <PageHeader title={t('loyalty.rewards.title', 'Rewards')} />
+      <PageHeader stacked title={t('loyalty.rewards.title', 'Rewards')} line={t('loyalty.rewards.line', 'What members spend their points on, the codes they bring to the desk, and the offers and referrals that bring them back.')} />
 
-      <div role="tablist" aria-label={t('loyalty.rewards.tabs', 'Rewards areas')} className="flex flex-wrap gap-2">
-        {REWARD_TABS.map(name => {
-          const Icon = TAB_ICONS[name]
-          const on = tab === name
+      <SectionCards label={t('loyalty.rewards.tabs', 'Rewards areas')} idPrefix="rewards-tab" panelId="rewards-panel" value={tab} onChange={go}
+        items={REWARD_TABS.map(name => {
           const count = counts[name]
-          const waiting = name === 'redemptions'
-          return (
-            // One tab stop; the arrow keys, Home and End move between the tabs.
-            <button key={name} type="button" role="tab" id={`rewards-tab-${name}`} aria-selected={on} aria-controls="rewards-panel"
-              tabIndex={on ? 0 : -1} onClick={() => go(name)} onKeyDown={(e) => {
-                const next = tabAfter(tab, e.key)
-                if (next === null) return
-                e.preventDefault()
-                go(next)
-                document.getElementById(`rewards-tab-${next}`)?.focus()
-              }}
-              className={`inline-flex min-h-10 items-center gap-2 rounded-full border py-1.5 pl-3 pr-3.5 text-sm font-medium ${on ? 'border-transparent bg-a-accent text-a-accent-ink' : 'border-a-border bg-a-surface text-a-text-2 hover:text-a-text'}`}>
-              <Icon size={15} aria-hidden />
-              <span>{t(`loyalty.rewards.tab.${name}`, TAB_WORDS[name])}</span>
-              {count !== null && (waiting
-                ? count > 0 && (
-                  // In the waiting colour; on the chosen tab it reads on the accent like the other counts.
-                  <span data-tab-count="" data-state="pending" className={`rounded-full px-2 text-xs font-bold tabular-nums ${on ? 'bg-a-accent-ink/20' : 'l-st-tint l-st-text'}`}>
-                    {points(count, locale)}<span className="sr-only"> {t('loyalty.rewards.tab_waiting', 'waiting at the desk')}</span>
-                  </span>
-                )
-                : <span data-tab-count="" className={`rounded-full px-2 text-xs font-semibold tabular-nums ${on ? 'bg-a-accent-ink/20' : 'bg-a-surface-2 text-a-text-2'}`}>{points(count, locale)}</span>)}
-            </button>
-          )
-        })}
-      </div>
+          return {
+            id: name, icon: TAB_ICONS[name], hue: TAB_HUE[name],
+            title: t(`loyalty.rewards.tab.${name}`, TAB_WORDS[name]),
+            caption: t(`loyalty.rewards.tab_caption.${name}`, TAB_CAPTION_WORDS[name]),
+            // The codes waiting at the desk in the waiting colour, only when some wait; every other tab its count.
+            badge: count === null ? undefined : name === 'redemptions'
+              ? (count > 0 ? <SectionCount waiting value={points(count, locale)} waitingLabel={t('loyalty.rewards.tab_waiting', 'waiting at the desk')} /> : undefined)
+              : <SectionCount value={points(count, locale)} />,
+          }
+        })} />
 
       <div id="rewards-panel" role="tabpanel" aria-labelledby={`rewards-tab-${tab}`} className="space-y-4">
         {tab === 'catalogue' && <CatalogueTab manage={actions.manage} />}
