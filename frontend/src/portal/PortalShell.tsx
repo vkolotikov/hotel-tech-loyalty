@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { NavLink } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { Home, Gift, CalendarDays, CalendarPlus, User, LogOut, Bell, Ticket } from 'lucide-react'
+import { Home, Gift, CalendarDays, CalendarPlus, User, LogOut, Bell, Ticket, CircleHelp } from 'lucide-react'
 import { useAuthStore } from '../stores/authStore'
 import { logoutAndRedirect } from '../lib/logout'
 import { usePortal } from './PortalProvider'
@@ -60,6 +60,12 @@ export function PortalShell({ children }: { children: ReactNode }) {
           </div>
           <div className="flex items-center gap-2 shrink-0">
             {firstName && <span className="hidden sm:inline text-sm text-p-text-2">{t('portal.shell.greeting', 'Hello, {{name}}', { name: firstName })}</span>}
+            {/* Help (2026-10-26): a question mark beside the bell at every width, like the inbox — not a menu item. */}
+            <NavLink to="/portal/help" title={t('portal.help.title', 'Help')} data-help-link=""
+              className={({ isActive }) => `flex items-center justify-center w-11 h-11 rounded-p-control transition-colors ${isActive ? 'text-p-accent-deep bg-p-accent/10' : 'text-p-text-2 hover:text-p-text'}`}>
+              <CircleHelp size={19} aria-hidden />
+              <span className="sr-only">{t('portal.help.title', 'Help')}</span>
+            </NavLink>
             {showInbox && (
               <NavLink to="/portal/inbox" title={t('portal.nav.inbox', 'Inbox')}
                 className={({ isActive }) => `relative flex items-center justify-center w-11 h-11 rounded-p-control transition-colors ${isActive ? 'text-p-accent-deep bg-p-accent/10' : 'text-p-text-2 hover:text-p-text'}`}>

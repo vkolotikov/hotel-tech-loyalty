@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { useLocation } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
+import { ChevronRight, CircleHelp } from 'lucide-react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import toast from 'react-hot-toast'
@@ -76,6 +77,17 @@ export function Profile() {
       {member && <MessagesCard member={member} />}
 
       {data.capabilities.loyalty && <ReferralCard />}
+
+      <Link to="/portal/help" className="block" data-help-link="">
+        <Card className="p-4 p-lift flex items-center gap-3">
+          <span className="w-9 h-9 rounded-full bg-p-accent/10 text-p-accent-deep flex items-center justify-center shrink-0"><CircleHelp size={17} aria-hidden /></span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-sm font-semibold">{t('portal.help.title', 'Help')}</span>
+            <span className="block text-xs text-p-text-2">{t('portal.help.line', 'Short answers about your membership.')}</span>
+          </span>
+          <ChevronRight size={16} aria-hidden className="shrink-0 text-p-text-2" />
+        </Card>
+      </Link>
 
       <Card className="p-4 flex items-center justify-between gap-3">
         <div><h2 className="text-sm font-semibold">{t('portal.profile.password_title', 'Password')}</h2></div>

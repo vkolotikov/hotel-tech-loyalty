@@ -19,6 +19,11 @@ import eventsRu from './events.ru.json'
 import eventsDe from './events.de.json'
 import eventsFr from './events.fr.json'
 import eventsEs from './events.es.json'
+import helpEn from './help.en.json'
+import helpRu from './help.ru.json'
+import helpDe from './help.de.json'
+import helpFr from './help.fr.json'
+import helpEs from './help.es.json'
 
 /**
  * The member portal's strings, kept out of the admin's common.json so a
@@ -28,13 +33,13 @@ import eventsEs from './events.es.json'
  * locale sweep in src/i18n/localeCompleteness.test.ts can see.
  */
 // Release 7 (spec 2026-10-25): the stamp card's and cashback credit's words, in their own files, under
-// `portal.stamps` and `portal.credit`.
+// `portal.stamps` and `portal.credit`. The Help page (2026-10-26) under `portal.help`.
 export const PORTAL_LOCALE_FILES = {
-  en: { ...en, stamps: stampsEn, credit: creditEn, events: eventsEn },
-  ru: { ...ru, stamps: stampsRu, credit: creditRu, events: eventsRu },
-  de: { ...de, stamps: stampsDe, credit: creditDe, events: eventsDe },
-  fr: { ...fr, stamps: stampsFr, credit: creditFr, events: eventsFr },
-  es: { ...es, stamps: stampsEs, credit: creditEs, events: eventsEs },
+  en: { ...en, stamps: stampsEn, credit: creditEn, events: eventsEn, help: helpEn },
+  ru: { ...ru, stamps: stampsRu, credit: creditRu, events: eventsRu, help: helpRu },
+  de: { ...de, stamps: stampsDe, credit: creditDe, events: eventsDe, help: helpDe },
+  fr: { ...fr, stamps: stampsFr, credit: creditFr, events: eventsFr, help: helpFr },
+  es: { ...es, stamps: stampsEs, credit: creditEs, events: eventsEs, help: helpEs },
 } as const
 
 let registered = false

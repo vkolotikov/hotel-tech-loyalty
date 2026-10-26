@@ -14,6 +14,7 @@ import { StayBook } from './pages/stay/StayBook'
 import { PayReturn } from './pages/book/PayReturn'
 import { BookEntry } from './pages/BookEntry'
 import { EventsPage } from './pages/events/EventsPage'
+import { HelpPage } from './pages/help/HelpPage'
 
 registerPortalLocales()
 
@@ -46,6 +47,8 @@ export function PortalApp() {
           <Route path="inbox" element={<Inbox />} />
           {/* Release 8: events the member may attend, and signing up. */}
           <Route path="events" element={<EventsPage />} />
+          {/* Help: short answers about what this member's portal has (owner 2026-10-26). */}
+          <Route path="help" element={<HelpPage />} />
           <Route path="*" element={<Navigate to="/portal" replace />} />
         </Routes>
       </PortalShell>
