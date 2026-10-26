@@ -101,12 +101,25 @@
   from { opacity: 0; transform: translateY(8px); }
   to   { opacity: 1; transform: translateY(0); }
 }
-[data-portal] .p-rise { animation: p-rise 220ms ease-out both; }
+/* `--p-delay` staggers a list (Help's steps): a Tailwind animation-delay class would lose to this shorthand. */
+[data-portal] .p-rise { animation: p-rise 220ms ease-out var(--p-delay, 0s) both; }
 [data-portal] .p-lift { transition: transform 160ms ease-out, box-shadow 160ms ease-out; }
 [data-portal] .p-lift:hover { transform: translateY(-2px); }
 
+/* Help (2026-10-26): the hero's icons drift, each at its own phase; an answer unfolds. */
+@keyframes p-bob {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-6px); }
+}
+@keyframes p-unfold {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: none; }
+}
+[data-portal] .p-bob { animation: p-bob 6s ease-in-out var(--p-delay, 0s) infinite; }
+[data-portal] .p-unfold { animation: p-unfold 200ms ease-out both; }
+
 @media (prefers-reduced-motion: reduce) {
-  [data-portal] .p-rise { animation: none; }
+  [data-portal] .p-rise, [data-portal] .p-bob, [data-portal] .p-unfold { animation: none; }
   [data-portal] .p-lift, [data-portal] .p-lift:hover { transition: none; transform: none; }
   [data-portal] * { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
 }

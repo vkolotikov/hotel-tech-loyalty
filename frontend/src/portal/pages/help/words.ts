@@ -1,0 +1,67 @@
+/**
+ * The Help page's words built at run time (steps, topics, questions and answers), in English: the fallbacks the page
+ * passes to t(), and what `help.en.json` must say (help.test.tsx compares them). The other four languages live in
+ * `portal/i18n/help.<lang>.json` under `portal.help`. A label quoted in an answer is the one the member sees on that
+ * screen, in each language (the test checks every quoted label against the portal's own words).
+ */
+export const HELP_WORDS = {
+  step: {
+    card: 'Show your card',
+    card_line: 'At the desk, from Home.',
+    earn: 'Collect points',
+    earn_line: 'When you visit or pay.',
+    spend: 'Enjoy rewards',
+    spend_line: 'Spend points under Rewards.',
+  },
+  topic: {
+    card: 'Card & points',
+    rewards: 'Rewards',
+    bookings: 'Bookings',
+    events: 'Events',
+    account: 'Account',
+  },
+  q: {
+    card: 'Where is my membership card?',
+    wallet: 'Can I add my card to my phone?',
+    earn: 'How do I collect points?',
+    balance: 'Where can I see my points?',
+    level: 'How do I reach the next level?',
+    ends: 'What happens when my membership ends?',
+    spend: 'How do I use my points?',
+    codes: 'Where are my reward codes?',
+    benefits: 'What does my level give me?',
+    offers: 'What are offers?',
+    book: 'How do I book?',
+    cancel: 'Can I cancel a booking?',
+    change: 'Can I change a booking?',
+    sign_up: 'How do I join an event?',
+    door: 'What do I show at the door?',
+    details: 'How do I change my name, phone or language?',
+    messages: 'How do I choose which messages I get?',
+    password: 'What if I forget my password?',
+    install: 'Can I keep the portal on my home screen?',
+    delete: 'How do I delete my account?',
+  },
+  a: {
+    card: 'On Home. Show its QR code at the desk, or give your member number.',
+    wallet: 'Where the venue offers it: tap “Add to Apple Wallet” or “Add to Google Wallet” under your card.',
+    earn: 'Show your card when you visit or pay. Points for a booking arrive once it is completed.',
+    balance: 'Your balance is on Home. Activity lists every change.',
+    level: 'Home shows how much more you need. Each level has its own benefits.',
+    ends: 'You can still sign in and see everything. Ask the team to renew it.',
+    spend: 'Choose a reward in Rewards → Catalogue. You get a code to show at the desk.',
+    codes: 'In Rewards → My codes.',
+    benefits: 'See Rewards → Benefits. Some apply on their own; for others, tap “Request this”.',
+    offers: 'Extras for members. You find them in Rewards → Offers.',
+    book: 'Tap Book, choose what and when, then confirm.',
+    cancel: 'Open it in Bookings: “Cancel booking” is there while free cancellation lasts, and online payments go back the way you paid. Later, contact the team.',
+    change: 'Contact the team. While free cancellation lasts, you can also cancel and book again.',
+    sign_up: 'Open Events and tap “Sign up”. You can cancel your sign-up there too.',
+    door: 'Your card on Home: the team scans its QR code.',
+    details: 'In Profile. To change your email, ask the team.',
+    messages: 'In Profile, under “What we tell you about”. A kind you switch off is not sent at all.',
+    password: 'Sign out, then tap “Forgot password?” on the sign-in page.',
+    install: 'Yes. On an iPhone: Share → Add to Home Screen. On Android: the browser menu → Add to Home screen.',
+    delete: 'In Profile: “Delete account”, at the bottom.',
+  },
+} as const

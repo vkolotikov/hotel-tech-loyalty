@@ -63,6 +63,15 @@ cancel either kind themselves inside the venue's cancellation window (`## Cancel
   friend's first visit. Words in `portal/i18n/stamps.<lang>.json` and `credit.<lang>.json` under `portal.stamps` and
   `portal.credit`.
 
+- Help (`/portal/help`, `pages/help/`, owner 2026-10-26): the member's FAQ, opened from the question mark beside the bell
+  (every width; not a menu item, so the phone bar keeps its five) and from Profile. A search; for a loyalty member,
+  how it works in three steps; the questions by topic, only about what this member's portal has (`questionsFor()`: no
+  points or rewards without loyalty, no booking questions where nothing can be booked, events while the menu offers
+  them, "when my membership ends" only with an end date); the venue's email and phone. Reads nothing beyond the
+  bootstrap. Words in `portal/i18n/help.<lang>.json` under `portal.help` (`pages/help/words.ts` is the English);
+  `help.test.tsx` checks that every button an answer quotes is that screen's own label in each language, and that
+  every link lands on a portal route — so renaming a button or a page means updating its answer.
+
 ## Frontend rules (enforced by `frontend/src/portal/tokens.test.ts`)
 
 - Only `p-*` colour classes (`bg-p-surface`, `text-p-text-2`, `bg-p-accent/10`, …) from
