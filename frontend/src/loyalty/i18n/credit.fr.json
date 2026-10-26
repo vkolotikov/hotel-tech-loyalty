@@ -2,7 +2,6 @@
   "title": "Crédit",
   "use_action": "Utiliser le crédit",
   "adjust_action": "Corriger",
-  "earning": "Les membres récupèrent {{percent}} % de ce qu’ils dépensent en crédit, à utiliser à l’accueil.",
   "off": "Le cashback est désactivé : rien de nouveau n’est gagné, et ce crédit peut toujours être utilisé à l’accueil.",
   "none": "Pas encore de crédit.",
   "history": "Historique du crédit",

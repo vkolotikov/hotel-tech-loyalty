@@ -1,6 +1,5 @@
 {
   "back": "Back to Scan",
-  "benefits": "Benefits",
   "check": "Check",
   "checking": "Checking…",
   "choose_failed": "Places and events could not be loaded. Check the connection, then reload this page.",
@@ -16,9 +15,6 @@
   "leave": "Leave door mode",
   "leave_line": "This screen stops scanning members in until door mode is opened again.",
   "leave_title": "Leave door mode?",
-  "line_desk": "Find a member, then award or redeem points or check them in.",
-  "line_event": "Each scan checks the member in to {{event}} ({{hours}}).",
-  "line_place": "Each scan decides whether the member may enter {{place}}, and records it.",
   "linked": "The card is linked to {{name}}. Scan it again to let them in.",
   "loading_places": "Loading places and events…",
   "next": "Next member",
@@ -28,7 +24,7 @@
   "places": "Places",
   "places_failed": "Places and events could not be loaded. The desk works as usual; they appear when the connection is back.",
   "ready": "Ready — scan the next member",
-  "ready_line": "A QR code, a card or a member number: the answer shows here for a few seconds.",
+  "renew": "Renew for 1 year",
   "retry": "Try again",
   "scanning_for": "Scanning for",
   "set_up_places": "Set up places",
@@ -52,14 +48,10 @@
   "unavailable": "Door mode could not start",
   "unavailable_line": "Check the connection, then try again.",
   "way_camera": "Start the camera",
-  "way_camera_line": "Members hold their QR code up to this screen.",
   "way_nfc": "Tap NFC cards",
-  "way_nfc_line": "Members tap their card on the back of this device.",
   "way_usb": "USB reader",
-  "way_usb_line": "A card reader plugged into this device.",
   "headline": {
-    "welcome": "Welcome, {{name}}",
-    "welcome_plain": "Welcome",
+    "welcome": "Welcome",
     "no_access": "No access",
     "card_unknown": "Card not recognised",
     "trouble": "Try again",
@@ -97,11 +89,14 @@
     "signed_up": "Signed up",
     "walk_in": "Walk-in",
     "already_in": "Already checked in at {{time}}",
+    "already_in_on": "Already checked in on {{date}} at {{time}}",
+    "points_one": "+1 point",
     "points": "+{{points}} points"
   },
   "validity": {
     "until": "Valid until {{date}}",
     "ending": "Valid until {{date}} — ends in {{days}} days",
+    "ending_tomorrow": "Valid until {{date}} — ends tomorrow",
     "ending_today": "Valid until today",
     "ended": "Membership ended on {{date}}"
   }

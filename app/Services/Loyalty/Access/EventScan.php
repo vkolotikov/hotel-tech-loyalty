@@ -103,14 +103,24 @@ final class EventScan
 
         $fresh = $member->fresh() ?? $member;
         $fresh->loadMissing('user:id,name,email,phone');
+        // The visit after the check-in may have moved the member up a tier (tiers by visits): the chip names the tier the
+        // benefits below are read from, the member's tier now (release 9).
+        $verdict = (array) ($done['verdict'] ?? []);
+        if ($fresh->tier_id !== null && (int) ($verdict['tier']['id'] ?? 0) !== (int) $fresh->tier_id) {
+            $tier = \App\Models\LoyaltyTier::withoutGlobalScopes()->where('organization_id', $fresh->organization_id)->find($fresh->tier_id);
+            if ($tier !== null) {
+                $verdict['tier'] = ['id' => (int) $tier->id, 'name' => (string) $tier->name, 'color' => $tier->color_hex];
+            }
+        }
         $answer = ['status' => 200, 'body' => [
             'member'     => MemberDirectory::row($fresh),
-            'verdict'    => (array) ($done['verdict'] ?? []) + [
+            'verdict'    => $verdict + [
                 'event'    => ['id' => (int) $event->id, 'title' => (string) $event->title],
                 'entry_id' => isset($done['scan_event_id']) ? (int) $done['scan_event_id'] : null,
             ],
             'checked_in' => (bool) ($done['checked_in'] ?? false),
             'already_in' => $done['already_in'] ?? null,
+            'already_in_at' => $done['already_in_at'] ?? null,
             'signed_up'  => (bool) ($done['signed_up'] ?? false),
             'points'     => (int) ($done['points'] ?? 0),
             'stamp'      => $done['stamp'] ?? null,

@@ -1,6 +1,7 @@
 import type { QueryClient } from '@tanstack/react-query'
 import { api } from '../../lib/api'
 import { loyaltyUrl, watched } from '../lib/api'
+import { PLACES_KEY } from '../places/placesApi'
 import type { Benefit, BenefitBody, Boost, BoostBody, Program, Tier, TierBenefit, TierBenefitBody, TierBody } from './types'
 
 /** Program's calls (spec 2026-10-21 §6.4): one read, and the managers' writes. */
@@ -29,10 +30,14 @@ export const PROGRAM_KEY = ['loyalty', 'program'] as const
 
 /**
  * What a saved change makes stale. The shell, the members list and Find read the tiers from the bootstrap, so a tier
- * change reads it again; a member's page shows the tier's benefits by name, so a benefit change reads those again.
+ * change reads it again, and the places list too (its chips carry the tiers' names and colours); a member's page shows
+ * the tier's benefits by name, so a benefit change reads those again.
  */
 export function afterProgramChange(client: QueryClient, touched: { tiers?: boolean; benefits?: boolean } = {}): void {
   void client.invalidateQueries({ queryKey: PROGRAM_KEY })
-  if (touched.tiers) void client.invalidateQueries({ queryKey: ['loyalty', 'bootstrap'] })
+  if (touched.tiers) {
+    void client.invalidateQueries({ queryKey: ['loyalty', 'bootstrap'] })
+    void client.invalidateQueries({ queryKey: PLACES_KEY, exact: true })
+  }
   if (touched.benefits || touched.tiers) void client.invalidateQueries({ queryKey: ['loyalty', 'member'] })
 }

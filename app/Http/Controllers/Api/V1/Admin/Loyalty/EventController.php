@@ -6,7 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Models\LoyaltyEvent;
 use App\Models\LoyaltyMember;
 use App\Models\User;
+use App\Services\Appointments\VenueClock;
 use App\Services\Booking\Setup\OwnRows;
+use App\Services\Loyalty\Access\AccessDecision;
 use App\Services\Loyalty\Events\EventCheckIn;
 use App\Services\Loyalty\Events\EventClock;
 use App\Services\Loyalty\Events\EventEditor;
@@ -135,7 +137,7 @@ class EventController extends Controller
         $event = $this->event($id);
         $row = $this->row($event);
 
-        return response()->json(['event' => $row, 'counts' => $row['counts']] + EventRows::people($event, (int) ($data['page'] ?? 1)));
+        return response()->json(['event' => $row, 'counts' => $row['counts'], 'latest' => EventRows::latestCheckIns($event)] + EventRows::people($event, (int) ($data['page'] ?? 1)));
     }
 
     public function signUp(Request $request, int $id, EventSignUp $signUps): JsonResponse
@@ -201,8 +203,11 @@ class EventController extends Controller
         $query = LoyaltyEvent::query()->where('organization_id', $orgId);
 
         return match ($when) {
+            // Today's, and one starting just after midnight once its doors are open (release 9: from two hours before,
+            // as AccessDecision lets in) — so the door can scan for it at 23:00.
             'today'  => $query->where('status', LoyaltyEvent::PUBLISHED)->where('ends_at', '>', $now)
-                ->where('starts_at', '<', EventClock::dayAfter(EventClock::today($orgId)))->orderBy('starts_at')->orderBy('id'),
+                ->where('starts_at', '<', max(EventClock::dayAfter(EventClock::today($orgId)), VenueClock::now($orgId)->addMinutes(AccessDecision::OPENS_BEFORE_MINUTES)->format(EventClock::DIGITS)))
+                ->orderBy('starts_at')->orderBy('id'),
             'past'   => $query->whereIn('status', [LoyaltyEvent::PUBLISHED, LoyaltyEvent::CANCELLED])->where('ends_at', '<=', $now)
                 ->orderByDesc('starts_at')->orderByDesc('id'),
             'drafts' => $query->where('status', LoyaltyEvent::DRAFT)->orderBy('starts_at')->orderBy('id'),

@@ -2,15 +2,17 @@ import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { ArrowLeft, Ban, Footprints, MapPin, Maximize2, Pencil, ScanLine, Send, Sparkles, Trash2, UserCheck, UserPlus, Users } from 'lucide-react'
+import { ArrowLeft, Ban, CalendarDays, ClipboardList, DoorOpen, Footprints, MapPin, Maximize2, MoreHorizontal, Pencil, ScanLine, Send, Sparkles, Ticket, Trash2, UserCheck, UserPlus, Users, type LucideIcon } from 'lucide-react'
 import { Button } from '../../workspace/ui/Button'
 import { Dialog } from '../../workspace/ui/Dialog'
 import { Notice } from '../../workspace/ui/Notice'
 import { Skeleton } from '../../workspace/ui/Skeleton'
+import { SideMenu } from '../../workspace/shell/SideMenu'
 import { venueNow } from '../../workspace/lib/wallClock'
 import { useBoot } from '../LoyaltyProvider'
 import { failureOf, newPressKey } from '../lib/api'
 import { refusalKey } from '../lib/errors'
+import { points } from '../lib/format'
 import { useLook } from '../lib/look'
 import type { MemberRow } from '../lib/types'
 import { useFirstFocus } from '../lib/useFirstFocus'
@@ -22,7 +24,8 @@ import { EventDialog } from './EventDialog'
 import { MemberPicker } from './MemberPicker'
 import { afterEventChange, afterPersonChange, eventKey, eventsApi, peopleKey } from './eventsApi'
 import {
-  SCAN_CONTEXT_KEY, checkInSentence, counted, doorPathFor, eventActions, peopleGroups, personLine, personState, phaseTone, scanContextFor, scanPathFor, wallNow, whenLine, whereOf, type CheckInSaid, type Say,
+  SCAN_CONTEXT_KEY, checkInSentence, counted, doorPathFor, eventActions, moreItems, peopleGroups, personLine, personState, phaseTone, scanContextFor, scanPathFor, wallNow, whenLine, whereOf,
+  type CheckInSaid, type MoreItem, type Say,
 } from './eventsMath'
 import type { CheckInAnswer, EventOptions, EventPerson, LoyaltyEventRow } from './types'
 import { PHASE_WORDS } from './words'
@@ -119,63 +122,75 @@ export function EventView({ event, canChange, options }: { event: LoyaltyEventRo
   }
 
   const c = event.counts
-  const tiles: { label: string; value: number }[] = [
-    ...(event.sign_up ? [{ label: t('loyalty.events.page.signed_up', 'Signed up'), value: c.signed_up }] : []),
-    { label: t('loyalty.events.page.checked_in', 'Checked in'), value: c.checked_in },
-    ...(event.sign_up ? [{ label: t('loyalty.events.page.walk_ins', 'Walk-ins'), value: c.walk_ins }] : []),
-    ...(c.room_left !== null ? [{ label: t('loyalty.events.page.room_left', 'Places left'), value: c.room_left }] : []),
+  const tiles: { key: string; icon: LucideIcon; label: string; value: number }[] = [
+    ...(event.sign_up ? [{ key: 'signed_up', icon: ClipboardList, label: t('loyalty.events.page.signed_up', 'Signed up'), value: c.signed_up }] : []),
+    { key: 'checked_in', icon: UserCheck, label: t('loyalty.events.page.checked_in', 'Checked in'), value: c.checked_in },
+    ...(event.sign_up ? [{ key: 'walk_ins', icon: DoorOpen, label: t('loyalty.events.page.walk_ins', 'Walk-ins'), value: c.walk_ins }] : []),
+    ...(c.room_left !== null ? [{ key: 'room_left', icon: Ticket, label: t('loyalty.events.page.room_left', 'Places left'), value: c.room_left }] : []),
   ]
+  const more = moreItems(can)
+  const pick = (item: MoreItem) => setOpen(item === 'add' ? 'add' : item === 'edit' ? 'edit' : item === 'cancel' ? 'cancel' : 'delete')
 
   return (
     <div className="space-y-5 px-4 py-6 lg:px-6">
       <BackLink />
 
       <header className="space-y-3">
-        <div className="flex flex-wrap items-start gap-x-4 gap-y-2">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
           <h1 className={`font-a-display text-[34px] font-normal leading-tight text-a-text ${event.phase === 'cancelled' ? 'line-through decoration-a-text-2/50' : ''}`}>{event.title}</h1>
-          <span className="pt-2"><ToneBadge tone={phaseTone(event.phase)}>{t(`loyalty.events.phase.${event.phase}`, PHASE_WORDS[event.phase])}</ToneBadge></span>
+          <ToneBadge tone={phaseTone(event.phase)}>{t(`loyalty.events.phase.${event.phase}`, PHASE_WORDS[event.phase])}</ToneBadge>
         </div>
-        <div className="space-y-1.5 text-sm text-a-text-2">
-          <p className="text-a-text">{whenLine(event.starts_at, event.ends_at, locale)}</p>
-          {where && <p className="inline-flex items-center gap-1.5"><MapPin size={14} aria-hidden />{where}</p>}
-          <div className="flex flex-wrap items-center gap-1.5">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-sm text-a-text-2">
+          <span className="inline-flex items-center gap-1.5 text-a-text"><CalendarDays size={15} aria-hidden className="text-a-text-2" />{whenLine(event.starts_at, event.ends_at, locale)}</span>
+          {where && <span className="inline-flex items-center gap-1.5"><MapPin size={15} aria-hidden />{where}</span>}
+          <span className="inline-flex flex-wrap items-center gap-1.5">
             {event.admits === 'tiers'
               ? event.tiers.map(tier => <TierChip key={tier.id} tier={tier} theme={look.resolved} size="sm" />)
-              : <span className="inline-flex items-center gap-1"><Users size={14} aria-hidden />{t('loyalty.events.card.every_member', 'Every member')}</span>}
-            {event.points > 0 && <span className="inline-flex items-center gap-1 font-semibold text-a-accent-text"><Sparkles size={14} aria-hidden />{counted(say, 'points_plus', event.points, locale)}</span>}
-            {event.counts_as_visit && <span className="inline-flex items-center gap-1"><Footprints size={14} aria-hidden />{t('loyalty.events.card.visit', 'Counts as a visit')}</span>}
-          </div>
-          {event.description && <p className="max-w-2xl whitespace-pre-line pt-1 text-a-text">{event.description}</p>}
+              : <><Users size={15} aria-hidden />{t('loyalty.events.card.every_member', 'Every member')}</>}
+          </span>
+          {event.points > 0 && <span className="inline-flex items-center gap-1.5 font-semibold text-a-accent-text"><Sparkles size={15} aria-hidden />{counted(say, 'points_plus', event.points, locale)}</span>}
+          {event.counts_as_visit && <span className="inline-flex items-center gap-1.5"><Footprints size={15} aria-hidden />{t('loyalty.events.card.visit', 'Counts as a visit')}</span>}
         </div>
+        {event.description && <p className="max-w-2xl whitespace-pre-line text-sm text-a-text">{event.description}</p>}
 
-        <div className="flex flex-wrap gap-2">
+        {/* Start check-in (or Publish, for a draft) is the page's action; Door mode and by name sit beside it; the rest is under More. */}
+        <div className="flex flex-wrap items-center gap-2">
           {can.checkIn && <Button onClick={startCheckIn}><ScanLine size={16} aria-hidden />{t('loyalty.events.page.start_check_in', 'Start check-in')}</Button>}
+          {can.publish && <Button loading={publish.isPending} onClick={() => publish.mutate()}><Send size={16} aria-hidden />{t('loyalty.events.page.publish', 'Publish')}</Button>}
           {can.checkIn && (
-            <Link to={doorPathFor(event.id)} onClick={remember}
-              className="inline-flex items-center gap-2 rounded-full border border-a-border bg-a-surface px-4 py-2.5 text-sm font-semibold text-a-text hover:bg-a-surface-2">
-              <Maximize2 size={16} aria-hidden />{t('loyalty.events.page.door_mode', 'Door mode')}
+            <Link to={doorPathFor(event.id)} onClick={remember} title={t('loyalty.events.page.door_mode', 'Door mode')}
+              className="inline-flex min-h-11 min-w-11 items-center justify-center gap-2 rounded-full border border-a-border bg-a-surface px-3 text-sm font-semibold text-a-text hover:bg-a-surface-2 sm:px-4">
+              <Maximize2 size={16} aria-hidden /><span className="sr-only sm:not-sr-only">{t('loyalty.events.page.door_mode', 'Door mode')}</span>
             </Link>
           )}
           {can.checkIn && (
-            <Button variant="secondary" aria-expanded={byName} onClick={() => { setByName(v => !v); setSaid(null) }}>
-              <UserCheck size={16} aria-hidden />{t('loyalty.events.page.by_name', 'Check in by name')}
-            </Button>
+            <button type="button" aria-expanded={byName} title={t('loyalty.events.page.by_name', 'Check in by name')} onClick={() => { setByName(v => !v); setSaid(null) }}
+              className={`inline-flex min-h-11 min-w-11 items-center justify-center gap-2 rounded-full border px-3 text-sm font-semibold sm:px-4 ${byName ? 'border-a-accent-text bg-a-accent/10 text-a-text' : 'border-a-border bg-a-surface text-a-text hover:bg-a-surface-2'}`}>
+              <UserCheck size={16} aria-hidden /><span className="sr-only sm:not-sr-only">{t('loyalty.events.page.by_name', 'Check in by name')}</span>
+            </button>
           )}
-          {can.addMember && <Button variant="secondary" onClick={() => setOpen('add')}><UserPlus size={16} aria-hidden />{t('loyalty.events.page.add_member', 'Add a member')}</Button>}
-          {can.publish && <Button variant="secondary" loading={publish.isPending} onClick={() => publish.mutate()}><Send size={16} aria-hidden />{t('loyalty.events.page.publish', 'Publish')}</Button>}
-          {can.edit && <Button variant="ghost" onClick={() => setOpen('edit')}><Pencil size={15} aria-hidden />{t('loyalty.events.page.edit', 'Edit')}</Button>}
-          {can.cancel && <Button variant="ghost" onClick={() => setOpen('cancel')}><Ban size={15} aria-hidden />{t('loyalty.events.page.cancel_event', 'Cancel event')}</Button>}
-          {can.remove && <Button variant="ghost" onClick={() => setOpen('delete')}><Trash2 size={15} aria-hidden />{t('loyalty.events.page.delete', 'Delete draft')}</Button>}
+          {more.length > 0 && (
+            <div data-event-more="">
+              <SideMenu kind="menu" place="down-right" label={t('loyalty.events.page.more', 'More')} named
+                buttonClassName="inline-flex h-11 w-11 items-center justify-center rounded-full border border-a-border bg-a-surface text-a-text hover:bg-a-surface-2"
+                face={<MoreHorizontal size={18} aria-hidden />} listClassName="w-56">
+                {more.map(item => <MoreRow key={item} item={item} onPick={pick} />)}
+              </SideMenu>
+            </div>
+          )}
         </div>
         {lifeFailure && <Notice tone="danger">{t(...refusalKey('loyalty.events', ERRORS, publish.isError ? 'life' : 'people', lifeFailure))}</Notice>}
         {event.status === 'draft' && <p className="text-xs text-a-text-2">{t('loyalty.events.page.draft_note', 'A draft: members do not see it, and nobody can sign up or check in until you publish it.')}</p>}
       </header>
 
-      <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <dl className={`grid overflow-hidden rounded-2xl border border-a-border bg-a-surface ${tiles.length === 1 ? 'grid-cols-1' : 'grid-cols-2'} ${tiles.length >= 4 ? 'sm:grid-cols-4' : tiles.length === 3 ? 'sm:grid-cols-3' : ''}`}>
         {tiles.map(tile => (
-          <div key={tile.label} className="rounded-2xl border border-a-border bg-a-surface p-4">
-            <dt className="text-xs font-medium text-a-text-2">{tile.label}</dt>
-            <dd className="font-a-display text-3xl tabular-nums text-a-text">{tile.value.toLocaleString(locale)}</dd>
+          <div key={tile.key} data-tile={tile.key} className="flex items-center gap-3 border-a-border px-4 py-3 [&:not(:first-child)]:border-l max-sm:[&:nth-child(3)]:border-l-0 max-sm:[&:nth-child(n+3)]:border-t">
+            <span aria-hidden className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-a-accent/10 text-a-accent-text"><tile.icon size={16} /></span>
+            <div className="min-w-0">
+              <dt className="truncate text-xs font-medium text-a-text-2">{tile.label}</dt>
+              <dd className="font-a-display text-2xl leading-tight tabular-nums text-a-text">{points(tile.value, locale)}</dd>
+            </div>
           </div>
         ))}
       </dl>
@@ -221,6 +236,25 @@ export function EventView({ event, canChange, options }: { event: LoyaltyEventRo
   )
 }
 
+const MORE_ROW = 'flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm hover:bg-a-surface-2 focus:bg-a-surface-2 focus:outline-none'
+
+/** One row of the More menu: Add a member, Edit, and the ones that end something (in the danger colour, last). */
+function MoreRow({ item, onPick }: { item: MoreItem; onPick: (item: MoreItem) => void }) {
+  const { t } = useTranslation()
+  const rows: Record<MoreItem, { icon: LucideIcon; word: string; danger?: boolean }> = {
+    add: { icon: UserPlus, word: t('loyalty.events.page.add_member', 'Add a member') },
+    edit: { icon: Pencil, word: t('loyalty.events.page.edit', 'Edit') },
+    cancel: { icon: Ban, word: t('loyalty.events.page.cancel_event', 'Cancel event'), danger: true },
+    delete: { icon: Trash2, word: t('loyalty.events.page.delete', 'Delete draft'), danger: true },
+  }
+  const row = rows[item]
+  return (
+    <button type="button" role="menuitem" data-more={item} onClick={() => onPick(item)} className={`${MORE_ROW} ${row.danger ? 'text-a-danger' : 'text-a-text'}`}>
+      <row.icon size={15} aria-hidden />{row.word}
+    </button>
+  )
+}
+
 /** Check in by name: find the member, press Check in. */
 function ByName({ pending, onCheckIn }: { pending: boolean; onCheckIn: (member: MemberRow) => void }) {
   const { t } = useTranslation()
@@ -258,7 +292,7 @@ function PeopleList({ people, signUp, canAct, pending, onCheckIn, onCancel }: {
     <div className="space-y-4">
       {sections.map(section => (
         <div key={section.key} className="space-y-1.5">
-          <h3 className="text-xs font-semibold uppercase tracking-wide text-a-text-2">{section.title} <span className="tabular-nums">· {section.list.length}</span></h3>
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-a-text-2">{section.title}</h3>
           <ul className="divide-y divide-a-border overflow-hidden rounded-2xl border border-a-border bg-a-surface">
             {section.list.map(p => {
               const state = personState(p, signUp)

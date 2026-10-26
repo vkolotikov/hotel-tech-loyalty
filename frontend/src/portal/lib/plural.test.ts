@@ -55,8 +55,8 @@ describe('count phrases agree with their number', () => {
     }
   })
 
-  it('reads right at 1, 2, 5, 21 and a million, in each language', async () => {
-    const say = async (lng: string, key: CountedKey, n: number) => counted((await i18nWith(lng)).t as never, key, n)
+  it('reads right at 1, 2, 5, 21 and a million, in each language, the number written the language’s way', async () => {
+    const say = async (lng: string, key: CountedKey, n: number) => counted((await i18nWith(lng)).t as never, key, n, lng)
 
     expect(await say('en', 'bookings.night_count', 1)).toBe('1 night')
     expect(await say('en', 'bookings.night_count', 2)).toBe('2 nights')
@@ -75,9 +75,12 @@ describe('count phrases agree with their number', () => {
     expect(await say('de', 'bookings.night_count', 1)).toBe('1 Nacht')
     expect(await say('de', 'stay.sleeps', 1)).toBe('Für 1 Gast')
     expect(await say('fr', 'bookings.guest_count', 1)).toBe('1 invité')
-    expect(await say('fr', 'rewards.you_have', 1_000_000)).toBe('Vous avez 1000000 points')
+    expect(await say('fr', 'rewards.you_have', 1_000_000)).toBe(`Vous avez ${(1_000_000).toLocaleString('fr')} points`)
     expect(await say('es', 'bookings.night_count', 1)).toBe('1 noche')
-    expect(await say('es', 'bookings.night_count', 1_000_000)).toBe('1000000 noches')
+    expect(await say('es', 'bookings.night_count', 1_000_000)).toBe(`${(1_000_000).toLocaleString('es')} noches`)
+    expect(await say('en', 'home.lifetime', 6512)).toBe('6,512 earned all time')
+    expect(await say('ru', 'home.points_to_go', 3488)).toBe(`Осталось ${(3488).toLocaleString('ru')} баллов`)
+    expect(await say('de', 'rewards.you_have', 6412)).toBe('Sie haben 6.412 Punkte')
   })
 
   it('a stay names its nights and its guests each in agreement: "1 night · 2 guests"', async () => {

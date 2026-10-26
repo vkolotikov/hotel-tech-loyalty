@@ -1,6 +1,7 @@
 import { addDays } from '../../workspace/lib/wallClock'
 import type { ApiFailure } from '../lib/api'
 import { serverProblems, type Problems } from '../lib/forms'
+import { points } from '../lib/format'
 import type { Admits, Entry, Place, PlaceBody, PlaceTier } from './placesApi'
 import { REASON_WORDS, REFUSAL_WORDS } from './words'
 
@@ -89,16 +90,16 @@ export function whoMayEnter(place: Pick<Place, 'admits' | 'tiers'>): WhoMayEnter
 /** A line's key, its English and its values, for `t(...)`. */
 export type Words = [string, string, Record<string, string | number>?]
 
-/** Today's scans at a place: "Today: 12 in · 1 refused", or "No entries today". */
-export function todayWords(today: Place['today']): Words {
+/** Today's scans at a place: "Today: 1,234 in · 1 refused" (grouped as the language groups numbers), or "No entries today". */
+export function todayWords(today: Place['today'], locale = 'en'): Words {
   if (today.granted === 0 && today.denied === 0) return ['loyalty.places.today_none', 'No entries today']
-  return ['loyalty.places.today', 'Today: {{granted}} in · {{denied}} refused', { granted: today.granted, denied: today.denied }]
+  return ['loyalty.places.today', 'Today: {{granted}} in · {{denied}} refused', { granted: points(today.granted, locale), denied: points(today.denied, locale) }]
 }
 
 /** A day's counts in the entries dialog: "12 in · 1 refused", or "Nobody scanned in here on this day". */
-export function countsWords(counts: { granted: number; denied: number }): Words {
+export function countsWords(counts: { granted: number; denied: number }, locale = 'en'): Words {
   if (counts.granted === 0 && counts.denied === 0) return ['loyalty.places.entries.none', 'Nobody scanned in here on this day.']
-  return ['loyalty.places.entries.counts', '{{granted}} in · {{denied}} refused', { granted: counts.granted, denied: counts.denied }]
+  return ['loyalty.places.entries.counts', '{{granted}} in · {{denied}} refused', { granted: points(counts.granted, locale), denied: points(counts.denied, locale) }]
 }
 
 /**

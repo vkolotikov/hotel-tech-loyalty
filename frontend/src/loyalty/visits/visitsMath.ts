@@ -117,9 +117,10 @@ function cardSentence(reward: CardReward, locale: string): Sentence {
     : said('card_points', { points: points(reward.points, locale) })
 }
 
-/** A stamp's visit in words; a source the workspace does not name is shown as sent. */
+/** A stamp's visit in words; a source the workspace does not name reads as "Visit" (never the server's raw code). */
 export function sourceSentence(source: string): Sentence {
-  return { key: `loyalty.visits.source.${source}`, fallback: SOURCE_WORDS[source] ?? source }
+  const known = source !== 'other' && Object.prototype.hasOwnProperty.call(SOURCE_WORDS, source) ? source : 'other'
+  return { key: `loyalty.visits.source.${known}`, fallback: SOURCE_WORDS[known] }
 }
 
 /** What a completed card gave: "+100 points", "Free reward: Coffee". */

@@ -42,6 +42,8 @@ export const ERRORS = {
   scan: {
     not_found: 'No member has this card or number.',
     expired: 'This QR code has expired. Ask the member to open their card again.',
+    // Release 8: a keyed event scan sent again while the first copy is still being handled (EventScan, 409).
+    in_progress: 'This scan is still being handled. Try again in a moment.',
     revoked: 'This QR code was replaced by a newer one. Ask the member to open their card again.',
     used_up: 'This QR code was already used. Ask the member to open their card again.',
     inactive: 'This member’s account is switched off.',

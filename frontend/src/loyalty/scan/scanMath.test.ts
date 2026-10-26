@@ -3,13 +3,38 @@ import type { ApiFailure } from '../lib/api'
 import {
   cameraAttempt, cameraFailure, cardToLink, detectEnv, fieldAttempt, hexWithColons, isRepeat, linkCarriesMember, looksLikeAppCode,
   looksLikeCardId, looksLikeMemberNumber, modeState, nfcAttempt, nfcFailure, nfcState, refocusAfter, REPEAT_MS, scanTrouble, shortUid,
-  usbAttempt, type ScanEnv,
+  usbAttempt, fieldAfter, gotNoAnswer, keyFor, REPLAY_MS, type ScanEnv,
 } from './scanMath'
 import { decodeRecord } from './useWebNfc'
 
 const env = (more: Partial<ScanEnv> = {}): ScanEnv => ({ secure: true, camera: true, webNfc: true, webHid: true, ...more })
 const failure = (code: string, extra: Record<string, unknown> = {}): ApiFailure => ({ status: 404, code, extra })
 const named = (name: string) => Object.assign(new Error(name), { name })
+
+describe('a scan that got no answer (release 9)', () => {
+  const fresh = () => 'new-key'
+  const last = { code: 'LS-001001', where: 'place=3', key: 'old-key', at: 1_000 }
+  it('sends the same code again with its own key, at the same place, within the replay window', () => {
+    expect(keyFor('LS-001001', 'place=3', last, 1_000 + 60_000, fresh)).toBe('old-key')
+    expect(keyFor('LS-001002', 'place=3', last, 2_000, fresh)).toBe('new-key')
+    expect(keyFor('LS-001001', 'desk', last, 2_000, fresh)).toBe('new-key')
+    expect(keyFor('LS-001001', 'place=3', last, 1_000 + REPLAY_MS, fresh)).toBe('new-key')
+    expect(keyFor('LS-001001', 'place=3', null, 2_000, fresh)).toBe('new-key')
+  })
+  it('only a lost answer, the server’s trouble or a scan still being checked counts as no answer', () => {
+    expect(gotNoAnswer({ status: 0, code: 'network', extra: {} })).toBe(true)
+    expect(gotNoAnswer({ status: 503, code: 'unknown', extra: {} })).toBe(true)
+    expect(gotNoAnswer({ status: 409, code: 'in_progress', extra: {} })).toBe(true)
+    expect(gotNoAnswer({ status: 404, code: 'not_found', extra: {} })).toBe(false)
+    expect(gotNoAnswer({ status: 410, code: 'used_up', extra: {} })).toBe(false)
+    expect(gotNoAnswer({ status: 422, code: 'invalid', extra: {} })).toBe(false)
+  })
+  it('clears the field after a scan unless the next code was begun meanwhile', () => {
+    expect(fieldAfter('LS-001001', 'LS-001001')).toBe('')
+    expect(fieldAfter(' LS-001001 ', 'LS-001001')).toBe('')
+    expect(fieldAfter('LS-00', 'LS-001001')).toBe('LS-00')
+  })
+})
 
 describe('which ways of scanning a device offers', () => {
   it('reads nothing where there is no browser (the tests, a server render)', () => {

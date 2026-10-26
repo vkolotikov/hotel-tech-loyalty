@@ -65,13 +65,14 @@ describe('the stamp card’s face', () => {
 })
 
 describe('the stamp card on Home', () => {
-  it('draws the circles with the visits left and the reward', () => {
+  it('draws the circles with the visits left and the reward, the count only in the circles’ label', () => {
     const html = render(mine())
     expect(html.match(/data-filled=""/g)?.length).toBe(7)
     expect(html.match(/w-8 h-8 rounded-full/g)?.length).toBe(10)
+    expect(html).toContain('aria-label="7 of 10 stamps"')
     const words = text(html)
     expect(words).toContain('Stamp card')
-    expect(words).toContain('7 of 10')
+    expect(words).not.toContain('7 of 10')
     expect(words).toContain('3 more visits to your reward')
     expect(words).toContain('Your reward: 1,000 points')
     expect(words).toContain('Cards completed: 1')

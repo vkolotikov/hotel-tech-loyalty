@@ -5,13 +5,13 @@ import { Pencil, Wallet } from 'lucide-react'
 import { Button } from '../../workspace/ui/Button'
 import { Notice } from '../../workspace/ui/Notice'
 import { Skeleton } from '../../workspace/ui/Skeleton'
-import { Eyebrow } from '../../workspace/ui/Typography'
 import { useBoot } from '../LoyaltyProvider'
 import { failureOf } from '../lib/api'
 import { refusalKey } from '../lib/errors'
 import { money, when } from '../lib/format'
 import type { MemberRow } from '../lib/types'
 import { Pager } from '../ui/Pager'
+import { CARD, CardHead } from '../member/CardHead'
 import { creditApi, creditKey, type CreditAfter, type CreditLine } from './creditApi'
 import { CreditDialog } from './CreditDialog'
 import { creditActions, doneMessage, lineKind, showsCredit, showsNote, signedMoney, type CreditMode } from './creditMath'
@@ -22,8 +22,9 @@ type Member = MemberRow & { is_erased?: boolean }
 
 /**
  * A member's cashback credit on their page (release 7, spec 2026-10-25 §3, R7-2), when the venue uses cashback or the
- * member still holds some: the balance in the venue's currency, what members earn, "Use credit" for whoever may redeem
- * (spent at the desk only), "Adjust" for a manager, and the credit history, newest first, 25 a page.
+ * member still holds some: the balance in the venue's currency, "Use credit" for whoever may redeem (spent at the desk
+ * only), "Adjust" for a manager, and the credit history, newest first, 25 a page. Release 9: the rate is Ways to earn's,
+ * not repeated here; only a switched-off cashback is said.
  */
 export function CreditPanel({ member, locale, timeZone }: { member: Member; locale: string; timeZone: string }) {
   const boot = useBoot()
@@ -43,23 +44,15 @@ function Panel({ member, locale, timeZone }: { member: Member; locale: string; t
   const currency = data?.currency ?? boot.venue.currency
   const enabled = data?.enabled ?? Boolean(boot.programme.ways?.cashback)
   const actions = creditActions(boot.staff.can, { ...member, credit_balance: balance })
-  const percent = new Intl.NumberFormat(locale || 'en', { maximumFractionDigits: 2 }).format(boot.programme.ways?.cashback_percent ?? 0)
 
   return (
-    <section aria-labelledby="credit-title" className="space-y-3 rounded-2xl border border-a-border bg-a-surface p-5">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <Eyebrow><span id="credit-title">{t('loyalty.credit.title', 'Credit')}</span></Eyebrow>
-        <div className="flex flex-wrap gap-2">
-          {actions.use && <Button size="sm" onClick={() => { setDone(null); setDialog('use') }}><Wallet size={15} aria-hidden />{t('loyalty.credit.use_action', 'Use credit')}</Button>}
-          {actions.adjust && <Button size="sm" variant="secondary" onClick={() => { setDone(null); setDialog('adjust') }}><Pencil size={14} aria-hidden />{t('loyalty.credit.adjust_action', 'Adjust')}</Button>}
-        </div>
-      </div>
-      <p data-credit-balance="" className="font-a-display text-5xl font-light tabular-nums text-a-text">{money(balance, currency, locale)}</p>
-      <p className="text-sm text-a-text-2">
-        {enabled
-          ? t('loyalty.credit.earning', 'Members get {{percent}}% of what they spend back as credit, to use at the desk.', { percent })
-          : t('loyalty.credit.off', 'Cashback is switched off: nothing new is earned, and this credit can still be used at the desk.')}
-      </p>
+    <section aria-labelledby="credit-title" className={CARD}>
+      <CardHead id="credit-title" icon={Wallet} title={t('loyalty.credit.title', 'Credit')}>
+        {actions.use && <Button size="sm" onClick={() => { setDone(null); setDialog('use') }}><Wallet size={15} aria-hidden />{t('loyalty.credit.use_action', 'Use credit')}</Button>}
+        {actions.adjust && <Button size="sm" variant="secondary" onClick={() => { setDone(null); setDialog('adjust') }}><Pencil size={14} aria-hidden />{t('loyalty.credit.adjust_action', 'Adjust')}</Button>}
+      </CardHead>
+      <p data-credit-balance="" className="font-a-display text-4xl font-light leading-none tabular-nums text-a-text">{money(balance, currency, locale)}</p>
+      {!enabled && <p className="text-sm text-a-text-2">{t('loyalty.credit.off', 'Cashback is switched off: nothing new is earned, and this credit can still be used at the desk.')}</p>}
       {done && <Notice tone="success">{t(...doneMessage(done.mode, done.after, locale))}</Notice>}
       {query.isError && <Notice tone="danger">{t(...refusalKey('loyalty.credit', ERRORS, 'load', failureOf(query.error)))}</Notice>}
       {!data && query.isLoading && <Skeleton className="h-16" />}
@@ -88,7 +81,7 @@ function Line({ line, locale, timeZone }: { line: CreditLine; locale: string; ti
 
   return (
     <li data-credit-line={line.id} className="flex flex-wrap items-center gap-x-4 gap-y-1 px-5 py-3">
-      <span className={`w-24 shrink-0 text-right font-semibold tabular-nums ${tone}`}>{signedMoney(line.amount, line.currency, locale)}</span>
+      <span className={`w-20 shrink-0 text-right font-semibold tabular-nums sm:w-24 ${tone}`}>{signedMoney(line.amount, line.currency, locale)}</span>
       <span className="min-w-0 flex-1">
         <span className="block text-sm text-a-text">
           {t(`loyalty.credit.line.${kind}`, LINE_WORDS[kind])}{showsNote(line) ? ` · ${line.note}` : ''}

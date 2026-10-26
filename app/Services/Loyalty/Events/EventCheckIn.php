@@ -182,6 +182,8 @@ final class EventCheckIn
             'verdict'       => $verdict->toArray(),
             'checked_in'    => $checkedIn,
             'already_in'    => $attendance !== null && !$checkedIn ? EventClock::timeOf($attendance->checked_in_at, $orgId) : null,
+            // Release 9: the same as the venue's wall clock with its day, for an event that runs several days.
+            'already_in_at' => $attendance !== null && !$checkedIn ? EventClock::wallOf($attendance->checked_in_at, $orgId) : null,
             'signed_up'     => $signedUp,
             'points'        => $points,
             'attendance_id' => $attendance !== null ? (int) $attendance->id : null,

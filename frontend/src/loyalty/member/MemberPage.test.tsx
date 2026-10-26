@@ -70,31 +70,49 @@ describe('a member’s page, release 2 (§4.1)', () => {
     const html = render(can(), detail())
     const words = text(html)
     expect(words).toContain('Details')
-    expect(words).toContain('Email grace@example.test')
-    expect(words).toContain('Phone +1 555 0100')
     expect(words).toContain('Language German')
     expect(words).toContain('Nationality American')
     expect(words).toContain('Date of birth December 9, 1906')
     expect(words).toContain('Marketing emails Agreed')
-    expect(words).toContain('Member number HL-2026-000030')
-    expect(words).toContain('Joined Jan 5, 2026')
     expect(words).toContain('Tier kept until Dec 31, 2026')
   })
 
-  it('says “Not given” for what nobody filled', () => {
-    const words = text(render(can(), detail({ phone: null, language: null, nationality: null, date_of_birth: null, marketing_consent: false, tier_override_until: null })))
-    expect(words).toContain('Phone Not given')
-    expect(words).toContain('Language Not given')
-    expect(words).toContain('Marketing emails Not agreed')
-    expect(words).not.toContain('Tier kept until')
+  it('says each fact once: name, number, joined, email and phone in the header, not again in the details (release 9)', () => {
+    const html = render(can(), detail())
+    for (const once of ['grace@example.test', '+1 555 0100', 'HL-2026-000030', 'Joined Jan 5, 2026']) {
+      expect(html.split(once).length - 1, once).toBe(1)
+    }
+    expect(html).toContain('data-contact="email"')
+    expect(html).toContain('data-contact="phone"')
+    for (const gone of ['data-detail="email"', 'data-detail="phone"', 'data-detail="number"', 'data-detail="joined"']) expect(html).not.toContain(gone)
   })
 
-  it('gives staff Edit details, Card and a More menu, and no manager’s actions', () => {
-    const words = text(render(can(), detail()))
-    expect(words).toContain('Edit details')
-    expect(words).toContain('Card')
-    expect(words).toContain('More')
+  it('says “Not given” for what nobody filled, and shows no phone when there is none', () => {
+    const html = render(can(), detail({ phone: null, language: null, nationality: null, date_of_birth: null, marketing_consent: false, tier_override_until: null }))
+    const words = text(html)
+    expect(words).toContain('Language Not given')
+    expect(words).toContain('Nationality Not given')
+    expect(words).toContain('Marketing emails Not agreed')
+    expect(words).not.toContain('Tier kept until')
+    expect(html).not.toContain('data-contact="phone"')
+  })
+
+  it('keeps Award and Redeem as words, Edit details and Card as named icons, and the rest under ⋯ More', () => {
+    const html = render(can(), detail())
+    const words = text(html)
     expect(words).toContain('Award points')
+    expect(words).toContain('Redeem points')
+    for (const named of ['Edit details', 'Card', 'More']) expect(html, named).toContain(`aria-label="${named}"`)
+    expect(html).toContain('title="Edit details"')
+    // The full admin's link and the manager's actions are items of the closed ⋯ menu.
+    expect(words).not.toContain('Open in full admin')
+  })
+
+  it('a staff member without the money rights sees neither Award nor Redeem, and still the icons', () => {
+    const html = render(can({ award: false, redeem: false }), detail())
+    expect(text(html)).not.toContain('Award points')
+    expect(text(html)).not.toContain('Redeem points')
+    expect(html).toContain('aria-label="Edit details"')
   })
 
   it('a deleted member shows only what stays: the number and the history', () => {
@@ -105,7 +123,45 @@ describe('a member’s page, release 2 (§4.1)', () => {
     expect(words).toContain('This member was deleted.')
     expect(words).toContain('Points history')
     expect(words).toContain('Spa visit')
-    for (const gone of ['Award points', 'Redeem points', 'Edit details', 'More', 'Details', 'deleted-member-30@deleted.local']) expect(words).not.toContain(gone)
+    for (const gone of ['Award points', 'Redeem points', 'Details', 'deleted-member-30@deleted.local']) expect(words).not.toContain(gone)
+    for (const gone of ['aria-label="Edit details"', 'aria-label="Card"', 'aria-label="More"']) expect(html).not.toContain(gone)
+  })
+})
+
+describe('the points history (release 9)', () => {
+  const lines = (more: Partial<HistoryPage['lines'][number]>[]): HistoryPage => ({
+    page: 1, pages: 1, total: more.length,
+    lines: more.map((m, i) => ({ id: i + 1, type: 'earn', points: 100, balance_after: 100, description: '', by: null, at: '2026-10-01T10:00:00+00:00', is_reversed: false, reversal_of_id: null, can_reverse: true, ...m })),
+  })
+  function withHistory(c: Can, page: HistoryPage) {
+    const client = new QueryClient()
+    client.setQueryData(['loyalty', 'member', 30], detail())
+    client.setQueryData(['loyalty', 'history', 30, 1], page)
+    return renderToStaticMarkup(
+      <QueryClientProvider client={client}>
+        <MemoryRouter initialEntries={['/loyalty/members/30']}>
+          <LoyaltyContext.Provider value={{ data: boot(c), isLoading: false, isError: false, error: null, refetch: () => {} }}>
+            <Routes><Route path="/loyalty/members/:id" element={<MemberPage />} /></Routes>
+          </LoyaltyContext.Provider>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    )
+  }
+
+  it('says a line’s kind once: as its title when it has no description, in the meta when it has one', () => {
+    const html = withHistory(can(), lines([{ type: 'adjust', description: '' }, { type: 'bonus', description: 'Birthday bonus' }]))
+    const first = text(html.slice(html.indexOf('data-line="1"'), html.indexOf('data-line="2"')))
+    expect(first.match(/Adjustment/g)).toHaveLength(1)
+    const second = text(html.slice(html.indexOf('data-line="2"')))
+    expect(second).toContain('Birthday bonus')
+    expect(second).toContain('Bonus ·')
+  })
+
+  it('offers Reverse to a manager as a named icon on a line that can be reversed, to nobody else', () => {
+    const manager = withHistory(can({ reverse: true }), lines([{}, { can_reverse: false }]))
+    expect(manager.match(/aria-label="Reverse"/g)).toHaveLength(1)
+    expect(manager).toContain('title="Reverse"')
+    expect(withHistory(can(), lines([{}]))).not.toContain('aria-label="Reverse"')
   })
 })
 

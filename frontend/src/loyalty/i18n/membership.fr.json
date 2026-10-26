@@ -6,16 +6,12 @@
     "card": "Carte",
     "welcome_sent": "L’e-mail de bienvenue part vers {{email}}, avec un nouveau code pour définir un mot de passe.",
     "not_given": "Non renseigné",
-    "email": "E-mail",
-    "phone": "Téléphone",
     "language": "Langue",
     "nationality": "Nationalité",
     "date_of_birth": "Date de naissance",
     "marketing": "E-mails marketing",
     "marketing_yes": "Accepté",
     "marketing_no": "Non accepté",
-    "number": "Numéro de membre",
-    "joined": "Membre depuis",
     "tier_kept": "Niveau maintenu jusqu’au",
     "details_title": "Informations"
   },
@@ -365,12 +361,6 @@
   },
   "validity": {
     "title": "Adhésion",
-    "state": {
-      "active": "Active",
-      "expiring": "Se termine bientôt",
-      "expired": "Expirée",
-      "off": "Désactivée"
-    },
     "extend_action": "Prolonger",
     "extend_by": "Prolonger de",
     "extend": {
@@ -379,21 +369,17 @@
       "6m": "+6 mois",
       "1y": "+1 an"
     },
-    "from_end": "À partir de la fin actuelle, le {{day}}.",
-    "from_today": "À partir d’aujourd’hui.",
     "new_end": "jusqu’au {{day}}",
     "set": "Fixer une date",
     "remove": "Retirer la date de fin",
     "saved": "Enregistré : valable jusqu’au {{day}}.",
     "saved_none": "Enregistré : l’adhésion n’a pas de date de fin.",
-    "managers_only": "Seul un propriétaire ou un responsable peut changer la date de fin.",
     "none": "Pas de date de fin",
     "until": "Valable jusqu’au {{day}}",
     "ends_today": "Se termine aujourd’hui",
     "ends_tomorrow": "Se termine demain",
     "ends_in": "Se termine dans {{days}} jours",
     "expired_on": "Expirée le {{day}}",
-    "none_line": "L’adhésion ne se termine jamais. Donnez-lui une date de fin quand un membre l’achète pour une durée.",
     "left_line": "Il reste {{left}}.",
     "left": {
       "years_one": "1 an",
@@ -404,8 +390,8 @@
       "days_many": "{{n}} jours"
     },
     "expiring_line": "Valable jusqu’au {{day}}. Ensuite, l’entrée est refusée jusqu’au renouvellement.",
-    "expired_line": "L’entrée est refusée jusqu’au renouvellement. Les points et l’historique restent, et l’accueil peut toujours servir le membre.",
-    "off_line": "Le compte est désactivé : l’entrée est refusée quelle que soit la date.",
+    "expired_line": "L’entrée est refusée jusqu’au renouvellement.",
+    "off_line": "L’entrée est refusée quelle que soit la date.",
     "problem": {
       "date": "Choisissez un jour.",
       "past": "Choisissez aujourd’hui ou un jour suivant."

@@ -1,6 +1,5 @@
 {
   "title": "Stempelkarte",
-  "count": "{{have}} von {{needed}}",
   "label": "{{have}} von {{needed}} Stempeln",
   "full": "Ihre Karte ist voll: Ihre Prämie ist unterwegs.",
   "reward_free": "Ihre Prämie: gratis {{reward}}",

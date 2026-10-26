@@ -169,6 +169,27 @@ class AccessDecisionTest extends TestCase
         $this->assertSame('expired', $this->decide($this->ada, $place)->reason);
     }
 
+    public function test_at_an_event_the_membership_is_judged_on_the_day_it_begins_as_its_sign_up_is(): void
+    {
+        // A night from 22:00 on the 5th to 02:00 on the 6th; Ada's membership ends on the 5th.
+        $event = $this->event(['starts_at' => '2026-10-05 22:00:00', 'ends_at' => '2026-10-06 02:00:00', 'sign_up' => true, 'walk_ins' => true]);
+        $this->validUntil($this->ada, '2026-10-05');
+        $this->travelTo(CarbonImmutable::parse('2026-10-05 21:30:00'));
+        $this->assertNull(\App\Services\Loyalty\Events\EventSignUp::refusal($event->fresh(), $this->ada->fresh()));
+        $this->assertTrue($this->decide($this->ada, null, $event)->granted);
+        // After midnight the door says the same (it used to say "expired", even to a member already inside).
+        $this->travelTo(CarbonImmutable::parse('2026-10-06 00:30:00'));
+        $this->assertSame('welcome', $this->decide($this->ada, null, $event)->reason);
+        // A place judges the venue's today: the 6th is past her end.
+        $this->assertSame('expired', $this->decide($this->ada, $this->place('Main entrance'))->reason);
+
+        // An event that begins after her last day refuses at sign-up and at the door alike.
+        $later = $this->event(['starts_at' => '2026-10-07 18:00:00', 'ends_at' => '2026-10-07 20:00:00', 'sign_up' => true, 'walk_ins' => true]);
+        $this->travelTo(CarbonImmutable::parse('2026-10-07 17:00:00'));
+        $this->assertSame('membership_expired', \App\Services\Loyalty\Events\EventSignUp::refusal($later->fresh(), $this->ada->fresh())?->errorCode);
+        $this->assertSame('expired', $this->decide($this->ada, null, $later)->reason);
+    }
+
     // ─── 4. The place switched off ───────────────────────────────────────
 
     public function test_a_switched_off_place_lets_nobody_in(): void

@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { CalendarClock, Minus, Plus } from 'lucide-react'
+import { CalendarClock, Gift, Minus, Plus } from 'lucide-react'
 import { Button } from '../../workspace/ui/Button'
 import { Skeleton } from '../../workspace/ui/Skeleton'
 import { useApi, useBoot } from '../LoyaltyProvider'
@@ -38,7 +38,7 @@ export function ScannedCard({ member }: { member: MemberRow }) {
   const validity = deskValidity(now, boot.venue.today, locale)
 
   return (
-    <section aria-label={now.name} className="max-w-2xl space-y-4 rounded-2xl border border-a-border bg-a-surface p-5 shadow-a-sm animate-a-pop">
+    <section aria-label={now.name} className="space-y-4 rounded-2xl border border-a-border bg-a-surface p-5 shadow-a-sm animate-a-pop">
       <div className="flex flex-wrap items-start gap-3">
         <div className="min-w-0 flex-1 space-y-1.5">
           <Link to={memberPath(now.id)} className="block font-a-display text-3xl text-a-text hover:underline">{now.name || now.member_number}</Link>
@@ -63,12 +63,13 @@ export function ScannedCard({ member }: { member: MemberRow }) {
       <CreditSummary member={now} />
       {!detail.data && detail.isLoading && <Skeleton className="h-16" />}
       {detail.data && detail.data.benefits.length > 0 && (
-        <div className="space-y-1">
-          <p className="text-xs font-medium text-a-text-2">{t('loyalty.member.benefits_title', 'Tier benefits')}</p>
-          <ul className="flex flex-wrap gap-2">
-            {detail.data.benefits.map(b => <li key={b.id} className="rounded-full bg-a-surface-2 px-2.5 py-1 text-xs text-a-text">{b.name}{b.value ? ` · ${b.value}` : ''}</li>)}
-          </ul>
-        </div>
+        <ul className="flex flex-wrap gap-2" aria-label={t('loyalty.member.benefits_title', 'Tier benefits')}>
+          {detail.data.benefits.map(b => (
+            <li key={b.id} className="inline-flex items-center gap-1.5 rounded-full border border-a-border px-3 py-1 text-sm text-a-text">
+              <Gift size={14} aria-hidden className="text-a-accent-text" />{b.name}{b.value ? ` · ${b.value}` : ''}
+            </li>
+          ))}
+        </ul>
       )}
       {detail.data && detail.data.requests.length > 0 && (
         <div className="space-y-1">

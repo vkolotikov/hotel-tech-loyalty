@@ -39,7 +39,6 @@
   },
   "benefits": {
     "add": "Add benefit",
-    "line": "The catalogue tiers choose their benefits from.",
     "none": "The catalogue is empty. Benefits such as late checkout or a welcome drink are added here, then given to tiers.",
     "switch_off": "Switch off",
     "switch_on": "Switch on",
@@ -95,7 +94,6 @@
     "add": "Add boost",
     "every_day": "Every day",
     "every_tier": "Every tier",
-    "line": "Times on the venue’s clock ({{zone}}).",
     "none": "No boosts. A boost multiplies the points members earn for a while, such as a double points weekend.",
     "range": "{{from}} – {{to}}",
     "remove": "Remove",
@@ -120,8 +118,6 @@
     "staff_approved": "Approved by staff",
     "voucher": "Voucher"
   },
-  "in_use": "In use",
-  "line": "The tiers members climb, the benefits they give, and points boosts.",
   "load": {
     "error": {
       "network": "No connection. Check the network and try again.",

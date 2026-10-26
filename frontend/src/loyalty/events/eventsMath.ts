@@ -140,6 +140,18 @@ export function eventActions(event: LoyaltyEventRow, canChange: boolean, now: Wa
   }
 }
 
+/** What the event page's More menu holds, in its order: the page keeps only Start check-in (or Publish) and Door mode out. */
+export type MoreItem = 'add' | 'edit' | 'cancel' | 'delete'
+
+export function moreItems(can: EventActions): MoreItem[] {
+  const out: MoreItem[] = []
+  if (can.addMember) out.push('add')
+  if (can.edit) out.push('edit')
+  if (can.cancel) out.push('cancel')
+  if (can.remove) out.push('delete')
+  return out
+}
+
 // ─── Scan's "Scanning for" ────────────────────────────────────────────────
 
 /** Where Scan reads its "Scanning for" choice (part D's scan screen). */
@@ -339,14 +351,27 @@ export function checkInSentence(answer: CheckInAnswer, name: string, say: Say, l
       points: answer.points > 0 ? counted(say, 'points_plus', answer.points, locale) : null,
     }
   }
-  const reason = v.reason in REASON_WORDS ? v.reason : 'unknown'
+  const known = v.reason in REASON_WORDS ? v.reason : 'unknown'
+  // A tier refusal names the member's tier — or says they have none, or that no tier is let in at all.
+  const reason = known !== 'tier_not_allowed' ? known
+    : v.allowed_tiers.length === 0 ? 'tier_not_allowed_none'
+      : v.tier ? 'tier_not_allowed' : 'tier_not_allowed_no_tier'
   const vars = {
     name,
     date: v.valid_until ? formatDate(v.valid_until, locale, { day: 'numeric', month: 'short', year: 'numeric' }) : '',
-    tiers: v.allowed_tiers.join(', '),
+    tiers: listOf(v.allowed_tiers, locale),
     tier: v.tier?.name ?? '',
   }
   return { tone: 'danger', text: say(`loyalty.events.reason.${reason}`, REASON_WORDS[reason], vars), points: null }
+}
+
+/** Names joined as the language joins them: "Gold and Platinum", «Gold и Platinum». */
+export function listOf(names: readonly string[], locale: string): string {
+  try {
+    return new Intl.ListFormat(locale || 'en', { style: 'long', type: 'conjunction' }).format(names)
+  } catch {
+    return names.join(', ')
+  }
 }
 
 // ─── The people ───────────────────────────────────────────────────────────

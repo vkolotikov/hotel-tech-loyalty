@@ -94,13 +94,14 @@ export function sameContext(a: ScanContext, b: ScanContext): boolean {
 
 /**
  * Today's events one can scan for now: published, not over (its end after the venue's now), starting today or
- * earlier (an event that runs past midnight is still open), soonest first. Times are compared as the venue's wall
- * clock, as text: `YYYY-MM-DDTHH:mm` sorts as it reads.
+ * earlier (an event that runs past midnight is still open) — or just after midnight with its doors already open (two
+ * hours before its start, release 9) — soonest first. Times are compared as the venue's wall clock, as text:
+ * `YYYY-MM-DDTHH:mm` sorts as it reads.
  */
 export function openEvents(events: readonly EventRow[], nowWall: string): EventRow[] {
   const today = nowWall.slice(0, 10)
   return events
-    .filter(e => e.status === 'published' && e.ends_at > nowWall && e.starts_at.slice(0, 10) <= today)
+    .filter(e => e.status === 'published' && e.ends_at > nowWall && (e.starts_at.slice(0, 10) <= today || opensAt(e.starts_at) <= nowWall))
     .slice()
     .sort((a, b) => (a.starts_at < b.starts_at ? -1 : a.starts_at > b.starts_at ? 1 : a.id - b.id))
 }

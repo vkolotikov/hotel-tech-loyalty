@@ -61,3 +61,16 @@ export function toggleTier(filters: ListFilters, tierId: number): ListFilters {
 
 /** Whether the list shows members by their membership's end date (release 8): the rows then say it. */
 export const byValidity = (state: ListState): boolean => state === 'expiring' || state === 'expired'
+
+/**
+ * A name's initials for the list's avatar: the first letters of its first and last words ("Ada Lovelace" → "AL"); for a
+ * member known only by an address, of its part before the @ ("grace.hopper@…" → "GH").
+ */
+export function initials(name: string): string {
+  const plain = name.trim()
+  const words = (plain.includes('@') && !/\s/.test(plain) ? plain.split('@')[0] : plain).split(/[\s._-]+/).filter(Boolean)
+  if (words.length === 0) return '?'
+  const first = [...words[0]][0] ?? ''
+  const last = words.length > 1 ? [...words[words.length - 1]][0] ?? '' : ''
+  return (first + last).toLocaleUpperCase()
+}

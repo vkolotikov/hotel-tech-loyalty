@@ -91,6 +91,16 @@ final class EventClock
     }
 
     /** An instant (a check-in) as the venue's clock reads it: `19:02`. */
+    /** An instant as the venue's wall clock (`YYYY-MM-DDTHH:mm`), or null — the day of a check-in at a multi-day event. */
+    public static function wallOf(\DateTimeInterface|string|null $instant, int $orgId): ?string
+    {
+        if ($instant === null || $instant === '') {
+            return null;
+        }
+
+        return CarbonImmutable::parse($instant)->setTimezone(VenueClock::zone($orgId))->format(VenueClock::WALL);
+    }
+
     public static function timeOf(\DateTimeInterface|string|null $instant, int $orgId): ?string
     {
         if ($instant === null || $instant === '') {

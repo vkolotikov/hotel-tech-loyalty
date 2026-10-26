@@ -1,8 +1,7 @@
-import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { ArrowRight, WandSparkles } from 'lucide-react'
+import { Award, ChevronRight, Gift, Tag, WandSparkles, Zap, type LucideIcon } from 'lucide-react'
 import { PageHeader } from '../../workspace/ui/PageHeader'
 import { SectionTitle } from '../../workspace/ui/Typography'
 import { points } from '../lib/format'
@@ -30,7 +29,6 @@ export function OptionsPage() {
   return (
     <div className="space-y-6 px-4 py-6 lg:px-6">
       <PageHeader title={t('loyalty.options.title', 'Ways to earn')}
-        line={t('loyalty.options.line', 'How members earn points and what they get back. Switch a way on or off and set its numbers; members see a saved change at once.')}
         below={data && !data.can_change && (
           <p data-read-only="" className="text-sm text-a-text-2">{t('loyalty.options.read_only', 'Only an owner or a manager can change these. You see them as they are.')}</p>
         )}>
@@ -47,7 +45,8 @@ export function OptionsPage() {
       {data && (
         <>
           <section aria-labelledby="options-ways" className="space-y-3">
-            <SectionTitle><span id="options-ways">{t('loyalty.options.ways_title', 'How members earn and what they get')}</span></SectionTitle>
+            {/* The page's title already says what these are: the section's own title is for a screen reader. */}
+            <h2 id="options-ways" className="sr-only">{t('loyalty.options.ways_title', 'How members earn and what they get')}</h2>
             <div className="grid gap-3 xl:grid-cols-2">
               {data.ways.map(way => <WayCard key={way.key} way={way} answer={data} manage={data.can_change} />)}
             </div>
@@ -68,34 +67,32 @@ function Parts({ answer }: { answer: OptionsAnswer }) {
     <section aria-labelledby="options-parts" className="space-y-3">
       <SectionTitle><span id="options-parts">{t('loyalty.options.parts_title', 'The rest of your programme')}</span></SectionTitle>
       <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <Part part="tiers" to="/loyalty/program" count={points(c.tiers, locale)} title={t('loyalty.options.part.tiers', 'Tiers')}
-          caption={t('loyalty.options.part.tiers_count', 'In the ladder')} line={t('loyalty.options.part.tiers_line', 'The levels members climb as they earn, each with its benefits.')}
-          open={t('loyalty.options.part.open_program', 'Open Program')} />
-        <Part part="rewards" to="/loyalty/rewards" count={points(c.rewards.length, locale)} title={t('loyalty.options.part.rewards', 'Rewards')}
-          caption={t('loyalty.options.part.rewards_count', 'In the catalogue')} line={t('loyalty.options.part.rewards_line', 'What members spend their points on.')}
-          open={t('loyalty.options.part.open_rewards', 'Open Rewards')} />
-        <Part part="offers" to="/loyalty/rewards?tab=offers" count={points(c.offers, locale)} title={t('loyalty.options.part.offers', 'Offers')}
-          caption={t('loyalty.options.part.offers_count', 'Switched on')} line={t('loyalty.options.part.offers_line', 'Deals for members for a while, such as a discount or bonus points.')}
-          open={t('loyalty.options.part.open_offers', 'Open offers')} />
-        <Part part="boosts" to="/loyalty/program" count={points(c.boosts, locale)} title={t('loyalty.options.part.boosts', 'Boosts')}
-          caption={t('loyalty.options.part.boosts_count', 'On now or coming up')} line={t('loyalty.options.part.boosts_line', 'Extra points for a while, such as a double points weekend.')}
-          open={t('loyalty.options.part.open_program', 'Open Program')} />
+        <Part part="tiers" to="/loyalty/program" icon={Award} count={points(c.tiers, locale)} title={t('loyalty.options.part.tiers', 'Tiers')}
+          caption={t('loyalty.options.part.tiers_count', 'In the ladder')} />
+        <Part part="rewards" to="/loyalty/rewards" icon={Gift} count={points(c.rewards.length, locale)} title={t('loyalty.options.part.rewards', 'Rewards')}
+          caption={t('loyalty.options.part.rewards_count', 'In the catalogue')} />
+        <Part part="offers" to="/loyalty/rewards?tab=offers" icon={Tag} count={points(c.offers, locale)} title={t('loyalty.options.part.offers', 'Offers')}
+          caption={t('loyalty.options.part.offers_count', 'Switched on')} />
+        <Part part="boosts" to="/loyalty/program" icon={Zap} count={points(c.boosts, locale)} title={t('loyalty.options.part.boosts', 'Boosts')}
+          caption={t('loyalty.options.part.boosts_count', 'On now or coming up')} />
       </ul>
     </section>
   )
 }
 
-function Part({ part, to, count, title, caption, line, open }: { part: string; to: string; count: string; title: string; caption: string; line: string; open: ReactNode }) {
+function Part({ part, to, icon: Icon, count, title, caption }: { part: string; to: string; icon: LucideIcon; count: string; title: string; caption: string }) {
   return (
     <li data-part={part}>
-      <Link to={to} className="flex h-full flex-col gap-2 rounded-2xl border border-a-border bg-a-surface p-4 hover:bg-a-surface-2">
-        <span className="text-sm font-medium text-a-text">{title}</span>
-        <span className="flex items-baseline gap-2">
-          <span className="font-a-display text-3xl font-light tabular-nums leading-none text-a-text">{count}</span>
-          <span className="text-xs text-a-text-2">{caption}</span>
+      <Link to={to} className="group flex h-full items-center gap-3 rounded-2xl border border-a-border bg-a-surface p-4 hover:bg-a-surface-2">
+        <span aria-hidden className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-a-accent/10 text-a-accent-text"><Icon size={18} /></span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-sm font-medium text-a-text">{title}</span>
+          <span className="flex items-baseline gap-2">
+            <span className="font-a-display text-2xl font-light tabular-nums leading-tight text-a-text">{count}</span>
+            <span className="truncate text-xs text-a-text-2">{caption}</span>
+          </span>
         </span>
-        <span className="text-sm text-a-text-2">{line}</span>
-        <span className="mt-auto inline-flex items-center gap-1 pt-1 text-sm font-semibold text-a-accent-text">{open}<ArrowRight size={14} aria-hidden /></span>
+        <ChevronRight size={16} aria-hidden className="shrink-0 text-a-text-2 group-hover:text-a-accent-text" />
       </Link>
     </li>
   )

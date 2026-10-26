@@ -2,32 +2,36 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { Camera, Link2, Maximize2, Nfc, ScanLine, Square, Usb } from 'lucide-react'
+import { Camera, CalendarPlus, Link2, Loader2, Maximize2, Nfc, RotateCcw, ScanLine, Square, Usb } from 'lucide-react'
 import { Button } from '../../workspace/ui/Button'
 import { Notice } from '../../workspace/ui/Notice'
 import { PageHeader } from '../../workspace/ui/PageHeader'
 import { useBoot } from '../LoyaltyProvider'
 import { failureOf, newPressKey, type ApiFailure } from '../lib/api'
-import { errorKey } from '../lib/errors'
+import { errorKey, refusalKey } from '../lib/errors'
 import type { MemberRow } from '../lib/types'
+import { afterMemberChange, membershipApi } from '../membership/api'
+import { ERRORS as MEMBERSHIP_ERRORS } from '../membership/errors'
+import { extendBody, validityActions } from '../membership/validityMath'
 import { CameraScanner } from './CameraScanner'
 import { ContextPicker } from './ContextPicker'
 import { LinkCardDialog } from './LinkCardDialog'
 import { ScannedCard } from './ScannedCard'
 import { afterGone, afterScan, contextBody, eventsTodayKey, placesKey, scanApi, type ScanAnswer } from './scanApi'
 import {
-  DESK, activePlaces, contextFromSearch, doorPath, loadContext, openEvents, resolveContext, saveContext, venueWallNow, type ScanContext,
+  DESK, activePlaces, contextFromSearch, contextSearch, doorPath, loadContext, openEvents, resolveContext, saveContext, venueWallNow, type ScanContext,
 } from './scanContext'
 import {
-  cameraAttempt, cardToLink, detectEnv, fieldAttempt, modeState, nfcState, refocusAfter, scanTrouble, usbAttempt,
-  type Attempt, type NfcPanelState, type ScanEnv, type ScanMode,
+  cameraAttempt, cardToLink, detectEnv, fieldAfter, fieldAttempt, gotNoAnswer, keyFor, modeState, nfcState, refocusAfter, scanTrouble, usbAttempt,
+  type Attempt, type NfcPanelState, type ScanEnv, type ScanMode, type Unanswered,
 } from './scanMath'
 import { TodayHere } from './TodayHere'
 import { useToday } from './useToday'
 import { UsbReader } from './UsbReader'
 import { useWebNfc } from './useWebNfc'
-import { answerVerdict, failureVerdict, goneContext, showsToday, type VerdictFacts } from './verdict'
+import { answerVerdict, failureVerdict, goneContext, renewable, showsToday, type VerdictFacts } from './verdict'
 import { Announcer, VerdictCard } from './VerdictCard'
+import { useTypedPhrase } from './useTypedPhrase'
 
 const INPUT = 'w-full rounded-xl border border-a-border bg-a-surface px-4 py-3 font-a-mono text-base text-a-text'
 
@@ -71,7 +75,8 @@ export function ScanPage() {
   const eventList = events.data ? openEvents(events.data.events, nowWall) : undefined
   const resolved = resolveContext(wanted, placeList, eventList)
   const context = resolved.context
-  const facts: VerdictFacts = { locale, today: boot.venue.today, nowWall, timeZone, place: resolved.place, event: resolved.event }
+  const typedPhrase = useTypedPhrase()
+  const facts: VerdictFacts = { locale, today: boot.venue.today, nowWall, timeZone, place: resolved.place, event: resolved.event, typedPhrase }
   const today = useToday(context, timeZone)
 
   const [mode, setMode] = useState<ScanMode | null>(null)
@@ -80,6 +85,10 @@ export function ScanPage() {
   const [linking, setLinking] = useState<string | null>(null)
   const field = useRef<HTMLInputElement>(null)
   const result = useRef<HTMLDivElement>(null)
+  // The last scan that got no answer: the same code sent again reuses its key, so the server replays what it did.
+  const unanswered = useRef<Unanswered | null>(null)
+  // One renewal key per scan: a press sent again after a lost answer renews once, not twice.
+  const [renewKey, setRenewKey] = useState(newPressKey)
   // On a phone the answer is below the fold: each new one is brought into view (no further than needed).
   useEffect(() => {
     if (!shown || typeof window === 'undefined') return
@@ -94,19 +103,21 @@ export function ScanPage() {
   }
 
   const scan = useMutation({
-    mutationFn: ({ attempt, context: at }: { attempt: Attempt; context: ScanContext }) =>
-      scanApi.scan({ code: attempt.code, idempotency_key: newPressKey(), ...contextBody(at) }),
-    onMutate: () => setShown(null),
+    mutationFn: ({ attempt, context: at, key }: { attempt: Attempt; context: ScanContext; key: string }) =>
+      scanApi.scan({ code: attempt.code, idempotency_key: key, ...contextBody(at) }),
+    onMutate: () => { setShown(null); setRenewKey(newPressKey()) },
     onSuccess: (answer, { attempt, context: at }) => {
+      unanswered.current = null
       setShown(at.kind === 'desk'
         ? { kind: 'desk', member: answer.member, key: Date.now(), linked: false }
         : { kind: 'verdict', context: at, attempt, answer, failure: null, key: Date.now() })
       afterScan(client, at, answer.member?.id ?? null)
     },
-    onError: (error, { attempt, context: at }) => {
+    onError: (error, { attempt, context: at, key }) => {
+      const failure = failureOf(error)
+      unanswered.current = gotNoAnswer(failure) ? { code: attempt.code, where: contextSearch(at) || 'desk', key, at: Date.now() } : null
       // A refused code is a red verdict at a place or an event (and is logged there); the desk says it as before.
       if (at.kind === 'desk') return
-      const failure = failureOf(error)
       setShown({ kind: 'verdict', context: at, attempt, answer: null, failure, key: Date.now() })
       afterScan(client, at, null)
       // The place or event no longer exists: the page falls back to the desk, and the band says so.
@@ -114,15 +125,27 @@ export function ScanPage() {
       if (gone) { afterGone(client, gone); fallBack() }
     },
     onSettled: (_data, _error, { attempt }) => {
-      if (attempt.source === 'field') setCode('')
+      // A reader that types may have begun the next code meanwhile: only the code sent is cleared.
+      if (attempt.source === 'field') setCode(current => fieldAfter(current, attempt.code))
       if (refocusAfter(attempt.source)) field.current?.focus()
     },
   })
   // Each scan is sent for the context chosen when it is read (useWebNfc keeps the latest of this function).
   const send = (attempt: Attempt | null) => {
-    if (attempt && attempt.code !== '') scan.mutate({ attempt, context })
+    if (!attempt || attempt.code === '') return
+    scan.mutate({ attempt, context, key: keyFor(attempt.code, contextSearch(context) || 'desk', unanswered.current, Date.now(), newPressKey) })
   }
   const nfc = useWebNfc(send)
+
+  // Release 9: a membership that ran out, renewed on the spot by a manager (MembershipValidity, as the member page
+  // does), then the member scanned again by number so the place decides afresh and records it.
+  const renew = useMutation({
+    mutationFn: ({ member, key }: { member: MemberRow; key: string }) => membershipApi.validity(member.id, extendBody('1y', key)),
+    onSuccess: (_answer, { member }) => {
+      afterMemberChange(client, member.id)
+      if (member.member_number) send(fieldAttempt(member.member_number))
+    },
+  })
 
   // A press starts NFC at once (the browser asks for the permission only from a press); the active mode's own button stops it.
   const choose = (next: ScanMode) => {
@@ -137,6 +160,7 @@ export function ScanPage() {
     setWanted(next)
     saveContext(next)
     scan.reset()
+    renew.reset()
     setShown(null)
     // The address no longer decides once someone chose: a reload keeps the choice.
     if (named) navigate({ pathname: location.pathname, search: '' }, { replace: true })
@@ -149,10 +173,13 @@ export function ScanPage() {
     ? (shown.answer ? answerVerdict(shown.answer, facts) : failureVerdict(shown.failure!))
     : null
   const verdictLink = shown?.kind === 'verdict' && shown.failure ? cardToLink(scanTrouble(shown.failure, shown.attempt), shown.attempt) : null
+  const renewFor = shown?.kind === 'verdict' && renewable(shown.answer) && shown.answer!.member.member_number && validityActions(boot.staff.can, {}).change
+    ? shown.answer!.member : null
+  const renewFailure = renew.isError ? failureOf(renew.error) : null
 
   return (
     <div className="space-y-5 px-4 py-6 lg:px-6">
-      <PageHeader title={t('loyalty.scan.title', 'Scan')} line={t('loyalty.scan.line', 'Scan the member app’s QR code or a card, or type a member number.')}>
+      <PageHeader title={t('loyalty.scan.title', 'Scan')}>
         {context.kind !== 'desk' && (
           <Link to={doorPath(context)} className="hidden items-center gap-2 rounded-full bg-a-accent px-4 py-2.5 text-sm font-semibold text-a-accent-ink shadow-a-sm hover:bg-a-accent-deep sm:inline-flex">
             <Maximize2 size={16} aria-hidden />{t('loyalty.door.open_door', 'Door mode')}
@@ -160,59 +187,78 @@ export function ScanPage() {
         )}
       </PageHeader>
 
-      <div className="max-w-3xl space-y-5">
-        <ContextPicker resolved={resolved} onChoose={chooseContext} choices={{
-          places: placeList,
-          events: eventList,
-          loading: places.isPending || events.isPending,
-          failed: places.isError || events.isError,
-          canSetUp: places.data?.can_change ?? false,
-        }} />
+      {/* Two columns from a laptop up: what to scan for and how on the left, the answer and today's list on the right. */}
+      <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,26rem)_minmax(0,1fr)] xl:grid-cols-[minmax(0,30rem)_minmax(0,1fr)]">
+        <div className="space-y-4">
+          <ContextPicker resolved={resolved} onChoose={chooseContext} choices={{
+            places: placeList,
+            events: eventList,
+            loading: places.isPending || events.isPending,
+            failed: places.isError || events.isError,
+            canSetUp: places.data?.can_change ?? false,
+          }} />
 
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3" role="group" aria-label={t('loyalty.scan.ways', 'Ways to scan')}>
-          <ModeButton active={mode === 'camera'} onClick={() => choose('camera')} icon={<Camera size={18} aria-hidden />} label={t('loyalty.scan.mode_camera', 'Scan with camera')} />
-          <ModeButton active={mode === 'nfc'} onClick={() => choose('nfc')} icon={<Nfc size={18} aria-hidden />} label={t('loyalty.scan.mode_nfc', 'Tap NFC card')} />
-          <ModeButton active={mode === 'usb'} onClick={() => choose('usb')} icon={<Usb size={18} aria-hidden />} label={t('loyalty.scan.mode_usb', 'USB reader')} />
-        </div>
+          <form className="flex gap-2" onSubmit={(e) => { e.preventDefault(); send(fieldAttempt(code)) }}>
+            <label className="min-w-0 flex-1">
+              <span className="sr-only">{t('loyalty.scan.field', 'Card, QR code or member number')}</span>
+              <input ref={field} value={code} onChange={(e) => setCode(e.target.value)} autoFocus autoComplete="off" spellCheck={false}
+                placeholder={t('loyalty.scan.placeholder', 'Scan or type…')} className={INPUT} />
+            </label>
+            <Button type="submit" loading={scan.isPending}><ScanLine size={16} aria-hidden />{t('loyalty.scan.find', 'Find')}</Button>
+          </form>
 
-        {mode !== null && (
-          <div>
-            {mode === 'camera' && <CameraPanel env={env} onCode={(text) => { setMode(null); send(cameraAttempt(text)) }} onStop={stopMode} />}
-            {mode === 'nfc' && <NfcPanel state={nfcState(env, nfc.listening, nfc.trouble)} onStart={nfc.start} onStop={stopMode} />}
-            {mode === 'usb' && <UsbReader onUid={(uid) => send(usbAttempt(uid))} />}
+          <div className="grid grid-cols-3 gap-2" role="group" aria-label={t('loyalty.scan.ways', 'Ways to scan')}>
+            <ModeButton active={mode === 'camera'} onClick={() => choose('camera')} icon={<Camera size={18} aria-hidden />} label={t('loyalty.scan.mode_camera', 'Camera')} />
+            <ModeButton active={mode === 'nfc'} onClick={() => choose('nfc')} icon={<Nfc size={18} aria-hidden />} label={t('loyalty.scan.mode_nfc', 'NFC card')} />
+            <ModeButton active={mode === 'usb'} onClick={() => choose('usb')} icon={<Usb size={18} aria-hidden />} label={t('loyalty.scan.mode_usb', 'USB reader')} />
           </div>
-        )}
 
-        <form className="flex gap-2" onSubmit={(e) => { e.preventDefault(); send(fieldAttempt(code)) }}>
-          <label className="min-w-0 flex-1">
-            <span className="sr-only">{t('loyalty.scan.field', 'Card, QR code or member number')}</span>
-            <input ref={field} value={code} onChange={(e) => setCode(e.target.value)} autoFocus autoComplete="off" spellCheck={false}
-              placeholder={t('loyalty.scan.placeholder', 'Scan or type…')} className={INPUT} />
-          </label>
-          <Button type="submit" loading={scan.isPending}><ScanLine size={16} aria-hidden />{t('loyalty.scan.find', 'Find')}</Button>
-        </form>
-
-        <div ref={result} className="scroll-mt-4 space-y-5">
-        {/* The desk, as releases 5–7 left it. */}
-        {deskFailure && attempt && <ScanTroubleNotice failure={deskFailure} attempt={attempt} onLink={setLinking} />}
-        {shown?.kind === 'desk' && shown.linked && <Notice tone="success">{t('loyalty.scan.linked', 'The card is linked to {{name}}. Their next tap finds them.', { name: shown.member.name || shown.member.member_number || '' })}</Notice>}
-        {shown?.kind === 'desk' && <ScannedCard key={`${shown.member.id}-${shown.key}`} member={shown.member} />}
-
-        {/* A place or an event: the verdict, said aloud (the region is always there, so a new verdict is announced). */}
-        <Announcer view={verdict} />
-        {verdict && (
-          <VerdictCard key={shown!.key} view={verdict}>
-            {verdictLink !== null && (
-              <Button className="py-3 text-base" onClick={() => setLinking(verdictLink)}><Link2 size={16} aria-hidden />{t('loyalty.scan.link_card', 'Link this card')}</Button>
-            )}
-          </VerdictCard>
-        )}
-        {shown?.kind === 'linked' && (
-          <Notice tone="success">{t('loyalty.door.linked', 'The card is linked to {{name}}. Scan it again to let them in.', { name: shown.member.name || shown.member.member_number || '' })}</Notice>
-        )}
+          {mode !== null && (
+            <div>
+              {mode === 'camera' && <CameraPanel env={env} onCode={(text) => { setMode(null); send(cameraAttempt(text)) }} onStop={stopMode} />}
+              {mode === 'nfc' && <NfcPanel state={nfcState(env, nfc.listening, nfc.trouble)} onStart={nfc.start} onStop={stopMode} />}
+              {mode === 'usb' && <UsbReader onUid={(uid) => send(usbAttempt(uid))} />}
+            </div>
+          )}
         </div>
 
-        {showsToday(context) && <TodayHere today={today} locale={locale} />}
+        <div className="min-w-0 space-y-5">
+          <div ref={result} className="scroll-mt-4 space-y-5">
+            {/* The desk, as releases 5–7 left it. */}
+            {deskFailure && attempt && <ScanTroubleNotice failure={deskFailure} attempt={attempt} onLink={setLinking} />}
+            {shown?.kind === 'desk' && shown.linked && <Notice tone="success">{t('loyalty.scan.linked', 'The card is linked to {{name}}. Their next tap finds them.', { name: shown.member.name || shown.member.member_number || '' })}</Notice>}
+            {shown?.kind === 'desk' && <ScannedCard key={`${shown.member.id}-${shown.key}`} member={shown.member} />}
+
+            {/* A place or an event: the verdict, said aloud (the region is always there, so a new verdict is announced). */}
+            <Announcer view={verdict} />
+            {verdict && (
+              <VerdictCard key={shown!.key} view={verdict}>
+                {verdictLink !== null && (
+                  <Button className="py-3 text-base" onClick={() => setLinking(verdictLink)}><Link2 size={16} aria-hidden />{t('loyalty.scan.link_card', 'Link this card')}</Button>
+                )}
+                {shown?.kind === 'verdict' && shown.failure && gotNoAnswer(shown.failure) && (
+                  <Button variant="secondary" className="py-3 text-base" loading={scan.isPending} onClick={() => send(shown.attempt)}>
+                    <RotateCcw size={16} aria-hidden />{t('loyalty.door.retry', 'Try again')}
+                  </Button>
+                )}
+                {renewFor !== null && (
+                  <div className="space-y-2">
+                    <Button className="py-3 text-base" loading={renew.isPending} onClick={() => renew.mutate({ member: renewFor, key: renewKey })}>
+                      <CalendarPlus size={16} aria-hidden />{t('loyalty.door.renew', 'Renew for 1 year')}
+                    </Button>
+                    {renewFailure && <Notice tone="danger">{t(...refusalKey('loyalty.membership', MEMBERSHIP_ERRORS, 'validity', renewFailure))}</Notice>}
+                  </div>
+                )}
+              </VerdictCard>
+            )}
+            {shown?.kind === 'linked' && (
+              <Notice tone="success">{t('loyalty.door.linked', 'The card is linked to {{name}}. Scan it again to let them in.', { name: shown.member.name || shown.member.member_number || '' })}</Notice>
+            )}
+            {!shown && !deskFailure && <Ready checking={scan.isPending} />}
+          </div>
+
+          {showsToday(context) && <TodayHere today={today} locale={locale} />}
+        </div>
       </div>
 
       {linking !== null && (
@@ -229,10 +275,24 @@ export function ScanPage() {
   )
 }
 
+/** The answer's place before the first scan, from a laptop up: the scanner is ready (or checking). */
+function Ready({ checking }: { checking: boolean }) {
+  const { t } = useTranslation()
+  return (
+    <div aria-hidden className="hidden min-h-48 flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-a-border p-8 text-center text-a-text-2 lg:flex">
+      <span className="grid h-14 w-14 place-items-center rounded-full bg-a-accent/10 text-a-accent-text">
+        {checking ? <Loader2 size={26} className="animate-spin" /> : <ScanLine size={26} />}
+      </span>
+      <p className="text-base font-medium">{checking ? t('loyalty.door.checking', 'Checking…') : t('loyalty.door.ready', 'Ready — scan the next member')}</p>
+    </div>
+  )
+}
+
 function ModeButton({ active, onClick, icon, label }: { active: boolean; onClick: () => void; icon: ReactNode; label: string }) {
   return (
-    <Button type="button" variant={active ? 'primary' : 'secondary'} full aria-pressed={active} onClick={onClick} className="py-3.5 text-base">
-      {icon}{label}
+    <Button type="button" variant={active ? 'primary' : 'secondary'} full aria-pressed={active} onClick={onClick}
+      className="min-h-11 flex-col gap-1 px-2 py-2 text-xs sm:flex-row sm:gap-2 sm:text-sm">
+      {icon}<span className="leading-tight">{label}</span>
     </Button>
   )
 }

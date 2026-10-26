@@ -1,6 +1,5 @@
 {
   "title": "Carte à tampons",
-  "count": "{{have}} sur {{needed}}",
   "label": "{{have}} tampons sur {{needed}}",
   "full": "Votre carte est complète : votre récompense arrive.",
   "reward_free": "Votre récompense offerte : {{reward}}",

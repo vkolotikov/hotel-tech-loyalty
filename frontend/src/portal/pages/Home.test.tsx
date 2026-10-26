@@ -4,6 +4,9 @@ import { MemoryRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { PortalContext, type PortalContextValue } from '../PortalProvider'
 import { Home } from './Home'
+import { NEXT_WORDS, instantDay, nextHeading } from './homeMath'
+import fs from 'node:fs'
+import path from 'node:path'
 import type { Paginated, PortalBooking, PortalBootstrap, PortalMember } from '../lib/types'
 
 vi.mock('react-i18next', () => ({
@@ -108,10 +111,61 @@ describe('Home', () => {
     expect(html).not.toContain('>pending<')
   })
 
+  it('heads the next booking by what it is: a stay as a stay, an appointment in the venue’s word', () => {
+    const stay: PortalBooking = { ...booking, kind: 'stay', id: 1, title: 'Sea view + Garden', starts_at: '2026-11-23', ends_at: '2026-11-26', nights: 3, status: 'confirmed' }
+    const html = render(base, clientWith([stay]))
+    expect(html).toContain('Your next stay')
+    expect(html).not.toContain('Your next appointment')
+    expect(html).toContain('3 nights')
+    expect(render(base, clientWith([booking]))).toContain('Your next appointment')
+    expect(render({ ...base, venue: { ...base.venue, industry: 'restaurant' } }, clientWith([booking]))).toContain('Your next reservation')
+  })
+
+  it('keeps the quick links to a word each', () => {
+    const html = render(base)
+    expect(html).toContain('Spend points')
+    expect(html).not.toContain('Browse the rewards catalogue')
+    expect(html).not.toContain('Discounts available to you')
+  })
+
+  it('dates a points line on the venue’s calendar, not by its UTC day', () => {
+    const late: PortalMember = { ...member, recent_activity: [{ id: 3, type: 'earn', points: 1500, description: 'Late visit', created_at: '2026-10-25T22:46:59.000000Z' }] }
+    const html = render({ ...base, member: late })
+    expect(html).toContain('26 Oct 2026')
+    expect(html).toContain('+1,500')
+  })
+
   it('translates an activity row with no description instead of showing the raw type', () => {
     const noDescription: PortalMember = { ...member, recent_activity: [{ id: 2, type: 'earn', points: 40, description: null, created_at: '2026-09-02T10:00:00Z' }] }
     const html = render({ ...base, member: noDescription })
     expect(html).toContain('Earned')
     expect(html).not.toContain('>earn<')
+  })
+})
+
+describe('Home’s decisions', () => {
+  const caps = { services: true, stays: false }
+  it('the heading: a stay wherever it was booked, an appointment by industry, a stays-only venue waiting for a stay', () => {
+    expect(nextHeading('stay', caps, 'beauty')).toEqual({ key: 'portal.home.next.stay', fallback: NEXT_WORDS.stay })
+    expect(nextHeading('service', caps, 'hotel')).toEqual({ key: 'portal.home.next.hotel', fallback: 'Your next appointment' })
+    expect(nextHeading('service', caps, 'fitness').fallback).toBe('Your next session')
+    expect(nextHeading('service', caps, 'spaceship').key).toBe('portal.home.next.other')
+    expect(nextHeading(null, { services: false, stays: true }, 'hotel').key).toBe('portal.home.next.stay')
+    expect(nextHeading(undefined, { services: true, stays: true }, 'medical').key).toBe('portal.home.next.medical')
+  })
+
+  it('every heading is a whole sentence in all five bundles, the English the code’s', () => {
+    for (const lang of ['en', 'ru', 'de', 'fr', 'es']) {
+      const json = JSON.parse(fs.readFileSync(path.resolve(__dirname, `../i18n/portal.${lang}.json`), 'utf8')) as { home: { next: Record<string, string> } }
+      expect(Object.keys(json.home.next).sort(), lang).toEqual(Object.keys(NEXT_WORDS).sort())
+      for (const v of Object.values(json.home.next)) expect(v, lang).not.toContain('{{')
+      if (lang === 'en') expect(json.home.next).toEqual(NEXT_WORDS)
+    }
+  })
+
+  it('the venue’s day of an instant; a plain date as it is', () => {
+    expect(instantDay('2026-10-25T22:46:59.000000Z', 'en', 'Europe/Riga')).toBe('26 Oct 2026')
+    expect(instantDay('2026-10-25T22:46:59.000000Z', 'en', 'UTC')).toBe('25 Oct 2026')
+    expect(instantDay('2025-09-16', 'en', 'Pacific/Honolulu')).toBe('16 Sept 2025')
   })
 })

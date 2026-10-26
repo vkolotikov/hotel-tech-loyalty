@@ -5,8 +5,8 @@ import { entryLine, peopleLines, TODAY_LINES, type TodayLine } from './verdict'
 
 export interface Today {
   lines: TodayLine[]
-  /** A place: let in and refused today; an event: checked in, signed up, walk-ins and the room left. */
-  counts: { kind: 'place'; granted: number; denied: number } | { kind: 'event'; checkedIn: number; signedUp: number; walkIns: number; roomLeft: number | null } | null
+  /** A place: let in and refused today; an event: checked in, signed up, walk-ins and the room left (sign-ups only where it takes them). */
+  counts: { kind: 'place'; granted: number; denied: number } | { kind: 'event'; checkedIn: number; signedUp: number; walkIns: number; roomLeft: number | null; signUp?: boolean } | null
   isLoading: boolean
   isError: boolean
 }
@@ -32,9 +32,11 @@ export function useToday(context: ScanContext, timeZone: string): Today {
   }
   if (eventId > 0) {
     const data = people.data
+    const signUp = data?.event?.sign_up ?? true
     return {
-      lines: data ? peopleLines(data.people, timeZone) : [],
-      counts: data ? { kind: 'event', checkedIn: data.counts.checked_in, signedUp: data.counts.signed_up, walkIns: data.counts.walk_ins, roomLeft: data.counts.room_left } : null,
+      // The server's latest check-ins by real time; an older server's first page, sorted by the clock.
+      lines: data ? (data.latest ? peopleLines(data.latest, timeZone, { signUp, sorted: true }) : peopleLines(data.people, timeZone, { signUp })) : [],
+      counts: data ? { kind: 'event', checkedIn: data.counts.checked_in, signedUp: data.counts.signed_up, walkIns: data.counts.walk_ins, roomLeft: data.counts.room_left, signUp } : null,
       isLoading: people.isPending, isError: people.isError,
     }
   }

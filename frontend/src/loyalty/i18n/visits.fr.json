@@ -13,7 +13,6 @@
   "add": "Ajouter l’achat",
   "card_label": "{{have}} tampons sur {{needed}}",
   "card_line": "{{have}} sur {{needed}} — encore {{left}}",
-  "completed": "Cartes complètes : {{cards}}",
   "off": "La carte de fidélité à tampons est désactivée : cette carte garde ses tampons mais n’en reçoit plus.",
   "recent": "Derniers tampons",
   "cards": "Cartes complètes",
@@ -33,7 +32,9 @@
     "appointment": "Rendez-vous",
     "stay": "Séjour",
     "check_in": "Visite",
-    "purchase": "Achat"
+    "purchase": "Achat",
+    "event": "Événement",
+    "other": "Autre visite"
   },
   "given": {
     "points": "+{{points}} points",

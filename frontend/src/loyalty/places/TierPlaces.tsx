@@ -15,8 +15,8 @@ export function TierPlaces({ tierId }: { tierId: number }) {
   const line = tierPlaces(query.data?.places, tierId)
   if (!line) return null
   return (
-    <p data-tier-places={tierId} className="flex items-start gap-1.5 text-sm text-a-text-2">
-      <MapPin size={14} aria-hidden className="mt-0.5 shrink-0" />
+    <p data-tier-places={tierId} className="inline-flex min-w-0 items-start gap-1.5 text-sm text-a-text-2">
+      <MapPin size={14} aria-hidden className="mt-[3px] shrink-0" />
       <span>{t(...tierPlacesWords(line))}</span>
     </p>
   )

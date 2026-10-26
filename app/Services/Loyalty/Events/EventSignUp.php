@@ -116,6 +116,43 @@ final class EventSignUp
     }
 
     /**
+     * A deleted member gives back the places they held (release 9): each standing sign-up for an event that has not
+     * ended is cancelled — under the member row's lock, then the event's, as cancel() takes them — and audited, so the
+     * counts, "Full" and the walk-ins' places follow at once. Called after a staff erasure (MemberErasure) and a member's
+     * own deletion. A member switched off keeps theirs (they may be switched on again; staff cancel on the event's page).
+     *
+     * @return int how many sign-ups were cancelled
+     */
+    public function releaseAll(LoyaltyMember $member, string $source, ?User $by = null): int
+    {
+        if (!\Illuminate\Support\Facades\Schema::hasTable('loyalty_event_registrations')) {
+            return 0;
+        }
+        $orgId = (int) $member->organization_id;
+        $eventIds = EventRegistration::withoutGlobalScopes()->where('organization_id', $orgId)->where('member_id', $member->id)
+            ->where('status', EventRegistration::SIGNED_UP)->pluck('loyalty_event_id')->all();
+        $events = LoyaltyEvent::withoutGlobalScopes()->where('organization_id', $orgId)->whereIn('id', $eventIds)->orderBy('id')->get()
+            ->reject(fn (LoyaltyEvent $e) => EventClock::hasEnded($e));
+
+        $released = 0;
+        foreach ($events as $event) {
+            $released += DB::transaction(function () use ($event, $member, $source, $by) {
+                [$lockedMember, $lockedEvent] = self::lock($event, $member);
+                $current = self::registrationOf($lockedEvent, (int) $lockedMember->id);
+                if ($current === null || $current->status !== EventRegistration::SIGNED_UP) {
+                    return 0;
+                }
+                $current->forceFill(['status' => EventRegistration::CANCELLED, 'cancelled_at' => now()])->save();
+                self::audit($lockedEvent, $lockedMember, 'loyalty.event_sign_up_cancelled', $source, $by, "Sign-up for \"{$lockedEvent->title}\" cancelled: the member was deleted");
+
+                return 1;
+            });
+        }
+
+        return $released;
+    }
+
+    /**
      * Why this member may not sign up for the event now, as the refusal to throw, or null when they may. Reads only.
      *
      * @param array{signed_up: int, walk_ins: int}|null $counts the event's numbers (EventRows), read when not given
@@ -130,7 +167,9 @@ final class EventSignUp
             return new LoyaltyRefused('inactive', 'This member’s account is switched off.', 409);
         }
         $validUntil = $member->membership_valid_until?->toDateString();
-        if ($validUntil !== null && $validUntil < max(EventClock::today((int) $event->organization_id), EventClock::day($event))) {
+        // Valid on the day the event begins — the day the door judges too (AccessDecision), so a sign-up accepted is a
+        // member let in, however late the night runs.
+        if ($validUntil !== null && $validUntil < EventClock::day($event)) {
             return new LoyaltyRefused('membership_expired', 'The membership ends before this event.', 409, ['valid_until' => $validUntil]);
         }
         if (!self::admits($event, $member)) {

@@ -120,6 +120,7 @@ class EventCheckInTest extends TestCase
         $this->travel(17)->minutes();
         $again = $this->checkIn($event, $this->grace->id)->assertOk()->json();
         $this->assertSame([true, 'welcome', false, '12:00', false, 0], [$again['verdict']['granted'], $again['verdict']['reason'], $again['checked_in'], $again['already_in'], $again['signed_up'], $again['points']]);
+        $this->assertSame('2026-10-05T12:00', $again['already_in_at'], 'with its day, for an event of several days');
         $this->assertSame(1, EventAttendance::query()->count());
         $this->assertSame(1, PointsTransaction::withoutGlobalScopes()->where('member_id', $this->grace->id)->count());
         $this->assertSame(['welcome', 'already_in'], ScanEvent::withoutGlobalScopes()->where('member_id', $this->grace->id)->orderBy('id')->pluck('action_taken')->all());

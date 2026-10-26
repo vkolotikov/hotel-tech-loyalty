@@ -6,38 +6,40 @@ import { memberPath } from '../lib/links'
 import { useLook } from '../lib/look'
 import { TierChip } from '../ui/TierChip'
 import { useSay } from './useSay'
-import { CLEAR_AFTER_MS, type Mark, type VerdictView } from './verdict'
+import { CLEAR_AFTER_MS, initialsOf, type Mark, type VerdictView } from './verdict'
 import './verdict.css'
 
 const MARKS: Record<Mark, LucideIcon> = { check: Check, alert: AlertTriangle, cross: X, retry: RotateCcw }
 
-/** What a screen reader hears when a verdict comes: the band's two lines (the region is always there, so it is announced). */
+/** What a screen reader hears when a verdict comes: the band, the member's name, why (the region is always there, so it is announced). */
 export function Announcer({ view }: { view: VerdictView | null }) {
   const say = useSay()
+  const name = view?.member ? view.member.name || view.member.member_number || '' : ''
   return (
     <p className="sr-only" aria-live="assertive" aria-atomic="true">
-      {view ? [say(view.headline), view.reason ? say(view.reason) : ''].filter(Boolean).join('. ') : ''}
+      {view ? [say(view.headline), name, view.reason ? say(view.reason) : ''].filter(Boolean).join('. ') : ''}
     </p>
   )
 }
 
+
 /**
  * A verdict on the scan page (spec 2026-10-25 §2): the full-width band — its tone's colour, an icon and the words
- * ("Welcome, Ada" / "No access" and why / amber "Membership ends in 5 days") — and under it the member: name, tier
- * chip, number, valid until, the tier's benefits and, at an event, the check-in's facts.
+ * ("Welcome" / "No access" and why / amber "Membership ends in 5 days") — and under it the member, once: initials,
+ * name, tier chip, number, valid until, at an event the check-in's facts, and on a welcome the tier's benefits.
  */
 export function VerdictCard({ view, children }: { view: VerdictView; children?: ReactNode }) {
   const say = useSay()
   const Icon = MARKS[view.mark]
   return (
     <section data-verdict={view.tone} aria-label={say(view.headline)} className="overflow-hidden rounded-2xl border border-a-border bg-a-surface shadow-a-sm animate-a-pop">
-      <div data-tone={view.tone} className="l-verdict flex items-center gap-4 px-5 py-5 sm:px-6">
-        <span className="l-verdict-disc grid h-14 w-14 shrink-0 place-items-center rounded-full sm:h-16 sm:w-16">
-          <Icon size={34} strokeWidth={2.75} aria-hidden />
+      <div data-tone={view.tone} className="l-verdict flex items-center gap-4 px-5 py-4 sm:px-6">
+        <span className="l-verdict-disc grid h-12 w-12 shrink-0 place-items-center rounded-full sm:h-14 sm:w-14">
+          <Icon size={30} strokeWidth={2.75} aria-hidden />
         </span>
         <div className="min-w-0">
           <p className="font-a-display text-3xl leading-tight sm:text-4xl">{say(view.headline)}</p>
-          {view.reason && <p className="mt-1 text-base font-semibold sm:text-lg">{say(view.reason)}</p>}
+          {view.reason && <p className="mt-0.5 text-base font-semibold sm:text-lg">{say(view.reason)}</p>}
         </div>
       </div>
       {(view.member || children) && (
@@ -63,16 +65,21 @@ export function MemberFacts({ view, size }: { view: VerdictView; size: 'page' | 
   const door = size === 'door'
   return (
     <div className={door ? 'space-y-4' : 'space-y-3'}>
-      <div className="space-y-2">
-        {door
-          ? <p className="font-a-display text-[clamp(1.75rem,min(6vw,7vh),3.25rem)] leading-tight text-a-text">{name}</p>
-          : <Link to={memberPath(member.id)} className="block font-a-display text-3xl leading-tight text-a-text hover:underline">{name}</Link>}
-        <div className={`flex flex-wrap items-center gap-x-3 gap-y-2 text-a-text-2 ${door ? 'text-base' : 'text-sm'}`}>
-          <TierChip tier={view.tier} theme={look.resolved} />
-          {member.member_number && <span className="font-a-mono">{member.member_number}</span>}
-          {view.validity && (
-            <span className="inline-flex items-center gap-1.5"><CalendarClock size={door ? 18 : 14} aria-hidden />{say(view.validity)}</span>
-          )}
+      <div className="flex items-center gap-4">
+        <span aria-hidden className={`grid shrink-0 place-items-center rounded-full bg-a-accent/10 font-semibold text-a-accent-text ${door ? 'h-[clamp(3.5rem,9vmin,5rem)] w-[clamp(3.5rem,9vmin,5rem)] text-2xl' : 'h-14 w-14 text-lg'}`}>
+          {initialsOf(name)}
+        </span>
+        <div className="min-w-0 space-y-1.5">
+          {door
+            ? <p className="font-a-display text-[clamp(1.75rem,min(6vw,7vh),3.25rem)] leading-tight text-a-text">{name}</p>
+            : <Link to={memberPath(member.id)} className="block truncate font-a-display text-3xl leading-tight text-a-text hover:underline">{name}</Link>}
+          <div className={`flex flex-wrap items-center gap-x-3 gap-y-1.5 text-a-text-2 ${door ? 'text-base' : 'text-sm'}`}>
+            <TierChip tier={view.tier} theme={look.resolved} />
+            {member.member_number && member.member_number !== name && <span className="font-a-mono">{member.member_number}</span>}
+            {view.validity && (
+              <span className="inline-flex items-center gap-1.5"><CalendarClock size={door ? 18 : 14} aria-hidden />{say(view.validity)}</span>
+            )}
+          </div>
         </div>
       </div>
       {view.facts.length > 0 && (
@@ -86,16 +93,13 @@ export function MemberFacts({ view, size }: { view: VerdictView; size: 'page' | 
         </ul>
       )}
       {view.benefits.length > 0 && (
-        <div className="space-y-1.5">
-          <p className={`font-medium text-a-text-2 ${door ? 'text-sm' : 'text-xs'}`}>{t('loyalty.door.benefits', 'Benefits')}</p>
-          <ul className="flex flex-wrap gap-2">
-            {view.benefits.map(b => (
-              <li key={b} className={`inline-flex items-center gap-1.5 rounded-full border border-a-border bg-a-surface text-a-text ${door ? 'px-3.5 py-1.5 text-base' : 'px-2.5 py-1 text-xs'}`}>
-                <Gift size={door ? 16 : 12} aria-hidden className="text-a-accent-text" />{b}
-              </li>
-            ))}
-          </ul>
-        </div>
+        <ul className="flex flex-wrap gap-2" aria-label={t('loyalty.member.benefits_title', 'Tier benefits')}>
+          {view.benefits.map(b => (
+            <li key={b} className={`inline-flex items-center gap-1.5 rounded-full border border-a-border bg-a-surface text-a-text ${door ? 'px-3.5 py-1.5 text-base' : 'px-3 py-1 text-sm'}`}>
+              <Gift size={door ? 16 : 14} aria-hidden className="text-a-accent-text" />{b}
+            </li>
+          ))}
+        </ul>
       )}
     </div>
   )

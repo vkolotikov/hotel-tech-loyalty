@@ -1,12 +1,11 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { keepPreviousData, useMutation, useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { ArrowLeft, ExternalLink, Minus, Pencil, Plus, QrCode } from 'lucide-react'
+import { ArrowLeft, Check, Coins, Gem, History as HistoryIcon, Inbox, Mail, Minus, Pencil, Phone, Plus, QrCode, Undo2 } from 'lucide-react'
 import { Button } from '../../workspace/ui/Button'
 import { Notice } from '../../workspace/ui/Notice'
 import { Skeleton } from '../../workspace/ui/Skeleton'
-import { Eyebrow, SectionTitle } from '../../workspace/ui/Typography'
 import { useApi, useBoot } from '../LoyaltyProvider'
 import { failureOf } from '../lib/api'
 import { errorKey, refusalKey } from '../lib/errors'
@@ -27,6 +26,7 @@ import { EraseDialog } from '../membership/EraseDialog'
 import { ERRORS as MEMBERSHIP_ERRORS } from '../membership/errors'
 import { moreItems, pageActions, waitMinutes, type MoreItem } from '../membership/membershipMath'
 import { StatusDialog } from '../membership/StatusDialog'
+import { CARD, CardHead, ICON_BUTTON } from './CardHead'
 import { DetailsCard } from './DetailsCard'
 import { lineType, memberActions, offersReverse, progressLine, type PointsMode, type ProgressIn } from './memberMath'
 import { MoreMenu } from './MoreMenu'
@@ -36,6 +36,8 @@ import { ValidityCard } from '../membership/ValidityCard'
 import { VisitsPanel } from '../visits/VisitsPanel'
 import { PointsDialog } from './PointsDialog'
 import { ReverseDialog } from './ReverseDialog'
+import { benefitDetail } from '../scan/verdict'
+import { useTypedPhrase } from '../scan/useTypedPhrase'
 
 /**
  * A member's page (spec 2026-10-21 §4.3): who they are and their tier, their points and how far the next tier is, the
@@ -43,7 +45,9 @@ import { ReverseDialog } from './ReverseDialog'
  * manager. Release 2 (§4.1) adds their details with Edit details, the card, and a More menu (Resend the welcome email;
  * a manager's Change tier, Deactivate / Reactivate, Delete). A deleted member shows only what stays: the number and
  * the history. Release 5 adds the member's NFC cards (link, switch off). What the workspace does not do (bookings,
- * CRM) is one link away in the full admin.
+ * CRM) is one link away in the full admin. Release 9: each fact once (identity and contact in the header only), Award
+ * and Redeem as words, Edit details and Card as named icons, the full admin and the rest under ⋯; cards with an icon
+ * and a short title, in two columns from lg.
  */
 export function MemberPage() {
   const { id: raw } = useParams()
@@ -86,6 +90,7 @@ type Open = PointsMode | 'details' | 'card' | Exclude<MoreItem, 'welcome'>
 function Member({ detail, locale }: { detail: MemberDetail; locale: string }) {
   const { t } = useTranslation()
   const boot = useBoot()
+  const typedPhrase = useTypedPhrase()
   const look = useLook()
   const { member, progress } = detail
   const tier = boot.programme.tiers.find(tr => tr.id === member.tier_id) ?? null
@@ -136,8 +141,9 @@ function Member({ detail, locale }: { detail: MemberDetail; locale: string }) {
         <ArrowLeft size={15} aria-hidden />{t('loyalty.member.back', 'All members')}
       </Link>
 
-      <div className="flex flex-wrap items-start gap-x-6 gap-y-3">
-        <div className="min-w-0 space-y-2">
+      {/* Who they are and how to reach them, once; the money actions as words, the rest as icons and the ⋯ menu. */}
+      <header className="flex flex-wrap items-start gap-x-6 gap-y-4">
+        <div className="min-w-0 flex-1 space-y-2">
           <h1 className="break-words font-a-display text-[40px] font-normal leading-none text-a-text">{member.name || member.email || `#${member.id}`}</h1>
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-a-text-2">
             <TierChip tier={tier} theme={look.resolved} />
@@ -146,20 +152,28 @@ function Member({ detail, locale }: { detail: MemberDetail; locale: string }) {
             <span>{member.last_activity_at ? t('loyalty.member.last_seen', 'Last seen {{day}}', { day: day(member.last_activity_at, locale, timeZone) }) : t('loyalty.member.not_seen', 'Not seen yet')}</span>
             {!member.is_active && <span className="l-minus font-semibold">{t('loyalty.member.inactive', 'Account switched off')}</span>}
           </div>
-          {(member.email || member.phone) && <p className="break-words text-sm text-a-text-2">{[member.email, member.phone].filter(Boolean).join(' · ')}</p>}
+          {(member.email || member.phone) && (
+            <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-sm text-a-text-2">
+              {member.email && <span data-contact="email" className="inline-flex min-w-0 items-center gap-1.5 break-all"><Mail size={14} aria-hidden className="shrink-0" />{member.email}</span>}
+              {member.phone && <span data-contact="phone" className="inline-flex items-center gap-1.5"><Phone size={14} aria-hidden className="shrink-0" />{member.phone}</span>}
+            </div>
+          )}
         </div>
-        {/* Right-aligned and wrapping from the right: the More menu is always at a row's right end, where its list opens leftwards. */}
-        <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
-          {actions.award && <Button onClick={() => setDialog('award')}><Plus size={15} aria-hidden />{t('loyalty.member.award', 'Award points')}</Button>}
-          {actions.redeem && <Button variant="secondary" onClick={() => setDialog('redeem')}><Minus size={15} aria-hidden />{t('loyalty.member.redeem', 'Redeem points')}</Button>}
-          {own.edit && <Button variant="secondary" onClick={() => setDialog('details')}><Pencil size={15} aria-hidden />{t('loyalty.membership.page.edit', 'Edit details')}</Button>}
-          {own.card && <Button variant="secondary" onClick={() => setDialog('card')}><QrCode size={15} aria-hidden />{t('loyalty.membership.page.card', 'Card')}</Button>}
-          <Link to={fullAdminMemberPath(member.id)} className="inline-flex items-center gap-1.5 rounded-full px-3 py-2 text-sm font-semibold text-a-accent-text hover:bg-a-accent/10">
-            {t('loyalty.member.full_admin', 'Open in full admin')}<ExternalLink size={14} aria-hidden />
-          </Link>
-          <MoreMenu items={more} onPick={pick} />
+        <div className="flex w-full flex-wrap items-center gap-2 sm:ml-auto sm:w-auto sm:justify-end">
+          {(actions.award || actions.redeem) && (
+            <div className="flex w-full gap-2 sm:w-auto">
+              {actions.award && <Button className="flex-1 sm:flex-none" onClick={() => setDialog('award')}><Plus size={15} aria-hidden />{t('loyalty.member.award', 'Award points')}</Button>}
+              {actions.redeem && <Button className="flex-1 sm:flex-none" variant="secondary" onClick={() => setDialog('redeem')}><Minus size={15} aria-hidden />{t('loyalty.member.redeem', 'Redeem points')}</Button>}
+            </div>
+          )}
+          {/* Right-aligned: the More menu is always at the row's right end, where its list opens leftwards. */}
+          <div className="ml-auto flex items-center gap-2">
+            {own.edit && <IconButton label={t('loyalty.membership.page.edit', 'Edit details')} onClick={() => setDialog('details')}><Pencil size={16} aria-hidden /></IconButton>}
+            {own.card && <IconButton label={t('loyalty.membership.page.card', 'Card')} onClick={() => setDialog('card')}><QrCode size={16} aria-hidden /></IconButton>}
+            <MoreMenu items={more} fullAdmin={fullAdminMemberPath(member.id)} onPick={pick} />
+          </div>
         </div>
-      </div>
+      </header>
 
       {welcome.isSuccess && (
         <div className="max-w-2xl"><Notice tone="success">{t('loyalty.membership.page.welcome_sent', 'The welcome email is on its way to {{email}}, with a new code to set a password.', { email: welcome.data.sent_to })}</Notice></div>
@@ -169,23 +183,28 @@ function Member({ detail, locale }: { detail: MemberDetail; locale: string }) {
       )}
 
       <div className="grid gap-4 lg:grid-cols-3">
-        <section aria-labelledby="points-title" className="space-y-3 rounded-2xl border border-a-border bg-a-surface p-5">
-          <Eyebrow><span id="points-title">{t('loyalty.member.points_title', 'Points')}</span></Eyebrow>
-          <p className="font-a-display text-5xl font-light tabular-nums text-a-text">{points(member.points, locale)}</p>
-          <p className="text-sm text-a-text-2">{t('loyalty.member.lifetime', '{{points}} earned in all', { points: points(member.lifetime_points, locale) })}</p>
+        <section aria-labelledby="points-title" className={CARD}>
+          <CardHead id="points-title" icon={Coins} title={t('loyalty.member.points_title', 'Points')} />
+          <div className="space-y-1">
+            <p className="font-a-display text-5xl font-light leading-none tabular-nums text-a-text">{points(member.points, locale)}</p>
+            <p className="text-sm text-a-text-2">{t('loyalty.member.lifetime', '{{points}} earned in all', { points: points(member.lifetime_points, locale) })}</p>
+          </div>
           <ProgressBlock progress={progress} locale={locale} currency={boot.venue.currency} />
         </section>
 
-        <section aria-labelledby="benefits-title" className="space-y-3 rounded-2xl border border-a-border bg-a-surface p-5">
-          <Eyebrow><span id="benefits-title">{t('loyalty.member.benefits_title', 'Tier benefits')}</span></Eyebrow>
+        <section aria-labelledby="benefits-title" className={CARD}>
+          <CardHead id="benefits-title" icon={Gem} title={t('loyalty.member.benefits_title', 'Tier benefits')} />
           {detail.benefits.length === 0
             ? <p className="text-sm text-a-text-2">{t('loyalty.member.no_benefits', 'This tier has no benefits yet.')}</p>
             : (
               <ul className="space-y-2">
                 {detail.benefits.map(b => (
-                  <li key={b.id} className="text-sm">
-                    <span className="font-medium text-a-text">{b.name}</span>
-                    {b.value && <span className="text-a-text-2"> · {b.value}</span>}
+                  <li key={b.id} className="flex items-start gap-2 text-sm">
+                    <Check size={15} aria-hidden className="mt-0.5 shrink-0 text-a-accent-text" />
+                    <span className="min-w-0">
+                      <span className="font-medium text-a-text">{b.name}</span>
+                      {benefitDetail(b, typedPhrase) && <span className="text-a-text-2"> · {benefitDetail(b, typedPhrase)}</span>}
+                    </span>
                   </li>
                 ))}
               </ul>
@@ -193,25 +212,32 @@ function Member({ detail, locale }: { detail: MemberDetail; locale: string }) {
         </section>
 
         <section aria-labelledby="requests-title" className="space-y-3 rounded-2xl border border-a-border bg-a-surface py-5">
-          <div className="px-5"><Eyebrow><span id="requests-title">{t('loyalty.member.requests_title', 'Requests')}</span></Eyebrow></div>
+          <div className="px-5"><CardHead id="requests-title" icon={Inbox} title={t('loyalty.member.requests_title', 'Requests')} /></div>
           {detail.requests.length === 0
             ? <p className="px-5 text-sm text-a-text-2">{t('loyalty.member.no_requests', 'Nothing waits for the team.')}</p>
             : <ul className="divide-y divide-a-border">{detail.requests.map(r => <RequestRow key={r.id} request={r} showMember={false} compact />)}</ul>}
         </section>
       </div>
 
-      {/* Release 8: the membership — valid until, Extend (managers). */}
-      <ValidityCard member={member} locale={locale} timeZone={timeZone} />
-
-      {/* Release 7: the stamp card with Check in and Add a purchase, and cashback credit — each when the venue uses it. */}
-      <VisitsPanel member={member} locale={locale} timeZone={timeZone} />
-      <CreditPanel member={member} locale={locale} timeZone={timeZone} />
-
-      <DetailsCard member={member} locale={locale} timeZone={timeZone} />
-
-      <NfcCards member={member} locale={locale} timeZone={timeZone} />
-
-      <History memberId={member.id} balance={member.points} locale={locale} />
+      {/*
+        Two columns from lg: the desk's cards and the history (two thirds), the membership, details and NFC cards (one
+        third). On a phone one column, in the order the desk needs: membership, visits, credit, details, cards, history.
+        A card a venue does not use renders nothing, and its slot (empty) takes no room.
+      */}
+      <div className="flex flex-col gap-4 lg:grid lg:grid-cols-3 lg:items-start">
+        <div className="contents lg:col-span-2 lg:flex lg:min-w-0 lg:flex-col lg:gap-4">
+          {/* Release 7: the stamp card with Check in and Add a purchase, and cashback credit — each when the venue uses it. */}
+          <div className="order-2 min-w-0 empty:hidden"><VisitsPanel member={member} locale={locale} timeZone={timeZone} /></div>
+          <div className="order-3 min-w-0 empty:hidden"><CreditPanel member={member} locale={locale} timeZone={timeZone} /></div>
+          <div className="order-6 min-w-0"><History memberId={member.id} balance={member.points} locale={locale} /></div>
+        </div>
+        <div className="contents lg:flex lg:min-w-0 lg:flex-col lg:gap-4">
+          {/* Release 8: the membership — valid until, Extend (managers). */}
+          <div className="order-1 min-w-0 empty:hidden"><ValidityCard member={member} locale={locale} timeZone={timeZone} /></div>
+          <div className="order-4 min-w-0"><DetailsCard member={member} locale={locale} timeZone={timeZone} /></div>
+          <div className="order-5 min-w-0"><NfcCards member={member} locale={locale} timeZone={timeZone} /></div>
+        </div>
+      </div>
 
       {(dialog === 'award' || dialog === 'redeem') && <PointsDialog mode={dialog} memberId={member.id} name={member.name} balance={member.points} onClose={() => setDialog(null)} />}
       {dialog === 'details' && <EditDetailsDialog member={member} languages={detail.options.languages} onClose={() => setDialog(null)} />}
@@ -221,6 +247,11 @@ function Member({ detail, locale }: { detail: MemberDetail; locale: string }) {
       {dialog === 'erase' && <EraseDialog member={member} onClose={() => setDialog(null)} />}
     </div>
   )
+}
+
+/** A round icon-only button with its name for a screen reader and the hover tip. */
+function IconButton({ label, onClick, children }: { label: string; onClick: () => void; children: ReactNode }) {
+  return <button type="button" aria-label={label} title={label} onClick={onClick} className={ICON_BUTTON}>{children}</button>
 }
 
 /**
@@ -275,24 +306,27 @@ function History({ memberId, balance, locale }: { memberId: number; balance: num
   const data = query.data
 
   return (
-    <section aria-labelledby="history-title" className="space-y-3">
-      <SectionTitle><span id="history-title">{t('loyalty.history.title', 'Points history')}</span></SectionTitle>
-      {query.isError && <Notice tone="danger">{t(...errorKey('load', failureOf(query.error)))}</Notice>}
-      {!data && query.isLoading && <Skeleton className="h-40" />}
-      {data && data.lines.length === 0 && <p className="text-sm text-a-text-2">{t('loyalty.history.none', 'No points yet.')}</p>}
+    <section aria-labelledby="history-title" className="space-y-4 overflow-hidden rounded-2xl border border-a-border bg-a-surface pt-5">
+      <div className="px-5"><CardHead id="history-title" icon={HistoryIcon} title={t('loyalty.history.title', 'Points history')} /></div>
+      {query.isError && <div className="px-5 pb-5"><Notice tone="danger">{t(...errorKey('load', failureOf(query.error)))}</Notice></div>}
+      {!data && query.isLoading && <div className="px-5 pb-5"><Skeleton className="h-40" /></div>}
+      {data && data.lines.length === 0 && <p className="px-5 pb-5 text-sm text-a-text-2">{t('loyalty.history.none', 'No points yet.')}</p>}
       {data && data.lines.length > 0 && (
         <>
-          <ul className="divide-y divide-a-border overflow-hidden rounded-2xl border border-a-border bg-a-surface">
+          <ul className="divide-y divide-a-border border-t border-a-border">
             {data.lines.map(line => {
               const type = lineType(line.type)
+              const kind = t(`loyalty.history.type.${type}`, LINE_TYPE_WORDS[type])
+              const reverse = t('loyalty.history.reverse', 'Reverse')
               return (
-                <li key={line.id} data-line={line.id} className={`flex flex-wrap items-center gap-x-4 gap-y-1 px-4 py-3 ${line.is_reversed ? 'opacity-70' : ''}`}>
-                  <span className={`w-20 shrink-0 text-right font-semibold tabular-nums ${line.points >= 0 ? 'l-plus' : 'l-minus'}`}>{signedPoints(line.points, locale)}</span>
+                <li key={line.id} data-line={line.id} className={`flex items-center gap-x-4 px-5 py-3 ${line.is_reversed ? 'opacity-70' : ''}`}>
+                  <span className={`w-16 shrink-0 text-right font-semibold tabular-nums sm:w-20 ${line.points >= 0 ? 'l-plus' : 'l-minus'}`}>{signedPoints(line.points, locale)}</span>
                   <span className="min-w-0 flex-1">
-                    <span className="block text-sm text-a-text">{line.description || t(`loyalty.history.type.${type}`, LINE_TYPE_WORDS[type])}</span>
+                    <span className="block break-words text-sm text-a-text">{line.description || kind}</span>
                     <span className="block text-xs text-a-text-2">
+                      {/* The kind once: in the meta only when the line has a description of its own. */}
                       {[
-                        t(`loyalty.history.type.${type}`, LINE_TYPE_WORDS[type]),
+                        line.description ? kind : null,
                         when(line.at, locale, boot.venue.timezone),
                         line.by ? t('loyalty.history.by', 'by {{name}}', { name: line.by }) : null,
                         line.balance_after !== null ? t('loyalty.history.balance_after', 'balance {{points}}', { points: points(line.balance_after, locale) }) : null,
@@ -301,13 +335,16 @@ function History({ memberId, balance, locale }: { memberId: number; balance: num
                     </span>
                   </span>
                   {offersReverse(line, boot.staff.can) && (
-                    <Button size="sm" variant="ghost" onClick={() => setReversing(line)}>{t('loyalty.history.reverse', 'Reverse')}</Button>
+                    <button type="button" data-reverse={line.id} aria-label={reverse} title={reverse} onClick={() => setReversing(line)}
+                      className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-a-accent-text hover:bg-a-accent/10 sm:h-9 sm:w-9">
+                      <Undo2 size={16} aria-hidden />
+                    </button>
                   )}
                 </li>
               )
             })}
           </ul>
-          <Pager page={data.page} pages={data.pages} onPage={setPage} />
+          <div className="!mt-0 px-5 pb-4 empty:hidden"><Pager page={data.page} pages={data.pages} onPage={setPage} /></div>
         </>
       )}
       {reversing && <ReverseDialog memberId={memberId} line={reversing} balance={balance} onClose={() => setReversing(null)} />}

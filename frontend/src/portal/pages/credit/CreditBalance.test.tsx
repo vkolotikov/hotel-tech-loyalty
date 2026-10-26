@@ -1,11 +1,12 @@
 import { describe, expect, it, vi } from 'vitest'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { MemoryRouter } from 'react-router-dom'
 import fs from 'node:fs'
 import path from 'node:path'
 import { PortalContext, type PortalContextValue } from '../../PortalProvider'
 import type { PortalBootstrap } from '../../lib/types'
-import { CreditBalance } from './CreditBalance'
+import { CreditBalance, CreditHistory } from './CreditBalance'
 import { CREDIT_KEY, LINE_WORDS, lineKind, showsCredit, showsNote, signedMoney, type MemberCredit } from './creditView'
 
 vi.mock('react-i18next', () => ({
@@ -36,38 +37,50 @@ function render(data?: MemberCredit) {
   if (data) client.setQueryData(CREDIT_KEY, data)
   const value: PortalContextValue = { data: boot, isLoading: false, isError: false, error: null, refetch: () => {} }
   return renderToStaticMarkup(
-    <QueryClientProvider client={client}><PortalContext.Provider value={value}><CreditBalance /></PortalContext.Provider></QueryClientProvider>,
+    <QueryClientProvider client={client}><MemoryRouter><PortalContext.Provider value={value}><CreditBalance /></PortalContext.Provider></MemoryRouter></QueryClientProvider>,
   )
+}
+function renderHistory(data: MemberCredit) {
+  const value: PortalContextValue = { data: boot, isLoading: false, isError: false, error: null, refetch: () => {} }
+  return renderToStaticMarkup(<PortalContext.Provider value={value}><CreditHistory credit={data} /></PortalContext.Provider>)
 }
 const text = (html: string) => html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ')
 
 describe('the credit on portal Home', () => {
-  it('says the balance in the venue’s currency, that it is spent at the desk, and the latest lines', () => {
-    const words = text(render(credit()))
+  it('says the balance in the venue’s currency and that it is spent at the desk, and leads to its history — no lines', () => {
+    const html = render(credit())
+    const words = text(html)
     expect(words).toContain('Credit: €12.40')
-    expect(words).toContain('Spend it at the desk: ask the team to take it off your bill.')
-    expect(words).toContain('Spent at the desk · Coffee')
-    expect(words).toContain('−€2.40')
-    expect(words).toContain('Cashback on a stay')
-    expect(words).toContain('+€14.80')
-    expect(words).not.toContain('5% cashback on')
-  })
-
-  it('shows at most five lines', () => {
-    const lines = Array.from({ length: 8 }, (_, i) => ({ id: 10 + i, type: 'spend', amount: -1, balance_after: 1, currency: 'EUR', note: null, reference_type: null, created_at: null }))
-    expect(render(credit({ lines })).match(/<li/g)).toHaveLength(5)
+    expect(words).toContain('Spend it at the desk.')
+    expect(html).toContain('href="/portal/activity?tab=credit"')
+    expect(html).not.toContain('<li')
+    expect(words).not.toContain('Coffee')
   })
 
   it('keeps a balance earned before cashback was switched off, and says no new credit comes', () => {
     const words = text(render(credit({ enabled: false })))
     expect(words).toContain('Credit: €12.40')
-    expect(words).toContain('New credit is no longer earned; what you have can still be spent at the desk.')
+    expect(words).toContain('No new credit is earned; spend yours at the desk.')
   })
 
   it('shows nothing while the venue gives no cashback and the member holds none, or before the answer', () => {
     expect(render(credit({ enabled: false, balance: 0, lines: [] }))).toBe('')
     expect(render()).toBe('')
-    expect(text(render(credit({ balance: 0, lines: [] })))).toContain('You get credit back on what you spend, from your next visit.')
+    expect(text(render(credit({ balance: 0, lines: [] })))).toContain('Earn credit back from your next visit.')
+  })
+})
+
+describe('the credit’s history (Activity → Credit)', () => {
+  it('lists every line the server sent, with its sign and only the team’s notes', () => {
+    const words = text(renderHistory(credit()))
+    expect(words).toContain('Credit: €12.40')
+    expect(words).toContain('Spent at the desk · Coffee')
+    expect(words).toContain('−€2.40')
+    expect(words).toContain('Cashback on a stay')
+    expect(words).toContain('+€14.80')
+    expect(words).not.toContain('5% cashback on')
+    const lines = Array.from({ length: 8 }, (_, i) => ({ id: 10 + i, type: 'spend', amount: -1, balance_after: 1, currency: 'EUR', note: null, reference_type: null, created_at: null }))
+    expect(renderHistory(credit({ lines })).match(/<li/g)).toHaveLength(8)
   })
 })
 

@@ -6,16 +6,12 @@
     "card": "Card",
     "welcome_sent": "The welcome email is on its way to {{email}}, with a new code to set a password.",
     "not_given": "Not given",
-    "email": "Email",
-    "phone": "Phone",
     "language": "Language",
     "nationality": "Nationality",
     "date_of_birth": "Date of birth",
     "marketing": "Marketing emails",
     "marketing_yes": "Agreed",
     "marketing_no": "Not agreed",
-    "number": "Member number",
-    "joined": "Joined",
     "tier_kept": "Tier kept until",
     "details_title": "Details"
   },
@@ -365,12 +361,6 @@
   },
   "validity": {
     "title": "Membership",
-    "state": {
-      "active": "Active",
-      "expiring": "Ending soon",
-      "expired": "Expired",
-      "off": "Switched off"
-    },
     "extend_action": "Extend",
     "extend_by": "Extend by",
     "extend": {
@@ -379,21 +369,17 @@
       "6m": "+6 months",
       "1y": "+1 year"
     },
-    "from_end": "From the current end, {{day}}.",
-    "from_today": "From today.",
     "new_end": "until {{day}}",
     "set": "Set a date",
     "remove": "Remove the end date",
     "saved": "Saved: valid until {{day}}.",
     "saved_none": "Saved: the membership has no end date.",
-    "managers_only": "Only an owner or a manager can change the end date.",
     "none": "No end date",
     "until": "Valid until {{day}}",
     "ends_today": "Ends today",
     "ends_tomorrow": "Ends tomorrow",
     "ends_in": "Ends in {{days}} days",
     "expired_on": "Expired on {{day}}",
-    "none_line": "The membership never ends. Give it an end date when a member buys one for a time.",
     "left_line": "{{left}} left.",
     "left": {
       "years_one": "1 year",
@@ -404,8 +390,8 @@
       "days_many": "{{n}} days"
     },
     "expiring_line": "Valid until {{day}}. After it, places refuse entry until it is renewed.",
-    "expired_line": "Places refuse entry until it is renewed. Points and history stay, and the desk can still serve the member.",
-    "off_line": "The account is switched off, so places refuse entry whatever the date.",
+    "expired_line": "Places refuse entry until it is renewed.",
+    "off_line": "Places refuse entry whatever the date.",
     "problem": {
       "date": "Choose a day.",
       "past": "Choose today or a later day."

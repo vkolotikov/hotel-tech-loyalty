@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { BadgeCheck, Sparkles } from 'lucide-react'
 import toast from 'react-hot-toast'
+import { usePortal } from '../../PortalProvider'
 import { portalApi, apiMessage } from '../../lib/portalApi'
 import { formatDay } from '../../lib/dates'
 import { Card } from '../../ui/Card'
@@ -14,11 +15,13 @@ import { claimedMessage, offerPerkNote, offerValueLabel, paysPointsOnClaim } fro
 export function OffersTab() {
   const { t, i18n } = useTranslation()
   const qc = useQueryClient()
+  const { data: boot } = usePortal()
+  const where = { currency: boot?.venue.currency, locale: i18n.language }
   const { data, isLoading, isError, refetch } = useQuery({ queryKey: ['portal-offers'], queryFn: portalApi.offers })
   const claim = useMutation({
     mutationFn: portalApi.claimOffer,
     onSuccess: reply => {
-      toast.success(claimedMessage(reply, t))
+      toast.success(claimedMessage(reply, t, i18n.language))
       void qc.invalidateQueries({ queryKey: ['portal-offers'] })
       // A bonus_points offer added points (release 7): the balance and the history moved.
       if (Number(reply?.points_awarded ?? 0) > 0) {
@@ -44,7 +47,7 @@ export function OffersTab() {
           <h2 className="text-xs font-semibold text-p-text-2 uppercase tracking-wider">{t('portal.rewards.offers_yours', 'Yours to use')}</h2>
           {claimed.map(c => {
             const used = !!c.used_at
-            const label = c.offer ? offerValueLabel(c.offer, t) : null
+            const label = c.offer ? offerValueLabel(c.offer, t, where) : null
             const perk = c.offer ? offerPerkNote(c.offer, t) : null
             return (
               <Card key={c.id} className={`p-4 ${used ? 'opacity-60' : 'border-p-accent/40'}`}>
@@ -74,7 +77,7 @@ export function OffersTab() {
         {available.length === 0 ? (
           <EmptyState icon={<Sparkles size={18} aria-hidden />} title={t('portal.rewards.offers_empty', "No offers right now. We'll let you know when something arrives.")} />
         ) : available.map(o => {
-          const label = offerValueLabel(o, t)
+          const label = offerValueLabel(o, t, where)
           const perk = offerPerkNote(o, t)
           const full = o.usage_limit != null && (o.times_used ?? 0) >= o.usage_limit
           return (

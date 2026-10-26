@@ -1,12 +1,10 @@
 {
   "title": "Bereiche",
-  "line": "Wo Mitglieder einchecken und welche Stufen eintreten dürfen.",
   "add": "Bereich hinzufügen",
   "add_first": "Eingang hinzufügen",
   "list": "Bereiche",
   "none_manager": "Noch keine Bereiche. Fügen Sie zuerst Ihren Eingang hinzu: Scans dort zeigen, wer hinein darf.",
   "none": "Noch keine Bereiche. Inhaber oder Manager legen sie hier an.",
-  "switched_on": "Eingeschaltet",
   "switched_off": "Ausgeschaltet",
   "edit": "Bearbeiten",
   "who": "Wer darf eintreten",
@@ -68,7 +66,6 @@
     "list": "Scans, neueste zuerst",
     "let_in": "Eingelassen:",
     "refused": "Abgewiesen:",
-    "unknown_code": "Unbekannte Karte oder unbekannter Code",
     "by": "von {{name}}",
     "error": {
       "not_found": "Diesen Bereich gibt es nicht mehr.",

@@ -221,50 +221,38 @@ class LoyaltyTierModelTest extends TestCase
 
     public function test_saving_tier_busts_cache(): void
     {
-        // Admin edits a tier → cache MUST drop so the SPA sees
-        // the change within seconds.
+        // Admin edits a tier → the next read MUST see it. Release 9: the active tiers are read once per request or
+        // job (never the cache: on Laravel Cloud that is each container's own files, which kept an old ladder for
+        // half an hour on the other containers); a save in this process forgets what was read.
         $bronze = $this->tier(['name' => 'Bronze', 'min_points' => 0]);
 
-        // Warm cache.
-        LoyaltyTier::cachedActiveForCurrentOrg();
-        $this->assertNotNull(
-            Cache::get("org:{$this->orgId}:loyalty_tiers_active"),
-            'Pre-condition: cache warm.',
-        );
+        $this->assertSame(['Bronze'], LoyaltyTier::cachedActiveForCurrentOrg()->pluck('name')->all());
+        $this->assertNull(Cache::get("org:{$this->orgId}:loyalty_tiers_active"), 'The shared cache is not used.');
 
-        // Edit a tier — saved hook MUST bust.
         $bronze->update(['name' => 'Bronze Plus']);
 
-        $this->assertNull(
-            Cache::get("org:{$this->orgId}:loyalty_tiers_active"),
-            'CRITICAL: saved() MUST flush cache.',
-        );
+        $this->assertSame(['Bronze Plus'], LoyaltyTier::cachedActiveForCurrentOrg()->pluck('name')->all(), 'CRITICAL: saved() MUST flush what was read.');
     }
 
     public function test_creating_new_tier_busts_cache(): void
     {
         $this->tier(['name' => 'Bronze']);
-        LoyaltyTier::cachedActiveForCurrentOrg(); // warm
+        LoyaltyTier::cachedActiveForCurrentOrg(); // read
 
         $this->tier(['name' => 'Silver', 'min_points' => 500]);
 
-        $this->assertNull(
-            Cache::get("org:{$this->orgId}:loyalty_tiers_active"),
-            'create() saved event MUST bust cache.',
-        );
+        $this->assertSame(['Bronze', 'Silver'], LoyaltyTier::cachedActiveForCurrentOrg()->pluck('name')->all(), 'create() MUST flush what was read.');
     }
 
     public function test_deleting_tier_busts_cache(): void
     {
         $bronze = $this->tier(['name' => 'Bronze']);
-        LoyaltyTier::cachedActiveForCurrentOrg(); // warm
+        $this->tier(['name' => 'Silver', 'min_points' => 500]);
+        LoyaltyTier::cachedActiveForCurrentOrg(); // read
 
         $bronze->delete();
 
-        $this->assertNull(
-            Cache::get("org:{$this->orgId}:loyalty_tiers_active"),
-            'delete() MUST bust cache.',
-        );
+        $this->assertSame(['Silver'], LoyaltyTier::cachedActiveForCurrentOrg()->pluck('name')->all(), 'delete() MUST flush what was read.');
     }
 
     public function test_flushCacheFor_null_org_is_noop(): void

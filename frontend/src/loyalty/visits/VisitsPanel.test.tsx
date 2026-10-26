@@ -82,7 +82,9 @@ describe('a member’s visits panel', () => {
     expect(html.match(/rounded-full border-2/g)?.length).toBe(10)
     expect(words).toContain('7 of 10 — 3 to go')
     expect(words).toContain('A full card gives a free Coffee.')
-    expect(words).toContain('Cards completed: 1')
+    // The count of completed cards once, beside the list's heading (release 9).
+    expect(html).toMatch(/Completed cards\s*<span data-completed-cards=""[^>]*>1<\/span>/)
+    expect(words).not.toContain('Cards completed')
     expect(words).toContain('Check in')
     expect(words).toContain('Add a purchase')
     expect(words).toContain('Recent stamps')
@@ -91,6 +93,18 @@ describe('a member’s visits panel', () => {
     expect(words).toContain('Appointment')
     expect(words).toContain('Card 1 · +100 points')
     expect(words).toContain('Sep 20, 2026')
+  })
+
+  it('names an event’s stamp, and one of a source it does not know, in words — never the server’s raw code', () => {
+    const stamps = [
+      { id: 21, venue_day: '2026-10-04', source: 'event', by: 'Ada', card_number: 2 },
+      { id: 20, venue_day: '2026-10-03', source: 'mystery', by: null, card_number: 2 },
+    ]
+    const html = render(<VisitsPanel member={member} locale="en" timeZone="Europe/Riga" />, ways(), can(), { ...view, history: { stamps, cards: [] } })
+    const words = text(html)
+    expect(words).toContain('Event')
+    expect(words).toContain('Visit')
+    expect(words).not.toMatch(/\bevent\b|mystery/)
   })
 
   it('a venue with check-in but no stamp card shows the desk without a card', () => {

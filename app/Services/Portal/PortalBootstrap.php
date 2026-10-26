@@ -208,7 +208,7 @@ final class PortalBootstrap
 
         return [
             'venue'        => $this->venue($org, $theme),
-            'capabilities' => $this->capabilities($org, $loyalty, $member !== null),
+            'capabilities' => $this->capabilities($org, $loyalty, $member),
             'policies'     => [
                 'services_cancel_hours'        => (int) HotelSetting::getValue('services_cancel_hours', 24),
                 'booking_cancel_hours'         => (int) HotelSetting::getValue('booking_cancel_hours', 48),
@@ -287,7 +287,7 @@ final class PortalBootstrap
      * an active tier (MemberProvisioner). Neither asks about the industry:
      * booking is gated on what the venue can actually sell.
      */
-    private function capabilities(Organization $org, bool $loyalty, bool $hasMember): array
+    private function capabilities(Organization $org, bool $loyalty, ?LoyaltyMember $member): array
     {
         $stripe = app(StripeService::class);
         $services = (string) HotelSetting::getValue('services_currency', 'EUR');
@@ -306,11 +306,11 @@ final class PortalBootstrap
 
         return [
             'loyalty'  => $loyalty,
-            'services' => $hasMember && $this->capability->appointmentsBookable($org->id),
-            'stays'    => $hasMember && $this->capability->staysBookableOnline($org->id),
+            'services' => $member !== null && $this->capability->appointmentsBookable($org->id),
+            'stays'    => $member !== null && $this->capability->staysBookableOnline($org->id),
             'chat'     => true,
-            // Release 8 (spec 2026-10-25 §4): the menu offers Events while the venue has a published event that has not ended.
-            'events'   => $hasMember && $loyalty && app(\App\Services\Loyalty\Events\PortalEvents::class)->offered((int) $org->id),
+            // Release 8 (spec 2026-10-25 §4): the menu offers Events while an event the member's tier may attend has not ended.
+            'events'   => $member !== null && $loyalty && app(\App\Services\Loyalty\Events\PortalEvents::class)->offered($member),
             'payments' => [
                 'services'        => $payServices,
                 'stays'           => $payStays,

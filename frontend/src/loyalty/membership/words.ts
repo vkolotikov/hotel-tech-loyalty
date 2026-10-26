@@ -125,14 +125,6 @@ export const COLUMN_WORDS: Record<string, string> = {
   valid_until: 'Valid until',
 }
 
-/** A membership's state (release 8, MembershipValidity on the server). */
-export const VALIDITY_STATE_WORDS: Record<string, string> = {
-  active: 'Active',
-  expiring: 'Ending soon',
-  expired: 'Expired',
-  off: 'Switched off',
-}
-
 /** Extend's quick choices (validityMath.ts `EXTENSIONS`). */
 export const EXTEND_WORDS: Record<string, string> = {
   '1m': '+1 month',
@@ -177,7 +169,6 @@ export const WORD_FAMILIES: Record<string, Record<string, string>> = {
   'import.kind': IMPORT_KIND_WORDS,
   'import.state': IMPORT_STATE_WORDS,
   'import.column': COLUMN_WORDS,
-  'validity.state': VALIDITY_STATE_WORDS,
   'validity.extend': EXTEND_WORDS,
   'validity.left': LEFT_WORDS,
   'validity.problem': VALIDITY_PROBLEM_WORDS,

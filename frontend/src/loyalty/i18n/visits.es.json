@@ -13,7 +13,6 @@
   "add": "Añadir la compra",
   "card_label": "{{have}} de {{needed}} sellos",
   "card_line": "{{have}} de {{needed}} — faltan {{left}}",
-  "completed": "Tarjetas completas: {{cards}}",
   "off": "La tarjeta de sellos está desactivada: esta tarjeta conserva sus sellos, pero no recibe más.",
   "recent": "Últimos sellos",
   "cards": "Tarjetas completas",
@@ -33,7 +32,9 @@
     "appointment": "Cita",
     "stay": "Estancia",
     "check_in": "Visita",
-    "purchase": "Compra"
+    "purchase": "Compra",
+    "event": "Evento",
+    "other": "Otra visita"
   },
   "given": {
     "points": "+{{points}} puntos",

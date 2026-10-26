@@ -53,13 +53,10 @@
     "tier_progress_by": "Los miembros suben por"
   },
   "hint": {
-    "cashback_percent": "El crédito solo se usa en el mostrador; nunca se paga en dinero.",
-    "checkin_points": "Con 0, la visita cuenta sin dar puntos.",
     "points_per_currency": "Los niveles superiores lo multiplican por su tasa de acumulación.",
-    "stamp_reward_id": "De su catálogo de recompensas. El miembro recibe un código para mostrar en el mostrador.",
-    "stamps_per_card": "Un cambio se aplica a las tarjetas nuevas; las ya empezadas mantienen su número."
+    "stamps_per_card": "Un cambio se aplica a las tarjetas nuevas; las ya empezadas mantienen su número.",
+    "tier_progress_by": "Un cambio no mueve a nadie de inmediato: el nivel se actualiza con la próxima visita o los próximos puntos."
   },
-  "line": "Cómo ganan puntos los miembros y qué reciben a cambio. Active o desactive cada forma y ajuste sus valores; los miembros ven al instante cualquier cambio guardado.",
   "load": {
     "error": {
       "network": "Sin conexión. Compruebe la red e inténtelo de nuevo.",
@@ -72,19 +69,12 @@
   "part": {
     "boosts": "Promociones de puntos",
     "boosts_count": "En curso o próximas",
-    "boosts_line": "Más puntos durante un tiempo, como un fin de semana de puntos dobles.",
     "offers": "Ofertas",
     "offers_count": "Activadas",
-    "offers_line": "Ofertas para miembros durante un tiempo, como un descuento o puntos extra.",
-    "open_offers": "Abrir ofertas",
-    "open_program": "Abrir Programa",
-    "open_rewards": "Abrir Recompensas",
     "rewards": "Recompensas",
     "rewards_count": "En el catálogo",
-    "rewards_line": "En qué gastan los miembros sus puntos.",
     "tiers": "Niveles",
-    "tiers_count": "En la escala",
-    "tiers_line": "Los niveles que suben los miembros al ganar puntos, cada uno con sus beneficios."
+    "tiers_count": "En la escala"
   },
   "parts_title": "El resto de su programa",
   "preset": {

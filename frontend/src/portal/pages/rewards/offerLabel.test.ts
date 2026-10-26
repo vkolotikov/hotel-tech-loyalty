@@ -23,6 +23,12 @@ describe('offerValueLabel', () => {
     expect(offerValueLabel({ id: 1, title: 'x', type: 'discount', value: 15 }, t)).toBe('15% off')
     expect(offerValueLabel({ id: 1, title: 'x', type: 'percent_discount', value: '10' }, t)).toBe('10% off')
     expect(offerValueLabel({ id: 1, title: 'x', type: 'fixed_amount', value: 25 }, t)).toBe('25 off')
+    // In the venue's currency when the page knows it (the bootstrap's venue.currency).
+    expect(offerValueLabel({ id: 1, title: 'x', type: 'fixed_amount', value: 25 }, t, { currency: 'EUR', locale: 'en' })).toBe('€25.00 off')
+  })
+
+  it('writes a bonus’s points the language’s way', async () => {
+    expect(offerValueLabel({ id: 1, title: 'x', type: 'bonus_points', value: 1500 }, await i18nWith('en'), { locale: 'en' })).toBe('+1,500 points')
     expect(offerValueLabel({ id: 1, title: 'x', type: 'points_multiplier', value: 2 }, t)).toBe('2x points')
   })
   it('says nothing for a type it cannot price', () => {

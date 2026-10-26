@@ -56,8 +56,11 @@ describe('a place as its card shows it', () => {
 
   it('counts today’s scans, and says so when there were none', () => {
     expect(todayWords({ granted: 0, denied: 0 })).toEqual(['loyalty.places.today_none', 'No entries today'])
-    expect(todayWords({ granted: 12, denied: 1 })).toEqual(['loyalty.places.today', 'Today: {{granted}} in · {{denied}} refused', { granted: 12, denied: 1 }])
-    expect(countsWords({ granted: 0, denied: 2 })[2]).toEqual({ granted: 0, denied: 2 })
+    expect(todayWords({ granted: 12, denied: 1 })).toEqual(['loyalty.places.today', 'Today: {{granted}} in · {{denied}} refused', { granted: '12', denied: '1' }])
+    expect(countsWords({ granted: 0, denied: 2 })[2]).toEqual({ granted: '0', denied: '2' })
+    // Counts are grouped as the language groups numbers.
+    expect(todayWords({ granted: 1234, denied: 5 }, 'en')[2]).toEqual({ granted: '1,234', denied: '5' })
+    expect(countsWords({ granted: 12345, denied: 0 }, 'de')[2]).toEqual({ granted: '12.345', denied: '0' })
     expect(countsWords({ granted: 0, denied: 0 })[0]).toBe('loyalty.places.entries.none')
   })
 })

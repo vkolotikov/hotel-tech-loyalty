@@ -18,12 +18,17 @@ export const SAID_WORDS = {
 
 export type SaidKey = keyof typeof SAID_WORDS
 
-/** A stamp's visit (StampCards::SOURCES). A source without a word here is shown as sent. */
+/**
+ * A stamp's visit (StampCards::SOURCES, each named here — visitsMath.test.ts reads the server's list); a source the
+ * workspace does not know yet reads as `other`, "Visit".
+ */
 export const SOURCE_WORDS: Record<string, string> = {
   appointment: 'Appointment',
   stay: 'Stay',
   check_in: 'Check-in',
   purchase: 'Purchase',
+  event: 'Event',
+  other: 'Visit',
 }
 
 /** What a completed card gave (visitsMath.ts `givenSentence`). */

@@ -39,7 +39,6 @@
   },
   "benefits": {
     "add": "Añadir beneficio",
-    "line": "El catálogo del que los niveles eligen sus beneficios.",
     "none": "El catálogo está vacío. Los beneficios, como una salida tardía o una bebida de bienvenida, se crean aquí y luego se asignan a los niveles.",
     "switch_off": "Desactivar",
     "switch_on": "Activar",
@@ -95,7 +94,6 @@
     "add": "Añadir promoción",
     "every_day": "Todos los días",
     "every_tier": "Todos los niveles",
-    "line": "Horas según el reloj del establecimiento ({{zone}}).",
     "none": "No hay promociones. Una promoción multiplica durante un tiempo los puntos que ganan los miembros, como un fin de semana de puntos dobles.",
     "range": "{{from}} – {{to}}",
     "remove": "Eliminar",
@@ -120,8 +118,6 @@
     "staff_approved": "Aprobado por el personal",
     "voucher": "Vale"
   },
-  "in_use": "Activo",
-  "line": "Los niveles por los que suben los miembros, sus beneficios y las promociones de puntos.",
   "load": {
     "error": {
       "network": "Sin conexión. Compruebe la red e inténtelo de nuevo.",

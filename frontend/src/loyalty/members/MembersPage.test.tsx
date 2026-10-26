@@ -17,7 +17,7 @@ vi.mock('../../lib/api', () => ({ api: {}, resolveImage: (url: string | null | u
 import { LoyaltyContext } from '../LoyaltyProvider'
 import type { Bootstrap, Can, MembersPage as MembersAnswer } from '../lib/types'
 import { NO_FILTERS } from './membersQuery'
-import { MembersPage } from './MembersPage'
+import { ListTools, MembersPage } from './MembersPage'
 
 const can = (more: Partial<Can> = {}): Can => ({ award: true, redeem: true, reverse: false, manage_program: false, manage_rewards: false, manage_members: false, view_insights: false, manage_campaigns: false, manage_app: false, ...more })
 const boot = (c: Can): Bootstrap => ({
@@ -58,10 +58,21 @@ describe('the members list’s actions (release 2 §4.1)', () => {
     for (const tool of ['Import', 'Export', 'Duplicates']) expect(words).not.toContain(tool)
   })
 
-  it('gives a manager Import, Export and Duplicates', () => {
+  it('gives a manager Import, Export and Duplicates, under the header’s ⋯ (release 9)', () => {
     const html = render(can({ manage_members: true }))
-    expect(text(html)).toContain('Export')
-    expect(html).toContain('href="/loyalty/members/import"')
-    expect(html).toContain('href="/loyalty/members/duplicates"')
+    expect(html).toContain('aria-label="More"')
+    expect(render(can())).not.toContain('aria-label="More"')
+    const tools = renderToStaticMarkup(<MemoryRouter><ListTools exporting={false} onExport={() => {}} /></MemoryRouter>)
+    expect(text(tools)).toContain('Export')
+    expect(tools).toContain('href="/loyalty/members/import"')
+    expect(tools).toContain('href="/loyalty/members/duplicates"')
+    expect(tools.match(/role="menuitem"/g)).toHaveLength(3)
+  })
+
+  it('shows each member with their initials, and Show and Order as named icons', () => {
+    const html = render(can())
+    expect(text(html)).toContain('GH')
+    expect(html).toContain('title="Show"')
+    expect(html).toContain('title="Order"')
   })
 })

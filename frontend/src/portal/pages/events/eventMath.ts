@@ -1,4 +1,5 @@
 import { formatDay, resolveLocale } from '../../lib/dates'
+import type { PortalCapabilities } from '../../lib/types'
 import type { PortalEvent, PortalEvents } from './eventsApi'
 
 /**
@@ -17,7 +18,6 @@ export interface Phrase {
 
 export const EVENT_WORDS = {
   title: 'Events',
-  line: 'What is on for members. Sign up where it asks, and show your card at the door.',
   coming_up: 'Coming up',
   attended: 'You came to',
   none: 'Nothing is planned right now.',
@@ -31,7 +31,7 @@ export const EVENT_WORDS = {
   checked_in: 'You’re checked in',
   come_along: 'No sign-up needed: just come along.',
   sign_up_needed: 'Sign up to get in.',
-  started: 'It has started: if you cannot come, let the team know.',
+  started: 'Started: tell the team if you can’t come.',
   your_next: 'Your next event',
   next_up: 'Coming up',
   see_all: 'See events',
@@ -45,6 +45,7 @@ export const WHY_WORDS: Record<string, string> = {
   event_full: 'Full',
   tier_not_allowed: 'For other membership levels',
   membership_expired: 'Your membership ends before this event',
+  membership_ended: 'Your membership has ended',
   inactive: 'Your membership is switched off',
   already_in: 'You’re checked in',
   sign_up_closed: 'Sign-up has closed',
@@ -58,7 +59,7 @@ export const ERROR_WORDS: Record<string, string> = {
   membership_expired: 'Your membership ends before this event. Ask the team to renew it.',
   inactive: 'Your membership is switched off. Please contact the team.',
   sign_up_closed: 'Sign-up for this event has closed.',
-  cancel_closed: 'The event has started, so the sign-up cannot be cancelled here. Please let the team know.',
+  cancel_closed: 'It has started: please tell the team.',
   already_in: 'You’re already checked in.',
   not_signed_up: 'You were not signed up.',
   not_found: 'This event is no longer listed.',
@@ -125,8 +126,10 @@ export type EventAction =
 export function actionOf(e: PortalEvent): EventAction {
   if (e.checked_in) return { kind: 'checked_in' }
   if (e.my === 'signed_up') return { kind: 'signed_up', canCancel: e.can_cancel }
-  if (!e.sign_up) return { kind: 'come_along' }
-  if (e.can_sign_up) return { kind: 'sign_up' }
+  // An event without sign-up: just come along — unless the door would refuse this member, which the server says in
+  // `why_not` (full, membership ended or switched off); then the card says why, in the same words as a sign-up's.
+  if (!e.sign_up && !e.why_not) return { kind: 'come_along' }
+  if (e.sign_up && e.can_sign_up) return { kind: 'sign_up' }
   if (e.why_not === 'event_full') return { kind: 'full' }
   return { kind: 'why_not', code: e.why_not && e.why_not in WHY_WORDS ? e.why_not : 'closed' }
 }
@@ -142,14 +145,33 @@ export function noteOf(e: PortalEvent, locale: string): Phrase | null {
 
 /**
  * Home's event: the next one the member signed up for; else, so they know there is one, the next event open to them.
- * Null when there is none.
+ * An event they are already checked in to is never the one Home points at. Null when there is none.
  */
 export function nextEvent(data: PortalEvents | undefined): { event: PortalEvent; mine: boolean } | null {
   if (!data) return null
   const mine = data.upcoming.find(e => e.my === 'signed_up' && !e.checked_in)
   if (mine) return { event: mine, mine: true }
-  const any = data.upcoming[0]
+  const any = data.upcoming.find(e => !e.checked_in)
   return any ? { event: any, mine: false } : null
+}
+
+/**
+ * The events the member came to, each shown once: one still on (listed under "Coming up" with "You're checked in") is
+ * left out here until it has ended.
+ */
+export function pastEvents(data: PortalEvents): PortalEvents['attended'] {
+  const upcoming = new Set(data.upcoming.map(e => e.id))
+  return data.attended.filter(e => !upcoming.has(e.id))
+}
+
+/**
+ * Whether the menu already holds Events — PortalShell's rule: Events while the venue has one coming, never as a sixth
+ * item (Home, Book, Rewards, Events, Bookings, Profile). Rewards links to Events only when the menu does not.
+ */
+export function eventsInMenu(capabilities: Pick<PortalCapabilities, 'services' | 'stays' | 'loyalty' | 'events'>): boolean {
+  if (!capabilities.events) return false
+  const shown = 4 + (capabilities.services || capabilities.stays ? 1 : 0) + (capabilities.loyalty ? 1 : 0)
+  return shown <= 5
 }
 
 /** The words for a refused sign-up or cancel. */
@@ -158,7 +180,11 @@ export function errorPhrase(code: string | null): Phrase {
   return { key: `portal.events.error.${c}`, fallback: ERROR_WORDS[c], options: {} }
 }
 
-/** The words for why the member cannot sign up. */
-export function whyPhrase(code: string): Phrase {
-  return { key: `portal.events.why.${code}`, fallback: WHY_WORDS[code] ?? WHY_WORDS.closed, options: {} }
+/**
+ * The words for why the member cannot sign up. A membership that has already ended says so (the bootstrap's
+ * `membership.state`), rather than that it ends before the event.
+ */
+export function whyPhrase(code: string, membershipState?: string | null): Phrase {
+  const c = code === 'membership_expired' && membershipState === 'expired' ? 'membership_ended' : code
+  return { key: `portal.events.why.${c}`, fallback: WHY_WORDS[c] ?? WHY_WORDS.closed, options: {} }
 }

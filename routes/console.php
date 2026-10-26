@@ -196,6 +196,13 @@ Schedule::command('loyalty:membership-reminders')
     ->dailyAt('08:37')
     ->withoutOverlapping(30);
 
+// HexaTech Loyalty release 9 (owner 2026-10-26): the nightly tier check — a grace period run out, a "keep until" ended,
+// a windowed programme's window moved on — through LoyaltyService::assessTier()'s own rules. A tier that still stands is
+// not touched, so a second run moves nobody twice.
+Schedule::command('loyalty:assess-tiers')
+    ->dailyAt('02:47')
+    ->withoutOverlapping(60);
+
 // Prune expired BookingHold + BookingIdempotencyKey rows. Holds carry guest
 // PII (name/email/phone) in payload_json; abandoned-cart rows accumulating
 // forever is both a Postgres bloat issue (jsonb ~2KB/row at the quote rate)

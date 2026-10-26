@@ -6,16 +6,12 @@
     "card": "Tarjeta",
     "welcome_sent": "El email de bienvenida va camino de {{email}}, con un código nuevo para crear una contraseña.",
     "not_given": "Sin indicar",
-    "email": "Email",
-    "phone": "Teléfono",
     "language": "Idioma",
     "nationality": "Nacionalidad",
     "date_of_birth": "Fecha de nacimiento",
     "marketing": "Emails de marketing",
     "marketing_yes": "Aceptados",
     "marketing_no": "No aceptados",
-    "number": "Número de miembro",
-    "joined": "Miembro desde",
     "tier_kept": "Nivel mantenido hasta",
     "details_title": "Datos"
   },
@@ -365,12 +361,6 @@
   },
   "validity": {
     "title": "Membresía",
-    "state": {
-      "active": "Activa",
-      "expiring": "Termina pronto",
-      "expired": "Vencida",
-      "off": "Desactivada"
-    },
     "extend_action": "Prolongar",
     "extend_by": "Prolongar",
     "extend": {
@@ -379,21 +369,17 @@
       "6m": "+6 meses",
       "1y": "+1 año"
     },
-    "from_end": "Desde el final actual, {{day}}.",
-    "from_today": "Desde hoy.",
     "new_end": "hasta el {{day}}",
     "set": "Fijar una fecha",
     "remove": "Quitar la fecha de fin",
     "saved": "Guardado: válida hasta el {{day}}.",
     "saved_none": "Guardado: la membresía no tiene fecha de fin.",
-    "managers_only": "Solo un propietario o un responsable puede cambiar la fecha de fin.",
     "none": "Sin fecha de fin",
     "until": "Válida hasta el {{day}}",
     "ends_today": "Termina hoy",
     "ends_tomorrow": "Termina mañana",
     "ends_in": "Termina en {{days}} días",
     "expired_on": "Venció el {{day}}",
-    "none_line": "La membresía no termina nunca. Póngale una fecha de fin cuando un miembro la compre por un tiempo.",
     "left_line": "Quedan {{left}}.",
     "left": {
       "years_one": "1 año",
@@ -404,8 +390,8 @@
       "days_many": "{{n}} días"
     },
     "expiring_line": "Válida hasta el {{day}}. Después, se niega la entrada hasta que se renueve.",
-    "expired_line": "Se niega la entrada hasta que se renueve. Los puntos y el historial se conservan, y el mostrador puede seguir atendiendo al miembro.",
-    "off_line": "La cuenta está desactivada, así que se niega la entrada sea cual sea la fecha.",
+    "expired_line": "Se niega la entrada hasta que se renueve.",
+    "off_line": "Se niega la entrada sea cual sea la fecha.",
     "problem": {
       "date": "Elija un día.",
       "past": "Elija hoy o un día posterior."

@@ -60,13 +60,14 @@ const text = (html: string) => html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' '
 const withList = (data: PlacesList) => (client: QueryClient) => client.setQueryData(PLACES_KEY, data)
 
 describe('Program’s Places (release 8 §1)', () => {
-  it('lists each place with who may enter, whether it is on and today’s entries', () => {
+  it('lists each place with who may enter, "Switched off" on one that is, and today’s entries', () => {
     const html = render(<PlacesSection manage />, true, withList(list()))
     const words = text(html)
     expect(words).toContain('Places')
-    expect(words).toContain('Where members scan in, and which tiers may enter.')
     expect(html.indexOf('data-place="1"')).toBeLessThan(html.indexOf('data-place="2"'))
-    expect(words).toContain('Main entrance Switched on')
+    // A place that is on wears no pill: only one that is off says so.
+    expect(words).not.toContain('Switched on')
+    expect((words.match(/Switched off/g) ?? []).length).toBe(1)
     expect(words).toContain('Who may enter Every member')
     expect(words).toContain('Today: 12 in · 1 refused')
     expect(words).toContain('No entries today')
@@ -177,7 +178,9 @@ describe('a place’s entries', () => {
     expect(html.indexOf('data-entry="9"')).toBeLessThan(html.indexOf('data-entry="7"'))
     expect(words).toContain('19:02 Let in: Ada Lovelace LS-000007 Let in · by Sam')
     expect(words).toContain('18:40 Refused: Grace Hopper LS-000008 Membership expired · by Sam')
-    expect(words).toContain('18:00 Refused: Unknown card or code No member has this card or number')
+    // Without a member, the code's refusal is the line, said once.
+    expect(words).toContain('18:00 Refused: No member has this card or number')
+    expect(words).not.toContain('Unknown card or code')
     expect(html).toContain('max="2026-10-05"')
     expect(html).toMatch(/aria-label="The day after"[^>]*disabled=""|disabled=""[^>]*aria-label="The day after"/)
   })

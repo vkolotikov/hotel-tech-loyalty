@@ -1,32 +1,31 @@
 import { useId, useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { CalendarClock, CalendarPlus, CalendarX2 } from 'lucide-react'
+import { CalendarCheck, CalendarClock, CalendarDays, CalendarOff, CalendarPlus, CalendarX2, Infinity as Endless, type LucideIcon } from 'lucide-react'
 import { formatDate } from '../../workspace/lib/wallClock'
 import { Button } from '../../workspace/ui/Button'
 import { Dialog } from '../../workspace/ui/Dialog'
 import { Notice } from '../../workspace/ui/Notice'
-import { Eyebrow } from '../../workspace/ui/Typography'
 import { useBoot } from '../LoyaltyProvider'
 import { failureOf, newPressKey } from '../lib/api'
 import { refusalKey } from '../lib/errors'
 import type { MemberRow } from '../lib/types'
 import { useFirstFocus } from '../lib/useFirstFocus'
-import { ConfirmDialog, FormField, FormFoot, ToneBadge } from '../ui/formParts'
+import { ConfirmDialog, FormField, FormFoot } from '../ui/formParts'
+import { CARD, CardHead } from '../member/CardHead'
 import { afterMemberChange, membershipApi } from './api'
 import { ERRORS } from './errors'
 import type { ValidityAnswer } from './types'
 import {
-  EXTENSIONS, dateProblem, extendBody, extendedEnd, firstEndDay, headlineOf, setBody, stateTone, validityActions,
-  type Extension, type MembershipState, type ValidityHeadline,
+  EXTENSIONS, dateProblem, extendBody, extendedEnd, firstEndDay, headlineOf, leftText, renewsKey, setBody, stateTone, validityActions,
+  type Extension, type MembershipState, type Say, type ValidityHeadline,
 } from './validityMath'
-import { EXTEND_WORDS, LEFT_WORDS, VALIDITY_PROBLEM_WORDS, VALIDITY_STATE_WORDS } from './words'
+import { EXTEND_WORDS, VALIDITY_PROBLEM_WORDS } from './words'
 
 const INPUT = 'w-full rounded-lg border border-a-border bg-a-surface px-3 py-2 text-sm text-a-text'
 const LONG: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'short', year: 'numeric' }
 
 type Member = MemberRow & { is_erased?: boolean }
-type Say = (key: string, fallback: string, vars?: Record<string, unknown>) => string
 
 /**
  * A member's membership on their page (release 8, spec 2026-10-25 §3, R8-2): until when it holds — "Valid until 3 Oct
@@ -54,7 +53,16 @@ export function ValidityCard({ member, locale }: { member: Member; locale: strin
   const extend = useMutation({
     mutationFn: (choice: Extension) => membershipApi.validity(member.id, extendBody(choice, key)),
     onSuccess: (answer) => { finish(answer); setChoosing(false) },
+    onError: (error) => refused(error),
   })
+  // A refusal the server answered (key_reused after a lost answer and another choice, a past date…) wrote nothing: the
+  // next press takes a new key, and the member is read again so the card shows the end date as it is. A lost answer
+  // keeps its key, so pressing the same choice again is answered as the first press (written once).
+  const refused = (error: unknown) => {
+    if (!renewsKey(failureOf(error))) return
+    setKey(newPressKey())
+    afterMemberChange(client, member.id)
+  }
   const finish = (answer: ValidityAnswer) => {
     setDone(answer)
     setBefore(member.valid_until ?? null)
@@ -71,23 +79,23 @@ export function ValidityCard({ member, locale }: { member: Member; locale: strin
   const day = (date: string) => formatDate(date, locale, LONG)
   const failure = extend.isError ? failureOf(extend.error) : null
 
-  return (
-    <section aria-labelledby={titleId} data-validity={headline.kind} className="space-y-3 rounded-2xl border border-a-border bg-a-surface p-5">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <Eyebrow><span id={titleId}>{t('loyalty.membership.validity.title', 'Membership')}</span></Eyebrow>
-        <ToneBadge tone={stateTone(state)}>{t(`loyalty.membership.validity.state.${state}`, VALIDITY_STATE_WORDS[state] ?? state)}</ToneBadge>
-      </div>
+  const tone = headline.kind === 'none' ? 'fulfilled' : stateTone(state)
+  const Icon = HEADLINE_ICONS[headline.kind]
+  const detail = detailText(headline, say, day)
 
-      <div className="flex items-start gap-3">
-        <span aria-hidden className={`inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${headline.kind === 'expired' ? 'bg-a-danger/10 text-a-danger' : 'bg-a-surface-2 text-a-text-2'}`}>
-          {headline.kind === 'expired' ? <CalendarX2 size={20} /> : <CalendarClock size={20} />}
-        </span>
-        <div className="min-w-0">
-          <p data-validity-line="" className={`font-a-display text-2xl font-normal leading-snug ${headline.kind === 'expired' ? 'text-a-danger' : 'text-a-text'}`}>
-            {headlineText(headline, say, day)}
-          </p>
-          <p className="text-sm text-a-text-2">{detailText(headline, say, day)}</p>
-        </div>
+  return (
+    <section aria-labelledby={titleId} data-validity={headline.kind} className={CARD}>
+      <CardHead id={titleId} icon={CalendarClock} title={t('loyalty.membership.validity.title', 'Membership')} />
+
+      {/* One line of status: the state's colour and icon on the headline, the time left (or what follows) beside it. */}
+      <div className="space-y-1">
+        <p className="flex flex-wrap items-center gap-x-2 gap-y-1">
+          <span data-state={tone} data-validity-line="" className="l-st-tint l-st-text inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-sm font-semibold">
+            <Icon size={15} aria-hidden className="shrink-0" />{headlineText(headline, say, day)}
+          </span>
+          {headline.kind === 'active' && detail && <span className="text-sm text-a-text-2">{detail}</span>}
+        </p>
+        {headline.kind !== 'active' && detail && <p className="text-sm text-a-text-2">{detail}</p>}
       </div>
 
       {done && (
@@ -101,55 +109,56 @@ export function ValidityCard({ member, locale }: { member: Member; locale: strin
       )}
       {failure && <Notice tone="danger">{t(...refusalKey('loyalty.membership', ERRORS, 'validity', failure))}</Notice>}
 
-      {change ? (
+      {change && (
         <div className="space-y-3">
-          <div className="flex flex-wrap gap-2">
-            <Button size="sm" aria-expanded={choosing} aria-controls={choicesId} onClick={() => { setChoosing(c => !c); extend.reset() }}>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button size="sm" variant="secondary" aria-expanded={choosing} aria-controls={choicesId} onClick={() => { setChoosing(c => !c); extend.reset() }}>
               <CalendarPlus size={15} aria-hidden />{t('loyalty.membership.validity.extend_action', 'Extend')}
             </Button>
-            <Button size="sm" variant="secondary" onClick={() => { setDone(null); setDialog('set') }}>{t('loyalty.membership.validity.set', 'Set a date')}</Button>
+            <Button size="sm" variant="secondary" onClick={() => { setDone(null); setDialog('set') }}>
+              <CalendarDays size={15} aria-hidden />{t('loyalty.membership.validity.set', 'Set a date')}
+            </Button>
             {shown.valid_until && (
-              <Button size="sm" variant="ghost" onClick={() => { setDone(null); setDialog('remove') }}>{t('loyalty.membership.validity.remove', 'Remove the end date')}</Button>
+              <button type="button" onClick={() => { setDone(null); setDialog('remove') }}
+                className="rounded-full py-2 text-xs font-medium text-a-text-2 underline-offset-2 hover:text-a-text hover:underline">
+                {t('loyalty.membership.validity.remove', 'Remove the end date')}
+              </button>
             )}
           </div>
           {choosing && (
-            <div id={choicesId} role="group" aria-label={t('loyalty.membership.validity.extend_by', 'Extend by')} className="space-y-2">
-              <p className="text-xs text-a-text-2">
-                {shown.valid_until && shown.valid_until > today
-                  ? t('loyalty.membership.validity.from_end', 'From the current end, {{day}}.', { day: day(shown.valid_until) })
-                  : t('loyalty.membership.validity.from_today', 'From today.')}
-              </p>
-              <ul className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
-                {EXTENSIONS.map(choice => {
-                  const end = extendedEnd(shown.valid_until, today, choice)
-                  const label = t(`loyalty.membership.validity.extend.${choice}`, EXTEND_WORDS[choice])
-                  const until = t('loyalty.membership.validity.new_end', 'until {{day}}', { day: day(end) })
-                  return (
-                    <li key={choice}>
-                      <button type="button" data-extend={choice} disabled={extend.isPending} onClick={() => extend.mutate(choice)}
-                        className="flex w-full flex-col items-start rounded-xl border border-a-border bg-a-surface px-3 py-2 text-left hover:bg-a-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-a-accent-text disabled:opacity-60">
-                        <span className="text-sm font-semibold text-a-text">{label}</span>
-                        <span className="text-xs tabular-nums text-a-text-2">{until}</span>
-                      </button>
-                    </li>
-                  )
-                })}
-              </ul>
-            </div>
+            <ul id={choicesId} role="group" aria-label={t('loyalty.membership.validity.extend_by', 'Extend by')} className="grid grid-cols-2 gap-2">
+              {EXTENSIONS.map(choice => {
+                const end = extendedEnd(shown.valid_until, today, choice)
+                const label = t(`loyalty.membership.validity.extend.${choice}`, EXTEND_WORDS[choice])
+                const until = t('loyalty.membership.validity.new_end', 'until {{day}}', { day: day(end) })
+                return (
+                  <li key={choice}>
+                    <button type="button" data-extend={choice} disabled={extend.isPending} onClick={() => extend.mutate(choice)}
+                      className="flex w-full flex-col items-start rounded-xl border border-a-border bg-a-surface px-3 py-2 text-left hover:bg-a-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-a-accent-text disabled:opacity-60">
+                      <span className="text-sm font-semibold text-a-text">{label}</span>
+                      <span className="text-xs tabular-nums text-a-text-2">{until}</span>
+                    </button>
+                  </li>
+                )
+              })}
+            </ul>
           )}
         </div>
-      ) : (
-        <p className="text-xs text-a-text-2">{t('loyalty.membership.validity.managers_only', 'Only an owner or a manager can change the end date.')}</p>
       )}
 
       {dialog === 'set' && (
-        <SetDateDialog member={shown} today={today} pressKey={key} onClose={() => setDialog(null)} onDone={finish} />
+        <SetDateDialog member={shown} today={today} pressKey={key} onClose={() => setDialog(null)} onDone={finish} onRefused={refused} />
       )}
       {dialog === 'remove' && (
-        <RemoveDialog member={shown} pressKey={key} onClose={() => setDialog(null)} onDone={finish} />
+        <RemoveDialog member={shown} pressKey={key} onClose={() => setDialog(null)} onDone={finish} onRefused={refused} />
       )}
     </section>
   )
+}
+
+/** The headline's icon, by what it says. */
+const HEADLINE_ICONS: Record<ValidityHeadline['kind'], LucideIcon> = {
+  none: Endless, active: CalendarCheck, expiring: CalendarClock, expired: CalendarX2, off: CalendarOff,
 }
 
 /** The card's first line, in the state's words. */
@@ -174,42 +183,32 @@ function headlineText(h: ValidityHeadline, say: Say, day: (d: string) => string)
   }
 }
 
-/** The line under it: the time left, what an end date does, or what happens now. */
-function detailText(h: ValidityHeadline, say: Say, day: (d: string) => string): string {
+/** The words beside or under it: the time left, or what happens now (none for a membership without an end). */
+function detailText(h: ValidityHeadline, say: Say, day: (d: string) => string): string | null {
   switch (h.kind) {
     case 'none':
-      return say('loyalty.membership.validity.none_line', 'The membership never ends. Give it an end date when a member buys one for a time.')
+      return null
     case 'active':
       return say('loyalty.membership.validity.left_line', '{{left}} left.', { left: leftText(h.left, say) })
     case 'expiring':
       return say('loyalty.membership.validity.expiring_line', 'Valid until {{day}}. After it, places refuse entry until it is renewed.', { day: day(h.until) })
     case 'expired':
-      return say('loyalty.membership.validity.expired_line', 'Places refuse entry until it is renewed. Points and history stay, and the desk can still serve the member.')
+      return say('loyalty.membership.validity.expired_line', 'Places refuse entry until it is renewed.')
     case 'off':
-      return say('loyalty.membership.validity.off_line', 'The account is switched off, so places refuse entry whatever the date.')
+      return say('loyalty.membership.validity.off_line', 'Places refuse entry whatever the date.')
   }
 }
 
-/** "1 year 2 months", "3 months 4 days", "12 days": the two largest parts there are. */
-export function leftText(left: { years: number; months: number; days: number }, say: Say): string {
-  const part = (unit: 'years' | 'months' | 'days', n: number) => n === 1
-    ? say(`loyalty.membership.validity.left.${unit}_one`, LEFT_WORDS[`${unit}_one`])
-    : say(`loyalty.membership.validity.left.${unit}_many`, LEFT_WORDS[`${unit}_many`], { n: String(n) })
-  const all = ([['years', left.years], ['months', left.months], ['days', left.days]] as const).filter(([, n]) => n > 0)
-  if (all.length === 0) return part('days', 0)
-  return all.slice(0, 2).map(([unit, n]) => part(unit, n)).join(' ')
-}
-
 /** Set a date: the last day the membership holds, today or later. */
-function SetDateDialog({ member, today, pressKey, onClose, onDone }: {
-  member: Member; today: string; pressKey: string; onClose: () => void; onDone: (answer: ValidityAnswer) => void
+function SetDateDialog({ member, today, pressKey, onClose, onDone, onRefused }: {
+  member: Member; today: string; pressKey: string; onClose: () => void; onDone: (answer: ValidityAnswer) => void; onRefused: (error: unknown) => void
 }) {
   const { t, i18n } = useTranslation()
   const locale = i18n.language || 'en'
   const first = useFirstFocus<HTMLInputElement>()
   const [date, setDate] = useState(member.valid_until && member.valid_until >= today ? member.valid_until : '')
   const [tried, setTried] = useState(false)
-  const save = useMutation({ mutationFn: () => membershipApi.validity(member.id, setBody(date, pressKey)), onSuccess: onDone })
+  const save = useMutation({ mutationFn: () => membershipApi.validity(member.id, setBody(date, pressKey)), onSuccess: onDone, onError: onRefused })
   const failure = save.isError ? failureOf(save.error) : null
   const local = dateProblem(date, today)
   const code = tried ? local : failure?.code === 'invalid' ? 'past' : null
@@ -237,9 +236,11 @@ function SetDateDialog({ member, today, pressKey, onClose, onDone }: {
 }
 
 /** Remove the end date: the membership then never ends. */
-function RemoveDialog({ member, pressKey, onClose, onDone }: { member: Member; pressKey: string; onClose: () => void; onDone: (answer: ValidityAnswer) => void }) {
+function RemoveDialog({ member, pressKey, onClose, onDone, onRefused }: {
+  member: Member; pressKey: string; onClose: () => void; onDone: (answer: ValidityAnswer) => void; onRefused: (error: unknown) => void
+}) {
   const { t } = useTranslation()
-  const save = useMutation({ mutationFn: () => membershipApi.validity(member.id, setBody(null, pressKey)), onSuccess: onDone })
+  const save = useMutation({ mutationFn: () => membershipApi.validity(member.id, setBody(null, pressKey)), onSuccess: onDone, onError: onRefused })
   const failure = save.isError ? t(...refusalKey('loyalty.membership', ERRORS, 'validity', failureOf(save.error))) : null
   return (
     <ConfirmDialog title={t('loyalty.membership.validity.remove_title', 'Remove the end date?')}

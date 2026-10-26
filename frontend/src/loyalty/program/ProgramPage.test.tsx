@@ -78,8 +78,13 @@ describe('Program (spec 2026-10-21 §4.5, §5)', () => {
     expect(words).toContain('Earn rate ×1.5')
     expect(words).toContain('Members 1,200')
     expect(words).toContain('Switched off')
-    expect(words).toContain('Late checkout · Until 2 pm · 10% off · Stays only')
+    // The wording when there is one — never the typed value beside it too (that stays in the chip's tip).
+    expect(words).toContain('Late checkout · Until 2 pm · Stays only')
+    expect(html).toContain('title="10% off"')
     expect(words).toContain('This tier gives no benefit yet.')
+    // The ladder's steps are numbered on the rail; a tier in use wears no pill, only one switched off does.
+    expect(words).not.toContain('In use')
+    expect(html).toMatch(/data-tier="1"[\s\S]*?>1<\/span>[\s\S]*?data-tier="2"[\s\S]*?>2<\/span>/)
   })
 
   it('names the catalogue\'s categories and ways of giving, and shows a value it has no word for as sent', () => {
@@ -101,10 +106,16 @@ describe('Program (spec 2026-10-21 §4.5, §5)', () => {
 
   it('gives a manager every action', () => {
     const words = text(render(can({ manage_program: true })))
-    for (const action of ['Add tier', 'Edit Gold', 'Add benefit Gold', 'Change Late checkout', 'Add benefit', 'Switch off Late checkout', 'Switch on Spa ritual', 'Add boost', 'Remove Double weekend']) {
+    for (const action of ['Add tier', 'Edit Gold', 'Add benefit Gold', 'Change Late checkout', 'Add benefit', 'Edit Late checkout', 'Add boost', 'Edit Double weekend', 'Remove Double weekend']) {
       expect(words).toContain(action)
     }
-    expect(render(can({ manage_program: true }))).toContain('aria-label="Take Late checkout off Gold"')
+    const html = render(can({ manage_program: true }))
+    expect(html).toContain('aria-label="Take Late checkout off Gold"')
+    // A catalogue entry is switched on and off by its switch, which says its state.
+    expect(html).toMatch(/role="switch" aria-checked="true" aria-label="Late checkout" title="Switch off"/)
+    expect(html).toMatch(/role="switch" aria-checked="false" aria-label="Spa ritual" title="Switch on"/)
+    // Codes are the system's, not shown in the list.
+    expect(words).not.toContain('LATE')
     expect(words).not.toContain('Only an owner or a manager can change the programme.')
   })
 

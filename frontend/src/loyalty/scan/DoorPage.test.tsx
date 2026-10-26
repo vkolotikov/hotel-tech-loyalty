@@ -117,7 +117,7 @@ describe('the door’s verdict', () => {
     expect(html).toContain('data-tone="warning"')
     expect(html).toContain('absolute inset-0')
     expect(html).toContain('l-verdict-bar')
-    for (const part of ['Welcome, Ada', 'Membership ends in 5 days.', 'Ada Lovelace', 'Gold', 'LS-001007', 'Free drink']) expect(words).toContain(part)
+    for (const part of ['Welcome', 'Membership ends in 5 days.', 'Ada Lovelace', 'Gold', 'LS-001007', 'Free drink']) expect(words).toContain(part)
     // At the door the name is read, not followed.
     expect(html).not.toContain('href=')
   })

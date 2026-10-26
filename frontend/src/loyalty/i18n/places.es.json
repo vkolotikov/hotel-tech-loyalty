@@ -1,12 +1,10 @@
 {
   "title": "Espacios",
-  "line": "Dónde escanean los miembros su tarjeta y qué niveles pueden entrar.",
   "add": "Añadir espacio",
   "add_first": "Añadir la entrada",
   "list": "Espacios",
   "none_manager": "Todavía no hay espacios. Añada primero su entrada: los escaneos allí dirán quién puede pasar.",
   "none": "Todavía no hay espacios. Un propietario o un gerente los añade aquí.",
-  "switched_on": "Activado",
   "switched_off": "Desactivado",
   "edit": "Editar",
   "who": "Quién puede entrar",
@@ -68,7 +66,6 @@
     "list": "Escaneos, primero los más recientes",
     "let_in": "Entró:",
     "refused": "Rechazado:",
-    "unknown_code": "Tarjeta o código desconocido",
     "by": "por {{name}}",
     "error": {
       "not_found": "Este espacio ya no existe.",

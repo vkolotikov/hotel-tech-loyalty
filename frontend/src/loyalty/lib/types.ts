@@ -127,6 +127,9 @@ export interface TierBenefitLine {
   name: string
   category: string | null
   value: string | null
+  /** Release 9: the typed value ("15% off" for a benefit given no wording). */
+  value_type?: string | null
+  value_amount?: number | null
   description: string | null
 }
 

@@ -6,7 +6,8 @@ import type { MemberRow } from '../lib/types'
 import { entryWords } from '../places/placesMath'
 import { deskSentences } from '../visits/visitsMath'
 import { FACT_WORDS, HEADLINE_WORDS, REASON_WORDS, VALIDITY_WORDS, WARNING_WORDS } from './doorWords'
-import type { EntryRow, EventPerson, EventRow, PlaceRow, ScanAnswer, TierBadge } from './scanApi'
+import { VALUE_PHRASE_WORDS } from '../program/words'
+import type { BenefitBadge, EntryRow, EventPerson, EventRow, PlaceRow, ScanAnswer, TierBadge } from './scanApi'
 import { opensAt, type ScanContext } from './scanContext'
 
 /**
@@ -57,6 +58,24 @@ export interface VerdictFacts {
   timeZone: string
   place?: PlaceRow | null
   event?: EventRow | null
+  /** A typed benefit value in the reader's words ("15% off", "€5.00 off"); the English pattern when not given. */
+  typedPhrase?: (type: string, amount: number) => string | null
+}
+
+/** What a benefit gives beside its name: its wording, or its typed value in words ("15% off"), or nothing. */
+export function benefitDetail(b: Pick<BenefitBadge, 'value' | 'value_type' | 'value_amount'>, typedPhrase?: VerdictFacts['typedPhrase']): string | null {
+  if (b.value) return b.value
+  if (b.value_type && b.value_type !== 'text' && b.value_amount !== null && b.value_amount !== undefined) {
+    const phrase = typedPhrase ? typedPhrase(b.value_type, b.value_amount) : (VALUE_PHRASE_WORDS[b.value_type] ?? '').replace('{{amount}}', String(b.value_amount))
+    return phrase || null
+  }
+  return null
+}
+
+/** A benefit as a chip: "Member price · 15% off", or the name alone. */
+export function benefitChip(b: BenefitBadge, typedPhrase?: VerdictFacts['typedPhrase']): string {
+  const detail = benefitDetail(b, typedPhrase)
+  return detail ? `${b.name} · ${detail}` : b.name
 }
 
 const MARK: Record<Tone, Mark> = { granted: 'check', warning: 'alert', denied: 'cross', trouble: 'retry' }
@@ -65,6 +84,12 @@ const word = <F extends Record<string, string>>(family: string, words: F, key: k
   ({ key: `loyalty.door.${family}.${key}`, fallback: words[key], ...(vars ? { vars } : {}) })
 const headline = (key: keyof typeof HEADLINE_WORDS, vars?: Record<string, string>) => word('headline', HEADLINE_WORDS, key, vars)
 const reasonWord = (key: keyof typeof REASON_WORDS, vars?: Record<string, string>) => word('reason', REASON_WORDS, key, vars)
+
+/** "AL" for Ada Lovelace: the first letters of the first two words, or of the number for a member with no name. */
+export function initialsOf(name: string): string {
+  const words = name.trim().split(/\s+/).filter(Boolean)
+  return words.slice(0, 2).map(w => w.charAt(0).toLocaleUpperCase()).join('') || '?'
+}
 
 /** The name a welcome uses: the first word of the member's name ("Ada" of "Ada Lovelace"), or nothing. */
 export function firstName(name: string | null | undefined): string {
@@ -105,15 +130,14 @@ export function answerVerdict(answer: ScanAnswer, facts: VerdictFacts): VerdictV
   const member = answer.member
   if (!verdict) return troubleView({ status: 0, code: 'unknown', extra: {} }, member)
 
-  const name = firstName(member.name)
   const validUntil = verdict.valid_until ?? member.valid_until ?? null
   const base = {
     member,
     tier: verdict.tier,
     validity: validUntil && verdict.reason !== 'expired' ? word('validity', VALIDITY_WORDS, 'until', { date: dayWords(validUntil, facts.today, facts.locale) }) : null,
-    benefits: (answer.benefits ?? []).map(b => (b.value ? `${b.name} · ${b.value}` : b.name)),
   }
 
+  // The band says "Welcome" and the member's name is written once, beneath it (release 9: no fact twice on a screen).
   if (verdict.granted) {
     const warning = warningSentence(verdict.expires_in_days)
     const tone: Tone = warning ? 'warning' : 'granted'
@@ -121,20 +145,31 @@ export function answerVerdict(answer: ScanAnswer, facts: VerdictFacts): VerdictV
       ...base,
       tone,
       mark: MARK[tone],
-      headline: name ? headline('welcome', { name }) : headline('welcome_plain'),
+      headline: headline('welcome'),
       reason: warning,
-      facts: eventFacts(answer, facts.locale, facts.timeZone),
+      benefits: (answer.benefits ?? []).map(b => benefitChip(b, facts.typedPhrase)),
+      facts: eventFacts(answer, facts.locale, facts.timeZone, facts.event?.sign_up, facts.today),
     }
   }
 
+  // A refusal shows why, and who; what the tier would give is beside the point at a closed door.
   return {
     ...base,
     tone: 'denied',
     mark: 'cross',
     headline: headline('no_access'),
     reason: refusalReason(answer, facts),
+    benefits: [],
     facts: [],
   }
+}
+
+/**
+ * A refusal a manager can undo on the spot: the membership has run out. The scan screen offers "Renew for 1 year" and
+ * scans the member again by number (the QR code the member showed may be single-use).
+ */
+export function renewable(answer: ScanAnswer | null): boolean {
+  return answer?.verdict?.granted === false && answer.verdict.reason === 'expired'
 }
 
 /** "Membership ends in 5 days." when the end is two weeks away or nearer (the server sends the days only then). */
@@ -186,15 +221,20 @@ export function eventClosed(event: Pick<EventRow, 'starts_at' | 'ends_at' | 'sta
 }
 
 /** An event's check-in beside the welcome, in this order: checked in or already in, signed up or walk-in, the points, the stamp. */
-export function eventFacts(answer: ScanAnswer, locale: string, timeZone: string): Sentence[] {
+export function eventFacts(answer: ScanAnswer, locale: string, timeZone: string, signUp: boolean = true, today?: string): Sentence[] {
   if (!answer.verdict?.event) return []
   const out: Sentence[] = []
   const already = clockOf(answer.already_in, timeZone)
-  if (already) out.push(word('fact', FACT_WORDS, 'already_in', { time: already }))
+  // At an event of several days, a check-in of another day says its day too.
+  const day = answer.already_in_at && today ? answer.already_in_at.slice(0, 10) : null
+  if (already && day && day !== today) out.push(word('fact', FACT_WORDS, 'already_in_on', { date: dayWords(day, today!, locale), time: already }))
+  else if (already) out.push(word('fact', FACT_WORDS, 'already_in', { time: already }))
   else if (answer.checked_in) out.push(word('fact', FACT_WORDS, 'checked_in'))
-  if (answer.signed_up === true) out.push(word('fact', FACT_WORDS, 'signed_up'))
-  else if (answer.signed_up === false) out.push(word('fact', FACT_WORDS, 'walk_in'))
-  if (answer.points && answer.points > 0) out.push(word('fact', FACT_WORDS, 'points', { points: points(answer.points, locale) }))
+  // An event without sign-up stores everyone as a walk-in: the screen says neither.
+  if (signUp && answer.signed_up === true) out.push(word('fact', FACT_WORDS, 'signed_up'))
+  else if (signUp && answer.signed_up === false) out.push(word('fact', FACT_WORDS, 'walk_in'))
+  if (answer.points === 1) out.push(word('fact', FACT_WORDS, 'points_one'))
+  else if (answer.points && answer.points > 0) out.push(word('fact', FACT_WORDS, 'points', { points: points(answer.points, locale) }))
   return [...out, ...stampFacts(answer, locale)]
 }
 
@@ -274,9 +314,9 @@ export function deskValidity(member: Pick<MemberRow, 'valid_until' | 'membership
   const date = dayWords(until, today, locale)
   if (state === 'expired') return { tone: 'danger', sentence: word('validity', VALIDITY_WORDS, 'ended', { date }) }
   if (state === 'expiring') {
-    return days <= 0
-      ? { tone: 'warning', sentence: word('validity', VALIDITY_WORDS, 'ending_today') }
-      : { tone: 'warning', sentence: word('validity', VALIDITY_WORDS, 'ending', { date, days: String(days) }) }
+    if (days <= 0) return { tone: 'warning', sentence: word('validity', VALIDITY_WORDS, 'ending_today') }
+    if (days === 1) return { tone: 'warning', sentence: word('validity', VALIDITY_WORDS, 'ending_tomorrow', { date }) }
+    return { tone: 'warning', sentence: word('validity', VALIDITY_WORDS, 'ending', { date, days: String(days) }) }
   }
   return { tone: 'neutral', sentence: word('validity', VALIDITY_WORDS, 'until', { date }) }
 }
@@ -335,11 +375,13 @@ export function entryLine(entry: EntryRow, timeZone: string): TodayLine {
 }
 
 /** The people who came in to an event, newest first: their time, and whether they had signed up or walked in. */
-export function peopleLines(people: readonly EventPerson[], timeZone: string, limit = TODAY_LINES): TodayLine[] {
-  return people
-    .filter(p => p.checked_in_at)
-    .slice()
-    .sort((a, b) => (a.checked_in_at! < b.checked_in_at! ? 1 : a.checked_in_at! > b.checked_in_at! ? -1 : 0))
+export function peopleLines(
+  people: readonly EventPerson[], timeZone: string, { signUp = true, sorted = false, limit = TODAY_LINES }: { signUp?: boolean; sorted?: boolean; limit?: number } = {},
+): TodayLine[] {
+  const checkedIn = people.filter(p => p.checked_in_at)
+  // The server's `latest` comes newest first by real time; a page of people only has 'HH:mm', sorted as well as it can be.
+  const ordered = sorted ? checkedIn : checkedIn.slice().sort((a, b) => (a.checked_in_at! < b.checked_in_at! ? 1 : a.checked_in_at! > b.checked_in_at! ? -1 : 0))
+  return ordered
     .slice(0, limit)
     .map(p => ({
       id: `person-${p.member.id}`,
@@ -347,7 +389,8 @@ export function peopleLines(people: readonly EventPerson[], timeZone: string, li
       name: p.member.name || p.member.member_number || '',
       number: p.member.member_number,
       granted: true,
-      label: word('fact', FACT_WORDS, p.walk_in ? 'walk_in' : 'signed_up'),
+      // Without sign-up everyone is a walk-in, so the line just says they are in.
+      label: word('fact', FACT_WORDS, !signUp ? 'checked_in' : p.walk_in ? 'walk_in' : 'signed_up'),
     }))
 }
 

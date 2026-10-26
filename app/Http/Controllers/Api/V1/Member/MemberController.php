@@ -324,6 +324,15 @@ class MemberController extends Controller
             ], 500);
         }
 
+        // Release 9: the places the member held at events go back, as at a staff erasure (never failing the deletion).
+        if ($member) {
+            try {
+                app(\App\Services\Loyalty\Events\EventSignUp::class)->releaseAll($member, \App\Services\Loyalty\Events\EventSignUp::PORTAL, $user);
+            } catch (\Throwable $e) {
+                Log::warning('account deletion: event sign-ups not released', ['member_id' => $member->id, 'error' => $e->getMessage()]);
+            }
+        }
+
         return response()->json([
             'message' => 'Your account has been deleted. We are sorry to see you go.',
         ]);

@@ -1,3 +1,6 @@
+import i18next from 'i18next'
+import { resolveLocale } from './dates'
+
 /**
  * Phrases with a number in them that must agree with it: "1 night", "2 nights"; «1 ночь», «2 ночи», «5 ночей».
  *
@@ -42,14 +45,29 @@ export const PLURAL_FORMS = ['one', 'few', 'many', 'other'] as const
  * The phrase for `count` in the member's language: `t('portal.<key>', <English plural>, { count, defaultValue_one })`.
  * Loosely typed on purpose, like paymentLabel(): i18next's TFunction has an overload set a hand-written signature
  * cannot satisfy, and this only ever uses the (key, defaultValue, options) form.
+ *
+ * The number is written the way the language writes it ("6,512", «6 512»): i18next picks the plural form from
+ * `count` and fills the phrase from `replace` (its documented interpolation data), so the bundles keep `{{count}}`.
+ * The language is the caller's, or else the app's current one (the portal shares the SPA's i18next instance).
  */
 export function counted(
   t: (key: string, defaultValue: string, options: Record<string, unknown>) => string,
   key: CountedKey,
   count: number,
+  locale?: string,
 ): string {
   const [one, other] = COUNTED[key]
-  return t(`portal.${key}`, other, { count, defaultValue_one: one })
+  const lang = locale ?? i18next.resolvedLanguage ?? i18next.language ?? 'en'
+  return t(`portal.${key}`, other, { count, defaultValue_one: one, replace: { count: formatCount(count, lang) } })
+}
+
+/** A count as the language writes it; a number Intl cannot take is written as it came. */
+export function formatCount(count: number, locale: string): string {
+  try {
+    return count.toLocaleString(resolveLocale(locale))
+  } catch {
+    return String(count)
+  }
 }
 
 /** A stay's length and party, each agreeing with its own number: "1 night · 2 guests". */

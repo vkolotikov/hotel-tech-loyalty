@@ -6,16 +6,12 @@
     "card": "Karte",
     "welcome_sent": "Die Willkommens-E-Mail ist unterwegs an {{email}}, mit einem neuen Code zum Festlegen eines Passworts.",
     "not_given": "Nicht angegeben",
-    "email": "E-Mail",
-    "phone": "Telefon",
     "language": "Sprache",
     "nationality": "Staatsangehörigkeit",
     "date_of_birth": "Geburtsdatum",
     "marketing": "Marketing-E-Mails",
     "marketing_yes": "Zugestimmt",
     "marketing_no": "Nicht zugestimmt",
-    "number": "Mitgliedsnummer",
-    "joined": "Mitglied seit",
     "tier_kept": "Stufe gehalten bis",
     "details_title": "Daten"
   },
@@ -365,12 +361,6 @@
   },
   "validity": {
     "title": "Mitgliedschaft",
-    "state": {
-      "active": "Aktiv",
-      "expiring": "Endet bald",
-      "expired": "Abgelaufen",
-      "off": "Ausgeschaltet"
-    },
     "extend_action": "Verlängern",
     "extend_by": "Verlängern um",
     "extend": {
@@ -379,21 +369,17 @@
       "6m": "+6 Monate",
       "1y": "+1 Jahr"
     },
-    "from_end": "Ab dem jetzigen Ende, {{day}}.",
-    "from_today": "Ab heute.",
     "new_end": "bis {{day}}",
     "set": "Datum festlegen",
     "remove": "Enddatum entfernen",
     "saved": "Gespeichert: gültig bis {{day}}.",
     "saved_none": "Gespeichert: Die Mitgliedschaft hat kein Enddatum.",
-    "managers_only": "Nur ein Inhaber oder Manager kann das Enddatum ändern.",
     "none": "Kein Enddatum",
     "until": "Gültig bis {{day}}",
     "ends_today": "Endet heute",
     "ends_tomorrow": "Endet morgen",
     "ends_in": "Endet in {{days}} Tagen",
     "expired_on": "Abgelaufen am {{day}}",
-    "none_line": "Die Mitgliedschaft endet nie. Geben Sie ein Enddatum an, wenn ein Mitglied sie für eine bestimmte Zeit kauft.",
     "left_line": "Noch {{left}}.",
     "left": {
       "years_one": "1 Jahr",
@@ -404,8 +390,8 @@
       "days_many": "{{n}} Tage"
     },
     "expiring_line": "Gültig bis {{day}}. Danach wird der Zutritt verweigert, bis sie verlängert wird.",
-    "expired_line": "Der Zutritt wird verweigert, bis sie verlängert wird. Punkte und Verlauf bleiben, und am Empfang wird das Mitglied weiter bedient.",
-    "off_line": "Das Konto ist ausgeschaltet, deshalb wird der Zutritt unabhängig vom Datum verweigert.",
+    "expired_line": "Der Zutritt wird verweigert, bis sie verlängert wird.",
+    "off_line": "Der Zutritt wird unabhängig vom Datum verweigert.",
     "problem": {
       "date": "Wählen Sie einen Tag.",
       "past": "Wählen Sie heute oder einen späteren Tag."
