@@ -74,6 +74,11 @@ import doorRu from './door.ru.json'
 import doorDe from './door.de.json'
 import doorFr from './door.fr.json'
 import doorEs from './door.es.json'
+import guideEn from './guide.en.json'
+import guideRu from './guide.ru.json'
+import guideDe from './guide.de.json'
+import guideFr from './guide.fr.json'
+import guideEs from './guide.es.json'
 
 /**
  * HexaTech Loyalty's words, kept out of the admin's common.json so a session
@@ -83,15 +88,16 @@ import doorEs from './door.es.json'
  * name: `loyalty.program`, `loyalty.rewards`, and release 2's
  * `loyalty.membership`, `loyalty.insights`, `loyalty.campaigns`, `loyalty.app`, and release 3's
  * `loyalty.push`, release 4's `loyalty.sms`, release 7's `loyalty.options`, `loyalty.visits` and `loyalty.credit`, and release 8's
- * `loyalty.places`, `loyalty.events` and `loyalty.door` (the scan screen's verdicts and door mode).
+ * `loyalty.places`, `loyalty.events` and `loyalty.door` (the scan screen's verdicts and door mode), and `loyalty.guide` (the
+ * Guide, owner 2026-10-26).
  * Registered when the chunk loads.
  */
 export const LOYALTY_LOCALE_FILES = {
-  en: { ...en, program: programEn, rewards: rewardsEn, membership: membershipEn, insights: insightsEn, campaigns: campaignsEn, app: appEn, push: pushEn, sms: smsEn, options: optionsEn, visits: visitsEn, credit: creditEn, places: placesEn, events: eventsEn, door: doorEn },
-  ru: { ...ru, program: programRu, rewards: rewardsRu, membership: membershipRu, insights: insightsRu, campaigns: campaignsRu, app: appRu, push: pushRu, sms: smsRu, options: optionsRu, visits: visitsRu, credit: creditRu, places: placesRu, events: eventsRu, door: doorRu },
-  de: { ...de, program: programDe, rewards: rewardsDe, membership: membershipDe, insights: insightsDe, campaigns: campaignsDe, app: appDe, push: pushDe, sms: smsDe, options: optionsDe, visits: visitsDe, credit: creditDe, places: placesDe, events: eventsDe, door: doorDe },
-  fr: { ...fr, program: programFr, rewards: rewardsFr, membership: membershipFr, insights: insightsFr, campaigns: campaignsFr, app: appFr, push: pushFr, sms: smsFr, options: optionsFr, visits: visitsFr, credit: creditFr, places: placesFr, events: eventsFr, door: doorFr },
-  es: { ...es, program: programEs, rewards: rewardsEs, membership: membershipEs, insights: insightsEs, campaigns: campaignsEs, app: appEs, push: pushEs, sms: smsEs, options: optionsEs, visits: visitsEs, credit: creditEs, places: placesEs, events: eventsEs, door: doorEs },
+  en: { ...en, program: programEn, rewards: rewardsEn, membership: membershipEn, insights: insightsEn, campaigns: campaignsEn, app: appEn, push: pushEn, sms: smsEn, options: optionsEn, visits: visitsEn, credit: creditEn, places: placesEn, events: eventsEn, door: doorEn, guide: guideEn },
+  ru: { ...ru, program: programRu, rewards: rewardsRu, membership: membershipRu, insights: insightsRu, campaigns: campaignsRu, app: appRu, push: pushRu, sms: smsRu, options: optionsRu, visits: visitsRu, credit: creditRu, places: placesRu, events: eventsRu, door: doorRu, guide: guideRu },
+  de: { ...de, program: programDe, rewards: rewardsDe, membership: membershipDe, insights: insightsDe, campaigns: campaignsDe, app: appDe, push: pushDe, sms: smsDe, options: optionsDe, visits: visitsDe, credit: creditDe, places: placesDe, events: eventsDe, door: doorDe, guide: guideDe },
+  fr: { ...fr, program: programFr, rewards: rewardsFr, membership: membershipFr, insights: insightsFr, campaigns: campaignsFr, app: appFr, push: pushFr, sms: smsFr, options: optionsFr, visits: visitsFr, credit: creditFr, places: placesFr, events: eventsFr, door: doorFr, guide: guideFr },
+  es: { ...es, program: programEs, rewards: rewardsEs, membership: membershipEs, insights: insightsEs, campaigns: campaignsEs, app: appEs, push: pushEs, sms: smsEs, options: optionsEs, visits: visitsEs, credit: creditEs, places: placesEs, events: eventsEs, door: doorEs, guide: guideEs },
 } as const
 
 let registered = false

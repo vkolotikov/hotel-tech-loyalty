@@ -119,6 +119,8 @@ describe('Find (spec §4.8)', () => {
     const narrow = findActions({ nav, dark: false, wide: false, slim: false, words }).map(a => a.label)
     expect(narrow).toEqual(['Scan a card', 'Go to Members', 'Go to Rewards', 'Switch to dark', 'Keyboard shortcuts'])
     expect(findActions({ nav, dark: true, wide: true, slim: true, words }).map(a => a.label)).toContain('Expand menu')
+    // The Guide (owner 2026-10-26), where the workspace names it.
+    expect(findActions({ nav, dark: false, wide: false, slim: false, words: { ...words, guide: 'Guide' } }).find(a => a.label === 'Guide')).toMatchObject({ go: { to: '/loyalty/guide' } })
   })
 
   it('lists the matching actions, then the members found, each opening its page', () => {

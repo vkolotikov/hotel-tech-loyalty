@@ -95,7 +95,7 @@ export function LoyaltyShell({ children }: { children: ReactNode }) {
   // Members is current on /loyalty and on a member's page, not on the other areas' addresses under it.
   const area = areaOf(pathname)
   nav[0].end = area !== 'members'
-  const pageName = nav.find(n => (area === 'members' ? n.to === '/loyalty' : n.to === `/loyalty/${area}`))?.label ?? ''
+  const pageName = area === 'guide' ? t('loyalty.guide.page.title', 'Guide') : nav.find(n => (area === 'members' ? n.to === '/loyalty' : n.to === `/loyalty/${area}`))?.label ?? ''
   const findLabel = t('loyalty.shell.find', 'Find a member or action')
   const modKey = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform ?? '') ? '⌘' : 'Ctrl'
   const crumb = data ? <Crumb organization={data.organization.name} page={pageName} /> : null
@@ -104,6 +104,7 @@ export function LoyaltyShell({ children }: { children: ReactNode }) {
   const foot = {
     look, fullAdmin: FULL_ADMIN, person: data?.staff.name, role: data?.staff.role ?? null, onLeave: () => true,
     onShortcuts: () => { if (ready) setHelpOpen(true) }, onFind: () => { if (ready) setFindOpen(true) },
+    guide: { to: '/loyalty/guide', label: t('loyalty.guide.page.title', 'Guide') },
   }
   const findList = findActions({
     nav, dark: look.resolved === 'dark', wide, slim,
@@ -115,6 +116,7 @@ export function LoyaltyShell({ children }: { children: ReactNode }) {
       collapse: t('workspace.shell.collapse', 'Collapse menu'),
       expand: t('workspace.shell.expand', 'Expand menu'),
       shortcuts: t('workspace.shortcuts.title', 'Keyboard shortcuts'),
+      guide: t('loyalty.guide.page.title', 'Guide'),
     },
   })
   const runFind = (target: FindTarget) => {

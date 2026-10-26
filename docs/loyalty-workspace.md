@@ -540,6 +540,15 @@ the scan screen, door mode, the member page and list, Program, Ways to earn, Eve
   numbers and people, Start check-in and Door mode (the Scan page with the event chosen), check in by name, add a member.
 - **Membership** (release 8): a member's page shows the end date with Extend / Set a date / Remove (managers); the
   members list shows Expiring soon and Expired; progress follows the programme's measure.
+- **The Guide** (`/loyalty/guide`, `guide/`, owner 2026-10-26): the workspace's documentation for new staff, opened
+  from Help & resources (side panel and phone menu) and from Find. A search over everything (accents and case aside);
+  the quick start in five steps; a card per page, only the pages this person's menu has (`featuresFor()`, the same
+  rights as the menu); "Try a scan", the door's four answers acted out through the scan screen's own `answerVerdict()`
+  with the venue's lowest and highest tiers (nothing is sent); the questions by topic, one or two sentences each. It
+  reads nothing beyond the bootstrap. Words in `i18n/guide.<lang>.json` (`guide/words.ts`); a new question is an entry
+  in `FAQ` (`guideMath.ts`) and its `_q`/`_a` in all five bundles. `guide.test.tsx` checks every link the Guide opens
+  against the routes in `LoyaltyApp.tsx`, so a renamed page fails it. The motion (`animate-a-sweep`, `animate-a-float`,
+  in `tailwind.config.js`) is stilled under reduced motion like the rest.
 
 ## What the workspace does not do
 
@@ -651,6 +660,8 @@ files on disk): run them one after the other.
 
 ## Deploying
 
+- Not yet live: the Guide (`/loyalty/guide`, frontend only, no migration), on the branch after 12958a4; it goes out on
+  the owner's word.
 - Release 9b is live (`main` d775898, pushed 2026-10-26 on the owner's word: the reminders and the tier check at each
   venue's own hour, the event dialog's single "Where", the deleted member's shorter notice), built from branch commit
   12958a4: the next release's change list is `git diff --name-status 12958a4 <tip>`. 15 source files, no deletions, no
