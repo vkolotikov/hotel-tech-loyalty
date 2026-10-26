@@ -23,6 +23,7 @@ import { answerFixture } from './fixture'
 import { OPTIONS_KEY } from './optionsApi'
 import { OptionsPage } from './OptionsPage'
 import type { OptionsAnswer } from './types'
+import { WayCard } from './WayCard'
 
 const can = (manager: boolean): Can => ({ award: true, redeem: true, reverse: manager, manage_program: manager, manage_rewards: false, manage_members: manager, view_insights: false, manage_campaigns: manager, manage_app: manager })
 const ways = (more: Partial<Ways> = {}): Ways => ({ stamps: false, stamps_per_card: 10, checkin: false, checkin_points: 0, desk_earn: false, cashback: false, cashback_percent: 5, setup_done: false, ...more })
@@ -51,6 +52,9 @@ function wrap(children: ReactNode, b: Bootstrap, data: OptionsAnswer | null, pat
 }
 const page = (manager: boolean, data: OptionsAnswer | null = answerFixture({ can_change: manager }), w?: Ways) => wrap(<OptionsPage />, boot(manager, w), data)
 const text = (html: string) => html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ')
+/** One card on its own, open as after Change (the tests cannot press it). */
+const opened = (way: string, data: OptionsAnswer = answerFixture({ can_change: true }), manage = true) =>
+  wrap(<WayCard way={data.ways.find(w => w.key === way)!} answer={data} manage={manage} defaultOpen />, boot(manage), data)
 const card = (html: string, way: string) => {
   const start = html.indexOf(`data-way="${way}"`)
   const end = html.indexOf('</form>', start)
@@ -58,9 +62,10 @@ const card = (html: string, way: string) => {
 }
 
 describe('Ways to earn (release 7 §1)', () => {
-  it('shows a card per way in the server’s order, each saying what members get', () => {
+  it('shows a card per way in three coloured sections (earn, bonuses, rules), the server’s order within each, each saying what members get', () => {
     const html = page(true)
-    const order = ['points_on_spend', 'points_expiry', 'welcome_bonus', 'birthday_bonus', 'referrals', 'stamp_card', 'check_in', 'desk_earn', 'cashback']
+    // Design pass 2026-10-26 (groups.ts): earn, then bonuses, then rules.
+    const order = ['points_on_spend', 'stamp_card', 'check_in', 'desk_earn', 'cashback', 'welcome_bonus', 'birthday_bonus', 'referrals', 'points_expiry']
     const at = order.map(w => html.indexOf(`data-way="${w}"`))
     expect(at.every(i => i > 0)).toBe(true)
     expect([...at].sort((a, b) => a - b)).toEqual(at)
@@ -76,24 +81,35 @@ describe('Ways to earn (release 7 §1)', () => {
     expect(words).toContain('No cashback credit.')
   })
 
-  it('a card that is on shows its fields, prefilled; one that is off shows only its switch', () => {
+  it('a card says On or Off and what members get; its numbers open with Change, prefilled; one that is off has no Change', () => {
     const html = page(true)
-    const referrals = card(html, 'referrals')
+    // Short cards: the numbers wait behind Change.
+    expect(text(card(html, 'referrals'))).toContain('Referrals On')
+    expect(text(card(html, 'referrals'))).toContain('Change Referrals')
+    expect(card(html, 'referrals')).not.toContain('value="250"')
+    expect(text(card(html, 'stamp_card'))).toContain('Stamp card Off')
+    expect(text(card(html, 'stamp_card'))).not.toContain('Change')
+    // Earning at the desk has no numbers to open.
+    expect(text(card(html, 'desk_earn'))).not.toContain('Change')
+
+    const referrals = card(opened('referrals'), 'referrals')
     expect(referrals).toContain('role="switch" aria-checked="true"')
     expect(text(referrals)).toContain('Points for the member who refers')
     expect(referrals).toContain('value="250"')
     expect(text(referrals)).toContain('After the friend’s first visit')
     expect(text(referrals)).toContain('As soon as the friend joins')
-    expect(text(card(html, 'points_on_spend'))).toContain('Points for each €1 spent')
+    expect(text(referrals)).toContain('Cancel')
+    expect(text(card(opened('points_on_spend'), 'points_on_spend'))).toContain('Points for each €1 spent')
 
-    const stamps = card(html, 'stamp_card')
+    // A way that is off shows no numbers even when asked to open: switching it on opens them.
+    const stamps = card(opened('stamp_card'), 'stamp_card')
     expect(stamps).toContain('role="switch" aria-checked="false"')
     expect(text(stamps)).not.toContain('Stamps on a card')
   })
 
   it('a stamp card that gives a reward picks it from the catalogue', () => {
     const data = answerFixture({ options: { ...answerFixture().options, stamps_enabled: true, stamp_reward_kind: 'reward', stamp_reward_id: 9 } })
-    const stamps = card(page(true, data), 'stamp_card')
+    const stamps = card(opened('stamp_card', data), 'stamp_card')
     expect(text(stamps)).toContain('A card holds 10 stamps; a full card gives Spa ritual.')
     expect(text(stamps)).toContain('Reward for a full card')
     expect(stamps).toMatch(/<option value="9" selected="">Spa ritual<\/option>/)
@@ -115,7 +131,7 @@ describe('Ways to earn (release 7 §1)', () => {
     const words = text(page(true))
     expect(words).not.toContain('Points for joining.')
     expect(words).not.toContain('How members earn points and what they get back.')
-    expect(words).toContain('Points on spend Members get 1 point for every €1 they spend.')
+    expect(words).toContain('Points on spend On Members get 1 point for every €1 they spend.')
   })
 
   it('shows anyone else the options read-only, and says why', () => {
@@ -124,7 +140,26 @@ describe('Ways to earn (release 7 §1)', () => {
     expect(html).not.toContain('type="submit"')
     expect(html).not.toContain('href="/loyalty/options/setup"')
     expect((html.match(/role="switch"[^>]*disabled=""/g) ?? []).length).toBe(9)
-    expect(card(html, 'referrals')).toMatch(/value="250" disabled=""|disabled="" [^>]*value="250"/)
+    // Nothing to open: the sentence says the numbers.
+    expect(text(html)).not.toContain('Change')
+    expect(text(card(html, 'referrals'))).toContain('250 points')
+    expect(card(opened('referrals', answerFixture({ can_change: false }), false), 'referrals')).toMatch(/value="250" disabled=""|disabled="" [^>]*value="250"/)
+  })
+
+  it('heads each section with its colour and how many of its ways are on, and jumps to each from the top', () => {
+    const html = page(true)
+    for (const [group, hue] of [['earn', 'earn'], ['bonus', 'bonus'], ['rule', 'rule']]) {
+      expect(html).toMatch(new RegExp(`<section id="ways-${group}" data-group="${group}" data-hue="${hue}"`))
+      expect(html).toContain(`href="#ways-${group}"`)
+    }
+    expect(html).toContain('href="#options-parts"')
+    const words = text(html)
+    expect(words).toMatch(/Earn points \d of 5 on/)
+    expect(words).toMatch(/Bonuses \d of 3 on/)
+    expect(words).toContain('Rules 1 of 1 on')
+    // An off card is grey; an on one wears its section's colour.
+    expect(card(html, 'stamp_card')).toMatch(/^data-way="stamp_card" data-hue="off"/)
+    expect(card(html, 'referrals')).toMatch(/^data-way="referrals" data-on="" data-hue="bonus"/)
   })
 
   it('links the rest of the programme with how many there are', () => {

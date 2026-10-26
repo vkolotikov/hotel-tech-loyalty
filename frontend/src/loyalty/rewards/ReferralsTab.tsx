@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
+import { CircleCheck, Coins, Hourglass, Users } from 'lucide-react'
 import { useBoot } from '../LoyaltyProvider'
 import { points, when } from '../lib/format'
 import { memberPath } from '../lib/links'
@@ -34,14 +35,16 @@ export function ReferralsTab() {
       {figures && (
         <dl data-figures="" className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           {([
-            ['total', t('loyalty.rewards.referrals.total', 'Referrals'), figures.total],
-            ['rewarded', t('loyalty.rewards.referrals.rewarded', 'Rewarded'), figures.rewarded],
-            ['pending', t('loyalty.rewards.referrals.pending', 'Pending'), figures.pending],
-            ['points', t('loyalty.rewards.referrals.points_paid', 'Points paid out'), figures.points_paid],
-          ] as const).map(([key, label, value]) => (
-            <div key={key} className="rounded-2xl border border-a-border bg-a-surface p-4">
-              <dt className="text-xs text-a-text-2">{label}</dt>
-              <dd className="font-a-display text-3xl font-light tabular-nums text-a-text">{points(value, locale)}</dd>
+            ['total', t('loyalty.rewards.referrals.total', 'Referrals'), figures.total, Users, 'offer'],
+            ['rewarded', t('loyalty.rewards.referrals.rewarded', 'Rewarded'), figures.rewarded, CircleCheck, 'earn'],
+            ['pending', t('loyalty.rewards.referrals.pending', 'Pending'), figures.pending, Hourglass, 'gift'],
+            ['points', t('loyalty.rewards.referrals.points_paid', 'Points paid out'), figures.points_paid, Coins, 'bonus'],
+          ] as const).map(([key, label, value, Icon, hue]) => (
+            <div key={key} data-hue={hue} className="rounded-2xl border border-a-border bg-a-surface p-4">
+              <dt className="flex items-center gap-2 text-xs text-a-text-2">
+                <span aria-hidden className="l-hue-tile inline-flex h-7 w-7 items-center justify-center rounded-lg"><Icon size={15} /></span>{label}
+              </dt>
+              <dd className="mt-1 font-a-display text-3xl font-light tabular-nums text-a-text">{points(value, locale)}</dd>
             </div>
           ))}
         </dl>

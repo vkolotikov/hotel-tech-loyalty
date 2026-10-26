@@ -540,6 +540,18 @@ the scan screen, door mode, the member page and list, Program, Ways to earn, Eve
   numbers and people, Start check-in and Door mode (the Scan page with the event chosen), check in by name, add a member.
 - **Membership** (release 8): a member's page shows the end date with Extend / Set a date / Remove (managers); the
   members list shows Expiring soon and Expired; progress follows the programme's measure.
+- **Colour families** (design pass, owner 2026-10-26: "colours, icons … not to lose in the app"): `theme/loyalty.css`
+  has five hues — earn green, bonus rose, rule violet, gift amber, offer blue, plus `off` grey — named on an element with
+  `data-hue` and painted by `.l-hue-tile`, `-text`, `-wash`, `-edge`, `-bar`, `-fade`; each reads at 4.5:1 on the
+  surfaces and over its 12 % tint (`loyaltyContrast.test.ts`). A new page reuses a family for the same kind of thing.
+- **Ways to earn, design pass**: the cards sit in three sections (`options/groups.ts`: earn, bonuses, rules; a way
+  the workspace does not know goes under More — `groups.test.ts` fails until a new server way is placed), each with its
+  colour and "x of y on", and a row at the top jumps to each. A card says On or Off beside its switch and what members
+  get; its numbers open with Change (or by themselves once the switch or a number changed) and close on Save or
+  Cancel, so the grid stays short. **Rewards, design pass**: tabs with icons and counts (the codes waiting at the desk
+  in the waiting colour; the four first-page answers fetched once and shared with the tabs), the catalogue filtered
+  by All / Offered / Switched off, its cards one shape (picture or its stand-in with the cost on it, the four figures
+  as icon tiles), offers with their kind's icon, redemption codes as chips, referral figures with icons.
 - **The Guide** (`/loyalty/guide`, `guide/`, owner 2026-10-26): the workspace's documentation for new staff, opened
   from Help & resources (side panel and phone menu) and from Find. A search over everything (accents and case aside);
   the quick start in five steps; a card per page, only the pages this person's menu has (`featuresFor()`, the same
@@ -662,9 +674,13 @@ files on disk): run them one after the other.
 
 - Since 2026-10-26 a finished job is deployed without asking (the owner's standing word, `CLAUDE.md` "Git and
   deploy"); the recipe's checks still decide.
-- The Guide is live (`main` 3679c27, pushed 2026-10-26: `/loyalty/guide`, with the standing word in `CLAUDE.md`),
-  built from branch commit fc76959: the next release's change list is `git diff --name-status fc76959 <tip>`. 21
-  source files, no deletions, no migration; on the deploy tree PHP 7013 passed, 7 skipped, the frontend 5440 passed,
+- The member portal's Help is live (`main` acced03, pushed 2026-10-26: `/portal/help`, `docs/member-portal.md`), built
+  from branch commit fa7e83e: the next release's change list is `git diff --name-status fa7e83e <tip>`. 16 source
+  files, no deletions, no migration; on the deploy tree PHP 7013 passed, 7 skipped, the frontend 5457 passed, tsc
+  clean; checked by content (every source file on `main` equal to the branch, Help's English and Russian words in the
+  built SPA).
+- The Guide went out as `main` 3679c27 (`/loyalty/guide`, with the standing word in `CLAUDE.md`), built from branch
+  commit fc76959. 21 source files, no deletions, no migration; on the deploy tree PHP 7013 passed, 7 skipped, the frontend 5440 passed,
   tsc clean; checked by content (every source file on `main` equal to the branch, the Guide's words and route in the
   `LoyaltyApp` chunk).
 - Release 9b went out as `main` d775898 (the reminders and the tier check at each venue's own hour, the event dialog's

@@ -166,6 +166,13 @@ describe('what members get, in a sentence', () => {
     expect(sentenceOf('points_on_spend', { ...answer.options, points_per_currency: 2.5 }, { ...ctx, locale: 'fr' })).toBe('Members get 2,5 points for every 1\u00a0€ they spend.')
   })
 
+  it('keeps one full stop when an abbreviated amount ends the sentence ("50 б." in Russian)', () => {
+    const russian: Say = (key, fallback, vars) => (key === 'loyalty.options.amount.points_many' ? `${vars?.points} б.` : say(key, fallback, vars))
+    const text = sentenceOf('stamp_card', { ...answer.options, stamps_enabled: true, stamp_reward_kind: 'points', stamp_reward_points: 50 }, { ...ctx, say: russian })
+    expect(text.endsWith('50 б.')).toBe(true)
+    expect(text).not.toContain('..')
+  })
+
   it('the sentence follows what is typed, and a number not yet a number reads as stored', () => {
     const typing = { on: true, values: { welcome_bonus_points: '75' } }
     expect(sentenceOf('welcome_bonus', previewOptions(way('welcome_bonus'), typing, answer.options, answer.fields), ctx)).toBe('New members get 75 points when they join.')

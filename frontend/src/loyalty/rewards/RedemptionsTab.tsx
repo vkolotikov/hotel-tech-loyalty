@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
+import { Ticket } from 'lucide-react'
 import { Button } from '../../workspace/ui/Button'
 import { Notice } from '../../workspace/ui/Notice'
 import { useBoot } from '../LoyaltyProvider'
@@ -95,7 +96,9 @@ export function RedemptionRow({ redemption: r, can, locale, timeZone, fulfilling
 
   return (
     <li data-redemption={r.id} className="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3">
-      <span className="w-28 shrink-0 font-a-mono text-sm font-semibold text-a-text">{r.code}</span>
+      <span data-hue={r.state === 'pending' ? 'gift' : 'off'} className="l-hue-tile inline-flex w-32 shrink-0 items-center gap-1.5 rounded-lg px-2.5 py-1 font-a-mono text-sm font-semibold">
+        <Ticket size={14} aria-hidden className="shrink-0" /><span className="truncate text-a-text">{r.code}</span>
+      </span>
       <div className="min-w-0 flex-1">
         <p className="font-medium text-a-text">{r.reward?.name ?? t('loyalty.rewards.redemptions.unknown_reward', 'A reward no longer in the catalogue')}</p>
         <p className="text-xs text-a-text-2">

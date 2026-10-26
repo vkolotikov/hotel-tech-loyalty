@@ -29,7 +29,10 @@
     "read_only": "Seuls les membres de l’équipe autorisés à gérer les offres peuvent ajouter ou modifier des récompenses.",
     "redeemed": "Échangées",
     "stock": "Stock",
-    "until": "Proposée jusqu’au {{when}}"
+    "until": "Proposée jusqu’au {{when}}",
+    "all": "Toutes",
+    "show": "Afficher",
+    "none_shown": "Aucune récompense ici."
   },
   "discount_phrase": {
     "fixed_amount": "{{amount}} de remise",
@@ -269,5 +272,6 @@
     "referrals": "Parrainages"
   },
   "tabs": "Rubriques des récompenses",
-  "title": "Récompenses"
+  "title": "Récompenses",
+  "tab_waiting": "en attente à l’accueil"
 }

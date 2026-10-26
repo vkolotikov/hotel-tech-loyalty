@@ -18,7 +18,11 @@
   "card": {
     "save": "Save",
     "saved": "Saved. Members get this from now on.",
-    "unsaved": "Not saved yet."
+    "unsaved": "Not saved yet.",
+    "on": "On",
+    "off": "Off",
+    "change": "Change",
+    "cancel": "Cancel"
   },
   "choice": {
     "referral_reward_on": {
@@ -244,5 +248,13 @@
     "to_configure": "Back to Configure",
     "to_members": "Go to Members",
     "to_options": "Go to Ways to earn"
-  }
+  },
+  "group": {
+    "earn": "Earn points",
+    "bonus": "Bonuses",
+    "rule": "Rules",
+    "more": "More"
+  },
+  "sections": "Sections",
+  "groups_on": "{{on}} of {{all}} on"
 }
