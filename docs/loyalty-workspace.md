@@ -700,9 +700,16 @@ files on disk): run them one after the other.
 
 - Since 2026-10-26 a finished job is deployed without asking (the owner's standing word, `CLAUDE.md` "Git and
   deploy"); the recipe's checks still decide.
-- Ways to earn's tabs and checks are live (`main` a6c06e8, pushed 2026-10-26: ProgrammeAdvice, the earn rate card,
-  Overview / Earn points / Bonuses / Rules, Turn on from the industry's preset), built from branch commit aabd384: the
-  next release's change list is `git diff --name-status aabd384 <tip>`. 28 source files, no deletions, no migration;
+- Ways to earn's Overview is live (`main` d905343, pushed 2026-10-26: the status line, each check's one-press fix,
+  the members' journey with its map and timeline, the no-`#…`-link rule), built from branch commit 80ff815: the next
+  release's change list is `git diff --name-status 80ff815 <tip>`. 18 source files, no deletions, no migration; on the
+  deploy tree PHP 7022 passed, 7 skipped, the frontend 5474 passed, tsc clean; the options and checks tests also pass
+  on PostgreSQL; in a browser a real check's Fix saved its one option and the check went, and a map step scrolled
+  without leaving the page; checked by content (every source file on `main` equal to the branch, the fix constants and
+  the hash-link rule in the source, the journey and fix words in the built SPA).
+- Ways to earn's tabs and checks went out as `main` a6c06e8 (ProgrammeAdvice, the earn rate card,
+  Overview / Earn points / Bonuses / Rules, Turn on from the industry's preset), built from branch commit aabd384.
+  28 source files, no deletions, no migration;
   on the deploy tree PHP 7020 passed, 7 skipped, the frontend 5467 passed, tsc clean (its first run caught a raw-accent
   ring the workspace's line rule refuses — fixed in aabd384 before the build); the options and checks tests also pass
   on PostgreSQL; checked by content (every source file on `main` equal to the branch, `earn_rate` in ProgrammeOptions,
