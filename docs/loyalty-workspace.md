@@ -745,6 +745,13 @@ files on disk): run them one after the other.
 
 - Since 2026-10-26 a finished job is deployed without asking (the owner's standing word, `CLAUDE.md` "Git and
   deploy"); the recipe's checks still decide.
+- Release 10b, the guidance, is live (`main` e3c7f0b, pushed 2026-10-26: Start here behind `GET start` from
+  `SetupProgress`, the Members card, Program's checks from `TierAdvice`, the tier form's earn-rate figures and "What
+  members see", the boost multiplier in figures), built from branch commit 5eedb5a: the next release's change list is
+  `git diff --name-status 5eedb5a <tip>`. 48 source files and docs (16 new), no deletions, no migration; on the deploy
+  tree PHP 7032 passed, 7 skipped, the frontend 5511 passed, tsc clean; the new server tests also pass on PostgreSQL;
+  checked by content (every source file on `main` equal to the branch, `TierAdvice`, `SetupProgress` and the
+  `admin/loyalty/start` map key in the source, the Start and check words in the built SPA).
 - Release 10a, the frame from the owner's Figma, is live (`main` d5b3ccb, pushed 2026-10-26: Loyalty's palette, the
   colour families with their fills, section cards on five pages, Program in sections, Get started panels, figure
   tiles), built from branch commit 7cc2a0b: the next release's change list is `git diff --name-status 7cc2a0b <tip>`.
