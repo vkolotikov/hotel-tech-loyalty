@@ -674,8 +674,13 @@ files on disk): run them one after the other.
 
 - Since 2026-10-26 a finished job is deployed without asking (the owner's standing word, `CLAUDE.md` "Git and
   deploy"); the recipe's checks still decide.
-- The member portal's Help is live (`main` acced03, pushed 2026-10-26: `/portal/help`, `docs/member-portal.md`), built
-  from branch commit fa7e83e: the next release's change list is `git diff --name-status fa7e83e <tip>`. 16 source
+- The Ways to earn and Rewards design pass is live (`main` d827fcb, pushed 2026-10-26: colour families, sections,
+  Change, tab counts, catalogue filter and cards), built from branch commit 410fec7: the next release's change list is
+  `git diff --name-status 410fec7 <tip>`. 29 source files, no deletions, no migration; on the deploy tree PHP 7013
+  passed, 7 skipped, the frontend 5464 passed, tsc clean; checked by content (every source file on `main` equal to the
+  branch, the colour classes and the new words in the built SPA).
+- The member portal's Help went out as `main` acced03 (`/portal/help`, `docs/member-portal.md`), built from branch
+  commit fa7e83e. 16 source
   files, no deletions, no migration; on the deploy tree PHP 7013 passed, 7 skipped, the frontend 5457 passed, tsc
   clean; checked by content (every source file on `main` equal to the branch, Help's English and Russian words in the
   built SPA).
