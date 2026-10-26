@@ -6,7 +6,8 @@
 
 /** A way to earn or be rewarded: its card's title (ProgrammeOptions::WAYS). */
 export const WAY_WORDS: Record<string, string> = {
-  points_on_spend: 'Points on spend',
+  earn_rate: 'Earn rate',
+  points_on_spend: 'Points on bookings',
   points_expiry: 'Points expiry',
   welcome_bonus: 'Welcome bonus',
   birthday_bonus: 'Birthday bonus',
@@ -20,7 +21,8 @@ export const WAY_WORDS: Record<string, string> = {
 
 /** What each way is, in a line under its title. */
 export const WAY_LINE_WORDS: Record<string, string> = {
-  points_on_spend: 'Points for completed bookings, by what was spent.',
+  earn_rate: 'How many points spending earns, on bookings and at the desk.',
+  points_on_spend: 'Points for completed bookings, at your earn rate.',
   points_expiry: 'Unused points run out after a while, which brings members back.',
   welcome_bonus: 'Points for joining.',
   birthday_bonus: 'Points on the member’s birthday.',
@@ -85,7 +87,9 @@ export const AMOUNT_WORDS: Record<string, string> = {
 
 /** What members get with a way as it stands (optionsMath.ts `sentenceOf`). */
 export const SENTENCE_WORDS: Record<string, string> = {
-  points_on_spend: 'Members get {{points}} for every {{money}} they spend.',
+  earn_rate: 'Members get {{points}} for every {{money}} they spend.',
+  earn_rate_none: 'Spending earns nothing yet: switch on Points on bookings or Earn at the desk.',
+  points_on_spend: 'Completed bookings earn points at your earn rate.',
   points_on_spend_off: 'Bookings earn no points.',
   points_expiry: 'Points expire {{months}} after they are earned.',
   points_expiry_off: 'Points never expire.',
@@ -162,6 +166,21 @@ export const STEP_WORDS: Record<string, string> = {
   review: 'Review',
 }
 
+/**
+ * What "Ways to earn"'s checks say (ProgrammeAdvice on the server, owner 2026-10-26), by code. A code without a word
+ * here is not shown.
+ */
+export const ADVICE_WORDS: Record<string, string> = {
+  nothing_earns: 'Members have no regular way to earn points yet.',
+  visits_without_source: 'Members move up by visits, but nothing records a visit here. Switch on Check-in.',
+  spend_without_source: 'Members move up by spend, but no spending is recorded here. Switch on Earn at the desk.',
+  stamp_reward_missing: 'A full stamp card gives a reward that is no longer offered.',
+  referrals_give_nothing: 'Referrals are on but give no points to either side.',
+  no_rewards: 'Members collect points but the catalogue has nothing to spend them on.',
+  expiry_short: 'Points expire after {{months}} months, which is short for most members; 12 to 24 is usual.',
+  checkin_counts_only: 'A check-in gives no points and no stamp: it only records the visit.',
+}
+
 /** The page's sections (groups.ts `GROUP_ORDER`). */
 export const GROUP_WORDS: Record<string, string> = {
   earn: 'Earn points',
@@ -172,6 +191,7 @@ export const GROUP_WORDS: Record<string, string> = {
 
 /** The families above by the key prefix they are read under. */
 export const WORD_FAMILIES: Record<string, Record<string, string>> = {
+  advice: ADVICE_WORDS,
   group: GROUP_WORDS,
   way: WAY_WORDS,
   way_line: WAY_LINE_WORDS,

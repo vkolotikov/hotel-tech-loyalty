@@ -22,7 +22,8 @@
     "on": "Activo",
     "off": "Inactivo",
     "change": "Cambiar",
-    "cancel": "Cancelar"
+    "cancel": "Cancelar",
+    "not_used": "Su establecimiento no acepta reservas, así que esto no da nada."
   },
   "choice": {
     "referral_reward_on": {
@@ -140,7 +141,7 @@
     "desk_earn_off": "Las compras en el mostrador no dan nada.",
     "points_expiry": "Los puntos caducan {{months}} después de ganarlos.",
     "points_expiry_off": "Los puntos nunca caducan.",
-    "points_on_spend": "Los miembros reciben {{points}} por cada {{money}} que gastan.",
+    "points_on_spend": "Las reservas completadas dan puntos a su tasa de puntos.",
     "points_on_spend_off": "Las reservas no dan puntos.",
     "referrals_first_visit": "Un miembro que recomienda a un amigo recibe {{referrer}} y el amigo {{referee}}, cuando el amigo ha hecho su primera visita.",
     "referrals_off": "Los miembros no tienen enlace de recomendación.",
@@ -153,7 +154,9 @@
     "welcome_bonus_off": "Los miembros nuevos no reciben bono de bienvenida.",
     "tier_progress_points": "Los miembros suben al ganar puntos. Ven «1.250 puntos para Gold».",
     "tier_progress_visits": "Los miembros suben según cuánto vienen: cuenta una visita al día, gasten lo que gasten. Ven «3 visitas más para Gold».",
-    "tier_progress_spend": "Los miembros suben según lo que gastan en sus visitas. Ven «120 € más para Gold»."
+    "tier_progress_spend": "Los miembros suben según lo que gastan en sus visitas. Ven «120 € más para Gold».",
+    "earn_rate": "Los miembros reciben {{points}} por cada {{money}} que gastan.",
+    "earn_rate_none": "El gasto aún no da nada: active «Puntos por reservas» o «Ganar en el mostrador»."
   },
   "setup": {
     "error": {
@@ -188,11 +191,12 @@
     "check_in": "Registro de visita",
     "desk_earn": "Ganar en el mostrador",
     "points_expiry": "Caducidad de los puntos",
-    "points_on_spend": "Puntos por gasto",
+    "points_on_spend": "Puntos por reservas",
     "referrals": "Referidos",
     "stamp_card": "Tarjeta de sellos",
     "welcome_bonus": "Bono de bienvenida",
-    "tier_progress": "Cómo suben los miembros"
+    "tier_progress": "Cómo suben los miembros",
+    "earn_rate": "Tasa de puntos"
   },
   "way_line": {
     "birthday_bonus": "Puntos en el cumpleaños del miembro.",
@@ -200,11 +204,12 @@
     "check_in": "El equipo registra la visita de un miembro en el mostrador tras escanear.",
     "desk_earn": "El equipo añade una compra hecha en el mostrador tras escanear.",
     "points_expiry": "Los puntos sin usar caducan al cabo de un tiempo, lo que hace volver a los miembros.",
-    "points_on_spend": "Puntos por las reservas completadas, según lo gastado.",
+    "points_on_spend": "Puntos por las reservas completadas, a su tasa de puntos.",
     "referrals": "Puntos por traer a un amigo, para los dos.",
     "stamp_card": "Un sello por visita; una tarjeta completa da una recompensa.",
     "welcome_bonus": "Puntos por unirse.",
-    "tier_progress": "Lo que lleva a un miembro al siguiente nivel. Un cambio no mueve a nadie de inmediato: el nivel se actualiza con la próxima visita o los próximos puntos."
+    "tier_progress": "Lo que lleva a un miembro al siguiente nivel. Un cambio no mueve a nadie de inmediato: el nivel se actualiza con la próxima visita o los próximos puntos.",
+    "earn_rate": "Cuántos puntos da el gasto, en reservas y en el mostrador."
   },
   "ways_link": "Formas de ganar",
   "ways_title": "Cómo ganan los miembros y qué reciben",
@@ -255,6 +260,26 @@
     "rule": "Reglas",
     "more": "Más"
   },
-  "sections": "Secciones",
-  "groups_on": "{{on}} de {{all}} activas"
+  "groups_on": "{{on}} de {{all}} activas",
+  "advice": {
+    "nothing_earns": "Los miembros aún no tienen una forma habitual de ganar puntos.",
+    "visits_without_source": "Los miembros suben por visitas, pero aquí nada registra una visita. Active «Registro de visita».",
+    "spend_without_source": "Los miembros suben por gasto, pero aquí no se registra ningún gasto. Active «Ganar en el mostrador».",
+    "stamp_reward_missing": "Una tarjeta de sellos completa da una recompensa que ya no se ofrece.",
+    "referrals_give_nothing": "Las recomendaciones están activas pero no dan puntos a nadie.",
+    "no_rewards": "Los miembros acumulan puntos, pero el catálogo no tiene nada en qué gastarlos.",
+    "expiry_short": "Los puntos caducan a los {{months}} meses, poco para la mayoría de los miembros; lo habitual es de 12 a 24.",
+    "checkin_counts_only": "Un registro de visita no da puntos ni sello: solo registra la visita."
+  },
+  "tabs": "Áreas de formas de ganar",
+  "tab_overview": "Resumen",
+  "to_check": "por revisar",
+  "checks": "Comprobaciones",
+  "all_good": "Todo funciona en conjunto.",
+  "open_way": "Abrir {{way}}",
+  "recommended": "Recomendado para {{preset}}",
+  "turn_on": "Activar",
+  "members_get": "Qué reciben los miembros",
+  "not_used_short": "No se usa aquí",
+  "switched_off": "Desactivado"
 }

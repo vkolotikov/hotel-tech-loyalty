@@ -1,7 +1,7 @@
 import { useId, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { Cake, Coins, DoorOpen, Gift, Hourglass, PiggyBank, ShoppingBag, Sparkles, Stamp, TrendingUp, Users, type LucideIcon } from 'lucide-react'
+import { Cake, CalendarCheck, Coins, DoorOpen, Gift, Hourglass, PiggyBank, ShoppingBag, Sparkles, Stamp, TrendingUp, Users, type LucideIcon } from 'lucide-react'
 import { Button } from '../../workspace/ui/Button'
 import { Notice } from '../../workspace/ui/Notice'
 import { Skeleton } from '../../workspace/ui/Skeleton'
@@ -21,7 +21,8 @@ export const INPUT = 'w-full rounded-lg border border-a-border bg-a-surface px-3
 
 /** Each way's mark; a way the workspace does not know wears the area's own. */
 const WAY_ICONS: Record<string, LucideIcon> = {
-  points_on_spend: Coins,
+  earn_rate: Coins,
+  points_on_spend: CalendarCheck,
   points_expiry: Hourglass,
   welcome_bonus: Gift,
   birthday_bonus: Cake,

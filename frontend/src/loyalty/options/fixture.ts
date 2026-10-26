@@ -14,7 +14,8 @@ export function answerFixture(more: Partial<OptionsAnswer> = {}): OptionsAnswer 
       programme_setup_completed_at: null,
     },
     ways: [
-      { key: 'points_on_spend', switch: 'points_on_bookings', zero_off: null, fields: ['points_per_currency'] },
+      { key: 'earn_rate', switch: null, zero_off: null, fields: ['points_per_currency'] },
+      { key: 'points_on_spend', switch: 'points_on_bookings', zero_off: null, fields: [] },
       { key: 'points_expiry', switch: null, zero_off: 'points_expiry_months', fields: ['points_expiry_months'] },
       { key: 'welcome_bonus', switch: null, zero_off: 'welcome_bonus_points', fields: ['welcome_bonus_points'] },
       { key: 'birthday_bonus', switch: null, zero_off: 'birthday_bonus_points', fields: ['birthday_bonus_points'] },

@@ -22,7 +22,8 @@
     "on": "An",
     "off": "Aus",
     "change": "Ändern",
-    "cancel": "Abbrechen"
+    "cancel": "Abbrechen",
+    "not_used": "Ihr Betrieb nimmt keine Buchungen an, daher bringt das nichts."
   },
   "choice": {
     "referral_reward_on": {
@@ -140,7 +141,7 @@
     "desk_earn_off": "Einkäufe an der Theke bringen nichts.",
     "points_expiry": "Punkte verfallen {{months}} nach ihrer Gutschrift.",
     "points_expiry_off": "Punkte verfallen nie.",
-    "points_on_spend": "Mitglieder erhalten {{points}} je {{money}} Umsatz.",
+    "points_on_spend": "Abgeschlossene Buchungen bringen Punkte nach Ihrer Punkterate.",
     "points_on_spend_off": "Buchungen bringen keine Punkte.",
     "referrals_first_visit": "Ein Mitglied, das einen Freund empfiehlt, erhält {{referrer}} und der Freund {{referee}}, sobald der Freund zum ersten Mal da war.",
     "referrals_off": "Mitglieder haben keinen Empfehlungslink.",
@@ -153,7 +154,9 @@
     "welcome_bonus_off": "Neue Mitglieder erhalten keinen Willkommensbonus.",
     "tier_progress_points": "Mitglieder steigen mit ihren Punkten auf. Sie sehen „1.250 Punkte bis Gold“.",
     "tier_progress_visits": "Mitglieder steigen danach auf, wie oft sie kommen: Ein Besuch pro Tag zählt, egal was sie ausgeben. Sie sehen „Noch 3 Besuche bis Gold“.",
-    "tier_progress_spend": "Mitglieder steigen nach ihren Ausgaben bei Besuchen auf. Sie sehen „Noch 120 € bis Gold“."
+    "tier_progress_spend": "Mitglieder steigen nach ihren Ausgaben bei Besuchen auf. Sie sehen „Noch 120 € bis Gold“.",
+    "earn_rate": "Mitglieder erhalten {{points}} je {{money}} Umsatz.",
+    "earn_rate_none": "Umsatz bringt noch nichts: Schalten Sie „Punkte für Buchungen“ oder „Sammeln an der Theke“ ein."
   },
   "setup": {
     "error": {
@@ -188,11 +191,12 @@
     "check_in": "Check-in",
     "desk_earn": "Sammeln an der Theke",
     "points_expiry": "Verfall der Punkte",
-    "points_on_spend": "Punkte für Umsatz",
+    "points_on_spend": "Punkte für Buchungen",
     "referrals": "Empfehlungen",
     "stamp_card": "Stempelkarte",
     "welcome_bonus": "Willkommensbonus",
-    "tier_progress": "Wie Mitglieder aufsteigen"
+    "tier_progress": "Wie Mitglieder aufsteigen",
+    "earn_rate": "Punkterate"
   },
   "way_line": {
     "birthday_bonus": "Punkte zum Geburtstag des Mitglieds.",
@@ -200,11 +204,12 @@
     "check_in": "Das Team checkt ein Mitglied nach dem Scannen an der Theke ein.",
     "desk_earn": "Das Team erfasst nach dem Scannen einen Einkauf an der Theke.",
     "points_expiry": "Ungenutzte Punkte verfallen nach einer Weile – das holt Mitglieder zurück.",
-    "points_on_spend": "Punkte für abgeschlossene Buchungen, nach dem ausgegebenen Betrag.",
+    "points_on_spend": "Punkte für abgeschlossene Buchungen, nach Ihrer Punkterate.",
     "referrals": "Punkte für einen geworbenen Freund, für beide.",
     "stamp_card": "Ein Stempel pro Besuch; eine volle Karte bringt eine Prämie.",
     "welcome_bonus": "Punkte für den Beitritt.",
-    "tier_progress": "Was ein Mitglied in die nächste Stufe bringt. Eine Änderung verschiebt niemanden sofort: Die Stufe folgt beim nächsten Besuch oder den nächsten Punkten."
+    "tier_progress": "Was ein Mitglied in die nächste Stufe bringt. Eine Änderung verschiebt niemanden sofort: Die Stufe folgt beim nächsten Besuch oder den nächsten Punkten.",
+    "earn_rate": "Wie viele Punkte Umsatz bringt, bei Buchungen und an der Theke."
   },
   "ways_link": "Sammeln & Prämien",
   "ways_title": "Wie Mitglieder sammeln und was sie erhalten",
@@ -255,6 +260,26 @@
     "rule": "Regeln",
     "more": "Weitere"
   },
-  "sections": "Bereiche",
-  "groups_on": "{{on}} von {{all}} an"
+  "groups_on": "{{on}} von {{all}} an",
+  "advice": {
+    "nothing_earns": "Mitglieder haben noch keinen regelmäßigen Weg, Punkte zu sammeln.",
+    "visits_without_source": "Mitglieder steigen nach Besuchen auf, aber hier erfasst nichts einen Besuch. Schalten Sie den Check-in ein.",
+    "spend_without_source": "Mitglieder steigen nach Umsatz auf, aber hier wird kein Umsatz erfasst. Schalten Sie „Sammeln an der Theke“ ein.",
+    "stamp_reward_missing": "Eine volle Stempelkarte gibt eine Prämie, die nicht mehr angeboten wird.",
+    "referrals_give_nothing": "Empfehlungen sind an, bringen aber keiner Seite Punkte.",
+    "no_rewards": "Mitglieder sammeln Punkte, aber der Katalog hat nichts, wofür sie sie einlösen können.",
+    "expiry_short": "Punkte verfallen nach {{months}} Monaten, was für die meisten Mitglieder kurz ist; üblich sind 12 bis 24.",
+    "checkin_counts_only": "Ein Check-in bringt weder Punkte noch einen Stempel: Er erfasst nur den Besuch."
+  },
+  "tabs": "Bereiche von Sammeln & Prämien",
+  "tab_overview": "Überblick",
+  "to_check": "zu prüfen",
+  "checks": "Prüfungen",
+  "all_good": "Alles passt zusammen.",
+  "open_way": "{{way}} öffnen",
+  "recommended": "Empfohlen für {{preset}}",
+  "turn_on": "Einschalten",
+  "members_get": "Was Mitglieder bekommen",
+  "not_used_short": "Hier nicht genutzt",
+  "switched_off": "Ausgeschaltet"
 }

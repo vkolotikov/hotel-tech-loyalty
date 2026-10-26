@@ -13,12 +13,13 @@ use App\Services\LoyaltyPresetService;
 /**
  * What "Ways to earn" and the setup wizard draw (release 7, spec 2026-10-25 §1): the venue's options (ProgrammeOptions)
  * with the cards they make and the rules of each field, how many tiers, offers and boosts it has and the rewards a full
- * stamp card may give, the presets with what each recommends, whether the wizard was done, and whether the caller may
- * change any of it. Every option list and enum is the server's; the workspace keeps no copy.
+ * stamp card may give, the presets with what each recommends, whether the wizard was done, whether the caller may
+ * change any of it, and what ProgrammeAdvice finds (the checks, the ways not used at this venue). Every option list and
+ * enum is the server's; the workspace keeps no copy.
  */
 final class ProgrammeOverview
 {
-    public function __construct(private readonly LoyaltyPresetService $presets)
+    public function __construct(private readonly LoyaltyPresetService $presets, private readonly ProgrammeAdvice $advice)
     {
     }
 
@@ -26,15 +27,20 @@ final class ProgrammeOverview
     public function for(int $orgId, User $user): array
     {
         $options = ProgrammeOptions::for($orgId);
+        $catalogue = $this->catalogue();
+        // Owner 2026-10-26: what does not work together, and the ways that do nothing at this venue (ProgrammeAdvice).
+        $checks = $this->advice->for($orgId, $options, array_column($catalogue['rewards'], 'id'));
 
         return [
             'options'    => $options,
             'ways'       => ProgrammeOptions::ways(),
             'fields'     => ProgrammeOptions::fields(),
-            'catalogue'  => $this->catalogue(),
+            'catalogue'  => $catalogue,
             'presets'    => $this->presets(),
             'setup_done' => $options['programme_setup_completed_at'] !== null,
             'can_change' => LoyaltyAccess::isManager($user),
+            'advice'     => $checks['advice'],
+            'not_used'   => $checks['not_used'],
         ];
     }
 

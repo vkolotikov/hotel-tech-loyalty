@@ -1,7 +1,7 @@
 import { useId, useMemo, useState, type FormEvent } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { SlidersHorizontal } from 'lucide-react'
+import { Info, SlidersHorizontal } from 'lucide-react'
 import { Button } from '../../workspace/ui/Button'
 import { Notice } from '../../workspace/ui/Notice'
 import { useBoot } from '../LoyaltyProvider'
@@ -56,6 +56,7 @@ export function WayCard({ way, answer, manage, defaultOpen = false }: { way: Way
   const title = wayTitle(say, way.key)
   const text = sentenceOf(way.key, previewOptions(way, form, answer.options, answer.fields), { say, currency, locale, rewards: answer.catalogue.rewards })
   const switchable = way.switch !== null || way.zero_off !== null
+  const unused = form.on && (answer.not_used ?? []).includes(way.key)
   const busy = save.isPending
   // A way with no numbers (earning at the desk) has nothing to open.
   const hasFields = way.fields.length > 0
@@ -81,7 +82,7 @@ export function WayCard({ way, answer, manage, defaultOpen = false }: { way: Way
   return (
     <form id={`way-${way.key}`} data-way={way.key} data-on={form.on ? '' : undefined} data-hue={form.on ? GROUP_HUE[groupOf(way.key)] : 'off'}
       aria-labelledby={titleId} noValidate onSubmit={submit}
-      className={`flex scroll-mt-20 flex-col gap-3 rounded-2xl border bg-a-surface p-4 sm:p-5 ${form.on ? 'border-a-border' : 'border-dashed border-a-border'} ${open ? 'l-hue-edge shadow-a-sm' : ''}`}>
+      className={`flex scroll-mt-20 flex-col gap-3 rounded-2xl border bg-a-surface p-4 sm:p-5 ${form.on ? 'border-a-border' : 'border-dashed border-a-border'} ${open ? 'l-hue-edge shadow-a-sm' : ''} ${defaultOpen ? 'ring-2 ring-a-accent-text/40' : ''}`}>
       <div className="flex items-center gap-3">
         <WayIcon way={way.key} on={form.on} />
         <div className="min-w-0 flex-1">
@@ -96,7 +97,13 @@ export function WayCard({ way, answer, manage, defaultOpen = false }: { way: Way
         {switchable && <Switch on={form.on} label={title} disabled={!manage || busy} onChange={(on) => edit({ ...form, on })} />}
       </div>
 
-      <Sentence tinted={form.on} muted={!form.on}>{text}</Sentence>
+      <Sentence tinted={form.on && !unused} muted={!form.on || unused}>{text}</Sentence>
+      {/* Owner 2026-10-26: a way that does nothing at this venue as it stands says so (ProgrammeAdvice's not_used). */}
+      {unused && (
+        <p data-not-used="" className="flex items-center gap-1.5 text-xs text-a-text-2">
+          <Info size={13} aria-hidden className="shrink-0" />{t('loyalty.options.card.not_used', 'Your venue takes no bookings, so this gives nothing.')}
+        </p>
+      )}
 
       {open && (
         <WayFields way={way} form={form} fields={answer.fields} rewards={answer.catalogue.rewards} problems={problems}

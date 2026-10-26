@@ -64,6 +64,17 @@ export interface Preset {
   recommends: Options
 }
 
+/**
+ * One of "Ways to earn"'s checks (ProgrammeAdvice, owner 2026-10-26): what does not work together, `warn`, or works but
+ * is unusual, `tip`; the card to open for it (null: the catalogue); the numbers its sentence names.
+ */
+export interface Advice {
+  code: string
+  level: 'warn' | 'tip'
+  way: string | null
+  params: Record<string, number>
+}
+
 export interface OptionsAnswer {
   options: Options
   ways: Way[]
@@ -74,6 +85,9 @@ export interface OptionsAnswer {
   setup_done: boolean
   /** A manager: may change the options, apply the wizard or skip it. */
   can_change: boolean
+  /** Owner 2026-10-26: the checks, warnings first, and the ways that do nothing at this venue as it stands. */
+  advice?: Advice[]
+  not_used?: string[]
 }
 
 /** What the wizard's apply did. */

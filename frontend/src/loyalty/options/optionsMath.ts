@@ -274,10 +274,13 @@ export function sentenceOf(wayKey: string, o: Options, ctx: SayContext): string 
   const { say, locale } = ctx
   const pts = (value: OptionValue | undefined) => pointsPhrase(num(value), say, locale)
   switch (wayKey) {
+    // Owner 2026-10-26: the rate serves bookings and the desk alike; each of them has its own switch.
+    case 'earn_rate':
+      return o.points_on_bookings === true || o.desk_earn_enabled === true
+        ? sentence('earn_rate', ctx, { points: pts(o.points_per_currency), money: money(1, ctx.currency, locale) })
+        : sentence('earn_rate_none', ctx)
     case 'points_on_spend':
-      return o.points_on_bookings === true
-        ? sentence('points_on_spend', ctx, { points: pts(o.points_per_currency), money: money(1, ctx.currency, locale) })
-        : sentence('points_on_spend_off', ctx)
+      return o.points_on_bookings === true ? sentence('points_on_spend', ctx) : sentence('points_on_spend_off', ctx)
     case 'points_expiry':
       return num(o.points_expiry_months) > 0
         ? sentence('points_expiry', ctx, { months: monthsPhrase(num(o.points_expiry_months), say, locale) })
@@ -375,4 +378,27 @@ export function setupBody(d: Described, choice: string, form: OptionsForm, key: 
 /** The banner's question: a manager, at a venue whose wizard was neither applied nor skipped. */
 export function offersSetup(manager: boolean, ways: { setup_done: boolean } | undefined): boolean {
   return manager && ways !== undefined && !ways.setup_done
+}
+
+// ─── Recommended for the venue's industry (owner 2026-10-26) ─────────────
+
+/**
+ * What the venue's own industry's preset would add (the server marks it `recommended`): each way it switches on that is
+ * off here — never one that cannot be off, nor one that does nothing at this venue (`not_used`) — with the change that
+ * turns it on with the preset's numbers (only what differs from today) and the options its sentence reads. Null when
+ * the venue's industry has no preset or nothing is missing.
+ */
+export function suggestionsOf(answer: OptionsAnswer): { preset: Preset; ways: { way: Way; changes: Options; preview: Options }[] } | null {
+  const preset = answer.presets.find(p => p.recommended)
+  if (!preset) return null
+  const unused = new Set(answer.not_used ?? [])
+  const recommends = { ...answer.options, ...preset.recommends }
+  const ways = answer.ways
+    .filter(way => !alwaysOn(way) && !unused.has(way.key) && !isOn(way, answer.options) && isOn(way, recommends))
+    .map(way => {
+      const form = wayFormOf(way, recommends, answer.fields)
+      return { way, changes: changesOf(way, form, answer.options, answer.fields), preview: { ...answer.options, ...wayOptions(way, form, answer.fields) } }
+    })
+    .filter(s => Object.keys(s.changes).length > 0)
+  return ways.length > 0 ? { preset, ways } : null
 }
