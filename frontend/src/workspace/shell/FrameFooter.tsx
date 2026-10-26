@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { ChevronsUpDown, Keyboard, LayoutGrid, LifeBuoy, LogOut, PanelLeftClose, PanelLeftOpen, Search, Settings } from 'lucide-react'
+import { BookOpen, ChevronsUpDown, Keyboard, LayoutGrid, LifeBuoy, LogOut, PanelLeftClose, PanelLeftOpen, Search, Settings } from 'lucide-react'
 import { logoutAndRedirect } from '../../lib/logout'
 import { firstLetter } from '../lib/firstLetter'
 import { leave } from '../lib/leave'
@@ -21,6 +21,8 @@ interface FootProps {
   onLeave: () => boolean
   onShortcuts: () => void
   onFind: () => void
+  /** The workspace's Guide, where it has one (HexaTech Loyalty, owner 2026-10-26): its address and its name. */
+  guide?: { to: string; label: string }
 }
 
 const ITEM = 'flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-sm text-a-text hover:bg-a-surface-2 focus-visible:bg-a-surface-2'
@@ -42,11 +44,16 @@ export function SettingsPanel({ look, fullAdmin, onLeave }: Pick<FootProps, 'loo
   )
 }
 
-/** Help & resources, opened: the list of keyboard shortcuts and Find. */
-export function HelpList({ onShortcuts, onFind }: Pick<FootProps, 'onShortcuts' | 'onFind'>) {
+/** Help & resources, opened: the Guide where the workspace has one, the list of keyboard shortcuts and Find. */
+export function HelpList({ onShortcuts, onFind, guide }: Pick<FootProps, 'onShortcuts' | 'onFind' | 'guide'>) {
   const { t } = useTranslation()
   return (
     <>
+      {guide && (
+        <Link to={guide.to} role="menuitem" tabIndex={-1} className={ITEM}>
+          <BookOpen size={16} aria-hidden className="shrink-0 text-a-text-2" />{guide.label}
+        </Link>
+      )}
       <button type="button" role="menuitem" tabIndex={-1} onClick={() => { onShortcuts() }} className={ITEM}>
         <Keyboard size={16} aria-hidden className="shrink-0 text-a-text-2" />{t('workspace.shortcuts.title', 'Keyboard shortcuts')}
       </button>
@@ -90,7 +97,7 @@ export function FrameFooter(props: FootProps) {
         <SettingsPanel look={look} fullAdmin={props.fullAdmin} onLeave={props.onLeave} />
       </SideMenu>
       <SideMenu label={t('workspace.shell.help', 'Help & resources')} icon={LifeBuoy} kind="menu" place={place} slim={slim} buttonClassName={row}>
-        <HelpList onShortcuts={props.onShortcuts} onFind={props.onFind} />
+        <HelpList onShortcuts={props.onShortcuts} onFind={props.onFind} guide={props.guide} />
       </SideMenu>
       <div className="border-t border-a-side-2 pt-2">
         <SideMenu label={person ?? ''} kind="menu" place={place} slim={slim}
@@ -124,6 +131,11 @@ export function PhoneMenu(props: FootProps) {
         <div className="text-xs text-a-text-2">{t(...roleLabelKey(role))}</div>
       </div>
       <SettingsPanel look={look} fullAdmin={props.fullAdmin} onLeave={props.onLeave} />
+      {props.guide && (
+        <Link to={props.guide.to} onClick={(e) => shut(e.currentTarget)} className={ITEM}>
+          <BookOpen size={16} aria-hidden className="shrink-0 text-a-text-2" />{props.guide.label}
+        </Link>
+      )}
       <button type="button" onClick={(e) => { shut(e.currentTarget); props.onShortcuts() }} className={ITEM}>
         <Keyboard size={16} aria-hidden className="shrink-0 text-a-text-2" />{t('workspace.shortcuts.title', 'Keyboard shortcuts')}
       </button>

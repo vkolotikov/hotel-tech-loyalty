@@ -30,6 +30,9 @@ Multi-tenant Laravel 13 + React (Vite, TypeScript) SaaS with four sub-brands. Pr
 - Merging to `main` IS a production deploy (migrations run with `--force`, the SPA is rebuilt by Cloud).
   Use the source-patch recipe in `docs/landing-page-builder.md` §6: separate worktree from `origin/main`,
   apply the change list including deletions, tests on the artifact, fresh build, push, verify by content.
+- The owner's standing word (2026-10-26): "deploy always after job done, no need to ask each time". When a job
+  is finished and verified, deploy it by that recipe without asking, then report what went out. The recipe's
+  checks still decide: a failing test, a parity difference or a failed content check stops the deploy.
 - Commit messages end with `Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>` (or the current
   model's name).
 - `feature/landing-phase-3c` carries unshipped non-landing work (37 source files of email deliverability

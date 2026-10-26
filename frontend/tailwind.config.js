@@ -209,6 +209,9 @@ export default {
         'a-slide-in': { from: { opacity: '0', transform: 'translateX(28px)' }, to: { opacity: '1', transform: 'none' } },
         'a-pop':      { from: { opacity: '0', transform: 'scale(0.98)' }, to: { opacity: '1', transform: 'none' } },
         'a-pulse':    { '0%': { boxShadow: '0 0 0 0 rgb(var(--a-now) / 0.55)' }, '70%': { boxShadow: '0 0 0 8px rgb(var(--a-now) / 0)' }, '100%': { boxShadow: '0 0 0 0 rgb(var(--a-now) / 0)' } },
+        // The Loyalty Guide (2026-10-26): a scan line sweeping a card once, and icons drifting.
+        'a-sweep':    { from: { transform: 'translateY(0)', opacity: '0.2' }, '20%': { opacity: '1' }, '80%': { opacity: '1' }, to: { transform: 'translateY(7rem)', opacity: '0.2' } },
+        'a-float':    { '0%, 100%': { transform: 'translateY(0)' }, '50%': { transform: 'translateY(-6px)' } },
       },
       animation: {
         // `backwards`, not `both`: a held `transform: none` after the rise would override every hover lift (hover:-translate-y-*).
@@ -217,6 +220,8 @@ export default {
         'a-slide-in': 'a-slide-in 0.32s cubic-bezier(0.2, 0.8, 0.2, 1) both',
         'a-pop':      'a-pop 0.18s cubic-bezier(0.2, 0.8, 0.2, 1) both',
         'a-pulse':    'a-pulse 2.4s ease-out infinite',
+        'a-sweep':    'a-sweep 0.7s ease-in-out both',
+        'a-float':    'a-float 6s ease-in-out infinite',
       },
     },
   },

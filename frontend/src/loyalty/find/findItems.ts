@@ -1,12 +1,12 @@
 import type { LucideIcon } from 'lucide-react'
-import { Keyboard, LayoutGrid, Moon, PanelLeft, ScanLine, Sun, User } from 'lucide-react'
+import { BookOpen, Keyboard, LayoutGrid, Moon, PanelLeft, ScanLine, Sun, User } from 'lucide-react'
 import type { FindGroup } from '../../workspace/find/FindFrame'
 import { fold, type FindItem, type FindTarget } from '../../workspace/find/findCore'
 import type { WorkspaceNavItem } from '../../workspace/WorkspaceShell'
 import { memberPath } from '../lib/links'
 import type { MemberRow } from '../lib/types'
 
-export interface ActionWords { scan: string; goTo: string; toDark: string; toLight: string; collapse: string; expand: string; shortcuts: string }
+export interface ActionWords { scan: string; goTo: string; toDark: string; toLight: string; collapse: string; expand: string; shortcuts: string; guide?: string }
 
 /** Find's actions (spec 2026-10-21 §4.8): Scan, the areas, the other theme, the side panel (from 1024 px), the list of shortcuts. */
 export function findActions(p: { nav: Pick<WorkspaceNavItem, 'to' | 'label'>[]; dark: boolean; wide: boolean; slim: boolean; words: ActionWords }): FindItem[] {
@@ -16,6 +16,8 @@ export function findActions(p: { nav: Pick<WorkspaceNavItem, 'to' | 'label'>[]; 
     { id: 'theme', kind: p.dark ? 'light' : 'dark', label: p.dark ? p.words.toLight : p.words.toDark, go: { run: 'theme' } },
     ...(p.wide ? [{ id: 'rail', kind: 'rail', label: p.slim ? p.words.expand : p.words.collapse, go: { run: 'rail' } }] : []),
     { id: 'shortcuts', kind: 'shortcuts', label: p.words.shortcuts, go: { run: 'shortcuts' } },
+    // The Guide (owner 2026-10-26): short answers, the quick start and "Try a scan".
+    ...(p.words.guide ? [{ id: 'guide', kind: 'guide', label: p.words.guide, go: { to: '/loyalty/guide' } }] : []),
   ]
 }
 
@@ -58,6 +60,7 @@ export function iconOf(item: FindItem): LucideIcon {
     case 'light': return Sun
     case 'rail': return PanelLeft
     case 'shortcuts': return Keyboard
+    case 'guide': return BookOpen
     default: return User
   }
 }

@@ -540,6 +540,15 @@ the scan screen, door mode, the member page and list, Program, Ways to earn, Eve
   numbers and people, Start check-in and Door mode (the Scan page with the event chosen), check in by name, add a member.
 - **Membership** (release 8): a member's page shows the end date with Extend / Set a date / Remove (managers); the
   members list shows Expiring soon and Expired; progress follows the programme's measure.
+- **The Guide** (`/loyalty/guide`, `guide/`, owner 2026-10-26): the workspace's documentation for new staff, opened
+  from Help & resources (side panel and phone menu) and from Find. A search over everything (accents and case aside);
+  the quick start in five steps; a card per page, only the pages this person's menu has (`featuresFor()`, the same
+  rights as the menu); "Try a scan", the door's four answers acted out through the scan screen's own `answerVerdict()`
+  with the venue's lowest and highest tiers (nothing is sent); the questions by topic, one or two sentences each. It
+  reads nothing beyond the bootstrap. Words in `i18n/guide.<lang>.json` (`guide/words.ts`); a new question is an entry
+  in `FAQ` (`guideMath.ts`) and its `_q`/`_a` in all five bundles. `guide.test.tsx` checks every link the Guide opens
+  against the routes in `LoyaltyApp.tsx`, so a renamed page fails it. The motion (`animate-a-sweep`, `animate-a-float`,
+  in `tailwind.config.js`) is stilled under reduced motion like the rest.
 
 ## What the workspace does not do
 
@@ -651,14 +660,18 @@ files on disk): run them one after the other.
 
 ## Deploying
 
-- Release 9 is live (`main` 34162f4, pushed 2026-10-26 on the owner's word: the review's fixes, the redesign and the
-  nightly tier check, with the two release 8 follow-ups), built from branch commit 9d610df: the next release's change
-  list is `git diff --name-status 9d610df <tip>`. 189 source files, no deletions, no migration; on the deploy tree PHP
+- Not yet live: the Guide (`/loyalty/guide`, frontend only, no migration), on the branch after 12958a4. Since
+  2026-10-26 a finished job is deployed without asking (the owner's standing word, `CLAUDE.md` "Git and deploy").
+- Release 9b is live (`main` d775898, pushed 2026-10-26 on the owner's word: the reminders and the tier check at each
+  venue's own hour, the event dialog's single "Where", the deleted member's shorter notice), built from branch commit
+  12958a4: the next release's change list is `git diff --name-status 12958a4 <tip>`. 15 source files, no deletions, no
+  migration; on the deploy tree PHP 7013 passed, 7 skipped, the frontend 5423 passed, tsc clean; checked by content
+  (every source file on `main` equal to the branch, both hourly schedule lines, the new notice in the `LoyaltyApp`
+  chunk). Release 9 went out as `main` 34162f4 (the review's fixes, the redesign and the nightly tier check, with the
+  two release 8 follow-ups), built from branch commit 9d610df. 189 source files, no deletions, no migration; on the deploy tree PHP
   7011 passed, 7 skipped, the frontend 5423 passed, tsc clean. It was checked by content (every source file on `main`
   equal to the branch, `loyalty:assess-tiers` and its schedule present, the `LoyaltyApp` chunk carrying the new scan
-  screen); the live site could not be reached from the build environment. Not yet live, on the branch after 9d610df:
-  the reminders and the tier check at each venue's own hour, the event dialog's single "Where", the deleted member's
-  shorter notice (they ride the next deploy). Release 8 went out as `main` 3ffe5c5 from 63651b8 (membership for every
+  screen); the live site could not be reached from the build environment. Release 8 went out as `main` 3ffe5c5 from 63651b8 (membership for every
   industry). Release 7
   went out as `main` ffabebf from 40ffdaf (ways to earn and reward). Release 6b went out as
   `main` 65b3415 from 8ac5a62 (campaigns and offers with no brand are every brand's), release 6 as 7835cf0 from
