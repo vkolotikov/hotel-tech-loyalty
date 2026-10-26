@@ -231,7 +231,9 @@ Multi-tenant Laravel 13 + React (Vite, TypeScript) SaaS with four sub-brands. Pr
   soft landing steps down the measure's own ladder; a move never writes `tier_effective_until` (it is the grace clock,
   started by the first dip, stopped by qualifying again); progress never names an invitation-only tier and every points
   summary goes through `tierProgress()`; the active tiers are read per request (`LoyaltyTier::cachedActiveForCurrentOrg`),
-  never from the cache. At an event the membership is judged on the day it begins (door and sign-up alike). A deleted
+  never from the cache; `php artisan loyalty:assess-tiers` (nightly) re-assesses grace ended, "keep until" ended and,
+  on a windowed programme, every tier — only through `assessTier()`. At an event the membership is judged on the day
+  it begins (door and sign-up alike). A deleted
   member's standing sign-ups are released by `EventSignUp::releaseAll()`. A scan that got no answer is sent again with
   its own key (`scanMath.keyFor`), never a fresh one. Every fact once per screen; a verdict names the member once.
 - Testing against PostgreSQL (the SQLite schemas miss NOT NULL columns and indexes production has): build a database

@@ -440,6 +440,12 @@ the scan screen, door mode, the member page and list, Program, Ways to earn, Eve
   year after any move and then gave no grace at all — and qualifying again stops a running clock. "Keep until"
   (`tier_override_until`) is how staff hold a tier on purpose. Members moved before release 9 keep the year-ahead date
   they have (it runs out on its own) (`TierMovesTest`).
+- **The nightly tier check** (owner 2026-10-26): `php artisan loyalty:assess-tiers [--org=<organisation id>]` (daily
+  02:47 UTC) re-assesses, through `assessTier()`'s own rules, each active member whose grace deadline has come, whose
+  "keep until" ended in the last three days, and — on a windowed programme — every active member with a tier; each
+  under the member row's lock, recorded as `scheduled` in the tier history. A tier that still stands is not touched,
+  so a second run moves nobody twice. Points marked "not qualifying for tier" keep counting towards points tiers, as
+  before (owner 2026-10-26: keep as it is).
 - **Progress** never points at an invitation-only tier on any measure, and the points summary (portal, member app,
   full admin, `LoyaltyMember::getProgressToNextTier()`) goes through `tierProgress()` on the programme's basis.
 - **The active tiers** are read once per request or job (at most a minute in a long one), never from the cache: on
@@ -585,12 +591,11 @@ reports (Twilio's status callbacks); no receipts for the full admin's own push c
   progress number "points" until its next build. The two-tone sound and NFC in door mode were not tried on a real
   device.
 
-- **Release 9.** Points that a line marks "not qualifying for tier" (check-in, event, birthday, welcome bonuses) still
-  count towards points tiers on the lifetime basis (`qualifyingPointsFor()` reads `lifetime_points`) — changing it
-  would move members, so it waits for the owner's word. A member switched off keeps their event sign-ups (and the place
+- **Release 9.** Points that a line marks "not qualifying for tier" (check-in, event, birthday, welcome bonuses) count
+  towards points tiers on the lifetime basis (`qualifyingPointsFor()` reads `lifetime_points`), as they always have
+  (owner 2026-10-26: keep as it is). A member switched off keeps their event sign-ups (and the place
   they hold). The membership reminders run at 08:37 UTC for every venue (each on its own day), early morning in the
-  Americas. Tiers are not re-assessed on a schedule: "keep until", a grace period's end and the windowed basis take
-  effect at the member's next award, refund or visit.
+  Americas; the nightly tier check runs at 02:47 UTC, the same moment for every venue.
 
 ## Tests on PostgreSQL
 
@@ -767,6 +772,7 @@ files on disk): run them one after the other.
 - Program: the tiers read as a ladder; Events: open one and find Add a member, Edit and Cancel under More.
 - Portal on a phone: the tier name is readable on the card, numbers have their separators, the tier's benefits sit
   under the progress bar.
+- The next morning: Laravel Cloud's scheduler log shows `loyalty:assess-tiers` ran at 02:47 ("… moved of … checked").
 
 ### After the release 8 deploy (owner, signed in)
 

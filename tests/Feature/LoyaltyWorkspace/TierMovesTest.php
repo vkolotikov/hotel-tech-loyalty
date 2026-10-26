@@ -135,6 +135,51 @@ class TierMovesTest extends TestCase
         $this->assertNull($this->grace->fresh()->tier_effective_until);
     }
 
+    // ─── The nightly check (loyalty:assess-tiers, owner 2026-10-26) ────────────
+
+    public function test_the_nightly_check_drops_a_tier_whose_grace_or_keep_until_has_ended_and_moves_nobody_twice(): void
+    {
+        // Ada (Gold, 1,500 points) dipped to 300 and her 30 days of grace ended yesterday; nothing has happened to her since.
+        $this->tiers['gold']->forceFill(['grace_period_days' => 30])->save();
+        LoyaltyTier::flushCacheFor($this->org->id);
+        $this->ada->forceFill(['lifetime_points' => 300, 'tier_effective_until' => now()->subDay()->toDateString()])->save();
+        // Grace (Silver) was put on Platinum with "keep until" yesterday; her 200 points are Silver's.
+        $this->grace->forceFill(['tier_id' => $this->tiers['platinum']->id, 'tier_override_until' => now()->subDay(), 'tier_effective_until' => null])->save();
+        // Another Gold member, still holding by her grace: untouched.
+        $held = $this->makeMember('Held Gold', 'held@example.test', ['current_points' => 300, 'lifetime_points' => 300, 'tier_id' => $this->tiers['gold']->id, 'tier_effective_until' => now()->addDays(5)->toDateString()]);
+
+        $this->artisan('loyalty:assess-tiers')->expectsOutput('2 moved of 2 checked')->assertSuccessful();
+        $this->assertSame('Silver', $this->tierOf($this->ada));
+        $this->assertSame('Silver', $this->tierOf($this->grace));
+        $this->assertSame('Gold', $this->tierOf($held));
+        $this->assertSame(2, AuditLog::query()->where('action', 'tier_downgraded')->count());
+        $this->assertSame(2, \App\Models\TierAssessment::query()->where('reason', 'scheduled')->count());
+
+        // A second run the same night moves nobody.
+        $this->artisan('loyalty:assess-tiers')->expectsOutput('0 moved of 1 checked')->assertSuccessful();
+        $this->artisan('loyalty:assess-tiers', ['--org' => $this->org->id + 1000])->expectsOutput('0 moved of 0 checked')->assertSuccessful();
+    }
+
+    public function test_on_a_windowed_programme_the_nightly_check_reads_every_member_with_a_tier(): void
+    {
+        \App\Models\HotelSetting::create(['key' => 'tier_qualification_basis', 'value' => LoyaltyService::BASIS_WINDOWED, 'type' => 'string', 'group' => 'loyalty', 'label' => 'Tier qualification basis']);
+        // Ada's 1,500 points were all earned more than a year ago: her window holds none, and nothing has happened since.
+        \Illuminate\Support\Facades\DB::table('points_transactions')->insert(['organization_id' => $this->org->id, 'member_id' => $this->ada->id, 'type' => 'earn', 'points' => 1500, 'balance_after' => 1500, 'description' => 'A stay', 'created_at' => now()->subMonths(14), 'updated_at' => now()->subMonths(14)]);
+        $this->ada->forceFill(['tier_effective_until' => null])->save();
+
+        $this->artisan('loyalty:assess-tiers')->assertSuccessful();
+        $this->assertSame('Silver', $this->tierOf($this->ada));
+    }
+
+    public function test_the_nightly_check_is_scheduled_once_a_night_without_overlapping(): void
+    {
+        $event = collect(app(\Illuminate\Console\Scheduling\Schedule::class)->events())
+            ->first(fn ($e) => str_contains((string) $e->command, 'loyalty:assess-tiers'));
+        $this->assertNotNull($event);
+        $this->assertSame('47 2 * * *', $event->expression);
+        $this->assertTrue($event->withoutOverlapping);
+    }
+
     public function test_progress_never_points_at_an_invitation_only_tier_and_the_points_summary_agrees(): void
     {
         $this->tiers['platinum']->forceFill(['invitation_only' => true])->save();
