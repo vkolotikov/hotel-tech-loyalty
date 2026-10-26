@@ -82,7 +82,7 @@ export function WayCard({ way, answer, manage, defaultOpen = false }: { way: Way
   return (
     <form id={`way-${way.key}`} data-way={way.key} data-on={form.on ? '' : undefined} data-hue={form.on ? GROUP_HUE[groupOf(way.key)] : 'off'}
       aria-labelledby={titleId} noValidate onSubmit={submit}
-      className={`flex scroll-mt-20 flex-col gap-3 rounded-2xl border bg-a-surface p-4 sm:p-5 ${form.on ? 'border-a-border' : 'border-dashed border-a-border'} ${open ? 'l-hue-edge shadow-a-sm' : ''} ${defaultOpen ? 'ring-2 ring-a-accent/40' : ''}`}>
+      className={`flex scroll-mt-20 flex-col gap-3 rounded-2xl border bg-a-surface p-4 sm:p-5 ${form.on ? 'border-a-border' : 'border-dashed border-a-border'} ${open ? 'l-hue-edge shadow-a-sm' : ''} ${defaultOpen ? 'ring-2 ring-a-accent-text/40' : ''}`}>
       <div className="flex items-center gap-3">
         <WayIcon way={way.key} on={form.on} />
         <div className="min-w-0 flex-1">
