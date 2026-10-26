@@ -660,11 +660,15 @@ files on disk): run them one after the other.
 
 ## Deploying
 
-- Not yet live: the Guide (`/loyalty/guide`, frontend only, no migration), on the branch after 12958a4. Since
-  2026-10-26 a finished job is deployed without asking (the owner's standing word, `CLAUDE.md` "Git and deploy").
-- Release 9b is live (`main` d775898, pushed 2026-10-26 on the owner's word: the reminders and the tier check at each
-  venue's own hour, the event dialog's single "Where", the deleted member's shorter notice), built from branch commit
-  12958a4: the next release's change list is `git diff --name-status 12958a4 <tip>`. 15 source files, no deletions, no
+- Since 2026-10-26 a finished job is deployed without asking (the owner's standing word, `CLAUDE.md` "Git and
+  deploy"); the recipe's checks still decide.
+- The Guide is live (`main` 3679c27, pushed 2026-10-26: `/loyalty/guide`, with the standing word in `CLAUDE.md`),
+  built from branch commit fc76959: the next release's change list is `git diff --name-status fc76959 <tip>`. 21
+  source files, no deletions, no migration; on the deploy tree PHP 7013 passed, 7 skipped, the frontend 5440 passed,
+  tsc clean; checked by content (every source file on `main` equal to the branch, the Guide's words and route in the
+  `LoyaltyApp` chunk).
+- Release 9b went out as `main` d775898 (the reminders and the tier check at each venue's own hour, the event dialog's
+  single "Where", the deleted member's shorter notice), built from branch commit 12958a4. 15 source files, no deletions, no
   migration; on the deploy tree PHP 7013 passed, 7 skipped, the frontend 5423 passed, tsc clean; checked by content
   (every source file on `main` equal to the branch, both hourly schedule lines, the new notice in the `LoyaltyApp`
   chunk). Release 9 went out as `main` 34162f4 (the review's fixes, the redesign and the nightly tier check, with the
