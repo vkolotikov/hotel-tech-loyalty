@@ -120,7 +120,7 @@ describe('a member’s page, release 2 (§4.1)', () => {
     const words = text(html)
     expect(words).toContain('Deleted member')
     expect(words).toContain('HL-2026-000030')
-    expect(words).toContain('This member was deleted.')
+    expect(words).toContain('Deleted: name and contact details are gone')
     expect(words).toContain('Points history')
     expect(words).toContain('Spa visit')
     for (const gone of ['Award points', 'Redeem points', 'Details', 'deleted-member-30@deleted.local']) expect(words).not.toContain(gone)

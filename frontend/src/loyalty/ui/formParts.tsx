@@ -13,9 +13,10 @@ import type { Tone } from '../lib/forms'
 
 /**
  * A labelled control and what is wrong with it. The label wraps the control; the hint and the problem are tied to it
- * by `aria-describedby`, and the control says it is invalid while there is a problem.
+ * by `aria-describedby`, and the control says it is invalid while there is a problem. `hideLabel` says the label to a
+ * screen reader only, where a section's heading above already says it (release 9: no word twice).
  */
-export function FormField({ label, hint, problem, children }: { label: string; hint?: string; problem?: string | null; children: ReactElement }) {
+export function FormField({ label, hint, problem, hideLabel = false, children }: { label: string; hint?: string; problem?: string | null; hideLabel?: boolean; children: ReactElement }) {
   const id = useId()
   const described = [hint ? `${id}-hint` : '', problem ? `${id}-problem` : ''].filter(Boolean).join(' ')
   const control = isValidElement(children)
@@ -24,7 +25,7 @@ export function FormField({ label, hint, problem, children }: { label: string; h
   return (
     <div>
       <label className="block">
-        <span className="mb-1 block text-xs font-medium text-a-text-2">{label}</span>
+        <span className={hideLabel ? 'sr-only' : 'mb-1 block text-xs font-medium text-a-text-2'}>{label}</span>
         {control}
       </label>
       {hint && <p id={`${id}-hint`} className="mt-1 text-xs text-a-text-2">{hint}</p>}

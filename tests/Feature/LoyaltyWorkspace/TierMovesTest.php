@@ -176,8 +176,26 @@ class TierMovesTest extends TestCase
         $event = collect(app(\Illuminate\Console\Scheduling\Schedule::class)->events())
             ->first(fn ($e) => str_contains((string) $e->command, 'loyalty:assess-tiers'));
         $this->assertNotNull($event);
-        $this->assertSame('47 2 * * *', $event->expression);
+        $this->assertSame('47 * * * *', $event->expression);
+        $this->assertStringContainsString('--at-venue-hour=5', (string) $event->command);
         $this->assertTrue($event->withoutOverlapping);
+    }
+
+    public function test_the_nightly_check_runs_for_each_venue_at_its_own_five_oclock(): void
+    {
+        // Ada's grace ended yesterday; the venue is in Riga (UTC+3 in October).
+        $this->tiers['gold']->forceFill(['grace_period_days' => 30])->save();
+        LoyaltyTier::flushCacheFor($this->org->id);
+        $this->ada->forceFill(['lifetime_points' => 300, 'tier_effective_until' => now()->subDay()->toDateString()])->save();
+        $this->org->forceFill(['timezone' => 'Europe/Riga'])->save();
+        app()->forgetScopedInstances();
+
+        $this->travelTo(\Carbon\CarbonImmutable::parse('2026-10-05 01:47:00'));   // 04:47 in Riga
+        $this->artisan('loyalty:assess-tiers', ['--at-venue-hour' => 5])->expectsOutput('0 moved of 0 checked')->assertSuccessful();
+        $this->assertSame('Gold', $this->tierOf($this->ada));
+        $this->travelTo(\Carbon\CarbonImmutable::parse('2026-10-05 02:47:00'));   // 05:47 in Riga
+        $this->artisan('loyalty:assess-tiers', ['--at-venue-hour' => 5])->expectsOutput('1 moved of 1 checked')->assertSuccessful();
+        $this->assertSame('Silver', $this->tierOf($this->ada));
     }
 
     public function test_progress_never_points_at_an_invitation_only_tier_and_the_points_summary_agrees(): void

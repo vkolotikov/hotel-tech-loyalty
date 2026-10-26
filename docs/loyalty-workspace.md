@@ -404,8 +404,10 @@ visits or spend, and a scan screen that is easy on location).
   a date, extend by 1/3/6/12 months from the later of today and the current end (a month without that day ends on its
   last day), or remove it; audited `member.validity_changed`; a changed date allows a new reminder. The member's state:
   `active`, `expiring` (≤ 30 days), `expired`, `off`. An expired member keeps earning and spending at the desk; only
-  places and events refuse. `php artisan loyalty:membership-reminders` (daily 08:37) keeps an inbox message and a push
-  14 days before the end, once per end date, on each venue's clock (`ValidityTest`, `ValidityRemindersTest`).
+  places and events refuse. `php artisan loyalty:membership-reminders` keeps an inbox message and a push 14 days
+  before the end, once per end date, on each venue's clock — scheduled hourly with `--at-venue-hour=9`, so each venue
+  is reminded in its own 9 o'clock hour (release 9; by hand without the option, every venue at once)
+  (`ValidityTest`, `ValidityRemindersTest`).
   Add member and the import (`valid_until`, YYYY-MM-DD) take one too.
 - **Tier progress** (`tier_progress_by`: points | visits | spend, a card on Ways to earn): a visit of any source —
   appointment, stay, check-in, purchase, event — adds one to `qualifying_visits`, once per member per venue day (every
@@ -440,8 +442,10 @@ the scan screen, door mode, the member page and list, Program, Ways to earn, Eve
   year after any move and then gave no grace at all — and qualifying again stops a running clock. "Keep until"
   (`tier_override_until`) is how staff hold a tier on purpose. Members moved before release 9 keep the year-ahead date
   they have (it runs out on its own) (`TierMovesTest`).
-- **The nightly tier check** (owner 2026-10-26): `php artisan loyalty:assess-tiers [--org=<organisation id>]` (daily
-  02:47 UTC) re-assesses, through `assessTier()`'s own rules, each active member whose grace deadline has come, whose
+- **The nightly tier check** (owner 2026-10-26): `php artisan loyalty:assess-tiers [--org=<organisation id>]
+  [--at-venue-hour=<hour 0-23>]` — scheduled hourly with `--at-venue-hour=5`, so each venue is checked in its own 5
+  o'clock hour, clear of the hours clocks change; by hand without the option, every venue at once — re-assesses,
+  through `assessTier()`'s own rules, each active member whose grace deadline has come, whose
   "keep until" ended in the last three days, and — on a windowed programme — every active member with a tier; each
   under the member row's lock, recorded as `scheduled` in the tier history. A tier that still stands is not touched,
   so a second run moves nobody twice. Points marked "not qualifying for tier" keep counting towards points tiers, as
@@ -594,8 +598,9 @@ reports (Twilio's status callbacks); no receipts for the full admin's own push c
 - **Release 9.** Points that a line marks "not qualifying for tier" (check-in, event, birthday, welcome bonuses) count
   towards points tiers on the lifetime basis (`qualifyingPointsFor()` reads `lifetime_points`), as they always have
   (owner 2026-10-26: keep as it is). A member switched off keeps their event sign-ups (and the place
-  they hold). The membership reminders run at 08:37 UTC for every venue (each on its own day), early morning in the
-  Americas; the nightly tier check runs at 02:47 UTC, the same moment for every venue.
+  they hold). The hourly reminder and tier-check runs act for a venue only in its own hour, so a scheduler down for
+  that hour skips the venue for that day (the next day's run catches up: the reminder window is two weeks, and "keep
+  until" ended is read three days back).
 
 ## Tests on PostgreSQL
 
@@ -646,20 +651,24 @@ files on disk): run them one after the other.
 
 ## Deploying
 
-- Release 8 is live (`main` 3ffe5c5, pushed 2026-10-25 on the owner's word: membership for every industry), built
-  from branch commit 63651b8: the next release's change list is `git diff --name-status 63651b8 <tip>`. It was checked
-  by content (every source file on `main` equal to the branch, the three migrations and the reminder's schedule
-  present, the `LoyaltyApp` chunk carrying the new scan screen); the live site could not be reached from the build
-  environment. Not yet live, on the branch after 63651b8: two release 8 follow-ups (the portal menu offers Events only
-  when an event the member's tier may attend is coming; the scan screen words a `409 in_progress` answer) and release
-  9 (the review's fixes and the redesign, no migration). They ride the next deploy (the change list above picks them
-  up). Release 7
+- Release 9 is live (`main` 34162f4, pushed 2026-10-26 on the owner's word: the review's fixes, the redesign and the
+  nightly tier check, with the two release 8 follow-ups), built from branch commit 9d610df: the next release's change
+  list is `git diff --name-status 9d610df <tip>`. 189 source files, no deletions, no migration; on the deploy tree PHP
+  7011 passed, 7 skipped, the frontend 5423 passed, tsc clean. It was checked by content (every source file on `main`
+  equal to the branch, `loyalty:assess-tiers` and its schedule present, the `LoyaltyApp` chunk carrying the new scan
+  screen); the live site could not be reached from the build environment. Not yet live, on the branch after 9d610df:
+  the reminders and the tier check at each venue's own hour, the event dialog's single "Where", the deleted member's
+  shorter notice (they ride the next deploy). Release 8 went out as `main` 3ffe5c5 from 63651b8 (membership for every
+  industry). Release 7
   went out as `main` ffabebf from 40ffdaf (ways to earn and reward). Release 6b went out as
   `main` 65b3415 from 8ac5a62 (campaigns and offers with no brand are every brand's), release 6 as 7835cf0 from
   1a37e68, release 5b as 5b481aa from ea8b364, release 5 as 8a04f86 from 6adf121, release 4 as 097432a from a7e87ae.
   Neither release 6 nor 6b could be checked on the live site from the build environment either (its network policy
   refuses `app.hexa-tech.uk`): `main` was checked by content instead (every source file equal to the branch, the
   built bundle carrying the new strings).
+- **Release 9** (review fixes, redesign, nightly tier check; live as `main` 34162f4, 2026-10-26). No migration. One new
+  scheduled command: `php artisan loyalty:assess-tiers [--org=<organisation id>]` (daily 02:47 UTC). No new route. The
+  change to tiers takes effect for moves from now on: a member moved before keeps the year-ahead grace date they have.
 - **Release 8** (membership for every industry; live as `main` 3ffe5c5, 2026-10-25).
   Three migrations, each tried on PostgreSQL with rollback, adding tables and defaulted or nullable columns only:
   `2026_10_25_140000_create_access_places` (`access_places`, `access_place_tiers`, `scan_events.access_place_id` and
@@ -772,7 +781,8 @@ files on disk): run them one after the other.
 - Program: the tiers read as a ladder; Events: open one and find Add a member, Edit and Cancel under More.
 - Portal on a phone: the tier name is readable on the card, numbers have their separators, the tier's benefits sit
   under the progress bar.
-- The next morning: Laravel Cloud's scheduler log shows `loyalty:assess-tiers` ran at 02:47 ("… moved of … checked").
+- The next morning: Laravel Cloud's scheduler log shows `loyalty:assess-tiers --at-venue-hour=5` running each hour at
+  :47 ("… moved of … checked"; "0 of 0" in the hours that are no venue's 5 o'clock).
 
 ### After the release 8 deploy (owner, signed in)
 

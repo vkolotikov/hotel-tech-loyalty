@@ -130,7 +130,7 @@ export function EventDialog({ event, options, onClose }: { event: LoyaltyEventRo
 
         <Section icon={MapPin} title={t('loyalty.events.dialog.where', 'Where')}>
           {places.length > 0 && (
-            <FormField label={t('loyalty.events.dialog.where_label', 'Place')} problem={problem('place_id')}>
+            <FormField hideLabel label={t('loyalty.events.dialog.where_label', 'Place')} problem={problem('place_id')}>
               <select value={whereValue} className={INPUT} onChange={(e) => {
                 const v = e.target.value
                 if (v.startsWith('place:')) update({ where: 'place', place_id: Number(v.slice(6)) })
@@ -143,7 +143,7 @@ export function EventDialog({ event, options, onClose }: { event: LoyaltyEventRo
             </FormField>
           )}
           {(places.length === 0 || form.where === 'location') && (
-            <FormField label={places.length === 0 ? t('loyalty.events.dialog.where_label', 'Place') : t('loyalty.events.dialog.location', 'Where exactly')} problem={problem('location')}>
+            <FormField hideLabel={places.length === 0} label={places.length === 0 ? t('loyalty.events.dialog.where_label', 'Place') : t('loyalty.events.dialog.location', 'Where exactly')} problem={problem('location')}>
               <input type="text" value={form.location} maxLength={200} className={INPUT}
                 onChange={(e) => update({ location: e.target.value, where: 'location', place_id: null })}
                 placeholder={t('loyalty.events.dialog.location_example', 'e.g. The terrace, 2nd floor')} />

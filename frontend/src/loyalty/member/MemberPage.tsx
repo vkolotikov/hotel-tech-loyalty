@@ -128,7 +128,7 @@ function Member({ detail, locale }: { detail: MemberDetail; locale: string }) {
           {member.member_number && <p className="font-a-mono text-sm text-a-text-2">{member.member_number}</p>}
         </div>
         <div className="max-w-2xl">
-          <Notice tone="info">{t('loyalty.membership.page.erased', 'This member was deleted. Their name and contact details are gone; the member number and the points history stay, so the figures still add up.')}</Notice>
+          <Notice tone="info">{t('loyalty.membership.page.erased', 'Deleted: name and contact details are gone; the number and points history stay.')}</Notice>
         </div>
         <History memberId={member.id} balance={member.points} locale={locale} />
       </div>
