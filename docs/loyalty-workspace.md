@@ -688,9 +688,15 @@ files on disk): run them one after the other.
 
 - Since 2026-10-26 a finished job is deployed without asking (the owner's standing word, `CLAUDE.md` "Git and
   deploy"); the recipe's checks still decide.
-- The Ways to earn and Rewards design pass is live (`main` d827fcb, pushed 2026-10-26: colour families, sections,
-  Change, tab counts, catalogue filter and cards), built from branch commit 410fec7: the next release's change list is
-  `git diff --name-status 410fec7 <tip>`. 29 source files, no deletions, no migration; on the deploy tree PHP 7013
+- Ways to earn's tabs and checks are live (`main` a6c06e8, pushed 2026-10-26: ProgrammeAdvice, the earn rate card,
+  Overview / Earn points / Bonuses / Rules, Turn on from the industry's preset), built from branch commit aabd384: the
+  next release's change list is `git diff --name-status aabd384 <tip>`. 28 source files, no deletions, no migration;
+  on the deploy tree PHP 7020 passed, 7 skipped, the frontend 5467 passed, tsc clean (its first run caught a raw-accent
+  ring the workspace's line rule refuses — fixed in aabd384 before the build); the options and checks tests also pass
+  on PostgreSQL; checked by content (every source file on `main` equal to the branch, `earn_rate` in ProgrammeOptions,
+  the Overview's words in the built SPA).
+- The Ways to earn and Rewards design pass went out as `main` d827fcb (colour families, sections, Change, tab counts,
+  catalogue filter and cards), built from branch commit 410fec7. 29 source files, no deletions, no migration; on the deploy tree PHP 7013
   passed, 7 skipped, the frontend 5464 passed, tsc clean; checked by content (every source file on `main` equal to the
   branch, the colour classes and the new words in the built SPA).
 - The member portal's Help went out as `main` acced03 (`/portal/help`, `docs/member-portal.md`), built from branch
