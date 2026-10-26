@@ -651,14 +651,16 @@ files on disk): run them one after the other.
 
 ## Deploying
 
-- Release 9 is live (`main` 34162f4, pushed 2026-10-26 on the owner's word: the review's fixes, the redesign and the
-  nightly tier check, with the two release 8 follow-ups), built from branch commit 9d610df: the next release's change
-  list is `git diff --name-status 9d610df <tip>`. 189 source files, no deletions, no migration; on the deploy tree PHP
+- Release 9b is live (`main` d775898, pushed 2026-10-26 on the owner's word: the reminders and the tier check at each
+  venue's own hour, the event dialog's single "Where", the deleted member's shorter notice), built from branch commit
+  12958a4: the next release's change list is `git diff --name-status 12958a4 <tip>`. 15 source files, no deletions, no
+  migration; on the deploy tree PHP 7013 passed, 7 skipped, the frontend 5423 passed, tsc clean; checked by content
+  (every source file on `main` equal to the branch, both hourly schedule lines, the new notice in the `LoyaltyApp`
+  chunk). Release 9 went out as `main` 34162f4 (the review's fixes, the redesign and the nightly tier check, with the
+  two release 8 follow-ups), built from branch commit 9d610df. 189 source files, no deletions, no migration; on the deploy tree PHP
   7011 passed, 7 skipped, the frontend 5423 passed, tsc clean. It was checked by content (every source file on `main`
   equal to the branch, `loyalty:assess-tiers` and its schedule present, the `LoyaltyApp` chunk carrying the new scan
-  screen); the live site could not be reached from the build environment. Not yet live, on the branch after 9d610df:
-  the reminders and the tier check at each venue's own hour, the event dialog's single "Where", the deleted member's
-  shorter notice (they ride the next deploy). Release 8 went out as `main` 3ffe5c5 from 63651b8 (membership for every
+  screen); the live site could not be reached from the build environment. Release 8 went out as `main` 3ffe5c5 from 63651b8 (membership for every
   industry). Release 7
   went out as `main` ffabebf from 40ffdaf (ways to earn and reward). Release 6b went out as
   `main` 65b3415 from 8ac5a62 (campaigns and offers with no brand are every brand's), release 6 as 7835cf0 from
