@@ -656,8 +656,10 @@ files on disk): run them one after the other.
   list is `git diff --name-status 9d610df <tip>`. 189 source files, no deletions, no migration; on the deploy tree PHP
   7011 passed, 7 skipped, the frontend 5423 passed, tsc clean. It was checked by content (every source file on `main`
   equal to the branch, `loyalty:assess-tiers` and its schedule present, the `LoyaltyApp` chunk carrying the new scan
-  screen); the live site could not be reached from the build environment. Release 8 went out as `main` 3ffe5c5 from
-  63651b8 (membership for every industry). Release 7
+  screen); the live site could not be reached from the build environment. Not yet live, on the branch after 9d610df:
+  the reminders and the tier check at each venue's own hour, the event dialog's single "Where", the deleted member's
+  shorter notice (they ride the next deploy). Release 8 went out as `main` 3ffe5c5 from 63651b8 (membership for every
+  industry). Release 7
   went out as `main` ffabebf from 40ffdaf (ways to earn and reward). Release 6b went out as
   `main` 65b3415 from 8ac5a62 (campaigns and offers with no brand are every brand's), release 6 as 7835cf0 from
   1a37e68, release 5b as 5b481aa from ea8b364, release 5 as 8a04f86 from 6adf121, release 4 as 097432a from a7e87ae.
