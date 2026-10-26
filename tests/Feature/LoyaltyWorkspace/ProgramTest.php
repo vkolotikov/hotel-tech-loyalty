@@ -79,10 +79,33 @@ class ProgramTest extends TestCase
             'check_time'   => false,
         ]);
 
+        // Release 10: each tier starts at its own figure and every benefit is given: nothing to check.
+        $response->assertJsonPath('advice', []);
+
         $response->assertJsonPath('options.categories', ['accommodation', 'dining', 'wellness', 'transport', 'recognition', 'points', 'access', 'discount', 'other'])
             ->assertJsonPath('options.fulfillment_modes', ['automatic', 'staff_approved', 'pms_linked', 'voucher', 'on_request'])
             ->assertJsonPath('options.value_types', DiscountService::VALUE_TYPES)
             ->assertJsonPath('options.applies_to', ['all', 'services', 'stays']);
+    }
+
+    public function test_it_says_what_the_ladder_and_the_catalogue_leave_out(): void
+    {
+        // Release 10 (the owner's Figma 163:88): Gold now starts where Silver does, so earning never reaches it; and a
+        // benefit is in the catalogue that no tier gives.
+        $this->tiers['gold']->update(['min_points' => 0]);
+        $spa = $this->benefit('Spa ritual', 'spa_ritual', 'wellness');
+        $this->benefit('Retired perk', 'retired', 'other', ['is_active' => false]);
+
+        $advice = $this->asStaffMember()->getJson($this->api('program'))->assertOk()->json('advice');
+
+        $this->assertSame([
+            [
+                'code' => 'tiers_share_threshold', 'level' => 'warn', 'params' => ['value' => 0],
+                'tiers' => [['id' => $this->tiers['silver']->id, 'name' => 'Silver'], ['id' => $this->tiers['gold']->id, 'name' => 'Gold']],
+                'benefits' => [],
+            ],
+            ['code' => 'benefit_unused', 'level' => 'tip', 'params' => ['n' => 1], 'tiers' => [], 'benefits' => [['id' => $spa->id, 'name' => 'Spa ritual']]],
+        ], $advice);
     }
 
     public function test_a_boost_is_live_upcoming_ended_or_off(): void

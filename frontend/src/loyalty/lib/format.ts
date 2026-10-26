@@ -58,3 +58,8 @@ export function day(iso: string | null, locale: string, timeZone: string): strin
   const key = dayOf(iso, timeZone)
   return key ? formatDate(key, locale || 'en', { day: 'numeric', month: 'short', year: 'numeric' }) : ''
 }
+
+/** Names as the language lists them ("Silver, Gold and Platinum"). */
+export function listOf(names: readonly string[], locale: string): string {
+  return new Intl.ListFormat(locale || 'en', { style: 'long', type: 'conjunction' }).format(names)
+}

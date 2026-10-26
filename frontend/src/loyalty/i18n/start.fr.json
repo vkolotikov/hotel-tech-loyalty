@@ -1,0 +1,39 @@
+{
+  "all_done": "Tout est prêt : votre programme est en place",
+  "all_done_line": "Toutes les étapes sont faites. Le Guide répond à la suite.",
+  "card_next": "Ensuite : {{step}}",
+  "card_title": "Configurer votre programme : {{done}} sur {{total}} terminées",
+  "continue": "Continuer",
+  "do_next": "À faire ensuite",
+  "done": "Fait",
+  "line": "Configurez votre programme étape par étape. Chaque étape ouvre la page qui la réalise et se coche toute seule une fois faite.",
+  "open": "Ouvrir",
+  "progress": "{{done}} sur {{total}} terminées",
+  "step_count": {
+    "member": "{{n}} membres",
+    "rewards": "{{n}} proposée(s)",
+    "scan": "{{n}} scans",
+    "tiers": "{{n}} utilisé(s)",
+    "ways": "{{n}} à corriger"
+  },
+  "step_line": {
+    "logo": "Les membres le voient sur leur carte et dans l’appli.",
+    "member": "Ajoutez quelqu’un à la main, ou importez votre liste.",
+    "programme": "Quatre questions rapides règlent les gains, les bonus et les premiers niveaux pour votre activité. Tout se modifie ensuite.",
+    "rewards": "Ce que les membres obtiennent avec leurs points, visible dans l’appli membre et sur le portail.",
+    "scan": "Scannez la carte ou le QR code d’un membre : l’écran dit qui c’est et ce qu’il peut faire.",
+    "tiers": "Des paliers comme Argent et Or : comment les atteindre et ce qu’ils offrent.",
+    "ways": "Façons de gagner vérifie que vos réglages vont ensemble et corrige presque tout en un clic."
+  },
+  "step_title": {
+    "logo": "Mettez votre logo sur la carte",
+    "member": "Ajoutez votre premier membre",
+    "programme": "Choisissez le fonctionnement de votre programme",
+    "rewards": "Ajoutez des récompenses",
+    "scan": "Essayez un scan à l’accueil",
+    "tiers": "Configurez vos niveaux",
+    "ways": "Vérifiez comment les membres gagnent"
+  },
+  "steps": "Étapes de configuration",
+  "title": "Pour commencer"
+}

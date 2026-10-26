@@ -76,6 +76,7 @@ staff member restricted to one brand is still held to it by the `brand` middlewa
 | SMS (`feature:campaigns`, release 4) | `GET/POST sms`, `GET/PUT/DELETE sms/{id}`, `GET sms/{id}/audience`, `POST sms/{id}/test`, `/send` (`recipients`, `revision`), `/schedule`, `/unschedule`, `/cancel`, `/duplicate` |
 | Card & app | `GET/PUT wallet`, `POST wallet/apple-cert`, `/apple-wwdr`, `/google-service-account` (`feature:wallet`); `GET/PUT app-look`, `POST app-look/logo`; release 4: `GET currency`, `PUT currency` (`currency`, `dry_run`) |
 | Ways to earn (release 7) | `GET options`, `PUT options` (`options`: a partial change), `POST options/setup` (`preset`, `options`, `idempotency_key`), `POST options/setup/skip` |
+| Start here (release 10) | `GET start` (SetupProgress: `steps` — `key`, `done`, `count` — `done`, `total`; every staff member); `GET program` also answers `advice` (TierAdvice) |
 | Visits (release 7) | `POST members/{id}/check-in` (`amount`, `note`, `idempotency_key`), `GET members/{id}/stamps` |
 | Credit (release 7) | `GET members/{id}/credit?page` (25 a page), `POST members/{id}/credit/spend` (`amount`, `note`, `idempotency_key`), `POST members/{id}/credit/adjust` (`amount`, signed, `reason`, `idempotency_key`) |
 | Places (release 8) | `GET places`, `POST places`, `PUT places/{id}` (`name`, `description`, `admits` all\|tiers, `tier_ids`, `is_active`, `sort_order`, `idempotency_key`), `DELETE places/{id}` (switched off instead once it has entries or an event names it), `GET places/{id}/entries?day=&page=` (50 a page); `POST scan` takes `place_id` or `event_id` |
@@ -613,6 +614,24 @@ the scan screen, door mode, the member page and list, Program, Ways to earn, Eve
     offers, email campaigns, segments, push messages, SMS and upcoming events (New event stays in the header).
   - *Benefits say where they are used* ("Given by Silver · Gold", or that no tier gives one yet).
   - Spanish addresses staff as *usted*, as the rest of the workspace does (Campaigns, Push and Insights test it).
+- **Release 10, guidance** (the second part of the same spec):
+  - *Start here* (`/loyalty/start`, `start/`): how far the programme is set up and each step in order — the wizard,
+    a tier in use, Ways to earn without warnings, a reward offered, the logo on the card, a member, a scan — done (a
+    tick) or the page that does it, the next one first in its colour with "Do this next". The steps and whether each is
+    done are `App\Services\Loyalty\Setup\SetupProgress`'s (reads only; `GET start`, every staff member); the list ticks
+    itself as staff work. A manager sees "Set up your programme: n of 7 done · Next: …" on Members until every step is
+    done (it replaces the wizard's banner there; the wizard is the first step, and its banner stays on Ways to earn);
+    the Guide's quick start and Find lead to it too. A new step is a key in `SetupProgress::STEPS` and its page in
+    `start/startMath.ts` `STEP_TO` (`start.test.tsx` fails until it is placed) with its words in all five bundles.
+  - *Program's checks* (`App\Services\Loyalty\Programme\TierAdvice`, reads only, in the program answer as `advice`):
+    `tiers_share_threshold` (warn) when two or more tiers members reach by earning start at the same figure on the
+    programme's measure — only one of them is ever reached by earning (LoyaltyService picks one per figure); a
+    switched-off, invitation-only or floorless tier does not count — as the owner's amber banner with each tier to
+    open, and the Tiers card's waiting count; `benefit_unused` (tip) for benefits switched on that no tier in use gives,
+    on Benefits with "Go to Tiers".
+  - *The tier form shows the member's side* (the owner's 163:166): the earn rate in figures as it is typed ("100 base
+    points become 125 points") and "What members see" — the chip, the rate in words, the tier's benefits; a boost's
+    multiplier says the same ("100 points become 200").
 
 ## What the workspace does not do
 
@@ -726,9 +745,15 @@ files on disk): run them one after the other.
 
 - Since 2026-10-26 a finished job is deployed without asking (the owner's standing word, `CLAUDE.md` "Git and
   deploy"); the recipe's checks still decide.
-- Ways to earn's Overview is live (`main` d905343, pushed 2026-10-26: the status line, each check's one-press fix,
-  the members' journey with its map and timeline, the no-`#…`-link rule), built from branch commit 80ff815: the next
-  release's change list is `git diff --name-status 80ff815 <tip>`. 18 source files, no deletions, no migration; on the
+- Release 10a, the frame from the owner's Figma, is live (`main` d5b3ccb, pushed 2026-10-26: Loyalty's palette, the
+  colour families with their fills, section cards on five pages, Program in sections, Get started panels, figure
+  tiles), built from branch commit 7cc2a0b: the next release's change list is `git diff --name-status 7cc2a0b <tip>`.
+  106 source files and docs, no deletions, no migration, no server code; on the deploy tree PHP 7022 passed, 7 skipped,
+  the frontend 5496 passed, tsc clean; checked by content (every source file on `main` equal to the branch,
+  `LOYALTY_SURFACES` in the source, the panels' and cards' words and the navy in the built SPA).
+- Ways to earn's Overview went out as `main` d905343 (the status line, each check's one-press fix,
+  the members' journey with its map and timeline, the no-`#…`-link rule), built from branch commit 80ff815.
+  18 source files, no deletions, no migration; on the
   deploy tree PHP 7022 passed, 7 skipped, the frontend 5474 passed, tsc clean; the options and checks tests also pass
   on PostgreSQL; in a browser a real check's Fix saved its one option and the check went, and a map step scrolled
   without leaving the page; checked by content (every source file on `main` equal to the branch, the fix constants and

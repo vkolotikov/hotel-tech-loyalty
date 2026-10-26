@@ -71,6 +71,7 @@ final class AccessMap
         'admin/loyalty/sms'                     => ['staff',              'manager',            'loyalty'],       // SMS campaigns through the venue's Twilio (release 4; changes, tests and sending: manager)
         'admin/loyalty/members/{id}/cards'      => ['staff',              'staff',              'loyalty'],       // Release 5: a member's NFC cards (link, switch off: every staff member, as Edit details and admin/nfc-cards)
         'admin/loyalty/options'                 => ['staff',              'manager',            'loyalty'],       // Release 7: the programme's options and the setup wizard (changes: manager, as Program)
+        'admin/loyalty/start'                   => ['staff',              'manager',            'loyalty'],       // Release 10: "Start here", the setup steps and which are done (reads only)
         'admin/loyalty/members/{id}/check-in'   => ['staff',              'can_award_points',   'loyalty'],       // Release 7: a check-in or a purchase at the desk (it writes points: can_award_points, as Award)
         'admin/loyalty/members/{id}/stamps'     => ['staff',              'staff',              'loyalty'],       // Release 7: a member's stamp card (read only)
         'admin/loyalty/members/{id}/credit'     => ['staff',              'can_redeem_points',  'loyalty'],       // Release 7: cashback credit; spending it at the desk is can_redeem_points, as Redeem

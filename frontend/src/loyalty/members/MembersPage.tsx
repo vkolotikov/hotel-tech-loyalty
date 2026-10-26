@@ -25,7 +25,7 @@ import { AddMemberDialog } from '../membership/AddMemberDialog'
 import { membershipApi } from '../membership/api'
 import { ERRORS as MEMBERSHIP_ERRORS } from '../membership/errors'
 import { exportFileName, listActions } from '../membership/membershipMath'
-import { SetupBanner } from '../options/SetupBanner'
+import { StartCard } from '../start/StartPage'
 import { ICON_BUTTON } from '../member/CardHead'
 import { asMemberFilters, filtersFrom, initials, searchFor, toggleTier, withChange, type ListFilters, type ListState } from './membersQuery'
 
@@ -129,8 +129,9 @@ export function MembersPage() {
         </div>
       )}
 
-      {/* Release 7: a manager is offered the programme's setup wizard until it is applied or skipped. */}
-      <SetupBanner />
+      {/* Release 10: for a manager, how far the setup is and the next step (the wizard is the first); release 7's banner
+          stays on Ways to earn. */}
+      <StartCard />
 
       {download.isError && (
         <div className="max-w-xl"><Notice tone="danger">{t(...refusalKey('loyalty.membership', MEMBERSHIP_ERRORS, 'export', failureOf(download.error)))}</Notice></div>

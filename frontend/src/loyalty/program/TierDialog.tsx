@@ -2,6 +2,7 @@ import { useId, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
+import { Check as Tick } from 'lucide-react'
 import { Dialog } from '../../workspace/ui/Dialog'
 import { Notice } from '../../workspace/ui/Notice'
 import { useBoot } from '../LoyaltyProvider'
@@ -13,8 +14,9 @@ import { TierChip } from '../ui/TierChip'
 import { afterProgramChange, programApi } from './api'
 import { ERRORS } from './errors'
 import { Check, FormField, FormFoot } from '../ui/formParts'
-import { MAX_EARN_RATE, MAX_MIN_POINTS, MAX_MIN_SPEND, MAX_MIN_VISITS, TIER_FIELDS, isHex, tierBody, tierFormOf, tierProblems, type TierForm } from './programMath'
-import { serverProblems } from '../lib/forms'
+import { MAX_EARN_RATE, MAX_MIN_POINTS, MAX_MIN_SPEND, MAX_MIN_VISITS, TIER_FIELDS, examplePoints, isHex, tierBody, tierFormOf, tierProblems, type TierForm } from './programMath'
+import { decimal, decimalOf, serverProblems } from '../lib/forms'
+import { points } from '../lib/format'
 import type { Tier } from './types'
 import { TIER_PROBLEM_WORDS } from './words'
 
@@ -29,9 +31,13 @@ const NO_COLOUR = '#8a94a6'
  *
  * Release 8 (spec 2026-10-25 §3): what reaches it is on the programme's measure — "Points to reach it", "Visits to
  * reach this tier" or "Spend to reach this tier" — and the other floors are hidden, kept as they are.
+ *
+ * Release 10 (the owner's Figma 163:166): the earn rate says what it does in figures as it is typed, and "What members
+ * see" shows the tier as members meet it — its chip, its rate in words and the benefits it gives.
  */
 export function TierDialog({ tier, onClose }: { tier: Tier | null; onClose: () => void }) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
+  const locale = i18n.language || 'en'
   const boot = useBoot()
   const by = boot.programme.progress_by ?? 'points'
   const look = useLook()
@@ -58,6 +64,8 @@ export function TierDialog({ tier, onClose }: { tier: Tier | null; onClose: () =
     return code ? t(`loyalty.program.tier.problem.${code}`, TIER_PROBLEM_WORDS[code] ?? TIER_PROBLEM_WORDS.name) : null
   }
   const colourProblem = problem('color')
+  const example = examplePoints(form.earn_rate)
+  const rate = decimalOf(form.earn_rate)
 
   return (
     <Dialog title={tier ? t('loyalty.program.tier.edit_title', 'Change {{name}}', { name: tier.name }) : t('loyalty.program.tier.new_title', 'Add a tier')}
@@ -109,8 +117,10 @@ export function TierDialog({ tier, onClose }: { tier: Tier | null; onClose: () =
                 onChange={(e) => update({ min_spend: e.target.value })} className={INPUT} />
             </FormField>
           )}
-          <FormField label={t('loyalty.program.tier.earn_rate', 'Earn rate')} hint={t('loyalty.program.tier.earn_rate_hint', 'Points per unit spent; 1.5 earns half as much again.')}
-            problem={problem('earn_rate')}>
+          <FormField label={t('loyalty.program.tier.earn_rate', 'Earn rate')} problem={problem('earn_rate')}
+            hint={example !== null
+              ? t('loyalty.program.tier.earn_rate_example', 'Points per unit spent: 100 base points become {{n}} points.', { n: points(example, locale) })
+              : t('loyalty.program.tier.earn_rate_hint', 'Points per unit spent; 1.5 earns half as much again.')}>
             <input type="number" inputMode="decimal" min={0} max={MAX_EARN_RATE} step={0.01} value={form.earn_rate}
               onChange={(e) => update({ earn_rate: e.target.value })} className={INPUT} />
           </FormField>
@@ -132,6 +142,23 @@ export function TierDialog({ tier, onClose }: { tier: Tier | null; onClose: () =
 
         <Check label={t('loyalty.program.tier.active', 'In use')} checked={form.is_active} onChange={(on) => update({ is_active: on })}
           hint={t('loyalty.program.tier.active_hint', 'Switched off, no member moves into this tier.')} />
+
+        <section data-member-preview="" data-hue="tier" aria-label={t('loyalty.program.tier.preview_title', 'What members see')} className="l-hue-panel space-y-2 rounded-xl border p-4">
+          <p className="l-hue-text text-xs font-semibold uppercase tracking-wide">{t('loyalty.program.tier.preview_title', 'What members see')}</p>
+          <TierChip tier={{ name: form.name.trim() || t('loyalty.program.tier.preview', 'Preview'), color: isHex(form.color) ? form.color : null }} theme={look.resolved} />
+          {rate !== null && (
+            <p className="text-sm font-medium text-a-text">{t('loyalty.program.tier.preview_rate', '×{{rate}} points on what they spend', { rate: decimal(rate, locale) })}</p>
+          )}
+          {tier && tier.benefits.length > 0
+            ? (
+              <ul className="space-y-1">
+                {tier.benefits.map(tb => (
+                  <li key={tb.id} className="flex items-center gap-2 text-sm text-a-text"><Tick size={14} aria-hidden className="l-hue-text shrink-0" />{tb.name}</li>
+                ))}
+              </ul>
+            )
+            : <p className="text-sm text-a-text-2">{t('loyalty.program.tier.preview_no_benefits', 'No benefit yet: add them on the tier’s card in the ladder.')}</p>}
+        </section>
 
         {failure && <Notice tone="danger">{t(...refusalKey('loyalty.program', ERRORS, 'tier', failure))}</Notice>}
 

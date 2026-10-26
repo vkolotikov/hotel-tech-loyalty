@@ -14,7 +14,8 @@
     "faq": "Questions",
     "all": "Toutes",
     "open": "Ouvrir",
-    "nothing": "Aucun résultat. Essayez d’autres mots."
+    "nothing": "Aucun résultat. Essayez d’autres mots.",
+    "start_live": "Les étapes déjà faites et celles qui restent :"
   },
   "step": {
     "tiers": "Définissez vos niveaux",

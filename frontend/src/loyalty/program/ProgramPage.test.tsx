@@ -19,6 +19,7 @@ import { LoyaltyContext } from '../LoyaltyProvider'
 import type { Bootstrap, Can } from '../lib/types'
 import { PROGRAM_KEY } from './api'
 import { BoostDialog } from './BoostDialog'
+import { TierDialog } from './TierDialog'
 import { ConfirmTimes, ProgramPage } from './ProgramPage'
 import { PROGRAM_SECTIONS, programSearch, type ProgramSection } from './programMath'
 import type { Program } from './types'
@@ -216,6 +217,48 @@ describe('Program (spec 2026-10-21 §4.5, §5)', () => {
     expect(staff).toContain('Give members a reason to come back')
     expect(staff).toContain('An owner or a manager sets this up.')
     expect(staff).not.toContain('Add boost')
+  })
+
+  it('says what the ladder and the catalogue leave out, as the server found it (release 10, the owner\'s 163:88)', () => {
+    const checked: Program = {
+      ...program,
+      advice: [
+        { code: 'tiers_share_threshold', level: 'warn', params: { value: 0 }, tiers: [{ id: 1, name: 'Silver' }, { id: 2, name: 'Gold' }], benefits: [] },
+        { code: 'benefit_unused', level: 'tip', params: { n: 1 }, tiers: [], benefits: [{ id: 8, name: 'Spa ritual' }] },
+      ],
+    }
+    const tiers = render(can({ manage_program: true }), checked)
+    expect(tiers).toMatch(/data-advice="tiers_share_threshold" data-level="warn" data-hue="gift"/)
+    expect(text(tiers)).toContain('Several tiers start at the same figure Silver and Gold all start at 0 points: members reach only one of them by earning.')
+    expect(text(tiers)).toContain('Open Silver Open Gold')
+    // The ladder's warning waits on its card, in the waiting colour, instead of the tier count.
+    expect(tiers).toMatch(/id="program-section-tiers"[\s\S]*?data-state="pending"[^>]*>1<span class="sr-only"> to check/)
+    // Staff read it, with nothing to press.
+    expect(text(render(can(), checked))).not.toContain('Open Silver')
+    const benefits = render(can(), checked, 'benefits')
+    expect(benefits).toMatch(/data-advice="benefit_unused" data-level="tip" data-hue="rule"/)
+    expect(text(benefits)).toContain('No tier gives Spa ritual yet Members have a benefit only once a tier gives it.')
+    expect(text(benefits)).toContain('Go to Tiers')
+    // A ladder with nothing to check shows no banner and its count.
+    expect(render(can({ manage_program: true }))).not.toContain('data-advice=')
+  })
+
+  it('shows the tier as members meet it, and its earn rate in figures (the owner\'s 163:166)', () => {
+    const inDialog = (node: ReactNode) => renderToStaticMarkup(
+      <QueryClientProvider client={new QueryClient()}>
+        <MemoryRouter>
+          <LoyaltyContext.Provider value={{ data: boot(can({ manage_program: true })), isLoading: false, isError: false, error: null, refetch: () => {} }}>{node}</LoyaltyContext.Provider>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    )
+    const gold = inDialog(<TierDialog tier={program.tiers[1]} onClose={() => {}} />)
+    expect(text(gold)).toContain('Points per unit spent: 100 base points become 150 points.')
+    expect(gold).toMatch(/data-member-preview="" data-hue="tier"/)
+    expect(text(gold)).toContain('What members see Gold ×1.5 points on what they spend Late checkout')
+    const fresh = text(inDialog(<TierDialog tier={null} onClose={() => {}} />))
+    expect(fresh).toContain('No benefit yet: add them on the tier’s card in the ladder.')
+    const boost = text(inDialog(<BoostDialog boost={program.boosts[0]} tiers={program.tiers} onClose={() => {}} />))
+    expect(boost).toContain('From 1 to 10. While it runs, 100 points become 200.')
   })
 
   it('lists the boosts to confirm with their times on the venue\'s clock (release 6)', () => {

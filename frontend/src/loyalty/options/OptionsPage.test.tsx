@@ -17,8 +17,6 @@ vi.mock('../../lib/api', () => ({ api: {}, resolveImage: (url: string | null | u
 
 import { LoyaltyContext } from '../LoyaltyProvider'
 import type { Bootstrap, Can, Ways } from '../lib/types'
-import { MembersPage } from '../members/MembersPage'
-import { NO_FILTERS } from '../members/membersQuery'
 import { answerFixture, presetFixture } from './fixture'
 import { OPTIONS_KEY } from './optionsApi'
 import { OptionsPage } from './OptionsPage'
@@ -41,7 +39,6 @@ const boot = (manager: boolean, w: Ways | undefined = ways()): Bootstrap => ({
 function wrap(children: ReactNode, b: Bootstrap, data: OptionsAnswer | null, path = '/loyalty/options') {
   const client = new QueryClient()
   if (data) client.setQueryData(OPTIONS_KEY, data)
-  client.setQueryData(['loyalty', 'members', NO_FILTERS], { page: 1, pages: 1, total: 0, members: [], figures: { total: 0, active: 0, new_this_month: 0, average_points: 0, tiers: {} } })
   return renderToStaticMarkup(
     <QueryClientProvider client={client}>
       <MemoryRouter initialEntries={[path]}>
@@ -261,14 +258,6 @@ describe('Ways to earn (release 7 §1; tabs and checks, owner 2026-10-26)', () =
     expect(page(true)).toContain('data-setup-banner')
     expect(page(true, undefined, ways({ setup_done: true }))).not.toContain('data-setup-banner')
     expect(page(false, answerFixture({ can_change: false }))).not.toContain('data-setup-banner')
-  })
-
-  it('the Members page carries the same banner for a manager', () => {
-    const html = wrap(<MembersPage />, boot(true), null, '/loyalty')
-    expect(html).toContain('data-setup-banner')
-    expect(text(html)).toContain('Not now')
-    expect(html).toContain('href="/loyalty/options/setup"')
-    expect(wrap(<MembersPage />, boot(false), null, '/loyalty')).not.toContain('data-setup-banner')
   })
 
   it('says it is loading before the answer comes', () => {

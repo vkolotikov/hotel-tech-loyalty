@@ -12,8 +12,9 @@ import { TierChip } from '../ui/TierChip'
 import { afterProgramChange, programApi } from './api'
 import { ERRORS } from './errors'
 import { Check, FormField, FormFoot, Toggle } from '../ui/formParts'
-import { BOOST_FIELDS, MAX_MULTIPLIER, MIN_MULTIPLIER, WEEK, boostBody, boostFormOf, boostProblems, weekdayName, type BoostForm } from './programMath'
+import { BOOST_FIELDS, MAX_MULTIPLIER, MIN_MULTIPLIER, WEEK, boostBody, boostFormOf, boostProblems, examplePoints, weekdayName, type BoostForm } from './programMath'
 import { serverProblems, toggled, wallInput } from '../lib/forms'
+import { points } from '../lib/format'
 import { BrandField } from '../rewards/parts'
 import { brandPart, initialBrand } from '../rewards/rewardsMath'
 import type { BrandChoice, BrandOptions } from '../rewards/types'
@@ -82,7 +83,10 @@ export function BoostDialog({ boost, tiers, brands, onClose }: { boost: Boost | 
           refused={!!failure?.fields?.brand} onChange={(id) => { setBrand(id); if (save.isError) save.reset() }} />
 
         <FormField label={t('loyalty.program.boost.multiplier', 'Multiplier')} problem={problem('multiplier')}
-          hint={t('loyalty.program.boost.multiplier_hint', 'Points earned while it runs are multiplied by this, from 1 to 10.')}>
+          hint={examplePoints(form.multiplier) !== null
+            // Release 10 (the owner's 163:400): what the multiplier does, in figures, as it is typed.
+            ? t('loyalty.program.boost.multiplier_example', 'From 1 to 10. While it runs, 100 points become {{n}}.', { n: points(examplePoints(form.multiplier) ?? 0, locale) })
+            : t('loyalty.program.boost.multiplier_hint', 'Points earned while it runs are multiplied by this, from 1 to 10.')}>
           <input type="number" inputMode="decimal" min={MIN_MULTIPLIER} max={MAX_MULTIPLIER} step={0.1} value={form.multiplier}
             onChange={(e) => update({ multiplier: e.target.value })} className={`${INPUT} sm:w-40`} />
         </FormField>

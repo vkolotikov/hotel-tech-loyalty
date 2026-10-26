@@ -154,6 +154,13 @@ function QuickStart({ say }: { say: Say }) {
           )
         })}
       </ol>
+      {/* Release 10: the same steps, live — which are done and which are left. */}
+      <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-a-text-2">
+        {t('loyalty.guide.page.start_live', 'See which steps your programme has done and which are left:')}
+        <Link to="/loyalty/start" data-guide-start-live="" className="inline-flex items-center gap-1 font-semibold text-a-accent-text hover:underline">
+          {t('loyalty.start.title', 'Get started')}<ArrowRight size={14} aria-hidden />
+        </Link>
+      </p>
     </section>
   )
 }

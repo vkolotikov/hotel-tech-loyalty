@@ -83,7 +83,8 @@
     "tiers": "Niveles",
     "tiers_hint": "Ninguno elegido: todos los niveles.",
     "weekdays": "Días de la semana",
-    "weekdays_hint": "Ninguno elegido: todos los días."
+    "weekdays_hint": "Ninguno elegido: todos los días.",
+    "multiplier_example": "De 1 a 10. Mientras dura, 100 puntos se convierten en {{n}}."
   },
   "boost_state": {
     "ended": "Finalizada",
@@ -187,7 +188,11 @@
     "min_spend_hint": "En {{currency}}, lo que los miembros gastaron en sus visitas. Vacío: nadie sube a él por gasto.",
     "measure_visits": "Los miembros cambian de nivel según sus visitas.",
     "measure_spend": "Los miembros cambian de nivel según lo que gastan.",
-    "measure_change": "Cámbielo en Formas de ganar"
+    "measure_change": "Cámbielo en Formas de ganar",
+    "earn_rate_example": "Puntos por unidad gastada: 100 puntos base se convierten en {{n}} puntos.",
+    "preview_title": "Lo que ven los miembros",
+    "preview_rate": "×{{rate}} puntos por lo que gastan",
+    "preview_no_benefits": "Todavía sin beneficios: añádalos en la tarjeta del nivel."
   },
   "tier_benefit": {
     "add_title": "Añadir un beneficio a {{tier}}",
@@ -324,6 +329,21 @@
       "example_title": "Fin de semana de puntos dobles",
       "example_figures": "{{from}} → {{to}} puntos",
       "example_line": "Promoción ×2 · sábado y domingo"
+    }
+  },
+  "to_check": "por revisar",
+  "advice": {
+    "points": "{{n}} puntos",
+    "visits": "{{n}} visitas",
+    "open_tier": "Abrir {{tier}}",
+    "go_tiers": "Ir a Niveles",
+    "tiers_share_threshold": {
+      "title": "Varios niveles empiezan en la misma cifra",
+      "line": "{{tiers}} empiezan todos en {{value}}: acumulando, los miembros solo alcanzan uno de ellos. Dé a cada nivel su propia cifra de inicio o reserve los demás para los miembros que asigna a mano."
+    },
+    "benefit_unused": {
+      "title": "Ningún nivel da todavía {{benefits}}",
+      "line": "Un miembro solo tiene un beneficio cuando un nivel lo da. En Niveles, pulse Añadir beneficio en el nivel que deba darlo."
     }
   }
 }

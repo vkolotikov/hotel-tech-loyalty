@@ -83,7 +83,8 @@
     "tiers": "Stufen",
     "tiers_hint": "Keine gewählt: alle Stufen.",
     "weekdays": "Wochentage",
-    "weekdays_hint": "Keiner gewählt: jeden Tag."
+    "weekdays_hint": "Keiner gewählt: jeden Tag.",
+    "multiplier_example": "Von 1 bis 10. Solange sie läuft, werden aus 100 Punkten {{n}}."
   },
   "boost_state": {
     "ended": "Beendet",
@@ -187,7 +188,11 @@
     "min_spend_hint": "In {{currency}}, was Mitglieder bei ihren Besuchen ausgegeben haben. Leer: Niemand steigt durch Ausgaben in diese Stufe auf.",
     "measure_visits": "Mitglieder wechseln die Stufe nach ihren Besuchen.",
     "measure_spend": "Mitglieder wechseln die Stufe nach ihren Ausgaben.",
-    "measure_change": "Unter „Sammeln & Prämien“ ändern"
+    "measure_change": "Unter „Sammeln & Prämien“ ändern",
+    "earn_rate_example": "Punkte pro ausgegebener Einheit: Aus 100 Basispunkten werden {{n}} Punkte.",
+    "preview_title": "Was Mitglieder sehen",
+    "preview_rate": "×{{rate}} Punkte auf ihre Ausgaben",
+    "preview_no_benefits": "Noch kein Vorteil: Fügen Sie sie auf der Karte der Stufe hinzu."
   },
   "tier_benefit": {
     "add_title": "Vorteil für {{tier}} hinzufügen",
@@ -324,6 +329,21 @@
       "example_title": "Doppelpunkte-Wochenende",
       "example_figures": "{{from}} → {{to}} Punkte",
       "example_line": "Aktion ×2 · Samstag und Sonntag"
+    }
+  },
+  "to_check": "zu prüfen",
+  "advice": {
+    "points": "{{n}} Punkten",
+    "visits": "{{n}} Besuchen",
+    "open_tier": "{{tier}} öffnen",
+    "go_tiers": "Zu den Stufen",
+    "tiers_share_threshold": {
+      "title": "Mehrere Stufen beginnen beim selben Wert",
+      "line": "{{tiers}} beginnen alle bei {{value}}: Mitglieder erreichen durch Sammeln nur eine davon. Geben Sie jeder Stufe einen eigenen Startwert oder behalten Sie die anderen für Mitglieder, die Sie von Hand einstufen."
+    },
+    "benefit_unused": {
+      "title": "Noch keine Stufe bietet {{benefits}}",
+      "line": "Mitglieder haben einen Vorteil erst, wenn eine Stufe ihn bietet. Unter Stufen bei der passenden Stufe auf Vorteil hinzufügen tippen."
     }
   }
 }

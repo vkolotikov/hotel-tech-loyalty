@@ -11,6 +11,7 @@ import { CampaignsPage } from './campaigns/CampaignsPage'
 import { EventPage } from './events/EventPage'
 import { EventsPage } from './events/EventsPage'
 import { GuidePage } from './guide/GuidePage'
+import { StartPage } from './start/StartPage'
 import { InsightsPage } from './insights/InsightsPage'
 import { MemberPage } from './member/MemberPage'
 import { DuplicatesPage } from './membership/DuplicatesPage'
@@ -65,6 +66,8 @@ export function LoyaltyApp() {
           <Route path="scan" element={<ScanPage />} />
           <Route path="app" element={<AppPage />} />
           <Route path="guide" element={<GuidePage />} />
+          {/* Release 10: "Start here", the setup steps. */}
+          <Route path="start" element={<StartPage />} />
           <Route path="*" element={<Navigate to="/loyalty" replace />} />
         </Routes>
       </LoyaltyShell>
