@@ -1,7 +1,7 @@
 {
   "page": {
     "erased_title": "Membre supprimé",
-    "erased": "Ce membre a été supprimé. Son nom et ses coordonnées ont été effacés ; le numéro de membre et l’historique des points restent, pour que les chiffres concordent.",
+    "erased": "Supprimé : nom et coordonnées effacés ; le numéro et l’historique des points restent.",
     "edit": "Modifier les informations",
     "card": "Carte",
     "welcome_sent": "L’e-mail de bienvenue part vers {{email}}, avec un nouveau code pour définir un mot de passe.",

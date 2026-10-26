@@ -1,7 +1,7 @@
 {
   "page": {
     "erased_title": "Gelöschtes Mitglied",
-    "erased": "Dieses Mitglied wurde gelöscht. Name und Kontaktdaten sind entfernt; die Mitgliedsnummer und der Punkteverlauf bleiben, damit die Zahlen stimmen.",
+    "erased": "Gelöscht: Name und Kontaktdaten sind entfernt; Nummer und Punkteverlauf bleiben.",
     "edit": "Daten bearbeiten",
     "card": "Karte",
     "welcome_sent": "Die Willkommens-E-Mail ist unterwegs an {{email}}, mit einem neuen Code zum Festlegen eines Passworts.",

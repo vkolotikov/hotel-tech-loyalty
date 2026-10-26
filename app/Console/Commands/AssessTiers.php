@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Models\LoyaltyMember;
+use App\Services\Appointments\VenueClock;
 use App\Services\LoyaltyService;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
@@ -16,10 +17,14 @@ use Illuminate\Support\Facades\Log;
  * LoyaltyService::assessTier() — its own rules for the direction, the lock, grace, "keep until" and soft landing, logged
  * and told as any other move — each under the member row's lock in its own transaction, under its organisation's binding.
  * A member whose tier still stands is not touched, so a second run the same night moves nobody twice.
+ *
+ * The schedule runs it every hour with `--at-venue-hour=5`, and each organisation is checked only in the hour its own
+ * clock reads 5 (before the day's first visit, and clear of the hours clocks change). Run by hand without the option,
+ * it checks every organisation at once.
  */
 class AssessTiers extends Command
 {
-    protected $signature = 'loyalty:assess-tiers {--org= : Only this organisation id}';
+    protected $signature = 'loyalty:assess-tiers {--org= : Only this organisation id} {--at-venue-hour= : Only organisations whose own clock reads this hour (0-23)}';
 
     protected $description = 'Re-assess HexaTech Loyalty tiers whose grace period or "keep until" has ended, and every tier on a windowed programme.';
 
@@ -32,10 +37,15 @@ class AssessTiers extends Command
             ->when($this->option('org'), fn ($q, $org) => $q->where('organization_id', (int) $org))
             ->distinct()->orderBy('organization_id')->pluck('organization_id');
 
+        $raw = $this->option('at-venue-hour');
+        $hour = $raw === null || $raw === '' ? null : max(0, min(23, (int) $raw));
         $moved = 0;
         $checked = 0;
         foreach ($orgs as $orgId) {
             $orgId = (int) $orgId;
+            if ($hour !== null && (int) VenueClock::now($orgId)->format('G') !== $hour) {
+                continue;
+            }
             try {
                 [$c, $m] = $this->underOrganization($orgId, fn () => $this->assessOrganization($orgId, $loyalty));
             } catch (\Throwable $e) {

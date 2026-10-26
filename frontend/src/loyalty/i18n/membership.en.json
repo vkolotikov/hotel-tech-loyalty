@@ -1,7 +1,7 @@
 {
   "page": {
     "erased_title": "Deleted member",
-    "erased": "This member was deleted. Their name and contact details are gone; the member number and the points history stay, so the figures still add up.",
+    "erased": "Deleted: name and contact details are gone; the number and points history stay.",
     "edit": "Edit details",
     "card": "Card",
     "welcome_sent": "The welcome email is on its way to {{email}}, with a new code to set a password.",

@@ -192,15 +192,17 @@ Schedule::command('loyalty:push-receipts')
 
 // HexaTech Loyalty release 8 §3: "your membership ends on …", two weeks ahead, once per end date (the mark is written
 // before the message, so a second run reminds nobody twice). Each organisation's days are its own venue clock's.
-Schedule::command('loyalty:membership-reminders')
-    ->dailyAt('08:37')
+// Release 9: every hour, and each organisation in the hour its own clock reads 9 — a morning everywhere.
+Schedule::command('loyalty:membership-reminders --at-venue-hour=9')
+    ->hourlyAt(37)
     ->withoutOverlapping(30);
 
 // HexaTech Loyalty release 9 (owner 2026-10-26): the nightly tier check — a grace period run out, a "keep until" ended,
 // a windowed programme's window moved on — through LoyaltyService::assessTier()'s own rules. A tier that still stands is
 // not touched, so a second run moves nobody twice.
-Schedule::command('loyalty:assess-tiers')
-    ->dailyAt('02:47')
+// Every hour, and each organisation in the hour its own clock reads 5 (clear of the hours clocks change).
+Schedule::command('loyalty:assess-tiers --at-venue-hour=5')
+    ->hourlyAt(47)
     ->withoutOverlapping(60);
 
 // Prune expired BookingHold + BookingIdempotencyKey rows. Holds carry guest

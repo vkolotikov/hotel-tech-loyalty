@@ -45,6 +45,25 @@ class ValidityRemindersTest extends TestCase
         return DB::table('push_notifications')->where('member_id', $m->id)->where('type', 'membership_ending')->orderBy('id')->get()->all();
     }
 
+    public function test_the_schedule_reminds_each_venue_in_its_own_morning(): void
+    {
+        // A venue in New York: 09:00 UTC is 05:00 there, so the hourly run at the venue's 9 o'clock waits until 13:00 UTC.
+        $this->org->forceFill(['timezone' => 'America/New_York'])->save();
+        app()->forgetScopedInstances();
+        $this->endsOn($this->grace, '2026-10-12');
+
+        $this->artisan('loyalty:membership-reminders', ['--at-venue-hour' => 9])->expectsOutputToContain('0 reminded')->assertSuccessful();
+        $this->assertSame([], $this->inbox($this->grace));
+        $this->travelTo(CarbonImmutable::parse('2026-10-05 13:37:00'));
+        $this->artisan('loyalty:membership-reminders', ['--at-venue-hour' => 9])->expectsOutputToContain('1 reminded')->assertSuccessful();
+        $this->assertCount(1, $this->inbox($this->grace));
+
+        $event = collect(app(\Illuminate\Console\Scheduling\Schedule::class)->events())
+            ->first(fn ($e) => str_contains((string) $e->command, 'loyalty:membership-reminders'));
+        $this->assertStringContainsString('--at-venue-hour=9', (string) $event->command);
+        $this->assertSame('37 * * * *', $event->expression);
+    }
+
     public function test_members_ending_within_two_weeks_are_reminded_once_per_end_date(): void
     {
         $this->endsOn($this->grace, '2026-10-19');                  // 14 days on: due
