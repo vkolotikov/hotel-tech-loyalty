@@ -16,8 +16,11 @@ use App\Services\DiscountService;
 use App\Services\Loyalty\LoyaltyAccess;
 use App\Services\Loyalty\LoyaltyForms;
 use App\Services\Loyalty\LoyaltyRefused;
+use App\Services\Loyalty\Members\TierHolders;
+use App\Services\Loyalty\Programme\BenefitRemoval;
 use App\Services\Loyalty\Programme\ProgrammeOptions;
 use App\Services\Loyalty\Programme\TierAdvice;
+use App\Services\Loyalty\Programme\TierRemoval;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -91,7 +94,7 @@ class ProgramController extends Controller
     {
         LoyaltyAccess::requireManager($request->user());
         $data = self::tierColumns($request->validate([
-            'name'        => 'required|string|max:255',
+            'name'        => ['required', 'string', 'max:255', self::freeName(null)],
             'color'       => ['nullable', 'string', self::COLOR],
             'min_points'  => 'required|integer|min:0|max:10000000',
             'min_visits'  => 'sometimes|nullable|integer|min:0|max:' . self::MAX_MIN_VISITS,
@@ -118,7 +121,7 @@ class ProgramController extends Controller
         LoyaltyAccess::requireManager($request->user());
         $tier = $this->tier($id);
         $data = self::tierColumns($request->validate([
-            'name'        => 'sometimes|required|string|max:255',
+            'name'        => ['sometimes', 'required', 'string', 'max:255', self::freeName($tier->id)],
             'color'       => ['sometimes', 'nullable', 'string', self::COLOR],
             'min_points'  => 'sometimes|integer|min:0|max:10000000',
             'min_visits'  => 'sometimes|nullable|integer|min:0|max:' . self::MAX_MIN_VISITS,
@@ -130,11 +133,31 @@ class ProgramController extends Controller
 
         $old = $tier->only(array_keys($data));
         $tier->update($data);
+        // Release 11: a renamed tier's name follows to its members' guest records.
+        if (array_key_exists('name', $data) && $data['name'] !== ($old['name'] ?? null)) {
+            app(TierHolders::class)->renamed($tier);
+        }
 
         AuditLog::record('tier_updated', $tier, $data, $old, $request->user(), "Tier '{$tier->name}' updated");
         AnalyticsService::clearDashboardCache();
 
         return response()->json(['tier' => $this->tierPayload($tier->fresh())]);
+    }
+
+    /** Release 11: what deleting the tier would do (TierRemoval), for the confirm dialog. Reads only. */
+    public function tierRemoval(int $id, TierRemoval $removal): JsonResponse
+    {
+        return response()->json(['removal' => $removal->preview($this->tier($id))]);
+    }
+
+    /** Release 11: delete the tier, its members moving to `move_to` (TierRemoval says what else changes). */
+    public function destroyTier(Request $request, int $id, TierRemoval $removal): JsonResponse
+    {
+        LoyaltyAccess::requireManager($request->user());
+        $tier = $this->tier($id);
+        $data = $request->validate(['move_to' => 'nullable|integer']);
+
+        return response()->json(['removed' => $removal->remove($tier, isset($data['move_to']) ? (int) $data['move_to'] : null, $request->user())]);
     }
 
     // ─── A tier's benefits ──────────────────────────────────────────────────
@@ -149,7 +172,7 @@ class ProgramController extends Controller
         LoyaltyAccess::requireManager($request->user());
         $tier = $this->tier($id);
         $data = Validator::make($request->all(), [
-            'benefit_id'   => ['required', 'integer', OwnRows::rule('benefit_definitions')],
+            'benefit_id'   => ['required', 'integer', OwnRows::rule('benefit_definitions')->whereNull('deleted_at')],
             'value'        => 'nullable|string|max:255',
             'value_type'   => ['nullable', 'string', Rule::in(DiscountService::VALUE_TYPES)],
             'value_amount' => 'nullable|numeric|min:0|max:1000000',
@@ -211,8 +234,9 @@ class ProgramController extends Controller
         $data = $request->validate([
             'name'             => 'required|string|max:255',
             // Unique within the organisation, as the database's (organization_id, code) index; another
-            // organisation's codes are none of this one's business.
-            'code'             => ['required', 'string', 'max:50', Rule::unique('benefit_definitions', 'code')->where('organization_id', (int) app('current_organization_id'))],
+            // organisation's codes are none of this one's business. A deleted benefit's code is free again (release 11,
+            // the partial index).
+            'code'             => ['required', 'string', 'max:50', Rule::unique('benefit_definitions', 'code')->where('organization_id', (int) app('current_organization_id'))->whereNull('deleted_at')],
             'category'         => ['required', Rule::in(LoyaltyForms::BENEFIT_CATEGORIES)],
             'fulfillment_mode' => ['required', Rule::in(LoyaltyForms::FULFILLMENT_MODES)],
             'description'      => 'nullable|string',
@@ -229,7 +253,7 @@ class ProgramController extends Controller
     public function updateBenefit(Request $request, int $id): JsonResponse
     {
         LoyaltyAccess::requireManager($request->user());
-        $benefit = BenefitDefinition::query()->find($id) ?? throw LoyaltyRefused::notFound();
+        $benefit = $this->benefit($id);
         $data = $request->validate([
             'name'             => 'sometimes|required|string|max:255',
             'category'         => ['sometimes', Rule::in(LoyaltyForms::BENEFIT_CATEGORIES)],
@@ -244,6 +268,20 @@ class ProgramController extends Controller
         AuditLog::record('benefit_updated', $benefit, $data, $old, $request->user(), "Benefit '{$benefit->name}' updated");
 
         return response()->json(['benefit' => self::benefitRow($benefit->fresh())]);
+    }
+
+    /** Release 11: what deleting the benefit would do (BenefitRemoval), for the confirm dialog. Reads only. */
+    public function benefitRemoval(int $id, BenefitRemoval $removal): JsonResponse
+    {
+        return response()->json(['removal' => $removal->preview($this->benefit($id))]);
+    }
+
+    /** Release 11: delete the benefit; members' requests for it keep its name. */
+    public function destroyBenefit(Request $request, int $id, BenefitRemoval $removal): JsonResponse
+    {
+        LoyaltyAccess::requireManager($request->user());
+
+        return response()->json(['removed' => $removal->remove($this->benefit($id), $request->user())]);
     }
 
     // ─── Boost events ───────────────────────────────────────────────────────
@@ -308,7 +346,7 @@ class ProgramController extends Controller
             'days_of_week'   => 'sometimes|nullable|array',
             'days_of_week.*' => 'integer|min:0|max:6',
             'tier_ids'       => 'sometimes|nullable|array',
-            'tier_ids.*'     => ['integer', OwnRows::rule('loyalty_tiers')],
+            'tier_ids.*'     => ['integer', OwnRows::rule('loyalty_tiers')->whereNull('deleted_at')],
             'is_active'      => 'sometimes|boolean',
             'brand'          => LoyaltyForms::brandRule($request->user(), $orgId),
         ])->after(function (FormValidator $v) use ($request, $orgId) {
@@ -470,6 +508,26 @@ class ProgramController extends Controller
     private function tierBenefits(): Builder
     {
         return TierBenefit::query()->where('is_active', true)->whereHas('benefit')->with('benefit')->orderBy('id');
+    }
+
+    /**
+     * Release 11: a tier's name is the organisation's own among the tiers not deleted (the database's partial unique
+     * index), whatever its case — two tiers both called "Gold" would read as one everywhere a name is shown.
+     */
+    private static function freeName(?int $except): \Closure
+    {
+        return function (string $attribute, mixed $value, \Closure $fail) use ($except) {
+            $taken = LoyaltyTier::query()->whereRaw('LOWER(name) = ?', [mb_strtolower(trim((string) $value))])
+                ->when($except !== null, fn ($q) => $q->whereKeyNot($except))->exists();
+            if ($taken) {
+                $fail('Another tier already has this name.');
+            }
+        };
+    }
+
+    private function benefit(int $id): BenefitDefinition
+    {
+        return BenefitDefinition::query()->find($id) ?? throw LoyaltyRefused::notFound();
     }
 
     private function tier(int $id): LoyaltyTier

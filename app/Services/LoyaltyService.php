@@ -13,6 +13,7 @@ use App\Models\PointExpiryBucket;
 use App\Models\PointsTransaction;
 use App\Models\TierAssessment;
 use App\Models\User;
+use App\Scopes\TenantScope;
 use App\Services\Loyalty\Programme\ProgrammeOptions;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -667,7 +668,8 @@ class LoyaltyService
         // highest active, non-invitation tier with a floor on the measure
         // that stands below the current tier and above the one qualified for.
         if ($isDowngrade && $currentTier->soft_landing) {
-            $oneTierDown = LoyaltyTier::withoutGlobalScopes()
+            // Without the tenant scope only: a deleted tier (release 11) is no step to land on.
+            $oneTierDown = LoyaltyTier::withoutGlobalScope(TenantScope::class)
                 ->where('organization_id', $member->organization_id)
                 ->where('is_active', true)
                 ->get()

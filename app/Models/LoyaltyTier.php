@@ -7,11 +7,18 @@ use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\Cache;
 
 class LoyaltyTier extends Model
 {
     use BelongsToOrganization;
+    /**
+     * Release 11 (owner 2026-10-26): a deleted tier leaves every list and every ladder; the history that names it (tier
+     * assessments, a member's tier) reads it with its name through withTrashed(). Deleted only by
+     * App\Services\Loyalty\Programme\TierRemoval, which first moves its members to another tier.
+     */
+    use SoftDeletes;
 
     /** Cache TTL for the per-org active-tiers collection. */
 

@@ -2,7 +2,7 @@ import { useState, type ReactNode } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { AlertTriangle, ArrowRight, Award, CalendarDays, CheckCheck, Crown, Gift, Lightbulb, MapPin, Pencil, Plus, Sparkles, Trash2, TrendingUp, Users, X, Zap } from 'lucide-react'
+import { AlertTriangle, ArrowRight, Award, CalendarDays, CheckCheck, Crown, Gift, Lightbulb, MapPin, Pencil, PenLine, Plus, SlidersHorizontal, Sparkles, Trash2, TrendingUp, Users, X, Zap } from 'lucide-react'
 import { Button } from '../../workspace/ui/Button'
 import { Dialog } from '../../workspace/ui/Dialog'
 import { Notice } from '../../workspace/ui/Notice'
@@ -37,14 +37,19 @@ import { FigureTile, FigureTiles } from '../ui/FigureTiles'
 import { GetStarted, GetStartedExample, SectionIntro } from '../ui/GetStarted'
 import { SectionCards, SectionCount } from '../ui/SectionCards'
 import type { Hue } from '../ui/sections'
-import { IconButton, SectionHead } from './parts'
+import { CardAction, IconButton, SectionHead } from './parts'
+import { RemoveBenefit, RemoveTier, RenameDialog } from './RemoveDialogs'
 
 /** Which dialog is open, with what it works on. */
 type Open =
   | { kind: 'tier'; tier: Tier | null }
+  | { kind: 'rename_tier'; tier: Tier }
+  | { kind: 'remove_tier'; tier: Tier }
   | { kind: 'tier_benefit'; tier: Tier; current: TierBenefit | null }
   | { kind: 'take_off'; tier: Tier; tb: TierBenefit }
   | { kind: 'benefit'; benefit: Benefit | null }
+  | { kind: 'rename_benefit'; benefit: Benefit }
+  | { kind: 'remove_benefit'; benefit: Benefit }
   | { kind: 'boost'; boost: Boost | null }
   | { kind: 'remove_boost'; boost: Boost }
   | { kind: 'confirm_times'; boosts: Boost[] }
@@ -124,11 +129,15 @@ export function ProgramPage() {
       </div>
 
       {data && open?.kind === 'tier' && <TierDialog tier={open.tier} onClose={close} />}
+      {open?.kind === 'rename_tier' && <RenameDialog subject={{ kind: 'tier', tier: open.tier }} onClose={close} />}
+      {open?.kind === 'remove_tier' && <RemoveTier tier={open.tier} onClose={close} />}
       {data && open?.kind === 'tier_benefit' && (
         <TierBenefitDialog tier={open.tier} current={open.current} benefits={data.benefits} options={data.options} onClose={close} />
       )}
       {open?.kind === 'take_off' && <TakeOff tier={open.tier} tb={open.tb} onClose={close} />}
       {data && open?.kind === 'benefit' && <BenefitDialog benefit={open.benefit} options={data.options} onClose={close} />}
+      {open?.kind === 'rename_benefit' && <RenameDialog subject={{ kind: 'benefit', benefit: open.benefit }} onClose={close} />}
+      {open?.kind === 'remove_benefit' && <RemoveBenefit benefit={open.benefit} onClose={close} />}
       {data && open?.kind === 'boost' && <BoostDialog boost={open.boost} tiers={data.tiers} brands={data.options.brands} onClose={close} />}
       {open?.kind === 'remove_boost' && <RemoveBoost boost={open.boost} onClose={close} />}
       {open?.kind === 'confirm_times' && <ConfirmTimes boosts={open.boosts} locale={locale} timeZone={boot.venue.timezone} onClose={close} />}
@@ -209,14 +218,9 @@ export function TierCard({ tier, step, last, manage, theme, locale, onOpen }: {
       </div>
 
       <div className={`relative mb-3 min-w-0 flex-1 rounded-2xl border border-a-border bg-a-surface p-4 ${last ? 'mb-0' : ''}`}>
-        {manage && (
-          <span className="absolute right-2 top-2">
-            <IconButton icon={Pencil} label={t('loyalty.program.edit', 'Edit')} name={tier.name} onClick={() => onOpen({ kind: 'tier', tier })} />
-          </span>
-        )}
         <div className="flex flex-col gap-3 lg:flex-row lg:gap-6">
           <div className="space-y-2 lg:w-52 lg:shrink-0">
-            <div className={`flex flex-wrap items-center gap-2 ${manage ? 'pr-10' : ''}`}>
+            <div className="flex flex-wrap items-center gap-2">
               <TierChip tier={tier} theme={theme} />
               {!tier.is_active && <ToneBadge tone={activeTone(false)}>{t('loyalty.program.switched_off', 'Switched off')}</ToneBadge>}
             </div>
@@ -234,7 +238,7 @@ export function TierCard({ tier, step, last, manage, theme, locale, onOpen }: {
             </dl>
           </div>
 
-          <div className={`min-w-0 flex-1 space-y-3 ${manage ? 'lg:pr-10' : ''}`}>
+          <div className="min-w-0 flex-1 space-y-3">
             <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 text-sm">
               <dl className="flex flex-wrap items-center gap-x-5 gap-y-1.5">
                 <div className="inline-flex items-center gap-1.5">
@@ -268,6 +272,14 @@ export function TierCard({ tier, step, last, manage, theme, locale, onOpen }: {
             )}
           </div>
         </div>
+        {/* Release 11: what a manager does with the tier, in words — rename it, change the rest, or delete it. */}
+        {manage && (
+          <div data-tier-actions="" className="mt-4 flex flex-wrap gap-2 border-t border-a-border pt-3">
+            <CardAction icon={PenLine} label={t('loyalty.program.rename.action', 'Rename')} name={tier.name} onClick={() => onOpen({ kind: 'rename_tier', tier })} />
+            <CardAction icon={SlidersHorizontal} label={t('loyalty.program.edit', 'Edit')} name={tier.name} onClick={() => onOpen({ kind: 'tier', tier })} />
+            <CardAction icon={Trash2} danger label={t('loyalty.program.remove_tier.action', 'Delete')} name={tier.name} onClick={() => onOpen({ kind: 'remove_tier', tier })} />
+          </div>
+        )}
       </div>
     </li>
   )
@@ -455,7 +467,9 @@ export function BenefitRow({ benefit: b, tiers, manage, onOpen }: { benefit: Ben
       {!manage && !b.is_active && <ToneBadge tone={activeTone(false)}>{t('loyalty.program.switched_off', 'Switched off')}</ToneBadge>}
       {manage && (
         <div className="flex items-center gap-1">
-          <IconButton icon={Pencil} label={t('loyalty.program.edit', 'Edit')} name={b.name} onClick={() => onOpen({ kind: 'benefit', benefit: b })} />
+          <IconButton icon={PenLine} label={t('loyalty.program.rename.action', 'Rename')} name={b.name} onClick={() => onOpen({ kind: 'rename_benefit', benefit: b })} />
+          <IconButton icon={SlidersHorizontal} label={t('loyalty.program.edit', 'Edit')} name={b.name} onClick={() => onOpen({ kind: 'benefit', benefit: b })} />
+          <IconButton icon={Trash2} danger label={t('loyalty.program.remove_benefit.action', 'Delete')} name={b.name} onClick={() => onOpen({ kind: 'remove_benefit', benefit: b })} />
           <Switch on={b.is_active} label={b.name} disabled={flip.isPending}
             title={b.is_active ? t('loyalty.program.benefits.switch_off', 'Switch off') : t('loyalty.program.benefits.switch_on', 'Switch on')}
             onChange={() => flip.mutate()} />

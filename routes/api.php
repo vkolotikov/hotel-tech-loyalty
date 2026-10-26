@@ -1397,10 +1397,15 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
                 Route::get('program', [\App\Http\Controllers\Api\V1\Admin\Loyalty\ProgramController::class, 'show']);
                 Route::post('program/tiers', [\App\Http\Controllers\Api\V1\Admin\Loyalty\ProgramController::class, 'storeTier']);
                 Route::put('program/tiers/{id}', [\App\Http\Controllers\Api\V1\Admin\Loyalty\ProgramController::class, 'updateTier'])->whereNumber('id');
+                // Release 11: delete a tier or a benefit, with what it would do read first.
+                Route::get('program/tiers/{id}/removal', [\App\Http\Controllers\Api\V1\Admin\Loyalty\ProgramController::class, 'tierRemoval'])->whereNumber('id');
+                Route::delete('program/tiers/{id}', [\App\Http\Controllers\Api\V1\Admin\Loyalty\ProgramController::class, 'destroyTier'])->whereNumber('id');
                 Route::post('program/tiers/{id}/benefits', [\App\Http\Controllers\Api\V1\Admin\Loyalty\ProgramController::class, 'attachBenefit'])->whereNumber('id');
                 Route::delete('program/tiers/{id}/benefits/{tierBenefit}', [\App\Http\Controllers\Api\V1\Admin\Loyalty\ProgramController::class, 'detachBenefit'])->whereNumber(['id', 'tierBenefit']);
                 Route::post('program/benefits', [\App\Http\Controllers\Api\V1\Admin\Loyalty\ProgramController::class, 'storeBenefit']);
                 Route::put('program/benefits/{id}', [\App\Http\Controllers\Api\V1\Admin\Loyalty\ProgramController::class, 'updateBenefit'])->whereNumber('id');
+                Route::get('program/benefits/{id}/removal', [\App\Http\Controllers\Api\V1\Admin\Loyalty\ProgramController::class, 'benefitRemoval'])->whereNumber('id');
+                Route::delete('program/benefits/{id}', [\App\Http\Controllers\Api\V1\Admin\Loyalty\ProgramController::class, 'destroyBenefit'])->whereNumber('id');
                 Route::post('program/boosts', [\App\Http\Controllers\Api\V1\Admin\Loyalty\ProgramController::class, 'storeBoost']);
                 Route::put('program/boosts/{id}', [\App\Http\Controllers\Api\V1\Admin\Loyalty\ProgramController::class, 'updateBoost'])->whereNumber('id');
                 Route::delete('program/boosts/{id}', [\App\Http\Controllers\Api\V1\Admin\Loyalty\ProgramController::class, 'destroyBoost'])->whereNumber('id');

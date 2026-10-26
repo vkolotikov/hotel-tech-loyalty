@@ -66,7 +66,7 @@ staff member restricted to one brand is still held to it by the `brand` middlewa
 | Points | `POST members/{id}/award`, `POST members/{id}/redeem` (`points`, `reason`, `idempotency_key`), `POST members/{id}/history/{line}/reverse` (`reason`) |
 | Requests | `GET requests?state=waiting|approved|done&page`, `POST requests/{id}/approve`, `/done`, `/decline` (`reason`) |
 | Scan | `POST scan` (`code`); release 5: `GET members/{id}/cards`, `POST members/{id}/cards` (`uid`), `POST members/{id}/cards/{card}/off` (AccessMap `admin/loyalty/members/{id}/cards`: every active staff member, as Edit details) |
-| Program | `GET program`; `POST/PUT program/tiers[/{id}]`, `POST program/tiers/{id}/benefits`, `DELETE program/tiers/{id}/benefits/{tierBenefit}`, `POST/PUT program/benefits[/{id}]`, `POST/PUT/DELETE program/boosts[/{id}]`; release 6: `POST program/boosts/confirm-times` (`ids`), `brand` on the boost, reward and offer PUTs |
+| Program | `GET program`; `POST/PUT program/tiers[/{id}]`, `POST program/tiers/{id}/benefits`, `DELETE program/tiers/{id}/benefits/{tierBenefit}`, `POST/PUT program/benefits[/{id}]`, `POST/PUT/DELETE program/boosts[/{id}]`; release 6: `POST program/boosts/confirm-times` (`ids`), `brand` on the boost, reward and offer PUTs; release 11: `GET program/tiers/{id}/removal`, `DELETE program/tiers/{id}` (`move_to`), `GET program/benefits/{id}/removal`, `DELETE program/benefits/{id}` |
 | Rewards | `GET/POST rewards`, `PUT rewards/{id}`; `GET redemptions?state=pending|done|all&page`, `POST redemptions/{id}/fulfil`, `/cancel`; `GET/POST offers`, `PUT offers/{id}`; `GET referrals?page`; `POST/DELETE rewards/{id}/image`, `POST/DELETE offers/{id}/image` |
 | Members (release 2) | `POST members`, `PUT members/{id}`, `PUT members/{id}/tier`, `POST members/{id}/deactivate`, `/reactivate`, `/erase` (`confirm_name`), `GET members/{id}/card`, `POST members/{id}/welcome`; `GET members/duplicates`, `POST members/merge`; `GET/POST members/imports`, `GET members/imports/{batch}`, `POST members/imports/{batch}/run`, `/cancel`; `GET members/export` (CSV) |
 | Insights | `GET insights?period=30d|90d|12m`, `GET insights/at-risk?days=` (7–365); release 4: `GET insights/cohorts`, `GET insights/money?period=` |
@@ -632,6 +632,32 @@ the scan screen, door mode, the member page and list, Program, Ways to earn, Eve
   - *The tier form shows the member's side* (the owner's 163:166): the earn rate in figures as it is typed ("100 base
     points become 125 points") and "What members see" — the chip, the rate in words, the tier's benefits; a boost's
     multiplier says the same ("100 points become 200").
+- **Release 11, rename and delete** (owner 2026-10-26: "an option for users to delete or rename tiers and benefits, so
+  they can customise the system for their needs"; `docs/superpowers/specs/2026-10-26-loyalty-release-11-design.md`):
+  - *Rename* is its own small dialog on each tier card and benefit row (the name alone; Edit keeps the rest). A tier's
+    name is the organisation's own among the tiers not deleted, whatever its case (`name_taken`), and a renamed tier's
+    name follows to its members' guest records (`guests.loyalty_tier`, 30 characters) through `Members\TierHolders`.
+  - *Delete* reads first what it would do (`GET …/removal`) and says it before the confirm. A deleted tier or benefit
+    is soft-deleted (`deleted_at`, the models are SoftDeletes): gone from every list and ladder — the full admin's,
+    the portal's and the app's too — while the history that names it keeps its name (`TierAssessment` old/new tier,
+    a member's tier and `BenefitEntitlement::benefit()` read it `withTrashed()`).
+  - A tier is deleted only by `App\Services\Loyalty\Programme\TierRemoval`, under the organisation's `tiers:{org}`
+    lock: gone from the ladder first, then its members (switched on and off) move to the tier the manager chose —
+    suggested: the nearest below that members can earn, else above — each with a `tier_deleted` assessment, their
+    kept-until day and grace clock cleared (`Members\TierHolders`, not told); its benefits are taken off it; places
+    and events stop naming it (one that let in only it then lets in no tier until staff choose); boosts and offers
+    stop naming it, and one for it alone is switched off (an empty tier list there means every tier); a segment rule
+    loses it only where it names other tiers too — one naming it alone stays, refused at send (`unknown_tier`) until
+    staff change it, never emptied into "everyone". The last tier switched on is never deleted (`last_tier`, 409); a
+    tier with members needs `move_to` (`move_to_required`, `move_to_unknown`, 422). After the commit it moves anyone a
+    review put on it meanwhile.
+  - A benefit is deleted only by `Programme\BenefitRemoval`: off every tier (the links switched off), out of the
+    catalogue; members' requests keep its name and the waiting ones stay in Requests for staff to decide.
+  - The database keeps a tier's name and a benefit's code once among the rows not deleted (partial unique indexes,
+    migration `2026_10_26_120000`), so a deleted "Silver" never stops a new one. Presets applied again never bring back
+    a tier or benefit a manager deleted (its name or code still counts); the forms refuse a deleted id
+    (`OwnRows::rule(...)->whereNull('deleted_at')`); unscoped tier queries that build a ladder drop only the tenant
+    scope (`withoutGlobalScope(TenantScope::class)`), so the soft delete still holds there.
 
 ## What the workspace does not do
 
@@ -640,6 +666,11 @@ reports (Twilio's status callbacks); no receipts for the full admin's own push c
 
 ## Known limits
 
+- **Deleted tiers and the full admin's own forms** (release 11): the full admin's validators (`exists:loyalty_tiers`)
+  still accept a deleted tier's id from a page loaded before the delete; a member put on one that way keeps its name
+  (the relation reads it `withTrashed()`) and the next tier review moves them on. The full admin's legacy segments
+  (`campaign_segments`, `notification_campaigns.segment_rules`) that name a deleted tier match nobody by it; they are
+  not rewritten.
 - **Boosts saved before release 4** say "check the time" (at a venue not on UTC) until a manager saves each one or
   confirms them together ("These times are right", release 6): one the full admin saved then was stored as if its
   wall-clock time were UTC and may be hours off; one the workspace saved is right but flagged too.
@@ -745,6 +776,13 @@ files on disk): run them one after the other.
 
 - Since 2026-10-26 a finished job is deployed without asking (the owner's standing word, `CLAUDE.md` "Git and
   deploy"); the recipe's checks still decide.
+- Release 10b, the guidance, is live (`main` e3c7f0b, pushed 2026-10-26: Start here behind `GET start` from
+  `SetupProgress`, the Members card, Program's checks from `TierAdvice`, the tier form's earn-rate figures and "What
+  members see", the boost multiplier in figures), built from branch commit 5eedb5a: the next release's change list is
+  `git diff --name-status 5eedb5a <tip>`. 48 source files and docs (16 new), no deletions, no migration; on the deploy
+  tree PHP 7032 passed, 7 skipped, the frontend 5511 passed, tsc clean; the new server tests also pass on PostgreSQL;
+  checked by content (every source file on `main` equal to the branch, `TierAdvice`, `SetupProgress` and the
+  `admin/loyalty/start` map key in the source, the Start and check words in the built SPA).
 - Release 10a, the frame from the owner's Figma, is live (`main` d5b3ccb, pushed 2026-10-26: Loyalty's palette, the
   colour families with their fills, section cards on five pages, Program in sections, Get started panels, figure
   tiles), built from branch commit 7cc2a0b: the next release's change list is `git diff --name-status 7cc2a0b <tip>`.
@@ -900,6 +938,13 @@ files on disk): run them one after the other.
 - Scan one member's QR code from the member app on a phone, and type one member number.
 - On Program, check the tiers and their colours; on Rewards, the catalogue and pending redemptions.
 - Reload admin tabs left open across the deploy.
+
+### After the release 11 deploy (owner, signed in)
+
+- On Program → Tiers, open Delete on a tier and read what it says (nothing changes until Delete is pressed); press Keep
+  it. Rename a benefit and rename it back.
+- The migration ran (`2026_10_26_120000_tiers_and_benefits_can_be_deleted`): adding a tier with a name another tier has
+  is refused in words, not with an error page.
 
 ### After the release 9 deploy (owner, signed in)
 

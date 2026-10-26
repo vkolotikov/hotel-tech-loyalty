@@ -9,6 +9,7 @@ use App\Models\LoyaltyEvent;
 use App\Models\LoyaltyMember;
 use App\Models\LoyaltyTier;
 use App\Models\User;
+use App\Scopes\TenantScope;
 use App\Services\Loyalty\LoyaltyRefused;
 use App\Services\Loyalty\Members\MemberErasure;
 use App\Support\SharedCache;
@@ -205,7 +206,7 @@ final class EventSignUp
     {
         $ids = DB::table('loyalty_event_tiers')->where('loyalty_event_id', $event->id)->pluck('tier_id')->all();
 
-        return LoyaltyTier::withoutGlobalScopes()->where('organization_id', $event->organization_id)->whereIn('id', $ids)
+        return LoyaltyTier::withoutGlobalScope(TenantScope::class)->where('organization_id', $event->organization_id)->whereIn('id', $ids)
             ->orderBy('sort_order')->orderBy('min_points')->pluck('name')->map(fn ($n) => (string) $n)->values()->all();
     }
 

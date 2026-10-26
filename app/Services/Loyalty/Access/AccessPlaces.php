@@ -7,6 +7,7 @@ use App\Models\AuditLog;
 use App\Models\LoyaltyTier;
 use App\Models\ScanEvent;
 use App\Models\User;
+use App\Scopes\TenantScope;
 use App\Services\Loyalty\LoyaltyRefused;
 use App\Support\AdvisoryLock;
 use App\Support\SharedCache;
@@ -230,7 +231,8 @@ final class AccessPlaces
         if ($wanted === []) {
             return [];
         }
-        $own = LoyaltyTier::withoutGlobalScopes()->where('organization_id', $orgId)->whereIn('id', $wanted)->pluck('id')->map(fn ($id) => (int) $id)->all();
+        // A deleted tier (release 11) is not one of this programme's.
+        $own = LoyaltyTier::withoutGlobalScope(TenantScope::class)->where('organization_id', $orgId)->whereIn('id', $wanted)->pluck('id')->map(fn ($id) => (int) $id)->all();
         if (count($own) !== count($wanted)) {
             throw ValidationException::withMessages(['tier_ids' => ['Choose tiers of this programme.']]);
         }

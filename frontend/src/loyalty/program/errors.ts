@@ -50,6 +50,26 @@ export const ERRORS: Record<string, Record<string, string>> = {
     network: OFFLINE,
     unknown: 'The boost could not be saved. Please try again.',
   },
+  // Release 11: deleting a tier (TierRemoval) or a benefit.
+  remove_tier: {
+    manager_only: RIGHT,
+    not_allowed: RIGHT,
+    no_capability: RIGHT,
+    not_found: 'This tier is no longer in the programme. The page now shows it as it is.',
+    last_tier: 'This is the last tier switched on. Members need a tier, so it cannot be deleted.',
+    move_to_required: 'Choose the tier its members move to.',
+    move_to_unknown: 'That tier is no longer one to move members to. Choose another one.',
+    network: 'No connection: nothing was deleted. Try again.',
+    unknown: 'The tier could not be deleted. Nothing was changed; please try again.',
+  },
+  remove_benefit: {
+    manager_only: RIGHT,
+    not_allowed: RIGHT,
+    no_capability: RIGHT,
+    not_found: 'This benefit is no longer in the catalogue. The page now shows it as it is.',
+    network: 'No connection: nothing was deleted. Try again.',
+    unknown: 'The benefit could not be deleted. Nothing was changed; please try again.',
+  },
   // Release 6: "These times are right" for the boosts that ask for their times to be checked.
   times: {
     manager_only: RIGHT,

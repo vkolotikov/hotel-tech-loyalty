@@ -14,6 +14,7 @@ use App\Models\Organization;
 use App\Models\Property;
 use App\Models\ReviewForm;
 use App\Models\User;
+use App\Scopes\TenantScope;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
@@ -472,7 +473,7 @@ class OrganizationSetupService
         // "Bronze" found nothing there, logged a warning, and silently
         // seeded no demo data for every non-hotel industry, so "with demo
         // data" was a hotel-only checkbox that lied to everyone else.
-        $ladder = LoyaltyTier::withoutGlobalScopes()
+        $ladder = LoyaltyTier::withoutGlobalScope(TenantScope::class)
             ->where('organization_id', $org->id)
             ->where('is_active', true)
             ->orderBy('min_points')

@@ -4,6 +4,7 @@ namespace App\Services\Loyalty\Access;
 
 use App\Models\AccessPlace;
 use App\Models\LoyaltyTier;
+use App\Scopes\TenantScope;
 use App\Services\Appointments\VenueClock;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Query\Builder;
@@ -32,7 +33,7 @@ final class PlaceEntries
         $places = AccessPlace::withoutGlobalScopes()->where('organization_id', $orgId)->with('tiers')
             ->orderBy('sort_order')->orderBy('name')->orderBy('id')->get();
         $counts = $this->counts($orgId, $day);
-        $tiers = AccessDecision::ladder(LoyaltyTier::withoutGlobalScopes()->where('organization_id', $orgId)->where('is_active', true)->get());
+        $tiers = AccessDecision::ladder(LoyaltyTier::withoutGlobalScope(TenantScope::class)->where('organization_id', $orgId)->where('is_active', true)->get());
 
         return [
             'places' => $places->map(fn (AccessPlace $p) => self::row($p, $counts[(int) $p->id] ?? null))->values()->all(),

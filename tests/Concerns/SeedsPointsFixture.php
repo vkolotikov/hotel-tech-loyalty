@@ -47,6 +47,7 @@ trait SeedsPointsFixture
                 $t->string('category')->nullable();
                 $t->boolean('is_active')->default(true);
                 $t->timestamps();
+                $t->softDeletes();
             });
         }
 

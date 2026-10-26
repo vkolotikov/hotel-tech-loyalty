@@ -58,7 +58,9 @@ class LoyaltyMember extends Model
 
     public function tier(): BelongsTo
     {
-        return $this->belongsTo(LoyaltyTier::class);
+        // Release 11: TierRemoval moves a tier's members before it deletes it; a member a stale form put back on a
+        // deleted tier still reads its name, and the next assessment moves them on.
+        return $this->belongsTo(LoyaltyTier::class)->withTrashed();
     }
 
     public function pointsTransactions(): HasMany

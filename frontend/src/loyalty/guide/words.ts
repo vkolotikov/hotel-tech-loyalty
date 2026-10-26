@@ -78,6 +78,8 @@ export const FAQ_WORDS = {
   move_up_a: 'Automatically, by points, visits or spend — you choose in Ways to earn.',
   by_hand_q: 'Can I put someone on a tier by hand?',
   by_hand_a: 'Yes: on the member’s page, ⋯ → Change tier. Add a “keep until” date to hold it.',
+  rename_delete_q: 'Can I rename or delete a tier or a benefit?',
+  rename_delete_a: 'Yes: on Program, each has Rename and Delete. Delete says first what changes: a tier’s members move to the tier you choose; history keeps the old name.',
   end_date_q: 'Can a membership end on a date?',
   end_date_a: 'Yes. Set or extend it on the member’s page. Members get a reminder two weeks before.',
   import_q: 'How do I add many members at once?',

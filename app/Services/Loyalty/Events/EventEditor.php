@@ -284,7 +284,7 @@ final class EventEditor
             'location'        => 'nullable|string|max:200',
             'admits'          => ['required', Rule::in(['all', 'tiers'])],
             'tier_ids'        => 'nullable|array|required_if:admits,tiers',
-            'tier_ids.*'      => ['integer', 'distinct', Rule::exists('loyalty_tiers', 'id')->where('organization_id', $orgId)],
+            'tier_ids.*'      => ['integer', 'distinct', Rule::exists('loyalty_tiers', 'id')->where('organization_id', $orgId)->whereNull('deleted_at')],
             'points'          => 'required|integer|min:0|max:' . self::MAX_POINTS,
             'counts_as_visit' => 'required|boolean',
             'sign_up'         => 'required|boolean',

@@ -5,11 +5,18 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use App\Traits\BelongsToOrganization;
 
 class BenefitDefinition extends Model
 {
     use BelongsToOrganization;
+    /**
+     * Release 11 (owner 2026-10-26): a deleted benefit leaves the catalogue and every tier; the members' requests for
+     * it keep its name (BenefitEntitlement::benefit() reads it withTrashed()). Deleted only by
+     * App\Services\Loyalty\Programme\BenefitRemoval.
+     */
+    use SoftDeletes;
 
     protected $fillable = [
         'organization_id', 'name', 'code', 'description', 'category', 'fulfillment_mode',

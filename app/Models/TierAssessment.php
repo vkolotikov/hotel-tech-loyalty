@@ -37,12 +37,13 @@ class TierAssessment extends Model
 
     public function oldTier(): BelongsTo
     {
-        return $this->belongsTo(LoyaltyTier::class, 'old_tier_id');
+        // A deleted tier keeps its name in the history (release 11).
+        return $this->belongsTo(LoyaltyTier::class, 'old_tier_id')->withTrashed();
     }
 
     public function newTier(): BelongsTo
     {
-        return $this->belongsTo(LoyaltyTier::class, 'new_tier_id');
+        return $this->belongsTo(LoyaltyTier::class, 'new_tier_id')->withTrashed();
     }
 
     public function assessedBy(): BelongsTo

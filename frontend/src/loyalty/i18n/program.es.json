@@ -179,7 +179,8 @@
       "min_points": "Introduzca un número entero de puntos de 0 a 10.000.000.",
       "name": "Dé un nombre al nivel.",
       "min_visits": "Escriba un número entero de visitas de 0 a 100.000, o déjelo vacío.",
-      "min_spend": "Escriba un importe de 0 a 100.000.000, p. ej., 250, o déjelo vacío."
+      "min_spend": "Escriba un importe de 0 a 100.000.000, p. ej., 250, o déjelo vacío.",
+      "name_taken": "Otro nivel ya tiene este nombre. Elija otro."
     },
     "save": "Guardar nivel",
     "min_visits": "Visitas para alcanzar este nivel",
@@ -344,6 +345,72 @@
     "benefit_unused": {
       "title": "Ningún nivel da todavía {{benefits}}",
       "line": "Un miembro solo tiene un beneficio cuando un nivel lo da. En Niveles, pulse Añadir beneficio en el nivel que deba darlo."
+    }
+  },
+  "rename": {
+    "action": "Cambiar nombre",
+    "title": "Cambiar el nombre de {{name}}",
+    "name": "Nombre nuevo",
+    "tier_hint": "Los miembros verán el nombre nuevo en su tarjeta, en la aplicación y en el portal.",
+    "benefit_hint": "Los miembros verán el nombre nuevo en la aplicación y en el portal, también en sus solicitudes.",
+    "save": "Cambiar nombre"
+  },
+  "remove_tier": {
+    "action": "Eliminar",
+    "title": "¿Eliminar {{name}}?",
+    "last": "{{tier}} es el último nivel activado. Los miembros necesitan un nivel, así que no se puede eliminar. Añada o active otro nivel primero.",
+    "intro": "{{tier}} sale del programa y de todas las listas. El historial de los miembros conserva su nombre.",
+    "move_to": "Los miembros del nivel {{tier}} ({{n}}) pasan a",
+    "move_hint": "Sus puntos se quedan como están. No se les envía ningún mensaje.",
+    "no_members": "Ningún miembro tiene este nivel.",
+    "also": "También cambia",
+    "keep": "Conservarlo",
+    "confirm": "Eliminar {{name}}",
+    "close": "Cerrar",
+    "line": {
+      "benefits": "Los beneficios de este nivel ({{n}}) se le retiran. Siguen en el catálogo para los demás niveles.",
+      "place_only": "{{name}} solo admite {{tier}}: después no admitirá ningún nivel hasta que usted vuelva a elegir sus niveles.",
+      "place": "{{name}} deja de admitir {{tier}}.",
+      "event_only": "El evento «{{name}}» es solo para {{tier}}: después no será para ningún nivel hasta que usted vuelva a elegir.",
+      "event": "El evento «{{name}}» ya no es para {{tier}}.",
+      "boost_only": "La promoción de puntos «{{name}}» es solo para {{tier}}, así que se desactiva.",
+      "boost": "La promoción de puntos «{{name}}» deja de contar {{tier}}.",
+      "offer_only": "La oferta «{{name}}» es solo para {{tier}}, así que se desactiva.",
+      "offer": "La oferta «{{name}}» ya no es para {{tier}}.",
+      "segment_only": "El segmento «{{name}}» solo elige {{tier}}: cámbielo antes de enviarle nada.",
+      "segment": "El segmento «{{name}}» deja de elegir {{tier}}."
+    },
+    "error": {
+      "manager_only": "Solo un propietario o un responsable puede modificar el programa.",
+      "not_allowed": "Solo un propietario o un responsable puede modificar el programa.",
+      "no_capability": "Solo un propietario o un responsable puede modificar el programa.",
+      "not_found": "Este nivel ya no está en el programa. La página muestra ahora su estado actual.",
+      "last_tier": "Este es el último nivel activado. Los miembros necesitan un nivel, así que no se puede eliminar.",
+      "move_to_required": "Elija el nivel al que pasan sus miembros.",
+      "move_to_unknown": "Ya no se pueden pasar miembros a ese nivel. Elija otro.",
+      "network": "Sin conexión: no se eliminó nada. Inténtelo de nuevo.",
+      "unknown": "No se pudo eliminar el nivel. No cambió nada; inténtelo de nuevo."
+    },
+    "move_off_only": "Los miembros desactivados del nivel {{tier}} ({{n}}) pasan a",
+    "move_off": "Los miembros desactivados ({{n}}) pasan con ellos."
+  },
+  "remove_benefit": {
+    "action": "Eliminar",
+    "title": "¿Eliminar {{name}}?",
+    "tiers": "Sale del catálogo y de los niveles que lo dan: {{tiers}}.",
+    "no_tiers": "Sale del catálogo. Ahora ningún nivel lo da.",
+    "waiting": "Solicitudes aún en espera: {{n}}. Siguen en Solicitudes para que usted las apruebe o rechace.",
+    "history": "Las solicitudes anteriores de los miembros conservan su nombre.",
+    "instead": "Para solo pausarlo, desactívelo: vuelve con un solo clic.",
+    "keep": "Conservarlo",
+    "confirm": "Eliminar beneficio",
+    "error": {
+      "manager_only": "Solo un propietario o un responsable puede modificar el programa.",
+      "not_allowed": "Solo un propietario o un responsable puede modificar el programa.",
+      "no_capability": "Solo un propietario o un responsable puede modificar el programa.",
+      "not_found": "Este beneficio ya no está en el catálogo. La página muestra ahora su estado actual.",
+      "network": "Sin conexión: no se eliminó nada. Inténtelo de nuevo.",
+      "unknown": "No se pudo eliminar el beneficio. No cambió nada; inténtelo de nuevo."
     }
   }
 }

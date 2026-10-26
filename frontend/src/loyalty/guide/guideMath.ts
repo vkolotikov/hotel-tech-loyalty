@@ -11,7 +11,7 @@ export type StepId = 'tiers' | 'earn' | 'places' | 'members' | 'scan'
 export type FeatureId = 'scan' | 'door' | 'members' | 'tiers' | 'places' | 'events' | 'earn' | 'rewards' | 'requests' | 'campaigns' | 'insights' | 'app'
 export type TopicId = keyof typeof TOPIC_WORDS
 export type FaqId =
-  | 'start' | 'roles' | 'look' | 'how_scan' | 'colours' | 'door' | 'expired' | 'nfc' | 'move_up' | 'by_hand' | 'end_date' | 'import'
+  | 'start' | 'roles' | 'look' | 'how_scan' | 'colours' | 'door' | 'expired' | 'nfc' | 'move_up' | 'by_hand' | 'end_date' | 'import' | 'rename_delete'
   | 'run_event' | 'sign_up' | 'give_points' | 'redeem' | 'boosts' | 'portal_what' | 'portal_card'
 
 export const STEPS: readonly { id: StepId; to: string }[] = [
@@ -54,6 +54,8 @@ export const FAQ: readonly { id: FaqId; topic: TopicId; to?: string }[] = [
   { id: 'by_hand', topic: 'members', to: '/loyalty' },
   { id: 'end_date', topic: 'members', to: '/loyalty' },
   { id: 'import', topic: 'members', to: '/loyalty' },
+  // Release 11: rename and delete on Program.
+  { id: 'rename_delete', topic: 'members', to: '/loyalty/program' },
   { id: 'run_event', topic: 'events', to: '/loyalty/events' },
   { id: 'sign_up', topic: 'events', to: '/loyalty/events' },
   { id: 'give_points', topic: 'rewards', to: '/loyalty/scan' },

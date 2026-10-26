@@ -101,7 +101,9 @@
     "portal_what_q": "What do members see?",
     "portal_what_a": "Their card and QR code, points, tier and benefits, events, rewards and history.",
     "portal_card_q": "Where is a member’s card?",
-    "portal_card_a": "In their portal or app — and in Apple or Google Wallet once you set it up in Card & app."
+    "portal_card_a": "In their portal or app — and in Apple or Google Wallet once you set it up in Card & app.",
+    "rename_delete_q": "Can I rename or delete a tier or a benefit?",
+    "rename_delete_a": "Yes: on Program, each has Rename and Delete. Delete says first what changes: a tier’s members move to the tier you choose; history keeps the old name."
   },
   "demo": {
     "welcome": "Welcome",

@@ -69,6 +69,7 @@ export const THRESHOLD_WORDS: Record<string, string> = {
 /** What stops the tier form, before sending or from the server's field errors (programMath.ts `tierProblems`). */
 export const TIER_PROBLEM_WORDS: Record<string, string> = {
   name: 'Give the tier a name.',
+  name_taken: 'Another tier already has this name. Choose another one.',
   color: 'Write the colour as # and six hex digits, e.g. #c9a227, or leave it empty.',
   min_points: 'Enter a whole number of points from 0 to 10,000,000.',
   earn_rate: 'Enter an earn rate from 0 to 99.99, e.g. 1.5.',
@@ -110,6 +111,24 @@ export const BOOST_PROBLEM_WORDS: Record<string, string> = {
   tier_ids: 'A chosen tier is no longer in the programme. Choose the tiers again.',
 }
 
+/**
+ * Release 11: what deleting a tier changes beyond its members, one line each (programMath.ts `tierRemovalLines`, from
+ * the server's TierRemoval preview); `{{tier}}` is the tier, `{{name}}` the place, event, boost, offer or segment.
+ */
+export const REMOVAL_WORDS: Record<string, string> = {
+  benefits: 'The benefits it gives ({{n}}) are taken off it. They stay in the catalogue for the other tiers.',
+  place_only: '{{name}} lets in only {{tier}}: afterwards it lets in no tier until you choose its tiers again.',
+  place: '{{name}} stops letting {{tier}} in.',
+  event_only: 'The event “{{name}}” is for {{tier}} only: afterwards it is for no tier until you choose again.',
+  event: 'The event “{{name}}” is no longer for {{tier}}.',
+  boost_only: 'The boost “{{name}}” is for {{tier}} only, so it is switched off.',
+  boost: 'The boost “{{name}}” stops counting {{tier}}.',
+  offer_only: 'The offer “{{name}}” is for {{tier}} only, so it is switched off.',
+  offer: 'The offer “{{name}}” is no longer for {{tier}}.',
+  segment_only: 'The segment “{{name}}” picks only {{tier}}: change it before you send anything to it.',
+  segment: 'The segment “{{name}}” stops picking {{tier}}.',
+}
+
 /** The families above by the key prefix they are read under. */
 export const WORD_FAMILIES: Record<string, Record<string, string>> = {
   boost_state: BOOST_STATE_WORDS,
@@ -123,4 +142,5 @@ export const WORD_FAMILIES: Record<string, Record<string, string>> = {
   'benefit.problem': BENEFIT_PROBLEM_WORDS,
   'tier_benefit.problem': TIER_BENEFIT_PROBLEM_WORDS,
   'boost.problem': BOOST_PROBLEM_WORDS,
+  'remove_tier.line': REMOVAL_WORDS,
 }

@@ -179,7 +179,8 @@
       "min_points": "Enter a whole number of points from 0 to 10,000,000.",
       "name": "Give the tier a name.",
       "min_visits": "Enter a whole number of visits from 0 to 100,000, or leave it empty.",
-      "min_spend": "Enter an amount from 0 to 100,000,000, e.g. 250, or leave it empty."
+      "min_spend": "Enter an amount from 0 to 100,000,000, e.g. 250, or leave it empty.",
+      "name_taken": "Another tier already has this name. Choose another one."
     },
     "save": "Save tier",
     "min_visits": "Visits to reach this tier",
@@ -344,6 +345,72 @@
     "benefit_unused": {
       "title": "No tier gives {{benefits}} yet",
       "line": "Members have a benefit only once a tier gives it. On Tiers, press Add benefit on the tier that should give it."
+    }
+  },
+  "rename": {
+    "action": "Rename",
+    "title": "Rename {{name}}",
+    "name": "New name",
+    "tier_hint": "Members see the new name on their card, in the app and in the portal.",
+    "benefit_hint": "Members see the new name in the app and the portal, on their requests too.",
+    "save": "Rename"
+  },
+  "remove_tier": {
+    "action": "Delete",
+    "title": "Delete {{name}}?",
+    "last": "{{tier}} is the last tier switched on. Members need a tier, so it cannot be deleted. Add or switch on another tier first.",
+    "intro": "{{tier}} leaves the programme and every list. Members’ history keeps its name.",
+    "move_to": "Members of {{tier}} ({{n}}) move to",
+    "move_hint": "Their points stay as they are. They are not sent a message.",
+    "no_members": "No member holds this tier.",
+    "also": "It also changes",
+    "keep": "Keep it",
+    "confirm": "Delete {{name}}",
+    "close": "Close",
+    "line": {
+      "benefits": "The benefits it gives ({{n}}) are taken off it. They stay in the catalogue for the other tiers.",
+      "place_only": "{{name}} lets in only {{tier}}: afterwards it lets in no tier until you choose its tiers again.",
+      "place": "{{name}} stops letting {{tier}} in.",
+      "event_only": "The event “{{name}}” is for {{tier}} only: afterwards it is for no tier until you choose again.",
+      "event": "The event “{{name}}” is no longer for {{tier}}.",
+      "boost_only": "The boost “{{name}}” is for {{tier}} only, so it is switched off.",
+      "boost": "The boost “{{name}}” stops counting {{tier}}.",
+      "offer_only": "The offer “{{name}}” is for {{tier}} only, so it is switched off.",
+      "offer": "The offer “{{name}}” is no longer for {{tier}}.",
+      "segment_only": "The segment “{{name}}” picks only {{tier}}: change it before you send anything to it.",
+      "segment": "The segment “{{name}}” stops picking {{tier}}."
+    },
+    "error": {
+      "manager_only": "Only an owner or a manager can change the programme.",
+      "not_allowed": "Only an owner or a manager can change the programme.",
+      "no_capability": "Only an owner or a manager can change the programme.",
+      "not_found": "This tier is no longer in the programme. The page now shows it as it is.",
+      "last_tier": "This is the last tier switched on. Members need a tier, so it cannot be deleted.",
+      "move_to_required": "Choose the tier its members move to.",
+      "move_to_unknown": "That tier is no longer one to move members to. Choose another one.",
+      "network": "No connection: nothing was deleted. Try again.",
+      "unknown": "The tier could not be deleted. Nothing was changed; please try again."
+    },
+    "move_off_only": "Switched-off members of {{tier}} ({{n}}) move to",
+    "move_off": "Switched-off members ({{n}}) move with them."
+  },
+  "remove_benefit": {
+    "action": "Delete",
+    "title": "Delete {{name}}?",
+    "tiers": "It leaves the catalogue and the tiers that give it: {{tiers}}.",
+    "no_tiers": "It leaves the catalogue. No tier gives it now.",
+    "waiting": "Requests for it still waiting: {{n}}. They stay in Requests for you to approve or decline.",
+    "history": "Members’ past requests keep its name.",
+    "instead": "To pause it instead, switch it off: it comes back with one press.",
+    "keep": "Keep it",
+    "confirm": "Delete benefit",
+    "error": {
+      "manager_only": "Only an owner or a manager can change the programme.",
+      "not_allowed": "Only an owner or a manager can change the programme.",
+      "no_capability": "Only an owner or a manager can change the programme.",
+      "not_found": "This benefit is no longer in the catalogue. The page now shows it as it is.",
+      "network": "No connection: nothing was deleted. Try again.",
+      "unknown": "The benefit could not be deleted. Nothing was changed; please try again."
     }
   }
 }
