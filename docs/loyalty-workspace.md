@@ -646,20 +646,22 @@ files on disk): run them one after the other.
 
 ## Deploying
 
-- Release 8 is live (`main` 3ffe5c5, pushed 2026-10-25 on the owner's word: membership for every industry), built
-  from branch commit 63651b8: the next release's change list is `git diff --name-status 63651b8 <tip>`. It was checked
-  by content (every source file on `main` equal to the branch, the three migrations and the reminder's schedule
-  present, the `LoyaltyApp` chunk carrying the new scan screen); the live site could not be reached from the build
-  environment. Not yet live, on the branch after 63651b8: two release 8 follow-ups (the portal menu offers Events only
-  when an event the member's tier may attend is coming; the scan screen words a `409 in_progress` answer) and release
-  9 (the review's fixes and the redesign, no migration). They ride the next deploy (the change list above picks them
-  up). Release 7
+- Release 9 is live (`main` 34162f4, pushed 2026-10-26 on the owner's word: the review's fixes, the redesign and the
+  nightly tier check, with the two release 8 follow-ups), built from branch commit 9d610df: the next release's change
+  list is `git diff --name-status 9d610df <tip>`. 189 source files, no deletions, no migration; on the deploy tree PHP
+  7011 passed, 7 skipped, the frontend 5423 passed, tsc clean. It was checked by content (every source file on `main`
+  equal to the branch, `loyalty:assess-tiers` and its schedule present, the `LoyaltyApp` chunk carrying the new scan
+  screen); the live site could not be reached from the build environment. Release 8 went out as `main` 3ffe5c5 from
+  63651b8 (membership for every industry). Release 7
   went out as `main` ffabebf from 40ffdaf (ways to earn and reward). Release 6b went out as
   `main` 65b3415 from 8ac5a62 (campaigns and offers with no brand are every brand's), release 6 as 7835cf0 from
   1a37e68, release 5b as 5b481aa from ea8b364, release 5 as 8a04f86 from 6adf121, release 4 as 097432a from a7e87ae.
   Neither release 6 nor 6b could be checked on the live site from the build environment either (its network policy
   refuses `app.hexa-tech.uk`): `main` was checked by content instead (every source file equal to the branch, the
   built bundle carrying the new strings).
+- **Release 9** (review fixes, redesign, nightly tier check; live as `main` 34162f4, 2026-10-26). No migration. One new
+  scheduled command: `php artisan loyalty:assess-tiers [--org=<organisation id>]` (daily 02:47 UTC). No new route. The
+  change to tiers takes effect for moves from now on: a member moved before keeps the year-ahead grace date they have.
 - **Release 8** (membership for every industry; live as `main` 3ffe5c5, 2026-10-25).
   Three migrations, each tried on PostgreSQL with rollback, adding tables and defaulted or nullable columns only:
   `2026_10_25_140000_create_access_places` (`access_places`, `access_place_tiers`, `scan_events.access_place_id` and
