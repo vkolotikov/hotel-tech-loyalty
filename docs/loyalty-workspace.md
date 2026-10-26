@@ -660,8 +660,8 @@ files on disk): run them one after the other.
 
 ## Deploying
 
-- Not yet live: the Guide (`/loyalty/guide`, frontend only, no migration), on the branch after 12958a4; it goes out on
-  the owner's word.
+- Not yet live: the Guide (`/loyalty/guide`, frontend only, no migration), on the branch after 12958a4. Since
+  2026-10-26 a finished job is deployed without asking (the owner's standing word, `CLAUDE.md` "Git and deploy").
 - Release 9b is live (`main` d775898, pushed 2026-10-26 on the owner's word: the reminders and the tier check at each
   venue's own hour, the event dialog's single "Where", the deleted member's shorter notice), built from branch commit
   12958a4: the next release's change list is `git diff --name-status 12958a4 <tip>`. 15 source files, no deletions, no
