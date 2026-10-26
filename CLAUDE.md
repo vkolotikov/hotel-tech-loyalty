@@ -240,7 +240,9 @@ Multi-tenant Laravel 13 + React (Vite, TypeScript) SaaS with four sub-brands. Pr
   action (hide the header's add button while it shows), figures are `FigureTiles`; colour only through the families
   (`data-hue`, `.l-hue-*`, each tone with its `--l-hue-*-bg` fill — a new family gets both and a line in
   `loyaltyContrast.test.ts`). Loyalty's palette is `LOYALTY_SURFACES` (the drafts' navy); Content keeps `NAVY_SURFACES`.
-  Spanish strings address staff as usted.
+  Spanish strings address staff as usted. What a programme still lacks is the server's: the setup steps are
+  `Loyalty\Setup\SetupProgress` (`GET start`), Program's checks `Loyalty\Programme\TierAdvice` (reads only, like
+  ProgrammeAdvice); the workspace only places and words them.
 - Release 9 (owner 2026-10-25, review and redesign; `docs/loyalty-workspace.md` "Release 9"): a tier move's direction is
   `LoyaltyService::compareOnLadder()` (the measure's floors, then points floors, then `sort_order`; level is no move);
   soft landing steps down the measure's own ladder; a move never writes `tier_effective_until` (it is the grace clock,

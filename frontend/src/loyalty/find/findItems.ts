@@ -1,12 +1,12 @@
 import type { LucideIcon } from 'lucide-react'
-import { BookOpen, Keyboard, LayoutGrid, Moon, PanelLeft, ScanLine, Sun, User } from 'lucide-react'
+import { BookOpen, Keyboard, LayoutGrid, Moon, PanelLeft, Rocket, ScanLine, Sun, User } from 'lucide-react'
 import type { FindGroup } from '../../workspace/find/FindFrame'
 import { fold, type FindItem, type FindTarget } from '../../workspace/find/findCore'
 import type { WorkspaceNavItem } from '../../workspace/WorkspaceShell'
 import { memberPath } from '../lib/links'
 import type { MemberRow } from '../lib/types'
 
-export interface ActionWords { scan: string; goTo: string; toDark: string; toLight: string; collapse: string; expand: string; shortcuts: string; guide?: string }
+export interface ActionWords { scan: string; goTo: string; toDark: string; toLight: string; collapse: string; expand: string; shortcuts: string; guide?: string; start?: string }
 
 /** Find's actions (spec 2026-10-21 §4.8): Scan, the areas, the other theme, the side panel (from 1024 px), the list of shortcuts. */
 export function findActions(p: { nav: Pick<WorkspaceNavItem, 'to' | 'label'>[]; dark: boolean; wide: boolean; slim: boolean; words: ActionWords }): FindItem[] {
@@ -18,6 +18,8 @@ export function findActions(p: { nav: Pick<WorkspaceNavItem, 'to' | 'label'>[]; 
     { id: 'shortcuts', kind: 'shortcuts', label: p.words.shortcuts, go: { run: 'shortcuts' } },
     // The Guide (owner 2026-10-26): short answers, the quick start and "Try a scan".
     ...(p.words.guide ? [{ id: 'guide', kind: 'guide', label: p.words.guide, go: { to: '/loyalty/guide' } }] : []),
+    // Release 10: "Start here", the setup steps.
+    ...(p.words.start ? [{ id: 'start', kind: 'start', label: p.words.start, go: { to: '/loyalty/start' } }] : []),
   ]
 }
 
@@ -61,6 +63,7 @@ export function iconOf(item: FindItem): LucideIcon {
     case 'rail': return PanelLeft
     case 'shortcuts': return Keyboard
     case 'guide': return BookOpen
+    case 'start': return Rocket
     default: return User
   }
 }

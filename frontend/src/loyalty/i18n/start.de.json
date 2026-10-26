@@ -1,0 +1,39 @@
+{
+  "all_done": "Alles bereit: Ihr Programm steht",
+  "all_done_line": "Jeder Schritt ist erledigt. Was als Nächstes kommt, erklärt die Anleitung.",
+  "card_next": "Als Nächstes: {{step}}",
+  "card_title": "Ihr Programm einrichten: {{done}} von {{total}} erledigt",
+  "continue": "Weiter",
+  "do_next": "Als Nächstes",
+  "done": "Erledigt",
+  "line": "Richten Sie Ihr Programm Schritt für Schritt ein. Jeder Schritt öffnet die passende Seite und hakt sich selbst ab, sobald er erledigt ist.",
+  "open": "Öffnen",
+  "progress": "{{done}} von {{total}} erledigt",
+  "step_count": {
+    "member": "{{n}} Mitglieder",
+    "rewards": "{{n}} im Angebot",
+    "scan": "{{n}} Scans",
+    "tiers": "{{n}} in Gebrauch",
+    "ways": "{{n}} zu beheben"
+  },
+  "step_line": {
+    "logo": "Mitglieder sehen es auf ihrer Karte und in der App.",
+    "member": "Fügen Sie jemanden von Hand hinzu oder importieren Sie Ihre Liste.",
+    "programme": "Vier kurze Fragen legen Sammeln, Boni und erste Stufen für Ihre Branche fest. Sie können später alles ändern.",
+    "rewards": "Wofür Mitglieder ihre Punkte einlösen, sichtbar in der Mitglieder-App und im Portal.",
+    "scan": "Scannen Sie die Karte oder den QR-Code eines Mitglieds: Der Bildschirm zeigt, wer es ist und was es darf.",
+    "tiers": "Stufen wie Silber und Gold: wie man sie erreicht und was sie bieten.",
+    "ways": "Sammeln & Prämien prüft, ob Ihre Einstellungen zusammenpassen, und behebt das meiste mit einem Klick."
+  },
+  "step_title": {
+    "logo": "Ihr Logo auf die Karte bringen",
+    "member": "Ihr erstes Mitglied hinzufügen",
+    "programme": "Festlegen, wie Ihr Programm funktioniert",
+    "rewards": "Prämien hinzufügen",
+    "scan": "Einen Scan am Empfang ausprobieren",
+    "tiers": "Stufen einrichten",
+    "ways": "Prüfen, wie Mitglieder sammeln"
+  },
+  "steps": "Einrichtungsschritte",
+  "title": "Erste Schritte"
+}

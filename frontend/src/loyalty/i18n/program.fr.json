@@ -83,7 +83,8 @@
     "tiers": "Niveaux",
     "tiers_hint": "Aucun choisi : tous les niveaux.",
     "weekdays": "Jours de la semaine",
-    "weekdays_hint": "Aucun choisi : tous les jours."
+    "weekdays_hint": "Aucun choisi : tous les jours.",
+    "multiplier_example": "De 1 à 10. Pendant qu’il dure, 100 points deviennent {{n}}."
   },
   "boost_state": {
     "ended": "Terminé",
@@ -187,7 +188,11 @@
     "min_spend_hint": "En {{currency}}, ce que les membres ont dépensé lors de leurs visites. Vide : personne n’y monte par les dépenses.",
     "measure_visits": "Les membres changent de niveau selon leurs visites.",
     "measure_spend": "Les membres changent de niveau selon leurs dépenses.",
-    "measure_change": "À changer dans Façons de gagner"
+    "measure_change": "À changer dans Façons de gagner",
+    "earn_rate_example": "Points par unité dépensée : 100 points de base deviennent {{n}} points.",
+    "preview_title": "Ce que voient les membres",
+    "preview_rate": "×{{rate}} points sur leurs dépenses",
+    "preview_no_benefits": "Pas encore d’avantage : ajoutez-les sur la carte du niveau."
   },
   "tier_benefit": {
     "add_title": "Ajouter un avantage au niveau {{tier}}",
@@ -324,6 +329,21 @@
       "example_title": "Week-end double points",
       "example_figures": "{{from}} → {{to}} points",
       "example_line": "Boost ×2 · samedi et dimanche"
+    }
+  },
+  "to_check": "à vérifier",
+  "advice": {
+    "points": "{{n}} points",
+    "visits": "{{n}} visites",
+    "open_tier": "Ouvrir {{tier}}",
+    "go_tiers": "Aller aux niveaux",
+    "tiers_share_threshold": {
+      "title": "Plusieurs niveaux démarrent au même seuil",
+      "line": "{{tiers}} démarrent tous à {{value}} : en cumulant, les membres n’atteignent qu’un seul d’entre eux. Donnez à chaque niveau son propre seuil, ou gardez les autres pour les membres que vous placez à la main."
+    },
+    "benefit_unused": {
+      "title": "Aucun niveau n’offre encore {{benefits}}",
+      "line": "Un membre n’a un avantage que lorsqu’un niveau l’offre. Dans Niveaux, appuyez sur Ajouter un avantage pour le niveau concerné."
     }
   }
 }

@@ -95,7 +95,7 @@ export function LoyaltyShell({ children }: { children: ReactNode }) {
   // Members is current on /loyalty and on a member's page, not on the other areas' addresses under it.
   const area = areaOf(pathname)
   nav[0].end = area !== 'members'
-  const pageName = area === 'guide' ? t('loyalty.guide.page.title', 'Guide') : nav.find(n => (area === 'members' ? n.to === '/loyalty' : n.to === `/loyalty/${area}`))?.label ?? ''
+  const pageName = area === 'guide' ? t('loyalty.guide.page.title', 'Guide') : area === 'start' ? t('loyalty.start.title', 'Get started') : nav.find(n => (area === 'members' ? n.to === '/loyalty' : n.to === `/loyalty/${area}`))?.label ?? ''
   const findLabel = t('loyalty.shell.find', 'Find a member or action')
   const modKey = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform ?? '') ? '⌘' : 'Ctrl'
   const crumb = data ? <Crumb organization={data.organization.name} page={pageName} /> : null
@@ -117,6 +117,7 @@ export function LoyaltyShell({ children }: { children: ReactNode }) {
       expand: t('workspace.shell.expand', 'Expand menu'),
       shortcuts: t('workspace.shortcuts.title', 'Keyboard shortcuts'),
       guide: t('loyalty.guide.page.title', 'Guide'),
+      start: t('loyalty.start.title', 'Get started'),
     },
   })
   const runFind = (target: FindTarget) => {

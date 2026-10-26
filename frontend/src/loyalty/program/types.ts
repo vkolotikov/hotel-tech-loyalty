@@ -84,6 +84,17 @@ export interface Program {
   benefits: Benefit[]
   boosts: Boost[]
   options: ProgramOptions
+  /** Release 10: what the ladder and the catalogue leave out (TierAdvice); a server before it sends none. */
+  advice?: ProgramAdvice[]
+}
+
+/** One of Program's checks: its code, warn or tip, its figures and the tiers or benefits it names. */
+export interface ProgramAdvice {
+  code: string
+  level: 'warn' | 'tip'
+  params: Record<string, number>
+  tiers: { id: number; name: string }[]
+  benefits: { id: number; name: string }[]
 }
 
 export interface TierBody {

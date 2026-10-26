@@ -14,7 +14,8 @@
     "faq": "Questions",
     "all": "All",
     "open": "Open",
-    "nothing": "Nothing found. Try other words."
+    "nothing": "Nothing found. Try other words.",
+    "start_live": "See which steps your programme has done and which are left:"
   },
   "step": {
     "tiers": "Set your tiers",

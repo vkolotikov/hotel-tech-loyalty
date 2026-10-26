@@ -16,6 +16,8 @@ use App\Services\DiscountService;
 use App\Services\Loyalty\LoyaltyAccess;
 use App\Services\Loyalty\LoyaltyForms;
 use App\Services\Loyalty\LoyaltyRefused;
+use App\Services\Loyalty\Programme\ProgrammeOptions;
+use App\Services\Loyalty\Programme\TierAdvice;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -50,14 +52,26 @@ class ProgramController extends Controller
         $named = VenueClock::isNamed($orgId);
         $members = LoyaltyMember::query()->where('is_active', true)
             ->selectRaw('tier_id, COUNT(*) AS n')->groupBy('tier_id')->pluck('n', 'tier_id');
-        $benefits = $this->tierBenefits()->get()->groupBy('tier_id');
+        $tierBenefits = $this->tierBenefits()->get();
+        $benefits = $tierBenefits->groupBy('tier_id');
+        $tiers = LoyaltyTier::query()->orderBy('sort_order')->orderBy('min_points')->get();
+        $catalogue = BenefitDefinition::query()->orderBy('sort_order')->orderBy('name')->get();
 
         return response()->json([
-            'tiers'    => LoyaltyTier::query()->orderBy('sort_order')->orderBy('min_points')->get()
-                ->map(fn (LoyaltyTier $t) => self::tierRow($t, (int) $members->get($t->id, 0), $benefits->get($t->id, collect())))
+            'tiers'    => $tiers->map(fn (LoyaltyTier $t) => self::tierRow($t, (int) $members->get($t->id, 0), $benefits->get($t->id, collect())))
                 ->values(),
-            'benefits' => BenefitDefinition::query()->orderBy('sort_order')->orderBy('name')->get()
-                ->map(fn (BenefitDefinition $b) => self::benefitRow($b))->values(),
+            'benefits' => $catalogue->map(fn (BenefitDefinition $b) => self::benefitRow($b))->values(),
+            // Release 10: what the ladder and the catalogue leave out (TierAdvice), for the owner's "Review rules".
+            'advice'   => TierAdvice::read(
+                $tiers->map(fn (LoyaltyTier $t) => [
+                    'id' => (int) $t->id, 'name' => (string) $t->name, 'is_active' => (bool) $t->is_active,
+                    'invitation_only' => (bool) ($t->invitation_only ?? false),
+                    'min_points' => $t->min_points, 'min_visits' => $t->min_visits, 'min_spend' => $t->min_spend,
+                ])->values()->all(),
+                $catalogue->map(fn (BenefitDefinition $b) => ['id' => (int) $b->id, 'name' => (string) $b->name, 'is_active' => (bool) $b->is_active])->values()->all(),
+                $tierBenefits->groupBy('benefit_id')->map(fn ($rows) => $rows->pluck('tier_id')->map(fn ($id) => (int) $id)->values()->all())->all(),
+                (string) ProgrammeOptions::get($orgId, 'tier_progress_by'),
+            ),
             'boosts'   => EarnRateEvent::query()->orderByDesc('starts_at')->orderByDesc('id')->get()
                 ->map(fn (EarnRateEvent $e) => self::boostRow($e, $named))->values(),
             'options'  => [

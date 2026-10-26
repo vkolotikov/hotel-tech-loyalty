@@ -83,7 +83,8 @@
     "tiers": "Tiers",
     "tiers_hint": "None chosen: every tier.",
     "weekdays": "Weekdays",
-    "weekdays_hint": "None chosen: every day."
+    "weekdays_hint": "None chosen: every day.",
+    "multiplier_example": "From 1 to 10. While it runs, 100 points become {{n}}."
   },
   "boost_state": {
     "ended": "Ended",
@@ -187,7 +188,11 @@
     "min_spend_hint": "In {{currency}}, what members spent at their visits. Empty: no one moves up to it by spend.",
     "measure_visits": "Members move between tiers by their visits.",
     "measure_spend": "Members move between tiers by what they spend.",
-    "measure_change": "Change it under Ways to earn"
+    "measure_change": "Change it under Ways to earn",
+    "earn_rate_example": "Points per unit spent: 100 base points become {{n}} points.",
+    "preview_title": "What members see",
+    "preview_rate": "×{{rate}} points on what they spend",
+    "preview_no_benefits": "No benefit yet: add them on the tier’s card in the ladder."
   },
   "tier_benefit": {
     "add_title": "Add a benefit to {{tier}}",
@@ -324,6 +329,21 @@
       "example_title": "Double-points weekend",
       "example_figures": "{{from}} → {{to}} points",
       "example_line": "×2 boost · Saturday and Sunday"
+    }
+  },
+  "to_check": "to check",
+  "advice": {
+    "points": "{{n}} points",
+    "visits": "{{n}} visits",
+    "open_tier": "Open {{tier}}",
+    "go_tiers": "Go to Tiers",
+    "tiers_share_threshold": {
+      "title": "Several tiers start at the same figure",
+      "line": "{{tiers}} all start at {{value}}: members reach only one of them by earning. Give each tier its own starting figure, or keep the others for members you place by hand."
+    },
+    "benefit_unused": {
+      "title": "No tier gives {{benefits}} yet",
+      "line": "Members have a benefit only once a tier gives it. On Tiers, press Add benefit on the tier that should give it."
     }
   }
 }

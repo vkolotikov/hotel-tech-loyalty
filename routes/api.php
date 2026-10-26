@@ -1423,6 +1423,8 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
                 Route::put('options', [\App\Http\Controllers\Api\V1\Admin\Loyalty\OptionsController::class, 'update']);
                 Route::post('options/setup', [\App\Http\Controllers\Api\V1\Admin\Loyalty\OptionsController::class, 'setup']);
                 Route::post('options/setup/skip', [\App\Http\Controllers\Api\V1\Admin\Loyalty\OptionsController::class, 'skip']);
+                // Release 10 (owner 2026-10-26): "Start here", the setup steps and which are done
+                Route::get('start', [\App\Http\Controllers\Api\V1\Admin\Loyalty\StartController::class, 'show']);
                 // §2 a check-in or a purchase at the desk; the member's stamp card
                 Route::post('members/{id}/check-in', [\App\Http\Controllers\Api\V1\Admin\Loyalty\VisitController::class, 'checkIn'])->whereNumber('id');
                 Route::get('members/{id}/stamps', [\App\Http\Controllers\Api\V1\Admin\Loyalty\VisitController::class, 'stamps'])->whereNumber('id');

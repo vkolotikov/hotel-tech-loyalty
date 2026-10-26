@@ -23,6 +23,15 @@ export function programSectionFrom(search: string, hash = ''): ProgramSection {
 
 export const programSearch = (section: ProgramSection): string => (section === 'tiers' ? '' : `?tab=${section}`)
 
+/**
+ * What 100 base points become at a typed rate or multiplier (release 10, the owner's 163:166: "100 base points become
+ * 125 points"), rounded as points are; null while the field holds no rate above zero.
+ */
+export function examplePoints(rate: string): number | null {
+  const value = decimalOf(rate)
+  return value === null || value <= 0 ? null : Math.round(100 * value)
+}
+
 /** Only a manager changes the programme; everyone else reads it (§5). The server checks again. */
 export function programActions(can: Can): { manage: boolean } {
   return { manage: can.manage_program }

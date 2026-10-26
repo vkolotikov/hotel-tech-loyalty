@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Can } from '../lib/types'
-import { BENEFIT_FIELDS, BOOST_FIELDS, PROGRAM_SECTIONS, programSearch, programSectionFrom, benefitBody, benefitChoices, benefitFormOf, benefitProblems, boostBody, boostFormOf, boostProblems, boostState, boostTone, existingOn, needsTimeCheck, needsAmount, timeCheckList, programActions, thresholds, tierBenefitBody, tierBenefitFormOf, tierBenefitProblems, tierBenefitServerProblems, tierBody, tierFormOf, tierProblems, typedValue, weekdayName, weekdaysText } from './programMath'
+import { BENEFIT_FIELDS, BOOST_FIELDS, PROGRAM_SECTIONS, examplePoints, programSearch, programSectionFrom, benefitBody, benefitChoices, benefitFormOf, benefitProblems, boostBody, boostFormOf, boostProblems, boostState, boostTone, existingOn, needsTimeCheck, needsAmount, timeCheckList, programActions, thresholds, tierBenefitBody, tierBenefitFormOf, tierBenefitProblems, tierBenefitServerProblems, tierBody, tierFormOf, tierProblems, typedValue, weekdayName, weekdaysText } from './programMath'
 import { chosenTiers, decimalOf, named, serverProblems, toggled, wallInput, wallOf } from '../lib/forms'
 import type { Benefit, Boost, ProgramOptions, Tier } from './types'
 
@@ -231,5 +231,17 @@ describe('Program\'s sections in the address (release 10)', () => {
 
   it('writes Tiers as the bare address and every other section as ?tab=', () => {
     expect(PROGRAM_SECTIONS.map(programSearch)).toEqual(['', '?tab=benefits', '?tab=places', '?tab=boosts'])
+  })
+})
+
+describe('a rate in figures (release 10, the owner\'s 163:166)', () => {
+  it('says what 100 base points become, rounded as points are, and nothing for no rate', () => {
+    expect(examplePoints('1.25')).toBe(125)
+    expect(examplePoints('1,5')).toBe(150)
+    expect(examplePoints('2')).toBe(200)
+    expect(examplePoints('1.333')).toBe(133)
+    expect(examplePoints('')).toBeNull()
+    expect(examplePoints('0')).toBeNull()
+    expect(examplePoints('abc')).toBeNull()
   })
 })

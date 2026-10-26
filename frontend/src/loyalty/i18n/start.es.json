@@ -1,0 +1,39 @@
+{
+  "all_done": "Todo listo: su programa está preparado",
+  "all_done_line": "Todos los pasos están hechos. La Guía responde a lo que viene después.",
+  "card_next": "Siguiente: {{step}}",
+  "card_title": "Configure su programa: {{done}} de {{total}} hechos",
+  "continue": "Continuar",
+  "do_next": "Hacer ahora",
+  "done": "Hecho",
+  "line": "Configure su programa paso a paso. Cada paso abre la página que lo hace y se marca solo cuando está hecho.",
+  "open": "Abrir",
+  "progress": "{{done}} de {{total}} hechos",
+  "step_count": {
+    "member": "{{n}} miembros",
+    "rewards": "{{n}} ofrecidas",
+    "scan": "{{n}} escaneos",
+    "tiers": "{{n}} en uso",
+    "ways": "{{n}} por arreglar"
+  },
+  "step_line": {
+    "logo": "Los miembros lo ven en su tarjeta y en la app.",
+    "member": "Añada a alguien a mano o importe su lista.",
+    "programme": "Cuatro preguntas cortas configuran la acumulación, los bonos y los primeros niveles para su negocio. Puede cambiarlo todo después.",
+    "rewards": "En qué gastan sus puntos los miembros, visible en la app de miembros y en el portal.",
+    "scan": "Escanee la tarjeta o el código QR de un miembro: la pantalla dice quién es y qué puede hacer.",
+    "tiers": "Escalones como Plata y Oro: cómo se alcanza cada uno y qué da.",
+    "ways": "Formas de ganar comprueba que sus opciones encajan y arregla casi todo con un clic."
+  },
+  "step_title": {
+    "logo": "Ponga su logo en la tarjeta",
+    "member": "Añada su primer miembro",
+    "programme": "Elija cómo funciona su programa",
+    "rewards": "Añada recompensas",
+    "scan": "Pruebe un escaneo en el mostrador",
+    "tiers": "Configure sus niveles",
+    "ways": "Compruebe cómo ganan los miembros"
+  },
+  "steps": "Pasos de configuración",
+  "title": "Primeros pasos"
+}

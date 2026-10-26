@@ -1,0 +1,39 @@
+{
+  "all_done": "All set: your programme is ready",
+  "all_done_line": "Every step is done. The Guide answers what comes next.",
+  "card_next": "Next: {{step}}",
+  "card_title": "Set up your programme: {{done}} of {{total}} done",
+  "continue": "Continue",
+  "do_next": "Do this next",
+  "done": "Done",
+  "line": "Set your programme up step by step. Each step opens the page that does it, and ticks itself once it is done.",
+  "open": "Open",
+  "progress": "{{done}} of {{total}} done",
+  "step_count": {
+    "member": "{{n}} members",
+    "rewards": "{{n}} offered",
+    "scan": "{{n}} scans",
+    "tiers": "{{n}} in use",
+    "ways": "{{n}} to fix"
+  },
+  "step_line": {
+    "logo": "Members see it on their card and in the app.",
+    "member": "Add someone by hand, or import your list.",
+    "programme": "Four short questions set your earning, bonuses and first tiers for your kind of business. You can change everything later.",
+    "rewards": "What members spend their points on, shown in the member app and the portal.",
+    "scan": "Scan a member’s card or QR code: the screen says who they are and what they may do.",
+    "tiers": "Levels such as Silver and Gold: what reaches each one and what it gives.",
+    "ways": "Ways to earn checks that your options work together, and fixes most things in one press."
+  },
+  "step_title": {
+    "logo": "Put your logo on the card",
+    "member": "Add your first member",
+    "programme": "Choose how your programme works",
+    "rewards": "Add rewards",
+    "scan": "Try a scan at the desk",
+    "tiers": "Set up your tiers",
+    "ways": "Check how members earn"
+  },
+  "steps": "Setup steps",
+  "title": "Get started"
+}

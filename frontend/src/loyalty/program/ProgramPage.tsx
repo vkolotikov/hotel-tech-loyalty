@@ -1,8 +1,8 @@
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { Award, CalendarDays, CheckCheck, Crown, Gift, MapPin, Pencil, Plus, Sparkles, Trash2, TrendingUp, Users, X, Zap } from 'lucide-react'
+import { AlertTriangle, ArrowRight, Award, CalendarDays, CheckCheck, Crown, Gift, Lightbulb, MapPin, Pencil, Plus, Sparkles, Trash2, TrendingUp, Users, X, Zap } from 'lucide-react'
 import { Button } from '../../workspace/ui/Button'
 import { Dialog } from '../../workspace/ui/Dialog'
 import { Notice } from '../../workspace/ui/Notice'
@@ -12,7 +12,7 @@ import type { ThemeName } from '../../workspace/theme/accent'
 import { useBoot } from '../LoyaltyProvider'
 import { failureOf, type ApiFailure } from '../lib/api'
 import { refusalKey } from '../lib/errors'
-import { amountOf, money, points, when } from '../lib/format'
+import { amountOf, listOf, money, points, when } from '../lib/format'
 import { useLook } from '../lib/look'
 import { TierChip } from '../ui/TierChip'
 import { PROGRAM_KEY, afterProgramChange, programApi } from './api'
@@ -27,7 +27,7 @@ import {
 import { chosenTiers, decimal, named } from '../lib/forms'
 import { TierBenefitDialog } from './TierBenefitDialog'
 import { TierDialog } from './TierDialog'
-import type { Benefit, Boost, Program, Tier, TierBenefit } from './types'
+import type { Benefit, Boost, Program, ProgramAdvice, Tier, TierBenefit } from './types'
 import { APPLIES_TO_WORDS, BOOST_STATE_WORDS, CATEGORY_WORDS, FULFILLMENT_WORDS, THRESHOLD_WORDS, VALUE_PHRASE_WORDS } from './words'
 import { PlacesSection } from '../places/PlacesSection'
 import { PLACES_KEY, placesApi } from '../places/placesApi'
@@ -76,6 +76,8 @@ export function ProgramPage() {
   const section = programSectionFrom(location.search, location.hash)
   const go = (next: ProgramSection) => navigate({ pathname: '/loyalty/program', search: programSearch(next) }, { replace: true })
   const count = (n: number | undefined) => (n === undefined ? undefined : <SectionCount value={points(n, locale)} />)
+  // The ladder's warnings wait on its card, in the waiting colour, as Ways to earn's do on its Overview.
+  const tierWarnings = (data?.advice ?? []).filter(a => a.level === 'warn' && a.code === 'tiers_share_threshold').length
 
   return (
     <div className="space-y-6 px-4 py-6 lg:px-6">
@@ -90,7 +92,8 @@ export function ProgramPage() {
 
       <SectionCards label={t('loyalty.program.sections', 'Program sections')} idPrefix="program-section" panelId="program-panel" value={section} onChange={go}
         items={[
-          { id: 'tiers', icon: Crown, hue: SECTION_HUE.tiers, title: t('loyalty.program.tiers.title', 'Tiers'), caption: t('loyalty.program.section.tiers', 'Levels and what reaches them'), badge: count(data?.tiers.length) },
+          { id: 'tiers', icon: Crown, hue: SECTION_HUE.tiers, title: t('loyalty.program.tiers.title', 'Tiers'), caption: t('loyalty.program.section.tiers', 'Levels and what reaches them'),
+            badge: tierWarnings > 0 ? <SectionCount waiting value={points(tierWarnings, locale)} waitingLabel={t('loyalty.program.to_check', 'to check')} /> : count(data?.tiers.length) },
           { id: 'benefits', icon: Gift, hue: SECTION_HUE.benefits, title: t('loyalty.program.benefits.title', 'Benefits'), caption: t('loyalty.program.section.benefits', 'Perks each tier includes'), badge: count(data?.benefits.length) },
           { id: 'places', icon: MapPin, hue: SECTION_HUE.places, title: t('loyalty.places.title', 'Places'), caption: t('loyalty.program.section.places', 'Entrances and who may enter'), badge: count(places.data?.places.length) },
           { id: 'boosts', icon: Zap, hue: SECTION_HUE.boosts, title: t('loyalty.program.boosts.title', 'Boost events'), caption: t('loyalty.program.section.boosts', 'Extra points for a while'), badge: count(data?.boosts.length) },
@@ -114,7 +117,7 @@ export function ProgramPage() {
         )}
 
         {data && section === 'tiers' && <Tiers program={data} manage={manage} theme={look.resolved} locale={locale} onOpen={setOpen} go={go} />}
-        {data && section === 'benefits' && <Benefits program={data} manage={manage} onOpen={setOpen} />}
+        {data && section === 'benefits' && <Benefits program={data} manage={manage} onOpen={setOpen} go={go} />}
         {/* Release 8: places and the tiers each admits. */}
         {section === 'places' && <PlacesSection manage={manage} />}
         {data && section === 'boosts' && <Boosts program={data} manage={manage} theme={look.resolved} locale={locale} timeZone={boot.venue.timezone} onOpen={setOpen} />}
@@ -171,6 +174,9 @@ function Tiers({ program, manage, theme, locale, onOpen, go }: {
         <FigureTile name="benefits" icon={Gift} hue="rule" label={t('loyalty.program.figures.benefits', 'Benefits to give')} value={points(program.benefits.length, locale)}
           note={t('loyalty.program.figures.benefits_note', 'in the catalogue')} onClick={() => go('benefits')} />
       </FigureTiles>
+      {(program.advice ?? []).filter(a => a.code === 'tiers_share_threshold').map(item => (
+        <SharedFigure key={item.params.value} item={item} program={program} manage={manage} locale={locale} onOpen={onOpen} />
+      ))}
       <SectionHead id="program-tiers" icon={Award} hue="tier" title={t('loyalty.program.tiers.title', 'Tiers')}>
         {manage && <Button size="sm" onClick={add}><Plus size={15} aria-hidden />{t('loyalty.program.tiers.add', 'Add tier')}</Button>}
       </SectionHead>
@@ -322,10 +328,59 @@ function TakeOff({ tier, tb, onClose }: { tier: Tier; tb: TierBenefit; onClose: 
   )
 }
 
+/**
+ * A check the server found (TierAdvice), as the owner's drafts draw one (163:88): in the waiting colour for a warning,
+ * the rules' violet for a tip, with what is wrong in a sentence and what to do about it.
+ */
+function AdviceBanner({ code, level, title, line, children }: { code: string; level: 'warn' | 'tip'; title: string; line: string; children?: ReactNode }) {
+  const Icon = level === 'warn' ? AlertTriangle : Lightbulb
+  return (
+    <div data-advice={code} data-level={level} data-hue={level === 'warn' ? 'gift' : 'rule'}
+      className="l-hue-panel flex flex-wrap items-center gap-x-4 gap-y-3 rounded-2xl border px-4 py-3.5">
+      <span aria-hidden className="l-hue-tile inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl"><Icon size={18} /></span>
+      <div className="min-w-[14rem] flex-1">
+        <p className="font-semibold text-a-text">{title}</p>
+        <p className="text-sm text-a-text-2">{line}</p>
+      </div>
+      {children && <div className="flex flex-wrap items-center gap-2">{children}</div>}
+    </div>
+  )
+}
+
+/** Tiers that start at the same figure: which, at what, and — for a manager — each tier to open and give its own figure. */
+function SharedFigure({ item, program, manage, locale, onOpen }: { item: ProgramAdvice; program: Program; manage: boolean; locale: string; onOpen: (open: Open) => void }) {
+  const { t } = useTranslation()
+  const boot = useBoot()
+  const by = boot.programme.progress_by ?? 'points'
+  const value = item.params.value ?? 0
+  const figure = by === 'spend'
+    ? money(value, boot.venue.currency, locale)
+    : by === 'visits'
+      ? t('loyalty.program.advice.visits', '{{n}} visits', { n: points(value, locale) })
+      : t('loyalty.program.advice.points', '{{n}} points', { n: points(value, locale) })
+  return (
+    <AdviceBanner code={item.code} level={item.level}
+      title={t('loyalty.program.advice.tiers_share_threshold.title', 'Several tiers start at the same figure')}
+      line={t('loyalty.program.advice.tiers_share_threshold.line', '{{tiers}} all start at {{value}}: members reach only one of them by earning. Give each tier its own starting figure, or keep the others for members you place by hand.', {
+        tiers: listOf(item.tiers.map(x => x.name), locale), value: figure,
+      })}>
+      {manage && item.tiers.map(ref => {
+        const tier = program.tiers.find(x => x.id === ref.id)
+        return tier && (
+          <Button key={ref.id} size="sm" variant="secondary" onClick={() => onOpen({ kind: 'tier', tier })}>
+            {t('loyalty.program.advice.open_tier', 'Open {{tier}}', { tier: ref.name })}
+          </Button>
+        )
+      })}
+    </AdviceBanner>
+  )
+}
+
 // ─── The benefit catalogue ────────────────────────────────────────────────
 
-function Benefits({ program, manage, onOpen }: { program: Program; manage: boolean; onOpen: (open: Open) => void }) {
-  const { t } = useTranslation()
+function Benefits({ program, manage, onOpen, go }: { program: Program; manage: boolean; onOpen: (open: Open) => void; go: (section: ProgramSection) => void }) {
+  const { t, i18n } = useTranslation()
+  const unused = (program.advice ?? []).find(a => a.code === 'benefit_unused')
   return (
     <section aria-labelledby={program.benefits.length > 0 ? 'program-benefits' : undefined} className="space-y-3">
       {/* An empty catalogue is its Get started panel alone: one heading, one action (the owner's 163:322). */}
@@ -346,9 +401,18 @@ function Benefits({ program, manage, onOpen }: { program: Program; manage: boole
             action={manage && <Button onClick={() => onOpen({ kind: 'benefit', benefit: null })}><Plus size={15} aria-hidden />{t('loyalty.program.benefits.add', 'Add benefit')}</Button>} />
         )
         : (
-          <ul className="grid gap-2 lg:grid-cols-2">
-            {program.benefits.map(b => <BenefitRow key={b.id} benefit={b} tiers={program.tiers} manage={manage} onOpen={onOpen} />)}
-          </ul>
+          <>
+            {unused && (
+              <AdviceBanner code={unused.code} level={unused.level}
+                title={t('loyalty.program.advice.benefit_unused.title', 'No tier gives {{benefits}} yet', { benefits: listOf(unused.benefits.map(x => x.name), i18n.language || 'en') })}
+                line={t('loyalty.program.advice.benefit_unused.line', 'Members have a benefit only once a tier gives it. On Tiers, press Add benefit on the tier that should give it.')}>
+                <Button size="sm" variant="secondary" onClick={() => go('tiers')}>{t('loyalty.program.advice.go_tiers', 'Go to Tiers')}<ArrowRight size={14} aria-hidden /></Button>
+              </AdviceBanner>
+            )}
+            <ul className="grid gap-2 lg:grid-cols-2">
+              {program.benefits.map(b => <BenefitRow key={b.id} benefit={b} tiers={program.tiers} manage={manage} onOpen={onOpen} />)}
+            </ul>
+          </>
         )}
     </section>
   )

@@ -14,7 +14,8 @@
     "faq": "Preguntas",
     "all": "Todas",
     "open": "Abrir",
-    "nothing": "No se encontró nada. Pruebe con otras palabras."
+    "nothing": "No se encontró nada. Pruebe con otras palabras.",
+    "start_live": "Qué pasos ya ha hecho su programa y cuáles faltan:"
   },
   "step": {
     "tiers": "Defina sus niveles",
