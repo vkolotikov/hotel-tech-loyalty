@@ -101,7 +101,9 @@
     "portal_what_q": "¿Qué ven los miembros?",
     "portal_what_a": "Su tarjeta y código QR, puntos, nivel y beneficios, eventos, recompensas e historial.",
     "portal_card_q": "¿Dónde está la tarjeta de un miembro?",
-    "portal_card_a": "En su portal o en la app — y en Apple o Google Wallet una vez configurado en Tarjeta y app."
+    "portal_card_a": "En su portal o en la app — y en Apple o Google Wallet una vez configurado en Tarjeta y app.",
+    "rename_delete_q": "¿Puedo cambiar el nombre de un nivel o un beneficio, o eliminarlo?",
+    "rename_delete_a": "Sí: en Programa, cada uno tiene «Cambiar nombre» y «Eliminar». Primero ve qué cambia: los miembros pasan al nivel que elija y el historial conserva el nombre."
   },
   "demo": {
     "welcome": "Bienvenida",

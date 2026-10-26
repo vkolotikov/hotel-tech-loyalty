@@ -69,6 +69,7 @@ class DiscountServiceTest extends TestCase
                 $t->string('fulfillment_mode')->nullable();
                 $t->boolean('is_active')->default(true);
                 $t->timestamps();
+                $t->softDeletes();
             });
         }
 

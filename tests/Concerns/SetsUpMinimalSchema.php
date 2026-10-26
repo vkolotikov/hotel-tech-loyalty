@@ -838,6 +838,7 @@ trait SetsUpMinimalSchema
                 $table->date('assessment_window_start')->nullable();
                 $table->date('assessment_window_end')->nullable();
                 $table->unsignedBigInteger('assessed_by')->nullable();
+                $table->text('notes')->nullable();
                 $table->timestamps();
                 $table->index('member_id');
             });
@@ -903,6 +904,7 @@ trait SetsUpMinimalSchema
                 $table->integer('sort_order')->default(0);
                 $table->boolean('is_active')->default(true);
                 $table->timestamps();
+                $table->softDeletes();
                 $table->unique(['organization_id', 'code']);
             });
         }
@@ -1325,6 +1327,7 @@ trait SetsUpMinimalSchema
                 $table->string('qualification_model', 32)->nullable();
                 $table->boolean('is_active')->default(true);
                 $table->timestamps();
+                $table->softDeletes();
                 $table->index('organization_id');
             });
         }

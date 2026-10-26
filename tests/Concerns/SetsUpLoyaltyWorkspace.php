@@ -231,6 +231,7 @@ trait SetsUpLoyaltyWorkspace
                 $t->boolean('invitation_only')->default(false);
                 $t->boolean('is_active')->default(true);
                 $t->timestamps();
+                $t->softDeletes();
             });
         }
 
@@ -291,6 +292,7 @@ trait SetsUpLoyaltyWorkspace
                 $t->integer('sort_order')->default(0);
                 $t->boolean('is_active')->default(true);
                 $t->timestamps();
+                $t->softDeletes();
             });
         }
 

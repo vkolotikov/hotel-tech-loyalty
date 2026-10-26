@@ -69,6 +69,7 @@ class BenefitEntitlementRequestTest extends TestCase
                 $t->boolean('requires_active_stay')->default(false);
                 $t->boolean('is_active')->default(true);
                 $t->timestamps();
+                $t->softDeletes();
             });
         }
 

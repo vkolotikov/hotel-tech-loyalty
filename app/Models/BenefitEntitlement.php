@@ -28,7 +28,8 @@ class BenefitEntitlement extends Model
 
     public function benefit(): BelongsTo
     {
-        return $this->belongsTo(BenefitDefinition::class, 'benefit_id');
+        // A request keeps the name of a benefit deleted since (release 11).
+        return $this->belongsTo(BenefitDefinition::class, 'benefit_id')->withTrashed();
     }
 
     public function property(): BelongsTo

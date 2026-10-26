@@ -101,7 +101,7 @@ class PlaceController extends Controller
             'description'     => 'sometimes|nullable|string|max:' . AccessPlaces::MAX_DESCRIPTION,
             'admits'          => [$partial ? 'sometimes' : 'required', 'string', Rule::in([AccessPlace::ADMITS_ALL, AccessPlace::ADMITS_TIERS])],
             'tier_ids'        => $partial ? 'sometimes|array|max:50' : 'required_if:admits,tiers|array|max:50',
-            'tier_ids.*'      => ['integer', 'distinct', OwnRows::rule('loyalty_tiers')],
+            'tier_ids.*'      => ['integer', 'distinct', OwnRows::rule('loyalty_tiers')->whereNull('deleted_at')],
             'is_active'       => 'sometimes|boolean',
             'sort_order'      => 'sometimes|nullable|integer|min:0|max:' . AccessPlaces::MAX_SORT_ORDER,
             'idempotency_key' => 'nullable|string|max:64',

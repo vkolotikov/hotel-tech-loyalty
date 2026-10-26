@@ -101,7 +101,9 @@
     "portal_what_q": "Que voient les membres ?",
     "portal_what_a": "Leur carte et QR code, leurs points, niveau et avantages, les événements, les récompenses et l’historique.",
     "portal_card_q": "Où est la carte d’un membre ?",
-    "portal_card_a": "Dans son portail ou l’appli — et dans Apple ou Google Wallet une fois configuré dans Carte et appli."
+    "portal_card_a": "Dans son portail ou l’appli — et dans Apple ou Google Wallet une fois configuré dans Carte et appli.",
+    "rename_delete_q": "Puis-je renommer ou supprimer un niveau ou un avantage ?",
+    "rename_delete_a": "Oui : dans Programme, chacun a « Renommer » et « Supprimer ». Vous voyez d’abord ce qui change : les membres passent au niveau choisi, l’historique garde le nom."
   },
   "demo": {
     "welcome": "Bienvenue",

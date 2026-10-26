@@ -179,7 +179,8 @@
       "min_points": "Geben Sie eine ganze Punktzahl von 0 bis 10.000.000 ein.",
       "name": "Bitte geben Sie der Stufe einen Namen.",
       "min_visits": "Geben Sie eine ganze Zahl an Besuchen von 0 bis 100.000 ein oder lassen Sie das Feld leer.",
-      "min_spend": "Geben Sie einen Betrag von 0 bis 100.000.000 ein, z. B. 250, oder lassen Sie das Feld leer."
+      "min_spend": "Geben Sie einen Betrag von 0 bis 100.000.000 ein, z. B. 250, oder lassen Sie das Feld leer.",
+      "name_taken": "Eine andere Stufe hat bereits diesen Namen. Wählen Sie einen anderen."
     },
     "save": "Stufe speichern",
     "min_visits": "Besuche bis zu dieser Stufe",
@@ -344,6 +345,72 @@
     "benefit_unused": {
       "title": "Noch keine Stufe bietet {{benefits}}",
       "line": "Mitglieder haben einen Vorteil erst, wenn eine Stufe ihn bietet. Unter Stufen bei der passenden Stufe auf Vorteil hinzufügen tippen."
+    }
+  },
+  "rename": {
+    "action": "Umbenennen",
+    "title": "{{name}} umbenennen",
+    "name": "Neuer Name",
+    "tier_hint": "Mitglieder sehen den neuen Namen auf ihrer Karte, in der App und im Portal.",
+    "benefit_hint": "Mitglieder sehen den neuen Namen in der App und im Portal, auch bei ihren Anfragen.",
+    "save": "Umbenennen"
+  },
+  "remove_tier": {
+    "action": "Löschen",
+    "title": "{{name}} löschen?",
+    "last": "{{tier}} ist die letzte aktive Stufe. Mitglieder brauchen eine Stufe, daher kann sie nicht gelöscht werden. Fügen Sie zuerst eine andere Stufe hinzu oder aktivieren Sie eine.",
+    "intro": "{{tier}} verschwindet aus dem Programm und aus allen Listen. Im Verlauf der Mitglieder bleibt der Name erhalten.",
+    "move_to": "Mitglieder der Stufe {{tier}} ({{n}}) wechseln zu",
+    "move_hint": "Ihre Punkte bleiben, wie sie sind. Sie erhalten keine Nachricht.",
+    "no_members": "Kein Mitglied hat diese Stufe.",
+    "also": "Außerdem ändert sich",
+    "keep": "Behalten",
+    "confirm": "{{name}} löschen",
+    "close": "Schließen",
+    "line": {
+      "benefits": "Die Vorteile dieser Stufe ({{n}}) werden ihr entzogen. Im Katalog bleiben sie für die anderen Stufen.",
+      "place_only": "{{name}} lässt nur {{tier}} ein: danach lässt der Bereich keine Stufe ein, bis Sie seine Stufen neu wählen.",
+      "place": "{{name}} lässt {{tier}} nicht mehr ein.",
+      "event_only": "Die Veranstaltung „{{name}}“ ist nur für {{tier}}: danach ist sie für keine Stufe, bis Sie neu wählen.",
+      "event": "Die Veranstaltung „{{name}}“ ist nicht mehr für {{tier}}.",
+      "boost_only": "Die Punkte-Aktion „{{name}}“ ist nur für {{tier}} und wird deshalb deaktiviert.",
+      "boost": "Die Punkte-Aktion „{{name}}“ zählt {{tier}} nicht mehr.",
+      "offer_only": "Das Angebot „{{name}}“ ist nur für {{tier}} und wird deshalb deaktiviert.",
+      "offer": "Das Angebot „{{name}}“ ist nicht mehr für {{tier}}.",
+      "segment_only": "Das Segment „{{name}}“ wählt nur {{tier}}: ändern Sie es, bevor Sie etwas daran senden.",
+      "segment": "Das Segment „{{name}}“ wählt {{tier}} nicht mehr."
+    },
+    "error": {
+      "manager_only": "Nur ein Inhaber oder Manager kann das Programm ändern.",
+      "not_allowed": "Nur ein Inhaber oder Manager kann das Programm ändern.",
+      "no_capability": "Nur ein Inhaber oder Manager kann das Programm ändern.",
+      "not_found": "Diese Stufe ist nicht mehr im Programm. Die Seite zeigt jetzt den aktuellen Stand.",
+      "last_tier": "Das ist die letzte aktive Stufe. Mitglieder brauchen eine Stufe, daher kann sie nicht gelöscht werden.",
+      "move_to_required": "Wählen Sie die Stufe, zu der ihre Mitglieder wechseln.",
+      "move_to_unknown": "Zu dieser Stufe können keine Mitglieder mehr wechseln. Wählen Sie eine andere.",
+      "network": "Keine Verbindung: Es wurde nichts gelöscht. Versuchen Sie es erneut.",
+      "unknown": "Die Stufe konnte nicht gelöscht werden. Es wurde nichts geändert; bitte versuchen Sie es erneut."
+    },
+    "move_off_only": "Deaktivierte Mitglieder der Stufe {{tier}} ({{n}}) wechseln zu",
+    "move_off": "Deaktivierte Mitglieder ({{n}}) wechseln mit ihnen."
+  },
+  "remove_benefit": {
+    "action": "Löschen",
+    "title": "{{name}} löschen?",
+    "tiers": "Der Vorteil verschwindet aus dem Katalog und aus den Stufen, die ihn geben: {{tiers}}.",
+    "no_tiers": "Der Vorteil verschwindet aus dem Katalog. Derzeit gibt ihn keine Stufe.",
+    "waiting": "Noch offene Anfragen dafür: {{n}}. Sie bleiben unter Anfragen, damit Sie sie annehmen oder ablehnen.",
+    "history": "Frühere Anfragen der Mitglieder behalten seinen Namen.",
+    "instead": "Um ihn nur zu pausieren, deaktivieren Sie ihn: Mit einem Klick ist er wieder da.",
+    "keep": "Behalten",
+    "confirm": "Vorteil löschen",
+    "error": {
+      "manager_only": "Nur ein Inhaber oder Manager kann das Programm ändern.",
+      "not_allowed": "Nur ein Inhaber oder Manager kann das Programm ändern.",
+      "no_capability": "Nur ein Inhaber oder Manager kann das Programm ändern.",
+      "not_found": "Dieser Vorteil ist nicht mehr im Katalog. Die Seite zeigt jetzt den aktuellen Stand.",
+      "network": "Keine Verbindung: Es wurde nichts gelöscht. Versuchen Sie es erneut.",
+      "unknown": "Der Vorteil konnte nicht gelöscht werden. Es wurde nichts geändert; bitte versuchen Sie es erneut."
     }
   }
 }

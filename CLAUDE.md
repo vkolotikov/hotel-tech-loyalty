@@ -243,6 +243,14 @@ Multi-tenant Laravel 13 + React (Vite, TypeScript) SaaS with four sub-brands. Pr
   Spanish strings address staff as usted. What a programme still lacks is the server's: the setup steps are
   `Loyalty\Setup\SetupProgress` (`GET start`), Program's checks `Loyalty\Programme\TierAdvice` (reads only, like
   ProgrammeAdvice); the workspace only places and words them.
+- Release 11 (owner 2026-10-26, rename and delete; `docs/loyalty-workspace.md` "Release 11"): tiers and benefits are
+  soft-deleted (`deleted_at`), only by `Loyalty\Programme\TierRemoval` / `BenefitRemoval`, each previewed first
+  (`GET …/removal`); a tier's members move only through `Members\TierHolders`; history reads a deleted one
+  `withTrashed()`. Never empty a tier list that means "every tier" when empty (boosts, offers: switch it off) nor a
+  segment's tier rule (leave it, refused at send). An unscoped tier or benefit query drops only `TenantScope`
+  (`withoutGlobalScope(TenantScope::class)`), never `withoutGlobalScopes()`, unless it means to see deleted rows; a form
+  naming one adds `->whereNull('deleted_at')` to its exists rule. A test schema creating `loyalty_tiers` or
+  `benefit_definitions` gives them `softDeletes()`.
 - Release 9 (owner 2026-10-25, review and redesign; `docs/loyalty-workspace.md` "Release 9"): a tier move's direction is
   `LoyaltyService::compareOnLadder()` (the measure's floors, then points floors, then `sort_order`; level is no move);
   soft landing steps down the measure's own ladder; a move never writes `tier_effective_until` (it is the grace clock,

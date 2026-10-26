@@ -1,7 +1,7 @@
 import { addDays } from '../../workspace/lib/wallClock'
 import { wholeIn, numberIn, decimalOf, serverProblems, isWall, wallOf, type Problems, type Tone } from '../lib/forms'
 import type { Can } from '../lib/types'
-import type { Benefit, BenefitBody, Boost, BoostBody, BoostState, ProgramOptions, Tier, TierBenefit, TierBenefitBody, TierBody } from './types'
+import type { Benefit, BenefitBody, Boost, BoostBody, BoostState, ProgramOptions, RemovalItem, Tier, TierBenefit, TierBenefitBody, TierBody, TierRemoval } from './types'
 
 /**
  * Program's decisions (spec 2026-10-21 §4.5, §5), kept out of the components so they can be tested: what a role sees,
@@ -116,8 +116,9 @@ export function tierBody(form: TierForm): TierBody {
   }
 }
 
+/** A name the server refuses is one another tier has (release 11); an empty one the form catches first. */
 export const TIER_FIELDS: Record<string, string> = {
-  name: 'name', color: 'color', min_points: 'min_points', earn_rate: 'earn_rate', description: 'description', min_visits: 'min_visits', min_spend: 'min_spend',
+  name: 'name_taken', color: 'color', min_points: 'min_points', earn_rate: 'earn_rate', description: 'description', min_visits: 'min_visits', min_spend: 'min_spend',
 }
 
 export type Threshold = 'points' | 'nights' | 'stays' | 'spend' | 'visits'
@@ -183,6 +184,40 @@ export function benefitBody(form: BenefitForm, creating: boolean): BenefitBody {
 /** The only check on a code the form cannot make is that no other benefit has it, so a refused code reads as taken. */
 export const BENEFIT_FIELDS: Record<string, string> = {
   name: 'name', code: 'code_taken', category: 'category', fulfillment_mode: 'fulfillment_mode', description: 'description',
+}
+
+// ─── Deleting ─────────────────────────────────────────────────────────────
+
+/** One line of what deleting a tier changes (words.ts REMOVAL_WORDS), and whether it asks staff to act afterwards. */
+export interface RemovalLine {
+  code: string
+  vars: Record<string, string | number>
+  warn: boolean
+}
+
+/**
+ * Release 11: what deleting a tier changes beyond its members, in the order the dialog says it — its benefits, then
+ * each place, event, boost, offer and segment that names it. One that names only this tier is a warning: a place or an
+ * event then lets in no tier, a boost or an offer is switched off, a segment must be changed before it is sent to.
+ */
+export function tierRemovalLines(removal: TierRemoval): RemovalLine[] {
+  const tier = removal.tier.name
+  const lines: RemovalLine[] = removal.benefits > 0 ? [{ code: 'benefits', vars: { n: removal.benefits, tier }, warn: false }] : []
+  const each = (items: RemovalItem[], kind: string) => {
+    for (const item of items) lines.push({ code: item.only ? `${kind}_only` : kind, vars: { name: item.name, tier }, warn: item.only })
+  }
+  each(removal.places, 'place')
+  each(removal.events, 'event')
+  each(removal.boosts, 'boost')
+  each(removal.offers, 'offer')
+  each(removal.segments, 'segment')
+  return lines
+}
+
+/** The tier the members move to: the one chosen while it is still offered, else the server's suggestion. */
+export function moveTarget(removal: TierRemoval, chosen: number | null): number | null {
+  if (chosen !== null && removal.move_options.some(o => o.id === chosen)) return chosen
+  return removal.move_to
 }
 
 // ─── A tier's benefits ────────────────────────────────────────────────────

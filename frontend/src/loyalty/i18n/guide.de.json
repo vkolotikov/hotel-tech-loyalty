@@ -101,7 +101,9 @@
     "portal_what_q": "Was sehen Mitglieder?",
     "portal_what_a": "Ihre Karte und den QR-Code, Punkte, Stufe und Vorteile, Events, Prämien und Verlauf.",
     "portal_card_q": "Wo ist die Karte eines Mitglieds?",
-    "portal_card_a": "Im Portal oder in der App – und in Apple oder Google Wallet, sobald Sie es unter Karte & App eingerichtet haben."
+    "portal_card_a": "Im Portal oder in der App – und in Apple oder Google Wallet, sobald Sie es unter Karte & App eingerichtet haben.",
+    "rename_delete_q": "Kann ich eine Stufe oder einen Vorteil umbenennen oder löschen?",
+    "rename_delete_a": "Ja: Unter Programm hat jedes „Umbenennen“ und „Löschen“. Vorher sehen Sie, was sich ändert: Mitglieder wechseln zur gewählten Stufe, der Verlauf behält den Namen."
   },
   "demo": {
     "welcome": "Willkommen",

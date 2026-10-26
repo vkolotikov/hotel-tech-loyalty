@@ -97,6 +97,40 @@ export interface ProgramAdvice {
   benefits: { id: number; name: string }[]
 }
 
+/** A place, an event, a boost, an offer or a segment that names a tier, and whether it is the only tier it names. */
+export interface RemovalItem {
+  id: number
+  name: string
+  only: boolean
+}
+
+/** Release 11: what deleting a tier would do (TierRemoval::preview), read before the confirm. */
+export interface TierRemoval {
+  tier: { id: number; name: string }
+  /** Its members switched on (as the tier's card counts them), and those switched off; all of them move. */
+  members: number
+  members_off: number
+  /** `last_tier`: the last tier switched on, which is never deleted. */
+  blocked: 'last_tier' | null
+  move_to: number | null
+  move_options: { id: number; name: string }[]
+  benefits: number
+  places: RemovalItem[]
+  events: RemovalItem[]
+  boosts: RemovalItem[]
+  offers: RemovalItem[]
+  segments: RemovalItem[]
+}
+
+/** Release 11: what deleting a benefit would do (BenefitRemoval::preview). */
+export interface BenefitRemoval {
+  benefit: { id: number; name: string }
+  /** The tiers that give it now, by name. */
+  tiers: string[]
+  waiting: number
+  requests: number
+}
+
 export interface TierBody {
   name: string
   color: string | null

@@ -179,7 +179,8 @@
       "min_points": "Saisissez un nombre entier de points de 0 à 10 000 000.",
       "name": "Donnez un nom au niveau.",
       "min_visits": "Saisissez un nombre entier de visites de 0 à 100 000, ou laissez vide.",
-      "min_spend": "Saisissez un montant de 0 à 100 000 000, par ex. 250, ou laissez vide."
+      "min_spend": "Saisissez un montant de 0 à 100 000 000, par ex. 250, ou laissez vide.",
+      "name_taken": "Un autre niveau porte déjà ce nom. Choisissez-en un autre."
     },
     "save": "Enregistrer le niveau",
     "min_visits": "Visites pour atteindre ce niveau",
@@ -344,6 +345,72 @@
     "benefit_unused": {
       "title": "Aucun niveau n’offre encore {{benefits}}",
       "line": "Un membre n’a un avantage que lorsqu’un niveau l’offre. Dans Niveaux, appuyez sur Ajouter un avantage pour le niveau concerné."
+    }
+  },
+  "rename": {
+    "action": "Renommer",
+    "title": "Renommer {{name}}",
+    "name": "Nouveau nom",
+    "tier_hint": "Les membres voient le nouveau nom sur leur carte, dans l’application et sur le portail.",
+    "benefit_hint": "Les membres voient le nouveau nom dans l’application et sur le portail, y compris sur leurs demandes.",
+    "save": "Renommer"
+  },
+  "remove_tier": {
+    "action": "Supprimer",
+    "title": "Supprimer {{name}} ?",
+    "last": "{{tier}} est le dernier niveau activé. Les membres ont besoin d’un niveau : il ne peut donc pas être supprimé. Ajoutez ou activez d’abord un autre niveau.",
+    "intro": "{{tier}} quitte le programme et toutes les listes. L’historique des membres garde son nom.",
+    "move_to": "Les membres du niveau {{tier}} ({{n}}) passent au niveau",
+    "move_hint": "Leurs points restent tels quels. Aucun message ne leur est envoyé.",
+    "no_members": "Aucun membre n’a ce niveau.",
+    "also": "Cela modifie aussi",
+    "keep": "Le conserver",
+    "confirm": "Supprimer {{name}}",
+    "close": "Fermer",
+    "line": {
+      "benefits": "Les avantages de ce niveau ({{n}}) lui sont retirés. Ils restent dans le catalogue pour les autres niveaux.",
+      "place_only": "{{name}} n’accueille que {{tier}} : ensuite, ce lieu n’accueille aucun niveau tant que vous n’en choisissez pas de nouveau.",
+      "place": "{{name}} n’accueille plus {{tier}}.",
+      "event_only": "L’événement « {{name}} » est réservé à {{tier}} : ensuite, il n’est ouvert à aucun niveau tant que vous n’en choisissez pas de nouveau.",
+      "event": "L’événement « {{name}} » n’est plus pour {{tier}}.",
+      "boost_only": "Le boost de points « {{name}} » est réservé à {{tier}} : il est donc désactivé.",
+      "boost": "Le boost de points « {{name}} » ne compte plus {{tier}}.",
+      "offer_only": "L’offre « {{name}} » est réservée à {{tier}} : elle est donc désactivée.",
+      "offer": "L’offre « {{name}} » n’est plus pour {{tier}}.",
+      "segment_only": "Le segment « {{name}} » ne choisit que {{tier}} : modifiez-le avant de lui envoyer quoi que ce soit.",
+      "segment": "Le segment « {{name}} » ne choisit plus {{tier}}."
+    },
+    "error": {
+      "manager_only": "Seul un propriétaire ou un responsable peut modifier le programme.",
+      "not_allowed": "Seul un propriétaire ou un responsable peut modifier le programme.",
+      "no_capability": "Seul un propriétaire ou un responsable peut modifier le programme.",
+      "not_found": "Ce niveau ne fait plus partie du programme. La page affiche désormais son état actuel.",
+      "last_tier": "C’est le dernier niveau activé. Les membres ont besoin d’un niveau : il ne peut donc pas être supprimé.",
+      "move_to_required": "Choisissez le niveau vers lequel passent ses membres.",
+      "move_to_unknown": "Ce niveau ne peut plus accueillir les membres. Choisissez-en un autre.",
+      "network": "Pas de connexion : rien n’a été supprimé. Réessayez.",
+      "unknown": "Le niveau n’a pas pu être supprimé. Rien n’a changé ; veuillez réessayer."
+    },
+    "move_off_only": "Les membres désactivés du niveau {{tier}} ({{n}}) passent au niveau",
+    "move_off": "Les membres désactivés ({{n}}) passent avec eux."
+  },
+  "remove_benefit": {
+    "action": "Supprimer",
+    "title": "Supprimer {{name}} ?",
+    "tiers": "Il quitte le catalogue et les niveaux qui le donnent : {{tiers}}.",
+    "no_tiers": "Il quitte le catalogue. Aucun niveau ne le donne pour l’instant.",
+    "waiting": "Demandes encore en attente : {{n}}. Elles restent dans Demandes pour que vous les acceptiez ou les refusiez.",
+    "history": "Les demandes passées des membres gardent son nom.",
+    "instead": "Pour simplement le mettre en pause, désactivez-le : il revient d’un seul clic.",
+    "keep": "Le conserver",
+    "confirm": "Supprimer l’avantage",
+    "error": {
+      "manager_only": "Seul un propriétaire ou un responsable peut modifier le programme.",
+      "not_allowed": "Seul un propriétaire ou un responsable peut modifier le programme.",
+      "no_capability": "Seul un propriétaire ou un responsable peut modifier le programme.",
+      "not_found": "Cet avantage ne figure plus au catalogue. La page affiche désormais son état actuel.",
+      "network": "Pas de connexion : rien n’a été supprimé. Réessayez.",
+      "unknown": "L’avantage n’a pas pu être supprimé. Rien n’a changé ; veuillez réessayer."
     }
   }
 }

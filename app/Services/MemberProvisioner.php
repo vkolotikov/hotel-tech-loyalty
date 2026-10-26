@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\LoyaltyMember;
 use App\Models\LoyaltyTier;
 use App\Models\User;
+use App\Scopes\TenantScope;
 use Illuminate\Support\Facades\Cache;
 
 /**
@@ -51,7 +52,7 @@ final class MemberProvisioner
                 return $member->fresh(['tier', 'user']);
             }
 
-            $tier = LoyaltyTier::withoutGlobalScopes()
+            $tier = LoyaltyTier::withoutGlobalScope(TenantScope::class)
                 ->where('organization_id', $user->organization_id)
                 ->where('is_active', true)
                 ->orderBy('min_points')

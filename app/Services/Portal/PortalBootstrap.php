@@ -8,6 +8,7 @@ use App\Models\LoyaltyTier;
 use App\Models\Organization;
 use App\Models\PushNotification;
 use App\Models\User;
+use App\Scopes\TenantScope;
 use App\Services\Booking\BookingCapability;
 use App\Services\DiscountService;
 use App\Services\IndustryPrompts\IndustryPromptService;
@@ -49,7 +50,7 @@ final class PortalBootstrap
      */
     public static function loyaltyOn(int $orgId): bool
     {
-        $hasTier = LoyaltyTier::withoutGlobalScopes()
+        $hasTier = LoyaltyTier::withoutGlobalScope(TenantScope::class)
             ->where('organization_id', $orgId)
             ->where('is_active', true)
             ->exists();

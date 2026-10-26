@@ -9,6 +9,7 @@ use App\Models\HotelSetting;
 use App\Models\LoyaltyMember;
 use App\Models\LoyaltyTier;
 use App\Models\TierBenefit;
+use App\Scopes\TenantScope;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
@@ -270,7 +271,8 @@ class LoyaltyPresetService
                 continue;
             }
 
-            $definition = BenefitDefinition::withoutGlobalScopes()
+            // A deleted benefit (release 11) is not linked again; a new one is made beside it.
+            $definition = BenefitDefinition::withoutGlobalScope(TenantScope::class)
                 ->where('organization_id', $organizationId)
                 ->whereRaw('LOWER(name) = ?', [mb_strtolower($perkText)])
                 ->first();
@@ -405,7 +407,7 @@ class LoyaltyPresetService
                 // sure we're operating on the right org's rows.
                 LoyaltyTier::withoutGlobalScopes()
                     ->where('organization_id', $organizationId)
-                    ->delete();
+                    ->forceDelete(); // a real delete, as before release 11 made tiers soft-deletable
                 $summary['replaced'] = true;
 
                 foreach ($preset['tiers'] as $i => $tier) {
@@ -419,7 +421,9 @@ class LoyaltyPresetService
                 $summary['tiers_added'] = count($preset['tiers']);
             } else {
                 // Members exist on tiers — additive only. Skip any
-                // tier whose `name` already exists for this org.
+                // tier whose `name` already exists for this org — a
+                // deleted one too (release 11): a preset applied again
+                // never brings back a tier a manager deleted.
                 $existing = LoyaltyTier::withoutGlobalScopes()
                     ->where('organization_id', $organizationId)
                     ->pluck('name')
@@ -439,7 +443,8 @@ class LoyaltyPresetService
             }
 
             // Benefits — additive by `code`. Existing rows untouched
-            // because admins often customise benefit descriptions.
+            // because admins often customise benefit descriptions; a
+            // deleted one's code counts too (release 11), so it stays deleted.
             $existingBenefits = BenefitDefinition::withoutGlobalScopes()
                 ->where('organization_id', $organizationId)
                 ->pluck('code')
