@@ -185,6 +185,19 @@ export function stockOf(stock: number | null): 'unlimited' | 'none' | 'some' {
   return stock === null ? 'unlimited' : stock <= 0 ? 'none' : 'some'
 }
 
+/** The catalogue's filter (design pass 2026-10-26): every reward, the offered ones, the switched-off ones. */
+export const CATALOGUE_SHOWS = ['all', 'offered', 'off'] as const
+export type CatalogueShow = typeof CATALOGUE_SHOWS[number]
+
+export function catalogueShown(rewards: readonly Reward[], show: CatalogueShow): Reward[] {
+  return rewards.filter(r => show === 'all' || (show === 'offered') === r.is_active)
+}
+
+export function catalogueCounts(rewards: readonly Reward[]): Record<CatalogueShow, number> {
+  const offered = rewards.filter(r => r.is_active).length
+  return { all: rewards.length, offered, off: rewards.length - offered }
+}
+
 // ─── An offer ─────────────────────────────────────────────────────────────
 
 export const MAX_OFFER_VALUE = 999_999.99

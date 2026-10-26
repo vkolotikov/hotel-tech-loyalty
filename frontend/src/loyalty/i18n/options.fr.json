@@ -18,7 +18,11 @@
   "card": {
     "save": "Enregistrer",
     "saved": "Enregistré. Les membres en profitent dès maintenant.",
-    "unsaved": "Pas encore enregistré."
+    "unsaved": "Pas encore enregistré.",
+    "on": "Activé",
+    "off": "Désactivé",
+    "change": "Modifier",
+    "cancel": "Annuler"
   },
   "choice": {
     "referral_reward_on": {
@@ -244,5 +248,13 @@
     "to_configure": "Retour au réglage",
     "to_members": "Aller aux membres",
     "to_options": "Aller à « Façons de gagner »"
-  }
+  },
+  "group": {
+    "earn": "Gagner des points",
+    "bonus": "Bonus",
+    "rule": "Règles",
+    "more": "Autres"
+  },
+  "sections": "Sections",
+  "groups_on": "{{on}} sur {{all}} actifs"
 }

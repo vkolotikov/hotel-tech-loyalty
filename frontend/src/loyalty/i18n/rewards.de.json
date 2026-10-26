@@ -29,7 +29,10 @@
     "read_only": "Nur Teammitglieder, die Angebote verwalten dürfen, können Prämien anlegen oder ändern.",
     "redeemed": "Eingelöst",
     "stock": "Bestand",
-    "until": "Angeboten bis {{when}}"
+    "until": "Angeboten bis {{when}}",
+    "all": "Alle",
+    "show": "Anzeigen",
+    "none_shown": "Hier gibt es keine Prämien."
   },
   "discount_phrase": {
     "fixed_amount": "{{amount}} Rabatt",
@@ -269,5 +272,6 @@
     "referrals": "Empfehlungen"
   },
   "tabs": "Bereiche der Prämien",
-  "title": "Prämien"
+  "title": "Prämien",
+  "tab_waiting": "warten am Empfang"
 }

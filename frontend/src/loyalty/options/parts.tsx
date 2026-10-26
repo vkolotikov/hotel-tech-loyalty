@@ -11,6 +11,7 @@ import { money } from '../lib/format'
 import { named } from '../lib/forms'
 import { FormField } from '../ui/formParts'
 import { ERRORS } from './errors'
+import { GROUP_HUE, groupOf } from './groups'
 import { problemText, shown, type Problems, type WayForm } from './optionsMath'
 import { useSay } from './say'
 import type { CatalogueReward, FieldDef, Way } from './types'
@@ -32,10 +33,11 @@ const WAY_ICONS: Record<string, LucideIcon> = {
   tier_progress: TrendingUp,
 }
 
+/** A way's mark in its section's colour (groups.ts); grey while it is off. */
 export function WayIcon({ way, on }: { way: string; on: boolean }) {
   const Icon = WAY_ICONS[way] ?? Sparkles
   return (
-    <span aria-hidden className={`inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${on ? 'bg-a-accent/15 text-a-accent-text' : 'bg-a-surface-2 text-a-text-2'}`}>
+    <span aria-hidden data-hue={on ? GROUP_HUE[groupOf(way)] : 'off'} className="l-hue-tile inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl">
       <Icon size={20} />
     </span>
   )
@@ -54,10 +56,13 @@ export function Switch({ on, label, title, disabled = false, onChange }: { on: b
   )
 }
 
-/** What members get with a way, as it stands — the line that changes as someone types. */
-export function Sentence({ children }: { children: ReactNode }) {
+/**
+ * What members get with a way, as it stands — the line that changes as someone types. On a card it wears the card's
+ * colour while the way is on (`tinted`), and reads quieter while it is off.
+ */
+export function Sentence({ children, tinted, muted }: { children: ReactNode; tinted?: boolean; muted?: boolean }) {
   return (
-    <p data-sentence="" aria-live="polite" className="rounded-xl bg-a-surface-2 px-3.5 py-2.5 text-sm font-medium text-a-text">
+    <p data-sentence="" aria-live="polite" className={`rounded-xl px-3.5 py-2.5 text-sm font-medium ${tinted ? 'l-hue-wash text-a-text' : muted ? 'bg-a-surface-2 text-a-text-2' : 'bg-a-surface-2 text-a-text'}`}>
       {children}
     </p>
   )
@@ -184,7 +189,7 @@ export function Loading() {
   return (
     <div role="status" className="space-y-3">
       <span className="sr-only">{t('loyalty.common.loading', 'Loading…')}</span>
-      <div className="grid gap-3 xl:grid-cols-2"><Skeleton className="h-44" /><Skeleton className="h-44" /><Skeleton className="h-44" /><Skeleton className="h-44" /></div>
+      <div className="grid gap-3 xl:grid-cols-2"><Skeleton className="h-36" /><Skeleton className="h-36" /><Skeleton className="h-36" /><Skeleton className="h-36" /></div>
     </div>
   )
 }

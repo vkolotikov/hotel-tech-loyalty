@@ -18,7 +18,11 @@
   "card": {
     "save": "Speichern",
     "saved": "Gespeichert. Mitglieder erhalten das ab sofort.",
-    "unsaved": "Noch nicht gespeichert."
+    "unsaved": "Noch nicht gespeichert.",
+    "on": "An",
+    "off": "Aus",
+    "change": "Ändern",
+    "cancel": "Abbrechen"
   },
   "choice": {
     "referral_reward_on": {
@@ -244,5 +248,13 @@
     "to_configure": "Zurück zum Einstellen",
     "to_members": "Zu den Mitgliedern",
     "to_options": "Zu „Sammeln & Prämien“"
-  }
+  },
+  "group": {
+    "earn": "Punkte sammeln",
+    "bonus": "Boni",
+    "rule": "Regeln",
+    "more": "Weitere"
+  },
+  "sections": "Bereiche",
+  "groups_on": "{{on}} von {{all}} an"
 }

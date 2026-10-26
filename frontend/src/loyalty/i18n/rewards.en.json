@@ -29,7 +29,10 @@
     "read_only": "Only staff allowed to manage offers can add or change rewards.",
     "redeemed": "Redeemed",
     "stock": "Stock",
-    "until": "Offered until {{when}}"
+    "until": "Offered until {{when}}",
+    "all": "All",
+    "show": "Show",
+    "none_shown": "No rewards here."
   },
   "discount_phrase": {
     "fixed_amount": "{{amount}} off",
@@ -269,5 +272,6 @@
     "referrals": "Referrals"
   },
   "tabs": "Rewards areas",
-  "title": "Rewards"
+  "title": "Rewards",
+  "tab_waiting": "waiting at the desk"
 }

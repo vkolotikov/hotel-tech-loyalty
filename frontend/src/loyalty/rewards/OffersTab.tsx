@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { Pencil, Plus, Star } from 'lucide-react'
+import { ArrowBigUpDash, Banknote, BedDouble, Pencil, Percent, PiggyBank, Plus, Sparkles, Star, Tag, X, type LucideIcon } from 'lucide-react'
 import { Button } from '../../workspace/ui/Button'
 import type { ThemeName } from '../../workspace/theme/accent'
 import { formatDate } from '../../workspace/lib/wallClock'
@@ -22,10 +22,15 @@ import { mediaUrl } from '../lib/api'
 
 const DAY: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'short', year: 'numeric' }
 
+/** An offer's kind as an icon (design pass 2026-10-26); a kind without one wears a tag. */
+const OFFER_ICONS: Record<string, LucideIcon> = {
+  discount: Percent, fixed_amount: Banknote, points_multiplier: X, bonus_points: Sparkles, free_night: BedDouble, upgrade: ArrowBigUpDash, cashback: PiggyBank,
+}
+
 /**
- * Offers (spec 2026-10-21 §4.6): each with its picture (release 2 §7), its kind and value, code, the venue days it
- * runs, the tiers that see it, how often it was used, and whether it is running. Staff who may manage offers add and
- * change them.
+ * Offers (spec 2026-10-21 §4.6): each with its picture (release 2 §7) — or its kind's icon in the offers' colour, grey
+ * once it has ended or is switched off (design pass 2026-10-26) — its kind and value, code, the venue days it runs, the
+ * tiers that see it, how often it was used, and whether it is running. Staff who may manage offers add and change them.
  */
 export function OffersTab({ manage }: { manage: boolean }) {
   const { t, i18n } = useTranslation()
@@ -86,10 +91,13 @@ export function OfferRow({ offer: o, tiers, manage, theme, locale, onEdit }: {
     : t('loyalty.rewards.offers.used_of', 'Used: {{used}} of {{limit}}', { used: points(o.times_used, locale), limit: points(o.usage_limit, locale) })
   const perMember = o.per_member_limit !== null ? t('loyalty.rewards.offers.per_member', 'Up to {{limit}} per member', { limit: points(o.per_member_limit, locale) }) : null
   const chosen = chosenTiers(o.tier_ids, tiers)
+  const KindIcon = OFFER_ICONS[o.type] ?? Tag
 
   return (
-    <li data-offer={o.id} className="flex flex-wrap items-start gap-x-4 gap-y-2 px-4 py-3">
-      {o.image_url && <img src={mediaUrl(o.image_url)} alt={o.title} loading="lazy" className="h-14 w-14 shrink-0 rounded-lg bg-a-surface-2 object-cover" />}
+    <li data-offer={o.id} data-hue={state === 'live' || state === 'upcoming' ? 'offer' : 'off'} className="flex flex-wrap items-start gap-x-4 gap-y-2 px-4 py-3">
+      {o.image_url
+        ? <img src={mediaUrl(o.image_url)} alt={o.title} loading="lazy" className="h-14 w-14 shrink-0 rounded-xl bg-a-surface-2 object-cover" />
+        : <span aria-hidden className="l-hue-tile inline-flex h-14 w-14 shrink-0 items-center justify-center rounded-xl"><KindIcon size={24} /></span>}
       <div className="min-w-0 flex-1 space-y-1">
         <p className="flex items-center gap-1.5 font-medium text-a-text">
           {o.title}

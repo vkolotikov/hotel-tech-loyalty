@@ -31,6 +31,14 @@
   --l-minus: 168 36 56;
   /* The dark ink on a tier colour white does not read on. */
   --l-ink: 20 24 28;
+  /* Colour families (design pass 2026-10-26): one hue per kind of thing, so a page reads by colour — earning green,
+     bonuses rose, rules violet, rewards amber, offers blue. An element names its family with data-hue; .l-hue-* paint
+     with it (see the end of this file). */
+  --l-hue-earn: 22 112 64;
+  --l-hue-bonus: 176 38 102;
+  --l-hue-rule: 98 64 190;
+  --l-hue-gift: 138 80 0;
+  --l-hue-offer: 13 94 140;
 }
 
 [data-loyalty][data-theme="dark"] {
@@ -52,6 +60,11 @@
   --l-st-off: 163 173 184;
   --l-plus: 95 211 154;
   --l-minus: 255 140 152;
+  --l-hue-earn: 95 211 154;
+  --l-hue-bonus: 255 138 190;
+  --l-hue-rule: 181 160 255;
+  --l-hue-gift: 240 179 90;
+  --l-hue-offer: 125 196 245;
 }
 
 [data-loyalty] [data-state="pending"],
@@ -95,4 +108,39 @@
 /* A tier's mark on a light ground: the dot beside a name where a whole chip would be too loud. */
 [data-loyalty] .l-tier-dot {
   background-color: rgb(var(--l-tier, var(--a-text-2)));
+}
+
+/* A colour family (data-hue): an icon's tile, a word, a soft wash behind a line, an edge, a bar, a picture's stand-in.
+   "off" is the grey of something switched off. Every hue reads at 4.5:1 on the surfaces and over its own 12 % tint
+   (loyaltyContrast.test.ts). */
+[data-loyalty] [data-hue="earn"] { --l-hue: var(--l-hue-earn); }
+[data-loyalty] [data-hue="bonus"] { --l-hue: var(--l-hue-bonus); }
+[data-loyalty] [data-hue="rule"] { --l-hue: var(--l-hue-rule); }
+[data-loyalty] [data-hue="gift"] { --l-hue: var(--l-hue-gift); }
+[data-loyalty] [data-hue="offer"] { --l-hue: var(--l-hue-offer); }
+[data-loyalty] [data-hue="off"] { --l-hue: var(--l-st-off); }
+
+[data-loyalty] .l-hue-tile {
+  background-color: rgb(var(--l-hue, var(--l-st-off)) / 0.12);
+  color: rgb(var(--l-hue, var(--l-st-off)));
+}
+
+[data-loyalty] .l-hue-text {
+  color: rgb(var(--l-hue, var(--l-st-off)));
+}
+
+[data-loyalty] .l-hue-wash {
+  background-color: rgb(var(--l-hue, var(--l-st-off)) / 0.07);
+}
+
+[data-loyalty] .l-hue-edge {
+  border-color: rgb(var(--l-hue, var(--l-st-off)) / 0.4);
+}
+
+[data-loyalty] .l-hue-bar {
+  background-color: rgb(var(--l-hue, var(--l-st-off)));
+}
+
+[data-loyalty] .l-hue-fade {
+  background-image: linear-gradient(135deg, rgb(var(--l-hue, var(--l-st-off)) / 0.24), rgb(var(--l-hue, var(--l-st-off)) / 0.06));
 }

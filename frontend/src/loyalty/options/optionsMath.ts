@@ -260,7 +260,8 @@ function monthsPhrase(n: number, say: Say, locale: string): string {
 
 /** One sentence of SENTENCE_WORDS. */
 function sentence(name: string, ctx: SayContext, vars?: Record<string, string>): string {
-  return ctx.say(`loyalty.options.sentence.${name}`, SENTENCE_WORDS[name] ?? name, vars)
+  // An amount a language abbreviates ("50 б.") that ends the sentence keeps one full stop, not two.
+  return ctx.say(`loyalty.options.sentence.${name}`, SENTENCE_WORDS[name] ?? name, vars).replace(/(?<!\.)\.\.(?!\.)/g, '.')
 }
 
 const num = (value: OptionValue | undefined): number => (typeof value === 'number' ? value : Number(value ?? 0))

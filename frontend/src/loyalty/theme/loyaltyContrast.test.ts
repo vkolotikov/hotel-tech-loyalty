@@ -36,7 +36,7 @@ const PAIRS: [string, string][] = [
   ['a-side-text', 'a-side'], ['a-side-text', 'a-side-2'], ['a-side-text-2', 'a-side'], ['a-side-text-2', 'a-side-2'],
 ]
 const SURFACES = ['a-canvas', 'a-surface', 'a-surface-2']
-const TONES = ['l-st-waiting', 'l-st-approved', 'l-st-done', 'l-st-declined', 'l-st-off', 'l-plus', 'l-minus']
+const TONES = ['l-st-waiting', 'l-st-approved', 'l-st-done', 'l-st-declined', 'l-st-off', 'l-plus', 'l-minus', 'l-hue-earn', 'l-hue-bonus', 'l-hue-rule', 'l-hue-gift', 'l-hue-offer']
 // The fallback blue, a deep navy, a pale gold, and the two extremes.
 const BRANDS = ['#3b82f6', '#1e3a8a', '#f5c518', '#ffffff', '#000000']
 // Tier colours as programmes set them: silver, gold, platinum, bronze, a deep purple, white, black, a mid grey.

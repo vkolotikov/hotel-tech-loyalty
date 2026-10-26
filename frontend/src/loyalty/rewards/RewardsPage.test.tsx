@@ -22,6 +22,7 @@ import { OfferDialog } from './OfferDialog'
 import { PictureField } from './PictureField'
 import { RewardDialog } from './RewardDialog'
 import { RewardsPage } from './RewardsPage'
+import { catalogueCounts, catalogueShown } from './rewardsMath'
 import type { Catalogue, OffersList, RedemptionsPage, ReferralsPage } from './types'
 
 const can = (more: Partial<Can> = {}): Can => ({ award: false, redeem: false, reverse: false, manage_program: false, manage_rewards: false, manage_members: false, view_insights: false, manage_campaigns: false, manage_app: false, ...more })
@@ -88,10 +89,27 @@ describe('Rewards (spec 2026-10-21 §4.6)', () => {
   it('shows the four tabs as a tablist, the address\'s tab selected and the only tab stop', () => {
     const html = render('?tab=offers', can())
     expect(html).toContain('role="tablist"')
-    expect(html).toMatch(/role="tab" id="rewards-tab-offers" aria-selected="true"[^>]*tabindex="0"[^>]*>Offers</)
-    expect(html).toMatch(/role="tab" id="rewards-tab-catalogue" aria-selected="false"[^>]*tabindex="-1"[^>]*>Catalogue</)
+    expect(html).toMatch(/role="tab" id="rewards-tab-offers" aria-selected="true"[^>]*tabindex="0"[^>]*>(?:(?!<\/button>)[\s\S])*<span>Offers<\/span>/)
+    expect(html).toMatch(/role="tab" id="rewards-tab-catalogue" aria-selected="false"[^>]*tabindex="-1"[^>]*>(?:(?!<\/button>)[\s\S])*<span>Catalogue<\/span>/)
     expect(html).toMatch(/role="tabpanel" aria-labelledby="rewards-tab-offers"/)
     expect(render('', can())).toMatch(/id="rewards-tab-catalogue" aria-selected="true"/)
+  })
+
+  it('says on each tab how many it holds, and on Redemptions the codes waiting at the desk in the waiting colour', () => {
+    const html = render('', can())
+    const tab = (name: string) => html.slice(html.indexOf(`id="rewards-tab-${name}"`), html.indexOf('</button>', html.indexOf(`id="rewards-tab-${name}"`)))
+    expect(text(tab('catalogue'))).toContain('Catalogue 2')
+    expect(tab('redemptions')).toMatch(/data-state="pending"[^>]*>1<span class="sr-only"> waiting at the desk/)
+    expect(text(tab('offers'))).toContain(`Offers ${offers.offers.length}`)
+    expect(text(tab('referrals'))).toContain('Referrals 60')
+  })
+
+  it('filters the catalogue to every reward, the offered ones or the switched-off ones, with how many each holds', () => {
+    const words = text(render('', can()))
+    expect(words).toContain('All 2 Offered 2 Switched off 0')
+    expect(catalogueCounts([...catalogue.rewards, { ...catalogue.rewards[1], id: 6, is_active: false }])).toEqual({ all: 3, offered: 2, off: 1 })
+    expect(catalogueShown(catalogue.rewards, 'off')).toEqual([])
+    expect(catalogueShown(catalogue.rewards, 'offered').map(r => r.id)).toEqual([4, 5])
   })
 
   it('shows the catalogue as cards, with Add and Edit only for staff who manage offers', () => {

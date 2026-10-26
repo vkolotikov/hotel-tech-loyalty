@@ -29,7 +29,10 @@
     "read_only": "Solo el personal autorizado a gestionar ofertas puede añadir o modificar recompensas.",
     "redeemed": "Canjeadas",
     "stock": "Stock",
-    "until": "Disponible hasta el {{when}}"
+    "until": "Disponible hasta el {{when}}",
+    "all": "Todas",
+    "show": "Mostrar",
+    "none_shown": "No hay recompensas aquí."
   },
   "discount_phrase": {
     "fixed_amount": "{{amount}} de descuento",
@@ -269,5 +272,6 @@
     "referrals": "Referidos"
   },
   "tabs": "Secciones de recompensas",
-  "title": "Recompensas"
+  "title": "Recompensas",
+  "tab_waiting": "esperan en el mostrador"
 }

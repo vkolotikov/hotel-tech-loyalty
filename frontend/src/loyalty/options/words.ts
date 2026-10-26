@@ -162,8 +162,17 @@ export const STEP_WORDS: Record<string, string> = {
   review: 'Review',
 }
 
+/** The page's sections (groups.ts `GROUP_ORDER`). */
+export const GROUP_WORDS: Record<string, string> = {
+  earn: 'Earn points',
+  bonus: 'Bonuses',
+  rule: 'Rules',
+  more: 'More',
+}
+
 /** The families above by the key prefix they are read under. */
 export const WORD_FAMILIES: Record<string, Record<string, string>> = {
+  group: GROUP_WORDS,
   way: WAY_WORDS,
   way_line: WAY_LINE_WORDS,
   field: FIELD_WORDS,

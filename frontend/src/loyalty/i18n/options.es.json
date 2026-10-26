@@ -18,7 +18,11 @@
   "card": {
     "save": "Guardar",
     "saved": "Guardado. Los miembros lo reciben desde ahora.",
-    "unsaved": "Todavía sin guardar."
+    "unsaved": "Todavía sin guardar.",
+    "on": "Activo",
+    "off": "Inactivo",
+    "change": "Cambiar",
+    "cancel": "Cancelar"
   },
   "choice": {
     "referral_reward_on": {
@@ -244,5 +248,13 @@
     "to_configure": "Volver a ajustar",
     "to_members": "Ir a Miembros",
     "to_options": "Ir a «Formas de ganar»"
-  }
+  },
+  "group": {
+    "earn": "Ganar puntos",
+    "bonus": "Bonificaciones",
+    "rule": "Reglas",
+    "more": "Más"
+  },
+  "sections": "Secciones",
+  "groups_on": "{{on}} de {{all}} activas"
 }
