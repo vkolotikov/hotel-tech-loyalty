@@ -12,6 +12,8 @@ import path from 'node:path'
  *  3. Nothing from another workspace: the workspaces share src/workspace, never each other.
  *  4. Every rule of every stylesheet here (theme/loyalty.css and an area's own, e.g. theme/insights.css) is scoped
  *     under [data-loyalty].
+ *  5. No "#…" link: index.html sets <base href="/">, so one resolves to the site root and leaves the workspace
+ *     (found 2026-10-26 on Ways to earn's journey map). Jump within a page with a button that scrolls.
  */
 const DIR = path.resolve(__dirname)
 
@@ -28,6 +30,7 @@ const PORTAL_CLASS = /(?:^|[\s'"`{(])(?:[a-z-]+:)*(?:bg|text|border|ring|divide|
 const CONTENT_CLASS = /(?:^|[\s'"`{(])(?:[a-z-]+:)*c-(?:card|ai|mark|edge|st-|keydate)/
 const FOREIGN_API = /\/v1\/(?!admin\/loyalty(?![-\w]))/
 const FROM_A_WORKSPACE = /(?:\bfrom\s+|\bimport\s*\(\s*)['"](?:\.\.\/)+(?:appointments|content)\//
+const HASH_LINK = /\b(?:href|to)=\{?\s*['"`]#/
 
 describe('loyalty workspace sweep', () => {
   const files = sourceFiles(DIR)
@@ -47,6 +50,7 @@ describe('loyalty workspace sweep', () => {
       expect(hits(CONTENT_CLASS), `Content's classes in ${rel}`).toEqual([])
       expect(hits(FOREIGN_API), `${rel} references an API outside /v1/admin/loyalty`).toEqual([])
       expect(hits(FROM_A_WORKSPACE), `${rel} imports from another workspace`).toEqual([])
+      expect(hits(HASH_LINK), `${rel} links to "#…", which <base href="/"> sends to the site root`).toEqual([])
     })
   }
 
@@ -54,6 +58,11 @@ describe('loyalty workspace sweep', () => {
     expect(FOREIGN_API.test("api.get('/v1/admin/loyalty-presets')")).toBe(true)
     expect(FOREIGN_API.test("const BASE = '/v1/admin/loyalty'")).toBe(false)
     expect(FOREIGN_API.test("api.get('/v1/admin/loyalty/members')")).toBe(false)
+  })
+
+  it('the hash-link rule catches "#…" in every spelling and nothing else', () => {
+    for (const bad of ['<a href="#top">', "<a href='#x'>", '<a href={`#step-${s}`}>', '<Link to="#rules">']) expect(HASH_LINK.test(bad), bad).toBe(true)
+    for (const good of ['<a href="https://x.test/#a">', '<Link to="/loyalty/rewards">', "color: '#fff'"]) expect(HASH_LINK.test(good), good).toBe(false)
   })
 
   it('sets no text smaller than 12 px', () => {

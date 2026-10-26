@@ -275,11 +275,35 @@
   "tab_overview": "Vue d’ensemble",
   "to_check": "à vérifier",
   "checks": "Vérifications",
-  "all_good": "Tout fonctionne ensemble.",
   "open_way": "Ouvrir {{way}}",
-  "recommended": "Recommandé pour {{preset}}",
   "turn_on": "Activer",
-  "members_get": "Ce que reçoivent les membres",
   "not_used_short": "Non utilisé ici",
-  "switched_off": "Désactivé"
+  "status_fix": "À corriger : {{n}}",
+  "status_ok": "Tout est prêt",
+  "pill_on": "Actifs : {{on}} sur {{all}}",
+  "pill_tiers": "Niveaux : {{n}}",
+  "pill_rewards": "Récompenses : {{n}}",
+  "pill_tips": "Conseils : {{n}}",
+  "pill_recommended": "Recommandé pour {{preset}} : {{n}}",
+  "journey": "Le parcours de vos membres",
+  "journey_map": "Étapes du parcours",
+  "recommended_badge": "Recommandé",
+  "stage": {
+    "join": "Adhère",
+    "visit": "Vient et dépense",
+    "celebrate": "Fête son anniversaire",
+    "friends": "Parraine un ami",
+    "move_up": "Monte de niveau",
+    "spend": "Dépense ses points",
+    "keep": "Reste actif"
+  },
+  "fix": {
+    "nothing_earns": "Activer {{way}}",
+    "visits_without_source": "Activer {{way}}",
+    "spend_without_source": "Activer {{way}}",
+    "stamp_reward_missing": "Donner des points à la place",
+    "referrals_give_nothing": "{{points}} points à chacun",
+    "expiry_short": "Expiration après {{months}} mois",
+    "checkin_counts_only": "{{points}} points par passage"
+  }
 }

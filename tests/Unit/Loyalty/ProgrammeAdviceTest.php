@@ -34,13 +34,14 @@ class ProgrammeAdviceTest extends TestCase
     {
         $read = ProgrammeAdvice::read($this->options(), ['bookings' => false, 'visit_events' => false], [1]);
         $this->assertSame(['points_on_spend'], $read['not_used']);
-        $this->assertSame([['code' => 'nothing_earns', 'level' => 'warn', 'way' => 'desk_earn', 'params' => []]], $read['advice']);
+        $this->assertSame([['code' => 'nothing_earns', 'level' => 'warn', 'way' => 'desk_earn', 'params' => [], 'fix' => ['desk_earn_enabled' => true]]], $read['advice']);
         // Any regular way to earn answers it: the desk, a check-in that gives points, the stamp card.
         $this->assertSame([], $this->codes($this->options(['desk_earn_enabled' => true]), false));
         $this->assertSame([], $this->codes($this->options(['checkin_enabled' => true, 'checkin_points' => 10]), false));
         $this->assertSame([], $this->codes($this->options(['stamps_enabled' => true]), false));
         // With bookings but their points switched off, the way to point at is the bookings.
-        $this->assertSame('points_on_spend', ProgrammeAdvice::read($this->options(['points_on_bookings' => false]), ['bookings' => true, 'visit_events' => false], [1])['advice'][0]['way']);
+        $withBookings = ProgrammeAdvice::read($this->options(['points_on_bookings' => false]), ['bookings' => true, 'visit_events' => false], [1])['advice'][0];
+        $this->assertSame(['points_on_spend', ['points_on_bookings' => true]], [$withBookings['way'], $withBookings['fix']]);
     }
 
     public function test_tiers_by_visits_or_spend_need_something_that_records_them(): void
@@ -70,9 +71,9 @@ class ProgrammeAdviceTest extends TestCase
     {
         $read = ProgrammeAdvice::read($this->options(['points_expiry_months' => 3, 'checkin_enabled' => true, 'checkin_points' => 0]), ['bookings' => true, 'visit_events' => false], []);
         $this->assertSame([
-            ['code' => 'no_rewards', 'level' => 'warn', 'way' => null, 'params' => []],
-            ['code' => 'expiry_short', 'level' => 'tip', 'way' => 'points_expiry', 'params' => ['months' => 3]],
-            ['code' => 'checkin_counts_only', 'level' => 'tip', 'way' => 'check_in', 'params' => []],
+            ['code' => 'no_rewards', 'level' => 'warn', 'way' => null, 'params' => [], 'fix' => null],
+            ['code' => 'expiry_short', 'level' => 'tip', 'way' => 'points_expiry', 'params' => ['months' => 3], 'fix' => ['points_expiry_months' => 12]],
+            ['code' => 'checkin_counts_only', 'level' => 'tip', 'way' => 'check_in', 'params' => [], 'fix' => ['checkin_points' => 10]],
         ], $read['advice']);
         // Six months and more, or no expiry at all, is not short; a check-in that moves members up by visits is no tip.
         $this->assertSame([], $this->codes($this->options(['points_expiry_months' => 6])));
@@ -90,5 +91,22 @@ class ProgrammeAdviceTest extends TestCase
         foreach ($read['not_used'] as $way) {
             $this->assertContains($way, $ways);
         }
+    }
+
+    public function test_each_fix_names_only_options_the_server_has_and_never_the_wizards_stamp(): void
+    {
+        $read = ProgrammeAdvice::read($this->options([
+            'tier_progress_by' => 'visits', 'referrer_bonus_points' => 0, 'referee_bonus_points' => 0, 'points_expiry_months' => 2,
+            'stamps_enabled' => true, 'stamp_reward_kind' => 'reward', 'stamp_reward_id' => 9,
+        ]), ['bookings' => false, 'visit_events' => false], []);
+        $this->assertSame(['visits_without_source', 'stamp_reward_missing', 'referrals_give_nothing', 'no_rewards', 'expiry_short'], array_column($read['advice'], 'code'));
+        foreach ($read['advice'] as $item) {
+            foreach (array_keys($item['fix'] ?? []) as $option) {
+                $this->assertArrayHasKey($option, ProgrammeOptions::OPTIONS, $item['code']);
+                $this->assertNotContains($option, ProgrammeOptions::WIZARD_ONLY, $item['code']);
+            }
+        }
+        // One number for both: the button reads "Give 250 points to each" (FIX_WORDS), so the two defaults stay equal.
+        $this->assertSame(['referrer_bonus_points' => 250, 'referee_bonus_points' => 250], $read['advice'][2]['fix']);
     }
 }

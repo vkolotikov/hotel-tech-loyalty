@@ -275,11 +275,35 @@
   "tab_overview": "Overview",
   "to_check": "to check",
   "checks": "Checks",
-  "all_good": "Everything works together.",
   "open_way": "Open {{way}}",
-  "recommended": "Recommended for {{preset}}",
   "turn_on": "Turn on",
-  "members_get": "What members get",
   "not_used_short": "Not used here",
-  "switched_off": "Switched off"
+  "status_fix": "To fix: {{n}}",
+  "status_ok": "All set",
+  "pill_on": "Ways on: {{on}} of {{all}}",
+  "pill_tiers": "Tiers: {{n}}",
+  "pill_rewards": "Rewards: {{n}}",
+  "pill_tips": "Tips: {{n}}",
+  "pill_recommended": "Recommended for {{preset}}: {{n}}",
+  "journey": "Your members’ journey",
+  "journey_map": "Journey steps",
+  "recommended_badge": "Recommended",
+  "stage": {
+    "join": "Joins",
+    "visit": "Visits and spends",
+    "celebrate": "Celebrates",
+    "friends": "Brings a friend",
+    "move_up": "Moves up",
+    "spend": "Spends points",
+    "keep": "Stays active"
+  },
+  "fix": {
+    "nothing_earns": "Turn on {{way}}",
+    "visits_without_source": "Turn on {{way}}",
+    "spend_without_source": "Turn on {{way}}",
+    "stamp_reward_missing": "Give points instead",
+    "referrals_give_nothing": "Give {{points}} points to each",
+    "expiry_short": "Expire after {{months}} months",
+    "checkin_counts_only": "Give {{points}} points per check-in"
+  }
 }

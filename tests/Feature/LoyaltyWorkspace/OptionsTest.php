@@ -64,7 +64,7 @@ class OptionsTest extends TestCase
         // The checks (ProgrammeAdvice): this salon takes no bookings yet, so points on bookings does nothing and nothing
         // else earns points by default; rewards are offered, so the catalogue is not empty.
         $this->assertSame(['points_on_spend'], $response->json('not_used'));
-        $this->assertSame([['code' => 'nothing_earns', 'level' => 'warn', 'way' => 'desk_earn', 'params' => []]], $response->json('advice'));
+        $this->assertSame([['code' => 'nothing_earns', 'level' => 'warn', 'way' => 'desk_earn', 'params' => [], 'fix' => ['desk_earn_enabled' => true]]], $response->json('advice'));
         $response->assertJsonPath('fields.referral_reward_on', ['type' => 'enum', 'default' => 'first_visit', 'min' => null, 'max' => null, 'choices' => ['first_visit', 'signup'], 'when' => null])
             ->assertJsonPath('fields.stamps_per_card', ['type' => 'int', 'default' => 10, 'min' => 2, 'max' => 50, 'choices' => null, 'when' => null])
             ->assertJsonPath('fields.stamp_reward_id.when', ['field' => 'stamp_reward_kind', 'is' => 'reward'])
@@ -268,7 +268,7 @@ class OptionsTest extends TestCase
         $this->asManager()->putJson($this->api('options'), ['options' => ['tier_progress_by' => 'visits']])->assertOk()
             ->assertJsonPath('not_used', ['points_on_spend'])
             ->assertJsonPath('advice.0.code', 'nothing_earns')
-            ->assertJsonPath('advice.1', ['code' => 'visits_without_source', 'level' => 'warn', 'way' => 'check_in', 'params' => []]);
+            ->assertJsonPath('advice.1', ['code' => 'visits_without_source', 'level' => 'warn', 'way' => 'check_in', 'params' => [], 'fix' => ['checkin_enabled' => true]]);
 
         // An event of ours that counts as a visit is a source of visits; check-in with no points is a tip, not a warning.
         DB::table('loyalty_events')->insert(['organization_id' => $this->org->id, 'title' => 'Open evening', 'starts_at' => '2026-10-10 18:00:00', 'ends_at' => '2026-10-10 20:00:00', 'status' => 'published', 'counts_as_visit' => true, 'created_at' => now(), 'updated_at' => now()]);
@@ -279,7 +279,27 @@ class OptionsTest extends TestCase
         DB::table('booking_rooms')->insert(['organization_id' => $this->org->id, 'name' => 'Garden room', 'is_active' => true, 'created_at' => now(), 'updated_at' => now()]);
         $this->asStaffMember()->getJson($this->api('options'))->assertOk()
             ->assertJsonPath('not_used', [])
-            ->assertJsonPath('advice', [['code' => 'checkin_counts_only', 'level' => 'tip', 'way' => 'check_in', 'params' => []]]);
+            ->assertJsonPath('advice', [['code' => 'checkin_counts_only', 'level' => 'tip', 'way' => 'check_in', 'params' => [], 'fix' => ['checkin_points' => 10]]]);
+    }
+
+    public function test_each_fix_saved_as_it_is_sent_clears_its_own_check(): void
+    {
+        $reward = Reward::create(['name' => 'Free coffee', 'points_cost' => 100, 'is_active' => true]);
+        $gone = Reward::create(['name' => 'Retired', 'points_cost' => 100, 'is_active' => true]);
+        $this->asManager()->putJson($this->api('options'), ['options' => [
+            'tier_progress_by' => 'visits', 'referrer_bonus_points' => 0, 'referee_bonus_points' => 0, 'points_expiry_months' => 2,
+            'stamps_enabled' => true, 'stamp_reward_kind' => 'reward', 'stamp_reward_id' => $gone->id,
+        ]])->assertOk();
+        $gone->update(['is_active' => false]);
+
+        $advice = $this->asManager()->getJson($this->api('options'))->assertOk()->json('advice');
+        $this->assertSame(['visits_without_source', 'stamp_reward_missing', 'referrals_give_nothing', 'expiry_short'], array_column($advice, 'code'));
+        // Every fix is sent as the server wrote it, through the options' own checks, and takes its code away.
+        foreach ($advice as $item) {
+            $after = $this->asManager()->putJson($this->api('options'), ['options' => $item['fix']])->assertOk()->json('advice');
+            $this->assertNotContains($item['code'], array_column($after, 'code'), $item['code']);
+        }
+        $this->assertNotNull($reward->fresh());
     }
 
     public function test_every_presets_recommendation_passes_the_options_own_checks(): void

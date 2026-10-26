@@ -275,11 +275,35 @@
   "tab_overview": "Обзор",
   "to_check": "проверить",
   "checks": "Проверки",
-  "all_good": "Всё работает вместе.",
   "open_way": "Открыть «{{way}}»",
-  "recommended": "Рекомендуем для: {{preset}}",
   "turn_on": "Включить",
-  "members_get": "Что получают участники",
   "not_used_short": "Здесь не используется",
-  "switched_off": "Выключено"
+  "status_fix": "Исправить: {{n}}",
+  "status_ok": "Всё готово",
+  "pill_on": "Включено: {{on}} из {{all}}",
+  "pill_tiers": "Уровни: {{n}}",
+  "pill_rewards": "Награды: {{n}}",
+  "pill_tips": "Советы: {{n}}",
+  "pill_recommended": "Рекомендуем ({{preset}}): {{n}}",
+  "journey": "Путь ваших участников",
+  "journey_map": "Шаги пути",
+  "recommended_badge": "Рекомендуем",
+  "stage": {
+    "join": "Вступает",
+    "visit": "Приходит и тратит",
+    "celebrate": "Празднует",
+    "friends": "Приводит друга",
+    "move_up": "Растёт в уровне",
+    "spend": "Тратит баллы",
+    "keep": "Остаётся активным"
+  },
+  "fix": {
+    "nothing_earns": "Включить «{{way}}»",
+    "visits_without_source": "Включить «{{way}}»",
+    "spend_without_source": "Включить «{{way}}»",
+    "stamp_reward_missing": "Давать баллы вместо награды",
+    "referrals_give_nothing": "Начислять по {{points}} б. обоим",
+    "expiry_short": "Сгорание через {{months}} мес.",
+    "checkin_counts_only": "Давать {{points}} б. за отметку"
+  }
 }

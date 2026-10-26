@@ -551,12 +551,24 @@ the scan screen, door mode, the member page and list, Program, Ways to earn, Eve
   Cancel, so the grid stays short.
 - **Ways to earn, tabs and checks** (owner 2026-10-26: "easier to manage … in industry … better logic"): tabs —
   Overview, Earn points, Bonuses, Rules — with each section's "on/all" and the Overview's warning count; the tab and an
-  opened card live in the address (`?tab=earn&way=check_in`, or `?way=…` alone). The Overview shows the **checks**
+  opened card live in the address (`?tab=earn&way=check_in`, or `?way=…` alone). The **checks**
   (`App\Services\Loyalty\Programme\ProgrammeAdvice`, in the options answer as `advice`: `nothing_earns`,
   `visits_without_source`, `spend_without_source`, `stamp_reward_missing`, `referrals_give_nothing`, `no_rewards`
-  as warnings, `expiry_short` and `checkin_counts_only` as tips — each with the card to open), **Recommended for
-  <the industry's preset>** (the ways that preset switches on and this venue has off, each with Turn on — one save
-  of that way's switch and numbers from the preset, `suggestionsOf()`), and what members get today. The **earn rate**
+  as warnings, `expiry_short` and `checkin_counts_only` as tips) each name the card to open and, but for
+  `no_rewards` (which opens Rewards), carry a **one-press fix** — `fix`, the options that clear it (switch on the
+  missing source, give points instead of a reward no longer offered, the referral defaults, 12 months' expiry, 10
+  points a check-in) — which a manager's Fix saves like any change. A fix names only options the server has
+  (`ProgrammeAdviceTest`), and each one saved as sent clears its own check (`OptionsTest`). **Recommended for <the
+  industry's preset>** means the ways that preset switches on and this venue has off, each with Turn on (one save
+  of that way's switch and numbers from the preset, `suggestionsOf()`). The **Overview** (`options/Overview.tsx`, owner 2026-10-26:
+  "easier to navigate … build a logic") reads top down: a status line ("All set" or "To fix: n", then ways on,
+  tiers, rewards, tips and the preset's recommendations); the checks; then **your members' journey**
+  (`options/journey.ts`): a map of seven steps — joins, visits and spends, celebrates, brings a friend, moves up,
+  spends points, stays active — coloured when the step gives members something today (`stepLive()`), each a button
+  that scrolls to its step below (never a `#…` link: under `<base href="/">` that leaves the workspace, and the
+  sweep in `tokens.test.ts` refuses one), and the timeline of those steps with their ways (Off, Not used here,
+  Recommended with Turn on) and the parts they lead to (boosts, tiers, rewards, offers, each opening its page).
+  Every server way has a step (`journey.test.ts` fails until a new one is placed). The **earn rate**
   is a card of its own, always on (`earn_rate`, `points_per_currency`): it serves completed bookings and purchases at
   the desk alike, while "Points on bookings" (`points_on_bookings`) only switches the bookings — so a venue without
   bookings still sets its desk rate. `not_used` names the ways that do nothing at this venue (points on bookings where
@@ -688,9 +700,15 @@ files on disk): run them one after the other.
 
 - Since 2026-10-26 a finished job is deployed without asking (the owner's standing word, `CLAUDE.md` "Git and
   deploy"); the recipe's checks still decide.
-- The Ways to earn and Rewards design pass is live (`main` d827fcb, pushed 2026-10-26: colour families, sections,
-  Change, tab counts, catalogue filter and cards), built from branch commit 410fec7: the next release's change list is
-  `git diff --name-status 410fec7 <tip>`. 29 source files, no deletions, no migration; on the deploy tree PHP 7013
+- Ways to earn's tabs and checks are live (`main` a6c06e8, pushed 2026-10-26: ProgrammeAdvice, the earn rate card,
+  Overview / Earn points / Bonuses / Rules, Turn on from the industry's preset), built from branch commit aabd384: the
+  next release's change list is `git diff --name-status aabd384 <tip>`. 28 source files, no deletions, no migration;
+  on the deploy tree PHP 7020 passed, 7 skipped, the frontend 5467 passed, tsc clean (its first run caught a raw-accent
+  ring the workspace's line rule refuses — fixed in aabd384 before the build); the options and checks tests also pass
+  on PostgreSQL; checked by content (every source file on `main` equal to the branch, `earn_rate` in ProgrammeOptions,
+  the Overview's words in the built SPA).
+- The Ways to earn and Rewards design pass went out as `main` d827fcb (colour families, sections, Change, tab counts,
+  catalogue filter and cards), built from branch commit 410fec7. 29 source files, no deletions, no migration; on the deploy tree PHP 7013
   passed, 7 skipped, the frontend 5464 passed, tsc clean; checked by content (every source file on `main` equal to the
   branch, the colour classes and the new words in the built SPA).
 - The member portal's Help went out as `main` acced03 (`/portal/help`, `docs/member-portal.md`), built from branch
