@@ -22,7 +22,8 @@
     "on": "On",
     "off": "Off",
     "change": "Change",
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "not_used": "Your venue takes no bookings, so this gives nothing."
   },
   "choice": {
     "referral_reward_on": {
@@ -140,7 +141,7 @@
     "desk_earn_off": "Purchases at the desk earn nothing.",
     "points_expiry": "Points expire {{months}} after they are earned.",
     "points_expiry_off": "Points never expire.",
-    "points_on_spend": "Members get {{points}} for every {{money}} they spend.",
+    "points_on_spend": "Completed bookings earn points at your earn rate.",
     "points_on_spend_off": "Bookings earn no points.",
     "referrals_first_visit": "A member who refers a friend gets {{referrer}} and the friend gets {{referee}}, once the friend has made a first visit.",
     "referrals_off": "Members have no referral link.",
@@ -153,7 +154,9 @@
     "welcome_bonus_off": "New members get no welcome bonus.",
     "tier_progress_points": "Members move up as they earn points. They see “1,250 points to Gold”.",
     "tier_progress_visits": "Members move up by how often they come: one visit a day counts, whatever they spend. They see “3 more visits to Gold”.",
-    "tier_progress_spend": "Members move up by what they spend at their visits. They see “€120 more to Gold”."
+    "tier_progress_spend": "Members move up by what they spend at their visits. They see “€120 more to Gold”.",
+    "earn_rate": "Members get {{points}} for every {{money}} they spend.",
+    "earn_rate_none": "Spending earns nothing yet: switch on Points on bookings or Earn at the desk."
   },
   "setup": {
     "error": {
@@ -188,11 +191,12 @@
     "check_in": "Check-in",
     "desk_earn": "Earn at the desk",
     "points_expiry": "Points expiry",
-    "points_on_spend": "Points on spend",
+    "points_on_spend": "Points on bookings",
     "referrals": "Referrals",
     "stamp_card": "Stamp card",
     "welcome_bonus": "Welcome bonus",
-    "tier_progress": "How members move up"
+    "tier_progress": "How members move up",
+    "earn_rate": "Earn rate"
   },
   "way_line": {
     "birthday_bonus": "Points on the member’s birthday.",
@@ -200,11 +204,12 @@
     "check_in": "Staff check a member in at the desk after a scan.",
     "desk_earn": "Staff add a purchase made at the desk after a scan.",
     "points_expiry": "Unused points run out after a while, which brings members back.",
-    "points_on_spend": "Points for completed bookings, by what was spent.",
+    "points_on_spend": "Points for completed bookings, at your earn rate.",
     "referrals": "Points for bringing a friend, for both of them.",
     "stamp_card": "A stamp for each visit; a full card gives a reward.",
     "welcome_bonus": "Points for joining.",
-    "tier_progress": "What takes a member to the next tier. A change moves nobody at once: each member’s tier follows at their next visit or points."
+    "tier_progress": "What takes a member to the next tier. A change moves nobody at once: each member’s tier follows at their next visit or points.",
+    "earn_rate": "How many points spending earns, on bookings and at the desk."
   },
   "ways_link": "Ways to earn",
   "ways_title": "How members earn and what they get",
@@ -255,6 +260,26 @@
     "rule": "Rules",
     "more": "More"
   },
-  "sections": "Sections",
-  "groups_on": "{{on}} of {{all}} on"
+  "groups_on": "{{on}} of {{all}} on",
+  "advice": {
+    "nothing_earns": "Members have no regular way to earn points yet.",
+    "visits_without_source": "Members move up by visits, but nothing records a visit here. Switch on Check-in.",
+    "spend_without_source": "Members move up by spend, but no spending is recorded here. Switch on Earn at the desk.",
+    "stamp_reward_missing": "A full stamp card gives a reward that is no longer offered.",
+    "referrals_give_nothing": "Referrals are on but give no points to either side.",
+    "no_rewards": "Members collect points but the catalogue has nothing to spend them on.",
+    "expiry_short": "Points expire after {{months}} months, which is short for most members; 12 to 24 is usual.",
+    "checkin_counts_only": "A check-in gives no points and no stamp: it only records the visit."
+  },
+  "tabs": "Ways to earn areas",
+  "tab_overview": "Overview",
+  "to_check": "to check",
+  "checks": "Checks",
+  "all_good": "Everything works together.",
+  "open_way": "Open {{way}}",
+  "recommended": "Recommended for {{preset}}",
+  "turn_on": "Turn on",
+  "members_get": "What members get",
+  "not_used_short": "Not used here",
+  "switched_off": "Switched off"
 }

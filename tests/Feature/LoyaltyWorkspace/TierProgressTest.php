@@ -37,6 +37,8 @@ class TierProgressTest extends TestCase
     {
         parent::setUp();
         $this->setUpLoyaltyWorkspace();
+        // Ways to earn's checks read what can be booked and the events (ProgrammeAdvice).
+        $this->buildProgrammeAdviceSchema();
         $this->buildTierCountsSchema();
         $this->buildValiditySchema();
         // Ways to earn lists the presets (their stamp is in crm_settings); the member summary counts bookings.

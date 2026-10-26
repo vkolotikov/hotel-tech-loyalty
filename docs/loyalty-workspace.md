@@ -546,9 +546,23 @@ the scan screen, door mode, the member page and list, Program, Ways to earn, Eve
   surfaces and over its 12 % tint (`loyaltyContrast.test.ts`). A new page reuses a family for the same kind of thing.
 - **Ways to earn, design pass**: the cards sit in three sections (`options/groups.ts`: earn, bonuses, rules; a way
   the workspace does not know goes under More — `groups.test.ts` fails until a new server way is placed), each with its
-  colour and "x of y on", and a row at the top jumps to each. A card says On or Off beside its switch and what members
+  colour and "x of y on". A card says On or Off beside its switch and what members
   get; its numbers open with Change (or by themselves once the switch or a number changed) and close on Save or
-  Cancel, so the grid stays short. **Rewards, design pass**: tabs with icons and counts (the codes waiting at the desk
+  Cancel, so the grid stays short.
+- **Ways to earn, tabs and checks** (owner 2026-10-26: "easier to manage … in industry … better logic"): tabs —
+  Overview, Earn points, Bonuses, Rules — with each section's "on/all" and the Overview's warning count; the tab and an
+  opened card live in the address (`?tab=earn&way=check_in`, or `?way=…` alone). The Overview shows the **checks**
+  (`App\Services\Loyalty\Programme\ProgrammeAdvice`, in the options answer as `advice`: `nothing_earns`,
+  `visits_without_source`, `spend_without_source`, `stamp_reward_missing`, `referrals_give_nothing`, `no_rewards`
+  as warnings, `expiry_short` and `checkin_counts_only` as tips — each with the card to open), **Recommended for
+  <the industry's preset>** (the ways that preset switches on and this venue has off, each with Turn on — one save
+  of that way's switch and numbers from the preset, `suggestionsOf()`), and what members get today. The **earn rate**
+  is a card of its own, always on (`earn_rate`, `points_per_currency`): it serves completed bookings and purchases at
+  the desk alike, while "Points on bookings" (`points_on_bookings`) only switches the bookings — so a venue without
+  bookings still sets its desk rate. `not_used` names the ways that do nothing at this venue (points on bookings where
+  nothing can be booked: no bookable service and no room), and their card says so. A new check is a code in
+  ProgrammeAdvice (pure `read()`, unit-tested by value) and its sentence in `options/words.ts` `ADVICE_WORDS` and the
+  five bundles; a code without words is not shown. **Rewards, design pass**: tabs with icons and counts (the codes waiting at the desk
   in the waiting colour; the four first-page answers fetched once and shared with the tabs), the catalogue filtered
   by All / Offered / Switched off, its cards one shape (picture or its stand-in with the cost on it, the four figures
   as icon tiles), offers with their kind's icon, redemption codes as chips, referral figures with icons.

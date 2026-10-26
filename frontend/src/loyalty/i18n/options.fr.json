@@ -22,7 +22,8 @@
     "on": "Activé",
     "off": "Désactivé",
     "change": "Modifier",
-    "cancel": "Annuler"
+    "cancel": "Annuler",
+    "not_used": "Votre établissement ne prend pas de réservations : cela ne rapporte donc rien."
   },
   "choice": {
     "referral_reward_on": {
@@ -140,7 +141,7 @@
     "desk_earn_off": "Les achats à l’accueil ne rapportent rien.",
     "points_expiry": "Les points expirent {{months}} après avoir été gagnés.",
     "points_expiry_off": "Les points n’expirent jamais.",
-    "points_on_spend": "Les membres gagnent {{points}} pour chaque {{money}} dépensé.",
+    "points_on_spend": "Les réservations terminées rapportent des points à votre taux de gain.",
     "points_on_spend_off": "Les réservations ne rapportent pas de points.",
     "referrals_first_visit": "Un membre qui parraine un ami reçoit {{referrer}} et l’ami {{referee}}, une fois que l’ami a fait sa première visite.",
     "referrals_off": "Les membres n’ont pas de lien de parrainage.",
@@ -153,7 +154,9 @@
     "welcome_bonus_off": "Les nouveaux membres ne reçoivent pas de bonus de bienvenue.",
     "tier_progress_points": "Les membres progressent en gagnant des points. Ils voient « 1 250 points avant Gold ».",
     "tier_progress_visits": "Les membres progressent selon leur fréquence de venue : une visite par jour compte, quelle que soit la dépense. Ils voient « Encore 3 visites avant Gold ».",
-    "tier_progress_spend": "Les membres progressent selon ce qu’ils dépensent lors de leurs visites. Ils voient « Encore 120 € avant Gold »."
+    "tier_progress_spend": "Les membres progressent selon ce qu’ils dépensent lors de leurs visites. Ils voient « Encore 120 € avant Gold ».",
+    "earn_rate": "Les membres gagnent {{points}} pour chaque {{money}} dépensé.",
+    "earn_rate_none": "Les dépenses ne rapportent rien pour l’instant : activez « Points sur les réservations » ou « Gagner à l’accueil »."
   },
   "setup": {
     "error": {
@@ -188,11 +191,12 @@
     "check_in": "Passage à l’accueil",
     "desk_earn": "Gagner à l’accueil",
     "points_expiry": "Expiration des points",
-    "points_on_spend": "Points sur les dépenses",
+    "points_on_spend": "Points sur les réservations",
     "referrals": "Parrainages",
     "stamp_card": "Carte à tampons",
     "welcome_bonus": "Bonus de bienvenue",
-    "tier_progress": "Comment les membres progressent"
+    "tier_progress": "Comment les membres progressent",
+    "earn_rate": "Taux de gain"
   },
   "way_line": {
     "birthday_bonus": "Des points pour l’anniversaire du membre.",
@@ -200,11 +204,12 @@
     "check_in": "L’équipe enregistre le passage d’un membre à l’accueil après un scan.",
     "desk_earn": "L’équipe ajoute un achat fait à l’accueil après un scan.",
     "points_expiry": "Les points inutilisés expirent au bout d’un temps, ce qui fait revenir les membres.",
-    "points_on_spend": "Des points pour les réservations terminées, selon le montant dépensé.",
+    "points_on_spend": "Des points pour les réservations terminées, à votre taux de gain.",
     "referrals": "Des points pour avoir amené un ami, pour tous les deux.",
     "stamp_card": "Un tampon par visite ; une carte pleine donne une récompense.",
     "welcome_bonus": "Des points pour l’inscription.",
-    "tier_progress": "Ce qui fait passer un membre au niveau suivant. Un changement ne déplace personne tout de suite : le niveau suit à la prochaine visite ou aux prochains points."
+    "tier_progress": "Ce qui fait passer un membre au niveau suivant. Un changement ne déplace personne tout de suite : le niveau suit à la prochaine visite ou aux prochains points.",
+    "earn_rate": "Combien de points rapportent les dépenses, en réservation et à l’accueil."
   },
   "ways_link": "Façons de gagner",
   "ways_title": "Comment les membres gagnent et ce qu’ils reçoivent",
@@ -255,6 +260,26 @@
     "rule": "Règles",
     "more": "Autres"
   },
-  "sections": "Sections",
-  "groups_on": "{{on}} sur {{all}} actifs"
+  "groups_on": "{{on}} sur {{all}} actifs",
+  "advice": {
+    "nothing_earns": "Les membres n’ont encore aucun moyen régulier de gagner des points.",
+    "visits_without_source": "Les membres progressent selon leurs visites, mais rien n’enregistre de visite ici. Activez « Passage à l’accueil ».",
+    "spend_without_source": "Les membres progressent selon leurs dépenses, mais aucune dépense n’est enregistrée ici. Activez « Gagner à l’accueil ».",
+    "stamp_reward_missing": "Une carte de tampons pleine donne une récompense qui n’est plus proposée.",
+    "referrals_give_nothing": "Le parrainage est activé mais ne donne de points à personne.",
+    "no_rewards": "Les membres cumulent des points, mais le catalogue n’a rien à leur offrir en échange.",
+    "expiry_short": "Les points expirent après {{months}} mois, ce qui est court pour la plupart des membres ; 12 à 24 est l’usage.",
+    "checkin_counts_only": "Un passage ne donne ni points ni tampon : il enregistre seulement la visite."
+  },
+  "tabs": "Rubriques des façons de gagner",
+  "tab_overview": "Vue d’ensemble",
+  "to_check": "à vérifier",
+  "checks": "Vérifications",
+  "all_good": "Tout fonctionne ensemble.",
+  "open_way": "Ouvrir {{way}}",
+  "recommended": "Recommandé pour {{preset}}",
+  "turn_on": "Activer",
+  "members_get": "Ce que reçoivent les membres",
+  "not_used_short": "Non utilisé ici",
+  "switched_off": "Désactivé"
 }

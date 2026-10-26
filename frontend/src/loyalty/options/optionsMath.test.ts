@@ -58,7 +58,7 @@ describe('a card’s form and its options (release 7 §1)', () => {
     expect(changesOf(way('referrals'), { on: true, values: { referrer_bonus_points: '400', referee_bonus_points: '250', referral_reward_on: 'first_visit' } }, answer.options, answer.fields))
       .toEqual({ referrer_bonus_points: 400 })
     // A field that does not read as a value is left out: problems say why.
-    expect(changesOf(way('points_on_spend'), { on: true, values: { points_per_currency: 'ten' } }, answer.options, answer.fields)).toEqual({})
+    expect(changesOf(way('earn_rate'), { on: true, values: { points_per_currency: 'ten' } }, answer.options, answer.fields)).toEqual({})
   })
 
   it('every card together is what the wizard sends', () => {
@@ -104,7 +104,7 @@ describe('what stops a card before it is sent', () => {
       referral_reward_on: { code: 'choice' },
     })
     expect(serverProblems(null, answer)).toEqual({})
-    expect(waysWith(serverProblems(failure, answer), answer)).toEqual(['points_on_spend', 'referrals', 'stamp_card'])
+    expect(waysWith(serverProblems(failure, answer), answer)).toEqual(['earn_rate', 'referrals', 'stamp_card'])
   })
 
   it('says what is wrong in a sentence', () => {
@@ -123,9 +123,13 @@ describe('what stops a card before it is sent', () => {
 
 describe('what members get, in a sentence', () => {
   it('points on spend, in the venue’s currency', () => {
-    expect(sentence('points_on_spend')).toBe('Members get 1 point for every €1 they spend.')
-    expect(sentence('points_on_spend', { points_per_currency: 10 })).toBe('Members get 10 points for every €1 they spend.')
-    expect(sentenceOf('points_on_spend', { ...answer.options, points_per_currency: 1.5 }, { ...ctx, currency: 'USD' })).toBe('Members get 1.5 points for every $1 they spend.')
+    // Owner 2026-10-26: the rate is its own card and serves bookings and the desk alike; each has its own switch.
+    expect(sentence('earn_rate')).toBe('Members get 1 point for every €1 they spend.')
+    expect(sentence('earn_rate', { points_per_currency: 10 })).toBe('Members get 10 points for every €1 they spend.')
+    expect(sentenceOf('earn_rate', { ...answer.options, points_per_currency: 1.5 }, { ...ctx, currency: 'USD' })).toBe('Members get 1.5 points for every $1 they spend.')
+    expect(sentence('earn_rate', { points_on_bookings: false, desk_earn_enabled: true })).toBe('Members get 1 point for every €1 they spend.')
+    expect(sentence('earn_rate', { points_on_bookings: false, desk_earn_enabled: false })).toBe('Spending earns nothing yet: switch on Points on bookings or Earn at the desk.')
+    expect(sentence('points_on_spend')).toBe('Completed bookings earn points at your earn rate.')
     expect(sentence('points_on_spend', { points_on_bookings: false })).toBe('Bookings earn no points.')
   })
 
@@ -163,7 +167,7 @@ describe('what members get, in a sentence', () => {
 
   it('writes numbers as the language does', () => {
     expect(pointsPhrase(1500, say, 'de')).toBe('1.500 points')
-    expect(sentenceOf('points_on_spend', { ...answer.options, points_per_currency: 2.5 }, { ...ctx, locale: 'fr' })).toBe('Members get 2,5 points for every 1\u00a0€ they spend.')
+    expect(sentenceOf('earn_rate', { ...answer.options, points_per_currency: 2.5 }, { ...ctx, locale: 'fr' })).toBe('Members get 2,5 points for every 1\u00a0€ they spend.')
   })
 
   it('keeps one full stop when an abbreviated amount ends the sentence ("50 б." in Russian)', () => {
@@ -211,17 +215,18 @@ describe('the setup wizard', () => {
     expect(beauty.cashback.on).toBe(false)
     const kept = recommendedForm(answer, null, answer.options)
     expect(kept.stamp_card.on).toBe(false)
-    expect(kept.points_on_spend.values.points_per_currency).toBe('1')
+    expect(kept.earn_rate.values.points_per_currency).toBe('1')
     // The configure step lists the ticked ways that have numbers.
-    expect(configurable(answer, beauty).map(w => w.key)).toEqual(['points_on_spend', 'points_expiry', 'welcome_bonus', 'birthday_bonus', 'referrals', 'stamp_card'])
+    expect(configurable(answer, beauty).map(w => w.key)).toEqual(['earn_rate', 'points_expiry', 'welcome_bonus', 'birthday_bonus', 'referrals', 'stamp_card'])
   })
 
   it('reviews what members will get, in the cards’ order, and names the ways left off', () => {
     const form = recommendedForm(answer, presetFixture('beauty', true), answer.options)
     const review = reviewOf(answer, form, answer.options, ctx)
-    expect(review.on.map(l => l.key)).toEqual(['points_on_spend', 'points_expiry', 'welcome_bonus', 'birthday_bonus', 'referrals', 'stamp_card'])
+    expect(review.on.map(l => l.key)).toEqual(['earn_rate', 'points_on_spend', 'points_expiry', 'welcome_bonus', 'birthday_bonus', 'referrals', 'stamp_card'])
     expect(review.on[0].text).toBe('Members get 10 points for every €1 they spend.')
-    expect(review.on[5].text).toBe('Members collect a stamp for each visit, one a day. A card holds 8 stamps; a full card gives 400 points.')
+    expect(review.on[1].text).toBe('Completed bookings earn points at your earn rate.')
+    expect(review.on[6].text).toBe('Members collect a stamp for each visit, one a day. A card holds 8 stamps; a full card gives 400 points.')
     expect(review.off).toEqual(['check_in', 'desk_earn', 'cashback'])
   })
 

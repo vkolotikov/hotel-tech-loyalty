@@ -22,6 +22,8 @@ class OptionsSetupTest extends TestCase
     {
         parent::setUp();
         $this->setUpLoyaltyWorkspace();
+        // Ways to earn's checks read what can be booked and the events (ProgrammeAdvice).
+        $this->buildProgrammeAdviceSchema();
         // LoyaltyPresetService writes and reads its stamps in crm_settings.
         $this->setUpLoyaltyPresetSchema();
     }

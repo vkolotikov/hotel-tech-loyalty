@@ -10,6 +10,7 @@ import type { Way } from './types'
 export type WayGroup = 'earn' | 'bonus' | 'rule' | 'more'
 
 export const WAY_GROUPS: Record<string, Exclude<WayGroup, 'more'>> = {
+  earn_rate: 'earn',
   points_on_spend: 'earn',
   check_in: 'earn',
   desk_earn: 'earn',
@@ -34,4 +35,45 @@ export function groupsOf(ways: readonly Way[]): { group: WayGroup; ways: Way[] }
   return GROUP_ORDER
     .map(group => ({ group, ways: ways.filter(w => groupOf(w.key) === group) }))
     .filter(g => g.ways.length > 0)
+}
+
+/** The page's tabs (owner 2026-10-26, "additional tabs"): the overview, then one per section that has ways. */
+export type OptionsTab = 'overview' | WayGroup
+
+export function tabsOf(ways: readonly Way[]): OptionsTab[] {
+  return ['overview', ...groupsOf(ways).map(g => g.group)]
+}
+
+/**
+ * The tab and the card an address names (`?tab=earn&way=check_in`): a way alone opens its section; a tab the page does
+ * not have, or none, is the overview.
+ */
+export function pageFrom(search: string, ways: readonly Way[]): { tab: OptionsTab; way: string | null } {
+  const params = new URLSearchParams(search)
+  const way = params.get('way')
+  const known = way !== null && ways.some(w => w.key === way) ? way : null
+  const tabs = tabsOf(ways)
+  const asked = params.get('tab')
+  const tab = (tabs as string[]).includes(asked ?? '') ? (asked as OptionsTab) : known ? groupOf(known) : 'overview'
+  return { tab, way: known && groupOf(known) === tab ? known : null }
+}
+
+/** The address of a tab, and of a card in it. */
+export function searchOf(tab: OptionsTab, way?: string | null): string {
+  const params = new URLSearchParams()
+  if (tab !== 'overview') params.set('tab', tab)
+  if (way) params.set('way', way)
+  const out = params.toString()
+  return out ? `?${out}` : ''
+}
+
+/** The tab after this one for the arrow keys, Home and End; null for any other key. */
+export function tabAfter(tabs: readonly OptionsTab[], current: OptionsTab, key: string): OptionsTab | null {
+  const i = tabs.indexOf(current)
+  const n = tabs.length
+  if (key === 'ArrowRight') return tabs[(i + 1) % n]
+  if (key === 'ArrowLeft') return tabs[(i - 1 + n) % n]
+  if (key === 'Home') return tabs[0]
+  if (key === 'End') return tabs[n - 1]
+  return null
 }

@@ -122,6 +122,50 @@ trait SetsUpLoyaltyWorkspace
         return $this->actingAs($this->staffMember, 'sanctum');
     }
 
+    /**
+     * The tables ProgrammeAdvice reads for "Ways to earn"'s checks (owner 2026-10-26): what can be booked — services with
+     * an active master and schedule (BookingCapability), rooms — and the events that count as visits. `loyalty_events`
+     * as EventsSchema builds it.
+     */
+    protected function buildProgrammeAdviceSchema(): void
+    {
+        $this->setUpServiceCatalogSchema();
+        $this->setUpAvailabilitySchema();
+        if (!Schema::hasTable('service_master_schedules')) {
+            Schema::create('service_master_schedules', function (Blueprint $t) {
+                $t->id();
+                $t->unsignedBigInteger('organization_id');
+                $t->unsignedBigInteger('service_master_id');
+                $t->unsignedTinyInteger('day_of_week');
+                $t->time('start_time');
+                $t->time('end_time');
+                $t->boolean('is_active')->default(true);
+                $t->timestamps();
+            });
+        }
+        if (!Schema::hasTable('loyalty_events')) {
+            Schema::create('loyalty_events', function (Blueprint $t) {
+                $t->bigIncrements('id');
+                $t->unsignedBigInteger('organization_id');
+                $t->string('title', 120);
+                $t->text('description')->nullable();
+                $t->dateTime('starts_at');
+                $t->dateTime('ends_at');
+                $t->unsignedBigInteger('access_place_id')->nullable();
+                $t->string('location', 200)->nullable();
+                $t->unsignedInteger('points')->default(0);
+                $t->boolean('counts_as_visit')->default(true);
+                $t->string('admits', 10)->default('all');
+                $t->boolean('sign_up')->default(false);
+                $t->boolean('walk_ins')->default(true);
+                $t->unsignedInteger('capacity')->nullable();
+                $t->string('status', 12)->default('draft');
+                $t->unsignedBigInteger('created_by')->nullable();
+                $t->timestamps();
+            });
+        }
+    }
+
     /** The programme's tables, each with every column the workspace and the services it calls read or write. */
     protected function buildLoyaltyWorkspaceTables(): void
     {

@@ -9,6 +9,7 @@ use App\Models\Reward;
 use App\Models\SpecialOffer;
 use App\Services\Loyalty\Programme\ProgrammeOptions;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
+use Illuminate\Support\Facades\DB;
 use Tests\Concerns\SetsUpLoyaltyWorkspace;
 use Tests\TestCase;
 
@@ -21,6 +22,8 @@ class OptionsTest extends TestCase
     {
         parent::setUp();
         $this->setUpLoyaltyWorkspace();
+        // Ways to earn's checks read what can be booked and the events (ProgrammeAdvice).
+        $this->buildProgrammeAdviceSchema();
         // LoyaltyPresetService::listPresets() reads the preset stamp from crm_settings.
         $this->setUpLoyaltyPresetSchema();
     }
@@ -50,12 +53,18 @@ class OptionsTest extends TestCase
             ->assertJsonPath('options.programme_setup_completed_at', null);
 
         $this->assertSame(
-            // Release 8: "How members move up" (tier_progress), a card that is always on.
-            ['points_on_spend', 'points_expiry', 'welcome_bonus', 'birthday_bonus', 'referrals', 'stamp_card', 'check_in', 'desk_earn', 'cashback', 'tier_progress'],
+            // Release 8: "How members move up" (tier_progress), a card that is always on. Owner 2026-10-26: the earn rate is
+            // a card of its own, always on — it serves bookings and the desk alike; points on bookings is only the switch.
+            ['earn_rate', 'points_on_spend', 'points_expiry', 'welcome_bonus', 'birthday_bonus', 'referrals', 'stamp_card', 'check_in', 'desk_earn', 'cashback', 'tier_progress'],
             array_column($response->json('ways'), 'key'),
         );
-        $response->assertJsonPath('ways.0', ['key' => 'points_on_spend', 'switch' => 'points_on_bookings', 'zero_off' => null, 'fields' => ['points_per_currency']])
-            ->assertJsonPath('ways.1', ['key' => 'points_expiry', 'switch' => null, 'zero_off' => 'points_expiry_months', 'fields' => ['points_expiry_months']]);
+        $response->assertJsonPath('ways.0', ['key' => 'earn_rate', 'switch' => null, 'zero_off' => null, 'fields' => ['points_per_currency']])
+            ->assertJsonPath('ways.1', ['key' => 'points_on_spend', 'switch' => 'points_on_bookings', 'zero_off' => null, 'fields' => []])
+            ->assertJsonPath('ways.2', ['key' => 'points_expiry', 'switch' => null, 'zero_off' => 'points_expiry_months', 'fields' => ['points_expiry_months']]);
+        // The checks (ProgrammeAdvice): this salon takes no bookings yet, so points on bookings does nothing and nothing
+        // else earns points by default; rewards are offered, so the catalogue is not empty.
+        $this->assertSame(['points_on_spend'], $response->json('not_used'));
+        $this->assertSame([['code' => 'nothing_earns', 'level' => 'warn', 'way' => 'desk_earn', 'params' => []]], $response->json('advice'));
         $response->assertJsonPath('fields.referral_reward_on', ['type' => 'enum', 'default' => 'first_visit', 'min' => null, 'max' => null, 'choices' => ['first_visit', 'signup'], 'when' => null])
             ->assertJsonPath('fields.stamps_per_card', ['type' => 'int', 'default' => 10, 'min' => 2, 'max' => 50, 'choices' => null, 'when' => null])
             ->assertJsonPath('fields.stamp_reward_id.when', ['field' => 'stamp_reward_kind', 'is' => 'reward'])
@@ -247,6 +256,30 @@ class OptionsTest extends TestCase
             ->assertOk()
             ->assertJsonPath('options.stamp_reward_kind', 'points')
             ->assertJsonPath('options.stamp_reward_points', 150);
+    }
+
+    public function test_the_checks_read_what_this_venue_has_and_follow_a_save(): void
+    {
+        Reward::create(['name' => 'Free coffee', 'points_cost' => 100, 'is_active' => true]);
+        // Another organisation's rooms, services and events never count for this one.
+        $other = $this->otherOrganization();
+        DB::table('booking_rooms')->insert(['organization_id' => $other['org']->id, 'name' => 'Their room', 'is_active' => true, 'created_at' => now(), 'updated_at' => now()]);
+        DB::table('loyalty_events')->insert(['organization_id' => $other['org']->id, 'title' => 'Theirs', 'starts_at' => '2026-10-10 18:00:00', 'ends_at' => '2026-10-10 20:00:00', 'status' => 'published', 'counts_as_visit' => true, 'created_at' => now(), 'updated_at' => now()]);
+        $this->asManager()->putJson($this->api('options'), ['options' => ['tier_progress_by' => 'visits']])->assertOk()
+            ->assertJsonPath('not_used', ['points_on_spend'])
+            ->assertJsonPath('advice.0.code', 'nothing_earns')
+            ->assertJsonPath('advice.1', ['code' => 'visits_without_source', 'level' => 'warn', 'way' => 'check_in', 'params' => []]);
+
+        // An event of ours that counts as a visit is a source of visits; check-in with no points is a tip, not a warning.
+        DB::table('loyalty_events')->insert(['organization_id' => $this->org->id, 'title' => 'Open evening', 'starts_at' => '2026-10-10 18:00:00', 'ends_at' => '2026-10-10 20:00:00', 'status' => 'published', 'counts_as_visit' => true, 'created_at' => now(), 'updated_at' => now()]);
+        $response = $this->asManager()->putJson($this->api('options'), ['options' => ['checkin_enabled' => true, 'checkin_points' => 0, 'tier_progress_by' => 'points']])->assertOk();
+        $this->assertSame(['nothing_earns', 'checkin_counts_only'], array_column($response->json('advice'), 'code'));
+
+        // Rooms to sell: bookings earn, nothing is left unused, and nothing is wrong.
+        DB::table('booking_rooms')->insert(['organization_id' => $this->org->id, 'name' => 'Garden room', 'is_active' => true, 'created_at' => now(), 'updated_at' => now()]);
+        $this->asStaffMember()->getJson($this->api('options'))->assertOk()
+            ->assertJsonPath('not_used', [])
+            ->assertJsonPath('advice', [['code' => 'checkin_counts_only', 'level' => 'tip', 'way' => 'check_in', 'params' => []]]);
     }
 
     public function test_every_presets_recommendation_passes_the_options_own_checks(): void

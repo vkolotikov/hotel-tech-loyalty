@@ -27,6 +27,8 @@ class TierProgressPresetsTest extends TestCase
     {
         parent::setUp();
         $this->setUpLoyaltyWorkspace();
+        // Ways to earn's checks read what can be booked and the events (ProgrammeAdvice).
+        $this->buildProgrammeAdviceSchema();
         $this->setUpLoyaltyPresetSchema();
         $this->buildValiditySchema();
     }

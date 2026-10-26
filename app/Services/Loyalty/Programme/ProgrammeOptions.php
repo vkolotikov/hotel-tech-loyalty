@@ -79,10 +79,16 @@ final class ProgrammeOptions
      * and the options the card sets. The workspace draws its cards from this list; it keeps no copy. A card with
      * neither is always on (release 8's "How members move up": a choice, never off).
      *
+     * The earn rate is a card of its own, always on (owner 2026-10-26, "better logic"): `points_per_currency` is what
+     * LoyaltyService::pointsForSpend() reads for a completed booking AND a purchase at the desk, while
+     * `points_on_bookings` switches only the bookings — so the rate no longer hides behind the bookings' switch, and a
+     * venue that takes no bookings still sets what its desk purchases earn.
+     *
      * @var array<string, array{switch?: string, zero_off?: string, fields: list<string>}>
      */
     public const WAYS = [
-        'points_on_spend' => ['switch' => 'points_on_bookings', 'fields' => ['points_per_currency']],
+        'earn_rate'       => ['fields' => ['points_per_currency']],
+        'points_on_spend' => ['switch' => 'points_on_bookings', 'fields' => []],
         'points_expiry'   => ['zero_off' => 'points_expiry_months', 'fields' => ['points_expiry_months']],
         'welcome_bonus'   => ['zero_off' => 'welcome_bonus_points', 'fields' => ['welcome_bonus_points']],
         'birthday_bonus'  => ['zero_off' => 'birthday_bonus_points', 'fields' => ['birthday_bonus_points']],

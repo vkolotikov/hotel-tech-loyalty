@@ -229,6 +229,10 @@ Multi-tenant Laravel 13 + React (Vite, TypeScript) SaaS with four sub-brands. Pr
   converted. Tiers are judged by the programme's `tier_progress_by` (points, visits — one per member per venue day —
   or spend), never by the member column `tier_qualification_model`; progress comes from
   `LoyaltyService::tierProgress()`.
+- Ways to earn (owner 2026-10-26, `docs/loyalty-workspace.md` "Ways to earn, tabs and checks"): what the page warns
+  about is decided only by `Loyalty\Programme\ProgrammeAdvice` (reads only; a new check is a code there with its words
+  in all five bundles), never computed in the workspace; the earn rate is its own always-on card (`earn_rate`) because
+  `points_per_currency` serves bookings and the desk alike.
 - Release 9 (owner 2026-10-25, review and redesign; `docs/loyalty-workspace.md` "Release 9"): a tier move's direction is
   `LoyaltyService::compareOnLadder()` (the measure's floors, then points floors, then `sort_order`; level is no move);
   soft landing steps down the measure's own ladder; a move never writes `tier_effective_until` (it is the grace clock,

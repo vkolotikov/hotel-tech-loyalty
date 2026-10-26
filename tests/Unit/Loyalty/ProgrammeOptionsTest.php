@@ -36,10 +36,10 @@ class ProgrammeOptionsTest extends TestCase
     public function test_a_card_has_a_switch_or_a_number_whose_zero_is_off_never_both(): void
     {
         foreach (ProgrammeOptions::ways() as $way) {
-            // Release 8: a card with neither is always on — only "How members move up", a choice that is never off.
+            // A card with neither is always on: release 8's "How members move up" (a choice, never off) and, owner
+            // 2026-10-26, the earn rate (it serves bookings and the desk alike; each has its own switch).
             if ($way['switch'] === null && $way['zero_off'] === null) {
-                $this->assertSame('tier_progress', $way['key']);
-                $this->assertSame(['tier_progress_by'], $way['fields']);
+                $this->assertSame(['earn_rate' => ['points_per_currency'], 'tier_progress' => ['tier_progress_by']][$way['key']] ?? null, $way['fields'], $way['key']);
                 continue;
             }
             $this->assertTrue(($way['switch'] === null) !== ($way['zero_off'] === null), $way['key']);
