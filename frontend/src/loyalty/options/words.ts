@@ -181,6 +181,28 @@ export const ADVICE_WORDS: Record<string, string> = {
   checkin_counts_only: 'A check-in gives no points and no stamp: it only records the visit.',
 }
 
+/** What a check's one-press fix does, by code (ProgrammeAdvice's `fix`); a check without a fix is opened instead. */
+export const FIX_WORDS: Record<string, string> = {
+  nothing_earns: 'Turn on {{way}}',
+  visits_without_source: 'Turn on {{way}}',
+  spend_without_source: 'Turn on {{way}}',
+  stamp_reward_missing: 'Give points instead',
+  referrals_give_nothing: 'Give {{points}} points to each',
+  expiry_short: 'Expire after {{months}} months',
+  checkin_counts_only: 'Give {{points}} points per check-in',
+}
+
+/** The member's journey on the Overview (journey.ts `STAGES`). */
+export const STAGE_WORDS: Record<string, string> = {
+  join: 'Joins',
+  visit: 'Visits and spends',
+  celebrate: 'Celebrates',
+  friends: 'Brings a friend',
+  move_up: 'Moves up',
+  spend: 'Spends points',
+  keep: 'Stays active',
+}
+
 /** The page's sections (groups.ts `GROUP_ORDER`). */
 export const GROUP_WORDS: Record<string, string> = {
   earn: 'Earn points',
@@ -192,6 +214,8 @@ export const GROUP_WORDS: Record<string, string> = {
 /** The families above by the key prefix they are read under. */
 export const WORD_FAMILIES: Record<string, Record<string, string>> = {
   advice: ADVICE_WORDS,
+  fix: FIX_WORDS,
+  stage: STAGE_WORDS,
   group: GROUP_WORDS,
   way: WAY_WORDS,
   way_line: WAY_LINE_WORDS,

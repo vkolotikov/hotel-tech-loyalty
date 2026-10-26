@@ -10,9 +10,11 @@ use App\Services\Booking\BookingCapability;
  * with what the venue actually has — bookings to earn on, events that count as visits, rewards to spend on — so a
  * manager is told when ways do not work together, before members find out. Reads only; the workspace names each code.
  *
- * - `advice`: a list of `{code, level, way, params}`, the warnings first. `level` is `warn` (members are short of
+ * - `advice`: a list of `{code, level, way, params, fix}`, the warnings first. `level` is `warn` (members are short of
  *   something) or `tip` (it works, but is unusual); `way` is the card to open for it (null: it is fixed elsewhere —
- *   the catalogue).
+ *   the catalogue); `fix` is the change that answers it in one press (owner 2026-10-26: "build a logic") — options as
+ *   `PUT options` takes them, validated and audited there like any change — or null when only a person can decide
+ *   (which reward to add).
  * - `not_used`: the ways that do nothing at this venue as it stands (points on bookings where nothing can be booked).
  *
  * A booking source is appointments bookable (BookingCapability) or rooms to sell — a stay may arrive from the PMS even
@@ -26,6 +28,10 @@ final class ProgrammeAdvice
     /** Points expiring sooner than this many months reads as a mistake to most members. */
     public const SHORT_EXPIRY_MONTHS = 6;
 
+    /** What the one-press fixes set: a usual expiry, and a check-in worth something (the fitness preset's). */
+    public const FIX_EXPIRY_MONTHS = 12;
+    public const FIX_CHECKIN_POINTS = 10;
+
     public function __construct(private readonly BookingCapability $capability)
     {
     }
@@ -33,7 +39,7 @@ final class ProgrammeAdvice
     /**
      * @param array<string, mixed> $options ProgrammeOptions::for()
      * @param list<int> $activeRewardIds the catalogue's offered rewards
-     * @return array{advice: list<array{code: string, level: string, way: ?string, params: array<string, int>}>, not_used: list<string>}
+     * @return array{advice: list<array{code: string, level: string, way: ?string, params: array<string, int>, fix: ?array<string, mixed>}>, not_used: list<string>}
      */
     public function for(int $orgId, array $options, array $activeRewardIds): array
     {
@@ -50,7 +56,7 @@ final class ProgrammeAdvice
      * @param array<string, mixed> $o the options
      * @param array{bookings: bool, visit_events: bool} $venue
      * @param list<int> $activeRewardIds
-     * @return array{advice: list<array{code: string, level: string, way: ?string, params: array<string, int>}>, not_used: list<string>}
+     * @return array{advice: list<array{code: string, level: string, way: ?string, params: array<string, int>, fix: ?array<string, mixed>}>, not_used: list<string>}
      */
     public static function read(array $o, array $venue, array $activeRewardIds): array
     {
@@ -65,40 +71,47 @@ final class ProgrammeAdvice
 
         $warn = [];
         $tips = [];
-        $say = fn (string $code, ?string $way, array $params = []) => ['code' => $code, 'way' => $way, 'params' => $params];
+        $say = fn (string $code, ?string $way, ?array $fix, array $params = []) => ['code' => $code, 'way' => $way, 'params' => $params, 'fix' => $fix];
+        $default = fn (string $option) => ProgrammeOptions::OPTIONS[$option][1];
 
         // Members can earn points regularly: on bookings (where there are any), at the desk, by checking in, by stamps.
         if (!$bookingPoints && !$desk && !($checkin && $checkinPoints > 0) && !$stamps) {
-            $warn[] = $say('nothing_earns', $bookings ? 'points_on_spend' : 'desk_earn');
+            $warn[] = $bookings
+                ? $say('nothing_earns', 'points_on_spend', ['points_on_bookings' => true])
+                : $say('nothing_earns', 'desk_earn', ['desk_earn_enabled' => true]);
         }
         // A tier by visits needs something that records a visit; by spend, something that records a spend.
         if ($progress === 'visits' && !$bookings && !$checkin && !$desk && !$venue['visit_events']) {
-            $warn[] = $say('visits_without_source', 'check_in');
+            $warn[] = $say('visits_without_source', 'check_in', ['checkin_enabled' => true]);
         }
         if ($progress === 'spend' && !$bookings && !$desk) {
-            $warn[] = $say('spend_without_source', 'desk_earn');
+            $warn[] = $say('spend_without_source', 'desk_earn', ['desk_earn_enabled' => true]);
         }
         if ($stamps && ($o['stamp_reward_kind'] ?? 'points') === 'reward' && !in_array((int) ($o['stamp_reward_id'] ?? 0), $activeRewardIds, true)) {
-            $warn[] = $say('stamp_reward_missing', 'stamp_card');
+            // A full card gives its points instead (the card's points field keeps its number).
+            $warn[] = $say('stamp_reward_missing', 'stamp_card', ['stamp_reward_kind' => 'points']);
         }
         if (($o['referral_enabled'] ?? false) === true && (int) ($o['referrer_bonus_points'] ?? 0) === 0 && (int) ($o['referee_bonus_points'] ?? 0) === 0) {
-            $warn[] = $say('referrals_give_nothing', 'referrals');
+            $warn[] = $say('referrals_give_nothing', 'referrals', [
+                'referrer_bonus_points' => $default('referrer_bonus_points'),
+                'referee_bonus_points'  => $default('referee_bonus_points'),
+            ]);
         }
         if ($activeRewardIds === []) {
-            $warn[] = $say('no_rewards', null);
+            $warn[] = $say('no_rewards', null, null);
         }
 
         if ($months > 0 && $months < self::SHORT_EXPIRY_MONTHS) {
-            $tips[] = $say('expiry_short', 'points_expiry', ['months' => $months]);
+            $tips[] = $say('expiry_short', 'points_expiry', ['points_expiry_months' => self::FIX_EXPIRY_MONTHS], ['months' => $months]);
         }
         if ($checkin && $checkinPoints === 0 && !$stamps && $progress !== 'visits') {
-            $tips[] = $say('checkin_counts_only', 'check_in');
+            $tips[] = $say('checkin_counts_only', 'check_in', ['checkin_points' => self::FIX_CHECKIN_POINTS]);
         }
 
         return [
             'advice'   => array_merge(
-                array_map(fn (array $a) => ['code' => $a['code'], 'level' => self::WARN, 'way' => $a['way'], 'params' => $a['params']], $warn),
-                array_map(fn (array $a) => ['code' => $a['code'], 'level' => self::TIP, 'way' => $a['way'], 'params' => $a['params']], $tips),
+                array_map(fn (array $a) => ['code' => $a['code'], 'level' => self::WARN, 'way' => $a['way'], 'params' => $a['params'], 'fix' => $a['fix']], $warn),
+                array_map(fn (array $a) => ['code' => $a['code'], 'level' => self::TIP, 'way' => $a['way'], 'params' => $a['params'], 'fix' => $a['fix']], $tips),
             ),
             'not_used' => $bookings ? [] : ['points_on_spend'],
         ];

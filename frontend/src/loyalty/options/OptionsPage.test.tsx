@@ -164,64 +164,96 @@ describe('Ways to earn (release 7 §1; tabs and checks, owner 2026-10-26)', () =
     expect(text(page(false, data))).not.toContain('Turn on')
   })
 
-  it('the Overview says what the checks found, each with the card to open, and counts the warnings on its tab', () => {
+  it('the Overview says where the programme stands: all set, or how many things to fix, with its figures', () => {
+    const fine = text(page(true, answerFixture({ advice: [] })))
+    expect(fine).toContain('All set')
+    expect(fine).toMatch(/Ways on: \d+ of 10 Tiers: 3 Rewards: 2/)
+    expect(fine).not.toContain('Checks')
     const data = answerFixture({
       advice: [
-        { code: 'visits_without_source', level: 'warn', way: 'check_in', params: {} },
-        { code: 'no_rewards', level: 'warn', way: null, params: {} },
-        { code: 'expiry_short', level: 'tip', way: 'points_expiry', params: { months: 3 } },
-        { code: 'made_up', level: 'warn', way: null, params: {} },
+        { code: 'visits_without_source', level: 'warn', way: 'check_in', params: {}, fix: { checkin_enabled: true } },
+        { code: 'no_rewards', level: 'warn', way: null, params: {}, fix: null },
+        { code: 'expiry_short', level: 'tip', way: 'points_expiry', params: { months: 3 }, fix: { points_expiry_months: 12 } },
+        { code: 'made_up', level: 'warn', way: null, params: {}, fix: null },
+      ],
+    })
+    const words = text(page(true, data))
+    expect(words).toContain('To fix: 2')
+    expect(words).toContain('Tips: 1')
+    // The industry's recommendations are counted too.
+    expect(words).toContain('Recommended for Beauty and spa: 1')
+  })
+
+  it('each check says what is wrong, offers its one-press fix to a manager and the card to open; the tab counts the warnings', () => {
+    const data = answerFixture({
+      advice: [
+        { code: 'visits_without_source', level: 'warn', way: 'check_in', params: {}, fix: { checkin_enabled: true } },
+        { code: 'no_rewards', level: 'warn', way: null, params: {}, fix: null },
+        { code: 'expiry_short', level: 'tip', way: 'points_expiry', params: { months: 3 }, fix: { points_expiry_months: 12 } },
+        { code: 'referrals_give_nothing', level: 'warn', way: 'referrals', params: {}, fix: { referrer_bonus_points: 250, referee_bonus_points: 250 } },
+        { code: 'made_up', level: 'warn', way: null, params: {}, fix: null },
       ],
     })
     const html = page(true, data)
     const words = text(html)
-    expect(words).toContain('Members move up by visits, but nothing records a visit here. Switch on Check-in. Open Check-in')
+    expect(words).toContain('Members move up by visits, but nothing records a visit here. Switch on Check-in. Turn on Check-in Open Check-in')
     expect(words).toContain('Members collect points but the catalogue has nothing to spend them on. Open Rewards')
-    expect(words).toContain('Points expire after 3 months, which is short for most members; 12 to 24 is usual. Open Points expiry')
+    expect(words).toContain('Points expire after 3 months, which is short for most members; 12 to 24 is usual. Expire after 12 months Open Points expiry')
+    expect(words).toContain('Give 250 points to each')
     // A code the workspace has no words for is not shown, nor counted.
     expect(html).not.toContain('made_up')
-    expect(html).toMatch(/id="options-tab-overview"[\s\S]*?data-state="pending"[^>]*>2<span class="sr-only"> to check/)
+    expect(html).toMatch(/id="options-tab-overview"[\s\S]*?data-state="pending"[^>]*>3<span class="sr-only"> to check/)
     expect(html).toContain('href="/loyalty/rewards"')
-    // Nothing found: all is well, and no count.
-    const fine = page(true, answerFixture({ advice: [] }))
-    expect(text(fine)).toContain('Everything works together.')
-    expect(fine).not.toContain('to check')
+    // Anyone else sees what is wrong and where, with nothing to press that changes it.
+    const readOnly = text(page(false, { ...data, can_change: false }))
+    expect(readOnly).toContain('Open Check-in')
+    expect(readOnly).not.toContain('Turn on Check-in')
+    expect(readOnly).not.toContain('Expire after 12 months')
   })
 
-  it('offers what the venue’s industry recommends and is off here, each with what members would get and Turn on', () => {
-    const html = page(true)
+  it('walks the member’s journey: a map of the steps, then each step with its ways and the parts it leads to', () => {
+    const html = page(true, answerFixture({ advice: [] }))
     const words = text(html)
-    expect(words).toContain('Recommended for Beauty and spa')
-    expect(html).toContain('data-suggest="stamp_card"')
-    expect(words).toContain('A card holds 8 stamps; a full card gives 400 points. Turn on Stamp card')
-    // On already, or always on: not offered.
-    expect(html).not.toContain('data-suggest="referrals"')
-    expect(html).not.toContain('data-suggest="earn_rate"')
-    // A venue whose industry has no preset, or nothing missing, has no such panel.
-    expect(text(page(true, answerFixture({ presets: [presetFixture('hotel_classic', false)] })))).not.toContain('Recommended for')
-  })
-
-  it('says what members get today, and the ways switched off, each opening its card; a way that does nothing here says so', () => {
-    const data = answerFixture({ not_used: ['points_on_spend'] })
-    const html = page(true, data)
-    const words = text(html)
-    expect(words).toContain('What members get')
-    expect(html).toContain('data-gets="earn_rate"')
-    expect(html).toContain('data-off="stamp_card"')
-    expect(words).toContain('Points on bookings Not used here')
-    expect(text(card(tab('earn', true, data), 'points_on_spend'))).toContain('Your venue takes no bookings, so this gives nothing.')
-    expect(text(card(tab('earn'), 'points_on_spend'))).not.toContain('takes no bookings')
-  })
-
-  it('links the rest of the programme with how many there are', () => {
-    const html = page(true)
-    const words = text(html)
-    expect(words).toContain('Tiers 3 In the ladder')
-    expect(words).toContain('Rewards 2 In the catalogue')
-    expect(words).toContain('Offers 2 Switched on')
+    expect(words).toContain('Your members’ journey')
+    const steps = ['join', 'visit', 'celebrate', 'friends', 'move_up', 'spend', 'keep']
+    const map = steps.map(s => html.indexOf(`data-map="${s}"`))
+    expect(map.every(i => i > 0)).toBe(true)
+    expect([...map].sort((a, b) => a - b)).toEqual(map)
+    // Each jumps to its step without leaving the page (a "#…" link would, under <base href="/">).
+    expect(html).not.toContain('href="#')
+    for (const s of steps) expect(html).toContain(`id="step-${s}"`)
+    expect(words).toMatch(/1\. Joins Welcome bonus New members get 500 points when they join\./)
+    expect(words).toContain('2. Visits and spends Earn rate Members get 1 point for every €1 they spend.')
+    expect(words).toContain('Stamp card · Off Recommended No stamp card.')
+    expect(words).toContain('5. Moves up Tiers 3 In the ladder')
+    expect(words).toContain('6. Spends points Rewards 2 In the catalogue Offers 2 Switched on')
     expect(words).toContain('Boosts 1 On now or coming up')
     expect(html).toContain('href="/loyalty/rewards?tab=offers"')
     expect(html).toContain('href="/loyalty/program"')
+    // A step that gives members nothing today is grey on the map.
+    const quiet = page(true, answerFixture({ advice: [], options: { ...answerFixture().options, birthday_bonus_points: 0 } }))
+    expect(quiet).toMatch(/type="button" data-map="celebrate" data-hue="off"/)
+    expect(quiet).toMatch(/type="button" data-map="join" data-live="" data-hue="bonus"/)
+  })
+
+  it('marks at its step what the venue’s industry recommends and is off here, with Turn on for a manager', () => {
+    const html = page(true)
+    const stamp = html.slice(html.indexOf('data-step-way="stamp_card"'), html.indexOf('</li>', html.indexOf('data-step-way="stamp_card"')))
+    expect(text(stamp)).toContain('Stamp card · Off Recommended No stamp card.')
+    expect(text(stamp)).toContain('Turn on Stamp card')
+    // On already, or always on: not marked.
+    const referrals = html.slice(html.indexOf('data-step-way="referrals"'), html.indexOf('</li>', html.indexOf('data-step-way="referrals"')))
+    expect(text(referrals)).not.toContain('Recommended')
+    // Nothing to turn on for anyone else; no recommendations where the industry has no preset.
+    expect(text(page(false, answerFixture({ can_change: false })))).not.toContain('Turn on')
+    expect(text(page(true, answerFixture({ presets: [presetFixture('hotel_classic', false)] })))).not.toContain('Recommended')
+  })
+
+  it('says at its step that a way does nothing at this venue, on the Overview and on its card', () => {
+    const data = answerFixture({ not_used: ['points_on_spend'] })
+    expect(text(page(true, data))).toContain('Points on bookings Not used here')
+    expect(text(card(tab('earn', true, data), 'points_on_spend'))).toContain('Your venue takes no bookings, so this gives nothing.')
+    expect(text(card(tab('earn'), 'points_on_spend'))).not.toContain('takes no bookings')
   })
 
   it('offers a manager the wizard in a banner until it was applied or skipped', () => {

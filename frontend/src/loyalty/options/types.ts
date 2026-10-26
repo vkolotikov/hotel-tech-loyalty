@@ -73,6 +73,8 @@ export interface Advice {
   level: 'warn' | 'tip'
   way: string | null
   params: Record<string, number>
+  /** The change that answers it in one press (`PUT options`, checked there like any change); null: a person decides. */
+  fix?: Options | null
 }
 
 export interface OptionsAnswer {

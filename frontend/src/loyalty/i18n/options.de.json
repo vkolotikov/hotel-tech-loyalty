@@ -275,11 +275,35 @@
   "tab_overview": "Überblick",
   "to_check": "zu prüfen",
   "checks": "Prüfungen",
-  "all_good": "Alles passt zusammen.",
   "open_way": "{{way}} öffnen",
-  "recommended": "Empfohlen für {{preset}}",
   "turn_on": "Einschalten",
-  "members_get": "Was Mitglieder bekommen",
   "not_used_short": "Hier nicht genutzt",
-  "switched_off": "Ausgeschaltet"
+  "status_fix": "Zu beheben: {{n}}",
+  "status_ok": "Alles bereit",
+  "pill_on": "An: {{on}} von {{all}}",
+  "pill_tiers": "Stufen: {{n}}",
+  "pill_rewards": "Prämien: {{n}}",
+  "pill_tips": "Tipps: {{n}}",
+  "pill_recommended": "Empfohlen für {{preset}}: {{n}}",
+  "journey": "Der Weg Ihrer Mitglieder",
+  "journey_map": "Schritte des Wegs",
+  "recommended_badge": "Empfohlen",
+  "stage": {
+    "join": "Tritt bei",
+    "visit": "Besucht und kauft",
+    "celebrate": "Feiert",
+    "friends": "Bringt Freunde mit",
+    "move_up": "Steigt auf",
+    "spend": "Löst Punkte ein",
+    "keep": "Bleibt aktiv"
+  },
+  "fix": {
+    "nothing_earns": "{{way}} einschalten",
+    "visits_without_source": "{{way}} einschalten",
+    "spend_without_source": "{{way}} einschalten",
+    "stamp_reward_missing": "Stattdessen Punkte geben",
+    "referrals_give_nothing": "Je {{points}} Punkte für beide",
+    "expiry_short": "Verfall nach {{months}} Monaten",
+    "checkin_counts_only": "{{points}} Punkte pro Check-in"
+  }
 }
