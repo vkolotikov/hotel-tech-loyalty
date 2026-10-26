@@ -298,7 +298,6 @@
     "new_name": "New SMS, {{day}}",
     "line": "A short text to the phones of a segment’s members who turned on offers by SMS, sent from the venue’s own Twilio number.",
     "new": "New SMS",
-    "none": "No SMS campaigns yet. Make one, write the text, choose a segment and send it.",
     "no_text": "No text yet",
     "edited": "Edited {{day}}",
     "scheduled": "Goes out {{when}}",
@@ -315,5 +314,15 @@
   "length": {
     "line": "{{chars}} of {{max}} characters · {{segments}} SMS (up to {{per}} characters each) · {{alphabet}}",
     "unicode": "These characters make it Unicode, which fits fewer characters in each SMS: {{chars}}"
+  },
+  "get_started": {
+    "title": "Send your first SMS",
+    "line": "A short text to the phones of members who turned on offers by SMS, from your venue’s own Twilio number.",
+    "s1_title": "Connect your Twilio number",
+    "s1_line": "Your own account and number, set up once.",
+    "s2_title": "Write the text",
+    "s2_line": "Short and clear: one message, one idea.",
+    "s3_title": "Choose who gets it and send",
+    "s3_line": "A segment of members who agreed to SMS, now or at a time you pick."
   }
 }

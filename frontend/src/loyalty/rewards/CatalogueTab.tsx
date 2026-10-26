@@ -16,6 +16,7 @@ import { CATALOGUE_SHOWS, catalogueCounts, catalogueShown, rewardDiscount, stock
 import type { Reward } from './types'
 import { APPLIES_TO_WORDS, DISCOUNT_PHRASE_WORDS, DISCOUNT_TYPE_WORDS } from './words'
 import { mediaUrl } from '../lib/api'
+import { GetStarted } from '../ui/GetStarted'
 
 /**
  * The catalogue (spec 2026-10-21 §4.6): every reward as a card — its picture (release 2 §7), its cost, stock,
@@ -46,14 +47,25 @@ export function CatalogueTab({ manage }: { manage: boolean }) {
         <p>{t('loyalty.rewards.catalogue.line', 'What members can spend their points on.')}</p>
         {!manage && <p data-read-only="">{t('loyalty.rewards.catalogue.read_only', 'Only staff allowed to manage offers can add or change rewards.')}</p>}
       </>}>
-        {manage && data && (
+        {/* An empty catalogue's Get started panel holds the one action. */}
+        {manage && data && data.rewards.length > 0 && (
           <Button size="sm" onClick={() => setEditing({ reward: null })}><Plus size={15} aria-hidden />{t('loyalty.rewards.catalogue.add', 'Add reward')}</Button>
         )}
       </TabHead>
 
       {query.isError && !data && <LoadFailed error={query.error} onRetry={() => { void query.refetch() }} />}
       {!data && query.isLoading && <Loading />}
-      {data && data.rewards.length === 0 && <Empty>{t('loyalty.rewards.catalogue.none', 'The catalogue is empty. Rewards added here show in the member app and the portal.')}</Empty>}
+      {data && data.rewards.length === 0 && (
+        // Release 10 (the owner's Figma): the empty catalogue teaches how to start, in the rewards' colour.
+        <GetStarted name="rewards" hue="gift" who={null} title={t('loyalty.rewards.get_started.catalogue.title', 'Add your first reward')}
+          line={t('loyalty.rewards.get_started.catalogue.line', 'Rewards are what members spend their points on. They show in the member app and the portal.')}
+          steps={[
+              { title: t('loyalty.rewards.get_started.catalogue.s1_title', 'Name it and set its cost'), line: t('loyalty.rewards.get_started.catalogue.s1_line', 'A free coffee for 200 points, a treatment for 2,000.') },
+              { title: t('loyalty.rewards.get_started.catalogue.s2_title', 'Add a picture'), line: t('loyalty.rewards.get_started.catalogue.s2_line', 'Optional, but a photo helps members choose.') },
+              { title: t('loyalty.rewards.get_started.catalogue.s3_title', 'Hand it over at the desk'), line: t('loyalty.rewards.get_started.catalogue.s3_line', 'Members get a code; staff hand the reward over on Redemptions.') },
+            ]}
+          action={manage && <Button onClick={() => setEditing({ reward: null })}><Plus size={15} aria-hidden />{t('loyalty.rewards.catalogue.add', 'Add reward')}</Button>} />
+      )}
       {data && counts && data.rewards.length > 0 && (
         <>
           <div role="group" aria-label={t('loyalty.rewards.catalogue.show', 'Show')} className="flex flex-wrap gap-2">

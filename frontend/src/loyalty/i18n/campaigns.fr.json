@@ -94,7 +94,6 @@
     "new_name": "Nouvelle campagne, {{day}}",
     "line": "Des e-mails aux membres d’un segment. Seuls les membres qui ont accepté les e-mails marketing les reçoivent.",
     "new": "Nouvelle campagne",
-    "none": "Aucune campagne pour l’instant. Créez-en une, choisissez un segment, écrivez l’e-mail et envoyez-le.",
     "no_subject": "Pas encore d’objet",
     "edited": "Modifiée le {{day}}",
     "counts": "{{sent}} envoyés sur {{total}} · {{failed}} échecs",
@@ -162,7 +161,6 @@
   "segments": {
     "line": "À qui va une campagne : des membres choisis par niveau, activité, points, date d’inscription, ou tout le monde.",
     "new": "Nouveau segment",
-    "none": "Aucun segment pour l’instant. Un segment choisit les membres auxquels une campagne est envoyée.",
     "problem": "La règle {{n}} ne peut pas être utilisée : {{why}} Aucune campagne n’est envoyée à ce segment tant qu’elle n’est pas corrigée.",
     "members": "Membres aujourd’hui",
     "last_sent": "Dernier envoi",
@@ -476,6 +474,34 @@
       "not_allowed": "Seul un propriétaire ou un responsable peut travailler sur les campagnes.",
       "network": "Pas de connexion : il est toujours programmé. Réessayez.",
       "unknown": "Impossible de le reprendre. Veuillez réessayer."
+    }
+  },
+  "tab_caption": {
+    "campaigns": "Des e-mails à un groupe de membres",
+    "segments": "Les groupes de membres à qui écrire",
+    "push": "Des messages dans l’appli membre",
+    "sms": "Des SMS sur les téléphones"
+  },
+  "get_started": {
+    "campaigns": {
+      "title": "Envoyez votre première campagne e-mail",
+      "line": "Écrivez une fois, envoyez aux membres d’un segment. Seuls les membres qui ont accepté les e-mails marketing la reçoivent.",
+      "s1_title": "Créez un segment",
+      "s1_line": "Dans Segments, choisissez à qui elle part : un niveau, une activité, ou tout le monde.",
+      "s2_title": "Rédigez l’e-mail",
+      "s2_line": "Un objet, puis du texte, des images et des boutons ; les balises ajoutent le nom et les points de chacun.",
+      "s3_title": "Envoyez-la ou programmez-la",
+      "s3_line": "Vérifiez combien elle touche, puis envoyez maintenant ou à l’heure choisie."
+    },
+    "segments": {
+      "title": "Créez votre premier segment",
+      "line": "Un segment est un groupe de membres à qui part un e-mail, une notification push ou un SMS.",
+      "s1_title": "Nommez-le",
+      "s1_line": "Par exemple, Membres Or ou Pas vus depuis 60 jours.",
+      "s2_title": "Choisissez ses règles",
+      "s2_line": "Niveau, activité, points ou date d’adhésion, ou tout le monde.",
+      "s3_title": "Écrivez-lui",
+      "s3_line": "Choisissez-le quand vous envoyez un e-mail, une notification push ou un SMS."
     }
   }
 }

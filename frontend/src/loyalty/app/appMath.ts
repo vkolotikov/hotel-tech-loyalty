@@ -25,17 +25,6 @@ export function searchFor(tab: AppTab): string {
   return tab === 'wallet' ? '' : `?tab=${tab}`
 }
 
-/** The tab the arrow keys, Home and End move to from the current one (they wrap); null for any other key. */
-export function tabAfter(current: AppTab, key: string): AppTab | null {
-  const i = APP_TABS.indexOf(current)
-  const n = APP_TABS.length
-  if (key === 'ArrowRight') return APP_TABS[(i + 1) % n]
-  if (key === 'ArrowLeft') return APP_TABS[(i - 1 + n) % n]
-  if (key === 'Home') return APP_TABS[0]
-  if (key === 'End') return APP_TABS[n - 1]
-  return null
-}
-
 /**
  * What the page shows (§3): the whole page is a manager's (`manage_app`) — anyone else who opens it by address reads
  * why; the wallet pass needs the plan's `wallet` feature, the member app's look does not.

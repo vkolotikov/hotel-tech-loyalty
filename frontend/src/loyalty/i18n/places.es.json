@@ -3,8 +3,6 @@
   "add": "Añadir espacio",
   "add_first": "Añadir la entrada",
   "list": "Espacios",
-  "none_manager": "Todavía no hay espacios. Añada primero su entrada: los escaneos allí dirán quién puede pasar.",
-  "none": "Todavía no hay espacios. Un propietario o un gerente los añade aquí.",
   "switched_off": "Desactivado",
   "edit": "Editar",
   "who": "Quién puede entrar",
@@ -120,5 +118,15 @@
     "admits": "Elija quién puede entrar.",
     "tiers": "Marque al menos un nivel.",
     "description": "300 caracteres como máximo."
+  },
+  "get_started": {
+    "title": "Añada su primera entrada",
+    "line": "Dé al equipo un lugar claro para comprobar la membresía y ver quién puede pasar.",
+    "s1_title": "Póngale nombre a la entrada",
+    "s1_line": "Por ejemplo, Entrada principal o Recepción.",
+    "s2_title": "Elija quién puede entrar",
+    "s2_line": "Todos los miembros o solo los niveles que marque.",
+    "s3_title": "Empiece a comprobar miembros",
+    "s3_line": "Abra Escanear y elija esta entrada."
   }
 }

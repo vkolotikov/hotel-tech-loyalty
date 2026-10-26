@@ -39,10 +39,11 @@
   },
   "benefits": {
     "add": "Añadir beneficio",
-    "none": "El catálogo está vacío. Los beneficios, como una salida tardía o una bebida de bienvenida, se crean aquí y luego se asignan a los niveles.",
     "switch_off": "Desactivar",
     "switch_on": "Activar",
-    "title": "Beneficios"
+    "title": "Beneficios",
+    "given_by": "Lo dan: {{tiers}}",
+    "given_by_none": "Ningún nivel lo da todavía"
   },
   "boost": {
     "active": "Activa",
@@ -94,7 +95,6 @@
     "add": "Añadir promoción",
     "every_day": "Todos los días",
     "every_tier": "Todos los niveles",
-    "none": "No hay promociones. Una promoción multiplica durante un tiempo los puntos que ganan los miembros, como un fin de semana de puntos dobles.",
     "range": "{{from}} – {{to}}",
     "remove": "Eliminar",
     "title": "Promociones de puntos"
@@ -233,8 +233,6 @@
     "ladder": "Los niveles en orden, desde el primero",
     "members": "Miembros",
     "no_benefits": "Este nivel aún no ofrece ningún beneficio.",
-    "none": "Aún no hay niveles.",
-    "none_manager": "Aún no hay niveles. Añada el primero: el programa empieza en cuanto un nivel está activo.",
     "take_off_label": "Quitar {{benefit}} de {{tier}}",
     "title": "Niveles"
   },
@@ -270,5 +268,62 @@
     "percent_discount": "Descuento porcentual",
     "points_multiplier": "Multiplicador de puntos",
     "text": "Solo texto"
+  },
+  "line": "Sus niveles, lo que da cada uno, dónde pueden entrar los miembros y las promociones que les hacen volver.",
+  "sections": "Secciones del programa",
+  "section": {
+    "tiers": "Escalones y cómo se alcanzan",
+    "benefits": "Lo que incluye cada nivel",
+    "places": "Entradas y quién puede entrar",
+    "boosts": "Más puntos durante un tiempo"
+  },
+  "intro": {
+    "tiers": "Los miembros suben de escalón a medida que acumulan. Cada nivel fija su tasa de acumulación, sus beneficios y dónde puede entrar.",
+    "benefits": "Cree un beneficio una vez y déselo a cualquier nivel. Un cambio aquí llega a todos los niveles que lo dan.",
+    "places": "Entradas donde el equipo comprueba la membresía. Cada una dice qué niveles pueden pasar, y Escanear lo usa en la puerta.",
+    "boosts": "Una promoción multiplica los puntos que ganan los miembros durante un tiempo. Fuera de ella siguen sus reglas de acumulación normales."
+  },
+  "figures": {
+    "label": "Los niveles en cifras",
+    "tiers": "Niveles",
+    "tiers_off": "{{n}} desactivados",
+    "members": "Miembros con nivel",
+    "benefits": "Beneficios para dar",
+    "benefits_note": "en el catálogo"
+  },
+  "get_started": {
+    "tiers": {
+      "title": "Añada su primer nivel",
+      "line": "Un nivel es un escalón que alcanzan los miembros, como Plata u Oro, con su propia tasa de acumulación y sus beneficios. El programa empieza en cuanto hay un nivel en uso.",
+      "s1_title": "Póngale nombre",
+      "s1_line": "Los miembros ven el nombre en su tarjeta y en la app.",
+      "s2_title": "Fije cómo se alcanza",
+      "s2_line": "Puntos, visitas o gasto, según lo que Formas de ganar fija para subir.",
+      "s3_title": "Dele beneficios",
+      "s3_line": "Una bebida de bienvenida, salida tardía o un descuento, del catálogo de beneficios."
+    },
+    "benefits": {
+      "title": "Cree su primer beneficio",
+      "line": "Los beneficios son lo que un nivel da a sus miembros. Cree uno aquí y luego déselo a los niveles que deban tenerlo.",
+      "s1_title": "Póngale nombre",
+      "s1_line": "Salida tardía, bebida de bienvenida, 10 % en servicios.",
+      "s2_title": "Elija cómo se da",
+      "s2_line": "Automáticamente, a petición o cuando el equipo lo apruebe.",
+      "s3_title": "Déselo a los niveles",
+      "s3_line": "En Niveles, pulse Añadir beneficio en cada nivel que deba tenerlo."
+    },
+    "boosts": {
+      "title": "Dé a los miembros un motivo para volver",
+      "line": "Una promoción multiplica los puntos que ganan los miembros durante un tiempo fijado. Empiece con un sencillo fin de semana de puntos dobles.",
+      "s1_title": "Póngale nombre y elija el multiplicador",
+      "s1_line": "×2 duplica cada punto ganado mientras dura.",
+      "s2_title": "Fije cuándo se aplica",
+      "s2_line": "Fechas y horas según el reloj de su local, y los días de la semana.",
+      "s3_title": "Elija a quién se aplica",
+      "s3_line": "A todos los niveles o solo a los que elija.",
+      "example_title": "Fin de semana de puntos dobles",
+      "example_figures": "{{from}} → {{to}} puntos",
+      "example_line": "Promoción ×2 · sábado y domingo"
+    }
   }
 }

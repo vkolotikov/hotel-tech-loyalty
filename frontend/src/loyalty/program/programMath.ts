@@ -8,6 +8,21 @@ import type { Benefit, BenefitBody, Boost, BoostBody, BoostState, ProgramOptions
  * what a form refuses before sending, the words a server value is read under, and the venue's clock for boosts.
  */
 
+/**
+ * Program's sections (release 10, the owner's Figma 163:88): tiers, benefits, places, boosts. The section lives in the
+ * address (`?tab=places`); `#places`, the address Scan and the Guide opened before, still opens Places.
+ */
+export const PROGRAM_SECTIONS = ['tiers', 'benefits', 'places', 'boosts'] as const
+export type ProgramSection = typeof PROGRAM_SECTIONS[number]
+
+export function programSectionFrom(search: string, hash = ''): ProgramSection {
+  const tab = new URLSearchParams(search).get('tab')
+  if (tab && (PROGRAM_SECTIONS as readonly string[]).includes(tab)) return tab as ProgramSection
+  return hash === '#places' ? 'places' : 'tiers'
+}
+
+export const programSearch = (section: ProgramSection): string => (section === 'tiers' ? '' : `?tab=${section}`)
+
 /** Only a manager changes the programme; everyone else reads it (§5). The server checks again. */
 export function programActions(can: Can): { manage: boolean } {
   return { manage: can.manage_program }

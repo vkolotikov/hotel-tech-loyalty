@@ -110,7 +110,6 @@
     "no_category": "Tipo aún sin elegir",
     "no_segment": "Sin segmento",
     "no_title": "Aún sin título",
-    "none": "Aún no hay notificaciones push. Cree una, elija su tipo y un segmento, y envíela.",
     "scheduled": "Se envía: {{when}}"
   },
   "load": {
@@ -266,5 +265,15 @@
       "network": "Sin conexión: sigue programado. Inténtelo de nuevo.",
       "unknown": "No se pudo retirar. Inténtelo de nuevo."
     }
+  },
+  "get_started": {
+    "title": "Envíe su primera notificación push",
+    "line": "Un mensaje corto al teléfono de los miembros que tienen la app. También queda en su bandeja de la app.",
+    "s1_title": "Escríbala",
+    "s1_line": "Un título y una o dos líneas.",
+    "s2_title": "Elija quién la recibe",
+    "s2_line": "Un segmento de sus miembros.",
+    "s3_title": "Envíela o prográmela",
+    "s3_line": "Ahora o a la hora que elija."
   }
 }

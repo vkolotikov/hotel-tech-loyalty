@@ -22,7 +22,6 @@
     "add": "Ajouter une récompense",
     "fulfilled": "Délivrées",
     "line": "Ce que les membres peuvent obtenir avec leurs points.",
-    "none": "Le catalogue est vide. Les récompenses ajoutées ici apparaissent dans l’application membre et sur le portail.",
     "none_left": "Épuisé",
     "offered": "Proposée",
     "per_member": "Par membre",
@@ -43,7 +42,7 @@
     "percent_discount": "Pourcentage de remise"
   },
   "edit": "Modifier",
-  "line": "Ce que les membres obtiennent avec leurs points, et ce qui les fait revenir.",
+  "line": "Ce que les membres obtiennent avec leurs points, les codes qu’ils présentent à l’accueil, et les offres et parrainages qui les font revenir.",
   "load": {
     "error": {
       "network": "Pas de connexion. Vérifiez le réseau et réessayez.",
@@ -136,7 +135,6 @@
     "every_tier": "Tous les niveaux",
     "featured": "Mise en avant",
     "line": "Les offres spéciales que les membres voient dans l’application et sur le portail.",
-    "none": "Aucune offre pour l’instant.",
     "per_member": "Jusqu’à {{limit}} par membre",
     "read_only": "Seuls les membres de l’équipe autorisés à gérer les offres peuvent en ajouter ou en modifier.",
     "used": "Utilisations : {{used}}",
@@ -273,5 +271,33 @@
   },
   "tabs": "Rubriques des récompenses",
   "title": "Récompenses",
-  "tab_waiting": "en attente à l’accueil"
+  "tab_waiting": "en attente à l’accueil",
+  "tab_caption": {
+    "catalogue": "Ce que l’on obtient avec ses points",
+    "redemptions": "Les codes à remettre à l’accueil",
+    "offers": "Des offres pour les membres, pour un temps",
+    "referrals": "Les amis qu’amènent vos membres"
+  },
+  "get_started": {
+    "catalogue": {
+      "title": "Ajoutez votre première récompense",
+      "line": "Les récompenses sont ce que les membres obtiennent avec leurs points. Elles apparaissent dans l’appli membre et sur le portail.",
+      "s1_title": "Nommez-la et fixez son prix",
+      "s1_line": "Un café offert pour 200 points, un soin pour 2 000.",
+      "s2_title": "Ajoutez une photo",
+      "s2_line": "Facultatif, mais une photo aide à choisir.",
+      "s3_title": "Remettez-la à l’accueil",
+      "s3_line": "Le membre reçoit un code ; l’équipe remet la récompense dans Échanges."
+    },
+    "offers": {
+      "title": "Créez votre première offre",
+      "line": "Une offre est un avantage que les membres voient un temps dans l’appli et sur le portail, comme 20 % sur un week-end d’automne.",
+      "s1_title": "Choisissez son type et sa valeur",
+      "s1_line": "Une remise, des points bonus, un surclassement, une nuit offerte, et plus.",
+      "s2_title": "Fixez ses jours",
+      "s2_line": "Un premier et un dernier jour ; désactivez-la quand vous voulez.",
+      "s3_title": "Choisissez qui la voit",
+      "s3_line": "Tous les niveaux, ou seulement ceux que vous choisissez."
+    }
+  }
 }

@@ -25,17 +25,6 @@ export function searchFor(tab: RewardTab): string {
   return tab === 'catalogue' ? '' : `?tab=${tab}`
 }
 
-/** The tab the arrow keys, Home and End move to from the current one (they wrap); null for any other key. */
-export function tabAfter(current: RewardTab, key: string): RewardTab | null {
-  const i = REWARD_TABS.indexOf(current)
-  const n = REWARD_TABS.length
-  if (key === 'ArrowRight') return REWARD_TABS[(i + 1) % n]
-  if (key === 'ArrowLeft') return REWARD_TABS[(i - 1 + n) % n]
-  if (key === 'Home') return REWARD_TABS[0]
-  if (key === 'End') return REWARD_TABS[n - 1]
-  return null
-}
-
 // ─── Who does what ────────────────────────────────────────────────────────
 
 /** Rewards and offers change with "manage offers"; redemptions are handled by whoever may redeem points (§5). */

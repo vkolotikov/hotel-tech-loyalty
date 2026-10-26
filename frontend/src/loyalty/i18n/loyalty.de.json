@@ -25,7 +25,11 @@
     "points_count": "{{points}} Pkt.",
     "previous": "Zurück",
     "reload": "Seite neu laden",
-    "retry": "Erneut versuchen"
+    "retry": "Erneut versuchen",
+    "get_started": "Los geht’s",
+    "optional": "Optional",
+    "example": "Beispiel",
+    "managers_set_up": "Das richtet ein Inhaber oder Manager ein."
   },
   "find": {
     "actions": "Aktionen",
@@ -129,7 +133,6 @@
     "col_points": "Punkte",
     "col_tier": "Stufe",
     "count": "Mitglieder: {{count}}",
-    "figures": "{{active}} von {{total}} aktiv · Diesen Monat beigetreten: {{new}} · Punkte im Schnitt: {{average}}",
     "never": "Noch nicht",
     "none": "Noch keine Mitglieder. Sie treten über die Mitglieder-App, das Portal oder das Buchungs-Widget bei.",
     "none_match": "Kein Mitglied passt.",
@@ -146,7 +149,16 @@
     "state_all": "Alle",
     "state_inactive": "Deaktiviert",
     "tiers": "Stufen",
-    "title": "Mitglieder"
+    "title": "Mitglieder",
+    "line": "Finden Sie ein Mitglied, sehen Sie, wo es steht, und heißen Sie neue willkommen.",
+    "tiles": "Mitglieder in Zahlen",
+    "tile": {
+      "active": "Aktive Mitglieder",
+      "active_note": "von {{total}}",
+      "joined": "Diesen Monat beigetreten",
+      "average": "Punkte im Schnitt",
+      "average_note": "pro Mitglied"
+    }
   },
   "nav": {
     "members": "Mitglieder",

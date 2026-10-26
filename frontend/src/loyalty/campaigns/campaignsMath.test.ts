@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest'
+import { sectionAfter } from '../ui/sections'
 import {
-  campaignActions, campaignBody, campaignFormOf, campaignServerProblems, canTest, confirmationOf, draftProblems, fieldKey, isDirty, isDay, isLink,
+  CAMPAIGN_TABS, campaignActions, campaignBody, campaignFormOf, campaignServerProblems, canTest, confirmationOf, draftProblems, fieldKey, isDirty, isDay, isLink,
   moveBlock, newBlock, previewDocument, previewFilled, previewOf, progressOf, reasonBounds, removeBlock, rowOf, rowProblem, ruleRow, searchFor, segmentBody,
-  segmentFormOf, segmentProblems, sendBlockers, sendRefusalRefreshes, serverRuleProblem, statusTone, tabAfter, tabFrom, tagPlace, targetFrom, toggledTier,
+  segmentFormOf, segmentProblems, sendBlockers, sendRefusalRefreshes, serverRuleProblem, statusTone, tabFrom, tagPlace, targetFrom, toggledTier,
   unknownTags, viewOf, withTag, withType, formWords, type CampaignForm,
 } from './campaignsMath'
 import type { Audience, Block, Campaign, CampaignOptions, Segment, SegmentOptions } from './types'
@@ -67,14 +68,14 @@ describe('the tabs live in the address', () => {
     // Release 4: SMS is the fourth tab.
     expect(tabFrom('?tab=sms')).toBe('sms')
     expect(searchFor('sms')).toBe('?tab=sms')
-    expect(tabAfter('campaigns', 'ArrowRight')).toBe('segments')
-    expect(tabAfter('segments', 'ArrowRight')).toBe('push')
-    expect(tabAfter('push', 'ArrowRight')).toBe('sms')
-    expect(tabAfter('sms', 'ArrowRight')).toBe('campaigns')
-    expect(tabAfter('campaigns', 'ArrowLeft')).toBe('sms')
-    expect(tabAfter('push', 'Home')).toBe('campaigns')
-    expect(tabAfter('segments', 'End')).toBe('sms')
-    expect(tabAfter('campaigns', 'x')).toBeNull()
+    expect(sectionAfter(CAMPAIGN_TABS, 'campaigns', 'ArrowRight')).toBe('segments')
+    expect(sectionAfter(CAMPAIGN_TABS, 'segments', 'ArrowRight')).toBe('push')
+    expect(sectionAfter(CAMPAIGN_TABS, 'push', 'ArrowRight')).toBe('sms')
+    expect(sectionAfter(CAMPAIGN_TABS, 'sms', 'ArrowRight')).toBe('campaigns')
+    expect(sectionAfter(CAMPAIGN_TABS, 'campaigns', 'ArrowLeft')).toBe('sms')
+    expect(sectionAfter(CAMPAIGN_TABS, 'push', 'Home')).toBe('campaigns')
+    expect(sectionAfter(CAMPAIGN_TABS, 'segments', 'End')).toBe('sms')
+    expect(sectionAfter(CAMPAIGN_TABS, 'campaigns', 'x')).toBeNull()
   })
 })
 

@@ -1,13 +1,20 @@
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
+import { Coins, CreditCard, Smartphone, type LucideIcon } from 'lucide-react'
 import { Notice } from '../../workspace/ui/Notice'
 import { PageHeader } from '../../workspace/ui/PageHeader'
 import { useBoot } from '../LoyaltyProvider'
-import { APP_TABS, appAccess, searchFor, tabAfter, tabFrom, type AppTab } from './appMath'
+import { APP_TABS, appAccess, searchFor, tabFrom, type AppTab } from './appMath'
 import { CurrencyTab } from './CurrencyTab'
 import { LookTab } from './LookTab'
 import { WalletTab } from './WalletTab'
-import { TAB_WORDS } from './words'
+import { TAB_CAPTION_WORDS, TAB_WORDS } from './words'
+import { SectionCards } from '../ui/SectionCards'
+import type { Hue } from '../ui/sections'
+
+const TAB_ICONS: Record<AppTab, LucideIcon> = { wallet: CreditCard, app: Smartphone, currency: Coins }
+/** Each tab's colour (release 10): the wallet card amber, the app blue, the currency green. */
+const TAB_HUE: Record<AppTab, Hue> = { wallet: 'gift', app: 'tier', currency: 'earn' }
 
 /**
  * Card & app (release 2 §7): the wallet pass members add to Apple Wallet and Google Wallet, and how the member app
@@ -37,24 +44,14 @@ export function AppPage() {
 
   return (
     <div className="space-y-5 px-4 py-6 lg:px-6">
-      <PageHeader title={title} line={t('loyalty.app.line', 'The card members keep in their phone’s wallet, and how the member app looks.')} />
+      <PageHeader stacked title={title} line={t('loyalty.app.line', 'The card members keep in their phone’s wallet, and how the member app looks.')} />
 
-      <div role="tablist" aria-label={t('loyalty.app.tabs', 'Card and app areas')} className="flex flex-wrap gap-2">
-        {APP_TABS.map(name => (
-          // One tab stop; the arrow keys, Home and End move between the tabs.
-          <button key={name} type="button" role="tab" id={`app-tab-${name}`} aria-selected={tab === name} aria-controls="app-panel"
-            tabIndex={tab === name ? 0 : -1} onClick={() => go(name)} onKeyDown={(e) => {
-              const next = tabAfter(tab, e.key)
-              if (next === null) return
-              e.preventDefault()
-              go(next)
-              document.getElementById(`app-tab-${next}`)?.focus()
-            }}
-            className={`inline-flex items-center gap-2 rounded-full border px-3.5 py-1.5 text-sm font-medium ${tab === name ? 'border-transparent bg-a-accent text-a-accent-ink' : 'border-a-border bg-a-surface text-a-text-2 hover:text-a-text'}`}>
-            {t(`loyalty.app.tab.${name}`, TAB_WORDS[name])}
-          </button>
-        ))}
-      </div>
+      <SectionCards label={t('loyalty.app.tabs', 'Card and app areas')} idPrefix="app-tab" panelId="app-panel" value={tab} onChange={go}
+        items={APP_TABS.map(name => ({
+          id: name, icon: TAB_ICONS[name], hue: TAB_HUE[name],
+          title: t(`loyalty.app.tab.${name}`, TAB_WORDS[name]),
+          caption: t(`loyalty.app.tab_caption.${name}`, TAB_CAPTION_WORDS[name]),
+        }))} />
 
       <div id="app-panel" role="tabpanel" aria-labelledby={`app-tab-${tab}`} className="space-y-5">
         {tab === 'wallet' ? <WalletTab wallet={access.wallet} /> : tab === 'currency' ? <CurrencyTab /> : <LookTab />}

@@ -22,7 +22,6 @@
     "add": "Prämie hinzufügen",
     "fulfilled": "Ausgegeben",
     "line": "Wofür Mitglieder ihre Punkte einlösen können.",
-    "none": "Der Katalog ist leer. Hier angelegte Prämien erscheinen in der Mitglieder-App und im Portal.",
     "none_left": "Vergriffen",
     "offered": "Angeboten",
     "per_member": "Pro Mitglied",
@@ -43,7 +42,7 @@
     "percent_discount": "Prozentrabatt"
   },
   "edit": "Bearbeiten",
-  "line": "Wofür Mitglieder ihre Punkte einlösen – und was sie wiederkommen lässt.",
+  "line": "Wofür Mitglieder ihre Punkte einlösen, die Codes, die sie am Empfang zeigen, und die Angebote und Empfehlungen, die sie wiederkommen lassen.",
   "load": {
     "error": {
       "network": "Keine Verbindung. Bitte prüfen Sie das Netzwerk und versuchen Sie es erneut.",
@@ -136,7 +135,6 @@
     "every_tier": "Alle Stufen",
     "featured": "Hervorgehoben",
     "line": "Sonderangebote, die Mitglieder in der App und im Portal sehen.",
-    "none": "Noch keine Angebote.",
     "per_member": "Bis zu {{limit}} pro Mitglied",
     "read_only": "Nur Teammitglieder, die Angebote verwalten dürfen, können Angebote anlegen oder ändern.",
     "used": "Genutzt: {{used}}",
@@ -273,5 +271,33 @@
   },
   "tabs": "Bereiche der Prämien",
   "title": "Prämien",
-  "tab_waiting": "warten am Empfang"
+  "tab_waiting": "warten am Empfang",
+  "tab_caption": {
+    "catalogue": "Wofür Punkte eingelöst werden",
+    "redemptions": "Codes zum Einlösen am Empfang",
+    "offers": "Angebote für Mitglieder, auf Zeit",
+    "referrals": "Freunde, die Ihre Mitglieder mitbringen"
+  },
+  "get_started": {
+    "catalogue": {
+      "title": "Legen Sie Ihre erste Prämie an",
+      "line": "Prämien sind das, wofür Mitglieder ihre Punkte einlösen. Sie erscheinen in der Mitglieder-App und im Portal.",
+      "s1_title": "Benennen und Preis festlegen",
+      "s1_line": "Ein Kaffee für 200 Punkte, eine Behandlung für 2.000.",
+      "s2_title": "Ein Bild hinzufügen",
+      "s2_line": "Optional, aber ein Foto hilft bei der Wahl.",
+      "s3_title": "Am Empfang übergeben",
+      "s3_line": "Mitglieder bekommen einen Code; das Team übergibt die Prämie unter Einlösungen."
+    },
+    "offers": {
+      "title": "Erstellen Sie Ihr erstes Angebot",
+      "line": "Ein Angebot ist ein Vorteil, den Mitglieder eine Zeit lang in der App und im Portal sehen, etwa 20 % an einem Herbstwochenende.",
+      "s1_title": "Art und Wert wählen",
+      "s1_line": "Ein Rabatt, Bonuspunkte, ein Upgrade, eine Gratisnacht und mehr.",
+      "s2_title": "Tage festlegen",
+      "s2_line": "Ein erster und ein letzter Tag; jederzeit ausschaltbar.",
+      "s3_title": "Wählen, wer es sieht",
+      "s3_line": "Jede Stufe oder nur die ausgewählten."
+    }
+  }
 }

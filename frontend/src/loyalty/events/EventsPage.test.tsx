@@ -78,10 +78,23 @@ describe('the Events page', () => {
   })
 
   it('offers New event only to those who may change events, and says so when the tab is empty', () => {
-    const words = text(render(<EventsPage />, '/loyalty/events', c => c.setQueryData(['loyalty', 'events', 'upcoming', 1], list([], false))))
+    // Release 10: nothing coming up teaches how to plan an event, with who may create one.
+    const html = render(<EventsPage />, '/loyalty/events', c => c.setQueryData(['loyalty', 'events', 'upcoming', 1], list([], false)))
+    const words = text(html)
     expect(words).not.toContain('New event')
-    expect(words).toContain('No events coming up.')
+    expect(html).toMatch(/data-get-started="events" data-hue="offer"/)
+    expect(words).toContain('Get started Plan your first event')
+    expect(words).toContain('3 Publish it Members see it in the portal; check them in with Scan on the day.')
     expect(words).toContain('Managers and staff allowed to manage offers create events.')
+    const manager = text(render(<EventsPage />, '/loyalty/events', c => c.setQueryData(['loyalty', 'events', 'upcoming', 1], list([], true))))
+    // A manager has New event once, in the page's header; the panel only teaches.
+    expect(manager.match(/New event/g)).toHaveLength(1)
+    expect(manager).toContain('Plan your first event')
+    expect(manager).not.toContain('Managers and staff allowed to manage offers create events.')
+    // An empty Past or Drafts tab only says what would be there.
+    const past = text(render(<EventsPage />, '/loyalty/events?tab=past', c => c.setQueryData(['loyalty', 'events', 'past', 1], list([], true))))
+    expect(past).toContain('Events that have ended show here, with who came.')
+    expect(past).not.toContain('Plan your first event')
   })
 
   it('opens the tab the address names', () => {

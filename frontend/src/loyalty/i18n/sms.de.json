@@ -298,7 +298,6 @@
     "new_name": "Neue SMS, {{day}}",
     "line": "Ein kurzer Text an die Telefone der Mitglieder eines Segments, die Angebote per SMS eingeschaltet haben, gesendet von der eigenen Twilio-Nummer des Hauses.",
     "new": "Neue SMS",
-    "none": "Noch keine SMS-Kampagnen. Legen Sie eine an, schreiben Sie den Text, wählen Sie ein Segment und senden Sie sie.",
     "no_text": "Noch kein Text",
     "edited": "Bearbeitet am {{day}}",
     "scheduled": "Geht hinaus: {{when}}",
@@ -315,5 +314,15 @@
   "length": {
     "line": "{{chars}} von {{max}} Zeichen · {{segments}} SMS (je bis zu {{per}} Zeichen) · {{alphabet}}",
     "unicode": "Diese Zeichen machen es zu Unicode, das weniger Zeichen pro SMS fasst: {{chars}}"
+  },
+  "get_started": {
+    "title": "Senden Sie Ihre erste SMS",
+    "line": "Ein kurzer Text aufs Telefon von Mitgliedern, die Angebote per SMS eingeschaltet haben, von der eigenen Twilio-Nummer Ihres Hauses.",
+    "s1_title": "Twilio-Nummer verbinden",
+    "s1_line": "Ihr eigenes Konto und Ihre Nummer, einmal eingerichtet.",
+    "s2_title": "Den Text schreiben",
+    "s2_line": "Kurz und klar: eine Nachricht, ein Gedanke.",
+    "s3_title": "Empfänger wählen und senden",
+    "s3_line": "Ein Segment von Mitgliedern, die SMS zugestimmt haben, jetzt oder zu einer gewählten Zeit."
   }
 }

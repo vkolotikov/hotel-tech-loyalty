@@ -3,8 +3,6 @@
   "add": "Ajouter un lieu",
   "add_first": "Ajouter l’entrée",
   "list": "Lieux",
-  "none_manager": "Aucun lieu pour l’instant. Ajoutez d’abord votre entrée : les scans y diront qui peut entrer.",
-  "none": "Aucun lieu pour l’instant. Un propriétaire ou un manager les ajoute ici.",
   "switched_off": "Désactivé",
   "edit": "Modifier",
   "who": "Qui peut entrer",
@@ -120,5 +118,15 @@
     "admits": "Choisissez qui peut entrer.",
     "tiers": "Cochez au moins un niveau.",
     "description": "300 caractères au plus."
+  },
+  "get_started": {
+    "title": "Ajoutez votre première entrée",
+    "line": "Donnez à l’équipe un endroit clair pour vérifier les adhésions et voir qui peut entrer.",
+    "s1_title": "Nommez votre entrée",
+    "s1_line": "Par exemple, Entrée principale ou Accueil.",
+    "s2_title": "Choisissez qui peut entrer",
+    "s2_line": "Tous les membres, ou seulement les niveaux cochés.",
+    "s3_title": "Commencez à vérifier les membres",
+    "s3_line": "Ouvrez Scanner et choisissez cette entrée."
   }
 }

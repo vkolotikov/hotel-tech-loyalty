@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Can } from '../lib/types'
-import { BENEFIT_FIELDS, BOOST_FIELDS, benefitBody, benefitChoices, benefitFormOf, benefitProblems, boostBody, boostFormOf, boostProblems, boostState, boostTone, existingOn, needsTimeCheck, needsAmount, timeCheckList, programActions, thresholds, tierBenefitBody, tierBenefitFormOf, tierBenefitProblems, tierBenefitServerProblems, tierBody, tierFormOf, tierProblems, typedValue, weekdayName, weekdaysText } from './programMath'
+import { BENEFIT_FIELDS, BOOST_FIELDS, PROGRAM_SECTIONS, programSearch, programSectionFrom, benefitBody, benefitChoices, benefitFormOf, benefitProblems, boostBody, boostFormOf, boostProblems, boostState, boostTone, existingOn, needsTimeCheck, needsAmount, timeCheckList, programActions, thresholds, tierBenefitBody, tierBenefitFormOf, tierBenefitProblems, tierBenefitServerProblems, tierBody, tierFormOf, tierProblems, typedValue, weekdayName, weekdaysText } from './programMath'
 import { chosenTiers, decimalOf, named, serverProblems, toggled, wallInput, wallOf } from '../lib/forms'
 import type { Benefit, Boost, ProgramOptions, Tier } from './types'
 
@@ -217,5 +217,19 @@ describe('a boost saved before its times were the venue\'s (R4-6)', () => {
     ]
     expect(timeCheckList(boosts).map(b => b.id)).toEqual([1, 4])
     expect(timeCheckList([])).toEqual([])
+  })
+})
+
+describe('Program\'s sections in the address (release 10)', () => {
+  it('reads the section from ?tab=, Places from the old #places, and Tiers otherwise', () => {
+    expect(programSectionFrom('?tab=boosts')).toBe('boosts')
+    expect(programSectionFrom('?tab=places', '#places')).toBe('places')
+    expect(programSectionFrom('', '#places')).toBe('places')
+    expect(programSectionFrom('?tab=nothing')).toBe('tiers')
+    expect(programSectionFrom('')).toBe('tiers')
+  })
+
+  it('writes Tiers as the bare address and every other section as ?tab=', () => {
+    expect(PROGRAM_SECTIONS.map(programSearch)).toEqual(['', '?tab=benefits', '?tab=places', '?tab=boosts'])
   })
 })

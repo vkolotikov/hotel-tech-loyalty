@@ -12,8 +12,9 @@ import { Pager } from '../ui/Pager'
 import { afterCampaignChange, campaignKey, campaignsApi, campaignsKey } from './api'
 import { campaignPath, progressOf } from './campaignsMath'
 import { isScheduled, scheduledWhen } from './scheduleMath'
-import { Empty, LoadFailed, Loading, Refusal, StatusBadge, TabHead } from './parts'
+import { LoadFailed, Loading, Refusal, StatusBadge, TabHead } from './parts'
 import type { CampaignRow } from './types'
+import { GetStarted } from '../ui/GetStarted'
 
 /**
  * The campaigns (spec 2026-10-21 release 2 §6): every email campaign of the organisation, the full admin's too, newest
@@ -43,13 +44,25 @@ export function CampaignsTab() {
   return (
     <>
       <TabHead line={<p>{t('loyalty.campaigns.list.line', 'Emails to the members of a segment. Only members who agreed to marketing email receive them.')}</p>}>
-        <Button size="sm" loading={create.isPending} onClick={() => create.mutate()}><Plus size={15} aria-hidden />{t('loyalty.campaigns.list.new', 'New campaign')}</Button>
+        {/* With no campaign yet, the Get started panel holds the one action. */}
+        {data && data.campaigns.length > 0 && (
+          <Button size="sm" loading={create.isPending} onClick={() => create.mutate()}><Plus size={15} aria-hidden />{t('loyalty.campaigns.list.new', 'New campaign')}</Button>
+        )}
       </TabHead>
       {create.isError && <Refusal family="create" failure={failureOf(create.error)} />}
 
       {query.isError && !data && <LoadFailed error={query.error} onRetry={() => { void query.refetch() }} />}
       {!data && query.isLoading && <Loading />}
-      {data && data.campaigns.length === 0 && <Empty>{t('loyalty.campaigns.list.none', 'No campaigns yet. Make one, choose a segment, write the email and send it.')}</Empty>}
+      {data && data.campaigns.length === 0 && (
+        <GetStarted name="campaigns" hue="tier" title={t('loyalty.campaigns.get_started.campaigns.title', 'Send your first email campaign')}
+          line={t('loyalty.campaigns.get_started.campaigns.line', 'Write once, send to the members of a segment. Only members who agreed to marketing email receive it.')}
+          steps={[
+              { title: t('loyalty.campaigns.get_started.campaigns.s1_title', 'Make a segment'), line: t('loyalty.campaigns.get_started.campaigns.s1_line', 'On Segments, choose who it goes to: a tier, activity, or everyone.') },
+              { title: t('loyalty.campaigns.get_started.campaigns.s2_title', 'Write the email'), line: t('loyalty.campaigns.get_started.campaigns.s2_line', 'A subject, then text, pictures and buttons; tags add each member’s name and points.') },
+              { title: t('loyalty.campaigns.get_started.campaigns.s3_title', 'Send it or schedule it'), line: t('loyalty.campaigns.get_started.campaigns.s3_line', 'Check how many it reaches, then send now or at a time you pick.') },
+            ]}
+          action={<Button loading={create.isPending} onClick={() => create.mutate()}><Plus size={15} aria-hidden />{t('loyalty.campaigns.list.new', 'New campaign')}</Button>} />
+      )}
       {data && data.campaigns.length > 0 && (
         <>
           <ul className={`divide-y divide-a-border overflow-hidden rounded-2xl border border-a-border bg-a-surface ${query.isFetching ? 'opacity-70' : ''}`}>

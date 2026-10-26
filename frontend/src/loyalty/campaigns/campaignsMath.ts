@@ -38,17 +38,6 @@ export function searchFor(tab: CampaignTab): string {
   return tab === 'campaigns' ? '' : `?tab=${tab}`
 }
 
-/** The tab the arrow keys, Home and End move to from the current one (they wrap); null for any other key. */
-export function tabAfter(current: CampaignTab, key: string): CampaignTab | null {
-  const i = CAMPAIGN_TABS.indexOf(current)
-  const n = CAMPAIGN_TABS.length
-  if (key === 'ArrowRight') return CAMPAIGN_TABS[(i + 1) % n]
-  if (key === 'ArrowLeft') return CAMPAIGN_TABS[(i - 1 + n) % n]
-  if (key === 'Home') return CAMPAIGN_TABS[0]
-  if (key === 'End') return CAMPAIGN_TABS[n - 1]
-  return null
-}
-
 // ─── A campaign's state ───────────────────────────────────────────────────
 
 export const CAMPAIGN_STATUSES = ['draft', 'scheduled', 'sending', 'sent', 'failed', 'cancelled'] as const

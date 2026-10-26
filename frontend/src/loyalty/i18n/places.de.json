@@ -3,8 +3,6 @@
   "add": "Bereich hinzufügen",
   "add_first": "Eingang hinzufügen",
   "list": "Bereiche",
-  "none_manager": "Noch keine Bereiche. Fügen Sie zuerst Ihren Eingang hinzu: Scans dort zeigen, wer hinein darf.",
-  "none": "Noch keine Bereiche. Inhaber oder Manager legen sie hier an.",
   "switched_off": "Ausgeschaltet",
   "edit": "Bearbeiten",
   "who": "Wer darf eintreten",
@@ -120,5 +118,15 @@
     "admits": "Wählen Sie, wer eintreten darf.",
     "tiers": "Kreuzen Sie mindestens eine Stufe an.",
     "description": "Höchstens 300 Zeichen."
+  },
+  "get_started": {
+    "title": "Legen Sie Ihren ersten Eingang an",
+    "line": "Geben Sie Ihrem Team einen klaren Ort, um Mitgliedschaften zu prüfen und zu sehen, wer hinein darf.",
+    "s1_title": "Benennen Sie den Eingang",
+    "s1_line": "Zum Beispiel Haupteingang oder Empfang.",
+    "s2_title": "Wählen Sie, wer hinein darf",
+    "s2_line": "Jedes Mitglied oder nur die angekreuzten Stufen.",
+    "s3_title": "Mitglieder prüfen",
+    "s3_line": "Öffnen Sie Scannen und wählen Sie diesen Eingang."
   }
 }

@@ -7,7 +7,7 @@ import type { FindTarget } from '../workspace/find/findCore'
 import { firstLetter } from '../workspace/lib/firstLetter'
 import { useMedia } from '../workspace/lib/useMedia'
 import { FrameFooter, PhoneMenu } from '../workspace/shell/FrameFooter'
-import { NAVY_SURFACES, accentTokens } from '../workspace/theme/accent'
+import { LOYALTY_SURFACES, accentTokens } from '../workspace/theme/accent'
 import { Button } from '../workspace/ui/Button'
 import { Notice } from '../workspace/ui/Notice'
 import { PageBoundary } from '../workspace/ui/PageBoundary'
@@ -50,7 +50,7 @@ export function LoyaltyShell({ children }: { children: ReactNode }) {
   // While the bootstrap loads, the frame wears the accent and mark this device last saw (lib/look.ts).
   const look = useLook()
   const [remembered] = useState(loadBrandPaint)
-  const accent = accentTokens(data ? data.accent : remembered?.accent, look.resolved, NAVY_SURFACES[look.resolved])
+  const accent = accentTokens(data ? data.accent : remembered?.accent, look.resolved, LOYALTY_SURFACES[look.resolved])
   const initial = data ? firstLetter(data.organization.name, 'H') : (remembered?.initial ?? 'H')
   const known = Boolean(data)
   const brandHex = accent.accent

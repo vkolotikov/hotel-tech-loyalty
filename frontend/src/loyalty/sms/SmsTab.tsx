@@ -13,11 +13,12 @@ import { failureOf } from '../lib/api'
 import { day, points } from '../lib/format'
 import { Pager } from '../ui/Pager'
 import { afterSmsChange, smsApi, smsKey, smsListKey } from './api'
-import { Empty, LoadFailed, Loading, Refusal, StatusBadge, TwilioSetup } from './parts'
+import { LoadFailed, Loading, Refusal, StatusBadge, TwilioSetup } from './parts'
 import { SmsEditor } from './SmsEditor'
 import { SmsResults } from './SmsResults'
 import { isLive, progressOf, smsFrom, smsSearch, SMS_REFRESH_MS, viewOf } from './smsMath'
 import type { SmsRow } from './types'
+import { GetStarted } from '../ui/GetStarted'
 
 /**
  * SMS campaigns (spec 2026-10-22 release 4 §5, owner decision R4-4), the Campaigns page's fourth tab (`?tab=sms`), a
@@ -70,14 +71,25 @@ function SmsList() {
         <p className="min-w-0 flex-1 text-sm text-a-text-2">
           {t('loyalty.sms.list.line', 'A short text to the phones of a segment’s members who turned on offers by SMS, sent from the venue’s own Twilio number.')}
         </p>
-        <Button size="sm" loading={create.isPending} onClick={() => create.mutate()}><Plus size={15} aria-hidden />{t('loyalty.sms.list.new', 'New SMS')}</Button>
+        {data && data.messages.length > 0 && (
+          <Button size="sm" loading={create.isPending} onClick={() => create.mutate()}><Plus size={15} aria-hidden />{t('loyalty.sms.list.new', 'New SMS')}</Button>
+        )}
       </div>
       {create.isError && <Refusal family="create" failure={failureOf(create.error)} />}
       {data && !data.twilio.ready && <TwilioSetup twilio={data.twilio} />}
 
       {query.isError && !data && <LoadFailed error={query.error} onRetry={() => { void query.refetch() }} />}
       {!data && query.isLoading && <Loading />}
-      {data && data.messages.length === 0 && <Empty>{t('loyalty.sms.list.none', 'No SMS campaigns yet. Make one, write the text, choose a segment and send it.')}</Empty>}
+      {data && data.messages.length === 0 && (
+        <GetStarted name="sms" hue="earn" optional title={t('loyalty.sms.get_started.title', 'Send your first SMS')}
+          line={t('loyalty.sms.get_started.line', 'A short text to the phones of members who turned on offers by SMS, from your venue’s own Twilio number.')}
+          steps={[
+              { title: t('loyalty.sms.get_started.s1_title', 'Connect your Twilio number'), line: t('loyalty.sms.get_started.s1_line', 'Your own account and number, set up once.') },
+              { title: t('loyalty.sms.get_started.s2_title', 'Write the text'), line: t('loyalty.sms.get_started.s2_line', 'Short and clear: one message, one idea.') },
+              { title: t('loyalty.sms.get_started.s3_title', 'Choose who gets it and send'), line: t('loyalty.sms.get_started.s3_line', 'A segment of members who agreed to SMS, now or at a time you pick.') },
+            ]}
+          action={<Button loading={create.isPending} onClick={() => create.mutate()}><Plus size={15} aria-hidden />{t('loyalty.sms.list.new', 'New SMS')}</Button>} />
+      )}
       {data && data.messages.length > 0 && (
         <>
           <ul className={`divide-y divide-a-border overflow-hidden rounded-2xl border border-a-border bg-a-surface ${query.isFetching ? 'opacity-70' : ''}`}>

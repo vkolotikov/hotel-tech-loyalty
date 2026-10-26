@@ -39,7 +39,7 @@ export const STAGE_PARTS: Record<StageId, PartId[]> = {
 }
 
 export const PART_TO: Record<PartId, string> = {
-  tiers: '/loyalty/program', rewards: '/loyalty/rewards', offers: '/loyalty/rewards?tab=offers', boosts: '/loyalty/program',
+  tiers: '/loyalty/program', rewards: '/loyalty/rewards', offers: '/loyalty/rewards?tab=offers', boosts: '/loyalty/program?tab=boosts',
 }
 
 export const stageOf = (way: string): StageId => WAY_STAGES[way] ?? 'visit'

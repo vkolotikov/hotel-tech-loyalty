@@ -31,8 +31,8 @@ export const SURFACES: Record<ThemeName, { canvas: string; surface: string; surf
 
 /**
  * The cards frame's palette (Content spec 2026-10-21 §3.1): the owner's navy in Dark, a light set with the navy side
- * panel in Light. HexaTech Content and HexaTech Loyalty wear it; content/theme/contentContrast.test.ts and
- * loyalty/theme/loyaltyContrast.test.ts prove they equal the [data-content] and [data-loyalty] tokens.
+ * panel in Light. HexaTech Content wears it; content/theme/contentContrast.test.ts proves it equals the [data-content]
+ * tokens. (HexaTech Loyalty wore it too until release 10, below.)
  */
 export const NAVY_SURFACES: Record<ThemeName, { canvas: string; surface: string; surface2: string; side: string }> = {
   light: { canvas: '#f4f6f9', surface: '#ffffff', surface2: '#eef2f7', side: '#1c232c' },
@@ -41,6 +41,16 @@ export const NAVY_SURFACES: Record<ThemeName, { canvas: string; surface: string;
 
 /** HexaTech Content's name for the navy palette (release 7a). */
 export const CONTENT_SURFACES = NAVY_SURFACES
+
+/**
+ * HexaTech Loyalty's palette (release 10, the owner's Figma drafts 2026-10-26): in Dark the drafts' navy — cards that
+ * stand clearly off the canvas, a deeper side panel; in Light the cards frame's, with the same side panel.
+ * loyalty/theme/loyaltyContrast.test.ts proves it equals the [data-loyalty] tokens.
+ */
+export const LOYALTY_SURFACES: Record<ThemeName, { canvas: string; surface: string; surface2: string; side: string }> = {
+  light: { canvas: '#f4f6f9', surface: '#ffffff', surface2: '#eef2f7', side: '#111b29' },
+  dark: { canvas: '#182231', surface: '#29384b', surface2: '#1f2c3e', side: '#111b29' },
+}
 
 /** A post card's text and secondary text in Content (`--a-text` and `--c-card-text-2`). */
 const CARD_TEXT: Record<ThemeName, { text: string; text2: string }> = {

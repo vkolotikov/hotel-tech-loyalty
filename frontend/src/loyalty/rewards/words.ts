@@ -128,8 +128,17 @@ export const PICTURE_PROBLEM_WORDS: Record<string, string> = {
 }
 
 /** The families above by the key prefix they are read under. */
+/** A tab card's line of what it holds (release 10). */
+export const TAB_CAPTION_WORDS: Record<string, string> = {
+  catalogue: 'What members spend points on',
+  redemptions: 'Codes to hand over at the desk',
+  offers: 'Deals for members, for a while',
+  referrals: 'Friends your members bring',
+}
+
 export const WORD_FAMILIES: Record<string, Record<string, string>> = {
   tab: TAB_WORDS,
+  tab_caption: TAB_CAPTION_WORDS,
   redemption_state: REDEMPTION_STATE_WORDS,
   redemption_filter: REDEMPTION_FILTER_WORDS,
   offer_state: OFFER_STATE_WORDS,

@@ -1,4 +1,3 @@
-import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { ExternalLink } from 'lucide-react'
@@ -33,10 +32,6 @@ export function LoadFailed({ error, onRetry }: { error: unknown; onRetry: () => 
       <Button variant="secondary" onClick={onRetry}>{t('loyalty.common.retry', 'Try again')}</Button>
     </div>
   )
-}
-
-export function Empty({ children }: { children: ReactNode }) {
-  return <p className="rounded-xl border border-dashed border-a-border px-4 py-8 text-center text-sm text-a-text-2">{children}</p>
 }
 
 /** A campaign's status as its tone's badge; a status without a word is shown as sent. */

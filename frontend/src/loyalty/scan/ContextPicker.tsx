@@ -74,7 +74,7 @@ export function ContextPicker({ resolved, choices, onChoose }: { resolved: Resol
       {!choices.loading && !choices.failed && places.length === 0 && choices.canSetUp && (
         <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-a-text-2">
           <span>{t('loyalty.door.no_places', 'Add your entrances and rooms to check who may enter as you scan.')}</span>
-          <Link to="/loyalty/program#places" className="inline-flex items-center gap-1.5 font-semibold text-a-accent-text hover:underline">
+          <Link to="/loyalty/program?tab=places" className="inline-flex items-center gap-1.5 font-semibold text-a-accent-text hover:underline">
             <Settings2 size={14} aria-hidden />{t('loyalty.door.set_up_places', 'Set up places')}
           </Link>
         </p>

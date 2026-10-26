@@ -157,7 +157,7 @@ describe('Scanning for (release 8 §2)', () => {
   it('offers a manager "Set up places" when there are none; says so when the lists could not be loaded', () => {
     const none = { places: [], events: [], loading: false, failed: false, canSetUp: true }
     const html = render(<ContextPicker resolved={resolveContext({ kind: 'desk' }, [], [])} onChoose={() => {}} choices={none} />)
-    expect(html).toContain('href="/loyalty/program#places"')
+    expect(html).toContain('href="/loyalty/program?tab=places"')
     expect(text(html)).toContain('Set up places')
     expect(text(render(<ContextPicker resolved={resolveContext({ kind: 'desk' }, [], [])} onChoose={() => {}} choices={{ ...none, canSetUp: false }} />))).not.toContain('Set up places')
     const failed = text(render(<ContextPicker resolved={resolveContext({ kind: 'desk' }, undefined, undefined)} onChoose={() => {}} choices={{ ...none, places: undefined, events: undefined, failed: true }} />))

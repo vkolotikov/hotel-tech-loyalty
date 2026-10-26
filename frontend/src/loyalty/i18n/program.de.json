@@ -39,10 +39,11 @@
   },
   "benefits": {
     "add": "Vorteil hinzufügen",
-    "none": "Der Katalog ist leer. Vorteile wie ein später Check-out oder ein Begrüßungsgetränk werden hier angelegt und dann Stufen zugewiesen.",
     "switch_off": "Deaktivieren",
     "switch_on": "Aktivieren",
-    "title": "Vorteile"
+    "title": "Vorteile",
+    "given_by": "Bietet: {{tiers}}",
+    "given_by_none": "Noch keine Stufe bietet ihn"
   },
   "boost": {
     "active": "Aktiv",
@@ -94,7 +95,6 @@
     "add": "Aktion hinzufügen",
     "every_day": "Jeden Tag",
     "every_tier": "Alle Stufen",
-    "none": "Keine Aktionen. Eine Aktion vervielfacht eine Zeit lang die Punkte, die Mitglieder sammeln – etwa doppelte Punkte am Wochenende.",
     "range": "{{from}} – {{to}}",
     "remove": "Entfernen",
     "title": "Punkte-Aktionen"
@@ -233,8 +233,6 @@
     "ladder": "Die Stufen der Reihe nach, von der ersten an",
     "members": "Mitglieder",
     "no_benefits": "Diese Stufe gewährt noch keinen Vorteil.",
-    "none": "Noch keine Stufen.",
-    "none_manager": "Noch keine Stufen. Legen Sie die erste an: Das Programm startet, sobald eine Stufe aktiv ist.",
     "take_off_label": "{{benefit}} aus {{tier}} entfernen",
     "title": "Stufen"
   },
@@ -270,5 +268,62 @@
     "percent_discount": "Prozentualer Rabatt",
     "points_multiplier": "Punkte-Multiplikator",
     "text": "Nur Wortlaut"
+  },
+  "line": "Ihre Stufen, was jede bietet, wo Mitglieder eintreten dürfen, und die Aktionen, die sie wiederkommen lassen.",
+  "sections": "Bereiche des Programms",
+  "section": {
+    "tiers": "Stufen und wie man sie erreicht",
+    "benefits": "Was jede Stufe enthält",
+    "places": "Eingänge und wer hinein darf",
+    "boosts": "Mehr Punkte für eine Weile"
+  },
+  "intro": {
+    "tiers": "Mitglieder steigen auf, während sie sammeln. Jede Stufe legt ihre Sammelrate, ihre Vorteile und ihre Bereiche fest.",
+    "benefits": "Legen Sie einen Vorteil einmal an und geben Sie ihn jeder Stufe. Eine Änderung hier gilt für jede Stufe, die ihn bietet.",
+    "places": "Eingänge, an denen das Team Mitgliedschaften prüft. Jeder sagt, welche Stufen hinein dürfen, und Scannen nutzt das an der Tür.",
+    "boosts": "Eine Aktion vervielfacht für eine Weile die Punkte, die Mitglieder sammeln. Außerhalb gelten Ihre normalen Sammelregeln."
+  },
+  "figures": {
+    "label": "Die Stufen in Zahlen",
+    "tiers": "Stufen",
+    "tiers_off": "{{n}} ausgeschaltet",
+    "members": "Mitglieder mit Stufe",
+    "benefits": "Vorteile zum Vergeben",
+    "benefits_note": "im Katalog"
+  },
+  "get_started": {
+    "tiers": {
+      "title": "Legen Sie Ihre erste Stufe an",
+      "line": "Eine Stufe ist ein Level, das Mitglieder erreichen, etwa Silber oder Gold, mit eigener Sammelrate und eigenen Vorteilen. Das Programm startet, sobald eine Stufe genutzt wird.",
+      "s1_title": "Benennen Sie sie",
+      "s1_line": "Mitglieder sehen den Namen auf ihrer Karte und in der App.",
+      "s2_title": "Legen Sie fest, wie man sie erreicht",
+      "s2_line": "Punkte, Besuche oder Umsatz, so wie Sammeln & Prämien den Aufstieg festlegt.",
+      "s3_title": "Geben Sie ihr Vorteile",
+      "s3_line": "Ein Willkommensgetränk, ein später Check-out oder ein Rabatt, aus dem Vorteilskatalog."
+    },
+    "benefits": {
+      "title": "Legen Sie Ihren ersten Vorteil an",
+      "line": "Vorteile sind das, was eine Stufe ihren Mitgliedern bietet. Legen Sie hier einen an und geben Sie ihn dann den passenden Stufen.",
+      "s1_title": "Benennen Sie ihn",
+      "s1_line": "Später Check-out, ein Willkommensgetränk, 10 % auf Leistungen.",
+      "s2_title": "Wählen Sie, wie er gewährt wird",
+      "s2_line": "Automatisch, auf Anfrage oder nach Freigabe durch das Team.",
+      "s3_title": "Geben Sie ihn den Stufen",
+      "s3_line": "Unter Stufen bei jeder passenden Stufe auf Vorteil hinzufügen tippen."
+    },
+    "boosts": {
+      "title": "Geben Sie Mitgliedern einen Grund wiederzukommen",
+      "line": "Eine Aktion vervielfacht für eine bestimmte Zeit die Punkte, die Mitglieder sammeln. Beginnen Sie mit einem einfachen Doppelpunkte-Wochenende.",
+      "s1_title": "Benennen und Faktor wählen",
+      "s1_line": "×2 verdoppelt jeden Punkt, der in dieser Zeit gesammelt wird.",
+      "s2_title": "Zeitraum festlegen",
+      "s2_line": "Daten und Uhrzeiten nach der Uhr Ihres Hauses, und die Wochentage.",
+      "s3_title": "Wählen, für wen sie gilt",
+      "s3_line": "Für jede Stufe oder nur für die ausgewählten.",
+      "example_title": "Doppelpunkte-Wochenende",
+      "example_figures": "{{from}} → {{to}} Punkte",
+      "example_line": "Aktion ×2 · Samstag und Sonntag"
+    }
   }
 }

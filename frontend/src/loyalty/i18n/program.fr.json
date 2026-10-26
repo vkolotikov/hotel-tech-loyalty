@@ -39,10 +39,11 @@
   },
   "benefits": {
     "add": "Ajouter un avantage",
-    "none": "Le catalogue est vide. Les avantages, comme un départ tardif ou une boisson de bienvenue, sont créés ici puis attribués aux niveaux.",
     "switch_off": "Désactiver",
     "switch_on": "Activer",
-    "title": "Avantages"
+    "title": "Avantages",
+    "given_by": "Offert par {{tiers}}",
+    "given_by_none": "Aucun niveau ne l’offre encore"
   },
   "boost": {
     "active": "Actif",
@@ -94,7 +95,6 @@
     "add": "Ajouter un boost",
     "every_day": "Tous les jours",
     "every_tier": "Tous les niveaux",
-    "none": "Aucun boost. Un boost multiplie pendant un temps les points gagnés par les membres, comme un week-end à points doublés.",
     "range": "{{from}} – {{to}}",
     "remove": "Supprimer",
     "title": "Boosts de points"
@@ -233,8 +233,6 @@
     "ladder": "Les niveaux dans l’ordre, du premier au plus élevé",
     "members": "Membres",
     "no_benefits": "Ce niveau n’offre encore aucun avantage.",
-    "none": "Aucun niveau pour l’instant.",
-    "none_manager": "Aucun niveau pour l’instant. Ajoutez le premier : le programme démarre dès qu’un niveau est actif.",
     "take_off_label": "Retirer {{benefit}} du niveau {{tier}}",
     "title": "Niveaux"
   },
@@ -270,5 +268,62 @@
     "percent_discount": "Remise en pourcentage",
     "points_multiplier": "Multiplicateur de points",
     "text": "Libellé seul"
+  },
+  "line": "Vos niveaux, ce que chacun offre, où les membres peuvent entrer, et les boosts qui les font revenir.",
+  "sections": "Sections du programme",
+  "section": {
+    "tiers": "Les paliers et comment les atteindre",
+    "benefits": "Ce que chaque niveau inclut",
+    "places": "Les entrées et qui peut entrer",
+    "boosts": "Plus de points pendant un temps"
+  },
+  "intro": {
+    "tiers": "Les membres montent de palier en cumulant. Chaque niveau fixe son taux de gain, ses avantages et les lieux où il peut entrer.",
+    "benefits": "Créez un avantage une fois, puis donnez-le à n’importe quel niveau. Un changement ici s’applique à chaque niveau qui l’offre.",
+    "places": "Les entrées où l’équipe vérifie les adhésions. Chacune indique les niveaux admis, et Scanner s’en sert à la porte.",
+    "boosts": "Un boost multiplie les points gagnés par les membres pendant un temps. En dehors, vos règles de gain habituelles s’appliquent."
+  },
+  "figures": {
+    "label": "Les niveaux en chiffres",
+    "tiers": "Niveaux",
+    "tiers_off": "{{n}} désactivé(s)",
+    "members": "Membres avec un niveau",
+    "benefits": "Avantages à donner",
+    "benefits_note": "au catalogue"
+  },
+  "get_started": {
+    "tiers": {
+      "title": "Ajoutez votre premier niveau",
+      "line": "Un niveau est un palier que les membres atteignent, comme Argent ou Or, avec son taux de gain et ses avantages. Le programme démarre dès qu’un niveau est utilisé.",
+      "s1_title": "Nommez-le",
+      "s1_line": "Les membres voient ce nom sur leur carte et dans l’appli.",
+      "s2_title": "Fixez comment l’atteindre",
+      "s2_line": "Points, visites ou dépenses, selon ce que Façons de gagner prévoit pour monter.",
+      "s3_title": "Donnez-lui des avantages",
+      "s3_line": "Une boisson de bienvenue, un départ tardif ou une remise, tirés du catalogue d’avantages."
+    },
+    "benefits": {
+      "title": "Créez votre premier avantage",
+      "line": "Les avantages sont ce qu’un niveau offre à ses membres. Créez-en un ici, puis donnez-le aux niveaux qui doivent l’avoir.",
+      "s1_title": "Nommez-le",
+      "s1_line": "Départ tardif, boisson de bienvenue, 10 % sur les prestations.",
+      "s2_title": "Choisissez comment il est accordé",
+      "s2_line": "Automatiquement, sur demande ou après accord de l’équipe.",
+      "s3_title": "Donnez-le aux niveaux",
+      "s3_line": "Dans Niveaux, appuyez sur Ajouter un avantage pour chaque niveau concerné."
+    },
+    "boosts": {
+      "title": "Donnez aux membres une raison de revenir",
+      "line": "Un boost multiplie les points gagnés par les membres pendant une période donnée. Commencez par un simple week-end double points.",
+      "s1_title": "Nommez-le et choisissez le multiplicateur",
+      "s1_line": "×2 double chaque point gagné pendant qu’il dure.",
+      "s2_title": "Fixez quand il a lieu",
+      "s2_line": "Dates et heures selon l’horloge de votre établissement, et les jours de la semaine.",
+      "s3_title": "Choisissez qui en profite",
+      "s3_line": "Tous les niveaux, ou seulement ceux que vous choisissez.",
+      "example_title": "Week-end double points",
+      "example_figures": "{{from}} → {{to}} points",
+      "example_line": "Boost ×2 · samedi et dimanche"
+    }
   }
 }

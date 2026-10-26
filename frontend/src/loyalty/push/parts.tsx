@@ -1,4 +1,3 @@
-import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Button } from '../../workspace/ui/Button'
 import { Notice } from '../../workspace/ui/Notice'
@@ -29,10 +28,6 @@ export function LoadFailed({ error, onRetry }: { error: unknown; onRetry: () => 
       <Button variant="secondary" onClick={onRetry}>{t('loyalty.common.retry', 'Try again')}</Button>
     </div>
   )
-}
-
-export function Empty({ children }: { children: ReactNode }) {
-  return <p className="rounded-xl border border-dashed border-a-border px-4 py-8 text-center text-sm text-a-text-2">{children}</p>
 }
 
 /** A message's status as its tone's badge; a status without a word is shown as sent. */

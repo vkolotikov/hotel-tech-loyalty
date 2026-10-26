@@ -185,6 +185,11 @@
     "currency": "Devise",
     "wallet": "Pass Wallet"
   },
+  "tab_caption": {
+    "app": "Les couleurs et le logo de l’appli membre",
+    "currency": "La devise de vos prix",
+    "wallet": "La carte dans Apple et Google Wallet"
+  },
   "tabs": "Rubriques de la carte et de l’appli",
   "title": "Carte et appli",
   "upload": {

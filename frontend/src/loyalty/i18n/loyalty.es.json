@@ -25,7 +25,11 @@
     "points_count": "{{points}} pts",
     "previous": "Anterior",
     "reload": "Recargar la página",
-    "retry": "Reintentar"
+    "retry": "Reintentar",
+    "get_started": "Para empezar",
+    "optional": "Opcional",
+    "example": "Ejemplo",
+    "managers_set_up": "Lo configura un propietario o un responsable."
   },
   "find": {
     "actions": "Acciones",
@@ -129,7 +133,6 @@
     "col_points": "Puntos",
     "col_tier": "Nivel",
     "count": "Miembros: {{count}}",
-    "figures": "Activos: {{active}} de {{total}} · Altas este mes: {{new}} · Media de puntos: {{average}}",
     "never": "Todavía no",
     "none": "Aún no hay miembros. Se unen desde la app de miembros, el portal o el widget de reservas.",
     "none_match": "Ningún miembro coincide.",
@@ -146,7 +149,16 @@
     "state_all": "Todos",
     "state_inactive": "Desactivados",
     "tiers": "Niveles",
-    "title": "Miembros"
+    "title": "Miembros",
+    "line": "Busque un miembro, vea cómo va y dé la bienvenida a los nuevos.",
+    "tiles": "Los miembros en cifras",
+    "tile": {
+      "active": "Miembros activos",
+      "active_note": "de {{total}}",
+      "joined": "Se unieron este mes",
+      "average": "Puntos de media",
+      "average_note": "por miembro"
+    }
   },
   "nav": {
     "members": "Miembros",

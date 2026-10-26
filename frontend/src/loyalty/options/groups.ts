@@ -1,3 +1,4 @@
+import type { Hue } from '../ui/sections'
 import type { Way } from './types'
 
 /**
@@ -26,7 +27,7 @@ export const WAY_GROUPS: Record<string, Exclude<WayGroup, 'more'>> = {
 export const GROUP_ORDER: readonly WayGroup[] = ['earn', 'bonus', 'rule', 'more']
 
 /** A section's colour family. */
-export const GROUP_HUE: Record<WayGroup, string> = { earn: 'earn', bonus: 'bonus', rule: 'rule', more: 'offer' }
+export const GROUP_HUE: Record<WayGroup, Hue> = { earn: 'earn', bonus: 'bonus', rule: 'rule', more: 'offer' }
 
 export const groupOf = (way: string): WayGroup => WAY_GROUPS[way] ?? 'more'
 
@@ -65,15 +66,4 @@ export function searchOf(tab: OptionsTab, way?: string | null): string {
   if (way) params.set('way', way)
   const out = params.toString()
   return out ? `?${out}` : ''
-}
-
-/** The tab after this one for the arrow keys, Home and End; null for any other key. */
-export function tabAfter(tabs: readonly OptionsTab[], current: OptionsTab, key: string): OptionsTab | null {
-  const i = tabs.indexOf(current)
-  const n = tabs.length
-  if (key === 'ArrowRight') return tabs[(i + 1) % n]
-  if (key === 'ArrowLeft') return tabs[(i - 1 + n) % n]
-  if (key === 'Home') return tabs[0]
-  if (key === 'End') return tabs[n - 1]
-  return null
 }

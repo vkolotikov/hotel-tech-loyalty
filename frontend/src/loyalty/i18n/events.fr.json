@@ -94,7 +94,6 @@
   "new": "Nouvel événement",
   "tabs": "Événements",
   "empty": {
-    "upcoming": "Aucun événement à venir. Prévoyez-en un : les membres s’inscrivent sur le portail, et vous les enregistrez à l’entrée.",
     "past": "Les événements terminés s’affichent ici, avec qui est venu.",
     "drafts": "Aucun brouillon. Un événement enregistré en brouillon reste ici jusqu’à sa publication."
   },
@@ -248,5 +247,15 @@
       "network": "Pas de connexion : rien n’a été enregistré. Réessayez.",
       "unknown": "L’arrivée n’a pas été enregistrée. Veuillez réessayer."
     }
+  },
+  "get_started": {
+    "title": "Planifiez votre premier événement",
+    "line": "Une dégustation, un cours ou une soirée membres : les membres s’inscrivent sur le portail, et l’équipe les enregistre à la porte.",
+    "s1_title": "Nommez-le et fixez l’horaire",
+    "s1_line": "Un jour et des heures selon l’horloge de votre établissement, et le lieu.",
+    "s2_title": "Choisissez qui peut venir",
+    "s2_line": "Tous les membres ou certains niveaux, avec une inscription sur le portail si vous le souhaitez.",
+    "s3_title": "Publiez-le",
+    "s3_line": "Les membres le voient sur le portail ; enregistrez-les avec Scanner le jour même."
   }
 }

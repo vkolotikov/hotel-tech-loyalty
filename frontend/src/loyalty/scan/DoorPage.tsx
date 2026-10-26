@@ -7,7 +7,7 @@ import {
 } from 'lucide-react'
 import { markShell } from '../../workspace/lib/shellMark'
 import { isTyping, modalOpen } from '../../workspace/lib/shortcuts'
-import { NAVY_SURFACES, accentStyle, accentTokens } from '../../workspace/theme/accent'
+import { LOYALTY_SURFACES, accentStyle, accentTokens } from '../../workspace/theme/accent'
 import { Button } from '../../workspace/ui/Button'
 import { Dialog } from '../../workspace/ui/Dialog'
 import { Notice } from '../../workspace/ui/Notice'
@@ -52,7 +52,7 @@ export function DoorPage() {
   const loyalty = useLoyalty()
   const look = useLook()
   const [remembered] = useState(loadBrandPaint)
-  const accent = accentTokens(loyalty.data ? loyalty.data.accent : remembered?.accent, look.resolved, NAVY_SURFACES[look.resolved])
+  const accent = accentTokens(loyalty.data ? loyalty.data.accent : remembered?.accent, look.resolved, LOYALTY_SURFACES[look.resolved])
   // <html data-shell="loyalty"> keeps the full admin's Branding mood typography out, as the shell does.
   useLayoutEffect(() => markShell(document.documentElement, 'loyalty'), [])
 
@@ -151,7 +151,7 @@ export function DoorChooser({ choices, onChoose, gone = null }: { choices: Choic
           <div className="space-y-3 rounded-2xl border border-a-border bg-a-surface p-5 text-center">
             <p className="text-lg text-a-text">{t('loyalty.door.choose_none', 'There is no place, and no event today, to scan for.')}</p>
             {choices.canSetUp && (
-              <Link to="/loyalty/program#places" className="inline-flex items-center gap-2 font-semibold text-a-accent-text hover:underline">
+              <Link to="/loyalty/program?tab=places" className="inline-flex items-center gap-2 font-semibold text-a-accent-text hover:underline">
                 <Settings2 size={16} aria-hidden />{t('loyalty.door.set_up_places', 'Set up places')}
               </Link>
             )}

@@ -25,7 +25,11 @@
     "points_count": "{{points}} pts",
     "previous": "Previous",
     "reload": "Reload the page",
-    "retry": "Try again"
+    "retry": "Try again",
+    "get_started": "Get started",
+    "optional": "Optional",
+    "example": "Example",
+    "managers_set_up": "An owner or a manager sets this up."
   },
   "find": {
     "actions": "Actions",
@@ -129,7 +133,6 @@
     "col_points": "Points",
     "col_tier": "Tier",
     "count": "Members: {{count}}",
-    "figures": "{{active}} active of {{total}} · {{new}} joined this month · {{average}} points on average",
     "never": "Not yet",
     "none": "No members yet. They join from the member app, the portal or the booking widget.",
     "none_match": "No member matches.",
@@ -146,7 +149,16 @@
     "state_all": "All",
     "state_inactive": "Switched off",
     "tiers": "Tiers",
-    "title": "Members"
+    "title": "Members",
+    "line": "Find a member, see where they stand, and welcome new ones.",
+    "tiles": "Members in figures",
+    "tile": {
+      "active": "Active members",
+      "active_note": "of {{total}}",
+      "joined": "Joined this month",
+      "average": "Average points",
+      "average_note": "per member"
+    }
   },
   "nav": {
     "members": "Members",

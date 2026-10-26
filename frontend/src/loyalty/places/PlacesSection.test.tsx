@@ -95,11 +95,18 @@ describe('Program’s Places (release 8 §1)', () => {
   })
 
   it('teaches the first step when there is no place', () => {
-    const manager = text(render(<PlacesSection manage />, true, withList(list({ places: [] }))))
-    expect(manager).toContain('No places yet. Add your entrance first: scans there say who may come in.')
+    // Release 10 (the owner's Figma 163:322): the steps in the places' colour, and the action — or who has it.
+    const managerHtml = render(<PlacesSection manage />, true, withList(list({ places: [] })))
+    const manager = text(managerHtml)
+    expect(managerHtml).toMatch(/data-get-started="places" data-hue="place"/)
+    expect(manager).toContain('Get started Add your first entrance')
+    expect(manager).toContain('1 Name your entrance For example, Main entrance or Reception.')
+    expect(manager).toContain('2 Choose who may enter Every member, or only the tiers you tick.')
+    expect(manager).toContain('3 Start checking members Open Scan and choose this entrance.')
     expect(manager).toContain('Add the entrance')
     const staff = text(render(<PlacesSection manage={false} />, false, withList(list({ places: [], can_change: false }))))
-    expect(staff).toContain('No places yet. An owner or a manager adds them here.')
+    expect(staff).toContain('Add your first entrance')
+    expect(staff).toContain('An owner or a manager sets this up.')
     expect(staff).not.toContain('Add the entrance')
   })
 
