@@ -1,11 +1,10 @@
 import { useBoot } from '../LoyaltyProvider'
-import { useLook } from '../lib/look'
 import { amountOf } from '../lib/format'
 import { DesignDialog, NumberControl } from '../redesign/DesignUI'
 import { OverviewButton } from '../overview/OverviewUI'
 import { overviewAssets } from '../overview/assets'
 import { useRedesignWords } from '../redesign/words'
-import { readableTierColor } from '../redesign/designMath'
+import { tierTextStyle } from '../redesign/designMath'
 import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
@@ -40,7 +39,6 @@ export function TierBenefitDialog({ tier, current, benefits, options, onClose }:
   const { t, i18n } = useTranslation()
   const say = useRedesignWords()
   const boot = useBoot()
-  const look = useLook()
   const [details, setDetails] = useState(false)
   const client = useQueryClient()
   const firstChoice = useFirstFocus<HTMLSelectElement>()
@@ -99,7 +97,7 @@ export function TierBenefitDialog({ tier, current, benefits, options, onClose }:
           </div>
           <FormField label={say('wording')} problem={problem('value')} hint={say('wordingHint')}><textarea aria-label={say('wording')} ref={current ? firstWording : undefined} value={form.value} rows={2} maxLength={255} onChange={e => update({ value: e.target.value })} className={INPUT} /></FormField>
         </div>
-        <aside className="l-rd-benefit-preview"><span className="l-ov-eyebrow">{say('preview')}</span><h2 style={{ color: readableTierColor(tier.color, look.resolved) }}>{tier.name}</h2><hr /><img src={overviewAssets.gift} alt="" />
+        <aside className="l-rd-benefit-preview"><span className="l-ov-eyebrow">{say('preview')}</span><h2 className="l-rd-tier-text" style={tierTextStyle(tier.color)}>{tier.name}</h2><hr /><img src={overviewAssets.gift} alt="" />
           <h3>{typed || form.value || selected?.name || say('previewEmpty')}</h3>{typed && form.value && <p>{form.value}</p>}{selected && <p>{selected.name}</p>}<small>{word('loyalty.program.applies_to', APPLIES_TO_WORDS, form.applies_to)}</small>
           {selected && <><button type="button" className="l-ov-link" aria-expanded={details} onClick={() => setDetails(!details)}>{say('benefitDetails')}</button>{details && <div><p>{selected.description || say('detailsUnavailable')}</p>{selected.fulfillment_mode && <small>{word('loyalty.program.fulfillment_mode', FULFILLMENT_WORDS, selected.fulfillment_mode)}</small>}</div>}</>}
         </aside>

@@ -1,4 +1,8 @@
 /* MB-01–03 / PG-01–03. Tokens and local Poppins belong to the shared Overview shell. */
+[data-loyalty][data-theme="dark"] .l-rd-tier-text { color: var(--rd-tier-dark); }
+[data-loyalty][data-theme="light"] .l-rd-tier-text { color: var(--rd-tier-light); }
+[data-loyalty][data-redesign][data-theme="dark"] [data-tier-chip] { --rd-tier-text: var(--rd-tier-dark); }
+[data-loyalty][data-redesign][data-theme="light"] [data-tier-chip] { --rd-tier-text: var(--rd-tier-light); }
 [data-loyalty][data-overview].l-rd-dialog-root { display: contents; }
 [data-loyalty][data-redesign] { --l-rd-emphasis: linear-gradient(100deg,#373b90,#2a2f59); --l-rd-accent-border: #37b6e938; --l-rd-table-head: #2a2f59; }
 [data-loyalty][data-redesign][data-theme="light"] { --l-rd-emphasis: linear-gradient(100deg,#e4e6ff,#e5f1fa); --l-rd-accent-border: #8fb4cf; --l-rd-table-head: #e4e6f4; }

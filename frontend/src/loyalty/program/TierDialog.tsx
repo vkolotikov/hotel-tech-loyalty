@@ -6,7 +6,6 @@ import { Notice } from '../../workspace/ui/Notice'
 import { useBoot } from '../LoyaltyProvider'
 import { failureOf } from '../lib/api'
 import { refusalKey } from '../lib/errors'
-import { useLook } from '../lib/look'
 import { useFirstFocus } from '../lib/useFirstFocus'
 import { afterProgramChange, programApi } from './api'
 import { ERRORS } from './errors'
@@ -19,7 +18,7 @@ import { TIER_PROBLEM_WORDS } from './words'
 import { DesignDialog, NumberControl } from '../redesign/DesignUI'
 import { useRedesignWords } from '../redesign/words'
 import { OverviewButton } from '../overview/OverviewUI'
-import { readableTierColor } from '../redesign/designMath'
+import { tierTextStyle } from '../redesign/designMath'
 import levelDiagonal from '../redesign/assets/level-diagonal.svg'
 
 const INPUT = 'w-full rounded-lg border border-a-border bg-a-surface px-3 py-2 text-sm text-a-text'
@@ -43,7 +42,6 @@ export function TierDialog({ tier, onClose, page = false, benefits, more, onDirt
   const locale = i18n.language || 'en'
   const boot = useBoot()
   const by = boot.programme.progress_by ?? 'points'
-  const look = useLook()
   const client = useQueryClient()
   const colourId = useId()
   const first = useFirstFocus<HTMLInputElement>()
@@ -120,7 +118,7 @@ export function TierDialog({ tier, onClose, page = false, benefits, more, onDirt
       </div>
       <aside className="l-rd-editor-aside">
         <section data-member-preview="" className="l-ov-panel l-rd-level-preview" aria-label={say('memberPreview')}><img src={levelDiagonal} alt="" /><span className="l-ov-eyebrow">{say('memberPreview')}</span>
-          <h2 style={{ color: readableTierColor(form.color, look.resolved) }}>{form.name.trim() || t('loyalty.program.tier.preview', 'Preview')}</h2>
+          <h2 className="l-rd-tier-text" style={tierTextStyle(form.color)}>{form.name.trim() || t('loyalty.program.tier.preview', 'Preview')}</h2>
           {form.description && <p>{form.description}</p>}<hr />
           {floorValue !== '' && Number.isFinite(Number(floorValue)) && <small>{by === 'spend' ? money(Number(floorValue), boot.venue.currency, locale) : points(Number(floorValue), locale)} · {floorLabel}</small>}
           {rate !== null && <strong>{t('loyalty.program.tier.preview_rate', '×{{rate}} points on what they spend', { rate: decimal(rate, locale) })}</strong>}

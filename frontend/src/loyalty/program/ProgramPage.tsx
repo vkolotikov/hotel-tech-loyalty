@@ -31,7 +31,7 @@ import { TierEditorPage } from './TierEditorPage'
 import { SideMenu } from '../../workspace/shell/SideMenu'
 import { OverviewButton } from '../overview/OverviewUI'
 import { useRedesignWords } from '../redesign/words'
-import { readableTierColor } from '../redesign/designMath'
+import { tierTextStyle } from '../redesign/designMath'
 import programDiagonal from '../redesign/assets/program-diagonal.svg'
 import type { Benefit, Boost, Program, ProgramAdvice, Tier, TierBenefit } from './types'
 import { APPLIES_TO_WORDS, BOOST_STATE_WORDS, CATEGORY_WORDS, FULFILLMENT_WORDS, THRESHOLD_WORDS, VALUE_PHRASE_WORDS } from './words'
@@ -192,7 +192,7 @@ function Tiers({ program, manage, theme, locale, onOpen, go }: {
 }
 
 /** PG-01 uses actual floors, member counts and included benefits; the complete ladder remains available. */
-export function TierCard({ tier, manage, theme, locale, onOpen }: {
+export function TierCard({ tier, manage, locale, onOpen }: {
   tier: Tier; step: number; last: boolean; manage: boolean; theme: ThemeName; locale: string; onOpen: (open: Open) => void
 }) {
   const { t } = useTranslation()
@@ -202,7 +202,7 @@ export function TierCard({ tier, manage, theme, locale, onOpen }: {
   const by = boot.programme.progress_by ?? 'points'
   const floors = thresholds(tier, by)
   return <li data-tier={tier.id} className="l-rd-tier-card">
-    <header><h2 style={{ color: readableTierColor(tier.color, theme) }}>{tier.name}</h2><small className={tier.is_active ? 'l-rd-status-active' : ''}>{say(tier.is_active ? 'active' : 'off')}</small></header>
+    <header><h2 className="l-rd-tier-text" style={tierTextStyle(tier.color)}>{tier.name}</h2><small className={tier.is_active ? 'l-rd-status-active' : ''}>{say(tier.is_active ? 'active' : 'off')}</small></header>
     <div className="l-rd-tier-body">
       <dl className="l-rd-tier-floors">{floors.map(th => <div key={th.kind}><dd>{th.value === null ? t('loyalty.program.threshold.not_set', 'Not set') : th.kind === 'spend' ? money(th.value, boot.venue.currency, locale) : points(th.value, locale)}</dd><dt>{t(`loyalty.program.threshold.${th.kind}`, THRESHOLD_WORDS[th.kind])}</dt></div>)}</dl>
       <div className="l-rd-tier-rate"><span>{t('loyalty.program.tiers.earn_rate', 'Earn rate')}</span><strong>×{decimal(tier.earn_rate, locale)} {t('loyalty.member.points', 'Points')}</strong></div>
