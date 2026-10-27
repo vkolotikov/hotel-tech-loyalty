@@ -1,0 +1,21 @@
+﻿{
+    "verified_at":  "2026-10-27T19:51:22.4813022+00:00",
+    "entry":  "/spa/assets/index-CL4idIXW.js",
+    "loyalty_js":  "LoyaltyApp-CjlMH1Wr.js",
+    "loyalty_css":  "LoyaltyApp-C6Vz3vTm.css",
+    "markers":  [
+                    "Find a member, understand their membership and help them take the next step.",
+                    "Benefit changes save separately.",
+                    "Wording shown to members",
+                    "Members per page"
+                ],
+    "fonts":  [
+                  "/spa/assets/poppins-400-C1IsaolU.ttf",
+                  "/spa/assets/poppins-500-BblA7dQf.ttf",
+                  "/spa/assets/poppins-600-Gz22PxOe.ttf"
+              ],
+    "api_status":  401,
+    "api_message":  "Authentication required.",
+    "landing_stylesheet":  "/landing/nocturne_ritual.css?v=7ca20c60a8",
+    "retired_stylesheet_status":  404
+}

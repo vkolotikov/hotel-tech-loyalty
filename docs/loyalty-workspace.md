@@ -774,6 +774,22 @@ files on disk): run them one after the other.
 
 ## Deploying
 
+- Members and Program, 2026-10-27: production **0f59ddab1**, source-patch **9bead854f**, feature source
+  **2d6e03d81** on `feature/loyalty-members-program-20261027`. Six completed Figma frames cover Members, profile,
+  Award points, Levels, Edit level and Add benefit. Existing routes/actions remain; no migrations, dependencies,
+  financial writers or authorization changes. The directory accepts bounded `per_page=10|25|50` (old default 50),
+  history accepts a whitelisted optional `type` before pagination, and member benefits include existing scope and
+  fulfillment metadata. Benefit assignments save separately without resetting the level draft.
+  All 81 explicit source paths matched. The isolated artifact passed 75 PHP scopes (**7071 passed, 7 existing
+  skips, 45224 assertions**), all **5553 frontend tests**, TypeScript/lint/build, and **50 browser assertions**
+  against compiled assets. The extra scope is the existing 18-test Concerns suite omitted by the old loop; two
+  Members tests are new. Six desktop screens were compared with Figma; responsive, light/Russian, permissions,
+  error/retry and transactional UI flows were checked locally. Cloud content, all three font payloads, API
+  authentication and landing kit/retired-file checks passed at **21:51 Europe/Riga**.
+  Evidence: `docs/loyalty-redesign/11-MEMBERS-PROGRAM-REPORT.md`. The **next** source change list starts at
+  **2d6e03d81**: `git diff --name-status --no-renames 2d6e03d81 <tip>`. Post-deployment records follow on the
+  feature branch; do not push its built assets or merge it directly to `main`.
+
 - Overview milestone, 2026-10-27, is live (`main` **4c13e2d1f**, source-patch **89846e822**, feature source
   **5706903b1** on `feature/loyalty-overview-20261027`). New `/loyalty/overview`, approved Figma desktop/mobile,
   scoped read-only summaries/checks/metrics/queues/activity, exact request links and all five locales; `/loyalty`
@@ -782,9 +798,9 @@ files on disk): run them one after the other.
   passed**, TypeScript/lint/build clean; six browser checks against the compiled assets passed in addition to the
   implementation's 20 scenarios. Source parity includes deletions; vendor was copied, not junctioned. Live Cloud
   content and three font payloads verified, new API route returns the expected 401, landing kit/retired stylesheet
-  checks passed. See `docs/loyalty-redesign/10-IMPLEMENTATION-REPORT.md` and its evidence. The next change list for
-  this working branch starts at **5706903b1**, not the older release-11 tip: use
-  `git diff --name-status --no-renames 5706903b1 <tip>`. Release-record docs are pushed on the working branch afterward.
+  checks passed. See `docs/loyalty-redesign/10-IMPLEMENTATION-REPORT.md` and its evidence. Its source baseline was
+  **5706903b1**, superseded by the Members/Program release above. Release-record docs are pushed on the working
+  branch afterward.
 
 - Since 2026-10-26 a finished job is deployed without asking (the owner's standing word, `CLAUDE.md` "Git and
   deploy"); the recipe's checks still decide.

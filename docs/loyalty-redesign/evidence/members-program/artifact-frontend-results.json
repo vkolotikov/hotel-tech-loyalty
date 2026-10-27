@@ -1,0 +1,11 @@
+﻿{
+    "artifact":  "0f59ddab1c8a25b757a9f919d8fc7149a8add2b5",
+    "source":  "2d6e03d81",
+    "source_patch":  "9bead854f",
+    "typescript":  "passed",
+    "loyalty_eslint":  "passed",
+    "build":  "passed",
+    "files":  385,
+    "passed":  5553,
+    "failed":  0
+}
