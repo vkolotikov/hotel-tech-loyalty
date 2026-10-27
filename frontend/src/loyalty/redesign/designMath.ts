@@ -18,5 +18,3 @@ export function readableTierColor(color: string | null | undefined, theme: 'ligh
 export function tierTextStyle(color: string | null | undefined): CSSProperties {
   return { '--rd-tier-dark': readableTierColor(color, 'dark'), '--rd-tier-light': readableTierColor(color, 'light') } as CSSProperties
 }
-
-

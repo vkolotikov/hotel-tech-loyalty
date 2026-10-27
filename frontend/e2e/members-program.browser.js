@@ -16,7 +16,7 @@ async (page) => {
   const detail={member:{...rows[0],qualifying_points:1250,referral_code:'EXAMPLE',language:'en',nationality:null,date_of_birth:null,marketing_consent:false,sms_consent:false,tier_override_until:null,is_erased:false},progress:{by:'points',qualifying:1250,next_tier:{id:3,name:'Gold',min_points:2000,floor:2000},needed:750,percent:62.5},benefits:benefits.slice(0,3).map(b=>({...b,description:'Available to this level, subject to the benefit’s rules.',fulfillment_mode:b.id===1?'on_request':'staff_approved'})),requests:[{id:42,state:'pending',member:{id:1,name:'Jamie Taylor',member_number:'M-1048'},benefit:{id:1,name:'Welcome gift',category:'recognition'},asked_at:'2026-10-27T07:00:00Z',fulfilled_at:null,decline_reason:null}],options:{languages:['en','ru','de','fr','es']}};
   const lines=[{id:1,type:'bonus',points:250,description:'Welcome bonus',at:'2026-10-27T07:42:00Z'},{id:2,type:'redeem',points:-500,description:'Coffee reward',at:'2026-10-25T12:05:00Z'},{id:3,type:'earn',points:1000,description:'Purchase points',at:'2026-10-24T09:16:00Z'},{id:4,type:'earn',points:50,description:'Earlier purchase',at:'2026-10-20T09:00:00Z'}].map(x=>({...x,balance_after:null,by:null,is_reversed:false,reversal_of_id:null,can_reverse:true}));
   const state={requests:[],errors:[],fail:null,writeFail:false,limited:false,empty:false,slow:false,program,detail,rows,lines,boot};
-  
+
   await page.unrouteAll({behavior:'wait'});
   await page.context().setOffline(false);
   page.on('pageerror',e=>state.errors.push(e.message));
