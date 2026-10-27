@@ -776,6 +776,10 @@ files on disk): run them one after the other.
 
 - Since 2026-10-26 a finished job is deployed without asking (the owner's standing word, `CLAUDE.md` "Git and
   deploy"); the recipe's checks still decide.
+- The handoff for another device or agent went out as `main` dbf4580 (2026-10-27, docs only: `AGENTS.md`,
+  `docs/handoff/2026-10-27-hexatech-handoff.md`, `CLAUDE.md`, this file), built from branch commit 6da6b55: the next
+  release's change list is `git diff --name-status 6da6b55 <tip>`. No code changed, so the suites were not run again;
+  checked by content (the four files on `main` equal the branch, nothing else differs from b2cecde).
 - Release 11, rename and delete, is live (`main` b2cecde, pushed 2026-10-26: Rename and Delete on each tier and
   benefit, the delete's preview, `TierRemoval`, `BenefitRemoval`, `TierHolders`, soft deletes and the migration
   `2026_10_26_120000_tiers_and_benefits_can_be_deleted`), built from branch commit 535e3ba: the next release's change
