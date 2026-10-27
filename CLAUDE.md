@@ -5,6 +5,10 @@ Multi-tenant Laravel 13 + React (Vite, TypeScript) SaaS with four sub-brands. Pr
 (read it before touching anything under `app/Landing`, `resources/views/landing`, `public/landing`,
 `frontend/src/pages/landing`).
 
+Starting a new session, or on another device or agent: the current state, set-up, test baselines, deploy steps and
+open items are in the newest file of `docs/handoff/` (now `docs/handoff/2026-10-27-hexatech-handoff.md`). Update it,
+or add the next dated one, at the end of a session.
+
 ## Environment (hard rules, each one has bitten before)
 
 - PHP: always `/c/wamp64/bin/php/php8.4.20/php.exe`. The `php` on PATH is 8.3 and silently breaks JSON
@@ -22,6 +26,8 @@ Multi-tenant Laravel 13 + React (Vite, TypeScript) SaaS with four sub-brands. Pr
 - Disk on `C:` fills up fast from other tools on this machine; report `ENOSPC` instead of deleting things.
 - Never junction `vendor` into a git worktree (PHPUnit then tests the wrong tree); remove junctions with
   `cmd /c rmdir` before `git worktree remove`.
+- On a Linux machine (Claude Code on the web) the same rules hold with `php8.4` as the pinned PHP, `cp -al` for
+  `vendor` in a deploy worktree, and a local PostgreSQL for the `scripts/test-pg.sh` checks; set-up in the handoff.
 
 ## Git and deploy
 

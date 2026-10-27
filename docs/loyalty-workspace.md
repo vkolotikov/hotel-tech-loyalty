@@ -776,6 +776,15 @@ files on disk): run them one after the other.
 
 - Since 2026-10-26 a finished job is deployed without asking (the owner's standing word, `CLAUDE.md` "Git and
   deploy"); the recipe's checks still decide.
+- Release 11, rename and delete, is live (`main` b2cecde, pushed 2026-10-26: Rename and Delete on each tier and
+  benefit, the delete's preview, `TierRemoval`, `BenefitRemoval`, `TierHolders`, soft deletes and the migration
+  `2026_10_26_120000_tiers_and_benefits_can_be_deleted`), built from branch commit 535e3ba: the next release's change
+  list is `git diff --name-status 535e3ba <tip>`. 55 source files and docs (8 new), no deletions, one migration; on
+  the deploy tree PHP 7040 passed, 7 skipped, the frontend 5519 passed, tsc clean; the new tests and the migration
+  (up, down, up) also pass on PostgreSQL, whose other failures are the listed ones; in a browser a rename, a refused
+  rename, a delete with nobody on the tier and one moving four members were done on the local data; checked by
+  content (every source file on `main` equal to the branch, the services and the partial index in the source, the
+  dialogs' words and the Guide question in the built SPA).
 - Release 10b, the guidance, is live (`main` e3c7f0b, pushed 2026-10-26: Start here behind `GET start` from
   `SetupProgress`, the Members card, Program's checks from `TierAdvice`, the tier form's earn-rate figures and "What
   members see", the boost multiplier in figures), built from branch commit 5eedb5a: the next release's change list is
