@@ -97,7 +97,7 @@ class MembersTest extends TestCase
     public function test_a_members_page_carries_progress_benefits_and_open_requests(): void
     {
         $benefit = BenefitDefinition::create(['name' => 'Late checkout', 'code' => 'late', 'category' => 'accommodation', 'fulfillment_mode' => 'on_request']);
-        TierBenefit::create(['tier_id' => $this->tiers['gold']->id, 'benefit_id' => $benefit->id, 'value' => 'Until 2 pm', 'is_active' => true]);
+        TierBenefit::create(['tier_id' => $this->tiers['gold']->id, 'benefit_id' => $benefit->id, 'value' => 'Until 2 pm', 'applies_to' => 'stays', 'is_active' => true]);
         $waiting = BenefitEntitlement::create(['member_id' => $this->ada->id, 'benefit_id' => $benefit->id, 'status' => 'pending']);
         BenefitEntitlement::create(['member_id' => $this->ada->id, 'benefit_id' => $benefit->id, 'status' => 'fulfilled']);
 
@@ -110,6 +110,8 @@ class MembersTest extends TestCase
             ->assertJsonPath('progress.percent', 12)
             ->assertJsonPath('benefits.0.name', 'Late checkout')
             ->assertJsonPath('benefits.0.value', 'Until 2 pm')
+            ->assertJsonPath('benefits.0.applies_to', 'stays')
+            ->assertJsonPath('benefits.0.fulfillment_mode', 'on_request')
             ->assertJsonCount(1, 'requests')
             ->assertJsonPath('requests.0.id', $waiting->id);
     }
@@ -143,6 +145,48 @@ class MembersTest extends TestCase
 
         $this->assertSame([50, 100], array_column($response->json('lines'), 'points'));
         $response->assertJsonPath('lines.0.by', 'Staff')->assertJsonPath('lines.0.can_reverse', true)->assertJsonPath('total', 2);
+    }
+
+    public function test_directory_page_sizes_are_bounded_and_do_not_change_tenant_or_search_scope(): void
+    {
+        $this->otherOrganization();
+        foreach (range(1, 29) as $i) {
+            $this->makeMember("Pagination {$i}", "pagination{$i}@example.test");
+        }
+        $this->asStaffMember()->getJson($this->api('members?per_page=10'))->assertOk()
+            ->assertJsonCount(10, 'members')->assertJsonPath('total', 31)->assertJsonPath('pages', 4)->assertJsonPath('per_page', 10);
+        $this->asStaffMember()->getJson($this->api('members?per_page=10&page=99'))->assertOk()
+            ->assertJsonCount(1, 'members')->assertJsonPath('page', 4);
+        $this->asStaffMember()->getJson($this->api('members?per_page=25&q=Pagination'))->assertOk()
+            ->assertJsonCount(25, 'members')->assertJsonPath('total', 29)->assertJsonPath('pages', 2);
+        foreach (['', '?per_page=100000', '?per_page=0', '?per_page=-1'] as $query) {
+            $this->asStaffMember()->getJson($this->api('members'.$query))->assertOk()
+                ->assertJsonPath('per_page', 50)->assertJsonCount(31, 'members');
+        }
+    }
+
+    public function test_history_filters_before_pagination_and_keeps_member_and_organisation_boundaries(): void
+    {
+        $other = $this->otherOrganization();
+        foreach (range(1, 27) as $i) {
+            $this->line(['type' => 'earn', 'points' => $i, 'created_at' => now()->subMinutes($i)]);
+        }
+        foreach (['bonus', 'adjust', 'redeem', 'expire', 'reverse', 'referral'] as $type) {
+            $this->line(['type' => $type, 'points' => 5, 'created_at' => now()]);
+        }
+        $this->line(['type' => 'earn', 'points' => 999, 'created_at' => now(), 'member_id' => $this->grace->id]);
+        $url = 'members/'.$this->ada->id.'/history';
+        $response = $this->asStaffMember()->getJson($this->api($url.'?type=earn&page=2'))->assertOk()
+            ->assertJsonCount(2, 'lines')->assertJsonPath('total', 27)->assertJsonPath('pages', 2);
+        $this->assertSame(['earn'], array_values(array_unique(array_column($response->json('lines'), 'type'))));
+        foreach (['bonus', 'adjust', 'redeem', 'expire', 'reverse', 'referral'] as $type) {
+            $this->asStaffMember()->getJson($this->api($url.'?type='.$type))->assertOk()
+                ->assertJsonPath('total', 1)->assertJsonPath('lines.0.type', $type);
+        }
+        foreach (['all', 'unknown', 'earn%27'] as $type) {
+            $this->asStaffMember()->getJson($this->api($url.'?type='.$type))->assertOk()->assertJsonPath('total', 33);
+        }
+        $this->asStaffMember()->getJson($this->api('members/'.$other['member']->id.'/history?type=earn'))->assertNotFound();
     }
 
     private function line(array $attributes): PointsTransaction

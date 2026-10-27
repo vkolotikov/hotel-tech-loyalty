@@ -36,20 +36,22 @@ final class MemberDirectory
      * @param array{q?: ?string, tier_id?: ?int, state?: ?string, sort?: ?string} $filters
      * @return array{members: list<array<string, mixed>>, page: int, pages: int, total: int}
      */
-    public function page(array $filters, int $page): array
+    public function page(array $filters, int $page, int $perPage = self::PER_PAGE): array
     {
+        $perPage = in_array($perPage, [10, 25, 50], true) ? $perPage : self::PER_PAGE;
         $query = $this->filtered($filters);
 
         $total = (clone $query)->count();
-        $pages = max(1, (int) ceil($total / self::PER_PAGE));
+        $pages = max(1, (int) ceil($total / $perPage));
         $page = min(max(1, $page), $pages);
-        $rows = $query->forPage($page, self::PER_PAGE)->get();
+        $rows = $query->forPage($page, $perPage)->get();
 
         return [
             'members' => $rows->map(fn (LoyaltyMember $m) => self::row($m))->values()->all(),
             'page'    => $page,
             'pages'   => $pages,
             'total'   => $total,
+            'per_page' => $perPage,
         ];
     }
 

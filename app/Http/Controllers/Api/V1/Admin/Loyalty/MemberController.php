@@ -31,7 +31,7 @@ class MemberController extends Controller
             'sort'    => $request->query('sort'),
         ];
 
-        return response()->json($directory->page($filters, (int) $request->query('page', 1)) + [
+        return response()->json($directory->page($filters, (int) $request->query('page', 1), (int) $request->query('per_page', MemberDirectory::PER_PAGE)) + [
             'figures' => $directory->figures($orgId),
         ]);
     }
@@ -60,6 +60,8 @@ class MemberController extends Controller
                 'value_type'   => $tb->value_type,
                 'value_amount' => $tb->value_amount !== null ? (float) $tb->value_amount : null,
                 'description' => $tb->custom_description ?? $tb->benefit->description,
+                'applies_to' => $tb->applies_to,
+                'fulfillment_mode' => $tb->benefit->fulfillment_mode,
             ])->values();
 
         return response()->json([
@@ -80,7 +82,7 @@ class MemberController extends Controller
 
     public function history(Request $request, int $id, MemberLedger $ledger): JsonResponse
     {
-        return response()->json($ledger->page($this->member($id), (int) $request->query('page', 1)));
+        return response()->json($ledger->page($this->member($id), (int) $request->query('page', 1), (string) $request->query('type', 'all')));
     }
     /** One of this organisation's members (the tenant scope), or 404. */
     private function member(int $id): LoyaltyMember

@@ -99,6 +99,7 @@ export interface Paged {
 }
 
 export interface MembersPage extends Paged {
+  per_page?: number
   members: MemberRow[]
   figures: Figures
 }
@@ -108,6 +109,7 @@ export type MemberSort = 'recent' | 'points' | 'name' | 'activity'
 export type MemberState = 'active' | 'inactive' | 'expiring' | 'expired' | 'all'
 
 export interface MemberFilters {
+  per_page?: 10 | 25 | 50
   q: string
   tier_id: number | null
   state: MemberState
@@ -123,6 +125,8 @@ export interface Progress {
 }
 
 export interface TierBenefitLine {
+  applies_to?: string | null
+  fulfillment_mode?: string | null
   id: number
   name: string
   category: string | null

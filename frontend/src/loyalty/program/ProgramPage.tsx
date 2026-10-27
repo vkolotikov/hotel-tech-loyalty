@@ -2,7 +2,7 @@ import { useState, type ReactNode } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { AlertTriangle, ArrowRight, Award, CalendarDays, CheckCheck, Crown, Gift, Lightbulb, MapPin, Pencil, PenLine, Plus, SlidersHorizontal, Sparkles, Trash2, TrendingUp, Users, X, Zap } from 'lucide-react'
+import { AlertTriangle, ArrowRight, CalendarDays, CheckCheck, Crown, Gift, Lightbulb, MapPin, Pencil, PenLine, Plus, SlidersHorizontal, Sparkles, Trash2, Users, X, Zap } from 'lucide-react'
 import { Button } from '../../workspace/ui/Button'
 import { Dialog } from '../../workspace/ui/Dialog'
 import { Notice } from '../../workspace/ui/Notice'
@@ -27,17 +27,22 @@ import {
 import { chosenTiers, decimal, named } from '../lib/forms'
 import { TierBenefitDialog } from './TierBenefitDialog'
 import { TierDialog } from './TierDialog'
+import { TierEditorPage } from './TierEditorPage'
+import { SideMenu } from '../../workspace/shell/SideMenu'
+import { OverviewButton } from '../overview/OverviewUI'
+import { useRedesignWords } from '../redesign/words'
+import { readableTierColor } from '../redesign/designMath'
+import programDiagonal from '../redesign/assets/program-diagonal.svg'
 import type { Benefit, Boost, Program, ProgramAdvice, Tier, TierBenefit } from './types'
 import { APPLIES_TO_WORDS, BOOST_STATE_WORDS, CATEGORY_WORDS, FULFILLMENT_WORDS, THRESHOLD_WORDS, VALUE_PHRASE_WORDS } from './words'
 import { PlacesSection } from '../places/PlacesSection'
 import { PLACES_KEY, placesApi } from '../places/placesApi'
 import { TierPlaces } from '../places/TierPlaces'
 import { Switch } from '../options/parts'
-import { FigureTile, FigureTiles } from '../ui/FigureTiles'
 import { GetStarted, GetStartedExample, SectionIntro } from '../ui/GetStarted'
 import { SectionCards, SectionCount } from '../ui/SectionCards'
 import type { Hue } from '../ui/sections'
-import { CardAction, IconButton, SectionHead } from './parts'
+import { IconButton, SectionHead } from './parts'
 import { RemoveBenefit, RemoveTier, RenameDialog } from './RemoveDialogs'
 
 /** Which dialog is open, with what it works on. */
@@ -79,14 +84,23 @@ export function ProgramPage() {
   const location = useLocation()
   const navigate = useNavigate()
   const section = programSectionFrom(location.search, location.hash)
+  const say = useRedesignWords()
+  const editorId = new URLSearchParams(location.search).get('tier')
+  const openTier = (tier: Tier | null) => navigate(`/loyalty/program?tab=tiers&tier=${tier?.id ?? 'new'}`)
+  const onOpen = (value: Open) => { if (value.kind === 'tier') openTier(value.tier); else setOpen(value) }
+  if (editorId && section === 'tiers') return <TierEditorPage id={editorId} />
   const go = (next: ProgramSection) => navigate({ pathname: '/loyalty/program', search: programSearch(next) }, { replace: true })
   const count = (n: number | undefined) => (n === undefined ? undefined : <SectionCount value={points(n, locale)} />)
   // The ladder's warnings wait on its card, in the waiting colour, as Ways to earn's do on its Overview.
   const tierWarnings = (data?.advice ?? []).filter(a => a.level === 'warn' && a.code === 'tiers_share_threshold').length
 
   return (
-    <div className="space-y-6 px-4 py-6 lg:px-6">
-      <PageHeader stacked title={t('loyalty.program.title', 'Program')}
+    <div className="l-ov-page l-rd-page">
+      {section === 'tiers' ? <>
+        <header className="l-ov-page-heading"><div><h1>{t('loyalty.program.title', 'Program')}</h1><p>{say('programLine')}</p></div>{manage && <div className="l-rd-actions"><Link className="l-ov-button" to="/loyalty/options/setup">{say('guidedSetup')}</Link>{!!data?.tiers.length && <OverviewButton primary onClick={() => openTier(null)}>{say('addLevel')}</OverviewButton>}</div>}</header>
+        {!manage && <p data-read-only="">{t('loyalty.program.read_only', 'Only an owner or a manager can change the programme.')}</p>}
+        <section className="l-rd-program-explainer"><img src={programDiagonal} alt="" /><div><h2>{say('howMove')}</h2><p>{say(boot.programme.progress_by === 'visits' ? 'moveVisits' : boot.programme.progress_by === 'spend' ? 'moveSpend' : 'movePoints')}</p><small>{say('moveNote')}</small></div><Link className="l-ov-link" to="/loyalty/options?tab=rules">{say('qualificationRules')}</Link></section>
+      </> : <>      <PageHeader stacked title={t('loyalty.program.title', 'Program')}
         line={t('loyalty.program.line', 'Your tiers, what each gives, where members may enter, and the boosts that bring them back.')}
         below={!manage && <p data-read-only="" className="text-sm text-a-text-2">{t('loyalty.program.read_only', 'Only an owner or a manager can change the programme.')}</p>}>
         {/* Release 7: the other ways to earn (points on spend, bonuses, stamps, check-in, cashback) are set there. */}
@@ -104,8 +118,10 @@ export function ProgramPage() {
           { id: 'boosts', icon: Zap, hue: SECTION_HUE.boosts, title: t('loyalty.program.boosts.title', 'Boost events'), caption: t('loyalty.program.section.boosts', 'Extra points for a while'), badge: count(data?.boosts.length) },
         ]} />
 
-      <div id="program-panel" role="tabpanel" aria-labelledby={`program-section-${section}`} className="space-y-5">
-        <SectionIntro hue={SECTION_HUE[section]}>{t(`loyalty.program.intro.${section}`, INTRO_WORDS[section])}</SectionIntro>
+</>}
+
+      <div id="program-panel" role={section === 'tiers' ? undefined : 'tabpanel'} aria-labelledby={section === 'tiers' ? undefined : `program-section-${section}`} className="space-y-5">
+        {section !== 'tiers' && <SectionIntro hue={SECTION_HUE[section]}>{t(`loyalty.program.intro.${section}`, INTRO_WORDS[section])}</SectionIntro>}
 
         {section !== 'places' && query.isError && !data && (
           <div className="max-w-xl space-y-3">
@@ -121,7 +137,7 @@ export function ProgramPage() {
           </div>
         )}
 
-        {data && section === 'tiers' && <Tiers program={data} manage={manage} theme={look.resolved} locale={locale} onOpen={setOpen} go={go} />}
+        {data && section === 'tiers' && <Tiers program={data} manage={manage} theme={look.resolved} locale={locale} onOpen={onOpen} go={go} />}
         {data && section === 'benefits' && <Benefits program={data} manage={manage} onOpen={setOpen} go={go} />}
         {/* Release 8: places and the tiers each admits. */}
         {section === 'places' && <PlacesSection manage={manage} />}
@@ -159,130 +175,56 @@ function Tiers({ program, manage, theme, locale, onOpen, go }: {
   program: Program; manage: boolean; theme: ThemeName; locale: string; onOpen: (open: Open) => void; go: (section: ProgramSection) => void
 }) {
   const { t } = useTranslation()
-  const add = () => onOpen({ kind: 'tier', tier: null })
-  if (program.tiers.length === 0) {
-    return (
-      <GetStarted name="tiers" hue="tier" title={t('loyalty.program.get_started.tiers.title', 'Add your first tier')}
-        line={t('loyalty.program.get_started.tiers.line', 'A tier is a level members reach, such as Silver or Gold, with its own earn rate and benefits. The programme starts once a tier is in use.')}
-        steps={[
-          { title: t('loyalty.program.get_started.tiers.s1_title', 'Name it'), line: t('loyalty.program.get_started.tiers.s1_line', 'Members see the name on their card and in the app.') },
-          { title: t('loyalty.program.get_started.tiers.s2_title', 'Set what reaches it'), line: t('loyalty.program.get_started.tiers.s2_line', 'Points, visits or spend, as Ways to earn sets how members move up.') },
-          { title: t('loyalty.program.get_started.tiers.s3_title', 'Give it benefits'), line: t('loyalty.program.get_started.tiers.s3_line', 'A welcome drink, late checkout or a discount, from the benefit catalogue.') },
-        ]}
-        action={manage && <Button onClick={add}><Plus size={15} aria-hidden />{t('loyalty.program.tiers.add', 'Add tier')}</Button>} />
-    )
-  }
-  const off = program.tiers.filter(tier => !tier.is_active).length
-  const members = program.tiers.reduce((sum, tier) => sum + tier.members, 0)
-  return (
-    <section aria-labelledby="program-tiers" className="space-y-4">
-      <FigureTiles label={t('loyalty.program.figures.label', 'The ladder in figures')}>
-        <FigureTile name="tiers" icon={Crown} hue="tier" label={t('loyalty.program.figures.tiers', 'Tiers in the ladder')} value={points(program.tiers.length, locale)}
-          note={off > 0 ? t('loyalty.program.figures.tiers_off', '{{n}} switched off', { n: points(off, locale) }) : undefined} />
-        <FigureTile name="members" icon={Users} label={t('loyalty.program.figures.members', 'Members in a tier')} value={points(members, locale)} />
-        <FigureTile name="benefits" icon={Gift} hue="rule" label={t('loyalty.program.figures.benefits', 'Benefits to give')} value={points(program.benefits.length, locale)}
-          note={t('loyalty.program.figures.benefits_note', 'in the catalogue')} onClick={() => go('benefits')} />
-      </FigureTiles>
-      {(program.advice ?? []).filter(a => a.code === 'tiers_share_threshold').map(item => (
-        <SharedFigure key={item.params.value} item={item} program={program} manage={manage} locale={locale} onOpen={onOpen} />
-      ))}
-      <SectionHead id="program-tiers" icon={Award} hue="tier" title={t('loyalty.program.tiers.title', 'Tiers')}>
-        {manage && <Button size="sm" onClick={add}><Plus size={15} aria-hidden />{t('loyalty.program.tiers.add', 'Add tier')}</Button>}
-      </SectionHead>
-      <ol aria-label={t('loyalty.program.tiers.ladder', 'The ladder, from the first tier up')}>
-        {program.tiers.map((tier, i) => (
-          <TierCard key={tier.id} tier={tier} step={i + 1} last={i === program.tiers.length - 1} manage={manage} theme={theme} locale={locale} onOpen={onOpen} />
-        ))}
-      </ol>
-    </section>
-  )
+  const say = useRedesignWords()
+  if (program.tiers.length === 0) return <GetStarted name="tiers" hue="tier" title={t('loyalty.program.get_started.tiers.title', 'Add your first tier')}
+    line={t('loyalty.program.get_started.tiers.line', 'A tier is a level members reach, such as Silver or Gold, with its own earn rate and benefits. The programme starts once a tier is in use.')}
+    steps={[
+      { title: t('loyalty.program.get_started.tiers.s1_title', 'Name it'), line: t('loyalty.program.get_started.tiers.s1_line', 'Members see the name on their card and in the app.') },
+      { title: t('loyalty.program.get_started.tiers.s2_title', 'Set what reaches it'), line: t('loyalty.program.get_started.tiers.s2_line', 'Points, visits or spend, as Ways to earn sets how members move up.') },
+      { title: t('loyalty.program.get_started.tiers.s3_title', 'Give it benefits'), line: t('loyalty.program.get_started.tiers.s3_line', 'A welcome drink, late checkout or a discount, from the benefit catalogue.') },
+    ]} action={manage && <OverviewButton primary onClick={() => onOpen({ kind: 'tier', tier: null })}>{say('addLevel')}</OverviewButton>} />
+  return <section aria-labelledby="program-tiers" className="space-y-5">
+    {(program.advice ?? []).filter(a => a.code === 'tiers_share_threshold').map(item => <SharedFigure key={item.params.value} item={item} program={program} manage={manage} locale={locale} onOpen={onOpen} />)}
+    <div className="l-rd-levels-head"><h2 id="program-tiers">{say('levels')}</h2><small>{say('levelsCount', { levels: points(program.tiers.filter(tier => tier.is_active).length, locale), members: points(program.tiers.reduce((n, tier) => n + tier.members, 0), locale) })}</small><OverviewButton onClick={() => go('benefits')}>{say('catalogue')}</OverviewButton></div>
+    <ol className="l-rd-level-grid" aria-label={t('loyalty.program.tiers.ladder', 'The ladder, from the first tier up')}>{program.tiers.map((tier, i) => <TierCard key={tier.id} tier={tier} step={i + 1} last={i === program.tiers.length - 1} manage={manage} theme={theme} locale={locale} onOpen={onOpen} />)}</ol>
+    {manage && <div className="l-ov-inset l-rd-guided"><div><strong>{say('preferSetup')}</strong><small>{say('setupLine')}</small></div><Link className="l-ov-button" to="/loyalty/options/setup">{say('openSetup')}</Link></div>}
+  </section>
 }
 
-/**
- * One step of the ladder: its number on the rail, the tier's chip (and "Switched off" when it is), what reaches it on
- * the programme's measure, its earn rate, its members, the places it can enter and its benefits.
- */
-export function TierCard({ tier, step, last, manage, theme, locale, onOpen }: {
+/** PG-01 uses actual floors, member counts and included benefits; the complete ladder remains available. */
+export function TierCard({ tier, manage, theme, locale, onOpen }: {
   tier: Tier; step: number; last: boolean; manage: boolean; theme: ThemeName; locale: string; onOpen: (open: Open) => void
 }) {
   const { t } = useTranslation()
-  // Release 8: what reaches the tier, on the programme's measure (points, visits or spend).
+  const say = useRedesignWords()
   const boot = useBoot()
+  const [all, setAll] = useState(false)
   const by = boot.programme.progress_by ?? 'points'
-  const currency = boot.venue.currency
-  return (
-    <li data-tier={tier.id} className="flex gap-3 sm:gap-4">
-      <div aria-hidden className="flex w-8 shrink-0 flex-col items-center">
-        <span className={`mt-4 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-semibold tabular-nums ${tier.is_active ? 'bg-a-accent/10 text-a-accent-text' : 'border border-a-border bg-a-surface text-a-text-2'}`}>{step}</span>
-        {!last && <span className="mt-1 w-px flex-1 bg-a-border" />}
-      </div>
-
-      <div className={`relative mb-3 min-w-0 flex-1 rounded-2xl border border-a-border bg-a-surface p-4 ${last ? 'mb-0' : ''}`}>
-        <div className="flex flex-col gap-3 lg:flex-row lg:gap-6">
-          <div className="space-y-2 lg:w-52 lg:shrink-0">
-            <div className="flex flex-wrap items-center gap-2">
-              <TierChip tier={tier} theme={theme} />
-              {!tier.is_active && <ToneBadge tone={activeTone(false)}>{t('loyalty.program.switched_off', 'Switched off')}</ToneBadge>}
-            </div>
-            <dl className="flex flex-wrap gap-x-5 gap-y-1">
-              {thresholds(tier, by).map(th => (
-                <div key={th.kind}>
-                  <dt className="text-xs text-a-text-2">{t(`loyalty.program.threshold.${th.kind}`, THRESHOLD_WORDS[th.kind])}</dt>
-                  <dd className="font-a-display text-2xl leading-tight tabular-nums text-a-text">
-                    {th.value === null
-                      ? <span className="font-sans text-sm text-a-text-2">{t('loyalty.program.threshold.not_set', 'Not set')}</span>
-                      : th.kind === 'spend' ? (by === 'spend' ? money(th.value, currency, locale) : decimal(th.value, locale)) : points(th.value, locale)}
-                  </dd>
-                </div>
-              ))}
-            </dl>
-          </div>
-
-          <div className="min-w-0 flex-1 space-y-3">
-            <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 text-sm">
-              <dl className="flex flex-wrap items-center gap-x-5 gap-y-1.5">
-                <div className="inline-flex items-center gap-1.5">
-                  <TrendingUp size={14} aria-hidden className="text-a-text-2" />
-                  <dt className="text-a-text-2">{t('loyalty.program.tiers.earn_rate', 'Earn rate')}</dt>
-                  <dd className="font-semibold tabular-nums text-a-text">×{decimal(tier.earn_rate, locale)}</dd>
-                </div>
-                <div className="inline-flex items-center gap-1.5">
-                  <Users size={14} aria-hidden className="text-a-text-2" />
-                  <dt className="text-a-text-2">{t('loyalty.program.tiers.members', 'Members')}</dt>
-                  <dd className="font-semibold tabular-nums text-a-text">{points(tier.members, locale)}</dd>
-                </div>
-              </dl>
-              {/* Release 8: the places this tier can enter. */}
-              <TierPlaces tierId={tier.id} />
-            </div>
-
-            {tier.benefits.length === 0 && !manage && <p className="text-sm text-a-text-2">{t('loyalty.program.tiers.no_benefits', 'This tier gives no benefit yet.')}</p>}
-            {(tier.benefits.length > 0 || manage) && (
-              <ul aria-label={t('loyalty.program.tiers.benefits', 'Benefits')} className="flex flex-wrap gap-2">
-                {tier.benefits.map(tb => <BenefitChip key={tb.id} tb={tb} tier={tier} manage={manage} locale={locale} onOpen={onOpen} />)}
-                {manage && (
-                  <li>
-                    <button type="button" onClick={() => onOpen({ kind: 'tier_benefit', tier, current: null })}
-                      className="inline-flex min-h-8 items-center gap-1 rounded-full border border-dashed border-a-border px-3 py-1 text-sm font-medium text-a-accent-text hover:bg-a-accent/10">
-                      <Plus size={14} aria-hidden />{t('loyalty.program.tiers.add_benefit', 'Add benefit')}<span className="sr-only"> {tier.name}</span>
-                    </button>
-                  </li>
-                )}
-              </ul>
-            )}
-          </div>
-        </div>
-        {/* Release 11: what a manager does with the tier, in words — rename it, change the rest, or delete it. */}
-        {manage && (
-          <div data-tier-actions="" className="mt-4 flex flex-wrap gap-2 border-t border-a-border pt-3">
-            <CardAction icon={PenLine} label={t('loyalty.program.rename.action', 'Rename')} name={tier.name} onClick={() => onOpen({ kind: 'rename_tier', tier })} />
-            <CardAction icon={SlidersHorizontal} label={t('loyalty.program.edit', 'Edit')} name={tier.name} onClick={() => onOpen({ kind: 'tier', tier })} />
-            <CardAction icon={Trash2} danger label={t('loyalty.program.remove_tier.action', 'Delete')} name={tier.name} onClick={() => onOpen({ kind: 'remove_tier', tier })} />
-          </div>
-        )}
-      </div>
-    </li>
-  )
+  const floors = thresholds(tier, by)
+  return <li data-tier={tier.id} className="l-rd-tier-card">
+    <header><h2 style={{ color: readableTierColor(tier.color, theme) }}>{tier.name}</h2><small className={tier.is_active ? 'l-rd-status-active' : ''}>{say(tier.is_active ? 'active' : 'off')}</small></header>
+    <div className="l-rd-tier-body">
+      <dl className="l-rd-tier-floors">{floors.map(th => <div key={th.kind}><dd>{th.value === null ? t('loyalty.program.threshold.not_set', 'Not set') : th.kind === 'spend' ? money(th.value, boot.venue.currency, locale) : points(th.value, locale)}</dd><dt>{t(`loyalty.program.threshold.${th.kind}`, THRESHOLD_WORDS[th.kind])}</dt></div>)}</dl>
+      <div className="l-rd-tier-rate"><span>{t('loyalty.program.tiers.earn_rate', 'Earn rate')}</span><strong>×{decimal(tier.earn_rate, locale)} {t('loyalty.member.points', 'Points')}</strong></div>
+      <Link className="l-ov-link" to={`/loyalty?tier=${tier.id}`}>{say('membersTotal', { n: points(tier.members, locale) })} →</Link>
+      <TierPlaces tierId={tier.id} />
+      <hr /><strong>{say('includedBenefits')}</strong>
+      <ul className="l-rd-included-benefits">{(all ? tier.benefits : tier.benefits.slice(0, 3)).map(tb => <li key={tb.id}>✓ {tb.name}{tb.value && <small> · {tb.value}</small>}</li>)}</ul>
+      {tier.benefits.length > 3 && !all && <button className="l-ov-link" onClick={() => setAll(true)}>{say('moreBenefits', { n: tier.benefits.length - 3 })}</button>}
+      {!tier.benefits.length && <p>{t('loyalty.program.tiers.no_benefits', 'This tier gives no benefit yet.')}</p>}
+      {tier.description && <small>{tier.description}</small>}
+      {all && <ul className="l-rd-included-benefit-details">{tier.benefits.map(tb => <BenefitChip key={tb.id} tb={tb} tier={tier} manage={manage} locale={locale} onOpen={onOpen} />)}</ul>}
+      {manage && <div data-tier-actions="" className="l-rd-tier-actions">
+        <OverviewButton aria-label={`${say('editLevel')} ${tier.name}`} onClick={() => onOpen({ kind: 'tier', tier })}>{say('editLevel')}</OverviewButton>
+        <OverviewButton aria-label={`${say('addBenefit')} ${tier.name}`} onClick={() => onOpen({ kind: 'tier_benefit', tier, current: null })}>+ {say('addBenefit')}</OverviewButton>
+        <SideMenu kind="menu" place="down-right" named label={`${t('loyalty.membership.more.label', 'More')} ${tier.name}`} buttonClassName="l-ov-button l-rd-icon-button" listClassName="w-56" face="⋯">
+          <button role="menuitem" className="l-rd-menu-item" onClick={() => onOpen({ kind: 'rename_tier', tier })}>{t('loyalty.program.rename.action', 'Rename')}</button>
+          <button role="menuitem" className="l-rd-menu-item" onClick={() => setAll(true)}>{say('includedBenefits')}</button>
+          <button role="menuitem" className="l-rd-menu-item" onClick={() => onOpen({ kind: 'remove_tier', tier })}>{t('loyalty.program.remove_tier.action', 'Delete')}</button>
+        </SideMenu>
+      </div>}
+    </div>
+  </li>
 }
 
 /** A benefit a tier gives, with its wording, its typed value and where it counts; a manager changes it or takes it off. */
@@ -321,7 +263,7 @@ function BenefitChip({ tb, tier, manage, locale, onOpen }: { tb: TierBenefit; ti
 }
 
 /** Take a benefit off a tier, once asked: the server switches it off, so the members' history keeps its name. */
-function TakeOff({ tier, tb, onClose }: { tier: Tier; tb: TierBenefit; onClose: () => void }) {
+export function TakeOff({ tier, tb, onClose }: { tier: Tier; tb: TierBenefit; onClose: () => void }) {
   const { t } = useTranslation()
   const client = useQueryClient()
   const remove = useMutation({

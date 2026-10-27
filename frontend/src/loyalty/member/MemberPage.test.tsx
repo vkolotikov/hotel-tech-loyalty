@@ -69,7 +69,7 @@ describe('a member’s page, release 2 (§4.1)', () => {
   it('shows the details block with every field and the day the tier is kept until', () => {
     const html = render(can(), detail())
     const words = text(html)
-    expect(words).toContain('Details')
+    expect(words).toContain('Member details')
     expect(words).toContain('Language German')
     expect(words).toContain('Nationality American')
     expect(words).toContain('Date of birth December 9, 1906')
@@ -77,14 +77,15 @@ describe('a member’s page, release 2 (§4.1)', () => {
     expect(words).toContain('Tier kept until Dec 31, 2026')
   })
 
-  it('says each fact once: name, number, joined, email and phone in the header, not again in the details (release 9)', () => {
+  it('says each identity fact once, with contact and joined date in Member details', () => {
     const html = render(can(), detail())
-    for (const once of ['grace@example.test', '+1 555 0100', 'HL-2026-000030', 'Joined Jan 5, 2026']) {
+    for (const once of ['grace@example.test', '+1 555 0100', 'HL-2026-000030', 'Jan 5, 2026']) {
       expect(html.split(once).length - 1, once).toBe(1)
     }
     expect(html).toContain('data-contact="email"')
     expect(html).toContain('data-contact="phone"')
-    for (const gone of ['data-detail="email"', 'data-detail="phone"', 'data-detail="number"', 'data-detail="joined"']) expect(html).not.toContain(gone)
+    for (const field of ['email', 'phone', 'joined']) expect(html).toContain(`data-detail="${field}"`)
+    expect(html).not.toContain('data-detail="number"')
   })
 
   it('says “Not given” for what nobody filled, and shows no phone when there is none', () => {
@@ -97,13 +98,14 @@ describe('a member’s page, release 2 (§4.1)', () => {
     expect(html).not.toContain('data-contact="phone"')
   })
 
-  it('keeps Award and Redeem as words, Edit details and Card as named icons, and the rest under ⋯ More', () => {
+  it('keeps Award, Redeem, Edit details and View card visible, with other actions under More', () => {
     const html = render(can(), detail())
     const words = text(html)
     expect(words).toContain('Award points')
     expect(words).toContain('Redeem points')
-    for (const named of ['Edit details', 'Card', 'More']) expect(html, named).toContain(`aria-label="${named}"`)
-    expect(html).toContain('title="Edit details"')
+    expect(html).toContain('aria-label="More"')
+    expect(words).toContain('Edit details →')
+    expect(words).toContain('View card')
     // The full admin's link and the manager's actions are items of the closed ⋯ menu.
     expect(words).not.toContain('Open in full admin')
   })
@@ -112,7 +114,7 @@ describe('a member’s page, release 2 (§4.1)', () => {
     const html = render(can({ award: false, redeem: false }), detail())
     expect(text(html)).not.toContain('Award points')
     expect(text(html)).not.toContain('Redeem points')
-    expect(html).toContain('aria-label="Edit details"')
+    expect(text(html)).toContain('Edit details →')
   })
 
   it('a deleted member shows only what stays: the number and the history', () => {

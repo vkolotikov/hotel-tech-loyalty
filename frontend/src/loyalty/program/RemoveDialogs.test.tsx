@@ -146,7 +146,8 @@ describe('Deleting and renaming tiers and benefits (release 11, owner 2026-10-26
   it('gives a manager Rename, Edit and Delete on each tier and benefit, in words on a tier card; nobody else', () => {
     const tiers = wrap(<ProgramPage />, true, c => c.setQueryData(PROGRAM_KEY, program))
     expect(tiers).toMatch(/data-tier-actions=""/)
-    expect(text(tiers)).toContain('Rename Silver Edit Silver Delete Silver')
+    expect(tiers).toContain('aria-label="Edit level Silver"')
+    expect(tiers).toContain('aria-label="More Silver"') // Rename and Delete are under this menu (browser tested).
     const benefits = wrap(<ProgramPage />, true, c => c.setQueryData(PROGRAM_KEY, program), '/loyalty/program?tab=benefits')
     for (const word of ['Rename', 'Edit', 'Delete']) expect(benefits).toContain(`<span class="sr-only">${word} Spa access</span>`)
 

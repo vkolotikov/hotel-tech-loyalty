@@ -12,12 +12,12 @@ export function OverviewBadge({ tone = 'neutral', children }: { tone?: 'green' |
   return <span className={`l-ov-badge l-ov-badge-${tone}`}><img src={overviewAssets[tone]} alt="" />{children}</span>
 }
 /** Native modal supplies background inertness, focus containment and Escape on desktop and phones alike. */
-export function OverviewDialog({ title, kind = 'drawer', onClose, children }: { title: string; kind?: 'drawer' | 'preview' | 'menu'; onClose: () => void; children: ReactNode }) {
+export function OverviewDialog({ title, kind = 'drawer', onClose, children, busy = false, className = '' }: { title: string; kind?: 'drawer' | 'preview' | 'menu' | 'form'; onClose: () => void; children: ReactNode; busy?: boolean; className?: string }) {
   const say = useOverviewWords()
   const ref = useRef<HTMLDialogElement>(null)
   const id = useId()
   const closeRef = useRef(onClose)
-  useEffect(() => { closeRef.current = onClose }, [onClose])
+  useEffect(() => { closeRef.current = () => { if (!busy) onClose() } }, [onClose, busy])
   useEffect(() => {
     const dialog = ref.current
     const before = document.activeElement instanceof HTMLElement ? document.activeElement : null
@@ -26,7 +26,7 @@ export function OverviewDialog({ title, kind = 'drawer', onClose, children }: { 
     dialog?.showModal()
     return () => { dialog?.close(); document.body.style.overflow = overflow; if (before?.isConnected) before.focus({ preventScroll: true }) }
   }, [])
-  return <dialog ref={ref} className={`l-ov-dialog l-ov-dialog-${kind}`} aria-labelledby={id}
+  return <dialog ref={ref} className={`l-ov-dialog l-ov-dialog-${kind} ${className}`} aria-labelledby={id}
     onKeyDown={e => {
       if (e.key !== 'Tab') return
       const dialog = e.currentTarget
@@ -37,7 +37,7 @@ export function OverviewDialog({ title, kind = 'drawer', onClose, children }: { 
     }}
     onCancel={e => { e.preventDefault(); closeRef.current() }}
     onClick={e => { if (e.target === e.currentTarget) { const r = e.currentTarget.getBoundingClientRect(); if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) closeRef.current() } }}>
-    <div className="l-ov-dialog-heading"><span className="l-ov-eyebrow">{say('nav')}</span><div className="l-ov-heading-row"><h2 id={id} aria-label={title}>{kind === 'menu' ? <span className="l-ov-menu-brand"><span className="l-ov-mark"><img src={overviewAssets.star} alt="" /></span>hexa</span> : title}</h2><OverviewButton className="l-ov-close" aria-label={say('close')} onClick={onClose}>×</OverviewButton></div></div>
+    <div className="l-ov-dialog-heading">{kind !== 'form' && <span className="l-ov-eyebrow">{say('nav')}</span>}<div className="l-ov-heading-row"><h2 id={id} aria-label={title}>{kind === 'menu' ? <span className="l-ov-menu-brand"><span className="l-ov-mark"><img src={overviewAssets.star} alt="" /></span>hexa</span> : title}</h2><OverviewButton className="l-ov-close" aria-label={say('close')} disabled={busy} onClick={onClose}>×</OverviewButton></div></div>
     <div className="l-ov-dialog-body">{children}</div>
   </dialog>
 }

@@ -85,6 +85,7 @@ export function membersParams(filters: MemberFilters): Record<string, string | n
   if (filters.state !== 'active') out.state = filters.state
   if (filters.sort !== 'recent') out.sort = filters.sort
   if (filters.page > 1) out.page = filters.page
+  if (filters.per_page) out.per_page = filters.per_page
   return out
 }
 
@@ -100,7 +101,7 @@ export const loyaltyApi = {
   members: (filters: MemberFilters): Promise<MembersPage> => watched(api.get(loyaltyUrl('members'), { params: membersParams(filters) })),
   find: (q: string): Promise<{ members: MemberRow[] }> => watched(api.get(loyaltyUrl('find'), { params: { q } })),
   member: (id: number): Promise<MemberDetail> => watched(api.get(loyaltyUrl(`members/${id}`))),
-  history: (id: number, page: number): Promise<HistoryPage> => watched(api.get(loyaltyUrl(`members/${id}/history`), { params: page > 1 ? { page } : {} })),
+  history: (id: number, page: number, type = 'all'): Promise<HistoryPage> => watched(api.get(loyaltyUrl(`members/${id}/history`), { params: { ...(page > 1 ? { page } : {}), ...(type !== 'all' ? { type } : {}) } })),
   award: (id: number, body: { points: number; reason: string; idempotency_key: string }): Promise<PointsAfter> =>
     watched(api.post(loyaltyUrl(`members/${id}/award`), body)),
   redeem: (id: number, body: { points: number; reason: string; idempotency_key: string }): Promise<PointsAfter> =>
