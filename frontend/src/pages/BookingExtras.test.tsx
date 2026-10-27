@@ -35,10 +35,11 @@ afterEach(() => clients.splice(0).forEach(client => client.clear()))
 describe('booking extras: how each extra is charged', () => {
   it('states each price with what it is charged per', () => {
     const shown = text(renderList())
-    expect(shown).toContain('Late check-out€15.00 per stay')
-    expect(shown).toContain('Parking€10.00 per night')
-    expect(shown).toContain('Welcome drink€5.00 per person')
-    expect(shown).toContain('Breakfast€5.00 per person per night')
+    // The formatter uses the device locale (lv-LV on Windows here). This contract is the amount and charging unit.
+    expect(shown).toMatch(/Late check-out€15[.,]00 per stay/)
+    expect(shown).toMatch(/Parking€10[.,]00 per night/)
+    expect(shown).toMatch(/Welcome drink€5[.,]00 per person/)
+    expect(shown).toMatch(/Breakfast€5[.,]00 per person per night/)
     expect(shown).not.toContain('/ Per')
   })
 

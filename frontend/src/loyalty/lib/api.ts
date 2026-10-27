@@ -108,8 +108,8 @@ export const loyaltyApi = {
   reverse: (id: number, line: number, reason: string): Promise<PointsAfter> =>
     watched(api.post(loyaltyUrl(`members/${id}/history/${line}/reverse`), { reason })),
 
-  requests: (tab: RequestTab, page: number): Promise<RequestsPage> =>
-    watched(api.get(loyaltyUrl('requests'), { params: { state: tab, ...(page > 1 ? { page } : {}) } })),
+  requests: (tab: RequestTab, page: number, request?: number): Promise<RequestsPage> =>
+    watched(api.get(loyaltyUrl('requests'), { params: { state: tab, ...(page > 1 ? { page } : {}), ...(request ? { request } : {}) } })),
   approve: (id: number): Promise<{ request: BenefitRequest }> => watched(api.post(loyaltyUrl(`requests/${id}/approve`))),
   done: (id: number): Promise<{ request: BenefitRequest }> => watched(api.post(loyaltyUrl(`requests/${id}/done`))),
   decline: (id: number, reason: string): Promise<{ request: BenefitRequest }> => watched(api.post(loyaltyUrl(`requests/${id}/decline`), { reason })),

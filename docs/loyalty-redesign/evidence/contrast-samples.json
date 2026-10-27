@@ -1,0 +1,127 @@
+{
+  "method": "Background pixels sampled from rendered desktop-1440.png/light-theme.png at adjacent label bands; foreground from CSS. WCAG relative luminance. Sampled regions only, not a full accessibility audit.",
+  "adjustment": "Glass eyebrow changed from secondary to primary text after measuring 4.32:1. Light sidebar utility tokens explicitly match its light surface.",
+  "samples": [
+    {
+      "region": "Dark metric muted text",
+      "foreground": "#a6b5cd",
+      "background": [
+        34,
+        40,
+        52
+      ],
+      "pixel": "(620,684)",
+      "contrast": 7.12
+    },
+    {
+      "region": "Dark metric secondary text",
+      "foreground": "#c7d3e5",
+      "background": [
+        49,
+        58,
+        77
+      ],
+      "pixel": "(620,610)",
+      "contrast": 7.53
+    },
+    {
+      "region": "Dark cyan link",
+      "foreground": "#37b6e9",
+      "background": [
+        34,
+        40,
+        52
+      ],
+      "pixel": "(600,977)",
+      "contrast": 6.35
+    },
+    {
+      "region": "Primary button label band",
+      "foreground": "#f5f7fb",
+      "background": [
+        75,
+        76,
+        237
+      ],
+      "pixel": "(1380,455)",
+      "contrast": 5.51
+    },
+    {
+      "region": "Glass preview footer",
+      "foreground": "#a6b5cd",
+      "background": [
+        43,
+        61,
+        117
+      ],
+      "pixel": "(1360,344)",
+      "contrast": 4.99
+    },
+    {
+      "region": "Glass preview eyebrow",
+      "foreground": "#f5f7fb",
+      "background": [
+        54,
+        96,
+        140
+      ],
+      "pixel": "(1360,240)",
+      "contrast": 6.1
+    },
+    {
+      "region": "Light account name",
+      "foreground": "#1b2430",
+      "background": [
+        237,
+        241,
+        247
+      ],
+      "pixel": "(200,1045)",
+      "contrast": 13.81
+    },
+    {
+      "region": "Light account secondary text",
+      "foreground": "#49596d",
+      "background": [
+        237,
+        241,
+        247
+      ],
+      "pixel": "(200,1045)",
+      "contrast": 6.32
+    },
+    {
+      "region": "Light cyan link",
+      "foreground": "#086b91",
+      "background": [
+        238,
+        242,
+        247
+      ],
+      "pixel": "(600,977)",
+      "contrast": 5.3
+    },
+    {
+      "region": "Light metric muted text",
+      "foreground": "#526279",
+      "background": [
+        238,
+        242,
+        247
+      ],
+      "pixel": "(620,684)",
+      "contrast": 5.52
+    },
+    {
+      "region": "Light glass preview footer",
+      "foreground": "#526279",
+      "background": [
+        217,
+        225,
+        245
+      ],
+      "pixel": "(1360,344)",
+      "contrast": 4.74
+    }
+  ]
+}

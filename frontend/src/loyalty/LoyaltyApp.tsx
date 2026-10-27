@@ -5,6 +5,8 @@ import { registerLoyaltyLocales } from './i18n'
 import { loginPath } from './lib/links'
 import { LoyaltyProvider } from './LoyaltyProvider'
 import { LoyaltyShell } from './LoyaltyShell'
+import { OverviewShell } from './overview/OverviewShell'
+import { OverviewPage } from './overview/OverviewPage'
 import { AppPage } from './app/AppPage'
 import { CampaignPage } from './campaigns/CampaignPage'
 import { CampaignsPage } from './campaigns/CampaignsPage'
@@ -39,6 +41,10 @@ export function LoyaltyApp() {
   const location = useLocation()
   if (!token) return <Navigate to={loginPath(location)} replace />
   if (user?.user_type === 'member') return <Navigate to="/portal" replace />
+
+  if (location.pathname.replace(/\/$/, '') === '/loyalty/overview') {
+    return <LoyaltyProvider><OverviewShell><OverviewPage /></OverviewShell></LoyaltyProvider>
+  }
 
   // Release 8: door mode is a full-screen scanner for a tablet at an entrance — no menus, so outside the shell.
   if (location.pathname.startsWith('/loyalty/scan/door')) {

@@ -24,6 +24,7 @@ export function RequestsPage() {
   const location = useLocation()
   const navigate = useNavigate()
   const tab = tabFrom(location.search)
+  const selected = Number(new URLSearchParams(location.search).get('request')) || undefined
   const [page, setPage] = useState(1)
   const [shown, setShown] = useState(tab)
   if (shown !== tab) {
@@ -31,7 +32,7 @@ export function RequestsPage() {
     setPage(1)
   }
   const go = (name: typeof tab) => navigate({ pathname: '/loyalty/requests', search: name === 'waiting' ? '' : `?tab=${name}` }, { replace: true })
-  const query = useQuery({ queryKey: ['loyalty', 'requests', tab, page], queryFn: () => api.requests(tab, page), placeholderData: keepPreviousData, refetchInterval: 60_000 })
+  const query = useQuery({ queryKey: ['loyalty', 'requests', tab, page, ...(selected ? [selected] : [])], queryFn: () => api.requests(tab, page, selected), placeholderData: selected ? undefined : keepPreviousData, refetchInterval: 60_000 })
   const data = query.data
 
   return (
@@ -39,6 +40,7 @@ export function RequestsPage() {
       <PageHeader title={t('loyalty.requests.title', 'Requests')} line={t('loyalty.requests.line', 'Benefits members asked for in the app.')} />
 
       <div role="tablist" aria-label={t('loyalty.requests.tabs', 'Request states')} className="flex flex-wrap gap-2">
+        {selected && <Button variant="secondary" onClick={() => go(tab)}>{t('loyalty.overview.allRequests', 'View all requests')}</Button>}
         {TABS.map(name => (
           // One tab stop; the arrow keys, Home and End move between the tabs (as Rewards' tabs).
           <button key={name} type="button" role="tab" id={`requests-tab-${name}`} aria-selected={tab === name} aria-controls="requests-panel"

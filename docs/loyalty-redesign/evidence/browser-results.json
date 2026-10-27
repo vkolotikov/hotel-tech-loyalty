@@ -1,0 +1,88 @@
+{
+  "results": [
+    {
+      "name": "desktop layout, authorized navigation and exact queue links",
+      "status": "PASS"
+    },
+    {
+      "name": "desktop details, preview, issues, definitions and both queues; Escape restores focus",
+      "status": "PASS"
+    },
+    {
+      "name": "all periods change period metrics and preserve current totals; activity filter clears",
+      "status": "PASS"
+    },
+    {
+      "name": "390px composition, full-screen period, modal focus trap and narrow navigation",
+      "status": "PASS"
+    },
+    {
+      "name": "320, 768, 1024 and landscape layouts; no horizontal overflow",
+      "status": "PASS"
+    },
+    {
+      "name": "discount, visit and service modes have relevant metrics",
+      "status": "PASS"
+    },
+    {
+      "name": "partial module failure and retry preserve healthy sections",
+      "status": "PASS"
+    },
+    {
+      "name": "loading and global context failure never fabricate zeros",
+      "status": "PASS"
+    },
+    {
+      "name": "limited staff make no analytics reads; explicit denial reveals no old numbers",
+      "status": "PASS"
+    },
+    {
+      "name": "empty configuration and membership are distinct from failed reads",
+      "status": "PASS"
+    },
+    {
+      "name": "offline retains labeled values and search uses the existing member search",
+      "status": "PASS"
+    },
+    {
+      "name": "rapid period selection cannot be overwritten by a late response",
+      "status": "PASS"
+    },
+    {
+      "name": "permission removal clears previously visible analytics",
+      "status": "PASS"
+    },
+    {
+      "name": "identity change during a pending request never displays the previous workspace",
+      "status": "PASS"
+    },
+    {
+      "name": "existing theme and language controls, long translations and zoom-equivalent layout",
+      "status": "PASS"
+    },
+    {
+      "name": "preview preserves disabled purchase earning and local assets load",
+      "status": "PASS"
+    },
+    {
+      "name": "queue destinations revalidate exact IDs and retain existing workflow controls",
+      "status": "PASS"
+    },
+    {
+      "name": "all existing primary routes retain their shell and Overview navigation",
+      "status": "PASS"
+    },
+    {
+      "name": "collapsed desktop navigation and long mobile content remain usable",
+      "status": "PASS"
+    },
+    {
+      "name": "all Overview requests are reads scoped to all brands",
+      "status": "PASS"
+    }
+  ],
+  "pageErrors": [],
+  "passed": 20,
+  "total": 20,
+  "rerun": "The account-menu locator was corrected to include its accessible role text; that scenario and read-only assertions were rerun successfully. Other final scenarios passed in the complete browser run."
+}

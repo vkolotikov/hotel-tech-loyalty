@@ -1377,6 +1377,7 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
             // `workspace:loyalty` then answers 403. Who may do what is
             // LoyaltyAccess, checked by each controller.
             Route::prefix('loyalty')->middleware('workspace:loyalty')->group(function () {
+                Route::get('overview/{module}', [\App\Http\Controllers\Api\V1\Admin\Loyalty\OverviewController::class, 'show']);
                 Route::get('bootstrap', [\App\Http\Controllers\Api\V1\Admin\Loyalty\BootstrapController::class, 'show']);
                 Route::get('find', [\App\Http\Controllers\Api\V1\Admin\Loyalty\MemberController::class, 'find']);
                 Route::get('members', [\App\Http\Controllers\Api\V1\Admin\Loyalty\MemberController::class, 'index']);

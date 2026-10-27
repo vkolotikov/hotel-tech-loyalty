@@ -13,8 +13,9 @@ class RequestController extends Controller
     public function index(Request $request, RequestQueue $queue): JsonResponse
     {
         $tab = (string) $request->query('state', 'waiting');
+        $data = $request->validate(['request' => 'sometimes|integer|min:1']);
 
-        return response()->json($queue->page(array_key_exists($tab, RequestQueue::TABS) ? $tab : 'waiting', (int) $request->query('page', 1)));
+        return response()->json($queue->page(array_key_exists($tab, RequestQueue::TABS) ? $tab : 'waiting', (int) $request->query('page', 1), null, isset($data['request']) ? (int) $data['request'] : null));
     }
 
     public function approve(Request $request, int $id, RequestQueue $queue): JsonResponse

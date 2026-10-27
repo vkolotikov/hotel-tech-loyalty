@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Ticket } from 'lucide-react'
@@ -31,11 +31,14 @@ export function RedemptionsTab({ redeem }: { redeem: boolean }) {
   const locale = i18n.language || 'en'
   const boot = useBoot()
   const client = useQueryClient()
+  const location = useLocation()
+  const navigate = useNavigate()
+  const selected = Number(new URLSearchParams(location.search).get('request')) || undefined
   const [filter, setFilter] = useState<RedemptionFilter>('pending')
   const [page, setPage] = useState(1)
   const [failure, setFailure] = useState<ApiFailure | null>(null)
   const [cancelling, setCancelling] = useState<Redemption | null>(null)
-  const query = useQuery({ queryKey: redemptionsKey(filter, page), queryFn: () => rewardsApi.redemptions(filter, page), placeholderData: keepPreviousData })
+  const query = useQuery({ queryKey: [...redemptionsKey(filter, page), ...(selected ? [selected] : [])], queryFn: () => rewardsApi.redemptions(filter, page, selected), placeholderData: selected ? undefined : keepPreviousData })
   const data = query.data
 
   const fulfil = useMutation({
@@ -44,7 +47,7 @@ export function RedemptionsTab({ redeem }: { redeem: boolean }) {
     onSuccess: (_, r) => afterRedemption(client, r.member?.id ?? null),
     onError: (error, r) => { setFailure(failureOf(error)); afterRedemption(client, r.member?.id ?? null) },
   })
-  const choose = (next: RedemptionFilter) => { setFilter(next); setPage(1); setFailure(null) }
+  const choose = (next: RedemptionFilter) => { setFilter(next); setPage(1); setFailure(null); if (selected) navigate('/loyalty/rewards?tab=redemptions', { replace: true }) }
 
   return (
     <>
@@ -54,6 +57,7 @@ export function RedemptionsTab({ redeem }: { redeem: boolean }) {
       </>} />
 
       <div role="group" aria-label={t('loyalty.rewards.redemptions.filter', 'Show')} className="flex flex-wrap gap-2">
+        {selected && <Button variant="secondary" onClick={() => choose(filter)}>{t('loyalty.overview.allRequests', 'View all requests')}</Button>}
         {REDEMPTION_FILTERS.map(name => (
           <Toggle key={name} on={filter === name} onClick={() => choose(name)}>
             {t(`loyalty.rewards.redemption_filter.${name}`, REDEMPTION_FILTER_WORDS[name])}

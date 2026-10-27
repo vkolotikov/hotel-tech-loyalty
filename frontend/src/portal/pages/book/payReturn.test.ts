@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { restartPath, returnConfirmOutcome, returnHasSecret, returnIntentId, returnStayNotice, returnView } from './payReturn'
+import { restartPath, returnConfirmOutcome, returnHasSecret, returnIntentId, returnStayNotice, returnView } from './payReturnState'
 import { canTryOnlineAgain, payAtVenueGrantOf, portalReturnUrl, retryOnlineVisit } from './steps'
 import type { PaymentReturn } from '../../lib/types'
 
