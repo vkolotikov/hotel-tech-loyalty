@@ -84,6 +84,11 @@ import startRu from './start.ru.json'
 import startDe from './start.de.json'
 import startFr from './start.fr.json'
 import startEs from './start.es.json'
+import overviewEn from './overview.en.json'
+import overviewRu from './overview.ru.json'
+import overviewDe from './overview.de.json'
+import overviewFr from './overview.fr.json'
+import overviewEs from './overview.es.json'
 
 /**
  * HexaTech Loyalty's words, kept out of the admin's common.json so a session
@@ -98,11 +103,11 @@ import startEs from './start.es.json'
  * Registered when the chunk loads.
  */
 export const LOYALTY_LOCALE_FILES = {
-  en: { ...en, program: programEn, rewards: rewardsEn, membership: membershipEn, insights: insightsEn, campaigns: campaignsEn, app: appEn, push: pushEn, sms: smsEn, options: optionsEn, visits: visitsEn, credit: creditEn, places: placesEn, events: eventsEn, door: doorEn, guide: guideEn, start: startEn },
-  ru: { ...ru, program: programRu, rewards: rewardsRu, membership: membershipRu, insights: insightsRu, campaigns: campaignsRu, app: appRu, push: pushRu, sms: smsRu, options: optionsRu, visits: visitsRu, credit: creditRu, places: placesRu, events: eventsRu, door: doorRu, guide: guideRu, start: startRu },
-  de: { ...de, program: programDe, rewards: rewardsDe, membership: membershipDe, insights: insightsDe, campaigns: campaignsDe, app: appDe, push: pushDe, sms: smsDe, options: optionsDe, visits: visitsDe, credit: creditDe, places: placesDe, events: eventsDe, door: doorDe, guide: guideDe, start: startDe },
-  fr: { ...fr, program: programFr, rewards: rewardsFr, membership: membershipFr, insights: insightsFr, campaigns: campaignsFr, app: appFr, push: pushFr, sms: smsFr, options: optionsFr, visits: visitsFr, credit: creditFr, places: placesFr, events: eventsFr, door: doorFr, guide: guideFr, start: startFr },
-  es: { ...es, program: programEs, rewards: rewardsEs, membership: membershipEs, insights: insightsEs, campaigns: campaignsEs, app: appEs, push: pushEs, sms: smsEs, options: optionsEs, visits: visitsEs, credit: creditEs, places: placesEs, events: eventsEs, door: doorEs, guide: guideEs, start: startEs },
+  en: { ...en, program: programEn, rewards: rewardsEn, membership: membershipEn, insights: insightsEn, campaigns: campaignsEn, app: appEn, push: pushEn, sms: smsEn, options: optionsEn, visits: visitsEn, credit: creditEn, places: placesEn, events: eventsEn, door: doorEn, guide: guideEn, start: startEn, overview: overviewEn },
+  ru: { ...ru, program: programRu, rewards: rewardsRu, membership: membershipRu, insights: insightsRu, campaigns: campaignsRu, app: appRu, push: pushRu, sms: smsRu, options: optionsRu, visits: visitsRu, credit: creditRu, places: placesRu, events: eventsRu, door: doorRu, guide: guideRu, start: startRu, overview: overviewRu },
+  de: { ...de, program: programDe, rewards: rewardsDe, membership: membershipDe, insights: insightsDe, campaigns: campaignsDe, app: appDe, push: pushDe, sms: smsDe, options: optionsDe, visits: visitsDe, credit: creditDe, places: placesDe, events: eventsDe, door: doorDe, guide: guideDe, start: startDe, overview: overviewDe },
+  fr: { ...fr, program: programFr, rewards: rewardsFr, membership: membershipFr, insights: insightsFr, campaigns: campaignsFr, app: appFr, push: pushFr, sms: smsFr, options: optionsFr, visits: visitsFr, credit: creditFr, places: placesFr, events: eventsFr, door: doorFr, guide: guideFr, start: startFr, overview: overviewFr },
+  es: { ...es, program: programEs, rewards: rewardsEs, membership: membershipEs, insights: insightsEs, campaigns: campaignsEs, app: appEs, push: pushEs, sms: smsEs, options: optionsEs, visits: visitsEs, credit: creditEs, places: placesEs, events: eventsEs, door: doorEs, guide: guideEs, start: startEs, overview: overviewEs },
 } as const
 
 let registered = false

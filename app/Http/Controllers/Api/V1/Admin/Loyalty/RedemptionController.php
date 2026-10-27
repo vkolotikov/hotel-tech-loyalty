@@ -31,13 +31,16 @@ class RedemptionController extends Controller
     public function index(Request $request): JsonResponse
     {
         $tab = (string) $request->query('state', 'pending');
+        $data = $request->validate(['request' => 'sometimes|integer|min:1']);
+        $selected = isset($data['request']) ? (int) $data['request'] : null;
         $states = array_key_exists($tab, self::TABS) ? self::TABS[$tab] : self::TABS['pending'];
         $query = RewardRedemption::query()
             ->with(['reward:id,name', 'member.user:id,name'])
-            ->when($states !== null, fn ($q) => $q->whereIn('status', $states))
+            ->when($selected, fn ($q) => $q->whereKey($selected), fn ($q) => $q->when($states !== null, fn ($q) => $q->whereIn('status', $states)))
             ->orderByDesc('created_at')->orderByDesc('id');
 
         $total = (clone $query)->count();
+        if ($selected && $total === 0) throw LoyaltyRefused::notFound();
         $pages = max(1, (int) ceil($total / self::PER_PAGE));
         $page = min(max(1, (int) $request->query('page', 1)), $pages);
 

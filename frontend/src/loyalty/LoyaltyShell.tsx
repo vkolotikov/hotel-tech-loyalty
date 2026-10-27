@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { BarChart3, CalendarDays, CreditCard, Crown, Gift, Inbox, Mail, ScanLine, Search, Sparkles, Users } from 'lucide-react'
+import { BarChart3, CalendarDays, CreditCard, Crown, Gift, Inbox, LayoutGrid, Mail, ScanLine, Search, Sparkles, Users } from 'lucide-react'
 import { WorkspaceShell, type WorkspaceNavItem } from '../workspace/WorkspaceShell'
 import type { FindTarget } from '../workspace/find/findCore'
 import { firstLetter } from '../workspace/lib/firstLetter'
@@ -95,6 +95,7 @@ export function LoyaltyShell({ children }: { children: ReactNode }) {
   // Members is current on /loyalty and on a member's page, not on the other areas' addresses under it.
   const area = areaOf(pathname)
   nav[0].end = area !== 'members'
+  nav.unshift({ to: '/loyalty/overview', end: true, icon: LayoutGrid, label: t('loyalty.overview.nav', 'Overview'), phone: false })
   const pageName = area === 'guide' ? t('loyalty.guide.page.title', 'Guide') : area === 'start' ? t('loyalty.start.title', 'Get started') : nav.find(n => (area === 'members' ? n.to === '/loyalty' : n.to === `/loyalty/${area}`))?.label ?? ''
   const findLabel = t('loyalty.shell.find', 'Find a member or action')
   const modKey = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform ?? '') ? '⌘' : 'Ctrl'

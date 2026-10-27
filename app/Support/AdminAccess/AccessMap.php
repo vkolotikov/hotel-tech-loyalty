@@ -62,6 +62,7 @@ final class AccessMap
         'admin/loyalty/members/imports'         => ['manager',            'manager',            'loyalty'],       // Member import (manager)
         'admin/loyalty/members/export'          => ['manager',            'manager',            'loyalty'],       // Member export: personal data out of the system (manager)
         'admin/loyalty/insights'                => ['can_view_analytics', 'can_view_analytics', 'loyalty'],       // Insights: the full admin's Analytics rule
+        'admin/loyalty/overview/{module}'        => ['staff', 'manager', 'loyalty'], // Read-only; analytics modules additionally require LoyaltyAccess::requireInsights.
         'admin/loyalty/segments'                => ['staff',              'manager',            'loyalty'],       // Segments (changes: manager, beside the campaigns that use them)
         'admin/loyalty/campaigns'               => ['staff',              'manager',            'loyalty'],       // Email campaigns (changes and sending: manager, as admin/email-campaigns)
         'admin/loyalty/wallet'                  => ['manager',            'manager',            'loyalty'],       // Wallet pass settings and certificates (manager, as admin/wallet-config)

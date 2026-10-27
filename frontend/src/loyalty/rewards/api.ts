@@ -11,8 +11,8 @@ export const rewardsApi = {
   createReward: (body: RewardBody): Promise<{ reward: Reward }> => watched(api.post(loyaltyUrl('rewards'), body)),
   updateReward: (id: number, body: RewardBody): Promise<{ reward: Reward }> => watched(api.put(loyaltyUrl(`rewards/${id}`), body)),
 
-  redemptions: (filter: RedemptionFilter, page: number): Promise<RedemptionsPage> =>
-    watched(api.get(loyaltyUrl('redemptions'), { params: { state: filter, ...(page > 1 ? { page } : {}) } })),
+  redemptions: (filter: RedemptionFilter, page: number, request?: number): Promise<RedemptionsPage> =>
+    watched(api.get(loyaltyUrl('redemptions'), { params: { state: filter, ...(page > 1 ? { page } : {}), ...(request ? { request } : {}) } })),
   fulfil: (id: number): Promise<{ redemption: Redemption }> => watched(api.post(loyaltyUrl(`redemptions/${id}/fulfil`))),
   cancel: (id: number): Promise<{ redemption: Redemption }> => watched(api.post(loyaltyUrl(`redemptions/${id}/cancel`))),
 

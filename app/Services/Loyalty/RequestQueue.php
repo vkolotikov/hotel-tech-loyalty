@@ -28,16 +28,17 @@ final class RequestQueue
     ];
 
     /** @return array{requests: list<array<string, mixed>>, page: int, pages: int, total: int, counts: array<string, int>} */
-    public function page(string $tab, int $page, ?int $memberId = null): array
+    public function page(string $tab, int $page, ?int $memberId = null, ?int $requestId = null): array
     {
         $states = self::TABS[$tab] ?? self::WAITING;
         $query = BenefitEntitlement::query()
             ->with(['member.user:id,name,email', 'benefit:id,name,code,category,fulfillment_mode'])
-            ->whereIn('status', $states)
+            ->when($requestId, fn ($q) => $q->whereKey($requestId), fn ($q) => $q->whereIn('status', $states))
             ->when($memberId, fn ($q) => $q->where('member_id', $memberId))
             ->orderByDesc('created_at')->orderByDesc('id');
 
         $total = (clone $query)->count();
+        if ($requestId && $total === 0) throw LoyaltyRefused::notFound();
         $pages = max(1, (int) ceil($total / self::PER_PAGE));
         $page = min(max(1, $page), $pages);
 

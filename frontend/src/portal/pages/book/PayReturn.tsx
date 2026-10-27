@@ -11,7 +11,7 @@ import { Money } from '../../ui/Money'
 import { Notice } from '../../ui/Notice'
 import { Skeleton } from '../../ui/Skeleton'
 import type { PaymentReturn, PortalBooking } from '../../lib/types'
-import { restartPath, returnConfirmOutcome, returnHasSecret, returnIntentId, returnStayNotice, returnView } from './payReturn'
+import { restartPath, returnConfirmOutcome, returnHasSecret, returnIntentId, returnStayNotice, returnView } from './payReturnState'
 import { clearReturnStash, readReturnStash, returnIdempotencyKey } from './returnStash'
 
 /**
