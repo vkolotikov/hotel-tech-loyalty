@@ -774,6 +774,18 @@ files on disk): run them one after the other.
 
 ## Deploying
 
+- Overview milestone, 2026-10-27, is live (`main` **4c13e2d1f**, source-patch **89846e822**, feature source
+  **5706903b1** on `feature/loyalty-overview-20261027`). New `/loyalty/overview`, approved Figma desktop/mobile,
+  scoped read-only summaries/checks/metrics/queues/activity, exact request links and all five locales; `/loyalty`
+  stays Members. Explicit change list: 118 added/modified paths and one deletion (the Windows helper rename), no
+  migrations. On the isolated deploy tree: PHP **7051 passed, 7 expected skips** across 74 scopes; frontend **5538
+  passed**, TypeScript/lint/build clean; six browser checks against the compiled assets passed in addition to the
+  implementation's 20 scenarios. Source parity includes deletions; vendor was copied, not junctioned. Live Cloud
+  content and three font payloads verified, new API route returns the expected 401, landing kit/retired stylesheet
+  checks passed. See `docs/loyalty-redesign/10-IMPLEMENTATION-REPORT.md` and its evidence. The next change list for
+  this working branch starts at **5706903b1**, not the older release-11 tip: use
+  `git diff --name-status --no-renames 5706903b1 <tip>`. Release-record docs are pushed on the working branch afterward.
+
 - Since 2026-10-26 a finished job is deployed without asking (the owner's standing word, `CLAUDE.md` "Git and
   deploy"); the recipe's checks still decide.
 - Release 11, rename and delete, is live (`main` b2cecde, pushed 2026-10-26: Rename and Delete on each tier and

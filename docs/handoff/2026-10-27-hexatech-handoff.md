@@ -1,8 +1,31 @@
 # Handoff — HexaTech, 2026-10-27
 
 The state of the app, how to work on it and what is open, for a new session on another device or with another AI
-agent. Production is `main` **b2cecde** (2026-10-26, HexaTech Loyalty release 11). Update this file, or write the
+agent. Production is `main` **4c13e2d1f** (2026-10-27, HexaTech Loyalty Overview). Update this file, or write the
 next dated one beside it, at the end of every session.
+
+## Latest deployment — Overview, 27 October
+
+The Overview milestone is live at `https://app.hexa-tech.uk/loyalty/overview`. Existing `/loyalty` Members and all
+other section routes remain. Its exact design source is Figma file `d6IGmk3hOoMw0V5rONbI1A`, final frames OV-01–34;
+the older Figma source below still documents the earlier section designs.
+
+Work continues on **`feature/loyalty-overview-20261027`**. The deployed feature source is **5706903b1**, applied onto
+dbf458020 in a separate worktree as **89846e822**, then freshly built and pushed as **4c13e2d1f**. The next source
+change list starts at **5706903b1**; the older release records' baselines below are historical. No migration or new
+dependency was added. The Windows-only `payReturn.ts` / `PayReturn.tsx` collision was resolved by renaming the
+unchanged helper to `payReturnState.ts`.
+
+On the deploy artifact: all 74 scoped PHP runs passed (**7051 passed, 7 expected skips**), frontend **384 files /
+5538 tests** passed, TypeScript/lint/build passed. Six browser scenarios against compiled assets passed, following
+20 implementation scenarios. Cloud content, new authenticated endpoint, all three fonts and landing checks were
+verified at **18:46 Europe/Riga**. Details, source semantics, screenshots, limits and machine-readable evidence are
+in `docs/loyalty-redesign/10-IMPLEMENTATION-REPORT.md`.
+
+The Overview API is read-only and uses existing Insights permission for analytics. Mode is derived from actual
+configuration; no global mode switch or saved wizard draft was introduced. Current points retain Insights' balance
+semantics. Existing shared advice may still warn about points in a non-points configuration; do not silently change
+that business contract. Members is the next redesign milestone after this Overview review.
 
 ## The first message for a new session
 
@@ -64,6 +87,7 @@ and recorded in `docs/loyalty-workspace.md` "Deploying":
 | Ways to earn | d827fcb, a6c06e8, d905343 | Design pass; tabs, checks and industry recommendations; Overview with one-press fixes and the member's journey |
 | 10a, 10b | d5b3ccb, e3c7f0b | The owner's Figma look (palette, section cards, Get started panels, figure tiles); Start here checklist, Program's checks, the tier form's member preview |
 | 11 | b2cecde | Rename and delete tiers and benefits (soft delete, previewed; members moved; nothing widened) |
+| Overview | 4c13e2d1f | Final Overview design, responsive details, independent scoped data, exact request links; existing routes preserved |
 
 Content's releases (up to 7a) went out before, on 2026-10-20/21. The owner's design source for the loyalty look is
 their Figma file `5MtOVFZKvXk5x0mJ8Trm6g` (page `Prototype`, node `1:4`; drafts 163:88 tiers, 163:166 edit tier,
@@ -71,9 +95,9 @@ their Figma file `5MtOVFZKvXk5x0mJ8Trm6g` (page `Prototype`, node `1:4`; drafts 
 
 ## Branches
 
-- **`ccr-9a004154-cs7txb`** (GitHub) — the working branch of the last sessions. Its source equals `main`'s; at most
-  the newest deploy record (a docs line) is on the branch only. Work continues on a feature branch (this one, or a
-  new one from `main`); never push one to `main`.
+- **`feature/loyalty-overview-20261027`** (GitHub) — current working branch. Deployed source tip **5706903b1**;
+  post-deployment records are committed afterward on this branch. Never push it directly to `main`.
+- **`ccr-9a004154-cs7txb`** (GitHub) — the prior working branch through release 11, before the Overview milestone.
 - **`main`** — production. Deploys are source patches (see "Deploying"), so commit history differs from the
   branch's: compare by content, never by `git log origin/main..branch`.
 - **`feature/landing-phase-3c`** — on the owner's Windows workstation only (not on GitHub): unshipped email

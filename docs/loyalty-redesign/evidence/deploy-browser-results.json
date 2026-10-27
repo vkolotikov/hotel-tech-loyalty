@@ -1,0 +1,34 @@
+{
+  "artifact": "4c13e2d1f60df6a601d882996a55126e157c7b5b",
+  "source": "5706903b1",
+  "method": "Browser checks against the compiled production assets in the isolated deploy worktree, served locally with test-only HTTP fixtures.",
+  "results": [
+    {
+      "name": "desktop layout, authorized navigation and exact queue links",
+      "status": "PASS"
+    },
+    {
+      "name": "desktop details, preview, issues, definitions and both queues; Escape restores focus",
+      "status": "PASS"
+    },
+    {
+      "name": "all periods change period metrics and preserve current totals; activity filter clears",
+      "status": "PASS"
+    },
+    {
+      "name": "390px composition, full-screen period, modal focus trap and narrow navigation",
+      "status": "PASS"
+    },
+    {
+      "name": "queue destinations revalidate exact IDs and retain existing workflow controls",
+      "status": "PASS"
+    },
+    {
+      "name": "all Overview requests are reads scoped to all brands",
+      "status": "PASS"
+    }
+  ],
+  "pageErrors": [],
+  "passed": 6,
+  "total": 6
+}
