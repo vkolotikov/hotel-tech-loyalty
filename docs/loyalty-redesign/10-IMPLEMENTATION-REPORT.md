@@ -3,12 +3,12 @@
 ## Result
 
 - **Implemented:** the Overview milestone at `/loyalty/overview`, with responsive desktop/phone layouts, real read adapters, permissions, details, period selection, activity filters, recovery and existing workflow destinations.
-- **Branch:** `feature/loyalty-overview-20261027`; reviewable, uncommitted source changes.
-- **Latest repository checked:** `origin/main` at `dbf458020537605b529dfe19bccd9035811f8bfc`, including the 27 October handoff and release 11. A final `git ls-remote origin refs/heads/main` returned the same revision.
+- **Source branch:** `feature/loyalty-overview-20261027`; implementation committed at `5706903b1` and pushed to GitHub.
+- **Implementation base:** `dbf458020537605b529dfe19bccd9035811f8bfc`, including the 27 October handoff and release 11. Pre-deploy fetch confirmed this base had not moved.
 - **Specification followed:** documents 00–09 and `2026-10-27-hexatech-handoff.md`. The old local voice-assistant branch and unrelated files remain intact.
-- **Verification:** 5,538 frontend tests; 575 distinct LoyaltyWorkspace tests plus 51 AdminAccess tests; 20 browser scenarios. Build, TypeScript and scoped ESLint passed.
+- **Verification:** 5,538 frontend tests; full deployment PHP run **7,051 passed, 7 expected skips** across 74 scopes; 20 implementation browser scenarios plus six checks against the compiled deployment assets. Build, TypeScript and scoped ESLint passed.
 - **Blocked work:** none for the defined Overview scope. Unsupported product semantics and verification limits are listed below.
-- **Deployment:** none. No merge, push, production transactions, migrations, dependencies or production configuration changes.
+- **Deployment:** owner explicitly authorized deployment after implementation. Production `main` **`4c13e2d1f`** is live and verified as of **27 October 2026, 18:46 Europe/Riga**. No migrations, dependencies or production configuration changes.
 
 ## Source mapping
 
@@ -142,6 +142,20 @@ These are explicit source limitations or validation limits, not fabricated succe
 
 `/loyalty` remains Members; profiles, import, duplicates, requests, program children, options/wizard, rewards children, events, campaigns, Insights, Scan/door mode, Card & app and Guide retain their routes and implementations. Settings/account/locale/theme/search utilities are reused. Existing award, redeem, approval, fulfillment, campaign, upload and setup-apply writers are unchanged.
 
-No migration or new package is required. Reverting the new route, adapters and scoped components restores the old navigation; optional exact-request handling is backward compatible. Deploy only through the repository's normal reviewed release process. This task did not deploy.
+No migration or new package is required. Reverting the new route, adapters and scoped components restores the old navigation; optional exact-request handling is backward compatible. The owner subsequently requested deployment; it was completed through the source-patch recipe. See the release record below.
 
 The next redesign milestone remains Members, after Overview review; sidebar links do not imply those other bodies were redesigned.
+
+## Production deployment — 27 October 2026
+
+The owner's subsequent “lets deploy” request authorized the production action. The initial implementation's no-deploy scope was superseded by that request.
+
+- Source commit: `5706903b1` on `feature/loyalty-overview-20261027`.
+- Previous main: `dbf458020`. Isolated source-patch commit: `89846e822`. Fresh build/deployed commit: [`4c13e2d1f`](https://github.com/vkolotikov/hotel-tech-loyalty/commit/4c13e2d1f60df6a601d882996a55126e157c7b5b).
+- Explicit allowlist: **118 added/modified paths and one deletion**. Vendor was copied, not junctioned; runtime reflection confirmed the new class loaded from the deploy worktree. Complete non-build source parity with the feature commit passed before and after the push.
+- Deployment artifact checks: [74 scoped PHP runs](evidence/deploy-php-results.json), **7,051 passed / 7 expected skips / zero failures**; **5,538 frontend tests**, TypeScript, ESLint, fresh Vite/postbuild; [six browser scenarios against compiled assets](evidence/deploy-browser-results.json), no page errors. Xdebug was disabled for this CLI run; the pinned PHP and OpenSSL configuration were retained.
+- Laravel Cloud rebuilt the SPA. Live verification was by content, not comparison with local bundle hashes: [verification record](evidence/live-deployment.json). Entry `index-d6jOYH4C.js` references `LoyaltyApp-C0BEEEA6.js` and `LoyaltyApp-BLZ94Q1g.css`; the four Overview markers, scoped styles and all three Poppins font payloads were present.
+- The new Overview read route changed from **404** before deployment to the expected **401 Authentication required** afterward. No authenticated customer transactions were used for verification.
+- The academy landing page retained its Nocturne kit stylesheet with no retired `rp-` markers; `/landing/ruled_page.css` remains 404.
+- Live destination: [Loyalty Overview](https://app.hexa-tech.uk/loyalty/overview). Reload an admin tab that was open before deployment.
+- Next source-patch baseline for this working branch: `git diff --name-status --no-renames 5706903b1 <next-tip>`. Release records are committed on the working branch after the deployment, as required by the runbook.

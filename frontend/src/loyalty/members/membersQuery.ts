@@ -34,6 +34,7 @@ export function filtersFrom(search: string, tierIds: number[]): ListFilters {
     state: LIST_STATES.includes(state) ? state : 'active',
     sort: SORTS.includes(sort) ? sort : 'recent',
     page: Number.isInteger(page) && page > 1 ? page : 1,
+    ...([10, 25, 50].includes(Number(p.get('per_page'))) ? { per_page: Number(p.get('per_page')) as 10 | 25 | 50 } : {}),
   }
 }
 
@@ -45,6 +46,7 @@ export function searchFor(filters: ListFilters): string {
   if (filters.state !== 'active') p.set('state', filters.state)
   if (filters.sort !== 'recent') p.set('sort', filters.sort)
   if (filters.page > 1) p.set('page', String(filters.page))
+  if (filters.per_page) p.set('per_page', String(filters.per_page))
   const s = p.toString()
   return s ? `?${s}` : ''
 }

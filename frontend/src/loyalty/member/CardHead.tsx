@@ -7,7 +7,7 @@ import type { LucideIcon } from 'lucide-react'
  */
 export function CardHead({ id, icon: Icon, title, children }: { id: string; icon: LucideIcon; title: string; children?: ReactNode }) {
   return (
-    <div className="flex flex-wrap items-center justify-between gap-2">
+    <div className="l-rd-card-heading flex flex-wrap items-center justify-between gap-2">
       <h2 id={id} className="flex min-w-0 items-center gap-2.5 text-[15px] font-semibold text-a-text">
         <span aria-hidden className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-a-accent/10 text-a-accent-text">
           <Icon size={16} />

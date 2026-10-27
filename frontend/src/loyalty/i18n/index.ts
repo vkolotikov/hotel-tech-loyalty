@@ -1,3 +1,8 @@
+import redesignEs from './redesign.es.json'
+import redesignFr from './redesign.fr.json'
+import redesignDe from './redesign.de.json'
+import redesignRu from './redesign.ru.json'
+import redesignEn from './redesign.en.json'
 import i18n from '../../i18n'
 import en from './loyalty.en.json'
 import ru from './loyalty.ru.json'
@@ -103,11 +108,11 @@ import overviewEs from './overview.es.json'
  * Registered when the chunk loads.
  */
 export const LOYALTY_LOCALE_FILES = {
-  en: { ...en, program: programEn, rewards: rewardsEn, membership: membershipEn, insights: insightsEn, campaigns: campaignsEn, app: appEn, push: pushEn, sms: smsEn, options: optionsEn, visits: visitsEn, credit: creditEn, places: placesEn, events: eventsEn, door: doorEn, guide: guideEn, start: startEn, overview: overviewEn },
-  ru: { ...ru, program: programRu, rewards: rewardsRu, membership: membershipRu, insights: insightsRu, campaigns: campaignsRu, app: appRu, push: pushRu, sms: smsRu, options: optionsRu, visits: visitsRu, credit: creditRu, places: placesRu, events: eventsRu, door: doorRu, guide: guideRu, start: startRu, overview: overviewRu },
-  de: { ...de, program: programDe, rewards: rewardsDe, membership: membershipDe, insights: insightsDe, campaigns: campaignsDe, app: appDe, push: pushDe, sms: smsDe, options: optionsDe, visits: visitsDe, credit: creditDe, places: placesDe, events: eventsDe, door: doorDe, guide: guideDe, start: startDe, overview: overviewDe },
-  fr: { ...fr, program: programFr, rewards: rewardsFr, membership: membershipFr, insights: insightsFr, campaigns: campaignsFr, app: appFr, push: pushFr, sms: smsFr, options: optionsFr, visits: visitsFr, credit: creditFr, places: placesFr, events: eventsFr, door: doorFr, guide: guideFr, start: startFr, overview: overviewFr },
-  es: { ...es, program: programEs, rewards: rewardsEs, membership: membershipEs, insights: insightsEs, campaigns: campaignsEs, app: appEs, push: pushEs, sms: smsEs, options: optionsEs, visits: visitsEs, credit: creditEs, places: placesEs, events: eventsEs, door: doorEs, guide: guideEs, start: startEs, overview: overviewEs },
+  en: { ...en, program: programEn, rewards: rewardsEn, membership: membershipEn, insights: insightsEn, campaigns: campaignsEn, app: appEn, push: pushEn, sms: smsEn, options: optionsEn, visits: visitsEn, credit: creditEn, places: placesEn, events: eventsEn, door: doorEn, guide: guideEn, start: startEn, overview: overviewEn, redesign: redesignEn },
+  ru: { ...ru, program: programRu, rewards: rewardsRu, membership: membershipRu, insights: insightsRu, campaigns: campaignsRu, app: appRu, push: pushRu, sms: smsRu, options: optionsRu, visits: visitsRu, credit: creditRu, places: placesRu, events: eventsRu, door: doorRu, guide: guideRu, start: startRu, overview: overviewRu, redesign: redesignRu },
+  de: { ...de, program: programDe, rewards: rewardsDe, membership: membershipDe, insights: insightsDe, campaigns: campaignsDe, app: appDe, push: pushDe, sms: smsDe, options: optionsDe, visits: visitsDe, credit: creditDe, places: placesDe, events: eventsDe, door: doorDe, guide: guideDe, start: startDe, overview: overviewDe, redesign: redesignDe },
+  fr: { ...fr, program: programFr, rewards: rewardsFr, membership: membershipFr, insights: insightsFr, campaigns: campaignsFr, app: appFr, push: pushFr, sms: smsFr, options: optionsFr, visits: visitsFr, credit: creditFr, places: placesFr, events: eventsFr, door: doorFr, guide: guideFr, start: startFr, overview: overviewFr, redesign: redesignFr },
+  es: { ...es, program: programEs, rewards: rewardsEs, membership: membershipEs, insights: insightsEs, campaigns: campaignsEs, app: appEs, push: pushEs, sms: smsEs, options: optionsEs, visits: visitsEs, credit: creditEs, places: placesEs, events: eventsEs, door: doorEs, guide: guideEs, start: startEs, overview: overviewEs, redesign: redesignEs },
 } as const
 
 let registered = false

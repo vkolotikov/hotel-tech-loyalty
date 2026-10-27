@@ -1,0 +1,380 @@
+{
+  "artifact": "4c13e2d1f60df6a601d882996a55126e157c7b5b",
+  "php": "8.4.20",
+  "passed": 7051,
+  "skipped": 7,
+  "failed": 0,
+  "scopes": 74,
+  "runs": [
+    {
+      "scope": "tests/Feature/Admin/",
+      "exit": 0,
+      "summary": "OK (105 tests, 1095 assertions)"
+    },
+    {
+      "scope": "tests/Feature/AdminAccess/",
+      "exit": 0,
+      "summary": "OK (51 tests, 3054 assertions)"
+    },
+    {
+      "scope": "tests/Feature/Ai/",
+      "exit": 0,
+      "summary": "OK (38 tests, 82 assertions)"
+    },
+    {
+      "scope": "tests/Feature/Analytics/",
+      "exit": 0,
+      "summary": "OK (7 tests, 16 assertions)"
+    },
+    {
+      "scope": "tests/Feature/ApiAuthentication/",
+      "exit": 0,
+      "summary": "OK (6 tests, 27 assertions)"
+    },
+    {
+      "scope": "tests/Feature/Appointments/",
+      "exit": 0,
+      "summary": "OK (408 tests, 2104 assertions)"
+    },
+    {
+      "scope": "tests/Feature/Audit/",
+      "exit": 0,
+      "summary": "OK (15 tests, 28 assertions)"
+    },
+    {
+      "scope": "tests/Feature/Auth/",
+      "exit": 0,
+      "summary": "OK (17 tests, 56 assertions)"
+    },
+    {
+      "scope": "tests/Feature/Booking/",
+      "exit": 0,
+      "summary": "Tests: 567, Assertions: 2631, Skipped: 1."
+    },
+    {
+      "scope": "tests/Feature/Brand/",
+      "exit": 0,
+      "summary": "OK (12 tests, 20 assertions)"
+    },
+    {
+      "scope": "tests/Feature/BrandCreation/",
+      "exit": 0,
+      "summary": "OK (4 tests, 33 assertions)"
+    },
+    {
+      "scope": "tests/Feature/Branding/",
+      "exit": 0,
+      "summary": "OK (17 tests, 31 assertions)"
+    },
+    {
+      "scope": "tests/Feature/Chatbot/",
+      "exit": 0,
+      "summary": "OK (48 tests, 99 assertions)"
+    },
+    {
+      "scope": "tests/Feature/ChatGptAuth/",
+      "exit": 0,
+      "summary": "OK (18 tests, 205 assertions)"
+    },
+    {
+      "scope": "tests/Feature/ChatGptConnections/",
+      "exit": 0,
+      "summary": "OK (9 tests, 63 assertions)"
+    },
+    {
+      "scope": "tests/Feature/ChatGptPortalNotes/",
+      "exit": 0,
+      "summary": "OK (7 tests, 27 assertions)"
+    },
+    {
+      "scope": "tests/Feature/ChatGptSetup/",
+      "exit": 0,
+      "summary": "OK (8 tests, 76 assertions)"
+    },
+    {
+      "scope": "tests/Feature/ChatGptSubscription/",
+      "exit": 0,
+      "summary": "OK (24 tests, 107 assertions)"
+    },
+    {
+      "scope": "tests/Feature/ChatGptTools/",
+      "exit": 0,
+      "summary": "OK (44 tests, 626 assertions)"
+    },
+    {
+      "scope": "tests/Feature/ChatGptTransport/",
+      "exit": 0,
+      "summary": "OK (9 tests, 99 assertions)"
+    },
+    {
+      "scope": "tests/Feature/Console/",
+      "exit": 0,
+      "summary": "OK (14 tests, 88 assertions)"
+    },
+    {
+      "scope": "tests/Feature/Content/",
+      "exit": 0,
+      "summary": "OK (386 tests, 2659 assertions)"
+    },
+    {
+      "scope": "tests/Feature/ContentCalendar/",
+      "exit": 0,
+      "summary": "OK (12 tests, 59 assertions)"
+    },
+    {
+      "scope": "tests/Feature/Crm/",
+      "exit": 0,
+      "summary": "OK (268 tests, 771 assertions)"
+    },
+    {
+      "scope": "tests/Feature/CrmTasks/",
+      "exit": 0,
+      "summary": "OK (18 tests, 157 assertions)"
+    },
+    {
+      "scope": "tests/Feature/Documentation/",
+      "exit": 0,
+      "summary": "OK (18 tests, 964 assertions)"
+    },
+    {
+      "scope": "tests/Feature/Engagement/",
+      "exit": 0,
+      "summary": "OK (113 tests, 214 assertions)"
+    },
+    {
+      "scope": "tests/Feature/Integration/",
+      "exit": 0,
+      "summary": "OK (9 tests, 21 assertions)"
+    },
+    {
+      "scope": "tests/Feature/Internal/",
+      "exit": 0,
+      "summary": "OK (13 tests, 26 assertions)"
+    },
+    {
+      "scope": "tests/Feature/Knowledge/",
+      "exit": 0,
+      "summary": "OK (24 tests, 52 assertions)"
+    },
+    {
+      "scope": "tests/Feature/Landing/",
+      "exit": 0,
+      "summary": "Tests: 1735, Assertions: 9470, PHPUnit Deprecations: 9."
+    },
+    {
+      "scope": "tests/Feature/LeadForm/",
+      "exit": 0,
+      "summary": "OK (33 tests, 103 assertions)"
+    },
+    {
+      "scope": "tests/Feature/Loyalty/",
+      "exit": 0,
+      "summary": "Tests: 382, Assertions: 1582, PHPUnit Deprecations: 2."
+    },
+    {
+      "scope": "tests/Feature/LoyaltyWorkspace/",
+      "exit": 0,
+      "summary": "OK (575 tests, 5586 assertions)"
+    },
+    {
+      "scope": "tests/Feature/Mail/",
+      "exit": 0,
+      "summary": "OK (118 tests, 321 assertions)"
+    },
+    {
+      "scope": "tests/Feature/Member/",
+      "exit": 0,
+      "summary": "OK (358 tests, 3110 assertions)"
+    },
+    {
+      "scope": "tests/Feature/Middleware/",
+      "exit": 0,
+      "summary": "OK (39 tests, 104 assertions)"
+    },
+    {
+      "scope": "tests/Feature/Models/",
+      "exit": 0,
+      "summary": "OK (7 tests, 19 assertions)"
+    },
+    {
+      "scope": "tests/Feature/Notifications/",
+      "exit": 0,
+      "summary": "OK (73 tests, 182 assertions)"
+    },
+    {
+      "scope": "tests/Feature/Planner/",
+      "exit": 0,
+      "summary": "OK (56 tests, 256 assertions)"
+    },
+    {
+      "scope": "tests/Feature/Pwa/",
+      "exit": 0,
+      "summary": "OK (16 tests, 74 assertions)"
+    },
+    {
+      "scope": "tests/Feature/Realtime/",
+      "exit": 0,
+      "summary": "OK (13 tests, 25 assertions)"
+    },
+    {
+      "scope": "tests/Feature/Reviews/",
+      "exit": 0,
+      "summary": "OK (10 tests, 39 assertions)"
+    },
+    {
+      "scope": "tests/Feature/Security/",
+      "exit": 0,
+      "summary": "Tests: 11, Assertions: 50, PHPUnit Deprecations: 4."
+    },
+    {
+      "scope": "tests/Feature/Settings/",
+      "exit": 0,
+      "summary": "OK (133 tests, 345 assertions)"
+    },
+    {
+      "scope": "tests/Feature/Setup/",
+      "exit": 0,
+      "summary": "OK (14 tests, 56 assertions)"
+    },
+    {
+      "scope": "tests/Feature/Smoobu/",
+      "exit": 0,
+      "summary": "OK (10 tests, 21 assertions)"
+    },
+    {
+      "scope": "tests/Feature/Stripe/",
+      "exit": 0,
+      "summary": "OK (63 tests, 300 assertions)"
+    },
+    {
+      "scope": "tests/Feature/TenantScope/",
+      "exit": 0,
+      "summary": "OK (12 tests, 30 assertions)"
+    },
+    {
+      "scope": "tests/Feature/Visitor/",
+      "exit": 0,
+      "summary": "OK (14 tests, 27 assertions)"
+    },
+    {
+      "scope": "tests/Feature/Widget/",
+      "exit": 0,
+      "summary": "OK (75 tests, 403 assertions)"
+    },
+    {
+      "scope": "tests/Feature/WidgetRealtime/",
+      "exit": 0,
+      "summary": "OK (12 tests, 90 assertions)"
+    },
+    {
+      "scope": "tests/Feature/BusinessOutcomeReportTest.php",
+      "exit": 0,
+      "summary": "OK (8 tests, 41 assertions)"
+    },
+    {
+      "scope": "tests/Feature/ExampleTest.php",
+      "exit": 0,
+      "summary": "OK (1 test, 1 assertion)"
+    },
+    {
+      "scope": "tests/Feature/GalleryUploadValidationTest.php",
+      "exit": 0,
+      "summary": "OK (18 tests, 20 assertions)"
+    },
+    {
+      "scope": "tests/Feature/LeadIntakeApiTest.php",
+      "exit": 0,
+      "summary": "Tests: 6, Assertions: 0, Skipped: 6."
+    },
+    {
+      "scope": "tests/Feature/QueueRetryAfterTest.php",
+      "exit": 0,
+      "summary": "OK (4 tests, 14 assertions)"
+    },
+    {
+      "scope": "tests/Feature/RouteControllersExistTest.php",
+      "exit": 0,
+      "summary": "OK (1 test, 1 assertion)"
+    },
+    {
+      "scope": "tests/Feature/RouteUniquenessTest.php",
+      "exit": 0,
+      "summary": "OK (1 test, 1 assertion)"
+    },
+    {
+      "scope": "tests/Unit/Appointments/",
+      "exit": 0,
+      "summary": "OK (39 tests, 362 assertions)"
+    },
+    {
+      "scope": "tests/Unit/Booking/",
+      "exit": 0,
+      "summary": "OK (81 tests, 213 assertions)"
+    },
+    {
+      "scope": "tests/Unit/Channels/",
+      "exit": 0,
+      "summary": "OK (12 tests, 14 assertions)"
+    },
+    {
+      "scope": "tests/Unit/Chatbot/",
+      "exit": 0,
+      "summary": "OK (58 tests, 897 assertions)"
+    },
+    {
+      "scope": "tests/Unit/Content/",
+      "exit": 0,
+      "summary": "OK (139 tests, 789 assertions)"
+    },
+    {
+      "scope": "tests/Unit/Enums/",
+      "exit": 0,
+      "summary": "OK (16 tests, 85 assertions)"
+    },
+    {
+      "scope": "tests/Unit/IndustryPrompts/",
+      "exit": 0,
+      "summary": "OK (55 tests, 551 assertions)"
+    },
+    {
+      "scope": "tests/Unit/Landing/",
+      "exit": 0,
+      "summary": "OK (118 tests, 1763 assertions)"
+    },
+    {
+      "scope": "tests/Unit/Loyalty/",
+      "exit": 0,
+      "summary": "OK (90 tests, 1044 assertions)"
+    },
+    {
+      "scope": "tests/Unit/Models/",
+      "exit": 0,
+      "summary": "OK (12 tests, 15 assertions)"
+    },
+    {
+      "scope": "tests/Unit/Portal/",
+      "exit": 0,
+      "summary": "OK (32 tests, 66 assertions)"
+    },
+    {
+      "scope": "tests/Unit/Services/",
+      "exit": 0,
+      "summary": "OK (111 tests, 188 assertions)"
+    },
+    {
+      "scope": "tests/Unit/Stripe/",
+      "exit": 0,
+      "summary": "OK (23 tests, 29 assertions)"
+    },
+    {
+      "scope": "tests/Unit/Support/",
+      "exit": 0,
+      "summary": "Tests: 184, Assertions: 1364, PHPUnit Deprecations: 1."
+    },
+    {
+      "scope": "tests/Unit/ExampleTest.php",
+      "exit": 0,
+      "summary": "OK (1 test, 1 assertion)"
+    }
+  ]
+}

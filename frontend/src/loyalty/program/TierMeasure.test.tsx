@@ -55,21 +55,21 @@ const text = (html: string) => html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' '
 describe('tiers on the programme’s measure', () => {
   it('cards show the visits or the spend that reach each tier, or that none is set', () => {
     const visits = text(wrap('visits', <ProgramPage />, program))
-    expect(visits).toContain('Visits to reach 10')
-    expect(visits).toContain('Visits to reach Not set')
+    expect(visits).toContain('10 Visits to reach')
+    expect(visits).toContain('Not set Visits to reach')
     expect(visits).not.toContain('Points to reach')
 
     const spend = text(wrap('spend', <ProgramPage />, program))
-    expect(spend).toContain('Spend to reach €250')
+    expect(spend).toContain('€250 Spend to reach')
     expect(spend).not.toContain('Visits to reach')
 
-    expect(text(wrap('points', <ProgramPage />, program))).toContain('Points to reach 1,000')
+    expect(text(wrap('points', <ProgramPage />, program))).toContain('1,000 Points to reach')
   })
 
   it('the tier form asks for the measure’s floor and hides the others', () => {
     const visits = text(wrap('visits', <TierDialog tier={program.tiers[1]} onClose={() => {}} />))
     expect(visits).toContain('Visits to reach this tier')
-    expect(visits).toContain('Members move between tiers by their visits.')
+    expect(visits).toContain('One a day counts: appointments, stays, check-ins, purchases and events.')
     expect(visits).not.toContain('Points to reach it')
 
     const spend = text(wrap('spend', <TierDialog tier={null} onClose={() => {}} />))

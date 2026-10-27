@@ -1,0 +1,24 @@
+{
+  "commit": "4c13e2d1f60df6a601d882996a55126e157c7b5b",
+  "source_commit": "5706903b1",
+  "previous_api_status": 404,
+  "verified_at": "2026-10-27T16:46:07.8828793+00:00",
+  "entry": "/spa/assets/index-d6jOYH4C.js",
+  "loyalty_js": "LoyaltyApp-C0BEEEA6.js",
+  "loyalty_css": "LoyaltyApp-BLZ94Q1g.css",
+  "markers": [
+    "Current recorded balances",
+    "/loyalty/overview",
+    "Purchase earning is off",
+    "About these numbers"
+  ],
+  "fonts": [
+    "/spa/assets/poppins-400-C1IsaolU.ttf",
+    "/spa/assets/poppins-500-BblA7dQf.ttf",
+    "/spa/assets/poppins-600-Gz22PxOe.ttf"
+  ],
+  "api_status": 401,
+  "api_message": "Authentication required.",
+  "landing_stylesheet": "/landing/nocturne_ritual.css?v=7ca20c60a8",
+  "retired_stylesheet_status": 404
+}

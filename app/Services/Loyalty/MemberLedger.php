@@ -25,9 +25,12 @@ final class MemberLedger
     }
 
     /** @return array{lines: list<array<string, mixed>>, page: int, pages: int, total: int} */
-    public function page(LoyaltyMember $member, int $page): array
+    public function page(LoyaltyMember $member, int $page, string $type = 'all'): array
     {
         $query = $this->lines($member)->orderByDesc('created_at')->orderByDesc('id');
+        if (in_array($type, ['earn', 'bonus', 'adjust', 'redeem', 'expire', 'reverse', 'referral'], true)) {
+            $query->where('type', $type);
+        }
         $total = (clone $query)->count();
         $pages = max(1, (int) ceil($total / self::PER_PAGE));
         $page = min(max(1, $page), $pages);

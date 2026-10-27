@@ -1,19 +1,24 @@
+import { useBoot } from '../LoyaltyProvider'
+import { amountOf } from '../lib/format'
+import { DesignDialog, NumberControl } from '../redesign/DesignUI'
+import { OverviewButton } from '../overview/OverviewUI'
+import { overviewAssets } from '../overview/assets'
+import { useRedesignWords } from '../redesign/words'
+import { tierTextStyle } from '../redesign/designMath'
 import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { Button } from '../../workspace/ui/Button'
-import { Dialog } from '../../workspace/ui/Dialog'
 import { Notice } from '../../workspace/ui/Notice'
 import { failureOf } from '../lib/api'
 import { refusalKey } from '../lib/errors'
 import { useFirstFocus } from '../lib/useFirstFocus'
 import { afterProgramChange, programApi } from './api'
 import { ERRORS } from './errors'
-import { FormField, FormFoot } from '../ui/formParts'
+import { FormField } from '../ui/formParts'
 import { benefitChoices, existingOn, needsAmount, tierBenefitBody, tierBenefitFormOf, tierBenefitProblems, tierBenefitServerProblems, type TierBenefitForm } from './programMath'
-import { named } from '../lib/forms'
+import { decimalOf, named } from '../lib/forms'
 import type { Benefit, ProgramOptions, Tier, TierBenefit } from './types'
-import { APPLIES_TO_WORDS, TIER_BENEFIT_PROBLEM_WORDS, VALUE_TYPE_WORDS } from './words'
+import { APPLIES_TO_WORDS, FULFILLMENT_WORDS, TIER_BENEFIT_PROBLEM_WORDS, VALUE_TYPE_WORDS, VALUE_PHRASE_WORDS } from './words'
 
 const INPUT = 'w-full rounded-lg border border-a-border bg-a-surface px-3 py-2 text-sm text-a-text'
 
@@ -31,10 +36,13 @@ export function TierBenefitDialog({ tier, current, benefits, options, onClose }:
   options: ProgramOptions
   onClose: () => void
 }) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
+  const say = useRedesignWords()
+  const boot = useBoot()
+  const [details, setDetails] = useState(false)
   const client = useQueryClient()
   const firstChoice = useFirstFocus<HTMLSelectElement>()
-  const firstWording = useFirstFocus<HTMLInputElement>()
+  const firstWording = useFirstFocus<HTMLTextAreaElement>()
   const [form, setForm] = useState<TierBenefitForm>(() => tierBenefitFormOf(current, options))
   const [tried, setTried] = useState(false)
   const choices = benefitChoices(benefits, current?.benefit_id ?? null)
@@ -69,69 +77,34 @@ export function TierBenefitDialog({ tier, current, benefits, options, onClose }:
     ? t('loyalty.program.tier_benefit.edit_title', '{{benefit}} in {{tier}}', { benefit: current.name, tier: tier.name })
     : t('loyalty.program.tier_benefit.add_title', 'Add a benefit to {{tier}}', { tier: tier.name })
 
-  if (choices.length === 0) {
-    return (
-      <Dialog title={title} onClose={onClose}>
-        <div className="space-y-4">
-          <p className="text-sm text-a-text">{t('loyalty.program.tier_benefit.empty_catalogue', 'The catalogue has no benefit in use yet. Add one under Benefits first.')}</p>
-          <div className="flex justify-end"><Button type="button" variant="secondary" onClick={onClose}>{t('loyalty.program.tier_benefit.close', 'Close')}</Button></div>
+
+  if (!choices.length) return <DesignDialog title={title} onClose={onClose}><p>{t('loyalty.program.tier_benefit.empty_catalogue', 'The catalogue has no benefit in use yet. Add one under Benefits first.')}</p></DesignDialog>
+  const selected = benefits.find(b => String(b.id) === form.benefit_id)
+  const amount = decimalOf(form.value_amount)
+  const typed = needsAmount(form.value_type) && amount !== null && VALUE_PHRASE_WORDS[form.value_type] ? t(`loyalty.program.value_phrase.${form.value_type}`, VALUE_PHRASE_WORDS[form.value_type], { amount: amountOf(form.value_type, amount, boot.venue.currency, i18n.language || 'en') }) : ''
+  const amountLabel = form.value_type === 'percent_discount' ? say('discount') : t('loyalty.program.tier_benefit.value_amount', 'Amount')
+  return <DesignDialog title={title} wide onClose={onClose} busy={save.isPending}>
+    <form className="l-rd-form" noValidate onSubmit={e => { e.preventDefault(); setTried(true); if (!save.isPending && Object.keys(tierBenefitProblems(form, options)).length === 0) save.mutate() }}>
+      <p>{say('benefitLine', { name: tier.name })}</p>
+      {already && <Notice tone="info">{t('loyalty.program.tier_benefit.already', '{{tier}} already gives this benefit: saving changes its wording and value.', { tier: tier.name })}</Notice>}
+      <div className="l-rd-benefit-columns">
+        <div className="l-rd-form">
+          {!current && <FormField label={t('loyalty.program.tier_benefit.benefit', 'Benefit')} problem={problem('benefit_id')}><select ref={firstChoice} value={form.benefit_id} onChange={e => choose(e.target.value)} className={INPUT}><option value="">{t('loyalty.program.tier_benefit.choose', 'Choose a benefit…')}</option>{choices.map(b => <option key={b.id} value={String(b.id)}>{b.name}</option>)}</select></FormField>}
+          <FormField label={say('valueType')} problem={problem('value_type')}><select value={form.value_type} onChange={e => update({ value_type: e.target.value })} className={INPUT}>{options.value_types.map(value => <option key={value} value={value}>{word('loyalty.program.value_type', VALUE_TYPE_WORDS, value)}</option>)}{!options.value_types.includes(form.value_type) && <option value={form.value_type}>{form.value_type}</option>}</select></FormField>
+          <div className="l-rd-benefit-value">
+            {needsAmount(form.value_type) && <div><span className="l-rd-label">{amountLabel}</span><NumberControl label={amountLabel} value={form.value_amount} onValue={value_amount => update({ value_amount })} min={form.value_type === 'points_multiplier' ? 1 : 0} max={form.value_type === 'percent_discount' ? 100 : 1000000} step={form.value_type === 'points_multiplier' || form.value_type === 'fixed_amount' ? .01 : 1} invalid={!!problem('value_amount')} disabled={save.isPending} />{problem('value_amount') && <p className="text-a-danger">{problem('value_amount')}</p>}</div>}
+            <FormField label={t('loyalty.program.tier_benefit.applies_to', 'Applies to')} problem={problem('applies_to')}><select value={form.applies_to} onChange={e => update({ applies_to: e.target.value })} className={INPUT}>{options.applies_to.map(value => <option key={value} value={value}>{word('loyalty.program.applies_to', APPLIES_TO_WORDS, value)}</option>)}{!options.applies_to.includes(form.applies_to) && <option value={form.applies_to}>{form.applies_to}</option>}</select></FormField>
+          </div>
+          <FormField label={say('wording')} problem={problem('value')} hint={say('wordingHint')}><textarea aria-label={say('wording')} ref={current ? firstWording : undefined} value={form.value} rows={2} maxLength={255} onChange={e => update({ value: e.target.value })} className={INPUT} /></FormField>
         </div>
-      </Dialog>
-    )
-  }
-
-  return (
-    <Dialog title={title} onClose={onClose} busy={save.isPending}>
-      <form className="space-y-4" noValidate onSubmit={(e) => {
-        e.preventDefault()
-        setTried(true)
-        if (Object.keys(tierBenefitProblems(form, options)).length === 0) save.mutate()
-      }}>
-        {!current && (
-          <FormField label={t('loyalty.program.tier_benefit.benefit', 'Benefit')} problem={problem('benefit_id')}>
-            <select ref={firstChoice} value={form.benefit_id} onChange={(e) => choose(e.target.value)} className={INPUT}>
-              <option value="">{t('loyalty.program.tier_benefit.choose', 'Choose a benefit…')}</option>
-              {choices.map(b => <option key={b.id} value={String(b.id)}>{b.name}</option>)}
-            </select>
-          </FormField>
-        )}
-        {already && (
-          <Notice tone="info">{t('loyalty.program.tier_benefit.already', '{{tier}} already gives this benefit: saving changes its wording and value.', { tier: tier.name })}</Notice>
-        )}
-
-        <FormField label={t('loyalty.program.tier_benefit.value', 'Wording')} problem={problem('value')}
-          hint={t('loyalty.program.tier_benefit.value_hint', 'What members read beside the benefit, e.g. “Until 2 pm”. Optional.')}>
-          <input ref={current ? firstWording : undefined} type="text" value={form.value} maxLength={255} onChange={(e) => update({ value: e.target.value })} className={INPUT} />
-        </FormField>
-
-        <div className="grid gap-4 sm:grid-cols-2">
-          <FormField label={t('loyalty.program.tier_benefit.value_type', 'Kind of value')} problem={problem('value_type')}>
-            <select value={form.value_type} onChange={(e) => update({ value_type: e.target.value })} className={INPUT}>
-              {options.value_types.map(value => <option key={value} value={value}>{word('loyalty.program.value_type', VALUE_TYPE_WORDS, value)}</option>)}
-              {!options.value_types.includes(form.value_type) && <option value={form.value_type}>{form.value_type}</option>}
-            </select>
-          </FormField>
-          {needsAmount(form.value_type) && (
-            <FormField label={t('loyalty.program.tier_benefit.value_amount', 'Amount')} problem={problem('value_amount')}>
-              <input type="number" inputMode="decimal" min={0} step={0.01} value={form.value_amount}
-                onChange={(e) => update({ value_amount: e.target.value })} className={INPUT} />
-            </FormField>
-          )}
-        </div>
-
-        <FormField label={t('loyalty.program.tier_benefit.applies_to', 'Applies to')} problem={problem('applies_to')}
-          hint={t('loyalty.program.tier_benefit.applies_to_hint', 'Which bookings a discount or multiplier counts on.')}>
-          <select value={form.applies_to} onChange={(e) => update({ applies_to: e.target.value })} className={INPUT}>
-            {options.applies_to.map(value => <option key={value} value={value}>{word('loyalty.program.applies_to', APPLIES_TO_WORDS, value)}</option>)}
-            {!options.applies_to.includes(form.applies_to) && <option value={form.applies_to}>{form.applies_to}</option>}
-          </select>
-        </FormField>
-
-        {failure && <Notice tone="danger">{t(...refusalKey('loyalty.program', ERRORS, 'tier_benefit', failure))}</Notice>}
-
-        <FormFoot cancel={t('loyalty.common.cancel', 'Cancel')} busy={save.isPending} onCancel={onClose}
-          save={current || already ? t('loyalty.program.tier_benefit.save', 'Save benefit') : t('loyalty.program.tier_benefit.create', 'Give benefit')} />
-      </form>
-    </Dialog>
-  )
+        <aside className="l-rd-benefit-preview"><span className="l-ov-eyebrow">{say('preview')}</span><h2 className="l-rd-tier-text" style={tierTextStyle(tier.color)}>{tier.name}</h2><hr /><img src={overviewAssets.gift} alt="" />
+          <h3>{typed || form.value || selected?.name || say('previewEmpty')}</h3>{typed && form.value && <p>{form.value}</p>}{selected && <p>{selected.name}</p>}<small>{word('loyalty.program.applies_to', APPLIES_TO_WORDS, form.applies_to)}</small>
+          {selected && <><button type="button" className="l-ov-link" aria-expanded={details} onClick={() => setDetails(!details)}>{say('benefitDetails')}</button>{details && <div><p>{selected.description || say('detailsUnavailable')}</p>{selected.fulfillment_mode && <small>{word('loyalty.program.fulfillment_mode', FULFILLMENT_WORDS, selected.fulfillment_mode)}</small>}</div>}</>}
+        </aside>
+      </div>
+      <div className="l-ov-inset l-rd-assignment-note"><strong>{say('valueDefines')}</strong><small>{say('deliveryRules')}</small></div>
+      {failure && <Notice tone="danger">{t(...refusalKey('loyalty.program', ERRORS, 'tier_benefit', failure))}</Notice>}
+      <div className="l-rd-form-foot"><small>{say('savesImmediately', { name: tier.name })}</small><OverviewButton type="button" disabled={save.isPending} onClick={onClose}>{t('loyalty.common.cancel', 'Cancel')}</OverviewButton><OverviewButton primary type="submit" disabled={save.isPending} aria-busy={save.isPending}>{current || already ? t('loyalty.program.tier_benefit.save', 'Save benefit') : say('addBenefit')}</OverviewButton></div>
+    </form>
+  </DesignDialog>
 }

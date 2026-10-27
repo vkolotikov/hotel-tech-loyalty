@@ -99,13 +99,13 @@ describe('the Membership card on a member’s page', () => {
     expect(text(gone)).toContain('Places refuse entry until it is renewed.')
     expect(gone).toContain('data-state="declined"')
     // Said once: the state's colour and icon are on the headline, with no second "Expired" badge.
-    expect(text(gone).match(/Expired/g)).toHaveLength(1)
+    expect(text(gone).match(/Expired on/g)).toHaveLength(1) // Header status and history filter also say Expired.
   })
 
   it('a switched-off member says so once, in the header; the card says only what follows', () => {
     const off = text(render(can(true), detail({ is_active: false, valid_until: '2027-12-08', membership_state: 'off' })))
     expect(off.match(/switched off/gi)).toHaveLength(1)
-    expect(off).toContain('Account switched off')
+    expect(off).toContain('Switched off')
     expect(off).toContain('Valid until Dec 8, 2027')
     expect(off).toContain('Places refuse entry whatever the date.')
   })
@@ -114,7 +114,7 @@ describe('the Membership card on a member’s page', () => {
     const html = render(can(true), detail({ valid_until: '2027-12-08', membership_state: 'active' }))
     expect(html).toContain('data-state="fulfilled"')
     expect(html.match(/data-state=/g)).toHaveLength(1)
-    expect(text(html)).not.toContain('Active')
+    expect(html).toMatch(/l-rd-profile-identity[\s\S]*?Gold · Active/)
   })
 
   it('is read-only for staff who are not managers', () => {

@@ -79,18 +79,18 @@ describe('Program (spec 2026-10-21 §4.5, §5)', () => {
     const html = render(can())
     const words = text(html)
     expect(html.indexOf('data-tier="1"')).toBeLessThan(html.indexOf('data-tier="2"'))
-    expect(words).toContain('Points to reach 1,000')
-    expect(words).toContain('Nights to reach 5')
+    expect(words).toContain('1,000 Points to reach')
+    expect(words).toContain('5 Nights to reach')
     expect(words).toContain('Earn rate ×1.5')
-    expect(words).toContain('Members 1,200')
+    expect(words).toContain('1,200 members')
     expect(words).toContain('Switched off')
     // The wording when there is one — never the typed value beside it too (that stays in the chip's tip).
-    expect(words).toContain('Late checkout · Until 2 pm · Stays only')
-    expect(html).toContain('title="10% off"')
+    expect(words).toContain('Late checkout · Until 2 pm')
+    expect(html).toContain('href="/loyalty?tier=2"')
     expect(words).toContain('This tier gives no benefit yet.')
     // The ladder's steps are numbered on the rail; a tier in use wears no pill, only one switched off does.
     expect(words).not.toContain('In use')
-    expect(html).toMatch(/data-tier="1"[\s\S]*?>1<\/span>[\s\S]*?data-tier="2"[\s\S]*?>2<\/span>/)
+    expect(html.match(/class="l-rd-tier-card"/g)).toHaveLength(2)
   })
 
   it('names the catalogue\'s categories and ways of giving, and shows a value it has no word for as sent', () => {
@@ -115,11 +115,13 @@ describe('Program (spec 2026-10-21 §4.5, §5)', () => {
 
   it('gives a manager every action', () => {
     const words = text(everySection(can({ manage_program: true })))
-    for (const action of ['Add tier', 'Edit Gold', 'Add benefit Gold', 'Change Late checkout', 'Add benefit', 'Edit Late checkout', 'Add boost', 'Edit Double weekend', 'Remove Double weekend']) {
+    for (const action of ['+ Add level', 'Edit level', 'Add benefit', 'Edit Late checkout', 'Add boost', 'Edit Double weekend', 'Remove Double weekend']) {
       expect(words).toContain(action)
     }
     const html = everySection(can({ manage_program: true }))
-    expect(html).toContain('aria-label="Take Late checkout off Gold"')
+    expect(html).toContain('aria-label="Edit level Gold"')
+    expect(html).toContain('aria-label="Add benefit Gold"')
+    expect(html).toContain('aria-label="More Gold"')
     // A catalogue entry is switched on and off by its switch, which says its state.
     expect(html).toMatch(/role="switch" aria-checked="true" aria-label="Late checkout" title="Switch off"/)
     expect(html).toMatch(/role="switch" aria-checked="false" aria-label="Spa ritual" title="Switch on"/)
@@ -137,7 +139,7 @@ describe('Program (spec 2026-10-21 §4.5, §5)', () => {
     expect(html).not.toContain('Take Late checkout off Gold')
     // The only buttons are the section cards and the figure that leads to Benefits: nothing that changes anything.
     const buttons = [...html.matchAll(/<button[^>]*>/g)].map(m => m[0]).filter(b => !b.includes('role="tab"') && !b.includes('data-leads=""'))
-    expect(buttons).toEqual([])
+    expect(buttons).toHaveLength(1) // The read-only benefit catalogue.
   })
 
   it('waits for the programme with a quiet stand-in', () => {
@@ -167,15 +169,10 @@ describe('Program (spec 2026-10-21 §4.5, §5)', () => {
 
   it('is one section at a time, chosen on its card in its colour and kept in the address (release 10, the owner\'s Figma)', () => {
     const html = render(can())
-    // Four cards in the owner's colours: tiers blue, benefits violet, places teal, boosts gold.
-    expect(html).toMatch(/role="tablist" aria-label="Program sections"/)
-    for (const [section, hue] of [['tiers', 'tier'], ['benefits', 'rule'], ['places', 'place'], ['boosts', 'gift']]) {
-      expect(html).toMatch(new RegExp(`id="program-section-${section}" aria-selected="(true|false)"[^>]*data-section="${section}" data-hue="${hue}"`))
-    }
-    expect(html).toMatch(/id="program-section-tiers" aria-selected="true"[^>]*tabindex="0"[^>]*class="[^"]*l-hue-card/)
-    expect(text(html)).toContain('Tiers 2 Levels and what reaches them Benefits 2 Perks each tier includes Places Entrances and who may enter Boost events 2 Extra points for a while')
-    // Each section opens with what it is for, in its colour, and shows only its own content.
-    expect(html).toMatch(/data-section-intro="" data-hue="tier"[^>]*>Members move up the ladder as they earn\./)
+    expect(html).toContain('id="program-tiers"')
+    expect(text(html)).toContain('How members move up')
+    expect(html).not.toContain('data-benefit="7"')
+    expect(html).not.toContain('data-boost="3"')
     const benefits = render(can(), program, 'benefits')
     expect(benefits).toMatch(/id="program-section-benefits" aria-selected="true"/)
     expect(benefits).toMatch(/aria-labelledby="program-section-benefits"/)
@@ -183,17 +180,16 @@ describe('Program (spec 2026-10-21 §4.5, §5)', () => {
     expect(benefits).not.toContain('data-tier="1"')
     expect(benefits).not.toContain('data-boost="3"')
     // An unknown section is Tiers; #places, the address Scan and the Guide opened before, is Places.
-    expect(render(can(), program, '?tab=nothing')).toMatch(/id="program-section-tiers" aria-selected="true"/)
+    expect(render(can(), program, '?tab=nothing')).toContain('id="program-tiers"')
     expect(render(can(), program, '#places')).toMatch(/id="program-section-places" aria-selected="true"/)
   })
 
   it('opens Tiers with the ladder in figures, the catalogue one press away', () => {
     const html = render(can())
     const words = text(html)
-    expect(words).toContain('Tiers in the ladder 2 1 switched off')
-    expect(words).toContain('Members in a tier 1,230')
-    expect(words).toContain('Benefits to give 2 in the catalogue')
-    expect(html).toMatch(/data-figure="benefits" data-hue="rule"><button type="button" data-leads=""/)
+    expect(words).toContain('1 active levels · 1,230 active members')
+    expect(words).toContain('Benefit catalogue →')
+    expect(words).toContain('Switched off')
   })
 
   it('teaches an empty section how to start, with the action for a manager and who has it for anyone else (the owner\'s 163:322, 163:400)', () => {
@@ -202,7 +198,7 @@ describe('Program (spec 2026-10-21 §4.5, §5)', () => {
     expect(tiers).toMatch(/data-get-started="tiers" data-hue="tier"/)
     expect(text(tiers)).toContain('Get started Add your first tier')
     expect(text(tiers)).toContain('1 Name it Members see the name on their card and in the app. 2 Set what reaches it')
-    expect(text(tiers)).toContain('Add tier')
+    expect(text(tiers).match(/\+ Add level/g)).toHaveLength(1)
     const benefits = text(render(can({ manage_program: true }), empty, 'benefits'))
     expect(benefits).toContain('Create your first benefit')
     expect(benefits).toContain('3 Give it to tiers On Tiers, press Add benefit on each tier that should have it.')
@@ -232,7 +228,7 @@ describe('Program (spec 2026-10-21 §4.5, §5)', () => {
     expect(text(tiers)).toContain('Several tiers start at the same figure Silver and Gold all start at 0 points: members reach only one of them by earning.')
     expect(text(tiers)).toContain('Open Silver Open Gold')
     // The ladder's warning waits on its card, in the waiting colour, instead of the tier count.
-    expect(tiers).toMatch(/id="program-section-tiers"[\s\S]*?data-state="pending"[^>]*>1<span class="sr-only"> to check/)
+    expect(tiers.match(/data-advice="tiers_share_threshold"/g)).toHaveLength(1)
     // Staff read it, with nothing to press.
     expect(text(render(can(), checked))).not.toContain('Open Silver')
     const benefits = render(can(), checked, 'benefits')
@@ -252,9 +248,11 @@ describe('Program (spec 2026-10-21 §4.5, §5)', () => {
       </QueryClientProvider>,
     )
     const gold = inDialog(<TierDialog tier={program.tiers[1]} onClose={() => {}} />)
-    expect(text(gold)).toContain('Points per unit spent: 100 base points become 150 points.')
-    expect(gold).toMatch(/data-member-preview="" data-hue="tier"/)
-    expect(text(gold)).toContain('What members see Gold ×1.5 points on what they spend Late checkout')
+    expect(text(gold)).toContain('100 base points → 150 points earned')
+    expect(gold).toContain('data-member-preview=""')
+    expect(text(gold)).toContain('What members see Gold')
+    expect(text(gold)).toContain('×1.5 points on what they spend')
+    expect(text(gold)).toContain('Late checkout')
     const fresh = text(inDialog(<TierDialog tier={null} onClose={() => {}} />))
     expect(fresh).toContain('No benefit yet: add them on the tier’s card in the ladder.')
     const boost = text(inDialog(<BoostDialog boost={program.boosts[0]} tiers={program.tiers} onClose={() => {}} />))

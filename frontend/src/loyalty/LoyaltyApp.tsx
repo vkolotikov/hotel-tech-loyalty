@@ -51,9 +51,11 @@ export function LoyaltyApp() {
     return <LoyaltyProvider><DoorPage /></LoyaltyProvider>
   }
 
+  const designed = location.pathname.replace(/\/$/, '') === '/loyalty' || /^\/loyalty\/members\/\d+\/?$/.test(location.pathname) || location.pathname.replace(/\/$/, '') === '/loyalty/program'
+  const Shell = designed ? OverviewShell : LoyaltyShell
   return (
     <LoyaltyProvider>
-      <LoyaltyShell>
+      <Shell>
         <Routes>
           <Route index element={<MembersPage />} />
           <Route path="members/duplicates" element={<DuplicatesPage />} />
@@ -76,7 +78,7 @@ export function LoyaltyApp() {
           <Route path="start" element={<StartPage />} />
           <Route path="*" element={<Navigate to="/loyalty" replace />} />
         </Routes>
-      </LoyaltyShell>
+      </Shell>
     </LoyaltyProvider>
   )
 }
