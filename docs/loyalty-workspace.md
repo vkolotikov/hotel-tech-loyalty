@@ -10,7 +10,7 @@ campaigns, card and app, pictures, currency).
 
 ## Who has it, and the ways in and back
 
-Requests/Insights redesign (28 October, release artifact in verification): `/loyalty/requests` combines benefit
+Requests/Insights redesign (28 October, release artifact verified): `/loyalty/requests` combines benefit
 requests, reward redemptions and referral activity through `GET requests/inbox`. Existing writers and legacy
 benefit bookmarks are retained. `/loyalty/insights` reads `GET insights/report?from&to&compare&tier_id`; defaults
 to 28 completed venue days, with equal preceding comparison. Current level filtering applies to current member

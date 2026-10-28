@@ -1,0 +1,10 @@
+﻿{
+    "passed":  5651,
+    "failed":  0,
+    "files":  391,
+    "typescript":  "passed",
+    "loyalty_eslint":  "passed",
+    "production_build":  "passed",
+    "final_focused_tests":  9,
+    "compiled_browser_checks":  139
+}

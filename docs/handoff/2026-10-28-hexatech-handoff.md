@@ -3,12 +3,17 @@
 Read this first, then `2026-10-27-hexatech-handoff.md` for the full environment, test-loop,
 product history and deployment instructions. Root AGENTS.md and CLAUDE.md still apply.
 
-## In verification: Requests and Insights
+## Verified, deployment pending: Requests and Insights
 
 Feature `feature/loyalty-insights-20261028` includes the unified Requests inbox and the Figma Insights dashboard.
 Read `docs/loyalty-redesign/15-REQUESTS-REPORT.md` and `16-INSIGHTS-REPORT.md` for source contracts, limitations,
 test evidence and exact frames. Source-patch baseline remains **27baa2935** until the new artifact is deployed.
 No new migrations/dependencies or member-writing rules. Place reports remain explicitly organization-wide.
+Artifact checks: 7,084 PHP tests passed, 7 skipped, 45,380 assertions, 75 scopes; 5,651 frontend tests passed
+in 391 files; TypeScript, Loyalty ESLint and fresh production build passed. Compiled browser: 139 checks passed.
+C: filled during dependency installation; the verified source/artifact are under `E:/Hexa-Tech-release/`.
+The final source is synced back to the original feature branch after the live check. Original Vite PID 1992
+is preserved; the task-owned compiled preview is PID 16468 and will be stopped when complete.
 
 ## Current production release: Events
 
