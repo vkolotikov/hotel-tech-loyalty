@@ -1,0 +1,10 @@
+﻿{
+    "source":  "d45a44be1",
+    "success":  true,
+    "passed":  5588,
+    "failed":  0,
+    "files":  387,
+    "typescript":  "passed",
+    "loyalty_eslint":  "passed",
+    "build":  "passed"
+}

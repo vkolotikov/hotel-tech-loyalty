@@ -1,6 +1,6 @@
 # Ways to earn — implementation record
 
-In progress, 28 October 2026. Branch: `feature/loyalty-ways-to-earn-20261028`.
+Implemented, tested and deployed, 28 October 2026. Branch: `feature/loyalty-ways-to-earn-20261028`.
 Production baseline: `0f59ddab1`; last deployed feature source: `2d6e03d81`.
 
 ## Design and implementation map
@@ -50,4 +50,22 @@ unknown methods, setup and original checks/journey are exercised. All five local
 Navigation protection covers in-app links, earning-page controls and browser unload; it does not intercept
 browser-history traversal or unrelated shell commands that call the router directly.
 
-The isolated production artifact, full backend checks, final browser results and live verification are pending.
+## Production artifact
+
+Source **d45a44be1** was applied to fresh production baseline **0f59ddab1** using 58 explicitly allowed paths
+(including the previous release's follow-up documentation). Source patch **8e3157d39** and availability-filter
+correction **9ac7dca0a** have whole-tree source parity with **d45a44be1**. Fresh build **1fcdcbb6b** was pushed
+to `main`; feature-branch built assets were never included.
+
+The isolated artifact passed TypeScript, Loyalty ESLint, **5,588 frontend tests across 387 files**, and
+**7,071 PHP tests / 45,224 assertions across 75 foreground scopes**. The seven skips match the previous release.
+PHP used 8.4.20 and a real copied vendor directory. Final compiled-browser checks passed **42 interactions +
+29 state/responsive checks**, with zero runtime errors. Compiled desktop screenshots were also viewed against Figma.
+Evidence is stored beside the reference/render screenshots, including per-scope PHP summaries and browser check lists.
+
+Live Cloud content verified **28 October, 11:33 Europe/Riga**: entry `index-BtSDK41H.js`,
+Loyalty JavaScript `LoyaltyApp-CCG_p63r.js` and stylesheet `LoyaltyApp-COCRVuhl.css` contain the new UI.
+All three local Poppins weights resolve. The options endpoint still answers unauthenticated requests with 401;
+the public landing page retains its kit stylesheet without retired markers, and the retired stylesheet returns 404.
+GitHub `main` has whole source parity with **d45a44be1**. No production option or member transaction was written by the tests.
+The temporary artifact preview and worktree were removed; the existing Vite server and unrelated local files remain.

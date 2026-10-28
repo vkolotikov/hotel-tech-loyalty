@@ -774,6 +774,19 @@ files on disk): run them one after the other.
 
 ## Deploying
 
+- Ways to earn, 2026-10-28: production **1fcdcbb6b**, feature source **d45a44be1** on
+  `feature/loyalty-ways-to-earn-20261028`. Source patch **8e3157d39** plus **9ac7dca0a** was applied to
+  **0f59ddab1** using 58 explicit paths; whole source parity passed. Three final Figma frames cover the earning
+  list, purchase settings and bonuses, with shared rules, all existing methods and the existing partial options API.
+  Checks/journey remains `?tab=overview`; the wizard and method bookmarks remain available.
+  Artifact checks: PHP **7,071 passed / 7 skipped / 45,224 assertions / 75 scopes**, frontend **5,588 passed / 387 files**,
+  TypeScript/ESLint/build passed, **71 compiled-browser checks passed**. Desktop/mobile, light/Russian, permissions,
+  retry, partial saves and independent drafts were verified. Live content verified **28 October, 11:33 Europe/Riga**:
+  entry `index-BtSDK41H.js`, Loyalty `LoyaltyApp-CCG_p63r.js` / `LoyaltyApp-COCRVuhl.css`, three local fonts,
+  options authentication (401), landing kit and retired stylesheet (404) checks passed.
+  The next source delta starts at **d45a44be1**. Later feature commits contain deployment records/evidence and
+  the CLAUDE.md handoff pointer. Full report: `docs/loyalty-redesign/12-WAYS-TO-EARN-REPORT.md`.
+
 - Members and Program, 2026-10-27: production **0f59ddab1**, source-patch **9bead854f**, feature source
   **2d6e03d81** on `feature/loyalty-members-program-20261027`. Six completed Figma frames cover Members, profile,
   Award points, Levels, Edit level and Add benefit. Existing routes/actions remain; no migrations, dependencies,
