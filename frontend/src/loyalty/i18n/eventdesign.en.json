@@ -1,6 +1,9 @@
 {
   "pointsValue": "{{n}} points",
   "registrationLabel": "Registration",
+  "yes": "Yes",
+  "no": "No",
+  "sort": "Sort",
   "line": "Bring members together and reward participation.",
   "create": "+ Create event",
   "createTitle": "Create event",

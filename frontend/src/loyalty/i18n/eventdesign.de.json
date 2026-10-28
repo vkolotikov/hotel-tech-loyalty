@@ -1,4 +1,7 @@
 {
+  "yes": "Ja",
+  "no": "Nein",
+  "sort": "Sortierung",
   "pointsValue": "{{n}} Punkte",
   "registrationLabel": "Anmeldung",
   "line": "Bringen Sie Mitglieder zusammen und belohnen Sie die Teilnahme.",
