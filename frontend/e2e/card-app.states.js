@@ -55,6 +55,7 @@ async page => {
   ok(await page.locator('input[type=password]').count()===0,'stored password is never exposed');
   await go('?tab=currency');await page.getByRole('button',{name:'Save currency',exact:true}).waitFor();ok((await page.locator('.l-ca-settings').innerText()).includes('never converts'),'currency warning and confirmation flow retained');
   await go('?tab=app');await page.locator('[data-preview]').waitFor();ok(await page.locator('[data-colour]').count()===11,'old appearance bookmark retains advanced controls');
+  await page.locator('#app-tab-wallet').click();await page.getByLabel('Pass Type ID',{exact:true}).waitFor();ok(new URL(page.url()).searchParams.get('tab')==='wallet','switching legacy settings tabs keeps wallet settings open');
   await fixture({failLook:true});await go();await page.locator('.l-ov-recovery').waitFor();ok(await page.locator('.l-ca-editor').count()===0,'failed initial look is not defaults');
   await fixture({failLook:false});await button('Try again').click();await ready();ok(true,'look retry recovers');
   await fixture({failWallet:true});await go();await page.getByText('Wallet connections could not be loaded.',{exact:true}).waitFor();ok(await page.locator('.l-ca-editor').count()===1&&await page.locator('.l-ca-wallets').count()===0,'wallet failure preserves appearance without false readiness');
@@ -74,7 +75,7 @@ async page => {
     await button('Show code').click();await page.locator('dialog[open]').waitFor();
     ok(await page.locator('dialog[open]').evaluate(e=>{const r=e.getBoundingClientRect();return r.left>=0&&r.right<=innerWidth+1&&r.height<=innerHeight&&e.scrollWidth<=e.clientWidth+1}),'dialog fits '+width+'px');await close();
   }
-  await page.setViewportSize({width:1440,height:1080});await button('Settings').click();await button('Light').click();await close();await page.screenshot({path:root+'render-light.png',fullPage:true});ok(true,'workspace light theme remains supported');
+  await page.setViewportSize({width:1440,height:1080});await button('Settings').click();await page.getByRole('group',{name:'Theme',exact:true}).getByRole('button',{name:'Light',exact:true}).click();await close();await page.screenshot({path:root+'render-light.png',fullPage:true});ok(true,'workspace light theme remains supported');
   for(const lang of ['ru','de','fr','es']){
     await page.getByRole('button',{name:/^(Settings|Настройки|Einstellungen|Réglages|Configuración)$/}).click();await page.getByRole('combobox',{name:/Language|Язык|Sprache|Langue|Idioma/}).selectOption(lang);await close();
     ok(!(await page.locator('.l-ca-page').innerText()).includes('Design your member experience'),'translated '+lang);

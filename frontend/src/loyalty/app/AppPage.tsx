@@ -4,7 +4,7 @@ import { Coins, CreditCard, Smartphone, type LucideIcon } from 'lucide-react'
 import { Notice } from '../../workspace/ui/Notice'
 import { PageHeader } from '../../workspace/ui/PageHeader'
 import { useBoot } from '../LoyaltyProvider'
-import { APP_TABS, appAccess, searchFor, tabFrom, type AppTab } from './appMath'
+import { APP_TABS, appAccess, tabFrom, type AppTab } from './appMath'
 import { CurrencyTab } from './CurrencyTab'
 import { LookTab } from './LookTab'
 import { WalletTab } from './WalletTab'
@@ -37,7 +37,7 @@ function AppSettings() {
   const navigate = useNavigate()
   const tab = tabFrom(location.search)
   const access = appAccess(boot.staff.can, boot.features)
-  const go = (next: AppTab) => navigate({ pathname: '/loyalty/app', search: searchFor(next) }, { replace: true })
+  const go = (next: AppTab) => navigate({ pathname: '/loyalty/app', search: `?tab=${next}` }, { replace: true })
   const title = t('loyalty.app.title', 'Card & app')
 
   if (!access.manage) {
