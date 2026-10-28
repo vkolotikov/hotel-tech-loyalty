@@ -34,8 +34,12 @@ The isolated artifact passed **1,138 PHP tests / 12,015 assertions** across Loya
 
 The full frontend run caught four unregistered fallback keys. These were corrected to the existing membership, Overview-help and Today-here keys. The final deployment checkout passes **5,688 frontend tests in 393 files**, TypeScript and the Loyalty ESLint check. Focused scanner/member tests cover permission gating, expired membership labels, inactive hardware and locale completeness.
 
+The compiled-browser run also prompted a synchronous pending-write lock in the shared points form. The follow-up scanner/member suite passes **164 tests in 16 files**, and PointsDialog lint passes. The final independent deployment checkout additionally passes **59 scan/access/card tests, 461 assertions**. The 34 browser interaction checks use an explicitly held award response to verify the lock deterministically; 17 compiled reader checks pass, including the real QR decoder and simulated NFC/HID. No runtime errors or horizontal overflow were observed.
+
 Visual comparison: desktop scanner width 880px, preview height 480px, 248×44px start button; mobile bottom navigation 390×84px at y=760 in the 390×844 frame, action tiles 173×118px. Desktop points input is 30px, using the shared validated editor. All three local Poppins weights load. Rendered references are reviewed against the exact Figma desktop/member/access and mobile states. Small text/height differences reflect actual state, translated server dates and the existing shell utilities. No example/demo facts are shown as live data.
 
 Physical NFC/USB hardware still requires an actual compatible reader; fixtures verify browser lifecycle and API behavior. A real camera image was replaced only inside the local browser test with a generated QR video stream.
 
 Storage incident: C: reported ENOSPC during the final locale commit. No files were deleted. Work continued in a complete independent clone at `E:/Hexa-Tech-release/scan-source`, with a fresh deployment worktree at `E:/Hexa-Tech-release/scan-final`, preserving the original C: workspace and its untracked files.
+
+After space became available again, the original feature checkout was synchronized by verified fast-forward ancestry and file parity. Its untracked project PDF, plugin ZIPs and Alexa assets were preserved. The final artifact uses a real vendor copy; the allowed frontend dependency junction points to the matching original package lock.
