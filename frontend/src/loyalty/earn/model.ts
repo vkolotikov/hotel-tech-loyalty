@@ -23,7 +23,7 @@ export function earningUrl(tab: OptionsTab, values: { way?: string | null; selec
 export function filteredWays(answer: OptionsAnswer, group: OptionsTab, q: string, status: EarnStatus, text: (way: Way) => string) {
   const needle = q.trim().toLocaleLowerCase()
   return answer.ways.filter(w => groupOf(w.key) === group && (!needle || text(w).toLocaleLowerCase().includes(needle))
-    && (status === 'all' || isOn(w, answer.options) === (status === 'active')))
+    && (status === 'all' || (status === 'active' ? isOn(w, answer.options) && !(answer.not_used ?? []).includes(w.key) : !isOn(w, answer.options))))
 }
 
 /** Illustrative base only, matching the engine's whole-point floor; never used for an award. */
