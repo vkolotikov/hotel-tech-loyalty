@@ -30,8 +30,9 @@ export function SegmentsTab() {
   const segments = useQuery({ queryKey: SEGMENTS_KEY, queryFn: campaignsApi.segments })
   const options = useQuery({ queryKey: OPTIONS_KEY, queryFn: campaignsApi.segmentOptions, staleTime: 60_000 })
   const [open, setOpen] = useState<{ kind: 'edit'; segment: Segment | null } | { kind: 'delete'; segment: Segment } | null>(null)
-  const list = segments.data?.segments
-  const opts = options.data
+  const denied = deniedRead(segments.error) || deniedRead(options.error)
+  const list = denied ? undefined : segments.data?.segments
+  const opts = denied ? undefined : options.data
   const failed = segments.isError ? segments.error : options.isError ? options.error : null
 
   const w = useCampaignWords()
