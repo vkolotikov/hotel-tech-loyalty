@@ -63,6 +63,8 @@ async page => {
   await page.locator('#app-tab-wallet').click();await page.getByLabel('Pass Type ID',{exact:true}).waitFor();ok(new URL(page.url()).searchParams.get('tab')==='wallet','switching legacy settings tabs keeps wallet settings open');
   await fixture({failLook:true});await go();await page.locator('.l-ov-recovery').waitFor();ok(await page.locator('.l-ca-editor').count()===0,'failed initial look is not defaults');
   await fixture({failLook:false});await button('Try again').click();await ready();ok(true,'look retry recovers');
+  await fixture({denySave:true});await accent.fill('#654321');await button('Save changes').click();await page.locator('.l-ov-recovery').waitFor();ok(await page.locator('.l-ca-editor').count()===0,'denied mutation hides the draft');
+  ok(await page.evaluate(()=>{const a=document.createElement('a');a.href='/loyalty/app?tab=wallet';document.body.append(a);let reached=false;a.addEventListener('click',e=>{reached=!e.defaultPrevented;e.preventDefault()});a.click();a.remove();return reached}),'denied mutation releases the navigation guard');await fixture({denySave:false});await go();await ready();
   await fixture({failWallet:true});await go();await page.getByText('Wallet connections could not be loaded.',{exact:true}).waitFor();ok(await page.locator('.l-ca-editor').count()===1&&await page.locator('.l-ca-wallets').count()===0,'wallet failure preserves appearance without false readiness');
   await fixture({failWallet:false});await button('Try again').click();await ready();
   await fixture({failSummary:true});await go();await page.getByText('Programme details are unavailable.',{exact:true}).first().waitFor();ok(await page.locator('.l-ca-editor').count()===1,'programme preview failure preserves settings');
