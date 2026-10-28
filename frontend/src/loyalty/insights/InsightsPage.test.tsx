@@ -81,7 +81,7 @@ const render = (c: Can, options: { data?: Insights | null; period?: Period; sear
   if (options.quiet !== null) client.setQueryData(atRiskKey(options.quiet?.days ?? 60), options.quiet ?? atRisk)
   return renderToStaticMarkup(
     <QueryClientProvider client={client}>
-      <MemoryRouter initialEntries={[`/loyalty/insights${options.search ?? ''}`]}>
+      <MemoryRouter initialEntries={[`/loyalty/insights${options.search ?? '?view=detailed'}`]}>
         <LoyaltyContext.Provider value={{ data: boot(c), isLoading: false, isError: false, error: null, refetch: () => {} }}>
           <InsightsPage />
         </LoyaltyContext.Provider>
