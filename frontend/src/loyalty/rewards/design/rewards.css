@@ -32,12 +32,12 @@
 [data-loyalty] .l-rb-arrow { flex: 0 0 52px; width: 52px; padding: 10px; }
 [data-loyalty] .l-rb-list-labels { display: grid; grid-template-columns: 320fr 276fr; padding: 0 84px 0 16px; gap: 16px; text-transform: uppercase; }
 [data-loyalty] .l-rb-list-labels small { font-size: 11px; }
-[data-loyalty] .l-rb-detail { padding: 20px; display: flex; flex-direction: column; gap: 12px; }
+[data-loyalty] .l-rb-detail { padding: 19px; display: flex; flex-direction: column; gap: 12px; }
 [data-loyalty] .l-rb-page .l-rb-detail { background: linear-gradient(105deg,var(--l-rd-detail-start),var(--l-ov-bottom)); }
 [data-loyalty] .l-rb-eyebrow { color: var(--l-ov-cyan); font-size: 12px; line-height: 18px; display: flex; align-items: center; gap: 16px; min-height: 20px; }
 [data-loyalty] .l-rb-eyebrow > span { display: grid; place-items: center; width: 20px; height: 20px; flex-shrink: 0; }
 [data-loyalty] .l-rb-detail h2.l-rb-title { font-size: 26px; line-height: 38px; font-weight: 500; }
-[data-loyalty] .l-rb-preview { display: flex; flex-direction: column; gap: 12px; padding: 20px; border: 1px solid var(--l-rd-accent-border); border-radius: 16px; background: var(--l-rd-emphasis); }
+[data-loyalty] .l-rb-preview { display: flex; flex-direction: column; gap: 12px; padding: 19px; border: 1px solid var(--l-rd-accent-border); border-radius: 16px; background: var(--l-rd-emphasis); }
 [data-loyalty] .l-rb-preview p, [data-loyalty] .l-rb-preview small { color: var(--l-ov-text); }
 [data-loyalty] .l-rb-preview p { font-size: 13px; }
 [data-loyalty] .l-rb-preview small { text-transform: uppercase; font-size: 11px; }
@@ -57,6 +57,7 @@
 [data-loyalty] .l-rb-empty { display: flex; flex-direction: column; align-items: flex-start; gap: 16px; padding: 32px 16px; }
 [data-loyalty] .l-rb-fields, [data-loyalty] .l-rb-editor { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
 [data-loyalty] .l-rb-fields { border: 0; margin: 0; padding: 0; }
+[data-loyalty] .l-rb-editor .l-rb-fields { gap: 12px; }
 [data-loyalty] .l-rb-form-panel { padding: 24px; display: flex; flex-direction: column; gap: 20px; }
 [data-loyalty] .l-rb-offer-editor .l-rb-form-panel { padding: 20px; gap: 16px; }
 [data-loyalty] .l-rb-cancel { align-self: flex-start; font-size: 13px; color: var(--l-ov-secondary); text-align: left; }
@@ -68,7 +69,7 @@
 [data-loyalty] .l-rb-fields textarea { resize: vertical; min-height: 44px; }
 [data-loyalty] .l-rb-fields label { color: var(--l-ov-text); font-size: 14px; font-weight: 400; }
 [data-loyalty] .l-rb-fields label > span { font-size: 14px; line-height: 20px; font-weight: 400; color: var(--l-ov-text); margin-bottom: 8px; }
-[data-loyalty] .l-rb-page .l-rd-stepper input { background: transparent; box-shadow: none; border-color: transparent; }
+[data-loyalty][data-redesign] .l-rb-page .l-rd-stepper input[type="number"] { background: transparent; box-shadow: none; border-color: transparent; }
 [data-loyalty] .l-rb-overflow { position: relative; flex: 0 0 52px; }
 [data-loyalty] .l-rb-overflow > summary { list-style: none; padding: 10px; }
 [data-loyalty] .l-rb-overflow > summary::-webkit-details-marker { display: none; }
