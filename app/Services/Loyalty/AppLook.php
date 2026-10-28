@@ -34,6 +34,12 @@ final class AppLook
     public const RADIUS_MIN = 0;
     public const RADIUS_MAX = 32;
 
+    /** Neutral palettes only: they write existing colour keys, never an unsupported native theme mode. */
+    public const COLOR_MODES = [
+        'dark' => ['background' => '#242c3b', 'surface' => '#353f54', 'secondary' => '#222834', 'text' => '#f5f7fb', 'text_secondary' => '#a6b5cd', 'border' => '#353f54'],
+        'light' => ['background' => '#f5f7fb', 'surface' => '#ffffff', 'secondary' => '#e8edf5', 'text' => '#242c3b', 'text_secondary' => '#53627a', 'border' => '#c7d3e5'],
+    ];
+
     /** The logo's limits: SettingsController::uploadLogo's, with the dimension rule the other pictures use. */
     public const LOGO_MAX_KB = 4096;
     public const LOGO_MAX_EDGE = 4096;
@@ -121,6 +127,7 @@ final class AppLook
                 array_keys(self::PRESETS),
             ),
             'logo'               => ['max_kb' => self::LOGO_MAX_KB, 'max_edge' => self::LOGO_MAX_EDGE, 'types' => ['image/jpeg', 'image/png', 'image/webp']],
+            'color_modes'        => self::COLOR_MODES,
         ];
     }
 

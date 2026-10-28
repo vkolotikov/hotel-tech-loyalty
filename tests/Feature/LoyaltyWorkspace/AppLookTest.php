@@ -86,6 +86,30 @@ class AppLookTest extends TestCase
             ->assertJsonPath('look.colors.text', '#FFF')->assertJsonPath('look.radius', 24)->assertJsonPath('look.preset', 'nordic_ice');
     }
 
+    public function test_neutral_palettes_save_through_existing_app_colours_without_changing_accent_or_other_tenants(): void
+    {
+        $other = $this->otherOrganization();
+        HotelSetting::withoutGlobalScopes()->insert([
+            'organization_id' => $other['org']->id, 'key' => 'mobile_background_color', 'value' => '#123456',
+            'type' => 'string', 'group' => 'mobile_app', 'created_at' => now(), 'updated_at' => now(),
+        ]);
+        $options = $this->asManager()->getJson($this->api('app-look'))->assertOk()->json('options');
+        $this->assertArrayNotHasKey('auto', $options['color_modes']);
+        $this->assertArrayNotHasKey('primary', $options['color_modes']['light']);
+        $this->assertSame('#242c3b', $options['color_modes']['dark']['background']);
+        $colors = array_replace(self::SAPPHIRE, $options['color_modes']['light']);
+        $this->putJson($this->api('app-look'), $this->look(['colors' => $colors]))->assertOk()
+            ->assertJsonPath('look.colors.primary', '#3b82f6')
+            ->assertJsonPath('look.colors.background', '#f5f7fb')
+            ->assertJsonPath('look.colors.text', '#242c3b')
+            ->assertJsonPath('look.colors.success', '#22c55e');
+        $theme = $this->theme()['mobile_theme'];
+        $this->assertSame('#f5f7fb', $theme['mobile_background_color']);
+        $this->assertSame('#3b82f6', $theme['mobile_primary_color']);
+        $this->assertSame('#123456', HotelSetting::withoutGlobalScopes()->where('organization_id', $other['org']->id)
+            ->where('key', 'mobile_background_color')->value('value'));
+    }
+
     public function test_a_manager_saves_it_lowercase_with_the_preset_and_one_audit_row_for_what_changed(): void
     {
         $this->asStaffMember()->putJson($this->api('app-look'), $this->look())->assertStatus(403)->assertJsonPath('error', 'manager_only');
