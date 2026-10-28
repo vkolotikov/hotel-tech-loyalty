@@ -57,6 +57,9 @@
 [data-loyalty] .l-rb-fields, [data-loyalty] .l-rb-editor { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
 [data-loyalty] .l-rb-fields { border: 0; margin: 0; padding: 0; }
 [data-loyalty] .l-rb-form-panel { padding: 24px; display: flex; flex-direction: column; gap: 20px; }
+[data-loyalty] .l-rb-offer-editor .l-rb-form-panel { padding: 20px; gap: 16px; }
+[data-loyalty] .l-rb-cancel { align-self: flex-start; font-size: 13px; color: var(--l-ov-secondary); text-align: left; }
+[data-loyalty] .l-rb-cancel:disabled { opacity: .65; cursor: default; }
 [data-loyalty] .l-rb-grid-two { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 16px 24px; }
 [data-loyalty] .l-rb-name-status { display: grid; grid-template-columns: minmax(0,2fr) minmax(0,1fr); gap: 24px; }
 [data-loyalty] .l-rb-offer-value { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr) minmax(0,2fr); gap: 16px; }
