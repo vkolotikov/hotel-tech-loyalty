@@ -3,7 +3,29 @@
 Read this first, then `2026-10-27-hexatech-handoff.md` for the full environment, test-loop,
 product history and deployment instructions. Root AGENTS.md and CLAUDE.md still apply.
 
-## Current production release: Requests and Insights
+## Current production release: Card & app
+
+Production **5eaffd69c67ccfd9af2a9f5679c634769c78a27a**, live content verified **28 October, 18:01 Europe/Riga**.
+Feature `feature/loyalty-card-app-20261028`; deployed source and **next source-patch baseline**:
+**f594c16d366db189c397b7180ec01db2014ff301**. Do not use the later post-deployment documentation commit.
+Isolated artifact parent **f5edeb363**, final source patch **711deccf4**, whole-source parity across **53 paths**.
+Read `docs/loyalty-redesign/17-CARD-APP-REPORT.md` for the exact CA-01 frame, integration and evidence.
+
+The default `/loyalty/app` now has the Figma appearance editor, saved/draft member previews and wallet panels.
+Existing appearance, wallet credentials and currency workflows remain reachable through their original tab URLs.
+Dark/Light save server-owned neutral palettes through the existing writer; automatic member-app switching is
+explicitly unsupported. Name follows the workspace, logo uploads are immediate, and device testing is a guide
+for an authorized test member, not an anonymous sample-pass generator. No migrations or dependencies changed.
+
+Artifact: **7,085 PHP passed, 7 existing skips, 45,393 assertions, 75 scopes**; full frontend **5,668 passed,
+392 files**; final focused **344 passed**; TypeScript, Loyalty ESLint and fresh build passed. Compiled Chrome:
+**79 interaction/state + 11 render checks**, zero runtime errors, six widths and five languages. Exact Figma
+comparison, local Poppins, 17 export hashes, modal keyboard focus and editor gradient contrast were verified.
+Live entry `index-CYWy-VPW.js`, Loyalty `LoyaltyApp-li05agYL.js` / `LoyaltyApp-CN3NTzf2.css`.
+Appearance/wallet/currency return the expected unauthenticated 401 JSON; existing landing kit and retired CSS
+404 passed. Browser mutations used intercepted local fixtures. Evidence: `evidence/card-app/live-verification.json`.
+
+## Previous release: Requests and Insights
 
 Feature `feature/loyalty-insights-20261028` includes the unified Requests inbox and the Figma Insights dashboard.
 Read `docs/loyalty-redesign/15-REQUESTS-REPORT.md` and `16-INSIGHTS-REPORT.md` for source contracts, limitations,

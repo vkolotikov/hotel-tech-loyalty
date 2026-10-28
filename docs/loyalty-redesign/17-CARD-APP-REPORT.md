@@ -1,6 +1,6 @@
 # Card & app milestone — implementation record
 
-Status: implemented and verified in the isolated release artifact; production verification pending. Exact Figma CA-01 `144:6931`, 1440 × 1522, file `d6IGmk3hOoMw0V5rONbI1A`, inspected through the connected plugin with full design context and screenshot. Figma's `primitives` package is not installed; the page composes the existing OverviewButton (workspace Button), fields and native dialog. All 17 static exports were downloaded and SHA-256 audited: 16 reuse identical Overview assets, and Program uses its exact new export with original SVG geometry.
+Status: deployed and live content verified on 28 October 2026 at 18:01 Europe/Riga. Exact Figma CA-01 `144:6931`, 1440 × 1522, file `d6IGmk3hOoMw0V5rONbI1A`, inspected through the connected plugin with full design context and screenshot. Figma's `primitives` package is not installed; the page composes the existing OverviewButton (workspace Button), fields and native dialog. All 17 static exports were downloaded and SHA-256 audited: 16 reuse identical Overview assets, and Program uses its exact new export with original SVG geometry.
 
 ## Implementation map
 
@@ -37,4 +37,12 @@ Status: implemented and verified in the isolated release artifact; production ve
 - Browser tests use only intercepted local APIs. They prove client contracts and interaction behavior; isolated PHP integration tests prove actual persistence/authorization. They do not assert a real Apple/Google installation or mutate production credentials. Playwright MCP transport became unavailable, so the same local fixture checks ran through installed Playwright with system Chrome.
 - Evidence: `evidence/card-app/asset-audit.json`, `browser-checks.json`, `render-audit.json`, exact Figma screenshot and compiled `render-*.png` files. Release scripts and full logs are on `E:/Hexa-Tech-release/`.
 
-Previous deployed source baseline: `e21e9258264614f239fc291e9331ca1746ea36fd`. Production parent: `f5edeb36304821a8ec9def97b75f5a82b2435955`. The isolated artifact has whole-source parity with the feature source, excluding only generated SPA files. Production content verification follows the push.
+Previous deployed source baseline: `e21e9258264614f239fc291e9331ca1746ea36fd`. Production parent: `f5edeb36304821a8ec9def97b75f5a82b2435955`. The isolated artifact has whole-source parity with the feature source, excluding only generated SPA files.
+
+## Deployment record
+
+- Production commit: **5eaffd69c67ccfd9af2a9f5679c634769c78a27a**. Deployed feature source: **f594c16d366db189c397b7180ec01db2014ff301** on `feature/loyalty-card-app-20261028`. The next source delta starts at **f594c16d3**, not the later documentation tip.
+- Isolated artifact started at `f5edeb363`; final source patch `711deccf4`. Whole-source parity passed across 53 explicitly allowed source/evidence paths. Only the deployment branch commits the fresh generated SPA; the feature branch contains source and evidence.
+- Live verification at `2026-10-28T16:01:26.1230070Z`: entry `index-CYWy-VPW.js`, Loyalty `LoyaltyApp-li05agYL.js` / `LoyaltyApp-CN3NTzf2.css`. New Card & app markers, retained Requests/Insights markers, responsive styles and all three local Poppins fonts passed after Cloud rebuilt the application.
+- Appearance, wallet and currency endpoints return the expected unauthenticated 401 JSON. Existing public landing kit and retired stylesheet 404 passed. These are read-only production checks; persistence, authorization and client mutations were verified in isolated tests and local browser fixtures.
+- Machine-readable live evidence: `evidence/card-app/live-verification.json`. No migration or dependency change was required.
