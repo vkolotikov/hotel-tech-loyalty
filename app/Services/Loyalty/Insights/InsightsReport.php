@@ -31,7 +31,7 @@ final class InsightsReport
         $counts = $this->members()->selectRaw('tier_id, COUNT(*) AS members')->groupBy('tier_id')->pluck('members', 'tier_id');
         $tierRows = $tiers->map(fn ($tier) => ['id' => $tier->id, 'name' => $tier->name, 'members' => (int) ($counts[$tier->id] ?? 0)])->all();
         $known = array_sum(array_column($tierRows, 'members'));
-        $expiry = DB::table('point_expiry_buckets')->where('organization_id', $this->orgId)
+        $expiry = DB::table('point_expiry_buckets')->where(fn ($q) => $q->where('organization_id', $this->orgId)->orWhereNull('organization_id'))
             ->whereIn('member_id', $this->members()->where('is_active', true)->select('id'))
             ->where('is_expired', false)->where('remaining_points', '>', 0)->where('expires_at', '>=', $today)
             ->where('expires_at', '<', InsightsPeriod::addDays($today, 30));
@@ -85,7 +85,7 @@ final class InsightsReport
     private function claims(InsightsPeriod $p): Query
     {
         // Redemptions belong to the tenant through their member, and also carry organization_id.
-        return DB::table('reward_redemptions as rr')->where('rr.organization_id', $this->orgId)
+        return DB::table('reward_redemptions as rr')->where(fn ($q) => $q->where('rr.organization_id', $this->orgId)->orWhereNull('rr.organization_id'))
             ->whereIn('rr.member_id', $this->members()->select('id'))->where('rr.created_at', '>=', $p->startUtc())->where('rr.created_at', '<', $p->endUtc());
     }
 

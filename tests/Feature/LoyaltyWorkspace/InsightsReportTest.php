@@ -104,4 +104,25 @@ class InsightsReportTest extends TestCase
         $this->line(8, 'earn', '2026-10-25 22:00:00'); // next day
         $this->report('from=2026-10-25&to=2026-10-25')->assertJsonPath('days', 1)->assertJsonPath('current.issued', 6);
     }
+
+    public function test_current_expiry_snapshot_uses_remaining_points_and_member_ownership(): void
+    {
+        $other = $this->otherOrganization();
+        $earn = PointsTransaction::withoutGlobalScopes()->create(['organization_id' => $this->org->id,
+            'member_id' => $this->ada->id, 'type' => 'earn', 'points' => 100, 'balance_after' => 100,
+            'description' => 'Earn', 'idempotency_key' => uniqid('expiry', true)]);
+        foreach ([['2026-10-05', 10, $this->ada->id, $this->org->id], ['2026-11-03', 20, $this->ada->id, null],
+            ['2026-11-04', 40, $this->ada->id, $this->org->id], ['2026-10-04', 80, $this->ada->id, $this->org->id],
+            ['2026-10-10', 900, $other['member']->id, null], ['2026-10-10', 800, $this->ada->id, $other['org']->id]] as [$date, $points, $member, $org]) {
+            DB::table('point_expiry_buckets')->insert(['organization_id' => $org, 'member_id' => $member,
+                'transaction_id' => $earn->id, 'original_points' => 1000, 'remaining_points' => $points, 'earned_at' => '2026-01-01',
+                'expires_at' => $date, 'is_expired' => false, 'created_at' => now(), 'updated_at' => now()]);
+        }
+        $this->ada->forceFill(['last_activity_at' => '2026-09-01 12:00:00'])->save();
+        $this->report()->assertJsonPath('attention.expiring', 30)->assertJsonPath('attention.expiring_members', 1)
+            ->assertJsonPath('attention.expiry_from', '2026-10-05')->assertJsonPath('attention.expiry_to', '2026-11-03')
+            ->assertJsonPath('attention.quiet', 1)->assertJsonPath('outstanding', 1700)->assertJsonPath('tiers.total', 2);
+        $this->ada->forceFill(['is_active' => false])->save();
+        $this->report()->assertJsonPath('attention.expiring', 0)->assertJsonPath('attention.quiet', 0)->assertJsonPath('outstanding', 200);
+    }
 }
