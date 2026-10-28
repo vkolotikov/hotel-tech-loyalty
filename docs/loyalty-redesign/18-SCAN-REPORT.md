@@ -32,7 +32,7 @@ Local browser fixtures intercept API requests; no production member, balance or 
 
 The isolated artifact passed **1,138 PHP tests / 12,015 assertions** across LoyaltyWorkspace (591), Loyalty (382), AdminAccess (51), Unit/Loyalty (90), Admin scan (13) and NFC link (11). PHP 8.4.20 was used in scoped foreground runs; no server source, schema, dependency or API contract changed.
 
-The full frontend run caught four unregistered fallback keys. These were corrected to the existing membership, Overview-help and Today-here keys; the full suite is rerun before release. Focused scanner/member tests pass, including permission gating, expired membership labels, inactive hardware and locale completeness.
+The full frontend run caught four unregistered fallback keys. These were corrected to the existing membership, Overview-help and Today-here keys. The final deployment checkout passes **5,688 frontend tests in 393 files**, TypeScript and the Loyalty ESLint check. Focused scanner/member tests cover permission gating, expired membership labels, inactive hardware and locale completeness.
 
 Visual comparison: desktop scanner width 880px, preview height 480px, 248×44px start button; mobile bottom navigation 390×84px at y=760 in the 390×844 frame, action tiles 173×118px. Desktop points input is 30px, using the shared validated editor. All three local Poppins weights load. Rendered references are reviewed against the exact Figma desktop/member/access and mobile states. Small text/height differences reflect actual state, translated server dates and the existing shell utilities. No example/demo facts are shown as live data.
 
