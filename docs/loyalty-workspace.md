@@ -10,6 +10,14 @@ campaigns, card and app, pictures, currency).
 
 ## Who has it, and the ways in and back
 
+Requests/Insights redesign (28 October, release artifact in verification): `/loyalty/requests` combines benefit
+requests, reward redemptions and referral activity through `GET requests/inbox`. Existing writers and legacy
+benefit bookmarks are retained. `/loyalty/insights` reads `GET insights/report?from&to&compare&tier_id`; defaults
+to 28 completed venue days, with equal preceding comparison. Current level filtering applies to current member
+records across all places; place attribution is not consistently available. Charts/tables, cohort inspection,
+metric definitions and scoped CSV export are live reads. Existing detailed reports and `?period`/`?quiet`
+bookmarks remain accessible. See redesign reports 15 and 16 for precise metric definitions and verification.
+
 - Every organisation has it by default (`Organization::WORKSPACE_DEFAULTS`). Organisations on the Appointments plan
   do not: the plan has no loyalty, and the access map refuses them (`not_in_plan`).
 - `php artisan workspace:loyalty <organisation id> --on [--landing] | --off | --status`, and

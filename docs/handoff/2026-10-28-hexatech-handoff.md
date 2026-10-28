@@ -3,7 +3,14 @@
 Read this first, then `2026-10-27-hexatech-handoff.md` for the full environment, test-loop,
 product history and deployment instructions. Root AGENTS.md and CLAUDE.md still apply.
 
-## Current release: Events
+## In verification: Requests and Insights
+
+Feature `feature/loyalty-insights-20261028` includes the unified Requests inbox and the Figma Insights dashboard.
+Read `docs/loyalty-redesign/15-REQUESTS-REPORT.md` and `16-INSIGHTS-REPORT.md` for source contracts, limitations,
+test evidence and exact frames. Source-patch baseline remains **27baa2935** until the new artifact is deployed.
+No new migrations/dependencies or member-writing rules. Place reports remain explicitly organization-wide.
+
+## Current production release: Events
 
 Events follows EV-01 `115:5501`, EV-02 `115:5502` and EV-03 `115:5503` in the connected Figma file
 `d6IGmk3hOoMw0V5rONbI1A`. The event overview, full create/edit page and attendees page now share the

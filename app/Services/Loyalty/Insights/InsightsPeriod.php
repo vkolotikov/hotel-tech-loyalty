@@ -69,6 +69,19 @@ final class InsightsPeriod
         return new self(in_array($choice, self::CHOICES, true) ? $choice : self::DEFAULT, $bucket, $starts[0], $today, $keys, $bounds);
     }
 
+    /** Explicit completed venue days, in seven-day buckets anchored to the selected start. */
+    public static function range(string $from, string $to, string $zone): self
+    {
+        $keys = [];
+        for ($day = $from; $day <= $to; $day = self::addDays($day, 7)) {
+            $keys[] = $day;
+        }
+        $bounds = array_map(fn (string $d) => self::dayStartUtc($d, $zone), $keys);
+        $bounds[] = self::dayStartUtc(self::addDays($to, 1), $zone);
+
+        return new self('custom', 'week', $from, $to, $keys, $bounds);
+    }
+
     /** The first instant of the period, in UTC as stored. */
     public function startUtc(): string
     {

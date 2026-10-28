@@ -1,0 +1,125 @@
+{
+  "matched": 17,
+  "assets": [
+    {
+      "name": "imgIconHome",
+      "local": "frontend/src/loyalty/overview/assets/90a94.svg",
+      "sha256": "92f4408f8bee54676d6dd99902872387902d9dbc1f6fc57dfa7067fa1a7b5fb3",
+      "root": "<svg preserveAspectRatio=\"none\" overflow=\"visible\" style=\"display: block;\" width=\"20\" height=\"20\" viewBox=\"0 0 20 20\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">",
+      "match": true
+    },
+    {
+      "name": "imgIconStar",
+      "local": "frontend/src/loyalty/overview/assets/5a184.svg",
+      "sha256": "cdfd1fabe2557db95b522a0275cca3d5f1acd54a2755335345f76ceda8640c22",
+      "root": "<svg preserveAspectRatio=\"none\" overflow=\"visible\" style=\"display: block;\" width=\"20\" height=\"20\" viewBox=\"0 0 20 20\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">",
+      "match": true
+    },
+    {
+      "name": "imgIconDown",
+      "local": "frontend/src/loyalty/overview/assets/6cf9c.svg",
+      "sha256": "a592f739ef6ebe39f9d7a38b9f669bad5809e63c422865b228a27888ba25fd86",
+      "root": "<svg preserveAspectRatio=\"none\" overflow=\"visible\" style=\"display: block;\" width=\"16\" height=\"16\" viewBox=\"0 0 16 16\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">",
+      "match": true
+    },
+    {
+      "name": "imgIconMembers",
+      "local": "frontend/src/loyalty/overview/assets/38333.svg",
+      "sha256": "26543803facae927b6ea13712ee81487302df0eb0243c8c7b198f4a5245ffa0d",
+      "root": "<svg preserveAspectRatio=\"none\" overflow=\"visible\" style=\"display: block;\" width=\"20\" height=\"20\" viewBox=\"0 0 20 20\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">",
+      "match": true
+    },
+    {
+      "name": "imgIconOperations",
+      "local": "frontend/src/loyalty/overview/assets/5c8a9.svg",
+      "sha256": "45b5c119bf18cfb6f2447983314b3e1869210b99b1572a919ecbea0ee32b0ea7",
+      "root": "<svg preserveAspectRatio=\"none\" overflow=\"visible\" style=\"display: block;\" width=\"20\" height=\"20\" viewBox=\"0 0 20 20\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">",
+      "match": true
+    },
+    {
+      "name": "imgIconProgram",
+      "local": "frontend/src/loyalty/insights/assets/program.svg",
+      "sha256": "c3f84ce38610cb68caa80928fc5607928d2af6d3151273545a973a6ddd8188b9",
+      "root": "<svg preserveAspectRatio=\"none\" overflow=\"visible\" style=\"display: block;\" width=\"20\" height=\"20\" viewBox=\"0 0 20 20\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">",
+      "match": true
+    },
+    {
+      "name": "imgGroup",
+      "local": "frontend/src/loyalty/overview/assets/7055e.svg",
+      "sha256": "c3e9ff2e93ddc8d5f70b0a5a11c4a01340cd6c2c61231560eb7c25569137a1e5",
+      "root": "<svg preserveAspectRatio=\"none\" overflow=\"visible\" style=\"display: block;\" width=\"16.3333\" height=\"16.3333\" viewBox=\"0 0 16.3333 16.3333\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">",
+      "match": true
+    },
+    {
+      "name": "imgSubmenuIndicator",
+      "local": "frontend/src/loyalty/overview/assets/507e1.svg",
+      "sha256": "4537b309dee73b9c46a7728b3ba20550f4e8ccc0a853b8836f02ef6626393643",
+      "root": "<svg preserveAspectRatio=\"none\" overflow=\"visible\" style=\"display: block;\" width=\"12\" height=\"12\" viewBox=\"0 0 12 12\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">",
+      "match": true
+    },
+    {
+      "name": "imgIconGift",
+      "local": "frontend/src/loyalty/overview/assets/3f053.svg",
+      "sha256": "0e7233481b0be0825c7550ffeda3f4a03f605cb63ca0e3e92595192031191bab",
+      "root": "<svg preserveAspectRatio=\"none\" overflow=\"visible\" style=\"display: block;\" width=\"20\" height=\"20\" viewBox=\"0 0 20 20\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">",
+      "match": true
+    },
+    {
+      "name": "imgGroup1",
+      "local": "frontend/src/loyalty/overview/assets/dcc5b.svg",
+      "sha256": "9a282926a2a70a698b52622888c37911697240eff2eb16cd15b433f3de327821",
+      "root": "<svg preserveAspectRatio=\"none\" overflow=\"visible\" style=\"display: block;\" width=\"16.3333\" height=\"16.3333\" viewBox=\"0 0 16.3333 16.3333\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">",
+      "match": true
+    },
+    {
+      "name": "imgGroup2",
+      "local": "frontend/src/loyalty/overview/assets/82bd8.svg",
+      "sha256": "74cdc3058d03cbcb2e44f3ea4bd7a80159f8a5070dfde9d154d17af0a7abbd6a",
+      "root": "<svg preserveAspectRatio=\"none\" overflow=\"visible\" style=\"display: block;\" width=\"16.3333\" height=\"13\" viewBox=\"0 0 16.3333 13\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">",
+      "match": true
+    },
+    {
+      "name": "imgIconChart",
+      "local": "frontend/src/loyalty/overview/assets/a3ff2.svg",
+      "sha256": "66be6497816539701379757bd0469408727dd36313b02b2a2eee16cf49600d77",
+      "root": "<svg preserveAspectRatio=\"none\" overflow=\"visible\" style=\"display: block;\" width=\"20\" height=\"20\" viewBox=\"0 0 20 20\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">",
+      "match": true
+    },
+    {
+      "name": "imgIconCard",
+      "local": "frontend/src/loyalty/overview/assets/2b886.svg",
+      "sha256": "69a07afd69535f720174a6244a7b45557f1e11f260dddba1aa3e75400a62d37a",
+      "root": "<svg preserveAspectRatio=\"none\" overflow=\"visible\" style=\"display: block;\" width=\"20\" height=\"20\" viewBox=\"0 0 20 20\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">",
+      "match": true
+    },
+    {
+      "name": "imgIconSettings",
+      "local": "frontend/src/loyalty/overview/assets/b7142.svg",
+      "sha256": "edfd32da6ba5de5a392537cf75f3aa1c1d56efeab0804821a9e73c37b62fb88d",
+      "root": "<svg preserveAspectRatio=\"none\" overflow=\"visible\" style=\"display: block;\" width=\"20\" height=\"20\" viewBox=\"0 0 20 20\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">",
+      "match": true
+    },
+    {
+      "name": "imgIconHelp",
+      "local": "frontend/src/loyalty/overview/assets/06b09.svg",
+      "sha256": "5783b089df393d55e33bf811943f68d9b57716d31071f1e87e8da8da46f8e94c",
+      "root": "<svg preserveAspectRatio=\"none\" overflow=\"visible\" style=\"display: block;\" width=\"20\" height=\"20\" viewBox=\"0 0 20 20\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">",
+      "match": true
+    },
+    {
+      "name": "imgIconSearch",
+      "local": "frontend/src/loyalty/overview/assets/7fef4.svg",
+      "sha256": "1a1ec1a4a2d2faef18ac5028cb9120d26d667412b787ef731ead5799c980ed2a",
+      "root": "<svg preserveAspectRatio=\"none\" overflow=\"visible\" style=\"display: block;\" width=\"18\" height=\"18\" viewBox=\"0 0 18 18\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">",
+      "match": true
+    },
+    {
+      "name": "imgEllipse",
+      "local": "frontend/src/loyalty/overview/assets/051e7.svg",
+      "sha256": "6a0a3a890f89cd882e57abdbf7aaa23cef6e65f394f8dec6512e7bea51ee1f71",
+      "root": "<svg preserveAspectRatio=\"none\" overflow=\"visible\" style=\"display: block;\" width=\"5\" height=\"5\" viewBox=\"0 0 5 5\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">",
+      "match": true
+    }
+  ],
+  "notes": "Navigation exports reused verbatim at native dimensions. Graphs and membership arcs are data-driven SVG, not static Figma sample-data images."
+}

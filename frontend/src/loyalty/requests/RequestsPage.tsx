@@ -1,85 +1,84 @@
-import { useState } from 'react'
-import { useLocation, useNavigate } from 'react-router-dom'
-import { keepPreviousData, useQuery } from '@tanstack/react-query'
+import { useEffect, useRef } from 'react'
+import { useSearchParams } from 'react-router-dom'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { Button } from '../../workspace/ui/Button'
-import { Notice } from '../../workspace/ui/Notice'
-import { PageHeader } from '../../workspace/ui/PageHeader'
-import { Skeleton } from '../../workspace/ui/Skeleton'
-import { useApi } from '../LoyaltyProvider'
+import { useBoot } from '../LoyaltyProvider'
 import { failureOf } from '../lib/api'
-import { errorKey } from '../lib/errors'
-import { REQUEST_TAB_WORDS } from '../lib/words'
-import { Pager } from '../ui/Pager'
-import { RequestRow } from './RequestRow'
-import { TABS, tabAfter, tabFrom } from './requestMath'
+import { points, when } from '../lib/format'
+import { overviewScope } from '../overview/overviewMath'
+import { OverviewButton, OverviewRecovery, OverviewSkeleton } from '../overview/OverviewUI'
+import { inbox } from './inboxApi'
+import { inboxFilters, recordLabel, recordTitle } from './inboxMath'
+import { RecordDetail, RecordStatus, ReferralDialog } from './RequestDetail'
+import { useRequestWords } from './words'
+import type { InboxRecord } from './types'
+import './requests.css'
 
-/**
- * Requests (spec 2026-10-21 §4.4): the benefits members asked for in the app, by state — Waiting, Approved, Done —
- * newest first, 25 a page. The tab lives in the address. Read again every 60 s while open, so a new request shows.
- */
 export function RequestsPage() {
-  const { t } = useTranslation()
-  const api = useApi()
-  const location = useLocation()
-  const navigate = useNavigate()
-  const tab = tabFrom(location.search)
-  const selected = Number(new URLSearchParams(location.search).get('request')) || undefined
-  const [page, setPage] = useState(1)
-  const [shown, setShown] = useState(tab)
-  if (shown !== tab) {
-    setShown(tab)
-    setPage(1)
+  const boot = useBoot()
+  const { t, i18n } = useTranslation()
+  const say = useRequestWords()
+  const client = useQueryClient()
+  const [params, setParams] = useSearchParams()
+  const latest = useRef(params)
+  const cleared = useRef('')
+  const detailRef = useRef<HTMLElement>(null)
+  const focusRecord = useRef('')
+  useEffect(() => { latest.current = params }, [params])
+  const filters = inboxFilters(params.toString())
+  const scope = overviewScope(boot)
+  const query = useQuery({ queryKey: ['loyalty', 'requests', 'inbox', scope, filters], queryFn: ({ signal }) => inbox(filters, signal), refetchInterval: 60_000, retry: (n, e) => ![401, 403, 404, 422].includes(failureOf(e).status) && n < 1 })
+  const forbidden = [401, 402, 403].includes(failureOf(query.error).status)
+  useEffect(() => {
+    if (forbidden && cleared.current !== scope) { cleared.current = scope; client.removeQueries({ queryKey: ['loyalty', 'requests', 'inbox', scope] }) }
+    else if (query.isSuccess) cleared.current = ''
+  }, [forbidden, query.isSuccess, client, scope])
+  const data = forbidden ? undefined : query.data
+  const selected = data?.selected ?? data?.records[0]
+  useEffect(() => {
+    if (selected && focusRecord.current === selected.key && detailRef.current) {
+      focusRecord.current = ''
+      detailRef.current.focus({ preventScroll: true })
+      detailRef.current.scrollIntoView({ block: 'start', behavior: 'instant' })
+    }
+  }, [selected])
+  const change = (changes: Record<string, string | null>, reset = false, replace = false) => {
+    const next = new URLSearchParams(latest.current)
+    if (reset) { for (const k of ['tab', 'request', 'record', 'detail', 'page']) next.delete(k); next.set('type', filters.type); next.set('view', filters.view) }
+    for (const [k, v] of Object.entries(changes)) { if (v === null || v === '') next.delete(k); else next.set(k, v) }
+    latest.current = next
+    setParams(next, { replace })
   }
-  const go = (name: typeof tab) => navigate({ pathname: '/loyalty/requests', search: name === 'waiting' ? '' : `?tab=${name}` }, { replace: true })
-  const query = useQuery({ queryKey: ['loyalty', 'requests', tab, page, ...(selected ? [selected] : [])], queryFn: () => api.requests(tab, page, selected), placeholderData: selected ? undefined : keepPreviousData, refetchInterval: 60_000 })
-  const data = query.data
-
-  return (
-    <div className="space-y-5 px-4 py-6 lg:px-6">
-      <PageHeader title={t('loyalty.requests.title', 'Requests')} line={t('loyalty.requests.line', 'Benefits members asked for in the app.')} />
-
-      <div role="tablist" aria-label={t('loyalty.requests.tabs', 'Request states')} className="flex flex-wrap gap-2">
-        {selected && <Button variant="secondary" onClick={() => go(tab)}>{t('loyalty.overview.allRequests', 'View all requests')}</Button>}
-        {TABS.map(name => (
-          // One tab stop; the arrow keys, Home and End move between the tabs (as Rewards' tabs).
-          <button key={name} type="button" role="tab" id={`requests-tab-${name}`} aria-selected={tab === name} aria-controls="requests-panel"
-            tabIndex={tab === name ? 0 : -1} onClick={() => go(name)} onKeyDown={(e) => {
-              const next = tabAfter(tab, e.key)
-              if (next === null) return
-              e.preventDefault()
-              go(next)
-              document.getElementById(`requests-tab-${next}`)?.focus()
-            }}
-            className={`inline-flex items-center gap-2 rounded-full border px-3.5 py-1.5 text-sm font-medium ${tab === name ? 'border-transparent bg-a-accent text-a-accent-ink' : 'border-a-border bg-a-surface text-a-text-2 hover:text-a-text'}`}>
-            {t(`loyalty.requests.tab.${name}`, REQUEST_TAB_WORDS[name])}
-            {data && <span className="tabular-nums">{data.counts[name]}</span>}
-          </button>
-        ))}
-      </div>
-
-      <div id="requests-panel" role="tabpanel" aria-labelledby={`requests-tab-${tab}`} className="space-y-4">
-      {query.isError && (
-        <div className="max-w-xl space-y-3">
-          <Notice tone="danger">{t(...errorKey('load', failureOf(query.error)))}</Notice>
-          <Button variant="secondary" onClick={() => { void query.refetch() }}>{t('loyalty.common.retry', 'Try again')}</Button>
-        </div>
-      )}
-      {!data && query.isLoading && <Skeleton className="h-48" />}
-      {data && data.requests.length === 0 && (
-        <p className="rounded-xl border border-dashed border-a-border px-4 py-8 text-center text-sm text-a-text-2">
-          {tab === 'waiting' ? t('loyalty.requests.none_waiting', 'Nothing waits. New requests from the app show here.') : t('loyalty.requests.none', 'Nothing here yet.')}
-        </p>
-      )}
-      {data && data.requests.length > 0 && (
-        <>
-          <ul className={`divide-y divide-a-border overflow-hidden rounded-2xl border border-a-border bg-a-surface ${query.isFetching ? 'opacity-80' : ''}`}>
-            {data.requests.map(r => <RequestRow key={r.id} request={r} />)}
-          </ul>
-          <Pager page={data.page} pages={data.pages} onPage={setPage} />
-        </>
-      )}
-      </div>
+  const choose = (row: InboxRecord) => {
+    if (row.kind !== 'referral' && window.matchMedia('(max-width: 900px)').matches) focusRecord.current = row.key
+    change({ record: row.key, request: null, detail: row.kind === 'referral' ? '1' : null })
+  }
+  const title = say(({ open: 'openTitle', closed: 'closedTitle', all: 'allTitle', waiting: 'waitingTitle', approved: 'approvedTitle' } as const)[filters.view])
+  return <div className="l-ov-page l-rq-page">
+    <header className="l-ov-page-heading"><div><h1>{t('loyalty.requests.title', 'Requests')}</h1><p>{say('line')}</p></div><OverviewButton disabled={query.isFetching} aria-busy={query.isFetching} onClick={() => { void query.refetch() }}>{say('refresh')}</OverviewButton></header>
+    <div className="l-ov-panel l-rq-filters">
+      <label><span>{say('search')}</span><input type="search" maxLength={120} placeholder={say('searchHint')} value={filters.q} onChange={e => change({ q: e.target.value }, true, true)} /></label>
+      <label><span>{say('type')}</span><select aria-label={say('type')} value={filters.type} onChange={e => change({ type: e.target.value, ...(['waiting', 'approved'].includes(filters.view) && e.target.value !== 'benefit' ? { view: 'open' } : {}) }, true)}>{(['all', 'benefit', 'redemption', 'referral'] as const).map(v => <option key={v} value={v}>{say(v === 'all' ? 'allTypes' : v)}</option>)}</select></label>
+      <label><span>{say('view')}</span><select aria-label={say('view')} value={filters.view} onChange={e => change({ view: e.target.value }, true)}>{(['open', 'closed', 'all', ...(filters.type === 'benefit' ? ['waiting', 'approved'] as const : [])] as const).map(v => <option key={v} value={v}>{say(v)}</option>)}</select></label>
+      <label><span>{say('sort')}</span><select aria-label={say('sort')} value={filters.sort} onChange={e => change({ sort: e.target.value }, true)}><option value="newest">{say('newest')}</option><option value="oldest">{say('oldest')}</option></select></label>
     </div>
-  )
+    {query.isError && <div><OverviewRecovery title={data ? say('stale') : undefined} forbidden={forbidden} onRetry={() => { void query.refetch() }} busy={query.isFetching} />{filters.selected_id && <OverviewButton onClick={() => change({ record: null, request: null, detail: null })}>{t('loyalty.overview.allRequests', 'View all requests')}</OverviewButton>}</div>}
+    {!data && query.isPending && <OverviewSkeleton rows={6} />}
+    {data && <div className="l-rq-columns">
+      <section className="l-ov-panel l-rq-list" aria-label={title} aria-busy={query.isFetching}>
+        <div className="l-rq-list-heading"><h2>{title}</h2><span>{say('records', { n: points(data.total, i18n.language) })}</span></div>
+        {data.records.length ? <ul className="l-rq-rows">{data.records.map(row => <li key={row.key}><button type="button" className={`l-rq-row ${selected?.key === row.key ? 'l-rq-selected' : ''}`} aria-pressed={selected?.key === row.key} onClick={() => choose(row)}>
+          <span className="l-rq-row-heading"><strong>{recordTitle(row, say)}</strong><RecordStatus row={row} /></span><span>{say(row.kind)} · {row.member?.name || row.member?.number || say('unavailableMember')}</span><small>{recordLabel(row)} · {when(row.at, i18n.language, boot.venue.timezone) || '—'}</small>
+        </button></li>)}</ul> : <div className="l-rq-empty"><h3>{say('empty')}</h3><p>{say('emptyLine')}</p><OverviewButton onClick={() => { latest.current = new URLSearchParams(); setParams({}) }}>{say('clear')}</OverviewButton></div>}
+        <div className="l-rq-pagination"><span>{say('showing', { from: data.total ? (data.page - 1) * data.per_page + 1 : 0, to: Math.min(data.page * data.per_page, data.total), total: data.total })}</span><OverviewButton disabled={query.isFetching || data.page <= 1} onClick={() => change({ page: String(data.page - 1), record: null, detail: null, request: null })}>{t('loyalty.common.previous', 'Previous')}</OverviewButton><OverviewButton disabled={query.isFetching || data.page >= data.pages} onClick={() => change({ page: String(data.page + 1), record: null, detail: null, request: null })}>{t('loyalty.common.next', 'Next')}</OverviewButton></div>
+        <p className="l-rq-note">{say('referralNote')}</p>
+      </section>
+      {selected ? <RecordDetail detailRef={detailRef} key={selected.key} row={selected} blocked={query.isFetching || query.isError} hold={() => change({ record: selected.key, request: null }, false, true)} onDetails={() => change({ record: selected.key, detail: '1' })} /> : <aside className="l-ov-panel l-rq-empty"><p>{say('choose')}</p></aside>}
+    </div>}
+    {selected?.kind === 'referral' && params.get('detail') === '1' && <ReferralDialog row={selected} onClose={() => {
+      change({ detail: null }, false, true)
+      // Selection refreshes the list, so the original DOM opener may no longer exist.
+      requestAnimationFrame(() => document.querySelector<HTMLButtonElement>('.l-rq-row[aria-pressed="true"]')?.focus())
+    }} />}
+  </div>
 }

@@ -27,6 +27,27 @@ use Illuminate\Validation\Rule;
  */
 class InsightsController extends Controller
 {
+    /** Completed-day dashboard; the legacy reports keep their original inclusive-today periods. */
+    public function report(Request $request): JsonResponse
+    {
+        LoyaltyAccess::requireInsights($request->user());
+        $org = (int) app('current_organization_id');
+        $last = InsightsPeriod::addDays(\App\Services\Appointments\VenueClock::today($org), -1);
+        $input = $request->validate([
+            'from' => ['nullable', 'required_with:to', 'date_format:Y-m-d', 'before_or_equal:to'],
+            'to' => ['nullable', 'required_with:from', 'date_format:Y-m-d', 'before_or_equal:' . $last],
+            'compare' => ['nullable', Rule::in(['previous', 'none'])],
+            'tier_id' => ['nullable', 'integer', Rule::exists('loyalty_tiers', 'id')->where('organization_id', $org)],
+        ]);
+        $from = $input['from'] ?? InsightsPeriod::addDays($last, -27);
+        $to = $input['to'] ?? $last;
+        if (InsightsPeriod::daysBetween($from, $to) > 365) {
+            throw \Illuminate\Validation\ValidationException::withMessages(['from' => ['Choose a period of at most 366 days.']]);
+        }
+        return response()->json((new \App\Services\Loyalty\Insights\InsightsReport($org, isset($input['tier_id']) ? (int) $input['tier_id'] : null))
+            ->get($from, $to, ($input['compare'] ?? 'previous') === 'previous'));
+    }
+
     /** `GET insights?period=30d|90d|12m` (30d when absent; anything else is a field error). */
     public function show(Request $request): JsonResponse
     {

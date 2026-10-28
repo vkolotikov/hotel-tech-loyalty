@@ -47,6 +47,7 @@ final class AccessMap
         'admin/appointments'                    => ['staff',              'staff',              'appointments'],  // The workspace; Setup keeps its own manager rule (SetupAccess)
         'admin/content'                         => ['staff',              'staff',              'content'],       // HexaTech Content; brand, strategy and whole-calendar AI keep their own manager rule (ContentAccess)
         'admin/loyalty'                         => ['staff',              'staff',              'loyalty'],       // HexaTech Loyalty; award and redeem keep their capabilities (LoyaltyAccess)
+        'admin/loyalty/requests/inbox'           => ['staff',              'manager',            'loyalty'],       // Read-only combined index; existing source endpoints decide every mutation
         'admin/loyalty/members/{id}/history'    => ['staff',              'manager',            'loyalty'],       // A member's ledger; reversing a line is a manager's correction
         'admin/loyalty/program'                 => ['staff',              'manager',            'loyalty'],       // Tiers, benefits, boost events (the full admin's Program is manager-only)
         'admin/loyalty/program/boosts/confirm-times' => ['manager',       'manager',            'loyalty'],       // Release 6: "These times are right" for boosts flagged "check the time" (manager)
