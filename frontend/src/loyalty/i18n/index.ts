@@ -140,4 +140,3 @@ import eventDesignRu from './eventdesign.ru.json'
 import eventDesignDe from './eventdesign.de.json'
 import eventDesignFr from './eventdesign.fr.json'
 import eventDesignEs from './eventdesign.es.json'
-
