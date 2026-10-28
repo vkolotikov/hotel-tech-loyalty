@@ -44,7 +44,7 @@
       "payload": {
         "points": 250,
         "reason": "Thank you for visiting us",
-        "idempotency_key": "ef54f747-ddd0-4bc9-a95d-87cf46851085"
+        "idempotency_key": "83b00495-4e4d-4d56-a228-926f46e21d4b"
       }
     },
     {
@@ -52,7 +52,7 @@
       "method": "POST",
       "query": "?brand_id=all",
       "payload": {
-        "idempotency_key": "5efd7c0f-06cf-48c9-a362-65866b27a851"
+        "idempotency_key": "09d0b170-4c27-4aff-9100-f95397823937"
       }
     },
     {
@@ -61,7 +61,7 @@
       "query": "?brand_id=all",
       "payload": {
         "code": "M-1048",
-        "idempotency_key": "6b99e152-385e-4b81-ac84-91524aba59fb",
+        "idempotency_key": "df503a77-4b5e-4c5e-8e63-1b2e70770185",
         "place_id": 1
       }
     },
@@ -71,7 +71,7 @@
       "query": "?brand_id=all",
       "payload": {
         "code": "04:a2:b3:c4",
-        "idempotency_key": "f113ac49-c207-4bc0-8e6a-fd38f56078de"
+        "idempotency_key": "ab39f94d-036d-47a0-8050-cf9dfd9293ac"
       }
     }
   ]
