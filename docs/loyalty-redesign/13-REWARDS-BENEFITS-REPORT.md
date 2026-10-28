@@ -60,6 +60,17 @@ The isolated release checkout starts at production `1fcdcbb6b`, with an allowlis
 - PHP **8.4.20**, 75 foreground scoped runs: **7,071 passed, 7 skipped, 45,224 assertions**. Every `Tests:` summary was read; no failed scopes.
 - Browser runtime errors: **0**. Evidence includes the Figma references, final compiled screenshots, test summaries and asset audit in `evidence/rewards-benefits/`.
 
-The verified release is ready for deployment. Production commit and live content checks are recorded after publication.
+## Deployment
+
+Production **56ddb2d2b**, from feature source **b7e5e3a5a** on `feature/loyalty-rewards-benefits-20261028`.
+The final isolated source patch is **1860ce52a**, based on **1fcdcbb6b**. Whole source parity passed across
+70 allowlisted source/documentation/evidence paths before the fresh build was committed and pushed to `main`.
+No feature-branch build output was committed or shipped. **The next source delta starts at b7e5e3a5a.**
+
+Live content verified **28 October 2026, 13:12 Europe/Riga** (11:12 UTC): entry `index-DKsE4bbC.js`,
+Loyalty `LoyaltyApp-EEnCshva.js` / `LoyaltyApp-qoyibfIz.css`. Unique Rewards strings and the final CSS rules
+are present; all three local Poppins weights resolve. Rewards, Offers and Program APIs each enforce authentication
+(401). The existing public landing page still serves its kit stylesheet without retired markers, and the retired
+stylesheet remains 404. Evidence: `evidence/rewards-benefits/live-verification.json`.
 
 Browser API requests are intercepted by the local fixture harness. Server integration is verified by the scoped PHP suites and existing API contracts; production member transactions are not used as test data.

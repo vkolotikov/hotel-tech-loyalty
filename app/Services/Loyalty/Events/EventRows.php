@@ -7,6 +7,7 @@ use App\Models\EventRegistration;
 use App\Models\LoyaltyEvent;
 use App\Models\LoyaltyMember;
 use App\Models\LoyaltyTier;
+use App\Models\PointsTransaction;
 use Illuminate\Support\Collection;
 
 /**
@@ -126,13 +127,33 @@ final class EventRows
      *
      * @return array{people: list<array<string, mixed>>, page: int, pages: int, total: int}
      */
-    public static function people(LoyaltyEvent $event, int $page = 1): array
+    public static function people(LoyaltyEvent $event, int $page = 1, array $filters = []): array
     {
         $orgId = (int) $event->organization_id;
         $registrations = EventRegistration::withoutGlobalScopes()->where('organization_id', $orgId)->where('loyalty_event_id', $event->id)->get()->keyBy('member_id');
         $attendances = EventAttendance::withoutGlobalScopes()->where('organization_id', $orgId)->where('loyalty_event_id', $event->id)->get()->keyBy('member_id');
 
         $memberIds = $registrations->keys()->merge($attendances->keys())->unique()->values();
+        $notCheckedIn = $registrations->filter(fn ($r) => $r->status === EventRegistration::SIGNED_UP && !$attendances->has($r->member_id))->count();
+        $attendance = $filters['attendance'] ?? 'all';
+        $memberIds = $memberIds->filter(function ($id) use ($registrations, $attendances, $attendance) {
+            $r = $registrations->get($id);
+            $a = $attendances->get($id);
+            return match ($attendance) {
+                'not_checked_in' => !$a && $r?->status === EventRegistration::SIGNED_UP,
+                'checked_in' => $a !== null,
+                'walk_in' => $a && $a->walk_in,
+                'cancelled' => $r?->status === EventRegistration::CANCELLED,
+                default => true,
+            };
+        });
+        if (trim($filters['q'] ?? '') !== '') {
+            $needle = '%'.str_replace(['!', '%', '_'], ['!!', '!%', '!_'], mb_strtolower(trim($filters['q']))).'%';
+            $matching = LoyaltyMember::withoutGlobalScopes()->where('organization_id', $orgId)->whereIn('id', $memberIds->all())
+                ->where(fn ($q) => $q->whereRaw("LOWER(member_number) LIKE ? ESCAPE '!'", [$needle])->orWhereHas('user', fn ($u) => $u->whereRaw("LOWER(name) LIKE ? ESCAPE '!'", [$needle])))
+                ->pluck('id')->all();
+            $memberIds = $memberIds->filter(fn ($id) => in_array($id, $matching));
+        }
         $rank = function (int $memberId) use ($registrations, $attendances): array {
             $r = $registrations->get($memberId);
             $a = $attendances->get($memberId);
@@ -148,16 +169,28 @@ final class EventRows
         $ordered = $memberIds->map(fn ($id) => (int) $id)->sort(fn (int $x, int $y) => $rank($x) <=> $rank($y))->values();
 
         $total = $ordered->count();
-        $pages = max(1, (int) ceil($total / self::PEOPLE_PER_PAGE));
+        $per = max(5, min(self::PEOPLE_PER_PAGE, (int) ($filters['per_page'] ?? self::PEOPLE_PER_PAGE)));
+        $pages = max(1, (int) ceil($total / $per));
         $page = min(max(1, $page), $pages);
-        $slice = $ordered->slice(($page - 1) * self::PEOPLE_PER_PAGE, self::PEOPLE_PER_PAGE)->values();
+        $slice = $ordered->slice(($page - 1) * $per, $per)->values();
 
         $members = LoyaltyMember::withoutGlobalScopes()->where('organization_id', $orgId)->whereIn('id', $slice->all())
             ->with(['user:id,name', 'tier' => fn ($q) => $q->withoutGlobalScopes()])->get()->keyBy('id');
 
-        $people = $slice->map(fn (int $memberId) => self::personRow($members->get($memberId), $memberId, $registrations->get($memberId), $attendances->get($memberId), $orgId))->all();
+        $transactions = PointsTransaction::withoutGlobalScopes()->where('organization_id', $orgId)
+            ->whereIn('id', $slice->map(fn ($id) => $attendances->get($id)?->points_transaction_id)->filter()->all())->get()->keyBy('id');
+        $people = $slice->map(function (int $memberId) use ($members, $registrations, $attendances, $transactions, $orgId) {
+            $a = $attendances->get($memberId);
+            $tx = $a ? $transactions->get($a->points_transaction_id) : null;
+            $valid = $tx && (int) $tx->member_id === $memberId && $tx->reference_type === 'loyalty_event_attendance' && (int) $tx->reference_id === (int) $a->id;
+            return self::personRow($members->get($memberId), $memberId, $registrations->get($memberId), $a, $orgId) + [
+                // Use the attendance's ledger entry, never the event's possibly changed reward.
+                'points_awarded' => $valid ? (int) $tx->points : ($a && !$a->points_transaction_id ? 0 : null),
+                'points_reversed' => $valid ? (bool) $tx->is_reversed : false,
+            ];
+        })->all();
 
-        return ['people' => $people, 'page' => $page, 'pages' => $pages, 'total' => $total];
+        return ['people' => $people, 'page' => $page, 'pages' => $pages, 'total' => $total, 'not_checked_in' => $notCheckedIn];
     }
 
     /**

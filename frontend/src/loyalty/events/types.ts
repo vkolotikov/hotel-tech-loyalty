@@ -10,6 +10,7 @@ export type EventStatus = 'draft' | 'published' | 'cancelled'
 export type EventPhase = 'draft' | 'upcoming' | 'on_now' | 'ended' | 'cancelled'
 
 export interface EventCounts {
+  not_checked_in?: number
   signed_up: number
   checked_in: number
   walk_ins: number
@@ -51,6 +52,7 @@ export interface PlaceOption {
 
 export interface EventOptions {
   places: PlaceOption[]
+  locations?: string[]
 }
 
 export type EventsTab = 'upcoming' | 'past' | 'drafts'
@@ -74,6 +76,8 @@ export interface EventOne {
 }
 
 export interface EventPerson {
+  points_awarded?: number | null
+  points_reversed?: boolean
   member: { id: number; name: string; member_number: string | null; tier: EventTier | null }
   signed_up_at: string | null
   cancelled_at: string | null

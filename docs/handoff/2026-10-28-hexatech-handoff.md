@@ -3,7 +3,35 @@
 Read this first, then `2026-10-27-hexatech-handoff.md` for the full environment, test-loop,
 product history and deployment instructions. Root AGENTS.md and CLAUDE.md still apply.
 
-## Current release
+## Current release: Rewards & benefits
+
+The Rewards milestone follows RB-01 `108:4986`, RB-02 `108:4987`, RB-03 `108:4988` and PG-04 `92:3955`
+in the connected Figma file. Points rewards, the full reward editor, Offers and Membership benefits now share
+the Overview design shell. Existing redemptions, referrals and `/loyalty/program?tab=benefits` remain available.
+
+- Production commit: **56ddb2d2b**, live content verified **28 October, 13:12 Europe/Riga**.
+  Entry `index-DKsE4bbC.js`, Loyalty `LoyaltyApp-EEnCshva.js` / `LoyaltyApp-qoyibfIz.css`.
+  Final CSS/strings, three local fonts, Rewards/Offers/Program authentication (401), public landing kit
+  and retired stylesheet (404) checks passed.
+- Deployed feature source: **b7e5e3a5a**, branch **feature/loyalty-rewards-benefits-20261028**.
+- Artifact starts at **1fcdcbb6b**. Final source patch **1860ce52a**; fresh build **56ddb2d2b**.
+  Whole source parity passed. The allowlisted patch contains 70 source/documentation/evidence paths.
+- **The next source delta starts at b7e5e3a5a**, not the later feature documentation tip.
+- No backend, migration or dependency changes. Existing tenant-scoped APIs, permissions, typed discounts,
+  stock/claim limits, images, brands, offer dates/caps and per-level benefit values remain authoritative.
+- Artifact verification: PHP **7,071 passed, 7 skipped, 45,224 assertions, 75 foreground scopes**;
+  frontend **5,606 passed, 0 failed, 388 files**; TypeScript, Loyalty ESLint and fresh build passed.
+- Compiled browser: **21 interaction + 61 state/responsive checks**, zero runtime errors. All four screens fit
+  1440, 1024, 768, 390 and 320 pixels; light mode and all five languages were checked. Reference and compiled
+  screenshots were visually compared. Browser writes use intercepted fixtures, never live member transactions.
+- Unsupported prototype options are honest facts: points rewards apply to all members and use member codes;
+  offer dates remain date-only. Switched off/ended/out-of-stock states reflect actual data. The inherited
+  navigation guard covers internal links and unload, not history traversal or unrelated shell commands.
+
+Full report and evidence: `docs/loyalty-redesign/13-REWARDS-BENEFITS-REPORT.md` and
+`docs/loyalty-redesign/evidence/rewards-benefits/`. Private logs/scripts use `.git/rewards-*`.
+
+## Previous release: Ways to earn
 
 Ways to earn is implemented from the final connected Figma frames WE-01 `102:4548`, WE-02 `102:4549`
 and WE-03 `102:4550` in file `d6IGmk3hOoMw0V5rONbI1A`.

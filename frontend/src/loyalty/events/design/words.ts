@@ -1,0 +1,23 @@
+import { useTranslation } from 'react-i18next'
+
+export const EVENT_DESIGN_WORDS = {
+  pointsValue: '{{n}} points', registrationLabel: 'Registration',
+  line: 'Bring members together and reward participation.', create: '+ Create event', createTitle: 'Create event',
+  hero: 'A clear plan for every event', heroLine: 'Set the time and place, collect signups and keep attendance organised.', upcomingCount: '{{n}} upcoming events',
+  search: 'Search events', searchHint: 'Search by event name', location: 'Location', level: 'Level', allLocations: 'All locations', allLevels: 'All levels',
+  upcoming: 'Upcoming events', past: 'Past events', drafts: 'Draft events', soonest: 'Soonest first', latest: 'Latest first', select: 'Select {{name}}',
+  noResults: 'No results match these filters.', clear: 'Clear filters', signedUp: '{{n}} signed up', signupOpen: 'Signup open', full: 'Full', noSignup: 'No signup required', multiple: 'Multiple days',
+  zone: 'All event times shown in {{zone}}', promotion: 'Planning a points promotion?', promotionLine: 'Use Events for scheduled activities. Use a boost to multiply points earned during a time period.', boosts: 'View boost events →',
+  published: 'PUBLISHED EVENT', who: 'Who can join', allMembers: 'All members', signup: 'Signup', required: 'Required', notRequired: 'Not required', availability: 'Availability', placesLeft: '{{n}} places left', unlimited: 'No capacity limit',
+  reward: 'ATTENDANCE REWARD', afterAttendance: 'After confirmed attendance.', edit: 'Edit event', attendees: 'Attendees', viewAttendees: 'View attendees', overview: '← Event overview', back: '← All events', details: 'Event details',
+  editorLine: 'Set up the details, then review what members will see.', name: 'Event name', description: 'Member description', schedule: 'Schedule', single: 'Single day', eligibility: 'Eligible levels', memberSignup: 'Member signup', capacity: 'Capacity · people', eventPoints: 'Event points',
+  registration: 'Registration and attendance are different', registrationLine: 'Members receive the event reward only after their attendance is confirmed.', preview: 'MEMBER PREVIEW', previewTitle: 'Your event', previewOnly: 'Preview only. Saving does not register members or award points.', confirmedAttendance: 'For confirmed attendance', places: '{{n}} places',
+  hidden: 'Not visible to members yet', reviewLine: 'Review the dates, eligibility and reward before publishing.', publishLine: 'Publishing makes the event available. Invitations are managed separately.', finalCheck: 'Ready for a final check?', draftLine: 'Save a draft or review before publishing.', reviewPublish: 'Review & publish', publishTitle: 'Publish this event?', saveDraft: 'Save draft',
+  registered: 'Registered', checkedIn: 'Checked in', notCheckedIn: 'Not checked in', attendanceConfirmed: 'Attendance confirmed', stillArrive: 'Registered members still to arrive', findAttendee: 'Find an attendee', findHint: 'Search by name or member ID', attendance: 'Attendance', allAttendees: 'All attendees', showing: 'Showing {{n}} of {{total}}', selectedAttendee: 'SELECTED ATTENDEE', confirmed: 'Confirmed', notRegistered: 'Not registered', notAwarded: 'Not awarded', awarded: '{{n}} points awarded', reversed: 'Points reversed', unknownAward: 'See member history',
+  afterConfirmation: 'AFTER CONFIRMATION', once: 'This event’s reward is applied once.', confirmHere: 'Confirm {{name}} is here before recording attendance.', confirmCheckIn: 'Confirm check-in', profile: 'Open member profile →', alreadyNote: 'Already checked in? Review the attendance record before making a correction.',
+  emptyPeople: 'Nobody matches this view yet.', discardTitle: 'Discard unsaved changes?', discardLine: 'Your unsaved event changes will be discarded.', partialSave: 'The draft was saved, but publishing did not finish. Review the error and try again.',
+} as const
+export function useEventWords() {
+  const { t } = useTranslation()
+  return (key: keyof typeof EVENT_DESIGN_WORDS, vars: Record<string, string | number> = {}) => t(`loyalty.eventdesign.${key}`, EVENT_DESIGN_WORDS[key], vars)
+}
