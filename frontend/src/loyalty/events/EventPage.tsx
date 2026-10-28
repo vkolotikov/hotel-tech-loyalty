@@ -34,6 +34,8 @@ export function EventPage() {
 export function EventView({ event, canChange }: { event: LoyaltyEventRow; canChange: boolean; options: EventOptions }) {
   const { t, i18n } = useTranslation(), say = useEventWords(), boot = useBoot(), navigate = useNavigate(), client = useQueryClient()
   const [params, setParams] = useSearchParams(), page = Math.max(1, Number(params.get('page')) || 1)
+  const latestParams = useRef(params)
+  latestParams.current = params
   const [open, setOpen] = useState<null | 'details' | 'add' | 'cancel' | 'delete' | 'publish'>(null), [byName, setByName] = useState(false), [said, setSaid] = useState<CheckInSaid | null>(null)
   const keys = useRef(new Map<number, string>())
   const filters = Object.fromEntries(['q', 'attendance'].flatMap(k => params.get(k) ? [[k, params.get(k)!]] : []))
@@ -41,7 +43,7 @@ export function EventView({ event, canChange }: { event: LoyaltyEventRow; canCha
   const current = people.data?.event ?? event, c = people.data?.counts ?? current.counts
   const can = eventActions(current, canChange, wallNow(venueNow(boot.venue.timezone)))
   const selected = people.data?.people.find(p => String(p.member.id) === params.get('selected')) ?? people.data?.people[0]
-  const change = (patch: Record<string, string>, paging = false) => { const next = new URLSearchParams(params); if (!paging) { next.delete('page'); next.delete('selected') }; for (const [k,v] of Object.entries(patch)) { if (v) next.set(k,v); else next.delete(k) }; setParams(next, { replace: true }) }
+  const change = (patch: Record<string, string>, paging = false) => { const next = new URLSearchParams(latestParams.current); if (!paging) { next.delete('page'); next.delete('selected') }; for (const [k,v] of Object.entries(patch)) { if (v) next.set(k,v); else next.delete(k) }; latestParams.current = next; setParams(next, { replace: true }) }
   const checkIn = useMutation({ mutationFn: (member: { id: number; name: string }) => { if (!keys.current.has(member.id)) keys.current.set(member.id, newPressKey()); return eventsApi.checkIn(event.id, member.id, keys.current.get(member.id)!) }, onSuccess: (answer, member) => { keys.current.delete(member.id); setSaid(checkInSentence(answer, member.name, (k, f, v) => t(k, f, v ?? {}), i18n.language)); afterPersonChange(client, event.id, member.id) } })
   const cancelSignup = useMutation({ mutationFn: (id: number) => eventsApi.cancelSignUp(event.id, id), onSuccess: (_, id) => afterPersonChange(client, event.id, id) })
   const publish = useMutation({ mutationFn: () => eventsApi.publish(event.id), onSuccess: () => { afterEventChange(client, event.id); setOpen(null) } })

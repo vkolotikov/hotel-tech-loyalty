@@ -37,7 +37,7 @@ async (page) => {
       else if(action==='cancel'){e.status='cancelled';e.phase='cancelled';body={event:e}}
       else if(action==='check-in'){const p=state.people.find(p=>p.member.id===payload.member_id),already=p.checked_in_at;if(!already){p.checked_in_at='18:15';p.points_awarded=e.points;e.counts.checked_in++;e.counts.not_checked_in--;}body={verdict:{granted:true,reason:'welcome',tier:p.member.tier,allowed_tiers:[],valid_until:null,expires_in_days:null},checked_in:!already,already_in:already,signed_up:!!p.signed_up_at,points:already?0:e.points,attendance_id:p.member.id,scan_event_id:1}}
       else if(action==='sign-ups'){const p=state.people.find(p=>p.member.id===Number(memberId||payload.member_id));if(p){if(method==='DELETE'){p.cancelled_at='2026-11-08T18:15:00Z';e.counts.signed_up--;e.counts.not_checked_in--}else p.signed_up_at='2026-11-08T18:15:00Z'}body={event:e,person:p}}
-    }else if(path==='members')body={members:state.people.map(p=>({...p.member,points:100,balance:100,is_active:true})),page:1,pages:1,total:state.people.length};
+    }else if(path==='members'||path==='find')body={members:state.people.map(p=>({...p.member,points:100,balance:100,is_active:true})),page:1,pages:1,total:state.people.length};
     else if(path==='start')body={done:7,total:7,steps:[]};
     return route.fulfill({status,contentType:'application/json',body:JSON.stringify(body)});
   });
