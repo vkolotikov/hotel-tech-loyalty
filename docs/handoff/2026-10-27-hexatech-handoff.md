@@ -1,31 +1,42 @@
 # Handoff — HexaTech, 2026-10-27
 
 The state of the app, how to work on it and what is open, for a new session on another device or with another AI
-agent. Production is `main` **4c13e2d1f** (2026-10-27, HexaTech Loyalty Overview). Update this file, or write the
+agent. Production is `main` **0f59ddab1** (2026-10-27, HexaTech Loyalty Members and Program). Update this file, or write the
 next dated one beside it, at the end of every session.
 
-## Latest deployment — Overview, 27 October
+## Latest deployment — Members and Program, 27 October
 
-The Overview milestone is live at `https://app.hexa-tech.uk/loyalty/overview`. Existing `/loyalty` Members and all
-other section routes remain. Its exact design source is Figma file `d6IGmk3hOoMw0V5rONbI1A`, final frames OV-01–34;
-the older Figma source below still documents the earlier section designs.
+The six completed Figma frames in `d6IGmk3hOoMw0V5rONbI1A` are implemented: Members, member profile, Award points
+(`59:3276–3278`), Levels, Edit level and Add benefit (`72:3598–3600`). Existing `/loyalty`, member/profile and
+`/loyalty/program` routes remain, as do import/export, membership management, points writers, NFC, all Program
+sections and permissions. Layouts were compared against the exact Figma exports and checked at 1440, 1024, 390
+and 320 pixels; all five locales and theme switching remain supported.
 
-Work continues on **`feature/loyalty-overview-20261027`**. The deployed feature source is **5706903b1**, applied onto
-dbf458020 in a separate worktree as **89846e822**, then freshly built and pushed as **4c13e2d1f**. The next source
-change list starts at **5706903b1**; the older release records' baselines below are historical. No migration or new
-dependency was added. The Windows-only `payReturn.ts` / `PayReturn.tsx` collision was resolved by renaming the
-unchanged helper to `payReturnState.ts`.
+Work continues on **`feature/loyalty-members-program-20261027`**. The deployed feature source is **2d6e03d81**,
+applied onto **4c13e2d1f** as **9bead854f**, then freshly built and pushed as **0f59ddab1**. All 81 explicit paths
+matched the feature source. The next source change list starts at **2d6e03d81**; older baselines below are historical.
+No migration, dependency, financial writer or authorization change was introduced.
 
-On the deploy artifact: all 74 scoped PHP runs passed (**7051 passed, 7 expected skips**), frontend **384 files /
-5538 tests** passed, TypeScript/lint/build passed. Six browser scenarios against compiled assets passed, following
-20 implementation scenarios. Cloud content, new authenticated endpoint, all three fonts and landing checks were
-verified at **18:46 Europe/Riga**. Details, source semantics, screenshots, limits and machine-readable evidence are
-in `docs/loyalty-redesign/10-IMPLEMENTATION-REPORT.md`.
+On the deployment artifact: **75 scoped PHP runs, 7,071 passed / 7 existing skips**, **385 frontend files / 5,553
+tests passed**, TypeScript/lint/build passed and **50 compiled-asset browser assertions passed**. This PHP sweep
+includes the existing 18-test `tests/Feature/Concerns/` suite omitted from the previous 74-scope loop, plus two new
+Members tests. Browser writes used local intercepted fixtures; real controllers/services/database integration was
+checked separately in Laravel. No production member transactions were performed.
 
-The Overview API is read-only and uses existing Insights permission for analytics. Mode is derived from actual
-configuration; no global mode switch or saved wizard draft was introduced. Current points retain Insights' balance
-semantics. Existing shared advice may still warn about points in a non-points configuration; do not silently change
-that business contract. Members is the next redesign milestone after this Overview review.
+Cloud's new bundle, stylesheet and three font payloads were verified at **21:51 Europe/Riga**. API authentication
+and the landing kit/retired-file checks passed. Live entry: `index-CL4idIXW.js`; Loyalty chunks:
+`LoyaltyApp-CjlMH1Wr.js` / `LoyaltyApp-C6Vz3vTm.css`.
+
+Details, exact frames, intentional design adaptations, screenshots and machine-readable evidence are in
+`docs/loyalty-redesign/11-MEMBERS-PROGRAM-REPORT.md`. Member list `per_page=10|25|50` is bounded, and history's
+optional `type` filter is whitelisted before pagination. Benefit scope and fulfillment metadata are read from the
+existing records. Benefit assignments save separately and preserve unsaved edits to the level itself.
+
+The previous Overview milestone remains live at `/loyalty/overview` (source **5706903b1**, production **4c13e2d1f**;
+report `docs/loyalty-redesign/10-IMPLEMENTATION-REPORT.md`). Its API remains read-only; mode comes from actual
+configuration and current points retain Insights' balance semantics. Shared advice may still warn about points in
+a non-points configuration; do not silently change that business contract. The Windows-only helper collision is
+already resolved as `payReturnState.ts`.
 
 ## The first message for a new session
 
@@ -88,6 +99,7 @@ and recorded in `docs/loyalty-workspace.md` "Deploying":
 | 10a, 10b | d5b3ccb, e3c7f0b | The owner's Figma look (palette, section cards, Get started panels, figure tiles); Start here checklist, Program's checks, the tier form's member preview |
 | 11 | b2cecde | Rename and delete tiers and benefits (soft delete, previewed; members moved; nothing widened) |
 | Overview | 4c13e2d1f | Final Overview design, responsive details, independent scoped data, exact request links; existing routes preserved |
+| Members and Program | 0f59ddab1 | Six final Figma screens, responsive profiles and forms, bounded directory pagination and filtered member history |
 
 Content's releases (up to 7a) went out before, on 2026-10-20/21. The owner's design source for the loyalty look is
 their Figma file `5MtOVFZKvXk5x0mJ8Trm6g` (page `Prototype`, node `1:4`; drafts 163:88 tiers, 163:166 edit tier,
@@ -95,8 +107,9 @@ their Figma file `5MtOVFZKvXk5x0mJ8Trm6g` (page `Prototype`, node `1:4`; drafts 
 
 ## Branches
 
-- **`feature/loyalty-overview-20261027`** (GitHub) — current working branch. Deployed source tip **5706903b1**;
+- **`feature/loyalty-members-program-20261027`** (GitHub) — current working branch. Deployed source tip **2d6e03d81**;
   post-deployment records are committed afterward on this branch. Never push it directly to `main`.
+- **`feature/loyalty-overview-20261027`** (GitHub) — previous working branch through the Overview milestone.
 - **`ccr-9a004154-cs7txb`** (GitHub) — the prior working branch through release 11, before the Overview milestone.
 - **`main`** — production. Deploys are source patches (see "Deploying"), so commit history differs from the
   branch's: compare by content, never by `git log origin/main..branch`.
@@ -143,19 +156,18 @@ bare `php artisan test`, robocopy rather than junctions for `vendor`).
 
 ## Tests
 
-Baselines at `main` b2cecde (a different number afterwards is a change to explain):
+Baselines at `main` **0f59ddab1** (a different number afterwards is a change to explain):
 
-- **PHP on SQLite** — 7040 passed, 7 skipped, 0 failed, run **directory by directory** (never a bare
+- **PHP on SQLite** — 7071 passed, 7 skipped, 0 failed, run **directory by directory** (never a bare
   `php artisan test`):
 
   ```bash
   for t in tests/Feature/*/ tests/Unit/*/ tests/Feature/*.php tests/Unit/*.php; do
-    t=${t%/}; [ "$t" = tests/Feature/Concerns ] && continue
-    echo "$t: $(php8.4 artisan test "$t" 2>&1 | grep -E 'Tests:' | tail -1)"
+    php8.4 artisan test "${t%/}" || exit 1
   done
   ```
 
-- **Frontend** — `cd frontend && npx tsc -b && npx eslint src/loyalty && npx vitest run`: 383 files, 5519 tests, all
+- **Frontend** — `cd frontend && npx tsc -b && npx eslint src/loyalty && npx vitest run`: 385 files, 5553 tests, all
   passing.
 - **PostgreSQL** — `scripts/test-pg.sh <test database> [paths…]` with the database settings exported (and
   `APP_ENV=testing CACHE_STORE=array SESSION_DRIVER=array QUEUE_CONNECTION=sync MAIL_MAILER=array`). Migrate the test

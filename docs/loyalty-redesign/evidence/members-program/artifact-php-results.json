@@ -1,0 +1,377 @@
+﻿[
+    {
+        "scope":  "tests/Feature/Admin/",
+        "exit":  0,
+        "summary":  "Tests:    105 passed (1095 assertions)"
+    },
+    {
+        "scope":  "tests/Feature/AdminAccess/",
+        "exit":  0,
+        "summary":  "Tests:    51 passed (3054 assertions)"
+    },
+    {
+        "scope":  "tests/Feature/Ai/",
+        "exit":  0,
+        "summary":  "Tests:    38 passed (82 assertions)"
+    },
+    {
+        "scope":  "tests/Feature/Analytics/",
+        "exit":  0,
+        "summary":  "Tests:    7 passed (16 assertions)"
+    },
+    {
+        "scope":  "tests/Feature/ApiAuthentication/",
+        "exit":  0,
+        "summary":  "Tests:    6 passed (27 assertions)"
+    },
+    {
+        "scope":  "tests/Feature/Appointments/",
+        "exit":  0,
+        "summary":  "Tests:    408 passed (2104 assertions)"
+    },
+    {
+        "scope":  "tests/Feature/Audit/",
+        "exit":  0,
+        "summary":  "Tests:    15 passed (28 assertions)"
+    },
+    {
+        "scope":  "tests/Feature/Auth/",
+        "exit":  0,
+        "summary":  "Tests:    17 passed (56 assertions)"
+    },
+    {
+        "scope":  "tests/Feature/Booking/",
+        "exit":  0,
+        "summary":  "Tests:    1 skipped, 566 passed (2631 assertions)"
+    },
+    {
+        "scope":  "tests/Feature/Brand/",
+        "exit":  0,
+        "summary":  "Tests:    12 passed (20 assertions)"
+    },
+    {
+        "scope":  "tests/Feature/BrandCreation/",
+        "exit":  0,
+        "summary":  "Tests:    4 passed (33 assertions)"
+    },
+    {
+        "scope":  "tests/Feature/Branding/",
+        "exit":  0,
+        "summary":  "Tests:    17 passed (31 assertions)"
+    },
+    {
+        "scope":  "tests/Feature/Chatbot/",
+        "exit":  0,
+        "summary":  "Tests:    48 passed (99 assertions)"
+    },
+    {
+        "scope":  "tests/Feature/ChatGptAuth/",
+        "exit":  0,
+        "summary":  "Tests:    18 passed (205 assertions)"
+    },
+    {
+        "scope":  "tests/Feature/ChatGptConnections/",
+        "exit":  0,
+        "summary":  "Tests:    9 passed (63 assertions)"
+    },
+    {
+        "scope":  "tests/Feature/ChatGptPortalNotes/",
+        "exit":  0,
+        "summary":  "Tests:    7 passed (27 assertions)"
+    },
+    {
+        "scope":  "tests/Feature/ChatGptSetup/",
+        "exit":  0,
+        "summary":  "Tests:    8 passed (76 assertions)"
+    },
+    {
+        "scope":  "tests/Feature/ChatGptSubscription/",
+        "exit":  0,
+        "summary":  "Tests:    24 passed (107 assertions)"
+    },
+    {
+        "scope":  "tests/Feature/ChatGptTools/",
+        "exit":  0,
+        "summary":  "Tests:    44 passed (626 assertions)"
+    },
+    {
+        "scope":  "tests/Feature/ChatGptTransport/",
+        "exit":  0,
+        "summary":  "Tests:    9 passed (99 assertions)"
+    },
+    {
+        "scope":  "tests/Feature/Concerns/",
+        "exit":  0,
+        "summary":  "Tests:    18 passed (26 assertions)"
+    },
+    {
+        "scope":  "tests/Feature/Console/",
+        "exit":  0,
+        "summary":  "Tests:    14 passed (88 assertions)"
+    },
+    {
+        "scope":  "tests/Feature/Content/",
+        "exit":  0,
+        "summary":  "Tests:    386 passed (2659 assertions)"
+    },
+    {
+        "scope":  "tests/Feature/ContentCalendar/",
+        "exit":  0,
+        "summary":  "Tests:    12 passed (59 assertions)"
+    },
+    {
+        "scope":  "tests/Feature/Crm/",
+        "exit":  0,
+        "summary":  "Tests:    268 passed (771 assertions)"
+    },
+    {
+        "scope":  "tests/Feature/CrmTasks/",
+        "exit":  0,
+        "summary":  "Tests:    18 passed (157 assertions)"
+    },
+    {
+        "scope":  "tests/Feature/Documentation/",
+        "exit":  0,
+        "summary":  "Tests:    18 passed (964 assertions)"
+    },
+    {
+        "scope":  "tests/Feature/Engagement/",
+        "exit":  0,
+        "summary":  "Tests:    113 passed (214 assertions)"
+    },
+    {
+        "scope":  "tests/Feature/Integration/",
+        "exit":  0,
+        "summary":  "Tests:    9 passed (21 assertions)"
+    },
+    {
+        "scope":  "tests/Feature/Internal/",
+        "exit":  0,
+        "summary":  "Tests:    13 passed (26 assertions)"
+    },
+    {
+        "scope":  "tests/Feature/Knowledge/",
+        "exit":  0,
+        "summary":  "Tests:    24 passed (52 assertions)"
+    },
+    {
+        "scope":  "tests/Feature/Landing/",
+        "exit":  0,
+        "summary":  "Tests:    1735 passed (9470 assertions)"
+    },
+    {
+        "scope":  "tests/Feature/LeadForm/",
+        "exit":  0,
+        "summary":  "Tests:    33 passed (103 assertions)"
+    },
+    {
+        "scope":  "tests/Feature/Loyalty/",
+        "exit":  0,
+        "summary":  "Tests:    382 passed (1582 assertions)"
+    },
+    {
+        "scope":  "tests/Feature/LoyaltyWorkspace/",
+        "exit":  0,
+        "summary":  "Tests:    577 passed (5642 assertions)"
+    },
+    {
+        "scope":  "tests/Feature/Mail/",
+        "exit":  0,
+        "summary":  "Tests:    118 passed (321 assertions)"
+    },
+    {
+        "scope":  "tests/Feature/Member/",
+        "exit":  0,
+        "summary":  "Tests:    358 passed (3110 assertions)"
+    },
+    {
+        "scope":  "tests/Feature/Middleware/",
+        "exit":  0,
+        "summary":  "Tests:    39 passed (104 assertions)"
+    },
+    {
+        "scope":  "tests/Feature/Models/",
+        "exit":  0,
+        "summary":  "Tests:    7 passed (19 assertions)"
+    },
+    {
+        "scope":  "tests/Feature/Notifications/",
+        "exit":  0,
+        "summary":  "Tests:    73 passed (182 assertions)"
+    },
+    {
+        "scope":  "tests/Feature/Planner/",
+        "exit":  0,
+        "summary":  "Tests:    56 passed (256 assertions)"
+    },
+    {
+        "scope":  "tests/Feature/Pwa/",
+        "exit":  0,
+        "summary":  "Tests:    16 passed (74 assertions)"
+    },
+    {
+        "scope":  "tests/Feature/Realtime/",
+        "exit":  0,
+        "summary":  "Tests:    13 passed (25 assertions)"
+    },
+    {
+        "scope":  "tests/Feature/Reviews/",
+        "exit":  0,
+        "summary":  "Tests:    10 passed (39 assertions)"
+    },
+    {
+        "scope":  "tests/Feature/Security/",
+        "exit":  0,
+        "summary":  "Tests:    11 passed (50 assertions)"
+    },
+    {
+        "scope":  "tests/Feature/Settings/",
+        "exit":  0,
+        "summary":  "Tests:    133 passed (345 assertions)"
+    },
+    {
+        "scope":  "tests/Feature/Setup/",
+        "exit":  0,
+        "summary":  "Tests:    14 passed (56 assertions)"
+    },
+    {
+        "scope":  "tests/Feature/Smoobu/",
+        "exit":  0,
+        "summary":  "Tests:    10 passed (21 assertions)"
+    },
+    {
+        "scope":  "tests/Feature/Stripe/",
+        "exit":  0,
+        "summary":  "Tests:    63 passed (300 assertions)"
+    },
+    {
+        "scope":  "tests/Feature/TenantScope/",
+        "exit":  0,
+        "summary":  "Tests:    12 passed (30 assertions)"
+    },
+    {
+        "scope":  "tests/Feature/Visitor/",
+        "exit":  0,
+        "summary":  "Tests:    14 passed (27 assertions)"
+    },
+    {
+        "scope":  "tests/Feature/Widget/",
+        "exit":  0,
+        "summary":  "Tests:    75 passed (403 assertions)"
+    },
+    {
+        "scope":  "tests/Feature/WidgetRealtime/",
+        "exit":  0,
+        "summary":  "Tests:    12 passed (90 assertions)"
+    },
+    {
+        "scope":  "tests/Feature/BusinessOutcomeReportTest.php",
+        "exit":  0,
+        "summary":  "Tests:    8 passed (41 assertions)"
+    },
+    {
+        "scope":  "tests/Feature/ExampleTest.php",
+        "exit":  0,
+        "summary":  "Tests:    1 passed (1 assertions)"
+    },
+    {
+        "scope":  "tests/Feature/GalleryUploadValidationTest.php",
+        "exit":  0,
+        "summary":  "Tests:    18 passed (20 assertions)"
+    },
+    {
+        "scope":  "tests/Feature/LeadIntakeApiTest.php",
+        "exit":  0,
+        "summary":  "Tests:    6 skipped (0 assertions)"
+    },
+    {
+        "scope":  "tests/Feature/QueueRetryAfterTest.php",
+        "exit":  0,
+        "summary":  "Tests:    4 passed (14 assertions)"
+    },
+    {
+        "scope":  "tests/Feature/RouteControllersExistTest.php",
+        "exit":  0,
+        "summary":  "Tests:    1 passed (1 assertions)"
+    },
+    {
+        "scope":  "tests/Feature/RouteUniquenessTest.php",
+        "exit":  0,
+        "summary":  "Tests:    1 passed (1 assertions)"
+    },
+    {
+        "scope":  "tests/Unit/Appointments/",
+        "exit":  0,
+        "summary":  "Tests:    39 passed (362 assertions)"
+    },
+    {
+        "scope":  "tests/Unit/Booking/",
+        "exit":  0,
+        "summary":  "Tests:    81 passed (213 assertions)"
+    },
+    {
+        "scope":  "tests/Unit/Channels/",
+        "exit":  0,
+        "summary":  "Tests:    12 passed (14 assertions)"
+    },
+    {
+        "scope":  "tests/Unit/Chatbot/",
+        "exit":  0,
+        "summary":  "Tests:    58 passed (897 assertions)"
+    },
+    {
+        "scope":  "tests/Unit/Content/",
+        "exit":  0,
+        "summary":  "Tests:    139 passed (789 assertions)"
+    },
+    {
+        "scope":  "tests/Unit/Enums/",
+        "exit":  0,
+        "summary":  "Tests:    16 passed (85 assertions)"
+    },
+    {
+        "scope":  "tests/Unit/IndustryPrompts/",
+        "exit":  0,
+        "summary":  "Tests:    55 passed (551 assertions)"
+    },
+    {
+        "scope":  "tests/Unit/Landing/",
+        "exit":  0,
+        "summary":  "Tests:    118 passed (1763 assertions)"
+    },
+    {
+        "scope":  "tests/Unit/Loyalty/",
+        "exit":  0,
+        "summary":  "Tests:    90 passed (1044 assertions)"
+    },
+    {
+        "scope":  "tests/Unit/Models/",
+        "exit":  0,
+        "summary":  "Tests:    12 passed (15 assertions)"
+    },
+    {
+        "scope":  "tests/Unit/Portal/",
+        "exit":  0,
+        "summary":  "Tests:    32 passed (66 assertions)"
+    },
+    {
+        "scope":  "tests/Unit/Services/",
+        "exit":  0,
+        "summary":  "Tests:    111 passed (188 assertions)"
+    },
+    {
+        "scope":  "tests/Unit/Stripe/",
+        "exit":  0,
+        "summary":  "Tests:    23 passed (29 assertions)"
+    },
+    {
+        "scope":  "tests/Unit/Support/",
+        "exit":  0,
+        "summary":  "Tests:    184 passed (1364 assertions)"
+    },
+    {
+        "scope":  "tests/Unit/ExampleTest.php",
+        "exit":  0,
+        "summary":  "Tests:    1 passed (1 assertions)"
+    }
+]

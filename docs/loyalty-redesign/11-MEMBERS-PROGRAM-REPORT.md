@@ -1,6 +1,6 @@
 # Members and Program — implementation record
 
-Implemented and visually reviewed on 27 October 2026. Deployment verification follows below.
+Implemented and visually reviewed on 27 October 2026. Release verification is recorded below.
 Branch: `feature/loyalty-members-program-20261027`. Previous production/source: `4c13e2d1f` / `5706903b1`.
 
 ## Design and scope
@@ -68,5 +68,29 @@ are outside this verification.
 
 ## Release
 
-The isolated source-patch artifact, fresh build, complete scoped PHP checks and live content verification will be
-recorded here once the deployment finishes. Existing routes and the previous Overview milestone remain included.
+Feature source **2d6e03d81** was applied onto production **4c13e2d1f** in an isolated worktree as **9bead854f**.
+All **81** explicit source/document paths matched the feature commit. A fresh production build was committed as
+**0f59ddab1** and pushed to `main`; feature-branch build output was not used. No migrations or dependencies changed.
+
+On that artifact:
+
+- All **75 scoped PHP runs** passed: **7,071 passed, 7 existing skips, 45,224 assertions**.
+  [Per-scope results](evidence/members-program/artifact-php-results.json).
+  Compared with the previous 74-scope run, this includes two new Members tests and the existing 18-test
+  `tests/Feature/Concerns/` suite that the older loop skipped.
+- TypeScript, Loyalty ESLint and the fresh Vite/postbuild passed. **385 frontend files / 5,553 tests passed**.
+  [Frontend results](evidence/members-program/artifact-frontend-results.json).
+- All **50 browser assertions** passed again against the compiled production assets, with no application runtime
+  errors. [Compiled-asset results](evidence/members-program/artifact-browser-checks.json).
+  The six desktop and fifteen responsive captures beside the comparison now come from that compiled artifact.
+- Tier labels were checked while switching theme in place; both light and dark text colors update immediately.
+
+Cloud content was verified at **21:51 Europe/Riga on 27 October 2026**. The live entry
+`index-CL4idIXW.js` loads `LoyaltyApp-CjlMH1Wr.js` / `LoyaltyApp-C6Vz3vTm.css`; all four new content markers,
+the redesign stylesheet and all three Poppins font payloads passed. The Members API still returns the expected
+401 without authentication. The academy landing page serves its kit stylesheet without retired `rp-` markers,
+and `/landing/ruled_page.css` remains 404.
+[Live verification](evidence/members-program/live-verification.json).
+
+Existing routes and the previous Overview milestone remain included. The next source patch starts at **2d6e03d81**;
+post-deployment records are committed separately on the feature branch.

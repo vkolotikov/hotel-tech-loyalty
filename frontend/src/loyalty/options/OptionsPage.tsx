@@ -39,7 +39,7 @@ export function OptionsPage() {
   const location = useLocation()
   const navigate = useNavigate()
   const { tab, way: focus } = pageFrom(location.search, data?.ways ?? [])
-  const go = (next: OptionsTab, way?: string | null) => navigate({ pathname: '/loyalty/options', search: searchOf(next, way) }, { replace: true })
+  const go = (next: OptionsTab, way?: string | null) => navigate({ pathname: '/loyalty/options', search: next === 'overview' ? '?tab=overview' : searchOf(next, way) }, { replace: true })
   const open = (way: string) => go(groupOf(way), way)
 
   return (

@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import { Fragment } from 'react'
+import { groupOf } from '../options/groups'
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { LayoutGrid, Users, Inbox, Crown, Sparkles, Gift, CalendarDays, Mail, BarChart3, CreditCard, ScanLine } from 'lucide-react'
@@ -23,15 +24,21 @@ import { useOverviewWords } from './words'
 import './overview.css'
 import '../redesign/redesign.css'
 import { useRedesignWords } from '../redesign/words'
+import { useEarnWords } from '../earn/words'
 
 export function OverviewShell({ children }: { children: ReactNode }) {
   const { t } = useTranslation()
   const say = useOverviewWords()
   const words = useRedesignWords()
+  const earn = useEarnWords()
   const location = useLocation()
   const isProgram = location.pathname.startsWith('/loyalty/program')
+  const isEarn = location.pathname.replace(/\/$/, '') === '/loyalty/options'
   const isMembers = /^\/loyalty\/?$/.test(location.pathname) || location.pathname.startsWith('/loyalty/members/')
-  const sectionName = isProgram ? t('loyalty.nav.program', 'Program') : isMembers ? t('loyalty.nav.members', 'Members') : say('nav')
+  const earnParams = new URLSearchParams(location.search)
+  const earnTab = earnParams.get('tab') ?? (earnParams.has('way') ? groupOf(earnParams.get('way')!) : 'earn')
+  const earnSection = earnTab === 'bonus' ? earn('bonuses') : earnTab === 'rule' ? earn('rules') : earnTab === 'overview' ? earn('checks') : earn('earning')
+  const sectionName = isEarn ? `${t('loyalty.nav.options', 'Ways to earn')} / ${earnSection}` : isProgram ? t('loyalty.nav.program', 'Program') : isMembers ? t('loyalty.nav.members', 'Members') : say('nav')
   const tab = new URLSearchParams(location.search).get('tab') ?? 'tiers'
   const context = useLoyalty()
   const { data: boot } = context
@@ -63,11 +70,12 @@ export function OverviewShell({ children }: { children: ReactNode }) {
   ]
   const assetFor = (to: string) => assets[(to === '/loyalty' ? 'members' : to === '/loyalty/overview' ? 'home' : to.split('/').pop()) as keyof typeof assets]
   const subnav = isProgram && !slim ? <div className="l-rd-subnav">{[['tiers', words('levels')], ['benefits', words('membershipBenefits')], ['places', t('loyalty.places.title', 'Places')], ['boosts', t('loyalty.program.boosts.title', 'Boost events')]].map(([key, label]) => <Link key={key} to={`/loyalty/program?tab=${key}`} className={tab === key ? 'l-rd-subnav-active' : ''} onClick={() => setMenu(false)}>{label}</Link>)}{can?.manage_program && <Link to="/loyalty/options/setup" onClick={() => setMenu(false)}>{words('guidedSetup')}</Link>}</div> : null
-  const links = <nav className="l-ov-nav" aria-label={say('menu')}>{nav.map(n => <Fragment key={n.to}><NavLink to={n.to} end={n.end} title={slim ? n.label : undefined} onClick={() => setMenu(false)} className={({ isActive }) => `l-ov-nav-item ${isActive || (n.to === '/loyalty' && isMembers) ? 'l-ov-selected' : ''}`}><span className="l-ov-icon"><img src={assetFor(n.to)} alt="" /></span><span>{n.label}</span>{['requests', 'program', 'options', 'rewards', 'campaigns', 'app'].includes(n.to.split('/').pop() ?? '') && <img className="l-ov-disclosure" src={assets.submenu} alt="" />}</NavLink>{n.to === '/loyalty/program' && subnav}</Fragment>)}</nav>
+  const earnNav = isEarn && !slim ? <div className="l-rd-subnav">{[['earn', earn('earning')], ['bonus', earn('bonuses')], ['rule', earn('rules')]].map(([key, label]) => <Link key={key} to={`/loyalty/options?tab=${key}`} className={earnTab === key ? 'l-rd-subnav-active' : ''} onClick={() => setMenu(false)}>{label}</Link>)}</div> : null
+  const links = <nav className="l-ov-nav" aria-label={say('menu')}>{nav.map(n => <Fragment key={n.to}><NavLink to={n.to} end={n.end} title={slim ? n.label : undefined} onClick={() => setMenu(false)} className={({ isActive }) => `l-ov-nav-item ${isActive || (n.to === '/loyalty' && isMembers) ? 'l-ov-selected' : ''}`}><span className="l-ov-icon"><img src={assetFor(n.to)} alt="" /></span><span>{n.label}</span>{['requests', 'program', 'options', 'rewards', 'campaigns', 'app'].includes(n.to.split('/').pop() ?? '') && <img className="l-ov-disclosure" src={assets.submenu} alt="" />}</NavLink>{n.to === '/loyalty/program' && subnav}{n.to === '/loyalty/options' && earnNav}</Fragment>)}</nav>
   const foot = { look, fullAdmin: FULL_ADMIN, person: ready ? boot?.staff.name : undefined, role: ready ? boot?.staff.role ?? null : null, onLeave: () => true, onShortcuts: () => { setMenu(false); setHelp(true) }, onFind: () => { setMenu(false); setFind(true) }, guide: { to: '/loyalty/guide', label: say('help') } }
   const findList = findActions({ nav: [...nav, { to: '/loyalty/scan', end: false, icon: ScanLine, label: say('scan') }], dark: look.resolved === 'dark', wide: true, slim, words: { scan: say('scan'), goTo: t('loyalty.find.go_to', 'Go to'), toDark: t('loyalty.find.theme_dark', 'Switch to dark'), toLight: t('loyalty.find.theme_light', 'Switch to light'), collapse: t('workspace.shell.collapse', 'Collapse menu'), expand: t('workspace.shell.expand', 'Expand menu'), shortcuts: t('workspace.shortcuts.title', 'Keyboard shortcuts'), guide: say('help'), start: say('checklist') } })
   const run = (target: FindTarget) => { const action = runOf(target); if (action === null && 'to' in target) navigate(target.to); else if (action === 'theme') look.setTheme(look.resolved === 'dark' ? 'light' : 'dark'); else if (action === 'rail') look.setRail(slim ? 'full' : 'slim'); else if (action === 'shortcuts') setHelp(true) }
-  return <div data-workspace="" data-loyalty="" data-theme={look.resolved} data-overview="" data-redesign={isProgram || isMembers || undefined} data-slim={slim || undefined} className="l-overview-frame" style={accentStyle(accentTokens(boot?.accent, look.resolved, LOYALTY_SURFACES[look.resolved]))}>
+  return <div data-workspace="" data-loyalty="" data-theme={look.resolved} data-overview="" data-redesign={isProgram || isMembers || isEarn || undefined} data-slim={slim || undefined} className="l-overview-frame" style={accentStyle(accentTokens(boot?.accent, look.resolved, LOYALTY_SURFACES[look.resolved]))}>
     <button className="l-ov-skip" onClick={() => main.current?.focus()}>{say('skip')}</button>
     <aside className="l-ov-sidebar" aria-label={say('menu')}>
       <Link to="/loyalty/overview" className="l-ov-brand"><span className="l-ov-mark"><img src={assets.star} alt="" /></span><span><strong>hexa</strong><small>{say('platform')}</small></span></Link>

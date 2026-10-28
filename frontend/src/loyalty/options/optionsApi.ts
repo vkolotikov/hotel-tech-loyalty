@@ -23,6 +23,7 @@ export const OPTIONS_KEY = ['loyalty', 'options'] as const
 export function afterOptionsChange(client: QueryClient, answer: OptionsAnswer, built = false): void {
   client.setQueryData(OPTIONS_KEY, answer)
   void client.invalidateQueries({ queryKey: ['loyalty', 'bootstrap'] })
+  void client.invalidateQueries({ queryKey: ['loyalty', 'overview'] })
   if (built) {
     void client.invalidateQueries({ queryKey: ['loyalty', 'program'] })
     void client.invalidateQueries({ queryKey: ['loyalty', 'rewards'] })

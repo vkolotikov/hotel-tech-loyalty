@@ -19,7 +19,7 @@ import { MemberPage } from './member/MemberPage'
 import { DuplicatesPage } from './membership/DuplicatesPage'
 import { ImportPage } from './membership/ImportPage'
 import { MembersPage } from './members/MembersPage'
-import { OptionsPage } from './options/OptionsPage'
+import { EarnPage } from './earn/EarnPage'
 import { SetupWizard } from './options/SetupWizard'
 import { ProgramPage } from './program/ProgramPage'
 import { RequestsPage } from './requests/RequestsPage'
@@ -51,7 +51,7 @@ export function LoyaltyApp() {
     return <LoyaltyProvider><DoorPage /></LoyaltyProvider>
   }
 
-  const designed = location.pathname.replace(/\/$/, '') === '/loyalty' || /^\/loyalty\/members\/\d+\/?$/.test(location.pathname) || location.pathname.replace(/\/$/, '') === '/loyalty/program'
+  const designed = ['/loyalty', '/loyalty/program', '/loyalty/options'].includes(location.pathname.replace(/\/$/, '')) || /^\/loyalty\/members\/\d+\/?$/.test(location.pathname)
   const Shell = designed ? OverviewShell : LoyaltyShell
   return (
     <LoyaltyProvider>
@@ -63,7 +63,7 @@ export function LoyaltyApp() {
           <Route path="members/:id" element={<MemberPage />} />
           <Route path="requests" element={<RequestsPage />} />
           <Route path="program" element={<ProgramPage />} />
-          <Route path="options" element={<OptionsPage />} />
+          <Route path="options" element={<EarnPage />} />
           <Route path="options/setup" element={<SetupWizard />} />
           <Route path="rewards" element={<RewardsPage />} />
           <Route path="events" element={<EventsPage />} />
