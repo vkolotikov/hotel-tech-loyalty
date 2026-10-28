@@ -1,0 +1,9 @@
+﻿{
+    "passed":  344,
+    "failed":  0,
+    "files":  4,
+    "success":  true,
+    "typescript":  "passed",
+    "loyalty_eslint":  "passed",
+    "production_build":  "passed"
+}

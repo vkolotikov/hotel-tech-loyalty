@@ -1,5 +1,5 @@
 {
-  "passed": 77,
+  "passed": 79,
   "checks": [
     "opening only reads settings",
     "workspace name is not silently renamed",
@@ -43,6 +43,8 @@
     "switching legacy settings tabs keeps wallet settings open",
     "failed initial look is not defaults",
     "look retry recovers",
+    "denied mutation hides the draft",
+    "denied mutation releases the navigation guard",
     "wallet failure preserves appearance without false readiness",
     "programme preview failure preserves settings",
     "denied reads hide cached appearance",
