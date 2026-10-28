@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
@@ -35,7 +35,7 @@ export function EventView({ event, canChange }: { event: LoyaltyEventRow; canCha
   const { t, i18n } = useTranslation(), say = useEventWords(), boot = useBoot(), navigate = useNavigate(), client = useQueryClient()
   const [params, setParams] = useSearchParams(), page = Math.max(1, Number(params.get('page')) || 1)
   const latestParams = useRef(params)
-  latestParams.current = params
+  useEffect(() => { latestParams.current = params }, [params])
   const [open, setOpen] = useState<null | 'details' | 'add' | 'cancel' | 'delete' | 'publish'>(null), [byName, setByName] = useState(false), [said, setSaid] = useState<CheckInSaid | null>(null)
   const keys = useRef(new Map<number, string>())
   const filters = Object.fromEntries(['q', 'attendance'].flatMap(k => params.get(k) ? [[k, params.get(k)!]] : []))
