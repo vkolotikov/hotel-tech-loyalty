@@ -1,0 +1,71 @@
+{
+  "checks": [
+    "Unanswered access retry reuses idempotency key",
+    "Retry preserves scan context",
+    "Event scan submits event_id and displays server attendance",
+    "Event result shows recorded attendance",
+    "Actual ZXing decoder reads the fixture QR from a MediaStream",
+    "Camera MediaStream stops after a decoded member",
+    "Opening manual lookup releases the active camera",
+    "Empty search cannot open a member",
+    "Editing a search invalidates the selected match",
+    "USB HID UID is normalised and sent through the existing scan API",
+    "USB reader closes after the member is found",
+    "ru mobile layout has no overflow",
+    "de mobile layout has no overflow",
+    "fr mobile layout has no overflow",
+    "es mobile layout has no overflow",
+    "Light theme renders",
+    "No reader integration runtime errors"
+  ],
+  "requests": [
+    {
+      "path": "scan",
+      "method": "POST",
+      "query": "?brand_id=all",
+      "payload": {
+        "code": "M-1048",
+        "idempotency_key": "1d30b14c-a7a4-439a-b411-1ab0ecb37b40",
+        "place_id": 1
+      }
+    },
+    {
+      "path": "scan",
+      "method": "POST",
+      "query": "?brand_id=all",
+      "payload": {
+        "code": "M-1048",
+        "idempotency_key": "1d30b14c-a7a4-439a-b411-1ab0ecb37b40",
+        "place_id": 1
+      }
+    },
+    {
+      "path": "scan",
+      "method": "POST",
+      "query": "?brand_id=all",
+      "payload": {
+        "code": "M-1048",
+        "idempotency_key": "c4fac689-6e2a-4f0c-bcb3-cbc98b0541b1",
+        "event_id": 5
+      }
+    },
+    {
+      "path": "scan",
+      "method": "POST",
+      "query": "?brand_id=all",
+      "payload": {
+        "code": "M-1048",
+        "idempotency_key": "c077fd97-1b8e-4e5f-9fec-1d3b3c69e6ba"
+      }
+    },
+    {
+      "path": "scan",
+      "method": "POST",
+      "query": "?brand_id=all",
+      "payload": {
+        "code": "04:A2:B3:C4",
+        "idempotency_key": "47cd7abf-af11-4d61-a5c1-6502c6ad79aa"
+      }
+    }
+  ]
+}

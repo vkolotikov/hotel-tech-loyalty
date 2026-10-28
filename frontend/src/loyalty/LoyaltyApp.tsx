@@ -52,7 +52,7 @@ export function LoyaltyApp() {
     return <LoyaltyProvider><DoorPage /></LoyaltyProvider>
   }
 
-  const designed = ['/loyalty', '/loyalty/program', '/loyalty/options', '/loyalty/rewards', '/loyalty/requests', '/loyalty/insights', '/loyalty/app'].includes(location.pathname.replace(/\/$/, '')) || /^\/loyalty\/members\/\d+\/?$/.test(location.pathname)
+  const designed = ['/loyalty', '/loyalty/program', '/loyalty/options', '/loyalty/rewards', '/loyalty/requests', '/loyalty/insights', '/loyalty/app', '/loyalty/scan'].includes(location.pathname.replace(/\/$/, '')) || /^\/loyalty\/members\/\d+\/?$/.test(location.pathname)
   const Shell = designed || /^\/loyalty\/events(?:\/|$)/.test(location.pathname) ? OverviewShell : LoyaltyShell
   return (
     <LoyaltyProvider>

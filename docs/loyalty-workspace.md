@@ -10,6 +10,12 @@ campaigns, card and app, pictures, currency).
 
 ## Who has it, and the ways in and back
 
+Card & app redesign (28 October, deployed and live verified): `/loyalty/app` now uses the exact CA-01
+appearance editor and member preview, with server-backed palette saves, immediate logo upload and wallet
+readiness. Original `?tab=wallet|app|currency` routes and all advanced controls remain. Automatic app themes
+and anonymous test passes are explicitly unavailable; device testing opens an accurate guide. See
+`docs/loyalty-redesign/17-CARD-APP-REPORT.md` for design, integration, tests and the deployment record.
+
 Requests/Insights redesign (28 October, deployed and live verified): `/loyalty/requests` combines benefit
 requests, reward redemptions and referral activity through `GET requests/inbox`. Existing writers and legacy
 benefit bookmarks are retained. `/loyalty/insights` reads `GET insights/report?from&to&compare&tier_id`; defaults
@@ -789,6 +795,15 @@ files on disk): run them one after the other.
   redirect outliving its page; an extra or a voice config holding NULL in a NOT NULL column.
 
 ## Deploying
+
+- Card & app, 2026-10-28: production **5eaffd69c**, feature source **f594c16d3** on
+  `feature/loyalty-card-app-20261028`. Final source patch **711deccf4** was applied to **f5edeb363**;
+  whole-source parity passed across 53 explicit paths. Backend **7,085 passed / 7 skipped / 45,393 assertions /
+  75 scopes**, frontend **5,668 passed / 392 files**, final focused **344 passed**. TypeScript, Loyalty ESLint,
+  fresh build and **90 compiled-browser checks** passed. Live content verified **28 October, 18:01 Europe/Riga**:
+  entry `index-CYWy-VPW.js`, Loyalty `LoyaltyApp-li05agYL.js` / `LoyaltyApp-CN3NTzf2.css`, three fonts,
+  appearance/wallet/currency authentication (401), public landing kit and retired stylesheet (404).
+  The next source delta starts at **f594c16d366db189c397b7180ec01db2014ff301**, not post-deployment docs.
 
 - Events, 2026-10-28: production **ab5f25bdd**, feature source **27baa2935** on
   `feature/loyalty-events-20261028`. Final source patch **6ba19561a** was applied to **56ddb2d2b**;

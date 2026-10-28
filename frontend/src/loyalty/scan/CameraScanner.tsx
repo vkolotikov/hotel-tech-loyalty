@@ -4,6 +4,9 @@ import { Square } from 'lucide-react'
 import { Button } from '../../workspace/ui/Button'
 import { Notice } from '../../workspace/ui/Notice'
 import { cameraFailure, type CameraFailure } from './scanMath'
+import { useScanWords } from './design/words'
+import { OverviewButton } from '../overview/OverviewUI'
+import scanCamera from './design/assets/scan-camera.svg'
 
 /** The rear camera where there is one (a phone's or tablet's); any camera otherwise (a laptop's). */
 const CONSTRAINTS: MediaStreamConstraints = { video: { facingMode: { ideal: 'environment' } }, audio: false }
@@ -16,13 +19,16 @@ const CONSTRAINTS: MediaStreamConstraints = { video: { facingMode: { ideal: 'env
  * Release 8 (spec 2026-10-25 §2): `continuous` keeps scanning — every code read is handed up, member after member (door
  * mode ignores the same code held in view, verdict.ts `isDuplicate`); `fill` lets the picture fill its box.
  */
-export function CameraScanner({ onCode, onStop, continuous = false, fill = false }: {
+export function CameraScanner({ onCode, onStop, continuous = false, fill = false, design = false }: {
   onCode: (text: string) => void
   onStop: () => void
   continuous?: boolean
   fill?: boolean
+  design?: boolean
 }) {
   const { t } = useTranslation()
+  const words = useScanWords()
+  const [attempt, setAttempt] = useState(0)
   const video = useRef<HTMLVideoElement>(null)
   const [state, setState] = useState<'starting' | 'running' | CameraFailure>('starting')
   const handlers = useRef({ onCode, onStop })
@@ -64,12 +70,14 @@ export function CameraScanner({ onCode, onStop, continuous = false, fill = false
       stopCamera()
       document.removeEventListener('visibilitychange', onHidden)
     }
-  }, [])
+  }, [attempt])
 
   const failed = state !== 'starting' && state !== 'running'
   const status = state === 'running'
     ? t('loyalty.scan.camera_aim', 'Hold the member’s QR code inside the square.')
     : t('loyalty.scan.camera_starting', 'Starting the camera…')
+
+  if (design) return <div className="l-sc-camera-live">{failed ? <div className="l-sc-viewport l-sc-camera-error"><h2>{words(state === 'denied' ? 'cameraBlocked' : 'cameraUnavailable')}</h2><p role="alert"><CameraTrouble failure={state} /></p><OverviewButton primary onClick={() => { setState('starting'); setAttempt(n => n + 1) }}>{words('retry')}</OverviewButton></div> : <div className="l-sc-video"><video ref={video} muted playsInline /><img src={scanCamera} alt="" /><p role="status">{status}</p></div>}<OverviewButton onClick={onStop}>{words('stopCamera')}</OverviewButton></div>
 
   if (fill) {
     return failed ? (

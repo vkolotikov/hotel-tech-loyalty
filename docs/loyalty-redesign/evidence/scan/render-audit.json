@@ -1,0 +1,105 @@
+{
+  "desktop": {
+    "heading": {
+      "x": 396,
+      "y": 96,
+      "width": 880,
+      "height": 66,
+      "font": "14px / 22px \"L Poppins\", \"A Text\", sans-serif",
+      "fontWeight": "400",
+      "color": "rgb(245, 247, 251)",
+      "background": "rgba(0, 0, 0, 0)"
+    },
+    "scanner": {
+      "x": 396,
+      "y": 186,
+      "width": 880,
+      "height": 701,
+      "font": "14px / 22px \"L Poppins\", \"A Text\", sans-serif",
+      "fontWeight": "400",
+      "color": "rgb(245, 247, 251)",
+      "background": "rgba(0, 0, 0, 0)"
+    },
+    "viewport": {
+      "x": 421,
+      "y": 271,
+      "width": 830,
+      "height": 480,
+      "font": "14px / 22px \"L Poppins\", \"A Text\", sans-serif",
+      "fontWeight": "400",
+      "color": "rgb(245, 247, 251)",
+      "background": "rgb(40, 48, 63)"
+    },
+    "button": {
+      "x": 712,
+      "y": 589,
+      "width": 248,
+      "height": 44,
+      "font": "500 14px / 22px \"L Poppins\", \"A Text\", sans-serif",
+      "fontWeight": "500",
+      "color": "rgb(245, 247, 251)",
+      "background": "rgba(0, 0, 0, 0)"
+    },
+    "panel": {
+      "x": 232,
+      "y": 72,
+      "width": 1208,
+      "height": 847,
+      "font": "14px / 22px \"L Poppins\", \"A Text\", sans-serif",
+      "fontWeight": "400",
+      "color": "rgb(245, 247, 251)",
+      "background": "rgba(0, 0, 0, 0)"
+    },
+    "fontFaces": [
+      {
+        "weight": "400",
+        "status": "loaded"
+      },
+      {
+        "weight": "500",
+        "status": "loaded"
+      },
+      {
+        "weight": "600",
+        "status": "loaded"
+      }
+    ]
+  },
+  "member": {
+    "fontSize": "30px",
+    "firstPanel": {
+      "x": 264,
+      "y": 379,
+      "width": 1144,
+      "height": 674,
+      "top": 379,
+      "right": 1408,
+      "bottom": 1053,
+      "left": 264
+    }
+  },
+  "mobile": {
+    "overflow": false,
+    "nav": {
+      "x": 0,
+      "y": 760,
+      "width": 390,
+      "height": 84,
+      "top": 760,
+      "right": 390,
+      "bottom": 844,
+      "left": 0
+    },
+    "tile": {
+      "x": 16,
+      "y": 351,
+      "width": 173,
+      "height": 118,
+      "top": 351,
+      "right": 189,
+      "bottom": 469,
+      "left": 16
+    },
+    "tileOpacity": "1"
+  }
+}

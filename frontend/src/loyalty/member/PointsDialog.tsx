@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Field } from '../../workspace/ui/Field'
@@ -15,6 +15,7 @@ import { useRedesignWords } from '../redesign/words'
 import { steppedValue } from '../redesign/designMath'
 import { initials } from '../members/membersQuery'
 import { balanceAfter, pointsProblem, type PointsMode } from './memberMath'
+import { useScanWords } from '../scan/design/words'
 
 const INPUT = 'w-full rounded-lg border border-a-border bg-a-surface px-3 py-2 text-sm text-a-text'
 
@@ -22,11 +23,12 @@ const INPUT = 'w-full rounded-lg border border-a-border bg-a-surface px-3 py-2 t
  * Award or redeem points (spec 2026-10-21 §4.3): the points, a reason, and the balance the member will have — checked
  * before sending, then by the server. One key per opening of the dialog: a retry after a lost answer writes nothing new.
  */
-export function PointsDialog({ mode, memberId, name, balance, onClose, memberNumber, level }: { mode: PointsMode; memberId: number; name: string; balance: number; onClose: () => void; memberNumber?: string | null; level?: string }) {
+export function PointsDialog({ mode, memberId, name, balance, onClose, memberNumber, level, inline = false, onBusyChange }: { mode: PointsMode; memberId: number; name: string; balance: number; onClose: () => void; memberNumber?: string | null; level?: string; inline?: boolean; onBusyChange?: (busy: boolean) => void }) {
   const { t, i18n } = useTranslation()
   const locale = i18n.language || 'en'
   const api = useApi()
   const say = useRedesignWords()
+  const scanWords = useScanWords()
   const queryClient = useQueryClient()
   const [key] = useState(newPressKey)
   const [typed, setTyped] = useState('')
@@ -45,19 +47,19 @@ export function PointsDialog({ mode, memberId, name, balance, onClose, memberNum
   })
 
   const problem = pointsProblem(mode, typed, reason, balance)
+  useEffect(() => { onBusyChange?.(save.isPending); return () => onBusyChange?.(false) }, [save.isPending, onBusyChange])
   const after = balanceAfter(mode, balance, typed)
   const failure = save.isError ? failureOf(save.error) : null
   const title = mode === 'award' ? t('loyalty.member.award', 'Award points') : t('loyalty.member.redeem', 'Redeem points')
 
-  return (
-    <DesignDialog title={title} onClose={onClose} busy={save.isPending}>
+  const form = (
       <form className="l-rd-form l-rd-points-form" noValidate onSubmit={(e) => {
         e.preventDefault()
         setTried(true)
         if (problem === null && !save.isPending) save.mutate()
       }}>
         <p>{say(mode === 'award' ? 'awardLine' : 'redeemLine')}</p>
-        <div className="l-rd-person-inset"><span className="l-rd-avatar" aria-hidden>{initials(name)}</span><span><strong>{name}</strong><small>{[level, memberNumber].filter(Boolean).join(' · ')}</small></span></div>
+        {!inline && <div className="l-rd-person-inset"><span className="l-rd-avatar" aria-hidden>{initials(name)}</span><span><strong>{name}</strong><small>{[level, memberNumber].filter(Boolean).join(' · ')}</small></span></div>}
         <div><span className="l-rd-label">{say(mode === 'award' ? 'pointsAdd' : 'pointsUse')}</span><NumberControl label={say(mode === 'award' ? 'pointsAdd' : 'pointsUse')} value={typed} onValue={setTyped} min={1} max={100000} inputRef={first} disabled={save.isPending} invalid={tried && (problem === 'points' || problem === 'too_many' || problem === 'over_balance')} /></div>
         <div className="l-rd-quick-add"><small>{say('quickAdd')}</small>{[50, 100, 250].map(n => <OverviewButton key={n} type="button" disabled={save.isPending} onClick={() => setTyped(steppedValue(typed, n, 1, 100000))}>+{n}</OverviewButton>)}</div>
         <small>{say('stepHint')}</small>
@@ -78,12 +80,12 @@ export function PointsDialog({ mode, memberId, name, balance, onClose, memberNum
         )}
 
         <div className="l-rd-form-foot">
-          <OverviewButton type="button" onClick={onClose} disabled={save.isPending}>{t('loyalty.common.cancel', 'Cancel')}</OverviewButton>
+          <OverviewButton type="button" onClick={inline ? () => { setTyped(''); setReason(''); setTried(false) } : onClose} disabled={save.isPending}>{inline ? scanWords('clear') : t('loyalty.common.cancel', 'Cancel')}</OverviewButton>
           <OverviewButton type="submit" primary disabled={save.isPending} aria-busy={save.isPending}>
             {after === null ? title : say(mode === 'award' ? 'awardConfirm' : 'redeemConfirm', { n: points(Number(typed), locale) })}
           </OverviewButton>
         </div>
       </form>
-    </DesignDialog>
   )
+  return inline ? form : <DesignDialog title={title} onClose={onClose} busy={save.isPending}>{form}</DesignDialog>
 }

@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { entriesKey, peopleKey, scanApi } from './scanApi'
 import type { ScanContext } from './scanContext'
 import { entryLine, peopleLines, TODAY_LINES, type TodayLine } from './verdict'
+import { failureOf } from '../lib/api'
 
 export interface Today {
   lines: TodayLine[]
@@ -16,14 +17,14 @@ export interface Today {
  * day's, newest first) or an event's people (`GET events/{id}/people`). Each scan invalidates it (scanApi `afterScan`);
  * it also refreshes each minute, for the scans of the other doors.
  */
-export function useToday(context: ScanContext, timeZone: string): Today {
+export function useToday(context: ScanContext, timeZone: string, scope?: string): Today {
   const placeId = context.kind === 'place' ? context.id : 0
   const eventId = context.kind === 'event' ? context.id : 0
-  const entries = useQuery({ queryKey: entriesKey(placeId), queryFn: () => scanApi.entries(placeId), enabled: placeId > 0, refetchInterval: 60_000, retry: 1 })
-  const people = useQuery({ queryKey: peopleKey(eventId), queryFn: () => scanApi.people(eventId), enabled: eventId > 0, refetchInterval: 60_000, retry: 1 })
+  const entries = useQuery({ queryKey: [...entriesKey(placeId), ...(scope ? [scope] : [])], queryFn: () => scanApi.entries(placeId), enabled: placeId > 0, refetchInterval: 60_000, retry: 1 })
+  const people = useQuery({ queryKey: [...peopleKey(eventId), ...(scope ? [scope] : [])], queryFn: () => scanApi.people(eventId), enabled: eventId > 0, refetchInterval: 60_000, retry: 1 })
 
   if (placeId > 0) {
-    const data = entries.data
+    const data = entries.isError && [401, 402, 403, 404].includes(failureOf(entries.error).status) ? undefined : entries.data
     return {
       lines: data ? data.entries.slice(0, TODAY_LINES).map(e => entryLine(e, timeZone)) : [],
       counts: data ? { kind: 'place', granted: data.counts.granted, denied: data.counts.denied } : null,
@@ -31,7 +32,7 @@ export function useToday(context: ScanContext, timeZone: string): Today {
     }
   }
   if (eventId > 0) {
-    const data = people.data
+    const data = people.isError && [401, 402, 403, 404].includes(failureOf(people.error).status) ? undefined : people.data
     const signUp = data?.event?.sign_up ?? true
     return {
       // The server's latest check-ins by real time; an older server's first page, sorted by the clock.
