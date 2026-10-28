@@ -779,6 +779,21 @@ files on disk): run them one after the other.
 
 ## Deploying
 
+- Events, 2026-10-28: production **ab5f25bdd**, feature source **27baa2935** on
+  `feature/loyalty-events-20261028`. Final source patch **6ba19561a** was applied to **56ddb2d2b**;
+  whole source parity passed across 49 explicit paths. Three connected Figma frames cover the overview,
+  full create/edit page and attendees. Existing scanner, door mode, signup and lifecycle actions remain.
+  Tenant-scoped read filters and historical attendance reward display extend existing APIs; writers,
+  permissions, notifications and idempotency remain unchanged. No migrations or dependencies changed.
+  Artifact checks: PHP **7,074 passed / 7 skipped / 45,264 assertions / 75 scopes**, frontend **5,619 passed / 389 files**,
+  TypeScript/ESLint/build passed, **83 compiled-browser checks passed**, zero runtime errors. All three views
+  fit 1440/1280/1024/768/390/320px; light mode, five languages, permissions, retries and workflow actions passed.
+  Compiled renders were visually compared with exact Figma references; 18 SVG exports matched local hashes.
+  Live content verified **28 October, 14:26 Europe/Riga**: entry `index-DPUoSWOd.js`, Loyalty
+  `LoyaltyApp-4CAHf0Ws.js` / `LoyaltyApp-DH-yoI5b.css`, three fonts, Events authentication (401),
+  public landing kit and retired stylesheet (404). The next source delta starts at **27baa2935**.
+  Full report: `docs/loyalty-redesign/14-EVENTS-REPORT.md`.
+
 - Rewards & benefits, 2026-10-28: production **56ddb2d2b**, feature source **b7e5e3a5a** on
   `feature/loyalty-rewards-benefits-20261028`. Final source patch **1860ce52a** was applied to **1fcdcbb6b**;
   whole source parity passed across 70 explicit source/evidence paths. Four connected Figma frames cover
