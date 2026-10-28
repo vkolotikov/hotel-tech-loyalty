@@ -1,0 +1,36 @@
+﻿{
+    "verified_at":  "2026-10-28T11:12:10.8470841+00:00",
+    "entry":  "/spa/assets/index-DKsE4bbC.js",
+    "loyalty_js":  "LoyaltyApp-EEnCshva.js",
+    "loyalty_css":  "LoyaltyApp-qoyibfIz.css",
+    "markers":  [
+                    "Turn points into something members want",
+                    "Create a benefit once, then choose what each level receives.",
+                    "Create clear promotions with a value, dates and eligibility.",
+                    "Saved. Your catalogue is up to date."
+                ],
+    "fonts":  [
+                  "/spa/assets/poppins-400-C1IsaolU.ttf",
+                  "/spa/assets/poppins-500-BblA7dQf.ttf",
+                  "/spa/assets/poppins-600-Gz22PxOe.ttf"
+              ],
+    "api":  [
+                {
+                    "endpoint":  "rewards",
+                    "status":  401,
+                    "message":  "Authentication required."
+                },
+                {
+                    "endpoint":  "offers",
+                    "status":  401,
+                    "message":  "Authentication required."
+                },
+                {
+                    "endpoint":  "program",
+                    "status":  401,
+                    "message":  "Authentication required."
+                }
+            ],
+    "landing_stylesheet":  "/landing/nocturne_ritual.css?v=7ca20c60a8",
+    "retired_stylesheet_status":  404
+}

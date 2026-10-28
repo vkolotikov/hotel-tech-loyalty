@@ -774,6 +774,19 @@ files on disk): run them one after the other.
 
 ## Deploying
 
+- Rewards & benefits, 2026-10-28: production **56ddb2d2b**, feature source **b7e5e3a5a** on
+  `feature/loyalty-rewards-benefits-20261028`. Final source patch **1860ce52a** was applied to **1fcdcbb6b**;
+  whole source parity passed across 70 explicit source/evidence paths. Four connected Figma frames cover
+  Points rewards, Edit reward, Offers and Membership benefits. Existing activity/Program routes and data
+  contracts remain. No backend, migration or dependency changes.
+  Artifact checks: PHP **7,071 passed / 7 skipped / 45,224 assertions / 75 scopes**, frontend **5,606 passed / 388 files**,
+  TypeScript/ESLint/build passed, **82 compiled-browser checks passed**. All four views fit 1440/1024/768/390/320px;
+  light mode, all five languages, permissions, CRUD, retry and per-level assignments were verified.
+  Live content verified **28 October, 13:12 Europe/Riga**: entry `index-DKsE4bbC.js`, Loyalty
+  `LoyaltyApp-EEnCshva.js` / `LoyaltyApp-qoyibfIz.css`, three local fonts, authenticated APIs (401),
+  public landing kit and retired stylesheet (404). The next source delta starts at **b7e5e3a5a**.
+  Full report: `docs/loyalty-redesign/13-REWARDS-BENEFITS-REPORT.md`.
+
 - Ways to earn, 2026-10-28: production **1fcdcbb6b**, feature source **d45a44be1** on
   `feature/loyalty-ways-to-earn-20261028`. Source patch **8e3157d39** plus **9ac7dca0a** was applied to
   **0f59ddab1** using 58 explicit paths; whole source parity passed. Three final Figma frames cover the earning
