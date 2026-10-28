@@ -14,6 +14,10 @@ import { REWARD_TABS, rewardsActions, searchFor, tabFrom, type RewardTab } from 
 import { TAB_CAPTION_WORDS, TAB_WORDS } from './words'
 import { SectionCards, SectionCount } from '../ui/SectionCards'
 import type { Hue } from '../ui/sections'
+import { PointsRewardsPage } from './design/PointsRewardsPage'
+import { OffersDesignPage } from './design/OffersDesignPage'
+import { MembershipBenefitsPage } from './design/MembershipBenefitsPage'
+import './design/rewards.css'
 
 const TAB_ICONS: Record<RewardTab, LucideIcon> = { catalogue: Gift, redemptions: Ticket, offers: Tag, referrals: Users }
 /** Each tab's colour (release 10): rewards amber, codes at the desk teal, offers blue, referrals rose. */
@@ -27,6 +31,15 @@ const TAB_HUE: Record<RewardTab, Hue> = { catalogue: 'gift', redemptions: 'place
  * answers the tabs show (one call each, shared through the query cache).
  */
 export function RewardsPage() {
+  const location = useLocation()
+  const tab = new URLSearchParams(location.search).get('tab')
+  if (tab === 'benefits') return <MembershipBenefitsPage />
+  if (tab === 'offers') return <OffersDesignPage />
+  if (tab !== 'redemptions' && tab !== 'referrals') return <PointsRewardsPage />
+  return <LegacyRewardsPage />
+}
+
+function LegacyRewardsPage() {
   const { t, i18n } = useTranslation()
   const locale = i18n.language || 'en'
   const boot = useBoot()

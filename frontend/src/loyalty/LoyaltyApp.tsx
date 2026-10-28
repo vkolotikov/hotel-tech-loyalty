@@ -51,7 +51,7 @@ export function LoyaltyApp() {
     return <LoyaltyProvider><DoorPage /></LoyaltyProvider>
   }
 
-  const designed = ['/loyalty', '/loyalty/program', '/loyalty/options'].includes(location.pathname.replace(/\/$/, '')) || /^\/loyalty\/members\/\d+\/?$/.test(location.pathname)
+  const designed = ['/loyalty', '/loyalty/program', '/loyalty/options', '/loyalty/rewards'].includes(location.pathname.replace(/\/$/, '')) || /^\/loyalty\/members\/\d+\/?$/.test(location.pathname)
   const Shell = designed ? OverviewShell : LoyaltyShell
   return (
     <LoyaltyProvider>

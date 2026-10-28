@@ -19,7 +19,7 @@ import { PICTURE_PROBLEM_WORDS } from './words'
  * by the picture's own endpoint, apart from the form's Save; the server deletes the old file. The limits are the
  * server's; the type and size are checked before sending, the longest side by the server.
  */
-export function PictureField({ owner, id, picture, alt, limits, onChange }: {
+export function PictureField({ owner, id, picture, alt, limits, onChange, onBusyChange }: {
   owner: PictureOwner
   id: number
   picture: string | null
@@ -27,6 +27,7 @@ export function PictureField({ owner, id, picture, alt, limits, onChange }: {
   alt: string
   limits: PictureLimits
   onChange: (url: string | null) => void
+  onBusyChange?: (busy: boolean) => void
 }) {
   const { t, i18n } = useTranslation()
   const locale = i18n.language || 'en'
@@ -37,6 +38,7 @@ export function PictureField({ owner, id, picture, alt, limits, onChange }: {
   const upload = useMutation({ mutationFn: (file: File) => rewardsApi.uploadPicture(owner, id, file), onSuccess: (r) => onChange(r.image_url) })
   const remove = useMutation({ mutationFn: () => rewardsApi.removePicture(owner, id), onSuccess: () => { setConfirming(false); onChange(null) } })
   const busy = upload.isPending || remove.isPending
+  useEffect(() => { onBusyChange?.(busy); return () => onBusyChange?.(false) }, [busy, onBusyChange])
   const vars = { mb: points(megabytes(limits.max_kb), locale), edge: points(limits.max_edge, locale) }
   const failure = upload.isError ? failureOf(upload.error) : remove.isError ? failureOf(remove.error) : null
 

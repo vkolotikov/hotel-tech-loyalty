@@ -2,7 +2,7 @@ import { useState, type ReactNode } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { AlertTriangle, ArrowRight, CalendarDays, CheckCheck, Crown, Gift, Lightbulb, MapPin, Pencil, PenLine, Plus, SlidersHorizontal, Sparkles, Trash2, Users, X, Zap } from 'lucide-react'
+import { AlertTriangle, CalendarDays, CheckCheck, Crown, Gift, Lightbulb, MapPin, Pencil, PenLine, Plus, SlidersHorizontal, Sparkles, Trash2, Users, X, Zap } from 'lucide-react'
 import { Button } from '../../workspace/ui/Button'
 import { Dialog } from '../../workspace/ui/Dialog'
 import { Notice } from '../../workspace/ui/Notice'
@@ -44,6 +44,8 @@ import { SectionCards, SectionCount } from '../ui/SectionCards'
 import type { Hue } from '../ui/sections'
 import { IconButton, SectionHead } from './parts'
 import { RemoveBenefit, RemoveTier, RenameDialog } from './RemoveDialogs'
+import { MembershipBenefitsPage } from '../rewards/design/MembershipBenefitsPage'
+import '../rewards/design/rewards.css'
 
 /** Which dialog is open, with what it works on. */
 type Open =
@@ -88,6 +90,7 @@ export function ProgramPage() {
   const editorId = new URLSearchParams(location.search).get('tier')
   const openTier = (tier: Tier | null) => navigate(`/loyalty/program?tab=tiers&tier=${tier?.id ?? 'new'}`)
   const onOpen = (value: Open) => { if (value.kind === 'tier') openTier(value.tier); else setOpen(value) }
+  if (section === 'benefits') return <MembershipBenefitsPage programRoute />
   if (editorId && section === 'tiers') return <TierEditorPage id={editorId} />
   const go = (next: ProgramSection) => navigate({ pathname: '/loyalty/program', search: programSearch(next) }, { replace: true })
   const count = (n: number | undefined) => (n === undefined ? undefined : <SectionCount value={points(n, locale)} />)
@@ -138,7 +141,6 @@ export function ProgramPage() {
         )}
 
         {data && section === 'tiers' && <Tiers program={data} manage={manage} theme={look.resolved} locale={locale} onOpen={onOpen} go={go} />}
-        {data && section === 'benefits' && <Benefits program={data} manage={manage} onOpen={setOpen} go={go} />}
         {/* Release 8: places and the tiers each admits. */}
         {section === 'places' && <PlacesSection manage={manage} />}
         {data && section === 'boosts' && <Boosts program={data} manage={manage} theme={look.resolved} locale={locale} timeZone={boot.venue.timezone} onOpen={setOpen} />}
@@ -332,45 +334,6 @@ function SharedFigure({ item, program, manage, locale, onOpen }: { item: Program
 
 // ─── The benefit catalogue ────────────────────────────────────────────────
 
-function Benefits({ program, manage, onOpen, go }: { program: Program; manage: boolean; onOpen: (open: Open) => void; go: (section: ProgramSection) => void }) {
-  const { t, i18n } = useTranslation()
-  const unused = (program.advice ?? []).find(a => a.code === 'benefit_unused')
-  return (
-    <section aria-labelledby={program.benefits.length > 0 ? 'program-benefits' : undefined} className="space-y-3">
-      {/* An empty catalogue is its Get started panel alone: one heading, one action (the owner's 163:322). */}
-      {program.benefits.length > 0 && (
-        <SectionHead id="program-benefits" icon={Gift} hue="rule" title={t('loyalty.program.benefits.title', 'Benefits')}>
-          {manage && <Button size="sm" onClick={() => onOpen({ kind: 'benefit', benefit: null })}><Plus size={15} aria-hidden />{t('loyalty.program.benefits.add', 'Add benefit')}</Button>}
-        </SectionHead>
-      )}
-      {program.benefits.length === 0
-        ? (
-          <GetStarted name="benefits" hue="rule" title={t('loyalty.program.get_started.benefits.title', 'Create your first benefit')}
-            line={t('loyalty.program.get_started.benefits.line', 'Benefits are what a tier gives its members. Create one here, then give it to the tiers that should have it.')}
-            steps={[
-              { title: t('loyalty.program.get_started.benefits.s1_title', 'Name it'), line: t('loyalty.program.get_started.benefits.s1_line', 'Late checkout, a welcome drink, 10 % off services.') },
-              { title: t('loyalty.program.get_started.benefits.s2_title', 'Choose how it is given'), line: t('loyalty.program.get_started.benefits.s2_line', 'Automatically, on request, or once staff approve it.') },
-              { title: t('loyalty.program.get_started.benefits.s3_title', 'Give it to tiers'), line: t('loyalty.program.get_started.benefits.s3_line', 'On Tiers, press Add benefit on each tier that should have it.') },
-            ]}
-            action={manage && <Button onClick={() => onOpen({ kind: 'benefit', benefit: null })}><Plus size={15} aria-hidden />{t('loyalty.program.benefits.add', 'Add benefit')}</Button>} />
-        )
-        : (
-          <>
-            {unused && (
-              <AdviceBanner code={unused.code} level={unused.level}
-                title={t('loyalty.program.advice.benefit_unused.title', 'No tier gives {{benefits}} yet', { benefits: listOf(unused.benefits.map(x => x.name), i18n.language || 'en') })}
-                line={t('loyalty.program.advice.benefit_unused.line', 'Members have a benefit only once a tier gives it. On Tiers, press Add benefit on the tier that should give it.')}>
-                <Button size="sm" variant="secondary" onClick={() => go('tiers')}>{t('loyalty.program.advice.go_tiers', 'Go to Tiers')}<ArrowRight size={14} aria-hidden /></Button>
-              </AdviceBanner>
-            )}
-            <ul className="grid gap-2 lg:grid-cols-2">
-              {program.benefits.map(b => <BenefitRow key={b.id} benefit={b} tiers={program.tiers} manage={manage} onOpen={onOpen} />)}
-            </ul>
-          </>
-        )}
-    </section>
-  )
-}
 
 /**
  * A catalogue entry: its name, and its category and how it is given in one line, then the tiers that give it (release

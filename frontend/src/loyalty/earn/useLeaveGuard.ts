@@ -12,8 +12,8 @@ export function useLeaveGuard() {
   const [busy, setBusy] = useState(false)
   const writing = useRef(false)
   const mark = useCallback((id: string, value: boolean) => setDrafts(old => old[id] === value ? old : { ...old, [id]: value }), [])
-  const begin = () => { if (writing.current) return false; writing.current = true; setBusy(true); return true }
-  const end = () => { writing.current = false; setBusy(false) }
+  const begin = useCallback(() => { if (writing.current) return false; writing.current = true; setBusy(true); return true }, [])
+  const end = useCallback(() => { writing.current = false; setBusy(false) }, [])
   const go = (to: string) => { if (writing.current || to === location.pathname + location.search + location.hash) return; if (dirty) setDestination(to); else navigate(to) }
   useEffect(() => {
     if (!dirty && !busy) return

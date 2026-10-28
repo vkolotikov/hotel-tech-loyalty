@@ -28,13 +28,14 @@ const INPUT = 'w-full rounded-lg border border-a-border bg-a-surface px-3 py-2 t
  * server keeps one per tier and benefit, so choosing one the tier already gives changes that one — the form says so
  * and starts from what is stored.
  */
-export function TierBenefitDialog({ tier, current, benefits, options, onClose }: {
+export function TierBenefitDialog({ tier, current, benefits, options, onClose, initialBenefitId }: {
   tier: Tier
   /** The tier's benefit being changed, or null to add one. */
   current: TierBenefit | null
   benefits: Benefit[]
   options: ProgramOptions
   onClose: () => void
+  initialBenefitId?: number
 }) {
   const { t, i18n } = useTranslation()
   const say = useRedesignWords()
@@ -43,7 +44,7 @@ export function TierBenefitDialog({ tier, current, benefits, options, onClose }:
   const client = useQueryClient()
   const firstChoice = useFirstFocus<HTMLSelectElement>()
   const firstWording = useFirstFocus<HTMLTextAreaElement>()
-  const [form, setForm] = useState<TierBenefitForm>(() => tierBenefitFormOf(current, options))
+  const [form, setForm] = useState<TierBenefitForm>(() => ({ ...tierBenefitFormOf(current, options), ...(!current && initialBenefitId ? { benefit_id: String(initialBenefitId) } : {}) }))
   const [tried, setTried] = useState(false)
   const choices = benefitChoices(benefits, current?.benefit_id ?? null)
   const already = current ? null : existingOn(tier, Number(form.benefit_id))

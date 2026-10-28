@@ -53,12 +53,13 @@ export function TabHead({ line, children }: { line: ReactNode; children?: ReactN
  * (owner 2026-10-25: an offer with no brand is every brand's) — a new offer starts there, and a saved one with no brand
  * shows it. `refused` is the server's field error (`brand`): a brand that is no longer offered.
  */
-export function BrandField({ options, value, saved, refused, onChange }: {
+export function BrandField({ options, value, saved, refused, onChange, compact = false }: {
   options: BrandOptions | undefined
   value: BrandChoice
   /** The saved row's brand; undefined for a new one. */
   saved?: number | null
   refused?: boolean
+  compact?: boolean
   onChange: (id: BrandChoice) => void
 }) {
   const { t } = useTranslation()
@@ -66,7 +67,7 @@ export function BrandField({ options, value, saved, refused, onChange }: {
   const editing = saved !== undefined
   return (
     <FormField label={t('loyalty.rewards.brand.label', 'Brand')}
-      hint={editing ? t('loyalty.rewards.brand.move_hint', 'Which of your brands it belongs to. Choosing another moves it there when you save.') : t('loyalty.rewards.brand.hint', 'Which of your brands it belongs to.')}
+      hint={compact && (!editing || value === saved || value === null || (value === 'every' && saved === null)) ? undefined : editing ? t('loyalty.rewards.brand.move_hint', 'Which of your brands it belongs to. Choosing another moves it there when you save.') : t('loyalty.rewards.brand.hint', 'Which of your brands it belongs to.')}
       problem={refused ? t('loyalty.rewards.brand.refused', 'Choose one of the brands listed.') : null}>
       <select data-brand="" value={value ?? ''} onChange={(e) => onChange(e.target.value === '' ? null : e.target.value === 'every' ? 'every' : Number(e.target.value))}
         className="w-full rounded-lg border border-a-border bg-a-surface px-3 py-2 text-sm text-a-text">
