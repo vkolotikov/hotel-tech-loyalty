@@ -27,7 +27,7 @@ async page => {
       else body={look:state.look,options:state.options};
     }else if(path==='app-look/logo'){state.logoCount++;state.look.logo_url='/local-fixture-logo.svg';body={logo_url:state.look.logo_url};}
     else if(path==='wallet'){if(state.failWallet||state.denied){status=state.denied?403:503;body={error:'unavailable'};}else if(req.method()==='PUT'){state.wallet={...state.wallet,...payload};body={wallet:state.wallet};}else body={wallet:state.wallet};}
-    else if(path.startsWith('wallet/'))body={wallet:state.wallet};
+    else if(path.startsWith('wallet/')){if(path==='wallet/google-service-account')state.wallet.google_service_account_uploaded=true;body={wallet:state.wallet};}
     else if(path==='overview/summary'){if(state.failSummary){status=503;body={error:'unavailable'};}else body={scope:state.boot.organization.id,as_of:'2026-10-28T14:00:00Z',period:{choice:'30d'},data:{mode:'points',configured:true,options:{},tiers:state.boot.programme.tiers,rewards:3,benefits:2,offers:1,minimum_reward:{id:1,name:'Complimentary coffee',points_cost:500},setup:{done:4,total:4,steps:[]},appearance:state.look}};}
     else if(path==='currency')body={currency:'EUR',options:['EUR','GBP','USD']};
     else if(path==='find')body={members:[]};
