@@ -1,7 +1,7 @@
 async page => {
   const root='C:/wamp64/www/Hexa-Tech/docs/loyalty-redesign/evidence/campaigns/', base=new URL(page.url()).origin;
   const checks=[];const check=(name,ok)=>{if(!ok)throw new Error(name);checks.push(name)};
-  const screenshot=async name=>{await page.waitForLoadState('networkidle');await page.evaluate(()=>document.fonts.ready);for(const frame of page.frames().filter(f=>f.parentFrame()))await frame.waitForFunction(()=>document.readyState==='complete'&&!!document.body?.innerText.trim());await page.screenshot({path:root+'render-'+name+'.png',fullPage:true})};
+  const screenshot=async name=>{await page.waitForLoadState('networkidle');await page.evaluate(()=>document.fonts.ready);for(const frame of page.frames().filter(f=>f.parentFrame()))await frame.waitForFunction(()=>document.readyState==='complete'&&!!document.body?.innerText.trim());for(const iframe of await page.locator('iframe').all()){await iframe.scrollIntoViewIfNeeded();await page.screenshot({path:root+'render-'+name+'-preview.png'});}await page.evaluate(()=>window.scrollTo(0,0));await page.screenshot({path:root+'render-'+name+'.png',fullPage:true})};
   await page.getByRole('link',{name:'Open Your next reward is waiting',exact:true}).click();await page.getByRole('heading',{name:'Write your email'}).waitFor();await screenshot('email-editor');
   await page.getByRole('button',{name:/2 Audience/}).click();await page.getByRole('button',{name:'Send to 412 members',exact:true}).waitFor();await screenshot('email-audience');
   check('Audience comes from server exclusions',await page.locator('[data-confirmation="ok"]').innerText().then(t=>t.includes('412')&&t.includes('48')));
