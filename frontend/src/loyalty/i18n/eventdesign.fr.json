@@ -1,4 +1,7 @@
 {
+  "yes": "Oui",
+  "no": "Non",
+  "sort": "Tri",
   "pointsValue": "{{n}} points",
   "registrationLabel": "Inscription",
   "line": "Réunissez les membres et récompensez leur participation.",

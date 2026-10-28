@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next'
 
 export const EVENT_DESIGN_WORDS = {
-  pointsValue: '{{n}} points', registrationLabel: 'Registration',
+  pointsValue: '{{n}} points', registrationLabel: 'Registration', yes: 'Yes', no: 'No', sort: 'Sort',
   line: 'Bring members together and reward participation.', create: '+ Create event', createTitle: 'Create event',
   hero: 'A clear plan for every event', heroLine: 'Set the time and place, collect signups and keep attendance organised.', upcomingCount: '{{n}} upcoming events',
   search: 'Search events', searchHint: 'Search by event name', location: 'Location', level: 'Level', allLocations: 'All locations', allLevels: 'All levels',
