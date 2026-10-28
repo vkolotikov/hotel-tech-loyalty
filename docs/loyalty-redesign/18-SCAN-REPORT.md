@@ -28,4 +28,14 @@ Original exported SVGs are in `frontend/src/loyalty/scan/design/assets`; matchin
 
 ## Verification
 
-In progress. Local browser fixtures intercept API requests; no production member, balance or scan data is changed during verification. Physical NFC/USB hardware requires an actual compatible reader; browser fixtures validate lifecycle and API behavior.
+Local browser fixtures intercept API requests; no production member, balance or scan data is changed during verification. The source-browser runs pass 34 interaction/state checks and 17 reader/integration checks, including actual ZXing decoding of a fixture QR carried in a MediaStream, camera track shutdown, NFC abort, simulated USB HID parsing/close, unanswered retry key reuse, event attendance, pending-write locking, failed searches, forbidden member detail, five locales and both themes.
+
+The isolated artifact passed **1,138 PHP tests / 12,015 assertions** across LoyaltyWorkspace (591), Loyalty (382), AdminAccess (51), Unit/Loyalty (90), Admin scan (13) and NFC link (11). PHP 8.4.20 was used in scoped foreground runs; no server source, schema, dependency or API contract changed.
+
+The full frontend run caught four unregistered fallback keys. These were corrected to the existing membership, Overview-help and Today-here keys; the full suite is rerun before release. Focused scanner/member tests pass, including permission gating, expired membership labels, inactive hardware and locale completeness.
+
+Visual comparison: desktop scanner width 880px, preview height 480px, 248×44px start button; mobile bottom navigation 390×84px at y=760 in the 390×844 frame, action tiles 173×118px. Desktop points input is 30px, using the shared validated editor. All three local Poppins weights load. Rendered references are reviewed against the exact Figma desktop/member/access and mobile states. Small text/height differences reflect actual state, translated server dates and the existing shell utilities. No example/demo facts are shown as live data.
+
+Physical NFC/USB hardware still requires an actual compatible reader; fixtures verify browser lifecycle and API behavior. A real camera image was replaced only inside the local browser test with a generated QR video stream.
+
+Storage incident: C: reported ENOSPC during the final locale commit. No files were deleted. Work continued in a complete independent clone at `E:/Hexa-Tech-release/scan-source`, with a fresh deployment worktree at `E:/Hexa-Tech-release/scan-final`, preserving the original C: workspace and its untracked files.
