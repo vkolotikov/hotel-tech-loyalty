@@ -1,0 +1,32 @@
+﻿[
+    {
+        "scope":  "tests/Feature/LoyaltyWorkspace/",
+        "exit":  0,
+        "summary":  "Tests:    591 passed (5802 assertions)"
+    },
+    {
+        "scope":  "tests/Feature/Loyalty/",
+        "exit":  0,
+        "summary":  "Tests:    382 passed (1582 assertions)"
+    },
+    {
+        "scope":  "tests/Feature/AdminAccess/",
+        "exit":  0,
+        "summary":  "Tests:    51 passed (3063 assertions)"
+    },
+    {
+        "scope":  "tests/Unit/Loyalty/",
+        "exit":  0,
+        "summary":  "Tests:    90 passed (1044 assertions)"
+    },
+    {
+        "scope":  "tests/Feature/Admin/ScanEndpointsTest.php",
+        "exit":  0,
+        "summary":  "Tests:    13 passed (393 assertions)"
+    },
+    {
+        "scope":  "tests/Feature/Admin/NfcLinkEndpointsTest.php",
+        "exit":  0,
+        "summary":  "Tests:    11 passed (131 assertions)"
+    }
+]
