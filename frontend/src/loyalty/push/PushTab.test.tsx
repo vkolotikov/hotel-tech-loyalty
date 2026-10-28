@@ -73,9 +73,9 @@ describe('Push messages (spec 2026-10-22 release 3 §5)', () => {
   it('lists every message with its kind, segment, status and how far it got, and offers a new one', () => {
     const html = render(manager, '/loyalty/campaigns?tab=push')
     const words = text(html)
-    expect(html).toContain('id="campaigns-tab-push" aria-selected="true"')
+    expect(html).toContain('data-channel="push" aria-current="page"')
     expect(html.indexOf('data-push="7"')).toBeLessThan(html.indexOf('data-push="6"'))
-    expect(words).toContain('Autumn Double points this weekend Offers Gold')
+    expect(words).toMatch(/Autumn Double points this weekend .*Offers.*Gold/)
     expect(words).toContain('1,180 of 1,200 pushed')
     expect(words).toContain('Sent')
     expect(words).toContain('No title yet')

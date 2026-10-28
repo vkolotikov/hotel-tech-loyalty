@@ -43,6 +43,7 @@ export interface PushRow {
 
 export interface PushesPage extends Paged {
   messages: PushRow[]
+  all_total?: number
 }
 
 export interface Push extends PushRow {

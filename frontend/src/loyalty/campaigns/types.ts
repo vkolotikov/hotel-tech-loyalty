@@ -113,6 +113,8 @@ export interface CampaignRow {
 
 export interface CampaignsPage extends Paged {
   campaigns: CampaignRow[]
+  all_total?: number
+  sender_name?: string
 }
 
 export interface Campaign extends CampaignRow {
@@ -148,6 +150,8 @@ export interface TagOption {
 
 /** The block editor's choices, served with every campaign (CampaignBody::options, CampaignTags::options). */
 export interface CampaignOptions {
+  sender_name?: string
+  test_recipient?: string
   block_types: BlockType[]
   /** A new block of each type without its id: the builder's defaults, empty texts. */
   new_blocks: Record<string, Record<string, unknown>>

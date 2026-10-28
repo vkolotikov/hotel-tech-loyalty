@@ -1,3 +1,4 @@
+import { DraftProtection } from '../campaigns/design/DraftProtection'
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient, type UseQueryResult } from '@tanstack/react-query'
@@ -73,6 +74,7 @@ export function SmsEditor({ answer }: { answer: SmsAnswer }) {
       navigate({ pathname: '/loyalty/campaigns', search: smsSearch(copy.sms.id) })
     },
   })
+  const busy = save.isPending || duplicate.isPending || test.isPending
   const update = (patch: Partial<SmsForm>) => {
     setForm(f => ({ ...f, ...patch }))
     setNoRoom(false)
@@ -113,7 +115,7 @@ export function SmsEditor({ answer }: { answer: SmsAnswer }) {
   const track = (e: { currentTarget: HTMLTextAreaElement }) => setCursor({ start: e.currentTarget.selectionStart, end: e.currentTarget.selectionEnd })
 
   return (
-    <div className="space-y-6">
+    <div className="l-cm-message-editor space-y-6">
       <div className="flex flex-wrap items-start gap-x-6 gap-y-3">
         <div className="min-w-0 space-y-2">
           <h2 className="break-words font-a-display text-3xl font-normal leading-tight text-a-text">{s.name}</h2>
@@ -123,16 +125,16 @@ export function SmsEditor({ answer }: { answer: SmsAnswer }) {
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2 sm:ml-auto">
-          <Button variant={dirty ? 'primary' : 'secondary'} loading={save.isPending} disabled={!dirty} onClick={() => {
+          <Button variant={dirty ? 'primary' : 'secondary'} loading={save.isPending} disabled={!dirty || busy} onClick={() => {
             setTried(true)
             if (Object.keys(draftProblems(form, options)).length === 0) save.mutate()
           }}>
             <Save size={15} aria-hidden />{t('loyalty.sms.editor.save', 'Save draft')}
           </Button>
-          <Button variant="secondary" loading={test.isPending} disabled={!canTest(s, dirty, options.twilio)} onClick={() => test.mutate()}>
+          <Button variant="secondary" loading={test.isPending} disabled={!canTest(s, dirty, options.twilio) || busy} onClick={() => test.mutate()}>
             <FlaskConical size={15} aria-hidden />{t('loyalty.sms.editor.test', 'Send me a test')}
           </Button>
-          <Button disabled={blockers.length > 0} onClick={() => setOpen('send')}>
+          <Button disabled={blockers.length > 0 || busy} onClick={() => setOpen('send')}>
             <Send size={15} aria-hidden />{t('loyalty.sms.editor.send', 'Send…')}
           </Button>
         </div>
@@ -155,7 +157,7 @@ export function SmsEditor({ answer }: { answer: SmsAnswer }) {
         </div>
       )}
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,22rem)]">
+      <fieldset disabled={busy} className="l-cm-message-columns">
         <section aria-labelledby="sms-edit" className="min-w-0 space-y-4">
           <Eyebrow><span id="sms-edit">{t('loyalty.sms.editor.heading', 'The text')}</span></Eyebrow>
           <FormField label={t('loyalty.sms.editor.name', 'Name')} hint={t('loyalty.sms.editor.name_hint', 'Only staff see it.')} problem={problem('name', options.max_name)}>
@@ -202,19 +204,20 @@ export function SmsEditor({ answer }: { answer: SmsAnswer }) {
           <Eyebrow><span id="sms-preview">{t('loyalty.sms.preview.heading', 'On a phone')}</span></Eyebrow>
           <PhoneBubble text={preview} from={options.twilio.from} sample={preview !== form.body.replace(/\r\n?/g, '\n')} />
         </section>
-      </div>
+      </fieldset>
 
       <div className="flex flex-wrap gap-2 border-t border-a-border pt-4">
-        <Button variant="secondary" size="sm" loading={duplicate.isPending} onClick={() => duplicate.mutate()}>
+        <Button variant="secondary" size="sm" disabled={dirty || busy} loading={duplicate.isPending} onClick={() => duplicate.mutate()}>
           <Copy size={14} aria-hidden />{t('loyalty.sms.editor.duplicate', 'Duplicate')}
         </Button>
-        <Button variant="ghost" size="sm" onClick={() => setOpen('delete')}>
+        <Button variant="ghost" size="sm" disabled={busy} onClick={() => setOpen('delete')}>
           <Trash2 size={14} aria-hidden />{t('loyalty.sms.editor.delete', 'Delete draft')}
         </Button>
       </div>
       {duplicate.isError && <Refusal family="duplicate" failure={failureOf(duplicate.error)} />}
 
       {open === 'send' && <SmsSendDialog sms={s} onClose={() => setOpen(null)} />}
+      <DraftProtection dirty={dirty} busy={busy} />
       {open === 'delete' && <DeleteDraft id={s.id} name={s.name} onClose={() => setOpen(null)} />}
     </div>
   )

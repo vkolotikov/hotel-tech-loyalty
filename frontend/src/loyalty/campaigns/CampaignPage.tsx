@@ -1,3 +1,4 @@
+import { deniedRead } from './design/readState'
 import type { ReactNode } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
@@ -38,7 +39,7 @@ export function CampaignPage() {
       <ArrowLeft size={15} aria-hidden />{t('loyalty.campaigns.back', 'All campaigns')}
     </Link>
   )
-  const frame = (body: ReactNode) => <div className="space-y-5 px-4 py-6 lg:px-6">{back}{body}</div>
+  const frame = (body: ReactNode) => <div className="l-cm-page">{back}{body}</div>
 
   if (!boot.staff.can.manage_campaigns) {
     return frame(<div className="max-w-xl"><Notice tone="info">{t('loyalty.campaigns.managers_only', 'Only an owner or a manager can work with campaigns and segments.')}</Notice></div>)
@@ -49,7 +50,7 @@ export function CampaignPage() {
   if (!valid || (query.isError && failureOf(query.error).status === 404)) {
     return frame(<div className="max-w-xl"><Notice tone="warning">{t('loyalty.campaigns.load.error.not_found', 'This campaign no longer exists.')}</Notice></div>)
   }
-  if (query.isError && !query.data) return frame(<LoadFailed error={query.error} onRetry={() => { void query.refetch() }} />)
+  if (query.isError && (!query.data || deniedRead(query.error))) return frame(<LoadFailed error={query.error} onRetry={() => { void query.refetch() }} />)
   if (!query.data) {
     return frame(
       <div role="status" className="space-y-4">
@@ -62,9 +63,8 @@ export function CampaignPage() {
 
   const answer = query.data
   const view = viewOf(answer.campaign)
+  if (view === 'editor') return <div className="l-cm-page"><CampaignEditor key={answer.campaign.id} answer={answer} /></div>
   return frame(
-    view === 'editor'
-      ? <CampaignEditor key={answer.campaign.id} answer={answer} />
-      : view === 'elsewhere' ? <ElsewhereDraft campaign={answer.campaign} /> : <CampaignResults campaign={answer.campaign} />,
+    view === 'elsewhere' ? <ElsewhereDraft campaign={answer.campaign} /> : <CampaignResults campaign={answer.campaign} />,
   )
 }

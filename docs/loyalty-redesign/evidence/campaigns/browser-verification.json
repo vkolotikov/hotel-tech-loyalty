@@ -1,0 +1,70 @@
+{
+  "checks": [
+    "Audience comes from server exclusions",
+    "Email list fits 320",
+    "Email list fits 390",
+    "Email list fits 768",
+    "Email list fits 1024",
+    "Email editor fits mobile",
+    "Audience fits mobile",
+    "No message sent during visual inspection",
+    "Figma desktop geometry and fonts",
+    "Server search filters rows",
+    "Dirty navigation asks to discard",
+    "Pending save locks draft fields",
+    "Pending save retains route",
+    "Save uses existing writer once with subject",
+    "Test uses signed-in recipient endpoint only",
+    "Blocks add, reorder and remove",
+    "Copied audience requires draft save",
+    "Audience copy preserves original and assigns new ID",
+    "Changed audience requires another confirmation",
+    "Schedule carries venue wall clock and revision",
+    "Confirmed send reaches results and can be stopped",
+    "Duplicate opens a draft and delete confirms removal",
+    "Create opens an empty saved draft",
+    "Incomplete email cannot send",
+    "Push draft saves and review does not send",
+    "SMS provider setup prevents test and send",
+    "SMS saves tags and reviews actual consent",
+    "segments fits 320 px",
+    "push fits 320 px",
+    "sms fits 320 px",
+    "List failure is visible",
+    "Forbidden lists hide identities",
+    "Staff cannot access campaign data or controls",
+    "ru translation and layout",
+    "de translation and layout",
+    "fr translation and layout",
+    "es translation and layout",
+    "No runtime errors: []",
+    "All loyalty requests preserve brand scope"
+  ],
+  "geometry": {
+    "page": {
+      "x": 232,
+      "y": 72,
+      "width": 1208,
+      "height": 956
+    },
+    "card": {
+      "x": 264,
+      "y": 182,
+      "width": 274,
+      "height": 118
+    },
+    "panel": {
+      "x": 264,
+      "y": 316,
+      "width": 752,
+      "height": 646
+    },
+    "font": "\"L Poppins\", \"A Text\", sans-serif",
+    "poppins": [
+      true,
+      true,
+      true
+    ]
+  },
+  "errors": []
+}

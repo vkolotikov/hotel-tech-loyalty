@@ -29,17 +29,17 @@ const INPUT = 'w-full rounded-lg border border-a-border bg-a-surface px-3 py-2 t
  * members it matches with ten of them, asked once typing pauses. The choices are the server's (`segments/options`).
  * Nothing is counted or saved while a rule has a problem: the shared service would skip such a rule and match more.
  */
-export function SegmentDialog({ segment, options, onClose }: { segment: Segment | null; options: SegmentOptions; onClose: () => void }) {
+export function SegmentDialog({ segment, options, onClose, initial, onSaved }: { segment: Segment | null; options: SegmentOptions; onClose: () => void; initial?: Segment; onSaved?: (segment: Segment) => void }) {
   const { t, i18n } = useTranslation()
   const locale = i18n.language || 'en'
   const client = useQueryClient()
   const first = useFirstFocus<HTMLInputElement>()
-  const [form, setForm] = useState<SegmentForm>(() => segmentFormOf(segment, options))
+  const [form, setForm] = useState<SegmentForm>(() => segmentFormOf(segment ?? initial ?? null, options))
   const [tried, setTried] = useState(false)
 
   const save = useMutation({
     mutationFn: () => (segment ? campaignsApi.updateSegment(segment.id, segmentBody(form, options)) : campaignsApi.createSegment(segmentBody(form, options))),
-    onSuccess: () => { afterSegmentChange(client); onClose() },
+    onSuccess: (answer) => { afterSegmentChange(client); onSaved?.(answer.segment); onClose() },
     onError: (error) => { if (failureOf(error).code === 'not_found') afterSegmentChange(client) },
   })
   const update = (patch: Partial<SegmentForm>) => {

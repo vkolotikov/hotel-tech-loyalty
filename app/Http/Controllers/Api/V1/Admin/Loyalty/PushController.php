@@ -45,6 +45,8 @@ class PushController extends Controller
     {
         LoyaltyAccess::requireManager($request->user());
         $query = PushMessage::query()->orderByDesc('created_at')->orderByDesc('id');
+        $allTotal = (clone $query)->count();
+        \App\Services\Loyalty\Campaigns\CampaignListFilter::apply($query, $request, ['name', 'title']);
         $total = (clone $query)->count();
         $pages = max(1, (int) ceil($total / self::PER_PAGE));
         $page = min(max(1, (int) $request->query('page', 1)), $pages);
@@ -56,6 +58,7 @@ class PushController extends Controller
             'page'     => $page,
             'pages'    => $pages,
             'total'    => $total,
+            'all_total' => $allTotal,
         ]);
     }
 

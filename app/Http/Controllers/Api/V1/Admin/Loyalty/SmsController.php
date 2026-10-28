@@ -48,6 +48,8 @@ class SmsController extends Controller
         LoyaltyAccess::requireManager($user);
         $orgId = self::orgId();
         $query = SmsMessage::query()->orderByDesc('created_at')->orderByDesc('id');
+        $allTotal = (clone $query)->count();
+        \App\Services\Loyalty\Campaigns\CampaignListFilter::apply($query, $request, ['name', 'body']);
         $total = (clone $query)->count();
         $pages = max(1, (int) ceil($total / self::PER_PAGE));
         $page = min(max(1, (int) $request->query('page', 1)), $pages);
@@ -59,6 +61,7 @@ class SmsController extends Controller
             'page'     => $page,
             'pages'    => $pages,
             'total'    => $total,
+            'all_total' => $allTotal,
             'twilio'   => app(TwilioSms::class)->readiness($orgId),
         ]);
     }

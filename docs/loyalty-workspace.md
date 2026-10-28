@@ -8,6 +8,8 @@ settings — nothing is copied. Specs: `docs/superpowers/specs/2026-10-21-loyalt
 `docs/superpowers/specs/2026-10-21-loyalty-release-2-design.md` (release 2: members complete, Insights, segments and
 campaigns, card and app, pictures, currency).
 
+Campaigns Figma redesign (28 October 2026): see `loyalty-redesign/19-CAMPAIGNS-REPORT.md` for CM-01–04, the two-step email editor, server list filters, saved audience copies, Push/SMS/Segments layouts and verification. Existing route names and delivery writers are unchanged.
+
 ## Who has it, and the ways in and back
 
 Scan redesign (28 October, deployed and live verified): `/loyalty/scan` now follows the exact desktop/mobile
