@@ -59,7 +59,9 @@ export function ReportPoints({ data }: { data: InsightsReport }) {
   const center = (i: number) => 48 + (width - 64) * (i + .5) / 3
   const barWidth = Math.min(64, (width - 64) / 5)
   const values = [data.current.issued, data.current.redeemed, data.current.expired], names = [t('loyalty.insights.points.issued', 'Issued'), t('loyalty.insights.points.redeemed', 'Redeemed'), say('expired')]
-  const n = (v: number) => new Intl.NumberFormat(i18n.language).format(v), max = Math.max(1, ...values), min = Math.min(0, ...values), range = max - min
+  const n = (v: number) => new Intl.NumberFormat(i18n.language).format(v)
+  const peak = Math.max(1, ...values.map(Math.abs)), step = 10 ** Math.floor(Math.log10(peak)) / 2
+  const max = Math.ceil(Math.max(1, ...values) / step) * step, min = Math.floor(Math.min(0, ...values) / step) * step, range = max - min
   const y = (v: number) => 150 - (v - min) / range * 120
   return <ReportCard title={say('pointsFlow')} action={<Link className="l-ov-link" to="/loyalty/insights?view=detailed#insights-points">{say('ledger')}</Link>}><p>{say('pointsLine')}</p>
     <svg ref={ref} className="l-in-points-svg" viewBox={`0 0 ${width} 182`} role="img" aria-label={values.map((v, i) => `${names[i]}: ${n(v)}`).join('; ')}>{[0, 1, 2, 3].map(i => { const v = min + range * i / 3; return <g key={i}><line x1="48" x2={width - 16} y1={y(v)} y2={y(v)} className="l-in-gridline" /><text x="0" y={y(v) + 4}>{new Intl.NumberFormat(i18n.language, { notation: 'compact', maximumFractionDigits: 1 }).format(v)}</text></g> })}{values.map((v, i) => <g key={i}><rect x={center(i) - barWidth / 2} y={Math.min(y(v), y(0))} width={barWidth} height={Math.abs(y(v) - y(0))} rx="4" className={`l-in-point-${i}`} /><text x={center(i)} y={Math.max(14, y(v) - 8)} textAnchor="middle">{n(v)}</text><text x={center(i)} y="177" textAnchor="middle">{names[i]}</text></g>)}</svg>
