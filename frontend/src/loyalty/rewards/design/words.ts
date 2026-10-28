@@ -1,0 +1,26 @@
+import { useTranslation } from 'react-i18next'
+
+export const REWARD_DESIGN_WORDS = {
+  pointsRewards: 'Points rewards', benefits: 'Membership benefits', offers: 'Offers',
+  scopeServices: 'services', scopeStays: 'stays', eligibleServices: 'eligible services', eligibleStays: 'eligible stays',
+  rewardsLine: 'Create rewards members can claim with their points.', benefitsLine: 'Create a benefit once, then choose what each level receives.', offersLine: 'Create clear promotions with a value, dates and eligibility.',
+  rewardHero: 'Turn points into something members want', rewardHeroLine: 'Show the cost, eligibility and claim process before a member spends their points.', benefitHero: 'Make every benefit easy to understand', benefitHeroLine: 'Set what members receive, who is eligible and how the benefit is delivered.',
+  available: '{{n}} available rewards', rewardCount: '{{n}} rewards', benefitCount: '{{n}} benefits',
+  searchRewards: 'Search rewards', searchBenefits: 'Search benefits', searchOffers: 'Search offers', searchName: 'Search by name', searchOfferHint: 'Search by name, brand or code',
+  delivery: 'Delivery', level: 'Level', status: 'Status', allMethods: 'All methods', allLevels: 'All levels', allStatuses: 'All statuses', allBrands: 'All brands',
+  active: 'Active', off: 'Switched off', ended: 'Ended', soldOut: 'Out of stock', live: 'Live', upcoming: 'Scheduled', current: 'Live & upcoming', unassigned: 'Needs assignment',
+  yourRewards: 'Your rewards', yourBenefits: 'Your benefits', yourOffers: 'Your offers', noResults: 'No results match these filters.', emptyRewards: 'Add your first reward to start your catalogue.', emptyBenefits: 'Create a benefit, then assign it to a level.', emptyOffers: 'Create your first offer for members.', clear: 'Clear filters',
+  selectedReward: 'POINTS REWARD', selectedBenefit: 'SELECTED BENEFIT', preview: 'MEMBER PREVIEW', offerPreview: 'MEMBER OFFER PREVIEW',
+  allMembers: 'All members', memberCode: 'Member code', who: 'Who can claim', availability: 'Availability', unlimited: 'Unlimited stock', stockLeft: '{{n}} remaining', memberLimit: 'Member limit', noLimit: 'No limit', once: 'Once per member', limit: 'Up to {{n}} per member', validUntil: 'Valid until', noEnd: 'No end date',
+  claimSteps: 'How members claim it', claimCost: 'Spend {{n}} points to receive a code.', claimCode: 'Show the code to your team to use it.', editReward: 'Edit reward', addReward: '+ Add reward', included: 'Included with a member’s level?', manageBenefits: 'Manage membership benefits →',
+  back: '← All points rewards', editorLine: 'Make the value and conditions clear before members claim.', rewardName: 'Reward name', description: 'Member description', rewardType: 'Reward type', item: 'Item / service', claimMethod: 'How members claim', pointsCost: 'Points per claim', eligibility: 'Eligible levels', claims: 'Claims per member', custom: 'Custom limit', limitedStock: 'Limited stock', setEnd: 'Set an end date', terms: 'Terms & conditions', editTerms: 'Edit terms →', noTerms: 'No terms added.',
+  afterClaim: 'What happens after a claim?', afterClaimLine: 'The member receives a code. Your team checks it and records when it is used.', review: 'Review the cost, limits and member-facing terms.', unsaved: 'Changes apply only after you save.', previewNote: 'Member preview only. Saving does not redeem a reward.', claimPreview: 'Claim for {{n}} points', invalidPreview: 'Enter a valid points cost to see the preview.',
+  addBenefit: '+ Add benefit', editBenefit: 'Edit benefit', assign: 'Assign to a level', assigned: 'Assigned levels', noLevels: 'No levels assigned', valuesPerLevel: 'Values are set per level', assignmentNote: 'This preview shows {{level}}. Edit the level assignment to change its value or scope.', manageAssignment: 'Manage {{level}} assignment →', chooseLevel: 'Choose a level', noProgramLevels: 'Add a program level before assigning benefits.', viewLevels: 'View program levels →',
+  createOffer: '+ Create offer', details: 'Selected offer details', newOffer: 'New offer', endedOffers: 'View ended offers →', offerName: 'Offer name', offerCode: 'Offer code', starts: 'Starts', ends: 'Ends', workspaceTime: 'Workspace dates · {{zone}}', caps: 'Total claims cap', perMember: 'Per member', conditions: 'Check the conditions members see', conditionsLine: 'Show eligible services, dates and usage limits before the offer is used.', useCode: 'Use code {{code}}', cancelChanges: 'Cancel changes',
+  saved: 'Saved. Your catalogue is up to date.', missing: 'This record is no longer available.', discardTitle: 'Discard unsaved changes?', discardLine: 'Unsaved changes will be discarded. Pictures already saved stay in place.', select: 'Select {{name}}',
+} as const
+
+export function useRewardWords() {
+  const { t } = useTranslation()
+  return (key: keyof typeof REWARD_DESIGN_WORDS, vars: Record<string, string | number> = {}) => t(`loyalty.rewarddesign.${key}`, REWARD_DESIGN_WORDS[key], vars)
+}

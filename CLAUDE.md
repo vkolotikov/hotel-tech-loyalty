@@ -6,7 +6,7 @@ Multi-tenant Laravel 13 + React (Vite, TypeScript) SaaS with four sub-brands. Pr
 `frontend/src/pages/landing`).
 
 Starting a new session, or on another device or agent: the current state, set-up, test baselines, deploy steps and
-open items are in the newest file of `docs/handoff/` (now `docs/handoff/2026-10-27-hexatech-handoff.md`). Update it,
+open items are in the newest file of `docs/handoff/` (now `docs/handoff/2026-10-28-hexatech-handoff.md`). Update it,
 or add the next dated one, at the end of a session.
 
 ## Environment (hard rules, each one has bitten before)

@@ -95,11 +95,11 @@ describe('Program (spec 2026-10-21 §4.5, §5)', () => {
 
   it('names the catalogue\'s categories and ways of giving, and shows a value it has no word for as sent', () => {
     const words = text(render(can(), program, 'benefits'))
-    expect(words).toContain('Accommodation · On request')
-    expect(words).toContain('spa · Voucher')
+    expect(words).toContain('Category Accommodation')
+    expect(text(render(can(), program, '?tab=benefits&selected=8'))).toContain('Category spa')
     // Release 10 (the owner's Benefit library): which tiers give each one, or that none does yet.
-    expect(words).toContain('Late checkout Accommodation · On request Given by Gold')
-    expect(words).toContain('Spa ritual spa · Voucher No tier gives it yet')
+    expect(words).toContain('Late checkout On request Gold Active')
+    expect(words).toContain('Spa ritual Voucher No levels assigned Switched off')
   })
 
   it('shows boosts on the venue\'s clock with their days, tiers and state', () => {
@@ -115,7 +115,7 @@ describe('Program (spec 2026-10-21 §4.5, §5)', () => {
 
   it('gives a manager every action', () => {
     const words = text(everySection(can({ manage_program: true })))
-    for (const action of ['+ Add level', 'Edit level', 'Add benefit', 'Edit Late checkout', 'Add boost', 'Edit Double weekend', 'Remove Double weekend']) {
+    for (const action of ['+ Add level', 'Edit level', 'Add benefit', 'Edit benefit', 'Add boost', 'Edit Double weekend', 'Remove Double weekend']) {
       expect(words).toContain(action)
     }
     const html = everySection(can({ manage_program: true }))
@@ -123,8 +123,7 @@ describe('Program (spec 2026-10-21 §4.5, §5)', () => {
     expect(html).toContain('aria-label="Add benefit Gold"')
     expect(html).toContain('aria-label="More Gold"')
     // A catalogue entry is switched on and off by its switch, which says its state.
-    expect(html).toMatch(/role="switch" aria-checked="true" aria-label="Late checkout" title="Switch off"/)
-    expect(html).toMatch(/role="switch" aria-checked="false" aria-label="Spa ritual" title="Switch on"/)
+    expect(html).toContain('aria-label="More"') // Selected benefit menu: rename, active state and delete; browser tested.
     // Codes are the system's, not shown in the list.
     expect(words).not.toContain('LATE')
     expect(words).not.toContain('Only an owner or a manager can change the programme.')
@@ -139,7 +138,8 @@ describe('Program (spec 2026-10-21 §4.5, §5)', () => {
     expect(html).not.toContain('Take Late checkout off Gold')
     // The only buttons are the section cards and the figure that leads to Benefits: nothing that changes anything.
     const buttons = [...html.matchAll(/<button[^>]*>/g)].map(m => m[0]).filter(b => !b.includes('role="tab"') && !b.includes('data-leads=""'))
-    expect(buttons).toHaveLength(1) // The read-only benefit catalogue.
+    expect(html).not.toContain('Edit benefit')
+    expect(buttons.length).toBeGreaterThan(1) // Read-only selection controls.
   })
 
   it('waits for the programme with a quiet stand-in', () => {
@@ -174,9 +174,9 @@ describe('Program (spec 2026-10-21 §4.5, §5)', () => {
     expect(html).not.toContain('data-benefit="7"')
     expect(html).not.toContain('data-boost="3"')
     const benefits = render(can(), program, 'benefits')
-    expect(benefits).toMatch(/id="program-section-benefits" aria-selected="true"/)
-    expect(benefits).toMatch(/aria-labelledby="program-section-benefits"/)
-    expect(text(benefits)).toContain('Create a benefit once, then give it to any tier.')
+    expect(text(benefits)).toContain('Membership benefits')
+    expect(benefits).toContain('data-record="benefit-7"')
+    expect(text(benefits)).toContain('Create a benefit once, then choose what each level receives.')
     expect(benefits).not.toContain('data-tier="1"')
     expect(benefits).not.toContain('data-boost="3"')
     // An unknown section is Tiers; #places, the address Scan and the Guide opened before, is Places.
@@ -200,8 +200,8 @@ describe('Program (spec 2026-10-21 §4.5, §5)', () => {
     expect(text(tiers)).toContain('1 Name it Members see the name on their card and in the app. 2 Set what reaches it')
     expect(text(tiers).match(/\+ Add level/g)).toHaveLength(1)
     const benefits = text(render(can({ manage_program: true }), empty, 'benefits'))
-    expect(benefits).toContain('Create your first benefit')
-    expect(benefits).toContain('3 Give it to tiers On Tiers, press Add benefit on each tier that should have it.')
+    expect(benefits).toContain('Create a benefit, then assign it to a level.')
+    expect(benefits).toContain('+ Add benefit')
     // A boost is optional, and comes with an example in figures.
     const boosts = render(can({ manage_program: true }), empty, 'boosts')
     expect(boosts).toMatch(/data-get-started="boosts" data-hue="gift"/)

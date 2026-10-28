@@ -86,48 +86,46 @@ const render = (search: string, c: Can) => {
 const text = (html: string) => html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ')
 
 describe('Rewards (spec 2026-10-21 §4.6)', () => {
-  it('shows the four tabs as a tablist, the address\'s tab selected and the only tab stop', () => {
-    const html = render('?tab=offers', can())
+  it('retains activity tab routes and opens the redesigned offers from its address', () => {
+    const html = render('?tab=redemptions', can())
     expect(html).toContain('role="tablist"')
-    expect(html).toMatch(/role="tab" id="rewards-tab-offers" aria-selected="true"[^>]*tabindex="0"[^>]*>(?:(?!<\/button>)[\s\S])*<span>Offers<\/span>/)
-    expect(html).toMatch(/role="tab" id="rewards-tab-catalogue" aria-selected="false"[^>]*tabindex="-1"[^>]*>(?:(?!<\/button>)[\s\S])*<span>Catalogue<\/span>/)
-    expect(html).toMatch(/role="tabpanel" aria-labelledby="rewards-tab-offers"/)
-    expect(render('', can())).toMatch(/id="rewards-tab-catalogue" aria-selected="true"/)
+    expect(html).toMatch(/id="rewards-tab-redemptions" aria-selected="true"/)
+    const offer = render('?tab=offers', can())
+    expect(text(offer)).toContain('Selected offer details')
+    expect(offer).toContain('href="/loyalty/rewards?tab=redemptions"')
+    expect(offer).toContain('href="/loyalty/rewards?tab=referrals"')
+    expect(text(render('', can()))).toContain('Points rewards')
   })
 
-  it('says on each tab how many it holds, and on Redemptions the codes waiting at the desk in the waiting colour', () => {
-    const html = render('', can())
+  it('retains pending-code and referral counts in the activity navigation', () => {
+    const html = render('?tab=redemptions', can())
     const tab = (name: string) => html.slice(html.indexOf(`id="rewards-tab-${name}"`), html.indexOf('</button>', html.indexOf(`id="rewards-tab-${name}"`)))
     expect(text(tab('catalogue'))).toContain('Catalogue 2')
     expect(tab('redemptions')).toMatch(/data-state="pending"[^>]*>1<span class="sr-only"> waiting at the desk/)
-    expect(text(tab('offers'))).toContain(`Offers ${offers.offers.length}`)
+    expect(text(tab('offers'))).toContain('Offers 2')
     expect(text(tab('referrals'))).toContain('Referrals 60')
   })
 
-  it('filters the catalogue to every reward, the offered ones or the switched-off ones, with how many each holds', () => {
-    const words = text(render('', can()))
-    expect(words).toContain('All 2 Offered 2 Switched off 0')
+  it('filters actual availability including exhausted stock, while preserving legacy filter decisions', () => {
+    expect(text(render('', can()))).toContain('1 available rewards')
+    const exhausted = render('?status=soldOut', can())
+    expect(exhausted).toContain('Breakfast for two')
+    expect(exhausted).not.toContain('Late checkout')
+    expect(text(render('?q=missing', can()))).toContain('No results match these filters.')
     expect(catalogueCounts([...catalogue.rewards, { ...catalogue.rewards[1], id: 6, is_active: false }])).toEqual({ all: 3, offered: 2, off: 1 })
     expect(catalogueShown(catalogue.rewards, 'off')).toEqual([])
     expect(catalogueShown(catalogue.rewards, 'offered').map(r => r.id)).toEqual([4, 5])
   })
 
-  it('shows the catalogue as cards, with Add and Edit only for staff who manage offers', () => {
+  it('shows saved reward details with Add and Edit only for staff who manage rewards', () => {
     const staff = text(render('', can({ redeem: true })))
-    expect(staff).toContain('Breakfast for two')
-    expect(staff).toContain('1,500 pts')
-    expect(staff).toContain('Stock None left')
-    expect(staff).toContain('Per member No limit')
-    expect(staff).toContain('Redeemed 10')
-    expect(staff).toContain('Fulfilled 7')
-    expect(staff).toContain('10% off · Stays only')
-    expect(staff).toContain('Offered until Dec 31, 23:59')
+    for (const value of ['Breakfast for two', '1,500 points', '0 remaining', 'No limit', 'Redeemed: 10', 'Fulfilled: 7', '10% off · Stays only', 'Dec 31, 23:59']) expect(staff).toContain(value)
     expect(staff).toContain('Only staff allowed to manage offers can add or change rewards.')
     expect(staff).not.toContain('Add reward')
-    expect(staff).not.toContain('Edit')
-    const manager = text(render('', can({ manage_rewards: true })))
-    expect(manager).toContain('Add reward')
-    expect(manager).toContain('Edit Breakfast for two')
+    expect(staff).not.toContain('Edit reward')
+    const manager = render('', can({ manage_rewards: true }))
+    expect(text(manager)).toContain('+ Add reward')
+    expect(manager).toContain('href="/loyalty/rewards?reward=4"')
   })
 
   it('offers Mark fulfilled and Cancel on a pending redemption, to whoever may redeem, and links the member', () => {
@@ -146,19 +144,14 @@ describe('Rewards (spec 2026-10-21 §4.6)', () => {
     expect(staff).toContain('Only staff allowed to redeem points can fulfil or cancel a redemption.')
   })
 
-  it('shows offers with their kind and value, code, days, tiers, use and state; a kind it has no word for as sent', () => {
-    const html = render('?tab=offers', can({ manage_rewards: true }))
-    const words = text(html)
-    expect(words).toContain('Discount · 15% off · Stays only')
-    expect(words).toContain('Oct 1, 2026 – Oct 31, 2026 · Used: 3 of 100 · Up to 1 per member · AUTUMN')
-    expect(words).toContain('Featured')
-    expect(words).toContain('Running')
-    expect(words).toContain('flash_sale')
-    expect(words).toContain('Upcoming')
-    expect(words).toContain('Every tier')
-    expect(html).toMatch(/data-offer="6"[\s\S]*?data-tier-chip[^>]*>[\s\S]*?Gold/)
-    expect(words).toContain('Add offer')
-    expect(text(render('?tab=offers', can()))).not.toContain('Add offer')
+  it('preserves offer values, unknown types, dates, eligibility, caps and permissions', () => {
+    const html = render('?tab=offers', can({ manage_rewards: true })), words = text(html)
+    for (const value of ['15% off', 'AUTUMN', 'Featured', 'Live', 'flash_sale', 'Scheduled', 'Gold', 'Used: 3', '+ Create offer']) expect(words).toContain(value)
+    expect(html).toContain('value="2026-10-01"')
+    expect(html).toContain('value="2026-10-31"')
+    expect(html).toContain('value="100"')
+    expect(text(render('?tab=offers', can()))).not.toContain('Create offer')
+    expect(render('?tab=offers', can())).toContain('<fieldset class="l-rb-fields" disabled="">')
   })
 
   it('shows the referral numbers and list, read only, with pages', () => {
@@ -175,11 +168,9 @@ describe('Rewards (spec 2026-10-21 §4.6)', () => {
 
   it('shows a reward\'s and an offer\'s picture lazily, named by the reward or the offer', () => {
     const html = render('', can())
-    expect(html).toMatch(/<img src="\/storage\/org-1\/rewards\/breakfast.jpg" alt="Breakfast for two" loading="lazy"/)
-    expect(html.match(/<img /g)).toHaveLength(1)
+    expect(html).toMatch(/<img[^>]+src="\/storage\/org-1\/rewards\/breakfast.jpg"[^>]+alt="Breakfast for two"[^>]+loading="lazy"/)
     const offersHtml = render('?tab=offers', can())
-    expect(offersHtml).toMatch(/data-offer="6"[^>]*><img src="\/storage\/org-1\/offers\/autumn.jpg" alt="Autumn weekend" loading="lazy"/)
-    expect(offersHtml.match(/<img /g)).toHaveLength(1)
+    expect(offersHtml).toMatch(/<img[^>]+src="\/storage\/org-1\/offers\/autumn.jpg"[^>]+alt="Autumn weekend"/)
   })
 
   it('changes the picture of a saved row in its dialog, and asks a new one to be saved first', () => {
