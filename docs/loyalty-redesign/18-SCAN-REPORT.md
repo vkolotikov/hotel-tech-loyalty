@@ -45,3 +45,11 @@ Physical NFC/USB hardware still requires an actual compatible reader; fixtures v
 Storage incident: C: reported ENOSPC during the final locale commit. No files were deleted. Work continued in a complete independent clone at `E:/Hexa-Tech-release/scan-source`, with a fresh deployment worktree at `E:/Hexa-Tech-release/scan-final`, preserving the original C: workspace and its untracked files.
 
 After space became available again, the original feature checkout was synchronized by verified fast-forward ancestry and file parity. Its untracked project PDF, plugin ZIPs and Alexa assets were preserved. The final artifact uses a real vendor copy; the allowed frontend dependency junction points to the matching original package lock.
+
+## Production deployment
+
+Production commit **c3a2646786f0f60f0c01232ef0e30369a0e3c4d0** is live at `https://app.hexa-tech.uk/loyalty/scan`, verified on **28 October 2026 at 19:27 Europe/Riga**. The isolated artifact starts at the previous Card & app production commit `5eaffd69c67ccfd9af2a9f5679c634769c78a27a`; source patch `bca5e6f03` includes 77 explicitly allowed paths and passes whole-source parity before the fresh build.
+
+The deployed feature source and **next source-patch baseline** is **ec236bfadfd393abc7abc1328e61b378ff9bcb86**, branch `feature/loyalty-scan-20261028`. Do not use the later post-deployment documentation commit as that baseline.
+
+Live entry `index-CZ4i_xE3.js`, Loyalty `LoyaltyApp-ICykbI-f.js` / `LoyaltyApp-BFRENnUK.css`. Scan content and responsive styles, previous Requests/Insights/Card & app markers, and all three Poppins payloads passed. Places, events and find retain expected unauthenticated 401 JSON. The existing public landing kit and retired stylesheet 404 also passed. Evidence: `evidence/scan/live-verification.json`. Live verification was read-only.

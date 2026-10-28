@@ -10,6 +10,13 @@ campaigns, card and app, pictures, currency).
 
 ## Who has it, and the ways in and back
 
+Scan redesign (28 October, deployed and live verified): `/loyalty/scan` now follows the exact desktop/mobile
+Figma scanner, manual lookup, member actions and access-result screens. Normal scanning pauses after one
+result; camera/NFC/USB activation remains explicit. Existing continuous `/loyalty/scan/door`, linking,
+renewal, visits, credit and point writers remain available. Place/Event context, balances and permissions
+come from the existing APIs; manual desk lookup is read-only. Five languages and both themes are supported.
+See `docs/loyalty-redesign/18-SCAN-REPORT.md` for design comparison, integration, tests and deployment evidence.
+
 Card & app redesign (28 October, deployed and live verified): `/loyalty/app` now uses the exact CA-01
 appearance editor and member preview, with server-backed palette saves, immediate logo upload and wallet
 readiness. Original `?tab=wallet|app|currency` routes and all advanced controls remain. Automatic app themes

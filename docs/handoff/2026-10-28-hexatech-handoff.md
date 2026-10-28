@@ -3,7 +3,36 @@
 Read this first, then `2026-10-27-hexatech-handoff.md` for the full environment, test-loop,
 product history and deployment instructions. Root AGENTS.md and CLAUDE.md still apply.
 
-## Current production release: Card & app
+## Current production release: Scan a member
+
+Production **c3a2646786f0f60f0c01232ef0e30369a0e3c4d0**, live content verified **28 October, 19:27 Europe/Riga**.
+Feature `feature/loyalty-scan-20261028`; deployed source and **next source-patch baseline**:
+**ec236bfadfd393abc7abc1328e61b378ff9bcb86**. Do not use the later post-deployment documentation commit.
+Isolated artifact parent **5eaffd69c**, source patch **bca5e6f03**, whole-source parity across **77 paths**.
+Read `docs/loyalty-redesign/18-SCAN-REPORT.md` for all 12 exact Figma frames, integration and evidence.
+
+The normal `/loyalty/scan` now uses the Figma desktop/mobile scanner, reader options, manual lookup,
+member actions and access result. Existing `/loyalty/scan/door` continuous mode and all original readers,
+member writers, linking, renewal, credit and visit actions remain. Normal scanning pauses after one result;
+manual desk lookup is read-only. Actual Place/Event context and server permissions remain authoritative.
+No backend, migration, dependency or API contract changed. Five languages and both themes are supported.
+
+Checks: **1,138 PHP passed / 12,015 assertions**, final artifact scan/access/card repeat **59 / 461**;
+full frontend **5,688 passed in 393 files**, final focused **164 passed**; TypeScript, Loyalty ESLint,
+fresh production build and SPA postbuild passed. Compiled Chrome: **34 interaction/state + 17 reader checks**,
+plus desktop/mobile Figma comparison, responsive geometry and font audit. Real ZXing QR decoding used a
+fixture video stream; NFC/HID lifecycle used simulated devices. No production member transactions were made.
+
+Live entry `index-CZ4i_xE3.js`, Loyalty `LoyaltyApp-ICykbI-f.js` / `LoyaltyApp-BFRENnUK.css`.
+Scan styles/content, prior feature markers, three font payloads, places/events/find authentication (401),
+public landing kit and retired CSS (404) passed. Evidence: `evidence/scan/live-verification.json`.
+C: ENOSPC was reported; work continued in an independent E: clone without deleting files. The original
+C: feature checkout was later safely synchronized, preserving its untracked files. It remains canonical.
+The task-owned compiled preview PID 43496 is stopped; the original Vite PID 1992 remains running.
+Both task-owned release worktrees and the final artifact's frontend dependency junction were removed after verification.
+The independent `E:/Hexa-Tech-release/scan-source` clone and verification logs remain available.
+
+## Previous release: Card & app
 
 Production **5eaffd69c67ccfd9af2a9f5679c634769c78a27a**, live content verified **28 October, 18:01 Europe/Riga**.
 Feature `feature/loyalty-card-app-20261028`; deployed source and **next source-patch baseline**:
