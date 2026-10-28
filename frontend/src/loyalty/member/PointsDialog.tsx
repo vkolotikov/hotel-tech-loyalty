@@ -44,10 +44,11 @@ export function PointsDialog({ mode, memberId, name, balance, onClose, memberNum
       void queryClient.invalidateQueries({ queryKey: ['loyalty', 'members'] })
       onClose()
     },
+    onSettled: () => onBusyChange?.(false),
   })
 
   const problem = pointsProblem(mode, typed, reason, balance)
-  useEffect(() => { onBusyChange?.(save.isPending); return () => onBusyChange?.(false) }, [save.isPending, onBusyChange])
+  useEffect(() => () => onBusyChange?.(false), [onBusyChange])
   const after = balanceAfter(mode, balance, typed)
   const failure = save.isError ? failureOf(save.error) : null
   const title = mode === 'award' ? t('loyalty.member.award', 'Award points') : t('loyalty.member.redeem', 'Redeem points')
@@ -56,7 +57,7 @@ export function PointsDialog({ mode, memberId, name, balance, onClose, memberNum
       <form className="l-rd-form l-rd-points-form" noValidate onSubmit={(e) => {
         e.preventDefault()
         setTried(true)
-        if (problem === null && !save.isPending) save.mutate()
+        if (problem === null && !save.isPending) { onBusyChange?.(true); save.mutate() }
       }}>
         <p>{say(mode === 'award' ? 'awardLine' : 'redeemLine')}</p>
         {!inline && <div className="l-rd-person-inset"><span className="l-rd-avatar" aria-hidden>{initials(name)}</span><span><strong>{name}</strong><small>{[level, memberNumber].filter(Boolean).join(' · ')}</small></span></div>}
