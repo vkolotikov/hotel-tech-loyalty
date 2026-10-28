@@ -1,0 +1,15 @@
+﻿{
+    "artifact_source":  "1b800e9bb2d4956120092a9f29c37d6a85d506dc",
+    "production_commit":  "59a6bda89ca5e47183135489550325c029f6c1b9",
+    "typescript":  "passed",
+    "loyalty_eslint":  "passed",
+    "frontend_tests":  5704,
+    "frontend_files":  394,
+    "php_tests":  736,
+    "php_assertions":  9985,
+    "browser_checks":  38,
+    "production_build":  "passed",
+    "postbuild":  "passed",
+    "frontend_log_sha256":  "AE281ECD9A8D5614555593F58518C9EA18FFB6D38814DDDC3ADF9FF7B2EF521F",
+    "build_log_sha256":  "47357B6D4C1A6B8F2481BD79AC4BCE3E7478894E8F8F84B5CBB8E6CAFAECE2F1"
+}

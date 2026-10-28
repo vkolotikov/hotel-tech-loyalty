@@ -3,7 +3,32 @@
 Read this first, then `2026-10-27-hexatech-handoff.md` for the full environment, test-loop,
 product history and deployment instructions. Root AGENTS.md and CLAUDE.md still apply.
 
-## Current production release: Scan a member
+## Current production release: Campaigns
+
+Production **59a6bda89ca5e47183135489550325c029f6c1b9**, live content verified **28 October, 21:13 Europe/Riga**.
+Feature `feature/loyalty-campaigns-20261028`; deployed source and **next source-patch baseline**:
+**1b800e9bb2d4956120092a9f29c37d6a85d506dc**. Do not use the later documentation/evidence commit.
+Isolated artifact parent **c3a264678**, source patches **285123749**, **87fe96fa1**; whole-source parity over **82 paths**.
+Read `docs/loyalty-redesign/19-CAMPAIGNS-REPORT.md` for Figma CM-01–04, source-backed adaptations and evidence.
+
+Email, Push, SMS and Segments retain their routes and delivery writers. Email now has Message / Audience & send
+steps, compact block editing, actual server-rendered preview, saved audience copies and full-page recipient review.
+Search/status filters run inside the existing tenant/source queries before pagination; sender and test identity
+come from the existing server services. No migration or dependency change. Campaign cache is scoped by organisation,
+staff and relevant permission/plan state. Form labels now name filled textareas/selects independently of their content.
+
+Final artifact: **736 PHP tests / 9,985 assertions**, **5,704 frontend tests in 394 files**, TypeScript, Loyalty lint,
+production build and postbuild pass. Scoped PHP runs use PHP 8.4.20, `XDEBUG_MODE=off`, `-d max_execution_time=0`;
+the first local run reached the 300-second CLI limit and was replaced by the complete artifact run.
+Compiled Chrome: **38 checks** covering draft/blocks/copy/send/results/cancel/schedule/unschedule/duplicate/delete,
+Push/SMS consent review, setup/errors/permissions, five locales, both themes and 320–1440px layouts. Tests never sent
+real messages. Server data determines exclusions; illustrative unsupported Figma controls are documented in the report.
+
+Live entry `index--e3eLj3s.js`, Loyalty `LoyaltyApp-DfQxl3v0.js` / `LoyaltyApp-CHeUwwzK.css`.
+Content, styles, fonts, four campaign API authentication checks, public landing kit and retired CSS passed.
+Evidence is in `docs/loyalty-redesign/evidence/campaigns`. The original Vite PID 1992 and user files are preserved.
+
+## Previous release: Scan a member
 
 Production **c3a2646786f0f60f0c01232ef0e30369a0e3c4d0**, live content verified **28 October, 19:27 Europe/Riga**.
 Feature `feature/loyalty-scan-20261028`; deployed source and **next source-patch baseline**:
