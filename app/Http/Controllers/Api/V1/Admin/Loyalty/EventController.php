@@ -59,12 +59,28 @@ class EventController extends Controller
         $data = $request->validate([
             'when' => ['nullable', Rule::in(self::WHEN)],
             'page' => 'nullable|integer|min:1|max:100000',
+            'q' => 'nullable|string|max:120',
+            'place_id' => 'nullable|integer|min:1',
+            'location' => 'nullable|string|max:200',
+            'tier_id' => 'nullable|integer|min:1',
+            'sort' => ['nullable', Rule::in(['soonest', 'latest'])],
         ]);
         $orgId = $this->orgId();
         $when = $data['when'] ?? 'upcoming';
         $now = EventClock::now($orgId);
 
         $query = $this->listed($orgId, $when, $now);
+        if (trim($data['q'] ?? '') !== '') {
+            // Bound values, literal wildcards and portable case folding (SQLite and PostgreSQL).
+            $needle = str_replace(['!', '%', '_'], ['!!', '!%', '!_'], mb_strtolower(trim($data['q'])));
+            $query->whereRaw("LOWER(title) LIKE ? ESCAPE '!'", ['%'.$needle.'%']);
+        }
+        if (isset($data['place_id'])) $query->where('access_place_id', $data['place_id']);
+        if (isset($data['location'])) $query->whereNull('access_place_id')->where('location', $data['location']);
+        if (isset($data['tier_id'])) {
+            $query->where(fn ($q) => $q->where('admits', 'all')->orWhereHas('tiers', fn ($t) => $t->where('loyalty_tiers.organization_id', $orgId)->where('loyalty_tiers.id', $data['tier_id'])));
+        }
+        if (isset($data['sort'])) $query->reorder()->orderBy('starts_at', $data['sort'] === 'latest' ? 'desc' : 'asc')->orderBy('id');
         $total = (clone $query)->count();
         $per = $when === 'today' ? self::TODAY_MAX : self::PER_PAGE;
         $pages = max(1, (int) ceil($total / $per));
@@ -133,11 +149,17 @@ class EventController extends Controller
 
     public function people(Request $request, int $id): JsonResponse
     {
-        $data = $request->validate(['page' => 'nullable|integer|min:1|max:100000']);
+        $data = $request->validate([
+            'page' => 'nullable|integer|min:1|max:100000',
+            'q' => 'nullable|string|max:120',
+            'attendance' => ['nullable', Rule::in(['all', 'not_checked_in', 'checked_in', 'walk_in', 'cancelled'])],
+            'per_page' => 'nullable|integer|min:5|max:200',
+        ]);
         $event = $this->event($id);
         $row = $this->row($event);
 
-        return response()->json(['event' => $row, 'counts' => $row['counts'], 'latest' => EventRows::latestCheckIns($event)] + EventRows::people($event, (int) ($data['page'] ?? 1)));
+        $people = EventRows::people($event, (int) ($data['page'] ?? 1), $data);
+        return response()->json(['event' => $row, 'counts' => $row['counts'] + ['not_checked_in' => $people['not_checked_in']], 'latest' => EventRows::latestCheckIns($event)] + $people);
     }
 
     public function signUp(Request $request, int $id, EventSignUp $signUps): JsonResponse
@@ -181,7 +203,8 @@ class EventController extends Controller
                 ->map(fn ($p) => ['id' => (int) $p->id, 'name' => (string) $p->name, 'is_active' => (bool) $p->is_active])->values()->all()
             : [];
 
-        return ['places' => $places];
+        $locations = LoyaltyEvent::query()->where('organization_id', $orgId)->whereNull('access_place_id')->whereNotNull('location')->where('location', '<>', '')->distinct()->orderBy('location')->pluck('location')->all();
+        return ['places' => $places, 'locations' => $locations];
     }
 
     /** Managers and staff who may manage offers create and change events (spec §4). */

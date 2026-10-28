@@ -8,8 +8,8 @@ import type { CheckInAnswer, EventBody, EventOne, EventPeople, EventPerson, Even
  * sign-ups by staff and check-in by name. Every call is Loyalty's own (`loyaltyUrl`, `brand_id=all`).
  */
 export const eventsApi = {
-  list: (tab: EventsTab, page: number): Promise<EventsList> =>
-    watched(api.get(loyaltyUrl('events'), { params: { when: tab, ...(page > 1 ? { page } : {}) } })),
+  list: (tab: EventsTab, page: number, filters: Record<string, string> = {}): Promise<EventsList> =>
+    watched(api.get(loyaltyUrl('events'), { params: { when: tab, ...filters, ...(page > 1 ? { page } : {}) } })),
   one: (id: number): Promise<EventOne> => watched(api.get(loyaltyUrl(`events/${id}`))),
   create: (body: EventBody & { publish: boolean; idempotency_key: string }): Promise<{ event: LoyaltyEventRow }> =>
     watched(api.post(loyaltyUrl('events'), body)),
@@ -18,8 +18,8 @@ export const eventsApi = {
   cancel: (id: number, reason: string | null): Promise<{ event: LoyaltyEventRow }> =>
     watched(api.post(loyaltyUrl(`events/${id}/cancel`), reason ? { reason } : {})),
   remove: (id: number): Promise<{ deleted: true }> => watched(api.delete(loyaltyUrl(`events/${id}`))),
-  people: (id: number, page: number): Promise<EventPeople> =>
-    watched(api.get(loyaltyUrl(`events/${id}/people`), { params: page > 1 ? { page } : {} })),
+  people: (id: number, page: number, filters: Record<string, string> = {}): Promise<EventPeople> =>
+    watched(api.get(loyaltyUrl(`events/${id}/people`), { params: { ...filters, ...(page > 1 ? { page } : {}) } })),
   signUp: (id: number, memberId: number, key: string): Promise<{ event: LoyaltyEventRow; person: EventPerson }> =>
     watched(api.post(loyaltyUrl(`events/${id}/sign-ups`), { member_id: memberId, idempotency_key: key })),
   cancelSignUp: (id: number, memberId: number): Promise<{ event: LoyaltyEventRow; person: EventPerson }> =>

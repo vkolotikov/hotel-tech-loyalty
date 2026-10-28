@@ -113,11 +113,11 @@ import overviewEs from './overview.es.json'
  * Registered when the chunk loads.
  */
 export const LOYALTY_LOCALE_FILES = {
-  en: { ...en, program: programEn, rewards: rewardsEn, membership: membershipEn, insights: insightsEn, campaigns: campaignsEn, app: appEn, push: pushEn, sms: smsEn, options: optionsEn, visits: visitsEn, credit: creditEn, places: placesEn, events: eventsEn, door: doorEn, guide: guideEn, start: startEn, overview: overviewEn, redesign: redesignEn, earn: earnEn, rewarddesign: rewardDesignEn },
-  ru: { ...ru, program: programRu, rewards: rewardsRu, membership: membershipRu, insights: insightsRu, campaigns: campaignsRu, app: appRu, push: pushRu, sms: smsRu, options: optionsRu, visits: visitsRu, credit: creditRu, places: placesRu, events: eventsRu, door: doorRu, guide: guideRu, start: startRu, overview: overviewRu, redesign: redesignRu, earn: earnRu, rewarddesign: rewardDesignRu },
-  de: { ...de, program: programDe, rewards: rewardsDe, membership: membershipDe, insights: insightsDe, campaigns: campaignsDe, app: appDe, push: pushDe, sms: smsDe, options: optionsDe, visits: visitsDe, credit: creditDe, places: placesDe, events: eventsDe, door: doorDe, guide: guideDe, start: startDe, overview: overviewDe, redesign: redesignDe, earn: earnDe, rewarddesign: rewardDesignDe },
-  fr: { ...fr, program: programFr, rewards: rewardsFr, membership: membershipFr, insights: insightsFr, campaigns: campaignsFr, app: appFr, push: pushFr, sms: smsFr, options: optionsFr, visits: visitsFr, credit: creditFr, places: placesFr, events: eventsFr, door: doorFr, guide: guideFr, start: startFr, overview: overviewFr, redesign: redesignFr, earn: earnFr, rewarddesign: rewardDesignFr },
-  es: { ...es, program: programEs, rewards: rewardsEs, membership: membershipEs, insights: insightsEs, campaigns: campaignsEs, app: appEs, push: pushEs, sms: smsEs, options: optionsEs, visits: visitsEs, credit: creditEs, places: placesEs, events: eventsEs, door: doorEs, guide: guideEs, start: startEs, overview: overviewEs, redesign: redesignEs, earn: earnEs, rewarddesign: rewardDesignEs },
+  en: { ...en, program: programEn, rewards: rewardsEn, membership: membershipEn, insights: insightsEn, campaigns: campaignsEn, app: appEn, push: pushEn, sms: smsEn, options: optionsEn, visits: visitsEn, credit: creditEn, places: placesEn, events: eventsEn, door: doorEn, guide: guideEn, start: startEn, overview: overviewEn, redesign: redesignEn, earn: earnEn, rewarddesign: rewardDesignEn, eventdesign: eventDesignEn },
+  ru: { ...ru, program: programRu, rewards: rewardsRu, membership: membershipRu, insights: insightsRu, campaigns: campaignsRu, app: appRu, push: pushRu, sms: smsRu, options: optionsRu, visits: visitsRu, credit: creditRu, places: placesRu, events: eventsRu, door: doorRu, guide: guideRu, start: startRu, overview: overviewRu, redesign: redesignRu, earn: earnRu, rewarddesign: rewardDesignRu, eventdesign: eventDesignRu },
+  de: { ...de, program: programDe, rewards: rewardsDe, membership: membershipDe, insights: insightsDe, campaigns: campaignsDe, app: appDe, push: pushDe, sms: smsDe, options: optionsDe, visits: visitsDe, credit: creditDe, places: placesDe, events: eventsDe, door: doorDe, guide: guideDe, start: startDe, overview: overviewDe, redesign: redesignDe, earn: earnDe, rewarddesign: rewardDesignDe, eventdesign: eventDesignDe },
+  fr: { ...fr, program: programFr, rewards: rewardsFr, membership: membershipFr, insights: insightsFr, campaigns: campaignsFr, app: appFr, push: pushFr, sms: smsFr, options: optionsFr, visits: visitsFr, credit: creditFr, places: placesFr, events: eventsFr, door: doorFr, guide: guideFr, start: startFr, overview: overviewFr, redesign: redesignFr, earn: earnFr, rewarddesign: rewardDesignFr, eventdesign: eventDesignFr },
+  es: { ...es, program: programEs, rewards: rewardsEs, membership: membershipEs, insights: insightsEs, campaigns: campaignsEs, app: appEs, push: pushEs, sms: smsEs, options: optionsEs, visits: visitsEs, credit: creditEs, places: placesEs, events: eventsEs, door: doorEs, guide: guideEs, start: startEs, overview: overviewEs, redesign: redesignEs, earn: earnEs, rewarddesign: rewardDesignEs, eventdesign: eventDesignEs },
 } as const
 
 let registered = false
@@ -134,3 +134,10 @@ import rewardDesignRu from './rewarddesign.ru.json'
 import rewardDesignDe from './rewarddesign.de.json'
 import rewardDesignFr from './rewarddesign.fr.json'
 import rewardDesignEs from './rewarddesign.es.json'
+
+import eventDesignEn from './eventdesign.en.json'
+import eventDesignRu from './eventdesign.ru.json'
+import eventDesignDe from './eventdesign.de.json'
+import eventDesignFr from './eventdesign.fr.json'
+import eventDesignEs from './eventdesign.es.json'
+
