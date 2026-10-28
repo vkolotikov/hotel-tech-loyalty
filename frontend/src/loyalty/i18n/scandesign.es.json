@@ -1,4 +1,5 @@
 {
+  "chooseAction": "¿Qué desea hacer?", "readerPaused": "Lector en pausa", "finished": "¿Ha terminado con este miembro?",
   "title": "Escanear a un miembro",
   "subtitle": "Escanee un código QR, acerque una tarjeta o busque a un miembro manualmente.",
   "options": "Opciones",

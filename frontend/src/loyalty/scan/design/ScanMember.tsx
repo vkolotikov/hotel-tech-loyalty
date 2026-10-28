@@ -24,7 +24,9 @@ export function ScanIdentity({ member }: { member: MemberRow }) {
   const { t, i18n } = useTranslation()
   const tier = boot.programme.tiers.find(tier => tier.id === member.tier_id)
   const validity = deskValidity(member, boot.venue.today, i18n.language)
-  return <div className="l-sc-identity"><span className="l-sc-avatar" aria-hidden>{member.name.split(/\s+/).map(p => p[0]).slice(0, 2).join('')}</span><div><strong>{member.name || member.member_number}</strong><small>{[tier?.name, member.member_number].filter(Boolean).join(' · ')}</small><div className="l-sc-mobile-facts"><span>{points(member.points, i18n.language)} {t('loyalty.scan.points', 'points')}</span>{validity && <Validity line={validity} />}</div></div><span className="l-sc-status">{t(member.is_active ? 'loyalty.common.active' : 'loyalty.common.inactive', member.is_active ? 'Active' : 'Inactive')}</span></div>
+  const expired = member.membership_state === 'expired' || (member.valid_until && member.valid_until < boot.venue.today)
+  const status = !member.is_active ? t('loyalty.common.inactive', 'Inactive') : expired ? t('loyalty.membership.list.state.expired', 'Expired') : t('loyalty.common.active', 'Active')
+  return <div className="l-sc-identity"><span className="l-sc-avatar" aria-hidden>{member.name.split(/\s+/).map(p => p[0]).slice(0, 2).join('')}</span><div><strong>{member.name || member.member_number}</strong><small className="l-sc-desktop">{[tier?.name, member.member_number].filter(Boolean).join(' · ')}</small><small className="l-sc-mobile">{[tier?.name, status, member.member_number].filter(Boolean).join(' · ')}</small><div className="l-sc-mobile-facts"><span>{points(member.points, i18n.language)} {t('loyalty.scan.points', 'points')}</span>{validity && <Validity line={validity} />}</div></div><span className="l-sc-status l-sc-desktop">{status}</span></div>
 }
 
 export function ScanMember({ member, onNext }: { member: MemberRow; onNext: () => void }) {
@@ -47,7 +49,7 @@ export function ScanMember({ member, onNext }: { member: MemberRow; onNext: () =
   const benefits = <><h2>{words('available')}</h2>{detail.data?.benefits.length ? <ul className="l-sc-benefits">{detail.data.benefits.map(b => <li key={b.id}><strong>{b.name}</strong>{b.value && <small>{b.value}</small>}</li>)}</ul> : <p>{words('noBenefits')}</p>}<Link className="l-ov-link" to="/loyalty/rewards?tab=benefits">{words('allBenefits')}</Link></>
   if (denied) return <section className="l-sc-panel" role="alert"><p>{words('unavailable')}</p><OverviewButton onClick={() => void detail.refetch()}>{words('retry')}</OverviewButton><OverviewButton onClick={onNext}>{words('next')}</OverviewButton></section>
   return <>
-    <header className="l-sc-heading"><div><h1><span className="l-sc-desktop">{words('atDesk')}</span><span className="l-sc-mobile">{words('found')}</span></h1><p className="l-sc-desktop">{words('deskSubtitle')}</p><p className="l-sc-mobile">{words('paused')}</p></div><div className="l-sc-desktop l-sc-actions"><Link className="l-ov-button" to={memberPath(now.id)}>{words('profile')}</Link><OverviewButton primary onClick={onNext}>{words('next')}</OverviewButton></div></header>
+    <header className="l-sc-heading"><div><h1><span className="l-sc-desktop">{words('atDesk')}</span><span className="l-sc-mobile"><img src={overviewAssets.members} alt="" />{words('found')}</span></h1><p className="l-sc-desktop">{words('deskSubtitle')}</p><p className="l-sc-mobile">{words('readerPaused')} · {words('desk')}</p></div><div className="l-sc-desktop l-sc-actions"><Link className="l-ov-button" to={memberPath(now.id)}>{words('profile')}</Link><OverviewButton primary onClick={onNext}>{words('next')}</OverviewButton></div></header>
     <ScanIdentity member={now} />
     {detail.isPending && <OverviewSkeleton rows={2} />}
     {detail.isError && <div className="l-sc-panel" role="alert"><p>{words('unavailable')}</p><OverviewButton onClick={() => void detail.refetch()}>{words('retry')}</OverviewButton></div>}
@@ -58,17 +60,18 @@ export function ScanMember({ member, onNext }: { member: MemberRow; onNext: () =
       <button disabled={!ready} aria-pressed={tab === 'benefits'} onClick={() => setTab('benefits')}><strong>{words('benefits')}</strong><small>{words('benefitsHint')}</small></button>
       <button disabled={!ready} aria-pressed={tab === 'checkin'} onClick={() => setTab('checkin')}><strong>{words('checkin')}</strong><small>{words('checkinHint')}</small></button>
     </div>
+    <strong className="l-sc-mobile">{words('chooseAction')}</strong>
     <div className="l-sc-mobile l-sc-tiles">
-      {actions.award && <OverviewButton disabled={!ready} onClick={() => setDialog('award')}><img src={overviewAssets.options} alt="" />{award}</OverviewButton>}
-      {actions.redeem && <OverviewButton disabled={!ready} onClick={() => setDialog('redeem')}><img src={overviewAssets.app} alt="" />{redeem}</OverviewButton>}
-      <OverviewButton disabled={!ready} onClick={() => setTab(tab === 'benefits' ? 'checkin' : 'benefits')} aria-expanded={tab === 'benefits'}><img src={overviewAssets.rewards} alt="" />{words('benefits')}</OverviewButton>
-      <Link className="l-ov-button" to={memberPath(now.id)}><img src={overviewAssets.members} alt="" />{words('profile')}</Link>
+      {actions.award && <OverviewButton primary disabled={!ready} aria-label={award} onClick={() => setDialog('award')}><img src={overviewAssets.options} alt="" /><span>{award}</span><small>{words('awardHint')}</small></OverviewButton>}
+      {actions.redeem && <OverviewButton disabled={!ready} aria-label={redeem} onClick={() => setDialog('redeem')}><img src={overviewAssets.app} alt="" /><span>{redeem}</span><small>{words('redeemHint')}</small></OverviewButton>}
+      <OverviewButton disabled={!ready} aria-label={words('benefits')} onClick={() => setTab(tab === 'benefits' ? 'checkin' : 'benefits')} aria-expanded={tab === 'benefits'}><img src={overviewAssets.rewards} alt="" /><span>{words('benefits')}</span><small>{words('benefitsHint')}</small></OverviewButton>
+      <Link className="l-ov-button" to={memberPath(now.id)}><img src={overviewAssets.members} alt="" /><span>{words('profile')}</span><small>{words('moreActions')}</small></Link>
     </div>
     {ready && <div className="l-sc-columns"><section className={`l-sc-panel ${tab === 'award' || tab === 'redeem' ? 'l-sc-desktop' : ''}`}>
       {(tab === 'award' || tab === 'redeem') ? <><h2>{tab === 'award' ? award : redeem}</h2><PointsDialog key={`${tab}-${revision}`} inline mode={tab} memberId={now.id} name={now.name} balance={now.points} onClose={saved} /></> : tab === 'benefits' ? <>{benefits}{detail.data.requests.length > 0 && <ul>{detail.data.requests.map(r => <RequestRow key={r.id} request={r} showMember={false} compact />)}</ul>}</> : <><h2>{words('review')}</h2><DeskActions member={now} /><CreditSummary member={now} /><Link className="l-ov-link" to={memberPath(now.id)}>{words('openProfile')}</Link></>}
     </section><aside className="l-sc-stack l-sc-desktop"><section className="l-sc-panel l-sc-membership"><h2>{words('current')}</h2><dl><dt>{words('points')}</dt><dd>{points(now.points, i18n.language)} {t('loyalty.scan.points', 'points')}</dd><dt>{words('level')}</dt><dd>{tier?.name ?? '—'}</dd><dt>{words('validUntil')}</dt><dd>{validity ? <Validity line={validity} /> : '—'}</dd></dl><small>{words('qualification')}</small></section><section className="l-sc-panel">{benefits}</section><section className="l-sc-panel"><strong>{words('moreActions')}</strong><p>{words('moreLine')}</p><Link className="l-ov-link" to={memberPath(now.id)}>{words('openProfile')}</Link></section></aside></div>}
     <OverviewButton className="l-sc-mobile" disabled={!ready} onClick={() => setTab(tab === 'checkin' ? 'benefits' : 'checkin')} aria-expanded={tab === 'checkin'}>{words('review')}</OverviewButton>
-    <section className="l-sc-panel l-sc-mobile"><h2>{words('scanAgain')}</h2><p>{words('scanAgainLine')}</p><OverviewButton primary onClick={onNext}>{words('next')}</OverviewButton></section>
+    <section className="l-sc-panel l-sc-mobile"><p>{words('finished')}</p><OverviewButton onClick={onNext}>{words('next')}</OverviewButton></section>
     <small className="l-sc-desktop">{words('draftHint')}</small>
     {dialog && ready && <PointsDialog mode={dialog} memberId={now.id} name={now.name} balance={now.points} memberNumber={now.member_number} level={tier?.name} onClose={() => setDialog(null)} />}
   </>

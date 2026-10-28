@@ -1,4 +1,5 @@
 {
+  "chooseAction": "What would you like to do?", "readerPaused": "Reader paused", "finished": "Finished with this member?",
   "title": "Scan a member", "subtitle": "Scan a QR code, tap a card or find a member manually.",
   "options": "Options", "reader": "Reader", "mode": "Mode", "desk": "Desk mode", "door": "Door check", "event": "Event check-in", "camera": "Camera", "nfc": "NFC", "usb": "USB reader", "done": "Done",
   "start": "Start scanning", "cameraLine": "Point the camera at the member’s QR code.", "startCamera": "Start camera", "cameraOff": "Camera off", "cameraHint": "Your camera is only used while scanning. Permission is requested when you start.",

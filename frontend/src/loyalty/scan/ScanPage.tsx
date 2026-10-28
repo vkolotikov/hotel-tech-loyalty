@@ -89,7 +89,7 @@ export function ScanPage() {
   const context = resolved.context
   const typedPhrase = useTypedPhrase()
   const facts: VerdictFacts = { locale, today: boot.venue.today, nowWall, timeZone, place: resolved.place, event: resolved.event, typedPhrase }
-  const today = useToday(context, timeZone)
+  const today = useToday(context, timeZone, overviewScope(boot))
 
   const [mode, setMode] = useState<ScanMode | null>(null)
   const [code, setCode] = useState('')
@@ -205,7 +205,7 @@ export function ScanPage() {
                     {/* A place or an event: the verdict, said aloud (the region is always there, so a new verdict is announced). */}
             <Announcer view={verdict} />
             {verdict && (
-              <ScanDoor key={shown!.key} view={verdict} context={shown!.kind === 'verdict' ? shown!.context : context} contextName={contextName} onNext={nextMember} onOptions={() => setOptions(true)}>
+              <ScanDoor key={shown!.key} view={verdict} context={shown!.kind === 'verdict' ? shown!.context : context} contextName={contextName} onNext={nextMember} onOptions={() => setOptions(true)} onDesk={() => chooseContext(DESK)}>
                 {verdictLink !== null && (
                   <Button className="py-3 text-base" onClick={() => setLinking(verdictLink)}><Link2 size={16} aria-hidden />{t('loyalty.scan.link_card', 'Link this card')}</Button>
                 )}

@@ -1,0 +1,76 @@
+{
+  "checks": [
+    "Idle performs no writes",
+    "render-options: no horizontal overflow",
+    "Options restores focus",
+    "render-manual: no horizontal overflow",
+    "Manual search is read only",
+    "Desk open performs no scan write",
+    "render-desktop-member: no horizontal overflow",
+    "Amount preview does not award points",
+    "Award writes once and refreshes member balance",
+    "Cannot redeem more than the authoritative balance",
+    "Existing check-in action remains available and keeps its completed outcome",
+    "render-desktop-camera-blocked: no horizontal overflow",
+    "Camera permission failure and retry recover without a scan",
+    "render-desktop-door: no horizontal overflow",
+    "Door uses selected place in the scan body",
+    "Continuous door route preserved",
+    "render-mobile-door: no horizontal overflow",
+    "render-mobile-nfc-idle: no horizontal overflow",
+    "render-mobile-nfc-unavailable: no horizontal overflow",
+    "render-mobile-camera-blocked: no horizontal overflow",
+    "render-mobile-member: no horizontal overflow",
+    "Mobile action tiles open the existing point dialog",
+    "render-member-320: no horizontal overflow",
+    "render-member-768: no horizontal overflow",
+    "render-member-1024: no horizontal overflow",
+    "Denied member details hide personal information and mutation controls",
+    "Denied member detail does not retain cached identity",
+    "render-mobile-nfc-waiting: no horizontal overflow",
+    "NFC aborts after first member result",
+    "Opening manual search stops NFC",
+    "No browser runtime errors",
+    "All loyalty API reads and writes retain brand_id=all"
+  ],
+  "errors": [],
+  "writes": [
+    {
+      "path": "members/1048/award",
+      "method": "POST",
+      "query": "?brand_id=all",
+      "payload": {
+        "points": 250,
+        "reason": "Thank you for visiting us",
+        "idempotency_key": "b281c477-507a-4d01-b67f-3efb88fc6eea"
+      }
+    },
+    {
+      "path": "members/1048/check-in",
+      "method": "POST",
+      "query": "?brand_id=all",
+      "payload": {
+        "idempotency_key": "2a58facc-7f94-4468-925d-b3bbc26d6b9a"
+      }
+    },
+    {
+      "path": "scan",
+      "method": "POST",
+      "query": "?brand_id=all",
+      "payload": {
+        "code": "M-1048",
+        "idempotency_key": "ed8fd2f7-4bb6-46fc-9190-5873405f21fe",
+        "place_id": 1
+      }
+    },
+    {
+      "path": "scan",
+      "method": "POST",
+      "query": "?brand_id=all",
+      "payload": {
+        "code": "04:a2:b3:c4",
+        "idempotency_key": "b7f18df0-e65a-437f-a55d-3e24bfbb5448"
+      }
+    }
+  ]
+}

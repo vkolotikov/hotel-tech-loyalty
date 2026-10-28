@@ -1,4 +1,5 @@
 {
+  "chooseAction": "Was möchten Sie tun?", "readerPaused": "Lesegerät pausiert", "finished": "Mit diesem Mitglied fertig?",
   "title": "Mitglied scannen",
   "subtitle": "Scannen Sie einen QR-Code, halten Sie eine Karte an das Lesegerät oder suchen Sie manuell.",
   "options": "Optionen",

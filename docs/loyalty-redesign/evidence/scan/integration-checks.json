@@ -1,0 +1,60 @@
+{
+  "checks": [
+    "Unanswered access retry reuses idempotency key",
+    "Retry preserves scan context",
+    "Event scan submits event_id and displays server attendance",
+    "Event result shows recorded attendance",
+    "Actual ZXing decoder reads the fixture QR from a MediaStream",
+    "Camera MediaStream stops after a decoded member",
+    "Opening manual lookup releases the active camera",
+    "Empty search cannot open a member",
+    "Editing a search invalidates the selected match",
+    "ru mobile layout has no overflow",
+    "de mobile layout has no overflow",
+    "fr mobile layout has no overflow",
+    "es mobile layout has no overflow",
+    "Light theme renders",
+    "No reader integration runtime errors"
+  ],
+  "requests": [
+    {
+      "path": "scan",
+      "method": "POST",
+      "query": "?brand_id=all",
+      "payload": {
+        "code": "M-1048",
+        "idempotency_key": "d4eea5b2-4617-4483-b030-47b584f04e6c",
+        "place_id": 1
+      }
+    },
+    {
+      "path": "scan",
+      "method": "POST",
+      "query": "?brand_id=all",
+      "payload": {
+        "code": "M-1048",
+        "idempotency_key": "d4eea5b2-4617-4483-b030-47b584f04e6c",
+        "place_id": 1
+      }
+    },
+    {
+      "path": "scan",
+      "method": "POST",
+      "query": "?brand_id=all",
+      "payload": {
+        "code": "M-1048",
+        "idempotency_key": "1fe35efd-f0cf-4a25-a7ad-3ede0739fc7d",
+        "event_id": 5
+      }
+    },
+    {
+      "path": "scan",
+      "method": "POST",
+      "query": "?brand_id=all",
+      "payload": {
+        "code": "M-1048",
+        "idempotency_key": "7b625f1d-ea9b-4c30-82fc-58ced4ca2e1b"
+      }
+    }
+  ]
+}
