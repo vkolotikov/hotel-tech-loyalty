@@ -6,7 +6,7 @@ async (page) => {
   const fixture = patch => page.evaluate(async p => (await fetch('/api/v1/admin/loyalty/__fixture', p ? { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(p) } : {})).json(), patch);
   const original = await fixture();
   const ok = (value, name) => { if (!value) throw Error(name); checks.push(name); };
-  const go = async query => { await page.goto(base + '/loyalty/rewards' + query); await page.locator('.l-rb-list, .l-rb-editor').first().waitFor(); };
+  const go = async query => { await page.goto(base + '/loyalty/rewards' + query); await page.locator('.l-rb-list, .l-rb-editor').first().waitFor({ timeout: 20000 }); };
   const button = name => page.getByRole('button', { name, exact: true });
   const writes = async () => (await fixture()).requests.filter(r => r.method !== 'GET');
   try {
@@ -40,10 +40,11 @@ async (page) => {
     d = page.getByRole('dialog'); await d.getByRole('textbox', { name: 'New name', exact: true }).fill('Renamed fixture'); await d.getByRole('button', { name: 'Rename', exact: true }).click(); await d.waitFor({ state: 'hidden' });
     await page.getByRole('heading', { name: 'Renamed fixture', exact: true }).waitFor();
     ok((await writes()).at(-1).payload.name === 'Renamed fixture', 'rename uses the existing benefit endpoint');
-    await button('More').click(); await page.getByRole('menuitem', { name: 'Switched off', exact: true }).click();
+    await button('More').click(); await page.getByRole('menuitem', { name: 'Switch off', exact: true }).click();
     await page.waitForFunction(id => document.querySelector(`[data-record="benefit-${id}"]`).textContent.includes('Switched off'), id, { timeout: 8000 });
     ok(!(await fixture()).program.benefits.find(b => b.id === id).is_active, 'benefit can be paused');
-    await button('More').click(); await page.getByRole('menuitem', { name: 'Active', exact: true }).click();
+    ok(await button('Assign to a level').isDisabled(), 'paused benefits cannot start an invalid assignment');
+    await button('More').click(); await page.getByRole('menuitem', { name: 'Switch on', exact: true }).click();
     await page.waitForFunction(id => !document.querySelector(`[data-record="benefit-${id}"]`).textContent.includes('Switched off'), id, { timeout: 8000 });
     await button('More').click(); await page.getByRole('menuitem', { name: 'Delete', exact: true }).click();
     d = page.getByRole('dialog'); await d.getByRole('button', { name: 'Delete benefit', exact: true }).waitFor();
