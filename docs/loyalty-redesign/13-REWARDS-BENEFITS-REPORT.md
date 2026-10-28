@@ -17,6 +17,8 @@ Full design context and reference screenshots inspected for all four nodes. The 
 
 The gift SVG was downloaded from the exact frame asset endpoint and compared with the existing `overview/assets/5287e.svg`: SHA-256 `DCDC9C021AED21307EC3F8903F307AE6EF5DE7EAD121FA0E35E3124B2862896D`, identical. The existing local asset is reused at the cyan detail/preview icon slots, with its native 20×20 geometry. Member-supplied reward and offer pictures remain dynamic.
 
+All 18 referenced static assets were downloaded and compared. Seventeen already match the shared Overview assets. The Program navigation variant differs, so its exact SVG is bundled as `rewards/design/assets/program.svg` and used only on these screens. Browser inspection confirms local asset loading and native icon dimensions.
+
 ## Data and behavior
 
 No financial, tenant, permission, redemption or fulfillment rules are changed.
@@ -34,8 +36,30 @@ The existing API does not support per-reward level eligibility, a configurable r
 
 List filters and selection are addressable. Reward editing and inline offer editing retain validation, pending/error/retry states and guard unsaved drafts on in-app links and unload. Saves use existing query keys and invalidate the relevant data. The shared guard's transaction functions now have stable identities so media writes can participate in pending navigation protection.
 
+Custom stock, claim-limit and expiry modes remain selected while an input is temporarily blank; incomplete values block saving. Offer row selection and dialog closing are explicit non-submit buttons. Paused benefits cannot start a new assignment, while existing assignments remain editable. Benefit management follows `manage_program`; rewards and offers follow `manage_rewards`.
+
+The existing guard does not intercept browser-history traversal or unrelated shell commands that call navigation directly. This is the same limitation documented for Ways to earn.
+
+## Visual comparison
+
+The four rendered pages were viewed against their exact Figma screenshots at the 1440px reference width. The implementation keeps the shared rail, Poppins typography, blue/violet panels, selected rows, 744/376 column proportions, gift icons, member previews and form groupings. Comparison corrections include the exact Program icon, flatter points stepper, preview padding that preserves the reference title line, compact offer details and the overflow actions beside Save offer.
+
+Existing category, media, active-state and usage controls are retained in disclosure/overflow controls. Real workspace identity and permissions replace illustrative Demo data labels. Actual API delivery, eligibility, offer dates and active states take precedence over unsupported prototype options. Lists and forms stack on smaller screens; long content wraps without horizontal overflow.
+
 ## Verification status
 
 Baseline: affected frontend suites passed (92 tests across seven files) before implementation. Production source baseline for the next allowlisted patch: `d45a44be1`; origin/main was source-identical at task start.
 
-Implementation and visual verification are in progress. Final test totals, responsive checks, asset audit and deployment evidence will be recorded here before reporting completion.
+The isolated release checkout starts at production `1fcdcbb6b`, with an allowlisted source patch from `d45a44be1`. Whole source parity is checked with built output excluded. Vendor is a real copy; dependencies were installed in the artifact. No backend, dependency or migration files changed.
+
+- Artifact TypeScript and Loyalty ESLint passed.
+- Full artifact frontend suite: **5,606 passed, 0 failed, 388 files**.
+- A fresh production build passed after the final CSS comparison corrections.
+- Compiled browser interactions: **21 passed**, including reward creation/editing, typed discounts, null clearing, venue-clock expiry, immediate media writes, validation/retry, pending protection, guarded selection, offer creation/editing and level-specific assignment.
+- Compiled state/responsive verification: **61 checks passed**. Coverage includes CRUD, permission separation, empty/error/retry states, old routes, all four screens at 1440/1024/768/390/320px, the mobile drawer, bundled icon geometry, light mode and EN/RU/DE/FR/ES. The locale subset was repeated after correcting the test's French Settings locator; application code did not change.
+- PHP **8.4.20**, 75 foreground scoped runs: **7,071 passed, 7 skipped, 45,224 assertions**. Every `Tests:` summary was read; no failed scopes.
+- Browser runtime errors: **0**. Evidence includes the Figma references, final compiled screenshots, test summaries and asset audit in `evidence/rewards-benefits/`.
+
+The verified release is ready for deployment. Production commit and live content checks are recorded after publication.
+
+Browser API requests are intercepted by the local fixture harness. Server integration is verified by the scoped PHP suites and existing API contracts; production member transactions are not used as test data.

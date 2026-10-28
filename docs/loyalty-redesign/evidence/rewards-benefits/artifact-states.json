@@ -1,0 +1,184 @@
+{
+  "passed": 61,
+  "checks": [
+    "custom limit remains editable through blank and first digit",
+    "blank limited stock blocks save without hiding the field",
+    "503 keeps the reward draft",
+    "reward retry saves and announces success",
+    "benefit creation validates required fields",
+    "new benefit persists its code, category and fulfillment",
+    "rename uses the existing benefit endpoint",
+    "benefit can be paused",
+    "paused benefits cannot start an invalid assignment",
+    "delete preview can be cancelled without a write",
+    "confirmed benefit deletion refreshes the catalogue",
+    "read-only rewards hide write links",
+    "direct reward editor enforces read-only access",
+    "read-only offers disable form and omit saving",
+    "read-only benefits hide management actions",
+    "manage_program permits benefits independently of manage_rewards",
+    "manage_rewards alone does not permit benefit changes",
+    "honest empty state: rewards",
+    "honest empty state: ?tab=offers",
+    "honest empty state: ?tab=benefits",
+    "rewards failure shows no invented records",
+    "rewards recovers on retry",
+    "offers failure shows no invented records",
+    "offers recovers on retry",
+    "program failure shows no invented records",
+    "program recovers on retry",
+    "legacy redemptions route preserved",
+    "legacy referrals route preserved",
+    "legacy Program benefits route preserved",
+    "points fits 1440px without horizontal overflow",
+    "edit-reward fits 1440px without horizontal overflow",
+    "offers fits 1440px without horizontal overflow",
+    "benefits fits 1440px without horizontal overflow",
+    "points fits 1024px without horizontal overflow",
+    "edit-reward fits 1024px without horizontal overflow",
+    "offers fits 1024px without horizontal overflow",
+    "benefits fits 1024px without horizontal overflow",
+    "points fits 768px without horizontal overflow",
+    "edit-reward fits 768px without horizontal overflow",
+    "offers fits 768px without horizontal overflow",
+    "benefits fits 768px without horizontal overflow",
+    "points fits 390px without horizontal overflow",
+    "edit-reward fits 390px without horizontal overflow",
+    "offers fits 390px without horizontal overflow",
+    "benefits fits 390px without horizontal overflow",
+    "points fits 320px without horizontal overflow",
+    "edit-reward fits 320px without horizontal overflow",
+    "offers fits 320px without horizontal overflow",
+    "benefits fits 320px without horizontal overflow",
+    "mobile drawer exposes Rewards subpages",
+    "visible icons load from bundled local assets",
+    "shared light theme works",
+    "ru translates the Rewards workspace",
+    "ru fits the narrow light layout",
+    "de translates the Rewards workspace",
+    "de fits the narrow light layout",
+    "fr translates the Rewards workspace",
+    "fr fits the narrow light layout",
+    "es translates the Rewards workspace",
+    "es fits the narrow light layout",
+    "no uncaught browser errors"
+  ],
+  "execution_note": "Locale subset rerun after correcting the test locator for French Réglages. No application code changed.",
+  "assets": [
+    {
+      "src": "bundled inline SVG",
+      "loaded": true,
+      "width": 20,
+      "natural": 20
+    },
+    {
+      "src": "bundled inline SVG",
+      "loaded": true,
+      "width": 20,
+      "natural": 20
+    },
+    {
+      "src": "bundled inline SVG",
+      "loaded": true,
+      "width": 20,
+      "natural": 20
+    },
+    {
+      "src": "bundled inline SVG",
+      "loaded": true,
+      "width": 20,
+      "natural": 20
+    },
+    {
+      "src": "bundled inline SVG",
+      "loaded": true,
+      "width": 12,
+      "natural": 12
+    },
+    {
+      "src": "bundled inline SVG",
+      "loaded": true,
+      "width": 20,
+      "natural": 20
+    },
+    {
+      "src": "bundled inline SVG",
+      "loaded": true,
+      "width": 12,
+      "natural": 12
+    },
+    {
+      "src": "bundled inline SVG",
+      "loaded": true,
+      "width": 16,
+      "natural": 16
+    },
+    {
+      "src": "bundled inline SVG",
+      "loaded": true,
+      "width": 12,
+      "natural": 12
+    },
+    {
+      "src": "bundled inline SVG",
+      "loaded": true,
+      "width": 20,
+      "natural": 20
+    },
+    {
+      "src": "bundled inline SVG",
+      "loaded": true,
+      "width": 12,
+      "natural": 12
+    },
+    {
+      "src": "bundled inline SVG",
+      "loaded": true,
+      "width": 16,
+      "natural": 16
+    },
+    {
+      "src": "bundled inline SVG",
+      "loaded": true,
+      "width": 16,
+      "natural": 16
+    },
+    {
+      "src": "bundled inline SVG",
+      "loaded": true,
+      "width": 12,
+      "natural": 12
+    },
+    {
+      "src": "bundled inline SVG",
+      "loaded": true,
+      "width": 20,
+      "natural": 20
+    },
+    {
+      "src": "bundled inline SVG",
+      "loaded": true,
+      "width": 20,
+      "natural": 20
+    },
+    {
+      "src": "bundled inline SVG",
+      "loaded": true,
+      "width": 12,
+      "natural": 12
+    },
+    {
+      "src": "bundled inline SVG",
+      "loaded": true,
+      "width": 18,
+      "natural": 18
+    },
+    {
+      "src": "bundled inline SVG",
+      "loaded": true,
+      "width": 20,
+      "natural": 20
+    }
+  ],
+  "errors": []
+}

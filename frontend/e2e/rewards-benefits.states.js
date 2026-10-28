@@ -96,11 +96,12 @@ async (page) => {
     await button('Settings').click(); await button('Light').click(); await page.locator('[data-loyalty][data-theme=light]').waitFor(); await page.keyboard.press('Escape');
     await page.screenshot({ path: root + 'render-light.png', fullPage: true }); checks.push('shared light theme works');
     for (const lang of ['ru', 'de', 'fr', 'es']) {
-      await page.getByRole('button', { name: /^(Settings|Настройки|Einstellungen|Paramètres|Configuración)$/ }).click(); await page.getByRole('combobox', { name: /Language|Язык|Sprache|Langue|Idioma/ }).selectOption(lang); await page.keyboard.press('Escape');
+      await page.getByRole('button', { name: /^(Settings|Настройки|Einstellungen|Réglages|Configuración)$/ }).click(); await page.getByRole('combobox', { name: /Language|Язык|Sprache|Langue|Idioma/ }).selectOption(lang); await page.keyboard.press('Escape');
       ok(!(await page.locator('.l-rb-page').innerText()).includes('Your rewards'), lang + ' translates the Rewards workspace');
       await page.setViewportSize({ width: 320, height: 844 });
       ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1 && document.querySelector('[data-loyalty]').dataset.theme === 'light'), lang + ' fits the narrow light layout');
       await page.setViewportSize({ width: 1440, height: 1080 });
+      await page.screenshot({ path: root + 'render-' + lang + '.png', fullPage: true });
     }
     ok((await fixture()).errors.length === 0, 'no uncaught browser errors');
     return { passed: checks.length, checks, assets, errors: (await fixture()).errors };
