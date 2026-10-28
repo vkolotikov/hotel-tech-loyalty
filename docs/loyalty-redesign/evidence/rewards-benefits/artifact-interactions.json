@@ -1,0 +1,27 @@
+{
+  "passed": 21,
+  "checks": [
+    "all catalogue requests retain brand_id=all",
+    "search, status filters, empty results and clearing",
+    "reward selection changes the preview and edit address",
+    "invalid points are blocked before a write",
+    "dirty reward supports keep editing and discard without saving",
+    "reward save preserves all fields, typed discount, brand and venue wall clock",
+    "null stock, limits, expiry and discount are explicitly cleared",
+    "new reward creation remains separate from image upload",
+    "image type validation and independent upload/removal",
+    "server field errors keep the reward draft, then retry succeeds",
+    "pending save disables repeated submits and navigation",
+    "missing reward address recovers to the catalogue",
+    "offers filter by brand, code and ended status",
+    "offer draft guards list selection; discard resets the inline form",
+    "offer edits preserve brand, tiers, caps, code, featured flag and date-only contract",
+    "offer cancel restores the saved baseline",
+    "offer code collision retains all fields and recovers",
+    "new offer validates dates and description then creates without redeeming",
+    "benefits filter by fulfillment, level, assignment state and search",
+    "benefit editing preserves immutable code and fulfillment values",
+    "assignment opens on the selected benefit and updates only the chosen level"
+  ],
+  "errors": []
+}

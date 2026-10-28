@@ -1,0 +1,9 @@
+﻿{
+    "passed":  5606,
+    "failed":  0,
+    "files":  388,
+    "typescript":  "passed",
+    "loyalty_eslint":  "passed",
+    "production_build":  "passed",
+    "php_version":  "8.4.20"
+}
