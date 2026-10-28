@@ -7,7 +7,7 @@ import type { ReactElement } from 'react'
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key: string, fallback?: string | Record<string, unknown>, vars?: Record<string, unknown>) => {
-      const text = typeof fallback === 'string' ? fallback : key
+      const text = typeof fallback === 'string' ? fallback : String(fallback?.defaultValue ?? key)
       return text.replace(/\{\{(\w+)\}\}/g, (_, name) => String((vars ?? {})[name] ?? ''))
     },
     i18n: { language: 'en' },
@@ -62,19 +62,11 @@ const events: EventRow[] = [{ id: 5, title: 'Wine tasting', starts_at: '2026-10-
 const facts: VerdictFacts = { locale: 'en', today: '2026-10-21', nowWall: '2026-10-21T19:00', timeZone: 'Europe/Riga' }
 
 describe('the Scan page (release 5)', () => {
-  it('offers the camera, NFC and the USB reader as short buttons, and keeps the field for readers that type', () => {
-    const html = render(<ScanPage />)
-    const words = text(html)
-    for (const way of ['Camera', 'NFC card', 'USB reader', 'Find']) expect(words).toContain(way)
-    // No subtitle restating the title; the answer's place says the scanner is ready.
-    expect(words).not.toContain('Scan the member app')
-    expect(words).toContain('Ready — scan the next member')
-    expect(html).toContain('placeholder="Scan or type…"')
-    expect(html).toMatch(/<input[^>]*autofocus/i)
-    // The three ways, none pressed (the desk is the context pressed above them).
-    expect(html.match(/aria-pressed="false"/g)).toHaveLength(3)
-    // Nothing starts on its own: no camera, no NFC, no reader until a press.
+  it('keeps readers behind an explicit start and provides manual lookup and options', () => {
+    const html = render(<ScanPage />), words = text(html)
+    for (const label of ['Camera', 'Start camera', 'Options', 'Find member manually']) expect(words).toContain(label)
     expect(html).not.toContain('<video')
+    expect(html).not.toMatch(/<input[^>]*autofocus/i)
     expect(words).not.toContain('Hold the card')
   })
 
@@ -117,8 +109,8 @@ describe('Scanning for (release 8 §2)', () => {
   it('opens on the desk: pressed, no door mode and no "Today here"', () => {
     const html = render(<ScanPage />)
     const words = text(html)
-    expect(words).toContain('Scanning for')
-    expect(html).toMatch(/aria-pressed="true"[^>]*>.*?Desk/)
+    expect(words).toContain('Desk mode')
+    expect(words).toContain('Options')
     expect(words).not.toContain('Door mode')
     expect(words).not.toContain('Today here')
     // The announcement region is there, silent until a verdict.
@@ -128,9 +120,8 @@ describe('Scanning for (release 8 §2)', () => {
   it('an address that names a place (an event’s Start check-in names its event) chooses it: door mode, "Today here", the verdict announced', () => {
     const html = render(<ScanPage />, '/loyalty/scan?place=3')
     const words = text(html)
-    expect(html).toContain('href="/loyalty/scan/door?place=3"')
-    expect(words).toContain('Door mode')
-    expect(words).toContain('Loading places and events…')
+    expect(words).toContain('Door check')
+    expect(words).toContain('Options')
     expect(words).toContain('Today here')
     expect(html).toContain('aria-live="assertive"')
     expect(text(render(<ScanPage />, '/loyalty/scan?event=5'))).toContain('Today here')
