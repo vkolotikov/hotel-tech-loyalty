@@ -65,9 +65,9 @@ function AppearanceEditor({ answer, blocked }: { answer: LookAnswer; blocked: bo
     }, onSettled: guard.end })
   const changed = lookChanged(form, look, options)
   const { mark } = guard
-  useEffect(() => mark('appearance', changed), [changed, mark])
   const failure = save.isError ? failureOf(save.error) : null
   const forbidden = [save.error, logo.error].some(error => [401, 402, 403].includes(failureOf(error).status))
+  useEffect(() => mark('appearance', changed && !forbidden), [changed, forbidden, mark])
   const busy = guard.busy || blocked
   const issues = { ...(tried ? lookProblems(form, options) : {}), ...lookServerProblems(failure?.fields) }
   const problem = (field: string) => issues[field] ? t(`loyalty.app.look.problem.${issues[field]}`, LOOK_PROBLEM_WORDS[issues[field]] ?? LOOK_PROBLEM_WORDS.colour) : null

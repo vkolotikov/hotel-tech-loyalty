@@ -22,7 +22,7 @@ async page => {
     if(path==='bootstrap')body=state.boot;
     else if(path==='app-look'){
       if(state.slow)await new Promise(resolve=>setTimeout(resolve,600));
-      if(state.denied||state.failLook||(req.method()==='PUT'&&state.failSave)){status=state.denied?403:503;body={error:state.denied?'manager_only':'unavailable'};}
+      if(state.denied||state.failLook||(req.method()==='PUT'&&(state.failSave||state.denySave))){status=state.denied||state.denySave?403:503;body={error:status===403?'manager_only':'unavailable'};}
       else if(req.method()==='PUT'){state.look={...state.look,...payload};body={look:state.look};}
       else body={look:state.look,options:state.options};
     }else if(path==='app-look/logo'){state.logoCount++;state.look.logo_url='/local-fixture-logo.svg';body={logo_url:state.look.logo_url};}
