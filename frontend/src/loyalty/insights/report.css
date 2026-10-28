@@ -16,7 +16,7 @@
 [data-loyalty] .l-in-tile > strong { font-size: 32px; line-height: 42px; font-weight: 600; overflow-wrap: anywhere; }
 [data-loyalty] .l-in-tile > small { font-size: 11px; }
 [data-loyalty][data-theme=dark] .l-in-tile:first-child { background: linear-gradient(110deg,#373b90,#2a2f59); }
-[data-loyalty][data-theme=dark] .l-in-tile:is(:nth-child(3),:nth-child(4),:nth-child(8)) { background: linear-gradient(110deg,#2a2f59,#222834); }
+[data-loyalty][data-theme=dark] .l-in-tile:nth-child(3), [data-loyalty][data-theme=dark] .l-in-tile:nth-child(4), [data-loyalty][data-theme=dark] .l-in-tile:nth-child(8) { background: linear-gradient(110deg,#2a2f59,#222834); }
 [data-loyalty] .l-in-grid { display: grid; gap: 16px; align-items: stretch; }
 [data-loyalty] .l-in-wide { grid-template-columns: minmax(0,744fr) minmax(0,384fr); }
 [data-loyalty] .l-in-even { grid-template-columns: repeat(2,minmax(0,1fr)); }

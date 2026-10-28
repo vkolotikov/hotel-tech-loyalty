@@ -135,7 +135,7 @@ describe('on the Insights page', () => {
     client.setQueryData(cohortsKey, cohorts)
     const html = renderToStaticMarkup(
       <QueryClientProvider client={client}>
-        <MemoryRouter initialEntries={['/loyalty/insights']}>
+        <MemoryRouter initialEntries={['/loyalty/insights?view=detailed']}>
           <LoyaltyContext.Provider value={{ data: boot, isLoading: false, isError: false, error: null, refetch: () => {} }}>
             <InsightsPage />
           </LoyaltyContext.Provider>
