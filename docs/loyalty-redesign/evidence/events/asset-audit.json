@@ -1,0 +1,128 @@
+﻿[
+    {
+        "figma_export":  "051e7.svg",
+        "sha256":  "6A0A3A890F89CD882E57ABDBF7AAA23CEF6E65F394F8DEC6512E7BEA51EE1F71",
+        "local":  "frontend/src/loyalty/overview/assets/051e7.svg",
+        "width":  "5",
+        "height":  "5"
+    },
+    {
+        "figma_export":  "06b09.svg",
+        "sha256":  "5783B089DF393D55E33BF811943F68D9B57716D31071F1E87E8DA8DA46F8E94C",
+        "local":  "frontend/src/loyalty/overview/assets/06b09.svg",
+        "width":  "20",
+        "height":  "20"
+    },
+    {
+        "figma_export":  "2b886.svg",
+        "sha256":  "69A07AFD69535F720174A6244A7B45557F1E11F260DDDBA1AA3E75400A62D37A",
+        "local":  "frontend/src/loyalty/overview/assets/2b886.svg",
+        "width":  "20",
+        "height":  "20"
+    },
+    {
+        "figma_export":  "38333.svg",
+        "sha256":  "26543803FACAE927B6EA13712EE81487302DF0EB0243C8C7B198F4A5245FFA0D",
+        "local":  "frontend/src/loyalty/overview/assets/38333.svg",
+        "width":  "20",
+        "height":  "20"
+    },
+    {
+        "figma_export":  "3dd3a.svg",
+        "sha256":  "C94978D9818EBAD3DAA725438733579DE1415F70A59AFE120FB8E8F66FBD8B6C",
+        "local":  "frontend/src/loyalty/events/design/assets/calendar.svg",
+        "width":  "16.3333",
+        "height":  "16.3333"
+    },
+    {
+        "figma_export":  "3f053.svg",
+        "sha256":  "0E7233481B0BE0825C7550FFEDA3F4A03F605CB63CA0E3E92595192031191BAB",
+        "local":  "frontend/src/loyalty/overview/assets/3f053.svg",
+        "width":  "20",
+        "height":  "20"
+    },
+    {
+        "figma_export":  "507e1.svg",
+        "sha256":  "4537B309DEE73B9C46A7728B3BA20550F4E8CCC0A853B8836F02EF6626393643",
+        "local":  "frontend/src/loyalty/overview/assets/507e1.svg",
+        "width":  "12",
+        "height":  "12"
+    },
+    {
+        "figma_export":  "5a184.svg",
+        "sha256":  "CDFD1FABE2557DB95B522A0275CCA3D5F1ACD54A2755335345F76CEDA8640C22",
+        "local":  "frontend/src/loyalty/overview/assets/5a184.svg",
+        "width":  "20",
+        "height":  "20"
+    },
+    {
+        "figma_export":  "5c8a9.svg",
+        "sha256":  "45B5C119BF18CFB6F2447983314B3E1869210B99B1572A919ECBEA0EE32B0EA7",
+        "local":  "frontend/src/loyalty/overview/assets/5c8a9.svg",
+        "width":  "20",
+        "height":  "20"
+    },
+    {
+        "figma_export":  "6cf9c.svg",
+        "sha256":  "A592F739EF6EBE39F9D7A38B9F669BAD5809E63C422865B228A27888BA25FD86",
+        "local":  "frontend/src/loyalty/overview/assets/6cf9c.svg",
+        "width":  "16",
+        "height":  "16"
+    },
+    {
+        "figma_export":  "7055e.svg",
+        "sha256":  "C3E9FF2E93DDC8D5F70B0A5A11C4A01340CD6C2C61231560EB7C25569137A1E5",
+        "local":  "frontend/src/loyalty/overview/assets/7055e.svg",
+        "width":  "16.3333",
+        "height":  "16.3333"
+    },
+    {
+        "figma_export":  "7fef4.svg",
+        "sha256":  "1A1EC1A4A2D2FAEF18AC5028CB9120D26D667412B787EF731EAD5799C980ED2A",
+        "local":  "frontend/src/loyalty/overview/assets/7fef4.svg",
+        "width":  "18",
+        "height":  "18"
+    },
+    {
+        "figma_export":  "82bd8.svg",
+        "sha256":  "74CDC3058D03CBCB2E44F3EA4BD7A80159F8A5070DFDE9D154D17AF0A7ABBD6A",
+        "local":  "frontend/src/loyalty/overview/assets/82bd8.svg",
+        "width":  "16.3333",
+        "height":  "13"
+    },
+    {
+        "figma_export":  "90a94.svg",
+        "sha256":  "92F4408F8BEE54676D6DD99902872387902D9DBC1F6FC57DFA7067FA1A7B5FB3",
+        "local":  "frontend/src/loyalty/overview/assets/90a94.svg",
+        "width":  "20",
+        "height":  "20"
+    },
+    {
+        "figma_export":  "a06a5.svg",
+        "sha256":  "F6F8E345845ED3B4509271797A9F181E94718F654814645B9D8844A2AFAB138C",
+        "local":  "frontend/src/loyalty/events/design/assets/program.svg",
+        "width":  "20",
+        "height":  "20"
+    },
+    {
+        "figma_export":  "a3ff2.svg",
+        "sha256":  "66BE6497816539701379757BD0469408727DD36313B02B2A2EEE16CF49600D77",
+        "local":  "frontend/src/loyalty/overview/assets/a3ff2.svg",
+        "width":  "20",
+        "height":  "20"
+    },
+    {
+        "figma_export":  "b7142.svg",
+        "sha256":  "EDFD32DA6BA5DE5A392537CF75F3AA1C1D56EFEAB0804821A9E73C37B62FB88D",
+        "local":  "frontend/src/loyalty/overview/assets/b7142.svg",
+        "width":  "20",
+        "height":  "20"
+    },
+    {
+        "figma_export":  "dcc5b.svg",
+        "sha256":  "9A282926A2A70A698B52622888C37911697240EFF2EB16CD15B433F3DE327821",
+        "local":  "frontend/src/loyalty/overview/assets/dcc5b.svg",
+        "width":  "16.3333",
+        "height":  "16.3333"
+    }
+]
