@@ -1,4 +1,4 @@
-import { useRef } from 'react'
+import { useEffect, useRef } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
@@ -18,7 +18,7 @@ export function EventsPage() {
   const { t, i18n } = useTranslation(), say = useEventWords(), boot = useBoot()
   const [params, setParams] = useSearchParams(), tab = tabFrom(`?${params}`)
   const latestParams = useRef(params)
-  latestParams.current = params
+  useEffect(() => { latestParams.current = params }, [params])
   const page = Math.max(1, Number(params.get('page')) || 1)
   const filters = Object.fromEntries(['q', 'place_id', 'location', 'tier_id', 'sort'].flatMap(k => params.get(k) ? [[k, params.get(k)!]] : []))
   const query = useQuery({ queryKey: [...EVENTS_KEY, tab, page, ...(Object.keys(filters).length ? [filters] : [])], queryFn: () => eventsApi.list(tab, page, filters) })
