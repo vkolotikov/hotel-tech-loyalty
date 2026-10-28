@@ -6,7 +6,7 @@ import type { SmsAnswer, SmsAudience, SmsBody, SmsPage } from './types'
 
 /** SMS campaigns' calls (spec 2026-10-22 release 4 §5), and the segments they are sent to. */
 export const smsApi = {
-  messages: (page: number): Promise<SmsPage> => watched(api.get(loyaltyUrl('sms'), { params: page > 1 ? { page } : {} })),
+  messages: (page: number, filters: { q?: string; status?: string } = {}): Promise<SmsPage> => watched(api.get(loyaltyUrl('sms'), { params: { ...(page > 1 ? { page } : {}), ...filters } })),
   message: (id: number): Promise<SmsAnswer> => watched(api.get(loyaltyUrl(`sms/${id}`))),
   create: (name: string): Promise<SmsAnswer> => watched(api.post(loyaltyUrl('sms'), { name })),
   update: (id: number, body: SmsBody): Promise<SmsAnswer> => watched(api.put(loyaltyUrl(`sms/${id}`), body)),
@@ -24,7 +24,7 @@ export const smsApi = {
 
 /** The segments list is the one Campaigns reads (the same call, the same key), so a saved segment shows here too. */
 export const SEGMENTS_KEY = ['loyalty', 'campaigns', 'segments'] as const
-export const smsListKey = (page: number) => ['loyalty', 'sms', 'list', page] as const
+export const smsListKey = (page: number, filters = '') => filters ? ['loyalty', 'sms', 'list', page, filters] as const : ['loyalty', 'sms', 'list', page] as const
 export const smsKey = (id: number) => ['loyalty', 'sms', 'message', id] as const
 export const smsAudienceKey = (id: number) => ['loyalty', 'sms', 'audience', id] as const
 

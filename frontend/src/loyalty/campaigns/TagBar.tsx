@@ -19,12 +19,13 @@ export interface TagFieldProps {
  * last, in the subject, a heading, a text or a button label (campaignsMath.ts `withTag`). The press does not take the
  * focus from the field, so the cursor stays where it was. The tags and their descriptions are the server's.
  */
-export function TagBar({ tags, form, target, noRoom, onInsert }: {
+export function TagBar({ tags, form, target, noRoom, onInsert, compact = false }: {
   tags: TagOption[]
   form: CampaignForm
   target: TagTarget | null
   noRoom: boolean
   onInsert: (tag: string) => void
+  compact?: boolean
 }) {
   const { t } = useTranslation()
   const place = target ? tagPlace(form, target.field) : null
@@ -36,7 +37,7 @@ export function TagBar({ tags, form, target, noRoom, onInsert }: {
         what: place.kind in BLOCK_WORDS ? t(`loyalty.campaigns.block.${place.kind}`, BLOCK_WORDS[place.kind]) : place.kind, n: place.n,
       })
 
-  return (
+  const content = (
     <div className="space-y-1.5" data-tags="">
       <p className="text-xs font-medium text-a-text-2">{t('loyalty.campaigns.tags.title', 'Tags')}</p>
       <div className="flex flex-wrap gap-1.5">
@@ -51,4 +52,5 @@ export function TagBar({ tags, form, target, noRoom, onInsert }: {
       {noRoom && <p className="text-xs font-medium text-a-danger">{t('loyalty.campaigns.tags.no_room', 'There is no room for that tag in this field.')}</p>}
     </div>
   )
+  return compact ? <details className="l-cm-tag-menu"><summary className="l-ov-button">{t('loyalty.campaigns.tags.title', 'Tags')} ▾</summary>{content}</details> : content
 }

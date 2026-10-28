@@ -1,3 +1,5 @@
+import { Fragment } from 'react'
+import { CampaignCache } from './campaigns/design/CampaignUI'
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { useAuthStore } from '../stores/authStore'
 import { registerWorkspaceLocales } from '../workspace/i18n'
@@ -53,11 +55,13 @@ export function LoyaltyApp() {
   }
 
   const designed = ['/loyalty', '/loyalty/program', '/loyalty/options', '/loyalty/rewards', '/loyalty/requests', '/loyalty/insights', '/loyalty/app', '/loyalty/scan'].includes(location.pathname.replace(/\/$/, '')) || /^\/loyalty\/members\/\d+\/?$/.test(location.pathname)
-  const Shell = designed || /^\/loyalty\/events(?:\/|$)/.test(location.pathname) ? OverviewShell : LoyaltyShell
+  const isCampaigns = /^\/loyalty\/campaigns(?:\/|$)/.test(location.pathname)
+  const CampaignScope = isCampaigns ? CampaignCache : Fragment
+  const Shell = designed || isCampaigns || /^\/loyalty\/events(?:\/|$)/.test(location.pathname) ? OverviewShell : LoyaltyShell
   return (
     <LoyaltyProvider>
       <Shell>
-        <Routes>
+        <CampaignScope><Routes>
           <Route index element={<MembersPage />} />
           <Route path="members/duplicates" element={<DuplicatesPage />} />
           <Route path="members/import" element={<ImportPage />} />
@@ -80,7 +84,7 @@ export function LoyaltyApp() {
           {/* Release 10: "Start here", the setup steps. */}
           <Route path="start" element={<StartPage />} />
           <Route path="*" element={<Navigate to="/loyalty" replace />} />
-        </Routes>
+        </Routes></CampaignScope>
       </Shell>
     </LoyaltyProvider>
   )

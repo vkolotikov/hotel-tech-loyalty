@@ -1,24 +1,19 @@
-import { useState, type ReactNode } from 'react'
-import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { CampaignList } from '../campaigns/design/CampaignList'
+import { deniedRead } from '../campaigns/design/readState'
+import type { ReactNode } from 'react'
+import { Link, useLocation } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { ArrowLeft, Plus } from 'lucide-react'
-import { Button } from '../../workspace/ui/Button'
+import { ArrowLeft } from 'lucide-react'
 import { Notice } from '../../workspace/ui/Notice'
 import { Skeleton } from '../../workspace/ui/Skeleton'
-import { formatDate } from '../../workspace/lib/wallClock'
-import { isScheduled, scheduledWhen } from '../campaigns/scheduleMath'
 import { useBoot } from '../LoyaltyProvider'
 import { failureOf } from '../lib/api'
-import { day, points } from '../lib/format'
-import { Pager } from '../ui/Pager'
-import { afterPushChange, pushApi, pushKey, pushListKey } from './api'
-import { CategoryName, LoadFailed, Loading, Refusal, StatusBadge } from './parts'
+import { pushApi, pushKey } from './api'
+import { LoadFailed } from './parts'
 import { PushEditor } from './PushEditor'
 import { PushResults } from './PushResults'
-import { isLive, messageFrom, PUSH_REFRESH_MS, progressOf, pushSearch, viewOf } from './pushMath'
-import type { PushRow } from './types'
-import { GetStarted } from '../ui/GetStarted'
+import { isLive, messageFrom, PUSH_REFRESH_MS, pushSearch, viewOf } from './pushMath'
 
 /**
  * Push messages (spec 2026-10-22 release 3 §5), the Campaigns page's third tab (`?tab=push`), a manager's: a title and
@@ -39,94 +34,7 @@ export function PushTab() {
     )
   }
   const id = messageFrom(location.search)
-  return id === null ? <PushList /> : <PushPage key={id} id={id} />
-}
-
-/** Every push message of the organisation made here, newest first. New push message makes an empty draft and opens it. */
-function PushList() {
-  const { t, i18n } = useTranslation()
-  const locale = i18n.language || 'en'
-  const boot = useBoot()
-  const navigate = useNavigate()
-  const client = useQueryClient()
-  const [page, setPage] = useState(1)
-  const query = useQuery({ queryKey: pushListKey(page), queryFn: () => pushApi.messages(page), placeholderData: keepPreviousData })
-  const data = query.data
-
-  const create = useMutation({
-    mutationFn: () => pushApi.create(t('loyalty.push.list.new_name', 'New push message, {{day}}', {
-      day: formatDate(boot.venue.today, locale, { day: 'numeric', month: 'short', year: 'numeric' }),
-    })),
-    onSuccess: (answer) => {
-      client.setQueryData(pushKey(answer.push.id), answer)
-      afterPushChange(client, null)
-      navigate({ pathname: '/loyalty/campaigns', search: pushSearch(answer.push.id) })
-    },
-  })
-
-  return (
-    <>
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-        <p className="min-w-0 flex-1 text-sm text-a-text-2">
-          {t('loyalty.push.list.line', 'A short message to the phones of a segment’s members who have the app. Each one also stays in their inbox in the app.')}
-        </p>
-        {data && data.messages.length > 0 && (
-          <Button size="sm" loading={create.isPending} onClick={() => create.mutate()}><Plus size={15} aria-hidden />{t('loyalty.push.list.new', 'New push message')}</Button>
-        )}
-      </div>
-      {create.isError && <Refusal family="create" failure={failureOf(create.error)} />}
-
-      {query.isError && !data && <LoadFailed error={query.error} onRetry={() => { void query.refetch() }} />}
-      {!data && query.isLoading && <Loading />}
-      {data && data.messages.length === 0 && (
-        <GetStarted name="push" hue="bonus" title={t('loyalty.push.get_started.title', 'Send your first push message')}
-          line={t('loyalty.push.get_started.line', 'A short message to the phones of members who have the app. It also stays in their inbox in the app.')}
-          steps={[
-              { title: t('loyalty.push.get_started.s1_title', 'Write it'), line: t('loyalty.push.get_started.s1_line', 'A title and a line or two.') },
-              { title: t('loyalty.push.get_started.s2_title', 'Choose who gets it'), line: t('loyalty.push.get_started.s2_line', 'A segment of your members.') },
-              { title: t('loyalty.push.get_started.s3_title', 'Send it or schedule it'), line: t('loyalty.push.get_started.s3_line', 'Now, or at a time you pick.') },
-            ]}
-          action={<Button loading={create.isPending} onClick={() => create.mutate()}><Plus size={15} aria-hidden />{t('loyalty.push.list.new', 'New push message')}</Button>} />
-      )}
-      {data && data.messages.length > 0 && (
-        <>
-          <ul className={`divide-y divide-a-border overflow-hidden rounded-2xl border border-a-border bg-a-surface ${query.isFetching ? 'opacity-70' : ''}`}>
-            {data.messages.map(m => <PushItem key={m.id} push={m} locale={locale} timeZone={boot.venue.timezone} />)}
-          </ul>
-          <Pager page={data.page} pages={data.pages} onPage={setPage} />
-        </>
-      )}
-    </>
-  )
-}
-
-/** One message in the list: name and title, its kind and segment, its numbers once it went out, and its status. */
-function PushItem({ push: m, locale, timeZone }: { push: PushRow; locale: string; timeZone: string }) {
-  const { t } = useTranslation()
-  const progress = progressOf(m)
-  const when = m.sent_at ?? m.updated_at ?? m.created_at
-  return (
-    <li data-push={m.id}>
-      <Link to={{ pathname: '/loyalty/campaigns', search: pushSearch(m.id) }} className="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3 hover:bg-a-surface-2">
-        <span className="min-w-0 flex-1 basis-56">
-          <span className="block truncate font-medium text-a-text">{m.name}</span>
-          <span className="block truncate text-xs text-a-text-2">{m.title || t('loyalty.push.list.no_title', 'No title yet')}</span>
-        </span>
-        <span className="min-w-0 basis-40 text-sm text-a-text-2">
-          <span className="block truncate"><CategoryName category={m.category} /></span>
-          <span className="block truncate">{m.segment ? m.segment.name : t('loyalty.push.list.no_segment', 'No segment')}</span>
-        </span>
-        <span className="basis-40 text-sm tabular-nums text-a-text-2">
-          {m.status === 'draft'
-            ? (when ? t('loyalty.push.list.edited', 'Edited {{day}}', { day: day(when, locale, timeZone) }) : '')
-            : isScheduled(m.status)
-              ? t('loyalty.push.list.scheduled', 'Goes out {{when}}', { when: scheduledWhen(m.scheduled_for, locale) })
-              : t('loyalty.push.list.counts', '{{sent}} of {{total}} pushed', { sent: points(m.results.sent, locale), total: points(progress.total, locale) })}
-        </span>
-        <StatusBadge status={m.status} />
-      </Link>
-    </li>
-  )
+  return id === null ? <CampaignList channel="push" /> : <PushPage key={id} id={id} />
 }
 
 /** One message, read again every 10 s while it sends. */
@@ -149,7 +57,7 @@ function PushPage({ id }: { id: number }) {
   if (query.isError && failureOf(query.error).status === 404) {
     return frame(<div className="max-w-xl"><Notice tone="warning">{t('loyalty.push.load.error.not_found', 'This push message no longer exists.')}</Notice></div>)
   }
-  if (query.isError && !query.data) return frame(<LoadFailed error={query.error} onRetry={() => { void query.refetch() }} />)
+  if (query.isError && (!query.data || deniedRead(query.error))) return frame(<LoadFailed error={query.error} onRetry={() => { void query.refetch() }} />)
   if (!query.data) {
     return frame(
       <div role="status" className="space-y-4">

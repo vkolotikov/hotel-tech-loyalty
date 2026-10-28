@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { Pencil, Plus, Trash2 } from 'lucide-react'
 import { Button } from '../../workspace/ui/Button'
 import { Notice } from '../../workspace/ui/Notice'
 import { useBoot } from '../LoyaltyProvider'
@@ -12,11 +11,12 @@ import { ConfirmDialog } from '../ui/formParts'
 import { afterSegmentChange, campaignsApi, OPTIONS_KEY, SEGMENTS_KEY } from './api'
 import { kindOf, reasonBounds, tierNames } from './campaignsMath'
 import { ERRORS } from './errors'
-import { LoadFailed, Loading, TabHead } from './parts'
+import { LoadFailed, Loading } from './parts'
 import { SegmentDialog } from './SegmentDialog'
 import type { Rule, Segment, SegmentOptions } from './types'
 import { OPERATOR_WORDS, REASON_WORDS, RULE_OP_WORDS, RULE_TYPE_WORDS } from './words'
-import { GetStarted } from '../ui/GetStarted'
+import { useCampaignWords } from './design/words'
+import { deniedRead } from './design/readState'
 
 /**
  * Segments (spec 2026-10-21 release 2 §6): the saved audiences, the full admin's too, each with its rules in words, how
@@ -34,70 +34,25 @@ export function SegmentsTab() {
   const opts = options.data
   const failed = segments.isError ? segments.error : options.isError ? options.error : null
 
-  return (
-    <>
-      <TabHead line={<p>{t('loyalty.campaigns.segments.line', 'Who a campaign goes to: members chosen by tier, activity, points, when they joined, or everyone.')}</p>}>
-        {opts && list && list.length > 0 && <Button size="sm" onClick={() => setOpen({ kind: 'edit', segment: null })}><Plus size={15} aria-hidden />{t('loyalty.campaigns.segments.new', 'New segment')}</Button>}
-      </TabHead>
-
-      {failed && !(list && opts) && <LoadFailed error={failed} onRetry={() => { void segments.refetch(); void options.refetch() }} />}
-      {!(list && opts) && !failed && <Loading />}
-      {list && opts && list.length === 0 && (
-        <GetStarted name="segments" hue="rule" title={t('loyalty.campaigns.get_started.segments.title', 'Make your first segment')}
-          line={t('loyalty.campaigns.get_started.segments.line', 'A segment is a group of members an email, a push message or an SMS goes to.')}
-          steps={[
-              { title: t('loyalty.campaigns.get_started.segments.s1_title', 'Name it'), line: t('loyalty.campaigns.get_started.segments.s1_line', 'For example, Gold members or Not seen for 60 days.') },
-              { title: t('loyalty.campaigns.get_started.segments.s2_title', 'Choose its rules'), line: t('loyalty.campaigns.get_started.segments.s2_line', 'Tier, activity, points or when they joined, or everyone.') },
-              { title: t('loyalty.campaigns.get_started.segments.s3_title', 'Send to it'), line: t('loyalty.campaigns.get_started.segments.s3_line', 'Pick it when you send an email, a push message or an SMS.') },
-            ]}
-          action={<Button onClick={() => setOpen({ kind: 'edit', segment: null })}><Plus size={15} aria-hidden />{t('loyalty.campaigns.segments.new', 'New segment')}</Button>} />
-      )}
-      {list && opts && list.length > 0 && (
-        <ul className="grid gap-3 md:grid-cols-2">
-          {list.map(s => (
-            <li key={s.id} data-segment={s.id} className="flex flex-col gap-3 rounded-2xl border border-a-border bg-a-surface p-4">
-              <div className="min-w-0 space-y-1">
-                <p className="font-medium text-a-text">{s.name}</p>
-                {s.description && <p className="text-sm text-a-text-2">{s.description}</p>}
-              </div>
-              <RulesText segment={s} options={opts} />
-              {s.problem && (
-                <Notice tone="warning">
-                  {t('loyalty.campaigns.segments.problem', 'Rule {{n}} cannot be used: {{why}} No campaign is sent to this segment until it is fixed.', {
-                    n: s.problem.index !== null ? s.problem.index + 1 : '–',
-                    why: t(`loyalty.campaigns.reason.${s.problem.reason in REASON_WORDS ? s.problem.reason : 'bad_rules'}`, REASON_WORDS[s.problem.reason] ?? REASON_WORDS.bad_rules,
-                      reasonBounds(s.problem.index !== null ? s.filters[s.problem.index]?.type : undefined, opts)),
-                  })}
-                </Notice>
-              )}
-              <dl className="grid grid-cols-2 gap-x-4 gap-y-1">
-                <div>
-                  <dt className="text-xs text-a-text-2">{t('loyalty.campaigns.segments.members', 'Members now')}</dt>
-                  <dd className="font-a-display text-2xl font-light tabular-nums text-a-text">{points(s.members, locale)}</dd>
-                </div>
-                <div>
-                  <dt className="text-xs text-a-text-2">{t('loyalty.campaigns.segments.last_sent', 'Last sent')}</dt>
-                  <dd className="text-sm text-a-text">{s.last_sent_at ? day(s.last_sent_at, locale, boot.venue.timezone) : t('loyalty.campaigns.segments.never', 'Not yet')}</dd>
-                </div>
-              </dl>
-              <div className="mt-auto flex flex-wrap gap-2 pt-1">
-                <Button size="sm" variant="secondary" onClick={() => setOpen({ kind: 'edit', segment: s })}>
-                  <Pencil size={14} aria-hidden />{t('loyalty.campaigns.segments.edit', 'Edit')}<span className="sr-only"> {s.name}</span>
-                </Button>
-                <Button size="sm" variant="ghost" onClick={() => setOpen({ kind: 'delete', segment: s })}>
-                  <Trash2 size={14} aria-hidden />{t('loyalty.campaigns.segments.delete', 'Delete')}<span className="sr-only"> {s.name}</span>
-                </Button>
-              </div>
-            </li>
-          ))}
-        </ul>
-      )}
-
-      {opts && open?.kind === 'edit' && <SegmentDialog segment={open.segment} options={opts} onClose={() => setOpen(null)} />}
-      {open?.kind === 'delete' && <DeleteSegment segment={open.segment} onClose={() => setOpen(null)} />}
-    </>
-  )
+  const w = useCampaignWords()
+  const [search, setSearch] = useState('')
+  const [selectedId, setSelectedId] = useState<number | null>(null)
+  const visible = list?.filter(s => s.name.toLocaleLowerCase(locale).includes(search.trim().toLocaleLowerCase(locale))) ?? []
+  const selected = visible.find(s => s.id === selectedId) ?? visible[0]
+  return <>
+    {failed && <LoadFailed error={failed} onRetry={() => { void segments.refetch(); void options.refetch() }} />}
+    {!(list && opts) && !failed && <Loading />}
+    {list && opts && !deniedRead(failed) && <div className="l-cm-segments"><section className="l-cm-panel"><header className="l-cm-panel-head"><h2>{t('loyalty.campaigns.tab.segments', 'Segments')}</h2><span className="l-cm-badge">{w('saved', { number: points(list.length, locale) })}</span></header><label className="l-cm-field"><span>{w('searchSegments')}</span><input type="search" value={search} maxLength={200} onChange={e => setSearch(e.target.value)} /></label>
+      <ul className="l-cm-rows">{visible.map(s => <li key={s.id} data-segment={s.id}><button className="l-cm-segment-row" aria-pressed={s.id === selected?.id} onClick={() => setSelectedId(s.id)}><span><strong>{s.name}</strong><small>{s.everyone ? t('loyalty.campaigns.segments.everyone', 'Every active member') : t(`loyalty.campaigns.operator.${s.operator}`, OPERATOR_WORDS[s.operator] ?? s.operator)}</small>{s.problem && <small>{t('loyalty.campaigns.editor.segment_problem', '{{name}} (a rule needs fixing)', { name: s.name })}</small>}</span><span><strong>{points(s.members, locale)}</strong><small>{w('matches')}</small></span><span aria-hidden>→</span></button></li>)}</ul>
+      {visible.length === 0 && <p>{w('noSegments')}</p>}<Button className="l-ov-button l-ov-primary" disabled={!!failed} onClick={() => setOpen({ kind: 'edit', segment: null })}>+ {t('loyalty.campaigns.segments.new', 'New segment')}</Button><small>{w('segmentCounts')}</small>
+    </section><section className="l-cm-panel l-cm-accent">{selected ? <><h2>{selected.name}</h2>{selected.description && <p>{selected.description}</p>}<RulesText segment={selected} options={opts} />{selected.problem && <Notice tone="warning">{t('loyalty.campaigns.segments.problem', 'Rule {{n}} cannot be used: {{why}} No campaign is sent to this segment until it is fixed.', { n: selected.problem.index !== null ? selected.problem.index + 1 : '–', why: t(`loyalty.campaigns.reason.${selected.problem.reason in REASON_WORDS ? selected.problem.reason : 'bad_rules'}`, REASON_WORDS[selected.problem.reason] ?? REASON_WORDS.bad_rules, reasonBounds(selected.problem.index !== null ? selected.filters[selected.problem.index]?.type : undefined, opts)) })}</Notice>}
+      <dl className="l-cm-facts"><dt>{t('loyalty.campaigns.segments.members', 'Members now')}</dt><dd>{points(selected.members, locale)}</dd><dt>{t('loyalty.campaigns.segments.last_sent', 'Last sent')}</dt><dd>{selected.last_sent_at ? day(selected.last_sent_at, locale, boot.venue.timezone) : t('loyalty.campaigns.segments.never', 'Not yet')}</dd></dl><Button className="l-ov-button" variant="secondary" disabled={!!failed} onClick={() => setOpen({ kind: 'edit', segment: selected })}>{w('editRules')}</Button><Button className="l-ov-button" variant="ghost" disabled={!!failed} onClick={() => setOpen({ kind: 'delete', segment: selected })}>{t('loyalty.campaigns.segments.delete', 'Delete')}</Button>
+    </> : <p>{w('chooseSegment')}</p>}</section></div>}
+    {opts && open?.kind === 'edit' && <SegmentDialog segment={open.segment} options={opts} onClose={() => setOpen(null)} onSaved={s => { setSelectedId(s.id); setSearch('') }} />}
+    {open?.kind === 'delete' && <DeleteSegment segment={open.segment} onClose={() => setOpen(null)} />}
+  </>
 }
+
 
 /** A segment's rules in words: Everyone, or how they combine and each rule. */
 export function RulesText({ segment, options }: { segment: Segment; options: SegmentOptions }) {

@@ -20,12 +20,12 @@ export function FormField({ label, hint, problem, hideLabel = false, children }:
   const id = useId()
   const described = [hint ? `${id}-hint` : '', problem ? `${id}-problem` : ''].filter(Boolean).join(' ')
   const control = isValidElement(children)
-    ? cloneElement(children as ReactElement<Record<string, unknown>>, { 'aria-invalid': problem ? true : undefined, 'aria-describedby': described || undefined })
+    ? cloneElement(children as ReactElement<Record<string, unknown>>, { 'aria-labelledby': `${id}-label`, 'aria-invalid': problem ? true : undefined, 'aria-describedby': described || undefined })
     : children
   return (
     <div>
       <label className="block">
-        <span className={hideLabel ? 'sr-only' : 'mb-1 block text-xs font-medium text-a-text-2'}>{label}</span>
+        <span id={`${id}-label`} className={hideLabel ? 'sr-only' : 'mb-1 block text-xs font-medium text-a-text-2'}>{label}</span>
         {control}
       </label>
       {hint && <p id={`${id}-hint`} className="mt-1 text-xs text-a-text-2">{hint}</p>}

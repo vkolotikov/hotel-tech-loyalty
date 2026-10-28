@@ -8,7 +8,16 @@ settings — nothing is copied. Specs: `docs/superpowers/specs/2026-10-21-loyalt
 `docs/superpowers/specs/2026-10-21-loyalty-release-2-design.md` (release 2: members complete, Insights, segments and
 campaigns, card and app, pictures, currency).
 
+Campaigns Figma redesign (28 October 2026): see `loyalty-redesign/19-CAMPAIGNS-REPORT.md` for CM-01–04, the two-step email editor, server list filters, saved audience copies, Push/SMS/Segments layouts and verification. Existing route names and delivery writers are unchanged.
+
 ## Who has it, and the ways in and back
+
+Scan redesign (28 October, deployed and live verified): `/loyalty/scan` now follows the exact desktop/mobile
+Figma scanner, manual lookup, member actions and access-result screens. Normal scanning pauses after one
+result; camera/NFC/USB activation remains explicit. Existing continuous `/loyalty/scan/door`, linking,
+renewal, visits, credit and point writers remain available. Place/Event context, balances and permissions
+come from the existing APIs; manual desk lookup is read-only. Five languages and both themes are supported.
+See `docs/loyalty-redesign/18-SCAN-REPORT.md` for design comparison, integration, tests and deployment evidence.
 
 Card & app redesign (28 October, deployed and live verified): `/loyalty/app` now uses the exact CA-01
 appearance editor and member preview, with server-backed palette saves, immediate logo upload and wallet

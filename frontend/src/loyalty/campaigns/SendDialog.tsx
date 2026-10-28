@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { CalendarClock, Send } from 'lucide-react'
@@ -16,6 +16,7 @@ import { WhenChoice } from './ScheduleParts'
 import { badTimeReason, defaultSendAt, laterProblem, scheduledWhen, scheduleRefusalRefreshes, timeProblemOf, venueClockNow, type SendMode } from './scheduleMath'
 import type { Audience, Campaign } from './types'
 import { NOT_REACHED_WORDS } from './words'
+import { useCampaignWords } from './design/words'
 
 /**
  * The step before a campaign goes out (spec 2026-10-21 release 2 §6). It says how many members it will email now — the
@@ -28,8 +29,13 @@ import { NOT_REACHED_WORDS } from './words'
  * Release 4: Send later. The same step offers a time on the venue's clock instead; the count is then "about this many
  * now" (it goes to whoever is eligible when it starts) and Schedule sets it, on the draft shown.
  */
-export function SendDialog({ campaign, onClose }: { campaign: Campaign; onClose: () => void }) {
+export function SendDialog({ campaign, onClose, inline, onBusyChange }: { campaign: Campaign; onClose: () => void; inline?: ReactNode; onBusyChange?: (busy: boolean) => void }) {
   const { t, i18n } = useTranslation()
+  const w = useCampaignWords()
+  const inFlight = useRef(false)
+  const settled = () => { inFlight.current = false; onBusyChange?.(false) }
+  const start = (run: () => void) => { if (inFlight.current) return; inFlight.current = true; onBusyChange?.(true); run() }
+  useEffect(() => () => onBusyChange?.(false), [onBusyChange])
   const locale = i18n.language || 'en'
   const boot = useBoot()
   const timeZone = boot.venue.timezone
@@ -46,6 +52,7 @@ export function SendDialog({ campaign, onClose }: { campaign: Campaign; onClose:
       onClose()
     },
     onError: (error) => { if (scheduleRefusalRefreshes(failureOf(error).code)) void client.invalidateQueries({ queryKey: campaignKey(campaign.id) }) },
+    onSettled: settled,
   })
   const send = useMutation({
     mutationFn: (recipients: number) => campaignsApi.send(campaign.id, { recipients, revision: campaign.revision }),
@@ -59,21 +66,23 @@ export function SendDialog({ campaign, onClose }: { campaign: Campaign; onClose:
       if (again.audience) void audience.refetch()
       if (again.campaign) void client.invalidateQueries({ queryKey: campaignKey(campaign.id) })
     },
+    onSettled: settled,
   })
-  const a = audience.data?.audience
+  const a = audience.isError ? undefined : audience.data?.audience
   const said = a ? confirmationOf(a) : null
   const failure = send.isError ? failureOf(send.error) : null
   const scheduleFailure = schedule.isError ? failureOf(schedule.error) : null
   const later = mode === 'later'
   const busy = send.isPending || schedule.isPending
 
-  return (
-    <Dialog title={t('loyalty.campaigns.send.title', 'Send this campaign')} onClose={onClose} busy={busy}>
-      <div className="space-y-4 text-sm text-a-text">
+  const content = <>
+      <section className={inline ? 'l-cm-panel l-cm-accent' : 'space-y-4 text-sm text-a-text'}>
+        {inline && <><h2>{w('review')}</h2>{a && <div><strong className="l-cm-review-count">{points(a.reached, locale)}</strong><p className="l-cm-cyan">{w('eligible')}</p></div>}</>}
         <p className="font-medium">{campaign.subject}</p>
-        <WhenChoice mode={mode} at={at} timeZone={timeZone} problem={later ? timeProblemOf(at, timeZone, tried, scheduleFailure) : null}
-          onMode={(next) => { setMode(next); send.reset(); schedule.reset() }} onAt={(next) => { setAt(next); if (schedule.isError) schedule.reset() }} />
+        <fieldset disabled={busy}><WhenChoice mode={mode} at={at} timeZone={timeZone} problem={later ? timeProblemOf(at, timeZone, tried, scheduleFailure) : null}
+          onMode={(next) => { setMode(next); send.reset(); schedule.reset() }} onAt={(next) => { setAt(next); if (schedule.isError) schedule.reset() }} /></fieldset>
         {audience.isError && <Refusal family="audience" failure={failureOf(audience.error)} />}
+        {audience.isError && <Button variant="secondary" onClick={() => { void audience.refetch() }}>{t('loyalty.common.retry', 'Try again')}</Button>}
         {!a && !audience.isError && (
           <div role="status" className="space-y-2">
             <span className="sr-only">{t('loyalty.campaigns.send.counting', 'Counting who it will reach…')}</span>
@@ -98,28 +107,29 @@ export function SendDialog({ campaign, onClose }: { campaign: Campaign; onClose:
         )}
         {failure && <Refusal family="send" failure={failure} vars={{ reached: points(Number(failure.extra.reached ?? 0), locale), limit: points(Number(failure.extra.limit ?? a?.limit ?? 0), locale) }} />}
         {scheduleFailure && !badTimeReason(scheduleFailure) && <Refusal family="schedule" failure={scheduleFailure} />}
-
-        <div className="flex flex-wrap justify-end gap-2 pt-1">
+        {inline && <small>{w('reviewHint')}</small>}
+      </section>
+        <div className={inline ? 'l-cm-footer' : 'flex flex-wrap justify-end gap-2 pt-1'}>
+          {inline && <div><p>{w('audienceSend')}</p><small>{w('draftOnly')}</small></div>}
           <Button type="button" variant="secondary" onClick={onClose} disabled={busy}>{t('loyalty.campaigns.send.keep', 'Not now')}</Button>
           {said?.state === 'ok' && !later && (
-            <Button type="button" variant="danger" loading={send.isPending} disabled={audience.isFetching} onClick={() => send.mutate(said.reached)}>
+            <Button type="button" variant="danger" className={inline ? 'l-ov-button l-ov-primary' : ''} loading={send.isPending} disabled={audience.isFetching || busy} onClick={() => start(() => send.mutate(said.reached))}>
               <Send size={15} aria-hidden />
               {t('loyalty.campaigns.send.confirm', 'Send to {{number}} members', { number: points(said.reached, locale) })}
             </Button>
           )}
           {said && later && (
-            <Button type="button" loading={schedule.isPending} onClick={() => {
+            <Button type="button" loading={schedule.isPending} disabled={audience.isFetching || busy} onClick={() => {
               setTried(true)
-              if (laterProblem(at, venueClockNow(timeZone)) === null) schedule.mutate(at)
+              if (laterProblem(at, venueClockNow(timeZone)) === null) start(() => schedule.mutate(at))
             }}>
               <CalendarClock size={15} aria-hidden />
               {t('loyalty.campaigns.send.schedule', 'Schedule for {{when}}', { when: scheduledWhen(at, locale) })}
             </Button>
           )}
         </div>
-      </div>
-    </Dialog>
-  )
+  </>
+  return inline ? <div className="l-cm-send-layout">{inline}{content}</div> : <Dialog title={t('loyalty.campaigns.send.title', 'Send this campaign')} onClose={onClose} busy={busy}><div className="space-y-4 text-sm text-a-text">{content}</div></Dialog>
 }
 
 /** The numbers the confirmation rests on. */

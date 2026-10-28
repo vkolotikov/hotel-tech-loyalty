@@ -1,3 +1,4 @@
+import { DraftProtection } from '../campaigns/design/DraftProtection'
 import { useId, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient, type UseQueryResult } from '@tanstack/react-query'
@@ -67,6 +68,7 @@ export function PushEditor({ answer }: { answer: PushAnswer }) {
       navigate({ pathname: '/loyalty/campaigns', search: pushSearch(copy.push.id) })
     },
   })
+  const busy = save.isPending || duplicate.isPending
   const update = (patch: Partial<PushForm>) => {
     setForm(f => ({ ...f, ...patch }))
     if (save.isError) save.reset()
@@ -88,7 +90,7 @@ export function PushEditor({ answer }: { answer: PushAnswer }) {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="l-cm-message-editor space-y-6">
       <div className="flex flex-wrap items-start gap-x-6 gap-y-3">
         <div className="min-w-0 space-y-2">
           <h2 className="break-words font-a-display text-3xl font-normal leading-tight text-a-text">{p.name}</h2>
@@ -98,13 +100,13 @@ export function PushEditor({ answer }: { answer: PushAnswer }) {
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2 sm:ml-auto">
-          <Button variant={dirty ? 'primary' : 'secondary'} loading={save.isPending} disabled={!dirty} onClick={() => {
+          <Button variant={dirty ? 'primary' : 'secondary'} loading={save.isPending} disabled={!dirty || busy} onClick={() => {
             setTried(true)
             if (Object.keys(draftProblems(form, options)).length === 0) save.mutate()
           }}>
             <Save size={15} aria-hidden />{t('loyalty.push.editor.save', 'Save draft')}
           </Button>
-          <Button disabled={blockers.length > 0} onClick={() => setOpen('send')}>
+          <Button disabled={blockers.length > 0 || busy} onClick={() => setOpen('send')}>
             <Send size={15} aria-hidden />{t('loyalty.push.editor.send', 'Send…')}
           </Button>
         </div>
@@ -122,7 +124,7 @@ export function PushEditor({ answer }: { answer: PushAnswer }) {
         </div>
       )}
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,22rem)]">
+      <fieldset disabled={busy} className="l-cm-message-columns">
         <section aria-labelledby="push-edit" className="min-w-0 space-y-4">
           <Eyebrow><span id="push-edit">{t('loyalty.push.editor.heading', 'The message')}</span></Eyebrow>
           <FormField label={t('loyalty.push.editor.name', 'Name')} hint={t('loyalty.push.editor.name_hint', 'Only staff see it.')} problem={problem('name', options.max_name)}>
@@ -158,19 +160,20 @@ export function PushEditor({ answer }: { answer: PushAnswer }) {
           <Eyebrow><span id="push-preview">{t('loyalty.push.preview.heading', 'On a phone')}</span></Eyebrow>
           <PhonePreview title={form.title} body={form.body} appName={boot.organization.name} titleGuide={options.title_guide} />
         </section>
-      </div>
+      </fieldset>
 
       <div className="flex flex-wrap gap-2 border-t border-a-border pt-4">
-        <Button variant="secondary" size="sm" loading={duplicate.isPending} onClick={() => duplicate.mutate()}>
+        <Button variant="secondary" size="sm" disabled={dirty || busy} loading={duplicate.isPending} onClick={() => duplicate.mutate()}>
           <Copy size={14} aria-hidden />{t('loyalty.push.editor.duplicate', 'Duplicate')}
         </Button>
-        <Button variant="ghost" size="sm" onClick={() => setOpen('delete')}>
+        <Button variant="ghost" size="sm" disabled={busy} onClick={() => setOpen('delete')}>
           <Trash2 size={14} aria-hidden />{t('loyalty.push.editor.delete', 'Delete draft')}
         </Button>
       </div>
       {duplicate.isError && <Refusal family="duplicate" failure={failureOf(duplicate.error)} />}
 
       {open === 'send' && <PushSendDialog push={p} onClose={() => setOpen(null)} />}
+      <DraftProtection dirty={dirty} busy={busy} />
       {open === 'delete' && <DeleteDraft id={p.id} name={p.name} onClose={() => setOpen(null)} />}
     </div>
   )

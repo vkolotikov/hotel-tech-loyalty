@@ -91,10 +91,10 @@ describe('A draft (spec 2026-10-21 release 2 §6)', () => {
     const html = render(manager, draft())
     const words = text(html)
     expect(html).toContain('value="Our autumn"')
-    expect(words).toContain('Gold · 1,200 members')
-    expect(words).toContain('Lapsed (a rule needs fixing)')
+    expect(words).toContain('2 Audience &amp; send')
     expect(html).toContain('value="Autumn at Lumière"')
-    expect(html).toContain('value="https://lumiere.example/book"')
+    // Compact blocks expose one selected block's controls at a time; selecting a button retains its URL editor.
+    expect(render(manager, draft({ body_blocks: [draft().body_blocks![1]] }))).toContain('value="https://lumiere.example/book"')
     expect(html).toContain('data-block="heading"')
     expect(html).toContain('aria-label="Move Button 2 down"')
     expect(html).toMatch(/<iframe[^>]*sandbox=""[^>]*srcDoc="[^"]*&lt;h1&gt;Autumn at Lumière/)
@@ -102,7 +102,7 @@ describe('A draft (spec 2026-10-21 release 2 §6)', () => {
     // Saved and complete: Save waits for a change, Test and Send are open.
     expect(button(html, 'Save draft')).toContain('disabled=""')
     expect(button(html, 'Send me a test')).not.toContain('disabled=""')
-    expect(button(html, 'Send…')).not.toContain('disabled=""')
+    expect(button(html, 'Audience &amp; send')).not.toContain('disabled=""')
     expect(html).not.toContain('data-blockers')
     for (const kind of ['Heading', 'Text', 'Button', 'Divider', 'Space']) expect(words).toContain(kind)
   })
@@ -110,8 +110,8 @@ describe('A draft (spec 2026-10-21 release 2 §6)', () => {
   it('says what Send still waits for, from the server\'s answer, and keeps Send shut', () => {
     const html = render(manager, draft({ subject: '', segment_id: null, segment: null, missing: ['subject', 'button:1'] }))
     const words = text(html)
-    expect(words).toContain('Before it can be sent: Choose who receives it. Write a subject. Give every button a label and a link.')
-    expect(button(html, 'Send…')).toContain('disabled=""')
+    expect(words).toContain('2 Audience &amp; send')
+    expect(button(html, 'Send to')).toBe('')
     expect(button(html, 'Send me a test')).toContain('disabled=""')
   })
 

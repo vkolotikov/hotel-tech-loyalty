@@ -5,7 +5,7 @@ import type { PushAnswer, PushAudience, PushBody, PushesPage, SegmentChoice } fr
 
 /** Push messages' calls (spec 2026-10-22 release 3 §5), and the segments they are sent to. */
 export const pushApi = {
-  messages: (page: number): Promise<PushesPage> => watched(api.get(loyaltyUrl('push'), { params: page > 1 ? { page } : {} })),
+  messages: (page: number, filters: { q?: string; status?: string } = {}): Promise<PushesPage> => watched(api.get(loyaltyUrl('push'), { params: { ...(page > 1 ? { page } : {}), ...filters } })),
   message: (id: number): Promise<PushAnswer> => watched(api.get(loyaltyUrl(`push/${id}`))),
   create: (name: string): Promise<PushAnswer> => watched(api.post(loyaltyUrl('push'), { name })),
   update: (id: number, body: PushBody): Promise<PushAnswer> => watched(api.put(loyaltyUrl(`push/${id}`), body)),
@@ -22,7 +22,7 @@ export const pushApi = {
 
 /** The segments list is the one Campaigns reads (the same call, the same key), so a saved segment shows here too. */
 export const SEGMENTS_KEY = ['loyalty', 'campaigns', 'segments'] as const
-export const pushListKey = (page: number) => ['loyalty', 'push', 'list', page] as const
+export const pushListKey = (page: number, filters = '') => filters ? ['loyalty', 'push', 'list', page, filters] as const : ['loyalty', 'push', 'list', page] as const
 export const pushKey = (id: number) => ['loyalty', 'push', 'message', id] as const
 export const pushAudienceKey = (id: number) => ['loyalty', 'push', 'audience', id] as const
 

@@ -66,6 +66,7 @@ export interface SmsRow {
 
 export interface SmsPage extends Paged {
   messages: SmsRow[]
+  all_total?: number
   twilio: TwilioReadiness
 }
 

@@ -49,6 +49,8 @@ class CampaignController extends Controller
     {
         LoyaltyAccess::requireManager($request->user());
         $query = EmailCampaign::query()->with('segment:id,name')->orderByDesc('created_at')->orderByDesc('id');
+        $allTotal = (clone $query)->count();
+        \App\Services\Loyalty\Campaigns\CampaignListFilter::apply($query, $request, ['name', 'subject']);
         $total = (clone $query)->count();
         $pages = max(1, (int) ceil($total / self::PER_PAGE));
         $page = min(max(1, (int) $request->query('page', 1)), $pages);
@@ -58,6 +60,8 @@ class CampaignController extends Controller
             'page'      => $page,
             'pages'     => $pages,
             'total'     => $total,
+            'all_total' => $allTotal,
+            'sender_name' => CampaignTags::venueName((int) app('current_organization_id')),
         ]);
     }
 
@@ -314,7 +318,10 @@ class CampaignController extends Controller
     {
         return [
             'campaign' => self::detail($c, CampaignTags::sample($viewer, (int) $c->organization_id)),
-            'options'  => CampaignBody::options() + CampaignTags::options(),
+            'options'  => CampaignBody::options() + CampaignTags::options() + [
+                'sender_name' => CampaignTags::venueName((int) $c->organization_id),
+                'test_recipient' => (string) $viewer->email,
+            ],
         ];
     }
 

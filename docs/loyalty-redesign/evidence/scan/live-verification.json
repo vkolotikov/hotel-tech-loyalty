@@ -1,0 +1,41 @@
+﻿{
+    "verified_at":  "2026-10-28T17:27:47.6603652+00:00",
+    "entry":  "/spa/assets/index-CZ4i_xE3.js",
+    "loyalty_js":  "LoyaltyApp-ICykbI-f.js",
+    "loyalty_css":  "LoyaltyApp-BFRENnUK.css",
+    "markers":  [
+                    "Manual lookup",
+                    "Camera permission blocked",
+                    "Reader paused",
+                    "Scan next member",
+                    "l-sc-viewport",
+                    "l-sc-context-bar",
+                    "insights/report",
+                    "requests/inbox",
+                    "app-look/logo"
+                ],
+    "fonts":  [
+                  "/spa/assets/poppins-400-C1IsaolU.ttf",
+                  "/spa/assets/poppins-500-BblA7dQf.ttf",
+                  "/spa/assets/poppins-600-Gz22PxOe.ttf"
+              ],
+    "api":  [
+                {
+                    "endpoint":  "places",
+                    "status":  401,
+                    "message":  "Authentication required."
+                },
+                {
+                    "endpoint":  "events",
+                    "status":  401,
+                    "message":  "Authentication required."
+                },
+                {
+                    "endpoint":  "find",
+                    "status":  401,
+                    "message":  "Authentication required."
+                }
+            ],
+    "landing_stylesheet":  "/landing/nocturne_ritual.css?v=7ca20c60a8",
+    "retired_stylesheet_status":  404
+}

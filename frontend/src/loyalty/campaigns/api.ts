@@ -12,7 +12,7 @@ export const campaignsApi = {
   updateSegment: (id: number, body: SegmentBody): Promise<{ segment: Segment }> => watched(api.put(loyaltyUrl(`segments/${id}`), body)),
   deleteSegment: (id: number): Promise<{ ok: boolean }> => watched(api.delete(loyaltyUrl(`segments/${id}`))),
 
-  campaigns: (page: number): Promise<CampaignsPage> => watched(api.get(loyaltyUrl('campaigns'), { params: page > 1 ? { page } : {} })),
+  campaigns: (page: number, filters: { q?: string; status?: string } = {}): Promise<CampaignsPage> => watched(api.get(loyaltyUrl('campaigns'), { params: { ...(page > 1 ? { page } : {}), ...filters } })),
   campaign: (id: number): Promise<CampaignAnswer> => watched(api.get(loyaltyUrl(`campaigns/${id}`))),
   createCampaign: (name: string): Promise<CampaignAnswer> => watched(api.post(loyaltyUrl('campaigns'), { name })),
   updateCampaign: (id: number, body: CampaignBody): Promise<CampaignAnswer> => watched(api.put(loyaltyUrl(`campaigns/${id}`), body)),
@@ -31,7 +31,7 @@ export const campaignsApi = {
 export const SEGMENTS_KEY = ['loyalty', 'campaigns', 'segments'] as const
 export const OPTIONS_KEY = ['loyalty', 'campaigns', 'segment-options'] as const
 export const previewKey = (body: string) => ['loyalty', 'campaigns', 'segment-preview', body] as const
-export const campaignsKey = (page: number) => ['loyalty', 'campaigns', 'list', page] as const
+export const campaignsKey = (page: number, filters = '') => filters ? ['loyalty', 'campaigns', 'list', page, filters] as const : ['loyalty', 'campaigns', 'list', page] as const
 export const campaignKey = (id: number) => ['loyalty', 'campaigns', 'campaign', id] as const
 export const audienceKey = (id: number) => ['loyalty', 'campaigns', 'audience', id] as const
 
@@ -49,4 +49,7 @@ export function afterSegmentChange(client: QueryClient): void {
   void client.invalidateQueries({ queryKey: SEGMENTS_KEY })
   void client.invalidateQueries({ queryKey: ['loyalty', 'campaigns', 'audience'] })
   void client.invalidateQueries({ queryKey: ['loyalty', 'campaigns', 'segment-preview'] })
+  void client.invalidateQueries({ queryKey: ['loyalty', 'push', 'audience'] })
+  void client.invalidateQueries({ queryKey: ['loyalty', 'sms', 'audience'] })
+  void client.invalidateQueries({ queryKey: ['loyalty', 'campaigns', 'list'] })
 }
