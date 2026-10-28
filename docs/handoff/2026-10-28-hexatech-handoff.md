@@ -3,19 +3,28 @@
 Read this first, then `2026-10-27-hexatech-handoff.md` for the full environment, test-loop,
 product history and deployment instructions. Root AGENTS.md and CLAUDE.md still apply.
 
-## Verified, deployment pending: Requests and Insights
+## Current production release: Requests and Insights
 
 Feature `feature/loyalty-insights-20261028` includes the unified Requests inbox and the Figma Insights dashboard.
 Read `docs/loyalty-redesign/15-REQUESTS-REPORT.md` and `16-INSIGHTS-REPORT.md` for source contracts, limitations,
-test evidence and exact frames. Source-patch baseline remains **27baa2935** until the new artifact is deployed.
+test evidence and exact frames. Production commit: **f5edeb36304821a8ec9def97b75f5a82b2435955**.
+Deployed feature source and next source-patch baseline: **e21e9258264614f239fc291e9331ca1746ea36fd**;
+do not use the later post-deployment documentation tip as the baseline. The isolated artifact started at
+**ab5f25bdd**, final source patch **8965ece17**, with whole-source parity across 94 allowlisted paths.
 No new migrations/dependencies or member-writing rules. Place reports remain explicitly organization-wide.
 Artifact checks: 7,084 PHP tests passed, 7 skipped, 45,380 assertions, 75 scopes; 5,651 frontend tests passed
 in 391 files; TypeScript, Loyalty ESLint and fresh production build passed. Compiled browser: 139 checks passed.
-C: filled during dependency installation; the verified source/artifact are under `E:/Hexa-Tech-release/`.
-The final source is synced back to the original feature branch after the live check. Original Vite PID 1992
-is preserved; the task-owned compiled preview is PID 16468 and will be stopped when complete.
+Live content verified **28 October, 16:22 Europe/Riga**: entry `index-Dmym9LWz.js`, Loyalty
+`LoyaltyApp-B6QX0ipr.js` / `LoyaltyApp-Cik0IdCp.css`. Page content, responsive styles, three font payloads,
+inbox/report/legacy-money authentication (401), public landing kit and retired stylesheet (404) all passed.
+Evidence: `docs/loyalty-redesign/evidence/insights/live-verification.json`. Browser mutations used local
+fixtures; no production member transactions were created.
+C: filled during dependency installation; verification moved to `E:/Hexa-Tech-release/` with real vendor
+copies and fresh dependencies. C: recovered space; final source is synchronized back to the original feature
+branch. Original Vite PID 1992 is preserved; task-owned compiled preview PID 16468 is stopped. The abandoned
+C: artifact is retained after automatic approval review blocked deleting its partial dependency copy.
 
-## Current production release: Events
+## Previous release: Events
 
 Events follows EV-01 `115:5501`, EV-02 `115:5502` and EV-03 `115:5503` in the connected Figma file
 `d6IGmk3hOoMw0V5rONbI1A`. The event overview, full create/edit page and attendees page now share the
