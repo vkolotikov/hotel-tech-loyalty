@@ -9,6 +9,8 @@
     "Opening manual lookup releases the active camera",
     "Empty search cannot open a member",
     "Editing a search invalidates the selected match",
+    "USB HID UID is normalised and sent through the existing scan API",
+    "USB reader closes after the member is found",
     "ru mobile layout has no overflow",
     "de mobile layout has no overflow",
     "fr mobile layout has no overflow",
@@ -23,7 +25,7 @@
       "query": "?brand_id=all",
       "payload": {
         "code": "M-1048",
-        "idempotency_key": "d4eea5b2-4617-4483-b030-47b584f04e6c",
+        "idempotency_key": "1d30b14c-a7a4-439a-b411-1ab0ecb37b40",
         "place_id": 1
       }
     },
@@ -33,7 +35,7 @@
       "query": "?brand_id=all",
       "payload": {
         "code": "M-1048",
-        "idempotency_key": "d4eea5b2-4617-4483-b030-47b584f04e6c",
+        "idempotency_key": "1d30b14c-a7a4-439a-b411-1ab0ecb37b40",
         "place_id": 1
       }
     },
@@ -43,7 +45,7 @@
       "query": "?brand_id=all",
       "payload": {
         "code": "M-1048",
-        "idempotency_key": "1fe35efd-f0cf-4a25-a7ad-3ede0739fc7d",
+        "idempotency_key": "c4fac689-6e2a-4f0c-bcb3-cbc98b0541b1",
         "event_id": 5
       }
     },
@@ -53,7 +55,16 @@
       "query": "?brand_id=all",
       "payload": {
         "code": "M-1048",
-        "idempotency_key": "7b625f1d-ea9b-4c30-82fc-58ced4ca2e1b"
+        "idempotency_key": "c077fd97-1b8e-4e5f-9fec-1d3b3c69e6ba"
+      }
+    },
+    {
+      "path": "scan",
+      "method": "POST",
+      "query": "?brand_id=all",
+      "payload": {
+        "code": "04:A2:B3:C4",
+        "idempotency_key": "47cd7abf-af11-4d61-a5c1-6502c6ad79aa"
       }
     }
   ]

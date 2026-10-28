@@ -38,6 +38,7 @@ export function ScanMember({ member, onNext }: { member: MemberRow; onNext: () =
   const [tab, setTab] = useState<PointsMode | 'benefits' | 'checkin'>(actions.award ? 'award' : actions.redeem ? 'redeem' : 'benefits')
   const [dialog, setDialog] = useState<PointsMode | null>(null)
   const [revision, setRevision] = useState(0)
+  const [busy, setBusy] = useState(false)
   const detail = useQuery({ queryKey: ['loyalty', 'member', member.id, overviewScope(boot)], queryFn: () => api.member(member.id), retry: false })
   const denied = detail.isError && [401, 402, 403, 404].includes(failureOf(detail.error).status)
   const now = detail.data?.member ?? member
@@ -47,31 +48,31 @@ export function ScanMember({ member, onNext }: { member: MemberRow; onNext: () =
   const award = t('loyalty.member.award', 'Award points'), redeem = t('loyalty.member.redeem', 'Redeem points')
   const saved = () => { setRevision(n => n + 1); setDialog(null) }
   const benefits = <><h2>{words('available')}</h2>{detail.data?.benefits.length ? <ul className="l-sc-benefits">{detail.data.benefits.map(b => <li key={b.id}><strong>{b.name}</strong>{b.value && <small>{b.value}</small>}</li>)}</ul> : <p>{words('noBenefits')}</p>}<Link className="l-ov-link" to="/loyalty/rewards?tab=benefits">{words('allBenefits')}</Link></>
-  if (denied) return <section className="l-sc-panel" role="alert"><p>{words('unavailable')}</p><OverviewButton onClick={() => void detail.refetch()}>{words('retry')}</OverviewButton><OverviewButton onClick={onNext}>{words('next')}</OverviewButton></section>
+  if (denied) return <section className="l-sc-panel" role="alert"><p>{words('unavailable')}</p><OverviewButton onClick={() => void detail.refetch()}>{words('retry')}</OverviewButton><OverviewButton disabled={busy} onClick={onNext}>{words('next')}</OverviewButton></section>
   return <>
-    <header className="l-sc-heading"><div><h1><span className="l-sc-desktop">{words('atDesk')}</span><span className="l-sc-mobile"><img src={overviewAssets.members} alt="" />{words('found')}</span></h1><p className="l-sc-desktop">{words('deskSubtitle')}</p><p className="l-sc-mobile">{words('readerPaused')} · {words('desk')}</p></div><div className="l-sc-desktop l-sc-actions"><Link className="l-ov-button" to={memberPath(now.id)}>{words('profile')}</Link><OverviewButton primary onClick={onNext}>{words('next')}</OverviewButton></div></header>
+    <header className="l-sc-heading"><div><h1><span className="l-sc-desktop">{words('atDesk')}</span><span className="l-sc-mobile"><img src={overviewAssets.members} alt="" />{words('found')}</span></h1><p className="l-sc-desktop">{words('deskSubtitle')}</p><p className="l-sc-mobile">{words('readerPaused')} · {words('desk')}</p></div><div className="l-sc-desktop l-sc-actions"><Link className="l-ov-button" aria-disabled={busy || undefined} onClick={e => { if (busy) e.preventDefault() }} to={memberPath(now.id)}>{words('profile')}</Link><OverviewButton primary disabled={busy} onClick={onNext}>{words('next')}</OverviewButton></div></header>
     <ScanIdentity member={now} />
     {detail.isPending && <OverviewSkeleton rows={2} />}
     {detail.isError && <div className="l-sc-panel" role="alert"><p>{words('unavailable')}</p><OverviewButton onClick={() => void detail.refetch()}>{words('retry')}</OverviewButton></div>}
     {revision > 0 && <p role="status">{words('saved')}</p>}
     <div className="l-sc-tabs l-sc-desktop" role="group" aria-label={words('moreActions')}>
-      {actions.award && <button disabled={!ready} aria-pressed={tab === 'award'} onClick={() => setTab('award')}><strong>{award}</strong><small>{words('awardHint')}</small></button>}
-      {actions.redeem && <button disabled={!ready} aria-pressed={tab === 'redeem'} onClick={() => setTab('redeem')}><strong>{redeem}</strong><small>{words('redeemHint')}</small></button>}
-      <button disabled={!ready} aria-pressed={tab === 'benefits'} onClick={() => setTab('benefits')}><strong>{words('benefits')}</strong><small>{words('benefitsHint')}</small></button>
-      <button disabled={!ready} aria-pressed={tab === 'checkin'} onClick={() => setTab('checkin')}><strong>{words('checkin')}</strong><small>{words('checkinHint')}</small></button>
+      {actions.award && <button disabled={!ready || busy} aria-pressed={tab === 'award'} onClick={() => setTab('award')}><strong>{award}</strong><small>{words('awardHint')}</small></button>}
+      {actions.redeem && <button disabled={!ready || busy} aria-pressed={tab === 'redeem'} onClick={() => setTab('redeem')}><strong>{redeem}</strong><small>{words('redeemHint')}</small></button>}
+      <button disabled={!ready || busy} aria-pressed={tab === 'benefits'} onClick={() => setTab('benefits')}><strong>{words('benefits')}</strong><small>{words('benefitsHint')}</small></button>
+      <button disabled={!ready || busy} aria-pressed={tab === 'checkin'} onClick={() => setTab('checkin')}><strong>{words('checkin')}</strong><small>{words('checkinHint')}</small></button>
     </div>
     <strong className="l-sc-mobile">{words('chooseAction')}</strong>
     <div className="l-sc-mobile l-sc-tiles">
-      {actions.award && <OverviewButton primary disabled={!ready} aria-label={award} onClick={() => setDialog('award')}><img src={overviewAssets.options} alt="" /><span>{award}</span><small>{words('awardHint')}</small></OverviewButton>}
-      {actions.redeem && <OverviewButton disabled={!ready} aria-label={redeem} onClick={() => setDialog('redeem')}><img src={overviewAssets.app} alt="" /><span>{redeem}</span><small>{words('redeemHint')}</small></OverviewButton>}
-      <OverviewButton disabled={!ready} aria-label={words('benefits')} onClick={() => setTab(tab === 'benefits' ? 'checkin' : 'benefits')} aria-expanded={tab === 'benefits'}><img src={overviewAssets.rewards} alt="" /><span>{words('benefits')}</span><small>{words('benefitsHint')}</small></OverviewButton>
+      {actions.award && <OverviewButton primary disabled={!ready || busy} aria-label={award} onClick={() => setDialog('award')}><img src={overviewAssets.options} alt="" /><span>{award}</span><small>{words('awardHint')}</small></OverviewButton>}
+      {actions.redeem && <OverviewButton disabled={!ready || busy} aria-label={redeem} onClick={() => setDialog('redeem')}><img src={overviewAssets.app} alt="" /><span>{redeem}</span><small>{words('redeemHint')}</small></OverviewButton>}
+      <OverviewButton disabled={!ready || busy} aria-label={words('benefits')} onClick={() => setTab(tab === 'benefits' ? 'checkin' : 'benefits')} aria-expanded={tab === 'benefits'}><img src={overviewAssets.rewards} alt="" /><span>{words('benefits')}</span><small>{words('benefitsHint')}</small></OverviewButton>
       <Link className="l-ov-button" to={memberPath(now.id)}><img src={overviewAssets.members} alt="" /><span>{words('profile')}</span><small>{words('moreActions')}</small></Link>
     </div>
     {ready && <div className="l-sc-columns"><section className={`l-sc-panel ${tab === 'award' || tab === 'redeem' ? 'l-sc-desktop' : ''}`}>
-      {(tab === 'award' || tab === 'redeem') ? <><h2>{tab === 'award' ? award : redeem}</h2><PointsDialog key={`${tab}-${revision}`} inline mode={tab} memberId={now.id} name={now.name} balance={now.points} onClose={saved} /></> : tab === 'benefits' ? <>{benefits}{detail.data.requests.length > 0 && <ul>{detail.data.requests.map(r => <RequestRow key={r.id} request={r} showMember={false} compact />)}</ul>}</> : <><h2>{words('review')}</h2><DeskActions member={now} /><CreditSummary member={now} /><Link className="l-ov-link" to={memberPath(now.id)}>{words('openProfile')}</Link></>}
+      {(tab === 'award' || tab === 'redeem') ? <><h2>{tab === 'award' ? award : redeem}</h2><PointsDialog key={`${tab}-${revision}`} inline mode={tab} memberId={now.id} name={now.name} balance={now.points} onClose={saved} onBusyChange={setBusy} /></> : tab === 'benefits' ? <>{benefits}{detail.data.requests.length > 0 && <ul>{detail.data.requests.map(r => <RequestRow key={r.id} request={r} showMember={false} compact />)}</ul>}</> : <><h2>{words('review')}</h2><DeskActions member={now} /><CreditSummary member={now} /><Link className="l-ov-link" to={memberPath(now.id)}>{words('openProfile')}</Link></>}
     </section><aside className="l-sc-stack l-sc-desktop"><section className="l-sc-panel l-sc-membership"><h2>{words('current')}</h2><dl><dt>{words('points')}</dt><dd>{points(now.points, i18n.language)} {t('loyalty.scan.points', 'points')}</dd><dt>{words('level')}</dt><dd>{tier?.name ?? '—'}</dd><dt>{words('validUntil')}</dt><dd>{validity ? <Validity line={validity} /> : '—'}</dd></dl><small>{words('qualification')}</small></section><section className="l-sc-panel">{benefits}</section><section className="l-sc-panel"><strong>{words('moreActions')}</strong><p>{words('moreLine')}</p><Link className="l-ov-link" to={memberPath(now.id)}>{words('openProfile')}</Link></section></aside></div>}
-    <OverviewButton className="l-sc-mobile" disabled={!ready} onClick={() => setTab(tab === 'checkin' ? 'benefits' : 'checkin')} aria-expanded={tab === 'checkin'}>{words('review')}</OverviewButton>
-    <section className="l-sc-panel l-sc-mobile"><p>{words('finished')}</p><OverviewButton onClick={onNext}>{words('next')}</OverviewButton></section>
+    <OverviewButton className="l-sc-mobile" disabled={!ready || busy} onClick={() => setTab(tab === 'checkin' ? 'benefits' : 'checkin')} aria-expanded={tab === 'checkin'}>{words('review')}</OverviewButton>
+    <section className="l-sc-panel l-sc-mobile"><p>{words('finished')}</p><OverviewButton disabled={busy} onClick={onNext}>{words('next')}</OverviewButton></section>
     <small className="l-sc-desktop">{words('draftHint')}</small>
     {dialog && ready && <PointsDialog mode={dialog} memberId={now.id} name={now.name} balance={now.points} memberNumber={now.member_number} level={tier?.name} onClose={() => setDialog(null)} />}
   </>

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Field } from '../../workspace/ui/Field'
@@ -23,7 +23,7 @@ const INPUT = 'w-full rounded-lg border border-a-border bg-a-surface px-3 py-2 t
  * Award or redeem points (spec 2026-10-21 §4.3): the points, a reason, and the balance the member will have — checked
  * before sending, then by the server. One key per opening of the dialog: a retry after a lost answer writes nothing new.
  */
-export function PointsDialog({ mode, memberId, name, balance, onClose, memberNumber, level, inline = false }: { mode: PointsMode; memberId: number; name: string; balance: number; onClose: () => void; memberNumber?: string | null; level?: string; inline?: boolean }) {
+export function PointsDialog({ mode, memberId, name, balance, onClose, memberNumber, level, inline = false, onBusyChange }: { mode: PointsMode; memberId: number; name: string; balance: number; onClose: () => void; memberNumber?: string | null; level?: string; inline?: boolean; onBusyChange?: (busy: boolean) => void }) {
   const { t, i18n } = useTranslation()
   const locale = i18n.language || 'en'
   const api = useApi()
@@ -47,6 +47,7 @@ export function PointsDialog({ mode, memberId, name, balance, onClose, memberNum
   })
 
   const problem = pointsProblem(mode, typed, reason, balance)
+  useEffect(() => { onBusyChange?.(save.isPending); return () => onBusyChange?.(false) }, [save.isPending, onBusyChange])
   const after = balanceAfter(mode, balance, typed)
   const failure = save.isError ? failureOf(save.error) : null
   const title = mode === 'award' ? t('loyalty.member.award', 'Award points') : t('loyalty.member.redeem', 'Redeem points')

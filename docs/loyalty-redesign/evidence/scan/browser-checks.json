@@ -8,6 +8,8 @@
     "Desk open performs no scan write",
     "render-desktop-member: no horizontal overflow",
     "Amount preview does not award points",
+    "Next member is locked during a pending points write",
+    "Action switching is locked during a pending points write",
     "Award writes once and refreshes member balance",
     "Cannot redeem more than the authoritative balance",
     "Existing check-in action remains available and keeps its completed outcome",
@@ -42,7 +44,7 @@
       "payload": {
         "points": 250,
         "reason": "Thank you for visiting us",
-        "idempotency_key": "b281c477-507a-4d01-b67f-3efb88fc6eea"
+        "idempotency_key": "ef54f747-ddd0-4bc9-a95d-87cf46851085"
       }
     },
     {
@@ -50,7 +52,7 @@
       "method": "POST",
       "query": "?brand_id=all",
       "payload": {
-        "idempotency_key": "2a58facc-7f94-4468-925d-b3bbc26d6b9a"
+        "idempotency_key": "5efd7c0f-06cf-48c9-a362-65866b27a851"
       }
     },
     {
@@ -59,7 +61,7 @@
       "query": "?brand_id=all",
       "payload": {
         "code": "M-1048",
-        "idempotency_key": "ed8fd2f7-4bb6-46fc-9190-5873405f21fe",
+        "idempotency_key": "6b99e152-385e-4b81-ac84-91524aba59fb",
         "place_id": 1
       }
     },
@@ -69,7 +71,7 @@
       "query": "?brand_id=all",
       "payload": {
         "code": "04:a2:b3:c4",
-        "idempotency_key": "b7f18df0-e65a-437f-a55d-3e24bfbb5448"
+        "idempotency_key": "f113ac49-c207-4bc0-8e6a-fd38f56078de"
       }
     }
   ]
