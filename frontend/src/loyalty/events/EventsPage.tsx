@@ -1,3 +1,4 @@
+import { useRef } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
@@ -16,14 +17,16 @@ import { useEventWords } from './design/words'
 export function EventsPage() {
   const { t, i18n } = useTranslation(), say = useEventWords(), boot = useBoot()
   const [params, setParams] = useSearchParams(), tab = tabFrom(`?${params}`)
+  const latestParams = useRef(params)
+  latestParams.current = params
   const page = Math.max(1, Number(params.get('page')) || 1)
   const filters = Object.fromEntries(['q', 'place_id', 'location', 'tier_id', 'sort'].flatMap(k => params.get(k) ? [[k, params.get(k)!]] : []))
   const query = useQuery({ queryKey: [...EVENTS_KEY, tab, page, ...(Object.keys(filters).length ? [filters] : [])], queryFn: () => eventsApi.list(tab, page, filters) })
   const data = query.data, selected = data?.events.find(e => String(e.id) === params.get('selected')) ?? data?.events[0]
-  const change = (patch: Record<string, string>, paging = false) => { const next = new URLSearchParams(params); if (!paging) { next.delete('page'); next.delete('selected') }; for (const [k,v] of Object.entries(patch)) { if (v) next.set(k,v); else next.delete(k) }; setParams(next, { replace: true }) }
+  const change = (patch: Record<string, string>, paging = false) => { const next = new URLSearchParams(latestParams.current); if (!paging) { next.delete('page'); next.delete('selected') }; for (const [k,v] of Object.entries(patch)) { if (v) next.set(k,v); else next.delete(k) }; latestParams.current = next; setParams(next, { replace: true }) }
   const location = filters.place_id ? `place:${filters.place_id}` : filters.location ? `text:${filters.location}` : ''
   return <div className="l-ov-page l-rd-page l-ev-page">
-    <EventHeading title={t('loyalty.events.title', 'Events')} line={say('line')}><Link className="l-ov-button" to="/loyalty/guide">{t('loyalty.shell.guide', 'Help & guide')}</Link>{data?.can_change && <Link className="l-ov-button l-ov-primary" to="/loyalty/events/new">{say('create')}</Link>}</EventHeading>
+    <EventHeading title={t('loyalty.events.title', 'Events')} line={say('line')}><Link className="l-ov-button" to="/loyalty/guide">{t('loyalty.overview.help', 'Help & guide')}</Link>{data?.can_change && <Link className="l-ov-button l-ov-primary" to="/loyalty/events/new">{say('create')}</Link>}</EventHeading>
     <nav className="l-ev-tabs" aria-label={t('loyalty.events.tabs', 'Events')}>{EVENT_TABS.map(k => <Link key={k} to={`/loyalty/events?tab=${k}`} aria-current={tab === k ? 'page' : undefined}>{t(`loyalty.events.tab.${k}`, TAB_WORDS[k])}</Link>)}</nav>
     <section className="l-ev-hero"><div><h2>{say('hero')}</h2><p>{say('heroLine')}</p></div>{data && <small>{say('upcomingCount', { n: points(data.totals.upcoming, i18n.language) })}</small>}</section>
     <div className="l-ev-filters"><FormField label={say('search')}><input type="search" maxLength={120} value={filters.q ?? ''} placeholder={say('searchHint')} onChange={e => change({ q: e.target.value })} /></FormField><FormField label={say('location')}><select value={location} onChange={e => change({ place_id: e.target.value.startsWith('place:') ? e.target.value.slice(6) : '', location: e.target.value.startsWith('text:') ? e.target.value.slice(5) : '' })}><option value="">{say('allLocations')}</option>{data?.options.places.map(p => <option key={p.id} value={`place:${p.id}`}>{p.name}</option>)}{data?.options.locations?.map(p => <option key={p} value={`text:${p}`}>{p}</option>)}</select></FormField><FormField label={say('level')}><select value={filters.tier_id ?? ''} onChange={e => change({ tier_id: e.target.value })}><option value="">{say('allLevels')}</option>{boot.programme.tiers.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}</select></FormField></div>
