@@ -22,6 +22,7 @@
 [data-loyalty] .l-rb-row.l-rb-selected { border-color: var(--l-ov-cyan); background: var(--l-rb-selected); }
 [data-loyalty] .l-rb-row-content { display: grid; grid-template-columns: minmax(0,320fr) minmax(0,276fr); gap: 16px; flex: 1; min-width: 0; text-align: left; cursor: pointer; }
 [data-loyalty] .l-rb-row-content > span { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+[data-loyalty] .l-rb-row-content, [data-loyalty] .l-rb-preview, [data-loyalty] .l-rb-facts dd, [data-loyalty] .l-rb-title { overflow-wrap: anywhere; }
 [data-loyalty] .l-rb-row strong { font-size: 14px; line-height: 20px; }
 [data-loyalty] .l-rb-row small { font-size: 12px; line-height: 18px; }
 [data-loyalty] .l-rb-value { color: var(--l-ov-cyan); font-size: 13px; line-height: 22px; }

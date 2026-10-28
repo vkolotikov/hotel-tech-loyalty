@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { Notice } from '../../../workspace/ui/Notice'
+import { formatDate } from '../../../workspace/lib/wallClock'
 import { useBoot } from '../../LoyaltyProvider'
 import { useLeaveGuard, type EarnGuard } from '../../earn/useLeaveGuard'
 import { failureOf, mediaUrl } from '../../lib/api'
@@ -33,6 +34,7 @@ export function OffersDesignPage() {
     if (guard.dirty || guard.busy) guard.go(url); else navigate(url, { replace: true })
   }
   const brandName = (offer: Offer) => offer.brand_id == null ? t('loyalty.rewards.brand.every', 'Every brand') : data?.options.brands?.list.find(b => b.id === offer.brand_id)?.name ?? String(offer.brand_id)
+  const dateLabel = (date: string | null) => date ? formatDate(date, i18n.language, { day: 'numeric', month: 'short' }) : '—'
   const visible = (data?.offers ?? []).filter(o => `${o.title} ${brandName(o)} ${o.code ?? ''}`.toLocaleLowerCase().includes(q.toLocaleLowerCase()) && (brand === 'all' || (brand === 'every' ? o.brand_id == null : String(o.brand_id) === brand)) && (status === 'all' || status === 'current' ? status === 'all' || ['live', 'upcoming'].includes(o.state) : o.state === status))
   const selected = visible.find(o => String(o.id) === params.get('selected')) ?? visible[0]
   const selectedParam = params.get('selected')
@@ -42,7 +44,7 @@ export function OffersDesignPage() {
     const next = new URLSearchParams(location.search); next.set('selected', String(selected.id))
     navigate({ pathname: location.pathname, search: next.toString() }, { replace: true })
   }, [adding, selectedParam, selected, location.pathname, location.search, navigate])
-  const list = <section className="l-ov-panel l-rb-list"><header><h2>{say('yourOffers')}</h2><button type="button" className="l-ov-link" onClick={() => go({ status: 'ended' })}>{say('endedOffers')}</button></header><ul>{visible.map(o => <RewardRow key={o.id} id={`offer-${o.id}`} name={o.title} caption={`${brandName(o)} · ${o.start_date ?? '—'} – ${o.end_date ?? '—'}`} value={OFFER_VALUE_WORDS[o.type] ? t(`loyalty.rewards.offer_value.${o.type}`, OFFER_VALUE_WORDS[o.type], { value: amountOf(o.type, o.value, boot.venue.currency, i18n.language) }) : `${t(`loyalty.rewards.offer_type.${o.type}`, OFFER_TYPE_WORDS[o.type] ?? o.type)} · ${points(o.value, i18n.language)}`} status={['live', 'upcoming', 'off', 'ended'].includes(o.state) ? say(o.state as 'live' | 'upcoming' | 'off' | 'ended') : o.state} tone={o.state} selected={!adding && selected?.id === o.id} onSelect={() => go({ selected: o.id })} />)}</ul>{!visible.length && <RewardEmpty empty={!data?.offers.length ? say('emptyOffers') : undefined} onClear={data?.offers.length ? () => go({ q: '', brand: 'all', status: 'all' }) : undefined} />}</section>
+  const list = <section className="l-ov-panel l-rb-list"><header><h2>{say('yourOffers')}</h2><button type="button" className="l-ov-link" onClick={() => go({ status: 'ended' })}>{say('endedOffers')}</button></header><ul>{visible.map(o => <RewardRow key={o.id} id={`offer-${o.id}`} name={o.title} caption={`${brandName(o)} · ${dateLabel(o.start_date)} – ${dateLabel(o.end_date)}`} value={OFFER_VALUE_WORDS[o.type] ? t(`loyalty.rewards.offer_value.${o.type}`, OFFER_VALUE_WORDS[o.type], { value: amountOf(o.type, o.value, boot.venue.currency, i18n.language) }) : `${t(`loyalty.rewards.offer_type.${o.type}`, OFFER_TYPE_WORDS[o.type] ?? o.type)} · ${points(o.value, i18n.language)}`} status={['live', 'upcoming', 'off', 'ended'].includes(o.state) ? say(o.state as 'live' | 'upcoming' | 'off' | 'ended') : o.state} tone={o.state} selected={!adding && selected?.id === o.id} onSelect={() => go({ selected: o.id })} />)}</ul>{!visible.length && <RewardEmpty empty={!data?.offers.length ? say('emptyOffers') : undefined} onClear={data?.offers.length ? () => go({ q: '', brand: 'all', status: 'all' }) : undefined} />}</section>
   return <div className="l-ov-page l-rd-page l-rb-page">
     <RewardHeading title={say('offers')} line={say('offersLine')}><Link className="l-ov-button" to="/loyalty/rewards">{say('pointsRewards')}</Link>{manage && data && <OverviewButton primary onClick={() => guard.go(rewardsUrl('offers', { offer: 'new' }))}>{say('createOffer')}</OverviewButton>}</RewardHeading>
     {!manage && <p data-read-only="">{t('loyalty.rewards.offers.read_only', 'Only staff allowed to manage offers can add or change them.')}</p>}
