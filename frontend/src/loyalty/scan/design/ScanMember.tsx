@@ -25,7 +25,7 @@ export function ScanIdentity({ member }: { member: MemberRow }) {
   const tier = boot.programme.tiers.find(tier => tier.id === member.tier_id)
   const validity = deskValidity(member, boot.venue.today, i18n.language)
   const expired = member.membership_state === 'expired' || (member.valid_until && member.valid_until < boot.venue.today)
-  const status = !member.is_active ? t('loyalty.common.inactive', 'Inactive') : expired ? t('loyalty.membership.list.state.expired', 'Expired') : t('loyalty.common.active', 'Active')
+  const status = !member.is_active ? t('loyalty.members.state_inactive', 'Switched off') : expired ? t('loyalty.membership.list.state.expired', 'Expired') : t('loyalty.members.state_active', 'Active')
   return <div className="l-sc-identity"><span className="l-sc-avatar" aria-hidden>{member.name.split(/\s+/).map(p => p[0]).slice(0, 2).join('')}</span><div><strong>{member.name || member.member_number}</strong><small className="l-sc-desktop">{[tier?.name, member.member_number].filter(Boolean).join(' · ')}</small><small className="l-sc-mobile">{[tier?.name, status, member.member_number].filter(Boolean).join(' · ')}</small><div className="l-sc-mobile-facts"><span>{points(member.points, i18n.language)} {t('loyalty.scan.points', 'points')}</span>{validity && <Validity line={validity} />}</div></div><span className="l-sc-status l-sc-desktop">{status}</span></div>
 }
 
