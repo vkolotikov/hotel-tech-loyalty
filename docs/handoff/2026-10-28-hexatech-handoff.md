@@ -3,7 +3,45 @@
 Read this first, then `2026-10-27-hexatech-handoff.md` for the full environment, test-loop,
 product history and deployment instructions. Root AGENTS.md and CLAUDE.md still apply.
 
-## Current release: Rewards & benefits
+## In verification: Requests and Insights
+
+Feature `feature/loyalty-insights-20261028` includes the unified Requests inbox and the Figma Insights dashboard.
+Read `docs/loyalty-redesign/15-REQUESTS-REPORT.md` and `16-INSIGHTS-REPORT.md` for source contracts, limitations,
+test evidence and exact frames. Source-patch baseline remains **27baa2935** until the new artifact is deployed.
+No new migrations/dependencies or member-writing rules. Place reports remain explicitly organization-wide.
+
+## Current production release: Events
+
+Events follows EV-01 `115:5501`, EV-02 `115:5502` and EV-03 `115:5503` in the connected Figma file
+`d6IGmk3hOoMw0V5rONbI1A`. The event overview, full create/edit page and attendees page now share the
+Overview shell. Existing scanner, door mode, by-name check-in, signup and lifecycle actions remain available.
+
+- Production commit: **ab5f25bdd0dd1e8993728f95423a2ea519ba67f4**, live content verified
+  **28 October, 14:26 Europe/Riga**. Entry `index-DPUoSWOd.js`, Loyalty `LoyaltyApp-4CAHf0Ws.js` /
+  `LoyaltyApp-DH-yoI5b.css`. Events markers/styles, three local fonts, list/detail/people authentication (401),
+  public landing kit and retired stylesheet (404) checks passed.
+- Deployed feature source: **27baa2935820dd2e70b4e63c337d8f5a5cc0c0bb**, branch
+  **feature/loyalty-events-20261028**. **The next source delta starts at 27baa2935**, not later documentation tips.
+- Artifact starts at **56ddb2d2b**; final source patch **6ba19561a**, fresh build **ab5f25bdd**.
+  Whole source parity passed across 49 allowlisted paths; the obsolete intermediate screenshot was removed.
+- Read endpoints add tenant-scoped event search/location/level filtering and attendee search/status/pagination.
+  Counts distinguish waiting registrations from walk-ins; historical rewards read the matching attendance ledger.
+  Writers, permissions, notifications, venue wall times and idempotency remain authoritative. No migrations
+  or dependencies changed. Original editor defaults, unlimited capacity and walk-in settings are preserved.
+- Artifact checks: PHP **7,074 passed, 7 skipped, 45,264 assertions, 75 foreground scopes**;
+  frontend **5,619 passed, 0 failed, 389 files**; TypeScript, Loyalty ESLint and fresh build passed.
+- Compiled browser: **26 interaction + 57 state/responsive checks**, zero runtime errors. All three screens
+  fit 1440/1280/1024/768/390/320px, with actual stacked-column and field-width checks. Light mode and all
+  five languages passed. All 18 Figma SVG exports match local hashes. Compiled screenshots were compared
+  visually against the exact three Figma references, including mobile and light-mode inspection.
+- Browser mutations use intercepted local fixtures. Live verification is read-only; no production member
+  transactions were created. Use a fresh browser context for live authenticated checks because the browser
+  harness installs context-wide initialization scripts.
+
+Full report and evidence: `docs/loyalty-redesign/14-EVENTS-REPORT.md` and
+`docs/loyalty-redesign/evidence/events/`. Private logs/scripts use `.git/events-*`.
+
+## Previous release: Rewards & benefits
 
 The Rewards milestone follows RB-01 `108:4986`, RB-02 `108:4987`, RB-03 `108:4988` and PG-04 `92:3955`
 in the connected Figma file. Points rewards, the full reward editor, Offers and Membership benefits now share
@@ -85,7 +123,8 @@ Implementation details and evidence: `docs/loyalty-redesign/12-WAYS-TO-EARN-REPO
 
 No feature-branch build assets were committed. Unrelated PDF/ZIP files and `public/alexa-skill-assets/` remain untouched.
 The original Vite server on port 5173 is not owned by this release and remains running. The release preview on
-5810 and the isolated deploy worktree were removed after verification. Private logs and scripts live under `.git/earn-*`.
+5810 and the isolated deploy worktree were removed after verification. Events logs and scripts live under `.git/events-*`;
+earlier Ways to earn and Rewards verification remains under `.git/earn-*` and `.git/rewards-*`.
 
 The owner has standing authorization to deploy each finished, verified job without asking again.
 Use the isolated source-patch recipe, test the artifact, build it fresh, push its deploy branch to `main`,

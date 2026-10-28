@@ -28,6 +28,8 @@ import { useEarnWords } from '../earn/words'
 import { useRewardWords } from '../rewards/design/words'
 import rewardsProgramIcon from '../rewards/design/assets/program.svg'
 import eventsProgramIcon from '../events/design/assets/program.svg'
+import insightsProgramIcon from '../insights/assets/program.svg'
+import requestsProgramIcon from '../requests/assets/program.svg'
 
 export function OverviewShell({ children }: { children: ReactNode }) {
   const { t } = useTranslation()
@@ -36,6 +38,8 @@ export function OverviewShell({ children }: { children: ReactNode }) {
   const earn = useEarnWords()
   const rewards = useRewardWords()
   const location = useLocation()
+  const isInsights = location.pathname.replace(/\/$/, '') === '/loyalty/insights'
+  const isRequests = location.pathname.replace(/\/$/, '') === '/loyalty/requests'
   const isEvents = /^\/loyalty\/events(?:\/|$)/.test(location.pathname)
   const eventsTab = location.pathname.endsWith('/new') ? 'drafts' : new URLSearchParams(location.search).get('tab') ?? 'upcoming'
   const eventSections: Record<string, string> = { upcoming: t('loyalty.events.tab.upcoming', 'Upcoming'), past: t('loyalty.events.tab.past', 'Past'), drafts: t('loyalty.events.tab.drafts', 'Drafts') }
@@ -48,7 +52,7 @@ export function OverviewShell({ children }: { children: ReactNode }) {
   const earnParams = new URLSearchParams(location.search)
   const earnTab = earnParams.get('tab') ?? (earnParams.has('way') ? groupOf(earnParams.get('way')!) : 'earn')
   const earnSection = earnTab === 'bonus' ? earn('bonuses') : earnTab === 'rule' ? earn('rules') : earnTab === 'overview' ? earn('checks') : earn('earning')
-  const sectionName = isEvents ? t('loyalty.nav.events', 'Events') + ' / ' + (eventSections[eventsTab] ?? eventSections.upcoming) : isRewards ? `${t('loyalty.rewards.title', 'Rewards')} / ${rewardsSection}` : isEarn ? `${t('loyalty.nav.options', 'Ways to earn')} / ${earnSection}` : isProgram ? t('loyalty.nav.program', 'Program') : isMembers ? t('loyalty.nav.members', 'Members') : say('nav')
+  const sectionName = isInsights ? t('loyalty.nav.insights', 'Insights') : isRequests ? t('loyalty.nav.requests', 'Requests') : isEvents ? t('loyalty.nav.events', 'Events') + ' / ' + (eventSections[eventsTab] ?? eventSections.upcoming) : isRewards ? `${t('loyalty.rewards.title', 'Rewards')} / ${rewardsSection}` : isEarn ? `${t('loyalty.nav.options', 'Ways to earn')} / ${earnSection}` : isProgram ? t('loyalty.nav.program', 'Program') : isMembers ? t('loyalty.nav.members', 'Members') : say('nav')
   const tab = new URLSearchParams(location.search).get('tab') ?? 'tiers'
   const context = useLoyalty()
   const { data: boot } = context
@@ -78,7 +82,7 @@ export function OverviewShell({ children }: { children: ReactNode }) {
     ...(can?.view_insights ? [{ to: '/loyalty/insights', end: false, icon: BarChart3, label: t('loyalty.nav.insights', 'Insights') }] : []),
     ...(can?.manage_app ? [{ to: '/loyalty/app', end: false, icon: CreditCard, label: t('loyalty.nav.app', 'Card & app') }] : []),
   ]
-  const assetFor = (to: string) => isEvents && to === '/loyalty/program' ? eventsProgramIcon : isRewards && to === '/loyalty/program' ? rewardsProgramIcon : assets[(to === '/loyalty' ? 'members' : to === '/loyalty/overview' ? 'home' : to.split('/').pop()) as keyof typeof assets]
+  const assetFor = (to: string) => isInsights && to === '/loyalty/program' ? insightsProgramIcon : isRequests && to === '/loyalty/program' ? requestsProgramIcon : isEvents && to === '/loyalty/program' ? eventsProgramIcon : isRewards && to === '/loyalty/program' ? rewardsProgramIcon : assets[(to === '/loyalty' ? 'members' : to === '/loyalty/overview' ? 'home' : to.split('/').pop()) as keyof typeof assets]
   const rewardsNav = isRewards && !slim ? <div className="l-rd-subnav">{[['catalogue', rewards('pointsRewards')], ['benefits', rewards('benefits')], ['offers', rewards('offers')]].map(([key, label]) => <Link key={key} to={key === 'catalogue' ? '/loyalty/rewards' : `/loyalty/rewards?tab=${key}`} className={rewardsTab === key ? 'l-rd-subnav-active' : ''} onClick={() => setMenu(false)}>{label}</Link>)}</div> : null
   const subnav = isProgram && !slim ? <div className="l-rd-subnav">{[['tiers', words('levels')], ['benefits', words('membershipBenefits')], ['places', t('loyalty.places.title', 'Places')], ['boosts', t('loyalty.program.boosts.title', 'Boost events')]].map(([key, label]) => <Link key={key} to={`/loyalty/program?tab=${key}`} className={tab === key ? 'l-rd-subnav-active' : ''} onClick={() => setMenu(false)}>{label}</Link>)}{can?.manage_program && <Link to="/loyalty/options/setup" onClick={() => setMenu(false)}>{words('guidedSetup')}</Link>}</div> : null
   const earnNav = isEarn && !slim ? <div className="l-rd-subnav">{[['earn', earn('earning')], ['bonus', earn('bonuses')], ['rule', earn('rules')]].map(([key, label]) => <Link key={key} to={`/loyalty/options?tab=${key}`} className={earnTab === key ? 'l-rd-subnav-active' : ''} onClick={() => setMenu(false)}>{label}</Link>)}</div> : null
@@ -87,7 +91,7 @@ export function OverviewShell({ children }: { children: ReactNode }) {
   const foot = { look, fullAdmin: FULL_ADMIN, person: ready ? boot?.staff.name : undefined, role: ready ? boot?.staff.role ?? null : null, onLeave: () => true, onShortcuts: () => { setMenu(false); setHelp(true) }, onFind: () => { setMenu(false); setFind(true) }, guide: { to: '/loyalty/guide', label: say('help') } }
   const findList = findActions({ nav: [...nav, { to: '/loyalty/scan', end: false, icon: ScanLine, label: say('scan') }], dark: look.resolved === 'dark', wide: true, slim, words: { scan: say('scan'), goTo: t('loyalty.find.go_to', 'Go to'), toDark: t('loyalty.find.theme_dark', 'Switch to dark'), toLight: t('loyalty.find.theme_light', 'Switch to light'), collapse: t('workspace.shell.collapse', 'Collapse menu'), expand: t('workspace.shell.expand', 'Expand menu'), shortcuts: t('workspace.shortcuts.title', 'Keyboard shortcuts'), guide: say('help'), start: say('checklist') } })
   const run = (target: FindTarget) => { const action = runOf(target); if (action === null && 'to' in target) navigate(target.to); else if (action === 'theme') look.setTheme(look.resolved === 'dark' ? 'light' : 'dark'); else if (action === 'rail') look.setRail(slim ? 'full' : 'slim'); else if (action === 'shortcuts') setHelp(true) }
-  return <div data-workspace="" data-loyalty="" data-theme={look.resolved} data-overview="" data-redesign={isProgram || isMembers || isEarn || isRewards || isEvents || undefined} data-slim={slim || undefined} className="l-overview-frame" style={accentStyle(accentTokens(boot?.accent, look.resolved, LOYALTY_SURFACES[look.resolved]))}>
+  return <div data-workspace="" data-loyalty="" data-theme={look.resolved} data-overview="" data-requests={isRequests || undefined} data-redesign={isProgram || isMembers || isEarn || isRewards || isEvents || isRequests || isInsights || undefined} data-slim={slim || undefined} className="l-overview-frame" style={accentStyle(accentTokens(boot?.accent, look.resolved, LOYALTY_SURFACES[look.resolved]))}>
     <button className="l-ov-skip" onClick={() => main.current?.focus()}>{say('skip')}</button>
     <aside className="l-ov-sidebar" aria-label={say('menu')}>
       <Link to="/loyalty/overview" className="l-ov-brand"><span className="l-ov-mark"><img src={assets.star} alt="" /></span><span><strong>hexa</strong><small>{say('platform')}</small></span></Link>

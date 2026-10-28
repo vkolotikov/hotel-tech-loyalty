@@ -16,6 +16,9 @@ This preserves the broader improvement plan. It is **not** permission to invent 
 
 The earlier Guided setup and Points rewards Figma concepts are starting directions, not complete state/interaction specifications. Obtain the next section's reviewed design before rebuilding its body.
 
+Events was separately authorized and deployed on 2026-10-28 from the final EV-01/02/03 frames; see
+`14-EVENTS-REPORT.md`. Campaigns remains a later milestone with its existing routes and behavior preserved.
+
 ## Cross-product improvements to carry forward
 
 ### Consistent readiness

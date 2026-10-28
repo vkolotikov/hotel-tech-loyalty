@@ -43,10 +43,10 @@ final class InsightsMoney
     ];
 
     /** @return array<string, mixed> */
-    public static function for(int $orgId, string $choice): array
+    public static function for(int $orgId, string $choice, ?InsightsPeriod $reportPeriod = null, ?int $tierId = null): array
     {
         $zone = VenueClock::zone($orgId);
-        $period = InsightsPeriod::of($choice, VenueClock::today($orgId), $zone);
+        $period = $reportPeriod ?? InsightsPeriod::of($choice, VenueClock::today($orgId), $zone);
         $org = Organization::withoutGlobalScopes()->findOrFail($orgId);
         $currency = PortalBootstrap::currency($org);
 
@@ -57,8 +57,8 @@ final class InsightsMoney
             'all'      => 0,
             'other'    => 0,
         ];
-        self::stays($orgId, $period, $currency, $c);
-        self::services($orgId, $period, $currency, $c);
+        self::stays($orgId, $period, $currency, $c, $tierId);
+        self::services($orgId, $period, $currency, $c, $tierId);
 
         $stays = array_sum($c['stays']);
         $services = array_sum($c['services']);
@@ -86,7 +86,7 @@ final class InsightsMoney
     }
 
     /** @param array<string, mixed> $c */
-    private static function stays(int $orgId, InsightsPeriod $period, string $currency, array &$c): void
+    private static function stays(int $orgId, InsightsPeriod $period, string $currency, array &$c, ?int $tierId = null): void
     {
         $stayCurrency = strtoupper((string) HotelSetting::getValue('booking_currency', 'EUR'));
         $booked = 'COALESCE(booking_mirror.source_created_at, booking_mirror.created_at)';
@@ -97,7 +97,7 @@ final class InsightsMoney
             ->whereRaw("{$booked} >= ? AND {$booked} < ?", [$period->startUtc(), $period->endUtc()])
             ->whereRaw("{$paid} > 0")
             ->whereRaw("COALESCE(booking_mirror.payment_method, '') <> 'mock'")
-            ->selectRaw("{$booked} AS booked_at, {$paid} AS paid, CASE WHEN " . self::byMember('booking_mirror') . ' THEN 1 ELSE 0 END AS by_member', [$orgId, $orgId, $orgId])
+            ->selectRaw("{$booked} AS booked_at, {$paid} AS paid, CASE WHEN " . self::byMember('booking_mirror', $tierId) . ' THEN 1 ELSE 0 END AS by_member', [$orgId, $orgId, $orgId])
             ->toBase()->cursor();
 
         foreach ($rows as $row) {
@@ -110,7 +110,7 @@ final class InsightsMoney
     }
 
     /** @param array<string, mixed> $c */
-    private static function services(int $orgId, InsightsPeriod $period, string $currency, array &$c): void
+    private static function services(int $orgId, InsightsPeriod $period, string $currency, array &$c, ?int $tierId = null): void
     {
         $inPeriod = fn () => ServiceBooking::query()->withoutGlobalScope(BrandScope::class)
             ->where('service_bookings.organization_id', $orgId)
@@ -124,7 +124,7 @@ final class InsightsMoney
 
         $rows = $inPeriod()->orderBy('service_bookings.id')
             ->select(array_map(fn (string $col) => "service_bookings.{$col}", self::SERVICE_COLUMNS))
-            ->selectRaw('CASE WHEN ' . self::byMember('service_bookings') . ' THEN 1 ELSE 0 END AS by_member', [$orgId, $orgId, $orgId])
+            ->selectRaw('CASE WHEN ' . self::byMember('service_bookings', $tierId) . ' THEN 1 ELSE 0 END AS by_member', [$orgId, $orgId, $orgId])
             ->cursor();
 
         foreach ($rows as $b) {
@@ -160,11 +160,14 @@ final class InsightsMoney
     /**
      * The row names a member of this organisation, or its guest is linked to one (three bindings: the organisation).
      */
-    private static function byMember(string $table): string
+    private static function byMember(string $table, ?int $tierId = null): string
     {
-        return "(EXISTS (SELECT 1 FROM loyalty_members bm WHERE bm.id = {$table}.member_id AND bm.organization_id = ?)"
+        // An integer from the validated, tenant-owned tier selection; bindings above remain the three tenant IDs.
+        $direct = $tierId === null ? '' : ' AND bm.tier_id = ' . (int) $tierId;
+        $guest = $tierId === null ? '' : ' AND bgm.tier_id = ' . (int) $tierId;
+        return "(EXISTS (SELECT 1 FROM loyalty_members bm WHERE bm.id = {$table}.member_id AND bm.organization_id = ?{$direct})"
             . " OR EXISTS (SELECT 1 FROM guests bg JOIN loyalty_members bgm ON bgm.id = bg.member_id"
-            . " WHERE bg.id = {$table}.guest_id AND bg.organization_id = ? AND bgm.organization_id = ?))";
+            . " WHERE bg.id = {$table}.guest_id AND bg.organization_id = ? AND bgm.organization_id = ?{$guest}))";
     }
 
     private static function cents(mixed $amount): int

@@ -10,6 +10,14 @@ campaigns, card and app, pictures, currency).
 
 ## Who has it, and the ways in and back
 
+Requests/Insights redesign (28 October, release artifact in verification): `/loyalty/requests` combines benefit
+requests, reward redemptions and referral activity through `GET requests/inbox`. Existing writers and legacy
+benefit bookmarks are retained. `/loyalty/insights` reads `GET insights/report?from&to&compare&tier_id`; defaults
+to 28 completed venue days, with equal preceding comparison. Current level filtering applies to current member
+records across all places; place attribution is not consistently available. Charts/tables, cohort inspection,
+metric definitions and scoped CSV export are live reads. Existing detailed reports and `?period`/`?quiet`
+bookmarks remain accessible. See redesign reports 15 and 16 for precise metric definitions and verification.
+
 - Every organisation has it by default (`Organization::WORKSPACE_DEFAULTS`). Organisations on the Appointments plan
   do not: the plan has no loyalty, and the access map refuses them (`not_in_plan`).
 - `php artisan workspace:loyalty <organisation id> --on [--landing] | --off | --status`, and
@@ -778,6 +786,21 @@ files on disk): run them one after the other.
   redirect outliving its page; an extra or a voice config holding NULL in a NOT NULL column.
 
 ## Deploying
+
+- Events, 2026-10-28: production **ab5f25bdd**, feature source **27baa2935** on
+  `feature/loyalty-events-20261028`. Final source patch **6ba19561a** was applied to **56ddb2d2b**;
+  whole source parity passed across 49 explicit paths. Three connected Figma frames cover the overview,
+  full create/edit page and attendees. Existing scanner, door mode, signup and lifecycle actions remain.
+  Tenant-scoped read filters and historical attendance reward display extend existing APIs; writers,
+  permissions, notifications and idempotency remain unchanged. No migrations or dependencies changed.
+  Artifact checks: PHP **7,074 passed / 7 skipped / 45,264 assertions / 75 scopes**, frontend **5,619 passed / 389 files**,
+  TypeScript/ESLint/build passed, **83 compiled-browser checks passed**, zero runtime errors. All three views
+  fit 1440/1280/1024/768/390/320px; light mode, five languages, permissions, retries and workflow actions passed.
+  Compiled renders were visually compared with exact Figma references; 18 SVG exports matched local hashes.
+  Live content verified **28 October, 14:26 Europe/Riga**: entry `index-DPUoSWOd.js`, Loyalty
+  `LoyaltyApp-4CAHf0Ws.js` / `LoyaltyApp-DH-yoI5b.css`, three fonts, Events authentication (401),
+  public landing kit and retired stylesheet (404). The next source delta starts at **27baa2935**.
+  Full report: `docs/loyalty-redesign/14-EVENTS-REPORT.md`.
 
 - Rewards & benefits, 2026-10-28: production **56ddb2d2b**, feature source **b7e5e3a5a** on
   `feature/loyalty-rewards-benefits-20261028`. Final source patch **1860ce52a** was applied to **1fcdcbb6b**;

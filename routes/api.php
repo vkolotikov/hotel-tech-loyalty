@@ -1387,6 +1387,7 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
                 Route::post('members/{id}/redeem', [\App\Http\Controllers\Api\V1\Admin\Loyalty\PointsController::class, 'redeem'])->whereNumber('id');
                 Route::post('members/{id}/history/{line}/reverse', [\App\Http\Controllers\Api\V1\Admin\Loyalty\PointsController::class, 'reverse'])->whereNumber(['id', 'line']);
                 Route::get('requests', [\App\Http\Controllers\Api\V1\Admin\Loyalty\RequestController::class, 'index']);
+                Route::get('requests/inbox', [\App\Http\Controllers\Api\V1\Admin\Loyalty\RequestController::class, 'inbox']);
                 Route::post('requests/{id}/approve', [\App\Http\Controllers\Api\V1\Admin\Loyalty\RequestController::class, 'approve'])->whereNumber('id');
                 Route::post('requests/{id}/decline', [\App\Http\Controllers\Api\V1\Admin\Loyalty\RequestController::class, 'decline'])->whereNumber('id');
                 Route::post('requests/{id}/done', [\App\Http\Controllers\Api\V1\Admin\Loyalty\RequestController::class, 'done'])->whereNumber('id');
@@ -1478,6 +1479,7 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
 
                 // Insights (§5)
                 Route::get('insights', [\App\Http\Controllers\Api\V1\Admin\Loyalty\InsightsController::class, 'show']);
+                Route::get('insights/report', [\App\Http\Controllers\Api\V1\Admin\Loyalty\InsightsController::class, 'report']);
                 Route::get('insights/at-risk', [\App\Http\Controllers\Api\V1\Admin\Loyalty\InsightsController::class, 'atRisk']);
                 // Release 4 part E: cohort retention, and the money members bring
                 Route::get('insights/cohorts', [\App\Http\Controllers\Api\V1\Admin\Loyalty\InsightsController::class, 'cohorts']);
