@@ -19,6 +19,11 @@ The earlier Guided setup and Points rewards Figma concepts are starting directio
 Events was separately authorized and deployed on 2026-10-28 from the final EV-01/02/03 frames; see
 `14-EVENTS-REPORT.md`. Campaigns remains a later milestone with its existing routes and behavior preserved.
 
+Requests and Insights were separately authorized and deployed on 2026-10-28; see `15-REQUESTS-REPORT.md`
+and `16-INSIGHTS-REPORT.md`. Card & app was subsequently authorized and implemented from CA-01; see
+`17-CARD-APP-REPORT.md` for verification and the deployment record. Settings, Scan and Campaigns retain
+their existing capabilities and remain separate design milestones.
+
 ## Cross-product improvements to carry forward
 
 ### Consistent readiness
