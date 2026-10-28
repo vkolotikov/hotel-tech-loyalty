@@ -1,4 +1,4 @@
-import { useLocation, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { Coins, CreditCard, Smartphone, type LucideIcon } from 'lucide-react'
 import { Notice } from '../../workspace/ui/Notice'
@@ -11,6 +11,8 @@ import { WalletTab } from './WalletTab'
 import { TAB_CAPTION_WORDS, TAB_WORDS } from './words'
 import { SectionCards } from '../ui/SectionCards'
 import type { Hue } from '../ui/sections'
+import { CardAppPage } from './design/CardAppPage'
+import { useCardWords } from './design/words'
 
 const TAB_ICONS: Record<AppTab, LucideIcon> = { wallet: CreditCard, app: Smartphone, currency: Coins }
 /** Each tab's colour (release 10): the wallet card amber, the app blue, the currency green. */
@@ -22,6 +24,13 @@ const TAB_HUE: Record<AppTab, Hue> = { wallet: 'gift', app: 'tier', currency: 'e
  * address reads why. The tab lives in the address (`?tab=wallet|app|currency`), so a link opens the same one.
  */
 export function AppPage() {
+  const location = useLocation(), say = useCardWords()
+  const params = new URLSearchParams(location.search)
+  if (!params.has('tab') && params.get('view') !== 'detailed') return <CardAppPage />
+  return <div className="l-ca-settings"><Link to="/loyalty/app" className="l-ov-link">← {say('back')}</Link><AppSettings /></div>
+}
+
+function AppSettings() {
   const { t } = useTranslation()
   const boot = useBoot()
   const location = useLocation()

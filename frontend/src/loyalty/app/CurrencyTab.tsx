@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
+import { useBoot } from '../LoyaltyProvider'
+import { overviewScope } from '../overview/overviewMath'
 import { Button } from '../../workspace/ui/Button'
 import { Notice } from '../../workspace/ui/Notice'
 import { failureOf } from '../lib/api'
@@ -21,15 +23,16 @@ import type { CurrencyAnswer, CurrencyPreview } from './types'
  * currency they have. A manager's, as the rest of Card & app.
  */
 export function CurrencyTab() {
-  const query = useQuery({ queryKey: CURRENCY_KEY, queryFn: appApi.currency })
+  const boot = useBoot(), queryKey = [...CURRENCY_KEY, overviewScope(boot)]
+  const query = useQuery({ queryKey, queryFn: appApi.currency })
   const data = query.data
 
-  if (query.isError && !data) return <LoadFailed error={query.error} onRetry={() => { void query.refetch() }} />
+  if (query.isError) return <LoadFailed error={query.error} onRetry={() => { void query.refetch() }} />
   if (!data) return <Loading />
-  return <CurrencyEditor answer={data} />
+  return <CurrencyEditor key={overviewScope(boot)} answer={data} queryKey={queryKey} />
 }
 
-export function CurrencyEditor({ answer, initialPreview = null }: { answer: CurrencyAnswer; initialPreview?: CurrencyPreview | null }) {
+export function CurrencyEditor({ answer, initialPreview = null, queryKey = CURRENCY_KEY }: { answer: CurrencyAnswer; initialPreview?: CurrencyPreview | null; queryKey?: readonly unknown[] }) {
   const { t, i18n } = useTranslation()
   const locale = i18n.language || 'en'
   const client = useQueryClient()
@@ -39,7 +42,7 @@ export function CurrencyEditor({ answer, initialPreview = null }: { answer: Curr
   const save = useMutation({
     mutationFn: () => appApi.saveCurrency(chosen),
     onSuccess: (saved) => {
-      client.setQueryData<CurrencyAnswer>(CURRENCY_KEY, saved)
+      client.setQueryData<CurrencyAnswer>(queryKey, saved)
       // The bootstrap's venue.currency is what every page writes money in.
       void client.invalidateQueries({ queryKey: ['loyalty', 'bootstrap'] })
       setPreview(null)

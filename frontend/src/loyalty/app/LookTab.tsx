@@ -5,6 +5,7 @@ import { Check as CheckIcon, ImagePlus } from 'lucide-react'
 import { Button } from '../../workspace/ui/Button'
 import { Notice } from '../../workspace/ui/Notice'
 import { useBoot } from '../LoyaltyProvider'
+import { overviewScope } from '../overview/overviewMath'
 import { failureOf, mediaUrl } from '../lib/api'
 import { refusalKey } from '../lib/errors'
 import { points } from '../lib/format'
@@ -30,16 +31,17 @@ import {
  * The lists and the presets are the server's (AppLook); the look is saved as a whole, the logo at once on its own.
  */
 export function LookTab() {
-  const query = useQuery({ queryKey: LOOK_KEY, queryFn: appApi.look })
+  const boot = useBoot(), queryKey = [...LOOK_KEY, overviewScope(boot)]
+  const query = useQuery({ queryKey, queryFn: appApi.look })
   const data = query.data
 
-  if (query.isError && !data) return <LoadFailed error={query.error} onRetry={() => { void query.refetch() }} />
+  if (query.isError) return <LoadFailed error={query.error} onRetry={() => { void query.refetch() }} />
   if (!data) return <Loading />
-  return <LookEditor answer={data} />
+  return <LookEditor key={overviewScope(boot)} answer={data} queryKey={queryKey} />
 }
 
 /** The look once read. The form starts from the saved look and takes the server's answer after each save. */
-export function LookEditor({ answer }: { answer: LookAnswer }) {
+export function LookEditor({ answer, queryKey = LOOK_KEY }: { answer: LookAnswer; queryKey?: readonly unknown[] }) {
   const { t } = useTranslation()
   const boot = useBoot()
   const client = useQueryClient()
@@ -50,7 +52,7 @@ export function LookEditor({ answer }: { answer: LookAnswer }) {
   const save = useMutation({
     mutationFn: () => appApi.saveLook(lookBody(form, options)),
     onSuccess: (saved) => {
-      client.setQueryData<LookAnswer>(LOOK_KEY, prev => (prev ? { ...prev, look: { ...saved.look, logo_url: prev.look.logo_url } } : prev))
+      client.setQueryData<LookAnswer>(queryKey, prev => (prev ? { ...prev, look: { ...saved.look, logo_url: prev.look.logo_url } } : prev))
       setForm(lookFormOf(saved.look, options))
       setTried(false)
     },
@@ -133,7 +135,7 @@ export function LookEditor({ answer }: { answer: LookAnswer }) {
         </div>
       </form>
 
-      <LogoField logo={look.logo_url} limits={options.logo} />
+      <LogoField logo={look.logo_url} limits={options.logo} queryKey={queryKey} />
       </div>
 
       <aside className="space-y-2 lg:sticky lg:top-4 lg:self-start" aria-label={t('loyalty.app.look.preview', 'Preview')}>
@@ -145,7 +147,7 @@ export function LookEditor({ answer }: { answer: LookAnswer }) {
 }
 
 /** A preset: a strip of its colours, its name and line; pressed while it is the one applied. */
-function PresetButton({ preset, on, name, line, onPick }: { preset: Preset; on: boolean; name: string; line: string; onPick: () => void }) {
+export function PresetButton({ preset, on, name, line, onPick }: { preset: Preset; on: boolean; name: string; line: string; onPick: () => void }) {
   const bars = [preset.colors.primary, preset.colors.background, preset.colors.surface, preset.colors.success, preset.colors.info]
   return (
     <button type="button" aria-pressed={on} onClick={onPick} data-preset={preset.key}
@@ -165,7 +167,7 @@ function PresetButton({ preset, on, name, line, onPick }: { preset: Preset; on: 
 }
 
 /** One choice of a few, as pressed chips, with its label and what is wrong. */
-function Choice({ label, problem, children }: { label: string; problem: string | null; children: ReactNode }) {
+export function Choice({ label, problem, children }: { label: string; problem: string | null; children: ReactNode }) {
   const id = useId()
   return (
     <div role="group" aria-labelledby={id} className="space-y-1.5">
@@ -177,7 +179,7 @@ function Choice({ label, problem, children }: { label: string; problem: string |
 }
 
 /** The corner radius: the full admin's slider, 0 to 32 pixels. */
-function Radius({ value, min, max, problem, onChange }: { value: number; min: number; max: number; problem: string | null; onChange: (n: number) => void }) {
+export function Radius({ value, min, max, problem, onChange }: { value: number; min: number; max: number; problem: string | null; onChange: (n: number) => void }) {
   const { t, i18n } = useTranslation()
   const id = useId()
   return (
@@ -197,7 +199,7 @@ function Radius({ value, min, max, problem, onChange }: { value: number; min: nu
  * The venue's logo, the same one the full admin's Branding sets (`company_logo`): uploaded or replaced at once, apart
  * from Save; the server deletes the old file when it is ours.
  */
-function LogoField({ logo, limits }: { logo: string | null; limits: LookAnswer['options']['logo'] }) {
+function LogoField({ logo, limits, queryKey }: { logo: string | null; limits: LookAnswer['options']['logo']; queryKey: readonly unknown[] }) {
   const { t, i18n } = useTranslation()
   const locale = i18n.language || 'en'
   const client = useQueryClient()
@@ -205,7 +207,7 @@ function LogoField({ logo, limits }: { logo: string | null; limits: LookAnswer['
   const [problem, setProblem] = useState<'type' | 'size' | null>(null)
   const send = useMutation({
     mutationFn: (file: File) => appApi.uploadLogo(file),
-    onSuccess: ({ logo_url }) => client.setQueryData<LookAnswer>(LOOK_KEY, prev => (prev ? { ...prev, look: { ...prev.look, logo_url } } : prev)),
+    onSuccess: ({ logo_url }) => client.setQueryData<LookAnswer>(queryKey, prev => (prev ? { ...prev, look: { ...prev.look, logo_url } } : prev)),
   })
   const vars = { mb: points(megabytes(limits.max_kb), locale), edge: points(limits.max_edge, locale) }
   const failure = send.isError ? failureOf(send.error) : null

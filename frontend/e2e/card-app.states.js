@@ -1,0 +1,86 @@
+// Run after card-app.browser.js. All API requests remain intercepted local fixtures.
+async page => {
+  const base=new URL(page.url()).origin;if(!/^http:\/\/(127\.0\.0\.1|localhost):(5173|5810)$/.test(base))throw Error('Local fixtures required');
+  const root='C:/wamp64/www/Hexa-Tech/docs/loyalty-redesign/evidence/card-app/',checks=[];
+  const ok=(v,n)=>{if(!v)throw Error(n);checks.push(n);console.log('PASS: '+n)},button=name=>page.getByRole('button',{name,exact:true});
+  const fixture=body=>page.evaluate(async body=>(await fetch('/api/v1/admin/loyalty/__fixture',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})).json(),body);
+  const go=async(q='')=>{await page.goto(base+'/loyalty/app'+q);await page.locator('h1').waitFor()};
+  const ready=async()=>{await page.locator('.l-ca-wallets').waitFor();await page.locator('.l-ca-preview-reward strong').waitFor()};
+  const close=async()=>{await page.keyboard.press('Escape');await page.locator('dialog[open]').waitFor({state:'hidden'})};
+  const initial=await fixture({});await ready();
+  ok(initial.requests.every(r=>r.method==='GET'),'opening only reads settings');
+  ok(await page.getByLabel('Name on card',{exact:true}).getAttribute('readonly')==='','workspace name is not silently renamed');
+  await button('Light').click();ok(await page.locator('.l-ca-colors input[type=text]').nth(1).inputValue()==='#f5f7fb','light updates neutral palette');
+  ok((await fixture({})).look.colors.background==='#242c3b','draft is not saved early');
+  await button('View saved version').click();ok(await page.locator('.l-ca-viewport').evaluate(e=>getComputedStyle(e).getPropertyValue('--ca-background').trim())==='#242c3b','saved preview excludes draft');
+  await button('View draft version').click();ok(await page.locator('.l-ca-viewport').evaluate(e=>getComputedStyle(e).getPropertyValue('--ca-background').trim())==='#f5f7fb','draft preview restored');
+  await button('Save changes').click();await page.getByText('Saved. The member app shows these colours the next time it opens.',{exact:true}).waitFor();
+  let s=await fixture({});ok(s.look.colors.background==='#f5f7fb'&&s.look.colors.primary==='#37b6e9','save preserves accent while saving light neutrals');
+  ok(await button('Save changes').isDisabled(),'clean appearance cannot be resubmitted');
+  await button('Dark').click();await button('Discard changes').click();await page.locator('dialog[open]').getByRole('button',{name:'Discard changes',exact:true}).click();
+  ok(await page.locator('.l-ca-colors input[type=text]').nth(1).inputValue()==='#f5f7fb','discard restores saved appearance');
+  await page.getByRole('button',{name:/^More appearance options/}).click();ok(await page.locator('[data-colour]').count()===11,'all eleven colours remain editable');
+  await page.locator('#l-ca-advanced').getByRole('button',{name:'Glass',exact:true}).click();ok(await page.locator('.l-ca-viewport').getAttribute('data-card')==='glass','glass style remains available');
+  await page.locator('#l-ca-advanced').getByRole('button',{name:'Outline',exact:true}).click();ok(await page.locator('.l-ca-viewport').getAttribute('data-button')==='outline','button style changes preview');
+  const accent=page.locator('.l-ca-colors input[type=text]').first();await accent.fill('bad');await button('Save changes').click();ok(await accent.getAttribute('aria-invalid')==='true','invalid colour is rejected locally');
+  await accent.fill('#AABBCC');await fixture({failSave:true});await button('Save changes').click();await page.getByText('Your appearance was not saved. Your changes are still here; try again.',{exact:true}).waitFor();
+  ok(await accent.inputValue()==='#AABBCC','failed save preserves draft');await fixture({failSave:false,slow:true});await button('Save changes').click();
+  await page.waitForFunction(()=>document.querySelector('.l-ca-editor').disabled);ok(await accent.isDisabled(),'editing is disabled during save');
+  await page.getByText('Saved. The member app shows these colours the next time it opens.',{exact:true}).waitFor();await fixture({slow:false});
+  ok((await fixture({})).look.colors.primary==='#aabbcc','hex values are normalized by existing save contract');
+  await button('Show code').click();ok((await page.locator('dialog[open]').innerText()).includes('non-scannable'),'sample code cannot be mistaken for a credential');
+  await close();ok(await button('Show code').evaluate(e=>e===document.activeElement),'dialog restores focus');
+  await button('Wallet options').click();ok((await page.locator('dialog[open]').innerText()).includes('does not create a pass'),'wallet preview has no fabricated pass');await close();
+  await button('View reward').click();ok((await page.locator('dialog[open]').innerText()).includes('no reward is claimed'),'reward preview cannot redeem');await close();
+  await button('Auto').click();ok((await page.locator('dialog[open]').innerText()).includes('not supported'),'automatic theme explains its limitation');await close();
+  await page.getByLabel('Example member',{exact:true}).selectOption('2');ok((await page.locator('.l-ca-member-card').innerText()).includes('Gold'),'example level comes from current programme');
+  await page.getByLabel('Member state',{exact:true}).selectOption('new');ok((await page.locator('.l-ca-member-card b').innerText()).includes('0 points'),'new member preview changes balance');
+  await page.getByLabel('Member state',{exact:true}).selectOption('empty');ok(await page.locator('.l-ca-preview-content').count()===0,'card-only preview changes content');
+  await page.getByLabel('Member state',{exact:true}).selectOption('rewards');
+  await button('Desktop').click();await page.locator('dialog[open]').waitFor();ok(await page.locator('.l-ca-desktop .l-ca-viewport').evaluate(e=>getComputedStyle(e).display)==='grid','desktop preview has a two-column layout');await page.locator('dialog[open]').screenshot({path:root+'render-desktop-preview.png'});await close();await button('Mobile').click();
+  await page.locator('[data-provider=apple]').getByRole('button',{name:'Test on device',exact:true}).click();ok((await page.locator('dialog[open]').innerText()).includes('does not generate anonymous sample passes'),'device test is truthful guidance');await close();
+  ok(await page.locator('[data-provider=google]').getByRole('button',{name:'Test on device',exact:true}).isDisabled(),'unconfigured provider cannot be tested');
+  await button('Dark').click();
+  const png=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=','base64');
+  await page.locator('.l-ca-logo input[type=file]').setInputFiles({name:'fixture.png',mimeType:'image/png',buffer:png});
+  await page.getByText('Logo saved. Discarding appearance changes keeps this logo.',{exact:true}).waitFor();
+  ok((await fixture({})).logoCount===1,'logo uses immediate existing upload');await button('Discard changes').click();await page.locator('dialog[open]').getByRole('button',{name:'Discard changes',exact:true}).click();
+  ok(await page.locator('.l-ca-logo img').getAttribute('src')==='/local-fixture-logo.svg','discard keeps an uploaded logo');
+  await accent.fill('#123456');await page.getByRole('link',{name:'Currency settings →',exact:true}).click();
+  await page.getByRole('heading',{name:'Leave with unsaved changes?',exact:true}).waitFor();await button('Keep editing').click();ok(await accent.inputValue()==='#123456','navigation guard keeps draft');
+  await page.getByRole('link',{name:'Currency settings →',exact:true}).click();await button('Discard and leave').click();ok(new URL(page.url()).searchParams.get('tab')==='currency','confirmed navigation discards draft');
+  await fixture({look:initial.look});await go();await ready();
+  await page.locator('[data-provider=apple]').getByRole('link',{name:'Connection settings',exact:true}).click();await page.getByLabel('Pass Type ID',{exact:true}).waitFor();
+  ok(new URL(page.url()).searchParams.get('tab')==='wallet','wallet bookmark opens existing settings');ok(await page.locator('[data-file]').count()===3,'all certificate/key upload controls remain');
+  ok(await page.locator('input[type=password]').count()===0,'stored password is never exposed');
+  await go('?tab=currency');await page.getByRole('button',{name:'Save currency',exact:true}).waitFor();ok((await page.locator('.l-ca-settings').innerText()).includes('never converts'),'currency warning and confirmation flow retained');
+  await go('?tab=app');await page.locator('[data-preview]').waitFor();ok(await page.locator('[data-colour]').count()===11,'old appearance bookmark retains advanced controls');
+  await fixture({failLook:true});await go();await page.locator('.l-ov-recovery').waitFor();ok(await page.locator('.l-ca-editor').count()===0,'failed initial look is not defaults');
+  await fixture({failLook:false});await button('Try again').click();await ready();ok(true,'look retry recovers');
+  await fixture({failWallet:true});await go();await page.getByText('Wallet connections could not be loaded.',{exact:true}).waitFor();ok(await page.locator('.l-ca-editor').count()===1&&await page.locator('.l-ca-wallets').count()===0,'wallet failure preserves appearance without false readiness');
+  await fixture({failWallet:false});await button('Try again').click();await ready();
+  await fixture({failSummary:true});await go();await page.getByText('Programme details are unavailable.',{exact:true}).first().waitFor();ok(await page.locator('.l-ca-editor').count()===1,'programme preview failure preserves settings');
+  await fixture({failSummary:false,denied:true});await go();await page.locator('.l-ov-recovery').waitFor();ok(await page.locator('.l-ca-editor').count()===0,'denied reads hide cached appearance');
+  const restricted=structuredClone(initial.boot);restricted.staff.can.manage_app=false;
+  await fixture({denied:false,boot:restricted,requests:[]});await go();await page.locator('.l-ov-recovery').waitFor();s=await fixture({});ok(!s.requests.some(r=>['app-look','wallet'].includes(r.path)),'staff without permission request no settings');
+  const noWallet=structuredClone(initial.boot);noWallet.features.wallet=false;
+  await fixture({boot:noWallet,requests:[]});await go();await page.getByText('Your plan does not include wallet passes. Member app appearance remains available.',{exact:true}).waitFor();s=await fixture({});ok(!s.requests.some(r=>r.path==='wallet'),'plan gating avoids wallet read');
+  await fixture({boot:initial.boot,look:initial.look});
+  for(const width of [1440,1280,1024,768,390,320]){
+    await page.setViewportSize({width,height:width<600?844:1080});await go();await ready();await page.evaluate(()=>document.fonts.ready);
+    ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1&&document.body.scrollWidth<=innerWidth+1),'page fits '+width+'px');
+    ok(await page.locator('.l-ca-field input,.l-ca-field select').evaluateAll(es=>es.every(e=>e.getBoundingClientRect().width>120)),'fields remain usable '+width+'px');
+    if([1440,390].includes(width))await page.screenshot({path:root+'render-'+width+'.png',fullPage:true});
+    await button('Show code').click();await page.locator('dialog[open]').waitFor();
+    ok(await page.locator('dialog[open]').evaluate(e=>{const r=e.getBoundingClientRect();return r.left>=0&&r.right<=innerWidth+1&&r.height<=innerHeight&&e.scrollWidth<=e.clientWidth+1}),'dialog fits '+width+'px');await close();
+  }
+  await page.setViewportSize({width:1440,height:1080});await button('Settings').click();await button('Light').click();await close();await page.screenshot({path:root+'render-light.png',fullPage:true});ok(true,'workspace light theme remains supported');
+  for(const lang of ['ru','de','fr','es']){
+    await page.getByRole('button',{name:/^(Settings|Настройки|Einstellungen|Réglages|Configuración)$/}).click();await page.getByRole('combobox',{name:/Language|Язык|Sprache|Langue|Idioma/}).selectOption(lang);await close();
+    ok(!(await page.locator('.l-ca-page').innerText()).includes('Design your member experience'),'translated '+lang);
+    await page.setViewportSize({width:390,height:1080});ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'translated mobile fits '+lang);await page.screenshot({path:root+'render-'+lang+'.png',fullPage:true});await page.setViewportSize({width:1440,height:1080});
+  }
+  s=await fixture({});ok(s.requests.filter(r=>['app-look','wallet','overview/summary'].includes(r.path)).every(r=>new URLSearchParams(r.query).get('brand_id')==='all'),'settings calls retain organization-wide scope');
+  ok(s.requests.filter(r=>r.method!=='GET').every(r=>['app-look','app-look/logo','wallet'].includes(r.path)),'preview never writes member or reward records');
+  ok(s.errors.length===0,'no browser runtime errors');return {passed:checks.length,checks,errors:s.errors};
+}

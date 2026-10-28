@@ -76,6 +76,8 @@ export interface LookOptions {
   radius: { min: number; max: number }
   presets: Preset[]
   logo: PictureLimits
+  /** Neutral palettes consumed as ordinary saved colours; automatic theme switching is not supported. */
+  color_modes?: Record<string, Colors>
 }
 
 export interface LookAnswer {

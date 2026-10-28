@@ -15,6 +15,7 @@ vi.mock('react-i18next', () => ({
 vi.mock('../../lib/api', () => ({ api: {}, resolveImage: (url: string | null | undefined) => url ?? null }))
 
 import { LoyaltyContext } from '../LoyaltyProvider'
+import { overviewScope } from '../overview/overviewMath'
 import type { Bootstrap, Can, Features } from '../lib/types'
 import { CURRENCY_KEY, LOOK_KEY, WALLET_KEY } from './api'
 import { AppPage } from './AppPage'
@@ -52,12 +53,13 @@ const look: LookAnswer = {
 
 const render = (search: string, c: Can, features?: Features) => {
   const client = new QueryClient()
-  client.setQueryData(WALLET_KEY, { wallet })
-  client.setQueryData(LOOK_KEY, look)
-  client.setQueryData(CURRENCY_KEY, { currency: 'EUR', options: ['EUR', 'GBP', 'USD'] })
+  const scope = overviewScope(boot(c, features))
+  client.setQueryData([...WALLET_KEY, scope], { wallet })
+  client.setQueryData([...LOOK_KEY, scope], look)
+  client.setQueryData([...CURRENCY_KEY, scope], { currency: 'EUR', options: ['EUR', 'GBP', 'USD'] })
   return renderToStaticMarkup(
     <QueryClientProvider client={client}>
-      <MemoryRouter initialEntries={[`/loyalty/app${search}`]}>
+      <MemoryRouter initialEntries={[`/loyalty/app?view=detailed${search.replace('?', '&')}`]}>
         <LoyaltyContext.Provider value={{ data: boot(c, features), isLoading: false, isError: false, error: null, refetch: () => {} }}>
           <AppPage />
         </LoyaltyContext.Provider>

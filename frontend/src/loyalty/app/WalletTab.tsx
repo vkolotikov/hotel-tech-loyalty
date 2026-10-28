@@ -1,4 +1,6 @@
 import { useState } from 'react'
+import { useBoot } from '../LoyaltyProvider'
+import { overviewScope } from '../overview/overviewMath'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Upload } from 'lucide-react'
@@ -37,16 +39,17 @@ export function WalletTab({ wallet }: { wallet: boolean }) {
 }
 
 function WalletSettings() {
-  const query = useQuery({ queryKey: WALLET_KEY, queryFn: appApi.wallet })
+  const boot = useBoot(), queryKey = [...WALLET_KEY, overviewScope(boot)]
+  const query = useQuery({ queryKey, queryFn: appApi.wallet })
   const data = query.data
 
-  if (query.isError && !data) return <LoadFailed error={query.error} onRetry={() => { void query.refetch() }} />
+  if (query.isError) return <LoadFailed error={query.error} onRetry={() => { void query.refetch() }} />
   if (!data) return <Loading />
-  return <WalletView wallet={data.wallet} />
+  return <WalletView key={overviewScope(boot)} wallet={data.wallet} queryKey={queryKey} />
 }
 
 /** The settings once read. The form starts from the saved fields and takes the server's answer after each save. */
-export function WalletView({ wallet: w }: { wallet: Wallet }) {
+export function WalletView({ wallet: w, queryKey = WALLET_KEY }: { wallet: Wallet; queryKey?: readonly unknown[] }) {
   const { t } = useTranslation()
   const client = useQueryClient()
   const [form, setForm] = useState<WalletForm>(() => walletFormOf(w))
@@ -56,7 +59,7 @@ export function WalletView({ wallet: w }: { wallet: Wallet }) {
   const save = useMutation({
     mutationFn: () => appApi.saveWallet(walletBody(form)),
     onSuccess: (answer) => {
-      client.setQueryData(WALLET_KEY, answer)
+      client.setQueryData(queryKey, answer)
       setForm(walletFormOf(answer.wallet))
       setTried(false)
     },
@@ -141,7 +144,7 @@ export function WalletView({ wallet: w }: { wallet: Wallet }) {
         </ul>
       </Part>
 
-      {uploading && <UploadDialog kind={uploading} wallet={w} onClose={() => setUploading(null)} />}
+      {uploading && <UploadDialog kind={uploading} wallet={w} queryKey={queryKey} onClose={() => setUploading(null)} />}
     </div>
   )
 }

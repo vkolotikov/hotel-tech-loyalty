@@ -20,7 +20,7 @@ import { FILE_LINE_WORDS, FILE_WORDS } from './words'
  * one, which must then open the new file. The server checks the file by its content and says what is wrong in a code
  * the workspace words (errors.ts `upload`).
  */
-export function UploadDialog({ kind, wallet, onClose }: { kind: WalletFile; wallet: Wallet; onClose: () => void }) {
+export function UploadDialog({ kind, wallet, onClose, queryKey = WALLET_KEY }: { kind: WalletFile; wallet: Wallet; onClose: () => void; queryKey?: readonly unknown[] }) {
   const { t } = useTranslation()
   const client = useQueryClient()
   const first = useFirstFocus<HTMLInputElement>()
@@ -32,7 +32,7 @@ export function UploadDialog({ kind, wallet, onClose }: { kind: WalletFile; wall
 
   const send = useMutation({
     mutationFn: (chosen: File) => appApi.uploadWalletFile(kind, chosen, password),
-    onSuccess: (answer) => { client.setQueryData(WALLET_KEY, answer); onClose() },
+    onSuccess: (answer) => { client.setQueryData(queryKey, answer); onClose() },
   })
   const failure = send.isError ? failureOf(send.error) : null
 
