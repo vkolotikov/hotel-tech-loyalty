@@ -25,6 +25,9 @@ describe('Ways to earn navigation and illustrative amounts', () => {
     expect(filteredWays(answer, 'earn', '', 'active', w => w.key).map(w => w.key)).toEqual(['earn_rate', 'points_on_spend'])
     expect(filteredWays(answer, 'earn', ' STAMP ', 'off', w => w.key).map(w => w.key)).toEqual(['stamp_card'])
     expect(filteredWays(answer, 'bonus', 'REFERRALS', 'all', w => w.key).map(w => w.key)).toEqual(['referrals'])
+    const unused = { ...answer, not_used: ['points_on_spend'] }
+    expect(filteredWays(unused, 'earn', '', 'active', w => w.key).map(w => w.key)).toEqual(['earn_rate'])
+    expect(filteredWays(unused, 'earn', '', 'all', w => w.key)).toHaveLength(6)
   })
   it.each([['50', '5', 250], ['10,50', '1.5', 15], ['0', '5', 0], ['2', '0.01', 0], ['', '5', null], ['-1', '5', null], ['NaN', '5', null], ['50', '0', null], ['50', '', null], ['1e50', '1e50', null]])('base example %s × %s gives %s without an award', (amount, rate, result) => {
     expect(baseExample(String(amount), String(rate))).toBe(result)
