@@ -29,6 +29,8 @@ async page => {
   for(const width of [1440,1280,1024,768,390,320]){
     await page.setViewportSize({width,height:1080});await go();await ready();await page.evaluate(()=>document.fonts.ready);
     ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1&&document.body.scrollWidth<=innerWidth+1),'dashboard fits '+width+'px');
+    await page.waitForFunction(()=>[...document.querySelectorAll('.l-in-trend-svg,.l-in-points-svg')].every(e=>Math.abs(e.getBoundingClientRect().width-e.viewBox.baseVal.width)<1));
+    ok(true,'charts retain readable coordinate scale at '+width+'px');
     if(width===390)await page.screenshot({path:root+'render-mobile.png',fullPage:true});
     for(const name of ['filters','definitions']){
       await (name==='filters'?page.getByRole('button',{name:/^Reporting period:/}):button('Definitions')).click();await page.locator('dialog[open]').waitFor();

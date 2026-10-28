@@ -24,6 +24,7 @@ export function RequestsPage() {
   const cleared = useRef('')
   const detailRef = useRef<HTMLElement>(null)
   const focusRecord = useRef('')
+  const restoreRow = useRef(false)
   useEffect(() => { latest.current = params }, [params])
   const filters = inboxFilters(params.toString())
   const scope = overviewScope(boot)
@@ -35,6 +36,15 @@ export function RequestsPage() {
   }, [forbidden, query.isSuccess, client, scope])
   const data = forbidden ? undefined : query.data
   const selected = data?.selected ?? data?.records[0]
+  useEffect(() => {
+    if (!restoreRow.current || params.get('detail') === '1' || !data) return
+    // Wait until the native dialog has unmounted and the list is no longer inert.
+    const frame = requestAnimationFrame(() => {
+      const row = document.querySelector<HTMLButtonElement>('.l-rq-row[aria-pressed="true"]')
+      if (row) { row.focus(); restoreRow.current = false }
+    })
+    return () => cancelAnimationFrame(frame)
+  }, [params, data])
   useEffect(() => {
     if (selected && focusRecord.current === selected.key && detailRef.current) {
       focusRecord.current = ''
@@ -76,9 +86,8 @@ export function RequestsPage() {
       {selected ? <RecordDetail detailRef={detailRef} key={selected.key} row={selected} blocked={query.isFetching || query.isError} hold={() => change({ record: selected.key, request: null }, false, true)} onDetails={() => change({ record: selected.key, detail: '1' })} /> : <aside className="l-ov-panel l-rq-empty"><p>{say('choose')}</p></aside>}
     </div>}
     {selected?.kind === 'referral' && params.get('detail') === '1' && <ReferralDialog row={selected} onClose={() => {
+      restoreRow.current = true
       change({ detail: null }, false, true)
-      // Selection refreshes the list, so the original DOM opener may no longer exist.
-      requestAnimationFrame(() => document.querySelector<HTMLButtonElement>('.l-rq-row[aria-pressed="true"]')?.focus())
     }} />}
   </div>
 }
