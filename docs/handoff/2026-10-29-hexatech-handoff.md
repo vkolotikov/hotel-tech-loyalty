@@ -3,6 +3,21 @@
 Read this first, then `2026-10-28-hexatech-handoff.md` for previous milestones and
 `2026-10-27-hexatech-handoff.md` for the full environment and history. Root AGENTS.md and CLAUDE.md still apply.
 
+## Public-launch audit — review only
+
+The subsequent audit recommends **holding the public launch**. Full report:
+`docs/audits/2026-10-29-public-launch-audit.md`, with platform, Loyalty, booking and UI appendices,
+reproduction files and a machine-readable verification summary. Nine high-priority findings cover
+identity/session/ownership, integration destinations, points and refunds; other configuration/UI issues
+and unverified operational gates are listed separately. No product improvements or deployment were made.
+
+Audit source `b13381c795d2c5b66e4c9aa1650b97b1c61f2ed5`, branch `audit/public-launch-20261029`.
+Existing scoped PHP runs: **7,070 passed / 1 failed / 7 skipped / 45,437 assertions**. The failure is the
+preexisting untracked Alexa static directory's missing reserved slug; skips require PostgreSQL.
+Frontend **5,730 passed**, TypeScript/build passed, **718 browser fixture checks** passed. Whole-app lint
+and dependency scans have findings. Twenty additional isolated probes establish defects, not fixes.
+Private artifacts: `E:/Hexa-Tech-audit-20261029/`. Production and the next source-patch baseline below remain unchanged.
+
 ## Current release: dedicated Loyalty mobile web
 
 Production **16788ad8cad9ecf0886c28c2ecd0997f40a725d9**, live content verified **29 October, 12:22 Europe/Riga**.

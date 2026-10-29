@@ -1,0 +1,72 @@
+[
+  {
+    "delay": 0,
+    "url": "http://127.0.0.1:5173/loyalty?tier=3&state=all",
+    "search": "",
+    "rows": 2,
+    "requests": [
+      {
+        "path": "members",
+        "query": "?brand_id=all&state=all&per_page=10",
+        "method": "GET",
+        "payload": null
+      },
+      {
+        "path": "members",
+        "query": "?brand_id=all&q=Jamie&state=all&per_page=10",
+        "method": "GET",
+        "payload": null
+      },
+      {
+        "path": "members",
+        "query": "?brand_id=all&tier_id=3&state=all&per_page=10",
+        "method": "GET",
+        "payload": null
+      }
+    ]
+  },
+  {
+    "delay": 700,
+    "url": "http://127.0.0.1:5173/loyalty?tier=3&state=all",
+    "search": "",
+    "rows": 2,
+    "requests": [
+      {
+        "path": "members",
+        "query": "?brand_id=all&state=all&per_page=10",
+        "method": "GET",
+        "payload": null
+      },
+      {
+        "path": "members",
+        "query": "?brand_id=all&q=Jamie&state=all&per_page=10",
+        "method": "GET",
+        "payload": null
+      },
+      {
+        "path": "members",
+        "query": "?brand_id=all&tier_id=3&state=all&per_page=10",
+        "method": "GET",
+        "payload": null
+      },
+      {
+        "path": "members",
+        "query": "?brand_id=all&state=all&per_page=10",
+        "method": "GET",
+        "payload": null
+      },
+      {
+        "path": "members",
+        "query": "?brand_id=all&q=Jamie&state=all&per_page=10",
+        "method": "GET",
+        "payload": null
+      },
+      {
+        "path": "members",
+        "query": "?brand_id=all&tier_id=3&state=all&per_page=10",
+        "method": "GET",
+        "payload": null
+      }
+    ]
+  }
+]
