@@ -155,4 +155,12 @@
   [data-loyalty][data-overview] .l-mw-validity button.bg-a-surface { border-radius:10px; background:linear-gradient(175deg,var(--l-ov-raised),var(--l-ov-bottom)); box-shadow:var(--l-ov-shadow); min-height:48px; padding:10px 16px; flex:1; }
   [data-loyalty][data-overview] .l-mw-validity button.bg-a-surface svg { display:none; }
   [data-loyalty][data-overview] .l-mw-benefit h2 { font-size:20px; line-height:30px; }
+  [data-loyalty][data-overview] .l-mw-metric { padding-bottom:6px; }
+  [data-loyalty][data-overview] .l-mw-latest { padding:15px; }
+  [data-loyalty][data-overview] .l-mw-more > .l-mw-panel:not(.l-mw-advanced) { padding:16px 15px 12px; }
+  [data-loyalty][data-overview] .l-mw-more .l-mw-eyebrow { font-size:11px; margin-bottom:-4px; }
+  [data-loyalty][data-overview] .l-mw-advanced p { font-size:12px; line-height:18px; }
+  [data-loyalty][data-overview] .l-mw-more .l-ov-button { border-bottom-color:transparent; border-right-color:transparent; }
+  [data-loyalty][data-overview] .l-mw-full-form .l-ov-heading-row h2 { font-weight:600; }
+  [data-loyalty][data-overview] .l-mw-points .l-rd-person-inset strong { line-height:24px; }
 }
