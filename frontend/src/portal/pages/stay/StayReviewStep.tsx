@@ -3,7 +3,6 @@ import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { apiErrorCode, bookErrorFallback, bookErrorKey, portalApi } from '../../lib/portalApi'
 import { formatDay } from '../../lib/dates'
-import { counted } from '../../lib/plural'
 import { Button } from '../../ui/Button'
 import { Card } from '../../ui/Card'
 import { Field, INPUT_CLASS } from '../../ui/Field'
@@ -134,8 +133,6 @@ export function StayReviewStep({ catalogue, state, onChange, onBack, onBounce, o
       {policy && (
         <div className="text-xs text-p-text-2 space-y-1">
           <p>{t('portal.stay.arrival_from', 'Arrival from {{time}}', { time: policy.check_in_time })} · {t('portal.stay.departure_by', 'Departure by {{time}}', { time: policy.check_out_time })}</p>
-          {policy.cancel_hours > 0 && <p>{counted(t, 'stay.free_cancellation', policy.cancel_hours)}</p>}
-          {policy.cancellation_policy && <p><span className="font-medium">{t('portal.bookings.policy', 'Cancellation policy')}:</span> {policy.cancellation_policy}</p>}
         </div>
       )}
 

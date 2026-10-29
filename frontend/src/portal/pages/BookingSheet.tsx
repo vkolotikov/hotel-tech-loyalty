@@ -27,7 +27,7 @@ function Row({ label, children }: { label: string; children: ReactNode }) {
 }
 
 function policyText(kind: BookingKind, policies: { services_cancellation_policy: string; booking_cancellation_policy: string } | undefined): string | null {
-  const text = kind === 'stay' ? policies?.booking_cancellation_policy : policies?.services_cancellation_policy
+  const text = kind === 'service' ? policies?.services_cancellation_policy : null
   return text ? text : null
 }
 

@@ -126,8 +126,9 @@ describe('StayReviewStep', () => {
     expect(html).toContain('193.50')
     expect(html).toContain('Arrival from 15:00')
     expect(html).toContain('Departure by 11:00')
-    expect(html).toContain('Free cancellation up to 48 hours before arrival.')
-    expect(html).toContain('Free until two days before.')
+    expect(html).not.toContain('Free cancellation')
+    expect(html).not.toContain('Cancellation policy')
+    expect(html).not.toContain('Free until two days before.')
     expect(html).not.toMatch(/<button[^>]*disabled=""[^>]*>Continue/)
   })
 
