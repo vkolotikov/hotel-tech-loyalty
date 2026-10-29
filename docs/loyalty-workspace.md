@@ -10,6 +10,11 @@ campaigns, card and app, pictures, currency).
 
 Campaigns Figma redesign (28 October 2026): see `loyalty-redesign/19-CAMPAIGNS-REPORT.md` for CM-01–04, the two-step email editor, server list filters, saved audience copies, Push/SMS/Segments layouts and verification. Existing route names and delivery writers are unchanged.
 
+Insights layout refinement (29 October 2026, live verified): populated membership levels stay beside the donut;
+empty levels remain in an expandable list. Long lists are bounded and keyboard-scrollable, and the activity chart
+no longer stretches with them. All report data, routes and interactions are retained. See
+`loyalty-redesign/20-INSIGHTS-LAYOUT-REPORT.md` for Figma comparison, responsive checks and release evidence.
+
 ## Who has it, and the ways in and back
 
 Scan redesign (28 October, deployed and live verified): `/loyalty/scan` now follows the exact desktop/mobile
