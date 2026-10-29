@@ -40,7 +40,13 @@ operator provenance, scheduler recovery, delayed jobs and unavailable-check beha
 frontend **5,766 tests / 399 files** pass. The lint regression gate retains its 1,393 legacy diagnostics.
 Local Chrome fixtures cover seven checks, refresh/failure/retry, destinations and six viewport/language views;
 desktop 1440 and mobile 320 screenshots were visually inspected, with no horizontal overflow or runtime errors.
-Final built-artifact checks and deployment evidence will be recorded below after verification.
+The isolated deployment artifact also passes **69 PHP tests / 3,116 assertions**, **5,766 frontend tests**,
+TypeScript and a fresh Vite/postbuild. Its first cold frontend run timed out at 5 seconds in the existing
+filesystem-wide `fixedInBlur` scan; the full rerun with a 30-second execution allowance passed without changing
+an assertion or source rule. Built Chrome repeats the status-page checks and passes **130 existing Settings/Scan
+checks**, with no runtime errors. The built 1440 screenshot was visually inspected; its pixels match the source
+render. Existing build warnings about external kit fonts, CSS import order and large chunks remain.
+Production content verification is recorded separately after deployment.
 
 ## External acceptance still open
 
@@ -50,6 +56,7 @@ Final built-artifact checks and deployment evidence will be recorded below after
   uploaded-file backups and SiteGround sender/DNS state remain unverified. No changes were made in either service.
 - Need a controlled recipient explicitly designated for a test campaign. No live emails were sent.
 - Need physical ACR122U/card type and OS testing; native PC/SC requires a trusted desktop connector.
+  The workstation currently reports no connected SmartCardReader/ACR122/NFC/contactless device.
 - Wallet acceptance requires the organisation's Apple pass certificate/team/pass-type identifiers and/or Google
   Wallet issuer/service-account setup, plus a real iOS/Android save-and-scan test. Do not paste secrets in chat.
 - A database backup alone does not establish uploaded-media recovery; restore testing must use an isolated target.
