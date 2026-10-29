@@ -5,7 +5,33 @@ The owner identified the existing **card builder** and authorized a controlled e
 Existing credentials were read in memory. No key, password, certificate bundle, access token or signed
 Google save URL was printed, committed or sent to an unrelated service.
 
-## Latest checkpoint: production identity and settings saved; file uploads pending
+## Latest checkpoint: uploads verified and temporary copies removed
+
+After the owner reported the uploads complete, production was rechecked at **18:58 Europe/Riga**:
+org **19 Kolotikovs**, staff **62**, expected pass/team/issuer/class identifiers, and **all three upload flags true**.
+The certificate opens with its blank upload password; the intermediate and Google service-account uploads were
+accepted by their existing content validators. Credential contents were not retrieved or printed.
+
+The first read found wallet delivery switched on. A fresh Google API check still reported the dedicated
+LoyaltyClass as **draft**, so the previously agreed disabled state was restored through the existing wallet
+writer. Final GET confirms **`is_active=false`**, all three upload flags true, and both missing arrays containing
+only **`switched_off`**. The loaded settings UI was refreshed. These readiness flags do not replace provider
+publishing approval, pass artwork/update implementation or physical-device acceptance.
+
+Removed exactly the three temporary upload files (`apple-pass.p12`, `apple-wwdr.pem`, `google-wallet.json`) from
+the protected local transfer folder. Verified all three absent, as well as both prior combined `credentials.json`
+copies. Original card-builder credentials are untouched. The harmless instruction file now marks the upload
+complete, preventing accidental repeat preparation. No further user upload is needed.
+
+Sanitized production evidence: `2026-10-29-launch-operations-evidence/wallet-production-verification.json`.
+Google access/list GETs returned 200, with the loyalty class still draft. No member pass/object or email was
+issued by the agent. Application source/build and the next deployment patch baseline remain unchanged.
+
+Next work is template/artwork finalization, automatic balance updates, Google class publishing validation and
+real iOS/Android save-and-scan acceptance. Do not call wallets publicly launched or mistake the agent's draft
+for a submission awaiting Google's review.
+
+## Earlier checkpoint: production identity and settings saved; file uploads pending
 
 The owner signed in and then delegated the shared/separate-brand decision ("do what is the best to do"). Live
 bootstrap identifies **organisation 19, Kolotikovs**, staff user **62**, active owner, wallet feature enabled.

@@ -69,8 +69,8 @@ remain unverified because the owner's existing browser session is unavailable to
 - Follow-up verified the existing card-builder Apple certificate and Google issuer credentials; no new accounts
   are needed on this evidence. Created a dedicated draft LoyaltyClass for the owner's selected FDS Cards UK;
   it cannot issue passes yet. Production login is verified (org 19, Kolotikovs, default FDS Cards brand) and public
-  wallet identifiers are saved with passes OFF. Three credential files await manual upload because Chrome's
-  file-access check rejected both working folders; see the preflight report's protected-file location/cleanup.
+  wallet identifiers and all three credential uploads are now verified, with passes OFF. The owner completed the
+  uploads after Chrome's file-access check blocked automation; all temporary credential copies were removed.
   branded artwork/update implementation and real iOS/Android save-and-scan acceptance remain open. Details are
   in the wallet/email preflight report. Do not paste secrets in chat.
 - A database backup alone does not establish uploaded-media recovery; restore testing must use an isolated target.

@@ -1,0 +1,31 @@
+{
+  "checked_at": "2026-10-29T16:58:54.615Z",
+  "organization_id": 19,
+  "wallet": {
+    "apple_pass_type_id": "pass.co.uk.fds-cards.digitalcard",
+    "apple_team_id": "HNWSAQ5CQ9",
+    "apple_organization_name": "FDS Cards UK",
+    "apple_pass_background_color": "rgb(13,13,13)",
+    "apple_pass_foreground_color": "rgb(255,255,255)",
+    "apple_pass_label_color": "rgb(201,168,76)",
+    "apple_cert_uploaded": true,
+    "apple_cert_password_set": false,
+    "apple_wwdr_uploaded": true,
+    "apple_ready": false,
+    "google_issuer_id": "3388000000023129907",
+    "google_class_suffix": "hexatech_fds_cards_uk_loyalty",
+    "google_service_account_uploaded": true,
+    "google_ready": false,
+    "is_active": false,
+    "apple_missing": [
+      "switched_off"
+    ],
+    "google_missing": [
+      "switched_off"
+    ]
+  },
+  "uploads_verified": true,
+  "google_provider_class_status": "draft",
+  "temporary_credential_files_removed": true,
+  "member_passes_issued_by_agent": 0
+}

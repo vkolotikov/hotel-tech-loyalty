@@ -3,7 +3,31 @@
 Read this first, then `2026-10-28-hexatech-handoff.md` for previous milestones and
 `2026-10-27-hexatech-handoff.md` for the full environment and history. Root AGENTS.md and CLAUDE.md still apply.
 
-## Latest checkpoint: production wallet identifiers saved, manual file uploads needed
+## Latest checkpoint: wallet credentials accepted; temporary files removed
+
+Owner reported uploads done. At **18:58 Europe/Riga**, verified the authenticated production org **19 Kolotikovs**,
+user/staff **62**, expected wallet IDs, and **all three credential upload flags true**. The certificate opens;
+password flag is false by design because this same-certificate transfer was exported with a blank password.
+No credential bytes were read back or printed.
+
+Delivery had been switched on during upload, but a fresh Google API read still returned **draft** for the
+dedicated loyalty class. Restored the previously agreed OFF state via the wallet writer. Final state:
+**`is_active=false`**, uploaded Apple P12/WWDR and Google key, both missing arrays **`["switched_off"]`**.
+Settings UI refreshed. The two brands retain their shared loyalty configuration; other organisations untouched.
+
+Deleted the three exact private temporary upload files from `storage/app/private/wallet-transfer/`, verified
+them and both previous combined transfer files absent, and marked `UPLOAD-INSTRUCTIONS.txt` complete.
+**No further manual upload is needed.** Original card-builder credentials remain. Do not regenerate copies.
+
+Evidence: `docs/audits/2026-10-29-launch-operations-evidence/wallet-production-verification.json`; full record:
+`docs/audits/2026-10-29-wallet-email-preflight.md`. Chrome context `fds-wallet-setup` remains signed in on
+`/loyalty/app?tab=wallet`. No source/build change or deploy; patch baseline below still applies.
+
+Wallets are configured but not publicly accepted: Google class is still the agent-created draft (not submitted
+and waiting on Google), branded pass artwork and automatic balance-update support remain incomplete, and real
+iOS/Android save-and-scan checks remain. No new email or member object/pass was issued by the agent.
+
+## Earlier checkpoint: production wallet identifiers saved, manual file uploads needed
 
 Owner signed in, then delegated the shared/separate choice ("do what is the best to do"). Verified live bootstrap:
 **org 19 Kolotikovs**, staff/user **62**, active owner, wallet plan feature. Its brands are **FDS Cards (23,
