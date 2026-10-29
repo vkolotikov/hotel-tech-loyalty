@@ -1,4 +1,5 @@
 {
+  "emptyLevels": "Levels with no members ({{n}})", "noLevelMembers": "No members in this snapshot yet.",
   "line": "See how your programme is performing.",
   "definitions": "Definitions", "definitionsTitle": "Metric definitions", "definitionsLine": "Know what each number includes.",
   "export": "Export report", "filters": "Report filters", "filterLine": "Choose the period and members included in this report.",

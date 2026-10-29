@@ -53,7 +53,7 @@ function ReportDashboard() {
       <div className="l-in-context"><p>{say('context', { days: data.days, zone: data.timezone })}{data.comparison && <> · {say('previous')}: {period(data.comparison.from, data.comparison.to)}</>} · {say('updated', { when: when(data.updated_at, i18n.language, data.timezone) ?? '—' })}</p><button onClick={() => { void query.refetch() }} disabled={query.isFetching} className="l-ov-link">{say('refresh')}</button></div>
       {data.current.members === 0 && <p role="status">{say('empty')}</p>}
       <ReportTiles data={data} onDefinitions={() => setModal('definitions')} />
-      <div className="l-in-grid l-in-wide"><ReportTrend data={data} /><ReportLevels data={data} /></div>
+      <div className="l-in-grid l-in-wide l-in-activity-row"><ReportTrend data={data} /><ReportLevels data={data} /></div>
       <div className="l-in-grid l-in-even"><ReportPoints data={data} /><ReportCard title={say('rewards')} action={<Link className="l-ov-link" to="/loyalty/requests?type=redemption&view=all">{say('requests')}</Link>}>
         <p>{say('claimsLine', { n: n(data.current.claims) })}</p>
         <dl className="l-in-outcomes">{[[say('fulfilled'), n(data.current.fulfilled)], [say('pending'), n(data.current.pending)], [say('rate'), data.current.fulfilment === null ? '—' : n(data.current.fulfilment) + '%']].map(([label, value], i) => <div key={label} data-tone={i}><dd>{value}</dd><dt>{label}</dt></div>)}</dl>

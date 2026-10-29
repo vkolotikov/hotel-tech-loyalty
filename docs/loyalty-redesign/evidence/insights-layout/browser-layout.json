@@ -1,0 +1,91 @@
+{
+  "passed": 48,
+  "checks": [
+    "only populated levels occupy the main legend",
+    "shares retain the exact 184-member denominator",
+    "donut retains the complete snapshot total",
+    "zero-member levels do not draw misleading arcs",
+    "empty levels are explicitly accounted for",
+    "keyboard disclosure exposes all seven empty levels",
+    "last empty level remains available",
+    "opening empty levels does not stretch the activity chart",
+    "page fits 1920px",
+    "level content fits 1920px",
+    "membership card stays compact at 1920px",
+    "page fits 1440px",
+    "level content fits 1440px",
+    "membership card stays compact at 1440px",
+    "page fits 1280px",
+    "level content fits 1280px",
+    "membership card stays compact at 1280px",
+    "page fits 1024px",
+    "level content fits 1024px",
+    "membership card stays compact at 1024px",
+    "page fits 768px",
+    "level content fits 768px",
+    "membership card stays compact at 768px",
+    "page fits 390px",
+    "level content fits 390px",
+    "membership card stays compact at 390px",
+    "page fits 320px",
+    "level content fits 320px",
+    "membership card stays compact at 320px",
+    "30 populated levels do not grow the card",
+    "long breakdown is keyboard scrollable",
+    "keyboard reaches the end of a long breakdown",
+    "all populated levels are retained",
+    "long level names wrap without horizontal overflow",
+    "members without a level remain in the distribution",
+    "empty snapshot has an explanation",
+    "empty snapshot has no invalid percentage",
+    "empty snapshot still exposes every configured level",
+    "disclosure translated to ru",
+    "expanded mobile layout fits ru",
+    "disclosure translated to de",
+    "expanded mobile layout fits de",
+    "disclosure translated to fr",
+    "expanded mobile layout fits fr",
+    "disclosure translated to es",
+    "expanded mobile layout fits es",
+    "layout interaction only reads existing APIs",
+    "no browser runtime errors"
+  ],
+  "sizes": [
+    {
+      "width": 1920,
+      "cardHeight": 403,
+      "cardWidth": 547.390625
+    },
+    {
+      "width": 1440,
+      "cardHeight": 403,
+      "cardWidth": 384
+    },
+    {
+      "width": 1280,
+      "cardHeight": 403,
+      "cardWidth": 329.546875
+    },
+    {
+      "width": 1024,
+      "cardHeight": 403,
+      "cardWidth": 744
+    },
+    {
+      "width": 768,
+      "cardHeight": 403,
+      "cardWidth": 720
+    },
+    {
+      "width": 390,
+      "cardHeight": 395,
+      "cardWidth": 358
+    },
+    {
+      "width": 320,
+      "cardHeight": 457,
+      "cardWidth": 288
+    }
+  ],
+  "errors": []
+}

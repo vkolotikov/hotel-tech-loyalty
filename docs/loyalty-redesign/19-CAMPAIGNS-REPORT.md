@@ -29,6 +29,18 @@ The browser fixture intercepts every API call. It verifies search/filter/reset, 
 
 Visual comparison uses the four downloaded Figma screenshots beside rendered pages at 1440px; responsive checks cover 320, 390, 768 and 1024px. Desktop rail 232px, top bar 72px, channel card 274×118px, list columns 752/376px, editor/audience columns 664/464px. All three actual local Poppins font faces are checked loaded. Content height adapts to real campaign names, delivery results and translated text. Exact asset hashes and callsites are in `evidence/campaigns/assets.json`: 16 existing Overview SVGs reused unchanged and the original Campaigns program SVG imported unchanged. CM-04 compact examples are adapted to each channel's existing editor and required consent/category/setup controls.
 
-The focused frontend run passes 453 checks; the first full run passed 5,702 and exposed one CSS-scoping assertion, corrected without weakening the test. The shared FormField now labels filled textareas/selects from the visible field label, with a regression test. Final artifact test/build results and deployment verification follow below.
+The final isolated artifact passes **5,704 frontend tests in 394 files**, TypeScript and Loyalty ESLint. The shared FormField now labels filled textareas/selects from the visible field label, with a regression test. The fresh Vite production build and SPA postbuild both pass.
+
+Scoped PHP 8.4.20 artifact runs pass **736 tests / 9,985 assertions**: LoyaltyWorkspace 595 / 5,878, AdminAccess 51 / 3,063 and Unit/Loyalty 90 / 1,044. Use `XDEBUG_MODE=off` and `-d max_execution_time=0` for this large scoped run; the original run reached the local 300-second CLI limit without a final summary and is not counted as passing.
+
+The exact compiled bundle passes **38 browser checks**, with no runtime errors or horizontal overflow at the tested widths. Compiled desktop, mobile, light-theme and translated screenshots were inspected against Figma. Screenshots scroll the sandboxed email iframe into view before capture: Chrome may omit its contents in an off-screen full-page capture. The additional `*-preview.png` images show the actual visible mobile/desktop preview. The compiled evidence and structured results are saved beside the Figma references.
 
 The previous deployed feature baseline is `ec236bfadfd393abc7abc1328e61b378ff9bcb86`; production starts at `c3a2646786f0f60f0c01232ef0e30369a0e3c4d0`. The isolated release uses E: with a real vendor copy and matching frontend dependencies. An explicit source allowlist excludes generated feature-branch artifacts and unrelated files.
+
+## Production deployment
+
+Production **59a6bda89ca5e47183135489550325c029f6c1b9** is live at `https://app.hexa-tech.uk/loyalty/campaigns`, verified **28 October 2026, 21:13 Europe/Riga**. Source patches `285123749` and `87fe96fa1` were applied to the isolated `origin/main` checkout with whole-source parity across 82 allowed paths before the fresh build. No feature-branch build artifacts were used.
+
+Feature `feature/loyalty-campaigns-20261028`; deployed source and **next source-patch baseline**: **1b800e9bb2d4956120092a9f29c37d6a85d506dc**. Do not use the later post-deployment documentation/evidence commit as that baseline.
+
+Live entry `index--e3eLj3s.js`, Loyalty `LoyaltyApp-DfQxl3v0.js` / `LoyaltyApp-CHeUwwzK.css`. Campaigns and earlier feature markers, responsive styles, three Poppins payloads, campaigns/segments/push/sms unauthenticated 401 JSON, the public landing kit and retired stylesheet 404 passed. Live verification is read-only; delivery behavior is covered by the scoped server tests and local browser fixtures. Evidence: `evidence/campaigns/live-verification.json`, `validation.json`, `php-verification.json` and `browser-verification.json`.

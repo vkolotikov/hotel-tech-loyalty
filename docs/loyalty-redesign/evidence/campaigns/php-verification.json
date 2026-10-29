@@ -1,0 +1,17 @@
+﻿[
+    {
+        "scope":  "tests/Feature/LoyaltyWorkspace/",
+        "exit":  0,
+        "summary":  "Tests:    595 passed (5878 assertions)"
+    },
+    {
+        "scope":  "tests/Feature/AdminAccess/",
+        "exit":  0,
+        "summary":  "Tests:    51 passed (3063 assertions)"
+    },
+    {
+        "scope":  "tests/Unit/Loyalty/",
+        "exit":  0,
+        "summary":  "Tests:    90 passed (1044 assertions)"
+    }
+]

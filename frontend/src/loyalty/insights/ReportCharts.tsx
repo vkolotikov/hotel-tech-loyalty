@@ -45,13 +45,17 @@ export function ReportTrend({ data }: { data: InsightsReport }) {
 }
 export function ReportLevels({ data }: { data: InsightsReport }) {
   const say = useReportWords(), { i18n } = useTranslation()
-  const rows = [...data.tiers.rows, ...(data.tiers.none ? [{ id: 0, name: say('noLevel'), members: data.tiers.none }] : [])]
+  const rows = [...data.tiers.rows, ...(data.tiers.none ? [{ id: 0, name: say('noLevel'), members: data.tiers.none }] : [])].map((row, i) => ({ ...row, tone: i % 5 }))
+  const populated = rows.filter(row => row.members > 0), empty = rows.filter(row => row.members === 0)
   const total = data.tiers.total, n = (v: number) => new Intl.NumberFormat(i18n.language, { maximumFractionDigits: 1 }).format(v)
-  const cumulative = rows.map((_, i) => rows.slice(0, i).reduce((sum, t) => sum + t.members, 0))
-  return <ReportCard title={say('levels')}><p>{say('snapshot', { date: formatDate(data.snapshot_date, i18n.language, { day: 'numeric', month: 'short', year: 'numeric' }) })}</p><div className="l-in-levels">
-    <div className="l-in-donut"><svg viewBox="0 0 160 160" aria-hidden><circle cx="80" cy="80" r="67" className="l-in-donut-base" />{rows.map((row, i) => <circle key={row.id} cx="80" cy="80" r="67" pathLength="100" className={`l-in-donut-${i % 5}`} strokeDasharray={`${row.members / Math.max(1, total) * 100} 100`} strokeDashoffset={-cumulative[i] / Math.max(1, total) * 100} transform="rotate(-90 80 80)" />)}</svg><div><strong>{n(total)}</strong><small>{say('members')}</small></div></div>
-    <ul>{rows.map((row, i) => <li key={row.id}><span><i className={`l-in-tone-${i % 5}`} />{row.name}</span><strong>{n(row.members)} · {total ? n(row.members / total * 100) : '0'}%</strong></li>)}</ul>
-  </div><hr /><small>{say('levelHint')}</small><Link className="l-ov-link" to="/loyalty/insights?view=detailed#insights-tiers">{say('explore')}</Link></ReportCard>
+  const cumulative = populated.map((_, i) => populated.slice(0, i).reduce((sum, t) => sum + t.members, 0))
+  return <ReportCard className="l-in-level-card" title={say('levels')}><p>{say('snapshot', { date: formatDate(data.snapshot_date, i18n.language, { day: 'numeric', month: 'short', year: 'numeric' }) })}</p><div className="l-in-levels">
+    <div className="l-in-donut" role="img" aria-label={say('people', { n: n(total) })}><svg viewBox="0 0 160 160" aria-hidden><circle cx="80" cy="80" r="67" className="l-in-donut-base" />{populated.map((row, i) => <circle key={row.id} cx="80" cy="80" r="67" pathLength="100" className={`l-in-donut-${row.tone}`} strokeDasharray={`${row.members / Math.max(1, total) * 100} 100`} strokeDashoffset={-cumulative[i] / Math.max(1, total) * 100} transform="rotate(-90 80 80)" />)}</svg><div><strong title={n(total)}>{new Intl.NumberFormat(i18n.language, { notation: total >= 10000 ? 'compact' : 'standard', maximumFractionDigits: 1 }).format(total)}</strong><small>{say('members')}</small></div></div>
+    {populated.length ? <div className="l-in-level-breakdown" tabIndex={0} role="region" aria-label={say('levels')}><ul>{populated.map(row => <li key={row.id}><span><i className={`l-in-tone-${row.tone}`} />{row.name}</span><div><strong>{n(row.members)}</strong><span>{total ? n(row.members / total * 100) : '0'}%</span></div></li>)}</ul></div> : <p className="l-in-level-empty">{say('noLevelMembers')}</p>}
+  </div>
+    {empty.length > 0 && <details className="l-in-empty-levels"><summary>{say('emptyLevels', { n: n(empty.length) })}</summary><div tabIndex={0} role="region" aria-label={say('emptyLevels', { n: n(empty.length) })}><ul>{empty.map(row => <li key={row.id}><span>{row.name}</span><span>{say('people', { n: '0' })}</span></li>)}</ul></div></details>}
+    <footer className="l-in-level-footer"><small>{say('levelHint')}</small><Link className="l-ov-link" to="/loyalty/insights?view=detailed#insights-tiers">{say('explore')}</Link></footer>
+  </ReportCard>
 }
 export function ReportPoints({ data }: { data: InsightsReport }) {
   const say = useReportWords(), { i18n, t } = useTranslation()
