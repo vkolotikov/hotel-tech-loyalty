@@ -50,6 +50,10 @@ async (page, answer) => {
   await settings(); await currency().selectOption('GBP'); await save().waitFor({state:'visible'}); await page.waitForFunction(()=>!document.querySelector('.l-st-save button:last-child').disabled); await screen('settings-desktop');
   await save().click(); await page.locator('.l-st-confirm').waitFor(); await screen('currency-review');
   check('currency review has separated warning sections',await page.locator('.l-st-confirm .l-ov-dialog-body').evaluate(el=>getComputedStyle(el).display==='flex'&&getComputedStyle(el).gap==='16px'));
+  await page.setViewportSize({width:320,height:680});await fit('currency review fits 320');await screen('currency-review-mobile');
+  check('currency review height stays inside phone viewport',await page.locator('.l-st-confirm').evaluate(el=>el.getBoundingClientRect().height<=innerHeight-20));
+  await page.keyboard.press('Tab');check('currency modal keeps keyboard focus',await page.evaluate(()=>document.querySelector('.l-st-confirm').contains(document.activeElement)));
+  await page.setViewportSize({width:1440,height:1080});
   check('currency preview before save',requests.filter(r=>r.path==='currency'&&r.method==='PUT').every(r=>r.payload.dry_run===true));
   check('server impact warnings retained',(await page.locator('.l-st-warnings li').count())>=3);
   await page.getByRole('button',{name:'Keep editing',exact:true}).click();
@@ -83,6 +87,7 @@ async (page, answer) => {
     await page.locator('.l-st-field select').first().selectOption(locale); await page.locator('.l-st-save button').last().click();
     await page.waitForFunction(code=>localStorage.getItem('admin_lang')===code,locale);
     check(locale+' locale has no raw keys',!(await page.locator('main').innerText()).includes('loyalty.settingsdesign.'));
+    await page.setViewportSize({width:320,height:900});await fit(locale+' Settings fits 320');await page.setViewportSize({width:1440,height:1080});
   }
   await page.reload(); await page.locator('.l-st-page').waitFor();
   await page.locator('[data-frame-footer]').getByRole('button',{name:'Settings',exact:true}).click();
