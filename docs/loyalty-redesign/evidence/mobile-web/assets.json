@@ -1,0 +1,74 @@
+﻿[
+    {
+        "path":  "C:/wamp64/www/Hexa-Tech/frontend/src/loyalty/scan/design/assets/scan.svg",
+        "sha256":  "45A6FC5C96523B6057239BF2B2CC3B2B55647A8A6E1BD776BBBC45902107072F",
+        "root":  "\u003csvg preserveAspectRatio=\"none\" overflow=\"visible\" style=\"display: block;\" width=\"20\" height=\"20\" viewBox=\"0 0 20 20\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"\u003e",
+        "file":  "272d0.svg"
+    },
+    {
+        "path":  "C:/wamp64/www/Hexa-Tech/frontend/src/loyalty/overview/assets/2b886.svg",
+        "sha256":  "69A07AFD69535F720174A6244A7B45557F1E11F260DDDBA1AA3E75400A62D37A",
+        "root":  "\u003csvg preserveAspectRatio=\"none\" overflow=\"visible\" style=\"display: block;\" width=\"20\" height=\"20\" viewBox=\"0 0 20 20\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"\u003e",
+        "file":  "2b886.svg"
+    },
+    {
+        "path":  "C:/wamp64/www/Hexa-Tech/frontend/src/loyalty/scan/design/assets/members.svg",
+        "sha256":  "26543803FACAE927B6EA13712EE81487302DF0EB0243C8C7B198F4A5245FFA0D",
+        "root":  "\u003csvg preserveAspectRatio=\"none\" overflow=\"visible\" style=\"display: block;\" width=\"20\" height=\"20\" viewBox=\"0 0 20 20\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"\u003e",
+        "file":  "2c75c.svg"
+    },
+    {
+        "path":  "C:/wamp64/www/Hexa-Tech/frontend/src/loyalty/scan/design/assets/members.svg",
+        "sha256":  "26543803FACAE927B6EA13712EE81487302DF0EB0243C8C7B198F4A5245FFA0D",
+        "root":  "\u003csvg preserveAspectRatio=\"none\" overflow=\"visible\" style=\"display: block;\" width=\"20\" height=\"20\" viewBox=\"0 0 20 20\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"\u003e",
+        "file":  "38333.svg"
+    },
+    {
+        "path":  "C:/wamp64/www/Hexa-Tech/frontend/src/loyalty/overview/assets/3f053.svg",
+        "sha256":  "0E7233481B0BE0825C7550FFEDA3F4A03F605CB63CA0E3E92595192031191BAB",
+        "root":  "\u003csvg preserveAspectRatio=\"none\" overflow=\"visible\" style=\"display: block;\" width=\"20\" height=\"20\" viewBox=\"0 0 20 20\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"\u003e",
+        "file":  "3f053.svg"
+    },
+    {
+        "path":  "C:/wamp64/www/Hexa-Tech/frontend/src/loyalty/scan/design/assets/requests.svg",
+        "sha256":  "45B5C119BF18CFB6F2447983314B3E1869210B99B1572A919ECBEA0EE32B0EA7",
+        "root":  "\u003csvg preserveAspectRatio=\"none\" overflow=\"visible\" style=\"display: block;\" width=\"20\" height=\"20\" viewBox=\"0 0 20 20\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"\u003e",
+        "file":  "4932e.svg"
+    },
+    {
+        "path":  "C:/wamp64/www/Hexa-Tech/frontend/src/loyalty/scan/design/assets/requests.svg",
+        "sha256":  "45B5C119BF18CFB6F2447983314B3E1869210B99B1572A919ECBEA0EE32B0EA7",
+        "root":  "\u003csvg preserveAspectRatio=\"none\" overflow=\"visible\" style=\"display: block;\" width=\"20\" height=\"20\" viewBox=\"0 0 20 20\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"\u003e",
+        "file":  "5c8a9.svg"
+    },
+    {
+        "path":  "C:/wamp64/www/Hexa-Tech/frontend/src/loyalty/overview/assets/7055e.svg",
+        "sha256":  "C3E9FF2E93DDC8D5F70B0A5A11C4A01340CD6C2C61231560EB7C25569137A1E5",
+        "root":  "\u003csvg preserveAspectRatio=\"none\" overflow=\"visible\" style=\"display: block;\" width=\"16.3333\" height=\"16.3333\" viewBox=\"0 0 16.3333 16.3333\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"\u003e",
+        "file":  "7055e.svg"
+    },
+    {
+        "path":  "C:/wamp64/www/Hexa-Tech/frontend/src/loyalty/scan/design/assets/scan.svg",
+        "sha256":  "45A6FC5C96523B6057239BF2B2CC3B2B55647A8A6E1BD776BBBC45902107072F",
+        "root":  "\u003csvg preserveAspectRatio=\"none\" overflow=\"visible\" style=\"display: block;\" width=\"20\" height=\"20\" viewBox=\"0 0 20 20\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"\u003e",
+        "file":  "984e7.svg"
+    },
+    {
+        "path":  "C:/wamp64/www/Hexa-Tech/frontend/src/loyalty/scan/design/assets/more.svg",
+        "sha256":  "503F121E6F1826E66CC76565DB7D7B409AA82F12ED66F7910627F126CF1232D1",
+        "root":  "\u003csvg preserveAspectRatio=\"none\" overflow=\"visible\" style=\"display: block;\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"\u003e",
+        "file":  "be4bc.svg"
+    },
+    {
+        "path":  null,
+        "sha256":  "F3BF755CF40E2DD21A48BB622099314F5DDA8B682704DA67A4E0864FE404BBC7",
+        "root":  "\u003csvg preserveAspectRatio=\"none\" overflow=\"visible\" style=\"display: block;\" width=\"20\" height=\"20\" viewBox=\"0 0 20 20\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"\u003e",
+        "file":  "dbc20.svg"
+    },
+    {
+        "path":  "C:/wamp64/www/Hexa-Tech/frontend/src/loyalty/scan/design/assets/home.svg",
+        "sha256":  "92F4408F8BEE54676D6DD99902872387902D9DBC1F6FC57DFA7067FA1A7B5FB3",
+        "root":  "\u003csvg preserveAspectRatio=\"none\" overflow=\"visible\" style=\"display: block;\" width=\"20\" height=\"20\" viewBox=\"0 0 20 20\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"\u003e",
+        "file":  "ea252.svg"
+    }
+]

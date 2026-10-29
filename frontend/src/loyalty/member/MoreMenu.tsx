@@ -5,6 +5,9 @@ import { SideMenu } from '../../workspace/shell/SideMenu'
 import type { MoreItem } from '../membership/membershipMath'
 import { MORE_WORDS } from '../membership/words'
 import { ICON_BUTTON } from './CardHead'
+import { useState } from 'react'
+import { usePhone } from '../overview/useOverview'
+import { OverviewButton, OverviewDialog } from '../overview/OverviewUI'
 
 const ITEM = 'flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm hover:bg-a-surface-2 focus:bg-a-surface-2 focus:outline-none'
 const ICONS: Record<MoreItem, LucideIcon> = { welcome: Mail, tier: Layers, deactivate: PowerOff, reactivate: Power, erase: Trash2 }
@@ -17,6 +20,9 @@ const ICONS: Record<MoreItem, LucideIcon> = { welcome: Mail, tier: Layers, deact
 export function MoreMenu({ items, fullAdmin, onPick }: { items: MoreItem[]; fullAdmin: string; onPick: (item: MoreItem) => void }) {
   const { t } = useTranslation()
   const label = t('loyalty.membership.more.label', 'More')
+  const phone = usePhone()
+  const [open, setOpen] = useState(false)
+  if (phone) return <><OverviewButton aria-haspopup="dialog" onClick={() => setOpen(true)}>{label}</OverviewButton>{open && <OverviewDialog kind="form" className="l-mw-sheet" title={label} onClose={() => setOpen(false)}>{items.map(item => <OverviewButton key={item} onClick={() => { setOpen(false); onPick(item) }}>{t(`loyalty.membership.more.${item}`, MORE_WORDS[item])}</OverviewButton>)}<Link className="l-ov-button" to={fullAdmin}>{t('loyalty.member.full_admin', 'Open in full admin')}</Link></OverviewDialog>}</>
   return (
     <SideMenu kind="menu" place="down-right" label={label} named buttonClassName={ICON_BUTTON}
       face={<span title={label} className="inline-flex"><MoreHorizontal size={18} aria-hidden /></span>}

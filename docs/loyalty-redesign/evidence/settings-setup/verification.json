@@ -1,0 +1,39 @@
+{
+  "date": "2026-10-29",
+  "feature_branch": "feature/loyalty-settings-setup-20261029",
+  "deployed_source": "43382945207c44ae6a6ce952272121e32e6a1d10",
+  "production_parent": "8f7c18159e6ae6d082c7f0db7706592cbdb1fbbb",
+  "production_commit": "ce1f55e0f349ee5cb236b63ac6e48704c6d3dd4d",
+  "source_patch_paths": 152,
+  "whole_source_parity": true,
+  "typescript": "passed",
+  "eslint": "full Loyalty and shared FrameFooter passed; final changed files rechecked",
+  "frontend": {"tests": 5717, "files": 394, "failed": 0},
+  "php": {
+    "version": "8.4.20",
+    "tests": 69,
+    "assertions": 719,
+    "failed": 0,
+    "command": "artisan test tests/Feature/LoyaltyWorkspace/ --filter=CurrencyTest|OptionsSetupTest|OptionsTest|StartTest|AccessDecisionTest|GateTest|ImportTest|DuplicatesTest"
+  },
+  "build": "fresh artifact Vite/postbuild passed",
+  "compiled_browser": {
+    "settings_setup_checks": 79,
+    "section_audit_views": 60,
+    "section_routes_and_tabs": 30,
+    "runtime_errors": 0,
+    "widths": [320, 390, 768, 1024, 1280, 1440],
+    "languages": ["en", "ru", "de", "fr", "es"],
+    "themes": ["dark", "light", "auto"],
+    "writes": "local intercepted fixtures only"
+  },
+  "figma": {
+    "file": "d6IGmk3hOoMw0V5rONbI1A",
+    "nodes": ["92:3958", "208:7104", "210:7325"],
+    "asset_references_checked": 34,
+    "exact_reused_exports": 32,
+    "new_program_svg_exports": 2,
+    "rendered_comparison": "desktop, phone, light theme and confirmation dialog inspected visually against the exact references"
+  },
+  "production_verification": "Passed 2026-10-29 at 11:03 Europe/Riga; see live-verification.json."
+}

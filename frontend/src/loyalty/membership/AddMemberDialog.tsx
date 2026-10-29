@@ -18,6 +18,9 @@ import { ENROL_FIELDS, MAX_NAME, MAX_PHONE, NEW_MEMBER, enrolBody, enrolProblems
 import type { EnrolAnswer } from './types'
 import { dateProblem, firstEndDay, setBody, validityActions } from './validityMath'
 import { ENROL_PROBLEM_WORDS, VALIDITY_PROBLEM_WORDS } from './words'
+import { DesignDialog } from '../redesign/DesignUI'
+import { usePhone } from '../overview/useOverview'
+import { useMobileWords } from '../mobile/words'
 
 const INPUT = 'w-full rounded-lg border border-a-border bg-a-surface px-3 py-2 text-sm text-a-text'
 
@@ -32,6 +35,9 @@ const INPUT = 'w-full rounded-lg border border-a-border bg-a-surface px-3 py-2 t
  */
 export function AddMemberDialog({ onClose }: { onClose: () => void }) {
   const { t } = useTranslation()
+  const phone = usePhone()
+  const mobile = useMobileWords()
+  const Surface = phone ? DesignDialog : Dialog
   const navigate = useNavigate()
   const client = useQueryClient()
   const boot = useBoot()
@@ -92,12 +98,13 @@ export function AddMemberDialog({ onClose }: { onClose: () => void }) {
   }
 
   return (
-    <Dialog title={t('loyalty.membership.add.title', 'Add a member')} onClose={onClose} busy={save.isPending}>
+    <Surface title={t('loyalty.membership.add.title', 'Add a member')} onClose={onClose} busy={save.isPending} {...(phone ? { className: 'l-mw-full-form l-mw-add' } : {})}>
       <form className="space-y-4" noValidate onSubmit={(e) => {
         e.preventDefault()
         setTried(true)
-        if (Object.keys(enrolProblems(form)).length === 0 && dateCode === null) save.mutate()
+        if (!save.isPending && Object.keys(enrolProblems(form)).length === 0 && dateCode === null) save.mutate()
       }}>
+        <div className={phone ? 'l-mw-panel l-mw-add-fields' : 'l-mw-add-desktop-fields'}>
         <FormField label={t('loyalty.membership.add.name', 'Name')} problem={problem('name')}>
           <input ref={first} type="text" value={form.name} maxLength={MAX_NAME} autoComplete="off" onChange={(e) => update({ name: e.target.value })} className={INPUT} />
         </FormField>
@@ -108,21 +115,24 @@ export function AddMemberDialog({ onClose }: { onClose: () => void }) {
         <FormField label={t('loyalty.membership.add.phone', 'Phone (optional)')} problem={problem('phone')}>
           <input type="tel" inputMode="tel" value={form.phone} maxLength={MAX_PHONE} autoComplete="off" onChange={(e) => update({ phone: e.target.value })} className={INPUT} />
         </FormField>
-        {dated && (
+        <details className={phone ? 'l-mw-add-extra' : 'l-mw-desktop-details'} open={!phone || undefined}><summary>{mobile('additional')}</summary>{dated && (
           <FormField label={t('loyalty.membership.add.valid_until', 'Valid until (optional)')}
             hint={t('loyalty.membership.add.valid_until_hint', 'The last day of a membership bought for a time. Leave it empty for one that never ends.')}
             problem={tried && dateCode ? t(`loyalty.membership.validity.problem.${dateCode}`, VALIDITY_PROBLEM_WORDS[dateCode]) : null}>
             <input type="date" value={validUntil} min={firstEndDay(today)} onChange={(e) => setValidUntil(e.target.value)} className={INPUT} />
           </FormField>
-        )}
+        )}</details></div>
+        <div className={phone ? 'l-mw-panel' : undefined}>
+        {phone && <><h2>{mobile('welcome')}</h2><p>{t('loyalty.membership.page.marketing_no', 'Not agreed')} · {t('loyalty.membership.page.marketing', 'Marketing emails')}</p><p>{t('loyalty.sms.member.label', 'Offers by SMS')}: {t('loyalty.sms.member.off', 'Off')}</p></>}
         <Check label={t('loyalty.membership.add.send_welcome', 'Send the welcome email')} checked={form.send_welcome} onChange={(on) => update({ send_welcome: on })}
           hint={t('loyalty.membership.add.send_welcome_hint', 'With a code to set a password; it is good for 48 hours.')} />
         <p className="text-sm text-a-text-2">{t('loyalty.membership.add.start', 'The member starts on the programme’s first tier, with the welcome bonus.')}</p>
+        </div>
 
         {failure && <Notice tone="danger">{t(...refusalKey('loyalty.membership', ERRORS, 'add', failure))}</Notice>}
 
         <FormFoot cancel={t('loyalty.common.cancel', 'Cancel')} busy={save.isPending} onCancel={onClose} save={t('loyalty.membership.add.save', 'Add member')} />
       </form>
-    </Dialog>
+    </Surface>
   )
 }

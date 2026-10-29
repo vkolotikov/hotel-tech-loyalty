@@ -19,6 +19,8 @@ import { recordLabel, recordTitle, recordWhen } from './inboxMath'
 import { refreshInbox } from './inboxApi'
 import { useRequestWords } from './words'
 import type { InboxMember, InboxRecord, ReferralRecord } from './types'
+import { usePhone } from '../overview/useOverview'
+import { useMobileWords } from '../mobile/words'
 
 export function RecordStatus({ row }: { row: InboxRecord }) {
   const { t } = useTranslation()
@@ -50,6 +52,8 @@ function Activity({ row }: { row: InboxRecord }) {
 
 type Action = 'approve' | 'done' | 'decline' | 'fulfil' | 'cancel'
 export function RecordDetail({ row, blocked, hold, onDetails, detailRef }: { row: InboxRecord; blocked: boolean; hold: () => void; onDetails: () => void; detailRef?: Ref<HTMLElement> }) {
+  const phone = usePhone()
+  const mobile = useMobileWords()
   const say = useRequestWords()
   const { t, i18n } = useTranslation()
   const boot = useBoot()
@@ -77,7 +81,12 @@ export function RecordDetail({ row, blocked, hold, onDetails, detailRef }: { row
   const busy = blocked || step.isPending
   const close = () => { if (!step.isPending) setAction(null) }
   const confirmLabel = action === 'approve' ? say('approve') : action === 'decline' ? t('loyalty.requests.decline', 'Decline') : action === 'cancel' ? t('loyalty.rewards.cancel.confirm', 'Cancel redemption') : say('done')
-  return <aside ref={detailRef} tabIndex={-1} className="l-ov-panel l-rq-detail" aria-label={title}>
+  return <aside ref={detailRef} tabIndex={-1} className={phone ? 'l-mw-request-detail' : 'l-ov-panel l-rq-detail'} aria-label={title}>
+    {phone ? <>
+      <section className="l-mw-panel l-mw-request-facts"><RecordStatus row={row} /><h2>{title}</h2><small>{recordLabel(row)} · {recordWhen(row.at, i18n.language, boot.venue.timezone)}</small>{row.kind === 'referral' ? <ReferralFacts row={row} /> : <><p>{row.member?.name || row.member?.number || say('unavailableMember')} · {row.member?.tier ?? '—'}</p><p>{row.kind === 'benefit' ? say('oneRequest') : `${say('pointsCost')}: ${say('points', { n: points(row.points, i18n.language) })}`}</p>{row.member && <Link className="l-ov-button" to={memberPath(row.member.id)}>{say('profile')}</Link>}</>}</section>
+      <section className="l-mw-panel"><h3>{row.kind === 'referral' ? say('pointsPaid') : first === 'approve' ? `${say('waiting')} → ${say('approved')} → ${t('loyalty.requests.state.fulfilled', 'Done')}` : say(row.kind === 'benefit' ? 'deliverBenefit' : 'deliverReward')}</h3>{row.kind === 'referral' && <strong className="l-mw-paid">{say('points', { n: points(row.points.referrer + row.points.referee, i18n.language) })}</strong>}<p>{row.kind === 'referral' ? say('referralLine') : first === 'approve' ? say('approveLine') : first ? say(row.kind === 'benefit' ? 'deliverBenefitLine' : 'deliverRewardLine') : row.kind === 'redemption' && row.state === 'pending' ? t('loyalty.rewards.redemptions.read_only', 'Only staff allowed to redeem points can fulfil or cancel a redemption.') : say('closedLine')}</p>{row.kind === 'redemption' && <small>{mobile('pointsDeducted')}</small>}</section>
+      {row.kind === 'referral' ? <Link className="l-ov-button" to="/loyalty/options?tab=bonus&way=referrals">{say('rules')}</Link> : first && <><OverviewButton disabled={busy} aria-expanded={more} onClick={() => setMore(!more)}>{say('more')}</OverviewButton>{more && <div className="l-mw-panel">{benefits.includes('decline') && <OverviewButton disabled={busy} onClick={() => open('decline')}>{t('loyalty.requests.decline', 'Decline')}</OverviewButton>}{rewards.cancel && <OverviewButton disabled={busy} onClick={() => open('cancel')}>{t('loyalty.rewards.cancel.confirm', 'Cancel redemption')}</OverviewButton>}</div>}<div className="l-mw-sticky-action"><OverviewButton primary disabled={busy} onClick={() => open(first)}>{first === 'approve' ? say('approve') : mobile('requestReview')}</OverviewButton></div></>}
+    </> : <>
     <div className="l-rq-accent" />
     <div className="l-rq-kind"><span>{say(row.kind)}</span><RecordStatus row={row} /></div><h2>{title}</h2><small>{recordLabel(row)}</small>
     {row.kind === 'referral' ? <><ReferralFacts row={row} /><h3>{say(row.points.referrer + row.points.referee === 0 ? 'noReward' : 'rewardRecorded')}</h3><p>{say('referralLine')}</p><OverviewButton onClick={onDetails}>{say('details')}</OverviewButton><Link className="l-ov-link" to="/loyalty/options?tab=bonus&way=referrals">{say('rules')}</Link></>
@@ -87,6 +96,7 @@ export function RecordDetail({ row, blocked, hold, onDetails, detailRef }: { row
         : row.kind === 'redemption' && row.state === 'pending' ? <div className="l-rq-next"><p>{t('loyalty.rewards.redemptions.read_only', 'Only staff allowed to redeem points can fulfil or cancel a redemption.')}</p></div> : <p>{say('closedLine')}</p>}
       {first && <div className="l-rq-actions"><OverviewButton disabled={busy} aria-expanded={more} onClick={() => setMore(!more)}>{say('more')}</OverviewButton><OverviewButton primary disabled={busy} onClick={() => open(first)}>{say(first === 'approve' ? 'approve' : 'done')}</OverviewButton></div>}
       {more && <div className="l-rq-more">{benefits.includes('decline') && <OverviewButton disabled={busy} onClick={() => open('decline')}>{t('loyalty.requests.decline', 'Decline')}</OverviewButton>}{rewards.cancel && <OverviewButton disabled={busy} onClick={() => open('cancel')}>{t('loyalty.rewards.cancel.confirm', 'Cancel redemption')}</OverviewButton>}</div>}
+    </>}
     </>}
     {success && <p role="status" className="l-rq-success">{say('updated')}</p>}
     {error && !action && <p role="alert" className="l-rq-error">{error}</p>}

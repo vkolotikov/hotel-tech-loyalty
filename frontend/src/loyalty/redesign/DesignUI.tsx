@@ -3,10 +3,12 @@ import { OverviewButton, OverviewDialog } from '../overview/OverviewUI'
 import { useRedesignWords } from './words'
 import { steppedValue } from './designMath'
 import { useLook } from '../lib/look'
+import { useMobileWords } from '../mobile/words'
 
-export function DesignDialog({ title, onClose, busy, wide, children }: { title: string; onClose: () => void; busy?: boolean; wide?: boolean; children: ReactNode }) {
+export function DesignDialog({ title, onClose, busy, wide, children, className = '' }: { title: string; onClose: () => void; busy?: boolean; wide?: boolean; children: ReactNode; className?: string }) {
   const look = useLook()
-  return <div data-loyalty="" data-overview="" data-redesign="" data-theme={look.resolved} className="l-rd-dialog-root"><OverviewDialog title={title} kind="form" busy={busy} className={wide ? 'l-rd-dialog-wide' : ''} onClose={onClose}>{children}</OverviewDialog></div>
+  const mobile = useMobileWords()
+  return <div data-loyalty="" data-overview="" data-redesign="" data-theme={look.resolved} className="l-rd-dialog-root"><OverviewDialog title={title} kind="form" busy={busy} className={`${wide ? 'l-rd-dialog-wide' : ''} ${className}`} backLabel={className.includes('l-mw-full-form') ? mobile('back') : undefined} onClose={onClose}>{children}</OverviewDialog></div>
 }
 
 export function NumberControl({ label, value, onValue, step = 1, min = 0, max, invalid, disabled, inputRef, ...props }: {

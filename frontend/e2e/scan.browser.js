@@ -15,7 +15,7 @@ async page => {
     state.requests.push({path,method:req.method(),query:url.search,payload});let body={},status=200;
     if(path==='bootstrap')body=state.boot;
     else if(path==='places')body={places:[{id:1,name:'Main entrance',admits:'all',is_active:true}],can_change:true};
-    else if(path==='events')body={events:[{id:5,title:'Members evening',starts_at:'2026-10-28T18:00:00',ends_at:'2026-10-28T23:59:00',status:'published',place:null,location:'Club',sign_up:false}]};
+    else if(path==='events')body={events:[{id:5,title:'Members evening',starts_at:new Date(Date.now()-86400000).toISOString().slice(0,10)+'T00:00:00',ends_at:new Date(Date.now()+86400000).toISOString().slice(0,10)+'T23:59:00',status:'published',place:null,location:'Club',sign_up:false}]};
     else if(path==='find')body={members:url.searchParams.get('q')?.toLowerCase().includes('nobody')?[]:[state.member]};
     else if(path==='members/1048'){if(state.denied||state.failMember){status=state.denied?403:503;body={error:'forbidden'};}else body={member:state.member,benefits:[{id:1,name:'10% service discount',value:'Staff-applied · Silver benefit'},{id:2,name:'Welcome drink',value:'On request · Check benefit rules'}],requests:[]};}
     else if(path==='scan'){state.scans++;if(state.slow)await new Promise(r=>setTimeout(r,500));if(state.failScan){status=503;body={error:'unavailable'};}else body={member:state.member,...(payload.place_id||payload.event_id?{verdict:{granted:true,reason:'allowed',valid_until:'2026-11-14',expires_in_days:17,tier:tiers[0],allowed_tiers:[],place:payload.place_id?{id:1,name:'Main entrance'}:null,event:payload.event_id?{id:5,title:'Members evening'}:null},checked_in:!!payload.event_id,points:payload.event_id?10:0,benefits:[]}:{} )};}

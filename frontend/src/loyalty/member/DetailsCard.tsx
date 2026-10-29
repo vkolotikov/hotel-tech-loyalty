@@ -7,6 +7,8 @@ import type { MemberProfile } from '../membership/types'
 import { CARD, CardHead } from './CardHead'
 import { ValidityCard } from '../membership/ValidityCard'
 import { useRedesignWords } from '../redesign/words'
+import { usePhone } from '../overview/useOverview'
+import { OverviewButton } from '../overview/OverviewUI'
 
 /**
  * The member's details on their page (spec 2026-10-21 release 2 §4.1): language, nationality, date of birth, marketing
@@ -16,6 +18,7 @@ import { useRedesignWords } from '../redesign/words'
 export function DetailsCard({ member, locale, timeZone, redesigned = false, onEdit }: { member: MemberProfile; locale: string; timeZone: string; redesigned?: boolean; onEdit?: () => void }) {
   const { t } = useTranslation()
   const say = useRedesignWords()
+  const phone = usePhone()
   const none = t('loyalty.membership.page.not_given', 'Not given')
   const rows: [string, string, string | null][] = [
     ['language', t('loyalty.membership.page.language', 'Language'), member.language ? languageName(member.language, locale) : null],
@@ -30,6 +33,11 @@ export function DetailsCard({ member, locale, timeZone, redesigned = false, onEd
     rows.push(['tier_kept', t('loyalty.membership.page.tier_kept', 'Tier kept until'), day(member.tier_override_until, locale, timeZone)])
   }
 
+  if (redesigned && phone) return <>
+    <section className="l-mw-panel l-mw-contact"><h2>{member.name || member.email}</h2>{member.email && <p>{member.email}</p>}{member.phone && <p>{member.phone}</p>}<p>{t('loyalty.member.joined', 'Joined {{day}}', { day: day(member.joined_at, locale, timeZone) })}</p><p>{member.last_activity_at ? t('loyalty.member.last_seen', 'Last seen {{day}}', { day: day(member.last_activity_at, locale, timeZone) }) : t('loyalty.member.not_seen', 'Not seen yet')}</p>{rows.filter(([key]) => key !== 'marketing' && key !== 'sms').map(([key, label, value]) => <p key={key}>{label}: {value ?? none}</p>)}{onEdit && <OverviewButton onClick={onEdit}>{say('editDetails')}</OverviewButton>}</section>
+    <div className="l-mw-validity"><ValidityCard member={member} locale={locale} timeZone={timeZone} /></div>
+    <details className="l-mw-consent"><summary>{t('loyalty.membership.page.marketing', 'Marketing emails')}</summary>{rows.filter(([key]) => key === 'marketing' || key === 'sms').map(([key, label, value]) => <p key={key}>{label}: {value ?? none}</p>)}</details>
+  </>
   if (redesigned) {
     const contact: [string, string, string | null][] = [
       ['email', t('loyalty.membership.details.email', 'Email'), member.email],

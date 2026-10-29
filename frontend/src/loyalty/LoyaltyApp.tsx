@@ -1,4 +1,5 @@
 import { Fragment } from 'react'
+import { MorePage } from './mobile/MobileUI'
 import { CampaignCache } from './campaigns/design/CampaignUI'
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { useAuthStore } from '../stores/authStore'
@@ -62,6 +63,7 @@ export function LoyaltyApp() {
       <Shell>
         <CampaignScope><Routes>
           <Route index element={<MembersPage />} />
+          <Route path="more" element={<MorePage />} />
           <Route path="members/duplicates" element={<DuplicatesPage />} />
           <Route path="members/import" element={<ImportPage />} />
           <Route path="members/:id" element={<MemberPage />} />

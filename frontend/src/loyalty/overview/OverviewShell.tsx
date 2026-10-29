@@ -35,7 +35,8 @@ import insightsProgramIcon from '../insights/assets/program.svg'
 import requestsProgramIcon from '../requests/assets/program.svg'
 import cardAppProgramIcon from '../app/design/assets/program.svg'
 
-import { ScanMobileNav, ScanMobileHeader } from '../scan/design/ScanMobileNav'
+import { MobileNav, MobileHeader } from '../mobile/MobileUI'
+import '../mobile/mobile.css'
 import scanProgramIcon from '../scan/design/assets/program.svg'
 import { useSettingsWords } from '../settings/words'
 import '../settings/utility.css'
@@ -121,14 +122,14 @@ export function OverviewShell({ children }: { children: ReactNode }) {
       <div className="l-ov-sidebar-foot"><Link className="l-ov-button" to="/loyalty/scan">{say('scan')}</Link><FrameFooter {...foot} /></div>
     </aside>
     <div className="l-ov-main-frame">
-      {isScan && <ScanMobileHeader name={boot?.organization.name ?? say('workspace')} person={boot?.staff.name ?? ''} onMenu={() => setMenu(true)} />}<header className="l-ov-topbar"><OverviewButton className="l-ov-menu-button" onClick={() => setMenu(true)} aria-haspopup="dialog" aria-label={say('menu')}>☰</OverviewButton><strong className="l-ov-mobile-brand">hexa</strong><div className="l-ov-crumb">{ready && <><span>{boot?.organization.name}</span><span>/</span></>}<span aria-current="page">{sectionName}</span></div><button ref={searchRef} className="l-ov-search" onClick={() => setFind(true)} disabled={!ready} aria-label={say('search')} aria-haspopup="dialog"><img src={assets.search} alt="" /><span>{say('search')}</span></button></header>
+      {<MobileHeader name={boot?.organization.name ?? say('workspace')} person={boot?.staff.name ?? ''} onAccount={() => setMenu(true)} />}<header className="l-ov-topbar"><OverviewButton className="l-ov-menu-button" onClick={() => setMenu(true)} aria-haspopup="dialog" aria-label={say('menu')}>☰</OverviewButton><strong className="l-ov-mobile-brand">hexa</strong><div className="l-ov-crumb">{ready && <><span>{boot?.organization.name}</span><span>/</span></>}<span aria-current="page">{sectionName}</span></div><button ref={searchRef} className="l-ov-search" onClick={() => setFind(true)} disabled={!ready} aria-label={say('search')} aria-haspopup="dialog"><img src={assets.search} alt="" /><span>{say('search')}</span></button></header>
       <main ref={main} tabIndex={-1} className="l-ov-main">
         {!ready && context.isLoading && <div className="l-ov-page"><OverviewSkeleton rows={6} /></div>}
         {!ready && context.isError && <div className="l-ov-page"><h1>{say('unavailableOverview')}</h1><OverviewRecovery forbidden={denied} onRetry={context.refetch} busy={context.isLoading} /><Link className="l-ov-link" to={FULL_ADMIN}>{t('loyalty.shell.open_full_admin', 'Open the full admin')}</Link>{code === 'workspace_disabled' && <p>{t('loyalty.shell.switched_off', 'HexaTech Loyalty has been switched off for your organisation. Your members and their points are unchanged.')}</p>}</div>}
         {ready && <PageBoundary message={say('unavailableOverview')} reload={say('retry')}><div className={utility ? 'l-utility-content' : undefined} key={`${boot?.organization.id}:${boot?.staff.id}`}>{children}</div></PageBoundary>}
       </main>
     </div>
-    {isScan && <ScanMobileNav onMenu={() => setMenu(true)} />}
+    {ready && <MobileNav />}
     {menu && <OverviewDialog kind="menu" title={say('menu')} onClose={() => setMenu(false)}><div className="l-ov-workspace"><strong>{boot?.organization.name}</strong><small>{say('workspace')}</small></div>{links}<Link to="/loyalty/scan" className="l-ov-button" onClick={() => setMenu(false)}>{say('scan')}</Link><PhoneMenu {...foot} /></OverviewDialog>}
     {ready && <><LoyaltyFind open={find} onClose={() => setFind(false)} onRun={run} actions={findList} fallbackFocus={[searchRef, main]} /><LoyaltyShortcuts open={help} onClose={() => setHelp(false)} modKey="Ctrl" fallbackFocus={[searchRef, main]} /></>}
   </div></OverviewLookContext.Provider>

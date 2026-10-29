@@ -1,6 +1,9 @@
 {
   "checks": [
     "currency review has separated warning sections",
+    "currency review fits 320",
+    "currency review height stays inside phone viewport",
+    "currency modal keeps keyboard focus",
     "currency preview before save",
     "server impact warnings retained",
     "cancel leaves currency unchanged",
@@ -16,11 +19,17 @@
     "confirmed currency saved",
     "successful currency save refreshed bootstrap",
     "ru locale has no raw keys",
+    "ru Settings fits 320",
     "de locale has no raw keys",
+    "de Settings fits 320",
     "fr locale has no raw keys",
+    "fr Settings fits 320",
     "es locale has no raw keys",
+    "es Settings fits 320",
     "en locale has no raw keys",
+    "en Settings fits 320",
     "quick preferences still available",
+    "opening full Settings closes quick preferences",
     "Settings fits 1280",
     "Settings fits 1024",
     "Settings fits 768",
@@ -251,7 +260,7 @@
           "cashback_enabled": false,
           "tier_progress_by": "points"
         },
-        "idempotency_key": "dcc0910f-1812-4ad4-8406-d9a1b62cc367"
+        "idempotency_key": "938e1d95-3855-4d4d-8ec1-9bb9cc91a9d9"
       },
       "query": "?brand_id=all"
     },
@@ -276,7 +285,7 @@
           "cashback_enabled": false,
           "tier_progress_by": "points"
         },
-        "idempotency_key": "dcc0910f-1812-4ad4-8406-d9a1b62cc367"
+        "idempotency_key": "938e1d95-3855-4d4d-8ec1-9bb9cc91a9d9"
       },
       "query": "?brand_id=all"
     },
