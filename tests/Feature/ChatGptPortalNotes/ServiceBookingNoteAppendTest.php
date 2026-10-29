@@ -17,6 +17,11 @@ class ServiceBookingNoteAppendTest extends TestCase
 {
     use ClearsTheMigrationsOrganisation, DatabaseTransactions, SetsUpMinimalSchema;
 
+    private function auditCount(): int
+    {
+        return DB::table('audit_logs')->whereIn('organization_id', [1, 2])->where('action', 'service_booking.updated')->count();
+    }
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -85,7 +90,7 @@ class ServiceBookingNoteAppendTest extends TestCase
             'status' => 'confirmed',
         ])->assertOk()->assertJsonPath('staff_notes', $latest."\n\nCustomer will arrive at 10:00.")
             ->assertJsonPath('status', 'confirmed');
-        $this->assertDatabaseCount('audit_logs', 1);
+        $this->assertSame(1, $this->auditCount());
     }
 
     public function test_additive_notes_can_exceed_the_old_replacement_field_limit_without_losing_history(): void
@@ -128,7 +133,7 @@ class ServiceBookingNoteAppendTest extends TestCase
             'append_staff_note' => str_repeat('a', 2001), 'status' => 'confirmed',
         ])->assertUnprocessable()->assertJsonValidationErrors('append_staff_note');
         $this->assertDatabaseHas('service_bookings', ['id' => 1, 'staff_notes' => $existing, 'status' => 'pending']);
-        $this->assertDatabaseCount('audit_logs', 0);
+        $this->assertSame(0, $this->auditCount());
     }
 
     public function test_append_cannot_cross_the_existing_tenant_or_brand_scope(): void
@@ -143,6 +148,6 @@ class ServiceBookingNoteAppendTest extends TestCase
         $this->patchJson('/_test/service-bookings/1/status', ['append_staff_note' => 'Forbidden'])
             ->assertNotFound();
         $this->assertDatabaseHas('service_bookings', ['id' => 2, 'staff_notes' => 'Private.']);
-        $this->assertDatabaseCount('audit_logs', 0);
+        $this->assertSame(0, $this->auditCount());
     }
 }

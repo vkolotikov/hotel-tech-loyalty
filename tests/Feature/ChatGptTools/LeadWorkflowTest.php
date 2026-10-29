@@ -242,7 +242,18 @@ class LeadWorkflowTest extends TestCase
         $this->callTool('update_lead_status', $args)->assertJsonPath('result.isError', true)->assertSee('changed since it was read');
         DB::table('inquiries')->where('id', 1)->update(['pipeline_id' => null]);
         DB::table('pipelines')->where('id', 1)->update(['is_default' => true]);
-        DB::table('pipelines')->insert(['id' => 2, 'organization_id' => 1, 'brand_id' => 1, 'name' => 'Duplicate default', 'slug' => 'duplicate-default', 'is_default' => true]);
+        $duplicate = ['id' => 2, 'organization_id' => 1, 'brand_id' => 1, 'name' => 'Duplicate default', 'slug' => 'duplicate-default', 'is_default' => true];
+        if (Schema::hasIndex('pipelines', 'pipelines_org_default_unique')) {
+            // The production schema prevents this legacy-corruption shape before an API can observe it.
+            try {
+                DB::transaction(fn () => DB::table('pipelines')->insert($duplicate));
+                $this->fail('The production index must refuse two default pipelines for one organisation.');
+            } catch (\Illuminate\Database\UniqueConstraintViolationException $e) {
+                $this->assertStringContainsString('pipelines_org_default_unique', $e->getMessage());
+            }
+            return;
+        }
+        DB::table('pipelines')->insert($duplicate);
         $this->callTool('get_lead', ['lead_id' => 1])->assertJsonCount(0, 'result.structuredContent.status_options');
         $this->callTool('update_lead_status', $this->statusArgs(2))->assertJsonPath('result.isError', true);
     }
@@ -277,7 +288,7 @@ class LeadWorkflowTest extends TestCase
         DB::table('staff')->update(['is_active' => false]);
         $this->callTool('get_lead', ['lead_id' => 1])->assertForbidden()->assertJsonPath('error', 'staff_inactive');
         $this->callTool('update_lead_status', $args)->assertForbidden()->assertJsonPath('error', 'staff_inactive');
-        $this->assertSame(0, DB::table('audit_logs')->count());
+        $this->assertSame(0, DB::table('audit_logs')->whereIn('organization_id', [1, 2])->where('action', 'chatgpt.lead_status_changed')->count());
     }
 
     public function test_unavailable_pipeline_and_bad_inputs_are_clear_errors(): void

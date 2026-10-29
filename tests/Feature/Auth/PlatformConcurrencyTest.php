@@ -31,6 +31,9 @@ class PlatformConcurrencyTest extends TestCase
     {
         foreach ($this->processes as $process) if ($process->isRunning()) $process->stop();
         foreach ($this->files as $file) if (file_exists($file)) unlink($file);
+        if ($this->org !== null) {
+            DB::table('audit_logs')->where('organization_id', $this->org->id)->delete();
+        }
         foreach ($this->users as $user) {
             EmailVerificationCode::where('user_id', $user->id)->delete();
             $user->tokens()->delete();
