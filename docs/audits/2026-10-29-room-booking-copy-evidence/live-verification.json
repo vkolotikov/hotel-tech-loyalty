@@ -1,0 +1,17 @@
+{
+  "checked_at": "2026-10-29T17:37:42.421Z",
+  "production_commit": "5ad1908b1",
+  "source_baseline": "ef5fd831f",
+  "entry": "/spa/assets/index-C1_GFlwU.js",
+  "chunk": "PortalApp-B2gWMIZ6.js",
+  "stay_policy_display_removed": true,
+  "stay_deadline_copy_removed": true,
+  "deadline_only_for_appointments": true,
+  "stay_contact_error": true,
+  "booking_actions_preserved": true,
+  "health": 200,
+  "member_auth": 401,
+  "landing_ok": true,
+  "retired_css": 404,
+  "pass": true
+}

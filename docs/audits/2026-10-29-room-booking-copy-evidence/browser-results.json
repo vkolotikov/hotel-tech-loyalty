@@ -1,0 +1,19 @@
+{
+  "results": [
+    {
+      "width": 1440,
+      "review": true,
+      "confirmation": true,
+      "cancellation_controls": true,
+      "fixture_only": true
+    },
+    {
+      "width": 390,
+      "review": true,
+      "confirmation": true,
+      "cancellation_controls": true,
+      "fixture_only": true
+    }
+  ],
+  "errors": []
+}

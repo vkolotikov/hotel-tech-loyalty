@@ -3,7 +3,30 @@
 Read this first, then `2026-10-28-hexatech-handoff.md` for previous milestones and
 `2026-10-27-hexatech-handoff.md` for the full environment and history. Root AGENTS.md and CLAUDE.md still apply.
 
-## Latest checkpoint: wallet credentials accepted; temporary files removed
+## Latest release: room booking cancellation copy removed
+
+Owner requested a small copy update: each organisation publishes its cancellation policy on its website.
+Production **5ad1908b11f99b9806b09799382e10a1302de2b2**, live content verified **19:37 Europe/Riga**.
+Source branch `feature/room-booking-copy-20261029`; next source-patch baseline:
+**ef5fd831f07edd06e279bf43a6eb87fc38d74687**. Do not use later docs-only commits as the baseline.
+
+Stay review/details no longer repeat cancellation-policy prose or a free-cancellation deadline. The shared
+room confirmation email (booking engine and staff-approved reservations) omits current/legacy policy text.
+Stay cancellation-panel deadline refusals use the existing translated contact-the-venue sentence. Booking
+actions, API fields, cancellation/refund rules, settings and appointment policy displays are unchanged.
+
+Nine allowed source paths passed parity. Isolated artifact: **94 PHP tests / 398 assertions**,
+**5,766 frontend tests / 399 files**, TypeScript, lint regression gate and fresh build pass. Built Chrome
+1440px/390px booking-review-confirmation flow and cancellation controls pass without errors; synthetic email
+render inspected. No real booking, payment or email created. Existing 1,393 lint diagnostics remain.
+
+Live entry `index-C1_GFlwU.js`, portal `PortalApp-B2gWMIZ6.js`; removal/guard markers, actions, health,
+member authentication, landing kit and retired CSS checks pass. Report:
+`docs/audits/2026-10-29-room-booking-copy.md`. Private evidence `E:/Hexa-Tech-room-copy-20261029/`.
+Temporary deployment checkout/preview removed after verification. Wallets remain OFF as described below;
+this update changed no wallet configuration. Previous production **9945e24bf0691735cb312e6f2ebe6826d2467f98**.
+
+## Previous checkpoint: wallet credentials accepted; temporary files removed
 
 Owner reported uploads done. At **18:58 Europe/Riga**, verified the authenticated production org **19 Kolotikovs**,
 user/staff **62**, expected wallet IDs, and **all three credential upload flags true**. The certificate opens;
