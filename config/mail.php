@@ -117,8 +117,8 @@ return [
     | hundred messages — and exceeding it gets mail deferred or the account
     | throttled, which reads as a spam run to the receiving side.
     |
-    | 60s => 100 recipients/minute => 6,000/hour. Raise it only to whatever the
-    | relay actually permits; a dedicated ESP can take far more.
+    | Chunk spacing is not the provider's hourly budget; the shared ceilings
+    | below still apply across all campaigns and organisations.
     |
     */
 
@@ -137,16 +137,17 @@ return [
     |            and their bounce rate becoming everyone's problem. All tenants
     |            share one sending domain, so reputation damage is collective.
     | global   — protects the provider's own ceiling. On shared hosting this is
-    |            a few hundred per hour; SES production accounts allow far more,
-    |            so raise both after the cutover.
+    |            a few hundred per hour. Start conservatively at 100, leaving
+    |            room for account/booking mail and bursts across clock hours.
+    |            Raise only after confirming the provider and other relay usage.
     |
     | Set either to 0 to disable that ceiling. Transactional mail is never
     | subject to these — see CampaignRateLimiter.
     |
     */
 
-    'campaign_hourly_limit_per_org' => env('MAIL_CAMPAIGN_HOURLY_PER_ORG', 2000),
-    'campaign_hourly_limit_global'  => env('MAIL_CAMPAIGN_HOURLY_GLOBAL', 6000),
+    'campaign_hourly_limit_per_org' => env('MAIL_CAMPAIGN_HOURLY_PER_ORG', 100),
+    'campaign_hourly_limit_global'  => env('MAIL_CAMPAIGN_HOURLY_GLOBAL', 100),
 
     'from' => [
         'address' => env('MAIL_FROM_ADDRESS', 'hello@example.com'),

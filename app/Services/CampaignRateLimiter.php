@@ -39,7 +39,7 @@ use Illuminate\Support\Str;
  */
 class CampaignRateLimiter
 {
-    /** Bucket resets on the clock hour, so a burst cannot straddle two windows. */
+    /** Clock-hour budget: the relay's rolling-hour quota needs headroom across two adjacent buckets. */
     private function bucketKey(?int $organizationId): string
     {
         $hour = now()->format('YmdH');
@@ -52,8 +52,8 @@ class CampaignRateLimiter
     private function limitFor(?int $organizationId): int
     {
         return $organizationId
-            ? (int) config('mail.campaign_hourly_limit_per_org', 2000)
-            : (int) config('mail.campaign_hourly_limit_global', 6000);
+            ? (int) config('mail.campaign_hourly_limit_per_org', 100)
+            : (int) config('mail.campaign_hourly_limit_global', 100);
     }
 
     /** How many more messages this scope may send in the current hour. */
