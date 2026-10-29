@@ -119,6 +119,8 @@ final class StayQuoteService
                 'check_in' => $data['check_in'], 'check_out' => $data['check_out'],
                 'adults' => $adults, 'children' => $children, 'extras' => $extras,
             ]);
+        } catch (CurrencyMismatch $e) {
+            throw new StayQuoteException('currency_mismatch', $e->getMessage(), 422);
         } catch (\InvalidArgumentException $e) {
             throw str_contains($e->getMessage(), 'Unknown unit')
                 ? new StayQuoteException('not_found', 'We could not find that room.', 404)
@@ -230,6 +232,8 @@ final class StayQuoteService
                 'check_in' => $data['check_in'], 'check_out' => $data['check_out'],
                 'adults' => $adults, 'children' => $children, 'extras' => $extras,
             ]);
+        } catch (CurrencyMismatch $e) {
+            throw new StayQuoteException('currency_mismatch', $e->getMessage(), 422);
         } catch (\InvalidArgumentException $e) {
             throw match (true) {
                 str_contains($e->getMessage(), 'Unknown unit') => new StayQuoteException('not_found', 'We could not find that room.', 404),

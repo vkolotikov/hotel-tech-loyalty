@@ -84,7 +84,7 @@ async (page) => {
       for (const [name, query] of [['points', ''], ['edit-reward', '?reward=1'], ['offers', '?tab=offers'], ['benefits', '?tab=benefits']]) {
         await go(query); await page.evaluate(() => document.fonts.ready);
         ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1 && document.body.scrollWidth <= innerWidth + 1), `${name} fits ${width}px without horizontal overflow`);
-        if (width === 1440 || width === 390) await page.screenshot({ path: root + `render-${name}-${width}.png`, fullPage: true });
+        if (width === 1440 || width === 390) await page.screenshot({ path: root + `render-${name}-${width}.png`, fullPage:false });
       }
     }
     await page.locator('.l-ov-menu-button').click(); await page.getByRole('dialog').waitFor();
@@ -94,19 +94,19 @@ async (page) => {
     const assets = await page.locator('[data-loyalty] img').evaluateAll(imgs => imgs.filter(i => i.getBoundingClientRect().width > 0).map(i => ({ src: i.getAttribute('src'), loaded: i.complete && i.naturalWidth > 0, width: i.width, natural: i.naturalWidth })));
     ok(assets.every(a => a.loaded && !/^https?:/.test(a.src)), 'visible icons load from bundled local assets');
     await button('Settings').click(); await button('Light').click(); await page.locator('[data-loyalty][data-theme=light]').waitFor(); await page.keyboard.press('Escape');
-    await page.screenshot({ path: root + 'render-light.png', fullPage: true }); checks.push('shared light theme works');
+    await page.screenshot({ path: root + 'render-light.png', fullPage:false }); checks.push('shared light theme works');
     for (const lang of ['ru', 'de', 'fr', 'es']) {
       await page.getByRole('button', { name: /^(Settings|Настройки|Einstellungen|Réglages|Configuración)$/ }).click(); await page.getByRole('combobox', { name: /Language|Язык|Sprache|Langue|Idioma/ }).selectOption(lang); await page.keyboard.press('Escape');
       ok(!(await page.locator('.l-rb-page').innerText()).includes('Your rewards'), lang + ' translates the Rewards workspace');
       await page.setViewportSize({ width: 320, height: 844 });
       ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1 && document.querySelector('[data-loyalty]').dataset.theme === 'light'), lang + ' fits the narrow light layout');
       await page.setViewportSize({ width: 1440, height: 1080 });
-      await page.screenshot({ path: root + 'render-' + lang + '.png', fullPage: true });
+      await page.screenshot({ path: root + 'render-' + lang + '.png', fullPage:false });
     }
     ok((await fixture()).errors.length === 0, 'no uncaught browser errors');
     return { passed: checks.length, checks, assets, errors: (await fixture()).errors };
   } catch (error) {
-    await page.screenshot({ path: root + 'state-failure.png', fullPage: true });
+    await page.screenshot({ path: root + 'state-failure.png', fullPage:false });
     return { passed: checks.length, checks, error: String(error), url: page.url(), body: (await page.locator('body').innerText()).slice(-4000) };
   }
 }

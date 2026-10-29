@@ -603,6 +603,7 @@ final class MemberCancellation
         try {
             $done = $this->stayRefund->applyRefund(GroupPayment::lead($rooms), null, 'requested_by_customer', null, true, null);
         } catch (\Throwable $e) {
+            if ($e instanceof RefundNotSettled && !$this->isChargeAlreadyRefunded($e)) throw new CancellationException($e->errorCode, $e->getMessage(), 409);
             if (!$this->isChargeAlreadyRefunded($e)) {
                 // Release 6: applyRefund() reads the rows again under its refund
                 // lock — a refund the webhook recorded in the gap is refused there
@@ -618,7 +619,10 @@ final class MemberCancellation
                 return $this->finishRefundedCombination($orgId, $groupId, self::sumOf($rooms, 'refunded_amount'), null);
             }
             try {
+                $this->assertRefundSettledAtProvider(GroupPayment::lead($rooms), self::sumOf($rooms, 'price_total'));
                 $done = $this->stayRefund->applyRefund(GroupPayment::lead($rooms), null, 'requested_by_customer', null, false, null);
+            } catch (RefundNotSettled $inner) {
+                throw new CancellationException($inner->errorCode, $inner->getMessage(), 409);
             } catch (\Throwable $inner) {
                 Log::error('portal.stay_refund_failed', ['org' => $orgId, 'group' => $groupId, 'payment_intent' => $pi, 'error' => $inner->getMessage()]);
                 throw new CancellationException('refund_failed', 'We could not return the payment just now, so the booking was not cancelled. Please try again in a moment.', 502);
@@ -805,6 +809,7 @@ final class MemberCancellation
         try {
             $done = $this->stayRefund->applyRefund($m, null, 'requested_by_customer', null, true, null);
         } catch (\Throwable $e) {
+            if ($e instanceof RefundNotSettled && !$this->isChargeAlreadyRefunded($e)) throw new CancellationException($e->errorCode, $e->getMessage(), 409);
             if (!$this->isChargeAlreadyRefunded($e)) {
                 // Release 6: applyRefund() reads the row again under its refund
                 // lock — a refund the webhook recorded in the gap is refused there
@@ -828,7 +833,10 @@ final class MemberCancellation
                 return $this->finishRefundedStay($orgId, $mirrorId, round((float) $m->refunded_amount, 2), false, null);
             }
             try {
+                $this->assertRefundSettledAtProvider($m, (float) $m->price_total);
                 $done = $this->stayRefund->applyRefund($m, null, 'requested_by_customer', null, false, null);
+            } catch (RefundNotSettled $inner) {
+                throw new CancellationException($inner->errorCode, $inner->getMessage(), 409);
             } catch (\Throwable $inner) {
                 Log::error('portal.stay_refund_failed', ['org' => $orgId, 'mirror' => $mirrorId, 'payment_intent' => $pi, 'error' => $inner->getMessage()]);
                 throw new CancellationException('refund_failed', 'We could not return the payment just now, so the booking was not cancelled. Please try again in a moment.', 502);
@@ -939,7 +947,18 @@ final class MemberCancellation
     /** Stripe's own code for "there is nothing left on this charge to refund" — checked by code, never by the exception's message text. Mirrors ServiceBookingRefund::isChargeAlreadyRefunded(); not shared, since duplicating this one check avoids coupling the two refund paths together. */
     private function isChargeAlreadyRefunded(\Throwable $e): bool
     {
+        if ($e instanceof RefundNotSettled && $e->getPrevious()) $e = $e->getPrevious();
         return method_exists($e, 'getStripeCode') && (string) $e->getStripeCode() === 'charge_already_refunded';
+    }
+
+    private function assertRefundSettledAtProvider(BookingMirror $m, float $expected): void
+    {
+        $total = 0.0;
+        foreach ($this->stripe->refundsForPaymentIntent((string) $m->stripe_payment_intent_id) as $refund) {
+            app(RefundOperations::class)->observePaymentRefund((int) $m->organization_id, $refund, (string) $m->stripe_payment_intent_id, 'stay', (int) $m->id, $m->currency);
+            if ($refund->status === 'succeeded') $total += StripeService::fromSmallestUnit((int) $refund->amount, $m->currency);
+        }
+        if ($total < $expected - 0.004) throw new RefundNotSettled('refund_pending');
     }
 
     /**

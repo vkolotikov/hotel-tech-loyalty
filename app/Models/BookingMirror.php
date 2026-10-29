@@ -17,6 +17,27 @@ class BookingMirror extends Model
     protected static function booted(): void
     {
         static::addGlobalScope(new IntegrationDataScope('smoobu'));
+        static::creating(function (self $booking) {
+            $raw = (array) ($booking->raw_json ?? []);
+            $raw['currency'] ??= $booking->currency;
+            $raw['_currency_source'] ??= 'booking_snapshot';
+            $booking->raw_json = $raw;
+        });
+    }
+
+    protected $appends = ['currency', 'currency_source'];
+
+    public function getCurrencySourceAttribute(): string
+    {
+        return (string) (($this->raw_json ?? [])['_currency_source'] ?? 'legacy_fallback');
+    }
+
+    /** Currency belongs to the booking's snapshot, not the venue's later settings. */
+    public function getCurrencyAttribute(): string
+    {
+        $raw = (array) ($this->raw_json ?? []);
+        return strtoupper((string) (($raw['currency'] ?? '') ?: (HotelSetting::withoutGlobalScopes()
+            ->where('organization_id', $this->organization_id)->where('key', 'booking_currency')->value('value') ?: 'EUR')));
     }
 
     protected $fillable = [

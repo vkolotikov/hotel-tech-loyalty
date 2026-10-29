@@ -658,7 +658,7 @@ class PortalStayCombinationTest extends MemberEndpointTestCase
             $this->postJson('/api/v1/booking/confirm', [
                 'hold_token' => $hold,
                 'guest' => ['first_name' => 'Eve', 'last_name' => 'Widget', 'email' => 'eve@example.test'],
-            ])->assertStatus(400)->assertJsonPath('error', 'Hold expired or not found');
+            ])->assertStatus(400)->assertJsonPath('code', 'booking_unavailable')->assertJsonStructure(['reference']);
         } finally {
             app()->forgetInstance('current_organization_id');
         }

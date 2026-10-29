@@ -154,7 +154,7 @@ function ExtraCard({ extra, onEdit, onDelete }: { extra: Extra; onEdit: () => vo
           </div>
           {extra.description && <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{extra.description}</p>}
           <div className="flex items-center justify-between mt-2">
-            <span className="text-sm font-bold text-white">{money(extra.price)} <span className="text-xs font-normal text-gray-500">{chargedAs(extra.price_type)?.per || extra.price_type}</span></span>
+            <span className="text-sm font-bold text-white">{money(extra.price, extra.currency)} <span className="text-xs font-normal text-gray-500">{chargedAs(extra.price_type)?.per || extra.price_type}</span></span>
             <div className="flex gap-1">
               <button onClick={onEdit} className="p-1.5 rounded-lg hover:bg-white/[0.06] text-gray-500 hover:text-white transition-all"><Pencil size={12} /></button>
               <button onClick={onDelete} className="p-1.5 rounded-lg hover:bg-red-500/10 text-gray-500 hover:text-red-400 transition-all"><Trash2 size={12} /></button>
@@ -231,7 +231,7 @@ export function ExtraForm({ extra, onClose, onSave, saving }: { extra: Extra | n
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-gray-400 mb-1.5">Price (€)</label>
+              <label className="block text-xs font-semibold text-gray-400 mb-1.5">Price ({extra?.currency || 'venue currency'})</label>
               <input type="number" inputMode="decimal" value={price} onChange={e => setPrice(e.target.value)} min={0} step={0.5} className={inputCls} />
             </div>
             <div>

@@ -162,15 +162,12 @@ class BookingExtraModelTest extends TestCase
         $this->assertIsInt($extra->lead_time_hours);
     }
 
-    public function test_null_lead_time_hours_persists_as_null(): void
+    public function test_cleared_lead_time_hours_persists_as_zero(): void
     {
-        // null = no lead-time requirement (most extras: late
-        // checkout, room upgrade, etc). The quote() filter
-        // branches on null/not-null — string-coerced "null" would
-        // false-positive as "0 hours required".
+        // The API accepts a cleared optional value; production stores no preparation time as zero.
         $extra = $this->extra(['lead_time_hours' => null]);
 
-        $this->assertNull($extra->fresh()->lead_time_hours);
+        $this->assertSame(0, $extra->fresh()->lead_time_hours);
     }
 
     public function test_lead_time_hours_24_persists_correctly(): void

@@ -11,6 +11,8 @@ use App\Models\RefundAttempt;
 use App\Models\User;
 use App\Services\Booking\GroupPayment;
 use App\Services\Booking\RefundOutcomeUnknown;
+use App\Services\Booking\RefundOperations;
+use App\Services\Booking\RefundNotSettled;
 use App\Support\SharedCache;
 use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Support\Collection;
@@ -197,11 +199,9 @@ class BookingRefundService
                     // of the same amount gets the same refund back (the
                     // idempotency key, `Idempotent-Replayed`) and records
                     // nothing twice (below).
-                    $refund = StripeService::underLock(fn () => $this->stripe->refund(
-                        $mirror->stripe_payment_intent_id,
-                        $amount,
-                        $reason,
-                    ));
+                    $refund = app(RefundOperations::class)->request($this->stripe, (int) $mirror->organization_id,
+                        (string) $mirror->stripe_payment_intent_id, $amount, (string) ($mirror->currency ?: 'EUR'),
+                        'stay', $forRoomId ?? (int) $mirror->id, (float) $group->sum(fn ($m) => (float) $m->refunded_amount - (float) $m->dispute_lost_amount), $reason);
                     $stripeRefundId = $refund->id;
                     $replayed = StripeService::wasReplayed($refund);
                 } else {
@@ -351,33 +351,39 @@ class BookingRefundService
         $fullNow = collect();
         // The rooms this refund gave money back to (the mail names them).
         $refundedRooms = collect();
-        foreach ($siblings as $sibling) {
-            if (!$multi) {
-                $sibling->update([
-                    'payment_status'  => $isFull ? PaymentStatus::Refunded->value : PaymentStatus::PartiallyRefunded->value,
-                    'refunded_amount' => $sibling->id === $mirror->id ? $cumulative : $sibling->price_total,
-                    'refunded_at'     => $isFull ? now() : $sibling->refunded_at,
-                    'last_refund_id'  => $stripeRefundId,
-                ]);
-                continue;
+        DB::transaction(function () use ($siblings, $multi, $isFull, $mirror, $cumulative, $stripeRefundId, $after, $fullNow, $refundedRooms, $staff) {
+            foreach ($siblings as $sibling) {
+                if (!$multi) {
+                    $sibling->update([
+                        'payment_status'  => $isFull ? PaymentStatus::Refunded->value : PaymentStatus::PartiallyRefunded->value,
+                        'refunded_amount' => $sibling->id === $mirror->id ? $cumulative : $sibling->price_total,
+                        'refunded_at'     => $isFull ? now() : $sibling->refunded_at,
+                        'last_refund_id'  => $stripeRefundId,
+                    ]);
+                    if ($isFull) app(\App\Services\Loyalty\Visits\VisitEffects::class)->reverse((int) $sibling->organization_id, 'booking_mirror', (int) $sibling->id, $staff);
+                    continue;
+                }
+                $before = round((float) ($sibling->refunded_amount ?? 0), 2);
+                $now = round((float) ($after[$sibling->id] ?? $before), 2);
+                $total = round((float) ($sibling->price_total ?? 0), 2);
+                // The payment's latest refund is stamped on every room: the
+                // lead's copy is the charge.refunded webhook's own dedupe key.
+                $changes = ['last_refund_id' => $stripeRefundId];
+                if ($isFull || ($total > 0 && $now >= $total - 0.01)) {
+                    $changes += ['payment_status' => PaymentStatus::Refunded->value, 'refunded_amount' => $isFull ? $total : $now, 'refunded_at' => now()];
+                    $fullNow->push($sibling);
+                } elseif ($now > 0.004) {
+                    $changes += ['payment_status' => PaymentStatus::PartiallyRefunded->value, 'refunded_amount' => $now];
+                }
+                if ($isFull || $now > $before + 0.004) {
+                    $refundedRooms->push($sibling);
+                }
+                $sibling->update($changes);
+                if (($changes['payment_status'] ?? null) === PaymentStatus::Refunded->value) {
+                    app(\App\Services\Loyalty\Visits\VisitEffects::class)->reverse((int) $sibling->organization_id, 'booking_mirror', (int) $sibling->id, $staff);
+                }
             }
-            $before = round((float) ($sibling->refunded_amount ?? 0), 2);
-            $now = round((float) ($after[$sibling->id] ?? $before), 2);
-            $total = round((float) ($sibling->price_total ?? 0), 2);
-            // The payment's latest refund is stamped on every room: the
-            // lead's copy is the charge.refunded webhook's own dedupe key.
-            $changes = ['last_refund_id' => $stripeRefundId];
-            if ($isFull || ($total > 0 && $now >= $total - 0.01)) {
-                $changes += ['payment_status' => PaymentStatus::Refunded->value, 'refunded_amount' => $isFull ? $total : $now, 'refunded_at' => now()];
-                $fullNow->push($sibling);
-            } elseif ($now > 0.004) {
-                $changes += ['payment_status' => PaymentStatus::PartiallyRefunded->value, 'refunded_amount' => $now];
-            }
-            if ($isFull || $now > $before + 0.004) {
-                $refundedRooms->push($sibling);
-            }
-            $sibling->update($changes);
-        }
+        });
 
         // Stamp the refund id on the attempt row so post-hoc audit
         // ties attempt → refund cleanly.
@@ -477,6 +483,9 @@ class BookingRefundService
 
         // Mark the attempt complete (informational, for the audit trail).
         $attempt->update(['completed_at' => now()]);
+        if ($stripeRefundId && $mirror->stripe_payment_intent_id) {
+            RefundOperations::applied((int) $mirror->organization_id, $stripeRefundId);
+        }
 
         return [
             'is_full'         => $isFull,
@@ -528,6 +537,44 @@ class BookingRefundService
             }
 
             return $this->refundLocked($locked, $new, $reason, $refundId ?? $locked->last_refund_id, false, null, null);
+        });
+    }
+
+    /** Read current provider state under the same lock as desk refunds; failed refunds can move the total down. */
+    public function reconcileProviderRefunds(BookingMirror $mirror, callable $read): void
+    {
+        $payer = GroupPayment::payer($mirror);
+        app()->instance('current_organization_id', (int) $payer->organization_id);
+        $this->underRefundLock($payer, $this->lockWait(), function (BookingMirror $locked) use ($read) {
+            [$total, $last] = $read();
+            $recorded = $this->recordedRefunds($locked);
+            if ($total > $recorded + 0.004) {
+                $new = round($total - $recorded, 2);
+                $target = RefundOperations::targetRoom((int) $locked->organization_id, (string) ($last?->metadata?->refund_operation ?? ''));
+                // At most one app operation can remain unresolved per payment. Preserve its selected room on settlement.
+                if ($target && $last) {
+                    $own = min($new, StripeService::fromSmallestUnit((int) $last->amount, $locked->currency));
+                    $this->refundLocked($locked, $own, $last->reason, $last->id, false, null, $target);
+                    $new = round($new - $own, 2);
+                    $locked = $locked->fresh();
+                }
+                if ($new > 0.004) $this->refundLocked($locked, $new, $last?->reason, $last?->id, false, null, null);
+            } elseif ($total < $recorded - 0.004) {
+                DB::transaction(function () use ($locked, $total, $last, $recorded) {
+                    $rooms = GroupPayment::rows((int) $locked->organization_id, (string) $locked->stripe_payment_intent_id);
+                    $remove = round($recorded - $total, 2);
+                    foreach ($rooms->sortByDesc('id') as $room) {
+                        $lost = (float) ($room->dispute_lost_amount ?? 0);
+                        $deduct = min($remove, max(0.0, (float) $room->refunded_amount - $lost));
+                        $gone = round((float) $room->refunded_amount - $deduct, 2);
+                        $room->update(['refunded_amount' => $gone, 'refunded_at' => $gone > 0 ? $room->refunded_at : null,
+                            'last_refund_id' => $last?->id, 'payment_status' => $gone <= 0 ? 'paid' : ($gone >= (float) $room->price_total - 0.004 ? 'refunded' : 'partially_refunded')]);
+                        $remove = round($remove - $deduct, 2);
+                    }
+                    // A provider failure does not resurrect a cancelled reservation or re-award its points.
+                    AuditLog::record('booking.refund.reconciled', $locked, ['refunded_amount' => $total], ['refunded_amount' => $recorded], null, 'Refund status reconciled with Stripe');
+                });
+            }
         });
     }
 
@@ -756,11 +803,8 @@ class BookingRefundService
      */
     private function reverseLoyaltyPoints(BookingMirror $mirror, ?User $staff): int
     {
-        // Release 7: the stay's visit goes back with its points — its stamp (an open card only), its cashback, its tier
-        // counts — each effect in its own transaction (a savepoint here, under a lost dispute's).
-        app(\App\Services\Loyalty\Visits\VisitRecorder::class)->reversed((int) $mirror->organization_id, 'booking_mirror', (int) $mirror->id, $staff);
-
         $txs = PointsTransaction::withoutGlobalScopes()
+            ->where('organization_id', $mirror->organization_id)
             ->where('reference_type', 'booking_mirror')
             ->where('reference_id', $mirror->id)
             ->where('points', '>', 0)
@@ -784,6 +828,8 @@ class BookingRefundService
                 ]);
             }
         }
+        // The durable reversal can recover points as well if this worker stopped before the inline loop finished.
+        app(\App\Services\Loyalty\Visits\VisitRecorder::class)->reversed((int) $mirror->organization_id, 'booking_mirror', (int) $mirror->id, $staff);
         return $total;
     }
 

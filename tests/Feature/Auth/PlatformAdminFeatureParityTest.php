@@ -98,6 +98,7 @@ class PlatformAdminFeatureParityTest extends TestCase
             'password'  => 'secret-pass-1', // NOT NULL in production
         ]);
 
+        $user->email_verified_at = now();
         $body = $this->callSubscription($user);
 
         $this->assertTrue($body['isSuperAdmin'] ?? false,

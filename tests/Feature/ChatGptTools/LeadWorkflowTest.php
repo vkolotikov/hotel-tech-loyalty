@@ -275,8 +275,8 @@ class LeadWorkflowTest extends TestCase
             DB::table('inquiries')->where('id', 2)->delete();
         }
         DB::table('staff')->update(['is_active' => false]);
-        $this->callTool('get_lead', ['lead_id' => 1])->assertJsonPath('result.isError', true);
-        $this->callTool('update_lead_status', $args)->assertJsonPath('result.isError', true);
+        $this->callTool('get_lead', ['lead_id' => 1])->assertForbidden()->assertJsonPath('error', 'staff_inactive');
+        $this->callTool('update_lead_status', $args)->assertForbidden()->assertJsonPath('error', 'staff_inactive');
         $this->assertSame(0, DB::table('audit_logs')->count());
     }
 

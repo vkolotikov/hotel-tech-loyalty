@@ -47,11 +47,10 @@ class CampaignsTest extends TestCase
         $this->setUpCampaignsSchema();
         $this->campaignsOn();
         EmailSuppression::query()->delete();
-        // Mail::html() is not caught by Mail::fake() (the fake forwards it to the manager), so every message lands in
-        // the in-memory `array` transport, through the real Mailer and its MessageSending listeners; it is read there.
+        // Use the real Mailer and its listeners, bound only to the in-memory transport.
         config(['mail.default' => 'array']);
         $this->outbox = app('mail.manager');
-        Mail::fake();
+        Mail::swap($this->outbox);
         Queue::fake();
         $this->everyone = $this->makeSegment('Everyone', ['operator' => 'AND', 'filters' => []]);
     }
@@ -154,7 +153,7 @@ class CampaignsTest extends TestCase
         foreach ([['get', 'campaigns'], ['post', 'campaigns'], ['get', "campaigns/{$campaign->id}"], ['put', "campaigns/{$campaign->id}"],
             ['delete', "campaigns/{$campaign->id}"], ['get', "campaigns/{$campaign->id}/audience"], ['post', "campaigns/{$campaign->id}/test"],
             ['post', "campaigns/{$campaign->id}/send"], ['post', "campaigns/{$campaign->id}/cancel"], ['post', "campaigns/{$campaign->id}/duplicate"]] as [$method, $path]) {
-            $this->asStaffMember()->json($method, $this->api($path), ['name' => 'X'])->assertStatus(403)->assertJsonPath('error', 'manager_only');
+            $this->asStaffMember()->json($method, $this->api($path), ['name' => 'X'])->assertStatus(403)->assertJsonPath('error', 'not_allowed');
         }
         $this->assertSame(1, EmailCampaign::query()->count());
         Queue::assertNothingPushed();
@@ -540,6 +539,17 @@ class CampaignsTest extends TestCase
         Queue::pushed(SendEmailCampaignChunk::class)->first()->handle(app(EmailComplianceService::class));
         $this->assertSame([], $this->sent());
         $this->assertSame('cancelled', $campaign->fresh()->status);
+    }
+
+    public function test_unknown_delivery_outcomes_are_visible_in_the_campaign_detail(): void
+    {
+        $campaign = $this->readyDraft();
+        DB::table('email_campaign_deliveries')->insert([
+            'campaign_id' => $campaign->id, 'member_id' => $this->ada->id, 'status' => 'pending',
+            'created_at' => now(), 'updated_at' => now(),
+        ]);
+        $campaign->forceFill(['status' => 'sent'])->save();
+        $this->asManager()->getJson($this->api("campaigns/{$campaign->id}"))->assertOk()->assertJsonPath('campaign.pending_count', 1);
     }
 
     public function test_duplicate_makes_a_fresh_draft_of_any_campaign(): void

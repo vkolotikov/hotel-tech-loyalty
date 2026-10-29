@@ -36,7 +36,7 @@ async (page) => {
     else if(path==='insights/at-risk')body={days:30,total:0,limit:100,members:[]};
     return route.fulfill({status,contentType:'application/json',body:JSON.stringify(body)});
   });
-  await page.setViewportSize({width:1440,height:1080});await page.goto(base+'/loyalty/insights');await page.locator('.l-in-tiles').waitFor();await page.evaluate(()=>document.fonts.ready);await page.screenshot({path:root+'render-dashboard.png',fullPage:true});
+  await page.setViewportSize({width:1440,height:1080});await page.goto(base+'/loyalty/insights');await page.locator('.l-in-tiles').waitFor();await page.evaluate(()=>document.fonts.ready);await page.screenshot({path:root+'render-dashboard.png',fullPage:false});
   await page.getByRole('button',{name:/^Reporting period:/}).click();await page.locator('dialog[open]').waitFor();await page.locator('dialog[open]').screenshot({path:root+'render-filters.png'});await page.keyboard.press('Escape');
   await page.getByRole('button',{name:'Definitions',exact:true}).click();await page.locator('dialog[open]').waitFor();await page.locator('dialog[open]').screenshot({path:root+'render-definitions.png'});await page.keyboard.press('Escape');
   return {screens:3,errors:state.errors};

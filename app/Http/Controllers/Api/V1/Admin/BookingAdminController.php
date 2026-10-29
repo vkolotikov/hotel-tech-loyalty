@@ -86,12 +86,25 @@ class BookingAdminController extends Controller
             return $q;
         };
 
+        $venueCurrency = strtoupper((string) \App\Models\HotelSetting::getValue('booking_currency', 'EUR'));
+        $currencySql = "UPPER(COALESCE(NULLIF(raw_json->>'currency', ''), ?))";
+        $currencyRows = $applyFilters(BookingMirror::query())
+            ->selectRaw("{$currencySql} AS currency_code, COALESCE(SUM(price_total), 0) AS revenue, COALESCE(SUM(price_paid), 0) AS paid", [$venueCurrency])
+            ->groupBy('currency_code')->orderBy('currency_code')->toBase()->get();
+        $moneyKpi = static function (string $key, string $label, bool $balance = false) use ($currencyRows, $venueCurrency): array {
+            $values = $currencyRows->map(fn ($row) => ['currency' => $row->currency_code,
+                'amount' => round((float) $row->revenue - ($balance ? (float) $row->paid : 0), 2)])->all();
+            if ($values === []) {
+                $values = [['currency' => $venueCurrency, 'amount' => 0.0]];
+            }
+            return ['key' => $key, 'label' => $label, 'value' => count($values) === 1 ? $values[0]['amount'] : null,
+                'values' => $values, 'displayValue' => implode(' / ', array_map(fn ($value) => $value['currency'].' '.number_format($value['amount'], 2), $values))];
+        };
+
         // ── KPI scalars in ONE SELECT ─────────────────────────────
         $kpiRow = $applyFilters(BookingMirror::query())
             ->selectRaw('
                 COUNT(*) AS total,
-                COALESCE(SUM(price_total), 0) AS revenue,
-                COALESCE(SUM(price_paid), 0) AS paid,
                 COUNT(*) FILTER (WHERE booking_state = ?) AS confirmed,
                 COUNT(*) FILTER (WHERE booking_state = ?) AS cancelled,
                 COUNT(*) FILTER (WHERE payment_status = ?) AS pending,
@@ -101,8 +114,6 @@ class BookingAdminController extends Controller
             ->first();
 
         $total     = (int) ($kpiRow->total ?? 0);
-        $revenue   = (float) ($kpiRow->revenue ?? 0);
-        $paid      = (float) ($kpiRow->paid ?? 0);
         $confirmed = (int) ($kpiRow->confirmed ?? 0);
         $cancelled = (int) ($kpiRow->cancelled ?? 0);
         $pending   = (int) ($kpiRow->pending ?? 0);
@@ -110,15 +121,13 @@ class BookingAdminController extends Controller
 
         // ── Payment mix — GROUP BY payment_status ────────────────
         $paymentMix = $applyFilters(BookingMirror::query())
-            ->selectRaw("COALESCE(payment_status, 'unknown') AS key, COUNT(*) AS count, COALESCE(SUM(price_total), 0) AS total")
-            ->groupBy('key')
-            ->get()
-            ->map(fn ($r) => [
-                'label' => $this->paymentStateLabel($r->key),
-                'key'   => $r->key,
-                'count' => (int) $r->count,
-                'total' => round((float) $r->total, 2),
-            ])
+            ->selectRaw("COALESCE(payment_status, 'unknown') AS key, {$currencySql} AS currency_code, COUNT(*) AS count, COALESCE(SUM(price_total), 0) AS total", [$venueCurrency])
+            ->groupBy('key', 'currency_code')->orderBy('currency_code')->toBase()->get()->groupBy('key')
+            ->map(function ($rows, $key) {
+                $totals = $rows->map(fn ($row) => ['currency' => $row->currency_code, 'amount' => round((float) $row->total, 2)])->values()->all();
+                return ['label' => $this->paymentStateLabel($key), 'key' => $key, 'count' => (int) $rows->sum('count'),
+                    'total' => count($totals) === 1 ? $totals[0]['amount'] : null, 'totals' => $totals];
+            })
             ->values();
 
         // ── Arrivals timeline — next 14 days. Already DB-aggregated. ──
@@ -143,21 +152,22 @@ class BookingAdminController extends Controller
 
         // ── Unit performance — GROUP BY apartment_name/id ────────
         $unitPerf = $applyFilters(BookingMirror::query())
-            ->selectRaw('
+            ->selectRaw("{$currencySql} AS currency_code,
                 apartment_name,
-                MAX(apartment_id) AS apartment_id,
+                apartment_id,
                 COUNT(*) AS bookings,
                 COALESCE(SUM(price_total), 0) AS revenue,
                 COALESCE(SUM(price_paid), 0) AS paid,
                 AVG(EXTRACT(EPOCH FROM (departure_date::timestamp - arrival_date::timestamp)) / 86400)
                     FILTER (WHERE arrival_date IS NOT NULL AND departure_date IS NOT NULL) AS avg_nights
-            ')
+            ", [$venueCurrency])
             ->whereNotNull('apartment_name')
-            ->groupBy('apartment_name')
-            ->get()
+            ->groupBy('apartment_name', 'apartment_id', 'currency_code')->orderBy('currency_code')
+            ->toBase()->get()
             ->map(fn ($r) => [
                 'unit_name'  => $r->apartment_name,
                 'unit_id'    => $r->apartment_id,
+                'currency'   => $r->currency_code,
                 'bookings'   => (int) $r->bookings,
                 'revenue'    => round((float) $r->revenue, 2),
                 'paid'       => round((float) $r->paid, 2),
@@ -190,13 +200,17 @@ class BookingAdminController extends Controller
             ->limit(8)
             ->get(['id', 'reservation_id', 'booking_reference', 'guest_name', 'apartment_name',
                    'channel_name', 'arrival_date', 'departure_date', 'price_total', 'price_paid',
-                   'payment_status', 'payment_method']);
+                   'payment_status', 'payment_method', 'organization_id', 'raw_json'])->makeHidden('raw_json');
 
         // Recent submissions
         $recentSubs = BookingSubmission::orderByDesc('created_at')
             ->limit(8)
             ->get(['id', 'outcome', 'guest_name', 'unit_name', 'check_in', 'check_out',
-                   'gross_total', 'payment_method', 'created_at']);
+                   'gross_total', 'payment_method', 'created_at', 'payload_json'])
+            ->map(function ($submission) use ($venueCurrency) {
+                $submission->setAttribute('currency', strtoupper((string) ($submission->payload_json['currency'] ?? $venueCurrency)));
+                return $submission->makeHidden('payload_json');
+            });
 
         // Upcoming arrivals (next 7 days). Enriched with channel + money so
         // the dashboard panel can show "Booking.com · €420 paid / €602" at
@@ -209,8 +223,8 @@ class BookingAdminController extends Controller
         $arrivals = $arrivalsQuery->get([
             'id', 'guest_name', 'apartment_name', 'arrival_date', 'departure_date',
             'adults', 'children', 'internal_status', 'payment_status',
-            'channel_name', 'price_total', 'price_paid', 'booking_reference',
-        ]);
+            'channel_name', 'price_total', 'price_paid', 'booking_reference', 'organization_id', 'raw_json',
+        ])->makeHidden('raw_json');
 
         // Website reservations — last 20 bookings made via the public
         // widget. Channel_name is stamped 'Website' by the widget's
@@ -222,8 +236,8 @@ class BookingAdminController extends Controller
             ->get([
                 'id', 'guest_name', 'guest_email', 'apartment_name', 'arrival_date', 'departure_date',
                 'adults', 'children', 'price_total', 'price_paid', 'payment_status',
-                'internal_status', 'booking_reference', 'source_created_at',
-            ]);
+                'internal_status', 'booking_reference', 'source_created_at', 'organization_id', 'raw_json',
+            ])->makeHidden('raw_json');
 
         // Sync health
         $lastSync = AuditLog::where('action', 'like', 'booking.%')->orderByDesc('created_at')->first();
@@ -243,12 +257,12 @@ class BookingAdminController extends Controller
             'filters' => ['units' => $units],
             'kpis' => [
                 ['key' => 'total_bookings', 'label' => 'Total Bookings', 'value' => $total, 'displayValue' => (string) $total],
-                ['key' => 'revenue', 'label' => 'Revenue', 'value' => $revenue, 'displayValue' => '€' . number_format($revenue, 0)],
+                $moneyKpi('revenue', 'Revenue'),
                 ['key' => 'confirmed', 'label' => 'Confirmed', 'value' => $confirmed, 'displayValue' => (string) $confirmed],
                 ['key' => 'cancelled', 'label' => 'Cancelled', 'value' => $cancelled, 'displayValue' => (string) $cancelled],
                 ['key' => 'pending_payment', 'label' => 'Pending Payment', 'value' => $pending, 'displayValue' => (string) $pending],
                 ['key' => 'avg_stay', 'label' => 'Avg Stay', 'value' => round($avgStay ?? 0, 1), 'displayValue' => round($avgStay ?? 0, 1) . ' nights'],
-                ['key' => 'balance_due', 'label' => 'Balance Due', 'value' => round($revenue - $paid, 2), 'displayValue' => '€' . number_format($revenue - $paid, 0)],
+                $moneyKpi('balance_due', 'Balance Due', true),
             ],
             'analytics' => [
                 'paymentMix'      => $paymentMix,
@@ -347,6 +361,9 @@ class BookingAdminController extends Controller
 
         $arr = $booking->toArray();
         $arr['balance_due'] = round(($booking->price_total ?? 0) - ($booking->price_paid ?? 0), 2);
+        $payer = \App\Services\Booking\GroupPayment::payer($booking);
+        $refunded = \App\Services\Booking\GroupPayment::rows((int) $booking->organization_id, (string) $payer->stripe_payment_intent_id)->sum(fn ($m) => (float) $m->refunded_amount - (float) $m->dispute_lost_amount);
+        $arr['pending_refunds'] = \App\Services\Booking\RefundOperations::pending((int) $booking->organization_id, (string) $payer->stripe_payment_intent_id, (float) $refunded);
 
         // Release 6: a room of a multi-room stay — one payment for every room,
         // carried by the lead room (GroupPayment) — shows that payment's
@@ -454,6 +471,8 @@ class BookingAdminController extends Controller
                 $request->user(),
                 $forRoomId,
             );
+        } catch (\App\Services\Booking\RefundNotSettled $e) {
+            return response()->json(['error' => $e->getMessage(), 'code' => $e->errorCode], 409);
         } catch (\App\Services\Booking\RefundOutcomeUnknown $e) {
             // Stripe did not answer in time: the refund may have been made.
             return response()->json(['error' => $e->getMessage(), 'code' => \App\Services\Booking\RefundOutcomeUnknown::CODE], 504);
@@ -564,7 +583,9 @@ class BookingAdminController extends Controller
         // racing (e.g. one operator marks paid while another changes status).
         DB::transaction(function () use ($id, $validated) {
             $booking = BookingMirror::lockForUpdate()->findOrFail($id);
-            $booking->update(array_filter($validated, fn ($v) => $v !== null));
+            $patch = array_filter($validated, fn ($v) => $v !== null);
+            if (isset($patch['internal_status'])) $patch['raw_json'] = array_merge((array) $booking->raw_json, ['_staff_internal_status' => $patch['internal_status']]);
+            $booking->update($patch);
         });
 
         return $this->show($id);
@@ -659,11 +680,12 @@ class BookingAdminController extends Controller
             ->where('booking_state', '!=', 'cancelled')
             ->get(['id', 'reservation_id', 'booking_type', 'guest_name', 'apartment_id', 'apartment_name',
                    'arrival_date', 'departure_date', 'adults', 'children',
-                   'internal_status', 'booking_state', 'payment_status', 'price_total', 'price_paid']);
+                   'internal_status', 'booking_state', 'payment_status', 'price_total', 'price_paid', 'organization_id', 'raw_json']);
 
         return response()->json([
             'bookings' => $bookings,
             'month'    => $month,
+            'default_currency' => BookingEngineService::stayCurrency(),
         ]);
     }
 
@@ -759,7 +781,9 @@ class BookingAdminController extends Controller
                     'mark_status'         => ['internal_status' => $validated['value'] ?? $b->internal_status],
                     'mark_payment_status' => ['payment_status'  => $validated['value'] ?? $b->payment_status],
                 };
-                BookingMirror::where('id', $b->id)->lockForUpdate()->update($patch);
+                $locked = BookingMirror::lockForUpdate()->findOrFail($b->id);
+                if (isset($patch['internal_status'])) $patch['raw_json'] = array_merge((array) $locked->raw_json, ['_staff_internal_status' => $patch['internal_status']]);
+                $locked->update($patch);
                 $updated++;
             }
         });

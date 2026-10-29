@@ -227,6 +227,11 @@ describe('the body\'s blocks', () => {
     expect(campaignServerProblems({ 'body_blocks.2.url': ['x'], 'body_blocks.0.color': ['x'], segment_id: ['x'], name: ['x'] })).toEqual({
       form: { segment_id: 'segment_gone', name: 'name' }, blocks: { 2: { url: 'url' }, 0: { look: 'look' } },
     })
+    })
+
+    it('does not label an unconfirmed delivery as skipped or complete', () => {
+      expect(progressOf({ status: 'sent', recipient_count: 10, sent_count: 7, failed_count: 1, pending_count: 2 }))
+        .toEqual({ done: 8, total: 10, percent: 80, skipped: 0 })
   })
 
   it('knows when the form differs from the saved draft', () => {

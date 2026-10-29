@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { api, API_BASE } from './api'
+import { authSession } from './authSession'
 
 /**
  * Field-visibility config for CRM entities. Stored under per-entity
@@ -459,7 +460,9 @@ export async function triggerExport(path: string, params: Record<string, any> = 
   for (const [k, v] of Object.entries(params)) {
     if (v !== '' && v !== null && v !== undefined) qs.set(k, String(v))
   }
-  const token = localStorage.getItem('auth_token')
+  const session = authSession.version()
+  if (!authSession.check(session)) throw new Error('Session changed')
+  const token = authSession.token()
   const base = API_BASE
   const url = `${base}${path}${qs.toString() ? '?' + qs.toString() : ''}`
   // Leads + customers exports return a styled .xlsx by default now;
@@ -474,6 +477,7 @@ export async function triggerExport(path: string, params: Record<string, any> = 
   })
   if (!res.ok) throw new Error('Export failed')
   const blob = await res.blob()
+  if (!authSession.check(session)) throw new Error('Session changed')
   const a = document.createElement('a')
   a.href = URL.createObjectURL(blob)
   a.download = (res.headers.get('content-disposition') ?? '').match(/filename="?([^"]+)"?/)?.[1] ?? 'export.xlsx'

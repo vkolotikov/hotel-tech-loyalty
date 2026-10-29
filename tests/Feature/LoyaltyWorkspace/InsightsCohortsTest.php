@@ -55,7 +55,7 @@ class InsightsCohortsTest extends TestCase
     public function test_only_who_may_read_insights_reads_them(): void
     {
         $this->asStaffMember()->getJson($this->api('insights/cohorts'))
-            ->assertStatus(403)->assertJsonPath('error', 'not_allowed')->assertJsonPath('need', 'can_view_analytics');
+            ->assertStatus(403)->assertJsonPath('error', 'not_allowed');
         DB::table('staff')->where('user_id', $this->staffMember->id)->update(['can_view_analytics' => true]);
         $this->asStaffMember()->getJson($this->api('insights/cohorts'))->assertOk();
     }

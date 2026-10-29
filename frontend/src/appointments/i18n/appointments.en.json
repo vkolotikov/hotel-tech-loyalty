@@ -303,6 +303,9 @@
     "bulk_mark_status": "Status changed in the full admin (bulk)"
   },
   "error": {
+    "refund_pending": "A refund is processing. Retry the same amount to check it; do not return the money another way.",
+    "refund_outcome_unknown": "The refund result is not known yet. Retry the same amount to check it; do not return the money another way.",
+    "refund_failed": "The refund was declined. No refund was completed. Check the payment and try again.",
     "deposit_refund_failed": "The deposit could not be refunded just now. Try again.",
     "deposits_unavailable": "Deposits need online payments through Stripe in the venue’s currency.",
     "reopen_slot_taken": "That time is taken now — book the client again at another time.",
@@ -511,6 +514,7 @@
     }
   },
   "money": {
+    "provider": {"pending":"Processing","unknown":"Outcome unknown","requesting":"Requested","requires_action":"Action required","failed":"Failed — no money returned","canceled":"Cancelled — no money returned"},
     "title": "Money",
     "total": "Total",
     "paid_online": "Paid online by card",

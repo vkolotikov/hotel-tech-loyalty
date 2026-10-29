@@ -29,7 +29,9 @@ final class TakingsReport
             ->orderBy('id')->get();
 
         $totals = [];
+        $statuses = \App\Services\Booking\RefundOperations::statuses($orgId, $rows->pluck('stripe_refund_id')->filter()->all());
         foreach ($rows as $r) {
+            if ($r->kind === 'refund' && $r->stripe_refund_id && ($statuses[$r->stripe_refund_id] ?? 'succeeded') !== 'succeeded') continue;
             $cur = (string) $r->currency;
             $totals[$cur] ??= array_fill_keys(self::METHODS, ['in' => 0.0, 'out' => 0.0]);
             $side = $r->kind === 'payment' ? 'in' : 'out';
@@ -52,6 +54,7 @@ final class TakingsReport
             'date'   => $date,
             'totals' => $totals,
             'rows'   => $rows->map(fn (ServiceBookingPayment $r) => $r->toApi() + [
+                'provider_status' => $r->stripe_refund_id ? ($statuses[$r->stripe_refund_id] ?? 'succeeded') : null,
                 'reference' => $r->booking?->booking_reference,
                 'client'    => $r->booking?->customer_name,
             ])->values()->all(),

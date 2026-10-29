@@ -110,4 +110,34 @@ class CampaignRateLimiterTest extends TestCase
 
         $this->assertSame(100, $this->limiter->remaining(1));
     }
+
+    public function test_reservations_compete_for_shared_global_and_organisation_budgets(): void
+    {
+        $first = $this->limiter->reserve(1, 90);
+        $second = (new CampaignRateLimiter())->reserve(1, 100);
+        $third = (new CampaignRateLimiter())->reserve(2, 100);
+        $fourth = (new CampaignRateLimiter())->reserve(3, 100);
+        $this->assertSame([90, 10, 100, 50], array_column([$first, $second, $third, $fourth], 'count'));
+        $this->assertSame(0, $this->limiter->reserve(4, 1)['count']);
+    }
+
+    public function test_only_known_unused_slots_are_returned_once_to_the_original_hour(): void
+    {
+        $reservation = $this->limiter->reserve(1, 100);
+        $this->limiter->release($reservation['id'], 40);
+        $this->limiter->release($reservation['id'], 40);
+        $this->assertSame(40, $this->limiter->remaining(1));
+        $previousHour = $this->limiter->reserve(1, 40);
+        $this->travel(1)->hour();
+        $this->limiter->reserve(1, 30);
+        $this->limiter->release($previousHour['id'], 40);
+        $this->assertSame(70, $this->limiter->remaining(1));
+    }
+
+    public function test_rate_budgets_use_shared_cache_even_when_default_cache_is_private(): void
+    {
+        config(['cache.default' => 'null', 'cache.shared' => 'array']);
+        $this->limiter->reserve(1, 100);
+        $this->assertSame(0, (new CampaignRateLimiter())->reserve(1, 100)['count']);
+    }
 }

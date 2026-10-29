@@ -93,7 +93,7 @@ class OffersTest extends TestCase
         $offer = $this->offer('Autumn spa');
 
         $this->asStaffMember()->postJson($this->api('offers'), $this->offerBody())
-            ->assertStatus(403)->assertJsonPath('error', 'not_allowed')->assertJsonPath('need', 'can_manage_offers');
+            ->assertStatus(403)->assertJsonPath('error', 'not_allowed');
         $this->asStaffMember()->putJson($this->api("offers/{$offer->id}"), ['title' => 'Mine'])
             ->assertStatus(403)->assertJsonPath('error', 'not_allowed');
 

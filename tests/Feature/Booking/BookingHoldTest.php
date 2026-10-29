@@ -278,10 +278,9 @@ class BookingHoldTest extends TestCase
         ]);
     }
 
-    public function test_same_hold_token_across_different_orgs_coexists(): void
+    public function test_same_hold_token_across_different_orgs_is_refused(): void
     {
-        // Per-tenant unique key — client-generated tokens MAY
-        // collide across orgs without breaking either.
+        // Tokens are server-generated bearer identifiers and globally unique in the production migration.
         $orgA = $this->orgId;
         $orgB = OrganizationFactory::new()->create()->id;
 
@@ -293,6 +292,7 @@ class BookingHoldTest extends TestCase
             'created_at'      => now(),
             'updated_at'      => now(),
         ]);
+        $this->expectException(UniqueConstraintViolationException::class);
         \DB::table('booking_holds')->insert([
             'organization_id' => $orgB,
             'hold_token'      => 'shared_token_xx',
@@ -302,11 +302,6 @@ class BookingHoldTest extends TestCase
             'updated_at'      => now(),
         ]);
 
-        $count = BookingHold::withoutGlobalScopes()
-            ->where('hold_token', 'shared_token_xx')
-            ->count();
-        $this->assertSame(2, $count,
-            'Per-tenant unique on (org, hold_token) MUST allow same token across orgs.');
     }
 
     /* ─── TenantScope cross-org isolation ─── */

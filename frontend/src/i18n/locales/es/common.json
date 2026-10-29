@@ -1059,7 +1059,8 @@
       "status": "Estado",
       "invoice": "Factura",
       "payment": "Pago",
-      "paid_amount": "Pagado (€)"
+      "paid_amount": "Pagado (€)",
+      "paid_amount_currency": "Pagado ({{currency}})"
     },
     "meta": {
       "title": "Detalles",
@@ -1073,6 +1074,10 @@
       "created": "Creado"
     },
     "refund": {
+      "pending": "Hay un reembolso en proceso. Reintente el mismo importe para comprobarlo; no devuelva el dinero por otra vía.",
+      "unknown": "Aún no se conoce el resultado. Reintente el mismo importe; no devuelva el dinero por otra vía.",
+      "open_original": "Abrir el reembolso de la habitación original",
+      "check": "Comprobar reembolso",
       "title": "Emitir reembolso",
       "subtitle": "Stripe devolverá los fondos en 5–10 días hábiles",
       "amount_label": "Importe",

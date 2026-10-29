@@ -434,7 +434,7 @@ function ProfileTab({ visitor: v }: { visitor: VisitorDetail['visitor'] | undefi
           <p className="text-sm font-semibold">{v.guest.full_name}</p>
           <p className="text-xs text-t-secondary mt-0.5">{v.guest.email ?? v.guest.phone ?? '—'}</p>
           <a
-            href={`/guest/${v.guest.id}`}
+            href={`/guests/${v.guest.id}`}
             className="inline-flex items-center gap-1 text-xs text-accent hover:underline mt-2"
           >
             Open CRM card <ExternalLink size={11} />
@@ -455,8 +455,6 @@ function ConversationTab({
   onSend: () => void
   sending: boolean
 }) {
-  if (!conv) return <Loading />
-
   // Translation state — agents can flip the whole transcript into
   // English / Russian (or any supported language). Cached per message
   // id so re-toggling doesn't re-call OpenAI for the same string.
@@ -469,7 +467,7 @@ function ConversationTab({
   // cache key as `${msg.id}:${lang}` so different languages don't fight.
   useEffect(() => {
     if (translateTo === 'off') return
-    const messages = conv.messages ?? []
+    const messages = conv?.messages ?? []
     const toFetch = messages.filter(m => {
       if (!m.content || !m.content.trim()) return false
       return !translations[`${m.id}:${translateTo}`]
@@ -500,7 +498,9 @@ function ConversationTab({
       if (!cancelled) setTranslating(false)
     })()
     return () => { cancelled = true }
-  }, [translateTo, conv.messages])
+  }, [translateTo, conv?.messages])
+
+  if (!conv) return <Loading />
 
   return (
     <>

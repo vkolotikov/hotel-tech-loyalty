@@ -1,6 +1,6 @@
 // Run after requests.browser.js. All writes remain local API fixtures.
 async (page) => {
-  const base=new URL(page.url()).origin;if(!/^http:\/\/(127\.0\.0\.1|localhost):(5173|5810)$/.test(base))throw Error('Local fixture required');
+  const base=new URL(page.url()).origin;if(!/^http:\/\/(127\.0\.0\.1|localhost):(5173|5175|5810)$/.test(base))throw Error('Local fixture required');
   const checks=[];const ok=(v,name)=>{if(!v)throw Error(name);checks.push(name)};
   const state=body=>page.evaluate(async body=>await(await fetch('/api/v1/admin/loyalty/__fixture',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})).json(),body);
   const read=()=>page.evaluate(async()=>await(await fetch('/api/v1/admin/loyalty/__fixture')).json());

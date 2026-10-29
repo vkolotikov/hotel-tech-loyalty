@@ -25,12 +25,13 @@ class PasswordResetCodeMail extends Mailable implements ShouldQueue
 
     public function __construct(
         public string $code,
+        public ?string $accountLabel = null,
     ) {}
 
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: "Your password reset code: {$this->code}",
+            subject: ($this->accountLabel ? $this->accountLabel . ' — ' : '') . "Your password reset code: {$this->code}",
         );
     }
 

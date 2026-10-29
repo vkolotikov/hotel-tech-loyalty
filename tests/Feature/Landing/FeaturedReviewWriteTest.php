@@ -4,6 +4,7 @@ namespace Tests\Feature\Landing;
 use App\Models\LandingPage;
 use App\Models\Organization;
 use App\Models\ReviewSubmission;
+use App\Models\Staff;
 use App\Models\User;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\Schema;
@@ -97,13 +98,16 @@ class FeaturedReviewWriteTest extends TestCase
 
     private function user(Organization $org): User
     {
-        return User::create([
+        $user = User::create([
             'password' => 'secret-pass-1',
             'name'            => 'Staff',
             'email'           => 'staff_' . uniqid() . '@example.test',
             'organization_id' => $org->id,
             'user_type'       => 'staff',
         ]);
+        Staff::create(['organization_id' => $org->id, 'user_id' => $user->id, 'role' => 'manager', 'is_active' => true]);
+
+        return $user;
     }
 
     /** The tenant scope is what the model's creating hook reads, so it is bound for the write. */

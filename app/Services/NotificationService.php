@@ -100,8 +100,8 @@ class NotificationService
 
     /**
      * The type a push message from HexaTech Loyalty is kept under, by its category (release 3 §5): each maps to that
-     * category in TYPE_TO_CATEGORY, so the member's opt-out applies to it. (The full admin's push campaigns keep the
-     * type `campaign`, which is transactional.)
+     * category in TYPE_TO_CATEGORY, so the member's opt-out applies to it. The full admin's bulk campaigns keep the
+     * type `campaign` and share the offers opt-out.
      */
     public const MESSAGE_TYPES = [
         'offers' => 'message_offers',
@@ -123,6 +123,7 @@ class NotificationService
         'tier_upgrade'    => 'tier',
         'tier_downgrade'  => 'tier',
         'new_offer'       => 'offers',
+        'campaign'        => 'offers', // legacy bulk marketing campaigns honour the member's offers preference
         'offer_expiring'  => 'offers',
         'booking'         => 'stays',
         'stay_review'     => 'stays',

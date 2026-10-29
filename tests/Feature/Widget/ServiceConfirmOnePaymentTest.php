@@ -333,10 +333,9 @@ class ServiceConfirmOnePaymentTest extends MemberEndpointTestCase
     }
 
     /**
-     * Any other unique violation keeps the answer it had: without a payment
-     * on the request, a clash on booking_reference is answered 409 with the
-     * exception's own message, as every RuntimeException here is. (Forced by
-     * handing the insert a reference another booking holds.)
+     * A clash on booking_reference remains a conflict, with a safe public
+     * message and the real diagnostic kept internally. Forced by handing
+     * the insert a reference another booking holds.
      */
     public function test_another_unique_violation_keeps_its_answer(): void
     {
@@ -349,10 +348,7 @@ class ServiceConfirmOnePaymentTest extends MemberEndpointTestCase
 
         $res->assertStatus(409);
         $message = (string) $res->json('error');
-        $this->assertSame(['error'], array_keys($res->json()));
-        $this->assertStringContainsString('booking_reference', $message);
-        // The submission row keeps the first 255 characters: production's `error_message` is varchar(255) (release 6).
-        $this->assertSame([mb_substr($message, 0, 255)], $this->failedReasons());
+        $this->assertSafeConflict($res, $message);
         $this->assertSame(1, $this->rows()->count());
     }
 
@@ -373,13 +369,23 @@ class ServiceConfirmOnePaymentTest extends MemberEndpointTestCase
 
         $res->assertStatus(409);
         $message = (string) $res->json('error');
-        $this->assertSame(['error'], array_keys($res->json()));
         $this->assertNotSame(self::USED, $message);
-        $this->assertStringContainsString('booking_reference', $message);
-        // The submission row keeps the first 255 characters: production's `error_message` is varchar(255) (release 6).
-        $this->assertSame([mb_substr($message, 0, 255)], $this->failedReasons());
+        $this->assertSafeConflict($res, $message);
         $this->assertSame(1, $this->rows()->count());
         $this->assertSame([], $captured);
+    }
+
+    private function assertSafeConflict(\Illuminate\Testing\TestResponse $response, string $message): void
+    {
+        $response->assertJsonPath('code', 'booking_unavailable');
+        $this->assertSame(['error', 'code', 'reference'], array_keys($response->json()));
+        $this->assertTrue(\Illuminate\Support\Str::isUuid($response->json('reference')));
+        $this->assertSame('The booking could not be saved. Please try again.', $message);
+        $this->assertStringNotContainsString('booking_reference', $message);
+        $reasons = $this->failedReasons();
+        $this->assertCount(1, $reasons);
+        $this->assertStringContainsString('booking_reference', $reasons[0]);
+        $this->assertLessThanOrEqual(255, mb_strlen($reasons[0]));
     }
 
     /**

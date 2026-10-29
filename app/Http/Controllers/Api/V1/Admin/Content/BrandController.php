@@ -22,7 +22,7 @@ use App\Services\ContentKnowledgeService;
 use App\Services\ContentPlanner\ProfileBootstrapService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Cache;
+use App\Support\SharedCache;
 
 /**
  * Brand (spec 2026-10-14 §4.6): everyone reads the profile, its audiences,
@@ -132,7 +132,7 @@ class BrandController extends Controller
         // The AI log needs a profile row, so the shell comes first.
         $profile = $this->editor->profileFor($request->attributes->get('workspace_org'), $request->user());
         // One quick setup at a time per brand: a second click while the AI writes would pay twice.
-        $lock = Cache::lock("content:quick-setup:{$request->attributes->get('workspace_org')->id}:{$profile->brand_id}", 600);
+        $lock = SharedCache::store()->lock("content:quick-setup:{$request->attributes->get('workspace_org')->id}:{$profile->brand_id}", 600);
         if (!$lock->get()) {
             throw new ContentRefused('already_generating', 'This brand is already being set up.', 409);
         }

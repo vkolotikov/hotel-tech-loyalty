@@ -24,6 +24,9 @@ class PlatformAdminFlagTest extends TestCase
     {
         parent::setUp();
         $this->setUpAppointments();
+        if (!Schema::hasColumn('users', 'email_verified_at')) {
+            Schema::table('users', fn ($t) => $t->timestamp('email_verified_at')->nullable());
+        }
         config()->set('services.saas.platform_admin_emails', 'owner@example.test');
     }
 
@@ -42,7 +45,7 @@ class PlatformAdminFlagTest extends TestCase
 
     public function test_a_platform_admin_is_told_so(): void
     {
-        $this->staff->forceFill(['email' => 'owner@example.test'])->save();
+        $this->staff->forceFill(['email' => 'owner@example.test', 'email_verified_at' => now()])->save();
 
         $this->me($this->staff)->assertJsonPath('is_platform_admin', true);
     }
@@ -74,7 +77,7 @@ class PlatformAdminFlagTest extends TestCase
             ->assertOk()
             ->assertJsonPath('user.is_platform_admin', false);
 
-        $this->staff->forceFill(['email' => 'owner@example.test'])->save();
+        $this->staff->forceFill(['email' => 'owner@example.test', 'email_verified_at' => now()])->save();
         $this->postJson('/api/v1/auth/login', ['email' => 'owner@example.test', 'password' => 'secret-pass-1'])
             ->assertOk()
             ->assertJsonPath('user.is_platform_admin', true);

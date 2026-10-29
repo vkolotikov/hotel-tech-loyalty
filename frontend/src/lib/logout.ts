@@ -1,5 +1,6 @@
 import { api, APP_BASE } from './api'
 import { useAuthStore } from '../stores/authStore'
+import { authSession } from './authSession'
 
 /**
  * Single logout path — supersedes the four separate sites that each
@@ -25,21 +26,25 @@ import { useAuthStore } from '../stores/authStore'
  * See AUDIT-2026-06-13-ADDENDUM.md frontend finding for the cross-tenant
  * cache leakage + persisted-PII reasoning.
  */
-let signingOut = false
+let signingOutVersion: number | null = null
 
 export async function logoutAndRedirect(redirectPath: string = '/login'): Promise<void> {
   // A page fires its requests together, so several refusals can ask at once
   // (a deactivated account's `staff_inactive`, then the 401s after the token
   // is revoked). Sign out once; the first caller's reason is the one the
   // sign-in screen gives. The page navigates away, so this never resets.
-  if (signingOut) return
-  signingOut = true
+  const version = authSession.version()
+  if (!authSession.check(version) || signingOutVersion === version) return
+  signingOutVersion = version
   try {
-    await api.delete('/v1/auth/logout')
+    await api.delete('/v1/auth/logout', { authSessionVersion: version })
   } catch {
     /* network/server failure: revoke locally regardless so the user is
        not stuck inside the admin on a broken session. */
   }
+  // A slow logout may finish after another identity signs in. It must not clear or redirect that session.
+  if (signingOutVersion === version) signingOutVersion = null
+  if (!authSession.check(version)) return
   try {
     useAuthStore.getState().logout()
   } catch {

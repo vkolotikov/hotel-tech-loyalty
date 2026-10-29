@@ -15,6 +15,7 @@ use App\Services\Booking\BookingWindowException;
 use App\Services\Booking\CouponException;
 use App\Services\Booking\CouponSelection;
 use App\Services\Booking\ExtraLeadTimeException;
+use App\Services\Booking\CurrencyMismatch;
 use App\Services\Booking\MemberPricing;
 use App\Services\Booking\PaymentAlreadyUsed;
 use App\Services\Booking\PaymentMismatch;
@@ -526,7 +527,7 @@ class PortalServiceBookingController extends Controller
 
         try {
             $pre = $this->buildQuote($request, $data, $builder);
-        } catch (CouponException | ExtraLeadTimeException | BookingWindowException | SlotTakenException | ModelNotFoundException $e) {
+        } catch (CouponException | ExtraLeadTimeException | CurrencyMismatch | BookingWindowException | SlotTakenException | ModelNotFoundException $e) {
             // The usual race: the pre-lock quote is where a taken slot, a window that just closed, or a
             // coupon that just stopped applying is normally caught — well before the advisory lock below,
             // and well before writeBooking()'s own catches. A card can already be authorised by this
@@ -602,7 +603,7 @@ class PortalServiceBookingController extends Controller
         } catch (PaymentMismatch) {
             $this->logFailure($orgId, $key, $data, $user, 'payment_mismatch');
             return $this->fail(response()->json(['error' => 'payment_mismatch', 'message' => 'The payment no longer matches the price. Please pay again.'], 409), $piId, $orgId, $memberId, $guard);
-        } catch (CouponException | ExtraLeadTimeException | BookingWindowException | SlotTakenException | ModelNotFoundException $e) {
+        } catch (CouponException | ExtraLeadTimeException | CurrencyMismatch | BookingWindowException | SlotTakenException | ModelNotFoundException $e) {
             $this->logFailure($orgId, $key, $data, $user, $e->getMessage());
             return $this->fail($this->quoteError($e), $piId, $orgId, $memberId, $guard);
         } catch (\Throwable $e) {
@@ -915,6 +916,7 @@ class PortalServiceBookingController extends Controller
     {
         return match (true) {
             $e instanceof CouponException => response()->json(['error' => $e->errorCode, 'message' => $e->sentence()], 422),
+            $e instanceof CurrencyMismatch => response()->json(['error' => 'currency_mismatch', 'message' => $e->getMessage()], 422),
             $e instanceof BookingWindowException => response()->json(['error' => $e->errorCode, 'message' => $e->getMessage()], 422),
             $e instanceof ExtraLeadTimeException => response()->json(['error' => 'extra_lead_time', 'message' => $e->getMessage()], 422),
             $e instanceof ModelNotFoundException => response()->json(['error' => 'not_found', 'message' => 'We could not find that service.'], 404),

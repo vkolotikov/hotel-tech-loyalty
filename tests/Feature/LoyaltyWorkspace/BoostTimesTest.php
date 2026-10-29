@@ -107,7 +107,7 @@ class BoostTimesTest extends TestCase
     {
         $boost = $this->boost('Weekend');
         $this->asStaffMember()->postJson($this->api('program/boosts/confirm-times?brand_id=all'), ['ids' => [$boost->id]])
-            ->assertStatus(403)->assertJsonPath('error', 'manager_only');
+            ->assertStatus(403)->assertJsonPath('error', 'not_allowed');
 
         $other = $this->otherOrganization();
         app()->instance('current_organization_id', $other['org']->id);

@@ -87,7 +87,7 @@ export function CampaignResults({ campaign: c }: { campaign: Campaign }) {
         <p className="text-sm text-a-text-2">
           {c.status === 'sending' && t('loyalty.campaigns.results.sending', 'Sending, in batches of 100. This page updates every 10 seconds.')}
           {c.status === 'sent' && t('loyalty.campaigns.results.done', 'Sent {{when}}.', { when: when(c.sent_at, locale, timeZone) })}
-          {c.status === 'failed' && t('loyalty.campaigns.results.stopped', 'Sending stopped before the end: {{sent}} were sent, the rest were not.', { sent: n(c.sent_count) })}
+          {c.status === 'failed' && t('loyalty.campaigns.results.stopped', 'Sending stopped before the end: {{sent}} were confirmed sent.', { sent: n(c.sent_count) })}
           {c.status === 'cancelled' && t('loyalty.campaigns.results.cancelled', 'Cancelled: {{sent}} were sent before it stopped.', { sent: n(c.sent_count) })}
         </p>
         {c.status === 'sending' && c.last_progress_at && (
@@ -97,6 +97,10 @@ export function CampaignResults({ campaign: c }: { campaign: Campaign }) {
           <p className="text-sm text-a-text-2">{t('loyalty.campaigns.results.skipped', '{{number}} were not emailed: they withdrew their consent or unsubscribed after it started, or their address was blocked after a bounce or a complaint.', { number: n(progress.skipped) })}</p>
         )}
       </section>
+      )}
+
+      {(c.pending_count ?? 0) > 0 && ['sent', 'failed', 'cancelled'].includes(c.status) && (
+        <Notice tone="warning">{t('loyalty.campaigns.results.unconfirmed', '{{count}} deliveries could not be confirmed. Check the email provider before sending these messages again; some may already have arrived.', { count: c.pending_count })}</Notice>
       )}
 
       <Actions campaign={c} cancel={actions.cancel} onCancel={() => setStopping(true)} />

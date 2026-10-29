@@ -385,7 +385,9 @@ class StripeService
         string $paymentIntentId,
         ?float $amount = null,
         ?string $reason = null,
-        ?string $idempotencyKey = null
+        ?string $idempotencyKey = null,
+        array $metadata = [],
+        ?string $currency = null,
     ): \Stripe\Refund {
         $this->boot();
 
@@ -394,8 +396,9 @@ class StripeService
         }
 
         $payload = ['payment_intent' => $paymentIntentId];
+        if ($metadata !== []) $payload['metadata'] = $metadata;
         if ($amount !== null) {
-            $payload['amount'] = $this->toSmallestUnit($amount);
+            $payload['amount'] = $this->toSmallestUnit($amount, $currency);
         }
         // Stripe accepts: 'duplicate', 'fraudulent', 'requested_by_customer'.
         // Anything else gets ignored, but we'd rather not 400 — only attach
@@ -418,6 +421,22 @@ class StripeService
         $reqOpts['idempotency_key'] = $idempotencyKey;
 
         return $this->client->refunds->create($payload, $reqOpts);
+    }
+
+    /** Read the current refund, so an old webhook cannot move its lifecycle backwards. */
+    public function retrieveRefund(string $id): \Stripe\Refund
+    {
+        $this->boot();
+        if (!$this->client) throw new \RuntimeException('Stripe is not configured for this organization.');
+        return $this->client->refunds->retrieve($id);
+    }
+
+    /** Complete current list, not the possibly truncated/outdated refunds embedded in a webhook. */
+    public function refundsForPaymentIntent(string $id): array
+    {
+        $this->boot();
+        if (!$this->client) throw new \RuntimeException('Stripe is not configured for this organization.');
+        return iterator_to_array($this->client->refunds->all(['payment_intent' => $id, 'limit' => 100])->autoPagingIterator(), false);
     }
 
     /**

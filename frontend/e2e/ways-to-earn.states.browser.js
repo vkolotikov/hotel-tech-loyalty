@@ -33,7 +33,7 @@ async(page)=>{
         await go(search);await page.evaluate(()=>document.fonts.ready);
         const fit=await page.evaluate(()=>({width:innerWidth,doc:document.documentElement.scrollWidth,body:document.body.scrollWidth}));
         ok(fit.doc<=fit.width+1&&fit.body<=fit.width+1,`${name} fits ${width}px without horizontal overflow`);
-        if(width===390||width===1440)await page.screenshot({path:root+`render-${name}-${width}.png`,fullPage:true});
+        if(width===390||width===1440)await page.screenshot({path:root+`render-${name}-${width}.png`,fullPage:false});
       }
     }
     await page.setViewportSize({width:390,height:844});await go('');
@@ -49,12 +49,12 @@ async(page)=>{
     await page.locator('[data-loyalty][data-theme="light"]').waitFor();
     await page.keyboard.press('Escape');
     await page.waitForFunction(()=>getComputedStyle(document.querySelector('[data-loyalty]')).backgroundColor==='rgb(244, 246, 249)');
-    await page.screenshot({path:root+'render-light.png',fullPage:true});checks.push('shared light theme works');
+    await page.screenshot({path:root+'render-light.png',fullPage:false});checks.push('shared light theme works');
     await page.getByRole('button',{name:'Settings',exact:true}).click();
     await page.getByRole('combobox',{name:'Language',exact:true}).selectOption('ru');
     await page.keyboard.press('Escape');
     ok(!(await page.locator('.l-earn-page').innerText()).includes('Ways to earn'),'Russian content replaces English');
-    await page.screenshot({path:root+'render-russian.png',fullPage:true});
+    await page.screenshot({path:root+'render-russian.png',fullPage:false});
     await page.setViewportSize({width:320,height:844});
     ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'Russian light page fits 320px');
     return {passed:checks.length,checks,errors:(await fixture()).errors};

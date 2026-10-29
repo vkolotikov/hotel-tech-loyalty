@@ -40,7 +40,7 @@ async (page) => {
     await page.goto('http://127.0.0.1:5173/loyalty/options'+url);
     await page.locator('.l-earn-page').waitFor();
     await page.evaluate(()=>document.fonts.ready);
-    await page.screenshot({path:root+'render-'+name+'.png',fullPage:true});
+    await page.screenshot({path:root+'render-'+name+'.png',fullPage:false});
   }
   return {errors:state.errors,screens:3,methods:answer.ways.length};
 }

@@ -71,6 +71,8 @@ class BookingEngineConfirmTest extends TestCase
         if (!\Illuminate\Support\Facades\Schema::hasTable('email_verification_codes')) {
             \Illuminate\Support\Facades\Schema::create('email_verification_codes', function ($table) {
                 $table->id();
+                $table->unsignedBigInteger('user_id')->nullable();
+                $table->string('purpose')->nullable();
                 $table->string('email')->index();
                 $table->string('code', 6);
                 $table->timestamp('expires_at');

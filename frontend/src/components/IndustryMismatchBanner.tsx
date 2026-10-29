@@ -123,6 +123,16 @@ export function IndustryMismatchBanner() {
     }
   }, [isMismatch])
 
+  // Hooks must keep the same order when the banner is dismissed or Settings suppresses it.
+  useEffect(() => {
+    if (!shouldShow || dismissed || !modalOpen) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !submitting) setModalOpen(false)
+    }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [shouldShow, dismissed, modalOpen, submitting])
+
   if (!shouldShow || dismissed) return null
 
   const hostCopy = industryCopyFor(hostIndustry)
@@ -168,18 +178,6 @@ export function IndustryMismatchBanner() {
       setSubmitting(false)
     }
   }
-
-  // Escape key + click-outside both close the modal. Click-outside is
-  // already wired via the backdrop's onClick. Escape needs an explicit
-  // listener — without it keyboard-only users can't dismiss the modal.
-  useEffect(() => {
-    if (!modalOpen) return
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && !submitting) setModalOpen(false)
-    }
-    document.addEventListener('keydown', onKey)
-    return () => document.removeEventListener('keydown', onKey)
-  }, [modalOpen, submitting])
 
   const confirmApply = async () => {
     setSubmitting(true)

@@ -303,6 +303,9 @@
     "bulk_mark_status": "Status in der vollständigen Verwaltung geändert (Sammelaktion)"
   },
   "error": {
+    "refund_pending": "Eine Erstattung wird bearbeitet. Prüfen Sie sie durch Wiederholen desselben Betrags; erstatten Sie das Geld nicht auf anderem Weg.",
+    "refund_outcome_unknown": "Das Ergebnis der Erstattung ist noch unbekannt. Wiederholen Sie denselben Betrag zur Prüfung; erstatten Sie nicht auf anderem Weg.",
+    "refund_failed": "Die Erstattung wurde abgelehnt. Es wurde kein Geld erstattet. Prüfen Sie die Zahlung und versuchen Sie es erneut.",
     "deposit_refund_failed": "Die Anzahlung konnte gerade nicht erstattet werden. Bitte erneut versuchen.",
     "deposits_unavailable": "Anzahlungen brauchen Online-Zahlungen über Stripe in der Währung des Betriebs.",
     "reopen_slot_taken": "Diese Zeit ist inzwischen belegt — buchen Sie den Kunden zu einer anderen Zeit neu.",
@@ -511,6 +514,7 @@
     }
   },
   "money": {
+    "provider": {"pending":"In Bearbeitung","unknown":"Ergebnis unbekannt","requesting":"Angefordert","requires_action":"Aktion erforderlich","failed":"Fehlgeschlagen – kein Geld zurückgegeben","canceled":"Abgebrochen – kein Geld zurückgegeben"},
     "title": "Zahlung",
     "total": "Gesamt",
     "paid_online": "Online per Karte bezahlt",

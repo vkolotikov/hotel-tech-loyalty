@@ -218,7 +218,9 @@ class BrandTest extends TestCase
         $this->asManager()->postJson($this->api('brand/quick-setup'), ['platforms' => ['instagram']])
             ->assertStatus(502)->assertJsonPath('error', 'ai_failed')->assertDontSee('Private provider detail');
 
-        $held = Cache::lock("content:quick-setup:{$this->org->id}:{$this->brandId}", 600);
+        config()->set('cache.stores.content_shared_test', ['driver' => 'array']);
+        config()->set('cache.shared', 'content_shared_test');
+        $held = Cache::store('content_shared_test')->lock("content:quick-setup:{$this->org->id}:{$this->brandId}", 600);
         $this->assertTrue($held->get());
         $this->asManager()->postJson($this->api('brand/quick-setup'), ['platforms' => ['instagram']])
             ->assertStatus(409)->assertJsonPath('error', 'already_generating');

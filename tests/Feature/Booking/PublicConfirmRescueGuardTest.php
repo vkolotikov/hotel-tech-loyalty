@@ -288,7 +288,7 @@ class PublicConfirmRescueGuardTest extends TestCase
     private function assertSameAnswer($expected, $actual): void
     {
         $this->assertSame($expected->getStatusCode(), $actual->getStatusCode(), 'same status');
-        $this->assertSame($expected->getContent(), $actual->getContent(), 'same body');
+        $this->assertSame(\Illuminate\Support\Arr::except($expected->json(), ['reference']), \Illuminate\Support\Arr::except($actual->json(), ['reference']), 'same public answer except independent diagnostic reference');
     }
 
     /**
@@ -327,7 +327,7 @@ class PublicConfirmRescueGuardTest extends TestCase
         ]);
 
         $this->confirm(['hold_token' => 'no-such-hold', 'guest' => $this->guest(), 'payment_intent_id' => 'pi_portal_stay'])
-            ->assertStatus(400)->assertExactJson(['error' => self::NO_MATCH]);
+            ->assertStatus(400)->assertJsonPath('code', 'booking_unavailable')->assertJsonStructure(['error', 'reference']);
         $this->assertSame([['retrieve', 'pi_portal_stay']], $this->calls, 'the rescue asks Stripe nothing about a carried payment');
         $this->assertRefused('pi_portal_stay', 'carried_by_booking', 'service_runtime');
 
@@ -426,7 +426,7 @@ class PublicConfirmRescueGuardTest extends TestCase
         $this->intents['pi_earlier'] = $this->intent('pi_earlier', 'requires_capture', $this->widgetMeta($earlier->hold_token));
 
         $this->confirm(['hold_token' => $this->hold()->hold_token, 'guest' => $this->guest(), 'payment_intent_id' => 'pi_earlier'])
-            ->assertStatus(400)->assertExactJson(['error' => self::NO_MATCH]);
+            ->assertStatus(400)->assertJsonPath('code', 'booking_unavailable')->assertJsonStructure(['error', 'reference']);
         $this->assertSame([['retrieve', 'pi_earlier'], ['retrieve', 'pi_earlier']], $this->calls);
         $this->assertRefused('pi_earlier', 'other_hold', 'service_runtime');
 
@@ -469,7 +469,7 @@ class PublicConfirmRescueGuardTest extends TestCase
         $given = $this->confirm(['payment_intent_id' => $own] + $body);
         $this->assertSame([['retrieve', $own], ['retrieve', $own], ['cancel', $own]], $this->calls);
         $this->assertSameAnswer($given, $refused);
-        $refused->assertStatus(400)->assertExactJson(['error' => self::ROOM_TAKEN]);
+        $refused->assertStatus(400)->assertJsonPath('code', 'booking_unavailable')->assertJsonStructure(['error', 'reference']);
     }
 
     /** 7. The validation-failure path naming a carried payment: nothing is asked of Stripe. */
@@ -500,7 +500,7 @@ class PublicConfirmRescueGuardTest extends TestCase
 
         $res = $this->confirm(['hold_token' => 'no-such-hold', 'guest' => $this->guest(), 'payment_intent_id' => 'pi_unreachable']);
 
-        $res->assertStatus(400)->assertExactJson(['error' => 'Unable to verify payment: Could not connect to Stripe.']);
+        $res->assertStatus(400)->assertJsonPath('code', 'booking_unavailable')->assertJsonStructure(['error', 'reference']);
         $this->assertSame([['retrieve', 'pi_unreachable'], ['retrieve', 'pi_unreachable']], $this->calls);
         $this->assertRefused('pi_unreachable', 'unreadable', 'service_runtime', null, ['retrieve_error']);
     }
@@ -514,7 +514,7 @@ class PublicConfirmRescueGuardTest extends TestCase
 
         foreach (['pi_bare_auth', 'pi_bare_paid'] as $id) {
             $this->confirm(['hold_token' => $hold->hold_token, 'guest' => $this->guest(), 'payment_intent_id' => $id])
-                ->assertStatus(400)->assertExactJson(['error' => self::NO_MATCH]);
+                ->assertStatus(400)->assertJsonPath('code', 'booking_unavailable')->assertJsonStructure(['error', 'reference']);
             $this->assertSame([['retrieve', $id], ['retrieve', $id]], $this->calls, 'no cancel, no refund');
             $this->assertRefused($id, 'not_widget_payment', 'service_runtime');
         }
@@ -532,7 +532,7 @@ class PublicConfirmRescueGuardTest extends TestCase
         $this->intents['pi_cached_carried'] = $this->intent('pi_cached_carried', 'requires_capture', $this->widgetMeta($hold->hold_token));
 
         $this->confirm(['hold_token' => $hold->hold_token, 'guest' => $this->guest()])
-            ->assertStatus(400)->assertExactJson(['error' => self::ROOM_TAKEN]);
+            ->assertStatus(400)->assertJsonPath('code', 'booking_unavailable')->assertJsonStructure(['error', 'reference']);
 
         $this->assertSame([], $this->calls);
         $this->assertRefused('pi_cached_carried', 'carried_by_booking', 'service_runtime');
@@ -568,7 +568,7 @@ class PublicConfirmRescueGuardTest extends TestCase
         $own = $this->ownIntent($hold);
 
         $this->confirm(['hold_token' => $hold->hold_token, 'guest' => $this->guest(), 'payment_intent_id' => $own])
-            ->assertStatus(400)->assertExactJson(['error' => 'Lifecycle service unavailable']);
+            ->assertStatus(400)->assertJsonPath('code', 'booking_unavailable')->assertJsonStructure(['error', 'reference']);
 
         $mirror = BookingMirror::withoutGlobalScopes()->where('stripe_payment_intent_id', $own)->sole();
         $this->assertSame('authorized', $mirror->payment_status, 'the booking stands, its payment authorised');
@@ -588,7 +588,7 @@ class PublicConfirmRescueGuardTest extends TestCase
 
         $res = $this->confirm(['hold_token' => $hold->hold_token, 'guest' => $this->guest(), 'payment_intent_id' => 'pi_own']);
 
-        $res->assertStatus(400)->assertExactJson(['error' => self::ROOM_TAKEN]);
+        $res->assertStatus(400)->assertJsonPath('code', 'booking_unavailable')->assertJsonStructure(['error', 'reference']);
         $this->assertSame([['retrieve', 'pi_own'], ['retrieve', 'pi_own'], ['cancel', 'pi_own']], $this->calls);
         $this->assertOutcome('pi_cancelled', 'pi_own', "Confirm failed — PI pi_own cancelled to release held funds", [
             'payment_intent_id' => 'pi_own',
@@ -608,7 +608,7 @@ class PublicConfirmRescueGuardTest extends TestCase
 
         $res = $this->confirm(['hold_token' => $hold->hold_token, 'guest' => $this->guest(), 'payment_intent_id' => 'pi_own']);
 
-        $res->assertStatus(400)->assertExactJson(['error' => self::ROOM_TAKEN]);
+        $res->assertStatus(400)->assertJsonPath('code', 'booking_unavailable')->assertJsonStructure(['error', 'reference']);
         $this->assertSame([['retrieve', 'pi_own'], ['retrieve', 'pi_own'], ['refund', 'pi_own', null, 'requested_by_customer']], $this->calls);
         $this->assertOutcome('pi_refunded', 'pi_own', "Confirm failed — PI pi_own refunded (already captured)", [
             'payment_intent_id' => 'pi_own',
@@ -631,7 +631,7 @@ class PublicConfirmRescueGuardTest extends TestCase
 
         $res = $this->confirm(['hold_token' => $hold->hold_token, 'guest' => $this->guest(), 'payment_intent_id' => $own]);
 
-        $res->assertStatus(503)->assertExactJson(['error' => 'PMS is temporarily unavailable. Please try again in a moment.', 'code' => 'pms_unavailable']);
+        $res->assertStatus(503)->assertExactJson(['error' => 'The booking provider is unavailable. Please try again shortly.', 'code' => 'pms_unavailable']);
         $this->assertSame([['retrieve', $own], ['retrieve', $own], ['cancel', $own]], $this->calls);
         $this->assertOutcome('pi_cancelled', $own, "Confirm failed — PI {$own} cancelled to release held funds", [
             'payment_intent_id' => $own,
@@ -652,7 +652,7 @@ class PublicConfirmRescueGuardTest extends TestCase
 
         $blind = $this->confirm($body);
 
-        $blind->assertStatus(400)->assertExactJson(['error' => self::ROOM_TAKEN]);
+        $blind->assertStatus(400)->assertJsonPath('code', 'booking_unavailable')->assertJsonStructure(['error', 'reference']);
         $this->assertSame([['retrieve', 'pi_hold_own'], ['cancel', 'pi_hold_own']], $this->calls);
         $this->assertOutcome('pi_cancelled', 'pi_hold_own', "Confirm failed — PI pi_hold_own cancelled to release held funds", [
             'payment_intent_id' => 'pi_hold_own',
@@ -683,7 +683,7 @@ class PublicConfirmRescueGuardTest extends TestCase
 
         $res = $this->confirm(['hold_token' => $hold->hold_token, 'guest' => $this->guest(), 'payment_intent_id' => 'pi_mock_abc123']);
 
-        $res->assertStatus(400)->assertExactJson(['error' => self::ROOM_TAKEN]);
+        $res->assertStatus(400)->assertJsonPath('code', 'booking_unavailable')->assertJsonStructure(['error', 'reference']);
         $this->assertSame([], $this->calls);
         $this->assertSame(0, AuditLog::withoutGlobalScopes()->where('action', 'like', 'booking.confirm.pi_%')->count());
     }
@@ -695,7 +695,7 @@ class PublicConfirmRescueGuardTest extends TestCase
 
         $res = $this->confirm(['hold_token' => $hold->hold_token, 'guest' => $this->guest(), 'payment_intent_id' => 'pi_mock_forged']);
 
-        $res->assertStatus(400)->assertExactJson(['error' => 'Payment has not been completed.']);
+        $res->assertStatus(400)->assertJsonPath('code', 'booking_unavailable')->assertJsonStructure(['error', 'reference']);
         $this->assertSame([], $this->calls);
         $this->assertSame(0, BookingMirror::withoutGlobalScopes()->count());
     }
@@ -817,6 +817,6 @@ class PublicConfirmRescueGuardTest extends TestCase
         $this->assertSame(1, AuditLog::withoutGlobalScopes()->where('action', 'like', 'booking.confirm.pi_%')->count(), 'no other rescue row');
 
         Log::shouldHaveReceived($level)->withArgs(fn ($message, $context = []) => $message === "Booking confirm PI rescue: {$action}" && $context == $newValues)->once();
-        Log::shouldNotHaveReceived('error');
+        Log::shouldNotHaveReceived('error', [\Mockery::on(fn ($message) => $message !== 'public_booking.failure'), \Mockery::any()]);
     }
 }

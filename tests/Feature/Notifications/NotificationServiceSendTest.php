@@ -190,15 +190,16 @@ class NotificationServiceSendTest extends TestCase
         $this->assertSame(1, $this->pushCount($member->id), 'offers=false must NOT suppress points_earned.');
     }
 
-    public function test_transactional_type_bypasses_per_category_opt_outs(): void
+    public function test_only_transactional_types_bypass_per_category_opt_outs(): void
     {
         $member = $this->pushyMember(['notification_preferences' => ['offers' => false, 'tier' => false, 'points' => false, 'stays' => false]]);
 
         $this->service->send($member, ['type' => 'welcome', 'title' => 'Welcome to the program', 'body' => 'You have 500 starting points']);
-        // The full admin's push campaigns keep the type `campaign`, which is transactional (release 3 left them so).
+        $this->assertSame(1, $this->pushCount($member->id), 'Transactional welcome remains deliverable.');
+        // Bulk marketing campaigns respect offers=false on both full admin and workspace send paths.
         $this->service->send($member, ['type' => 'campaign', 'title' => 'Weekend', 'body' => 'Double points']);
 
-        $this->assertSame(2, $this->pushCount($member->id), 'Transactional types must bypass per-category opt-outs.');
+        $this->assertSame(1, $this->pushCount($member->id), 'A marketing campaign must respect the offers opt-out.');
     }
 
     public function test_null_preferences_default_to_everything_on_back_compat(): void

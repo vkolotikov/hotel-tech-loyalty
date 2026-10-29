@@ -4,6 +4,7 @@ namespace Tests\Feature\Landing;
 use App\Models\LandingPage;
 use App\Models\Organization;
 use App\Models\Property;
+use App\Models\Staff;
 use App\Models\User;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\DB;
@@ -84,10 +85,8 @@ class LandingPageTeardownTest extends TestCase
                 $table->string('plan_slug', 32)->nullable();
             });
         }
-        // CheckSubscription reads $user->staff?->isSuperAdmin() before
-        // anything else — a super admin bypasses the gate entirely, and
-        // every org below must NOT be one, so the table has to exist and
-        // stay empty.
+        // Give each authorised user an active manager membership. Their
+        // subscription remains subject to the real billing gate.
         if (!Schema::hasTable('staff')) {
             Schema::create('staff', function ($table) {
                 $table->bigIncrements('id');
@@ -127,13 +126,18 @@ class LandingPageTeardownTest extends TestCase
 
     private function user(Organization $org, string $type = 'staff'): User
     {
-        return User::create([
+        $user = User::create([
             'password' => 'secret-pass-1',
             'name'            => 'Staff',
             'email'           => 'staff_' . uniqid() . '@example.test',
             'organization_id' => $org->id,
             'user_type'       => $type,
         ]);
+        if ($type === 'staff') {
+            Staff::create(['organization_id' => $org->id, 'user_id' => $user->id, 'role' => 'manager', 'is_active' => true]);
+        }
+
+        return $user;
     }
 
     /**

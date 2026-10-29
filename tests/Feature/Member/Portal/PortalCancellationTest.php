@@ -263,7 +263,7 @@ class PortalCancellationTest extends MemberEndpointTestCase
         $stripe->shouldReceive('retrievePaymentIntent')->andReturn(PaymentIntent::constructFrom(['id' => 'pi_paid', 'status' => 'succeeded']));
         $stripe->shouldReceive('refund')->andThrow(new \RuntimeException('stripe down'));
 
-        $this->cancel('service', $b->id)->assertStatus(502)->assertJsonPath('error', 'refund_failed');
+        $this->cancel('service', $b->id)->assertStatus(409)->assertJsonPath('error', 'refund_outcome_unknown');
 
         $this->assertSame('confirmed', ServiceBooking::withoutGlobalScopes()->findOrFail($b->id)->status);
         Mail::assertNothingQueued();

@@ -193,7 +193,7 @@ class SettingsSecretFallbackTest extends TestCase
         // truth about what is in effect.
         $plain = $this->item($response->json(), 'booking_smoobu_base_url');
         $this->assertNotNull($plain);
-        $this->assertSame('https://platform.smoobu.example', $plain['value']);
+        $this->assertSame(\App\Support\SmoobuEndpoint::BASE, $plain['value']);
         $this->assertTrue($plain['has_value']);
     }
 }

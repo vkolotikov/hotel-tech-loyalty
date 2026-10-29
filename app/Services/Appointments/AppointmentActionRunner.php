@@ -119,6 +119,9 @@ final class AppointmentActionRunner
             if ($patch !== []) {
                 $booking->update($patch);
             }
+            if ($action === 'complete') {
+                $this->points->rememberAppointmentVisit($booking);
+            }
 
             $new = ['status' => (string) $booking->status, 'payment_status' => (string) $booking->payment_status];
             if ($action === 'cancel') {

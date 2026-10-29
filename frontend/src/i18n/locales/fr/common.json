@@ -1059,7 +1059,8 @@
       "status": "Statut",
       "invoice": "Facture",
       "payment": "Paiement",
-      "paid_amount": "Payé (€)"
+      "paid_amount": "Payé (€)",
+      "paid_amount_currency": "Payé ({{currency}})"
     },
     "meta": {
       "title": "Détails",
@@ -1073,6 +1074,10 @@
       "created": "Créé"
     },
     "refund": {
+      "pending": "Un remboursement est en cours. Réessayez le même montant pour vérifier ; ne remboursez pas par un autre moyen.",
+      "unknown": "Le résultat est encore inconnu. Réessayez le même montant ; ne remboursez pas par un autre moyen.",
+      "open_original": "Ouvrir le remboursement de la chambre initiale",
+      "check": "Vérifier le remboursement",
       "title": "Émettre un remboursement",
       "subtitle": "Stripe restituera les fonds sous 5 à 10 jours ouvrables",
       "amount_label": "Montant",

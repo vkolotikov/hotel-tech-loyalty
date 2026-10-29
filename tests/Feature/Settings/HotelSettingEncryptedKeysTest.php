@@ -87,6 +87,7 @@ class HotelSettingEncryptedKeysTest extends TestCase
                 'booking_smoobu_api_key',
                 'booking_smoobu_webhook_secret',
                 'mail_password',
+                'twilio_auth_token',
             ],
             HotelSetting::ENCRYPTED_KEYS,
             'ENCRYPTED_KEYS list changed — verify the migration story for the new/removed key first.',

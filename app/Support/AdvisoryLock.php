@@ -35,10 +35,11 @@ final class AdvisoryLock
      * second wait until the first booking is committed and visible to
      * `assertUnused()`. Does nothing on other drivers (sqlite in tests).
      */
-    public static function within(string $key): void
+    public static function within(string $key, ?\Illuminate\Database\Connection $connection = null): void
     {
-        if (DB::getDriverName() === 'pgsql') {
-            DB::statement('SELECT pg_advisory_xact_lock(hashtext(?))', [$key]);
+        $connection ??= DB::connection();
+        if ($connection->getDriverName() === 'pgsql') {
+            $connection->statement('SELECT pg_advisory_xact_lock(hashtext(?))', [$key]);
         }
     }
 }

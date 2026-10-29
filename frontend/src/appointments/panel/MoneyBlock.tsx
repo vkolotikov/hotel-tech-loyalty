@@ -18,6 +18,7 @@ export function MoneyBlock({ money: m, locale, zone }: { money: MoneyInfo; local
   return (
     <section className="rounded-lg border border-a-border p-3 text-sm space-y-2">
       <h3 className="font-semibold text-a-text">{t('appointments.money.title', 'Money')}</h3>
+      {!!m.pending_refunds?.length && <p role="status" className="text-a-text">{t('appointments.error.refund_pending', 'A refund is processing. Retry the same amount to check it; do not return the money another way.')}</p>}
       {quiet && <p className="text-a-text-2">{t('appointments.money.nothing', 'Nothing paid, nothing owed.')}</p>}
       {rows && (
         <dl className="space-y-1">
@@ -36,6 +37,7 @@ export function MoneyBlock({ money: m, locale, zone }: { money: MoneyInfo; local
             <li key={mv.id} className="flex flex-wrap gap-x-2 text-a-text-2">
               <span className="font-medium text-a-text">{t(`appointments.money.kind.${kindKey(mv)}`, KIND_FALLBACK[kindKey(mv)])}</span>
               <span>{fmt(mv.amount, mv.currency)}</span>
+              {mv.provider_status && mv.provider_status !== 'succeeded' && <span>{t(`appointments.money.provider.${mv.provider_status}`, mv.provider_status)}</span>}
               <span>{t(`appointments.money.method.${mv.method}`, METHOD_FALLBACK[mv.method])}</span>
               {mv.by && <span>{t('appointments.money.by', 'by {{name}}', { name: mv.by })}</span>}
               {mv.at && <time dateTime={mv.at}>{formatInstant(mv.at, locale, zone)}</time>}

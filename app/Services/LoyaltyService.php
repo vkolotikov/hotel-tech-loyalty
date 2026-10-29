@@ -14,6 +14,8 @@ use App\Models\PointsTransaction;
 use App\Models\TierAssessment;
 use App\Models\User;
 use App\Scopes\TenantScope;
+use App\Scopes\BrandScope;
+use App\Services\Loyalty\LoyaltyRefused;
 use App\Services\Loyalty\Programme\ProgrammeOptions;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -41,10 +43,11 @@ class LoyaltyService
         ?string       $idempotencyKey = null,
         bool          $qualifying = true,
         ?string       $approvalStatus = 'auto_approved',
+        bool          $validateReplay = false,
     ): PointsTransaction {
         // Idempotency check
         if ($idempotencyKey) {
-            $existing = PointsTransaction::where('idempotency_key', $idempotencyKey)->first();
+            $existing = $this->replay($member, $idempotencyKey, $points, $type, $description, $validateReplay);
             if ($existing) {
                 return $existing;
             }
@@ -53,7 +56,7 @@ class LoyaltyService
         return DB::transaction(function () use (
             $member, $points, $description, $type, $staff, $referenceType,
             $referenceId, $amountSpent, $propertyId, $outletId, $reasonCode,
-            $sourceType, $sourceId, $idempotencyKey, $qualifying, $approvalStatus,
+            $sourceType, $sourceId, $idempotencyKey, $qualifying, $approvalStatus, $validateReplay,
         ) {
             // Serialize per-member writes, then re-check idempotency
             // under the lock. The pre-transaction check alone is a
@@ -65,14 +68,17 @@ class LoyaltyService
             LoyaltyMember::whereKey($member->id)->lockForUpdate()->firstOrFail();
             $member->refresh();
             if ($idempotencyKey) {
-                $existing = PointsTransaction::where('idempotency_key', $idempotencyKey)->first();
+                $existing = $this->replay($member, $idempotencyKey, $points, $type, $description, $validateReplay);
                 if ($existing) {
                     return $existing;
                 }
             }
 
             $member->increment('current_points', $points);
-            $member->increment('lifetime_points', $points);
+            // A legacy redemption without its original debit still needs a refund, never new earned points.
+            if ($reasonCode !== 'redemption_refund') {
+                $member->increment('lifetime_points', $points);
+            }
 
             if ($qualifying) {
                 $member->increment('qualifying_points', $points);
@@ -152,22 +158,17 @@ class LoyaltyService
         ?int          $propertyId = null,
         ?string       $reasonCode = null,
         ?string       $idempotencyKey = null,
+        bool          $validateReplay = false,
     ): PointsTransaction {
-        // Advisory fast-fail only — the authoritative balance check runs
-        // under a row lock inside the transaction below.
-        if ($member->current_points < $points) {
-            throw new \RuntimeException("Insufficient points. Available: {$member->current_points}, Requested: {$points}");
-        }
-
         // Idempotency check
         if ($idempotencyKey) {
-            $existing = PointsTransaction::where('idempotency_key', $idempotencyKey)->first();
+            $existing = $this->replay($member, $idempotencyKey, -$points, 'redeem', $description, $validateReplay);
             if ($existing) {
                 return $existing;
             }
         }
 
-        return DB::transaction(function () use ($member, $points, $description, $staff, $propertyId, $reasonCode, $idempotencyKey) {
+        return DB::transaction(function () use ($member, $points, $description, $staff, $propertyId, $reasonCode, $idempotencyKey, $validateReplay) {
             // Serialize concurrent redemptions on the member row. Without
             // the lock, two simultaneous redeems (double-clicked button,
             // admin + mobile app at once) both pass the balance pre-check
@@ -182,7 +183,7 @@ class LoyaltyService
             // raced past the pre-transaction check settle to exactly-once
             // here instead of double-debiting.
             if ($idempotencyKey) {
-                $existing = PointsTransaction::where('idempotency_key', $idempotencyKey)->first();
+                $existing = $this->replay($member, $idempotencyKey, -$points, 'redeem', $description, $validateReplay);
                 if ($existing) {
                     return $existing;
                 }
@@ -354,7 +355,9 @@ class LoyaltyService
             // double-clicked "Reverse" runs twice — both requests read
             // is_reversed=false, both flip it, and a single +500 award
             // gets reversed into a net −500.
-            $transaction = PointsTransaction::whereKey($transaction->id)->lockForUpdate()->firstOrFail();
+            $transaction = PointsTransaction::withoutGlobalScope(BrandScope::class)
+                ->where('organization_id', $transaction->organization_id)->where('member_id', $transaction->member_id)
+                ->whereKey($transaction->id)->lockForUpdate()->firstOrFail();
             if ($transaction->is_reversed) {
                 throw new \RuntimeException('Transaction already reversed.');
             }
@@ -368,7 +371,7 @@ class LoyaltyService
             if ($transaction->qualifying_points != 0) {
                 $member->increment('qualifying_points', -$transaction->qualifying_points);
             }
-            if ($transaction->points > 0) {
+            if ($transaction->points > 0 && $transaction->reason_code !== 'redemption_refund') {
                 $member->decrement('lifetime_points', $transaction->points);
             }
 
@@ -384,6 +387,7 @@ class LoyaltyService
 
             $reversal = PointsTransaction::create([
                 'member_id'       => $member->id,
+                'brand_id'        => $transaction->brand_id,
                 'property_id'     => $transaction->property_id,
                 'type'            => 'reverse',
                 'points'          => $reversePoints,
@@ -412,6 +416,19 @@ class LoyaltyService
 
             return $reversal;
         });
+    }
+
+    /** A balance belongs to the organisation/member, not the currently selected display brand. */
+    private function replay(LoyaltyMember $member, string $key, int $points, string $type, string $description, bool $validate): ?PointsTransaction
+    {
+        $line = PointsTransaction::withoutGlobalScope(BrandScope::class)
+            ->where('organization_id', $member->organization_id)->where('member_id', $member->id)
+            ->where('idempotency_key', $key)->first();
+        if ($line && $validate && ((int) $line->points !== $points || $line->type !== $type || $line->description !== $description)) {
+            throw new LoyaltyRefused('key_reused', 'This retry key was used for a different points operation.', 409);
+        }
+
+        return $line;
     }
 
     /**

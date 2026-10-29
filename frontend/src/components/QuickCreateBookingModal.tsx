@@ -9,6 +9,7 @@ interface Props {
   initialDate: string
   initialApartmentId: string
   initialApartmentName: string
+  currency: string
   onClose: () => void
   onCreated: () => void
 }
@@ -23,7 +24,7 @@ interface Props {
  * edit them all but most direct walk-ins fit this shape and keystrokes saved
  * here pay back every shift.
  */
-export function QuickCreateBookingModal({ initialDate, initialApartmentId, initialApartmentName, onClose, onCreated }: Props) {
+export function QuickCreateBookingModal({ initialDate, initialApartmentId, initialApartmentName, currency, onClose, onCreated }: Props) {
   const qc = useQueryClient()
   const nextDay = (d: string) => {
     const dt = new Date(d + 'T00:00:00')
@@ -140,7 +141,7 @@ export function QuickCreateBookingModal({ initialDate, initialApartmentId, initi
                 className={inputCls} />
             </div>
             <div>
-              <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-1">Total (€)</label>
+              <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-1">Total ({currency})</label>
               <input value={form.price_total} onChange={e => setForm(f => ({ ...f, price_total: e.target.value }))} type="number" min={0} step="0.01"
                 placeholder="—" className={inputCls} />
             </div>

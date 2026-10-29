@@ -204,13 +204,7 @@ class ReservationController extends Controller
                 ->first();
 
             if ($member && $member->welcomed_at === null) {
-                $code = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
-
-                EmailVerificationCode::create([
-                    'email'      => $email,
-                    'code'       => $code,
-                    'expires_at' => now()->addHours(48),
-                ]);
+                $code = EmailVerificationCode::issueFor($member->user, 'claim', now()->addHours(48))->code;
 
                 Mail::to($email)->send(new BookingMembershipMail(
                     guestName: $guestName,

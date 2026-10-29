@@ -2,6 +2,8 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { applyServerLanguage } from '../i18n'
 import { queryClient } from '../lib/queryClient'
+import { AUTH_SESSION_VERSION, authSession, sessionTokenOf } from '../lib/authSession'
+import { useBrandStore } from './brandStore'
 import type { IndustryId } from '../lib/industryHosts'
 
 interface User {
@@ -116,9 +118,13 @@ export const useAuthStore = create<AuthState>()(
         const prevToken = get().token
         if (prevToken !== token) {
           try { queryClient.clear() } catch { /* defensive */ }
+          useBrandStore.setState({ brands: [], currentBrandId: null, loading: false })
         }
         localStorage.setItem('auth_token', token)
-        set({ token, user, staff })
+        const session = { token, user, staff: staff ?? null }
+        // Persist the pair before notifying either store's synchronous subscribers.
+        localStorage.setItem('loyalty-auth', JSON.stringify({ state: session, version: AUTH_SESSION_VERSION }))
+        authSession.bind(token, () => set(session))
         applyServerLanguage(user.language ?? null)
       },
       refreshUser: (fresh) => {
@@ -143,9 +149,10 @@ export const useAuthStore = create<AuthState>()(
         // zustand store so user/staff PII doesn't survive a
         // logout-then-refresh.
         try { queryClient.clear() } catch { /* defensive */ }
+        useBrandStore.setState({ brands: [], currentBrandId: null, loading: false })
         localStorage.removeItem('auth_token')
         localStorage.removeItem('loyalty-auth')
-        set({ token: null, user: null, staff: null })
+        authSession.bind(null, () => set({ token: null, user: null, staff: null }))
       },
       isAdmin: () => {
         const { staff } = get()
@@ -159,7 +166,12 @@ export const useAuthStore = create<AuthState>()(
       // the User type. Existing sessions rehydrate without these fields
       // until the next `/v1/auth/me`. Any future breaking change to the
       // persisted shape bumps this again + uses `migrate` to translate.
-      version: 1,
+      version: AUTH_SESSION_VERSION,
+      merge: (persisted, current) => {
+        const state = persisted as Partial<AuthState> | null
+        if (!sessionTokenOf(state)) return { ...current, token: null, user: null, staff: null }
+        return { ...current, token: state!.token!, user: state!.user!, staff: state!.staff ?? null }
+      },
     }
   )
 )

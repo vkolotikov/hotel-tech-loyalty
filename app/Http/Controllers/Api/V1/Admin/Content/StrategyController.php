@@ -15,7 +15,7 @@ use App\Services\Content\ContentRefused;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Cache;
+use App\Support\SharedCache;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -61,7 +61,7 @@ class StrategyController extends Controller
         $profile = ContentContext::requireProfile();
 
         // Two clicks at once must not both pass the check: the check and the placeholder are one step.
-        $lock = Cache::lock("content:strategy:{$org->id}:{$profile->brand_id}", 10);
+        $lock = SharedCache::store()->lock("content:strategy:{$org->id}:{$profile->brand_id}", 10);
         if (!$lock->get()) {
             throw new ContentRefused('already_generating', 'A strategy is already being written for this brand.', 409);
         }

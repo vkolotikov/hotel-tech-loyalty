@@ -79,6 +79,7 @@ export function TakingsView({ data, locale, zone }: { data: Takings; locale: str
               <span className="text-a-text">{r.client ?? '—'}</span>
               <span className="font-a-mono">{r.reference}</span>
               <span>{t(`appointments.money.kind.${kindKey(r)}`, KIND_FALLBACK[kindKey(r)])}</span>
+              {r.provider_status && r.provider_status !== 'succeeded' && <span>{t(`appointments.money.provider.${r.provider_status}`, r.provider_status)}</span>}
               <span>{t(`appointments.money.method.${r.method}`, METHOD_FALLBACK[r.method])}</span>
               <span className="font-semibold tabular-nums text-a-text">{r.kind === 'refund' ? '−' : ''}{fmt(r.amount, r.currency)}</span>
               {r.by && <span>{r.by}</span>}

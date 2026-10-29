@@ -13,6 +13,7 @@ import { detectIndustryFromWindow, type IndustryId } from '../lib/industryHosts'
 import { localisedIndustryCopy, PICKER_INDUSTRIES, type IndustryCopy } from '../lib/industryCopy'
 import { landingPath, safeRedirect } from '../appointments/lib/landing'
 import { AccessOffNotice } from '../components/AccessOffNotice'
+import { sessionBoundTask } from '../lib/sessionBoundTask'
 
 /**
  * Industry Platform Plan Phase 2 — registration captures industry at
@@ -412,20 +413,20 @@ export function Login() {
     const redirectTo = safeRedirect(searchParams.get('redirect'))
 
     const base = (api.defaults.baseURL || '').replace(/\/$/, '')
-    fetch(base + '/v1/auth/me', {
-      headers: { Authorization: 'Bearer ' + saasToken, Accept: 'application/json' },
-    })
-      .then(async (res) => {
+    return sessionBoundTask(async (signal) => {
+        const res = await fetch(base + '/v1/auth/me', {
+          signal,
+          headers: { Authorization: 'Bearer ' + saasToken, Accept: 'application/json' },
+        })
         const body = await res.json().catch(() => ({}))
         if (!res.ok) throw new Error(body?.message || body?.error || `Sign-in failed (${res.status})`)
-        localStorage.setItem('auth_token', saasToken)
-        api.defaults.headers.common['Authorization'] = 'Bearer ' + saasToken
+        return body
+      }, (body) => {
         setAuth(saasToken, body, body.staff)
         navigate(landingPath(body, redirectTo), { replace: true })
-      })
-      .catch((err) => {
-        setError(err?.message || 'Could not complete single sign-on. Please try signing in below.')
-        localStorage.removeItem('auth_token')
+      }, (err) => {
+        setError(err instanceof Error ? err.message : 'Could not complete single sign-on. Please try signing in below.')
+        useAuthStore.getState().logout()
         setSsoLoading(false)
       })
   }, [searchParams, setAuth, navigate])

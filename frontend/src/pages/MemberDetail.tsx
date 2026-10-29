@@ -94,7 +94,7 @@ export function MemberDetail() {
   })
 
   const updateMutation = useMutation({
-    mutationFn: (payload: Record<string, any>) => {
+    mutationFn: async (payload: Record<string, any>) => {
       if (payload._hasFile) {
         const formData = new FormData()
         formData.append('_method', 'PUT')

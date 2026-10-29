@@ -34,6 +34,6 @@ async page => {
     return route.fulfill({status,contentType:'application/json',body:JSON.stringify(body)});
   });
   await page.route('**/local-fixture-logo.svg',r=>r.fulfill({contentType:'image/svg+xml',body:'<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48"><rect width="48" height="48" fill="#37b6e9"/><text x="12" y="33" font-size="28">N</text></svg>'}));
-  await page.setViewportSize({width:1440,height:1080});await page.goto(base+'/loyalty/app');await page.locator('.l-ca-wallets').waitFor();await page.evaluate(()=>document.fonts.ready);await page.screenshot({path:root+'render-initial.png',fullPage:true});
+  await page.setViewportSize({width:1440,height:1080});await page.goto(base+'/loyalty/app');await page.locator('.l-ca-wallets').waitFor();await page.evaluate(()=>document.fonts.ready);await page.screenshot({path:root+'render-initial.png',fullPage:false});
   return {errors:state.errors,heading:await page.locator('h1').innerText(),overflow:await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth)};
 }

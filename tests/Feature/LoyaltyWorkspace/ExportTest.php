@@ -80,7 +80,7 @@ class ExportTest extends TestCase
 
     public function test_the_export_is_a_managers(): void
     {
-        $this->asStaffMember()->getJson($this->api('members/export'))->assertStatus(403)->assertJsonPath('error', 'manager_only');
+        $this->asStaffMember()->getJson($this->api('members/export'))->assertStatus(403)->assertJsonPath('error', 'not_allowed');
         $this->assertSame(0, AuditLog::where('action', 'loyalty.members_exported')->count());
     }
 }

@@ -83,14 +83,20 @@ class BookingPointsServiceTest extends TestCase
         $this->assertNull(app(BookingPointsService::class)->awardForServiceBooking($this->booking()));
     }
 
-    public function test_a_member_without_a_tier_still_earns_at_the_base_rate(): void
+    public function test_a_member_on_the_base_tier_earns_at_the_base_rate(): void
     {
-        $this->member->forceFill(['tier_id' => null])->save();
+        LoyaltyTier::withoutGlobalScopes()->whereKey($this->member->tier_id)->update(['earn_rate' => 1]);
 
         $tx = app(BookingPointsService::class)->awardForServiceBooking($this->booking());
 
         $this->assertNotNull($tx);
         $this->assertSame(540, $tx->points); // 54 x 10 x 1.0
+    }
+
+    public function test_a_missing_tier_in_memory_uses_the_defensive_base_rate(): void
+    {
+        $this->member->forceFill(['tier_id' => null])->setRelation('tier', null);
+        $this->assertSame(540, app(\App\Services\LoyaltyService::class)->pointsForSpend($this->member, 54));
     }
 
     /**

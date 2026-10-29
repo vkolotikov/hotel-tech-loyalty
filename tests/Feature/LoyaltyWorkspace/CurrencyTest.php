@@ -55,8 +55,8 @@ class CurrencyTest extends TestCase
 
     public function test_only_a_manager_reads_or_changes_it(): void
     {
-        $this->asStaffMember()->getJson($this->api('currency?brand_id=all'))->assertStatus(403)->assertJsonPath('error', 'manager_only');
-        $this->asStaffMember()->putJson($this->api('currency?brand_id=all'), ['currency' => 'GBP'])->assertStatus(403)->assertJsonPath('error', 'manager_only');
+        $this->asStaffMember()->getJson($this->api('currency?brand_id=all'))->assertStatus(403)->assertJsonPath('error', 'not_allowed');
+        $this->asStaffMember()->putJson($this->api('currency?brand_id=all'), ['currency' => 'GBP'])->assertStatus(403)->assertJsonPath('error', 'not_allowed');
         $this->assertSame('EUR', $this->org->fresh()->currency);
     }
 

@@ -137,6 +137,7 @@ class AdminAccessDecisionTest extends TestCase
         $this->assertRefused('staff_inactive', $this->decide($foreign, 'GET', 'api/v1/admin/dashboard/arrivals-today'));
 
         config(['services.saas.platform_admin_emails' => $foreign->email]);
+        $foreign->email_verified_at = now();
         $this->assertPassed($this->decide($foreign, 'PUT', 'api/v1/admin/settings'));
     }
 
@@ -212,6 +213,7 @@ class AdminAccessDecisionTest extends TestCase
 
         $operator = $this->staffUser($this->otherOrganization());
         config(['services.saas.platform_admin_emails' => $operator->email]);
+        $operator->email_verified_at = now();
         $this->assertPassed($this->decide($operator, 'GET', 'api/v1/admin/members'));
     }
 

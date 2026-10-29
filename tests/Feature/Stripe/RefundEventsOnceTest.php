@@ -34,6 +34,7 @@ use Tests\TestCase;
 class RefundEventsOnceTest extends TestCase
 {
     use DatabaseTransactions, SetsUpMinimalSchema;
+    use \Tests\Concerns\SetsUpServiceBookingSchema, \Tests\Concerns\MocksCurrentStripeRefunds;
 
     private Organization $org;
     private $stripe;
@@ -43,6 +44,8 @@ class RefundEventsOnceTest extends TestCase
     {
         parent::setUp();
         $this->setUpBookingRefundSchema();
+        $this->setUpServiceBookingSchema();
+        $this->setUpLoyaltySchema();
         if (!Schema::hasTable('stripe_webhook_events')) {
             Schema::create('stripe_webhook_events', function ($t) {
                 $t->bigIncrements('id');
@@ -68,6 +71,7 @@ class RefundEventsOnceTest extends TestCase
         app()->instance('current_organization_id', $this->org->id);
 
         $this->stripe = Mockery::mock(StripeService::class);
+        $this->mockCurrentRefunds($this->stripe);
         $this->stripe->shouldReceive('isEnabled')->andReturn(true);
         $this->stripe->shouldReceive('constructWebhookEvent')->andReturnUsing(fn (string $payload) => \Stripe\Event::constructFrom(json_decode($payload, true)));
         $this->app->instance(StripeService::class, $this->stripe);
@@ -115,8 +119,12 @@ class RefundEventsOnceTest extends TestCase
         ];
     }
 
-    private function deliver(array $event)
+    private function deliver(array $event, bool $current = true)
     {
+        $charge = $event['data']['object'];
+        if ($current && isset($charge['refunds'])) {
+            $this->providerRefunds($charge['payment_intent'], $charge['refunds']['data'], $charge['currency']);
+        }
         return $this->postJson('/api/v1/booking/webhooks/stripe', $event, ['Stripe-Signature' => 't=1,v1=test']);
     }
 
@@ -134,12 +142,12 @@ class RefundEventsOnceTest extends TestCase
         $this->stripe->shouldReceive('refund')->once()->andReturnUsing(function () use ($event, &$midFlight) {
             // Stripe has refunded and its event arrives while our call still holds the lock.
             $midFlight = $this->deliver($event);
-            return Refund::constructFrom(['id' => 're_admin_1', 'object' => 'refund', 'amount' => 20000, 'currency' => 'eur']);
+            return Refund::constructFrom(['status' => 'succeeded', 'id' => 're_admin_1', 'object' => 'refund', 'amount' => 20000, 'currency' => 'eur']);
         });
 
         $outcome = app(BookingRefundService::class)->applyRefund(BookingMirror::withoutGlobalScopes()->find($id), null, 'requested_by_customer');
 
-        $midFlight->assertStatus(500);
+        $midFlight->assertStatus(503);
         $this->assertSame(0, DB::table('stripe_webhook_events')->where('event_id', 'evt_admin_1')->count(), 'the event that found the lock held is delivered again');
         $this->assertTrue($outcome['is_full']);
 
@@ -211,7 +219,7 @@ class RefundEventsOnceTest extends TestCase
         // The same refunds delivered again under a new event id (the same id is the dedup table's own, pinned in
         // StripeWebhookEventDedupTest), and the older event arriving late.
         $this->deliver(['id' => 'evt_old_2b'] + $second)->assertOk();
-        $this->deliver($first)->assertOk();
+        $this->deliver($first, current: false)->assertOk();
 
         $row = $this->row($id);
         $this->assertEquals(80.0, (float) $row->refunded_amount, 'never more, never backwards');
@@ -226,7 +234,7 @@ class RefundEventsOnceTest extends TestCase
         $id = $this->stay();
         $stale = BookingMirror::withoutGlobalScopes()->find($id);
         DB::table('booking_mirror')->where('id', $id)->update(['payment_status' => 'partially_refunded', 'refunded_amount' => 50, 'last_refund_id' => 're_dash_x']);
-        $this->stripe->shouldReceive('refund')->once()->andReturn(Refund::constructFrom(['id' => 're_admin_2', 'object' => 'refund', 'amount' => 5000, 'currency' => 'eur']));
+        $this->stripe->shouldReceive('refund')->once()->andReturn(Refund::constructFrom(['status' => 'succeeded', 'id' => 're_admin_2', 'object' => 'refund', 'amount' => 5000, 'currency' => 'eur']));
 
         app(BookingRefundService::class)->applyRefund($stale, 50.0, 'requested_by_customer');
 
@@ -244,7 +252,7 @@ class RefundEventsOnceTest extends TestCase
         $id = $this->stay();
         $this->deliver($this->event('evt_late_1', 5000, [['id' => 're_late_1', 'object' => 'refund', 'amount' => 5000, 'created' => time()]]))->assertOk();
         $this->assertEquals(50.0, (float) $this->row($id)->refunded_amount);
-        $this->stripe->shouldReceive('refund')->once()->andReturn(Refund::constructFrom(['id' => 're_late_1', 'object' => 'refund', 'amount' => 5000, 'currency' => 'eur']));
+        $this->stripe->shouldReceive('refund')->once()->andReturn(Refund::constructFrom(['status' => 'succeeded', 'id' => 're_late_1', 'object' => 'refund', 'amount' => 5000, 'currency' => 'eur']));
 
         $outcome = app(BookingRefundService::class)->applyRefund(BookingMirror::withoutGlobalScopes()->find($id), 50.0, 'requested_by_customer');
 
@@ -258,7 +266,7 @@ class RefundEventsOnceTest extends TestCase
     /** A refund as Stripe answers a request it replays (`Idempotent-Replayed: true`): one it made for an earlier request with the same key. */
     private function replayed(string $id, int $amountMinor): Refund
     {
-        $refund = Refund::constructFrom(['id' => $id, 'object' => 'refund', 'amount' => $amountMinor, 'currency' => 'eur']);
+        $refund = Refund::constructFrom(['status' => 'succeeded', 'id' => $id, 'object' => 'refund', 'amount' => $amountMinor, 'currency' => 'eur']);
         $refund->setLastResponse(new \Stripe\ApiResponse('{}', 200, new \Stripe\Util\CaseInsensitiveArray(['Idempotent-Replayed' => 'true']), []));
 
         return $refund;
@@ -283,6 +291,7 @@ class RefundEventsOnceTest extends TestCase
         $id = $this->stay();
         $event = $this->event('evt_no_list', 5000, []);
         unset($event['data']['object']['refunds']);
+        $this->providerRefunds('pi_refund_1', [['id' => 're_late_1', 'amount' => 5000]]);
         $this->deliver($event)->assertOk();
         $this->assertEquals(50.0, (float) $this->row($id)->refunded_amount);
         $this->stripe->shouldReceive('refund')->once()->andReturn($this->replayed('re_late_1', 5000));
@@ -338,18 +347,19 @@ class RefundEventsOnceTest extends TestCase
         try {
             app(BookingRefundService::class)->applyRefund(BookingMirror::withoutGlobalScopes()->find($id), 50.0, 'requested_by_customer');
             $this->fail('a refund Stripe did not answer must not read as made or as failed');
-        } catch (\App\Services\Booking\RefundOutcomeUnknown $e) {
-            $this->assertStringContainsString('use exactly the same amount', $e->getMessage());
+        } catch (\App\Services\Booking\RefundNotSettled $e) {
+            $this->assertSame('refund_outcome_unknown', $e->errorCode);
         }
 
         $this->assertNull($this->row($id)->refunded_amount);
-        $this->assertStringContainsString('timed out', (string) DB::table('refund_attempts')->where('mirror_id', $id)->value('error'));
+        $this->assertSame('unknown', \App\Services\Booking\RefundOperations::connection()->table('refund_operations')->where('payment_intent_id', 'pi_refund_1')->value('status'));
     }
 
     /** Item 6 pin: a zero-decimal currency's refund event is recorded in yen, not hundredths of a yen. */
     public function test_a_yen_refund_event_is_recorded_in_yen(): void
     {
         $id = $this->stay(12000.0, 'pi_yen_1');
+        DB::table('booking_mirror')->where('id', $id)->update(['raw_json' => json_encode(['currency' => 'JPY'])]);
         $this->smoobu->shouldReceive('cancelReservation')->once()->andReturn([]);
 
         $this->deliver($this->event('evt_yen_1', 12000, [['id' => 're_yen_1', 'object' => 'refund', 'amount' => 12000, 'created' => time()]], 'pi_yen_1', 12000, 'jpy'))->assertOk();

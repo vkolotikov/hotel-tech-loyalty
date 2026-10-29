@@ -11,6 +11,8 @@ use App\Services\Appointments\AppointmentRefused;
 use App\Services\Appointments\StaleAppointment;
 use App\Services\Loyalty\BookingPointsService;
 use App\Services\StripeService;
+use App\Services\Booking\RefundOperations;
+use App\Services\Booking\RefundNotSettled;
 use App\Support\AdvisoryLock;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -161,11 +163,10 @@ final class AppointmentMoney
             $pi = (string) $b->stripe_payment_intent_id;
             AdvisoryLock::within('pi:' . $pi);
             $row = ServiceBookingPayment::create($base + ['method' => 'online_card']);
-            $key = "appt-refund-{$b->id}-" . (int) round((float) ($b->refunded_amount ?? 0) * 100) . '-' . (int) round($amount * 100);
             try {
-                $refund = $this->stripe->refund($pi, $amount, 'requested_by_customer', $key);
-            } catch (\Throwable $e) {
-                throw new AppointmentRefused('refund_failed', 'The card refund did not go through: ' . $e->getMessage(), 409);
+                $refund = app(RefundOperations::class)->request($this->stripe, (int) $b->organization_id, $pi, $amount, $s['currency'], 'service', (int) $b->id, max(0, (float) ($b->refunded_amount ?? 0) - (float) ($b->dispute_lost_amount ?? 0)), 'requested_by_customer');
+            } catch (RefundNotSettled $e) {
+                throw new AppointmentRefused($e->errorCode, $e->getMessage(), 409);
             }
             $refundId = (string) ($refund->id ?? '');
             $row->forceFill(['stripe_refund_id' => $refundId !== '' ? $refundId : null])->save();
@@ -174,7 +175,11 @@ final class AppointmentMoney
                 'refunded_at'     => now(),
                 'last_refund_id'  => $refundId !== '' ? $refundId : $b->last_refund_id,
             ]);
+            RefundOperations::applied((int) $b->organization_id, $refundId);
         } elseif (in_array($via, ServiceBookingPayment::DESK_METHODS, true)) {
+            if (($s['pending_refunds'] ?? []) !== []) {
+                throw new AppointmentRefused('refund_pending', 'A card refund is still processing. Check it before returning money another way.', 409);
+            }
             self::refuseOver($via, $amount, $s);
             $row = ServiceBookingPayment::create($base + ['method' => $via]);
         } else {
@@ -182,8 +187,18 @@ final class AppointmentMoney
         }
 
         $this->settle($b, $actor, 'service_booking.refunded', ['amount' => $amount, 'method' => $via, 'reason' => $reason, 'corrects' => $corrects], ($corrects ? 'correction' : 'refund') . " of {$amount} {$s['currency']} ({$via})");
+        self::rememberFullRefund($b, $actor);
 
         return $row;
+    }
+
+    /** Persist with the refund transaction; a worker crash before afterRefunds() cannot lose the reversal. */
+    public static function rememberFullRefund(ServiceBooking $b, ?User $actor = null): void
+    {
+        $s = self::summary($b);
+        if ($s['paid_in'] > 0 && $s['paid_back'] >= $s['paid_in'] - 0.004) {
+            app(\App\Services\Loyalty\Visits\VisitEffects::class)->reverse((int) $b->organization_id, 'service_booking', (int) $b->id, $actor);
+        }
     }
 
     /** After the refunds commit: a visit whose money all went back gives its points back, once. */
@@ -256,6 +271,7 @@ final class AppointmentMoney
             'amount' => $missing, 'currency' => $currency, 'note' => $note, 'stripe_refund_id' => $refundId ?: null,
         ]);
         $this->settle($b, null, 'service_booking.refund_recorded', ['amount' => $missing, 'method' => 'online_card', 'reason' => $note], "refund of {$missing} {$currency} ({$note})");
+        self::rememberFullRefund($b);
     }
 
     /**
@@ -288,10 +304,12 @@ final class AppointmentMoney
     {
         $rows = ServiceBookingPayment::withoutGlobalScopes()->with('actor')
             ->where('service_booking_id', $b->id)->orderByDesc('id')->get();
+        $statuses = RefundOperations::statuses((int) $b->organization_id, $rows->pluck('stripe_refund_id')->filter()->all());
 
         return self::amountsFrom($b, $rows) + [
+            'pending_refunds' => RefundOperations::pending((int) $b->organization_id, (string) $b->stripe_payment_intent_id, max(0, (float) $b->refunded_amount - (float) $b->dispute_lost_amount)),
             'deposit'   => Deposits::forStaff($b),
-            'movements' => $rows->map(fn (ServiceBookingPayment $r) => $r->toApi())->values()->all(),
+            'movements' => $rows->map(fn (ServiceBookingPayment $r) => $r->toApi() + ['provider_status' => $r->stripe_refund_id ? ($statuses[$r->stripe_refund_id] ?? 'succeeded') : null])->values()->all(),
         ];
     }
 

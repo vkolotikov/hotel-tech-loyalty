@@ -3,14 +3,20 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "engines": {
+    "node": ">=22.12.0"
+  },
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build && npm run postbuild",
     "build:prod": "cp .env.build .env.production.local && tsc -b && vite build --mode production && npm run postbuild",
     "postbuild": "node scripts/postbuild.mjs",
-    "lint": "eslint .",
+    "lint": "node scripts/check-lint-baseline.mjs",
+    "lint:all": "eslint .",
     "preview": "vite preview",
     "test": "vitest run",
+    "test:browser": "node e2e/run.mjs",
+    "preview:fixture": "node e2e/preview.mjs",
     "test:watch": "vitest"
   },
   "dependencies": {
@@ -37,21 +43,22 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.39.4",
-    "@types/node": "^24.12.0",
+    "@types/node": "^24.19.2",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
-    "@vitejs/plugin-react": "^4.7.0",
+    "@vitejs/plugin-react": "^6.1.2",
     "autoprefixer": "^10.4.27",
     "eslint": "^9.39.4",
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.5.2",
     "globals": "^17.4.0",
+    "playwright": "^1.64.1",
     "postcss": "^8.5.8",
     "rollup-plugin-visualizer": "^7.0.1",
     "tailwindcss": "^3.4.19",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.56.1",
-    "vite": "^5.4.21",
-    "vitest": "^2.1.9"
+    "vite": "^8.3.5",
+    "vitest": "^5.0.5"
   }
 }

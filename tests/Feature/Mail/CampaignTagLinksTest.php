@@ -42,7 +42,7 @@ class CampaignTagLinksTest extends TestCase
         config(['mail.default' => 'array', 'cache.default' => 'array']);
         Cache::store('array')->flush();
         $this->outbox = app('mail.manager');
-        Mail::fake();
+        Mail::swap($this->outbox);
         Queue::fake();
     }
 

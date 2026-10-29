@@ -148,10 +148,10 @@ class SegmentsTest extends TestCase
         $segment = $this->makeSegment('All', ['operator' => 'AND', 'filters' => []]);
 
         $this->asStaffMember()->getJson($this->api('segments'))->assertOk()->assertJsonPath('segments.0.name', 'All');
-        $this->asStaffMember()->postJson($this->api('segments'), ['name' => 'X', 'everyone' => true])->assertStatus(403)->assertJsonPath('error', 'manager_only');
-        $this->asStaffMember()->putJson($this->api("segments/{$segment->id}"), ['name' => 'X', 'everyone' => true])->assertStatus(403)->assertJsonPath('error', 'manager_only');
-        $this->asStaffMember()->deleteJson($this->api("segments/{$segment->id}"))->assertStatus(403)->assertJsonPath('error', 'manager_only');
-        $this->asStaffMember()->postJson($this->api('segments/preview'), ['everyone' => true])->assertStatus(403)->assertJsonPath('error', 'manager_only');
+        $this->asStaffMember()->postJson($this->api('segments'), ['name' => 'X', 'everyone' => true])->assertStatus(403)->assertJsonPath('error', 'not_allowed');
+        $this->asStaffMember()->putJson($this->api("segments/{$segment->id}"), ['name' => 'X', 'everyone' => true])->assertStatus(403)->assertJsonPath('error', 'not_allowed');
+        $this->asStaffMember()->deleteJson($this->api("segments/{$segment->id}"))->assertStatus(403)->assertJsonPath('error', 'not_allowed');
+        $this->asStaffMember()->postJson($this->api('segments/preview'), ['everyone' => true])->assertStatus(403)->assertJsonPath('error', 'not_allowed');
 
         $this->assertSame('All', $segment->fresh()->name);
     }

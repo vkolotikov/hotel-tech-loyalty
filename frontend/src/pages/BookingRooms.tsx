@@ -229,7 +229,7 @@ export default function BookingRooms() {
               {/* Price + Actions */}
               <div className="flex items-center justify-between mt-auto pt-3 border-t border-white/[0.04]">
                 <div>
-                  <span className="text-lg font-bold text-white">{money(room.base_price)}</span>
+                  <span className="text-lg font-bold text-white">{money(room.base_price, room.currency)}</span>
                   <span className="text-xs text-gray-500 ml-1">/ night</span>
                 </div>
                 <div className="flex gap-2">
@@ -435,7 +435,7 @@ function RoomForm({ room, onClose, onSave, saving }: {
               <input value={name} onChange={e => setName(e.target.value)} placeholder="ForRest DeLuxe House" className={inputCls} />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-gray-400 mb-1.5">Base Price (€ / night)</label>
+              <label className="block text-xs font-semibold text-gray-400 mb-1.5">Base Price ({room?.currency || 'venue currency'} / night)</label>
               <input type="number" value={basePrice} onChange={e => setBasePrice(e.target.value)} min={0} placeholder="0" className={inputCls} />
             </div>
           </div>

@@ -1059,7 +1059,8 @@
       "status": "Status",
       "invoice": "Invoice",
       "payment": "Payment",
-      "paid_amount": "Paid (€)"
+      "paid_amount": "Paid (€)",
+      "paid_amount_currency": "Paid ({{currency}})"
     },
     "meta": {
       "title": "Details",
@@ -1073,6 +1074,10 @@
       "created": "Created"
     },
     "refund": {
+      "pending": "A refund is processing. Retry the same amount to check it; do not return the money another way.",
+      "unknown": "The refund outcome is not known yet. Retry the same amount to check it; do not return the money another way.",
+      "open_original": "Open the original room refund",
+      "check": "Check refund",
       "title": "Issue refund",
       "subtitle": "Stripe will return funds in 5–10 business days",
       "amount_label": "Amount",

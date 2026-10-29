@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { useEffect } from 'react'
 import { api } from '../lib/api'
+import { authSession } from '../lib/authSession'
 import { SHADES, hexToRgb, isHex, shadeScale, toTriplet } from '../theme/colour'
 import { brandGlassVariables } from '../theme/glass'
 import { brandLightVariables, isPaleBrand } from '../theme/light'
@@ -330,7 +331,7 @@ export function useTheme() {
     // colors or empties) and was the root cause of the customer-reported
     // 'I picked a preset but after refresh it reverted' bug.
     queryFn: async () => {
-      const hasToken = typeof window !== 'undefined' && !!localStorage.getItem('auth_token')
+      const hasToken = Boolean(authSession.token())
       // Members hold a token but no admin rights, so the authenticated
       // endpoint 403s for them — which left the portal unbranded and
       // logged an error on every load. They take the public route, which

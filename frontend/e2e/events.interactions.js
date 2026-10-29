@@ -1,6 +1,6 @@
 // Run after events.browser.js, against that script's intercepted local API only.
 async (page) => {
-  const origin=new URL(page.url()).origin;if(!/^http:\/\/127\.0\.0\.1:(5173|5810)$/.test(origin))throw Error('Local fixture only');
+  const origin=new URL(page.url()).origin;if(!/^http:\/\/127\.0\.0\.1:(5173|5175|5810)$/.test(origin))throw Error('Local fixture only');
   const checks=[],ok=(name,value)=>{if(!value)throw Error(name);checks.push(name)};
   const fixture=async patch=>page.evaluate(async p=>(await fetch('/api/v1/admin/loyalty/__fixture',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(p)})).json(),patch);
   const go=async path=>{await page.goto(origin+path);await page.locator('.l-ev-page').waitFor({timeout:20000})};

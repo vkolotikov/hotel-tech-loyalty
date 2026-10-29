@@ -34,6 +34,40 @@ interface Config {
   is_active: boolean
 }
 
+function useUploadMutation(endpoint: string, label: string, password = '') {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (file: File) => {
+      const fd = new FormData()
+      fd.append('file', file)
+      if (endpoint === '/v1/admin/wallet-config/apple-cert' && password) {
+        fd.append('password', password)
+      }
+      return api.post(endpoint, fd)
+    },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['wallet-config'] }); toast.success(`${label} uploaded`) },
+    onError: (e: any) => toast.error(e.response?.data?.message || 'Upload failed'),
+  })
+}
+
+function FileInput({ label, mutation, accept }: {
+  label: string
+  mutation: { isPending: boolean; mutate: (file: File) => void }
+  accept: string
+}) {
+  return (
+    <label className="flex items-center gap-2 bg-dark-surface2 border border-dark-border text-t-soft hover:text-white text-xs px-3 py-2 rounded-lg cursor-pointer w-fit">
+      {mutation.isPending ? <Loader2 size={13} className="animate-spin" /> : <Upload size={13} />}
+      <span>{label}</span>
+      <input type="file" accept={accept} className="hidden" onChange={(e) => {
+        const f = e.target.files?.[0]
+        if (f) mutation.mutate(f)
+        e.target.value = ''
+      }} />
+    </label>
+  )
+}
+
 export function WalletConfig() {
   const qc = useQueryClient()
   const { data, isLoading } = useQuery<{ config: Config }>({
@@ -77,34 +111,9 @@ export function WalletConfig() {
     onError: (e: any) => toast.error(e.response?.data?.message || 'Save failed'),
   })
 
-  const uploadMutation = (endpoint: string, label: string) => useMutation({
-    mutationFn: (file: File) => {
-      const fd = new FormData()
-      fd.append('file', file)
-      if (endpoint === '/v1/admin/wallet-config/apple-cert' && form.apple_cert_password) {
-        fd.append('password', form.apple_cert_password)
-      }
-      return api.post(endpoint, fd)
-    },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['wallet-config'] }); toast.success(`${label} uploaded`) },
-    onError: (e: any) => toast.error(e.response?.data?.message || 'Upload failed'),
-  })
-
-  const uploadCert  = uploadMutation('/v1/admin/wallet-config/apple-cert', 'Apple Pass Type ID cert')
-  const uploadWwdr  = uploadMutation('/v1/admin/wallet-config/apple-wwdr', 'Apple WWDR cert')
-  const uploadGoogleSA = uploadMutation('/v1/admin/wallet-config/google-service-account', 'Google service account')
-
-  const FileInput = ({ label, mutation, accept }: { label: string; mutation: any; accept: string }) => (
-    <label className="flex items-center gap-2 bg-dark-surface2 border border-dark-border text-t-soft hover:text-white text-xs px-3 py-2 rounded-lg cursor-pointer w-fit">
-      {mutation.isPending ? <Loader2 size={13} className="animate-spin" /> : <Upload size={13} />}
-      <span>{label}</span>
-      <input type="file" accept={accept} className="hidden" onChange={(e) => {
-        const f = e.target.files?.[0]
-        if (f) mutation.mutate(f)
-        e.target.value = ''
-      }} />
-    </label>
-  )
+  const uploadCert  = useUploadMutation('/v1/admin/wallet-config/apple-cert', 'Apple Pass Type ID cert', form.apple_cert_password)
+  const uploadWwdr  = useUploadMutation('/v1/admin/wallet-config/apple-wwdr', 'Apple WWDR cert')
+  const uploadGoogleSA = useUploadMutation('/v1/admin/wallet-config/google-service-account', 'Google service account')
 
   return (
     <div className="space-y-6">

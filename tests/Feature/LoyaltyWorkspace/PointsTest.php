@@ -12,6 +12,7 @@ use Tests\TestCase;
 class PointsTest extends TestCase
 {
     use DatabaseTransactions, SetsUpLoyaltyWorkspace;
+    use \Tests\Concerns\LoyaltyWorkspace\PushSchema;
 
     protected function setUp(): void
     {
@@ -54,14 +55,63 @@ class PointsTest extends TestCase
             ->assertJsonPath('member.lifetime_points', 1500);
     }
 
+    public function test_a_committed_deduction_can_be_retried_after_its_balance_has_been_spent(): void
+    {
+        $body = ['points' => 150, 'reason' => 'Desk adjustment', 'idempotency_key' => 'lost-response'];
+        $first = $this->asStaffMember()->postJson($this->api("members/{$this->grace->id}/redeem"), $body)->assertOk();
+        $this->asStaffMember()->postJson($this->api("members/{$this->grace->id}/redeem"), $body)
+            ->assertOk()->assertJsonPath('member.points', 50)->assertJsonPath('line', $first->json('line'));
+        $this->assertSame(1, PointsTransaction::where('member_id', $this->grace->id)->count());
+    }
+
+    public function test_a_retry_key_cannot_change_points_reason_or_operation(): void
+    {
+        $body = ['points' => 100, 'reason' => 'Welcome', 'idempotency_key' => 'same-key'];
+        $this->asStaffMember()->postJson($this->api("members/{$this->grace->id}/award"), $body)->assertOk();
+        foreach ([['points' => 101], ['reason' => 'A different award']] as $change) {
+            $this->asStaffMember()->postJson($this->api("members/{$this->grace->id}/award"), $change + $body)
+                ->assertStatus(409)->assertJsonPath('error', 'key_reused');
+        }
+        $this->asStaffMember()->postJson($this->api("members/{$this->grace->id}/redeem"), $body)
+            ->assertStatus(409)->assertJsonPath('error', 'key_reused');
+        $this->assertSame(300, $this->grace->fresh()->current_points);
+        $this->assertSame(1, PointsTransaction::where('member_id', $this->grace->id)->count());
+    }
+
+    public function test_replaying_an_award_notifies_the_member_only_once(): void
+    {
+        $this->buildPushSchema();
+        \Illuminate\Support\Facades\Http::fake();
+        $this->grace->forceFill(['expo_push_token' => null])->save();
+        $body = ['points' => 100, 'reason' => 'Desk award', 'idempotency_key' => 'award-retry'];
+        $this->asStaffMember()->postJson($this->api("members/{$this->grace->id}/award"), $body)->assertOk();
+        $this->asStaffMember()->postJson($this->api("members/{$this->grace->id}/award"), $body)->assertOk();
+        $this->assertSame(300, $this->grace->fresh()->current_points);
+        $this->assertSame(1, DB::table('push_notifications')->where('member_id', $this->grace->id)->where('type', 'points_earned')->count());
+    }
+
+    public function test_an_organisation_ledger_line_can_be_retried_and_reversed_from_another_brand(): void
+    {
+        $body = ['points' => 100, 'reason' => 'Welcome', 'idempotency_key' => 'brand-retry'];
+        $first = $this->asManager()->postJson($this->api("members/{$this->grace->id}/award"), $body)->assertOk();
+        $brand = \App\Models\Brand::create(['name' => 'Second studio', 'slug' => 'second-'.uniqid(), 'is_default' => false]);
+        DB::table('brand_user')->insert(['brand_id' => $brand->id, 'user_id' => $this->manager->id, 'created_at' => now(), 'updated_at' => now()]);
+        $this->asManager()->postJson($this->api("members/{$this->grace->id}/award?brand_id=all"), $body)
+            ->assertOk()->assertJsonPath('line', $first->json('line'))->assertJsonPath('member.points', 300);
+        $this->asManager()->getJson($this->api("members/{$this->grace->id}/history?brand_id=all"))
+            ->assertOk()->assertJsonPath('lines.0.can_reverse', true);
+        $this->asManager()->postJson($this->api("members/{$this->grace->id}/history/{$first->json('line')}/reverse?brand_id=all"), ['reason' => 'Wrong member'])
+            ->assertOk()->assertJsonPath('member.points', 200)->assertJsonPath('member.lifetime_points', 200);
+    }
+
     public function test_each_step_needs_its_flag(): void
     {
         DB::table('staff')->where('user_id', $this->staffMember->id)->update(['can_award_points' => false, 'can_redeem_points' => false]);
 
         $this->asStaffMember()->postJson($this->api('members/' . $this->grace->id . '/award'), ['points' => 1, 'reason' => 'No'])
-            ->assertStatus(403)->assertJsonPath('error', 'not_allowed')->assertJsonPath('need', 'can_award_points');
+            ->assertStatus(403)->assertJsonPath('error', 'not_allowed');
         $this->asStaffMember()->postJson($this->api('members/' . $this->grace->id . '/redeem'), ['points' => 1, 'reason' => 'No'])
-            ->assertStatus(403)->assertJsonPath('need', 'can_redeem_points');
+            ->assertStatus(403)->assertJsonPath('error', 'not_allowed');
         $this->assertSame(200, (int) $this->grace->fresh()->current_points);
     }
 
@@ -88,7 +138,7 @@ class PointsTest extends TestCase
         $award = PointsTransaction::query()->where('member_id', $this->grace->id)->latest('id')->first();
 
         $this->asStaffMember()->postJson($this->api("members/{$this->grace->id}/history/{$award->id}/reverse"), ['reason' => 'Wrong member'])
-            ->assertStatus(403)->assertJsonPath('error', 'manager_only');
+            ->assertStatus(403)->assertJsonPath('error', 'not_allowed');
 
         $response = $this->asManager()->postJson($this->api("members/{$this->grace->id}/history/{$award->id}/reverse"), ['reason' => 'Wrong member'])
             ->assertOk()

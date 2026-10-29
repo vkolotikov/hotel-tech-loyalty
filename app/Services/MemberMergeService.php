@@ -93,6 +93,7 @@ class MemberMergeService
         'stamp_cards'          => ['member_id'],
         'credit_transactions'  => ['member_id'],
         'tier_qualification_counts' => ['member_id'], // what each visit added to the counters, which the merge adds up
+        'loyalty_visit_effects' => ['member_id'], // immutable visit references survive a merge; future retries use the survivor
         // Release 8: event sign-ups and check-ins, one per member per event (mergeEvents() drops the loser's duplicates first).
         'loyalty_event_registrations' => ['member_id'],
         'loyalty_event_attendances'   => ['member_id'],

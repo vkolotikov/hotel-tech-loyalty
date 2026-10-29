@@ -43,8 +43,8 @@ async (page) => {
     else if(path==='find')body={members:[]};
     return route.fulfill({status,contentType:'application/json',body:JSON.stringify(body)});
   });
-  await page.setViewportSize({width:1440,height:1080});await page.goto(base+'/loyalty/requests');await page.locator('.l-rq-detail').waitFor();await page.evaluate(()=>document.fonts.ready);await page.screenshot({path:root+'render-benefit.png',fullPage:true});
-  await page.locator('.l-rq-row').filter({hasText:'Complimentary coffee'}).click();await page.locator('.l-rq-detail h2').filter({hasText:'Complimentary coffee'}).waitFor();await page.screenshot({path:root+'render-reward.png',fullPage:true});
+  await page.setViewportSize({width:1440,height:1080});await page.goto(base+'/loyalty/requests');await page.locator('.l-rq-detail').waitFor();await page.evaluate(()=>document.fonts.ready);await page.screenshot({path:root+'render-benefit.png',fullPage:false});
+  await page.locator('.l-rq-row').filter({hasText:'Complimentary coffee'}).click();await page.locator('.l-rq-detail h2').filter({hasText:'Complimentary coffee'}).waitFor();await page.screenshot({path:root+'render-reward.png',fullPage:false});
   await page.locator('.l-rq-row').filter({hasText:'Referral bonus'}).click();await page.locator('dialog[open]').waitFor();await page.locator('dialog[open]').screenshot({path:root+'render-referral.png'});await page.getByRole('button',{name:'Close',exact:true}).last().click();
   return {screens:3,errors:state.errors,reads:[...new Set(state.requests.filter(r=>r.method==='GET').map(r=>r.path))]};
 }

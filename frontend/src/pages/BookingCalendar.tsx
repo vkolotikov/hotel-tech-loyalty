@@ -363,7 +363,7 @@ export function BookingCalendar() {
                         }`}>
                           {booking.payment_status === 'paid' ? 'Paid' : booking.payment_status === 'invoice_waiting' ? 'Invoice' : booking.payment_status === 'channel_managed' ? 'Channel' : 'Open'}
                         </span>
-                        {booking.price_total && <span className="text-[11px] font-bold text-white">{money(booking.price_total)}</span>}
+                        {booking.price_total && <span className="text-[11px] font-bold text-white">{money(booking.price_total, booking.currency)}</span>}
                       </div>
                     </Link>
                   ) : (
@@ -379,6 +379,7 @@ export function BookingCalendar() {
       {/* Quick-create modal — opened by clicking an empty cell */}
       {quickCreate && (
         <QuickCreateBookingModal
+          currency={data?.default_currency ?? ''}
           initialDate={quickCreate.date}
           initialApartmentId={quickCreate.apartment_id}
           initialApartmentName={quickCreate.apartment_name}
@@ -534,10 +535,10 @@ export function BookingCalendar() {
                               boxShadow: `0 4px 10px rgba(0,0,0,0.2)`,
                               opacity: isDragging ? 0.4 : 1,
                             }}
-                            title={`${b.guest_name || '?'} — ${b.apartment_name}\n${arrFmt} → ${depFmt}${b.price_total ? `\n${money(b.price_total)}` : ''}${isManual ? '\n(drag to move)' : ''}`}>
+                            title={`${b.guest_name || '?'} — ${b.apartment_name}\n${arrFmt} → ${depFmt}${b.price_total ? `\n${money(b.price_total, b.currency)}` : ''}${isManual ? '\n(drag to move)' : ''}`}>
                             {isManual && <span className="text-[8px] opacity-70 mr-1">⋮⋮</span>}
                             {shortGuest(b.guest_name)}
-                            {widthPct > 12 && b.price_total ? <span className="ml-auto text-[9px] opacity-75">{money(b.price_total)}</span> : null}
+                            {widthPct > 12 && b.price_total ? <span className="ml-auto text-[9px] opacity-75">{money(b.price_total, b.currency)}</span> : null}
                           </Link>
                         )
                       })}

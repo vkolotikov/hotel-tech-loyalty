@@ -3,7 +3,7 @@ async page => {
   const results=[], check=(ok,label)=>{if(!ok)throw new Error(label);results.push(label)};
   const state=()=>page.evaluate(async()=>await(await fetch('/api/v1/admin/loyalty/__fixture')).json());
   const set=patch=>page.evaluate(async p=>await(await fetch('/api/v1/admin/loyalty/__fixture',{method:'POST',body:JSON.stringify(p),headers:{'Content-Type':'application/json'}})).json(),patch);
-  const shot=async name=>{await page.evaluate(async()=>{await document.fonts.ready;window.scrollTo(0,0)});await page.screenshot({path:root+name+'.png',fullPage:true});check(!(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth)),name+': no horizontal overflow')};
+  const shot=async name=>{await page.evaluate(async()=>{await document.fonts.ready;window.scrollTo(0,0)});await page.screenshot({path:root+name+'.png',fullPage:false});check(!(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth)),name+': no horizontal overflow')};
   const lookup=async()=>{await page.getByRole('button',{name:'Find member manually',exact:true}).click();await page.getByLabel('Name, email or member ID').fill('Jamie');await page.getByRole('button',{name:'Search members',exact:true}).click();await page.getByRole('button',{name:/Jamie Taylor/}).click()};
   check((await state()).requests.every(r=>r.method==='GET'),'Idle performs no writes');
   await page.getByRole('button',{name:'Options',exact:true}).click();await shot('render-options');await page.getByRole('button',{name:'Done',exact:true}).click();check(await page.getByRole('button',{name:'Options',exact:true}).evaluate(e=>e===document.activeElement),'Options restores focus');

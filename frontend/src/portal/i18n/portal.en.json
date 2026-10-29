@@ -76,6 +76,8 @@
       "not_cancellable": "This booking cannot be cancelled here. Please contact the venue.",
       "already_cancelled": "This booking is already cancelled.",
       "cancel_in_progress": "This booking is being cancelled. Please check it again in a moment.",
+      "refund_pending": "Your refund is processing. The booking remains active. Please check again shortly.",
+      "refund_outcome_unknown": "The refund result is not known yet. The booking remains active. Please retry the cancellation to check it.",
       "refund_failed": "We could not return the payment just now, so the booking was not cancelled. Please try again in a moment.",
       "refund_unavailable": "The payment cannot be returned here, so the booking was not cancelled. Please contact the venue.",
       "cancel_failed": "We could not finish cancelling this booking. If a refund was due it may already be on its way. Please try again, or contact the venue."
@@ -155,6 +157,7 @@
     "confirmed_title": "You're booked", "confirmed_body": "Reference {{reference}}. We've emailed the details.", "add_to_calendar": "Add to calendar",
     "change": "Change", "continue": "Continue", "back": "Back", "cta_home": "Book {{noun}}", "not_bookable": "Online booking is not available for this venue yet.",
     "too_soon": "That time is too soon to book online.", "too_far_ahead": "That date is beyond the booking window.",
+    "currency_mismatch": "These prices use different currencies. Please contact the venue before booking.",
     "extra_lead_time": "One of the add-ons needs more notice than this time allows.", "payment_required": "Please complete the payment first.",
     "idempotency_conflict": "This booking was already submitted. Check your bookings.", "confirm_failed": "We could not complete the booking. Please try again.",
     "nothing_to_pay": "There is nothing to pay online for this booking.",

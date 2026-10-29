@@ -28,8 +28,8 @@ use Symfony\Component\HttpFoundation\Response;
  *   5. the rule for the method (GET/HEAD read, anything else change) must be
  *      met, else not_allowed.
  *
- * Steps 4 and 5 refuse only when config('admin_access.mode') is `enforce`.
- * In report mode (the default) they record and let the call through. Every
+ * Steps 4 and 5 refuse by default. Only explicit `report` mode records
+ * and lets the call through. Every
  * refusal, made or not, is recorded (AccessRecorder). The route's own
  * middleware (staff.can, feature, workspace, admin:role) and the
  * controllers' own checks still run after this one.
@@ -47,10 +47,10 @@ class AdminAccess
     {
     }
 
-    /** Whether the role and deactivation rules refuse (enforce) or only record (report, the default). */
+    /** Only explicit report mode disables role and deactivation enforcement. */
     public static function enforcing(): bool
     {
-        return config('admin_access.mode') === 'enforce';
+        return config('admin_access.mode') !== 'report';
     }
 
     public function handle(Request $request, Closure $next): Response

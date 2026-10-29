@@ -42,6 +42,8 @@ trait MembershipSchema
 
         $this->membershipTable('email_verification_codes', function (Blueprint $t) {
             $t->bigIncrements('id');
+            $t->unsignedBigInteger('user_id')->nullable();
+            $t->string('purpose', 16)->nullable();
             $t->string('email')->index();
             $t->string('code', 6);
             $t->timestamp('expires_at');

@@ -16,29 +16,7 @@ class SettingsController extends Controller
     public const THEME_STYLES = ['glass', 'classic', 'light'];
 
     /** Keys that contain secrets — returned masked unless explicitly empty. */
-    private const SECRET_KEYS = [
-        'ai_openai_api_key', 'ai_anthropic_api_key',
-        'booking_smoobu_api_key', 'booking_smoobu_webhook_secret',
-        'expo_access_token',
-        'stripe_secret_key', 'stripe_webhook_secret',
-        'twilio_auth_token',
-        'whatsapp_access_token', 'whatsapp_verify_token',
-        'google_maps_api_key',
-        'custom_webhook_secret',
-        // PMS provider secrets
-        'cloudbeds_api_key', 'cloudbeds_client_secret',
-        'mews_access_token', 'mews_client_token',
-        'guesty_api_key', 'guesty_api_secret',
-        'hostaway_api_key',
-        'beds24_api_key',
-        'lodgify_api_key',
-        'little_hotelier_api_key',
-        'roomraccoon_api_key',
-        // Channel secrets
-        'booking_com_api_key',
-        'airbnb_api_key',
-        'expedia_api_key',
-    ];
+    private const SECRET_KEYS = \App\Support\SettingRegistry::SECRET_KEYS;
 
     /**
      * Env fallback map: setting key → env variable name.
@@ -57,14 +35,10 @@ class SettingsController extends Controller
         'ai_anthropic_model'           => 'ANTHROPIC_MODEL',
         'booking_smoobu_api_key'       => 'SMOOBU_API_KEY',
         'booking_smoobu_channel_id'    => 'SMOOBU_CHANNEL_ID',
-        'booking_smoobu_base_url'      => 'SMOOBU_BASE_URL',
         'expo_access_token'            => 'EXPO_ACCESS_TOKEN',
         // stripe_* keys are deliberately NOT listed here — each customer
         // must use their own Stripe account. No platform fallback.
-        'twilio_account_sid'           => 'TWILIO_ACCOUNT_SID',
         'twilio_auth_token'            => 'TWILIO_AUTH_TOKEN',
-        'twilio_phone_number'          => 'TWILIO_PHONE_NUMBER',
-        'whatsapp_phone_id'            => 'WHATSAPP_PHONE_ID',
         'whatsapp_access_token'        => 'WHATSAPP_ACCESS_TOKEN',
         'whatsapp_verify_token'        => 'WHATSAPP_VERIFY_TOKEN',
         'google_maps_api_key'          => 'GOOGLE_MAPS_API_KEY',
@@ -83,25 +57,21 @@ class SettingsController extends Controller
         // theme endpoint returns values. Idempotent — only creates missing keys.
         $this->ensureTenantHasDefaultSettings();
 
-        $query = HotelSetting::query();
-        // Non-super-admins:
-        //   - Only see company-scoped settings (system-scoped are platform-only).
-        //   - Don't see the entire `integrations` group AT ALL. Integration
-        //     credentials (SMTP username/from-address, Stripe keys, Twilio
-        //     SID, WhatsApp tokens etc.) include real platform/admin emails
-        //     that a regular staff user has no business knowing about.
-        //     This previously leaked the org's mail_from_address /
-        //     mail_username to anyone with the staff role.
-        if (!$isSuperAdmin) {
-            $query->where(function ($q) {
-                $q->where('scope', 'company')->orWhereNull('scope');
-            });
-            $query->where('group', '!=', 'integrations');
-        }
-
-        $settings = $query->get()->groupBy('group')->map(function ($group) {
+        $settings = HotelSetting::query()->get()->filter(function ($setting) use ($isSuperAdmin) {
+            $definition = \App\Support\SettingRegistry::get($setting->key);
+            if (!$definition || (!$isSuperAdmin && \App\Support\SettingRegistry::ownerOnly($setting->key))) {
+                return false;
+            }
+            $setting->group = $definition['group'];
+            $setting->scope = $definition['scope'];
+            $setting->type = $definition['type'];
+            return true;
+        })->groupBy('group')->map(function ($group) {
             return $group->map(function ($setting) {
                 $value = $setting->typed_value;
+                if ($setting->key === 'booking_smoobu_base_url') {
+                    $value = \App\Support\SmoobuEndpoint::BASE;
+                }
 
                 $isSecret = in_array($setting->key, self::SECRET_KEYS);
 
@@ -131,7 +101,7 @@ class SettingsController extends Controller
                 }
 
                 // Mask secret keys
-                $masked = $isSecret && $value ? $this->maskSecret((string) $value) : null;
+                $masked = $isSecret && $value ? ($setting->key === 'twilio_auth_token' ? str_repeat('•', 8) : $this->maskSecret((string) $value)) : null;
 
                 return [
                     'id'          => $setting->id,
@@ -283,135 +253,81 @@ class SettingsController extends Controller
 
     public function update(Request $request): JsonResponse
     {
-        $user = $request->user();
-        $staff = $user?->staff;
-        $isSuperAdmin = $staff && $staff->role === 'super_admin';
-
+        $staff = $request->user()?->staff;
+        $isSuperAdmin = $staff && $staff->role === 'super_admin' && $staff->is_active;
         $validated = $request->validate([
-            'settings'         => 'required|array',
-            'settings.*.key'   => 'required|string',
+            'settings' => 'required|array|max:250', 'settings.*.key' => 'required|string|max:191|distinct',
             'settings.*.value' => 'present',
         ]);
-
-        // theme_style picks the admin's look for the whole organisation. Refuse a
-        // value the SPA can't render before anything in this save is written, so
-        // a bad style never lands half a save.
+        $orgId = app()->bound('current_organization_id') ? app('current_organization_id') : null;
+        if (!$orgId) {
+            return response()->json(['message' => 'Cannot save settings — no organization context bound. Please re-login.'], 422);
+        }
+        // Validate every key and permission before writing anything. DB metadata never grants authority.
         foreach ($validated['settings'] as $item) {
-            if ($item['key'] === 'theme_style' && !in_array($item['value'], self::THEME_STYLES, true)) {
-                throw ValidationException::withMessages([
-                    'theme_style' => 'theme_style must be glass, classic or light.',
-                ]);
+            $key = $item['key'];
+            if (\App\Support\SettingRegistry::get($key) === null || $key === 'company_logo') {
+                throw ValidationException::withMessages(['settings' => 'Unknown or read-only setting: ' . $key]);
+            }
+            if (!$isSuperAdmin && \App\Support\SettingRegistry::ownerOnly($key)) {
+                abort(403, 'Only an owner can change integration settings.');
+            }
+            if ($key === 'theme_style' && !in_array($item['value'], self::THEME_STYLES, true)) {
+                throw ValidationException::withMessages(['theme_style' => 'theme_style must be glass, classic or light.']);
+            }
+            if ($key === 'booking_smoobu_base_url' && !\App\Support\SmoobuEndpoint::accepts($item['value'])) {
+                throw ValidationException::withMessages(['booking_smoobu_base_url' => 'Use the official Smoobu API address: ' . \App\Support\SmoobuEndpoint::BASE]);
             }
         }
 
-        // Resolve the bound org once up-front. If we can't, fail hard so
-        // the frontend's "Settings saved" toast can't lie about a write
-        // that landed nowhere. Before this, a misconfigured middleware
-        // could let updates go through with NULL organization_id (or get
-        // silently dropped by the trait), which is exactly the failure
-        // mode behind the "theme preset reverts on refresh" report.
-        $boundOrgId = app()->bound('current_organization_id') ? app('current_organization_id') : null;
-        if (!$boundOrgId) {
-            return response()->json([
-                'message' => 'Cannot save settings — no organization context bound. Please re-login.',
-            ], 422);
-        }
+        $programmeChanges = array_intersect_key(array_column($validated['settings'], 'value', 'key'),
+            \App\Services\Loyalty\Programme\ProgrammeOptions::OPTIONS);
+        \App\Services\Loyalty\Programme\ProgrammeOptions::validate((int) $orgId, $programmeChanges);
 
-        $written = 0;
-        $skipped = 0;
-        foreach ($validated['settings'] as $item) {
-            $setting = HotelSetting::where('key', $item['key'])->first();
-
-            // Non-super-admins cannot write system-scoped settings.
-            if (!$isSuperAdmin && $setting && $setting->scope === 'system') {
-                $skipped++;
-                continue;
+        return \Illuminate\Support\Facades\DB::transaction(function () use ($validated, $request, $orgId, $programmeChanges) {
+            $written = 0;
+            $skipped = 0;
+            if ($programmeChanges !== []) {
+                \App\Services\Loyalty\Programme\ProgrammeOptions::save((int) $orgId, $programmeChanges, $request->user());
             }
-
-            // Non-super-admins cannot write integration settings either —
-            // matches the read-side filter and prevents staff from
-            // overwriting SMTP/Stripe/Twilio credentials.
-            if (!$isSuperAdmin && $setting && $setting->group === 'integrations') {
-                $skipped++;
-                continue;
-            }
-
-            // Skip empty secret submissions (user didn't type a new key)
-            if (in_array($item['key'], self::SECRET_KEYS) && ($item['value'] === '' || $item['value'] === null)) {
-                $skipped++;
-                continue;
-            }
-
-            $oldValue = $setting?->value;
-            $newValue = is_array($item['value']) ? json_encode($item['value']) : (string) $item['value'];
-
-            if ($setting) {
-                $setting->update(['value' => $newValue]);
-                $written++;
-            } else {
-                // Row doesn't exist for this org yet. Check if the key exists as a
-                // template in any other org (fresh orgs have no seeded settings
-                // rows until they first save). If it's a known company-scoped key
-                // or missing entirely, let the staff user create it for their org.
-                $template = HotelSetting::withoutGlobalScopes()->where('key', $item['key'])->first();
-                if ($template && $template->scope === 'system' && !$isSuperAdmin) {
+            foreach ($validated['settings'] as $item) {
+                $key = $item['key'];
+                $definition = \App\Support\SettingRegistry::get($key);
+                if (array_key_exists($key, $programmeChanges)) {
+                    // The shared programme writer owns values, switch dates and its audit.
+                    HotelSetting::where('key', $key)->firstOrFail()->update([
+                        'group' => $definition['group'], 'scope' => $definition['scope'], 'type' => $definition['type'],
+                    ]);
+                    $written++;
+                    continue;
+                }
+                $secret = in_array($key, self::SECRET_KEYS, true);
+                if ($secret && ($item['value'] === '' || $item['value'] === null)) {
                     $skipped++;
                     continue;
                 }
-                // Infer group/type/label from the template when available
-                $group = $template?->group ?? $this->inferGroup($item['key']);
-                $isEnabledFlag = str_ends_with($item['key'], '_enabled');
-                $type  = $template?->type ?? ($isEnabledFlag ? 'boolean' : 'string');
-                $label = $template?->label ?? ucwords(str_replace('_', ' ', $item['key']));
-                HotelSetting::create([
-                    'key'             => $item['key'],
-                    'value'           => $newValue,
-                    'type'            => $type,
-                    'group'           => $group,
-                    'label'           => $label,
-                    'scope'           => $template?->scope ?? 'company',
-                    // Defence in depth — the BelongsToOrganization trait's
-                    // `creating` hook already sets this, but if the bound
-                    // context drifts between the auth-check above and the
-                    // hook execution (mid-request middleware swap, queue
-                    // worker reuse, etc.) the trait silently leaves the
-                    // column NULL and the row gets dropped by TenantScope
-                    // on the next read. Explicit beats implicit here.
-                    'organization_id' => $boundOrgId,
-                ]);
+                $setting = HotelSetting::where('key', $key)->first();
+                $oldValue = $setting?->value;
+                $attributes = [
+                    'value' => is_array($item['value']) ? json_encode($item['value']) : (string) $item['value'],
+                    'group' => $definition['group'], 'scope' => $definition['scope'], 'type' => $definition['type'],
+                ];
+                if ($setting) {
+                    $setting->update($attributes);
+                } else {
+                    $setting = HotelSetting::create($attributes + ['key' => $key, 'label' => $definition['label']]);
+                }
                 $written++;
+                AuditLog::record('setting_updated', $setting,
+                    ['value' => $secret ? '***' : $item['value']], ['value' => $secret ? '***' : $oldValue],
+                    $request->user(), "Setting '{$key}' changed");
             }
-
-            AuditLog::record(
-                'setting_updated',
-                $setting ?? HotelSetting::where('key', $item['key'])->first(),
-                ['value' => in_array($item['key'], self::SECRET_KEYS) ? '***' : $item['value']],
-                ['value' => in_array($item['key'], self::SECRET_KEYS) ? '***' : $oldValue],
-                $request->user(),
-                "Setting '{$item['key']}' changed"
-            );
-        }
-
-        // Echo back the actually-persisted values so the client can verify
-        // its optimistic state matches what landed in the DB. Pre-fix the
-        // client trusted the 200 response unconditionally — but `skipped`
-        // could quietly hide cases where a non-superadmin tried to save a
-        // system-scoped key (e.g. a confused write to an integration key).
-        // Now the client can diff what it asked for vs what stored.
-        $persistedKeys = collect($validated['settings'])->pluck('key')->all();
-        $persisted = HotelSetting::whereIn('key', $persistedKeys)
-            ->get(['key', 'value'])
-            ->mapWithKeys(fn ($r) => [$r->key => in_array($r->key, self::SECRET_KEYS) ? '***' : $r->value])
-            ->all();
-
-        return response()->json([
-            'message'   => 'Settings updated',
-            'written'   => $written,
-            'skipped'   => $skipped,
-            'persisted' => $persisted,
-        ])->header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
+            $persisted = HotelSetting::whereIn('key', array_column($validated['settings'], 'key'))->get(['key', 'value'])
+                ->mapWithKeys(fn ($row) => [$row->key => in_array($row->key, self::SECRET_KEYS, true) ? '***' : $row->value])->all();
+            return response()->json(['message' => 'Settings updated', 'written' => $written, 'skipped' => $skipped, 'persisted' => $persisted])
+                ->header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
+        });
     }
-
     /**
      * Lazy-seed a minimal set of hotel_settings rows for the current tenant.
      * Only creates keys that don't already exist for this org. Safe to call
@@ -425,105 +341,7 @@ class SettingsController extends Controller
 
         $existingKeys = HotelSetting::pluck('key')->all();
 
-        $defaults = [
-            // Appearance (brand colors) — this is what non-super-admins need
-            // for the Branding tab to render editable inputs.
-            ['key' => 'primary_color',        'value' => '#3b82f6', 'type' => 'string',  'group' => 'appearance', 'label' => 'Primary Color'],
-            ['key' => 'secondary_color',      'value' => '#1e1e1e', 'type' => 'string',  'group' => 'appearance', 'label' => 'Secondary Color'],
-            ['key' => 'accent_color',         'value' => '#32d74b', 'type' => 'string',  'group' => 'appearance', 'label' => 'Accent / Success'],
-            ['key' => 'background_color',     'value' => '#0d0d0d', 'type' => 'string',  'group' => 'appearance', 'label' => 'Background'],
-            ['key' => 'surface_color',        'value' => '#161616', 'type' => 'string',  'group' => 'appearance', 'label' => 'Surface / Card'],
-            ['key' => 'text_color',           'value' => '#ffffff', 'type' => 'string',  'group' => 'appearance', 'label' => 'Text Color'],
-            ['key' => 'text_secondary_color', 'value' => '#8e8e93', 'type' => 'string',  'group' => 'appearance', 'label' => 'Secondary Text'],
-            ['key' => 'border_color',         'value' => '#2c2c2c', 'type' => 'string',  'group' => 'appearance', 'label' => 'Border Color'],
-            ['key' => 'error_color',          'value' => '#ff375f', 'type' => 'string',  'group' => 'appearance', 'label' => 'Error / Danger'],
-            ['key' => 'warning_color',        'value' => '#ffd60a', 'type' => 'string',  'group' => 'appearance', 'label' => 'Warning'],
-            ['key' => 'info_color',           'value' => '#0a84ff', 'type' => 'string',  'group' => 'appearance', 'label' => 'Info'],
-            ['key' => 'dark_mode_enabled',    'value' => 'true',    'type' => 'boolean', 'group' => 'appearance', 'label' => 'Dark Mode'],
-
-            // General
-            ['key' => 'hotel_currency',       'value' => 'EUR',     'type' => 'string',  'group' => 'general',    'label' => 'Currency'],
-            ['key' => 'hotel_timezone',       'value' => 'UTC',     'type' => 'string',  'group' => 'general',    'label' => 'Timezone'],
-
-            // Points — backfilled here so the row appears on the Loyalty
-            // tab for orgs created before this key was seeded.
-            ['key' => 'birthday_bonus_points', 'value' => '500',    'type' => 'integer', 'group' => 'points',     'label' => 'Birthday Bonus Points', 'description' => 'Points auto-awarded on each member\'s birthday. 0 disables.'],
-
-            // Integrations — PMS
-            ['key' => 'booking_smoobu_api_key',       'value' => '', 'type' => 'string', 'group' => 'integrations', 'label' => 'Smoobu API Key'],
-            ['key' => 'booking_smoobu_channel_id',    'value' => '', 'type' => 'string', 'group' => 'integrations', 'label' => 'Smoobu Channel ID'],
-            ['key' => 'booking_smoobu_base_url',      'value' => '', 'type' => 'string', 'group' => 'integrations', 'label' => 'Smoobu API URL'],
-            ['key' => 'booking_smoobu_webhook_secret', 'value' => '', 'type' => 'string', 'group' => 'integrations', 'label' => 'Smoobu Webhook Secret'],
-            ['key' => 'cloudbeds_api_key',            'value' => '', 'type' => 'string', 'group' => 'integrations', 'label' => 'Cloudbeds API Key'],
-            ['key' => 'cloudbeds_property_id',        'value' => '', 'type' => 'string', 'group' => 'integrations', 'label' => 'Cloudbeds Property ID'],
-            ['key' => 'cloudbeds_client_id',          'value' => '', 'type' => 'string', 'group' => 'integrations', 'label' => 'Cloudbeds Client ID'],
-            ['key' => 'cloudbeds_client_secret',      'value' => '', 'type' => 'string', 'group' => 'integrations', 'label' => 'Cloudbeds Client Secret'],
-            ['key' => 'mews_access_token',            'value' => '', 'type' => 'string', 'group' => 'integrations', 'label' => 'Mews Access Token'],
-            ['key' => 'mews_client_token',            'value' => '', 'type' => 'string', 'group' => 'integrations', 'label' => 'Mews Client Token'],
-            ['key' => 'mews_platform_url',            'value' => '', 'type' => 'string', 'group' => 'integrations', 'label' => 'Mews API URL'],
-            ['key' => 'guesty_api_key',               'value' => '', 'type' => 'string', 'group' => 'integrations', 'label' => 'Guesty API Key'],
-            ['key' => 'guesty_api_secret',            'value' => '', 'type' => 'string', 'group' => 'integrations', 'label' => 'Guesty API Secret'],
-            ['key' => 'guesty_account_id',            'value' => '', 'type' => 'string', 'group' => 'integrations', 'label' => 'Guesty Account ID'],
-            ['key' => 'hostaway_api_key',             'value' => '', 'type' => 'string', 'group' => 'integrations', 'label' => 'Hostaway API Key'],
-            ['key' => 'hostaway_account_id',          'value' => '', 'type' => 'string', 'group' => 'integrations', 'label' => 'Hostaway Account ID'],
-            ['key' => 'beds24_api_key',               'value' => '', 'type' => 'string', 'group' => 'integrations', 'label' => 'Beds24 API Key'],
-            ['key' => 'beds24_property_id',           'value' => '', 'type' => 'string', 'group' => 'integrations', 'label' => 'Beds24 Property ID'],
-            ['key' => 'lodgify_api_key',              'value' => '', 'type' => 'string', 'group' => 'integrations', 'label' => 'Lodgify API Key'],
-            ['key' => 'lodgify_property_id',          'value' => '', 'type' => 'string', 'group' => 'integrations', 'label' => 'Lodgify Property ID'],
-            ['key' => 'little_hotelier_api_key',      'value' => '', 'type' => 'string', 'group' => 'integrations', 'label' => 'Little Hotelier API Key'],
-            ['key' => 'little_hotelier_property_id',  'value' => '', 'type' => 'string', 'group' => 'integrations', 'label' => 'Little Hotelier Property ID'],
-            ['key' => 'roomraccoon_api_key',          'value' => '', 'type' => 'string', 'group' => 'integrations', 'label' => 'RoomRaccoon API Key'],
-            ['key' => 'roomraccoon_property_id',      'value' => '', 'type' => 'string', 'group' => 'integrations', 'label' => 'RoomRaccoon Property ID'],
-            // Integrations — OTA / Channels
-            ['key' => 'booking_com_hotel_id',         'value' => '', 'type' => 'string', 'group' => 'integrations', 'label' => 'Booking.com Hotel ID'],
-            ['key' => 'booking_com_api_key',          'value' => '', 'type' => 'string', 'group' => 'integrations', 'label' => 'Booking.com API Key'],
-            ['key' => 'airbnb_api_key',               'value' => '', 'type' => 'string', 'group' => 'integrations', 'label' => 'Airbnb API Key'],
-            ['key' => 'airbnb_listing_ids',           'value' => '', 'type' => 'string', 'group' => 'integrations', 'label' => 'Airbnb Listing IDs'],
-            ['key' => 'expedia_api_key',              'value' => '', 'type' => 'string', 'group' => 'integrations', 'label' => 'Expedia API Key'],
-            ['key' => 'expedia_property_id',          'value' => '', 'type' => 'string', 'group' => 'integrations', 'label' => 'Expedia Property ID'],
-            // Integrations — Payments & Communication
-            ['key' => 'stripe_publishable_key',       'value' => '', 'type' => 'string', 'group' => 'integrations', 'label' => 'Stripe Publishable Key'],
-            ['key' => 'stripe_secret_key',            'value' => '', 'type' => 'string', 'group' => 'integrations', 'label' => 'Stripe Secret Key'],
-            ['key' => 'stripe_webhook_secret',        'value' => '', 'type' => 'string', 'group' => 'integrations', 'label' => 'Stripe Webhook Secret'],
-            ['key' => 'stripe_currency',              'value' => '', 'type' => 'string', 'group' => 'integrations', 'label' => 'Stripe Currency'],
-            // Sender identity a venue can safely control. The SMTP host /
-            // port / username / password rows that used to live here were
-            // deleted (see 2026_08_14_100000): nothing ever read them, and a
-            // server-side SMTP client aimed at a tenant-supplied host is an
-            // SSRF vector. A venue sends as itself by verifying a DOMAIN in
-            // SES, not by handing us a password.
-            //
-            // From ADDRESS is deliberately absent too — it must stay on the
-            // platform's authenticated domain or DMARC alignment breaks.
-            ['key' => 'mail_from_name',               'value' => '', 'type' => 'string', 'group' => 'integrations', 'label' => 'Sender name',      'description' => 'The name recipients see on email from your venue. Defaults to your organisation name.'],
-            ['key' => 'mail_reply_to',                'value' => '', 'type' => 'string', 'group' => 'integrations', 'label' => 'Reply-to address', 'description' => 'Where replies go. Defaults to your organisation email.'],
-            ['key' => 'twilio_account_sid',           'value' => '', 'type' => 'string', 'group' => 'integrations', 'label' => 'Twilio Account SID'],
-            ['key' => 'twilio_auth_token',            'value' => '', 'type' => 'string', 'group' => 'integrations', 'label' => 'Twilio Auth Token'],
-            ['key' => 'twilio_phone_number',          'value' => '', 'type' => 'string', 'group' => 'integrations', 'label' => 'Twilio Phone Number'],
-            ['key' => 'whatsapp_phone_id',            'value' => '', 'type' => 'string', 'group' => 'integrations', 'label' => 'WhatsApp Phone Number ID'],
-            ['key' => 'whatsapp_access_token',        'value' => '', 'type' => 'string', 'group' => 'integrations', 'label' => 'WhatsApp Access Token'],
-            ['key' => 'whatsapp_verify_token',        'value' => '', 'type' => 'string', 'group' => 'integrations', 'label' => 'WhatsApp Verify Token'],
-            ['key' => 'expo_access_token',            'value' => '', 'type' => 'string', 'group' => 'integrations', 'label' => 'Expo Push Token'],
-            ['key' => 'google_maps_api_key',          'value' => '', 'type' => 'string', 'group' => 'integrations', 'label' => 'Google Maps API Key'],
-            ['key' => 'google_analytics_id',          'value' => '', 'type' => 'string', 'group' => 'integrations', 'label' => 'Google Analytics ID'],
-            ['key' => 'google_tag_manager_id',        'value' => '', 'type' => 'string', 'group' => 'integrations', 'label' => 'Google Tag Manager ID'],
-            ['key' => 'zapier_webhook_url',           'value' => '', 'type' => 'string', 'group' => 'integrations', 'label' => 'Zapier Webhook URL'],
-            ['key' => 'custom_webhook_url',           'value' => '', 'type' => 'string', 'group' => 'integrations', 'label' => 'Custom Webhook URL'],
-            ['key' => 'custom_webhook_secret',        'value' => '', 'type' => 'string', 'group' => 'integrations', 'label' => 'Custom Webhook Secret'],
-            // Integrations — AI (system scope, seeded here for completeness)
-            ['key' => 'ai_openai_api_key',            'value' => '', 'type' => 'string', 'group' => 'integrations', 'label' => 'OpenAI API Key',       'scope' => 'system'],
-            ['key' => 'ai_openai_model',              'value' => '', 'type' => 'string', 'group' => 'integrations', 'label' => 'OpenAI Model',          'scope' => 'system'],
-            ['key' => 'ai_anthropic_api_key',         'value' => '', 'type' => 'string', 'group' => 'integrations', 'label' => 'Anthropic API Key',     'scope' => 'system'],
-            ['key' => 'ai_anthropic_model',           'value' => '', 'type' => 'string', 'group' => 'integrations', 'label' => 'Anthropic Model',       'scope' => 'system'],
-
-            // Member portal (phase 2) — booking + loyalty behaviour the
-            // portal reads at booking/cancel/confirm time.
-            ['key' => 'services_require_staff_confirmation', 'value' => 'false', 'type' => 'boolean', 'group' => 'booking', 'label' => 'Member portal bookings need staff confirmation'],
-            ['key' => 'points_on_bookings',                  'value' => 'true',  'type' => 'boolean', 'group' => 'loyalty', 'label' => 'Award points when a booking is completed'],
-            ['key' => 'services_cancel_hours',               'value' => '24',    'type' => 'integer', 'group' => 'booking', 'label' => 'Free cancellation window for appointments (hours)'],
-            ['key' => 'booking_cancel_hours',                'value' => '48',    'type' => 'integer', 'group' => 'booking', 'label' => 'Free cancellation window for stays (hours)'],
-            ['key' => 'portal_enabled',                      'value' => 'true',  'type' => 'boolean', 'group' => 'loyalty', 'label' => 'Member web portal'],
-        ];
+        $defaults = \App\Support\SettingRegistry::defaults();
 
         foreach ($defaults as $d) {
             if (in_array($d['key'], $existingKeys, true)) {
@@ -713,7 +531,9 @@ class SettingsController extends Controller
 
     private function getValueSource(HotelSetting $setting): string
     {
+        if ($setting->key === 'booking_smoobu_base_url') return 'default';
         if ($setting->value !== '' && $setting->value !== null) return 'database';
+        if (in_array($setting->key, self::SECRET_KEYS, true)) return 'empty';
         if (isset(self::ENV_FALLBACKS[$setting->key])) {
             $envVal = env(self::ENV_FALLBACKS[$setting->key]);
             if ($envVal !== null && $envVal !== '') return 'env';
@@ -723,8 +543,12 @@ class SettingsController extends Controller
 
     private function resolveKey(string $settingKey, string $envKey): ?string
     {
-        $val = HotelSetting::getValue($settingKey);
+        // Secrets are intentionally excluded from HotelSetting's cache. Read this tenant's row directly.
+        $val = HotelSetting::where('key', $settingKey)->first()?->value;
         if ($val && $val !== '') return $val;
+        if (in_array($settingKey, self::SECRET_KEYS, true) || in_array($settingKey, ['twilio_account_sid', 'twilio_phone_number', 'whatsapp_phone_id'], true)) {
+            return null;
+        }
         $env = env($envKey);
         return ($env && $env !== '') ? $env : null;
     }
@@ -773,28 +597,19 @@ class SettingsController extends Controller
         $key = $this->resolveKey('booking_smoobu_api_key', 'SMOOBU_API_KEY');
         if (!$key) return response()->json(['success' => false, 'message' => 'No API key configured']);
 
-        $base = rtrim($this->resolveKey('booking_smoobu_base_url', 'SMOOBU_BASE_URL') ?? 'https://login.smoobu.com/api', '/');
+        $base = \App\Support\SmoobuEndpoint::BASE;
 
         // Hit page 1 with the largest page_size so admins can see the
         // ACTUAL unit total (page_count × page_size) — pre-fix the test
         // would just say "Connected" while sync silently returned only
         // the first 25 units.
         try {
-            $ch = curl_init("{$base}/apartments?page=1&page_size=50");
-            curl_setopt_array($ch, [
-                CURLOPT_RETURNTRANSFER => true,
-                CURLOPT_TIMEOUT        => 10,
-                CURLOPT_HTTPHEADER     => ["Api-Key: {$key}", "Content-Type: application/json"],
-            ]);
-            $body = curl_exec($ch);
-            $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-            $error = curl_error($ch);
-            curl_close($ch);
-
-            if ($error) return response()->json(['success' => false, 'message' => "Connection failed: {$error}"]);
+            $response = \Illuminate\Support\Facades\Http::withoutRedirecting()->timeout(10)
+                ->withHeaders(['Api-Key' => $key])->get("{$base}/apartments", ['page' => 1, 'page_size' => 50]);
+            $code = $response->status();
             if ($code < 200 || $code >= 300) return response()->json(['success' => false, 'message' => "HTTP {$code}"]);
 
-            $payload = json_decode((string) $body, true) ?: [];
+            $payload = $response->json() ?: [];
             $units   = is_array($payload['apartments'] ?? null) ? count($payload['apartments']) : 0;
             $total   = (int) ($payload['total_items'] ?? $units);
             $pages   = (int) ($payload['page_count'] ?? 1);
@@ -917,7 +732,7 @@ class SettingsController extends Controller
         // Per-tenant only — no env fallback. Each org configures its own
         // Stripe account so the "Test connection" button reflects whether
         // THIS org's keys work, not whether the platform has an env default.
-        $key = HotelSetting::getValue('stripe_secret_key');
+        $key = HotelSetting::where('key', 'stripe_secret_key')->first()?->value;
         if (!$key) return response()->json(['success' => false, 'message' => 'No secret key configured for this organization']);
 
         $result = $this->curlTest('https://api.stripe.com/v1/balance', ["Authorization: Bearer {$key}"]);

@@ -117,10 +117,63 @@ class RedemptionsTest extends TestCase
     {
         $row = $this->redeemed($this->ada);
 
-        $this->asStaffMember()->postJson(rtrim((string) config('app.url'), '/') . "/api/v1/admin/rewards/redemptions/{$row->id}/fulfill")->assertOk();
+        $this->asManager()->postJson(rtrim((string) config('app.url'), '/') . "/api/v1/admin/rewards/redemptions/{$row->id}/fulfill")->assertOk();
 
         $this->asStaffMember()->getJson($this->api('redemptions?state=done'))->assertJsonPath('redemptions.0.state', 'fulfilled');
         $this->asStaffMember()->postJson($this->api("redemptions/{$row->id}/fulfil"))->assertStatus(409)->assertJsonPath('error', 'wrong_state');
+    }
+
+    public function test_catalog_debits_must_be_refunded_through_cancellation(): void
+    {
+        $row = $this->redeemed($this->ada);
+        $debit = PointsTransaction::withoutGlobalScope(BrandScope::class)->where('idempotency_key', 'reward_redemption_'.$row->id)->firstOrFail();
+        $this->asManager()->getJson($this->api("members/{$this->ada->id}/history"))->assertJsonPath('lines.0.can_reverse', false);
+        $this->asManager()->postJson($this->api("members/{$this->ada->id}/history/{$debit->id}/reverse"), ['reason' => 'Cancel reward'])
+            ->assertStatus(409)->assertJsonPath('error', 'cannot_reverse');
+        $this->assertSame(1000, $this->ada->fresh()->current_points);
+        $this->assertSame('pending', $row->fresh()->status);
+        $this->asStaffMember()->postJson($this->api("redemptions/{$row->id}/cancel"))->assertOk();
+        $this->assertSame(1500, $this->ada->fresh()->current_points);
+        $this->assertSame(4, $this->voucher->fresh()->stock);
+    }
+
+    public function test_a_historically_reversed_debit_cannot_be_fulfilled_or_refunded_twice(): void
+    {
+        $row = $this->redeemed($this->ada);
+        $debit = PointsTransaction::withoutGlobalScope(BrandScope::class)->where('idempotency_key', 'reward_redemption_'.$row->id)->firstOrFail();
+        app(LoyaltyService::class)->reverseTransaction($debit, 'Prior manual reversal', $this->manager);
+        $this->asStaffMember()->postJson($this->api("redemptions/{$row->id}/fulfil"))->assertStatus(409)->assertJsonPath('error', 'wrong_state');
+        $this->asStaffMember()->postJson($this->api("redemptions/{$row->id}/cancel"))->assertOk();
+        $ada = $this->ada->fresh();
+        $this->assertSame([1500, 1500, 1500, 4], [$ada->current_points, $ada->lifetime_points, $ada->qualifying_points, $this->voucher->fresh()->stock]);
+        $this->assertSame(1, PointsTransaction::where('reversal_of_id', $debit->id)->count());
+    }
+
+    public function test_organisation_wide_cancellation_restores_the_owning_brands_stock_and_ledger(): void
+    {
+        $row = $this->redeemed($this->ada);
+        $brand = \App\Models\Brand::create(['name' => 'Second studio', 'slug' => 'second-'.uniqid(), 'is_default' => false]);
+        DB::table('brand_user')->insert(['brand_id' => $brand->id, 'user_id' => $this->staffMember->id, 'created_at' => now(), 'updated_at' => now()]);
+        $this->asStaffMember()->postJson($this->api("redemptions/{$row->id}/cancel?brand_id=all"))->assertOk();
+        $ada = $this->ada->fresh();
+        $this->assertSame([1500, 1500, 1500, 4], [$ada->current_points, $ada->lifetime_points, $ada->qualifying_points,
+            Reward::withoutGlobalScope(BrandScope::class)->findOrFail($row->reward_id)->stock]);
+        $this->assertSame(1, PointsTransaction::withoutGlobalScope(BrandScope::class)->where('type', 'reverse')->count());
+    }
+
+    public function test_legacy_refunds_restore_spendable_points_without_awarding_earned_points(): void
+    {
+        $row = $this->redemption($this->ada);
+        $this->ada->forceFill(['current_points' => 1000])->save();
+        $this->voucher->decrement('stock');
+        $this->asStaffMember()->postJson($this->api("redemptions/{$row->id}/cancel"))->assertOk();
+        $ada = $this->ada->fresh();
+        $this->assertSame([1500, 1500, 1500, 4], [$ada->current_points, $ada->lifetime_points, $ada->qualifying_points, $this->voucher->fresh()->stock]);
+        $refund = PointsTransaction::where('idempotency_key', 'reward_refund_'.$row->id)->firstOrFail();
+        app(LoyaltyService::class)->reverseTransaction($refund, 'Correction', $this->manager);
+        $this->assertSame(1000, $this->ada->fresh()->current_points);
+        $this->assertSame(1500, $this->ada->fresh()->lifetime_points);
+        $this->assertSame(1500, $this->ada->fresh()->qualifying_points);
     }
 
     public function test_staff_without_redeem_are_refused_and_nothing_moves(): void
@@ -130,7 +183,7 @@ class RedemptionsTest extends TestCase
 
         foreach (['fulfil', 'cancel'] as $step) {
             $this->asStaffMember()->postJson($this->api("redemptions/{$row->id}/{$step}"))
-                ->assertStatus(403)->assertJsonPath('error', 'not_allowed')->assertJsonPath('need', 'can_redeem_points');
+                ->assertStatus(403)->assertJsonPath('error', 'not_allowed');
         }
 
         $this->assertSame('pending', $row->fresh()->status);

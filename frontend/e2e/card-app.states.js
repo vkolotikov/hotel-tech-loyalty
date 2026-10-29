@@ -1,6 +1,6 @@
 // Run after card-app.browser.js. All API requests remain intercepted local fixtures.
 async page => {
-  const base=new URL(page.url()).origin;if(!/^http:\/\/(127\.0\.0\.1|localhost):(5173|5810)$/.test(base))throw Error('Local fixtures required');
+  const base=new URL(page.url()).origin;if(!/^http:\/\/(127\.0\.0\.1|localhost):(5173|5175|5810)$/.test(base))throw Error('Local fixtures required');
   const root='C:/wamp64/www/Hexa-Tech/docs/loyalty-redesign/evidence/card-app/',checks=[];
   const ok=(v,n)=>{if(!v)throw Error(n);checks.push(n);console.log('PASS: '+n)},button=name=>page.getByRole('button',{name,exact:true});
   const fixture=body=>page.evaluate(async body=>(await fetch('/api/v1/admin/loyalty/__fixture',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})).json(),body);
@@ -78,15 +78,15 @@ async page => {
     await page.setViewportSize({width,height:width<600?844:1080});await go();await ready();await page.evaluate(()=>document.fonts.ready);
     ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1&&document.body.scrollWidth<=innerWidth+1),'page fits '+width+'px');
     ok(await page.locator('.l-ca-field input,.l-ca-field select').evaluateAll(es=>es.every(e=>e.getBoundingClientRect().width>120)),'fields remain usable '+width+'px');
-    if([1440,390].includes(width))await page.screenshot({path:root+'render-'+width+'.png',fullPage:true});
+    if([1440,390].includes(width))await page.screenshot({path:root+'render-'+width+'.png',fullPage:false});
     await button('Show code').click();await page.locator('dialog[open]').waitFor();
     ok(await page.locator('dialog[open]').evaluate(e=>{const r=e.getBoundingClientRect();return r.left>=0&&r.right<=innerWidth+1&&r.height<=innerHeight&&e.scrollWidth<=e.clientWidth+1}),'dialog fits '+width+'px');await close();
   }
-  await page.setViewportSize({width:1440,height:1080});await button('Settings').click();await page.getByRole('group',{name:'Theme',exact:true}).getByRole('button',{name:'Light',exact:true}).click();await close();await page.waitForFunction(()=>getComputedStyle(document.querySelector('[data-overview]')).backgroundColor==='rgb(244, 246, 249)');await page.evaluate(()=>scrollTo(0,0));await page.screenshot({path:root+'render-light.png',fullPage:true});ok(true,'workspace light theme remains supported');
+  await page.setViewportSize({width:1440,height:1080});await button('Settings').click();await page.getByRole('group',{name:'Theme',exact:true}).getByRole('button',{name:'Light',exact:true}).click();await close();await page.waitForFunction(()=>getComputedStyle(document.querySelector('[data-overview]')).backgroundColor==='rgb(244, 246, 249)');await page.evaluate(()=>scrollTo(0,0));await page.screenshot({path:root+'render-light.png',fullPage:false});ok(true,'workspace light theme remains supported');
   for(const lang of ['ru','de','fr','es']){
     await page.getByRole('button',{name:/^(Settings|Настройки|Einstellungen|Réglages|Configuración)$/}).click();await page.getByRole('combobox',{name:/Language|Язык|Sprache|Langue|Idioma/}).selectOption(lang);await close();
     ok(!(await page.locator('.l-ca-page').innerText()).includes('Design your member experience'),'translated '+lang);
-    await page.setViewportSize({width:390,height:1080});ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'translated mobile fits '+lang);await page.evaluate(()=>scrollTo(0,0));await page.screenshot({path:root+'render-'+lang+'.png',fullPage:true});await page.setViewportSize({width:1440,height:1080});
+    await page.setViewportSize({width:390,height:1080});ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'translated mobile fits '+lang);await page.evaluate(()=>scrollTo(0,0));await page.screenshot({path:root+'render-'+lang+'.png',fullPage:false});await page.setViewportSize({width:1440,height:1080});
   }
   s=await fixture({});ok(s.requests.filter(r=>['app-look','wallet','overview/summary'].includes(r.path)).every(r=>new URLSearchParams(r.query).get('brand_id')==='all'),'settings calls retain organization-wide scope');
   ok(s.requests.filter(r=>r.method!=='GET').every(r=>['app-look','app-look/logo','wallet','wallet/google-service-account'].includes(r.path)),'preview never writes member or reward records');

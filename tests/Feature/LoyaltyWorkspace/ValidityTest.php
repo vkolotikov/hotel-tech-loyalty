@@ -125,7 +125,7 @@ class ValidityTest extends TestCase
 
     public function test_only_a_manager_changes_it_and_only_for_this_organisations_living_members(): void
     {
-        $this->change($this->grace->id, ['valid_until' => '2027-01-01'], manager: false)->assertStatus(403)->assertJsonPath('error', 'manager_only');
+        $this->change($this->grace->id, ['valid_until' => '2027-01-01'], manager: false)->assertStatus(403)->assertJsonPath('error', 'not_allowed');
 
         ['member' => $theirs] = $this->otherOrganization();
         $this->change($theirs->id, ['valid_until' => '2027-01-01'])->assertStatus(404)->assertJsonPath('error', 'not_found');

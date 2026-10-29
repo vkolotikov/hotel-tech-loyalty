@@ -58,7 +58,7 @@ export function Properties() {
   })
 
   const saveMutation = useMutation({
-    mutationFn: ({ formData, isEdit, propertyId }: { formData: FormData | Record<string, any>; isEdit: boolean; propertyId: number | null }) => {
+    mutationFn: async ({ formData, isEdit, propertyId }: { formData: FormData | Record<string, any>; isEdit: boolean; propertyId: number | null }) => {
       if (formData instanceof FormData) {
         if (isEdit && propertyId) {
           formData.append('_method', 'PUT')

@@ -99,7 +99,7 @@ class LockOrderTest extends TestCase
         $this->assertStringContainsString('"svcm:{$data[\'service_master_id\']}"', $body);
         // Inside the transaction, so reserveSlot() takes every candidate's `svcm:` (lockCandidates() needs a transaction).
         $this->assertInOrder($body, ['DB::transaction(', 'AdvisoryLock::within($lockKey)', '$scheduler->reserveSlot('], 'the public services confirm');
-        $this->assertStringNotContainsString("'pi:'", $body, 'no `pi:` before or among the slot locks');
+        $this->assertInOrder($body, ['$scheduler->reserveSlot(', "AdvisoryLock::within('pi:' . \$intent->id)"], 'the public service payment lock follows every slot lock');
     }
 
     public function test_the_portals_any_master_confirm_takes_the_slot_locks_before_pi(): void

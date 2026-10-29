@@ -44,7 +44,7 @@ async (page, answer) => {
   const save = () => page.locator('.l-st-save').getByRole('button',{name:'Save preferences',exact:true});
   const discard = () => page.locator('.l-st-save').getByRole('button',{name:'Discard changes',exact:true});
   const currency = () => page.locator('.l-st-field select').last();
-  const screen = async name => { await page.screenshot({path:root+'render-'+name+'.png',fullPage:true,animations:'disabled'}); };
+  const screen = async name => { await page.screenshot({path:root+'render-'+name+'.png',fullPage:false,animations:'disabled'}); };
   const fit = async name => check(name,await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
   await page.setViewportSize({width:1440,height:1080});
   await settings(); await currency().selectOption('GBP'); await save().waitFor({state:'visible'}); await page.waitForFunction(()=>!document.querySelector('.l-st-save button:last-child').disabled); await screen('settings-desktop');

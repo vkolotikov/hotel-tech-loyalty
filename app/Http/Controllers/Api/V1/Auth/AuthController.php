@@ -34,9 +34,10 @@ class AuthController extends Controller
 
     public function register(Request $request): JsonResponse
     {
+        $request->merge(['email' => strtolower(trim((string) $request->input('email')))]);
         $validated = $request->validate([
             'name'          => 'required|string|max:191',
-            'email'         => 'required|email|unique:users',
+            'email'         => ['required', 'email', \Illuminate\Validation\Rule::unique('users', 'email')->where('user_type', 'member')],
             'password'      => 'required|string|min:8|confirmed',
             'phone'         => 'nullable|string|max:20',
             'date_of_birth' => 'nullable|date',
@@ -61,6 +62,10 @@ class AuthController extends Controller
         ]);
 
         $validated['email'] = strtolower(trim($validated['email']));
+
+        if (User::isPlatformOperatorEmail($validated['email'])) {
+            throw ValidationException::withMessages(['email' => 'This address cannot be used for public registration.']);
+        }
 
         // Bind org context for tenant-scoped queries (tier lookup, settings, etc.).
         // Resolvable only from the public token or an already-bound tenant —
@@ -230,12 +235,21 @@ class AuthController extends Controller
             'email'    => 'required|email',
             'password' => 'required|string',
             'device'   => 'nullable|string|max:50',
+            'user_type' => 'nullable|in:member,staff',
+            'organization_id' => 'nullable|integer|min:1',
         ]);
 
         $validated['email'] = strtolower(trim($validated['email']));
 
         // No tenant context at login — bypass global scopes
-        $user = User::withoutGlobalScopes()->where('email', $validated['email'])->first();
+        $candidates = User::withoutGlobalScopes()->where('email', $validated['email'])
+            ->when($validated['user_type'] ?? null, fn ($q, $type) => $q->where('user_type', $type))
+            ->when($validated['organization_id'] ?? null, fn ($q, $id) => $q->where('organization_id', $id))->get();
+        $matching = $candidates->filter(fn (User $candidate) => $this->passwordMatches($validated['password'], $candidate->password));
+        if ($matching->count() > 1) {
+            throw ValidationException::withMessages(['email' => 'More than one account matches. Use your organisation sign-in link or reset the password for the account you need.']);
+        }
+        $user = $matching->first();
         // Guarded: BcryptHasher::check() THROWS on a stored value that is
         // not a bcrypt hash, and imported members deliberately carry one
         // that nothing can match (see MemberImportService). Unguarded, a
@@ -243,7 +257,7 @@ class AuthController extends Controller
         // a 500 reading "This password does not use the Bcrypt algorithm"
         // instead of "invalid credentials". A hash bcrypt cannot parse is
         // a hash no password matches.
-        $localOk = $user && $this->passwordMatches($validated['password'], $user->password);
+        $localOk = $user !== null;
 
         // SaaS fallback: when local lookup fails, ask SaaS whether this
         // email+password combo is valid. Covers the case where a
@@ -253,12 +267,23 @@ class AuthController extends Controller
         // password) so subsequent logins go straight to the local DB.
         if (!$localOk) {
             $saasResult = $this->verifyAgainstSaas($validated['email'], $validated['password']);
-            if (!$saasResult) {
+            if (!$saasResult || ($validated['user_type'] ?? null) === 'member'
+                || strtolower(trim($saasResult['user']['email'] ?? '')) !== $validated['email']
+                || (isset($validated['organization_id']) && !Organization::whereKey($validated['organization_id'])
+                    ->where('saas_org_id', $saasResult['organization']['id'] ?? '')->exists())) {
                 throw ValidationException::withMessages([
                     'email' => ['The provided credentials are incorrect.'],
                 ]);
             }
             $user = $this->provisionLocalUserFromSaas($saasResult, $validated['password']);
+            if (isset($validated['organization_id']) && (int) $user->organization_id !== (int) $validated['organization_id']) {
+                throw ValidationException::withMessages(['email' => 'The provided credentials are incorrect.']);
+            }
+        }
+
+        if ($user->isStaff() && !$user->isPlatformAdmin() && !Staff::withoutGlobalScopes()->where('organization_id', $user->organization_id)
+            ->where('user_id', $user->id)->where('is_active', true)->exists()) {
+            throw ValidationException::withMessages(['email' => 'Access to this organisation has been switched off.']);
         }
 
         // Bind org context so subsequent scoped queries work
@@ -413,7 +438,15 @@ class AuthController extends Controller
         }
 
         // Find-or-create the local user.
-        $user = User::withoutGlobalScopes()->where('email', $email)->first();
+        if (!$org || $email === '') {
+            throw ValidationException::withMessages(['email' => 'The account service did not identify an organisation.']);
+        }
+        // Creation hooks must use the verified tenant, even if a prior context
+        // was bound earlier in this request (or in a long-lived worker).
+        app()->instance('current_organization_id', $org->id);
+        app()->forgetInstance('current_brand_id');
+        $user = User::withoutGlobalScopes()->where('email', $email)->where('user_type', 'staff')
+            ->where('organization_id', $org->id)->first();
         if (!$user) {
             $user = User::create([
                 'name'            => $name,
@@ -807,6 +840,7 @@ class AuthController extends Controller
 
         // Rate limit: max 1 code per email per 60 seconds
         $recent = EmailVerificationCode::where('email', $validated['email'])
+            ->whereNull('user_id')->where(fn ($q) => $q->where('purpose', 'verify')->orWhereNull('purpose'))
             ->where('created_at', '>', now()->subMinutes(1))
             ->exists();
 
@@ -825,11 +859,13 @@ class AuthController extends Controller
 
         // Invalidate old codes
         EmailVerificationCode::where('email', $validated['email'])
+            ->whereNull('user_id')->where(fn ($q) => $q->where('purpose', 'verify')->orWhereNull('purpose'))
             ->whereNull('verified_at')
             ->delete();
 
         $record = EmailVerificationCode::create([
             'email'      => $validated['email'],
+            'purpose'    => 'verify',
             'code'       => $code,
             'expires_at' => now()->addMinutes(15),
         ]);
@@ -883,6 +919,7 @@ class AuthController extends Controller
         // attempt — five of those locked the address out for 15 minutes in
         // the middle of an honest signup.
         $record = EmailVerificationCode::where('email', $validated['email'])
+            ->whereNull('user_id')->where(fn ($q) => $q->where('purpose', 'verify')->orWhereNull('purpose'))
             ->where('code', $validated['code'])
             ->latest()
             ->first();
@@ -968,10 +1005,12 @@ class AuthController extends Controller
         $validated['email'] = strtolower(trim($validated['email']));
 
         // Require verified email (only if a code was actually sent — skip if mail isn't configured)
-        $codeWasSent = EmailVerificationCode::where('email', $validated['email'])->exists();
+        $codeWasSent = EmailVerificationCode::where('email', $validated['email'])
+            ->whereNull('user_id')->where(fn ($q) => $q->where('purpose', 'verify')->orWhereNull('purpose'))->exists();
         $emailVerified = false;
         if ($codeWasSent) {
             $emailVerified = EmailVerificationCode::where('email', $validated['email'])
+                ->whereNull('user_id')->where(fn ($q) => $q->where('purpose', 'verify')->orWhereNull('purpose'))
                 ->whereNotNull('verified_at')
                 ->where('verified_at', '>', now()->subMinutes(30))
                 ->exists();
@@ -981,11 +1020,25 @@ class AuthController extends Controller
             }
         }
 
-        // Check if user already exists and is fully set up (bypass scopes)
-        $existingUser = User::withoutGlobalScopes()->where('email', $validated['email'])->first();
+        // A signup can resume only a credential-verified staff identity. An
+        // existing member with this email is a separate account, never a
+        // partially configured administrator whose password we may replace.
+        $existingUsers = User::withoutGlobalScopes()->where('email', $validated['email'])->where('user_type', 'staff')->get();
+        if ($existingUsers->isEmpty() && User::isPlatformOperatorEmail($validated['email'])) {
+            return response()->json(['error' => 'Please use your organisation invitation or sign in.'], 422);
+        }
+        $matchingUsers = $existingUsers->filter(fn (User $user) => $this->passwordMatches($validated['password'], $user->password));
+        if ($existingUsers->isNotEmpty() && $matchingUsers->count() !== 1) {
+            return response()->json(['error' => 'Please sign in to the account for your organisation.'], 422);
+        }
+        $existingUser = $matchingUsers->first();
         $existingStaff = $existingUser
-            ? Staff::withoutGlobalScopes()->where('user_id', $existingUser->id)->first()
+            ? Staff::withoutGlobalScopes()->where('user_id', $existingUser->id)->where('organization_id', $existingUser->organization_id)->first()
             : null;
+
+        if ($existingUser && ((!$existingStaff && $existingUser->organization_id) || ($existingStaff && !$existingStaff->is_active))) {
+            return response()->json(['error' => 'Access to this organisation is unavailable. Contact its owner.'], 422);
+        }
 
         if ($existingUser && $existingStaff) {
             // If the password they just typed matches, this is almost
@@ -1407,8 +1460,7 @@ class AuthController extends Controller
         // Platform admin (hotel-tech.ai operator) gets full access — no subscription needed.
         // This is NOT the same as org "super_admin" role — every org owner has that.
         $user = $request->user();
-        $platformEmails = array_map('trim', explode(',', config('services.saas.platform_admin_emails', '')));
-        $isPlatformAdmin = $user && in_array($user->email, $platformEmails, true);
+        $isPlatformAdmin = $user?->isPlatformAdmin() ?? false;
         if ($isPlatformAdmin) {
             return response()->json([
                 'active'   => true,
@@ -2400,31 +2452,13 @@ class AuthController extends Controller
     public function forgotPassword(Request $request): JsonResponse
     {
         $validated = $request->validate(['email' => 'required|email']);
-        $validated['email'] = strtolower(trim($validated['email']));
-
-        $user = User::where('email', $validated['email'])->first();
-        if (!$user) {
-            // Don't reveal whether the email exists
-            return response()->json(['message' => 'If an account exists with that email, a reset code has been sent.']);
+        $email = strtolower(trim($validated['email']));
+        // One separately labelled grant per identity: the submitted code, never row order, chooses the account.
+        foreach (User::where('email', $email)->with('organization')->get() as $user) {
+            $record = EmailVerificationCode::issueFor($user, 'reset', now()->addMinutes(15));
+            $label = trim(($user->organization?->name ?? '') . ' (' . $user->user_type . ')');
+            Mail::to($email)->queue(new \App\Mail\PasswordResetCodeMail($record->code, $label));
         }
-
-        // Expire any previous codes for this email
-        EmailVerificationCode::where('email', $validated['email'])
-            ->whereNull('verified_at')
-            ->delete();
-
-        $code = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
-
-        EmailVerificationCode::create([
-            'email'      => $validated['email'],
-            'code'       => $code,
-            'expires_at' => now()->addMinutes(15),
-        ]);
-
-        // queue() instead of send() — PasswordResetCodeMail now
-        // implements ShouldQueue. failed_jobs catches a transient SMTP
-        // outage instead of the request thread.
-        Mail::to($validated['email'])->queue(new \App\Mail\PasswordResetCodeMail($code));
 
         return response()->json(['message' => 'If an account exists with that email, a reset code has been sent.']);
     }
@@ -2432,121 +2466,40 @@ class AuthController extends Controller
     public function resetPassword(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'email'    => 'required|email',
-            'code'     => 'required|string|size:6',
+            'email' => 'required|email', 'code' => 'required|string|size:6',
             'password' => 'required|string|min:8|confirmed',
         ]);
-
-        $validated['email'] = strtolower(trim($validated['email']));
-        $validated['code']  = trim($validated['code']);
-
-        $record = EmailVerificationCode::where('email', $validated['email'])
-            ->where('code', $validated['code'])
-            ->whereNull('verified_at')
-            ->latest()
-            ->first();
-
-        if (!$record || $record->isExpired()) {
-            return response()->json(['message' => 'Invalid or expired reset code.'], 422);
-        }
-
-        $user = User::where('email', $validated['email'])->first();
-        if (!$user) {
-            return response()->json(['message' => 'Invalid or expired reset code.'], 422);
-        }
-
-        $user->update(['password' => Hash::make($validated['password'])]);
-        $record->update(['verified_at' => now()]);
-
-        // Compliance: account-takeover forensics. Without this row, a
-        // credential-stuffing attacker who succeeds with a stolen
-        // verification code leaves zero trace. See AUDIT-2026-06-13.md
-        // observability finding (password reset no audit log).
-        AuditLog::create([
-            'organization_id' => $user->organization_id,
-            'user_id'         => $user->id,
-            'action'          => 'auth.password_reset',
-            'subject_type'    => 'user',
-            'subject_id'      => $user->id,
-            'ip_address'      => $request->ip(),
-            'description'     => 'Password reset via verification code',
-        ]);
-
-        return response()->json(['message' => 'Password has been reset successfully.']);
+        return \App\Services\Auth\AccountRecovery::consume(strtolower(trim($validated['email'])), trim($validated['code']),
+            $validated['password'], 'reset', function (User $user) use ($request) {
+                AuditLog::create([
+                    'organization_id' => $user->organization_id, 'user_id' => $user->id,
+                    'action' => 'auth.password_reset', 'subject_type' => 'user', 'subject_id' => $user->id,
+                    'ip_address' => $request->ip(), 'description' => 'Password reset via verification code',
+                ]);
+                return response()->json(['message' => 'Password has been reset successfully.']);
+            });
     }
 
-    /**
-     * POST /v1/auth/claim
-     *
-     * Staff creates a member without a password → member receives a
-     * welcome email with a 6-digit invitation code. This endpoint lets
-     * the member set their password AND log in with a single request.
-     */
+    /** An invitation grants exactly its identity; the credential, grant, audit and new session commit together. */
     public function claimAccount(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'email'    => 'required|email',
-            'code'     => 'required|string|size:6',
+            'email' => 'required|email', 'code' => 'required|string|size:6',
             'password' => 'required|string|min:8|confirmed',
         ]);
-
-        $validated['email'] = strtolower(trim($validated['email']));
-        $validated['code']  = trim($validated['code']);
-
-        $record = EmailVerificationCode::where('email', $validated['email'])
-            ->where('code', $validated['code'])
-            ->whereNull('verified_at')
-            ->latest()
-            ->first();
-
-        if (!$record || $record->isExpired()) {
-            return response()->json(['message' => 'Invalid or expired invitation code.'], 422);
-        }
-
-        $user = User::where('email', $validated['email'])->first();
-        if (!$user) {
-            return response()->json(['message' => 'No account found for this email.'], 422);
-        }
-
-        $user->update(['password' => Hash::make($validated['password'])]);
-
-        // The code was sent to this address and the caller just proved they
-        // control it — the one place email_verified_at should be set for
-        // the claim flow. Set directly rather than through update(): the
-        // column is deliberately absent from User::$fillable (mass-
-        // assigning it would let a crafted request body self-verify), same
-        // as the SaaS-sync branch above.
-        $user->email_verified_at = now();
-        $user->save();
-        $record->update(['verified_at' => now()]);
-
-        // Bind org context so subsequent scoped queries work (same as login)
-        if ($user->organization_id) {
-            app()->instance('current_organization_id', $user->organization_id);
-        }
-
-        // Account-claim forensics — same justification as password reset.
-        AuditLog::create([
-            'organization_id' => $user->organization_id,
-            'user_id'         => $user->id,
-            'action'          => 'auth.account_claimed',
-            'subject_type'    => 'user',
-            'subject_id'      => $user->id,
-            'ip_address'      => $request->ip(),
-            'description'     => 'Account claimed via invitation code',
-        ]);
-
-        $member = LoyaltyMember::withoutGlobalScopes()
-            ->where('user_id', $user->id)->with('tier')->first();
-        $token  = $user->createToken('mobile-app')->plainTextToken;
-
-        return response()->json([
-            'token'  => $token,
-            'user'   => $user,
-            'member' => $member,
-        ]);
+        return \App\Services\Auth\AccountRecovery::consume(strtolower(trim($validated['email'])), trim($validated['code']),
+            $validated['password'], 'claim', function (User $user) use ($request) {
+                app()->instance('current_organization_id', $user->organization_id);
+                AuditLog::create([
+                    'organization_id' => $user->organization_id, 'user_id' => $user->id,
+                    'action' => 'auth.account_claimed', 'subject_type' => 'user', 'subject_id' => $user->id,
+                    'ip_address' => $request->ip(), 'description' => 'Account claimed via invitation code',
+                ]);
+                $member = LoyaltyMember::withoutGlobalScopes()->where('user_id', $user->id)->with('tier')->first();
+                $token = $user->createToken('mobile-app')->plainTextToken;
+                return response()->json(['token' => $token, 'user' => $user, 'member' => $member]);
+            });
     }
-
     /**
      * POST /v1/auth/activate
      *
@@ -2599,7 +2552,7 @@ class AuthController extends Controller
         $saasUser   = $data['user'] ?? null;
         $saasOrg    = $data['organization'] ?? null;
 
-        if (!$saasUser) {
+        if (!$saasUser || strtolower(trim($saasUser['email'] ?? '')) !== $validated['email']) {
             return response()->json([
                 'error' => 'Activation succeeded but no account information was returned. Please sign in manually.',
             ], 500);
@@ -2631,10 +2584,6 @@ class AuthController extends Controller
                 }
             }
 
-            $localUser = User::withoutGlobalScopes()->where('email', $validated['email'])->first();
-            if (!$org && $localUser?->organization_id) {
-                $org = \App\Models\Organization::find($localUser->organization_id);
-            }
             if (!$org) {
                 return response()->json([
                     'error' => 'No organization is linked to this invite. Please contact your administrator.',
@@ -2642,6 +2591,10 @@ class AuthController extends Controller
             }
 
             app()->instance('current_organization_id', $org->id);
+
+            [$localUser, $staff] = \DB::transaction(function () use ($validated, $org, $saasUser, $saasOrg) {
+                $localUser = User::withoutGlobalScopes()->where('email', $validated['email'])
+                    ->where('user_type', 'staff')->where('organization_id', $org->id)->lockForUpdate()->first();
 
             if (!$localUser) {
                 $localUser = User::create([
@@ -2662,12 +2615,14 @@ class AuthController extends Controller
                 $localUser->update($updates);
             }
 
-            $staff = Staff::withoutGlobalScopes()->where('user_id', $localUser->id)->first();
+            $staff = Staff::withoutGlobalScopes()->where('user_id', $localUser->id)->where('organization_id', $org->id)->first();
             if (!$staff) {
                 $staff = Staff::withoutGlobalScopes()->create([
                     'user_id'            => $localUser->id,
                     'organization_id'    => $org->id,
-                    'role'               => $saasOrg['role'] ?? 'super_admin',
+                    'role'               => match (strtoupper((string) ($saasOrg['role'] ?? 'STAFF'))) {
+                        'OWNER', 'SUPER_ADMIN' => 'super_admin', 'ADMIN', 'MANAGER' => 'manager', default => 'receptionist',
+                    },
                     'hotel_name'         => $org->name,
                     'can_award_points'   => true,
                     'can_redeem_points'  => true,
@@ -2675,6 +2630,13 @@ class AuthController extends Controller
                     'can_view_analytics' => true,
                 ]);
             }
+
+                // SaaS accepted the account-specific emailed activation grant.
+                $localUser->email_verified_at = now();
+                $localUser->save();
+                $localUser->tokens()->delete();
+                return [$localUser, $staff];
+            });
 
             // Best-effort entitlements sync from SaaS bootstrap endpoint.
             if ($saasToken) {

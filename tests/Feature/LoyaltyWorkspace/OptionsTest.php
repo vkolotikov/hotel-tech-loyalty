@@ -106,7 +106,7 @@ class OptionsTest extends TestCase
             ['postJson', 'options/setup/skip', []],
         ];
         foreach ($calls as [$method, $path, $body]) {
-            $this->asStaffMember()->{$method}($this->api($path), $body)->assertStatus(403)->assertJsonPath('error', 'manager_only');
+            $this->asStaffMember()->{$method}($this->api($path), $body)->assertStatus(403)->assertJsonPath('error', 'not_allowed');
         }
 
         $this->assertSame(0, HotelSetting::withoutGlobalScopes()->where('organization_id', $this->org->id)->whereIn('key', ['stamps_enabled', 'programme_setup_completed_at'])->count());

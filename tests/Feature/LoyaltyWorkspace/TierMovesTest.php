@@ -171,6 +171,14 @@ class TierMovesTest extends TestCase
         $this->assertSame('Silver', $this->tierOf($this->ada));
     }
 
+    public function test_the_nightly_check_catches_up_a_hold_expired_before_a_long_scheduler_outage(): void
+    {
+        $this->grace->forceFill(['tier_id' => $this->tiers['platinum']->id, 'tier_override_until' => now()->subDays(30), 'tier_effective_until' => null])->save();
+        $this->artisan('loyalty:assess-tiers')->expectsOutput('1 moved of 1 checked')->assertSuccessful();
+        $this->assertSame('Silver', $this->tierOf($this->grace));
+        $this->artisan('loyalty:assess-tiers')->expectsOutput('0 moved of 1 checked')->assertSuccessful();
+    }
+
     public function test_the_nightly_check_is_scheduled_once_a_night_without_overlapping(): void
     {
         $event = collect(app(\Illuminate\Console\Scheduling\Schedule::class)->events())

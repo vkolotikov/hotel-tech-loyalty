@@ -11,11 +11,35 @@ abstract class TestCase extends BaseTestCase
 
     /** Whether this process has checked the PostgreSQL sequences yet (see keepFixedTestIdsFree()). */
     private static bool $sequencesChecked = false;
+    private array $refundJournalBefore = [];
+    private bool $refundJournalInitialized = false;
 
     protected function setUp(): void
     {
         parent::setUp();
         $this->keepFixedTestIdsFree();
+        $this->setUpRefundJournal();
+        $this->refundJournalBefore = \App\Services\Booking\RefundOperations::connection()->table('refund_operations')->pluck('id')->all();
+        $this->refundJournalInitialized = true;
+    }
+
+    protected function tearDown(): void
+    {
+        // The journal intentionally survives application rollbacks, so test isolation must clean it explicitly.
+        if ($this->refundJournalInitialized) {
+            \App\Services\Booking\RefundOperations::connection()->table('refund_operations')->whereNotIn('id', $this->refundJournalBefore)->delete();
+        }
+        parent::tearDown();
+    }
+
+    /** A second in-memory connection models the independently committed production refund journal. */
+    private function setUpRefundJournal(): void
+    {
+        if (DB::connection()->getDriverName() !== 'sqlite' || DB::connection()->getDatabaseName() !== ':memory:') return;
+        $journal = \App\Services\Booking\RefundOperations::connection();
+        if (!$journal->getSchemaBuilder()->hasTable('refund_operations')) {
+            (require database_path('migrations/2026_10_29_140000_create_refund_operations.php'))->up(\App\Services\Booking\RefundOperations::CONNECTION);
+        }
     }
 
     /**

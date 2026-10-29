@@ -48,6 +48,7 @@ class BookingExtraController extends Controller
         $data = self::withoutEmptyRequired($data);
 
         $data['organization_id'] = app('current_organization_id');
+        $data['currency'] = strtoupper(trim((string) ($data['currency'] ?? ''))) ?: \App\Services\BookingEngineService::stayCurrency();
 
         if ($request->hasFile('image')) {
             try {
