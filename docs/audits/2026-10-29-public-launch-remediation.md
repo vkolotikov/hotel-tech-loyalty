@@ -1,6 +1,6 @@
 # Public-launch remediation — 29 October 2026
 
-Implementation follows the approved [launch audit](2026-10-29-public-launch-audit.md). This report is being finalized with the consolidated verification and deployment evidence; it is not yet a public-launch sign-off.
+Implemented and verified the code corrections A01–A24 from the approved [launch audit](2026-10-29-public-launch-audit.md), including the additional defects found during independent review and production-schema testing. External provider, device and operational acceptance remains required before public launch; local tests alone do not close those gates.
 
 ## Changes
 
@@ -22,15 +22,34 @@ Additional recovery records persist visit-effect intent before completion commit
 
 Independent review also closed retry and concurrency gaps: legacy notification campaigns claim each recipient before transport, bulk campaign pushes respect the offers preference, recovery invalidates sibling claim/reset grants, and reward cancellation uses the same reward-before-member lock order as redemption. Transactional account messages retain their existing exemption. The currency backfill locks and re-reads each row so a concurrent provider update is preserved; rollback guidance retains the durable financial and loyalty journals.
 
+Refund amounts must be representable in their currency before any journal, desk ledger or provider write; fractional JPY amounts are refused rather than rounded to a different repayment. Insights reads historical stay currency snapshots and counts other currencies separately. Both card/theme editors use the same canonical setting metadata, independent of another tenant's rows.
+
 ## Verification and release tooling
 
-- PHP dependencies and frontend/build dependencies were updated; final advisory reports are recorded with the release evidence.
-- Vite 8/Vitest 5 require Node 22.12 or newer. Existing browser compilation targets are retained. The translation libraries keep their previous compatible versions.
-- Loyalty pages load separately. The first measured main JavaScript bundle fell from approximately 1,054 KB to 318 KB; the shared Loyalty bundle fell from 2,208 KB to 1,357 KB before further final changes. These are bundle sizes, not a measured production latency claim.
-- [Maintained browser runner](../../../frontend/e2e/README.md) uses local fixtures and can exercise the built SPA. Every state script starts with a fresh fixture. Viewport screenshots avoid the installed capture tool's transient 1×1 resize, which otherwise changes responsive UI state.
+- PHP dependencies and frontend/build dependencies were updated. Composer and npm advisory scans both report zero advisories.
+- The combined build/test toolchain supports Node 22.12+ within Node 22, Node 24, or Node 26+; verified with Node 24.15.0. Vitest 5 excludes Node 23/25. Existing browser compilation targets and compatible translation library versions are retained.
+- Loyalty pages load separately. The final main JavaScript bundle is 318.34 KB / 96.94 KB gzip (previously approximately 1,054 KB / 344 KB); shared Loyalty is 1,356.86 KB / 361.29 KB gzip (previously 2,208 KB / 653 KB). Overview is 28.03 KB and scanner 49.31 KB. These are bundle sizes, not measured production latency.
+- [Maintained browser runner](../../frontend/e2e/README.md) uses local fixtures and can exercise the built SPA. Every state script starts with a fresh fixture. Viewport screenshots avoid the installed capture tool's transient 1×1 resize, which otherwise changes responsive UI state.
 - `npm run lint` rejects new diagnostics relative to recorded legacy debt; correctness findings were triaged. `npm run lint:all` still exposes the entire backlog. The baseline does not permit parse errors, missing lint rules or hook-order violations; this is not a claim that all legacy lint debt has been removed.
 
-Consolidated counts, source/artifact commits, final screenshots and live content verification will be added after the final regression pass. Private working evidence is under `E:/Hexa-Tech-hardening-20261029/`.
+| Final artifact verification | Result |
+|---|---|
+| PHP feature/unit suites, 76 nonoverlapping scopes | **7,212 passed, 46,371 assertions; zero failures, errors or skips** |
+| Full frontend Vitest | **5,761 passed / 398 files** |
+| TypeScript and fresh production Vite/postbuild | Passed |
+| Built-SPA browser suite | **737 named checks / 28 scripts**, zero failures/runtime errors |
+| Fresh PostgreSQL 18 database | **227 migrations** passed |
+| Real independent-process checks | Recovery/owner races, refund journal visibility/rollback/retry, reward cancellation versus redemption passed; shared-cache campaign budget contention also verified |
+| Lint regression gate | Passed; **1,393 recorded legacy diagnostics** remain visible in `lint:all` |
+| Dependency advisories | Composer **0**, npm **0** |
+
+The backend total comprises general/legacy features (3,861), platform/security/connectors (442), Booking/Appointments/Portal/Stripe/Widget (1,629), and Loyalty/Mail/member endpoints (1,280). This is complete existing-suite coverage plus new regressions, not a claim of 100% code or manual-button coverage. All seven original PostgreSQL-only skips were exercised successfully; new independent-process cases also ran on PostgreSQL.
+
+Strict-schema runs exposed invalid test fixtures and global audit-count assumptions. Fixtures now retain production constraints, use explicit tenant audit predicates and realistic required fields; assertions were not simply dropped. Cold artifact startup exceeded one process test's former 15-second cap; it now allows startup time while enforcing tighter database lock/statement deadlines. Initial failed runs remain in the private evidence, followed by clean scoped reruns.
+
+Final Overview desktop, compact Insights and 320px mobile renders were visually inspected. The layout and existing routes remain intact. Machine-readable totals and per-scope evidence are in [verification JSON](2026-10-29-public-launch-remediation-verification.json). Full logs/screenshots are private under `E:/Hexa-Tech-hardening-20261029/`.
+
+Deployment follows the isolated source-patch recipe from production parent `16788ad8cad9ecf0886c28c2ecd0997f40a725d9`, using source baseline `e4f43246f5ec0195cbb36c50c861afe744437790`. The latest handoff records the final deployed source/artifact commits and live content checks. No feature-branch build artifacts or unrelated user files are included.
 
 ## Boundaries for public launch
 

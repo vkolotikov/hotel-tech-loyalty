@@ -1,6 +1,6 @@
 # Browser release checks
 
-Use Node 22.12+ and `npm ci`. Install Chrome (the default) or run `npx playwright install chromium` and set `E2E_CHANNEL=chromium`.
+Use Node 22.12+ within the 22 release line, Node 24, or Node 26+ and `npm ci` (the release was tested with Node 24.15.0). Vitest 5 does not support Node 23 or 25. Install Chrome (the default) or run `npx playwright install chromium` and set `E2E_CHANNEL=chromium`.
 
 Start `npm run dev`, then `npm run test:browser` from `frontend`. The runner installs deterministic API fixtures, blocks external requests and refuses non-local base URLs. It does not exercise real provider delivery or production customer data.
 
