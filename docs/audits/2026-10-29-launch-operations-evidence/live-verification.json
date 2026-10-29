@@ -1,0 +1,19 @@
+{
+  "checked_at": "2026-10-29T13:53:46.060Z",
+  "production_commit": "9945e24bf0691735cb312e6f2ebe6826d2467f98",
+  "source_baseline": "48b9efce7b02a96e8e05d47693ffce327eae0712",
+  "entry": "/spa/assets/index-CDjfqwMZ.js",
+  "statusChunk": "SystemStatus-HdTYnJgv.js",
+  "loyaltyChunk": "LoyaltyApp-D-Z9VC46.js",
+  "route_marker": true,
+  "status_api_marker": true,
+  "status_copy_marker": true,
+  "reader_guidance_marker": true,
+  "unauthenticated_status": 401,
+  "health_status": 200,
+  "landing_status": 200,
+  "landing_stylesheet": "/landing/nocturne_ritual.css?v=7ca20c60a8",
+  "landing_has_retired_markers": false,
+  "retired_css_status": 404,
+  "pass": true
+}

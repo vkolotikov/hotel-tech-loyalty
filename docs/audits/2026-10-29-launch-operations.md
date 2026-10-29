@@ -46,7 +46,14 @@ filesystem-wide `fixedInBlur` scan; the full rerun with a 30-second execution al
 an assertion or source rule. Built Chrome repeats the status-page checks and passes **130 existing Settings/Scan
 checks**, with no runtime errors. The built 1440 screenshot was visually inspected; its pixels match the source
 render. Existing build warnings about external kit fonts, CSS import order and large chunks remain.
-Production content verification is recorded separately after deployment.
+Production **9945e24bf0691735cb312e6f2ebe6826d2467f98** is live, content verified at **2026-10-29 13:53:46 UTC**
+(15:53 Europe/Riga). Next source-patch baseline: **48b9efce7b02a96e8e05d47693ffce327eae0712**.
+The 34-path allowlist and whole application source passed parity before deployment. Live entry is
+`index-CDjfqwMZ.js`; `SystemStatus-HdTYnJgv.js` contains the endpoint and new copy;
+`LoyaltyApp-D-Z9VC46.js` contains the reader guidance. The API refuses unauthenticated access with 401;
+health is 200, the public landing kit remains unchanged, and retired CSS remains 404.
+See `2026-10-29-launch-operations-evidence/live-verification.json`. Authenticated production observations
+remain unverified because the owner's existing browser session is unavailable to the connected tools.
 
 ## External acceptance still open
 

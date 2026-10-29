@@ -3,7 +3,45 @@
 Read this first, then `2026-10-28-hexatech-handoff.md` for previous milestones and
 `2026-10-27-hexatech-handoff.md` for the full environment and history. Root AGENTS.md and CLAUDE.md still apply.
 
-## Current release: public-launch hardening
+## Current release: in-app operational status
+
+Production **9945e24bf0691735cb312e6f2ebe6826d2467f98**, live content verified **29 October, 15:53 Europe/Riga**.
+Source branch `feature/launch-operations-20261029`; next source-patch baseline:
+**48b9efce7b02a96e8e05d47693ffce327eae0712**. Do not use later documentation-only commits.
+Previous production is `6cee65865f61635e08bba65432c0dceb854e889c`.
+
+Owner scope: mobile web + PC now, native apps later; email campaigns priority, payments/SMS deferred acceptance,
+wallets useful pending setup, ACR122U candidate. Failure reporting is inside the app, not email alerts.
+New `/system-status` (Full admin → System; also linked from Loyalty Settings) exposes tenant-scoped campaign
+failures and delayed loyalty effects to managers. Verified platform operators additionally see scheduler and queue
+observations. No payload/secret exposure, cross-tenant data, retry writers or alert emails. Missing observations
+show unverified/unavailable, not healthy; the app cannot monitor its own complete outage. USB help now states
+that ACR122U requires a PC/SC desktop connector; no connector or physical-reader acceptance is claimed.
+
+34 selected source paths passed parity; no migrations. Isolated artifact: **69 PHP tests / 3,116 assertions**,
+**5,766 frontend tests / 399 files**, TypeScript, lint regression gate and fresh build pass. The first cold artifact
+run hit the existing fixedInBlur filesystem scan's 5-second timeout; the complete rerun with 30 seconds passed
+unchanged assertions. Built Chrome status-page refresh/error/retry/navigation checks, six language/viewport
+views and **130 existing Settings/Scan checks** passed; desktop and 320px renders inspected. Existing lint/build
+warnings remain documented. Live entry `index-CDjfqwMZ.js`, status `SystemStatus-HdTYnJgv.js`; endpoint 401,
+new content/reader guidance, health 200, unchanged landing kit and retired CSS 404 verified.
+
+Report: `docs/audits/2026-10-29-launch-operations.md`; evidence beside it. Private helpers and browser-regression
+results: `E:/Hexa-Tech-launch-20261029/`. No live customer emails or other customer mutations were performed.
+The temporary deployment worktree and preview on port 5175 have been removed; its node_modules junction was
+removed first. The existing source Vite server on port 5173 and unrelated user files/worktrees remain untouched.
+`MailIdentityService` already uses the business name + organisation email/override as Reply-To; actual From stays
+on the platform domain. Per-customer authenticated From domains require a separate verification integration.
+
+External gates remain: Cloud backup/restore, workers/scheduler/cache, media recovery, sender/DNS and controlled
+email delivery, wallet accounts/certificates + devices, physical reader/card acceptance. User's Chrome is open,
+but both browser plugins see only an empty automation tab and computer-use initialization fails with
+`failed to write kernel assets ... (os error 3)` after reset. No Cloud/SiteGround configuration was inspected or
+changed. No SmartCardReader/ACR122/NFC/contactless device was present in the workstation's device inventory.
+Do not call this a fully accepted public launch. A test recipient is still needed; the owner instead asked about
+customer sender addresses, which was answered without sending any mail.
+
+## Previous release: public-launch hardening
 
 Production **6cee65865f61635e08bba65432c0dceb854e889c**, live content verified **29 October, 15:08 Europe/Riga**.
 Source branch `feature/public-launch-hardening-20261029`; deployed source and **next source-patch baseline**:
