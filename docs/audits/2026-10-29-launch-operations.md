@@ -61,11 +61,15 @@ remain unverified because the owner's existing browser session is unavailable to
   the computer-use runtime failed with `failed to write kernel assets ... (os error 3)` even after a reset.
   Laravel Cloud backup retention, restore rehearsal, production worker/scheduler/shared-cache configuration,
   uploaded-file backups and SiteGround sender/DNS state remain unverified. No changes were made in either service.
-- Need a controlled recipient explicitly designated for a test campaign. No live emails were sent.
+- Follow-up: owner designated `info@fds-cards.co.uk`; one local SMTP test was accepted at 15:13:21 UTC.
+  Inbox/spam receipt and the production campaign/worker path remain unverified. See
+  `2026-10-29-wallet-email-preflight.md`; no customer broadcast was sent.
 - Need physical ACR122U/card type and OS testing; native PC/SC requires a trusted desktop connector.
   The workstation currently reports no connected SmartCardReader/ACR122/NFC/contactless device.
-- Wallet acceptance requires the organisation's Apple pass certificate/team/pass-type identifiers and/or Google
-  Wallet issuer/service-account setup, plus a real iOS/Android save-and-scan test. Do not paste secrets in chat.
+- Follow-up verified the existing card-builder Apple certificate and Google issuer credentials; no new accounts
+  are needed on this evidence. A dedicated LoyaltyClass, intended production organisation's configuration,
+  branded artwork/update implementation and real iOS/Android save-and-scan acceptance remain open. Details are
+  in the wallet/email preflight report. Do not paste secrets in chat.
 - A database backup alone does not establish uploaded-media recovery; restore testing must use an isolated target.
 
 Rollback: previous production source and assets can be redeployed. This follow-up adds no migration or writer.

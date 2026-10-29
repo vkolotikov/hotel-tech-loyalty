@@ -3,6 +3,29 @@
 Read this first, then `2026-10-28-hexatech-handoff.md` for previous milestones and
 `2026-10-27-hexatech-handoff.md` for the full environment and history. Root AGENTS.md and CLAUDE.md still apply.
 
+## Latest follow-up: existing wallet credentials and controlled email
+
+Owner clarified **card builder** = `C:/wamp64/www/card-builder`, and authorized a test to
+`info@fds-cards.co.uk`. One message was accepted by SMTP at **15:13:21 UTC**, from `noreply@hotel-tech.ai`,
+subject `HexaTech email test - HEXA-LAUNCH-20261029-01`. Receipt confirmation is pending; this exercised local
+SMTP and the suppression listener, not production campaign workers. Do not resend blindly: the private helper
+has an exclusive attempt marker.
+
+Existing Apple Pass Type ID certificate `pass.co.uk.fds-cards.digitalcard` is valid through **29 September 2027**;
+password/key/team match. The actual HexaTech generator's synthetic pass verified its manifest and signature
+chain to Apple's root. Google OAuth and issuer/class reads returned 200 for **FDS Cards LTD**; its existing class
+is generic and there are no loyalty classes. Reuse the accounts, create a separate LoyaltyClass after identifying
+the intended production organisation. Owner was asked whether the first setup is for **FDS Cards UK** (present
+locally; do not assume local ID 2 is its production ID). No wallet configuration or provider pass/class was written.
+
+**41 wallet tests / 254 assertions pass.** Real credentials exposed remaining wallet work: Apple emits transparent
+1px artwork and no update web service; Google signs initial objects but has no balance/tier update writer. Do not
+promise branded, automatically updating wallets or device acceptance yet. Connected Chrome remains unavailable
+for production settings; only an empty automation tab is exposed. No secrets were printed or committed.
+
+Report: `docs/audits/2026-10-29-wallet-email-preflight.md`; private sanitized results and helpers:
+`E:/Hexa-Tech-launch-20261029/`. No application changes/deploy; production and next patch baseline below remain.
+
 ## Current release: in-app operational status
 
 Production **9945e24bf0691735cb312e6f2ebe6826d2467f98**, live content verified **29 October, 15:53 Europe/Riga**.
@@ -38,8 +61,8 @@ email delivery, wallet accounts/certificates + devices, physical reader/card acc
 but both browser plugins see only an empty automation tab and computer-use initialization fails with
 `failed to write kernel assets ... (os error 3)` after reset. No Cloud/SiteGround configuration was inspected or
 changed. No SmartCardReader/ACR122/NFC/contactless device was present in the workstation's device inventory.
-Do not call this a fully accepted public launch. A test recipient is still needed; the owner instead asked about
-customer sender addresses, which was answered without sending any mail.
+Do not call this a fully accepted public launch. The later follow-up above records the authorized email test
+and verified existing wallet credentials; production configuration and phone acceptance are still pending.
 
 ## Previous release: public-launch hardening
 
