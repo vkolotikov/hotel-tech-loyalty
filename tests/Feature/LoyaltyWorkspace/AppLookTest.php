@@ -7,6 +7,7 @@ use App\Models\HotelSetting;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Tests\Concerns\SetsUpLoyaltyWorkspace;
 use Tests\Concerns\ComparesJsonColumns;
@@ -176,6 +177,27 @@ class AppLookTest extends TestCase
         $this->assertSameJson($fullAdmin['theme'], $this->theme());
         $this->assertSame($fullAdmin['rows'], $this->rows());
         $this->assertSame('#3b82f6', $this->theme()['mobile_theme']['mobile_primary_color']);
+    }
+
+    public function test_new_app_look_rows_use_canonical_metadata_even_when_another_tenant_has_false_metadata(): void
+    {
+        $other = $this->otherOrganization();
+        DB::table('hotel_settings')->updateOrInsert([
+            'organization_id' => $other['org']->id, 'key' => 'mobile_primary_color',
+        ], ['value' => '#123456', 'type' => 'integer', 'group' => 'integrations', 'scope' => 'system', 'label' => 'Foreign label']);
+
+        $this->asManager()->putJson($this->api('app-look'), $this->look())->assertOk();
+        $rows = $this->rows();
+        $this->assertSame([
+            'value' => '#3b82f6', 'type' => 'string', 'group' => 'mobile_app', 'label' => 'Primary / Accent', 'scope' => 'company',
+        ], $rows['mobile_primary_color']);
+        $this->assertSame([
+            'value' => '20', 'type' => 'integer', 'group' => 'mobile_app', 'label' => 'Corner Radius', 'scope' => 'company',
+        ], $rows['mobile_radius']);
+        $this->assertDatabaseHas('hotel_settings', [
+            'organization_id' => $other['org']->id, 'key' => 'mobile_primary_color', 'value' => '#123456',
+            'type' => 'integer', 'group' => 'integrations', 'scope' => 'system', 'label' => 'Foreign label',
+        ]);
     }
 
     public function test_the_logo_is_the_full_admins_company_logo_and_a_replacement_deletes_our_old_file(): void

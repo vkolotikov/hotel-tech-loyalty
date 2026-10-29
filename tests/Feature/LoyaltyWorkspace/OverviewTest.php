@@ -151,9 +151,9 @@ class OverviewTest extends TestCase
                 'created_at' => "$day 10:00:00", 'updated_at' => "$day 10:00:00", 'reversed_at' => $reversed]);
         }
         $this->read('metrics')->assertJsonPath('data.mode', 'visits')->assertJsonPath('data.items.1.key', 'checkins')->assertJsonPath('data.items.1.value', 1);
-        $offer = SpecialOffer::create(['title' => 'Member offer', 'type' => 'discount', 'value' => 10, 'is_active' => true, 'start_date' => '2026-09-01', 'end_date' => '2026-10-31']);
-        SpecialOffer::create(['title' => 'Expired', 'type' => 'discount', 'value' => 10, 'is_active' => true, 'start_date' => '2026-09-01', 'end_date' => '2026-09-30']);
-        SpecialOffer::create(['title' => 'Used up', 'type' => 'discount', 'value' => 10, 'is_active' => true, 'start_date' => '2026-09-01', 'end_date' => '2026-10-31', 'usage_limit' => 1, 'times_used' => 1]);
+        $offer = SpecialOffer::create(['title' => 'Member offer', 'description' => 'Member offer fixture', 'type' => 'discount', 'value' => 10, 'is_active' => true, 'start_date' => '2026-09-01', 'end_date' => '2026-10-31']);
+        SpecialOffer::create(['title' => 'Expired', 'description' => 'Expired offer fixture', 'type' => 'discount', 'value' => 10, 'is_active' => true, 'start_date' => '2026-09-01', 'end_date' => '2026-09-30']);
+        SpecialOffer::create(['title' => 'Used up', 'description' => 'Used offer fixture', 'type' => 'discount', 'value' => 10, 'is_active' => true, 'start_date' => '2026-09-01', 'end_date' => '2026-10-31', 'usage_limit' => 1, 'times_used' => 1]);
         MemberOffer::create(['member_id' => $this->ada->id, 'offer_id' => $offer->id, 'status' => 'used', 'used_at' => '2026-10-01']);
         $this->read('metrics')->assertJsonPath('data.mode', 'discounts')->assertJsonPath('data.items.1.value', 1)->assertJsonPath('data.items.2.value', 1);
     }
@@ -197,7 +197,11 @@ class OverviewTest extends TestCase
     {
         Schema::rename('tier_qualification_counts', 'overview_missing_counts');
         try {
-            $this->asManager()->getJson($this->api('overview/activity'))->assertStatus(500);
+            // Isolate the deliberately invalid statement: PostgreSQL aborts its current transaction on SQL error.
+            DB::beginTransaction();
+            try {
+                $this->asManager()->getJson($this->api('overview/activity'))->assertStatus(500);
+            } finally { DB::rollBack(); }
             $this->read('queue')->assertJsonPath('data.total', 0);
         } finally { Schema::rename('overview_missing_counts', 'tier_qualification_counts'); }
     }
@@ -220,7 +224,7 @@ class OverviewTest extends TestCase
         $this->read('summary')->assertJsonPath('data.configured', true); // existing members
         DB::table('loyalty_members')->where('organization_id', $this->org->id)->delete();
         $this->read('summary')->assertJsonPath('data.configured', false);
-        SpecialOffer::create(['title' => 'Offer programme', 'type' => 'percentage', 'value' => 10,
+        SpecialOffer::create(['title' => 'Offer programme', 'description' => 'Offer programme fixture', 'type' => 'discount', 'value' => 10,
             'start_date' => '2026-10-01', 'end_date' => '2026-10-31', 'is_active' => true]);
         $this->read('summary')->assertJsonPath('data.mode', 'discounts')->assertJsonPath('data.configured', true);
         SpecialOffer::query()->update(['is_active' => false]);

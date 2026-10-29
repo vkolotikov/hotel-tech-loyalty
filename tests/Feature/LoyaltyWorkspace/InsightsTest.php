@@ -300,9 +300,10 @@ class InsightsTest extends TestCase
         $legacy = LoyaltyTier::create(['name' => 'Legacy', 'min_points' => 0, 'sort_order' => 0, 'is_active' => false]);
         LoyaltyTier::create(['name' => 'Retired', 'min_points' => 0, 'sort_order' => 9, 'is_active' => false]);
         $this->makeMember('On Legacy', 'legacy@example.test', ['tier_id' => $legacy->id]);
-        $this->makeMember('No Tier', 'none@example.test', ['tier_id' => null]);
+        // A valid FK outside this programme must count as no programme tier, without relaxing NOT NULL.
+        $unavailable = $this->otherOrganization();
+        $this->makeMember('No Programme Tier', 'none@example.test', ['tier_id' => $unavailable['tier']->id]);
         $this->makeMember('Gone Gold', 'gone@example.test', ['tier_id' => $this->tiers['gold']->id, 'is_active' => false]);
-        $this->otherOrganization();
 
         $tiers = $this->insights()->json('tiers');
 
@@ -327,9 +328,9 @@ class InsightsTest extends TestCase
         $moved($silver->id, $gold->id, '2026-09-10 10:00:00', $this->ada->id);
         $moved($gold->id, $silver->id, '2026-10-02 10:00:00');
         $moved($gold->id, $goldPlus->id, '2026-10-03 10:00:00');
-        $moved(null, $silver->id, '2026-10-03 10:00:00');                    // a first tier is not movement
-        $moved($silver->id, $gold->id, '2026-09-05 10:00:00');               // before the period
         $other = $this->otherOrganization();
+        $moved($other['tier']->id, $silver->id, '2026-10-03 10:00:00');     // a tier outside the programme is not movement
+        $moved($silver->id, $gold->id, '2026-09-05 10:00:00');               // before the period
         $this->inOrganization($other['org']->id, fn () => $moved($silver->id, $gold->id, '2026-10-01 10:00:00', $other['member']->id));
 
         $this->insights()->assertJsonPath('movement', [

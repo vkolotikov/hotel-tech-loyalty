@@ -150,4 +150,23 @@ class InsightsMoneyTest extends TestCase
         $this->assertSame(80, (int) $series['2026-10-02']['services']);
         $this->assertSame(300, (int) $series['2026-10-01']['stays']);
     }
+
+    public function test_stay_currency_snapshots_survive_a_venue_currency_change_without_conversion(): void
+    {
+        $historical = $this->stay(['member_id' => $this->ada->id, 'price_paid' => 100,
+            'raw_json' => json_encode(['currency' => 'eur'])], '2026-10-01 10:00:00');
+        $this->org->forceFill(['currency' => 'USD'])->save();
+        HotelSetting::withoutGlobalScopes()->create(['organization_id' => $this->org->id, 'key' => 'booking_currency', 'value' => 'USD', 'type' => 'string', 'group' => 'booking']);
+        $this->stay(['member_id' => $this->ada->id, 'price_paid' => 20,
+            'raw_json' => json_encode(['currency' => 'USD'])], '2026-10-02 10:00:00');
+        $legacy = $this->stay(['member_id' => $this->ada->id, 'price_paid' => 30], '2026-10-03 10:00:00');
+
+        $this->money()->assertJsonPath('currency', 'USD')->assertJsonPath('members.stays', ['bookings' => 2, 'amount' => 50])
+            ->assertJsonPath('all.total', 50)->assertJsonPath('other_currency.bookings', 1);
+        $this->org->forceFill(['currency' => 'EUR'])->save();
+        $this->money()->assertJsonPath('currency', 'EUR')->assertJsonPath('members.stays', ['bookings' => 1, 'amount' => 100])
+            ->assertJsonPath('all.total', 100)->assertJsonPath('other_currency.bookings', 2);
+        $this->assertSame('eur', json_decode(DB::table('booking_mirror')->where('id', $historical)->value('raw_json'), true)['currency']);
+        $this->assertNull(DB::table('booking_mirror')->where('id', $legacy)->value('raw_json'), 'Reading insights must not rewrite historical data.');
+    }
 }

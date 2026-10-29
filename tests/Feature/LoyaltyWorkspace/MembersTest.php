@@ -121,7 +121,8 @@ class MembersTest extends TestCase
         $this->ada->update(['tier_id' => $this->tiers['platinum']->id]);
         $this->asStaffMember()->getJson($this->api('members/' . $this->ada->id))->assertJsonPath('progress.next_tier', null)->assertJsonPath('progress.percent', 100);
 
-        $this->grace->update(['tier_id' => null]);
+        // Keep production's required FK while simulating an unavailable (foreign programme) tier relation.
+        $this->grace->update(['tier_id' => $this->otherOrganization()['tier']->id]);
         $this->asStaffMember()->getJson($this->api('members/' . $this->grace->id))->assertOk()->assertJsonPath('benefits', [])->assertJsonPath('progress.next_tier.name', 'Gold');
     }
 
