@@ -93,6 +93,7 @@ async (page, answer) => {
   await page.locator('[data-frame-footer]').getByRole('button',{name:'Settings',exact:true}).click();
   check('quick preferences still available',await page.locator('.l-quick-settings').isVisible());
   await page.locator('.l-quick-settings').getByRole('link',{name:'All settings'}).click();
+  check('opening full Settings closes quick preferences',await page.locator('.l-quick-settings').count()===0);
   for(const width of [1280,1024,768,390,320]) {await page.setViewportSize({width,height:900});await fit('Settings fits '+width);if([390,320].includes(width))await screen('settings-'+width);}
   await page.setViewportSize({width:1440,height:1080});
   state.currencyError=503; await settings(); await page.getByRole('button',{name:'Try again',exact:true}).waitFor();check('currency load failure recoverable',true);
