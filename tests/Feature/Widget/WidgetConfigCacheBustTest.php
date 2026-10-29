@@ -228,27 +228,18 @@ class WidgetConfigCacheBustTest extends TestCase
         );
     }
 
-    public function test_config_with_null_widget_key_does_not_crash_on_save(): void
+    public function test_null_widget_key_cache_hook_never_forgets_an_empty_key(): void
     {
-        // Defensive: a config row without widget_key (legacy data,
-        // partial migration) MUST NOT throw on save. The cache
-        // bust callback short-circuits with the if($config->widget_key)
-        // check.
-        $org = OrganizationFactory::new()->create();
-        app()->instance('current_organization_id', $org->id);
-
-        $config = ChatWidgetConfig::create([
-            'api_key' => \Illuminate\Support\Str::random(48),
+        // Exercise the defensive hook without inserting a state PostgreSQL's
+        // NOT NULL widget_key constraint correctly refuses.
+        $config = new ChatWidgetConfig([
             'widget_key'   => null,
             'company_name' => 'Legacy config',
         ]);
-
-        // Saving MUST NOT throw.
-        $config->company_name = 'Updated';
-        $config->save();
-
-        $this->assertSame('Updated', $config->fresh()->company_name,
-            'Null widget_key save MUST succeed (defensive short-circuit).');
+        Cache::shouldReceive('forget')->never();
+        ChatWidgetConfig::getEventDispatcher()->dispatch('eloquent.saved: ' . ChatWidgetConfig::class, [$config]);
+        ChatWidgetConfig::getEventDispatcher()->dispatch('eloquent.deleted: ' . ChatWidgetConfig::class, [$config]);
+        $this->assertFalse($config->exists);
     }
 
     /* ─── PopupRule saved hook ─── */
