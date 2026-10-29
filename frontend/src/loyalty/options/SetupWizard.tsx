@@ -127,6 +127,7 @@ export function Wizard({ answer, start = {} }: { answer: OptionsAnswer; start?: 
     setForm(recommendedForm(answer, presetOf(answer, next), answer.options))
   }
   const go = (next: Step) => {
+    if (next === step) return
     if (next === 'review') { setKey(newPressKey()); apply.reset() }
     setStep(next)
   }
