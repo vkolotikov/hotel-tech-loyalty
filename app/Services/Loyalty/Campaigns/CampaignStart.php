@@ -5,6 +5,7 @@ namespace App\Services\Loyalty\Campaigns;
 use App\Jobs\SendEmailCampaignChunk;
 use App\Models\AuditLog;
 use App\Models\EmailCampaign;
+use App\Models\LoyaltyMember;
 use App\Models\MemberSegment;
 use App\Models\User;
 use App\Services\Loyalty\LoyaltyRefused;
@@ -111,6 +112,49 @@ final class CampaignStart
             throw new LoyaltyRefused('audience_changed', 'The number of members it would reach has changed.', 409, ['reached' => $count]);
         }
 
+        return $this->beginDraft($campaign, $by, $ids, $audience['segment']);
+    }
+
+    /**
+     * The existing full-admin HTML editor and explicit-member API retain their payloads. Both now use the same
+     * audience checks, atomic draft claim and queue-failure recovery as the Loyalty workspace.
+     */
+    public function startFullAdmin(EmailCampaign $campaign, User $by, array $memberIds = []): EmailCampaign
+    {
+        if ($campaign->status !== EmailCampaign::STATUS_DRAFT) {
+            throw self::alreadyStarted($campaign->status);
+        }
+        if (trim((string) $campaign->subject) === '' || trim((string) $campaign->body_html) === '') {
+            throw new LoyaltyRefused('incomplete', 'Add a subject and message before sending.', 422);
+        }
+        $segment = null;
+        if ($campaign->segment_id) {
+            $audience = $this->audienceOf($campaign);
+            $segment = $audience['segment'];
+        } else {
+            $memberIds = array_values(array_unique(array_map('intval', $memberIds)));
+            $owned = LoyaltyMember::query()->where('organization_id', $campaign->organization_id)
+                ->whereIn('id', $memberIds)->count();
+            if ($owned !== count($memberIds)) {
+                throw new LoyaltyRefused('bad_recipients', 'Choose members of this organisation.', 422);
+            }
+            $audience = $this->audience->ofMembers($memberIds, (int) $campaign->organization_id);
+        }
+        $ids = $audience['reached'];
+        if ($ids === []) {
+            throw new LoyaltyRefused('nobody_to_send_to', 'No eligible recipients — choose members who can receive marketing emails.', 422);
+        }
+        if (count($ids) > CampaignAudience::LIMIT) {
+            throw new LoyaltyRefused('too_many', 'This audience is larger than one campaign may reach.', 422);
+        }
+
+        return $this->beginDraft($campaign, $by, $ids, $segment);
+    }
+
+    private function beginDraft(EmailCampaign $campaign, User $by, array $ids, ?MemberSegment $segment): EmailCampaign
+    {
+        $count = count($ids);
+
         // The one write that starts it: only this organisation's row, only while it is the draft that was checked.
         $started = EmailCampaign::query()
             ->whereKey($campaign->id)
@@ -119,6 +163,7 @@ final class CampaignStart
             ->where('segment_id', $campaign->segment_id)
             ->where('subject', $campaign->subject)
             ->where('body_html', $campaign->body_html)
+            ->where('updated_at', $campaign->getRawOriginal('updated_at'))
             ->update([
                 'status'          => EmailCampaign::STATUS_SENDING,
                 'sent_by_user_id' => $by->id,
@@ -138,7 +183,7 @@ final class CampaignStart
             throw new LoyaltyRefused('not_started', 'The campaign could not be queued. Nothing was sent.', 503);
         }
 
-        $audience['segment']->forceFill(['last_sent_at' => now()])->save();
+        $segment?->forceFill(['last_sent_at' => now()])->save();
         $fresh = EmailCampaign::query()->findOrFail($campaign->id);
         AuditLog::record('email_campaign_queued', $fresh,
             ['recipients' => $count, 'segment_id' => (int) $campaign->segment_id], [], $by,

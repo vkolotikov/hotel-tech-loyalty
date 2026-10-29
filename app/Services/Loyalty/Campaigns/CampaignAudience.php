@@ -3,10 +3,12 @@
 namespace App\Services\Loyalty\Campaigns;
 
 use App\Models\EmailSuppression;
+use App\Models\LoyaltyMember;
 use App\Models\MemberSegment;
 use App\Models\User;
 use App\Services\EmailComplianceService;
 use App\Services\MemberSegmentService;
+use Illuminate\Database\Eloquent\Builder;
 
 /**
  * Who a campaign to a segment would email, counted the way the pipeline sends (spec 2026-10-21 release 2 §6):
@@ -44,6 +46,18 @@ final class CampaignAudience
     public function of(MemberSegment $segment, int $orgId): array
     {
         $base = $this->segments->buildQuery(is_array($segment->definition) ? $segment->definition : []);
+        return $this->count($base, $orgId);
+    }
+
+    /** The full admin can address an explicit, tenant-checked list instead of a segment. */
+    public function ofMembers(array $ids, int $orgId): array
+    {
+        return $this->count(LoyaltyMember::query()->where('organization_id', $orgId)
+            ->where('is_active', true)->whereIn('id', $ids), $orgId);
+    }
+
+    private function count(Builder $base, int $orgId): array
+    {
         $members = (clone $base)->count();
         $unsubscribed = (clone $base)->whereNotNull('unsubscribed_at')->count();
         $eligible = $this->compliance->scopeEligible(clone $base, 'marketing');

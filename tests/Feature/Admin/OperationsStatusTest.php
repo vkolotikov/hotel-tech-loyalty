@@ -115,6 +115,17 @@ class OperationsStatusTest extends TestCase
         $this->assertSame(0, $this->check('scheduled_failures')['count']);
     }
 
+    public function test_heartbeat_alone_cannot_prove_that_scheduled_task_reporting_works(): void
+    {
+        $this->operator();
+        ScheduledCommandRun::create(['command' => 'heartbeat', 'status' => 'success', 'started_at' => now(), 'finished_at' => now()]);
+        ScheduledCommandRun::create(['command' => 'old:sentinel', 'status' => 'success', 'started_at' => now()->subDays(3), 'finished_at' => now()->subDays(3)]);
+        $this->assertSame('ok', $this->check('scheduler')['status']);
+        $this->assertSame('unobserved', $this->check('scheduled_failures')['status']);
+        ScheduledCommandRun::create(['command' => 'test:task', 'status' => 'success', 'started_at' => now(), 'finished_at' => now()]);
+        $this->assertSame('ok', $this->check('scheduled_failures')['status']);
+    }
+
     public function test_queue_checks_do_not_claim_liveness_and_exclude_future_and_running_jobs(): void
     {
         $this->operator();

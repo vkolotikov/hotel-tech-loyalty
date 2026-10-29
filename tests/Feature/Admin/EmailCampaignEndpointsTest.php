@@ -7,6 +7,8 @@ use App\Models\EmailCampaign;
 use App\Models\EmailSuppression;
 use App\Models\MemberSegment;
 use App\Services\EmailComplianceService;
+use App\Services\Loyalty\Campaigns\CampaignStart;
+use App\Services\Loyalty\LoyaltyRefused;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Mail\MailManager;
 use Illuminate\Support\Facades\DB;
@@ -102,6 +104,18 @@ class EmailCampaignEndpointsTest extends TestCase
 
     // ─── Send ───────────────────────────────────────────────────────────────
 
+    public function test_full_admin_does_not_report_a_suppressed_test_as_delivered_or_expose_transport_errors(): void
+    {
+        $campaign = $this->campaign();
+        EmailSuppression::create(['email' => $this->manager->email, 'reason' => 'complaint', 'organization_id' => $this->org->id]);
+        $this->asManager()->postJson($this->admin("{$campaign->id}/test"))->assertStatus(422)->assertJsonPath('error', 'suppressed');
+        $this->assertSame([], $this->sent());
+        EmailSuppression::query()->delete();
+        Mail::shouldReceive('html')->once()->andThrow(new \RuntimeException('SMTP private password'));
+        $response = $this->asManager()->postJson($this->admin("{$campaign->id}/test"))->assertStatus(502)->assertJsonPath('error', 'test_failed');
+        $this->assertStringNotContainsString('SMTP private password', $response->getContent());
+    }
+
     public function test_send_queues_the_segments_members_and_answers_as_before(): void
     {
         $this->ada->update(['marketing_consent' => true, 'email_notifications' => true]);
@@ -111,18 +125,18 @@ class EmailCampaignEndpointsTest extends TestCase
         $response->assertExactJson([
             'campaign'   => self::asJson($campaign),
             'queued'     => true,
-            'recipients' => 2,
-            'message'    => 'Sending to 2 recipients. Progress updates as it goes.',
+            'recipients' => 1,
+            'message'    => 'Sending to 1 recipients. Progress updates as it goes.',
         ]);
-        $this->assertSame([EmailCampaign::STATUS_SENDING, 2, 0, 0], [$response->json('campaign.status'), $response->json('campaign.recipient_count'), $response->json('campaign.sent_count'), $response->json('campaign.failed_count')]);
+        $this->assertSame([EmailCampaign::STATUS_SENDING, 1, 0, 0], [$response->json('campaign.status'), $response->json('campaign.recipient_count'), $response->json('campaign.sent_count'), $response->json('campaign.failed_count')]);
 
-        // Every active member of the segment is handed over; the job checks consent before each chunk.
+        // Only eligible members are counted and handed over; the job rechecks consent before each chunk.
         Queue::assertPushed(SendEmailCampaignChunk::class, 1);
         $job = Queue::pushed(SendEmailCampaignChunk::class)->first();
         // The segment's members in no particular order (the query has none; PostgreSQL's row order is not SQLite's).
         $handedOver = $job->memberIds;
         sort($handedOver);
-        $expected = [$this->ada->id, $this->grace->id];
+        $expected = [$this->ada->id];
         sort($expected);
         $this->assertSame([(int) $campaign->id, $expected, 0], [$job->campaignId, $handedOver, $job->offset]);
         $this->assertSame([], $this->sent());
@@ -143,7 +157,7 @@ class EmailCampaignEndpointsTest extends TestCase
 
         $empty = $this->campaign(['segment_id' => $this->makeSegment('Nobody', ['operator' => 'AND', 'filters' => [['type' => 'tier', 'op' => 'in', 'value' => [999999]]]])->id]);
         $this->asManager()->postJson($this->admin("{$empty->id}/send"))->assertStatus(422)
-            ->assertExactJson(['message' => 'No recipients — link a segment with members or provide member_ids.']);
+            ->assertJsonPath('error', 'bad_rule');
 
         Queue::assertNothingPushed();
         $this->assertSame(EmailCampaign::STATUS_DRAFT, $empty->fresh()->status);
@@ -166,7 +180,7 @@ class EmailCampaignEndpointsTest extends TestCase
     {
         $this->ada->update(['marketing_consent' => true, 'email_notifications' => true]);
         $campaign = $this->campaign(['subject' => 'Hi {{first_name}}', 'body_html' => '<p>Dear {{member.name}}, {{tier_name}}</p>']);
-        $this->asManager()->postJson($this->admin("{$campaign->id}/send"))->assertOk()->assertJsonPath('recipients', 2);
+        $this->asManager()->postJson($this->admin("{$campaign->id}/send"))->assertOk()->assertJsonPath('recipients', 1);
         $job = Queue::pushed(SendEmailCampaignChunk::class)->first();
 
         $job->handle(app(EmailComplianceService::class));
@@ -193,6 +207,55 @@ class EmailCampaignEndpointsTest extends TestCase
             ->assertJsonPath('warning', '1 recipients already received this. Sending again will email them a second time.');
 
         $this->assertSame([(int) $other->id], DB::table('email_campaign_deliveries')->pluck('campaign_id')->map(fn ($id) => (int) $id)->all());
+    }
+
+    public function test_full_admin_deduplicates_explicit_recipients_and_keeps_consent_checks(): void
+    {
+        $this->ada->update(['marketing_consent' => true, 'email_notifications' => true]);
+        $campaign = $this->campaign(['segment_id' => null]);
+        $this->asManager()->postJson($this->admin("{$campaign->id}/send"), [
+            'member_ids' => [$this->ada->id, $this->ada->id, $this->grace->id],
+        ])->assertOk()->assertJsonPath('recipients', 1);
+        Queue::assertPushed(SendEmailCampaignChunk::class, fn ($job) => $job->memberIds === [$this->ada->id]);
+    }
+
+    public function test_full_admin_cannot_send_to_another_organisations_member_or_ignore_a_broken_rule(): void
+    {
+        $other = $this->otherOrganization();
+        $campaign = $this->campaign(['segment_id' => null]);
+        $this->asManager()->postJson($this->admin("{$campaign->id}/send"), ['member_ids' => [$other['member']->id]])
+            ->assertStatus(422)->assertJsonPath('error', 'bad_recipients');
+        $broken = $this->campaign(['segment_id' => $this->makeSegment('Broken', [
+            'operator' => 'AND', 'filters' => [['type' => 'unknown', 'op' => 'anything']],
+        ])->id]);
+        $this->asManager()->postJson($this->admin("{$broken->id}/send"))->assertStatus(422)->assertJsonPath('error', 'bad_rule');
+        Queue::assertNothingPushed();
+    }
+
+    public function test_two_full_admin_requests_that_read_the_same_draft_queue_only_one_send(): void
+    {
+        $this->ada->update(['marketing_consent' => true, 'email_notifications' => true]);
+        $campaign = $this->campaign();
+        $stale = EmailCampaign::findOrFail($campaign->id);
+        app(CampaignStart::class)->startFullAdmin($campaign, $this->manager);
+        try {
+            app(CampaignStart::class)->startFullAdmin($stale, $this->manager);
+            $this->fail('A stale second request started another send.');
+        } catch (LoyaltyRefused $e) {
+            $this->assertSame('already_started', $e->errorCode);
+        }
+        Queue::assertPushed(SendEmailCampaignChunk::class, 1);
+    }
+
+    public function test_full_admin_returns_to_draft_if_the_queue_refuses_the_job(): void
+    {
+        $this->ada->update(['marketing_consent' => true, 'email_notifications' => true]);
+        $campaign = $this->campaign();
+        $this->mock(\Illuminate\Contracts\Bus\Dispatcher::class)
+            ->shouldReceive('dispatch')->once()->andThrow(new \RuntimeException('queue unavailable'));
+        $this->asManager()->postJson($this->admin("{$campaign->id}/send"))->assertStatus(503)->assertJsonPath('error', 'not_started');
+        $this->assertSame('draft', $campaign->fresh()->status);
+        $this->assertSame(0, $campaign->fresh()->recipient_count);
     }
 
     public function test_reset_hands_a_cancelled_campaign_back_as_a_draft_with_its_warning(): void

@@ -4,11 +4,13 @@ namespace App\Http\Controllers\Api\V1\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\AuditLog;
-use App\Jobs\SendEmailCampaignChunk;
 use App\Models\EmailCampaign;
+use App\Models\EmailSuppression;
 use App\Models\LoyaltyMember;
 use App\Models\MemberSegment;
 use App\Services\Email\CampaignTags;
+use App\Services\Loyalty\Campaigns\CampaignStart;
+use App\Services\Loyalty\LoyaltyRefused;
 use App\Services\MemberSegmentService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -29,7 +31,7 @@ use Illuminate\Support\Facades\Mail;
  *
  * Send respects member.email_notifications opt-in. Recipients come
  * from the linked segment, or from explicit member_ids when none.
- * Synchronous send is fine for the existing 5000-recipient cap.
+ * Delivery runs through the shared campaign queue, capped at 5000 eligible recipients.
  */
 class EmailCampaignController extends Controller
 {
@@ -121,6 +123,9 @@ class EmailCampaignController extends Controller
         if (!$email) {
             return response()->json(['message' => 'Your staff account has no email on file.'], 422);
         }
+        if (EmailSuppression::isSuppressed($email, (int) $campaign->organization_id)) {
+            return response()->json(['message' => 'Your address is on the list that is never emailed.', 'error' => 'suppressed'], 422);
+        }
 
         // Tags filled as a member's would be, with the sender's own name as the sample (CampaignTags::sample): the
         // test shows the personalisation without putting any member's details in a staff inbox.
@@ -134,9 +139,9 @@ class EmailCampaignController extends Controller
         } catch (\Throwable $e) {
             Log::warning('Email campaign test send failed', [
                 'campaign_id' => $campaign->id,
-                'error'       => $e->getMessage(),
+                'exception'   => $e::class,
             ]);
-            return response()->json(['message' => 'Test send failed: ' . $e->getMessage()], 500);
+            return response()->json(['message' => 'The test email could not be sent. Please try again later.', 'error' => 'test_failed'], 502);
         }
 
         return response()->json([
@@ -195,7 +200,7 @@ class EmailCampaignController extends Controller
     }
 
     /**
-     * Send the campaign synchronously. Audience = segment if linked,
+     * Queue the campaign. Audience = segment if linked,
      * otherwise the explicit member_ids in the request body. Member
      * email opt-in (member.email_notifications) is honoured.
      */
@@ -211,52 +216,12 @@ class EmailCampaignController extends Controller
             'member_ids.*' => 'integer|exists:loyalty_members,id',
         ]);
 
-        // Resolve recipients
-        $memberIds = [];
-        if ($campaign->segment_id) {
-            $segment = MemberSegment::find($campaign->segment_id);
-            if ($segment) {
-                $memberIds = $this->segments->memberIds($segment->definition ?? []);
-            }
-        } elseif (is_array($request->input('member_ids'))) {
-            $memberIds = $request->input('member_ids');
+        try {
+            $campaign = app(CampaignStart::class)->startFullAdmin($campaign, $request->user(), $request->input('member_ids', []));
+        } catch (LoyaltyRefused $e) {
+            return response()->json(['message' => $e->getMessage(), 'error' => $e->errorCode], $e->status);
         }
-
-        if (empty($memberIds)) {
-            return response()->json(['message' => 'No recipients — link a segment with members or provide member_ids.'], 422);
-        }
-
-        $recipientCount = count($memberIds);
-
-        $campaign->forceFill([
-            'status'          => EmailCampaign::STATUS_SENDING,
-            'sent_by_user_id' => $request->user()->id,
-            'recipient_count' => count($memberIds),
-            'sent_count'      => 0,
-            'failed_count'    => 0,
-            'error_message'   => null,
-        ])->save();
-
-        // Hand off to the queue rather than sending inline.
-        //
-        // The loop that used to live here ran inside the HTTP request: the
-        // campaign flipped to SENDING up front and only reached SENT after
-        // every message had gone, so a timeout on a large list left it
-        // wedged in SENDING forever — and send/update/destroy all refuse a
-        // non-draft row, making duplicate() the only escape, which
-        // duplicates the deliveries too.
-        //
-        // The job chains chunk by chunk, so counters stay accurate, a crash
-        // resumes from a known offset, and delivery is paced instead of
-        // handing an SMTP relay 5 000 messages at once.
-        SendEmailCampaignChunk::dispatch($campaign->id, array_values($memberIds));
-
-        // Records the decision to send, not the outcome — the outcome now
-        // arrives asynchronously and lives on the campaign's counters.
-        AuditLog::record('email_campaign_queued', $campaign,
-            ['recipients' => count($memberIds)],
-            [], $request->user(),
-            "Email campaign '{$campaign->name}' queued for {$recipientCount} recipients");
+        $recipientCount = (int) $campaign->recipient_count;
 
         return response()->json([
             'campaign'   => $campaign->fresh(),
