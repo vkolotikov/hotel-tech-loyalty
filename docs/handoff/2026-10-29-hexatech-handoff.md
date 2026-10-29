@@ -3,7 +3,61 @@
 Read this first, then `2026-10-28-hexatech-handoff.md` for previous milestones and
 `2026-10-27-hexatech-handoff.md` for the full environment and history. Root AGENTS.md and CLAUDE.md still apply.
 
-## Latest release: room booking cancellation copy removed
+## Latest release: live operational verification and reporting/campaign fixes
+
+Production **414dfbef83d0de54eb23e3b7b732e4542ca681f8**, Cloud deployment **1097**, verified
+**20:23 Europe/Riga**. Source `feature/production-acceptance-20261029`; next source-patch baseline
+**12fd2c5fda28c43b3e61ef1fa4fef69b09575502**, not later documentation commits. Previous production
+`5ad1908b11f99b9806b09799382e10a1302de2b2`. No migrations or frontend-source changes.
+
+The real Chrome Design profile is accessible through computer use (Chrome extension browser 1). Chrome
+DevTools still exposes an empty automation tab; use the extension for the owner's actual Cloud/Loyalty session.
+Cloud queues default/ai both consumed harmless probes, failed jobs remain zero, scheduler heartbeat is current,
+cache/default shared cache are database. Seven-day database PITR is enabled; DigitalOcean media versioning is off.
+
+Found that AppServiceProvider is unregistered, so its scheduler observers had never executed. Moved reporting
+to explicitly registered ScheduleServiceProvider. Live completion listener count is now one, and real
+`loyalty:send-scheduled` outcomes are recorded. Missing real task observations now show unobserved in System
+status. Failure diagnostics omit exception messages/command arguments; heartbeat is not duplicated.
+At **20:25 Europe/Riga**, the next real five-minute cycle also reported success for PMS sync/retry,
+appointment reminders and loyalty visit-effect recovery; failed jobs and portal browser errors remained zero.
+
+Legacy full-admin campaign send now uses CampaignStart, retaining its HTML/explicit-recipient interface,
+with eligible counts, tenant/rule/cap checks, atomic start and queue-failure recovery. Suppressed test sends
+are refused and SMTP failures no longer expose raw exceptions. Production defaults were 2000/org and
+6000/global with no overrides, too high for the shared SiteGround relay. New conservative defaults are
+**100/org and 100/global per clock hour**, live verified. Larger campaigns wait for hourly budget; account
+and booking mail remain exempt. Revisit only after verifying the actual relay plan and other apps' usage.
+
+Isolated artifact: **911 SQLite tests / 7089 assertions**, one PG-only skip covered by **45 PostgreSQL tests /
+427 assertions** (including the real reward race); **161 mail/campaign tests / 743 assertions** rerun after
+pacing change. **5766 frontend tests / 399 files**, TypeScript, existing lint regression gate and fresh build
+passed. Thirteen source paths passed parity. Live backend hashes match, status UI is clean, public health,
+member authentication, unchanged booking-copy markers, landing kit and retired CSS all verified. Existing
+1393 lint diagnostics/build warnings remain. Report: `docs/audits/2026-10-29-production-acceptance.md`.
+
+Exactly one controlled **production queued** test email, job 36, subject
+`HexaTech production queue test - HEXA-LAUNCH-PROD-20261029-01`, was sent to **info@fds-cards.co.uk**.
+The job was consumed without failure or suppression; inbox receipt awaits the owner's answer. Cache marker
+`ops:mail:HEXA-LAUNCH-PROD-20261029-01` prevents repeating it. This is separate from the earlier locally sent
+email whose inbox receipt was confirmed. Member 207's marketing consent remains false; no customer campaign,
+preference change or member pass was issued.
+
+Restore rehearsal is prepared in Cloud as **hotel_tech_loyalty_restore_20261029**, point **17:53:07 UTC**,
+but has NOT been submitted. The user was asked to approve up to **US$5** for a temporary cluster, verifying
+both main/hexa_seo restored databases and removing the test copy; answer pending. Keep production attached
+to the existing cluster. Backup dialog is a handoff tab. No SiteGround/DO console is exposed in this profile.
+Sender hotel-tech.ai has SPF/DKIM/one monitoring DMARC; hexa-tech.uk has duplicate DMARC records to resolve
+through its DNS account. Media version recovery, restore rehearsal, mail quota/feedback, wallet implementation
+and provider/device acceptance remain open. Wallets stay OFF, as below.
+
+Private test logs and source manifest: `E:/Hexa-Tech-launch-20261029/production-acceptance-*`; public content
+probe `E:/Hexa-Tech-production-acceptance-20261029/`. Private HexaTech Postgres used **55440** and is now stopped.
+Port **55439 belongs to an unrelated dry-ice application**, untouched; do not use the older pg-env.ps1 port
+without overriding it and verifying the data directory. Preserve the original Vite 5173 and unrelated files.
+The isolated production-acceptance deployment worktree and its node_modules junction are removed.
+
+## Previous release: room booking cancellation copy removed
 
 Owner requested a small copy update: each organisation publishes its cancellation policy on its website.
 Production **5ad1908b11f99b9806b09799382e10a1302de2b2**, live content verified **19:37 Europe/Riga**.

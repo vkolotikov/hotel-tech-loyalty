@@ -1,0 +1,64 @@
+﻿{
+    "source":  "12fd2c5fda28c43b3e61ef1fa4fef69b09575502",
+    "production":  "414dfbef83d0de54eb23e3b7b732e4542ca681f8",
+    "php":  [
+                {
+                    "scope":  "artifact-php",
+                    "tests":  912,
+                    "assertions":  7089,
+                    "failures":  0,
+                    "errors":  0,
+                    "skipped":  1
+                },
+                {
+                    "scope":  "pacing-php",
+                    "tests":  161,
+                    "assertions":  743,
+                    "failures":  0,
+                    "errors":  0,
+                    "skipped":  0
+                },
+                {
+                    "scope":  "artifact-pg",
+                    "tests":  45,
+                    "assertions":  427,
+                    "failures":  0,
+                    "errors":  0,
+                    "skipped":  0
+                }
+            ],
+    "frontend":  {
+                     "build":  "pass",
+                     "files":  399,
+                     "tests":  5766,
+                     "typecheck":  "pass",
+                     "lint":  "baseline_pass",
+                     "legacy_diagnostics":  1393
+                 },
+    "preflight":  {
+                      "cache":  "database",
+                      "probe_job_ids":  [
+                                            34,
+                                            35
+                                        ],
+                      "probe_remaining":  0,
+                      "workers":  [
+                                      "default",
+                                      "ai"
+                                  ],
+                      "queued_test_reference":  "HEXA-LAUNCH-PROD-20261029-01",
+                      "worker_timeout":  600,
+                      "queued_test_remaining":  false,
+                      "heartbeat_checked_at":  "2026-10-29T17:52:33Z",
+                      "failed_jobs":  0,
+                      "retry_after":  660,
+                      "queued_test_job":  36,
+                      "media_versioning":  "not_enabled",
+                      "shared_cache":  "database",
+                      "database_pitr_days":  7,
+                      "queue":  "database",
+                      "heartbeat_at":  "2026-10-29T17:52:04Z",
+                      "media_disk":  "do",
+                      "inbox_confirmation":  "pending"
+                  }
+}
