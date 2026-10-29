@@ -27,7 +27,7 @@
   [data-loyalty] .l-mw-header small { display:block; font-size:11px; line-height:18px; }
   [data-loyalty] .l-mw-header button { flex-shrink:0; padding:10px; min-width:44px; }
   [data-loyalty][data-overview] .l-mw-nav { position:fixed; z-index:35; bottom:0; left:0; right:0; display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:0; padding:8px 16px max(18px,env(safe-area-inset-bottom)); min-height:84px; background:var(--l-ov-side); }
-  [data-loyalty] .l-mw-nav a { display:flex; flex-direction:column; justify-content:center; align-items:center; gap:4px; min-height:58px; border-radius:12px; padding:8px 2px; color:var(--l-ov-secondary); font-size:11px; line-height:16px; text-align:center; }
+  [data-loyalty] .l-mw-nav a { display:flex; flex-direction:column; justify-content:center; align-items:center; gap:2px; min-height:58px; border-radius:12px; padding:8px 2px; color:var(--l-ov-secondary); font-size:11px; line-height:16px; text-align:center; }
   [data-loyalty] .l-mw-nav a[aria-current=page] { background:var(--l-ov-canvas); color:var(--l-ov-cyan); }
   [data-loyalty] .l-mw-nav a.l-mw-nav-scan { color:#f5f7fb; background:linear-gradient(180deg,#37b6e9,#4b4ced 22%,#4b4ced); }
   [data-loyalty][data-theme=light] .l-mw-nav a.l-mw-nav-scan img { filter:none; }
