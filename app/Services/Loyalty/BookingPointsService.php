@@ -12,6 +12,7 @@ use App\Models\User;
 use App\Services\Loyalty\Programme\ProgrammeOptions;
 use App\Services\Loyalty\Visits\Visit;
 use App\Services\Loyalty\Visits\VisitRecorder;
+use App\Services\Loyalty\Visits\VisitEffects;
 use App\Services\LoyaltyService;
 use App\Services\Portal\PortalBootstrap;
 use Illuminate\Support\Facades\DB;
@@ -125,17 +126,18 @@ final class BookingPointsService
      */
     public function reverseForServiceBooking(ServiceBooking $booking, ?User $staff = null): int
     {
-        // Release 7: the visit goes back too — its stamp (an open card only), its cashback, its tier counts.
-        app(VisitRecorder::class)->reversed((int) $booking->organization_id, 'service_booking', (int) $booking->id, $staff);
-
         $total = 0;
         $txs = PointsTransaction::withoutGlobalScopes()
+            ->where('organization_id', $booking->organization_id)
             ->where('reference_type', 'service_booking')->where('reference_id', $booking->id)
             ->where('points', '>', 0)->where('is_reversed', false)->get();
         foreach ($txs as $tx) {
             $this->loyalty->reverseTransaction($tx, "Appointment {$booking->booking_reference} refunded", $staff);
             $total += (int) $tx->points;
         }
+
+        // The durable runner recovers these points too if the producer stopped before this inline path.
+        app(VisitRecorder::class)->reversed((int) $booking->organization_id, 'service_booking', (int) $booking->id, $staff);
 
         return $total;
     }
@@ -330,9 +332,8 @@ final class BookingPointsService
 
             // Zero computed points still stamps the stay, or it would be
             // looked at again every night.
-            DB::table('booking_mirror')->where('id', $mirror->id)->update(['points_awarded_at' => now()]);
-
             $this->recordStayVisit($member, $mirror);
+            DB::table('booking_mirror')->where('id', $mirror->id)->update(['points_awarded_at' => now()]);
 
             return $tx;
         });
@@ -365,19 +366,28 @@ final class BookingPointsService
     /** Release 7: a completed appointment is the member's visit (VisitRecorder), on the appointment's own day. */
     private function recordAppointmentVisit(ServiceBooking $booking): void
     {
-        $orgId = (int) $booking->organization_id;
-        if (!PortalBootstrap::loyaltyOn($orgId)) {
-            return;
+        $intent = $this->rememberAppointmentVisit($booking);
+        if ($intent !== null) {
+            app(VisitEffects::class)->run($intent);
         }
-        $this->underBookingOrg($orgId, function () use ($booking, $orgId) {
+    }
+
+    /** Record only the intent inside the completion transaction; run effects after booking locks are released. */
+    public function rememberAppointmentVisit(ServiceBooking $booking): ?int
+    {
+        $orgId = (int) $booking->organization_id;
+        if ($booking->status !== 'completed' || !$booking->member_id || $booking->payment_status === 'refunded' || !PortalBootstrap::loyaltyOn($orgId)) {
+            return null;
+        }
+        return $this->underBookingOrg($orgId, function () use ($booking, $orgId) {
             $member = LoyaltyMember::withoutGlobalScopes()->where('organization_id', $orgId)->whereKey($booking->member_id)->first();
             if (!$member) {
-                return;
+                return null;
             }
             // The stored start is the venue's wall clock (never converted): its date is the visit's venue day.
             $start = (string) ($booking->getRawOriginal('start_at') ?? '');
             $day = preg_match('/^\d{4}-\d{2}-\d{2}/', $start) ? substr($start, 0, 10) : PortalBootstrap::venueToday($orgId)->toDateString();
-            app(VisitRecorder::class)->record($member, new Visit(
+            return app(VisitEffects::class)->remember($member, new Visit(
                 Visit::APPOINTMENT, 'service_booking', (int) $booking->id, round((float) $booking->total_amount, 2), $day,
             ));
         });

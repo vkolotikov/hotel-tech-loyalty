@@ -151,7 +151,7 @@ class PushTest extends TestCase
 
         foreach ($this->routes($message->id) as [$method, $path]) {
             $this->asStaffMember()->json($method, $this->api($path), ['name' => 'X', 'recipients' => 1, 'revision' => 'x'])
-                ->assertStatus(403)->assertJsonPath('error', 'manager_only');
+                ->assertStatus(403)->assertJsonPath('error', 'not_allowed');
         }
         $this->assertSame(1, NotificationCampaign::query()->count());
         $this->assertSame('draft', $message->fresh()->status);

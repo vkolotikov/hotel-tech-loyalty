@@ -1,0 +1,13 @@
+{
+  "afterLogout": {
+    "storageSignedOut": true,
+    "inMemoryStillSignedIn": true,
+    "memberStillVisible": true,
+    "url": "/loyalty/members/1"
+  },
+  "afterAccountChange": {
+    "storeUser": 1,
+    "persistedUser": 999,
+    "memberStillVisible": true
+  }
+}

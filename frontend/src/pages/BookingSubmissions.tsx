@@ -92,7 +92,7 @@ export function BookingSubmissions({ embedded = false }: { embedded?: boolean } 
               </div>
               {/* Total */}
               <div className="text-sm font-bold text-white tabular-nums min-w-[80px] text-right">
-                {money(s.gross_total)}
+                {money(s.gross_total, s.currency)}
               </div>
               {/* Method */}
               <div className="min-w-[70px] text-center">

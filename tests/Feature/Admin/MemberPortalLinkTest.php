@@ -44,6 +44,7 @@ class MemberPortalLinkTest extends TestCase
                 $table->unsignedBigInteger('organization_id');
                 $table->unsignedBigInteger('user_id');
                 $table->string('role', 32)->default('manager');
+                $table->boolean('is_active')->default(true);
                 $table->timestamps();
             });
         }

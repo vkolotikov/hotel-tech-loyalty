@@ -37,10 +37,10 @@ class EmailCampaignEndpointsTest extends TestCase
         $this->setUpCampaignsSchema();
         $this->campaignsOn();
         EmailSuppression::query()->delete();
-        // Mail::html() goes past Mail::fake() to the manager: every message lands in the `array` transport.
+        // Exercise rendering and transport hooks without sending real mail.
         config(['mail.default' => 'array']);
         $this->outbox = app('mail.manager');
-        Mail::fake();
+        Mail::swap($this->outbox);
         Queue::fake();
         $this->everyone = $this->makeSegment('Everyone', ['operator' => 'AND', 'filters' => []]);
     }

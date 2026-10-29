@@ -32,6 +32,15 @@ interface Props {
 
 type CopyState = Record<string, boolean>
 
+function Toggle({ on, onClick, color = 'emerald' }: { on: boolean; onClick: () => void; color?: 'emerald' | 'amber' }) {
+  return (
+    <button onClick={onClick}
+      className={`relative w-11 h-6 rounded-full transition-colors flex-shrink-0 ${on ? (color === 'amber' ? 'bg-amber-500' : 'bg-emerald-500') : 'bg-white/[0.1]'}`}>
+      <div className={`absolute left-0 top-0.5 w-5 h-5 rounded-full bg-on-fill transition-transform ${on ? 'translate-x-[22px]' : 'translate-x-0.5'}`} />
+    </button>
+  )
+}
+
 export function BookingTab({ getVal, handleChange, widgetToken, cardClass, cardStyle, inputClass }: Props) {
   const widgetBaseUrl = typeof window !== 'undefined' && window.location.hostname !== 'localhost'
     ? window.location.origin
@@ -121,13 +130,6 @@ export function BookingTab({ getVal, handleChange, widgetToken, cardClass, cardS
 
   const isOn = (key: string, fallback = 'false') => (getVal(key) || fallback) === 'true'
   const toggle = (key: string, fallback = 'false') => handleChange(key, isOn(key, fallback) ? 'false' : 'true')
-
-  const Toggle = ({ on, onClick, color = 'emerald' }: { on: boolean; onClick: () => void; color?: 'emerald' | 'amber' }) => (
-    <button onClick={onClick}
-      className={`relative w-11 h-6 rounded-full transition-colors flex-shrink-0 ${on ? (color === 'amber' ? 'bg-amber-500' : 'bg-emerald-500') : 'bg-white/[0.1]'}`}>
-      <div className={`absolute left-0 top-0.5 w-5 h-5 rounded-full bg-on-fill transition-transform ${on ? 'translate-x-[22px]' : 'translate-x-0.5'}`} />
-    </button>
-  )
 
   const embed = activeEmbed === 'rooms' ? rooms : services
   const embedLabel = activeEmbed === 'rooms' ? 'Room Booking' : 'Services Booking'

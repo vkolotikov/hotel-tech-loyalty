@@ -1,0 +1,9 @@
+{
+  "width": 390,
+  "touch": 1,
+  "viewport": "width=device-width, initial-scale=1.0, viewport-fit=cover",
+  "nav": "grid",
+  "overflow": false,
+  "touch_navigation": true,
+  "program_summary": true
+}

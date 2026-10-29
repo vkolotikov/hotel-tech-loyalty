@@ -30,7 +30,7 @@ use Tests\TestCase;
 /**
  * The shared SendEmailCampaignChunk mails each member once and fills their tags (HexaTech Loyalty release 3 §4), for
  * the full admin's campaigns and the workspace's alike. Every test runs the real job; its messages go through the real
- * Mailer (Mail::html() is forwarded past Mail::fake() to the manager) into the in-memory `array` transport, so the
+ * Mailer bound explicitly to the in-memory `array` transport, so the
  * MessageSending listeners — the suppression one among them — fire as in production.
  */
 class CampaignDeliveriesTest extends TestCase
@@ -48,7 +48,7 @@ class CampaignDeliveriesTest extends TestCase
         config(['mail.default' => 'array', 'cache.default' => 'array']);
         Cache::store('array')->flush();
         $this->outbox = app('mail.manager');
-        Mail::fake();
+        Mail::swap($this->outbox);
         Queue::fake();
     }
 
@@ -85,6 +85,43 @@ class CampaignDeliveriesTest extends TestCase
     private function runChunk(EmailCampaign $campaign, array $memberIds, int $offset = 0): void
     {
         (new SendEmailCampaignChunk((int) $campaign->id, $memberIds, $offset))->handle(app(EmailComplianceService::class));
+    }
+
+    public function test_cancelling_during_the_final_chunk_remains_cancelled_after_completion_and_failure(): void
+    {
+        $member = $this->reachable('Recipient', 'cancelled-chunk@example.test');
+        $campaign = $this->sending('Hello', 'Message', 1);
+        $cancelled = false;
+        \Illuminate\Support\Facades\Event::listen(\Illuminate\Mail\Events\MessageSent::class, function () use ($campaign, &$cancelled) {
+            DB::table('email_campaigns')->where('id', $campaign->id)->update(['status' => EmailCampaign::STATUS_CANCELLED]);
+            $cancelled = true;
+        });
+        $this->runChunk($campaign, [$member->id]);
+        $this->assertTrue($cancelled, 'Cancellation must occur inside the transport callback.');
+        $this->assertSame(EmailCampaign::STATUS_CANCELLED, $campaign->fresh()->status);
+        $this->assertNull($campaign->fresh()->sent_at);
+        $this->assertCount(1, $this->sent());
+        (new SendEmailCampaignChunk($campaign->id, [$member->id]))->failed(new \RuntimeException('Worker stopped'));
+        $this->assertSame(EmailCampaign::STATUS_CANCELLED, $campaign->fresh()->status);
+    }
+
+    public function test_a_partial_hourly_allowance_sends_only_that_many_and_continues_with_the_remainder(): void
+    {
+        config(['mail.campaign_hourly_limit_per_org' => 1, 'mail.campaign_hourly_limit_global' => 10]);
+        $first = $this->reachable('First', 'first-budget@example.test');
+        $second = $this->reachable('Second', 'second-budget@example.test');
+        $campaign = $this->sending('Hello', 'Message', 2);
+        $ids = [$first->id, $second->id];
+        $this->runChunk($campaign, $ids);
+        $this->assertCount(1, $this->sent());
+        $this->assertSame(EmailCampaign::STATUS_SENDING, $campaign->fresh()->status);
+        Queue::assertPushed(SendEmailCampaignChunk::class, fn ($job) => $job->offset === 1);
+        $this->runChunk($campaign, $ids, 1);
+        $this->assertCount(1, $this->sent());
+        $this->travel(1)->hour();
+        $this->runChunk($campaign, $ids, 1);
+        $this->assertSame(EmailCampaign::STATUS_SENT, $campaign->fresh()->status);
+        $this->assertEqualsCanonicalizing(['first-budget@example.test', 'second-budget@example.test'], array_column($this->sent(), 'to'));
     }
 
     /** @return array<int, string> member id => status */

@@ -303,6 +303,9 @@
     "bulk_mark_status": "Statut modifié dans l'administration complète (action groupée)"
   },
   "error": {
+    "refund_pending": "Un remboursement est en cours. Réessayez le même montant pour vérifier ; ne remboursez pas par un autre moyen.",
+    "refund_outcome_unknown": "Le résultat du remboursement est encore inconnu. Réessayez le même montant ; ne remboursez pas par un autre moyen.",
+    "refund_failed": "Le remboursement a été refusé. Aucun remboursement n’a été effectué. Vérifiez le paiement et réessayez.",
     "deposit_refund_failed": "L’acompte n’a pas pu être remboursé pour l’instant. Réessayez.",
     "deposits_unavailable": "Les acomptes demandent les paiements en ligne via Stripe dans la devise de l’établissement.",
     "reopen_slot_taken": "Ce créneau est désormais pris — réservez à nouveau le client à un autre moment.",
@@ -511,6 +514,7 @@
     }
   },
   "money": {
+    "provider": {"pending":"En cours","unknown":"Résultat inconnu","requesting":"Demandé","requires_action":"Action requise","failed":"Échec : aucun argent restitué","canceled":"Annulé : aucun argent restitué"},
     "title": "Paiement",
     "total": "Total",
     "paid_online": "Payé en ligne par carte",

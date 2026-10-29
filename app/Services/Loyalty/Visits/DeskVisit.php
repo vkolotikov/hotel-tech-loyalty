@@ -177,6 +177,9 @@ final class DeskVisit
                 'description'     => $amount !== null ? "A purchase of {$amount} at the desk" : 'A check-in at the desk',
             ]);
 
+            app(VisitEffects::class)->remember($locked, new Visit($amount !== null ? Visit::PURCHASE : Visit::CHECK_IN,
+                'scan_event', (int) $row->id, $amount, CarbonImmutable::parse($row->created_at)->setTimezone($zone)->toDateString(), $by));
+
             return ['row' => $row, 'replay' => false, 'amount' => $amount, 'already' => $already, 'checkin' => $checkin, 'purchase' => $purchase];
         });
 

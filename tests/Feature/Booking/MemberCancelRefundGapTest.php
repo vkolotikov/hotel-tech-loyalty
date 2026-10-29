@@ -113,7 +113,7 @@ class MemberCancelRefundGapTest extends TestCase
     {
         $m = $this->stay();
         $this->webhookRecordsInTheGap($m, 50, 'partially_refunded');
-        $this->stripe->shouldReceive('refund')->once()->with('pi_gap', null, 'requested_by_customer')->andReturn(Refund::constructFrom(['id' => 're_rest', 'object' => 'refund', 'amount' => 13000, 'currency' => 'eur']));
+        $this->stripe->shouldReceive('refund')->once()->with('pi_gap', null, 'requested_by_customer', \Mockery::any(), \Mockery::any(), \Mockery::any())->andReturn(Refund::constructFrom(['id' => 're_rest', 'status' => 'succeeded', 'object' => 'refund', 'amount' => 13000, 'currency' => 'eur']));
 
         $out = app(MemberCancellation::class)->cancelStay($this->orgId, $m->id);
 

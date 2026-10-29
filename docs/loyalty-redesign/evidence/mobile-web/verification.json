@@ -1,0 +1,35 @@
+{
+  "deployed_source": "e4f43246f5ec0195cbb36c50c861afe744437790",
+  "previous_source_baseline": "43382945207c44ae6a6ce952272121e32e6a1d10",
+  "production_parent": "ce1f55e0f349ee5cb236b63ac6e48704c6d3dd4d",
+  "production_commit": "16788ad8cad9ecf0886c28c2ecd0997f40a725d9",
+  "source_patch": "60916b106",
+  "explicit_paths": 240,
+  "selected_and_whole_source_parity": true,
+  "typescript": "passed",
+  "eslint": "full Loyalty and shared footer passed",
+  "frontend": { "files": 394, "tests": 5730, "passed": true },
+  "php": {
+    "tests": 133,
+    "assertions": 1391,
+    "directory": "tests/Feature/LoyaltyWorkspace/",
+    "filter": "OverviewTest|MembersTest|MembershipTest|PointsTest|RequestsInboxTest|RequestsTest|RedemptionsTest|RewardsTest|CurrencyTest|OptionsSetupTest|ScanTest|ScanAccessTest|GateTest|ValidityTest",
+    "passed": true
+  },
+  "vite_postbuild": "passed in isolated artifact",
+  "chrome_compiled": {
+    "mobile_flows": 73,
+    "settings_setup": 79,
+    "scan_states": 34,
+    "reader_integrations": 17,
+    "style_routes": 30,
+    "style_views": 60,
+    "locale_theme_short_views": 70,
+    "runtime_errors": 0,
+    "writes": "intercepted test fixtures only; no real member/settings changes"
+  },
+  "figma_session": "c71f8237-ff98-4a14-8271-a9097c33f93d",
+  "mobile_touch_emulation": "390px viewport, tap navigation and program summary passed",
+  "live_verified_at": "2026-10-29T12:22:00+02:00",
+  "live_verification": "passed; exact assets and responses in live-verification.json"
+}

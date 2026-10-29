@@ -133,7 +133,7 @@ class MemberAdminEndpointsTest extends TestCase
     public function test_resend_replaces_the_open_code_and_sends_again(): void
     {
         $email = $this->grace->user->email;
-        EmailVerificationCode::create(['email' => $email, 'code' => '111111', 'expires_at' => now()->addHour()]);
+        EmailVerificationCode::create(['email' => $email, 'user_id' => $this->grace->user_id, 'purpose' => 'claim', 'code' => '111111', 'expires_at' => now()->addHour()]);
 
         $this->asManager()->postJson($this->admin("members/{$this->grace->id}/resend-welcome"))
             ->assertOk()->assertExactJson(['message' => 'Welcome email sent to ' . $email]);

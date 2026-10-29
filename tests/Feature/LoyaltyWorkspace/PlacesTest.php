@@ -131,9 +131,9 @@ class PlacesTest extends TestCase
 
     public function test_only_a_manager_changes_places(): void
     {
-        $this->asStaffMember()->postJson($this->api('places'), ['name' => 'Spa', 'admits' => 'all'])->assertForbidden()->assertJsonPath('error', 'manager_only');
+        $this->asStaffMember()->postJson($this->api('places'), ['name' => 'Spa', 'admits' => 'all'])->assertForbidden()->assertJsonPath('error', 'not_allowed');
         $id = $this->add(['name' => 'Spa', 'admits' => 'all'])->json('place.id');
-        $this->asStaffMember()->putJson($this->api("places/{$id}"), ['name' => 'Pool'])->assertForbidden()->assertJsonPath('error', 'manager_only');
+        $this->asStaffMember()->putJson($this->api("places/{$id}"), ['name' => 'Pool'])->assertForbidden()->assertJsonPath('error', 'not_allowed');
         $this->asStaffMember()->deleteJson($this->api("places/{$id}"))->assertForbidden();
         $this->assertSame(1, AccessPlace::query()->count());
     }

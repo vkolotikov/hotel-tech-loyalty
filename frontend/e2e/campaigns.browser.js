@@ -58,6 +58,6 @@ async page => {
     }
     status=404;body={message:'Unmocked local fixture endpoint'};return response();
   });
-  await page.setViewportSize({width:1440,height:1080});await page.goto(base+'/loyalty/campaigns');await page.locator('.l-cm-row').first().waitFor();await page.evaluate(()=>document.fonts.ready);await page.screenshot({path:root+'render-email-list.png',fullPage:true});
+  await page.setViewportSize({width:1440,height:1080});await page.goto(base+'/loyalty/campaigns');await page.locator('.l-cm-row').first().waitFor();await page.evaluate(()=>document.fonts.ready);await page.screenshot({path:root+'render-email-list.png',fullPage:false});
   return {root,errors:state.errors};
 }

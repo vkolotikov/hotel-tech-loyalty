@@ -80,6 +80,79 @@ class StayCurrencyTest extends TestCase
     {
         HotelSetting::withoutGlobalScopes()->create(['organization_id' => $this->org->id, 'key' => 'booking_currency', 'value' => $code, 'type' => 'string', 'group' => 'booking']);
         HotelSetting::flushCacheFor($this->org->id);
+        \App\Models\BookingRoom::withoutGlobalScopes()->where('organization_id', $this->org->id)->update(['currency' => strtoupper($code)]);
+    }
+
+    public function test_a_room_or_selected_extra_in_another_currency_cannot_be_added_to_a_quote(): void
+    {
+        $this->venueCurrency('USD');
+        \App\Models\BookingRoom::withoutGlobalScopes()->where('organization_id', $this->org->id)->where('pms_id', '102')->update(['currency' => 'EUR']);
+        try {
+            $this->engine->quoteCombo(['unit_ids' => ['101', '102'], 'check_in' => $this->checkIn, 'check_out' => $this->checkOut, 'adults' => 3]);
+            $this->fail('Mixed currencies were quoted');
+        } catch (\App\Services\Booking\CurrencyMismatch) {
+            $this->assertSame(0, BookingHold::count());
+        }
+        $extra = $this->seedStayExtra($this->org->id, ['currency' => 'EUR', 'price' => 10]);
+        $this->expectException(\App\Services\Booking\CurrencyMismatch::class);
+        $this->engine->quote(['unit_id' => '101', 'check_in' => $this->checkIn, 'check_out' => $this->checkOut, 'extras' => [['id' => (string) $extra->id]]]);
+    }
+
+    public function test_a_provider_rate_in_another_currency_is_not_relabelled(): void
+    {
+        $avail = Mockery::mock(AvailabilityService::class);
+        $avail->shouldReceive('unitRates')->andReturn(['available' => true, 'price' => 200, 'currency' => 'USD']);
+        $this->app->instance(AvailabilityService::class, $avail);
+        $this->expectException(\App\Services\Booking\CurrencyMismatch::class);
+        $this->engine->quote(['unit_id' => '101', 'check_in' => $this->checkIn, 'check_out' => $this->checkOut]);
+    }
+
+    public function test_new_rooms_and_extras_default_to_the_venue_currency(): void
+    {
+        $this->venueCurrency('USD');
+        $room = app(\App\Http\Controllers\Api\V1\Admin\BookingRoomController::class)->store(\Illuminate\Http\Request::create('/', 'POST', ['name' => 'New room']))->getData(true);
+        $extra = app(\App\Http\Controllers\Api\V1\Admin\BookingExtraController::class)->store(\Illuminate\Http\Request::create('/', 'POST', ['name' => 'Breakfast', 'price' => 10]))->getData(true);
+        $this->assertSame('USD', $room['currency']);
+        $this->assertSame('USD', $extra['currency']);
+    }
+
+    public function test_a_saved_quote_is_not_authorized_in_a_new_venue_currency(): void
+    {
+        $quote = $this->engine->quote(['unit_id' => '101', 'check_in' => $this->checkIn, 'check_out' => $this->checkOut]);
+        $this->venueCurrency('USD');
+        $stripe = Mockery::mock(\App\Services\StripeService::class);
+        $stripe->shouldReceive('isEnabled')->andReturn(true);
+        $stripe->shouldReceive('currency')->andReturn('usd');
+        $stripe->shouldReceive('publishableKey')->andReturn('pk_test_fixture');
+        $stripe->shouldNotReceive('createPaymentIntent');
+        $this->app->instance(\App\Services\StripeService::class, $stripe);
+        $this->postJson('/api/v1/booking/payment-intent?org=' . $this->org->fresh()->widget_token, ['hold_token' => $quote['hold_token']])
+            ->assertStatus(422)->assertJsonPath('code', 'currency_mismatch');
+    }
+
+    public function test_currency_backfill_preserves_metadata_and_currency_written_after_the_chunk_read(): void
+    {
+        $rows = [];
+        foreach (['metadata', 'currency'] as $kind) {
+            $mirror = BookingMirror::withoutGlobalScopes()->create(['organization_id' => $this->org->id, 'reservation_id' => 'MIG-' . $kind, 'apartment_id' => '101', 'arrival_date' => $this->checkIn, 'departure_date' => $this->checkOut]);
+            \Illuminate\Support\Facades\DB::table('booking_mirror')->where('id', $mirror->id)->update(['raw_json' => json_encode(['old' => true])]);
+            $rows[$kind] = $mirror->id;
+        }
+        $interleaved = false;
+        \Illuminate\Support\Facades\DB::listen(function ($query) use (&$interleaved, $rows) {
+            if ($interleaved || !str_contains($query->sql, 'booking_mirror') || !str_contains($query->sql, 'limit 250')) return;
+            $interleaved = true;
+            // An old application's provider update commits between the chunk read and the migration's row update.
+            \Illuminate\Support\Facades\DB::table('booking_mirror')->where('id', $rows['metadata'])->update(['raw_json' => json_encode(['old' => true, 'provider_update' => 'new'])]);
+            \Illuminate\Support\Facades\DB::table('booking_mirror')->where('id', $rows['currency'])->update(['raw_json' => json_encode(['currency' => 'GBP', '_currency_source' => 'quoted_snapshot'])]);
+        });
+        (require database_path('migrations/2026_10_29_140100_snapshot_stay_currency.php'))->up();
+        $this->assertTrue($interleaved);
+        $metadata = json_decode(\Illuminate\Support\Facades\DB::table('booking_mirror')->where('id', $rows['metadata'])->value('raw_json'), true);
+        $this->assertSame('new', $metadata['provider_update'] ?? null);
+        $this->assertSame('EUR', $metadata['currency']);
+        $currency = json_decode(\Illuminate\Support\Facades\DB::table('booking_mirror')->where('id', $rows['currency'])->value('raw_json'), true);
+        $this->assertSame(['currency' => 'GBP', '_currency_source' => 'quoted_snapshot'], $currency);
     }
 
     private function guest(): array
@@ -168,6 +241,9 @@ class StayCurrencyTest extends TestCase
         $res = $this->engine->confirm(['hold_token' => $hold->hold_token, 'guest' => $this->guest()]);
 
         $this->assertSame('EUR', $res['currency']);
+        $mirror = BookingMirror::withoutGlobalScopes()->where('reservation_id', '556002')->firstOrFail();
+        $this->assertSame('EUR', $mirror->currency);
+        $this->assertSame('quoted_snapshot', $mirror->currency_source);
     }
 
     /** The replay by payment has no hold to read: it answers the venue's currency. */

@@ -356,7 +356,7 @@ class BookingRefundServiceComboTest extends TestCase
         $piId = 'pi_test_combo_follower_' . uniqid();
         [$a, $b] = $this->makeComboMirrors(2, $groupId, $piId);
 
-        $this->stripe->shouldReceive('refund')->once()->with($piId, null, null)->andReturn($this->fakeStripeRefund('re_follower_001'));
+        $this->stripe->shouldReceive('refund')->once()->with($piId, null, null, \Mockery::any(), \Mockery::any(), \Mockery::any())->andReturn($this->fakeStripeRefund('re_follower_001'));
         $this->smoobu->shouldReceive('cancelReservation')->twice()->andReturn([]);
         $this->loyalty->shouldReceive('reverseTransaction')->andReturn(new PointsTransaction());
 
@@ -380,7 +380,7 @@ class BookingRefundServiceComboTest extends TestCase
         $piId = 'pi_test_combo_partial_' . uniqid();
         [$a, $b] = $this->makeComboMirrors(2, $groupId, $piId);
 
-        $this->stripe->shouldReceive('refund')->once()->with($piId, 300.0, null)->andReturn($this->fakeStripeRefund('re_partial_001'));
+        $this->stripe->shouldReceive('refund')->once()->with($piId, 300.0, null, \Mockery::any(), \Mockery::any(), \Mockery::any())->andReturn($this->fakeStripeRefund('re_partial_001'));
         $this->smoobu->shouldNotReceive('cancelReservation');
         $this->loyalty->shouldNotReceive('reverseTransaction');
 

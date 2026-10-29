@@ -2,7 +2,8 @@
 
 namespace App\Services;
 
-use Illuminate\Support\Facades\Cache;
+use App\Support\SharedCache;
+use Illuminate\Support\Str;
 
 /**
  * Hourly send budget for BULK mail.
@@ -63,7 +64,7 @@ class CampaignRateLimiter
             return PHP_INT_MAX; // 0 or negative disables the ceiling
         }
 
-        $used = (int) Cache::get($this->bucketKey($organizationId), 0);
+        $used = (int) SharedCache::store()->get($this->bucketKey($organizationId), 0);
 
         return max(0, $limit - $used);
     }
@@ -82,26 +83,62 @@ class CampaignRateLimiter
     }
 
     /**
-     * Record messages actually sent, against both buckets.
+     * Atomically reserve both budgets before handing any messages to a transport.
+     * A worker dying retains its reservation until the clock hour ends: an unknown
+     * provider outcome must not free capacity for another possibly duplicate send.
      *
-     * Called AFTER sending rather than before, so a chunk that fails to send
-     * does not consume budget it never used. The small race this allows (two
-     * workers both reading budget before either records) is acceptable: the
-     * consequence is a slight overshoot of a self-imposed limit, whereas
-     * reserving up-front would leak budget on every failure.
+     * @return array{id: string, count: int}
      */
+    public function reserve(?int $organizationId, int $wanted): array
+    {
+        return SharedCache::store()->lock('campaign_sends:budget_lock', 10)->block(5, function () use ($organizationId, $wanted) {
+            $count = $this->allowance($organizationId, $wanted);
+            $id = (string) Str::uuid();
+            $keys = array_values(array_unique([$this->bucketKey($organizationId), $this->bucketKey(null)]));
+            $this->add($keys, $count);
+            if ($count > 0) {
+                SharedCache::store()->put('campaign_sends:reservation:' . $id, ['keys' => $keys, 'count' => $count], now()->addHours(2));
+            }
+
+            return ['id' => $id, 'count' => $count];
+        });
+    }
+
+    /** Return only slots known not to have reached the transport; release is idempotent and uses the original hour. */
+    public function release(string $reservationId, int $unused): void
+    {
+        SharedCache::store()->lock('campaign_sends:budget_lock', 10)->block(5, function () use ($reservationId, $unused) {
+            $store = SharedCache::store();
+            $reservation = $store->pull('campaign_sends:reservation:' . $reservationId);
+            if (!$reservation) {
+                return;
+            }
+            $count = max(0, min($unused, $reservation['count']));
+            foreach ($reservation['keys'] as $key) {
+                $store->put($key, max(0, (int) $store->get($key, 0) - $count), now()->addHours(2));
+            }
+        });
+    }
+
+    /** Record already-sent mail (legacy callers/operational accounting); new sends must reserve first. */
     public function record(?int $organizationId, int $count): void
     {
         if ($count <= 0) {
             return;
         }
 
-        foreach ([$organizationId, null] as $scope) {
-            $key = $this->bucketKey($scope);
+        SharedCache::store()->lock('campaign_sends:budget_lock', 10)->block(5, function () use ($organizationId, $count) {
+            $this->add(array_values(array_unique([$this->bucketKey($organizationId), $this->bucketKey(null)])), $count);
+        });
+    }
+
+    private function add(array $keys, int $count): void
+    {
+        foreach ($keys as $key) {
             // Seed then increment: increment() on a missing key is a no-op on
             // some cache drivers, which would silently disable the limit.
-            Cache::add($key, 0, now()->addHours(2));
-            Cache::increment($key, $count);
+            SharedCache::store()->add($key, 0, now()->addHours(2));
+            SharedCache::store()->increment($key, $count);
         }
     }
 }

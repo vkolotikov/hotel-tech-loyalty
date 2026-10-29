@@ -4,9 +4,12 @@ namespace App\Services\Loyalty\Visits;
 
 use App\Models\AuditLog;
 use App\Models\LoyaltyMember;
+use App\Models\PointsTransaction;
 use App\Models\User;
 use App\Services\Loyalty\Credit\CreditLedger;
 use App\Services\Loyalty\Stamps\StampCards;
+use App\Services\LoyaltyService;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -31,8 +34,20 @@ final class VisitRecorder
 
     public function record(LoyaltyMember $member, Visit $visit): VisitOutcome
     {
+        $effects = app(VisitEffects::class);
+        $id = $effects->remember($member, $visit);
+        return $id !== null ? $effects->run($id) : $this->recordEffects($member, $visit);
+    }
+
+    /** Internal effect runner; durable entry points are record() and reversed(). */
+    public function recordEffects(LoyaltyMember $member, Visit $visit): VisitOutcome
+    {
         $outcome = new VisitOutcome();
         $outcome->stamp = $this->effect('stamp', $member, $visit, $outcome, fn () => $this->stamps->stamp($member, $visit));
+        // A worker can stop after the stamp committed but before its free reward was settled.
+        if (is_array($outcome->stamp)) {
+            $this->effect('stamp_rewards', $member, $visit, $outcome, fn () => $this->stamps->settleRewards((int) $member->organization_id, (int) $member->id));
+        }
         $outcome->credit = $this->effect('cashback', $member, $visit, $outcome, fn () => $this->credit->earnCashback($member, $visit));
         $outcome->referralQualified = (bool) $this->effect('referral', $member, $visit, $outcome, fn () => $this->referrals->qualify($member, $visit));
         $this->effect('tier_counters', $member, $visit, $outcome, fn () => $this->counters->count($member, $visit));
@@ -43,7 +58,19 @@ final class VisitRecorder
     /** A refunded or cancelled booking: its stamp comes off (an open card only), its cashback and tier counts go back. */
     public function reversed(int $orgId, string $referenceType, int $referenceId, ?User $by = null): void
     {
+        $effects = app(VisitEffects::class);
+        $id = $effects->reverse($orgId, $referenceType, $referenceId, $by);
+        // Cancellation can call this under booking/payment locks. Persist only the intent there;
+        // its independent writers and reward locks run after the producer commits (or via recovery).
+        DB::afterCommit(fn () => $effects->run($id));
+    }
+
+    /** @return list<string> Effects still needing recovery. */
+    public function reverseEffects(int $orgId, string $referenceType, int $referenceId, ?User $by = null): array
+    {
+        $failed = [];
         foreach ([
+            'points'        => fn () => $this->reverseBookingPoints($orgId, $referenceType, $referenceId, $by),
             'stamp'         => fn () => $this->stamps->removeFor($orgId, $referenceType, $referenceId, $by),
             'cashback'      => fn () => $this->credit->reverseFor($orgId, $referenceType, $referenceId, $by),
             'tier_counters' => fn () => $this->counters->uncount($orgId, $referenceType, $referenceId),
@@ -51,8 +78,30 @@ final class VisitRecorder
             try {
                 $run();
             } catch (\Throwable $e) {
+                $failed[] = $name;
                 $this->failed($orgId, null, $name, "{$referenceType}#{$referenceId}", $e);
             }
+        }
+        return $failed;
+    }
+
+    /** Refund intents also recover a worker stopping before the booking's inline points reversal. */
+    private function reverseBookingPoints(int $orgId, string $referenceType, int $referenceId, ?User $by): void
+    {
+        if (!in_array($referenceType, ['booking_mirror', 'service_booking'], true)) {
+            return; // Desk reversals name a particular ledger line; they must not reverse its other awards.
+        }
+
+        $ids = PointsTransaction::withoutGlobalScopes()->where('organization_id', $orgId)
+            ->where('reference_type', $referenceType)->where('reference_id', $referenceId)
+            ->where('points', '>', 0)->where('is_reversed', false)->orderBy('id')->pluck('id');
+        foreach ($ids as $id) {
+            DB::transaction(function () use ($id, $orgId, $referenceType, $referenceId, $by) {
+                $line = PointsTransaction::withoutGlobalScopes()->where('organization_id', $orgId)->whereKey($id)->lockForUpdate()->first();
+                if ($line && !$line->is_reversed) {
+                    app(LoyaltyService::class)->reverseTransaction($line, "Refunded {$referenceType} #{$referenceId}", $by);
+                }
+            });
         }
     }
 

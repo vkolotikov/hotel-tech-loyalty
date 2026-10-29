@@ -56,6 +56,11 @@ class ServiceBookingRefundTest extends TestCase
         return $stripe;
     }
 
+    private function settledRefund(int $amount): Refund
+    {
+        return Refund::constructFrom(['id' => 're_dashboard', 'payment_intent' => 'pi_1', 'status' => 'succeeded', 'amount' => $amount, 'currency' => 'eur']);
+    }
+
     public function test_a_booking_without_an_online_payment_has_nothing_to_give_back(): void
     {
         $stripe = Mockery::mock(StripeService::class);
@@ -83,7 +88,7 @@ class ServiceBookingRefundTest extends TestCase
     public function test_a_captured_payment_is_refunded_in_full(): void
     {
         $stripe = $this->stripe('succeeded');
-        $stripe->shouldReceive('refund')->once()->with('pi_1', null, 'requested_by_customer')->andReturn(Refund::constructFrom(['id' => 're_1', 'status' => 'succeeded', 'amount' => 5400]));
+        $stripe->shouldReceive('refund')->once()->with('pi_1', null, 'requested_by_customer', \Mockery::any(), \Mockery::any(), \Mockery::any())->andReturn(Refund::constructFrom(['id' => 're_1', 'status' => 'succeeded', 'amount' => 5400]));
         $stripe->shouldNotReceive('cancelPaymentIntent');
         $this->travelTo('2026-10-01 09:00:00');
 
@@ -131,8 +136,8 @@ class ServiceBookingRefundTest extends TestCase
                 (new ServiceBookingRefund($stripe))->giveBack($this->booking(['payment_status' => 'paid']));
                 $this->fail('a failed refund must throw');
             } catch (CancellationException $e) {
-                $this->assertSame('refund_failed', $e->errorCode);
-                $this->assertSame(502, $e->status);
+                $this->assertSame($stripe === $down ? 'refund_failed' : 'refund_outcome_unknown', $e->errorCode);
+                $this->assertSame($stripe === $down ? 502 : 409, $e->status);
             }
         }
     }
@@ -152,6 +157,7 @@ class ServiceBookingRefundTest extends TestCase
     public function test_a_charge_already_fully_refunded_is_recorded_without_calling_refund(): void
     {
         $stripe = Mockery::mock(StripeService::class);
+        $stripe->shouldReceive('refundsForPaymentIntent')->with('pi_1')->andReturn([$this->settledRefund(5400)]);
         $stripe->shouldReceive('isEnabled')->andReturn(true);
         $stripe->shouldReceive('retrievePaymentIntent')->with('pi_1', ['latest_charge'])->andReturn(PaymentIntent::constructFrom([
             'id' => 'pi_1', 'status' => 'succeeded',
@@ -173,7 +179,8 @@ class ServiceBookingRefundTest extends TestCase
     public function test_a_refund_call_that_finds_the_charge_already_refunded_is_recorded_as_refunded(): void
     {
         $stripe = $this->stripe('succeeded');
-        $stripe->shouldReceive('refund')->once()->with('pi_1', null, 'requested_by_customer')->andThrow(
+        $stripe->shouldReceive('refundsForPaymentIntent')->with('pi_1')->andReturn([$this->settledRefund(5400)]);
+        $stripe->shouldReceive('refund')->once()->with('pi_1', null, 'requested_by_customer', \Mockery::any(), \Mockery::any(), \Mockery::any())->andThrow(
             \Stripe\Exception\InvalidRequestException::factory('The charge ch_1 has already been refunded.', 400, null, null, null, 'charge_already_refunded')
         );
 
@@ -189,7 +196,7 @@ class ServiceBookingRefundTest extends TestCase
     public function test_the_refund_objects_own_amount_is_recorded_when_it_differs_from_the_booking_total(): void
     {
         $stripe = $this->stripe('succeeded');
-        $stripe->shouldReceive('refund')->once()->with('pi_1', null, 'requested_by_customer')->andReturn(
+        $stripe->shouldReceive('refund')->once()->with('pi_1', null, 'requested_by_customer', \Mockery::any(), \Mockery::any(), \Mockery::any())->andReturn(
             Refund::constructFrom(['id' => 're_partial', 'status' => 'succeeded', 'amount' => 4000])
         );
 
@@ -228,12 +235,13 @@ class ServiceBookingRefundTest extends TestCase
             $stripe->shouldReceive('isEnabled')->andReturn(true);
             $stripe->shouldReceive('retrievePaymentIntent')->once()->with('pi_1', ['latest_charge'])->andThrow($refusal);
             $stripe->shouldReceive('retrievePaymentIntent')->once()->with('pi_1')->andReturn(PaymentIntent::constructFrom(['id' => 'pi_1', 'status' => 'succeeded']));
-            $stripe->shouldReceive('refund')->once()->with('pi_1', null, 'requested_by_customer')->andReturn(Refund::constructFrom(['id' => 're_1', 'status' => 'succeeded', 'amount' => 5400]));
+            $stripe->shouldReceive('refund')->once()->with('pi_1', null, 'requested_by_customer', \Mockery::any(), \Mockery::any(), \Mockery::any())->andReturn(Refund::constructFrom(['id' => 're_1', 'status' => 'succeeded', 'amount' => 5400]));
 
             $r = (new ServiceBookingRefund($stripe))->giveBack($this->booking(['payment_status' => 'paid']));
 
             $this->assertSame('refunded', $r['money']);
             $this->assertSame(54.0, $r['amount']);
+            \App\Services\Booking\RefundOperations::connection()->table('refund_operations')->where('organization_id', $this->org->id)->delete();
         }
     }
 
@@ -257,6 +265,7 @@ class ServiceBookingRefundTest extends TestCase
     public function test_an_already_refunded_amount_is_capped_at_the_captured_amount(): void
     {
         $stripe = Mockery::mock(StripeService::class);
+        $stripe->shouldReceive('refundsForPaymentIntent')->with('pi_1')->andReturn([$this->settledRefund(4000)]);
         $stripe->shouldReceive('isEnabled')->andReturn(true);
         $stripe->shouldReceive('retrievePaymentIntent')->with('pi_1', ['latest_charge'])->andReturn(PaymentIntent::constructFrom([
             'id' => 'pi_1', 'status' => 'succeeded',

@@ -103,7 +103,7 @@ class MemberCancellationTest extends TestCase
         $this->stripe->shouldReceive('retrievePaymentIntent')->with('pi_held', ['latest_charge'])->andReturn(PaymentIntent::constructFrom(['id' => 'pi_held', 'status' => 'requires_capture']));
         $this->stripe->shouldReceive('cancelPaymentIntent')->once()->with('pi_held', 'requested_by_customer')->andReturn(PaymentIntent::constructFrom(['id' => 'pi_held', 'status' => 'canceled']));
         $this->stripe->shouldReceive('retrievePaymentIntent')->with('pi_paid', ['latest_charge'])->andReturn(PaymentIntent::constructFrom(['id' => 'pi_paid', 'status' => 'succeeded']));
-        $this->stripe->shouldReceive('refund')->once()->with('pi_paid', null, 'requested_by_customer')->andReturn(Refund::constructFrom(['id' => 're_9', 'status' => 'succeeded']));
+        $this->stripe->shouldReceive('refund')->once()->with('pi_paid', null, 'requested_by_customer', \Mockery::any(), \Mockery::any(), \Mockery::any())->andReturn(Refund::constructFrom(['id' => 're_9', 'status' => 'succeeded']));
 
         $a = $this->cancellation()->cancelService($this->orgId, $held->id);
         $b = $this->cancellation()->cancelService($this->orgId, $paid->id);
@@ -129,7 +129,7 @@ class MemberCancellationTest extends TestCase
             $this->cancellation()->cancelService($this->orgId, $b->id);
             $this->fail('a failed refund must not cancel');
         } catch (CancellationException $e) {
-            $this->assertSame('refund_failed', $e->errorCode);
+            $this->assertSame('refund_outcome_unknown', $e->errorCode);
         }
 
         $this->assertSame('confirmed', $b->fresh()->status);
@@ -398,7 +398,7 @@ class MemberCancellationTest extends TestCase
         $m = $this->stay(['payment_status' => 'paid', 'payment_method' => 'stripe', 'stripe_payment_intent_id' => 'pi_stay', 'price_paid' => 180]);
         $tx = app(\App\Services\LoyaltyService::class)->awardPoints($this->member, 2700, 'Stay', 'earn', null, 'booking_mirror', $m->id, 180.0, null, null, 'booking_completed', 'booking_mirror', (string) $m->id, "booking_points_stay_{$m->id}");
         $this->stripe->shouldReceive('retrievePaymentIntent')->with('pi_stay')->andReturn(PaymentIntent::constructFrom(['id' => 'pi_stay', 'status' => 'succeeded']));
-        $this->stripe->shouldReceive('refund')->once()->with('pi_stay', null, 'requested_by_customer')->andReturn(Refund::constructFrom(['id' => 're_stay', 'status' => 'succeeded']));
+        $this->stripe->shouldReceive('refund')->once()->with('pi_stay', null, 'requested_by_customer', \Mockery::any(), \Mockery::any(), \Mockery::any())->andReturn(Refund::constructFrom(['id' => 're_stay', 'status' => 'succeeded']));
         $this->smoobu->shouldReceive('cancelReservation')->once()->with($m->reservation_id)->andReturn([]);
 
         $out = $this->cancellation()->cancelStay($this->orgId, $m->id);
@@ -433,8 +433,8 @@ class MemberCancellationTest extends TestCase
             $this->cancellation()->cancelStay($this->orgId, $m->id);
             $this->fail('a failed refund must not cancel');
         } catch (CancellationException $e) {
-            $this->assertSame('refund_failed', $e->errorCode);
-            $this->assertSame(502, $e->status);
+            $this->assertSame('refund_outcome_unknown', $e->errorCode);
+            $this->assertSame(409, $e->status);
         }
 
         $fresh = $this->freshStay($m);
@@ -684,7 +684,7 @@ class MemberCancellationTest extends TestCase
         $m = $this->stay(['payment_status' => 'paid', 'payment_method' => 'stripe', 'stripe_payment_intent_id' => 'pi_stay', 'discount_source' => 'offer', 'discount_source_id' => $claim->id]);
         $claim->forceFill(['used_at' => now(), 'status' => 'used', 'used_reference' => $m->booking_reference])->save();
         $this->stripe->shouldReceive('retrievePaymentIntent')->with('pi_stay')->andReturn(PaymentIntent::constructFrom(['id' => 'pi_stay', 'status' => 'succeeded']));
-        $this->stripe->shouldReceive('refund')->once()->with('pi_stay', null, 'requested_by_customer')->andReturn(Refund::constructFrom(['id' => 're_stay2', 'status' => 'succeeded']));
+        $this->stripe->shouldReceive('refund')->once()->with('pi_stay', null, 'requested_by_customer', \Mockery::any(), \Mockery::any(), \Mockery::any())->andReturn(Refund::constructFrom(['id' => 're_stay2', 'status' => 'succeeded']));
         $this->smoobu->shouldReceive('cancelReservation')->once()->andReturn([]);
 
         $out = $this->cancellation()->cancelStay($this->orgId, $m->id);
@@ -697,8 +697,9 @@ class MemberCancellationTest extends TestCase
     public function test_a_charge_already_refunded_at_stripe_is_recorded_without_a_second_stripe_call(): void
     {
         $m = $this->stay(['payment_status' => 'paid', 'payment_method' => 'stripe', 'stripe_payment_intent_id' => 'pi_stay']);
+        $this->stripe->shouldReceive('refundsForPaymentIntent')->with('pi_stay')->andReturn([Refund::constructFrom(['id' => 're_dashboard', 'payment_intent' => 'pi_stay', 'status' => 'succeeded', 'amount' => (int) round((float) $m->price_total * 100), 'currency' => 'eur'])]);
         $this->stripe->shouldReceive('retrievePaymentIntent')->with('pi_stay')->andReturn(PaymentIntent::constructFrom(['id' => 'pi_stay', 'status' => 'succeeded']));
-        $this->stripe->shouldReceive('refund')->once()->with('pi_stay', null, 'requested_by_customer')->andThrow(
+        $this->stripe->shouldReceive('refund')->once()->with('pi_stay', null, 'requested_by_customer', \Mockery::any(), \Mockery::any(), \Mockery::any())->andThrow(
             \Stripe\Exception\InvalidRequestException::factory('The charge ch_1 has already been refunded.', 400, null, null, null, 'charge_already_refunded')
         );
         $this->smoobu->shouldReceive('cancelReservation')->once()->with($m->reservation_id)->andReturn([]);
@@ -728,7 +729,7 @@ class MemberCancellationTest extends TestCase
         $m = $this->stay(['payment_status' => 'paid', 'payment_method' => 'stripe', 'stripe_payment_intent_id' => 'pi_stay', 'discount_source' => 'offer', 'discount_source_id' => $claim->id]);
         $claim->forceFill(['used_at' => now(), 'status' => 'used', 'used_reference' => $m->booking_reference])->save();
         $this->stripe->shouldReceive('retrievePaymentIntent')->with('pi_stay')->andReturn(PaymentIntent::constructFrom(['id' => 'pi_stay', 'status' => 'succeeded']));
-        $this->stripe->shouldReceive('refund')->once()->with('pi_stay', null, 'requested_by_customer')->andReturn(Refund::constructFrom(['id' => 're_stay', 'status' => 'succeeded']));
+        $this->stripe->shouldReceive('refund')->once()->with('pi_stay', null, 'requested_by_customer', \Mockery::any(), \Mockery::any(), \Mockery::any())->andReturn(Refund::constructFrom(['id' => 're_stay', 'status' => 'succeeded']));
         $this->smoobu->shouldReceive('cancelReservation')->once()->with($m->reservation_id)->andReturn([]);
 
         // Simulate a failure in phase 3 (after the refund has already gone

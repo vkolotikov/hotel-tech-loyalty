@@ -127,6 +127,13 @@ class AppointmentActionEndpointTest extends TestCase
     public function test_completing_a_members_visit_awards_points_once(): void
     {
         $booking = $this->seedBooking(['member_id' => $this->member->id]);
+        $intentRecordedBeforeCommit = false;
+        AuditLog::created(function (AuditLog $row) use ($booking, &$intentRecordedBeforeCommit) {
+            if ($row->action === 'service_booking.complete') {
+                $intentRecordedBeforeCommit = DB::table('loyalty_visit_effects')->where('reference_type', 'service_booking')
+                    ->where('reference_id', $booking->id)->where('member_id', $this->member->id)->where('pending', true)->exists();
+            }
+        });
 
         $this->act($booking, 'complete')->assertOk()
             ->assertJsonPath('points', ['awarded' => 900, 'reason' => null])
@@ -135,6 +142,7 @@ class AppointmentActionEndpointTest extends TestCase
         $this->assertSame(1, PointsTransaction::where('member_id', $this->member->id)->count());
         $this->assertSame(900, (int) $this->member->fresh()->current_points);
         $this->assertNotNull($booking->fresh()->points_awarded_at);
+        $this->assertTrue($intentRecordedBeforeCommit, 'The completion transaction must persist benefits before its post-commit hook.');
 
         // Completed is final here: a second press is refused and awards nothing.
         $this->act($booking, 'complete')->assertStatus(422);

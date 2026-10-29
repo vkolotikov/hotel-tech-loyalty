@@ -115,7 +115,7 @@ class DepositCancelTest extends TestCase
         $b = $this->takenDeposit();
         $this->stripe->shouldReceive('refund')->andThrow(new \RuntimeException('card closed'));
 
-        $this->act($b, 'cancel')->assertStatus(422)->assertJsonPath('error', 'deposit_refund_failed');
+        $this->act($b, 'cancel')->assertStatus(409)->assertJsonPath('error', 'refund_outcome_unknown');
 
         $this->assertSame('confirmed', $b->fresh()->status);
         $this->assertSame(0, ServiceBookingPayment::where('kind', 'refund')->count());

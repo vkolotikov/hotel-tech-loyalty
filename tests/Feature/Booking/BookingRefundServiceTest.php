@@ -282,7 +282,7 @@ class BookingRefundServiceTest extends TestCase
         // param defaults from inside the service).
         $this->stripe->shouldReceive('refund')
             ->once()
-            ->with($mirror->stripe_payment_intent_id, null, null)
+            ->with($mirror->stripe_payment_intent_id, null, null, \Mockery::any(), \Mockery::any(), \Mockery::any())
             ->andReturn($this->fakeStripeRefund($refundId));
 
         // Smoobu cancellation runs once — the production code calls
@@ -342,7 +342,7 @@ class BookingRefundServiceTest extends TestCase
         // BookingRefundService call site.
         $this->stripe->shouldReceive('refund')
             ->once()
-            ->with($mirror->stripe_payment_intent_id, 50.00, null)
+            ->with($mirror->stripe_payment_intent_id, 50.00, null, \Mockery::any(), \Mockery::any(), \Mockery::any())
             ->andReturn($this->fakeStripeRefund('re_test_partial'));
 
         // Smoobu + Loyalty: NOT called on partial refunds (partial
@@ -394,6 +394,19 @@ class BookingRefundServiceTest extends TestCase
 
         $mirror->refresh();
         $this->assertSame('refunded', $mirror->payment_status);
+    }
+
+    public function test_a_stop_after_refund_state_commit_leaves_a_durable_loyalty_reversal(): void
+    {
+        Mail::fake();
+        $mirror = $this->makeMirror(fn (BookingMirrorFactory $f) => $f->paid()->mock()->state(['price_total' => 100]));
+        app()->instance(\App\Services\Loyalty\Visits\VisitRecorder::class, new class {
+            public function reversed(...$args): void { throw new \RuntimeException('Simulated worker stop before effects'); }
+        });
+        try { $this->service->applyRefund($mirror); $this->fail('Expected simulated stop'); }
+        catch (\RuntimeException $e) { $this->assertSame('Simulated worker stop before effects', $e->getMessage()); }
+        $this->assertSame('refunded', $mirror->fresh()->payment_status);
+        $this->assertDatabaseHas('loyalty_visit_effects', ['organization_id' => $mirror->organization_id, 'reference_type' => 'booking_mirror', 'reference_id' => $mirror->id, 'operation' => 'reverse', 'pending' => true]);
     }
 
     public function test_webhook_path_skips_the_stripe_refund_call(): void

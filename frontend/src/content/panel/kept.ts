@@ -1,4 +1,5 @@
 import type { PanelTarget } from './PanelProvider'
+import { authSession } from '../../lib/authSession'
 
 /**
  * The post panel's unsaved edits, kept in this tab's memory when the portal
@@ -16,8 +17,7 @@ const onUnload = (e: BeforeUnloadEvent) => { e.preventDefault() }
 
 /** Who may have kept edits back: this session's sign-in and the brand. */
 export function ownerOf(brand: number | null): string {
-  let token = ''
-  try { token = window.localStorage.getItem('auth_token') ?? '' } catch { /* no storage: no session to tell apart */ }
+  const token = authSession.token() ?? ''
   return `${token}|${brand ?? ''}`
 }
 

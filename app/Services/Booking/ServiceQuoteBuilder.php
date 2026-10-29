@@ -47,7 +47,7 @@ class ServiceQuoteBuilder
         $start = CarbonImmutable::parse($slot['start']);
         // The extras' notice counts from the venue's now: the stored start is
         // the venue's wall clock, not UTC (the widget and the portal both pass it).
-        $lines = $this->extraLines($extras, $partySize, VenueNotice::instant($slot['start'], (int) app('current_organization_id')));
+        $lines = $this->extraLines($extras, $partySize, VenueNotice::instant($slot['start'], (int) app('current_organization_id')), $service->currency ?: 'EUR');
         $extrasTotal = round((float) array_sum(array_column($lines, 'line_total')), 2);
         $servicePrice = round((float) $slot['price'], 2);
 
@@ -68,7 +68,7 @@ class ServiceQuoteBuilder
      * @param array<int, array{id:int, quantity?:int}> $extras
      * @return array<int, array{id:int, name:string, unit_price:float, quantity:int, line_total:float}>
      */
-    private function extraLines(array $extras, int $partySize, CarbonImmutable $start): array
+    private function extraLines(array $extras, int $partySize, CarbonImmutable $start, string $currency): array
     {
         if ($extras === []) {
             return [];
@@ -83,6 +83,7 @@ class ServiceQuoteBuilder
             if (!$row) {
                 continue;
             }
+            CurrencyMismatch::assertSame($row->currency, $currency);
 
             if ($row->lead_time_hours && $start->lessThan(CarbonImmutable::now()->addHours((int) $row->lead_time_hours))) {
                 throw new ExtraLeadTimeException("\"{$row->name}\" requires at least {$row->lead_time_hours}h notice. Please remove it or pick a later slot.");

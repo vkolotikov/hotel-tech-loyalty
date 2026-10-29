@@ -305,7 +305,7 @@ class BookingMirrorModelTest extends TestCase
 
         $mirror = BookingMirrorFactory::new()->create(['raw_json' => $rawPayload]);
 
-        $this->assertSameJson($rawPayload, $mirror->fresh()->raw_json);
+        $this->assertSameJson($rawPayload + ['currency' => 'EUR', '_currency_source' => 'booking_snapshot'], $mirror->fresh()->raw_json);
     }
 
     public function test_extras_json_round_trips_through_array_cast(): void

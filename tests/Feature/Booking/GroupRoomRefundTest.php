@@ -95,10 +95,35 @@ class GroupRoomRefundTest extends TestCase
         return \Stripe\Refund::constructFrom(['id' => $id, 'object' => 'refund', 'status' => 'succeeded']);
     }
 
+    public function test_a_pending_room_refund_stays_on_its_original_room_when_it_settles(): void
+    {
+        [$lead, $other] = $this->group();
+        $metadata = [];
+        $this->stripe->shouldReceive('refund')->once()->andReturnUsing(function ($pi, $amount, $reason, $key, $meta) use (&$metadata) {
+            $metadata = $meta;
+            return \Stripe\Refund::constructFrom(['id' => 're_pending_room', 'status' => 'pending', 'amount' => 5000, 'currency' => 'eur', 'payment_intent' => $pi, 'metadata' => $meta]);
+        });
+        $this->assertSame(409, $this->refund($other, ['amount' => 50])->getStatusCode());
+        $this->assertSame('paid', $this->row($other)->payment_status);
+        $this->assertSame(409, $this->refund($lead, ['amount' => 50])->getStatusCode(), 'Another room cannot reuse the same pending amount');
+        $detail = $this->show($lead);
+        $this->assertSame($other, (int) $detail['pending_refunds'][0]['booking_id']);
+        $settled = \Stripe\Refund::constructFrom(['id' => 're_pending_room', 'status' => 'succeeded', 'amount' => 5000, 'currency' => 'eur', 'payment_intent' => 'pi_room_1', 'metadata' => $metadata]);
+        app(\App\Services\Booking\RefundOperations::class)->observe($this->orgId, $settled);
+        app(BookingRefundService::class)->reconcileProviderRefunds(BookingMirror::withoutGlobalScopes()->findOrFail($lead), fn () => [50.0, $settled]);
+        $this->assertSame(50.0, (float) $this->row($other)->refunded_amount);
+        $this->assertSame(0.0, (float) $this->row($lead)->refunded_amount);
+        $this->assertSame([], $this->show($other)['pending_refunds']);
+        // A later provider failure corrects the accounting without claiming a second refund or cancelling a room.
+        app(BookingRefundService::class)->reconcileProviderRefunds(BookingMirror::withoutGlobalScopes()->findOrFail($lead), fn () => [0.0, null]);
+        $this->assertSame(0.0, (float) $this->row($other)->refunded_amount);
+        $this->assertSame('confirmed', $this->row($other)->internal_status);
+    }
+
     public function test_a_refund_with_no_amount_on_one_room_refunds_that_room_only(): void
     {
         [$lead, $other] = $this->group();
-        $this->stripe->shouldReceive('refund')->once()->with('pi_room_1', 160.0, null)->andReturn($this->fakeRefund('re_room_1'));
+        $this->stripe->shouldReceive('refund')->once()->with('pi_room_1', 160.0, null, \Mockery::any(), \Mockery::any(), \Mockery::any())->andReturn($this->fakeRefund('re_room_1'));
         $this->smoobu->shouldReceive('cancelReservation')->once()->with('880102')->andReturn([]);
 
         $res = $this->refund($other);
@@ -117,7 +142,7 @@ class GroupRoomRefundTest extends TestCase
     public function test_a_refund_on_the_lead_rooms_page_is_the_lead_rooms_own(): void
     {
         [$lead, $other] = $this->group();
-        $this->stripe->shouldReceive('refund')->once()->with('pi_room_1', 200.0, null)->andReturn($this->fakeRefund('re_room_2'));
+        $this->stripe->shouldReceive('refund')->once()->with('pi_room_1', 200.0, null, \Mockery::any(), \Mockery::any(), \Mockery::any())->andReturn($this->fakeRefund('re_room_2'));
         $this->smoobu->shouldReceive('cancelReservation')->once()->with('880101')->andReturn([]);
 
         $this->refund($lead);
@@ -129,7 +154,7 @@ class GroupRoomRefundTest extends TestCase
         // (A later staff action: production's `refund_attempts_replay_unique`
         // refuses a second attempt on the same payment within the same second.)
         $this->travel(2)->seconds();
-        $this->stripe->shouldReceive('refund')->once()->with('pi_room_1', 160.0, null)->andReturn($this->fakeRefund('re_room_3'));
+        $this->stripe->shouldReceive('refund')->once()->with('pi_room_1', 160.0, null, \Mockery::any(), \Mockery::any(), \Mockery::any())->andReturn($this->fakeRefund('re_room_3'));
         $this->smoobu->shouldReceive('cancelReservation')->once()->with('880102')->andReturn([]);
         $second = $this->refund($other);
         $this->assertSame(200, $second->getStatusCode(), json_encode($second->getData(true)));
@@ -139,7 +164,7 @@ class GroupRoomRefundTest extends TestCase
     public function test_a_part_of_one_rooms_total_is_recorded_on_that_room(): void
     {
         [$lead, $other] = $this->group();
-        $this->stripe->shouldReceive('refund')->once()->with('pi_room_1', 50.0, 'requested_by_customer')->andReturn($this->fakeRefund('re_room_4'));
+        $this->stripe->shouldReceive('refund')->once()->with('pi_room_1', 50.0, 'requested_by_customer', \Mockery::any(), \Mockery::any(), \Mockery::any())->andReturn($this->fakeRefund('re_room_4'));
         $this->smoobu->shouldNotReceive('cancelReservation');
 
         $this->refund($other, ['amount' => 50, 'reason' => 'requested_by_customer']);
@@ -166,7 +191,7 @@ class GroupRoomRefundTest extends TestCase
     public function test_a_single_room_is_refunded_as_before(): void
     {
         $id = $this->room(['apartment_name' => 'Sea view', 'reservation_id' => '880201', 'price_total' => 200, 'price_paid' => 200, 'stripe_payment_intent_id' => 'pi_single_room']);
-        $this->stripe->shouldReceive('refund')->once()->with('pi_single_room', null, null)->andReturn($this->fakeRefund('re_single_1'));
+        $this->stripe->shouldReceive('refund')->once()->with('pi_single_room', null, null, \Mockery::any(), \Mockery::any(), \Mockery::any())->andReturn($this->fakeRefund('re_single_1'));
         $this->smoobu->shouldReceive('cancelReservation')->once()->with('880201')->andReturn([]);
 
         $res = $this->refund($id);

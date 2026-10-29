@@ -21,4 +21,10 @@ class BookingExtra extends Model
         'price'           => 'decimal:2',
         'lead_time_hours' => 'integer',
     ];
+
+    /** A cleared optional preparation time means no wait; the persisted column is non-null. */
+    public function setLeadTimeHoursAttribute($value): void
+    {
+        $this->attributes['lead_time_hours'] = $value === null || $value === '' ? 0 : (int) $value;
+    }
 }

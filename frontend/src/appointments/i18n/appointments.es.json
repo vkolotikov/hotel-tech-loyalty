@@ -303,6 +303,9 @@
     "bulk_mark_status": "Estado cambiado en la administración completa (acción masiva)"
   },
   "error": {
+    "refund_pending": "Hay un reembolso en proceso. Reintente el mismo importe para comprobarlo; no devuelva el dinero por otra vía.",
+    "refund_outcome_unknown": "Aún no se conoce el resultado del reembolso. Reintente el mismo importe; no devuelva el dinero por otra vía.",
+    "refund_failed": "El reembolso fue rechazado. No se devolvió dinero. Compruebe el pago e inténtelo de nuevo.",
     "deposit_refund_failed": "No se ha podido devolver el depósito ahora mismo. Inténtelo de nuevo.",
     "deposits_unavailable": "Los depósitos necesitan pagos en línea con Stripe en la moneda del local.",
     "reopen_slot_taken": "Esa hora ya está ocupada: vuelva a reservar al cliente en otro momento.",
@@ -511,6 +514,7 @@
     }
   },
   "money": {
+    "provider": {"pending":"En proceso","unknown":"Resultado desconocido","requesting":"Solicitado","requires_action":"Acción necesaria","failed":"Fallido: no se devolvió dinero","canceled":"Cancelado: no se devolvió dinero"},
     "title": "Pago",
     "total": "Total",
     "paid_online": "Pagado en línea con tarjeta",

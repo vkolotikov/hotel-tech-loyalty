@@ -15,6 +15,7 @@ use App\Services\Appointments\Money\AppointmentMoney;
 use App\Services\Appointments\Money\DepositRefused;
 use App\Services\Appointments\Money\Deposits;
 use App\Services\Booking\ExtraLeadTimeException;
+use App\Services\Booking\CurrencyMismatch;
 use App\Services\Booking\PaymentAlreadyUsed;
 use App\Services\Booking\PaymentMismatch;
 use App\Services\Booking\ServiceCatalogue;
@@ -74,6 +75,8 @@ class ServicePublicController extends Controller
         $stripe        = app(StripeService::class);
         $mockMode      = $this->getStringSetting($orgId, 'booking_mock_mode', 'false') === 'true';
         $paymentEnabled = $stripe->isEnabled() && !$mockMode;
+        $currencyMismatches = $paymentEnabled ? array_values(array_map(fn ($s) => $s['id'], array_filter($cat['services'],
+            fn ($s) => strtoupper($s['currency'] ?: 'EUR') !== strtoupper($stripe->currency())))) : [];
 
         return response()->json(array_merge(
             [
@@ -90,6 +93,7 @@ class ServicePublicController extends Controller
                 'payment_enabled'        => $paymentEnabled,
                 'stripe_publishable_key' => $paymentEnabled ? $stripe->publishableKey() : null,
                 'mock_mode'              => $mockMode,
+                'currency_mismatch_service_ids' => $currencyMismatches,
             ],
         ));
     }
@@ -107,6 +111,7 @@ class ServicePublicController extends Controller
 
         $service = Service::findOrFail($data['service_id']);
         $orgId = app('current_organization_id');
+
         $leadMinutes = (int) $this->getStringSetting($orgId, 'services_lead_minutes', '60');
         $stepMinutes = (int) $this->getStringSetting($orgId, 'services_slot_step', '15');
 
@@ -157,6 +162,9 @@ class ServicePublicController extends Controller
         $service = Service::findOrFail($data['service_id']);
 
         try {
+            if (Deposits::switchedOn() && !filter_var(HotelSetting::getValue('booking_mock_mode', false), FILTER_VALIDATE_BOOL)) {
+                CurrencyMismatch::assertSame($service->currency ?: 'EUR', app(StripeService::class)->currency());
+            }
             $q = app(ServiceQuoteBuilder::class)->build(
                 $service,
                 $data['service_master_id'] ?? null,
@@ -164,10 +172,12 @@ class ServicePublicController extends Controller
                 (int) ($data['party_size'] ?? 1),
                 $data['extras'] ?? [],
             );
+        } catch (CurrencyMismatch $e) {
+            return response()->json(['error' => $e->getMessage(), 'code' => 'currency_mismatch'], 422);
         } catch (ExtraLeadTimeException $e) {
             return response()->json(['error' => $e->getMessage()], 422);
         } catch (\RuntimeException $e) {
-            return response()->json(['error' => $e->getMessage()], 409);
+            return \App\Services\Booking\PublicBookingError::response($e, 'This time is unavailable. Please choose another time.', 'slot_unavailable', 409);
         }
 
         $deposit = Deposits::termsFor((float) $q['list_total'], (string) $q['currency']);
@@ -234,6 +244,7 @@ class ServicePublicController extends Controller
         $service = Service::findOrFail($data['service_id']);
 
         try {
+            CurrencyMismatch::assertSame($service->currency ?: 'EUR', $stripe->currency());
             $reservation = $scheduler->reserveSlot(
                 $service,
                 $data['service_master_id'] ?? null,
@@ -246,14 +257,19 @@ class ServicePublicController extends Controller
             // conflict already gets. Distinguishing it as a 422 is
             // quote()'s job this phase, not payment-intent's.
             $total = $this->computeTotal($service, $reservation, $data);
+        } catch (CurrencyMismatch $e) {
+            return response()->json(['error' => $e->getMessage(), 'code' => 'currency_mismatch'], 422);
         } catch (\RuntimeException $e) {
-            return response()->json(['error' => $e->getMessage()], 409);
+            return \App\Services\Booking\PublicBookingError::response($e, 'This time is unavailable. Please choose another time.', 'slot_unavailable', 409);
         }
 
         $orgId = app('current_organization_id');
 
         // Part H: at a venue that takes deposits the intent is for the deposit only — the server's figure, held on
         // the card (manual capture, no redirect methods) until confirm() saves the booking and charges it.
+        $quoteNonce = (string) \Illuminate\Support\Str::uuid();
+        $quote = ['org' => (int) $orgId, 'service' => (int) $service->id, 'master' => (int) $reservation['master']->id,
+            'start' => $reservation['start']->toIso8601String(), 'total' => (float) $total, 'currency' => strtoupper($service->currency ?: 'EUR'), 'nonce' => $quoteNonce, 'expires' => now()->addMinutes(30)->timestamp];
         $deposit = Deposits::termsFor((float) $total, (string) ($service->currency ?: 'EUR'));
         if ($deposit !== null) {
             try {
@@ -266,13 +282,15 @@ class ServicePublicController extends Controller
                         'start_at'   => $reservation['start']->toIso8601String(),
                         'kind'       => Deposits::KIND,
                         'source'     => Deposits::SOURCE,
+                        'quote_nonce' => $quoteNonce,
+                        'master_id'   => (string) $reservation['master']->id,
                     ],
                     ['allow_redirects' => 'never'],
                 );
 
-                return response()->json($intent + ['deposit' => $deposit]);
+                return response()->json($intent + ['deposit' => $deposit, 'quote_token' => \Illuminate\Support\Facades\Crypt::encryptString(json_encode($quote + ['pi' => $intent['payment_intent_id']]))]);
             } catch (\Throwable $e) {
-                return response()->json(['error' => 'Failed to create payment: ' . $e->getMessage()], 500);
+                return \App\Services\Booking\PublicBookingError::response($e, 'Payment could not be prepared. Please try again shortly.', 'payment_unavailable', 503);
             }
         }
 
@@ -285,11 +303,13 @@ class ServicePublicController extends Controller
                     'service_id' => (string) $service->id,
                     'start_at'   => $reservation['start']->toIso8601String(),
                     'kind'       => 'service_booking',
+                    'quote_nonce' => $quoteNonce,
+                    'master_id'   => (string) $reservation['master']->id,
                 ],
             );
-            return response()->json($intent);
+            return response()->json($intent + ['quote_token' => \Illuminate\Support\Facades\Crypt::encryptString(json_encode($quote + ['pi' => $intent['payment_intent_id']]))]);
         } catch (\Throwable $e) {
-            return response()->json(['error' => 'Failed to create payment: ' . $e->getMessage()], 500);
+            return \App\Services\Booking\PublicBookingError::response($e, 'Payment could not be prepared. Please try again shortly.', 'payment_unavailable', 503);
         }
     }
 
@@ -311,6 +331,7 @@ class ServicePublicController extends Controller
             'extras.*.id'       => 'required_with:extras|integer',
             'extras.*.quantity' => 'nullable|integer|min:1|max:50',
             'payment_intent_id' => 'nullable|string|max:255',
+            'quote_token'       => 'nullable|string|max:4096',
             // Attribution (template fidelity phase 6.7). The widget has read
             // `?source=` and posted it since the mobile app's WebView needed
             // 'mobile_app', but this rule was missing, so validate() dropped
@@ -360,6 +381,15 @@ class ServicePublicController extends Controller
         $mockMode = HotelSetting::getValue('booking_mock_mode');
         $isMockBooking = ($mockMode === true || $mockMode === 'true');
 
+        // A mismatched deposit configuration must not silently become an unpaid booking.
+        if (!$isMockBooking && (!empty($data['payment_intent_id']) || Deposits::switchedOn())) {
+            try {
+                CurrencyMismatch::assertSame($service->currency ?: 'EUR', app(StripeService::class)->currency());
+            } catch (CurrencyMismatch $e) {
+                return response()->json(['error' => $e->getMessage(), 'code' => 'currency_mismatch'], 422);
+            }
+        }
+
         // If a payment_intent_id is provided, verify it
         $intent = null; // Part H: kept for the deposit check in the lock
         $paymentStatus = 'unpaid';
@@ -382,9 +412,24 @@ class ServicePublicController extends Controller
                         }
                         $paymentStatus = $intent->status === 'succeeded' ? 'paid' : 'authorized';
                     } catch (\Throwable $e) {
-                        return response()->json(['error' => 'Unable to verify payment: ' . $e->getMessage()], 400);
+                        return \App\Services\Booking\PublicBookingError::response($e, 'Payment could not be checked. Please try again shortly.', 'payment_unverifiable', 503);
                     }
                 }
+            }
+        }
+
+        // A new payment's authenticated quote fixes the staff member chosen before the card was authorised.
+        $quoted = null;
+        if ($intent !== null && !empty(Deposits::metadataOf($intent)['quote_nonce'])) {
+            try {
+                $quoted = json_decode(\Illuminate\Support\Facades\Crypt::decryptString($data['quote_token'] ?? ''), true, flags: JSON_THROW_ON_ERROR);
+                $meta = Deposits::metadataOf($intent);
+                if (($quoted['org'] ?? null) !== (int) $orgId || ($quoted['service'] ?? null) !== (int) $service->id
+                    || ($quoted['pi'] ?? '') !== (string) $intent->id || ($quoted['nonce'] ?? '') !== $meta['quote_nonce']
+                    || \App\Services\Appointments\VenueClock::wall($quoted['start']) !== \App\Services\Appointments\VenueClock::wall($data['start_at'])) throw new \RuntimeException('Invalid quote');
+                $data['service_master_id'] = (int) $quoted['master'];
+            } catch (\Throwable) {
+                return response()->json(['error' => 'Please return to the payment step and try again.', 'code' => 'payment_mismatch'], 422);
             }
         }
 
@@ -397,8 +442,9 @@ class ServicePublicController extends Controller
             : "svc:{$service->id}";
 
         try {
-            $booking = DB::transaction(function () use ($data, $service, $scheduler, $orgId, $paymentStatus, $lockKey, $source, $intent) {
+            $booking = DB::transaction(function () use ($data, $service, $scheduler, $orgId, $paymentStatus, $lockKey, $source, $intent, $quoted) {
                 \App\Support\AdvisoryLock::within($lockKey);
+                if ($quoted !== null && ($quoted['expires'] < now()->timestamp || ($quoted['currency'] ?? strtoupper($service->currency ?: 'EUR')) !== strtoupper($service->currency ?: 'EUR'))) throw new PaymentMismatch('The quote changed. Please review it and try again.');
 
                 // Re-run the conflict check inside the lock — definitive source of truth.
                 $reservation = $scheduler->reserveSlot(
@@ -406,6 +452,7 @@ class ServicePublicController extends Controller
                     $data['service_master_id'] ?? null,
                     $data['start_at'],
                 );
+                if ($intent !== null) \App\Support\AdvisoryLock::within('pi:' . $intent->id);
 
                 $partySize = (int) ($data['party_size'] ?? 1);
                 $servicePrice = (float) $reservation['price'];
@@ -424,6 +471,7 @@ class ServicePublicController extends Controller
                     foreach ($data['extras'] as $line) {
                         $extra = $extraModels->get($line['id']);
                         if (!$extra) continue;
+                        CurrencyMismatch::assertSame($extra->currency, $service->currency ?: 'EUR');
                         $required = (int) ($extra->lead_time_hours ?? 0);
                         if ($required > 0 && $hoursUntilStart < $required) {
                             throw new \RuntimeException(
@@ -452,6 +500,7 @@ class ServicePublicController extends Controller
                 // (R4-2) a stay — is refused before the insert, a mock id
                 // (`pi_mock_`) as much as a real one.
                 $paymentIntentId = (string) ($data['payment_intent_id'] ?? '');
+                if ($quoted !== null && abs((float) $quoted['total'] - round($servicePrice + $extrasTotal, 2)) > 0.004) throw new PaymentMismatch('The price changed. Please review it and try again.');
                 if ($paymentIntentId !== ''
                     && (ServiceBooking::withoutGlobalScopes()->where('organization_id', $orgId)->where('stripe_payment_intent_id', $paymentIntentId)->exists()
                         || BookingMirror::withoutGlobalScopes()->where('organization_id', $orgId)->where('stripe_payment_intent_id', $paymentIntentId)->exists())) {
@@ -470,7 +519,7 @@ class ServicePublicController extends Controller
                     throw new DepositRefused('deposit_mismatch', 'The deposit does not match this booking. Your card was not charged; please try again.');
                 } elseif ($intent !== null) {
                     // R4-2: a full payment pays only this booking — worked out here from the price in the lock.
-                    self::assertPaysThisBooking($intent, (int) $orgId, (int) $service->id, $reservation['start'], round($servicePrice + $extrasTotal, 2), app(StripeService::class)->currency());
+                    self::assertPaysThisBooking($intent, (int) $orgId, (int) $service->id, $reservation['start'], round($servicePrice + $extrasTotal, 2), $service->currency ?: 'EUR');
                 }
 
                 $booking = ServiceBooking::create([
@@ -487,7 +536,7 @@ class ServicePublicController extends Controller
                     'service_price'     => $servicePrice,
                     'extras_total'      => $extrasTotal,
                     'total_amount'      => round($servicePrice + $extrasTotal, 2),
-                    'currency'          => $service->currency ?: 'EUR',
+                    'currency'          => strtoupper((string) ($intent?->currency ?? $service->currency ?? 'EUR')),
                     'status'            => 'confirmed',
                     'payment_status'    => $paymentStatus,
                     'stripe_payment_intent_id' => $data['payment_intent_id'] ?? null,
@@ -509,6 +558,9 @@ class ServicePublicController extends Controller
 
                 return $booking;
             });
+        } catch (CurrencyMismatch $e) {
+            $quoted !== null ? $this->releaseQuotedPayment($intent, (int) $orgId) : $this->releaseDeposit($intent, $orgId);
+            return response()->json(['error' => $e->getMessage(), 'code' => 'currency_mismatch'], 422);
         } catch (DepositRefused $e) {
             if ($e->reason === 'deposit_mismatch') {
                 $this->releaseDeposit($intent, $orgId);
@@ -518,6 +570,7 @@ class ServicePublicController extends Controller
         } catch (PaymentAlreadyUsed) {
             return $this->paymentAlreadyUsed($orgId, $idempotency, $data);
         } catch (PaymentMismatch $e) {
+            if ($quoted !== null) $this->releaseQuotedPayment($intent, (int) $orgId);
             // R4-2: not this booking's payment. Answered as the deposit refusal is (422, a sentence and a code), and
             // nothing is cancelled: the payment may be another booking's, another venue's, or another payer's.
             $this->logSubmission($orgId, $idempotency, $data, null, 'failed', 'payment_mismatch');
@@ -533,18 +586,18 @@ class ServicePublicController extends Controller
                 return $this->paymentAlreadyUsed($orgId, $idempotency, $data);
             }
             $this->logSubmission($orgId, $idempotency, $data, null, 'failed', $e->getMessage());
-            return response()->json(['error' => $e->getMessage()], 409);
+            return \App\Services\Booking\PublicBookingError::response($e, 'The booking could not be saved. Please try again.', 'booking_unavailable', 409);
         } catch (\RuntimeException $e) {
             // reserveSlot threw — the requested slot was taken by a concurrent
             // confirm while we were waiting for the advisory lock. A deposit held
             // for it goes back at once (Part H).
-            $released = $this->releaseDeposit($intent, $orgId);
+            $released = $quoted !== null ? $this->releaseQuotedPayment($intent, (int) $orgId) : $this->releaseDeposit($intent, $orgId);
             $this->logSubmission($orgId, $idempotency, $data, null, 'failed', $e->getMessage());
-            return response()->json(['error' => $e->getMessage() . ($released ? ' Your card was not charged.' : '')] + ($released ? ['code' => 'slot_taken'] : []), 409);
+            return \App\Services\Booking\PublicBookingError::response($e, 'This time is no longer available. Please choose another.' . ($released ? ' Your card was not charged.' : ''), 'slot_taken', 409);
         } catch (\Throwable $e) {
             $this->releaseDeposit($intent, $orgId);
             $this->logSubmission($orgId, $idempotency, $data, null, 'failed', $e->getMessage());
-            return response()->json(['error' => 'Failed to create booking: ' . $e->getMessage()], 500);
+            return \App\Services\Booking\PublicBookingError::response($e, 'The booking could not be saved. Please try again shortly.', 'booking_unavailable', 503);
         }
 
         $this->logSubmission($orgId, $idempotency, $data, $booking->id, 'success');
@@ -638,9 +691,8 @@ class ServicePublicController extends Controller
      * payment (retrieved with its own Stripe key, its metadata naming this
      * organisation), made by paymentIntent() (`kind` PAYMENT_KIND) for this
      * service at this time, for the amount the server prices, in the currency
-     * paymentIntent() charges in (the venue's Stripe currency — not the
-     * service's: a venue whose two differ was charged that way before R4-2 and
-     * still books), through the one conversion every comparison with a Stripe
+     * paymentIntent() charges in (the service's quoted currency, checked
+     * against the venue's Stripe configuration before authorization), through the conversion every comparison with a Stripe
      * amount uses. The time is compared as the venue's wall clock, as the
      * deposit's is (both sides come from the scheduler's own start).
      *
@@ -671,6 +723,23 @@ class ServicePublicController extends Controller
      * venue's own deposit intent, only while it is still just held, and
      * never one a booking already carries.
      */
+    private function releaseQuotedPayment(mixed $intent, int $orgId): bool
+    {
+        if (!$intent || (string) $intent->status !== 'requires_capture') return false;
+        try {
+            return DB::transaction(function () use ($intent, $orgId) {
+                \App\Support\AdvisoryLock::within('pi:' . $intent->id);
+                if (ServiceBooking::withoutGlobalScopes()->where('organization_id', $orgId)->where('stripe_payment_intent_id', $intent->id)->exists()
+                    || BookingMirror::withoutGlobalScopes()->where('organization_id', $orgId)->where('stripe_payment_intent_id', $intent->id)->exists()) return false;
+                app(StripeService::class)->cancelPaymentIntent($intent->id, 'abandoned');
+                return true;
+            });
+        } catch (\Throwable $e) {
+            report($e);
+            return false;
+        }
+    }
+
     private function releaseDeposit(mixed $intent, ?int $orgId): bool
     {
         if ($intent === null || !$orgId) {
@@ -947,13 +1016,7 @@ class ServicePublicController extends Controller
                 ->first();
 
             if ($member && $member->welcomed_at === null) {
-                $code = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
-
-                \App\Models\EmailVerificationCode::create([
-                    'email'      => $email,
-                    'code'       => $code,
-                    'expires_at' => now()->addHours(48),
-                ]);
+                $code = \App\Models\EmailVerificationCode::issueFor($member->user, 'claim', now()->addHours(48))->code;
 
                 \Illuminate\Support\Facades\Mail::to($email)
                     ->queue(new \App\Mail\BookingMembershipMail(

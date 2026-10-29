@@ -24,10 +24,8 @@ class HotelSetting extends Model
      * are decrypted lazily and re-encrypted on next save (try/catch path
      * in getValueAttribute).
      *
-     * Only secrets that actually move money / signing keys go in here.
-     * Other "private" fields (SMTP password, third-party tokens) are
-     * candidates but kept plaintext for now to limit the migration blast
-     * radius. Add to this list when extending coverage.
+     * Covers payment, PMS, legacy SMTP and Twilio credentials. Every added
+     * key needs a backfill migration and must stay out of the cached map.
      */
     public const ENCRYPTED_KEYS = [
         'stripe_secret_key',
@@ -49,6 +47,7 @@ class HotelSetting extends Model
         // the default). Read them with a direct query, as the Stripe and Smoobu
         // consumers do.
         'mail_password',
+        'twilio_auth_token',
     ];
 
     protected static function booted(): void
@@ -150,7 +149,7 @@ class HotelSetting extends Model
     private static function cachedMapFor(int $orgId): array
     {
         return Cache::remember(
-            "org:{$orgId}:hotel_settings",
+            "org:{$orgId}:hotel_settings:v2",
             self::CACHE_TTL,
             fn () => static::all()
                 ->reject(fn (self $s) => in_array($s->key, self::ENCRYPTED_KEYS, true))
@@ -163,6 +162,7 @@ class HotelSetting extends Model
     {
         if ($orgId) {
             Cache::forget("org:{$orgId}:hotel_settings");
+            Cache::forget("org:{$orgId}:hotel_settings:v2");
         }
     }
 }

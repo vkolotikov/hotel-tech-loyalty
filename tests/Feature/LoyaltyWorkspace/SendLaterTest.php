@@ -160,7 +160,7 @@ class SendLaterTest extends TestCase
     public function test_staff_cannot_schedule_or_take_back(): void
     {
         $c = $this->emailDraft();
-        $this->asStaffMember()->postJson($this->api("campaigns/{$c->id}/schedule"), ['send_at' => '2026-10-06T10:00', 'revision' => 'x'])->assertStatus(403)->assertJsonPath('error', 'manager_only');
+        $this->asStaffMember()->postJson($this->api("campaigns/{$c->id}/schedule"), ['send_at' => '2026-10-06T10:00', 'revision' => 'x'])->assertStatus(403)->assertJsonPath('error', 'not_allowed');
         $this->asStaffMember()->postJson($this->api("campaigns/{$c->id}/unschedule"))->assertStatus(403);
         $p = $this->pushDraft();
         $this->asStaffMember()->postJson($this->api("push/{$p->id}/schedule"), ['send_at' => '2026-10-06T10:00', 'revision' => 'x'])->assertStatus(403);

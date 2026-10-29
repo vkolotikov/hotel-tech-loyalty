@@ -2,7 +2,6 @@
 
 namespace Tests\Feature\Stripe;
 
-use App\Http\Controllers\Api\V1\BookingPublicController;
 use App\Models\Organization;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\DB;
@@ -12,23 +11,23 @@ use Tests\Concerns\SetsUpServiceBookingSchema;
 use Tests\TestCase;
 
 /**
- * A refund made in the Stripe dashboard for a service booking's payment is
- * recorded on the booking — read from the charge's own cumulative fields
- * (amount_refunded / amount_captured / refunded), not from
- * `charge.refunds` (not always present, and Stripe lists it newest-first,
- * so naively taking the last entry would name the OLDEST refund).
+ * Refund webhooks trigger a current provider read. Delayed event payloads cannot
+ * overwrite newer provider state, and failed writes remain retryable.
  */
 class ServiceBookingRefundWebhookTest extends TestCase
 {
     use DatabaseTransactions, SetsUpMinimalSchema, SetsUpServiceBookingSchema;
+    use \Tests\Concerns\MocksCurrentStripeRefunds;
 
     private Organization $org;
+    private $stripe;
 
     protected function setUp(): void
     {
         parent::setUp();
         $this->setUpBookingRefundSchema();
         $this->setUpServiceBookingSchema();
+        $this->setUpLoyaltySchema();
         if (!\Illuminate\Support\Facades\Schema::hasTable('stripe_webhook_events')) {
             \Illuminate\Support\Facades\Schema::create('stripe_webhook_events', function ($t) {
                 $t->bigIncrements('id');
@@ -44,6 +43,11 @@ class ServiceBookingRefundWebhookTest extends TestCase
         }
         $this->org = Organization::create(['name' => 'Numa', 'slug' => 'numa-' . uniqid()]);
         app()->instance('current_organization_id', $this->org->id);
+        $this->stripe = \Mockery::mock(\App\Services\StripeService::class);
+        $this->mockCurrentRefunds($this->stripe);
+        $this->stripe->shouldReceive('isEnabled')->andReturn(true);
+        $this->stripe->shouldReceive('constructWebhookEvent')->andReturnUsing(fn ($payload) => \Stripe\Event::constructFrom(json_decode($payload, true)));
+        $this->app->instance(\App\Services\StripeService::class, $this->stripe);
     }
 
     protected function tearDown(): void
@@ -72,20 +76,124 @@ class ServiceBookingRefundWebhookTest extends TestCase
         return Charge::constructFrom($payload);
     }
 
-    private function refundEvent(string $pi, int $orgId, Charge $charge, ?string $eventId = null): void
+    private function refundEvent(string $pi, int $orgId, Charge $charge, ?string $eventId = null, bool $current = true, int $expectedStatus = 200): void
     {
-        $controller = app(BookingPublicController::class);
-        (new \ReflectionMethod($controller, 'handleChargeRefunded'))->invoke($controller, $charge, $orgId, $eventId);
+        if ($current && isset($charge->refunds)) {
+            $this->providerRefunds($pi, $charge->refunds->data ? array_map(fn ($refund) => $refund->toArray(), $charge->refunds->data) : [], (string) $charge->currency);
+        }
+        $object = $charge->toArray();
+        $object['metadata'] = ['org_id' => (string) $orgId];
+        $this->postJson('/api/v1/booking/webhooks/stripe', [
+            'id' => $eventId ?? 'evt_'.uniqid(), 'object' => 'event', 'type' => 'charge.refunded', 'data' => ['object' => $object],
+        ], ['Stripe-Signature' => 't=1,v1=test'])->assertStatus($expectedStatus);
     }
 
     private function booking(array $attrs = []): int
     {
+        $orgId = $attrs['organization_id'] ?? $this->org->id;
+        $serviceId = DB::table('services')->insertGetId([
+            'organization_id' => $orgId, 'name' => 'Refund test service', 'price' => 54,
+            'created_at' => now(), 'updated_at' => now(),
+        ]);
         return DB::table('service_bookings')->insertGetId(array_merge([
-            'organization_id' => $this->org->id, 'booking_reference' => 'SVC-' . strtoupper(uniqid()), 'service_id' => 1,
+            'organization_id' => $this->org->id, 'booking_reference' => 'SVC-' . strtoupper(uniqid()), 'service_id' => $serviceId,
             'customer_name' => 'Ada', 'customer_email' => 'ada@example.test', 'start_at' => now()->addDay(), 'end_at' => now()->addDay()->addHour(), 'duration_minutes' => 60,
             'total_amount' => 54, 'currency' => 'EUR', 'status' => 'cancelled', 'payment_status' => 'paid', 'stripe_payment_intent_id' => 'pi_svc_1',
             'created_at' => now(), 'updated_at' => now(),
         ], $attrs));
+    }
+
+    private function signedProvider(?callable $read = null): void
+    {
+        $stripe = \Mockery::mock(\App\Services\StripeService::class);
+        $stripe->shouldReceive('isEnabled')->andReturn(true);
+        $stripe->shouldReceive('constructWebhookEvent')->andReturnUsing(fn ($payload, $signature) =>
+            \Stripe\Webhook::constructEvent($payload, $signature, 'whsec_refund_test'));
+        if ($read) {
+            $stripe->shouldReceive('refundsForPaymentIntent')->andReturnUsing($read);
+        } else {
+            $this->mockCurrentRefunds($stripe);
+        }
+        $this->app->instance(\App\Services\StripeService::class, $stripe);
+    }
+
+    private function signedEvent(string $id, string $type, array $object, bool $valid = true): \Illuminate\Testing\TestResponse
+    {
+        $object['metadata'] = ['org_id' => (string) $this->org->id];
+        $payload = json_encode(['id' => $id, 'object' => 'event', 'type' => $type, 'data' => ['object' => $object]], JSON_THROW_ON_ERROR);
+        $timestamp = time();
+        $signature = hash_hmac('sha256', $timestamp.'.'.$payload, $valid ? 'whsec_refund_test' : 'wrong_secret');
+        return $this->call('POST', '/api/v1/booking/webhooks/stripe', [], [], [], [
+            'CONTENT_TYPE' => 'application/json', 'HTTP_STRIPE_SIGNATURE' => 't='.$timestamp.',v1='.$signature,
+        ], $payload);
+    }
+
+    public function test_signed_refund_lifecycle_uses_current_provider_status_even_after_a_stale_success_event(): void
+    {
+        $id = $this->booking();
+        $this->signedProvider();
+        $refund = ['id' => 're_lifecycle', 'object' => 'refund', 'payment_intent' => 'pi_svc_1', 'amount' => 2000, 'currency' => 'eur', 'created' => time()];
+        $this->providerRefunds('pi_svc_1', [$refund + ['status' => 'pending']]);
+        $this->signedEvent('evt_pending', 'refund.created', $refund + ['status' => 'pending'])->assertOk();
+        $this->assertDatabaseHas('service_bookings', ['id' => $id, 'payment_status' => 'paid', 'refunded_amount' => 0]);
+        $this->assertDatabaseHas('refund_operations', ['refund_id' => 're_lifecycle', 'status' => 'pending'], 'refund_journal');
+        $this->assertSame(0, DB::table('service_booking_payments')->where('service_booking_id', $id)->where('kind', 'refund')->count());
+
+        $this->providerRefunds('pi_svc_1', [$refund + ['status' => 'succeeded']]);
+        $this->signedEvent('evt_succeeded', 'refund.updated', $refund + ['status' => 'succeeded'])->assertOk();
+        $this->assertDatabaseHas('service_bookings', ['id' => $id, 'payment_status' => 'partially_refunded', 'refunded_amount' => 20]);
+        $this->assertDatabaseHas('refund_operations', ['refund_id' => 're_lifecycle', 'status' => 'succeeded'], 'refund_journal');
+        $this->assertSame(1, DB::table('service_booking_payments')->where('service_booking_id', $id)->where('kind', 'refund')->count());
+
+        $this->providerRefunds('pi_svc_1', [$refund + ['status' => 'failed']]);
+        $this->signedEvent('evt_failed', 'refund.failed', $refund + ['status' => 'failed'])->assertOk();
+        $this->assertDatabaseHas('service_bookings', ['id' => $id, 'payment_status' => 'paid', 'refunded_amount' => 0]);
+        $this->assertDatabaseHas('refund_operations', ['refund_id' => 're_lifecycle', 'status' => 'failed'], 'refund_journal');
+
+        $stale = $this->chargeEvent('pi_svc_1', 2000, 5400, false, [$refund + ['status' => 'succeeded']])->toArray();
+        $this->signedEvent('evt_stale_success', 'charge.refunded', $stale)->assertOk();
+        // Production has no outer transaction here. Isolate the intentional unique-key
+        // violation so PostgreSQL does not abort DatabaseTransactions' test wrapper.
+        DB::beginTransaction();
+        try {
+            $this->signedEvent('evt_stale_success', 'charge.refunded', $stale)->assertOk()->assertJsonPath('duplicate', true);
+        } finally {
+            DB::rollBack();
+        }
+        $this->assertDatabaseHas('service_bookings', ['id' => $id, 'payment_status' => 'paid', 'refunded_amount' => 0]);
+        $this->assertSame(1, DB::table('service_booking_payments')->where('service_booking_id', $id)->where('kind', 'refund')->count(), 'The immutable history remains once; current failed provider status excludes it from totals.');
+        $this->assertSame(['re_lifecycle' => 'failed'], \App\Services\Booking\RefundOperations::statuses($this->org->id, ['re_lifecycle']));
+        $this->assertSame(4, DB::table('stripe_webhook_events')->where('organization_id', $this->org->id)->count());
+    }
+
+    public function test_signed_provider_read_failure_is_retryable_without_dedup_or_partial_money_writes(): void
+    {
+        $id = $this->booking();
+        $attempts = 0;
+        $this->signedProvider(function ($pi) use (&$attempts) {
+            $this->assertSame('pi_svc_1', $pi);
+            if (++$attempts === 1) throw new \RuntimeException('simulated provider unavailable');
+            return [];
+        });
+        $refund = ['id' => 're_read_failure', 'object' => 'refund', 'payment_intent' => 'pi_svc_1', 'amount' => 2000, 'currency' => 'eur', 'status' => 'pending'];
+        $this->signedEvent('evt_read_failure', 'refund.updated', $refund)->assertStatus(503);
+        $this->assertSame(0, DB::table('stripe_webhook_events')->where('event_id', 'evt_read_failure')->count());
+        $this->assertDatabaseHas('service_bookings', ['id' => $id, 'payment_status' => 'paid', 'refunded_amount' => null]);
+        $this->assertSame(0, DB::table('service_booking_payments')->where('service_booking_id', $id)->count());
+        $this->signedEvent('evt_read_failure', 'refund.updated', $refund)->assertOk();
+        $this->assertSame(2, $attempts);
+        $this->assertSame(1, DB::table('stripe_webhook_events')->where('event_id', 'evt_read_failure')->count());
+    }
+
+    public function test_invalid_signature_cannot_reconcile_provider_refunds(): void
+    {
+        $id = $this->booking();
+        $this->signedProvider(fn () => throw new \RuntimeException('Provider must not be read for an invalid signature'));
+        $this->signedEvent('evt_invalid_signature', 'refund.updated', [
+            'id' => 're_invalid', 'object' => 'refund', 'payment_intent' => 'pi_svc_1', 'amount' => 5400, 'currency' => 'eur', 'status' => 'succeeded',
+        ], valid: false)->assertStatus(400);
+        $this->assertSame(0, DB::table('stripe_webhook_events')->where('event_id', 'evt_invalid_signature')->count());
+        $this->assertDatabaseHas('service_bookings', ['id' => $id, 'payment_status' => 'paid', 'refunded_amount' => null]);
     }
 
     public function test_a_refund_for_a_service_bookings_payment_is_recorded_on_the_booking(): void
@@ -101,7 +209,7 @@ class ServiceBookingRefundWebhookTest extends TestCase
         $this->assertEquals(54.0, (float) $row->refunded_amount);
         $this->assertSame('re_dash_1', $row->last_refund_id);
         $this->assertNotNull($row->refunded_at);
-        $this->assertSame(1, DB::table('audit_logs')->where('action', 'service_booking.refunded')->where('subject_id', $id)->count());
+        $this->assertSame(1, DB::table('audit_logs')->where('action', 'service_booking.refund_reconciled')->where('subject_id', $id)->count());
         $this->assertSame(0, DB::table('audit_logs')->where('action', 'stripe.webhook.cross_tenant_attempt')->count());
     }
 
@@ -111,7 +219,7 @@ class ServiceBookingRefundWebhookTest extends TestCase
         $charge = $this->chargeEvent('pi_svc_1', 5400, 5400, true, [['id' => 're_dash_1', 'amount' => 5400, 'created' => 100]]);
         $this->refundEvent('pi_svc_1', $this->org->id, $charge);
         $this->refundEvent('pi_svc_1', $this->org->id, $charge);
-        $this->assertSame(1, DB::table('audit_logs')->where('action', 'service_booking.refunded')->where('subject_id', $id)->count());
+        $this->assertSame(1, DB::table('audit_logs')->where('action', 'service_booking.refund_reconciled')->where('subject_id', $id)->count());
     }
 
     public function test_a_partial_refund_is_recorded_as_partial(): void
@@ -125,13 +233,15 @@ class ServiceBookingRefundWebhookTest extends TestCase
         $this->assertEquals(20.0, (float) $row->refunded_amount);
     }
 
-    public function test_a_payment_no_booking_of_this_organisation_carries_is_still_reported(): void
+    public function test_a_payment_of_another_organisation_is_never_mutated(): void
     {
-        $this->booking(['organization_id' => $this->org->id + 1]);
+        $foreign = Organization::create(['name' => 'Other venue', 'slug' => 'foreign-'.uniqid()]);
+        $id = $this->booking(['organization_id' => $foreign->id]);
         $this->refundEvent('pi_svc_1', $this->org->id, $this->chargeEvent('pi_svc_1', 5400, 5400, true, [
             ['id' => 're_1', 'amount' => 5400, 'created' => 100],
         ]));
-        $this->assertSame(1, DB::table('audit_logs')->where('action', 'stripe.webhook.cross_tenant_attempt')->count());
+        $this->assertSame(0.0, (float) DB::table('service_bookings')->where('id', $id)->value('refunded_amount'));
+        $this->assertSame(0, \App\Services\Booking\RefundOperations::connection()->table('refund_operations')->where('organization_id', $foreign->id)->count());
     }
 
     /** Two partial refunds in sequence (each event carries the cumulative amount so far), then a full refund. */
@@ -166,7 +276,7 @@ class ServiceBookingRefundWebhookTest extends TestCase
         $this->assertEquals(54.0, (float) $row->refunded_amount);
         $this->assertSame('re_3', $row->last_refund_id);
 
-        $this->assertSame(3, DB::table('audit_logs')->where('action', 'service_booking.refunded')->where('subject_id', $id)->count());
+        $this->assertSame(3, DB::table('audit_logs')->where('action', 'service_booking.refund_reconciled')->where('subject_id', $id)->count());
     }
 
     public function test_redelivery_of_the_same_refund_event_is_recorded_once(): void
@@ -175,19 +285,19 @@ class ServiceBookingRefundWebhookTest extends TestCase
         $charge = $this->chargeEvent('pi_svc_1', 5400, 5400, true, [['id' => 're_1', 'amount' => 5400, 'created' => 100]]);
         $this->refundEvent('pi_svc_1', $this->org->id, $charge);
         $this->refundEvent('pi_svc_1', $this->org->id, $charge);
-        $this->assertSame(1, DB::table('audit_logs')->where('action', 'service_booking.refunded')->where('subject_id', $id)->count());
+        $this->assertSame(1, DB::table('audit_logs')->where('action', 'service_booking.refund_reconciled')->where('subject_id', $id)->count());
     }
 
-    public function test_a_payload_without_a_refunds_key_is_still_recorded_from_amount_refunded(): void
+    public function test_a_payload_without_a_refunds_key_is_recorded_from_the_provider_read(): void
     {
         $id = $this->booking();
+        $this->providerRefunds('pi_svc_1', [['id' => 're_provider_full', 'amount' => 5400]]);
         $this->refundEvent('pi_svc_1', $this->org->id, $this->chargeEvent('pi_svc_1', 5400, 5400, true, null));
         $row = DB::table('service_bookings')->where('id', $id)->first();
         $this->assertSame('refunded', $row->payment_status);
         $this->assertEquals(54.0, (float) $row->refunded_amount);
-        // No `refunds` payload to name a newer one — the stored value (none
-        // yet, so null) is left as it was.
-        $this->assertNull($row->last_refund_id);
+        // The provider read supplies the refund ID even when the event has no list.
+        $this->assertSame('re_provider_full', $row->last_refund_id);
     }
 
     public function test_a_refund_already_recorded_by_the_portal_is_not_overwritten(): void
@@ -196,7 +306,7 @@ class ServiceBookingRefundWebhookTest extends TestCase
         $this->refundEvent('pi_svc_1', $this->org->id, $this->chargeEvent('pi_svc_1', 5400, 5400, true, [
             ['id' => 're_portal_1', 'amount' => 5400, 'created' => 100],
         ]));
-        $this->assertSame(0, DB::table('audit_logs')->where('action', 'service_booking.refunded')->where('subject_id', $id)->count());
+        $this->assertSame(0, DB::table('audit_logs')->where('action', 'service_booking.refund_reconciled')->where('subject_id', $id)->count());
         $row = DB::table('service_bookings')->where('id', $id)->first();
         $this->assertSame('re_portal_1', $row->last_refund_id);
     }
@@ -212,10 +322,7 @@ class ServiceBookingRefundWebhookTest extends TestCase
         $this->assertEquals(5400.0, (float) $row->refunded_amount);
     }
 
-    // ── Never moves backwards: Stripe does not guarantee webhook delivery
-    //    order, so a later delivery carrying a SMALLER cumulative amount
-    //    than what is already stored must never undo what a later (in real
-    //    time), larger event already recorded. ────────────────────────────
+    // A stale event must not replace current provider state.
 
     public function test_events_delivered_out_of_order_50_then_20_keep_the_larger_amount(): void
     {
@@ -227,17 +334,17 @@ class ServiceBookingRefundWebhookTest extends TestCase
         $row = DB::table('service_bookings')->where('id', $id)->first();
         $this->assertSame('partially_refunded', $row->payment_status);
         $this->assertEquals(50.0, (float) $row->refunded_amount);
-        $this->assertSame(1, DB::table('audit_logs')->where('action', 'service_booking.refunded')->where('subject_id', $id)->count());
+        $this->assertSame(1, DB::table('audit_logs')->where('action', 'service_booking.refund_reconciled')->where('subject_id', $id)->count());
 
         // An older event (a smaller cumulative amount) arrives late.
         $this->refundEvent('pi_svc_1', $this->org->id, $this->chargeEvent('pi_svc_1', 2000, 5400, false, [
             ['id' => 're_early', 'amount' => 2000, 'created' => 100],
-        ]));
+        ]), current: false);
         $row = DB::table('service_bookings')->where('id', $id)->first();
         $this->assertSame('partially_refunded', $row->payment_status);
         $this->assertEquals(50.0, (float) $row->refunded_amount, 'a lower, out-of-order amount must never move the stored amount backwards');
         $this->assertSame('re_1', $row->last_refund_id);
-        $this->assertSame(1, DB::table('audit_logs')->where('action', 'service_booking.refunded')->where('subject_id', $id)->count(), 'the out-of-order, lower event writes no second audit');
+        $this->assertSame(1, DB::table('audit_logs')->where('action', 'service_booking.refund_reconciled')->where('subject_id', $id)->count(), 'the out-of-order, lower event writes no second audit');
     }
 
     public function test_a_full_refund_then_an_out_of_order_partial_stays_refunded(): void
@@ -255,11 +362,11 @@ class ServiceBookingRefundWebhookTest extends TestCase
         // regress the status back to partially_refunded.
         $this->refundEvent('pi_svc_1', $this->org->id, $this->chargeEvent('pi_svc_1', 2000, 5400, false, [
             ['id' => 're_partial_late', 'amount' => 2000, 'created' => 150],
-        ]));
+        ]), current: false);
         $row = DB::table('service_bookings')->where('id', $id)->first();
         $this->assertSame('refunded', $row->payment_status);
         $this->assertEquals(54.0, (float) $row->refunded_amount);
-        $this->assertSame(1, DB::table('audit_logs')->where('action', 'service_booking.refunded')->where('subject_id', $id)->count());
+        $this->assertSame(1, DB::table('audit_logs')->where('action', 'service_booking.refund_reconciled')->where('subject_id', $id)->count());
     }
 
     /**
@@ -267,34 +374,22 @@ class ServiceBookingRefundWebhookTest extends TestCase
      * row BEFORE handing off to this handler. If recording the refund then
      * fails, the event must not be left marked processed with the refund
      * never recorded — the dedup row is removed so Stripe's retry gets a
-     * fresh attempt, and the failure is rethrown so Stripe actually sees
+     * fresh attempt, and the dispatcher returns HTTP 503 so Stripe sees
      * one and retries.
      */
     public function test_a_db_failure_recording_a_refund_removes_the_dedup_mark_so_a_retry_is_processed(): void
     {
         $id = $this->booking();
         $eventId = 'evt_test_dbfail_1';
-        DB::table('stripe_webhook_events')->insert([
-            'organization_id' => $this->org->id, 'event_id' => $eventId, 'event_type' => 'charge.refunded',
-            'payment_intent_id' => 'pi_svc_1', 'charge_id' => 'ch_1', 'received_at' => now(),
-            'created_at' => now(), 'updated_at' => now(),
-        ]);
 
         \App\Models\ServiceBooking::saving(function (\App\Models\ServiceBooking $m) {
             throw new \RuntimeException('simulated db failure');
         });
 
         try {
-            $threw = false;
-            try {
-                $this->refundEvent('pi_svc_1', $this->org->id, $this->chargeEvent('pi_svc_1', 5400, 5400, true, [
-                    ['id' => 're_1', 'amount' => 5400, 'created' => 100],
-                ]), $eventId);
-            } catch (\RuntimeException $e) {
-                $threw = true;
-                $this->assertSame('simulated db failure', $e->getMessage());
-            }
-            $this->assertTrue($threw, 'the DB failure must propagate so Stripe sees a failure response and retries');
+            $this->refundEvent('pi_svc_1', $this->org->id, $this->chargeEvent('pi_svc_1', 5400, 5400, true, [
+                ['id' => 're_1', 'amount' => 5400, 'created' => 100],
+            ]), $eventId, expectedStatus: 503);
 
             $this->assertSame(0, DB::table('stripe_webhook_events')->where('event_id', $eventId)->count(), "the dedup mark must be removed so Stripe's retry is processed");
             $row = DB::table('service_bookings')->where('id', $id)->first();

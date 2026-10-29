@@ -124,7 +124,7 @@ final class MemberEnrolment
                 $this->loyalty->awardPoints($member, $welcomeBonus, 'Welcome bonus — registered by staff', 'bonus', $by);
             }
 
-            return [$member, $inviteFlow ? $this->newCode($user->email) : null];
+            return [$member, $inviteFlow ? $this->newCode($user) : null];
         });
 
         $emailSent = false;
@@ -182,7 +182,7 @@ final class MemberEnrolment
             throw new LoyaltyRefused('no_email', 'Member has no email on file', 422);
         }
 
-        $code = $this->newCode($member->user->email);
+        $code = $this->newCode($member->user);
 
         try {
             $this->mail($member, $code);
@@ -211,14 +211,9 @@ final class MemberEnrolment
     }
 
     /** A fresh six-digit code for the address, every unused one before it removed. */
-    private function newCode(string $email): string
+    private function newCode(\App\Models\User $user): string
     {
-        EmailVerificationCode::where('email', $email)->whereNull('verified_at')->delete();
-
-        $code = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
-        EmailVerificationCode::create(['email' => $email, 'code' => $code, 'expires_at' => now()->addHours(self::CODE_HOURS)]);
-
-        return $code;
+        return EmailVerificationCode::issueFor($user, 'claim', now()->addHours(self::CODE_HOURS))->code;
     }
 
     private function mail(LoyaltyMember $member, string $code): void

@@ -297,6 +297,9 @@ class ServiceBookingController extends Controller
                     'mark_status'   => ['status' => $validated['value'] ?? $b->status],
                 };
                 ServiceBooking::where('id', $b->id)->lockForUpdate()->update($patch);
+                if (($patch['status'] ?? null) === 'completed') {
+                    app(BookingPointsService::class)->rememberAppointmentVisit($b->fresh());
+                }
                 $patches[$b->id] = $patch;
                 $updated++;
             }
@@ -647,6 +650,9 @@ class ServiceBookingController extends Controller
                 app(DepositRule::class)->onCancel($booking, $request->user());
             }
             $booking->update(array_filter($data, fn ($v) => $v !== null));
+            if (($data['status'] ?? null) === 'completed') {
+                app(BookingPointsService::class)->rememberAppointmentVisit($booking);
+            }
 
             AuditLog::record(
                 'service_booking.updated',

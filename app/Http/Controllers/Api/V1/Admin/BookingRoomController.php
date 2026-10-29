@@ -65,6 +65,7 @@ class BookingRoomController extends Controller
         ]);
 
         $data['organization_id'] = app('current_organization_id');
+        $data['currency'] = strtoupper(trim((string) ($data['currency'] ?? ''))) ?: \App\Services\BookingEngineService::stayCurrency();
         $data['slug'] = Str::slug($data['name']);
 
         $this->applyPhotos($request, null, $data);
@@ -123,6 +124,7 @@ class BookingRoomController extends Controller
         if (isset($data['name'])) {
             $data['slug'] = Str::slug($data['name']);
         }
+        if (array_key_exists('currency', $data)) $data['currency'] = strtoupper(trim((string) $data['currency'])) ?: $room->currency;
 
         $this->applyPhotos($request, $room, $data);
 

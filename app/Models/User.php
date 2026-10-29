@@ -20,7 +20,7 @@ class User extends Authenticatable
         'wants_daily_summary', 'wants_loyalty_digest', 'wants_content_morning_email',
     ];
 
-    protected $hidden = ['password', 'remember_token', 'email_verified_at', 'organization_id'];
+    protected $hidden = ['password', 'remember_token', 'email_verified_at', 'organization_id', 'platform_operator_granted_at'];
 
     protected $casts = [
         'email_verified_at' => 'datetime',
@@ -33,6 +33,25 @@ class User extends Authenticatable
         'wants_content_morning_email' => 'boolean',
         'content_morning_email_last_sent_at' => 'datetime',
     ];
+
+    protected static function booted(): void
+    {
+        static::updating(function (self $user) {
+            if (!$user->isDirty('email')) return;
+            // A previous address's proof cannot follow an email change. A
+            // trusted server writer may explicitly prove the replacement in
+            // the same save; neither provenance field is mass assignable.
+            $schema = $user->getConnection()->getSchemaBuilder();
+            if (!$user->isDirty('email_verified_at') && (array_key_exists('email_verified_at', $user->getAttributes())
+                || $schema->hasColumn($user->getTable(), 'email_verified_at'))) {
+                $user->email_verified_at = null;
+            }
+            if (array_key_exists('platform_operator_granted_at', $user->getAttributes())
+                || $schema->hasColumn($user->getTable(), 'platform_operator_granted_at')) {
+                $user->platform_operator_granted_at = null;
+            }
+        });
+    }
 
     public function loyaltyMember()
     {
@@ -93,10 +112,17 @@ class User extends Authenticatable
      */
     public function isPlatformAdmin(): bool
     {
-        if (!$this->email) return false;
+        return $this->isStaff() && self::isPlatformOperatorEmail((string) $this->email)
+            && ($this->email_verified_at !== null || $this->getAttribute('platform_operator_granted_at') !== null);
+    }
+
+    /** Reserved addresses identify operators only after staff identity and mailbox provenance are checked. */
+    public static function isPlatformOperatorEmail(string $email): bool
+    {
+        if ($email === '') return false;
         $raw = config('services.saas.platform_admin_emails', '');
         $list = array_filter(array_map('trim', explode(',', (string) $raw)));
-        return in_array(strtolower($this->email), array_map('strtolower', $list), true);
+        return in_array(strtolower(trim($email)), array_map('strtolower', $list), true);
     }
 
     public function isStaff(): bool

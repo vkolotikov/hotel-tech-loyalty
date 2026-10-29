@@ -182,7 +182,14 @@ describe('A campaign that went out', () => {
 
   it('cancelled or stopped says how many went out first', () => {
     expect(text(render(manager, draft({ status: 'cancelled', recipient_count: 400, sent_count: 200 })))).toContain('Cancelled: 200 were sent before it stopped.')
-    expect(text(render(manager, draft({ status: 'failed', recipient_count: 400, sent_count: 300 })))).toContain('Sending stopped before the end: 300 were sent, the rest were not.')
+    expect(text(render(manager, draft({ status: 'failed', recipient_count: 400, sent_count: 300 })))).toContain('Sending stopped before the end: 300 were confirmed sent.')
+  })
+
+  it('warns about unresolved outcomes without claiming the messages were skipped', () => {
+    const words = text(render(manager, draft({ status: 'sent', recipient_count: 10, sent_count: 8, pending_count: 2 })))
+    expect(words).toContain('2 deliveries could not be confirmed.')
+    expect(words).not.toContain('2 were not emailed')
+    expect(words).toContain('Check the email provider before sending these messages again')
   })
 })
 

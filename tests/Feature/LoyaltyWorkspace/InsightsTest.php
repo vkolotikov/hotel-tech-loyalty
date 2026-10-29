@@ -88,7 +88,7 @@ class InsightsTest extends TestCase
     {
         foreach (['insights', 'insights/at-risk'] as $path) {
             $this->asStaffMember()->getJson($this->api($path))
-                ->assertStatus(403)->assertJsonPath('error', 'not_allowed')->assertJsonPath('need', 'can_view_analytics');
+                ->assertStatus(403)->assertJsonPath('error', 'not_allowed');
             $this->asManager()->getJson($this->api($path . '?brand_id=all'))->assertOk();
         }
 

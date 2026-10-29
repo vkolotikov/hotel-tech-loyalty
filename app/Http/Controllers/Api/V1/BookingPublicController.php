@@ -205,10 +205,12 @@ class BookingPublicController extends Controller
                 ? $booking->quoteCombo($validated)
                 : $booking->quote($validated);
             return response()->json($quote);
+        } catch (\App\Services\Booking\CurrencyMismatch $e) {
+            return response()->json(['error' => $e->getMessage(), 'code' => 'currency_mismatch'], 422);
         } catch (\InvalidArgumentException $e) {
-            return response()->json(['error' => $e->getMessage()], 400);
+            return \App\Services\Booking\PublicBookingError::response($e, 'Please check your dates and room selection.', 'invalid_quote', 400);
         } catch (\RuntimeException $e) {
-            return response()->json(['error' => $e->getMessage()], 409);
+            return \App\Services\Booking\PublicBookingError::response($e, 'Availability could not be confirmed. Please try again shortly.', 'quote_unavailable', 409);
         }
     }
 
@@ -295,6 +297,11 @@ class BookingPublicController extends Controller
         // call at all.
         if (!empty($hold->payload_json['member_id'] ?? null)) {
             return response()->json(['error' => 'Hold expired or not found. Please start over.'], 400);
+        }
+
+        // A venue currency change never re-labels a quote already shown to the guest.
+        if (strtoupper((string) ($hold->payload_json['currency'] ?? $widgetCurrency)) !== strtoupper($stripeCurrency)) {
+            return response()->json(['error' => 'The payment currency changed. Please start a new quote or contact the venue.', 'code' => 'currency_mismatch'], 422);
         }
 
         // Extend the hold so a guest sitting on the Stripe Elements payment
@@ -385,7 +392,7 @@ class BookingPublicController extends Controller
 
             return response()->json($intent);
         } catch (\Throwable $e) {
-            return response()->json(['error' => 'Failed to create payment: ' . $e->getMessage()], 500);
+            return \App\Services\Booking\PublicBookingError::response($e, 'Payment could not be prepared. Please try again shortly.', 'payment_unavailable', 503);
         }
     }
 
@@ -512,6 +519,14 @@ class BookingPublicController extends Controller
                             if (($intent->metadata->hold_token ?? '') !== $validated['hold_token']) {
                                 throw new \RuntimeException('Payment does not match this booking.');
                             }
+                            $paidHold = \App\Models\BookingHold::withoutGlobalScopes()->where('organization_id', app('current_organization_id'))->where('hold_token', $validated['hold_token'])->first();
+                            if ($paidHold) {
+                                $quotedCurrency = (string) ($paidHold->payload_json['currency'] ?? 'EUR');
+                                if (strtoupper((string) $intent->currency) !== strtoupper($quotedCurrency)
+                                    || (int) $intent->amount !== StripeService::smallestUnitOf((float) ($paidHold->payload_json['gross_total'] ?? 0), $quotedCurrency)) {
+                                    throw new \RuntimeException('Payment does not match the quoted price or currency.');
+                                }
+                            }
                             // Attach payment method info to the booking data
                             $validated['payment_method'] = 'stripe';
                             $validated['payment_status'] = $intent->status === 'succeeded' ? 'paid' : 'authorized';
@@ -578,11 +593,11 @@ class BookingPublicController extends Controller
             );
             if ($e->getStatusCode() === 503) {
                 return response()->json([
-                    'error' => $e->getMessage(),
+                    'error' => 'The booking provider is unavailable. Please try again shortly.',
                     'code'  => 'pms_unavailable',
                 ], 503);
             }
-            return response()->json(['error' => $e->getMessage()], $e->getStatusCode());
+            return \App\Services\Booking\PublicBookingError::response($e, 'The booking could not be completed. Please try again.', 'booking_unavailable', $e->getStatusCode());
         } catch (\App\Services\Booking\PaymentUnverifiable $e) {
             // Release 6: the engine read the payment again under the hold's
             // lock and Stripe could not be asked (an outage, a timeout).
@@ -621,7 +636,7 @@ class BookingPublicController extends Controller
                 ['stage' => 'service_runtime', 'message' => $e->getMessage()],
                 $e,
             );
-            return response()->json(['error' => $e->getMessage()], 400);
+            return \App\Services\Booking\PublicBookingError::response($e, 'The booking could not be completed. Please check availability and try again.', 'booking_unavailable', 400);
         } catch (\Throwable $e) {
             // Anything else — TypeError, PHP fatal, DB drop. Same risk
             // surface as RuntimeException: exception fires AFTER Stripe
@@ -635,7 +650,7 @@ class BookingPublicController extends Controller
                 ['stage' => 'unhandled', 'class' => get_class($e)],
                 $e,
             );
-            throw $e;
+            return \App\Services\Booking\PublicBookingError::response($e, 'The booking could not be completed. Please try again shortly.', 'booking_unavailable', 503);
         }
     }
 
@@ -1675,7 +1690,7 @@ class BookingPublicController extends Controller
         } catch (\Stripe\Exception\SignatureVerificationException $e) {
             return response()->json(['error' => 'Invalid signature'], 400);
         } catch (\Throwable $e) {
-            return response()->json(['error' => 'Webhook error: ' . $e->getMessage()], 400);
+            return response()->json(['error' => 'Invalid webhook signature or payload.'], 400);
         }
 
         // Event-ID dedup (audit 2026-06-01 finding #4). Stripe explicitly
@@ -1915,11 +1930,18 @@ class BookingPublicController extends Controller
                 ],
                 'description'  => "Stripe PI {$intent->id} failed",
             ]);
-        } elseif ($event->type === 'charge.refunded') {
+        } elseif (in_array($event->type, ['charge.refunded', 'refund.created', 'refund.updated', 'refund.failed'], true)) {
             // Refund issued — sync our state. Fires for refunds initiated from
             // the Stripe Dashboard, async settlement reversals, and our own
             // admin refunds (idempotency check below dedupes our own actions).
-            $this->handleChargeRefunded($event->data->object, (int) $orgId, (string) $event->id);
+            try {
+                $pi = (string) ($event->data->object->payment_intent ?? '');
+                if ($pi !== '') app(\App\Services\Booking\RefundReconciler::class)->reconcile((int) $orgId, $pi, app(StripeService::class));
+            } catch (\Throwable $e) {
+                \App\Models\StripeWebhookEvent::withoutGlobalScopes()->where('organization_id', $orgId)->where('event_id', $event->id)->delete();
+                report($e);
+                return response()->json(['error' => 'Refund reconciliation will be retried.'], 503);
+            }
         } elseif ($event->type === 'charge.dispute.created') {
             // Chargeback opened. Stripe holds the funds pending review. We
             // flag the booking so staff see it — do NOT auto-refund yet,
@@ -2750,7 +2772,7 @@ class BookingPublicController extends Controller
                     \App\Models\SmoobuWebhookEvent::query()->where('id', $dedupRowId)->delete();
                 } catch (\Throwable) {}
             }
-            return response()->json(['ok' => false, 'error' => $e->getMessage()], 500);
+            return \App\Services\Booking\PublicBookingError::response($e, 'The provider update could not be applied.', 'update_unavailable', 503);
         }
 
         return response()->json(['ok' => true, 'reservation_id' => $reservationId, 'action' => $action]);

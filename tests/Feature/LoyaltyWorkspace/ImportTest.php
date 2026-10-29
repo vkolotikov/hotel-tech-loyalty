@@ -183,7 +183,7 @@ class ImportTest extends TestCase
 
     public function test_import_is_a_managers_and_another_organisations_batch_is_not_found(): void
     {
-        $this->asStaffMember()->getJson($this->api('members/imports'))->assertStatus(403)->assertJsonPath('error', 'manager_only');
+        $this->asStaffMember()->getJson($this->api('members/imports'))->assertStatus(403)->assertJsonPath('error', 'not_allowed');
         $this->asStaffMember()->post($this->api('members/imports'), ['file' => UploadedFile::fake()->createWithContent('a.csv', "name,email\nA,a@example.test\n")], ['Accept' => 'application/json'])
             ->assertStatus(403);
 

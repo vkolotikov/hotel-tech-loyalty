@@ -150,7 +150,7 @@ class SmsTest extends TestCase
 
         foreach ($this->routes($c->id) as [$method, $path]) {
             $this->asStaffMember()->json($method, $this->api($path), ['name' => 'X', 'recipients' => 1, 'revision' => 'x', 'send_at' => '2026-10-06T10:00'])
-                ->assertStatus(403)->assertJsonPath('error', 'manager_only');
+                ->assertStatus(403)->assertJsonPath('error', 'not_allowed');
         }
         $this->assertSame('draft', $c->fresh()->status);
         Queue::assertNothingPushed();

@@ -360,6 +360,8 @@ class CampaignController extends Controller
         $here = CampaignBody::editable($c->body_blocks, $c->body_html);
 
         return self::row($c) + [
+            // Claimed sends whose worker outcome is unknown are never silently retried.
+            'pending_count'    => DB::table('email_campaign_deliveries')->where('campaign_id', $c->id)->where('status', 'pending')->count(),
             'segment_id'       => $c->segment_id !== null ? (int) $c->segment_id : null,
             'editable_here'    => $here,
             'body_blocks'      => $here ? array_values(is_array($c->body_blocks) ? $c->body_blocks : []) : null,

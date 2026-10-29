@@ -32,6 +32,7 @@ use Tests\TestCase;
 class GroupPaymentWebhooksTest extends TestCase
 {
     use DatabaseTransactions, SetsUpMinimalSchema;
+    use \Tests\Concerns\SetsUpServiceBookingSchema, \Tests\Concerns\MocksCurrentStripeRefunds;
 
     private Organization $org;
     private $stripe;
@@ -41,6 +42,8 @@ class GroupPaymentWebhooksTest extends TestCase
     {
         parent::setUp();
         $this->setUpBookingRefundSchema();
+        $this->setUpServiceBookingSchema();
+        $this->setUpLoyaltySchema();
         if (!Schema::hasTable('stripe_webhook_events')) {
             Schema::create('stripe_webhook_events', function ($t) {
                 $t->bigIncrements('id');
@@ -58,6 +61,7 @@ class GroupPaymentWebhooksTest extends TestCase
         $this->org = Organization::create(['name' => 'Seaside Hotel', 'slug' => 'seaside-' . uniqid()]);
 
         $this->stripe = Mockery::mock(StripeService::class);
+        $this->mockCurrentRefunds($this->stripe);
         $this->stripe->shouldReceive('isEnabled')->andReturn(true);
         $this->stripe->shouldReceive('constructWebhookEvent')->andReturnUsing(fn (string $payload) => \Stripe\Event::constructFrom(json_decode($payload, true)));
         $this->stripe->shouldNotReceive('refund');
@@ -98,8 +102,11 @@ class GroupPaymentWebhooksTest extends TestCase
         return DB::table('booking_mirror')->where('id', $id)->first();
     }
 
-    private function deliver(string $type, array $object): void
+    private function deliver(string $type, array $object, bool $current = true): void
     {
+        if ($type === 'charge.refunded' && $current && isset($object['refunds'])) {
+            $this->providerRefunds($object['payment_intent'], $object['refunds']['data'], $object['currency']);
+        }
         $this->postJson('/api/v1/booking/webhooks/stripe', [
             'id' => 'evt_' . uniqid(), 'object' => 'event', 'type' => $type, 'data' => ['object' => $object],
         ], ['Stripe-Signature' => 't=1,v1=test'])->assertOk();
@@ -206,8 +213,9 @@ class GroupPaymentWebhooksTest extends TestCase
         $lock = \App\Support\SharedCache::store()->lock("refund:{$lead}", 30);
         $this->assertTrue($lock->get(), 'our refund holds the lock');
         $event = ['id' => 'evt_ours_1', 'object' => 'event', 'type' => 'charge.refunded', 'data' => ['object' => $this->charge(36000, [['id' => 're_ours_1', 'object' => 'refund', 'amount' => 36000]])]];
+        $this->providerRefunds('pi_group_1', [['id' => 're_ours_1', 'amount' => 36000]]);
 
-        $this->postJson('/api/v1/booking/webhooks/stripe', $event, ['Stripe-Signature' => 't=1,v1=test'])->assertStatus(500);
+        $this->postJson('/api/v1/booking/webhooks/stripe', $event, ['Stripe-Signature' => 't=1,v1=test'])->assertStatus(503);
 
         $this->assertSame('paid', $this->row($lead)->payment_status);
         $this->assertSame('paid', $this->row($other)->payment_status);
@@ -383,7 +391,7 @@ class GroupPaymentWebhooksTest extends TestCase
         $this->assertSame('re_second', $this->row($id)->last_refund_id, 'the newest refund, not the oldest');
 
         $this->travel(2)->minutes();
-        $this->deliver('charge.refunded', $charge(5000, [$first]));
+        $this->deliver('charge.refunded', $charge(5000, [$first]), current: false);
         $this->assertEquals(80.0, (float) $this->row($id)->refunded_amount, 'an older event arriving late moves nothing back');
         Mail::assertQueued(BookingRefundMail::class, 2);
     }
@@ -409,6 +417,7 @@ class GroupPaymentWebhooksTest extends TestCase
         $this->smoobu->shouldReceive('cancelReservation')->twice()->andReturn([]);
         $charge = $this->charge(36000, []);
         unset($charge['refunds']);
+        $this->providerRefunds('pi_group_1', [['id' => 're_provider_full', 'amount' => 36000]]);
 
         $this->deliver('charge.refunded', $charge);
 

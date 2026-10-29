@@ -38,6 +38,7 @@ use Tests\TestCase;
 class LostDisputeTest extends TestCase
 {
     use DatabaseTransactions, SetsUpMinimalSchema, SetsUpServiceBookingSchema;
+    use \Tests\Concerns\MocksCurrentStripeRefunds;
 
     private Organization $org;
     private int $memberId;
@@ -75,6 +76,7 @@ class LostDisputeTest extends TestCase
         $this->memberId = $this->member();
 
         $stripe = Mockery::mock(StripeService::class);
+        $this->mockCurrentRefunds($stripe);
         $stripe->shouldReceive('isEnabled')->andReturn(true);
         $stripe->shouldReceive('constructWebhookEvent')->andReturnUsing(fn (string $payload) => \Stripe\Event::constructFrom(json_decode($payload, true)));
         $stripe->shouldNotReceive('refund');
@@ -162,6 +164,8 @@ class LostDisputeTest extends TestCase
         $reversed = [];
         $this->loyalty->shouldReceive('reverseTransaction')->twice()->andReturnUsing(function (PointsTransaction $tx) use (&$reversed) {
             $reversed[] = (int) $tx->id;
+            // Model the real ledger's durable marker so the recovery hook sees the settled reversal.
+            $tx->update(['is_reversed' => true]);
             return $tx;
         });
 
@@ -180,6 +184,7 @@ class LostDisputeTest extends TestCase
             $this->assertSame('confirmed', $row->internal_status);
         }
         $this->assertEqualsCanonicalizing([$leadTx, $otherTx], $reversed, "every room's points are reversed");
+        $this->assertSame(2, PointsTransaction::whereIn('id', [$leadTx, $otherTx])->where('is_reversed', true)->count());
         $audits = DB::table('audit_logs')->where('action', 'booking_dispute_lost')->orderBy('subject_id')->get();
         $this->assertSame([$lead, $other], $audits->pluck('subject_id')->map(fn ($v) => (int) $v)->all());
         $this->assertSame('dp_1', json_decode($audits[0]->new_values, true)['dispute_id']);
@@ -245,7 +250,8 @@ class LostDisputeTest extends TestCase
     {
         $id = $this->serviceBooking();
         $tx = $this->earned('service_booking', $id, 54);
-        $this->loyalty->shouldReceive('reverseTransaction')->once()->with(Mockery::on(fn ($t) => (int) $t->id === $tx), Mockery::any(), Mockery::any())->andReturnUsing(fn ($t) => $t);
+        $this->loyalty->shouldReceive('reverseTransaction')->once()->with(Mockery::on(fn ($t) => (int) $t->id === $tx), Mockery::any(), Mockery::any())
+            ->andReturnUsing(function (PointsTransaction $line) { $line->update(['is_reversed' => true]); return $line; });
 
         // The dispute carries no metadata: its organisation is found through the booking that carries the payment.
         $this->deliver('charge.dispute.created', $this->dispute('pi_svc_dispute', 5400, 'needs_response', 'eur', 'dp_svc'));
@@ -258,6 +264,7 @@ class LostDisputeTest extends TestCase
         $this->assertSame('dispute_dp_svc', $row->last_refund_id);
         $this->assertSame('confirmed', $row->status, 'the booking is left as it is');
         $this->assertSame(1, DB::table('audit_logs')->where('action', 'service_booking.dispute_lost')->where('subject_id', $id)->count());
+        $this->assertTrue(PointsTransaction::findOrFail($tx)->is_reversed);
 
         // Delivered again: once.
         $this->deliver('charge.dispute.closed', $this->dispute('pi_svc_dispute', 5400, 'lost', 'eur', 'dp_svc'));
@@ -280,6 +287,7 @@ class LostDisputeTest extends TestCase
     /** A `charge.refunded` event as Stripe sends it: the charge's cumulative `amount_refunded`, which counts refunds only. */
     private function refunded(string $pi, int $amountMinor, int $refundedMinor, string $refundId): void
     {
+        $this->providerRefunds($pi, [['id' => $refundId, 'amount' => $refundedMinor]]);
         $this->postJson('/api/v1/booking/webhooks/stripe', [
             'id' => 'evt_' . uniqid(), 'object' => 'event', 'type' => 'charge.refunded', 'data' => ['object' => [
                 'id' => 'ch_' . $pi, 'object' => 'charge', 'payment_intent' => $pi, 'amount' => $amountMinor, 'amount_captured' => $amountMinor,

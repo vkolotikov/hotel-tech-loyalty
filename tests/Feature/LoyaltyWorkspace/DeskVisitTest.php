@@ -289,7 +289,7 @@ class DeskVisitTest extends TestCase
     {
         $this->setOptions(['checkin_enabled' => true]);
         DB::table('staff')->where('user_id', $this->staffMember->id)->update(['can_award_points' => false]);
-        $this->checkIn($this->grace->id)->assertStatus(403)->assertJsonPath('need', 'can_award_points');
+        $this->checkIn($this->grace->id)->assertStatus(403)->assertJsonPath('error', 'not_allowed');
 
         $other = $this->otherOrganization();
         $this->asManager()->postJson($this->api("members/{$other['member']->id}/check-in"))->assertStatus(404);

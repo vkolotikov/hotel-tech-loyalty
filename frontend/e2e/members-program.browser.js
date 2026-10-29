@@ -65,19 +65,19 @@ async (page) => {
   await page.setViewportSize({width:1440,height:1080});
   const open=async path=>{await page.goto('http://127.0.0.1:5173'+path);await page.locator('.l-rd-page').waitFor();await page.evaluate(()=>document.fonts.ready);};
   await open('/loyalty?state=all');await page.getByRole('link',{name:'Jamie Taylor jamie.taylor@example.test'}).waitFor();
-  await page.screenshot({path:root+'render-members-initial.png',fullPage:true});
+  await page.screenshot({path:root+'render-members-initial.png',fullPage:false});
   await open('/loyalty/members/1');await page.getByRole('heading',{name:'Jamie Taylor'}).waitFor();
-  await page.screenshot({path:root+'render-profile-initial.png',fullPage:true});
+  await page.screenshot({path:root+'render-profile-initial.png',fullPage:false});
   await page.getByRole('button',{name:'Award points',exact:true}).click();await page.getByRole('dialog').waitFor();
   await page.getByRole('spinbutton',{name:'Points to add',exact:true}).fill('250');await page.getByLabel('Reason',{exact:true}).fill('Thank you for visiting us');
-  await page.getByRole('heading',{name:'Award points',exact:true}).click();await page.screenshot({path:root+'render-award-initial.png',fullPage:true});await page.keyboard.press('Escape');
+  await page.getByRole('heading',{name:'Award points',exact:true}).click();await page.screenshot({path:root+'render-award-initial.png',fullPage:false});await page.keyboard.press('Escape');
   await open('/loyalty/program');await page.getByRole('heading',{name:'Gold',exact:true}).waitFor();
-  await page.screenshot({path:root+'render-levels-initial.png',fullPage:true});
+  await page.screenshot({path:root+'render-levels-initial.png',fullPage:false});
   await page.getByRole('button',{name:'Edit level Gold',exact:true}).click();await page.getByRole('heading',{name:'Edit Gold level'}).waitFor();
-  await page.screenshot({path:root+'render-edit-level-initial.png',fullPage:true});
+  await page.screenshot({path:root+'render-edit-level-initial.png',fullPage:false});
   await page.getByRole('button',{name:'+ Add benefit',exact:true}).click();await page.getByRole('dialog').waitFor();
   await page.getByRole('combobox',{name:'Benefit',exact:true}).selectOption('5');await page.getByRole('combobox',{name:'Value type',exact:true}).selectOption('percent_discount');
   await page.getByRole('spinbutton',{name:'Discount (%)',exact:true}).fill('10');await page.getByRole('combobox',{name:'Applies to',exact:true}).selectOption('stays');await page.getByLabel('Wording shown to members',{exact:true}).fill('10% off eligible stays');
-  await page.screenshot({path:root+'render-add-benefit-initial.png',fullPage:true});
+  await page.screenshot({path:root+'render-add-benefit-initial.png',fullPage:false});
   return {errors:state.errors,missing:state.requests.filter(r=>r.path[0]==='/'),requests:state.requests.length};
 }

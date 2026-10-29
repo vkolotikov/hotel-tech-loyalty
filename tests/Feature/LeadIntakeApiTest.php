@@ -6,9 +6,10 @@ use App\Models\Inquiry;
 use App\Models\Organization;
 use App\Models\Pipeline;
 use App\Models\PipelineStage;
+use App\Models\Staff;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Laravel\Sanctum\Sanctum;
+use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 /**
@@ -28,23 +29,14 @@ class LeadIntakeApiTest extends TestCase
 
     private const ENDPOINT = '/api/v1/integrations/leads';
 
-    /**
-     * Skipped until a dedicated Postgres test DB is wired up.
-     *
-     * This suite uses RefreshDatabase, which runs all 137 production
-     * migrations against the configured DB. Several of those migrations
-     * touch `pg_indexes` (Postgres system catalog) — sqlite errors with
-     * "no such table: pg_indexes" before the test body even runs.
-     *
-     * Also flagged by AUDIT-2026-06-13-ADDENDUM.md (testing finding
-     * "LeadIntakeApiTest has correctness + isolation issues"). Unskip
-     * + fix as part of the Postgres test-DB ship.
-     */
-    protected function setUp(): void
+    /** RefreshDatabase rebuilds every table: only this dedicated PostgreSQL database may be used. */
+    protected function beforeRefreshingDatabase(): void
     {
-        $this->markTestSkipped(
-            'Blocked on Postgres test DB. Migration set includes pg_indexes lookups that sqlite cannot evaluate. See AUDIT-2026-06-13-ADDENDUM.md testing recommendation #1.'
-        );
+        if (DB::getDriverName() !== 'pgsql') {
+            $this->markTestSkipped('Lead intake migration coverage requires PostgreSQL (production migrations use pg_indexes).');
+        }
+        $this->assertTrue(app()->environment('testing'));
+        $this->assertSame('hexa_leadintake_test', DB::connection()->getDatabaseName(), 'Run this destructive migration suite only on its dedicated hexa_leadintake_test database.');
     }
 
     private function makeOrgWithStaff(string $orgName = 'Acme Hotels'): array
@@ -61,12 +53,14 @@ class LeadIntakeApiTest extends TestCase
         $pipeline = Pipeline::create([
             'organization_id' => $org->id,
             'name'            => 'Sales',
+            'slug'            => 'sales',
             'is_default'      => true,
         ]);
         PipelineStage::create([
             'organization_id' => $org->id,
             'pipeline_id'     => $pipeline->id,
             'name'            => 'New',
+            'slug'            => 'new',
             'kind'            => 'open',
             'sort_order'      => 1,
         ]);
@@ -78,8 +72,21 @@ class LeadIntakeApiTest extends TestCase
             'user_type'       => 'staff',
             'organization_id' => $org->id,
         ]);
+        Staff::create([
+            'organization_id' => $org->id, 'user_id' => $user->id,
+            'role' => 'staff', 'is_active' => true,
+        ]);
 
         return [$org, $user];
+    }
+
+    /** Use real personal tokens and make middleware prove the organization, independently of fixture bindings. */
+    private function authenticate(User $user): void
+    {
+        $this->app['auth']->forgetGuards();
+        app()->forgetInstance('current_organization_id');
+        app()->forgetInstance('current_brand_id');
+        $this->withToken($user->createToken('lead-intake-test')->plainTextToken);
     }
 
     private function validPayload(array $overrides = []): array
@@ -123,7 +130,7 @@ class LeadIntakeApiTest extends TestCase
     public function test_valid_payload_creates_lead_scoped_to_token_user(): void
     {
         [$org, $user] = $this->makeOrgWithStaff();
-        Sanctum::actingAs($user, ['*']);
+        $this->authenticate($user);
 
         $resp = $this->postJson(self::ENDPOINT, $this->validPayload());
 
@@ -139,12 +146,15 @@ class LeadIntakeApiTest extends TestCase
         ]);
 
         // Guest created and linked.
-        $inquiry = Inquiry::withoutGlobalScopes()->where('external_id', 'e3bb7fba-d240-46ac-adfd-392b90bd167f')->first();
+        $inquiry = Inquiry::withoutGlobalScopes()->where('organization_id', $org->id)->findOrFail($resp->json('id'));
         $this->assertNotNull($inquiry->guest_id);
         $this->assertDatabaseHas('guests', [
+            'id'              => $inquiry->guest_id,
             'organization_id' => $org->id,
             'email'           => 'john@acme.com',
         ]);
+        $this->assertDatabaseHas('pipelines', ['id' => $inquiry->pipeline_id, 'organization_id' => $org->id, 'is_default' => true]);
+        $this->assertDatabaseHas('pipeline_stages', ['id' => $inquiry->pipeline_stage_id, 'pipeline_id' => $inquiry->pipeline_id, 'kind' => 'open']);
 
         // URL is shape we promised.
         $this->assertStringContainsString('/inquiries/' . $inquiry->id, $resp->json('url'));
@@ -154,7 +164,7 @@ class LeadIntakeApiTest extends TestCase
     public function test_replay_returns_existing_lead_without_duplicating(): void
     {
         [, $user] = $this->makeOrgWithStaff();
-        Sanctum::actingAs($user, ['*']);
+        $this->authenticate($user);
 
         $first = $this->postJson(self::ENDPOINT, $this->validPayload());
         $first->assertStatus(201);
@@ -163,6 +173,7 @@ class LeadIntakeApiTest extends TestCase
         $second = $this->postJson(self::ENDPOINT, $this->validPayload());
         $second->assertStatus(200);
         $this->assertSame($firstId, $second->json('id'));
+        $this->assertDatabaseCount('guests', 1);
 
         // No duplicate created.
         $this->assertSame(
@@ -178,7 +189,7 @@ class LeadIntakeApiTest extends TestCase
     public function test_missing_required_field_returns_422(): void
     {
         [, $user] = $this->makeOrgWithStaff();
-        Sanctum::actingAs($user, ['*']);
+        $this->authenticate($user);
 
         $payload = $this->validPayload();
         unset($payload['contact']['email']);
@@ -188,19 +199,20 @@ class LeadIntakeApiTest extends TestCase
             ->assertJsonValidationErrors(['contact.email']);
 
         $this->assertDatabaseCount('inquiries', 0);
+        $this->assertDatabaseCount('guests', 0);
     }
 
     /** Scenario 6 — Two users' tokens, same external_id → no cross-account collision */
     public function test_different_orgs_can_share_external_id(): void
     {
         [$orgA, $userA] = $this->makeOrgWithStaff('Org A');
-        Sanctum::actingAs($userA, ['*']);
+        $this->authenticate($userA);
         $respA = $this->postJson(self::ENDPOINT, $this->validPayload());
         $respA->assertStatus(201);
         $idA = $respA->json('id');
 
         [$orgB, $userB] = $this->makeOrgWithStaff('Org B');
-        Sanctum::actingAs($userB, ['*']);
+        $this->authenticate($userB);
         $respB = $this->postJson(self::ENDPOINT, $this->validPayload());
         $respB->assertStatus(201);
         $idB = $respB->json('id');
@@ -208,6 +220,13 @@ class LeadIntakeApiTest extends TestCase
         $this->assertNotSame($idA, $idB);
         $this->assertDatabaseHas('inquiries', ['id' => $idA, 'organization_id' => $orgA->id]);
         $this->assertDatabaseHas('inquiries', ['id' => $idB, 'organization_id' => $orgB->id]);
+        $leadA = Inquiry::withoutGlobalScopes()->findOrFail($idA);
+        $leadB = Inquiry::withoutGlobalScopes()->findOrFail($idB);
+        $this->assertNotSame($leadA->guest_id, $leadB->guest_id, 'The same contact email must not link guests across organizations.');
+        $this->assertDatabaseHas('guests', ['id' => $leadA->guest_id, 'organization_id' => $orgA->id]);
+        $this->assertDatabaseHas('guests', ['id' => $leadB->guest_id, 'organization_id' => $orgB->id]);
+        $this->assertDatabaseHas('pipelines', ['id' => $leadA->pipeline_id, 'organization_id' => $orgA->id]);
+        $this->assertDatabaseHas('pipelines', ['id' => $leadB->pipeline_id, 'organization_id' => $orgB->id]);
 
         // Two distinct inquiries with the same external_id but different orgs.
         $this->assertSame(

@@ -44,6 +44,20 @@ function render(detail: Record<string, unknown>) {
 afterEach(() => clients.splice(0).forEach(client => client.clear()))
 
 describe('booking detail — the payment reference of a room group', () => {
+  it('keeps the booking currency on totals, paid amounts and its balance', () => {
+    const html = render({ ...room, currency: 'GBP', price_total: 160, price_paid: 60, balance_due: 100 })
+    expect(html).toMatch(/£160[.,]00/)
+    expect(html).toMatch(/£60[.,]00/)
+    expect(html).toMatch(/£100[.,]00/)
+    expect(html).not.toContain('€')
+  })
+  it('shows a durable pending refund and sends other rooms to the original refund', () => {
+    const html = render({ ...room, pending_refunds: [{ id: 'op', booking_id: 41, requested_amount: 25, status: 'unknown', currency: 'EUR' }] })
+    expect(html).toContain('The refund outcome is not known yet')
+    expect(html).toContain('do not return the money another way')
+    expect(html).toContain('href="/bookings/41"')
+    expect(html).toContain('Open the original room refund')
+  })
   it("shows a following room the group's payment, carried by the lead room, with a link to it", () => {
     const html = render({ ...room, group_payment: { payment_intent_id: 'pi_group_1', lead_id: 41, is_lead: false, total: 360, rooms: [{ id: 41 }, { id: 42 }] } })
     expect(html).toContain('Group payment ID')

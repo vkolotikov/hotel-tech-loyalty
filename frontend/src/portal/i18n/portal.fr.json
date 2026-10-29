@@ -76,6 +76,8 @@
       "not_cancellable": "Cette réservation ne peut pas être annulée ici. Veuillez contacter l'établissement.",
       "already_cancelled": "Cette réservation est déjà annulée.",
       "cancel_in_progress": "Cette réservation est en cours d'annulation. Veuillez vérifier dans un instant.",
+      "refund_pending": "Votre remboursement est en cours. La réservation reste active. Veuillez vérifier à nouveau dans un instant.",
+      "refund_outcome_unknown": "Le résultat du remboursement est encore inconnu. La réservation reste active. Réessayez l’annulation pour vérifier.",
       "refund_failed": "Le paiement n'a pas pu être restitué pour le moment, la réservation n'a donc pas été annulée. Veuillez réessayer dans un instant.",
       "refund_unavailable": "Le paiement ne peut pas être restitué ici, la réservation n'a donc pas été annulée. Veuillez contacter l'établissement.",
       "cancel_failed": "Nous n'avons pas pu terminer l'annulation de cette réservation. Si un remboursement était dû, il est peut-être déjà en cours. Veuillez réessayer ou contacter l'établissement."
@@ -155,6 +157,7 @@
     "confirmed_title": "Vous êtes réservé", "confirmed_body": "Référence {{reference}}. Nous vous avons envoyé les détails par e-mail.", "add_to_calendar": "Ajouter au calendrier",
     "change": "Modifier", "continue": "Continuer", "back": "Retour", "cta_home": "Réserver {{noun}}", "not_bookable": "La réservation en ligne n'est pas encore disponible pour cet établissement.",
     "too_soon": "Ce créneau est trop proche pour être réservé en ligne.", "too_far_ahead": "Cette date dépasse la période de réservation autorisée.",
+    "currency_mismatch": "Ces prix utilisent des devises différentes. Veuillez contacter le lieu avant de réserver.",
     "extra_lead_time": "Une des options nécessite plus de préavis que ce créneau ne le permet.", "payment_required": "Veuillez d'abord finaliser le paiement.",
     "idempotency_conflict": "Cette réservation a déjà été envoyée. Consultez vos réservations.", "confirm_failed": "Impossible de finaliser la réservation. Veuillez réessayer.",
     "nothing_to_pay": "Il n'y a rien à payer en ligne pour cette réservation.",

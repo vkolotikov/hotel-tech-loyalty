@@ -6,6 +6,7 @@ use App\Jobs\SendNotificationCampaignChunk;
 use App\Models\LoyaltyMember;
 use App\Models\LoyaltyTier;
 use App\Models\NotificationCampaign;
+use App\Models\EmailTemplate;
 use App\Models\Organization;
 use App\Models\User;
 use App\Services\EmailComplianceService;
@@ -14,6 +15,8 @@ use App\Services\NotificationService;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Schema;
 use Tests\Concerns\LoyaltyWorkspace\PushSchema;
 use Tests\Concerns\SetsUpMinimalSchema;
@@ -154,5 +157,99 @@ class NotificationCampaignPushTest extends TestCase
         $this->assertSame('sent', $fresh->status);
 
         Http::assertSent(fn ($request) => str_starts_with($request->url(), 'https://exp.host/'));
+    }
+
+    private function retryFixture(string $channel = 'push'): array
+    {
+        Queue::fake();
+        config(['cache.shared' => 'array', 'mail.campaign_hourly_limit_per_org' => 10000, 'mail.campaign_hourly_limit_global' => 10000]);
+        $org = Organization::create(['name' => 'Retry fixture', 'slug' => 'retry-' . uniqid(), 'subscription_status' => 'ACTIVE']);
+        app()->instance('current_organization_id', $org->id);
+        $user = User::create(['organization_id' => $org->id, 'name' => 'Retry Member', 'email' => uniqid() . '@example.test', 'password' => 'FixturePassword123!']);
+        $member = LoyaltyMember::create($this->memberRequired(['organization_id' => $org->id, 'user_id' => $user->id, 'member_number' => 'M-' . $user->id, 'is_active' => true]));
+        DB::table('loyalty_members')->where('id', $member->id)->update(['expo_push_token' => 'ExponentPushToken[test-device]']);
+        $templateId = null;
+        if ($channel === 'both') {
+            if (!Schema::hasTable('email_templates')) {
+                Schema::create('email_templates', function ($t) {
+                    $t->id(); $t->unsignedBigInteger('organization_id'); $t->unsignedBigInteger('brand_id')->nullable();
+                    $t->string('name'); $t->string('subject'); $t->text('html_body'); $t->boolean('is_active')->default(true); $t->timestamps();
+                });
+            }
+            $templateId = EmailTemplate::create(['name' => 'Retry fixture', 'subject' => 'Fixture', 'html_body' => '<p>Hello {{member_name}}</p>'])->id;
+        }
+        $campaign = NotificationCampaign::create(['name' => 'Retry fixture', 'title' => 'Fixture', 'body' => 'Fixture', 'channel' => $channel,
+            'status' => 'sending', 'target_count' => 101, 'email_template_id' => $templateId]);
+        // Keep the campaign sending after the first slice, like a retried mid-campaign worker.
+        $job = new SendNotificationCampaignChunk($campaign->id, array_merge([$member->id], array_fill(0, 100, PHP_INT_MAX)));
+        return [$org, $member, $campaign, $job];
+    }
+
+    public function test_a_retried_slice_sends_push_and_email_once_and_counts_each_settled_recipient_once(): void
+    {
+        [, $member, $campaign, $job] = $this->retryFixture('both');
+        $notifications = $this->mock(NotificationService::class);
+        $notifications->shouldReceive('send')->once()->andReturnUsing(function () use ($campaign, $member) {
+            $this->assertDatabaseHas('campaign_recipients', ['campaign_id' => $campaign->id, 'loyalty_member_id' => $member->id,
+                'channel' => 'push', 'status' => 'pending', 'sent_at' => null]);
+        });
+        $compliance = $this->mock(EmailComplianceService::class);
+        $compliance->shouldReceive('canReceive')->andReturn(true);
+        $compliance->shouldReceive('footerHtml')->once()->andReturn('');
+        Mail::shouldReceive('html')->once()->andReturn(new \stdClass());
+        $job->handle($compliance, $notifications, app(MailIdentityService::class));
+        $job->handle($compliance, $notifications, app(MailIdentityService::class));
+        $this->assertSame(2, DB::table('campaign_recipients')->where('campaign_id', $campaign->id)->count());
+        $this->assertSame(1, (int) $campaign->fresh()->sent_count);
+        $this->assertSame(1, (int) $campaign->fresh()->email_sent_count);
+        $this->assertSame('sending', $campaign->fresh()->status);
+    }
+
+    public function test_pending_and_failed_delivery_outcomes_are_never_resent_or_counted_as_sent(): void
+    {
+        foreach (['pending', 'failed'] as $status) {
+            [$org, $member, $campaign, $job] = $this->retryFixture('both');
+            foreach (['push', 'email'] as $channel) {
+                DB::table('campaign_recipients')->insert(['organization_id' => $org->id, 'campaign_id' => $campaign->id,
+                    'loyalty_member_id' => $member->id, 'channel' => $channel, 'status' => $status, 'created_at' => now(), 'updated_at' => now()]);
+            }
+            $notifications = $this->mock(NotificationService::class);
+            $notifications->shouldNotReceive('send');
+            $compliance = $this->mock(EmailComplianceService::class);
+            $compliance->shouldReceive('canReceive')->andReturn(true);
+            Mail::shouldReceive('html')->never();
+            $job->handle($compliance, $notifications, app(MailIdentityService::class));
+            $this->assertSame(2, DB::table('campaign_recipients')->where('campaign_id', $campaign->id)->count());
+            $this->assertSame(0, (int) $campaign->fresh()->sent_count);
+            $this->assertSame(0, (int) $campaign->fresh()->email_sent_count);
+        }
+    }
+
+    public function test_cancellation_during_delivery_stops_new_claims_without_losing_the_completed_count(): void
+    {
+        [$org, $member, $campaign] = $this->retryFixture();
+        $user = User::create(['organization_id' => $org->id, 'name' => 'Later Member', 'email' => uniqid() . '@example.test', 'password' => 'FixturePassword123!']);
+        $later = LoyaltyMember::create($this->memberRequired(['organization_id' => $org->id, 'user_id' => $user->id, 'member_number' => 'M-' . $user->id, 'is_active' => true]));
+        DB::table('loyalty_members')->where('id', $later->id)->update(['expo_push_token' => 'ExponentPushToken[later-test-device]']);
+        $notifications = $this->mock(NotificationService::class);
+        $notifications->shouldReceive('send')->once()->andReturnUsing(fn () => $campaign->update(['status' => 'cancelled']));
+        $job = new SendNotificationCampaignChunk($campaign->id, [$member->id, $later->id]);
+        $job->handle(app(EmailComplianceService::class), $notifications, app(MailIdentityService::class));
+        $this->assertSame('cancelled', $campaign->fresh()->status);
+        $this->assertSame(1, (int) $campaign->fresh()->sent_count);
+        $this->assertSame(1, DB::table('campaign_recipients')->where('campaign_id', $campaign->id)->count());
+        $this->assertDatabaseMissing('campaign_recipients', ['campaign_id' => $campaign->id, 'loyalty_member_id' => $later->id]);
+    }
+
+    public function test_marketing_push_opt_out_creates_no_delivery_claim_and_is_not_counted(): void
+    {
+        [, $member, $campaign, $job] = $this->retryFixture();
+        DB::table('loyalty_members')->where('id', $member->id)->update(['notification_preferences' => json_encode(['offers' => false])]);
+        $notifications = $this->mock(NotificationService::class);
+        $notifications->shouldNotReceive('send');
+        $this->assertSame('offers', NotificationService::categoryOf('campaign'));
+        $job->handle(app(EmailComplianceService::class), $notifications, app(MailIdentityService::class));
+        $this->assertSame(0, (int) $campaign->fresh()->sent_count);
+        $this->assertDatabaseMissing('campaign_recipients', ['campaign_id' => $campaign->id, 'loyalty_member_id' => $member->id]);
     }
 }

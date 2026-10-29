@@ -737,6 +737,7 @@ img{max-width:100%;display:block}
       customer_notes: state.customer.notes,
       extras: state.extras,
       payment_intent_id: state.paymentIntent ? state.paymentIntent.id : null,
+      quote_token: state.paymentIntent ? state.paymentIntent.quote_token : null,
       source: state.source,
     }, { 'Idempotency-Key': state.idempotencyKey }).then(function (res) {
       state.submitting = false
@@ -1349,6 +1350,7 @@ img{max-width:100%;display:block}
     body.customer_phone = state.customer.phone
     body.customer_notes = state.customer.notes
     body.payment_intent_id = intentId
+    body.quote_token = dep.intent ? dep.intent.quote_token : null
     body.source = state.source
     post('/v1/services/confirm', body, { 'Idempotency-Key': state.idempotencyKey }).then(function (res) {
       dep.paying = false

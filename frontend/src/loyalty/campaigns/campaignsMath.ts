@@ -90,12 +90,13 @@ export const isLive = (status: string): boolean => status === 'sending'
  * was handed that it neither mailed nor failed: they withdrew consent or unsubscribed after it started (the job checks
  * again before every chunk), or — since release 3 — the transport refused their address as suppressed.
  */
-export function progressOf(c: Pick<CampaignRow, 'status' | 'recipient_count' | 'sent_count' | 'failed_count'>): { done: number; total: number; percent: number; skipped: number } {
+export function progressOf(c: Pick<CampaignRow, 'status' | 'recipient_count' | 'sent_count' | 'failed_count' | 'pending_count'>): { done: number; total: number; percent: number; skipped: number } {
   const done = c.sent_count + c.failed_count
   const total = c.recipient_count
   const percent = total > 0 ? Math.min(100, Math.round((done * 100) / total)) : 0
   const sent = c.status === 'sent'
-  return { done, total, percent: sent ? 100 : percent, skipped: sent ? Math.max(0, total - done) : 0 }
+  const pending = c.pending_count ?? 0
+  return { done, total, percent: sent && pending === 0 ? 100 : percent, skipped: sent ? Math.max(0, total - done - pending) : 0 }
 }
 
 // ─── Segments: the form ───────────────────────────────────────────────────

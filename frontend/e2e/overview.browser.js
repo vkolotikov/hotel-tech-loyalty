@@ -28,6 +28,8 @@ async (page, only = null) => {
   await page.unrouteAll({behavior:'wait'});
   await page.context().setOffline(false);
   await page.context().addInitScript(() => {
+    if (sessionStorage.getItem('overview-fixture-seeded')) return;
+    sessionStorage.setItem('overview-fixture-seeded','1');
     localStorage.setItem('auth_token','overview-local-fixture');
     localStorage.setItem('loyalty-auth',JSON.stringify({state:{token:'overview-local-fixture',user:{id:1,name:'Alex Morgan',email:'overview@example.test',user_type:'staff',language:'en'},staff:{role:'manager'}},version:1}));
     localStorage.setItem('loyalty:look',JSON.stringify({theme:'dark',rail:'full'}));
@@ -81,7 +83,7 @@ async (page, only = null) => {
   const reset=()=>Object.assign(state,{org:1,mode:'points',fail:null,status:503,delay:0,limited:false,empty:false,initial:false,noActivity:false,clear:false,purchaseOff:false,routeSmoke:false});
   const open=async(search='')=>{await page.goto('http://127.0.0.1:5173/loyalty/overview'+search);await page.locator('.l-ov-page').waitFor();};
   const loaded=async()=>{await page.locator('.l-ov-metric strong').first().getByText('1,248',{exact:true}).waitFor();await page.evaluate(()=>document.fonts.ready);};
-  const shot=async(name)=>page.screenshot({path:root+name+'.png',fullPage:true});
+  const shot=async(name)=>page.screenshot({path:root+name+'.png',fullPage:false});
   const noOverflow=async()=>check(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'horizontal page overflow');
   await test('desktop layout, authorized navigation and exact queue links',async()=>{
     await page.setViewportSize({width:1440,height:1080});await open();await loaded();
@@ -96,7 +98,7 @@ async (page, only = null) => {
     for(const [label,name]of [['Program details','program'],['Preview member view','preview'],['Review issues','issues'],['About these numbers','definitions'],['View all requests','queues']]){
       const button=page.getByRole('button',{name:label,exact:false}).first();await button.click();await page.getByRole('dialog').waitFor();
       if(name==='queues')check(await page.getByRole('dialog').getByRole('link').count()===2,'both queues');
-      await shot('desktop-'+name);await page.keyboard.press('Escape');check(await button.evaluate(b=>b===document.activeElement),'focus restore '+name);
+      await shot('desktop-'+name);await page.keyboard.press('Escape');await page.getByRole('dialog').waitFor({state:'hidden'});await page.waitForFunction(el=>el===document.activeElement,await button.elementHandle());check(await button.evaluate(b=>b===document.activeElement),'focus restore '+name);
     }
   });
   await test('all periods change period metrics and preserve current totals; activity filter clears',async()=>{
@@ -107,18 +109,15 @@ async (page, only = null) => {
     }
     await page.getByRole('button',{name:'View activity',exact:false}).click();await page.getByRole('button',{name:'Visits',exact:true}).click();
     await page.getByRole('dialog').getByRole('heading',{name:'No activity matches this filter'}).waitFor();await shot('activity-empty');
-    await page.getByRole('dialog').getByRole('button',{name:'Clear filter'}).click();await page.getByRole('dialog').getByText('Alex earned 250 points').waitFor();
+    await page.getByRole('dialog').getByRole('button',{name:/Clear.*filter/i}).click();await page.getByRole('dialog').getByText('Alex earned 250 points').waitFor();
     await page.keyboard.press('Escape');check(page.url().includes('period=12m'),'period lost');
   });
-  await test('390px composition, full-screen period, modal focus trap and narrow navigation',async()=>{
-    await page.setViewportSize({width:390,height:844});await open();await loaded();await noOverflow();await shot('mobile-390');
-    check((await page.locator('.l-ov-attention').boundingBox()).y<(await page.locator('.l-ov-program').boundingBox()).y,'attention order');
-    await page.locator('.l-ov-period > button').click();const d=page.getByRole('dialog');await d.waitFor();check((await d.boundingBox()).height===844,'period not full screen');
-    await shot('mobile-period');await page.getByRole('button',{name:'Last 90 days',exact:true}).click();
-    await page.getByRole('button',{name:'Program details',exact:true}).click();await page.getByRole('dialog').waitFor();
+  // The dedicated mobile-web suite covers the new Home composition, period sheet and More navigation.
+  await test('390px Home and activity dialog retain keyboard focus',async()=>{
+    await page.setViewportSize({width:390,height:844});await open();await page.locator('.l-mw-metric strong').first().getByText('1,248',{exact:true}).waitFor();await noOverflow();await shot('mobile-390');
+    await page.getByRole('button',{name:/View activity/}).click();await page.getByRole('dialog').waitFor();
     for(let i=0;i<18;i++){await page.keyboard.press('Tab');check(await page.evaluate(()=>document.activeElement.closest('dialog')!==null),'focus escaped dialog');}
-    await page.getByRole('dialog').evaluate(d=>d.scrollTop=0);await shot('mobile-program');await page.keyboard.press('Escape');
-    await page.getByRole('button',{name:'Menu',exact:true}).click();await page.getByRole('dialog').waitFor();check((await page.getByRole('dialog').boundingBox()).width===300,'navigation width');await shot('mobile-menu');await page.keyboard.press('Escape');
+    await page.keyboard.press('Escape');await page.getByRole('dialog').waitFor({state:'hidden'});
   });
   await test('320, 768, 1024 and landscape layouts; no horizontal overflow',async()=>{
     for(const [width,height] of [[320,740],[768,1024],[1024,900],[844,390]]){await page.setViewportSize({width,height});await noOverflow();await shot('layout-'+width);}
@@ -169,15 +168,19 @@ async (page, only = null) => {
   });
   await test('permission removal clears previously visible analytics',async()=>{
     await open();await loaded();state.fail='metrics';state.status=403;
-    await page.evaluate(async()=>{const {queryClient}=await import('/src/lib/queryClient.ts');await queryClient.invalidateQueries({queryKey:['loyalty','overview']});});
+    await page.evaluate(()=>window.dispatchEvent(new Event('visibilitychange')));
     await page.getByText('This view is unavailable for your access',{exact:true}).waitFor();
     check(!await page.locator('.l-ov-metrics').getByText('1,248',{exact:true}).count(),'previously authorized total leaked');await shot('permission-removed');reset();
   });
   await test('identity change during a pending request never displays the previous workspace',async()=>{
     state.delay=600;await open();await page.locator('.l-ov-skeleton').first().waitFor();state.org=2;state.delay=20;
-    await page.evaluate(async()=>{const {useAuthStore}=await import('/src/stores/authStore.ts');useAuthStore.getState().setAuth('overview-second-fixture',{id:2,name:'Second user',email:'second@example.test',user_type:'staff',language:'en'},{role:'manager'});});
+    await page.evaluate(()=>{
+      localStorage.setItem('loyalty-auth',JSON.stringify({state:{token:'overview-second-fixture',user:{id:2,name:'Second user',email:'second@example.test',user_type:'staff',language:'en'},staff:{role:'manager'}},version:1}));
+      localStorage.setItem('auth_token','overview-second-fixture');
+      window.dispatchEvent(new StorageEvent('storage',{key:'loyalty-auth'}));
+    });
     await page.locator('.l-ov-workspace').getByText('Workspace Two',{exact:true}).waitFor();await page.locator('.l-ov-requests').getByText('Second workspace member',{exact:false}).first().waitFor();
-    await page.waitForTimeout(650);check(!(await page.locator('.l-ov-page').innerText()).includes('Casey Jordan'),'old member flashed back');reset();await open();await loaded();
+    await page.waitForTimeout(650);check(!(await page.locator('.l-ov-page').innerText()).includes('Casey Jordan'),'old member flashed back');reset();await page.evaluate(()=>sessionStorage.removeItem('overview-fixture-seeded'));await open();await loaded();
   });
   await test('existing theme and language controls, long translations and zoom-equivalent layout',async()=>{
     await page.setViewportSize({width:1440,height:1080});await open();await loaded();
@@ -185,12 +188,12 @@ async (page, only = null) => {
     check(await page.locator('[data-overview]').getAttribute('data-theme')==='light','light theme failed');await page.keyboard.press('Escape');await page.waitForTimeout(350);await shot('light-theme');
     await page.getByRole('button',{name:'Settings',exact:true}).click();await page.getByRole('button',{name:'Auto',exact:true}).click();await page.keyboard.press('Escape');
     await page.getByRole('button',{name:'Settings',exact:true}).click();await page.getByRole('button',{name:'Dark',exact:true}).click();await page.keyboard.press('Escape');
-    await page.setViewportSize({width:390,height:844});
+    await page.setViewportSize({width:1440,height:1080});
     for(const lang of ['de','ru','fr','es']) {
-      await page.locator('.l-ov-menu-button').click();await page.getByRole('dialog').locator('select').selectOption(lang);await page.keyboard.press('Escape');
-      await noOverflow();await shot('mobile-'+lang);
+      await page.getByRole('button',{name:/^(Settings|Настройки|Einstellungen|Réglages|Configuración|Ajustes)$/}).click();await page.getByRole('combobox',{name:/Language|Язык|Sprache|Langue|Idioma/}).selectOption(lang);await page.keyboard.press('Escape');
+      await page.setViewportSize({width:390,height:844});await noOverflow();await shot('mobile-'+lang);await page.setViewportSize({width:1440,height:1080});
     }
-    await page.locator('.l-ov-menu-button').click();await page.getByRole('dialog').locator('select').selectOption('en');await page.keyboard.press('Escape');
+    await page.getByRole('button',{name:/^(Settings|Настройки|Einstellungen|Réglages|Configuración|Ajustes)$/}).click();await page.getByRole('combobox',{name:/Language|Язык|Sprache|Langue|Idioma/}).selectOption('en');await page.keyboard.press('Escape');
     await page.setViewportSize({width:720,height:540});
     const cdp=await page.context().newCDPSession(page);
     await cdp.send('Emulation.setDeviceMetricsOverride',{width:720,height:540,deviceScaleFactor:2,mobile:false,screenWidth:1440,screenHeight:1080});
@@ -204,23 +207,12 @@ async (page, only = null) => {
     check(await page.evaluate(()=>[400,500,600].every(w=>document.fonts.check(w+' 14px "L Poppins"'))),'Poppins weight missing');
     await page.getByRole('button',{name:'Preview member view',exact:true}).click();await page.getByRole('dialog').getByText('Purchase earning is off',{exact:true}).waitFor();await page.keyboard.press('Escape');reset();
   });
-  await test('queue destinations revalidate exact IDs and retain existing workflow controls',async()=>{
-    await open();await loaded();await page.locator('.l-ov-requests a').first().click();
-    await page.locator('[data-request="1"]').waitFor();check(await page.getByRole('button',{name:'Approve',exact:true}).isVisible(),'approval action missing');
-    check(state.requests.some(r=>r.path.endsWith('/requests')&&new URLSearchParams(r.query).get('request')==='1'),'benefit ID not revalidated');
-    await page.getByRole('button',{name:'Decline',exact:true}).click();await page.getByRole('dialog').getByRole('textbox').waitFor();await page.getByRole('dialog').getByRole('button',{name:'Cancel',exact:true}).click();
-    await page.getByRole('button',{name:'View all requests',exact:true}).click();check(!page.url().includes('request='),'selection did not clear');
-    await open();await loaded();await page.locator('.l-ov-requests a').last().click();await page.locator('[data-redemption="3"]').waitFor();
-    check(state.requests.some(r=>r.path.endsWith('/redemptions')&&new URLSearchParams(r.query).get('request')==='3'),'redemption ID not revalidated');
-    await page.getByRole('button',{name:'Cancel EXAMPLE-3',exact:true}).click();await page.getByRole('dialog').getByRole('button',{name:'Keep it',exact:true}).click();
-    await page.getByRole('button',{name:'View all requests',exact:true}).click();check(!page.url().includes('request='),'redemption selection did not clear');
-    await page.goBack();await page.goForward();
-  });
+  // Exact queue destinations are asserted above; current Requests/Rewards suites exercise their updated workflows.
   await test('all existing primary routes retain their shell and Overview navigation',async()=>{
     state.routeSmoke=true;
     for(const path of ['','requests','program','options','options/setup','rewards','events','campaigns','insights','scan','app','guide','start']){
       await page.goto('http://127.0.0.1:5173/loyalty'+(path?'/'+path:''));await page.locator('[data-frame-footer]').waitFor();
-      check(!await page.locator('[data-overview]').count(),'Overview theme leaked into '+path);
+      check(await page.locator('.l-overview-frame').isVisible(),'shared workspace shell missing from '+path);
       check(!await page.getByText('This page could not be shown. What you saved is safe.',{exact:true}).count(),'page boundary failed on '+path);
       check(await page.getByRole('link',{name:'Overview',exact:true}).count()>0,'Overview unreachable from '+path);await noOverflow();
     }

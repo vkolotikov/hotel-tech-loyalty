@@ -69,7 +69,7 @@ final class ServiceBookingRefund
                 }
 
                 try {
-                    $refund = $this->stripe->refund($pi, null, 'requested_by_customer');
+                    $refund = app(RefundOperations::class)->request($this->stripe, (int) $b->organization_id, $pi, null, (string) $b->currency, 'service', (int) $b->id, (float) ($b->refunded_amount ?? 0), 'requested_by_customer');
                 } catch (\Throwable $e) {
                     if ($this->isChargeAlreadyRefunded($e)) {
                         // A refund made from the Stripe dashboard, or one
@@ -79,15 +79,16 @@ final class ServiceBookingRefund
                         // nothing left to give back — record it as such
                         // rather than fail a cancellation the money has
                         // already left.
-                        return $this->refunded($amount, null);
+                        return $this->settledAtProvider($b, $amount);
                     }
                     throw $e;
                 }
 
                 $refundedAmount = isset($refund->amount)
-                    ? StripeService::fromSmallestUnit((int) $refund->amount, (string) $b->currency)
+                    ? round((float) ($b->refunded_amount ?? 0) + StripeService::fromSmallestUnit((int) $refund->amount, (string) $b->currency), 2)
                     : $amount;
 
+                RefundOperations::applied((int) $b->organization_id, (string) $refund->id);
                 return $this->refunded($refundedAmount, (string) ($refund->id ?? ''));
             }
 
@@ -95,6 +96,8 @@ final class ServiceBookingRefund
             $this->stripe->cancelPaymentIntent($pi, 'requested_by_customer');
 
             return ['money' => 'released', 'amount' => $amount, 'columns' => ['payment_status' => 'cancelled']];
+        } catch (RefundNotSettled $e) {
+            throw new CancellationException($e->errorCode, $e->getMessage(), 409);
         } catch (CancellationException $e) {
             throw $e;
         } catch (\Throwable $e) {
@@ -134,7 +137,20 @@ final class ServiceBookingRefund
         }
         $amount = $refundedAmount !== null ? StripeService::fromSmallestUnit($refundedAmount, (string) $b->currency) : $fallback;
 
-        return $this->refunded($amount, null);
+        return $this->settledAtProvider($b, $amount);
+    }
+
+    /** Charge totals may include pending refunds. Only a current succeeded refund repays a cancellation. */
+    private function settledAtProvider(ServiceBooking $b, float $expected): array
+    {
+        $refunds = $this->stripe->refundsForPaymentIntent((string) $b->stripe_payment_intent_id);
+        $settled = 0.0;
+        foreach ($refunds as $refund) {
+            app(RefundOperations::class)->observePaymentRefund((int) $b->organization_id, $refund, (string) $b->stripe_payment_intent_id, 'service', (int) $b->id, (string) $b->currency);
+            if ($refund->status === 'succeeded') $settled += StripeService::fromSmallestUnit((int) $refund->amount, (string) $b->currency);
+        }
+        if ($settled < $expected - 0.004) throw new RefundNotSettled('refund_pending');
+        return $this->refunded(round($settled, 2), null);
     }
 
     /** @return array{money: 'refunded', amount: float, columns: array} */
@@ -151,6 +167,7 @@ final class ServiceBookingRefund
     /** Stripe's own code for "there is nothing left on this charge to refund" — checked by code, never by the exception's message text. */
     private function isChargeAlreadyRefunded(\Throwable $e): bool
     {
+        if ($e instanceof RefundNotSettled && $e->getPrevious()) $e = $e->getPrevious();
         return method_exists($e, 'getStripeCode') && (string) $e->getStripeCode() === 'charge_already_refunded';
     }
 }

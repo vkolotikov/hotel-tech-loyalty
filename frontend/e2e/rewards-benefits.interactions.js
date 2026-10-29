@@ -109,7 +109,7 @@ async (page) => {
     assert(result.errors.length === 0, 'Page errors: ' + result.errors.join(', '));
     return result;
   } catch (error) {
-    await page.screenshot({ path: 'C:/wamp64/www/Hexa-Tech/.git/rewards-browser-failure.png', fullPage: true });
+    await page.screenshot({ path: 'C:/wamp64/www/Hexa-Tech/.git/rewards-browser-failure.png', fullPage:false });
     return { failedAfter: passed.length, passed, error: String(error), url: page.url(), page: (await page.locator('body').innerText()).slice(-5000) };
   }
 }

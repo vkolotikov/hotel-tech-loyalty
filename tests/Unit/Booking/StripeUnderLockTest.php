@@ -100,7 +100,9 @@ class StripeUnderLockTest extends TestCase
             'capture job: appointment row + pi:'        => ['app/Console/Commands/CapturePendingPaymentIntents.php', 'private function processServiceBooking(', 'StripeService::underLock(function () use ($stripe, $fresh'],
             'public rescue: hold row + pi:'             => ['app/Http/Controllers/Api/V1/BookingPublicController.php', 'private function rescueUnderLocks(', '$outcome = StripeService::underLock($act);'],
             'engine: widget payment re-check'           => ['app/Services/BookingEngineService.php', 'private function assertWidgetPaymentStillPayable(', 'StripeService::underLock(fn () => $stripe->retrievePaymentIntent('],
-            'refund: under the refund: lock'            => ['app/Services/BookingRefundService.php', 'private function refundLocked(', 'StripeService::underLock(fn () => $this->stripe->refund('],
+            'refund: under the refund: lock'            => ['app/Services/Booking/RefundOperations.php', 'public function request(', 'StripeService::underLock(fn () => $stripe->refund('],
+            'refund: retrieve under payment lock'       => ['app/Services/Booking/RefundOperations.php', 'public function request(', 'StripeService::underLock(fn () => $stripe->retrieveRefund('],
+            'refund: recover old identity under lock'   => ['app/Services/Booking/RefundOperations.php', 'public function request(', 'StripeService::underLock(fn () => $stripe->refundsForPaymentIntent('],
         ];
     }
 

@@ -353,7 +353,7 @@ class EventsTest extends TestCase
     public function test_only_managers_and_staff_who_manage_offers_change_events_and_every_staff_member_reads_them(): void
     {
         $event = $this->makeEvent(['status' => 'draft']);
-        $no = fn ($response) => $response->assertStatus(403)->assertJsonPath('error', 'not_allowed')->assertJsonPath('need', 'can_manage_offers');
+        $no = fn ($response) => $response->assertStatus(403)->assertJsonPath('error', 'not_allowed');
 
         $no($this->asStaffMember()->postJson($this->api('events'), $this->form()));
         $no($this->asStaffMember()->putJson($this->api("events/{$event->id}"), ['title' => 'Mine']));

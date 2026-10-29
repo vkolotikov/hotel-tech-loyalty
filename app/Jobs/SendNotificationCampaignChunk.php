@@ -15,6 +15,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 
@@ -69,7 +70,7 @@ class SendNotificationCampaignChunk implements ShouldQueue
     ): void {
         $campaign = NotificationCampaign::withoutGlobalScopes()->find($this->campaignId);
 
-        if (!$campaign) {
+        if (!$campaign || $campaign->status !== 'sending') {
             return; // deleted mid-flight
         }
 
@@ -89,7 +90,11 @@ class SendNotificationCampaignChunk implements ShouldQueue
         // a non-event, a campaign that silently skipped 400 people is a support
         // incident nobody can reconstruct.
         $limiter = app(\App\Services\CampaignRateLimiter::class);
-        if ($limiter->allowance($campaign->organization_id, count($slice)) < 1) {
+        $sendEmail = in_array($campaign->channel, ['email', 'both'], true);
+        $sendPush  = in_array($campaign->channel, ['push', 'both'], true);
+        $reservation = $sendEmail ? $limiter->reserve($campaign->organization_id, count($slice)) : null;
+        $allowance = $reservation['count'] ?? count($slice);
+        if ($allowance < 1) {
             \Illuminate\Support\Facades\Log::info('campaign chunk deferred: hourly send budget exhausted', [
                 'campaign_id'     => $campaign->id,
                 'organization_id' => $campaign->organization_id,
@@ -103,8 +108,8 @@ class SendNotificationCampaignChunk implements ShouldQueue
             return;
         }
 
-        $sendEmail = in_array($campaign->channel, ['email', 'both'], true);
-        $sendPush  = in_array($campaign->channel, ['push', 'both'], true);
+        $slice = array_slice($slice, 0, $allowance);
+        $unused = $allowance;
 
         $template = $campaign->email_template_id
             ? EmailTemplate::withoutGlobalScopes()->find($campaign->email_template_id)
@@ -114,32 +119,30 @@ class SendNotificationCampaignChunk implements ShouldQueue
         $identity = $identityService->forOrganization($campaign->organization_id);
         $orgName  = $identity['from_name'] ?: $org?->name;
 
-        $pushSent = 0;
-        $emailSent = 0;
-
         $members = LoyaltyMember::whereIn('id', $slice)->with(['user', 'tier'])->get();
 
         foreach ($members as $member) {
             if ($sendPush && $member->expo_push_token) {
-                $pushSent += $this->sendPush($campaign, $member, $notifications) ? 1 : 0;
+                $this->sendPush($campaign, $member, $notifications);
             }
 
             if ($sendEmail && $template) {
-                $emailSent += $this->sendEmail(
-                    $campaign, $member, $template, $compliance, $identity, $orgName, $org,
-                ) ? 1 : 0;
+                $attempted = false;
+                $this->sendEmail(
+                    $campaign, $member, $template, $compliance, $identity, $orgName, $org, $attempted,
+                );
+                $unused -= $attempted ? 1 : 0;
             }
         }
 
         // Only EMAIL consumes the mail budget; push goes to Expo, not the relay.
-        $limiter->record($campaign->organization_id, $emailSent);
+        if ($reservation) {
+            $limiter->release($reservation['id'], $unused);
+        }
 
-        // Counters accumulate per chunk, so progress survives a crash and is
-        // visible to the admin while the send is still running.
-        if ($pushSent)  $campaign->increment('sent_count', $pushSent);
-        if ($emailSent) $campaign->increment('email_sent_count', $emailSent);
+        // Each recipient's status and counter commit together in settle().
 
-        $nextOffset = $this->offset + self::CHUNK;
+        $nextOffset = $this->offset + count($slice);
 
         if ($nextOffset >= count($this->memberIds)) {
             $this->finish($campaign);
@@ -155,10 +158,45 @@ class SendNotificationCampaignChunk implements ShouldQueue
 
     private function finish(NotificationCampaign $campaign): void
     {
-        $campaign->forceFill([
+        NotificationCampaign::withoutGlobalScopes()->whereKey($campaign->id)->where('status', 'sending')->update([
             'status'  => 'sent',
             'sent_at' => now(),
-        ])->save();
+        ]);
+    }
+
+    /** Historical rows remain intact; the campaign lock serializes claims without requiring a new unique index. */
+    private function claim(NotificationCampaign $campaign, LoyaltyMember $member, string $channel, ?string $email = null): ?CampaignRecipient
+    {
+        return DB::transaction(function () use ($campaign, $member, $channel, $email) {
+            $locked = NotificationCampaign::withoutGlobalScopes()->where('organization_id', $campaign->organization_id)
+                ->whereKey($campaign->id)->lockForUpdate()->first();
+            if (!$locked || $locked->status !== 'sending' || (int) $member->organization_id !== (int) $locked->organization_id) return null;
+            if (CampaignRecipient::withoutGlobalScopes()->where('organization_id', $locked->organization_id)
+                ->where('campaign_id', $locked->id)->where('loyalty_member_id', $member->id)->where('channel', $channel)->exists()) return null;
+
+            return CampaignRecipient::create([
+                'organization_id' => $locked->organization_id, 'campaign_id' => $locked->id,
+                'loyalty_member_id' => $member->id, 'channel' => $channel, 'email' => $email,
+                'status' => 'pending', 'sent_at' => null,
+            ]);
+        });
+    }
+
+    /** A retry never repeats pending/failed transport outcomes, and cannot count a settled recipient twice. */
+    private function settle(CampaignRecipient $recipient, string $status, ?string $error = null): void
+    {
+        DB::transaction(function () use ($recipient, $status, $error) {
+            $campaign = NotificationCampaign::withoutGlobalScopes()->where('organization_id', $recipient->organization_id)
+                ->whereKey($recipient->campaign_id)->lockForUpdate()->first();
+            if (!$campaign) return;
+            $changed = CampaignRecipient::withoutGlobalScopes()->where('organization_id', $recipient->organization_id)
+                ->whereKey($recipient->id)->where('status', 'pending')->update([
+                    'status' => $status, 'sent_at' => $status === 'sent' ? now() : null, 'error' => $error,
+                ]);
+            if ($changed && $status === 'sent') {
+                $campaign->increment($recipient->channel === 'email' ? 'email_sent_count' : 'sent_count');
+            }
+        });
     }
 
     private function sendPush(
@@ -166,13 +204,11 @@ class SendNotificationCampaignChunk implements ShouldQueue
         LoyaltyMember $member,
         NotificationService $notifications,
     ): bool {
-        $recipient = CampaignRecipient::create([
-            'campaign_id'       => $campaign->id,
-            'loyalty_member_id' => $member->id,
-            'channel'           => 'push',
-            'status'            => 'sent',
-            'sent_at'           => now(),
-        ]);
+        if (NotificationService::optsOut($member->notification_preferences, NotificationService::categoryOf('campaign'))) {
+            return false;
+        }
+        $recipient = $this->claim($campaign, $member, 'push');
+        if (!$recipient) return false;
 
         try {
             $notifications->send($member, [
@@ -186,9 +222,10 @@ class SendNotificationCampaignChunk implements ShouldQueue
                 'body'  => $campaign->body,
                 'data'  => ['campaign_id' => $campaign->id],
             ]);
+            $this->settle($recipient, 'sent');
             return true;
         } catch (\Throwable $e) {
-            $recipient->update(['status' => 'failed', 'error' => $e->getMessage()]);
+            $this->settle($recipient, 'failed', $e->getMessage());
             return false;
         }
     }
@@ -201,6 +238,7 @@ class SendNotificationCampaignChunk implements ShouldQueue
         array $identity,
         ?string $orgName,
         ?Organization $org,
+        bool &$attempted,
     ): bool {
         // This campaign carries an open-tracking pixel, so it is marketing by
         // any regulator's definition and needs real consent — not merely the
@@ -214,14 +252,8 @@ class SendNotificationCampaignChunk implements ShouldQueue
             return false;
         }
 
-        $recipient = CampaignRecipient::create([
-            'campaign_id'       => $campaign->id,
-            'loyalty_member_id' => $member->id,
-            'channel'           => 'email',
-            'email'             => $to,
-            'status'            => 'sent',
-            'sent_at'           => now(),
-        ]);
+        $recipient = $this->claim($campaign, $member, 'email', $to);
+        if (!$recipient) return false;
 
         try {
             $rendered = $template->render($member);
@@ -238,7 +270,8 @@ class SendNotificationCampaignChunk implements ShouldQueue
             // require both of a bulk sender.
             $html .= $compliance->footerHtml($member, $orgName);
 
-            Mail::html($html, function ($message) use (
+            $attempted = true;
+            $sent = Mail::html($html, function ($message) use (
                 $to, $member, $rendered, $compliance, $identity, $orgName, $org
             ) {
                 $message->to($to, $member->user->name ?? null)
@@ -259,9 +292,15 @@ class SendNotificationCampaignChunk implements ShouldQueue
                 $compliance->applyHeaders($message, $member, 'marketing');
             });
 
+            if ($sent === null) {
+                $attempted = false;
+                $this->settle($recipient, 'suppressed');
+                return false;
+            }
+            $this->settle($recipient, 'sent');
             return true;
         } catch (\Throwable $e) {
-            $recipient->update(['status' => 'failed', 'error' => $e->getMessage()]);
+            $this->settle($recipient, 'failed', $e->getMessage());
             Log::warning('notification campaign recipient failed', [
                 'campaign_id' => $campaign->id,
                 'member_id'   => $member->id,
@@ -280,9 +319,9 @@ class SendNotificationCampaignChunk implements ShouldQueue
     {
         $campaign = NotificationCampaign::withoutGlobalScopes()->find($this->campaignId);
 
-        $campaign?->forceFill([
+        NotificationCampaign::withoutGlobalScopes()->whereKey($this->campaignId)->where('status', 'sending')->update([
             'status' => 'failed',
-        ])->save();
+        ]);
 
         Log::error('notification campaign chunk failed permanently', [
             'campaign_id' => $this->campaignId,

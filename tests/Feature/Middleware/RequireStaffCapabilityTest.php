@@ -176,7 +176,9 @@ class RequireStaffCapabilityTest extends TestCase
         Config::set('services.saas.platform_admin_emails', 'ops@hotel-tech.ai');
 
         // Deliberately no staff row AND no capability.
-        $this->loginAs(null, 'ops@hotel-tech.ai');
+        $operator = $this->loginAs(null, 'ops@hotel-tech.ai');
+        $operator->user_type = 'staff';
+        $operator->email_verified_at = now();
 
         $this->assertSame(200, $this->invoke('can_manage_offers')->getStatusCode());
     }
@@ -189,5 +191,16 @@ class RequireStaffCapabilityTest extends TestCase
 
         $this->expectException(\InvalidArgumentException::class);
         $this->invoke('can_do_anything');
+    }
+
+    public function test_operator_email_on_a_member_or_unverified_staff_has_no_capability_bypass(): void
+    {
+        Config::set('services.saas.platform_admin_emails', 'operator@example.test');
+        $user = $this->loginAs(null, 'operator@example.test');
+        $user->user_type = 'member';
+        $this->assertSame(403, $this->invoke('can_manage_offers')->getStatusCode());
+        $user->user_type = 'staff';
+        $user->email_verified_at = null;
+        $this->assertSame(403, $this->invoke('can_manage_offers')->getStatusCode());
     }
 }

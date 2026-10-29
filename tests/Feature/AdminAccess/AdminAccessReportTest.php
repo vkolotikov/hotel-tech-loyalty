@@ -37,6 +37,7 @@ class AdminAccessReportTest extends TestCase
 
     public function test_it_says_the_mode_and_sums_by_rule_method_and_outcome(): void
     {
+        config(['admin_access.mode' => 'report']);
         $this->seedRecord();
 
         $this->artisan('admin-access:report', ['--org' => $this->org->id])

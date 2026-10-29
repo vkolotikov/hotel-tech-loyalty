@@ -1023,13 +1023,19 @@ function renderSummary() {
 
   if (state.selectedUnit) {
     h += '<div style="margin:12px 0;padding-top:12px;border-top:1px solid var(--border)">';
-    h += '<div class="summary-line"><span>' + svgBed() + ' ' + esc(state.selectedUnit.name) + '</span><span>' + formatCurrency(q.room_total || state.selectedUnit.price_per_night * n) + '</span></div>';
+    h += '<div class="summary-line"><span>' + svgBed() + ' ' + esc(state.selectedUnit.name) + '</span><span>' + formatCurrency(q.room_total != null ? q.room_total : state.selectedUnit.price_per_night * n) + '</span></div>';
     h += '</div>';
+  }
+
+  if (state.selectedCombo) {
+    (q.rooms || state.selectedCombo.rooms || []).forEach(function(room) {
+      h += '<div class="summary-line"><span>' + svgBed() + ' ' + esc(room.name || room.unit_name) + '</span><span>' + formatCurrency(room.room_total != null ? room.room_total : (room.total_price != null ? room.total_price : room.price)) + '</span></div>';
+    });
   }
 
   if (q.extras && q.extras.length) {
     q.extras.forEach(function(ex) {
-      h += '<div class="summary-line"><span>' + svgStar() + ' ' + esc(ex.name) + '</span><span>' + formatCurrency(ex.price) + '</span></div>';
+      h += '<div class="summary-line"><span>' + svgStar() + ' ' + esc(ex.name) + '</span><span>' + formatCurrency(ex.line_total) + '</span></div>';
     });
   }
 
@@ -1038,17 +1044,18 @@ function renderSummary() {
     var selExtras = state.config.extras.filter(function(ex) { return state.selectedExtras[ex.id]; });
     if (selExtras.length) {
       selExtras.forEach(function(ex) {
-        h += '<div class="summary-line"><span>' + svgStar() + ' ' + esc(ex.name) + '</span><span>' + formatCurrency(ex.price) + '</span></div>';
+        h += '<div class="summary-line"><span>' + svgStar() + ' ' + esc(ex.name) + '</span><span>' + formatCurrency(extraEstimate(ex, n)) + '</span></div>';
       });
     }
   }
 
-  var total = q.total || (state.selectedUnit ? state.selectedUnit.price_per_night * n : 0);
-  if (!q.total && state.config && state.config.extras) {
-    state.config.extras.forEach(function(ex) { if (state.selectedExtras[ex.id]) total += (ex.price || 0); });
+  var quoted = typeof q.gross_total === 'number';
+  var total = quoted ? q.gross_total : (state.selectedCombo ? state.selectedCombo.total_price : (state.selectedUnit ? state.selectedUnit.price_per_night * n : 0));
+  if (!quoted && state.config && state.config.extras) {
+    state.config.extras.forEach(function(ex) { if (state.selectedExtras[ex.id]) total += extraEstimate(ex, n); });
   }
-  if (total > 0) {
-    h += '<div class="summary-total"><span>Total</span><span>' + formatCurrency(total) + '</span></div>';
+  if (quoted || total > 0) {
+    h += '<div class="summary-total"><span>' + (quoted ? 'Total' : 'Estimated total') + '</span><span>' + formatCurrency(total) + '</span></div>';
   }
 
   // Continue button in summary
@@ -1077,6 +1084,13 @@ function renderSummary() {
 }
 
 /* --- Step 3: Extras --- */
+function extraEstimate(ex, nightsCount) {
+  var type = ex.price_type || ex.type || 'per_stay';
+  var guests = Number(state.adults || 0) + Number(state.children || 0);
+  var units = type === 'per_night' ? nightsCount : (type === 'per_person' || type === 'per_guest' ? guests : (type === 'per_person_night' || type === 'per_person_per_night' ? guests * nightsCount : 1));
+  return Math.round(Number(ex.price || 0) * units * 100) / 100;
+}
+
 function renderExtras() {
   var allExtras = (state.config && state.config.extras) || [];
   // Filter out extras whose preparation lead time can't be met before

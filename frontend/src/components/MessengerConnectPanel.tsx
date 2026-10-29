@@ -479,7 +479,6 @@ function ConnectedRow({
   return (
     <div className="p-4 flex items-start gap-3">
       {account.display_avatar_url ? (
-        // eslint-disable-next-line jsx-a11y/img-redundant-alt
         <img
           src={account.display_avatar_url}
           alt={`${account.display_name ?? 'Page'} avatar`}
@@ -667,7 +666,6 @@ function PagePickerModal({
               className="w-full p-3 flex items-center gap-3 border-b border-dark-border hover:bg-white/[0.02] transition-colors text-left disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {p.picture_url ? (
-                // eslint-disable-next-line jsx-a11y/img-redundant-alt
                 <img
                   src={p.picture_url}
                   alt={`${p.name} avatar`}

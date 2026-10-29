@@ -47,6 +47,8 @@ class VerificationCodeCleanupTest extends TestCase
         if (!Schema::hasTable('email_verification_codes')) {
             Schema::create('email_verification_codes', function (Blueprint $table) {
                 $table->id();
+                $table->unsignedBigInteger('user_id')->nullable();
+                $table->string('purpose', 16)->nullable();
                 $table->string('email')->index();
                 $table->string('code', 6);
                 $table->timestamp('expires_at');

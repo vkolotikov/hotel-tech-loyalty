@@ -119,7 +119,7 @@ class CreditEndpointsTest extends TestCase
     public function test_spending_needs_the_redeem_flag_and_works_with_cashback_switched_off(): void
     {
         DB::table('staff')->where('user_id', $this->staffMember->id)->update(['can_redeem_points' => false]);
-        $this->spend(['amount' => 1])->assertStatus(403)->assertJsonPath('need', 'can_redeem_points');
+        $this->spend(['amount' => 1])->assertStatus(403)->assertJsonPath('error', 'not_allowed');
         DB::table('staff')->where('user_id', $this->staffMember->id)->update(['can_redeem_points' => true]);
 
         ProgrammeOptions::save($this->org->id, ['cashback_enabled' => false], $this->manager);
@@ -130,7 +130,7 @@ class CreditEndpointsTest extends TestCase
     public function test_a_correction_is_a_managers_with_a_reason_and_never_below_zero(): void
     {
         $this->asStaffMember()->postJson($this->api("members/{$this->grace->id}/credit/adjust"), ['amount' => 5, 'reason' => 'Goodwill'])
-            ->assertStatus(403)->assertJsonPath('error', 'manager_only');
+            ->assertStatus(403)->assertJsonPath('error', 'not_allowed');
         $this->asManager()->postJson($this->api("members/{$this->grace->id}/credit/adjust"), ['amount' => 5])
             ->assertStatus(422)->assertJsonValidationErrors(['reason']);
         $this->asManager()->postJson($this->api("members/{$this->grace->id}/credit/adjust"), ['amount' => -12.41, 'reason' => 'Too far'])

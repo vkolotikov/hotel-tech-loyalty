@@ -138,6 +138,7 @@ const BOOK_ERROR_FALLBACK: Record<string, string> = {
   too_soon: 'That time is too soon to book online.',
   too_far_ahead: 'That date is beyond the booking window.',
   extra_lead_time: 'One of the add-ons needs more notice than this time allows.',
+  currency_mismatch: 'These prices use different currencies. Please contact the venue before booking.',
   payment_required: 'Please complete the payment first.',
   payment_mismatch: 'The price changed. Please review and pay again.',
   idempotency_conflict: 'This booking was already submitted. Check your bookings.',
@@ -186,6 +187,8 @@ const CANCEL_ERROR_FALLBACK: Record<string, string> = {
   already_cancelled: 'This booking is already cancelled.',
   cancel_in_progress: 'This booking is being cancelled. Please check it again in a moment.',
   refund_failed: 'We could not return the payment just now, so the booking was not cancelled. Please try again in a moment.',
+  refund_pending: 'Your refund is processing. The booking remains active. Please check again shortly.',
+  refund_outcome_unknown: 'The refund result is not known yet. The booking remains active. Please retry the cancellation to check it.',
   refund_unavailable: 'The payment cannot be returned here, so the booking was not cancelled. Please contact the venue.',
   cancel_failed: 'We could not finish cancelling this booking. If a refund was due it may already be on its way. Please try again, or contact the venue.',
 }

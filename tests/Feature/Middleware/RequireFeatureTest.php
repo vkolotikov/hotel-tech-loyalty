@@ -90,6 +90,7 @@ class RequireFeatureTest extends TestCase
     private function loginAs(?Organization $org, string $email = 'staff@example.com'): User
     {
         $u = UserFactory::new()->create([
+            'user_type' => 'staff',
             'organization_id' => $org?->id,
             'email'           => $email,
         ]);
@@ -177,6 +178,17 @@ class RequireFeatureTest extends TestCase
         $resp = $this->invoke('admin_ai');
         $this->assertSame(402, $resp->getStatusCode(),
             'Substring match MUST NOT count as platform-admin.');
+    }
+
+    public function test_operator_email_without_staff_identity_or_verified_mailbox_does_not_bypass(): void
+    {
+        Config::set('services.saas.platform_admin_emails', 'operator@example.test');
+        $user = $this->loginAs(null, 'operator@example.test');
+        $user->user_type = 'member';
+        $this->assertSame(403, $this->invoke('admin_ai')->getStatusCode());
+        $user->user_type = 'staff';
+        $user->email_verified_at = null;
+        $this->assertSame(403, $this->invoke('admin_ai')->getStatusCode());
     }
 
     /* ─── 403 / no org context ─── */

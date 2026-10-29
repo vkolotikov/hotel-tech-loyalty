@@ -158,6 +158,11 @@ final class EventCheckIn
                 'description'     => mb_substr("Checked in at \"{$lockedEvent->title}\"", 0, 250),
             ]);
 
+            if ($lockedEvent->counts_as_visit) {
+                app(\App\Services\Loyalty\Visits\VisitEffects::class)->remember($lockedMember,
+                    new Visit(Visit::EVENT, 'loyalty_event_attendance', (int) $attendance->id, null, EventClock::day($lockedEvent), $by));
+            }
+
             return ['replay' => false, 'row' => $row, 'verdict' => $verdict, 'attendance' => $attendance, 'new' => true, 'signed_up' => $signedUp, 'line' => $line, 'event' => $lockedEvent];
         });
 

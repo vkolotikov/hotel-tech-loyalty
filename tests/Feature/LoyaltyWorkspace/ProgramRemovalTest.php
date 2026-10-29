@@ -132,7 +132,7 @@ class ProgramRemovalTest extends TestCase
         $gold = $this->tiers['gold']->id;
 
         $this->asStaffMember()->deleteJson($this->api("program/tiers/{$gold}"), ['move_to' => $this->silver()])
-            ->assertStatus(403)->assertJsonPath('error', 'manager_only');
+            ->assertStatus(403)->assertJsonPath('error', 'not_allowed');
         $this->asManager()->deleteJson($this->api("program/tiers/{$gold}"))
             ->assertStatus(422)->assertJsonPath('error', 'move_to_required');
         $this->asManager()->deleteJson($this->api("program/tiers/{$gold}"), ['move_to' => $gold])
@@ -218,7 +218,7 @@ class ProgramRemovalTest extends TestCase
 
         $this->asStaffMember()->getJson($this->api("program/benefits/{$spa->id}/removal"))->assertOk()
             ->assertJsonPath('removal', ['benefit' => ['id' => $spa->id, 'name' => 'Spa access'], 'tiers' => ['Silver', 'Gold'], 'waiting' => 1, 'requests' => 2]);
-        $this->asStaffMember()->deleteJson($this->api("program/benefits/{$spa->id}"))->assertStatus(403)->assertJsonPath('error', 'manager_only');
+        $this->asStaffMember()->deleteJson($this->api("program/benefits/{$spa->id}"))->assertStatus(403)->assertJsonPath('error', 'not_allowed');
 
         $this->asManager()->deleteJson($this->api("program/benefits/{$spa->id}"))->assertOk()->assertJsonPath('removed', ['tiers' => 2]);
 

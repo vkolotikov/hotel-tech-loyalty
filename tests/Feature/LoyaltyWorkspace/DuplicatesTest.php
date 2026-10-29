@@ -69,9 +69,9 @@ class DuplicatesTest extends TestCase
     {
         $twin = $this->adasTwin();
 
-        $this->asStaffMember()->getJson($this->api('members/duplicates'))->assertStatus(403)->assertJsonPath('error', 'manager_only');
+        $this->asStaffMember()->getJson($this->api('members/duplicates'))->assertStatus(403)->assertJsonPath('error', 'not_allowed');
         $this->asStaffMember()->postJson($this->api('members/merge'), ['keep_id' => $this->ada->id, 'merge_id' => $twin->id, 'reason' => 'Same person'])
-            ->assertStatus(403)->assertJsonPath('error', 'manager_only');
+            ->assertStatus(403)->assertJsonPath('error', 'not_allowed');
         $this->assertNotNull(LoyaltyMember::query()->find($twin->id));
     }
 

@@ -286,13 +286,15 @@ class LandingPageEntitlementTest extends TestCase
     {
         $org = $this->orgWith(['reviews' => true, 'campaigns' => true], 'growth');
 
-        Sanctum::actingAs(User::create([
+        $user = User::create([
             'password' => 'secret-pass-1',
             'name'            => 'Staff',
             'email'           => 'staff_' . uniqid() . '@example.test',
             'organization_id' => $org->id,
             'user_type'       => 'staff',
-        ]), ['*']);
+        ]);
+        \App\Models\Staff::create(['organization_id' => $org->id, 'user_id' => $user->id, 'role' => 'manager', 'is_active' => true]);
+        Sanctum::actingAs($user, ['*']);
 
         $this->getJson('/api/v1/admin/landing-pages/onboarding')->assertStatus(402)
             ->assertJsonPath('code', 'feature_locked')

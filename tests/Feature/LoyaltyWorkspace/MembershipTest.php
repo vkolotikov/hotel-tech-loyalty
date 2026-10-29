@@ -168,7 +168,7 @@ class MembershipTest extends TestCase
         $other = $this->otherOrganization();
 
         $this->asStaffMember()->putJson($this->api("members/{$this->grace->id}/tier"), ['tier_id' => $this->tiers['gold']->id])
-            ->assertStatus(403)->assertJsonPath('error', 'manager_only');
+            ->assertStatus(403)->assertJsonPath('error', 'not_allowed');
         $this->asManager()->putJson($this->api("members/{$this->grace->id}/tier"), ['tier_id' => $other['tier']->id])
             ->assertStatus(422)->assertJsonValidationErrors('tier_id');
         $this->asManager()->putJson($this->api("members/{$this->grace->id}/tier"), ['tier_id' => $this->tiers['gold']->id, 'keep_until' => '2026-10-05'])
@@ -188,8 +188,8 @@ class MembershipTest extends TestCase
         $this->asManager()->postJson($this->api("members/{$this->grace->id}/reactivate"))->assertOk();
         $this->assertSame(1, AuditLog::where('action', 'member_reactivated')->count());
 
-        $this->asStaffMember()->postJson($this->api("members/{$this->grace->id}/deactivate"))->assertStatus(403)->assertJsonPath('error', 'manager_only');
-        $this->asStaffMember()->postJson($this->api("members/{$this->grace->id}/reactivate"))->assertStatus(403)->assertJsonPath('error', 'manager_only');
+        $this->asStaffMember()->postJson($this->api("members/{$this->grace->id}/deactivate"))->assertStatus(403)->assertJsonPath('error', 'not_allowed');
+        $this->asStaffMember()->postJson($this->api("members/{$this->grace->id}/reactivate"))->assertStatus(403)->assertJsonPath('error', 'not_allowed');
     }
 
     // ─── Delete ───────────────────────────────────────────────────────────
@@ -237,7 +237,7 @@ class MembershipTest extends TestCase
     public function test_deleting_is_a_managers(): void
     {
         $this->asStaffMember()->postJson($this->api("members/{$this->grace->id}/erase"), ['confirm_name' => 'Grace Hopper'])
-            ->assertStatus(403)->assertJsonPath('error', 'manager_only');
+            ->assertStatus(403)->assertJsonPath('error', 'not_allowed');
         $this->assertSame('Grace Hopper', $this->grace->user->fresh()->name);
     }
 

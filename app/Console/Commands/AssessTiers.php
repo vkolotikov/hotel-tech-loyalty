@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\Log;
 /**
  * The nightly tier check (release 9, owner 2026-10-26). Tiers move when something happens to a member — points, a visit,
  * a refund — and also when time alone decides: a grace period that has run out (`tier_effective_until`), a manager's
- * "keep until" that has ended (`tier_override_until`, in the last three days, so a missed night is caught up), or a
+ * "keep until" that has ended (`tier_override_until`, including an arbitrarily long outage), or a
  * windowed programme whose window has moved on (every active member with a tier). This re-assesses those members through
  * LoyaltyService::assessTier() — its own rules for the direction, the lock, grace, "keep until" and soft landing, logged
  * and told as any other move — each under the member row's lock in its own transaction, under its organisation's binding.
@@ -27,9 +27,6 @@ class AssessTiers extends Command
     protected $signature = 'loyalty:assess-tiers {--org= : Only this organisation id} {--at-venue-hour= : Only organisations whose own clock reads this hour (0-23)}';
 
     protected $description = 'Re-assess HexaTech Loyalty tiers whose grace period or "keep until" has ended, and every tier on a windowed programme.';
-
-    /** How far back an ended "keep until" is still picked up (a night the scheduler missed). */
-    public const OVERRIDE_DAYS = 3;
 
     public function handle(LoyaltyService $loyalty): int
     {
@@ -74,7 +71,7 @@ class AssessTiers extends Command
         $query = LoyaltyMember::withoutGlobalScopes()->where('organization_id', $orgId)->where('is_active', true)->whereNotNull('tier_id')
             ->when(!$windowed, fn ($q) => $q->where(fn ($w) => $w
                 ->where('tier_effective_until', '<=', now()->toDateString())
-                ->orWhereBetween('tier_override_until', [now()->subDays(self::OVERRIDE_DAYS), now()])));
+                ->orWhere('tier_override_until', '<=', now())));
 
         $checked = 0;
         $moved = 0;

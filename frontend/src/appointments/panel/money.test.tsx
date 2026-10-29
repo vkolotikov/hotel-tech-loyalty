@@ -51,6 +51,15 @@ describe('MoneyBlock', () => {
 })
 
 describe('the forms', () => {
+  it('an unresolved refund keeps its original amount and method for a safe retry', () => {
+    const m = money({ paid_online: 60, refundable_online: 60, pending_refunds: [{ id: 'op1', amount: 25, status: 'unknown', currency: 'EUR' }] })
+    const html = renderToStaticMarkup(<RefundForm booking={booking(m)} saving={false} error={null} onSave={() => {}} onBack={() => {}} />)
+    expect(html).toContain('value="25"')
+    expect(html).toMatch(/<select[^>]*disabled/)
+    expect(html).toMatch(/<input[^>]*disabled[^>]*type="number"/)
+    expect(html).toContain('do not return the money another way')
+  })
+
   it('Take payment starts at what is owed and offers the four desk methods', () => {
     const html = renderToStaticMarkup(<TakePaymentForm booking={booking(money())} saving={false} error={null} onSave={() => {}} onBack={() => {}} />)
     expect(html).toContain('value="40"')

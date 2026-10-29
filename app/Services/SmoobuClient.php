@@ -58,7 +58,7 @@ class SmoobuClient
             return;
         }
 
-        $this->baseUrl   = rtrim($this->setting('booking_smoobu_base_url', config('services.smoobu.base_url', 'https://login.smoobu.com/api/')), '/');
+        $this->baseUrl   = \App\Support\SmoobuEndpoint::BASE;
 
         // Phase 3: per-brand Smoobu credentials. The brand-stamped key on the
         // brands table wins when present. Falls through to the org-level
@@ -69,7 +69,7 @@ class SmoobuClient
         $perBrandChannelId = '';
         if ($brandId) {
             try {
-                $brand = \App\Models\Brand::withoutGlobalScopes()->find($brandId);
+                $brand = \App\Models\Brand::withoutGlobalScopes()->where('organization_id', $orgId)->find($brandId);
                 if ($brand) {
                     $perBrandKey = (string) ($brand->pms_smoobu_api_key ?? '');
                     $perBrandChannelId = (string) ($brand->pms_smoobu_channel_id ?? '');
@@ -390,7 +390,7 @@ class SmoobuClient
         // intentional too: the symptom (200 + HTML) is not transient.
         try {
             $url = "{$this->baseUrl}/channels";
-            $response = Http::withHeaders(['Api-Key' => $this->apiKey])
+            $response = Http::withHeaders(['Api-Key' => $this->apiKey])->withoutRedirecting()
                 ->timeout($this->timeout)
                 ->get($url);
         } catch (\Throwable $e) {
@@ -938,6 +938,11 @@ class SmoobuClient
         // sit OUTSIDE the `/api` namespace on Smoobu — callers can pass
         // an absolute URL in that case and we use it as-is.
         $url = str_starts_with($path, 'http') ? $path : "{$this->baseUrl}{$path}";
+        $parts = parse_url($url);
+        if (!is_array($parts) || ($parts['scheme'] ?? '') !== 'https' || ($parts['host'] ?? '') !== 'login.smoobu.com'
+            || isset($parts['user']) || isset($parts['pass']) || (isset($parts['port']) && $parts['port'] !== 443)) {
+            throw new \LogicException('Smoobu requests must use the official API origin.');
+        }
         $attempt = 0;
 
         while (true) {
@@ -952,7 +957,7 @@ class SmoobuClient
             // out at 8s mid-sync. Treat any of those as transient and
             // fall into the same exponential backoff path as 429+5xx.
             try {
-                $client = Http::withHeaders(['Api-Key' => $this->apiKey])->timeout($this->timeout);
+                $client = Http::withHeaders(['Api-Key' => $this->apiKey])->withoutRedirecting()->timeout($this->timeout);
                 $response = match ($method) {
                     'GET'    => $client->get($url, $options['query'] ?? []),
                     'POST'   => $client->post($url, $options['json'] ?? []),

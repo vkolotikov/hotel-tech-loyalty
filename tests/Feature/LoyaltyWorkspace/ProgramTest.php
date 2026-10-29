@@ -140,7 +140,7 @@ class ProgramTest extends TestCase
         ];
         foreach ($calls as [$method, $path, $body]) {
             $this->asStaffMember()->{$method}($this->api($path), $body)
-                ->assertStatus(403)->assertJsonPath('error', 'manager_only');
+                ->assertStatus(403)->assertJsonPath('error', 'not_allowed');
         }
 
         $this->assertSame('Gold', $this->tiers['gold']->fresh()->name);

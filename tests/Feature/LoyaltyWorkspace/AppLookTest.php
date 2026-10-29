@@ -112,7 +112,7 @@ class AppLookTest extends TestCase
 
     public function test_a_manager_saves_it_lowercase_with_the_preset_and_one_audit_row_for_what_changed(): void
     {
-        $this->asStaffMember()->putJson($this->api('app-look'), $this->look())->assertStatus(403)->assertJsonPath('error', 'manager_only');
+        $this->asStaffMember()->putJson($this->api('app-look'), $this->look())->assertStatus(403)->assertJsonPath('error', 'not_allowed');
 
         $colors = self::SAPPHIRE;
         $colors['primary'] = '#3B82F6';
@@ -181,7 +181,7 @@ class AppLookTest extends TestCase
     public function test_the_logo_is_the_full_admins_company_logo_and_a_replacement_deletes_our_old_file(): void
     {
         $this->asStaffMember()->post($this->api('app-look/logo'), ['logo' => UploadedFile::fake()->image('logo.png', 400, 400)], ['Accept' => 'application/json'])
-            ->assertStatus(403)->assertJsonPath('error', 'manager_only');
+            ->assertStatus(403)->assertJsonPath('error', 'not_allowed');
         $this->asManager()->post($this->api('app-look/logo'), ['logo' => UploadedFile::fake()->create('logo.pdf', 10, 'application/pdf')], ['Accept' => 'application/json'])
             ->assertStatus(422)->assertJsonValidationErrors(['logo']);
         $this->asManager()->post($this->api('app-look/logo'), ['logo' => UploadedFile::fake()->image('logo.png', 400, 400)->size(4097)], ['Accept' => 'application/json'])

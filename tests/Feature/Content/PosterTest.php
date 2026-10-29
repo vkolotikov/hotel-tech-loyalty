@@ -145,7 +145,7 @@ class PosterTest extends TestCase
         $this->profile->forceFill(['requires_approval' => true])->save();
         $post = $this->makePost(['status' => 'approved', 'poster_id' => $this->staffMember->id]);
         DB::table('staff')->where('user_id', $this->staffMember->id)->update(['is_active' => false]);
-        $this->asStaffMember()->postJson($this->api("posts/{$post->id}/mark-published"))->assertStatus(403)->assertJsonPath('error', 'needs_approval');
+        $this->asStaffMember()->postJson($this->api("posts/{$post->id}/mark-published"))->assertStatus(403)->assertJsonPath('error', 'staff_inactive');
         $this->assertSame('approved', $post->fresh()->status);
     }
 }

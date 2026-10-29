@@ -76,6 +76,8 @@
       "not_cancellable": "Esta reserva no se puede cancelar aquí. Póngase en contacto con el establecimiento.",
       "already_cancelled": "Esta reserva ya está cancelada.",
       "cancel_in_progress": "Esta reserva se está cancelando. Compruébela de nuevo en un momento.",
+      "refund_pending": "Su reembolso está en proceso. La reserva sigue activa. Vuelva a comprobarlo en breve.",
+      "refund_outcome_unknown": "Aún no se conoce el resultado del reembolso. La reserva sigue activa. Reintente la cancelación para comprobarlo.",
       "refund_failed": "Ahora mismo no hemos podido devolver el pago, así que la reserva no se ha cancelado. Inténtelo de nuevo en un momento.",
       "refund_unavailable": "El pago no se puede devolver aquí, así que la reserva no se ha cancelado. Póngase en contacto con el establecimiento.",
       "cancel_failed": "No hemos podido terminar de cancelar esta reserva. Si correspondía un reembolso, es posible que ya esté en camino. Inténtelo de nuevo o póngase en contacto con el establecimiento."
@@ -155,6 +157,7 @@
     "confirmed_title": "Su reserva está hecha", "confirmed_body": "Referencia {{reference}}. Le hemos enviado los detalles por correo electrónico.", "add_to_calendar": "Añadir al calendario",
     "change": "Cambiar", "continue": "Continuar", "back": "Atrás", "cta_home": "Reservar {{noun}}", "not_bookable": "La reserva en línea aún no está disponible para este establecimiento.",
     "too_soon": "Esa hora está demasiado próxima para reservarla en línea.", "too_far_ahead": "Esa fecha está fuera del plazo de reserva.",
+    "currency_mismatch": "Estos precios utilizan distintas monedas. Póngase en contacto con el establecimiento antes de reservar.",
     "extra_lead_time": "Uno de los extras necesita más antelación de la que permite esa hora.", "payment_required": "Complete primero el pago.",
     "idempotency_conflict": "Esta reserva ya se envió. Consulte sus reservas.", "confirm_failed": "No se pudo completar la reserva. Inténtelo de nuevo.",
     "nothing_to_pay": "No hay nada que pagar en línea para esta reserva.",

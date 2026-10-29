@@ -44,12 +44,13 @@ export interface PriceQuote {
 export type DeskMethod = 'cash' | 'card_desk' | 'transfer' | 'other'
 export type RefundVia = DeskMethod | 'online_card'
 /** `corrects`: a desk refund undoing a wrong entry — the money is owed again. */
-export interface MoneyMovement { id: number; kind: 'payment' | 'refund'; method: RefundVia; amount: number; currency: string; note: string | null; corrects?: boolean; by: string | null; at: string | null }
+export interface MoneyMovement { provider_status?: string | null; id: number; kind: 'payment' | 'refund'; method: RefundVia; amount: number; currency: string; note: string | null; corrects?: boolean; by: string | null; at: string | null }
 /** The money of an appointment (Part E), worked out by the server. */
 export interface MoneyInfo {
   total: number; currency: string; held_online: number; paid_online: number; refunded_online: number
   paid_desk: number; refunded_desk: number; legacy_marked_paid: boolean; owed: number; to_refund: number
   refundable_online: number; refundable_desk: number; paid_in: number; paid_back: number; can_take: boolean
+  pending_refunds?: { id: string; amount: number | null; status: string; currency: string }[]
   /** What a correction may undo: money entered here (not a label marked paid before Part E). */
   correctable_desk?: number; corrected_desk?: number
   /** Part H: the booking-page deposit's terms; null for every other booking. */

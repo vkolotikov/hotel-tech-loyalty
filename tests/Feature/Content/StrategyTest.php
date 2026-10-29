@@ -135,7 +135,9 @@ class StrategyTest extends TestCase
         $service = Mockery::mock(ContentPlannerStrategyService::class);
         $service->shouldNotReceive('generate');
         $this->app->instance(ContentPlannerStrategyService::class, $service);
-        $held = Cache::lock("content:strategy:{$this->org->id}:{$this->brandId}", 10);
+        config()->set('cache.stores.content_shared_test', ['driver' => 'array']);
+        config()->set('cache.shared', 'content_shared_test');
+        $held = Cache::store('content_shared_test')->lock("content:strategy:{$this->org->id}:{$this->brandId}", 10);
         $this->assertTrue($held->get());
 
         $this->asManager()->postJson($this->api('strategies'), [])->assertStatus(409)->assertJsonPath('error', 'already_generating');

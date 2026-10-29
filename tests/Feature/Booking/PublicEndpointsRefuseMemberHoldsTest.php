@@ -106,7 +106,7 @@ class PublicEndpointsRefuseMemberHoldsTest extends TestCase
             'guest' => ['first_name' => 'Ada', 'last_name' => 'Lovelace', 'email' => 'ada@example.test'],
         ]);
 
-        $res->assertStatus(400)->assertJsonPath('error', 'Hold expired or not found');
+        $res->assertStatus(400)->assertJsonPath('code', 'booking_unavailable')->assertJsonStructure(['reference']);
         $this->assertSame(0, BookingMirror::withoutGlobalScopes()->where('organization_id', $this->org->id)->count());
         $this->assertSame('active', $hold->fresh()->status, "the member's own hold is untouched");
     }

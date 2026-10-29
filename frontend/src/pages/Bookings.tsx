@@ -173,8 +173,8 @@ function BarChart({ data }: { data: { label: string; count: number }[] }) {
 
 /* ── Horizontal Bars ─────────────────────────────────────────────── */
 
-function HorizontalBars({ data }: { data: { unit_name: string; revenue: number; balance: number; bookings: number; avg_nights: number }[] }) {
-  const maxRev = Math.max(1, ...data.map(d => d.revenue))
+function HorizontalBars({ data }: { data: { unit_name: string; currency: string; revenue: number; balance: number; bookings: number; avg_nights: number }[] }) {
+  const maxFor = (currency: string) => Math.max(1, ...data.filter(d => d.currency === currency).map(d => d.revenue))
   if (!data.length) return <div className="text-gray-600 text-sm text-center py-10">No data</div>
 
   return (
@@ -184,19 +184,19 @@ function HorizontalBars({ data }: { data: { unit_name: string; revenue: number; 
           <div className="flex justify-between text-xs mb-1.5">
             <span className="text-gray-300 font-medium truncate">{d.unit_name || 'Unknown'}</span>
             <span className="text-gray-500 flex-shrink-0 ml-3 tabular-nums">
-              {money(d.revenue)} · {d.bookings} bookings · {d.avg_nights}n
+              {money(d.revenue, d.currency)} · {d.bookings} bookings · {d.avg_nights}n
             </span>
           </div>
           <div className="h-2.5 rounded-full overflow-hidden" style={{ background: 'var(--legacy-panel-raised)' }}>
             <div className="h-full rounded-full transition-all duration-500"
               style={{
-                width: `${(d.revenue / maxRev) * 100}%`,
+                width: `${(d.revenue / maxFor(d.currency)) * 100}%`,
                 background: `linear-gradient(90deg, ${CHART_COLORS[i % CHART_COLORS.length]}cc, ${CHART_COLORS[i % CHART_COLORS.length]})`,
                 boxShadow: `0 0 12px ${CHART_COLORS[i % CHART_COLORS.length]}33`,
               }}
             />
           </div>
-          {d.balance > 0 && <div className="text-[10px] text-red-400/70 mt-1">{money(d.balance)} outstanding</div>}
+          {d.balance > 0 && <div className="text-[10px] text-red-400/70 mt-1">{money(d.balance, d.currency)} outstanding</div>}
         </div>
       ))}
     </div>
@@ -580,7 +580,11 @@ export function Bookings() {
                     <Icon size={12} className={meta.color} />
                   </div>
                 </div>
-                <div className="text-2xl font-bold text-white tabular-nums">{kpi.displayValue}</div>
+                <div className="text-2xl font-bold text-white tabular-nums break-words">
+                  {Array.isArray(kpi.values) ? kpi.values.map((value: { currency: string; amount: number }) => (
+                    <div key={value.currency}>{money(value.amount, value.currency)}</div>
+                  )) : kpi.displayValue}
+                </div>
               </div>
             )
           })}
@@ -653,9 +657,9 @@ export function Bookings() {
                       <div className="text-right flex-shrink-0 ml-3">
                         {total > 0 && (
                           <div className="text-xs tabular-nums">
-                            <span className="text-emerald-400 font-semibold">{money(paid)}</span>
+                            <span className="text-emerald-400 font-semibold">{money(paid, a.currency)}</span>
                             <span className="text-t-muted"> / </span>
-                            <span className={balance > 0 ? 'text-red-400' : 'text-t-muted'}>{money(total)}</span>
+                            <span className={balance > 0 ? 'text-red-400' : 'text-t-muted'}>{money(total, a.currency)}</span>
                           </div>
                         )}
                         {a.payment_status && (
@@ -684,8 +688,8 @@ export function Bookings() {
                       <div className="text-xs text-t-muted">{b.apartment_name || '—'} · {fmtDateShort(b.arrival_date)} → {fmtDateShort(b.departure_date)}</div>
                     </div>
                     <div className="text-right flex-shrink-0 ml-3 tabular-nums">
-                      <div className="text-xs text-emerald-400 font-semibold">{money(b.price_paid || 0)}</div>
-                      <div className="text-xs text-red-400">/ {money(b.price_total || 0)}</div>
+                      <div className="text-xs text-emerald-400 font-semibold">{money(b.price_paid || 0, b.currency)}</div>
+                      <div className="text-xs text-red-400">/ {money(b.price_total || 0, b.currency)}</div>
                     </div>
                   </Link>
                 ))}
@@ -809,72 +813,6 @@ export function Bookings() {
               </div>
             </div>
           )}
-        </Card>
-      )}
-
-      {/* Legacy Website Reservations sub-table inside Overview removed.
-          Content lives in the dedicated Website tab above. */}
-      {false && dashboard?.websiteBookings && dashboard.websiteBookings.length > 0 && (
-        <Card className="p-0 overflow-hidden">
-          <div className="px-5 py-4 border-b border-dark-border flex items-center justify-between">
-            <div>
-              <h3 className="text-sm font-bold text-white">{t('bookings.panels.website_reservations', 'Website Reservations')}</h3>
-              <p className="text-xs text-t-muted mt-0.5">{t('bookings.panels.website_reservations_sub', 'Direct bookings via your booking widget')}</p>
-            </div>
-            <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-full bg-blue-500/15 text-blue-300 border border-blue-500/30">
-              {t('bookings.panels.website_count', { count: dashboard.websiteBookings.length, defaultValue: '{{count}} recent' })}
-            </span>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-dark-border">
-                  <th className="text-left p-3 text-[10px] uppercase tracking-wider font-medium text-t-muted">{t('bookings.table.guest', 'Guest')}</th>
-                  <th className="text-left p-3 text-[10px] uppercase tracking-wider font-medium text-t-muted">{t('bookings.table.unit', 'Unit')}</th>
-                  <th className="text-left p-3 text-[10px] uppercase tracking-wider font-medium text-t-muted">{t('bookings.table.stay', 'Stay')}</th>
-                  <th className="text-right p-3 text-[10px] uppercase tracking-wider font-medium text-t-muted">{t('bookings.table.total', 'Total')}</th>
-                  <th className="text-right p-3 text-[10px] uppercase tracking-wider font-medium text-t-muted">{t('bookings.table.paid', 'Paid')}</th>
-                  <th className="text-left p-3 text-[10px] uppercase tracking-wider font-medium text-t-muted">{t('bookings.table.payment', 'Payment')}</th>
-                  <th className="text-left p-3 text-[10px] uppercase tracking-wider font-medium text-t-muted">{t('bookings.table.booked', 'Booked')}</th>
-                  <th className="text-center p-3 text-[10px] uppercase tracking-wider font-medium text-t-muted"></th>
-                </tr>
-              </thead>
-              <tbody>
-                {dashboard.websiteBookings.map((b: any) => {
-                  const paid = Number(b.price_paid ?? 0)
-                  const total = Number(b.price_total ?? 0)
-                  return (
-                    <tr key={b.id} className="border-b border-dark-border/60 hover:bg-dark-surface2/40 transition-colors">
-                      <td className="p-3">
-                        <div className="text-sm text-white font-medium truncate max-w-[180px]">{b.guest_name || '—'}</div>
-                        {b.guest_email && <div className="text-[11px] text-t-muted truncate max-w-[180px]">{b.guest_email}</div>}
-                      </td>
-                      <td className="p-3 text-xs text-t-soft truncate max-w-[180px]">{b.apartment_name || '—'}</td>
-                      <td className="p-3 text-xs text-t-soft whitespace-nowrap">
-                        {fmtDateShort(b.arrival_date)} → {fmtDateShort(b.departure_date)}
-                        {(b.adults != null) && <span className="text-t-muted"> · {b.adults}A{b.children > 0 ? ` ${b.children}C` : ''}</span>}
-                      </td>
-                      <td className="p-3 text-right text-sm text-white font-semibold tabular-nums">{money(total)}</td>
-                      <td className={`p-3 text-right text-sm tabular-nums ${paid >= total && total > 0 ? 'text-emerald-400 font-semibold' : 'text-t-soft'}`}>{money(paid)}</td>
-                      <td className="p-3">
-                        {b.payment_status && (
-                          <span className={`inline-block text-[9px] px-1.5 py-0.5 rounded-full font-bold ${PAY_PILL[b.payment_status] || 'bg-gray-500/15 text-gray-400 border border-gray-500/20'}`}>
-                            {payLabel(b.payment_status)}
-                          </span>
-                        )}
-                      </td>
-                      <td className="p-3 text-xs text-t-muted whitespace-nowrap">{b.source_created_at ? new Date(b.source_created_at).toLocaleDateString() : '—'}</td>
-                      <td className="p-3 text-center">
-                        <Link to={`/bookings/${b.id}`} className="inline-flex items-center gap-1 text-xs text-primary-400 hover:text-primary-300">
-                          <Eye size={12} />
-                        </Link>
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
         </Card>
       )}
 
@@ -1103,12 +1041,12 @@ function ReservationCard({ b, t, refetch }: {
       <div className="mb-3">
         <div className="flex items-baseline justify-between text-xs tabular-nums">
           <span>
-            <span className={paid >= total && total > 0 ? 'text-emerald-400 font-semibold' : 'text-white font-semibold'}>{money(paid)}</span>
+            <span className={paid >= total && total > 0 ? 'text-emerald-400 font-semibold' : 'text-white font-semibold'}>{money(paid, b.currency)}</span>
             <span className="text-t-muted"> / </span>
-            <span className="text-t-soft">{money(total)}</span>
+            <span className="text-t-soft">{money(total, b.currency)}</span>
           </span>
           {balance > 0 ? (
-            <span className="text-[10px] text-red-400 font-semibold">{money(balance)} {t('bookings.row.due', 'due')}</span>
+            <span className="text-[10px] text-red-400 font-semibold">{money(balance, b.currency)} {t('bookings.row.due', 'due')}</span>
           ) : total > 0 ? (
             <span className="text-[10px] text-emerald-400/80 font-semibold">{t('bookings.row.settled', 'Settled')}</span>
           ) : null}
@@ -1246,10 +1184,10 @@ function ReservationRow({ b, t, refetch }: {
 
       {/* Amount — total + paid/balance below */}
       <td className="p-4 text-right tabular-nums whitespace-nowrap">
-        <div className="text-sm font-semibold text-white">{money(total)}</div>
+        <div className="text-sm font-semibold text-white">{money(total, b.currency)}</div>
         <div className="text-[10px] mt-0.5">
           {balance > 0
-            ? <span className="text-red-400 font-semibold">{money(balance)} {t('bookings.row.due', 'due')}</span>
+            ? <span className="text-red-400 font-semibold">{money(balance, b.currency)} {t('bookings.row.due', 'due')}</span>
             : total > 0 ? <span className="text-emerald-400/80 font-semibold">{t('bookings.row.settled', 'Settled')}</span>
                         : <span className="text-t-muted">—</span>}
         </div>
@@ -1423,15 +1361,15 @@ function CompactBookingRow({
       {/* Money + progress bar */}
       <div className="text-right flex-shrink-0 min-w-[150px]">
         <div className="text-xs tabular-nums whitespace-nowrap">
-          <span className={paid >= total && total > 0 ? 'text-emerald-400 font-semibold' : 'text-white font-semibold'}>{money(paid)}</span>
+          <span className={paid >= total && total > 0 ? 'text-emerald-400 font-semibold' : 'text-white font-semibold'}>{money(paid, b.currency)}</span>
           <span className="text-t-muted"> / </span>
-          <span className="text-t-soft">{money(total)}</span>
+          <span className="text-t-soft">{money(total, b.currency)}</span>
         </div>
         <div className="h-1 mt-1.5 bg-white/[0.04] rounded-full overflow-hidden">
           <div className={`h-full ${barTone} transition-all`} style={{ width: `${paidPct}%` }} />
         </div>
         {balance > 0 && total > 0 && (
-          <div className="text-[10px] text-red-400 font-semibold mt-1 tabular-nums">{money(balance)} {t('bookings.row.due', 'due')}</div>
+          <div className="text-[10px] text-red-400 font-semibold mt-1 tabular-nums">{money(balance, b.currency)} {t('bookings.row.due', 'due')}</div>
         )}
       </div>
 

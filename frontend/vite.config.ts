@@ -11,14 +11,18 @@ export default defineConfig(({ mode }) => {
     ].filter(Boolean),
     base: mode === 'production' ? '/spa/' : './',
     resolve: {
-      alias: { '@': path.resolve(__dirname, './src') },
+      alias: { '@': path.resolve(import.meta.dirname, './src') },
     },
     build: {
-      rollupOptions: {
+      // Keep the existing supported browser floor when upgrading the build tool.
+      target: ['es2020', 'chrome87', 'edge88', 'firefox78', 'safari14'],
+      rolldownOptions: {
         output: {
-          manualChunks: {
-            'vendor-react': ['react', 'react-dom', 'react-router-dom'],
-            'vendor-query': ['@tanstack/react-query'],
+          codeSplitting: {
+            groups: [
+              { name: 'vendor-react', test: /node_modules[\\/](react|react-dom|react-router|react-router-dom|scheduler)[\\/]/ },
+              { name: 'vendor-query', test: /node_modules[\\/]@tanstack[\\/](react-query|query-core)[\\/]/ },
+            ],
             // 'vendor-charts': ['recharts'] — removed 2026-06-13.
             // Vite was emitting a <link rel="modulepreload"> for the
             // 434KB recharts chunk in index.html so EVERY cold load

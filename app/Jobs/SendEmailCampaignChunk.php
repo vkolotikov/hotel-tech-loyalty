@@ -69,8 +69,7 @@ class SendEmailCampaignChunk implements ShouldQueue
         }
 
         // A cancelled campaign stops the chain rather than draining it.
-        if ($campaign->status === EmailCampaign::STATUS_CANCELLED) {
-            Log::info('campaign send cancelled', ['campaign_id' => $campaign->id]);
+        if ($campaign->status !== EmailCampaign::STATUS_SENDING) {
             return;
         }
 
@@ -81,10 +80,7 @@ class SendEmailCampaignChunk implements ShouldQueue
         $slice = array_slice($this->memberIds, $this->offset, self::CHUNK);
 
         if ($slice === []) {
-            $campaign->forceFill([
-                'status'     => EmailCampaign::STATUS_SENT,
-                'sent_at'    => now(),
-            ])->save();
+            $this->complete();
             return;
         }
 
@@ -95,7 +91,9 @@ class SendEmailCampaignChunk implements ShouldQueue
         // a non-event, a campaign that silently skipped 400 people is a support
         // incident nobody can reconstruct.
         $limiter = app(\App\Services\CampaignRateLimiter::class);
-        if ($limiter->allowance($campaign->organization_id, count($slice)) < 1) {
+        $reservation = $limiter->reserve($campaign->organization_id, count($slice));
+        $allowance = $reservation['count'];
+        if ($allowance < 1) {
             \Illuminate\Support\Facades\Log::info('campaign chunk deferred: hourly send budget exhausted', [
                 'campaign_id'     => $campaign->id,
                 'organization_id' => $campaign->organization_id,
@@ -108,6 +106,7 @@ class SendEmailCampaignChunk implements ShouldQueue
 
             return;
         }
+        $slice = array_slice($slice, 0, $allowance);
 
         $isMarketing = ($campaign->category ?? 'marketing') !== EmailComplianceService::TRANSACTIONAL;
         $category = $isMarketing ? 'marketing' : EmailComplianceService::TRANSACTIONAL;
@@ -123,7 +122,7 @@ class SendEmailCampaignChunk implements ShouldQueue
         $recipients = LoyaltyMember::whereIn('id', $slice)->with(['user:id,name,email', 'tier:id,name'])->orderBy('id');
         $compliance->scopeEligible($recipients, $category);
 
-        $sent = 0;
+        $unused = $allowance;
         $passedOver = 0;
 
         foreach ($recipients->get() as $member) {
@@ -152,6 +151,8 @@ class SendEmailCampaignChunk implements ShouldQueue
                     $html .= $compliance->footerHtml($member, $orgName);
                 }
 
+                // From this point even an exception may mean the provider accepted it.
+                $unused--;
                 $message = Mail::html($html, function ($mail) use ($email, $subject, $member, $compliance, $category, $identity) {
                     $mail->to($email, $member->user->name ?? null)
                          ->subject($subject);
@@ -187,6 +188,9 @@ class SendEmailCampaignChunk implements ShouldQueue
                 // No message back: the suppression listener (BlockSuppressedRecipients) cancelled it at the
                 // transport — not sent, and not a failure either.
                 $outcome = $message === null ? self::DELIVERY_SUPPRESSED : self::DELIVERY_SENT;
+                if ($outcome === self::DELIVERY_SUPPRESSED) {
+                    $unused++;
+                }
             } catch (\Throwable $e) {
                 $outcome = self::DELIVERY_FAILED;
                 Log::warning('campaign recipient failed', [
@@ -197,9 +201,6 @@ class SendEmailCampaignChunk implements ShouldQueue
             }
 
             $this->settle((int) $campaign->id, (int) $member->id, $outcome);
-            if ($outcome === self::DELIVERY_SENT) {
-                $sent++;
-            }
         }
 
         if ($passedOver > 0) {
@@ -210,20 +211,21 @@ class SendEmailCampaignChunk implements ShouldQueue
             ]);
         }
 
-        $limiter->record($campaign->organization_id, $sent);
+        $limiter->release($reservation['id'], $unused);
 
         // The counters moved with each member (settle()), so progress is visible while the chunk runs and a chunk
         // that stopped partway and ran again still adds up: its first sends stay counted, its second pass counts
         // nobody twice.
         $campaign->forceFill(['last_progress_at' => now()])->save();
 
-        $nextOffset = $this->offset + self::CHUNK;
+        $nextOffset = $this->offset + count($slice);
 
         if ($nextOffset >= count($this->memberIds)) {
-            $campaign->forceFill([
-                'status'  => EmailCampaign::STATUS_SENT,
-                'sent_at' => now(),
-            ])->save();
+            $this->complete();
+            return;
+        }
+
+        if (EmailCampaign::withoutGlobalScopes()->find($this->campaignId)?->status !== EmailCampaign::STATUS_SENDING) {
             return;
         }
 
@@ -239,6 +241,14 @@ class SendEmailCampaignChunk implements ShouldQueue
 
         self::dispatch($this->campaignId, $this->memberIds, $nextOffset)
             ->delay(now()->addSeconds($spacing));
+    }
+
+    /** Cancellation can happen during this chunk: completion must never undo it. */
+    private function complete(): void
+    {
+        EmailCampaign::withoutGlobalScopes()->whereKey($this->campaignId)
+            ->where('status', EmailCampaign::STATUS_SENDING)
+            ->update(['status' => EmailCampaign::STATUS_SENT, 'sent_at' => now()]);
     }
 
     /**
@@ -284,10 +294,11 @@ class SendEmailCampaignChunk implements ShouldQueue
             return;
         }
 
-        $campaign->forceFill([
+        EmailCampaign::withoutGlobalScopes()->whereKey($this->campaignId)
+            ->where('status', EmailCampaign::STATUS_SENDING)->update([
             'status'        => EmailCampaign::STATUS_FAILED,
             'error_message' => 'Sending stopped at recipient ' . $this->offset . ': ' . $e->getMessage(),
-        ])->save();
+        ]);
 
         Log::error('campaign send failed', [
             'campaign_id' => $this->campaignId,

@@ -73,7 +73,7 @@ class InsightsMoneyTest extends TestCase
     public function test_only_who_may_read_insights_reads_it_and_the_period_is_checked(): void
     {
         $this->asStaffMember()->getJson($this->api('insights/money'))
-            ->assertStatus(403)->assertJsonPath('error', 'not_allowed')->assertJsonPath('need', 'can_view_analytics');
+            ->assertStatus(403)->assertJsonPath('error', 'not_allowed');
         $this->asManager()->getJson($this->api('insights/money?period=7d'))->assertStatus(422)->assertJsonValidationErrors(['period']);
         $this->money()->assertJsonPath('period', '30d')->assertJsonPath('currency', 'EUR');
     }

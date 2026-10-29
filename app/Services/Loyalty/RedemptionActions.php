@@ -8,6 +8,7 @@ use App\Models\PointsTransaction;
 use App\Models\Reward;
 use App\Models\RewardRedemption;
 use App\Models\User;
+use App\Scopes\BrandScope;
 use App\Services\AnalyticsService;
 use App\Services\LoyaltyService;
 use Illuminate\Support\Facades\DB;
@@ -43,6 +44,9 @@ final class RedemptionActions
             if ($row->status !== RewardRedemption::STATUS_PENDING) {
                 throw new RedemptionStateException("Redemption is already {$row->status}.");
             }
+            if ($this->debit($row)?->is_reversed) {
+                throw new RedemptionStateException('This redemption was refunded. Cancel it instead.');
+            }
             $row->update([
                 'status'               => RewardRedemption::STATUS_FULFILLED,
                 'fulfilled_at'         => now(),
@@ -52,7 +56,7 @@ final class RedemptionActions
 
             return $row;
         });
-        $row->load('reward');
+        $row->load(['reward' => fn ($q) => $q->withoutGlobalScope(BrandScope::class)->where('organization_id', $row->organization_id)]);
 
         AuditLog::record('reward_redemption_fulfilled', $row,
             ['status' => 'fulfilled'], ['status' => 'pending'],
@@ -72,23 +76,26 @@ final class RedemptionActions
 
         DB::transaction(function () use (&$row, $by, $notes) {
             // Re-read under lock: two concurrent cancels both passed the check above.
-            $row = RewardRedemption::with('reward', 'member')->whereKey($row->id)->lockForUpdate()->firstOrFail();
+            $row = RewardRedemption::with(['reward' => fn ($q) => $q->withoutGlobalScope(BrandScope::class)
+                ->where('organization_id', $row->organization_id), 'member'])->whereKey($row->id)->lockForUpdate()->firstOrFail();
             if ($row->status === RewardRedemption::STATUS_CANCELLED) {
                 throw new RedemptionStateException('Redemption is already cancelled.');
             }
 
             if ($row->status === RewardRedemption::STATUS_PENDING) {
+                // A fresh redemption locks reward then member. Keep the same order while returning stock.
+                $row->setRelation('reward', Reward::withoutGlobalScope(BrandScope::class)
+                    ->where('organization_id', $row->organization_id)->whereKey($row->reward_id)->lockForUpdate()->first());
                 if ($row->member && $row->points_spent > 0) {
-                    $debit = PointsTransaction::where('idempotency_key', 'reward_redemption_' . $row->id)
-                        ->where('is_reversed', false)
-                        ->first();
+                    $debit = $this->debit($row);
 
-                    if ($debit) {
+                    if ($debit && !$debit->is_reversed) {
                         $this->loyalty->reverseTransaction($debit, "cancelled reward redemption {$row->code}", $by);
-                    } else {
+                    } elseif (!$debit) {
                         // No matching debit (rows from before the idempotency key): a credit, so the member is not
                         // left short.
-                        $this->loyalty->awardPoints($row->member, $row->points_spent, "Refund: cancelled reward redemption {$row->code}", 'adjust');
+                        $this->loyalty->awardPoints($row->member, $row->points_spent, "Refund: cancelled reward redemption {$row->code}", 'adjust',
+                            reasonCode: 'redemption_refund', idempotencyKey: 'reward_refund_' . $row->id, qualifying: false);
                     }
                 }
                 if ($row->reward && $row->reward->stock !== null) {
@@ -110,6 +117,12 @@ final class RedemptionActions
         AnalyticsService::clearDashboardCache();
 
         return $row;
+    }
+
+    private function debit(RewardRedemption $row): ?PointsTransaction
+    {
+        return PointsTransaction::withoutGlobalScope(BrandScope::class)->where('organization_id', $row->organization_id)
+            ->where('member_id', $row->member_id)->where('idempotency_key', 'reward_redemption_' . $row->id)->first();
     }
 
     /**

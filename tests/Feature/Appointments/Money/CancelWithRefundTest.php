@@ -58,7 +58,7 @@ class CancelWithRefundTest extends TestCase
         $b = $this->seedBooking(['payment_status' => 'paid', 'stripe_payment_intent_id' => 'pi_fail']);
         $this->stripe->shouldReceive('refund')->andThrow(new \RuntimeException('declined'));
 
-        $this->cancel($b, ['refunds' => [['via' => 'online_card', 'amount' => 60]]])->assertStatus(409)->assertJsonPath('error', 'refund_failed');
+        $this->cancel($b, ['refunds' => [['via' => 'online_card', 'amount' => 60]]])->assertStatus(409)->assertJsonPath('error', 'refund_outcome_unknown');
 
         $this->assertSame(['confirmed', 'paid'], [$b->fresh()->status, $b->fresh()->payment_status]);
         $this->assertSame(0, ServiceBookingPayment::count());

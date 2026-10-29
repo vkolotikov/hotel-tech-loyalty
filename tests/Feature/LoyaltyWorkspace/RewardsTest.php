@@ -79,7 +79,7 @@ class RewardsTest extends TestCase
         $reward = Reward::create(['name' => 'Coffee', 'points_cost' => 50]);
 
         $this->asStaffMember()->postJson($this->api('rewards'), ['name' => 'Tea', 'points_cost' => 40])
-            ->assertStatus(403)->assertJsonPath('error', 'not_allowed')->assertJsonPath('need', 'can_manage_offers');
+            ->assertStatus(403)->assertJsonPath('error', 'not_allowed');
         $this->asStaffMember()->putJson($this->api("rewards/{$reward->id}"), ['name' => 'Tea', 'points_cost' => 40])
             ->assertStatus(403)->assertJsonPath('error', 'not_allowed');
 

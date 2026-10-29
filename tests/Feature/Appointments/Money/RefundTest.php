@@ -48,6 +48,27 @@ class RefundTest extends TestCase
         return $b;
     }
 
+    public function test_full_refund_commits_its_reversal_intent_before_after_commit_effects_run(): void
+    {
+        $b = $this->paidAtDesk(60);
+        \Illuminate\Support\Facades\DB::transaction(fn () => app(\App\Services\Appointments\Money\AppointmentMoney::class)->refundInLock($b, 60, 'cash', 'Full refund', $this->staff));
+        $this->assertDatabaseHas('loyalty_visit_effects', ['organization_id' => $b->organization_id, 'reference_type' => 'service_booking', 'reference_id' => $b->id, 'operation' => 'reverse', 'pending' => true]);
+        $this->assertSame('refunded', $b->fresh()->payment_status);
+    }
+
+    public function test_refund_rollback_cannot_leave_a_reversal_for_a_booking_that_kept_its_money(): void
+    {
+        $b = $this->paidAtDesk(60);
+        try {
+            \Illuminate\Support\Facades\DB::transaction(function () use ($b) {
+                app(\App\Services\Appointments\Money\AppointmentMoney::class)->refundInLock($b, 60, 'cash', 'Full refund', $this->staff);
+                throw new \RuntimeException('Simulated save failure');
+            });
+        } catch (\RuntimeException $e) { $this->assertSame('Simulated save failure', $e->getMessage()); }
+        $this->assertDatabaseMissing('loyalty_visit_effects', ['organization_id' => $b->organization_id, 'reference_type' => 'service_booking', 'reference_id' => $b->id]);
+        $this->assertSame(0, ServiceBookingPayment::where('service_booking_id', $b->id)->where('kind', 'refund')->count());
+    }
+
     public function test_a_manager_gives_cash_back_and_staff_may_not(): void
     {
         $b = $this->paidAtDesk(60);
@@ -74,7 +95,7 @@ class RefundTest extends TestCase
     {
         $b = $this->seedBooking(['payment_status' => 'paid', 'stripe_payment_intent_id' => 'pi_paid9']);
         $this->stripe->shouldReceive('refund')->once()
-            ->withArgs(fn ($pi, $amount, $reason, $key) => $pi === 'pi_paid9' && abs($amount - 25.0) < 0.001 && $reason === 'requested_by_customer' && str_starts_with($key, "appt-refund-{$b->id}-"))
+            ->withArgs(fn ($pi, $amount, $reason, $key) => $pi === 'pi_paid9' && abs($amount - 25.0) < 0.001 && $reason === 'requested_by_customer' && str_starts_with($key, 'refund-operation-'))
             ->andReturn(Refund::constructFrom(['id' => 're_77', 'status' => 'succeeded']));
 
         $this->refund($b, ['amount' => 25, 'via' => 'online_card'])->assertOk()
@@ -92,8 +113,8 @@ class RefundTest extends TestCase
         $this->stripe->shouldReceive('refund')->andThrow(new \RuntimeException('Card network unavailable'));
 
         $this->refund($b, ['amount' => 25, 'via' => 'online_card'])->assertStatus(409)
-            ->assertJsonPath('error', 'refund_failed')
-            ->assertJson(['message' => 'The card refund did not go through: Card network unavailable']);
+            ->assertJsonPath('error', 'refund_outcome_unknown')
+            ->assertJson(['message' => 'The refund result is not known yet. Check its status or retry the same amount; do not return the money another way.']);
 
         $this->assertSame(0, ServiceBookingPayment::count());
         $this->assertSame(['paid', null], [$b->fresh()->payment_status, $b->fresh()->refunded_amount !== null ? (float) $b->fresh()->refunded_amount : null]);
@@ -148,7 +169,7 @@ class RefundTest extends TestCase
             return Refund::constructFrom(['id' => 're_lost' . count($keys), 'status' => 'succeeded']);
         });
 
-        $this->refund($b, ['amount' => 25, 'via' => 'online_card'])->assertStatus(409)->assertJsonPath('error', 'refund_failed');
+        $this->refund($b, ['amount' => 25, 'via' => 'online_card'])->assertStatus(409)->assertJsonPath('error', 'refund_outcome_unknown');
         // Meanwhile the desk takes money for someone else, so the ledger's next row id moves on (as PostgreSQL's
         // sequence always does after a rollback).
         $this->paidAtDesk(30, ['start_at' => '2026-10-06 12:00:00', 'end_at' => '2026-10-06 12:45:00']);

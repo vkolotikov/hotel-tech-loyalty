@@ -88,7 +88,9 @@ class BootstrapTest extends TestCase
         $this->asStaffMember()->getJson($this->api('bootstrap'))->assertJsonPath('staff.can.award', false);
 
         DB::table('staff')->where('user_id', $this->manager->id)->update(['is_active' => false]);
-        $this->asManager()->getJson($this->api('bootstrap'))->assertJsonPath('staff.can.reverse', false)->assertJsonPath('staff.can.award', false);
+        // Enforcement now refuses inactive staff before any workspace data is returned.
+        $this->asManager()->getJson($this->api('bootstrap'))->assertForbidden()
+            ->assertJsonPath('error', 'staff_inactive')->assertJsonMissingPath('venue')->assertJsonMissingPath('staff');
     }
 
     public function test_it_counts_the_requests_waiting(): void

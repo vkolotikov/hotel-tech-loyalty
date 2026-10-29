@@ -88,7 +88,10 @@ export function BookingDetail() {
         toast.success('Refund issued')
       }
     },
-    onError: (e: any) => toast.error(e?.response?.data?.error || 'Refund failed'),
+    onError: (e: any) => {
+      qc.invalidateQueries({ queryKey: ['booking-detail', id] })
+      toast.error(e?.response?.data?.error || 'Refund failed')
+    },
   })
 
   const handleSync = async () => {
@@ -102,6 +105,10 @@ export function BookingDetail() {
   if (!booking) return <div className="text-center text-gray-600 py-16">{t('bookingDetail.not_found', 'Booking not found')}</div>
 
   const b = booking
+  const pendingRefund = b.pending_refunds?.[0]
+  const anotherRoomRefund = pendingRefund && Number(pendingRefund.booking_id) !== Number(id)
+  const retryAmount = pendingRefund ? (pendingRefund.requested_amount == null ? '' : String(pendingRefund.requested_amount)) : refundAmount
+  const retryReason = pendingRefund ? (pendingRefund.reason ?? '') : refundReason
   const nights = b.arrival_date && b.departure_date ? Math.ceil((new Date(b.departure_date).getTime() - new Date(b.arrival_date).getTime()) / 86400000) : 0
   const balanceDue = b.balance_due ?? Math.max(0, (b.price_total || 0) - (b.price_paid || 0))
   // Release 6: a room of a multi-room stay shows the group's one payment (carried by its lead room).
@@ -209,25 +216,25 @@ export function BookingDetail() {
                 <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-5">
                   <div className="rounded-xl p-3" style={{ background: 'var(--legacy-panel-50)', border: `1px solid ${hxWhite(0.04)}` }}>
                     <div className="text-[10px] text-gray-500 font-medium uppercase">{t('bookingDetail.financial.total', 'Total')}</div>
-                    <div className="text-xl font-bold text-white mt-1 tabular-nums">{money(b.price_total)}</div>
+                    <div className="text-xl font-bold text-white mt-1 tabular-nums">{money(b.price_total, b.currency)}</div>
                   </div>
                   <div className="rounded-xl p-3" style={{ background: 'var(--legacy-panel-50)', border: `1px solid ${hxWhite(0.04)}` }}>
                     <div className="text-[10px] text-gray-500 font-medium uppercase">{t('bookingDetail.financial.paid', 'Paid')}</div>
-                    <div className="text-xl font-bold text-emerald-400 mt-1 tabular-nums">{money(b.price_paid || 0)}</div>
+                    <div className="text-xl font-bold text-emerald-400 mt-1 tabular-nums">{money(b.price_paid || 0, b.currency)}</div>
                   </div>
                   <div className="rounded-xl p-3" style={{ background: 'var(--legacy-panel-50)', border: `1px solid ${hxWhite(0.04)}` }}>
                     <div className="text-[10px] text-gray-500 font-medium uppercase">{t('bookingDetail.financial.balance', 'Balance')}</div>
                     <div className={`text-xl font-bold mt-1 tabular-nums ${balanceDue > 0 ? 'text-red-400' : 'text-emerald-400/50'}`}>
-                      {balanceDue > 0 ? money(balanceDue) : t('bookingDetail.financial.settled', 'Settled')}
+                      {balanceDue > 0 ? money(balanceDue, b.currency) : t('bookingDetail.financial.settled', 'Settled')}
                     </div>
                   </div>
                   <div className="rounded-xl p-3" style={{ background: 'var(--legacy-panel-50)', border: `1px solid ${hxWhite(0.04)}` }}>
                     <div className="text-[10px] text-gray-500 font-medium uppercase">{t('bookingDetail.financial.deposit', 'Deposit')}</div>
-                    <div className="text-sm text-white mt-1">{money(b.deposit_amount)} {b.deposit_paid ? <CheckCircle size={11} className="inline text-emerald-400" /> : ''}</div>
+                    <div className="text-sm text-white mt-1">{money(b.deposit_amount, b.currency)} {b.deposit_paid ? <CheckCircle size={11} className="inline text-emerald-400" /> : ''}</div>
                   </div>
                   <div className="rounded-xl p-3" style={{ background: 'var(--legacy-panel-50)', border: `1px solid ${hxWhite(0.04)}` }}>
                     <div className="text-[10px] text-gray-500 font-medium uppercase">{t('bookingDetail.financial.prepayment', 'Prepayment')}</div>
-                    <div className="text-sm text-white mt-1">{money(b.prepayment_amount)} {b.prepayment_paid ? <CheckCircle size={11} className="inline text-emerald-400" /> : ''}</div>
+                    <div className="text-sm text-white mt-1">{money(b.prepayment_amount, b.currency)} {b.prepayment_paid ? <CheckCircle size={11} className="inline text-emerald-400" /> : ''}</div>
                   </div>
                 </div>
 
@@ -259,7 +266,7 @@ export function BookingDetail() {
                             </span>
                             <span className="text-[9px] uppercase tracking-wider text-gray-600 font-medium">{line.element_type}</span>
                             <span className={'font-mono font-semibold tabular-nums min-w-[80px] text-right ' + (isDiscount ? 'text-emerald-400' : 'text-white')}>
-                              {amount < 0 ? '−' : ''}{money(Math.abs(amount))}
+                              {amount < 0 ? '−' : ''}{money(Math.abs(amount), b.currency)}
                             </span>
                           </div>
                         )
@@ -320,13 +327,13 @@ export function BookingDetail() {
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-500">{t('bookingDetail.financial.charged', 'Charged')}</span>
-                        <span className="text-white tabular-nums">{money(b.price_paid || 0)}</span>
+                        <span className="text-white tabular-nums">{money(b.price_paid || 0, b.currency)}</span>
                       </div>
                       {b.refunded_amount > 0 && (
                         <>
                           <div className="flex justify-between">
                             <span className="text-gray-500">{t('bookingDetail.financial.refunded', 'Refunded')}</span>
-                            <span className="text-amber-300 tabular-nums">−{money(b.refunded_amount)}</span>
+                            <span className="text-amber-300 tabular-nums">−{money(b.refunded_amount, b.currency)}</span>
                           </div>
                           {b.refunded_at && (
                             <div className="flex justify-between">
@@ -353,7 +360,13 @@ export function BookingDetail() {
                         This booking was created in Mock Mode — no real charge was made.
                       </p>
                     )}
-                    {(b.payment_status === 'paid' || b.payment_status === 'partially_refunded') && (
+                    {pendingRefund && <p role="status" className="text-xs text-amber-300 bg-amber-500/10 rounded-lg p-3 mb-3">
+                      {pendingRefund.status === 'unknown' || pendingRefund.status === 'requesting'
+                        ? t('bookingDetail.refund.unknown', 'The refund outcome is not known yet. Retry the same amount to check it; do not return the money another way.')
+                        : t('bookingDetail.refund.pending', 'A refund is processing. Retry the same amount to check it; do not return the money another way.')}
+                      {anotherRoomRefund && <Link className="underline ml-1" to={`/bookings/${pendingRefund.booking_id}`}>{t('bookingDetail.refund.open_original', 'Open the original room refund')}</Link>}
+                    </p>}
+                    {(b.payment_status === 'paid' || b.payment_status === 'partially_refunded') && !anotherRoomRefund && (
                       <button
                         onClick={() => setRefundOpen(true)}
                         className="mt-3 w-full px-3 py-2 rounded-lg text-xs font-semibold text-amber-300 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 transition-colors inline-flex items-center justify-center gap-2"
@@ -370,7 +383,7 @@ export function BookingDetail() {
                     {b.price_elements.map((pe: any) => (
                       <div key={pe.id} className="flex justify-between text-sm py-1.5">
                         <span className="text-gray-400">{pe.name || pe.element_type}</span>
-                        <span className="text-white font-medium tabular-nums">{money(pe.amount || 0)} × {pe.quantity}</span>
+                        <span className="text-white font-medium tabular-nums">{money(pe.amount || 0, b.currency)} × {pe.quantity}</span>
                       </div>
                     ))}
                   </div>
@@ -441,7 +454,7 @@ export function BookingDetail() {
                       </div>
                     </div>
                     <div className="text-right flex-shrink-0 ml-3">
-                      {s.gross_total && <div className="text-xs text-white font-semibold tabular-nums">{money(s.gross_total)}</div>}
+                      {s.gross_total && <div className="text-xs text-white font-semibold tabular-nums">{money(s.gross_total, s.currency)}</div>}
                       <div className="text-[10px] text-gray-600">{new Date(s.created_at).toLocaleString()}</div>
                       {s.failure_code && <div className="text-[10px] text-red-400 mt-0.5">{s.failure_code}</div>}
                     </div>
@@ -479,7 +492,7 @@ export function BookingDetail() {
                 </select>
               </div>
               <div>
-                <label className="text-[10px] text-gray-500 font-medium block mb-1.5 uppercase tracking-wider">{t('bookingDetail.operations.paid_amount', 'Paid (€)')}</label>
+                <label className="text-[10px] text-gray-500 font-medium block mb-1.5 uppercase tracking-wider">{t('bookingDetail.operations.paid_amount_currency', 'Paid ({{currency}})', { currency: b.currency })}</label>
                 <input key={`paid-${b.price_paid}`} type="number" step="0.01" min="0" defaultValue={b.price_paid || 0}
                   onBlur={e => { const v = parseFloat(e.target.value); if (!isNaN(v) && v !== (b.price_paid || 0)) updateStatus.mutate({ price_paid: v }) }}
                   className={selectClass} />
@@ -530,13 +543,14 @@ export function BookingDetail() {
             <div className="p-5 space-y-3">
               <div>
                 <label className="block text-xs font-semibold text-t-soft mb-1">
-                  {t('bookingDetail.refund.amount_label', 'Amount')} <span className="text-t-muted font-normal">{t('bookingDetail.refund.amount_hint', { total: money(b.price_total || 0), defaultValue: '(leave empty for full refund of {{total}})' })}</span>
+                  {t('bookingDetail.refund.amount_label', 'Amount')} <span className="text-t-muted font-normal">{t('bookingDetail.refund.amount_hint', { total: money(b.price_total || 0, b.currency), defaultValue: '(leave empty for full refund of {{total}})' })}</span>
                 </label>
                 <input
                   type="number"
                   min="0"
                   step="0.01"
-                  value={refundAmount}
+                  disabled={!!pendingRefund || refundMutation.isPending}
+                  value={retryAmount}
                   onChange={e => setRefundAmount(e.target.value)}
                   placeholder={String(b.price_total ?? '')}
                   className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white tabular-nums focus:outline-none focus:ring-2 focus:ring-amber-500/40"
@@ -545,7 +559,8 @@ export function BookingDetail() {
               <div>
                 <label className="block text-xs font-semibold text-t-soft mb-1">{t('bookingDetail.refund.reason_label', 'Reason')} <span className="text-t-muted font-normal">{t('bookingDetail.refund.reason_optional', '(optional)')}</span></label>
                 <select
-                  value={refundReason}
+                  disabled={!!pendingRefund || refundMutation.isPending}
+                  value={retryReason}
                   onChange={e => setRefundReason(e.target.value as any)}
                   className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-amber-500/40"
                 >
@@ -565,14 +580,14 @@ export function BookingDetail() {
               <button onClick={() => setRefundOpen(false)} className="px-3 py-1.5 text-sm text-t-soft hover:text-white">{t('actions.cancel', 'Cancel')}</button>
               <button
                 onClick={() => refundMutation.mutate({
-                  amount: refundAmount ? Number(refundAmount) : undefined,
-                  reason: refundReason || undefined,
+                  amount: retryAmount ? Number(retryAmount) : undefined,
+                  reason: retryReason || undefined,
                 })}
-                disabled={refundMutation.isPending}
+                disabled={refundMutation.isPending || !!anotherRoomRefund}
                 className="bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-on-fill text-sm font-semibold px-4 py-1.5 rounded-lg flex items-center gap-2"
               >
                 {refundMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <Undo2 size={14} />}
-                Refund
+                {pendingRefund ? t('bookingDetail.refund.check', 'Check refund') : t('bookingDetail.refund.title', 'Issue refund')}
               </button>
             </div>
           </div>

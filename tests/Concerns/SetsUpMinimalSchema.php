@@ -98,6 +98,7 @@ trait SetsUpMinimalSchema
     protected function setUpBookingRefundSchema(): void
     {
         $this->setUpMinimalSchema();
+        $this->setUpVisitEffectsSchema();
 
         if (!Schema::hasTable('booking_mirror')) {
             Schema::create('booking_mirror', function ($table) {
@@ -123,6 +124,7 @@ trait SetsUpMinimalSchema
                 $table->string('payment_status', 32)->nullable();
                 $table->string('stripe_payment_intent_id')->nullable();
                 $table->string('internal_status', 32)->nullable();
+                $table->json('raw_json')->nullable();
                 // Member portal phase 3 (2026_09_30_100000) and the two
                 // columns the portal reads beside them.
                 $table->string('channel_name', 80)->nullable();
@@ -1405,6 +1407,30 @@ trait SetsUpMinimalSchema
         // reverseTransaction now realigns expiry buckets, so every caller
         // of this schema needs the table — not just the award-path tests.
         $this->setUpExpiryBucketSchema();
+        $this->setUpVisitEffectsSchema();
+    }
+
+    protected function setUpVisitEffectsSchema(): void
+    {
+        if (!Schema::hasTable('loyalty_visit_effects')) {
+            // Same columns/indexes as the migration, without FKs like these other optional SQLite fixtures.
+            Schema::create('loyalty_visit_effects', function ($table) {
+                $table->id();
+                $table->unsignedBigInteger('organization_id');
+                $table->unsignedBigInteger('member_id')->nullable();
+                $table->string('reference_type', 40);
+                $table->unsignedBigInteger('reference_id');
+                $table->string('operation', 12)->default('record');
+                $table->json('payload');
+                $table->boolean('pending')->default(true);
+                $table->unsignedInteger('attempts')->default(0);
+                $table->json('failed_effects')->nullable();
+                $table->timestamp('last_attempt_at')->nullable();
+                $table->timestamps();
+                $table->unique(['organization_id', 'reference_type', 'reference_id'], 'loyalty_visit_effects_reference_unique');
+                $table->index(['pending', 'id']);
+            });
+        }
     }
 
     /**
@@ -1480,7 +1506,7 @@ trait SetsUpMinimalSchema
             Schema::create('booking_holds', function ($table) {
                 $table->bigIncrements('id');
                 $table->unsignedBigInteger('organization_id');
-                $table->string('hold_token', 64);
+                $table->string('hold_token', 64)->unique();
                 $table->string('status', 16)->default('active');
                 $table->timestamp('expires_at')->nullable();
                 $table->text('payload_json')->nullable();

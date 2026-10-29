@@ -105,7 +105,7 @@ describe('bookErrorFallback', () => {
 /** Every code `cancelErrorKey` maps to its own `portal.bookings.cancel_error.<code>` key — `cancel_failed`
  *  (the cancel endpoint's own catch-all 500) is included, since the endpoint really answers with it and
  *  its sentence must not claim nothing happened. */
-const CANCEL_ERROR_CODES = ['outside_policy', 'not_cancellable', 'already_cancelled', 'cancel_in_progress', 'refund_failed', 'refund_unavailable', 'cancel_failed']
+const CANCEL_ERROR_CODES = ['outside_policy', 'not_cancellable', 'already_cancelled', 'cancel_in_progress', 'refund_failed', 'refund_pending', 'refund_outcome_unknown', 'refund_unavailable', 'cancel_failed']
 
 describe('cancelErrorKey', () => {
   it('maps every cancellation code to its own portal.bookings.cancel_error.<code> key', () => {

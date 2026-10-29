@@ -85,18 +85,18 @@ class TeamController extends Controller
         // team list doesn't fan out into one query per row.
         $pendingEmails = $rows
             ->filter(fn (Staff $s) => $s->user && !$s->last_login_at)
-            ->pluck('user.email')
+            ->pluck('user_id')
             ->filter()
             ->unique()
             ->values();
         $inviteExpiry = collect();
         if ($pendingEmails->isNotEmpty()) {
-            $inviteExpiry = EmailVerificationCode::whereIn('email', $pendingEmails)
+            $inviteExpiry = EmailVerificationCode::whereIn('user_id', $pendingEmails)->where('purpose', 'claim')
                 ->whereNull('verified_at')
                 ->where('expires_at', '>', now())
                 ->orderByDesc('id')
-                ->get(['email', 'expires_at'])
-                ->groupBy('email')
+                ->get(['user_id', 'expires_at'])
+                ->groupBy('user_id')
                 ->map(fn ($g) => $g->first()->expires_at);
         }
 
@@ -111,7 +111,7 @@ class TeamController extends Controller
                 'department'          => $s->department,
                 'is_active'           => $s->is_active,
                 'last_login_at'       => $s->last_login_at,
-                'invite_expires_at'   => $s->last_login_at ? null : ($inviteExpiry[$s->user?->email] ?? null),
+                'invite_expires_at'   => $s->last_login_at ? null : ($inviteExpiry[$s->user_id] ?? null),
                 'can_award_points'    => $s->can_award_points,
                 'can_redeem_points'   => $s->can_redeem_points,
                 'can_manage_offers'   => $s->can_manage_offers,
@@ -180,6 +180,7 @@ class TeamController extends Controller
 
         try {
             $result = DB::transaction(function () use ($validated, $email, $orgId) {
+                Organization::whereKey($orgId)->lockForUpdate()->firstOrFail();
                 // Reuse an existing user in THIS org with THIS email.
                 // Migration `2026_05_25_120000_users_email_unique_per_org_for_staff`
                 // replaced the global users.email unique with two partial
@@ -240,7 +241,7 @@ class TeamController extends Controller
                     'is_active'          => true,
                 ];
                 if ($staff) {
-                    $staff->update($payload);
+                    // Re-inviting is a resend, never a second role/capability editor or a reactivation.
                 } else {
                     $staff = Staff::withoutGlobalScopes()->create($payload);
                 }
@@ -248,15 +249,7 @@ class TeamController extends Controller
                 // Generate a fresh invite code. Wipe any prior unverified
                 // codes for this email first so re-invitations don't
                 // collide with a stale code.
-                EmailVerificationCode::where('email', $email)
-                    ->whereNull('verified_at')
-                    ->delete();
-                $code = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
-                EmailVerificationCode::create([
-                    'email'      => $email,
-                    'code'       => $code,
-                    'expires_at' => now()->addHours(48),
-                ]);
+                $code = EmailVerificationCode::issueFor($user, 'claim', now()->addHours(48))->code;
 
                 return ['user' => $user, 'staff' => $staff, 'code' => $code];
             });
@@ -294,7 +287,18 @@ class TeamController extends Controller
      */
     public function update(Request $request, int $id): JsonResponse
     {
+        return DB::transaction(function () use ($request, $id) {
+            Organization::whereKey(app('current_organization_id'))->lockForUpdate()->firstOrFail();
+            return $this->updateLocked($request, $id);
+        });
+    }
+
+    private function updateLocked(Request $request, int $id): JsonResponse
+    {
         $staff = Staff::findOrFail($id);
+        if ($staff->role === 'super_admin' && !$this->isCurrentUserSuperAdmin($request)) {
+            return response()->json(['error' => 'Only super-admins can change a super-admin.'], 403);
+        }
 
         $validated = $request->validate([
             'role'                 => 'sometimes|string|in:' . implode(',', self::ROLES),
@@ -384,7 +388,18 @@ class TeamController extends Controller
      */
     public function deactivate(Request $request, int $id): JsonResponse
     {
+        return DB::transaction(function () use ($request, $id) {
+            Organization::whereKey(app('current_organization_id'))->lockForUpdate()->firstOrFail();
+            return $this->deactivateLocked($request, $id);
+        });
+    }
+
+    private function deactivateLocked(Request $request, int $id): JsonResponse
+    {
         $staff = Staff::findOrFail($id);
+        if ($staff->role === 'super_admin' && !$this->isCurrentUserSuperAdmin($request)) {
+            return response()->json(['error' => 'Only super-admins can change a super-admin.'], 403);
+        }
 
         if ($staff->user_id === $request->user()?->id) {
             return response()->json(['error' => "You can't deactivate your own account."], 422);
@@ -429,6 +444,9 @@ class TeamController extends Controller
     public function reactivate(Request $request, int $id): JsonResponse
     {
         $staff = Staff::findOrFail($id);
+        if ($staff->role === 'super_admin' && !$this->isCurrentUserSuperAdmin($request)) {
+            return response()->json(['error' => 'Only super-admins can change a super-admin.'], 403);
+        }
         $staff->update(['is_active' => true]);
 
         AuditLog::create([
@@ -457,15 +475,7 @@ class TeamController extends Controller
         }
         $email = $staff->user->email;
 
-        EmailVerificationCode::where('email', $email)
-            ->whereNull('verified_at')
-            ->delete();
-        $code = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
-        EmailVerificationCode::create([
-            'email'      => $email,
-            'code'       => $code,
-            'expires_at' => now()->addHours(48),
-        ]);
+        $code = EmailVerificationCode::issueFor($staff->user, 'claim', now()->addHours(48))->code;
 
         $emailSent = $this->sendInviteEmail($email, $staff->user->name ?? $email, $code);
 

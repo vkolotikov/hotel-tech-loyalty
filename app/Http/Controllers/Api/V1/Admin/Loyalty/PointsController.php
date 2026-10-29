@@ -37,15 +37,18 @@ class PointsController extends Controller
             type:           'earn',
             staff:          $request->user(),
             idempotencyKey: $this->key($member, $data['idempotency_key'] ?? null),
+            validateReplay: true,
         );
 
         // Side effects, as the full admin's: never a reason for the award to fail.
-        try {
-            $notices->sendPointsEarned($member->fresh(), $data['points']);
-        } catch (\Throwable $e) {
-            Log::warning('loyalty workspace: sendPointsEarned failed: ' . $e->getMessage());
+        if ($line->wasRecentlyCreated) {
+            try {
+                $notices->sendPointsEarned($member->fresh(), (int) $line->points);
+            } catch (\Throwable $e) {
+                Log::warning('loyalty workspace: sendPointsEarned failed: ' . $e->getMessage());
+            }
+            $this->tell($realtime, 'Points Awarded', "+{$line->points} pts to " . ($member->user?->name ?? 'member'), $member, (int) $line->points, 'award');
         }
-        $this->tell($realtime, 'Points Awarded', "+{$data['points']} pts to " . ($member->user?->name ?? 'member'), $member, $data['points'], 'award');
 
         return response()->json($this->after($member, $line->id));
     }
@@ -55,9 +58,6 @@ class PointsController extends Controller
         LoyaltyAccess::require($request->user(), LoyaltyAccess::REDEEM);
         $data = $this->validated($request);
         $member = $this->member($id);
-        if ($data['points'] > (int) $member->current_points) {
-            throw new LoyaltyRefused('not_enough_points', 'The member does not have that many points.', 422, ['balance' => (int) $member->current_points]);
-        }
 
         try {
             $line = $loyalty->redeemPoints(
@@ -66,6 +66,7 @@ class PointsController extends Controller
                 description:    $data['reason'],
                 staff:          $request->user(),
                 idempotencyKey: $this->key($member, $data['idempotency_key'] ?? null),
+                validateReplay: true,
             );
         } catch (\RuntimeException $e) {
             // The service's own check, under the member's lock: the balance fell meanwhile.
@@ -74,7 +75,9 @@ class PointsController extends Controller
             }
             throw $e;
         }
-        $this->tell($realtime, 'Points Redeemed', "-{$data['points']} pts from " . ($member->user?->name ?? 'member'), $member, $data['points'], 'redeem');
+        if ($line->wasRecentlyCreated) {
+            $this->tell($realtime, 'Points Redeemed', "-{$data['points']} pts from " . ($member->user?->name ?? 'member'), $member, $data['points'], 'redeem');
+        }
 
         return response()->json($this->after($member, $line->id));
     }

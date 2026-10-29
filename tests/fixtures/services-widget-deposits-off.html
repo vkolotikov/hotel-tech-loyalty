@@ -718,6 +718,7 @@ img{max-width:100%;display:block}
       customer_notes: state.customer.notes,
       extras: state.extras,
       payment_intent_id: state.paymentIntent ? state.paymentIntent.id : null,
+      quote_token: state.paymentIntent ? state.paymentIntent.quote_token : null,
       source: state.source,
     }, { 'Idempotency-Key': state.idempotencyKey }).then(function (res) {
       state.submitting = false

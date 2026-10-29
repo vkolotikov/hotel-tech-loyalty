@@ -6,7 +6,7 @@ use App\Models\LoyaltyMember;
 use App\Models\PointsTransaction;
 use App\Models\User;
 use App\Scopes\BrandScope;
-use App\Services\Loyalty\Visits\VisitRecorder;
+use App\Services\Loyalty\Visits\VisitEffects;
 use App\Services\LoyaltyService;
 use Illuminate\Support\Facades\DB;
 
@@ -52,17 +52,20 @@ final class MemberLedger
      * is made again under the row's lock by the service.
      *
      * Release 7: a line of a desk visit (DeskVisit's check-in or purchase line, referenced `scan_event` + the visit's
-     * row) undoes the visit too, once the line's lock is released — VisitRecorder::reversed(): its stamp comes off an
+     * row) commits a durable reversal intent with the points and undoes the visit once the locks are released: its stamp comes off an
      * open card, its cashback goes back (never below zero), its tier spend is taken back. Each of those is idempotent,
      * so reversing the visit's other line as well changes nothing more.
      */
     public function reverse(LoyaltyMember $member, int $lineId, string $reason, User $by): PointsTransaction
     {
-        $deskVisit = null;
-        $reversal = DB::transaction(function () use ($member, $lineId, $reason, $by, &$deskVisit) {
+        $visitIntent = null;
+        $reversal = DB::transaction(function () use ($member, $lineId, $reason, $by, &$visitIntent) {
             $line = $this->lines($member)->whereKey($lineId)->lockForUpdate()->first();
             if (!$line) {
                 throw LoyaltyRefused::notFound();
+            }
+            if (self::isRewardDebit($line)) {
+                throw new LoyaltyRefused('cannot_reverse', 'Cancel the reward redemption to refund its points and stock together.', 409);
             }
             if (self::isReversal($line)) {
                 throw new LoyaltyRefused('cannot_reverse', 'A reversal cannot be reversed.', 409);
@@ -70,16 +73,17 @@ final class MemberLedger
             if ($line->is_reversed) {
                 throw new LoyaltyRefused('already_reversed', 'This line was already reversed.', 409);
             }
-            if ($line->reference_type === 'scan_event' && $line->reference_id !== null) {
-                $deskVisit = (int) $line->reference_id;
-            }
-
             // This transaction holds the line's lock, so the service's own re-check sees what was checked here.
-            return $this->loyalty->reverseTransaction($line, $reason, $by);
+            $reversal = $this->loyalty->reverseTransaction($line, $reason, $by);
+            if ($line->reference_type === 'scan_event' && $line->reference_id !== null) {
+                $visitIntent = app(VisitEffects::class)->reverse((int) $member->organization_id, 'scan_event', (int) $line->reference_id, $by);
+            }
+            return $reversal;
         });
 
-        if ($deskVisit !== null) {
-            app(VisitRecorder::class)->reversed((int) $member->organization_id, 'scan_event', $deskVisit, $by);
+        if ($visitIntent !== null) {
+            // The intent commits with points. Run effects only after any caller's outer transaction releases its locks.
+            DB::afterCommit(fn () => app(VisitEffects::class)->run($visitIntent));
         }
 
         return $reversal;
@@ -98,13 +102,20 @@ final class MemberLedger
             'at'             => $t->created_at?->toIso8601String(),
             'is_reversed'    => (bool) $t->is_reversed,
             'reversal_of_id' => $t->reversal_of_id !== null ? (int) $t->reversal_of_id : null,
-            'can_reverse'    => !$t->is_reversed && !self::isReversal($t),
+            'can_reverse'    => !$t->is_reversed && !self::isReversal($t) && !self::isRewardDebit($t),
         ];
     }
 
     private static function isReversal(PointsTransaction $t): bool
     {
         return $t->type === 'reverse' || $t->reversal_of_id !== null;
+    }
+
+    /** Reward value and stock must move together through RedemptionActions::cancel(). */
+    private static function isRewardDebit(PointsTransaction $t): bool
+    {
+        return (int) $t->points < 0 && ($t->reason_code === 'catalog_redeem'
+            || str_starts_with((string) $t->idempotency_key, 'reward_redemption_'));
     }
 
     /** The member's lines in every brand; the tenant scope still holds. */

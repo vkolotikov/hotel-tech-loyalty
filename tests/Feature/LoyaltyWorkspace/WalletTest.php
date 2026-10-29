@@ -82,10 +82,10 @@ class WalletTest extends TestCase
     public function test_it_is_a_managers_and_the_plans(): void
     {
         foreach (['get' => 'wallet', 'put' => 'wallet', 'post' => 'wallet/apple-cert'] as $method => $path) {
-            $this->asStaffMember()->json($method, $this->api($path), [])->assertStatus(403)->assertJsonPath('error', 'manager_only');
+            $this->asStaffMember()->json($method, $this->api($path), [])->assertStatus(403)->assertJsonPath('error', 'not_allowed');
         }
         foreach (['wallet/apple-wwdr', 'wallet/google-service-account'] as $path) {
-            $this->asStaffMember()->postJson($this->api($path))->assertStatus(403)->assertJsonPath('error', 'manager_only');
+            $this->asStaffMember()->postJson($this->api($path))->assertStatus(403)->assertJsonPath('error', 'not_allowed');
         }
 
         $this->withWalletFeature(false);

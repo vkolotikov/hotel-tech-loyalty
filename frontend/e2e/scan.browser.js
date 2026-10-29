@@ -26,6 +26,6 @@ async page => {
     else if(path.includes('credit'))body={balance:10,entries:[]};
     return route.fulfill({status,contentType:'application/json',body:JSON.stringify(body)});
   });
-  await page.setViewportSize({width:1440,height:1080});await page.goto(base+'/loyalty/scan');await page.locator('.l-sc-viewport').waitFor();await page.evaluate(()=>document.fonts.ready);await page.screenshot({path:root+'render-desktop-idle.png',fullPage:true});
+  await page.setViewportSize({width:1440,height:1080});await page.goto(base+'/loyalty/scan');await page.locator('.l-sc-viewport').waitFor();await page.evaluate(()=>document.fonts.ready);await page.screenshot({path:root+'render-desktop-idle.png',fullPage:false});
   return {heading:await page.locator('h1').innerText(),errors:state.errors};
 }

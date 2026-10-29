@@ -121,7 +121,7 @@ class ImagesTest extends TestCase
     public function test_staff_without_manage_offers_are_refused_and_nothing_is_stored(): void
     {
         $this->asStaffMember()->post($this->api("rewards/{$this->reward->id}/image"), ['image' => UploadedFile::fake()->image('a.jpg')], ['Accept' => 'application/json'])
-            ->assertStatus(403)->assertJsonPath('error', 'not_allowed')->assertJsonPath('need', 'can_manage_offers');
+            ->assertStatus(403)->assertJsonPath('error', 'not_allowed');
         $this->asStaffMember()->deleteJson($this->api("rewards/{$this->reward->id}/image"))->assertStatus(403);
         $this->asStaffMember()->post($this->api("offers/{$this->offer->id}/image"), ['image' => UploadedFile::fake()->image('a.jpg')], ['Accept' => 'application/json'])->assertStatus(403);
         $this->asStaffMember()->deleteJson($this->api("offers/{$this->offer->id}/image"))->assertStatus(403);

@@ -1,7 +1,7 @@
 // Run in a fresh local-fixture page after card-app.browser.js.
 async page => {
   const origin = new URL(page.url()).origin;
-  if (!/^http:\/\/(127\.0\.0\.1|localhost):(5173|5810)$/.test(origin)) throw Error('Local fixtures required');
+  if (!/^http:\/\/(127\.0\.0\.1|localhost):(5173|5175|5810)$/.test(origin)) throw Error('Local fixtures required');
   const root = 'C:/wamp64/www/Hexa-Tech/docs/loyalty-redesign/evidence/card-app/';
   const checks = [], ok = (value, name) => { if (!value) throw Error(name); checks.push(name); };
   const inspect = () => page.evaluate(() => {

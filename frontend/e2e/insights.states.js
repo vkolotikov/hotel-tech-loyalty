@@ -1,6 +1,6 @@
 // Run after insights.browser.js. All requests remain intercepted local fixtures.
 async page => {
-  const base=new URL(page.url()).origin;if(!/^http:\/\/(127\.0\.0\.1|localhost):(5173|5810)$/.test(base))throw Error('Local fixtures required');
+  const base=new URL(page.url()).origin;if(!/^http:\/\/(127\.0\.0\.1|localhost):(5173|5175|5810)$/.test(base))throw Error('Local fixtures required');
   const root='C:/wamp64/www/Hexa-Tech/docs/loyalty-redesign/evidence/insights/',checks=[];
   const ok=(v,name)=>{if(!v)throw Error(name);checks.push(name)},button=name=>page.getByRole('button',{name,exact:true});
   const fixture=body=>page.evaluate(async body=>await(await fetch('/api/v1/admin/loyalty/__fixture',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})).json(),body);
@@ -31,7 +31,7 @@ async page => {
     ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1&&document.body.scrollWidth<=innerWidth+1),'dashboard fits '+width+'px');
     await page.waitForFunction(()=>[...document.querySelectorAll('.l-in-trend-svg,.l-in-points-svg')].every(e=>Math.abs(e.getBoundingClientRect().width-e.viewBox.baseVal.width)<1));
     ok(true,'charts retain readable coordinate scale at '+width+'px');
-    if(width===390)await page.screenshot({path:root+'render-mobile.png',fullPage:true});
+    if(width===390)await page.screenshot({path:root+'render-mobile.png',fullPage:false});
     for(const name of ['filters','definitions']){
       await (name==='filters'?page.getByRole('button',{name:/^Reporting period:/}):button('Definitions')).click();await page.locator('dialog[open]').waitFor();
       ok(await page.locator('dialog[open]').evaluate(e=>{const r=e.getBoundingClientRect();return r.left>=0&&r.right<=innerWidth+1&&r.height<=innerHeight&&e.scrollWidth<=e.clientWidth+1}),name+' fit '+width+'px');
@@ -39,7 +39,7 @@ async page => {
     }
   }
   await page.setViewportSize({width:1440,height:1080});await page.getByRole('link',{name:'Detailed reports →',exact:true}).click();await page.getByText('Members over time',{exact:true}).waitFor();ok(await page.locator('#insights-at-risk').count()===1,'all original reports remain accessible');await page.getByRole('link',{name:'← Back to dashboard',exact:true}).click();await ready();
-  await button('Settings').click();await button('Light').click();await page.locator('[data-theme=light]').waitFor();await close();await page.screenshot({path:root+'render-light.png',fullPage:true,animations:'disabled'});ok(true,'light theme supported');
-  for(const lang of ['ru','de','fr','es']){await page.getByRole('button',{name:/^(Settings|Настройки|Einstellungen|Réglages|Configuración)$/}).click();await page.getByRole('combobox',{name:/Language|Язык|Sprache|Langue|Idioma/}).selectOption(lang);await close();ok(!(await page.locator('.l-in-page').innerText()).includes('See how your programme'),'translated '+lang);await page.setViewportSize({width:390,height:1080});ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'translated mobile fits '+lang);await page.screenshot({path:root+'render-'+lang+'.png',fullPage:true});await page.setViewportSize({width:1440,height:1080});}
+  await button('Settings').click();await button('Light').click();await page.locator('[data-theme=light]').waitFor();await close();await page.screenshot({path:root+'render-light.png',fullPage:false,animations:'disabled'});ok(true,'light theme supported');
+  for(const lang of ['ru','de','fr','es']){await page.getByRole('button',{name:/^(Settings|Настройки|Einstellungen|Réglages|Configuración)$/}).click();await page.getByRole('combobox',{name:/Language|Язык|Sprache|Langue|Idioma/}).selectOption(lang);await close();ok(!(await page.locator('.l-in-page').innerText()).includes('See how your programme'),'translated '+lang);await page.setViewportSize({width:390,height:1080});ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'translated mobile fits '+lang);await page.screenshot({path:root+'render-'+lang+'.png',fullPage:false});await page.setViewportSize({width:1440,height:1080});}
   const state=await fixture({});ok(state.requests.filter(r=>r.path==='insights/report').every(r=>new URLSearchParams(r.query).get('brand_id')==='all'),'organization-wide report reads');ok(state.requests.every(r=>r.method==='GET'),'report performs no member writes');ok(state.errors.length===0,'no runtime errors');return {passed:checks.length,checks,errors:state.errors};
 }

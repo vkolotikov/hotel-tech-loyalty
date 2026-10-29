@@ -18,8 +18,12 @@ export default defineConfig({
     environment: 'node',
     include: ['src/**/*.test.ts', 'src/**/*.test.tsx'],
     globals: false,
+    // Preserve the existing suite's explicit mock lifecycle across the Vitest 5 upgrade.
+    clearMocks: false,
+    // Bound parallel filesystem-heavy locale/style audits on shared dev and CI machines.
+    maxWorkers: 4,
   },
   resolve: {
-    alias: { '@': path.resolve(__dirname, './src') },
+    alias: { '@': path.resolve(import.meta.dirname, './src') },
   },
 })

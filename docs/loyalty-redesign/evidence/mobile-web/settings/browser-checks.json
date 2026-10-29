@@ -260,7 +260,7 @@
           "cashback_enabled": false,
           "tier_progress_by": "points"
         },
-        "idempotency_key": "0a5723b1-d54e-4999-8510-4df5c611ef24"
+        "idempotency_key": "d00eb4d1-af62-4406-a42d-40a527202f0e"
       },
       "query": "?brand_id=all"
     },
@@ -285,7 +285,7 @@
           "cashback_enabled": false,
           "tier_progress_by": "points"
         },
-        "idempotency_key": "0a5723b1-d54e-4999-8510-4df5c611ef24"
+        "idempotency_key": "d00eb4d1-af62-4406-a42d-40a527202f0e"
       },
       "query": "?brand_id=all"
     },

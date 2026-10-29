@@ -1,35 +1,43 @@
-import { Fragment } from 'react'
+import { Fragment, lazy, Suspense, type ReactNode } from 'react'
 import { MorePage } from './mobile/MobileUI'
-import { CampaignCache } from './campaigns/design/CampaignUI'
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { useAuthStore } from '../stores/authStore'
 import { registerWorkspaceLocales } from '../workspace/i18n'
 import { registerLoyaltyLocales } from './i18n'
 import { loginPath } from './lib/links'
 import { LoyaltyProvider } from './LoyaltyProvider'
-import { SettingsPage } from './settings/SettingsPage'
 import { OverviewShell } from './overview/OverviewShell'
-import { OverviewPage } from './overview/OverviewPage'
-import { AppPage } from './app/AppPage'
-import { CampaignPage } from './campaigns/CampaignPage'
-import { CampaignsPage } from './campaigns/CampaignsPage'
-import { EventPage } from './events/EventPage'
-import { EventsPage } from './events/EventsPage'
-import { EventEditorPage } from './events/design/EventEditorPage'
-import { GuidePage } from './guide/GuidePage'
-import { StartPage } from './start/StartPage'
-import { InsightsPage } from './insights/InsightsPage'
-import { MemberPage } from './member/MemberPage'
-import { DuplicatesPage } from './membership/DuplicatesPage'
-import { ImportPage } from './membership/ImportPage'
-import { MembersPage } from './members/MembersPage'
-import { EarnPage } from './earn/EarnPage'
-import { SetupWizard } from './options/SetupWizard'
-import { ProgramPage } from './program/ProgramPage'
-import { RequestsPage } from './requests/RequestsPage'
-import { RewardsPage } from './rewards/RewardsPage'
-import { DoorPage } from './scan/DoorPage'
-import { ScanPage } from './scan/ScanPage'
+import { OverviewSkeleton } from './overview/OverviewUI'
+import { ChunkErrorBoundary } from '../components/ChunkErrorBoundary'
+
+// Phones opening Home should not download the campaign editors, charts or scanner decoder.
+const CampaignCache = lazy(() => import('./campaigns/design/CampaignUI').then(m => ({ default: m.CampaignCache })))
+const SettingsPage = lazy(() => import('./settings/SettingsPage').then(m => ({ default: m.SettingsPage })))
+const OverviewPage = lazy(() => import('./overview/OverviewPage').then(m => ({ default: m.OverviewPage })))
+const AppPage = lazy(() => import('./app/AppPage').then(m => ({ default: m.AppPage })))
+const CampaignPage = lazy(() => import('./campaigns/CampaignPage').then(m => ({ default: m.CampaignPage })))
+const CampaignsPage = lazy(() => import('./campaigns/CampaignsPage').then(m => ({ default: m.CampaignsPage })))
+const EventPage = lazy(() => import('./events/EventPage').then(m => ({ default: m.EventPage })))
+const EventsPage = lazy(() => import('./events/EventsPage').then(m => ({ default: m.EventsPage })))
+const EventEditorPage = lazy(() => import('./events/design/EventEditorPage').then(m => ({ default: m.EventEditorPage })))
+const GuidePage = lazy(() => import('./guide/GuidePage').then(m => ({ default: m.GuidePage })))
+const StartPage = lazy(() => import('./start/StartPage').then(m => ({ default: m.StartPage })))
+const InsightsPage = lazy(() => import('./insights/InsightsPage').then(m => ({ default: m.InsightsPage })))
+const MemberPage = lazy(() => import('./member/MemberPage').then(m => ({ default: m.MemberPage })))
+const DuplicatesPage = lazy(() => import('./membership/DuplicatesPage').then(m => ({ default: m.DuplicatesPage })))
+const ImportPage = lazy(() => import('./membership/ImportPage').then(m => ({ default: m.ImportPage })))
+const MembersPage = lazy(() => import('./members/MembersPage').then(m => ({ default: m.MembersPage })))
+const EarnPage = lazy(() => import('./earn/EarnPage').then(m => ({ default: m.EarnPage })))
+const SetupWizard = lazy(() => import('./options/SetupWizard').then(m => ({ default: m.SetupWizard })))
+const ProgramPage = lazy(() => import('./program/ProgramPage').then(m => ({ default: m.ProgramPage })))
+const RequestsPage = lazy(() => import('./requests/RequestsPage').then(m => ({ default: m.RequestsPage })))
+const RewardsPage = lazy(() => import('./rewards/RewardsPage').then(m => ({ default: m.RewardsPage })))
+const DoorPage = lazy(() => import('./scan/DoorPage').then(m => ({ default: m.DoorPage })))
+const ScanPage = lazy(() => import('./scan/ScanPage').then(m => ({ default: m.ScanPage })))
+
+function PageLoad({ children }: { children: ReactNode }) {
+  return <ChunkErrorBoundary><Suspense fallback={<OverviewSkeleton />}>{children}</Suspense></ChunkErrorBoundary>
+}
 
 registerWorkspaceLocales()
 registerLoyaltyLocales()
@@ -47,12 +55,12 @@ export function LoyaltyApp() {
   if (user?.user_type === 'member') return <Navigate to="/portal" replace />
 
   if (location.pathname.replace(/\/$/, '') === '/loyalty/overview') {
-    return <LoyaltyProvider><OverviewShell><OverviewPage /></OverviewShell></LoyaltyProvider>
+    return <LoyaltyProvider><OverviewShell><PageLoad><OverviewPage /></PageLoad></OverviewShell></LoyaltyProvider>
   }
 
   // Release 8: door mode is a full-screen scanner for a tablet at an entrance — no menus, so outside the shell.
   if (location.pathname.startsWith('/loyalty/scan/door')) {
-    return <LoyaltyProvider><DoorPage /></LoyaltyProvider>
+    return <LoyaltyProvider><PageLoad><DoorPage /></PageLoad></LoyaltyProvider>
   }
 
   const isCampaigns = /^\/loyalty\/campaigns(?:\/|$)/.test(location.pathname)
@@ -61,7 +69,7 @@ export function LoyaltyApp() {
   return (
     <LoyaltyProvider>
       <Shell>
-        <CampaignScope><Routes>
+        <PageLoad><CampaignScope><Routes>
           <Route index element={<MembersPage />} />
           <Route path="more" element={<MorePage />} />
           <Route path="members/duplicates" element={<DuplicatesPage />} />
@@ -86,7 +94,7 @@ export function LoyaltyApp() {
           {/* Release 10: "Start here", the setup steps. */}
           <Route path="start" element={<StartPage />} />
           <Route path="*" element={<Navigate to="/loyalty" replace />} />
-        </Routes></CampaignScope>
+        </Routes></CampaignScope></PageLoad>
       </Shell>
     </LoyaltyProvider>
   )

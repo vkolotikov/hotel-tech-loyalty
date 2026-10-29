@@ -76,6 +76,8 @@
       "not_cancellable": "Diese Buchung kann hier nicht storniert werden. Bitte wenden Sie sich an das Haus.",
       "already_cancelled": "Diese Buchung ist bereits storniert.",
       "cancel_in_progress": "Diese Buchung wird gerade storniert. Bitte sehen Sie gleich noch einmal nach.",
+      "refund_pending": "Ihre Erstattung wird bearbeitet. Die Buchung bleibt aktiv. Bitte prüfen Sie sie in Kürze erneut.",
+      "refund_outcome_unknown": "Das Ergebnis der Erstattung ist noch unbekannt. Die Buchung bleibt aktiv. Bitte wiederholen Sie die Stornierung zur Prüfung.",
       "refund_failed": "Die Zahlung konnte gerade nicht zurückgegeben werden, deshalb wurde die Buchung nicht storniert. Bitte versuchen Sie es gleich noch einmal.",
       "refund_unavailable": "Die Zahlung kann hier nicht zurückgegeben werden, deshalb wurde die Buchung nicht storniert. Bitte wenden Sie sich an das Haus.",
       "cancel_failed": "Wir konnten die Stornierung dieser Buchung nicht abschließen. Falls eine Rückerstattung fällig war, ist sie möglicherweise bereits unterwegs. Bitte versuchen Sie es erneut oder wenden Sie sich an das Haus."
@@ -155,6 +157,7 @@
     "confirmed_title": "Sie sind gebucht", "confirmed_body": "Referenz {{reference}}. Wir haben Ihnen die Details per E-Mail gesendet.", "add_to_calendar": "Zum Kalender hinzufügen",
     "change": "Ändern", "continue": "Weiter", "back": "Zurück", "cta_home": "{{noun}} buchen", "not_bookable": "Online-Buchung ist für dieses Unternehmen noch nicht verfügbar.",
     "too_soon": "Diese Zeit liegt zu kurzfristig für eine Online-Buchung.", "too_far_ahead": "Dieses Datum liegt außerhalb des Buchungszeitraums.",
+    "currency_mismatch": "Diese Preise verwenden unterschiedliche Währungen. Bitte kontaktieren Sie den Anbieter vor der Buchung.",
     "extra_lead_time": "Eine der Zusatzleistungen benötigt mehr Vorlaufzeit, als diese Uhrzeit zulässt.", "payment_required": "Bitte schließen Sie zuerst die Zahlung ab.",
     "idempotency_conflict": "Diese Buchung wurde bereits übermittelt. Prüfen Sie Ihre Buchungen.", "confirm_failed": "Die Buchung konnte nicht abgeschlossen werden. Bitte versuchen Sie es erneut.",
     "nothing_to_pay": "Für diese Buchung ist online nichts zu bezahlen.",

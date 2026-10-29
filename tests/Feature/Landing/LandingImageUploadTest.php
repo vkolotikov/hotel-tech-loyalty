@@ -4,6 +4,7 @@ namespace Tests\Feature\Landing;
 use App\Landing\PageContent;
 use App\Models\LandingPage;
 use App\Models\Organization;
+use App\Models\Staff;
 use App\Models\User;
 use App\Services\Landing\LandingOnboardingService;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
@@ -48,8 +49,7 @@ class LandingImageUploadTest extends TestCase
                 $table->string('plan_slug', 32)->nullable();
             });
         }
-        // CheckSubscription reads $user->staff?->isSuperAdmin() before
-        // anything else; the table has to exist and stay empty.
+        // The real access middleware requires an active staff membership.
         if (!Schema::hasTable('staff')) {
             Schema::create('staff', function ($table) {
                 $table->bigIncrements('id');
@@ -141,13 +141,18 @@ class LandingImageUploadTest extends TestCase
 
     private function user(Organization $org, string $type = 'staff'): User
     {
-        return User::create([
+        $user = User::create([
             'password' => 'secret-pass-1',
             'name'            => 'Staff',
             'email'           => 'staff_' . uniqid() . '@example.test',
             'organization_id' => $org->id,
             'user_type'       => $type,
         ]);
+        if ($type === 'staff') {
+            Staff::create(['organization_id' => $org->id, 'user_id' => $user->id, 'role' => 'manager', 'is_active' => true]);
+        }
+
+        return $user;
     }
 
     private function actAsStaff(Organization $org): void

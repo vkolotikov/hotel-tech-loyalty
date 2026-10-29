@@ -25,7 +25,7 @@
       "query": "?brand_id=all",
       "payload": {
         "code": "M-1048",
-        "idempotency_key": "7f5e9ba2-506c-4b69-8f63-2c1e1b785313",
+        "idempotency_key": "fcc368b6-a8cc-4921-9b1c-d99ba16c013b",
         "place_id": 1
       }
     },
@@ -35,7 +35,7 @@
       "query": "?brand_id=all",
       "payload": {
         "code": "M-1048",
-        "idempotency_key": "7f5e9ba2-506c-4b69-8f63-2c1e1b785313",
+        "idempotency_key": "fcc368b6-a8cc-4921-9b1c-d99ba16c013b",
         "place_id": 1
       }
     },
@@ -45,7 +45,7 @@
       "query": "?brand_id=all",
       "payload": {
         "code": "M-1048",
-        "idempotency_key": "bccba3d7-0c7a-4705-af04-e6d0a05dd81b",
+        "idempotency_key": "fdc9675c-2753-4908-8f76-5d7fa566848e",
         "event_id": 5
       }
     },
@@ -55,7 +55,7 @@
       "query": "?brand_id=all",
       "payload": {
         "code": "M-1048",
-        "idempotency_key": "66b807c7-7209-475b-8c7f-3177c9e29f67"
+        "idempotency_key": "c47c45cd-cb16-4480-aa0b-e2c8a50a4d42"
       }
     },
     {
@@ -64,7 +64,7 @@
       "query": "?brand_id=all",
       "payload": {
         "code": "04:A2:B3:C4",
-        "idempotency_key": "28257518-a0aa-48b3-83a2-5328c14e6e15"
+        "idempotency_key": "e238f99a-497d-49d8-88b7-841d15e903ea"
       }
     }
   ]

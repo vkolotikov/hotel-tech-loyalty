@@ -77,7 +77,7 @@ async (page) => {
     await page.goto('http://127.0.0.1:5173/loyalty/rewards' + query);
     await page.locator('.l-rb-preview').first().waitFor();
     await page.evaluate(() => document.fonts.ready);
-    await page.screenshot({ path: root + 'render-' + name + '.png', fullPage: true });
+    await page.screenshot({ path: root + 'render-' + name + '.png', fullPage:false });
   }
   return { errors: state.errors, screens: 4, reads: state.requests.filter(r => r.method === 'GET').map(r => r.path) };
 }

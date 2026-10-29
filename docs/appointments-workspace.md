@@ -265,17 +265,18 @@ The middleware `admin.access` runs on every `/v1/admin` route (after `admin`, be
 billing, the industry switch, lead intake and the connector. A platform admin always passes. The route's own checks
 (`staff.can`, `feature`, `workspace`, `admin:super_admin`, Setup's manager rule) still apply after it.
 
-| `ADMIN_ACCESS_MODE` (Laravel Cloud) | Roles and deactivated accounts | The Appointments plan's lock |
+| Environment and `ADMIN_ACCESS_MODE` | Roles and deactivated accounts | The Appointments plan's lock |
 |---|---|---|
-| unset, or anything but `enforce` (report) | recorded, let through | refused (`not_in_plan`) |
-| `enforce` | refused (`not_allowed`, `staff_inactive`) | refused |
+| Production, staging, or any environment other than `local` / `testing` | refused (`not_allowed`, `staff_inactive`), regardless of an old `report` setting | refused (`not_in_plan`) |
+| Local / testing, explicitly `report` | recorded, let through | refused |
+| Local / testing, unset or any other value | refused | refused |
 
-**Before switching to enforce:**
+**Reviewing access refusals:**
 
 - run `php artisan admin-access:report --days=7` (add `--org=<id>` for one organisation);
-- every "would refuse" line that a real page needs becomes a map fix with its test, shipped first;
-- then set `ADMIN_ACCESS_MODE=enforce` in Laravel Cloud;
-- removing it, or setting `report`, undoes it.
+- any refusal that a real authorised page needs becomes a map fix with its test;
+- local and testing environments may use `ADMIN_ACCESS_MODE=report` for diagnostics;
+- production cannot disable role or deactivation checks through this variable. Rebuild the configuration cache when shipping the configuration change.
 
 The record (`admin_access_refusals`) keeps who, which organisation, which rule, which method and why, per day, and
 never a request's contents.
@@ -623,9 +624,9 @@ every organisation:
 - (Part B) the public and chat widgets offer today's slots from the venue's own now, and an extra's notice counts
   from it in the widget and the portal;
 - (Part C) every `/v1/admin` route, billing, the industry switch, lead intake and the connector run the access
-  map; in report mode (no `ADMIN_ACCESS_MODE`) it refuses only `not_in_plan`;
+  map; production always enforces it. Explicit local/testing report mode still refuses `not_in_plan`;
 - (Part C) sign-in and `/auth/me` carry `workspaces.appointments.only`;
-- (Part C) a deactivated account is signed out on its next refused call once enforced.
+- (Part C) a deactivated account is signed out on its next refused call.
 - (Part D) one additive migration (`client_messages`) and one scheduled job (`appointments:send-reminders`, every
   five minutes); client messages are off everywhere until a manager switches them on, so the job sends nothing
   until then;

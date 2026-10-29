@@ -55,7 +55,7 @@ class FullAdminDepositCancelTest extends TestCase
         $this->stripe->shouldReceive('refund')->andThrow(new \RuntimeException('card closed'));
 
         $this->asStaff()->patchJson("/api/v1/admin/service-bookings/{$b->id}/status", ['status' => 'cancelled'])
-            ->assertStatus(422)->assertJsonPath('error', 'deposit_refund_failed');
+            ->assertStatus(409)->assertJsonPath('error', 'refund_outcome_unknown');
         $this->assertSame('confirmed', $b->fresh()->status);
     }
 

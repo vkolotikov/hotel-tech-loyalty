@@ -1,6 +1,6 @@
 // Run after events.browser.js. All data and mutations are local fixtures.
 async (page) => {
-  const base=new URL(page.url()).origin;if(!/^http:\/\/127\.0\.0\.1:(5173|5810)$/.test(base))throw Error('Local fixture only');
+  const base=new URL(page.url()).origin;if(!/^http:\/\/127\.0\.0\.1:(5173|5175|5810)$/.test(base))throw Error('Local fixture only');
   const root='C:/wamp64/www/Hexa-Tech/docs/loyalty-redesign/evidence/events/',checks=[],ok=(v,n)=>{if(!v)throw Error(n);checks.push(n)};
   const fixture=p=>page.evaluate(async p=>(await fetch('/api/v1/admin/loyalty/__fixture',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(p)})).json(),p);
   const go=async path=>{await page.goto(base+path);await page.locator('.l-ev-page,.l-ov-recovery').first().waitFor({timeout:20000})};
@@ -21,15 +21,15 @@ async (page) => {
     for(const [name,path] of [['overview','/loyalty/events'],['editor','/loyalty/events/new'],['attendees','/loyalty/events/1']]){
       await go(path);await page.locator(name==='editor'?'.l-ev-form-panel':name==='overview'?'.l-ev-detail':'.l-ev-attendee-detail').waitFor();await page.evaluate(()=>document.fonts.ready);
       ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1&&document.body.scrollWidth<=innerWidth+1),name+' fits '+width+'px');
-      if(width<=768)ok(await page.locator('.l-ev-columns').evaluate(e=>{const [a,b]=e.children;return !b||b.getBoundingClientRect().top>=a.getBoundingClientRect().bottom-1}),name+' stacks columns at '+width+'px');if(name==='editor'&&width<=768)ok(await page.getByLabel('Event name',{exact:true}).evaluate(e=>e.getBoundingClientRect().width>=220),'editor field usable at '+width+'px');if(width===390)await page.screenshot({path:root+'render-'+name+'-mobile.png',fullPage:true});
+      if(width<=768)ok(await page.locator('.l-ev-columns').evaluate(e=>{const [a,b]=e.children;return !b||b.getBoundingClientRect().top>=a.getBoundingClientRect().bottom-1}),name+' stacks columns at '+width+'px');if(name==='editor'&&width<=768)ok(await page.getByLabel('Event name',{exact:true}).evaluate(e=>e.getBoundingClientRect().width>=220),'editor field usable at '+width+'px');if(width===390)await page.screenshot({path:root+'render-'+name+'-mobile.png',fullPage:false});
     }
   }
   await page.setViewportSize({width:1440,height:1080});await go('/loyalty/events');await page.locator('.l-ev-detail').waitFor();
   const assets=await page.locator('[data-loyalty] img').evaluateAll(es=>es.filter(e=>e.getBoundingClientRect().width>0).map(e=>({loaded:e.complete&&e.naturalWidth>0,w:e.width,h:e.height,nw:e.naturalWidth,nh:e.naturalHeight})));
   ok(assets.every(a=>a.loaded&&Math.abs(a.w-a.nw)<1&&Math.abs(a.h-a.nh)<1),'all exported icons load at native geometry');
-  await button('Settings').click();await button('Light').click();await page.locator('[data-loyalty][data-theme=light]').waitFor();await page.keyboard.press('Escape');await page.waitForFunction(()=>getComputedStyle(document.querySelector('[data-loyalty][data-overview]')).backgroundColor==='rgb(244, 246, 249)');await page.screenshot({path:root+'render-light.png',fullPage:true,animations:'disabled'});ok(true,'shared light theme');
+  await button('Settings').click();await button('Light').click();await page.locator('[data-loyalty][data-theme=light]').waitFor();await page.keyboard.press('Escape');await page.waitForFunction(()=>getComputedStyle(document.querySelector('[data-loyalty][data-overview]')).backgroundColor==='rgb(244, 246, 249)');await page.screenshot({path:root+'render-light.png',fullPage:false,animations:'disabled'});ok(true,'shared light theme');
   for(const lang of ['ru','de','fr','es']){
-    await page.getByRole('button',{name:/^(Settings|Настройки|Einstellungen|Réglages|Configuración)$/}).click();await page.getByRole('combobox',{name:/Language|Язык|Sprache|Langue|Idioma/}).selectOption(lang);await page.keyboard.press('Escape');ok(!(await page.locator('.l-ev-page').innerText()).includes('A clear plan for every event'),lang+' translates Events');await page.setViewportSize({width:390,height:1080});ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),lang+' fits mobile');await page.screenshot({path:root+'render-'+lang+'.png',fullPage:true});await page.setViewportSize({width:1440,height:1080});
+    await page.getByRole('button',{name:/^(Settings|Настройки|Einstellungen|Réglages|Configuración)$/}).click();await page.getByRole('combobox',{name:/Language|Язык|Sprache|Langue|Idioma/}).selectOption(lang);await page.keyboard.press('Escape');ok(!(await page.locator('.l-ev-page').innerText()).includes('A clear plan for every event'),lang+' translates Events');await page.setViewportSize({width:390,height:1080});ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),lang+' fits mobile');await page.screenshot({path:root+'render-'+lang+'.png',fullPage:false});await page.setViewportSize({width:1440,height:1080});
   }
   const state=await fixture({});ok(state.errors.length===0,'no runtime errors');return{passed:checks.length,checks,errors:state.errors};
 }

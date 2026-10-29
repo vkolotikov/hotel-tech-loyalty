@@ -103,6 +103,8 @@ export interface CampaignRow {
   recipient_count: number
   sent_count: number
   failed_count: number
+  /** Claimed deliveries whose provider outcome has not been confirmed. */
+  pending_count?: number
   /** Release 4, send later: the instant it is (or was) due, and the same on the venue's clock (`YYYY-MM-DDTHH:mm`). */
   scheduled_at: string | null
   scheduled_for: string | null

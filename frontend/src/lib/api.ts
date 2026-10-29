@@ -2,6 +2,12 @@ import axios from 'axios'
 import { withAppointmentsOnly } from '../appointments/lib/landing'
 import { loginPathAfterExpiry } from '../workspace/lib/landing'
 import { ACCESS_OFF_LOGIN, refusalOf } from './accessOff'
+import { authSession } from './authSession'
+
+declare module 'axios' {
+  interface AxiosRequestConfig { authSessionVersion?: number }
+  interface InternalAxiosRequestConfig { authSessionVersion?: number }
+}
 
 const isProduction = typeof window !== 'undefined' && window.location.hostname !== 'localhost'
 export const API_BASE = isProduction ? '/api' : (import.meta.env.VITE_API_URL || 'http://localhost/hotel-tech/apps/loyalty/backend/public/api')
@@ -30,8 +36,11 @@ export const api = axios.create({
 // body, the server can't parse the multipart parts and file uploads silently
 // fail (this is what was breaking BookingExtras image upload).
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('auth_token')
+  if (!authSession.check(config.authSessionVersion)) throw new axios.CanceledError('Session changed')
+  config.authSessionVersion = authSession.version()
+  const token = authSession.token()
   if (token) config.headers.Authorization = `Bearer ${token}`
+  else delete config.headers.Authorization
 
   if (typeof FormData !== 'undefined' && config.data instanceof FormData) {
     // Let the browser/axios set the boundary itself.
@@ -63,14 +72,21 @@ api.interceptors.request.use((config) => {
   }
 
   return config
-})
+}, error => { throw error }, { synchronous: true })
 
 // Handle 401 globally — but don't redirect for billing/subscription endpoints
 // (those return 401 when the SaaS token can't be obtained, not when the user session is invalid)
 // Also dispatch 403 subscription_required events to trigger lockout UI
 api.interceptors.response.use(
-  (res) => res,
+  (res) => {
+    if (!authSession.check(res.config.authSessionVersion)) throw new axios.CanceledError('Session changed')
+    return res
+  },
   (error) => {
+    // An earlier account's late 401 must not sign out the new account, and its late data must not reach the UI.
+    if (error.config?.authSessionVersion !== undefined && !authSession.check(error.config.authSessionVersion)) {
+      return Promise.reject(new axios.CanceledError('Session changed'))
+    }
     if (error.response?.status === 401) {
       const url = error.config?.url || ''
       const isBillingCall = url.includes('/billing/') || url.includes('/subscription')
@@ -82,6 +98,7 @@ api.interceptors.response.use(
         // The 401 path is rare and async, so a dynamic import is cheap.
         // From a workspace page, signing in again returns to the same page.
         import('./logout').then(({ logoutAndRedirect }) => {
+          if (!authSession.check(error.config?.authSessionVersion)) return
           void logoutAndRedirect(loginPathAfterExpiry(window.location.pathname, window.location.search))
         })
       }
@@ -90,10 +107,13 @@ api.interceptors.response.use(
     // moved to the Appointments plan is marked appointments-only and taken to the workspace (never from inside it).
     const refusal = refusalOf(error)
     if (refusal === 'staff_inactive') {
-      import('./logout').then(({ logoutAndRedirect }) => { void logoutAndRedirect(ACCESS_OFF_LOGIN) })
+      import('./logout').then(({ logoutAndRedirect }) => {
+        if (authSession.check(error.config?.authSessionVersion)) void logoutAndRedirect(ACCESS_OFF_LOGIN)
+      })
     }
     if (refusal === 'not_in_plan' && !/^\/appointments(\/|$)/.test(window.location.pathname)) {
       import('../stores/authStore').then(({ useAuthStore }) => {
+        if (!authSession.check(error.config?.authSessionVersion)) return
         const { user } = useAuthStore.getState()
         if (user) useAuthStore.setState({ user: withAppointmentsOnly(user) })
         window.location.href = `${APP_BASE}/appointments`

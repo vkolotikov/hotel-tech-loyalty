@@ -1059,7 +1059,8 @@
       "status": "Status",
       "invoice": "Rechnung",
       "payment": "Zahlung",
-      "paid_amount": "Bezahlt (€)"
+      "paid_amount": "Bezahlt (€)",
+      "paid_amount_currency": "Bezahlt ({{currency}})"
     },
     "meta": {
       "title": "Details",
@@ -1073,6 +1074,10 @@
       "created": "Erstellt"
     },
     "refund": {
+      "pending": "Eine Erstattung wird bearbeitet. Prüfen Sie sie durch Wiederholen desselben Betrags; erstatten Sie nicht auf anderem Weg.",
+      "unknown": "Das Ergebnis der Erstattung ist noch unbekannt. Wiederholen Sie denselben Betrag; erstatten Sie nicht auf anderem Weg.",
+      "open_original": "Ursprüngliche Zimmererstattung öffnen",
+      "check": "Erstattung prüfen",
       "title": "Erstattung ausführen",
       "subtitle": "Stripe erstattet die Beträge in 5–10 Geschäftstagen",
       "amount_label": "Betrag",

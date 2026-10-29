@@ -112,6 +112,7 @@ class BookingEngineService
 
         $avail = app(AvailabilityService::class);
         $rates = $avail->unitRates($unitId, $checkIn, $checkOut, $adults);
+        $this->assertQuoteCurrencies($unit, $rates ?? [], $extras);
 
         if (empty($rates) || !($rates['available'] ?? false)) {
             throw new \RuntimeException('Unit not available for selected dates');
@@ -169,6 +170,7 @@ class BookingEngineService
             'extras_total'    => $extrasTotal,
             'gross_total'     => $grossTotal,
             'currency'        => $currency,
+            'extras'          => $this->extrasLines($extras, (int) $adults, (int) $children, $nights),
             'price_per_night' => $rates['price_per_night'] ?? round($roomTotal / $nights, 2),
         ];
     }
@@ -200,6 +202,7 @@ class BookingEngineService
             if (!$unit) throw new \InvalidArgumentException("Unknown unit: {$unitId}");
 
             $rates = $avail->unitRates($unitId, $checkIn, $checkOut, $adults);
+            $this->assertQuoteCurrencies($unit, $rates ?? [], $extras);
             if (empty($rates) || !($rates['available'] ?? false)) {
                 throw new \RuntimeException("Unit {$unitId} ({$unit['name']}) is not available for the selected dates");
             }
@@ -261,6 +264,7 @@ class BookingEngineService
             'extras_total'    => $extrasTotal,
             'gross_total'     => round($grossTotal, 2),
             'currency'        => $currency,
+            'extras'          => $this->extrasLines($extras, (int) $adults, (int) $children, $nights),
         ];
     }
 
@@ -306,7 +310,7 @@ class BookingEngineService
                     'check_in'          => $existingMirror->arrival_date?->toDateString(),
                     'check_out'         => $existingMirror->departure_date?->toDateString(),
                     'gross_total'       => $grossTotal,
-                    'currency'          => self::stayCurrency(),
+                    'currency'          => $existingMirror->currency,
                     'pms_synced'        => $existingMirror->internal_status !== 'pending_pms_sync',
                     'replayed'          => true,
                     'replay_source'     => 'payment_intent',
@@ -992,6 +996,7 @@ class BookingEngineService
             $paymentStatus   = $data['payment_status'] ?? ($paymentIntentId ? PaymentStatus::Paid->value : null);
 
             $mirror = BookingMirror::create([
+                'raw_json' => ['currency' => (string) ($payload['currency'] ?? self::stayCurrency()), '_currency_source' => 'quoted_snapshot'],
                 'reservation_id'    => (string) ($result['id'] ?? ''),
                 'booking_reference' => $result['reference-id'] ?? null,
                 'booking_type'      => 'reservation',
@@ -1546,13 +1551,11 @@ class BookingEngineService
         // ── Dates + internal status ─────────────────────────────────
         $arrivalDate   = $dateOrNull($data['arrival'] ?? null);
         $departureDate = $dateOrNull($data['departure'] ?? null);
-        $today = now()->toDateString();
+        $today = \Carbon\CarbonImmutable::now(\App\Services\Portal\AppointmentClock::zoneFor((int) $orgId))->toDateString();
         if ($type === 'cancellation') {
             $internalStatus = 'cancelled';
         } elseif ($departureDate && $departureDate < $today) {
             $internalStatus = 'checked-out';
-        } elseif ($arrivalDate && $arrivalDate <= $today && $departureDate && $departureDate >= $today) {
-            $internalStatus = 'checked-in';
         } else {
             $internalStatus = 'confirmed';
         }
@@ -1591,7 +1594,7 @@ class BookingEngineService
             $existing = BookingMirror::withoutGlobalScopes()
                 ->where('organization_id', $orgId)
                 ->where('reservation_id', $clip((string) $data['id'], 30))
-                ->first(['id', 'channel_name', 'stripe_payment_intent_id', 'price_total', 'price_paid', 'notice', 'member_id', 'guest_id', 'payment_status', 'internal_status', 'booking_state', 'cancelled_at']);
+                ->first(['id', 'organization_id', 'channel_name', 'stripe_payment_intent_id', 'price_total', 'price_paid', 'notice', 'member_id', 'guest_id', 'payment_status', 'internal_status', 'booking_state', 'cancelled_at', 'raw_json']);
             if ($existing) {
                 $existingChannel      = $existing->channel_name;
                 $existingHadStripe    = !empty($existing->stripe_payment_intent_id);
@@ -1649,6 +1652,14 @@ class BookingEngineService
             $internalStatus = 'cancelled';
             $bookingState = 'cancelled';
         }
+        // Calendar dates do not prove somebody arrived. Preserve an operational state staff explicitly set.
+        $staffStatus = $existing?->raw_json['_staff_internal_status'] ?? null;
+        if ($type !== 'cancellation' && $existing?->cancelled_at === null && in_array($staffStatus, ['checked-in', 'checked-out'], true)) {
+            $internalStatus = $staffStatus;
+        }
+        $data['currency'] = $existing?->currency ?: ($data['currency'] ?? self::stayCurrency());
+        $data['_currency_source'] = $existing?->currency_source ?? 'provider_snapshot';
+        if ($staffStatus !== null) $data['_staff_internal_status'] = $staffStatus;
 
         $mirror = BookingMirror::updateOrCreate(
             ['organization_id' => $orgId, 'reservation_id' => $clip((string) $data['id'], 30)],
@@ -2093,6 +2104,7 @@ class BookingEngineService
                     $internalStatus = $pmsResult ? 'confirmed' : 'pending_pms_sync';
 
                     $mirror = BookingMirror::create([
+                        'raw_json' => ['currency' => (string) ($payload['currency'] ?? self::stayCurrency()), '_currency_source' => 'quoted_snapshot'],
                         'organization_id'          => $orgId,
                         'booking_group_id'         => $groupId,
                         'reservation_id'           => substr((string) ($result['id'] ?? ''), 0, 30),
@@ -2389,6 +2401,7 @@ class BookingEngineService
                     $roomPayload = $this->comboRoomPayload($payload, $room, $shares[$i], $i === 0);
                     $total = $shares[$i]['total'];
                     $mirror = BookingMirror::create([
+                        'raw_json' => ['currency' => (string) ($payload['currency'] ?? self::stayCurrency()), '_currency_source' => 'quoted_snapshot'],
                         'organization_id'          => $orgId,
                         'booking_group_id'         => $groupId,
                         'reservation_id'           => (string) ($results[$i]['id'] ?? ''),
@@ -3135,13 +3148,7 @@ class BookingEngineService
 
                 if ($member && $member->welcomed_at === null) {
                     // Generate a verification code so the guest can set their password
-                    $code = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
-
-                    EmailVerificationCode::create([
-                        'email'      => $email,
-                        'code'       => $code,
-                        'expires_at' => now()->addHours(48),
-                    ]);
+                    $code = EmailVerificationCode::issueFor($member->user, 'claim', now()->addHours(48))->code;
 
                     Mail::to($email)->queue(new BookingMembershipMail(
                         guestName: $guestName,
@@ -3367,6 +3374,7 @@ class BookingEngineService
                     'id'    => (string) $e->id,
                     'name'  => $e->name,
                     'price' => (float) $e->price,
+                    'currency' => $e->currency,
                     // Legacy readers check `type` for the pricing type;
                     // the DB column is `price_type`, so alias.
                     'type'  => $e->price_type ?? 'per_stay',
@@ -3517,6 +3525,20 @@ class BookingEngineService
         }
 
         return $total;
+    }
+
+    /** Validate the new quote only; historical holds retain their original currency. */
+    private function assertQuoteCurrencies(array $unit, array $rates, array $selected): void
+    {
+        $currency = self::stayCurrency();
+        \App\Services\Booking\CurrencyMismatch::assertSame($unit['currency'] ?? null, $currency);
+        \App\Services\Booking\CurrencyMismatch::assertSame($rates['currency'] ?? null, $currency);
+        $ids = array_map(fn ($row) => (string) ($row['id'] ?? ''), $selected);
+        foreach ($this->loadExtrasConfig() as $extra) {
+            if (in_array((string) ($extra['id'] ?? ''), $ids, true)) {
+                \App\Services\Booking\CurrencyMismatch::assertSame($extra['currency'] ?? null, $currency);
+            }
+        }
     }
 
     private function logSubmission(string $outcome, ?string $failCode, ?string $failMsg, array $data, ?string $requestId, ?string $idempotencyKey, array $response = [], ?int $guestId = null, bool $enquiry = true): void

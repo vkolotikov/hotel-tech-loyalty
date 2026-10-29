@@ -62,8 +62,9 @@ class MemberPricingTest extends TestCase
 
     public function test_a_member_without_a_tier_gets_the_list_price(): void
     {
-        $this->member->forceFill(['tier_id' => null])->save();
-        $p = app(MemberPricing::class)->quote($this->member->fresh(), 50, 'EUR', BookingScope::Services);
+        // Defensive in-memory input; production membership rows require a tier.
+        $this->member->forceFill(['tier_id' => null]);
+        $p = app(MemberPricing::class)->quote($this->member, 50, 'EUR', BookingScope::Services);
         $this->assertSame(0.0, $p->discount);
         $this->assertSame(50.0, $p->total);
     }

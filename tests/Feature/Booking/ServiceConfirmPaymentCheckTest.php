@@ -153,16 +153,35 @@ class ServiceConfirmPaymentCheckTest extends MemberEndpointTestCase
         $this->assertSame([], $this->failedReasons());
     }
 
-    /**
-     * The widget's payment-intent charges in the venue's Stripe currency, whatever the service's own label says (as
-     * before R4-2); the check compares with that currency, so a venue whose two differ still books.
-     */
-    public function test_a_venue_whose_services_are_labelled_in_another_currency_still_books_with_its_stripe_payment(): void
+    /** An amount labelled GBP can never become an EUR authorization without an explicit FX product. */
+    public function test_a_currency_mismatch_is_refused_before_authorization_and_cannot_be_confirmed(): void
     {
         DB::table('services')->where('id', $this->service->id)->update(['currency' => 'GBP']);
 
-        $this->confirm(['payment_intent_id' => $this->pay('pi_eur')])->assertStatus(201);
-        $this->assertSame(['pi_eur'], $this->captured);
+        app(StripeService::class)->shouldNotReceive('createPaymentIntent');
+        $this->postJson('/api/v1/services/payment-intent?org=' . $this->org->fresh()->widget_token, [
+            'service_id' => $this->service->id, 'start_at' => now()->setTime(10, 0)->toIso8601String(),
+        ])->assertStatus(422)->assertJsonPath('code', 'currency_mismatch');
+        $this->confirm(['payment_intent_id' => $this->pay('pi_eur')])->assertStatus(422)->assertJsonPath('code', 'currency_mismatch');
+        $this->assertSame([], $this->captured);
+        $this->assertSame(0, ServiceBooking::withoutGlobalScopes()->count());
+    }
+
+    public function test_mixed_currency_service_extras_are_refused_at_quote_and_confirm(): void
+    {
+        $extra = ServiceExtra::withoutGlobalScopes()->create(['organization_id' => $this->org->id, 'name' => 'Other currency', 'price' => 10, 'currency' => 'GBP', 'price_type' => 'per_booking', 'is_active' => true]);
+        $data = ['service_id' => $this->service->id, 'service_master_id' => $this->master->id, 'start_at' => now()->setTime(10, 0)->toIso8601String(), 'extras' => [['id' => $extra->id]]];
+        $this->postJson('/api/v1/services/quote?org=' . $this->org->fresh()->widget_token, $data)->assertStatus(422)->assertJsonPath('code', 'currency_mismatch');
+        $this->confirm(['extras' => $data['extras']])->assertStatus(422)->assertJsonPath('code', 'currency_mismatch');
+        $this->assertSame(0, ServiceBooking::withoutGlobalScopes()->count());
+    }
+
+    public function test_config_identifies_services_that_cannot_be_paid_in_the_configured_currency(): void
+    {
+        DB::table('services')->where('id', $this->service->id)->update(['currency' => 'GBP']);
+        app(StripeService::class)->shouldReceive('publishableKey')->andReturn('pk_test_fixture');
+        $this->getJson('/api/v1/services/config?org=' . $this->org->fresh()->widget_token)
+            ->assertOk()->assertJsonPath('currency_mismatch_service_ids', [$this->service->id]);
     }
 
     public function test_this_bookings_own_payment_already_taken_books_as_paid(): void
@@ -265,6 +284,7 @@ class ServiceConfirmPaymentCheckTest extends MemberEndpointTestCase
      */
     public function test_a_payment_made_by_the_payment_intent_endpoint_for_this_booking_books(): void
     {
+        $quote = $this->postJson('/api/v1/services/quote?org=' . $this->org->fresh()->widget_token, ['service_id' => $this->service->id, 'service_master_id' => $this->master->id, 'start_at' => now()->setTime(10, 0)->toIso8601String()])->assertOk()->json();
         $stripe = $this->app->make(StripeService::class);
         $stripe->shouldReceive('createPaymentIntent')->once()->andReturnUsing(function (float $amount, string $description, array $meta) {
             $this->intents['pi_made'] = PaymentIntent::constructFrom([
@@ -275,14 +295,67 @@ class ServiceConfirmPaymentCheckTest extends MemberEndpointTestCase
             return ['client_secret' => 'cs_made', 'payment_intent_id' => 'pi_made'];
         });
 
-        $this->postJson('/api/v1/services/payment-intent?org=' . $this->org->fresh()->widget_token, [
+        $quoteResponse = $this->postJson('/api/v1/services/payment-intent?org=' . $this->org->fresh()->widget_token, [
             'service_id' => $this->service->id, 'service_master_id' => $this->master->id,
             'start_at' => now()->setTime(10, 0)->toIso8601String(), 'party_size' => 1,
         ])->assertOk()->assertJsonPath('payment_intent_id', 'pi_made');
         $this->assertSame(ServicePublicController::PAYMENT_KIND, $this->intents['pi_made']->metadata['kind']);
         app()->forgetInstance('current_organization_id');
 
-        $this->confirm(['payment_intent_id' => 'pi_made'])->assertStatus(201);
+        $this->confirm(['payment_intent_id' => 'pi_made', 'quote_token' => $quoteResponse->json('quote_token')])->assertStatus(201);
         $this->assertSame(['pi_made'], $this->captured);
+        $this->assertSame(strtoupper($quote['currency']), strtoupper($this->intents['pi_made']->currency));
+        $this->assertSame(strtoupper($quote['currency']), ServiceBooking::withoutGlobalScopes()->sole()->currency);
+        $this->assertEquals($quote['total_amount'], ServiceBooking::withoutGlobalScopes()->sole()->total_amount);
+    }
+    private function quotedPayment(): \Illuminate\Testing\TestResponse
+    {
+        $stripe = $this->app->make(StripeService::class);
+        $stripe->shouldReceive('createPaymentIntent')->once()->andReturnUsing(function (float $amount, string $description, array $meta) {
+            $this->intents['pi_quoted'] = PaymentIntent::constructFrom(['id' => 'pi_quoted', 'status' => 'requires_capture', 'currency' => 'eur', 'metadata' => $meta, 'amount' => (int) round($amount * 100)]);
+            return ['client_secret' => 'cs_quoted', 'payment_intent_id' => 'pi_quoted'];
+        });
+        return $this->postJson('/api/v1/services/payment-intent?org=' . $this->org->fresh()->widget_token, [
+            'service_id' => $this->service->id, 'service_master_id' => null, 'start_at' => now()->setTime(10, 0)->toIso8601String(), 'party_size' => 1,
+        ])->assertOk()->assertJsonStructure(['quote_token']);
+    }
+
+    public function test_any_staff_quote_does_not_switch_to_a_differently_priced_available_master(): void
+    {
+        $quote = $this->quotedPayment();
+        $chosen = (int) $this->intents['pi_quoted']->metadata['master_id'];
+        $other = $this->master->replicate(); $other->name = 'Other master'; $other->save();
+        DB::table('service_master_service')->insert(['organization_id' => $this->org->id, 'service_id' => $this->service->id, 'service_master_id' => $other->id, 'price_override' => 95]);
+        foreach (range(0, 6) as $day) DB::table('service_master_schedules')->insert(['organization_id' => $this->org->id, 'service_master_id' => $other->id, 'day_of_week' => $day, 'start_time' => '09:00', 'end_time' => '17:00', 'is_active' => true]);
+        ServiceBooking::withoutGlobalScopes()->create(['organization_id' => $this->org->id, 'service_id' => $this->service->id, 'service_master_id' => $chosen, 'booking_reference' => 'BUSY-QUOTE', 'duration_minutes' => 45, 'customer_name' => 'Another guest', 'customer_email' => 'busy@example.test', 'start_at' => now()->setTime(10, 0), 'end_at' => now()->setTime(10, 45), 'status' => 'confirmed', 'total_amount' => 60, 'currency' => 'EUR']);
+        $this->app->make(StripeService::class)->shouldReceive('cancelPaymentIntent')->once()->with('pi_quoted', 'abandoned')->andReturn(PaymentIntent::constructFrom(['id' => 'pi_quoted', 'status' => 'canceled']));
+        $this->confirm(['service_master_id' => null, 'payment_intent_id' => 'pi_quoted', 'quote_token' => $quote->json('quote_token')])->assertStatus(409)->assertJsonPath('code', 'slot_taken');
+        $this->assertFalse(ServiceBooking::withoutGlobalScopes()->where('stripe_payment_intent_id', 'pi_quoted')->exists());
+        $this->assertSame([], $this->captured);
+    }
+
+    public function test_a_changed_price_releases_only_the_payment_bound_to_the_signed_quote(): void
+    {
+        $quote = $this->quotedPayment();
+        DB::table('service_master_service')->where('service_id', $this->service->id)->update(['price_override' => 85]);
+        $this->app->make(StripeService::class)->shouldReceive('cancelPaymentIntent')->once()->with('pi_quoted', 'abandoned')->andReturn(PaymentIntent::constructFrom(['id' => 'pi_quoted', 'status' => 'canceled']));
+        $this->confirm(['service_master_id' => null, 'payment_intent_id' => 'pi_quoted', 'quote_token' => $quote->json('quote_token')])->assertStatus(422)->assertJsonPath('code', 'payment_mismatch');
+        $this->assertSame(0, ServiceBooking::withoutGlobalScopes()->count());
+    }
+
+    public function test_a_missing_or_tampered_quote_cannot_cancel_somebody_elses_authorisation(): void
+    {
+        $quote = $this->quotedPayment();
+        $this->confirm(['payment_intent_id' => 'pi_quoted', 'quote_token' => $quote->json('quote_token') . 'broken'])->assertStatus(422)->assertJsonPath('code', 'payment_mismatch');
+        $this->assertSame([], $this->captured);
+    }
+
+    public function test_provider_exception_text_is_not_returned_to_the_public_payment_form(): void
+    {
+        $this->app->make(StripeService::class)->shouldReceive('createPaymentIntent')->once()->andThrow(new \RuntimeException('SQLSTATE secret_schema private_token'));
+        $response = $this->postJson('/api/v1/services/payment-intent?org=' . $this->org->fresh()->widget_token, ['service_id' => $this->service->id, 'start_at' => now()->setTime(10, 0)->toIso8601String()]);
+        $response->assertStatus(503)->assertJsonPath('code', 'payment_unavailable')->assertJsonStructure(['reference']);
+        $this->assertStringNotContainsString('SQLSTATE', $response->getContent());
+        $this->assertStringNotContainsString('private_token', $response->getContent());
     }
 }

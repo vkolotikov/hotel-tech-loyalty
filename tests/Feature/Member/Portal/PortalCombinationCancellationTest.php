@@ -170,7 +170,7 @@ class PortalCombinationCancellationTest extends MemberEndpointTestCase
         $stripe->shouldReceive('refund')->andThrow(new \RuntimeException('stripe down'));
         $this->smoobu->shouldNotReceive('cancelReservation');
 
-        $this->cancel($lead->id)->assertStatus(502)->assertJsonPath('error', 'refund_failed');
+        $this->cancel($lead->id)->assertStatus(409)->assertJsonPath('error', 'refund_outcome_unknown');
 
         foreach ([$lead, $other] as $m) {
             $m = $this->fresh($m);

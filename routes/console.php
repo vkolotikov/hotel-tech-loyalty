@@ -205,6 +205,8 @@ Schedule::command('loyalty:assess-tiers --at-venue-hour=5')
     ->hourlyAt(47)
     ->withoutOverlapping(60);
 
+Schedule::command('loyalty:retry-visit-effects')->everyFiveMinutes()->withoutOverlapping(10);
+
 // Prune expired BookingHold + BookingIdempotencyKey rows. Holds carry guest
 // PII (name/email/phone) in payload_json; abandoned-cart rows accumulating
 // forever is both a Postgres bloat issue (jsonb ~2KB/row at the quote rate)
