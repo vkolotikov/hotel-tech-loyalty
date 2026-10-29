@@ -3,11 +3,31 @@
 Read this first, then `2026-10-28-hexatech-handoff.md` for previous milestones and
 `2026-10-27-hexatech-handoff.md` for the full environment and history. Root AGENTS.md and CLAUDE.md still apply.
 
-## Latest follow-up: existing wallet credentials and controlled email
+## Latest follow-up: FDS Cards UK wallet draft and confirmed email receipt
+
+The owner confirmed **FDS Cards UK** as the first wallet organisation and confirmed the controlled email arrived
+in the **inbox**. No second email was sent. Created Google LoyaltyClass
+`3388000000023129907.hexatech_fds_cards_uk_loyalty` at **17:55 Europe/Riga** in **draft** state; create/read-back
+200 and the existing builder GenericClass's before/after response hash is unchanged. No member objects created.
+The existing public FDS SVG logo was visually inspected and used in the draft; final image sizing and device
+review remain. A draft class cannot issue objects, so do not activate its configuration prematurely.
+
+Chrome DevTools now opens the live app, but its current account belongs to **Forrest Glamp**, not FDS Cards UK;
+it is not a platform operator. No settings changed. A separate isolated Chrome context `fds-wallet-setup` is open
+on `https://app.hexa-tech.uk/login`; the owner was asked to sign in with the FDS Cards UK admin account. At this
+checkpoint the sign-in is pending. Verify the live identity before reading/writing its settings; never reuse the
+local FDS ID 2 as a production ID. Preserve the existing other-organisation session. Windows `sky` still fails
+initialization with `os error 3`, but browser automation works.
+
+The private `fds-google-class-result.json` and reviewable `fds-google-loyalty-class-draft.json` sit in
+`E:/Hexa-Tech-launch-20261029/`. No HexaTech database wallet row, application source or build changed. Report:
+`docs/audits/2026-10-29-wallet-email-preflight.md`. Production and the source-patch baseline remain unchanged.
+
+## Earlier follow-up: existing wallet credentials and controlled email
 
 Owner clarified **card builder** = `C:/wamp64/www/card-builder`, and authorized a test to
 `info@fds-cards.co.uk`. One message was accepted by SMTP at **15:13:21 UTC**, from `noreply@hotel-tech.ai`,
-subject `HexaTech email test - HEXA-LAUNCH-20261029-01`. Receipt confirmation is pending; this exercised local
+subject `HexaTech email test - HEXA-LAUNCH-20261029-01`. Receipt was confirmed in the later follow-up; this exercised local
 SMTP and the suppression listener, not production campaign workers. Do not resend blindly: the private helper
 has an exclusive attempt marker.
 

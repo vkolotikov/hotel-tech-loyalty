@@ -62,12 +62,13 @@ remain unverified because the owner's existing browser session is unavailable to
   Laravel Cloud backup retention, restore rehearsal, production worker/scheduler/shared-cache configuration,
   uploaded-file backups and SiteGround sender/DNS state remain unverified. No changes were made in either service.
 - Follow-up: owner designated `info@fds-cards.co.uk`; one local SMTP test was accepted at 15:13:21 UTC.
-  Inbox/spam receipt and the production campaign/worker path remain unverified. See
+  The owner confirmed inbox receipt. The production campaign/worker path remains unverified. See
   `2026-10-29-wallet-email-preflight.md`; no customer broadcast was sent.
 - Need physical ACR122U/card type and OS testing; native PC/SC requires a trusted desktop connector.
   The workstation currently reports no connected SmartCardReader/ACR122/NFC/contactless device.
 - Follow-up verified the existing card-builder Apple certificate and Google issuer credentials; no new accounts
-  are needed on this evidence. A dedicated LoyaltyClass, intended production organisation's configuration,
+  are needed on this evidence. Created a dedicated draft LoyaltyClass for the owner's selected FDS Cards UK;
+  it cannot issue passes yet. Correct production login/configuration,
   branded artwork/update implementation and real iOS/Android save-and-scan acceptance remain open. Details are
   in the wallet/email preflight report. Do not paste secrets in chat.
 - A database backup alone does not establish uploaded-media recovery; restore testing must use an isolated target.
