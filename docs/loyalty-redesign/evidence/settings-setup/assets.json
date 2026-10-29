@@ -1,0 +1,314 @@
+﻿[
+    {
+        "frame":  "setup",
+        "file":  "90a94.svg",
+        "sha256":  "92F4408F8BEE54676D6DD99902872387902D9DBC1F6FC57DFA7067FA1A7B5FB3",
+        "reuses":  [
+                       "frontend/src/loyalty/overview/assets/90a94.svg",
+                       "frontend/src/loyalty/scan/design/assets/home.svg"
+                   ],
+        "geometry":  "\u003csvg preserveAspectRatio=\"none\" overflow=\"visible\" style=\"display: block;\" width=\"20\" height=\"20\" viewBox=\"0 0 20 20\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"\u003e"
+    },
+    {
+        "frame":  "setup",
+        "file":  "5a184.svg",
+        "sha256":  "CDFD1FABE2557DB95B522A0275CCA3D5F1ACD54A2755335345F76CEDA8640C22",
+        "reuses":  [
+                       "frontend/src/loyalty/overview/assets/5a184.svg"
+                   ],
+        "geometry":  "\u003csvg preserveAspectRatio=\"none\" overflow=\"visible\" style=\"display: block;\" width=\"20\" height=\"20\" viewBox=\"0 0 20 20\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"\u003e"
+    },
+    {
+        "frame":  "setup",
+        "file":  "6cf9c.svg",
+        "sha256":  "A592F739EF6EBE39F9D7A38B9F669BAD5809E63C422865B228A27888BA25FD86",
+        "reuses":  [
+                       "frontend/src/loyalty/overview/assets/6cf9c.svg"
+                   ],
+        "geometry":  "\u003csvg preserveAspectRatio=\"none\" overflow=\"visible\" style=\"display: block;\" width=\"16\" height=\"16\" viewBox=\"0 0 16 16\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"\u003e"
+    },
+    {
+        "frame":  "setup",
+        "file":  "38333.svg",
+        "sha256":  "26543803FACAE927B6EA13712EE81487302DF0EB0243C8C7B198F4A5245FFA0D",
+        "reuses":  [
+                       "frontend/src/loyalty/overview/assets/38333.svg",
+                       "frontend/src/loyalty/scan/design/assets/members.svg"
+                   ],
+        "geometry":  "\u003csvg preserveAspectRatio=\"none\" overflow=\"visible\" style=\"display: block;\" width=\"20\" height=\"20\" viewBox=\"0 0 20 20\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"\u003e"
+    },
+    {
+        "frame":  "setup",
+        "file":  "5c8a9.svg",
+        "sha256":  "45B5C119BF18CFB6F2447983314B3E1869210B99B1572A919ECBEA0EE32B0EA7",
+        "reuses":  [
+                       "frontend/src/loyalty/overview/assets/5c8a9.svg",
+                       "frontend/src/loyalty/scan/design/assets/requests.svg"
+                   ],
+        "geometry":  "\u003csvg preserveAspectRatio=\"none\" overflow=\"visible\" style=\"display: block;\" width=\"20\" height=\"20\" viewBox=\"0 0 20 20\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"\u003e"
+    },
+    {
+        "frame":  "setup",
+        "file":  "a06a5.svg",
+        "sha256":  "DF3972E9ED4349050F78300D11DBE7D6F0B1095962D9852F8A3C366291B7FDD3",
+        "reuses":  [
+
+                   ],
+        "geometry":  "\u003csvg preserveAspectRatio=\"none\" overflow=\"visible\" style=\"display: block;\" width=\"20\" height=\"20\" viewBox=\"0 0 20 20\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"\u003e"
+    },
+    {
+        "frame":  "setup",
+        "file":  "7055e.svg",
+        "sha256":  "C3E9FF2E93DDC8D5F70B0A5A11C4A01340CD6C2C61231560EB7C25569137A1E5",
+        "reuses":  [
+                       "frontend/src/loyalty/overview/assets/7055e.svg"
+                   ],
+        "geometry":  "\u003csvg preserveAspectRatio=\"none\" overflow=\"visible\" style=\"display: block;\" width=\"16.3333\" height=\"16.3333\" viewBox=\"0 0 16.3333 16.3333\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"\u003e"
+    },
+    {
+        "frame":  "setup",
+        "file":  "507e1.svg",
+        "sha256":  "4537B309DEE73B9C46A7728B3BA20550F4E8CCC0A853B8836F02EF6626393643",
+        "reuses":  [
+                       "frontend/src/loyalty/overview/assets/507e1.svg"
+                   ],
+        "geometry":  "\u003csvg preserveAspectRatio=\"none\" overflow=\"visible\" style=\"display: block;\" width=\"12\" height=\"12\" viewBox=\"0 0 12 12\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"\u003e"
+    },
+    {
+        "frame":  "setup",
+        "file":  "3f053.svg",
+        "sha256":  "0E7233481B0BE0825C7550FFEDA3F4A03F605CB63CA0E3E92595192031191BAB",
+        "reuses":  [
+                       "frontend/src/loyalty/overview/assets/3f053.svg"
+                   ],
+        "geometry":  "\u003csvg preserveAspectRatio=\"none\" overflow=\"visible\" style=\"display: block;\" width=\"20\" height=\"20\" viewBox=\"0 0 20 20\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"\u003e"
+    },
+    {
+        "frame":  "setup",
+        "file":  "dcc5b.svg",
+        "sha256":  "9A282926A2A70A698B52622888C37911697240EFF2EB16CD15B433F3DE327821",
+        "reuses":  [
+                       "frontend/src/loyalty/overview/assets/dcc5b.svg"
+                   ],
+        "geometry":  "\u003csvg preserveAspectRatio=\"none\" overflow=\"visible\" style=\"display: block;\" width=\"16.3333\" height=\"16.3333\" viewBox=\"0 0 16.3333 16.3333\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"\u003e"
+    },
+    {
+        "frame":  "setup",
+        "file":  "82bd8.svg",
+        "sha256":  "74CDC3058D03CBCB2E44F3EA4BD7A80159F8A5070DFDE9D154D17AF0A7ABBD6A",
+        "reuses":  [
+                       "frontend/src/loyalty/overview/assets/82bd8.svg"
+                   ],
+        "geometry":  "\u003csvg preserveAspectRatio=\"none\" overflow=\"visible\" style=\"display: block;\" width=\"16.3333\" height=\"13\" viewBox=\"0 0 16.3333 13\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"\u003e"
+    },
+    {
+        "frame":  "setup",
+        "file":  "a3ff2.svg",
+        "sha256":  "66BE6497816539701379757BD0469408727DD36313B02B2A2EEE16CF49600D77",
+        "reuses":  [
+                       "frontend/src/loyalty/overview/assets/a3ff2.svg"
+                   ],
+        "geometry":  "\u003csvg preserveAspectRatio=\"none\" overflow=\"visible\" style=\"display: block;\" width=\"20\" height=\"20\" viewBox=\"0 0 20 20\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"\u003e"
+    },
+    {
+        "frame":  "setup",
+        "file":  "2b886.svg",
+        "sha256":  "69A07AFD69535F720174A6244A7B45557F1E11F260DDDBA1AA3E75400A62D37A",
+        "reuses":  [
+                       "frontend/src/loyalty/overview/assets/2b886.svg"
+                   ],
+        "geometry":  "\u003csvg preserveAspectRatio=\"none\" overflow=\"visible\" style=\"display: block;\" width=\"20\" height=\"20\" viewBox=\"0 0 20 20\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"\u003e"
+    },
+    {
+        "frame":  "setup",
+        "file":  "b7142.svg",
+        "sha256":  "EDFD32DA6BA5DE5A392537CF75F3AA1C1D56EFEAB0804821A9E73C37B62FB88D",
+        "reuses":  [
+                       "frontend/src/loyalty/overview/assets/b7142.svg"
+                   ],
+        "geometry":  "\u003csvg preserveAspectRatio=\"none\" overflow=\"visible\" style=\"display: block;\" width=\"20\" height=\"20\" viewBox=\"0 0 20 20\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"\u003e"
+    },
+    {
+        "frame":  "setup",
+        "file":  "06b09.svg",
+        "sha256":  "5783B089DF393D55E33BF811943F68D9B57716D31071F1E87E8DA8DA46F8E94C",
+        "reuses":  [
+                       "frontend/src/loyalty/overview/assets/06b09.svg"
+                   ],
+        "geometry":  "\u003csvg preserveAspectRatio=\"none\" overflow=\"visible\" style=\"display: block;\" width=\"20\" height=\"20\" viewBox=\"0 0 20 20\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"\u003e"
+    },
+    {
+        "frame":  "setup",
+        "file":  "7fef4.svg",
+        "sha256":  "1A1EC1A4A2D2FAEF18AC5028CB9120D26D667412B787EF731EAD5799C980ED2A",
+        "reuses":  [
+                       "frontend/src/loyalty/overview/assets/7fef4.svg"
+                   ],
+        "geometry":  "\u003csvg preserveAspectRatio=\"none\" overflow=\"visible\" style=\"display: block;\" width=\"18\" height=\"18\" viewBox=\"0 0 18 18\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"\u003e"
+    },
+    {
+        "frame":  "setup",
+        "file":  "051e7.svg",
+        "sha256":  "6A0A3A890F89CD882E57ABDBF7AAA23CEF6E65F394F8DEC6512E7BEA51EE1F71",
+        "reuses":  [
+                       "frontend/src/loyalty/overview/assets/051e7.svg"
+                   ],
+        "geometry":  "\u003csvg preserveAspectRatio=\"none\" overflow=\"visible\" style=\"display: block;\" width=\"5\" height=\"5\" viewBox=\"0 0 5 5\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"\u003e"
+    },
+    {
+        "frame":  "settings",
+        "file":  "90a94.svg",
+        "sha256":  "92F4408F8BEE54676D6DD99902872387902D9DBC1F6FC57DFA7067FA1A7B5FB3",
+        "reuses":  [
+                       "frontend/src/loyalty/overview/assets/90a94.svg",
+                       "frontend/src/loyalty/scan/design/assets/home.svg"
+                   ],
+        "geometry":  "\u003csvg preserveAspectRatio=\"none\" overflow=\"visible\" style=\"display: block;\" width=\"20\" height=\"20\" viewBox=\"0 0 20 20\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"\u003e"
+    },
+    {
+        "frame":  "settings",
+        "file":  "5a184.svg",
+        "sha256":  "CDFD1FABE2557DB95B522A0275CCA3D5F1ACD54A2755335345F76CEDA8640C22",
+        "reuses":  [
+                       "frontend/src/loyalty/overview/assets/5a184.svg"
+                   ],
+        "geometry":  "\u003csvg preserveAspectRatio=\"none\" overflow=\"visible\" style=\"display: block;\" width=\"20\" height=\"20\" viewBox=\"0 0 20 20\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"\u003e"
+    },
+    {
+        "frame":  "settings",
+        "file":  "6cf9c.svg",
+        "sha256":  "A592F739EF6EBE39F9D7A38B9F669BAD5809E63C422865B228A27888BA25FD86",
+        "reuses":  [
+                       "frontend/src/loyalty/overview/assets/6cf9c.svg"
+                   ],
+        "geometry":  "\u003csvg preserveAspectRatio=\"none\" overflow=\"visible\" style=\"display: block;\" width=\"16\" height=\"16\" viewBox=\"0 0 16 16\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"\u003e"
+    },
+    {
+        "frame":  "settings",
+        "file":  "38333.svg",
+        "sha256":  "26543803FACAE927B6EA13712EE81487302DF0EB0243C8C7B198F4A5245FFA0D",
+        "reuses":  [
+                       "frontend/src/loyalty/overview/assets/38333.svg",
+                       "frontend/src/loyalty/scan/design/assets/members.svg"
+                   ],
+        "geometry":  "\u003csvg preserveAspectRatio=\"none\" overflow=\"visible\" style=\"display: block;\" width=\"20\" height=\"20\" viewBox=\"0 0 20 20\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"\u003e"
+    },
+    {
+        "frame":  "settings",
+        "file":  "5c8a9.svg",
+        "sha256":  "45B5C119BF18CFB6F2447983314B3E1869210B99B1572A919ECBEA0EE32B0EA7",
+        "reuses":  [
+                       "frontend/src/loyalty/overview/assets/5c8a9.svg",
+                       "frontend/src/loyalty/scan/design/assets/requests.svg"
+                   ],
+        "geometry":  "\u003csvg preserveAspectRatio=\"none\" overflow=\"visible\" style=\"display: block;\" width=\"20\" height=\"20\" viewBox=\"0 0 20 20\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"\u003e"
+    },
+    {
+        "frame":  "settings",
+        "file":  "a06a5.svg",
+        "sha256":  "4BDABA5ABB70DFCB9266E8770735C2B79B9261332ED14485710D76DEDD41985B",
+        "reuses":  [
+
+                   ],
+        "geometry":  "\u003csvg preserveAspectRatio=\"none\" overflow=\"visible\" style=\"display: block;\" width=\"20\" height=\"20\" viewBox=\"0 0 20 20\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"\u003e"
+    },
+    {
+        "frame":  "settings",
+        "file":  "7055e.svg",
+        "sha256":  "C3E9FF2E93DDC8D5F70B0A5A11C4A01340CD6C2C61231560EB7C25569137A1E5",
+        "reuses":  [
+                       "frontend/src/loyalty/overview/assets/7055e.svg"
+                   ],
+        "geometry":  "\u003csvg preserveAspectRatio=\"none\" overflow=\"visible\" style=\"display: block;\" width=\"16.3333\" height=\"16.3333\" viewBox=\"0 0 16.3333 16.3333\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"\u003e"
+    },
+    {
+        "frame":  "settings",
+        "file":  "507e1.svg",
+        "sha256":  "4537B309DEE73B9C46A7728B3BA20550F4E8CCC0A853B8836F02EF6626393643",
+        "reuses":  [
+                       "frontend/src/loyalty/overview/assets/507e1.svg"
+                   ],
+        "geometry":  "\u003csvg preserveAspectRatio=\"none\" overflow=\"visible\" style=\"display: block;\" width=\"12\" height=\"12\" viewBox=\"0 0 12 12\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"\u003e"
+    },
+    {
+        "frame":  "settings",
+        "file":  "3f053.svg",
+        "sha256":  "0E7233481B0BE0825C7550FFEDA3F4A03F605CB63CA0E3E92595192031191BAB",
+        "reuses":  [
+                       "frontend/src/loyalty/overview/assets/3f053.svg"
+                   ],
+        "geometry":  "\u003csvg preserveAspectRatio=\"none\" overflow=\"visible\" style=\"display: block;\" width=\"20\" height=\"20\" viewBox=\"0 0 20 20\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"\u003e"
+    },
+    {
+        "frame":  "settings",
+        "file":  "bfc66.svg",
+        "sha256":  "9A282926A2A70A698B52622888C37911697240EFF2EB16CD15B433F3DE327821",
+        "reuses":  [
+                       "frontend/src/loyalty/overview/assets/dcc5b.svg"
+                   ],
+        "geometry":  "\u003csvg preserveAspectRatio=\"none\" overflow=\"visible\" style=\"display: block;\" width=\"16.3333\" height=\"16.3333\" viewBox=\"0 0 16.3333 16.3333\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"\u003e"
+    },
+    {
+        "frame":  "settings",
+        "file":  "82bd8.svg",
+        "sha256":  "74CDC3058D03CBCB2E44F3EA4BD7A80159F8A5070DFDE9D154D17AF0A7ABBD6A",
+        "reuses":  [
+                       "frontend/src/loyalty/overview/assets/82bd8.svg"
+                   ],
+        "geometry":  "\u003csvg preserveAspectRatio=\"none\" overflow=\"visible\" style=\"display: block;\" width=\"16.3333\" height=\"13\" viewBox=\"0 0 16.3333 13\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"\u003e"
+    },
+    {
+        "frame":  "settings",
+        "file":  "a3ff2.svg",
+        "sha256":  "66BE6497816539701379757BD0469408727DD36313B02B2A2EEE16CF49600D77",
+        "reuses":  [
+                       "frontend/src/loyalty/overview/assets/a3ff2.svg"
+                   ],
+        "geometry":  "\u003csvg preserveAspectRatio=\"none\" overflow=\"visible\" style=\"display: block;\" width=\"20\" height=\"20\" viewBox=\"0 0 20 20\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"\u003e"
+    },
+    {
+        "frame":  "settings",
+        "file":  "2b886.svg",
+        "sha256":  "69A07AFD69535F720174A6244A7B45557F1E11F260DDDBA1AA3E75400A62D37A",
+        "reuses":  [
+                       "frontend/src/loyalty/overview/assets/2b886.svg"
+                   ],
+        "geometry":  "\u003csvg preserveAspectRatio=\"none\" overflow=\"visible\" style=\"display: block;\" width=\"20\" height=\"20\" viewBox=\"0 0 20 20\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"\u003e"
+    },
+    {
+        "frame":  "settings",
+        "file":  "b7142.svg",
+        "sha256":  "EDFD32DA6BA5DE5A392537CF75F3AA1C1D56EFEAB0804821A9E73C37B62FB88D",
+        "reuses":  [
+                       "frontend/src/loyalty/overview/assets/b7142.svg"
+                   ],
+        "geometry":  "\u003csvg preserveAspectRatio=\"none\" overflow=\"visible\" style=\"display: block;\" width=\"20\" height=\"20\" viewBox=\"0 0 20 20\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"\u003e"
+    },
+    {
+        "frame":  "settings",
+        "file":  "06b09.svg",
+        "sha256":  "5783B089DF393D55E33BF811943F68D9B57716D31071F1E87E8DA8DA46F8E94C",
+        "reuses":  [
+                       "frontend/src/loyalty/overview/assets/06b09.svg"
+                   ],
+        "geometry":  "\u003csvg preserveAspectRatio=\"none\" overflow=\"visible\" style=\"display: block;\" width=\"20\" height=\"20\" viewBox=\"0 0 20 20\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"\u003e"
+    },
+    {
+        "frame":  "settings",
+        "file":  "7fef4.svg",
+        "sha256":  "1A1EC1A4A2D2FAEF18AC5028CB9120D26D667412B787EF731EAD5799C980ED2A",
+        "reuses":  [
+                       "frontend/src/loyalty/overview/assets/7fef4.svg"
+                   ],
+        "geometry":  "\u003csvg preserveAspectRatio=\"none\" overflow=\"visible\" style=\"display: block;\" width=\"18\" height=\"18\" viewBox=\"0 0 18 18\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"\u003e"
+    },
+    {
+        "frame":  "settings",
+        "file":  "051e7.svg",
+        "sha256":  "6A0A3A890F89CD882E57ABDBF7AAA23CEF6E65F394F8DEC6512E7BEA51EE1F71",
+        "reuses":  [
+                       "frontend/src/loyalty/overview/assets/051e7.svg"
+                   ],
+        "geometry":  "\u003csvg preserveAspectRatio=\"none\" overflow=\"visible\" style=\"display: block;\" width=\"5\" height=\"5\" viewBox=\"0 0 5 5\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"\u003e"
+    }
+]

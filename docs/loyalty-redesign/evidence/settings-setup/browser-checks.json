@@ -1,0 +1,542 @@
+{
+  "checks": [
+    "currency review has separated warning sections",
+    "currency preview before save",
+    "server impact warnings retained",
+    "cancel leaves currency unchanged",
+    "theme staged before save",
+    "theme applied to live frame",
+    "theme persisted across reload",
+    "discard restores saved theme",
+    "Auto follows system theme",
+    "leave guard preserves draft",
+    "preview failure is visible",
+    "write failure preserves currency",
+    "save locked while writing",
+    "confirmed currency saved",
+    "successful currency save refreshed bootstrap",
+    "ru locale has no raw keys",
+    "de locale has no raw keys",
+    "fr locale has no raw keys",
+    "es locale has no raw keys",
+    "en locale has no raw keys",
+    "quick preferences still available",
+    "Settings fits 1280",
+    "Settings fits 1024",
+    "Settings fits 768",
+    "Settings fits 390",
+    "Settings fits 320",
+    "currency load failure recoverable",
+    "regular staff cannot edit venue currency",
+    "regular staff do not request manager currency",
+    "existing tiers preserved",
+    "unused presets collapsed",
+    "invalid setup values stay on Configure",
+    "member preview uses actual draft",
+    "setup leave guard retains draft",
+    "Guided setup fits 1280",
+    "Guided setup fits 1024",
+    "Guided setup fits 768",
+    "Guided setup fits 390",
+    "Guided setup fits 320",
+    "Apply retries retain idempotency key",
+    "Apply sends edited points",
+    "skip cancel writes nothing",
+    "new programme presets available",
+    "staff permission preserved for setup",
+    "start fits 1440",
+    "start shared frame 1440",
+    "start fits 390",
+    "start shared frame 390",
+    "start fits 320",
+    "start shared frame 320",
+    "guide fits 1440",
+    "guide shared frame 1440",
+    "guide fits 390",
+    "guide shared frame 390",
+    "guide fits 320",
+    "guide shared frame 320",
+    "import fits 1440",
+    "import shared frame 1440",
+    "import fits 390",
+    "import shared frame 390",
+    "import fits 320",
+    "import shared frame 320",
+    "duplicates fits 1440",
+    "duplicates shared frame 1440",
+    "duplicates fits 390",
+    "duplicates shared frame 390",
+    "duplicates fits 320",
+    "duplicates shared frame 320",
+    "no browser errors",
+    "all loyalty API calls use all-brand scope"
+  ],
+  "errors": [],
+  "requests": [
+    {
+      "path": "/api/v1/admin/branding/theme",
+      "method": "GET",
+      "payload": null,
+      "query": ""
+    },
+    {
+      "path": "bootstrap",
+      "method": "GET",
+      "payload": null,
+      "query": "?brand_id=all"
+    },
+    {
+      "path": "currency",
+      "method": "GET",
+      "payload": null,
+      "query": "?brand_id=all"
+    },
+    {
+      "path": "currency",
+      "method": "PUT",
+      "payload": {
+        "currency": "GBP",
+        "dry_run": true
+      },
+      "query": "?brand_id=all"
+    },
+    {
+      "path": "/api/v1/admin/branding/theme",
+      "method": "GET",
+      "payload": null,
+      "query": ""
+    },
+    {
+      "path": "bootstrap",
+      "method": "GET",
+      "payload": null,
+      "query": "?brand_id=all"
+    },
+    {
+      "path": "currency",
+      "method": "GET",
+      "payload": null,
+      "query": "?brand_id=all"
+    },
+    {
+      "path": "currency",
+      "method": "PUT",
+      "payload": {
+        "currency": "GBP",
+        "dry_run": true
+      },
+      "query": "?brand_id=all"
+    },
+    {
+      "path": "currency",
+      "method": "PUT",
+      "payload": {
+        "currency": "GBP",
+        "dry_run": true
+      },
+      "query": "?brand_id=all"
+    },
+    {
+      "path": "currency",
+      "method": "PUT",
+      "payload": {
+        "currency": "GBP"
+      },
+      "query": "?brand_id=all"
+    },
+    {
+      "path": "currency",
+      "method": "PUT",
+      "payload": {
+        "currency": "GBP"
+      },
+      "query": "?brand_id=all"
+    },
+    {
+      "path": "bootstrap",
+      "method": "GET",
+      "payload": null,
+      "query": "?brand_id=all"
+    },
+    {
+      "path": "/api/v1/admin/branding/theme",
+      "method": "GET",
+      "payload": null,
+      "query": ""
+    },
+    {
+      "path": "bootstrap",
+      "method": "GET",
+      "payload": null,
+      "query": "?brand_id=all"
+    },
+    {
+      "path": "currency",
+      "method": "GET",
+      "payload": null,
+      "query": "?brand_id=all"
+    },
+    {
+      "path": "/api/v1/admin/branding/theme",
+      "method": "GET",
+      "payload": null,
+      "query": ""
+    },
+    {
+      "path": "bootstrap",
+      "method": "GET",
+      "payload": null,
+      "query": "?brand_id=all"
+    },
+    {
+      "path": "currency",
+      "method": "GET",
+      "payload": null,
+      "query": "?brand_id=all"
+    },
+    {
+      "path": "currency",
+      "method": "GET",
+      "payload": null,
+      "query": "?brand_id=all"
+    },
+    {
+      "path": "/api/v1/admin/branding/theme",
+      "method": "GET",
+      "payload": null,
+      "query": ""
+    },
+    {
+      "path": "bootstrap",
+      "method": "GET",
+      "payload": null,
+      "query": "?brand_id=all"
+    },
+    {
+      "path": "/api/v1/admin/branding/theme",
+      "method": "GET",
+      "payload": null,
+      "query": ""
+    },
+    {
+      "path": "bootstrap",
+      "method": "GET",
+      "payload": null,
+      "query": "?brand_id=all"
+    },
+    {
+      "path": "options",
+      "method": "GET",
+      "payload": null,
+      "query": "?brand_id=all"
+    },
+    {
+      "path": "options/setup",
+      "method": "POST",
+      "payload": {
+        "options": {
+          "points_per_currency": 17,
+          "points_on_bookings": true,
+          "points_expiry_months": 12,
+          "welcome_bonus_points": 250,
+          "birthday_bonus_points": 500,
+          "referral_enabled": false,
+          "stamps_enabled": true,
+          "stamps_per_card": 10,
+          "stamp_reward_kind": "points",
+          "stamp_reward_points": 100,
+          "checkin_enabled": true,
+          "checkin_points": 25,
+          "desk_earn_enabled": false,
+          "cashback_enabled": false,
+          "tier_progress_by": "points"
+        },
+        "idempotency_key": "dcc0910f-1812-4ad4-8406-d9a1b62cc367"
+      },
+      "query": "?brand_id=all"
+    },
+    {
+      "path": "options/setup",
+      "method": "POST",
+      "payload": {
+        "options": {
+          "points_per_currency": 17,
+          "points_on_bookings": true,
+          "points_expiry_months": 12,
+          "welcome_bonus_points": 250,
+          "birthday_bonus_points": 500,
+          "referral_enabled": false,
+          "stamps_enabled": true,
+          "stamps_per_card": 10,
+          "stamp_reward_kind": "points",
+          "stamp_reward_points": 100,
+          "checkin_enabled": true,
+          "checkin_points": 25,
+          "desk_earn_enabled": false,
+          "cashback_enabled": false,
+          "tier_progress_by": "points"
+        },
+        "idempotency_key": "dcc0910f-1812-4ad4-8406-d9a1b62cc367"
+      },
+      "query": "?brand_id=all"
+    },
+    {
+      "path": "bootstrap",
+      "method": "GET",
+      "payload": null,
+      "query": "?brand_id=all"
+    },
+    {
+      "path": "/api/v1/admin/branding/theme",
+      "method": "GET",
+      "payload": null,
+      "query": ""
+    },
+    {
+      "path": "bootstrap",
+      "method": "GET",
+      "payload": null,
+      "query": "?brand_id=all"
+    },
+    {
+      "path": "options",
+      "method": "GET",
+      "payload": null,
+      "query": "?brand_id=all"
+    },
+    {
+      "path": "/api/v1/admin/branding/theme",
+      "method": "GET",
+      "payload": null,
+      "query": ""
+    },
+    {
+      "path": "bootstrap",
+      "method": "GET",
+      "payload": null,
+      "query": "?brand_id=all"
+    },
+    {
+      "path": "options",
+      "method": "GET",
+      "payload": null,
+      "query": "?brand_id=all"
+    },
+    {
+      "path": "/api/v1/admin/branding/theme",
+      "method": "GET",
+      "payload": null,
+      "query": ""
+    },
+    {
+      "path": "bootstrap",
+      "method": "GET",
+      "payload": null,
+      "query": "?brand_id=all"
+    },
+    {
+      "path": "options",
+      "method": "GET",
+      "payload": null,
+      "query": "?brand_id=all"
+    },
+    {
+      "path": "/api/v1/admin/branding/theme",
+      "method": "GET",
+      "payload": null,
+      "query": ""
+    },
+    {
+      "path": "bootstrap",
+      "method": "GET",
+      "payload": null,
+      "query": "?brand_id=all"
+    },
+    {
+      "path": "start",
+      "method": "GET",
+      "payload": null,
+      "query": "?brand_id=all"
+    },
+    {
+      "path": "/api/v1/admin/branding/theme",
+      "method": "GET",
+      "payload": null,
+      "query": ""
+    },
+    {
+      "path": "bootstrap",
+      "method": "GET",
+      "payload": null,
+      "query": "?brand_id=all"
+    },
+    {
+      "path": "start",
+      "method": "GET",
+      "payload": null,
+      "query": "?brand_id=all"
+    },
+    {
+      "path": "/api/v1/admin/branding/theme",
+      "method": "GET",
+      "payload": null,
+      "query": ""
+    },
+    {
+      "path": "bootstrap",
+      "method": "GET",
+      "payload": null,
+      "query": "?brand_id=all"
+    },
+    {
+      "path": "start",
+      "method": "GET",
+      "payload": null,
+      "query": "?brand_id=all"
+    },
+    {
+      "path": "/api/v1/admin/branding/theme",
+      "method": "GET",
+      "payload": null,
+      "query": ""
+    },
+    {
+      "path": "bootstrap",
+      "method": "GET",
+      "payload": null,
+      "query": "?brand_id=all"
+    },
+    {
+      "path": "/api/v1/admin/branding/theme",
+      "method": "GET",
+      "payload": null,
+      "query": ""
+    },
+    {
+      "path": "bootstrap",
+      "method": "GET",
+      "payload": null,
+      "query": "?brand_id=all"
+    },
+    {
+      "path": "/api/v1/admin/branding/theme",
+      "method": "GET",
+      "payload": null,
+      "query": ""
+    },
+    {
+      "path": "bootstrap",
+      "method": "GET",
+      "payload": null,
+      "query": "?brand_id=all"
+    },
+    {
+      "path": "/api/v1/admin/branding/theme",
+      "method": "GET",
+      "payload": null,
+      "query": ""
+    },
+    {
+      "path": "bootstrap",
+      "method": "GET",
+      "payload": null,
+      "query": "?brand_id=all"
+    },
+    {
+      "path": "members/imports",
+      "method": "GET",
+      "payload": null,
+      "query": "?brand_id=all"
+    },
+    {
+      "path": "/api/v1/admin/branding/theme",
+      "method": "GET",
+      "payload": null,
+      "query": ""
+    },
+    {
+      "path": "bootstrap",
+      "method": "GET",
+      "payload": null,
+      "query": "?brand_id=all"
+    },
+    {
+      "path": "members/imports",
+      "method": "GET",
+      "payload": null,
+      "query": "?brand_id=all"
+    },
+    {
+      "path": "/api/v1/admin/branding/theme",
+      "method": "GET",
+      "payload": null,
+      "query": ""
+    },
+    {
+      "path": "bootstrap",
+      "method": "GET",
+      "payload": null,
+      "query": "?brand_id=all"
+    },
+    {
+      "path": "members/imports",
+      "method": "GET",
+      "payload": null,
+      "query": "?brand_id=all"
+    },
+    {
+      "path": "/api/v1/admin/branding/theme",
+      "method": "GET",
+      "payload": null,
+      "query": ""
+    },
+    {
+      "path": "bootstrap",
+      "method": "GET",
+      "payload": null,
+      "query": "?brand_id=all"
+    },
+    {
+      "path": "members/duplicates",
+      "method": "GET",
+      "payload": null,
+      "query": "?brand_id=all"
+    },
+    {
+      "path": "/api/v1/admin/branding/theme",
+      "method": "GET",
+      "payload": null,
+      "query": ""
+    },
+    {
+      "path": "bootstrap",
+      "method": "GET",
+      "payload": null,
+      "query": "?brand_id=all"
+    },
+    {
+      "path": "members/duplicates",
+      "method": "GET",
+      "payload": null,
+      "query": "?brand_id=all"
+    },
+    {
+      "path": "/api/v1/admin/branding/theme",
+      "method": "GET",
+      "payload": null,
+      "query": ""
+    },
+    {
+      "path": "bootstrap",
+      "method": "GET",
+      "payload": null,
+      "query": "?brand_id=all"
+    },
+    {
+      "path": "members/duplicates",
+      "method": "GET",
+      "payload": null,
+      "query": "?brand_id=all"
+    }
+  ]
+}

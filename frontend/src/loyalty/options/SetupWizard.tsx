@@ -7,9 +7,7 @@ import {
   Ticket, Users, Utensils, type LucideIcon,
 } from 'lucide-react'
 import { Button } from '../../workspace/ui/Button'
-import { Dialog } from '../../workspace/ui/Dialog'
 import { Notice } from '../../workspace/ui/Notice'
-import { PageHeader } from '../../workspace/ui/PageHeader'
 import { SectionTitle } from '../../workspace/ui/Typography'
 import { useBoot } from '../LoyaltyProvider'
 import { failureOf, newPressKey } from '../lib/api'
@@ -26,6 +24,10 @@ import { LoadFailed, Loading, Sentence, WayFields, WayIcon } from './parts'
 import { useSay, wayLine, wayTitle } from './say'
 import type { OptionsAnswer, Preset, SetupOutcome } from './types'
 import { PRESET_LINE_WORDS, PRESET_WORDS, STEP_WORDS } from './words'
+import { useSettingsWords } from '../settings/words'
+import { OverviewButton, OverviewDialog } from '../overview/OverviewUI'
+import { useLeaveGuard } from '../earn/useLeaveGuard'
+import './setup.css'
 
 /** The server's icon name for a preset (LoyaltyPresetService::PRESETS `icon`); one the workspace does not know wears the area's own. */
 const PRESET_ICONS: Record<string, LucideIcon> = {
@@ -47,9 +49,8 @@ export function SetupWizard() {
   const data = query.data
 
   return (
-    <div className="space-y-6 px-4 py-6 lg:px-6">
-      <PageHeader title={t('loyalty.options.wizard.title', 'Set up your programme')}
-        line={t('loyalty.options.wizard.line', 'Four short steps. You can change everything later under Ways to earn.')} />
+    <div className="l-ov-page l-rd-page l-gs-page">
+      <header className="l-ov-page-heading"><div><h1>{t('loyalty.redesign.guidedSetup', 'Guided setup')}</h1><p>{t('loyalty.options.wizard.line', 'Four short steps. You can change everything later under Ways to earn.')}</p></div><Link to="/loyalty/guide" className="l-ov-button">{t('loyalty.guide.page.title', 'Guide')}</Link></header>
       {query.isError && !data && <LoadFailed error={query.error} onRetry={() => { void query.refetch() }} />}
       {!data && query.isLoading && <Loading />}
       {data && !data.can_change && (
@@ -74,6 +75,8 @@ export interface WizardStart {
 export function Wizard({ answer, start = {} }: { answer: OptionsAnswer; start?: WizardStart }) {
   const { t, i18n } = useTranslation()
   const say = useSay()
+  const design = useSettingsWords()
+  const guard = useLeaveGuard()
   const locale = i18n.language || 'en'
   const currency = useBoot().venue.currency
   const client = useQueryClient()
@@ -92,11 +95,17 @@ export function Wizard({ answer, start = {} }: { answer: OptionsAnswer; start?: 
   const apply = useMutation({
     mutationFn: () => optionsApi.setup(setupBody(answer, choice, form, key)),
     onSuccess: (next) => { afterOptionsChange(client, next, next.setup.preset_applied); setDone(next.setup) },
+    onSettled: guard.end,
   })
   const skip = useMutation({
     mutationFn: optionsApi.skip,
     onSuccess: (next) => { afterOptionsChange(client, next); navigate('/loyalty/options') },
+    onSettled: guard.end,
   })
+
+  const changed = !done && (step !== 'business' || choice !== startChoice(answer) || JSON.stringify(form) !== JSON.stringify(recommendedForm(answer, presetOf(answer, startChoice(answer)), answer.options)))
+  const { mark } = guard
+  useEffect(() => { mark('setup', changed) }, [changed, mark])
 
   const heading = useRef<HTMLHeadingElement>(null)
   const first = useRef(true)
@@ -124,7 +133,7 @@ export function Wizard({ answer, start = {} }: { answer: OptionsAnswer; start?: 
   const onNext = (e: FormEvent) => {
     e.preventDefault()
     if (step === 'configure' && Object.keys(local).length > 0) { setTried(true); return }
-    if (step === 'review') { apply.mutate(); return }
+    if (step === 'review') { if (guard.begin()) apply.mutate(); return }
     const next = stepAfter(step, 1)
     if (next) go(next)
   }
@@ -134,21 +143,25 @@ export function Wizard({ answer, start = {} }: { answer: OptionsAnswer; start?: 
   if (done) return <Done outcome={done} headingRef={heading} />
 
   return (
-    <div className="max-w-4xl space-y-5">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <ol aria-label={t('loyalty.options.wizard.steps', 'Steps')} className="flex flex-wrap items-center gap-2">
+    <div className="l-gs-workspace">
+      <section className="l-ov-panel l-gs-progress"><div><h2>{design('draftTitle')}</h2><span>{t('loyalty.options.wizard.step_of', 'Step {{n}} of {{total}}', { n: String(index + 1), total: String(STEPS.length) })}</span></div><p>{design('draftLine')}</p><progress max={STEPS.length} value={index} aria-label={t('loyalty.options.wizard.steps', 'Steps')} /></section>
+      <div className="l-gs-columns"><div className="l-gs-main">
+      <div className="l-ov-panel l-gs-steps">
+        <ol aria-label={t('loyalty.options.wizard.steps', 'Steps')}>
           {STEPS.map((s, i) => (
             <li key={s} data-step={s} aria-current={s === step ? 'step' : undefined}
-              className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-sm font-medium ${s === step ? 'border-transparent bg-a-accent text-a-accent-ink' : i < index ? 'border-a-border bg-a-surface text-a-text' : 'border-a-border bg-a-surface text-a-text-2'}`}>
+              data-complete={i < index || undefined}>
+              <button type="button" disabled={i > index || apply.isPending} onClick={() => go(s)}>
               <span aria-hidden className="font-a-mono text-xs tabular-nums">{i < index ? <Check size={13} /> : i + 1}</span>
               {t(`loyalty.options.step.${s}`, STEP_WORDS[s])}
+              </button>
             </li>
           ))}
         </ol>
-        <Button type="button" variant="ghost" size="sm" onClick={() => setAsking(true)}>{t('loyalty.options.wizard.skip', 'Skip setup')}</Button>
+        <OverviewButton type="button" disabled={apply.isPending} onClick={() => setAsking(true)}>{t('loyalty.options.wizard.skip', 'Skip setup')}</OverviewButton>
       </div>
 
-      <form noValidate onSubmit={onNext} aria-labelledby="wizard-step" className="space-y-5">
+      <form noValidate onSubmit={onNext} aria-labelledby="wizard-step" className="l-ov-panel l-gs-form">
         <div className="space-y-1">
           <p className="font-a-mono text-xs uppercase tracking-[0.12em] text-a-text-2">
             {t('loyalty.options.wizard.step_of', 'Step {{n}} of {{total}}', { n: String(index + 1), total: String(STEPS.length) })}
@@ -180,7 +193,7 @@ export function Wizard({ answer, start = {} }: { answer: OptionsAnswer; start?: 
           <Notice tone="danger">{t('loyalty.options.wizard.fix_fields', 'Check the fields marked below.')}</Notice>
         )}
 
-        <div className="flex flex-wrap items-center justify-between gap-2 border-t border-a-border pt-4">
+        <div className="l-gs-actions">
           {index > 0
             ? <Button type="button" variant="secondary" onClick={back} disabled={apply.isPending}><ChevronLeft size={15} aria-hidden />{t('loyalty.options.wizard.back', 'Back')}</Button>
             : <span />}
@@ -189,21 +202,26 @@ export function Wizard({ answer, start = {} }: { answer: OptionsAnswer; start?: 
             : <Button type="submit">{t('loyalty.options.wizard.next', 'Next')}<ChevronRight size={15} aria-hidden /></Button>}
         </div>
       </form>
+      <section className="l-ov-panel l-gs-optional"><h3>{design('optional')}</h3><div><Link className="l-ov-link" to="/loyalty/program?tab=places">{t('loyalty.places.title', 'Places')} →</Link><Link className="l-ov-link" to="/loyalty/program?tab=boosts">{t('loyalty.program.boosts.title', 'Boost events')} →</Link><Link className="l-ov-link" to="/loyalty/options">{t('loyalty.nav.options', 'Ways to earn')} →</Link></div></section>
+      </div>
+      {step !== 'review' && <aside className="l-ov-panel l-gs-preview"><small>{design('preview')}</small><h2>{t('loyalty.options.wizard.review_title', 'What members will get')}</h2><div tabIndex={0} role="region" aria-label={design('preview')}><ul>{reviewOf(answer, form, answer.options, ctx).on.map(line => <li key={line.key}><strong>{wayTitle(ctx.say, line.key)}</strong><p>{line.text}</p></li>)}</ul></div><p>{design('previewHint')}</p></aside>}
+      </div>
 
       {asking && (
-        <Dialog title={t('loyalty.options.wizard.skip_title', 'Skip the setup?')} onClose={() => setAsking(false)} busy={skip.isPending}>
+        <OverviewDialog kind="form" className="l-gs-dialog" title={t('loyalty.options.wizard.skip_title', 'Skip the setup?')} onClose={() => setAsking(false)} busy={skip.isPending}>
           <div className="space-y-4">
             <p className="text-sm text-a-text">
               {t('loyalty.options.wizard.skip_body', 'Nothing you chose here is saved, and the programme stays as it is. You can open the setup again any time from Ways to earn.')}
             </p>
             {skip.isError && <Notice tone="danger">{t(...refusalKey('loyalty.options', ERRORS, 'skip', failureOf(skip.error)))}</Notice>}
             <div className="flex flex-wrap justify-end gap-2 pt-1">
-              <Button type="button" variant="secondary" disabled={skip.isPending} onClick={() => setAsking(false)}>{t('loyalty.options.wizard.skip_keep', 'Keep going')}</Button>
-              <Button type="button" loading={skip.isPending} onClick={() => skip.mutate()}>{t('loyalty.options.wizard.skip_confirm', 'Skip setup')}</Button>
+              <OverviewButton type="button" disabled={skip.isPending} onClick={() => setAsking(false)}>{t('loyalty.options.wizard.skip_keep', 'Keep going')}</OverviewButton>
+              <OverviewButton primary type="button" disabled={skip.isPending} aria-busy={skip.isPending} onClick={() => { if (guard.begin()) skip.mutate() }}>{t('loyalty.options.wizard.skip_confirm', 'Skip setup')}</OverviewButton>
             </div>
           </div>
-        </Dialog>
+        </OverviewDialog>
       )}
+      {guard.destination && <OverviewDialog kind="form" className="l-gs-dialog" title={design('leaveTitle')} onClose={guard.keep}><p>{t('loyalty.options.wizard.skip_body', 'Nothing you chose here is saved, and the programme stays as it is. You can open the setup again any time from Ways to earn.')}</p><div className="l-gs-dialog-actions"><OverviewButton onClick={guard.keep}>{design('keepEditing')}</OverviewButton><OverviewButton primary onClick={guard.discard}>{design('discard')}</OverviewButton></div></OverviewDialog>}
     </div>
   )
 }
@@ -250,7 +268,8 @@ export function Business({ answer, choice, keep, onChoose }: { answer: OptionsAn
           title={t('loyalty.options.wizard.keep', 'Keep my tiers and rewards')}
           line={t('loyalty.options.wizard.keep_line', 'Tiers: {{tiers}}. Rewards in the catalogue: {{rewards}}. Nothing in them changes.', { tiers: String(answer.catalogue.tiers), rewards: String(answer.catalogue.rewards.length) })} />
       )}
-      {keep && <p className="text-sm text-a-text-2">{t('loyalty.options.wizard.presets_greyed', 'Starting programmes set up a new venue’s tiers only. They are shown here for reference.')}</p>}
+      <details className="l-gs-presets" open={keep ? undefined : true}>
+      <summary hidden={!keep}>{t('loyalty.options.wizard.presets_greyed', 'Starting programmes set up a new venue’s tiers only. They are shown here for reference.')}</summary>
       <div className="grid gap-3 sm:grid-cols-2">
         {answer.presets.map(p => (
           <ChoiceCard key={p.key} name="programme-start" value={p.key} checked={!keep && choice === p.key} disabled={keep} onChoose={onChoose}
@@ -262,6 +281,7 @@ export function Business({ answer, choice, keep, onChoose }: { answer: OptionsAn
             ]} />
         ))}
       </div>
+      </details>
     </fieldset>
   )
 }

@@ -6,7 +6,7 @@ import { registerWorkspaceLocales } from '../workspace/i18n'
 import { registerLoyaltyLocales } from './i18n'
 import { loginPath } from './lib/links'
 import { LoyaltyProvider } from './LoyaltyProvider'
-import { LoyaltyShell } from './LoyaltyShell'
+import { SettingsPage } from './settings/SettingsPage'
 import { OverviewShell } from './overview/OverviewShell'
 import { OverviewPage } from './overview/OverviewPage'
 import { AppPage } from './app/AppPage'
@@ -54,10 +54,9 @@ export function LoyaltyApp() {
     return <LoyaltyProvider><DoorPage /></LoyaltyProvider>
   }
 
-  const designed = ['/loyalty', '/loyalty/program', '/loyalty/options', '/loyalty/rewards', '/loyalty/requests', '/loyalty/insights', '/loyalty/app', '/loyalty/scan'].includes(location.pathname.replace(/\/$/, '')) || /^\/loyalty\/members\/\d+\/?$/.test(location.pathname)
   const isCampaigns = /^\/loyalty\/campaigns(?:\/|$)/.test(location.pathname)
   const CampaignScope = isCampaigns ? CampaignCache : Fragment
-  const Shell = designed || isCampaigns || /^\/loyalty\/events(?:\/|$)/.test(location.pathname) ? OverviewShell : LoyaltyShell
+  const Shell = OverviewShell
   return (
     <LoyaltyProvider>
       <Shell>
@@ -70,6 +69,7 @@ export function LoyaltyApp() {
           <Route path="program" element={<ProgramPage />} />
           <Route path="options" element={<EarnPage />} />
           <Route path="options/setup" element={<SetupWizard />} />
+          <Route path="settings" element={<SettingsPage />} />
           <Route path="rewards" element={<RewardsPage />} />
           <Route path="events" element={<EventsPage />} />
           <Route path="events/new" element={<EventEditorPage />} />

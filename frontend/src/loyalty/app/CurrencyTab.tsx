@@ -108,7 +108,9 @@ export function CurrencyEditor({ answer, initialPreview = null, queryKey = CURRE
 type T = ReturnType<typeof useTranslation>['t']
 
 /** One thing the dry run said, in the workspace's words. */
-function warningText(t: T, w: CurrencyWarning, to: string, locale: string): string {
+// Shared with the full Settings page; it has no component state.
+// eslint-disable-next-line react-refresh/only-export-components
+export function warningText(t: T, w: CurrencyWarning, to: string, locale: string): string {
   switch (w.key) {
     case 'payments':
       return t('loyalty.app.currency.warn.payments', 'Online payments are set up in {{currency}}. Bookings priced in {{to}} would be paid at the venue until Stripe takes {{to}} (full admin: Settings → Integrations).', { currency: w.currency, to })
