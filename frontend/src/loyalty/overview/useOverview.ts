@@ -13,7 +13,7 @@ const subscribeOnline = (notify: () => void) => {
 }
 export function useOnline() { return useSyncExternalStore(subscribeOnline, () => navigator.onLine, () => true) }
 
-const phoneMedia = () => window.matchMedia('(max-width: 600px)')
+const phoneMedia = () => window.matchMedia('(max-width: 767px)')
 const subscribePhone = (notify: () => void) => { const media = phoneMedia(); media.addEventListener('change', notify); return () => media.removeEventListener('change', notify) }
 export function usePhone() { return useSyncExternalStore(subscribePhone, () => phoneMedia().matches, () => false) }
 

@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react'
+import { usePhone } from '../overview/useOverview'
+import { useMobileWords } from '../mobile/words'
 import { Link } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
@@ -31,6 +33,7 @@ export function SettingsPage() {
 
 function SettingsEditor() {
   const boot = useBoot(), { t, i18n } = useTranslation(), w = useSettingsWords(), look = useOverviewLook(), client = useQueryClient(), guard = useLeaveGuard()
+  const phone = usePhone(), mobile = useMobileWords()
   const queryKey = [...CURRENCY_KEY, overviewScope(boot)], allowed = boot.staff.can.manage_app
   const query = useQuery({ queryKey, queryFn: appApi.currency, enabled: allowed, retry: false })
   const base: Preferences = { language: i18n.language.slice(0, 2), theme: look.theme, currency: query.data?.currency ?? boot.venue.currency }
@@ -77,11 +80,11 @@ function SettingsEditor() {
         {!preview && failureNotice}
         {saved && <p role="status" className="l-st-saved">{w('saved')}</p>}
       </section>
-      <aside className="l-st-related">
+      <details className="l-st-mobile-more" open={!phone || undefined}><summary>{mobile('allTools')}</summary><aside className="l-st-related">
         <section className="l-ov-panel l-st-panel"><h2>{w('admin')}</h2><p>{w('adminHint')}</p><Link to={FULL_ADMIN} className="l-ov-button">{w('openAdmin')}</Link><small>{w('adminAccess')}</small></section>
         <section className="l-ov-panel l-st-panel"><h2>{w('related')}</h2><div className="l-st-related-links">{[[allowed, '/loyalty/app', t('loyalty.nav.app', 'Card & app'), w('cardHint')], [true, '/loyalty/program', t('loyalty.nav.program', 'Program'), w('programHint')], [true, '/loyalty/options', t('loyalty.nav.options', 'Ways to earn'), w('earnHint')], [boot.staff.can.manage_campaigns, '/loyalty/campaigns', t('loyalty.nav.campaigns', 'Campaigns'), w('campaignsHint')]].map(([show, to, label, hint]) => show && <div key={String(to)}><Link to={String(to)} className="l-ov-link">{label} →</Link><small>{hint}</small></div>)}</div></section>
         <section className="l-ov-panel l-st-panel"><h2>{w('help')}</h2><p>{w('helpLine')}</p><Link to="/loyalty/guide" className="l-ov-button">{w('openGuide')}</Link></section>
-      </aside>
+      </aside></details>
     </div>
     <footer className="l-ov-panel l-st-save"><p role="status">{changed ? w('unsaved') : saved ? w('saved') : w('prefsLine')}</p><div><OverviewButton disabled={!changed || busy} onClick={discard}>{w('discard')}</OverviewButton><OverviewButton primary disabled={!changed || busy || (currencyDirty && currencyBlocked)} aria-busy={busy} onClick={submit}>{w('save')}</OverviewButton></div></footer>
     {preview && <OverviewDialog kind="form" busy={busy} className="l-st-confirm" title={w('confirmTitle')} onClose={() => { if (!busy) setPreview(null) }}><p>{w('confirmLine')}</p><dl className="l-st-comparison"><div><dt>{w('current')}</dt><dd>100 {preview.from}</dd></div><div><dt>{w('after')}</dt><dd>100 {preview.to}</dd></div></dl><p className="l-st-amber">{w('confirmHint', { currency: preview.to })}</p>{currencyWarnings(preview).length > 0 && <ul className="l-st-warnings">{currencyWarnings(preview).map(item => <li key={item.key}>{warningText(t, item, preview.to, i18n.language)}</li>)}</ul>}{failureNotice}<div className="l-st-dialog-actions"><OverviewButton disabled={busy} onClick={() => setPreview(null)}>{w('keepEditing')}</OverviewButton><OverviewButton primary disabled={busy || currencyBlocked} aria-busy={busy} onClick={() => { if (guard.begin()) save.mutate({ ...form, currency: preview.to, changeCurrency: true }) }}>{w('save')}</OverviewButton></div></OverviewDialog>}

@@ -10,8 +10,14 @@ import { OverviewDetails, ActivityRows } from './OverviewDetails'
 import { useOnline, useOverviewModule, usePhone } from './useOverview'
 import { useOverviewWords } from './words'
 import type { Panel, Summary } from './types'
+import { MobileHome } from '../mobile/MobileHome'
 
 export function OverviewPage() {
+  const phone = usePhone()
+  return phone ? <MobileHome /> : <DesktopOverviewPage />
+}
+
+function DesktopOverviewPage() {
   const boot = useBoot()
   const say = useOverviewWords()
   const { i18n } = useTranslation()
@@ -20,7 +26,10 @@ export function OverviewPage() {
   const navigate = useNavigate()
   const period = periodFrom(location.search)
   const filter = filterFrom(location.search)
-  const [panel, setPanel] = useState<Panel | null>(null)
+  const [panel, setPanel] = useState<Panel | null>(() => {
+    const requested = new URLSearchParams(location.search).get('panel')
+    return requested === 'program' || requested === 'preview' ? requested : null
+  })
   const [picker, setPicker] = useState(false)
   const pickerRef = useRef<HTMLDivElement>(null)
   const pickerButton = useRef<HTMLButtonElement>(null)

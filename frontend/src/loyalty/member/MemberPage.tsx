@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { keepPreviousData, useMutation, useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { ArrowLeft, History as HistoryIcon, Undo2 } from 'lucide-react'
@@ -37,6 +37,11 @@ import { useRedesignWords } from '../redesign/words'
 import { OverviewButton } from '../overview/OverviewUI'
 import { initials } from '../members/membersQuery'
 import memberDiagonal from '../redesign/assets/member-diagonal.svg'
+import { usePhone } from '../overview/useOverview'
+import { MobileTitle, MobileTile } from '../mobile/MobileUI'
+import { mobileIcons } from '../mobile/assets'
+import { useMobileWords } from '../mobile/words'
+import { MemberBenefits } from '../mobile/MemberBenefits'
 
 /**
  * A member's page (spec 2026-10-21 §4.3): who they are and their tier, their points and how far the next tier is, the
@@ -97,6 +102,11 @@ function Member({ detail, locale }: { detail: MemberDetail; locale: string }) {
   const own = pageActions(member)
   const more = moreItems(boot.staff.can, member)
   const [dialog, setDialog] = useState<Open | null>(null)
+  const phone = usePhone()
+  const mobile = useMobileWords()
+  const [params, setParams] = useSearchParams()
+  const view = params.get('view')
+  const mobileView = (value: string | null) => { const next = new URLSearchParams(params); if (value) next.set('view', value); else next.delete('view'); setParams(next) }
   const timeZone = boot.venue.timezone
 
   // Resend the welcome email: at once, from the More menu; what came of it shows under the header.
@@ -134,7 +144,23 @@ function Member({ detail, locale }: { detail: MemberDetail; locale: string }) {
   }
 
   return (
-    <div className="l-ov-page l-rd-page l-rd-profile-page">
+    <div className={`l-ov-page l-rd-page l-rd-profile-page ${phone ? 'l-mw-page l-mw-member' : ''}`}>
+      {phone ? <>
+        {welcome.isSuccess && <Notice tone="success">{t('loyalty.membership.page.welcome_sent', 'The welcome email is on its way to {{email}}, with a new code to set a password.', { email: welcome.data.sent_to })}</Notice>}
+        {welcomeFailure && <Notice tone="danger">{t(...refusalKey('loyalty.membership', MEMBERSHIP_ERRORS, 'welcome', welcomeFailure), { minutes: waitMinutes(welcomeFailure.extra.retry_after) })}</Notice>}
+        {view ? <button className="l-mw-back" onClick={() => mobileView(null)}>← {mobile('back')}</button> : <Link className="l-mw-back" to="/loyalty">← {mobile('back')}</Link>}
+        <MobileTitle>{view === 'details' ? mobile('memberDetails') : view === 'benefits' ? t('loyalty.overview.rewardsNav', 'Rewards & benefits') : view === 'history' ? mobile('memberHistory') : member.name || member.email || `#${member.id}`}</MobileTitle>
+        {view === 'details' ? <><DetailsCard member={member} locale={locale} timeZone={timeZone} redesigned onEdit={own.edit ? () => setDialog('details') : undefined} /><NfcCards member={member} locale={locale} timeZone={timeZone} />{own.card && <OverviewButton onClick={() => setDialog('card')}>{say('viewCard')}</OverviewButton>}</>
+        : view === 'benefits' ? <><p className="l-mw-identity">{member.name} · {t('loyalty.common.points_count', '{{points}} pts', { points: points(member.points, locale) })}</p><MemberBenefits detail={detail} /></>
+        : view === 'history' ? <><VisitsPanel member={member} locale={locale} timeZone={timeZone} /><CreditPanel member={member} locale={locale} timeZone={timeZone} /><History memberId={member.id} balance={member.points} locale={locale} /></>
+        : <>
+          <p className="l-mw-identity">{say('profileIdentity', { level: tier?.name ?? say('noLevel'), state: say(!member.is_active ? 'off' : member.membership_state ?? 'active'), number: member.member_number ?? member.id })}</p>
+          <section className="l-mw-panel l-mw-balance"><small className="l-mw-eyebrow">{mobile('available')}</small><strong>{points(member.points, locale)}</strong><small>{mobile('earnedTotal', { n: points(member.lifetime_points, locale) })}</small></section>
+          <div className="l-mw-tiles">{actions.award && <MobileTile primary icon={mobileIcons.award} title={t('loyalty.member.award', 'Award points')} hint={mobile('addBalance')} onClick={() => setDialog('award')} />}{actions.redeem && <MobileTile icon={mobileIcons.deduct} title={mobile('deduct')} hint={mobile('manualAdjustment')} onClick={() => setDialog('redeem')} />}<MobileTile icon={mobileIcons.benefits} title={mobile('benefits')} hint={mobile('rewardsClaims')} onClick={() => mobileView('benefits')} /><MobileTile icon={mobileIcons.members} title={mobile('memberDetails')} hint={mobile('contactMembership')} onClick={() => mobileView('details')} /></div>
+          <section className="l-mw-panel l-mw-progress"><ProgressBlock progress={progress} locale={locale} currency={boot.venue.currency} /></section>
+          <div className="l-mw-member-more"><MoreMenu items={more} fullAdmin={fullAdminMemberPath(member.id)} onPick={pick} /><OverviewButton onClick={() => mobileView('history')}>{mobile('memberHistory')}</OverviewButton></div>
+        </>}
+      </> : <>
       <Link to="/loyalty" className="inline-flex items-center gap-1 text-sm text-a-text-2 hover:text-a-text">
         <ArrowLeft size={15} aria-hidden />{t('loyalty.member.back', 'All members')}
       </Link>
@@ -175,6 +201,7 @@ function Member({ detail, locale }: { detail: MemberDetail; locale: string }) {
         </div>
       </div>
 
+      </>}
       {(dialog === 'award' || dialog === 'redeem') && <PointsDialog mode={dialog} memberId={member.id} name={member.name} balance={member.points} memberNumber={member.member_number} level={tier?.name} onClose={() => setDialog(null)} />}
       {dialog === 'details' && <EditDetailsDialog member={member} languages={detail.options.languages} onClose={() => setDialog(null)} />}
       {dialog === 'card' && <CardDialog memberId={member.id} onClose={() => setDialog(null)} />}

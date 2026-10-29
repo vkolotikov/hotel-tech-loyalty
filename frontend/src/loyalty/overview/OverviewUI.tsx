@@ -12,7 +12,7 @@ export function OverviewBadge({ tone = 'neutral', children }: { tone?: 'green' |
   return <span className={`l-ov-badge l-ov-badge-${tone}`}><img src={overviewAssets[tone]} alt="" />{children}</span>
 }
 /** Native modal supplies background inertness, focus containment and Escape on desktop and phones alike. */
-export function OverviewDialog({ title, kind = 'drawer', onClose, children, busy = false, className = '' }: { title: string; kind?: 'drawer' | 'preview' | 'menu' | 'form'; onClose: () => void; children: ReactNode; busy?: boolean; className?: string }) {
+export function OverviewDialog({ title, kind = 'drawer', onClose, children, busy = false, className = '', backLabel }: { title: string; kind?: 'drawer' | 'preview' | 'menu' | 'form'; onClose: () => void; children: ReactNode; busy?: boolean; className?: string; backLabel?: string }) {
   const say = useOverviewWords()
   const ref = useRef<HTMLDialogElement>(null)
   const id = useId()
@@ -37,7 +37,7 @@ export function OverviewDialog({ title, kind = 'drawer', onClose, children, busy
     }}
     onCancel={e => { e.preventDefault(); closeRef.current() }}
     onClick={e => { if (e.target === e.currentTarget) { const r = e.currentTarget.getBoundingClientRect(); if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) closeRef.current() } }}>
-    <div className="l-ov-dialog-heading">{kind !== 'form' && <span className="l-ov-eyebrow">{say('nav')}</span>}<div className="l-ov-heading-row"><h2 id={id} aria-label={title}>{kind === 'menu' ? <span className="l-ov-menu-brand"><span className="l-ov-mark"><img src={overviewAssets.star} alt="" /></span>hexa</span> : title}</h2><OverviewButton type="button" className="l-ov-close" aria-label={say('close')} disabled={busy} onClick={onClose}>×</OverviewButton></div></div>
+    <div className="l-ov-dialog-heading">{backLabel && <button className="l-mw-back" disabled={busy} onClick={onClose}>← {backLabel}</button>}{kind !== 'form' && <span className="l-ov-eyebrow">{say('nav')}</span>}<div className="l-ov-heading-row"><h2 id={id} aria-label={title}>{kind === 'menu' ? <span className="l-ov-menu-brand"><span className="l-ov-mark"><img src={overviewAssets.star} alt="" /></span>hexa</span> : title}</h2>{!backLabel && <OverviewButton type="button" className="l-ov-close" aria-label={say('close')} disabled={busy} onClick={onClose}>×</OverviewButton>}</div></div>
     <div className="l-ov-dialog-body">{children}</div>
   </dialog>
 }

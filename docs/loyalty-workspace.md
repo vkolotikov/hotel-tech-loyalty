@@ -17,6 +17,11 @@ no longer stretches with them. All report data, routes and interactions are reta
 
 ## Who has it, and the ways in and back
 
+Dedicated mobile web (29 October 2026): at widths up to 767px, Loyalty uses the Figma Home/Members/Requests/Scan/
+More navigation and compact task screens. Members and requests have separate details, with existing writers behind
+review sheets. More retains secondary tools; Settings prioritises personal preferences and currency. Desktop layouts
+remain from 768px. See `loyalty-redesign/22-MOBILE-WEB-REPORT.md` for exact frames, API adaptations and release evidence.
+
 Guided setup and Settings style refinement (29 October 2026): `/loyalty/options/setup` uses the shared Figma frame,
 progress banner, four-step editor and actual draft preview. Existing tiers, validation, idempotent Apply and Skip
 remain; edited drafts warn before leaving. Sidebar Settings retains quick preferences and adds **All settings**

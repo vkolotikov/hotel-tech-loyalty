@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
@@ -13,11 +13,19 @@ import { RecordDetail, RecordStatus, ReferralDialog } from './RequestDetail'
 import { useRequestWords } from './words'
 import type { InboxRecord } from './types'
 import './requests.css'
+import { usePhone } from '../overview/useOverview'
+import { MobileTile, MobileTitle } from '../mobile/MobileUI'
+import { mobileIcons } from '../mobile/assets'
+import { useMobileWords } from '../mobile/words'
+import { RequestFilters } from '../mobile/RequestFilters'
 
 export function RequestsPage() {
   const boot = useBoot()
   const { t, i18n } = useTranslation()
   const say = useRequestWords()
+  const mobile = useMobileWords()
+  const phone = usePhone()
+  const [filtering, setFiltering] = useState(false)
   const client = useQueryClient()
   const [params, setParams] = useSearchParams()
   const latest = useRef(params)
@@ -61,9 +69,25 @@ export function RequestsPage() {
   }
   const choose = (row: InboxRecord) => {
     if (row.kind !== 'referral' && window.matchMedia('(max-width: 900px)').matches) focusRecord.current = row.key
-    change({ record: row.key, request: null, detail: row.kind === 'referral' ? '1' : null })
+    change({ record: row.key, request: null, detail: phone || row.kind === 'referral' ? '1' : null })
   }
   const title = say(({ open: 'openTitle', closed: 'closedTitle', all: 'allTitle', waiting: 'waitingTitle', approved: 'approvedTitle' } as const)[filters.view])
+  if (phone) return <div className="l-ov-page l-mw-page l-mw-requests">
+    {filters.selected_id ? <><button className="l-mw-back" onClick={() => change({ record: null, request: null, detail: null })}>← {mobile('back')}</button><MobileTitle>{selected ? say(selected.kind) : t('loyalty.requests.title', 'Requests')}</MobileTitle></> : <>
+      <MobileTitle icon={mobileIcons.requests}>{t('loyalty.requests.title', 'Requests')}</MobileTitle>
+      <label className="l-mw-search"><span>{mobile('requestSearch')}</span><input type="search" maxLength={120} value={filters.q} placeholder={say('searchHint')} onChange={e => change({ q: e.target.value }, true, true)} /></label>
+      <div className="l-mw-tiles"><MobileTile primary icon={mobileIcons.requests} title={title} onClick={() => setFiltering(true)} /><MobileTile icon={mobileIcons.filters} title={say(filters.type === 'all' ? 'allTypes' : filters.type)} onClick={() => setFiltering(true)} /></div>
+    </>}
+    {query.isError && <OverviewRecovery title={data ? say('stale') : undefined} forbidden={forbidden} busy={query.isFetching} onRetry={() => { void query.refetch() }} />}
+    {!data && query.isPending && <OverviewSkeleton rows={5} />}
+    {data && (filters.selected_id && selected ? <RecordDetail key={selected.key} row={selected} detailRef={detailRef} blocked={query.isFetching || query.isError} hold={() => change({ record: selected.key, request: null }, false, true)} onDetails={() => change({ record: selected.key, detail: '1' })} /> : <>
+      <small role="status">{mobile('recordsSort', { count: points(data.total, i18n.language), sort: say(filters.sort) })}</small>
+      <ul className="l-mw-records" aria-busy={query.isFetching}>{data.records.map(row => <li key={row.key}><button className="l-mw-record" onClick={() => choose(row)}><img src={row.kind === 'redemption' ? mobileIcons.benefits : mobileIcons.requests} alt="" /><span><strong>{recordTitle(row, say)}</strong><b>{row.member?.name || row.member?.number || say('unavailableMember')} · {say(row.kind)}</b><small><RecordStatus row={row} /> · {recordLabel(row)}</small></span></button></li>)}</ul>
+      {!data.records.length && <section className="l-mw-panel"><h2>{say('empty')}</h2><p>{say('emptyLine')}</p><OverviewButton onClick={() => { latest.current = new URLSearchParams(); setParams({}) }}>{say('clear')}</OverviewButton></section>}
+      <div className="l-mw-pagination"><OverviewButton disabled={query.isFetching || data.page <= 1} onClick={() => change({ page: String(data.page - 1), record: null, request: null, detail: null })}>{t('loyalty.common.previous', 'Previous')}</OverviewButton><OverviewButton disabled={query.isFetching || data.page >= data.pages} onClick={() => change({ page: String(data.page + 1), record: null, request: null, detail: null })}>{t('loyalty.common.next', 'Next')}</OverviewButton></div>
+    </>)}
+    {filtering && <RequestFilters value={filters} onApply={next => change({ type: next.type, view: next.view, sort: next.sort }, true)} onClose={() => setFiltering(false)} />}
+  </div>
   return <div className="l-ov-page l-rq-page">
     <header className="l-ov-page-heading"><div><h1>{t('loyalty.requests.title', 'Requests')}</h1><p>{say('line')}</p></div><OverviewButton disabled={query.isFetching} aria-busy={query.isFetching} onClick={() => { void query.refetch() }}>{say('refresh')}</OverviewButton></header>
     <div className="l-ov-panel l-rq-filters">

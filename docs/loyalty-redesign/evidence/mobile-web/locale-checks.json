@@ -1,0 +1,1506 @@
+{
+  "views": 50,
+  "results": [
+    {
+      "lang": "en",
+      "theme": "dark",
+      "path": "/loyalty/overview",
+      "width": 320,
+      "overflow": false,
+      "nav": [
+        {
+          "text": "Home",
+          "height": 60
+        },
+        {
+          "text": "Members",
+          "height": 60
+        },
+        {
+          "text": "Scan",
+          "height": 60
+        },
+        {
+          "text": "Requests",
+          "height": 60
+        },
+        {
+          "text": "More",
+          "height": 60
+        }
+      ],
+      "title": "Home"
+    },
+    {
+      "lang": "en",
+      "theme": "dark",
+      "path": "/loyalty/more",
+      "width": 320,
+      "overflow": false,
+      "nav": [
+        {
+          "text": "Home",
+          "height": 60
+        },
+        {
+          "text": "Members",
+          "height": 60
+        },
+        {
+          "text": "Scan",
+          "height": 60
+        },
+        {
+          "text": "Requests",
+          "height": 60
+        },
+        {
+          "text": "More",
+          "height": 60
+        }
+      ],
+      "title": "More"
+    },
+    {
+      "lang": "en",
+      "theme": "dark",
+      "path": "/loyalty",
+      "width": 320,
+      "overflow": false,
+      "nav": [
+        {
+          "text": "Home",
+          "height": 60
+        },
+        {
+          "text": "Members",
+          "height": 60
+        },
+        {
+          "text": "Scan",
+          "height": 60
+        },
+        {
+          "text": "Requests",
+          "height": 60
+        },
+        {
+          "text": "More",
+          "height": 60
+        }
+      ],
+      "title": "Members"
+    },
+    {
+      "lang": "en",
+      "theme": "dark",
+      "path": "/loyalty/members/1",
+      "width": 320,
+      "overflow": false,
+      "nav": [
+        {
+          "text": "Home",
+          "height": 60
+        },
+        {
+          "text": "Members",
+          "height": 60
+        },
+        {
+          "text": "Scan",
+          "height": 60
+        },
+        {
+          "text": "Requests",
+          "height": 60
+        },
+        {
+          "text": "More",
+          "height": 60
+        }
+      ],
+      "title": "Jamie Taylor"
+    },
+    {
+      "lang": "en",
+      "theme": "dark",
+      "path": "/loyalty/requests",
+      "width": 320,
+      "overflow": false,
+      "nav": [
+        {
+          "text": "Home",
+          "height": 60
+        },
+        {
+          "text": "Members",
+          "height": 60
+        },
+        {
+          "text": "Scan",
+          "height": 60
+        },
+        {
+          "text": "Requests",
+          "height": 60
+        },
+        {
+          "text": "More",
+          "height": 60
+        }
+      ],
+      "title": "Requests"
+    },
+    {
+      "lang": "en",
+      "theme": "light",
+      "path": "/loyalty/overview",
+      "width": 320,
+      "overflow": false,
+      "nav": [
+        {
+          "text": "Home",
+          "height": 60
+        },
+        {
+          "text": "Members",
+          "height": 60
+        },
+        {
+          "text": "Scan",
+          "height": 60
+        },
+        {
+          "text": "Requests",
+          "height": 60
+        },
+        {
+          "text": "More",
+          "height": 60
+        }
+      ],
+      "title": "Home"
+    },
+    {
+      "lang": "en",
+      "theme": "light",
+      "path": "/loyalty/more",
+      "width": 320,
+      "overflow": false,
+      "nav": [
+        {
+          "text": "Home",
+          "height": 60
+        },
+        {
+          "text": "Members",
+          "height": 60
+        },
+        {
+          "text": "Scan",
+          "height": 60
+        },
+        {
+          "text": "Requests",
+          "height": 60
+        },
+        {
+          "text": "More",
+          "height": 60
+        }
+      ],
+      "title": "More"
+    },
+    {
+      "lang": "en",
+      "theme": "light",
+      "path": "/loyalty",
+      "width": 320,
+      "overflow": false,
+      "nav": [
+        {
+          "text": "Home",
+          "height": 60
+        },
+        {
+          "text": "Members",
+          "height": 60
+        },
+        {
+          "text": "Scan",
+          "height": 60
+        },
+        {
+          "text": "Requests",
+          "height": 60
+        },
+        {
+          "text": "More",
+          "height": 60
+        }
+      ],
+      "title": "Members"
+    },
+    {
+      "lang": "en",
+      "theme": "light",
+      "path": "/loyalty/members/1",
+      "width": 320,
+      "overflow": false,
+      "nav": [
+        {
+          "text": "Home",
+          "height": 60
+        },
+        {
+          "text": "Members",
+          "height": 60
+        },
+        {
+          "text": "Scan",
+          "height": 60
+        },
+        {
+          "text": "Requests",
+          "height": 60
+        },
+        {
+          "text": "More",
+          "height": 60
+        }
+      ],
+      "title": "Jamie Taylor"
+    },
+    {
+      "lang": "en",
+      "theme": "light",
+      "path": "/loyalty/requests",
+      "width": 320,
+      "overflow": false,
+      "nav": [
+        {
+          "text": "Home",
+          "height": 60
+        },
+        {
+          "text": "Members",
+          "height": 60
+        },
+        {
+          "text": "Scan",
+          "height": 60
+        },
+        {
+          "text": "Requests",
+          "height": 60
+        },
+        {
+          "text": "More",
+          "height": 60
+        }
+      ],
+      "title": "Requests"
+    },
+    {
+      "lang": "ru",
+      "theme": "dark",
+      "path": "/loyalty/overview",
+      "width": 320,
+      "overflow": false,
+      "nav": [
+        {
+          "text": "Главная",
+          "height": 60
+        },
+        {
+          "text": "Участники",
+          "height": 60
+        },
+        {
+          "text": "Сканер",
+          "height": 60
+        },
+        {
+          "text": "Запросы",
+          "height": 60
+        },
+        {
+          "text": "Ещё",
+          "height": 60
+        }
+      ],
+      "title": "Главная"
+    },
+    {
+      "lang": "ru",
+      "theme": "dark",
+      "path": "/loyalty/more",
+      "width": 320,
+      "overflow": false,
+      "nav": [
+        {
+          "text": "Главная",
+          "height": 60
+        },
+        {
+          "text": "Участники",
+          "height": 60
+        },
+        {
+          "text": "Сканер",
+          "height": 60
+        },
+        {
+          "text": "Запросы",
+          "height": 60
+        },
+        {
+          "text": "Ещё",
+          "height": 60
+        }
+      ],
+      "title": "Ещё"
+    },
+    {
+      "lang": "ru",
+      "theme": "dark",
+      "path": "/loyalty",
+      "width": 320,
+      "overflow": false,
+      "nav": [
+        {
+          "text": "Главная",
+          "height": 60
+        },
+        {
+          "text": "Участники",
+          "height": 60
+        },
+        {
+          "text": "Сканер",
+          "height": 60
+        },
+        {
+          "text": "Запросы",
+          "height": 60
+        },
+        {
+          "text": "Ещё",
+          "height": 60
+        }
+      ],
+      "title": "Участники"
+    },
+    {
+      "lang": "ru",
+      "theme": "dark",
+      "path": "/loyalty/members/1",
+      "width": 320,
+      "overflow": false,
+      "nav": [
+        {
+          "text": "Главная",
+          "height": 60
+        },
+        {
+          "text": "Участники",
+          "height": 60
+        },
+        {
+          "text": "Сканер",
+          "height": 60
+        },
+        {
+          "text": "Запросы",
+          "height": 60
+        },
+        {
+          "text": "Ещё",
+          "height": 60
+        }
+      ],
+      "title": "Jamie Taylor"
+    },
+    {
+      "lang": "ru",
+      "theme": "dark",
+      "path": "/loyalty/requests",
+      "width": 320,
+      "overflow": false,
+      "nav": [
+        {
+          "text": "Главная",
+          "height": 60
+        },
+        {
+          "text": "Участники",
+          "height": 60
+        },
+        {
+          "text": "Сканер",
+          "height": 60
+        },
+        {
+          "text": "Запросы",
+          "height": 60
+        },
+        {
+          "text": "Ещё",
+          "height": 60
+        }
+      ],
+      "title": "Запросы"
+    },
+    {
+      "lang": "ru",
+      "theme": "light",
+      "path": "/loyalty/overview",
+      "width": 320,
+      "overflow": false,
+      "nav": [
+        {
+          "text": "Главная",
+          "height": 60
+        },
+        {
+          "text": "Участники",
+          "height": 60
+        },
+        {
+          "text": "Сканер",
+          "height": 60
+        },
+        {
+          "text": "Запросы",
+          "height": 60
+        },
+        {
+          "text": "Ещё",
+          "height": 60
+        }
+      ],
+      "title": "Главная"
+    },
+    {
+      "lang": "ru",
+      "theme": "light",
+      "path": "/loyalty/more",
+      "width": 320,
+      "overflow": false,
+      "nav": [
+        {
+          "text": "Главная",
+          "height": 60
+        },
+        {
+          "text": "Участники",
+          "height": 60
+        },
+        {
+          "text": "Сканер",
+          "height": 60
+        },
+        {
+          "text": "Запросы",
+          "height": 60
+        },
+        {
+          "text": "Ещё",
+          "height": 60
+        }
+      ],
+      "title": "Ещё"
+    },
+    {
+      "lang": "ru",
+      "theme": "light",
+      "path": "/loyalty",
+      "width": 320,
+      "overflow": false,
+      "nav": [
+        {
+          "text": "Главная",
+          "height": 60
+        },
+        {
+          "text": "Участники",
+          "height": 60
+        },
+        {
+          "text": "Сканер",
+          "height": 60
+        },
+        {
+          "text": "Запросы",
+          "height": 60
+        },
+        {
+          "text": "Ещё",
+          "height": 60
+        }
+      ],
+      "title": "Участники"
+    },
+    {
+      "lang": "ru",
+      "theme": "light",
+      "path": "/loyalty/members/1",
+      "width": 320,
+      "overflow": false,
+      "nav": [
+        {
+          "text": "Главная",
+          "height": 60
+        },
+        {
+          "text": "Участники",
+          "height": 60
+        },
+        {
+          "text": "Сканер",
+          "height": 60
+        },
+        {
+          "text": "Запросы",
+          "height": 60
+        },
+        {
+          "text": "Ещё",
+          "height": 60
+        }
+      ],
+      "title": "Jamie Taylor"
+    },
+    {
+      "lang": "ru",
+      "theme": "light",
+      "path": "/loyalty/requests",
+      "width": 320,
+      "overflow": false,
+      "nav": [
+        {
+          "text": "Главная",
+          "height": 60
+        },
+        {
+          "text": "Участники",
+          "height": 60
+        },
+        {
+          "text": "Сканер",
+          "height": 60
+        },
+        {
+          "text": "Запросы",
+          "height": 60
+        },
+        {
+          "text": "Ещё",
+          "height": 60
+        }
+      ],
+      "title": "Запросы"
+    },
+    {
+      "lang": "de",
+      "theme": "dark",
+      "path": "/loyalty/overview",
+      "width": 320,
+      "overflow": false,
+      "nav": [
+        {
+          "text": "Start",
+          "height": 60
+        },
+        {
+          "text": "Mitglieder",
+          "height": 60
+        },
+        {
+          "text": "Scannen",
+          "height": 60
+        },
+        {
+          "text": "Anfragen",
+          "height": 60
+        },
+        {
+          "text": "Mehr",
+          "height": 60
+        }
+      ],
+      "title": "Start"
+    },
+    {
+      "lang": "de",
+      "theme": "dark",
+      "path": "/loyalty/more",
+      "width": 320,
+      "overflow": false,
+      "nav": [
+        {
+          "text": "Start",
+          "height": 60
+        },
+        {
+          "text": "Mitglieder",
+          "height": 60
+        },
+        {
+          "text": "Scannen",
+          "height": 60
+        },
+        {
+          "text": "Anfragen",
+          "height": 60
+        },
+        {
+          "text": "Mehr",
+          "height": 60
+        }
+      ],
+      "title": "Mehr"
+    },
+    {
+      "lang": "de",
+      "theme": "dark",
+      "path": "/loyalty",
+      "width": 320,
+      "overflow": false,
+      "nav": [
+        {
+          "text": "Start",
+          "height": 60
+        },
+        {
+          "text": "Mitglieder",
+          "height": 60
+        },
+        {
+          "text": "Scannen",
+          "height": 60
+        },
+        {
+          "text": "Anfragen",
+          "height": 60
+        },
+        {
+          "text": "Mehr",
+          "height": 60
+        }
+      ],
+      "title": "Mitglieder"
+    },
+    {
+      "lang": "de",
+      "theme": "dark",
+      "path": "/loyalty/members/1",
+      "width": 320,
+      "overflow": false,
+      "nav": [
+        {
+          "text": "Start",
+          "height": 60
+        },
+        {
+          "text": "Mitglieder",
+          "height": 60
+        },
+        {
+          "text": "Scannen",
+          "height": 60
+        },
+        {
+          "text": "Anfragen",
+          "height": 60
+        },
+        {
+          "text": "Mehr",
+          "height": 60
+        }
+      ],
+      "title": "Jamie Taylor"
+    },
+    {
+      "lang": "de",
+      "theme": "dark",
+      "path": "/loyalty/requests",
+      "width": 320,
+      "overflow": false,
+      "nav": [
+        {
+          "text": "Start",
+          "height": 60
+        },
+        {
+          "text": "Mitglieder",
+          "height": 60
+        },
+        {
+          "text": "Scannen",
+          "height": 60
+        },
+        {
+          "text": "Anfragen",
+          "height": 60
+        },
+        {
+          "text": "Mehr",
+          "height": 60
+        }
+      ],
+      "title": "Anfragen"
+    },
+    {
+      "lang": "de",
+      "theme": "light",
+      "path": "/loyalty/overview",
+      "width": 320,
+      "overflow": false,
+      "nav": [
+        {
+          "text": "Start",
+          "height": 60
+        },
+        {
+          "text": "Mitglieder",
+          "height": 60
+        },
+        {
+          "text": "Scannen",
+          "height": 60
+        },
+        {
+          "text": "Anfragen",
+          "height": 60
+        },
+        {
+          "text": "Mehr",
+          "height": 60
+        }
+      ],
+      "title": "Start"
+    },
+    {
+      "lang": "de",
+      "theme": "light",
+      "path": "/loyalty/more",
+      "width": 320,
+      "overflow": false,
+      "nav": [
+        {
+          "text": "Start",
+          "height": 60
+        },
+        {
+          "text": "Mitglieder",
+          "height": 60
+        },
+        {
+          "text": "Scannen",
+          "height": 60
+        },
+        {
+          "text": "Anfragen",
+          "height": 60
+        },
+        {
+          "text": "Mehr",
+          "height": 60
+        }
+      ],
+      "title": "Mehr"
+    },
+    {
+      "lang": "de",
+      "theme": "light",
+      "path": "/loyalty",
+      "width": 320,
+      "overflow": false,
+      "nav": [
+        {
+          "text": "Start",
+          "height": 60
+        },
+        {
+          "text": "Mitglieder",
+          "height": 60
+        },
+        {
+          "text": "Scannen",
+          "height": 60
+        },
+        {
+          "text": "Anfragen",
+          "height": 60
+        },
+        {
+          "text": "Mehr",
+          "height": 60
+        }
+      ],
+      "title": "Mitglieder"
+    },
+    {
+      "lang": "de",
+      "theme": "light",
+      "path": "/loyalty/members/1",
+      "width": 320,
+      "overflow": false,
+      "nav": [
+        {
+          "text": "Start",
+          "height": 60
+        },
+        {
+          "text": "Mitglieder",
+          "height": 60
+        },
+        {
+          "text": "Scannen",
+          "height": 60
+        },
+        {
+          "text": "Anfragen",
+          "height": 60
+        },
+        {
+          "text": "Mehr",
+          "height": 60
+        }
+      ],
+      "title": "Jamie Taylor"
+    },
+    {
+      "lang": "de",
+      "theme": "light",
+      "path": "/loyalty/requests",
+      "width": 320,
+      "overflow": false,
+      "nav": [
+        {
+          "text": "Start",
+          "height": 60
+        },
+        {
+          "text": "Mitglieder",
+          "height": 60
+        },
+        {
+          "text": "Scannen",
+          "height": 60
+        },
+        {
+          "text": "Anfragen",
+          "height": 60
+        },
+        {
+          "text": "Mehr",
+          "height": 60
+        }
+      ],
+      "title": "Anfragen"
+    },
+    {
+      "lang": "fr",
+      "theme": "dark",
+      "path": "/loyalty/overview",
+      "width": 320,
+      "overflow": false,
+      "nav": [
+        {
+          "text": "Accueil",
+          "height": 60
+        },
+        {
+          "text": "Membres",
+          "height": 60
+        },
+        {
+          "text": "Scanner",
+          "height": 60
+        },
+        {
+          "text": "Demandes",
+          "height": 60
+        },
+        {
+          "text": "Plus",
+          "height": 60
+        }
+      ],
+      "title": "Accueil"
+    },
+    {
+      "lang": "fr",
+      "theme": "dark",
+      "path": "/loyalty/more",
+      "width": 320,
+      "overflow": false,
+      "nav": [
+        {
+          "text": "Accueil",
+          "height": 60
+        },
+        {
+          "text": "Membres",
+          "height": 60
+        },
+        {
+          "text": "Scanner",
+          "height": 60
+        },
+        {
+          "text": "Demandes",
+          "height": 60
+        },
+        {
+          "text": "Plus",
+          "height": 60
+        }
+      ],
+      "title": "Plus"
+    },
+    {
+      "lang": "fr",
+      "theme": "dark",
+      "path": "/loyalty",
+      "width": 320,
+      "overflow": false,
+      "nav": [
+        {
+          "text": "Accueil",
+          "height": 60
+        },
+        {
+          "text": "Membres",
+          "height": 60
+        },
+        {
+          "text": "Scanner",
+          "height": 60
+        },
+        {
+          "text": "Demandes",
+          "height": 60
+        },
+        {
+          "text": "Plus",
+          "height": 60
+        }
+      ],
+      "title": "Membres"
+    },
+    {
+      "lang": "fr",
+      "theme": "dark",
+      "path": "/loyalty/members/1",
+      "width": 320,
+      "overflow": false,
+      "nav": [
+        {
+          "text": "Accueil",
+          "height": 60
+        },
+        {
+          "text": "Membres",
+          "height": 60
+        },
+        {
+          "text": "Scanner",
+          "height": 60
+        },
+        {
+          "text": "Demandes",
+          "height": 60
+        },
+        {
+          "text": "Plus",
+          "height": 60
+        }
+      ],
+      "title": "Jamie Taylor"
+    },
+    {
+      "lang": "fr",
+      "theme": "dark",
+      "path": "/loyalty/requests",
+      "width": 320,
+      "overflow": false,
+      "nav": [
+        {
+          "text": "Accueil",
+          "height": 60
+        },
+        {
+          "text": "Membres",
+          "height": 60
+        },
+        {
+          "text": "Scanner",
+          "height": 60
+        },
+        {
+          "text": "Demandes",
+          "height": 60
+        },
+        {
+          "text": "Plus",
+          "height": 60
+        }
+      ],
+      "title": "Demandes"
+    },
+    {
+      "lang": "fr",
+      "theme": "light",
+      "path": "/loyalty/overview",
+      "width": 320,
+      "overflow": false,
+      "nav": [
+        {
+          "text": "Accueil",
+          "height": 60
+        },
+        {
+          "text": "Membres",
+          "height": 60
+        },
+        {
+          "text": "Scanner",
+          "height": 60
+        },
+        {
+          "text": "Demandes",
+          "height": 60
+        },
+        {
+          "text": "Plus",
+          "height": 60
+        }
+      ],
+      "title": "Accueil"
+    },
+    {
+      "lang": "fr",
+      "theme": "light",
+      "path": "/loyalty/more",
+      "width": 320,
+      "overflow": false,
+      "nav": [
+        {
+          "text": "Accueil",
+          "height": 60
+        },
+        {
+          "text": "Membres",
+          "height": 60
+        },
+        {
+          "text": "Scanner",
+          "height": 60
+        },
+        {
+          "text": "Demandes",
+          "height": 60
+        },
+        {
+          "text": "Plus",
+          "height": 60
+        }
+      ],
+      "title": "Plus"
+    },
+    {
+      "lang": "fr",
+      "theme": "light",
+      "path": "/loyalty",
+      "width": 320,
+      "overflow": false,
+      "nav": [
+        {
+          "text": "Accueil",
+          "height": 60
+        },
+        {
+          "text": "Membres",
+          "height": 60
+        },
+        {
+          "text": "Scanner",
+          "height": 60
+        },
+        {
+          "text": "Demandes",
+          "height": 60
+        },
+        {
+          "text": "Plus",
+          "height": 60
+        }
+      ],
+      "title": "Membres"
+    },
+    {
+      "lang": "fr",
+      "theme": "light",
+      "path": "/loyalty/members/1",
+      "width": 320,
+      "overflow": false,
+      "nav": [
+        {
+          "text": "Accueil",
+          "height": 60
+        },
+        {
+          "text": "Membres",
+          "height": 60
+        },
+        {
+          "text": "Scanner",
+          "height": 60
+        },
+        {
+          "text": "Demandes",
+          "height": 60
+        },
+        {
+          "text": "Plus",
+          "height": 60
+        }
+      ],
+      "title": "Jamie Taylor"
+    },
+    {
+      "lang": "fr",
+      "theme": "light",
+      "path": "/loyalty/requests",
+      "width": 320,
+      "overflow": false,
+      "nav": [
+        {
+          "text": "Accueil",
+          "height": 60
+        },
+        {
+          "text": "Membres",
+          "height": 60
+        },
+        {
+          "text": "Scanner",
+          "height": 60
+        },
+        {
+          "text": "Demandes",
+          "height": 60
+        },
+        {
+          "text": "Plus",
+          "height": 60
+        }
+      ],
+      "title": "Demandes"
+    },
+    {
+      "lang": "es",
+      "theme": "dark",
+      "path": "/loyalty/overview",
+      "width": 320,
+      "overflow": false,
+      "nav": [
+        {
+          "text": "Inicio",
+          "height": 60
+        },
+        {
+          "text": "Miembros",
+          "height": 60
+        },
+        {
+          "text": "Escanear",
+          "height": 60
+        },
+        {
+          "text": "Solicitudes",
+          "height": 60
+        },
+        {
+          "text": "Más",
+          "height": 60
+        }
+      ],
+      "title": "Inicio"
+    },
+    {
+      "lang": "es",
+      "theme": "dark",
+      "path": "/loyalty/more",
+      "width": 320,
+      "overflow": false,
+      "nav": [
+        {
+          "text": "Inicio",
+          "height": 60
+        },
+        {
+          "text": "Miembros",
+          "height": 60
+        },
+        {
+          "text": "Escanear",
+          "height": 60
+        },
+        {
+          "text": "Solicitudes",
+          "height": 60
+        },
+        {
+          "text": "Más",
+          "height": 60
+        }
+      ],
+      "title": "Más"
+    },
+    {
+      "lang": "es",
+      "theme": "dark",
+      "path": "/loyalty",
+      "width": 320,
+      "overflow": false,
+      "nav": [
+        {
+          "text": "Inicio",
+          "height": 60
+        },
+        {
+          "text": "Miembros",
+          "height": 60
+        },
+        {
+          "text": "Escanear",
+          "height": 60
+        },
+        {
+          "text": "Solicitudes",
+          "height": 60
+        },
+        {
+          "text": "Más",
+          "height": 60
+        }
+      ],
+      "title": "Miembros"
+    },
+    {
+      "lang": "es",
+      "theme": "dark",
+      "path": "/loyalty/members/1",
+      "width": 320,
+      "overflow": false,
+      "nav": [
+        {
+          "text": "Inicio",
+          "height": 60
+        },
+        {
+          "text": "Miembros",
+          "height": 60
+        },
+        {
+          "text": "Escanear",
+          "height": 60
+        },
+        {
+          "text": "Solicitudes",
+          "height": 60
+        },
+        {
+          "text": "Más",
+          "height": 60
+        }
+      ],
+      "title": "Jamie Taylor"
+    },
+    {
+      "lang": "es",
+      "theme": "dark",
+      "path": "/loyalty/requests",
+      "width": 320,
+      "overflow": false,
+      "nav": [
+        {
+          "text": "Inicio",
+          "height": 60
+        },
+        {
+          "text": "Miembros",
+          "height": 60
+        },
+        {
+          "text": "Escanear",
+          "height": 60
+        },
+        {
+          "text": "Solicitudes",
+          "height": 60
+        },
+        {
+          "text": "Más",
+          "height": 60
+        }
+      ],
+      "title": "Solicitudes"
+    },
+    {
+      "lang": "es",
+      "theme": "light",
+      "path": "/loyalty/overview",
+      "width": 320,
+      "overflow": false,
+      "nav": [
+        {
+          "text": "Inicio",
+          "height": 60
+        },
+        {
+          "text": "Miembros",
+          "height": 60
+        },
+        {
+          "text": "Escanear",
+          "height": 60
+        },
+        {
+          "text": "Solicitudes",
+          "height": 60
+        },
+        {
+          "text": "Más",
+          "height": 60
+        }
+      ],
+      "title": "Inicio"
+    },
+    {
+      "lang": "es",
+      "theme": "light",
+      "path": "/loyalty/more",
+      "width": 320,
+      "overflow": false,
+      "nav": [
+        {
+          "text": "Inicio",
+          "height": 60
+        },
+        {
+          "text": "Miembros",
+          "height": 60
+        },
+        {
+          "text": "Escanear",
+          "height": 60
+        },
+        {
+          "text": "Solicitudes",
+          "height": 60
+        },
+        {
+          "text": "Más",
+          "height": 60
+        }
+      ],
+      "title": "Más"
+    },
+    {
+      "lang": "es",
+      "theme": "light",
+      "path": "/loyalty",
+      "width": 320,
+      "overflow": false,
+      "nav": [
+        {
+          "text": "Inicio",
+          "height": 60
+        },
+        {
+          "text": "Miembros",
+          "height": 60
+        },
+        {
+          "text": "Escanear",
+          "height": 60
+        },
+        {
+          "text": "Solicitudes",
+          "height": 60
+        },
+        {
+          "text": "Más",
+          "height": 60
+        }
+      ],
+      "title": "Miembros"
+    },
+    {
+      "lang": "es",
+      "theme": "light",
+      "path": "/loyalty/members/1",
+      "width": 320,
+      "overflow": false,
+      "nav": [
+        {
+          "text": "Inicio",
+          "height": 60
+        },
+        {
+          "text": "Miembros",
+          "height": 60
+        },
+        {
+          "text": "Escanear",
+          "height": 60
+        },
+        {
+          "text": "Solicitudes",
+          "height": 60
+        },
+        {
+          "text": "Más",
+          "height": 60
+        }
+      ],
+      "title": "Jamie Taylor"
+    },
+    {
+      "lang": "es",
+      "theme": "light",
+      "path": "/loyalty/requests",
+      "width": 320,
+      "overflow": false,
+      "nav": [
+        {
+          "text": "Inicio",
+          "height": 60
+        },
+        {
+          "text": "Miembros",
+          "height": 60
+        },
+        {
+          "text": "Escanear",
+          "height": 60
+        },
+        {
+          "text": "Solicitudes",
+          "height": 60
+        },
+        {
+          "text": "Más",
+          "height": 60
+        }
+      ],
+      "title": "Solicitudes"
+    }
+  ],
+  "errors": []
+}

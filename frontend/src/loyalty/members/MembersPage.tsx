@@ -24,6 +24,11 @@ import { StartCard } from '../start/StartPage'
 import { OverviewButton } from '../overview/OverviewUI'
 import { useRedesignWords } from '../redesign/words'
 import { asMemberFilters, filtersFrom, initials, searchFor, withChange, type ListFilters, type ListState } from './membersQuery'
+import { usePhone } from '../overview/useOverview'
+import { MobileTile, MobileTitle } from '../mobile/MobileUI'
+import { mobileIcons } from '../mobile/assets'
+import { MemberFilters } from '../mobile/MemberFilters'
+import { useMobileWords } from '../mobile/words'
 
 const TOOL = 'flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm text-a-text hover:bg-a-surface-2 focus:bg-a-surface-2 focus:outline-none'
 
@@ -54,6 +59,11 @@ export function MembersPage() {
   const timeZone = boot.venue.timezone
   const actions = listActions(boot.staff.can)
   const [adding, setAdding] = useState(false)
+  const phone = usePhone()
+  const mobile = useMobileWords()
+  const [filtering, setFiltering] = useState(false)
+  const addRequested = new URLSearchParams(location.search).get('add') === '1'
+  const closeAdd = () => { setAdding(false); if (addRequested) apply(filters) }
   const download = useMutation({
     mutationFn: () => membershipApi.exportMembers(asMemberFilters(filters)),
     onSuccess: blob => {
@@ -72,6 +82,17 @@ export function MembersPage() {
     return <small className="block">{m.membership_state === 'expiring' ? t('loyalty.membership.list.ends', 'Ends {{day}}', { day: date }) : t('loyalty.membership.list.ended', 'Expired {{day}}', { day: date })}</small>
   }
   const identity = (m: MemberRow) => <Link to={memberPath(m.id)} className="l-rd-member-identity"><span className="l-rd-avatar" aria-hidden>{initials(m.name || m.email || '')}</span><span><strong>{m.name || m.email || `#${m.id}`}</strong><small>{m.email || m.member_number}</small></span></Link>
+  if (phone) return <div className="l-ov-page l-mw-page l-mw-members">
+    <MobileTitle icon={mobileIcons.members}>{t('loyalty.members.title', 'Members')}</MobileTitle>
+    <div className="l-mw-tiles">{actions.add && <MobileTile primary icon={mobileIcons.members} title={t('loyalty.membership.list.add', 'Add member')} hint={mobile('createMember')} onClick={() => setAdding(true)} />}<MobileTile icon={mobileIcons.filters} title={mobile('filters')} hint={mobile('levelStatus')} onClick={() => setFiltering(true)} /></div>
+    <label className="l-mw-search"><span>{mobile('findMember')}</span><input type="search" value={typed} onChange={e => setTyped(e.target.value)} maxLength={100} placeholder={t('loyalty.members.search_hint', 'Name, email, phone or member number')} /></label>
+    {page && <small role="status">{mobile('countSort', { count: points(page.total, locale), sort: t(`loyalty.members.sort_${filters.sort}`) })}</small>}
+    {query.isError && <><Notice tone="danger">{t(...errorKey('load', failureOf(query.error)))}</Notice><OverviewButton onClick={() => { void query.refetch() }}>{t('loyalty.common.retry', 'Try again')}</OverviewButton></>}
+    {!page && query.isLoading && <Skeleton className="h-40" />}
+    {page && <><ul className="l-mw-records" aria-busy={query.isFetching}>{page.members.map(m => <li key={m.id}><Link className="l-mw-record" to={memberPath(m.id)}><img src={mobileIcons.members} alt="" /><span><strong>{m.name || m.email || `#${m.id}`}</strong><b>{tiers.find(tr => tr.id === m.tier_id)?.name ?? say('noLevel')} · {say(status(m))}</b><small>{t('loyalty.common.points_count', '{{points}} pts', { points: points(m.points, locale) })} · {m.member_number ?? `#${m.id}`}</small>{ends(m)}</span></Link></li>)}</ul>{page.members.length === 0 && <p className="l-mw-panel">{t('loyalty.members.none_match', 'No member matches.')}</p>}<div className="l-mw-pagination"><OverviewButton disabled={page.page <= 1 || query.isFetching} onClick={() => apply({ ...filters, page: page.page - 1 })}>{t('loyalty.common.previous', 'Previous')}</OverviewButton><small>{t('loyalty.common.page_of', 'Page {{page}} of {{pages}}', { page: page.page, pages: page.pages })}</small><OverviewButton disabled={page.page >= page.pages || query.isFetching} onClick={() => apply({ ...filters, page: page.page + 1 })}>{t('loyalty.common.next', 'Next')}</OverviewButton></div></>}
+    {(adding || addRequested) && <AddMemberDialog onClose={closeAdd} />}
+    {filtering && <MemberFilters value={filters} onApply={apply} onClose={() => setFiltering(false)} />}
+  </div>
   return <div className="l-ov-page l-rd-page">
     <header className="l-ov-page-heading"><div><h1>{t('loyalty.members.title', 'Members')}</h1><p>{say('membersLine')}</p></div><div className="l-rd-actions">
       {actions.add && <OverviewButton primary onClick={() => setAdding(true)}>+ {t('loyalty.membership.list.add', 'Add member')}</OverviewButton>}
@@ -84,7 +105,7 @@ export function MembersPage() {
     </div>}
     <StartCard />
     {download.isError && <Notice tone="danger">{t(...refusalKey('loyalty.membership', MEMBERSHIP_ERRORS, 'export', failureOf(download.error)))}</Notice>}
-    {adding && <AddMemberDialog onClose={() => setAdding(false)} />}
+    {(adding || addRequested) && <AddMemberDialog onClose={closeAdd} />}
     <div className="l-rd-filters">
       <label><span>{t('loyalty.members.search', 'Search members')}</span><input type="search" value={typed} onChange={e => setTyped(e.target.value)} maxLength={100} placeholder={t('loyalty.members.search_hint', 'Name, email, phone or member number')} /></label>
       <label><span>{say('level')}</span><select value={filters.tier_id ?? ''} onChange={e => apply(withChange(filters, { tier_id: e.target.value ? Number(e.target.value) : null }))}>
