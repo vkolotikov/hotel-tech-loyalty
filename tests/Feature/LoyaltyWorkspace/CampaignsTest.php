@@ -460,6 +460,8 @@ class CampaignsTest extends TestCase
         $this->asManager()->getJson($this->api("campaigns/{$campaign->id}/audience"))->assertOk()->assertJsonPath('audience.reached', CampaignsTestLimit::OVER);
         $this->asManager()->postJson($this->api("campaigns/{$campaign->id}/send"), ['recipients' => CampaignsTestLimit::OVER, 'revision' => $campaign->updated_at->toIso8601String()])
             ->assertStatus(422)->assertJsonPath('error', 'too_many')->assertJsonPath('limit', 5000);
+        $this->asManager()->postJson(rtrim(config('app.url'), '/') . "/api/v1/admin/email-campaigns/{$campaign->id}/send")
+            ->assertStatus(422)->assertJsonPath('error', 'too_many');
         Queue::assertNothingPushed();
     }
 

@@ -42,7 +42,13 @@ final class OperationsStatus
             $checks[] = $this->observe('scheduled_failures', function () {
                 // A skipped overlap does not resolve a failed command; a subsequent success does.
                 $latest = DB::table('scheduled_command_runs')->selectRaw('MAX(id)')->whereIn('status', ['success', 'failed'])->groupBy('command');
-                return $this->count(DB::table('scheduled_command_runs')->whereIn('id', $latest)->where('status', 'failed')->count());
+                $failures = DB::table('scheduled_command_runs')->whereIn('id', $latest)->where('status', 'failed')->count();
+                if ($failures > 0) return $this->count($failures);
+                // A working heartbeat proves the loop, not that task reporting is attached. Old sentinels must not
+                // turn a silent reporter green; recent real command outcomes are required for a clean observation.
+                $observed = DB::table('scheduled_command_runs')->where('command', '!=', 'heartbeat')
+                    ->whereIn('status', ['success', 'failed'])->where('finished_at', '>=', now()->subDays(2))->exists();
+                return ['status' => $observed ? 'ok' : 'unobserved', 'count' => 0];
             });
             $checks[] = $this->observe('queue_failures', function () {
                 if (!in_array(config('queue.failed.driver'), ['database', 'database-uuids'], true)) return ['status' => 'unobserved'];
