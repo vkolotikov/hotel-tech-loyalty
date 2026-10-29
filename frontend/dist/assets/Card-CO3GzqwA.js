@@ -1,0 +1,1 @@
+import{t as e}from"./vendor-react-C7UcvFic.js";import{bn as t}from"./index-CvAtFrCp.js";var n=e();function r({children:e,className:r,padding:i=!0}){return(0,n.jsx)(`div`,{className:t(`bg-dark-surface rounded-xl border border-dark-border`,i&&`p-6`,r),children:e})}export{r as t};
