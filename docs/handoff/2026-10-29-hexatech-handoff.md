@@ -41,6 +41,9 @@ permissions now enforce regardless of a legacy `ADMIN_ACCESS_MODE=report` value.
 
 Private logs, original failures and clean reruns: `E:/Hexa-Tech-hardening-20261029/`. User PDF/ZIP/Alexa assets preserved.
 Source and deploy histories are separate by design; feature builds were not committed.
+The temporary deploy checkout and its preview server were removed after live verification; its node_modules junction
+was removed first. The private PostgreSQL instance on port 55439 is stopped, with its data/evidence retained.
+The working application's Vite server on port 5173 remains available. Final source/handoff is pushed to the feature branch.
 
 ## Earlier public-launch audit — review only, followed by remediation above
 
