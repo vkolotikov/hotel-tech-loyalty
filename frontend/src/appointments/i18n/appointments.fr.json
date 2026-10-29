@@ -314,7 +314,7 @@
     "money_returned": "De l'argent a été rendu pour ce rendez-vous — réservez-le à nouveau.",
     "coupon_returned": "Le bon utilisé pour ce rendez-vous a été rendu au membre — réservez-le à nouveau.",
     "price_changed": "Le prix a changé — vérifiez et enregistrez à nouveau.",
-    "invalid_amount": "Saisissez un montant supérieur à zéro.",
+    "invalid_amount": "Saisissez un montant positif valide pour cette devise. Utilisez un nombre entier pour les devises sans décimales.",
     "note_required": "Indiquez comment le client a payé.",
     "reason_required": "Indiquez le motif du remboursement.",
     "refund_unavailable": "Les paiements en ligne sont désactivés ici ; la carte ne peut pas être remboursée ici.",

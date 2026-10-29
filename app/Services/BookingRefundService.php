@@ -118,6 +118,7 @@ class BookingRefundService
         ?User $staff,
         ?int $forRoomId,
     ): array {
+        if ($issueStripeRefund) RefundOperations::assertAmount($amount, (string) ($mirror->currency ?: 'EUR'));
         // ── Pre-flight checks BEFORE writing the attempt row.
         // Audit 2026-06-01 finding C3: a RefundAttempt row is an audit
         // trail of refunds actually tried — never one for a refusal.

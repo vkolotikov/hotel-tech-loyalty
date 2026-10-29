@@ -144,6 +144,11 @@ final class AppointmentMoney
         }
         $s = self::summary($b);
         $base = ['service_booking_id' => $b->id, 'kind' => 'refund', 'amount' => $amount, 'currency' => $s['currency'], 'note' => $reason, 'corrects' => $corrects, 'actor_user_id' => $actor->id];
+        try {
+            RefundOperations::assertAmount($amount, $s['currency']);
+        } catch (RefundNotSettled $e) {
+            throw new AppointmentRefused($e->errorCode, $e->getMessage(), $e->httpStatus());
+        }
 
         if ($corrects) {
             // Only a payment recorded here can have been entered wrongly; a card refund is real money back.
@@ -166,7 +171,7 @@ final class AppointmentMoney
             try {
                 $refund = app(RefundOperations::class)->request($this->stripe, (int) $b->organization_id, $pi, $amount, $s['currency'], 'service', (int) $b->id, max(0, (float) ($b->refunded_amount ?? 0) - (float) ($b->dispute_lost_amount ?? 0)), 'requested_by_customer');
             } catch (RefundNotSettled $e) {
-                throw new AppointmentRefused($e->errorCode, $e->getMessage(), 409);
+                throw new AppointmentRefused($e->errorCode, $e->getMessage(), $e->httpStatus());
             }
             $refundId = (string) ($refund->id ?? '');
             $row->forceFill(['stripe_refund_id' => $refundId !== '' ? $refundId : null])->save();

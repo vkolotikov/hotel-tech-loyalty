@@ -472,7 +472,7 @@ class BookingAdminController extends Controller
                 $forRoomId,
             );
         } catch (\App\Services\Booking\RefundNotSettled $e) {
-            return response()->json(['error' => $e->getMessage(), 'code' => $e->errorCode], 409);
+            return response()->json(['error' => $e->getMessage(), 'code' => $e->errorCode], $e->httpStatus());
         } catch (\App\Services\Booking\RefundOutcomeUnknown $e) {
             // Stripe did not answer in time: the refund may have been made.
             return response()->json(['error' => $e->getMessage(), 'code' => \App\Services\Booking\RefundOutcomeUnknown::CODE], 504);

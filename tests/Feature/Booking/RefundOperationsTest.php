@@ -38,6 +38,20 @@ class RefundOperationsTest extends TestCase
         $this->artisan('refunds:inspect', ['--organization' => (string) ($this->org + 1)])->expectsOutput('0 operation(s). Read-only; no refunds were requested.')->assertSuccessful();
         $this->assertEquals($before, RefundOperations::connection()->table('refund_operations')->where('organization_id', $this->org)->first());
     }
+
+    public function test_a_fractional_yen_refund_is_refused_before_operation_or_provider_write(): void
+    {
+        $stripe = Mockery::mock(StripeService::class);
+        $stripe->shouldNotReceive('refund');
+        try {
+            app(RefundOperations::class)->request($stripe, $this->org, 'pi_yen_precision', 25.50, 'JPY', 'service', 7, 0);
+            $this->fail('Unrepresentable money must not be rounded');
+        } catch (RefundNotSettled $e) {
+            $this->assertSame('invalid_amount', $e->errorCode);
+            $this->assertSame(422, $e->httpStatus());
+        }
+        $this->assertSame(0, RefundOperations::connection()->table('refund_operations')->where('organization_id', $this->org)->count());
+    }
     public function test_pending_refund_reserves_the_payment_and_retries_its_id_until_settled(): void
     {
         $stripe = Mockery::mock(StripeService::class);

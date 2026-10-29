@@ -38,6 +38,8 @@ Public booking exceptions expose a stable code and diagnostic reference. Detaile
 
 New checkout never converts currencies implicitly. A service and its selected extras must share one currency; Stripe must be configured for that currency before an authorization is created. Public configuration reports incompatible services in `currency_mismatch_service_ids`, and a mismatched deposit configuration cannot silently become an unpaid booking. The encrypted service quote also binds currency. A stay quote refuses mixed room, provider-rate or selected-extra currencies; new rooms/extras default to the venue's stay currency. Legacy catalogue entries without a currency use the venue currency, while explicit differing currencies need operator correction. A saved stay hold cannot be authorized in a newly changed venue currency. Existing historical mismatches remain report-only: do not relabel or convert their amounts without provider evidence.
 
+Refund amounts must be representable in the booking currency's payment unit. A fractional JPY amount, for example, returns `422 invalid_amount` before a journal, provider or desk-refund write; it is never rounded into a different refund. The same check applies to cash refunds and corrections in Appointments.
+
 ## Required operational checks
 
 Use provider sandbox credentials for pending/failed refund events, timeout/retry and signed webhook redelivery. Verify the scheduler/queue, webhook registration and production database migration on the actual deployment. Local tests use provider fakes and do not prove those external prerequisites. No historical money or points anomalies were automatically repaired by this change.

@@ -41,6 +41,7 @@ final class RefundOperations
     /** Caller holds its payment lock. The separately committed journal serializes refund identities too. */
     public function request(StripeService $stripe, int $orgId, string $pi, ?float $amount, string $currency, string $kind, int $bookingId, float $refundedBefore, ?string $reason = null): Refund
     {
+        self::assertAmount($amount, $currency);
         $op = self::connection()->transaction(function () use ($orgId, $pi, $amount, $currency, $kind, $bookingId, $refundedBefore, $reason) {
             // No DB booking lock is acquired on this connection, ever.
             \App\Support\AdvisoryLock::within('refund-operation:' . $orgId . ':' . $pi, self::connection());
@@ -94,6 +95,16 @@ final class RefundOperations
             throw new RefundNotSettled(in_array($status, ['failed', 'canceled'], true) ? 'refund_failed' : ($status === 'unknown' ? 'refund_outcome_unknown' : 'refund_pending'));
         }
         return $refund;
+    }
+
+    /** Reject unrepresentable amounts before any provider/operation write; never silently round money. */
+    public static function assertAmount(?float $amount, string $currency): void
+    {
+        if ($amount === null) return;
+        if (!is_finite($amount) || $amount <= 0
+            || abs(StripeService::fromSmallestUnit(StripeService::smallestUnitOf($amount, $currency), $currency) - $amount) > 0.000001) {
+            throw new RefundNotSettled('invalid_amount');
+        }
     }
 
     /** Only call with an authenticated provider response, never the request's own payload. */

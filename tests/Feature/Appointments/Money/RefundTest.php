@@ -69,6 +69,17 @@ class RefundTest extends TestCase
         $this->assertSame(0, ServiceBookingPayment::where('service_booking_id', $b->id)->where('kind', 'refund')->count());
     }
 
+    public function test_fractional_yen_cash_and_card_refunds_are_rejected_without_any_money_write(): void
+    {
+        $cash = $this->paidAtDesk(60, ['currency' => 'JPY']);
+        $card = $this->seedBooking(['currency' => 'JPY', 'payment_status' => 'paid', 'stripe_payment_intent_id' => 'pi_yen_precision']);
+        $this->stripe->shouldNotReceive('refund');
+        $this->refund($cash, ['amount' => 25.5, 'via' => 'cash'])->assertStatus(422)->assertJsonPath('error', 'invalid_amount');
+        $this->refund($card, ['amount' => 25.5, 'via' => 'online_card'])->assertStatus(422)->assertJsonPath('error', 'invalid_amount');
+        $this->assertSame(0, ServiceBookingPayment::whereIn('service_booking_id', [$cash->id, $card->id])->where('kind', 'refund')->count());
+        $this->assertEquals(0, $card->fresh()->refunded_amount);
+    }
+
     public function test_a_manager_gives_cash_back_and_staff_may_not(): void
     {
         $b = $this->paidAtDesk(60);

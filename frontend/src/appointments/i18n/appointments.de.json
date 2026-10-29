@@ -314,7 +314,7 @@
     "money_returned": "Für diesen Termin wurde Geld zurückgegeben — buchen Sie ihn neu.",
     "coupon_returned": "Der Gutschein dieses Termins wurde dem Mitglied zurückgegeben — buchen Sie ihn neu.",
     "price_changed": "Der Preis hat sich geändert — prüfen und erneut speichern.",
-    "invalid_amount": "Geben Sie einen Betrag über null ein.",
+    "invalid_amount": "Geben Sie einen positiven Betrag in dieser Währung ein. Verwenden Sie für Währungen ohne Dezimalstellen eine ganze Zahl.",
     "note_required": "Geben Sie an, wie der Kunde bezahlt hat.",
     "reason_required": "Geben Sie den Grund der Erstattung an.",
     "refund_unavailable": "Online-Zahlungen sind hier ausgeschaltet; die Karte kann hier nicht erstattet werden.",
