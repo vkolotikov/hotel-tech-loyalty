@@ -1,4 +1,5 @@
 {
+  "emptyLevels": "Niveaux sans membres ({{n}})", "noLevelMembers": "Aucun membre dans cet instantané pour le moment.",
   "line": "Suivez les performances de votre programme.",
   "definitions": "Définitions",
   "definitionsTitle": "Définition des indicateurs",

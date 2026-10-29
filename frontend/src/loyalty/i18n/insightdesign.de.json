@@ -1,4 +1,5 @@
 {
+  "emptyLevels": "Stufen ohne Mitglieder ({{n}})", "noLevelMembers": "In dieser Momentaufnahme gibt es noch keine Mitglieder.",
   "line": "So entwickelt sich Ihr Programm.",
   "definitions": "Definitionen",
   "definitionsTitle": "Kennzahlendefinitionen",
