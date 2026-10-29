@@ -324,6 +324,7 @@ class ServiceConfirmOnePaymentTest extends MemberEndpointTestCase
     {
         $stripe = Mockery::mock(StripeService::class);
         $stripe->shouldReceive('isEnabled')->andReturn(true);
+        $stripe->shouldReceive('currency')->andReturn('eur');
         $stripe->shouldNotReceive('retrievePaymentIntent');
         $this->app->instance(StripeService::class, $stripe);
 
