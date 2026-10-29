@@ -34,6 +34,7 @@ class EmptyRequiredFieldsTest extends TestCase
         parent::setUp();
         $this->setUpMinimalSchema();
         $this->setUpKnowledgeSchema(); // brands: the extras belong to a brand (BelongsToBrand)
+        $this->setUpBookingRefundSchema(); // hotel_settings: new extras default to the venue currency
         foreach (['booking_extras' => 'per_stay', 'service_extras' => 'per_booking'] as $table => $priceType) {
             if (!Schema::hasTable($table)) {
                 Schema::create($table, function (Blueprint $t) use ($table, $priceType) {
