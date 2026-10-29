@@ -1559,6 +1559,7 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
 
             // ─── Audit Logs ──────────────────────────────────────────────────
             Route::get('audit-logs',                      [AuditLogController::class, 'index']);
+            Route::get('operations-status', \App\Http\Controllers\Api\V1\Admin\OperationsStatusController::class)->middleware('throttle:30,1');
             Route::get('audit-logs/actions',              [AuditLogController::class, 'actions']);
             Route::get('audit-logs/subject-types',        [AuditLogController::class, 'subjectTypes']);
 

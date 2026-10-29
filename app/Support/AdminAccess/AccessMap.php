@@ -94,6 +94,7 @@ final class AccessMap
         'admin/analytics'                       => ['can_view_analytics', 'can_view_analytics', 'admin'],         // Analytics (menu: can_view_analytics; the routes check it too)
         'admin/api-tokens'                      => ['manager',            'manager',            'admin'],         // API tokens (Settings, manager)
         'admin/audit-logs'                      => ['manager',            'manager',            'admin'],         // Audit log (menu: manager)
+        'admin/operations-status'               => ['manager',            'manager',            'admin'],         // Tenant failures; infrastructure additionally requires a verified platform operator.
         'admin/brands'                          => ['staff',              'manager',            'admin'],         // Brands (menu: manager); the brand switcher reads them
         'admin/business-reporting-key'          => ['can_view_analytics', 'can_view_analytics', 'admin'],         // Reporting key (the route checks can_view_analytics)
         'admin/dashboard'                       => ['staff',              'staff',              'admin'],         // Dashboard (menu: everyone)

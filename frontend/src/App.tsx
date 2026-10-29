@@ -83,6 +83,7 @@ const Planner = lazy(() => import('./pages/Planner').then(m => ({ default: m.Pla
 const Venues = lazy(() => import('./pages/Venues').then(m => ({ default: m.Venues })))
 const Billing = lazy(() => import('./pages/Billing').then(m => ({ default: m.Billing })))
 const AuditLog = lazy(() => import('./pages/AuditLog').then(m => ({ default: m.AuditLog })))
+const SystemStatus = lazy(() => import('./pages/operations/SystemStatus'))
 const Bookings = lazy(() => import('./pages/Bookings').then(m => ({ default: m.Bookings })))
 const BookingDetail = lazy(() => import('./pages/BookingDetail').then(m => ({ default: m.BookingDetail })))
 const BookingCalendar = lazy(() => import('./pages/BookingCalendar').then(m => ({ default: m.BookingCalendar })))
@@ -428,6 +429,7 @@ export default function App() {
           <Route path="/service-bookings/calendar" element={<LazyRoute product="booking"><ServiceBookingCalendar /></LazyRoute>} />
           <Route path="/billing" element={<LazyRoute gate="admin"><Billing /></LazyRoute>} />
           <Route path="/audit-log" element={<LazyRoute gate="admin"><AuditLog /></LazyRoute>} />
+          <Route path="/system-status" element={<LazyRoute gate="admin"><SystemStatus /></LazyRoute>} />
           <Route path="/settings" element={<LazyRoute gate="admin"><Settings /></LazyRoute>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

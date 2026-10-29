@@ -110,6 +110,7 @@
       "scan": "Escanear",
       "billing": "Facturación",
       "audit_log": "Registro de auditoría",
+      "system_status": "Estado del sistema",
       "settings": "Ajustes",
       "landing_pages": "Página de destino",
       "appointments_workspace": "HexaTech Appointments",

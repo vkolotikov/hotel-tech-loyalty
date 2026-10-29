@@ -1,5 +1,9 @@
 # Browser release checks
 
+Operational status: `node e2e/operations.mjs`. Uses the local server at `E2E_BASE_URL` (default port 5173),
+intercepts API reads, blocks external requests and mutations, and checks five languages, narrow layouts,
+refresh, error recovery and destinations. Use port 5175 with the preview server to check a built artifact.
+
 Use Node 22.12+ within the 22 release line, Node 24, or Node 26+ and `npm ci` (the release was tested with Node 24.15.0). Vitest 5 does not support Node 23 or 25. Install Chrome (the default) or run `npx playwright install chromium` and set `E2E_CHANNEL=chromium`.
 
 Start `npm run dev`, then `npm run test:browser` from `frontend`. The runner installs deterministic API fixtures, blocks external requests and refuses non-local base URLs. It does not exercise real provider delivery or production customer data.

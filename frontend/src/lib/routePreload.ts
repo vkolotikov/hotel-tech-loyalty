@@ -46,6 +46,7 @@ const ROUTE_CHUNKS: Record<string, Importer[]> = {
   '/scan':              [() => import('../pages/Scan')],
   '/billing':           [() => import('../pages/Billing')],
   '/audit-log':         [() => import('../pages/AuditLog')],
+  '/system-status':     [() => import('../pages/operations/SystemStatus')],
   '/settings':          [() => import('../pages/Settings')],
 }
 

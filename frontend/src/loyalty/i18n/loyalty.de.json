@@ -284,6 +284,7 @@
     "points": "Punkte",
     "title": "Scannen",
     "usb_connect": "USB-Lesegerät verbinden",
+    "usb_compatibility": "Nur kompatible HID-Lesegeräte. ACR122U benötigt einen Desktop-Connector; eine direkte Browserverbindung wird nicht unterstützt.",
     "usb_connecting": "Verbindung zum Lesegerät wird hergestellt…",
     "usb_disconnect": "Trennen",
     "usb_failed": "Das Lesegerät konnte nicht geöffnet werden. Ziehen Sie es ab, stecken Sie es wieder ein und verbinden Sie es erneut.",

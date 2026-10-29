@@ -81,7 +81,7 @@ function SettingsEditor() {
         {saved && <p role="status" className="l-st-saved">{w('saved')}</p>}
       </section>
       <details className="l-st-mobile-more" open={!phone || undefined}><summary>{mobile('allTools')}</summary><aside className="l-st-related">
-        <section className="l-ov-panel l-st-panel"><h2>{w('admin')}</h2><p>{w('adminHint')}</p><Link to={FULL_ADMIN} className="l-ov-button">{w('openAdmin')}</Link><small>{w('adminAccess')}</small></section>
+        <section className="l-ov-panel l-st-panel"><h2>{w('admin')}</h2><p>{w('adminHint')}</p><Link to={FULL_ADMIN} className="l-ov-button">{w('openAdmin')}</Link>{allowed && <Link to="/system-status" className="l-ov-link">{t('nav.items.system_status', 'System status')} →</Link>}<small>{w('adminAccess')}</small></section>
         <section className="l-ov-panel l-st-panel"><h2>{w('related')}</h2><div className="l-st-related-links">{[[allowed, '/loyalty/app', t('loyalty.nav.app', 'Card & app'), w('cardHint')], [true, '/loyalty/program', t('loyalty.nav.program', 'Program'), w('programHint')], [true, '/loyalty/options', t('loyalty.nav.options', 'Ways to earn'), w('earnHint')], [boot.staff.can.manage_campaigns, '/loyalty/campaigns', t('loyalty.nav.campaigns', 'Campaigns'), w('campaignsHint')]].map(([show, to, label, hint]) => show && <div key={String(to)}><Link to={String(to)} className="l-ov-link">{label} →</Link><small>{hint}</small></div>)}</div></section>
         <section className="l-ov-panel l-st-panel"><h2>{w('help')}</h2><p>{w('helpLine')}</p><Link to="/loyalty/guide" className="l-ov-button">{w('openGuide')}</Link></section>
       </aside></details>

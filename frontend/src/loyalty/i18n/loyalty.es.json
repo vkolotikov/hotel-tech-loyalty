@@ -284,6 +284,7 @@
     "points": "puntos",
     "title": "Escanear",
     "usb_connect": "Conectar lector USB",
+    "usb_compatibility": "Solo lectores HID compatibles. ACR122U necesita un conector de escritorio; no se admite la conexión directa al navegador.",
     "usb_connecting": "Conectando con el lector…",
     "usb_disconnect": "Desconectar",
     "usb_failed": "No se pudo abrir el lector. Desconéctelo, vuelva a enchufarlo y conéctelo de nuevo.",
