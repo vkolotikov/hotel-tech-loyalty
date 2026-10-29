@@ -113,6 +113,7 @@ async (page, answer) => {
   for(const width of [1280,1024,768,390,320]) {await page.setViewportSize({width,height:900});await fit('Guided setup fits '+width);if(width===390)await screen('setup-mobile');}
   await page.setViewportSize({width:1440,height:1080});await page.getByRole('button',{name:'Next',exact:true}).click();await page.locator('[data-step="review"][aria-current]').waitFor();await screen('setup-review');
   state.setupError=503;await page.getByRole('button',{name:'Apply',exact:true}).click();await page.locator('.l-gs-form [role="alert"]').waitFor();
+  await page.locator('[data-step="review"] button').click();
   state.setupError=0;await page.getByRole('button',{name:'Apply',exact:true}).click();await page.locator('[data-setup-done]').waitFor();
   const writes=requests.filter(r=>r.path==='options/setup');check('Apply retries retain idempotency key',writes.length===2&&writes[0].payload.idempotency_key===writes[1].payload.idempotency_key);
   check('Apply sends edited points',writes[1].payload.options.points_per_currency===17);
