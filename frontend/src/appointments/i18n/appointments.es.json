@@ -314,7 +314,7 @@
     "money_returned": "Se devolvió dinero por esta cita — resérvela de nuevo.",
     "coupon_returned": "El cupón usado en esta cita se devolvió al miembro — resérvela de nuevo.",
     "price_changed": "El precio cambió — revíselo y guarde de nuevo.",
-    "invalid_amount": "Introduzca un importe mayor que cero.",
+    "invalid_amount": "Introduzca un importe positivo válido para esta moneda. Use un número entero para las monedas sin decimales.",
     "note_required": "Indique cómo pagó el cliente.",
     "reason_required": "Indique el motivo de la devolución.",
     "refund_unavailable": "Los pagos en línea están desactivados aquí; la tarjeta no se puede devolver aquí.",

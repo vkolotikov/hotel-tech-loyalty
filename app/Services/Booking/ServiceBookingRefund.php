@@ -97,7 +97,7 @@ final class ServiceBookingRefund
 
             return ['money' => 'released', 'amount' => $amount, 'columns' => ['payment_status' => 'cancelled']];
         } catch (RefundNotSettled $e) {
-            throw new CancellationException($e->errorCode, $e->getMessage(), 409);
+            throw new CancellationException($e->errorCode, $e->getMessage(), $e->httpStatus());
         } catch (CancellationException $e) {
             throw $e;
         } catch (\Throwable $e) {

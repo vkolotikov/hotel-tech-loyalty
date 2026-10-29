@@ -603,7 +603,7 @@ final class MemberCancellation
         try {
             $done = $this->stayRefund->applyRefund(GroupPayment::lead($rooms), null, 'requested_by_customer', null, true, null);
         } catch (\Throwable $e) {
-            if ($e instanceof RefundNotSettled && !$this->isChargeAlreadyRefunded($e)) throw new CancellationException($e->errorCode, $e->getMessage(), 409);
+            if ($e instanceof RefundNotSettled && !$this->isChargeAlreadyRefunded($e)) throw new CancellationException($e->errorCode, $e->getMessage(), $e->httpStatus());
             if (!$this->isChargeAlreadyRefunded($e)) {
                 // Release 6: applyRefund() reads the rows again under its refund
                 // lock — a refund the webhook recorded in the gap is refused there
@@ -809,7 +809,7 @@ final class MemberCancellation
         try {
             $done = $this->stayRefund->applyRefund($m, null, 'requested_by_customer', null, true, null);
         } catch (\Throwable $e) {
-            if ($e instanceof RefundNotSettled && !$this->isChargeAlreadyRefunded($e)) throw new CancellationException($e->errorCode, $e->getMessage(), 409);
+            if ($e instanceof RefundNotSettled && !$this->isChargeAlreadyRefunded($e)) throw new CancellationException($e->errorCode, $e->getMessage(), $e->httpStatus());
             if (!$this->isChargeAlreadyRefunded($e)) {
                 // Release 6: applyRefund() reads the row again under its refund
                 // lock — a refund the webhook recorded in the gap is refused there

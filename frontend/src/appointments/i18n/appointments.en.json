@@ -314,7 +314,7 @@
     "money_returned": "Money was given back for this visit — book it again instead.",
     "coupon_returned": "The coupon used on this visit was given back to the member — book it again instead.",
     "price_changed": "The price changed — check it and save again.",
-    "invalid_amount": "Enter an amount above zero.",
+    "invalid_amount": "Enter a positive amount valid for this currency. Use a whole number for currencies without decimal units.",
     "note_required": "Say how the client paid.",
     "reason_required": "Say why the money goes back.",
     "refund_unavailable": "Online payments are switched off at this venue, so the card cannot be refunded here.",
