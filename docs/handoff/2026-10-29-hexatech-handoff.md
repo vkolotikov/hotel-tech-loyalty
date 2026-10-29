@@ -3,22 +3,61 @@
 Read this first, then `2026-10-28-hexatech-handoff.md` for previous milestones and
 `2026-10-27-hexatech-handoff.md` for the full environment and history. Root AGENTS.md and CLAUDE.md still apply.
 
-## Public-launch audit — review only
+## Current release: public-launch hardening
 
-The subsequent audit recommends **holding the public launch**. Full report:
+Production **6cee65865f61635e08bba65432c0dceb854e889c**, live content verified **29 October, 15:08 Europe/Riga**.
+Source branch `feature/public-launch-hardening-20261029`; deployed source and **next source-patch baseline**:
+**a3896179c27f1205bc3139b14f2b9952f347ba94**. Do not use later documentation/evidence commits.
+Production parent `16788ad8cad9ecf0886c28c2ecd0997f40a725d9`; 412 explicit source paths passed parity,
+including whole application source parity. Build artifacts and their deletions were committed only in the isolated deploy checkout.
+
+Report: `docs/audits/2026-10-29-public-launch-remediation.md`; machine totals and final render/live evidence sit beside it.
+Approved audit A01–A24 are corrected: tenant/type-bound identity and recovery, owner invariants, integration-origin
+and settings permissions, atomic browser sessions, points/reward replay and cancellation, durable refund recovery,
+campaign concurrency/consent, tier catch-up, checkout totals/currency/quote binding, safe public errors and UI defects.
+Independent review added durable visit/reversal recovery, shared locks, historical Insights currency, canonical card
+metadata and whole-currency-unit refund validation. Existing routes/features and desktop/mobile designs remain.
+
+Final artifact: **7,212 PHP tests / 46,371 assertions / 76 scopes / zero failures or skips**, covering all 584 test files;
+**5,761 frontend tests / 398 files**, TypeScript, lint regression gate and fresh build passed. **737 browser checks / 28 scripts**
+passed against the built SPA; final desktop and 320px renders inspected. Fresh PostgreSQL 18 ran **227 migrations**;
+independent-process identity/owner/refund/reward races passed. Composer and npm audits: **zero advisories**.
+The lint baseline still records 1,393 legacy diagnostics; this is not a zero-warning claim.
+
+Build/test runtime: Node 22.12+ within Node 22, Node 24, or Node 26+; verified Node 24.15.0. Vitest 5 excludes Node 23/25.
+Vite 8 retains the previous browser targets. Main JS is 318.34 KB / 96.94 KB gzip; shared Loyalty 1,356.86 KB / 361.29 KB gzip,
+with separate page chunks. Browser runner: `frontend/e2e/README.md`.
+
+Live entry `index-CUzztHZW.js`, Loyalty `LoyaltyApp-CVi2FsKr.js` / `LoyaltyApp-yTdAox3L.css`.
+New session/page/style markers, five authentication refusals, health 200, landing kit and retired CSS 404 verified.
+No live customer messages, bookings or financial transactions were created in testing.
+
+**Public launch still needs external acceptance:** provider sandbox/callback delivery, sender/domain readiness,
+physical camera/NFC/wallet/push, production queue/scheduler/shared-cache/monitoring and restore rehearsal.
+Historical fallback currencies/uncertain financial outcomes require read-only reconciliation before any repair.
+Read `docs/refund-operations.md`: all new migrations precede new workers; retain refund/visit journals on rollback
+and pause refund mutation if reverting to old source that ignores unresolved operations. Production/staging access
+permissions now enforce regardless of a legacy `ADMIN_ACCESS_MODE=report` value.
+
+Private logs, original failures and clean reruns: `E:/Hexa-Tech-hardening-20261029/`. User PDF/ZIP/Alexa assets preserved.
+Source and deploy histories are separate by design; feature builds were not committed.
+
+## Earlier public-launch audit — review only, followed by remediation above
+
+Before remediation, the audit recommended **holding the public launch**. Full report:
 `docs/audits/2026-10-29-public-launch-audit.md`, with platform, Loyalty, booking and UI appendices,
 reproduction files and a machine-readable verification summary. Nine high-priority findings cover
 identity/session/ownership, integration destinations, points and refunds; other configuration/UI issues
-and unverified operational gates are listed separately. No product improvements or deployment were made.
+and unverified operational gates are listed separately. No product improvements or deployment were made during that audit.
 
 Audit source `b13381c795d2c5b66e4c9aa1650b97b1c61f2ed5`, branch `audit/public-launch-20261029`.
 Existing scoped PHP runs: **7,070 passed / 1 failed / 7 skipped / 45,437 assertions**. The failure is the
 preexisting untracked Alexa static directory's missing reserved slug; skips require PostgreSQL.
 Frontend **5,730 passed**, TypeScript/build passed, **718 browser fixture checks** passed. Whole-app lint
 and dependency scans have findings. Twenty additional isolated probes establish defects, not fixes.
-Private artifacts: `E:/Hexa-Tech-audit-20261029/`. Production and the next source-patch baseline below remain unchanged.
+Private artifacts: `E:/Hexa-Tech-audit-20261029/`. At audit time, production and the source baseline were still the mobile release below.
 
-## Current release: dedicated Loyalty mobile web
+## Previous release: dedicated Loyalty mobile web
 
 Production **16788ad8cad9ecf0886c28c2ecd0997f40a725d9**, live content verified **29 October, 12:22 Europe/Riga**.
 Feature `feature/loyalty-mobile-20261029`; deployed source and **next source-patch baseline**:
