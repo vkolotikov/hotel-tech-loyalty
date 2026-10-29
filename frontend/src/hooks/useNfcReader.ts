@@ -1,13 +1,13 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 
 /**
- * Universal WebHID NFC reader hook.
+ * WebHID transport for readers exposing the supported HID report formats.
  *
- * Works with ANY USB HID NFC reader — no hardcoded vendor/product filters.
- * The browser's device picker lets the user select their reader manually.
+ * The device picker lists HID devices; selecting one does not establish protocol compatibility.
+ * Standard ACR122U readers use USB CCID / PC/SC, not WebHID, and need a separate desktop bridge.
  *
  * Communication strategy:
- * 1. Try CCID-over-HID protocol (works with ACR122U, SCL3711, Identiv, etc.)
+ * 1. Try CCID framing carried inside HID reports, for hardware explicitly supporting that transport.
  * 2. If CCID fails, fall back to raw HID report parsing (some readers send
  *    the UID directly in input reports without needing CCID framing)
  */

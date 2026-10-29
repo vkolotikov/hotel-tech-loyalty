@@ -1,0 +1,14 @@
+{
+  "results": [
+    "en-1440: render and no horizontal overflow",
+    "Seven checks; refresh; failure hides stale data; retry; campaign and audit destinations",
+    "en-320: render and no horizontal overflow",
+    "de-390: render and no horizontal overflow",
+    "fr-390: render and no horizontal overflow",
+    "es-390: render and no horizontal overflow",
+    "ru-390: render and no horizontal overflow"
+  ],
+  "errors": [],
+  "fixture": true,
+  "base": "http://127.0.0.1:5173"
+}

@@ -200,6 +200,7 @@ export const navGroups: NavGroup[] = [
     items: [
       { path: '/billing',   labelKey: 'nav.items.billing',    defaultLabel: 'Billing',   icon: CreditCard, gate: 'admin' },
       { path: '/audit-log', labelKey: 'nav.items.audit_log',  defaultLabel: 'Audit Log', icon: ScrollText, gate: 'admin' },
+      { path: '/system-status', labelKey: 'nav.items.system_status', defaultLabel: 'System status', icon: AlertTriangle, gate: 'admin' },
       { path: '/settings',  labelKey: 'nav.items.settings',   defaultLabel: 'Settings',  icon: Settings,   gate: 'admin' },
     ],
   },
