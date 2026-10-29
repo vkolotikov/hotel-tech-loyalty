@@ -62,6 +62,7 @@ class OperationsStatusTest extends TestCase
     {
         $other = $this->otherOrganization();
         $this->campaign($other['org']->id);
+        $this->campaign($other['org']->id);
         $this->campaign($this->org->id, ['error_message' => 'secret-provider-response']);
         $answer = $this->asManager()->getJson($this->url() . '?organization_id=' . $other['org']->id)->assertOk();
         $checks = collect($answer->json('checks'))->keyBy('key');
