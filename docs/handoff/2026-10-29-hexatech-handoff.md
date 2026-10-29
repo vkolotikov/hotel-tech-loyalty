@@ -3,7 +3,38 @@
 Read this first, then `2026-10-28-hexatech-handoff.md` for previous milestones and
 `2026-10-27-hexatech-handoff.md` for the full environment and history. Root AGENTS.md and CLAUDE.md still apply.
 
-## Current production release: Guided setup and Settings
+## Current release: dedicated Loyalty mobile web
+
+Production **16788ad8cad9ecf0886c28c2ecd0997f40a725d9**, live content verified **29 October, 12:22 Europe/Riga**.
+Feature `feature/loyalty-mobile-20261029`; deployed source and **next source-patch baseline**:
+**e4f43246f5ec0195cbb36c50c861afe744437790**. Do not use later documentation/evidence commits.
+Production parent `ce1f55e0f`; final source patch `60916b106`; 240 explicitly allowed paths with whole-source parity.
+Report: `docs/loyalty-redesign/22-MOBILE-WEB-REPORT.md`.
+
+The connected plugin supplied all 32 MH/MM/MR/MS/MA mobile design contexts. Below 768px the workspace now has
+Home/Members/Scan/Requests/More navigation, compact Home summaries, separate member and request details,
+full-screen member forms and review sheets. More preserves secondary tools; Settings collapses supporting links.
+Desktop layouts, APIs, routes, permissions, full admin and the continuous door scanner remain available.
+
+The API supports one membership-level filter, so the mobile sheet follows that contract. There is no staff
+reward-claim creation endpoint: reward details explain member-app claiming and open existing claims. No synthetic
+writer, inferred eligibility or consent update was added. Actual organisation, balances and rules replace demo data.
+
+Final artifact: **5,730 frontend tests / 394 files**, **133 PHP tests / 1,391 assertions**, TypeScript,
+full Loyalty/shared-footer ESLint and fresh build passed. Compiled Chrome: **203 interaction checks**,
+**60 style views / 30 routes**, **70 narrow/short locale-theme views**, plus mobile touch-emulation navigation.
+No runtime errors or overflow. QR decoding uses the real decoder with a fixture MediaStream; NFC/USB transport is
+simulated. Browser writes are intercepted; live checks are read-only. No backend/migration/dependency changes.
+
+Private helpers/logs: `E:/Hexa-Tech-release/mobile-*`, `logs/mobile-*`. Evidence and exact geometry are in
+`docs/loyalty-redesign/evidence/mobile-web/`. Temporary artifact `E:/Hexa-Tech-release/mobile-web` and preview
+PID 38500 were removed after live verification. Original Vite PID 1992 and unrelated user files are preserved.
+
+Live entry `index-wkLcRp-m.js`, Loyalty `LoyaltyApp-DA0ULxos.js` / `LoyaltyApp-Ddu--NOf.css`. Mobile and existing
+section markers, safe-area styles, three font files and currency/Overview/members/requests/rewards authentication
+responses passed. The public landing kit retained its stylesheet; retired CSS stayed 404. See `live-verification.json`.
+
+## Previous production release: Guided setup and Settings
 
 Production **ce1f55e0f349ee5cb236b63ac6e48704c6d3dd4d**, live content verified **29 October, 11:03 Europe/Riga**.
 Feature `feature/loyalty-settings-setup-20261029`; deployed feature source and **next source-patch baseline**:

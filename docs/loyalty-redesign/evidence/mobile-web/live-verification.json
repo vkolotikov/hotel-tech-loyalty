@@ -1,0 +1,57 @@
+﻿{
+    "verified_at":  "2026-10-29T10:21:59.6804104+00:00",
+    "entry":  "/spa/assets/index-wkLcRp-m.js",
+    "loyalty_js":  "LoyaltyApp-DA0ULxos.js",
+    "loyalty_css":  "LoyaltyApp-Ddu--NOf.css",
+    "markers":  [
+                    "l-mw-nav",
+                    "l-mw-full-form",
+                    "Members claim points rewards in their app",
+                    "l-st-page",
+                    "l-st-comparison",
+                    "l-gs-progress",
+                    "l-utility-content",
+                    "Prepare your programme",
+                    "Unsaved preference changes",
+                    "l-in-empty-levels",
+                    "Write your email",
+                    "Manual lookup",
+                    "insights/report",
+                    "requests/inbox",
+                    "app-look/logo"
+                ],
+    "fonts":  [
+                  "/spa/assets/poppins-400-C1IsaolU.ttf",
+                  "/spa/assets/poppins-500-BblA7dQf.ttf",
+                  "/spa/assets/poppins-600-Gz22PxOe.ttf"
+              ],
+    "api":  [
+                {
+                    "endpoint":  "currency",
+                    "status":  401,
+                    "message":  "Authentication required."
+                },
+                {
+                    "endpoint":  "overview/summary",
+                    "status":  401,
+                    "message":  "Authentication required."
+                },
+                {
+                    "endpoint":  "members",
+                    "status":  401,
+                    "message":  "Authentication required."
+                },
+                {
+                    "endpoint":  "requests/inbox",
+                    "status":  401,
+                    "message":  "Authentication required."
+                },
+                {
+                    "endpoint":  "rewards",
+                    "status":  401,
+                    "message":  "Authentication required."
+                }
+            ],
+    "landing_stylesheet":  "/landing/nocturne_ritual.css?v=7ca20c60a8",
+    "retired_stylesheet_status":  404
+}
