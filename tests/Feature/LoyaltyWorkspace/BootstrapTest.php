@@ -74,7 +74,8 @@ class BootstrapTest extends TestCase
             ->assertJsonPath('venue.currency', 'GBP')
             ->assertJsonPath('features', ['campaigns' => true, 'wallet' => false, 'push' => true]);
 
-        DB::table('organizations')->where('id', $this->org->id)->update(['currency' => null, 'plan_features' => null]);
+        // PostgreSQL requires the column; an empty legacy value still exercises the documented fallback.
+        DB::table('organizations')->where('id', $this->org->id)->update(['currency' => '', 'plan_features' => null]);
         HotelSetting::withoutGlobalScopes()->create($this->settingRow(['organization_id' => $this->org->id, 'key' => 'services_currency', 'value' => 'chf']));
 
         $this->asStaffMember()->getJson($this->api('bootstrap'))

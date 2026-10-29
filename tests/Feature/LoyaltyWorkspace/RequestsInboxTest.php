@@ -33,7 +33,7 @@ class RequestsInboxTest extends TestCase
 
     private function redemption(string $state = 'pending'): RewardRedemption
     {
-        return RewardRedemption::create(['member_id' => $this->grace->id, 'reward_id' => $this->reward->id, 'status' => $state, 'points_spent' => 500, 'code' => 'REW-'.uniqid()]);
+        return RewardRedemption::create(['member_id' => $this->grace->id, 'reward_id' => $this->reward->id, 'status' => $state, 'points_spent' => 500, 'code' => 'REW-'.strtoupper(bin2hex(random_bytes(4)))]);
     }
 
     public function test_combined_pagination_filters_and_stable_order_keep_native_states(): void

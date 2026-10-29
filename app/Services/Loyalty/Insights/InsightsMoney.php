@@ -24,7 +24,8 @@ use Illuminate\Support\Collection;
  *  - A member's booking: it names a member of this organisation (`member_id`), or its guest is linked to one
  *    (`guests.member_id`) — the two links staff see. A booking that only shares a member's email is not counted.
  *  - Paid, a stay: what was paid less what went back (`price_paid` − `refunded_amount`), when above zero; a mock-mode
- *    stay is test data and never counts. Its currency is the stays' (`booking_currency`, as the portal reads it).
+ *    stay is test data and never counts. Its currency is the booking snapshot, falling back to `booking_currency`
+ *    only for legacy rows without a snapshot.
  *  - Paid, an appointment: what was taken less what went back, AppointmentMoney's own figures (online, at the desk,
  *    deposits), as the Appointments Insights' "taken"; when above zero. Its currency is its own.
  *  - In the venue's currency only: a paid booking in another currency is counted in `other_currency` and added
@@ -97,6 +98,7 @@ final class InsightsMoney
             ->whereRaw("{$booked} >= ? AND {$booked} < ?", [$period->startUtc(), $period->endUtc()])
             ->whereRaw("{$paid} > 0")
             ->whereRaw("COALESCE(booking_mirror.payment_method, '') <> 'mock'")
+            ->addSelect('booking_mirror.raw_json')
             ->selectRaw("{$booked} AS booked_at, {$paid} AS paid, CASE WHEN " . self::byMember('booking_mirror', $tierId) . ' THEN 1 ELSE 0 END AS by_member', [$orgId, $orgId, $orgId])
             ->toBase()->cursor();
 
@@ -105,7 +107,9 @@ final class InsightsMoney
             if ($i === null) {
                 continue;
             }
-            self::add($c, 'stays', $i, $stayCurrency === $currency, (int) $row->by_member === 1, self::cents($row->paid));
+            $snapshot = json_decode((string) ($row->raw_json ?? ''), true);
+            $bookedCurrency = strtoupper(trim((string) ($snapshot['currency'] ?? ''))) ?: $stayCurrency;
+            self::add($c, 'stays', $i, $bookedCurrency === $currency, (int) $row->by_member === 1, self::cents($row->paid));
         }
     }
 

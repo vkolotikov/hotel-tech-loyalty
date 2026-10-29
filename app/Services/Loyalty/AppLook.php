@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Rules\MaxImageDimensions;
 use App\Services\Loyalty\App\OwnMedia;
 use App\Services\MediaService;
+use App\Support\SettingRegistry;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 
@@ -262,21 +263,17 @@ final class AppLook
         ];
     }
 
-    /**
-     * A row this organisation never had, made as SettingsController::update makes one: group, type, label and scope
-     * from the same key in any organisation when there is one (the seeded rows), else the `mobile_app` group, a
-     * string, and a label from the key. The organisation is set explicitly, as there.
-     */
+    /** A missing row uses the same canonical metadata as SettingsController, independent of other tenants. */
     private static function create(string $key, string $value): void
     {
-        $template = HotelSetting::withoutGlobalScopes()->where('key', $key)->first();
+        $definition = SettingRegistry::get($key) ?? throw new \LogicException('Unknown app-look setting');
         HotelSetting::create([
             'key'             => $key,
             'value'           => $value,
-            'type'            => $template?->type ?? 'string',
-            'group'           => $template?->group ?? 'mobile_app',
-            'label'           => $template?->label ?? ucwords(str_replace('_', ' ', $key)),
-            'scope'           => $template?->scope ?? 'company',
+            'type'            => $definition['type'],
+            'group'           => $definition['group'],
+            'label'           => $definition['label'],
+            'scope'           => $definition['scope'],
             'organization_id' => (int) app('current_organization_id'),
         ]);
     }

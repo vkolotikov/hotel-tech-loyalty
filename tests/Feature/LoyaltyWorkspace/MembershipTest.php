@@ -294,7 +294,8 @@ class MembershipTest extends TestCase
 
     public function test_a_member_without_an_email_has_no_welcome_email(): void
     {
-        $this->grace->forceFill(['user_id' => null])->save();
+        // A member must retain its user in PostgreSQL; this is specifically the missing-address branch.
+        $this->grace->user->forceFill(['email' => ''])->save();
         $this->asStaffMember()->postJson($this->api("members/{$this->grace->id}/welcome"))->assertStatus(422)->assertJsonPath('error', 'no_email');
     }
 

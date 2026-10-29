@@ -21,6 +21,7 @@ class InsightsReportTest extends TestCase
     {
         parent::setUp();
         $this->setUpLoyaltyWorkspace();
+        $this->org->forceFill(['currency' => 'EUR'])->save();
         $this->setUpServiceBookingSchema();
         foreach (['guest_id', 'source_created_at'] as $column) {
             if (!Schema::hasColumn('booking_mirror', $column)) Schema::table('booking_mirror', fn (Blueprint $t) => $column === 'guest_id' ? $t->unsignedBigInteger($column)->nullable() : $t->timestamp($column)->nullable());
