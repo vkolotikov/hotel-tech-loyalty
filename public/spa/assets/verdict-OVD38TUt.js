@@ -1,0 +1,1 @@
+import{jn as e}from"./index-CK1ABZnb.js";function t(){let{t}=e();return e=>t(e.key,e.fallback,e.vars)}export{t};
