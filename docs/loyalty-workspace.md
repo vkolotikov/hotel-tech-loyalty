@@ -17,6 +17,13 @@ no longer stretches with them. All report data, routes and interactions are reta
 
 ## Who has it, and the ways in and back
 
+Guided setup and Settings style refinement (29 October 2026): `/loyalty/options/setup` uses the shared Figma frame,
+progress banner, four-step editor and actual draft preview. Existing tiers, validation, idempotent Apply and Skip
+remain; edited drafts warn before leaving. Sidebar Settings retains quick preferences and adds **All settings**
+at `/loyalty/settings`, with staged language/theme choices and the existing manager-only currency dry run and writer.
+Get started, Guide, Import and Duplicates also use the shared frame. Thirty other routes/tabs were audited on desktop
+and mobile. See `loyalty-redesign/21-SETTINGS-SETUP-REPORT.md` for exact Figma nodes, data integration and verification.
+
 Scan redesign (28 October, deployed and live verified): `/loyalty/scan` now follows the exact desktop/mobile
 Figma scanner, manual lookup, member actions and access-result screens. Normal scanning pauses after one
 result; camera/NFC/USB activation remains explicit. Existing continuous `/loyalty/scan/door`, linking,
@@ -809,6 +816,15 @@ files on disk): run them one after the other.
   redirect outliving its page; an extra or a voice config holding NULL in a NOT NULL column.
 
 ## Deploying
+
+- Guided setup and Settings, 2026-10-29: production **ce1f55e0f**, deployed source and next source-patch baseline
+  **43382945207c44ae6a6ce952272121e32e6a1d10**, feature `feature/loyalty-settings-setup-20261029`. Isolated parent
+  **8f7c18159**, final source patch **56c9049de**, whole-source parity across 152 allowed paths. Final artifact:
+  **5,717 frontend tests / 394 files**, **69 PHP tests / 719 assertions**, TypeScript, ESLint and build passed.
+  Compiled Chrome: **79 setup/settings checks + 60 style-audit views**, no runtime errors. Live content verified
+  **29 October, 11:03 Europe/Riga**: `index-CKJuCZ7B.js`, `LoyaltyApp-DVccFo2K.js` / `LoyaltyApp-CTQS2Qab.css`,
+  new/existing markers, three fonts, currency/options/start authentication, landing kit and retired CSS 404.
+  See `loyalty-redesign/21-SETTINGS-SETUP-REPORT.md`. Later documentation commits are not the source baseline.
 
 - Card & app, 2026-10-28: production **5eaffd69c**, feature source **f594c16d3** on
   `feature/loyalty-card-app-20261028`. Final source patch **711deccf4** was applied to **f5edeb363**;

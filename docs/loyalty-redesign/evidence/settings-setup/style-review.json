@@ -1146,8 +1146,8 @@
       "panels": []
     },
     {
-      "name": "templates",
-      "path": "/loyalty/campaigns?tab=templates",
+      "name": "sms",
+      "path": "/loyalty/campaigns?tab=sms",
       "width": 1440,
       "title": "Campaigns",
       "font": "\"L Poppins\", \"A Text\", sans-serif",
@@ -1157,8 +1157,8 @@
       "panels": []
     },
     {
-      "name": "templates",
-      "path": "/loyalty/campaigns?tab=templates",
+      "name": "sms",
+      "path": "/loyalty/campaigns?tab=sms",
       "width": 390,
       "title": "Campaigns",
       "font": "\"L Poppins\", \"A Text\", sans-serif",
