@@ -162,6 +162,10 @@ class RefundOperationsTest extends TestCase
 require $argv[1].'/vendor/autoload.php';
 $app = require $argv[1].'/bootstrap/app.php';
 $app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();
+Illuminate\Support\Facades\DB::statement("set lock_timeout = '2s'");
+Illuminate\Support\Facades\DB::statement("set statement_timeout = '10s'");
+App\Services\Booking\RefundOperations::connection()->statement("set lock_timeout = '2s'");
+App\Services\Booking\RefundOperations::connection()->statement("set statement_timeout = '10s'");
 $stripe = Mockery::mock(App\Services\StripeService::class);
 $stripe->shouldReceive('refund')->andReturnUsing(function($pi,$amount,$reason,$key) use ($argv) {
     file_put_contents($argv[3], $key.PHP_EOL, FILE_APPEND|LOCK_EX);
@@ -175,7 +179,9 @@ PHP;
         try {
             for ($i = 0; $i < 2; $i++) {
                 $process = new \Symfony\Component\Process\Process([PHP_BINARY, '-d', 'max_execution_time=0', '-r', $source, base_path(), (string) $this->org, $file]);
-                $process->setTimeout(15);
+                // Cold artifact autoloading on Windows can take several seconds before either worker reaches PG.
+                // Database lock/statement timeouts above still fail a real deadlock promptly.
+                $process->setTimeout(60);
                 $process->start();
                 $processes[] = $process;
             }
