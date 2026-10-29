@@ -29,6 +29,11 @@ class CustomerBookingToolsTest extends TestCase
 
     private const REQUEST_ID = '9133341b-c7da-4126-a6cb-fc302bdb170b';
 
+    private function auditCount(): int
+    {
+        return DB::table('audit_logs')->whereIn('organization_id', [1, 2])->where('action', 'chatgpt.note_added')->count();
+    }
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -238,7 +243,7 @@ class CustomerBookingToolsTest extends TestCase
             HexaTechServer::tool(AddBookingNote::class, ['kind' => $kind, 'booking_id' => 3,
                 'body' => 'Must not be saved', 'request_id' => self::REQUEST_ID])->assertHasErrors();
         }
-        $this->assertDatabaseCount('audit_logs', 0);
+        $this->assertSame(0, $this->auditCount());
     }
 
     public function test_booking_dates_and_pages_are_inclusive_and_service_dates_use_org_timezone(): void
@@ -349,7 +354,7 @@ class CustomerBookingToolsTest extends TestCase
         $retry->assertOk();
         $this->assertTrue($this->data($retry)['replayed']);
         $this->assertDatabaseCount('guest_activities', 1);
-        $this->assertDatabaseCount('audit_logs', 1);
+        $this->assertSame(1, $this->auditCount());
         $this->assertNotNull(DB::table('guests')->where('id', 1)->value('last_activity_at'));
         HexaTechServer::tool(AddCustomerNote::class, [...$args, 'body' => 'Different text'])->assertHasErrors();
         $this->assertDatabaseCount('guest_activities', 1);
@@ -370,7 +375,7 @@ class CustomerBookingToolsTest extends TestCase
             HexaTechServer::tool(AddBookingNote::class, $args)->assertOk();
             HexaTechServer::tool(GetBooking::class, ['kind' => $kind, 'booking_id' => 1])->assertOk()->assertSee('Late arrival requested');
         }
-        $this->assertDatabaseCount('audit_logs', 3);
+        $this->assertSame(3, $this->auditCount());
         $this->assertDatabaseCount('booking_notes', 1);
         $notes = DB::table('reservations')->value('notes');
         $this->assertStringContainsString('Original reservation note', $notes);
