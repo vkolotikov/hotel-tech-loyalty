@@ -5,7 +5,53 @@ The owner identified the existing **card builder** and authorized a controlled e
 Existing credentials were read in memory. No key, password, certificate bundle, access token or signed
 Google save URL was printed, committed or sent to an unrelated service.
 
-## Follow-up: target confirmed and Google draft created
+## Latest checkpoint: production identity and settings saved; file uploads pending
+
+The owner signed in and then delegated the shared/separate-brand decision ("do what is the best to do"). Live
+bootstrap identifies **organisation 19, Kolotikovs**, staff user **62**, active owner, wallet feature enabled.
+Its default brand is **FDS Cards (23)**; **Hexa Academy (42)** is also in this organisation. This is the live
+account the owner selected, not the local `FDS Cards UK` organisation (local ID 2). Preserve the existing single
+loyalty programme and shared organisation-level wallet configuration; do not split balances or silently create
+separate organisations. A future brand-specific wallet experience would need explicit model/route work.
+
+At the **18:37 Europe/Riga** checkpoint, saved the non-secret wallet settings through the existing production
+`PUT /api/v1/admin/loyalty/wallet?brand_id=all` (200), then independently read them back and reloaded/inspected
+the live Wallet page:
+
+- Apple pass ID: `pass.co.uk.fds-cards.digitalcard`; team: `HNWSAQ5CQ9`; pass name: `FDS Cards UK`.
+- Google issuer: `3388000000023129907`; class suffix: `hexatech_fds_cards_uk_loyalty`.
+- **`is_active = false`**. Existing wallet colours and member-app appearance were preserved.
+- All three upload flags are **false**. Apple lacks certificate/WWDR; Google lacks service account. The screen
+  correctly shows missing files and the off switch. No signing secrets reached production in this attempt.
+
+The Chrome `upload_file` tool refused both the private E: work folder and the private file under the declared
+project root: **"Access denied ... is not within any of the configured workspace roots."** Do not retry through
+a hidden bridge or expose credentials in tool arguments/logs. The one-time combined transfer files were removed,
+and the temporary file input was removed from the browser. No token was exported and no credential contents were
+printed. Direct API mutations used only public identifiers and the disabled flag.
+
+Prepared three files for the owner to upload using the normal UI, in the Git-ignored folder
+`C:/wamp64/www/Hexa-Tech/storage/app/private/wallet-transfer/`:
+
+1. `apple-pass.p12`: same verified certificate/private key, repacked with a **blank** upload password. Opened
+   and certificate fingerprint compared before writing; the original builder P12/password remain unchanged.
+2. `apple-wwdr.pem`: the verified Apple intermediate.
+3. `google-wallet.json`: the existing authorized service account.
+
+The directory has inheritance disabled and only the current Windows user and SYSTEM have access; `.htaccess`
+denies web access. `UPLOAD-INSTRUCTIONS.txt` explains the three upload slots. These temporary private-key copies
+are intentionally retained for the manual upload and **must be removed after successful upload verification**.
+Never commit or attach them to chat. The owner has not yet reported completing those uploads.
+
+Resume in the `fds-wallet-setup` browser context at `/loyalty/app?tab=wallet`, verifying org 19/staff 62 first.
+After the owner's uploads, GET the existing wallet API and check all three flags plus no missing items other
+than `switched_off`. Delete only the three named temporary files once verified. Keep delivery disabled while
+the Google class remains a draft and the artwork/update/device acceptance work below remains open.
+
+No application source/build or local wallet database was changed. The existing production source revision and
+source-patch baseline are unchanged; these are live configuration writes plus documentation, not a code deploy.
+
+## Earlier follow-up: target confirmed and Google draft created
 
 The owner confirmed **FDS Cards UK** as the first organisation and confirmed the test email was **received in
 the inbox**. This closes receipt of the controlled SMTP test; production campaign/worker delivery is still untested.
@@ -28,8 +74,8 @@ the local database. The Windows computer-use runtime still fails to initialize, 
 Private reviewable request: `E:/Hexa-Tech-launch-20261029/fds-google-loyalty-class-draft.json`; sanitized provider
 evidence: `fds-google-class-result.json` in the same directory. The creation helper checks the known issuer,
 creates only when the exact new ID returns 404, and never overwrites an existing class or member object.
-Production/local HexaTech wallet configuration rows remain unchanged. Resume by verifying the FDS login,
-its settings and intended test membership before transferring credentials or enabling passes.
+At that earlier checkpoint, production/local HexaTech wallet configuration rows were unchanged. The latest
+checkpoint above records the later production identity verification and non-secret configuration write.
 
 ## Confirmed results
 
@@ -65,8 +111,8 @@ GenericClass and is not a valid replacement for the LoyaltyClass referenced by H
 
 Before activation:
 
-1. The owner selected `FDS Cards UK`. Its local ID 2 does not establish its production ID; verify the production
-   identity after the requested sign-in.
+1. Production identity is now verified: org 19 (`Kolotikovs`), default brand 23 (`FDS Cards`). The owner delegated
+   scope choice and the existing shared configuration is retained. Never use local org ID 2 in production.
 2. Inspect the authenticated production organisation and current wallet settings; use the existing
    `WalletSettings` writer/upload endpoints so files remain encrypted in the organisation's database row.
    Do not copy local numeric IDs into production or deploy secrets in source/build assets.
@@ -75,7 +121,8 @@ Before activation:
 4. Save and scan a real test membership on iOS and Android. These services issue QR passes; no NFC/Smart Tap
    acceptance or ACR122U wallet interaction has been demonstrated.
 
-The original browser-connection block has narrowed to the correct production login, as recorded above.
+The original browser-connection/login block is resolved. Automated credential file uploads are blocked by the
+browser tool's configured file-access roots, as recorded in the latest checkpoint.
 No Laravel Cloud, SiteGround, Apple console or Google console settings were inspected or changed. Google access
 and the new draft were handled directly through its official API.
 
@@ -99,8 +146,9 @@ as described in the operations report.
 
 Private, non-repository helpers and sanitized results are in `E:/Hexa-Tech-launch-20261029/`:
 `wallet-mail-preflight.php`, `google-wallet-access-result.json`, `wallet-generation-result.json`, and
-`controlled-email-20261029-attempt.json`. The test pass contains synthetic data only. No new persistent private
-key copies were made. The application signer uses its existing temporary-file cleanup.
+`controlled-email-20261029-attempt.json`. The test pass contains synthetic data only. The initial checks made no
+new persistent private-key copies; the three later temporary manual-upload files are listed in the latest
+checkpoint and require cleanup. The application signer uses its existing temporary-file cleanup.
 
 Scoped tests: `Settings/WalletConfigModelTest.php`, `Admin/WalletConfigEndpointsTest.php`,
 `Member/AppleWalletLinkTest.php`, `LoyaltyWorkspace/WalletTest.php` under `tests/Feature/`.

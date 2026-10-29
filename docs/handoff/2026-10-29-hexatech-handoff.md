@@ -3,7 +3,36 @@
 Read this first, then `2026-10-28-hexatech-handoff.md` for previous milestones and
 `2026-10-27-hexatech-handoff.md` for the full environment and history. Root AGENTS.md and CLAUDE.md still apply.
 
-## Latest follow-up: FDS Cards UK wallet draft and confirmed email receipt
+## Latest checkpoint: production wallet identifiers saved, manual file uploads needed
+
+Owner signed in, then delegated the shared/separate choice ("do what is the best to do"). Verified live bootstrap:
+**org 19 Kolotikovs**, staff/user **62**, active owner, wallet plan feature. Its brands are **FDS Cards (23,
+default)** and **Hexa Academy (42)**. Keep the current shared loyalty programme/configuration; do not create
+duplicate memberships or assume local org ID 2 is the live FDS organisation. The earlier Forrest Glamp session
+remains untouched.
+
+Saved/read back production wallet identifiers via the existing API (200), then reloaded and inspected the UI:
+Apple `pass.co.uk.fds-cards.digitalcard`, team `HNWSAQ5CQ9`, pass name `FDS Cards UK`; Google issuer
+`3388000000023129907`, class suffix `hexatech_fds_cards_uk_loyalty`. **Passes are OFF (`is_active=false`).**
+Existing colours/app look preserved. **No credential file was uploaded**: all three flags remain false.
+
+Chrome file upload rejects both E: and the declared C: project root as outside its configured workspace roots.
+Do not bypass that restriction or print secrets. Prepared manual-upload files in the **Git-ignored, ACL-restricted**
+`storage/app/private/wallet-transfer/`: `apple-pass.p12` (blank password; same verified cert/key), `apple-wwdr.pem`,
+`google-wallet.json`, plus `UPLOAD-INSTRUCTIONS.txt`. Original builder credentials unchanged. These three private
+temporary files are retained for the owner and **must be removed after verified upload**. Combined `credentials.json`
+transfer files from both directories and temporary DOM inputs were removed. `.htaccess` denies web access.
+
+Resume in Chrome's isolated `fds-wallet-setup` context, currently `/loyalty/app?tab=wallet`. Owner needs to use the
+three normal upload buttons, then report completion. Recheck org 19/user 62, three upload flags and missing arrays;
+only `switched_off` should remain after valid uploads. Keep OFF: Google class remains draft; branded artwork,
+automatic updates and device save/scan acceptance remain open. No native app is required for the wallet tests.
+
+Report updated at **18:37 Europe/Riga**: `docs/audits/2026-10-29-wallet-email-preflight.md`. No application source,
+build or local wallet rows changed; production revision and patch baseline below remain valid. User email receipt
+is confirmed in inbox; no second email was sent.
+
+## Earlier follow-up: FDS Cards UK wallet draft and confirmed email receipt
 
 The owner confirmed **FDS Cards UK** as the first wallet organisation and confirmed the controlled email arrived
 in the **inbox**. No second email was sent. Created Google LoyaltyClass
