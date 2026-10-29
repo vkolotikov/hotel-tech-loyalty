@@ -1,0 +1,46 @@
+/* PG-07: the existing four-step editor in the shared Figma frame. */
+[data-loyalty] .l-gs-page { padding-top: 24px; gap: 16px; }
+[data-loyalty] .l-gs-workspace, [data-loyalty] .l-gs-main { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+[data-loyalty][data-redesign] .l-gs-progress { padding: 20px; display: flex; flex-direction: column; gap: 8px; background: var(--l-rd-emphasis); }
+[data-loyalty] .l-gs-progress > div { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+[data-loyalty] .l-gs-progress p, [data-loyalty] .l-gs-progress span { font-size: 13px; line-height: 22px; }
+[data-loyalty] .l-gs-progress progress { width: 100%; height: 6px; border: 0; border-radius: 4px; overflow: hidden; background: var(--l-ov-recessed); }
+[data-loyalty] .l-gs-progress progress::-webkit-progress-bar { background: var(--l-ov-recessed); }
+[data-loyalty] .l-gs-progress progress::-webkit-progress-value { background: var(--l-ov-cyan); }
+[data-loyalty] .l-gs-progress progress::-moz-progress-bar { background: var(--l-ov-cyan); }
+[data-loyalty] .l-gs-columns { display: grid; grid-template-columns: minmax(0,744fr) minmax(280px,376fr); align-items: start; gap: 24px; }
+[data-loyalty] .l-gs-columns:has(> :only-child) { grid-template-columns: minmax(0,1fr); }
+[data-loyalty] .l-gs-steps { padding: 16px; display: flex; gap: 16px; align-items: center; flex-wrap: wrap; }
+[data-loyalty] .l-gs-steps ol { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); flex: 1 1 100%; gap: 8px; list-style: none; margin: 0; padding: 0; }
+[data-loyalty] .l-gs-steps li { border-radius: 12px; border: 1px solid var(--l-ov-border); min-width: 0; }
+[data-loyalty] .l-gs-steps li[aria-current] { background: var(--l-rd-emphasis); border-color: var(--l-ov-cyan); }
+[data-loyalty] .l-gs-steps li[data-complete] { border-color: var(--l-ov-green); }
+[data-loyalty] .l-gs-steps li > button { display: flex; gap: 8px; align-items: center; text-align: left; width: 100%; min-height: 52px; padding: 10px; font-size: 12px; line-height: 18px; }
+[data-loyalty] .l-gs-steps li > button:disabled { color: var(--l-ov-muted); }
+[data-loyalty] .l-gs-steps > button { margin-left: auto; }
+[data-loyalty] .l-gs-form { display: flex; flex-direction: column; gap: 20px; padding: 20px; }
+[data-loyalty] .l-gs-form > div > p { font-size: 12px; }
+[data-loyalty] .l-gs-form fieldset { min-width: 0; }
+[data-loyalty] .l-gs-form [data-choice], [data-loyalty] .l-gs-form [data-tick], [data-loyalty] .l-gs-form [data-configure] { background: var(--l-ov-recessed); border-color: var(--l-ov-border); border-radius: 12px; }
+[data-loyalty] .l-gs-form [data-checked] { background: var(--l-rd-emphasis); border-color: var(--l-ov-cyan); }
+[data-loyalty] .l-gs-presets summary { color: var(--l-ov-muted); font-size: 12px; line-height: 20px; padding: 12px 0; cursor: pointer; }
+[data-loyalty] .l-gs-actions { display: flex; justify-content: space-between; gap: 16px; padding-top: 16px; border-top: 1px solid var(--l-ov-border); }
+[data-loyalty] .l-gs-form button.bg-a-accent { border-radius: 10px; background: var(--l-ov-primary); box-shadow: var(--l-ov-shadow); }
+[data-loyalty] .l-gs-form button.bg-a-surface { border-radius: 10px; background: linear-gradient(175deg,var(--l-ov-raised),var(--l-ov-bottom)); box-shadow: var(--l-ov-shadow); }
+[data-loyalty] .l-gs-preview { display: flex; flex-direction: column; gap: 16px; padding: 20px; min-width: 0; }
+[data-loyalty] .l-gs-preview > small { color: var(--l-ov-cyan); font-size: 12px; }
+[data-loyalty] .l-gs-preview > div { min-width: 0; max-height: 380px; overflow-y: auto; scrollbar-width: thin; }
+[data-loyalty] .l-gs-preview ul { list-style: none; padding: 16px; margin: 0; border-radius: 12px; background: var(--l-rd-emphasis); display: flex; flex-direction: column; gap: 16px; }
+[data-loyalty] .l-gs-preview li + li { border-top: 1px solid var(--l-ov-border); padding-top: 16px; }
+[data-loyalty] .l-gs-preview strong { display: block; font-size: 14px; line-height: 22px; margin-bottom: 8px; }
+[data-loyalty] .l-gs-preview p { font-size: 12px; line-height: 20px; color: var(--l-ov-secondary); overflow-wrap: anywhere; }
+[data-loyalty] .l-gs-optional { padding: 16px; display: flex; flex-direction: column; gap: 8px; }
+[data-loyalty] .l-gs-optional h3 { font-size: 14px; }
+[data-loyalty] .l-gs-optional > div { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 16px; }
+[data-loyalty] .l-gs-optional .l-ov-link { font-size: 12px; }
+[data-loyalty][data-redesign] .l-gs-form, [data-loyalty][data-redesign] .l-gs-preview { padding: 20px; }
+[data-loyalty][data-overview] .l-gs-dialog { width: min(560px,calc(100vw - 32px)); height: fit-content; border-radius: 16px; }
+[data-loyalty][data-overview] .l-gs-dialog .l-ov-dialog-body { display: flex; flex-direction: column; gap: 20px; font-size: 14px; line-height: 22px; }
+[data-loyalty] .l-gs-dialog-actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 12px; }
+@media (max-width:1150px) { [data-loyalty] .l-gs-columns { grid-template-columns: minmax(0,1fr); } }
+@media (max-width:600px) { [data-loyalty] .l-gs-form, [data-loyalty] .l-gs-preview, [data-loyalty] .l-gs-progress { padding: 16px; } [data-loyalty] .l-gs-steps ol { grid-template-columns: repeat(2,minmax(0,1fr)); } [data-loyalty] .l-gs-progress > div { flex-wrap: wrap; gap: 4px; } }

@@ -1,0 +1,17 @@
+/* The remaining Loyalty utility routes share the frame without changing Content or full admin. */
+[data-loyalty][data-overview] { --l-ov-primary: linear-gradient(180deg,#37b6e9 0%,#4b4ced 23%,#4b4ced 100%); }
+[data-loyalty] .l-utility-content > div { padding: 24px 32px 32px; display: flex; flex-direction: column; gap: 20px; min-width: 0; }
+[data-loyalty] .l-utility-content > div > * { margin-block: 0; }
+[data-loyalty] .l-utility-content > div > :not([hidden]) ~ :not([hidden]) { margin-block: 0; }
+[data-loyalty] .l-utility-content .font-a-display { font-family: var(--a-font-text); font-weight: 600; }
+[data-loyalty] .l-utility-content h1 { font-size: 32px; line-height: 44px; }
+[data-loyalty] .l-utility-content .bg-a-surface { background: linear-gradient(160deg,var(--l-ov-raised),var(--l-ov-bottom) 70%); border-color: var(--l-rd-accent-border); }
+[data-loyalty] .l-utility-content input:not([type=checkbox]):not([type=radio]):not([type=file]), [data-loyalty] .l-utility-content select { background: var(--l-ov-recessed); color: var(--l-ov-text); border-color: var(--l-ov-border); box-shadow: var(--l-ov-inset); border-radius: 10px; min-height: 44px; max-width: 100%; }
+[data-loyalty] .l-utility-content button.bg-a-accent, [data-loyalty] .l-utility-content a.bg-a-accent { background: var(--l-ov-primary); border-radius: 10px; box-shadow: var(--l-ov-shadow); }
+[data-loyalty] .l-utility-content button.bg-a-surface, [data-loyalty] .l-utility-content a.bg-a-surface { border-radius: 10px; box-shadow: var(--l-ov-shadow); }
+[data-loyalty] .l-quick-settings { display: flex; flex-direction: column; gap: 12px; }
+[data-loyalty] .l-quick-settings > :first-child { color: var(--l-ov-cyan); font-weight: 500; border-bottom: 1px solid var(--l-ov-border); border-radius: 0; padding-bottom: 12px; }
+[data-loyalty] .l-quick-settings select { background: var(--l-ov-recessed); box-shadow: var(--l-ov-inset); color: var(--l-ov-text); border: 1px solid var(--l-ov-border); border-radius: 10px; min-height: 44px; }
+[data-loyalty] .l-quick-settings [aria-pressed=true] { background: var(--l-ov-primary); color: #f5f7fb; }
+[data-loyalty][data-settings] [data-frame-footer] > div:first-child > button { background: var(--l-rd-emphasis); border: 1px solid var(--l-ov-border); }
+@media (max-width:767px) { [data-loyalty] .l-utility-content > div { padding: 20px 16px 28px; } [data-loyalty] .l-utility-content [data-step] > div { min-width: 0; flex-basis: 100%; } }

@@ -36,7 +36,7 @@ export function DuplicatesPage() {
       <Link to="/loyalty" className="inline-flex items-center gap-1 text-sm text-a-text-2 hover:text-a-text">
         <ArrowLeft size={15} aria-hidden />{t('loyalty.member.back', 'All members')}
       </Link>
-      <PageHeader title={t('loyalty.membership.duplicates.title', 'Duplicates')}
+      <PageHeader stacked title={t('loyalty.membership.duplicates.title', 'Duplicates')}
         line={t('loyalty.membership.duplicates.line', 'Members who look like one person. Merging keeps one and moves everything of the other to it.')} />
       {manager
         ? <Pairs />

@@ -1,0 +1,19 @@
+{
+  "source": "de39dc9a9e5c26898a13821dd68554f113c0cb7d",
+  "production_parent": "59a6bda89ca5e47183135489550325c029f6c1b9",
+  "production_commit": "8f7c18159e6ae6d082c7f0db7706592cbdb1fbbb",
+  "source_paths": 34,
+  "whole_source_parity": true,
+  "typescript": "passed",
+  "loyalty_eslint": "passed",
+  "frontend": { "passed": 5704, "files": 394, "failed": 0 },
+  "php": { "scope": "tests/Feature/LoyaltyWorkspace/ --filter=Insights", "passed": 33, "assertions": 276, "failed": 0 },
+  "production_build": "passed",
+  "compiled_browser": { "layout": 48, "existing_interactions_and_states": 59, "runtime_errors": [] },
+  "figma": { "file": "d6IGmk3hOoMw0V5rONbI1A", "frame": "136:6541", "session": "dc92ed43-b2ec-495c-9711-48bb5cbb3e45" },
+  "visual_comparison": "Compiled desktop and mobile renders inspected against IN-01 and the user screenshot.",
+  "browser_data": "Intercepted local API fixtures; no production member writes.",
+  "backend_changes": false,
+  "migrations": false,
+  "dependency_changes": false
+}

@@ -38,7 +38,7 @@ export function ImportPage() {
       <Link to="/loyalty" className="inline-flex items-center gap-1 text-sm text-a-text-2 hover:text-a-text">
         <ArrowLeft size={15} aria-hidden />{t('loyalty.member.back', 'All members')}
       </Link>
-      <PageHeader title={t('loyalty.membership.import.title', 'Import members')}
+      <PageHeader stacked title={t('loyalty.membership.import.title', 'Import members')}
         line={t('loyalty.membership.import.line', 'Bring existing customers into the programme from a CSV file, with their points and join dates.')} />
       {manager
         ? <Importer />

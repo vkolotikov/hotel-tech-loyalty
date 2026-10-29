@@ -23,16 +23,19 @@ interface FootProps {
   onFind: () => void
   /** The workspace's Guide, where it has one (HexaTech Loyalty, owner 2026-10-26): its address and its name. */
   guide?: { to: string; label: string }
+  /** Optional full settings page; quick preferences remain available. */
+  settings?: { to: string; label: string; onSelect?: () => void }
 }
 
 const ITEM = 'flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-sm text-a-text hover:bg-a-surface-2 focus-visible:bg-a-surface-2'
 const SELECT = 'w-full rounded-md border border-a-border bg-a-surface px-2 py-1.5 text-sm text-a-text'
 
 /** Settings, opened (spec 2026-10-21 §4.1): Light / Dark / Auto, the language, and Full admin where there is one. */
-export function SettingsPanel({ look, fullAdmin, onLeave }: Pick<FootProps, 'look' | 'fullAdmin' | 'onLeave'>) {
+export function SettingsPanel({ look, fullAdmin, onLeave, settings }: Pick<FootProps, 'look' | 'fullAdmin' | 'onLeave' | 'settings'>) {
   const { t } = useTranslation()
   return (
-    <div className="space-y-2 p-1">
+    <div className={`space-y-2 p-1 ${settings ? 'l-quick-settings' : ''}`}>
+      {settings && <Link to={settings.to} className={ITEM} onClick={e => leave(onLeave, () => settings.onSelect?.(), e)}>{settings.label}</Link>}
       <ThemeSwitch value={look.theme} onChange={look.setTheme} tone="surface" />
       <div className="px-1"><LanguageSelect className={SELECT} /></div>
       {fullAdmin !== null && (
@@ -94,7 +97,7 @@ export function FrameFooter(props: FootProps) {
   return (
     <div data-frame-footer="" className="mt-auto space-y-1 border-t border-a-side-2 pt-4">
       <SideMenu label={t('workspace.shell.settings', 'Settings')} icon={Settings} kind="panel" place={place} slim={slim} buttonClassName={row}>
-        <SettingsPanel look={look} fullAdmin={props.fullAdmin} onLeave={props.onLeave} />
+        <SettingsPanel look={look} fullAdmin={props.fullAdmin} onLeave={props.onLeave} settings={props.settings} />
       </SideMenu>
       <SideMenu label={t('workspace.shell.help', 'Help & resources')} icon={LifeBuoy} kind="menu" place={place} slim={slim} buttonClassName={row}>
         <HelpList onShortcuts={props.onShortcuts} onFind={props.onFind} guide={props.guide} />
@@ -130,7 +133,7 @@ export function PhoneMenu(props: FootProps) {
         <div className="break-words text-sm font-medium text-a-text">{person}</div>
         <div className="text-xs text-a-text-2">{t(...roleLabelKey(role))}</div>
       </div>
-      <SettingsPanel look={look} fullAdmin={props.fullAdmin} onLeave={props.onLeave} />
+      <SettingsPanel look={look} fullAdmin={props.fullAdmin} onLeave={props.onLeave} settings={props.settings} />
       {props.guide && (
         <Link to={props.guide.to} onClick={(e) => shut(e.currentTarget)} className={ITEM}>
           <BookOpen size={16} aria-hidden className="shrink-0 text-a-text-2" />{props.guide.label}
