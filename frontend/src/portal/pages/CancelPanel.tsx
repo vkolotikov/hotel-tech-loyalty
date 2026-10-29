@@ -45,7 +45,7 @@ export function CancelPanel({ booking: b, venue, offer, stage, error, result, on
   const money = (amount: number, currency: string) => formatMoney(amount, currency, i18n.language)
   // A date is an element, not a word in a sentence: the label and the <time> sit side by side, in the
   // venue's own time zone, and no translation has to place a date inside its grammar.
-  const deadline = b.cancel_deadline
+  const deadline = b.kind === 'service' && b.cancel_deadline
     ? <time dateTime={b.cancel_deadline}>{formatDateTime(b.cancel_deadline, i18n.language, venue.timezone)}</time>
     : null
 
@@ -119,7 +119,9 @@ export function CancelPanel({ booking: b, venue, offer, stage, error, result, on
         {promise === 'venue' && <p>{t('portal.bookings.cancel_money_venue', 'This booking was paid at {{venue}}. They will arrange any refund with you.', { venue: venue.name })}</p>}
         {promise === 'nothing' && <p>{t('portal.bookings.cancel_nothing', 'Nothing has been charged for this booking.')}</p>}
       </div>
-      {error && <Notice tone="danger">{t(cancelErrorKey(error), cancelErrorFallback(error))}</Notice>}
+      {error && <Notice tone="danger">{b.kind === 'stay' && error === 'outside_policy'
+        ? t('portal.bookings.contact_to_change', 'To change or cancel, contact {{venue}}.', { venue: venue.name })
+        : t(cancelErrorKey(error), cancelErrorFallback(error))}</Notice>}
       <div className="flex gap-2 justify-end">
         <Button type="button" variant="secondary" disabled={busy} onClick={onKeep}>{t('portal.bookings.cancel_keep', 'Keep it')}</Button>
         <Button type="button" variant="danger" loading={busy} onClick={onConfirm}>

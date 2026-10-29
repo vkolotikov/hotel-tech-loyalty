@@ -519,6 +519,11 @@ checkout's `node_modules` has them.
 
 ## Stays (phase 3)
 
+Owner update, 29 October 2026: room-booking review, booking details and confirmation emails (including
+staff-approved reservations) no longer repeat cancellation-policy text or a "free cancellation until" deadline.
+The organisation publishes its policy on its website. Check-in/out times, booking actions, API fields,
+server cancellation eligibility and refund outcomes remain unchanged; appointment policy displays are unchanged.
+
 A member books a room at `/portal/book/stay` in four steps: dates and party, room, review, pay
 (`frontend/src/portal/pages/stay/`, `StayBook.tsx`, `staySteps.ts`). Backend entry point
 `App\Http\Controllers\Api\V1\Member\Portal\PortalStayBookingController`.

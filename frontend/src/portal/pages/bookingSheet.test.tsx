@@ -108,13 +108,15 @@ describe('BookingSheet', () => {
     expect(html).not.toContain('Stays: two days ahead.')
   })
 
-  // The test above only ever renders kind="service", so it never exercises the
-  // booking_cancellation_policy branch — this one does.
-  it('shows the stay\'s own cancellation policy for a stay booking, not the services\' one', () => {
+  it('keeps stay details and cancellation available without repeating policy copy', () => {
     const client = new QueryClient()
     client.setQueryData(['portal-booking', 'stay', 9], stayBooking)
     const html = render(client, { ...data, policies: { ...data.policies, services_cancellation_policy: 'Appointments: a day ahead.', booking_cancellation_policy: 'Stays: two days ahead.' } }, 'stay')
-    expect(html).toContain('Stays: two days ahead.')
+    expect(html).not.toContain('Stays: two days ahead.')
     expect(html).not.toContain('Appointments: a day ahead.')
+    expect(html).not.toContain('Cancellation policy')
+    expect(html).not.toContain('Free cancellation')
+    expect(html).toContain('Cancel booking')
+    expect(html).toContain('Add to calendar')
   })
 })

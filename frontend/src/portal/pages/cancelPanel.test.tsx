@@ -116,6 +116,12 @@ describe('CancelPanel', () => {
     expect(html).toContain('To change or cancel, contact Numa.')
     expect(html).toContain('href="mailto:hi@numa.test"')
     expect(html).not.toContain('Cancel booking')
+
+    const stay = panel({ offer: 'ended', booking: { ...booking, kind: 'stay', can_cancel: false } })
+    expect(stay).not.toContain('Free cancellation')
+    expect(stay).not.toContain('<time')
+    expect(stay).toContain('To change or cancel, contact Numa.')
+    expect(stay).toContain('href="mailto:hi@numa.test"')
   })
 
   it('points to the venue for a booking that cannot be cancelled here', () => {

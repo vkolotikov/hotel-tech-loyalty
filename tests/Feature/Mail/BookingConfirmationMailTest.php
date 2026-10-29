@@ -290,14 +290,15 @@ class BookingConfirmationMailTest extends TestCase
         $this->assertStringNotContainsString('−EUR', $html);
     }
 
-    public function test_the_cancellation_policy_the_venue_saved_is_shown(): void
+    public function test_cancellation_policy_copy_is_omitted_from_room_confirmation(): void
     {
-        // Settings → Booking saves the text under `cancellation_policy`; the
-        // template also falls back to the legacy `cancellation` key below.
+        // The venue publishes its policy on its website. Both current and legacy
+        // settings can still be passed by booking and staff confirmation callers.
         $html = $this->makeMail(['policies' => ['cancellation_policy' => 'Free cancellation until 48 hours before arrival.']])->render();
-        $this->assertStringContainsString('Free cancellation until 48 hours before arrival.', $html);
+        $this->assertStringNotContainsString('Free cancellation until 48 hours before arrival.', $html);
+        $this->assertStringNotContainsString('Cancellation policy:', $html);
 
         $legacy = $this->makeMail(['policies' => ['cancellation' => 'Older key still works.']])->render();
-        $this->assertStringContainsString('Older key still works.', $legacy);
+        $this->assertStringNotContainsString('Older key still works.', $legacy);
     }
 }

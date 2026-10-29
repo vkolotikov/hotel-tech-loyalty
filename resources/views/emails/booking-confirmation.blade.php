@@ -262,12 +262,6 @@
                 <tr><td class="lbl">Address</td><td class="val">{{ $hotelAddress }}</td></tr>
             </table>
         @endif
-        @php $cancellationPolicy = $policies['cancellation_policy'] ?? $policies['cancellation'] ?? null; @endphp
-        @if(!empty($cancellationPolicy))
-            <p style="font-size:12px;color:rgba(255,255,255,0.6);line-height:1.65;margin:14px 0 0;">
-                <strong style="color:rgba(255,255,255,0.82);">Cancellation policy:</strong> {{ $cancellationPolicy }}
-            </p>
-        @endif
         <p style="font-size:12px;color:rgba(255,255,255,0.5);line-height:1.65;margin:14px 0 0;">
             We'll send your pre-arrival details a few days before check-in. If you have any
             questions, simply reply to this email — we're happy to help.
