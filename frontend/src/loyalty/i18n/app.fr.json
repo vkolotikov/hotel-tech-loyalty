@@ -256,8 +256,8 @@
       "pass_type_id": "Un Pass Type ID commence par « pass. », par ex. pass.com.yourvenue.loyalty.",
       "team_id": "Un Team ID compte 10 majuscules ou chiffres, par ex. ABCDE12345."
     },
-    "ready": "Prêt",
-    "ready_line": "Les membres peuvent ajouter leur carte.",
+    "ready": "Prêt à tester",
+    "ready_line": "Les paramètres sont enregistrés. Vérifiez l’approbation du fournisseur et testez l’ajout d’une carte sur un appareil réel avant le lancement.",
     "replace": "Remplacer…",
     "save": "Enregistrer le pass Wallet",
     "saved": "Enregistré.",

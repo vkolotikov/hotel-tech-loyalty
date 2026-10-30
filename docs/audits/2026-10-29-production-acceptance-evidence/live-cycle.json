@@ -1,0 +1,31 @@
+{
+  "checked_at": "2026-10-29T18:25:22+00:00",
+  "tasks": [
+    {
+      "command": "appointments:send-reminders",
+      "status": "success",
+      "finished_at": "2026-10-29 18:25:12"
+    },
+    {
+      "command": "bookings:retry-pms-sync",
+      "status": "success",
+      "finished_at": "2026-10-29 18:25:12"
+    },
+    {
+      "command": "bookings:sync-pms",
+      "status": "success",
+      "finished_at": "2026-10-29 18:25:11"
+    },
+    {
+      "command": "loyalty:retry-visit-effects",
+      "status": "success",
+      "finished_at": "2026-10-29 18:25:13"
+    },
+    {
+      "command": "loyalty:send-scheduled",
+      "status": "success",
+      "finished_at": "2026-10-29 18:25:13"
+    }
+  ],
+  "failed_jobs": 0
+}

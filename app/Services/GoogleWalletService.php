@@ -23,7 +23,7 @@ use App\Models\WalletConfig;
  */
 class GoogleWalletService
 {
-    public function buildSaveUrl(LoyaltyMember $member, WalletConfig $config): string
+    public function buildSaveUrl(LoyaltyMember $member, WalletConfig $config, ?\App\Models\WalletPass $pass = null): string
     {
         if (!$config->googleReady()) {
             throw new \RuntimeException('Google Wallet not configured for this organization.');
@@ -43,7 +43,7 @@ class GoogleWalletService
             throw new \RuntimeException('Invalid Google service account JSON.');
         }
 
-        $loyaltyObject = $this->buildLoyaltyObject($member, $config);
+        $loyaltyObject = $pass ? app(\App\Services\Wallet\Passes::class)->payload($pass, $config) : $this->payload($member, $config);
 
         // The JWT payload wraps the object inline (typ=savetowallet).
         // For a one-off issuance like this, inline is the simplest +
@@ -64,6 +64,11 @@ class GoogleWalletService
     }
 
     private function buildLoyaltyObject(LoyaltyMember $member, WalletConfig $config): array
+    {
+        return $this->payload($member, $config);
+    }
+
+    public function payload(LoyaltyMember $member, WalletConfig $config): array
     {
         $issuerId   = $config->google_issuer_id;
         $classId    = "{$issuerId}.{$config->google_class_suffix}";
@@ -101,7 +106,7 @@ class GoogleWalletService
      * concatenated, signed with openssl, signature base64url-appended.
      * No library needed; the spec is short.
      */
-    private function signJwt(array $payload, string $privateKeyPem): string
+    public function signJwt(array $payload, string $privateKeyPem): string
     {
         $header = ['alg' => 'RS256', 'typ' => 'JWT'];
 

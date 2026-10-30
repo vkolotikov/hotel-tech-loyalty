@@ -1,6 +1,6 @@
 // Run after card-app.browser.js. All API requests remain intercepted local fixtures.
 async page => {
-  const base=new URL(page.url()).origin;if(!/^http:\/\/(127\.0\.0\.1|localhost):(5173|5175|5810)$/.test(base))throw Error('Local fixtures required');
+  const base=new URL(page.url()).origin;if(!['127.0.0.1','localhost'].includes(new URL(base).hostname))throw Error('Local fixtures required');
   const root='C:/wamp64/www/Hexa-Tech/docs/loyalty-redesign/evidence/card-app/',checks=[];
   const ok=(v,n)=>{if(!v)throw Error(n);checks.push(n);console.log('PASS: '+n)},button=name=>page.getByRole('button',{name,exact:true});
   const fixture=body=>page.evaluate(async body=>(await fetch('/api/v1/admin/loyalty/__fixture',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})).json(),body);

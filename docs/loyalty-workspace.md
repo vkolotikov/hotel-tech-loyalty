@@ -1,5 +1,14 @@
 # HexaTech Loyalty — runbook
 
+Wallet updates, media recovery and Windows reader (30 October 2026): see `wallet-and-media-operations.md` for
+the protocol, scheduler, recovery commands and outstanding physical acceptance.
+
+Production acceptance follow-up (29 October 2026): the full admin's email send now uses `CampaignStart`,
+including its explicit-member/HTML compatibility path. Recipient counts reflect eligibility, invalid segment
+rules fail closed, and queue refusal restores the draft. Scheduler reporting is registered through
+`ScheduleServiceProvider`; missing task observations show unobserved in System status. See
+`docs/audits/2026-10-29-production-acceptance.md` for live infrastructure evidence and remaining acceptance.
+
 HexaTech Loyalty (`/loyalty`) is the loyalty programme as its own workspace beside the full admin, a sibling of
 HexaTech Appointments and HexaTech Content, in Content's cards look. It is another shell over the same records —
 `loyalty_members`, `loyalty_tiers`, `points_transactions`, `benefit_entitlements`, `rewards`, `special_offers`,

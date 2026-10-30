@@ -157,10 +157,10 @@ function PassCard({ name, missing }: { name: string; missing: string[] }) {
     <div data-pass="" className="space-y-2 rounded-2xl border border-a-border bg-a-surface p-4">
       <div className="flex items-start justify-between gap-2">
         <p className="font-medium text-a-text">{name}</p>
-        <ToneBadge tone={ready ? 'fulfilled' : 'pending'}>{ready ? t('loyalty.app.wallet.ready', 'Ready') : t('loyalty.app.wallet.not_ready', 'Not ready')}</ToneBadge>
+        <ToneBadge tone={ready ? 'fulfilled' : 'pending'}>{ready ? t('loyalty.app.wallet.ready', 'Ready to test') : t('loyalty.app.wallet.not_ready', 'Not ready')}</ToneBadge>
       </div>
       {ready
-        ? <p className="text-sm text-a-text-2">{t('loyalty.app.wallet.ready_line', 'Members can add their card.')}</p>
+        ? <p className="text-sm text-a-text-2">{t('loyalty.app.wallet.ready_line', 'Connection details are saved. Check provider approval and test adding a card on a real device before rollout.')}</p>
         : (
           <div className="text-sm text-a-text">
             <p className="text-a-text-2">{t('loyalty.app.wallet.still_needed', 'Still needed:')}</p>

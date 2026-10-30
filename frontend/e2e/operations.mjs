@@ -8,6 +8,7 @@ await fs.mkdir(out, { recursive: true })
 const browser = await chromium.launch({ channel: 'chrome', headless: true })
 const errors = [], results = []
 const snapshot = { checked_at: '2026-10-29T13:00:00Z', checks: [
+  { key: 'wallet_updates', status: 'attention', count: 1 }, { key: 'media_versioning', status: 'unobserved' },
   { key: 'email_failures', status: 'attention', count: 2 }, { key: 'email_delays', status: 'ok', count: 0 },
   { key: 'loyalty_delays', status: 'ok', count: 0 }, { key: 'scheduler', status: 'attention', last_seen_at: '2026-10-29T12:50:00Z' },
   { key: 'scheduled_failures', status: 'ok', count: 0 }, { key: 'queue_failures', status: 'attention', count: 1 },
@@ -49,7 +50,7 @@ try {
     await page.screenshot({ path: `${out}/${lang}-${width}.png`, fullPage: false })
     results.push(`${lang}-${width}: render and no horizontal overflow`)
     if (lang === 'en' && width === 1440) {
-      if (await page.getByRole('heading', { level: 2 }).count() !== 7) throw Error('Missing status cards')
+      if (await page.getByRole('heading', { level: 2 }).count() !== 9) throw Error('Missing status cards')
       const before = calls
       await page.getByRole('button', { name: 'Refresh', exact: true }).click()
       await page.waitForFunction(() => !document.querySelector('button:disabled'))
@@ -63,7 +64,7 @@ try {
       await page.locator('time').first().waitFor()
       if (await page.getByRole('link', { name: 'Review campaigns', exact: true }).getAttribute('href') !== '/campaigns?tab=email') throw Error('Campaign destination')
       if (await page.getByRole('link', { name: 'Open audit log', exact: true }).getAttribute('href') !== '/audit-log') throw Error('Audit destination')
-      results.push('Seven checks; refresh; failure hides stale data; retry; campaign and audit destinations')
+      results.push('Nine checks; refresh; failure hides stale data; retry; campaign and audit destinations')
     }
     await context.close()
   }

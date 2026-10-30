@@ -27,9 +27,9 @@ use ZipArchive;
  */
 class AppleWalletService
 {
-    public function generate(LoyaltyMember $member, WalletConfig $config): string
+    public function generate(LoyaltyMember $member, WalletConfig $config, ?\App\Models\WalletPass $pass = null): string
     {
-        if (!$config->appleReady()) {
+        if (!$config->appleReady() && $pass === null) {
             throw new \RuntimeException('Apple Wallet not configured for this organization.');
         }
 
@@ -40,7 +40,8 @@ class AppleWalletService
         $member->loadMissing(['user', 'tier', 'organization']);
 
         // 1. Build pass.json
-        $passJson = json_encode($this->buildPassPayload($member, $config), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+        $payload = $pass ? app(\App\Services\Wallet\Passes::class)->payload($pass, $config) : $this->payload($member, $config);
+        $passJson = json_encode($payload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
 
         // 2. Stage files in a temp directory
         $stagingDir = sys_get_temp_dir() . '/pkpass_' . $member->organization_id . '_' . $member->id . '_' . uniqid();
@@ -54,10 +55,7 @@ class AppleWalletService
             // Icons — required by Apple. Use the org's logo if uploaded,
             // else fall back to a packaged default. logo + icon are
             // the same image at different sizes (Wallet UI cares).
-            $this->copyOrSyntheticIcon($member, $stagingDir, 'icon.png',    29);
-            $this->copyOrSyntheticIcon($member, $stagingDir, 'icon@2x.png', 58);
-            $this->copyOrSyntheticIcon($member, $stagingDir, 'logo.png',    160);
-            $this->copyOrSyntheticIcon($member, $stagingDir, 'logo@2x.png', 320);
+            app(\App\Services\Wallet\Artwork::class)->write($member, $config, $stagingDir);
 
             // 3. Compute manifest.json (SHA-1 per file)
             $manifest = [];
@@ -89,6 +87,11 @@ class AppleWalletService
     }
 
     private function buildPassPayload(LoyaltyMember $member, WalletConfig $config): array
+    {
+        return $this->payload($member, $config);
+    }
+
+    public function payload(LoyaltyMember $member, WalletConfig $config): array
     {
         $name = $member->user?->name ?: 'Member';
         $tierName = $member->tier?->name ?: 'Member';
@@ -175,7 +178,7 @@ class AppleWalletService
                     [
                         'key'   => 'terms',
                         'label' => 'Terms',
-                        'value' => "Points are non-transferable. Subject to program terms. Lost cards: contact reception.\n\nDelete this pass from Wallet at any time.",
+                        'value' => "Contact the organisation for membership terms and support.\n\nDelete this pass from Wallet at any time.",
                     ],
                 ],
             ],
@@ -317,22 +320,6 @@ class AppleWalletService
             $zip->addFile("$stagingDir/$f", $f);
         }
         $zip->close();
-    }
-
-    /**
-     * Best-effort icon: prefer the org's hotel logo when uploaded,
-     * else synthesize a 1px transparent PNG so the bundle is valid
-     * (Apple rejects passes missing the required image files).
-     */
-    private function copyOrSyntheticIcon(LoyaltyMember $member, string $stagingDir, string $filename, int $size): void
-    {
-        // 1px transparent PNG — minimum viable to pass Apple's bundle
-        // validation. Customers should upload a real logo via Settings
-        // for production passes.
-        $minimal = base64_decode(
-            'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII='
-        );
-        file_put_contents("$stagingDir/$filename", $minimal);
     }
 
     private function rrmdir(string $dir): void

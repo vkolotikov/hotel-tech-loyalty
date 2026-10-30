@@ -1,0 +1,12 @@
+{
+  "checked_at": "2026-10-30T09:54:40+00:00",
+  "database": "hotel_loyalty",
+  "members": 487,
+  "bookings": 2585,
+  "migrations": 227,
+  "failed_jobs": 0,
+  "queued_jobs": 0,
+  "heartbeat": "2026-10-30 09:54:04",
+  "read_only_transaction": true,
+  "source": "Cloud application console; screenshot live-runtime.jpg"
+}

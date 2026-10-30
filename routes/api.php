@@ -97,6 +97,15 @@ Route::prefix('internal/entitlements')->group(function () {
     Route::post('bust', [\App\Http\Controllers\Api\Internal\InternalEntitlementController::class, 'bust']);
 });
 
+Route::prefix('wallet/apple/v1')->middleware('throttle:120,1,wallet-apple')->group(function () {
+    $controller = \App\Http\Controllers\Api\ApplePassUpdatesController::class;
+    Route::post('devices/{device}/registrations/{type}/{serial}', [$controller, 'register']);
+    Route::delete('devices/{device}/registrations/{type}/{serial}', [$controller, 'unregister']);
+    Route::get('devices/{device}/registrations/{type}', [$controller, 'changes']);
+    Route::get('passes/{type}/{serial}', [$controller, 'download']);
+    Route::post('log', [$controller, 'logs']);
+});
+
 Route::prefix('v1')->group(function () {
 
     // ─── Public ──────────────────────────────────────────────────────────────────

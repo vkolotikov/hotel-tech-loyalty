@@ -7,7 +7,7 @@ import { useAuthStore } from '../../stores/authStore'
 import { Card } from '../../components/ui/Card'
 import { useOperationsWords } from './words'
 
-type CheckKey = 'email_failures' | 'email_delays' | 'loyalty_delays' | 'scheduler' | 'scheduled_failures' | 'queue_failures' | 'queue_delays'
+type CheckKey = 'media_versioning' | 'wallet_updates' | 'email_failures' | 'email_delays' | 'loyalty_delays' | 'scheduler' | 'scheduled_failures' | 'queue_failures' | 'queue_delays'
 type Check = { key: CheckKey; status: 'ok' | 'attention' | 'unavailable' | 'unobserved'; count?: number; last_seen_at?: string | null }
 export type OperationsSnapshot = { checked_at: string; checks: Check[] }
 const actionClass = 'inline-flex items-center justify-center gap-2 min-h-11 px-4 py-2 rounded-xl border border-dark-border bg-dark-surface text-sm font-medium text-white hover:bg-dark-surface2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary-500 disabled:opacity-50'

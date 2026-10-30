@@ -106,6 +106,7 @@ class MemberMergeService
 
     /** Member columns deliberately left as they are, and why. @var array<string, string> */
     public const KEPT_COLUMNS = [
+        'wallet_passes.member_id' => 'Installed credentials never move to a merge survivor; nullOnDelete keeps a voidable pass.',
         'member_merges.merged_member_id' => 'The record of a merge names the member it removed; that member no longer exists.',
     ];
 

@@ -1,0 +1,20 @@
+{
+  "checked_at": "2026-10-29T18:23:07+00:00",
+  "schedule_listeners": 1,
+  "reporter_sha256": "d96fd58a4e412dcacbc415cc4cf803d82a8c14c263327e10b3f61cdadc13a624",
+  "campaign_sha256": "c81aeaf1d7a1918bc1550ac4ae049e04661f1ad6d42113fa25a23eab3f317d3d",
+  "status_sha256": "cdb8a86b431aebc724fa56183f6bbca45e1200c16c6af07cd6baa9d27717dd57",
+  "mail_sha256": "07323877cb20bfb590e35fa87975e76d87da55c6c3ac8b6e9a56f7bdd7a19c35",
+  "campaign_limits": [
+    100,
+    100
+  ],
+  "tasks": [
+    {
+      "command": "loyalty:send-scheduled",
+      "status": "success",
+      "finished_at": "2026-10-29 18:23:04"
+    }
+  ],
+  "failed_jobs": 0
+}
