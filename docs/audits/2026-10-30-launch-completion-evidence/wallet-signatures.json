@@ -1,0 +1,23 @@
+{
+    "checked_at": "2026-10-30T18:51:02+00:00",
+    "database_writes": 0,
+    "provider_object_writes": 0,
+    "apple": {
+        "bundle_bytes": 4631,
+        "manifest_hashes_valid": true,
+        "signature_chain_valid_to_apple_root": true,
+        "pass_type_matches": true,
+        "team_matches": true,
+        "synthetic_barcode_matches": true,
+        "automatic_update_web_service_present": false,
+        "device_add_not_tested": true
+    },
+    "google": {
+        "jwt_signature_valid": true,
+        "issuer_matches": true,
+        "points_match": true,
+        "synthetic_barcode_matches": true,
+        "class_not_created": true,
+        "device_add_not_tested": true
+    }
+}

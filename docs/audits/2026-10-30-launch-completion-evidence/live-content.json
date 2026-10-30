@@ -1,0 +1,20 @@
+{
+  "checked_at": "2026-10-30T18:49:56.543Z",
+  "production_commit": "f0c30c739",
+  "source_baseline": "b32aefe5a",
+  "entry": "/spa/assets/index-Df7w7ZXT.js",
+  "wallet_operations": true,
+  "reader_guidance": true,
+  "readiness_copy": true,
+  "reader_status": 200,
+  "reader_sha256": "fe2a4ad815a0db3af508e20f0fbf76ce9fe1fe6663e8eed1347f630bb1374893",
+  "reader_matches": true,
+  "apple_pass_auth": 401,
+  "stay_policy_display_removed": true,
+  "booking_actions_preserved": true,
+  "health": 200,
+  "member_auth": 401,
+  "landing_ok": true,
+  "retired_css": 404,
+  "pass": true
+}

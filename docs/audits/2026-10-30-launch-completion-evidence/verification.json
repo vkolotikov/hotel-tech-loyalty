@@ -1,0 +1,13 @@
+{
+  "production_commit": "f0c30c7398fa73c33fa3b2ef6d971664ef51d2aa",
+  "cloud_deployment": 1098,
+  "source_baseline": "b32aefe5aa888f3a48f9610ea08307c5adb877b1",
+  "artifact_php": {"passed": 145, "assertions": 3876},
+  "artifact_postgresql": {"passed": 30, "assertions": 234},
+  "frontend": {"passed": 5766, "files": 399, "typescript": "passed", "build": "passed", "lint_regression": "passed", "legacy_lint_diagnostics": 1393},
+  "browser": {"card_scan_checks": 133, "operations_locales": ["en", "de", "es", "fr", "ru"], "runtime_errors": 0},
+  "reader": {"self_tests": "passed", "detected_readers": 0, "physical_acceptance": false, "distribution": "unsigned_preview"},
+  "media": {"checked_at": "2026-10-30T18:44:58+00:00", "current_objects": 208, "current_bytes": 201923289, "inventory_complete": true, "versioning": "Disabled", "lifecycle_inspection": "AccessDenied", "configuration_changed": false},
+  "google_issuer_console": {"business": "FDS Cards LTD", "publishing_access": "In review", "production_issuance_allowed": false},
+  "pending": ["Google issuer approval", "Actual iOS/Android wallet save, artwork, update and scan", "Physical ACR122U test", "Media permissions, retention and recovery", "DMARC cleanup for hexa-tech.uk and fds-cards.co.uk", "Received mail headers and hosting campaign quota/feedback"]
+}

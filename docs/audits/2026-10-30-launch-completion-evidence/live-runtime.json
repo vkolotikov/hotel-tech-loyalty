@@ -1,0 +1,17 @@
+{
+  "source": "Signed-in Laravel Cloud app-cluster console, production 1098",
+  "checked_at": "2026-10-30T18:55:12+00:00",
+  "database": "hotel_loyalty",
+  "migrations": 228,
+  "wallet_passes": 0,
+  "wallet_registrations": 0,
+  "wallet_sync_exit": 0,
+  "fds_wallet_active": false,
+  "apple_problem": null,
+  "google_class_approved": true,
+  "media_check_exit": 0,
+  "media_check": "Media versioning: attention. Versioning alone does not verify recovery.",
+  "queued": 0,
+  "failed": 0,
+  "heartbeat": "2026-10-30 18:55:04"
+}

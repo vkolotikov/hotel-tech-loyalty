@@ -1,0 +1,10 @@
+{
+  "source": "Signed-in Laravel Cloud production console",
+  "checked_at": "2026-10-30T18:55:46+00:00",
+  "wallet_runs": [
+    {"command": "loyalty:sync-wallets", "status": "success", "finished_at": "2026-10-30 18:55:15"},
+    {"command": "loyalty:sync-wallets", "status": "success", "finished_at": "2026-10-30 18:50:17"}
+  ],
+  "latest_failed_tasks": 0,
+  "media_observation": {"status": "attention", "last_seen_at": "2026-10-30T18:55:12+00:00"}
+}

@@ -3,7 +3,53 @@
 Read this first, then `2026-10-29-hexatech-handoff.md` for the latest application releases and
 `2026-10-27-hexatech-handoff.md` for the full environment. AGENTS.md and CLAUDE.md still apply.
 
-## Database restore rehearsal completed and cleaned up
+## Latest release: wallet updates, media monitoring and reader preview
+
+Owner: "do all improvements what you can do". Deployed **f0c30c7398fa73c33fa3b2ef6d971664ef51d2aa**,
+Cloud **1098**, 30 October about 18:49 UTC. Feature `feature/launch-completion-20261030`.
+**Next source-patch baseline: b32aefe5aa888f3a48f9610ea08307c5adb877b1.** Later docs commits are not the baseline.
+
+Wallet update tables/protocol, Apple APNs and Google PATCH retries, strict credentials/class preflight,
+owned-logo artwork, atomic download nonces and certificate replacement fix shipped. Operations now observes
+tenant wallet failures and platform media versioning. Added read-only media observation and explicit isolated
+version recovery tooling. Windows ACR122U helper reads/copies UID into existing Scan/Link fields; unsigned preview,
+zero readers detected on this workstation. Runbook: `docs/wallet-and-media-operations.md`.
+
+Artifact checks: **145 PHP tests / 3,876 assertions**, **30 PostgreSQL tests / 234 assertions**, **5,766 frontend
+tests / 399 files**, TypeScript, lint regression gate and build. Built card/scan **133 checks** and multilingual
+responsive operations scenarios pass; desktop/mobile renders inspected. Existing 1,393 lint diagnostics and
+build/docblock warnings remain. Full source parity passed; main received the isolated source patch and fresh build.
+Live content, download checksum, wallet authentication, health, portal auth, booking-copy preservation and landing
+checks passed **18:49:56 UTC**; entry `index-Df7w7ZXT.js`.
+Live runtime **18:55:12 UTC**: database `hotel_loyalty`, **228 migrations**, zero wallet passes/registrations,
+zero queued/failed jobs; heartbeat **18:55:04**. FDS off, Apple preflight passes, Google class approved, wallet
+command exit 0. The media observation was populated and correctly says attention (versioning remains off).
+Automatic wallet cycles succeeded **18:50:17** and **18:55:15 UTC**; zero latest failed scheduled tasks at
+18:55:46. The production console was exited after inspection. Deployment worktree and its node_modules junction
+were removed after testing; private proof files remain outside it.
+
+Dedicated Google loyalty class is now **approved**, existing Card Builder generic class unchanged. Google issuer
+publishing access is **In review** in the signed-in console. No member objects created. Existing Apple certificate
+identity/expiry/signature and real Apple-root verification pass. FDS wallets remain OFF pending issuer approval
+and actual iPhone/Android save, artwork, update and scan tests.
+
+Media inventory: **208 current objects / 201,923,289 bytes**, versioning disabled. Lifecycle read **AccessDenied**
+with the app's existing credentials. No storage settings/costs/copies changed. Awaiting owner access to DigitalOcean
+for a reviewed retention policy and subsequent recovery rehearsal. SiteGround is signed out; owner was asked to
+sign in to fix duplicate DMARC on **both hexa-tech.uk and fds-cards.co.uk**. Actual sender is hotel-tech.ai and the
+confirmed email receipt stands. Received headers, hosting quota/feedback and actual device tests remain pending.
+
+Report: `docs/audits/2026-10-30-launch-completion.md`; evidence beside it. Private artifacts:
+`E:/Hexa-Tech-completion-20261030/`. Private PostgreSQL **55440** and task preview/Vite processes have been stopped.
+Port **55439**, unrelated user browser tabs and untracked PDF/ZIP/Alexa assets were untouched.
+
+Browser: use native CUA on Chrome window **3147704**, refreshed by inventory. The task has separate Cloud, Google
+Wallet and SiteGround tabs beside the user's existing tabs. Google is signed in; SiteGround is not. Browser extension
+host remains unavailable. AX can lag one action: verify navigation/focus visually. In an xterm console use `paste`,
+then Return, and inspect the later screenshot; an editable terminal may still belong to a disconnected restored
+session, so select Start new session first. Do not use the system clipboard directly or print credentials.
+
+## Earlier today: database restore rehearsal completed and cleaned up
 
 Owner approved **up to US$5** for restoring `hotel_tech_loyalty` to the disposable
 `hotel_tech_loyalty_restore_20261029`, verifying the databases, and deleting the copy. The restore point was
@@ -45,7 +91,7 @@ Owner confirmed **inbox receipt** at `info@fds-cards.co.uk` of
 `HexaTech production queue test - HEXA-LAUNCH-PROD-20261029-01`. No resend is needed; retain attempt marker
 `ops:mail:HEXA-LAUNCH-PROD-20261029-01`. No marketing consent, campaigns or customer data changed.
 
-## Release state and next work
+## Restore-rehearsal release state (superseded by the release above)
 
 No application source, build, migration, production setting or deployment changed this session.
 Production remains **414dfbef83d0de54eb23e3b7b732e4542ca681f8**, Cloud **1097**.
@@ -58,7 +104,7 @@ reader test; actual iOS/Android browser checks. Wallets remain OFF; their upload
 Native apps, payments and SMS remain deferred. Database restoration and email inbox receipt are no longer
 pending user approvals.
 
-## Browser recovery notes
+## Earlier browser recovery notes
 
 The browser extension host currently reports unavailable. Chrome DevTools exposes a separate blank profile,
 not the owner's signed-in Cloud session; do not ask the owner to sign into it again. The owner brought their
