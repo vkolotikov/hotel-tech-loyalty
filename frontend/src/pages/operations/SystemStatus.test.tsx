@@ -11,9 +11,11 @@ describe('operational observations', () => {
         { key: 'email_failures', status: 'attention', count: 3 },
         { key: 'scheduler', status: 'unavailable' },
         { key: 'queue_delays', status: 'unobserved', count: 0 },
+        { key: 'wallet_updates', status: 'attention', count: 1 },
+        { key: 'media_versioning', status: 'unobserved' },
       ] }} />)
       expect(html).not.toMatch(/undefined|Invalid Date/)
-      expect(html.match(/<h2/g)).toHaveLength(3)
+      expect(html.match(/<h2/g)).toHaveLength(5)
       expect(html).toContain('2026-10-29T13:00:00Z')
     }
     await i18n.changeLanguage('en')

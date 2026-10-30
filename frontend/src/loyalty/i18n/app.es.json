@@ -256,8 +256,8 @@
       "pass_type_id": "Un Pass Type ID empieza por «pass.», p. ej. pass.com.yourvenue.loyalty.",
       "team_id": "Un Team ID tiene 10 mayúsculas o dígitos, p. ej. ABCDE12345."
     },
-    "ready": "Listo",
-    "ready_line": "Los miembros pueden añadir su tarjeta.",
+    "ready": "Listo para probar",
+    "ready_line": "Los datos de conexión están guardados. Compruebe la aprobación del proveedor y pruebe a añadir una tarjeta en un dispositivo real antes del lanzamiento.",
     "replace": "Reemplazar…",
     "save": "Guardar el pase de Wallet",
     "saved": "Guardado.",

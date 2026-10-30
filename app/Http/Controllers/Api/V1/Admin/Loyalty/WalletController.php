@@ -86,6 +86,9 @@ class WalletController extends Controller
         $config = $this->config();
         $password = $request->filled('password') ? (string) $request->input('password') : null;
 
+        if ($password === null && !WalletFiles::opens($this->bytes($request->file('file')), (string) $config->apple_cert_password)
+            && WalletFiles::opens($this->bytes($request->file('file')), '')) $password = '';
+
         $problem = WalletFiles::appleCertProblem($this->bytes($request->file('file')), $password ?? (string) ($config->apple_cert_password ?? ''));
         if ($problem !== null) {
             throw new LoyaltyRefused($problem, $problem === 'not_pkcs12' ? 'This is not a .p12 certificate.' : 'The certificate does not open with this password.');

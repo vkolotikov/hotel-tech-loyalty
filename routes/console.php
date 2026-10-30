@@ -206,6 +206,8 @@ Schedule::command('loyalty:assess-tiers --at-venue-hour=5')
     ->withoutOverlapping(60);
 
 Schedule::command('loyalty:retry-visit-effects')->everyFiveMinutes()->withoutOverlapping(10);
+Schedule::command('loyalty:sync-wallets')->everyFiveMinutes()->withoutOverlapping(10);
+Schedule::command('media:check-recovery')->dailyAt('04:20')->withoutOverlapping(10);
 
 // Prune expired BookingHold + BookingIdempotencyKey rows. Holds carry guest
 // PII (name/email/phone) in payload_json; abandoned-cart rows accumulating

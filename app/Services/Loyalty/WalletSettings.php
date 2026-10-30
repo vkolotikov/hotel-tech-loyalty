@@ -83,9 +83,14 @@ final class WalletSettings
      */
     public static function storeAppleCert(WalletConfig $config, UploadedFile|string $file, ?string $password, User $by, array $audit): WalletConfig
     {
-        $config->putFile('apple_cert', self::bytes($file));
-        if ($password !== null && $password !== '') {
-            $config->apple_cert_password = $password;
+        $bytes = self::bytes($file);
+        // Replacing a protected certificate with an unprotected one must not retain an unusable old password.
+        if ($password === null && !WalletFiles::opens($bytes, (string) $config->apple_cert_password) && WalletFiles::opens($bytes, '')) {
+            $password = '';
+        }
+        $config->putFile('apple_cert', $bytes);
+        if ($password !== null) {
+            $config->apple_cert_password = $password === '' ? null : $password;
         }
         $config->save();
 

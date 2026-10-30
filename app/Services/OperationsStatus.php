@@ -13,6 +13,14 @@ final class OperationsStatus
     {
         $orgId = (int) $user->organization_id;
         $checks = [
+            $this->observe('wallet_updates', function () use ($orgId) {
+                $rows = DB::table('wallet_passes')->where('organization_id', $orgId);
+                $failed = (clone $rows)->whereNotNull('failure_code')->count();
+                $late = (clone $rows)->whereNull('failure_code')->where(fn ($q) => $q->where('next_attempt_at', '<', now()->subMinutes(15))
+                    ->orWhere(fn ($q) => $q->whereNull('next_attempt_at')->where('updated_at', '<', now()->subMinutes(15))))->count();
+                if ($failed + $late > 0) return $this->count($failed + $late);
+                return ['status' => (clone $rows)->whereNotNull('last_success_at')->exists() ? 'ok' : 'unobserved', 'count' => 0];
+            }),
             $this->observe('email_failures', function () use ($orgId) {
                 $count = DB::table('email_campaigns')->where('organization_id', $orgId)
                     ->where('updated_at', '>=', now()->subDays(30))
@@ -33,6 +41,11 @@ final class OperationsStatus
 
         // An organisation owner is NOT a platform operator. Global infrastructure is private.
         if ($user->isPlatformAdmin()) {
+            $checks[] = $this->observe('media_versioning', function () {
+                $cache = \App\Support\SharedCache::store();
+                if ($cache->has('ops:media-recovery-copy')) return ['status' => 'attention'];
+                return $cache->get('ops:media-versioning') ?? ['status' => 'unobserved'];
+            });
             $checks[] = $this->observe('scheduler', function () {
                 $last = DB::table('scheduled_command_runs')->where('command', 'heartbeat')
                     ->where('status', 'success')->max('finished_at');

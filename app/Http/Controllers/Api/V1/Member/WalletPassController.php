@@ -8,7 +8,8 @@ use App\Services\AppleWalletService;
 use App\Services\GoogleWalletService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Cache;
+use App\Support\SharedCache;
+use App\Services\Wallet\Passes;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
@@ -69,7 +70,7 @@ class WalletPassController extends Controller
      * history, and any proxy or CDN in between. One leaked log line is
      * permanent access to that member's account.
      *
-     * The nonce is single-use (Cache::pull is get-and-delete) and expires in
+     * The nonce is single-use (shared-cache pull under an atomic lock) and expires in
      * two minutes, so the same exposure is worth nothing.
      */
     public function appleLink(Request $request): JsonResponse
@@ -85,12 +86,12 @@ class WalletPassController extends Controller
         }
 
         $nonce = bin2hex(random_bytes(32));
-        Cache::put(self::PASS_NONCE_PREFIX . $nonce, $user->id, self::PASS_NONCE_TTL);
+        SharedCache::store()->put(self::PASS_NONCE_PREFIX . $nonce, $user->id, self::PASS_NONCE_TTL);
 
         return response()->json([
             'url'        => url('/api/v1/member/card/apple-wallet?pass=' . $nonce),
             'expires_in' => self::PASS_NONCE_TTL,
-        ]);
+        ])->header('Cache-Control', 'no-store');
     }
 
     public function apple(Request $request, AppleWalletService $apple): Response
@@ -101,11 +102,13 @@ class WalletPassController extends Controller
         $user = $request->user();
 
         if (!$user) {
-            // Preferred: a single-use nonce minted by appleLink(). Cache::pull
-            // is get-and-delete, so a replayed URL fails even inside the TTL.
+            // The shared lock makes get-and-delete atomic across replicas, including simultaneous requests.
             $nonce = (string) $request->query('pass', '');
-            if ($nonce !== '') {
-                $userId = Cache::pull(self::PASS_NONCE_PREFIX . $nonce);
+            if (preg_match('/^[a-f0-9]{64}$/', $nonce)) {
+                $cache = SharedCache::store();
+                $lock = $cache->lock('wallet:nonce:'.hash('sha256', $nonce), 5);
+                abort_unless($lock->get(), 401);
+                try { $userId = $cache->pull(self::PASS_NONCE_PREFIX . $nonce); } finally { $lock->release(); }
                 $user = $userId ? \App\Models\User::withoutGlobalScopes()->find($userId) : null;
                 if (!$user) {
                     abort(401, 'This download link has expired. Please try again from the app.');
@@ -136,6 +139,8 @@ class WalletPassController extends Controller
         // explicit reason so the mobile app can hide the button.
         if ($gate = $this->requireLoyalty($member)) return $gate;
 
+        abort_unless(app(Passes::class)->eligible($member), 403, 'This membership is not active.');
+
         $config = WalletConfig::where('organization_id', $member->organization_id)->first();
         if (!$config || !$config->appleReady()) {
             return response()->json([
@@ -144,11 +149,15 @@ class WalletPassController extends Controller
         }
 
         try {
-            $binary = $apple->generate($member, $config);
+            if (app(\App\Services\Wallet\Credentials::class)->appleProblem($config)) {
+                return response()->json(['message' => 'Apple Wallet certificate needs attention.'], 503);
+            }
+            $pass = app(Passes::class)->issue($member, $config, 'apple');
+            $binary = $apple->generate($member, $config, $pass);
         } catch (\Throwable $e) {
             \Log::error('Apple Wallet generation failed', [
                 'member_id' => $member->id,
-                'error'     => $e->getMessage(),
+                'error'     => $e::class,
             ]);
             return response()->json(['message' => 'Could not generate pass — please try again.'], 500);
         }
@@ -168,6 +177,8 @@ class WalletPassController extends Controller
         // Phase 8 — same hasLoyalty gate as Apple.
         if ($gate = $this->requireLoyalty($member)) return $gate;
 
+        abort_unless(app(Passes::class)->eligible($member), 403, 'This membership is not active.');
+
         $config = WalletConfig::where('organization_id', $member->organization_id)->first();
         if (!$config || !$config->googleReady()) {
             return response()->json([
@@ -176,15 +187,19 @@ class WalletPassController extends Controller
         }
 
         try {
-            $url = $google->buildSaveUrl($member, $config);
+            if (!app(\App\Services\Wallet\GoogleClient::class)->approved($config)) {
+                return response()->json(['message' => 'Google Wallet publication is not approved yet.'], 503);
+            }
+            $pass = app(Passes::class)->issue($member, $config, 'google');
+            $url = $google->buildSaveUrl($member, $config, $pass);
         } catch (\Throwable $e) {
             \Log::error('Google Wallet generation failed', [
                 'member_id' => $member->id,
-                'error'     => $e->getMessage(),
+                'error'     => $e::class,
             ]);
             return response()->json(['message' => 'Could not generate Wallet link — please try again.'], 500);
         }
 
-        return response()->json(['saveUrl' => $url]);
+        return response()->json(['saveUrl' => $url])->header('Cache-Control', 'no-store');
     }
 }

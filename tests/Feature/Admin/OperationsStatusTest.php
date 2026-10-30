@@ -23,6 +23,7 @@ class OperationsStatusTest extends TestCase
         $this->setUpLoyaltyWorkspace();
         $this->setUpCampaignsSchema();
         foreach ([
+            'wallet_passes' => '2026_10_30_110000_create_wallet_pass_updates.php',
             'loyalty_visit_effects' => '2026_10_29_170000_create_loyalty_visit_effects.php',
             'scheduled_command_runs' => '2026_05_19_130000_create_scheduled_command_runs_table.php',
             'failed_jobs' => '2019_08_19_000000_create_failed_jobs_table.php',
@@ -67,7 +68,7 @@ class OperationsStatusTest extends TestCase
         $answer = $this->asManager()->getJson($this->url() . '?organization_id=' . $other['org']->id)->assertOk();
         $checks = collect($answer->json('checks'))->keyBy('key');
         $this->assertSame(1, $checks['email_failures']['count']);
-        $this->assertSame(['email_failures', 'email_delays', 'loyalty_delays'], $checks->keys()->all());
+        $this->assertSame(['wallet_updates', 'email_failures', 'email_delays', 'loyalty_delays'], $checks->keys()->all());
         $this->assertStringNotContainsString('secret-provider-response', $answer->getContent());
         $this->assertStringNotContainsString('Private', $answer->getContent());
         $this->assertStringContainsString('no-store', $answer->headers->get('Cache-Control'));
@@ -97,7 +98,7 @@ class OperationsStatusTest extends TestCase
     {
         config(['services.saas.platform_admin_emails' => $this->manager->email]);
         $this->manager->forceFill(['email_verified_at' => null])->save();
-        $this->assertCount(3, app(OperationsStatus::class)->forUser($this->manager)['checks']);
+        $this->assertCount(4, app(OperationsStatus::class)->forUser($this->manager)['checks']);
         $this->operator();
         $this->assertSame('unobserved', $this->check('scheduler')['status']);
         ScheduledCommandRun::create(['command' => 'heartbeat', 'status' => 'success', 'started_at' => now()->subMinutes(6), 'finished_at' => now()->subMinutes(6)]);

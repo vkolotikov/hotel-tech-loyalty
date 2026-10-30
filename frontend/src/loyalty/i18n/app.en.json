@@ -256,8 +256,8 @@
       "pass_type_id": "A Pass Type ID starts with “pass.”, e.g. pass.com.yourvenue.loyalty.",
       "team_id": "A Team ID is 10 capital letters or digits, e.g. ABCDE12345."
     },
-    "ready": "Ready",
-    "ready_line": "Members can add their card.",
+    "ready": "Ready to test",
+    "ready_line": "Connection details are saved. Check provider approval and test adding a card on a real device before rollout.",
     "replace": "Replace…",
     "save": "Save wallet pass",
     "saved": "Saved.",
