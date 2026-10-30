@@ -3,6 +3,11 @@
 Owner requested completing the remaining work possible with Laravel Cloud and Loyalty open in Chrome.
 This report distinguishes live observations, verified fixes and acceptance still requiring access/devices/budget.
 
+**30 October follow-up:** the owner confirmed the production queued email arrived in the inbox and approved
+up to US$5 for the restore rehearsal. The separate cluster was restored, its data checked read-only, and the
+temporary cluster deleted. Production remained attached to its original cluster. See
+`2026-10-30-restore-rehearsal.md` for results, the important actual-database-name finding, and remaining limits.
+
 ## Live infrastructure observations
 
 The Chrome extension now exposes the owner's real session (Chrome Design profile). Laravel Cloud's
@@ -25,8 +30,9 @@ At 17:52 UTC, production reported:
 
 Cloud Resources confirms **seven days of point-in-time recovery** on the `hotel_tech_loyalty` Postgres 18
 cluster (1.1 GB observed). It contains `main` and the separate `hexa_seo` database. The restore dialog says
-restoration creates a **new cluster**, and showed a window beginning 22 October 17:53 UTC. No restore,
-database replacement or resource purchase was performed. A real restore rehearsal remains open.
+restoration creates a **new cluster**, and showed a window beginning 22 October 17:53 UTC. At this initial
+checkpoint no restore, database replacement or resource purchase had been performed. The subsequent
+authorized rehearsal is recorded in the 30 October follow-up.
 Provider reference: [Laravel Cloud backup strategies](https://laravel.com/blog/creating-backup-strategies-in-serverless-postgres-with-laravel-cloud).
 
 ## Defects found and corrected
@@ -62,7 +68,7 @@ Exactly one production queued test was requested through the live application ma
 **HexaTech production queue test - HEXA-LAUNCH-PROD-20261029-01**, to **info@fds-cards.co.uk**,
 from configured **noreply@hotel-tech.ai**, job 36. The job was consumed, failed-job count remained zero,
 and the address was not suppressed. A durable attempt marker prevents blind resends.
-Inbox confirmation is pending. This exercises the actual production worker and SMTP transport, not a
+The owner subsequently confirmed inbox receipt. This exercises the actual production worker and SMTP transport, not a
 customer campaign or the marketing unsubscribe path.
 
 The matching member (207) has marketing consent off. That preference was preserved; no campaign was
@@ -116,18 +122,18 @@ The refreshed live portal had **zero browser console errors**. No task was manua
 The private PostgreSQL cluster on 55440 was stopped after testing. Its data was retained; the unrelated
 dry-ice PostgreSQL on 55439 was untouched. Restore review is prepared in the browser as
 `hotel_tech_loyalty_restore_20261029`, point **29 October 17:53:07 UTC**, with no application attached.
-The user was asked for a **US$5 maximum** temporary-resource budget; approval is pending, so Restore has
-not been clicked. Inbox confirmation for the new production test is also pending.
+The owner subsequently approved the **US$5 maximum** temporary-resource budget and confirmed the new
+production email arrived. The restore was submitted, verified and removed; see the 30 October report.
 The isolated deployment checkout and its node_modules junction were removed after live verification;
 the original source dependencies, Vite server and unrelated user files were preserved.
 
 ## Remaining acceptance
 
-- Run a restore into a temporary separate Cloud cluster, check restored data, and remove the disposable
-  copy. Creating that cluster incurs usage charges; no spending limit was supplied for new resources.
+- Restore rehearsal completed on 30 October under the owner's US$5 authorization; the temporary cluster
+  was removed. See the follow-up report for the limited verification scope and billing visibility.
 - Establish and test recovery for object storage (versioning and/or a separate backup), with an agreed
   retention/cost policy. Database PITR does not restore DigitalOcean object contents.
-- Confirm this new production test's inbox receipt and inspect sender authentication/hosting quota before
+- Inbox receipt is confirmed; inspect sender authentication/hosting quota before
   increasing campaign volume. Resolve duplicate hexa-tech.uk DMARC through its DNS account when available.
 - Wallets remain off: uploaded credentials are accepted, but branded artwork, automatic balance updates,
   Google class publication and real iOS/Android save-and-scan acceptance remain separate wallet work.

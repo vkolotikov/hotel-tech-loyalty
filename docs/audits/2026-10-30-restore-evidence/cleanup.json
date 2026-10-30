@@ -1,0 +1,11 @@
+{
+  "checked_at": "2026-10-30T09:51:28.172Z",
+  "temporary_cluster": "hotel_tech_loyalty_restore_20261029",
+  "temporary_cluster_absent": true,
+  "original_cluster_present": true,
+  "source_attachments_before_cleanup": [
+    "main -> hotel-tech-loyalty/main",
+    "hexa_seo -> hexa-seo-platform/production"
+  ],
+  "application_repointed": false
+}
