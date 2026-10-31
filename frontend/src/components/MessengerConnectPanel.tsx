@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback } from 'react'
 import {
-  Facebook, Plus, RefreshCw, Trash2, AlertCircle, CheckCircle2,
+  Plus, RefreshCw, Trash2, AlertCircle, CheckCircle2,
   ExternalLink, Loader2, X, MessageCircle, ChevronRight, Clock,
 } from 'lucide-react'
+import Facebook from './icons/Facebook'
 import toast from 'react-hot-toast'
 import { api } from '../lib/api'
 
