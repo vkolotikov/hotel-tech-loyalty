@@ -52,6 +52,9 @@ class PluginTransportTest extends TestCase
             'Access-Control-Request-Headers' => 'authorization,content-type,mcp-protocol-version']);
         $response->assertNoContent()->assertHeader('Access-Control-Allow-Origin', 'https://inspector.example.test');
         $this->assertStringContainsString('MCP-Protocol-Version', $response->headers->get('Access-Control-Allow-Headers'));
+        foreach (['Mcp-Method', 'Mcp-Name'] as $header) {
+            $this->assertStringContainsString($header, $response->headers->get('Access-Control-Allow-Headers'));
+        }
         $this->options('/mcp', [], ['Origin' => 'https://untrusted.example'])->assertForbidden()
             ->assertHeaderMissing('Access-Control-Allow-Origin');
         config(['chatgpt.enabled' => false]);
@@ -80,6 +83,24 @@ class PluginTransportTest extends TestCase
         $response->assertUnauthorized();
         $this->assertStringContainsString('resource_metadata=', $response->headers->get('WWW-Authenticate', ''));
         $this->assertStringContainsString('no-store', $response->headers->get('Cache-Control', ''));
+    }
+
+    public function test_a_2026_07_28_client_discovers_the_server_and_lists_tools_through_our_middleware(): void
+    {
+        // laravel/mcp 1.x: modern clients skip `initialize`, send the revision in params._meta and the MCP headers.
+        $this->bypassIdentityForProtocolTests();
+        $meta = ['io.modelcontextprotocol/protocolVersion' => '2026-07-28', 'io.modelcontextprotocol/clientCapabilities' => []];
+        $this->postJson('/mcp', ['jsonrpc' => '2.0', 'id' => 1, 'method' => 'server/discover', 'params' => ['_meta' => $meta]],
+            ['MCP-Protocol-Version' => '2026-07-28', 'Mcp-Method' => 'server/discover'])
+            ->assertOk()->assertJsonPath('result.supportedVersions.0', '2026-07-28');
+        $tools = $this->postJson('/mcp', ['jsonrpc' => '2.0', 'id' => 2, 'method' => 'tools/list', 'params' => ['_meta' => $meta]],
+            ['MCP-Protocol-Version' => '2026-07-28', 'Mcp-Method' => 'tools/list']);
+        $tools->assertOk();
+        $this->assertContains('list_leads', array_column($tools->json('result.tools'), 'name'));
+        // A body that disagrees with its headers is refused (the library's header check, behind our middleware).
+        $this->postJson('/mcp', ['jsonrpc' => '2.0', 'id' => 3, 'method' => 'tools/list', 'params' => ['_meta' => $meta]],
+            ['MCP-Protocol-Version' => '2026-07-28', 'Mcp-Method' => 'tools/call'])
+            ->assertStatus(400)->assertJsonPath('error.code', -32020);
     }
 
     public function test_initialize_and_notifications_use_real_mcp_transport(): void
@@ -124,7 +145,9 @@ class PluginTransportTest extends TestCase
     public function test_unknown_methods_return_protocol_error(): void
     {
         $this->bypassIdentityForProtocolTests();
+        // laravel/mcp 1.x (MCP 2026-07-28) answers a JSON-RPC error with a matching HTTP status: method not found
+        // is 404, with the same -32601 error in the body. Tool failures stay 200 with result.isError.
         $this->postJson('/mcp', ['jsonrpc' => '2.0', 'id' => 3, 'method' => 'admin/deleteEverything'])
-            ->assertOk()->assertJsonPath('error.code', -32601);
+            ->assertNotFound()->assertJsonPath('error.code', -32601)->assertJsonPath('id', 3);
     }
 }

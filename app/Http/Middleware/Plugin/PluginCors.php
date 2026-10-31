@@ -24,7 +24,9 @@ class PluginCors
         if (config('chatgpt.enabled') && $origin && in_array($origin, $allowed, true)) {
             $response->headers->set('Access-Control-Allow-Origin', $origin);
             $response->headers->set('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS');
-            $response->headers->set('Access-Control-Allow-Headers', 'Content-Type, Authorization, MCP-Protocol-Version, Mcp-Session-Id, Last-Event-ID');
+            // Mcp-Method and Mcp-Name: MCP 2026-07-28 clients send them on every POST (laravel/mcp 1.x checks them);
+            // Mcp-Session-Id is kept for clients of the older revisions, which still connect.
+            $response->headers->set('Access-Control-Allow-Headers', 'Content-Type, Authorization, MCP-Protocol-Version, Mcp-Method, Mcp-Name, Mcp-Session-Id, Last-Event-ID');
             $response->headers->set('Access-Control-Expose-Headers', 'WWW-Authenticate, Mcp-Session-Id, Retry-After');
             $response->headers->set('Access-Control-Max-Age', '600');
         }
