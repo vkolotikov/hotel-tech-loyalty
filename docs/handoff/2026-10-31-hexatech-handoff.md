@@ -21,7 +21,7 @@ main's red tests green (record: `docs/loyalty-workspace.md` "Deploying"). The ne
 - Built: sign-in with lock, Home, Scan (NFC, camera QR, typed, at the desk or a place or today's event), the scanned
   member with the door answer, member page, give or use points, check-in, link a card, Members, Requests (benefit
   requests and rewards to hand over), More (web pages, language, lock, sign out). Five languages. Brand icon.
-- Checked: `npx tsc --noEmit`, `npx vitest run` (12 tests), the web preview against the local API with real data
+- Checked: `npx tsc --noEmit`, `npx vitest run` (13 tests), the web preview against the local API with real data
   (every screen at phone size, sign in and out, scans at the desk and a tiers-only place, points given through the
   sheet).
 - **Not yet checked on a phone.** Next: an EAS development build (needs the owner's Expo sign-in or an `EXPO_TOKEN`
