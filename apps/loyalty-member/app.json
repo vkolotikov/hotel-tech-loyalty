@@ -62,7 +62,8 @@
         "expo-camera",
         {
           "cameraPermission": "Scan your venue's sign-up QR code to join its membership.",
-          "recordAudioAndroid": false
+          "recordAudioAndroid": false,
+          "microphonePermission": false
         }
       ],
       [
