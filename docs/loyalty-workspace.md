@@ -863,6 +863,17 @@ files on disk): run them one after the other.
 
 ## Deploying
 
+- Library upgrades (stack plan phase 4a-4e), 2026-10-31: production **ebe5c4f** on **c46e8da**, feature source
+  **379ff18** on `claude/stack-audit-upgrade-plan-9hdkkv`. 21 paths changed, none added or deleted: PHPUnit 13 (dev),
+  `anthropic-ai/sdk` 1.3 (Content Planner on API `2026-10-21`), `openai-php` 0.21, `laravel/mcp` 1.1 (MCP `2026-07-28`
+  plus the older handshake; `PluginCors` allows `Mcp-Method`/`Mcp-Name`), `endroid/qr-code` 6 (`QrCodeService` on the v6
+  builder, same codes), CI on PHP 8.5 for PostgreSQL and Larastan. No migration. Parity: every listed file and the
+  whole source equal the tip. Artifact: PHP 8.4.27, **77 scopes, 7,251 passed / 16 skipped / 0 failed**; frontend tsc,
+  **5,778 tests / 399 files**; fresh build identical to main's bundle. CI on the same application source green (one
+  PostgreSQL failure on a first attempt, `MembersTest` newest first, passed on re-run and locally). Verified by
+  content on `origin/main` (21/21). Worth a real ChatGPT connection test (MCP library major). The next source delta
+  starts at **379ff18**.
+
 - Stack upgrade phases 0 and 1, 2026-10-31: production **c46e8da** on **48b12f0**, feature source **a8a573f** on
   `claude/stack-audit-upgrade-plan-9hdkkv` (plan `docs/audits/2026-10-31-stack-audit-and-upgrade-plan.md`). 29 paths
   (10 added, 19 changed, no deletions): CI (`.github/workflows/ci.yml`, never deploys), Larastan/Rector (dev only),

@@ -6,7 +6,8 @@ environment). AGENTS.md and CLAUDE.md still apply.
 
 ## Production
 
-Latest: **c46e8da** (31 Oct, stack upgrade phases 0 and 1: CI, static analysis, test tooling, build-tool security,
+Latest: **ebe5c4f** (31 Oct evening, library upgrades of stack plan phase 4a-4e; next source-patch baseline
+**379ff18**). Before it, **c46e8da** (31 Oct, stack upgrade phases 0 and 1: CI, static analysis, test tooling, build-tool security,
 `media:verify-version --version-id`, no `dall-e-3` fallback; record in `docs/loyalty-workspace.md` "Deploying"; the
 next source-patch baseline is **a8a573f** on `claude/stack-audit-upgrade-plan-9hdkkv`). Before it, **48b12f0** (portal
 booking rules shared with the members' app), and before that **4c59696c2**: request alerts on staff phones (`a199f1f8c`: the `staff_devices` table,
