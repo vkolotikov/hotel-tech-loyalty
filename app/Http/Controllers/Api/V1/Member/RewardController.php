@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1\Member;
 
 use App\Http\Controllers\Controller;
+use App\Jobs\AlertStaffOfRequest;
 use App\Models\Reward;
 use App\Models\RewardRedemption;
 use App\Services\LoyaltyService;
@@ -141,6 +142,9 @@ class RewardController extends Controller
             // wins the race lands here as a clean 422, not a 500.
             return response()->json(['message' => $e->getMessage()], 422);
         }
+
+        // Staff phones hear of it once the member has their code (StaffAlerts).
+        AlertStaffOfRequest::dispatchAfterResponse('reward', (int) $result->organization_id, (int) $result->id);
 
         return response()->json([
             'redemption' => $result->fresh(['reward']),

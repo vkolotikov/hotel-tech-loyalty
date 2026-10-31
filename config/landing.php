@@ -31,7 +31,7 @@ return [
         'sitemap', 'favicon', 'preview', 'privacy', 'terms',
         // Directories under public/, shadowed by the web server before PHP.
         // 'spa', 'assets', 'app' and 'storage' are above already.
-        'build', 'landing', 'staff', 'widget', 'alexa-skill-assets',
+        'build', 'landing', 'staff', 'widget', 'alexa-skill-assets', 'downloads',
         // The framework health route. On the landing host /up matches
         // landing.show, so a tenant holding this slug would shadow it.
         'up',

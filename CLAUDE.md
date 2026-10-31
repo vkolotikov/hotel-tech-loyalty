@@ -6,7 +6,7 @@ Multi-tenant Laravel 13 + React (Vite, TypeScript) SaaS with four sub-brands. Pr
 `frontend/src/pages/landing`).
 
 Starting a new session, or on another device or agent: the current state, set-up, test baselines, deploy steps and
-open items are in the newest file of `docs/handoff/` (now `docs/handoff/2026-10-30-hexatech-handoff.md`). Update it,
+open items are in the newest file of `docs/handoff/` (now `docs/handoff/2026-10-31-hexatech-handoff.md`). Update it,
 or add the next dated one, at the end of a session.
 
 ## Environment (hard rules, each one has bitten before)
@@ -298,6 +298,26 @@ or add the next dated one, at the end of a session.
   owner's say-so.
 - Local checks that capture mail need `LOG_LEVEL=debug` beside `MAIL_MAILER=log`: the local log level hides the
   log mailer's output, and an empty log then proves nothing.
+
+## Staff app (`apps/loyalty-staff`) code rules
+
+- The native Android and iOS desk app (Expo, branch `feature/loyalty-staff-app`; decisions and status in
+  `docs/loyalty-staff-app/00-PLAN.md`, how to run and build in `apps/loyalty-staff/README.md`). It is not part of the
+  Laravel Cloud deploy: it reaches phones only through EAS builds and the stores.
+- It decides nothing about loyalty: rights from the bootstrap's `staff.can`, every answer and refusal from
+  `/v1/admin/loyalty/…` with `brand_id=all`. A new action needs the endpoint first (server change with its `AccessMap`
+  key and tests), never a rule copied into the app. An endpoint's shape the app reads stays compatible, because
+  installed apps update late.
+- Every write sends an `idempotency_key`, kept while the attempt is unanswered (`src/lib/desk.ts`); every string is
+  `t('…')` in all five bundles of `src/lib/i18n/` (Spanish addresses staff as usted); colours and fonts only from
+  `src/lib/theme.ts`, the previous Expo apps' gold on navy, not the web mobile Figma (owner, 2026-10-31).
+- Request alerts (owner 2026-10-31): a staff phone is a `staff_devices` row written only by
+  `Admin\Loyalty\DeviceController` (`PUT`/`DELETE devices`); alerts are sent only by `Loyalty\Staff\StaffAlerts`,
+  dispatched after the member's response (`AlertStaffOfRequest::dispatchAfterResponse`), never inside the member's
+  request or transaction. `staff.expo_push_token` stays the Hotel Staff app's own. A new kind of alert is a method on
+  `StaffAlerts` with its words in all five `lang/<lang>/staff_alerts.php`.
+- Checks: `cd apps/loyalty-staff && npx tsc --noEmit && npx vitest run`. In the cloud container Expo commands need
+  `EXPO_OFFLINE=1`. Never commit `node_modules`, `dist` or the generated `ios`/`android` folders.
 
 ## Secrets
 

@@ -1,1 +1,0 @@
-import{r as e}from"./rolldown-runtime-XKyaHtl9.js";import{m as t}from"./vendor-react-C7UcvFic.js";var n=e(t(),1);function r(){let e=(0,n.useRef)(null);return(0,n.useEffect)(()=>{var t;(t=e.current)==null||t.focus()},[]),e}export{r as t};

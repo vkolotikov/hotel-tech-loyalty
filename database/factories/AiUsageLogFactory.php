@@ -42,7 +42,8 @@ class AiUsageLogFactory extends Factory
 
     public function lastMonth(): static
     {
-        return $this->state(['created_at' => now()->subMonth()->startOfMonth()->addDays(5)]);
+        // NoOverflow: on the 29th to 31st, subMonth() rolls over into this month (31 Oct - 1 month = 1 Oct).
+        return $this->state(['created_at' => now()->subMonthNoOverflow()->startOfMonth()->addDays(5)]);
     }
 
     public function thisMonth(): static
