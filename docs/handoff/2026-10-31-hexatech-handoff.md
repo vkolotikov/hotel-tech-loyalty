@@ -78,7 +78,8 @@ Plan and progress: `docs/audits/2026-10-31-stack-audit-and-upgrade-plan.md` (§6
   super admin's password if production was seeded with the old script.
 - Later the same day: Cloud runs PHP 8.5 (owner); PHPUnit 13, Anthropic SDK 1.3 (Content Planner on API
   `2026-10-21`), openai-php 0.21, laravel/mcp 1.1 (MCP `2026-07-28`, older handshake still served) and
-  endroid/qr-code 6 (plan §8). Open: spatie/laravel-permission 6 → 8, Stripe (needs test-mode keys), the chat
+  endroid/qr-code 6 (plan §8); then spatie/laravel-permission 8 and the planner's manager release fix. Open: Stripe
+  (needs test-mode keys), the chat
   widget's raw Anthropic calls (owner's temperature decision), the workstation's PHP 8.4.20 → 8.5.12.
 
 ## Cloud container notes (Linux)
