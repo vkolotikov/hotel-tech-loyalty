@@ -321,6 +321,7 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
             Route::get('me',            [AuthController::class, 'me']);
             Route::delete('logout',     [AuthController::class, 'logout']);
             Route::post('push-token',   [AuthController::class, 'updatePushToken']);
+            Route::delete('push-token', [AuthController::class, 'forgetPushToken']);
             Route::get('subscription',  [AuthController::class, 'subscription']);
             // Money-touching billing proxies — each call hits SaaS + Stripe.
             // Inner throttle so a malicious client can't churn Checkout/Portal

@@ -1,6 +1,6 @@
 import { formatDay, resolveLocale } from '../../lib/dates'
 import type { PortalCapabilities } from '../../lib/types'
-import type { PortalEvent, PortalEvents } from './eventsApi'
+import type { PortalEvent, PortalEvents } from '../../lib/types'
 
 /**
  * The member's events, decided here and tested by value (the portal's tests render to a string): what an event's

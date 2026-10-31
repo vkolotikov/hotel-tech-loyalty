@@ -825,6 +825,21 @@ class AuthController extends Controller
     }
 
     /**
+     * Before signing out, the members' app forgets this phone: the member's push token is cleared, but only while it is
+     * the one this phone sent (another phone that registered since keeps it). Answers whether it was cleared.
+     */
+    public function forgetPushToken(Request $request): JsonResponse
+    {
+        $validated = $request->validate(['expo_push_token' => 'required|string|max:255']);
+        $cleared = LoyaltyMember::withoutGlobalScopes()
+            ->where('user_id', $request->user()->id)
+            ->where('expo_push_token', $validated['expo_push_token'])
+            ->update(['expo_push_token' => null]);
+
+        return response()->json(['cleared' => $cleared > 0]);
+    }
+
+    /**
      * POST /v1/auth/send-code — Send a 6-digit verification code to the email.
      */
     public function sendVerificationCode(Request $request): JsonResponse

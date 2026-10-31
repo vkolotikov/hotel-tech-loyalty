@@ -1,1 +1,0 @@
-import{j as s,a6 as d}from"./index-DkJhGloi.js";function t({children:r,className:a,padding:e=!0}){return s.jsx("div",{className:d("bg-dark-surface rounded-xl border border-dark-border",e&&"p-6",a),children:r})}export{t as C};

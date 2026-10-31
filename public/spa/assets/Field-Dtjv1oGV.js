@@ -1,0 +1,1 @@
+import{j as t}from"./index-B0havFSF.js";function l({label:s,hint:e,children:x}){return t.jsxs("label",{className:"block",children:[t.jsx("span",{className:"block text-xs font-medium text-a-text-2 mb-1",children:s}),x,e&&t.jsx("span",{className:"block text-xs text-a-text-2 mt-1",children:e})]})}export{l as F};

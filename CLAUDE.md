@@ -323,6 +323,23 @@ or add the next dated one, at the end of a session.
 - Checks: `cd apps/loyalty-staff && npx tsc --noEmit && npx vitest run`. In the cloud container Expo commands need
   `EXPO_OFFLINE=1`. Never commit `node_modules`, `dist` or the generated `ios`/`android` folders.
 
+## Members' app (`apps/loyalty-member`) code rules
+
+- HexaTech Loyalty, the members' app (owner 2026-10-31: a new app, published as version 2.0 of the existing Hotel
+  Loyalty listing `com.hotelloyalty.app`, each venue's colours). Branch `feature/loyalty-member-app`; plan
+  `docs/loyalty-member-app/00-PLAN.md`, how to run, build and release in `apps/loyalty-member/README.md`. Not part of the
+  Laravel Cloud deploy.
+- It shares the member portal rather than copying it: the portal's words (`frontend/src/portal/i18n/*.json`, through
+  `src/lib/i18n/portalBundles.ts`) and its framework-free logic and types (through `src/shared/portal.ts`). Only modules
+  with no React, web client or browser API are imported; a portal change to one of them is a change to the app too, so
+  run the app's `npx tsc --noEmit && npx vitest run` with the portal's tests. Metro and Vitest resolve a shared file's
+  packages from the app's own `node_modules` (one i18next).
+- It decides nothing about loyalty or money: every figure, phrase and refusal is the server's (`/v1/member/*`) or the
+  portal's shared logic; the member-portal money rules above hold for it unchanged. The session keeps the old app's
+  secure-store keys (`auth_token`, `auth_user`) so an update keeps members signed in.
+- The venue's accent and heading face are read at render time (`C.gold`, `accentGradient()`, `fonts.*`), never inside
+  `StyleSheet.create`. Expo-managed libraries stay at the SDK's versions; no `expo-updates`.
+
 ## Secrets
 
 Never echo credential values. `.env` is local; production settings live in Laravel Cloud.

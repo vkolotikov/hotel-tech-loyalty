@@ -857,6 +857,15 @@ files on disk): run them one after the other.
 
 ## Deploying
 
+- Native apps' minimum version, 2026-10-31: production **54d61cd8c** on **a199f1f8c**, feature source **bb56e5355** on
+  `feature/loyalty-staff-app`. 8 paths (3 added, 5 changed): public `GET /api/v1/apps/{app}/version`
+  (`AppVersionController`, `config/apps.php`, Laravel Cloud variables `STAFF_APP_MIN_VERSION`,
+  `STAFF_APP_LATEST_VERSION`, `STAFF_APP_IOS_URL`, `STAFF_APP_ANDROID_URL`), its test and docs. No migration. Parity:
+  every listed file and the whole source outside the app equal the tip. Artifact: PHP **77 scopes, 7,240 passed / 16
+  skipped / 0 failed**; frontend tsc, **5,766 tests / 399 files**, build. Verified by content on `origin/main` (8/8);
+  no live check (the production host is not reachable from the cloud container). The next source delta starts at
+  **bb56e5355** (the app folder excepted; the members' app plan of 9719cddf1 is documentation only).
+
 - Request alerts on staff phones, 2026-10-31: production **a199f1f8c** on **f0c30c739**, feature source **91f0d1e72**
   on `feature/loyalty-staff-app`. 22 paths (13 added, 9 changed, no deletions); the app `apps/loyalty-staff` stays on
   the branch (EAS, not Cloud). Migration `2026_10_31_120000_create_staff_devices` (new table only; up, down, up on

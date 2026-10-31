@@ -6,10 +6,11 @@ environment). AGENTS.md and CLAUDE.md still apply.
 
 ## Production
 
-Production is **a199f1f8c** (request alerts on staff phones, on top of the wallet and recovery release `f0c30c739`):
-the `staff_devices` table, `PUT/DELETE /v1/admin/loyalty/devices` and `StaffAlerts`, plus three fixes that made
-main's red tests green (record: `docs/loyalty-workspace.md` "Deploying"). The next source-patch baseline is
-**91f0d1e72** on `feature/loyalty-staff-app`, with `apps/loyalty-staff/` left out of any Cloud deploy.
+Production is **54d61cd8c**: request alerts on staff phones (`a199f1f8c`: the `staff_devices` table,
+`PUT/DELETE /v1/admin/loyalty/devices`, `StaffAlerts`, and three fixes that made main's red tests green), then the
+native apps' minimum-version answer (`GET /api/v1/apps/{app}/version`, `config/apps.php`). Records:
+`docs/loyalty-workspace.md` "Deploying". The next source-patch baseline is **bb56e5355** on
+`feature/loyalty-staff-app`, with `apps/loyalty-staff/` left out of any Cloud deploy.
 
 ## New: HexaTech Staff, the native desk app
 
@@ -29,8 +30,26 @@ main's red tests green (record: `docs/loyalty-workspace.md` "Deploying"). The ne
 - Request alerts are built and the server part is live: a member's benefit request alerts every active staff phone,
   a claimed reward those who may hand it over. A phone hears them once the owner has set up the EAS project id, an
   Apple push key and FCM V1 credentials (`apps/loyalty-staff/README.md`, "Request alerts").
-- Later steps (plan, "What is left"): a minimum-version answer, the store listings and unlisted App Store
-  distribution.
+- The minimum-version check is built and its server part is live; the app is on the newest versions (Expo SDK
+  58.0.21, TypeScript 7, Vitest 5; README "Versions").
+- Later steps (plan, "What is left"): the store listings and unlisted App Store distribution.
+
+## New: HexaTech Loyalty, the members' app
+
+Owner's decisions (2026-10-31): a new app, published as version 2.0.0 of the existing Hotel Loyalty listing
+(`com.hotelloyalty.app`), store name "HexaTech Loyalty", each venue's own colours. Branch `feature/loyalty-member-app`,
+folder `apps/loyalty-member` (README there; plan and audit in `docs/loyalty-member-app/`). Not part of the Cloud
+deploy.
+
+- Phase 1 (foundation, sign-in, join by QR, the card, activity, five languages, push per phone, version check) and
+  phase 2 (rewards, offers, codes, stamps, credit, events, inbox, profile, help) are built and checked in the browser
+  preview against the local API. Phase 3 (bookings and payments, under the member-portal money rules) is next.
+- It shares the member portal's words and framework-free logic; the portal's event, stamp and credit types live in
+  its `lib/types.ts` and the industry nouns' keys in `lib/industry.ts` for that reason.
+- Server part (additive): `DELETE /v1/auth/push-token` (clears the member's push token only when it is this phone's)
+  and `member` in `config/apps.php` (`MEMBER_APP_*`, default 2.0.0 and the existing store pages).
+- The owner's side before release: Expo sign-in as `hoteltechai` (or an `EXPO_TOKEN`), the Apple push key, FCM V1 for
+  both apps, the old repository's over-the-air workflow switched off, store texts.
 
 ## Cloud container notes (Linux)
 

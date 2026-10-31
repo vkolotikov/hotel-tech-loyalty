@@ -395,3 +395,89 @@ export interface CancelReply {
   booking: PortalBooking
   refund: { outcome: 'none' | 'released' | 'refunded'; amount: number; currency: string; coupon_released: boolean; points_reversed: number }
 }
+
+// ─── Events and stamps (release 8 and 7): the member endpoints' shapes, beside the rest ───
+
+/**
+ * An event as the member sees it (release 8, spec 2026-10-25 §4; PortalEvents::row()). Times are the venue's wall
+ * clock, 'YYYY-MM-DDTHH:mm' — read as digits, never passed to `new Date()`.
+ */
+export interface PortalEvent {
+  id: number
+  title: string
+  description: string | null
+  starts_at: string
+  ends_at: string
+  /** The place's name, or the written location, or null. */
+  where: string | null
+  points: number
+  sign_up: boolean
+  walk_ins: boolean
+  capacity: number | null
+  /** Places left (sign-ups and walk-ins taken off the capacity); null without a capacity. */
+  room_left: number | null
+  my: 'signed_up' | 'none'
+  /** The member has checked in already (an event on now). */
+  checked_in: boolean
+  can_sign_up: boolean
+  /** Why the member cannot sign up (EventSignUp's code), while the event takes sign-ups; else null. */
+  why_not: string | null
+  can_cancel: boolean
+}
+
+export interface AttendedEvent {
+  id: number
+  title: string
+  starts_at: string
+  points: number
+}
+
+/** `GET member/portal/events` */
+export interface PortalEvents {
+  upcoming: PortalEvent[]
+  attended: AttendedEvent[]
+}
+
+/** One stamp as the member sees it: the venue day and the visit that gave it. */
+export interface MemberStamp {
+  venue_day: string
+  source: string
+  card_number?: number | null
+}
+
+/**
+ * `GET /v1/member/portal/stamps` (StampCards::forMember without staff details, release 7): just `{ enabled: false }`
+ * while the venue does not use the stamp card and the member has none.
+ */
+export interface MemberStamps {
+  enabled: boolean
+  stamps_per_card?: number
+  /** What a full card gives now. */
+  reward?: { kind: 'points'; points: number } | { kind: 'reward'; reward_id: number; reward_name: string }
+  card?: { id: number; number: number; stamps_count: number; stamps_needed: number; completed_at: string | null; stamps: MemberStamp[] } | null
+  completed_cards?: number
+  history?: { stamps: MemberStamp[]; cards: unknown[] }
+}
+
+// ─── Cashback credit (release 7) ───
+
+/** One line of the member's own credit (`CreditLedger::forMemberSelf`): signed amounts, never a staff name. */
+export interface MemberCreditLine {
+  id: number
+  /** `earn` | `spend` | `reverse` | `adjust`. */
+  type: string
+  amount: number
+  balance_after: number
+  currency: string
+  note: string | null
+  reference_type: string | null
+  created_at: string | null
+}
+
+/** `GET member/portal/credit`: whether the venue gives cashback, the balance in its currency, the last 20 lines. */
+export interface MemberCredit {
+  enabled: boolean
+  balance: number
+  currency: string
+  lines: MemberCreditLine[]
+}
