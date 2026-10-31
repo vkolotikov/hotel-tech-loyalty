@@ -1,0 +1,76 @@
+{
+  "app": "HexaTech Loyalty",
+  "listing": "Version 2.0 of the existing Hotel Loyalty listing (App Store app 6765608479, Play com.hotelloyalty.app)",
+  "languages": {
+    "en": {
+      "appStore": {
+        "name": "HexaTech Loyalty",
+        "subtitle": "Your membership card & rewards",
+        "promotionalText": "Your card, points and rewards in one place. Book appointments and stays at member prices, and hear about new offers first.",
+        "keywords": "loyalty,membership,rewards,points,card,wallet,offers,booking,hotel,salon,spa,stamps,member",
+        "whatsNew": "HexaTech Loyalty 2.0 is a new app, made again from the ground up.\n\n• Your venue's own colours and style\n• Your membership card with its QR code, for the desk and your phone's wallet\n• Points, your level and what it takes to reach the next one\n• Rewards, offers, stamp cards and credit\n• Book appointments and stays at member prices, and pay in the app\n• Events, messages from your venue, and your bookings in one place\n• Face ID or fingerprint lock, and five languages\n\nYou stay signed in after the update."
+      },
+      "play": {
+        "title": "HexaTech Loyalty",
+        "shortDescription": "Your membership card, points, rewards and bookings at member prices."
+      },
+      "description": "HexaTech Loyalty is the membership app of the hotels, salons, spas and clubs that run their loyalty programme with HexaTech. It shows your venue's own colours and keeps everything your membership gives you in one place.\n\nYOUR CARD\n• Your membership card with its QR code: show it at the desk to collect points and use your benefits\n• Add it to Apple Wallet or Google Wallet\n\nPOINTS AND LEVELS\n• Your balance and every line of your history\n• Your level, what it gives you, and what it takes to reach the next one\n\nREWARDS\n• Spend points on rewards from your venue's catalogue and keep the codes at hand\n• Claim offers made for you, fill your stamp card, and see your credit\n• Ask for your level's benefits, and see when they are ready\n\nBOOKINGS\n• Book appointments and stays at member prices, with your coupons\n• Pay securely in the app with Stripe, or at the venue where it allows\n• See and cancel your bookings within your venue's policy\n\nAND MORE\n• Events: sign up, and see the ones you came to\n• Messages from your venue, and the choice of what you hear about\n• Invite friends with your own link\n• Lock the app with Face ID or your fingerprint\n• English, Russian, German, French and Spanish\n\nYou need a membership at a venue that uses HexaTech: join with its sign-up QR code or link, or sign in with the account you already have."
+    },
+    "ru": {
+      "appStore": {
+        "name": "HexaTech Loyalty",
+        "subtitle": "Карта участника и награды",
+        "promotionalText": "Ваша карта, баллы и награды в одном месте. Бронируйте визиты и проживание по цене для участников и первыми узнавайте о новых предложениях.",
+        "keywords": "лояльность,баллы,карта,награды,бонусы,бронь,отель,спа",
+        "whatsNew": "HexaTech Loyalty 2.0 — новое приложение, созданное заново.\n\n• Цвета и стиль вашего заведения\n• Карта участника с QR-кодом — для стойки и для кошелька телефона\n• Баллы, ваш уровень и что нужно для следующего\n• Награды, предложения, карточки штампов и кредит\n• Бронирование визитов и проживания по цене для участников с оплатой в приложении\n• События, сообщения от заведения и ваши бронирования в одном месте\n• Блокировка Face ID или отпечатком пальца и пять языков\n\nПосле обновления вход сохраняется."
+      },
+      "play": {
+        "title": "HexaTech Loyalty",
+        "shortDescription": "Карта участника, баллы, награды и бронирования по цене для участников."
+      },
+      "description": "HexaTech Loyalty — приложение для участников программ лояльности отелей, салонов, спа и клубов, которые работают с HexaTech. Оно показывает цвета вашего заведения и собирает в одном месте всё, что даёт вам участие.\n\nВАША КАРТА\n• Карта участника с QR-кодом: покажите её на стойке, чтобы получить баллы и воспользоваться привилегиями\n• Добавьте её в Apple Wallet или Google Wallet\n\nБАЛЛЫ И УРОВНИ\n• Ваш баланс и вся история начислений\n• Ваш уровень, его привилегии и что нужно для следующего\n\nНАГРАДЫ\n• Обменивайте баллы на награды из каталога заведения и держите коды под рукой\n• Получайте персональные предложения, собирайте штампы и следите за кредитом\n• Запрашивайте привилегии своего уровня и узнавайте, когда они готовы\n\nБРОНИРОВАНИЯ\n• Бронируйте визиты и проживание по цене для участников, с вашими купонами\n• Платите в приложении через Stripe или на месте, если заведение это допускает\n• Смотрите и отменяйте бронирования по правилам заведения\n\nА ТАКЖЕ\n• События: записывайтесь и смотрите, на каких вы были\n• Сообщения от заведения и выбор, о чём вам сообщать\n• Приглашайте друзей по своей ссылке\n• Блокировка приложения Face ID или отпечатком пальца\n• Английский, русский, немецкий, французский и испанский\n\nНужно участие в программе заведения, которое работает с HexaTech: присоединяйтесь по его QR-коду или ссылке либо войдите в существующую учётную запись."
+    },
+    "de": {
+      "appStore": {
+        "name": "HexaTech Loyalty",
+        "subtitle": "Ihre Mitgliedskarte & Prämien",
+        "promotionalText": "Ihre Karte, Punkte und Prämien an einem Ort. Buchen Sie Termine und Aufenthalte zu Mitgliederpreisen und erfahren Sie neue Angebote zuerst.",
+        "keywords": "Treue,Mitglied,Prämien,Punkte,Karte,Wallet,Angebote,Buchung,Hotel,Salon,Spa,Stempel,Bonus",
+        "whatsNew": "HexaTech Loyalty 2.0 ist eine neue App, von Grund auf neu gebaut.\n\n• Die Farben und der Stil Ihres Hauses\n• Ihre Mitgliedskarte mit QR-Code, für den Empfang und die Wallet Ihres Telefons\n• Punkte, Ihre Stufe und was zur nächsten fehlt\n• Prämien, Angebote, Stempelkarten und Guthaben\n• Termine und Aufenthalte zu Mitgliederpreisen buchen und in der App bezahlen\n• Veranstaltungen, Nachrichten Ihres Hauses und Ihre Buchungen an einem Ort\n• Sperre mit Face ID oder Fingerabdruck, fünf Sprachen\n\nNach dem Update bleiben Sie angemeldet."
+      },
+      "play": {
+        "title": "HexaTech Loyalty",
+        "shortDescription": "Ihre Mitgliedskarte, Punkte, Prämien und Buchungen zu Mitgliederpreisen."
+      },
+      "description": "HexaTech Loyalty ist die Mitglieder-App der Hotels, Salons, Spas und Clubs, die ihr Treueprogramm mit HexaTech führen. Sie zeigt die Farben Ihres Hauses und bündelt alles, was Ihnen Ihre Mitgliedschaft bietet.\n\nIHRE KARTE\n• Ihre Mitgliedskarte mit QR-Code: Zeigen Sie sie am Empfang, um Punkte zu sammeln und Ihre Vorteile zu nutzen\n• Fügen Sie sie Apple Wallet oder Google Wallet hinzu\n\nPUNKTE UND STUFEN\n• Ihr Punktestand und jede Buchung Ihres Verlaufs\n• Ihre Stufe, ihre Vorteile und was zur nächsten fehlt\n\nPRÄMIEN\n• Lösen Sie Punkte gegen Prämien aus dem Katalog Ihres Hauses ein und haben Sie die Codes zur Hand\n• Nutzen Sie Angebote für Sie, füllen Sie Ihre Stempelkarte und sehen Sie Ihr Guthaben\n• Fragen Sie die Vorteile Ihrer Stufe an und sehen Sie, wann sie bereitstehen\n\nBUCHUNGEN\n• Buchen Sie Termine und Aufenthalte zu Mitgliederpreisen, mit Ihren Gutscheinen\n• Bezahlen Sie sicher in der App über Stripe oder vor Ort, wo es das Haus erlaubt\n• Sehen und stornieren Sie Ihre Buchungen nach den Regeln des Hauses\n\nUND MEHR\n• Veranstaltungen: anmelden und sehen, an welchen Sie teilgenommen haben\n• Nachrichten Ihres Hauses und die Wahl, worüber Sie informiert werden\n• Laden Sie Freunde mit Ihrem eigenen Link ein\n• Sperren Sie die App mit Face ID oder Fingerabdruck\n• Englisch, Russisch, Deutsch, Französisch und Spanisch\n\nSie benötigen eine Mitgliedschaft bei einem Haus, das HexaTech nutzt: Treten Sie über dessen QR-Code oder Link bei oder melden Sie sich mit Ihrem bestehenden Konto an."
+    },
+    "fr": {
+      "appStore": {
+        "name": "HexaTech Loyalty",
+        "subtitle": "Carte membre et avantages",
+        "promotionalText": "Votre carte, vos points et vos récompenses au même endroit. Réservez rendez-vous et séjours au prix membre et découvrez les offres en premier.",
+        "keywords": "fidélité,membre,récompenses,points,carte,wallet,offres,réservation,hôtel,salon,spa,tampons",
+        "whatsNew": "HexaTech Loyalty 2.0 est une nouvelle application, entièrement repensée.\n\n• Les couleurs et le style de votre établissement\n• Votre carte membre avec son code QR, pour l'accueil et le portefeuille de votre téléphone\n• Vos points, votre niveau et ce qu'il faut pour le suivant\n• Récompenses, offres, cartes de tampons et crédit\n• Réservez rendez-vous et séjours au prix membre et payez dans l'application\n• Événements, messages de votre établissement et vos réservations au même endroit\n• Verrouillage par Face ID ou empreinte, cinq langues\n\nVous restez connecté après la mise à jour."
+      },
+      "play": {
+        "title": "HexaTech Loyalty",
+        "shortDescription": "Votre carte membre, vos points, récompenses et réservations au prix membre."
+      },
+      "description": "HexaTech Loyalty est l'application membre des hôtels, salons, spas et clubs qui gèrent leur programme de fidélité avec HexaTech. Elle reprend les couleurs de votre établissement et réunit tout ce que votre adhésion vous offre.\n\nVOTRE CARTE\n• Votre carte membre avec son code QR : présentez-la à l'accueil pour cumuler des points et profiter de vos avantages\n• Ajoutez-la à Apple Wallet ou Google Wallet\n\nPOINTS ET NIVEAUX\n• Votre solde et chaque ligne de votre historique\n• Votre niveau, ses avantages et ce qu'il faut pour le suivant\n\nRÉCOMPENSES\n• Échangez vos points contre les récompenses du catalogue et gardez vos codes à portée de main\n• Profitez des offres qui vous sont destinées, remplissez votre carte de tampons et consultez votre crédit\n• Demandez les avantages de votre niveau et sachez quand ils sont prêts\n\nRÉSERVATIONS\n• Réservez rendez-vous et séjours au prix membre, avec vos coupons\n• Payez en toute sécurité dans l'application avec Stripe, ou sur place lorsque l'établissement le permet\n• Consultez et annulez vos réservations selon les conditions de l'établissement\n\nET AUSSI\n• Événements : inscrivez-vous et retrouvez ceux auxquels vous avez participé\n• Messages de votre établissement, et le choix de ce que vous recevez\n• Invitez vos amis avec votre propre lien\n• Verrouillez l'application avec Face ID ou votre empreinte\n• Anglais, russe, allemand, français et espagnol\n\nVous avez besoin d'une adhésion auprès d'un établissement qui utilise HexaTech : rejoignez-le avec son code QR ou son lien d'inscription, ou connectez-vous avec votre compte existant."
+    },
+    "es": {
+      "appStore": {
+        "name": "HexaTech Loyalty",
+        "subtitle": "Su tarjeta de socio y premios",
+        "promotionalText": "Su tarjeta, sus puntos y sus premios en un solo lugar. Reserve citas y estancias a precio de socio y conozca las nuevas ofertas antes que nadie.",
+        "keywords": "fidelidad,socio,premios,puntos,tarjeta,wallet,ofertas,reservas,hotel,salón,spa,sellos",
+        "whatsNew": "HexaTech Loyalty 2.0 es una aplicación nueva, hecha desde cero.\n\n• Los colores y el estilo de su establecimiento\n• Su tarjeta de socio con código QR, para la recepción y la cartera de su teléfono\n• Sus puntos, su nivel y lo que le falta para el siguiente\n• Premios, ofertas, tarjetas de sellos y crédito\n• Reserve citas y estancias a precio de socio y pague en la aplicación\n• Eventos, mensajes de su establecimiento y sus reservas en un solo lugar\n• Bloqueo con Face ID o huella y cinco idiomas\n\nTras la actualización, su sesión sigue abierta."
+      },
+      "play": {
+        "title": "HexaTech Loyalty",
+        "shortDescription": "Su tarjeta de socio, puntos, premios y reservas a precio de socio."
+      },
+      "description": "HexaTech Loyalty es la aplicación para socios de los hoteles, salones, spas y clubes que gestionan su programa de fidelidad con HexaTech. Muestra los colores de su establecimiento y reúne todo lo que le ofrece su membresía.\n\nSU TARJETA\n• Su tarjeta de socio con código QR: muéstrela en recepción para sumar puntos y usar sus ventajas\n• Añádala a Apple Wallet o Google Wallet\n\nPUNTOS Y NIVELES\n• Su saldo y cada movimiento de su historial\n• Su nivel, sus ventajas y lo que le falta para el siguiente\n\nPREMIOS\n• Canjee puntos por premios del catálogo de su establecimiento y tenga los códigos a mano\n• Aproveche las ofertas pensadas para usted, complete su tarjeta de sellos y consulte su crédito\n• Solicite las ventajas de su nivel y sepa cuándo están listas\n\nRESERVAS\n• Reserve citas y estancias a precio de socio, con sus cupones\n• Pague con seguridad en la aplicación con Stripe, o en el establecimiento cuando lo permita\n• Consulte y cancele sus reservas según las condiciones del establecimiento\n\nY ADEMÁS\n• Eventos: inscríbase y vea a cuáles asistió\n• Mensajes de su establecimiento y la elección de qué avisos recibe\n• Invite a sus amigos con su propio enlace\n• Bloquee la aplicación con Face ID o su huella\n• Inglés, ruso, alemán, francés y español\n\nNecesita una membresía en un establecimiento que use HexaTech: únase con su código QR o su enlace de alta, o inicie sesión con la cuenta que ya tiene."
+    }
+  }
+}

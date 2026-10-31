@@ -80,6 +80,9 @@ Browser preview against a local API (no camera, push or wallet):
 
 ## Build and release
 
+The store release, step by step (accounts, credentials, listing texts in `store/listing.json`, screenshots in
+`store/screenshots/`, privacy answers, review notes): `docs/loyalty-member-app/02-RELEASE.md`.
+
 Needs the `hoteltechai` Expo sign-in (or an `EXPO_TOKEN` secret).
 
 ```bash

@@ -1,0 +1,76 @@
+{
+  "app": "HexaTech Staff",
+  "listing": "New listing: App Store (unlisted distribution requested), Play uk.hexatech.loyalty.staff",
+  "languages": {
+    "en": {
+      "appStore": {
+        "name": "HexaTech Staff",
+        "subtitle": "The loyalty desk for your team",
+        "promotionalText": "Scan a member's card or code, award points, check guests in and answer reward requests: your HexaTech loyalty desk on a phone or tablet.",
+        "keywords": "loyalty,desk,scan,NFC,QR,points,rewards,members,check-in,hotel,salon,venue,staff,front desk",
+        "whatsNew": "The first release of HexaTech Staff, the desk app for venues that run their loyalty programme with HexaTech."
+      },
+      "play": {
+        "title": "HexaTech Staff",
+        "shortDescription": "Scan members, award points and answer reward requests at your desk."
+      },
+      "description": "HexaTech Staff is the desk app for hotels, salons, spas, restaurants and clubs that run their loyalty programme with HexaTech. Your team signs in with its HexaTech staff accounts; each person sees and does what their role allows.\n\nSCAN\n• Read a member's NFC card, their QR code from the app or wallet, or type their number\n• See at once who they are, their level, their points and what they are entitled to\n• At the door or an event: a clear yes or no, and why\n\nAT THE DESK\n• Award points for a visit or a purchase, and check members in\n• Hand over rewards and benefits, and link a new card to a member\n• Every action is checked and recorded by the server, never decided on the phone\n\nREQUESTS\n• Members' benefit requests and claimed rewards in one list\n• Alerts on the phone when a new request arrives\n\nMEMBERS\n• Find any member by name, email, phone or card number\n\nMADE FOR THE DESK\n• Works on phones and tablets\n• Lock with Face ID or a fingerprint on a shared desk phone\n• English, Russian, German, French and Spanish\n\nHexaTech Staff needs a staff account from a venue that uses HexaTech. It is not for members: members use HexaTech Loyalty."
+    },
+    "ru": {
+      "appStore": {
+        "name": "HexaTech Staff",
+        "subtitle": "Стойка лояльности для команды",
+        "promotionalText": "Сканируйте карту или код участника, начисляйте баллы, отмечайте гостей и отвечайте на запросы наград: стойка HexaTech на телефоне или планшете.",
+        "keywords": "лояльность,стойка,NFC,QR,баллы,награды,отель,салон",
+        "whatsNew": "Первый выпуск HexaTech Staff — приложения для стойки заведений, которые ведут программу лояльности в HexaTech."
+      },
+      "play": {
+        "title": "HexaTech Staff",
+        "shortDescription": "Сканируйте участников, начисляйте баллы и отвечайте на запросы наград."
+      },
+      "description": "HexaTech Staff — приложение для стойки отелей, салонов, спа, ресторанов и клубов, которые ведут программу лояльности в HexaTech. Сотрудники входят под своими учётными записями HexaTech и видят и делают то, что позволяет их роль.\n\nСКАНИРОВАНИЕ\n• Считывайте NFC-карту участника, QR-код из приложения или кошелька либо вводите номер\n• Сразу видно, кто это, его уровень, баллы и на что он имеет право\n• На входе или на событии — понятное «да» или «нет» и причина\n\nНА СТОЙКЕ\n• Начисляйте баллы за визит или покупку и отмечайте участников\n• Выдавайте награды и привилегии, привязывайте новую карту к участнику\n• Каждое действие проверяет и записывает сервер, а не телефон\n\nЗАПРОСЫ\n• Запросы привилегий и полученные награды участников в одном списке\n• Уведомление на телефон о каждом новом запросе\n\nУЧАСТНИКИ\n• Поиск участника по имени, email, телефону или номеру карты\n\nДЛЯ СТОЙКИ\n• Работает на телефонах и планшетах\n• Блокировка Face ID или отпечатком пальца на общем телефоне\n• Английский, русский, немецкий, французский и испанский\n\nДля HexaTech Staff нужна учётная запись сотрудника заведения, которое работает с HexaTech. Приложение не для участников: им предназначено HexaTech Loyalty."
+    },
+    "de": {
+      "appStore": {
+        "name": "HexaTech Staff",
+        "subtitle": "Der Treue-Empfang fürs Team",
+        "promotionalText": "Scannen Sie Karte oder Code eines Mitglieds, vergeben Sie Punkte, checken Sie Gäste ein und beantworten Sie Prämienanfragen – auf Telefon oder Tablet.",
+        "keywords": "Treue,Empfang,Scan,NFC,QR,Punkte,Prämien,Mitglieder,Check-in,Hotel,Salon,Personal,Rezeption",
+        "whatsNew": "Die erste Version von HexaTech Staff, der Empfangs-App für Häuser, die ihr Treueprogramm mit HexaTech führen."
+      },
+      "play": {
+        "title": "HexaTech Staff",
+        "shortDescription": "Mitglieder scannen, Punkte vergeben und Prämienanfragen beantworten."
+      },
+      "description": "HexaTech Staff ist die Empfangs-App für Hotels, Salons, Spas, Restaurants und Clubs, die ihr Treueprogramm mit HexaTech führen. Ihr Team meldet sich mit seinen HexaTech-Mitarbeiterkonten an; jede Person sieht und tut, was ihre Rolle erlaubt.\n\nSCANNEN\n• Lesen Sie die NFC-Karte eines Mitglieds, seinen QR-Code aus App oder Wallet, oder geben Sie die Nummer ein\n• Sie sehen sofort, wer es ist, seine Stufe, seine Punkte und worauf es Anspruch hat\n• An der Tür oder bei einer Veranstaltung: ein klares Ja oder Nein, mit Grund\n\nAM EMPFANG\n• Vergeben Sie Punkte für einen Besuch oder Kauf und checken Sie Mitglieder ein\n• Geben Sie Prämien und Vorteile aus und verknüpfen Sie eine neue Karte mit einem Mitglied\n• Jede Aktion prüft und speichert der Server, nie das Telefon allein\n\nANFRAGEN\n• Vorteilsanfragen und eingelöste Prämien der Mitglieder in einer Liste\n• Benachrichtigung auf dem Telefon bei jeder neuen Anfrage\n\nMITGLIEDER\n• Finden Sie jedes Mitglied nach Name, E-Mail, Telefon oder Kartennummer\n\nFÜR DEN EMPFANG GEMACHT\n• Für Telefone und Tablets\n• Sperre mit Face ID oder Fingerabdruck auf einem geteilten Empfangstelefon\n• Englisch, Russisch, Deutsch, Französisch und Spanisch\n\nFür HexaTech Staff benötigen Sie ein Mitarbeiterkonto eines Hauses, das HexaTech nutzt. Die App ist nicht für Mitglieder: Mitglieder nutzen HexaTech Loyalty."
+    },
+    "fr": {
+      "appStore": {
+        "name": "HexaTech Staff",
+        "subtitle": "L'accueil fidélité de l'équipe",
+        "promotionalText": "Scannez la carte ou le code d'un membre, attribuez des points, enregistrez les arrivées et répondez aux demandes de récompenses, sur téléphone ou tablette.",
+        "keywords": "fidélité,accueil,scan,NFC,QR,points,récompenses,membres,hôtel,salon,personnel,réception",
+        "whatsNew": "La première version de HexaTech Staff, l'application d'accueil des établissements qui gèrent leur programme de fidélité avec HexaTech."
+      },
+      "play": {
+        "title": "HexaTech Staff",
+        "shortDescription": "Scannez les membres, attribuez des points et traitez les demandes."
+      },
+      "description": "HexaTech Staff est l'application d'accueil des hôtels, salons, spas, restaurants et clubs qui gèrent leur programme de fidélité avec HexaTech. Votre équipe se connecte avec ses comptes personnel HexaTech ; chacun voit et fait ce que son rôle permet.\n\nSCANNER\n• Lisez la carte NFC d'un membre, son code QR depuis l'application ou le portefeuille, ou saisissez son numéro\n• Voyez aussitôt qui il est, son niveau, ses points et ce à quoi il a droit\n• À l'entrée ou lors d'un événement : un oui ou un non clair, avec la raison\n\nÀ L'ACCUEIL\n• Attribuez des points pour une visite ou un achat, et enregistrez les arrivées\n• Remettez récompenses et avantages, et associez une nouvelle carte à un membre\n• Chaque action est vérifiée et enregistrée par le serveur, jamais décidée par le téléphone\n\nDEMANDES\n• Les demandes d'avantages et les récompenses réclamées par les membres dans une seule liste\n• Une alerte sur le téléphone à chaque nouvelle demande\n\nMEMBRES\n• Retrouvez un membre par son nom, e-mail, téléphone ou numéro de carte\n\nPENSÉE POUR L'ACCUEIL\n• Pour téléphones et tablettes\n• Verrouillage par Face ID ou empreinte sur un téléphone d'accueil partagé\n• Anglais, russe, allemand, français et espagnol\n\nHexaTech Staff nécessite un compte personnel d'un établissement qui utilise HexaTech. Elle n'est pas destinée aux membres : ils utilisent HexaTech Loyalty."
+    },
+    "es": {
+      "appStore": {
+        "name": "HexaTech Staff",
+        "subtitle": "La recepción de fidelidad",
+        "promotionalText": "Escanee la tarjeta o el código de un socio, otorgue puntos, registre llegadas y atienda solicitudes de premios: su recepción HexaTech en móvil o tableta.",
+        "keywords": "fidelidad,recepción,escáner,NFC,QR,puntos,premios,socios,hotel,salón,personal,registro",
+        "whatsNew": "La primera versión de HexaTech Staff, la aplicación de recepción para los establecimientos que gestionan su programa de fidelidad con HexaTech."
+      },
+      "play": {
+        "title": "HexaTech Staff",
+        "shortDescription": "Escanee socios, otorgue puntos y atienda solicitudes de premios."
+      },
+      "description": "HexaTech Staff es la aplicación de recepción para hoteles, salones, spas, restaurantes y clubes que gestionan su programa de fidelidad con HexaTech. Su equipo inicia sesión con sus cuentas de personal de HexaTech; cada persona ve y hace lo que su función le permite.\n\nESCANEAR\n• Lea la tarjeta NFC de un socio, su código QR desde la aplicación o la cartera, o escriba su número\n• Vea al instante quién es, su nivel, sus puntos y a qué tiene derecho\n• En la entrada o en un evento: un sí o un no claros, con el motivo\n\nEN RECEPCIÓN\n• Otorgue puntos por una visita o una compra y registre la llegada de los socios\n• Entregue premios y ventajas, y vincule una tarjeta nueva a un socio\n• El servidor comprueba y registra cada acción; el teléfono nunca decide\n\nSOLICITUDES\n• Las solicitudes de ventajas y los premios canjeados por los socios en una sola lista\n• Un aviso en el teléfono con cada nueva solicitud\n\nSOCIOS\n• Encuentre a cualquier socio por nombre, correo, teléfono o número de tarjeta\n\nPENSADA PARA LA RECEPCIÓN\n• Para móviles y tabletas\n• Bloqueo con Face ID o huella en un teléfono de recepción compartido\n• Inglés, ruso, alemán, francés y español\n\nHexaTech Staff requiere una cuenta de personal de un establecimiento que use HexaTech. No es para socios: los socios usan HexaTech Loyalty."
+    }
+  }
+}
