@@ -1,4 +1,4 @@
-import type { AvailableRoom, CouponRef, StayAvailability, StayQuote, StayQuoteBody, StayRoom, StayRules } from '../../lib/types'
+import type { AvailableCombination, AvailableRoom, CouponRef, StayAvailability, StayQuote, StayQuoteBody, StayRoom, StayRules } from '../../lib/types'
 import type { PayVisit } from '../book/steps'
 
 export type StayStep = 'dates' | 'room' | 'review' | 'pay'
@@ -422,4 +422,33 @@ export type StayCatalogueGuard = 'error' | 'loading' | 'ready'
 export function stayCatalogueGuard(hasData: boolean, isError: boolean): StayCatalogueGuard {
   if (hasData) return 'ready'
   return isError ? 'error' : 'loading'
+}
+
+/** Whether the quote is chargeable online at all: online mode and something owed. A zero total never asks for an
+ *  intent, whatever the mode. */
+export function stayChargeable(quote: Pick<StayQuote, 'payment' | 'total_amount'>): boolean {
+  return quote.payment.mode === 'online' && quote.total_amount > 0
+}
+
+/**
+ * The breakdown's own reading of the payment-intent call (see `StayIntentAnswer`): the specific "nothing chargeable
+ * online" code off the current failure when there is one; once the visit already remembers `noCard` without a fresh
+ * code to read it from (the intent query is disabled — a remount after jumping away from Pay and back, say), the
+ * safer `'pay_at_venue'` ("owed, just not online") rather than silently reverting to "charged now".
+ */
+export function stayIntentAnswer(code: string | null, noCard: boolean): StayIntentAnswer {
+  if (code === 'nothing_to_pay' || code === 'pay_at_venue') return code
+  return noCard ? 'pay_at_venue' : null
+}
+
+/** `afterStayConfirmError`'s own `hold` when its decision was to stay on Pay; null otherwise (no error, or an error
+ *  that sent the member away instead). */
+export function stayHold(decision: StayConfirmDecision | null): 'contact' | 'retry' | null {
+  return decision && decision.to === 'pay' ? decision.hold : null
+}
+
+/** A combination's per-night figure: the member's own total spread over the nights, rounded to the cent; null before
+ *  the nights are known. */
+export function combinationPerNight(combo: Pick<AvailableCombination, 'member_total'>, nights: number): number | null {
+  return nights > 0 ? Math.round((combo.member_total / nights) * 100) / 100 : null
 }

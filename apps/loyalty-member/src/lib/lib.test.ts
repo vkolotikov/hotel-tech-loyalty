@@ -5,12 +5,13 @@ import { en } from './i18n/en'
 import { PORTAL_BUNDLES } from './i18n/portalBundles'
 import { ApiError, asPortalError, failureFrom, serverCodeOf } from './failure'
 import { sheetOutcome } from './paymentOutcome'
+import { addMonths, monthGrid, rangeTap } from './calendar'
 import { errorKey, signInErrorKey } from './errors'
 import { appRoute, greeting, initials, joinTokenFrom, mediaAddress, spacedNumber } from './format'
 import { pushTarget } from './alerts'
 import { compareVersions, versionState } from './version'
 import { DEFAULT_LOOK, lookFrom } from './theme'
-import { afterConfirmError, bookInitialState, bookReducer, cancelOffer, chargesNothing, counted, formatMoney, moneyPromise, payAtVenueGrantOf, vocabKey, type Catalogue, type PortalBooking } from '../shared/portal'
+import { afterStayConfirmError, datesProblem, initialStayState, stayChargeLine, stayQuoteBody, stayReducer, afterConfirmError, bookInitialState, bookReducer, cancelOffer, chargesNothing, counted, formatMoney, moneyPromise, payAtVenueGrantOf, vocabKey, type Catalogue, type PortalBooking } from '../shared/portal'
 
 const placeholders = (text: string) => (text.match(/\{\{\w+\}\}/g) ?? []).sort().join(',')
 
@@ -195,5 +196,43 @@ describe('booking and paying, on the portal’s own rules', () => {
     expect(moneyPromise({ ...booking, paid_online: true })).toBe('refund')
     expect(cancelOffer(booking, new Date())).toBe('offer')
     expect(cancelOffer({ ...booking, can_cancel: false }, new Date())).toBe('contact')
+  })
+})
+
+describe('booking a stay', () => {
+  it('lay a month out in Monday weeks on the calendar alone', () => {
+    const november = monthGrid('2026-11')
+    expect(november[0]).toEqual([null, null, null, null, null, null, '2026-11-01'])
+    expect(november.flat().filter(Boolean)).toHaveLength(30)
+    expect(november.every(week => week.length === 7)).toBe(true)
+    expect(monthGrid('2027-02').flat().filter(Boolean)).toHaveLength(28)
+    expect(addMonths('2026-11', 2)).toBe('2027-01')
+    expect(addMonths('2027-01', -1)).toBe('2026-12')
+  })
+
+  it('pick the arrival first, the departure next, and start again on an earlier day', () => {
+    expect(rangeTap(null, null, '2026-11-10')).toEqual({ checkIn: '2026-11-10', checkOut: null })
+    expect(rangeTap('2026-11-10', null, '2026-11-13')).toEqual({ checkIn: '2026-11-10', checkOut: '2026-11-13' })
+    expect(rangeTap('2026-11-10', null, '2026-11-08')).toEqual({ checkIn: '2026-11-08', checkOut: null })
+    expect(rangeTap('2026-11-10', '2026-11-13', '2026-11-20')).toEqual({ checkIn: '2026-11-20', checkOut: null })
+  })
+
+  it('follow the portal’s stay rules: dates checked before asking, a combination quoted as one stay', () => {
+    const rules = { currency: 'EUR', min_nights: 2, max_nights: 14 }
+    expect(datesProblem('2026-11-10', '2026-11-11', rules, '2026-11-01')).toEqual({ code: 'min_nights', count: 2 })
+    expect(datesProblem('2026-11-10', '2026-11-13', rules, '2026-11-01')).toBeNull()
+    const dated = stayReducer(initialStayState, { type: 'setDates', checkIn: '2026-11-10', checkOut: '2026-11-13' })
+    const together = stayReducer(dated, { type: 'pickRooms', roomIds: ['a', 'b'] })
+    expect(together.step).toBe('review')
+    expect(stayQuoteBody(together)).toMatchObject({ unit_ids: ['a', 'b'], check_in: '2026-11-10', check_out: '2026-11-13' })
+  })
+
+  it('never send a member with a held card away unless the server released it, and never say "reserved" too early', () => {
+    expect(afterStayConfirmError(null, true)).toEqual({ to: 'pay', hold: 'retry' })
+    expect(afterStayConfirmError('hold_not_found', true)).toEqual({ to: 'pay', hold: 'contact' })
+    expect(afterStayConfirmError('room_unavailable', true)).toEqual({ to: 'room', clearRoom: true })
+    expect(stayChargeLine('online', 300, false, false)).toBe('charged_next_step')
+    expect(stayChargeLine('online', 300, true, false)).toBe('charged_pending')
+    expect(stayChargeLine('online', 300, true, true)).toBe('charged_now')
   })
 })

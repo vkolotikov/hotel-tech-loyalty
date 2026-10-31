@@ -13,7 +13,9 @@ export { isUnread, openNotification, afterReadOne, afterReadAll, canMarkAllRead 
 export { TOPICS, questionsFor, topicsFor, showsSteps, STEPS, stepWords, questionWords, topicWord, fold, narrow, type TopicId, type QuestionId } from '../../../../frontend/src/portal/pages/help/helpMath'
 export { messageKinds, preferencesOf, messageBody, applyMessageChange, marketingNeedsEmail, smsSwitch, type MessageChange, type ChannelField } from '../../../../frontend/src/portal/pages/profile/messages'
 export type {
-  Activity, Benefit, BookingKind, CancelReply, Catalogue, CatalogueService, CatalogueMaster, CatalogueExtra, CatalogueRules, Slot, CouponRef, Quote, QuoteBody, ConfirmBody, PaymentIntentReply, ResolvedCoupon, CardPayload, Claim, InboxNotification, LaravelPage, Offer, Paginated, PortalBooking,
+  Activity, Benefit, BookingKind, CancelReply, Catalogue, CatalogueService, CatalogueMaster, CatalogueExtra, CatalogueRules, Slot, CouponRef, Quote, QuoteBody, ConfirmBody, PaymentIntentReply, ResolvedCoupon,
+  StayRoom, StayExtra, StayPolicies, StayRules, StayCatalogue, AvailableRoom, AvailableCombination, StayAvailability, StayQuoteBody, StayQuoteRoom,
+  StayQuote, StayConfirmBody, Priced, CardPayload, Claim, InboxNotification, LaravelPage, Offer, Paginated, PortalBooking,
   PortalBootstrap, PortalCapabilities, PortalMember, PortalVenue, Redemption, Reward, Tier, MessageKind, NotificationPreferences,
   PortalEvent, PortalEvents, AttendedEvent, MemberStamps, MemberCredit,
 } from '../../../../frontend/src/portal/lib/types'
@@ -31,3 +33,10 @@ export {
   retryOnlineVisit, canTryOnlineAgain, canLeavePay, afterConfirmError, refreshAfterCouponResolved, quoteBody, isWindowCode, couponChoices,
   sameCoupon, addDays, chargesNothing, type Step as BookStep, type BookState, type BookAction, type ReviewPatch, type PayVisit,
 } from '../../../../frontend/src/portal/pages/book/steps'
+export {
+  STAY_STEPS, stayReducer, initialStayState, datesProblem, nightsBetween, stayQuoteBody, hasRoomChoice, chosenRoomsLabel, stayRoomChoices,
+  afterStayQuoteError, afterStayConfirmError, retryConfirmArgs, stayBounceArgs, stayPayNoticeKind, stayIntentErrorKind, payView,
+  showCardUnavailable, stayChargeLine, perNightShown, stayCatalogueGuard, stayChargeable, stayIntentAnswer, stayHold, combinationPerNight,
+  type StayStep, type StayState, type StayAction, type StayReviewPatch, type StayRoomChoices, type StayConfirmDecision, type StayPayNoticeKind,
+  type StayIntentErrorKind, type StayPayView, type StayIntentAnswer, type StayChargeLine,
+} from '../../../../frontend/src/portal/pages/stay/staySteps'

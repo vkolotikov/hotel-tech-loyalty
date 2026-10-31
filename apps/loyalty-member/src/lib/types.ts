@@ -4,7 +4,8 @@
  */
 export type {
   Activity, Benefit, BookingKind, CancelReply, Catalogue, CatalogueService, CatalogueMaster, CatalogueExtra, CatalogueRules, Slot, CouponRef,
-  Quote, QuoteBody, ConfirmBody, PaymentIntentReply, ResolvedCoupon, CardPayload, Claim, InboxNotification, LaravelPage, Offer, Paginated, PortalBooking, PortalBootstrap,
+  Quote, QuoteBody, ConfirmBody, PaymentIntentReply, ResolvedCoupon, CardPayload,
+  StayCatalogue, StayAvailability, StayQuoteBody, StayQuote, StayConfirmBody, AvailableRoom, AvailableCombination, StayRules, Priced, Claim, InboxNotification, LaravelPage, Offer, Paginated, PortalBooking, PortalBootstrap,
   PortalCapabilities, PortalMember, PortalVenue, Redemption, Reward, Tier, MessageKind, NotificationPreferences,
   PortalEvent, PortalEvents, AttendedEvent, MemberStamps, MemberCredit,
 } from '../shared/portal'

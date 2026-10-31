@@ -1,5 +1,5 @@
 import { ApiError, failureFrom } from './failure'
-import type { Activity, Benefit, BookingKind, CancelReply, Catalogue, Claim, ConfirmBody, PaymentIntentReply, Quote, QuoteBody, ResolvedCoupon, Slot, InboxNotification, JoinContext, LaravelPage, MemberCardAnswer, MemberCredit, MemberStamps, Offer, Paginated, PortalBooking, PortalBootstrap, PortalEvent, PortalEvents, Redemption, Reward, SignInAnswer } from './types'
+import type { Activity, Benefit, BookingKind, CancelReply, Catalogue, Claim, ConfirmBody, PaymentIntentReply, Quote, QuoteBody, ResolvedCoupon, Slot, StayAvailability, StayCatalogue, StayConfirmBody, StayQuote, StayQuoteBody, InboxNotification, JoinContext, LaravelPage, MemberCardAnswer, MemberCredit, MemberStamps, Offer, Paginated, PortalBooking, PortalBootstrap, PortalEvent, PortalEvents, Redemption, Reward, SignInAnswer } from './types'
 import type { AppVersions } from './version'
 import { mediaAddress } from './format'
 
@@ -154,4 +154,13 @@ export const api = {
   confirm: (body: ConfirmBody, idempotencyKey: string): Promise<{ booking: PortalBooking; replayed: boolean }> =>
     send('POST', '/v1/member/portal/services/confirm', body, undefined, undefined, { 'Idempotency-Key': idempotencyKey }),
   resolveCoupon: (code: string): Promise<ResolvedCoupon> => send('POST', '/v1/member/portal/coupons/resolve', { code }),
+
+  // ─── Stays (the portal's stay flow; the quote names a hold, the server prices and books it) ───
+  stayCatalogue: (): Promise<StayCatalogue> => read('/v1/member/portal/stays'),
+  stayAvailability: (checkIn: string, checkOut: string, adults: number, children: number): Promise<StayAvailability> =>
+    read('/v1/member/portal/stays/availability', { check_in: checkIn, check_out: checkOut, adults, children }),
+  stayQuote: (body: StayQuoteBody): Promise<StayQuote> => send('POST', '/v1/member/portal/stays/quote', body),
+  stayPaymentIntent: (holdToken: string): Promise<PaymentIntentReply> => send('POST', '/v1/member/portal/stays/payment-intent', { hold_token: holdToken }),
+  /** No Idempotency-Key: a hold is booked once, and a repeated confirm answers the booking it became. */
+  stayConfirm: (body: StayConfirmBody): Promise<{ booking: PortalBooking; replayed: boolean }> => send('POST', '/v1/member/portal/stays/confirm', body),
 }

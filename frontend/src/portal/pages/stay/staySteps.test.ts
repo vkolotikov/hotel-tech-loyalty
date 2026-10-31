@@ -3,6 +3,7 @@ import { newPayVisit } from '../book/steps'
 import type { StayQuote } from '../../lib/types'
 import {
   addDays, afterStayConfirmError, afterStayQuoteError, chosenRoomsLabel, datesProblem, hasRoomChoice, initialStayState, nightsBetween, payView, perNightShown, retryConfirmArgs, showCardUnavailable, stayBounceArgs, stayCatalogueGuard, stayChargeLine, stayFocusTarget, stayIntentErrorKind, stayPayNoticeKind, stayQuoteBody, stayReducer, stayRoomChoices, type StayState,
+  combinationPerNight, stayChargeable, stayHold, stayIntentAnswer,
 } from './staySteps'
 
 const rules = { currency: 'EUR', min_nights: 2, max_nights: 14 }
@@ -472,5 +473,32 @@ describe('perNightShown', () => {
 
   it('no rate and no discount: nothing to show', () => {
     expect(perNightShown({ price_per_night: 0, total_price: 180, member_total: 180 }, 2)).toBeNull()
+  })
+})
+
+describe('pay step readings', () => {
+  it('is chargeable online only with something owed', () => {
+    expect(stayChargeable({ payment: { mode: 'online', reason: null }, total_amount: 90 })).toBe(true)
+    expect(stayChargeable({ payment: { mode: 'online', reason: null }, total_amount: 0 })).toBe(false)
+    expect(stayChargeable({ payment: { mode: 'at_venue', reason: 'payments_off' }, total_amount: 90 })).toBe(false)
+  })
+
+  it('reads the intent answer, and keeps "owed at the venue" once the visit only remembers noCard', () => {
+    expect(stayIntentAnswer('nothing_to_pay', false)).toBe('nothing_to_pay')
+    expect(stayIntentAnswer('pay_at_venue', false)).toBe('pay_at_venue')
+    expect(stayIntentAnswer(null, true)).toBe('pay_at_venue')
+    expect(stayIntentAnswer('hold_expired', false)).toBeNull()
+  })
+
+  it('stays on Pay only for a decision that holds', () => {
+    expect(stayHold(afterStayConfirmError('confirm_failed', true))).toBe('contact')
+    expect(stayHold(afterStayConfirmError(null, true))).toBe('retry')
+    expect(stayHold(afterStayConfirmError('room_unavailable', true))).toBeNull()
+    expect(stayHold(null)).toBeNull()
+  })
+
+  it('spreads a combination’s own total over the nights', () => {
+    expect(combinationPerNight({ member_total: 500 }, 3)).toBe(166.67)
+    expect(combinationPerNight({ member_total: 500 }, 0)).toBeNull()
   })
 })

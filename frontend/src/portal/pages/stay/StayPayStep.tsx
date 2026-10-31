@@ -12,7 +12,7 @@ import { Skeleton } from '../../ui/Skeleton'
 import { canTryOnlineAgain, payAtVenueGrantOf, retryOnlineVisit, type PayVisit } from '../book/steps'
 import { stashForReturn } from '../book/returnStash'
 import { StayPriceBreakdown } from './StayPriceBreakdown'
-import { afterStayConfirmError, payView, retryConfirmArgs, showCardUnavailable, stayBounceArgs, stayIntentErrorKind, stayPayNoticeKind, type StayIntentAnswer, type StayState } from './staySteps'
+import { afterStayConfirmError, payView, retryConfirmArgs, showCardUnavailable, stayBounceArgs, stayChargeable, stayHold, stayIntentAnswer, stayIntentErrorKind, stayPayNoticeKind, type StayState } from './staySteps'
 import type { PortalBooking, StayQuote } from '../../lib/types'
 
 const StripePayment = lazy(() => import('../book/StripePayment'))
@@ -43,7 +43,7 @@ export function StayPayStep({ quote, state, visit, onVisitChange, onBack, onDone
   // A zero total is never chargeable online, whatever the mode — decided from the
   // quote alone, before the payment-intent query's own `enabled` is even evaluated, so a zero-total online
   // booking never asks for an intent at all.
-  const chargeable = online && quote.total_amount > 0
+  const chargeable = stayChargeable(quote)
   const publishableKey = data?.capabilities.payments.publishable_key ?? null
 
   // ONE payment-intent request per visit: keyed on `visit.nonce`, every automatic refetch off, `gcTime: 0`.
@@ -75,8 +75,7 @@ export function StayPayStep({ quote, state, visit, onVisitChange, onBack, onDone
   // remembered without a fresh code to re-derive it from (the intent query is now disabled — a remount after
   // jumping away from Pay and back, say), it falls back to `'pay_at_venue'`, the safer of the two ("owed,
   // just not online") rather than silently reverting to "charged now" for what may still be an online quote.
-  const intentAnswer: StayIntentAnswer =
-    intentErrorCode === 'nothing_to_pay' || intentErrorCode === 'pay_at_venue' ? intentErrorCode : visit.noCard ? 'pay_at_venue' : null
+  const intentAnswer = stayIntentAnswer(intentErrorCode, visit.noCard)
   // The mode comes from the quote, the key from the bootstrap; a missing key is never a blank step, but
   // it is never shown once the card is captured, or once the visit already knows it needs no
   // card online at all (`showCardUnavailable`, a pure function with its own test).
@@ -157,7 +156,7 @@ export function StayPayStep({ quote, state, visit, onVisitChange, onBack, onDone
    *  `retryConfirmArgs`, a pure function with its own test. */
   const retryConfirm = () => confirm.mutate(retryConfirmArgs(visit))
 
-  const hold: 'contact' | 'retry' | null = confirmDecision && confirmDecision.to === 'pay' ? confirmDecision.hold : null
+  const hold = stayHold(confirmDecision)
   // Which of the five sentences to show — `stayPayNoticeKind`, a pure function with
   // its own test covering every `{ hold, paid, code }` combination.
   const noticeKind = stayPayNoticeKind(hold, visit.paid, confirmErrorCode)

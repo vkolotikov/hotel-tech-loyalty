@@ -38,8 +38,9 @@ in every language as the portal is (usted, Sie, vous, вы); `lib.test.ts` check
 
 | Path | What |
 |---|---|
-| `src/app/` | Screens (Expo Router). `(tabs)/`: Home, Rewards (benefits, catalogue, offers, codes), Card (raised), Activity, More. `sign-in`, `join`, and the sheets `inbox`, `events`, `profile` (details, messages, invite, password, delete account), `help`, `bookings`, `booking/[kind]/[id]` (with cancelling), `book` (the chooser) and `book/appointment` |
-| `src/components/book/` | The appointment flow's steps (service, who, when, review with coupons, pay), on the portal's `steps.ts` |
+| `src/app/` | Screens (Expo Router). `(tabs)/`: Home, Rewards (benefits, catalogue, offers, codes), Card (raised), Activity, More. `sign-in`, `join`, and the sheets `inbox`, `events`, `profile` (details, messages, invite, password, delete account), `help`, `bookings`, `booking/[kind]/[id]` (with cancelling), `book` (the chooser), `book/appointment` and `book/stay` |
+| `src/components/book/` | The appointment flow's steps (service, who, when, review with coupons, pay), on the portal's `steps.ts`; `stay.tsx`, the stay flow's (dates on a month grid, rooms and combinations, review, pay), on its `staySteps.ts` |
+| `src/lib/calendar.ts` | The stay dates picker's month grid and taps (the portal uses the browser's own date inputs) |
 | `src/lib/payment.ts` | Stripe's payment sheet for the one intent the server made (`payment.web.ts`: none in the browser preview) |
 | `src/components/` | `ui.tsx` (building blocks, `Toggle`, `Picture`), `Bookings` (rows, Home's next booking), `MemberCard`, `ActivityRow`, `Programme` (stamps, credit, next event), `TabBar`, `Sheet`, `UpdateGate` |
 | `src/lib/theme.ts` | Navy, text and states fixed; the accent and heading face are the venue's (`useLook`) |
@@ -116,6 +117,10 @@ Before the first release of 2.0.0:
 3. Take a time someone else has just booked: back to the times, with the sentence why.
 4. Cancel a paid booking inside its window: the money promise before, the refund after; a held card is released.
 5. A venue that takes no cards: "Nothing to pay now", Confirm, the booking says "Pay at the venue".
+6. Book a stay at a hotel: arrival and departure on the month grid (a too-short stay says the venue's minimum), the
+   rooms free with the member's total and a night's price, a party no room sleeps offered rooms together, review
+   (add-ons, requests, a coupon, "to reserve on your card at the next step"), pay with the sheet; the stay opens with
+   "You're booked". Let the hold lapse on Pay: back to Review for a fresh price, nothing taken.
 
 ## Acceptance on phones (phase 2)
 

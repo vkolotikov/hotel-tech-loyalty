@@ -83,6 +83,7 @@ export default function RootLayout() {
               <Stack.Screen name="booking/[kind]/[id]" />
               <Stack.Screen name="book/index" />
               <Stack.Screen name="book/appointment" />
+              <Stack.Screen name="book/stay" />
             </Stack>
           </View>
           <LockGate />

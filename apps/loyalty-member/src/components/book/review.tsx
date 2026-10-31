@@ -8,7 +8,7 @@ import { useT } from '../../lib/i18n'
 import { C, fonts } from '../../lib/theme'
 import {
   afterQuoteError, bookErrorFallback, bookErrorKey, couponChoices, formatDateTime, formatMoney, isWindowCode, quoteBody, sameCoupon,
-  type BookState, type Catalogue, type CouponRef, type Quote, type ReviewPatch,
+  type BookState, type Catalogue, type CouponRef, type Priced, type Quote, type ReviewPatch,
 } from '../../shared/portal'
 import { Field, GhostButton, GoldButton, Notice, Shimmer, Surface, Toggle } from '../ui'
 import { Choice, PriceBreakdown, Stepper } from './parts'
@@ -101,7 +101,7 @@ export function ReviewStep({ catalogue, state, industry, timezone, onChange, onB
  * The member's coupons as chips (claimed offers not yet used, reward codes still pending), a code typed from the venue,
  * and what became of it. Explicit: nothing is applied without the member choosing it.
  */
-function Coupons({ value, onChange, quote, quoteError }: { value: CouponRef | null; onChange: (coupon: CouponRef | null) => void; quote: Quote | null; quoteError: string | null }) {
+export function Coupons({ value, onChange, quote, quoteError }: { value: CouponRef | null; onChange: (coupon: CouponRef | null) => void; quote: Priced | null; quoteError: string | null }) {
   const { tp } = useT()
   const [code, setCode] = useState('')
   const [error, setError] = useState<string | null>(null)
