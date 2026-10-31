@@ -857,6 +857,16 @@ files on disk): run them one after the other.
 
 ## Deploying
 
+- Members' app server part, 2026-10-31: production **4c59696c2** on **54d61cd8c**, feature source **4a1494c62** on
+  `feature/loyalty-member-app`. 18 paths (4 added, 14 changed, no deletions); `apps/loyalty-member` stays on the branch
+  (EAS, not Cloud). `DELETE /v1/auth/push-token` (a member's phone forgets its own push token at sign-out),
+  `member` in `config/apps.php` (Laravel Cloud variables `MEMBER_APP_MIN_VERSION`, `MEMBER_APP_LATEST_VERSION`,
+  `MEMBER_APP_IOS_URL`, `MEMBER_APP_ANDROID_URL`; defaults 2.0.0 and the existing store pages), the portal's event,
+  stamp and credit types and industry nouns moved into framework-free files (no behaviour change), docs. No migration.
+  Parity: every listed file and the whole source outside the apps equal the tip. Artifact: PHP **77 scopes, 7,245
+  passed / 16 skipped / 0 failed**; frontend tsc, **5,768 tests / 399 files**, fresh build committed. Verified by
+  content on `origin/main` (18/18); no live check (the production host is not reachable from the cloud container).
+
 - Native apps' minimum version, 2026-10-31: production **54d61cd8c** on **a199f1f8c**, feature source **bb56e5355** on
   `feature/loyalty-staff-app`. 8 paths (3 added, 5 changed): public `GET /api/v1/apps/{app}/version`
   (`AppVersionController`, `config/apps.php`, Laravel Cloud variables `STAFF_APP_MIN_VERSION`,
