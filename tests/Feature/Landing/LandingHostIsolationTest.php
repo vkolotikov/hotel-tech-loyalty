@@ -71,7 +71,7 @@ class LandingHostIsolationTest extends TestCase
             'Login stopped answering on the admin host.');
     }
 
-    /** @dataProvider blockedApiPaths */
+    #[\PHPUnit\Framework\Attributes\DataProvider('blockedApiPaths')]
     public function test_no_admin_api_answers_on_the_landing_host(string $path): void
     {
         $this->getJson('http://' . $this->host() . $path)->assertNotFound();
@@ -230,9 +230,8 @@ class LandingHostIsolationTest extends TestCase
      * `web` group, and StartSession queued cookies before the closure's
      * abort_if could refuse. The guard has to be asked the same question the
      * router is asked.
-     *
-     * @dataProvider nonCanonicalPaths
      */
+    #[\PHPUnit\Framework\Attributes\DataProvider('nonCanonicalPaths')]
     public function test_a_non_canonical_path_is_refused_like_any_other(string $path): void
     {
         $res = $this->get('http://' . $this->host() . $path);
@@ -265,9 +264,8 @@ class LandingHostIsolationTest extends TestCase
      * test_the_chat_loader_allocates_no_session_on_the_landing_host was written
      * for, arriving down a different path, and this is the only assertion in
      * this file that can see it.
-     *
-     * @dataProvider nonCanonicalPaths
      */
+    #[\PHPUnit\Framework\Attributes\DataProvider('nonCanonicalPaths')]
     public function test_a_non_canonical_path_allocates_no_session(string $path): void
     {
         $dir = storage_path('framework/testing/sessions-' . uniqid());
@@ -338,9 +336,8 @@ class LandingHostIsolationTest extends TestCase
      * host. /book/{token} and /form/{embedKey} 404 there too for an unknown
      * token, so "not a 404 on the admin host" would not work for them, and
      * without some such check a typo in the path would pass for free.
-     *
-     * @dataProvider iframedWidgetPages
      */
+    #[\PHPUnit\Framework\Attributes\DataProvider('iframedWidgetPages')]
     public function test_iframed_widget_host_pages_are_not_reachable_on_the_landing_host(string $path, string $routeUri): void
     {
         $this->get('http://' . $this->host() . $path)->assertNotFound();
@@ -376,9 +373,8 @@ class LandingHostIsolationTest extends TestCase
      * The four API prefixes the guard's docblock names as blocked had no test
      * at all: widening the allow pattern from `#^api/v1/widget/#` to
      * `#^api/v1/#` would have left this whole file green.
-     *
-     * @dataProvider blockedWidgetApiPaths
      */
+    #[\PHPUnit\Framework\Attributes\DataProvider('blockedWidgetApiPaths')]
     public function test_the_iframed_widget_api_prefixes_are_blocked_on_the_landing_host(string $path): void
     {
         $this->getJson('http://' . $this->host() . $path)->assertNotFound();

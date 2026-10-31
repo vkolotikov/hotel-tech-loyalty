@@ -56,6 +56,7 @@ jobs:
       - name: Root build tools have no high or critical advisories
         run: npm audit --audit-level=high
 
+  # PHP 8.5 is production's (Laravel Cloud, since 2026-10-31); 8.4 is the workstation's (CLAUDE.md).
   php:
     name: PHP ${{ matrix.php }} on SQLite (shard ${{ matrix.shard }})
     runs-on: ubuntu-24.04
@@ -81,7 +82,7 @@ jobs:
         run: PHP=php SHARD=${{ matrix.shard }} scripts/test-php.sh
 
   postgres:
-    name: PHP 8.4 on PostgreSQL 18 (only known failures allowed)
+    name: PHP 8.5 on PostgreSQL 18 (only known failures allowed)
     runs-on: ubuntu-24.04
     timeout-minutes: 90
     # PostgreSQL is started by a step rather than as a service container: a service's whole server log is printed
@@ -101,7 +102,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: shivammathur/setup-php@d52fc211a0436f8839a587b3b5b8efddab4744ea # v2
         with:
-          php-version: '8.4'
+          php-version: '8.5'
           extensions: ${{ env.PHP_EXTENSIONS }}
           ini-values: memory_limit=-1
           tools: composer:v2
@@ -145,7 +146,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: shivammathur/setup-php@d52fc211a0436f8839a587b3b5b8efddab4744ea # v2
         with:
-          php-version: '8.4'
+          php-version: '8.5'
           extensions: ${{ env.PHP_EXTENSIONS }}
           ini-values: memory_limit=-1
           tools: composer:v2
