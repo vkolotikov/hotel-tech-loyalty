@@ -863,6 +863,17 @@ files on disk): run them one after the other.
 
 ## Deploying
 
+- Stack upgrade phases 0 and 1, 2026-10-31: production **c46e8da** on **48b12f0**, feature source **a8a573f** on
+  `claude/stack-audit-upgrade-plan-9hdkkv` (plan `docs/audits/2026-10-31-stack-audit-and-upgrade-plan.md`). 29 paths
+  (10 added, 19 changed, no deletions): CI (`.github/workflows/ci.yml`, never deploys), Larastan/Rector (dev only),
+  test scripts, root build tools (Vite 8) and SPA ESLint 10, `phpunit.xml` pins `APP_URL`; production code:
+  `media:verify-version --version-id` (it could not start before) and no `dall-e-3` image fallback. No migration, no
+  production package change. Parity: every listed file and the whole source equal the tip. Artifact: PHP 8.4.27,
+  **77 scopes, 7,249 passed / 16 skipped / 0 failed**; frontend tsc, lint baseline, **5,778 tests / 399 files**,
+  fresh build (identical to a build of main's own source). CI run 3 on the tip green (11 jobs). Verified by content on
+  `origin/main` (29/29); no live check (the production host is not reachable from the cloud container). The next
+  source delta starts at **a8a573f**.
+
 - Members' app server part, 2026-10-31: production **4c59696c2** on **54d61cd8c**, feature source **4a1494c62** on
   `feature/loyalty-member-app`. 18 paths (4 added, 14 changed, no deletions); `apps/loyalty-member` stays on the branch
   (EAS, not Cloud). `DELETE /v1/auth/push-token` (a member's phone forgets its own push token at sign-out),

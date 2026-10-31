@@ -6,7 +6,10 @@ environment). AGENTS.md and CLAUDE.md still apply.
 
 ## Production
 
-Production is **4c59696c2**: request alerts on staff phones (`a199f1f8c`: the `staff_devices` table,
+Latest: **c46e8da** (31 Oct, stack upgrade phases 0 and 1: CI, static analysis, test tooling, build-tool security,
+`media:verify-version --version-id`, no `dall-e-3` fallback; record in `docs/loyalty-workspace.md` "Deploying"; the
+next source-patch baseline is **a8a573f** on `claude/stack-audit-upgrade-plan-9hdkkv`). Before it, **48b12f0** (portal
+booking rules shared with the members' app), and before that **4c59696c2**: request alerts on staff phones (`a199f1f8c`: the `staff_devices` table,
 `PUT/DELETE /v1/admin/loyalty/devices`, `StaffAlerts`, and three fixes that made main's red tests green), the native
 apps' minimum-version answer (`54d61cd8c`: `GET /api/v1/apps/{app}/version`, `config/apps.php`), then the members'
 app server part (`DELETE /v1/auth/push-token`, `member` in `config/apps.php`, the portal's shared types). Records:
