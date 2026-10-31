@@ -44,6 +44,12 @@ export const SPACE = { xs: 4, sm: 8, md: 12, lg: 16, xl: 20, xxl: 28 }
 /** Bottom padding for a tab screen's scroll content: the tab bar and its raised Scan button need the room. */
 export const TAB_BAR_ROOM = 128
 
+/**
+ * The widest the screens grow (iPad, a wide Android tablet): the app is one column of cards, centred, with the navy
+ * beside it, rather than every card and row stretched across a tablet (on a desk tablet too: the member card keeps its card shape).
+ */
+export const CONTENT_MAX_WIDTH = 640
+
 export const fonts = {
   display: { fontFamily: 'CormorantGaramond_600SemiBold', fontSize: 34, lineHeight: 38, letterSpacing: -0.3 },
   title: { fontFamily: 'CormorantGaramond_600SemiBold', fontSize: 26, lineHeight: 30 },

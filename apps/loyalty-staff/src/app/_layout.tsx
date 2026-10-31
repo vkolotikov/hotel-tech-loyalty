@@ -15,7 +15,7 @@ import { queryClient } from '../lib/queries'
 import { useSession } from '../lib/session'
 import { usePrefs } from '../lib/prefs'
 import { useT } from '../lib/i18n'
-import { C, fonts } from '../lib/theme'
+import { C, CONTENT_MAX_WIDTH, fonts } from '../lib/theme'
 import { Backdrop, GoldButton } from '../components/ui'
 import { UpdateGate } from '../components/UpdateGate'
 
@@ -49,6 +49,7 @@ export default function RootLayout() {
       <SafeAreaProvider>
         <QueryClientProvider client={queryClient}>
           <StatusBar style="light" />
+          <View style={styles.column}>
           <Stack
             screenOptions={{
               headerShown: false,
@@ -64,6 +65,7 @@ export default function RootLayout() {
             <Stack.Screen name="check-in" options={{ presentation: 'modal' }} />
             <Stack.Screen name="link-card" options={{ presentation: 'modal' }} />
           </Stack>
+          </View>
           <LockGate />
           <UpdateGate />
         </QueryClientProvider>
@@ -125,6 +127,7 @@ function LockGate() {
 }
 
 const styles = StyleSheet.create({
+  column: { flex: 1, width: '100%', maxWidth: CONTENT_MAX_WIDTH, alignSelf: 'center' },
   lock: { alignItems: 'center', justifyContent: 'center', gap: 24, padding: 32 },
   lockMark: { width: 72, height: 72, borderRadius: 36, alignItems: 'center', justifyContent: 'center', backgroundColor: C.goldWash, borderWidth: 1, borderColor: C.goldEdge },
 })

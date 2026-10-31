@@ -2,6 +2,7 @@
   "expo": {
     "name": "HexaTech Staff",
     "slug": "hexatech-loyalty-staff",
+    "owner": "hoteltechai",
     "version": "1.0.0",
     "scheme": "hexatech-staff",
     "orientation": "portrait",
@@ -64,7 +65,8 @@
         "expo-camera",
         {
           "cameraPermission": "The camera reads members' QR codes.",
-          "recordAudioAndroid": false
+          "recordAudioAndroid": false,
+          "microphonePermission": false
         }
       ],
       [

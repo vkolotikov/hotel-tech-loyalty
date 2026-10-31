@@ -48,6 +48,9 @@ In a cloud container where `api.expo.dev` is blocked, prefix Expo commands with 
 
 ## Build and release (EAS)
 
+The store release, step by step (accounts, credentials, listing texts in `store/listing.json`, screenshots in
+`store/screenshots/`, privacy answers, review notes): `docs/loyalty-staff-app/02-RELEASE.md`.
+
 Needs the owner's Expo account, or an `EXPO_TOKEN` secret in the environment (never in chat or in the repository).
 
 ```bash
