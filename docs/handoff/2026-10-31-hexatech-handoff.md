@@ -6,7 +6,8 @@ environment). AGENTS.md and CLAUDE.md still apply.
 
 ## Production
 
-Latest: **c46e8da** (31 Oct, stack upgrade phases 0 and 1: CI, static analysis, test tooling, build-tool security,
+Latest: **ebe5c4f** (31 Oct evening, library upgrades of stack plan phase 4a-4e; next source-patch baseline
+**379ff18**). Before it, **c46e8da** (31 Oct, stack upgrade phases 0 and 1: CI, static analysis, test tooling, build-tool security,
 `media:verify-version --version-id`, no `dall-e-3` fallback; record in `docs/loyalty-workspace.md` "Deploying"; the
 next source-patch baseline is **a8a573f** on `claude/stack-audit-upgrade-plan-9hdkkv`). Before it, **48b12f0** (portal
 booking rules shared with the members' app), and before that **4c59696c2**: request alerts on staff phones (`a199f1f8c`: the `staff_devices` table,
@@ -77,7 +78,8 @@ Plan and progress: `docs/audits/2026-10-31-stack-audit-and-upgrade-plan.md` (§6
   super admin's password if production was seeded with the old script.
 - Later the same day: Cloud runs PHP 8.5 (owner); PHPUnit 13, Anthropic SDK 1.3 (Content Planner on API
   `2026-10-21`), openai-php 0.21, laravel/mcp 1.1 (MCP `2026-07-28`, older handshake still served) and
-  endroid/qr-code 6 (plan §8). Open: spatie/laravel-permission 6 → 8, Stripe (needs test-mode keys), the chat
+  endroid/qr-code 6 (plan §8); then spatie/laravel-permission 8 and the planner's manager release fix. Open: Stripe
+  (needs test-mode keys), the chat
   widget's raw Anthropic calls (owner's temperature decision), the workstation's PHP 8.4.20 → 8.5.12.
 
 ## Cloud container notes (Linux)

@@ -12,7 +12,7 @@ class BusinessReportController extends Controller
     public function issue(Request $request)
     {
         $org = $request->user()?->organization_id;
-        abort_unless($org, 403);
+        abort_unless($org !== null, 403);
         $token = bin2hex(random_bytes(32));
         DB::table('business_report_keys')->updateOrInsert(['organization_id' => $org], [
             'token_hash' => hash('sha256', $token), 'created_at' => now(), 'updated_at' => now(),

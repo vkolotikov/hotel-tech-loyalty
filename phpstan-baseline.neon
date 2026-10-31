@@ -205,12 +205,6 @@ parameters:
 			path: app/Console/Commands/MessengerBackfillVisitors.php
 
 		-
-			message: '#^Access to an undefined property App\\Models\\User\:\:\$organization_id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Console/Commands/MessengerConnectPage.php
-
-		-
 			message: '#^If condition is always true\.$#'
 			identifier: if.alwaysTrue
 			count: 1
@@ -245,24 +239,6 @@ parameters:
 			identifier: larastan.relationExistence
 			count: 1
 			path: app/Console/Commands/MessengerStatus.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\User\:\:\$organization_id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Console/Commands/SendContentMorningEmail.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\User\:\:\$organization_id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Console/Commands/SendEngagementDailySummary.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\User\:\:\$organization_id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Console/Commands/SendLoyaltyDigest.php
 
 		-
 			message: '#^Ternary operator condition is always true\.$#'
@@ -344,12 +320,6 @@ parameters:
 
 		-
 			message: '#^Access to an undefined property App\\Models\\AiUsageLog\:\:\$day\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/Api/V1/Admin/AiUsageController.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\User\:\:\$organization_id\.$#'
 			identifier: property.notFound
 			count: 1
 			path: app/Http/Controllers/Api/V1/Admin/AiUsageController.php
@@ -463,12 +433,6 @@ parameters:
 			path: app/Http/Controllers/Api/V1/Admin/AnalyticsController.php
 
 		-
-			message: '#^Access to an undefined property App\\Models\\User\:\:\$organization_id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/Api/V1/Admin/AnalyticsController.php
-
-		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$email\.$#'
 			identifier: property.notFound
 			count: 1
@@ -545,12 +509,6 @@ parameters:
 			identifier: nullsafe.neverNull
 			count: 1
 			path: app/Http/Controllers/Api/V1/Admin/AnalyticsController.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\User\:\:\$organization_id\.$#'
-			identifier: property.notFound
-			count: 2
-			path: app/Http/Controllers/Api/V1/Admin/ApiTokenController.php
 
 		-
 			message: '#^Access to an undefined property App\\Models\\MemberOffer\:\:\$offer\.$#'
@@ -709,12 +667,6 @@ parameters:
 			path: app/Http/Controllers/Api/V1/Admin/ChatInboxController.php
 
 		-
-			message: '#^Access to an undefined property App\\Models\\User\:\:\$organization_id\.$#'
-			identifier: property.notFound
-			count: 17
-			path: app/Http/Controllers/Api/V1/Admin/ChatInboxController.php
-
-		-
 			message: '#^Called ''env'' outside of the config directory which returns null when the config is cached, use ''config''\.$#'
 			identifier: larastan.noEnvCallsOutsideOfConfig
 			count: 1
@@ -769,28 +721,10 @@ parameters:
 			path: app/Http/Controllers/Api/V1/Admin/ChatInboxController.php
 
 		-
-			message: '#^Access to an undefined property App\\Models\\User\:\:\$organization_id\.$#'
-			identifier: property.notFound
-			count: 5
-			path: app/Http/Controllers/Api/V1/Admin/ChatWidgetConfigController.php
-
-		-
 			message: '#^Access to an undefined property App\\Models\\ChatConversation\:\:\$count\.$#'
 			identifier: property.notFound
 			count: 2
 			path: app/Http/Controllers/Api/V1/Admin/ChatbotAnalyticsController.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\User\:\:\$organization_id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/Api/V1/Admin/ChatbotAnalyticsController.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\User\:\:\$organization_id\.$#'
-			identifier: property.notFound
-			count: 5
-			path: app/Http/Controllers/Api/V1/Admin/ChatbotConfigController.php
 
 		-
 			message: '#^Called ''env'' outside of the config directory which returns null when the config is cached, use ''config''\.$#'
@@ -803,12 +737,6 @@ parameters:
 			identifier: match.unhandled
 			count: 1
 			path: app/Http/Controllers/Api/V1/Admin/ChatbotConfigController.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\User\:\:\$organization_id\.$#'
-			identifier: property.notFound
-			count: 3
-			path: app/Http/Controllers/Api/V1/Admin/ChatbotOnboardingController.php
 
 		-
 			message: '#^Call to an undefined method Illuminate\\Contracts\\Cache\\Repository\:\:lock\(\)\.$#'
@@ -973,12 +901,6 @@ parameters:
 			path: app/Http/Controllers/Api/V1/Admin/CorporateAccountController.php
 
 		-
-			message: '#^Access to an undefined property App\\Models\\User\:\:\$organization_id\.$#'
-			identifier: property.notFound
-			count: 3
-			path: app/Http/Controllers/Api/V1/Admin/CrmAiController.php
-
-		-
 			message: '#^Called ''env'' outside of the config directory which returns null when the config is cached, use ''config''\.$#'
 			identifier: larastan.noEnvCallsOutsideOfConfig
 			count: 1
@@ -1078,12 +1000,6 @@ parameters:
 			message: '#^Access to an undefined property App\\Models\\ReviewSubmission\:\:\$total\.$#'
 			identifier: property.notFound
 			count: 1
-			path: app/Http/Controllers/Api/V1/Admin/DashboardController.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\User\:\:\$organization_id\.$#'
-			identifier: property.notFound
-			count: 4
 			path: app/Http/Controllers/Api/V1/Admin/DashboardController.php
 
 		-
@@ -1279,12 +1195,6 @@ parameters:
 			path: app/Http/Controllers/Api/V1/Admin/DiscountController.php
 
 		-
-			message: '#^Access to an undefined property App\\Models\\User\:\:\$organization_id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/Api/V1/Admin/EmailTemplateController.php
-
-		-
 			message: '#^Offset 0 on array\{list\<string\>\} on left side of \?\? always exists and is not nullable\.$#'
 			identifier: nullCoalesce.offset
 			count: 1
@@ -1321,18 +1231,6 @@ parameters:
 			path: app/Http/Controllers/Api/V1/Admin/GuestController.php
 
 		-
-			message: '#^Access to an undefined property App\\Models\\User\:\:\$organization_id\.$#'
-			identifier: property.notFound
-			count: 2
-			path: app/Http/Controllers/Api/V1/Admin/GuestController.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\User\:\:\$organization_id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/Api/V1/Admin/GuestMergeController.php
-
-		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
 			identifier: property.notFound
 			count: 1
@@ -1360,12 +1258,6 @@ parameters:
 			message: '#^Access to an undefined property App\\Models\\Inquiry\|Illuminate\\Database\\Eloquent\\Collection\<int, App\\Models\\Inquiry\>\:\:\$organization_id\.$#'
 			identifier: property.notFound
 			count: 1
-			path: app/Http/Controllers/Api/V1/Admin/InquiryController.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\User\:\:\$organization_id\.$#'
-			identifier: property.notFound
-			count: 2
 			path: app/Http/Controllers/Api/V1/Admin/InquiryController.php
 
 		-
@@ -1439,12 +1331,6 @@ parameters:
 			identifier: nullsafe.neverNull
 			count: 4
 			path: app/Http/Controllers/Api/V1/Admin/InquiryController.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\User\:\:\$organization_id\.$#'
-			identifier: property.notFound
-			count: 13
-			path: app/Http/Controllers/Api/V1/Admin/KnowledgeBaseController.php
 
 		-
 			message: '#^Relation ''category'' is not found in App\\Models\\KnowledgeItem model\.$#'
@@ -1915,12 +1801,6 @@ parameters:
 			path: app/Http/Controllers/Api/V1/Admin/MemberAdminController.php
 
 		-
-			message: '#^Access to an undefined property App\\Models\\User\:\:\$organization_id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/Api/V1/Admin/MemberAdminController.php
-
-		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$activities\.$#'
 			identifier: property.notFound
 			count: 1
@@ -2155,34 +2035,10 @@ parameters:
 			path: app/Http/Controllers/Api/V1/Admin/MemberAdminController.php
 
 		-
-			message: '#^Access to an undefined property App\\Models\\User\:\:\$organization_id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/Api/V1/Admin/MemberImportController.php
-
-		-
 			message: '#^Using nullsafe property access "\?\-\>organization_id" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
 			identifier: nullsafe.neverNull
 			count: 1
 			path: app/Http/Controllers/Api/V1/Admin/MemberImportController.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\User\:\:\$organization_id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/Api/V1/Admin/MemberMergeController.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\User\:\:\$organization_id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/Api/V1/Admin/MemberPortalLinkController.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\User\:\:\$organization_id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/Api/V1/Admin/MessengerIntegrationController.php
 
 		-
 			message: '#^Offset ''granular_scopes'' on array\{token\: string, scopes\: array, granular_scopes\: array, expires_at\: int\|null, data_access_expires_at\: int\|null, is_valid\: bool\} on left side of \?\? always exists and is not nullable\.$#'
@@ -2251,20 +2107,8 @@ parameters:
 			path: app/Http/Controllers/Api/V1/Admin/PlannerController.php
 
 		-
-			message: '#^Access to an undefined property App\\Models\\User\:\:\$organization_id\.$#'
-			identifier: property.notFound
-			count: 8
-			path: app/Http/Controllers/Api/V1/Admin/PlannerController.php
-
-		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$title\.$#'
 			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/Api/V1/Admin/PlannerController.php
-
-		-
-			message: '#^Call to function method_exists\(\) with App\\Models\\User and ''hasRole'' will always evaluate to true\.$#'
-			identifier: function.alreadyNarrowedType
 			count: 1
 			path: app/Http/Controllers/Api/V1/Admin/PlannerController.php
 
@@ -2291,12 +2135,6 @@ parameters:
 			identifier: nullsafe.neverNull
 			count: 3
 			path: app/Http/Controllers/Api/V1/Admin/PlannerController.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\User\:\:\$organization_id\.$#'
-			identifier: property.notFound
-			count: 4
-			path: app/Http/Controllers/Api/V1/Admin/PopupRuleController.php
 
 		-
 			message: '#^Parameter \#1 \$string of function str_pad expects string, int\<1, max\> given\.$#'
@@ -2791,12 +2629,6 @@ parameters:
 			path: app/Http/Controllers/Api/V1/Admin/ServiceBookingController.php
 
 		-
-			message: '#^Access to an undefined property App\\Models\\User\:\:\$organization_id\.$#'
-			identifier: property.notFound
-			count: 2
-			path: app/Http/Controllers/Api/V1/Admin/SettingsController.php
-
-		-
 			message: '#^Access to an undefined property App\\Models\\User\:\:\$staff\.$#'
 			identifier: property.notFound
 			count: 3
@@ -2849,12 +2681,6 @@ parameters:
 			identifier: cast.string
 			count: 1
 			path: app/Http/Controllers/Api/V1/Admin/SetupController.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\User\:\:\$organization_id\.$#'
-			identifier: property.notFound
-			count: 2
-			path: app/Http/Controllers/Api/V1/Admin/TaskController.php
 
 		-
 			message: '#^Access to an undefined property App\\Models\\Staff\:\:\$user\.$#'
@@ -2911,12 +2737,6 @@ parameters:
 			path: app/Http/Controllers/Api/V1/Admin/TierController.php
 
 		-
-			message: '#^Access to an undefined property App\\Models\\User\:\:\$organization_id\.$#'
-			identifier: property.notFound
-			count: 6
-			path: app/Http/Controllers/Api/V1/Admin/TrainingController.php
-
-		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
 			identifier: property.notFound
 			count: 1
@@ -2933,24 +2753,6 @@ parameters:
 			identifier: argument.unresolvableType
 			count: 1
 			path: app/Http/Controllers/Api/V1/Admin/VenueController.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\User\:\:\$organization_id\.$#'
-			identifier: property.notFound
-			count: 2
-			path: app/Http/Controllers/Api/V1/Admin/VoiceAgentController.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\User\:\:\$organization_id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/Api/V1/Admin/WalletConfigController.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\User\:\:\$organization_id\.$#'
-			identifier: property.notFound
-			count: 22
-			path: app/Http/Controllers/Api/V1/Auth/AuthController.php
 
 		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
@@ -3145,24 +2947,6 @@ parameters:
 			path: app/Http/Controllers/Api/V1/BookingPublicController.php
 
 		-
-			message: '#^Access to an undefined property App\\Models\\User\:\:\$organization_id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/Api/V1/Chatbot/ChatbotController.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\User\:\:\$organization_id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/Api/V1/Integrations/BusinessReportController.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\User\:\:\$organization_id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/Api/V1/Integrations/LeadIntakeController.php
-
-		-
 			message: '#^Access to an undefined property App\\Models\\BenefitEntitlement\:\:\$organization_id\.$#'
 			identifier: property.notFound
 			count: 1
@@ -3235,21 +3019,9 @@ parameters:
 			path: app/Http/Controllers/Api/V1/Member/MemberChatController.php
 
 		-
-			message: '#^Access to an undefined property App\\Models\\User\:\:\$organization_id\.$#'
-			identifier: property.notFound
-			count: 5
-			path: app/Http/Controllers/Api/V1/Member/MemberChatController.php
-
-		-
 			message: '#^Access to an undefined property App\\Models\\User\:\:\$loyaltyMember\.$#'
 			identifier: property.notFound
 			count: 2
-			path: app/Http/Controllers/Api/V1/Member/MemberController.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\User\:\:\$organization_id\.$#'
-			identifier: property.notFound
-			count: 1
 			path: app/Http/Controllers/Api/V1/Member/MemberController.php
 
 		-
@@ -3637,12 +3409,6 @@ parameters:
 			path: app/Http/Controllers/Api/V1/Widget/WidgetChatController.php
 
 		-
-			message: '#^Access to an undefined property App\\Models\\User\:\:\$organization_id\.$#'
-			identifier: property.notFound
-			count: 4
-			path: app/Http/Controllers/Plugin/PluginConnectionsController.php
-
-		-
 			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:map\(\) expects callable\(Illuminate\\Database\\Eloquent\\Model, int\)\: array\{id\: string, name\: non\-falsy\-string, scopes\: array, created_at\: string\|null, expires_at\: string\|null\}, Closure\(Laravel\\Passport\\Token\)\: array\{id\: string, name\: non\-falsy\-string, scopes\: array, created_at\: string\|null, expires_at\: string\|null\} given\.$#'
 			identifier: argument.type
 			count: 1
@@ -3671,12 +3437,6 @@ parameters:
 			identifier: function.alreadyNarrowedType
 			count: 2
 			path: app/Http/Middleware/BrandMiddleware.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\User\:\:\$organization_id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Middleware/CheckSubscription.php
 
 		-
 			message: '#^Access to an undefined property App\\Models\\User\:\:\$staff\.$#'
@@ -3709,12 +3469,6 @@ parameters:
 			path: app/Http/Middleware/LandingPageSecurity.php
 
 		-
-			message: '#^Access to an undefined property App\\Models\\PluginUser\:\:\$organization_id\.$#'
-			identifier: property.notFound
-			count: 2
-			path: app/Http/Middleware/Plugin/AuthenticatePluginToken.php
-
-		-
 			message: '#^Access to an undefined property Laravel\\Passport\\AccessToken\:\:\$plugin_organization_id\.$#'
 			identifier: property.notFound
 			count: 1
@@ -3725,12 +3479,6 @@ parameters:
 			identifier: method.notFound
 			count: 1
 			path: app/Http/Middleware/Plugin/AuthenticatePluginToken.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\User\:\:\$organization_id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Middleware/Plugin/CheckPluginSubscription.php
 
 		-
 			message: '#^If condition is always false\.$#'
@@ -3767,12 +3515,6 @@ parameters:
 			identifier: argument.type
 			count: 1
 			path: app/Http/Middleware/Plugin/RequirePluginBridgeToken.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\PluginUser\:\:\$organization_id\.$#'
-			identifier: property.notFound
-			count: 2
-			path: app/Http/Middleware/Plugin/RequirePluginSession.php
 
 		-
 			message: '#^Parameter \#1 \$boolean of function abort_unless expects bool, Laravel\\Passport\\Client\|null given\.$#'
@@ -3833,12 +3575,6 @@ parameters:
 			identifier: nullsafe.neverNull
 			count: 2
 			path: app/Http/Middleware/SaasAuthMiddleware.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\User\:\:\$organization_id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Middleware/TenantMiddleware.php
 
 		-
 			message: '#^Parameter \#1 \$array \(list\<string\>\) of array_values is already a list, call has no effect\.$#'
@@ -3995,12 +3731,6 @@ parameters:
 			identifier: nullsafe.neverNull
 			count: 1
 			path: app/Mail/WelcomeMemberMail.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\User\:\:\$organization_id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Mcp/Support/CustomerBookingAccess.php
 
 		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$apartment_name\.$#'
@@ -4555,22 +4285,10 @@ parameters:
 			path: app/Models/VoiceAgentConfig.php
 
 		-
-			message: '#^Access to an undefined property App\\Models\\User\:\:\$organization_id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/OAuth/PluginAccessTokenRepository.php
-
-		-
 			message: '#^Access to an undefined property League\\OAuth2\\Server\\Entities\\AccessTokenEntityInterface\:\:\$organizationId\.$#'
 			identifier: property.notFound
 			count: 2
 			path: app/OAuth/PluginAccessTokenRepository.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\User\:\:\$organization_id\.$#'
-			identifier: property.notFound
-			count: 2
-			path: app/OAuth/PluginAuthCodeRepository.php
 
 		-
 			message: '#^Access to an undefined property Laravel\\Passport\\AuthCode\:\:\$plugin_organization_id\.$#'
@@ -4579,28 +4297,10 @@ parameters:
 			path: app/OAuth/PluginAuthCodeRepository.php
 
 		-
-			message: '#^Access to an undefined property App\\Models\\User\:\:\$organization_id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/OAuth/PluginIdentity.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\User\:\:\$organization_id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/OAuth/PluginRefreshTokenRepository.php
-
-		-
 			message: '#^Access to an undefined property Laravel\\Passport\\Token\:\:\$plugin_organization_id\.$#'
 			identifier: property.notFound
 			count: 1
 			path: app/OAuth/PluginRefreshTokenRepository.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\User\:\:\$organization_id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Providers/PluginServiceProvider.php
 
 		-
 			message: '#^Using nullsafe property access "\?\-\>id" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
@@ -6271,12 +5971,6 @@ parameters:
 			path: app/Services/ContentVisualBriefService.php
 
 		-
-			message: '#^Access to an undefined property App\\Models\\User\:\:\$organization_id\.$#'
-			identifier: property.notFound
-			count: 2
-			path: app/Services/CrmAiService.php
-
-		-
 			message: '#^Called ''pluck'' on Laravel collection, but could have been retrieved as a query\.$#'
 			identifier: larastan.noUnnecessaryCollectionCall
 			count: 3
@@ -6796,12 +6490,6 @@ parameters:
 			message: '#^Access to an undefined property App\\Models\\Guest\:\:\$organization_id\.$#'
 			identifier: property.notFound
 			count: 2
-			path: app/Services/GuestMergeService.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\User\:\:\$organization_id\.$#'
-			identifier: property.notFound
-			count: 1
 			path: app/Services/GuestMergeService.php
 
 		-
@@ -8191,12 +7879,6 @@ parameters:
 			path: app/Services/MemberMergeService.php
 
 		-
-			message: '#^Access to an undefined property App\\Models\\User\:\:\$organization_id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/MemberMergeService.php
-
-		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$email\.$#'
 			identifier: property.notFound
 			count: 1
@@ -8207,12 +7889,6 @@ parameters:
 			identifier: property.notFound
 			count: 1
 			path: app/Services/MemberMergeService.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\User\:\:\$organization_id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/MemberProvisioner.php
 
 		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
@@ -8230,12 +7906,6 @@ parameters:
 			message: '#^Access to an undefined property App\\Models\\LoyaltyMember\:\:\$organization_id\.$#'
 			identifier: property.notFound
 			count: 4
-			path: app/Services/OpenAiService.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\User\:\:\$organization_id\.$#'
-			identifier: property.notFound
-			count: 1
 			path: app/Services/OpenAiService.php
 
 		-
@@ -8273,12 +7943,6 @@ parameters:
 			identifier: nullsafe.neverNull
 			count: 5
 			path: app/Services/OpenAiService.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\User\:\:\$organization_id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/OperationsStatus.php
 
 		-
 			message: '#^Call to function in_array\(\) with arguments string, array\{\} and true will always evaluate to false\.$#'
@@ -8425,12 +8089,6 @@ parameters:
 			path: app/Services/Portal/PortalBootstrap.php
 
 		-
-			message: '#^Access to an undefined property App\\Models\\User\:\:\$organization_id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/Portal/PortalBootstrap.php
-
-		-
 			message: '#^Property App\\Services\\Portal\\PortalBootstrap\:\:\$industries is never read, only written\.$#'
 			identifier: property.onlyWritten
 			count: 1
@@ -8459,12 +8117,6 @@ parameters:
 			identifier: nullsafe.neverNull
 			count: 1
 			path: app/Services/Sms/TwilioSms.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\User\:\:\$organization_id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/VoicePromptBuilder.php
 
 		-
 			message: '#^Called ''pluck'' on Laravel collection, but could have been retrieved as a query\.$#'

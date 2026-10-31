@@ -398,9 +398,15 @@ class PlannerController extends Controller
         if (!$user) return response()->json(['error' => 'Not authenticated'], 401);
 
         $isAssignee = $taskModel->assigned_to_user_id === $user->id;
-        $isManager  = method_exists($user, 'hasRole')
-            ? ($user->hasRole('super_admin') || $user->hasRole('manager'))
-            : false;
+        // A manager is the staff role, as everywhere else in the planner (teamView, the pool's skills filter).
+        // This used spatie/laravel-permission's hasRole(), but no Spatie role is ever created or assigned in
+        // this app, so it was always false and no manager could release a colleague's task.
+        $isManager = $user->organization_id
+            && (\App\Models\Staff::withoutGlobalScopes()
+                ->where('user_id', $user->id)
+                ->where('organization_id', $user->organization_id)
+                ->where('is_active', true)
+                ->first(['role'])?->isManager() ?? false);
         if (!$isAssignee && !$isManager) {
             return response()->json(['error' => 'Only the assignee or a manager can release this task'], 403);
         }

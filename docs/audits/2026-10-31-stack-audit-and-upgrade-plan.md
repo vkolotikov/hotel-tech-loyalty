@@ -394,8 +394,30 @@ checks. Laravel 13 keeps security fixes until about March 2028, so there is no p
   - Recorded in `docs/chatgpt-plugin.md`. Worth a real ChatGPT connection test after deploy.
 - **4e, endroid/qr-code 5 → 6**: same QR codes (SVG byte-identical; PNG pixel-identical within 4/255, now a
   palette image).
-- Not done in this round, as planned: **4f spatie/laravel-permission 6 → 8** and **4g Stripe** (money: needs Stripe
+- **4f, spatie/laravel-permission 6 → 8** (owner: "do the permissions upgrade next"), done separately; see below.
+- Not done in this round, as planned: **4g Stripe** (money: needs Stripe
   test-mode keys to check against the real API), and Guzzle 8 (still blocked by openai-php).
+
+### 31 October 2026, evening: phase 4f, permissions
+
+- **What the app uses:** only the `HasRoles` trait on `User`. Its role system is the staff role (`staff.role`,
+  `AccessMap::MANAGER_ROLES`); nothing ever creates or assigns a Spatie role.
+- **A bug found on the way:** the planner's "release a task back to the pool" let the assignee *or a manager* do
+  it, but checked managers through Spatie's `hasRole()`, which is always false here, so managers were refused. It
+  now uses the planner's own staff-role check (an active `super_admin` or `manager` of the user's organisation), with
+  a new test. After this the app makes no Spatie role check at all.
+- **The upgrade:** 6.25 → 8.3.2 by the package's guide (v6 → v7 → v8).
+  - The migration stub differs only in syntax, so there is no new migration and no table change.
+  - The config gained `models.team` and `models.default_model` (both null) and matches v8's.
+  - The app has no custom models, contracts, events, commands, middleware or registrar calls.
+  - Adds `spatie/laravel-package-tools`.
+- **Rehearsal on PostgreSQL:** against tables built by every migration, v8 creates, assigns and checks roles and
+  permissions (through the Laravel gate too), removes them, and cleans up on user deletion; all in a rolled-back
+  transaction.
+- **Larastan:** declaring `User::$organization_id` cleared 153 recorded findings. The one real finding it exposed
+  (`BusinessReportController`) was fixed, not recorded. Baseline 2,182 → 2,028.
+- **Option for later:** since nothing uses Spatie roles, the package could be removed entirely, keeping its (empty)
+  tables until a decision about them. That means one fewer dependency, but it is a separate decision.
 
 ---
 
