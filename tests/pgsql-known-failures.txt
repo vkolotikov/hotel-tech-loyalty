@@ -1,0 +1,46 @@
+# Tests that fail on PostgreSQL on purpose. CI's PostgreSQL job fails on any other failure
+# (scripts/pg-known-failures.py). Recorded from CI's PostgreSQL 18 run of 2026-10-31 (7,247 tests, 33 failed).
+# Why each group fails: docs/loyalty-workspace.md "Tests on PostgreSQL". A test that starts passing is
+# reported by the check; remove it here. Add a line only with its reason in that section.
+#
+# 17 landing render tests: a priceless menu reads the NOT NULL defaults (price 0, 60 min) as real values;
+# how "no price" is stored and shown is the owner's call. Plus one redirect that outlives its page.
+#
+# 9 tests of states production's schema refuses (kept for SQLite): a member with no tier, no user or no
+# referral code; a voice config with NULL in a NOT NULL column.
+#
+# 6 LeadIntakeApiTest tests: a destructive migration suite that runs only on its own database,
+# hexa_leadintake_test, and refuses any other (CI runs it there in a separate step, where it must pass).
+Tests\Feature\Admin\MemberImportEndpointsTest::test_preview_reports_what_a_commit_would_do_and_keeps_a_pending_batch
+Tests\Feature\Landing\ArdeaAestheticsRenderTest::test_a_fixed_price_prints_bare_and_no_price_prints_nothing
+Tests\Feature\Landing\EmberTableRenderTest::test_a_menu_with_no_price_and_no_window_prints_no_value_column
+Tests\Feature\Landing\EmberTableRenderTest::test_a_menu_with_no_price_shows_its_own_service_window_in_its_place
+Tests\Feature\Landing\EmberTableRenderTest::test_a_rows_own_window_is_escaped
+Tests\Feature\Landing\EmberTableRenderTest::test_the_bands_window_is_the_fallback_for_a_priceless_menu_without_its_own
+Tests\Feature\Landing\EmberTableRenderTest::test_the_leaves_only_this_design_draws_are_escaped
+Tests\Feature\Landing\FormaDentalRenderTest::test_a_card_with_neither_length_nor_price_has_no_footer_row
+Tests\Feature\Landing\FormaDentalRenderTest::test_the_card_footer_is_minutes_and_price_in_the_authors_shape
+Tests\Feature\Landing\LandingRedirectTest::test_a_redirect_to_a_deleted_page_404s
+Tests\Feature\Landing\LumaGardenRenderTest::test_a_menu_with_no_price_prints_no_price
+Tests\Feature\Landing\LumaGardenRenderTest::test_without_a_window_a_menu_with_a_duration_prints_it_and_one_without_keeps_its_rule
+Tests\Feature\Landing\MaisonVelaRenderTest::test_a_menu_with_no_price_and_no_window_prints_no_value_column
+Tests\Feature\Landing\MaisonVelaRenderTest::test_a_menu_with_no_price_shows_its_own_service_window_in_its_place
+Tests\Feature\Landing\MaisonVelaRenderTest::test_a_rows_own_window_is_escaped
+Tests\Feature\Landing\MaisonVelaRenderTest::test_the_bands_window_is_the_fallback_for_a_priceless_menu_without_its_own
+Tests\Feature\Landing\MaisonVelaRenderTest::test_the_leaves_only_this_design_draws_are_escaped
+Tests\Feature\Landing\NumaSkinLabRenderTest::test_the_price_line_is_the_authors_from_and_never_a_duration
+Tests\Feature\Landing\TempoStudioRenderTest::test_a_session_with_neither_duration_nor_price_draws_no_ledger
+Tests\Feature\LeadIntakeApiTest::test_different_orgs_can_share_external_id
+Tests\Feature\LeadIntakeApiTest::test_invalid_token_is_rejected
+Tests\Feature\LeadIntakeApiTest::test_missing_required_field_returns_422
+Tests\Feature\LeadIntakeApiTest::test_replay_returns_existing_lead_without_duplicating
+Tests\Feature\LeadIntakeApiTest::test_unauthenticated_request_is_rejected
+Tests\Feature\LeadIntakeApiTest::test_valid_payload_creates_lead_scoped_to_token_user
+Tests\Feature\Loyalty\DiscountServiceTest::test_member_without_a_tier_gets_nothing
+Tests\Feature\Loyalty\LoyaltyPresetServiceTest::test_additive_path_engages_when_ANY_member_exists_even_without_tier_id
+Tests\Feature\Loyalty\LoyaltyServiceAssessTierTest::test_first_time_assignment_when_member_has_no_tier
+Tests\Feature\Loyalty\LoyaltyServiceAssessTierTest::test_invitation_only_tiers_are_skipped_in_auto_assignment
+Tests\Feature\Loyalty\MemberDuplicatesFinderTest::test_only_this_organisations_members_and_only_members_with_a_user_are_paired
+Tests\Feature\Loyalty\MemberMergeServiceTest::test_referral_code_adopted_when_winner_has_none
+Tests\Feature\Member\ReferralLinkTest::test_no_referral_code_means_no_link
+Tests\Feature\WidgetRealtime\WidgetRealtimeSessionTest::test_only_retired_models_are_replaced_without_updating_saved_settings with data set #0

@@ -119,6 +119,10 @@ jobs:
         run: PHP=php JUNIT_DIR="$RUNNER_TEMP/junit" scripts/test-pg.sh hexa_test | tee "$RUNNER_TEMP/pg.log" || true
       - name: No failure beyond tests/pgsql-known-failures.txt
         run: python3 scripts/pg-known-failures.py "$RUNNER_TEMP/junit" tests/pgsql-known-failures.txt
+      - name: Lead intake suite on its own database (it refuses any other)
+        run: |
+          docker exec pg18 psql -U ci -d hexa_test -c 'CREATE DATABASE hexa_leadintake_test'
+          DB_CONNECTION=pgsql DB_DATABASE=hexa_leadintake_test php artisan test tests/Feature/LeadIntakeApiTest.php
       - if: always()
         run: docker logs pg18 > "$RUNNER_TEMP/postgres-server.log" 2>&1 || true
       - if: always()
