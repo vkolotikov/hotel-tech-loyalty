@@ -17,8 +17,9 @@ modern, luxury, poverfull, easy to use nice design".
   reward the phones of those who may hand it over; tapping one opens Requests. Server tests on SQLite and PostgreSQL.
 - **Not yet checked: a phone.** NFC and the camera only run in a phone build. The next step is the owner's EAS
   development build and the acceptance list in the README.
-- **Production is unchanged.** The app uses only endpoints already live; nothing in this repository's web or server
-  code changed for it, so there is nothing to deploy to Laravel Cloud.
+- **On the server:** the screens use endpoints that were already live; request alerts added server code (phones,
+  `StaffAlerts`), deployed to production on 2026-10-31 (`docs/loyalty-workspace.md` "Deploying"). The app itself is
+  not part of the Laravel Cloud deploy: it reaches phones through EAS and the stores.
 
 ## Decisions
 
