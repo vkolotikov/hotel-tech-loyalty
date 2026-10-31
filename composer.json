@@ -23,7 +23,6 @@
         "stripe/stripe-php": "^20.0"
     },
     "require-dev": {
-        "driftingly/rector-laravel": "^2.7",
         "fakerphp/faker": "^1.23",
         "larastan/larastan": "^3.13",
         "laravel/pint": "^1.0",
