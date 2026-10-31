@@ -113,7 +113,7 @@ typescript-eslint 8.72.1, PostCSS 8.5.32.
 |---------|--------|--------|-------|
 | i18next / react-i18next / languagedetector | 26.1.0 / 17.0.7 / 8.2.3 | 26.5.12 / 17.1.9 / 8.2.4 | In range. The members' app already uses these. |
 | typescript | 5.9.3 | 7.0.2 (6.0.3 on the 6 line) | **Go to 6.0, not 7 yet:** typescript-eslint supports only TypeScript < 6.1, and TS 7.0 has no stable programmatic API until 7.1. |
-| eslint, @eslint/js | 9.39.5 | 10.14.0 / 10.0.1 | Also clears the 12 moderate `minimatch` advisories (dev only). |
+| eslint, @eslint/js | 9.39.5 | 10.14.0 / 10.0.1 | Does not clear the moderate `minimatch` advisory: ESLint 10's own dependencies still pull it (dev only). |
 | tailwindcss | 3.4.19 | **4.3.3** | Design-sensitive. 244-line config, 27 CSS files, no `@apply`. v4 needs Safari 16.4+, Chrome 111+ and Firefox 128+. |
 | lucide-react | 0.577.0 | **1.66.0** | Imported in 342 files; some icons renamed in 1.x. |
 | @stripe/stripe-js / @stripe/react-stripe-js | 9.17.0 / 6.12.0 | 10.2.0 / 7.0.1 | Money path; same step as stripe-php. |
@@ -154,7 +154,7 @@ patch releases. Per the app rules, never `npm audit fix --force` in an Expo app.
 | PHP runtime | Critical RCE fixed in 8.4.27 / 8.5.12 / 8.3.36 | **Critical** | Confirm the Cloud runtime's patch level; update every dev PHP (Windows WAMP 8.4.20 → 8.4.27 or 8.5.12). |
 | `hotel-tech-loyalty` Composer (160 packages) | `composer audit`: none | — | — |
 | `frontend/` production npm packages | `npm audit --omit=dev`: none | — | — |
-| `frontend/` dev tooling | 12 moderate (`minimatch` via ESLint 9) | Moderate, build machine only | ESLint 10 |
+| `frontend/` dev tooling | 12 moderate (`minimatch` via ESLint) | Moderate, build machine only | Waits for ESLint's own update (ESLint 10 still pulls it) |
 | Repository root `package.json` (Vite 5 toolchain) | 8 (7 high): postcss, source-map-js, esbuild, axios, nanoid, form-data, follow-redirects | High, build machine only | Remove the unused toolchain (phase 1) |
 | Staff and members' apps | 13 (2 high) inside `@expo/cli` | High, build machine only | Expo patch releases |
 | `saas-app` production packages | **47 (5 critical, 25 high)**: `next`, `next-auth`/`@auth/core`, `proxy-addr`, `prisma`, `sharp` (libvips CVEs), `hono`, `lodash`, `path-to-regexp`, `zod` via `shadcn`, … | **Critical** | Phase 1: in-range updates; `shadcn` to dev |
@@ -219,7 +219,11 @@ patch releases. Per the app rules, never `npm audit fix --force` in an Expo app.
 2. **Repository root**: confirm in Laravel Cloud's build settings that nothing runs the root `npm run build`. Then
    remove the root `package.json`, `package-lock.json`, `vite.config.js` and `resources/js`, `resources/css` (Laravel's
    original skeleton assets). If something does use them, upgrade to Vite 8 + `laravel-vite-plugin` 2 instead.
-3. **Frontend dev tooling**: ESLint 10 + `@eslint/js` 10 (clears the moderate advisories).
+   (Done 31 Oct the second way, because Cloud's build commands could not be read from here: Vite 8.3.5 +
+   `laravel-vite-plugin` 3.2.0, which works whether or not Cloud runs it. Removal can follow once the owner confirms
+   Cloud never runs the root build.)
+3. **Frontend dev tooling**: ESLint 10 + `@eslint/js` 10. (Correction, 31 Oct: this does not clear the moderate
+   `minimatch` advisory, which ESLint 10 still depends on; it is development-only and waits for ESLint.)
 
 ### Phase 2: In-range updates and small fixes (one release, low risk)
 
