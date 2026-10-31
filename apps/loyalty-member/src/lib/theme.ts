@@ -127,6 +127,12 @@ export const SPACE = { xs: 4, sm: 8, md: 12, lg: 16, xl: 20, xxl: 28 }
 /** Bottom padding for a tab screen's scroll content: the tab bar and its raised Card button need the room. */
 export const TAB_BAR_ROOM = 128
 
+/**
+ * The widest the screens grow (iPad, a wide Android tablet): the app is one column of cards, centred, with the navy
+ * beside it, rather than every card and row stretched across a tablet (a member reads one column of cards).
+ */
+export const CONTENT_MAX_WIDTH = 640
+
 const display = () => DISPLAY_FAMILIES[now().face] ?? DISPLAY_FAMILIES.cormorant
 
 export const fonts = {

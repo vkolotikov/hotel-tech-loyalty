@@ -20,7 +20,7 @@ import { queryClient, restoreLook } from '../lib/queries'
 import { useSession } from '../lib/session'
 import { usePrefs } from '../lib/prefs'
 import { useT } from '../lib/i18n'
-import { C, fonts, useLook } from '../lib/theme'
+import { C, CONTENT_MAX_WIDTH, fonts, useLook } from '../lib/theme'
 import { Backdrop, GoldButton } from '../components/ui'
 import { UpdateGate } from '../components/UpdateGate'
 
@@ -64,7 +64,7 @@ export default function RootLayout() {
       <SafeAreaProvider>
         <QueryClientProvider client={queryClient}>
           <StatusBar style="light" />
-          <View key={`look-${lookVersion}`} style={{ flex: 1 }}>
+          <View key={`look-${lookVersion}`} style={styles.column}>
             <Stack
               screenOptions={{
                 headerShown: false,
@@ -146,6 +146,7 @@ function LockGate() {
 }
 
 const styles = StyleSheet.create({
+  column: { flex: 1, width: '100%', maxWidth: CONTENT_MAX_WIDTH, alignSelf: 'center' },
   lock: { alignItems: 'center', justifyContent: 'center', gap: 24, padding: 32 },
   lockMark: { width: 72, height: 72, borderRadius: 36, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
 })
