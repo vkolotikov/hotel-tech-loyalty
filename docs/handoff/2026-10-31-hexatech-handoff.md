@@ -75,7 +75,10 @@ Plan and progress: `docs/audits/2026-10-31-stack-audit-and-upgrade-plan.md` (§6
 - **Owner's side:** read production's PHP and Node versions in Laravel Cloud (PHP must be 8.4.27+ or 8.5.12+); remove
   `CONTENT_PLANNER_IMAGE_FALLBACK_MODEL` if it says `dall-e-3`; merge and deploy `saas-app`'s branch; change the SaaS
   super admin's password if production was seeded with the old script.
-- Next by the plan: phase 3 (PHP 8.5 on Cloud), then phase 4's library majors one per release.
+- Later the same day: Cloud runs PHP 8.5 (owner); PHPUnit 13, Anthropic SDK 1.3 (Content Planner on API
+  `2026-10-21`), openai-php 0.21, laravel/mcp 1.1 (MCP `2026-07-28`, older handshake still served) and
+  endroid/qr-code 6 (plan §8). Open: spatie/laravel-permission 6 → 8, Stripe (needs test-mode keys), the chat
+  widget's raw Anthropic calls (owner's temperature decision), the workstation's PHP 8.4.20 → 8.5.12.
 
 ## Cloud container notes (Linux)
 
