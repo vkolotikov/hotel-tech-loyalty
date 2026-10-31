@@ -9,6 +9,8 @@ import { WEB_BASE } from '../../lib/api'
 import { queryClient, useBoot } from '../../lib/queries'
 import { useSession } from '../../lib/session'
 import { usePrefs } from '../../lib/prefs'
+import { useVersionCheck } from '../../lib/appVersion'
+import { updateUrl } from '../../lib/version'
 import { LANGUAGES, LANGUAGE_NAMES, useT } from '../../lib/i18n'
 import type { Key } from '../../lib/i18n/en'
 import { C, RADIUS, TAB_BAR_ROOM, fonts } from '../../lib/theme'
@@ -34,6 +36,8 @@ export default function More() {
   const lock = usePrefs(s => s.lock)
   const alerts = usePrefs(s => s.alerts)
   const alertsState = usePrefs(s => s.alertsState)
+  const versionState = useVersionCheck(s => s.state)
+  const storeUrl = updateUrl(useVersionCheck(s => s.versions), Platform.OS)
   const [lockProblem, setLockProblem] = useState(false)
 
   const toggleLock = async (on: boolean) => {
@@ -129,6 +133,9 @@ export default function More() {
           </Surface>
         </View>
 
+        {versionState === 'update_available' && (
+          <Notice tone="info" text={t('update.available')} action={storeUrl ? t('update.now') : undefined} onAction={storeUrl ? () => { void Linking.openURL(storeUrl) } : undefined} />
+        )}
         <GhostButton title={t('more.signOut')} icon="log-out-outline" tone={C.danger} onPress={signOut} />
         <Text style={[fonts.small, { color: C.text3, textAlign: 'center' }]}>{t('more.version', { v: Constants.expoConfig?.version ?? '1.0.0' })}</Text>
       </ScrollView>

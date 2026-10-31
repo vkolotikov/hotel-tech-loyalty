@@ -316,6 +316,10 @@ or add the next dated one, at the end of a session.
   dispatched after the member's response (`AlertStaffOfRequest::dispatchAfterResponse`), never inside the member's
   request or transaction. `staff.expo_push_token` stays the Hotel Staff app's own. A new kind of alert is a method on
   `StaffAlerts` with its words in all five `lang/<lang>/staff_alerts.php`.
+- The native apps' versions are answered only by `GET /api/v1/apps/{app}/version` (`config/apps.php`, from the
+  `STAFF_APP_*` variables); a setting that is not `x.y.z` counts as none, so a typo never locks phones out. Every app
+  store release raises `version` in the app's `app.json`. Expo-managed libraries stay at the versions the SDK names
+  (`npx expo install --check`); never `npm audit fix --force` in an Expo app.
 - Checks: `cd apps/loyalty-staff && npx tsc --noEmit && npx vitest run`. In the cloud container Expo commands need
   `EXPO_OFFLINE=1`. Never commit `node_modules`, `dist` or the generated `ios`/`android` folders.
 

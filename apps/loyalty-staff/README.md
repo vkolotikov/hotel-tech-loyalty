@@ -78,6 +78,31 @@ Push needs three things set up once, all in the owner's accounts:
    `uk.hexatech.loyalty.staff`, then upload its service account key with `npx eas-cli credentials` → Android →
    "Google Service Account" → "FCM V1". (A `google-services.json` is not needed for Expo's push service.)
 
+## Minimum version
+
+At start and on return to the app (at most every 30 minutes) the app asks `GET /api/v1/apps/staff/version` (public,
+`config/apps.php` on the server). Below `min_version` it shows only "Time to update" over every screen, with the
+store link for the phone; below `latest_version` More offers the update. The app's own version is `version` in
+`app.json`; raise it for every store release.
+
+To retire old versions, set these in Laravel Cloud's environment, then redeploy (a value that is not `x.y.z` counts
+as none, so a typo never locks phones out):
+
+| Variable | Meaning |
+|---|---|
+| `STAFF_APP_MIN_VERSION` | Oldest version still served (default `1.0.0`) |
+| `STAFF_APP_LATEST_VERSION` | Newest version in the stores (default `1.0.0`) |
+| `STAFF_APP_IOS_URL` | The App Store link (the unlisted link once Apple grants it) |
+| `STAFF_APP_ANDROID_URL` | The Play link (default the package's Play page) |
+
+## Versions
+
+Expo SDK 58.0.21 (the newest stable on 2026-10-31), React Native 0.88, React 19.3, TypeScript 7, Vitest 5. Every
+Expo-managed library is at the version SDK 58 names (`EXPO_OFFLINE=1 npx expo install --check`). `npm audit` lists
+only findings inside Expo's own build tooling (`@expo/cli`, `@expo/config`, `glob`, `minimatch`, `zod` 3), which run on
+the build machine and never ship in the app; they clear when Expo updates them, never by `npm audit fix --force` (it
+would downgrade Expo).
+
 ## Acceptance on phones
 
 1. Sign in, close the app, reopen it: still signed in. Turn the lock on, leave for two minutes, return: Face ID or
@@ -96,3 +121,5 @@ Push needs three things set up once, all in the owner's accounts:
 11. Request alerts: allow notifications at first start; from the member app ask for a benefit and claim a reward —
     a phone signed in as a manager hears both, a desk account without "redeem points" only the benefit; tap one and
     Requests opens. Switch alerts off in More (nothing arrives), sign out (nothing arrives), sign in again.
+12. Minimum version: with `STAFF_APP_MIN_VERSION` above the installed version, the app shows only "Time to update"
+    (before sign-in too) and its button opens the store; set it back and "Check again" lets the phone in.

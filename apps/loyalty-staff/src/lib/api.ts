@@ -3,6 +3,7 @@ import type {
   Activity, Bootstrap, DeskAnswer, Envelope, EventRow, HistoryPage, MemberDetail, MemberRow, MembersPage, Metrics,
   NfcCardRow, PlaceRow, PointsAfter, RedemptionsPage, RequestTab, RequestsPage, ScanAnswer, SignInAnswer,
 } from './types'
+import type { AppVersions } from './version'
 
 /** The HexaTech API (production by default; a development build may point elsewhere with EXPO_PUBLIC_API_URL). */
 export const API_BASE = (process.env.EXPO_PUBLIC_API_URL ?? 'https://app.hexa-tech.uk/api').replace(/\/+$/, '')
@@ -100,6 +101,8 @@ export const api = {
   /** Revokes this token; sent with the token itself, which the session has already forgotten. */
   signOut: (token: string): Promise<unknown> => send('DELETE', '/v1/auth/logout', undefined, undefined, token),
 
+  /** Which versions of this app the server still serves; public, asked before sign-in too. */
+  appVersions: (): Promise<AppVersions> => read('/v1/apps/staff/version'),
   bootstrap: (): Promise<Bootstrap> => read(loyaltyPath('bootstrap')),
   /** This phone, for request alerts: registered after sign-in and on every start, with its language and switch. */
   saveDevice: (device: { token: string; platform: 'ios' | 'android'; language: string; alerts: boolean }): Promise<{ device: { alerts: boolean; language: string } }> =>

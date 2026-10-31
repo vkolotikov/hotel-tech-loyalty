@@ -17,6 +17,7 @@ import { usePrefs } from '../lib/prefs'
 import { useT } from '../lib/i18n'
 import { C, fonts } from '../lib/theme'
 import { Backdrop, GoldButton } from '../components/ui'
+import { UpdateGate } from '../components/UpdateGate'
 
 SplashScreen.preventAutoHideAsync().catch(() => {})
 
@@ -64,6 +65,7 @@ export default function RootLayout() {
             <Stack.Screen name="link-card" options={{ presentation: 'modal' }} />
           </Stack>
           <LockGate />
+          <UpdateGate />
         </QueryClientProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>

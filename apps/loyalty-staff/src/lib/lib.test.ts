@@ -6,6 +6,7 @@ import { balanceAfter, cleanCode, errorKey, keyFor, looksLikeCode, membershipSta
 import { ago, day, greeting, initials, spacedNumber } from './format'
 import { failureFrom } from './failure'
 import { isRequestAlert } from './alerts'
+import { compareVersions, updateUrl, versionState } from './version'
 import { BUNDLES, LANGUAGES, languageOf, say } from './i18n'
 import { en } from './i18n/en'
 import type { MemberRow, Verdict } from './types'
@@ -142,5 +143,31 @@ describe('request alerts', () => {
     expect(isRequestAlert({ type: 'points_earned' })).toBe(false)
     expect(isRequestAlert(null)).toBe(false)
     expect(isRequestAlert('staff_request')).toBe(false)
+  })
+})
+
+describe('app versions', () => {
+  it('compare as numbers, part by part', () => {
+    expect(compareVersions('1.10.0', '1.9.9')).toBeGreaterThan(0)
+    expect(compareVersions('1.0.0', '1.0.0')).toBe(0)
+    expect(compareVersions('0.9.12', '1.0.0')).toBeLessThan(0)
+    expect(compareVersions('1.2', '1.2.0')).toBe(0)
+  })
+
+  it('require an update only below the minimum, and offer one below the latest', () => {
+    const versions = { min_version: '1.2.0', latest_version: '1.4.0' }
+    expect(versionState('1.1.9', versions)).toBe('update_required')
+    expect(versionState('1.2.0', versions)).toBe('update_available')
+    expect(versionState('1.4.0', versions)).toBe('current')
+    expect(versionState('2.0.0', versions)).toBe('current')
+    // A server that answers nonsense never locks the phone out.
+    expect(versionState('1.0.0', { min_version: 'soon', latest_version: '' })).toBe('current')
+  })
+
+  it('open this phone’s own store page, or none', () => {
+    const versions = { app: 'staff', min_version: '1.0.0', latest_version: '1.0.0', update_url: { ios: 'https://apps.apple.com/x', android: null } }
+    expect(updateUrl(versions, 'ios')).toBe('https://apps.apple.com/x')
+    expect(updateUrl(versions, 'android')).toBeNull()
+    expect(updateUrl(null, 'ios')).toBeNull()
   })
 })
