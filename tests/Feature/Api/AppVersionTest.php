@@ -51,6 +51,14 @@ class AppVersionTest extends TestCase
         $this->getJson($this->url('staff'))->assertOk()->assertJsonPath('latest_version', '2.0.0');
     }
 
+    public function test_the_members_app_starts_at_two_with_the_existing_listing(): void
+    {
+        $this->getJson($this->url('member'))->assertOk()
+            ->assertJsonPath('min_version', '2.0.0')
+            ->assertJsonPath('update_url.ios', 'https://apps.apple.com/app/id6765608479')
+            ->assertJsonPath('update_url.android', 'https://play.google.com/store/apps/details?id=com.hotelloyalty.app');
+    }
+
     public function test_an_unknown_app_is_not_found(): void
     {
         $this->getJson($this->url('kiosk'))->assertStatus(404)->assertJsonPath('error', 'not_found');

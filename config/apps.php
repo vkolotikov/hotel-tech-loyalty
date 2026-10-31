@@ -11,4 +11,12 @@ return [
         'ios_url'        => env('STAFF_APP_IOS_URL'),
         'android_url'    => env('STAFF_APP_ANDROID_URL', 'https://play.google.com/store/apps/details?id=uk.hexatech.loyalty.staff'),
     ],
+    // The members' app, HexaTech Loyalty (owner 2026-10-31): the existing Hotel Loyalty listing (com.hotelloyalty.app)
+    // from version 2.0.0. Versions before 2.0 are the old app, which never asks.
+    'member' => [
+        'min_version'    => env('MEMBER_APP_MIN_VERSION', '2.0.0'),
+        'latest_version' => env('MEMBER_APP_LATEST_VERSION', '2.0.0'),
+        'ios_url'        => env('MEMBER_APP_IOS_URL', 'https://apps.apple.com/app/id6765608479'),
+        'android_url'    => env('MEMBER_APP_ANDROID_URL', 'https://play.google.com/store/apps/details?id=com.hotelloyalty.app'),
+    ],
 ];

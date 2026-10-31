@@ -1,0 +1,78 @@
+import type { Key } from './en'
+
+/** Usted, as the portal speaks to members. */
+export const es: Record<Key, string> = {
+  'brand': 'HexaTech Loyalty',
+
+  'signIn.title': 'Bienvenido de nuevo',
+  'signIn.line': 'Inicie sesión para ver su tarjeta, sus puntos y lo que le ofrece su membresía.',
+  'signIn.email': 'Correo electrónico',
+  'signIn.password': 'Contraseña',
+  'signIn.submit': 'Iniciar sesión',
+  'signIn.forgot': '¿Ha olvidado su contraseña?',
+  'signIn.new': '¿Es nuevo en un programa?',
+  'signIn.join': 'Únase con el código de su establecimiento',
+  'signIn.claim': 'Configurar una cuenta existente',
+
+  'join.title': 'Unirse a una membresía',
+  'join.line': 'Escanee el código QR en su establecimiento o pegue el enlace de registro que le enviaron.',
+  'join.scan': 'Escanear el código QR',
+  'join.paste': 'Pegar el enlace de registro',
+  'join.link': 'Enlace de registro',
+  'join.continue': 'Continuar',
+  'join.badLink': 'Ese no es un enlace de registro. Utilice el enlace o el código QR que le dio su establecimiento.',
+  'join.pointCamera': 'Apunte la cámara al código QR de registro',
+  'join.cameraAsk': 'Permita que la cámara lea el código QR.',
+  'join.cameraAllow': 'Permitir la cámara',
+  'join.cameraDenied': 'La cámara no está permitida. Permítala en los ajustes del teléfono o pegue el enlace.',
+
+  'home.morning': 'Buenos días',
+  'home.afternoon': 'Buenas tardes',
+  'home.evening': 'Buenas noches',
+  'home.showCard': 'Mostrar mi tarjeta',
+  'home.showCardLine': 'El código QR para la recepción',
+  'home.messages': 'Mensajes',
+  'home.unread': '{{n}} nuevos',
+  'home.noneUnread': 'Nada nuevo',
+
+  'tab.card': 'Tarjeta',
+  'card.title': 'Su tarjeta',
+  'card.show': 'Muestre este código en la recepción',
+  'card.noCode': 'No se pudo mostrar el código. Deslice hacia abajo para intentarlo de nuevo.',
+
+  'more.title': 'Más',
+  'more.venue': 'Su establecimiento',
+  'more.preferences': 'Preferencias',
+  'more.language': 'Idioma',
+  'more.lock': 'Bloquear con Face ID o huella',
+  'more.lockLine': 'Vuelve a pedirlo tras dos minutos fuera',
+  'more.lockMissing': 'Configure primero Face ID, una huella o un código en este teléfono.',
+  'more.alerts': 'Notificaciones',
+  'more.alertsLine': 'Puntos, ofertas y mensajes de {{venue}}',
+  'more.alertsBlocked': 'Las notificaciones de HexaTech Loyalty están desactivadas en los ajustes del teléfono.',
+  'more.alertsSettings': 'Abrir ajustes',
+  'more.alertsUnavailable': 'Las notificaciones funcionan en la aplicación instalada en un teléfono.',
+  'more.signOut': 'Cerrar sesión',
+  'more.signOutAsk': '¿Cerrar sesión de HexaTech Loyalty en este teléfono?',
+  'more.version': 'Versión {{v}}',
+
+  'lock.title': 'HexaTech Loyalty está bloqueada',
+  'lock.unlock': 'Desbloquear',
+  'lock.prompt': 'Desbloquear HexaTech Loyalty',
+
+  'update.title': 'Es hora de actualizar',
+  'update.line': 'Esta versión de HexaTech Loyalty ya no es compatible. Actualice la aplicación para seguir usando su membresía.',
+  'update.versions': 'Este teléfono tiene la versión {{v}}; se necesita la {{min}} o posterior.',
+  'update.now': 'Actualizar ahora',
+  'update.again': 'Comprobar de nuevo',
+  'update.noLink': 'Actualice HexaTech Loyalty desde App Store o Google Play.',
+  'update.available': 'Hay una versión más reciente de HexaTech Loyalty.',
+
+  'push.channel': 'Mensajes de su establecimiento',
+
+  'error.network': 'Sin conexión. Compruebe internet e inténtelo de nuevo.',
+  'error.invalid': 'Ese correo y esa contraseña no corresponden a ninguna membresía.',
+  'error.too_many': 'Demasiados intentos. Espere un minuto e inténtelo de nuevo.',
+  'error.not_found': 'No se ha encontrado.',
+  'error.unknown': 'Algo salió mal. Inténtelo de nuevo.',
+}

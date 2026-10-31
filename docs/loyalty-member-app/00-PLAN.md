@@ -2,8 +2,16 @@
 
 Owner, 2026-10-31: "If or when it is done can we develope as well user membership app or improve existing one."
 
-Status: **plan for the owner's decision; nothing built yet.** Evidence: a read-only audit of the existing app
-(`vkolotikov/hotel-tech-loyalty-mobile` at `c3deea3`), with its key facts checked again by hand.
+Owner's decisions (2026-10-31): **a new app, published under the existing listing; store name "HexaTech Loyalty";
+each venue's own colours.**
+
+Status: **phase 1 built** on `feature/loyalty-member-app` in `apps/loyalty-member` (README there): sign-in, join by
+QR or link, the old app's session carried over, Home, the card with its QR code and wallet buttons, Activity, More,
+the venue's accent and heading face, five languages (the portal's own words, shared), push per phone with sign-out
+clearing it, the version check. Checked in the browser preview against the local API: Home, card, activity and More
+for a real member, a new member joining through the form (201, welcome points on Home), Russian. Phases 2 and 3 next.
+Evidence for the decision: a read-only audit of the existing app (`vkolotikov/hotel-tech-loyalty-mobile` at `c3deea3`,
+`01-AUDIT-2026-10-31.md`), with its key facts checked again by hand.
 
 ## What exists
 

@@ -1,0 +1,93 @@
+{
+  "expo": {
+    "name": "HexaTech Loyalty",
+    "slug": "hotel-loyalty",
+    "version": "2.0.0",
+    "scheme": "hotel-loyalty",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#07090f",
+    "ios": {
+      "bundleIdentifier": "com.hotelloyalty.app",
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSCameraUsageDescription": "Scan your venue's sign-up QR code to join its membership.",
+        "NSFaceIDUsageDescription": "Unlock HexaTech Loyalty with Face ID.",
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    },
+    "android": {
+      "package": "com.hotelloyalty.app",
+      "adaptiveIcon": {
+        "backgroundColor": "#07090f",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.USE_BIOMETRIC"
+      ],
+      "blockedPermissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.SYSTEM_ALERT_WINDOW",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE"
+      ],
+      "softwareKeyboardLayoutMode": "resize",
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro",
+      "output": "single"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      "expo-font",
+      "expo-localization",
+      "expo-web-browser",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 160,
+          "resizeMode": "contain",
+          "backgroundColor": "#07090f"
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Scan your venue's sign-up QR code to join its membership.",
+          "recordAudioAndroid": false
+        }
+      ],
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "Unlock HexaTech Loyalty with Face ID."
+        }
+      ],
+      "expo-status-bar",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#c9a84c"
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": false
+    },
+    "owner": "hoteltechai",
+    "extra": {
+      "eas": {
+        "projectId": "865bfb65-5e82-4b4d-b3b4-dc55e9b9ef17"
+      }
+    }
+  }
+}
