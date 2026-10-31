@@ -14,11 +14,11 @@ Face ID texts only; no microphone; Android's unused permissions blocked).
 1. **Let the build run.** From a computer signed in to Expo as `hoteltechai`, or from this cloud environment once its
    network allows `api.expo.dev`, `expo.dev` and `storage.googleapis.com` (EAS uploads the project there) and it has an
    `EXPO_TOKEN` secret for `hoteltechai` (environment settings, never the chat or the repository).
-2. **Stop the old app's release workflow** in `vkolotikov/hotel-tech-loyalty-mobile` (`.github/workflows/release.yml`):
-   it publishes an over-the-air update on every push to `main` and builds binaries on every `v*` tag, against the
-   same Expo project and store listing. Remove its `push` trigger (keep `workflow_dispatch` if wanted) or delete the
-   file, and remove the repository's `EXPO_TOKEN` Actions secret. The old 1.x apps keep running; they simply get no
-   more updates.
+2. **The old app's release workflow is retired** (done 2026-10-31, `vkolotikov/hotel-tech-loyalty-mobile` commit
+   `2ac9a17`): `.github/workflows/release.yml` (an over-the-air update on every push to `main`, binaries on every `v*`
+   tag, against the same Expo project and listing) is deleted, and that repository's `CLAUDE.md` says the app moved
+   here. No run started from that push. What is left there is the repository's `EXPO_TOKEN` Actions secret, which no
+   workflow uses any more; delete it in Settings → Secrets and variables → Actions when convenient.
 3. **Credentials are already on EAS** for project `865bfb65-5e82-4b4d-b3b4-dc55e9b9ef17` (the old app's): the iOS
    distribution certificate and profile, the Apple push key, and the Android upload keystore. The new app uses the same
    project, so a build reuses them. Play only accepts an update signed with the same upload key; EAS's stored keystore is
