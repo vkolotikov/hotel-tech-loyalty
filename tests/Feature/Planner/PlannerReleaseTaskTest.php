@@ -88,7 +88,7 @@ class PlannerReleaseTaskTest extends TestCase
     private function user(string $name, ?string $role, bool $active = true, ?int $orgId = null): User
     {
         $user = User::forceCreate(['organization_id' => $orgId ?? $this->orgId, 'name' => $name,
-            'email' => $name . '-' . uniqid() . '@example.test', 'user_type' => 'staff']);
+            'email' => $name . '-' . uniqid() . '@example.test', 'password' => 'not-used', 'user_type' => 'staff']);
         if ($role !== null) {
             Staff::withoutGlobalScopes()->forceCreate(['organization_id' => $orgId ?? $this->orgId,
                 'user_id' => $user->id, 'role' => $role, 'is_active' => $active]);
