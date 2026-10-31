@@ -6,10 +6,11 @@ environment). AGENTS.md and CLAUDE.md still apply.
 
 ## Production
 
-Production is **a199f1f8c** (request alerts on staff phones, on top of the wallet and recovery release `f0c30c739`):
-the `staff_devices` table, `PUT/DELETE /v1/admin/loyalty/devices` and `StaffAlerts`, plus three fixes that made
-main's red tests green (record: `docs/loyalty-workspace.md` "Deploying"). The next source-patch baseline is
-**91f0d1e72** on `feature/loyalty-staff-app`, with `apps/loyalty-staff/` left out of any Cloud deploy.
+Production is **54d61cd8c**: request alerts on staff phones (`a199f1f8c`: the `staff_devices` table,
+`PUT/DELETE /v1/admin/loyalty/devices`, `StaffAlerts`, and three fixes that made main's red tests green), then the
+native apps' minimum-version answer (`GET /api/v1/apps/{app}/version`, `config/apps.php`). Records:
+`docs/loyalty-workspace.md` "Deploying". The next source-patch baseline is **bb56e5355** on
+`feature/loyalty-staff-app`, with `apps/loyalty-staff/` left out of any Cloud deploy.
 
 ## New: HexaTech Staff, the native desk app
 
@@ -29,8 +30,15 @@ main's red tests green (record: `docs/loyalty-workspace.md` "Deploying"). The ne
 - Request alerts are built and the server part is live: a member's benefit request alerts every active staff phone,
   a claimed reward those who may hand it over. A phone hears them once the owner has set up the EAS project id, an
   Apple push key and FCM V1 credentials (`apps/loyalty-staff/README.md`, "Request alerts").
-- Later steps (plan, "What is left"): a minimum-version answer, the store listings and unlisted App Store
-  distribution.
+- The minimum-version check is built and its server part is live; the app is on the newest versions (Expo SDK
+  58.0.21, TypeScript 7, Vitest 5; README "Versions").
+- Later steps (plan, "What is left"): the store listings and unlisted App Store distribution.
+
+## Next: the members' app
+
+`docs/loyalty-member-app/00-PLAN.md` (with the audit of the existing Hotel Loyalty app beside it) recommends a new
+members' app at `apps/loyalty-member` on the staff app's toolchain, published as an update of the existing listing
+(`com.hotelloyalty.app`). It waits on the owner's four decisions listed there; nothing is built yet.
 
 ## Cloud container notes (Linux)
 
