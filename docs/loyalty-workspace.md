@@ -857,6 +857,17 @@ files on disk): run them one after the other.
 
 ## Deploying
 
+- Request alerts on staff phones, 2026-10-31: production **a199f1f8c** on **f0c30c739**, feature source **91f0d1e72**
+  on `feature/loyalty-staff-app`. 22 paths (13 added, 9 changed, no deletions); the app `apps/loyalty-staff` stays on
+  the branch (EAS, not Cloud). Migration `2026_10_31_120000_create_staff_devices` (new table only; up, down, up on
+  PostgreSQL). It also made three tests that were red on main green: `operations-status` got its own throttle bucket,
+  `config/landing.php` reserves `downloads` (`public/downloads`), and `AiUsageLogFactory::lastMonth()` no longer
+  overflows on the 29th to 31st. Parity: every listed file and the whole source outside the app equal the tip.
+  Artifact: PHP **76 scopes, 7,233 passed / 16 skipped** plus the three fixed scopes green again (38, 11, 184), Landing
+  1,735 + 118 again; frontend tsc, **5,766 tests / 399 files**, build. Verified by content on `origin/main` (22/22
+  files equal the tip); the production host is not reachable from the cloud container, so no live check was made.
+  The next source delta starts at **91f0d1e72** (the app folder excepted).
+
 - Guided setup and Settings, 2026-10-29: production **ce1f55e0f**, deployed source and next source-patch baseline
   **43382945207c44ae6a6ce952272121e32e6a1d10**, feature `feature/loyalty-settings-setup-20261029`. Isolated parent
   **8f7c18159**, final source patch **56c9049de**, whole-source parity across 152 allowed paths. Final artifact:
