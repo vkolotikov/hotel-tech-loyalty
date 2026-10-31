@@ -108,6 +108,25 @@ class CalendarGenerationTest extends TestCase
         Http::assertSentCount(1);
     }
 
+    public function test_the_request_is_api_version_2026_10_21_with_a_bearer_key_and_no_sampling_settings(): void
+    {
+        // Anthropic SDK 1.x (since 2026-10-31) sends API version 2026-10-21: the key travels as a bearer token,
+        // and temperature/top_p/top_k would be refused. Pins what the Content Planner actually sends.
+        Http::fake(function ($request) {
+            $this->assertSame('https://api.anthropic.com/v1/messages', $request->url());
+            $this->assertSame('2026-10-21', $request->header('anthropic-version')[0] ?? null);
+            $this->assertSame('Bearer calendar-test-key', $request->header('Authorization')[0] ?? null);
+            $body = $request->data();
+            $this->assertSame([], array_intersect(['temperature', 'top_p', 'top_k'], array_keys($body)));
+            $this->assertSame('user', $body['messages'][0]['role']);
+
+            return Http::response($this->message([$this->item('2026-09-07')]));
+        });
+
+        $this->assertCount(1, $this->generate('2026-09-07', '2026-09-13')['created']);
+        Http::assertSentCount(1);
+    }
+
     #[DataProvider('providerFailures')]
     public function test_provider_failure_stops_later_weeks_without_sdk_or_transport_retries(string $failure): void
     {
