@@ -34,11 +34,22 @@ native apps' minimum-version answer (`GET /api/v1/apps/{app}/version`, `config/a
   58.0.21, TypeScript 7, Vitest 5; README "Versions").
 - Later steps (plan, "What is left"): the store listings and unlisted App Store distribution.
 
-## Next: the members' app
+## New: HexaTech Loyalty, the members' app
 
-`docs/loyalty-member-app/00-PLAN.md` (with the audit of the existing Hotel Loyalty app beside it) recommends a new
-members' app at `apps/loyalty-member` on the staff app's toolchain, published as an update of the existing listing
-(`com.hotelloyalty.app`). It waits on the owner's four decisions listed there; nothing is built yet.
+Owner's decisions (2026-10-31): a new app, published as version 2.0.0 of the existing Hotel Loyalty listing
+(`com.hotelloyalty.app`), store name "HexaTech Loyalty", each venue's own colours. Branch `feature/loyalty-member-app`,
+folder `apps/loyalty-member` (README there; plan and audit in `docs/loyalty-member-app/`). Not part of the Cloud
+deploy.
+
+- Phase 1 (foundation, sign-in, join by QR, the card, activity, five languages, push per phone, version check) and
+  phase 2 (rewards, offers, codes, stamps, credit, events, inbox, profile, help) are built and checked in the browser
+  preview against the local API. Phase 3 (bookings and payments, under the member-portal money rules) is next.
+- It shares the member portal's words and framework-free logic; the portal's event, stamp and credit types live in
+  its `lib/types.ts` and the industry nouns' keys in `lib/industry.ts` for that reason.
+- Server part (additive): `DELETE /v1/auth/push-token` (clears the member's push token only when it is this phone's)
+  and `member` in `config/apps.php` (`MEMBER_APP_*`, default 2.0.0 and the existing store pages).
+- The owner's side before release: Expo sign-in as `hoteltechai` (or an `EXPO_TOKEN`), the Apple push key, FCM V1 for
+  both apps, the old repository's over-the-air workflow switched off, store texts.
 
 ## Cloud container notes (Linux)
 
