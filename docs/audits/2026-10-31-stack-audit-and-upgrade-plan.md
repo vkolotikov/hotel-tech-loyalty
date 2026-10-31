@@ -323,7 +323,57 @@ checks. Laravel 13 keeps security fixes until about March 2028, so there is no p
 
 ---
 
-## 8. Sources
+## 8. Progress
+
+### 31 October 2026: phase 0 and phase 1 (owner: "start with Phase 0 and Phase 1, all suggestions okay")
+
+**Phase 0, safety net**
+
+- **Test baseline on the patched PHP builds.** The whole PHP suite ran on PHP 8.4.27 and 8.5.12 (both carry the
+  October security fixes): 76 scopes, every test passing on both (7,227 passed, 16 skipped). Frontend: `tsc -b`
+  clean, lint baseline passes, Vitest 399 files / 5,778 tests.
+- **Tests no longer depend on the developer's `.env`.** `phpunit.xml` now pins `APP_URL=http://localhost`. With a
+  production-like `APP_URL` (as in `.env.example`, which CI starts from), 16 ChatGPT plugin tests failed.
+- **CI** (`.github/workflows/ci.yml`): dependency audits; PHP 8.4 and 8.5 suites in three shards each; PHP 8.4 on
+  PostgreSQL 18, failing only on a failure not in `tests/pgsql-known-failures.txt`; Larastan; the SPA on Node 22
+  and 24. It runs on pushes to `main`, on pull requests and on demand, and never deploys. Actions are pinned by commit
+  SHA. Scripts: `scripts/test-php.sh` (the suite by directory, with `SHARD=i/n`), `scripts/test-pg.sh` (optional
+  JUnit output), `scripts/pg-known-failures.py`.
+- **Static analysis.** Larastan 3.13 (PHPStan 2.3, level 5) with a baseline of the 2,182 findings present today, so
+  only new findings fail. Rector 2.8 is set up for the PHPUnit 12 step (dry run: 9 test files). Most recorded
+  findings are Eloquent properties without docblocks. Worth a later look: 27 `env()` calls outside `config/` in 10
+  controllers and services, which return `null` if configuration is cached and the variable is not a real
+  environment variable.
+- **A real bug found by Larastan's first run:** `php artisan media:verify-version` could not start, because its
+  `--version` option clashed with the console's own. So the media-recovery check in
+  `docs/wallet-and-media-operations.md` could not be run. It now takes `--version-id`; the runbook and a new command
+  test say so.
+- **Screenshot comparison.** `frontend/e2e/visual-compare.mjs` compares two runs of the browser suite pixel by pixel
+  (README "Visual comparison"). Two runs of the same build compare identical. One flaky check showed up:
+  `mobile/overview` "More program summary uses live Overview detail" failed once in four runs.
+- **Production's PHP and Node versions** are still to be read in Laravel Cloud (the cloud session cannot reach it).
+
+**Phase 1, urgent security**
+
+- **`saas-app`**: production npm advisories 47 → 0, the broken `master` build fixed, and credentials removed from the
+  source. Details are in that repository's `docs/2026-10-31-stack-audit-and-upgrade-plan.md` "Progress". It is on its
+  branch and still has to be merged and deployed. **The owner should change the production super admin's password if
+  production was seeded with the old script.**
+- **Root toolchain**: Vite 8.3.5, `laravel-vite-plugin` 3.2.0, axios 1.21.0; npm audit 8 → 0; `vite build` still works.
+- **SPA**: ESLint 10. ESLint 10's new `no-useless-assignment` rule found 6 dead initialisers in 4 Content Planner
+  files, recorded in the lint baseline. Production npm audit: 0.
+
+**Phase 2 items done early (small, verified)**
+
+- Content Planner images: no fallback to the shut-down `dall-e-3` (none unless `CONTENT_PLANNER_IMAGE_FALLBACK_MODEL`
+  is set), and the error text names the real remedy. New `ImageFallbackTest`. **If Laravel Cloud sets
+  `CONTENT_PLANNER_IMAGE_FALLBACK_MODEL=dall-e-3`, remove that variable.**
+- `.env.example`: `ANTHROPIC_MODEL=claude-sonnet-5` (was the retired `claude-sonnet-4-20250514`).
+- `composer.json`: `php ^8.4` (the lock already required 8.4.1).
+
+---
+
+## 9. Sources
 
 - Packagist and npm registry metadata, read 31 Oct 2026 (versions, release dates, requirements).
 - `composer audit` / `npm audit` on the lock files of both repositories and both app branches.

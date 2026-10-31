@@ -84,17 +84,8 @@ jobs:
     name: PHP 8.4 on PostgreSQL 18 (only known failures allowed)
     runs-on: ubuntu-24.04
     timeout-minutes: 90
-    services:
-      postgres:
-        image: postgres:18
-        env:
-          POSTGRES_USER: ci
-          POSTGRES_PASSWORD: ci-only-not-a-secret
-          POSTGRES_DB: hexa_test
-        ports: ['5432:5432']
-        options: >-
-          --health-cmd "pg_isready -U ci -d hexa_test"
-          --health-interval 5s --health-timeout 5s --health-retries 20
+    # PostgreSQL is started by a step rather than as a service container: a service's whole server log is printed
+    # at the end of the job, which buries the failure list. The server log is kept as an artifact instead.
     env:
       DB_HOST: 127.0.0.1
       DB_PORT: '5432'
@@ -115,6 +106,11 @@ jobs:
           ini-values: memory_limit=-1
           tools: composer:v2
           coverage: none
+      - name: Start PostgreSQL 18
+        run: |
+          docker run -d --name pg18 -p 5432:5432 -e POSTGRES_USER=ci -e POSTGRES_PASSWORD=ci-only-not-a-secret \
+            -e POSTGRES_DB=hexa_test postgres:18
+          for i in $(seq 1 60); do docker exec pg18 pg_isready -h 127.0.0.1 -U ci -d hexa_test && exit 0; sleep 2; done; exit 1
       - run: composer install --no-progress --prefer-dist
       - run: cp .env.example .env && php artisan key:generate --force
       - name: Build the test database from every migration
@@ -124,11 +120,18 @@ jobs:
       - name: No failure beyond tests/pgsql-known-failures.txt
         run: python3 scripts/pg-known-failures.py "$RUNNER_TEMP/junit" tests/pgsql-known-failures.txt
       - if: always()
+        run: docker logs pg18 > "$RUNNER_TEMP/postgres-server.log" 2>&1 || true
+      - if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: postgres-run
-          path: ${{ runner.temp }}/pg.log
+          path: |
+            ${{ runner.temp }}/pg.log
+            ${{ runner.temp }}/postgres-server.log
           retention-days: 14
+      - name: Failures on PostgreSQL (repeated last, for reading the log)
+        if: always()
+        run: python3 scripts/pg-known-failures.py "$RUNNER_TEMP/junit" tests/pgsql-known-failures.txt || true
 
   static-analysis:
     name: Larastan (new findings only)

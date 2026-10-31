@@ -56,19 +56,23 @@ deploy.
 - The owner's side before release: Expo sign-in as `hoteltechai` (or an `EXPO_TOKEN`), the Apple push key, FCM V1 for
   both apps, the old repository's over-the-air workflow switched off, store texts.
 
-## Stack audit and upgrade plan (proposed, nothing changed)
+## Stack audit and upgrade plan: phases 0 and 1 done (owner, 31 Oct: "start with Phase 0 and Phase 1")
 
-`docs/audits/2026-10-31-stack-audit-and-upgrade-plan.md` (branch `claude/stack-audit-upgrade-plan-9hdkkv`; the
-`saas-app` part also lives in that repository's `docs/`). The main stack is current: Laravel 13.39.0, React 19.3.1,
-Vite 8, Expo SDK 58, PostgreSQL 18; no known vulnerability in production PHP or SPA packages. Open, most urgent first:
+Plan and progress: `docs/audits/2026-10-31-stack-audit-and-upgrade-plan.md` (§6 the plan, §8 what is done). The
+`saas-app` part lives in that repository's `docs/2026-10-31-stack-audit-and-upgrade-plan.md`.
 
-- Confirm production's PHP patch level: 8.4.27 / 8.5.12 fix critical RCEs; dev docs still say 8.4.20.
-- `saas-app` has 5 critical and 25 high advisories, including the Next.js proxy auth bypasses.
-- The `dall-e-3` image fallback is dead.
-- PHP 8.4 leaves active support on 31 Dec 2026.
-
-Then the phased plan: CI first, PHP 8.5, library majors one per release, Stripe last of those, Tailwind 4 only after
-an owner decision on old browsers.
+- **CI exists now** (`.github/workflows/ci.yml`): it runs on pushes to `main`, on pull requests and on demand, never
+  deploys, and is pinned by SHA. Locally the same checks are `scripts/test-php.sh` (the suite by directory),
+  `scripts/test-pg.sh` with `JUNIT_DIR` plus `scripts/pg-known-failures.py`, `vendor/bin/phpstan analyse`
+  (Larastan, baseline in `phpstan-baseline.neon`), and `frontend/e2e/visual-compare.mjs` for before/after screenshots.
+  A new PostgreSQL failure must be fixed, or added to `tests/pgsql-known-failures.txt` with its reason in
+  `docs/loyalty-workspace.md`; a new Larastan finding must be fixed, never added to the baseline by hand.
+- Suites pass on PHP 8.4.27 and 8.5.12. `phpunit.xml` pins `APP_URL`, so a local `.env` no longer changes results.
+- Fixed: `media:verify-version` now takes `--version-id` (`--version` made it crash); no `dall-e-3` image fallback.
+- **Owner's side:** read production's PHP and Node versions in Laravel Cloud (PHP must be 8.4.27+ or 8.5.12+); remove
+  `CONTENT_PLANNER_IMAGE_FALLBACK_MODEL` if it says `dall-e-3`; merge and deploy `saas-app`'s branch; change the SaaS
+  super admin's password if production was seeded with the old script.
+- Next by the plan: phase 3 (PHP 8.5 on Cloud), then phase 4's library majors one per release.
 
 ## Cloud container notes (Linux)
 
@@ -77,3 +81,9 @@ an owner decision on old browsers.
 - Web preview: `npx expo export --platform web` with `EXPO_PUBLIC_API_URL=http://127.0.0.1:8000/api`, served with a
   fallback to `index.html`. The local API needs `CORS_ALLOWED_ORIGINS` to include the preview's origin.
 - Force-pushing a rebased branch is refused by this environment's safety check; add commits instead.
+- PHP 8.4 and 8.5 are not in Ubuntu's archive and the ondrej PPA is blocked. The 31 Oct session compiled both from
+  the official source tarball inside the `mirror.gcr.io/library/php:8.x-cli` images (Docker Hub rate-limits) with
+  Ubuntu's `-dev` packages, `--with-webp` included (image tests need it). Composer then fell back to git clones
+  (api.github.com is scoped to this session's repositories), so delete `vendor/*/*/.git` afterwards. Never run
+  Composer in the main tree while a worktree shares `vendor` by hard links: it rewrites the shared autoload files.
+  The disk allowance is small; a full `vendor` copy plus build trees filled it once.
