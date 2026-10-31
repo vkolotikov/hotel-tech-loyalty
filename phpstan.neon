@@ -1,0 +1,16 @@
+# Static analysis (Larastan, PHPStan for Laravel). CI runs `vendor/bin/phpstan analyse`.
+#
+# phpstan-baseline.neon records what the code base held when this was introduced (2026-10-31), so the check
+# fails only on NEW findings; it is not a claim that the recorded ones are fine. Fixing one shrinks the baseline:
+# regenerate it with `vendor/bin/phpstan analyse --generate-baseline` after the fix (and only then).
+includes:
+    - vendor/larastan/larastan/extension.neon
+    - phpstan-baseline.neon
+
+parameters:
+    paths:
+        - app/
+    level: 5
+    tmpDir: storage/framework/cache/phpstan
+    # A recorded finding that no longer occurs is good news, not a failure.
+    reportUnmatchedIgnoredErrors: false
