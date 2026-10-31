@@ -75,6 +75,10 @@ export default function RootLayout() {
               <Stack.Screen name="(tabs)" />
               <Stack.Screen name="sign-in" options={{ animation: 'fade' }} />
               <Stack.Screen name="join" />
+              <Stack.Screen name="inbox" />
+              <Stack.Screen name="help" />
+              <Stack.Screen name="profile" />
+              <Stack.Screen name="events" />
             </Stack>
           </View>
           <LockGate />

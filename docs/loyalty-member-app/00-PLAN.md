@@ -9,7 +9,12 @@ Status: **phase 1 built** on `feature/loyalty-member-app` in `apps/loyalty-membe
 QR or link, the old app's session carried over, Home, the card with its QR code and wallet buttons, Activity, More,
 the venue's accent and heading face, five languages (the portal's own words, shared), push per phone with sign-out
 clearing it, the version check. Checked in the browser preview against the local API: Home, card, activity and More
-for a real member, a new member joining through the form (201, welcome points on Home), Russian. Phases 2 and 3 next.
+for a real member, a new member joining through the form (201, welcome points on Home), Russian. **Phase 2 built**
+(2026-10-31): Rewards (benefits and requests, catalogue, offers, codes), stamps, credit and the next event on Home,
+Inbox, Events, Profile (details, messages, invite, password, delete account), Help; the portal's event, stamp and credit
+types moved into its `lib/types.ts` and its industry nouns into `lib/industry.ts` so the app shares them. Checked in
+the browser preview in English, Russian, German and Spanish, with no unfilled placeholder and no broken picture.
+Phase 3 (bookings and payments) next.
 Evidence for the decision: a read-only audit of the existing app (`vkolotikov/hotel-tech-loyalty-mobile` at `c3deea3`,
 `01-AUDIT-2026-10-31.md`), with its key facts checked again by hand.
 

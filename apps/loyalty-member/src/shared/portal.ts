@@ -8,7 +8,15 @@ export { formatMoney } from '../../../../frontend/src/portal/lib/money'
 export { formatDay, formatDateTime, formatTime, resolveLocale, venueToday } from '../../../../frontend/src/portal/lib/dates'
 export { counted, formatCount, COUNTED, type CountedKey } from '../../../../frontend/src/portal/lib/plural'
 export { toGoPhrase, membershipPhrase, tierTone, type CardPhrase, type CardProgress } from '../../../../frontend/src/portal/pages/memberCardMath'
+export { offerValueLabel, offerPerkNote, paysPointsOnClaim, claimedMessage } from '../../../../frontend/src/portal/pages/rewards/offerLabel'
+export { isUnread, openNotification, afterReadOne, afterReadAll, canMarkAllRead } from '../../../../frontend/src/portal/pages/inbox/inboxState'
+export { TOPICS, questionsFor, topicsFor, showsSteps, STEPS, stepWords, questionWords, topicWord, fold, narrow, type TopicId, type QuestionId } from '../../../../frontend/src/portal/pages/help/helpMath'
+export { messageKinds, preferencesOf, messageBody, applyMessageChange, marketingNeedsEmail, smsSwitch, type MessageChange, type ChannelField } from '../../../../frontend/src/portal/pages/profile/messages'
 export type {
   Activity, Benefit, BookingKind, CardPayload, Claim, InboxNotification, LaravelPage, Offer, Paginated, PortalBooking,
-  PortalBootstrap, PortalCapabilities, PortalMember, PortalVenue, Redemption, Reward, Tier,
+  PortalBootstrap, PortalCapabilities, PortalMember, PortalVenue, Redemption, Reward, Tier, MessageKind, NotificationPreferences,
+  PortalEvent, PortalEvents, AttendedEvent, MemberStamps, MemberCredit,
 } from '../../../../frontend/src/portal/lib/types'
+export { actionOf, noteOf, whenPhrase, dateBlock, nextEvent, pastEvents, errorPhrase, whyPhrase, counted as eventCounted, type Phrase as EventPhrase } from '../../../../frontend/src/portal/pages/events/eventMath'
+export { vocabKey, vocabIndustry, type VocabNoun } from '../../../../frontend/src/portal/lib/industry'
+export { stampFace, toGoPhrase as stampToGo, rewardPhrase as stampReward, type StampFace } from '../../../../frontend/src/portal/pages/stamps/stampMath'

@@ -1,11 +1,20 @@
 import { ApiError, failureFrom } from './failure'
-import type { Activity, JoinContext, LaravelPage, MemberCardAnswer, PortalBootstrap, SignInAnswer } from './types'
+import type { Activity, Benefit, Claim, InboxNotification, JoinContext, LaravelPage, MemberCardAnswer, MemberCredit, MemberStamps, Offer, PortalBootstrap, PortalEvent, PortalEvents, Redemption, Reward, SignInAnswer } from './types'
 import type { AppVersions } from './version'
+import { mediaAddress } from './format'
 
 /** The HexaTech API (production by default; a development build may point elsewhere with EXPO_PUBLIC_API_URL). */
 export const API_BASE = (process.env.EXPO_PUBLIC_API_URL ?? 'https://app.hexa-tech.uk/api').replace(/\/+$/, '')
 /** The web app beside it, for the pages a phone opens in the browser (password reset, account set-up). */
 export const WEB_BASE = (process.env.EXPO_PUBLIC_WEB_URL ?? API_BASE.replace(/\/api$/, '')).replace(/\/+$/, '')
+
+/** Where the API's stored pictures are served (`/storage/…` beside the API). */
+const API_ORIGIN = API_BASE.replace(/\/api$/, '')
+
+/** A stored picture's address as the phone must ask for it (relative `/storage/…` answers resolved beside the API). */
+export function mediaUrl(url: string | null | undefined): string | null {
+  return mediaAddress(url, API_ORIGIN)
+}
 
 const TIMEOUT_MS = 15_000
 
@@ -97,6 +106,28 @@ export const api = {
   pointsHistory: (page: number): Promise<LaravelPage<Activity>> => read('/v1/member/points/history', { page, per_page: 20 }),
   appleWalletLink: (): Promise<{ url: string; expires_in: number }> => read('/v1/member/card/apple-wallet/link'),
   googleWallet: (): Promise<{ saveUrl?: string; save_url?: string }> => read('/v1/member/card/google-wallet'),
+
+  // The portal's own member endpoints (frontend/src/portal/lib/portalApi.ts), the same calls and shapes.
+  benefits: (): Promise<{ tier: string | null; benefits: Benefit[] }> => read('/v1/member/benefits'),
+  requestBenefit: (tierBenefitId: number): Promise<unknown> => send('POST', `/v1/member/benefits/${tierBenefitId}/request`),
+  cancelBenefitRequest: (requestId: number): Promise<unknown> => send('DELETE', `/v1/member/benefits/requests/${requestId}`),
+  rewards: (): Promise<{ rewards: Reward[]; current_points: number }> => read('/v1/member/rewards'),
+  redeem: (rewardId: number): Promise<{ redemption: Redemption; message: string }> => send('POST', `/v1/member/rewards/${rewardId}/redeem`),
+  redemptions: (): Promise<{ redemptions: Redemption[] }> => read('/v1/member/my/redemptions'),
+  offers: (): Promise<{ general: Offer[]; personalized: Claim[] }> => read('/v1/member/offers'),
+  claimOffer: (offerId: number): Promise<{ points_awarded?: number | null }> => send('POST', `/v1/member/offers/${offerId}/claim`),
+  notifications: (page: number): Promise<LaravelPage<InboxNotification>> => read('/v1/member/notifications', { page, per_page: 20 }),
+  markRead: (id: number): Promise<unknown> => send('POST', `/v1/member/notifications/${id}/read`),
+  markAllRead: (): Promise<unknown> => send('POST', '/v1/member/notifications/read-all'),
+  updateProfile: (payload: Record<string, unknown>): Promise<unknown> => send('PUT', '/v1/member/profile', payload),
+  changePassword: (payload: { current_password: string; password: string; password_confirmation: string }): Promise<unknown> => send('PUT', '/v1/member/password', payload),
+  deleteAccount: (payload: { password: string; confirmation: string }): Promise<unknown> => send('DELETE', '/v1/member/account', payload),
+  stamps: (): Promise<MemberStamps> => read('/v1/member/portal/stamps'),
+  credit: (): Promise<MemberCredit> => read('/v1/member/portal/credit'),
+  events: (): Promise<PortalEvents> => read('/v1/member/portal/events'),
+  eventSignUp: (id: number): Promise<{ event: PortalEvent }> => send('POST', `/v1/member/portal/events/${id}/sign-up`),
+  eventCancel: (id: number): Promise<{ event: PortalEvent }> => send('DELETE', `/v1/member/portal/events/${id}/sign-up`),
+  referral: (): Promise<{ referral_code: string | null; referral_link: string | null; total_referrals: number; rewarded_referrals: number }> => read('/v1/member/referral'),
 
   /** This phone's push token for the member (one per member, as the server keeps it). */
   savePushToken: (token: string): Promise<unknown> => send('POST', '/v1/auth/push-token', { expo_push_token: token }),

@@ -23,7 +23,8 @@ Expo SDK 58 (React Native 0.88, React 19), Expo Router, TanStack Query, Zustand,
 
 The app does not copy the portal; it reads it. `src/lib/i18n/portalBundles.ts` loads the portal's own words
 (`frontend/src/portal/i18n/*.json`, five languages) and `src/shared/portal.ts` its framework-free logic and types (money,
-dates, plurals, the card's progress and membership phrases). A sentence or rule fixed in the portal is fixed in the app
+dates, plurals, the card's progress and membership phrases, offers' values, the inbox, help's questions, message
+switches, events, stamps, the industry's nouns). A sentence or rule fixed in the portal is fixed in the app
 at its next build. Only modules with no React, web client or browser API may be imported there.
 
 `metro.config.js` watches the portal folder and resolves a package a shared file imports (`i18next`) from this app's
@@ -37,8 +38,8 @@ in every language as the portal is (usted, Sie, vous, вы); `lib.test.ts` check
 
 | Path | What |
 |---|---|
-| `src/app/` | Screens (Expo Router). `(tabs)/`: Home, Rewards, Card (raised), Activity, More. `sign-in`, `join` |
-| `src/components/` | `ui.tsx` (building blocks), `MemberCard`, `ActivityRow`, `TabBar`, `Sheet`, `UpdateGate` |
+| `src/app/` | Screens (Expo Router). `(tabs)/`: Home, Rewards (benefits, catalogue, offers, codes), Card (raised), Activity, More. `sign-in`, `join`, and the sheets `inbox`, `events`, `profile` (details, messages, invite, password, delete account), `help` |
+| `src/components/` | `ui.tsx` (building blocks, `Toggle`, `Picture`), `MemberCard`, `ActivityRow`, `Programme` (stamps, credit, next event), `TabBar`, `Sheet`, `UpdateGate` |
 | `src/lib/theme.ts` | Navy, text and states fixed; the accent and heading face are the venue's (`useLook`) |
 | `src/lib/api.ts` | The one HTTP client: `/v1/member/*`, `/v1/auth/*`, `/v1/public/join/*`, bearer token, 15 s timeout |
 | `src/lib/session.ts` | Sign-in, join, sign-out; the old app's keys `auth_token`/`auth_user`, so members stay signed in |
@@ -50,7 +51,11 @@ in every language as the portal is (usted, Sie, vous, вы); `lib.test.ts` check
   A new feature uses an existing `/v1/member/…` endpoint, or a server change first.
 - The venue's accent is read through `C.gold`/`accentGradient()`/`fonts.*` at render time, never inside
   `StyleSheet.create` (which reads once); the root redraws the screens when the look changes.
-- Every string is the portal's (`tp('portal.…')`) or the app's (`t('…')`) in all five languages.
+- Every string is the portal's (`tp('portal.…')`) or the app's (`t('…')`) in all five languages, with every
+  placeholder the portal passes (`{{venue}}`, `{{noun}}`, `{{phone}}`): a portal phrase is called with the same values
+  as the portal page calls it.
+- A stored picture goes through `Picture` (`mediaUrl()`: `/storage/…` beside the API), which shows nothing rather than
+  an empty frame when it cannot load.
 
 ## Run
 
@@ -94,3 +99,14 @@ Before the first release of 2.0.0:
 4. Card: the QR code reads at the desk (HexaTech Staff scans it); Add to Apple Wallet / Google Wallet.
 5. Home: progress to the next tier in the programme's measure; membership end date where there is one.
 6. Five languages; Airplane mode shows "No connection"; the lock; notifications switch.
+
+## Acceptance on phones (phase 2)
+
+1. Rewards: a benefit request is sent and cancelled; a reward is redeemed (its code under My codes, the points gone);
+   an offer is claimed; a reward the member cannot afford says how many points are missing.
+2. Home: the stamp card, the credit balance and the next event, each only where the venue has it.
+3. Inbox: a message opens and is marked read; "Mark all as read"; the More tab's badge follows.
+4. Events: sign up and cancel; a refusal says why (the server's reason).
+5. Profile: name and phone saved; each message switch saved on its own; the invite link shared from the phone;
+   password changed; delete account asks for the password and signs out.
+6. Help: the questions search in each language; an answer's link opens the app's own screen.

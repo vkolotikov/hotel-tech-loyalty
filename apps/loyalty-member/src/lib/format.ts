@@ -50,3 +50,34 @@ export function joinTokenFrom(text: string): { org: string; ref: string | null }
   }
   return /^[A-Za-z0-9_-]{16,128}$/.test(value) ? { org: value, ref: null } : null
 }
+
+/**
+ * Where a portal page's link (the help answers' `to`) opens in the app: its tab or screen, or null where the app has no
+ * such page yet (the member reads the answer in words).
+ */
+export function appRoute(portalPath: string | undefined): string | null {
+  if (!portalPath) return null
+  const path = portalPath.split(/[?#]/)[0]
+  const map: Record<string, string> = {
+    '/portal': '/',
+    '/portal/activity': '/activity',
+    '/portal/rewards': '/rewards',
+    '/portal/profile': '/profile',
+    '/portal/events': '/events',
+    '/portal/inbox': '/inbox',
+    '/portal/help': '/help',
+  }
+  return map[path] ?? null
+}
+
+/**
+ * A stored picture's address for the phone. MediaService answers `/storage/…` on the public disk, which lives beside
+ * the API (the full admin's `resolveImage` rule); an address elsewhere (the bucket) is kept as it is.
+ */
+export function mediaAddress(url: string | null | undefined, origin: string): string | null {
+  if (!url) return null
+  const stored = url.match(/(\/storage\/.*)/)
+  if (stored) return origin + stored[1]
+  if (url.startsWith('/')) return origin + url
+  return url
+}

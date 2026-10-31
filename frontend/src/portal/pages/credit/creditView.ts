@@ -1,26 +1,9 @@
 import { api } from '../../../lib/api'
 import { formatMoney } from '../../lib/money'
+import type { MemberCredit, MemberCreditLine } from '../../lib/types'
 
-/** One line of the member's own credit (`CreditLedger::forMemberSelf`): signed amounts, never a staff name. */
-export interface MemberCreditLine {
-  id: number
-  /** `earn` | `spend` | `reverse` | `adjust`. */
-  type: string
-  amount: number
-  balance_after: number
-  currency: string
-  note: string | null
-  reference_type: string | null
-  created_at: string | null
-}
-
-/** `GET member/portal/credit`: whether the venue gives cashback, the balance in its currency, the last 20 lines. */
-export interface MemberCredit {
-  enabled: boolean
-  balance: number
-  currency: string
-  lines: MemberCreditLine[]
-}
+// The shapes live in lib/types.ts (plain types the members' app shares); named here for the credit screens' imports.
+export type { MemberCredit, MemberCreditLine } from '../../lib/types'
 
 /** The member's cashback credit (release 7, spec 2026-10-25 §3): read only — credit is spent at the desk (R7-2). */
 export const creditApi = {

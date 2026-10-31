@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Alert, Linking, Platform, ScrollView, StyleSheet, Switch, Text, View } from 'react-native'
+import { Alert, Linking, Platform, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { router } from 'expo-router'
 import * as LocalAuthentication from 'expo-local-authentication'
 import Constants from 'expo-constants'
@@ -13,7 +13,7 @@ import { updateUrl } from '../../lib/version'
 import { number } from '../../lib/format'
 import { LANGUAGES, LANGUAGE_NAMES, useT } from '../../lib/i18n'
 import { C, RADIUS, TAB_BAR_ROOM, fonts } from '../../lib/theme'
-import { Avatar, Backdrop, GhostButton, IconBadge, Notice, Press, Row, SectionTitle, Surface } from '../../components/ui'
+import { Avatar, Backdrop, GhostButton, IconBadge, Notice, Press, Row, SectionTitle, Surface, Toggle } from '../../components/ui'
 
 /** More: who is signed in at which venue, messages and help, the language, the lock, notifications, and signing out. */
 export default function More() {
@@ -77,6 +77,19 @@ export default function More() {
             line={unread > 0 ? t('home.unread', { n: number(unread, language) }) : t('home.noneUnread')}
             onPress={() => router.push('/inbox')}
           />
+          {boot.data?.capabilities.events && (
+            <Row
+              left={<IconBadge name="ticket-outline" color={C.info} size={36} />}
+              title={tp('portal.events.title')}
+              onPress={() => router.push('/events')}
+            />
+          )}
+          <Row
+            left={<IconBadge name="person-circle-outline" color={C.success} size={36} />}
+            title={tp('portal.profile.title')}
+            line={tp('portal.profile.kinds_title')}
+            onPress={() => router.push('/profile')}
+          />
           <Row
             left={<IconBadge name="help-buoy-outline" color={C.gold} size={36} />}
             title={tp('portal.help.title')}
@@ -103,12 +116,11 @@ export default function More() {
                 <Text style={[fonts.bodyStrong, { color: C.text }]}>{t('more.alerts')}</Text>
                 <Text style={[fonts.small, { color: C.text2 }]}>{t('more.alertsLine', { venue: venue?.name ?? '' })}</Text>
               </View>
-              <Switch
+              <Toggle
                 value={alerts && alertsState !== 'blocked' && alertsState !== 'unavailable'}
                 disabled={alertsState === 'unavailable'}
-                onValueChange={on => { void usePrefs.getState().setAlerts(on) }}
-                trackColor={{ true: C.gold, false: C.surface3 }}
-                thumbColor="#fff"
+                onChange={on => { void usePrefs.getState().setAlerts(on) }}
+                label={t('more.alerts')}
               />
             </View>
             {alertsState === 'blocked' && <Notice tone="warning" text={t('more.alertsBlocked')} action={t('more.alertsSettings')} onAction={() => { void Linking.openSettings() }} />}
@@ -118,7 +130,7 @@ export default function More() {
                 <Text style={[fonts.bodyStrong, { color: C.text }]}>{t('more.lock')}</Text>
                 <Text style={[fonts.small, { color: C.text2 }]}>{t('more.lockLine')}</Text>
               </View>
-              <Switch value={lock} onValueChange={on => { void toggleLock(on) }} trackColor={{ true: C.gold, false: C.surface3 }} thumbColor="#fff" />
+              <Toggle value={lock} onChange={on => { void toggleLock(on) }} label={t('more.lock')} />
             </View>
             {lockProblem && <Notice tone="warning" text={t('more.lockMissing')} />}
           </Surface>

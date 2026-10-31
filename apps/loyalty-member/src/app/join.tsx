@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Image, Platform, StyleSheet, Text, View } from 'react-native'
+import { Platform, StyleSheet, Text, View } from 'react-native'
 import { router, useLocalSearchParams } from 'expo-router'
 import { useQuery } from '@tanstack/react-query'
 import { CameraView, useCameraPermissions } from 'expo-camera'
@@ -13,7 +13,7 @@ import { useSession } from '../lib/session'
 import { useT } from '../lib/i18n'
 import { C, RADIUS, fonts } from '../lib/theme'
 import { counted } from '../shared/portal'
-import { Field, GhostButton, GoldButton, Notice, Shimmer, Surface } from '../components/ui'
+import { Field, GhostButton, GoldButton, Notice, Picture, Shimmer, Surface } from '../components/ui'
 import { Sheet } from '../components/Sheet'
 
 /**
@@ -150,9 +150,11 @@ function JoinForm({ org, refCode }: { org: string; refCode: string }) {
   return (
     <View style={{ gap: 18 }}>
       <View style={styles.venue}>
-        {ctx.theme?.logo_url
-          ? <Image source={{ uri: ctx.theme.logo_url }} style={[styles.logo, { borderColor: C.goldEdge }]} />
-          : <View style={[styles.logo, styles.logoMark, { backgroundColor: C.goldWash, borderColor: C.goldEdge }]}><Ionicons name="sparkles" size={22} color={C.gold} /></View>}
+        <Picture
+          url={ctx.theme?.logo_url}
+          style={[styles.logo, { borderColor: C.goldEdge }]}
+          fallback={<View style={[styles.logo, styles.logoMark, { backgroundColor: C.goldWash, borderColor: C.goldEdge }]}><Ionicons name="sparkles" size={22} color={C.gold} /></View>}
+        />
         <Text style={[fonts.title, { color: C.text, textAlign: 'center' }]}>{tp('portal.join.title', { venue: ctx.organization.name })}</Text>
         <Text style={[fonts.body, { color: C.goldLight, textAlign: 'center' }]}>{bonus}</Text>
       </View>

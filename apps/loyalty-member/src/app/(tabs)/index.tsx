@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Image, Linking, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native'
+import { Linking, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { router } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
@@ -12,7 +12,8 @@ import { C, RADIUS, TAB_BAR_ROOM, fonts } from '../../lib/theme'
 import { formatDay } from '../../shared/portal'
 import { MemberCard } from '../../components/MemberCard'
 import { ActivityRow } from '../../components/ActivityRow'
-import { Avatar, Backdrop, IconBadge, Notice, Press, SectionTitle, Shimmer, Surface } from '../../components/ui'
+import { CreditTile, NextEventCard, StampCard } from '../../components/Programme'
+import { Avatar, Backdrop, IconBadge, Notice, Picture, Press, SectionTitle, Shimmer, Surface } from '../../components/ui'
 
 /**
  * Home: the venue's greeting, the member's card with the way to the next tier, the card and messages one press away,
@@ -45,7 +46,7 @@ export default function Home() {
         <View style={styles.header}>
           <View style={{ flex: 1, gap: 2 }}>
             <View style={styles.venueRow}>
-              {venue?.logo_url ? <Image source={{ uri: venue.logo_url }} style={styles.logo} /> : null}
+              <Picture url={venue?.logo_url} style={styles.logo} />
               <Text style={[fonts.label, { color: C.gold, flexShrink: 1 }]} numberOfLines={1}>{venue?.name ?? ' '}</Text>
             </View>
             <Text style={[fonts.italic, { color: C.text2 }]}>{t(greeting(new Date().getHours()))},</Text>
@@ -85,6 +86,10 @@ export default function Home() {
             </Press>
           </View>
         )}
+
+        {member && data?.capabilities.loyalty && <CreditTile />}
+        {member && data?.capabilities.loyalty && <StampCard />}
+        {member && data?.capabilities.events && <NextEventCard />}
 
         {member && member.benefits.length > 0 && (
           <View>

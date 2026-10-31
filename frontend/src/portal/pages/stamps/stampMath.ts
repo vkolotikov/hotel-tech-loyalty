@@ -1,5 +1,5 @@
 import { resolveLocale } from '../../lib/dates'
-import type { MemberStamps } from './stampsApi'
+import type { MemberStamps } from '../../lib/types'
 
 /**
  * The portal's stamp card, decided here and tested by value (the portal's tests render to a string): whether there is

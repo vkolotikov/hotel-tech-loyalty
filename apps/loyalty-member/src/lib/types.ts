@@ -4,7 +4,8 @@
  */
 export type {
   Activity, Benefit, CardPayload, Claim, InboxNotification, LaravelPage, Offer, Paginated, PortalBooking, PortalBootstrap,
-  PortalCapabilities, PortalMember, PortalVenue, Redemption, Reward, Tier,
+  PortalCapabilities, PortalMember, PortalVenue, Redemption, Reward, Tier, MessageKind, NotificationPreferences,
+  PortalEvent, PortalEvents, AttendedEvent, MemberStamps, MemberCredit,
 } from '../shared/portal'
 
 /** `POST /v1/auth/login` (and `register`, which adds the member): the token and the account. */

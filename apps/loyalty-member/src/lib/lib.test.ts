@@ -5,11 +5,11 @@ import { en } from './i18n/en'
 import { PORTAL_BUNDLES } from './i18n/portalBundles'
 import { failureFrom } from './failure'
 import { errorKey, signInErrorKey } from './errors'
-import { greeting, initials, joinTokenFrom, spacedNumber } from './format'
+import { appRoute, greeting, initials, joinTokenFrom, mediaAddress, spacedNumber } from './format'
 import { pushTarget } from './alerts'
 import { compareVersions, versionState } from './version'
 import { DEFAULT_LOOK, lookFrom } from './theme'
-import { counted, formatMoney } from '../shared/portal'
+import { counted, formatMoney, vocabKey } from '../shared/portal'
 
 const placeholders = (text: string) => (text.match(/\{\{\w+\}\}/g) ?? []).sort().join(',')
 
@@ -54,6 +54,16 @@ describe('the portal’s shared logic, in the app', () => {
     expect(counted(t, 'home.points_to_go', 1, 'ru')).toBe(i18next.t('portal.home.points_to_go_one', { lng: 'ru', count: '1' }).replace('{{count}}', '1'))
     expect(counted(t, 'home.points_to_go', 5, 'ru')).toContain('5')
     expect(counted(t, 'home.points_to_go', 2, 'ru')).not.toBe(counted(t, 'home.points_to_go', 5, 'ru').replace('5', '2'))
+  })
+
+  it('name a venue’s bookings in its own industry’s words, in every language', () => {
+    expect(vocabKey('beauty', 'booking_plural')).toBe('portal.vocab.beauty.booking_plural')
+    expect(vocabKey('spaceport', 'booking_plural')).toBe('portal.vocab.other.booking_plural')
+    for (const lng of LANGUAGES) {
+      const word = i18next.t(vocabKey('hotel', 'booking_plural'), { lng })
+      expect(word).not.toContain('vocab.')
+      expect(i18next.t('portal.profile.kind_stays', { lng, noun: word })).not.toContain('{{')
+    }
   })
 
   it('write money in the venue’s currency and the member’s language', () => {
@@ -113,6 +123,23 @@ describe('small helpers', () => {
     expect(initials('Ada Lovelace')).toBe('AL')
     expect(spacedNumber('12345678')).toBe('1234 5678')
     expect(spacedNumber('LS-001001')).toBe('LS-001001')
+  })
+
+  it('ask for stored pictures beside the API, and keep a bucket’s address as it is', () => {
+    const origin = 'https://app.hexa-tech.uk'
+    expect(mediaAddress('/storage/org-2/rewards/a.jpg', origin)).toBe('https://app.hexa-tech.uk/storage/org-2/rewards/a.jpg')
+    expect(mediaAddress('http://localhost/storage/org-2/a.jpg', origin)).toBe('https://app.hexa-tech.uk/storage/org-2/a.jpg')
+    expect(mediaAddress('https://bucket.example.test/org-2/a.jpg', origin)).toBe('https://bucket.example.test/org-2/a.jpg')
+    expect(mediaAddress(null, origin)).toBeNull()
+    expect(mediaAddress('', origin)).toBeNull()
+  })
+
+  it('open a help answer’s page where the app has it, and nowhere where it has not yet', () => {
+    expect(appRoute('/portal/rewards?tab=codes')).toBe('/rewards')
+    expect(appRoute('/portal/profile#messages')).toBe('/profile')
+    expect(appRoute('/portal/events')).toBe('/events')
+    expect(appRoute('/portal/book')).toBeNull()
+    expect(appRoute(undefined)).toBeNull()
   })
 
   it('open every notification in the inbox', () => {

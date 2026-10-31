@@ -1,15 +1,42 @@
-import { useEffect, useRef, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import {
-  ActivityIndicator, Animated, Platform, Pressable, StyleSheet, Text, TextInput, View,
-  type StyleProp, type TextInputProps, type TextStyle, type ViewStyle,
+  ActivityIndicator, Animated, Image, Platform, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View,
+  type ImageStyle, type StyleProp, type TextInputProps, type TextStyle, type ViewStyle,
 } from 'react-native'
 import { LinearGradient } from 'expo-linear-gradient'
 import { Ionicons } from '@expo/vector-icons'
 import { BACKDROP, C, RADIUS, SHADOW, accentGradient, fonts, readableOn, tierColor, withAlpha } from '../lib/theme'
 import { initials } from '../lib/format'
+import { mediaUrl } from '../lib/api'
 import { feel } from '../lib/haptics'
 
 export type IconName = keyof typeof Ionicons.glyphMap
+
+/** The web preview's switch paints its own thumb colour when on; the phone's takes `thumbColor` for both states. */
+const WEB_THUMB = (Platform.OS === 'web' ? { activeThumbColor: '#fff' } : {}) as object
+
+/** A switch in the venue's accent. */
+export function Toggle({ value, onChange, disabled, label }: { value: boolean; onChange: (on: boolean) => void; disabled?: boolean; label?: string }) {
+  return (
+    <Switch
+      value={value}
+      disabled={disabled}
+      onValueChange={onChange}
+      trackColor={{ true: C.gold, false: C.surface3 }}
+      thumbColor="#fff"
+      accessibilityLabel={label}
+      {...WEB_THUMB}
+    />
+  )
+}
+
+/** A stored picture (resolved beside the API); the fallback, else nothing, when it cannot be loaded: never an empty frame. */
+export function Picture({ url, style, label, fallback = null }: { url: string | null | undefined; style: StyleProp<ImageStyle>; label?: string; fallback?: ReactNode }) {
+  const [failed, setFailed] = useState(false)
+  const uri = mediaUrl(url)
+  if (!uri || failed) return <>{fallback}</>
+  return <Image source={{ uri }} style={style} onError={() => setFailed(true)} accessibilityLabel={label} />
+}
 
 /** A browser draws its own focus ring around a text field; the field's border already shows focus. */
 export const NO_OUTLINE: TextStyle = Platform.OS === 'web' ? { outlineWidth: 0 } : {}
@@ -224,21 +251,25 @@ export function Empty({ icon, text }: { icon: IconName; text: string }) {
 
 /** Tabs drawn as one pill with the chosen part lit. */
 export function Segments<T extends string>({ value, items, onChange }: { value: T; items: { id: T; label: string; count?: number }[]; onChange: (id: T) => void }) {
+  // Each segment is as wide as its words and the row fills the width; words too long for one row (Russian, Spanish)
+  // scroll sideways instead of being cut.
   return (
-    <View style={styles.segments} accessibilityRole="tablist">
-      {items.map(item => {
-        const on = item.id === value
-        return (
-          <Pressable key={item.id} accessibilityRole="tab" accessibilityState={{ selected: on }} onPress={() => { feel.tap(); onChange(item.id) }} style={[styles.segment, on && { backgroundColor: C.gold }]}>
-            <Text style={[fonts.smallStrong, { color: on ? C.onGold : C.text2 }]} numberOfLines={1}>{item.label}</Text>
-            {item.count !== undefined && item.count > 0 && (
-              <View style={[styles.segmentCount, { backgroundColor: on ? 'rgba(0,0,0,0.18)' : C.goldWash }]}>
-                <Text style={[fonts.smallStrong, { fontSize: 11, color: on ? C.onGold : C.gold }]}>{item.count}</Text>
-              </View>
-            )}
-          </Pressable>
-        )
-      })}
+    <View style={styles.segments}>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.segmentRow} accessibilityRole="tablist">
+        {items.map(item => {
+          const on = item.id === value
+          return (
+            <Pressable key={item.id} accessibilityRole="tab" accessibilityState={{ selected: on }} onPress={() => { feel.tap(); onChange(item.id) }} style={[styles.segment, on && { backgroundColor: C.gold }]}>
+              <Text style={[fonts.smallStrong, { color: on ? C.onGold : C.text2 }]} numberOfLines={1}>{item.label}</Text>
+              {item.count !== undefined && item.count > 0 && (
+                <View style={[styles.segmentCount, { backgroundColor: on ? 'rgba(0,0,0,0.18)' : C.goldWash }]}>
+                  <Text style={[fonts.smallStrong, { fontSize: 11, color: on ? C.onGold : C.gold }]}>{item.count}</Text>
+                </View>
+              )}
+            </Pressable>
+          )
+        })}
+      </ScrollView>
     </View>
   )
 }
@@ -268,8 +299,9 @@ const styles = StyleSheet.create({
   pill: { alignSelf: 'flex-start', paddingHorizontal: 10, paddingVertical: 4, borderRadius: RADIUS.pill, maxWidth: 200 },
   sectionTitle: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10, marginTop: 6 },
   notice: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 12, borderRadius: RADIUS.md, borderWidth: 1 },
-  segments: { flexDirection: 'row', backgroundColor: C.surface, borderRadius: RADIUS.pill, padding: 4, borderWidth: 1, borderColor: C.hairline },
-  segment: { flex: 1, flexDirection: 'row', gap: 6, alignItems: 'center', justifyContent: 'center', minHeight: 40, borderRadius: RADIUS.pill, paddingHorizontal: 8 },
+  segments: { backgroundColor: C.surface, borderRadius: RADIUS.pill, padding: 4, borderWidth: 1, borderColor: C.hairline, overflow: 'hidden' },
+  segmentRow: { flexGrow: 1, gap: 2 },
+  segment: { flexGrow: 1, flexDirection: 'row', gap: 6, alignItems: 'center', justifyContent: 'center', minHeight: 40, borderRadius: RADIUS.pill, paddingHorizontal: 12 },
   segmentCount: { minWidth: 20, paddingHorizontal: 5, height: 20, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
   row: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 14 },
   rowLine: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: C.hairlineStrong },
