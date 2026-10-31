@@ -863,6 +863,15 @@ files on disk): run them one after the other.
 
 ## Deploying
 
+- Permissions package and planner release fix (stack plan phase 4f), 2026-10-31: production **b7dfa6a** on
+  **ebe5c4f**, feature source **e6d1a7f** on `claude/stack-audit-upgrade-plan-9hdkkv`. 11 paths (1 added, 10 changed,
+  no deletions): `spatie/laravel-permission` 8.3.2 (no migration, no table change; rehearsed on PostgreSQL), the
+  planner's `releaseTask` asks the staff role for managers (it asked Spatie's `hasRole()`, always false here), Larastan
+  baseline 2,182 → 2,028. Parity: every listed file and the whole source equal the tip. Artifact: PHP 8.4.27, **77
+  scopes, 7,254 passed / 16 skipped / 0 failed**; frontend tsc, **5,778 tests / 399 files**; fresh build identical to
+  main's bundle. CI on the tip green (11 jobs). Verified by content on `origin/main` (11/11). The next source delta
+  starts at **e6d1a7f**.
+
 - Library upgrades (stack plan phase 4a-4e), 2026-10-31: production **ebe5c4f** on **c46e8da**, feature source
   **379ff18** on `claude/stack-audit-upgrade-plan-9hdkkv`. 21 paths changed, none added or deleted: PHPUnit 13 (dev),
   `anthropic-ai/sdk` 1.3 (Content Planner on API `2026-10-21`), `openai-php` 0.21, `laravel/mcp` 1.1 (MCP `2026-07-28`
