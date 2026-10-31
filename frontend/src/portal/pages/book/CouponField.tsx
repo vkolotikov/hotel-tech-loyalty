@@ -2,14 +2,12 @@ import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { apiErrorCode, bookErrorFallback, bookErrorKey, portalApi } from '../../lib/portalApi'
-import { refreshAfterCouponResolved } from './steps'
+import { couponChoices, refreshAfterCouponResolved, sameCoupon } from './steps'
 import { Button } from '../../ui/Button'
 import { Field, INPUT_CLASS } from '../../ui/Field'
 import { Notice } from '../../ui/Notice'
 import { Skeleton } from '../../ui/Skeleton'
-import type { Claim, CouponRef, Priced, Redemption } from '../../lib/types'
-
-const sameRef = (a: CouponRef | null, b: CouponRef) => !!a && JSON.stringify(a) === JSON.stringify(b)
+import type { CouponRef, Priced } from '../../lib/types'
 
 /** A top-level component so it isn't recreated on every render of `CouponField` (react-hooks' `static-components`). */
 function CouponChip({ label, active, onToggle }: { label: string; active: boolean; onToggle: () => void }) {
@@ -54,8 +52,7 @@ export function CouponField({ value, onChange, quote, quoteErrorMessage = null }
     },
   })
 
-  const claims: Claim[] = (offers.data?.personalized ?? []).filter(c => c.status !== 'used' && !c.used_at)
-  const codes: Redemption[] = (redemptions.data?.redemptions ?? []).filter(r => r.status === 'pending')
+  const { claims, codes } = couponChoices(offers.data?.personalized, redemptions.data?.redemptions)
   const loadingCoupons = offers.isPending || redemptions.isPending
 
   return (
@@ -69,12 +66,12 @@ export function CouponField({ value, onChange, quote, quoteErrorMessage = null }
         <div className="flex flex-wrap gap-2">
           {claims.map(c => {
             const ref: CouponRef = { member_offer_id: c.id }
-            const active = sameRef(value, ref)
+            const active = sameCoupon(value, ref)
             return <CouponChip key={`o${c.id}`} label={c.offer?.title ?? ''} active={active} onToggle={() => { setError(null); setApplied(null); onChange(active ? null : ref) }} />
           })}
           {codes.map(r => {
             const ref: CouponRef = { redemption_id: r.id }
-            const active = sameRef(value, ref)
+            const active = sameCoupon(value, ref)
             return <CouponChip key={`r${r.id}`} label={r.reward?.name ?? r.code} active={active} onToggle={() => { setError(null); setApplied(null); onChange(active ? null : ref) }} />
           })}
         </div>

@@ -13,7 +13,7 @@ import { Money } from '../../ui/Money'
 import { Notice } from '../../ui/Notice'
 import { Skeleton } from '../../ui/Skeleton'
 import type { AvailableCombination, AvailableRoom } from '../../lib/types'
-import { perNightShown, stayRoomChoices, type StayState } from './staySteps'
+import { combinationPerNight, perNightShown, stayRoomChoices, type StayState } from './staySteps'
 
 interface Props { state: StayState; onPick: (roomId: string) => void; onPickRooms: (roomIds: string[]) => void; onChangeDates: () => void }
 
@@ -94,7 +94,7 @@ export function RoomStep({ state, onPick, onPickRooms, onChangeDates }: Props) {
 function CombinationCard({ combo, nights, onPick }: { combo: AvailableCombination; nights: number; onPick: (ids: string[]) => void }) {
   const { t, i18n } = useTranslation()
   const discounted = combo.member_total < combo.total_price
-  const perNight = nights > 0 ? Math.round((combo.member_total / nights) * 100) / 100 : null
+  const perNight = combinationPerNight(combo, nights)
   return (
     <Card className="p-4 space-y-3">
       <div className="flex items-start justify-between gap-4">

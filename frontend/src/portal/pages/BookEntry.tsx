@@ -8,19 +8,10 @@ import { EmptyState } from '../ui/EmptyState'
 import { PageSkeleton } from '../ui/Skeleton'
 import { Book } from './book/Book'
 import { StayBook } from './stay/StayBook'
+import { bookDestination } from './bookDestination'
 
-/**
- * Where "Book" leads: straight into the one flow a venue has, or to a choice when it has both. A link that
- * already names a service (`?service=`) is an appointment link and skips the choice.
- */
 // eslint-disable-next-line react-refresh/only-export-components
-export function bookDestination(capabilities: { services: boolean; stays: boolean }, hasServiceParam: boolean): 'appointment' | 'stay' | 'choose' | 'none' {
-  const { services, stays } = capabilities
-  if (services && stays) return hasServiceParam ? 'appointment' : 'choose'
-  if (services) return 'appointment'
-  if (stays) return 'stay'
-  return 'none'
-}
+export { bookDestination }
 
 function Choice({ to, icon, title, hint }: { to: string; icon: ReactNode; title: string; hint: string }) {
   return (

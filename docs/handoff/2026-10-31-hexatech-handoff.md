@@ -6,11 +6,12 @@ environment). AGENTS.md and CLAUDE.md still apply.
 
 ## Production
 
-Production is **54d61cd8c**: request alerts on staff phones (`a199f1f8c`: the `staff_devices` table,
-`PUT/DELETE /v1/admin/loyalty/devices`, `StaffAlerts`, and three fixes that made main's red tests green), then the
-native apps' minimum-version answer (`GET /api/v1/apps/{app}/version`, `config/apps.php`). Records:
-`docs/loyalty-workspace.md` "Deploying". The next source-patch baseline is **bb56e5355** on
-`feature/loyalty-staff-app`, with `apps/loyalty-staff/` left out of any Cloud deploy.
+Production is **4c59696c2**: request alerts on staff phones (`a199f1f8c`: the `staff_devices` table,
+`PUT/DELETE /v1/admin/loyalty/devices`, `StaffAlerts`, and three fixes that made main's red tests green), the native
+apps' minimum-version answer (`54d61cd8c`: `GET /api/v1/apps/{app}/version`, `config/apps.php`), then the members'
+app server part (`DELETE /v1/auth/push-token`, `member` in `config/apps.php`, the portal's shared types). Records:
+`docs/loyalty-workspace.md` "Deploying". The next source-patch baseline is **4a1494c62** on
+`feature/loyalty-member-app`, with `apps/` left out of any Cloud deploy.
 
 ## New: HexaTech Staff, the native desk app
 
@@ -41,11 +42,15 @@ Owner's decisions (2026-10-31): a new app, published as version 2.0.0 of the exi
 folder `apps/loyalty-member` (README there; plan and audit in `docs/loyalty-member-app/`). Not part of the Cloud
 deploy.
 
-- Phase 1 (foundation, sign-in, join by QR, the card, activity, five languages, push per phone, version check) and
-  phase 2 (rewards, offers, codes, stamps, credit, events, inbox, profile, help) are built and checked in the browser
-  preview against the local API. Phase 3 (bookings and payments, under the member-portal money rules) is next.
-- It shares the member portal's words and framework-free logic; the portal's event, stamp and credit types live in
-  its `lib/types.ts` and the industry nouns' keys in `lib/industry.ts` for that reason.
+- Phases 1 to 3 are built: foundation, sign-in, join by QR, the card, activity, five languages, push per phone, the
+  version check; rewards, offers, codes, stamps, credit, events, inbox, profile, help; bookings with cancelling, and
+  booking an appointment or a stay with Stripe's payment sheet (`@stripe/stripe-react-native` 0.81.0). The appointment
+  flow ran end to end in the browser preview against the local API (a venue paid at the visit); stays and the payment
+  sheet itself need a phone, a hotel venue with its PMS and a Stripe test key. Phase 4 (release) is the owner's.
+- It shares the member portal's words and framework-free logic; for that reason the portal keeps its event, stamp and
+  credit types in `lib/types.ts`, the industry nouns' keys in `lib/industry.ts`, the booking error sentences in
+  `lib/bookErrors.ts`, the booking labels in `pages/bookingLabels.ts`, and every booking-flow decision in
+  `pages/book/steps.ts` and `pages/stay/staySteps.ts`.
 - Server part (additive): `DELETE /v1/auth/push-token` (clears the member's push token only when it is this phone's)
   and `member` in `config/apps.php` (`MEMBER_APP_*`, default 2.0.0 and the existing store pages).
 - The owner's side before release: Expo sign-in as `hoteltechai` (or an `EXPO_TOKEN`), the Apple push key, FCM V1 for

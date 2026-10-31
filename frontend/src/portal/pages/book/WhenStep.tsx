@@ -10,11 +10,9 @@ import { Skeleton } from '../../ui/Skeleton'
 import { EmptyState } from '../../ui/EmptyState'
 import { Notice } from '../../ui/Notice'
 import { Button } from '../../ui/Button'
-import { visibleDay } from './steps'
+import { addDays, visibleDay } from './steps'
 import type { CatalogueRules } from '../../lib/types'
 
-const isoDay = (d: Date) => d.toISOString().slice(0, 10)
-const addDays = (day: string, n: number) => { const d = new Date(day + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return isoDay(d) }
 
 interface Props { serviceId: number; masterId: number | null; rules: CatalogueRules; value: string | null; onPick: (startAt: string) => void; timezone: string }
 

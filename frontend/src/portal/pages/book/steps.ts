@@ -1,4 +1,7 @@
-import type { Catalogue, CouponRef, Quote } from '../../lib/types'
+import type { Catalogue, Claim, CouponRef, Quote, QuoteBody, Redemption } from '../../lib/types'
+
+// The calendar arithmetic is the stay flow's; the When step's day strip uses the same one.
+export { addDays } from '../stay/staySteps'
 
 export type Step = 'service' | 'staff' | 'when' | 'review' | 'pay'
 export const STEPS: Step[] = ['service', 'staff', 'when', 'review', 'pay']
@@ -266,4 +269,48 @@ export function afterConfirmError(code: string | null): ConfirmErrorDecision {
  */
 export function refreshAfterCouponResolved(r: { kind: 'offer' | 'reward' }): string[][] {
   return r.kind === 'offer' ? [['portal-offers']] : [['portal-redemptions']]
+}
+
+/** service_id/start_at/etc. only — notes are sent at confirm (Task 17), never here: they cost nothing to
+ *  change, so they must not perturb the quote's query key and re-fetch a price that hasn't moved. */
+export function quoteBody(state: BookState): QuoteBody {
+  return {
+    service_id: state.serviceId!,
+    master_id: state.masterId,
+    start_at: state.startAt!,
+    party_size: state.partySize,
+    extras: state.extras.map(id => ({ id, quantity: 1 })),
+    coupon: state.coupon,
+  }
+}
+
+/** The quote's own booking-window codes: the slot is gone or the chosen time no longer fits the venue's
+ *  lead/advance-booking rules — none of these can be fixed on the Review screen, so the member goes
+ *  back to When rather than being offered a "try again" that would fail the same way. */
+const WINDOW_CODES = new Set(['slot_taken', 'too_soon', 'too_far_ahead'])
+
+export function isWindowCode(code: string | null): code is string {
+  return code !== null && WINDOW_CODES.has(code)
+}
+
+/** The coupons a member can pick on Review: claimed offers not yet used, and reward codes still pending. */
+export function couponChoices(personalized: Claim[] | undefined, redemptions: Redemption[] | undefined): { claims: Claim[]; codes: Redemption[] } {
+  return {
+    claims: (personalized ?? []).filter(c => c.status !== 'used' && !c.used_at),
+    codes: (redemptions ?? []).filter(r => r.status === 'pending'),
+  }
+}
+
+/** Whether a picked coupon is this one (the chip shows pressed). */
+export function sameCoupon(a: CouponRef | null, b: CouponRef): boolean {
+  return !!a && JSON.stringify(a) === JSON.stringify(b)
+}
+
+/**
+ * Whether the payment-intent call answered that there is genuinely nothing to charge online: a coupon covered the
+ * whole price (`nothing_to_pay`), or the venue turned online payment off between Review and Pay (`pay_at_venue`).
+ * Both are shown exactly like an at-venue booking — a Confirm button with no card — not as failures.
+ */
+export function chargesNothing(code: string | null): boolean {
+  return code === 'nothing_to_pay' || code === 'pay_at_venue'
 }

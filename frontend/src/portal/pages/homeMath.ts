@@ -1,5 +1,5 @@
 import { formatDay, resolveLocale } from '../lib/dates'
-import { vocabIndustry } from '../lib/vocab'
+import { vocabIndustry } from '../lib/industry'
 import type { BookingKind, PortalCapabilities } from '../lib/types'
 
 /**
