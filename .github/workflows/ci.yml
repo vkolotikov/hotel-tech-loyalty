@@ -1,0 +1,177 @@
+# Checks only. This workflow never deploys: Laravel Cloud deploys `main` on its own, and merging to `main`
+# still goes by the source-patch recipe (docs/landing-page-builder.md §6). It runs the same commands the
+# handoff's test section names, so a red run here is a red run on the workstation too.
+#
+# Actions are pinned to a full commit SHA (the tag in the comment), so a moved tag cannot change what runs.
+#
+# When it runs: every push to main (that is, every deploy), every pull request, and on demand for any branch
+# (Actions tab, "Run workflow"). A full run is about eleven jobs, so it does not run on every feature-branch push.
+name: CI
+
+on:
+  push:
+    branches: [main]
+    paths-ignore: ['docs/**', '**/*.md']
+  pull_request:
+    paths-ignore: ['docs/**', '**/*.md']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  COMPOSER_NO_INTERACTION: '1'
+  PHP_EXTENSIONS: mbstring, intl, bcmath, gd, zip, sodium, pdo_sqlite, sqlite3, pdo_pgsql, pgsql, exif, pcntl
+
+jobs:
+  audit:
+    name: Dependency audit
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: shivammathur/setup-php@d52fc211a0436f8839a587b3b5b8efddab4744ea # v2
+        with:
+          php-version: '8.4'
+          extensions: ${{ env.PHP_EXTENSIONS }}
+          tools: composer:v2
+          coverage: none
+      - name: composer.json and composer.lock agree
+        run: composer validate --no-check-publish --no-check-all
+      - name: PHP packages have no known advisories
+        run: composer audit --locked
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: '24'
+      - name: SPA production packages have no known advisories
+        working-directory: frontend
+        run: npm audit --omit=dev --audit-level=low
+      - name: SPA build tools have no high or critical advisories
+        working-directory: frontend
+        run: npm audit --audit-level=high
+      - name: Root build tools have no high or critical advisories
+        run: npm audit --audit-level=high
+
+  php:
+    name: PHP ${{ matrix.php }} on SQLite (shard ${{ matrix.shard }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ['8.4', '8.5']
+        shard: ['1/3', '2/3', '3/3']
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: shivammathur/setup-php@d52fc211a0436f8839a587b3b5b8efddab4744ea # v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: ${{ env.PHP_EXTENSIONS }}
+          ini-values: memory_limit=-1
+          tools: composer:v2
+          coverage: none
+      - run: composer install --no-progress --prefer-dist
+      - name: Local environment file (no secrets; phpunit.xml sets the test drivers)
+        run: cp .env.example .env && php artisan key:generate --force
+      - name: Suites, one directory at a time
+        run: PHP=php SHARD=${{ matrix.shard }} scripts/test-php.sh
+
+  postgres:
+    name: PHP 8.4 on PostgreSQL 18 (only known failures allowed)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: ci
+          POSTGRES_PASSWORD: ci-only-not-a-secret
+          POSTGRES_DB: hexa_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U ci -d hexa_test"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      DB_HOST: 127.0.0.1
+      DB_PORT: '5432'
+      DB_USERNAME: ci
+      DB_PASSWORD: ci-only-not-a-secret
+      APP_ENV: testing
+      CACHE_STORE: array
+      CACHE_DRIVER: array
+      SESSION_DRIVER: array
+      QUEUE_CONNECTION: sync
+      MAIL_MAILER: array
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: shivammathur/setup-php@d52fc211a0436f8839a587b3b5b8efddab4744ea # v2
+        with:
+          php-version: '8.4'
+          extensions: ${{ env.PHP_EXTENSIONS }}
+          ini-values: memory_limit=-1
+          tools: composer:v2
+          coverage: none
+      - run: composer install --no-progress --prefer-dist
+      - run: cp .env.example .env && php artisan key:generate --force
+      - name: Build the test database from every migration
+        run: DB_CONNECTION=pgsql DB_DATABASE=hexa_test php artisan migrate --force
+      - name: Suites on PostgreSQL
+        run: PHP=php JUNIT_DIR="$RUNNER_TEMP/junit" scripts/test-pg.sh hexa_test | tee "$RUNNER_TEMP/pg.log" || true
+      - name: No failure beyond tests/pgsql-known-failures.txt
+        run: python3 scripts/pg-known-failures.py "$RUNNER_TEMP/junit" tests/pgsql-known-failures.txt
+      - if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: postgres-run
+          path: ${{ runner.temp }}/pg.log
+          retention-days: 14
+
+  static-analysis:
+    name: Larastan (new findings only)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: shivammathur/setup-php@d52fc211a0436f8839a587b3b5b8efddab4744ea # v2
+        with:
+          php-version: '8.4'
+          extensions: ${{ env.PHP_EXTENSIONS }}
+          ini-values: memory_limit=-1
+          tools: composer:v2
+          coverage: none
+      - run: composer install --no-progress --prefer-dist
+      - run: cp .env.example .env && php artisan key:generate --force
+      - name: PHPStan with the recorded baseline
+        run: vendor/bin/phpstan analyse --no-progress --error-format=github
+
+  frontend:
+    name: SPA on Node ${{ matrix.node }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ['22', '24']
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci --no-audit --no-fund
+      - name: Types
+        run: npx tsc -b
+      - name: Lint (no diagnostics beyond eslint-baseline.json)
+        run: npm run lint
+      - name: Unit and render tests
+        run: npx vitest run
+      - name: Production build
+        run: npx vite build
