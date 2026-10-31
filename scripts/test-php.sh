@@ -11,7 +11,8 @@
 #   scripts/test-php.sh [test path ...]
 #
 #   test path   optional: run only these directories/files (default: every directory under tests/Feature and
-#               tests/Unit except tests/Feature/Concerns, then every top-level tests/Feature/*.php and tests/Unit/*.php).
+#               tests/Unit, then every top-level tests/Feature/*.php and tests/Unit/*.php). tests/Feature/Concerns is
+#               included: besides shared traits it holds IndexesResourceTest (18 tests), which test-pg.sh leaves out.
 #
 # Environment:
 #   PHP     the PHP binary (default php8.4; CLAUDE.md names the pinned one on the Windows workstation)
@@ -30,9 +31,7 @@ if [ $# -gt 0 ]; then
 else
   TARGETS=()
   for d in tests/Feature/*/ tests/Unit/*/; do
-    d="${d%/}"
-    [ "$d" = "tests/Feature/Concerns" ] && continue
-    TARGETS+=("$d")
+    TARGETS+=("${d%/}")
   done
   for f in tests/Feature/*.php tests/Unit/*.php; do
     TARGETS+=("$f")
