@@ -38,8 +38,10 @@ in every language as the portal is (usted, Sie, vous, вы); `lib.test.ts` check
 
 | Path | What |
 |---|---|
-| `src/app/` | Screens (Expo Router). `(tabs)/`: Home, Rewards (benefits, catalogue, offers, codes), Card (raised), Activity, More. `sign-in`, `join`, and the sheets `inbox`, `events`, `profile` (details, messages, invite, password, delete account), `help` |
-| `src/components/` | `ui.tsx` (building blocks, `Toggle`, `Picture`), `MemberCard`, `ActivityRow`, `Programme` (stamps, credit, next event), `TabBar`, `Sheet`, `UpdateGate` |
+| `src/app/` | Screens (Expo Router). `(tabs)/`: Home, Rewards (benefits, catalogue, offers, codes), Card (raised), Activity, More. `sign-in`, `join`, and the sheets `inbox`, `events`, `profile` (details, messages, invite, password, delete account), `help`, `bookings`, `booking/[kind]/[id]` (with cancelling), `book` (the chooser) and `book/appointment` |
+| `src/components/book/` | The appointment flow's steps (service, who, when, review with coupons, pay), on the portal's `steps.ts` |
+| `src/lib/payment.ts` | Stripe's payment sheet for the one intent the server made (`payment.web.ts`: none in the browser preview) |
+| `src/components/` | `ui.tsx` (building blocks, `Toggle`, `Picture`), `Bookings` (rows, Home's next booking), `MemberCard`, `ActivityRow`, `Programme` (stamps, credit, next event), `TabBar`, `Sheet`, `UpdateGate` |
 | `src/lib/theme.ts` | Navy, text and states fixed; the accent and heading face are the venue's (`useLook`) |
 | `src/lib/api.ts` | The one HTTP client: `/v1/member/*`, `/v1/auth/*`, `/v1/public/join/*`, bearer token, 15 s timeout |
 | `src/lib/session.ts` | Sign-in, join, sign-out; the old app's keys `auth_token`/`auth_user`, so members stay signed in |
@@ -54,6 +56,12 @@ in every language as the portal is (usted, Sie, vous, вы); `lib.test.ts` check
 - Every string is the portal's (`tp('portal.…')`) or the app's (`t('…')`) in all five languages, with every
   placeholder the portal passes (`{{venue}}`, `{{noun}}`, `{{phone}}`): a portal phrase is called with the same values
   as the portal page calls it.
+- Booking and paying follow the member-portal money rules unchanged: every decision is the portal's `steps.ts`
+  (`bookReducer`, `afterConfirmError`, `canLeavePay`, …) and every sentence its `bookErrors.ts`; a failed call is read
+  with `serverCodeOf()` (the server's own code, or null, as the portal's `apiErrorCode`). The card is taken only by
+  Stripe's payment sheet for the payment intent the server made; the app sends the visit's Idempotency-Key and the
+  intent's id, never an amount. While a card is held against a booking not yet confirmed the sheet cannot be closed.
+  Apple Pay and Google Pay are off until the owner's merchant id is set (`app.json`, the Stripe plugin).
 - A stored picture goes through `Picture` (`mediaUrl()`: `/storage/…` beside the API), which shows nothing rather than
   an empty frame when it cannot load.
 
@@ -99,6 +107,15 @@ Before the first release of 2.0.0:
 4. Card: the QR code reads at the desk (HexaTech Staff scans it); Add to Apple Wallet / Google Wallet.
 5. Home: progress to the next tier in the programme's measure; membership end date where there is one.
 6. Five languages; Airplane mode shows "No connection"; the lock; notifications switch.
+
+## Acceptance on phones (phase 3)
+
+1. Book an appointment at a venue that takes cards: service, person, time, review (member price, a coupon), pay with
+   the payment sheet (a test card; one that asks for 3-D Secure too); the booking opens with "You're booked".
+2. Close the payment sheet without paying: nothing is taken, Pay is offered again; a declined card says so.
+3. Take a time someone else has just booked: back to the times, with the sentence why.
+4. Cancel a paid booking inside its window: the money promise before, the refund after; a held card is released.
+5. A venue that takes no cards: "Nothing to pay now", Confirm, the booking says "Pay at the venue".
 
 ## Acceptance on phones (phase 2)
 

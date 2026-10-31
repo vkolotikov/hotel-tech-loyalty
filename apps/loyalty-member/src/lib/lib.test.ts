@@ -3,13 +3,14 @@ import i18next from 'i18next'
 import { BUNDLES, LANGUAGES, languageOf, nested, say } from './i18n'
 import { en } from './i18n/en'
 import { PORTAL_BUNDLES } from './i18n/portalBundles'
-import { failureFrom } from './failure'
+import { ApiError, asPortalError, failureFrom, serverCodeOf } from './failure'
+import { sheetOutcome } from './paymentOutcome'
 import { errorKey, signInErrorKey } from './errors'
 import { appRoute, greeting, initials, joinTokenFrom, mediaAddress, spacedNumber } from './format'
 import { pushTarget } from './alerts'
 import { compareVersions, versionState } from './version'
 import { DEFAULT_LOOK, lookFrom } from './theme'
-import { counted, formatMoney, vocabKey } from '../shared/portal'
+import { afterConfirmError, bookInitialState, bookReducer, cancelOffer, chargesNothing, counted, formatMoney, moneyPromise, payAtVenueGrantOf, vocabKey, type Catalogue, type PortalBooking } from '../shared/portal'
 
 const placeholders = (text: string) => (text.match(/\{\{\w+\}\}/g) ?? []).sort().join(',')
 
@@ -151,5 +152,48 @@ describe('small helpers', () => {
     expect(compareVersions('2.10.0', '2.9.9')).toBeGreaterThan(0)
     expect(versionState('1.9.0', { min_version: '2.0.0', latest_version: '2.0.0' })).toBe('update_required')
     expect(versionState('2.0.0', { min_version: '2.0.0', latest_version: '2.1.0' })).toBe('update_available')
+  })
+})
+
+describe('booking and paying, on the portal’s own rules', () => {
+  it('read the server’s own code the way the portal does, never the app’s network or unknown', () => {
+    expect(serverCodeOf(new ApiError(failureFrom(409, { error: 'slot_taken' })))).toBe('slot_taken')
+    expect(serverCodeOf(new ApiError(failureFrom(404, { message: 'Not found' })))).toBeNull()
+    expect(serverCodeOf(new ApiError(failureFrom(0, null)))).toBeNull()
+    expect(serverCodeOf(new Error('boom'))).toBeNull()
+    // A network failure stays on Pay with a retry of the same confirm; a taken slot goes back to When.
+    expect(afterConfirmError(serverCodeOf(new ApiError(failureFrom(0, null))))).toEqual({ to: null, releasesHold: false, clearStart: false })
+    expect(afterConfirmError('slot_taken')).toEqual({ to: 'when', releasesHold: true, clearStart: true })
+  })
+
+  it('hand the pay-at-venue grant through only when the server gave one because online payment is unavailable', () => {
+    const grant = new ApiError(failureFrom(409, { error: 'pay_at_venue', reason: 'payment_unavailable', pay_at_venue_grant: 'g-1' }))
+    expect(payAtVenueGrantOf(asPortalError(grant))).toBe('g-1')
+    const plain = new ApiError(failureFrom(409, { error: 'pay_at_venue' }))
+    expect(payAtVenueGrantOf(asPortalError(plain))).toBeNull()
+    expect(chargesNothing(serverCodeOf(plain))).toBe(true)
+    expect(chargesNothing(null)).toBe(false)
+  })
+
+  it('read the payment sheet: paid, closed by the member, or refused with Stripe’s sentence', () => {
+    expect(sheetOutcome(undefined)).toEqual({ kind: 'paid' })
+    expect(sheetOutcome({ code: 'Canceled', message: 'closed' })).toEqual({ kind: 'cancelled' })
+    expect(sheetOutcome({ code: 'Failed', localizedMessage: 'Your card was declined.' })).toEqual({ kind: 'failed', message: 'Your card was declined.' })
+    expect(sheetOutcome({ code: 'Failed' })).toEqual({ kind: 'failed', message: null })
+  })
+
+  it('move through the flow with the portal’s reducer: a person skipped when only one does the service', () => {
+    const catalogue = { masters: [{ id: 7, service_ids: [1] }], rules: { allow_master_choice: true } } as unknown as Catalogue
+    const picked = bookReducer(bookInitialState, { type: 'pickService', serviceId: 1, catalogue })
+    expect(picked.step).toBe('when')
+    expect(bookReducer(picked, { type: 'pickStart', startAt: '2026-11-02T15:00' }).step).toBe('review')
+  })
+
+  it('promise only the money a booking records, and offer cancelling only as the server says', () => {
+    const booking = { kind: 'service', status: 'confirmed', total: 50, payment_status: 'paid', paid_online: false, can_cancel: true, cancel_deadline: null } as unknown as PortalBooking
+    expect(moneyPromise(booking)).toBe('venue')
+    expect(moneyPromise({ ...booking, paid_online: true })).toBe('refund')
+    expect(cancelOffer(booking, new Date())).toBe('offer')
+    expect(cancelOffer({ ...booking, can_cancel: false }, new Date())).toBe('contact')
   })
 })

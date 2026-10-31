@@ -1,5 +1,5 @@
 import { ApiError, failureFrom } from './failure'
-import type { Activity, Benefit, Claim, InboxNotification, JoinContext, LaravelPage, MemberCardAnswer, MemberCredit, MemberStamps, Offer, PortalBootstrap, PortalEvent, PortalEvents, Redemption, Reward, SignInAnswer } from './types'
+import type { Activity, Benefit, BookingKind, CancelReply, Catalogue, Claim, ConfirmBody, PaymentIntentReply, Quote, QuoteBody, ResolvedCoupon, Slot, InboxNotification, JoinContext, LaravelPage, MemberCardAnswer, MemberCredit, MemberStamps, Offer, Paginated, PortalBooking, PortalBootstrap, PortalEvent, PortalEvents, Redemption, Reward, SignInAnswer } from './types'
 import type { AppVersions } from './version'
 import { mediaAddress } from './format'
 
@@ -39,7 +39,7 @@ function withQuery(path: string, query?: Query): string {
   return `${path}${path.includes('?') ? '&' : '?'}${parts.join('&')}`
 }
 
-async function send<T>(method: 'GET' | 'POST' | 'PUT' | 'DELETE', path: string, body?: unknown, query?: Query, asToken?: string): Promise<T> {
+async function send<T>(method: 'GET' | 'POST' | 'PUT' | 'DELETE', path: string, body?: unknown, query?: Query, asToken?: string, extraHeaders?: Record<string, string>): Promise<T> {
   const token = asToken ?? readToken()
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS)
@@ -52,6 +52,7 @@ async function send<T>(method: 'GET' | 'POST' | 'PUT' | 'DELETE', path: string, 
         'Content-Type': 'application/json',
         'Accept-Language': readLanguage(),
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...extraHeaders,
       },
       body: body === undefined ? undefined : JSON.stringify(body),
       signal: controller.signal,
@@ -133,4 +134,24 @@ export const api = {
   savePushToken: (token: string): Promise<unknown> => send('POST', '/v1/auth/push-token', { expo_push_token: token }),
   /** Before signing out, with the session's own token: the member's push token is cleared when it is this phone's. */
   forgetPushToken: (token: string, authToken: string): Promise<unknown> => send('DELETE', '/v1/auth/push-token', { expo_push_token: token }, undefined, authToken),
+
+  // ─── Bookings (the portal's member endpoints, unchanged) ───
+  bookings: (scope: 'upcoming' | 'past', page = 1): Promise<Paginated<PortalBooking>> => read('/v1/member/portal/bookings', { scope, page }),
+  booking: (kind: BookingKind, id: number): Promise<PortalBooking> => read(`/v1/member/portal/bookings/${kind}/${id}`),
+  cancelBooking: (kind: BookingKind, id: number): Promise<CancelReply> => send('POST', `/v1/member/portal/bookings/${kind}/${id}/cancel`),
+
+  // ─── Appointments (the portal's Book flow; prices, holds and payments are the server's) ───
+  catalogue: (): Promise<Catalogue> => read('/v1/member/portal/services'),
+  calendar: (serviceId: number, masterId: number | null, start: string, end: string): Promise<{ available_dates: string[] }> =>
+    read('/v1/member/portal/services/calendar', { service_id: serviceId, master_id: masterId ?? undefined, start, end }),
+  availability: (serviceId: number, masterId: number | null, date: string): Promise<{ slots: Slot[] }> =>
+    read('/v1/member/portal/services/availability', { service_id: serviceId, master_id: masterId ?? undefined, date }),
+  quote: (body: QuoteBody): Promise<Quote> => send('POST', '/v1/member/portal/services/quote', body),
+  /** The visit's Idempotency-Key travels with it: a pay-at-venue grant, if the server offers one, is for the one booking
+   *  the confirm under that same key makes. */
+  paymentIntent: (body: QuoteBody, idempotencyKey: string): Promise<PaymentIntentReply> =>
+    send('POST', '/v1/member/portal/services/payment-intent', body, undefined, undefined, { 'Idempotency-Key': idempotencyKey }),
+  confirm: (body: ConfirmBody, idempotencyKey: string): Promise<{ booking: PortalBooking; replayed: boolean }> =>
+    send('POST', '/v1/member/portal/services/confirm', body, undefined, undefined, { 'Idempotency-Key': idempotencyKey }),
+  resolveCoupon: (code: string): Promise<ResolvedCoupon> => send('POST', '/v1/member/portal/coupons/resolve', { code }),
 }

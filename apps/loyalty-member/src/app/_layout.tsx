@@ -79,6 +79,10 @@ export default function RootLayout() {
               <Stack.Screen name="help" />
               <Stack.Screen name="profile" />
               <Stack.Screen name="events" />
+              <Stack.Screen name="bookings" />
+              <Stack.Screen name="booking/[kind]/[id]" />
+              <Stack.Screen name="book/index" />
+              <Stack.Screen name="book/appointment" />
             </Stack>
           </View>
           <LockGate />

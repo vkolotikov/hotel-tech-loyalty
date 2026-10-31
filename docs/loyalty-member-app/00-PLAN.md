@@ -14,7 +14,10 @@ for a real member, a new member joining through the form (201, welcome points on
 Inbox, Events, Profile (details, messages, invite, password, delete account), Help; the portal's event, stamp and credit
 types moved into its `lib/types.ts` and its industry nouns into `lib/industry.ts` so the app shares them. Checked in
 the browser preview in English, Russian, German and Spanish, with no unfilled placeholder and no broken picture.
-Phase 3 (bookings and payments) next.
+**Phase 3 under way**: bookings (upcoming and past, a booking's page, cancelling with the server's money promise and
+outcome), Home's next booking, and booking an appointment through the portal's own flow rules with Stripe's payment
+sheet (`@stripe/stripe-react-native` 0.81.0, the SDK's version); checked end to end against the local API at a venue
+paid at the visit (service, person, time, review with the member discount, confirm, "You're booked"). Stays next.
 Evidence for the decision: a read-only audit of the existing app (`vkolotikov/hotel-tech-loyalty-mobile` at `c3deea3`,
 `01-AUDIT-2026-10-31.md`), with its key facts checked again by hand.
 

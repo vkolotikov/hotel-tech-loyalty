@@ -39,6 +39,7 @@ export const ru: Record<Key, string> = {
   'card.show': 'Покажите этот код на стойке',
   'card.noCode': 'Не удалось показать код. Потяните вниз, чтобы попробовать снова.',
 
+  'list.more': 'Показать ещё',
   'more.title': 'Ещё',
   'more.venue': 'Ваше заведение',
   'more.preferences': 'Настройки',

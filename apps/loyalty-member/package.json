@@ -11,6 +11,7 @@
     "@expo-google-fonts/playfair-display": "^0.4.2",
     "@expo-google-fonts/space-grotesk": "^0.4.1",
     "@expo/vector-icons": "^15.0.2",
+    "@stripe/stripe-react-native": "0.81.0",
     "@tanstack/react-query": "^5.105.0",
     "expo": "~58.0.21",
     "expo-blur": "~58.0.5",

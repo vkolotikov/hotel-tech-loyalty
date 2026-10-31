@@ -77,6 +77,13 @@ export default function More() {
             line={unread > 0 ? t('home.unread', { n: number(unread, language) }) : t('home.noneUnread')}
             onPress={() => router.push('/inbox')}
           />
+          {boot.data && (boot.data.capabilities.services || boot.data.capabilities.stays) && (
+            <Row
+              left={<IconBadge name="calendar-outline" color={C.gold} size={36} />}
+              title={tp('portal.nav.bookings')}
+              onPress={() => router.push('/bookings')}
+            />
+          )}
           {boot.data?.capabilities.events && (
             <Row
               left={<IconBadge name="ticket-outline" color={C.info} size={36} />}

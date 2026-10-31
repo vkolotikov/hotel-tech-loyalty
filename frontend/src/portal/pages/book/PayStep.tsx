@@ -10,7 +10,7 @@ import { Notice } from '../../ui/Notice'
 import { Skeleton } from '../../ui/Skeleton'
 import { PriceBreakdown } from './PriceBreakdown'
 import { quoteBody } from './ReviewStep'
-import { afterConfirmError, canTryOnlineAgain, payAtVenueGrantOf, retryOnlineVisit, type BookState, type PayVisit } from './steps'
+import { afterConfirmError, canTryOnlineAgain, chargesNothing, payAtVenueGrantOf, retryOnlineVisit, type BookState, type PayVisit } from './steps'
 import { stashForReturn } from './returnStash'
 import type { PortalBooking, Quote } from '../../lib/types'
 
@@ -29,14 +29,6 @@ export interface PayStepProps {
   onBack: (to: 'when' | 'review', code: string) => void
   onDone: (booking: PortalBooking) => void
 }
-
-/**
- * Codes the payment-intent call can answer with when there is genuinely nothing to charge online: a
- * coupon covered the whole price (`nothing_to_pay`), or the venue turned online payment off between
- * Review and Pay (`pay_at_venue`). Both are shown exactly like an at-venue booking — a Confirm button with
- * no card — not as failures.
- */
-const NOTHING_TO_CHARGE = new Set(['nothing_to_pay', 'pay_at_venue'])
 
 const freshId = () => (typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : `k-${Date.now()}-${Math.random()}`)
 
@@ -74,7 +66,7 @@ export function PayStep({ quote, state, visit, onVisitChange, onBack, onDone }: 
     retryOnMount: false,
   })
   const intentErrorCode = intent.isError ? apiErrorCode(intent.error) : null
-  const nothingToCharge = visit.noCard || (intentErrorCode !== null && NOTHING_TO_CHARGE.has(intentErrorCode))
+  const nothingToCharge = visit.noCard || chargesNothing(intentErrorCode)
   const payAtVenue = !online || nothingToCharge
   // Release 4, part C: a `pay_at_venue` answer given because online payment is unavailable carries the server's
   // grant (`payAtVenueGrantOf`) — the confirm sends it back, and the member is told why there is nothing to pay now.

@@ -10,6 +10,9 @@ export interface Failure {
   fields?: Record<string, string[]>
   message?: string
   extra: Record<string, unknown>
+  /** The server's own snake_case code (`slot_taken`), or null when it sent none (no answer, a bare 404, a field error).
+   *  The booking flows read this, as the portal's `apiErrorCode` does, never the app's own `network`/`unknown`. */
+  serverCode?: string | null
 }
 
 export class ApiError extends Error {
@@ -25,7 +28,7 @@ const SNAKE = /^[a-z_]+$/
 
 /** The failure of an answer with this status and body (already parsed, or null when it was not JSON). */
 export function failureFrom(status: number, body: unknown): Failure {
-  if (status === 0) return { status: 0, code: 'network', extra: {} }
+  if (status === 0) return { status: 0, code: 'network', extra: {}, serverCode: null }
   const data = body && typeof body === 'object' ? (body as Record<string, unknown>) : {}
   const fields = data.errors && typeof data.errors === 'object' ? (data.errors as Record<string, string[]>) : undefined
   const named = typeof data.code === 'string' && SNAKE.test(data.code) ? data.code
@@ -37,11 +40,25 @@ export function failureFrom(status: number, body: unknown): Failure {
   const firstField = fields ? Object.values(fields)[0]?.[0] : undefined
   const sentence = firstField ?? (typeof data.message === 'string' ? data.message : typeof data.error === 'string' && !SNAKE.test(data.error) ? data.error : undefined)
 
-  return { status, code, ...(fields ? { fields } : {}), ...(sentence ? { message: sentence } : {}), extra }
+  return { status, code, ...(fields ? { fields } : {}), ...(sentence ? { message: sentence } : {}), extra, serverCode: named }
 }
 
 /** The failure an error carries, whatever threw it. */
 export function failureOf(error: unknown): Failure {
   if (error instanceof ApiError) return error.failure
-  return { status: 0, code: 'network', extra: {} }
+  return { status: 0, code: 'network', extra: {}, serverCode: null }
+}
+
+/** The server's own code off any failed call, or null when there is none (the portal's `apiErrorCode`). */
+export function serverCodeOf(error: unknown): string | null {
+  return failureOf(error).serverCode ?? null
+}
+
+/**
+ * A failure in the shape the portal's shared booking rules read loosely (`error.response.data`), so `payAtVenueGrantOf`
+ * and the like see the server's code and its other fields (`reason`, `pay_at_venue_grant`) exactly as the portal does.
+ */
+export function asPortalError(error: unknown): { response: { data: Record<string, unknown> } } {
+  const failure = failureOf(error)
+  return { response: { data: { ...failure.extra, ...(failure.serverCode ? { error: failure.serverCode } : {}) } } }
 }

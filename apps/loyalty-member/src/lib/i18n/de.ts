@@ -39,6 +39,7 @@ export const de: Record<Key, string> = {
   'card.show': 'Zeigen Sie diesen Code am Empfang',
   'card.noCode': 'Der Code konnte nicht angezeigt werden. Ziehen Sie nach unten, um es erneut zu versuchen.',
 
+  'list.more': 'Mehr anzeigen',
   'more.title': 'Mehr',
   'more.venue': 'Ihr Haus',
   'more.preferences': 'Einstellungen',

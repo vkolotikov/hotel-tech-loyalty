@@ -339,6 +339,11 @@ or add the next dated one, at the end of a session.
   secure-store keys (`auth_token`, `auth_user`) so an update keeps members signed in.
 - The venue's accent and heading face are read at render time (`C.gold`, `accentGradient()`, `fonts.*`), never inside
   `StyleSheet.create`. Expo-managed libraries stay at the SDK's versions; no `expo-updates`.
+- Booking and paying in the app use the portal's own flow rules (`pages/book/steps.ts`, `pages/stay/staySteps.ts`) and
+  sentences (`lib/bookErrors.ts`) through `src/shared/portal.ts`; a failed call is read with `serverCodeOf()` (the
+  portal's `apiErrorCode`), never the app's `network`/`unknown`. A card is taken only by Stripe's payment sheet
+  (`src/lib/payment.ts`) for the one intent the server made; the app sends the Idempotency-Key and the intent's id,
+  never an amount, and cannot be left while a card is held against an unconfirmed booking (`canLeavePay`).
 
 ## Secrets
 

@@ -13,7 +13,7 @@ import { Stepper } from '../../ui/Stepper'
 import { Toggle } from '../../ui/Toggle'
 import { CouponField } from './CouponField'
 import { PriceBreakdown } from './PriceBreakdown'
-import { afterQuoteError, type BookState, type ReviewPatch } from './steps'
+import { afterQuoteError, isWindowCode, quoteBody, type BookState, type ReviewPatch } from './steps'
 import type { Catalogue, CouponRef, Quote, QuoteBody } from '../../lib/types'
 
 export interface ReviewStepProps {
@@ -26,24 +26,9 @@ export interface ReviewStepProps {
   onContinue: (quote: Quote, notes: string) => void
 }
 
-/** The quote's own booking-window codes: the slot is gone or the chosen time no longer fits the venue's
- *  lead/advance-booking rules — none of these can be fixed by anything on this screen, so the member goes
- *  back to When rather than being offered a "try again" that would fail the same way. */
-const WINDOW_CODES = new Set(['slot_taken', 'too_soon', 'too_far_ahead'])
-
-/** service_id/start_at/etc. only — notes are sent at confirm (Task 17), never here: they cost nothing to
- *  change, so they must not perturb the quote's query key and re-fetch a price that hasn't moved. */
+// The quote's body and the booking-window codes are steps.ts's (shared with the members' app); re-exported for PayStep.
 // eslint-disable-next-line react-refresh/only-export-components
-export function quoteBody(state: BookState): QuoteBody {
-  return {
-    service_id: state.serviceId!,
-    master_id: state.masterId,
-    start_at: state.startAt!,
-    party_size: state.partySize,
-    extras: state.extras.map(id => ({ id, quantity: 1 })),
-    coupon: state.coupon,
-  }
-}
+export { quoteBody }
 
 /**
  * The quote query. `retry: false` — a 409/422 is a real answer from the server, not a network hiccup; show it at
@@ -70,7 +55,7 @@ export function ReviewStep({ catalogue, state, onChange, onBack, onContinue }: R
   const body = useMemo(() => quoteBody(state), [state])
   const quote = useQuery(quoteQueryOptions(body))
   const code = quote.isError ? apiErrorCode(quote.error) : null
-  const windowCode = code !== null && WINDOW_CODES.has(code) ? code : null
+  const windowCode = isWindowCode(code) ? code : null
   const quoteHasCouponError = code !== null && code.startsWith('coupon_')
   const otherError = quote.isError && !windowCode && !quoteHasCouponError && code !== 'extra_lead_time'
 

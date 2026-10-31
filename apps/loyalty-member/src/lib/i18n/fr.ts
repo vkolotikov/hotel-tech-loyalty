@@ -39,6 +39,7 @@ export const fr: Record<Key, string> = {
   'card.show': 'Montrez ce code à l’accueil',
   'card.noCode': 'Le code n’a pas pu s’afficher. Tirez vers le bas pour réessayer.',
 
+  'list.more': 'Afficher plus',
   'more.title': 'Plus',
   'more.venue': 'Votre établissement',
   'more.preferences': 'Préférences',

@@ -43,6 +43,7 @@ export const en = {
   'card.show': 'Show this code at the desk',
   'card.noCode': 'Your code could not be shown. Pull down to try again.',
 
+  'list.more': 'Show more',
   'more.title': 'More',
   'more.venue': 'Your venue',
   'more.preferences': 'Preferences',

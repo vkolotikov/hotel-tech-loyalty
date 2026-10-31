@@ -13,6 +13,7 @@ import { formatDay } from '../../shared/portal'
 import { MemberCard } from '../../components/MemberCard'
 import { ActivityRow } from '../../components/ActivityRow'
 import { CreditTile, NextEventCard, StampCard } from '../../components/Programme'
+import { NextBooking } from '../../components/Bookings'
 import { Avatar, Backdrop, IconBadge, Notice, Picture, Press, SectionTitle, Shimmer, Surface } from '../../components/ui'
 
 /**
@@ -87,6 +88,7 @@ export default function Home() {
           </View>
         )}
 
+        {member && venue && data && (data.capabilities.services || data.capabilities.stays) && <NextBooking venue={venue} capabilities={data.capabilities} />}
         {member && data?.capabilities.loyalty && <CreditTile />}
         {member && data?.capabilities.loyalty && <StampCard />}
         {member && data?.capabilities.events && <NextEventCard />}

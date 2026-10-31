@@ -78,6 +78,12 @@
           "icon": "./assets/notification-icon.png",
           "color": "#c9a84c"
         }
+      ],
+      [
+        "@stripe/stripe-react-native",
+        {
+          "enableGooglePay": false
+        }
       ]
     ],
     "experiments": {

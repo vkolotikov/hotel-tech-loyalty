@@ -3,7 +3,8 @@
  * (src/shared/portal.ts re-exports frontend/src/portal/lib/types.ts), so the two never drift.
  */
 export type {
-  Activity, Benefit, CardPayload, Claim, InboxNotification, LaravelPage, Offer, Paginated, PortalBooking, PortalBootstrap,
+  Activity, Benefit, BookingKind, CancelReply, Catalogue, CatalogueService, CatalogueMaster, CatalogueExtra, CatalogueRules, Slot, CouponRef,
+  Quote, QuoteBody, ConfirmBody, PaymentIntentReply, ResolvedCoupon, CardPayload, Claim, InboxNotification, LaravelPage, Offer, Paginated, PortalBooking, PortalBootstrap,
   PortalCapabilities, PortalMember, PortalVenue, Redemption, Reward, Tier, MessageKind, NotificationPreferences,
   PortalEvent, PortalEvents, AttendedEvent, MemberStamps, MemberCredit,
 } from '../shared/portal'

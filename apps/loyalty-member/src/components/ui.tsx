@@ -119,18 +119,19 @@ export function GoldButton({ title, onPress, icon, busy, disabled, style }: {
 }
 
 /** A quieter button: outlined, for the second choice. */
-export function GhostButton({ title, onPress, icon, tone = C.text, disabled, style }: {
+export function GhostButton({ title, onPress, icon, tone = C.text, disabled, busy, style }: {
   title: string
   onPress: () => void
   icon?: IconName
   tone?: string
   disabled?: boolean
+  busy?: boolean
   style?: StyleProp<ViewStyle>
 }) {
   return (
-    <Press onPress={onPress} disabled={disabled} label={title} style={style}>
-      <View style={[styles.button, styles.ghost]}>
-        {icon && <Ionicons name={icon} size={18} color={tone} />}
+    <Press onPress={onPress} disabled={disabled || busy} label={title} style={style}>
+      <View style={[styles.button, styles.ghost, (disabled || busy) && { opacity: 0.6 }]}>
+        {busy ? <ActivityIndicator color={tone} /> : icon && <Ionicons name={icon} size={18} color={tone} />}
         <Text style={[fonts.button, { color: tone }]}>{title}</Text>
       </View>
     </Press>

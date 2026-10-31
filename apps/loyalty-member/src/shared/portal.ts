@@ -13,10 +13,21 @@ export { isUnread, openNotification, afterReadOne, afterReadAll, canMarkAllRead 
 export { TOPICS, questionsFor, topicsFor, showsSteps, STEPS, stepWords, questionWords, topicWord, fold, narrow, type TopicId, type QuestionId } from '../../../../frontend/src/portal/pages/help/helpMath'
 export { messageKinds, preferencesOf, messageBody, applyMessageChange, marketingNeedsEmail, smsSwitch, type MessageChange, type ChannelField } from '../../../../frontend/src/portal/pages/profile/messages'
 export type {
-  Activity, Benefit, BookingKind, CardPayload, Claim, InboxNotification, LaravelPage, Offer, Paginated, PortalBooking,
+  Activity, Benefit, BookingKind, CancelReply, Catalogue, CatalogueService, CatalogueMaster, CatalogueExtra, CatalogueRules, Slot, CouponRef, Quote, QuoteBody, ConfirmBody, PaymentIntentReply, ResolvedCoupon, CardPayload, Claim, InboxNotification, LaravelPage, Offer, Paginated, PortalBooking,
   PortalBootstrap, PortalCapabilities, PortalMember, PortalVenue, Redemption, Reward, Tier, MessageKind, NotificationPreferences,
   PortalEvent, PortalEvents, AttendedEvent, MemberStamps, MemberCredit,
 } from '../../../../frontend/src/portal/lib/types'
 export { actionOf, noteOf, whenPhrase, dateBlock, nextEvent, pastEvents, errorPhrase, whyPhrase, counted as eventCounted, type Phrase as EventPhrase } from '../../../../frontend/src/portal/pages/events/eventMath'
 export { vocabKey, vocabIndustry, type VocabNoun } from '../../../../frontend/src/portal/lib/industry'
 export { stampFace, toGoPhrase as stampToGo, rewardPhrase as stampReward, type StampFace } from '../../../../frontend/src/portal/pages/stamps/stampMath'
+export { cancelOffer, moneyPromise, afterCancelError } from '../../../../frontend/src/portal/pages/cancelBooking'
+export { statusTone, statusLabel, bookingPaymentLabel, type ChipTone } from '../../../../frontend/src/portal/pages/bookingLabels'
+export { bookErrorKey, bookErrorFallback, cancelErrorKey, cancelErrorFallback } from '../../../../frontend/src/portal/lib/bookErrors'
+export { nightsAndGuests } from '../../../../frontend/src/portal/lib/plural'
+export { bookDestination } from '../../../../frontend/src/portal/pages/bookDestination'
+export { nextHeading } from '../../../../frontend/src/portal/pages/homeMath'
+export {
+  STEPS as BOOK_STEPS, bookReducer, initialState as bookInitialState, mastersFor, visibleDay, afterQuoteError, newPayVisit, payAtVenueGrantOf,
+  retryOnlineVisit, canTryOnlineAgain, canLeavePay, afterConfirmError, refreshAfterCouponResolved, quoteBody, isWindowCode, couponChoices,
+  sameCoupon, addDays, chargesNothing, type Step as BookStep, type BookState, type BookAction, type ReviewPatch, type PayVisit,
+} from '../../../../frontend/src/portal/pages/book/steps'

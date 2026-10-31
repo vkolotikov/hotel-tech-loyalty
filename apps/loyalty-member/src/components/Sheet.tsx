@@ -1,16 +1,21 @@
 import type { ReactNode } from 'react'
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native'
-import { router } from 'expo-router'
+import { router, usePreventRemove } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
 import { C, fonts } from '../lib/theme'
 import { useT } from '../lib/i18n'
 import { Backdrop, Press } from './ui'
 
-/** A modal screen's frame: its title, a close button, and the form scrolling above the keyboard. */
-export function Sheet({ title, line, children }: { title: string; line?: string; children: ReactNode }) {
+/**
+ * A modal screen's frame: its title, a close button, and the form scrolling above the keyboard. While `busy` (a
+ * cancellation or a payment in flight) the sheet cannot be closed, by its button, a swipe or the phone's Back: the
+ * member stays to see what happened to their money.
+ */
+export function Sheet({ title, line, children, busy = false }: { title: string; line?: string; children: ReactNode; busy?: boolean }) {
   const insets = useSafeAreaInsets()
   const { tp } = useT()
+  usePreventRemove(busy, () => {})
   return (
     <Backdrop>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
@@ -20,8 +25,8 @@ export function Sheet({ title, line, children }: { title: string; line?: string;
               <Text style={[fonts.title, { color: C.text }]}>{title}</Text>
               {line ? <Text style={[fonts.small, { color: C.text2 }]}>{line}</Text> : null}
             </View>
-            <Press onPress={() => router.back()} label={tp('portal.common.close')}>
-              <View style={styles.close}><Ionicons name="close" size={22} color={C.text} /></View>
+            <Press onPress={() => router.back()} label={tp('portal.common.close')} disabled={busy}>
+              <View style={[styles.close, busy && { opacity: 0.4 }]}><Ionicons name="close" size={22} color={C.text} /></View>
             </Press>
           </View>
           {children}

@@ -40,6 +40,7 @@ export const es: Record<Key, string> = {
   'card.show': 'Muestre este código en la recepción',
   'card.noCode': 'No se pudo mostrar el código. Deslice hacia abajo para intentarlo de nuevo.',
 
+  'list.more': 'Mostrar más',
   'more.title': 'Más',
   'more.venue': 'Su establecimiento',
   'more.preferences': 'Preferencias',
