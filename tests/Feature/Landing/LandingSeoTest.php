@@ -464,25 +464,7 @@ class LandingSeoTest extends TestCase
         }
     }
 
-    /**
-     * @dataProvider bandSuppressedByItsSectionRow
-     *
-     * reviewStats and has('reviews') are not the whole gate, and gating the
-     * markup on them was the same defect through a different door. The
-     * section loop skips a row whose `enabled` is false, and a page can
-     * simply have no `reviews` row at all — a template rollback, a section
-     * set written before `reviews` existed, or a tenant who switched the
-     * band off. In both states the tenant has four featured, rated reviews,
-     * so both of those switches say yes, and the page still renders no band
-     * anywhere. Publishing an aggregateRating over that is invisible
-     * structured data, which Google's structured data policies forbid
-     * outright and which risks a manual action against the tenant's whole
-     * site.
-     *
-     * The JSON-LD block itself must SURVIVE — a page is not fixed by losing
-     * its LocalBusiness node — so the business name is asserted out of the
-     * decoded payload rather than the absences alone.
-     */
+    #[\PHPUnit\Framework\Attributes\DataProvider('bandSuppressedByItsSectionRow')]
     public function test_no_aggregate_rating_is_published_when_the_band_is_switched_off(int $brandId, string $slug, string $how): void
     {
         $page = $this->published($brandId, $slug);
@@ -556,7 +538,7 @@ class LandingSeoTest extends TestCase
         ];
     }
 
-    /** @dataProvider industryProvider */
+    #[\PHPUnit\Framework\Attributes\DataProvider('industryProvider')]
     public function test_the_schema_type_matches_the_pages_industry(string $industry, string $expectedType): void
     {
         // The slug route is constrained to [a-z0-9-]+ (routes/landing.php) —

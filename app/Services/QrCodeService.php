@@ -9,6 +9,7 @@ use Endroid\QrCode\ErrorCorrectionLevel;
 use Endroid\QrCode\RoundBlockSizeMode;
 use Endroid\QrCode\Writer\PngWriter;
 use Endroid\QrCode\Writer\SvgWriter;
+use Endroid\QrCode\Writer\WriterInterface;
 use Illuminate\Support\Str;
 
 class QrCodeService
@@ -88,34 +89,27 @@ class QrCodeService
 
     private function buildQrPng(string $data): string
     {
-        $result = Builder::create()
-            ->writer(new PngWriter())
-            ->writerOptions([])
-            ->data($data)
-            ->encoding(new Encoding('UTF-8'))
-            ->errorCorrectionLevel(ErrorCorrectionLevel::High)
-            ->size(300)
-            ->margin(10)
-            ->roundBlockSizeMode(RoundBlockSizeMode::Margin)
-            ->build();
-
-        return base64_encode($result->getString());
+        return base64_encode($this->build(new PngWriter(), $data));
     }
 
     private function buildQrSvg(string $data): string
     {
-        $result = Builder::create()
-            ->writer(new SvgWriter())
-            ->writerOptions([])
-            ->data($data)
-            ->encoding(new Encoding('UTF-8'))
-            ->errorCorrectionLevel(ErrorCorrectionLevel::High)
-            ->size(300)
-            ->margin(10)
-            ->roundBlockSizeMode(RoundBlockSizeMode::Margin)
-            ->build();
+        return $this->build(new SvgWriter(), $data);
+    }
 
-        return $result->getString();
+    /** One QR code (endroid/qr-code 6: the builder takes its options in the constructor). */
+    private function build(WriterInterface $writer, string $data): string
+    {
+        return (new Builder(
+            writer: $writer,
+            writerOptions: [],
+            data: $data,
+            encoding: new Encoding('UTF-8'),
+            errorCorrectionLevel: ErrorCorrectionLevel::High,
+            size: 300,
+            margin: 10,
+            roundBlockSizeMode: RoundBlockSizeMode::Margin,
+        ))->build()->getString();
     }
 
     /**

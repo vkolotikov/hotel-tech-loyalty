@@ -456,7 +456,7 @@ class MemberMergeServiceTest extends TestCase
         return $cases;
     }
 
-    /** @dataProvider memberColumns */
+    #[\PHPUnit\Framework\Attributes\DataProvider('memberColumns')]
     public function test_every_row_that_names_the_loser_moves_to_the_winner(string $table, string $column): void
     {
         $this->assertTrue(Schema::hasTable($table) && Schema::hasColumn($table, $column), "{$table}.{$column} is missing from the test schema");

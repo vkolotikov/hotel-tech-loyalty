@@ -71,7 +71,7 @@ class WidgetColourInjectionTest extends TestCase
         return implode("\n", $m[0]);
     }
 
-    /** @dataProvider publicWidgetRoutes */
+    #[\PHPUnit\Framework\Attributes\DataProvider('publicWidgetRoutes')]
     public function test_a_crafted_colour_cannot_inject_css(string $uri): void
     {
         $declarations = $this->colourDeclarations($uri . '?color=' . urlencode(self::PAYLOAD));
@@ -84,7 +84,7 @@ class WidgetColourInjectionTest extends TestCase
             "{$uri} let the payload close the declaration it was placed in.");
     }
 
-    /** @dataProvider publicWidgetRoutes */
+    #[\PHPUnit\Framework\Attributes\DataProvider('publicWidgetRoutes')]
     public function test_the_whole_document_is_free_of_the_payload(string $uri): void
     {
         // Colour reaches more than one sink: a <style> block, a theme-color
@@ -96,7 +96,7 @@ class WidgetColourInjectionTest extends TestCase
             "{$uri} still reflects the payload somewhere in the document.");
     }
 
-    /** @dataProvider publicWidgetRoutes */
+    #[\PHPUnit\Framework\Attributes\DataProvider('publicWidgetRoutes')]
     public function test_a_legitimate_colour_still_works(string $uri): void
     {
         // The fix must not cost every embedded widget its brand colour.
@@ -106,7 +106,7 @@ class WidgetColourInjectionTest extends TestCase
             "{$uri} dropped a valid brand colour.");
     }
 
-    /** @dataProvider publicWidgetRoutes */
+    #[\PHPUnit\Framework\Attributes\DataProvider('publicWidgetRoutes')]
     public function test_an_omitted_colour_falls_back_rather_than_emitting_nothing(string $uri): void
     {
         // An empty custom property cascades to an invalid value and the widget

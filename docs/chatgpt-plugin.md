@@ -142,6 +142,13 @@ Select streamable HTTP and use the environment's `/mcp` URL. Walk through OAuth 
 
 Verify a second organization is refused when it is not allowlisted. Confirm a subscription cancellation is enforced after the signed invalidation event or snapshot expiry, and that a billing verification failure does not grant access. Confirm the intended billing principal works for locally invited staff without changing the requesting user's tool permissions. Disconnect through `/account/connections`, then verify both the previous access token and refresh token fail. Test the page while the pilot is disabled and while the subscription is expired.
 
+Since 2026-10-31 the server runs `laravel/mcp` 1.x, which speaks MCP revision `2026-07-28` (`server/discover`, the
+revision and client capabilities in each request's `params._meta`, and the `MCP-Protocol-Version`, `Mcp-Method` and
+`Mcp-Name` headers, checked against the body) and still answers clients that open with `initialize` on `2025-11-25`,
+`2025-06-18` or `2025-03-26`. A JSON-RPC protocol error now carries a matching HTTP status (unknown method 404, header
+mismatch 400 with `-32020`, internal error 500); a tool's own failure stays HTTP 200 with `result.isError`. There are no
+MCP sessions any more (`Mcp-Session-Id` is ignored).
+
 For browser-based clients, verify MCP preflight accepts the configured origin and protocol headers and exposes the authentication challenge; unrelated API CORS behavior is unchanged. Exercise two staff identities behind the same source address: each has its own authenticated 60/minute quota, with separate coarse network abuse limits. The response's `Retry-After` should guide retries.
 
 Use these chat prompts as a repeatable evaluation set:

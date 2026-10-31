@@ -36,13 +36,11 @@ use PHPUnit\Framework\TestCase;
  */
 class BookingEngineServiceTransientErrorTest extends TestCase
 {
-    /**
-     * @testWith ["HTTP 500 Internal Server Error from Smoobu"]
-     *           ["HTTP 502 Bad Gateway"]
-     *           ["HTTP 503 Service Unavailable"]
-     *           ["HTTP 504 Gateway Timeout"]
-     *           ["HTTP/500 returned by upstream"]
-     */
+    #[\PHPUnit\Framework\Attributes\TestWith(['HTTP 500 Internal Server Error from Smoobu'])]
+    #[\PHPUnit\Framework\Attributes\TestWith(['HTTP 502 Bad Gateway'])]
+    #[\PHPUnit\Framework\Attributes\TestWith(['HTTP 503 Service Unavailable'])]
+    #[\PHPUnit\Framework\Attributes\TestWith(['HTTP 504 Gateway Timeout'])]
+    #[\PHPUnit\Framework\Attributes\TestWith(['HTTP/500 returned by upstream'])]
     public function test_5xx_status_codes_are_transient(string $msg): void
     {
         $this->assertTrue(BookingEngineService::isTransientSmoobuError($msg),
@@ -60,25 +58,21 @@ class BookingEngineServiceTransientErrorTest extends TestCase
         ));
     }
 
-    /**
-     * @testWith ["cURL error 28: Operation timed out"]
-     *           ["Connection timeout after 30 seconds"]
-     *           ["Request timed out"]
-     *           ["Network connection lost"]
-     */
+    #[\PHPUnit\Framework\Attributes\TestWith(['cURL error 28: Operation timed out'])]
+    #[\PHPUnit\Framework\Attributes\TestWith(['Connection timeout after 30 seconds'])]
+    #[\PHPUnit\Framework\Attributes\TestWith(['Request timed out'])]
+    #[\PHPUnit\Framework\Attributes\TestWith(['Network connection lost'])]
     public function test_timeout_and_network_errors_are_transient(string $msg): void
     {
         $this->assertTrue(BookingEngineService::isTransientSmoobuError($msg),
             "Network-shaped error '{$msg}' must be classified as transient.");
     }
 
-    /**
-     * @testWith ["cURL error 6: Could not resolve host: login.smoobu.com"]
-     *           ["getaddrinfo failure"]
-     *           ["ECONNREFUSED 127.0.0.1:443"]
-     *           ["ENOTFOUND login.smoobu.com"]
-     *           ["Connection reset by peer"]
-     */
+    #[\PHPUnit\Framework\Attributes\TestWith(['cURL error 6: Could not resolve host: login.smoobu.com'])]
+    #[\PHPUnit\Framework\Attributes\TestWith(['getaddrinfo failure'])]
+    #[\PHPUnit\Framework\Attributes\TestWith(['ECONNREFUSED 127.0.0.1:443'])]
+    #[\PHPUnit\Framework\Attributes\TestWith(['ENOTFOUND login.smoobu.com'])]
+    #[\PHPUnit\Framework\Attributes\TestWith(['Connection reset by peer'])]
     public function test_dns_and_socket_errors_are_transient(string $msg): void
     {
         // DNS + socket-level failures are infrastructure events —
@@ -98,12 +92,10 @@ class BookingEngineServiceTransientErrorTest extends TestCase
         ));
     }
 
-    /**
-     * @testWith ["The service is temporarily unavailable. Please try again."]
-     *           ["Service Unavailable"]
-     *           ["Internal Server Error"]
-     *           ["Bad Gateway"]
-     */
+    #[\PHPUnit\Framework\Attributes\TestWith(['The service is temporarily unavailable. Please try again.'])]
+    #[\PHPUnit\Framework\Attributes\TestWith(['Service Unavailable'])]
+    #[\PHPUnit\Framework\Attributes\TestWith(['Internal Server Error'])]
+    #[\PHPUnit\Framework\Attributes\TestWith(['Bad Gateway'])]
     public function test_human_readable_infrastructure_strings_are_transient(string $msg): void
     {
         // Proxy-side error PAGES often deliver these strings as plain

@@ -74,14 +74,12 @@ class EngagementFeedServiceScoreHotLeadTest extends TestCase
         $this->assertTrue($hot);
     }
 
-    /**
-     * @testWith ["/book"]
-     *           ["/book/forrest-cabin"]
-     *           ["/rooms"]
-     *           ["/rooms/beach-suite"]
-     *           ["/services"]
-     *           ["/services/spa-package"]
-     */
+    #[\PHPUnit\Framework\Attributes\TestWith(['/book'])]
+    #[\PHPUnit\Framework\Attributes\TestWith(['/book/forrest-cabin'])]
+    #[\PHPUnit\Framework\Attributes\TestWith(['/rooms'])]
+    #[\PHPUnit\Framework\Attributes\TestWith(['/rooms/beach-suite'])]
+    #[\PHPUnit\Framework\Attributes\TestWith(['/services'])]
+    #[\PHPUnit\Framework\Attributes\TestWith(['/services/spa-package'])]
     public function test_booking_path_pages_make_lead_hot(string $page): void
     {
         // Visitor on a booking-funnel page = high intent. The
@@ -100,12 +98,10 @@ class EngagementFeedServiceScoreHotLeadTest extends TestCase
             "Booking-path page '{$page}' must mark lead as hot.");
     }
 
-    /**
-     * @testWith ["/about"]
-     *           ["/contact"]
-     *           ["/blog/welcome-post"]
-     *           ["/"]
-     */
+    #[\PHPUnit\Framework\Attributes\TestWith(['/about'])]
+    #[\PHPUnit\Framework\Attributes\TestWith(['/contact'])]
+    #[\PHPUnit\Framework\Attributes\TestWith(['/blog/welcome-post'])]
+    #[\PHPUnit\Framework\Attributes\TestWith(['/'])]
     public function test_non_booking_pages_do_not_trigger_booking_path_signal(string $page): void
     {
         // Non-funnel pages must NOT match the booking-path heuristic.
@@ -202,13 +198,11 @@ class EngagementFeedServiceScoreHotLeadTest extends TestCase
         $this->assertTrue($hot);
     }
 
-    /**
-     * @testWith ["info_request"]
-     *           ["complaint"]
-     *           ["support"]
-     *           ["spam"]
-     *           ["other"]
-     */
+    #[\PHPUnit\Framework\Attributes\TestWith(['info_request'])]
+    #[\PHPUnit\Framework\Attributes\TestWith(['complaint'])]
+    #[\PHPUnit\Framework\Attributes\TestWith(['support'])]
+    #[\PHPUnit\Framework\Attributes\TestWith(['spam'])]
+    #[\PHPUnit\Framework\Attributes\TestWith(['other'])]
     public function test_non_booking_intents_do_not_trigger_intent_signal(string $intent): void
     {
         // Only booking_inquiry counts for the intent-tag heuristic.

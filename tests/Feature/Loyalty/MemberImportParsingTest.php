@@ -161,7 +161,7 @@ class MemberImportParsingTest extends TestCase
         $this->assertSame('The file is empty.', $this->svc()->parseFile($this->csv(''))['error']);
     }
 
-    /** @dataProvider numberFormats */
+    #[\PHPUnit\Framework\Attributes\DataProvider('numberFormats')]
     public function test_parses_real_world_number_formats(string $input, int $expected): void
     {
         $svc = $this->svc();

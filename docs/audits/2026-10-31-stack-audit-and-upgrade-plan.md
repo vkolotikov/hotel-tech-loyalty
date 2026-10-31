@@ -372,6 +372,31 @@ checks. Laravel 13 keeps security fixes until about March 2028, so there is no p
 - `.env.example`: `ANTHROPIC_MODEL=claude-sonnet-5` (was the retired `claude-sonnet-4-20250514`).
 - `composer.json`: `php ^8.4` (the lock already required 8.4.1).
 
+### 31 October 2026, later: phase 3 done; phase 4 steps a to e (owner: "do next")
+
+- **Phase 3, PHP 8.5:** the owner switched Laravel Cloud to PHP 8.5. The suites pass on 8.5.12, and CI now runs the
+  PostgreSQL and Larastan jobs on 8.5 (the SQLite suites run on 8.4 and 8.5). `composer.json` stays at `php ^8.4`
+  because the workstation's pinned PHP is 8.4.20 (CLAUDE.md). Raise it to `^8.5` once that machine runs 8.5.12; it
+  should be updated anyway, because 8.4.20 predates the October security release.
+- **4a, PHPUnit 11 → 13** (test-only): Rector turned the 23 annotations into attributes; same results (7,249 passed).
+- **4b, Anthropic PHP SDK 0.36 → 1.3**: the Content Planner now sends API version `2026-10-21`, its key as
+  `Authorization: Bearer`, and no sampling parameters. Done by Anthropic's migration guide; a new test pins the request.
+  **Still on `2023-06-01`:** five direct HTTP calls to Anthropic (chat widget `DispatchesAiChat`, chatbot settings
+  test, CRM AI, the settings key check, `CrmAiService`). The chat widget and chatbot settings send the venue's
+  configured `temperature`, which `2026-10-21` refuses. Moving them means **an owner decision:** either drop the
+  temperature setting (default sampling), or keep those calls on `2023-06-01`.
+- **4c, openai-php 0.19 → 0.21**: only these two packages changed. Every call the app makes was checked against 0.21.
+- **4d, laravel/mcp 0.9 → 1.1** (ChatGPT plugin):
+  - The library speaks MCP `2026-07-28` and still serves clients on the older `initialize` handshake.
+  - JSON-RPC protocol errors now carry an HTTP status (unknown method: 404).
+  - CORS now allows the new `Mcp-Method` / `Mcp-Name` headers.
+  - A new test drives a `2026-07-28` client through the plugin's middleware.
+  - Recorded in `docs/chatgpt-plugin.md`. Worth a real ChatGPT connection test after deploy.
+- **4e, endroid/qr-code 5 → 6**: same QR codes (SVG byte-identical; PNG pixel-identical within 4/255, now a
+  palette image).
+- Not done in this round, as planned: **4f spatie/laravel-permission 6 → 8** and **4g Stripe** (money: needs Stripe
+  test-mode keys to check against the real API), and Guzzle 8 (still blocked by openai-php).
+
 ---
 
 ## 9. Sources

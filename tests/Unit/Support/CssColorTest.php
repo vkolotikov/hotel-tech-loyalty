@@ -17,7 +17,7 @@ class CssColorTest extends TestCase
         );
     }
 
-    /** @dataProvider hostilePayloads */
+    #[\PHPUnit\Framework\Attributes\DataProvider('hostilePayloads')]
     public function test_it_rejects_anything_that_is_not_a_hex_colour(string $payload): void
     {
         $this->assertSame(CssColor::FALLBACK, CssColor::safe($payload));

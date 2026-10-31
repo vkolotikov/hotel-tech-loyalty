@@ -102,9 +102,8 @@ class ChatFrameTest extends TestCase
      * uuid", i.e. a 500 on an unauthenticated route anyone can call with
      * anything. WidgetChatController::resolveWidget() guards it for that
      * reason and this route mirrors the guard rather than re-deciding it.
-     *
-     * @dataProvider keysThatAreNotWidgetKeys
      */
+    #[\PHPUnit\Framework\Attributes\DataProvider('keysThatAreNotWidgetKeys')]
     public function test_a_non_uuid_key_is_a_404_rather_than_a_database_type_error(string $key): void
     {
         $this->widget();
@@ -241,9 +240,8 @@ class ChatFrameTest extends TestCase
      * normalises it — /chat-frame/../login is /login, which is the admin
      * panel. Same for a smuggled query or fragment (the query belongs in
      * widgetUrl()'s own parameter) and for the protocol-relative //host shape.
-     *
-     * @dataProvider pathsFrameSrcMustRefuse
      */
+    #[\PHPUnit\Framework\Attributes\DataProvider('pathsFrameSrcMustRefuse')]
     public function test_a_path_that_escapes_its_permitted_prefix_is_refused(string $path): void
     {
         $this->expectException(\InvalidArgumentException::class);
