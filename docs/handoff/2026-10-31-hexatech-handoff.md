@@ -6,11 +6,12 @@ environment). AGENTS.md and CLAUDE.md still apply.
 
 ## Production
 
-Production is **4c59696c2**: request alerts on staff phones (`a199f1f8c`: the `staff_devices` table,
+Production is **48b12f04c**: request alerts on staff phones (`a199f1f8c`: the `staff_devices` table,
 `PUT/DELETE /v1/admin/loyalty/devices`, `StaffAlerts`, and three fixes that made main's red tests green), the native
 apps' minimum-version answer (`54d61cd8c`: `GET /api/v1/apps/{app}/version`, `config/apps.php`), then the members'
-app server part (`DELETE /v1/auth/push-token`, `member` in `config/apps.php`, the portal's shared types). Records:
-`docs/loyalty-workspace.md` "Deploying". The next source-patch baseline is **4a1494c62** on
+app server part (`4c59696c2`: `DELETE /v1/auth/push-token`, `member` in `config/apps.php`, the portal's shared types),
+then the portal's booking rules moved into shared files (`48b12f04c`, no behaviour change). Records:
+`docs/loyalty-workspace.md` "Deploying". The next source-patch baseline is **01eaa03b6** on
 `feature/loyalty-member-app`, with `apps/` left out of any Cloud deploy.
 
 ## New: HexaTech Staff, the native desk app

@@ -857,6 +857,15 @@ files on disk): run them one after the other.
 
 ## Deploying
 
+- Portal booking rules shared with the members' app, 2026-10-31: production **48b12f04c** on **4c59696c2**, feature
+  source **01eaa03b6** on `feature/loyalty-member-app`. 20 paths (3 added, 17 changed, no deletions), frontend and docs
+  only; `apps/` stays on the branch. The portal's booking error sentences, booking labels, Book entry choice and
+  booking-flow decisions moved into framework-free files (`lib/bookErrors.ts`, `pages/bookingLabels.ts`,
+  `pages/bookDestination.ts`, `pages/book/steps.ts`, `pages/stay/staySteps.ts`), no behaviour change. No migration.
+  Parity: every listed file and the whole source outside the apps equal the tip. Artifact: PHP **77 scopes, 7,245
+  passed / 16 skipped / 0 failed**; frontend tsc, **5,778 tests / 399 files**, fresh build committed. Verified by
+  content on `origin/main` (20/20); no live check (the production host is not reachable from the cloud container).
+
 - Members' app server part, 2026-10-31: production **4c59696c2** on **54d61cd8c**, feature source **4a1494c62** on
   `feature/loyalty-member-app`. 18 paths (4 added, 14 changed, no deletions); `apps/loyalty-member` stays on the branch
   (EAS, not Cloud). `DELETE /v1/auth/push-token` (a member's phone forgets its own push token at sign-out),
