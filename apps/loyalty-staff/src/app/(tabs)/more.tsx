@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Alert, Platform, ScrollView, StyleSheet, Switch, Text, View } from 'react-native'
+import { Alert, Linking, Platform, ScrollView, StyleSheet, Switch, Text, View } from 'react-native'
 import * as WebBrowser from 'expo-web-browser'
 import * as LocalAuthentication from 'expo-local-authentication'
 import Constants from 'expo-constants'
@@ -25,13 +25,15 @@ const WEB_PAGES: { path: string; label: Key; icon: IconName; color: string }[] =
   { path: 'guide', label: 'more.guide', icon: 'book-outline', color: C.goldLight },
 ]
 
-/** More: who is signed in, the workspace pages on the web, the language, the lock, and signing out. */
+/** More: who is signed in, the workspace pages on the web, the language, the lock, request alerts, and signing out. */
 export default function More() {
   const insets = useSafeAreaInsets()
   const { t, language } = useT()
   const boot = useBoot()
   const user = useSession(s => s.user)
   const lock = usePrefs(s => s.lock)
+  const alerts = usePrefs(s => s.alerts)
+  const alertsState = usePrefs(s => s.alertsState)
   const [lockProblem, setLockProblem] = useState(false)
 
   const toggleLock = async (on: boolean) => {
@@ -109,6 +111,21 @@ export default function More() {
               <Switch value={lock} onValueChange={on => { void toggleLock(on) }} trackColor={{ true: C.gold, false: C.surface3 }} thumbColor="#fff" />
             </View>
             {lockProblem && <Notice tone="warning" text={t('more.lockMissing')} />}
+            <View style={styles.lockRow}>
+              <View style={{ flex: 1, gap: 2 }}>
+                <Text style={[fonts.bodyStrong, { color: C.text }]}>{t('more.alerts')}</Text>
+                <Text style={[fonts.small, { color: C.text2 }]}>{t('more.alertsLine')}</Text>
+              </View>
+              <Switch
+                value={alerts && alertsState !== 'blocked' && alertsState !== 'unavailable'}
+                disabled={alertsState === 'unavailable'}
+                onValueChange={on => { void usePrefs.getState().setAlerts(on) }}
+                trackColor={{ true: C.gold, false: C.surface3 }}
+                thumbColor="#fff"
+              />
+            </View>
+            {alertsState === 'blocked' && <Notice tone="warning" text={t('more.alertsBlocked')} action={t('more.alertsSettings')} onAction={() => { void Linking.openSettings() }} />}
+            {alertsState === 'unavailable' && <Text style={[fonts.small, { color: C.text3 }]}>{t('more.alertsUnavailable')}</Text>}
           </Surface>
         </View>
 

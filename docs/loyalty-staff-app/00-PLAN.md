@@ -13,6 +13,8 @@ modern, luxury, poverfull, easy to use nice design".
   preview against the local API with real data: every screen photographed at phone size, sign in and sign out (the
   token is revoked on the server), a scan by typed code at the desk and at a tiers-only place, and points given
   through the sheet (one request, balance moved by exactly the amount).
+- **Request alerts (2026-10-31):** a member's new benefit request reaches every active staff phone, a claimed
+  reward the phones of those who may hand it over; tapping one opens Requests. Server tests on SQLite and PostgreSQL.
 - **Not yet checked: a phone.** NFC and the camera only run in a phone build. The next step is the owner's EAS
   development build and the acceptance list in the README.
 - **Production is unchanged.** The app uses only endpoints already live; nothing in this repository's web or server
@@ -63,7 +65,7 @@ modern, luxury, poverfull, easy to use nice design".
 |---|---|---|
 | 1. Phone builds | EAS development build for Android and iPhone; install on the owner's phones | Owner signs in to Expo (or adds an `EXPO_TOKEN` secret to this environment); agent runs it |
 | 2. Acceptance | The list in the README: NFC on both phones with the real cards, QR in poor light, typed codes, door answers, points, check-in, linking a card, requests, lock, five languages | Owner with the agent |
-| 3. Push for new requests | Register the staff device's push token; notify managers when a member sends a request (server change with tests, then `expo-notifications` in the app) | Agent |
+| 3. Push for new requests | **Built 2026-10-31**: server (`StaffAlerts`, `staff_devices`, deployed) and app (`src/lib/push.ts`, the switch in More). Needs the EAS project id, an Apple push key and FCM V1 credentials (README, "Request alerts") before a phone hears one | Owner sets up the credentials |
 | 4. Minimum version | A server answer naming the lowest app version still served, so an old app asks to update | Agent |
 | 5. Stores | Store texts in five languages, screenshots, privacy and data-safety forms, a demo staff login for Apple's review, the unlisted request; TestFlight and Play internal test, then release | Agent prepares, owner submits |
 

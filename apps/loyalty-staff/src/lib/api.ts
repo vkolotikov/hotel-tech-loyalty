@@ -101,6 +101,11 @@ export const api = {
   signOut: (token: string): Promise<unknown> => send('DELETE', '/v1/auth/logout', undefined, undefined, token),
 
   bootstrap: (): Promise<Bootstrap> => read(loyaltyPath('bootstrap')),
+  /** This phone, for request alerts: registered after sign-in and on every start, with its language and switch. */
+  saveDevice: (device: { token: string; platform: 'ios' | 'android'; language: string; alerts: boolean }): Promise<{ device: { alerts: boolean; language: string } }> =>
+    send('PUT', loyaltyPath('devices'), device),
+  /** Sent with the session's own token while signing out, so a refusal cannot sign out twice. */
+  removeDevice: (token: string, authToken: string): Promise<{ removed: boolean }> => send('DELETE', loyaltyPath('devices'), { token }, undefined, authToken),
   metrics: (): Promise<Envelope<Metrics>> => read(loyaltyPath('overview/metrics'), { period: '30d' }),
   activity: (): Promise<Envelope<Activity>> => read(loyaltyPath('overview/activity'), { filter: 'all' }),
 

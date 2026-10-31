@@ -1400,6 +1400,9 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
                 Route::post('requests/{id}/approve', [\App\Http\Controllers\Api\V1\Admin\Loyalty\RequestController::class, 'approve'])->whereNumber('id');
                 Route::post('requests/{id}/decline', [\App\Http\Controllers\Api\V1\Admin\Loyalty\RequestController::class, 'decline'])->whereNumber('id');
                 Route::post('requests/{id}/done', [\App\Http\Controllers\Api\V1\Admin\Loyalty\RequestController::class, 'done'])->whereNumber('id');
+                // The caller's own phone in the HexaTech Staff app, for request alerts (owner 2026-10-31).
+                Route::put('devices', [\App\Http\Controllers\Api\V1\Admin\Loyalty\DeviceController::class, 'save']);
+                Route::delete('devices', [\App\Http\Controllers\Api\V1\Admin\Loyalty\DeviceController::class, 'remove']);
                 Route::post('scan', [\App\Http\Controllers\Api\V1\Admin\Loyalty\ScanController::class, 'scan']);
                 // Release 5 (spec 2026-10-23 §3): a member's NFC cards — the list, link, switch off
                 Route::get('members/{id}/cards', [\App\Http\Controllers\Api\V1\Admin\Loyalty\CardsController::class, 'index'])->whereNumber('id');

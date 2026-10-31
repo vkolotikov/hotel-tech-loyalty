@@ -716,6 +716,32 @@ the scan screen, door mode, the member page and list, Program, Ways to earn, Eve
     (`OwnRows::rule(...)->whereNull('deleted_at')`); unscoped tier queries that build a ladder drop only the tenant
     scope (`withoutGlobalScope(TenantScope::class)`), so the soft delete still holds there.
 
+## Request alerts on staff phones (2026-10-31)
+
+Owner, 2026-10-31: "go ahead with push notifications for new requests" — for the HexaTech Staff app
+(`apps/loyalty-staff`, `docs/loyalty-staff-app/00-PLAN.md`).
+
+- **Phones.** `staff_devices` (migration `2026_10_31_120000`), one row per phone: an Expo push token is unique across
+  every organisation and belongs to whoever signed in on that phone last. The app sends `PUT devices` (`token`,
+  `platform`, `language`, `alerts`) after signing in and on every start, which keeps `last_seen_at` fresh, and
+  `DELETE devices` (`token`, only the caller's own) before signing out. A field not sent keeps its value.
+  `staff.expo_push_token` stays the Hotel Staff app's own single token; nothing here reads or writes it.
+- **Who hears what** (`Loyalty\Staff\StaffAlerts`, the only sender): a member's new benefit request
+  (`POST /v1/member/benefits/{id}/request`, the member app and the portal alike) goes to every active staff member's
+  phone, since any of them may approve it; a claimed reward (`POST /v1/member/rewards/{id}/redeem`) only to managers and
+  staff with `can_redeem_points`, who may hand it over. Only while the organisation has HexaTech Loyalty (workspace on,
+  in its plan), only phones with alerts on that the app reported within 60 days, each in the phone's language
+  (`lang/<lang>/staff_alerts.php`). The push data is `{type: 'staff_request', kind, id, organization_id}`; the app
+  opens Requests when it is tapped.
+- **The member never waits and never fails.** The two endpoints dispatch `AlertStaffOfRequest` after the response
+  (`dispatchAfterResponse`, no queue worker needed); its failures are logged (`Staff request alert failed`, or
+  `Push batch failed` from `NotificationService::pushMany()`). Each request is alerted at most once (a
+  `SharedCache` key per kind and id, one day). A phone Expo calls `DeviceNotRegistered` is deleted at once.
+- **What it does not do:** no alert for free rewards the programme issues itself (`RedemptionActions::issueFree()`),
+  for events or for anything a member did not ask for; no receipts round (Expo's later receipts are not read for staff
+  phones); no badge count on the app icon.
+- Tests: `tests/Feature/LoyaltyWorkspace/StaffAlertsTest.php` (SQLite and PostgreSQL).
+
 ## What the workspace does not do
 
 No bulk message from the members list (the full admin's bulk message and segment send keep it); no SMS delivery

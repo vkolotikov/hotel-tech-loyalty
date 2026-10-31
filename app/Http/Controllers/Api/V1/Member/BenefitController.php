@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1\Member;
 
 use App\Http\Controllers\Controller;
+use App\Jobs\AlertStaffOfRequest;
 use App\Models\BenefitEntitlement;
 use App\Models\TierBenefit;
 use App\Services\DiscountService;
@@ -152,6 +153,9 @@ class BenefitController extends Controller
         } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
             return response()->json(['message' => $e->getMessage()], $e->getStatusCode());
         }
+
+        // Staff phones hear of it once the member has their answer (StaffAlerts).
+        AlertStaffOfRequest::dispatchAfterResponse('benefit', (int) $entitlement->organization_id, (int) $entitlement->id);
 
         return response()->json([
             'message'     => 'Requested. Reception will confirm shortly.',

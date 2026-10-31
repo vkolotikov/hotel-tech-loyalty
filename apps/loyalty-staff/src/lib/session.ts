@@ -3,6 +3,7 @@ import { Platform } from 'react-native'
 import * as Device from 'expo-device'
 import { api, connectSession } from './api'
 import { storage } from './storage'
+import { forgetAlerts } from './push'
 import { languageOf, useLanguage } from './i18n'
 
 const TOKEN = 'hexatech_staff_token'
@@ -55,6 +56,8 @@ export const useSession = create<Session>((set, get) => ({
 
   signOut: async () => {
     const token = get().token
+    // While the token still works: this phone stops hearing this person's request alerts (at most a few seconds' wait).
+    if (token) await Promise.race([forgetAlerts(token), new Promise(done => setTimeout(done, 4000))])
     set({ token: null, user: null })
     await Promise.all([storage.remove(TOKEN), storage.remove(USER)])
     if (token) {

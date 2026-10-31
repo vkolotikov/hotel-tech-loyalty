@@ -5,6 +5,7 @@ vi.mock('expo-crypto', () => ({ randomUUID: () => 'fresh-key' }))
 import { balanceAfter, cleanCode, errorKey, keyFor, looksLikeCode, membershipState, pointsFrom, pointsProblem, REPLAY_MS, verdictKey } from './desk'
 import { ago, day, greeting, initials, spacedNumber } from './format'
 import { failureFrom } from './failure'
+import { isRequestAlert } from './alerts'
 import { BUNDLES, LANGUAGES, languageOf, say } from './i18n'
 import { en } from './i18n/en'
 import type { MemberRow, Verdict } from './types'
@@ -132,5 +133,14 @@ describe('the five languages', () => {
     expect(languageOf(null)).toBe('en')
     expect(say('en', 'points.confirmAward', { n: 50 })).toBe('Give 50 points')
     expect(say('de', 'home.waiting', { n: 3 })).toBe('3 offen')
+  })
+})
+
+describe('request alerts', () => {
+  it('open Requests only for the server’s request alert', () => {
+    expect(isRequestAlert({ type: 'staff_request', kind: 'benefit', id: 4, organization_id: 2 })).toBe(true)
+    expect(isRequestAlert({ type: 'points_earned' })).toBe(false)
+    expect(isRequestAlert(null)).toBe(false)
+    expect(isRequestAlert('staff_request')).toBe(false)
   })
 })

@@ -62,6 +62,22 @@ npx eas-cli submit --profile production --platform android   # Play, internal tr
 The production server is set in `eas.json` (`EXPO_PUBLIC_API_URL`, `EXPO_PUBLIC_WEB_URL`). iOS NFC needs the
 "NFC Tag Reading" capability on the App ID; EAS turns it on from the config plugin when it manages the credentials.
 
+## Request alerts (push)
+
+The app registers the phone with the server after sign-in and on every start (`src/lib/push.ts`, `PUT
+/v1/admin/loyalty/devices`), removes it before signing out, and opens Requests when an alert is tapped. More has the
+switch. The server side is `StaffAlerts` (`docs/loyalty-workspace.md` "Request alerts on staff phones").
+
+Push needs three things set up once, all in the owner's accounts:
+
+1. **The EAS project id.** The first `npx eas-cli init` (or the first build) writes `extra.eas.projectId` into
+   `app.json`; commit it. Without it the app shows "Alerts work in the installed app on a phone" and sends nothing.
+2. **iPhone:** an Apple Push Notifications key. `npx eas-cli credentials` → iOS → "Push Notifications: Manage your
+   Apple Push Notifications Key" (or answer yes when the first iOS build asks).
+3. **Android:** Firebase Cloud Messaging (FCM V1). Create or reuse a Firebase project with an Android app for
+   `uk.hexatech.loyalty.staff`, then upload its service account key with `npx eas-cli credentials` → Android →
+   "Google Service Account" → "FCM V1". (A `google-services.json` is not needed for Expo's push service.)
+
 ## Acceptance on phones
 
 1. Sign in, close the app, reopen it: still signed in. Turn the lock on, leave for two minutes, return: Face ID or
@@ -77,3 +93,6 @@ The production server is set in `eas.json` (`EXPO_PUBLIC_API_URL`, `EXPO_PUBLIC_
 8. Link a new card to a member, then scan it; scan a card that belongs to someone else (refused).
 9. Approve, decline (the member reads the reason) and mark a request as given; hand over a claimed reward.
 10. Switch to each of the five languages; in Airplane mode a screen says "No connection" and offers Retry.
+11. Request alerts: allow notifications at first start; from the member app ask for a benefit and claim a reward —
+    a phone signed in as a manager hears both, a desk account without "redeem points" only the benefit; tap one and
+    Requests opens. Switch alerts off in More (nothing arrives), sign out (nothing arrives), sign in again.
