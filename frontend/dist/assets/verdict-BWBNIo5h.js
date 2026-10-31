@@ -1,0 +1,1 @@
+import{jn as e}from"./index-qBb-3k7h.js";function t(){let{t}=e();return e=>t(e.key,e.fallback,e.vars)}export{t};
