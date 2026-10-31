@@ -56,6 +56,20 @@ deploy.
 - The owner's side before release: Expo sign-in as `hoteltechai` (or an `EXPO_TOKEN`), the Apple push key, FCM V1 for
   both apps, the old repository's over-the-air workflow switched off, store texts.
 
+## Stack audit and upgrade plan (proposed, nothing changed)
+
+`docs/audits/2026-10-31-stack-audit-and-upgrade-plan.md` (branch `claude/stack-audit-upgrade-plan-9hdkkv`; the
+`saas-app` part also lives in that repository's `docs/`). The main stack is current: Laravel 13.39.0, React 19.3.1,
+Vite 8, Expo SDK 58, PostgreSQL 18; no known vulnerability in production PHP or SPA packages. Open, most urgent first:
+
+- Confirm production's PHP patch level: 8.4.27 / 8.5.12 fix critical RCEs; dev docs still say 8.4.20.
+- `saas-app` has 5 critical and 25 high advisories, including the Next.js proxy auth bypasses.
+- The `dall-e-3` image fallback is dead.
+- PHP 8.4 leaves active support on 31 Dec 2026.
+
+Then the phased plan: CI first, PHP 8.5, library majors one per release, Stripe last of those, Tailwind 4 only after
+an owner decision on old browsers.
+
 ## Cloud container notes (Linux)
 
 - Expo commands need `EXPO_OFFLINE=1` (the proxy blocks `api.expo.dev`; `docs.expo.dev` is blocked too, so read
