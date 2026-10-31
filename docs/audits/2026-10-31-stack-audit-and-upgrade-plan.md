@@ -329,9 +329,10 @@ checks. Laravel 13 keeps security fixes until about March 2028, so there is no p
 
 **Phase 0, safety net**
 
-- **Test baseline on the patched PHP builds.** The whole PHP suite ran on PHP 8.4.27 and 8.5.12 (both carry the
-  October security fixes): 76 scopes, every test passing on both (7,227 passed, 16 skipped). Frontend: `tsc -b`
-  clean, lint baseline passes, Vitest 399 files / 5,778 tests.
+- **Test baseline on the patched PHP builds.** The whole PHP suite passes on PHP 8.4.27 and 8.5.12 (both carry the
+  October security fixes): 77 scopes, **7,249 passed, 16 skipped, 0 failed** (the last deploy's 7,245 plus the 4
+  tests added today). Frontend: `tsc -b` clean, lint baseline passes, Vitest 399 files / 5,778 tests. On PostgreSQL
+  18 (CI): 7,247 tests run, and the 33 failures are all in the documented groups (`tests/pgsql-known-failures.txt`).
 - **Tests no longer depend on the developer's `.env`.** `phpunit.xml` now pins `APP_URL=http://localhost`. With a
   production-like `APP_URL` (as in `.env.example`, which CI starts from), 16 ChatGPT plugin tests failed.
 - **CI** (`.github/workflows/ci.yml`): dependency audits; PHP 8.4 and 8.5 suites in three shards each; PHP 8.4 on
