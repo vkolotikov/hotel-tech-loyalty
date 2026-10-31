@@ -6,9 +6,10 @@ environment). AGENTS.md and CLAUDE.md still apply.
 
 ## Production
 
-Unchanged by this session: no application source, migration, production setting or deployment changed. The newest
-`main` is `f0c30c739` (the wallet and recovery release, recorded by its own session). Take the next source-patch
-baseline from that session's record, not from this branch.
+Production is **a199f1f8c** (request alerts on staff phones, on top of the wallet and recovery release `f0c30c739`):
+the `staff_devices` table, `PUT/DELETE /v1/admin/loyalty/devices` and `StaffAlerts`, plus three fixes that made
+main's red tests green (record: `docs/loyalty-workspace.md` "Deploying"). The next source-patch baseline is
+**91f0d1e72** on `feature/loyalty-staff-app`, with `apps/loyalty-staff/` left out of any Cloud deploy.
 
 ## New: HexaTech Staff, the native desk app
 
@@ -20,13 +21,16 @@ baseline from that session's record, not from this branch.
 - Built: sign-in with lock, Home, Scan (NFC, camera QR, typed, at the desk or a place or today's event), the scanned
   member with the door answer, member page, give or use points, check-in, link a card, Members, Requests (benefit
   requests and rewards to hand over), More (web pages, language, lock, sign out). Five languages. Brand icon.
-- Checked: `npx tsc --noEmit`, `npx vitest run` (12 tests), the web preview against the local API with real data
+- Checked: `npx tsc --noEmit`, `npx vitest run` (13 tests), the web preview against the local API with real data
   (every screen at phone size, sign in and out, scans at the desk and a tiers-only place, points given through the
   sheet).
 - **Not yet checked on a phone.** Next: an EAS development build (needs the owner's Expo sign-in or an `EXPO_TOKEN`
   secret in this environment's settings), then the README's acceptance list with the real cards.
-- Later steps (plan, "What is left"): push to managers for new requests (server change), a minimum-version answer,
-  the store listings and unlisted App Store distribution.
+- Request alerts are built and the server part is live: a member's benefit request alerts every active staff phone,
+  a claimed reward those who may hand it over. A phone hears them once the owner has set up the EAS project id, an
+  Apple push key and FCM V1 credentials (`apps/loyalty-staff/README.md`, "Request alerts").
+- Later steps (plan, "What is left"): a minimum-version answer, the store listings and unlisted App Store
+  distribution.
 
 ## Cloud container notes (Linux)
 

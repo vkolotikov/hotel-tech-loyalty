@@ -173,6 +173,10 @@ Route::prefix('v1')->group(function () {
     // Public: fetch available plans from SaaS
     Route::get('plans', [AuthController::class, 'plans']);
 
+    // Public: which versions of a native app the server still serves (config/apps.php), before sign-in.
+    Route::get('apps/{app}/version', [\App\Http\Controllers\Api\V1\AppVersionController::class, 'show'])
+        ->where('app', '[a-z]+')->middleware('throttle:120,1,app-version');
+
     // Public: email open-tracking pixel (no auth, no tenant scope)
     Route::get('track/open/{recipient}', [CampaignTrackingController::class, 'open']);
 

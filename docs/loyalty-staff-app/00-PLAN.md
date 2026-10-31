@@ -67,7 +67,7 @@ modern, luxury, poverfull, easy to use nice design".
 | 1. Phone builds | EAS development build for Android and iPhone; install on the owner's phones | Owner signs in to Expo (or adds an `EXPO_TOKEN` secret to this environment); agent runs it |
 | 2. Acceptance | The list in the README: NFC on both phones with the real cards, QR in poor light, typed codes, door answers, points, check-in, linking a card, requests, lock, five languages | Owner with the agent |
 | 3. Push for new requests | **Built 2026-10-31**: server (`StaffAlerts`, `staff_devices`, deployed) and app (`src/lib/push.ts`, the switch in More). Needs the EAS project id, an Apple push key and FCM V1 credentials (README, "Request alerts") before a phone hears one | Owner sets up the credentials |
-| 4. Minimum version | A server answer naming the lowest app version still served, so an old app asks to update | Agent |
+| 4. Minimum version | **Built 2026-10-31**: `GET /api/v1/apps/staff/version` (`config/apps.php`, Laravel Cloud variables `STAFF_APP_*`); below the minimum the app shows only "Time to update" | Owner sets the variables at a release |
 | 5. Stores | Store texts in five languages, screenshots, privacy and data-safety forms, a demo staff login for Apple's review, the unlisted request; TestFlight and Play internal test, then release | Agent prepares, owner submits |
 
 ## Checks before release
