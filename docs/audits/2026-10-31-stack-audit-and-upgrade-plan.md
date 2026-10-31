@@ -294,7 +294,7 @@ Order chosen so that test-only and single-file changes come first, money last.
 
 ### Phase 7: Laravel 14 and PHP 8.6 (Q1–Q2 2027)
 
-When Laravel 14 is released, wait 4–8 weeks for Passport, Sanctum, spatie/laravel-permission, openai-php/laravel,
+When Laravel 14 is released, wait 4–8 weeks for Passport, Sanctum, openai-php/laravel,
 laravel/mcp and Nightwatch to declare support. Then follow the official upgrade guide in one release, with the same
 checks. Laravel 13 keeps security fixes until about March 2028, so there is no pressure to be first.
 
@@ -417,7 +417,34 @@ checks. Laravel 13 keeps security fixes until about March 2028, so there is no p
 - **Larastan:** declaring `User::$organization_id` cleared 153 recorded findings. The one real finding it exposed
   (`BusinessReportController`) was fixed, not recorded. Baseline 2,182 → 2,028.
 - **Option for later:** since nothing uses Spatie roles, the package could be removed entirely, keeping its (empty)
-  tables until a decision about them. That means one fewer dependency, but it is a separate decision.
+  tables until a decision about them. That means one fewer dependency, but it is a separate decision. (Done the same
+  night on the owner's word; see below.)
+
+### 31 October 2026, night: permissions package removed; phase 5 steps 1 and 2 (owner: "remove the permissions package, do next")
+
+- **spatie/laravel-permission removed** with `spatie/laravel-package-tools`; nothing else changed in the lock.
+  - Removed: the `HasRoles` trait on `User` and `config/permission.php`.
+  - The five tables (`roles`, `permissions`, `model_has_roles`, `model_has_permissions`, `role_has_permissions`) stay,
+    empty and unused. Dropping them is a separate owner decision. No migration runs on deploy.
+  - Their `2026_03_17_094143` migration read `config/permission.php`, so a fresh database (tests, CI, a new
+    environment) could no longer be built. It now spells out the same names, columns, keys and index names. On
+    PostgreSQL the five tables it builds dump identical to the original's (75 lines each), and `down()` then `up()`
+    runs cleanly.
+  - Checks: the whole PHP suite (77 scopes, 7,254 passed, 16 skipped, 0 failed), Larastan clean, CI green on every
+    job, PostgreSQL's known-failures list unchanged.
+- **5a, TypeScript 5.9.3 → 6.0.3** in the SPA: `tsc -b` reported nothing to fix. The production bundle is byte-identical
+  to main's (344 of 344 files), so this changes only the build tooling.
+- **5b, lucide-react 0.577 → 1.66**:
+  - Lucide 1.0 removed its brand icons, and the one the SPA used was `Facebook` (the Messenger panel). The same
+    drawing now lives in `frontend/src/components/icons/Facebook.tsx` through lucide's own `createLucideIcon`. Its
+    markup is identical to 0.577's (same path, props and `lucide lucide-facebook` class).
+  - Every other icon keeps its name and its CSS classes (old names still come as aliases), which
+    `overview.css` and a few tests rely on.
+  - Checks: `tsc -b` clean, lint baseline unchanged, Vitest 399 files / 5,780 tests, the browser suite as on main.
+  - Screenshots: 235 compared with the TypeScript 6 build at 1440 and phone width. Only three differ, and those three
+    differ just as much between two runs of the unchanged build (an animation's timing), so no design change.
+- **Next in phase 5:** Tailwind 4 waits for the owner's decision on old browsers (step 3). Node 24 for the build
+  (step 4) is a Laravel Cloud setting, and CI already runs the SPA on Node 24.
 
 ---
 
