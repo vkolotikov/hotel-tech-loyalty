@@ -68,4 +68,20 @@ class MediaRecoveryTest extends TestCase
         try { $this->recovery($client)->verify(2, 'org-2/logos/a.png', 'source'); $this->fail('Expected timeout'); }
         catch (\RuntimeException) { $this->assertStringStartsWith('_recovery_checks/', SharedCache::store()->get('ops:media-recovery-copy')['key']); }
     }
+
+    public function test_the_command_starts_and_previews_the_exact_version_it_is_given(): void
+    {
+        // Until 2026-10-31 the option was --version, which every console command already has: the command could
+        // not even start. It now takes --version-id and passes it through unchanged.
+        config(['cache.shared' => 'array']);
+        $recovery = \Mockery::mock(MediaRecovery::class);
+        $recovery->shouldReceive('preview')->once()->with(2, 'org-2/logos/a.png', '3HL4kqtJlcpXroDTDmJ+rmSpXd3dIbrHY')
+            ->andReturn(['key' => 'org-2/logos/a.png', 'version' => '3HL4kqtJlcpXroDTDmJ+rmSpXd3dIbrHY']);
+        $recovery->shouldNotReceive('verify');
+        $this->app->instance(MediaRecovery::class, $recovery);
+
+        $this->artisan('media:verify-version', ['--org' => 2, '--key' => 'org-2/logos/a.png', '--version-id' => '3HL4kqtJlcpXroDTDmJ+rmSpXd3dIbrHY'])
+            ->expectsOutputToContain('"applied":false')
+            ->assertExitCode(0);
+    }
 }

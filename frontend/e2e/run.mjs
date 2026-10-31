@@ -22,7 +22,8 @@ const specs = {
   mobile: ['overview', 'members-program', 'requests'],
 }
 const groups = (process.env.E2E_GROUPS || Object.keys(specs).join(',')).split(',')
-const browser = await chromium.launch({ headless: true, ...(process.env.E2E_CHANNEL === 'chromium' ? {} : { channel: process.env.E2E_CHANNEL || 'chrome' }) })
+// E2E_EXECUTABLE: a Chromium binary to use instead (a container's preinstalled browser of another Playwright build).
+const browser = await chromium.launch({ headless: true, ...(process.env.E2E_EXECUTABLE ? { executablePath: process.env.E2E_EXECUTABLE } : process.env.E2E_CHANNEL === 'chromium' ? {} : { channel: process.env.E2E_CHANNEL || 'chrome' }) })
 const results = []
 async function source(file, dir) {
   return (await fs.readFile(new URL(file, import.meta.url), 'utf8'))

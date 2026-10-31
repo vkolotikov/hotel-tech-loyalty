@@ -14,4 +14,20 @@ For a production artifact, build with Vite, start `npm run preview:fixture` (por
 
 Screenshots use the actual viewport. Full-page capture on the installed Chrome/Playwright combination transiently resizes the viewport to 1×1, switching responsive components and dismissing dialogs. Viewport capture avoids changing the state being tested. The dedicated mobile suite covers Home, More, members and requests at their current breakpoints; older desktop workflows are tested at desktop widths.
 
+`E2E_EXECUTABLE` points the runner at a Chromium binary of another Playwright build (a container's preinstalled browser, e.g. `/opt/pw-browsers/chromium-1243/chrome-linux64/chrome`); it takes precedence over `E2E_CHANNEL`.
+
+## Visual comparison (before and after a change that must not alter the design)
+
+1. On the current `main` build: `E2E_OUTPUT=test-results/before npm run test:browser` (with the preview server as above).
+2. Apply the change (for example a Tailwind or icon-library upgrade), rebuild, restart the preview, and run again with
+   `E2E_OUTPUT=test-results/after`.
+3. `node e2e/visual-compare.mjs test-results/before test-results/after test-results/visual-compare`
+
+It matches every screenshot by its path and counts a pixel as changed when a channel differs by more than
+`VISUAL_TOLERANCE` (default 8 of 255). A screenshot fails when more than `VISUAL_MAX_RATIO` of its pixels changed
+(default 0.001), when its size changed, or when it exists on one side only. Each failing screenshot gets a `.diff.png`
+(changed pixels in red) and the summary goes to `report.json`; the exit status is 1 when anything differs. Two runs of
+the same build compare as identical apart from a check that failed in only one run (its `failure.png`), so read the
+runner's own output first.
+
 Browser fixture checks complement backend tests, PostgreSQL concurrency tests and provider/device acceptance. They do not replace those checks.

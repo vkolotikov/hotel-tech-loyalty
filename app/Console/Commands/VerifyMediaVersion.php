@@ -8,7 +8,9 @@ use Illuminate\Console\Command;
 
 class VerifyMediaVersion extends Command
 {
-    protected $signature = 'media:verify-version {--org=} {--key=} {--version=} {--apply : Copy privately, verify, and remove the exact temporary version}';
+    // `--version-id`, not `--version`: every console command already has --version (the application's), and a
+    // command declaring it again cannot even start ("An option named \"version\" already exists").
+    protected $signature = 'media:verify-version {--org=} {--key=} {--version-id= : The exact object version (S3 VersionId)} {--apply : Copy privately, verify, and remove the exact temporary version}';
     protected $description = 'Preview or verify recovery of one exact tenant-owned media version in isolation.';
 
     public function handle(MediaRecovery $recovery): int
@@ -17,7 +19,7 @@ class VerifyMediaVersion extends Command
         if (!$lock->get()) { $this->error('A media verification is already running.'); return self::FAILURE; }
         try {
             if ($this->option('apply') && SharedCache::store()->has('ops:media-recovery-copy')) throw new \RuntimeException('media_recovery_cleanup_required');
-            $args = [(int) $this->option('org'), (string) $this->option('key'), (string) $this->option('version')];
+            $args = [(int) $this->option('org'), (string) $this->option('key'), (string) $this->option('version-id')];
             $result = $this->option('apply') ? $recovery->verify(...$args) : $recovery->preview(...$args);
             $this->info(json_encode(['applied' => (bool) $this->option('apply')] + $result, JSON_THROW_ON_ERROR));
             return self::SUCCESS;

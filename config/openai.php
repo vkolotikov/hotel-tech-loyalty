@@ -40,13 +40,17 @@ return [
     |--------------------------------------------------------------------------
     |
     | Model used to generate post images. 'gpt-image-1' is best quality but
-    | may require OpenAI org verification; the Content Planner auto-falls back
-    | to 'dall-e-3' on an access error. Override with CONTENT_PLANNER_IMAGE_MODEL.
+    | may require OpenAI org verification. Override with
+    | CONTENT_PLANNER_IMAGE_MODEL. On an access error the Content Planner can
+    | retry once with CONTENT_PLANNER_IMAGE_FALLBACK_MODEL (e.g.
+    | 'gpt-image-1-mini'); there is none by default, because the old default
+    | 'dall-e-3' was shut down by OpenAI on 2026-05-12 and the GPT image models
+    | that replace it can need the same verification.
     | Image request timeout is separate (generation can take 10-40s).
     */
 
     'image_model' => env('CONTENT_PLANNER_IMAGE_MODEL', 'gpt-image-1'),
-    'image_fallback_model' => env('CONTENT_PLANNER_IMAGE_FALLBACK_MODEL', 'dall-e-3'),
+    'image_fallback_model' => env('CONTENT_PLANNER_IMAGE_FALLBACK_MODEL', ''),
     'image_timeout' => env('CONTENT_PLANNER_IMAGE_TIMEOUT', 120),
 
 ];

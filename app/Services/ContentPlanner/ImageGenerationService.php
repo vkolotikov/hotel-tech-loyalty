@@ -98,7 +98,7 @@ class ImageGenerationService
         try {
             return [$this->requestImage($model, $prompt, $size), $model];
         } catch (\Throwable $e) {
-            $fallback = config('openai.image_fallback_model', 'dall-e-3');
+            $fallback = (string) config('openai.image_fallback_model', '');
             if ($fallback && $fallback !== $model && $this->isAccessError($e->getMessage())) {
                 Log::warning("Content Planner image: {$model} unavailable, falling back to {$fallback}", [
                     'error' => $e->getMessage(),
@@ -252,7 +252,7 @@ class ImageGenerationService
     private function friendlyError(string $message): string
     {
         if ($this->isAccessError($message)) {
-            return 'Image generation failed: your OpenAI account may not have access to the image model. Try setting CONTENT_PLANNER_IMAGE_MODEL=dall-e-3. (' . mb_substr($message, 0, 160) . ')';
+            return 'Image generation failed: your OpenAI account may not have access to the image model. OpenAI\'s image models can require a verified organisation (OpenAI platform settings, Organization, Verify). (' . mb_substr($message, 0, 160) . ')';
         }
         if (str_contains(strtolower($message), 'billing') || str_contains(strtolower($message), 'quota')) {
             return 'Image generation failed: OpenAI billing/quota issue. Check your OpenAI account. (' . mb_substr($message, 0, 160) . ')';

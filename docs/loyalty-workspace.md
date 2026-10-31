@@ -837,6 +837,12 @@ production never has); on SQLite the real index still runs.
 `SESSION_DRIVER` `array`, `QUEUE_CONNECTION=sync`, `MAIL_MAILER=array`) after sourcing the credentials file: a local
 server's file cache and environment make the register throttle answer 429 across runs.
 
+**CI (since 2026-10-31).** `.github/workflows/ci.yml` runs every suite on PostgreSQL 18 and fails on any failure not
+listed in `tests/pgsql-known-failures.txt` (`scripts/pg-known-failures.py`); its run of 2026-10-31 had 33 failures,
+all in the groups below. Six of them are `LeadIntakeApiTest`, which runs only on its own database
+`hexa_leadintake_test`: CI runs it there separately, where all six pass. A new entry in the list needs its reason
+here.
+
 **Still failing on PostgreSQL, on purpose** (2026-10-24; the release 7 and release 8 runs of 2026-10-25 failed the
 same 37 tests — 18 in `Feature/Landing`, 19 elsewhere — and nothing new, with 6822 and 6962 passing). Running the
 SQLite and PostgreSQL suites at the same time in one working tree can fail `DurableFilesTest` (both write the same

@@ -26,6 +26,10 @@
              tests as of Tier P. -->
         <ini name="memory_limit" value="512M"/>
         <env name="APP_ENV" value="testing"/>
+        <!-- Tests build URLs and compare hosts against http://localhost (the ChatGPT plugin's
+             canonical-origin guard, for one). Without this the developer's .env APP_URL leaks in,
+             and a production-like value (.env.example's) fails 16 ChatGptTools tests. -->
+        <env name="APP_URL" value="http://localhost"/>
         <env name="BCRYPT_ROUNDS" value="4"/>
         <env name="CACHE_DRIVER" value="array"/>
         <env name="CACHE_STORE" value="array"/>

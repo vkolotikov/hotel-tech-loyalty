@@ -1,0 +1,1 @@
+import{t as e}from"./vendor-react-C7UcvFic.js";var t=e();function n({label:e,hint:n,children:r}){return(0,t.jsxs)(`label`,{className:`block`,children:[(0,t.jsx)(`span`,{className:`block text-xs font-medium text-a-text-2 mb-1`,children:e}),r,n&&(0,t.jsx)(`span`,{className:`block text-xs text-a-text-2 mt-1`,children:n})]})}export{n as t};

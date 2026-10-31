@@ -54,7 +54,7 @@ missing/stale observations are unobserved. The command does not enable versionin
 Preview an exact tenant-owned version:
 
 ```text
-php artisan media:verify-version --org=<organisation id> --key=<org-prefixed object key> --version=<exact version id>
+php artisan media:verify-version --org=<organisation id> --key=<org-prefixed object key> --version-id=<exact version id>
 ```
 
 For an authorised rehearsal, add `--apply`. It reads the exact source version (maximum 64 MiB), copies it privately

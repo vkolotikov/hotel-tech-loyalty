@@ -22,7 +22,8 @@
 # leave it as they found it):
 #   createdb -O <database owner> hexa_test
 #   DB_CONNECTION=pgsql DB_DATABASE=hexa_test php artisan migrate --force    (with DB_HOST etc. exported)
-# The runs use the PHP binary in $PHP (default php8.4).
+# The runs use the PHP binary in $PHP (default php8.4). With JUNIT_DIR set, each run also writes a JUnit report there
+# (CI compares the failures with tests/pgsql-known-failures.txt through scripts/pg-known-failures.py).
 # or keep one such database untouched as a template and copy it for each run:
 #   createdb -O <database owner> -T <template database> hexa_test
 #
@@ -71,9 +72,13 @@ else
   done
 fi
 
+[ -n "${JUNIT_DIR:-}" ] && mkdir -p "$JUNIT_DIR"
+
 overall=0
 for t in "${TARGETS[@]}"; do
-  res="$(timeout 2400 "$PHP" artisan test "$t" 2>&1)"
+  junit=()
+  [ -n "${JUNIT_DIR:-}" ] && junit=(--log-junit "$JUNIT_DIR/$(printf '%s' "$t" | tr '/.' '__').xml")
+  res="$(timeout 2400 "$PHP" artisan test "$t" "${junit[@]}" 2>&1)"
   code=$?
   [ $code -ne 0 ] && overall=1
   summary="$(printf '%s\n' "$res" | grep -E "Tests:" | tail -1 | sed 's/^ *//')"
