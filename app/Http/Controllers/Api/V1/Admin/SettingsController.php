@@ -588,8 +588,18 @@ class SettingsController extends Controller
         $key = $this->resolveKey('ai_anthropic_api_key', 'ANTHROPIC_API_KEY');
         if (!$key) return response()->json(['success' => false, 'message' => 'No API key configured']);
 
-        $result = $this->curlTest('https://api.anthropic.com/v1/models', ["x-api-key: {$key}", "anthropic-version: 2023-06-01"]);
-        return response()->json($result);
+        // Lists one model through the official SDK (API version 2026-10-21,
+        // bearer key): proves the key without spending tokens.
+        try {
+            \App\Services\Ai\AnthropicSdk::client($key, 10)->models->list(limit: 1);
+            return response()->json(['success' => true, 'message' => 'Connected']);
+        } catch (\Anthropic\Core\Exceptions\APIStatusException $e) {
+            return response()->json(['success' => false, 'message' => "HTTP {$e->status}"]);
+        } catch (\Illuminate\Http\Client\ConnectionException $e) {
+            return response()->json(['success' => false, 'message' => 'Connection failed: ' . $e->getMessage()]);
+        } catch (\Throwable $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()]);
+        }
     }
 
     private function testSmoobu(): JsonResponse

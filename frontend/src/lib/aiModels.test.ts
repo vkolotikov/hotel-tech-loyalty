@@ -4,6 +4,8 @@ import {
   findModel,
   findProvider,
   formatModelLabel,
+  isListedModel,
+  takesTemperature,
   type ModelEntry,
   type Provider,
 } from './aiModels'
@@ -100,15 +102,19 @@ describe('Capability flags — UI gate invariants', () => {
     }
   })
 
-  it('gpt-4.1 family does NOT advertise responsesApi (Chat Completions only)', () => {
-    // The complement: 4.1 family is dispatched via Chat Completions,
-    // not Responses. responsesApi flag must be absent or false.
+  it('every listed OpenAI model is a gpt-5.x on the Responses API (no Chat Completions model is offered)', () => {
+    // Owner 2026-11-01: a short list of current models. gpt-4.x, gpt-4o and
+    // the o-series are no longer offered; a venue that saved one keeps it.
     const openai = AI_PROVIDERS.find(p => p.id === 'openai')!
-    const gpt41Models = openai.models.filter(m => m.id.startsWith('gpt-4.1'))
-    expect(gpt41Models.length).toBeGreaterThan(0)
-    for (const m of gpt41Models) {
-      expect(m.capabilities.responsesApi).toBeFalsy()
+    for (const m of openai.models) {
+      expect(m.id.startsWith('gpt-5')).toBe(true)
+      expect(m.capabilities.responsesApi).toBe(true)
     }
+  })
+
+  it('GPT-5.6 Terra and Luna default to low reasoning effort (fast chat replies)', () => {
+    expect(findModel('gpt-5.6-terra')?.capabilities.defaultReasoningEffort).toBe('low')
+    expect(findModel('gpt-5.6-luna')?.capabilities.defaultReasoningEffort).toBe('low')
   })
 
   it('defaultReasoningEffort uses one of the documented levels', () => {
@@ -123,7 +129,7 @@ describe('Capability flags — UI gate invariants', () => {
   })
 
   it('Anthropic models support vision + toolUse + streaming', () => {
-    // Claude 4.x family canonical capabilities. CrmAiService relies
+    // Claude 5.x family canonical capabilities. CrmAiService relies
     // on toolUse for the 35+ admin AI tools.
     const anthropic = AI_PROVIDERS.find(p => p.id === 'anthropic')!
     for (const m of anthropic.models) {
@@ -131,6 +137,79 @@ describe('Capability flags — UI gate invariants', () => {
       expect(m.capabilities.toolUse).toBe(true)
       expect(m.capabilities.streaming).toBe(true)
     }
+  })
+})
+
+describe('The short list (owner 2026-11-01) — current, fast models for guest chat', () => {
+  it('offers exactly these models, in this order', () => {
+    expect(AI_PROVIDERS.map(p => [p.id, p.models.map(m => m.id)])).toEqual([
+      ['openai', ['gpt-5.6-terra', 'gpt-5.6-luna', 'gpt-5.5']],
+      ['anthropic', ['claude-haiku-5-5', 'claude-sonnet-5-5']],
+      ['google', ['gemini-3.5-flash-lite']],
+    ])
+  })
+
+  it('each provider defaults to its recommended model', () => {
+    expect(findProvider('openai')?.defaultModel).toBe('gpt-5.6-terra')
+    expect(findProvider('anthropic')?.defaultModel).toBe('claude-haiku-5-5')
+    expect(findProvider('google')?.defaultModel).toBe('gemini-3.5-flash-lite')
+    for (const p of AI_PROVIDERS) {
+      expect(p.models.find(m => m.id === p.defaultModel)?.recommended).toBe(true)
+    }
+  })
+
+  it('no longer lists the older models a venue may still have saved', () => {
+    for (const id of ['gpt-4.1', 'gpt-4o', 'gpt-5-mini', 'gpt-5-nano', 'o3', 'claude-opus-4-6',
+      'claude-sonnet-4-6', 'claude-haiku-4-5-20251001', 'gemini-2.5-pro', 'gemini-2.0-flash']) {
+      expect(findModel(id)).toBeNull()
+    }
+  })
+})
+
+describe('Temperature — which models the server sends it to', () => {
+  it('no Claude model takes the temperature setting', () => {
+    const anthropic = AI_PROVIDERS.find(p => p.id === 'anthropic')!
+    for (const m of anthropic.models) {
+      expect(m.capabilities.temperature).toBeFalsy()
+      expect(takesTemperature('anthropic', m.id)).toBe(false)
+    }
+  })
+
+  it('Gemini 3 and later keep their own temperature', () => {
+    const google = AI_PROVIDERS.find(p => p.id === 'google')!
+    const gemini3 = google.models.filter(m => /^gemini-([3-9]|\d{2,})/.test(m.id))
+    expect(gemini3.map(m => m.id)).toContain('gemini-3.5-flash-lite')
+    for (const m of gemini3) {
+      expect(takesTemperature('google', m.id)).toBe(false)
+    }
+  })
+
+  it('gpt-5.x keeps the setting (the server sends it when reasoning effort is none)', () => {
+    for (const id of ['gpt-5.6-terra', 'gpt-5.6-luna', 'gpt-5.5']) {
+      expect(takesTemperature('openai', id)).toBe(true)
+    }
+  })
+
+  it('a saved older model follows its provider: never for Claude, still for OpenAI and Gemini 2.x', () => {
+    expect(takesTemperature('anthropic', 'claude-opus-4-6')).toBe(false)
+    expect(takesTemperature('anthropic', 'claude-haiku-4-5-20251001')).toBe(false)
+    expect(takesTemperature('openai', 'gpt-4.1')).toBe(true)
+    expect(takesTemperature('google', 'gemini-2.5-pro')).toBe(true)
+  })
+})
+
+describe('isListedModel — saved older models', () => {
+  it('is true only for a model listed under that provider', () => {
+    expect(isListedModel('anthropic', 'claude-haiku-5-5')).toBe(true)
+    expect(isListedModel('openai', 'claude-haiku-5-5')).toBe(false)
+    expect(isListedModel('anthropic', 'claude-opus-4-6')).toBe(false)
+    expect(isListedModel('openai', 'gpt-4.1')).toBe(false)
+  })
+
+  it('is false for no model at all', () => {
+    expect(isListedModel('openai', null)).toBe(false)
+    expect(isListedModel('openai', '')).toBe(false)
+    expect(isListedModel(null, 'gpt-5.5')).toBe(false)
   })
 })
 
@@ -160,21 +239,21 @@ describe('Recommended models — ★ marker invariants', () => {
 
 describe('findModel — registry lookup', () => {
   it('finds an OpenAI model by id', () => {
-    const m = findModel('gpt-4.1')
+    const m = findModel('gpt-5.6-terra')
     expect(m).toBeTruthy()
-    expect(m!.id).toBe('gpt-4.1')
+    expect(m!.id).toBe('gpt-5.6-terra')
   })
 
   it('finds an Anthropic model by id', () => {
-    const m = findModel('claude-opus-4-6')
+    const m = findModel('claude-haiku-5-5')
     expect(m).toBeTruthy()
-    expect(m!.id).toBe('claude-opus-4-6')
+    expect(m!.id).toBe('claude-haiku-5-5')
   })
 
   it('finds a Google model by id', () => {
-    const m = findModel('gemini-2.5-pro')
+    const m = findModel('gemini-3.5-flash-lite')
     expect(m).toBeTruthy()
-    expect(m!.id).toBe('gemini-2.5-pro')
+    expect(m!.id).toBe('gemini-3.5-flash-lite')
   })
 
   it('returns null for unknown model id', () => {

@@ -487,6 +487,75 @@ checks. Laravel 13 keeps security fixes until about March 2028, so there is no p
     `&& cp -r dist ../public/spa` from the Cloud build command (`build:prod` already syncs `public/spa`). Then:
     stripe-php in Stripe test mode.
 
+### 1 November 2026: the owner's answers; permission tables, PHP 8.5, chat widget models
+
+Owner, 1 Nov: Tailwind 4 may drop old browsers; drop the empty permission tables; the workstation runs PHP 8.5; the
+ChatGPT connection works; the chat widget should offer fewer, current models that are fast and good at conversation.
+
+- **Permission tables dropped and PHP 8.5 everywhere** (deployed, production `eb52525`): see `docs/loyalty-workspace.md`
+  "Deploying". `composer.json` now requires PHP `^8.5`; CI runs 8.5 only.
+- **Chat widget models** (`frontend/src/lib/aiModels.ts`, the one list the "Behavior & Model" tab reads):
+  - OpenAI: GPT-5.6 Terra (recommended, default), GPT-5.6 Luna (fastest, cheapest), GPT-5.5 (most capable, slower).
+    OpenAI retires `gpt-5-mini` and `gpt-5-nano` on 11 Dec 2026 (replacements Terra and Luna).
+  - Claude: Claude Haiku 5.5 (recommended, default; $0.10 / $0.50 per million tokens) and Claude Sonnet 5.5.
+  - Gemini: Gemini 3.5 Flash-Lite only. The Gemini 2.5 models the list offered were retired on 20 Oct 2026, so a venue
+    still set to one of them is failing today and should switch.
+  - Removed from the list: GPT-5.4 Pro/5.4/5/5 Mini/5 Nano, GPT-4.1 (3), GPT-4o (2), o3, o4-mini, Claude Opus 4.6,
+    Sonnet 4.6, Haiku 4.5, and the Gemini 2.5 models. **A venue's saved model is never changed:** the page shows it as
+    "older model, still works; consider switching", and the server sends it as before.
+- **Temperature:** every current Claude model refuses a non-default temperature, and Claude API version 2026-10-21
+  refuses it on every model, so Claude never gets it now; Gemini 3 neither (Google advises its default). The page says
+  so instead of showing the slider; the stored value is kept. OpenAI is unchanged (GPT-5.x takes it only at reasoning
+  effort "none").
+- **Claude calls** (chat widget, the model check, the API-key check, the CRM diagnosis) go through the official SDK on
+  API version 2026-10-21. Chat replies use effort `low` and thinking off wherever the model allows it (Haiku 5.5:
+  disabled; Sonnet 5.5: between tools), so a guest gets the fastest reply and the venue's max-tokens setting is spent
+  on the reply. The admin's "test model" button now asks Anthropic's Models API (no tokens spent) and reports active,
+  deprecated (with the date) or retired.
+- **Checked:** PHP tests for the new requests (version, Bearer key, no sampling settings, effort and thinking per
+  model, thinking blocks skipped, refusal and empty replies as failures, retries), all AI, chatbot, widget, settings
+  and CRM tests, the frontend suite, the page in Chromium (new default, an older saved model, OpenAI), and one real
+  request through the new transport to a local stand-in for the API. **Not checked live:** no real API call was made
+  from here; press the model check ("test") button once per provider after the deploy.
+- **Left as they are (other model lists):** the voice agent (`gpt-realtime-1.5`), images (`gpt-image-1`), the
+  Content Planner (`claude-sonnet-5`), the Training page's fine-tuning bases, and the Settings page's model lists,
+  which nothing reads at runtime (the real values are `OPENAI_MODEL`, default `gpt-4o`, and `ANTHROPIC_MODEL`,
+  default `claude-sonnet-5`). `CrmAiService` still calls Claude directly on API version 2023-06-01 (no sampling
+  settings; its tool loop would need rebuilding for the SDK).
+- **Tailwind 4 trial** (local branch `wip/tailwind4-trial`, three commits on `b333c82`, not pushed, not deployed):
+  - The official upgrade tool plus the upgrade guide's compatibility CSS is **not safe on its own**: 67 of 235
+    screenshots changed, and Glass (the default admin style) lost its fonts and its popover and modal surfaces.
+  - The trial adds what keeps v3's look:
+    - v3's colour palette pinned (v4's `tailwindcss/colors` is oklch, which the Glass and Clean light builders cannot
+      read);
+    - v3's cascade order (only the theme variables and preflight in layers);
+    - v3's `space-x/y` selector and line heights, plus table-cell and form-field defaults;
+    - an explicit `@source` (v4 would otherwise also scan the committed `frontend/dist`);
+    - the Vite plugin instead of PostCSS, which otherwise drops all 17 self-hosted fonts.
+  - The tool's false positives were undone by hand: API values such as `'outline'`, `'ring'` and `'rounded'`, and two
+    English sentences.
+  - **Results:** tsc, the 5,780 frontend tests and lint pass. The loyalty screenshot suite matches v3 within its noise
+    floor. Main CSS is 37% larger raw (25% gzip): `color-mix` blocks with fallbacks for opacity on the JS-config colours.
+  - **Left to decide:**
+    - gradients now blend in oklab (`/srgb` restores v3);
+    - 7 `leading-*` cases that v3 ignored;
+    - `pl-13` in `NewCustomerDrawer`, which v3 ignored;
+    - whether the Google Fonts `@import` that v3's build always dropped stays dropped.
+  - **Not covered yet:** the screenshot suite covers only the loyalty workspace. The full admin in Glass, Classic and
+    Clean light, the portal, the appointments, content and landing editors, login, and Safari and Firefox are not
+    covered. A safe release needs those screenshots before and after (about 2–4 days on top of the trial).
+  - **Owner, 1 Nov: go ahead.** The trial branch is pushed (`origin/wip/tailwind4-trial`). Decisions:
+    - gradients keep v3's look (sRGB);
+    - the 7 `leading-*` cases keep v3's look;
+    - `pl-13` takes v4's padding;
+    - the Google Fonts `@import` stays dropped.
+  - **Release work** on that branch, before the deploy recipe:
+    - merge today's changes;
+    - before/after screenshots of every route on real demo data (seeded PostgreSQL), at 1440 and phone width, in
+      every admin style;
+    - Firefox and WebKit if they can be installed here.
+  - Stripe library upgrades wait for the owner's test keys ("will test later").
+
 ---
 
 ## 9. Sources

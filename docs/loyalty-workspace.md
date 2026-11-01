@@ -863,6 +863,27 @@ files on disk): run them one after the other.
 
 ## Deploying
 
+- Chat widget models (owner, 2026-11-01): production **915f9c6** on **eb52525**, feature source **19a565b** on
+  `claude/stack-audit-upgrade-plan-9hdkkv`. 21 paths (4 added, 17 changed, none deleted): the short current model list
+  (`frontend/src/lib/aiModels.ts`: GPT-5.6 Terra / Luna / GPT-5.5, Claude Haiku 5.5 / Sonnet 5.5, Gemini 3.5
+  Flash-Lite; a venue's saved model kept and still sent), Claude calls on the official SDK at API version 2026-10-21
+  (`App\Services\Ai\AnthropicSdk`, `LaravelHttpTransport`), no temperature for Claude or Gemini 3, chat effort low and
+  thinking off where the model allows it, the model check through Anthropic's Models API, prices for the new models.
+  No migration. Parity: every listed file and the whole source equal the tip. Artifact: PHP 8.5.12, **78 scopes, 7,298
+  passed / 16 skipped / 0 failed**; frontend tsc, **5,790 tests / 399 files**; the page checked in Chromium. CI on the
+  tip green (8 jobs; the first run's one Larastan finding fixed in 19a565b). Verified by content on `origin/main`
+  (21/21, the bundle carries the new list). The next source delta starts at **19a565b**.
+
+- Empty permission tables dropped, PHP 8.5 everywhere (owner's decisions, 2026-11-01): production **eb52525** on
+  **38b0f24**, feature source **b333c82** on `claude/stack-audit-upgrade-plan-9hdkkv`. 11 paths (2 added, 9 changed,
+  none deleted): migration `2026_11_01_100000_drop_unused_permission_tables` (drops `roles`, `permissions`,
+  `model_has_roles`, `model_has_permissions`, `role_has_permissions`; refuses if any holds a row; `down()` rebuilds
+  them, schema identical on PostgreSQL), `composer.json` `php ^8.5` (lock: platform and hash only), CI and the test
+  scripts on 8.5, CLAUDE.md naming the WAMP 8.5 build, and the hotel-tech-saas records. Parity: every listed file and
+  the whole source equal the tip. Artifact: PHP 8.5.12, **78 scopes, 7,256 passed / 16 skipped / 0 failed**; frontend
+  tsc, **5,780 tests / 399 files**; fresh build identical to main's. CI on the tip green (8 jobs). Verified by content
+  on `origin/main` (11/11). The next source delta starts at **b333c82**.
+
 - Permissions package removed, SPA on TypeScript 6 and lucide-react 1.66 (stack plan, after 4f; phase 5 steps 1 and
   2), 2026-10-31: production **38b0f24** (source patch **2166918** plus the SPA build) on **b7dfa6a**, feature source
   **85e80c5** on `claude/stack-audit-upgrade-plan-9hdkkv`. 12 paths (1 added, 10 changed, 1 deleted:

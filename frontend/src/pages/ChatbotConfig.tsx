@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '../lib/api'
 import { Bot, Save, Plus, X, ChevronDown, ChevronUp, Info, CheckCircle, AlertTriangle, Wifi, RefreshCw } from 'lucide-react'
 import toast from 'react-hot-toast'
-import { AI_PROVIDERS, findModel, findProvider, formatModelLabel } from '../lib/aiModels'
+import { AI_PROVIDERS, findModel, findProvider, formatModelLabel, isListedModel, takesTemperature } from '../lib/aiModels'
 import { BrandRequired } from '../components/BrandRequired'
 
 // Labels resolved via t() at render — keep value as stable identifier + English fallback only.
@@ -110,6 +110,10 @@ export function ChatbotConfig() {
   const [showAdvanced, setShowAdvanced] = useState(false)
   const selectedProvider = findProvider(mForm.provider || 'openai') ?? AI_PROVIDERS[0]
   const selectedModel = findModel(mForm.model_name)
+  // A saved model that is no longer listed keeps working (the server sends
+  // whatever is stored): show it as an older model rather than a default.
+  const olderModel: string | null = mForm.model_name && !isListedModel(selectedProvider.id, mForm.model_name) ? mForm.model_name : null
+  const usesTemperature = takesTemperature(selectedProvider.id, mForm.model_name || selectedProvider.defaultModel)
   const supportsReasoning = !!selectedModel?.capabilities?.reasoning
   const supportsVerbosity = !!selectedModel?.capabilities?.verbosity
   const isLoading = loadingBehavior || loadingModel
@@ -183,7 +187,7 @@ export function ChatbotConfig() {
                 <label className="block text-sm text-t-secondary mb-1 flex items-center gap-2">
                   <span>{t('chatbot_config.model.model', 'Model')}</span>
                   {probe.status === 'checking' && <span className="text-[10px] text-t-secondary flex items-center gap-1"><RefreshCw size={10} className="animate-spin" /> {t('chatbot_config.model.verifying', 'Verifying…')}</span>}
-                  {probe.status === 'ok'       && <span className="text-[10px] text-accent flex items-center gap-1"><CheckCircle size={10} /> {t('chatbot_config.model.available', 'Available on your account')}</span>}
+                  {probe.status === 'ok'       && <span className="text-[10px] text-accent flex items-center gap-1" title={probe.message}><CheckCircle size={10} /> {t('chatbot_config.model.available', 'Available on your account')}</span>}
                   {probe.status === 'error'    && <span className="text-[10px] text-warning flex items-center gap-1" title={probe.message}><AlertTriangle size={10} /> {t('chatbot_config.model.not_available', { reason: probe.message || t('chatbot_config.model.check_api_key', 'check API key'), defaultValue: 'Not available — {{reason}}' })}</span>}
                 </label>
                 <div className="flex items-stretch gap-2">
@@ -192,6 +196,7 @@ export function ChatbotConfig() {
                     onChange={e => updateModel('model_name', e.target.value)}
                     className="flex-1 bg-dark-surface border border-dark-border rounded-lg px-3 py-2 text-white text-sm"
                   >
+                    {olderModel && <option value={olderModel}>{t('chatbot_config.model.older_model', { model: olderModel, defaultValue: '{{model}} — older model, still works; consider switching' })}</option>}
                     {selectedProvider.models.map(m => <option key={m.id} value={m.id}>{formatModelLabel(m)}</option>)}
                   </select>
                   <button onClick={runProbe} type="button" disabled={probe.status === 'checking'}
@@ -228,10 +233,14 @@ export function ChatbotConfig() {
               {showAdvanced && (
                 <div className="mt-4 space-y-4 border border-dark-border rounded-lg p-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Temperature — only for models the server sends it to
+                        (capability flag in lib/aiModels.ts). The stored value
+                        is left as it is either way. */}
+                    {usesTemperature ? (
                     <div>
                       <div className="flex items-center gap-1.5 mb-1">
                         <label className="text-sm text-t-secondary">{t('chatbot_config.model.temperature', 'Temperature')}</label>
-                        <span className="text-xs text-t-secondary">({(mForm.temperature ?? 0.7).toFixed(1)})</span>
+                        <span className="text-xs text-t-secondary">({Number(mForm.temperature ?? 0.7).toFixed(1)})</span>
                         <span title={t('chatbot_config.model.temperature_help', 'Controls creativity. Lower = more factual, higher = more creative. 0.7 is recommended for hospitality.')}>
                           <Info size={11} className="text-t-secondary cursor-help" />
                         </span>
@@ -246,6 +255,12 @@ export function ChatbotConfig() {
                         <span>{t('chatbot_config.model.temperature_precise', 'Precise (0.0)')}</span><span>{t('chatbot_config.model.temperature_creative', 'Creative (1.0)')}</span>
                       </div>
                     </div>
+                    ) : (
+                    <div>
+                      <label className="block text-sm text-t-secondary mb-1">{t('chatbot_config.model.temperature', 'Temperature')}</label>
+                      <p className="text-xs text-t-secondary">{t('chatbot_config.model.temperature_not_used', 'This model chooses its own temperature, so this setting is not sent to it. Your saved value is kept.')}</p>
+                    </div>
+                    )}
                     <div>
                       <div className="flex items-center gap-1.5 mb-1">
                         <label className="text-sm text-t-secondary">{t('chatbot_config.model.max_tokens', 'Max Response Tokens')}</label>

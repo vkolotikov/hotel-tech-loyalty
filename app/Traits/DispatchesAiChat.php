@@ -15,11 +15,18 @@ use Illuminate\Support\Facades\Log;
  */
 trait DispatchesAiChat
 {
+    /** Claude chat replies are asked for at this effort: fast, natural answers. */
+    private const CLAUDE_CHAT_EFFORT = 'low';
+
     /**
      * Route a chat request to the configured provider with retry/backoff.
      *
      * $extra accepts optional model tuning params from ChatbotModelConfig:
      *   top_p, frequency_penalty, presence_penalty, stop_sequences
+     *
+     * Not every model takes $temperature and top_p: Claude (every model) and
+     * Gemini 3+ never receive them, gpt-5.x only with reasoning effort `none`.
+     * The admin page reads the same rule from frontend/src/lib/aiModels.ts.
      */
     protected function callProvider(
         string $provider,
@@ -89,6 +96,8 @@ trait DispatchesAiChat
         // and the new verbosity control are first-class on /v1/responses.
         // Older gpt-4.x and o-series stay on Chat Completions for now —
         // they work there and a forced migration adds risk for no win.
+        // The prefix covers the whole family, gpt-5.6-terra / gpt-5.6-luna
+        // included (WidgetChatController's tool loop uses the same prefix).
         $isGpt5 = (bool) preg_match('/^gpt-5/i', $model);
         if ($isGpt5) {
             return $this->dispatchOpenAiResponses($apiKey, $system, $messages, $model, $temp, $maxTokens, $extra, $feature);
@@ -261,55 +270,97 @@ trait DispatchesAiChat
         }, "OpenAI/{$model}");
     }
 
+    /**
+     * Claude, through the official SDK (API version 2026-10-21, bearer key).
+     *
+     * The venue's temperature and top_p stay in its settings but are not sent:
+     * every current Claude model refuses a non-default temperature, and API
+     * version 2026-10-21 refuses temperature, top_p and top_k on every model.
+     * Effort is `low` (quick replies, which is what a chat needs) and only for
+     * the models that accept it; no `thinking` parameter, so each model keeps
+     * its own default. The SDK makes one attempt per call — withRetry() below
+     * stays the only retry loop.
+     */
     private function dispatchAnthropic(string $system, array $messages, string $model, float $temp, int $maxTokens, array $extra = [], string $feature = 'chat'): string
     {
-        $apiKey = config('services.anthropic.api_key', env('ANTHROPIC_API_KEY'));
+        $apiKey = (string) config('services.anthropic.api_key', env('ANTHROPIC_API_KEY'));
         if (!$apiKey) {
             throw new \RuntimeException('Anthropic API key not configured. Set ANTHROPIC_API_KEY in .env');
         }
 
-        return $this->withRetry(function () use ($apiKey, $system, $messages, $model, $temp, $maxTokens, $extra, $feature) {
-            $payload = [
-                'model'       => $model,
-                'max_tokens'  => $maxTokens,
-                'temperature' => min($temp, 1.0),
-                'system'      => $system,
-                'messages'    => $messages,
-            ];
-            if (isset($extra['top_p']) && $extra['top_p'] < 1.0) {
-                $payload['top_p'] = (float) $extra['top_p'];
-            }
-            $response = Http::withHeaders([
-                'x-api-key'         => $apiKey,
-                'anthropic-version' => '2023-06-01',
-                'content-type'      => 'application/json',
-            ])->timeout(60)->post('https://api.anthropic.com/v1/messages', $payload);
+        $client = \App\Services\Ai\AnthropicSdk::client($apiKey, 60);
+        $params = [
+            'model'     => $model,
+            'maxTokens' => $maxTokens,
+            'messages'  => $messages,
+        ];
+        if ($system !== '') {
+            $params['system'] = $system;
+        }
+        if (\App\Services\Ai\AnthropicSdk::takesEffort($model)) {
+            $params['outputConfig'] = ['effort' => self::CLAUDE_CHAT_EFFORT];
+        }
+        if ($thinking = \App\Services\Ai\AnthropicSdk::chatThinking($model)) {
+            $params['thinking'] = $thinking;
+        }
 
-            if ($response->failed()) {
-                $status = $response->status();
-                if (in_array($status, [429, 500, 529])) {
-                    $delay = $status === 429
-                        ? (int) ($response->header('retry-after') ?: 2)
-                        : 1;
-                    throw new \App\Exceptions\RetryableAiException(
-                        "Anthropic {$status}: " . substr($response->body(), 0, 200),
-                        $status,
-                        $delay,
-                    );
-                }
-                throw new \RuntimeException('Anthropic API error ' . $status . ': ' . substr($response->body(), 0, 300));
-            }
+        return $this->withRetry(
+            fn () => $this->anthropicAttempt($client, $params, $model, $feature),
+            "Anthropic/{$model}",
+        );
+    }
 
-            $body = $response->json();
-            // Anthropic usage shape: usage.input_tokens / output_tokens.
-            $this->trackUsage(
-                $model,
-                $feature,
-                (int) ($body['usage']['input_tokens']  ?? 0),
-                (int) ($body['usage']['output_tokens'] ?? 0),
-            );
-            return $body['content'][0]['text'] ?? '';
-        }, "Anthropic/{$model}");
+    /**
+     * One Claude call. Rate limits, overload (529) and other 5xx answers are
+     * RetryableAiException (with the Retry-After delay on a 429, as before);
+     * anything else, a refusal and a reply with no text are a failed call.
+     */
+    private function anthropicAttempt(\Anthropic\Client $client, array $params, string $model, string $feature): string
+    {
+        try {
+            $message = $client->messages->create(...$params);
+        } catch (\Anthropic\Core\Exceptions\APIStatusException $e) {
+            $status = (int) $e->status;
+            $detail = \App\Services\Ai\AnthropicSdk::errorDetail($e);
+            if ($status === 429 || $status >= 500) {
+                $delay = $status === 429 ? \App\Services\Ai\AnthropicSdk::retryAfterSeconds($e, 2) : 1;
+                throw new \App\Exceptions\RetryableAiException("Anthropic {$status}: {$detail}", $status, $delay, $e);
+            }
+            throw new \RuntimeException("Anthropic API error {$status} [{$model}]: {$detail}", 0, $e);
+        } catch (\Anthropic\Core\Exceptions\APIException $e) {
+            throw new \RuntimeException("Anthropic API error [{$model}]: " . \App\Services\Ai\AnthropicSdk::errorDetail($e), 0, $e);
+        }
+
+        // Anthropic usage shape: usage.input_tokens / output_tokens. Counted
+        // before the checks below: a refused call is still billed.
+        $this->trackUsage(
+            $model,
+            $feature,
+            (int) ($message->usage->inputTokens ?? 0),
+            (int) ($message->usage->outputTokens ?? 0),
+        );
+
+        if ($message->stopReason === 'refusal') {
+            throw new \RuntimeException("Anthropic refused to answer [{$model}]");
+        }
+
+        $text = \App\Services\Ai\AnthropicSdk::text($message);
+        if (trim($text) === '') {
+            // An empty assistant turn would also break the next request of
+            // the conversation (Claude refuses empty text), so it is a failure.
+            throw new \RuntimeException("Anthropic returned no text [{$model}] (stop reason: " . ($message->stopReason ?? 'none') . ')');
+        }
+
+        return $text;
+    }
+
+    /**
+     * Gemini 3 and later: Google recommends leaving the temperature at the
+     * model's default, so the venue's setting is not sent to them.
+     */
+    private function geminiTakesTemperature(string $model): bool
+    {
+        return !(preg_match('/^gemini-(\d+)/i', $model, $m) && (int) $m[1] >= 3);
     }
 
     private function dispatchGoogle(string $system, array $messages, string $model, float $temp, int $maxTokens, array $extra = [], string $feature = 'chat'): string
@@ -327,13 +378,18 @@ trait DispatchesAiChat
             ];
         }
 
-        return $this->withRetry(function () use ($apiKey, $system, $contents, $model, $temp, $maxTokens, $feature) {
+        $generationConfig = ['maxOutputTokens' => $maxTokens];
+        if ($this->geminiTakesTemperature($model)) {
+            $generationConfig = ['temperature' => $temp] + $generationConfig;
+        }
+
+        return $this->withRetry(function () use ($apiKey, $system, $contents, $model, $generationConfig, $feature) {
             $response = Http::timeout(60)->post(
                 "https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent?key={$apiKey}",
                 [
                     'system_instruction' => ['parts' => [['text' => $system]]],
                     'contents'           => $contents,
-                    'generationConfig'   => ['temperature' => $temp, 'maxOutputTokens' => $maxTokens],
+                    'generationConfig'   => $generationConfig,
                 ]
             );
 
@@ -350,14 +406,23 @@ trait DispatchesAiChat
             }
 
             $body = $response->json();
-            // Gemini usage shape: usageMetadata.promptTokenCount / candidatesTokenCount.
+            // Gemini usage shape: usageMetadata.promptTokenCount / candidatesTokenCount;
+            // a thinking model's thoughtsTokenCount is billed as output too.
             $this->trackUsage(
                 $model,
                 $feature,
                 (int) ($body['usageMetadata']['promptTokenCount']     ?? 0),
-                (int) ($body['usageMetadata']['candidatesTokenCount'] ?? 0),
+                (int) ($body['usageMetadata']['candidatesTokenCount'] ?? 0)
+                    + (int) ($body['usageMetadata']['thoughtsTokenCount'] ?? 0),
             );
-            return $body['candidates'][0]['content']['parts'][0]['text'] ?? '';
+            // Join the answer's text parts; a part marked `thought` is not the answer.
+            $text = '';
+            foreach ($body['candidates'][0]['content']['parts'] ?? [] as $part) {
+                if (isset($part['text']) && empty($part['thought'])) {
+                    $text .= $part['text'];
+                }
+            }
+            return $text;
         }, "Google/{$model}");
     }
 
