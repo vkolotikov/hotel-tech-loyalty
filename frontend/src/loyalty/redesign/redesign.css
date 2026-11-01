@@ -222,7 +222,7 @@
   [data-loyalty] .l-rd-profile-header > .l-rd-actions { margin-left: auto; }
   [data-loyalty] .l-rd-profile-columns { grid-template-columns: minmax(0,1.6fr) minmax(0,1fr); }
   [data-loyalty] .l-rd-level-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
-  [data-loyalty] .l-rd-basics-row { grid-template-columns: 1fr 1fr; }
+  [data-loyalty] .l-rd-basics-row { grid-template-columns: repeat(2,minmax(0,1fr)); }
   [data-loyalty] .l-rd-basics-row > :first-child { grid-column: 1 / -1; }
   [data-loyalty] .l-rd-editor-columns { grid-template-columns: minmax(0,1.7fr) minmax(0,1fr); }
   [data-loyalty] .l-rd-two-fields { grid-template-columns: 1fr; }
@@ -274,7 +274,7 @@
   [data-loyalty] .l-rd-balance-preview small { font-size: 11px; }
   [data-loyalty] .l-rd-quick-add { gap: 8px; flex-wrap: wrap; }
   [data-loyalty] .l-rd-quick-add > small { width: 100%; }
-  [data-loyalty] .l-rd-basics-row { grid-template-columns: 1fr; }
+  [data-loyalty] .l-rd-basics-row { grid-template-columns: minmax(0,1fr); } /* 1fr alone grew to its widest field: 399px wide at 390 */
   [data-loyalty] .l-rd-split-line { flex-wrap: wrap; gap: 4px; }
   [data-loyalty] .l-rd-editor-footer { padding: 12px; flex-wrap: wrap; }
   [data-loyalty] .l-rd-editor-footer > small { width: 100%; }
