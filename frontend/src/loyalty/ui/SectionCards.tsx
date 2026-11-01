@@ -43,7 +43,7 @@ export function SectionCards<T extends string>({ label, idPrefix, panelId, items
               onChange(next)
               document.getElementById(`${idPrefix}-${next}`)?.focus()
             }}
-            className={`flex min-h-[4.5rem] items-center gap-3 rounded-2xl border p-3 text-left transition-colors sm:p-4 ${on ? 'l-hue-card' : 'border-a-border bg-a-surface hover:bg-a-surface-2'}`}>
+            className={`flex min-h-18 items-center gap-3 rounded-2xl border p-3 text-left transition-colors sm:p-4 ${on ? 'l-hue-card' : 'border-a-border bg-a-surface hover:bg-a-surface-2'}`}>
             <span aria-hidden className="l-hue-tile inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl"><Icon size={20} /></span>
             <span className="min-w-0 flex-1">
               <span className={`flex flex-wrap items-center gap-x-2 gap-y-0.5 font-semibold leading-tight ${on ? 'l-hue-text' : 'text-a-text'}`}>

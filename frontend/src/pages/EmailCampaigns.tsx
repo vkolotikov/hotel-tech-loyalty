@@ -335,7 +335,7 @@ export function EmailCampaigns() {
         </div>
         <button
           onClick={() => { resetForm(); setShowForm(true) }}
-          className="flex items-center gap-2 bg-primary-600 text-on-primary px-4 py-2 rounded-lg hover:bg-primary-700 text-sm font-semibold shadow-sm">
+          className="flex items-center gap-2 bg-primary-600 text-on-primary px-4 py-2 rounded-lg hover:bg-primary-700 text-sm font-semibold shadow-xs">
           <Plus size={16} /> {t('emailCampaigns.new_campaign', 'New campaign')}
         </button>
       </div>
@@ -405,12 +405,12 @@ export function EmailCampaigns() {
                   <label className="block text-xs font-medium text-t-secondary mb-1">{t('emailCampaigns.form.internal_name', 'Internal name *')}</label>
                   <input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
                     placeholder={t('emailCampaigns.form.internal_name_placeholder', 'e.g. June win-back to Gold tier')}
-                    className="w-full bg-dark-bg border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500" />
+                    className="w-full bg-dark-bg border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-hidden focus:ring-2 focus:ring-primary-500" />
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-t-secondary mb-1">{t('emailCampaigns.form.target_segment', 'Target segment')}</label>
                   <select value={form.segment_id} onChange={e => setForm(f => ({ ...f, segment_id: e.target.value }))}
-                    className="w-full bg-dark-bg border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500">
+                    className="w-full bg-dark-bg border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-hidden focus:ring-2 focus:ring-primary-500">
                     <option value="">{t('emailCampaigns.form.no_segment_option', '— No segment (pick recipients on send) —')}</option>
                     {segments.map(s => (
                       <option key={s.id} value={s.id}>
@@ -425,7 +425,7 @@ export function EmailCampaigns() {
                 <label className="block text-xs font-medium text-t-secondary mb-1">{t('emailCampaigns.form.subject', 'Subject *')}</label>
                 <input value={form.subject} onChange={e => setForm(f => ({ ...f, subject: e.target.value }))}
                   placeholder={t('emailCampaigns.form.subject_placeholder', 'Your exclusive offer inside')}
-                  className="w-full bg-dark-bg border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500" />
+                  className="w-full bg-dark-bg border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-hidden focus:ring-2 focus:ring-primary-500" />
               </div>
 
               {/* Visual / Code mode toggle */}
@@ -466,7 +466,7 @@ export function EmailCampaigns() {
                     onChange={e => setForm(f => ({ ...f, body_html: e.target.value }))}
                     rows={14}
                     placeholder="<h1>Hi {{member.name}}</h1><p>We've prepared a special offer just for you…</p>"
-                    className="w-full font-mono text-xs bg-dark-bg border border-dark-border rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    className="w-full font-mono text-xs bg-dark-bg border border-dark-border rounded-lg px-3 py-2 text-white focus:outline-hidden focus:ring-2 focus:ring-primary-500"
                   />
                   <p className="text-[10px] text-t-muted mt-1">{t('emailCampaigns.form.code_hint', 'Plain HTML. Inline styles render best across email clients.')}</p>
                   <div className="flex flex-wrap gap-1 mt-2">
@@ -476,7 +476,7 @@ export function EmailCampaigns() {
                         key={token}
                         type="button"
                         onClick={() => insertVariableInCode(token)}
-                        className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-primary-500/10 text-primary-300 hover:bg-primary-500/20 transition-colors"
+                        className="px-1.5 py-0.5 rounded-sm text-[10px] font-mono bg-primary-500/10 text-primary-300 hover:bg-primary-500/20 transition-colors"
                       >
                         {token.replace(/[{}]|member\./g, '')}
                       </button>
@@ -490,7 +490,7 @@ export function EmailCampaigns() {
                 <textarea value={form.body_text} onChange={e => setForm(f => ({ ...f, body_text: e.target.value }))}
                   rows={3}
                   placeholder={t('emailCampaigns.form.plain_text_placeholder', "Plain-text version for clients that can't render HTML")}
-                  className="w-full text-xs bg-dark-bg border border-dark-border rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-primary-500" />
+                  className="w-full text-xs bg-dark-bg border border-dark-border rounded-lg px-3 py-2 text-white focus:outline-hidden focus:ring-2 focus:ring-primary-500" />
               </div>
             </div>
 
@@ -654,13 +654,13 @@ export function EmailCampaigns() {
                           <>
                             <button
                               onClick={() => startEdit(c)}
-                              className="flex items-center gap-1 bg-primary-600 hover:bg-primary-700 text-on-primary text-xs font-semibold px-2.5 py-1 rounded transition-colors"
+                              className="flex items-center gap-1 bg-primary-600 hover:bg-primary-700 text-on-primary text-xs font-semibold px-2.5 py-1 rounded-sm transition-colors"
                             >
                               <Pencil size={12} /> {t('emailCampaigns.table.edit', 'Edit')}
                             </button>
                             <button
                               onClick={() => confirm(t('emailCampaigns.table.send_confirm', { name: c.name, audience: c.segment ? t('emailCampaigns.table.send_confirm_audience', { name: c.segment.name, defaultValue: ' Audience: {{name}}.' }) : '', defaultValue: 'Send "{{name}}" now?{{audience}}' })) && sendMutation.mutate(c.id)}
-                              className="flex items-center gap-1 bg-emerald-600 hover:bg-emerald-700 text-on-fill text-xs font-semibold px-2.5 py-1 rounded transition-colors"
+                              className="flex items-center gap-1 bg-emerald-600 hover:bg-emerald-700 text-on-fill text-xs font-semibold px-2.5 py-1 rounded-sm transition-colors"
                             >
                               <Send size={12} /> {t('emailCampaigns.table.send', 'Send')}
                             </button>
@@ -671,7 +671,7 @@ export function EmailCampaigns() {
                           <button
                             onClick={() => setOpenMenuFor(openMenuFor === c.id ? null : c.id)}
                             onBlur={() => setTimeout(() => setOpenMenuFor(m => (m === c.id ? null : m)), 150)}
-                            className="p-1.5 rounded hover:bg-dark-surface3 text-t-soft hover:text-white"
+                            className="p-1.5 rounded-sm hover:bg-dark-surface3 text-t-soft hover:text-white"
                             title={t('emailCampaigns.table.more_tooltip', 'More')}
                           >
                             <MoreHorizontal size={14} />

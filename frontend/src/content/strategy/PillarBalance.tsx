@@ -22,7 +22,7 @@ export function PillarBalance({ balance }: { balance: Balance }) {
             </div>
             <div className="relative h-2 rounded-full bg-a-surface-2" aria-hidden>
               <div className="h-2 rounded-full bg-a-accent" style={{ width: `${row.actual}%` }} />
-              <div className="absolute -top-1 h-4 w-0.5 rounded bg-a-text" style={{ left: `${row.target}%` }} />
+              <div className="absolute -top-1 h-4 w-0.5 rounded-sm bg-a-text" style={{ left: `${row.target}%` }} />
             </div>
           </li>
         ))}

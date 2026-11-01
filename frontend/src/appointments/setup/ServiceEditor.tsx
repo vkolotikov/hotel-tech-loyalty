@@ -122,7 +122,7 @@ export function ServiceEditor({ service, data, onClose, onSaved }: { service: Se
 
   return (
     <aside role="dialog" aria-modal="false" aria-labelledby="service-editor-title"
-      className="fixed right-0 top-14 !mt-0 bottom-0 z-30 w-full sm:w-[440px] overflow-y-auto bg-a-surface border-l border-a-border shadow-xl">
+      className="fixed right-0 top-14 mt-0! bottom-0 z-30 w-full sm:w-[440px] overflow-y-auto bg-a-surface border-l border-a-border shadow-xl">
       <div className="flex items-center justify-between gap-3 border-b border-a-border px-5 py-4">
         <h2 id="service-editor-title" ref={heading} tabIndex={-1} className="font-a-display text-xl font-normal text-a-text">
           {service ? t('appointments.setup.services.edit', 'Edit service') : t('appointments.setup.services.new', 'New service')}

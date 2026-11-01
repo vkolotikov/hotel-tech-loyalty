@@ -49,7 +49,7 @@ export function ApprovalsSection({ brand, canEdit }: { brand: BrandPayload; canE
           <button type="button" role="switch" aria-checked={on} disabled={busy} aria-labelledby="content-approvals-switch" aria-describedby="content-approvals-line"
             onClick={() => { void toggle() }}
             className={`relative h-6 w-11 shrink-0 rounded-full transition ${on ? 'bg-a-accent' : 'bg-a-surface-2'}`}>
-            <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-a-surface shadow-a-sm transition ${on ? 'left-[1.375rem]' : 'left-0.5'}`} />
+            <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-a-surface shadow-a-sm transition ${on ? 'left-5.5' : 'left-0.5'}`} />
           </button>
           <span id="content-approvals-switch" className="text-sm text-a-text">{switchLabel}</span>
         </div>

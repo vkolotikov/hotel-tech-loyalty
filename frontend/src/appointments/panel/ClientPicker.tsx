@@ -86,7 +86,7 @@ export function ClientPicker({ client, onPick }: { client: ClientSummary | null;
               : t('appointments.client.not_member', 'Not a member')}
           </div>
         </div>
-        <button type="button" autoFocus={handled} onClick={() => pick(null)} className="shrink-0 rounded p-1 text-a-text-2 hover:text-a-text" aria-label={t('appointments.client.change', 'Choose someone else')}>
+        <button type="button" autoFocus={handled} onClick={() => pick(null)} className="shrink-0 rounded-sm p-1 text-a-text-2 hover:text-a-text" aria-label={t('appointments.client.change', 'Choose someone else')}>
           <X size={16} aria-hidden />
         </button>
       </div>

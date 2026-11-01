@@ -80,7 +80,7 @@ export function SendReviewButton({ target, className, label = 'Request review' }
                   <select
                     value={selected ?? ''}
                     onChange={e => setFormId(Number(e.target.value))}
-                    className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-hidden focus:ring-2 focus:ring-primary-500"
                   >
                     {forms.map(f => (
                       <option key={f.id} value={f.id}>
@@ -97,7 +97,7 @@ export function SendReviewButton({ target, className, label = 'Request review' }
                   value={subject}
                   onChange={e => setSubject(e.target.value)}
                   placeholder="How was your stay?"
-                  className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-hidden focus:ring-2 focus:ring-primary-500"
                 />
               </div>
 

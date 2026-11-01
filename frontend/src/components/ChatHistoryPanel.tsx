@@ -146,18 +146,18 @@ export function ChatHistoryPanel({ inquiryId }: { inquiryId: number }) {
                 className="w-full flex items-center justify-between px-3 py-2 hover:bg-dark-surface2/40 transition-colors"
               >
                 <div className="flex items-center gap-2 min-w-0">
-                  {isOpen ? <ChevronDown size={13} className="text-t-secondary flex-shrink-0" /> : <ChevronRight size={13} className="text-t-secondary flex-shrink-0" />}
+                  {isOpen ? <ChevronDown size={13} className="text-t-secondary shrink-0" /> : <ChevronRight size={13} className="text-t-secondary shrink-0" />}
                   <span className="text-xs font-semibold text-white truncate">
                     {conv.visitor?.country || 'Anonymous'}
                     {conv.visitor?.city ? `, ${conv.visitor.city}` : ''}
                   </span>
                   {conv.intent_tag && (
-                    <span className="px-1.5 py-0.5 rounded text-[9px] uppercase font-bold bg-primary-500/15 text-primary-300 flex-shrink-0">
+                    <span className="px-1.5 py-0.5 rounded-sm text-[9px] uppercase font-bold bg-primary-500/15 text-primary-300 shrink-0">
                       {conv.intent_tag.replace(/_/g, ' ')}
                     </span>
                   )}
                   {conv.status && (
-                    <span className={`px-1.5 py-0.5 rounded text-[9px] uppercase font-bold flex-shrink-0 ${
+                    <span className={`px-1.5 py-0.5 rounded text-[9px] uppercase font-bold shrink-0 ${
                       conv.status === 'resolved' ? 'bg-emerald-500/15 text-emerald-300' :
                       conv.status === 'active'   ? 'bg-blue-500/15 text-blue-300' :
                                                    'bg-amber-500/15 text-amber-300'
@@ -166,7 +166,7 @@ export function ChatHistoryPanel({ inquiryId }: { inquiryId: number }) {
                     </span>
                   )}
                 </div>
-                <span className="text-[10px] text-t-secondary tabular-nums flex-shrink-0 ml-2">
+                <span className="text-[10px] text-t-secondary tabular-nums shrink-0 ml-2">
                   {formatTimeShort(conv.last_message_at)}
                 </span>
               </button>
@@ -205,7 +205,7 @@ export function ChatHistoryPanel({ inquiryId }: { inquiryId: number }) {
                                   {m.created_at ? new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
                                 </span>
                               </div>
-                              <div className="text-xs whitespace-pre-wrap break-words">{m.content || <span className="italic opacity-60">(empty)</span>}</div>
+                              <div className="text-xs whitespace-pre-wrap wrap-break-word">{m.content || <span className="italic opacity-60">(empty)</span>}</div>
                             </div>
                           </div>
                         )

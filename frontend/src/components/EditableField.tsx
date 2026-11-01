@@ -45,14 +45,14 @@ export interface EditableFieldProps {
 // Standard input style mirrors TaskDrawer.tsx (lines 236, 269, 355).
 const INPUT_BASE =
   'w-full bg-dark-bg border border-primary-500 rounded-md px-2.5 py-1.5 ' +
-  'text-sm text-white placeholder-t-secondary outline-none ' +
+  'text-sm text-white placeholder-t-secondary outline-hidden ' +
   'focus:border-primary-500 focus:ring-2 focus:ring-primary-500/30'
 
 // Display wrapper — same padding so the cell does not jump on click.
 const DISPLAY_BASE =
   'group relative w-full px-2.5 py-1.5 rounded-md text-sm cursor-text ' +
   'min-h-[34px] flex items-center transition-colors ' +
-  'hover:bg-white/[0.04] focus:outline-none focus:bg-white/[0.04] ' +
+  'hover:bg-white/4 focus:outline-hidden focus:bg-white/4 ' +
   'focus:ring-2 focus:ring-primary-500/30'
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/

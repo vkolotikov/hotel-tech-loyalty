@@ -61,7 +61,7 @@ export function PipelineInsights({ currencySymbol }: { currencySymbol: string })
       label: 'Going Cold',
       blurb: 'Open · no contact in 7+ days',
       icon: Snowflake,
-      tone: 'border-blue-500/25 bg-blue-500/[0.04] hover:bg-blue-500/[0.08]',
+      tone: 'border-blue-500/25 bg-blue-500/4 hover:bg-blue-500/8',
       countText: String(data.cold?.count ?? 0),
       sample: data.cold?.sample ?? [],
     },
@@ -70,7 +70,7 @@ export function PipelineInsights({ currencySymbol }: { currencySymbol: string })
       label: 'High Value',
       blurb: 'Top 5 active deals by value',
       icon: DollarSign,
-      tone: 'border-emerald-500/25 bg-emerald-500/[0.04] hover:bg-emerald-500/[0.08]',
+      tone: 'border-emerald-500/25 bg-emerald-500/4 hover:bg-emerald-500/8',
       countText: `${currencySymbol}${Number(data.high_value?.total ?? 0).toLocaleString()}`,
       sample: data.high_value?.sample ?? [],
     },
@@ -79,7 +79,7 @@ export function PipelineInsights({ currencySymbol }: { currencySymbol: string })
       label: 'Unassigned',
       blurb: 'Open 3+ days · no owner',
       icon: UserMinus,
-      tone: 'border-amber-500/25 bg-amber-500/[0.04] hover:bg-amber-500/[0.08]',
+      tone: 'border-amber-500/25 bg-amber-500/4 hover:bg-amber-500/8',
       countText: String(data.unassigned?.count ?? 0),
       sample: data.unassigned?.sample ?? [],
     },
@@ -88,7 +88,7 @@ export function PipelineInsights({ currencySymbol }: { currencySymbol: string })
       label: 'Stuck',
       blurb: 'Same status for 14+ days',
       icon: AlarmClock,
-      tone: 'border-red-500/25 bg-red-500/[0.04] hover:bg-red-500/[0.08]',
+      tone: 'border-red-500/25 bg-red-500/4 hover:bg-red-500/8',
       countText: String(data.stuck?.count ?? 0),
       sample: data.stuck?.sample ?? [],
     },
@@ -127,8 +127,8 @@ export function PipelineInsights({ currencySymbol }: { currencySymbol: string })
       </div>
 
       {activeCard && (
-        <div className="rounded-2xl border border-white/[0.06] overflow-hidden" style={{ background: 'var(--legacy-card)' }}>
-          <div className="px-4 py-2 border-b border-white/[0.06] flex items-center justify-between gap-2">
+        <div className="rounded-2xl border border-white/6 overflow-hidden" style={{ background: 'var(--legacy-card)' }}>
+          <div className="px-4 py-2 border-b border-white/6 flex items-center justify-between gap-2">
             <span className="text-xs font-bold uppercase tracking-wider text-gray-400">{activeCard.label}</span>
             <div className="flex items-center gap-2">
               {activeCard.key === 'cold' && activeCard.sample.length > 0 && (
@@ -149,11 +149,11 @@ export function PipelineInsights({ currencySymbol }: { currencySymbol: string })
               <button onClick={() => setOpen(null)} className="text-[10px] text-gray-500 hover:text-white">Close</button>
             </div>
           </div>
-          <div className="divide-y divide-white/[0.04]">
+          <div className="divide-y divide-white/4">
             {activeCard.sample.length === 0 ? (
               <div className="px-4 py-6 text-center text-xs text-gray-600">No items in this bucket.</div>
             ) : activeCard.sample.map((inq: any) => (
-              <div key={inq.id} className="flex items-center justify-between px-4 py-2.5 hover:bg-white/[0.02] transition-colors text-sm gap-3 flex-wrap">
+              <div key={inq.id} className="flex items-center justify-between px-4 py-2.5 hover:bg-white/2 transition-colors text-sm gap-3 flex-wrap">
                 <div className="flex items-center gap-3 min-w-0 flex-1">
                   <ChevronDown size={12} className="text-gray-700 -rotate-90" />
                   <span className="text-white font-semibold truncate">{inq.guest?.full_name ?? '—'}</span>

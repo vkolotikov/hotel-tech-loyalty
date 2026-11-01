@@ -69,7 +69,7 @@ export function AiInsights() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-11 h-11 bg-gradient-to-br from-primary-500/20 to-primary-700/10 rounded-xl flex items-center justify-center border border-primary-500/20">
+          <div className="w-11 h-11 bg-linear-to-br from-primary-500/20 to-primary-700/10 rounded-xl flex items-center justify-center border border-primary-500/20">
             <Brain size={22} className="text-primary-400" />
           </div>
           <div>
@@ -173,7 +173,7 @@ export function AiInsights() {
             placeholder="Search member by name or email…"
             value={memberSearch}
             onChange={(e) => setMemberSearch(e.target.value)}
-            className="w-full pl-9 pr-4 py-2.5 bg-dark-surface border border-dark-border rounded-xl text-sm text-white placeholder-t-muted focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500"
+            className="w-full pl-9 pr-4 py-2.5 bg-dark-surface border border-dark-border rounded-xl text-sm text-white placeholder-t-muted focus:outline-hidden focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500"
           />
         </div>
 

@@ -281,7 +281,7 @@ export function EngagementDrawer({ visitorId, conversationId, onClose }: Props) 
         {/* Header */}
         <div className="flex items-start justify-between gap-3 p-4 border-b border-dark-border">
           <div className="flex items-start gap-3 min-w-0">
-            <div className="relative flex-shrink-0">
+            <div className="relative shrink-0">
               <div className="w-12 h-12 rounded-full bg-accent/20 border border-accent/40 flex items-center justify-center text-base font-bold text-accent">
                 {(v?.display_name || v?.email || v?.visitor_ip || 'V').charAt(0).toUpperCase()}
               </div>
@@ -293,7 +293,7 @@ export function EngagementDrawer({ visitorId, conversationId, onClose }: Props) 
               <h2 className="text-lg font-bold truncate flex items-center gap-2 flex-wrap">
                 {v?.display_name || v?.email || v?.phone || `Visitor ${v?.visitor_ip ?? ''}`}
                 {v?.is_lead && (
-                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-300/15 text-amber-300 border border-amber-300/30">
+                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-sm text-[10px] font-bold bg-amber-300/15 text-amber-300 border border-amber-300/30">
                     <Star size={10} /> LEAD
                   </span>
                 )}
@@ -320,7 +320,7 @@ export function EngagementDrawer({ visitorId, conversationId, onClose }: Props) 
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg hover:bg-dark-surface2 text-t-secondary hover:text-white transition-colors flex-shrink-0"
+            className="p-1.5 rounded-lg hover:bg-dark-surface2 text-t-secondary hover:text-white transition-colors shrink-0"
             title="Close (Esc)"
           >
             <X size={18} />
@@ -513,7 +513,7 @@ function ConversationTab({
         <select
           value={translateTo}
           onChange={(e) => setTranslateTo(e.target.value as typeof translateTo)}
-          className="bg-dark-bg border border-dark-border rounded px-2 py-1 text-xs outline-none focus:border-accent transition-colors cursor-pointer"
+          className="bg-dark-bg border border-dark-border rounded-sm px-2 py-1 text-xs outline-hidden focus:border-accent transition-colors cursor-pointer"
         >
           <option value="off">Off</option>
           <option value="en">English</option>
@@ -563,12 +563,12 @@ function ConversationTab({
               }}
               placeholder="Type your reply… (⌘/Ctrl+Enter to send)"
               rows={2}
-              className="flex-1 bg-dark-bg border border-dark-border rounded-lg px-3 py-2 text-sm placeholder-t-secondary outline-none focus:border-accent transition-colors resize-none"
+              className="flex-1 bg-dark-bg border border-dark-border rounded-lg px-3 py-2 text-sm placeholder-t-secondary outline-hidden focus:border-accent transition-colors resize-none"
             />
             <button
               onClick={onSend}
               disabled={!reply.trim() || sending}
-              className="bg-accent text-black font-bold rounded-lg px-3 disabled:opacity-50 hover:bg-accent/90 transition-colors flex-shrink-0"
+              className="bg-accent text-black font-bold rounded-lg px-3 disabled:opacity-50 hover:bg-accent/90 transition-colors shrink-0"
             >
               <Send size={15} />
             </button>
@@ -624,13 +624,13 @@ function MessageBubble({
         </div>
         {showTranslation ? (
           <>
-            <div className="text-sm whitespace-pre-wrap break-words">{translation!.text}</div>
-            <div className="mt-1.5 pt-1.5 border-t border-white/10 text-[11px] whitespace-pre-wrap break-words opacity-60">
+            <div className="text-sm whitespace-pre-wrap wrap-break-word">{translation!.text}</div>
+            <div className="mt-1.5 pt-1.5 border-t border-white/10 text-[11px] whitespace-pre-wrap wrap-break-word opacity-60">
               {m.content}
             </div>
           </>
         ) : (
-          <div className="text-sm whitespace-pre-wrap break-words">{m.content}</div>
+          <div className="text-sm whitespace-pre-wrap wrap-break-word">{m.content}</div>
         )}
       </div>
     </div>
@@ -651,14 +651,14 @@ function JourneyTab({ pageViews }: { pageViews: VisitorDetail['page_views'] }) {
     <div className="overflow-y-auto p-4 space-y-1">
       {pageViews.map((pv, i) => (
         <div key={pv.id} className="flex gap-3 items-start py-2 border-b border-dark-border/40 last:border-b-0">
-          <div className="w-6 h-6 rounded-full bg-dark-surface border border-dark-border flex items-center justify-center text-[10px] font-bold text-t-secondary flex-shrink-0">
+          <div className="w-6 h-6 rounded-full bg-dark-surface border border-dark-border flex items-center justify-center text-[10px] font-bold text-t-secondary shrink-0">
             {i + 1}
           </div>
           <div className="flex-1 min-w-0">
             <div className="text-sm font-medium truncate">{pv.title || pv.url}</div>
             <div className="text-[10px] text-t-secondary truncate font-mono">{pv.url}</div>
           </div>
-          <div className="text-[10px] text-t-secondary whitespace-nowrap flex-shrink-0">
+          <div className="text-[10px] text-t-secondary whitespace-nowrap shrink-0">
             {relativeTime(pv.viewed_at)}
           </div>
         </div>
@@ -742,7 +742,7 @@ function NotesTab({
         onChange={(e) => onChange(e.target.value)}
         placeholder="e.g. asked about late check-in, follow up Tuesday…"
         rows={10}
-        className="bg-dark-surface border border-dark-border rounded-lg px-3 py-2 text-sm placeholder-t-secondary outline-none focus:border-accent transition-colors resize-none"
+        className="bg-dark-surface border border-dark-border rounded-lg px-3 py-2 text-sm placeholder-t-secondary outline-hidden focus:border-accent transition-colors resize-none"
       />
       <button
         onClick={onSave}
@@ -803,10 +803,10 @@ function Field({ label, icon: Icon, value, mono }: {
 }) {
   return (
     <div className="flex items-start gap-3">
-      {Icon && <Icon size={13} className="text-t-secondary mt-0.5 flex-shrink-0" />}
+      {Icon && <Icon size={13} className="text-t-secondary mt-0.5 shrink-0" />}
       <div className="flex-1 min-w-0">
         <p className="text-[10px] uppercase tracking-wide font-bold text-t-secondary">{label}</p>
-        <p className={`text-sm mt-0.5 break-words ${mono ? 'font-mono' : ''}`}>{value}</p>
+        <p className={`text-sm mt-0.5 wrap-break-word ${mono ? 'font-mono' : ''}`}>{value}</p>
       </div>
     </div>
   )

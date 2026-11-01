@@ -93,7 +93,7 @@ export function MemberDuplicates() {
       </div>
 
       <div className="bg-amber-500/5 border border-amber-500/20 rounded-xl p-4 flex items-start gap-3">
-        <AlertCircle size={16} className="text-amber-400 flex-shrink-0 mt-0.5" />
+        <AlertCircle size={16} className="text-amber-400 shrink-0 mt-0.5" />
         <div className="text-xs text-amber-200/90 leading-relaxed">
           {t('members.duplicates.warning', 'Merging is permanent. The "loser" member\'s points, transactions, bookings, NFC cards, inquiries, and CRM guest record are reassigned to the "winner", and the loser account is deleted. Use the swap button to flip which one survives.')}
         </div>
@@ -184,7 +184,7 @@ export function MemberDuplicates() {
                 onChange={e => setReason(e.target.value)}
                 rows={2}
                 placeholder={t('members.duplicates.reason_placeholder', 'e.g. Same person — used different email at front desk')}
-                className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-t-muted focus:outline-none focus:ring-2 focus:ring-primary-500 mb-4"
+                className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-t-muted focus:outline-hidden focus:ring-2 focus:ring-primary-500 mb-4"
               />
 
               <div className="flex justify-end gap-2">

@@ -29,7 +29,7 @@ function useContentWidth(): [(el: HTMLElement | null) => (() => void) | undefine
  */
 function Tile({ title, delay = '', children }: { title: string; delay?: string; children: ReactNode }) {
   return (
-    <div className={`rounded-xl border border-a-border bg-a-surface p-4 shadow-a-sm animate-a-rise min-w-0 [container-type:inline-size] ${delay}`}>
+    <div className={`rounded-xl border border-a-border bg-a-surface p-4 shadow-a-sm animate-a-rise min-w-0 @container ${delay}`}>
       <h2 className="font-a-mono text-xs font-medium uppercase tracking-[0.12em] text-a-text-2 mb-1">{title}</h2>
       {children}
     </div>
@@ -93,7 +93,7 @@ export function TodayStrip({ date, now, appointments, masters, pending = false }
   // Four tiles in a row where the strip itself has room for them, else two by two (workspace.css, [data-glance]):
   // the screen's width says nothing of the open panel or the side menu.
   return (
-    <div className="[container-type:inline-size]">
+    <div className="@container">
       <section data-glance="" aria-label={t('appointments.today.label', 'At a glance')} aria-busy={pending || undefined} className="grid grid-cols-2 gap-3 pb-3">
         <Tile title={t('appointments.overview.total', 'Appointments')}>
           <Figure fit>{pending ? DASH : f.total}</Figure>
@@ -118,7 +118,7 @@ export function TodayStrip({ date, now, appointments, masters, pending = false }
         )}
 
         <Tile title={t('appointments.today.team', 'Team')} delay="[animation-delay:180ms]">
-          <div ref={measureRow} className="flex h-[2.375rem] items-center">
+          <div ref={measureRow} className="flex h-9.5 items-center">
             {shown.map((m, i) => (
               <span key={m.id} aria-hidden title={m.name} style={{ '--a-m': m.color } as CSSProperties}
                 className={`a-member-ring ${avatar} ${i > 0 ? '-ml-1.5' : ''}`}>{initialsOf(m.name)}</span>

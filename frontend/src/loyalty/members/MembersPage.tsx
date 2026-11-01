@@ -30,7 +30,7 @@ import { mobileIcons } from '../mobile/assets'
 import { MemberFilters } from '../mobile/MemberFilters'
 import { useMobileWords } from '../mobile/words'
 
-const TOOL = 'flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm text-a-text hover:bg-a-surface-2 focus:bg-a-surface-2 focus:outline-none'
+const TOOL = 'flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm text-a-text hover:bg-a-surface-2 focus:bg-a-surface-2 focus:outline-hidden'
 
 /** MB-01: the existing tenant directory, tools and URL filters in the approved composition. */
 export function MembersPage() {

@@ -150,10 +150,10 @@ function LeadRowImpl(props: LeadRowProps) {
   return (
     <tr
       className={[
-        'group border-b border-dark-border/40 hover:bg-white/[0.025] transition-colors cursor-pointer',
-        isOverdue ? 'bg-red-500/[0.025]' : '',
-        isSelected ? 'bg-primary-500/[0.06]' : '',
-        isExpanded ? 'bg-white/[0.02]' : '',
+        'group border-b border-dark-border/40 hover:bg-white/2.5 transition-colors cursor-pointer',
+        isOverdue ? 'bg-red-500/2.5' : '',
+        isSelected ? 'bg-primary-500/6' : '',
+        isExpanded ? 'bg-white/2' : '',
       ].join(' ')}
       style={priorityStripe ? { boxShadow: priorityStripe } : undefined}
       onClick={(e) => {
@@ -178,7 +178,7 @@ function LeadRowImpl(props: LeadRowProps) {
           checked={isSelected}
           onChange={onToggleSelect}
           onClick={(e) => e.stopPropagation()}
-          className="rounded border-white/20 bg-white/[0.04] cursor-pointer"
+          className="rounded-sm border-white/20 bg-white/4 cursor-pointer"
           aria-label={t('inquiries.bulk.row_select', { defaultValue: 'Select row' })}
         />
       </td>
@@ -188,7 +188,7 @@ function LeadRowImpl(props: LeadRowProps) {
         <div className="flex items-start gap-3 relative">
           {/* Avatar */}
           <div
-            className="flex-shrink-0 w-9 h-9 rounded-full flex items-center justify-center text-[12.5px] font-bold tracking-tight shadow-inner"
+            className="shrink-0 w-9 h-9 rounded-full flex items-center justify-center text-[12.5px] font-bold tracking-tight shadow-inner"
             style={avatarStyle}
             aria-hidden
           >
@@ -217,7 +217,7 @@ function LeadRowImpl(props: LeadRowProps) {
               />
               {vipLevel && (
                 <span
-                  className="inline-flex items-center gap-0.5 text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border border-amber-500/30 text-amber-300 bg-amber-500/10"
+                  className="inline-flex items-center gap-0.5 text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-sm border border-amber-500/30 text-amber-300 bg-amber-500/10"
                   title={t('inquiries.row.vip_tooltip', { defaultValue: 'VIP level on the guest profile' })}
                 >
                   <Star size={9} className="fill-amber-300" />
@@ -250,13 +250,13 @@ function LeadRowImpl(props: LeadRowProps) {
               <div className="text-[11px] text-gray-500 mt-0.5 space-y-0.5">
                 {inq.guest?.email && (
                   <div className="inline-flex items-center gap-1 break-all" title={inq.guest.email}>
-                    <Mail size={10} className="opacity-60 flex-shrink-0" />
+                    <Mail size={10} className="opacity-60 shrink-0" />
                     <span className="break-all">{inq.guest.email}</span>
                   </div>
                 )}
                 {(inq.guest?.phone || inq.guest?.mobile) && (
                   <div className="flex items-center gap-1" title={inq.guest?.phone || inq.guest?.mobile}>
-                    <Phone size={10} className="opacity-60 flex-shrink-0" />
+                    <Phone size={10} className="opacity-60 shrink-0" />
                     <span className="tabular-nums">{inq.guest?.phone || inq.guest?.mobile}</span>
                   </div>
                 )}
@@ -322,7 +322,7 @@ function LeadRowImpl(props: LeadRowProps) {
       {fieldCfg.list.value && (
         <td className="px-3 py-3 text-right whitespace-nowrap">
           {inq.total_value ? (
-            <span className="inline-flex items-center px-2.5 py-1 rounded-md bg-emerald-500/[0.08] border border-emerald-500/25 text-emerald-300 text-[13px] font-bold tabular-nums">
+            <span className="inline-flex items-center px-2.5 py-1 rounded-md bg-emerald-500/8 border border-emerald-500/25 text-emerald-300 text-[13px] font-bold tabular-nums">
               {currencySymbol}{Number(inq.total_value).toLocaleString()}
             </span>
           ) : (
@@ -383,10 +383,10 @@ function LeadRowImpl(props: LeadRowProps) {
           <div className="flex items-center gap-2 max-w-[180px]">
             <div
               className={[
-                'flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-[10.5px] font-bold',
+                'shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-[10.5px] font-bold',
                 ownerName
-                  ? 'bg-white/[0.06] border border-white/15 text-gray-200'
-                  : 'border border-dashed border-amber-500/30 text-amber-400 bg-amber-500/[0.06]',
+                  ? 'bg-white/6 border border-white/15 text-gray-200'
+                  : 'border border-dashed border-amber-500/30 text-amber-400 bg-amber-500/6',
               ].join(' ')}
               aria-hidden
             >
@@ -450,7 +450,7 @@ function LeadRowImpl(props: LeadRowProps) {
             title={isExpanded
               ? t('inquiries.row.collapse', { defaultValue: 'Collapse' })
               : t('inquiries.row.expand', { defaultValue: 'Expand' })}
-            className="p-1.5 rounded-lg hover:bg-white/[0.06] text-gray-500 hover:text-white transition-colors"
+            className="p-1.5 rounded-lg hover:bg-white/6 text-gray-500 hover:text-white transition-colors"
           >
             <ChevronDown size={14} className={`transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
           </button>
@@ -462,7 +462,7 @@ function LeadRowImpl(props: LeadRowProps) {
               onOpenActionMenu(rect)
             }}
             title={t('inquiries.table.more', { defaultValue: 'More' })}
-            className="p-1.5 rounded-lg hover:bg-white/[0.06] text-gray-500 hover:text-white transition-colors opacity-70 group-hover:opacity-100 transition-opacity"
+            className="p-1.5 rounded-lg hover:bg-white/6 text-gray-500 hover:text-white transition-colors opacity-70 group-hover:opacity-100 transition-opacity"
           >
             <MoreHorizontal size={14} />
           </button>

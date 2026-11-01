@@ -96,7 +96,7 @@ export function InquiryAttachmentsPanel({ inquiryId }: { inquiryId: number }) {
         <button
           onClick={() => inputRef.current?.click()}
           disabled={uploadMutation.isPending}
-          className="p-1 rounded hover:bg-dark-surface2 text-t-secondary hover:text-white disabled:opacity-50"
+          className="p-1 rounded-sm hover:bg-dark-surface2 text-t-secondary hover:text-white disabled:opacity-50"
           title="Upload"
         >
           {uploadMutation.isPending ? <Loader2 size={13} className="animate-spin" /> : <Upload size={13} />}
@@ -122,7 +122,7 @@ export function InquiryAttachmentsPanel({ inquiryId }: { inquiryId: number }) {
         }}
         className={`rounded-lg border-2 border-dashed text-center py-4 px-3 cursor-pointer transition-colors mb-2 ${
           dragOver
-            ? 'border-primary-500 bg-primary-500/[0.05]'
+            ? 'border-primary-500 bg-primary-500/5'
             : 'border-dark-border hover:border-white/20 bg-dark-surface2/40'
         }`}
       >
@@ -144,7 +144,7 @@ export function InquiryAttachmentsPanel({ inquiryId }: { inquiryId: number }) {
             const Icon = iconFor(a.mime_type)
             return (
               <div key={a.id} className="flex items-center gap-2 text-xs bg-dark-surface2 rounded-lg px-2.5 py-2 group">
-                <Icon size={13} className="text-primary-300 flex-shrink-0" />
+                <Icon size={13} className="text-primary-300 shrink-0" />
                 <div className="flex-1 min-w-0">
                   <a
                     href={a.url}
@@ -165,7 +165,7 @@ export function InquiryAttachmentsPanel({ inquiryId }: { inquiryId: number }) {
                   href={a.url}
                   target="_blank"
                   rel="noreferrer"
-                  className="opacity-0 group-hover:opacity-100 p-1 rounded text-gray-500 hover:text-primary-300 hover:bg-white/5 transition"
+                  className="opacity-0 group-hover:opacity-100 p-1 rounded-sm text-gray-500 hover:text-primary-300 hover:bg-white/5 transition"
                   title="Open"
                 >
                   <Download size={11} />
@@ -175,7 +175,7 @@ export function InquiryAttachmentsPanel({ inquiryId }: { inquiryId: number }) {
                     if (window.confirm(`Remove "${a.filename}"?`)) deleteMutation.mutate(a.id)
                   }}
                   disabled={deleteMutation.isPending}
-                  className="opacity-0 group-hover:opacity-100 p-1 rounded text-gray-500 hover:text-red-400 hover:bg-red-500/10 transition disabled:opacity-30"
+                  className="opacity-0 group-hover:opacity-100 p-1 rounded-sm text-gray-500 hover:text-red-400 hover:bg-red-500/10 transition disabled:opacity-30"
                   title="Remove"
                 >
                   <Trash2 size={11} />

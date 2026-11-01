@@ -161,7 +161,7 @@ function Accordion({ title, subtitle, icon: Icon, iconColor, defaultOpen, childr
         <span className="mt-0.5 text-t-secondary">
           {open ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
         </span>
-        <Icon size={16} className={'mt-0.5 flex-shrink-0 ' + iconColor} />
+        <Icon size={16} className={'mt-0.5 shrink-0 ' + iconColor} />
         <div className="flex-1 min-w-0">
           <h2 className="text-base font-bold text-white">{title}</h2>
           {subtitle && <p className="text-xs text-t-secondary mt-0.5">{subtitle}</p>}
@@ -281,18 +281,18 @@ function PipelineRow({ pipeline, expanded, onToggle, onSetDefault, onDelete }: {
               value={name}
               onChange={e => setName(e.target.value)}
               autoFocus
-              className="flex-1 bg-dark-surface border border-dark-border rounded-md px-2 py-1 text-sm outline-none focus:border-accent"
+              className="flex-1 bg-dark-surface border border-dark-border rounded-md px-2 py-1 text-sm outline-hidden focus:border-accent"
             />
             <button
               onClick={() => rename.mutate()}
-              className="p-1.5 rounded hover:bg-emerald-500/15 text-emerald-400"
+              className="p-1.5 rounded-sm hover:bg-emerald-500/15 text-emerald-400"
               title="Save"
             >
               <Save size={13} />
             </button>
             <button
               onClick={() => { setRenaming(false); setName(pipeline.name) }}
-              className="p-1.5 rounded hover:bg-dark-surface2 text-t-secondary hover:text-white"
+              className="p-1.5 rounded-sm hover:bg-dark-surface2 text-t-secondary hover:text-white"
             >
               <X size={13} />
             </button>
@@ -301,13 +301,13 @@ function PipelineRow({ pipeline, expanded, onToggle, onSetDefault, onDelete }: {
           <>
             <span className="font-semibold text-white flex-1">{pipeline.name}</span>
             {pipeline.is_default ? (
-              <span className="flex items-center gap-1 text-[10px] uppercase tracking-wide font-bold text-amber-300 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/30">
+              <span className="flex items-center gap-1 text-[10px] uppercase tracking-wide font-bold text-amber-300 bg-amber-500/10 px-2 py-0.5 rounded-sm border border-amber-500/30">
                 <Star size={9} className="fill-amber-300" /> Default
               </span>
             ) : (
               <button
                 onClick={e => { e.stopPropagation(); onSetDefault() }}
-                className="text-[10px] uppercase tracking-wide font-bold text-t-secondary hover:text-amber-300 px-2 py-0.5 rounded border border-dark-border hover:border-amber-500/30"
+                className="text-[10px] uppercase tracking-wide font-bold text-t-secondary hover:text-amber-300 px-2 py-0.5 rounded-sm border border-dark-border hover:border-amber-500/30"
                 title="Make default"
               >
                 Set default
@@ -318,7 +318,7 @@ function PipelineRow({ pipeline, expanded, onToggle, onSetDefault, onDelete }: {
             </span>
             <button
               onClick={e => { e.stopPropagation(); setRenaming(true) }}
-              className="p-1.5 rounded hover:bg-dark-surface2 text-t-secondary hover:text-white"
+              className="p-1.5 rounded-sm hover:bg-dark-surface2 text-t-secondary hover:text-white"
               title="Rename"
             >
               <Edit3 size={13} />
@@ -326,7 +326,7 @@ function PipelineRow({ pipeline, expanded, onToggle, onSetDefault, onDelete }: {
             {!pipeline.is_default && (
               <button
                 onClick={e => { e.stopPropagation(); onDelete() }}
-                className="p-1.5 rounded hover:bg-red-500/15 text-t-secondary hover:text-red-400"
+                className="p-1.5 rounded-sm hover:bg-red-500/15 text-t-secondary hover:text-red-400"
                 title="Delete pipeline"
               >
                 <Trash2 size={13} />
@@ -406,7 +406,7 @@ function StageRow({ stage }: { stage: PipelineStage }) {
             value={name}
             onChange={e => setName(e.target.value)}
             placeholder="Stage name"
-            className="flex-1 bg-dark-surface border border-dark-border rounded-md px-2 py-1 text-sm outline-none focus:border-accent"
+            className="flex-1 bg-dark-surface border border-dark-border rounded-md px-2 py-1 text-sm outline-hidden focus:border-accent"
           />
           <input
             type="number"
@@ -415,7 +415,7 @@ function StageRow({ stage }: { stage: PipelineStage }) {
             value={winProb}
             onChange={e => setWinProb(e.target.value)}
             placeholder="%"
-            className="w-16 bg-dark-surface border border-dark-border rounded-md px-2 py-1 text-sm text-center outline-none focus:border-accent"
+            className="w-16 bg-dark-surface border border-dark-border rounded-md px-2 py-1 text-sm text-center outline-hidden focus:border-accent"
             title="Default win probability"
           />
         </div>
@@ -473,12 +473,12 @@ function StageRow({ stage }: { stage: PipelineStage }) {
   return (
     <div className="group flex items-center gap-2 p-2 rounded-md hover:bg-dark-surface2">
       <span
-        className="w-2 h-2 rounded-full flex-shrink-0"
+        className="w-2 h-2 rounded-full shrink-0"
         style={{ background: stage.color }}
       />
       <span className="text-sm font-semibold text-white flex-1">{stage.name}</span>
       <span
-        className="flex items-center gap-1 text-[10px] uppercase tracking-wide font-bold px-1.5 py-0.5 rounded"
+        className="flex items-center gap-1 text-[10px] uppercase tracking-wide font-bold px-1.5 py-0.5 rounded-sm"
         style={{ color: ink(KIND_META[stage.kind].color), background: KIND_META[stage.kind].color + '15' }}
       >
         <KindIcon size={9} />
@@ -497,7 +497,7 @@ function StageRow({ stage }: { stage: PipelineStage }) {
       <div className="opacity-0 group-hover:opacity-100 transition flex items-center gap-1">
         <button
           onClick={() => setEditing(true)}
-          className="p-1 rounded hover:bg-dark-surface2 text-t-secondary hover:text-white"
+          className="p-1 rounded-sm hover:bg-dark-surface2 text-t-secondary hover:text-white"
         >
           <Edit3 size={11} />
         </button>
@@ -507,7 +507,7 @@ function StageRow({ stage }: { stage: PipelineStage }) {
               remove.mutate()
             }
           }}
-          className="p-1 rounded hover:bg-red-500/15 text-t-secondary hover:text-red-400"
+          className="p-1 rounded-sm hover:bg-red-500/15 text-t-secondary hover:text-red-400"
         >
           <Trash2 size={11} />
         </button>
@@ -550,7 +550,7 @@ function NewStageRow({ pipelineId, onClose, onAdded }: {
           onChange={e => setName(e.target.value)}
           placeholder="Stage name"
           autoFocus
-          className="flex-1 bg-dark-surface border border-dark-border rounded-md px-2 py-1 text-sm outline-none focus:border-accent"
+          className="flex-1 bg-dark-surface border border-dark-border rounded-md px-2 py-1 text-sm outline-hidden focus:border-accent"
         />
         <input
           type="number"
@@ -559,7 +559,7 @@ function NewStageRow({ pipelineId, onClose, onAdded }: {
           value={winProb}
           onChange={e => setWinProb(e.target.value)}
           placeholder="%"
-          className="w-16 bg-dark-surface border border-dark-border rounded-md px-2 py-1 text-sm text-center outline-none focus:border-accent"
+          className="w-16 bg-dark-surface border border-dark-border rounded-md px-2 py-1 text-sm text-center outline-hidden focus:border-accent"
         />
       </div>
       <div className="flex items-center gap-1.5">
@@ -626,7 +626,7 @@ function NewPipelineModal({ onClose, onCreated }: { onClose: () => void; onCreat
 
   return (
     <div
-      className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+      className="fixed inset-0 bg-black/70 backdrop-blur-xs z-50 flex items-center justify-center p-4"
       onClick={onClose}
     >
       <div
@@ -642,14 +642,14 @@ function NewPipelineModal({ onClose, onCreated }: { onClose: () => void; onCreat
           onChange={e => setName(e.target.value)}
           placeholder="Name (e.g. MICE & Group Sales)"
           autoFocus
-          className="w-full bg-dark-bg border border-dark-border rounded-md px-3 py-2 text-sm outline-none focus:border-accent mb-3"
+          className="w-full bg-dark-bg border border-dark-border rounded-md px-3 py-2 text-sm outline-hidden focus:border-accent mb-3"
         />
         <textarea
           value={description}
           onChange={e => setDescription(e.target.value)}
           placeholder="Optional — what kind of deals belong here?"
           rows={2}
-          className="w-full bg-dark-bg border border-dark-border rounded-md px-3 py-2 text-sm placeholder-t-secondary outline-none focus:border-accent resize-none mb-4"
+          className="w-full bg-dark-bg border border-dark-border rounded-md px-3 py-2 text-sm placeholder-t-secondary outline-hidden focus:border-accent resize-none mb-4"
         />
         <div className="flex justify-end gap-2">
           <button onClick={onClose} className="px-4 py-2 text-sm text-t-secondary hover:text-white">
@@ -724,7 +724,7 @@ function LostReasonsEditor({ reasons }: { reasons: LostReason[] }) {
             placeholder="Reason label"
             autoFocus
             onKeyDown={e => { if (e.key === 'Enter' && newLabel.trim()) add.mutate() }}
-            className="flex-1 bg-dark-surface border border-dark-border rounded-md px-3 py-1.5 text-sm outline-none focus:border-accent"
+            className="flex-1 bg-dark-surface border border-dark-border rounded-md px-3 py-1.5 text-sm outline-hidden focus:border-accent"
           />
           <button
             onClick={() => add.mutate()}
@@ -755,7 +755,7 @@ function ReasonRow({ reason, onToggle, onDelete }: {
   onDelete: () => void
 }) {
   return (
-    <div className={`group flex items-center gap-2 px-2 py-1.5 rounded ${reason.is_active ? '' : 'opacity-50'}`}>
+    <div className={`group flex items-center gap-2 px-2 py-1.5 rounded-sm ${reason.is_active ? '' : 'opacity-50'}`}>
       <span className={`text-sm flex-1 ${reason.is_active ? 'text-white' : 'text-t-secondary line-through'}`}>
         {reason.label}
       </span>
@@ -764,13 +764,13 @@ function ReasonRow({ reason, onToggle, onDelete }: {
       )}
       <button
         onClick={onToggle}
-        className="text-[10px] uppercase tracking-wide font-bold px-1.5 py-0.5 rounded border opacity-0 group-hover:opacity-100 transition text-t-secondary hover:text-white border-dark-border"
+        className="text-[10px] uppercase tracking-wide font-bold px-1.5 py-0.5 rounded-sm border opacity-0 group-hover:opacity-100 transition text-t-secondary hover:text-white border-dark-border"
       >
         {reason.is_active ? 'Hide' : 'Activate'}
       </button>
       <button
         onClick={onDelete}
-        className="p-1 rounded hover:bg-red-500/15 text-t-secondary hover:text-red-400 opacity-0 group-hover:opacity-100 transition"
+        className="p-1 rounded-sm hover:bg-red-500/15 text-t-secondary hover:text-red-400 opacity-0 group-hover:opacity-100 transition"
       >
         <Trash2 size={11} />
       </button>

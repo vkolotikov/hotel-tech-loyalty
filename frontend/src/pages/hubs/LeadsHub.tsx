@@ -115,7 +115,7 @@ export function LeadsHub() {
                 value={homeSearch}
                 onChange={(e) => setHomeSearch(e.target.value)}
                 placeholder="Search leads & contacts…"
-                className="w-full bg-dark-surface border border-dark-border rounded-lg pl-9 pr-3 py-2 text-sm placeholder-t-secondary outline-none focus:border-primary-500 transition-colors"
+                className="w-full bg-dark-surface border border-dark-border rounded-lg pl-9 pr-3 py-2 text-sm placeholder-t-secondary outline-hidden focus:border-primary-500 transition-colors"
               />
             </div>
 
@@ -138,15 +138,15 @@ export function LeadsHub() {
           <div className="flex items-center gap-2 min-w-0">
             <button
               onClick={() => setActive('home')}
-              className="flex items-center gap-1 text-xs text-t-secondary hover:text-white transition-colors px-1.5 py-1 -ml-1.5 rounded-md hover:bg-dark-surface2 flex-shrink-0"
+              className="flex items-center gap-1 text-xs text-t-secondary hover:text-white transition-colors px-1.5 py-1 -ml-1.5 rounded-md hover:bg-dark-surface2 shrink-0"
               title="Back to Leads home"
             >
               <ArrowLeft size={13} />
               <span className="hidden sm:inline">Leads</span>
             </button>
-            <span className="text-t-secondary/40 flex-shrink-0">/</span>
+            <span className="text-t-secondary/40 shrink-0">/</span>
             <div className="flex items-center gap-1.5 min-w-0">
-              {tile && <tile.icon size={14} className="text-t-secondary flex-shrink-0" />}
+              {tile && <tile.icon size={14} className="text-t-secondary shrink-0" />}
               {tile && <h2 className="text-base font-semibold text-white truncate">{tile.label}</h2>}
             </div>
           </div>

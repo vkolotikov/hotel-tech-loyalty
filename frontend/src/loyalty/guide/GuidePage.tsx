@@ -42,7 +42,7 @@ export function GuidePage() {
 
   return (
     <div className="space-y-8 px-4 py-6 lg:px-6">
-      <header className="relative overflow-hidden rounded-3xl border border-a-border bg-gradient-to-br from-a-accent/15 via-a-surface to-a-surface p-6 sm:p-8">
+      <header className="relative overflow-hidden rounded-3xl border border-a-border bg-linear-to-br from-a-accent/15 via-a-surface to-a-surface p-6 sm:p-8">
         <Floating />
         <div className="relative max-w-2xl space-y-4">
           <PageHeader title={t('loyalty.guide.page.title', 'Guide')} />
@@ -129,7 +129,7 @@ function QuickStart({ say }: { say: Say }) {
     <section aria-labelledby="guide-start" className="space-y-3">
       <SectionTitle id="guide-start" icon={Rocket}>{t('loyalty.guide.page.start', 'Quick start')}</SectionTitle>
       <ol className="relative grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-        <span aria-hidden className="absolute left-6 right-6 top-9 hidden h-0.5 rounded-full bg-gradient-to-r from-a-accent/50 via-a-accent/20 to-a-accent/50 lg:block" />
+        <span aria-hidden className="absolute left-6 right-6 top-9 hidden h-0.5 rounded-full bg-linear-to-r from-a-accent/50 via-a-accent/20 to-a-accent/50 lg:block" />
         {STEPS.map((s, i) => {
           const Icon = STEP_ICONS[s.id]
           const w = stepWords(s.id, say)
@@ -177,7 +177,7 @@ function Question({ id, to, open, say }: { id: FaqId; to?: string; open: boolean
           <span className="min-w-0 flex-1">{w.q}</span>
           <ChevronDown size={18} aria-hidden className="shrink-0 text-a-text-2 transition-transform group-open:rotate-180" />
         </summary>
-        <div className="space-y-2 px-4 pb-4 pl-[3.75rem] text-sm text-a-text-2 animate-a-fade">
+        <div className="space-y-2 px-4 pb-4 pl-15 text-sm text-a-text-2 animate-a-fade">
           <p>{w.a}</p>
           {to && (
             <Link to={to} className="inline-flex items-center gap-1 font-semibold text-a-accent-text hover:underline">

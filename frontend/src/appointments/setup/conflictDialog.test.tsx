@@ -43,7 +43,7 @@ describe('ConflictDialog', () => {
     const backdrop = (html.match(/<div class="(fixed inset-0[^"]*)"/)?.[1] ?? '').split(' ')
     expect(backdrop).toContain('bg-a-scrim/40')
     expect(backdrop.some(c => c.startsWith('bg-a-text'))).toBe(false)
-    expect(backdrop).toContain('!mt-0')
+    expect(backdrop).toContain('mt-0!')
   })
 })
 

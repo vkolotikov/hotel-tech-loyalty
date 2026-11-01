@@ -86,7 +86,7 @@ export function CardPreview({ id, appointment, memberName, placement, top, botto
     // A press here must not take the focus from a card the keyboard previewed: its blur would close this before the click arrives.
     <div id={id} role="tooltip" style={style}
       onPointerEnter={onHold} onPointerLeave={(e) => onLeave?.(e.relatedTarget)} onClick={onOpen} onMouseDown={(e) => e.preventDefault()}
-      className="absolute z-30 w-[17rem] cursor-pointer space-y-1.5 rounded-xl border border-a-border bg-a-surface p-3.5 text-sm text-a-text shadow-a-lg animate-a-pop">
+      className="absolute z-30 w-68 cursor-pointer space-y-1.5 rounded-xl border border-a-border bg-a-surface p-3.5 text-sm text-a-text shadow-a-lg animate-a-pop">
       <div className="font-a-display text-base font-normal leading-tight">{appointment.client.name}</div>
       {boot.loyalty.programme_on && member && points !== null && (
         <div className="text-xs text-a-text-2">{member.tier

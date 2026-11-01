@@ -100,7 +100,7 @@ function ChannelEditor({ channel, onDone, onCancel }: { channel: Channel | null;
           <div className="flex flex-wrap gap-1.5">
             {CHANNEL_DAYS.map((day, i) => (
               <button key={day} type="button" aria-pressed={form.days[day]} onClick={() => set({ days: { ...form.days, [day]: !form.days[day] } })}
-                className={`min-w-[3rem] rounded-full border px-2.5 py-1 text-xs font-medium ${form.days[day] ? 'border-a-accent-text bg-a-accent/10 text-a-text' : 'border-a-border text-a-text-2 hover:text-a-text'}`}>
+                className={`min-w-12 rounded-full border px-2.5 py-1 text-xs font-medium ${form.days[day] ? 'border-a-accent-text bg-a-accent/10 text-a-text' : 'border-a-border text-a-text-2 hover:text-a-text'}`}>
                 {dayShort(i, locale)}
               </button>
             ))}
@@ -205,7 +205,7 @@ export function ChannelsSection({ brand, canEdit, startOpen = false, onSaved }: 
                       aria-label={t('content.brand.channels.switch', 'Posting on {{channel}}', { channel: channel.label })}
                       onClick={() => { void run(() => saveChannel(deps, channel, { ...channelForm(channel, channel.platform), active: !channel.active }), null) }}
                       className={`relative h-6 w-11 rounded-full transition ${channel.active ? 'bg-a-accent' : 'bg-a-surface-2'}`}>
-                      <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-a-surface shadow-a-sm transition ${channel.active ? 'left-[1.375rem]' : 'left-0.5'}`} />
+                      <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-a-surface shadow-a-sm transition ${channel.active ? 'left-5.5' : 'left-0.5'}`} />
                     </button>
                   ) : (
                     <span className="rounded-full border border-a-border px-2 py-0.5 text-xs text-a-text-2">{channel.active ? w('on', 'On') : w('off', 'Off')}</span>

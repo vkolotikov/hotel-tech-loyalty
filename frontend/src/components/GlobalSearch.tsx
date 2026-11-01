@@ -129,7 +129,7 @@ export function GlobalSearch() {
 
   return (
     <>
-      <div className="fixed inset-0 bg-black/60 z-50 backdrop-blur-sm" onClick={() => setOpen(false)} />
+      <div className="fixed inset-0 bg-black/60 z-50 backdrop-blur-xs" onClick={() => setOpen(false)} />
       <div className="fixed top-[12vh] left-1/2 -translate-x-1/2 w-full max-w-2xl px-4 z-50 pointer-events-none">
         <div className="bg-dark-surface border border-dark-border rounded-2xl shadow-2xl overflow-hidden pointer-events-auto">
           {/* Input */}
@@ -140,7 +140,7 @@ export function GlobalSearch() {
               value={q}
               onChange={e => setQ(e.target.value)}
               placeholder="Search customers, inquiries, companies, reservations…"
-              className="flex-1 bg-transparent text-white placeholder-gray-600 outline-none text-sm"
+              className="flex-1 bg-transparent text-white placeholder-gray-600 outline-hidden text-sm"
               autoFocus
             />
             {isFetching ? <Loader2 size={13} className="animate-spin text-gray-500" /> : null}
@@ -170,20 +170,20 @@ export function GlobalSearch() {
                       onMouseEnter={() => setActiveIdx(i)}
                       onClick={() => { navigate(r.url); setOpen(false) }}
                       className={`w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors ${
-                        activeIdx === i ? 'bg-primary-500/10' : 'hover:bg-white/[0.03]'
+                        activeIdx === i ? 'bg-primary-500/10' : 'hover:bg-white/3'
                       }`}
                     >
-                      <div className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 bg-white/[0.04]`}>
+                      <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 bg-white/4`}>
                         <Icon size={13} className={meta.color} />
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="text-sm text-white truncate flex items-center gap-1.5">
                           <span className="truncate">{r.title}</span>
-                          {r.badge === 'VIP' && <Star size={9} className="text-amber-400 flex-shrink-0" />}
+                          {r.badge === 'VIP' && <Star size={9} className="text-amber-400 shrink-0" />}
                         </div>
                         {r.subtitle && <div className="text-[11px] text-gray-500 truncate">{r.subtitle}</div>}
                       </div>
-                      <div className="flex items-center gap-2 flex-shrink-0">
+                      <div className="flex items-center gap-2 shrink-0">
                         {r.badge && r.badge !== 'VIP' && (
                           <span className="text-[10px] text-t-secondary uppercase tracking-wider">{r.badge}</span>
                         )}
@@ -197,11 +197,11 @@ export function GlobalSearch() {
           </div>
 
           <div className="px-4 py-2 border-t border-dark-border bg-dark-surface2/40 flex items-center justify-between text-[10px] text-gray-600">
-            <div><kbd className="font-mono px-1 py-0.5 rounded bg-white/5 text-gray-400">⌘K</kbd> to open</div>
+            <div><kbd className="font-mono px-1 py-0.5 rounded-sm bg-white/5 text-gray-400">⌘K</kbd> to open</div>
             <div className="flex items-center gap-2">
-              <kbd className="font-mono px-1 py-0.5 rounded bg-white/5 text-gray-400">↑↓</kbd> nav
-              <kbd className="font-mono px-1 py-0.5 rounded bg-white/5 text-gray-400">↵</kbd> open
-              <kbd className="font-mono px-1 py-0.5 rounded bg-white/5 text-gray-400">esc</kbd> close
+              <kbd className="font-mono px-1 py-0.5 rounded-sm bg-white/5 text-gray-400">↑↓</kbd> nav
+              <kbd className="font-mono px-1 py-0.5 rounded-sm bg-white/5 text-gray-400">↵</kbd> open
+              <kbd className="font-mono px-1 py-0.5 rounded-sm bg-white/5 text-gray-400">esc</kbd> close
             </div>
           </div>
         </div>

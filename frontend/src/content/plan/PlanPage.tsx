@@ -327,7 +327,7 @@ export function PlanPage() {
       )}
 
       <div className="flex min-h-0 flex-1 flex-col gap-4 px-4 pb-4 lg:px-6">
-        <div className="min-h-[24rem] min-w-0 flex-1 overflow-auto rounded-xl border border-a-border bg-a-surface shadow-a-sm">
+        <div className="min-h-96 min-w-0 flex-1 overflow-auto rounded-xl border border-a-border bg-a-surface shadow-a-sm">
           {query.isLoading && <CalendarSkeleton />}
           {!query.isLoading && view === 'week' && (
             <WeekGrid plans={plans} today={today} locale={locale} selectedId={selectedId} dropDate={dropDate} fillingKey={filling} aiPaused={aiPaused} times={times} onAdd={addOn}

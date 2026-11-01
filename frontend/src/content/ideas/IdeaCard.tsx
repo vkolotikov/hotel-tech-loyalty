@@ -47,7 +47,7 @@ export function IdeaCard({ post, column, locale, now, pillar, draggable, locked 
         className="flex w-full items-start gap-2 rounded-md text-left">
         <PlatformMark platform={post.platform} size="sm" />
         <span className="min-w-0 flex-1">
-          <span className="line-clamp-3 block break-words text-sm font-medium text-a-text">{line}</span>
+          <span className="line-clamp-3 block wrap-break-word text-sm font-medium text-a-text">{line}</span>
           {sub && <span className="block truncate text-xs text-a-text-2">{sub}</span>}
         </span>
       </button>

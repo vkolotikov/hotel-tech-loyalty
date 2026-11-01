@@ -20,7 +20,7 @@ export interface ChatGptConnectionsResponse {
 }
 
 const endpoint = '/v1/auth/plugin-connections'
-const focus = 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-600 focus-visible:ring-offset-2'
+const focus = 'focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-slate-600 focus-visible:ring-offset-2'
 
 export function ChatGptConnectionsPanel() {
   const userId = useAuthStore(state => state.user?.id)
@@ -75,7 +75,7 @@ export function ChatGptConnectionsPanel() {
             <AlertCircle size={17} className="mt-0.5 shrink-0" aria-hidden="true" />
             <div>
               <p>Connections could not be loaded.</p>
-              <button type="button" onClick={() => void refetch()} className={`mt-1 rounded underline underline-offset-2 ${focus}`}>Try again</button>
+              <button type="button" onClick={() => void refetch()} className={`mt-1 rounded-sm underline underline-offset-2 ${focus}`}>Try again</button>
             </div>
           </div>
         ) : (
@@ -95,7 +95,7 @@ export function ChatGptConnectionsPanel() {
                 <ul className="divide-y divide-hx-dde3e8" aria-label="Your approved connections">
                   {connections.map(connection => (
                     <li key={connection.id} className="py-3 first:pt-0">
-                      <p className="break-words font-semibold">{connection.name}</p>
+                      <p className="wrap-break-word font-semibold">{connection.name}</p>
                       {connection.created_at && (
                         <p className="mt-0.5 text-xs text-hx-54626e">Authorized {new Date(connection.created_at).toLocaleString()}</p>
                       )}

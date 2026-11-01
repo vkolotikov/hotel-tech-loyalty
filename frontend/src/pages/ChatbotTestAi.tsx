@@ -62,7 +62,7 @@ export function ChatbotTestAi() {
           {history.map((m, i) => (
             <div key={i} className={`flex gap-2 ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
               {m.role === 'assistant' && (
-                <div className="w-7 h-7 rounded-full bg-primary-600/30 flex items-center justify-center flex-shrink-0">
+                <div className="w-7 h-7 rounded-full bg-primary-600/30 flex items-center justify-center shrink-0">
                   <Bot size={12} className="text-primary-400" />
                 </div>
               )}
@@ -70,7 +70,7 @@ export function ChatbotTestAi() {
                 {m.content}
               </div>
               {m.role === 'user' && (
-                <div className="w-7 h-7 rounded-full bg-dark-surface2 flex items-center justify-center flex-shrink-0">
+                <div className="w-7 h-7 rounded-full bg-dark-surface2 flex items-center justify-center shrink-0">
                   <User size={12} className="text-t-secondary" />
                 </div>
               )}

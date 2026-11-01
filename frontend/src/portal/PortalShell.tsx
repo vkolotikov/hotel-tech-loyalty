@@ -52,7 +52,7 @@ export function PortalShell({ children }: { children: ReactNode }) {
 
   return (
     <div data-portal="" className="min-h-screen flex flex-col font-p-body">
-      <header className="sticky top-0 z-30 bg-p-bg/90 backdrop-blur border-b border-p-border">
+      <header className="sticky top-0 z-30 bg-p-bg/90 backdrop-blur-sm border-b border-p-border">
         <div className="max-w-3xl mx-auto px-4 h-14 flex items-center justify-between gap-3">
           <div className="flex items-center gap-2 min-w-0">
             {data?.venue.logo_url && <img src={data.venue.logo_url} alt="" className="h-7 w-7 rounded-full object-cover" />}
@@ -121,7 +121,7 @@ export function PortalShell({ children }: { children: ReactNode }) {
         {!isLoading && !portalOff && !blockingError && children}
       </main>
 
-      <nav className="sm:hidden fixed bottom-0 inset-x-0 z-30 bg-p-surface/95 backdrop-blur border-t border-p-border" aria-label={t('portal.shell.menu', 'Menu')} style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
+      <nav className="sm:hidden fixed bottom-0 inset-x-0 z-30 bg-p-surface/95 backdrop-blur-sm border-t border-p-border" aria-label={t('portal.shell.menu', 'Menu')} style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
         <div className={`grid ${MOBILE_COLS[items.length] ?? 'grid-cols-4'}`}>
           {items.map(({ to, label, icon: Icon, end, badge }) => (
             <NavLink key={to} to={to} end={end}

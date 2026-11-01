@@ -52,7 +52,7 @@ export function Offers() {
         {isError
           ? <div className="col-span-full"><QueryError onRetry={() => refetch()} /></div>
           : isLoading
-          ? Array(6).fill(0).map((_, i) => <div key={i} className="bg-dark-surface rounded-xl border border-dark-border p-6 animate-pulse"><div className="h-4 bg-dark-surface2 rounded w-3/4 mb-3" /><div className="h-3 bg-dark-surface2 rounded w-1/2" /></div>)
+          ? Array(6).fill(0).map((_, i) => <div key={i} className="bg-dark-surface rounded-xl border border-dark-border p-6 animate-pulse"><div className="h-4 bg-dark-surface2 rounded-sm w-3/4 mb-3" /><div className="h-3 bg-dark-surface2 rounded-sm w-1/2" /></div>)
           : (data?.data ?? []).map((offer: any) => (
             <Card key={offer.id} className="relative overflow-hidden">
               {offer.image_url && (
@@ -93,7 +93,7 @@ export function Offers() {
                   {offer.is_active ? t('offers.active', 'Active') : t('offers.inactive', 'Inactive')}
                 </span>
                 <div className="flex-1" />
-                <button onClick={() => { setEditOffer(offer); setShowForm(true) }} className="p-1.5 text-t-muted hover:text-primary-400 hover:bg-primary-500/10 rounded">
+                <button onClick={() => { setEditOffer(offer); setShowForm(true) }} className="p-1.5 text-t-muted hover:text-primary-400 hover:bg-primary-500/10 rounded-sm">
                   <Edit size={14} />
                 </button>
                 <button
@@ -105,7 +105,7 @@ export function Offers() {
                     }
                   }}
                   aria-label={t('offers.delete_label', 'Delete offer')}
-                  className="p-1.5 text-t-muted hover:text-danger hover:bg-danger/10 rounded"
+                  className="p-1.5 text-t-muted hover:text-danger hover:bg-danger/10 rounded-sm"
                 >
                   <Trash2 size={14} />
                 </button>
@@ -197,8 +197,8 @@ function OfferForm({ offer, onClose }: { offer: any, onClose: () => void }) {
             <div key={f}>
               <label className="block text-sm font-medium text-t-soft mb-1">{t(`offers.form.${f}`, f.charAt(0).toUpperCase() + f.slice(1))}</label>
               {f === 'description'
-                ? <textarea value={(form as any)[f]} onChange={(e) => setForm({ ...form, [f]: e.target.value })} className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-t-muted focus:outline-none focus:ring-2 focus:ring-primary-500" rows={3} />
-                : <input type="text" value={(form as any)[f]} onChange={(e) => setForm({ ...form, [f]: e.target.value })} className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-t-muted focus:outline-none focus:ring-2 focus:ring-primary-500" />
+                ? <textarea value={(form as any)[f]} onChange={(e) => setForm({ ...form, [f]: e.target.value })} className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-t-muted focus:outline-hidden focus:ring-2 focus:ring-primary-500" rows={3} />
+                : <input type="text" value={(form as any)[f]} onChange={(e) => setForm({ ...form, [f]: e.target.value })} className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-t-muted focus:outline-hidden focus:ring-2 focus:ring-primary-500" />
               }
             </div>
           ))}

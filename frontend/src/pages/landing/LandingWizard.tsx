@@ -109,7 +109,7 @@ const kicker = 'text-[11px] font-mono uppercase tracking-[0.14em] text-primary-5
 // dark-surface is the 525-occurrence house default (Appendix A §7.4).
 const card = 'bg-dark-surface border border-dark-border rounded-xl p-5'
 const label = 'block text-xs text-t-secondary mb-1.5'
-const input = 'w-full bg-dark-bg border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-t-muted focus:border-primary-500 outline-none'
+const input = 'w-full bg-dark-bg border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-t-muted focus:border-primary-500 outline-hidden'
 
 /**
  * The full wizard: say what you do, check your details, make it yours,
@@ -395,10 +395,10 @@ export function LandingWizard(props: LandingWizardProps) {
                 type="button"
                 aria-pressed={chip.selected}
                 onClick={() => up('industry', chip.id)}
-                className={'rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-all outline-none '
+                className={'rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-all outline-hidden '
                   + 'focus-visible:ring-2 focus-visible:ring-primary-500/40 '
                   + (chip.selected
-                    ? 'border-primary-500 bg-primary-500/[0.12] text-white'
+                    ? 'border-primary-500 bg-primary-500/12 text-white'
                     : 'border-dark-border bg-dark-surface text-t-secondary hover:border-primary-500/40 hover:text-white')}
               >
                 {t(`landing_pages.wizard.industry_name_${chip.id}`, chip.name)}
@@ -671,7 +671,7 @@ export function LandingWizard(props: LandingWizardProps) {
                   aria-checked={checked}
                   aria-label={section.label}
                   onClick={() => up('sections', { ...form.sections, [section.key]: !checked })}
-                  className={'relative shrink-0 w-9 h-5 rounded-full transition-colors outline-none '
+                  className={'relative shrink-0 w-9 h-5 rounded-full transition-colors outline-hidden '
                     + 'focus-visible:ring-2 focus-visible:ring-primary-500/40 '
                     + (checked ? 'bg-primary-500' : 'bg-dark-border')}
                 >
@@ -692,7 +692,7 @@ export function LandingWizard(props: LandingWizardProps) {
           type="button"
           onClick={() => setStep(s => Math.max(0, s - 1))}
           disabled={step === 0 || applyMut.isPending}
-          className="flex items-center gap-1.5 px-3 py-2 text-sm text-t-secondary hover:text-white rounded-lg focus-visible:ring-2 focus-visible:ring-primary-500/40 outline-none disabled:opacity-50 disabled:cursor-not-allowed"
+          className="flex items-center gap-1.5 px-3 py-2 text-sm text-t-secondary hover:text-white rounded-lg focus-visible:ring-2 focus-visible:ring-primary-500/40 outline-hidden disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <ArrowLeft size={15} /> {t('landing_pages.wizard.back', 'Back')}
         </button>
@@ -707,7 +707,7 @@ export function LandingWizard(props: LandingWizardProps) {
             }
           }}
           disabled={isLastStep && applyMut.isPending}
-          className="flex items-center gap-2 px-5 py-2.5 text-sm font-medium bg-primary-500 text-on-primary rounded-lg hover:bg-primary-400 transition-colors focus-visible:ring-2 focus-visible:ring-primary-500/40 outline-none disabled:opacity-60 disabled:cursor-not-allowed"
+          className="flex items-center gap-2 px-5 py-2.5 text-sm font-medium bg-primary-500 text-on-primary rounded-lg hover:bg-primary-400 transition-colors focus-visible:ring-2 focus-visible:ring-primary-500/40 outline-hidden disabled:opacity-60 disabled:cursor-not-allowed"
         >
           {isLastStep
             ? (applyMut.isPending

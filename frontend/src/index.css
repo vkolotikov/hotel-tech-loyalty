@@ -1,27 +1,68 @@
-@import './portal/theme/portal.css';
-@import './workspace/theme/workspace.css';
-@import './appointments/theme/appointments.css';
-@import './content/theme/content.css';
-@import './loyalty/theme/loyalty.css';
-@import './theme/legacySurfaces.css';
-@import './theme/glass.css';
-@import './theme/light.css';
+@import './portal/theme/portal.css' layer(base);
+@import './workspace/theme/workspace.css' layer(base);
+@import './appointments/theme/appointments.css' layer(base);
+@import './content/theme/content.css' layer(base);
+@import './loyalty/theme/loyalty.css' layer(base);
+@import './theme/legacySurfaces.css' layer(base);
+@import './theme/glass.css' layer(base);
+@import './theme/light.css' layer(base);
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import 'tailwindcss';
 
-/* NOTE (2026-10-08): this import has never reached production. It follows
-   the rules above, so the build drops it, and the preset fonts below only
-   render where they happen to be installed. Moving it up would change how
-   Classic looks for every organisation on a preset, so that is left to the
-   owner (Glass spec §12). Glass's own faces are self-hosted in theme/glass.css. */
-/* Display fonts used by Settings → Branding theme presets. Without these
-   the per-preset fontFamily fell back to system fonts (mostly Inter on
-   Windows) and all 14 preset cards rendered with the SAME typography —
-   defeating the whole point of having distinct moods. display=swap means
-   they don't block first paint; browser swaps once loaded. */
-@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;700&family=EB+Garamond:wght@500;700&family=Playfair+Display:wght@600;700&family=Lora:wght@500;700&family=DM+Serif+Display:wght@400&family=Manrope:wght@400;600;700&family=Outfit:wght@300;500;700&family=Quicksand:wght@500;700&family=Space+Grotesk:wght@500;700&family=IBM+Plex+Sans:wght@300;500;700&family=Bricolage+Grotesque:wght@500;700&family=JetBrains+Mono:wght@400;700&display=swap');
+/* NOTE (2026-10-08): the Google Fonts @import for the Settings → Branding
+   preset faces (Cormorant Garamond, EB Garamond, Playfair Display, Lora,
+   DM Serif Display, Manrope, Outfit, Quicksand, Space Grotesk, IBM Plex Sans,
+   Bricolage Grotesque, JetBrains Mono) has never reached production: under
+   Tailwind 3 it followed other rules, so the build dropped it, and the preset
+   fonts only render where they happen to be installed. Tailwind 4 hoists every
+   @import, so it would start loading for every organisation; it is left out to
+   keep that behaviour, and turning it on stays the owner's call (Glass spec §12).
+   Glass's own faces are self-hosted in theme/glass.css. */
+
+@config '../tailwind.config.js';
+
+/* ════════════════════════════════════════════════════════════════════════
+   Tailwind 3 defaults kept on Tailwind 4 (the upgrade guide's compatibility
+   styles). The palette is a JS config value, not a CSS variable, so the
+   colours are written out (Tailwind 3's gray-200, gray-400, blue-500 / 50%).
+   ════════════════════════════════════════════════════════════════════════ */
+@theme {
+  /* `ring` was 3px in v3 (the upgrade tool rewrote bare `ring` to `ring-3`). */
+  --default-ring-width: 3px;
+  /* A ring with no colour class was blue-500 at 50% in v3, currentcolor in v4. */
+  --default-ring-color: rgb(59 130 246 / 0.5);
+}
+
+/* v3's hover applied on touch screens too; v4 wraps it in @media (hover: hover). */
+@custom-variant hover (&:hover);
+
+@layer base {
+  /* Default border colour: gray-200 in v3, currentcolor in v4. */
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: #e5e7eb;
+  }
+
+  /* Placeholder: gray-400 in v3, the text colour at 50% in v4. */
+  input::placeholder,
+  textarea::placeholder {
+    color: #9ca3af;
+  }
+
+  /* Buttons had the pointer cursor in v3; v4 uses the browser default. */
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+
+  /* v4's reset takes the browser's centring margin off <dialog>. */
+  dialog {
+    margin: auto;
+  }
+}
 
 * { box-sizing: border-box; }
 

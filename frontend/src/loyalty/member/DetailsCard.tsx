@@ -60,7 +60,7 @@ export function DetailsCard({ member, locale, timeZone, redesigned = false, onEd
         {rows.map(([key, label, value]) => (
           <div key={key} data-detail={key} className="min-w-0">
             <dt className="text-xs text-a-text-2">{label}</dt>
-            <dd className={`break-words ${value === null ? 'text-a-text-2' : 'text-a-text'}`}>{value ?? none}</dd>
+            <dd className={`wrap-break-word ${value === null ? 'text-a-text-2' : 'text-a-text'}`}>{value ?? none}</dd>
           </div>
         ))}
       </dl>

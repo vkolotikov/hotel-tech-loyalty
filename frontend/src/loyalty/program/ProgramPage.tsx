@@ -294,7 +294,7 @@ function AdviceBanner({ code, level, title, line, children }: { code: string; le
     <div data-advice={code} data-level={level} data-hue={level === 'warn' ? 'gift' : 'rule'}
       className="l-hue-panel flex flex-wrap items-center gap-x-4 gap-y-3 rounded-2xl border px-4 py-3.5">
       <span aria-hidden className="l-hue-tile inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl"><Icon size={18} /></span>
-      <div className="min-w-[14rem] flex-1">
+      <div className="min-w-56 flex-1">
         <p className="font-semibold text-a-text">{title}</p>
         <p className="text-sm text-a-text-2">{line}</p>
       </div>

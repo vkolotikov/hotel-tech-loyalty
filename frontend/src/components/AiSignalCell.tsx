@@ -120,7 +120,7 @@ export default function AiSignalCell({
               <span title="Medium going-cold risk" className="w-1.5 h-1.5 rounded-full bg-amber-400" />
             )}
           </div>
-          <div className="w-12 h-[3px] rounded-full bg-white/[0.06] overflow-hidden">
+          <div className="w-12 h-[3px] rounded-full bg-white/6 overflow-hidden">
             <div
               className={['h-full rounded-full transition-all', tone.bar].join(' ')}
               style={{ width: `${Math.max(2, Math.min(100, probability))}%` }}
@@ -134,7 +134,7 @@ export default function AiSignalCell({
         <div className="inline-flex items-center gap-1">
           {showFlame && <Flame size={12} className="text-red-400" />}
           {intent && (
-            <span className="text-[9px] uppercase tracking-wider font-bold text-gray-400 bg-white/[0.04] px-1.5 py-0.5 rounded border border-white/10">
+            <span className="text-[9px] uppercase tracking-wider font-bold text-gray-400 bg-white/4 px-1.5 py-0.5 rounded-sm border border-white/10">
               {intent.replace(/_/g, ' ')}
             </span>
           )}

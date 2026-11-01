@@ -57,7 +57,7 @@ const AMENITY_OPTIONS = [
 const BED_TYPES = ['Single', 'Double', 'Twin', 'King', 'Queen', 'Suite', 'Bunk']
 
 /* ── Styles ──────────────────────────────────────────────────────── */
-const card = 'rounded-2xl border border-white/[0.06] p-5'
+const card = 'rounded-2xl border border-white/6 p-5'
 const cardBg = { background: 'var(--legacy-hero-gradient-soft)', backdropFilter: 'blur(20px)' }
 const btnPrimary = 'flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-bold uppercase tracking-wider transition-all'
 const btnPrimaryStyle = { background: 'linear-gradient(135deg, var(--color-primary, #74c895), color-mix(in srgb, var(--color-primary, #74c895) 80%, #000))', color: '#03050A' }
@@ -127,7 +127,7 @@ export default function BookingRooms() {
         <div className="flex gap-3">
           {pmsEnabled && pmsSyncable && (
             <button onClick={() => syncMut.mutate()} disabled={syncMut.isPending}
-              className={btnPrimary + ' bg-white/[0.04] border border-white/[0.08] text-gray-300 hover:bg-white/[0.08]'}>
+              className={btnPrimary + ' bg-white/4 border border-white/8 text-gray-300 hover:bg-white/8'}>
               <RefreshCw size={14} className={syncMut.isPending ? 'animate-spin' : ''} /> Sync from {pmsName}
             </button>
           )}
@@ -162,7 +162,7 @@ export default function BookingRooms() {
                 <RefreshCw size={14} /> Sync from {pmsName}
               </button>
             )}
-            <button onClick={openNew} className={btnPrimary + (pmsEnabled && pmsSyncable ? ' bg-white/[0.04] border border-white/[0.08] text-gray-300' : '')} style={pmsEnabled && pmsSyncable ? undefined : btnPrimaryStyle}>
+            <button onClick={openNew} className={btnPrimary + (pmsEnabled && pmsSyncable ? ' bg-white/4 border border-white/8 text-gray-300' : '')} style={pmsEnabled && pmsSyncable ? undefined : btnPrimaryStyle}>
               <Plus size={14} /> Add Manually
             </button>
           </div>
@@ -170,7 +170,7 @@ export default function BookingRooms() {
       ) : (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {rooms.map(room => (
-            <div key={room.id} className={card + ' group relative overflow-hidden transition-all hover:border-white/[0.12]'} style={cardBg}>
+            <div key={room.id} className={card + ' group relative overflow-hidden transition-all hover:border-white/12'} style={cardBg}>
               {/* Image */}
               <div className="relative h-40 -mx-5 -mt-5 mb-4 bg-black/30 overflow-hidden rounded-t-2xl">
                 {room.image ? (
@@ -207,7 +207,7 @@ export default function BookingRooms() {
                 <div className="flex flex-wrap gap-1.5 mb-3">
                   {room.amenities.slice(0, 5).map(a => {
                     const opt = AMENITY_OPTIONS.find(o => o.value === a)
-                    return <span key={a} className="px-2 py-0.5 rounded-full bg-white/[0.04] border border-white/[0.06] text-[10px] text-gray-400">
+                    return <span key={a} className="px-2 py-0.5 rounded-full bg-white/4 border border-white/6 text-[10px] text-gray-400">
                       {opt?.icon} {opt?.label || a}
                     </span>
                   })}
@@ -227,17 +227,17 @@ export default function BookingRooms() {
               )}
 
               {/* Price + Actions */}
-              <div className="flex items-center justify-between mt-auto pt-3 border-t border-white/[0.04]">
+              <div className="flex items-center justify-between mt-auto pt-3 border-t border-white/4">
                 <div>
                   <span className="text-lg font-bold text-white">{money(room.base_price, room.currency)}</span>
                   <span className="text-xs text-gray-500 ml-1">/ night</span>
                 </div>
                 <div className="flex gap-2">
-                  <button onClick={() => openEdit(room)} className="p-2 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] text-gray-400 hover:text-white transition-all">
+                  <button onClick={() => openEdit(room)} className="p-2 rounded-lg bg-white/4 hover:bg-white/8 text-gray-400 hover:text-white transition-all">
                     <Pencil size={14} />
                   </button>
                   <button onClick={() => { if (confirm('Delete this room?')) deleteMut.mutate(room.id) }}
-                    className="p-2 rounded-lg bg-white/[0.04] hover:bg-red-500/10 text-gray-400 hover:text-red-400 transition-all">
+                    className="p-2 rounded-lg bg-white/4 hover:bg-red-500/10 text-gray-400 hover:text-red-400 transition-all">
                     <Trash2 size={14} />
                   </button>
                 </div>
@@ -356,14 +356,14 @@ function RoomForm({ room, onClose, onSave, saving }: {
     onSave(fd)
   }
 
-  const inputCls = 'w-full rounded-xl border border-white/[0.08] bg-white/[0.03] px-3.5 py-2.5 text-sm text-white placeholder-gray-500 outline-none focus:border-primary-500/50 focus:ring-1 focus:ring-primary-500/20 transition-all'
+  const inputCls = 'w-full rounded-xl border border-white/8 bg-white/3 px-3.5 py-2.5 text-sm text-white placeholder-gray-500 outline-hidden focus:border-primary-500/50 focus:ring-1 focus:ring-primary-500/20 transition-all'
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-start justify-center pt-[5vh] overflow-y-auto pb-10">
-      <div className="w-full max-w-2xl rounded-2xl border border-white/[0.08] p-6" style={{ background: 'var(--legacy-hero-gradient)' }}>
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-start justify-center pt-[5vh] overflow-y-auto pb-10">
+      <div className="w-full max-w-2xl rounded-2xl border border-white/8 p-6" style={{ background: 'var(--legacy-hero-gradient)' }}>
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-lg font-bold text-white">{room ? 'Edit Room' : 'Add Room'}</h2>
-          <button onClick={onClose} className="p-2 rounded-lg hover:bg-white/[0.06] text-gray-500 hover:text-white transition-all"><X size={18} /></button>
+          <button onClick={onClose} className="p-2 rounded-lg hover:bg-white/6 text-gray-500 hover:text-white transition-all"><X size={18} /></button>
         </div>
 
         <div className="space-y-4">
@@ -372,7 +372,7 @@ function RoomForm({ room, onClose, onSave, saving }: {
             <div className="flex items-center justify-between mb-2">
               <label className="block text-xs font-semibold text-gray-400">Photos</label>
               <button type="button" onClick={() => fileRef.current?.click()}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-white/[0.1] px-2.5 py-1.5 text-xs font-medium text-white hover:border-primary-500/50 transition-all">
+                className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 px-2.5 py-1.5 text-xs font-medium text-white hover:border-primary-500/50 transition-all">
                 <Upload size={13} /> Add photos
               </button>
               <input ref={fileRef} type="file" accept="image/*" multiple className="hidden" onChange={addPhotos} />
@@ -380,7 +380,7 @@ function RoomForm({ room, onClose, onSave, saving }: {
 
             {photos.length === 0 ? (
               <button type="button" onClick={() => fileRef.current?.click()}
-                className="w-full rounded-xl border border-dashed border-white/[0.12] bg-white/[0.02] py-8 text-center hover:border-primary-500/40 transition-all">
+                className="w-full rounded-xl border border-dashed border-white/12 bg-white/2 py-8 text-center hover:border-primary-500/40 transition-all">
                 <Upload size={22} className="mx-auto text-gray-600 mb-1.5" />
                 <span className="text-xs text-gray-500">Add one or more photos. The first is the cover shown in the booking widget.</span>
               </button>
@@ -395,8 +395,8 @@ function RoomForm({ room, onClose, onSave, saving }: {
                       onDragOver={e => e.preventDefault()}
                       onDrop={() => { if (dragIndex !== null && dragIndex !== i) movePhoto(dragIndex, i); setDragIndex(null) }}
                       onDragEnd={() => setDragIndex(null)}
-                      className={`group relative aspect-[4/3] overflow-hidden rounded-xl border cursor-move ${
-                        i === 0 ? 'border-primary-500/60' : 'border-white/[0.08]'
+                      className={`group relative aspect-4/3 overflow-hidden rounded-xl border cursor-move ${
+                        i === 0 ? 'border-primary-500/60' : 'border-white/8'
                       } ${dragIndex === i ? 'opacity-40' : ''}`}
                     >
                       <img src={p.preview} className="h-full w-full object-cover" />
@@ -406,19 +406,19 @@ function RoomForm({ room, onClose, onSave, saving }: {
                           <Star size={10} /> Cover
                         </span>
                       )}
-                      <span className="absolute right-1.5 top-1.5 rounded bg-black/50 p-0.5 text-on-fill/70 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <span className="absolute right-1.5 top-1.5 rounded-sm bg-black/50 p-0.5 text-on-fill/70 opacity-0 group-hover:opacity-100 transition-opacity">
                         <GripVertical size={12} />
                       </span>
                       {/* Controls */}
-                      <div className="absolute inset-x-0 bottom-0 flex items-center justify-between gap-1 bg-gradient-to-t from-black/70 to-transparent px-1.5 py-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="absolute inset-x-0 bottom-0 flex items-center justify-between gap-1 bg-linear-to-t from-black/70 to-transparent px-1.5 py-1 opacity-0 group-hover:opacity-100 transition-opacity">
                         <div className="flex gap-0.5">
                           <button type="button" onClick={() => movePhoto(i, i - 1)} disabled={i === 0}
-                            className="rounded p-0.5 text-on-fill/80 hover:text-on-fill disabled:opacity-30" title="Move left">‹</button>
+                            className="rounded-sm p-0.5 text-on-fill/80 hover:text-on-fill disabled:opacity-30" title="Move left">‹</button>
                           <button type="button" onClick={() => movePhoto(i, i + 1)} disabled={i === photos.length - 1}
-                            className="rounded p-0.5 text-on-fill/80 hover:text-on-fill disabled:opacity-30" title="Move right">›</button>
+                            className="rounded-sm p-0.5 text-on-fill/80 hover:text-on-fill disabled:opacity-30" title="Move right">›</button>
                         </div>
                         <button type="button" onClick={() => removePhoto(p.id)}
-                          className="rounded p-0.5 text-on-fill/80 hover:text-red-400" title="Remove"><Trash2 size={12} /></button>
+                          className="rounded-sm p-0.5 text-on-fill/80 hover:text-red-400" title="Remove"><Trash2 size={12} /></button>
                       </div>
                     </div>
                   ))}
@@ -491,7 +491,7 @@ function RoomForm({ room, onClose, onSave, saving }: {
                   className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all border ${
                     amenities.includes(opt.value)
                       ? 'bg-primary-500/10 border-primary-500/30 text-primary-400'
-                      : 'bg-white/[0.02] border-white/[0.06] text-gray-500 hover:border-white/[0.12]'
+                      : 'bg-white/2 border-white/6 text-gray-500 hover:border-white/12'
                   }`}>
                   {opt.icon} {opt.label}
                 </button>
@@ -512,7 +512,7 @@ function RoomForm({ room, onClose, onSave, saving }: {
             <div className="flex gap-2">
               <input value={newTag} onChange={e => setNewTag(e.target.value)} onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addTag())}
                 placeholder="e.g. Forest view, Deluxe, Private" className={inputCls + ' flex-1'} />
-              <button onClick={addTag} className="px-3 py-2 rounded-xl bg-white/[0.04] border border-white/[0.06] text-xs text-gray-400 hover:text-white transition-all">
+              <button onClick={addTag} className="px-3 py-2 rounded-xl bg-white/4 border border-white/6 text-xs text-gray-400 hover:text-white transition-all">
                 <Tag size={14} />
               </button>
             </div>
@@ -525,15 +525,15 @@ function RoomForm({ room, onClose, onSave, saving }: {
               <p className="text-[11px] text-gray-600">Inactive rooms won't appear in the booking widget</p>
             </div>
             <button onClick={() => setIsActive(!isActive)}
-              className={`w-11 h-6 rounded-full transition-all ${isActive ? 'bg-primary-500' : 'bg-white/[0.08]'}`}>
-              <div className={`w-5 h-5 rounded-full bg-on-fill shadow-sm transition-all ${isActive ? 'translate-x-5.5' : 'translate-x-0.5'}`} style={{ transform: `translateX(${isActive ? '22px' : '2px'})` }} />
+              className={`w-11 h-6 rounded-full transition-all ${isActive ? 'bg-primary-500' : 'bg-white/8'}`}>
+              <div className={`w-5 h-5 rounded-full bg-on-fill shadow-xs transition-all ${isActive ? 'translate-x-5.5' : 'translate-x-0.5'}`} style={{ transform: `translateX(${isActive ? '22px' : '2px'})` }} />
             </button>
           </div>
         </div>
 
         {/* Actions */}
-        <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-white/[0.04]">
-          <button onClick={onClose} className="px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider bg-white/[0.04] border border-white/[0.06] text-gray-400 hover:text-white transition-all">
+        <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-white/4">
+          <button onClick={onClose} className="px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider bg-white/4 border border-white/6 text-gray-400 hover:text-white transition-all">
             Cancel
           </button>
           <button onClick={handleSubmit} disabled={saving}

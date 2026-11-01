@@ -114,7 +114,7 @@ export function NewCustomerDrawer({ onClose, onCreated }: { onClose: () => void;
           <div className="flex items-center gap-2">
             {stage !== 'pick' && (
               <button onClick={() => { setStage('pick'); setText(''); setForm({ full_name: '' }) }}
-                className="p-1.5 rounded hover:bg-white/5 text-gray-500 hover:text-white"
+                className="p-1.5 rounded-sm hover:bg-white/5 text-gray-500 hover:text-white"
                 title="Back"
               >
                 <ArrowLeft size={14} />
@@ -129,7 +129,7 @@ export function NewCustomerDrawer({ onClose, onCreated }: { onClose: () => void;
               </h2>
             </div>
           </div>
-          <button onClick={onClose} className="p-1.5 rounded hover:bg-white/5 text-gray-500 hover:text-white">
+          <button onClick={onClose} className="p-1.5 rounded-sm hover:bg-white/5 text-gray-500 hover:text-white">
             <X size={16} />
           </button>
         </div>
@@ -139,7 +139,7 @@ export function NewCustomerDrawer({ onClose, onCreated }: { onClose: () => void;
           <div className="flex-1 overflow-y-auto p-5 space-y-3">
             <button
               onClick={handleAiClick}
-              className="w-full text-left rounded-xl border border-primary-500/30 bg-primary-500/[0.06] hover:bg-primary-500/[0.10] p-4 transition group"
+              className="w-full text-left rounded-xl border border-primary-500/30 bg-primary-500/6 hover:bg-primary-500/10 p-4 transition group"
             >
               <div className="flex items-center gap-3 mb-1">
                 <div className="w-10 h-10 rounded-lg bg-primary-500/15 flex items-center justify-center">
@@ -157,10 +157,10 @@ export function NewCustomerDrawer({ onClose, onCreated }: { onClose: () => void;
 
             <button
               onClick={handleManualClick}
-              className="w-full text-left rounded-xl border border-dark-border bg-dark-surface2/40 hover:bg-white/[0.03] p-4 transition group"
+              className="w-full text-left rounded-xl border border-dark-border bg-dark-surface2/40 hover:bg-white/3 p-4 transition group"
             >
               <div className="flex items-center gap-3 mb-1">
-                <div className="w-10 h-10 rounded-lg bg-white/[0.04] flex items-center justify-center">
+                <div className="w-10 h-10 rounded-lg bg-white/4 flex items-center justify-center">
                   <User size={18} className="text-gray-400" />
                 </div>
                 <div>
@@ -187,7 +187,7 @@ export function NewCustomerDrawer({ onClose, onCreated }: { onClose: () => void;
               rows={10}
               autoFocus
               placeholder={'e.g.\n\nLīga Teterovska\nDirector of Sales · Acme Hotels Ltd\nlīga@acmehotels.lv\n+371 2222 3333\nRiga, Latvia'}
-              className="w-full px-3 py-2.5 bg-dark-surface2 border border-dark-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500 text-sm text-white placeholder-gray-600 font-mono"
+              className="w-full px-3 py-2.5 bg-dark-surface2 border border-dark-border rounded-lg focus:outline-hidden focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500 text-sm text-white placeholder-gray-600 font-mono"
             />
             <button
               onClick={() => extract.mutate(text)}
@@ -199,7 +199,7 @@ export function NewCustomerDrawer({ onClose, onCreated }: { onClose: () => void;
             </button>
             {extract.isError && (
               <div className="flex items-start gap-2 text-xs text-red-300 bg-red-500/10 border border-red-500/20 rounded-lg p-2.5">
-                <AlertCircle size={13} className="flex-shrink-0 mt-0.5" />
+                <AlertCircle size={13} className="shrink-0 mt-0.5" />
                 <span>Extraction failed. Either retry or switch to <button onClick={handleManualClick} className="underline">manual entry</button>.</span>
               </div>
             )}
@@ -272,7 +272,7 @@ export function NewCustomerDrawer({ onClose, onCreated }: { onClose: () => void;
                   value={form.notes ?? ''}
                   onChange={e => set('notes', e.target.value)}
                   rows={3}
-                  className="w-full px-3 py-2 bg-dark-surface2 border border-dark-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500 text-sm text-white placeholder-gray-600"
+                  className="w-full px-3 py-2 bg-dark-surface2 border border-dark-border rounded-lg focus:outline-hidden focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500 text-sm text-white placeholder-gray-600"
                 />
               </label>
             )}
@@ -282,7 +282,7 @@ export function NewCustomerDrawer({ onClose, onCreated }: { onClose: () => void;
         {/* Footer */}
         {stage === 'preview' && (
           <div className="px-5 py-3 border-t border-dark-border flex items-center justify-end gap-2">
-            <button onClick={onClose} className="px-3 py-2 rounded text-sm text-t-secondary hover:text-white">Cancel</button>
+            <button onClick={onClose} className="px-3 py-2 rounded-sm text-sm text-t-secondary hover:text-white">Cancel</button>
             <button
               onClick={() => create.mutate(form)}
               disabled={!canSave}
@@ -313,7 +313,7 @@ function Field({ label, value, onChange, type = 'text', required = false }: {
         value={value}
         onChange={e => onChange(e.target.value)}
         required={required}
-        className="w-full px-3 py-2 bg-dark-surface2 border border-dark-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500 text-sm text-white placeholder-gray-600"
+        className="w-full px-3 py-2 bg-dark-surface2 border border-dark-border rounded-lg focus:outline-hidden focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500 text-sm text-white placeholder-gray-600"
       />
     </label>
   )
@@ -328,7 +328,7 @@ function Select({ label, value, onChange, options }: {
       <select
         value={value}
         onChange={e => onChange(e.target.value)}
-        className="w-full px-3 py-2 bg-dark-surface2 border border-dark-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500 text-sm text-white"
+        className="w-full px-3 py-2 bg-dark-surface2 border border-dark-border rounded-lg focus:outline-hidden focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500 text-sm text-white"
       >
         {options.map(o => <option key={o} value={o}>{o}</option>)}
       </select>

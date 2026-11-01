@@ -20,7 +20,7 @@ import PlannerStats from './PlannerStats'
  */
 
 const fmtDate = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-const filterSel = 'bg-dark-surface border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-primary-500/50'
+const filterSel = 'bg-dark-surface border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-hidden focus:border-primary-500/50'
 
 type RangeKind = 'today' | 'week' | '2weeks' | 'month' | 'last30' | 'year'
 

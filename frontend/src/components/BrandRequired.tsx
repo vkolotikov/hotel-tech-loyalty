@@ -54,7 +54,7 @@ export function BrandRequired({
               className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-dark-surface2 transition-colors text-left"
             >
               <div
-                className="w-8 h-8 rounded-md flex items-center justify-center flex-shrink-0"
+                className="w-8 h-8 rounded-md flex items-center justify-center shrink-0"
                 style={{ background: b.primary_color ?? hxWhite(0.06) }}
               >
                 <Briefcase size={13} className="text-white" />
@@ -63,7 +63,7 @@ export function BrandRequired({
                 <p className="text-sm font-medium text-white truncate">{b.name}</p>
                 <p className="text-[11px] text-t-secondary truncate font-mono">/{b.slug}</p>
               </div>
-              <ChevronRight size={14} className="text-t-secondary flex-shrink-0" />
+              <ChevronRight size={14} className="text-t-secondary shrink-0" />
             </button>
           ))}
         </div>

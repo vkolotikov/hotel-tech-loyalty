@@ -191,7 +191,7 @@ export function TaskDrawer({ task, defaultInquiryId, onClose, onSaved }: Props) 
       >
         <div className="flex items-center justify-between p-4 border-b border-dark-border">
           <h2 className="text-lg font-bold text-white">{isNew ? t('taskDrawer.title_new', 'New task') : t('taskDrawer.title_edit', 'Edit task')}</h2>
-          <button onClick={onClose} className="p-1.5 rounded hover:bg-dark-surface2 text-t-secondary hover:text-white">
+          <button onClick={onClose} className="p-1.5 rounded-sm hover:bg-dark-surface2 text-t-secondary hover:text-white">
             <X size={16} />
           </button>
         </div>
@@ -233,7 +233,7 @@ export function TaskDrawer({ task, defaultInquiryId, onClose, onSaved }: Props) 
               onChange={e => setTitle(e.target.value)}
               placeholder={t('taskDrawer.placeholders.title', 'Send proposal · Follow up after site visit · …')}
               autoFocus={isNew}
-              className="w-full bg-dark-bg border border-dark-border rounded-md px-3 py-2 text-sm placeholder-t-secondary outline-none focus:border-accent"
+              className="w-full bg-dark-bg border border-dark-border rounded-md px-3 py-2 text-sm placeholder-t-secondary outline-hidden focus:border-accent"
             />
           </div>
 
@@ -266,13 +266,13 @@ export function TaskDrawer({ task, defaultInquiryId, onClose, onSaved }: Props) 
               type="date"
               value={date}
               onChange={e => setDate(e.target.value)}
-              className="w-full bg-dark-bg border border-dark-border rounded-md px-3 py-2 text-sm outline-none focus:border-accent"
+              className="w-full bg-dark-bg border border-dark-border rounded-md px-3 py-2 text-sm outline-hidden focus:border-accent"
             />
             <div className="flex gap-1.5 mt-2 flex-wrap">
-              <button type="button" onClick={() => setDateOffset(0)} className="text-[11px] px-2 py-1 rounded bg-dark-bg border border-dark-border text-t-secondary hover:text-white">{t('taskDrawer.date_quick.today', 'Today')}</button>
-              <button type="button" onClick={() => setDateOffset(1)} className="text-[11px] px-2 py-1 rounded bg-dark-bg border border-dark-border text-t-secondary hover:text-white">{t('taskDrawer.date_quick.tomorrow', 'Tomorrow')}</button>
-              <button type="button" onClick={() => setDateOffset(2)} className="text-[11px] px-2 py-1 rounded bg-dark-bg border border-dark-border text-t-secondary hover:text-white">{t('taskDrawer.date_quick.in_2_days', 'In 2 days')}</button>
-              <button type="button" onClick={() => setDateOffset(7)} className="text-[11px] px-2 py-1 rounded bg-dark-bg border border-dark-border text-t-secondary hover:text-white">{t('taskDrawer.date_quick.next_week', 'Next week')}</button>
+              <button type="button" onClick={() => setDateOffset(0)} className="text-[11px] px-2 py-1 rounded-sm bg-dark-bg border border-dark-border text-t-secondary hover:text-white">{t('taskDrawer.date_quick.today', 'Today')}</button>
+              <button type="button" onClick={() => setDateOffset(1)} className="text-[11px] px-2 py-1 rounded-sm bg-dark-bg border border-dark-border text-t-secondary hover:text-white">{t('taskDrawer.date_quick.tomorrow', 'Tomorrow')}</button>
+              <button type="button" onClick={() => setDateOffset(2)} className="text-[11px] px-2 py-1 rounded-sm bg-dark-bg border border-dark-border text-t-secondary hover:text-white">{t('taskDrawer.date_quick.in_2_days', 'In 2 days')}</button>
+              <button type="button" onClick={() => setDateOffset(7)} className="text-[11px] px-2 py-1 rounded-sm bg-dark-bg border border-dark-border text-t-secondary hover:text-white">{t('taskDrawer.date_quick.next_week', 'Next week')}</button>
             </div>
           </div>
 
@@ -352,7 +352,7 @@ export function TaskDrawer({ task, defaultInquiryId, onClose, onSaved }: Props) 
               onChange={e => setDescription(e.target.value)}
               rows={3}
               placeholder={t('taskDrawer.placeholders.notes', 'Anything the staff picking this up should know.')}
-              className="w-full bg-dark-bg border border-dark-border rounded-md px-3 py-2 text-sm placeholder-t-secondary outline-none focus:border-accent resize-none"
+              className="w-full bg-dark-bg border border-dark-border rounded-md px-3 py-2 text-sm placeholder-t-secondary outline-hidden focus:border-accent resize-none"
             />
           </div>
 
@@ -360,7 +360,7 @@ export function TaskDrawer({ task, defaultInquiryId, onClose, onSaved }: Props) 
             entity="task"
             values={customData}
             onChange={setCustomData}
-            inputClassName="w-full bg-dark-bg border border-dark-border rounded-md px-3 py-2 text-sm placeholder-t-secondary outline-none focus:border-accent"
+            inputClassName="w-full bg-dark-bg border border-dark-border rounded-md px-3 py-2 text-sm placeholder-t-secondary outline-hidden focus:border-accent"
             layout="stack"
           />
 

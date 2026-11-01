@@ -225,7 +225,7 @@ function PanelBody({ target }: { target: PanelTarget }) {
       className={`fixed bottom-0 right-0 top-14 z-30 flex w-full flex-col border-l border-a-border bg-a-canvas sm:w-[400px] ${mode === 'docked' ? '' : 'shadow-a-lg animate-a-slide-in'}`}>
       <div className="flex items-start justify-between gap-3 border-b border-a-border px-5 py-4">
         <div className="min-w-0">
-          <h2 id="content-panel-title" ref={heading} tabIndex={-1} className="truncate text-base font-semibold text-a-text outline-none">
+          <h2 id="content-panel-title" ref={heading} tabIndex={-1} className="truncate text-base font-semibold text-a-text outline-hidden">
             {saved ? t('content.panel.details', 'Post details') : t('content.panel.new_title', 'New post')}
           </h2>
           {editing && saved && <p className="mt-0.5 text-xs text-a-text-2">{day ?? t('content.panel.no_day', 'No day yet')}</p>}
@@ -242,7 +242,7 @@ function PanelBody({ target }: { target: PanelTarget }) {
 
       <div className="flex-1 overflow-y-auto px-5 py-4">
         {/* Above the tabs, so every tab shows them: loading, a failed read, kept edits, a conflict, what ⋯ answered. */}
-        <div data-panel-notices="" className="space-y-3 empty:hidden [&:not(:empty)]:mb-5">
+        <div data-panel-notices="" className="space-y-3 empty:hidden not-empty:mb-5">
           {id !== null && !editing && detail.isError && <Notice tone="danger">{t('content.panel.load_failed', 'This post could not be loaded.')}</Notice>}
           {id !== null && !editing && !detail.isError && <p role="status" className="text-sm text-a-text-2">{t('content.common.loading', 'Loading…')}</p>}
           {restored && dirty && <Notice tone="info">{t('content.panel.kept', 'Your unsaved changes were kept.')}</Notice>}

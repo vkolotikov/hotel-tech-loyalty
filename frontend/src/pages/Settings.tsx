@@ -355,7 +355,7 @@ function PresetCard({
       onClick={onClick}
       className={`relative text-left overflow-hidden border transition-all duration-200 hover:-translate-y-1 hover:shadow-2xl group ${
         isFeatured ? 'lg:col-span-2' : ''
-      } ${isActive ? 'border-transparent' : 'border-white/[0.06] hover:border-white/25'}`}
+      } ${isActive ? 'border-transparent' : 'border-white/6 hover:border-white/25'}`}
       style={{
         borderRadius: MOOD_RADIUS[mood] ?? '14px',
         background: moodBackground(mood, c),
@@ -451,9 +451,9 @@ function renderMoodCard(mood: string, name: string, preset: ThemePreset, isFeatu
       return (
         <div className="flex flex-col" style={{ minHeight: 220 }}>
           <div className="h-3 flex">
-            <div className="flex-[3]" style={{ background: c.primary_color }} />
-            <div className="flex-[2]" style={{ background: c.accent_color }} />
-            <div className="flex-[1]" style={{ background: c.info_color }} />
+            <div className="flex-3" style={{ background: c.primary_color }} />
+            <div className="flex-2" style={{ background: c.accent_color }} />
+            <div className="flex-1" style={{ background: c.info_color }} />
           </div>
 
           <div className="flex-1 flex flex-col px-3 py-2.5 gap-2">
@@ -519,7 +519,7 @@ function renderMoodCard(mood: string, name: string, preset: ThemePreset, isFeatu
                   <div className="text-sm italic font-semibold truncate" style={{ color: c.text_color, fontFamily: font }}>Sarah Mitchell</div>
                   <div className="text-[10px] mt-0.5" style={{ color: c.accent_color, fontFamily: font }}>Suite 305 · 3 nights</div>
                 </div>
-                <span className="text-[9px] px-2.5 py-1 font-semibold flex-shrink-0" style={{ background: c.accent_color, color: c.background_color, borderRadius: 999, fontFamily: font }}>
+                <span className="text-[9px] px-2.5 py-1 font-semibold shrink-0" style={{ background: c.accent_color, color: c.background_color, borderRadius: 999, fontFamily: font }}>
                   VIP
                 </span>
               </div>
@@ -704,7 +704,7 @@ function renderMoodCard(mood: string, name: string, preset: ThemePreset, isFeatu
             </p>
 
             <div className="flex items-center gap-2 mt-1">
-              <div className="flex items-center justify-center flex-shrink-0" style={{ width: 52, height: 52, background: hexA(c.primary_color, 0.18), border: `1px solid ${hexA(c.primary_color, 0.35)}`, borderRadius: 18 }}>
+              <div className="flex items-center justify-center shrink-0" style={{ width: 52, height: 52, background: hexA(c.primary_color, 0.18), border: `1px solid ${hexA(c.primary_color, 0.35)}`, borderRadius: 18 }}>
                 <span className="text-2xl" style={{ color: c.primary_color }}>✿</span>
               </div>
               <div className="min-w-0">
@@ -812,13 +812,13 @@ function renderMoodCard(mood: string, name: string, preset: ThemePreset, isFeatu
 
           <div className="flex-1 px-4 pb-2.5">
             <div className="p-3 flex items-start gap-2" style={{ background: c.surface_color, border: `1px solid ${c.border_color}`, borderRadius: 12, boxShadow: `0 4px 12px ${hexA(c.primary_color, 0.18)}` }}>
-              <div className="w-9 h-9 flex-shrink-0 flex items-center justify-center font-bold" style={{ background: `linear-gradient(135deg, ${c.primary_color}, ${c.accent_color})`, color: c.background_color, borderRadius: 999, fontFamily: font }}>
+              <div className="w-9 h-9 shrink-0 flex items-center justify-center font-bold" style={{ background: `linear-gradient(135deg, ${c.primary_color}, ${c.accent_color})`, color: c.background_color, borderRadius: 999, fontFamily: font }}>
                 M
               </div>
               <div className="min-w-0 flex-1">
                 <div className="flex items-baseline justify-between gap-2">
                   <span className="text-xs font-semibold truncate" style={{ color: c.text_color, fontFamily: font }}>New booking</span>
-                  <span className="text-[10px] flex-shrink-0" style={{ color: c.text_secondary_color }}>2 min ago</span>
+                  <span className="text-[10px] shrink-0" style={{ color: c.text_secondary_color }}>2 min ago</span>
                 </div>
                 <div className="text-[10px] truncate mt-0.5" style={{ color: c.text_secondary_color }}>
                   Suite 304 · €620 · 3 nights
@@ -1341,9 +1341,9 @@ export function Settings() {
 
   /* ── Shared UI ───────────────────────────────────────────────────────── */
 
-  const cardClass = 'rounded-2xl border border-white/[0.06] p-6'
+  const cardClass = 'rounded-2xl border border-white/6 p-6'
   const cardStyle = { background: 'var(--legacy-card-gradient)', boxShadow: '0 16px 30px rgba(0,0,0,0.18)' }
-  const inputClass = 'w-full bg-dark-bg border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:ring-1 focus:ring-emerald-500/40'
+  const inputClass = 'w-full bg-dark-bg border border-white/8 rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-hidden focus:ring-1 focus:ring-emerald-500/40'
   const btnPrimary = 'flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all'
 
   /* ── Setting Field Renderer ──────────────────────────────────────────── */
@@ -1359,7 +1359,7 @@ export function Settings() {
         <div className="flex items-center gap-2">
           <input type="color" value={currentVal || '#000000'}
             onChange={e => handleChange(setting.key, e.target.value)}
-            className="w-10 h-10 rounded-lg border border-white/[0.08] cursor-pointer bg-transparent p-0.5" />
+            className="w-10 h-10 rounded-lg border border-white/8 cursor-pointer bg-transparent p-0.5" />
           <input type="text" value={currentVal}
             onChange={e => handleChange(setting.key, e.target.value)}
             placeholder="#000000" maxLength={7}
@@ -1372,7 +1372,7 @@ export function Settings() {
       const isOn = currentVal === 'true' || currentVal === '1'
       return (
         <button onClick={() => handleChange(setting.key, isOn ? 'false' : 'true')}
-          className={`relative w-12 h-6 rounded-full transition-colors ${isOn ? 'bg-emerald-500' : 'bg-white/[0.08]'}`}>
+          className={`relative w-12 h-6 rounded-full transition-colors ${isOn ? 'bg-emerald-500' : 'bg-white/8'}`}>
           <div className={`absolute left-0 top-0.5 w-5 h-5 rounded-full bg-on-fill transition-transform ${isOn ? 'translate-x-6' : 'translate-x-0.5'}`} />
         </button>
       )
@@ -1445,7 +1445,7 @@ export function Settings() {
   const renderSettingRow = (setting: any) => (
     // Stack on mobile: 288px input next to a cramped label doesn't fit on a
     // phone. md+ goes back to the two-column row.
-    <div key={setting.key} className="flex flex-col md:flex-row md:items-start gap-2 md:gap-4 py-3 border-b border-white/[0.04] last:border-0">
+    <div key={setting.key} className="flex flex-col md:flex-row md:items-start gap-2 md:gap-4 py-3 border-b border-white/4 last:border-0">
       <div className="flex-1 min-w-0 md:pt-1">
         <label className="block text-sm font-medium text-white">{setting.label}</label>
         {setting.description && <p className="text-xs text-gray-500 mt-0.5">{setting.description}</p>}
@@ -1453,14 +1453,14 @@ export function Settings() {
           <span className={`inline-flex items-center gap-1 mt-1 text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full ${
             setting.source === 'database' ? 'bg-emerald-500/10 text-emerald-400'
             : setting.source === 'env' ? 'bg-amber-500/10 text-amber-400'
-            : 'bg-white/[0.04] text-gray-600'
+            : 'bg-white/4 text-gray-600'
           }`}>
             {setting.source === 'database' ? <Database size={9} /> : setting.source === 'env' ? <Globe size={9} /> : null}
             {setting.source}
           </span>
         )}
       </div>
-      <div className="w-full md:w-72 md:flex-shrink-0">{renderField(setting)}</div>
+      <div className="w-full md:w-72 md:shrink-0">{renderField(setting)}</div>
     </div>
   )
 
@@ -1522,18 +1522,18 @@ export function Settings() {
           <p className="text-xs text-gray-500 mb-4">Displayed in the app header, member cards, and emails.</p>
           <input ref={logoInputRef} type="file" accept="image/*" onChange={handleLogoChange} className="hidden" />
           <div className="flex items-center gap-6">
-            <div className="flex-shrink-0">
+            <div className="shrink-0">
               {logoPreview || currentLogoUrl ? (
                 <div className="relative group">
                   <img src={logoPreview || currentLogoUrl!} alt="Logo"
-                    className="h-20 max-w-[200px] object-contain rounded-xl border border-white/[0.06] bg-hx-0a1410 p-2" />
+                    className="h-20 max-w-[200px] object-contain rounded-xl border border-white/6 bg-hx-0a1410 p-2" />
                   <div className="absolute inset-0 flex items-center justify-center rounded-xl bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
                     onClick={() => logoInputRef.current?.click()}>
                     <Upload size={20} className="text-on-fill" />
                   </div>
                 </div>
               ) : (
-                <div className="h-20 w-40 rounded-xl border-2 border-dashed border-white/[0.08] flex items-center justify-center cursor-pointer hover:border-emerald-500/40 transition-colors"
+                <div className="h-20 w-40 rounded-xl border-2 border-dashed border-white/8 flex items-center justify-center cursor-pointer hover:border-emerald-500/40 transition-colors"
                   onClick={() => logoInputRef.current?.click()}>
                   <div className="text-center">
                     <Upload size={20} className="mx-auto text-gray-600 mb-1" />
@@ -1585,7 +1585,7 @@ export function Settings() {
                 </span>
               )}
             </h3>
-            <div className="flex items-center gap-2 flex-shrink-0">
+            <div className="flex items-center gap-2 shrink-0">
               {undoSnapshot && !undoSnapshot.fromStyle && (
                 <button
                   onClick={undoPreset}
@@ -1637,7 +1637,7 @@ export function Settings() {
           </h3>
           <div className="rounded-xl overflow-hidden border" style={{ borderColor: previewBorder, backgroundColor: previewBg }}>
             <div className="px-4 py-3 flex items-center gap-3" style={{ backgroundColor: previewSurface, borderBottom: `1px solid ${previewBorder}` }}>
-              <div className="w-6 h-6 rounded flex items-center justify-center" style={{ backgroundColor: previewPrimary }}>
+              <div className="w-6 h-6 rounded-sm flex items-center justify-center" style={{ backgroundColor: previewPrimary }}>
                 <span style={{ color: previewBg, fontSize: 10, fontWeight: 700 }}>H</span>
               </div>
               <span style={{ color: previewText, fontSize: 13, fontWeight: 600 }}>Hotel Loyalty</span>
@@ -1817,7 +1817,7 @@ export function Settings() {
                   return (
                     <button key={preset.name} onClick={() => applyMobilePreset(c, preset.name)}
                       className={`text-left rounded-xl overflow-hidden border transition-all hover:-translate-y-px hover:shadow-lg ${
-                        isActive ? 'border-emerald-500/50 shadow-[0_0_0_1px_rgba(116,200,149,0.3)]' : 'border-white/[0.06] hover:border-emerald-500/30'
+                        isActive ? 'border-emerald-500/50 shadow-[0_0_0_1px_rgba(116,200,149,0.3)]' : 'border-white/6 hover:border-emerald-500/30'
                       }`}
                       style={{ background: c.surface_color }}>
                       <div className="h-8 flex">
@@ -1852,7 +1852,7 @@ export function Settings() {
                     className={`px-3 py-2.5 rounded-xl border text-xs font-semibold capitalize transition-all ${
                       cardStyleVal === style
                         ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-300'
-                        : 'border-white/[0.06] bg-white/[0.02] text-gray-400 hover:border-emerald-500/30'
+                        : 'border-white/6 bg-white/2 text-gray-400 hover:border-emerald-500/30'
                     }`}>
                     {style}
                   </button>
@@ -1869,7 +1869,7 @@ export function Settings() {
               </div>
 
               {/* Button Style */}
-              <div className="mt-4 pt-4 border-t border-white/[0.06]">
+              <div className="mt-4 pt-4 border-t border-white/6">
                 <label className="text-xs text-gray-400 mb-2 block">Button Style</label>
                 <div className="grid grid-cols-3 gap-2">
                   {(['filled', 'outline', 'soft'] as const).map(style => (
@@ -1877,7 +1877,7 @@ export function Settings() {
                       className={`px-3 py-2.5 rounded-xl border text-xs font-semibold capitalize transition-all ${
                         buttonStyle === style
                           ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-300'
-                          : 'border-white/[0.06] bg-white/[0.02] text-gray-400 hover:border-emerald-500/30'
+                          : 'border-white/6 bg-white/2 text-gray-400 hover:border-emerald-500/30'
                       }`}>
                       {style}
                     </button>
@@ -1886,7 +1886,7 @@ export function Settings() {
               </div>
 
               {/* Accent Intensity */}
-              <div className="mt-4 pt-4 border-t border-white/[0.06]">
+              <div className="mt-4 pt-4 border-t border-white/6">
                 <label className="text-xs text-gray-400 mb-2 block">Accent Intensity</label>
                 <div className="grid grid-cols-3 gap-2">
                   {(['subtle', 'vibrant', 'bold'] as const).map(intensity => (
@@ -1894,7 +1894,7 @@ export function Settings() {
                       className={`px-3 py-2.5 rounded-xl border text-xs font-semibold capitalize transition-all ${
                         accentIntensity === intensity
                           ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-300'
-                          : 'border-white/[0.06] bg-white/[0.02] text-gray-400 hover:border-emerald-500/30'
+                          : 'border-white/6 bg-white/2 text-gray-400 hover:border-emerald-500/30'
                       }`}>
                       {intensity}
                     </button>
@@ -2057,7 +2057,7 @@ export function Settings() {
             { label: 'Min Redeem',         value: minRedeem.toLocaleString() + ' pts',     sub: 'redemption threshold', color: '#a78bfa' },
             { label: 'Qualification',      value: qualModel.charAt(0).toUpperCase() + qualModel.slice(1), sub: 'tier assessment model', color: '#74c895' },
           ].map(stat => (
-            <div key={stat.label} className="rounded-xl p-3 border border-white/[0.04]"
+            <div key={stat.label} className="rounded-xl p-3 border border-white/4"
               style={{ background: 'var(--legacy-well-50)' }}>
               <p className="text-[10px] uppercase tracking-wider font-bold text-gray-500">{stat.label}</p>
               <p className="text-xl font-bold mt-0.5" style={{ color: ink(stat.color) }}>{stat.value}</p>
@@ -2067,7 +2067,7 @@ export function Settings() {
         </div>
 
         {/* Quick health indicators */}
-        <div className="flex flex-wrap gap-2 pt-3 border-t border-white/[0.04]">
+        <div className="flex flex-wrap gap-2 pt-3 border-t border-white/4">
           {referrerBonus > 0 && refereeBonus > 0 ? (
             <span className="text-[11px] px-2 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/15">
               <CheckCircle size={10} className="inline -mt-px mr-1" />
@@ -2128,9 +2128,9 @@ export function Settings() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           {managePages.map(page => (
             <Link key={page.to} to={page.to}
-              className="flex items-center gap-3 p-3 rounded-xl border border-white/[0.04] hover:border-emerald-500/20 transition-all hover:-translate-y-px group"
+              className="flex items-center gap-3 p-3 rounded-xl border border-white/4 hover:border-emerald-500/20 transition-all hover:-translate-y-px group"
               style={{ background: 'var(--legacy-well-50)' }}>
-              <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
+              <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
                 style={{ background: page.accent + '18', color: ink(page.accent) }}>
                 {page.icon}
               </div>
@@ -2145,7 +2145,7 @@ export function Settings() {
 
         {/* Tier roster preview — icons match the Tiers page */}
         {!tiersLoading && tiers.length > 0 && (
-          <div className="mt-4 pt-4 border-t border-white/[0.04]">
+          <div className="mt-4 pt-4 border-t border-white/4">
             <p className="text-[10px] uppercase tracking-wider font-bold text-gray-500 mb-2">Current Tiers</p>
             <div className="flex flex-wrap gap-2">
               {tiers.map((tier: any) => {
@@ -2244,7 +2244,7 @@ export function Settings() {
       const showActive = hasAnyValue && isEnabled && !isComingSoon
 
       return (
-        <div key={section.id} className={`rounded-2xl border overflow-hidden transition-all ${isComingSoon ? 'border-white/[0.04] opacity-60' : 'border-white/[0.06]'}`}
+        <div key={section.id} className={`rounded-2xl border overflow-hidden transition-all ${isComingSoon ? 'border-white/4 opacity-60' : 'border-white/6'}`}
           style={{
             background: result
               ? result.success
@@ -2255,8 +2255,8 @@ export function Settings() {
           }}>
           <button onClick={() => isComingSoon ? null : toggleSection(section.id)}
             disabled={isComingSoon}
-            className={`w-full flex items-center gap-3 px-5 py-3.5 text-left transition-colors ${isComingSoon ? 'cursor-not-allowed' : 'hover:bg-white/[0.02]'}`}>
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+            className={`w-full flex items-center gap-3 px-5 py-3.5 text-left transition-colors ${isComingSoon ? 'cursor-not-allowed' : 'hover:bg-white/2'}`}>
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
               style={{ background: showActive ? 'rgba(116,200,149,0.12)' : hxWhite(0.04) }}>
               <section.icon size={15} className={showActive ? 'text-emerald-400' : 'text-gray-500'} />
             </div>
@@ -2281,7 +2281,7 @@ export function Settings() {
             {!isComingSoon && hasAnyValue && (
               <span onClick={toggleEnabled} role="switch" aria-checked={isEnabled}
                 title={isEnabled ? 'Click to deactivate (credentials kept; data sync stops)' : 'Click to reactivate'}
-                className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors flex-shrink-0 cursor-pointer ${isEnabled ? 'bg-emerald-500/70' : 'bg-gray-600/60'}`}>
+                className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors shrink-0 cursor-pointer ${isEnabled ? 'bg-emerald-500/70' : 'bg-gray-600/60'}`}>
                 <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-on-fill transition-transform ${isEnabled ? 'translate-x-5' : 'translate-x-1'}`} />
               </span>
             )}
@@ -2290,7 +2290,7 @@ export function Settings() {
             )}
           </button>
           {!isComingSoon && isOpen && (
-            <div className="px-5 pb-4 border-t border-white/[0.04]">
+            <div className="px-5 pb-4 border-t border-white/4">
               {section.testType && (
                 <div className="flex items-center justify-between pt-3 pb-1">
                   {!isEnabled && hasAnyValue ? (
@@ -2310,8 +2310,8 @@ export function Settings() {
                   result carries a warning — clearing it requires re-running
                   the test with a fixed key. */}
               {result?.warning && (
-                <div className="mt-3 rounded-xl border border-amber-500/30 bg-amber-500/[0.06] p-3.5 flex items-start gap-3">
-                  <AlertTriangle size={16} className="text-amber-400 mt-0.5 flex-shrink-0" />
+                <div className="mt-3 rounded-xl border border-amber-500/30 bg-amber-500/6 p-3.5 flex items-start gap-3">
+                  <AlertTriangle size={16} className="text-amber-400 mt-0.5 shrink-0" />
                   <div className="flex-1 min-w-0">
                     <p className="text-[12px] font-bold text-amber-200">{result.warning.title}</p>
                     <p className="text-[11px] text-amber-100/80 mt-1 leading-relaxed whitespace-pre-line">{result.warning.message}</p>
@@ -2336,7 +2336,7 @@ export function Settings() {
                     .catch(() => toast.error('Could not copy'))
                 }
                 return (
-                  <div className="mt-3 mb-1 rounded-xl border border-blue-500/15 bg-blue-500/[0.03] p-3 text-xs">
+                  <div className="mt-3 mb-1 rounded-xl border border-blue-500/15 bg-blue-500/3 p-3 text-xs">
                     <div className="flex items-center gap-2 mb-1.5 text-blue-300/90">
                       <Link2 size={12} />
                       <span className="font-semibold uppercase tracking-wider text-[10px]">Smoobu webhook URL</span>
@@ -2346,11 +2346,11 @@ export function Settings() {
                     </p>
                     {widgetToken ? (
                       <div className="flex items-center gap-2">
-                        <code className="flex-1 px-2 py-1.5 rounded bg-hx-000000/30 text-emerald-300 font-mono text-[10px] break-all">
+                        <code className="flex-1 px-2 py-1.5 rounded-sm bg-hx-000000/30 text-emerald-300 font-mono text-[10px] break-all">
                           {webhookUrl}
                         </code>
                         <button onClick={copyUrl}
-                          className={btnPrimary + ' bg-blue-500/15 text-blue-300 border border-blue-500/20 hover:bg-blue-500/25 text-[11px] px-3 py-1.5 flex-shrink-0'}>
+                          className={btnPrimary + ' bg-blue-500/15 text-blue-300 border border-blue-500/20 hover:bg-blue-500/25 text-[11px] px-3 py-1.5 shrink-0'}>
                           <Copy size={11} /> Copy
                         </button>
                       </div>
@@ -2367,7 +2367,7 @@ export function Settings() {
                   reliably tell apart direct/website/manual channels from
                   blocked / OTA ones across every account setup. */}
               {section.id === 'smoobu' && hasAnyValue && isEnabled && (
-                <div className="mt-3 mb-1 rounded-xl border border-amber-500/15 bg-amber-500/[0.03] p-3 text-xs">
+                <div className="mt-3 mb-1 rounded-xl border border-amber-500/15 bg-amber-500/3 p-3 text-xs">
                   <div className="flex items-center justify-between gap-2 mb-1.5">
                     <div className="flex items-center gap-2 text-amber-300/90">
                       <Calendar size={12} />
@@ -2410,13 +2410,13 @@ export function Settings() {
                               setEditedSettings(prev => ({ ...prev, booking_smoobu_channel_id: id }))
                               toast.success(`Channel ID ${id} ready — click Save to apply`)
                             }}
-                            className={`w-full flex items-center justify-between gap-2 px-3 py-1.5 rounded text-left text-[11px] transition-colors ${isConfigured ? 'bg-emerald-500/15 border border-emerald-500/30' : 'bg-hx-000000/30 border border-white/[0.04] hover:border-amber-500/30'}`}>
+                            className={`w-full flex items-center justify-between gap-2 px-3 py-1.5 rounded-sm text-left text-[11px] transition-colors ${isConfigured ? 'bg-emerald-500/15 border border-emerald-500/30' : 'bg-hx-000000/30 border border-white/4 hover:border-amber-500/30'}`}>
                             <div className="flex items-center gap-2 min-w-0">
                               <code className="font-mono text-amber-300 font-semibold">{id}</code>
                               <span className="text-gray-300 truncate">{name}</span>
                               {type && <span className="text-gray-600 text-[10px] uppercase tracking-wider">{type}</span>}
                             </div>
-                            <div className="flex items-center gap-1.5 flex-shrink-0">
+                            <div className="flex items-center gap-1.5 shrink-0">
                               {isConfigured && <span className="text-emerald-400 text-[10px] uppercase tracking-wider">Active</span>}
                               {!isConfigured && isSuggested && <span className="text-blue-400 text-[10px] uppercase tracking-wider">Suggested</span>}
                               {!isConfigured && <span className="text-gray-500 text-[10px]">Click to use</span>}
@@ -2433,7 +2433,7 @@ export function Settings() {
                   collapsible history mean staff can spot silent failures
                   instead of trusting the test connection alone. */}
               {section.id === 'smoobu' && hasAnyValue && isEnabled && syncStatus?.smoobu && (
-                <div className="mt-3 mb-1 rounded-xl border border-white/[0.06] bg-white/[0.02] p-3 text-xs">
+                <div className="mt-3 mb-1 rounded-xl border border-white/6 bg-white/2 p-3 text-xs">
                   <div className="flex items-center justify-between gap-3 flex-wrap">
                     <div className="flex items-center gap-3">
                       <div className="flex items-center gap-1.5 text-gray-400">
@@ -2489,7 +2489,7 @@ export function Settings() {
                       )}
                       {syncStatus.smoobu.recent_history.map((h: any) => (
                         <div key={h.id} className="flex items-start gap-2 text-[11px]">
-                          <span className={`mt-0.5 inline-block w-1.5 h-1.5 rounded-full flex-shrink-0 ${h.is_error ? 'bg-red-400' : 'bg-emerald-400'}`} />
+                          <span className={`mt-0.5 inline-block w-1.5 h-1.5 rounded-full shrink-0 ${h.is_error ? 'bg-red-400' : 'bg-emerald-400'}`} />
                           <div className="flex-1 min-w-0">
                             <div className={h.is_error ? 'text-red-300' : 'text-gray-300'}>{h.description}</div>
                             <div className="text-gray-600">{h.relative} · {h.action}</div>
@@ -2581,10 +2581,10 @@ export function Settings() {
             const hasAnyValue = items.some((s: any) => s.has_value)
 
             return (
-              <div key={section.id} className="rounded-2xl border border-white/[0.06] overflow-hidden" style={cardStyle}>
+              <div key={section.id} className="rounded-2xl border border-white/6 overflow-hidden" style={cardStyle}>
                 <button onClick={() => toggleSection(section.id)}
-                  className="w-full flex items-center gap-3 px-6 py-4 text-left hover:bg-white/[0.02] transition-colors">
-                  <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
+                  className="w-full flex items-center gap-3 px-6 py-4 text-left hover:bg-white/2 transition-colors">
+                  <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
                     style={{ background: hasAnyValue ? 'rgba(116,200,149,0.12)' : hxWhite(0.04) }}>
                     <section.icon size={16} className={hasAnyValue ? 'text-emerald-400' : 'text-gray-500'} />
                   </div>
@@ -2603,7 +2603,7 @@ export function Settings() {
                   <ChevronDown size={14} className={`text-gray-500 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
                 </button>
                 {isOpen && (
-                  <div className="px-6 pb-5 border-t border-white/[0.04]">
+                  <div className="px-6 pb-5 border-t border-white/4">
                     <div className="flex justify-end pt-4 pb-2">
                       <button onClick={() => testConnection(section.testType)}
                         disabled={testingIntegration === section.testType}
@@ -2631,7 +2631,7 @@ export function Settings() {
               { label: 'Stack', value: 'Laravel + React + Expo' },
               { label: 'AI Provider', value: getVal('ai_openai_model') || getVal('ai_anthropic_model') || 'Not configured' },
             ].map((item, i) => (
-              <div key={i} className="flex justify-between py-3 border-b border-white/[0.04] last:border-0">
+              <div key={i} className="flex justify-between py-3 border-b border-white/4 last:border-0">
                 <dt className="text-sm text-gray-500">{item.label}</dt>
                 <dd className="text-sm font-medium text-white">{item.value}</dd>
               </div>
@@ -2653,7 +2653,7 @@ export function Settings() {
               { label: 'DigitalOcean', icon: <Database size={16} />, desc: 'Server management', url: 'https://cloud.digitalocean.com/' },
             ].map(link => (
               <a key={link.label} href={link.url} target="_blank" rel="noopener noreferrer"
-                className="flex items-start gap-3 p-3 rounded-xl border border-white/[0.04] hover:border-emerald-500/20 transition-all hover:-translate-y-px group"
+                className="flex items-start gap-3 p-3 rounded-xl border border-white/4 hover:border-emerald-500/20 transition-all hover:-translate-y-px group"
                 style={{ background: 'var(--legacy-well-50)' }}>
                 <div className="text-emerald-400 mt-0.5">{link.icon}</div>
                 <div className="flex-1 min-w-0">
@@ -2678,10 +2678,10 @@ export function Settings() {
         <div className="space-y-4">
           {Array(3).fill(0).map((_, i) => (
             <div key={i} className={cardClass + ' animate-pulse'} style={cardStyle}>
-              <div className="h-5 bg-white/[0.04] rounded w-32 mb-4" />
+              <div className="h-5 bg-white/4 rounded-sm w-32 mb-4" />
               <div className="space-y-3">
-                <div className="h-10 bg-white/[0.04] rounded-xl" />
-                <div className="h-10 bg-white/[0.04] rounded-xl" />
+                <div className="h-10 bg-white/4 rounded-xl" />
+                <div className="h-10 bg-white/4 rounded-xl" />
               </div>
             </div>
           ))}
@@ -2736,7 +2736,7 @@ export function Settings() {
         {hasChanges && (
           <div className="flex items-center gap-2">
             <button onClick={() => setEditedSettings({})}
-              className={btnPrimary + ' bg-white/[0.04] text-gray-400 border border-white/[0.06] hover:bg-white/[0.08]'}>
+              className={btnPrimary + ' bg-white/4 text-gray-400 border border-white/6 hover:bg-white/8'}>
               <RotateCcw size={14} /> {t('settings.discard', 'Discard')}
             </button>
             <button onClick={handleSave} disabled={saveMutation.isPending}
@@ -2806,7 +2806,7 @@ export function Settings() {
                   value={homeSearch}
                   onChange={(e) => setHomeSearch(e.target.value)}
                   placeholder={t('settings.home_search', 'Search settings…')}
-                  className="w-full bg-dark-surface border border-dark-border rounded-lg pl-9 pr-3 py-2 text-sm placeholder-t-secondary outline-none focus:border-primary-500 transition-colors"
+                  className="w-full bg-dark-surface border border-dark-border rounded-lg pl-9 pr-3 py-2 text-sm placeholder-t-secondary outline-hidden focus:border-primary-500 transition-colors"
                 />
               </div>
 
@@ -2899,15 +2899,15 @@ export function Settings() {
               <div className="flex items-center gap-2 min-w-0">
                 <button
                   onClick={() => setActiveTab('home')}
-                  className="flex items-center gap-1 text-xs text-t-secondary hover:text-white transition-colors px-1.5 py-1 -ml-1.5 rounded-md hover:bg-dark-surface2 flex-shrink-0"
+                  className="flex items-center gap-1 text-xs text-t-secondary hover:text-white transition-colors px-1.5 py-1 -ml-1.5 rounded-md hover:bg-dark-surface2 shrink-0"
                   title={t('settings.back_to_home', 'All settings')}
                 >
                   <ArrowLeft size={13} />
                   <span className="hidden sm:inline">{t('settings.title', 'Settings')}</span>
                 </button>
-                <span className="text-t-secondary/40 flex-shrink-0">/</span>
+                <span className="text-t-secondary/40 shrink-0">/</span>
                 <div className="flex items-center gap-1.5 min-w-0">
-                  <TIcon size={14} className="text-t-secondary flex-shrink-0" />
+                  <TIcon size={14} className="text-t-secondary shrink-0" />
                   <h2 className="text-base font-semibold text-white truncate">{label}</h2>
                 </div>
               </div>

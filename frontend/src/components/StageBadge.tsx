@@ -78,7 +78,7 @@ export default function StageBadge({
       ].join(' ')}
     >
       <span className="truncate max-w-[140px]">{label}</span>
-      {showCaret && onClick && <ChevronDown size={9} className="flex-shrink-0 opacity-75" />}
+      {showCaret && onClick && <ChevronDown size={9} className="shrink-0 opacity-75" />}
     </Component>
   )
 }

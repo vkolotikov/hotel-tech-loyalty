@@ -336,12 +336,12 @@ function Header({ inq, stages, onBack, onPickStage, onDraftProposal, onSendTempl
     <div className="bg-dark-surface border border-dark-border rounded-xl p-5">
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-3 min-w-0">
-          <button onClick={onBack} className="p-1.5 rounded hover:bg-dark-surface2 text-t-secondary hover:text-white" aria-label={t('inquiryDetail.back', 'Back')}>
+          <button onClick={onBack} className="p-1.5 rounded-sm hover:bg-dark-surface2 text-t-secondary hover:text-white" aria-label={t('inquiryDetail.back', 'Back')}>
             <ArrowLeft size={18} />
           </button>
           {scoreTone && (
             <span
-              className={`flex-shrink-0 inline-flex items-center justify-center w-10 h-10 rounded-lg text-base font-bold tabular-nums border ${scoreTone.bg} ${scoreTone.text} ${scoreTone.border}`}
+              className={`shrink-0 inline-flex items-center justify-center w-10 h-10 rounded-lg text-base font-bold tabular-nums border ${scoreTone.bg} ${scoreTone.text} ${scoreTone.border}`}
               title={t('inquiryDetail.score_tooltip', 'AI win probability')}
             >
               {score}
@@ -352,7 +352,7 @@ function Header({ inq, stages, onBack, onPickStage, onDraftProposal, onSendTempl
               <h1 className="text-xl font-bold text-white truncate">{guestName}</h1>
               <BrandBadge brandId={inq.brand_id} />
               {stage?.kind === 'lost' && inq.lost_reason && (
-                <span className="text-[10px] px-2 py-0.5 rounded bg-red-500/15 text-red-300 border border-red-500/30">
+                <span className="text-[10px] px-2 py-0.5 rounded-sm bg-red-500/15 text-red-300 border border-red-500/30">
                   {t('inquiryDetail.lost_reason_prefix', { reason: inq.lost_reason.label, defaultValue: 'Lost: {{reason}}' })}
                 </span>
               )}
@@ -416,7 +416,7 @@ function Header({ inq, stages, onBack, onPickStage, onDraftProposal, onSendTempl
                       className="w-full flex items-center gap-2 px-3 py-2 hover:bg-dark-surface2 text-left text-sm"
                     >
                       <span
-                        className="w-2 h-2 rounded-full flex-shrink-0"
+                        className="w-2 h-2 rounded-full shrink-0"
                         style={{ background: s.color }}
                       />
                       <span className="flex-1 text-white">{s.name}</span>
@@ -574,7 +574,7 @@ function CustomFieldsSection({ inq }: { inq: InquiryDetail }) {
             values={draft}
             onChange={setDraft}
             errors={cfErrors}
-            inputClassName="w-full bg-dark-bg border border-dark-border rounded-md px-2.5 py-1.5 text-sm placeholder-t-secondary outline-none focus:border-accent"
+            inputClassName="w-full bg-dark-bg border border-dark-border rounded-md px-2.5 py-1.5 text-sm placeholder-t-secondary outline-hidden focus:border-accent"
             layout="stack"
           />
           <div className="flex justify-end gap-2 pt-1">
@@ -674,7 +674,7 @@ function ActivityRow({ activity }: { activity: Activity }) {
   return (
     <div className="flex gap-3">
       <div
-        className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5"
+        className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 mt-0.5"
         style={{ background: meta.color + '22', border: `1px solid ${meta.color}55` }}
       >
         <Icon size={14} style={{ color: ink(meta.color) }} />
@@ -821,7 +821,7 @@ function ActivityComposer({ onSubmit, disabled, seed, onSeedConsumed }: {
           value={subject}
           onChange={e => setSubject(e.target.value)}
           placeholder={type === 'email' ? t('inquiryDetail.timeline.composer.subject', 'Subject') : t('inquiryDetail.timeline.composer.meeting_title', 'Meeting title')}
-          className="w-full bg-dark-bg border border-dark-border rounded-md px-3 py-1.5 text-sm placeholder-t-secondary outline-none focus:border-accent mb-2"
+          className="w-full bg-dark-bg border border-dark-border rounded-md px-3 py-1.5 text-sm placeholder-t-secondary outline-hidden focus:border-accent mb-2"
         />
       )}
       <div className="flex gap-2">
@@ -836,14 +836,14 @@ function ActivityComposer({ onSubmit, disabled, seed, onSeedConsumed }: {
                                  t('inquiryDetail.timeline.composer.meeting_placeholder', 'Meeting notes…')
           }
           rows={2}
-          className="flex-1 bg-dark-bg border border-dark-border rounded-md px-3 py-2 text-sm placeholder-t-secondary outline-none focus:border-accent resize-none"
+          className="flex-1 bg-dark-bg border border-dark-border rounded-md px-3 py-2 text-sm placeholder-t-secondary outline-hidden focus:border-accent resize-none"
         />
         {(type === 'call' || type === 'meeting') && (
           <input
             value={duration}
             onChange={e => setDuration(e.target.value.replace(/[^0-9]/g, ''))}
             placeholder={t('inquiryDetail.timeline.composer.minutes_placeholder', 'min')}
-            className="w-16 bg-dark-bg border border-dark-border rounded-md px-2 py-1.5 text-sm text-center outline-none focus:border-accent"
+            className="w-16 bg-dark-bg border border-dark-border rounded-md px-2 py-1.5 text-sm text-center outline-hidden focus:border-accent"
           />
         )}
         <button
@@ -905,7 +905,7 @@ function SmartPanelCol({ inq, tasks, onCompleteTask, fieldCfg }: {
             </div>
             <button
               onClick={() => setAdding(true)}
-              className="p-1 rounded hover:bg-dark-surface2 text-t-secondary hover:text-white"
+              className="p-1 rounded-sm hover:bg-dark-surface2 text-t-secondary hover:text-white"
               title={t('inquiryDetail.tasks.add_task', 'Add task')}
             >
               <Plus size={13} />
@@ -996,7 +996,7 @@ function SmartPanel({ inq }: { inq: InquiryDetail }) {
   const empty = !brief?.brief && !generating
 
   return (
-    <div className="bg-gradient-to-br from-purple-500/10 to-purple-500/5 border border-purple-500/20 rounded-xl p-4">
+    <div className="bg-linear-to-br from-purple-500/10 to-purple-500/5 border border-purple-500/20 rounded-xl p-4">
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2 text-[10px] uppercase tracking-wide font-bold text-purple-300">
           <Sparkles size={11} /> {t('inquiryDetail.smart_panel.title', 'AI Smart Panel')}
@@ -1004,7 +1004,7 @@ function SmartPanel({ inq }: { inq: InquiryDetail }) {
         <button
           onClick={() => refresh.mutate()}
           disabled={generating}
-          className="p-1 rounded hover:bg-purple-500/15 text-purple-300/70 hover:text-purple-200 disabled:opacity-40"
+          className="p-1 rounded-sm hover:bg-purple-500/15 text-purple-300/70 hover:text-purple-200 disabled:opacity-40"
           title={t('inquiryDetail.smart_panel.refresh_tooltip', 'Regenerate brief')}
         >
           <RefreshCw size={11} className={generating ? 'animate-spin' : ''} />
@@ -1036,7 +1036,7 @@ function SmartPanel({ inq }: { inq: InquiryDetail }) {
         <div className="flex items-center gap-2 flex-wrap mt-3">
           {intent && (
             <span
-              className="text-[10px] px-2 py-0.5 rounded font-bold uppercase tracking-wide"
+              className="text-[10px] px-2 py-0.5 rounded-sm font-bold uppercase tracking-wide"
               style={{ background: intent.color + '20', color: ink(intent.color), border: `1px solid ${intent.color}40` }}
             >
               {intent.label}
@@ -1044,7 +1044,7 @@ function SmartPanel({ inq }: { inq: InquiryDetail }) {
           )}
           {cold && ColdIcon && (
             <span
-              className="flex items-center gap-1 text-[10px] px-2 py-0.5 rounded font-bold uppercase tracking-wide"
+              className="flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-sm font-bold uppercase tracking-wide"
               style={{ background: cold.color + '20', color: ink(cold.color), border: `1px solid ${cold.color}40` }}
             >
               <ColdIcon size={9} />
@@ -1062,7 +1062,7 @@ function SmartPanel({ inq }: { inq: InquiryDetail }) {
           </div>
           <div className="mt-1 h-1.5 bg-dark-bg rounded-full overflow-hidden">
             <div
-              className="h-full bg-gradient-to-r from-purple-500 to-emerald-400 rounded-full transition-all"
+              className="h-full bg-linear-to-r from-purple-500 to-emerald-400 rounded-full transition-all"
               style={{ width: `${brief.win_probability}%` }}
             />
           </div>
@@ -1094,7 +1094,7 @@ function TaskRow({ task, onComplete }: { task: Task; onComplete: () => void }) {
     <div className="flex items-start gap-2 group">
       <button
         onClick={onComplete}
-        className="w-4 h-4 rounded-full border-2 border-dark-border hover:border-emerald-400 flex-shrink-0 mt-0.5 transition-colors"
+        className="w-4 h-4 rounded-full border-2 border-dark-border hover:border-emerald-400 shrink-0 mt-0.5 transition-colors"
         title={t('inquiryDetail.tasks.mark_complete', 'Mark complete')}
       />
       <div className="flex-1 min-w-0">
@@ -1163,7 +1163,7 @@ function WonModal({ inq, stage, onClose, onSuccess }: {
         onChange={e => setNote(e.target.value)}
         placeholder={t('inquiryDetail.won.note_placeholder', 'Optional note — e.g. how the deal closed, terms agreed.')}
         rows={3}
-        className="w-full bg-dark-bg border border-dark-border rounded-md px-3 py-2 text-sm placeholder-t-secondary outline-none focus:border-accent resize-none mb-4"
+        className="w-full bg-dark-bg border border-dark-border rounded-md px-3 py-2 text-sm placeholder-t-secondary outline-hidden focus:border-accent resize-none mb-4"
       />
 
       <div className="flex justify-end gap-2">
@@ -1285,7 +1285,7 @@ function LostModal({ inq, stage, onClose, onSuccess }: {
             }`}
           >
             <span
-              className={`w-3.5 h-3.5 rounded-full border-2 flex-shrink-0 ${
+              className={`w-3.5 h-3.5 rounded-full border-2 shrink-0 ${
                 reasonId === r.id ? 'bg-red-400 border-red-400' : 'border-dark-border'
               }`}
             />
@@ -1302,7 +1302,7 @@ function LostModal({ inq, stage, onClose, onSuccess }: {
         onChange={e => setNote(e.target.value)}
         placeholder={t('inquiryDetail.lost.note_placeholder', "Optional context — e.g. what they went with instead, what we'd need to win next time.")}
         rows={3}
-        className="w-full bg-dark-bg border border-dark-border rounded-md px-3 py-2 text-sm placeholder-t-secondary outline-none focus:border-accent resize-none mb-4"
+        className="w-full bg-dark-bg border border-dark-border rounded-md px-3 py-2 text-sm placeholder-t-secondary outline-hidden focus:border-accent resize-none mb-4"
       />
 
       <div className="flex justify-end gap-2">
@@ -1357,7 +1357,7 @@ function ProposalModal({ inq, onClose, onUseAsEmail }: {
 
   return (
     <div
-      className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+      className="fixed inset-0 bg-black/70 backdrop-blur-xs z-50 flex items-center justify-center p-4"
       onClick={onClose}
     >
       <div
@@ -1369,7 +1369,7 @@ function ProposalModal({ inq, onClose, onUseAsEmail }: {
             <Wand2 size={18} className="text-purple-400" />
             <h2 className="text-lg font-bold text-white">{t('inquiryDetail.proposal.title', 'AI proposal draft')}</h2>
           </div>
-          <button onClick={onClose} className="p-1.5 rounded hover:bg-dark-surface2 text-t-secondary hover:text-white">
+          <button onClick={onClose} className="p-1.5 rounded-sm hover:bg-dark-surface2 text-t-secondary hover:text-white">
             <X size={16} />
           </button>
         </div>
@@ -1391,7 +1391,7 @@ function ProposalModal({ inq, onClose, onUseAsEmail }: {
               <input
                 value={subject}
                 onChange={e => setSubject(e.target.value)}
-                className="w-full bg-dark-bg border border-dark-border rounded-md px-3 py-2 text-sm outline-none focus:border-accent"
+                className="w-full bg-dark-bg border border-dark-border rounded-md px-3 py-2 text-sm outline-hidden focus:border-accent"
               />
             </div>
             <div>
@@ -1402,7 +1402,7 @@ function ProposalModal({ inq, onClose, onUseAsEmail }: {
                 value={body}
                 onChange={e => setBody(e.target.value)}
                 rows={14}
-                className="w-full bg-dark-bg border border-dark-border rounded-md px-3 py-2 text-sm outline-none focus:border-accent resize-none whitespace-pre-wrap leading-relaxed"
+                className="w-full bg-dark-bg border border-dark-border rounded-md px-3 py-2 text-sm outline-hidden focus:border-accent resize-none whitespace-pre-wrap leading-relaxed"
               />
             </div>
           </div>
@@ -1450,7 +1450,7 @@ function Modal({ children, onClose }: { children: React.ReactNode; onClose: () =
 
   return (
     <div
-      className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+      className="fixed inset-0 bg-black/70 backdrop-blur-xs z-50 flex items-center justify-center p-4"
       onClick={onClose}
     >
       <div

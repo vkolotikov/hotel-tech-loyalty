@@ -134,7 +134,7 @@ export function ValidityCard({ member, locale }: { member: Member; locale: strin
                 return (
                   <li key={choice}>
                     <button type="button" data-extend={choice} disabled={extend.isPending} onClick={() => extend.mutate(choice)}
-                      className="flex w-full flex-col items-start rounded-xl border border-a-border bg-a-surface px-3 py-2 text-left hover:bg-a-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-a-accent-text disabled:opacity-60">
+                      className="flex w-full flex-col items-start rounded-xl border border-a-border bg-a-surface px-3 py-2 text-left hover:bg-a-surface-2 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-a-accent-text disabled:opacity-60">
                       <span className="text-sm font-semibold text-a-text">{label}</span>
                       <span className="text-xs tabular-nums text-a-text-2">{until}</span>
                     </button>

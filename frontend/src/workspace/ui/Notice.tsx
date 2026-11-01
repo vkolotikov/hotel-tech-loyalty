@@ -4,9 +4,9 @@ type Tone = 'info' | 'success' | 'warning' | 'danger'
 
 const TONE: Record<Tone, string> = {
   info:    'bg-a-surface-2 text-a-text border-a-border',
-  success: 'bg-a-st-confirmed/[0.12] text-a-st-confirmed border-a-st-confirmed/20',
-  warning: 'bg-a-st-pending/[0.12] text-a-st-pending border-a-st-pending/20',
-  danger:  'bg-a-danger/[0.12] text-a-danger border-a-danger/20',
+  success: 'bg-a-st-confirmed/12 text-a-st-confirmed border-a-st-confirmed/20',
+  warning: 'bg-a-st-pending/12 text-a-st-pending border-a-st-pending/20',
+  danger:  'bg-a-danger/12 text-a-danger border-a-danger/20',
 }
 
 export function Notice({ tone = 'info', children }: { tone?: Tone; children: ReactNode }) {

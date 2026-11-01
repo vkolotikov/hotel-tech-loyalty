@@ -310,7 +310,7 @@ function DisplayValue({ field, value }: { field: CustomFieldDef; value: any }) {
     return (
       <div className="flex flex-wrap gap-1 mt-0.5">
         {value.map(v => (
-          <span key={v} className="text-[11px] px-1.5 py-0.5 rounded bg-dark-bg border border-dark-border text-white">
+          <span key={v} className="text-[11px] px-1.5 py-0.5 rounded-sm bg-dark-bg border border-dark-border text-white">
             {v}
           </span>
         ))}

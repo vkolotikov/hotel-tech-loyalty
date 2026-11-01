@@ -44,7 +44,7 @@ export function WeekGrid({ plans, today, locale, selectedId, dropDate, fillingKe
 }) {
   const { t } = useTranslation()
   return (
-    <div className="grid min-h-full min-w-[42rem] grid-cols-7 divide-x divide-a-border">
+    <div className="grid min-h-full min-w-2xl grid-cols-7 divide-x divide-a-border">
       {plans.map((day, index) => {
         const adds = onAdd !== undefined && canAdd(day.date, today)
         return (

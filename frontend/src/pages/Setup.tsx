@@ -204,7 +204,7 @@ export function Setup({ onComplete }: Props) {
                 value={companyName}
                 onChange={e => setCompanyName(e.target.value)}
                 placeholder="e.g. Grand Hotel Vienna"
-                className="w-full bg-dark-bg border border-dark-border rounded-lg px-3 py-2.5 text-sm text-white placeholder-gray-600 outline-none focus:border-primary-500 mb-5"
+                className="w-full bg-dark-bg border border-dark-border rounded-lg px-3 py-2.5 text-sm text-white placeholder-gray-600 outline-hidden focus:border-primary-500 mb-5"
               />
 
               <h3 className="text-sm font-bold text-white mb-1">Pick your industry</h3>
@@ -216,7 +216,7 @@ export function Setup({ onComplete }: Props) {
                   return (
                     <button key={opt.key} onClick={() => pickIndustry(opt.key)}
                       className={'flex flex-col items-center gap-1.5 p-3 rounded-lg border text-center transition-all ' +
-                        (active ? 'border-amber-500/60 bg-amber-500/[0.08]' : 'border-dark-border bg-dark-bg hover:border-amber-500/30 hover:bg-amber-500/[0.04]')}>
+                        (active ? 'border-amber-500/60 bg-amber-500/8' : 'border-dark-border bg-dark-bg hover:border-amber-500/30 hover:bg-amber-500/4')}>
                       <div className={'w-9 h-9 rounded-md flex items-center justify-center ' + (active ? 'bg-amber-500/25 text-amber-300' : 'bg-purple-500/15 text-purple-300')}>
                         <Icon size={16} />
                       </div>
@@ -227,7 +227,7 @@ export function Setup({ onComplete }: Props) {
               </div>
               {industryDef && (
                 <div className="mt-3 text-xs text-gray-500 flex items-start gap-2">
-                  <Star size={11} className="text-amber-300 fill-amber-300 mt-0.5 flex-shrink-0" />
+                  <Star size={11} className="text-amber-300 fill-amber-300 mt-0.5 shrink-0" />
                   <span>{industryDef.blurb}</span>
                 </div>
               )}
@@ -248,7 +248,7 @@ export function Setup({ onComplete }: Props) {
                       className={'w-full flex items-center gap-3 p-3 rounded-lg border text-left transition-colors ' +
                         (active ? 'border-dark-border' : 'border-dark-border opacity-50')}
                       style={active ? { borderColor: f.accent + '60', backgroundColor: f.accent + '0c' } : {}}>
-                      <div className="w-10 h-10 rounded-md flex items-center justify-center flex-shrink-0"
+                      <div className="w-10 h-10 rounded-md flex items-center justify-center shrink-0"
                         style={{ backgroundColor: f.accent + '25', color: f.accent }}>
                         <Icon size={17} />
                       </div>
@@ -285,7 +285,7 @@ export function Setup({ onComplete }: Props) {
                     onChange={e => setWelcomeMessage(e.target.value)}
                     rows={2}
                     placeholder={`Hi! Welcome to ${companyName || 'our site'}. How can we help you today?`}
-                    className="w-full bg-dark-bg border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 outline-none focus:border-primary-500 resize-none"
+                    className="w-full bg-dark-bg border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 outline-hidden focus:border-primary-500 resize-none"
                   />
                 </div>
               )}
@@ -308,7 +308,7 @@ export function Setup({ onComplete }: Props) {
                 <label className="text-[10px] uppercase tracking-wide font-bold text-gray-500 mb-1.5 block">Want demo data to explore?</label>
                 <div className="grid grid-cols-2 gap-2">
                   <button onClick={() => setWithSample(true)}
-                    className={'p-3 rounded-lg border text-left transition-colors ' + (withSample ? 'border-primary-500 bg-primary-500/[0.08]' : 'border-dark-border bg-dark-bg hover:bg-dark-surface2')}>
+                    className={'p-3 rounded-lg border text-left transition-colors ' + (withSample ? 'border-primary-500 bg-primary-500/8' : 'border-dark-border bg-dark-bg hover:bg-dark-surface2')}>
                     <div className="flex items-center gap-2 mb-1">
                       <Database size={14} className={withSample ? 'text-primary-400' : 'text-gray-500'} />
                       <span className="text-sm font-bold text-white">With demo data</span>
@@ -316,7 +316,7 @@ export function Setup({ onComplete }: Props) {
                     <p className="text-[11px] text-gray-500">5 members, 3 guests, sample tiers — click around to learn the app.</p>
                   </button>
                   <button onClick={() => setWithSample(false)}
-                    className={'p-3 rounded-lg border text-left transition-colors ' + (!withSample ? 'border-primary-500 bg-primary-500/[0.08]' : 'border-dark-border bg-dark-bg hover:bg-dark-surface2')}>
+                    className={'p-3 rounded-lg border text-left transition-colors ' + (!withSample ? 'border-primary-500 bg-primary-500/8' : 'border-dark-border bg-dark-bg hover:bg-dark-surface2')}>
                     <div className="flex items-center gap-2 mb-1">
                       <FileText size={14} className={!withSample ? 'text-primary-400' : 'text-gray-500'} />
                       <span className="text-sm font-bold text-white">Start clean</span>
@@ -346,7 +346,7 @@ export function Setup({ onComplete }: Props) {
                 )}
               </div>
 
-              <div className="bg-blue-500/[0.04] border border-blue-500/20 rounded-lg p-3">
+              <div className="bg-blue-500/4 border border-blue-500/20 rounded-lg p-3">
                 <p className="text-[11px] text-blue-200 font-bold mb-1">What happens next</p>
                 <ul className="text-[11px] text-blue-100/80 space-y-0.5 list-disc list-inside">
                   <li>{industryDef.label} pipeline + task groups configured</li>
@@ -393,7 +393,7 @@ export function Setup({ onComplete }: Props) {
 function ReviewRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-start gap-3 py-1.5 border-b border-dark-border last:border-b-0">
-      <span className="text-[11px] uppercase tracking-wide font-bold text-gray-500 w-28 flex-shrink-0 mt-0.5">{label}</span>
+      <span className="text-[11px] uppercase tracking-wide font-bold text-gray-500 w-28 shrink-0 mt-0.5">{label}</span>
       <span className="text-sm text-white flex-1">{value}</span>
     </div>
   )

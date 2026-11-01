@@ -153,19 +153,19 @@ describe('TeamEditor — the calendar colour (spec 5.3)', () => {
   it('shows the selected swatch with a ring in accent-text, and the focused one with an outline beyond it', () => {
     const { choices } = picker(render(mara))
     // Focus is an outline outside the selected ring, so a checked swatch with the focus looks different from one without.
-    const focus = ['has-[:focus-visible]:outline', 'has-[:focus-visible]:outline-2', 'has-[:focus-visible]:outline-a-accent-text']
+    const focus = ['has-focus-visible:outline-solid', 'has-focus-visible:outline-2', 'has-focus-visible:outline-a-accent-text']
     for (const swatch of choices.slice(1)) {
       const classes = swatch.match(/^<label[^>]*class="([^"]*)"/)?.[1].split(/\s+/) ?? []
-      expect(classes).toEqual(expect.arrayContaining(['has-[:checked]:ring-2', 'has-[:checked]:ring-offset-2', 'has-[:checked]:ring-a-accent-text', ...focus]))
-      expect(classes).toContain('has-[:checked]:ring-offset-a-surface') // the gap around the selected swatch is the panel's own colour, not white, in the dark theme
+      expect(classes).toEqual(expect.arrayContaining(['has-checked:ring-2', 'has-checked:ring-offset-2', 'has-checked:ring-a-accent-text', ...focus]))
+      expect(classes).toContain('has-checked:ring-offset-a-surface') // the gap around the selected swatch is the panel's own colour, not white, in the dark theme
       // The ring reaches 4 px out (offset 2 + width 2): the outline starts beyond it.
       const offset = Number(classes.find(c => c.startsWith('has-[:focus-visible]:outline-offset-'))?.match(/(\d+)(?:px\])?$/)?.[1])
       expect(offset).toBeGreaterThan(4)
-      expect(classes.some(c => c.startsWith('has-[:focus-visible]:ring'))).toBe(false)
+      expect(classes.some(c => c.startsWith('has-focus-visible:ring-3'))).toBe(false)
     }
     const auto = choices[0]?.match(/^<label[^>]*class="([^"]*)"/)?.[1]?.split(/\s+/) ?? []
-    expect(auto).toEqual(expect.arrayContaining(['has-[:checked]:border-a-accent-text', 'has-[:checked]:ring-a-accent-text', ...focus, 'has-[:focus-visible]:outline-offset-2']))
-    expect(auto.some(c => c.startsWith('has-[:focus-visible]:ring'))).toBe(false)
+    expect(auto).toEqual(expect.arrayContaining(['has-checked:border-a-accent-text', 'has-checked:ring-a-accent-text', ...focus, 'has-focus-visible:outline-offset-2']))
+    expect(auto.some(c => c.startsWith('has-focus-visible:ring-3'))).toBe(false)
   })
 
   it('checks Automatic when the member has no stored colour, and the stored colour when they have one', () => {

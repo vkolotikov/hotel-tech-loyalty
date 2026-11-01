@@ -215,7 +215,7 @@ export function BookingCalendar() {
     return s
   }
 
-  const selectClass = 'bg-dark-bg border border-white/[0.08] rounded-xl text-xs text-white px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-emerald-500/40'
+  const selectClass = 'bg-dark-bg border border-white/8 rounded-xl text-xs text-white px-3 py-1.5 focus:outline-hidden focus:ring-1 focus:ring-emerald-500/40'
 
   return (
     <div className="space-y-5">
@@ -330,10 +330,10 @@ export function BookingCalendar() {
               else if (checkOut) { status = 'Check-out'; statusColor = 'amber'; statusEmoji = '→' }
               else if (booking) { status = 'Occupied'; statusColor = 'teal'; statusEmoji = '🛏' }
               return (
-                <div key={uid} className="rounded-xl border border-white/[0.06] p-4 transition-all hover:border-white/[0.1]"
+                <div key={uid} className="rounded-xl border border-white/6 p-4 transition-all hover:border-white/10"
                   style={{ background: 'var(--legacy-card-gradient-diagonal)', borderLeftWidth: '4px', borderLeftColor: vis.accent }}>
                   <div className="flex items-start gap-3 mb-3">
-                    <div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
+                    <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
                       style={{ background: vis.soft, border: `1px solid ${vis.accent}33`, color: ink(vis.accent) }}>
                       <UnitIcon type={vis.icon} size={18} />
                     </div>
@@ -347,7 +347,7 @@ export function BookingCalendar() {
                   </div>
                   {booking ? (
                     <Link to={`/bookings/${booking.id}`}
-                      className="block p-3 rounded-lg border border-white/[0.06] hover:border-white/[0.1] transition-colors"
+                      className="block p-3 rounded-lg border border-white/6 hover:border-white/10 transition-colors"
                       style={{ background: hx('f', '#000000', 0.3) }}>
                       <div className="text-sm font-bold text-white mb-1">{booking.guest_name || '?'}</div>
                       <div className="text-[11px] text-gray-400 mb-2">
@@ -390,17 +390,17 @@ export function BookingCalendar() {
 
       {/* Timeline */}
       {view !== 'day' && (
-      <div className="rounded-2xl border border-white/[0.06] overflow-x-auto"
+      <div className="rounded-2xl border border-white/6 overflow-x-auto"
         style={{ background: 'var(--legacy-card-gradient)', boxShadow: '0 16px 30px rgba(0,0,0,0.18)' }}>
         <div style={{ minWidth: colCount * 40 + 260 }}>
           {/* Day axis */}
-          <div className="flex border-b border-white/[0.06] sticky top-0 z-10" style={{ background: 'var(--legacy-card-deep)' }}>
-            <div className="w-[260px] flex-shrink-0 p-3 text-[10px] text-gray-500 font-bold uppercase tracking-wider border-r border-white/[0.06]">Unit</div>
+          <div className="flex border-b border-white/6 sticky top-0 z-10" style={{ background: 'var(--legacy-card-deep)' }}>
+            <div className="w-[260px] shrink-0 p-3 text-[10px] text-gray-500 font-bold uppercase tracking-wider border-r border-white/6">Unit</div>
             <div className="flex-1 grid" style={{ gridTemplateColumns: `repeat(${colCount}, 1fr)` }}>
               {days.map(d => {
                 const dt = new Date(d), isToday = d === today, isWe = dt.getDay() === 0 || dt.getDay() === 6, inMonth = d.startsWith(month)
                 return (
-                  <div key={d} className="text-center py-2 border-r border-white/[0.03]"
+                  <div key={d} className="text-center py-2 border-r border-white/3"
                     style={{
                       background: isToday ? 'rgba(116,200,149,0.08)' : isWe ? 'rgba(217,143,69,0.04)' : 'transparent',
                       opacity: inMonth ? 1 : 0.3,
@@ -431,9 +431,9 @@ export function BookingCalendar() {
             const vis = unitVisual(udata.name)
             const stats = uStats(udata.bookings)
             return (
-              <div key={uid} className="flex border-b border-white/[0.04]">
+              <div key={uid} className="flex border-b border-white/4">
                 {/* Unit label */}
-                <div className="w-[260px] flex-shrink-0 p-3 border-r border-white/[0.06] relative overflow-hidden"
+                <div className="w-[260px] shrink-0 p-3 border-r border-white/6 relative overflow-hidden"
                   style={{ background: vis.soft }}>
                   {/* Left accent bar */}
                   <div className="absolute left-0 top-0 bottom-0 w-1" style={{ background: vis.accent }} />
@@ -441,7 +441,7 @@ export function BookingCalendar() {
                   <div className="absolute top-0 right-0 w-[120px] h-[120px] pointer-events-none"
                     style={{ background: `radial-gradient(circle at 100% 0, ${vis.glow}, transparent 70%)` }} />
 
-                  <div className="relative z-[1] pl-3">
+                  <div className="relative z-1 pl-3">
                     <div className="flex items-center gap-2 mb-1.5">
                       <div className="w-8 h-8 rounded-lg flex items-center justify-center"
                         style={{ background: vis.soft, border: `1px solid ${vis.accent}33`, color: ink(vis.accent) }}>
@@ -498,7 +498,7 @@ export function BookingCalendar() {
                             onDragOver={e => { if (dragging) e.preventDefault() }}
                             onDrop={handleDrop}
                             title={`New booking · ${udata.name} · ${d}`}
-                            className="border-r border-white/[0.02] cursor-pointer hover:bg-white/[0.025] transition-colors group"
+                            className="border-r border-white/2 cursor-pointer hover:bg-white/2.5 transition-colors group"
                             style={{ background: isToday ? 'rgba(116,200,149,0.04)' : isWe ? 'rgba(217,143,69,0.02)' : 'transparent' }}>
                             <span className="opacity-0 group-hover:opacity-40 inline-block text-emerald-400 text-[10px]">+</span>
                           </button>
@@ -527,7 +527,7 @@ export function BookingCalendar() {
                             draggable={isManual}
                             onDragStart={() => setDragging({ id: b.id, nights, booking_type: b.booking_type })}
                             onDragEnd={() => setDragging(null)}
-                            className={`absolute flex items-center px-2 rounded-lg text-[10px] font-bold truncate z-[1] transition-all hover:brightness-110 hover:-translate-y-px ${isManual ? 'cursor-grab active:cursor-grabbing' : ''}`}
+                            className={`absolute flex items-center px-2 rounded-lg text-[10px] font-bold truncate z-1 transition-all hover:brightness-110 hover:-translate-y-px ${isManual ? 'cursor-grab active:cursor-grabbing' : ''}`}
                             style={{
                               left: `${leftPct}%`, width: `${widthPct}%`,
                               top: PAD + row * (ROW_H + ROW_GAP),

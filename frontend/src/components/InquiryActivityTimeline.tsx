@@ -74,14 +74,14 @@ export function InquiryActivityTimeline({ inquiryId }: Props) {
   return (
     <div className="space-y-3">
       {/* Quick-add */}
-      <div className="rounded-xl border border-white/[0.08] bg-white/[0.02] p-3 space-y-2">
+      <div className="rounded-xl border border-white/8 bg-white/2 p-3 space-y-2">
         <div className="flex flex-wrap gap-1.5">
           {types.map(tp => {
             const Icon = tp.icon
             const active = type === tp.key
             return (
               <button key={tp.key} type="button" onClick={() => setType(tp.key)}
-                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold border transition-all ${active ? tp.tone : 'text-gray-500 border-white/[0.06] hover:border-white/[0.15] hover:text-gray-300'}`}>
+                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold border transition-all ${active ? tp.tone : 'text-gray-500 border-white/6 hover:border-white/15 hover:text-gray-300'}`}>
                 <Icon size={11} />
                 {tp.label}
               </button>
@@ -93,7 +93,7 @@ export function InquiryActivityTimeline({ inquiryId }: Props) {
           onChange={e => setBody(e.target.value)}
           placeholder="What happened? (e.g. 'Called guest, will send proposal Tue')"
           rows={2}
-          className="w-full bg-panel border border-white/[0.06] rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 resize-none focus:outline-none focus:ring-1 focus:ring-primary-500/40"
+          className="w-full bg-panel border border-white/6 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 resize-none focus:outline-hidden focus:ring-1 focus:ring-primary-500/40"
           onKeyDown={e => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) submit() }}
         />
         <div className="flex items-center justify-between">
@@ -115,8 +115,8 @@ export function InquiryActivityTimeline({ inquiryId }: Props) {
             const { Icon, tone } = iconFor(t)
             const when = a.occurred_at || a.created_at
             return (
-              <div key={a.id} className="flex items-start gap-3 p-3 rounded-xl border border-white/[0.06] bg-white/[0.015]">
-                <div className={`w-8 h-8 rounded-lg border flex items-center justify-center flex-shrink-0 ${tone}`}>
+              <div key={a.id} className="flex items-start gap-3 p-3 rounded-xl border border-white/6 bg-white/1.5">
+                <div className={`w-8 h-8 rounded-lg border flex items-center justify-center shrink-0 ${tone}`}>
                   <Icon size={13} />
                 </div>
                 <div className="flex-1 min-w-0">

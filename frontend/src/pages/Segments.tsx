@@ -211,14 +211,14 @@ export function Segments() {
                 <select
                   value={form.definition.operator}
                   onChange={e => setForm(f => ({ ...f, definition: { ...f.definition, operator: e.target.value as 'AND' | 'OR' } }))}
-                  className="ml-2 bg-dark-bg border border-dark-border rounded px-2 py-0.5 text-[11px] text-white"
+                  className="ml-2 bg-dark-bg border border-dark-border rounded-sm px-2 py-0.5 text-[11px] text-white"
                 >
                   <option value="AND">{t('segments.form.match_all', 'match all (AND)')}</option>
                   <option value="OR">{t('segments.form.match_any', 'match any (OR)')}</option>
                 </select>
               </div>
               <button onClick={addFilter}
-                className="flex items-center gap-1 bg-dark-surface2 border border-dark-border text-t-soft hover:text-white text-xs px-2 py-1 rounded">
+                className="flex items-center gap-1 bg-dark-surface2 border border-dark-border text-t-soft hover:text-white text-xs px-2 py-1 rounded-sm">
                 <Plus size={12} /> {t('segments.form.add_filter', 'Add filter')}
               </button>
             </div>
@@ -336,12 +336,12 @@ export function Segments() {
                     <td className="py-3">
                       <div className="flex gap-1 justify-end">
                         <button onClick={() => { setSendingSegment(s); setSendForm({ title: '', body: '', send_email: false, category: 'transactional' }) }}
-                          className="flex items-center gap-1 bg-primary-600 hover:bg-primary-700 text-on-primary text-xs font-semibold px-2.5 py-1 rounded">
+                          className="flex items-center gap-1 bg-primary-600 hover:bg-primary-700 text-on-primary text-xs font-semibold px-2.5 py-1 rounded-sm">
                           <Send size={12} /> {t('segments.list.send', 'Send')}
                         </button>
-                        <button onClick={() => startEdit(s)} className="p-1.5 rounded hover:bg-dark-surface3 text-t-soft" title={t('segments.list.edit_title', 'Edit')}><Pencil size={13} /></button>
+                        <button onClick={() => startEdit(s)} className="p-1.5 rounded-sm hover:bg-dark-surface3 text-t-soft" title={t('segments.list.edit_title', 'Edit')}><Pencil size={13} /></button>
                         <button onClick={() => confirm(t('segments.list.delete_confirm', { name: s.name, defaultValue: 'Delete segment "{{name}}"?' })) && deleteMutation.mutate(s.id)}
-                          className="p-1.5 rounded hover:bg-dark-surface3 text-red-400" title={t('segments.list.delete_title', 'Delete')}><Trash2 size={13} /></button>
+                          className="p-1.5 rounded-sm hover:bg-dark-surface3 text-red-400" title={t('segments.list.delete_title', 'Delete')}><Trash2 size={13} /></button>
                       </div>
                     </td>
                   </tr>
@@ -430,11 +430,11 @@ function FilterRowEditor({
   return (
     <div className="flex flex-wrap items-center gap-2 bg-panel-dim border border-dark-border rounded-lg p-2">
       <select value={row.type} onChange={e => onChange({ type: e.target.value })}
-        className="bg-dark-bg border border-dark-border rounded px-2 py-1 text-xs text-white">
+        className="bg-dark-bg border border-dark-border rounded-sm px-2 py-1 text-xs text-white">
         {FILTER_TYPES.map(ft => <option key={ft.value} value={ft.value}>{t(`segments.filter_types.${ft.value}`, ft.label)}</option>)}
       </select>
       <select value={row.op} onChange={e => onChange({ op: e.target.value })}
-        className="bg-dark-bg border border-dark-border rounded px-2 py-1 text-xs text-white">
+        className="bg-dark-bg border border-dark-border rounded-sm px-2 py-1 text-xs text-white">
         {opOptions.map(o => <option key={o.value} value={o.value}>{t(`segments.filter_ops.${o.value}`, o.label)}</option>)}
       </select>
       {needsValue && row.type === 'tier' ? (
@@ -442,13 +442,13 @@ function FilterRowEditor({
           multiple
           value={(row.value ?? []).map(String)}
           onChange={e => onChange({ value: Array.from(e.target.selectedOptions).map(o => Number(o.value)) })}
-          className="bg-dark-bg border border-dark-border rounded px-2 py-1 text-xs text-white min-w-[160px]"
+          className="bg-dark-bg border border-dark-border rounded-sm px-2 py-1 text-xs text-white min-w-[160px]"
         >
           {tiers.map(tier => <option key={tier.id} value={tier.id}>{tier.name}</option>)}
         </select>
       ) : needsValue && row.type === 'joined' ? (
         <input type="date" value={row.value ?? ''} onChange={e => onChange({ value: e.target.value })}
-          className="bg-dark-bg border border-dark-border rounded px-2 py-1 text-xs text-white" />
+          className="bg-dark-bg border border-dark-border rounded-sm px-2 py-1 text-xs text-white" />
       ) : needsValue ? (
         <input
           type="number"
@@ -456,7 +456,7 @@ function FilterRowEditor({
           value={row.value ?? ''}
           onChange={e => onChange({ value: e.target.value === '' ? '' : Number(e.target.value) })}
           placeholder={row.type === 'activity' ? t('segments.value_placeholders.days', 'days') : t('segments.value_placeholders.points', 'points')}
-          className="bg-dark-bg border border-dark-border rounded px-2 py-1 text-xs text-white w-28"
+          className="bg-dark-bg border border-dark-border rounded-sm px-2 py-1 text-xs text-white w-28"
         />
       ) : null}
       <button onClick={onRemove}

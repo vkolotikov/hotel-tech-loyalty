@@ -127,9 +127,9 @@ export function Guests() {
     return updated
   }
 
-  const sel = 'w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500'
+  const sel = 'w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-hidden focus:ring-2 focus:ring-primary-500'
   const inp = sel
-  const filterSel = 'bg-dark-surface border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500'
+  const filterSel = 'bg-dark-surface border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-hidden focus:ring-2 focus:ring-primary-500'
 
   return (
     <div className="space-y-5">
@@ -159,7 +159,7 @@ export function Guests() {
         <div className="flex gap-3">
           <div className="relative flex-1 max-w-sm">
             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-t-muted" />
-            <input value={search} onChange={e => { setSearch(e.target.value); setPage(1) }} placeholder={t('guests.search_placeholder', 'Search name, email, phone, company...')} className="w-full bg-panel border border-dark-border rounded-lg pl-9 pr-3 py-2 text-sm text-white placeholder-t-muted focus:outline-none focus:ring-2 focus:ring-primary-500" />
+            <input value={search} onChange={e => { setSearch(e.target.value); setPage(1) }} placeholder={t('guests.search_placeholder', 'Search name, email, phone, company...')} className="w-full bg-panel border border-dark-border rounded-lg pl-9 pr-3 py-2 text-sm text-white placeholder-t-muted focus:outline-hidden focus:ring-2 focus:ring-primary-500" />
           </div>
           <button onClick={() => setShowFilters(f => !f)} className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm transition-colors ${hasFilters ? 'border-primary-500 text-primary-400' : 'border-dark-border text-t-secondary hover:text-white'}`}>
             <Filter size={14} /> {t('guests.filters_button', 'Filters')} {hasFilters ? '●' : ''}
@@ -410,7 +410,7 @@ export function Guests() {
                   onChange={e => setCaptureText(e.target.value)}
                   rows={8}
                   placeholder={t('guests.capture.placeholder', 'Paste the email or message here...')}
-                  className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-t-muted focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none"
+                  className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-t-muted focus:outline-hidden focus:ring-2 focus:ring-primary-500 resize-none"
                 />
                 <div className="flex justify-end gap-3">
                   <button type="button" onClick={() => setShowCapture(false)} className="px-4 py-2 text-sm text-t-soft hover:text-white">{t('guests.capture.cancel', 'Cancel')}</button>
@@ -459,7 +459,7 @@ export function Guests() {
                         type={type}
                         value={captureResult[key] ?? ''}
                         onChange={e => setCaptureResult((r: any) => ({ ...r, [key]: e.target.value }))}
-                        className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+                        className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-hidden focus:ring-2 focus:ring-primary-500"
                       />
                     </div>
                   ))}
@@ -470,7 +470,7 @@ export function Guests() {
                     value={captureResult.notes ?? ''}
                     onChange={e => setCaptureResult((r: any) => ({ ...r, notes: e.target.value }))}
                     rows={3}
-                    className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none"
+                    className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-hidden focus:ring-2 focus:ring-primary-500 resize-none"
                   />
                 </div>
                 <div className="flex justify-between pt-1">

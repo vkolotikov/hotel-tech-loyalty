@@ -305,7 +305,7 @@ export function InquiryDrawer({
               className="absolute top-0 left-0 right-0 h-px"
               style={{ background: stageColor ? `linear-gradient(90deg, transparent, ${stageColor}, transparent)` : `linear-gradient(90deg, transparent, ${hxWhite(0.15)}, transparent)` }}
             />
-            <div className="relative flex-shrink-0">
+            <div className="relative shrink-0">
               <div
                 className="w-14 h-14 rounded-2xl flex items-center justify-center text-lg font-bold text-black"
                 style={{ background: 'linear-gradient(135deg, #f5d782 0%, #c9a84c 100%)', boxShadow: '0 4px 16px rgba(201, 168, 76, 0.35)' }}
@@ -338,7 +338,7 @@ export function InquiryDrawer({
                   <span className={`text-[10px] uppercase font-bold px-2.5 py-1 rounded-md border ${
                     inq.priority === 'High'
                       ? 'bg-red-500/15 text-red-300 border-red-500/40'
-                      : 'bg-white/[0.04] text-gray-400 border-white/10'
+                      : 'bg-white/4 text-gray-400 border-white/10'
                   }`}>
                     {inq.priority}
                   </span>
@@ -361,7 +361,7 @@ export function InquiryDrawer({
               <button
                 ref={kebabRef}
                 onClick={() => setMenuOpen(v => !v)}
-                className="p-2 rounded-lg hover:bg-white/[0.06] text-gray-400 hover:text-white transition-colors"
+                className="p-2 rounded-lg hover:bg-white/6 text-gray-400 hover:text-white transition-colors"
                 aria-label={t('inquiryDrawer.more_actions', 'More actions')}
               >
                 <MoreVertical size={16} />
@@ -371,7 +371,7 @@ export function InquiryDrawer({
                   {guest?.id && (
                     <button
                       onClick={() => { setMenuOpen(false); onRequestCustomerDrawer?.(guest.id!) }}
-                      className="w-full text-left px-3 py-2 text-xs flex items-center gap-2 text-gray-300 hover:bg-white/[0.06]"
+                      className="w-full text-left px-3 py-2 text-xs flex items-center gap-2 text-gray-300 hover:bg-white/6"
                     >
                       <UserCircle2 size={12} /> {t('inquiryDrawer.menu.edit_customer', 'Edit customer details')}
                     </button>
@@ -379,7 +379,7 @@ export function InquiryDrawer({
                   {customerHref && (
                     <a
                       href={customerHref}
-                      className="w-full text-left px-3 py-2 text-xs flex items-center gap-2 text-gray-300 hover:bg-white/[0.06]"
+                      className="w-full text-left px-3 py-2 text-xs flex items-center gap-2 text-gray-300 hover:bg-white/6"
                       onClick={() => setMenuOpen(false)}
                     >
                       <ExternalLink size={12} /> {t('inquiryDrawer.menu.open_customer_profile', 'Open full customer profile')}
@@ -396,7 +396,7 @@ export function InquiryDrawer({
               )}
               <button
                 onClick={onClose}
-                className="p-2 rounded-lg hover:bg-white/[0.06] text-gray-400 hover:text-white transition-colors"
+                className="p-2 rounded-lg hover:bg-white/6 text-gray-400 hover:text-white transition-colors"
                 aria-label={t('inquiryDrawer.close', 'Close')}
               >
                 <X size={16} />
@@ -405,7 +405,7 @@ export function InquiryDrawer({
           </div>
 
           {/* Tabs — pill style, sticky to top of body */}
-          <div className="px-5 py-3 border-b border-dark-border bg-dark-surface/95 backdrop-blur sticky top-0 z-10">
+          <div className="px-5 py-3 border-b border-dark-border bg-dark-surface/95 backdrop-blur-sm sticky top-0 z-10">
             <div className="inline-flex items-center gap-0.5 p-0.5 bg-dark-bg rounded-lg border border-dark-border">
               {([
                 { key: 'lead' as const,     label: t('inquiryDrawer.tabs.lead', 'Lead'), icon: Tag },
@@ -420,8 +420,8 @@ export function InquiryDrawer({
                     onClick={() => setTab(x.key)}
                     className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${
                       active
-                        ? 'bg-primary-500 text-on-primary shadow-sm'
-                        : 'text-t-secondary hover:text-white hover:bg-white/[0.04]'
+                        ? 'bg-primary-500 text-on-primary shadow-xs'
+                        : 'text-t-secondary hover:text-white hover:bg-white/4'
                     }`}
                   >
                     <Icon size={12} />
@@ -447,7 +447,7 @@ export function InquiryDrawer({
                 </p>
                 <button
                   onClick={onClose}
-                  className="mt-5 px-4 py-2 text-xs font-semibold rounded-lg bg-white/[0.04] border border-dark-border text-gray-300 hover:bg-white/[0.08] transition-colors"
+                  className="mt-5 px-4 py-2 text-xs font-semibold rounded-lg bg-white/4 border border-dark-border text-gray-300 hover:bg-white/8 transition-colors"
                 >
                   {t('inquiryDrawer.empty.close', 'Close panel')}
                 </button>
@@ -729,7 +729,7 @@ export function InquiryDrawer({
                         </a>
                       )}
                       {customerHref && (
-                        <a href={customerHref} className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-white/[0.04] border border-white/10 text-xs font-semibold text-gray-300 hover:bg-white/[0.08] transition-colors">
+                        <a href={customerHref} className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-white/4 border border-white/10 text-xs font-semibold text-gray-300 hover:bg-white/8 transition-colors">
                           <Globe size={12} /> {t('inquiryDrawer.customer.profile_btn', 'Profile')}
                         </a>
                       )}

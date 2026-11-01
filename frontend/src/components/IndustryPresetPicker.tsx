@@ -87,10 +87,10 @@ export function IndustryPresetPicker() {
     ?? (data.current ? data.current : 'Hotel (default)')
 
   return (
-    <div className="bg-gradient-to-br from-amber-500/10 via-purple-500/[0.05] to-cyan-500/10 border border-amber-500/30 rounded-xl p-4 mb-4">
+    <div className="bg-linear-to-br from-amber-500/10 via-purple-500/5 to-cyan-500/10 border border-amber-500/30 rounded-xl p-4 mb-4">
       <div className="flex items-start justify-between mb-3 gap-3 flex-wrap">
         <div className="flex items-start gap-2.5">
-          <div className="w-9 h-9 rounded-lg bg-amber-500/15 border border-amber-500/40 flex items-center justify-center flex-shrink-0">
+          <div className="w-9 h-9 rounded-lg bg-amber-500/15 border border-amber-500/40 flex items-center justify-center shrink-0">
             <Zap size={16} className="text-amber-300" />
           </div>
           <div>
@@ -119,8 +119,8 @@ export function IndustryPresetPicker() {
               onClick={() => setConfirming(p)}
               className={`text-left rounded-lg border p-2.5 transition group ${
                 p.is_current
-                  ? 'border-amber-500/50 bg-amber-500/[0.06] cursor-default'
-                  : 'border-dark-border bg-dark-bg hover:border-amber-500/40 hover:bg-amber-500/[0.04]'
+                  ? 'border-amber-500/50 bg-amber-500/6 cursor-default'
+                  : 'border-dark-border bg-dark-bg hover:border-amber-500/40 hover:bg-amber-500/4'
               }`}
             >
               <div className="flex items-center gap-2 mb-1">
@@ -131,7 +131,7 @@ export function IndustryPresetPicker() {
                 </div>
                 <p className="text-sm font-bold text-white truncate flex-1">{p.label}</p>
                 {p.is_current && (
-                  <CheckCircle2 size={13} className="text-amber-400 flex-shrink-0" />
+                  <CheckCircle2 size={13} className="text-amber-400 shrink-0" />
                 )}
               </div>
               <p className="text-[10px] text-t-secondary leading-snug line-clamp-2 min-h-[24px]">
@@ -177,7 +177,7 @@ function ConfirmModal({ preset, isCurrent, onCancel, onConfirm, applying }: {
 
   return (
     <div
-      className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+      className="fixed inset-0 bg-black/70 backdrop-blur-xs z-50 flex items-center justify-center p-4"
       onClick={applying ? undefined : onCancel}
     >
       <div
@@ -194,7 +194,7 @@ function ConfirmModal({ preset, isCurrent, onCancel, onConfirm, applying }: {
           <button
             onClick={onCancel}
             disabled={applying}
-            className="p-1.5 rounded hover:bg-dark-surface2 text-t-secondary hover:text-white"
+            className="p-1.5 rounded-sm hover:bg-dark-surface2 text-t-secondary hover:text-white"
           >
             <X size={16} />
           </button>
@@ -224,9 +224,9 @@ function ConfirmModal({ preset, isCurrent, onCancel, onConfirm, applying }: {
           )}
         </div>
 
-        <div className="bg-blue-500/[0.04] border border-blue-500/20 rounded-lg p-3 mb-4">
+        <div className="bg-blue-500/4 border border-blue-500/20 rounded-lg p-3 mb-4">
           <div className="flex items-start gap-2">
-            <Info size={13} className="text-blue-300 flex-shrink-0 mt-0.5" />
+            <Info size={13} className="text-blue-300 shrink-0 mt-0.5" />
             <div className="text-[11px] text-blue-100/90 leading-relaxed">
               <p className="font-bold text-blue-200 mb-0.5">Your data is safe</p>
               Open leads move to the new pipeline's matching stage (won deals stay won, lost stays lost).

@@ -101,7 +101,7 @@ export function WorkspaceShell({ workspace, look, accent, card, initial, organiz
             <NavLink key={to} to={to} end={end} data-tip={slim ? label : undefined}
               className={({ isActive }) => cards
                 // The owner's mockup: each area a card; the current one filled with the brand (spec 2026-10-21 §4.1).
-                ? `relative flex min-h-11 items-center gap-3 rounded-[10px] border px-3 text-sm font-medium transition-colors ${slim ? 'justify-center' : ''} ${isActive ? 'border-transparent bg-gradient-to-br from-a-accent to-a-accent-deep text-a-accent-ink shadow-a-sm' : 'border-a-side-2 bg-a-side-2 text-a-side-text-2 hover:text-a-side-text'}`
+                ? `relative flex min-h-11 items-center gap-3 rounded-[10px] border px-3 text-sm font-medium transition-colors ${slim ? 'justify-center' : ''} ${isActive ? 'border-transparent bg-linear-to-br from-a-accent to-a-accent-deep text-a-accent-ink shadow-a-sm' : 'border-a-side-2 bg-a-side-2 text-a-side-text-2 hover:text-a-side-text'}`
                 : `relative flex min-h-11 items-center gap-3 rounded-xl px-3 text-sm font-medium transition-colors ${slim ? 'justify-center' : ''} ${isActive ? 'bg-a-side-2 text-a-side-text' : 'text-a-side-text-2 hover:bg-a-side-2/60 hover:text-a-side-text'}`}>
               {({ isActive }) => (
                 <>
@@ -131,7 +131,7 @@ export function WorkspaceShell({ workspace, look, accent, card, initial, organiz
           {/* Slim: a globe with the real picker laid over it, transparent. The select keeps its "Language" name and opens on click and on the keyboard; its own focus ring is invisible at zero opacity, so the wrapper draws one. The opened list is drawn from the select's own colours, not the wrapper's, hence the explicit bg and text. */}
           {slim && (
             <div data-tip={t('workspace.shell.language', 'Language')}
-              className="relative flex min-h-10 items-center justify-center rounded-xl text-a-side-text-2 transition-colors hover:bg-a-side-2/60 hover:text-a-side-text has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-a-side-text">
+              className="relative flex min-h-10 items-center justify-center rounded-xl text-a-side-text-2 transition-colors hover:bg-a-side-2/60 hover:text-a-side-text has-focus-visible:ring-2 has-focus-visible:ring-a-side-text">
               <Globe size={16} aria-hidden />
               {language('absolute inset-0 h-full w-full cursor-pointer opacity-0 bg-a-side-2 text-a-side-text')}
             </div>
@@ -191,7 +191,7 @@ export function WorkspaceShell({ workspace, look, accent, card, initial, organiz
                 </nav>
               )}
               {phoneMenu ?? <>
-              <div className="px-2 py-1 text-xs text-a-text-2 break-words">{person}</div>
+              <div className="px-2 py-1 text-xs text-a-text-2 wrap-break-word">{person}</div>
               <div className="px-1 pb-1"><ThemeSwitch value={look.theme} onChange={look.setTheme} tone="surface" /></div>
               {fullAdmin !== null && (
                 <Link to={fullAdmin} onClick={toFullAdmin} className="flex items-center gap-3 rounded-lg px-2 py-2 text-sm text-a-text hover:bg-a-surface-2">

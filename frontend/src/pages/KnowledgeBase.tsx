@@ -185,7 +185,7 @@ export function KnowledgeBase() {
       completed: 'bg-accent/20 text-accent',
       failed: 'bg-error/20 text-error',
     }
-    return <span className={`px-2 py-0.5 rounded text-xs font-medium ${styles[status] || styles.pending}`}>{t(`knowledge_base.status.${status}`, { defaultValue: String(status ?? '') })}</span>
+    return <span className={`px-2 py-0.5 rounded-sm text-xs font-medium ${styles[status] || styles.pending}`}>{t(`knowledge_base.status.${status}`, { defaultValue: String(status ?? '') })}</span>
   }
 
   return (
@@ -326,18 +326,18 @@ export function KnowledgeBase() {
                               type="text"
                               value={it.question}
                               onChange={e => setAiPreview(p => p.map((x, idx) => idx === i ? { ...x, question: e.target.value } : x))}
-                              className="w-full bg-transparent text-white text-sm font-medium border-b border-transparent focus:border-primary-500 focus:outline-none mb-1"
+                              className="w-full bg-transparent text-white text-sm font-medium border-b border-transparent focus:border-primary-500 focus:outline-hidden mb-1"
                             />
                             <textarea
                               value={it.answer}
                               onChange={e => setAiPreview(p => p.map((x, idx) => idx === i ? { ...x, answer: e.target.value } : x))}
                               rows={2}
-                              className="w-full bg-transparent text-t-secondary text-xs border-b border-transparent focus:border-primary-500 focus:outline-none resize-none"
+                              className="w-full bg-transparent text-t-secondary text-xs border-b border-transparent focus:border-primary-500 focus:outline-hidden resize-none"
                             />
                             {it.keywords.length > 0 && (
                               <div className="flex flex-wrap gap-1 mt-1">
                                 {it.keywords.map((kw, ki) => (
-                                  <span key={ki} className="text-[10px] bg-primary-500/20 text-primary-300 px-1.5 py-0.5 rounded">{kw}</span>
+                                  <span key={ki} className="text-[10px] bg-primary-500/20 text-primary-300 px-1.5 py-0.5 rounded-sm">{kw}</span>
                                 ))}
                               </div>
                             )}
@@ -401,7 +401,7 @@ export function KnowledgeBase() {
                 <label className="block text-sm text-t-secondary mb-1">{t('knowledge_base.item_form.keywords', 'Keywords')}</label>
                 <div className="flex flex-wrap gap-1 mb-2">
                   {itemForm.keywords.map((kw, i) => (
-                    <span key={i} className="flex items-center gap-1 bg-primary-500/20 text-primary-400 px-2 py-0.5 rounded text-xs">
+                    <span key={i} className="flex items-center gap-1 bg-primary-500/20 text-primary-400 px-2 py-0.5 rounded-sm text-xs">
                       {kw}
                       <button onClick={() => removeKeyword(i)}><X size={12} /></button>
                     </span>
@@ -446,14 +446,14 @@ export function KnowledgeBase() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
                         <span className="text-white font-medium text-sm">{item.question}</span>
-                        {item.category && <span className="text-xs bg-dark-surface4 text-t-secondary px-2 py-0.5 rounded">{item.category.name}</span>}
-                        {!item.is_active && <span className="text-xs bg-error/20 text-error px-2 py-0.5 rounded">{t('knowledge_base.inactive', 'Inactive')}</span>}
+                        {item.category && <span className="text-xs bg-dark-surface4 text-t-secondary px-2 py-0.5 rounded-sm">{item.category.name}</span>}
+                        {!item.is_active && <span className="text-xs bg-error/20 text-error px-2 py-0.5 rounded-sm">{t('knowledge_base.inactive', 'Inactive')}</span>}
                       </div>
                       <p className="text-sm text-t-secondary line-clamp-2">{item.answer}</p>
                       {item.keywords?.length > 0 && (
                         <div className="flex flex-wrap gap-1 mt-2">
                           {item.keywords.map((kw: string, i: number) => (
-                            <span key={i} className="text-xs bg-primary-500/10 text-primary-400 px-1.5 py-0.5 rounded">{kw}</span>
+                            <span key={i} className="text-xs bg-primary-500/10 text-primary-400 px-1.5 py-0.5 rounded-sm">{kw}</span>
                           ))}
                         </div>
                       )}
@@ -527,7 +527,7 @@ export function KnowledgeBase() {
                     <div className="flex items-center gap-2">
                       <span className="text-white font-medium">{cat.name}</span>
                       <span className="text-xs text-t-secondary">{t('knowledge_base.cat_row.items_count', { count: cat.items_count || 0, defaultValue: '({{count}} items)' })}</span>
-                      {!cat.is_active && <span className="text-xs bg-error/20 text-error px-2 py-0.5 rounded">{t('knowledge_base.inactive', 'Inactive')}</span>}
+                      {!cat.is_active && <span className="text-xs bg-error/20 text-error px-2 py-0.5 rounded-sm">{t('knowledge_base.inactive', 'Inactive')}</span>}
                     </div>
                     {cat.description && <p className="text-sm text-t-secondary mt-1">{cat.description}</p>}
                   </div>

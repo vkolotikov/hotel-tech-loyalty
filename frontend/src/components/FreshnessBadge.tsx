@@ -70,7 +70,7 @@ function resolve(props: FreshnessBadgeProps): Resolved | null {
   }
   return {
     label: tr('inquiries.row.age_days', { d: ageDays, defaultValue: `${ageDays}d old` }),
-    cls: 'text-gray-400 bg-white/[0.04] border-white/10',
+    cls: 'text-gray-400 bg-white/4 border-white/10',
     title: titleAge,
   }
 }
@@ -83,8 +83,8 @@ export default function FreshnessBadge(props: FreshnessBadgeProps) {
     <span
       title={r.title}
       className={[
-        'flex-shrink-0 inline-flex items-center font-bold uppercase tracking-wider border rounded',
-        tight ? 'text-[8.5px] px-1 py-[1px]' : 'text-[9px] px-1.5 py-0.5',
+        'shrink-0 inline-flex items-center font-bold uppercase tracking-wider border rounded-sm',
+        tight ? 'text-[8.5px] px-1 py-px' : 'text-[9px] px-1.5 py-0.5',
         r.cls,
       ].join(' ')}
     >

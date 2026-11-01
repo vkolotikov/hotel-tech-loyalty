@@ -106,7 +106,7 @@ function Suggestions({ full }: { full: boolean }) {
         <div key={item.name} className="flex flex-wrap items-start gap-3 rounded-lg bg-a-surface-2 p-2.5">
           <div className="min-w-0 grow basis-48">
             <p className="text-sm font-semibold text-a-text">{item.name}</p>
-            <p className="break-words text-xs text-a-text-2">{item.body}</p>
+            <p className="wrap-break-word text-xs text-a-text-2">{item.body}</p>
           </div>
           <Button size="sm" variant="secondary" loading={busy === item.name} disabled={full || (busy !== null && busy !== item.name)} onClick={() => { void add(item) }}>
             {w('add_suggestion', 'Add')}
@@ -163,7 +163,7 @@ function SnippetList({ kind, brand, canEdit }: { kind: SnippetKind; brand: Brand
                 <div className="flex flex-wrap items-start gap-3 rounded-lg border border-a-border p-3">
                   <div className="min-w-0 grow basis-48">
                     <p className="truncate text-sm font-semibold text-a-text">{snippet.name}</p>
-                    <p className="whitespace-pre-line break-words text-xs text-a-text-2">{snippet.body}</p>
+                    <p className="whitespace-pre-line wrap-break-word text-xs text-a-text-2">{snippet.body}</p>
                   </div>
                   {canEdit && (
                     <div className="flex gap-1">

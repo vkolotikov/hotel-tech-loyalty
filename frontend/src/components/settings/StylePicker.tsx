@@ -58,7 +58,7 @@ export function StylePicker({ value, brand, onPick }: {
             tabIndex={active ? 0 : -1}
             onClick={() => onPick(id)}
             className={clsx(
-              'text-left rounded-2xl border p-3 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-400',
+              'text-left rounded-2xl border p-3 transition-colors focus:outline-hidden focus-visible:ring-2 focus-visible:ring-primary-400',
               active ? 'border-primary-400 bg-primary-500/10' : 'border-dark-border hover:border-dark-border2',
             )}
           >

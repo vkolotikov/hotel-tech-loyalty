@@ -66,7 +66,7 @@ const STEPS = [
 const kicker = 'text-[11px] font-mono uppercase tracking-[0.14em] text-primary-500'
 const card   = 'bg-dark-card border border-dark-border rounded-xl p-5'
 const label  = 'block text-xs text-t-secondary mb-1.5'
-const input  = 'w-full bg-dark-bg border border-dark-border rounded-lg px-3 py-2.5 text-sm text-white placeholder-t-muted focus:border-primary-500 focus-visible:ring-2 focus-visible:ring-primary-500/40 outline-none transition-colors'
+const input  = 'w-full bg-dark-bg border border-dark-border rounded-lg px-3 py-2.5 text-sm text-white placeholder-t-muted focus:border-primary-500 focus-visible:ring-2 focus-visible:ring-primary-500/40 outline-hidden transition-colors'
 
 export function ChatbotWizard({ onDone }: { onDone: () => void }) {
   const qc = useQueryClient()
@@ -210,7 +210,7 @@ export function ChatbotWizard({ onDone }: { onDone: () => void }) {
                   aria-pressed={tone === t.value}
                   onClick={() => setForm(f => ({ ...f, tone: t.value }))}
                   className={
-                    'text-left px-3 py-2.5 rounded-lg border transition-colors focus-visible:ring-2 focus-visible:ring-primary-500/40 outline-none ' +
+                    'text-left px-3 py-2.5 rounded-lg border transition-colors focus-visible:ring-2 focus-visible:ring-primary-500/40 outline-hidden ' +
                     (tone === t.value
                       ? 'bg-primary-500/10 border-primary-500 text-white'
                       : 'bg-dark-bg border-dark-border text-t-secondary hover:border-dark-border2')
@@ -339,7 +339,7 @@ export function ChatbotWizard({ onDone }: { onDone: () => void }) {
           type="button"
           onClick={() => (step === 0 ? skip.mutate() : setStep(s => s - 1))}
           disabled={skip.isPending}
-          className="flex items-center gap-1.5 px-3 py-2 text-sm text-t-secondary hover:text-white rounded-lg focus-visible:ring-2 focus-visible:ring-primary-500/40 outline-none disabled:opacity-50"
+          className="flex items-center gap-1.5 px-3 py-2 text-sm text-t-secondary hover:text-white rounded-lg focus-visible:ring-2 focus-visible:ring-primary-500/40 outline-hidden disabled:opacity-50"
         >
           {step === 0 ? 'Skip setup' : <><ArrowLeft size={15} /> Back</>}
         </button>
@@ -348,7 +348,7 @@ export function ChatbotWizard({ onDone }: { onDone: () => void }) {
           type="button"
           onClick={() => (isLast ? apply.mutate() : setStep(s => s + 1))}
           disabled={apply.isPending}
-          className="flex items-center gap-2 px-5 py-2.5 text-sm font-medium bg-primary-500 text-on-primary rounded-lg hover:bg-primary-400 transition-colors focus-visible:ring-2 focus-visible:ring-primary-500/40 outline-none disabled:opacity-60"
+          className="flex items-center gap-2 px-5 py-2.5 text-sm font-medium bg-primary-500 text-on-primary rounded-lg hover:bg-primary-400 transition-colors focus-visible:ring-2 focus-visible:ring-primary-500/40 outline-hidden disabled:opacity-60"
         >
           {apply.isPending
             ? <><Loader2 size={15} className="animate-spin" /> Setting up…</>

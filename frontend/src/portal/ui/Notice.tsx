@@ -22,7 +22,7 @@ export function Notice({ tone = 'info', children, tabIndex, ref, onDismiss }: { 
       <Icon size={16} className="shrink-0 mt-px" aria-hidden />
       <div className="min-w-0 flex-1">{children}</div>
       {onDismiss && (
-        <button type="button" onClick={onDismiss} aria-label={t('portal.common.close', 'Close')} className="shrink-0 -m-1 p-1 rounded text-current opacity-70 hover:opacity-100">
+        <button type="button" onClick={onDismiss} aria-label={t('portal.common.close', 'Close')} className="shrink-0 -m-1 p-1 rounded-sm text-current opacity-70 hover:opacity-100">
           <X size={14} />
         </button>
       )}

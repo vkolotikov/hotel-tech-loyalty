@@ -494,7 +494,7 @@ export function Dashboard() {
                 : ''
               return (
                 <div key={i} className="flex items-center gap-3 px-5 py-3 hover:bg-dark-surface2 transition-colors">
-                  <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${meta.bg}`}>
+                  <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${meta.bg}`}>
                     <Icon size={15} className={meta.color} />
                   </div>
                   <div className="flex-1 min-w-0">
@@ -561,7 +561,7 @@ function ScheduleSection({
           {rows.map(r => (
             <button key={r.key} onClick={r.onClick}
               className="w-full flex items-center gap-3 px-5 py-2.5 hover:bg-dark-surface2 transition-colors">
-              <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-bold"
+              <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-xs font-bold"
                 style={{ background: r.initialColor + '20', color: ink(r.initialColor) }}>
                 {r.initial.toUpperCase()}
               </div>
@@ -570,7 +570,7 @@ function ScheduleSection({
                 {r.secondary && <p className="text-[11px] text-t-muted truncate">{r.secondary}</p>}
               </div>
               {r.meta && (
-                <span className="text-[10px] px-2 py-0.5 rounded-full font-bold flex-shrink-0"
+                <span className="text-[10px] px-2 py-0.5 rounded-full font-bold shrink-0"
                   style={{ background: r.metaColor + '20', color: ink(r.metaColor) }}>
                   {r.meta}
                 </span>

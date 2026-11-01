@@ -99,7 +99,7 @@ export function Referrals() {
               placeholder={t('referrals.search_placeholder', 'Search referrer or referee by name / email…')}
               value={search}
               onChange={(e) => { setSearch(e.target.value); setPage(1) }}
-              className="w-full pl-9 pr-4 py-2 bg-panel border border-dark-border rounded-lg text-sm text-white placeholder-t-muted focus:outline-none focus:ring-2 focus:ring-primary-500"
+              className="w-full pl-9 pr-4 py-2 bg-panel border border-dark-border rounded-lg text-sm text-white placeholder-t-muted focus:outline-hidden focus:ring-2 focus:ring-primary-500"
             />
           </div>
           <select
@@ -133,7 +133,7 @@ export function Referrals() {
                 Array(6).fill(0).map((_, i) => (
                   <tr key={i}>
                     {Array(6).fill(0).map((_, j) => (
-                      <td key={j} className="py-3"><div className="h-4 bg-dark-surface2 rounded animate-pulse w-24" /></td>
+                      <td key={j} className="py-3"><div className="h-4 bg-dark-surface2 rounded-sm animate-pulse w-24" /></td>
                     ))}
                   </tr>
                 ))

@@ -119,7 +119,7 @@ describe('PostCardView', () => {
     const out = html(<PostCardView post={post(3, { scheduled_time: '09:30' })} onOpen={noop} />)
     const words = out.match(/<span class="([^"]*)">Hook 3<\/span>/)?.[1] ?? ''
     expect(words).toContain('line-clamp-6')
-    expect(words).toContain('break-words')
+    expect(words).toContain('wrap-break-word')
     // A block span keeps line-clamp from clamping (it needs -webkit-box).
     expect(words.split(' ')).not.toContain('block')
     expect(out.indexOf('data-status=')).toBeLessThan(out.indexOf('>Hook 3<'))

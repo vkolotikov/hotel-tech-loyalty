@@ -494,7 +494,7 @@ function Step1Channel({ form, setForm, emailTemplates, selectedTemplate }: Step1
                 value={form.title}
                 onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
                 placeholder={t('notifications.wizard.step1.title_placeholder', 'e.g. Special offer just for you!')}
-                className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+                className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-hidden focus:ring-2 focus:ring-primary-500"
               />
             </div>
             <div>
@@ -504,7 +504,7 @@ function Step1Channel({ form, setForm, emailTemplates, selectedTemplate }: Step1
                 onChange={e => setForm(f => ({ ...f, body: e.target.value }))}
                 placeholder={t('notifications.wizard.step1.body_placeholder', 'Earn double points this weekend…')}
                 rows={3}
-                className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none"
+                className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-hidden focus:ring-2 focus:ring-primary-500 resize-none"
               />
             </div>
           </div>
@@ -560,7 +560,7 @@ function Step2Audience({ form, tiers, audience, loading, toggleTier, setForm }: 
                 value={form.points_min}
                 onChange={e => setForm(f => ({ ...f, points_min: e.target.value }))}
                 placeholder="0"
-                className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+                className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-hidden focus:ring-2 focus:ring-primary-500"
               />
             </div>
             <div>
@@ -570,7 +570,7 @@ function Step2Audience({ form, tiers, audience, loading, toggleTier, setForm }: 
                 value={form.points_max}
                 onChange={e => setForm(f => ({ ...f, points_max: e.target.value }))}
                 placeholder="∞"
-                className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+                className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-hidden focus:ring-2 focus:ring-primary-500"
               />
             </div>
           </div>
@@ -657,7 +657,7 @@ function Step3Details({ form, setForm, selectedTemplate }: Step3Props) {
           value={form.name}
           onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
           placeholder={t('notifications.wizard.step3.campaign_name_placeholder', 'e.g. October weekend offer')}
-          className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+          className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-hidden focus:ring-2 focus:ring-primary-500"
         />
       </div>
 
@@ -669,7 +669,7 @@ function Step3Details({ form, setForm, selectedTemplate }: Step3Props) {
             value={form.email_subject}
             onChange={e => setForm(f => ({ ...f, email_subject: e.target.value }))}
             placeholder={selectedTemplate?.subject || t('notifications.wizard.step3.subject_placeholder_fallback', 'Enter subject')}
-            className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+            className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-hidden focus:ring-2 focus:ring-primary-500"
           />
           <p className="text-[11px] text-t-muted mt-1">{t('notifications.wizard.step3.subject_default_hint', 'Leave blank to use the template default:')} <span className="text-t-secondary">{selectedTemplate?.subject ?? '—'}</span></p>
         </div>
@@ -681,7 +681,7 @@ function Step3Details({ form, setForm, selectedTemplate }: Step3Props) {
           type="datetime-local"
           value={form.scheduled_at}
           onChange={e => setForm(f => ({ ...f, scheduled_at: e.target.value }))}
-          className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+          className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-hidden focus:ring-2 focus:ring-primary-500"
         />
         <p className="text-[11px] text-t-muted mt-1">{t('notifications.wizard.step3.schedule_hint', 'Leave blank to send immediately on review.')}</p>
       </div>
@@ -745,7 +745,7 @@ function Step4Review({ form, setForm, audience, selectedTemplate, onTestSend, te
                 value={form.test_email}
                 onChange={e => setForm(f => ({ ...f, test_email: e.target.value }))}
                 placeholder={t('notifications.wizard.step4.test_placeholder', 'Leave blank to send to yourself')}
-                className="flex-1 bg-panel border border-dark-border rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+                className="flex-1 bg-panel border border-dark-border rounded-lg px-3 py-2 text-xs text-white focus:outline-hidden focus:ring-2 focus:ring-primary-500"
               />
               <button
                 onClick={onTestSend}
@@ -798,7 +798,7 @@ function ReviewRow({ label, value, tone }: { label: string; value: string; tone?
   return (
     <div className="flex items-start justify-between gap-4 py-1.5 border-b border-dark-border/50">
       <span className="text-xs text-t-soft uppercase tracking-wide shrink-0">{label}</span>
-      <span className={`text-sm font-medium ${vColor} text-right break-words`}>{value}</span>
+      <span className={`text-sm font-medium ${vColor} text-right wrap-break-word`}>{value}</span>
     </div>
   )
 }

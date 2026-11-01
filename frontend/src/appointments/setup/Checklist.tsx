@@ -29,7 +29,7 @@ export function Checklist({ checklist, onTab }: { checklist: ChecklistData; onTa
           const label = t(`appointments.setup.step.${step.key}`)
           return (
             <li key={step.key} className="flex items-center gap-3 text-sm">
-              <span aria-hidden className={`grid h-6 w-6 shrink-0 place-items-center rounded-full font-a-mono text-xs font-medium ${step.done ? 'bg-a-st-confirmed/[0.12] text-a-st-confirmed' : 'bg-a-surface-2 text-a-text-2'}`}>
+              <span aria-hidden className={`grid h-6 w-6 shrink-0 place-items-center rounded-full font-a-mono text-xs font-medium ${step.done ? 'bg-a-st-confirmed/12 text-a-st-confirmed' : 'bg-a-surface-2 text-a-text-2'}`}>
                 {step.done ? <Check size={14} /> : i + 1}
               </span>
               <span className={step.done ? 'text-a-text-2' : 'text-a-text'}>

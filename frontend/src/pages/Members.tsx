@@ -327,7 +327,7 @@ export function Members() {
               placeholder={t('members.search_placeholder', 'Search by name, email, or member number…')}
               value={search}
               onChange={(e) => { setSearch(e.target.value); setUrlParam('page', undefined) }}
-              className="w-full pl-9 pr-4 py-2 bg-panel border border-dark-border rounded-lg text-sm text-white placeholder-t-muted focus:outline-none focus:ring-2 focus:ring-primary-500"
+              className="w-full pl-9 pr-4 py-2 bg-panel border border-dark-border rounded-lg text-sm text-white placeholder-t-muted focus:outline-hidden focus:ring-2 focus:ring-primary-500"
             />
           </div>
           <div className="relative">
@@ -335,7 +335,7 @@ export function Members() {
             <select
               value={sortBy}
               onChange={(e) => setUrlParam('sort_by', e.target.value === 'recent' ? undefined : e.target.value)}
-              className="appearance-none bg-panel border border-dark-border rounded-lg pl-8 pr-8 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+              className="appearance-none bg-panel border border-dark-border rounded-lg pl-8 pr-8 py-2 text-sm text-white focus:outline-hidden focus:ring-2 focus:ring-primary-500"
             >
               <option value="recent">{t('members.sort.recent', 'Recently joined')}</option>
               <option value="points">{t('members.sort.points', 'Points high → low')}</option>
@@ -404,8 +404,8 @@ export function Members() {
           {isLoading ? (
             Array(6).fill(0).map((_, i) => (
               <div key={i} className="bg-panel-dim border border-dark-border rounded-xl p-3 animate-pulse">
-                <div className="h-4 bg-dark-surface2 rounded w-32 mb-2" />
-                <div className="h-3 bg-dark-surface2 rounded w-24" />
+                <div className="h-4 bg-dark-surface2 rounded-sm w-32 mb-2" />
+                <div className="h-3 bg-dark-surface2 rounded-sm w-24" />
               </div>
             ))
           ) : isError ? (
@@ -426,10 +426,10 @@ export function Members() {
                     <img
                       src={resolveImage(m.user.avatar_url)!}
                       alt={m.user.name}
-                      className="w-10 h-10 rounded-full object-cover flex-shrink-0"
+                      className="w-10 h-10 rounded-full object-cover shrink-0"
                     />
                   ) : (
-                    <div className="w-10 h-10 rounded-full bg-primary-500/20 flex items-center justify-center flex-shrink-0">
+                    <div className="w-10 h-10 rounded-full bg-primary-500/20 flex items-center justify-center shrink-0">
                       <span className="text-sm font-bold text-primary-400">{m.user?.name?.charAt(0)}</span>
                     </div>
                   )}
@@ -437,7 +437,7 @@ export function Members() {
                     <p className="font-medium text-white truncate">{m.user?.name}</p>
                     <p className="text-xs text-t-muted truncate">{m.user?.email}</p>
                   </div>
-                  <ChevronRight size={16} className="text-t-muted flex-shrink-0" />
+                  <ChevronRight size={16} className="text-t-muted shrink-0" />
                 </div>
                 {(memberFields.list.tier || memberFields.list.points || memberFields.list.status) && (
                   <div className="flex items-center gap-2 mt-3 flex-wrap">
@@ -486,7 +486,7 @@ export function Members() {
                 Array(10).fill(0).map((_, i) => (
                   <tr key={i}>
                     {Array(visibleMemberCols).fill(0).map((_, j) => (
-                      <td key={j} className="py-3"><div className="h-4 bg-dark-surface2 rounded animate-pulse w-20" /></td>
+                      <td key={j} className="py-3"><div className="h-4 bg-dark-surface2 rounded-sm animate-pulse w-20" /></td>
                     ))}
                   </tr>
                 ))
@@ -512,10 +512,10 @@ export function Members() {
                           <img
                             src={resolveImage(m.user.avatar_url)!}
                             alt={m.user.name}
-                            className="w-8 h-8 rounded-full object-cover flex-shrink-0"
+                            className="w-8 h-8 rounded-full object-cover shrink-0"
                           />
                         ) : (
-                          <div className="w-8 h-8 rounded-full bg-primary-500/20 flex items-center justify-center flex-shrink-0">
+                          <div className="w-8 h-8 rounded-full bg-primary-500/20 flex items-center justify-center shrink-0">
                             <span className="text-xs font-bold text-primary-400">{m.user?.name?.charAt(0)}</span>
                           </div>
                         )}
@@ -636,12 +636,12 @@ export function Members() {
                     <div>
                       <label className="block text-sm font-semibold text-t-soft mb-1">Full Name *</label>
                       <input type="text" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="John Smith"
-                        className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2.5 text-sm text-white placeholder-t-muted focus:outline-none focus:ring-2 focus:ring-primary-500" />
+                        className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2.5 text-sm text-white placeholder-t-muted focus:outline-hidden focus:ring-2 focus:ring-primary-500" />
                     </div>
                     <div>
                       <label className="block text-sm font-semibold text-t-soft mb-1">Email Address *</label>
                       <input type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} placeholder="john@example.com"
-                        className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2.5 text-sm text-white placeholder-t-muted focus:outline-none focus:ring-2 focus:ring-primary-500" />
+                        className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2.5 text-sm text-white placeholder-t-muted focus:outline-hidden focus:ring-2 focus:ring-primary-500" />
                     </div>
                     <div className="rounded-lg border border-primary-500/30 bg-primary-500/5 px-3 py-2.5 text-xs text-t-soft">
                       <span className="font-semibold text-primary-400">Password:</span> the member will receive a welcome email with a 6-digit code to set their own password. No password needed from you.
@@ -649,12 +649,12 @@ export function Members() {
                     <div>
                       <label className="block text-sm font-semibold text-t-soft mb-1">Phone <span className="font-normal text-t-muted">(optional)</span></label>
                       <input type="tel" value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} placeholder="+1 234 567 8900"
-                        className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2.5 text-sm text-white placeholder-t-muted focus:outline-none focus:ring-2 focus:ring-primary-500" />
+                        className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2.5 text-sm text-white placeholder-t-muted focus:outline-hidden focus:ring-2 focus:ring-primary-500" />
                     </div>
                     <div>
                       <label className="block text-sm font-semibold text-t-soft mb-1">Starting Tier <span className="font-normal text-t-muted">(optional, default Bronze)</span></label>
                       <select value={form.tier_id} onChange={e => setForm(f => ({ ...f, tier_id: e.target.value }))}
-                        className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500">
+                        className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2.5 text-sm text-white focus:outline-hidden focus:ring-2 focus:ring-primary-500">
                         <option value="">Default tier</option>
                         {tiers.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
                       </select>
@@ -678,7 +678,7 @@ export function Members() {
                     <p className="text-xs text-t-secondary">Paste an email, registration form, business card text, or any message. AI will extract member details automatically.</p>
                     <textarea value={captureText} onChange={e => setCaptureText(e.target.value)} rows={8}
                       placeholder="e.g. Hi, I'd like to sign up for the loyalty program. My name is Sarah Johnson, email sarah.j@acme.com, phone +971 50 123 4567. I'm a British national and I travel frequently for business..."
-                      className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-t-muted focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none" />
+                      className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-t-muted focus:outline-hidden focus:ring-2 focus:ring-primary-500 resize-none" />
                     <div className="flex justify-end gap-3">
                       <button type="button" onClick={() => { setShowCreate(false); setCaptureText('') }} className="px-4 py-2 text-sm text-t-soft hover:text-white">Cancel</button>
                       <button
@@ -719,13 +719,13 @@ export function Members() {
                         <div key={key}>
                           <label className="block text-xs text-t-soft mb-1">{label}</label>
                           <input type={type} value={captureResult[key] ?? ''} onChange={e => setCaptureResult((r: any) => ({ ...r, [key]: e.target.value }))}
-                            className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500" />
+                            className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-hidden focus:ring-2 focus:ring-primary-500" />
                         </div>
                       ))}
                       <div>
                         <label className="block text-xs text-t-soft mb-1">Starting Tier</label>
                         <select value={tiers.find(t => t.name === captureResult.tier)?.id ?? ''} onChange={e => setCaptureResult((r: any) => ({ ...r, tier_id: e.target.value, tier: tiers.find(t => t.id === Number(e.target.value))?.name ?? '' }))}
-                          className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500">
+                          className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-hidden focus:ring-2 focus:ring-primary-500">
                           <option value="">Default tier</option>
                           {tiers.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
                         </select>
@@ -822,7 +822,7 @@ export function Members() {
                 placeholder="100"
                 value={quickAwardPts}
                 onChange={e => setQuickAwardPts(e.target.value)}
-                className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2.5 text-2xl font-bold text-emerald-400 text-center focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2.5 text-2xl font-bold text-emerald-400 text-center focus:outline-hidden focus:ring-2 focus:ring-emerald-500"
               />
               <div className="flex flex-wrap gap-1.5">
                 {[100, 250, 500, 1000].map(n => (
@@ -840,7 +840,7 @@ export function Members() {
                 placeholder="Reason (e.g. Staff courtesy)"
                 value={quickAwardReason}
                 onChange={e => setQuickAwardReason(e.target.value)}
-                className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-t-muted focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-t-muted focus:outline-hidden focus:ring-2 focus:ring-emerald-500"
               />
             </div>
             <div className="flex justify-end gap-2 p-4 border-t border-dark-border">

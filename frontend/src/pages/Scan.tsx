@@ -302,7 +302,7 @@ export function Scan() {
                     value={nfcUid}
                     onChange={(e) => setNfcUid(e.target.value)}
                     autoFocus
-                    className="w-full bg-panel border border-dark-border rounded-lg pl-10 pr-4 py-3 text-sm text-white placeholder-t-muted focus:outline-none focus:ring-2 focus:ring-primary-500 font-mono text-center text-lg tracking-wider"
+                    className="w-full bg-panel border border-dark-border rounded-lg pl-10 pr-4 py-3 text-sm text-white placeholder-t-muted focus:outline-hidden focus:ring-2 focus:ring-primary-500 font-mono text-center text-lg tracking-wider"
                     onKeyDown={(e) => e.key === 'Enter' && scanNfc()}
                   />
                 </div>
@@ -370,14 +370,14 @@ export function Scan() {
                     placeholder="Points to award"
                     value={pointsInput}
                     onChange={(e) => setPointsInput(e.target.value)}
-                    className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-t-muted focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-t-muted focus:outline-hidden focus:ring-2 focus:ring-primary-500"
                   />
                   <input
                     type="text"
                     placeholder="Description (e.g. Room 205 stay)"
                     value={pointsDesc}
                     onChange={(e) => setPointsDesc(e.target.value)}
-                    className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-t-muted focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-t-muted focus:outline-hidden focus:ring-2 focus:ring-primary-500"
                   />
                   <button onClick={awardPoints} className="w-full bg-green-600 text-on-fill py-2 rounded-lg text-sm font-medium hover:bg-green-700 transition-colors">
                     Award Points

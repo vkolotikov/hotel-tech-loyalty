@@ -175,7 +175,7 @@ export function WalletConfig() {
                 <FileInput label="Upload WWDR .pem" accept=".pem,.cer,application/x-x509-ca-cert" mutation={uploadWwdr} />
               </div>
               <p className="text-[11px] text-t-muted mt-2 flex items-start gap-1.5">
-                <Info size={11} className="mt-0.5 flex-shrink-0" />
+                <Info size={11} className="mt-0.5 shrink-0" />
                 <span>
                   Need WWDR? Download from <a href="https://www.apple.com/certificateauthority/" target="_blank" rel="noreferrer" className="text-primary-400 hover:underline">apple.com/certificateauthority</a>.
                   Generate the .p12 from your Pass Type ID in the Apple Developer portal (Keychain → export).
@@ -202,7 +202,7 @@ export function WalletConfig() {
                 <FileInput label="Upload .json" accept=".json,application/json" mutation={uploadGoogleSA} />
               </div>
               <p className="text-[11px] text-t-muted mt-2 flex items-start gap-1.5">
-                <Info size={11} className="mt-0.5 flex-shrink-0" />
+                <Info size={11} className="mt-0.5 shrink-0" />
                 <span>
                   Open the <a href="https://pay.google.com/business/console/" target="_blank" rel="noreferrer" className="text-primary-400 hover:underline">Google Pay & Wallet Console</a>,
                   create a Loyalty Class (use the suffix above), and a service account with "Wallet Object Issuer" role.

@@ -320,7 +320,7 @@ export function Engagement() {
           above the KPI strip so it's hard to miss without being modal. */}
       {permission === 'default' && !permBannerDismissed && (
         <div className="flex items-center gap-3 bg-dark-surface border border-amber-500/40 rounded-xl px-4 py-3">
-          <div className="w-8 h-8 rounded-lg bg-amber-500/15 border border-amber-500/30 flex items-center justify-center flex-shrink-0">
+          <div className="w-8 h-8 rounded-lg bg-amber-500/15 border border-amber-500/30 flex items-center justify-center shrink-0">
             <Bell size={15} className="text-amber-300" />
           </div>
           <div className="flex-1 min-w-0">
@@ -462,7 +462,7 @@ export function Engagement() {
               value={search}
               onChange={(e) => { setSearch(e.target.value); setPage(1) }}
               placeholder={t('engagement.filters.search_placeholder', 'Search by name, email, phone, IP, city, or page…')}
-              className="w-full bg-dark-bg border border-dark-border rounded-lg pl-9 pr-3 py-2 text-sm placeholder-t-secondary outline-none focus:border-accent transition-colors"
+              className="w-full bg-dark-bg border border-dark-border rounded-lg pl-9 pr-3 py-2 text-sm placeholder-t-secondary outline-hidden focus:border-accent transition-colors"
             />
           </div>
           {/* Sort dropdown — Priority (smart score) / Newest / Oldest.
@@ -472,7 +472,7 @@ export function Engagement() {
           <select
             value={sort}
             onChange={(e) => { setSort(e.target.value as 'priority' | 'recent' | 'oldest'); setPage(1) }}
-            className="bg-dark-bg border border-dark-border rounded-lg px-3 py-2 text-sm outline-none focus:border-accent transition-colors cursor-pointer"
+            className="bg-dark-bg border border-dark-border rounded-lg px-3 py-2 text-sm outline-hidden focus:border-accent transition-colors cursor-pointer"
             title={t('engagement.filters.sort_title', 'Sort order')}
           >
             <option value="priority">{t('engagement.filters.sort_priority', 'Priority')}</option>
@@ -511,14 +511,14 @@ export function Engagement() {
             <button
               disabled={meta.current_page <= 1}
               onClick={() => setPage(p => Math.max(1, p - 1))}
-              className="p-1.5 rounded hover:bg-dark-surface2 disabled:opacity-30 disabled:hover:bg-transparent"
+              className="p-1.5 rounded-sm hover:bg-dark-surface2 disabled:opacity-30 disabled:hover:bg-transparent"
             >
               <ChevronLeft size={14} />
             </button>
             <button
               disabled={meta.current_page >= meta.last_page}
               onClick={() => setPage(p => p + 1)}
-              className="p-1.5 rounded hover:bg-dark-surface2 disabled:opacity-30 disabled:hover:bg-transparent"
+              className="p-1.5 rounded-sm hover:bg-dark-surface2 disabled:opacity-30 disabled:hover:bg-transparent"
             >
               <ChevronRight size={14} />
             </button>
@@ -585,7 +585,7 @@ function Row({ row: r, onOpen }: { row: EngagementRow; onOpen: (visitorId: numbe
         {/* Avatar / online indicator. For named visitors the initial
             sits inside the gold accent ring; anonymous rows get a
             country flag (when available) so a glance gives geography. */}
-        <div className="relative flex-shrink-0">
+        <div className="relative shrink-0">
           <div className="w-10 h-10 rounded-full bg-accent/20 border border-accent/40 flex items-center justify-center text-sm font-bold text-accent">
             {isAnonymous && flag
               ? <span className="text-lg leading-none">{flag}</span>
@@ -623,17 +623,17 @@ function Row({ row: r, onOpen }: { row: EngagementRow; onOpen: (visitorId: numbe
             {r.has_email && <Mail size={11} className="text-blue-400" />}
             {r.has_phone && <Phone size={11} className="text-emerald-400" />}
             {r.is_hot_lead && (
-              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold bg-orange-500/15 text-orange-400 border border-orange-500/40 animate-pulse">
+              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-sm text-[9px] font-bold bg-orange-500/15 text-orange-400 border border-orange-500/40 animate-pulse">
                 <Sparkles size={9} /> {t('engagement.row.hot', 'HOT')}
               </span>
             )}
             {r.is_lead && !r.is_hot_lead && (
-              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-300/15 text-amber-300 border border-amber-300/30">
+              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-sm text-[9px] font-bold bg-amber-300/15 text-amber-300 border border-amber-300/30">
                 <Star size={9} /> {t('engagement.row.lead', 'LEAD')}
               </span>
             )}
             {r.conversation?.intent_tag && INTENT_META[r.conversation.intent_tag] && (
-              <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold border ${INTENT_META[r.conversation.intent_tag].cls}`}>
+              <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-sm text-[9px] font-bold border ${INTENT_META[r.conversation.intent_tag].cls}`}>
                 {(() => {
                   const Ic = INTENT_META[r.conversation.intent_tag].icon
                   return <Ic size={9} />
@@ -647,7 +647,7 @@ function Row({ row: r, onOpen }: { row: EngagementRow; onOpen: (visitorId: numbe
               </span>
             ) : null}
             {isWaiting && (
-              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-300/15 text-amber-300 border border-amber-300/30">
+              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-sm text-[9px] font-bold bg-amber-300/15 text-amber-300 border border-amber-300/30">
                 {t('engagement.row.waiting', 'WAITING')}
               </span>
             )}
@@ -657,7 +657,7 @@ function Row({ row: r, onOpen }: { row: EngagementRow; onOpen: (visitorId: numbe
           <div className="flex items-center gap-3 mt-2 text-[10px] text-t-secondary">
             {r.is_online && r.current_page && (
               <span className="flex items-center gap-1 truncate max-w-[280px]">
-                <MapPin size={10} className="flex-shrink-0" />
+                <MapPin size={10} className="shrink-0" />
                 <span className="truncate font-mono">{r.current_page}</span>
               </span>
             )}
@@ -679,7 +679,7 @@ function Row({ row: r, onOpen }: { row: EngagementRow; onOpen: (visitorId: numbe
 
         {/* Right rail — conversation status */}
         {r.conversation && (
-          <div className="flex flex-col items-end gap-1 flex-shrink-0 hidden sm:flex">
+          <div className="flex flex-col items-end gap-1 shrink-0 hidden sm:flex">
             <span className={`text-[10px] uppercase tracking-wide font-bold ${
               r.conversation.status === 'active'   ? 'text-green-400'
             : r.conversation.status === 'waiting'  ? 'text-amber-300'

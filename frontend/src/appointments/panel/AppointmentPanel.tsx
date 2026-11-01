@@ -206,8 +206,8 @@ export function AppointmentPanel({ state, dispatch, masters, services, today, sl
     <aside ref={panel} role="dialog" aria-modal="false" aria-labelledby="appointment-panel-title" data-covers-calendar=""
       className={`fixed right-0 top-14 bottom-0 z-30 w-full sm:w-[440px] overflow-y-auto bg-a-surface border-l border-a-border shadow-a-lg${slide ? ' animate-a-slide-in' : ''}`}>
       <div className="sticky top-0 z-10 flex items-center justify-between gap-3 border-b border-a-border bg-a-surface px-4 py-3">
-        <h2 id="appointment-panel-title" ref={heading} tabIndex={-1} className="font-a-display text-xl font-normal text-a-text outline-none">{title}</h2>
-        <button type="button" onClick={() => dispatch({ type: 'close' })} className="rounded p-1.5 text-a-text-2 hover:text-a-text" aria-label={t('appointments.common.close', 'Close')}>
+        <h2 id="appointment-panel-title" ref={heading} tabIndex={-1} className="font-a-display text-xl font-normal text-a-text outline-hidden">{title}</h2>
+        <button type="button" onClick={() => dispatch({ type: 'close' })} className="rounded-sm p-1.5 text-a-text-2 hover:text-a-text" aria-label={t('appointments.common.close', 'Close')}>
           <X size={18} aria-hidden />
         </button>
       </div>

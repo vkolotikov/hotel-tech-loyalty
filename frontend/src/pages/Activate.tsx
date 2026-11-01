@@ -74,7 +74,7 @@ export function Activate() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-hx-0a1020 via-hx-0d1528 to-hx-0a1020 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-linear-to-br from-hx-0a1020 via-hx-0d1528 to-hx-0a1020 flex items-center justify-center p-4">
       {/* Ambient glow */}
       <div
         className="pointer-events-none absolute inset-0 overflow-hidden"
@@ -93,13 +93,13 @@ export function Activate() {
               className="drop-shadow-[0_10px_40px_rgba(201,168,76,0.25)]"
             />
           ) : (
-            <div className="inline-flex w-14 h-14 items-center justify-center rounded-2xl bg-gradient-to-br from-hx-c9a84c to-hx-a6883c text-black font-bold text-xl shadow-lg shadow-hx-c9a84c/30">
+            <div className="inline-flex w-14 h-14 items-center justify-center rounded-2xl bg-linear-to-br from-hx-c9a84c to-hx-a6883c text-black font-bold text-xl shadow-lg shadow-hx-c9a84c/30">
               HT
             </div>
           )}
         </div>
 
-        <div className="bg-hx-0f1527/90 backdrop-blur rounded-2xl border border-white/[0.06] p-8 shadow-2xl">
+        <div className="bg-hx-0f1527/90 backdrop-blur-sm rounded-2xl border border-white/6 p-8 shadow-2xl">
           {done ? (
             <div className="text-center py-6">
               <div className="inline-flex w-14 h-14 items-center justify-center rounded-full bg-hx-c9a84c/15 text-hx-c9a84c mb-4 ring-1 ring-hx-c9a84c/30">
@@ -126,7 +126,7 @@ export function Activate() {
                       type={showPassword ? 'text' : 'password'}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      className="w-full bg-black/30 border border-white/[0.08] rounded-lg py-2.5 pl-10 pr-10 text-white text-sm focus:border-hx-c9a84c/50 focus:ring-1 focus:ring-hx-c9a84c/30 focus:outline-none transition"
+                      className="w-full bg-black/30 border border-white/8 rounded-lg py-2.5 pl-10 pr-10 text-white text-sm focus:border-hx-c9a84c/50 focus:ring-1 focus:ring-hx-c9a84c/30 focus:outline-hidden transition"
                       placeholder="At least 8 characters"
                       autoFocus
                       disabled={loading || !code || !email}
@@ -152,7 +152,7 @@ export function Activate() {
                       type={showPassword ? 'text' : 'password'}
                       value={confirm}
                       onChange={(e) => setConfirm(e.target.value)}
-                      className="w-full bg-black/30 border border-white/[0.08] rounded-lg py-2.5 pl-10 pr-3 text-white text-sm focus:border-hx-c9a84c/50 focus:ring-1 focus:ring-hx-c9a84c/30 focus:outline-none transition"
+                      className="w-full bg-black/30 border border-white/8 rounded-lg py-2.5 pl-10 pr-3 text-white text-sm focus:border-hx-c9a84c/50 focus:ring-1 focus:ring-hx-c9a84c/30 focus:outline-hidden transition"
                       placeholder="Re-enter password"
                       disabled={loading || !code || !email}
                     />
@@ -161,7 +161,7 @@ export function Activate() {
 
                 {error && (
                   <div className="flex items-start gap-2 bg-red-500/10 border border-red-500/30 rounded-lg px-3 py-2.5 text-xs text-red-300">
-                    <AlertCircle size={14} className="flex-shrink-0 mt-0.5" />
+                    <AlertCircle size={14} className="shrink-0 mt-0.5" />
                     <span>{error}</span>
                   </div>
                 )}
@@ -169,7 +169,7 @@ export function Activate() {
                 <button
                   type="submit"
                   disabled={loading || !code || !email}
-                  className="w-full py-3 rounded-lg font-semibold text-sm text-black bg-gradient-to-br from-hx-d4b357 via-hx-c9a84c to-hx-a6883c hover:from-hx-dcbc60 hover:to-hx-b59244 transition shadow-lg shadow-hx-c9a84c/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  className="w-full py-3 rounded-lg font-semibold text-sm text-black bg-linear-to-br from-hx-d4b357 via-hx-c9a84c to-hx-a6883c hover:from-hx-dcbc60 hover:to-hx-b59244 transition shadow-lg shadow-hx-c9a84c/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
                   {loading ? 'Activating…' : <>Activate Account <ArrowRight size={16} /></>}
                 </button>

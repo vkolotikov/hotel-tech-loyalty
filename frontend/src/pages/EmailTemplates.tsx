@@ -258,7 +258,7 @@ export function EmailTemplates() {
                   style={{ transform: 'scale(0.35)', transformOrigin: 'top left' }}
                   sandbox=""
                 />
-                <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-hx-1c1c1e" />
+                <div className="absolute inset-0 bg-linear-to-b from-transparent via-transparent to-hx-1c1c1e" />
               </div>
 
               <div className="p-4">
@@ -347,7 +347,7 @@ export function EmailTemplates() {
                   value={meta.name}
                   onChange={e => setMeta(m => ({ ...m, name: e.target.value }))}
                   placeholder="e.g. Monthly Newsletter"
-                  className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-t-muted focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-t-muted focus:outline-hidden focus:ring-2 focus:ring-primary-500"
                 />
               </div>
               <div>
@@ -357,7 +357,7 @@ export function EmailTemplates() {
                   value={meta.subject}
                   onChange={e => setMeta(m => ({ ...m, subject: e.target.value }))}
                   placeholder="{{first_name}}, a message from {{hotel_name}}"
-                  className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-t-muted focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-t-muted focus:outline-hidden focus:ring-2 focus:ring-primary-500"
                 />
               </div>
               <div>
@@ -365,7 +365,7 @@ export function EmailTemplates() {
                 <select
                   value={meta.category}
                   onChange={e => setMeta(m => ({ ...m, category: e.target.value }))}
-                  className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-hidden focus:ring-2 focus:ring-primary-500"
                 >
                   {CATEGORIES.map(c => (
                     <option key={c.value} value={c.value}>{c.label}</option>
@@ -454,7 +454,7 @@ export function EmailTemplates() {
                           onChange={e => setRawHtml(e.target.value)}
                           rows={24}
                           spellCheck={false}
-                          className="w-full bg-hx-0b0b0b border border-dark-border rounded-lg px-3 py-2 text-xs text-hx-e0e0e0 font-mono focus:outline-none focus:ring-2 focus:ring-primary-500 resize-y leading-relaxed"
+                          className="w-full bg-hx-0b0b0b border border-dark-border rounded-lg px-3 py-2 text-xs text-hx-e0e0e0 font-mono focus:outline-hidden focus:ring-2 focus:ring-primary-500 resize-y leading-relaxed"
                         />
                         <p className="text-[11px] text-t-muted mt-2">
                           Editing raw HTML disconnects the visual builder for this template. Switch back to Design to regenerate from scratch.
@@ -552,7 +552,7 @@ function DesignPane({ content, setContent, updateBlock, moveBlock, removeBlock, 
               type="text"
               value={content.logoText}
               onChange={e => setField('logoText', e.target.value)}
-              className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+              className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-hidden focus:ring-2 focus:ring-primary-500"
             />
           </div>
           <div>
@@ -561,7 +561,7 @@ function DesignPane({ content, setContent, updateBlock, moveBlock, removeBlock, 
               type="text"
               value={content.preheader ?? ''}
               onChange={e => setField('preheader', e.target.value)}
-              className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+              className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-hidden focus:ring-2 focus:ring-primary-500"
             />
           </div>
           <div className="grid grid-cols-2 gap-3">
@@ -635,7 +635,7 @@ function DesignPane({ content, setContent, updateBlock, moveBlock, removeBlock, 
           value={content.footerText}
           onChange={e => setField('footerText', e.target.value)}
           rows={2}
-          className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+          className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-hidden focus:ring-2 focus:ring-primary-500"
         />
       </section>
     </div>
@@ -657,7 +657,7 @@ function SwatchInput({ label, value, onChange }: { label: string; value: string;
           type="text"
           value={value}
           onChange={e => onChange(e.target.value)}
-          className="flex-1 bg-transparent py-2 text-xs text-white font-mono focus:outline-none"
+          className="flex-1 bg-transparent py-2 text-xs text-white font-mono focus:outline-hidden"
         />
       </div>
     </div>
@@ -691,7 +691,7 @@ function BlockEditor({ block, onChange, onUp, onDown, onRemove }: BlockEditorPro
 }
 
 function BlockFields({ block, onChange }: { block: Block; onChange: (patch: Partial<Block>) => void }) {
-  const cls = 'w-full bg-well border border-dark-border rounded-md px-2.5 py-1.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-primary-500'
+  const cls = 'w-full bg-well border border-dark-border rounded-md px-2.5 py-1.5 text-xs text-white focus:outline-hidden focus:ring-1 focus:ring-primary-500'
 
   switch (block.type) {
     case 'heading':
@@ -964,7 +964,7 @@ function BlockFields({ block, onChange }: { block: Block; onChange: (patch: Part
                   const items = block.items.filter((_, i) => i !== idx)
                   onChange({ items } as Partial<Block>)
                 }}
-                className="w-6 h-6 rounded text-xs text-hx-ff6680 hover:bg-danger/15"
+                className="w-6 h-6 rounded-sm text-xs text-hx-ff6680 hover:bg-danger/15"
                 title="Remove"
               >
                 &times;

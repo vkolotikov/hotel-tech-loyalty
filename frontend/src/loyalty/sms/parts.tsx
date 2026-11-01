@@ -120,7 +120,7 @@ export function PhoneBubble({ text, from, sample }: { text: string; from: string
         <div aria-hidden className="mx-auto h-1.5 w-16 rounded-full bg-a-border" />
         <p className="mt-4 text-center text-xs font-medium text-a-text-2">{from ?? t('loyalty.sms.preview.no_from', 'The venue’s number')}</p>
         <div className="mt-4 max-w-[85%] rounded-2xl rounded-bl-md border border-a-border bg-a-surface px-3 py-2">
-          <p className={`whitespace-pre-line break-words text-sm ${text.trim() ? 'text-a-text' : 'text-a-text-2'}`}>
+          <p className={`whitespace-pre-line wrap-break-word text-sm ${text.trim() ? 'text-a-text' : 'text-a-text-2'}`}>
             {text.trim() || t('loyalty.sms.preview.no_text', 'Your text')}
           </p>
         </div>

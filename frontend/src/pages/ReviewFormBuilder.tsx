@@ -322,7 +322,7 @@ export function ReviewFormBuilder() {
           <input
             value={name}
             onChange={e => setName(e.target.value)}
-            className="bg-transparent text-2xl font-bold text-white focus:outline-none w-full placeholder:text-hx-444444"
+            className="bg-transparent text-2xl font-bold text-white focus:outline-hidden w-full placeholder:text-hx-444444"
             placeholder="Form name"
           />
           <div className="flex items-center gap-2 mt-2">
@@ -361,18 +361,18 @@ export function ReviewFormBuilder() {
         <input
           readOnly
           value={publicUrl}
-          className="flex-1 bg-transparent text-xs text-t-soft font-mono focus:outline-none min-w-0"
+          className="flex-1 bg-transparent text-xs text-t-soft font-mono focus:outline-hidden min-w-0"
         />
         <button
           onClick={() => { navigator.clipboard.writeText(publicUrl); toast.success('Copied') }}
-          className="text-t-soft hover:text-white p-1.5 rounded-lg hover:bg-white/[0.04] transition-colors"
+          className="text-t-soft hover:text-white p-1.5 rounded-lg hover:bg-white/4 transition-colors"
           title="Copy URL"
         >
           <Copy size={14} />
         </button>
         <button
           onClick={() => confirm('Rotating invalidates every existing shared link. Continue?') && rotateKeyMut.mutate()}
-          className="text-t-soft hover:text-white p-1.5 rounded-lg hover:bg-white/[0.04] transition-colors"
+          className="text-t-soft hover:text-white p-1.5 rounded-lg hover:bg-white/4 transition-colors"
           title="Rotate embed key"
         >
           <RefreshCw size={14} />
@@ -408,7 +408,7 @@ export function ReviewFormBuilder() {
           comment) — their settings ARE the build surface, so they render
           unconditionally with an explainer instead of a blank page. */}
       {form.type === 'basic' && (
-        <div className="bg-primary-500/[0.06] border border-primary-500/25 rounded-xl p-4 mb-6 text-[12.5px] text-hx-c8c8cc leading-relaxed">
+        <div className="bg-primary-500/6 border border-primary-500/25 rounded-xl p-4 mb-6 text-[12.5px] text-hx-c8c8cc leading-relaxed">
           This is a <span className="font-semibold text-white">basic survey</span>: a 5-star rating question
           {config.ask_for_comment ? ' plus an optional comment box' : ''}, with high ratings offered a redirect
           to your public review profiles. Adjust its behaviour below — or create a <span className="font-semibold text-white">custom survey</span> from
@@ -504,7 +504,7 @@ export function ReviewFormBuilder() {
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
               <h2 className="text-sm font-bold text-white uppercase tracking-wider">Questions</h2>
-              <span className="text-[10px] bg-white/[0.06] text-hx-888888 px-2 py-0.5 rounded-full font-medium">
+              <span className="text-[10px] bg-white/6 text-hx-888888 px-2 py-0.5 rounded-full font-medium">
                 {questions.length} {questions.length === 1 ? 'question' : 'questions'}
               </span>
             </div>
@@ -516,7 +516,7 @@ export function ReviewFormBuilder() {
                   questions.forEach((_, i) => { next[i] = !allExpanded })
                   setExpanded(next)
                 }}
-                className="text-t-soft hover:text-white text-xs px-2 py-1.5 rounded-lg hover:bg-white/[0.04] transition-colors flex items-center gap-1.5"
+                className="text-t-soft hover:text-white text-xs px-2 py-1.5 rounded-lg hover:bg-white/4 transition-colors flex items-center gap-1.5"
               >
                 {questions.every((_, i) => expanded[i]) ? <EyeOff size={12} /> : <Eye size={12} />}
                 {questions.every((_, i) => expanded[i]) ? 'Collapse all' : 'Expand all'}
@@ -556,7 +556,7 @@ export function ReviewFormBuilder() {
                   onDragOver={e => { e.preventDefault(); setDragOverIdx(i) }}
                   className={`group rounded-xl border transition-all ${
                     isDragging ? 'opacity-40 scale-[0.98]' : ''
-                  } ${isDragOver ? 'border-primary-500/50 bg-primary-500/[0.03]' : 'border-dark-border bg-dark-surface hover:border-white/[0.08]'}`}
+                  } ${isDragOver ? 'border-primary-500/50 bg-primary-500/3' : 'border-dark-border bg-dark-surface hover:border-white/8'}`}
                 >
                   {/* Condition connector line */}
                   {hasCondition && (
@@ -622,7 +622,7 @@ export function ReviewFormBuilder() {
                     <div className="px-4 pb-4 pt-0 border-t border-dark-border mx-4 mt-0">
                       <div className="pt-4 space-y-4">
                         {/* Label + Type row */}
-                        <div className="grid grid-cols-1 md:grid-cols-[1fr,200px] gap-3">
+                        <div className="grid grid-cols-1 md:grid-cols-[1fr_200px] gap-3">
                           <div>
                             <label className="block text-[10px] font-semibold text-hx-888888 uppercase tracking-wider mb-1.5">Question</label>
                             <input
@@ -717,7 +717,7 @@ export function ReviewFormBuilder() {
                         )}
 
                         {/* Footer: required toggle + delete */}
-                        <div className="flex items-center justify-between pt-2 border-t border-white/[0.04]">
+                        <div className="flex items-center justify-between pt-2 border-t border-white/4">
                           <div className="flex items-center gap-4">
                             <Toggle
                               label="Required"
@@ -768,7 +768,7 @@ export function ReviewFormBuilder() {
                     <button
                       key={kind}
                       onClick={() => addQuestion(kind)}
-                      className="rounded-xl border border-dark-border bg-hx-1c1c1c hover:border-primary-500/40 hover:bg-white/[0.03] transition-all text-left p-3 group/item"
+                      className="rounded-xl border border-dark-border bg-hx-1c1c1c hover:border-primary-500/40 hover:bg-white/3 transition-all text-left p-3 group/item"
                     >
                       <div className="flex items-center gap-2 mb-1.5">
                         <div className="w-7 h-7 rounded-md flex items-center justify-center shrink-0" style={{ backgroundColor: meta.color + '18' }}>
@@ -787,7 +787,7 @@ export function ReviewFormBuilder() {
 
           {/* Save questions bar */}
           {questions.length > 0 && (
-            <div className="fixed bottom-0 left-0 right-0 bg-well/95 backdrop-blur-sm border-t border-dark-border px-6 py-4 flex items-center justify-between z-40">
+            <div className="fixed bottom-0 left-0 right-0 bg-well/95 backdrop-blur-xs border-t border-dark-border px-6 py-4 flex items-center justify-between z-40">
               <div className="text-xs text-hx-888888">
                 {questions.length} question{questions.length !== 1 ? 's' : ''}
                 {hasConditions && <span className="ml-2 text-purple-400">with conditional logic</span>}
@@ -810,7 +810,7 @@ export function ReviewFormBuilder() {
 
 /* ──────────────────────── Shared helpers ──────────────────────── */
 
-const inputCls = 'w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500/40 placeholder:text-hx-444444 transition-shadow'
+const inputCls = 'w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-hidden focus:ring-2 focus:ring-primary-500/40 placeholder:text-hx-444444 transition-shadow'
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -860,7 +860,7 @@ function ChoiceEditor({ choices, onChange }: { choices: string[]; onChange: (c: 
             />
             <button
               onClick={() => onChange(choices.filter((_, x) => x !== ci))}
-              className="text-hx-555555 hover:text-red-400 p-1 rounded transition-colors shrink-0"
+              className="text-hx-555555 hover:text-red-400 p-1 rounded-sm transition-colors shrink-0"
             >
               <Trash2 size={12} />
             </button>
@@ -902,7 +902,7 @@ function EmojiEditor({ emojis, labels, onChange }: {
                 const next = [...emojis]; next[ci] = e.target.value
                 onChange(next, labels)
               }}
-              className={inputCls + ' !w-14 text-center text-lg'}
+              className={inputCls + ' w-14! text-center text-lg'}
               placeholder="😀"
             />
             <input
@@ -916,7 +916,7 @@ function EmojiEditor({ emojis, labels, onChange }: {
             />
             <button
               onClick={() => onChange(emojis.filter((_, x) => x !== ci), labels.filter((_, x) => x !== ci))}
-              className="text-hx-555555 hover:text-red-400 p-1 rounded transition-colors shrink-0"
+              className="text-hx-555555 hover:text-red-400 p-1 rounded-sm transition-colors shrink-0"
             >
               <Trash2 size={12} />
             </button>
@@ -959,14 +959,14 @@ function ConditionEditor({ q, index, priorQuestions, onChange }: {
   }
 
   return (
-    <div className={`rounded-xl border transition-colors ${hasCondition ? 'border-purple-500/25 bg-purple-500/[0.04]' : 'border-dashed border-dark-border'} p-3.5`}>
+    <div className={`rounded-xl border transition-colors ${hasCondition ? 'border-purple-500/25 bg-purple-500/4' : 'border-dashed border-dark-border'} p-3.5`}>
       <div className="flex items-center gap-2 mb-0">
         <GitBranch size={13} className={hasCondition ? 'text-purple-400' : 'text-t-muted'} />
         <span className="text-xs font-semibold text-hx-cccccc">Show this question</span>
         <div className="flex gap-0.5 bg-hx-141414 border border-dark-border p-0.5 rounded-lg ml-1">
           <button
             onClick={() => onChange({ ...q, condition_index: null, condition_operator: null, condition_value: null })}
-            className={`px-2.5 py-1 rounded-md text-[11px] font-semibold transition-colors ${!hasCondition ? 'bg-white/[0.09] text-white' : 'text-hx-888888 hover:text-white'}`}
+            className={`px-2.5 py-1 rounded-md text-[11px] font-semibold transition-colors ${!hasCondition ? 'bg-white/9 text-white' : 'text-hx-888888 hover:text-white'}`}
           >Always</button>
           <button
             onClick={() => { if (!hasCondition) setParent(index - 1) }}
@@ -1122,15 +1122,15 @@ function KindExample({ kind }: { kind: Kind }) {
     case 'scale':
       return <div className="flex gap-[2px]">{Array.from({ length: 10 }, (_, n) => <span key={n} className={`w-2.5 h-2.5 rounded-[2px] ${n < 6 ? 'bg-violet-400/70' : 'bg-panel-raised'}`} />)}</div>
     case 'single_choice':
-      return <div className="space-y-[3px]"><div className="h-[7px] w-4/5 rounded bg-orange-400/40" /><div className="h-[7px] w-3/5 rounded bg-panel-raised" /></div>
+      return <div className="space-y-[3px]"><div className="h-[7px] w-4/5 rounded-sm bg-orange-400/40" /><div className="h-[7px] w-3/5 rounded-sm bg-panel-raised" /></div>
     case 'multi_choice':
-      return <div className="space-y-[3px]"><div className="h-[7px] w-4/5 rounded bg-pink-400/40" /><div className="h-[7px] w-2/3 rounded bg-pink-400/40" /></div>
+      return <div className="space-y-[3px]"><div className="h-[7px] w-4/5 rounded-sm bg-pink-400/40" /><div className="h-[7px] w-2/3 rounded-sm bg-pink-400/40" /></div>
     case 'boolean':
       return <div className="flex gap-1 text-[12px] leading-none">👍 👎</div>
     case 'text':
-      return <div className="h-[8px] w-full rounded bg-panel-raised" />
+      return <div className="h-[8px] w-full rounded-sm bg-panel-raised" />
     case 'textarea':
-      return <div className="space-y-[3px]"><div className="h-[7px] w-full rounded bg-panel-raised" /><div className="h-[7px] w-2/3 rounded bg-panel-raised" /></div>
+      return <div className="space-y-[3px]"><div className="h-[7px] w-full rounded-sm bg-panel-raised" /><div className="h-[7px] w-2/3 rounded-sm bg-panel-raised" /></div>
   }
 }
 
@@ -1138,7 +1138,7 @@ function KindExample({ kind }: { kind: Kind }) {
 
 function QuestionPreview({ q }: { q: Question }) {
   return (
-    <div className="rounded-lg bg-well border border-white/[0.04] p-3">
+    <div className="rounded-lg bg-well border border-white/4 p-3">
       <div className="text-[10px] uppercase tracking-wider text-hx-555555 font-semibold mb-2 flex items-center gap-1">
         <Eye size={10} /> Preview
       </div>
@@ -1156,7 +1156,7 @@ function QuestionPreview({ q }: { q: Question }) {
       {q.kind === 'scale' && (
         <div className="flex gap-1">
           {Array.from({ length: 10 }, (_, i) => (
-            <div key={i} className={`w-7 h-7 rounded text-xs flex items-center justify-center font-medium ${i < 6 ? 'bg-primary-500/20 text-primary-300' : 'bg-panel text-hx-555555'}`}>
+            <div key={i} className={`w-7 h-7 rounded-sm text-xs flex items-center justify-center font-medium ${i < 6 ? 'bg-primary-500/20 text-primary-300' : 'bg-panel text-hx-555555'}`}>
               {i + 1}
             </div>
           ))}
@@ -1165,7 +1165,7 @@ function QuestionPreview({ q }: { q: Question }) {
       {q.kind === 'nps' && (
         <div className="flex gap-0.5">
           {Array.from({ length: 11 }, (_, i) => (
-            <div key={i} className={`w-6 h-7 rounded text-[10px] flex items-center justify-center font-medium ${i <= 6 ? (i <= 3 ? 'bg-red-500/20 text-red-300' : 'bg-amber-500/20 text-amber-300') : 'bg-emerald-500/20 text-emerald-300'}`}>
+            <div key={i} className={`w-6 h-7 rounded-sm text-[10px] flex items-center justify-center font-medium ${i <= 6 ? (i <= 3 ? 'bg-red-500/20 text-red-300' : 'bg-amber-500/20 text-amber-300') : 'bg-emerald-500/20 text-emerald-300'}`}>
               {i}
             </div>
           ))}
@@ -1187,7 +1187,7 @@ function QuestionPreview({ q }: { q: Question }) {
         <div className="space-y-1.5">
           {(q.options?.choices ?? []).slice(0, 4).map((c, i) => (
             <div key={i} className="flex items-center gap-2">
-              <div className={`w-4 h-4 border border-hx-444444 shrink-0 ${q.kind === 'multi_choice' ? 'rounded' : 'rounded-full'} ${i === 0 ? 'bg-primary-500/30 border-primary-500/50' : ''}`} />
+              <div className={`w-4 h-4 border border-hx-444444 shrink-0 ${q.kind === 'multi_choice' ? 'rounded-sm' : 'rounded-full'} ${i === 0 ? 'bg-primary-500/30 border-primary-500/50' : ''}`} />
               <span className="text-xs text-hx-aaaaaa">{c}</span>
             </div>
           ))}

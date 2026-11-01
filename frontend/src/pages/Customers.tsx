@@ -334,7 +334,7 @@ export function Customers() {
             value={q}
             onChange={e => updateParam('q', e.target.value)}
             placeholder="Search name, email, phone, company…"
-            className="w-full pl-9 pr-9 py-2 rounded-lg bg-dark-surface2 border border-dark-border focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500 text-sm text-white placeholder-gray-600"
+            className="w-full pl-9 pr-9 py-2 rounded-lg bg-dark-surface2 border border-dark-border focus:outline-hidden focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500 text-sm text-white placeholder-gray-600"
           />
           {q && (
             <button
@@ -373,7 +373,7 @@ export function Customers() {
           <select
             value={sortIdx}
             onChange={e => updateParam('sort', e.target.value)}
-            className="bg-dark-surface2 border border-dark-border rounded px-2 py-1 text-xs text-white focus:outline-none focus:ring-1 focus:ring-primary-500/40"
+            className="bg-dark-surface2 border border-dark-border rounded-sm px-2 py-1 text-xs text-white focus:outline-hidden focus:ring-1 focus:ring-primary-500/40"
           >
             {SORTS.map((s, i) => <option key={s.key} value={i}>{s.label}</option>)}
           </select>
@@ -443,7 +443,7 @@ export function Customers() {
               value={minStays}
               onChange={e => updateParam('min_stays', e.target.value)}
               placeholder="any"
-              className="w-full px-3 py-2 bg-dark-surface2 border border-dark-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500 text-sm text-white"
+              className="w-full px-3 py-2 bg-dark-surface2 border border-dark-border rounded-lg focus:outline-hidden focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500 text-sm text-white"
             />
           </label>
           <div className="grid grid-cols-2 gap-2">
@@ -453,7 +453,7 @@ export function Customers() {
                 type="date"
                 value={dateFrom}
                 onChange={e => updateParam('date_from', e.target.value)}
-                className="w-full px-3 py-2 bg-dark-surface2 border border-dark-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500 text-xs text-white"
+                className="w-full px-3 py-2 bg-dark-surface2 border border-dark-border rounded-lg focus:outline-hidden focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500 text-xs text-white"
               />
             </label>
             <label className="block">
@@ -462,7 +462,7 @@ export function Customers() {
                 type="date"
                 value={dateTo}
                 onChange={e => updateParam('date_to', e.target.value)}
-                className="w-full px-3 py-2 bg-dark-surface2 border border-dark-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500 text-xs text-white"
+                className="w-full px-3 py-2 bg-dark-surface2 border border-dark-border rounded-lg focus:outline-hidden focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500 text-xs text-white"
               />
             </label>
           </div>
@@ -509,7 +509,7 @@ export function Customers() {
           from a corporate row. One-click to clear, since the filter is a
           temporary view rather than a saved preference. */}
       {company && (
-        <div className="flex items-center justify-between gap-3 rounded-lg border border-purple-500/20 bg-purple-500/[0.04] px-4 py-2.5">
+        <div className="flex items-center justify-between gap-3 rounded-lg border border-purple-500/20 bg-purple-500/4 px-4 py-2.5">
           <div className="flex items-center gap-2 text-sm text-purple-200">
             <Briefcase size={14} className="text-purple-400" />
             <span>Showing customers at <strong className="text-white">{company}</strong></span>
@@ -526,7 +526,7 @@ export function Customers() {
       {/* Bulk action bar — pops in when one or more rows are selected.
           Sticky-top so it stays in view while scrolling a long list. */}
       {selected.size > 0 && (
-        <div className="sticky top-0 z-20 -mx-0 rounded-lg border border-primary-500/40 bg-primary-500/[0.08] backdrop-blur px-4 py-2.5 flex items-center gap-3 flex-wrap">
+        <div className="sticky top-0 z-20 mx-0 rounded-lg border border-primary-500/40 bg-primary-500/8 backdrop-blur-sm px-4 py-2.5 flex items-center gap-3 flex-wrap">
           <div className="text-sm font-medium text-white">
             <span className="text-primary-300 font-bold">{selected.size}</span> selected
           </div>
@@ -536,21 +536,21 @@ export function Customers() {
 
           <button
             onClick={() => exportSelected()}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium bg-emerald-500/15 text-emerald-300 border border-emerald-500/20 hover:bg-emerald-500/25 transition"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-sm text-xs font-medium bg-emerald-500/15 text-emerald-300 border border-emerald-500/20 hover:bg-emerald-500/25 transition"
           >
             <Download size={11} /> Export Excel
           </button>
           <button
             onClick={() => bulkUpdateMutation.mutate({ ids: Array.from(selected), fields: { vip_level: 'VIP' } })}
             disabled={bulkUpdateMutation.isPending}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium bg-amber-500/15 text-amber-300 border border-amber-500/20 hover:bg-amber-500/25 disabled:opacity-50 transition"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-sm text-xs font-medium bg-amber-500/15 text-amber-300 border border-amber-500/20 hover:bg-amber-500/25 disabled:opacity-50 transition"
           >
             <Crown size={11} /> Mark as VIP
           </button>
           <button
             onClick={() => bulkUpdateMutation.mutate({ ids: Array.from(selected), fields: { lifecycle_status: 'archived' } })}
             disabled={bulkUpdateMutation.isPending}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium bg-gray-500/15 text-gray-300 border border-gray-500/20 hover:bg-gray-500/25 disabled:opacity-50 transition"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-sm text-xs font-medium bg-gray-500/15 text-gray-300 border border-gray-500/20 hover:bg-gray-500/25 disabled:opacity-50 transition"
           >
             <TagIcon size={11} /> Archive
           </button>
@@ -561,7 +561,7 @@ export function Customers() {
               }
             }}
             disabled={bulkDeleteMutation.isPending}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium bg-red-500/15 text-red-300 border border-red-500/20 hover:bg-red-500/25 disabled:opacity-50 transition"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-sm text-xs font-medium bg-red-500/15 text-red-300 border border-red-500/20 hover:bg-red-500/25 disabled:opacity-50 transition"
           >
             <Trash2 size={11} /> Delete
           </button>
@@ -656,12 +656,12 @@ export function Customers() {
             <button
               onClick={() => updateParam('page', String(page - 1))}
               disabled={page <= 1}
-              className="px-3 py-1.5 rounded bg-dark-surface2 border border-dark-border disabled:opacity-40 hover:border-white/20 transition"
+              className="px-3 py-1.5 rounded-sm bg-dark-surface2 border border-dark-border disabled:opacity-40 hover:border-white/20 transition"
             >Prev</button>
             <button
               onClick={() => updateParam('page', String(page + 1))}
               disabled={page >= data.last_page}
-              className="px-3 py-1.5 rounded bg-dark-surface2 border border-dark-border disabled:opacity-40 hover:border-white/20 transition"
+              className="px-3 py-1.5 rounded-sm bg-dark-surface2 border border-dark-border disabled:opacity-40 hover:border-white/20 transition"
             >Next</button>
           </div>
         </div>
@@ -674,10 +674,10 @@ export function Customers() {
 
 function KpiTile({ icon: Icon, label, value, accent }: { icon: any; label: string; value: string; accent: 'blue' | 'amber' | 'purple' | 'emerald' }) {
   const ring = {
-    blue:    'border-blue-500/15 bg-blue-500/[0.04]',
-    amber:   'border-amber-500/15 bg-amber-500/[0.04]',
-    purple:  'border-purple-500/15 bg-purple-500/[0.04]',
-    emerald: 'border-emerald-500/15 bg-emerald-500/[0.04]',
+    blue:    'border-blue-500/15 bg-blue-500/4',
+    amber:   'border-amber-500/15 bg-amber-500/4',
+    purple:  'border-purple-500/15 bg-purple-500/4',
+    emerald: 'border-emerald-500/15 bg-emerald-500/4',
   }[accent]
   const color = {
     blue:    'text-blue-400',
@@ -716,7 +716,7 @@ function FacetSelect({ label, value, onChange, options, icon: Icon }: {
       <select
         value={value}
         onChange={e => onChange(e.target.value || null)}
-        className="w-full px-3 py-2 bg-dark-surface2 border border-dark-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500 text-sm text-white"
+        className="w-full px-3 py-2 bg-dark-surface2 border border-dark-border rounded-lg focus:outline-hidden focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500 text-sm text-white"
       >
         <option value="">All</option>
         {options.map(o => <option key={o} value={o}>{o}</option>)}
@@ -796,8 +796,8 @@ function Row({ guest, fieldCfg, selected, onToggle, onEdit, onOpen }: RowProps) 
     <div
       onClick={onOpen}
       style={{ ['--md-cols' as any]: mdGridCols }}
-      className={`grid grid-cols-[auto_1fr_auto_auto] md:[grid-template-columns:var(--md-cols)] gap-3 px-4 py-3 border-b border-dark-border last:border-b-0 cursor-pointer group items-center transition-colors ${
-        selected ? 'bg-primary-500/[0.06]' : 'hover:bg-white/[0.02]'
+      className={`grid grid-cols-[auto_1fr_auto_auto] md:grid-cols-(--md-cols) gap-3 px-4 py-3 border-b border-dark-border last:border-b-0 cursor-pointer group items-center transition-colors ${
+        selected ? 'bg-primary-500/6' : 'hover:bg-white/2'
       }`}
     >
       {/* Selection checkbox — stopPropagation so clicking the box doesn't
@@ -814,7 +814,7 @@ function Row({ guest, fieldCfg, selected, onToggle, onEdit, onOpen }: RowProps) 
 
       {/* Customer name + initials */}
       <div className="flex items-center gap-3 min-w-0">
-        <div className="w-9 h-9 rounded-full flex items-center justify-center bg-dark-surface2 border border-dark-border text-xs font-bold text-primary-300 flex-shrink-0">
+        <div className="w-9 h-9 rounded-full flex items-center justify-center bg-dark-surface2 border border-dark-border text-xs font-bold text-primary-300 shrink-0">
           {initials}
         </div>
         <div className="min-w-0">
@@ -857,7 +857,7 @@ function Row({ guest, fieldCfg, selected, onToggle, onEdit, onOpen }: RowProps) 
         <div className="hidden md:block min-w-0">
           {guest.company ? (
             <div className="flex items-center gap-1.5 text-xs text-gray-300 truncate">
-              <Briefcase size={11} className="text-gray-500 flex-shrink-0" />
+              <Briefcase size={11} className="text-gray-500 shrink-0" />
               <span className="truncate">{guest.company}</span>
             </div>
           ) : (
@@ -881,7 +881,7 @@ function Row({ guest, fieldCfg, selected, onToggle, onEdit, onOpen }: RowProps) 
       <div className="flex items-center gap-1.5 justify-end">
         <button
           onClick={e => { e.stopPropagation(); onEdit() }}
-          className="opacity-0 group-hover:opacity-100 p-1.5 rounded hover:bg-white/5 text-gray-500 hover:text-primary-300 transition"
+          className="opacity-0 group-hover:opacity-100 p-1.5 rounded-sm hover:bg-white/5 text-gray-500 hover:text-primary-300 transition"
           title="Quick edit"
           aria-label="Quick edit"
         >
@@ -959,7 +959,7 @@ function EditDrawer({ guest, onClose, onSave, saving }: EditDrawerProps) {
             <div className="text-[10px] uppercase tracking-wider text-gray-500">Quick edit</div>
             <h2 className="text-base font-semibold text-white">{guest.full_name}</h2>
           </div>
-          <button type="button" onClick={onClose} className="p-1.5 rounded hover:bg-white/5 text-gray-500 hover:text-white">
+          <button type="button" onClick={onClose} className="p-1.5 rounded-sm hover:bg-white/5 text-gray-500 hover:text-white">
             <X size={16} />
           </button>
         </div>
@@ -984,7 +984,7 @@ function EditDrawer({ guest, onClose, onSave, saving }: EditDrawerProps) {
         </div>
 
         <div className="px-5 py-3 border-t border-dark-border flex items-center justify-end gap-2">
-          <button type="button" onClick={onClose} className="px-3 py-2 rounded text-sm text-t-secondary hover:text-white">
+          <button type="button" onClick={onClose} className="px-3 py-2 rounded-sm text-sm text-t-secondary hover:text-white">
             Cancel
           </button>
           <button
@@ -1009,7 +1009,7 @@ function Field({ label, value, onChange, type = 'text' }: { label: string; value
         type={type}
         value={value}
         onChange={e => onChange(e.target.value)}
-        className="w-full px-3 py-2 bg-dark-surface2 border border-dark-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500 text-sm text-white placeholder-gray-600"
+        className="w-full px-3 py-2 bg-dark-surface2 border border-dark-border rounded-lg focus:outline-hidden focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500 text-sm text-white placeholder-gray-600"
       />
     </label>
   )
@@ -1022,7 +1022,7 @@ function Select({ label, value, onChange, options }: { label: string; value: str
       <select
         value={value}
         onChange={e => onChange(e.target.value)}
-        className="w-full px-3 py-2 bg-dark-surface2 border border-dark-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500 text-sm text-white"
+        className="w-full px-3 py-2 bg-dark-surface2 border border-dark-border rounded-lg focus:outline-hidden focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500 text-sm text-white"
       >
         {options.map(o => <option key={o} value={o}>{o}</option>)}
       </select>

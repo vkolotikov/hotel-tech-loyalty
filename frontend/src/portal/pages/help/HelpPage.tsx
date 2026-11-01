@@ -42,7 +42,7 @@ export function HelpPage() {
 
   return (
     <div className="space-y-6">
-      <Card className="relative overflow-hidden p-5 sm:p-6 bg-gradient-to-br from-p-accent/15 via-p-surface to-p-surface">
+      <Card className="relative overflow-hidden p-5 sm:p-6 bg-linear-to-br from-p-accent/15 via-p-surface to-p-surface">
         <Drifting icons={loyalty ? [QrCode, Sparkles, Gift] : [CalendarDays, Bell, User]} />
         <div className="relative max-w-md space-y-3">
           <h1 className="font-p-display text-3xl">{t('portal.help.title', 'Help')}</h1>
@@ -87,7 +87,7 @@ export function HelpPage() {
       <section aria-labelledby="help-questions" className="space-y-3">
         <h2 id="help-questions" className="text-sm font-semibold">{t('portal.help.questions', 'Questions')}</h2>
         {topics.length > 1 && (
-          <div role="group" aria-label={t('portal.help.questions', 'Questions')} className="-mx-4 px-4 flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none]">
+          <div role="group" aria-label={t('portal.help.questions', 'Questions')} className="-mx-4 px-4 flex gap-2 overflow-x-auto pb-1 scrollbar-none">
             {(['all', ...topics] as const).map(id => {
               const Icon = TOPIC_ICONS[id]
               const on = topic === id
@@ -153,7 +153,7 @@ function Question({ id, icon: Icon, to, open, say }: { id: QuestionId; icon: Luc
           <span className="min-w-0 flex-1">{w.q}</span>
           <ChevronDown size={18} aria-hidden className="shrink-0 text-p-text-2 transition-transform group-open:rotate-180" />
         </summary>
-        <div className="px-4 pb-4 pl-[3.75rem] space-y-1 text-sm text-p-text-2 p-unfold">
+        <div className="px-4 pb-4 pl-15 space-y-1 text-sm text-p-text-2 p-unfold">
           <p>{w.a}</p>
           {to && (
             <Link to={to} className="p-tap inline-flex items-center gap-1 font-semibold text-p-accent-deep">

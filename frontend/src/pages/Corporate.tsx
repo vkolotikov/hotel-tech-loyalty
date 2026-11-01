@@ -103,15 +103,15 @@ export function Corporate() {
         <div className="relative flex-1 min-w-[240px]">
           <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-t-muted" />
           <input type="text" placeholder={t('corporate.search_placeholder', 'Search company, contact, email...')} value={search} onChange={e => { setSearch(e.target.value); setPage(1) }}
-            className="w-full pl-9 pr-3 py-2 bg-panel border border-dark-border rounded-lg text-sm text-white placeholder-t-muted focus:outline-none focus:ring-2 focus:ring-primary-500" />
+            className="w-full pl-9 pr-3 py-2 bg-panel border border-dark-border rounded-lg text-sm text-white placeholder-t-muted focus:outline-hidden focus:ring-2 focus:ring-primary-500" />
         </div>
         <select value={status} onChange={e => { setStatus(e.target.value); setPage(1) }}
-          className="bg-dark-surface border border-dark-border rounded-lg text-sm text-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500">
+          className="bg-dark-surface border border-dark-border rounded-lg text-sm text-gray-300 px-3 py-2 focus:outline-hidden focus:ring-2 focus:ring-primary-500">
           <option value="">{t('corporate.filters.all_statuses', 'All Statuses')}</option>
           {STATUSES.map(s => <option key={s} value={s}>{t(`corporate.statuses.${s}`, s)}</option>)}
         </select>
         <select value={accountManager} onChange={e => { setAccountManager(e.target.value); setPage(1) }}
-          className="bg-dark-surface border border-dark-border rounded-lg text-sm text-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500">
+          className="bg-dark-surface border border-dark-border rounded-lg text-sm text-gray-300 px-3 py-2 focus:outline-hidden focus:ring-2 focus:ring-primary-500">
           <option value="">{t('corporate.filters.all_managers', 'All Managers')}</option>
           {settings.account_managers.map(m => <option key={m} value={m}>{m}</option>)}
         </select>
@@ -251,13 +251,13 @@ export function Corporate() {
                 <div>
                   <label className="block text-xs text-t-soft mb-1">{t('corporate.create.notes', 'Notes')}</label>
                   <textarea value={form.notes} onChange={e => F('notes', e.target.value)} rows={3}
-                    className="w-full bg-dark-bg border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-t-muted focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none" />
+                    className="w-full bg-dark-bg border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-t-muted focus:outline-hidden focus:ring-2 focus:ring-primary-500 resize-none" />
                 </div>
                 <CustomFieldsForm
                   entity="corporate_account"
                   values={form.custom_data}
                   onChange={(next) => setForm(f => ({ ...f, custom_data: next }))}
-                  inputClassName="w-full bg-dark-bg border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-t-muted focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  inputClassName="w-full bg-dark-bg border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-t-muted focus:outline-hidden focus:ring-2 focus:ring-primary-500"
                 />
                 <div className="flex justify-end gap-3 pt-2">
                   <button type="button" onClick={() => setShowCreate(false)} className="px-4 py-2 text-sm text-t-soft hover:text-white transition-colors">{t('corporate.create.cancel', 'Cancel')}</button>
@@ -273,7 +273,7 @@ export function Corporate() {
                     <p className="text-xs text-t-secondary">{t('corporate.capture.instructions', 'Paste an email, contract excerpt, proposal, or meeting notes. AI will extract corporate account details automatically.')}</p>
                     <textarea value={captureText} onChange={e => setCaptureText(e.target.value)} rows={8}
                       placeholder={t('corporate.capture.placeholder', 'e.g. Following our meeting with Acme Corp…')}
-                      className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-t-muted focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none" />
+                      className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-t-muted focus:outline-hidden focus:ring-2 focus:ring-primary-500 resize-none" />
                     <div className="flex justify-end gap-3">
                       <button type="button" onClick={() => { setShowCreate(false); setCaptureText('') }} className="px-4 py-2 text-sm text-t-soft hover:text-white">{t('corporate.capture.cancel', 'Cancel')}</button>
                       <button
@@ -325,19 +325,19 @@ export function Corporate() {
                         <div key={key}>
                           <label className="block text-xs text-t-soft mb-1">{label}</label>
                           <input type={type || 'text'} value={captureResult[key] ?? ''} onChange={e => setCaptureResult((r: any) => ({ ...r, [key]: e.target.value }))}
-                            className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500" />
+                            className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-hidden focus:ring-2 focus:ring-primary-500" />
                         </div>
                       ))}
                     </div>
                     <div>
                       <label className="block text-xs text-t-soft mb-1">{t('corporate.create.billing_address', 'Billing Address')}</label>
                       <input type="text" value={captureResult.billing_address ?? ''} onChange={e => setCaptureResult((r: any) => ({ ...r, billing_address: e.target.value }))}
-                        className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500" />
+                        className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-hidden focus:ring-2 focus:ring-primary-500" />
                     </div>
                     <div>
                       <label className="block text-xs text-t-soft mb-1">{t('corporate.create.notes', 'Notes')}</label>
                       <textarea value={captureResult.notes ?? ''} onChange={e => setCaptureResult((r: any) => ({ ...r, notes: e.target.value }))} rows={3}
-                        className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none" />
+                        className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-hidden focus:ring-2 focus:ring-primary-500 resize-none" />
                     </div>
                     <div className="flex justify-between pt-1">
                       <button onClick={() => setCaptureResult(null)} className="text-sm text-t-muted hover:text-white">{t('corporate.capture.back', 'Back')}</button>
@@ -545,7 +545,7 @@ function Input({ label, value, onChange, type = 'text', required }: { label: str
     <div>
       <label className="block text-xs text-t-soft mb-1">{label}</label>
       <input type={type} value={value} onChange={e => onChange(e.target.value)} required={required}
-        className="w-full bg-dark-bg border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-t-muted focus:outline-none focus:ring-2 focus:ring-primary-500" />
+        className="w-full bg-dark-bg border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-t-muted focus:outline-hidden focus:ring-2 focus:ring-primary-500" />
     </div>
   )
 }
@@ -556,7 +556,7 @@ function Select({ label, value, onChange, options }: { label: string; value: str
     <div>
       <label className="block text-xs text-t-soft mb-1">{label}</label>
       <select value={value} onChange={e => onChange(e.target.value)}
-        className="w-full bg-dark-bg border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500">
+        className="w-full bg-dark-bg border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-hidden focus:ring-2 focus:ring-primary-500">
         <option value="">{t('corporate.create.select_placeholder', 'Select...')}</option>
         {options.map(o => <option key={o} value={o}>{o}</option>)}
       </select>

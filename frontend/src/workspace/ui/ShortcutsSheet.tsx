@@ -78,7 +78,7 @@ function ShortcutsPanel({ onClose, sections, fallbackFocus }: { onClose: () => v
         className="fixed inset-0 z-50 cursor-default bg-a-scrim/40 animate-a-fade" />
       {/* Centred with auto margins, not translate: the pop animation ends on transform: none and would undo a translate. */}
       <div role="dialog" aria-modal="true" aria-label={title} tabIndex={-1} onKeyDown={onPanelKey}
-        className="fixed inset-x-0 top-24 z-50 mx-auto max-h-[calc(100vh-8rem)] w-[min(30rem,calc(100%-2rem))] overflow-y-auto rounded-2xl border border-a-border bg-a-surface p-5 text-a-text shadow-a-lg animate-a-pop focus:outline-none">
+        className="fixed inset-x-0 top-24 z-50 mx-auto max-h-[calc(100vh-8rem)] w-[min(30rem,calc(100%-2rem))] overflow-y-auto rounded-2xl border border-a-border bg-a-surface p-5 text-a-text shadow-a-lg animate-a-pop focus:outline-hidden">
         <SectionTitle>{title}</SectionTitle>
         {sections.map((section, i) => (
           <Fragment key={section.title ?? i}>

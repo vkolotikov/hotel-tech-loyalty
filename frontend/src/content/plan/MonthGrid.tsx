@@ -35,7 +35,7 @@ export function MonthGrid({ plans, date, today, locale, selectedId, dropDate, on
 }) {
   const { t } = useTranslation()
   return (
-    <div className="min-w-[42rem]">
+    <div className="min-w-2xl">
       <div className="grid grid-cols-7 border-b border-a-border">
         {plans.slice(0, 7).map(day => (
           <div key={day.date} className="bg-a-surface px-3 py-2 font-a-mono text-xs uppercase tracking-[0.12em] text-a-text-2">{formatDate(day.date, locale, { weekday: 'short' })}</div>
@@ -53,7 +53,7 @@ export function MonthGrid({ plans, date, today, locale, selectedId, dropDate, on
           return (
             <div key={day.date} data-drop-date={day.date}
               onClick={adds ? (e) => { if (clickAdds(e.target as Element)) onAdd(day.date, 'post') } : undefined}
-              className={`group relative flex min-h-[6.5rem] min-w-0 flex-col border-b border-r border-a-border p-1.5 transition-colors ${dropDate === day.date ? 'bg-a-accent/10' : 'bg-a-surface-2'} ${open ? 'ring-1 ring-inset ring-a-accent-text' : ''}`}>
+              className={`group relative flex min-h-26 min-w-0 flex-col border-b border-r border-a-border p-1.5 transition-colors ${dropDate === day.date ? 'bg-a-accent/10' : 'bg-a-surface-2'} ${open ? 'ring-1 ring-inset ring-a-accent-text' : ''}`}>
               <div className="mb-1 flex items-center gap-1.5">
                 <button type="button" onClick={() => onDay(day.date)} aria-current={isToday ? 'date' : undefined}
                   aria-label={formatDate(day.date, locale, { weekday: 'long', day: 'numeric', month: 'long' })}

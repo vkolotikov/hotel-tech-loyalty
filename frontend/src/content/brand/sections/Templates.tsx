@@ -139,7 +139,7 @@ function TemplateSuggestions({ full }: { full: boolean }) {
           <div key={key} className="flex flex-wrap items-start gap-3 rounded-lg bg-a-surface-2 p-2.5">
             <div className="min-w-0 grow basis-48">
               <p className="text-sm font-semibold text-a-text">{item.name}</p>
-              <p className="break-words text-xs text-a-text-2">{item.hook ?? item.topic ?? item.main_copy ?? ''}</p>
+              <p className="wrap-break-word text-xs text-a-text-2">{item.hook ?? item.topic ?? item.main_copy ?? ''}</p>
             </div>
             <Button size="sm" variant="secondary" loading={busy === key} disabled={full || (busy !== null && busy !== key)} onClick={() => { void add(item, key) }}>
               {w('add_suggestion', 'Add')}

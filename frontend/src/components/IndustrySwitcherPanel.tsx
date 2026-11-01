@@ -146,7 +146,7 @@ export function IndustrySwitcherPanel() {
       {/* Header + current state */}
       <div className="rounded-2xl bg-dark-surface border border-dark-border p-5">
         <div className="flex items-start gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500/20 to-amber-700/10 border border-amber-500/30 flex items-center justify-center flex-shrink-0">
+          <div className="w-10 h-10 rounded-xl bg-linear-to-br from-amber-500/20 to-amber-700/10 border border-amber-500/30 flex items-center justify-center shrink-0">
             <Building2 size={20} className="text-amber-400" />
           </div>
           <div className="flex-1 min-w-0">
@@ -182,14 +182,14 @@ export function IndustrySwitcherPanel() {
                 className={
                   'group text-left p-4 rounded-xl border transition-all ' +
                   (isCurrent
-                    ? 'bg-amber-500/[0.08] border-amber-500/40 cursor-default'
-                    : 'bg-dark-surface border-dark-border hover:border-amber-500/40 hover:bg-amber-500/[0.04]')
+                    ? 'bg-amber-500/8 border-amber-500/40 cursor-default'
+                    : 'bg-dark-surface border-dark-border hover:border-amber-500/40 hover:bg-amber-500/4')
                 }
               >
                 <div className="flex items-start gap-3">
                   <div className={
-                    'w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ' +
-                    (isCurrent ? 'bg-amber-500/20 border border-amber-500/30' : 'bg-white/[0.04] border border-white/10 group-hover:border-amber-500/30')
+                    'w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ' +
+                    (isCurrent ? 'bg-amber-500/20 border border-amber-500/30' : 'bg-white/4 border border-white/10 group-hover:border-amber-500/30')
                   }>
                     <Icon size={18} className={isCurrent ? 'text-amber-400' : 'text-gray-400'} />
                   </div>
@@ -197,7 +197,7 @@ export function IndustrySwitcherPanel() {
                     <div className="flex items-center gap-2">
                       <span className="font-semibold text-sm text-white">{copy.brand}</span>
                       {isCurrent && (
-                        <span className="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                        <span className="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded-sm bg-amber-500/20 text-amber-300 border border-amber-500/30">
                           Current
                         </span>
                       )}
@@ -230,14 +230,14 @@ export function IndustrySwitcherPanel() {
                 className={
                   'group text-left p-4 rounded-xl border transition-all ' +
                   (isCurrent
-                    ? 'bg-amber-500/[0.08] border-amber-500/40 cursor-default'
-                    : 'bg-dark-surface border-dark-border hover:border-amber-500/40 hover:bg-amber-500/[0.04]')
+                    ? 'bg-amber-500/8 border-amber-500/40 cursor-default'
+                    : 'bg-dark-surface border-dark-border hover:border-amber-500/40 hover:bg-amber-500/4')
                 }
               >
                 <div className="flex items-start gap-3">
                   <div className={
-                    'w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ' +
-                    (isCurrent ? 'bg-amber-500/20 border border-amber-500/30' : 'bg-white/[0.04] border border-white/10 group-hover:border-amber-500/30')
+                    'w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ' +
+                    (isCurrent ? 'bg-amber-500/20 border border-amber-500/30' : 'bg-white/4 border border-white/10 group-hover:border-amber-500/30')
                   }>
                     <Icon size={18} className={isCurrent ? 'text-amber-400' : 'text-gray-400'} />
                   </div>
@@ -245,7 +245,7 @@ export function IndustrySwitcherPanel() {
                     <div className="flex items-center gap-2">
                       <span className="font-semibold text-sm text-white">{copy.brand}</span>
                       {isCurrent && (
-                        <span className="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                        <span className="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded-sm bg-amber-500/20 text-amber-300 border border-amber-500/30">
                           Current
                         </span>
                       )}
@@ -264,7 +264,7 @@ export function IndustrySwitcherPanel() {
           Cancel. */}
       {modalOpen && targetIndustry && targetCopy && (
         <div
-          className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4"
+          className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4"
           onClick={closeModal}
         >
           <div
@@ -291,9 +291,9 @@ export function IndustrySwitcherPanel() {
             )}
 
             {changes && changes.length > 0 && (
-              <div className="rounded-xl bg-amber-500/[0.06] border border-amber-500/30 p-4 mb-4">
+              <div className="rounded-xl bg-amber-500/6 border border-amber-500/30 p-4 mb-4">
                 <div className="flex items-start gap-2">
-                  <AlertTriangle size={16} className="text-amber-400 mt-0.5 flex-shrink-0" />
+                  <AlertTriangle size={16} className="text-amber-400 mt-0.5 shrink-0" />
                   <div className="text-sm text-amber-100">
                     <div className="font-semibold mb-2">What will change:</div>
                     <ul className="space-y-1 text-xs text-amber-100/85">
@@ -310,7 +310,7 @@ export function IndustrySwitcherPanel() {
             )}
 
             {error && (
-              <div className="rounded-xl bg-red-500/[0.06] border border-red-500/30 p-3 mb-4">
+              <div className="rounded-xl bg-red-500/6 border border-red-500/30 p-3 mb-4">
                 <div className="text-sm text-red-300">{error}</div>
               </div>
             )}
@@ -319,7 +319,7 @@ export function IndustrySwitcherPanel() {
               <button
                 onClick={closeModal}
                 disabled={submitting}
-                className="px-4 py-2 rounded-lg text-sm font-medium text-gray-300 hover:text-white hover:bg-white/[0.05] disabled:opacity-50 transition-colors"
+                className="px-4 py-2 rounded-lg text-sm font-medium text-gray-300 hover:text-white hover:bg-white/5 disabled:opacity-50 transition-colors"
               >
                 Cancel
               </button>

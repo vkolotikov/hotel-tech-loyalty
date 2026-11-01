@@ -39,7 +39,7 @@ export function PageRow({ page, canManage, chosen, full, onToggle, locale, busy 
           : <div aria-hidden className="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg bg-a-surface-2 text-a-text-2"><FileText size={18} /></div>}
         <div className="min-w-0 flex-1 space-y-1">
           <a href={page.url} target="_blank" rel="noopener noreferrer" className="inline-flex max-w-full items-start gap-1 font-semibold text-a-text hover:underline">
-            <span className="min-w-0 break-words">{page.title}</span><ExternalLink size={13} aria-hidden className="mt-1 shrink-0 text-a-text-2" />
+            <span className="min-w-0 wrap-break-word">{page.title}</span><ExternalLink size={13} aria-hidden className="mt-1 shrink-0 text-a-text-2" />
           </a>
           <p className="text-xs text-a-text-2">{[date, pageNumbers(page, t)].filter(Boolean).join(' · ')}</p>
           {!page.seen && <p className="text-xs font-medium text-a-text-2">{t('content.promote.not_seen', 'Not found on the last scan')}</p>}

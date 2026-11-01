@@ -113,13 +113,13 @@ function MiniCalendar({ currentDate, tasks, onDateChange }: { currentDate: strin
   return (
     <div className="bg-dark-surface border border-dark-border rounded-xl p-3">
       <div className="flex items-center justify-between mb-3">
-        <button onClick={() => stepMonth(-1)} className="w-6 h-6 rounded hover:bg-white/5 text-gray-400 flex items-center justify-center">
+        <button onClick={() => stepMonth(-1)} className="w-6 h-6 rounded-sm hover:bg-white/5 text-gray-400 flex items-center justify-center">
           <ChevronLeft size={14} />
         </button>
         <span className="text-sm font-semibold text-white tabular-nums">
           {MONTH_NAMES[month]} {year}
         </span>
-        <button onClick={() => stepMonth(1)} className="w-6 h-6 rounded hover:bg-white/5 text-gray-400 flex items-center justify-center">
+        <button onClick={() => stepMonth(1)} className="w-6 h-6 rounded-sm hover:bg-white/5 text-gray-400 flex items-center justify-center">
           <ChevronRight size={14} />
         </button>
       </div>
@@ -206,7 +206,7 @@ function TaskSummaryDonut({ tasks }: { tasks: Task[] }) {
           const pct = total > 0 ? Math.round((s.value / total) * 100) : 0
           return (
             <div key={s.label} className="flex items-center gap-2 text-xs">
-              <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: s.color }} />
+              <span className="w-2 h-2 rounded-full shrink-0" style={{ background: s.color }} />
               <span className="flex-1 text-gray-300">{s.label}</span>
               <span className="text-gray-500 tabular-nums">{s.value} <span className="text-gray-600">({pct}%)</span></span>
             </div>
@@ -249,9 +249,9 @@ function UpNext({ currentDate, tasks }: { currentDate: string; tasks: Task[] }) 
       </h3>
       <div className="space-y-2">
         {upcoming.map(t => (
-          <div key={t.id} className="flex items-start gap-2.5 p-2 rounded-lg bg-white/[0.02] border border-white/5 hover:border-white/15 transition">
+          <div key={t.id} className="flex items-start gap-2.5 p-2 rounded-lg bg-white/2 border border-white/5 hover:border-white/15 transition">
             <span className={[
-              'w-2 h-2 rounded-full mt-1.5 flex-shrink-0',
+              'w-2 h-2 rounded-full mt-1.5 shrink-0',
               t.priority === 'high' ? 'bg-red-400' : t.priority === 'low' ? 'bg-gray-500' : 'bg-blue-400',
             ].join(' ')} />
             <div className="flex-1 min-w-0">

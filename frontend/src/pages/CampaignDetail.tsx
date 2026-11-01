@@ -90,8 +90,8 @@ export function CampaignDetail() {
         <div>
           <h1 className="text-2xl font-bold text-white">{c.name}</h1>
           <div className="flex flex-wrap gap-2 mt-2 text-xs">
-            <span className="px-2 py-0.5 rounded bg-dark-surface2 text-t-soft border border-dark-border">{c.channel}</span>
-            <span className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">{c.status}</span>
+            <span className="px-2 py-0.5 rounded-sm bg-dark-surface2 text-t-soft border border-dark-border">{c.channel}</span>
+            <span className="px-2 py-0.5 rounded-sm bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">{c.status}</span>
             {c.sent_at && <span className="text-t-soft">sent {new Date(c.sent_at).toLocaleString()}</span>}
           </div>
         </div>
@@ -151,7 +151,7 @@ export function CampaignDetail() {
               value={search}
               onChange={e => setSearch(e.target.value)}
               placeholder="Search name, email, tier"
-              className="bg-panel border border-dark-border rounded-lg pl-9 pr-3 py-1.5 text-xs text-white focus:outline-none focus:ring-2 focus:ring-primary-500 w-64"
+              className="bg-panel border border-dark-border rounded-lg pl-9 pr-3 py-1.5 text-xs text-white focus:outline-hidden focus:ring-2 focus:ring-primary-500 w-64"
             />
           </div>
         </div>
@@ -178,7 +178,7 @@ export function CampaignDetail() {
                     <div className="text-t-soft text-xs">{r.email ?? r.member?.email ?? '—'}{r.member?.tier ? ` · ${r.member.tier}` : ''}</div>
                   </td>
                   <td className="p-3">
-                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold ${r.channel === 'email' ? 'bg-blue-500/15 text-blue-300' : 'bg-purple-500/15 text-purple-300'}`}>
+                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-sm text-xs font-semibold ${r.channel === 'email' ? 'bg-blue-500/15 text-blue-300' : 'bg-purple-500/15 text-purple-300'}`}>
                       {r.channel === 'email' ? <Mail size={11} /> : <Bell size={11} />} {r.channel}
                     </span>
                   </td>

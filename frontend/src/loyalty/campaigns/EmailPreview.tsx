@@ -19,7 +19,7 @@ export function EmailPreview({ html, subject, filled = false }: { html: string; 
         <p className="text-sm text-a-text"><span className="text-a-text-2">{t('loyalty.campaigns.preview.subject', 'Subject')}</span> {subject}</p>
       )}
       <iframe title={t('loyalty.campaigns.preview.title', 'Preview of the email')} sandbox="" srcDoc={previewDocument(html)}
-        className="h-[32rem] w-full rounded-xl border border-a-border bg-a-surface-2" />
+        className="h-128 w-full rounded-xl border border-a-border bg-a-surface-2" />
       {filled && <p className="text-xs text-a-text-2" data-sample="">{t('loyalty.campaigns.preview.sample', 'The tags show a sample — your own name, the first tier, made-up points — as your test email has them. Each member sees their own.')}</p>}
     </div>
   )

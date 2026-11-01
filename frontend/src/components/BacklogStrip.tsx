@@ -254,7 +254,7 @@ export function BacklogStrip({ currentUserId, currentUserName = '', plannerSkill
             expand toggle. Designed to feel like a single 40px control
             row, not a panel header. */}
         <div className="flex items-center gap-2 px-3 py-2">
-          <div className="flex items-center gap-1.5 flex-shrink-0">
+          <div className="flex items-center gap-1.5 shrink-0">
             <Inbox size={14} className="text-primary-400" />
             <span className="text-xs font-semibold text-white uppercase tracking-wide">Backlog</span>
           </div>
@@ -264,19 +264,19 @@ export function BacklogStrip({ currentUserId, currentUserName = '', plannerSkill
               reads as a real button against the dark surface. The
               previous bg-white/5 + gray-400 combo was so subtle the
               inactive tab looked disabled. */}
-          <div className="flex gap-1 flex-shrink-0">
+          <div className="flex gap-1 shrink-0">
             <button
               onClick={() => setScope('mine')}
               className={[
                 'flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-medium transition border',
                 scope === 'mine'
                   ? 'bg-primary-500 text-on-primary border-primary-500'
-                  : 'bg-white/[0.06] text-gray-200 border-white/15 hover:bg-white/[0.12] hover:border-white/25',
+                  : 'bg-white/6 text-gray-200 border-white/15 hover:bg-white/12 hover:border-white/25',
               ].join(' ')}
             >
               <Hand size={10} /> Mine
               {mineTasks.length > 0 && (
-                <span className={['ml-0.5 px-1 rounded text-[10px] tabular-nums', scope === 'mine' ? 'bg-black/20' : 'bg-white/15 text-gray-300'].join(' ')}>{mineTasks.length}</span>
+                <span className={['ml-0.5 px-1 rounded-sm text-[10px] tabular-nums', scope === 'mine' ? 'bg-black/20' : 'bg-white/15 text-gray-300'].join(' ')}>{mineTasks.length}</span>
               )}
             </button>
             <button
@@ -285,25 +285,25 @@ export function BacklogStrip({ currentUserId, currentUserName = '', plannerSkill
                 'flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-medium transition border',
                 scope === 'pool'
                   ? 'bg-primary-500 text-on-primary border-primary-500'
-                  : 'bg-white/[0.06] text-gray-200 border-white/15 hover:bg-white/[0.12] hover:border-white/25',
+                  : 'bg-white/6 text-gray-200 border-white/15 hover:bg-white/12 hover:border-white/25',
               ].join(' ')}
             >
               <Users size={10} /> Open pool
               {poolTasks.length > 0 && (
-                <span className={['ml-0.5 px-1 rounded text-[10px] tabular-nums', scope === 'pool' ? 'bg-black/20' : 'bg-white/15 text-gray-300'].join(' ')}>{poolTasks.length}</span>
+                <span className={['ml-0.5 px-1 rounded-sm text-[10px] tabular-nums', scope === 'pool' ? 'bg-black/20' : 'bg-white/15 text-gray-300'].join(' ')}>{poolTasks.length}</span>
               )}
             </button>
           </div>
 
           {/* Search — only when expanded + there are enough tasks */}
           {open && activeTasks.length >= 5 && (
-            <div className="relative flex-shrink-0">
+            <div className="relative shrink-0">
               <Search size={11} className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" />
               <input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search…"
-                className="bg-dark-bg border border-white/10 rounded-md pl-6 pr-2 py-1 text-[11px] text-white placeholder-gray-500 focus:outline-none focus:border-primary-500/50 w-[140px]"
+                className="bg-dark-bg border border-white/10 rounded-md pl-6 pr-2 py-1 text-[11px] text-white placeholder-gray-500 focus:outline-hidden focus:border-primary-500/50 w-[140px]"
               />
             </div>
           )}
@@ -313,7 +313,7 @@ export function BacklogStrip({ currentUserId, currentUserName = '', plannerSkill
           {/* Quick-add: compact popover form (Name + Category + Task +
               approx Duration), mirroring the main drawer's fields. Adds to
               the current scope (Mine = assigned to me, Pool = unassigned). */}
-          <div className="relative flex-shrink-0">
+          <div className="relative shrink-0">
             <button
               onClick={() => {
                 // Prefer the full right-side drawer (matches the main
@@ -343,12 +343,12 @@ export function BacklogStrip({ currentUserId, currentUserName = '', plannerSkill
                     if (e.key === 'Escape') setShowQuickAdd(false)
                   }}
                   placeholder="Task name…"
-                  className="w-full bg-dark-bg border border-white/10 rounded-md px-2 py-1.5 text-[11px] text-white placeholder-gray-500 focus:outline-none focus:border-primary-500/50"
+                  className="w-full bg-dark-bg border border-white/10 rounded-md px-2 py-1.5 text-[11px] text-white placeholder-gray-500 focus:outline-hidden focus:border-primary-500/50"
                 />
                 <select
                   value={qa.task_group}
                   onChange={(e) => setQa(q => ({ ...q, task_group: e.target.value, task_category: '' }))}
-                  className="w-full bg-dark-bg border border-white/10 rounded-md px-2 py-1.5 text-[11px] text-white focus:outline-none focus:border-primary-500/50"
+                  className="w-full bg-dark-bg border border-white/10 rounded-md px-2 py-1.5 text-[11px] text-white focus:outline-hidden focus:border-primary-500/50"
                 >
                   <option value="">Category — none</option>
                   {groupNames.map(g => <option key={g} value={g}>{g}</option>)}
@@ -357,7 +357,7 @@ export function BacklogStrip({ currentUserId, currentUserName = '', plannerSkill
                   <select
                     value={qa.task_category}
                     onChange={(e) => setQa(q => ({ ...q, task_category: e.target.value }))}
-                    className="w-full bg-dark-bg border border-white/10 rounded-md px-2 py-1.5 text-[11px] text-white focus:outline-none focus:border-primary-500/50"
+                    className="w-full bg-dark-bg border border-white/10 rounded-md px-2 py-1.5 text-[11px] text-white focus:outline-hidden focus:border-primary-500/50"
                   >
                     <option value="">Task — none</option>
                     {qaTasks.map(tk => <option key={tk.key} value={tk.key}>{tk.label}</option>)}
@@ -366,7 +366,7 @@ export function BacklogStrip({ currentUserId, currentUserName = '', plannerSkill
                 <select
                   value={qa.duration}
                   onChange={(e) => setQa(q => ({ ...q, duration: e.target.value }))}
-                  className="w-full bg-dark-bg border border-white/10 rounded-md px-2 py-1.5 text-[11px] text-white focus:outline-none focus:border-primary-500/50"
+                  className="w-full bg-dark-bg border border-white/10 rounded-md px-2 py-1.5 text-[11px] text-white focus:outline-hidden focus:border-primary-500/50"
                 >
                   <option value="">Approx duration — none</option>
                   {[15, 30, 45, 60, 75, 90, 105, 120, 150, 180, 240, 300, 360].map(m => (
@@ -407,7 +407,7 @@ export function BacklogStrip({ currentUserId, currentUserName = '', plannerSkill
           {/* Expand / collapse */}
           <button
             onClick={() => setOpen(o => !o)}
-            className="flex items-center gap-1 px-2 py-1 rounded-md hover:bg-white/5 text-gray-400 hover:text-white text-[11px] font-medium flex-shrink-0"
+            className="flex items-center gap-1 px-2 py-1 rounded-md hover:bg-white/5 text-gray-400 hover:text-white text-[11px] font-medium shrink-0"
             title={open ? 'Collapse backlog' : 'Show backlog cards'}
           >
             {open ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
@@ -483,18 +483,18 @@ export function BacklogStrip({ currentUserId, currentUserName = '', plannerSkill
                 className={['flex-1 px-2 py-2 rounded-md text-xs font-medium flex items-center justify-center gap-1.5 border',
                   scope === 'mine'
                     ? 'bg-primary-500 text-on-primary border-primary-500'
-                    : 'bg-white/[0.06] text-gray-200 border-white/15'].join(' ')}
+                    : 'bg-white/6 text-gray-200 border-white/15'].join(' ')}
               >
-                <Hand size={12} /> Mine {mineTasks.length > 0 && <span className={['ml-0.5 px-1 rounded text-[10px]', scope === 'mine' ? 'bg-black/20' : 'bg-white/15 text-gray-300'].join(' ')}>{mineTasks.length}</span>}
+                <Hand size={12} /> Mine {mineTasks.length > 0 && <span className={['ml-0.5 px-1 rounded-sm text-[10px]', scope === 'mine' ? 'bg-black/20' : 'bg-white/15 text-gray-300'].join(' ')}>{mineTasks.length}</span>}
               </button>
               <button
                 onClick={() => setScope('pool')}
                 className={['flex-1 px-2 py-2 rounded-md text-xs font-medium flex items-center justify-center gap-1.5 border',
                   scope === 'pool'
                     ? 'bg-primary-500 text-on-primary border-primary-500'
-                    : 'bg-white/[0.06] text-gray-200 border-white/15'].join(' ')}
+                    : 'bg-white/6 text-gray-200 border-white/15'].join(' ')}
               >
-                <Users size={12} /> Pool {poolTasks.length > 0 && <span className={['ml-0.5 px-1 rounded text-[10px]', scope === 'pool' ? 'bg-black/20' : 'bg-white/15 text-gray-300'].join(' ')}>{poolTasks.length}</span>}
+                <Users size={12} /> Pool {poolTasks.length > 0 && <span className={['ml-0.5 px-1 rounded-sm text-[10px]', scope === 'pool' ? 'bg-black/20' : 'bg-white/15 text-gray-300'].join(' ')}>{poolTasks.length}</span>}
               </button>
             </div>
             <div className="flex-1 overflow-y-auto p-2 space-y-2">
@@ -512,28 +512,28 @@ export function BacklogStrip({ currentUserId, currentUserName = '', plannerSkill
                 <div key={task.id} className="bg-white/5 border border-white/10 rounded-md p-2.5">
                   <div className="text-sm text-white font-medium">{task.title}</div>
                   <div className="flex items-center gap-2 mt-1 text-[10px] text-gray-500">
-                    {task.task_group && <span className="px-1 rounded bg-white/5">{task.task_group}</span>}
+                    {task.task_group && <span className="px-1 rounded-sm bg-white/5">{task.task_group}</span>}
                     {task.priority === 'high' && <span className="text-red-400 flex items-center gap-0.5"><Flag size={9} />high</span>}
-                    {(() => { const b = horizonBadge(task); return b ? <span className={'px-1 rounded ' + (b.over ? 'bg-red-500/20 text-red-300' : 'bg-blue-500/15 text-blue-300')}>{b.label}</span> : null })()}
+                    {(() => { const b = horizonBadge(task); return b ? <span className={'px-1 rounded-sm ' + (b.over ? 'bg-red-500/20 text-red-300' : 'bg-blue-500/15 text-blue-300')}>{b.label}</span> : null })()}
                   </div>
                   {mobileScheduling?.id === task.id ? (
                     <div className="mt-2 flex flex-col gap-1.5">
                       <div className="flex gap-1.5">
-                        <input type="date" value={mobileDate} onChange={(e) => setMobileDate(e.target.value)} className="flex-1 bg-dark-bg border border-white/10 rounded px-2 py-1.5 text-xs text-white" />
-                        <input type="time" value={mobileTime} onChange={(e) => setMobileTime(e.target.value)} className="bg-dark-bg border border-white/10 rounded px-2 py-1.5 text-xs text-white" />
+                        <input type="date" value={mobileDate} onChange={(e) => setMobileDate(e.target.value)} className="flex-1 bg-dark-bg border border-white/10 rounded-sm px-2 py-1.5 text-xs text-white" />
+                        <input type="time" value={mobileTime} onChange={(e) => setMobileTime(e.target.value)} className="bg-dark-bg border border-white/10 rounded-sm px-2 py-1.5 text-xs text-white" />
                       </div>
                       <div className="flex gap-1.5">
-                        <button onClick={() => scheduleMutation.mutate({ id: task.id, task_date: mobileDate, start_time: mobileTime })} disabled={scheduleMutation.isPending} className="flex-1 px-2 py-1.5 rounded bg-primary-500 hover:bg-primary-400 text-on-primary text-xs font-medium disabled:opacity-50">Schedule</button>
-                        <button onClick={() => setMobileScheduling(null)} className="px-2 py-1.5 rounded bg-white/5 text-gray-400 text-xs">Cancel</button>
+                        <button onClick={() => scheduleMutation.mutate({ id: task.id, task_date: mobileDate, start_time: mobileTime })} disabled={scheduleMutation.isPending} className="flex-1 px-2 py-1.5 rounded-sm bg-primary-500 hover:bg-primary-400 text-on-primary text-xs font-medium disabled:opacity-50">Schedule</button>
+                        <button onClick={() => setMobileScheduling(null)} className="px-2 py-1.5 rounded-sm bg-white/5 text-gray-400 text-xs">Cancel</button>
                       </div>
                     </div>
                   ) : (
                     <div className="flex gap-1.5 mt-2">
-                      <button onClick={() => setMobileScheduling({ id: task.id, title: task.title })} className="flex-1 px-2 py-1.5 rounded bg-white/5 hover:bg-white/10 text-xs text-gray-300 flex items-center justify-center gap-1">
+                      <button onClick={() => setMobileScheduling({ id: task.id, title: task.title })} className="flex-1 px-2 py-1.5 rounded-sm bg-white/5 hover:bg-white/10 text-xs text-gray-300 flex items-center justify-center gap-1">
                         <CalendarIcon size={11} /> Schedule
                       </button>
                       {scope === 'pool' && (
-                        <button onClick={() => claimMutation.mutate(task.id)} className="px-3 py-1.5 rounded bg-primary-500/15 text-primary-400 text-xs flex items-center gap-1">
+                        <button onClick={() => claimMutation.mutate(task.id)} className="px-3 py-1.5 rounded-sm bg-primary-500/15 text-primary-400 text-xs flex items-center gap-1">
                           <Hand size={11} /> Claim
                         </button>
                       )}
@@ -570,7 +570,7 @@ function BacklogCardChip({ task, scope, onClaim }: {
         e.dataTransfer.setData('sourceDate', '')
       }}
       className={[
-        'group flex-shrink-0 w-[160px] bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 hover:border-white/20 rounded-md px-2 py-1.5 cursor-move transition border-l-2',
+        'group shrink-0 w-[160px] bg-white/4 hover:bg-white/8 border border-white/10 hover:border-white/20 rounded-md px-2 py-1.5 cursor-move transition border-l-2',
         accent,
       ].join(' ')}
       title={task.title + (task.task_group ? ` · ${task.task_group}` : '')}
@@ -579,10 +579,10 @@ function BacklogCardChip({ task, scope, onClaim }: {
         <div className="flex-1 min-w-0">
           <div className="text-[11px] font-medium text-white leading-tight truncate">{task.title}</div>
           <div className="flex items-center gap-1.5 mt-0.5 text-[9px] text-gray-500">
-            {task.task_group && <span className="px-1 rounded bg-white/5 text-gray-400 truncate max-w-[60px]">{task.task_group}</span>}
+            {task.task_group && <span className="px-1 rounded-sm bg-white/5 text-gray-400 truncate max-w-[60px]">{task.task_group}</span>}
             {task.priority === 'high' && <span className="flex items-center gap-0.5 text-red-400"><Flag size={8} />high</span>}
             {task.duration_minutes && <span className="text-gray-500 tabular-nums">{task.duration_minutes}m</span>}
-            {(() => { const b = horizonBadge(task); return b ? <span className={'px-1 rounded ' + (b.over ? 'bg-red-500/20 text-red-300' : 'bg-blue-500/15 text-blue-300')}>{b.label}</span> : null })()}
+            {(() => { const b = horizonBadge(task); return b ? <span className={'px-1 rounded-sm ' + (b.over ? 'bg-red-500/20 text-red-300' : 'bg-blue-500/15 text-blue-300')}>{b.label}</span> : null })()}
           </div>
         </div>
         {/* Pool cards expose a tiny claim affordance on hover; mine
@@ -590,7 +590,7 @@ function BacklogCardChip({ task, scope, onClaim }: {
         {scope === 'pool' && (
           <button
             onClick={(e) => { e.stopPropagation(); onClaim() }}
-            className="opacity-0 group-hover:opacity-100 transition w-5 h-5 rounded bg-primary-500/15 hover:bg-primary-500/25 text-primary-400 flex items-center justify-center flex-shrink-0"
+            className="opacity-0 group-hover:opacity-100 transition w-5 h-5 rounded-sm bg-primary-500/15 hover:bg-primary-500/25 text-primary-400 flex items-center justify-center shrink-0"
             title="Claim into my bucket"
           >
             <Hand size={9} />
