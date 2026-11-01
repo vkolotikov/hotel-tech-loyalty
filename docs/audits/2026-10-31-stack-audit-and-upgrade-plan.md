@@ -470,9 +470,12 @@ checks. Laravel 13 keeps security fixes until about March 2028, so there is no p
     0 in production packages. Seven SPA pages give identical screenshots.
   - Record and how to run the tests: that repository's `docs/2026-11-01-security-update.md`.
   - **Owner (1 Nov):** `hotel-tech-saas` deploys from `main` on Laravel Cloud and runs PHP 8.5; `saas-app` is unused
-    (its remaining steps are dropped; phase 6 now means `hotel-tech-saas`). The tests also pass on PHP 8.5.12. The
-    update reaches production by fast-forwarding that repository's `main` to the branch, which waits for the owner's
-    go-ahead. After it: CI for `hotel-tech-saas`, then Symfony 8 there (PHP 8.5 allows it; the loyalty platform
+    (its remaining steps are dropped; phase 6 now means `hotel-tech-saas`). The tests also pass on PHP 8.5.12. **Deployed
+    1 Nov** on the owner's go-ahead: that repository's `main` fast-forwarded `ff38311` → **`9c179fa`** (the tested
+    branch tip). Verified by content on `origin/main`: the 7 paths, Laravel 13.39.0, React Router 7.18.5, the new
+    bundle in `public/spa` and the old one gone, `composer audit` 0 and production npm audit 0 on its lock. The live
+    site cannot be reached from the cloud session: the owner checks Laravel Cloud's deploy and the loyalty sign-in.
+    After it: CI for `hotel-tech-saas`, then Symfony 8 there (PHP 8.5 allows it; the loyalty platform
     already runs it), then stripe-php in Stripe test mode.
 
 ---
