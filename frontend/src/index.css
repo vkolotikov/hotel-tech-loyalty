@@ -108,6 +108,25 @@
   }
 }
 
+/* Gradients blend as in v3 (owner, 2026-11-01). v3 wrote a plain
+   linear-gradient() of sRGB colours, which browsers blend in sRGB; v4's
+   direction utilities ask for oklab (`to right in oklab`), whose midpoints
+   are lighter and more saturated, and its colours with an opacity are
+   color-mix() results, which the browser would blend in oklab even without
+   the keyword. Each direction gets the `/srgb` modifier's value, behind the
+   same @supports test as v4's own rule, so it follows that rule and wins; a
+   browser without interpolation methods keeps v4's plain fallback, sRGB.
+   An explicit modifier (bg-linear-to-r/oklch) is a different class and keeps
+   its own blend. */
+@utility bg-linear-to-t { @supports (background-image: linear-gradient(in lab, red, red)) { --tw-gradient-position: to top in srgb; } }
+@utility bg-linear-to-tr { @supports (background-image: linear-gradient(in lab, red, red)) { --tw-gradient-position: to top right in srgb; } }
+@utility bg-linear-to-r { @supports (background-image: linear-gradient(in lab, red, red)) { --tw-gradient-position: to right in srgb; } }
+@utility bg-linear-to-br { @supports (background-image: linear-gradient(in lab, red, red)) { --tw-gradient-position: to bottom right in srgb; } }
+@utility bg-linear-to-b { @supports (background-image: linear-gradient(in lab, red, red)) { --tw-gradient-position: to bottom in srgb; } }
+@utility bg-linear-to-bl { @supports (background-image: linear-gradient(in lab, red, red)) { --tw-gradient-position: to bottom left in srgb; } }
+@utility bg-linear-to-l { @supports (background-image: linear-gradient(in lab, red, red)) { --tw-gradient-position: to left in srgb; } }
+@utility bg-linear-to-tl { @supports (background-image: linear-gradient(in lab, red, red)) { --tw-gradient-position: to top left in srgb; } }
+
 @layer base {
   /* Default border colour: gray-200 in v3, currentcolor in v4. */
   *,

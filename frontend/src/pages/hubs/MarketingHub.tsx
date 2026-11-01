@@ -194,7 +194,7 @@ function Tile({ tile, onClick, onPreload }: { tile: TileDef; onClick: () => void
       </div>
 
       <div className="relative mt-auto">
-        <h3 className="text-base sm:text-lg font-bold text-white leading-tight">{tile.label}</h3>
+        <h3 className="text-base sm:text-lg font-bold text-white leading-tight sm:leading-7">{tile.label}</h3>
         <p className="text-xs text-t-secondary mt-1 line-clamp-2 leading-relaxed">{tile.desc}</p>
       </div>
     </button>

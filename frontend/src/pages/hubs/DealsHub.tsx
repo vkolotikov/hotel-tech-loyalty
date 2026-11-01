@@ -318,7 +318,7 @@ function DealTile({
       </div>
 
       <div className="relative mt-auto">
-        <h3 className={`text-sm sm:text-base font-bold leading-tight ${quiet ? 'text-gray-400' : 'text-white'}`}>{tile.label}</h3>
+        <h3 className={`text-sm sm:text-base font-bold leading-tight sm:leading-6 ${quiet ? 'text-gray-400' : 'text-white'}`}>{tile.label}</h3>
         <p className={`text-xs mt-1 line-clamp-2 leading-relaxed ${quiet ? 'text-gray-600' : 'text-t-secondary'}`}>
           {tile.desc}
         </p>

@@ -213,7 +213,7 @@ function Tile({ tile, label, desc, onClick }: { tile: TileDef; label: string; de
       </div>
 
       <div className="relative mt-auto">
-        <h3 className="text-sm sm:text-base font-bold text-white leading-tight">{label}</h3>
+        <h3 className="text-sm sm:text-base font-bold text-white leading-tight sm:leading-6">{label}</h3>
         <p className="text-xs text-t-secondary mt-1 line-clamp-2 leading-relaxed">{desc}</p>
       </div>
     </button>

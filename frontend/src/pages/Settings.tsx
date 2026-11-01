@@ -2863,7 +2863,7 @@ export function Settings() {
                       </div>
 
                       <div className="relative mt-auto">
-                        <h3 className="text-sm sm:text-base font-bold text-white leading-tight">
+                        <h3 className="text-sm sm:text-base font-bold text-white leading-tight sm:leading-6">
                           {tile.id === 'booking' && useNeutralBookingCopy
                             ? bookingTabCopy.label
                             : (vocab(tile.label) ?? t(`settings.tabs.${tile.id}`, tile.label))}

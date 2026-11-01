@@ -49,7 +49,7 @@ export function SectionCards<T extends string>({ label, idPrefix, panelId, items
               <span className={`flex flex-wrap items-center gap-x-2 gap-y-0.5 font-semibold leading-tight ${on ? 'l-hue-text' : 'text-a-text'}`}>
                 <span>{title}</span>{badge}
               </span>
-              <span className="mt-0.5 block text-xs leading-snug text-a-text-2 sm:text-sm">{caption}</span>
+              <span className="mt-0.5 block text-xs leading-snug text-a-text-2 sm:text-sm sm:leading-5">{caption}</span>
             </span>
           </button>
         )
