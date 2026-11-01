@@ -469,8 +469,11 @@ checks. Laravel 13 keeps security fixes until about March 2028, so there is no p
     commonmark 2.10.7); React Router 7.18.5; `public/spa` rebuilt (only the router code differs). Both audits now
     0 in production packages. Seven SPA pages give identical screenshots.
   - Record and how to run the tests: that repository's `docs/2026-11-01-security-update.md`.
-  - **Owner:** how `hotel-tech-saas` is deployed and which PHP it runs. Merge and deploy that branch the usual way:
-    no migration, no configuration change.
+  - **Owner (1 Nov):** `hotel-tech-saas` deploys from `main` on Laravel Cloud and runs PHP 8.5; `saas-app` is unused
+    (its remaining steps are dropped; phase 6 now means `hotel-tech-saas`). The tests also pass on PHP 8.5.12. The
+    update reaches production by fast-forwarding that repository's `main` to the branch, which waits for the owner's
+    go-ahead. After it: CI for `hotel-tech-saas`, then Symfony 8 there (PHP 8.5 allows it; the loyalty platform
+    already runs it), then stripe-php in Stripe test mode.
 
 ---
 

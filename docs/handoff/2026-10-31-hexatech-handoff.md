@@ -88,7 +88,7 @@ Plan and progress: `docs/audits/2026-10-31-stack-audit-and-upgrade-plan.md` (§6
 - 1 Nov: **the live SaaS is `vkolotikov/hotel-tech-saas`**, not `saas-app` (this app calls its `billing/*`,
   `tools/bootstrap` and `auth/service-*` routes). Its security update (41 PHP advisories, 1 critical, 14 high → 0;
   React Router patched) is on its branch `claude/stack-audit-upgrade-plan-9hdkkv` with new contract tests, **not
-  deployed**: the owner says how it deploys and which PHP it runs. Plan §8.
+  deployed yet**. Owner: it deploys from `main` on Laravel Cloud, runs PHP 8.5, and `saas-app` is unused. Plan §8.
 
 ## Cloud container notes (Linux)
 
