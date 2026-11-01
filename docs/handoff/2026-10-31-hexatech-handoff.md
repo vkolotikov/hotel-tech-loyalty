@@ -85,6 +85,11 @@ Plan and progress: `docs/audits/2026-10-31-stack-audit-and-upgrade-plan.md` (§6
   (needs test-mode keys), the chat
   widget's raw Anthropic calls (owner's temperature decision), the workstation's PHP 8.4.20 → 8.5.12.
 
+- 1 Nov: **the live SaaS is `vkolotikov/hotel-tech-saas`**, not `saas-app` (this app calls its `billing/*`,
+  `tools/bootstrap` and `auth/service-*` routes). Its security update (41 PHP advisories, 1 critical, 14 high → 0;
+  React Router patched) is on its branch `claude/stack-audit-upgrade-plan-9hdkkv` with new contract tests, **not
+  deployed**: the owner says how it deploys and which PHP it runs. Plan §8.
+
 ## Cloud container notes (Linux)
 
 - Expo commands need `EXPO_OFFLINE=1` (the proxy blocks `api.expo.dev`; `docs.expo.dev` is blocked too, so read
@@ -97,4 +102,7 @@ Plan and progress: `docs/audits/2026-10-31-stack-audit-and-upgrade-plan.md` (§6
   Ubuntu's `-dev` packages, `--with-webp` included (image tests need it). Composer then fell back to git clones
   (api.github.com is scoped to this session's repositories), so delete `vendor/*/*/.git` afterwards. Never run
   Composer in the main tree while a worktree shares `vendor` by hard links: it rewrites the shared autoload files.
-  The disk allowance is small; a full `vendor` copy plus build trees filled it once.
+  The disk allowance is small; a full `vendor` copy plus build trees filled it once. A fresh `composer install`
+  falls back to full git clones (6 GB for one Laravel app, which filled the disk); instead pre-fill Composer's cache
+  with each locked commit fetched shallow (`git fetch --depth 1 origin <sha>`, `git archive` as a zip into
+  `~/.cache/composer/files/<package>/<sha1 of the dist URL>.zip`), then install normally: 109 packages in 15 s.

@@ -446,6 +446,32 @@ checks. Laravel 13 keeps security fixes until about March 2028, so there is no p
 - **Next in phase 5:** Tailwind 4 waits for the owner's decision on old browsers (step 3). Node 24 for the build
   (step 4) is a Laravel Cloud setting, and CI already runs the SPA on Node 24.
 
+
+### 1 November 2026: the live SaaS is `hotel-tech-saas`, and its security update (owner: "do next")
+
+- **Correction to §3.5 and phase 6.** This app's SaaS client (`SAAS_API_URL`, default `https://saas.hotel-tech.ai/api`)
+  calls `billing/plans`, `billing/subscribe`, `billing/subscriptions`, `billing/portal`, `billing/change-plan`,
+  `billing/activate`, `tools/bootstrap`, `auth/register`, `auth/token`, `auth/service-token` and
+  `auth/service-lookup`. The Next.js `saas-app` audited on 31 October has none of the `billing/*`, `tools/bootstrap`
+  or `auth/service-*` routes. They live in **`vkolotikov/hotel-tech-saas`** (Laravel 13 with a React SPA), which
+  replaced `saas-app` and keeps its token shape. So `hotel-tech-saas` is the SaaS in production, and `saas-app` looks
+  unused (its plan records two sign-in gate bugs found on the way; its step 2 is paused). **Owner to confirm.**
+- **`hotel-tech-saas` security update**, branch `claude/stack-audit-upgrade-plan-9hdkkv` in that repository, **not
+  deployed**:
+  - Found: `composer audit` 41 advisories (1 critical, 14 high) on Laravel 13.2.0, Symfony 7.4.7, Guzzle 7.10,
+    league/commonmark 2.8 and others. The critical one (Laravel's token guard) does not apply, because the app has no
+    token guard. A Symfony ReDoS reachable through any request's `Cache-Control` header, CRLF injection in the
+    `email` rule and in `Mime\Address`, and commonmark's DoS issues do. The SPA had 2 high (React Router 7.13.2).
+  - Contract tests first: `tests/Feature/LoyaltyContractTest.php` pins what this app relies on (the sign-in token's
+    exact claims, the HMAC-signed service endpoints, bootstrap, verify, me, token refusal, plans, the webhook's
+    refusal of unsigned calls). PostgreSQL only. They pass before and after.
+  - Update: 80 PHP packages within their majors, for PHP 8.3 and newer (Laravel 13.39, Symfony 7.4.22, Guzzle 7.16,
+    commonmark 2.10.7); React Router 7.18.5; `public/spa` rebuilt (only the router code differs). Both audits now
+    0 in production packages. Seven SPA pages give identical screenshots.
+  - Record and how to run the tests: that repository's `docs/2026-11-01-security-update.md`.
+  - **Owner:** how `hotel-tech-saas` is deployed and which PHP it runs. Merge and deploy that branch the usual way:
+    no migration, no configuration change.
+
 ---
 
 ## 9. Sources
