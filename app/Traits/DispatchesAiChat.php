@@ -300,6 +300,9 @@ trait DispatchesAiChat
         if (\App\Services\Ai\AnthropicSdk::takesEffort($model)) {
             $params['outputConfig'] = ['effort' => self::CLAUDE_CHAT_EFFORT];
         }
+        if ($thinking = \App\Services\Ai\AnthropicSdk::chatThinking($model)) {
+            $params['thinking'] = $thinking;
+        }
 
         return $this->withRetry(
             fn () => $this->anthropicAttempt($client, $params, $model, $feature),

@@ -54,6 +54,30 @@ final class AnthropicSdk
     }
 
     /**
+     * Thinking for a chat reply: off wherever the model allows it, so a guest gets the fastest answer and the venue's
+     * max-tokens setting is spent on the reply itself, not on reasoning. Haiku 5.x, Sonnet 5 and Opus 5 accept
+     * `disabled` at effort `high` or below (chat sends `low`); Sonnet 5.5 refuses `disabled` and turns thinking off
+     * with `between_tools` instead. Opus 5.5 and Fable cannot switch it off (they keep adaptive thinking at low
+     * effort), and the 4.x models do not think unless asked: for all of those nothing is sent.
+     *
+     * @return array{type: string}|null
+     */
+    public static function chatThinking(string $model): ?array
+    {
+        if (preg_match('/^claude-haiku-5(?:-\d{1,2})?(?=-|$)/', $model)) {
+            return ['type' => 'disabled'];
+        }
+        if (preg_match('/^claude-sonnet-5-5(?=-|$)/', $model)) {
+            return ['type' => 'between_tools'];
+        }
+        if (preg_match('/^claude-(?:sonnet|opus)-5(?=-\d{8}|$)/', $model)) {
+            return ['type' => 'disabled'];
+        }
+
+        return null;
+    }
+
+    /**
      * The reply's text. A model that thinks puts a thinking block first, so
      * this joins the text blocks rather than reading the first block.
      */

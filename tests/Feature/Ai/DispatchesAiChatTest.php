@@ -66,8 +66,9 @@ class DispatchesAiChatTest extends TestCase
             $this->assertSame(512, $body['max_tokens']);
             $this->assertSame('You are the concierge.', $body['system']);
             $this->assertSame([['role' => 'user', 'content' => 'Is breakfast included?']], $body['messages']);
-            $this->assertSame([], array_values(array_intersect(['temperature', 'top_p', 'top_k', 'thinking'], array_keys($body))));
+            $this->assertSame([], array_values(array_intersect(['temperature', 'top_p', 'top_k'], array_keys($body))));
             $this->assertSame(['effort' => 'low'], $body['output_config']);
+            $this->assertSame(['type' => 'disabled'], $body['thinking']);
 
             return Http::response($this->claudeMessage([['type' => 'text', 'text' => 'Yes, from 7 to 10.']]));
         });
@@ -95,6 +96,37 @@ class DispatchesAiChatTest extends TestCase
         });
 
         $this->assertSame('Hello', $this->dispatcher()->chat('anthropic', 'sys', [['role' => 'user', 'content' => 'Hi']], $model, 0.7, 300));
+    }
+
+    #[DataProvider('thinkingModels')]
+    public function test_chat_turns_thinking_off_wherever_the_model_allows_it(string $model, ?array $thinking): void
+    {
+        $this->assertSame($thinking, AnthropicSdk::chatThinking($model));
+
+        Http::fake(function (Request $request) use ($model, $thinking) {
+            $body = $request->data();
+            $this->assertSame($model, $body['model']);
+            $this->assertSame($thinking, $body['thinking'] ?? null);
+
+            return Http::response($this->claudeMessage([['type' => 'text', 'text' => 'Hello']]));
+        });
+
+        $this->assertSame('Hello', $this->dispatcher()->chat('anthropic', 'sys', [['role' => 'user', 'content' => 'Hi']], $model, 0.7, 300));
+    }
+
+    public static function thinkingModels(): array
+    {
+        return [
+            'Haiku 5.5: disabled'          => ['claude-haiku-5-5', ['type' => 'disabled']],
+            'Sonnet 5.5: between_tools'    => ['claude-sonnet-5-5', ['type' => 'between_tools']],
+            'Sonnet 5: disabled'           => ['claude-sonnet-5', ['type' => 'disabled']],
+            'Opus 5: disabled'             => ['claude-opus-5', ['type' => 'disabled']],
+            'Opus 5.5: cannot turn it off' => ['claude-opus-5-5', null],
+            'Fable 5.1: always thinks'     => ['claude-fable-5-1', null],
+            'saved Opus 4.6: none sent'    => ['claude-opus-4-6', null],
+            'saved Haiku 4.5: none sent'   => ['claude-haiku-4-5-20251001', null],
+            'dated Sonnet 4: none sent'    => ['claude-sonnet-4-20250514', null],
+        ];
     }
 
     public static function effortModels(): array
