@@ -237,6 +237,9 @@ class NotificationServiceSendTest extends TestCase
 
     public function test_DB_row_carries_type_title_body_data_channel_and_is_marked_sent(): void
     {
+        // sent_at is compared to the second below: without a frozen clock the test failed whenever a second ticked
+        // between the write and the assertion (CI, 1 Nov 2026).
+        $this->freezeTime();
         $member = $this->pushyMember();
         $payload = [
             'type'  => 'reward_nudge',
