@@ -1,5 +1,4 @@
-import colors from 'tailwindcss/colors'
-import plugin from 'tailwindcss/plugin'
+import colors from './src/theme/tailwind3Palette.ts'
 import {
   COLOURED_TEXT_SHADES, GLASS_SCOPE, GREY_HUES, SHIFTED_HUES,
 } from './src/theme/glassTokens.ts'
@@ -67,6 +66,9 @@ export default {
   theme: {
     extend: {
       colors: {
+        // Tailwind 3's palette, pinned (Tailwind 4's default palette is a new
+        // one in oklch): bg-red-500 and friends keep their v3 colours.
+        ...colors,
         // Fills (bg-, border-, ring-) keep the brand's own shades in every
         // style; text-primary-* is in textColor below.
         primary: primaryFill,
@@ -227,7 +229,9 @@ export default {
   },
   plugins: [
     // The Glass variable blocks, generated from src/theme/glassTokens.ts.
-    plugin(({ addBase }) => {
+    // Plugin objects written out ({ handler }, what tailwindcss/plugin returns in v3 and v4),
+    // so the config imports nothing from tailwindcss.
+    { handler: ({ addBase }) => {
       addBase({
         [GLASS_SCOPE]: glassVariables(),
         '@media (prefers-reduced-transparency: reduce)': { [GLASS_SCOPE]: glassSolidVariables() },
@@ -235,10 +239,10 @@ export default {
           [GLASS_SCOPE]: glassSolidVariables(),
         },
       })
-    }),
+    } },
     // The Clean light variable block, generated from src/theme/lightTokens.ts.
-    plugin(({ addBase }) => {
+    { handler: ({ addBase }) => {
       addBase({ [LIGHT_SCOPE]: lightVariables() })
-    }),
+    } },
   ],
 }

@@ -1,4 +1,4 @@
-import colors from 'tailwindcss/colors'
+import colors from './tailwind3Palette'
 import { SHADES, hexToRgb, toTriplet } from './colour'
 import { COLOURED_TEXT_SHADES, GREY_HUES, SHIFTED_HUES } from './glassTokens'
 import { HX_FILL, HX_TEXT } from './hxColours'
