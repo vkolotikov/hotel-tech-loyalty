@@ -487,6 +487,44 @@ checks. Laravel 13 keeps security fixes until about March 2028, so there is no p
     `&& cp -r dist ../public/spa` from the Cloud build command (`build:prod` already syncs `public/spa`). Then:
     stripe-php in Stripe test mode.
 
+### 1 November 2026: the owner's answers; permission tables, PHP 8.5, chat widget models
+
+Owner, 1 Nov: Tailwind 4 may drop old browsers; drop the empty permission tables; the workstation runs PHP 8.5; the
+ChatGPT connection works; the chat widget should offer fewer, current models that are fast and good at conversation.
+
+- **Permission tables dropped and PHP 8.5 everywhere** (deployed, production `eb52525`): see `docs/loyalty-workspace.md`
+  "Deploying". `composer.json` now requires PHP `^8.5`; CI runs 8.5 only.
+- **Chat widget models** (`frontend/src/lib/aiModels.ts`, the one list the "Behavior & Model" tab reads):
+  - OpenAI: GPT-5.6 Terra (recommended, default), GPT-5.6 Luna (fastest, cheapest), GPT-5.5 (most capable, slower).
+    OpenAI retires `gpt-5-mini` and `gpt-5-nano` on 11 Dec 2026 (replacements Terra and Luna).
+  - Claude: Claude Haiku 5.5 (recommended, default; $0.10 / $0.50 per million tokens) and Claude Sonnet 5.5.
+  - Gemini: Gemini 3.5 Flash-Lite only. The Gemini 2.5 models the list offered were retired on 20 Oct 2026, so a venue
+    still set to one of them is failing today and should switch.
+  - Removed from the list: GPT-5.4 Pro/5.4/5/5 Mini/5 Nano, GPT-4.1 (3), GPT-4o (2), o3, o4-mini, Claude Opus 4.6,
+    Sonnet 4.6, Haiku 4.5, and the Gemini 2.5 models. **A venue's saved model is never changed:** the page shows it as
+    "older model, still works; consider switching", and the server sends it as before.
+- **Temperature:** every current Claude model refuses a non-default temperature, and Claude API version 2026-10-21
+  refuses it on every model, so Claude never gets it now; Gemini 3 neither (Google advises its default). The page says
+  so instead of showing the slider; the stored value is kept. OpenAI is unchanged (GPT-5.x takes it only at reasoning
+  effort "none").
+- **Claude calls** (chat widget, the model check, the API-key check, the CRM diagnosis) go through the official SDK on
+  API version 2026-10-21. Chat replies use effort `low` and thinking off wherever the model allows it (Haiku 5.5:
+  disabled; Sonnet 5.5: between tools), so a guest gets the fastest reply and the venue's max-tokens setting is spent
+  on the reply. The admin's "test model" button now asks Anthropic's Models API (no tokens spent) and reports active,
+  deprecated (with the date) or retired.
+- **Checked:** PHP tests for the new requests (version, Bearer key, no sampling settings, effort and thinking per
+  model, thinking blocks skipped, refusal and empty replies as failures, retries), all AI, chatbot, widget, settings
+  and CRM tests, the frontend suite, the page in Chromium (new default, an older saved model, OpenAI), and one real
+  request through the new transport to a local stand-in for the API. **Not checked live:** no real API call was made
+  from here; press the model check ("test") button once per provider after the deploy.
+- **Left as they are (other model lists):** the voice agent (`gpt-realtime-1.5`), images (`gpt-image-1`), the
+  Content Planner (`claude-sonnet-5`), the Training page's fine-tuning bases, and the Settings page's model lists,
+  which nothing reads at runtime (the real values are `OPENAI_MODEL`, default `gpt-4o`, and `ANTHROPIC_MODEL`,
+  default `claude-sonnet-5`). `CrmAiService` still calls Claude directly on API version 2023-06-01 (no sampling
+  settings; its tool loop would need rebuilding for the SDK).
+- **Tailwind 4:** a trial runs in a separate worktree first (about 8,400 bare `border`, 1,230 `space-*`, 660 `ring`
+  and 390 `outline-none` uses change meaning in v4); its result decides how the move is released.
+
 ---
 
 ## 9. Sources

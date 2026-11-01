@@ -863,6 +863,16 @@ files on disk): run them one after the other.
 
 ## Deploying
 
+- Empty permission tables dropped, PHP 8.5 everywhere (owner's decisions, 2026-11-01): production **eb52525** on
+  **38b0f24**, feature source **b333c82** on `claude/stack-audit-upgrade-plan-9hdkkv`. 11 paths (2 added, 9 changed,
+  none deleted): migration `2026_11_01_100000_drop_unused_permission_tables` (drops `roles`, `permissions`,
+  `model_has_roles`, `model_has_permissions`, `role_has_permissions`; refuses if any holds a row; `down()` rebuilds
+  them, schema identical on PostgreSQL), `composer.json` `php ^8.5` (lock: platform and hash only), CI and the test
+  scripts on 8.5, CLAUDE.md naming the WAMP 8.5 build, and the hotel-tech-saas records. Parity: every listed file and
+  the whole source equal the tip. Artifact: PHP 8.5.12, **78 scopes, 7,256 passed / 16 skipped / 0 failed**; frontend
+  tsc, **5,780 tests / 399 files**; fresh build identical to main's. CI on the tip green (8 jobs). Verified by content
+  on `origin/main` (11/11). The next source delta starts at **b333c82**.
+
 - Permissions package removed, SPA on TypeScript 6 and lucide-react 1.66 (stack plan, after 4f; phase 5 steps 1 and
   2), 2026-10-31: production **38b0f24** (source patch **2166918** plus the SPA build) on **b7dfa6a**, feature source
   **85e80c5** on `claude/stack-audit-upgrade-plan-9hdkkv`. 12 paths (1 added, 10 changed, 1 deleted:

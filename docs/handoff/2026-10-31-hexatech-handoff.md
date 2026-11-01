@@ -6,7 +6,8 @@ environment). AGENTS.md and CLAUDE.md still apply.
 
 ## Production
 
-Latest: **38b0f24** (31 Oct night: permissions package removed, its tables kept; SPA on TypeScript 6 and lucide-react
+Latest: **eb52525** (1 Nov: the empty permission tables dropped; PHP 8.5 everywhere, `composer.json` `^8.5`; next
+source-patch baseline **b333c82**). Before it, **38b0f24** (31 Oct night: permissions package removed, its tables kept; SPA on TypeScript 6 and lucide-react
 1.66; next source-patch baseline **85e80c5**). Before it, **b7dfa6a** (permissions package 8 and the planner manager
 release fix, phase 4f). Before it, **ebe5c4f** (library upgrades, phase 4a-4e). Before it, **c46e8da** (31 Oct, stack upgrade phases 0 and 1: CI, static analysis, test tooling, build-tool security,
 `media:verify-version --version-id`, no `dall-e-3` fallback; record in `docs/loyalty-workspace.md` "Deploying"; the
