@@ -46,6 +46,9 @@ class AiUsageService
      */
     public const MODEL_PRICING = [
         // Anthropic Claude (chat completions)
+        'claude-haiku-5-5'               => ['input' => 0.10,  'output' => 0.50],
+        'claude-sonnet-5-5'              => ['input' => 2.00,  'output' => 10.00],
+        'claude-opus-5-5'                => ['input' => 4.00,  'output' => 20.00],
         'claude-opus-4-7'                => ['input' => 15.00, 'output' => 75.00],
         'claude-opus-4-7[1m]'            => ['input' => 30.00, 'output' => 150.00], // 1M context tier
         'claude-opus-4-6'                => ['input' => 15.00, 'output' => 75.00],
@@ -63,6 +66,13 @@ class AiUsageService
         'gpt-4.1-nano'                   => ['input' => 0.10,  'output' => 0.40],
         'gpt-5'                          => ['input' => 5.00,  'output' => 20.00],
         'gpt-5-mini'                     => ['input' => 0.50,  'output' => 2.00],
+        'gpt-5.6-terra'                  => ['input' => 2.00,  'output' => 12.00],
+        'gpt-5.6-luna'                   => ['input' => 0.20,  'output' => 1.20],
+        // Google Gemini (chat). ESTIMATE, not Google's published price: the
+        // rate for gemini-3.5-flash-lite was not confirmed when it was added
+        // (2026-11-01). Set at Gemini 3 Flash-class rates so a venue's spend
+        // reads high rather than low; replace with the published price.
+        'gemini-3.5-flash-lite'          => ['input' => 0.50,  'output' => 3.00],
         // OpenAI Realtime (voice agent) — audio token rates from the GA
         // pricing page. Realtime billing reports input_audio_tokens +
         // output_audio_tokens via the response.done event; recordUsage()
