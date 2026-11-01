@@ -15,13 +15,13 @@
 #               included: besides shared traits it holds IndexesResourceTest (18 tests), which test-pg.sh leaves out.
 #
 # Environment:
-#   PHP     the PHP binary (default php8.4; CLAUDE.md names the pinned one on the Windows workstation)
+#   PHP     the PHP binary (default php8.5; CLAUDE.md names the pinned one on the Windows workstation)
 #   SHARD   optional "<index>/<count>", e.g. 1/2: run only every <count>-th path starting at <index> (CI splits the
 #           suite this way; together the shards run every path exactly once)
 
 set -u
 
-PHP="${PHP:-php8.4}"
+PHP="${PHP:-php8.5}"
 export COLUMNS=220   # full test names in the FAILED lines
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT" || exit 2

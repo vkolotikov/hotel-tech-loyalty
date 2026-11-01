@@ -11,8 +11,9 @@ or add the next dated one, at the end of a session.
 
 ## Environment (hard rules, each one has bitten before)
 
-- PHP: always `/c/wamp64/bin/php/php8.4.20/php.exe`. The `php` on PATH is 8.3 and silently breaks JSON
-  request bodies in tests.
+- PHP: always the PHP 8.5 build in WAMP, `/c/wamp64/bin/php/php8.5.<patch>/php.exe` (owner 2026-11-01: the
+  workstation runs 8.5, like production; `ls /c/wamp64/bin/php` names the folder; 8.5.12 or newer). The `php` on PATH
+  is 8.3 and silently breaks JSON request bodies in tests.
 - NEVER run a bare `php artisan test` — it segfaults. Scope every run:
   `artisan test tests/Feature/Landing/`, `tests/Unit/Landing/`, `tests/Unit/Support/` (and the other suites
   by directory). Run in the foreground and read the `Tests:` summary line yourself.
@@ -26,7 +27,7 @@ or add the next dated one, at the end of a session.
 - Disk on `C:` fills up fast from other tools on this machine; report `ENOSPC` instead of deleting things.
 - Never junction `vendor` into a git worktree (PHPUnit then tests the wrong tree); remove junctions with
   `cmd /c rmdir` before `git worktree remove`.
-- On a Linux machine (Claude Code on the web) the same rules hold with `php8.4` as the pinned PHP, `cp -al` for
+- On a Linux machine (Claude Code on the web) the same rules hold with `php8.5` as the pinned PHP, `cp -al` for
   `vendor` in a deploy worktree, and a local PostgreSQL for the `scripts/test-pg.sh` checks; set-up in the handoff.
 
 ## Git and deploy

@@ -22,7 +22,7 @@
 # leave it as they found it):
 #   createdb -O <database owner> hexa_test
 #   DB_CONNECTION=pgsql DB_DATABASE=hexa_test php artisan migrate --force    (with DB_HOST etc. exported)
-# The runs use the PHP binary in $PHP (default php8.4). With JUNIT_DIR set, each run also writes a JUnit report there
+# The runs use the PHP binary in $PHP (default php8.5). With JUNIT_DIR set, each run also writes a JUnit report there
 # (CI compares the failures with tests/pgsql-known-failures.txt through scripts/pg-known-failures.py).
 # or keep one such database untouched as a template and copy it for each run:
 #   createdb -O <database owner> -T <template database> hexa_test
@@ -46,7 +46,7 @@ for v in DB_HOST DB_USERNAME; do
   fi
 done
 
-PHP="${PHP:-php8.4}"
+PHP="${PHP:-php8.5}"
 export COLUMNS=220   # full test names in the FAILED lines
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT" || exit 2
