@@ -475,8 +475,13 @@ checks. Laravel 13 keeps security fixes until about March 2028, so there is no p
     branch tip). Verified by content on `origin/main`: the 7 paths, Laravel 13.39.0, React Router 7.18.5, the new
     bundle in `public/spa` and the old one gone, `composer audit` 0 and production npm audit 0 on its lock. The live
     site cannot be reached from the cloud session: the owner checks Laravel Cloud's deploy and the loyalty sign-in.
-    After it: CI for `hotel-tech-saas`, then Symfony 8 there (PHP 8.5 allows it; the loyalty platform
-    already runs it), then stripe-php in Stripe test mode.
+    The owner confirmed both applications work and sign in after it.
+  - **Second step, on the same branch (`eef4275`), waiting for the owner's go-ahead to deploy:** CI for
+    `hotel-tech-saas` (audits; PHP 8.5 with the tests on PostgreSQL 18 and SQLite; the SPA on Node 22 and 24, lint
+    against a baseline), green; the SPA on ESLint 10 (Cloud's build warned ESLint 9 is deprecated) and TypeScript 6,
+    which also found a real bug (the dashboard's hook order for a super admin; fixed); Symfony 7.4 → 8.1 with
+    `php ^8.4` (only the 16 Symfony components change). Record: that repository's
+    `docs/2026-11-01-security-update.md`. Then: stripe-php in Stripe test mode.
 
 ---
 

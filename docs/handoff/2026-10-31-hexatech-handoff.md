@@ -89,7 +89,8 @@ Plan and progress: `docs/audits/2026-10-31-stack-audit-and-upgrade-plan.md` (§6
   `tools/bootstrap` and `auth/service-*` routes). Its security update (41 PHP advisories, 1 critical, 14 high → 0;
   React Router patched) is on its branch `claude/stack-audit-upgrade-plan-9hdkkv` with new contract tests, **deployed 1 Nov**
   (`hotel-tech-saas` `main` = `9c179fa`; it deploys from `main` on Laravel Cloud and runs PHP 8.5). `saas-app` is
-  unused (owner). Next there: CI, then Symfony 8. Plan §8.
+  unused (owner). Its second step (CI, ESLint 10 and TypeScript 6 with a dashboard hook-order fix, Symfony 8.1)
+  is on the same branch at `eef4275`, CI green, waiting for the owner's go-ahead to deploy. Plan §8.
 
 ## Cloud container notes (Linux)
 
