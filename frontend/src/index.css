@@ -180,6 +180,22 @@
     background-color: revert-layer;
     border-radius: revert-layer;
   }
+  /* v4 gives form controls `font: inherit`, which also resets what v3 left to
+     the browser: Safari draws date and time fields in tabular figures, and
+     without them they read "11 / 01 / 2026". v3's longhands, exactly. */
+  button,
+  input,
+  select,
+  optgroup,
+  textarea {
+    font: revert-layer;
+    font-family: inherit;
+    font-feature-settings: inherit;
+    font-variation-settings: inherit;
+    font-size: 100%;
+    font-weight: inherit;
+    line-height: inherit;
+  }
   /* v3 left the file button native (a button look, the page's font). */
   ::file-selector-button {
     all: revert-layer;

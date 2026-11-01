@@ -80,3 +80,28 @@ most `FC_PAGES`), never by resizing the viewport.
 
 Read every difference from the noise run first: a screen that differs between two runs of the same build (relative
 times written by the server, a chart's own animation) differs for the same reason between the builds.
+
+## 6. WebKit (the engine family Safari uses)
+
+Playwright's own WebKit download is refused in the cloud container, but Ubuntu's archive has WebKitGTK and its
+WebDriver: `apt-get install webkit2gtk-driver xvfb` (MiniBrowser comes with it, in
+`/usr/lib/x86_64-linux-gnu/webkit2gtk-4.1/`). `shoot-webkit.mjs` shoots the same screens a Chromium run of
+`shoot.mjs` took (its `run.json`), against the same backend:
+
+    frontend/e2e/full-coverage/webkit-build.sh <build dir> <copy dir>      # once per build
+    frontend/e2e/full-coverage/reset-db.sh reset
+    Xvfb :77 -screen 0 2400x1600x24 -nolisten tcp &
+    node e2e/full-coverage/serve.mjs <copy dir> 5180 &
+    DISPLAY=:77 WK_BASE=http://127.0.0.1:5180 WK_OUT=test-results/wk-before WK_LIST=test-results/fc-before/run.json \
+      FC_STAFF_EMAIL=… FC_STAFF_PASSWORD=… FC_MEMBER_EMAIL=… FC_MEMBER_PASSWORD=… node e2e/full-coverage/shoot-webkit.mjs
+
+Compare two WebKit runs with `visual-compare.mjs` as above, never a WebKit run with a Chromium one. The phone width
+is a 390-wide frame (MiniBrowser's window cannot be that narrow), cut out of the window's capture with Python 3 and
+Pillow. A run of 748 screens takes about 17 minutes with four browsers. Seen in practice:
+
+- A redirect that lands after the page settles (`/guests/:id` to the member's CRM tab) or a loading state can be
+  caught either way. Check the final URL in `run.json` and shoot the screen again before reading anything into it.
+- A one-off black square behind a filtered image (the register page's logo) is a drawing glitch. It does not repeat.
+
+The Tailwind 4 release (1 Nov 2026) found one WebKit-only difference this way that Chromium did not show: date and
+time fields lost their tabular figures (`index.css`, v3's form-control font longhands).

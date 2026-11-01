@@ -554,6 +554,33 @@ ChatGPT connection works; the chat widget should offer fewer, current models tha
     - before/after screenshots of every route on real demo data (seeded PostgreSQL), at 1440 and phone width, in
       every admin style;
     - Firefox and WebKit if they can be installed here.
+  - **Release work done (1 Nov):**
+    - **Harness:** `frontend/e2e/full-coverage/` (README there). It seeds a demo database from every migration
+      and signs in through the real login. It shoots every route of `App.tsx` that has data:
+      - 748 screens and about 1,980 captures per build;
+      - the full admin in Glass, Classic and Clean light;
+      - the workspaces and the portal in light and dark;
+      - the signed-out pages;
+      - 1440 and 390 wide.
+    - **Chromium:** v4 matches v3 within the noise of two v3 runs. Two differences were fixed:
+      - `drop-shadow-lg` had lost its shadow (the sign-in logo);
+      - the content plan's week grid shifted 1px (`divide-x`).
+    - **WebKit** (WebKitGTK 2.52, Ubuntu's `webkit2gtk-driver`, the engine family Safari uses) found one more:
+      date and time fields read "11 / 01 / 2026". v4's base styles give form controls `font: inherit`, which drops
+      WebKit's tabular figures. `index.css` restores v3's longhands. After that fix, WebKit matches v3 except for:
+      - the chips below;
+      - two screens where the capture races a redirect or a loading state in both builds.
+    - **Firefox:** could not be installed here (its downloads are refused). It still needs a look on a real machine.
+    - **Classes that start working in v4** (the code always asked for them, v3 ignored them; same category as
+      `pl-13`, left as v4 draws them):
+      - `bg-primary-500/12`: the chatbot model chips and a few hovers;
+      - `bg-amber-500/12`;
+      - `via-primary-600/8`;
+      - `z-1`.
+    - **Checks:** tsc, the 5,790 frontend tests, lint, the build, and the loyalty browser suite (690 checks) all pass.
+      Main CSS: 437 kB raw (+37%), 52 kB gzip (+26%).
+    - **Found on the way (not Tailwind):** model-bound admin routes answered 404. The fix is in the same deploy (see
+      the handoff).
   - Stripe library upgrades wait for the owner's test keys ("will test later").
 
 ---
