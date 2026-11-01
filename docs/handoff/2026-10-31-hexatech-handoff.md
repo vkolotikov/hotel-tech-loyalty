@@ -6,8 +6,9 @@ environment). AGENTS.md and CLAUDE.md still apply.
 
 ## Production
 
-Latest: **b7dfa6a** (31 Oct night, permissions package 8 and the planner manager release fix, phase 4f; next
-source-patch baseline **e6d1a7f**). Before it, **ebe5c4f** (library upgrades, phase 4a-4e). Before it, **c46e8da** (31 Oct, stack upgrade phases 0 and 1: CI, static analysis, test tooling, build-tool security,
+Latest: **38b0f24** (31 Oct night: permissions package removed, its tables kept; SPA on TypeScript 6 and lucide-react
+1.66; next source-patch baseline **85e80c5**). Before it, **b7dfa6a** (permissions package 8 and the planner manager
+release fix, phase 4f). Before it, **ebe5c4f** (library upgrades, phase 4a-4e). Before it, **c46e8da** (31 Oct, stack upgrade phases 0 and 1: CI, static analysis, test tooling, build-tool security,
 `media:verify-version --version-id`, no `dall-e-3` fallback; record in `docs/loyalty-workspace.md` "Deploying"; the
 next source-patch baseline is **a8a573f** on `claude/stack-audit-upgrade-plan-9hdkkv`). Before it, **48b12f0** (portal
 booking rules shared with the members' app), and before that **4c59696c2**: request alerts on staff phones (`a199f1f8c`: the `staff_devices` table,
@@ -78,9 +79,18 @@ Plan and progress: `docs/audits/2026-10-31-stack-audit-and-upgrade-plan.md` (§6
   super admin's password if production was seeded with the old script.
 - Later the same day: Cloud runs PHP 8.5 (owner); PHPUnit 13, Anthropic SDK 1.3 (Content Planner on API
   `2026-10-21`), openai-php 0.21, laravel/mcp 1.1 (MCP `2026-07-28`, older handshake still served) and
-  endroid/qr-code 6 (plan §8); then spatie/laravel-permission 8 and the planner's manager release fix. Open: Stripe
+  endroid/qr-code 6 (plan §8); then spatie/laravel-permission 8 and the planner's manager release fix; then the
+  permissions package removed altogether (its five empty tables stay until the owner decides), TypeScript 6 and
+  lucide-react 1.66 in the SPA (screenshots before and after: no design change). Open: Stripe
   (needs test-mode keys), the chat
   widget's raw Anthropic calls (owner's temperature decision), the workstation's PHP 8.4.20 → 8.5.12.
+
+- 1 Nov: **the live SaaS is `vkolotikov/hotel-tech-saas`**, not `saas-app` (this app calls its `billing/*`,
+  `tools/bootstrap` and `auth/service-*` routes). Its security update (41 PHP advisories, 1 critical, 14 high → 0;
+  React Router patched) is on its branch `claude/stack-audit-upgrade-plan-9hdkkv` with new contract tests, **deployed 1 Nov**
+  (`hotel-tech-saas` `main` = `9c179fa`; it deploys from `main` on Laravel Cloud and runs PHP 8.5). `saas-app` is
+  unused (owner). Its second step (CI, ESLint 10 and TypeScript 6 with a dashboard hook-order fix, Symfony 8.1)
+  is deployed too (`main` = `eef4275`, CI green on `main`). Plan §8.
 
 ## Cloud container notes (Linux)
 
@@ -94,4 +104,7 @@ Plan and progress: `docs/audits/2026-10-31-stack-audit-and-upgrade-plan.md` (§6
   Ubuntu's `-dev` packages, `--with-webp` included (image tests need it). Composer then fell back to git clones
   (api.github.com is scoped to this session's repositories), so delete `vendor/*/*/.git` afterwards. Never run
   Composer in the main tree while a worktree shares `vendor` by hard links: it rewrites the shared autoload files.
-  The disk allowance is small; a full `vendor` copy plus build trees filled it once.
+  The disk allowance is small; a full `vendor` copy plus build trees filled it once. A fresh `composer install`
+  falls back to full git clones (6 GB for one Laravel app, which filled the disk); instead pre-fill Composer's cache
+  with each locked commit fetched shallow (`git fetch --depth 1 origin <sha>`, `git archive` as a zip into
+  `~/.cache/composer/files/<package>/<sha1 of the dist URL>.zip`), then install normally: 109 packages in 15 s.

@@ -863,6 +863,20 @@ files on disk): run them one after the other.
 
 ## Deploying
 
+- Permissions package removed, SPA on TypeScript 6 and lucide-react 1.66 (stack plan, after 4f; phase 5 steps 1 and
+  2), 2026-10-31: production **38b0f24** (source patch **2166918** plus the SPA build) on **b7dfa6a**, feature source
+  **85e80c5** on `claude/stack-audit-upgrade-plan-9hdkkv`. 12 paths (1 added, 10 changed, 1 deleted:
+  `config/permission.php`): `spatie/laravel-permission` and `spatie/laravel-package-tools` removed, the `HasRoles`
+  trait gone from `User`, the five permission tables kept (empty, no migration runs; their `2026_03_17` migration
+  spells out the same schema, identical on PostgreSQL); TypeScript 6.0.3 and lucide-react 1.66 in the SPA (the
+  Messenger panel's Facebook icon kept as an identical local icon). Parity: every listed file and the whole source
+  equal the tip. Artifact: PHP 8.4.27, **77 scopes, 7,254 passed / 16 skipped / 0 failed** (the landing shell test
+  re-run once the build was in place: it skips while `frontend/dist` is being rebuilt); frontend tsc, **5,780 tests /
+  399 files**; fresh build committed (it differs from the screenshot-tested build only in one import's order in the
+  Scan chunk). 235 screenshots before and after: no design change. CI on the tip green (11 jobs). Verified by content
+  on `origin/main` (12/12, the whole source, the lock, the bundle). The next source delta starts
+  at **85e80c5**.
+
 - Permissions package and planner release fix (stack plan phase 4f), 2026-10-31: production **b7dfa6a** on
   **ebe5c4f**, feature source **e6d1a7f** on `claude/stack-audit-upgrade-plan-9hdkkv`. 11 paths (1 added, 10 changed,
   no deletions): `spatie/laravel-permission` 8.3.2 (no migration, no table change; rehearsed on PostgreSQL), the
