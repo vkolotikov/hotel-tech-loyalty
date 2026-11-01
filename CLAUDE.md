@@ -53,6 +53,9 @@ or add the next dated one, at the end of a session.
   page; `tests/Feature/AdminAccess/AccessMapTest.php` and `AdminAccessWiringTest.php` fail otherwise.
 - Organisations on the Appointments plan reach only products `appointments` and `account` (runbook:
   `docs/appointments-workspace.md`).
+- A route parameter that names a model (`{inquiry}`, `{pipeline}`…) is resolved after `SaasAuthMiddleware` and
+  `TenantMiddleware` (`bootstrap/app.php` priority list), so its lookup runs under the organisation's `TenantScope`;
+  before 2026-11-01 every such admin route answered 404. `RouteBindingTenantTest` pins the order.
 
 ## Landing-page code rules
 

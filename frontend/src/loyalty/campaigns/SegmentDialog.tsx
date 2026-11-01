@@ -201,7 +201,7 @@ function RuleEditor({ index, row, options, problem, reason, onChange, onRemove }
       <div className="flex items-center justify-between gap-2">
         <span className="text-xs font-medium text-a-text-2">{t('loyalty.campaigns.segment.rule_n', 'Rule {{n}}', { n })}</span>
         <button type="button" onClick={onRemove} aria-label={t('loyalty.campaigns.segment.remove_rule', 'Remove rule {{n}}', { n })}
-          className="rounded p-1 text-a-text-2 hover:text-a-text">
+          className="rounded-sm p-1 text-a-text-2 hover:text-a-text">
           <X size={15} aria-hidden />
         </button>
       </div>
@@ -235,7 +235,7 @@ function RuleEditor({ index, row, options, problem, reason, onChange, onRemove }
         <label className="flex items-center gap-2">
           <span className="sr-only">{t('loyalty.campaigns.segment.rule_value', 'Value of rule {{n}}', { n })}</span>
           <input type="number" inputMode="numeric" step={1} min={typeof rt?.min === 'number' ? rt.min : undefined} max={typeof rt?.max === 'number' ? rt.max : undefined}
-            value={row.text} onChange={(e) => onChange({ ...row, text: e.target.value })} className={`${INPUT} max-w-[10rem]`} />
+            value={row.text} onChange={(e) => onChange({ ...row, text: e.target.value })} className={`${INPUT} max-w-40`} />
           <span className="text-sm text-a-text-2">
             {kind === 'days' ? t('loyalty.campaigns.segment.unit_days', 'days') : t('loyalty.campaigns.segment.unit_points', 'points')}
           </span>
@@ -245,7 +245,7 @@ function RuleEditor({ index, row, options, problem, reason, onChange, onRemove }
         <label className="block">
           <span className="sr-only">{t('loyalty.campaigns.segment.rule_value', 'Value of rule {{n}}', { n })}</span>
           <input type="date" min={typeof rt?.min === 'string' ? rt.min : undefined} max={typeof rt?.max === 'string' ? rt.max : undefined}
-            value={row.text} onChange={(e) => onChange({ ...row, text: e.target.value })} className={`${INPUT} max-w-[12rem]`} />
+            value={row.text} onChange={(e) => onChange({ ...row, text: e.target.value })} className={`${INPUT} max-w-48`} />
         </label>
       )}
       {kind === 'date' && <p className="text-xs text-a-text-2">{t('loyalty.campaigns.segment.date_hint', 'Counted from midnight UTC on that day.')}</p>}

@@ -111,7 +111,7 @@ export function SavedViews<F extends Record<string, any>>({
                 if (e.key === 'Enter' && savingName.trim()) create.mutate()
                 if (e.key === 'Escape') setSavingName(null)
               }}
-              className="bg-transparent border-0 text-xs text-white placeholder-t-secondary outline-none w-32"
+              className="bg-transparent border-0 text-xs text-white placeholder-t-secondary outline-hidden w-32"
             />
             <button
               onClick={() => savingName.trim() && create.mutate()}

@@ -61,7 +61,7 @@ export function MorningSwitchView({ on, busy, failed, manager = false, onFlip }:
         <button type="button" role="switch" aria-checked={on} aria-disabled={busy || undefined} aria-labelledby="content-morning-email" aria-describedby="content-morning-email-hint"
           onMouseDown={(e) => e.preventDefault()} onClick={() => { if (!busy) onFlip() }}
           className={`relative h-6 w-11 shrink-0 rounded-full transition ${on ? 'bg-a-accent' : 'bg-a-surface-2'} ${busy ? 'opacity-60' : ''}`}>
-          <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-a-surface shadow-a-sm transition ${on ? 'left-[1.375rem]' : 'left-0.5'}`} />
+          <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-a-surface shadow-a-sm transition ${on ? 'left-5.5' : 'left-0.5'}`} />
         </button>
       </div>
       {failed && <p role="status" className="mt-1 text-xs text-a-danger">{t('content.bell.morning_failed', 'The setting could not be saved. Please try again.')}</p>}

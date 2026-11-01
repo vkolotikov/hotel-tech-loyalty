@@ -206,7 +206,7 @@ export function Billing() {
       {billingError && (
         <div className="rounded-xl border border-orange-500/30 bg-orange-500/10 p-5">
           <div className="flex items-start gap-3">
-            <AlertTriangle size={20} className="text-orange-400 flex-shrink-0 mt-0.5" />
+            <AlertTriangle size={20} className="text-orange-400 shrink-0 mt-0.5" />
             <div className="flex-1 min-w-0">
               <h3 className="text-sm font-bold text-white">Billing couldn't open for this workspace</h3>
               <p className="text-xs text-gray-300 mt-1">{billingError}</p>
@@ -451,8 +451,8 @@ export function Billing() {
             return (
               <div key={plan.id} className={
                 'rounded-xl border p-5 relative flex flex-col ' +
-                (isCurrent ? 'border-green-500/50 bg-green-500/[0.03] ring-1 ring-green-500/20' :
-                 isPopular ? 'border-primary-500/50 bg-primary-500/[0.03]' :
+                (isCurrent ? 'border-green-500/50 bg-green-500/3 ring-1 ring-green-500/20' :
+                 isPopular ? 'border-primary-500/50 bg-primary-500/3' :
                  'border-dark-border bg-dark-surface2')
               }>
                 {isCurrent && (

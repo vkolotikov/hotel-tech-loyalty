@@ -276,7 +276,7 @@ function SubmissionsTab() {
                     disabled={featureMut.isPending}
                     className={'flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors disabled:opacity-50 '
                       + (s.is_featured
-                        ? 'bg-primary-500/[0.12] text-primary-500 border border-primary-500/30'
+                        ? 'bg-primary-500/12 text-primary-500 border border-primary-500/30'
                         : 'bg-dark-bg border border-dark-border text-t-secondary hover:text-white')}
                   >
                     <Star size={13} className={s.is_featured ? 'fill-current' : ''} />
@@ -356,9 +356,9 @@ function FormsTab() {
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
                 <h3 className="text-white font-semibold">{f.name}</h3>
-                <span className="px-2 py-0.5 rounded bg-panel text-t-soft text-[10px] uppercase tracking-wider">{f.type}</span>
-                {f.is_default && <span className="px-2 py-0.5 rounded bg-amber-500/15 text-amber-300 text-[10px] uppercase tracking-wider">Default</span>}
-                {!f.is_active && <span className="px-2 py-0.5 rounded bg-red-500/15 text-red-300 text-[10px] uppercase tracking-wider">Inactive</span>}
+                <span className="px-2 py-0.5 rounded-sm bg-panel text-t-soft text-[10px] uppercase tracking-wider">{f.type}</span>
+                {f.is_default && <span className="px-2 py-0.5 rounded-sm bg-amber-500/15 text-amber-300 text-[10px] uppercase tracking-wider">Default</span>}
+                {!f.is_active && <span className="px-2 py-0.5 rounded-sm bg-red-500/15 text-red-300 text-[10px] uppercase tracking-wider">Inactive</span>}
               </div>
               <div className="text-xs text-t-soft mt-1">
                 {f.type === 'custom' ? `${f.questions_count ?? 0} questions` : 'Single rating'} · {f.submissions_count ?? 0} submissions
@@ -426,7 +426,7 @@ function CreateFormModal({ onClose, onCreate, pending }: { onClose: () => void; 
               value={name}
               onChange={e => setName(e.target.value)}
               placeholder="e.g. Spa Experience"
-              className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+              className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-hidden focus:ring-2 focus:ring-primary-500"
             />
           </div>
           <div className="grid grid-cols-2 gap-2">
@@ -564,7 +564,7 @@ function DevicesTab() {
           {devices.map(d => (
             <div key={d.id} className="bg-dark-surface border border-dark-border rounded-xl p-4 flex flex-col md:flex-row md:items-center gap-3">
               <div className="flex items-center gap-3 min-w-0 md:w-64">
-                <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${d.is_online ? 'bg-emerald-400' : 'bg-gray-600'}`}
+                <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${d.is_online ? 'bg-emerald-400' : 'bg-gray-600'}`}
                   title={d.is_online ? 'Online — kiosk page open' : 'Offline'} />
                 <div className="min-w-0">
                   <div className="text-sm font-semibold text-white truncate">{d.name}</div>
@@ -587,7 +587,7 @@ function DevicesTab() {
 
               <div className="flex items-center gap-1.5 flex-wrap">
                 <button onClick={() => { navigator.clipboard.writeText(kioskUrl(d)); toast.success('Kiosk link copied') }}
-                  className="flex items-center gap-1 text-[11px] px-2.5 py-1.5 rounded-lg bg-white/[0.04] border border-dark-border text-t-soft hover:text-white">
+                  className="flex items-center gap-1 text-[11px] px-2.5 py-1.5 rounded-lg bg-white/4 border border-dark-border text-t-soft hover:text-white">
                   <Copy size={11} /> Copy link
                 </button>
                 <button
@@ -597,15 +597,15 @@ function DevicesTab() {
                       setQrModal({ name: d.name, url: res.url, qr: res.qr })
                     } catch { toast.error('Could not generate QR') }
                   }}
-                  className="flex items-center gap-1 text-[11px] px-2.5 py-1.5 rounded-lg bg-white/[0.04] border border-dark-border text-t-soft hover:text-white">
+                  className="flex items-center gap-1 text-[11px] px-2.5 py-1.5 rounded-lg bg-white/4 border border-dark-border text-t-soft hover:text-white">
                   <QrCode size={11} /> QR
                 </button>
                 <a href={kioskUrl(d)} target="_blank" rel="noreferrer"
-                  className="flex items-center gap-1 text-[11px] px-2.5 py-1.5 rounded-lg bg-white/[0.04] border border-dark-border text-t-soft hover:text-white">
+                  className="flex items-center gap-1 text-[11px] px-2.5 py-1.5 rounded-lg bg-white/4 border border-dark-border text-t-soft hover:text-white">
                   <ExternalLink size={11} /> Open
                 </a>
                 <button onClick={() => { if (confirm("Rotate this device's key? The old kiosk link stops working.")) rotateMutation.mutate(d.id) }}
-                  className="flex items-center gap-1 text-[11px] px-2.5 py-1.5 rounded-lg bg-white/[0.04] border border-dark-border text-t-soft hover:text-white">
+                  className="flex items-center gap-1 text-[11px] px-2.5 py-1.5 rounded-lg bg-white/4 border border-dark-border text-t-soft hover:text-white">
                   <RefreshCw size={11} /> Rotate key
                 </button>
                 <button onClick={() => { if (confirm(`Remove "${d.name}"?`)) deleteMutation.mutate(d.id) }}
@@ -696,7 +696,7 @@ function IntegrationRow({ platform, existing, onSave }: { platform: string; exis
         value={url}
         onChange={e => setUrl(e.target.value)}
         placeholder="https://g.page/.../review"
-        className="flex-1 bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+        className="flex-1 bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-hidden focus:ring-2 focus:ring-primary-500"
       />
       <label className="flex items-center gap-2 text-xs text-t-soft cursor-pointer">
         <input type="checkbox" checked={enabled} onChange={e => setEnabled(e.target.checked)} />
@@ -859,5 +859,5 @@ function StatusBadge({ status }: { status: Invitation['status'] }) {
     redirected: 'bg-amber-500/15 text-amber-300',
     failed:     'bg-red-500/15 text-red-300',
   }
-  return <span className={`px-2 py-0.5 rounded text-xs font-semibold capitalize ${styles[status]}`}>{status}</span>
+  return <span className={`px-2 py-0.5 rounded-sm text-xs font-semibold capitalize ${styles[status]}`}>{status}</span>
 }

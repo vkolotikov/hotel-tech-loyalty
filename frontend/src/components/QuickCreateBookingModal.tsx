@@ -84,19 +84,19 @@ export function QuickCreateBookingModal({ initialDate, initialApartmentId, initi
     })
   }
 
-  const inputCls = 'w-full bg-dark-bg border border-white/[0.08] rounded-xl text-sm text-white placeholder-gray-600 px-3 py-2 focus:outline-none focus:ring-1 focus:ring-emerald-500/40'
+  const inputCls = 'w-full bg-dark-bg border border-white/8 rounded-xl text-sm text-white placeholder-gray-600 px-3 py-2 focus:outline-hidden focus:ring-1 focus:ring-emerald-500/40'
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={onClose}>
+    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4" onClick={onClose}>
       <div onClick={e => e.stopPropagation()}
-        className="w-full max-w-lg rounded-2xl border border-white/[0.08] overflow-hidden"
+        className="w-full max-w-lg rounded-2xl border border-white/8 overflow-hidden"
         style={{ background: 'var(--legacy-card-gradient-deep)' }}>
-        <div className="flex items-center justify-between px-5 py-4 border-b border-white/[0.06]">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-white/6">
           <div>
             <h2 className="text-base font-bold text-white">New Direct Booking</h2>
             <p className="text-[11px] text-gray-500 mt-0.5">{initialApartmentName} · {form.arrival_date} → {form.departure_date}</p>
           </div>
-          <button onClick={onClose} className="p-1.5 rounded-lg text-gray-500 hover:text-white hover:bg-white/[0.06]"><X size={16} /></button>
+          <button onClick={onClose} className="p-1.5 rounded-lg text-gray-500 hover:text-white hover:bg-white/6"><X size={16} /></button>
         </div>
 
         <div className="p-5 space-y-3">
@@ -153,7 +153,7 @@ export function QuickCreateBookingModal({ initialDate, initialApartmentId, initi
           </div>
 
           {conflict && (
-            <div className="rounded-xl border border-amber-500/25 bg-amber-500/[0.06] p-3 text-xs text-amber-200">
+            <div className="rounded-xl border border-amber-500/25 bg-amber-500/6 p-3 text-xs text-amber-200">
               <p className="font-semibold mb-2">{conflict}</p>
               <button onClick={() => submit(true)} disabled={create.isPending}
                 className="px-3 py-1.5 rounded-lg bg-amber-500/20 text-amber-200 text-xs font-bold hover:bg-amber-500/30 disabled:opacity-50">
@@ -163,7 +163,7 @@ export function QuickCreateBookingModal({ initialDate, initialApartmentId, initi
           )}
         </div>
 
-        <div className="flex items-center justify-end gap-2 px-5 py-3 border-t border-white/[0.06] bg-hx-000000/20">
+        <div className="flex items-center justify-end gap-2 px-5 py-3 border-t border-white/6 bg-hx-000000/20">
           <button onClick={onClose} className="px-4 py-2 rounded-xl text-xs font-bold text-gray-400 hover:text-white">Cancel</button>
           <button onClick={() => submit(false)} disabled={create.isPending}
             className="px-4 py-2 rounded-xl text-xs font-bold disabled:opacity-50"

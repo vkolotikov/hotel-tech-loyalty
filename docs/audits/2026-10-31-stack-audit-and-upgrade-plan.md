@@ -522,8 +522,66 @@ ChatGPT connection works; the chat widget should offer fewer, current models tha
   which nothing reads at runtime (the real values are `OPENAI_MODEL`, default `gpt-4o`, and `ANTHROPIC_MODEL`,
   default `claude-sonnet-5`). `CrmAiService` still calls Claude directly on API version 2023-06-01 (no sampling
   settings; its tool loop would need rebuilding for the SDK).
-- **Tailwind 4:** a trial runs in a separate worktree first (about 8,400 bare `border`, 1,230 `space-*`, 660 `ring`
-  and 390 `outline-none` uses change meaning in v4); its result decides how the move is released.
+- **Tailwind 4 trial** (local branch `wip/tailwind4-trial`, three commits on `b333c82`, not pushed, not deployed):
+  - The official upgrade tool plus the upgrade guide's compatibility CSS is **not safe on its own**: 67 of 235
+    screenshots changed, and Glass (the default admin style) lost its fonts and its popover and modal surfaces.
+  - The trial adds what keeps v3's look:
+    - v3's colour palette pinned (v4's `tailwindcss/colors` is oklch, which the Glass and Clean light builders cannot
+      read);
+    - v3's cascade order (only the theme variables and preflight in layers);
+    - v3's `space-x/y` selector and line heights, plus table-cell and form-field defaults;
+    - an explicit `@source` (v4 would otherwise also scan the committed `frontend/dist`);
+    - the Vite plugin instead of PostCSS, which otherwise drops all 17 self-hosted fonts.
+  - The tool's false positives were undone by hand: API values such as `'outline'`, `'ring'` and `'rounded'`, and two
+    English sentences.
+  - **Results:** tsc, the 5,780 frontend tests and lint pass. The loyalty screenshot suite matches v3 within its noise
+    floor. Main CSS is 37% larger raw (25% gzip): `color-mix` blocks with fallbacks for opacity on the JS-config colours.
+  - **Left to decide:**
+    - gradients now blend in oklab (`/srgb` restores v3);
+    - 7 `leading-*` cases that v3 ignored;
+    - `pl-13` in `NewCustomerDrawer`, which v3 ignored;
+    - whether the Google Fonts `@import` that v3's build always dropped stays dropped.
+  - **Not covered yet:** the screenshot suite covers only the loyalty workspace. The full admin in Glass, Classic and
+    Clean light, the portal, the appointments, content and landing editors, login, and Safari and Firefox are not
+    covered. A safe release needs those screenshots before and after (about 2–4 days on top of the trial).
+  - **Owner, 1 Nov: go ahead.** The trial branch is pushed (`origin/wip/tailwind4-trial`). Decisions:
+    - gradients keep v3's look (sRGB);
+    - the 7 `leading-*` cases keep v3's look;
+    - `pl-13` takes v4's padding;
+    - the Google Fonts `@import` stays dropped.
+  - **Release work** on that branch, before the deploy recipe:
+    - merge today's changes;
+    - before/after screenshots of every route on real demo data (seeded PostgreSQL), at 1440 and phone width, in
+      every admin style;
+    - Firefox and WebKit if they can be installed here.
+  - **Release work done (1 Nov):**
+    - **Harness:** `frontend/e2e/full-coverage/` (README there). It seeds a demo database from every migration
+      and signs in through the real login. It shoots every route of `App.tsx` that has data:
+      - 748 screens and about 1,980 captures per build;
+      - the full admin in Glass, Classic and Clean light;
+      - the workspaces and the portal in light and dark;
+      - the signed-out pages;
+      - 1440 and 390 wide.
+    - **Chromium:** v4 matches v3 within the noise of two v3 runs. Two differences were fixed:
+      - `drop-shadow-lg` had lost its shadow (the sign-in logo);
+      - the content plan's week grid shifted 1px (`divide-x`).
+    - **WebKit** (WebKitGTK 2.52, Ubuntu's `webkit2gtk-driver`, the engine family Safari uses) found one more:
+      date and time fields read "11 / 01 / 2026". v4's base styles give form controls `font: inherit`, which drops
+      WebKit's tabular figures. `index.css` restores v3's longhands. After that fix, WebKit matches v3 except for:
+      - the chips below;
+      - two screens where the capture races a redirect or a loading state in both builds.
+    - **Firefox:** could not be installed here (its downloads are refused). It still needs a look on a real machine.
+    - **Classes that start working in v4** (the code always asked for them, v3 ignored them; same category as
+      `pl-13`, left as v4 draws them):
+      - `bg-primary-500/12`: the chatbot model chips and a few hovers;
+      - `bg-amber-500/12`;
+      - `via-primary-600/8`;
+      - `z-1`.
+    - **Checks:** tsc, the 5,790 frontend tests, lint, the build, and the loyalty browser suite (690 checks) all pass.
+      Main CSS: 437 kB raw (+37%), 52 kB gzip (+26%).
+    - **Found on the way (not Tailwind):** model-bound admin routes answered 404. The fix is in the same deploy (see
+      the handoff).
+  - Stripe library upgrades wait for the owner's test keys ("will test later").
 
 ---
 

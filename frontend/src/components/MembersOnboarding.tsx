@@ -157,8 +157,8 @@ export function MembersOnboarding({ onComplete }: Props) {
                     onClick={() => setSelectedKey(p.key)}
                     className={'text-left rounded-xl border p-4 transition-all ' +
                       (active
-                        ? 'border-amber-500/60 bg-amber-500/[0.08] ring-1 ring-amber-500/30'
-                        : 'border-dark-border bg-dark-surface hover:border-amber-500/40 hover:bg-amber-500/[0.04]')}>
+                        ? 'border-amber-500/60 bg-amber-500/8 ring-1 ring-amber-500/30'
+                        : 'border-dark-border bg-dark-surface hover:border-amber-500/40 hover:bg-amber-500/4')}>
                     <div className="flex items-center gap-2 mb-2">
                       <div className={'w-9 h-9 rounded-md flex items-center justify-center ' +
                         (active ? 'bg-amber-500/25 text-amber-300' : 'bg-purple-500/15 text-purple-300')}>
@@ -171,12 +171,12 @@ export function MembersOnboarding({ onComplete }: Props) {
                           <div className="text-[10px] text-emerald-400 font-semibold mt-0.5">Recommended for your business</div>
                         )}
                       </div>
-                      {active && <Check size={16} className="text-amber-400 flex-shrink-0" />}
+                      {active && <Check size={16} className="text-amber-400 shrink-0" />}
                     </div>
                     <p className="text-[11px] text-gray-500 line-clamp-2 mb-2 min-h-[28px]">{p.description}</p>
                     <div className="flex flex-wrap gap-1 mb-2">
                       {p.tier_names.map(n => (
-                        <span key={n} className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-dark-bg border border-dark-border text-gray-400">
+                        <span key={n} className="text-[10px] font-bold px-1.5 py-0.5 rounded-sm bg-dark-bg border border-dark-border text-gray-400">
                           {n}
                         </span>
                       ))}
@@ -186,7 +186,7 @@ export function MembersOnboarding({ onComplete }: Props) {
                         redeem reads as busywork. */}
                     {p.sample_rewards?.length > 0 && (
                       <div className="flex items-start gap-1.5 mb-2 text-[10px] text-gray-400">
-                        <Gift size={11} className="text-emerald-400 mt-[1px] flex-shrink-0" />
+                        <Gift size={11} className="text-emerald-400 mt-px shrink-0" />
                         <span className="line-clamp-1">{p.sample_rewards.join(' · ')}</span>
                       </div>
                     )}
@@ -213,7 +213,7 @@ export function MembersOnboarding({ onComplete }: Props) {
             <div className="grid grid-cols-2 gap-3">
               <button onClick={() => setWithSample(true)}
                 className={'rounded-xl border p-4 text-left transition-all ' +
-                  (withSample ? 'border-primary-500 bg-primary-500/[0.08]' : 'border-dark-border bg-dark-surface hover:bg-dark-surface2')}>
+                  (withSample ? 'border-primary-500 bg-primary-500/8' : 'border-dark-border bg-dark-surface hover:bg-dark-surface2')}>
                 <div className="flex items-center gap-2 mb-2">
                   <Database size={16} className={withSample ? 'text-primary-400' : 'text-gray-500'} />
                   <span className="text-sm font-bold text-white">Add demo data</span>
@@ -222,7 +222,7 @@ export function MembersOnboarding({ onComplete }: Props) {
               </button>
               <button onClick={() => setWithSample(false)}
                 className={'rounded-xl border p-4 text-left transition-all ' +
-                  (!withSample ? 'border-primary-500 bg-primary-500/[0.08]' : 'border-dark-border bg-dark-surface hover:bg-dark-surface2')}>
+                  (!withSample ? 'border-primary-500 bg-primary-500/8' : 'border-dark-border bg-dark-surface hover:bg-dark-surface2')}>
                 <div className="flex items-center gap-2 mb-2">
                   <FileText size={16} className={!withSample ? 'text-primary-400' : 'text-gray-500'} />
                   <span className="text-sm font-bold text-white">Start clean</span>
@@ -269,7 +269,7 @@ export function MembersOnboarding({ onComplete }: Props) {
                 translates the preset into the first thing a real customer
                 gets. */}
             {picked.cheapest_reward && (
-              <div className="bg-emerald-500/[0.05] border border-emerald-500/20 rounded-xl p-4">
+              <div className="bg-emerald-500/5 border border-emerald-500/20 rounded-xl p-4">
                 <div className="flex items-center gap-2 mb-2">
                   <Gift size={13} className="text-emerald-300" />
                   <div className="text-[11px] font-bold uppercase tracking-wide text-emerald-300">
@@ -308,9 +308,9 @@ export function MembersOnboarding({ onComplete }: Props) {
               </div>
             )}
 
-            <div className="bg-blue-500/[0.04] border border-blue-500/20 rounded-lg p-3">
+            <div className="bg-blue-500/4 border border-blue-500/20 rounded-lg p-3">
               <div className="flex items-start gap-2">
-                <AlertCircle size={13} className="text-blue-300 flex-shrink-0 mt-0.5" />
+                <AlertCircle size={13} className="text-blue-300 shrink-0 mt-0.5" />
                 <div className="text-[11px] text-blue-100/90 leading-relaxed">
                   <p className="font-bold text-blue-200 mb-0.5">Existing data is preserved</p>
                   If you already have members assigned to tiers, we keep those tiers active and only ADD any
@@ -355,7 +355,7 @@ export function MembersOnboarding({ onComplete }: Props) {
 function ReviewRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-start gap-3 py-1">
-      <span className="text-[11px] uppercase tracking-wide font-bold text-gray-500 w-28 flex-shrink-0 mt-0.5">{label}</span>
+      <span className="text-[11px] uppercase tracking-wide font-bold text-gray-500 w-28 shrink-0 mt-0.5">{label}</span>
       <span className="text-sm text-white flex-1">{value}</span>
     </div>
   )

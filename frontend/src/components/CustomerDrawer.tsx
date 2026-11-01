@@ -15,7 +15,7 @@ import { isCrmRecordId } from '../lib/crmRecordId'
  * Right-side drawer for viewing AND editing a guest's full CRM profile,
  * opened from the /leads inquiries list (and anywhere else that surfaces
  * a guest_id). Reuses TaskDrawer's slide pattern: fixed full-height
- * panel, backdrop-blur overlay, ESC + backdrop close.
+ * panel, backdrop-blur-sm overlay, ESC + backdrop close.
  *
  * Field edits diff-PUT against /v1/admin/guests/:id — the controller's
  * partial-PUT contract (nullable validation + array_filter) makes this
@@ -111,14 +111,14 @@ function EditableField({
               onChange={e => setDraft(e.target.value)}
               rows={3}
               placeholder={placeholder}
-              className="flex-1 bg-dark-bg border border-accent rounded-md px-3 py-2 text-sm placeholder-t-secondary outline-none resize-none"
+              className="flex-1 bg-dark-bg border border-accent rounded-md px-3 py-2 text-sm placeholder-t-secondary outline-hidden resize-none"
             />
           ) : type === 'select' ? (
             <select
               autoFocus
               value={draft}
               onChange={e => setDraft(e.target.value)}
-              className="flex-1 bg-dark-bg border border-accent rounded-md px-3 py-2 text-sm outline-none"
+              className="flex-1 bg-dark-bg border border-accent rounded-md px-3 py-2 text-sm outline-hidden"
             >
               {(options ?? []).map(o => (
                 <option key={o.key} value={o.key}>{o.label}</option>
@@ -135,7 +135,7 @@ function EditableField({
                 if (e.key === 'Escape') cancel()
               }}
               placeholder={placeholder}
-              className="flex-1 bg-dark-bg border border-accent rounded-md px-3 py-2 text-sm placeholder-t-secondary outline-none"
+              className="flex-1 bg-dark-bg border border-accent rounded-md px-3 py-2 text-sm placeholder-t-secondary outline-hidden"
             />
           )}
           <button
@@ -201,7 +201,7 @@ function DeleteConfirmModal({
 
   return (
     <div
-      className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[60] flex items-center justify-center p-4"
+      className="fixed inset-0 bg-black/80 backdrop-blur-xs z-60 flex items-center justify-center p-4"
       onClick={onCancel}
     >
       <div
@@ -243,7 +243,7 @@ function DeleteConfirmModal({
           autoFocus
           value={confirmText}
           onChange={e => setConfirmText(e.target.value)}
-          className="w-full bg-dark-bg border border-dark-border rounded-md px-3 py-2 text-sm outline-none focus:border-red-500 mb-4"
+          className="w-full bg-dark-bg border border-dark-border rounded-md px-3 py-2 text-sm outline-hidden focus:border-red-500 mb-4"
         />
 
         <div className="flex justify-end gap-2">
@@ -409,7 +409,7 @@ export function CustomerDrawer({ open, guestId: requestedGuestId, onClose, onGue
           {/* Header */}
           <div className="flex items-center gap-3 p-4 border-b border-dark-border">
             <div
-              className="w-11 h-11 rounded-full flex items-center justify-center text-base font-bold text-black flex-shrink-0"
+              className="w-11 h-11 rounded-full flex items-center justify-center text-base font-bold text-black shrink-0"
               style={{ background: 'linear-gradient(135deg, #f5d782 0%, #c9a84c 100%)' }}
             >
               {loading ? <Loader2 size={16} className="animate-spin text-black/70" /> : initial}
@@ -420,12 +420,12 @@ export function CustomerDrawer({ open, guestId: requestedGuestId, onClose, onGue
                   {loading ? t('customerDrawer.loading', 'Loading…') : name}
                 </h2>
                 {vip && (
-                  <span className="inline-flex items-center gap-1 text-[10px] uppercase font-bold px-2 py-0.5 rounded bg-amber-500/15 text-amber-300 border border-amber-500/40">
+                  <span className="inline-flex items-center gap-1 text-[10px] uppercase font-bold px-2 py-0.5 rounded-sm bg-amber-500/15 text-amber-300 border border-amber-500/40">
                     <Crown size={10} /> {vip}
                   </span>
                 )}
                 {status && (
-                  <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded bg-blue-500/15 text-blue-300 border border-blue-500/30">
+                  <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded-sm bg-blue-500/15 text-blue-300 border border-blue-500/30">
                     {status}
                   </span>
                 )}
@@ -442,7 +442,7 @@ export function CustomerDrawer({ open, guestId: requestedGuestId, onClose, onGue
                 ref={kebabRef}
                 onClick={() => setMenuOpen(v => !v)}
                 disabled={loading}
-                className="p-1.5 rounded hover:bg-dark-surface2 text-t-secondary hover:text-white disabled:opacity-50"
+                className="p-1.5 rounded-sm hover:bg-dark-surface2 text-t-secondary hover:text-white disabled:opacity-50"
                 aria-label={t('customerDrawer.actions.menu', 'More actions')}
               >
                 <MoreVertical size={16} />
@@ -471,7 +471,7 @@ export function CustomerDrawer({ open, guestId: requestedGuestId, onClose, onGue
             <button
               onClick={onClose}
               disabled={loading}
-              className="p-1.5 rounded hover:bg-dark-surface2 text-t-secondary hover:text-white disabled:opacity-50"
+              className="p-1.5 rounded-sm hover:bg-dark-surface2 text-t-secondary hover:text-white disabled:opacity-50"
               aria-label={t('actions.close', 'Close')}
             >
               <X size={16} />
@@ -509,8 +509,8 @@ export function CustomerDrawer({ open, guestId: requestedGuestId, onClose, onGue
               <div className="space-y-3 animate-pulse">
                 {[0, 1, 2, 3, 4].map(i => (
                   <div key={i}>
-                    <div className="h-3 w-20 bg-dark-surface2 rounded mb-2" />
-                    <div className="h-9 bg-dark-surface2 rounded" />
+                    <div className="h-3 w-20 bg-dark-surface2 rounded-sm mb-2" />
+                    <div className="h-9 bg-dark-surface2 rounded-sm" />
                   </div>
                 ))}
               </div>

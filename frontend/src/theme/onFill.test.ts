@@ -88,7 +88,7 @@ const FOREGROUND_WHITE: { file: string; snippet: string }[] = []
 
 /** Elements whose inline background is a translucent tint: there text-white should follow the ink (paper under the tint in light). */
 const INLINE_TINT_WHITE: { file: string; snippet: string }[] = [
-  { file: 'pages/Analytics.tsx', snippet: 'min-w-[44px] px-2 py-1 rounded text-xs font-semibold text-white' },
+  { file: 'pages/Analytics.tsx', snippet: 'min-w-[44px] px-2 py-1 rounded-sm text-xs font-semibold text-white' },
   { file: 'pages/Settings.tsx', snippet: "btnPrimary + ' text-white border border-emerald-500/30" },
 ]
 
@@ -175,9 +175,9 @@ describe('whites that stay white', () => {
     expect(SOLID.test("'from-black/80'")).toBe(true)
     expect(SOLID.test("'bg-black/70'")).toBe(true)
     expect(SOLID.test("'bg-black/40'")).toBe(false)
-    const well = "'rounded bg-black/40 text-emerald-300 font-mono'"
+    const well = "'rounded-sm bg-black/40 text-emerald-300 font-mono'"
     expect(BLACK_WELL.test(well) && COLOURED_TEXT.test(well) && !SCRIM.test(well)).toBe(true)
-    expect(BLACK_WELL.test("'rounded bg-hx-000000/40 text-emerald-300'")).toBe(false)
+    expect(BLACK_WELL.test("'rounded-sm bg-hx-000000/40 text-emerald-300'")).toBe(false)
     expect(SCRIM.test("'fixed inset-0 bg-black/50 text-emerald-300'")).toBe(true)
   })
 

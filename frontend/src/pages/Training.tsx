@@ -80,7 +80,7 @@ export function Training() {
       failed: 'bg-red-500/20 text-red-400',
       cancelled: 'bg-dark-surface4 text-t-secondary',
     }
-    return <span className={`px-2 py-0.5 rounded text-xs font-medium ${styles[status] || styles.preparing}`}>{t(`training.statuses.${status}`, { defaultValue: String(status ?? '') })}</span>
+    return <span className={`px-2 py-0.5 rounded-sm text-xs font-medium ${styles[status] || styles.preparing}`}>{t(`training.statuses.${status}`, { defaultValue: String(status ?? '') })}</span>
   }
 
   return (

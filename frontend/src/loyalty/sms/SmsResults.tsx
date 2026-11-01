@@ -53,7 +53,7 @@ export function SmsResults({ sms: s, options }: { sms: Sms; options: SmsOptions 
   return (
     <div className="space-y-6">
       <div className="min-w-0 space-y-2">
-        <h2 className="break-words font-a-display text-3xl font-normal leading-tight text-a-text">{s.name}</h2>
+        <h2 className="wrap-break-word font-a-display text-3xl font-normal leading-tight text-a-text">{s.name}</h2>
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-a-text-2">
           <StatusBadge status={s.status} />
           <span>{s.segment ? t('loyalty.sms.results.to', 'To {{segment}}', { segment: s.segment.name }) : t('loyalty.sms.list.no_segment', 'No segment')}</span>

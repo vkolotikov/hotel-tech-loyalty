@@ -176,11 +176,11 @@ export function Properties() {
                 <img src={imagePreview} alt="Property" className="w-full h-40 object-cover rounded-xl border border-dark-border" />
                 <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl flex items-center justify-center gap-3">
                   <button type="button" onClick={() => fileInputRef.current?.click()}
-                    className="bg-on-fill/20 text-on-fill px-3 py-1.5 rounded-lg text-sm backdrop-blur-sm hover:bg-on-fill/30 transition-colors">
+                    className="bg-on-fill/20 text-on-fill px-3 py-1.5 rounded-lg text-sm backdrop-blur-xs hover:bg-on-fill/30 transition-colors">
                     Change
                   </button>
                   <button type="button" onClick={clearImage}
-                    className="bg-danger/20 text-danger px-3 py-1.5 rounded-lg text-sm backdrop-blur-sm hover:bg-danger/30 transition-colors">
+                    className="bg-danger/20 text-danger px-3 py-1.5 rounded-lg text-sm backdrop-blur-xs hover:bg-danger/30 transition-colors">
                     <Trash2 size={14} />
                   </button>
                 </div>
@@ -235,10 +235,10 @@ export function Properties() {
                     <img
                       src={resolveImageUrl(p.image_url)!}
                       alt={p.name}
-                      className="w-12 h-12 rounded-lg object-cover border border-dark-border flex-shrink-0"
+                      className="w-12 h-12 rounded-lg object-cover border border-dark-border shrink-0"
                     />
                   ) : (
-                    <div className="w-12 h-12 rounded-lg bg-primary-500/15 flex items-center justify-center flex-shrink-0">
+                    <div className="w-12 h-12 rounded-lg bg-primary-500/15 flex items-center justify-center shrink-0">
                       <Building2 size={20} className="text-primary-400" />
                     </div>
                   )}
@@ -267,18 +267,18 @@ export function Properties() {
                   {showOutletForm && (
                     <div className="flex items-center gap-3 bg-dark-bg p-3 rounded-lg">
                       <input value={outletForm.name} onChange={e => setOutletForm({ ...outletForm, name: e.target.value })} placeholder="Outlet name" required
-                        className="flex-1 bg-dark-surface border border-dark-border rounded px-2 py-1.5 text-white text-sm" />
+                        className="flex-1 bg-dark-surface border border-dark-border rounded-sm px-2 py-1.5 text-white text-sm" />
                       <select value={outletForm.type} onChange={e => setOutletForm({ ...outletForm, type: e.target.value })}
-                        className="bg-dark-surface border border-dark-border rounded px-2 py-1.5 text-white text-sm">
+                        className="bg-dark-surface border border-dark-border rounded-sm px-2 py-1.5 text-white text-sm">
                         {OUTLET_TYPES.map(t => <option key={t} value={t}>{t.replace('_', ' ')}</option>)}
                       </select>
                       <input value={outletForm.earn_rate_override} onChange={e => setOutletForm({ ...outletForm, earn_rate_override: e.target.value })}
                         placeholder="Earn rate" type="number" step="0.01"
-                        className="w-24 bg-dark-surface border border-dark-border rounded px-2 py-1.5 text-white text-sm" />
+                        className="w-24 bg-dark-surface border border-dark-border rounded-sm px-2 py-1.5 text-white text-sm" />
                       <button onClick={() => outletMutation.mutate({
                         ...outletForm,
                         earn_rate_override: outletForm.earn_rate_override ? Number(outletForm.earn_rate_override) : null,
-                      })} className="bg-primary-600 text-on-primary px-3 py-1.5 rounded text-sm hover:bg-primary-700">Add</button>
+                      })} className="bg-primary-600 text-on-primary px-3 py-1.5 rounded-sm text-sm hover:bg-primary-700">Add</button>
                     </div>
                   )}
 

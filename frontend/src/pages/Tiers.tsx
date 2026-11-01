@@ -371,11 +371,11 @@ export function Tiers() {
               </p>
             </div>
             <label className="flex items-center gap-2 text-sm text-t-secondary">
-              <input type="checkbox" checked={form.soft_landing} onChange={e => setForm({ ...form, soft_landing: e.target.checked })} className="rounded" />
+              <input type="checkbox" checked={form.soft_landing} onChange={e => setForm({ ...form, soft_landing: e.target.checked })} className="rounded-sm" />
               {t('tiers.form.soft_landing', 'Soft Landing')}
             </label>
             <label className="flex items-center gap-2 text-sm text-t-secondary">
-              <input type="checkbox" checked={form.invitation_only} onChange={e => setForm({ ...form, invitation_only: e.target.checked })} className="rounded" />
+              <input type="checkbox" checked={form.invitation_only} onChange={e => setForm({ ...form, invitation_only: e.target.checked })} className="rounded-sm" />
               {t('tiers.form.invitation_only', 'Invitation Only')}
             </label>
           </div>
@@ -465,12 +465,12 @@ export function Tiers() {
                   <div className="flex flex-col gap-3 bg-dark-bg p-3 rounded-lg">
                     <div className="flex items-center gap-3">
                       <select value={assignForm.benefit_id} onChange={e => setAssignForm({ ...assignForm, benefit_id: e.target.value })}
-                        className="flex-1 bg-dark-surface border border-dark-border rounded px-2 py-1.5 text-white text-sm">
+                        className="flex-1 bg-dark-surface border border-dark-border rounded-sm px-2 py-1.5 text-white text-sm">
                         <option value="">{t('tiers.expanded.select_benefit', 'Select benefit...')}</option>
                         {allBenefits.map((b: any) => <option key={b.id} value={b.id}>{b.name}</option>)}
                       </select>
                       <input value={assignForm.value} onChange={e => setAssignForm({ ...assignForm, value: e.target.value })}
-                        placeholder={t('tiers.expanded.value_placeholder', 'Value (optional)')} className="w-48 bg-dark-surface border border-dark-border rounded px-2 py-1.5 text-white text-sm" />
+                        placeholder={t('tiers.expanded.value_placeholder', 'Value (optional)')} className="w-48 bg-dark-surface border border-dark-border rounded-sm px-2 py-1.5 text-white text-sm" />
                     </div>
                     <BenefitValueFields value={assignForm} onChange={v => setAssignForm({ ...assignForm, ...v })} />
                     <button disabled={!assignForm.benefit_id} onClick={() => assignBenefitMutation.mutate({
@@ -481,7 +481,7 @@ export function Tiers() {
                         value_amount: assignForm.value_type === 'text' ? null : (assignForm.value_amount === '' ? null : Number(assignForm.value_amount)),
                         applies_to: assignForm.applies_to,
                       })}
-                      className="self-start bg-primary-600 text-on-primary px-3 py-1.5 rounded text-sm hover:bg-primary-700 disabled:opacity-50">{t('tiers.expanded.assign', 'Assign')}</button>
+                      className="self-start bg-primary-600 text-on-primary px-3 py-1.5 rounded-sm text-sm hover:bg-primary-700 disabled:opacity-50">{t('tiers.expanded.assign', 'Assign')}</button>
                   </div>
                 </div>
               )}

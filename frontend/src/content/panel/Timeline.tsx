@@ -12,7 +12,7 @@ import type { PostDetail, TimelineComment, TimelineEvent, TimelineItem } from '.
 import { COMMENT_MAX, EVENT_TEXT, commentProblem, commentRights, sendsOnEnter, withComment, withEdited, withoutComment } from './timelineMath'
 
 const BOX = 'w-full rounded-lg border border-a-border bg-a-surface px-3 py-2 text-sm text-a-text'
-const SMALL = 'rounded px-1 text-xs font-medium text-a-text-2 hover:text-a-text'
+const SMALL = 'rounded-sm px-1 text-xs font-medium text-a-text-2 hover:text-a-text'
 
 /** One approval step: a grey line with who and when, a send-back's note beneath. */
 function EventLine({ item, name, when }: { item: TimelineEvent; name: string; when: string }) {
@@ -22,7 +22,7 @@ function EventLine({ item, name, when }: { item: TimelineEvent; name: string; wh
       <span>{t(`content.timeline.event.${item.kind}`, EVENT_TEXT[item.kind], { name })}</span>
       <span aria-hidden> · </span>
       <time dateTime={item.at}>{when}</time>
-      {item.note && <p className="mt-0.5 whitespace-pre-wrap break-words italic text-a-text">{item.note}</p>}
+      {item.note && <p className="mt-0.5 whitespace-pre-wrap wrap-break-word italic text-a-text">{item.note}</p>}
     </li>
   )
 }
@@ -74,7 +74,7 @@ function CommentItem({ item, name, when, manager, onSave, onDelete }: {
         )}
       </div>
       {text === null
-        ? <p className="mt-1 whitespace-pre-wrap break-words text-sm text-a-text">{item.body}</p>
+        ? <p className="mt-1 whitespace-pre-wrap wrap-break-word text-sm text-a-text">{item.body}</p>
         : (
           <div className="mt-1 space-y-2">
             <textarea value={text} rows={3} onChange={(e) => setText(e.target.value)} aria-label={t('content.timeline.edit', 'Edit')} className={BOX} />

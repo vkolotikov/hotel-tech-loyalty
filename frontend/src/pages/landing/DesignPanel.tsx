@@ -58,17 +58,17 @@ import {
 const kicker = 'text-[11px] font-mono uppercase tracking-[0.14em] text-primary-500'
 
 const chipBase = 'inline-flex items-center gap-1.5 rounded-full border pl-2.5 pr-3.5 py-1.5 text-xs font-semibold '
-  + 'transition-all outline-none focus-visible:ring-2 focus-visible:ring-primary-500/40'
-const chipActive = 'border-primary-500 bg-primary-500/[0.12] text-white'
+  + 'transition-all outline-hidden focus-visible:ring-2 focus-visible:ring-primary-500/40'
+const chipActive = 'border-primary-500 bg-primary-500/12 text-white'
 const chipInactive = 'border-dark-border bg-dark-bg text-t-secondary hover:border-primary-500/40 hover:text-white'
 
 // The house "selected card" idiom (LandingWizard.tsx's own cards, predating
 // this component): border + a soft ring in primary-500, versus a plain
 // border that brightens on hover.
-const cardBase = 'text-left rounded-xl border p-2 transition-all outline-none '
+const cardBase = 'text-left rounded-xl border p-2 transition-all outline-hidden '
   + 'focus-visible:ring-2 focus-visible:ring-primary-500/40'
-const cardActive = 'border-primary-500 bg-primary-500/[0.08] ring-1 ring-primary-500/30'
-const cardInactive = 'border-dark-border bg-dark-bg hover:border-primary-500/40 hover:bg-primary-500/[0.04]'
+const cardActive = 'border-primary-500 bg-primary-500/8 ring-1 ring-primary-500/30'
+const cardInactive = 'border-dark-border bg-dark-bg hover:border-primary-500/40 hover:bg-primary-500/4'
 
 const currentBadge = 'rounded-full border border-primary-500/40 px-2 py-0.5 text-[10px] font-mono uppercase tracking-[0.12em] text-primary-400'
 
@@ -238,7 +238,7 @@ export function DesignPanel({
                       alt=""
                       loading="lazy"
                       decoding="async"
-                      className="w-full aspect-[8/5] object-cover object-top rounded-lg border border-dark-border"
+                      className="w-full aspect-8/5 object-cover object-top rounded-lg border border-dark-border"
                     />
                     {c.key === savedTemplateKey && (
                       <span className={currentBadge + ' absolute top-1.5 right-1.5 bg-dark-bg/90'}>
@@ -274,7 +274,7 @@ export function DesignPanel({
             lines the dialog used to say, and a way back to the saved design.
           */}
           {templateHasChanged(templateKey, savedTemplateKey) && (
-            <div className="rounded-xl border border-primary-500/40 bg-primary-500/[0.06] p-3 space-y-1.5">
+            <div className="rounded-xl border border-primary-500/40 bg-primary-500/6 p-3 space-y-1.5">
               <p className="text-sm text-white">
                 {t('landing_pages.design.previewing_note', {
                   name: chosen?.name ?? '',
@@ -287,7 +287,7 @@ export function DesignPanel({
               <button
                 type="button"
                 onClick={() => onTemplateChange(savedTemplateKey as string)}
-                className="text-xs text-primary-400 hover:text-primary-300 font-semibold outline-none
+                className="text-xs text-primary-400 hover:text-primary-300 font-semibold outline-hidden
                   focus-visible:ring-2 focus-visible:ring-primary-500/40 rounded"
               >
                 {t('landing_pages.design.keep_saved', { name: savedName, defaultValue: 'Keep {{name}}' })}

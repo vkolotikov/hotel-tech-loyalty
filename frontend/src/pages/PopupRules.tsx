@@ -191,7 +191,7 @@ export function PopupRules() {
             <label className="block text-sm text-t-secondary mb-1">{t('popup_rules.form.quick_replies', 'Quick Reply Buttons')}</label>
             <div className="flex flex-wrap gap-1 mb-2">
               {form.quick_replies.map((r, i) => (
-                <span key={i} className="flex items-center gap-1 bg-primary-500/20 text-primary-400 px-2 py-1 rounded text-xs">
+                <span key={i} className="flex items-center gap-1 bg-primary-500/20 text-primary-400 px-2 py-1 rounded-sm text-xs">
                   {r}
                   <button onClick={() => removeReply(i)}><X size={12} /></button>
                 </span>
@@ -208,7 +208,7 @@ export function PopupRules() {
           {/* Active toggle */}
           <label className="flex items-center gap-2 cursor-pointer">
             <input type="checkbox" checked={form.is_active} onChange={e => setForm(p => ({ ...p, is_active: e.target.checked }))}
-              className="w-4 h-4 rounded border-dark-border bg-dark-surface text-primary-500" />
+              className="w-4 h-4 rounded-sm border-dark-border bg-dark-surface text-primary-500" />
             <span className="text-sm text-white">{t('popup_rules.form.active', 'Active')}</span>
           </label>
 
@@ -238,9 +238,9 @@ export function PopupRules() {
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-1">
                     <span className="text-white font-medium">{rule.name}</span>
-                    <span className="text-xs bg-dark-surface4 text-t-secondary px-2 py-0.5 rounded">{triggerLabel(rule.trigger_type)}</span>
+                    <span className="text-xs bg-dark-surface4 text-t-secondary px-2 py-0.5 rounded-sm">{triggerLabel(rule.trigger_type)}</span>
                     {rule.trigger_value && <span className="text-xs text-dark-border2">({rule.trigger_value}{rule.trigger_type === 'scroll_depth' ? '%' : 's'})</span>}
-                    {!rule.is_active && <span className="text-xs bg-red-500/20 text-red-400 px-2 py-0.5 rounded">{t('popup_rules.row.inactive', 'Inactive')}</span>}
+                    {!rule.is_active && <span className="text-xs bg-red-500/20 text-red-400 px-2 py-0.5 rounded-sm">{t('popup_rules.row.inactive', 'Inactive')}</span>}
                   </div>
                   <p className="text-sm text-t-secondary line-clamp-1">{rule.message}</p>
                   <div className="flex items-center gap-4 mt-1 text-xs text-dark-border2">
@@ -253,7 +253,7 @@ export function PopupRules() {
                   {rule.quick_replies?.length > 0 && (
                     <div className="flex gap-1 mt-1">
                       {rule.quick_replies.map((r: string, i: number) => (
-                        <span key={i} className="text-xs bg-primary-500/10 text-primary-400 px-1.5 py-0.5 rounded">{r}</span>
+                        <span key={i} className="text-xs bg-primary-500/10 text-primary-400 px-1.5 py-0.5 rounded-sm">{r}</span>
                       ))}
                     </div>
                   )}

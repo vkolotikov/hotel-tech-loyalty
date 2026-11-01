@@ -46,7 +46,7 @@ export function PostCardView({ post, size = 'week', selected = false, onOpen, on
   // Spec 2026-10-16 §6.3, §7.1: the card's flags end its name (the one-line card draws them without words).
   const flags = flagWords(cardFlags(post, approvalsOn(data)), (key, fallback, vars) => t(key, fallback, vars), versionsOf(post), clicksOf(post))
   // The open post's card is filled with the brand; its secondary text takes the brand's ink.
-  const fill = selected ? 'bg-gradient-to-br from-a-accent to-a-accent-deep text-a-accent-ink shadow-a' : 'c-card'
+  const fill = selected ? 'bg-linear-to-br from-a-accent to-a-accent-deep text-a-accent-ink shadow-a' : 'c-card'
   const second = selected ? 'text-a-accent-ink' : 'c-card-2'
   const time = post.scheduled_time && size !== 'tray' && <span className={`font-a-mono text-xs ${second}`}>{post.scheduled_time}</span>
   const statusWord = <span data-status={post.status} title={status} className={`ml-auto max-w-full truncate text-xs ${second}`}>{status}</span>
@@ -74,9 +74,9 @@ export function PostCardView({ post, size = 'week', selected = false, onOpen, on
             {time}{' '}
             {statusWord}
           </span>{' '}
-          <span className={`${size === 'month' ? 'line-clamp-4' : 'line-clamp-6'} w-full break-words text-sm leading-snug`}>{text}</span>{' '}
+          <span className={`${size === 'month' ? 'line-clamp-4' : 'line-clamp-6'} w-full wrap-break-word text-sm leading-snug`}>{text}</span>{' '}
           <CardFlags post={post} />
-          {size === 'week' && post.image_url && <img src={post.image_url} alt="" loading="lazy" draggable={false} className="h-14 w-full max-w-[8rem] rounded-md object-cover" />}
+          {size === 'week' && post.image_url && <img src={post.image_url} alt="" loading="lazy" draggable={false} className="h-14 w-full max-w-32 rounded-md object-cover" />}
         </>
       )}
     </button>

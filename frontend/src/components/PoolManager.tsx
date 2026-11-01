@@ -186,7 +186,7 @@ export function PoolManager({ plannerSkills = null, isManager = false, onNewTask
         <div className="relative ml-auto">
           <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" />
           <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search pool…"
-            className="bg-dark-surface border border-dark-border rounded-lg pl-8 pr-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-primary-500 w-[180px]" />
+            className="bg-dark-surface border border-dark-border rounded-lg pl-8 pr-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-hidden focus:border-primary-500 w-[180px]" />
         </div>
         <button onClick={() => onNewTask('general')}
           className="flex items-center gap-1.5 text-sm font-medium text-on-primary bg-primary-600 hover:bg-primary-500 px-3 py-2 rounded-lg transition-colors">
@@ -210,7 +210,7 @@ export function PoolManager({ plannerSkills = null, isManager = false, onNewTask
                 className={'flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition ' +
                   (active ? 'text-black border-transparent' : 'bg-dark-surface text-gray-300 border-dark-border hover:text-white hover:border-white/15')}
                 style={active ? { background: meta.color, ...(light ? { color: onColor(meta.color) } : {}) } : {}}>
-                <span className="w-2 h-2 rounded-sm" style={{ background: active ? '#00000055' : meta.color }} />
+                <span className="w-2 h-2 rounded-xs" style={{ background: active ? '#00000055' : meta.color }} />
                 {tt.key} <span className="text-[10px] opacity-70">{tt.count}</span>
               </button>
             )
@@ -236,7 +236,7 @@ export function PoolManager({ plannerSkills = null, isManager = false, onNewTask
             return (
               <div key={col.key} className="bg-dark-surface/40 border border-dark-border rounded-xl flex flex-col min-h-[200px]">
                 <div className="flex items-center gap-2 px-3 py-2.5 border-b border-dark-border">
-                  <div className="w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0" style={{ background: col.accent + '22', border: `1px solid ${col.accent}44` }}>
+                  <div className="w-6 h-6 rounded-md flex items-center justify-center shrink-0" style={{ background: col.accent + '22', border: `1px solid ${col.accent}44` }}>
                     <Icon size={13} style={{ color: ink(col.accent) }} />
                   </div>
                   <div className="min-w-0">
@@ -302,10 +302,10 @@ function PoolCard({ task, meta, channel, relevant, canManage, onClaim, onEdit, o
     >
       <div className="flex items-start gap-2">
         <div className="flex-1 min-w-0">
-          <div className="text-[13px] font-medium text-white leading-snug break-words pr-6">{task.title}</div>
+          <div className="text-[13px] font-medium text-white leading-snug wrap-break-word pr-6">{task.title}</div>
           <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
             {task.task_group && (
-              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium" style={{ background: meta.color + '22', color: ink(meta.color) }}>
+              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-sm text-[10px] font-medium" style={{ background: meta.color + '22', color: ink(meta.color) }}>
                 <TypeIcon size={10} /> {task.task_group}
               </span>
             )}
@@ -320,7 +320,7 @@ function PoolCard({ task, meta, channel, relevant, canManage, onClaim, onEdit, o
             {task.duration_minutes ? <span className="text-[10px] text-gray-500 tabular-nums">{task.duration_minutes}m</span> : null}
           </div>
           <div className="flex items-center gap-1.5 mt-1.5">
-            <span className={'inline-flex items-center px-1.5 py-0.5 rounded border text-[10px] font-medium ' + uCls}>{u.label}</span>
+            <span className={'inline-flex items-center px-1.5 py-0.5 rounded-sm border text-[10px] font-medium ' + uCls}>{u.label}</span>
             {relevant && <span className="inline-flex items-center gap-0.5 text-[10px] text-amber-400" title="Fits your skills"><Sparkles size={9} /> fits you</span>}
           </div>
         </div>
@@ -330,11 +330,11 @@ function PoolCard({ task, meta, channel, relevant, canManage, onClaim, onEdit, o
       <div className="absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition">
         {canManage && (
           <>
-            <button onClick={onEdit} title="Edit" className="w-6 h-6 rounded bg-white/5 hover:bg-white/15 text-gray-400 hover:text-white flex items-center justify-center"><Pencil size={11} /></button>
-            <button onClick={onDelete} title="Delete" className="w-6 h-6 rounded bg-white/5 hover:bg-red-500/25 text-gray-400 hover:text-red-300 flex items-center justify-center"><Trash2 size={11} /></button>
+            <button onClick={onEdit} title="Edit" className="w-6 h-6 rounded-sm bg-white/5 hover:bg-white/15 text-gray-400 hover:text-white flex items-center justify-center"><Pencil size={11} /></button>
+            <button onClick={onDelete} title="Delete" className="w-6 h-6 rounded-sm bg-white/5 hover:bg-red-500/25 text-gray-400 hover:text-red-300 flex items-center justify-center"><Trash2 size={11} /></button>
           </>
         )}
-        <button onClick={onClaim} title="Claim into my backlog" className="w-6 h-6 rounded bg-primary-500/15 hover:bg-primary-500/30 text-primary-400 flex items-center justify-center"><Hand size={11} /></button>
+        <button onClick={onClaim} title="Claim into my backlog" className="w-6 h-6 rounded-sm bg-primary-500/15 hover:bg-primary-500/30 text-primary-400 flex items-center justify-center"><Hand size={11} /></button>
       </div>
     </div>
   )

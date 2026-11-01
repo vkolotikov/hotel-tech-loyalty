@@ -246,7 +246,7 @@ export function Deals() {
                   'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold transition-all active:scale-[0.98]',
                   active
                     ? 'bg-primary-500 text-on-primary shadow-md shadow-primary-500/25'
-                    : 'text-gray-300 hover:text-white hover:bg-white/[0.04]',
+                    : 'text-gray-300 hover:text-white hover:bg-white/4',
                 ].join(' ')}
               >
                 {p.label}
@@ -258,7 +258,7 @@ export function Deals() {
                         ? 'bg-black/20 text-on-primary'
                         : (p.tone === 'red' ? 'bg-red-500/15 text-red-300 border border-red-500/30'
                           : p.tone === 'emerald' ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30'
-                          : 'bg-white/[0.06] text-gray-400 border border-white/10'),
+                          : 'bg-white/6 text-gray-400 border border-white/10'),
                     ].join(' ')}
                   >
                     {p.count}
@@ -274,7 +274,7 @@ export function Deals() {
             <select
               value={sort}
               onChange={e => setSort(e.target.value as any)}
-              className="bg-transparent text-white font-semibold focus:outline-none cursor-pointer"
+              className="bg-transparent text-white font-semibold focus:outline-hidden cursor-pointer"
             >
               <option value="due_date">{t('deals.sort.due_date', 'Due Date')}</option>
               <option value="amount">{t('deals.sort.amount', 'Amount')}</option>
@@ -293,7 +293,7 @@ export function Deals() {
         <div className="overflow-x-auto rounded-xl">
           <table className="w-full text-sm min-w-[1100px]">
             <thead>
-              <tr className="border-b border-dark-border bg-dark-bg/40 sticky top-0 z-10 backdrop-blur-sm">
+              <tr className="border-b border-dark-border bg-dark-bg/40 sticky top-0 z-10 backdrop-blur-xs">
                 <th className="text-left px-3 py-2.5 text-[10.5px] uppercase tracking-wider font-bold text-gray-500 whitespace-nowrap">
                   {t('deals.table.deal_customer', 'Deal · Customer')}
                 </th>
@@ -322,7 +322,7 @@ export function Deals() {
                 <tr>
                   <td colSpan={visibleCols} className="px-4 py-16 text-center">
                     <div className="mx-auto max-w-[420px] flex flex-col items-center gap-3">
-                      <div className="w-14 h-14 rounded-2xl bg-white/[0.03] border border-white/[0.08] flex items-center justify-center">
+                      <div className="w-14 h-14 rounded-2xl bg-white/3 border border-white/8 flex items-center justify-center">
                         <Inbox size={26} className="text-gray-600" />
                       </div>
                       <div className="text-[15px] font-semibold text-white">
@@ -371,15 +371,15 @@ export function Deals() {
                   <tr
                     onClick={() => setDrawerDealId(d.id)}
                     className={[
-                    'group border-b border-dark-border/40 hover:bg-white/[0.025] transition-colors cursor-pointer',
-                    isOverdue ? 'bg-red-500/[0.025]' : '',
-                    isExpanded ? 'bg-white/[0.02]' : '',
+                    'group border-b border-dark-border/40 hover:bg-white/2.5 transition-colors cursor-pointer',
+                    isOverdue ? 'bg-red-500/2.5' : '',
+                    isExpanded ? 'bg-white/2' : '',
                   ].join(' ')}>
                     {/* Deal / Customer */}
                     <td className="px-3 py-3 min-w-[260px]">
                       <div className="flex items-start gap-3">
                         <div
-                          className="flex-shrink-0 w-9 h-9 rounded-full flex items-center justify-center text-[12.5px] font-bold tracking-tight shadow-inner"
+                          className="shrink-0 w-9 h-9 rounded-full flex items-center justify-center text-[12.5px] font-bold tracking-tight shadow-inner"
                           style={avatarStyle}
                           aria-hidden
                         >
@@ -401,7 +401,7 @@ export function Deals() {
                             />
                             {d.guest?.vip_level && d.guest.vip_level !== 'Standard' && (
                               <span
-                                className="inline-flex items-center gap-0.5 text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border border-amber-500/30 text-amber-300 bg-amber-500/10"
+                                className="inline-flex items-center gap-0.5 text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-sm border border-amber-500/30 text-amber-300 bg-amber-500/10"
                                 title={t('deals.row.vip_tooltip', 'VIP level on the guest profile')}
                               >
                                 <Star size={9} className="fill-amber-300" />{d.guest.vip_level}
@@ -419,7 +419,7 @@ export function Deals() {
                             <div className="text-[11px] text-gray-500 mt-0.5 flex items-center gap-1.5 truncate">
                               {d.guest?.email && (
                                 <span className="inline-flex items-center gap-1 truncate" title={d.guest.email}>
-                                  <Mail size={10} className="opacity-60 flex-shrink-0" />
+                                  <Mail size={10} className="opacity-60 shrink-0" />
                                   <span className="truncate max-w-[180px]">{d.guest.email}</span>
                                 </span>
                               )}
@@ -427,7 +427,7 @@ export function Deals() {
                                 <>
                                   {d.guest?.email && <span className="text-gray-600">·</span>}
                                   <span className="inline-flex items-center gap-1" title={d.guest?.phone || d.guest?.mobile}>
-                                    <Phone size={10} className="opacity-60 flex-shrink-0" />
+                                    <Phone size={10} className="opacity-60 shrink-0" />
                                     <span className="tabular-nums">{d.guest?.phone ?? d.guest?.mobile}</span>
                                   </span>
                                 </>
@@ -454,7 +454,7 @@ export function Deals() {
                     {/* Amount (right-aligned, emerald pill matches LeadRow) */}
                     {dealFields.list.amount && (
                       <td className="px-3 py-3 text-right whitespace-nowrap">
-                        <div className="inline-flex items-center px-2.5 py-1 rounded-md bg-emerald-500/[0.08] border border-emerald-500/25 text-emerald-300 text-[13px] font-bold tabular-nums">
+                        <div className="inline-flex items-center px-2.5 py-1 rounded-md bg-emerald-500/8 border border-emerald-500/25 text-emerald-300 text-[13px] font-bold tabular-nums">
                           {currency(d.total_value)}
                         </div>
                         {d.paid_amount != null && d.payment_status === 'partial' && (
@@ -471,7 +471,7 @@ export function Deals() {
                             const rect = e.currentTarget.getBoundingClientRect()
                             setOpenPaymentMenu(openPaymentMenu?.id === d.id ? null : { id: d.id, rect })
                           }}
-                          className={`inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full font-bold border hover:brightness-110 transition ${payment?.bg ?? 'bg-white/[0.04]'} ${payment?.text ?? 'text-gray-400'}`}
+                          className={`inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full font-bold border hover:brightness-110 transition ${payment?.bg ?? 'bg-white/4'} ${payment?.text ?? 'text-gray-400'}`}
                           style={payment ? { borderColor: 'currentColor', borderOpacity: 0.35 } as any : { borderColor: hxWhite(0.1) }}
                         >
                           {payment?.label ?? t('deals.row.no_payment', 'Set status')}
@@ -519,8 +519,8 @@ export function Deals() {
                         {d.next_task_type && !d.next_task_completed ? (
                           <div className="flex items-start gap-1.5">
                             {isOverdue
-                              ? <AlertTriangle size={12} className="text-red-400 flex-shrink-0 mt-0.5" />
-                              : <CheckSquare size={12} className="text-gray-500 flex-shrink-0 mt-0.5" />}
+                              ? <AlertTriangle size={12} className="text-red-400 shrink-0 mt-0.5" />
+                              : <CheckSquare size={12} className="text-gray-500 shrink-0 mt-0.5" />}
                             <div className="min-w-0">
                               <div className="text-[12px] text-gray-200 font-semibold truncate">{d.next_task_type}</div>
                               {d.next_task_due && rel && (
@@ -556,7 +556,7 @@ export function Deals() {
                         {d.assigned_to ? (
                           <div className="flex items-center gap-2 max-w-[180px]">
                             <div
-                              className="flex-shrink-0 w-7 h-7 rounded-full bg-white/[0.06] border border-white/15 text-gray-200 flex items-center justify-center text-[10.5px] font-bold"
+                              className="shrink-0 w-7 h-7 rounded-full bg-white/6 border border-white/15 text-gray-200 flex items-center justify-center text-[10.5px] font-bold"
                               aria-hidden
                             >
                               {avatarInitials(d.assigned_to)}
@@ -565,7 +565,7 @@ export function Deals() {
                           </div>
                         ) : (
                           <div className="flex items-center gap-2 max-w-[180px]">
-                            <div className="flex-shrink-0 w-7 h-7 rounded-full border border-dashed border-amber-500/30 text-amber-400 bg-amber-500/[0.06] flex items-center justify-center text-[10.5px] font-bold">?</div>
+                            <div className="shrink-0 w-7 h-7 rounded-full border border-dashed border-amber-500/30 text-amber-400 bg-amber-500/6 flex items-center justify-center text-[10.5px] font-bold">?</div>
                             <span className="text-[12px] text-amber-400 font-semibold">{t('deals.row.unassigned', 'Unassigned')}</span>
                           </div>
                         )}
@@ -579,7 +579,7 @@ export function Deals() {
                           type="button"
                           onClick={(e) => { e.stopPropagation(); setExpandedRow(isExpanded ? null : d.id) }}
                           title={isExpanded ? t('deals.row.collapse', 'Collapse') : t('deals.row.expand', 'Expand')}
-                          className="p-1.5 rounded-lg hover:bg-white/[0.06] text-gray-500 hover:text-white transition-colors"
+                          className="p-1.5 rounded-lg hover:bg-white/6 text-gray-500 hover:text-white transition-colors"
                         >
                           <ChevronDown size={14} className={`transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
                         </button>
@@ -593,7 +593,7 @@ export function Deals() {
                         <button
                           type="button"
                           onClick={(e) => e.stopPropagation()}
-                          className="p-1.5 rounded-lg hover:bg-white/[0.06] text-gray-500 hover:text-white transition-colors opacity-70 group-hover:opacity-100"
+                          className="p-1.5 rounded-lg hover:bg-white/6 text-gray-500 hover:text-white transition-colors opacity-70 group-hover:opacity-100"
                         >
                           <MoreHorizontal size={14} />
                         </button>
@@ -613,7 +613,7 @@ export function Deals() {
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
 
                           {/* CUSTOMER */}
-                          <div className="rounded-xl border border-sky-500/15 bg-sky-500/[0.03] p-4">
+                          <div className="rounded-xl border border-sky-500/15 bg-sky-500/3 p-4">
                             <div className="flex items-center justify-between mb-3">
                               <div className="inline-flex items-center gap-2">
                                 <div className="w-6 h-6 rounded-md bg-sky-500/15 border border-sky-500/25 flex items-center justify-center">
@@ -627,7 +627,7 @@ export function Deals() {
                                 <Link
                                   to={`/guests/${d.guest.id}`}
                                   onClick={e => e.stopPropagation()}
-                                  className="inline-flex items-center gap-1 text-[10.5px] font-semibold text-primary-300 hover:text-primary-200 bg-primary-500/[0.08] hover:bg-primary-500/[0.15] border border-primary-500/25 rounded-md px-2 py-1 transition-colors"
+                                  className="inline-flex items-center gap-1 text-[10.5px] font-semibold text-primary-300 hover:text-primary-200 bg-primary-500/8 hover:bg-primary-500/15 border border-primary-500/25 rounded-md px-2 py-1 transition-colors"
                                 >
                                   {t('deals.expanded.view_full_customer', 'View full customer')}
                                 </Link>
@@ -644,12 +644,12 @@ export function Deals() {
                                       </span>
                                     )}
                                     {d.guest.stays_count > 0 && (
-                                      <span className="inline-flex items-center gap-1 text-[10.5px] font-semibold px-2 py-1 rounded-md bg-white/[0.04] border border-white/10 text-gray-200">
+                                      <span className="inline-flex items-center gap-1 text-[10.5px] font-semibold px-2 py-1 rounded-md bg-white/4 border border-white/10 text-gray-200">
                                         {d.guest.stays_count} {d.guest.stays_count === 1 ? t('deals.expanded.stay', 'stay') : t('deals.expanded.stays', 'stays')}
                                       </span>
                                     )}
                                     {d.guest.total_spent > 0 && (
-                                      <span className="inline-flex items-center gap-1 text-[10.5px] font-semibold px-2 py-1 rounded-md bg-emerald-500/[0.08] border border-emerald-500/25 text-emerald-300 tabular-nums">
+                                      <span className="inline-flex items-center gap-1 text-[10.5px] font-semibold px-2 py-1 rounded-md bg-emerald-500/8 border border-emerald-500/25 text-emerald-300 tabular-nums">
                                         {currency(d.guest.total_spent)} {t('deals.expanded.ltv', 'LTV')}
                                       </span>
                                     )}
@@ -700,7 +700,7 @@ export function Deals() {
                           </div>
 
                           {/* DEAL & FULFILLMENT */}
-                          <div className="rounded-xl border border-primary-500/15 bg-primary-500/[0.025] p-4">
+                          <div className="rounded-xl border border-primary-500/15 bg-primary-500/2.5 p-4">
                             <div className="inline-flex items-center gap-2 mb-3">
                               <div className="w-6 h-6 rounded-md bg-primary-500/15 border border-primary-500/25 flex items-center justify-center">
                                 <TrendingUp size={11} className="text-primary-300" strokeWidth={2.5} />
@@ -714,14 +714,14 @@ export function Deals() {
                               * when present, identical surface to the Leads
                               * expanded card. Hide entirely on legacy rows. */}
                             {(d.ai_brief || d.ai_suggested_action) && (
-                              <div className="rounded-lg border border-primary-500/25 bg-gradient-to-br from-primary-500/[0.08] to-transparent p-3 mb-3">
+                              <div className="rounded-lg border border-primary-500/25 bg-linear-to-br from-primary-500/8 to-transparent p-3 mb-3">
                                 <div className="flex items-center justify-between gap-2 mb-1.5">
                                   <div className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-primary-300">
                                     <Sparkles size={11} />
                                     {t('deals.expanded.ai_brief', 'AI Brief')}
                                   </div>
                                   {(d.ai_going_cold_risk ?? '').toLowerCase() === 'high' && (
-                                    <span className="inline-flex items-center gap-1 text-[9.5px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-red-500/15 border border-red-500/30 text-red-300">
+                                    <span className="inline-flex items-center gap-1 text-[9.5px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-sm bg-red-500/15 border border-red-500/30 text-red-300">
                                       <Flame size={9} /> {t('deals.expanded.going_cold', 'Going cold')}
                                     </span>
                                   )}
@@ -742,15 +742,15 @@ export function Deals() {
                             {/* Money breakdown — top of the column because it's
                               * the post-sale information that matters most. */}
                             <div className="grid grid-cols-3 gap-2 mb-3">
-                              <div className="rounded-md bg-white/[0.03] border border-white/[0.06] p-2">
+                              <div className="rounded-md bg-white/3 border border-white/6 p-2">
                                 <div className="text-[9.5px] uppercase tracking-wider text-gray-500 font-bold">{t('deals.expanded.total', 'Total')}</div>
                                 <div className="text-[13px] text-white font-bold tabular-nums mt-1">{currency(d.total_value)}</div>
                               </div>
-                              <div className="rounded-md bg-emerald-500/[0.06] border border-emerald-500/20 p-2">
+                              <div className="rounded-md bg-emerald-500/6 border border-emerald-500/20 p-2">
                                 <div className="text-[9.5px] uppercase tracking-wider text-emerald-400/80 font-bold">{t('deals.expanded.paid', 'Paid')}</div>
                                 <div className="text-[13px] text-emerald-300 font-bold tabular-nums mt-1">{currency(d.paid_amount ?? 0)}</div>
                               </div>
-                              <div className="rounded-md bg-amber-500/[0.06] border border-amber-500/20 p-2">
+                              <div className="rounded-md bg-amber-500/6 border border-amber-500/20 p-2">
                                 <div className="text-[9.5px] uppercase tracking-wider text-amber-400/80 font-bold">{t('deals.expanded.balance', 'Balance')}</div>
                                 <div className="text-[13px] text-amber-300 font-bold tabular-nums mt-1">
                                   {currency(Math.max(0, Number(d.total_value || 0) - Number(d.paid_amount || 0)))}
@@ -819,7 +819,7 @@ export function Deals() {
                           </div>
 
                           {/* NEXT ACTION + NOTES */}
-                          <div className="rounded-xl border border-emerald-500/15 bg-emerald-500/[0.025] p-4">
+                          <div className="rounded-xl border border-emerald-500/15 bg-emerald-500/2.5 p-4">
                             <div className="flex items-center justify-between mb-3">
                               <div className="inline-flex items-center gap-2">
                                 <div className="w-6 h-6 rounded-md bg-emerald-500/15 border border-emerald-500/25 flex items-center justify-center">
@@ -832,7 +832,7 @@ export function Deals() {
                               <Link
                                 to={`/inquiries/${d.id}`}
                                 onClick={e => e.stopPropagation()}
-                                className="text-[10.5px] font-semibold text-emerald-300 hover:text-emerald-200 bg-emerald-500/[0.08] hover:bg-emerald-500/[0.15] border border-emerald-500/25 rounded-md px-2 py-1 transition-colors inline-flex items-center gap-1"
+                                className="text-[10.5px] font-semibold text-emerald-300 hover:text-emerald-200 bg-emerald-500/8 hover:bg-emerald-500/15 border border-emerald-500/25 rounded-md px-2 py-1 transition-colors inline-flex items-center gap-1"
                               >
                                 <Eye size={11} /> {t('deals.expanded.open_detail', 'Open full detail')}
                               </Link>
@@ -856,7 +856,7 @@ export function Deals() {
                                 )}
                               </div>
                             ) : d.next_task_completed ? (
-                              <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/[0.06] p-3 inline-flex items-center gap-2 text-[12px] text-emerald-300 font-semibold">
+                              <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/6 p-3 inline-flex items-center gap-2 text-[12px] text-emerald-300 font-semibold">
                                 <CheckCircle2 size={13} /> {t('deals.expanded.task_done', 'Task complete')}
                               </div>
                             ) : (
@@ -866,7 +866,7 @@ export function Deals() {
                             )}
 
                             {d.notes && (
-                              <div className="mt-4 pt-4 border-t border-white/[0.05]">
+                              <div className="mt-4 pt-4 border-t border-white/5">
                                 <div className="flex items-center gap-1.5 mb-2">
                                   <FileText size={11} className="text-emerald-400/70" />
                                   <div className="text-[10.5px] uppercase tracking-wider text-emerald-300/80 font-bold">

@@ -863,6 +863,17 @@ files on disk): run them one after the other.
 
 ## Deploying
 
+- Chat widget models (owner, 2026-11-01): production **915f9c6** on **eb52525**, feature source **19a565b** on
+  `claude/stack-audit-upgrade-plan-9hdkkv`. 21 paths (4 added, 17 changed, none deleted): the short current model list
+  (`frontend/src/lib/aiModels.ts`: GPT-5.6 Terra / Luna / GPT-5.5, Claude Haiku 5.5 / Sonnet 5.5, Gemini 3.5
+  Flash-Lite; a venue's saved model kept and still sent), Claude calls on the official SDK at API version 2026-10-21
+  (`App\Services\Ai\AnthropicSdk`, `LaravelHttpTransport`), no temperature for Claude or Gemini 3, chat effort low and
+  thinking off where the model allows it, the model check through Anthropic's Models API, prices for the new models.
+  No migration. Parity: every listed file and the whole source equal the tip. Artifact: PHP 8.5.12, **78 scopes, 7,298
+  passed / 16 skipped / 0 failed**; frontend tsc, **5,790 tests / 399 files**; the page checked in Chromium. CI on the
+  tip green (8 jobs; the first run's one Larastan finding fixed in 19a565b). Verified by content on `origin/main`
+  (21/21, the bundle carries the new list). The next source delta starts at **19a565b**.
+
 - Empty permission tables dropped, PHP 8.5 everywhere (owner's decisions, 2026-11-01): production **eb52525** on
   **38b0f24**, feature source **b333c82** on `claude/stack-audit-upgrade-plan-9hdkkv`. 11 paths (2 added, 9 changed,
   none deleted): migration `2026_11_01_100000_drop_unused_permission_tables` (drops `roles`, `permissions`,

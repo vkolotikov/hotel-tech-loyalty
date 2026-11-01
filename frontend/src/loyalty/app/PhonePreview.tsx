@@ -27,7 +27,7 @@ export function PhonePreview({ paint, logo, venue, tier }: { paint: PreviewPaint
   ]
 
   return (
-    <svg role="img" aria-labelledby={ids.title} viewBox="0 0 264 520" data-preview="" className="mx-auto block h-auto w-full max-w-[16.5rem]">
+    <svg role="img" aria-labelledby={ids.title} viewBox="0 0 264 520" data-preview="" className="mx-auto block h-auto w-full max-w-66">
       <title id={ids.title}>{t('loyalty.app.preview.title', 'Preview of the member app with these colours')}</title>
       <defs>
         <linearGradient id={ids.card} x1="0" y1="0" x2="1" y2="1">

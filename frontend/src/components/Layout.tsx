@@ -716,7 +716,7 @@ export function Layout({ children }: { children: ReactNode }) {
 
       {/* Sidebar */}
       <aside className={clsx(
-        'hx-sidebar mobile-drawer flex flex-col bg-dark-surface text-white flex-shrink-0 border-r border-dark-border',
+        'hx-sidebar mobile-drawer flex flex-col bg-dark-surface text-white shrink-0 border-r border-dark-border',
         // Mobile: fixed off-canvas drawer, wide w-72
         'fixed inset-y-0 left-0 z-50 w-72 transform',
         mobileOpen ? 'translate-x-0' : '-translate-x-full',
@@ -727,10 +727,10 @@ export function Layout({ children }: { children: ReactNode }) {
         {/* Logo */}
         <div className={clsx('flex items-center border-b border-dark-border h-14', displayCollapsed ? 'justify-center px-2' : 'gap-3 px-4')}>
           {logoUrl ? (
-            <img src={logoUrl} alt="Logo" className={clsx('rounded-lg object-contain flex-shrink-0', displayCollapsed ? 'h-7 w-7 object-cover' : 'h-8 max-w-[140px]')} />
+            <img src={logoUrl} alt="Logo" className={clsx('rounded-lg object-contain shrink-0', displayCollapsed ? 'h-7 w-7 object-cover' : 'h-8 max-w-[140px]')} />
           ) : (
             <>
-              <div className="w-7 h-7 bg-primary-500 rounded-lg flex items-center justify-center flex-shrink-0">
+              <div className="w-7 h-7 bg-primary-500 rounded-lg flex items-center justify-center shrink-0">
                 <Hotel size={15} />
               </div>
               {!displayCollapsed && <span className="font-bold text-sm truncate">{vocab('Hotel Loyalty') ?? 'Hotel Loyalty'}</span>}
@@ -786,10 +786,10 @@ export function Layout({ children }: { children: ReactNode }) {
                 {!displayCollapsed ? (
                   <button
                     onClick={() => toggleGroup(defaultLabel)}
-                    className="flex items-center gap-2 w-full px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.08em] hover:bg-white/[0.02] rounded-lg transition-colors group"
+                    className="flex items-center gap-2 w-full px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.08em] hover:bg-white/2 rounded-lg transition-colors group"
                     style={{ color: `var(--nav-label-text, ${tint(0.9)})` }}
                   >
-                    <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: accent, boxShadow: `0 0 8px ${tint(0.5)}` }} />
+                    <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: accent, boxShadow: `0 0 8px ${tint(0.5)}` }} />
                     <span className="flex-1 text-left">{groupLabel}</span>
                     <ChevronDown size={11} className={clsx('transition-transform opacity-50 group-hover:opacity-100', isOpen ? '' : '-rotate-90')} />
                   </button>
@@ -863,14 +863,14 @@ export function Layout({ children }: { children: ReactNode }) {
                         className={clsx(
                           'w-[calc(100%-12px)] flex items-center gap-2.5 py-2 mx-1.5 rounded-lg transition-colors text-[13px] font-medium relative',
                           displayCollapsed ? 'justify-center px-0' : 'px-3',
-                          'text-t-secondary/70 hover:text-white hover:bg-white/[0.04]',
+                          'text-t-secondary/70 hover:text-white hover:bg-white/4',
                         )}
                       >
-                        <Icon size={17} className="flex-shrink-0 opacity-70" aria-hidden="true" />
+                        <Icon size={17} className="shrink-0 opacity-70" aria-hidden="true" />
                         {!displayCollapsed && (
                           <>
                             <span className="truncate flex-1 text-left">{itemLabel}</span>
-                            <Lock size={11} className="flex-shrink-0 text-primary-400/80" aria-hidden="true" />
+                            <Lock size={11} className="shrink-0 text-primary-400/80" aria-hidden="true" />
                           </>
                         )}
                         {displayCollapsed && (
@@ -910,7 +910,7 @@ export function Layout({ children }: { children: ReactNode }) {
                         // Matches the `_locked` button's own muted treatment
                         // above, so "you do not have this" reads the same
                         // whichever of the two reasons produced it.
-                        !active && lapsed && 'text-t-secondary/70 hover:text-white hover:bg-white/[0.04]',
+                        !active && lapsed && 'text-t-secondary/70 hover:text-white hover:bg-white/4',
                       )}
                       data-nav-active={active ? '' : undefined}
                       style={active ? {
@@ -923,13 +923,13 @@ export function Layout({ children }: { children: ReactNode }) {
                         '--nav-accent-light': LIGHT_NAV_ACCENT_TEXT[accent] ?? accent,
                       } as CSSProperties : undefined}
                     >
-                      <Icon size={17} className={clsx('flex-shrink-0', lapsed && !active && 'opacity-70')} />
+                      <Icon size={17} className={clsx('shrink-0', lapsed && !active && 'opacity-70')} />
                       {!displayCollapsed && <span className="truncate flex-1">{itemLabel}</span>}
                       {lapsed && (
                         displayCollapsed ? (
                           <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-primary-500/80" aria-hidden="true" />
                         ) : (
-                          <Lock size={11} className="flex-shrink-0 text-primary-400/80" aria-hidden="true" />
+                          <Lock size={11} className="shrink-0 text-primary-400/80" aria-hidden="true" />
                         )
                       )}
                       {badge > 0 && (
@@ -963,19 +963,19 @@ export function Layout({ children }: { children: ReactNode }) {
         {/* User + logout */}
         <div className="border-t border-dark-border p-3">
           <Link to="/account/connections" title="Connected apps" onClick={() => setMobileOpen(false)}
-            className={clsx('mb-3 flex min-h-9 items-center gap-2 rounded-lg px-2 text-xs text-t-secondary hover:bg-dark-surface2 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400', displayCollapsed && 'justify-center')}>
+            className={clsx('mb-3 flex min-h-9 items-center gap-2 rounded-lg px-2 text-xs text-t-secondary hover:bg-dark-surface2 hover:text-white focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary-400', displayCollapsed && 'justify-center')}>
             <Link2 size={15} aria-hidden="true" />
             {!displayCollapsed && 'Connected apps'}
           </Link>
           {!displayCollapsed && (
             <div className="flex items-center gap-2 mb-2.5">
-              <div className="w-7 h-7 bg-primary-500 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0">
+              <div className="w-7 h-7 bg-primary-500 rounded-full flex items-center justify-center text-xs font-bold shrink-0">
                 {user?.name?.charAt(0)}
               </div>
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-1.5">
                   <p className="text-xs font-medium truncate">{user?.name}</p>
-                  {roleName && <span className="text-[9px] px-1 py-0.5 rounded bg-primary-500/20 text-primary-400 font-medium flex-shrink-0">{roleName}</span>}
+                  {roleName && <span className="text-[9px] px-1 py-0.5 rounded-sm bg-primary-500/20 text-primary-400 font-medium shrink-0">{roleName}</span>}
                 </div>
                 <p className="text-[10px] text-t-muted truncate">{user?.email}</p>
               </div>
@@ -1052,14 +1052,14 @@ export function Layout({ children }: { children: ReactNode }) {
                   ) : events.map((evt, i) => (
                     <div key={i} className="px-4 py-2.5 hover:bg-dark-surface2 transition-colors">
                       <div className="flex items-start gap-2">
-                        <span className="text-sm flex-shrink-0 mt-0.5">
+                        <span className="text-sm shrink-0 mt-0.5">
                           {evt.type === 'arrival' ? '\ud83d\udecf' : evt.type === 'departure' ? '\ud83d\udecf' : evt.type === 'inquiry' ? '\ud83d\udce9' : evt.type === 'points' ? '\u2b50' : evt.type === 'member' ? '\ud83d\udc64' : '\ud83c\udfe8'}
                         </span>
                         <div className="min-w-0 flex-1">
                           <p className="text-xs font-medium text-white truncate">{evt.title}</p>
                           {evt.body && <p className="text-[11px] text-t-secondary truncate">{evt.body}</p>}
                         </div>
-                        <span className="text-[10px] text-t-muted flex-shrink-0 whitespace-nowrap">
+                        <span className="text-[10px] text-t-muted shrink-0 whitespace-nowrap">
                           {new Date(evt.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </span>
                       </div>
@@ -1230,7 +1230,7 @@ function SidebarPlanBadge({ collapsed }: { collapsed: boolean }) {
             )} />
             <span className="text-[11px] font-semibold text-white truncate">{planName} plan</span>
           </div>
-          <span className={clsx('text-[9px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider shrink-0',
+          <span className={clsx('text-[9px] px-1.5 py-0.5 rounded-sm font-bold uppercase tracking-wider shrink-0',
             status === 'TRIALING' ? 'bg-primary-500/20 text-primary-300' :
             status === 'ACTIVE' ? 'bg-green-500/20 text-green-300' :
             'bg-red-500/20 text-red-300'
@@ -1368,7 +1368,7 @@ function SubscriptionWall() {
   const isAdmin = staff?.role === 'manager'
 
   return (
-    <div className="fixed inset-0 bg-dark-bg/95 backdrop-blur-sm z-40 flex flex-col items-center justify-center p-4">
+    <div className="fixed inset-0 bg-dark-bg/95 backdrop-blur-xs z-40 flex flex-col items-center justify-center p-4">
       <div className="flex flex-col items-center text-center max-w-2xl gap-6">
         {/* Lock Icon */}
         <div className="w-20 h-20 rounded-2xl bg-orange-500/20 flex items-center justify-center">
@@ -1419,7 +1419,7 @@ function SubscriptionWall() {
           </p>
         )}
 
-        <Link to="/account/connections" className="rounded text-sm text-gray-300 underline underline-offset-4 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400">
+        <Link to="/account/connections" className="rounded-sm text-sm text-gray-300 underline underline-offset-4 hover:text-white focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary-400">
           Manage connected apps
         </Link>
 

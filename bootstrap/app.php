@@ -68,6 +68,15 @@ return Application::configure(basePath: dirname(__DIR__))
             'landing.security'   => \App\Http\Middleware\LandingPageSecurity::class,
         ]);
 
+        // Route-model bindings ({inquiry}, {pipeline}, {task}, {field}…) look the row up through the model's
+        // TenantScope, which finds nothing until TenantMiddleware has set the organisation. Laravel sorts
+        // SubstituteBindings ahead of both middleware (they are not in its priority list), so every such admin
+        // route answered 404 for the organisation's own rows. The SaaS sign-in runs first because it can name the
+        // organisation TenantMiddleware chooses; their order to each other and after sign-in is unchanged.
+        // tests/Feature/AdminAccess/RouteBindingTenantTest.php
+        $middleware->prependToPriorityList(\Illuminate\Routing\Middleware\SubstituteBindings::class, \App\Http\Middleware\SaasAuthMiddleware::class);
+        $middleware->prependToPriorityList(\Illuminate\Routing\Middleware\SubstituteBindings::class, \App\Http\Middleware\TenantMiddleware::class);
+
         // RFC 8058 one-click unsubscribe. Gmail and Yahoo POST to this URL
         // straight from their own "Unsubscribe" button — there is no
         // browser session and no way for them to carry a CSRF token, so

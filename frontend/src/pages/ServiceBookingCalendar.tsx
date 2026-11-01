@@ -140,7 +140,7 @@ export default function ServiceBookingCalendar() {
     return { bookings, revenue }
   }, [filtered])
 
-  const selectClass = 'bg-dark-bg border border-white/[0.08] rounded-xl text-xs text-white px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary-500/40'
+  const selectClass = 'bg-dark-bg border border-white/8 rounded-xl text-xs text-white px-3 py-1.5 focus:outline-hidden focus:ring-1 focus:ring-primary-500/40'
 
   const selectedBookings = selectedDay ? (byDay.get(selectedDay) || []) : []
 
@@ -220,11 +220,11 @@ export default function ServiceBookingCalendar() {
       </div>
 
       {view === 'month' && (
-        <div className="rounded-2xl border border-white/[0.06] overflow-hidden"
+        <div className="rounded-2xl border border-white/6 overflow-hidden"
           style={{ background: 'var(--legacy-card-gradient)' }}>
-          <div className="grid grid-cols-7 border-b border-white/[0.06]">
+          <div className="grid grid-cols-7 border-b border-white/6">
             {weekdays.map(w => (
-              <div key={w} className="py-2 text-center text-[10px] font-bold uppercase tracking-wider text-gray-500 border-r border-white/[0.04] last:border-r-0">
+              <div key={w} className="py-2 text-center text-[10px] font-bold uppercase tracking-wider text-gray-500 border-r border-white/4 last:border-r-0">
                 {w}
               </div>
             ))}
@@ -240,7 +240,7 @@ export default function ServiceBookingCalendar() {
               const more = list.length - visible.length
               return (
                 <button key={d} onClick={() => list.length > 0 && setSelectedDay(d)}
-                  className="text-left border-r border-b border-white/[0.04] last:border-r-0 p-2 min-h-[108px] transition-colors hover:bg-white/[0.02] focus:outline-none"
+                  className="text-left border-r border-b border-white/4 last:border-r-0 p-2 min-h-[108px] transition-colors hover:bg-white/2 focus:outline-hidden"
                   style={{
                     background: isToday ? 'rgba(116,200,149,0.05)' : isWe && inMonth ? 'rgba(217,143,69,0.02)' : 'transparent',
                     opacity: inMonth ? 1 : 0.35,
@@ -251,7 +251,7 @@ export default function ServiceBookingCalendar() {
                       {dayNumber(d)}
                     </span>
                     {list.length > 0 && (
-                      <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-white/[0.04] text-gray-400">
+                      <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-white/4 text-gray-400">
                         {list.length}
                       </span>
                     )}
@@ -281,7 +281,7 @@ export default function ServiceBookingCalendar() {
       )}
 
       {view === 'week' && (
-        <div className="rounded-2xl border border-white/[0.06] overflow-hidden"
+        <div className="rounded-2xl border border-white/6 overflow-hidden"
           style={{ background: 'var(--legacy-card-gradient)' }}>
           <div className="grid grid-cols-7">
             {weekDays.map((d, idx) => {
@@ -289,9 +289,9 @@ export default function ServiceBookingCalendar() {
               const isWe = [5, 6].includes(idx)
               const list = byDay.get(d) || []
               return (
-                <div key={d} className="border-r border-white/[0.04] last:border-r-0 min-h-[360px]"
+                <div key={d} className="border-r border-white/4 last:border-r-0 min-h-[360px]"
                   style={{ background: isToday ? 'rgba(116,200,149,0.04)' : isWe ? 'rgba(217,143,69,0.02)' : 'transparent' }}>
-                  <div className="px-3 py-2 border-b border-white/[0.04] flex items-center justify-between sticky top-0 z-[1]"
+                  <div className="px-3 py-2 border-b border-white/4 flex items-center justify-between sticky top-0 z-1"
                     style={{ background: 'var(--legacy-card-deep)' }}>
                     <div>
                       <div className="text-[10px] font-bold uppercase tracking-wider text-gray-500">
@@ -300,7 +300,7 @@ export default function ServiceBookingCalendar() {
                       <div className={`text-lg font-bold ${isToday ? 'text-emerald-400' : 'text-white'}`}>{dayNumber(d)}</div>
                     </div>
                     {list.length > 0 && (
-                      <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-white/[0.06] text-gray-400">
+                      <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-white/6 text-gray-400">
                         {list.length}
                       </span>
                     )}
@@ -328,7 +328,7 @@ export default function ServiceBookingCalendar() {
       )}
 
       {view === 'day' && (
-        <div className="rounded-2xl border border-white/[0.06] overflow-hidden"
+        <div className="rounded-2xl border border-white/6 overflow-hidden"
           style={{ background: 'var(--legacy-card-gradient)' }}>
           {dayBookings.length === 0 ? (
             <div className="p-16 text-center">
@@ -344,11 +344,11 @@ export default function ServiceBookingCalendar() {
                   const isCurrentHour = cursor === today && new Date().getHours() === hour
                   return (
                     <div key={hour} className="contents">
-                      <div className="border-r border-b border-white/[0.04] p-2 text-right text-[11px] font-bold text-gray-500"
+                      <div className="border-r border-b border-white/4 p-2 text-right text-[11px] font-bold text-gray-500"
                         style={{ background: isCurrentHour ? 'rgba(116,200,149,0.04)' : 'transparent' }}>
                         {String(hour).padStart(2, '0')}:00
                       </div>
-                      <div className="border-b border-white/[0.04] min-h-[60px] p-2 space-y-1.5"
+                      <div className="border-b border-white/4 min-h-[60px] p-2 space-y-1.5"
                         style={{ background: isCurrentHour ? 'rgba(116,200,149,0.03)' : 'transparent' }}>
                         {hourBookings.map(b => {
                           const s = STATUS_STYLES[b.status] || DEFAULT_STYLE
@@ -388,16 +388,16 @@ export default function ServiceBookingCalendar() {
 
       {/* Day detail drawer */}
       {selectedDay && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-start justify-end" onClick={() => setSelectedDay(null)}>
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-start justify-end" onClick={() => setSelectedDay(null)}>
           <div onClick={e => e.stopPropagation()}
-            className="w-full max-w-md h-full overflow-y-auto border-l border-white/[0.08] p-6"
+            className="w-full max-w-md h-full overflow-y-auto border-l border-white/8 p-6"
             style={{ background: 'var(--legacy-card-gradient-deep)' }}>
             <div className="flex items-center justify-between mb-6">
               <div>
                 <h2 className="text-lg font-bold text-white">{formatDayKey(selectedDay, undefined, { weekday: 'long', day: 'numeric', month: 'long' })}</h2>
                 <p className="text-xs text-gray-500 mt-0.5">{selectedBookings.length} booking{selectedBookings.length === 1 ? '' : 's'}</p>
               </div>
-              <button onClick={() => setSelectedDay(null)} className="p-2 rounded-lg hover:bg-white/[0.06] text-gray-500">
+              <button onClick={() => setSelectedDay(null)} className="p-2 rounded-lg hover:bg-white/6 text-gray-500">
                 <X size={18} />
               </button>
             </div>
@@ -407,7 +407,7 @@ export default function ServiceBookingCalendar() {
                 const s = STATUS_STYLES[b.status] || DEFAULT_STYLE
                 return (
                   <Link key={b.id} to={`/service-bookings?id=${b.id}`}
-                    className="block rounded-xl border border-white/[0.08] p-4 transition-all hover:border-white/[0.16] hover:bg-white/[0.02]">
+                    className="block rounded-xl border border-white/8 p-4 transition-all hover:border-white/16 hover:bg-white/2">
                     <div className="flex items-start justify-between mb-2">
                       <div className="flex items-center gap-2">
                         <Clock size={14} className="text-gray-500" />
@@ -430,7 +430,7 @@ export default function ServiceBookingCalendar() {
                         {b.master && <span className="text-gray-600">· with {b.master.name}</span>}
                       </div>
                     )}
-                    <div className="flex items-center justify-between mt-2 pt-2 border-t border-white/[0.04]">
+                    <div className="flex items-center justify-between mt-2 pt-2 border-t border-white/4">
                       <span className="text-[10px] text-gray-600 font-mono">{b.booking_reference}</span>
                       <span className="text-xs font-bold text-white">
                         {money(b.total_amount)}

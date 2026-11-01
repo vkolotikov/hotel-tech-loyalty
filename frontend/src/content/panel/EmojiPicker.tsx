@@ -39,7 +39,7 @@ export function EmojiPicker({ recent, onPick }: { recent: string[]; onPick: (emo
   const title = 'mb-1 mt-2 font-a-mono text-xs uppercase tracking-[0.12em] text-a-text-2'
 
   return (
-    <div className="w-[17.5rem] space-y-1">
+    <div className="w-70 space-y-1">
       <input ref={search} type="search" aria-label={t('content.panel.emoji_search', 'Search emoji')} value={query}
         placeholder={t('content.panel.emoji_search', 'Search emoji')} onChange={(e) => setQuery(e.target.value)}
         onKeyDown={(e) => { if (e.key === 'Enter' && found && found.length > 0) { e.preventDefault(); onPick(found[0].char) } }}

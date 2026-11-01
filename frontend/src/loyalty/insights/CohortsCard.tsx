@@ -37,7 +37,7 @@ export function CohortsTable({ data, locale }: { data: Cohorts; locale: string }
 
   return (
     <div className="-mx-1 overflow-x-auto px-1">
-      <table data-chart="cohorts" className="w-full min-w-[40rem] border-separate border-spacing-0.5 text-xs tabular-nums">
+      <table data-chart="cohorts" className="w-full min-w-160 border-separate border-spacing-0.5 text-xs tabular-nums">
         <caption className="sr-only">{t('loyalty.insights.cohorts.title', 'Cohort retention')}</caption>
         <thead>
           <tr className="text-a-text-2">
@@ -59,7 +59,7 @@ export function CohortsTable({ data, locale }: { data: Cohorts; locale: string }
                 if (k >= row.active.length) return <td key={k} aria-hidden />
                 const share = retentionShare(row.active[k], row.members)
                 return (
-                  <td key={k} data-share={share ?? ''} className={`rounded px-1.5 py-1 text-center text-a-text ${heatStep(share) > 0 ? `l-heat-${heatStep(share)}` : ''}`}
+                  <td key={k} data-share={share ?? ''} className={`rounded-sm px-1.5 py-1 text-center text-a-text ${heatStep(share) > 0 ? `l-heat-${heatStep(share)}` : ''}`}
                     title={share === null ? undefined : t('loyalty.insights.cohorts.cell', '{{active}} of {{members}} active', { active: points(row.active[k], locale), members: points(row.members, locale) })}>
                     {share === null ? '–' : `${share}%`}
                   </td>

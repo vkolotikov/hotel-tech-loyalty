@@ -120,7 +120,7 @@ export function EngagementLive() {
   const k = kpis?.data
 
   return (
-    <div className="fixed inset-0 bg-gradient-to-br from-hx-070b14 via-hx-0a0d14 to-hx-0a0d1f text-white overflow-hidden flex flex-col">
+    <div className="fixed inset-0 bg-linear-to-br from-hx-070b14 via-hx-0a0d14 to-hx-0a0d1f text-white overflow-hidden flex flex-col">
       {/* Header */}
       <header className="flex items-center justify-between px-8 py-6 border-b border-white/5">
         <div className="flex items-center gap-3">
@@ -219,7 +219,7 @@ function BigKpi({
 }) {
   return (
     <div
-      className="bg-dark-surface/80 border rounded-2xl p-5 backdrop-blur"
+      className="bg-dark-surface/80 border rounded-2xl p-5 backdrop-blur-sm"
       style={{ borderColor: color + '40' }}
     >
       <div className="flex items-center gap-2.5">
@@ -249,7 +249,7 @@ function VisitorTile({ row: r, highlight }: { row: LiveRow; highlight: boolean }
 
   return (
     <div
-      className={`relative bg-dark-surface/80 border rounded-xl p-4 backdrop-blur transition-all duration-500 ${
+      className={`relative bg-dark-surface/80 border rounded-xl p-4 backdrop-blur-sm transition-all duration-500 ${
         highlight
           ? 'border-accent ring-2 ring-accent/40 scale-[1.02] shadow-[0_0_24px_rgba(201,168,76,0.3)]'
           : r.is_hot_lead
@@ -262,7 +262,7 @@ function VisitorTile({ row: r, highlight }: { row: LiveRow; highlight: boolean }
 
       {/* Identity */}
       <div className="flex items-start gap-3">
-        <div className="w-10 h-10 rounded-full bg-accent/20 border border-accent/40 flex items-center justify-center text-base font-bold text-accent flex-shrink-0">
+        <div className="w-10 h-10 rounded-full bg-accent/20 border border-accent/40 flex items-center justify-center text-base font-bold text-accent shrink-0">
           {r.effective_name.charAt(0).toUpperCase()}
         </div>
         <div className="flex-1 min-w-0">
@@ -283,23 +283,23 @@ function VisitorTile({ row: r, highlight }: { row: LiveRow; highlight: boolean }
       {/* Tags */}
       <div className="flex items-center gap-1.5 mt-2.5 flex-wrap">
         {r.is_hot_lead && (
-          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold bg-orange-500/20 text-orange-400 border border-orange-500/40 animate-pulse">
+          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-sm text-[9px] font-bold bg-orange-500/20 text-orange-400 border border-orange-500/40 animate-pulse">
             <Sparkles size={9} /> HOT
           </span>
         )}
         {r.is_lead && !r.is_hot_lead && (
-          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-300/15 text-amber-300 border border-amber-300/30">
+          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-sm text-[9px] font-bold bg-amber-300/15 text-amber-300 border border-amber-300/30">
             <Star size={9} /> LEAD
           </span>
         )}
         {intentMeta && (
-          <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold border ${intentMeta.cls}`}>
+          <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-sm text-[9px] font-bold border ${intentMeta.cls}`}>
             <intentMeta.icon size={9} />
             {intentMeta.label}
           </span>
         )}
         {r.conversation && r.conversation.status === 'active' && (
-          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold bg-green-500/15 text-green-400 border border-green-500/30">
+          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-sm text-[9px] font-bold bg-green-500/15 text-green-400 border border-green-500/30">
             CHAT
           </span>
         )}
@@ -308,7 +308,7 @@ function VisitorTile({ row: r, highlight }: { row: LiveRow; highlight: boolean }
       {/* Current page */}
       {r.current_page && (
         <div className="mt-2.5 flex items-start gap-1.5 text-[10px] text-t-secondary">
-          <MapPin size={10} className="flex-shrink-0 mt-0.5" />
+          <MapPin size={10} className="shrink-0 mt-0.5" />
           <span className="truncate font-mono">{r.current_page}</span>
         </div>
       )}

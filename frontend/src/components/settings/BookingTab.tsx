@@ -35,7 +35,7 @@ type CopyState = Record<string, boolean>
 function Toggle({ on, onClick, color = 'emerald' }: { on: boolean; onClick: () => void; color?: 'emerald' | 'amber' }) {
   return (
     <button onClick={onClick}
-      className={`relative w-11 h-6 rounded-full transition-colors flex-shrink-0 ${on ? (color === 'amber' ? 'bg-amber-500' : 'bg-emerald-500') : 'bg-white/[0.1]'}`}>
+      className={`relative w-11 h-6 rounded-full transition-colors shrink-0 ${on ? (color === 'amber' ? 'bg-amber-500' : 'bg-emerald-500') : 'bg-white/10'}`}>
       <div className={`absolute left-0 top-0.5 w-5 h-5 rounded-full bg-on-fill transition-transform ${on ? 'translate-x-[22px]' : 'translate-x-0.5'}`} />
     </button>
   )
@@ -147,7 +147,7 @@ export function BookingTab({ getVal, handleChange, widgetToken, cardClass, cardS
             <p className="text-xs text-gray-500 mt-1">Paste these snippets into your website. Both widgets share the same token and appearance.</p>
           </div>
           {widgetToken && (
-            <span className="text-[10px] text-gray-500 font-mono bg-white/[0.04] border border-white/[0.06] px-2 py-1 rounded-md whitespace-nowrap">
+            <span className="text-[10px] text-gray-500 font-mono bg-white/4 border border-white/6 px-2 py-1 rounded-md whitespace-nowrap">
               <Shield size={10} className="inline -mt-px mr-1" /> {widgetToken.slice(0, 12)}…
             </span>
           )}
@@ -160,13 +160,13 @@ export function BookingTab({ getVal, handleChange, widgetToken, cardClass, cardS
         ) : (
           <>
             {/* Tabs */}
-            <div className="flex items-center gap-1 rounded-xl border border-white/[0.08] p-1 mb-4 w-fit" style={{ background: 'var(--legacy-well-60)' }}>
+            <div className="flex items-center gap-1 rounded-xl border border-white/8 p-1 mb-4 w-fit" style={{ background: 'var(--legacy-well-60)' }}>
               {[
                 { id: 'rooms' as const,    label: 'Rooms',    icon: <Building2 size={12} /> },
                 { id: 'services' as const, label: 'Services', icon: <Scissors size={12} /> },
               ].map(tab => (
                 <button key={tab.id} onClick={() => setActiveEmbed(tab.id)}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${activeEmbed === tab.id ? 'bg-white/[0.08] text-white' : 'text-gray-500 hover:text-gray-300'}`}>
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${activeEmbed === tab.id ? 'bg-white/8 text-white' : 'text-gray-500 hover:text-gray-300'}`}>
                   {tab.icon} {tab.label}
                 </button>
               ))}
@@ -174,7 +174,7 @@ export function BookingTab({ getVal, handleChange, widgetToken, cardClass, cardS
 
             {/* Snippet */}
             <div className="relative">
-              <pre className="text-xs font-mono border border-white/[0.06] rounded-xl p-4 overflow-x-auto text-gray-300 whitespace-pre-wrap" style={{ background: hx('f', '#000000', 0.4) }}>{embed.snippet}</pre>
+              <pre className="text-xs font-mono border border-white/6 rounded-xl p-4 overflow-x-auto text-gray-300 whitespace-pre-wrap" style={{ background: hx('f', '#000000', 0.4) }}>{embed.snippet}</pre>
               <div className="absolute top-3 right-3">{copyBtn(`${activeEmbed}-snippet`, embed.snippet)}</div>
             </div>
 
@@ -182,18 +182,18 @@ export function BookingTab({ getVal, handleChange, widgetToken, cardClass, cardS
             <div className="mt-3">
               <p className="text-[11px] text-gray-500 mb-1.5">
                 Using Joomla, YOOtheme, Wix or Squarespace? Some page builders remove
-                <code className="mx-1 px-1 rounded bg-white/[0.06] text-gray-400">&lt;script&gt;</code>
+                <code className="mx-1 px-1 rounded-sm bg-white/6 text-gray-400">&lt;script&gt;</code>
                 tags from page content. Use this instead — it always works, but keeps a fixed height.
               </p>
               <div className="relative">
-                <pre className="text-xs font-mono border border-white/[0.06] rounded-xl p-4 overflow-x-auto text-gray-300 whitespace-pre-wrap" style={{ background: hx('f', '#000000', 0.4) }}>{embed.iframe}</pre>
+                <pre className="text-xs font-mono border border-white/6 rounded-xl p-4 overflow-x-auto text-gray-300 whitespace-pre-wrap" style={{ background: hx('f', '#000000', 0.4) }}>{embed.iframe}</pre>
                 <div className="absolute top-3 right-3">{copyBtn(`${activeEmbed}-iframe`, embed.iframe)}</div>
               </div>
             </div>
 
             {/* Direct URL + preview link */}
             <div className="mt-3 flex items-center gap-2">
-              <code className="flex-1 text-xs font-mono border border-white/[0.06] rounded-lg px-3 py-2 text-gray-300 overflow-x-auto" style={{ background: hx('f', '#000000', 0.4) }}>{embed.direct}</code>
+              <code className="flex-1 text-xs font-mono border border-white/6 rounded-lg px-3 py-2 text-gray-300 overflow-x-auto" style={{ background: hx('f', '#000000', 0.4) }}>{embed.direct}</code>
               {copyBtn(`${activeEmbed}-direct`, embed.direct, true)}
               <a href={embed.preview} target="_blank" rel="noopener noreferrer"
                 className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider text-blue-400 hover:bg-blue-500/10 border border-blue-500/20 transition-colors">
@@ -204,7 +204,7 @@ export function BookingTab({ getVal, handleChange, widgetToken, cardClass, cardS
 
             <details className="mt-3 text-[11px] text-gray-500">
               <summary className="cursor-pointer hover:text-gray-400 select-none">Optional script attributes</summary>
-              <div className="mt-2 p-3 rounded-lg bg-white/[0.02] border border-white/[0.04] leading-relaxed">
+              <div className="mt-2 p-3 rounded-lg bg-white/2 border border-white/4 leading-relaxed">
                 <code className="text-gray-400">data-lang="en"</code> · language ·{' '}
                 <code className="text-gray-400">data-primary-color="#c9a84c"</code> · brand color ·{' '}
                 <code className="text-gray-400">data-container="my-id"</code> · custom container ID
@@ -222,13 +222,13 @@ export function BookingTab({ getVal, handleChange, widgetToken, cardClass, cardS
           </h3>
           {/* Per-widget tab. Each widget keeps its own settings — pick one,
               edit it, the other stays untouched. */}
-          <div className="flex items-center gap-1 rounded-xl border border-white/[0.08] p-1" style={{ background: 'var(--legacy-well-60)' }}>
+          <div className="flex items-center gap-1 rounded-xl border border-white/8 p-1" style={{ background: 'var(--legacy-well-60)' }}>
             {[
               { id: 'rooms' as const,    label: 'Rooms',    icon: <Building2 size={12} /> },
               { id: 'services' as const, label: 'Services', icon: <Scissors size={12} /> },
             ].map(tab => (
               <button key={tab.id} onClick={() => setAppearanceTab(tab.id)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${appearanceTab === tab.id ? 'bg-white/[0.08] text-white' : 'text-gray-500 hover:text-gray-300'}`}>
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${appearanceTab === tab.id ? 'bg-white/8 text-white' : 'text-gray-500 hover:text-gray-300'}`}>
                 {tab.icon} {tab.label}
               </button>
             ))}
@@ -241,27 +241,27 @@ export function BookingTab({ getVal, handleChange, widgetToken, cardClass, cardS
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-6">
           <div className="space-y-3">
             {/* Theme */}
-            <div className="flex items-center justify-between py-2 border-b border-white/[0.04]">
+            <div className="flex items-center justify-between py-2 border-b border-white/4">
               <label className="block text-sm font-medium text-white">Theme</label>
-              <div className="flex items-center gap-1 rounded-xl border border-white/[0.08] p-1" style={{ background: 'var(--legacy-well-60)' }}>
+              <div className="flex items-center gap-1 rounded-xl border border-white/8 p-1" style={{ background: 'var(--legacy-well-60)' }}>
                 <button onClick={() => handleChange(sk('theme'), 'light')}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${widgetTheme === 'light' ? 'bg-white/[0.1] text-white' : 'text-gray-500 hover:text-gray-300'}`}>
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${widgetTheme === 'light' ? 'bg-white/10 text-white' : 'text-gray-500 hover:text-gray-300'}`}>
                   <Sun size={12} /> Light
                 </button>
                 <button onClick={() => handleChange(sk('theme'), 'dark')}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${widgetTheme === 'dark' ? 'bg-white/[0.1] text-white' : 'text-gray-500 hover:text-gray-300'}`}>
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${widgetTheme === 'dark' ? 'bg-white/10 text-white' : 'text-gray-500 hover:text-gray-300'}`}>
                   <Moon size={12} /> Dark
                 </button>
               </div>
             </div>
 
             {/* Primary Color */}
-            <div className="flex items-center justify-between py-2 border-b border-white/[0.04]">
+            <div className="flex items-center justify-between py-2 border-b border-white/4">
               <label className="block text-sm font-medium text-white">Primary Color</label>
               <div className="flex items-center gap-2 w-48">
                 <input type="color" value={widgetColor}
                   onChange={e => handleChange(sk('color'), e.target.value)}
-                  className="w-10 h-10 rounded-lg border border-white/[0.08] cursor-pointer bg-transparent p-0.5" />
+                  className="w-10 h-10 rounded-lg border border-white/8 cursor-pointer bg-transparent p-0.5" />
                 <input type="text" value={widgetColor}
                   onChange={e => handleChange(sk('color'), e.target.value)}
                   placeholder="#2d6a4f" maxLength={7}
@@ -270,14 +270,14 @@ export function BookingTab({ getVal, handleChange, widgetToken, cardClass, cardS
             </div>
 
             {/* Background colour override (optional — empty = theme default) */}
-            <div className="flex items-center justify-between py-2 border-b border-white/[0.04]">
+            <div className="flex items-center justify-between py-2 border-b border-white/4">
               <label className="block text-sm font-medium text-white">
                 Background <span className="text-[10px] text-gray-500 font-normal">(optional)</span>
               </label>
               <div className="flex items-center gap-2 w-48">
                 <input type="color" value={widgetBgColor || '#ffffff'}
                   onChange={e => handleChange(sk('bg_color'), e.target.value)}
-                  className="w-10 h-10 rounded-lg border border-white/[0.08] cursor-pointer bg-transparent p-0.5" />
+                  className="w-10 h-10 rounded-lg border border-white/8 cursor-pointer bg-transparent p-0.5" />
                 <input type="text" value={widgetBgColor}
                   onChange={e => handleChange(sk('bg_color'), e.target.value)}
                   placeholder="auto"
@@ -286,14 +286,14 @@ export function BookingTab({ getVal, handleChange, widgetToken, cardClass, cardS
             </div>
 
             {/* Text colour override */}
-            <div className="flex items-center justify-between py-2 border-b border-white/[0.04]">
+            <div className="flex items-center justify-between py-2 border-b border-white/4">
               <label className="block text-sm font-medium text-white">
                 Text Color <span className="text-[10px] text-gray-500 font-normal">(optional)</span>
               </label>
               <div className="flex items-center gap-2 w-48">
                 <input type="color" value={widgetTextColor || '#1a1a1a'}
                   onChange={e => handleChange(sk('text_color'), e.target.value)}
-                  className="w-10 h-10 rounded-lg border border-white/[0.08] cursor-pointer bg-transparent p-0.5" />
+                  className="w-10 h-10 rounded-lg border border-white/8 cursor-pointer bg-transparent p-0.5" />
                 <input type="text" value={widgetTextColor}
                   onChange={e => handleChange(sk('text_color'), e.target.value)}
                   placeholder="auto"
@@ -302,7 +302,7 @@ export function BookingTab({ getVal, handleChange, widgetToken, cardClass, cardS
             </div>
 
             {/* Border Radius */}
-            <div className="flex items-center justify-between py-2 border-b border-white/[0.04]">
+            <div className="flex items-center justify-between py-2 border-b border-white/4">
               <label className="block text-sm font-medium text-white">Border Radius</label>
               <div className="flex items-center gap-3 w-48">
                 <input type="range" min={0} max={24} value={Number(widgetRadius)}
@@ -313,18 +313,18 @@ export function BookingTab({ getVal, handleChange, widgetToken, cardClass, cardS
             </div>
 
             {/* Button style */}
-            <div className="flex items-center justify-between py-2 border-b border-white/[0.04]">
+            <div className="flex items-center justify-between py-2 border-b border-white/4">
               <label className="block text-sm font-medium text-white flex items-center gap-1.5">
                 <Square size={13} className="text-gray-500" /> Button Style
               </label>
-              <div className="flex items-center gap-1 rounded-xl border border-white/[0.08] p-1" style={{ background: 'var(--legacy-well-60)' }}>
+              <div className="flex items-center gap-1 rounded-xl border border-white/8 p-1" style={{ background: 'var(--legacy-well-60)' }}>
                 {[
                   { id: 'filled',  label: 'Filled' },
                   { id: 'outline', label: 'Outline' },
                   { id: 'soft',    label: 'Soft' },
                 ].map(opt => (
                   <button key={opt.id} onClick={() => handleChange(sk('button_style'), opt.id)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${widgetButtonStyle === opt.id ? 'bg-white/[0.1] text-white' : 'text-gray-500 hover:text-gray-300'}`}>
+                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${widgetButtonStyle === opt.id ? 'bg-white/10 text-white' : 'text-gray-500 hover:text-gray-300'}`}>
                     {opt.label}
                   </button>
                 ))}
@@ -350,7 +350,7 @@ export function BookingTab({ getVal, handleChange, widgetToken, cardClass, cardS
           </div>
 
           {/* Live preview */}
-          <div className="rounded-xl overflow-hidden border border-white/[0.08]"
+          <div className="rounded-xl overflow-hidden border border-white/8"
             style={{
               borderRadius: `${widgetRadius}px`,
               background: widgetBgColor || (widgetTheme === 'dark' ? '#1a1a2e' : '#ffffff'),
@@ -394,7 +394,7 @@ export function BookingTab({ getVal, handleChange, widgetToken, cardClass, cardS
         </div>
 
         {/* Custom CSS escape hatch */}
-        <div className="mt-6 pt-5 border-t border-white/[0.04]">
+        <div className="mt-6 pt-5 border-t border-white/4">
           <details className="group">
             <summary className="cursor-pointer flex items-center gap-2 text-sm font-medium text-white hover:text-gray-200">
               <Code size={14} className="text-amber-400" />
@@ -425,7 +425,7 @@ export function BookingTab({ getVal, handleChange, widgetToken, cardClass, cardS
         <p className="text-xs text-gray-500 mb-5">Stay limits, cancellation terms and payment behavior for both widgets.</p>
 
         {/* Rooms sub-group */}
-        <div className="rounded-xl border border-white/[0.06] p-4 mb-4" style={{ background: 'var(--legacy-well-40)' }}>
+        <div className="rounded-xl border border-white/6 p-4 mb-4" style={{ background: 'var(--legacy-well-40)' }}>
           <p className="text-[11px] font-bold uppercase tracking-wider text-gray-400 mb-3 flex items-center gap-1.5">
             <Building2 size={12} className="text-blue-400" /> Room Bookings
           </p>
@@ -486,7 +486,7 @@ export function BookingTab({ getVal, handleChange, widgetToken, cardClass, cardS
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-6 pt-2 border-t border-white/[0.04]">
+          <div className="flex flex-wrap items-center gap-6 pt-2 border-t border-white/4">
             <div className="flex items-center gap-3">
               <Toggle on={isOn('booking_payment_enabled')} onClick={() => toggle('booking_payment_enabled')} />
               <div>
@@ -513,7 +513,7 @@ export function BookingTab({ getVal, handleChange, widgetToken, cardClass, cardS
         </div>
 
         {/* Services sub-group */}
-        <div className="rounded-xl border border-white/[0.06] p-4" style={{ background: 'var(--legacy-well-40)' }}>
+        <div className="rounded-xl border border-white/6 p-4" style={{ background: 'var(--legacy-well-40)' }}>
           <p className="text-[11px] font-bold uppercase tracking-wider text-gray-400 mb-3 flex items-center gap-1.5">
             <Scissors size={12} className="text-emerald-400" /> Service Bookings
           </p>
@@ -566,7 +566,7 @@ export function BookingTab({ getVal, handleChange, widgetToken, cardClass, cardS
             <p className="text-[10px] text-gray-500 mt-1">The text members read. The hours above are what the member portal enforces; keep the two in step.</p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-6 pt-3 mt-3 border-t border-white/[0.04]">
+          <div className="flex flex-wrap items-center gap-6 pt-3 mt-3 border-t border-white/4">
             <div className="flex items-center gap-3">
               <Toggle on={isOn('services_allow_master_choice', 'true')} onClick={() => toggle('services_allow_master_choice', 'true')} />
               <div>

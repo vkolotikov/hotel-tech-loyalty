@@ -6,7 +6,7 @@ import type { HoursRow } from '../lib/types'
 import { formatDate } from '../../workspace/lib/wallClock'
 import { Button } from '../../workspace/ui/Button'
 
-const timeField = 'w-[5.5rem] rounded-lg border border-a-border bg-a-surface px-2 py-1.5 text-sm text-a-text disabled:bg-a-surface-2'
+const timeField = 'w-22 rounded-lg border border-a-border bg-a-surface px-2 py-1.5 text-sm text-a-text disabled:bg-a-surface-2'
 
 /** A person's week, Monday first: each day off or one or more time ranges. Saving hands the whole week back. */
 export function WeekEditor({ rows, readOnly, locale, saving, onSave }: { rows: HoursRow[]; readOnly: boolean; locale: string; saving: boolean; onSave: (rows: HoursRow[]) => void }) {
@@ -44,7 +44,7 @@ export function WeekEditor({ rows, readOnly, locale, saving, onSave }: { rows: H
                   {!readOnly && (
                     <button type="button" onClick={() => setDay(day, windows.filter((_, j) => j !== i))}
                       aria-label={`${t('appointments.setup.remove', 'Remove')}: ${name} ${w.start}–${w.end}`}
-                      className="rounded p-1 text-a-text-2 hover:text-a-danger">
+                      className="rounded-sm p-1 text-a-text-2 hover:text-a-danger">
                       <Trash2 size={15} aria-hidden />
                     </button>
                   )}

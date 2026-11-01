@@ -135,7 +135,7 @@ export const GLASS_NAV_ACCENT_TEXT: Record<string, string> = {
   '#9ca3af': '#d1d5db', // gray
 }
 
-/** Tailwind's corner scale in Glass. rounded-sm and rounded-full stay. */
+/** Tailwind's corner scale in Glass. rounded-xs and rounded-full stay. */
 export const GLASS_RADIUS = {
   md: '8px',
   lg: '12px',

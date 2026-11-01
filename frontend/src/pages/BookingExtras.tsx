@@ -43,9 +43,9 @@ const PRICE_TYPES = [
 // An extra saved with no type is charged once per stay; an unexpected one is shown as it is stored.
 const chargedAs = (value: string | null | undefined) => PRICE_TYPES.find(p => p.value === (value || 'per_stay'))
 
-const card = 'rounded-2xl border border-white/[0.06] p-5'
+const card = 'rounded-2xl border border-white/6 p-5'
 const cardBg = { background: 'var(--legacy-hero-gradient-soft)', backdropFilter: 'blur(20px)' }
-const inputCls = 'w-full rounded-xl border border-white/[0.08] bg-white/[0.03] px-3.5 py-2.5 text-sm text-white placeholder-gray-500 outline-none focus:border-primary-500/50 focus:ring-1 focus:ring-primary-500/20 transition-all'
+const inputCls = 'w-full rounded-xl border border-white/8 bg-white/3 px-3.5 py-2.5 text-sm text-white placeholder-gray-500 outline-hidden focus:border-primary-500/50 focus:ring-1 focus:ring-primary-500/20 transition-all'
 const btnPrimaryStyle = { background: 'linear-gradient(135deg, var(--color-primary, #74c895), color-mix(in srgb, var(--color-primary, #74c895) 80%, #000))', color: '#03050A' }
 
 export default function BookingExtras() {
@@ -134,16 +134,16 @@ export default function BookingExtras() {
 }
 
 function ExtraCard({ extra, onEdit, onDelete }: { extra: Extra; onEdit: () => void; onDelete: () => void }) {
-  const card = 'rounded-2xl border border-white/[0.06] p-4 transition-all hover:border-white/[0.12]'
+  const card = 'rounded-2xl border border-white/6 p-4 transition-all hover:border-white/12'
   const cardBg = { background: 'var(--legacy-hero-gradient-soft)' }
 
   return (
     <div className={card} style={cardBg}>
       <div className="flex gap-3">
         {extra.image ? (
-          <img src={resolveImage(extra.image) || ''} className="w-16 h-16 rounded-xl object-cover flex-shrink-0" />
+          <img src={resolveImage(extra.image) || ''} className="w-16 h-16 rounded-xl object-cover shrink-0" />
         ) : (
-          <div className="w-16 h-16 rounded-xl bg-white/[0.03] border border-white/[0.06] flex items-center justify-center text-2xl flex-shrink-0">
+          <div className="w-16 h-16 rounded-xl bg-white/3 border border-white/6 flex items-center justify-center text-2xl shrink-0">
             {CATEGORIES.find(c => c.value === extra.category)?.icon || '✨'}
           </div>
         )}
@@ -156,7 +156,7 @@ function ExtraCard({ extra, onEdit, onDelete }: { extra: Extra; onEdit: () => vo
           <div className="flex items-center justify-between mt-2">
             <span className="text-sm font-bold text-white">{money(extra.price, extra.currency)} <span className="text-xs font-normal text-gray-500">{chargedAs(extra.price_type)?.per || extra.price_type}</span></span>
             <div className="flex gap-1">
-              <button onClick={onEdit} className="p-1.5 rounded-lg hover:bg-white/[0.06] text-gray-500 hover:text-white transition-all"><Pencil size={12} /></button>
+              <button onClick={onEdit} className="p-1.5 rounded-lg hover:bg-white/6 text-gray-500 hover:text-white transition-all"><Pencil size={12} /></button>
               <button onClick={onDelete} className="p-1.5 rounded-lg hover:bg-red-500/10 text-gray-500 hover:text-red-400 transition-all"><Trash2 size={12} /></button>
             </div>
           </div>
@@ -198,17 +198,17 @@ export function ExtraForm({ extra, onClose, onSave, saving }: { extra: Extra | n
   }
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-start justify-center pt-[10vh] overflow-y-auto pb-10">
-      <div className="w-full max-w-lg rounded-2xl border border-white/[0.08] p-6" style={{ background: 'var(--legacy-hero-gradient)' }}>
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-start justify-center pt-[10vh] overflow-y-auto pb-10">
+      <div className="w-full max-w-lg rounded-2xl border border-white/8 p-6" style={{ background: 'var(--legacy-hero-gradient)' }}>
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-lg font-bold text-white">{extra ? 'Edit Extra' : 'Add Extra Service'}</h2>
-          <button onClick={onClose} className="p-2 rounded-lg hover:bg-white/[0.06] text-gray-500"><X size={18} /></button>
+          <button onClick={onClose} className="p-2 rounded-lg hover:bg-white/6 text-gray-500"><X size={18} /></button>
         </div>
 
         <div className="space-y-4">
           {/* Image */}
           <div className="flex items-center gap-4">
-            <div className="w-20 h-20 rounded-xl border border-white/[0.08] bg-white/[0.02] overflow-hidden flex items-center justify-center cursor-pointer"
+            <div className="w-20 h-20 rounded-xl border border-white/8 bg-white/2 overflow-hidden flex items-center justify-center cursor-pointer"
               onClick={() => fileRef.current?.click()}>
               {imagePreview ? <img src={imagePreview} className="w-full h-full object-cover" /> : <Upload size={20} className="text-gray-600" />}
             </div>
@@ -270,7 +270,7 @@ export function ExtraForm({ extra, onClose, onSave, saving }: { extra: Extra | n
                   className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all border ${
                     category === cat.value
                       ? 'bg-primary-500/10 border-primary-500/30 text-primary-400'
-                      : 'bg-white/[0.02] border-white/[0.06] text-gray-500 hover:border-white/[0.12]'
+                      : 'bg-white/2 border-white/6 text-gray-500 hover:border-white/12'
                   }`}>
                   {cat.icon} {cat.label}
                 </button>
@@ -281,14 +281,14 @@ export function ExtraForm({ extra, onClose, onSave, saving }: { extra: Extra | n
           <div className="flex items-center justify-between py-2">
             <span className="text-sm text-white font-medium">Active</span>
             <button onClick={() => setIsActive(!isActive)}
-              className={`w-11 h-6 rounded-full transition-all ${isActive ? 'bg-primary-500' : 'bg-white/[0.08]'}`}>
-              <div className="w-5 h-5 rounded-full bg-on-fill shadow-sm transition-all" style={{ transform: `translateX(${isActive ? '22px' : '2px'})` }} />
+              className={`w-11 h-6 rounded-full transition-all ${isActive ? 'bg-primary-500' : 'bg-white/8'}`}>
+              <div className="w-5 h-5 rounded-full bg-on-fill shadow-xs transition-all" style={{ transform: `translateX(${isActive ? '22px' : '2px'})` }} />
             </button>
           </div>
         </div>
 
-        <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-white/[0.04]">
-          <button onClick={onClose} className="px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider bg-white/[0.04] border border-white/[0.06] text-gray-400">Cancel</button>
+        <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-white/4">
+          <button onClick={onClose} className="px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider bg-white/4 border border-white/6 text-gray-400">Cancel</button>
           <button onClick={handleSubmit} disabled={saving} className="flex items-center gap-2 rounded-xl px-5 py-2.5 text-xs font-bold uppercase tracking-wider transition-all" style={btnPrimaryStyle}>
             {saving ? <RefreshCw size={14} className="animate-spin" /> : <Save size={14} />}
             {extra ? 'Save' : 'Create'}

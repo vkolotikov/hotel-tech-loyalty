@@ -120,7 +120,7 @@ export function JourneyTimeline({ activities = [], inquiries = [], reservations 
             <button key={p.k} onClick={() => setFilter(p.k)}
               className={`text-[11px] px-2.5 py-1 rounded-full font-semibold border transition-all ${active
                 ? 'bg-primary-500/20 text-primary-300 border-primary-500/30'
-                : 'bg-white/[0.025] text-gray-400 border-white/[0.06] hover:border-white/[0.15] hover:text-gray-200'}`}>
+                : 'bg-white/2.5 text-gray-400 border-white/6 hover:border-white/15 hover:text-gray-200'}`}>
               {p.label} <span className="opacity-60 ml-1 tabular-nums">{c}</span>
             </button>
           )
@@ -129,20 +129,20 @@ export function JourneyTimeline({ activities = [], inquiries = [], reservations 
 
       <div className="relative">
         {/* Vertical guide line — quietly anchors the timeline beats. */}
-        <div className="absolute left-[15px] top-2 bottom-2 w-px bg-white/[0.05]" />
+        <div className="absolute left-[15px] top-2 bottom-2 w-px bg-white/5" />
         <div className="space-y-2">
           {visible.map(e => {
             const { Icon, tone } = iconFor(e.kind, e.type)
             return (
               <div key={e.id} className="relative flex items-start gap-3 pl-0.5">
-                <div className={`relative z-[1] w-8 h-8 rounded-lg border flex items-center justify-center flex-shrink-0 ${tone}`}>
+                <div className={`relative z-1 w-8 h-8 rounded-lg border flex items-center justify-center shrink-0 ${tone}`}>
                   <Icon size={13} />
                 </div>
-                <div className="flex-1 min-w-0 p-2.5 rounded-xl border border-white/[0.06] bg-white/[0.015]">
+                <div className="flex-1 min-w-0 p-2.5 rounded-xl border border-white/6 bg-white/1.5">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-xs font-bold text-white capitalize">{e.title}</span>
                     {e.status && (
-                      <span className="text-[9px] px-1.5 py-0.5 rounded-full font-bold uppercase tracking-wider bg-white/[0.06] text-gray-400">
+                      <span className="text-[9px] px-1.5 py-0.5 rounded-full font-bold uppercase tracking-wider bg-white/6 text-gray-400">
                         {e.status.replace('_', ' ')}
                       </span>
                     )}

@@ -134,7 +134,7 @@ export default function NextActionCell({ inquiry, onAdd, t }: NextActionCellProp
 
   return (
     <div className="inline-flex items-center gap-2 min-w-0 max-w-full">
-      <Icon size={13} className="text-gray-400 flex-shrink-0" />
+      <Icon size={13} className="text-gray-400 shrink-0" />
       <div className="min-w-0 flex flex-col">
         <span className="text-[12px] font-semibold text-gray-200 truncate leading-tight">
           {inquiry.next_task_type}

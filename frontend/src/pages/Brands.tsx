@@ -242,7 +242,7 @@ export function Brands() {
                   value={form.name}
                   onChange={e => setForm({ ...form, name: e.target.value })}
                   placeholder="e.g. The Grand"
-                  className="w-full bg-dark-bg border border-dark-border rounded-lg px-3 py-2 text-sm focus:border-accent outline-none"
+                  className="w-full bg-dark-bg border border-dark-border rounded-lg px-3 py-2 text-sm focus:border-accent outline-hidden"
                 />
               </div>
               <div>
@@ -253,7 +253,7 @@ export function Brands() {
                   value={form.slug}
                   onChange={e => setForm({ ...form, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '') })}
                   placeholder="the-grand"
-                  className="w-full bg-dark-bg border border-dark-border rounded-lg px-3 py-2 text-sm font-mono focus:border-accent outline-none"
+                  className="w-full bg-dark-bg border border-dark-border rounded-lg px-3 py-2 text-sm font-mono focus:border-accent outline-hidden"
                 />
               </div>
               <div>
@@ -265,7 +265,7 @@ export function Brands() {
                   onChange={e => setForm({ ...form, description: e.target.value })}
                   rows={2}
                   placeholder="Short marketing line — shown in the brand switcher"
-                  className="w-full bg-dark-bg border border-dark-border rounded-lg px-3 py-2 text-sm focus:border-accent outline-none resize-none"
+                  className="w-full bg-dark-bg border border-dark-border rounded-lg px-3 py-2 text-sm focus:border-accent outline-hidden resize-none"
                 />
               </div>
               <div>
@@ -283,7 +283,7 @@ export function Brands() {
                     value={form.primary_color}
                     onChange={e => setForm({ ...form, primary_color: e.target.value })}
                     placeholder="#c9a84c"
-                    className="flex-1 bg-dark-bg border border-dark-border rounded-lg px-3 py-2 text-sm font-mono focus:border-accent outline-none"
+                    className="flex-1 bg-dark-bg border border-dark-border rounded-lg px-3 py-2 text-sm font-mono focus:border-accent outline-hidden"
                   />
                   {form.primary_color && (
                     <button
@@ -337,11 +337,11 @@ export function Brands() {
                   <img
                     src={resolveImage(b.logo_url) ?? undefined}
                     alt=""
-                    className="w-14 h-14 rounded-xl object-cover flex-shrink-0 bg-dark-bg"
+                    className="w-14 h-14 rounded-xl object-cover shrink-0 bg-dark-bg"
                   />
                 ) : (
                   <div
-                    className="w-14 h-14 rounded-xl flex items-center justify-center flex-shrink-0"
+                    className="w-14 h-14 rounded-xl flex items-center justify-center shrink-0"
                     style={{ background: b.primary_color ?? hxWhite(0.06) }}
                   >
                     <Briefcase size={22} className="text-white" style={light && isHex(b.primary_color) ? { color: onColor(b.primary_color) } : undefined} />
@@ -352,7 +352,7 @@ export function Brands() {
                   <div className="flex items-center gap-2 flex-wrap">
                     <h3 className="font-semibold truncate">{b.name}</h3>
                     {b.is_default && (
-                      <span className="text-[9px] font-bold uppercase tracking-wide text-amber-300 bg-amber-300/10 border border-amber-300/30 px-2 py-0.5 rounded">
+                      <span className="text-[9px] font-bold uppercase tracking-wide text-amber-300 bg-amber-300/10 border border-amber-300/30 px-2 py-0.5 rounded-sm">
                         <Star size={9} className="inline-block -mt-px mr-1" />
                         Default
                       </span>

@@ -184,7 +184,7 @@ export function Tasks() {
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder={t('tasks.search_placeholder', 'Search…')}
-            className="bg-dark-surface border border-dark-border rounded-lg pl-7 pr-3 py-1.5 text-xs outline-none focus:border-accent w-44"
+            className="bg-dark-surface border border-dark-border rounded-lg pl-7 pr-3 py-1.5 text-xs outline-hidden focus:border-accent w-44"
           />
         </div>
       </div>
@@ -265,15 +265,15 @@ function TaskCard({ task, fieldCfg, onComplete, onReopen, onEdit, onDelete }: {
     <div
       className={`group flex items-start gap-3 p-3 rounded-lg border transition ${
         completed
-          ? 'bg-emerald-500/[0.03] border-emerald-500/15 opacity-70'
+          ? 'bg-emerald-500/3 border-emerald-500/15 opacity-70'
           : overdue
-            ? 'bg-red-500/[0.03] border-red-500/20 hover:border-red-500/40'
+            ? 'bg-red-500/3 border-red-500/20 hover:border-red-500/40'
             : 'bg-dark-surface border-dark-border hover:border-dark-border/80'
       }`}
     >
       <button
         onClick={completed ? onReopen : onComplete}
-        className={`w-5 h-5 rounded-full border-2 flex-shrink-0 mt-0.5 flex items-center justify-center transition ${
+        className={`w-5 h-5 rounded-full border-2 shrink-0 mt-0.5 flex items-center justify-center transition ${
           completed
             ? 'bg-emerald-500 border-emerald-500'
             : 'border-dark-border hover:border-emerald-400'
@@ -284,7 +284,7 @@ function TaskCard({ task, fieldCfg, onComplete, onReopen, onEdit, onDelete }: {
       </button>
 
       <div
-        className="w-7 h-7 rounded-md flex items-center justify-center flex-shrink-0 mt-0.5"
+        className="w-7 h-7 rounded-md flex items-center justify-center shrink-0 mt-0.5"
         style={{ background: meta.color + '20', border: `1px solid ${meta.color}40` }}
       >
         <Icon size={13} style={{ color: ink(meta.color) }} />
@@ -343,7 +343,7 @@ function TaskCard({ task, fieldCfg, onComplete, onReopen, onEdit, onDelete }: {
         {completed ? (
           <button
             onClick={onReopen}
-            className="p-1.5 rounded hover:bg-dark-surface2 text-t-secondary hover:text-white"
+            className="p-1.5 rounded-sm hover:bg-dark-surface2 text-t-secondary hover:text-white"
             title={t('tasks.tooltips.reopen', 'Reopen')}
           >
             <RotateCcw size={13} />
@@ -351,7 +351,7 @@ function TaskCard({ task, fieldCfg, onComplete, onReopen, onEdit, onDelete }: {
         ) : null}
         <button
           onClick={onDelete}
-          className="p-1.5 rounded hover:bg-red-500/15 text-t-secondary hover:text-red-400"
+          className="p-1.5 rounded-sm hover:bg-red-500/15 text-t-secondary hover:text-red-400"
           title={t('tasks.tooltips.delete', 'Delete')}
         >
           <Trash2 size={13} />

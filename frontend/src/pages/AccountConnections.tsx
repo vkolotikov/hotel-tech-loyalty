@@ -14,11 +14,11 @@ export function AccountConnections() {
     <main className="min-h-screen bg-hx-eaeef2 text-hx-1b2a34">
       <header className="bg-hx-0e1a24 px-5 py-8 text-hx-f4f6f8 sm:px-8">
         <div className="mx-auto max-w-2xl">
-          <Link to="/" className="inline-flex min-h-10 items-center gap-2 rounded text-sm text-hx-c1cdd4 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white">
+          <Link to="/" className="inline-flex min-h-10 items-center gap-2 rounded-sm text-sm text-hx-c1cdd4 hover:text-white focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-white">
             <ArrowLeft size={16} aria-hidden="true" /> Back to Hexa-Tech
           </Link>
           <h1 className="mt-5 text-2xl font-semibold tracking-tight sm:text-3xl">Your connected apps</h1>
-          <p className="mt-2 break-words text-sm text-hx-c1cdd4">{user.email}</p>
+          <p className="mt-2 wrap-break-word text-sm text-hx-c1cdd4">{user.email}</p>
         </div>
       </header>
       <div className="mx-auto max-w-2xl px-4 py-6 sm:px-0 sm:py-8">

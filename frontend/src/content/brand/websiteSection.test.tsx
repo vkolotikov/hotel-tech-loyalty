@@ -53,7 +53,7 @@ describe('the Website section (spec 2026-10-20 §5)', () => {
     expect(html).toContain('Scanned 20 October. Articles: 42 · Pages: 12')
     expect(html).toContain('Lumière cuts and colours hair in Riga.')
     // Final review (6-2): a summary quoting a long address wraps on a phone.
-    expect(html).toMatch(/class="[^"]*whitespace-pre-line[^"]*break-words/)
+    expect(html).toMatch(/class="[^"]*whitespace-pre-line[^"]*wrap-break-word/)
     expect(html).toContain('Edit summary')
     expect(html).toContain('href="/content/promote"')
   })

@@ -130,7 +130,7 @@ export function PhoneMenu(props: FootProps) {
   return (
     <div data-phone-menu="" className="space-y-1">
       <div className="px-2 py-1">
-        <div className="break-words text-sm font-medium text-a-text">{person}</div>
+        <div className="wrap-break-word text-sm font-medium text-a-text">{person}</div>
         <div className="text-xs text-a-text-2">{t(...roleLabelKey(role))}</div>
       </div>
       <SettingsPanel look={look} fullAdmin={props.fullAdmin} onLeave={props.onLeave} settings={props.settings} />

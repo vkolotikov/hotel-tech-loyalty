@@ -38,7 +38,7 @@ export function ShortLink({ typed, link }: { typed: string; link: ShortLinkFacts
         <ul className="flex h-12 items-end gap-1">
           {bars.map(bar => (
             <li key={bar.day} className="flex h-full flex-1 flex-col justify-end">
-              <span aria-hidden className={`block w-full rounded-sm ${bar.height > 0 ? 'bg-a-accent' : 'h-px bg-a-border'}`}
+              <span aria-hidden className={`block w-full rounded-xs ${bar.height > 0 ? 'bg-a-accent' : 'h-px bg-a-border'}`}
                 style={bar.height > 0 ? { height: `${bar.height}%` } : undefined} />
               <span className="sr-only">{w('bar', '{{day}}: {{count}}', { day: formatDate(bar.day, locale, { day: 'numeric', month: 'short' }), count: bar.clicks })}</span>
             </li>

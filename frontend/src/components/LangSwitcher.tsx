@@ -73,7 +73,7 @@ export function LangSwitcher({ collapsed = false, variant = 'sidebar' }: {
       >
         <Globe size={14} />
         {!collapsed && (
-          <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-primary-500/15 text-primary-300 border border-primary-500/25">
+          <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-sm bg-primary-500/15 text-primary-300 border border-primary-500/25">
             {current.code}
           </span>
         )}
@@ -97,11 +97,11 @@ export function LangSwitcher({ collapsed = false, variant = 'sidebar' }: {
                   'flex items-center gap-2.5 w-full px-2.5 py-1.5 text-sm transition-colors',
                   isActive
                     ? 'bg-primary-500/10 text-white'
-                    : 'text-t-secondary hover:bg-white/[0.04] hover:text-white',
+                    : 'text-t-secondary hover:bg-white/4 hover:text-white',
                 )}
               >
                 <span className={clsx(
-                  'inline-flex items-center justify-center min-w-[28px] h-5 px-1.5 rounded text-[10px] font-bold uppercase tracking-wider border',
+                  'inline-flex items-center justify-center min-w-[28px] h-5 px-1.5 rounded-sm text-[10px] font-bold uppercase tracking-wider border',
                   isActive
                     ? 'bg-primary-500/20 text-primary-300 border-primary-500/40'
                     : 'bg-dark-surface2 text-t-secondary border-dark-border',
@@ -109,7 +109,7 @@ export function LangSwitcher({ collapsed = false, variant = 'sidebar' }: {
                   {l.code}
                 </span>
                 <span className="flex-1 text-left">{l.label}</span>
-                {isActive && <Check size={13} className="text-primary-400 flex-shrink-0" />}
+                {isActive && <Check size={13} className="text-primary-400 shrink-0" />}
               </button>
             )
           })}

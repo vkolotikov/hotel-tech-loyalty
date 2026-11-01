@@ -282,7 +282,7 @@ export function Venues() {
                 <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
                 <input value={search} onChange={e => { setSearch(e.target.value); setPage(1) }}
                   placeholder="Search event name, contact..."
-                  className="w-full bg-dark-surface border border-dark-border rounded-lg pl-9 pr-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-primary-500" />
+                  className="w-full bg-dark-surface border border-dark-border rounded-lg pl-9 pr-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-hidden focus:border-primary-500" />
               </div>
               <button onClick={() => setShowFilters(f => !f)}
                 className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm transition-colors ${hasFilters ? 'border-primary-500 text-primary-400' : 'border-dark-border text-gray-400 hover:text-white'}`}>
@@ -292,29 +292,29 @@ export function Venues() {
             {showFilters && (
               <div className="flex flex-wrap gap-2 items-center">
                 <select value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setPage(1) }}
-                  className="bg-dark-surface border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-primary-500">
+                  className="bg-dark-surface border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-hidden focus:border-primary-500">
                   <option value="">All Statuses</option>
                   {BOOKING_STATUSES.map(s => <option key={s}>{s}</option>)}
                 </select>
                 <select value={venueTypeFilter} onChange={e => { setVenueTypeFilter(e.target.value); setPage(1) }}
-                  className="bg-dark-surface border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-primary-500">
+                  className="bg-dark-surface border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-hidden focus:border-primary-500">
                   <option value="">All Types</option>
                   {VENUE_TYPES.map(s => <option key={s}>{s}</option>)}
                 </select>
                 <select value={venueIdFilter} onChange={e => { setVenueIdFilter(e.target.value); setPage(1) }}
-                  className="bg-dark-surface border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-primary-500">
+                  className="bg-dark-surface border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-hidden focus:border-primary-500">
                   <option value="">All Venues</option>
                   {venues.map((v: any) => <option key={v.id} value={v.id}>{v.name}</option>)}
                 </select>
                 <div className="flex items-center gap-1">
                   <span className="text-xs text-gray-500">From</span>
                   <input type="date" value={dateFrom} onChange={e => { setDateFrom(e.target.value); setPage(1) }}
-                    className="bg-dark-surface border border-dark-border rounded-lg px-2 py-2 text-sm text-white focus:outline-none focus:border-primary-500" />
+                    className="bg-dark-surface border border-dark-border rounded-lg px-2 py-2 text-sm text-white focus:outline-hidden focus:border-primary-500" />
                 </div>
                 <div className="flex items-center gap-1">
                   <span className="text-xs text-gray-500">To</span>
                   <input type="date" value={dateTo} onChange={e => { setDateTo(e.target.value); setPage(1) }}
-                    className="bg-dark-surface border border-dark-border rounded-lg px-2 py-2 text-sm text-white focus:outline-none focus:border-primary-500" />
+                    className="bg-dark-surface border border-dark-border rounded-lg px-2 py-2 text-sm text-white focus:outline-hidden focus:border-primary-500" />
                 </div>
                 {hasFilters && <button onClick={clearFilters} className="text-xs text-gray-500 hover:text-white px-2">Clear</button>}
               </div>
@@ -373,8 +373,8 @@ export function Venues() {
                       <td className="px-4 py-3 text-gray-400 text-xs">{b.setup_style ?? '—'}</td>
                       <td className="px-4 py-3">
                         <div className="flex gap-1">
-                          {b.catering_required && <span title="Catering" className="w-5 h-5 rounded bg-amber-500/10 flex items-center justify-center"><Coffee size={10} className="text-amber-400" /></span>}
-                          {b.av_required && <span title="AV Equipment" className="w-5 h-5 rounded bg-blue-500/10 flex items-center justify-center"><Monitor size={10} className="text-blue-400" /></span>}
+                          {b.catering_required && <span title="Catering" className="w-5 h-5 rounded-sm bg-amber-500/10 flex items-center justify-center"><Coffee size={10} className="text-amber-400" /></span>}
+                          {b.av_required && <span title="AV Equipment" className="w-5 h-5 rounded-sm bg-blue-500/10 flex items-center justify-center"><Monitor size={10} className="text-blue-400" /></span>}
                           {!b.catering_required && !b.av_required && <span className="text-xs text-gray-600">—</span>}
                         </div>
                       </td>
@@ -500,7 +500,7 @@ export function Venues() {
                         <div className={'text-xs font-semibold mb-1 ' + (isToday ? 'text-primary-400' : 'text-white')}>{date.getDate()}</div>
                         <div className="space-y-0.5">
                           {dayBookings.slice(0, 2).map((b: any) => (
-                            <div key={b.id} className={'text-[10px] px-1 py-0.5 rounded truncate border-l-2 text-gray-300 ' + venueColor(b.venue_type)}>
+                            <div key={b.id} className={'text-[10px] px-1 py-0.5 rounded-sm truncate border-l-2 text-gray-300 ' + venueColor(b.venue_type)}>
                               {b.event_name || b.venue_name}
                             </div>
                           ))}
@@ -554,15 +554,15 @@ export function Venues() {
               </div>
 
               <div className="flex gap-2 mb-3">
-                {v.hourly_rate && <span className="text-[10px] px-2 py-0.5 bg-primary-500/10 text-primary-400 rounded">{curr}{v.hourly_rate}/hr</span>}
-                {v.half_day_rate && <span className="text-[10px] px-2 py-0.5 bg-primary-500/10 text-primary-400 rounded">{curr}{v.half_day_rate}/½day</span>}
-                {v.full_day_rate && <span className="text-[10px] px-2 py-0.5 bg-primary-500/10 text-primary-400 rounded">{curr}{v.full_day_rate}/day</span>}
+                {v.hourly_rate && <span className="text-[10px] px-2 py-0.5 bg-primary-500/10 text-primary-400 rounded-sm">{curr}{v.hourly_rate}/hr</span>}
+                {v.half_day_rate && <span className="text-[10px] px-2 py-0.5 bg-primary-500/10 text-primary-400 rounded-sm">{curr}{v.half_day_rate}/½day</span>}
+                {v.full_day_rate && <span className="text-[10px] px-2 py-0.5 bg-primary-500/10 text-primary-400 rounded-sm">{curr}{v.full_day_rate}/day</span>}
               </div>
 
               {v.amenities && v.amenities.length > 0 && (
                 <div className="flex flex-wrap gap-1">
                   {(v.amenities as string[]).map((a: string) => (
-                    <span key={a} className="text-[10px] px-1.5 py-0.5 bg-dark-surface2 border border-dark-border rounded text-gray-400">{a}</span>
+                    <span key={a} className="text-[10px] px-1.5 py-0.5 bg-dark-surface2 border border-dark-border rounded-sm text-gray-400">{a}</span>
                   ))}
                 </div>
               )}
@@ -594,7 +594,7 @@ export function Venues() {
                 <div>
                   <label className="block text-xs text-gray-400 mb-1">Venue *</label>
                   <select required value={bookingForm.venue_id} onChange={e => setBookingForm(f => ({ ...f, venue_id: e.target.value }))}
-                    className="w-full bg-dark-surface2 border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500">
+                    className="w-full bg-dark-surface2 border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-hidden focus:ring-2 focus:ring-primary-500">
                     <option value="">-- Select --</option>
                     {venues.map((v: any) => <option key={v.id} value={v.id}>{v.name} ({v.venue_type})</option>)}
                   </select>
@@ -602,39 +602,39 @@ export function Venues() {
                 <div>
                   <label className="block text-xs text-gray-400 mb-1">Date *</label>
                   <input required type="date" value={bookingForm.booking_date} onChange={e => setBookingForm(f => ({ ...f, booking_date: e.target.value }))}
-                    className="w-full bg-dark-surface2 border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500" />
+                    className="w-full bg-dark-surface2 border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-hidden focus:ring-2 focus:ring-primary-500" />
                 </div>
                 <div>
                   <label className="block text-xs text-gray-400 mb-1">Status</label>
                   <select value={bookingForm.status} onChange={e => setBookingForm(f => ({ ...f, status: e.target.value }))}
-                    className="w-full bg-dark-surface2 border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500">
+                    className="w-full bg-dark-surface2 border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-hidden focus:ring-2 focus:ring-primary-500">
                     {BOOKING_STATUSES.map(s => <option key={s}>{s}</option>)}
                   </select>
                 </div>
                 <div>
                   <label className="block text-xs text-gray-400 mb-1">Start Time *</label>
                   <input required type="time" value={bookingForm.start_time} onChange={e => setBookingForm(f => ({ ...f, start_time: e.target.value }))}
-                    className="w-full bg-dark-surface2 border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500" />
+                    className="w-full bg-dark-surface2 border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-hidden focus:ring-2 focus:ring-primary-500" />
                 </div>
                 <div>
                   <label className="block text-xs text-gray-400 mb-1">End Time *</label>
                   <input required type="time" value={bookingForm.end_time} onChange={e => setBookingForm(f => ({ ...f, end_time: e.target.value }))}
-                    className="w-full bg-dark-surface2 border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500" />
+                    className="w-full bg-dark-surface2 border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-hidden focus:ring-2 focus:ring-primary-500" />
                 </div>
                 <div>
                   <label className="block text-xs text-gray-400 mb-1">Attendees</label>
                   <input type="number" value={bookingForm.attendees} onChange={e => setBookingForm(f => ({ ...f, attendees: e.target.value }))}
-                    className="w-full bg-dark-surface2 border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500" />
+                    className="w-full bg-dark-surface2 border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-hidden focus:ring-2 focus:ring-primary-500" />
                 </div>
                 <div>
                   <label className="block text-xs text-gray-400 mb-1">Event Name</label>
                   <input value={bookingForm.event_name} onChange={e => setBookingForm(f => ({ ...f, event_name: e.target.value }))}
-                    className="w-full bg-dark-surface2 border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500" />
+                    className="w-full bg-dark-surface2 border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-hidden focus:ring-2 focus:ring-primary-500" />
                 </div>
                 <div>
                   <label className="block text-xs text-gray-400 mb-1">Event Type</label>
                   <select value={bookingForm.event_type} onChange={e => setBookingForm(f => ({ ...f, event_type: e.target.value }))}
-                    className="w-full bg-dark-surface2 border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500">
+                    className="w-full bg-dark-surface2 border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-hidden focus:ring-2 focus:ring-primary-500">
                     <option value="">-- Select --</option>
                     {EVENT_TYPES.map(s => <option key={s}>{s}</option>)}
                   </select>
@@ -642,7 +642,7 @@ export function Venues() {
                 <div>
                   <label className="block text-xs text-gray-400 mb-1">Setup Style</label>
                   <select value={bookingForm.setup_style} onChange={e => setBookingForm(f => ({ ...f, setup_style: e.target.value }))}
-                    className="w-full bg-dark-surface2 border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500">
+                    className="w-full bg-dark-surface2 border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-hidden focus:ring-2 focus:ring-primary-500">
                     <option value="">-- Select --</option>
                     {SETUP_STYLES.map(s => <option key={s}>{s}</option>)}
                   </select>
@@ -650,22 +650,22 @@ export function Venues() {
                 <div>
                   <label className="block text-xs text-gray-400 mb-1">Guest ID</label>
                   <input type="number" value={bookingForm.guest_id} onChange={e => setBookingForm(f => ({ ...f, guest_id: e.target.value }))}
-                    className="w-full bg-dark-surface2 border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500" />
+                    className="w-full bg-dark-surface2 border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-hidden focus:ring-2 focus:ring-primary-500" />
                 </div>
                 <div>
                   <label className="block text-xs text-gray-400 mb-1">Rate ({curr})</label>
                   <input type="number" step="0.01" value={bookingForm.rate_charged} onChange={e => setBookingForm(f => ({ ...f, rate_charged: e.target.value }))}
-                    className="w-full bg-dark-surface2 border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500" />
+                    className="w-full bg-dark-surface2 border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-hidden focus:ring-2 focus:ring-primary-500" />
                 </div>
                 <div className="flex items-end gap-4 pb-2">
                   <label className="flex items-center gap-2 text-xs text-gray-400 cursor-pointer">
                     <input type="checkbox" checked={bookingForm.catering_required} onChange={e => setBookingForm(f => ({ ...f, catering_required: e.target.checked }))}
-                      className="rounded bg-dark-surface2 border-dark-border" />
+                      className="rounded-sm bg-dark-surface2 border-dark-border" />
                     <Coffee size={12} /> Catering
                   </label>
                   <label className="flex items-center gap-2 text-xs text-gray-400 cursor-pointer">
                     <input type="checkbox" checked={bookingForm.av_required} onChange={e => setBookingForm(f => ({ ...f, av_required: e.target.checked }))}
-                      className="rounded bg-dark-surface2 border-dark-border" />
+                      className="rounded-sm bg-dark-surface2 border-dark-border" />
                     <Monitor size={12} /> AV
                   </label>
                 </div>
@@ -674,23 +674,23 @@ export function Venues() {
                 <div>
                   <label className="block text-xs text-gray-400 mb-1">Contact Name</label>
                   <input value={bookingForm.contact_name} onChange={e => setBookingForm(f => ({ ...f, contact_name: e.target.value }))}
-                    className="w-full bg-dark-surface2 border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500" />
+                    className="w-full bg-dark-surface2 border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-hidden focus:ring-2 focus:ring-primary-500" />
                 </div>
                 <div>
                   <label className="block text-xs text-gray-400 mb-1">Contact Phone</label>
                   <input value={bookingForm.contact_phone} onChange={e => setBookingForm(f => ({ ...f, contact_phone: e.target.value }))}
-                    className="w-full bg-dark-surface2 border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500" />
+                    className="w-full bg-dark-surface2 border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-hidden focus:ring-2 focus:ring-primary-500" />
                 </div>
                 <div>
                   <label className="block text-xs text-gray-400 mb-1">Contact Email</label>
                   <input value={bookingForm.contact_email} onChange={e => setBookingForm(f => ({ ...f, contact_email: e.target.value }))}
-                    className="w-full bg-dark-surface2 border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500" />
+                    className="w-full bg-dark-surface2 border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-hidden focus:ring-2 focus:ring-primary-500" />
                 </div>
               </div>
               <div>
                 <label className="block text-xs text-gray-400 mb-1">Special Requirements</label>
                 <textarea value={bookingForm.special_requirements} onChange={e => setBookingForm(f => ({ ...f, special_requirements: e.target.value }))} rows={2}
-                  className="w-full bg-dark-surface2 border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none" />
+                  className="w-full bg-dark-surface2 border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-hidden focus:ring-2 focus:ring-primary-500 resize-none" />
               </div>
               <div className="flex justify-end gap-3 pt-2">
                 <button type="button" onClick={() => setShowCreateBooking(false)} className="px-4 py-2 text-sm text-gray-400 hover:text-white">Cancel</button>
@@ -729,12 +729,12 @@ export function Venues() {
                 <div className="col-span-2">
                   <label className="block text-xs text-gray-400 mb-1">Name *</label>
                   <input required value={venueForm.name} onChange={e => setVenueForm(f => ({ ...f, name: e.target.value }))}
-                    className="w-full bg-dark-surface2 border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500" />
+                    className="w-full bg-dark-surface2 border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-hidden focus:ring-2 focus:ring-primary-500" />
                 </div>
                 <div>
                   <label className="block text-xs text-gray-400 mb-1">Property *</label>
                   <select required value={venueForm.property_id} onChange={e => setVenueForm(f => ({ ...f, property_id: e.target.value }))}
-                    className="w-full bg-dark-surface2 border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500">
+                    className="w-full bg-dark-surface2 border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-hidden focus:ring-2 focus:ring-primary-500">
                     <option value="">-- Select --</option>
                     {(Array.isArray(properties) ? properties : []).map((p: any) => <option key={p.id} value={p.id}>{p.name}</option>)}
                   </select>
@@ -742,7 +742,7 @@ export function Venues() {
                 <div>
                   <label className="block text-xs text-gray-400 mb-1">Type *</label>
                   <select required value={venueForm.venue_type} onChange={e => setVenueForm(f => ({ ...f, venue_type: e.target.value }))}
-                    className="w-full bg-dark-surface2 border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500">
+                    className="w-full bg-dark-surface2 border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-hidden focus:ring-2 focus:ring-primary-500">
                     <option value="">-- Select --</option>
                     {VENUE_TYPES.map(s => <option key={s}>{s}</option>)}
                   </select>
@@ -750,43 +750,43 @@ export function Venues() {
                 <div>
                   <label className="block text-xs text-gray-400 mb-1">Capacity</label>
                   <input type="number" value={venueForm.capacity} onChange={e => setVenueForm(f => ({ ...f, capacity: e.target.value }))}
-                    className="w-full bg-dark-surface2 border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500" />
+                    className="w-full bg-dark-surface2 border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-hidden focus:ring-2 focus:ring-primary-500" />
                 </div>
                 <div>
                   <label className="block text-xs text-gray-400 mb-1">Area (m²)</label>
                   <input type="number" value={venueForm.area_sqm} onChange={e => setVenueForm(f => ({ ...f, area_sqm: e.target.value }))}
-                    className="w-full bg-dark-surface2 border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500" />
+                    className="w-full bg-dark-surface2 border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-hidden focus:ring-2 focus:ring-primary-500" />
                 </div>
                 <div>
                   <label className="block text-xs text-gray-400 mb-1">Hourly Rate ({curr})</label>
                   <input type="number" step="0.01" value={venueForm.hourly_rate} onChange={e => setVenueForm(f => ({ ...f, hourly_rate: e.target.value }))}
-                    className="w-full bg-dark-surface2 border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500" />
+                    className="w-full bg-dark-surface2 border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-hidden focus:ring-2 focus:ring-primary-500" />
                 </div>
                 <div>
                   <label className="block text-xs text-gray-400 mb-1">Half-Day Rate ({curr})</label>
                   <input type="number" step="0.01" value={venueForm.half_day_rate} onChange={e => setVenueForm(f => ({ ...f, half_day_rate: e.target.value }))}
-                    className="w-full bg-dark-surface2 border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500" />
+                    className="w-full bg-dark-surface2 border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-hidden focus:ring-2 focus:ring-primary-500" />
                 </div>
                 <div>
                   <label className="block text-xs text-gray-400 mb-1">Full-Day Rate ({curr})</label>
                   <input type="number" step="0.01" value={venueForm.full_day_rate} onChange={e => setVenueForm(f => ({ ...f, full_day_rate: e.target.value }))}
-                    className="w-full bg-dark-surface2 border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500" />
+                    className="w-full bg-dark-surface2 border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-hidden focus:ring-2 focus:ring-primary-500" />
                 </div>
                 <div>
                   <label className="block text-xs text-gray-400 mb-1">Floor</label>
                   <input value={venueForm.floor} onChange={e => setVenueForm(f => ({ ...f, floor: e.target.value }))}
-                    className="w-full bg-dark-surface2 border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500" />
+                    className="w-full bg-dark-surface2 border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-hidden focus:ring-2 focus:ring-primary-500" />
                 </div>
                 <div className="col-span-2">
                   <label className="block text-xs text-gray-400 mb-1">Amenities (comma-separated)</label>
                   <input value={venueForm.amenities} onChange={e => setVenueForm(f => ({ ...f, amenities: e.target.value }))}
                     placeholder="Projector, Whiteboard, Sound System..."
-                    className="w-full bg-dark-surface2 border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-primary-500" />
+                    className="w-full bg-dark-surface2 border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-hidden focus:ring-2 focus:ring-primary-500" />
                 </div>
                 <div className="col-span-2">
                   <label className="block text-xs text-gray-400 mb-1">Description</label>
                   <textarea value={venueForm.description} onChange={e => setVenueForm(f => ({ ...f, description: e.target.value }))} rows={2}
-                    className="w-full bg-dark-surface2 border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none" />
+                    className="w-full bg-dark-surface2 border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-hidden focus:ring-2 focus:ring-primary-500 resize-none" />
                 </div>
               </div>
               <div className="flex justify-end gap-3 pt-2">

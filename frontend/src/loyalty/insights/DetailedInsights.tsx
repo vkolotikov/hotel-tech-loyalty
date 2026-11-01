@@ -199,10 +199,10 @@ export function InsightsView({ data, tiers, theme, locale }: { data: Insights; t
 function Tiles({ items }: { items: [string, string, string, string | null][] }) {
   const { t } = useTranslation()
   return (
-    <div className="[container-type:inline-size]">
+    <div className="@container">
       <dl data-glance="" aria-label={t('loyalty.insights.tiles.label', 'The figures')} className="grid grid-cols-2 gap-3">
         {items.map(([key, label, value, line]) => (
-          <div key={key} data-tile={key} className="min-w-0 space-y-1 rounded-2xl border border-a-border bg-a-surface p-4 [container-type:inline-size]">
+          <div key={key} data-tile={key} className="min-w-0 space-y-1 rounded-2xl border border-a-border bg-a-surface p-4 @container">
             <dt className="text-xs text-a-text-2">{label}</dt>
             <dd><Figure fit>{value}</Figure></dd>
             {line && <dd className="text-xs text-a-text-2">{line}</dd>}

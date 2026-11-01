@@ -78,7 +78,7 @@ export function TagInput({ label, values, onChange, invalid = false }: { label: 
         ))}
         <input value={text} onChange={(e) => setText(e.target.value)} onKeyDown={onKey} onBlur={commit} aria-label={label}
           placeholder={values.length === 0 ? t('content.brand.tag_add', 'Type and press Enter') : ''}
-          className="min-w-[8rem] flex-1 bg-transparent px-1 py-0.5 text-sm text-a-text outline-none" />
+          className="min-w-32 flex-1 bg-transparent px-1 py-0.5 text-sm text-a-text outline-hidden" />
       </div>
     </div>
   )

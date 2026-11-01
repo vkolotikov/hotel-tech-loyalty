@@ -133,7 +133,7 @@ export function Visitors() {
           value={search}
           onChange={e => setSearch(e.target.value)}
           placeholder="Search by name, email, IP, or page..."
-          className="w-full bg-dark-surface border border-dark-border rounded-xl pl-10 pr-4 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-primary-500/60"
+          className="w-full bg-dark-surface border border-dark-border rounded-xl pl-10 pr-4 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-hidden focus:border-primary-500/60"
         />
       </div>
 
@@ -167,7 +167,7 @@ export function Visitors() {
                 }`}
               >
                 <div className="flex items-start gap-3">
-                  <div className="relative flex-shrink-0">
+                  <div className="relative shrink-0">
                     <div className={`w-11 h-11 rounded-xl flex items-center justify-center ${
                       v.is_lead ? 'bg-amber-500/10 border border-amber-500/30' : 'bg-dark-surface2 border border-dark-border'
                     }`}>
@@ -183,22 +183,22 @@ export function Visitors() {
                         {v.display_name || v.email || v.visitor_ip || 'Anonymous'}
                       </span>
                       {v.is_lead && (
-                        <span className="text-[10px] uppercase font-bold text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded">Lead</span>
+                        <span className="text-[10px] uppercase font-bold text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded-sm">Lead</span>
                       )}
                     </div>
                     <div className="text-xs text-gray-500 truncate flex items-center gap-1">
-                      <Globe className="w-3 h-3 flex-shrink-0" />
+                      <Globe className="w-3 h-3 shrink-0" />
                       {[v.city, v.country].filter(Boolean).join(', ') || v.visitor_ip || '—'}
                     </div>
                     {v.current_page && (
                       <div className="text-xs text-gray-400 truncate mt-1 flex items-center gap-1">
-                        <Activity className="w-3 h-3 flex-shrink-0 text-primary-400" />
+                        <Activity className="w-3 h-3 shrink-0 text-primary-400" />
                         <span className="truncate">{v.current_page_title || v.current_page}</span>
                       </div>
                     )}
                     <div className="flex items-center gap-2 mt-2 text-[11px] text-gray-500">
-                      <span className="bg-dark-surface2 px-1.5 py-0.5 rounded">{v.page_views_count || 0} views</span>
-                      <span className="bg-dark-surface2 px-1.5 py-0.5 rounded">{v.visit_count || 1} visits</span>
+                      <span className="bg-dark-surface2 px-1.5 py-0.5 rounded-sm">{v.page_views_count || 0} views</span>
+                      <span className="bg-dark-surface2 px-1.5 py-0.5 rounded-sm">{v.visit_count || 1} visits</span>
                       {v.last_seen_at && (
                         <span className="ml-auto text-gray-600">{formatDistanceToNow(new Date(v.last_seen_at), { addSuffix: true })}</span>
                       )}
@@ -234,7 +234,7 @@ export function Visitors() {
           {detail && selectedVisitor && (
             <>
               {/* Detail header */}
-              <div className="p-6 border-b border-dark-border bg-gradient-to-br from-dark-surface to-dark-surface2">
+              <div className="p-6 border-b border-dark-border bg-linear-to-br from-dark-surface to-dark-surface2">
                 <div className="flex items-start justify-between gap-4 flex-wrap">
                   <div className="flex items-start gap-4">
                     <div className="relative">
@@ -321,7 +321,7 @@ export function Visitors() {
                   <div className="bg-dark-surface2 rounded-lg p-3 border border-dark-border">
                     <div className="text-[10px] uppercase text-gray-500 mb-1 font-semibold">Came From</div>
                     <a href={selectedVisitor.referrer} target="_blank" rel="noreferrer" className="text-xs text-primary-400 hover:underline break-all flex items-center gap-1">
-                      {selectedVisitor.referrer} <ArrowUpRight className="w-3 h-3 flex-shrink-0" />
+                      {selectedVisitor.referrer} <ArrowUpRight className="w-3 h-3 shrink-0" />
                     </a>
                   </div>
                 )}
@@ -341,7 +341,7 @@ export function Visitors() {
                     <div className="space-y-1.5 max-h-72 overflow-y-auto pr-2">
                       {detail.page_views.map((pv: any, i: number) => (
                         <div key={pv.id} className="flex items-start gap-3 bg-dark-surface2 rounded-lg p-2.5 border border-dark-border/50 hover:border-primary-500/30 transition">
-                          <div className="w-6 h-6 rounded-full bg-primary-500/10 flex items-center justify-center text-[10px] text-primary-400 font-bold flex-shrink-0">
+                          <div className="w-6 h-6 rounded-full bg-primary-500/10 flex items-center justify-center text-[10px] text-primary-400 font-bold shrink-0">
                             {i + 1}
                           </div>
                           <div className="flex-1 min-w-0">
@@ -350,7 +350,7 @@ export function Visitors() {
                               <div className="text-[10px] text-gray-500 truncate">{pv.url}</div>
                             )}
                           </div>
-                          <div className="text-[10px] text-gray-500 flex items-center gap-1 flex-shrink-0">
+                          <div className="text-[10px] text-gray-500 flex items-center gap-1 shrink-0">
                             <Clock className="w-3 h-3" />
                             {formatDistanceToNow(new Date(pv.viewed_at), { addSuffix: true })}
                           </div>
@@ -396,7 +396,7 @@ export function Visitors() {
                               {c.lead_captured && <span className="text-amber-400">· Lead captured</span>}
                             </div>
                           </div>
-                          <div className="text-[10px] text-gray-500 flex-shrink-0 ml-3 text-right">
+                          <div className="text-[10px] text-gray-500 shrink-0 ml-3 text-right">
                             {c.last_message_at && formatDistanceToNow(new Date(c.last_message_at), { addSuffix: true })}
                           </div>
                         </Link>

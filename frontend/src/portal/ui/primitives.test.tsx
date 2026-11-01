@@ -62,7 +62,7 @@ describe('portal primitives', () => {
     // a plain class and would push the fixed overlay down the screen.
     const html = renderToStaticMarkup(<Sheet open onClose={() => {}} title="Redeem">body</Sheet>)
     const overlay = /^<div class="([^"]*)"/.exec(html)?.[1] ?? ''
-    expect(overlay.split(' ')).toEqual(expect.arrayContaining(['fixed', 'inset-0', '!m-0']))
+    expect(overlay.split(' ')).toEqual(expect.arrayContaining(['fixed', 'inset-0', 'm-0!']))
   })
 
   it('tabs expose the selected one', () => {

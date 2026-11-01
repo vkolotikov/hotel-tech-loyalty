@@ -400,7 +400,7 @@ export default function PlannerStats({ stats, statsPrev, statsEmployee, statsFro
           <p className="text-xs text-gray-500 font-medium">Completion Rate</p>
           <p className="text-3xl font-bold mt-2 text-primary-400">{d.rate}%</p>
           <Delta cur={d.rate} prev={d.pRate} pp />
-          <div className="mt-2 h-1.5 rounded-full bg-white/[0.06] overflow-hidden"><div className="h-full rounded-full bg-primary-500" style={{ width: `${d.rate}%` }} /></div>
+          <div className="mt-2 h-1.5 rounded-full bg-white/6 overflow-hidden"><div className="h-full rounded-full bg-primary-500" style={{ width: `${d.rate}%` }} /></div>
         </div>
       </div>
 
@@ -456,13 +456,13 @@ export default function PlannerStats({ stats, statsPrev, statsEmployee, statsFro
                 <div><span className="text-3xl font-bold text-green-400">{Math.round((d.onTime / d.completedTracked) * 100)}%</span><span className="text-xs text-gray-500 ml-1.5">on time</span></div>
                 <div className="text-right text-[11px] text-gray-500">{d.onTime} on time · {d.late} late{d.untracked > 0 ? ` · ${d.untracked} untracked` : ''}</div>
               </div>
-              <div className="flex h-4 rounded-lg overflow-hidden bg-white/[0.04]">
+              <div className="flex h-4 rounded-lg overflow-hidden bg-white/4">
                 <div className="bg-green-500 flex items-center justify-center" style={{ width: `${(d.onTime / d.completedTracked) * 100}%` }} title={`${d.onTime} on time`} />
                 <div className="bg-red-500/80 flex items-center justify-center" style={{ width: `${(d.late / d.completedTracked) * 100}%` }} title={`${d.late} late`} />
               </div>
               <div className="flex gap-4 text-[11px]">
-                <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-green-500" />On time — finished on/before the scheduled day</span>
-                <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-red-500/80" />Late</span>
+                <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-xs bg-green-500" />On time — finished on/before the scheduled day</span>
+                <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-xs bg-red-500/80" />Late</span>
               </div>
               {d.untracked > 0 && <p className="text-[10px] text-gray-600">{d.untracked} completed task{d.untracked === 1 ? '' : 's'} predate completion tracking and aren't scored.</p>}
             </div>
@@ -486,7 +486,7 @@ export default function PlannerStats({ stats, statsPrev, statsEmployee, statsFro
                     <div><span className="text-3xl font-bold text-white">{d.poolAging.total}</span><span className="text-xs text-gray-500 ml-1.5">waiting</span></div>
                     <div className="text-right text-[11px] text-gray-500">oldest {oldestDays} day{oldestDays === 1 ? '' : 's'}</div>
                   </div>
-                  <div className="flex h-4 rounded-lg overflow-hidden bg-white/[0.04]">
+                  <div className="flex h-4 rounded-lg overflow-hidden bg-white/4">
                     {buckets.map(b => b.v > 0 && <div key={b.label} style={{ width: `${(b.v / d.poolAging.total) * 100}%`, background: b.c }} title={`${b.label}: ${b.v}`} />)}
                   </div>
                   <div className="grid grid-cols-4 gap-2">
@@ -507,7 +507,7 @@ export default function PlannerStats({ stats, statsPrev, statsEmployee, statsFro
       {/* ── Type focus chip (drill) ── */}
       {typeFocus && (
         <div className="flex items-center gap-2 text-xs bg-primary-500/10 border border-primary-500/25 rounded-lg px-3 py-2">
-          <span className="w-2.5 h-2.5 rounded-sm" style={{ background: groupColor(typeFocus) }} />
+          <span className="w-2.5 h-2.5 rounded-xs" style={{ background: groupColor(typeFocus) }} />
           <span className="text-primary-200 font-semibold">Focused on type: {typeFocus}</span>
           <span className="text-gray-500">— the task + hierarchy views below show only this type.</span>
           <button onClick={() => setTypeFocus(null)} className="ml-auto text-gray-400 hover:text-white inline-flex items-center gap-1"><X size={12} /> Clear</button>
@@ -539,8 +539,8 @@ export default function PlannerStats({ stats, statsPrev, statsEmployee, statsFro
                       const diff = r1(g.val - g.prev)
                       return (
                         <button key={g.task_group} onClick={() => drillType(g.task_group)}
-                          className={'w-full flex items-center gap-2 text-xs rounded px-1 py-0.5 hover:bg-white/[0.04] ' + (typeFocus === g.task_group ? 'bg-white/[0.06]' : '')}>
-                          <span className="w-2.5 h-2.5 rounded-sm flex-shrink-0" style={{ background: g.color }} />
+                          className={'w-full flex items-center gap-2 text-xs rounded-sm px-1 py-0.5 hover:bg-white/4 ' + (typeFocus === g.task_group ? 'bg-white/6' : '')}>
+                          <span className="w-2.5 h-2.5 rounded-xs shrink-0" style={{ background: g.color }} />
                           <span className="text-gray-200 truncate flex-1 min-w-0 text-left" title={g.task_group}>{g.task_group}</span>
                           <span className="tabular-nums text-white font-medium">{fmtVal(g.val)}</span>
                           <span className="tabular-nums text-gray-500 w-9 text-right">{share}%</span>
@@ -585,7 +585,7 @@ export default function PlannerStats({ stats, statsPrev, statsEmployee, statsFro
               <div className="space-y-1.5 mt-2">
                 {d.byPriority.map((p: any) => (
                   <div key={p.key} className="flex items-center justify-between text-xs">
-                    <span className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-sm" style={{ background: p.fill }} />{p.priority}</span>
+                    <span className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-xs" style={{ background: p.fill }} />{p.priority}</span>
                     <span className="tabular-nums text-gray-400">{p.completed}/{p.total} done</span>
                   </div>
                 ))}
@@ -613,8 +613,8 @@ export default function PlannerStats({ stats, statsPrev, statsEmployee, statsFro
               return (
                 <button key={tp} type="button" onClick={() => toggleType(tp)}
                   className={'inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[11px] font-medium border transition-colors ' +
-                    (on ? 'border-white/15 text-gray-200 bg-white/[0.04]' : 'border-dark-border text-gray-600 bg-transparent line-through')}>
-                  <span className="w-2 h-2 rounded-sm" style={{ background: on ? groupColor(tp) : '#4b5563' }} />{tp}
+                    (on ? 'border-white/15 text-gray-200 bg-white/4' : 'border-dark-border text-gray-600 bg-transparent line-through')}>
+                  <span className="w-2 h-2 rounded-xs" style={{ background: on ? groupColor(tp) : '#4b5563' }} />{tp}
                 </button>
               )
             })}
@@ -648,7 +648,7 @@ export default function PlannerStats({ stats, statsPrev, statsEmployee, statsFro
               <div className="flex-1 min-w-[200px] space-y-1 max-h-[220px] overflow-y-auto pr-1">
                 {d.byTask.map((r: any, i: number) => (
                   <div key={i} className="flex items-center gap-2 text-xs">
-                    <span className="w-2.5 h-2.5 rounded-sm flex-shrink-0" style={{ background: r.color }} />
+                    <span className="w-2.5 h-2.5 rounded-xs shrink-0" style={{ background: r.color }} />
                     <span className="text-gray-200 truncate flex-1 min-w-0" title={`${r.task} · ${r.type}`}>{r.task}</span>
                     {showDelta && (() => { const diff = r1(r.val - r.prev); return diff !== 0 ? <span className={'tabular-nums ' + (diff > 0 ? 'text-green-400' : 'text-red-400')}>{diff > 0 ? '▲' : '▼'}{Math.abs(diff)}</span> : null })()}
                     <span className="tabular-nums text-white font-medium">{fmtVal(r.val)}</span>
@@ -670,7 +670,7 @@ export default function PlannerStats({ stats, statsPrev, statsEmployee, statsFro
               return (
                 <div key={g.type} className="rounded-lg border border-dark-border bg-dark-bg/40 p-3">
                   <div className="flex items-center gap-2.5 flex-wrap">
-                    <span className="w-3 h-3 rounded-sm flex-shrink-0" style={{ background: g.color }} />
+                    <span className="w-3 h-3 rounded-xs shrink-0" style={{ background: g.color }} />
                     <span className="font-semibold text-white">{g.type}</span>
                     <span className="text-[11px] text-gray-500">{g.tasks.length} task{g.tasks.length === 1 ? '' : 's'}</span>
                     <div className="ml-auto flex items-center gap-3 text-[11px]">
@@ -686,14 +686,14 @@ export default function PlannerStats({ stats, statsPrev, statsEmployee, statsFro
                       const donePct = tk.total > 0 ? (tk.completed / tk.total) * 100 : 0
                       return (
                         <div key={i} className="flex items-center gap-2 text-[11px]">
-                          <span className="text-gray-300 w-40 truncate flex-shrink-0" title={tk.task}>{tk.task}</span>
-                          <div className="flex-1 h-2.5 rounded bg-white/[0.04] overflow-hidden min-w-[60px]" title={`${tk.completed} of ${tk.total} done`}>
-                            <div className="h-full rounded" style={{ width: `${pct}%`, background: g.color + '55' }}>
-                              <div className="h-full rounded" style={{ width: `${donePct}%`, background: g.color }} />
+                          <span className="text-gray-300 w-40 truncate shrink-0" title={tk.task}>{tk.task}</span>
+                          <div className="flex-1 h-2.5 rounded-sm bg-white/4 overflow-hidden min-w-[60px]" title={`${tk.completed} of ${tk.total} done`}>
+                            <div className="h-full rounded-sm" style={{ width: `${pct}%`, background: g.color + '55' }}>
+                              <div className="h-full rounded-sm" style={{ width: `${donePct}%`, background: g.color }} />
                             </div>
                           </div>
-                          <span className="tabular-nums text-gray-400 w-14 text-right flex-shrink-0">{tk.completed}/{tk.total}</span>
-                          <span className="tabular-nums text-gray-600 w-12 text-right flex-shrink-0">{tk.workedH}h</span>
+                          <span className="tabular-nums text-gray-400 w-14 text-right shrink-0">{tk.completed}/{tk.total}</span>
+                          <span className="tabular-nums text-gray-600 w-12 text-right shrink-0">{tk.workedH}h</span>
                         </div>
                       )
                     })}
@@ -711,18 +711,18 @@ export default function PlannerStats({ stats, statsPrev, statsEmployee, statsFro
           <div className="overflow-x-auto">
             <div className="inline-block min-w-full">
               <div className="flex text-[10px] text-gray-600 mb-1">
-                <div className="w-10 flex-shrink-0" />
+                <div className="w-10 shrink-0" />
                 {d.hmHours.map(h => <div key={h} className="flex-1 text-center min-w-[26px]">{h}</div>)}
               </div>
               {DOW_ORDER.map(dow => (
                 <div key={dow} className="flex items-center mb-0.5">
-                  <div className="w-10 flex-shrink-0 text-[11px] text-gray-400">{DOW_LABELS[dow]}</div>
+                  <div className="w-10 shrink-0 text-[11px] text-gray-400">{DOW_LABELS[dow]}</div>
                   {d.hmHours.map(h => {
                     const v = d.hmMap[`${dow}-${h}`] || 0
                     const alpha = d.hmMax > 0 && v > 0 ? 0.14 + 0.86 * (v / d.hmMax) : 0
                     return (
                       <div key={h} className="flex-1 min-w-[26px] px-0.5">
-                        <div className="h-6 rounded" title={v > 0 ? `${DOW_LABELS[dow]} ${h}:00 — ${fmtVal(r1(v))}` : `${DOW_LABELS[dow]} ${h}:00 — none`}
+                        <div className="h-6 rounded-sm" title={v > 0 ? `${DOW_LABELS[dow]} ${h}:00 — ${fmtVal(r1(v))}` : `${DOW_LABELS[dow]} ${h}:00 — none`}
                           style={{ background: v > 0 ? `rgba(16,185,129,${alpha})` : hxWhite(0.03) }} />
                       </div>
                     )
@@ -731,7 +731,7 @@ export default function PlannerStats({ stats, statsPrev, statsEmployee, statsFro
               ))}
               <div className="flex items-center gap-2 mt-2 text-[10px] text-gray-600">
                 <span>Less</span>
-                {[0.14, 0.4, 0.65, 1].map(a => <span key={a} className="w-5 h-3 rounded" style={{ background: `rgba(16,185,129,${a})` }} />)}
+                {[0.14, 0.4, 0.65, 1].map(a => <span key={a} className="w-5 h-3 rounded-sm" style={{ background: `rgba(16,185,129,${a})` }} />)}
                 <span>More</span>
                 <span className="ml-2">peak {fmtVal(r1(d.hmMax))}</span>
               </div>

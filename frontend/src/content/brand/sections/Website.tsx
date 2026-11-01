@@ -105,7 +105,7 @@ function CompanySummary({ payload, canEdit }: { payload: SitePayload; canEdit: b
       <p className="text-xs text-a-text-2">{t('content.site.summary_intro', 'What the AI knows about your company from your website. The AI reads it for every post it writes.')}</p>
       {draft === null ? (
         site?.summary
-          ? <p className="whitespace-pre-line break-words text-sm text-a-text">{site.summary}</p>
+          ? <p className="whitespace-pre-line wrap-break-word text-sm text-a-text">{site.summary}</p>
           : <p className="text-sm text-a-text-2">{t('content.site.summary_none', 'No summary yet. Scan the website to write one.')}</p>
       ) : (
         <div className="space-y-2">

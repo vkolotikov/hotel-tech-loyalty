@@ -54,7 +54,7 @@ export function NfcCards({ member, locale, timeZone }: { member: { id: number; n
                 <span className="flex flex-wrap items-center gap-2">
                   <span className="font-a-mono text-sm text-a-text" title={hexWithColons(card.uid)}>{shortUid(card.uid)}</span>
                   {card.is_active
-                    ? <span className="rounded-full bg-a-st-confirmed/[0.12] px-2 py-0.5 text-xs font-semibold text-a-st-confirmed">{t('loyalty.member.cards_on', 'On')}</span>
+                    ? <span className="rounded-full bg-a-st-confirmed/12 px-2 py-0.5 text-xs font-semibold text-a-st-confirmed">{t('loyalty.member.cards_on', 'On')}</span>
                     : <span className="rounded-full bg-a-surface-2 px-2 py-0.5 text-xs font-semibold text-a-text-2">{t('loyalty.member.cards_off', 'Switched off')}</span>}
                 </span>
                 <span className="block text-xs text-a-text-2">

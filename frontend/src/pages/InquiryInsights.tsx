@@ -66,8 +66,8 @@ export function InquiryInsights() {
           quiet status line — no point eating viewport when nothing is on
           fire. */}
       {totalToday === 0 ? (
-        <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/[0.04] px-4 py-2.5 flex items-center gap-3 text-xs">
-          <CheckCircle2 size={14} className="text-emerald-400 flex-shrink-0" />
+        <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/4 px-4 py-2.5 flex items-center gap-3 text-xs">
+          <CheckCircle2 size={14} className="text-emerald-400 shrink-0" />
           <span className="text-emerald-300 font-bold uppercase tracking-wider text-[10px]">{t('inquiries.today.label', 'Today')}</span>
           <span className="text-gray-300">{t('inquiries.today.all_caught_up', 'All caught up — no overdue, no tasks due today, no new leads in the last 24h.')}</span>
           <span className="ml-auto text-[10px] text-gray-600">{today.date}</span>
@@ -87,8 +87,8 @@ export function InquiryInsights() {
 
       {/* Inline focus pane when a TODAY tile is active. */}
       {dailyFocus && (
-        <div className="rounded-2xl border border-white/[0.06] overflow-hidden" style={{ background: 'var(--legacy-card)' }}>
-          <div className="px-4 py-2 border-b border-white/[0.06] flex items-center justify-between">
+        <div className="rounded-2xl border border-white/6 overflow-hidden" style={{ background: 'var(--legacy-card)' }}>
+          <div className="px-4 py-2 border-b border-white/6 flex items-center justify-between">
             <span className="text-xs font-bold uppercase tracking-wider text-gray-400">
               {dailyFocus === 'overdue' ? t('inquiries.today.focus.overdue', 'Overdue Tasks')
                 : dailyFocus === 'today' ? t('inquiries.today.focus.today', "Today's Tasks")
@@ -97,7 +97,7 @@ export function InquiryInsights() {
             </span>
             <button onClick={() => setDailyFocus('')} className="text-[10px] text-gray-500 hover:text-white">{t('inquiries.today.focus.close', 'Close')}</button>
           </div>
-          <div className="divide-y divide-white/[0.04]">
+          <div className="divide-y divide-white/4">
             {(() => {
               const items = dailyFocus === 'new_leads'
                 ? (today.new_leads?.leads ?? [])
@@ -106,7 +106,7 @@ export function InquiryInsights() {
                 return <div className="px-4 py-6 text-center text-xs text-gray-600">{t('inquiries.today.focus.empty', 'Nothing here right now.')}</div>
               }
               return items.map((inq: any) => (
-                <div key={inq.id} className="flex items-center justify-between px-4 py-2.5 hover:bg-white/[0.02] transition-colors text-sm">
+                <div key={inq.id} className="flex items-center justify-between px-4 py-2.5 hover:bg-white/2 transition-colors text-sm">
                   <div className="flex items-center gap-3 min-w-0 flex-1">
                     <button
                       onClick={() => navigate(`/inquiries/${inq.id}`)}

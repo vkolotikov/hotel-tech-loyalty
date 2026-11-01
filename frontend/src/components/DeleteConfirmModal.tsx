@@ -83,14 +83,14 @@ export default function DeleteConfirmModal({
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center p-4"
+      className="fixed inset-0 z-100 flex items-center justify-center p-4"
       role="dialog"
       aria-modal="true"
       aria-labelledby="delete-confirm-title"
     >
       {/* Backdrop */}
       <div
-        className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+        className="absolute inset-0 bg-black/70 backdrop-blur-xs"
         onClick={() => !loading && onClose()}
       />
 
@@ -98,7 +98,7 @@ export default function DeleteConfirmModal({
       <div className="relative w-full max-w-md rounded-xl border border-red-500/30 bg-dark-surface shadow-2xl shadow-red-500/10 animate-in fade-in zoom-in-95 duration-150">
         {/* Header */}
         <div className="flex items-start gap-3 px-5 pt-5 pb-3">
-          <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-red-500/15 ring-1 ring-red-500/30">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-red-500/15 ring-1 ring-red-500/30">
             <AlertTriangle className="h-5 w-5 text-red-400" aria-hidden="true" />
           </div>
           <div className="flex-1 pt-1">
@@ -139,7 +139,7 @@ export default function DeleteConfirmModal({
               <ul className="space-y-1 text-sm text-gray-300">
                 {impacts.map((line, i) => (
                   <li key={i} className="flex items-start gap-2">
-                    <span className="mt-1.5 h-1 w-1 flex-shrink-0 rounded-full bg-red-400" />
+                    <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-red-400" />
                     <span>{line}</span>
                   </li>
                 ))}
@@ -161,7 +161,7 @@ export default function DeleteConfirmModal({
                 onChange={(e) => setTyped(e.target.value)}
                 disabled={loading}
                 placeholder={entityName}
-                className="w-full rounded-lg border border-white/10 bg-dark-bg px-3 py-2 text-sm text-white placeholder-gray-600 outline-none transition focus:border-red-500/50 focus:ring-2 focus:ring-red-500/20 disabled:opacity-50"
+                className="w-full rounded-lg border border-white/10 bg-dark-bg px-3 py-2 text-sm text-white placeholder-gray-600 outline-hidden transition focus:border-red-500/50 focus:ring-2 focus:ring-red-500/20 disabled:opacity-50"
                 autoComplete="off"
                 spellCheck={false}
               />
@@ -170,7 +170,7 @@ export default function DeleteConfirmModal({
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-end gap-2 border-t border-white/5 px-5 py-3 bg-white/[0.02] rounded-b-xl">
+        <div className="flex items-center justify-end gap-2 border-t border-white/5 px-5 py-3 bg-white/2 rounded-b-xl">
           <button
             type="button"
             onClick={onClose}
@@ -184,7 +184,7 @@ export default function DeleteConfirmModal({
             type="button"
             onClick={handleConfirm}
             disabled={!canConfirm}
-            className="inline-flex items-center gap-2 rounded-lg bg-red-600 px-3.5 py-2 text-sm font-semibold text-on-fill shadow-sm shadow-red-900/40 transition hover:bg-red-500 focus:outline-none focus:ring-2 focus:ring-red-500/50 focus:ring-offset-2 focus:ring-offset-dark-surface disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-red-600"
+            className="inline-flex items-center gap-2 rounded-lg bg-red-600 px-3.5 py-2 text-sm font-semibold text-on-fill shadow-xs shadow-red-900/40 transition hover:bg-red-500 focus:outline-hidden focus:ring-2 focus:ring-red-500/50 focus:ring-offset-2 focus:ring-offset-dark-surface disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-red-600"
           >
             {loading && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
             {confirmLabel || t('actions.delete', 'Delete')}

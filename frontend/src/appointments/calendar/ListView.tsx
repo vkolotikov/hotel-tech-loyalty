@@ -49,7 +49,7 @@ export function ListView({ from, to, appointments, locale, selectedId, onOpen }:
             <th scope="colgroup" colSpan={6} className="px-4 py-1.5 text-left font-a-display text-sm font-normal text-a-text">{formatDate(day, locale)}</th>
           </tr>
           {rows.filter(a => dateOf(a.start) === day).map(a => (
-            <tr key={a.id} className={`border-b border-a-border bg-a-surface ${a.id === selectedId ? 'outline outline-2 -outline-offset-2 outline-a-accent-text' : ''}`}>
+            <tr key={a.id} className={`border-b border-a-border bg-a-surface ${a.id === selectedId ? 'outline-solid outline-2 -outline-offset-2 outline-a-accent-text' : ''}`}>
               <td className="px-4 py-2 whitespace-nowrap">
                 <button type="button" onClick={() => onOpen(a.id)} aria-current={a.id === selectedId ? 'true' : undefined}
                   className="font-semibold text-a-accent-text underline-offset-2 hover:underline">

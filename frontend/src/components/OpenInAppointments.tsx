@@ -16,7 +16,7 @@ export function OpenInAppointments() {
 
   return (
     <Link to="/appointments"
-      className="inline-flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-bold uppercase tracking-wider bg-white/[0.04] border border-white/[0.06] text-gray-300 hover:bg-white/[0.06] transition-all">
+      className="inline-flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-bold uppercase tracking-wider bg-white/4 border border-white/6 text-gray-300 hover:bg-white/6 transition-all">
       <CalendarDays size={14} aria-hidden /> {t('nav.items.appointments_workspace_open', 'Open in HexaTech Appointments')}
     </Link>
   )

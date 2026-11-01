@@ -51,11 +51,11 @@ interface Service {
   masters?: ServiceMasterLite[]
 }
 
-const card = 'rounded-2xl border border-white/[0.06] p-5'
+const card = 'rounded-2xl border border-white/6 p-5'
 const cardBg = { background: 'var(--legacy-hero-gradient-soft)', backdropFilter: 'blur(20px)' }
-const inputCls = 'w-full rounded-xl border border-white/[0.08] bg-white/[0.03] px-3.5 py-2.5 text-sm text-white placeholder-gray-500 outline-none focus:border-primary-500/50 focus:ring-1 focus:ring-primary-500/20 transition-all'
+const inputCls = 'w-full rounded-xl border border-white/8 bg-white/3 px-3.5 py-2.5 text-sm text-white placeholder-gray-500 outline-hidden focus:border-primary-500/50 focus:ring-1 focus:ring-primary-500/20 transition-all'
 const btnPrimaryStyle = { background: 'linear-gradient(135deg, var(--color-primary, #74c895), color-mix(in srgb, var(--color-primary, #74c895) 80%, #000))', color: '#03050A' }
-const tabBtn = (active: boolean) => `px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-xl transition-all ${active ? 'bg-white/[0.08] text-white' : 'text-gray-500 hover:text-white'}`
+const tabBtn = (active: boolean) => `px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-xl transition-all ${active ? 'bg-white/8 text-white' : 'text-gray-500 hover:text-white'}`
 
 export default function Services() {
   const [tab, setTab] = useState<'services' | 'categories'>('services')
@@ -71,7 +71,7 @@ export default function Services() {
         </div>
       </div>
 
-      <div className="flex gap-2 border-b border-white/[0.06]">
+      <div className="flex gap-2 border-b border-white/6">
         <button onClick={() => setTab('services')} className={tabBtn(tab === 'services')}>
           <Sparkles size={12} className="inline mr-1.5" /> Services
         </button>
@@ -176,12 +176,12 @@ function ServicesList() {
 function ServiceCard({ service, onEdit, onDelete }: { service: Service; onEdit: () => void; onDelete: () => void }) {
   const ink = useDataInk()
   return (
-    <div className={card + ' transition-all hover:border-white/[0.12]'} style={cardBg}>
+    <div className={card + ' transition-all hover:border-white/12'} style={cardBg}>
       <div className="flex gap-4">
         {service.image ? (
-          <img src={resolveImage(service.image) || ''} className="w-20 h-20 rounded-xl object-cover flex-shrink-0" />
+          <img src={resolveImage(service.image) || ''} className="w-20 h-20 rounded-xl object-cover shrink-0" />
         ) : (
-          <div className="w-20 h-20 rounded-xl bg-white/[0.03] border border-white/[0.06] flex items-center justify-center flex-shrink-0">
+          <div className="w-20 h-20 rounded-xl bg-white/3 border border-white/6 flex items-center justify-center shrink-0">
             <Sparkles size={24} className="text-gray-600" />
           </div>
         )}
@@ -210,8 +210,8 @@ function ServiceCard({ service, onEdit, onDelete }: { service: Service; onEdit: 
         )}
       </div>
 
-      <div className="flex justify-end gap-1 mt-3 pt-3 border-t border-white/[0.04]">
-        <button onClick={onEdit} className="p-1.5 rounded-lg hover:bg-white/[0.06] text-gray-500 hover:text-white transition-all"><Pencil size={14} /></button>
+      <div className="flex justify-end gap-1 mt-3 pt-3 border-t border-white/4">
+        <button onClick={onEdit} className="p-1.5 rounded-lg hover:bg-white/6 text-gray-500 hover:text-white transition-all"><Pencil size={14} /></button>
         <button onClick={onDelete} className="p-1.5 rounded-lg hover:bg-red-500/10 text-gray-500 hover:text-red-400 transition-all"><Trash2 size={14} /></button>
       </div>
     </div>
@@ -284,16 +284,16 @@ function ServiceForm({
   }
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-start justify-center pt-[5vh] overflow-y-auto pb-10">
-      <div className="w-full max-w-2xl rounded-2xl border border-white/[0.08] p-6" style={{ background: 'var(--legacy-hero-gradient)' }}>
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-start justify-center pt-[5vh] overflow-y-auto pb-10">
+      <div className="w-full max-w-2xl rounded-2xl border border-white/8 p-6" style={{ background: 'var(--legacy-hero-gradient)' }}>
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-lg font-bold text-white">{service ? 'Edit Service' : 'Add Service'}</h2>
-          <button onClick={onClose} className="p-2 rounded-lg hover:bg-white/[0.06] text-gray-500"><X size={18} /></button>
+          <button onClick={onClose} className="p-2 rounded-lg hover:bg-white/6 text-gray-500"><X size={18} /></button>
         </div>
 
         <div className="space-y-4">
           <div className="flex items-center gap-4">
-            <div className="w-24 h-24 rounded-xl border border-white/[0.08] bg-white/[0.02] overflow-hidden flex items-center justify-center cursor-pointer flex-shrink-0"
+            <div className="w-24 h-24 rounded-xl border border-white/8 bg-white/2 overflow-hidden flex items-center justify-center cursor-pointer shrink-0"
               onClick={() => fileRef.current?.click()}>
               {imagePreview ? <img src={imagePreview} className="w-full h-full object-cover" /> : <Upload size={20} className="text-gray-600" />}
             </div>
@@ -355,11 +355,11 @@ function ServiceForm({
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-semibold text-gray-400 mb-1.5">Starting price</label>
-              <div className="flex items-center justify-between rounded-xl border border-white/[0.06] bg-white/[0.02] px-3 py-2">
+              <div className="flex items-center justify-between rounded-xl border border-white/6 bg-white/2 px-3 py-2">
                 <span className="text-xs text-gray-400">Show as “From …”</span>
                 <button type="button" onClick={() => setPriceIsFrom(!priceIsFrom)} aria-pressed={priceIsFrom} aria-label="Starting price"
-                  className={`w-11 h-6 rounded-full transition-all flex-shrink-0 ${priceIsFrom ? 'bg-primary-500' : 'bg-white/[0.08]'}`}>
-                  <div className="w-5 h-5 rounded-full bg-on-fill shadow-sm transition-all" style={{ transform: `translateX(${priceIsFrom ? '22px' : '2px'})` }} />
+                  className={`w-11 h-6 rounded-full transition-all shrink-0 ${priceIsFrom ? 'bg-primary-500' : 'bg-white/8'}`}>
+                  <div className="w-5 h-5 rounded-full bg-on-fill shadow-xs transition-all" style={{ transform: `translateX(${priceIsFrom ? '22px' : '2px'})` }} />
                 </button>
               </div>
               <p className="text-[11px] text-gray-600 mt-1">On your website the price reads “From €48” and drops the “per guest” suffix.</p>
@@ -390,7 +390,7 @@ function ServiceForm({
                       className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all border ${
                         active
                           ? 'bg-primary-500/10 border-primary-500/30 text-primary-400'
-                          : 'bg-white/[0.02] border-white/[0.06] text-gray-500 hover:border-white/[0.12]'
+                          : 'bg-white/2 border-white/6 text-gray-500 hover:border-white/12'
                       }`}>
                       {m.name}
                     </button>
@@ -403,14 +403,14 @@ function ServiceForm({
           <div className="flex items-center justify-between py-2">
             <span className="text-sm text-white font-medium">Active</span>
             <button type="button" onClick={() => setIsActive(!isActive)}
-              className={`w-11 h-6 rounded-full transition-all ${isActive ? 'bg-primary-500' : 'bg-white/[0.08]'}`}>
-              <div className="w-5 h-5 rounded-full bg-on-fill shadow-sm transition-all" style={{ transform: `translateX(${isActive ? '22px' : '2px'})` }} />
+              className={`w-11 h-6 rounded-full transition-all ${isActive ? 'bg-primary-500' : 'bg-white/8'}`}>
+              <div className="w-5 h-5 rounded-full bg-on-fill shadow-xs transition-all" style={{ transform: `translateX(${isActive ? '22px' : '2px'})` }} />
             </button>
           </div>
         </div>
 
-        <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-white/[0.04]">
-          <button onClick={onClose} className="px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider bg-white/[0.04] border border-white/[0.06] text-gray-400">Cancel</button>
+        <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-white/4">
+          <button onClick={onClose} className="px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider bg-white/4 border border-white/6 text-gray-400">Cancel</button>
           <button onClick={handleSubmit} disabled={saving} className="flex items-center gap-2 rounded-xl px-5 py-2.5 text-xs font-bold uppercase tracking-wider transition-all" style={btnPrimaryStyle}>
             {saving ? <RefreshCw size={14} className="animate-spin" /> : <Save size={14} />}
             {service ? 'Save' : 'Create'}
@@ -460,10 +460,10 @@ function CategoriesList() {
       ) : (
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           {categories.map(c => (
-            <div key={c.id} className={card + ' transition-all hover:border-white/[0.12]'} style={cardBg}>
+            <div key={c.id} className={card + ' transition-all hover:border-white/12'} style={cardBg}>
               <div className="flex items-start justify-between gap-3">
                 <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
                     style={{ background: (c.color || '#374151') + '20' }}>
                     <FolderTree size={16} style={{ color: ink(c.color || '#9ca3af') }} />
                   </div>
@@ -473,7 +473,7 @@ function CategoriesList() {
                   </div>
                 </div>
                 <div className="flex gap-1">
-                  <button onClick={() => { setEditing(c); setShowForm(true) }} className="p-1.5 rounded-lg hover:bg-white/[0.06] text-gray-500 hover:text-white transition-all"><Pencil size={12} /></button>
+                  <button onClick={() => { setEditing(c); setShowForm(true) }} className="p-1.5 rounded-lg hover:bg-white/6 text-gray-500 hover:text-white transition-all"><Pencil size={12} /></button>
                   <button onClick={() => { if (confirm('Delete this category? Services will be moved to "Uncategorized".')) deleteMut.mutate(c.id) }} className="p-1.5 rounded-lg hover:bg-red-500/10 text-gray-500 hover:text-red-400 transition-all"><Trash2 size={12} /></button>
                 </div>
               </div>
@@ -533,16 +533,16 @@ function CategoryForm({ category, onClose, onSaved }: { category: ServiceCategor
   }
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-start justify-center pt-[10vh] overflow-y-auto pb-10">
-      <div className="w-full max-w-md rounded-2xl border border-white/[0.08] p-6" style={{ background: 'var(--legacy-hero-gradient)' }}>
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-start justify-center pt-[10vh] overflow-y-auto pb-10">
+      <div className="w-full max-w-md rounded-2xl border border-white/8 p-6" style={{ background: 'var(--legacy-hero-gradient)' }}>
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-lg font-bold text-white">{category ? 'Edit Category' : 'Add Category'}</h2>
-          <button onClick={onClose} className="p-2 rounded-lg hover:bg-white/[0.06] text-gray-500"><X size={18} /></button>
+          <button onClick={onClose} className="p-2 rounded-lg hover:bg-white/6 text-gray-500"><X size={18} /></button>
         </div>
 
         <div className="space-y-4">
           <div className="flex items-center gap-4">
-            <div className="w-20 h-20 rounded-xl border border-white/[0.08] bg-white/[0.02] overflow-hidden flex items-center justify-center cursor-pointer"
+            <div className="w-20 h-20 rounded-xl border border-white/8 bg-white/2 overflow-hidden flex items-center justify-center cursor-pointer"
               onClick={() => fileRef.current?.click()}>
               {imagePreview ? <img src={imagePreview} className="w-full h-full object-cover" /> : <Upload size={20} className="text-gray-600" />}
             </div>
@@ -566,7 +566,7 @@ function CategoryForm({ category, onClose, onSaved }: { category: ServiceCategor
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-semibold text-gray-400 mb-1.5">Color</label>
-              <input type="color" value={color} onChange={e => setColor(e.target.value)} className="h-10 w-full rounded-xl border border-white/[0.08] bg-transparent cursor-pointer" />
+              <input type="color" value={color} onChange={e => setColor(e.target.value)} className="h-10 w-full rounded-xl border border-white/8 bg-transparent cursor-pointer" />
             </div>
             <div>
               <label className="block text-xs font-semibold text-gray-400 mb-1.5">Icon (lucide name)</label>
@@ -577,14 +577,14 @@ function CategoryForm({ category, onClose, onSaved }: { category: ServiceCategor
           <div className="flex items-center justify-between py-2">
             <span className="text-sm text-white font-medium">Active</span>
             <button type="button" onClick={() => setIsActive(!isActive)}
-              className={`w-11 h-6 rounded-full transition-all ${isActive ? 'bg-primary-500' : 'bg-white/[0.08]'}`}>
-              <div className="w-5 h-5 rounded-full bg-on-fill shadow-sm transition-all" style={{ transform: `translateX(${isActive ? '22px' : '2px'})` }} />
+              className={`w-11 h-6 rounded-full transition-all ${isActive ? 'bg-primary-500' : 'bg-white/8'}`}>
+              <div className="w-5 h-5 rounded-full bg-on-fill shadow-xs transition-all" style={{ transform: `translateX(${isActive ? '22px' : '2px'})` }} />
             </button>
           </div>
         </div>
 
-        <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-white/[0.04]">
-          <button onClick={onClose} className="px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider bg-white/[0.04] border border-white/[0.06] text-gray-400">Cancel</button>
+        <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-white/4">
+          <button onClick={onClose} className="px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider bg-white/4 border border-white/6 text-gray-400">Cancel</button>
           <button onClick={handleSubmit} disabled={saving} className="flex items-center gap-2 rounded-xl px-5 py-2.5 text-xs font-bold uppercase tracking-wider transition-all" style={btnPrimaryStyle}>
             {saving ? <RefreshCw size={14} className="animate-spin" /> : <Save size={14} />}
             {category ? 'Save' : 'Create'}

@@ -37,7 +37,7 @@ export function IconButton({ icon: Icon, label, name, onClick, danger = false }:
 }) {
   return (
     <button type="button" title={label} onClick={onClick}
-      className={`inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition-colors hover:bg-a-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-a-accent-text sm:h-9 sm:w-9 ${danger ? 'text-a-text-2 hover:text-a-danger' : 'text-a-text-2 hover:text-a-text'}`}>
+      className={`inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition-colors hover:bg-a-surface-2 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-a-accent-text sm:h-9 sm:w-9 ${danger ? 'text-a-text-2 hover:text-a-danger' : 'text-a-text-2 hover:text-a-text'}`}>
       <Icon size={16} aria-hidden />
       <span className="sr-only">{label}{name ? ` ${name}` : ''}</span>
     </button>
@@ -57,7 +57,7 @@ export function CardAction({ icon: Icon, label, name, onClick, danger = false }:
 }) {
   return (
     <button type="button" onClick={onClick}
-      className={`inline-flex min-h-11 items-center gap-1.5 rounded-full border border-a-border px-3 py-1.5 text-sm font-medium transition-colors hover:bg-a-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-a-accent-text sm:min-h-9 ${danger ? 'text-a-text-2 hover:border-a-danger hover:text-a-danger' : 'text-a-text'}`}>
+      className={`inline-flex min-h-11 items-center gap-1.5 rounded-full border border-a-border px-3 py-1.5 text-sm font-medium transition-colors hover:bg-a-surface-2 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-a-accent-text sm:min-h-9 ${danger ? 'text-a-text-2 hover:border-a-danger hover:text-a-danger' : 'text-a-text'}`}>
       <Icon size={15} aria-hidden />
       {label}{name && <span className="sr-only"> {name}</span>}
     </button>

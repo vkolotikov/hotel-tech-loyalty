@@ -70,7 +70,7 @@ export function SmsSendDialog({ sms, onClose }: { sms: Sms; onClose: () => void 
   return (
     <Dialog title={t('loyalty.sms.send.title', 'Send this SMS')} onClose={onClose} busy={busy}>
       <div className="space-y-4 text-sm text-a-text">
-        <p className="line-clamp-3 whitespace-pre-line break-words font-medium">{sms.body}</p>
+        <p className="line-clamp-3 whitespace-pre-line wrap-break-word font-medium">{sms.body}</p>
         <WhenChoice mode={mode} at={at} timeZone={timeZone} problem={later ? timeProblemOf(at, timeZone, tried, scheduleFailure) : null}
           onMode={(next) => { setMode(next); send.reset(); schedule.reset() }} onAt={(next) => { setAt(next); if (schedule.isError) schedule.reset() }} />
         {audience.isError && <Refusal family="audience" failure={failureOf(audience.error)} />}

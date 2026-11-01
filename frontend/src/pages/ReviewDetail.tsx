@@ -56,7 +56,7 @@ export function ReviewDetail() {
             <div className="text-t-soft text-xs uppercase tracking-wider mb-1">{s.form.name}</div>
             <h1 className="text-2xl font-bold text-white">{who}</h1>
             {email && <div className="text-t-soft text-sm mt-1">{email}</div>}
-            {s.member?.tier && <span className="inline-block mt-2 px-2 py-0.5 rounded bg-panel text-amber-300 text-xs font-semibold">{s.member.tier.name}</span>}
+            {s.member?.tier && <span className="inline-block mt-2 px-2 py-0.5 rounded-sm bg-panel text-amber-300 text-xs font-semibold">{s.member.tier.name}</span>}
           </div>
           <div className="text-right">
             {s.overall_rating !== null && (

@@ -105,7 +105,7 @@ export function EntryRow({ entry }: { entry: Entry }) {
   return (
     <li data-entry={entry.id} className="flex items-start gap-3 px-3 py-2.5">
       <span className="w-11 shrink-0 pt-0.5 font-a-mono text-xs tabular-nums text-a-text-2">{entryTime(entry.at)}</span>
-      <span aria-hidden className={`mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full ${entry.granted ? 'bg-a-st-confirmed/[0.15] text-a-st-confirmed' : 'bg-a-danger/[0.12] text-a-danger'}`}>
+      <span aria-hidden className={`mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full ${entry.granted ? 'bg-a-st-confirmed/15 text-a-st-confirmed' : 'bg-a-danger/12 text-a-danger'}`}>
         {entry.granted ? <CheckIcon size={13} /> : <X size={13} />}
       </span>
       <div className="min-w-0 flex-1">

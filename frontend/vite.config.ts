@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import tailwindcss from '@tailwindcss/vite'
 import { visualizer } from 'rollup-plugin-visualizer'
 import path from 'path'
 
@@ -7,6 +8,9 @@ export default defineConfig(({ mode }) => {
   return {
     plugins: [
       react(),
+      // Tailwind 4 through its Vite plugin, not PostCSS: @tailwindcss/postcss inlines index.css's
+      // @imports without rebasing their url()s, so the self-hosted fonts (Glass, workspaces) 404.
+      tailwindcss(),
       mode === 'production' && visualizer({ filename: 'dist/stats.html', gzipSize: true }),
     ].filter(Boolean),
     base: mode === 'production' ? '/spa/' : './',

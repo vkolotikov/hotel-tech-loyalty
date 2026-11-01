@@ -332,7 +332,7 @@ export function FieldManagerPanel() {
             >
               <Icon size={14} className={active ? 'text-accent' : ''} />
               {t.label}
-              <span className={'text-[10px] font-mono px-1.5 py-0.5 rounded ' + (active ? 'bg-accent/15 text-accent' : 'bg-dark-surface text-t-secondary')}>
+              <span className={'text-[10px] font-mono px-1.5 py-0.5 rounded-sm ' + (active ? 'bg-accent/15 text-accent' : 'bg-dark-surface text-t-secondary')}>
                 {counts.on}/{counts.total}
               </span>
             </button>
@@ -410,13 +410,13 @@ function TabEditor({ tab, initial }: { tab: TabDef; initial: any }) {
             value={query}
             onChange={e => setQuery(e.target.value)}
             placeholder={`Search ${tab.label.toLowerCase()} fields…`}
-            className="w-full bg-dark-bg border border-dark-border rounded-md pl-7 pr-2 py-1.5 text-xs text-white placeholder:text-t-secondary outline-none focus:border-accent"
+            className="w-full bg-dark-bg border border-dark-border rounded-md pl-7 pr-2 py-1.5 text-xs text-white placeholder:text-t-secondary outline-hidden focus:border-accent"
           />
         </div>
         <div className="flex items-center gap-2">
           <button
             onClick={reset}
-            className="text-xs text-t-secondary hover:text-white px-2 py-1 rounded hover:bg-dark-surface2 flex items-center gap-1"
+            className="text-xs text-t-secondary hover:text-white px-2 py-1 rounded-sm hover:bg-dark-surface2 flex items-center gap-1"
             title="Reset to defaults"
           >
             <RotateCcw size={11} /> Reset
@@ -452,11 +452,11 @@ function TabEditor({ tab, initial }: { tab: TabDef; initial: any }) {
                   <span className="text-[10px] text-t-secondary font-mono">{on}/{section.fields.length}</span>
                   <button
                     onClick={() => bulkSet(section.path, true)}
-                    className="text-[10px] text-t-secondary hover:text-emerald-400 px-1.5 py-0.5 rounded hover:bg-dark-surface2"
+                    className="text-[10px] text-t-secondary hover:text-emerald-400 px-1.5 py-0.5 rounded-sm hover:bg-dark-surface2"
                   >All on</button>
                   <button
                     onClick={() => bulkSet(section.path, false)}
-                    className="text-[10px] text-t-secondary hover:text-red-400 px-1.5 py-0.5 rounded hover:bg-dark-surface2"
+                    className="text-[10px] text-t-secondary hover:text-red-400 px-1.5 py-0.5 rounded-sm hover:bg-dark-surface2"
                   >All off</button>
                 </div>
               </div>
@@ -488,12 +488,12 @@ function FieldRow({ label, hint, on, onToggle }: {
   return (
     <button
       onClick={onToggle}
-      className="w-full flex items-center justify-between gap-2 px-2 py-1.5 rounded hover:bg-dark-surface2/50 transition text-left"
+      className="w-full flex items-center justify-between gap-2 px-2 py-1.5 rounded-sm hover:bg-dark-surface2/50 transition text-left"
     >
       <div className="flex items-center gap-2 min-w-0">
         {on
-          ? <Eye size={13} className="text-emerald-400 flex-shrink-0" />
-          : <EyeOff size={13} className="text-t-secondary flex-shrink-0" />}
+          ? <Eye size={13} className="text-emerald-400 shrink-0" />
+          : <EyeOff size={13} className="text-t-secondary shrink-0" />}
         <div className="min-w-0">
           <div className={'text-xs ' + (on ? 'text-white' : 'text-t-secondary')}>{label}</div>
           {hint && <div className="text-[10px] text-t-secondary/70 truncate">{hint}</div>}

@@ -341,9 +341,9 @@ function CustomFieldRowItem({ field, isFirst, isLast, onMoveUp, onMoveDown, onTo
           <input
             value={label}
             onChange={e => setLabel(e.target.value)}
-            className="flex-1 bg-dark-surface border border-dark-border rounded-md px-2 py-1 text-sm outline-none focus:border-accent"
+            className="flex-1 bg-dark-surface border border-dark-border rounded-md px-2 py-1 text-sm outline-hidden focus:border-accent"
           />
-          <span className="flex items-center gap-1 text-[10px] uppercase tracking-wide font-bold text-purple-300 bg-purple-500/10 px-2 py-0.5 rounded">
+          <span className="flex items-center gap-1 text-[10px] uppercase tracking-wide font-bold text-purple-300 bg-purple-500/10 px-2 py-0.5 rounded-sm">
             <TypeIcon size={10} /> {typeMeta?.short ?? field.type}
           </span>
         </div>
@@ -351,7 +351,7 @@ function CustomFieldRowItem({ field, isFirst, isLast, onMoveUp, onMoveDown, onTo
           value={helpText}
           onChange={e => setHelpText(e.target.value)}
           placeholder="Help text shown under the field (optional)"
-          className="w-full bg-dark-surface border border-dark-border rounded-md px-2 py-1 text-xs outline-none focus:border-accent"
+          className="w-full bg-dark-surface border border-dark-border rounded-md px-2 py-1 text-xs outline-hidden focus:border-accent"
         />
         {supportsOptions && (
           <div>
@@ -362,7 +362,7 @@ function CustomFieldRowItem({ field, isFirst, isLast, onMoveUp, onMoveDown, onTo
               value={optionsText}
               onChange={e => setOptionsText(e.target.value)}
               rows={4}
-              className="w-full bg-dark-surface border border-dark-border rounded-md px-2 py-1.5 text-xs outline-none focus:border-accent resize-none font-mono"
+              className="w-full bg-dark-surface border border-dark-border rounded-md px-2 py-1.5 text-xs outline-hidden focus:border-accent resize-none font-mono"
             />
           </div>
         )}
@@ -408,7 +408,7 @@ function CustomFieldRowItem({ field, isFirst, isLast, onMoveUp, onMoveDown, onTo
         </button>
       </div>
 
-      <span className="flex items-center gap-1 text-[10px] uppercase tracking-wide font-bold text-purple-300 bg-purple-500/10 px-1.5 py-0.5 rounded w-20 truncate">
+      <span className="flex items-center gap-1 text-[10px] uppercase tracking-wide font-bold text-purple-300 bg-purple-500/10 px-1.5 py-0.5 rounded-sm w-20 truncate">
         <TypeIcon size={9} /> {typeMeta?.short ?? field.type}
       </span>
       <span className="text-sm font-semibold text-white flex-1 truncate">
@@ -443,10 +443,10 @@ function CustomFieldRowItem({ field, isFirst, isLast, onMoveUp, onMoveDown, onTo
         >
           {field.is_active ? 'Active' : 'Off'}
         </button>
-        <button onClick={() => setEditing(true)} className="p-1 rounded hover:bg-dark-surface2 text-t-secondary hover:text-white" title="Edit field">
+        <button onClick={() => setEditing(true)} className="p-1 rounded-sm hover:bg-dark-surface2 text-t-secondary hover:text-white" title="Edit field">
           <Edit3 size={11} />
         </button>
-        <button onClick={onDelete} className="p-1 rounded hover:bg-red-500/15 text-t-secondary hover:text-red-400" title="Delete field">
+        <button onClick={onDelete} className="p-1 rounded-sm hover:bg-red-500/15 text-t-secondary hover:text-red-400" title="Delete field">
           <Trash2 size={11} />
         </button>
       </div>
@@ -499,7 +499,7 @@ function NewCustomFieldRow({ entity, onClose, onAdded }: {
           value={label}
           onChange={e => setLabel(e.target.value)}
           placeholder='e.g. "Allergies", "Budget", "Preferred trainer"'
-          className="w-full bg-dark-surface border border-dark-border rounded-md px-2.5 py-1.5 text-sm outline-none focus:border-accent"
+          className="w-full bg-dark-surface border border-dark-border rounded-md px-2.5 py-1.5 text-sm outline-hidden focus:border-accent"
         />
       </div>
 
@@ -543,7 +543,7 @@ function NewCustomFieldRow({ entity, onClose, onAdded }: {
           value={helpText}
           onChange={e => setHelpText(e.target.value)}
           placeholder='e.g. "List ALL drug, food and environmental allergies."'
-          className="w-full bg-dark-surface border border-dark-border rounded-md px-2.5 py-1.5 text-xs outline-none focus:border-accent"
+          className="w-full bg-dark-surface border border-dark-border rounded-md px-2.5 py-1.5 text-xs outline-hidden focus:border-accent"
         />
       </div>
 
@@ -557,7 +557,7 @@ function NewCustomFieldRow({ entity, onClose, onAdded }: {
             onChange={e => setOptionsText(e.target.value)}
             rows={4}
             placeholder={'Option A\nOption B\nOption C'}
-            className="w-full bg-dark-surface border border-dark-border rounded-md px-2.5 py-1.5 text-xs outline-none focus:border-accent resize-none font-mono"
+            className="w-full bg-dark-surface border border-dark-border rounded-md px-2.5 py-1.5 text-xs outline-hidden focus:border-accent resize-none font-mono"
           />
         </div>
       )}

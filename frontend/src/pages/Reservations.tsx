@@ -135,7 +135,7 @@ export function Reservations() {
   const clearFilters = () => { setStatus(''); setPropertyId(''); setRoomType(''); setMealPlan(''); setPaymentStatus(''); setBookingChannel(''); setCheckInFrom(''); setCheckInTo(''); setPage(1) }
   const calcNights = (ci: string, co: string) => { if (!ci || !co) return '—'; const n = Math.round((new Date(co).getTime() - new Date(ci).getTime()) / 86400000); return n > 0 ? n : '—' }
 
-  const inp = 'w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500'
+  const inp = 'w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-hidden focus:ring-2 focus:ring-primary-500'
 
   return (
     <div className="space-y-5">
@@ -181,7 +181,7 @@ export function Reservations() {
           { key: '', labelKey: 'reservations.quick.all', fallback: 'All' },
         ].map(({ key, labelKey, fallback }) => (
           <button key={labelKey} onClick={() => setQuick(key)}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border whitespace-nowrap flex-shrink-0 ${quickFilter === key ? 'border-primary-500 bg-primary-500/10 text-primary-400' : 'border-dark-border text-t-secondary hover:text-white hover:border-dark-border2'}`}>
+            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border whitespace-nowrap shrink-0 ${quickFilter === key ? 'border-primary-500 bg-primary-500/10 text-primary-400' : 'border-dark-border text-t-secondary hover:text-white hover:border-dark-border2'}`}>
             {t(labelKey, fallback)}
           </button>
         ))}
@@ -192,7 +192,7 @@ export function Reservations() {
         <div className="flex gap-3">
           <div className="relative flex-1 max-w-md">
             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-t-muted" />
-            <input value={search} onChange={e => { setSearch(e.target.value); setPage(1) }} placeholder={t('reservations.search_placeholder', 'Search confirmation no, guest name, company...')} className="w-full bg-panel border border-dark-border rounded-lg pl-9 pr-3 py-2 text-sm text-white placeholder-t-muted focus:outline-none focus:ring-2 focus:ring-primary-500" />
+            <input value={search} onChange={e => { setSearch(e.target.value); setPage(1) }} placeholder={t('reservations.search_placeholder', 'Search confirmation no, guest name, company...')} className="w-full bg-panel border border-dark-border rounded-lg pl-9 pr-3 py-2 text-sm text-white placeholder-t-muted focus:outline-hidden focus:ring-2 focus:ring-primary-500" />
           </div>
           <button onClick={() => setShowFilters(f => !f)} className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm transition-colors ${hasFilters ? 'border-primary-500 text-primary-400' : 'border-dark-border text-t-secondary hover:text-white'}`}>
             <Filter size={14} /> {t('reservations.filters_button', 'Filters')} {hasFilters ? '●' : ''}
@@ -200,37 +200,37 @@ export function Reservations() {
         </div>
         {showFilters && (
           <div className="flex flex-wrap gap-2 items-center">
-            <select value={status} onChange={e => { setStatus(e.target.value); setPage(1) }} className="bg-dark-surface border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500">
+            <select value={status} onChange={e => { setStatus(e.target.value); setPage(1) }} className="bg-dark-surface border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-hidden focus:ring-2 focus:ring-primary-500">
               <option value="">{t('reservations.filters.all_statuses', 'All Statuses')}</option>
               {settings.reservation_statuses.map(s => <option key={s}>{s}</option>)}
             </select>
-            <select value={propertyId} onChange={e => { setPropertyId(e.target.value); setPage(1) }} className="bg-dark-surface border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500">
+            <select value={propertyId} onChange={e => { setPropertyId(e.target.value); setPage(1) }} className="bg-dark-surface border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-hidden focus:ring-2 focus:ring-primary-500">
               <option value="">{t('reservations.filters.all_properties', 'All Properties')}</option>
               {properties.map((p: any) => <option key={p.id} value={p.id}>{p.name}</option>)}
             </select>
-            <select value={roomType} onChange={e => { setRoomType(e.target.value); setPage(1) }} className="bg-dark-surface border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500">
+            <select value={roomType} onChange={e => { setRoomType(e.target.value); setPage(1) }} className="bg-dark-surface border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-hidden focus:ring-2 focus:ring-primary-500">
               <option value="">{t('reservations.filters.all_room_types', 'All Room Types')}</option>
               {settings.room_types.map(s => <option key={s}>{s}</option>)}
             </select>
-            <select value={mealPlan} onChange={e => { setMealPlan(e.target.value); setPage(1) }} className="bg-dark-surface border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500">
+            <select value={mealPlan} onChange={e => { setMealPlan(e.target.value); setPage(1) }} className="bg-dark-surface border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-hidden focus:ring-2 focus:ring-primary-500">
               <option value="">{t('reservations.filters.all_meal_plans', 'All Meal Plans')}</option>
               {settings.meal_plans.map(s => <option key={s}>{s}</option>)}
             </select>
-            <select value={paymentStatus} onChange={e => { setPaymentStatus(e.target.value); setPage(1) }} className="bg-dark-surface border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500">
+            <select value={paymentStatus} onChange={e => { setPaymentStatus(e.target.value); setPage(1) }} className="bg-dark-surface border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-hidden focus:ring-2 focus:ring-primary-500">
               <option value="">{t('reservations.filters.all_payments', 'All Payments')}</option>
               {settings.payment_statuses.map(s => <option key={s}>{s}</option>)}
             </select>
-            <select value={bookingChannel} onChange={e => { setBookingChannel(e.target.value); setPage(1) }} className="bg-dark-surface border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500">
+            <select value={bookingChannel} onChange={e => { setBookingChannel(e.target.value); setPage(1) }} className="bg-dark-surface border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-hidden focus:ring-2 focus:ring-primary-500">
               <option value="">{t('reservations.filters.all_channels', 'All Channels')}</option>
               {settings.booking_channels.map(s => <option key={s}>{s}</option>)}
             </select>
             <div className="flex items-center gap-1">
               <span className="text-xs text-t-secondary">{t('reservations.filters.from', 'From')}</span>
-              <input type="date" value={checkInFrom} onChange={e => { setCheckInFrom(e.target.value); setPage(1) }} className="bg-dark-surface border border-dark-border rounded-lg px-2 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500" />
+              <input type="date" value={checkInFrom} onChange={e => { setCheckInFrom(e.target.value); setPage(1) }} className="bg-dark-surface border border-dark-border rounded-lg px-2 py-2 text-sm text-white focus:outline-hidden focus:ring-2 focus:ring-primary-500" />
             </div>
             <div className="flex items-center gap-1">
               <span className="text-xs text-t-secondary">{t('reservations.filters.to', 'To')}</span>
-              <input type="date" value={checkInTo} onChange={e => { setCheckInTo(e.target.value); setPage(1) }} className="bg-dark-surface border border-dark-border rounded-lg px-2 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500" />
+              <input type="date" value={checkInTo} onChange={e => { setCheckInTo(e.target.value); setPage(1) }} className="bg-dark-surface border border-dark-border rounded-lg px-2 py-2 text-sm text-white focus:outline-hidden focus:ring-2 focus:ring-primary-500" />
             </div>
             {hasFilters && <button onClick={clearFilters} className="text-xs text-t-muted hover:text-white px-2">{t('reservations.filters.clear', 'Clear')}</button>}
           </div>
@@ -304,14 +304,14 @@ export function Reservations() {
                   <div className="flex items-center gap-1">
                     {r.status === 'Confirmed' && (
                       <button onClick={() => checkInMutation.mutate(r.id)} disabled={checkInMutation.isPending}
-                        className="flex items-center gap-1 px-2 py-1 rounded text-[11px] font-medium bg-green-500/10 text-green-400 hover:bg-green-500/20 transition-colors disabled:opacity-50"
+                        className="flex items-center gap-1 px-2 py-1 rounded-sm text-[11px] font-medium bg-green-500/10 text-green-400 hover:bg-green-500/20 transition-colors disabled:opacity-50"
                         title={t('reservations.row_actions.check_in_title', 'Check In')}>
                         <LogIn size={12} /> {t('reservations.row_actions.check_in_short', 'In')}
                       </button>
                     )}
                     {r.status === 'Checked In' && (
                       <button onClick={() => checkOutMutation.mutate(r.id)} disabled={checkOutMutation.isPending}
-                        className="flex items-center gap-1 px-2 py-1 rounded text-[11px] font-medium bg-gray-500/10 text-t-soft hover:bg-gray-500/20 transition-colors disabled:opacity-50"
+                        className="flex items-center gap-1 px-2 py-1 rounded-sm text-[11px] font-medium bg-gray-500/10 text-t-soft hover:bg-gray-500/20 transition-colors disabled:opacity-50"
                         title={t('reservations.row_actions.check_out_title', 'Check Out')}>
                         <LogOut size={12} /> {t('reservations.row_actions.check_out_short', 'Out')}
                       </button>

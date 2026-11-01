@@ -85,10 +85,10 @@ export function TeamSettings() {
 
   return (
     <div className="space-y-4">
-      <div className="bg-gradient-to-br from-blue-500/10 via-purple-500/[0.05] to-amber-500/10 border border-blue-500/30 rounded-xl p-4">
+      <div className="bg-linear-to-br from-blue-500/10 via-purple-500/5 to-amber-500/10 border border-blue-500/30 rounded-xl p-4">
         <div className="flex items-start justify-between gap-3 flex-wrap">
           <div className="flex items-start gap-2.5">
-            <div className="w-9 h-9 rounded-lg bg-blue-500/15 border border-blue-500/40 flex items-center justify-center flex-shrink-0">
+            <div className="w-9 h-9 rounded-lg bg-blue-500/15 border border-blue-500/40 flex items-center justify-center shrink-0">
               <Users size={16} className="text-blue-300" />
             </div>
             <div>
@@ -146,14 +146,14 @@ export function TeamSettings() {
         return (
           <div className="space-y-4">
             {pending.length > 0 && (
-              <div className="bg-amber-500/[0.04] border border-amber-500/30 rounded-xl overflow-hidden">
-                <div className="flex items-center justify-between gap-2 px-4 py-2.5 bg-amber-500/[0.06] border-b border-amber-500/20">
+              <div className="bg-amber-500/4 border border-amber-500/30 rounded-xl overflow-hidden">
+                <div className="flex items-center justify-between gap-2 px-4 py-2.5 bg-amber-500/6 border-b border-amber-500/20">
                   <div className="flex items-center gap-2">
                     <Mail size={13} className="text-amber-400" />
                     <span className="text-xs font-bold text-amber-300 uppercase tracking-wider">
                       Pending invitations
                     </span>
-                    <span className="text-[10px] tabular-nums font-bold px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-300">
+                    <span className="text-[10px] tabular-nums font-bold px-1.5 py-0.5 rounded-sm bg-amber-500/15 text-amber-300">
                       {pending.length}
                     </span>
                   </div>
@@ -170,13 +170,13 @@ export function TeamSettings() {
             {active.length > 0 && (
               <div className="bg-dark-surface border border-dark-border rounded-xl overflow-hidden">
                 {pending.length > 0 && (
-                  <div className="flex items-center justify-between gap-2 px-4 py-2.5 bg-white/[0.02] border-b border-dark-border">
+                  <div className="flex items-center justify-between gap-2 px-4 py-2.5 bg-white/2 border-b border-dark-border">
                     <div className="flex items-center gap-2">
                       <Users size={13} className="text-gray-400" />
                       <span className="text-xs font-bold text-gray-300 uppercase tracking-wider">
                         Active team
                       </span>
-                      <span className="text-[10px] tabular-nums font-bold px-1.5 py-0.5 rounded bg-white/10 text-gray-300">
+                      <span className="text-[10px] tabular-nums font-bold px-1.5 py-0.5 rounded-sm bg-white/10 text-gray-300">
                         {active.length}
                       </span>
                     </div>
@@ -193,7 +193,7 @@ export function TeamSettings() {
 
       <div className="bg-dark-bg/50 border border-dark-border rounded-lg p-3 text-[11px] text-gray-500 leading-relaxed">
         <p className="flex items-start gap-1.5">
-          <Info size={11} className="text-blue-400 mt-0.5 flex-shrink-0" />
+          <Info size={11} className="text-blue-400 mt-0.5 shrink-0" />
           <span>
             <span className="font-semibold text-blue-300">Tip:</span> Invites expire after 48 hours.
             Use <span className="text-white">Resend</span> on any teammate's row to send a fresh code.
@@ -249,16 +249,16 @@ function ViewRow({ staff, onEdit, onDeactivate, onReactivate, onResend, resendPe
 
   return (
     <div className={'flex items-center gap-3 p-3 ' + (staff.is_active ? '' : 'opacity-50')}>
-      <div className="w-9 h-9 rounded-md flex items-center justify-center flex-shrink-0"
+      <div className="w-9 h-9 rounded-md flex items-center justify-center shrink-0"
         style={{ backgroundColor: meta.color + '25', color: ink(meta.color) }}>
         <Icon size={15} />
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
           <span className="text-sm font-bold text-white truncate">{staff.name || '—'}</span>
-          {staff.is_me && <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-blue-500/15 text-blue-300 uppercase tracking-wide">You</span>}
-          {!staff.is_active && <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-red-500/15 text-red-400 uppercase tracking-wide">Deactivated</span>}
-          {inviteExpiry === 'expired' && <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-red-500/15 text-red-400 uppercase tracking-wide">Code expired</span>}
+          {staff.is_me && <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-sm bg-blue-500/15 text-blue-300 uppercase tracking-wide">You</span>}
+          {!staff.is_active && <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-sm bg-red-500/15 text-red-400 uppercase tracking-wide">Deactivated</span>}
+          {inviteExpiry === 'expired' && <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-sm bg-red-500/15 text-red-400 uppercase tracking-wide">Code expired</span>}
         </div>
         <div className="text-[11px] text-gray-500 mt-0.5 truncate">{staff.email}</div>
       </div>
@@ -273,23 +273,23 @@ function ViewRow({ staff, onEdit, onDeactivate, onReactivate, onResend, resendPe
           // Pending rows get a labeled, primary-styled Resend button so
           // the action is obvious — was a tiny icon-only button before.
           <button onClick={onResend} disabled={resendPending} title="Resend invitation email"
-            className="flex items-center gap-1 px-2 py-1.5 rounded bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 text-amber-300 hover:text-amber-200 text-[11px] font-semibold disabled:opacity-50">
+            className="flex items-center gap-1 px-2 py-1.5 rounded-sm bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 text-amber-300 hover:text-amber-200 text-[11px] font-semibold disabled:opacity-50">
             <RefreshCw size={11} className={resendPending ? 'animate-spin' : ''} />
             <span className="hidden sm:inline">{resendPending ? 'Sending…' : 'Resend'}</span>
           </button>
         )}
         <button onClick={onEdit} title="Edit"
-          className="p-1.5 rounded text-gray-500 hover:bg-dark-surface2 hover:text-white">
+          className="p-1.5 rounded-sm text-gray-500 hover:bg-dark-surface2 hover:text-white">
           <Edit2 size={13} />
         </button>
         {!staff.is_me && (staff.is_active ? (
           <button onClick={onDeactivate} title="Deactivate"
-            className="p-1.5 rounded text-gray-500 hover:bg-red-500/15 hover:text-red-400">
+            className="p-1.5 rounded-sm text-gray-500 hover:bg-red-500/15 hover:text-red-400">
             <UserX size={13} />
           </button>
         ) : (
           <button onClick={onReactivate} title="Reactivate"
-            className="p-1.5 rounded text-gray-500 hover:bg-emerald-500/15 hover:text-emerald-400">
+            className="p-1.5 rounded-sm text-gray-500 hover:bg-emerald-500/15 hover:text-emerald-400">
             <UserCheck size={13} />
           </button>
         ))}
@@ -342,7 +342,7 @@ function EditRow({ staff, availableRoles, availableGroups, onCancel, onSaved }: 
             className="bg-primary-500 hover:bg-primary-400 text-on-primary font-bold rounded-md px-3 py-1.5 text-xs disabled:opacity-50 flex items-center gap-1">
             <Save size={11} /> {save.isPending ? 'Saving…' : 'Save'}
           </button>
-          <button onClick={onCancel} className="p-1.5 rounded text-gray-500 hover:text-white"><X size={13} /></button>
+          <button onClick={onCancel} className="p-1.5 rounded-sm text-gray-500 hover:text-white"><X size={13} /></button>
         </div>
       </div>
 
@@ -357,13 +357,13 @@ function EditRow({ staff, availableRoles, availableGroups, onCancel, onSaved }: 
               return (
                 <button key={r} onClick={() => setForm(f => ({ ...f, role: r }))}
                   className={'w-full flex items-start gap-2 p-2 rounded-md border text-left transition-colors ' +
-                    (active ? 'border-amber-500/60 bg-amber-500/[0.06]' : 'border-dark-border bg-dark-bg hover:bg-dark-surface2')}>
-                  <Icon size={14} className="mt-0.5 flex-shrink-0" style={{ color: ink(meta.color) }} />
+                    (active ? 'border-amber-500/60 bg-amber-500/6' : 'border-dark-border bg-dark-bg hover:bg-dark-surface2')}>
+                  <Icon size={14} className="mt-0.5 shrink-0" style={{ color: ink(meta.color) }} />
                   <div className="flex-1 min-w-0">
                     <div className="text-xs font-bold text-white">{meta.label}</div>
                     <div className="text-[10px] text-gray-500">{meta.desc}</div>
                   </div>
-                  {active && <Check size={13} className="text-amber-400 flex-shrink-0" />}
+                  {active && <Check size={13} className="text-amber-400 shrink-0" />}
                 </button>
               )
             })}
@@ -374,7 +374,7 @@ function EditRow({ staff, availableRoles, availableGroups, onCancel, onSaved }: 
           <label className="text-[10px] uppercase tracking-wide font-bold text-gray-500 mb-1.5 block">Department (optional)</label>
           <input value={form.department} onChange={e => setForm(f => ({ ...f, department: e.target.value }))}
             placeholder="e.g. Front desk"
-            className="w-full bg-dark-bg border border-dark-border rounded-md px-3 py-2 text-sm text-white placeholder-gray-600 outline-none focus:border-primary-500 mb-3" />
+            className="w-full bg-dark-bg border border-dark-border rounded-md px-3 py-2 text-sm text-white placeholder-gray-600 outline-hidden focus:border-primary-500 mb-3" />
 
           <label className="text-[10px] uppercase tracking-wide font-bold text-gray-500 mb-1.5 block">Per-feature permissions</label>
           <div className="space-y-1 mb-3">
@@ -445,7 +445,7 @@ function SectionPicker({ availableGroups, value, onChange }: {
       <label className="text-[10px] uppercase tracking-wide font-bold text-gray-500 mb-1.5 block">Sections this person can see</label>
       <button onClick={() => onChange(null)}
         className={'w-full flex items-center gap-2 px-2.5 py-2 rounded-md border text-xs mb-1.5 transition-colors ' +
-          (isAll ? 'border-emerald-500/60 bg-emerald-500/[0.06] text-emerald-300' : 'border-dark-border bg-dark-bg text-gray-400 hover:bg-dark-surface2')}>
+          (isAll ? 'border-emerald-500/60 bg-emerald-500/6 text-emerald-300' : 'border-dark-border bg-dark-bg text-gray-400 hover:bg-dark-surface2')}>
         {isAll ? <Check size={12} /> : <span className="w-3" />}
         <span className="font-bold">All sections</span>
         <span className="text-[10px] text-gray-500 ml-auto">No restriction</span>
@@ -458,8 +458,8 @@ function SectionPicker({ availableGroups, value, onChange }: {
           return (
             <button key={g} onClick={() => toggle(g)}
               className={'w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md border text-xs transition-colors ' +
-                (checked ? 'border-amber-500/60 bg-amber-500/[0.06] text-white' : 'border-dark-border bg-dark-bg text-gray-400 hover:bg-dark-surface2 hover:text-white')}>
-              <span className={'w-3 h-3 rounded border flex-shrink-0 flex items-center justify-center ' + (checked ? 'bg-amber-400 border-amber-400' : 'border-gray-600')}>
+                (checked ? 'border-amber-500/60 bg-amber-500/6 text-white' : 'border-dark-border bg-dark-bg text-gray-400 hover:bg-dark-surface2 hover:text-white')}>
+              <span className={'w-3 h-3 rounded-sm border shrink-0 flex items-center justify-center ' + (checked ? 'bg-amber-400 border-amber-400' : 'border-gray-600')}>
                 {checked && <Check size={9} className="text-black" />}
               </span>
               <span>{localised ?? g}</span>
@@ -502,8 +502,8 @@ function PlannerSkillsPicker({ availableGroups, value, onChange }: {
       </label>
       <button onClick={() => onChange(null)}
         className={'w-full flex items-center gap-2 px-2.5 py-2 rounded-md border text-xs mb-1.5 transition-colors ' +
-          (isAll ? 'border-emerald-500/60 bg-emerald-500/[0.06] text-emerald-300' : 'border-dark-border bg-dark-bg text-gray-400 hover:bg-dark-surface2')}>
-        <span className={'w-3 h-3 rounded-full flex-shrink-0 ' + (isAll ? 'bg-emerald-400' : 'border border-gray-600')} />
+          (isAll ? 'border-emerald-500/60 bg-emerald-500/6 text-emerald-300' : 'border-dark-border bg-dark-bg text-gray-400 hover:bg-dark-surface2')}>
+        <span className={'w-3 h-3 rounded-full shrink-0 ' + (isAll ? 'bg-emerald-400' : 'border border-gray-600')} />
         <span className="font-semibold">Can claim anything in the pool</span>
       </button>
       <div className="grid grid-cols-2 gap-1">
@@ -512,8 +512,8 @@ function PlannerSkillsPicker({ availableGroups, value, onChange }: {
           return (
             <button key={g} onClick={() => toggle(g)}
               className={'w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md border text-xs transition-colors ' +
-                (checked ? 'border-amber-500/60 bg-amber-500/[0.06] text-white' : 'border-dark-border bg-dark-bg text-gray-400 hover:bg-dark-surface2 hover:text-white')}>
-              <span className={'w-3 h-3 rounded border flex-shrink-0 flex items-center justify-center ' + (checked ? 'bg-amber-400 border-amber-400' : 'border-gray-600')}>
+                (checked ? 'border-amber-500/60 bg-amber-500/6 text-white' : 'border-dark-border bg-dark-bg text-gray-400 hover:bg-dark-surface2 hover:text-white')}>
+              <span className={'w-3 h-3 rounded-sm border shrink-0 flex items-center justify-center ' + (checked ? 'bg-amber-400 border-amber-400' : 'border-gray-600')}>
                 {checked && <Check size={9} className="text-black" />}
               </span>
               <span className="truncate">{g}</span>
@@ -531,7 +531,7 @@ function PlannerSkillsPicker({ availableGroups, value, onChange }: {
 function Toggle({ label, value, onChange }: { label: string; value: boolean; onChange: (v: boolean) => void }) {
   return (
     <button onClick={() => onChange(!value)}
-      className="w-full flex items-center justify-between px-2 py-1.5 rounded hover:bg-dark-surface2">
+      className="w-full flex items-center justify-between px-2 py-1.5 rounded-sm hover:bg-dark-surface2">
       <span className="text-xs text-gray-300">{label}</span>
       <span className={'w-9 h-5 rounded-full relative transition-colors ' + (value ? 'bg-emerald-500' : 'bg-dark-surface2')}>
         <span className={'absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-on-fill transition-transform ' + (value ? 'translate-x-4' : '')} />
@@ -573,13 +573,13 @@ function InviteModal({ availableRoles, availableGroups, onClose, onInvited }: {
   })
 
   return (
-    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={onClose}>
+    <div className="fixed inset-0 bg-black/70 backdrop-blur-xs z-50 flex items-center justify-center p-4" onClick={onClose}>
       <div className="bg-dark-surface border border-dark-border rounded-xl w-full max-w-md shadow-2xl" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between p-4 border-b border-dark-border">
           <h3 className="text-lg font-bold text-white flex items-center gap-2">
             <UserPlus size={16} /> Invite teammate
           </h3>
-          <button onClick={onClose} className="p-1.5 rounded hover:bg-dark-surface2 text-gray-500 hover:text-white"><X size={16} /></button>
+          <button onClick={onClose} className="p-1.5 rounded-sm hover:bg-dark-surface2 text-gray-500 hover:text-white"><X size={16} /></button>
         </div>
 
         <form onSubmit={e => { e.preventDefault(); invite.mutate() }} className="p-4 space-y-3">
@@ -587,14 +587,14 @@ function InviteModal({ availableRoles, availableGroups, onClose, onInvited }: {
             <label className="text-[10px] uppercase tracking-wide font-bold text-gray-500 mb-1 block">Full name</label>
             <input required value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
               placeholder="e.g. Anna Schmidt"
-              className="w-full bg-dark-bg border border-dark-border rounded-md px-3 py-2 text-sm text-white outline-none focus:border-primary-500" />
+              className="w-full bg-dark-bg border border-dark-border rounded-md px-3 py-2 text-sm text-white outline-hidden focus:border-primary-500" />
           </div>
 
           <div>
             <label className="text-[10px] uppercase tracking-wide font-bold text-gray-500 mb-1 block">Email</label>
             <input required type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value.toLowerCase() }))}
               placeholder="anna@hotel.com"
-              className="w-full bg-dark-bg border border-dark-border rounded-md px-3 py-2 text-sm text-white outline-none focus:border-primary-500" />
+              className="w-full bg-dark-bg border border-dark-border rounded-md px-3 py-2 text-sm text-white outline-hidden focus:border-primary-500" />
           </div>
 
           <div>
@@ -607,13 +607,13 @@ function InviteModal({ availableRoles, availableGroups, onClose, onInvited }: {
                 return (
                   <button key={r} type="button" onClick={() => setForm(f => ({ ...f, role: r }))}
                     className={'w-full flex items-start gap-2 p-2 rounded-md border text-left transition-colors ' +
-                      (active ? 'border-amber-500/60 bg-amber-500/[0.06]' : 'border-dark-border bg-dark-bg hover:bg-dark-surface2')}>
-                    <Icon size={14} className="mt-0.5 flex-shrink-0" style={{ color: ink(meta.color) }} />
+                      (active ? 'border-amber-500/60 bg-amber-500/6' : 'border-dark-border bg-dark-bg hover:bg-dark-surface2')}>
+                    <Icon size={14} className="mt-0.5 shrink-0" style={{ color: ink(meta.color) }} />
                     <div className="flex-1 min-w-0">
                       <div className="text-xs font-bold text-white">{meta.label}</div>
                       <div className="text-[10px] text-gray-500">{meta.desc}</div>
                     </div>
-                    {active && <Check size={13} className="text-amber-400 flex-shrink-0" />}
+                    {active && <Check size={13} className="text-amber-400 shrink-0" />}
                   </button>
                 )
               })}
@@ -624,7 +624,7 @@ function InviteModal({ availableRoles, availableGroups, onClose, onInvited }: {
             <label className="text-[10px] uppercase tracking-wide font-bold text-gray-500 mb-1 block">Department (optional)</label>
             <input value={form.department} onChange={e => setForm(f => ({ ...f, department: e.target.value }))}
               placeholder="e.g. Front desk"
-              className="w-full bg-dark-bg border border-dark-border rounded-md px-3 py-2 text-sm text-white placeholder-gray-600 outline-none focus:border-primary-500" />
+              className="w-full bg-dark-bg border border-dark-border rounded-md px-3 py-2 text-sm text-white placeholder-gray-600 outline-hidden focus:border-primary-500" />
           </div>
 
           {form.role === 'staff' && (
@@ -635,8 +635,8 @@ function InviteModal({ availableRoles, availableGroups, onClose, onInvited }: {
             />
           )}
 
-          <div className="bg-blue-500/[0.04] border border-blue-500/20 rounded-md p-2.5 flex items-start gap-2">
-            <Mail size={13} className="text-blue-300 flex-shrink-0 mt-0.5" />
+          <div className="bg-blue-500/4 border border-blue-500/20 rounded-md p-2.5 flex items-start gap-2">
+            <Mail size={13} className="text-blue-300 shrink-0 mt-0.5" />
             <p className="text-[11px] text-blue-100/90 leading-relaxed">
               We'll email <span className="text-white font-semibold">{form.email || 'this address'}</span> a link + a 6-digit code. They set their own password on first login. Code expires in 48 hours.
             </p>

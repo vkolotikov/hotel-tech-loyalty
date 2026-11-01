@@ -86,7 +86,7 @@ export function CameraScanner({ onCode, onStop, continuous = false, fill = false
         <Button variant="secondary" full className="py-3 text-base" onClick={onStop}><Square size={16} aria-hidden />{t('loyalty.scan.close', 'Close')}</Button>
       </div>
     ) : (
-      <div className="relative h-full min-h-[12rem] overflow-hidden rounded-2xl border border-a-border bg-a-surface-2">
+      <div className="relative h-full min-h-48 overflow-hidden rounded-2xl border border-a-border bg-a-surface-2">
         <video ref={video} muted playsInline className="absolute inset-0 block h-full w-full object-cover" />
         <div aria-hidden className="pointer-events-none absolute inset-0 grid place-items-center">
           <div className="aspect-square w-3/5 max-w-sm rounded-3xl border-4 border-a-accent-text/80" />
@@ -103,7 +103,7 @@ export function CameraScanner({ onCode, onStop, continuous = false, fill = false
     <div className="space-y-3">
       {failed ? <Notice tone="warning"><CameraTrouble failure={state} /></Notice> : (
         <div className="relative overflow-hidden rounded-2xl border border-a-border bg-a-surface-2">
-          <video ref={video} muted playsInline className="block aspect-[3/4] w-full object-cover sm:aspect-video" />
+          <video ref={video} muted playsInline className="block aspect-3/4 w-full object-cover sm:aspect-video" />
           <div aria-hidden className="pointer-events-none absolute inset-0 grid place-items-center">
             <div className="aspect-square w-3/5 max-w-xs rounded-2xl border-2 border-a-accent-text/80" />
           </div>

@@ -229,7 +229,7 @@ export default function UpgradeFeatureModal() {
 
   return (
     <div
-      className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+      className="fixed inset-0 z-110 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs"
       onClick={handleDismiss}
       role="dialog"
       aria-modal="true"
@@ -241,13 +241,13 @@ export default function UpgradeFeatureModal() {
         onClick={e => e.stopPropagation()}
       >
         {/* Gold accent bar at the top */}
-        <div className="h-1 bg-gradient-to-r from-primary-500/60 via-primary-500 to-primary-500/60" aria-hidden="true" />
+        <div className="h-1 bg-linear-to-r from-primary-500/60 via-primary-500 to-primary-500/60" aria-hidden="true" />
 
         <button
           onClick={handleDismiss}
           aria-label={t('upgrade_modal.close_aria', 'Close upgrade prompt')}
           type="button"
-          className="absolute top-3 right-3 w-8 h-8 rounded-full flex items-center justify-center text-t-secondary hover:text-white hover:bg-white/[0.06] transition-colors"
+          className="absolute top-3 right-3 w-8 h-8 rounded-full flex items-center justify-center text-t-secondary hover:text-white hover:bg-white/6 transition-colors"
         >
           <X size={18} aria-hidden="true" />
         </button>
@@ -255,7 +255,7 @@ export default function UpgradeFeatureModal() {
         <div className="p-5 sm:p-7 pr-10 sm:pr-12">
           {/* Header — lock icon + plan badge */}
           <div className="flex items-center gap-3 mb-5">
-            <div className="w-12 h-12 rounded-xl bg-primary-500/15 border border-primary-500/30 flex items-center justify-center flex-shrink-0">
+            <div className="w-12 h-12 rounded-xl bg-primary-500/15 border border-primary-500/30 flex items-center justify-center shrink-0">
               <Lock size={22} className="text-primary-400" aria-hidden="true" />
             </div>
             <div className="flex flex-col min-w-0">
@@ -286,7 +286,7 @@ export default function UpgradeFeatureModal() {
             <button
               onClick={handleDismiss}
               type="button"
-              className="px-4 py-2.5 text-t-secondary hover:text-white text-sm font-medium transition-colors sm:flex-shrink-0"
+              className="px-4 py-2.5 text-t-secondary hover:text-white text-sm font-medium transition-colors sm:shrink-0"
             >
               {t('upgrade_modal.dismiss', 'Not now')}
             </button>

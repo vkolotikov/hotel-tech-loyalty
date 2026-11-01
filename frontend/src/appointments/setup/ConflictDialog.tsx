@@ -16,7 +16,7 @@ export function ConflictDialog({ impact, locale, onConfirm, onCancel }: { impact
 
   return (
     // The scrim token is ink in both themes (a-text is pale in the dark one); !mt-0: a fixed layer never takes its stack's spacing.
-    <div className="fixed inset-0 z-50 grid place-items-center bg-a-scrim/40 p-4 !mt-0">
+    <div className="fixed inset-0 z-50 grid place-items-center bg-a-scrim/40 p-4 mt-0!">
       <div role="alertdialog" aria-modal="true" aria-labelledby="setup-conflict-title" aria-describedby="setup-conflict-intro"
         className="w-full max-w-lg space-y-4 rounded-xl border border-a-border bg-a-surface p-5 shadow-xl animate-a-pop">
         <h2 id="setup-conflict-title" className="font-a-display text-xl font-normal text-a-text">

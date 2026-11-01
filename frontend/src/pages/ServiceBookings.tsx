@@ -94,9 +94,9 @@ const PAYMENT_COLOR: Record<string, string> = {
   failed:   'bg-red-500/15 text-red-400',
 }
 
-const card = 'rounded-2xl border border-white/[0.06]'
+const card = 'rounded-2xl border border-white/6'
 const cardBg = { background: 'var(--legacy-hero-gradient-soft)', backdropFilter: 'blur(20px)' }
-const inputCls = 'w-full rounded-xl border border-white/[0.08] bg-white/[0.03] px-3.5 py-2.5 text-sm text-white placeholder-gray-500 outline-none focus:border-primary-500/50 focus:ring-1 focus:ring-primary-500/20 transition-all'
+const inputCls = 'w-full rounded-xl border border-white/8 bg-white/3 px-3.5 py-2.5 text-sm text-white placeholder-gray-500 outline-hidden focus:border-primary-500/50 focus:ring-1 focus:ring-primary-500/20 transition-all'
 const btnPrimaryStyle = { background: 'linear-gradient(135deg, var(--color-primary, #74c895), color-mix(in srgb, var(--color-primary, #74c895) 80%, #000))', color: '#03050A' }
 
 export default function ServiceBookings() {
@@ -255,7 +255,7 @@ export default function ServiceBookings() {
         </div>
         <div className="flex gap-2">
           <button onClick={exportCsv} disabled={bulkBusy}
-            className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-xs font-bold uppercase tracking-wider bg-white/[0.04] border border-white/[0.06] text-gray-300 hover:bg-white/[0.06] disabled:opacity-50 transition-all"
+            className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-xs font-bold uppercase tracking-wider bg-white/4 border border-white/6 text-gray-300 hover:bg-white/6 disabled:opacity-50 transition-all"
             title="Download CSV (selection or current filters)">
             <Download size={14} /> Export
           </button>
@@ -294,16 +294,16 @@ export default function ServiceBookings() {
       )}
 
       {todaySnap && showTodayList && (
-        <div className="rounded-2xl border border-white/[0.06] overflow-hidden"
+        <div className="rounded-2xl border border-white/6 overflow-hidden"
           style={{ background: 'var(--legacy-card)' }}>
-          <div className="px-4 py-2 border-b border-white/[0.06] flex items-center justify-between">
+          <div className="px-4 py-2 border-b border-white/6 flex items-center justify-between">
             <span className="text-xs font-bold uppercase tracking-wider text-gray-400">Today's Schedule</span>
             <button onClick={() => setShowTodayList(false)} className="text-[10px] text-gray-500 hover:text-white">Close</button>
           </div>
-          <div className="divide-y divide-white/[0.04]">
+          <div className="divide-y divide-white/4">
             {(todaySnap.today_bookings ?? []).map((b: any) => (
               <button key={b.id} onClick={() => setActive(b)}
-                className="w-full flex items-center justify-between px-4 py-2.5 hover:bg-white/[0.02] transition-colors text-sm text-left">
+                className="w-full flex items-center justify-between px-4 py-2.5 hover:bg-white/2 transition-colors text-sm text-left">
                 <div className="flex items-center gap-3 min-w-0">
                   <span className="text-emerald-300 font-bold tabular-nums">
                     {formatWallTime(b.start_at)}
@@ -351,7 +351,7 @@ export default function ServiceBookings() {
             className={`flex items-center gap-2 rounded-xl px-3.5 py-2.5 text-sm transition-all border ${
               hasFilters || showFilters
                 ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-300'
-                : 'bg-white/[0.03] border-white/[0.08] text-gray-400 hover:text-white'
+                : 'bg-white/3 border-white/8 text-gray-400 hover:text-white'
             }`}>
             <Filter size={14} /> Filters
             {filterCount > 0 && (
@@ -369,7 +369,7 @@ export default function ServiceBookings() {
         </div>
 
         {showFilters && (
-          <div className="px-3 pb-4 pt-1 border-t border-white/[0.04] grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          <div className="px-3 pb-4 pt-1 border-t border-white/4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {/* Status */}
             <div>
               <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-1">Status</label>
@@ -435,11 +435,11 @@ export default function ServiceBookings() {
           </div>
         ) : (
           <table className="w-full text-sm">
-            <thead className="text-[10px] font-bold uppercase tracking-wider text-gray-500 border-b border-white/[0.04]">
+            <thead className="text-[10px] font-bold uppercase tracking-wider text-gray-500 border-b border-white/4">
               <tr>
                 <th className="text-center p-4 w-10">
                   <input type="checkbox" checked={allOnPageSelected} onChange={togglePageSelection}
-                    className="rounded border-white/20 bg-white/[0.04] cursor-pointer" />
+                    className="rounded-sm border-white/20 bg-white/4 cursor-pointer" />
                 </th>
                 <th className="text-left p-4">Reference</th>
                 <th className="text-left p-4">Service / Master</th>
@@ -453,10 +453,10 @@ export default function ServiceBookings() {
             </thead>
             <tbody>
               {rows.map(b => (
-                <tr key={b.id} className={`border-b border-white/[0.03] hover:bg-white/[0.02] cursor-pointer ${selected.has(b.id) ? 'bg-primary-500/[0.04]' : ''}`} onClick={() => setActive(b)}>
+                <tr key={b.id} className={`border-b border-white/3 hover:bg-white/2 cursor-pointer ${selected.has(b.id) ? 'bg-primary-500/4' : ''}`} onClick={() => setActive(b)}>
                   <td className="p-4 text-center" onClick={e => { e.stopPropagation(); toggleRow(b.id) }}>
                     <input type="checkbox" checked={selected.has(b.id)} readOnly
-                      className="rounded border-white/20 bg-white/[0.04] cursor-pointer" />
+                      className="rounded-sm border-white/20 bg-white/4 cursor-pointer" />
                   </td>
                   <td className="p-4 font-mono text-xs text-gray-400">{b.booking_reference}</td>
                   <td className="p-4">
@@ -473,12 +473,12 @@ export default function ServiceBookings() {
                     <ServiceBookingPricing row={b} />
                   </td>
                   <td className="p-4">
-                    <span className={`text-[10px] px-2 py-1 rounded-full font-bold uppercase ${STATUS_COLOR[b.status] || 'bg-white/[0.05] text-gray-400'}`}>
+                    <span className={`text-[10px] px-2 py-1 rounded-full font-bold uppercase ${STATUS_COLOR[b.status] || 'bg-white/5 text-gray-400'}`}>
                       {b.status.replace('_', ' ')}
                     </span>
                   </td>
                   <td className="p-4">
-                    <span className={`text-[10px] px-2 py-1 rounded-full font-bold uppercase ${PAYMENT_COLOR[b.payment_status] || 'bg-white/[0.05] text-gray-400'}`}>
+                    <span className={`text-[10px] px-2 py-1 rounded-full font-bold uppercase ${PAYMENT_COLOR[b.payment_status] || 'bg-white/5 text-gray-400'}`}>
                       {b.payment_status}
                     </span>
                   </td>
@@ -495,13 +495,13 @@ export default function ServiceBookings() {
           </table>
         )}
         {(data?.last_page || 1) > 1 && (
-          <div className="flex items-center justify-between p-4 border-t border-white/[0.04]">
+          <div className="flex items-center justify-between p-4 border-t border-white/4">
             <div className="text-xs text-gray-500">Page {data?.current_page} of {data?.last_page} — {data?.total} bookings</div>
             <div className="flex gap-2">
               <button disabled={page === 1} onClick={() => setPage(p => p - 1)}
-                className="px-3 py-1.5 text-xs rounded-lg bg-white/[0.04] border border-white/[0.06] text-gray-300 disabled:opacity-30">Prev</button>
+                className="px-3 py-1.5 text-xs rounded-lg bg-white/4 border border-white/6 text-gray-300 disabled:opacity-30">Prev</button>
               <button disabled={page >= (data?.last_page || 1)} onClick={() => setPage(p => p + 1)}
-                className="px-3 py-1.5 text-xs rounded-lg bg-white/[0.04] border border-white/[0.06] text-gray-300 disabled:opacity-30">Next</button>
+                className="px-3 py-1.5 text-xs rounded-lg bg-white/4 border border-white/6 text-gray-300 disabled:opacity-30">Next</button>
             </div>
           </div>
         )}
@@ -511,7 +511,7 @@ export default function ServiceBookings() {
       {showCreate && <ManualBookingForm onClose={() => setShowCreate(false)} onSaved={() => { qc.invalidateQueries({ queryKey: ['service-bookings'] }); setShowCreate(false) }} />}
 
       {selected.size > 0 && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 border border-white/10 rounded-2xl shadow-2xl p-3 flex items-center gap-2 backdrop-blur"
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 border border-white/10 rounded-2xl shadow-2xl p-3 flex items-center gap-2 backdrop-blur-sm"
           style={{ background: 'var(--legacy-card)', boxShadow: '0 20px 40px rgba(0,0,0,0.5)' }}>
           <span className="px-3 py-1.5 text-xs font-bold text-white tabular-nums">{selected.size} selected</span>
           <div className="h-5 w-px bg-white/10" />
@@ -528,12 +528,12 @@ export default function ServiceBookings() {
             <Trash2 size={13} /> Cancel
           </button>
           <button onClick={exportCsv} disabled={bulkBusy}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-white/[0.06] text-gray-300 hover:bg-white/[0.1] disabled:opacity-50 transition-colors">
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-white/6 text-gray-300 hover:bg-white/10 disabled:opacity-50 transition-colors">
             <Download size={13} /> Export
           </button>
           <div className="h-5 w-px bg-white/10" />
           <button onClick={() => setSelected(new Set())} title="Clear selection"
-            className="p-1.5 rounded-lg text-gray-500 hover:text-white hover:bg-white/[0.06]">
+            className="p-1.5 rounded-lg text-gray-500 hover:text-white hover:bg-white/6">
             <X size={14} />
           </button>
         </div>
@@ -588,11 +588,11 @@ export function BookingDetailDrawer({ booking, onClose, onChanged }: { booking: 
   }
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex justify-end overflow-y-auto">
-      <div className="w-full max-w-md min-h-full bg-dark-surface border-l border-white/[0.08] p-6 overflow-y-auto">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex justify-end overflow-y-auto">
+      <div className="w-full max-w-md min-h-full bg-dark-surface border-l border-white/8 p-6 overflow-y-auto">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-bold text-white">{booking.booking_reference}</h2>
-          <button onClick={onClose} className="p-2 rounded-lg hover:bg-white/[0.06] text-gray-500"><X size={18} /></button>
+          <button onClick={onClose} className="p-2 rounded-lg hover:bg-white/6 text-gray-500"><X size={18} /></button>
         </div>
 
         <div className="space-y-1 mb-6">
@@ -634,12 +634,12 @@ export function BookingDetailDrawer({ booking, onClose, onChanged }: { booking: 
           <ServiceBookingPricing row={detail ?? booking} />
         </div>
 
-        <hr className="border-white/[0.06] my-4" />
+        <hr className="border-white/6 my-4" />
 
         {(detail?.staff_notes ?? booking.staff_notes) && (
           <section className="mb-5" aria-label="Existing staff notes">
             <h3 className="text-xs font-semibold text-gray-300 mb-2">Staff notes</h3>
-            <p className="max-h-64 overflow-y-auto whitespace-pre-wrap break-words rounded-xl border border-white/[0.08] bg-white/[0.03] px-3.5 py-3 text-sm leading-relaxed text-gray-200">
+            <p className="max-h-64 overflow-y-auto whitespace-pre-wrap wrap-break-word rounded-xl border border-white/8 bg-white/3 px-3.5 py-3 text-sm leading-relaxed text-gray-200">
               {detail?.staff_notes ?? booking.staff_notes}
             </p>
           </section>
@@ -735,11 +735,11 @@ function ManualBookingForm({ onClose, onSaved }: { onClose: () => void; onSaved:
   }
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-start justify-center pt-[5vh] overflow-y-auto pb-10">
-      <div className="w-full max-w-xl rounded-2xl border border-white/[0.08] p-6" style={{ background: 'var(--legacy-hero-gradient)' }}>
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-start justify-center pt-[5vh] overflow-y-auto pb-10">
+      <div className="w-full max-w-xl rounded-2xl border border-white/8 p-6" style={{ background: 'var(--legacy-hero-gradient)' }}>
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-lg font-bold text-white">New Booking</h2>
-          <button onClick={onClose} className="p-2 rounded-lg hover:bg-white/[0.06] text-gray-500"><X size={18} /></button>
+          <button onClick={onClose} className="p-2 rounded-lg hover:bg-white/6 text-gray-500"><X size={18} /></button>
         </div>
 
         <div className="space-y-4">
@@ -765,7 +765,7 @@ function ManualBookingForm({ onClose, onSaved }: { onClose: () => void; onSaved:
               <label className="block text-xs font-semibold text-gray-400 mb-1.5">Date *</label>
               <input type="date" value={date} onChange={e => { setDate(e.target.value); setSlots([]); setSlotStart('') }} className={inputCls} />
             </div>
-            <button onClick={loadSlots} className="px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider bg-white/[0.04] border border-white/[0.06] text-gray-300">Find Slots</button>
+            <button onClick={loadSlots} className="px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider bg-white/4 border border-white/6 text-gray-300">Find Slots</button>
           </div>
 
           {slots.length > 0 && (
@@ -777,7 +777,7 @@ function ManualBookingForm({ onClose, onSaved }: { onClose: () => void; onSaved:
                     className={`px-3 py-1.5 rounded-xl text-xs font-medium border transition-all ${
                       slotStart === s.start
                         ? 'bg-primary-500/15 border-primary-500/30 text-primary-400'
-                        : 'bg-white/[0.02] border-white/[0.06] text-gray-300 hover:border-white/[0.12]'
+                        : 'bg-white/2 border-white/6 text-gray-300 hover:border-white/12'
                     }`}>
                     {s.time_label}
                   </button>
@@ -812,8 +812,8 @@ function ManualBookingForm({ onClose, onSaved }: { onClose: () => void; onSaved:
           </div>
         </div>
 
-        <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-white/[0.04]">
-          <button onClick={onClose} className="px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider bg-white/[0.04] border border-white/[0.06] text-gray-400">Cancel</button>
+        <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-white/4">
+          <button onClick={onClose} className="px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider bg-white/4 border border-white/6 text-gray-400">Cancel</button>
           <button onClick={submit} disabled={saving} className="flex items-center gap-2 rounded-xl px-5 py-2.5 text-xs font-bold uppercase tracking-wider transition-all" style={btnPrimaryStyle}>
             {saving ? <RefreshCw size={14} className="animate-spin" /> : <Plus size={14} />}
             Create Booking

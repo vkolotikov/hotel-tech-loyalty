@@ -362,7 +362,7 @@ function ChooseStep({ file, onFile, onTemplate }: {
     <div className="space-y-4">
       <label className="block">
         <div className={`rounded-xl border-2 border-dashed p-8 text-center cursor-pointer transition-colors ${
-          file ? 'border-primary-500/50 bg-primary-500/5' : 'border-dark-border2 hover:border-dark-border2/80 hover:bg-white/[0.02]'
+          file ? 'border-primary-500/50 bg-primary-500/5' : 'border-dark-border2 hover:border-dark-border2/80 hover:bg-white/2'
         }`}>
           <Upload size={22} className={`mx-auto mb-2 ${file ? 'text-primary-400' : 'text-t-secondary'}`} />
           {file ? (

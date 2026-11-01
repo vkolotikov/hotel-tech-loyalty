@@ -73,7 +73,7 @@ export function MoneyView({ data, locale }: { data: Money; locale: string }) {
 
 function MoneyFigure({ id, label, value, line }: { id: string; label: string; value: string; line: string }) {
   return (
-    <div data-money-figure={id} className="min-w-0 space-y-1 rounded-xl bg-a-surface-2 px-3 py-2 [container-type:inline-size]">
+    <div data-money-figure={id} className="min-w-0 space-y-1 rounded-xl bg-a-surface-2 px-3 py-2 @container">
       <dt className="text-xs text-a-text-2">{label}</dt>
       <dd><Figure fit>{value}</Figure></dd>
       <dd className="text-xs text-a-text-2">{line}</dd>

@@ -145,7 +145,7 @@ export function Benefits() {
           <select
             value={categoryFilter}
             onChange={e => setCategoryFilter(e.target.value)}
-            className="bg-dark-surface border border-dark-border rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+            className="bg-dark-surface border border-dark-border rounded-lg px-3 py-1.5 text-sm text-white focus:outline-hidden focus:ring-2 focus:ring-primary-500"
           >
             <option value="all">{t('benefits.all_categories', 'All categories')}</option>
             {CATEGORIES.map(c => (
@@ -190,7 +190,7 @@ export function Benefits() {
             className="w-full bg-dark-bg border border-dark-border rounded-lg px-3 py-2 text-white text-sm" rows={2} />
           <label className="flex items-center gap-2 text-sm text-t-secondary">
             <input type="checkbox" checked={form.requires_active_stay} onChange={e => setForm({ ...form, requires_active_stay: e.target.checked })}
-              className="rounded border-dark-border" />
+              className="rounded-sm border-dark-border" />
             {t('benefits.form.requires_active_stay', 'Requires active stay')}
           </label>
           <button type="submit" disabled={saveMutation.isPending}
@@ -227,7 +227,7 @@ export function Benefits() {
                       <div>
                         <span className="text-white text-sm font-medium">{b.name}</span>
                         {!b.is_active && (
-                          <span className="ml-2 inline-flex px-1.5 py-0.5 rounded text-[10px] font-medium bg-red-500/15 text-red-400 uppercase">
+                          <span className="ml-2 inline-flex px-1.5 py-0.5 rounded-sm text-[10px] font-medium bg-red-500/15 text-red-400 uppercase">
                             {t('benefits.table.disabled', 'Disabled')}
                           </span>
                         )}
@@ -250,7 +250,7 @@ export function Benefits() {
                       <button
                         onClick={() => toggleMutation.mutate(b.id)}
                         disabled={toggleMutation.isPending}
-                        className="relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:ring-offset-dark-surface disabled:opacity-50"
+                        className="relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-hidden focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:ring-offset-dark-surface disabled:opacity-50"
                         style={{ backgroundColor: b.is_active ? '#32d74b' : '#48484a' }}
                         title={b.is_active ? t('benefits.table.disable_tooltip', 'Click to disable') : t('benefits.table.enable_tooltip', 'Click to enable')}
                       >

@@ -34,7 +34,7 @@ const TONES: Record<Tone, { bg: string; text: string; ring: string }> = {
  */
 export function DailyOpsBar({ title, tiles, hint }: { title?: string; tiles: Tile[]; hint?: string }) {
   return (
-    <div className="rounded-2xl border border-white/[0.06] p-4"
+    <div className="rounded-2xl border border-white/6 p-4"
       style={{ background: 'var(--legacy-card-gradient)' }}>
       {(title || hint) && (
         <div className="flex items-baseline justify-between mb-3">
@@ -52,8 +52,8 @@ export function DailyOpsBar({ title, tiles, hint }: { title?: string; tiles: Til
               {...(interactive ? { type: 'button' as const, onClick: t.onClick } : {})}
               className={`group flex flex-col gap-1 px-4 py-3 rounded-xl text-left border transition-all ${
                 t.active
-                  ? `border-transparent ring-2 ${tone.ring} bg-white/[0.03]`
-                  : 'border-white/[0.05] bg-white/[0.015] ' + (interactive ? 'hover:border-white/15 hover:bg-white/[0.04]' : '')
+                  ? `border-transparent ring-2 ${tone.ring} bg-white/3`
+                  : 'border-white/5 bg-white/1.5 ' + (interactive ? 'hover:border-white/15 hover:bg-white/4' : '')
               }`}>
               <div className="flex items-center justify-between">
                 <span className="text-[10px] font-bold uppercase tracking-wider text-gray-500 truncate">{t.label}</span>

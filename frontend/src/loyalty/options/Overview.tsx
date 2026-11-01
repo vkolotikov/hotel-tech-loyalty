@@ -70,7 +70,7 @@ function Status({ answer, recommended, preset }: { answer: OptionsAnswer; recomm
     <section data-status={warnings > 0 ? 'fix' : 'ok'} data-hue={warnings > 0 ? 'gift' : 'earn'} aria-labelledby="options-status"
       className="flex flex-wrap items-center gap-4 rounded-2xl border border-a-border bg-a-surface p-4 sm:p-5">
       <span aria-hidden className="l-hue-tile inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl"><Icon size={24} /></span>
-      <div className="min-w-[12rem] flex-1 space-y-2">
+      <div className="min-w-48 flex-1 space-y-2">
         <h2 id="options-status" className="font-a-display text-2xl font-normal text-a-text">
           {warnings > 0 ? t('loyalty.options.status_fix', 'To fix: {{n}}', { n: points(warnings, locale) }) : t('loyalty.options.status_ok', 'All set')}
         </h2>
@@ -159,7 +159,7 @@ function Journey({ answer, recommended, open }: { answer: OptionsAnswer; recomme
   return (
     <section aria-labelledby="options-journey" className="space-y-4">
       <h2 id="options-journey" className="font-a-display text-xl font-normal text-a-text">{t('loyalty.options.journey', 'Your members’ journey')}</h2>
-      <nav aria-label={t('loyalty.options.journey_map', 'Journey steps')} className="-mx-4 overflow-x-auto px-4 pb-1 [scrollbar-width:none]">
+      <nav aria-label={t('loyalty.options.journey_map', 'Journey steps')} className="-mx-4 overflow-x-auto px-4 pb-1 scrollbar-none">
         <ol className="flex min-w-max items-start">
           {steps.map((step, i) => {
             const Icon = STAGE_ICONS[step.stage]
@@ -224,7 +224,7 @@ function WayRow({ way, answer, turnOn, open }: { way: Way; answer: OptionsAnswer
   return (
     <li data-step-way={way.key} data-on={on ? '' : undefined} className={`rounded-xl px-3 py-2.5 ${on ? 'bg-a-surface-2' : 'border border-dashed border-a-border'}`}>
       <div className="flex items-center gap-3">
-        <button type="button" onClick={() => open(way.key)} className="group flex min-w-[10rem] flex-1 items-center gap-3 text-left">
+        <button type="button" onClick={() => open(way.key)} className="group flex min-w-40 flex-1 items-center gap-3 text-left">
           <WayIcon way={way.key} on={on && !unused} />
           <span className="min-w-0 flex-1">
             <span className="flex flex-wrap items-center gap-1.5 text-sm font-medium text-a-text">

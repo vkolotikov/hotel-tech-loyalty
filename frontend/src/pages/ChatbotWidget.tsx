@@ -164,7 +164,7 @@ const shadeColor = (hex: string, pct: number) => {
 const card = 'bg-dark-card border border-dark-border rounded-xl p-5 space-y-4'
 const cardTitle = 'text-sm font-semibold text-white flex items-center gap-2'
 const label = 'block text-xs text-t-secondary mb-1'
-const input = 'w-full bg-dark-bg border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-t-muted focus:border-primary-500 outline-none'
+const input = 'w-full bg-dark-bg border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-t-muted focus:border-primary-500 outline-hidden'
 const btnSec = 'flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-dark-bg border border-dark-border text-t-secondary rounded-lg hover:text-white'
 
 export function ChatbotWidget() {
@@ -281,7 +281,7 @@ export function ChatbotWidget() {
   const Toggle = ({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) => (
     <label className="relative inline-flex items-center cursor-pointer">
       <input type="checkbox" checked={checked} onChange={e => onChange(e.target.checked)} className="sr-only peer" />
-      <div className="w-10 h-5 bg-dark-bg border border-dark-border peer-focus:outline-none rounded-full peer peer-checked:bg-primary-500 peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[1px] after:left-[1px] after:bg-on-fill after:rounded-full after:h-4 after:w-4 after:transition-all" />
+      <div className="w-10 h-5 bg-dark-bg border border-dark-border peer-focus:outline-hidden rounded-full peer peer-checked:bg-primary-500 peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-px after:left-px after:bg-on-fill after:rounded-full after:h-4 after:w-4 after:transition-all" />
     </label>
   )
 
@@ -424,7 +424,7 @@ export function ChatbotWidget() {
                 ))}
               </div>
               <input type="color" value={primary} onChange={e => update('primary_color', e.target.value)}
-                className="w-8 h-8 rounded cursor-pointer border-0" />
+                className="w-8 h-8 rounded-sm cursor-pointer border-0" />
               <span className="text-xs text-t-secondary font-mono">{primary}</span>
             </div>
             <p className="text-[10px] text-t-secondary mt-1.5">
@@ -440,7 +440,7 @@ export function ChatbotWidget() {
                 : (f.agent_status || 'online') === 'away' ? 'bg-warning' : 'bg-t-secondary'
               }`} />
               <select value={f.agent_status || 'online'} onChange={e => update('agent_status', e.target.value)}
-                className="bg-dark-bg border border-dark-border rounded px-2 py-1 text-xs text-white">
+                className="bg-dark-bg border border-dark-border rounded-sm px-2 py-1 text-xs text-white">
                 <option value="online">Online</option>
                 <option value="away">Away</option>
                 <option value="offline">Offline</option>
@@ -556,9 +556,9 @@ export function ChatbotWidget() {
                     <div className="flex items-center gap-2">
                       <input type="color" value={gradEnd}
                         onChange={e => update('header_gradient_end', e.target.value)}
-                        className="w-8 h-8 rounded cursor-pointer border border-dark-border" />
+                        className="w-8 h-8 rounded-sm cursor-pointer border border-dark-border" />
                       <input type="text" value={f.header_gradient_end || ''} onChange={e => update('header_gradient_end', e.target.value)}
-                        className="flex-1 bg-dark-bg border border-dark-border rounded px-2 py-1.5 text-[11px] text-white font-mono"
+                        className="flex-1 bg-dark-bg border border-dark-border rounded-sm px-2 py-1.5 text-[11px] text-white font-mono"
                         placeholder="#7c3aed" />
                     </div>
                   </div>
@@ -581,9 +581,9 @@ export function ChatbotWidget() {
                       <label className={label}>{c.label}</label>
                       <div className="flex items-center gap-2">
                         <input type="color" value={f[c.key] || c.def || '#000000'} onChange={e => update(c.key, e.target.value)}
-                          className="w-8 h-8 rounded cursor-pointer border border-dark-border bg-transparent" />
+                          className="w-8 h-8 rounded-sm cursor-pointer border border-dark-border bg-transparent" />
                         <input type="text" value={f[c.key] || ''} placeholder={c.def || 'auto'} onChange={e => update(c.key, e.target.value)}
-                          className="flex-1 bg-dark-bg border border-dark-border rounded px-2 py-1.5 text-[11px] text-white font-mono" />
+                          className="flex-1 bg-dark-bg border border-dark-border rounded-sm px-2 py-1.5 text-[11px] text-white font-mono" />
                       </div>
                     </div>
                   ))}
@@ -689,7 +689,7 @@ export function ChatbotWidget() {
               )}
             </div>
             <input type="url" value={f.assistant_avatar_url || ''} onChange={e => update('assistant_avatar_url', e.target.value)}
-              className="w-full bg-dark-bg border border-dark-border rounded px-2 py-1 text-[11px] text-white font-mono"
+              className="w-full bg-dark-bg border border-dark-border rounded-sm px-2 py-1 text-[11px] text-white font-mono"
               placeholder="…or paste image URL" />
           </div>
         </div>
@@ -749,7 +749,7 @@ export function ChatbotWidget() {
                     <label key={field} className="flex items-center gap-2 cursor-pointer">
                       <input type="checkbox" checked={fields[field] ?? false}
                         onChange={e => update('lead_capture_fields', { ...fields, [field]: e.target.checked })}
-                        className="w-4 h-4 rounded border-dark-border bg-dark-bg text-primary-500" />
+                        className="w-4 h-4 rounded-sm border-dark-border bg-dark-bg text-primary-500" />
                       <span className="text-sm text-white capitalize">{field}</span>
                     </label>
                   )
@@ -796,11 +796,11 @@ export function ChatbotWidget() {
                   <>
                     <input type="time" value={slot.open}
                       onChange={e => update('business_hours', { ...hours, [day.key]: [{ ...slot, open: e.target.value }] })}
-                      className="bg-dark-bg border border-dark-border rounded px-2 py-1 text-xs text-white" />
+                      className="bg-dark-bg border border-dark-border rounded-sm px-2 py-1 text-xs text-white" />
                     <span className="text-xs text-t-secondary">to</span>
                     <input type="time" value={slot.close}
                       onChange={e => update('business_hours', { ...hours, [day.key]: [{ ...slot, close: e.target.value }] })}
-                      className="bg-dark-bg border border-dark-border rounded px-2 py-1 text-xs text-white" />
+                      className="bg-dark-bg border border-dark-border rounded-sm px-2 py-1 text-xs text-white" />
                   </>
                 )}
                 {!isOpen && <span className="text-xs text-t-secondary">Closed</span>}
@@ -972,7 +972,7 @@ export function ChatbotWidget() {
             <p className="text-[11px] text-t-secondary">Paste this before the closing <code className="text-primary-500">&lt;/body&gt;</code> tag.</p>
             <div className="bg-dark-bg border border-dark-border rounded-lg p-3 relative group">
               <pre className="text-xs text-primary-300 whitespace-pre-wrap break-all font-mono">{embed?.embed_code || (config?.id ? 'Loading...' : 'Save widget config first')}</pre>
-              <button onClick={() => copyCode(embed?.embed_code, 'script')} className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 bg-dark-card text-t-secondary hover:text-white p-1.5 rounded">
+              <button onClick={() => copyCode(embed?.embed_code, 'script')} className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 bg-dark-card text-t-secondary hover:text-white p-1.5 rounded-sm">
                 {copied === 'script' ? <Check size={14} className="text-accent" /> : <Copy size={14} />}
               </button>
             </div>
@@ -984,7 +984,7 @@ export function ChatbotWidget() {
             <p className="text-[11px] text-t-secondary">Drop-in iframe — works with WordPress, Wix, Squarespace.</p>
             <div className="bg-dark-bg border border-dark-border rounded-lg p-3 relative group">
               <pre className="text-xs text-primary-300 whitespace-pre-wrap break-all font-mono">{embed?.iframe_code || (config?.id ? 'Loading...' : 'Save widget config first')}</pre>
-              <button onClick={() => copyCode(embed?.iframe_code, 'iframe')} className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 bg-dark-card text-t-secondary hover:text-white p-1.5 rounded">
+              <button onClick={() => copyCode(embed?.iframe_code, 'iframe')} className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 bg-dark-card text-t-secondary hover:text-white p-1.5 rounded-sm">
                 {copied === 'iframe' ? <Check size={14} className="text-accent" /> : <Copy size={14} />}
               </button>
             </div>
@@ -996,7 +996,7 @@ export function ChatbotWidget() {
             <p className="text-[11px] text-t-secondary">REST API endpoints for custom integrations.</p>
             {embed?.api_info?.endpoints && Object.entries(embed.api_info.endpoints).map(([name, ep]: [string, any]) => (
               <div key={name} className="flex items-center gap-2 bg-dark-bg border border-dark-border rounded-lg px-3 py-2">
-                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${ep.method === 'GET' ? 'bg-accent/20 text-accent' : 'bg-info/20 text-info'}`}>{ep.method}</span>
+                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-sm ${ep.method === 'GET' ? 'bg-accent/20 text-accent' : 'bg-info/20 text-info'}`}>{ep.method}</span>
                 <code className="text-[11px] text-t-secondary font-mono flex-1 truncate">{ep.url}</code>
                 <button onClick={() => copyCode(ep.url, name)} className="text-t-secondary hover:text-white"><Copy size={12} /></button>
               </div>
@@ -1055,7 +1055,7 @@ export function ChatbotWidget() {
 
           {/* Sticky save bar — only for widget config tabs (voice has its own save) */}
           {tab !== 'voice' && tab !== 'install' && (
-            <div className="sticky bottom-0 -mx-2 px-2 py-3 bg-dark-bg/95 backdrop-blur border-t border-dark-border flex items-center justify-between">
+            <div className="sticky bottom-0 -mx-2 px-2 py-3 bg-dark-bg/95 backdrop-blur-sm border-t border-dark-border flex items-center justify-between">
               <span className="text-xs text-t-secondary">{dirty ? 'Unsaved changes' : 'All changes saved'}</span>
               <button onClick={() => saveMutation.mutate(f)} disabled={!dirty || saveMutation.isPending}
                 className="flex items-center gap-2 px-4 py-2 text-sm font-medium bg-primary-500 text-on-primary rounded-lg disabled:opacity-50 disabled:cursor-not-allowed">
@@ -1304,7 +1304,7 @@ function WidgetPreview({ cfg }: { cfg: any }) {
               <div className="flex items-center gap-2 rounded-lg px-2.5 py-1.5"
                 style={{ background: 'rgba(0,0,0,0.04)', borderRadius: Math.max(radius - 6, 6) }}>
                 <input
-                  className="flex-1 bg-transparent outline-none text-[12px]"
+                  className="flex-1 bg-transparent outline-hidden text-[12px]"
                   style={{ color: botBubbleTxt }}
                   placeholder={placeholder}
                   readOnly

@@ -75,7 +75,7 @@ function Progress({ answer }: { answer: StartAnswer }) {
     <section data-progress={all ? 'done' : 'open'} data-hue={all ? 'earn' : 'tier'} aria-labelledby="start-progress"
       className="l-hue-panel flex flex-wrap items-center gap-4 rounded-2xl border p-4 sm:p-5">
       <span aria-hidden className="l-hue-tile inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl"><Icon size={24} /></span>
-      <div className="min-w-[12rem] flex-1 space-y-2">
+      <div className="min-w-48 flex-1 space-y-2">
         <h2 id="start-progress" className="font-a-display text-2xl font-normal text-a-text">
           {all
             ? t('loyalty.start.all_done', 'All set: your programme is ready')
@@ -100,7 +100,7 @@ function StepRow({ step, place, next }: { step: StartStep; place: number; next: 
     <li data-step={step.key} data-done={step.done ? '' : undefined} data-next={next ? '' : undefined} data-hue={step.done ? 'earn' : STEP_HUE[step.key]}
       className={`flex flex-wrap items-center gap-x-4 gap-y-3 rounded-2xl border p-4 ${next ? 'l-hue-card' : 'border-a-border bg-a-surface'}`}>
       <span aria-hidden className="l-hue-tile inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl"><Icon size={20} /></span>
-      <div className="min-w-[14rem] flex-1">
+      <div className="min-w-56 flex-1">
         <p className="flex flex-wrap items-center gap-x-2 gap-y-1 font-semibold text-a-text">
           <span className="tabular-nums text-a-text-2">{place}.</span>
           {t(`loyalty.start.step_title.${step.key}`, STEP_TITLE_WORDS[step.key] ?? step.key)}

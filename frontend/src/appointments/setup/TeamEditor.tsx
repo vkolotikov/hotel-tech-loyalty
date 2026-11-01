@@ -132,7 +132,7 @@ export function TeamEditor({ member: initial, data, onClose, onChanged }: { memb
 
   return (
     <aside role="dialog" aria-modal="false" aria-labelledby="team-editor-title"
-      className="fixed right-0 top-14 !mt-0 bottom-0 z-30 w-full sm:w-[480px] overflow-y-auto bg-a-surface border-l border-a-border shadow-xl">
+      className="fixed right-0 top-14 mt-0! bottom-0 z-30 w-full sm:w-[480px] overflow-y-auto bg-a-surface border-l border-a-border shadow-xl">
       <div className="flex items-center justify-between gap-3 border-b border-a-border px-5 py-4">
         <h2 id="team-editor-title" ref={heading} tabIndex={-1} className="font-a-display text-xl font-normal text-a-text">
           {member ? member.name : t('appointments.setup.team.new', 'New team member')}
@@ -177,7 +177,7 @@ export function TeamEditor({ member: initial, data, onClose, onChanged }: { memb
               <legend className="text-xs font-medium text-a-text-2">{t('appointments.setup.team.colour', 'Colour on the calendar')}</legend>
               <div className="flex flex-wrap items-center gap-2">
                 {/* Checked is a ring; keyboard focus is an outline beyond it, so a checked choice with the focus looks different from one without. */}
-                <label className="inline-flex items-center gap-2 rounded-full border border-a-border px-3 py-1.5 text-sm text-a-text has-[:checked]:border-a-accent-text has-[:checked]:ring-1 has-[:checked]:ring-a-accent-text has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-a-accent-text">
+                <label className="inline-flex items-center gap-2 rounded-full border border-a-border px-3 py-1.5 text-sm text-a-text has-checked:border-a-accent-text has-checked:ring-1 has-checked:ring-a-accent-text has-focus-visible:outline-solid has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-a-accent-text">
                   <input type="radio" name="team-colour" className="sr-only" checked={draft.color === null} onChange={() => set({ color: null })} />
                   {t('appointments.setup.team.colour_auto', 'Automatic')}
                 </label>
@@ -185,7 +185,7 @@ export function TeamEditor({ member: initial, data, onClose, onChanged }: { memb
                   // The colour's word on hover too: blue, indigo and violet are close for some eyes.
                   const name = t(`appointments.colours.${c.key}`, c.key)
                   return (
-                    <label key={c.key} title={name} className="relative inline-flex h-8 w-8 items-center justify-center rounded-full has-[:checked]:ring-2 has-[:checked]:ring-offset-2 has-[:checked]:ring-offset-a-surface has-[:checked]:ring-a-accent-text has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-[6px] has-[:focus-visible]:outline-a-accent-text">
+                    <label key={c.key} title={name} className="relative inline-flex h-8 w-8 items-center justify-center rounded-full has-checked:ring-2 has-checked:ring-offset-2 has-checked:ring-offset-a-surface has-checked:ring-a-accent-text has-focus-visible:outline-solid has-focus-visible:outline-2 has-focus-visible:outline-offset-[6px] has-focus-visible:outline-a-accent-text">
                       <input type="radio" name="team-colour" className="sr-only" checked={draft.color === c.hex} onChange={() => set({ color: c.hex })} />
                       <span aria-hidden className="a-member-dot h-6 w-6 rounded-full" style={{ '--a-m': c.hex } as CSSProperties} />
                       <span className="sr-only">{name}</span>
