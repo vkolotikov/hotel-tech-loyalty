@@ -359,7 +359,7 @@ function DoorScanner({ resolved, nowWall, onGone }: { resolved: Resolved; nowWal
           takes the screen — above in portrait, beside in landscape — and the rest sits next to it. */}
       <main className={`flex min-h-0 flex-1 gap-5 overflow-y-auto p-4 sm:p-6 ${way === null ? 'flex-col items-center justify-center' : 'flex-col landscape:flex-row'}`}>
         {way !== null && (
-          <div className="flex min-h-[16rem] flex-1 flex-col">
+          <div className="flex min-h-64 flex-1 flex-col">
             {way === 'camera' && (modeState('camera', env) === 'ready'
               ? <CameraScanner continuous fill onCode={(text) => offer(cameraAttempt(text))} onStop={stopWay} />
               : <WayTrouble onBack={stopWay}>{modeState('camera', env) === 'insecure'

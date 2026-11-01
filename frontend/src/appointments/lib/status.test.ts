@@ -10,7 +10,7 @@ describe('status', () => {
     for (const status of STATUSES) {
       const tone = TONE_CLASS[STATUS_TONE[status]]
       expect(tone.text).toMatch(/^text-a-st-/)
-      expect(tone.tint).toMatch(/^bg-a-st-.+\/\[0\.12\]$/)
+      expect(tone.tint).toMatch(/^bg-a-st-.+\/12$/)
       expect(tone.bar).toMatch(/^border-a-st-/)
     }
     expect(new Set(STATUSES.map(s => STATUS_TONE[s])).size).toBe(STATUSES.length) // no two statuses share a tone

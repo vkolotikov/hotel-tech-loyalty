@@ -95,7 +95,7 @@ function DonutChart({ data }: { data: { label: string; key: string; count: numbe
 
   return (
     <div className="flex items-center gap-8">
-      <div className="relative flex-shrink-0">
+      <div className="relative shrink-0">
         <svg width={172} height={172} viewBox="0 0 172 172">
           <circle cx={86} cy={86} r={radius} fill="none" style={{ stroke: 'var(--legacy-panel-raised)' }} strokeWidth={stroke} />
           {data.map((d, i) => {
@@ -122,7 +122,7 @@ function DonutChart({ data }: { data: { label: string; key: string; count: numbe
         {data.map((d, i) => (
           <div key={d.key} className="flex items-center gap-2.5 text-xs cursor-pointer group"
             onMouseEnter={() => setHovered(i)} onMouseLeave={() => setHovered(null)}>
-            <div className="w-3 h-3 rounded-full flex-shrink-0 ring-2 ring-white/10" style={{ background: CHART_COLORS[i % CHART_COLORS.length] }} />
+            <div className="w-3 h-3 rounded-full shrink-0 ring-2 ring-white/10" style={{ background: CHART_COLORS[i % CHART_COLORS.length] }} />
             <span className="text-gray-400 group-hover:text-white transition-colors truncate">{d.label}</span>
             <span className="text-white font-semibold ml-auto tabular-nums">{d.count}</span>
           </div>
@@ -183,7 +183,7 @@ function HorizontalBars({ data }: { data: { unit_name: string; currency: string;
         <div key={i} className="group">
           <div className="flex justify-between text-xs mb-1.5">
             <span className="text-gray-300 font-medium truncate">{d.unit_name || 'Unknown'}</span>
-            <span className="text-gray-500 flex-shrink-0 ml-3 tabular-nums">
+            <span className="text-gray-500 shrink-0 ml-3 tabular-nums">
               {money(d.revenue, d.currency)} · {d.bookings} bookings · {d.avg_nights}n
             </span>
           </div>
@@ -213,7 +213,7 @@ function ChannelList({ data }: { data: { label: string; count: number }[] }) {
     <div className="space-y-3.5">
       {data.map((d, i) => (
         <div key={i} className="flex items-center gap-3">
-          <div className="w-3 h-3 rounded-full flex-shrink-0 ring-2 ring-white/10" style={{ background: CHART_COLORS[i % CHART_COLORS.length] }} />
+          <div className="w-3 h-3 rounded-full shrink-0 ring-2 ring-white/10" style={{ background: CHART_COLORS[i % CHART_COLORS.length] }} />
           <span className="text-xs text-gray-400 flex-1 truncate">{d.label}</span>
           <span className="text-xs text-white font-semibold tabular-nums">{d.count}</span>
           <div className="w-24 h-2 rounded-full overflow-hidden" style={{ background: 'var(--legacy-panel-raised)' }}>
@@ -373,7 +373,7 @@ export function Bookings() {
     balance_due:     { icon: Clock,         color: 'text-orange-400',  bg: 'bg-orange-500/10' },
   }
 
-  const selectClass = 'bg-panel border border-dark-border rounded-lg text-sm text-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500 appearance-none cursor-pointer'
+  const selectClass = 'bg-panel border border-dark-border rounded-lg text-sm text-white px-3 py-2 focus:outline-hidden focus:ring-2 focus:ring-primary-500 appearance-none cursor-pointer'
   // Native <option> defaults to OS-light styling; force dark so the open
   // dropdown matches the rest of the admin and the text stays readable.
   const selectStyle = { colorScheme: HX_COLOR_SCHEME }
@@ -438,7 +438,7 @@ export function Bookings() {
               return (
                 <button key={td.key} onClick={() => { setTab(td.key); setPage(1) }}
                   className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-semibold whitespace-nowrap transition-colors ${
-                    active ? 'bg-primary-600 text-on-primary shadow-sm' : 'text-t-secondary hover:text-white hover:bg-dark-surface2'
+                    active ? 'bg-primary-600 text-on-primary shadow-xs' : 'text-t-secondary hover:text-white hover:bg-dark-surface2'
                   }`}>
                   <span className={active ? '' : td.tone}>{td.icon}</span>
                   {td.label}
@@ -489,9 +489,9 @@ export function Bookings() {
           Inline rather than re-filtering the table below because the lists
           are short (≤25 each) and reception wants them at a glance. */}
       {today && dailyFocus && (
-        <div className="rounded-2xl border border-white/[0.06] overflow-hidden"
+        <div className="rounded-2xl border border-white/6 overflow-hidden"
           style={{ background: 'var(--legacy-card)' }}>
-          <div className="px-4 py-2 border-b border-white/[0.06] flex items-center justify-between">
+          <div className="px-4 py-2 border-b border-white/6 flex items-center justify-between">
             <span className="text-xs font-bold uppercase tracking-wider text-gray-400">
               {dailyFocus === 'arrivals' ? t('bookings.today.arrivals', 'Arrivals Today')
                 : dailyFocus === 'in_house' ? t('bookings.today.in_house_guests', 'In-House Guests')
@@ -499,12 +499,12 @@ export function Bookings() {
             </span>
             <button onClick={() => setDailyFocus('')} className="text-[10px] text-gray-500 hover:text-white">{t('bookings.today.close', 'Close')}</button>
           </div>
-          <div className="divide-y divide-white/[0.04]">
+          <div className="divide-y divide-white/4">
             {(dailyFocus === 'arrivals' ? today.arrivals_today?.guests
               : dailyFocus === 'in_house' ? today.in_house?.guests
               : today.departures_today?.guests)?.map((g: any) => (
               <Link key={g.id} to={`/bookings/${g.id}`}
-                className="flex items-center justify-between px-4 py-2.5 hover:bg-white/[0.02] transition-colors text-sm">
+                className="flex items-center justify-between px-4 py-2.5 hover:bg-white/2 transition-colors text-sm">
                 <div className="flex items-center gap-3 min-w-0">
                   <span className="text-white font-semibold truncate">{g.guest_name || '—'}</span>
                   <span className="text-gray-500 text-xs truncate">{g.apartment_name || '—'}</span>
@@ -534,7 +534,7 @@ export function Bookings() {
       {/* PMS deactivated banner */}
       {dashboard?.syncHealth && dashboard.syncHealth.pmsEnabled === false && (
         <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 px-4 py-3 flex items-center gap-3">
-          <AlertTriangle size={18} className="text-amber-400 flex-shrink-0" />
+          <AlertTriangle size={18} className="text-amber-400 shrink-0" />
           <div className="flex-1 min-w-0">
             <p className="text-sm text-amber-200 font-medium">{t('bookings.pms_banner.deactivated', { name: dashboard.syncHealth.pmsName || t('bookings.pms_banner.pms_fallback', 'PMS'), defaultValue: '{{name}} integration is deactivated' })}</p>
             <p className="text-xs text-amber-200/70 mt-0.5">{t('bookings.pms_banner.deactivated_sub', { name: dashboard.syncHealth.pmsName || t('bookings.pms_banner.pms_fallback_long', 'the PMS'), defaultValue: 'Synced reservations are hidden while the integration is off. Your data in {{name}} is untouched.' })}</p>
@@ -580,7 +580,7 @@ export function Bookings() {
                     <Icon size={12} className={meta.color} />
                   </div>
                 </div>
-                <div className="text-2xl font-bold text-white tabular-nums break-words">
+                <div className="text-2xl font-bold text-white tabular-nums wrap-break-word">
                   {Array.isArray(kpi.values) ? kpi.values.map((value: { currency: string; amount: number }) => (
                     <div key={value.currency}>{money(value.amount, value.currency)}</div>
                   )) : kpi.displayValue}
@@ -654,7 +654,7 @@ export function Bookings() {
                           <span>· {fmtDateShort(a.arrival_date)} → {fmtDateShort(a.departure_date)}</span>
                         </div>
                       </div>
-                      <div className="text-right flex-shrink-0 ml-3">
+                      <div className="text-right shrink-0 ml-3">
                         {total > 0 && (
                           <div className="text-xs tabular-nums">
                             <span className="text-emerald-400 font-semibold">{money(paid, a.currency)}</span>
@@ -687,7 +687,7 @@ export function Bookings() {
                       <div className="text-sm font-semibold text-white truncate">{b.guest_name || '—'}</div>
                       <div className="text-xs text-t-muted">{b.apartment_name || '—'} · {fmtDateShort(b.arrival_date)} → {fmtDateShort(b.departure_date)}</div>
                     </div>
-                    <div className="text-right flex-shrink-0 ml-3 tabular-nums">
+                    <div className="text-right shrink-0 ml-3 tabular-nums">
                       <div className="text-xs text-emerald-400 font-semibold">{money(b.price_paid || 0, b.currency)}</div>
                       <div className="text-xs text-red-400">/ {money(b.price_total || 0, b.currency)}</div>
                     </div>
@@ -784,7 +784,7 @@ export function Bookings() {
               <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-t-muted" />
               <input value={search} onChange={e => { setSearch(e.target.value); setPage(1) }}
                 placeholder={t('bookings.filters.search_placeholder', 'Search guest, email, reference…')}
-                className="w-full pl-9 pr-3 py-2 bg-panel border border-dark-border rounded-lg text-sm text-white placeholder-t-muted focus:outline-none focus:ring-2 focus:ring-primary-500" />
+                className="w-full pl-9 pr-3 py-2 bg-panel border border-dark-border rounded-lg text-sm text-white placeholder-t-muted focus:outline-hidden focus:ring-2 focus:ring-primary-500" />
             </div>
           </div>
 
@@ -824,8 +824,8 @@ export function Bookings() {
       {/* Tab-specific header banner — clarifies why filters might be
           forced when the user lands on Unpaid. */}
       {tab === 'unpaid' && (
-        <div className="rounded-xl border border-amber-500/20 bg-amber-500/[0.06] px-4 py-3 flex items-center gap-3 text-xs">
-          <AlertTriangle size={14} className="text-amber-400 flex-shrink-0" />
+        <div className="rounded-xl border border-amber-500/20 bg-amber-500/6 px-4 py-3 flex items-center gap-3 text-xs">
+          <AlertTriangle size={14} className="text-amber-400 shrink-0" />
           <span className="text-amber-200">{t('bookings.tabs.unpaid_hint', 'Showing bookings with open balances. Use the search and filters below to narrow further.')}</span>
         </div>
       )}
@@ -840,7 +840,7 @@ export function Bookings() {
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-t-muted" />
           <input type="text" value={search} onChange={e => { setSearch(e.target.value); setPage(1) }}
             placeholder={t('bookings.filters.search_placeholder', 'Search guest, email, reference…')}
-            className="w-full pl-9 pr-4 py-2.5 bg-panel border border-dark-border rounded-lg text-sm text-white placeholder-t-muted focus:outline-none focus:ring-2 focus:ring-primary-500" />
+            className="w-full pl-9 pr-4 py-2.5 bg-panel border border-dark-border rounded-lg text-sm text-white placeholder-t-muted focus:outline-hidden focus:ring-2 focus:ring-primary-500" />
         </div>
 
         {/* Status pill row */}
@@ -1017,7 +1017,7 @@ function ReservationCard({ b, t, refetch }: {
           {b.guest_email && <div className="text-[11px] text-t-muted truncate">{b.guest_email}</div>}
         </div>
         <Link to={`/bookings/${b.id}`}
-          className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-white/[0.04] text-t-soft hover:bg-white/[0.08] hover:text-white transition-colors flex-shrink-0">
+          className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-white/4 text-t-soft hover:bg-white/8 hover:text-white transition-colors shrink-0">
           <Eye size={14} />
         </Link>
       </div>
@@ -1051,7 +1051,7 @@ function ReservationCard({ b, t, refetch }: {
             <span className="text-[10px] text-emerald-400/80 font-semibold">{t('bookings.row.settled', 'Settled')}</span>
           ) : null}
         </div>
-        <div className="h-1 mt-1.5 bg-white/[0.04] rounded-full overflow-hidden">
+        <div className="h-1 mt-1.5 bg-white/4 rounded-full overflow-hidden">
           <div className={`h-full ${barTone} transition-all`} style={{ width: `${paidPct}%` }} />
         </div>
       </div>
@@ -1062,7 +1062,7 @@ function ReservationCard({ b, t, refetch }: {
           <button onClick={() => { setStatusOpen(o => !o); setPayOpen(false) }} disabled={busy}
             className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold transition-all disabled:opacity-50 ${STATUS_PILL[internalStatus] || 'bg-gray-500/15 text-gray-400 border border-gray-500/20'}`}>
             {internalStatus.replace(/-/g, ' ')}
-            <ChevronLeft size={9} className="rotate-[270deg]" />
+            <ChevronLeft size={9} className="rotate-270" />
           </button>
           {statusOpen && (
             <>
@@ -1085,7 +1085,7 @@ function ReservationCard({ b, t, refetch }: {
           <button onClick={() => { setPayOpen(o => !o); setStatusOpen(false) }} disabled={busy}
             className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold transition-all disabled:opacity-50 ${PAY_PILL[payState] || 'bg-gray-500/15 text-gray-400 border border-gray-500/20'}`}>
             {payLabel(payState)}
-            <ChevronLeft size={9} className="rotate-[270deg]" />
+            <ChevronLeft size={9} className="rotate-270" />
           </button>
           {payOpen && (
             <>
@@ -1207,7 +1207,7 @@ function ReservationRow({ b, t, refetch }: {
         <button onClick={() => { setStatusOpen(o => !o); setPayOpen(false) }} disabled={savingStatus}
           className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold transition-all disabled:opacity-50 ${STATUS_PILL[internalStatus] || 'bg-gray-500/15 text-gray-400 border border-gray-500/20'}`}>
           {internalStatus.replace(/-/g, ' ')}
-          <ChevronLeft size={9} className="rotate-[270deg]" />
+          <ChevronLeft size={9} className="rotate-270" />
         </button>
         {statusOpen && (
           <>
@@ -1238,7 +1238,7 @@ function ReservationRow({ b, t, refetch }: {
         <button onClick={() => { setPayOpen(o => !o); setStatusOpen(false) }} disabled={savingPay}
           className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold transition-all disabled:opacity-50 ${PAY_PILL[payState] || 'bg-gray-500/15 text-gray-400 border border-gray-500/20'}`}>
           {payLabel(payState)}
-          <ChevronLeft size={9} className="rotate-[270deg]" />
+          <ChevronLeft size={9} className="rotate-270" />
         </button>
         {payOpen && (
           <>
@@ -1266,7 +1266,7 @@ function ReservationRow({ b, t, refetch }: {
       {/* View */}
       <td className="p-4 text-center">
         <Link to={`/bookings/${b.id}`}
-          className="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-white/[0.04] text-t-soft hover:bg-white/[0.08] hover:text-white transition-colors">
+          className="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-white/4 text-t-soft hover:bg-white/8 hover:text-white transition-colors">
           <Eye size={13} />
         </Link>
       </td>
@@ -1318,7 +1318,7 @@ function CompactBookingRow({
     <Link to={`/bookings/${b.id}`}
       className="flex items-center gap-4 px-5 py-3 hover:bg-dark-surface2/40 transition-colors">
       {/* Avatar circle */}
-      <div className="w-9 h-9 rounded-full bg-primary-500/15 border border-primary-500/30 flex items-center justify-center text-xs font-bold text-primary-300 flex-shrink-0">
+      <div className="w-9 h-9 rounded-full bg-primary-500/15 border border-primary-500/30 flex items-center justify-center text-xs font-bold text-primary-300 shrink-0">
         {initial}
       </div>
 
@@ -1348,7 +1348,7 @@ function CompactBookingRow({
       </div>
 
       {/* Stay */}
-      <div className="hidden md:block text-right flex-shrink-0 min-w-[140px]">
+      <div className="hidden md:block text-right shrink-0 min-w-[140px]">
         <div className="text-xs text-hx-e0e0e0 tabular-nums whitespace-nowrap">
           {fmtDateShort(b.arrival_date)} → {fmtDateShort(b.departure_date)}
         </div>
@@ -1359,13 +1359,13 @@ function CompactBookingRow({
       </div>
 
       {/* Money + progress bar */}
-      <div className="text-right flex-shrink-0 min-w-[150px]">
+      <div className="text-right shrink-0 min-w-[150px]">
         <div className="text-xs tabular-nums whitespace-nowrap">
           <span className={paid >= total && total > 0 ? 'text-emerald-400 font-semibold' : 'text-white font-semibold'}>{money(paid, b.currency)}</span>
           <span className="text-t-muted"> / </span>
           <span className="text-t-soft">{money(total, b.currency)}</span>
         </div>
-        <div className="h-1 mt-1.5 bg-white/[0.04] rounded-full overflow-hidden">
+        <div className="h-1 mt-1.5 bg-white/4 rounded-full overflow-hidden">
           <div className={`h-full ${barTone} transition-all`} style={{ width: `${paidPct}%` }} />
         </div>
         {balance > 0 && total > 0 && (
@@ -1374,15 +1374,15 @@ function CompactBookingRow({
       </div>
 
       {/* Status pill */}
-      <div className="hidden sm:block flex-shrink-0">
+      <div className="hidden sm:block shrink-0">
         <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${PAY_PILL[payState] || 'bg-gray-500/15 text-gray-400 border border-gray-500/20'}`}>
           {payLabel(payState)}
         </span>
       </div>
 
       {/* View */}
-      <div className="flex-shrink-0">
-        <span className="p-1.5 rounded-lg bg-white/[0.04] text-t-soft hover:bg-white/[0.08] hover:text-white inline-flex">
+      <div className="shrink-0">
+        <span className="p-1.5 rounded-lg bg-white/4 text-t-soft hover:bg-white/8 hover:text-white inline-flex">
           <Eye size={13} />
         </span>
       </div>

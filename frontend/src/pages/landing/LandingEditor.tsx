@@ -156,7 +156,7 @@ const DEFAULT_ACCENT = '#6b7280'
 // carries the identical note at its own `card` const.
 const card = 'bg-dark-surface border border-dark-border rounded-xl p-5'
 const label = 'block text-xs text-t-secondary mb-1.5'
-const input = 'w-full bg-dark-bg border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-t-muted focus:border-primary-500 outline-none'
+const input = 'w-full bg-dark-bg border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-t-muted focus:border-primary-500 outline-hidden'
 const btnPrimary = 'flex items-center gap-2 px-5 py-2.5 text-sm font-medium bg-primary-500 text-on-primary rounded-lg hover:bg-primary-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed'
 // The house "secondary action" button (ChatbotWidget.tsx:166) — reused here
 // for Copy, Change and Unpublish, none of which are the screen's primary
@@ -170,7 +170,7 @@ const btnSec = 'flex items-center gap-1.5 px-3 py-2 text-xs font-medium bg-dark-
  * The section row's icon buttons, one shape for all of them.
  *
  * The house icon button (EarnRateEvents.tsx:266, InquiryDetail.tsx:337) is
- * `p-1.5 rounded hover:bg-dark-surface3 text-t-secondary hover:text-white` —
+ * `p-1.5 rounded-sm hover:bg-dark-surface3 text-t-secondary hover:text-white` —
  * quiet by default, lit on hover, no border. This is that, with two things
  * added rather than invented: a fixed 32px square so every control on the
  * row has the same hit target whatever glyph sits in it (the old grip and
@@ -182,7 +182,7 @@ const btnSec = 'flex items-center gap-1.5 px-3 py-2 text-xs font-medium bg-dark-
 const iconBtn = 'flex items-center justify-center w-8 h-8 shrink-0 rounded-md text-t-secondary '
   + 'hover:text-white hover:bg-dark-surface3 transition-colors motion-reduce:transition-none '
   + 'disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-t-secondary '
-  + 'outline-none focus-visible:ring-2 focus-visible:ring-primary-500/60'
+  + 'outline-hidden focus-visible:ring-2 focus-visible:ring-primary-500/60'
 
 /**
  * The same button, for the one action that destroys something.
@@ -200,7 +200,7 @@ const iconBtnDanger = 'flex items-center justify-center w-8 h-8 shrink-0 rounded
   + 'hover:text-warning hover:bg-warning/10 focus-visible:text-warning focus-visible:bg-warning/10 '
   + 'transition-colors motion-reduce:transition-none '
   + 'disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-t-secondary '
-  + 'outline-none focus-visible:ring-2 focus-visible:ring-warning/60'
+  + 'outline-hidden focus-visible:ring-2 focus-visible:ring-warning/60'
 
 /** One 14px glyph for every control on the row header. The old mix (15px
  *  grip and chevrons against a 13px trash) is a difference with no meaning
@@ -1566,7 +1566,7 @@ export function LandingEditor({
                       aria-pressed={active}
                       disabled={empty}
                       onClick={() => setFilter(id)}
-                      className={'flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-full border outline-none '
+                      className={'flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-full border outline-hidden '
                         + 'transition-colors motion-reduce:transition-none '
                         + 'focus-visible:ring-2 focus-visible:ring-primary-500/60 '
                         + 'disabled:opacity-40 disabled:cursor-not-allowed '
@@ -1763,7 +1763,7 @@ export function LandingEditor({
           </div>
           )}
 
-          <div className="sticky bottom-0 -mx-2 px-2 py-3 bg-dark-bg/95 backdrop-blur border-t border-dark-border flex items-center justify-between">
+          <div className="sticky bottom-0 -mx-2 px-2 py-3 bg-dark-bg/95 backdrop-blur-sm border-t border-dark-border flex items-center justify-between">
             {/*
               Template fidelity 1.6 — SAY WHAT THIS BAR IS ACTUALLY ABOUT.
               It used to read "Unsaved changes" / "All changes saved", which
@@ -1951,7 +1951,7 @@ function BuilderTabBar({ active, onSelect }: { active: BuilderTab; onSelect: (ta
           type="button"
           aria-pressed={active === tab}
           onClick={() => onSelect(tab)}
-          className={'flex items-center gap-2 px-4 py-2.5 text-sm font-semibold whitespace-nowrap border-b-2 outline-none '
+          className={'flex items-center gap-2 px-4 py-2.5 text-sm font-semibold whitespace-nowrap border-b-2 outline-hidden '
             + 'transition-colors motion-reduce:transition-none '
             + 'focus-visible:ring-2 focus-visible:ring-primary-500/60 focus-visible:ring-offset-0 '
             + (active === tab
@@ -2048,7 +2048,7 @@ function RowHeading({ label, group, status, statusLine, placementNote }: {
     <span className="min-w-0 flex-1 block">
       <span className="flex items-center gap-2 flex-wrap">
         <span className="text-sm font-medium text-white">{label}</span>
-        <span className="shrink-0 rounded border border-dark-border px-1.5 py-px text-[10px] font-medium uppercase tracking-[0.08em] text-t-secondary/80">
+        <span className="shrink-0 rounded-sm border border-dark-border px-1.5 py-px text-[10px] font-medium uppercase tracking-[0.08em] text-t-secondary/80">
           {t(`landing_pages.editor.group_${group}`, GROUP_FALLBACK[group])}
         </span>
       </span>
@@ -2178,7 +2178,7 @@ function WebAddressCard({
               <span className="text-xs text-t-secondary whitespace-nowrap shrink-0">{addressHost(page.url)}/</span>
               <input
                 autoFocus
-                className="flex-1 min-w-0 bg-transparent text-xs text-white outline-none"
+                className="flex-1 min-w-0 bg-transparent text-xs text-white outline-hidden"
                 value={draft}
                 onChange={e => onDraftChange(e.target.value)}
                 aria-label={t('landing_pages.web_address', 'Web address')}
@@ -2696,7 +2696,7 @@ function SectionRow({
               onClick={onToggleExpanded}
               aria-expanded={isOpen}
               aria-controls={bodyId}
-              className={'flex items-start gap-3 min-w-0 flex-1 text-left rounded-lg -my-1 py-1 px-1.5 -mx-1.5 outline-none '
+              className={'flex items-start gap-3 min-w-0 flex-1 text-left rounded-lg -my-1 py-1 px-1.5 -mx-1.5 outline-hidden '
                 + 'transition-colors motion-reduce:transition-none hover:bg-dark-surface3/50 '
                 + 'focus-visible:ring-2 focus-visible:ring-primary-500/60'}
             >
@@ -2779,7 +2779,7 @@ function SectionRow({
                 // one: a 20px-high control is under every hit-target floor
                 // there is, and growing the pill itself would have made the
                 // loudest thing on the card louder still.
-                className={'flex items-center justify-center h-8 px-1.5 shrink-0 rounded-md outline-none '
+                className={'flex items-center justify-center h-8 px-1.5 shrink-0 rounded-md outline-hidden '
                   + 'hover:bg-dark-surface3 transition-colors motion-reduce:transition-none '
                   + 'focus-visible:ring-2 focus-visible:ring-primary-500/60'}
               >
@@ -3050,7 +3050,7 @@ function AddBlockRail({ types, adding, onAdd, templateKey, open, onOpenChange }:
           aria-expanded={open}
           className={'flex items-center gap-1 px-2 py-1 rounded-full border border-dark-border bg-dark-bg '
             + 'text-[11px] text-t-secondary opacity-60 group-hover:opacity-100 focus-visible:opacity-100 '
-            + 'hover:text-white transition-opacity motion-reduce:transition-none outline-none '
+            + 'hover:text-white transition-opacity motion-reduce:transition-none outline-hidden '
             + 'focus-visible:ring-2 focus-visible:ring-primary-500/60'}
         >
           <Plus size={12} />
@@ -3165,7 +3165,7 @@ function AddBlockPicker({ types, adding, onAdd, templateKey, onClose }: {
                   type="button"
                   disabled={reason !== null || adding !== null}
                   onClick={() => onAdd(type.id)}
-                  className={btnSec + ' w-full !py-2.5'}
+                  className={btnSec + ' w-full py-2.5!'}
                 >
                   <Plus size={14} />
                   {adding === type.id

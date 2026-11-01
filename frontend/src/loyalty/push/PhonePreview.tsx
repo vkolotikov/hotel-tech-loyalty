@@ -21,10 +21,10 @@ export function PhonePreview({ title, body, appName, titleGuide }: { title: stri
             <span className="min-w-0 flex-1 truncate font-medium uppercase tracking-wide">{appName}</span>
             <span>{t('loyalty.push.preview.now', 'now')}</span>
           </div>
-          <p className={`mt-2 break-words text-sm font-semibold ${shown.text ? 'text-a-text' : 'text-a-text-2'}`} data-preview-title="">
+          <p className={`mt-2 wrap-break-word text-sm font-semibold ${shown.text ? 'text-a-text' : 'text-a-text-2'}`} data-preview-title="">
             {shown.text || t('loyalty.push.preview.no_title', 'Your title')}
           </p>
-          <p className={`mt-0.5 line-clamp-4 whitespace-pre-line break-words text-sm ${body.trim() ? 'text-a-text' : 'text-a-text-2'}`}>
+          <p className={`mt-0.5 line-clamp-4 whitespace-pre-line wrap-break-word text-sm ${body.trim() ? 'text-a-text' : 'text-a-text-2'}`}>
             {body.trim() || t('loyalty.push.preview.no_body', 'Your message')}
           </p>
         </div>

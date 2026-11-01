@@ -8,7 +8,7 @@ import type { Align, Block, CampaignOptions } from './types'
 import { ALIGN_WORDS, BLOCK_WORDS, DRAFT_PROBLEM_WORDS, LEVEL_WORDS } from './words'
 
 const INPUT = 'w-full rounded-lg border border-a-border bg-a-surface px-3 py-2 text-sm text-a-text'
-const ICON = 'rounded p-1.5 text-a-text-2 hover:text-a-text disabled:opacity-40'
+const ICON = 'rounded-sm p-1.5 text-a-text-2 hover:text-a-text disabled:opacity-40'
 
 /**
  * The email's body as blocks (spec 2026-10-21 release 2 §6), in the full admin's builder format: a heading (its words,

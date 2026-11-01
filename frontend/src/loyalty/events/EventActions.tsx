@@ -15,7 +15,7 @@ import { MemberPicker } from './MemberPicker'
 import { afterEventChange, afterPersonChange, eventsApi } from './eventsApi'
 import { counted, type MoreItem, type Say } from './eventsMath'
 import type { LoyaltyEventRow } from './types'
-const MORE_ROW = 'flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm hover:bg-a-surface-2 focus:bg-a-surface-2 focus:outline-none'
+const MORE_ROW = 'flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm hover:bg-a-surface-2 focus:bg-a-surface-2 focus:outline-hidden'
 
 /** One row of the More menu: Add a member, Edit, and the ones that end something (in the danger colour, last). */
 export function MoreRow({ item, onPick }: { item: MoreItem; onPick: (item: MoreItem) => void }) {

@@ -170,7 +170,7 @@ function formatMessage(text: string) {
         <ul key={`ul-${elements.length}`} className="space-y-0.5 my-1">
           {listItems.map((item, i) => (
             <li key={i} className="flex gap-1.5 items-start">
-              <span className="text-primary-400 mt-1 flex-shrink-0">•</span>
+              <span className="text-primary-400 mt-1 shrink-0">•</span>
               <span>{formatInline(item)}</span>
             </li>
           ))}
@@ -220,7 +220,7 @@ function formatInline(text: string) {
   while ((match = regex.exec(text)) !== null) {
     if (match.index > lastIndex) parts.push(text.slice(lastIndex, match.index))
     if (match[2]) parts.push(<strong key={match.index} className="text-white font-semibold">{match[2]}</strong>)
-    else if (match[3]) parts.push(<code key={match.index} className="bg-dark-surface px-1 py-0.5 rounded text-primary-300 text-[11px] font-mono">{match[3]}</code>)
+    else if (match[3]) parts.push(<code key={match.index} className="bg-dark-surface px-1 py-0.5 rounded-sm text-primary-300 text-[11px] font-mono">{match[3]}</code>)
     lastIndex = regex.lastIndex
   }
 
@@ -973,7 +973,7 @@ export default function AiChat() {
           {/* Slow ambient pulse ring */}
           <span className="absolute inset-0 rounded-full border border-primary-400/40 animate-ping opacity-50" />
           {/* Core button */}
-          <span className="relative w-14 h-14 rounded-full bg-gradient-to-br from-primary-400 via-primary-500 to-primary-700 flex items-center justify-center shadow-xl shadow-primary-500/40 group-hover:scale-105 group-active:scale-95 transition-transform">
+          <span className="relative w-14 h-14 rounded-full bg-linear-to-br from-primary-400 via-primary-500 to-primary-700 flex items-center justify-center shadow-xl shadow-primary-500/40 group-hover:scale-105 group-active:scale-95 transition-transform">
             <Sparkles size={24} className="text-on-primary group-hover:rotate-12 transition-transform" strokeWidth={2.4} />
           </span>
           {/* Online indicator */}
@@ -995,10 +995,10 @@ export default function AiChat() {
     <div className={`fixed bottom-5 right-5 ${panelSize} bg-dark-bg border border-dark-border rounded-2xl shadow-2xl shadow-black/50 z-50 flex flex-col overflow-hidden transition-all duration-300`}>
       {/* Header — compact, no title-wrap. Identity stack on the left,
         * Voice CTA + overflow menu + close on the right. */}
-      <div className="px-3.5 py-3 border-b border-dark-border flex items-center justify-between flex-shrink-0 bg-gradient-to-r from-dark-surface/90 to-dark-surface2/90 backdrop-blur-sm">
+      <div className="px-3.5 py-3 border-b border-dark-border flex items-center justify-between shrink-0 bg-linear-to-r from-dark-surface/90 to-dark-surface2/90 backdrop-blur-xs">
         <div className="flex items-center gap-2.5 min-w-0 flex-1">
-          <div className="relative flex-shrink-0">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary-400 to-primary-700 flex items-center justify-center shadow-md shadow-primary-500/30">
+          <div className="relative shrink-0">
+            <div className="w-9 h-9 rounded-xl bg-linear-to-br from-primary-400 to-primary-700 flex items-center justify-center shadow-md shadow-primary-500/30">
               <Sparkles size={16} className="text-on-primary" strokeWidth={2.4} />
             </div>
             {/* Tiny "online" pip on the avatar */}
@@ -1018,14 +1018,14 @@ export default function AiChat() {
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-1 flex-shrink-0">
+        <div className="flex items-center gap-1 shrink-0">
           {/* Voice Call — primary affordance. */}
           <button
             onClick={voiceCallActive ? endVoiceCall : startVoiceCall}
             className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold transition-all active:scale-95 ${
               voiceCallActive
                 ? 'bg-red-500 hover:bg-red-600 text-on-fill shadow-md shadow-red-500/30'
-                : 'bg-gradient-to-br from-primary-400 to-primary-600 hover:from-primary-300 hover:to-primary-500 text-on-primary shadow-md shadow-primary-500/30'
+                : 'bg-linear-to-br from-primary-400 to-primary-600 hover:from-primary-300 hover:to-primary-500 text-on-primary shadow-md shadow-primary-500/30'
             }`}
             title={voiceCallActive ? 'End voice call' : 'Start a voice call — speak naturally to plan your day, search any data, take actions'}
           >
@@ -1105,8 +1105,8 @@ export default function AiChat() {
             {/* Hero — bigger headline with soft accent halo around the icon. */}
             <div className="text-center space-y-3">
               <div className="relative w-16 h-16 mx-auto">
-                <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-primary-500/30 to-primary-700/0 blur-xl opacity-80" />
-                <div className="relative w-16 h-16 rounded-2xl bg-gradient-to-br from-primary-400 via-primary-500 to-primary-700 flex items-center justify-center shadow-lg shadow-primary-500/30">
+                <div className="absolute inset-0 rounded-2xl bg-linear-to-br from-primary-500/30 to-primary-700/0 blur-xl opacity-80" />
+                <div className="relative w-16 h-16 rounded-2xl bg-linear-to-br from-primary-400 via-primary-500 to-primary-700 flex items-center justify-center shadow-lg shadow-primary-500/30">
                   <Sparkles size={28} className="text-on-primary" strokeWidth={2.4} />
                 </div>
               </div>
@@ -1123,10 +1123,10 @@ export default function AiChat() {
             {!voiceCallActive && (
               <button
                 onClick={startVoiceCall}
-                className="group block w-full text-left rounded-2xl overflow-hidden bg-gradient-to-br from-primary-500/15 via-primary-600/8 to-transparent border border-primary-500/25 hover:border-primary-400/50 hover:from-primary-500/20 transition-all active:scale-[0.99]"
+                className="group block w-full text-left rounded-2xl overflow-hidden bg-linear-to-br from-primary-500/15 via-primary-600/8 to-transparent border border-primary-500/25 hover:border-primary-400/50 hover:from-primary-500/20 transition-all active:scale-[0.99]"
               >
                 <div className="flex items-center gap-3 p-3.5">
-                  <div className="relative w-11 h-11 rounded-xl bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center flex-shrink-0 shadow-md shadow-primary-500/30">
+                  <div className="relative w-11 h-11 rounded-xl bg-linear-to-br from-primary-400 to-primary-600 flex items-center justify-center shrink-0 shadow-md shadow-primary-500/30">
                     <span className="absolute inset-0 rounded-xl border border-primary-300/40 animate-ping opacity-50" />
                     <Phone size={20} className="text-on-primary" strokeWidth={2.4} />
                   </div>
@@ -1139,7 +1139,7 @@ export default function AiChat() {
                       Speak naturally — plan your day, search data, take actions hands-free.
                     </div>
                   </div>
-                  <ChevronRight size={16} className="text-primary-300/70 group-hover:text-primary-200 group-hover:translate-x-0.5 transition-all flex-shrink-0" />
+                  <ChevronRight size={16} className="text-primary-300/70 group-hover:text-primary-200 group-hover:translate-x-0.5 transition-all shrink-0" />
                 </div>
               </button>
             )}
@@ -1166,9 +1166,9 @@ export default function AiChat() {
                           onClick={() => send(q)}
                           className={`group flex items-center w-full text-left text-[12.5px] text-hx-b8b8ba hover:text-white bg-dark-surface/70 hover:bg-dark-surface border border-dark-border ${group.border} rounded-xl px-3 py-2.5 transition-all active:scale-[0.99]`}
                         >
-                          <span className={`w-1 h-1 rounded-full ${group.accent.replace('text-', 'bg-')} opacity-50 group-hover:opacity-100 mr-2.5 flex-shrink-0 transition-opacity`} />
+                          <span className={`w-1 h-1 rounded-full ${group.accent.replace('text-', 'bg-')} opacity-50 group-hover:opacity-100 mr-2.5 shrink-0 transition-opacity`} />
                           <span className="flex-1 leading-snug">{q}</span>
-                          <ChevronRight size={12} className="text-hx-5a5a5c group-hover:text-white opacity-0 group-hover:opacity-100 -translate-x-1 group-hover:translate-x-0 transition-all flex-shrink-0" />
+                          <ChevronRight size={12} className="text-hx-5a5a5c group-hover:text-white opacity-0 group-hover:opacity-100 -translate-x-1 group-hover:translate-x-0 transition-all shrink-0" />
                         </button>
                       ))}
                     </div>
@@ -1182,7 +1182,7 @@ export default function AiChat() {
         {messages.map((msg, i) => (
           <div key={i} className={`flex gap-2.5 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
             {msg.role === 'assistant' && (
-              <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-primary-500/20 to-primary-700/10 flex items-center justify-center flex-shrink-0 mt-0.5 border border-primary-500/10">
+              <div className="w-7 h-7 rounded-lg bg-linear-to-br from-primary-500/20 to-primary-700/10 flex items-center justify-center shrink-0 mt-0.5 border border-primary-500/10">
                 <Bot size={14} className="text-primary-400" />
               </div>
             )}
@@ -1208,7 +1208,7 @@ export default function AiChat() {
               ) : msg.content}
             </div>
             {msg.role === 'user' && (
-              <div className="w-7 h-7 rounded-lg bg-dark-surface2 flex items-center justify-center flex-shrink-0 mt-0.5 border border-dark-border">
+              <div className="w-7 h-7 rounded-lg bg-dark-surface2 flex items-center justify-center shrink-0 mt-0.5 border border-dark-border">
                 <User size={14} className="text-t-secondary" />
               </div>
             )}
@@ -1231,7 +1231,7 @@ export default function AiChat() {
 
         {loading && (
           <div className="flex gap-2.5">
-            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-primary-500/20 to-primary-700/10 flex items-center justify-center flex-shrink-0 border border-primary-500/10">
+            <div className="w-7 h-7 rounded-lg bg-linear-to-br from-primary-500/20 to-primary-700/10 flex items-center justify-center shrink-0 border border-primary-500/10">
               <Bot size={14} className="text-primary-400" />
             </div>
             <div className="bg-dark-surface border border-dark-border rounded-2xl rounded-bl-md px-3.5 py-2.5">
@@ -1252,7 +1252,7 @@ export default function AiChat() {
       </div>
 
       {/* Input */}
-      <div className="px-3 py-3 border-t border-dark-border flex-shrink-0 bg-dark-surface/50">
+      <div className="px-3 py-3 border-t border-dark-border shrink-0 bg-dark-surface/50">
         <div className="flex gap-2">
           {/* Mic button */}
           {hasSpeechRecognition && (
@@ -1260,7 +1260,7 @@ export default function AiChat() {
               type="button"
               onClick={listening ? stopListening : startListening}
               disabled={loading}
-              className={`p-2.5 rounded-xl transition-all flex-shrink-0 ${
+              className={`p-2.5 rounded-xl transition-all shrink-0 ${
                 listening
                   ? 'bg-red-500 text-on-fill shadow-md shadow-red-500/30 animate-pulse'
                   : 'bg-dark-surface border border-dark-border text-t-muted hover:text-primary-400 hover:border-primary-500/30'
@@ -1279,7 +1279,7 @@ export default function AiChat() {
             placeholder={listening ? 'Listening…' : 'Ask anything — by text or voice'}
             disabled={loading}
             rows={1}
-            className={`flex-1 bg-dark-surface border rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-t-muted focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 disabled:opacity-50 resize-none max-h-[100px] ${
+            className={`flex-1 bg-dark-surface border rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-t-muted focus:outline-hidden focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 disabled:opacity-50 resize-none max-h-[100px] ${
               listening ? 'border-red-500/50 ring-1 ring-red-500/30' : 'border-dark-border'
             }`}
             style={{ minHeight: '42px' }}
@@ -1288,7 +1288,7 @@ export default function AiChat() {
             type="button"
             onClick={() => send()}
             disabled={loading || !input.trim()}
-            className="p-2.5 bg-gradient-to-br from-primary-500 to-primary-700 hover:from-primary-400 hover:to-primary-600 text-on-primary rounded-xl disabled:opacity-40 transition-all flex-shrink-0 shadow-md shadow-primary-500/10 disabled:shadow-none"
+            className="p-2.5 bg-linear-to-br from-primary-500 to-primary-700 hover:from-primary-400 hover:to-primary-600 text-on-primary rounded-xl disabled:opacity-40 transition-all shrink-0 shadow-md shadow-primary-500/10 disabled:shadow-none"
           >
             <Send size={16} />
           </button>
@@ -1315,7 +1315,7 @@ export default function AiChat() {
     {/* Voice Call Overlay — full-viewport, mic-reactive waveform, live
       * transcript stream, tool-call chips, status pill. */}
     {voiceCallActive && (
-      <div className="fixed inset-0 z-[60] bg-gradient-to-br from-hx-0a0a0c via-hx-0c0c12 to-hx-080810 backdrop-blur-md flex flex-col items-center justify-between py-10 px-6">
+      <div className="fixed inset-0 z-60 bg-linear-to-br from-hx-0a0a0c via-hx-0c0c12 to-hx-080810 backdrop-blur-md flex flex-col items-center justify-between py-10 px-6">
         {/* Top: live status pill + tool-call chips */}
         <div className="w-full max-w-2xl flex flex-col items-center gap-3">
           <div className="inline-flex items-center gap-2 bg-primary-500/10 border border-primary-500/30 rounded-full px-4 py-1.5 text-primary-300 text-xs font-medium uppercase tracking-wider">
@@ -1387,7 +1387,7 @@ export default function AiChat() {
           />
           {/* Solid core */}
           <div
-            className="rounded-full bg-gradient-to-br from-primary-400 via-primary-500 to-primary-700 flex items-center justify-center shadow-2xl shadow-primary-500/40"
+            className="rounded-full bg-linear-to-br from-primary-400 via-primary-500 to-primary-700 flex items-center justify-center shadow-2xl shadow-primary-500/40"
             style={{
               width: 140 + voiceLevel * 20,
               height: 140 + voiceLevel * 20,
@@ -1431,9 +1431,9 @@ export default function AiChat() {
       * overlay. While this is up, the model has paused on the
       * function_call event and is waiting for our reply. */}
     {pendingConfirm && (
-      <div className="fixed inset-0 z-[70] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+      <div className="fixed inset-0 z-70 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4">
         <div className="w-full max-w-md bg-dark-surface border border-dark-border rounded-2xl shadow-2xl overflow-hidden">
-          <div className="px-5 py-4 bg-gradient-to-r from-amber-500/10 to-orange-500/10 border-b border-amber-400/20 flex items-center gap-3">
+          <div className="px-5 py-4 bg-linear-to-r from-amber-500/10 to-orange-500/10 border-b border-amber-400/20 flex items-center gap-3">
             <div className="w-9 h-9 rounded-full bg-amber-500/20 border border-amber-400/40 flex items-center justify-center">
               <Zap size={16} className="text-amber-300" />
             </div>

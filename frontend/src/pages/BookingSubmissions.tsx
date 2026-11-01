@@ -22,7 +22,7 @@ export function BookingSubmissions({ embedded = false }: { embedded?: boolean } 
   const items = data?.data ?? []
   const lastPage = data?.last_page ?? 1
 
-  const selectClass = 'bg-dark-bg border border-white/[0.08] rounded-xl text-sm text-white px-3 py-2.5 focus:outline-none focus:ring-1 focus:ring-emerald-500/40'
+  const selectClass = 'bg-dark-bg border border-white/8 rounded-xl text-sm text-white px-3 py-2.5 focus:outline-hidden focus:ring-1 focus:ring-emerald-500/40'
 
   return (
     <div className="space-y-7">
@@ -36,14 +36,14 @@ export function BookingSubmissions({ embedded = false }: { embedded?: boolean } 
       )}
 
       {/* Filters */}
-      <div className="rounded-2xl p-4 border border-white/[0.06]"
+      <div className="rounded-2xl p-4 border border-white/6"
         style={{ background: 'var(--legacy-card-gradient)', boxShadow: '0 16px 30px rgba(0,0,0,0.18)' }}>
         <div className="flex flex-wrap gap-3">
           <div className="relative flex-1 min-w-[220px]">
             <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-600" />
             <input type="text" value={search} onChange={e => { setSearch(e.target.value); setPage(1) }}
               placeholder="Search by guest name, email, reference..."
-              className="w-full pl-10 pr-4 py-2.5 bg-dark-bg border border-white/[0.06] rounded-xl text-sm text-white placeholder-gray-600 focus:outline-none focus:ring-1 focus:ring-emerald-500/40"
+              className="w-full pl-10 pr-4 py-2.5 bg-dark-bg border border-white/6 rounded-xl text-sm text-white placeholder-gray-600 focus:outline-hidden focus:ring-1 focus:ring-emerald-500/40"
             />
           </div>
           <select value={outcome} onChange={e => { setOutcome(e.target.value); setPage(1) }} className={selectClass}>
@@ -59,7 +59,7 @@ export function BookingSubmissions({ embedded = false }: { embedded?: boolean } 
         {isLoading ? (
           <div className="text-center py-12"><div className="w-6 h-6 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto" /></div>
         ) : items.length === 0 ? (
-          <div className="text-center text-gray-600 py-12 rounded-2xl border border-white/[0.06]"
+          <div className="text-center text-gray-600 py-12 rounded-2xl border border-white/6"
             style={{ background: 'var(--legacy-card-gradient)' }}>
             No submissions yet.
           </div>
@@ -73,7 +73,7 @@ export function BookingSubmissions({ embedded = false }: { embedded?: boolean } 
             }}>
             <div className="flex items-center gap-4 flex-wrap">
               {/* Outcome */}
-              <div className="flex-shrink-0">
+              <div className="shrink-0">
                 {s.outcome === 'success'
                   ? <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-emerald-500/15 border border-emerald-500/20"><CheckCircle size={16} className="text-emerald-400" /></div>
                   : <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-red-500/15 border border-red-500/20"><XCircle size={16} className="text-red-400" /></div>
@@ -97,7 +97,7 @@ export function BookingSubmissions({ embedded = false }: { embedded?: boolean } 
               {/* Method */}
               <div className="min-w-[70px] text-center">
                 {s.payment_method && (
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-white/[0.04] text-gray-400 border border-white/[0.06]">
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-white/4 text-gray-400 border border-white/6">
                     {s.payment_method}
                   </span>
                 )}

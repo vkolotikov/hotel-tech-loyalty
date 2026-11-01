@@ -48,7 +48,7 @@ export function PrintableCard({ card }: { card: CardData }) {
         className="h-40 w-40 shrink-0 rounded-lg bg-a-surface" />
       <div className="min-w-0 space-y-1">
         <p className="text-xs font-medium uppercase tracking-wide text-a-text-2">{boot.organization.name}</p>
-        <p className="break-words font-a-display text-2xl text-a-text">{card.name}</p>
+        <p className="wrap-break-word font-a-display text-2xl text-a-text">{card.name}</p>
         <p className="font-a-mono text-sm text-a-text">{card.member_number}</p>
       </div>
     </div>

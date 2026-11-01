@@ -63,11 +63,11 @@ export function BrandSwitcher() {
           <img
             src={resolveImage(selected.logo_url) ?? undefined}
             alt=""
-            className="w-5 h-5 rounded-sm object-cover flex-shrink-0"
+            className="w-5 h-5 rounded-xs object-cover shrink-0"
           />
         ) : (
           <div
-            className="w-5 h-5 rounded-sm flex items-center justify-center flex-shrink-0"
+            className="w-5 h-5 rounded-xs flex items-center justify-center shrink-0"
             style={{ background: selected?.primary_color ?? hxWhite(0.08) }}
           >
             {selected
@@ -79,7 +79,7 @@ export function BrandSwitcher() {
         <span className="truncate text-white font-medium">
           {selected?.name ?? 'All brands'}
         </span>
-        <ChevronDown size={14} className="text-t-secondary flex-shrink-0" />
+        <ChevronDown size={14} className="text-t-secondary shrink-0" />
       </button>
 
       {open && (
@@ -98,14 +98,14 @@ export function BrandSwitcher() {
             onClick={() => switchTo(null)}
             className="w-full flex items-center gap-2.5 px-3 py-2.5 hover:bg-dark-surface2 transition-colors text-left"
           >
-            <div className="w-8 h-8 rounded-md bg-accent/10 border border-accent/30 flex items-center justify-center flex-shrink-0">
+            <div className="w-8 h-8 rounded-md bg-accent/10 border border-accent/30 flex items-center justify-center shrink-0">
               <LayoutGrid size={14} className="text-accent" />
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-white">All brands</p>
               <p className="text-[11px] text-t-secondary">Portfolio view across {brands.length} brands</p>
             </div>
-            {currentBrandId === null && <Check size={15} className="text-accent flex-shrink-0" />}
+            {currentBrandId === null && <Check size={15} className="text-accent shrink-0" />}
           </button>
 
           <div className="border-t border-dark-border" />
@@ -123,11 +123,11 @@ export function BrandSwitcher() {
                   <img
                     src={resolveImage(b.logo_url) ?? undefined}
                     alt=""
-                    className="w-8 h-8 rounded-md object-cover flex-shrink-0"
+                    className="w-8 h-8 rounded-md object-cover shrink-0"
                   />
                 ) : (
                   <div
-                    className="w-8 h-8 rounded-md flex items-center justify-center flex-shrink-0"
+                    className="w-8 h-8 rounded-md flex items-center justify-center shrink-0"
                     style={{ background: b.primary_color ?? hxWhite(0.06) }}
                   >
                     <Briefcase size={14} className="text-white" />
@@ -137,14 +137,14 @@ export function BrandSwitcher() {
                   <p className="text-sm font-medium text-white truncate flex items-center gap-2">
                     {b.name}
                     {b.is_default && (
-                      <span className="text-[9px] font-bold uppercase tracking-wide text-t-secondary bg-dark-surface2 px-1.5 py-0.5 rounded">
+                      <span className="text-[9px] font-bold uppercase tracking-wide text-t-secondary bg-dark-surface2 px-1.5 py-0.5 rounded-sm">
                         Default
                       </span>
                     )}
                   </p>
                   <p className="text-[11px] text-t-secondary truncate">/{b.slug}</p>
                 </div>
-                {currentBrandId === b.id && <Check size={15} className="text-accent flex-shrink-0" />}
+                {currentBrandId === b.id && <Check size={15} className="text-accent shrink-0" />}
               </button>
             ))}
           </div>

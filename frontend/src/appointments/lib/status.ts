@@ -17,12 +17,12 @@ export const STATUS_TONE: Record<Status, Tone> = {
 
 /** Written out in full: Tailwind only generates classes it can see as literals. */
 export const TONE_CLASS: Record<Tone, { text: string; tint: string; bar: string }> = {
-  pending:   { text: 'text-a-st-pending',   tint: 'bg-a-st-pending/[0.12]',   bar: 'border-a-st-pending' },
-  confirmed: { text: 'text-a-st-confirmed', tint: 'bg-a-st-confirmed/[0.12]', bar: 'border-a-st-confirmed' },
-  progress:  { text: 'text-a-st-progress',  tint: 'bg-a-st-progress/[0.12]',  bar: 'border-a-st-progress' },
-  completed: { text: 'text-a-st-completed', tint: 'bg-a-st-completed/[0.12]', bar: 'border-a-st-completed' },
-  cancelled: { text: 'text-a-st-cancelled', tint: 'bg-a-st-cancelled/[0.12]', bar: 'border-a-st-cancelled' },
-  noshow:    { text: 'text-a-st-noshow',    tint: 'bg-a-st-noshow/[0.12]',    bar: 'border-a-st-noshow' },
+  pending:   { text: 'text-a-st-pending',   tint: 'bg-a-st-pending/12',   bar: 'border-a-st-pending' },
+  confirmed: { text: 'text-a-st-confirmed', tint: 'bg-a-st-confirmed/12', bar: 'border-a-st-confirmed' },
+  progress:  { text: 'text-a-st-progress',  tint: 'bg-a-st-progress/12',  bar: 'border-a-st-progress' },
+  completed: { text: 'text-a-st-completed', tint: 'bg-a-st-completed/12', bar: 'border-a-st-completed' },
+  cancelled: { text: 'text-a-st-cancelled', tint: 'bg-a-st-cancelled/12', bar: 'border-a-st-cancelled' },
+  noshow:    { text: 'text-a-st-noshow',    tint: 'bg-a-st-noshow/12',    bar: 'border-a-st-noshow' },
 }
 
 /**

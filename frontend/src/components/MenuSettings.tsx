@@ -113,9 +113,9 @@ export function MenuSettings() {
 
   return (
     <div className="space-y-4">
-      <div className="bg-gradient-to-br from-blue-500/10 via-cyan-500/[0.05] to-emerald-500/10 border border-blue-500/30 rounded-xl p-4">
+      <div className="bg-linear-to-br from-blue-500/10 via-cyan-500/5 to-emerald-500/10 border border-blue-500/30 rounded-xl p-4">
         <div className="flex items-start gap-2.5">
-          <div className="w-9 h-9 rounded-lg bg-blue-500/15 border border-blue-500/40 flex items-center justify-center flex-shrink-0">
+          <div className="w-9 h-9 rounded-lg bg-blue-500/15 border border-blue-500/40 flex items-center justify-center shrink-0">
             <Eye size={16} className="text-blue-300" />
           </div>
           <div>
@@ -147,7 +147,7 @@ export function MenuSettings() {
             const Icon = g.icon
             const row = (
               <>
-                <div className="w-9 h-9 rounded-md flex items-center justify-center flex-shrink-0"
+                <div className="w-9 h-9 rounded-md flex items-center justify-center shrink-0"
                   style={{ backgroundColor: g.accent + '25', color: ink(g.accent) }}>
                   <Icon size={15} />
                 </div>
@@ -219,7 +219,7 @@ export function MenuSettings() {
             const Icon = g.icon
             return (
               <div key={g.label} className="flex items-center gap-3 p-2.5 rounded-lg border border-dark-border bg-dark-bg/50">
-                <div className="w-9 h-9 rounded-md flex items-center justify-center flex-shrink-0 bg-gray-500/15 text-gray-400">
+                <div className="w-9 h-9 rounded-md flex items-center justify-center shrink-0 bg-gray-500/15 text-gray-400">
                   <Icon size={15} />
                 </div>
                 <div className="flex-1 min-w-0">
@@ -268,7 +268,7 @@ function RerunWizardCard() {
   return (
     <div className="bg-dark-surface border border-dark-border rounded-xl p-4">
       <div className="flex items-start gap-3">
-        <div className="w-9 h-9 rounded-lg bg-amber-500/15 border border-amber-500/40 flex items-center justify-center flex-shrink-0">
+        <div className="w-9 h-9 rounded-lg bg-amber-500/15 border border-amber-500/40 flex items-center justify-center shrink-0">
           <Zap size={16} className="text-amber-300" />
         </div>
         <div className="flex-1">

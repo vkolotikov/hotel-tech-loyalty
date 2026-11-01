@@ -11,7 +11,7 @@ export function NewPostButton() {
   return (
     <button type="button" data-new-post="" onClick={() => panel.openNew({ date: boot.venue.today, platform: null })}
       aria-label={t('content.shell.new_post', 'New post')}
-      className="inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-xl bg-gradient-to-br from-a-accent to-a-accent-deep px-3 py-2 text-sm font-semibold text-a-accent-ink shadow-a-sm transition sm:px-4 [@media(hover:hover)]:hover:-translate-y-px">
+      className="inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-xl bg-linear-to-br from-a-accent to-a-accent-deep px-3 py-2 text-sm font-semibold text-a-accent-ink shadow-a-sm transition sm:px-4 [@media(hover:hover)]:hover:-translate-y-px">
       <Plus size={16} aria-hidden /><span className="hidden sm:inline">{t('content.shell.new_post', 'New post')}</span>
     </button>
   )

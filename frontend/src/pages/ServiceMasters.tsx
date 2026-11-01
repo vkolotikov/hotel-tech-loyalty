@@ -41,9 +41,9 @@ interface Master {
 
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
-const card = 'rounded-2xl border border-white/[0.06] p-5'
+const card = 'rounded-2xl border border-white/6 p-5'
 const cardBg = { background: 'var(--legacy-hero-gradient-soft)', backdropFilter: 'blur(20px)' }
-const inputCls = 'w-full rounded-xl border border-white/[0.08] bg-white/[0.03] px-3.5 py-2.5 text-sm text-white placeholder-gray-500 outline-none focus:border-primary-500/50 focus:ring-1 focus:ring-primary-500/20 transition-all'
+const inputCls = 'w-full rounded-xl border border-white/8 bg-white/3 px-3.5 py-2.5 text-sm text-white placeholder-gray-500 outline-hidden focus:border-primary-500/50 focus:ring-1 focus:ring-primary-500/20 transition-all'
 const btnPrimaryStyle = { background: 'linear-gradient(135deg, var(--color-primary, #74c895), color-mix(in srgb, var(--color-primary, #74c895) 80%, #000))', color: '#03050A' }
 
 export default function ServiceMasters() {
@@ -123,12 +123,12 @@ function MasterCard({ master, onEdit, onDelete, onSchedule }: {
 }) {
   const scheduleDays = master.schedules?.map(s => s.day_of_week) || []
   return (
-    <div className={card + ' transition-all hover:border-white/[0.12]'} style={cardBg}>
+    <div className={card + ' transition-all hover:border-white/12'} style={cardBg}>
       <div className="flex gap-4">
         {master.avatar ? (
-          <img src={resolveImage(master.avatar) || ''} className="w-16 h-16 rounded-full object-cover flex-shrink-0" />
+          <img src={resolveImage(master.avatar) || ''} className="w-16 h-16 rounded-full object-cover shrink-0" />
         ) : (
-          <div className="w-16 h-16 rounded-full bg-white/[0.03] border border-white/[0.06] flex items-center justify-center flex-shrink-0">
+          <div className="w-16 h-16 rounded-full bg-white/3 border border-white/6 flex items-center justify-center shrink-0">
             <UserCircle2 size={28} className="text-gray-600" />
           </div>
         )}
@@ -151,14 +151,14 @@ function MasterCard({ master, onEdit, onDelete, onSchedule }: {
       <div className="flex items-center gap-1 mt-4">
         {DAYS.map((d, i) => (
           <span key={d} className={`text-[10px] px-1.5 py-0.5 rounded-md font-medium ${
-            scheduleDays.includes(i) ? 'bg-primary-500/15 text-primary-400' : 'bg-white/[0.03] text-gray-600'
+            scheduleDays.includes(i) ? 'bg-primary-500/15 text-primary-400' : 'bg-white/3 text-gray-600'
           }`}>{d}</span>
         ))}
       </div>
 
-      <div className="flex justify-end gap-1 mt-3 pt-3 border-t border-white/[0.04]">
-        <button onClick={onSchedule} className="p-1.5 rounded-lg hover:bg-white/[0.06] text-gray-500 hover:text-white transition-all" title="Schedule"><CalendarIcon size={14} /></button>
-        <button onClick={onEdit} className="p-1.5 rounded-lg hover:bg-white/[0.06] text-gray-500 hover:text-white transition-all"><Pencil size={14} /></button>
+      <div className="flex justify-end gap-1 mt-3 pt-3 border-t border-white/4">
+        <button onClick={onSchedule} className="p-1.5 rounded-lg hover:bg-white/6 text-gray-500 hover:text-white transition-all" title="Schedule"><CalendarIcon size={14} /></button>
+        <button onClick={onEdit} className="p-1.5 rounded-lg hover:bg-white/6 text-gray-500 hover:text-white transition-all"><Pencil size={14} /></button>
         <button onClick={onDelete} className="p-1.5 rounded-lg hover:bg-red-500/10 text-gray-500 hover:text-red-400 transition-all"><Trash2 size={14} /></button>
       </div>
     </div>
@@ -218,16 +218,16 @@ function MasterForm({
   }
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-start justify-center pt-[5vh] overflow-y-auto pb-10">
-      <div className="w-full max-w-xl rounded-2xl border border-white/[0.08] p-6" style={{ background: 'var(--legacy-hero-gradient)' }}>
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-start justify-center pt-[5vh] overflow-y-auto pb-10">
+      <div className="w-full max-w-xl rounded-2xl border border-white/8 p-6" style={{ background: 'var(--legacy-hero-gradient)' }}>
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-lg font-bold text-white">{master ? 'Edit Master' : 'Add Master'}</h2>
-          <button onClick={onClose} className="p-2 rounded-lg hover:bg-white/[0.06] text-gray-500"><X size={18} /></button>
+          <button onClick={onClose} className="p-2 rounded-lg hover:bg-white/6 text-gray-500"><X size={18} /></button>
         </div>
 
         <div className="space-y-4">
           <div className="flex items-center gap-4">
-            <div className="w-24 h-24 rounded-full border border-white/[0.08] bg-white/[0.02] overflow-hidden flex items-center justify-center cursor-pointer flex-shrink-0"
+            <div className="w-24 h-24 rounded-full border border-white/8 bg-white/2 overflow-hidden flex items-center justify-center cursor-pointer shrink-0"
               onClick={() => fileRef.current?.click()}>
               {avatarPreview ? <img src={avatarPreview} className="w-full h-full object-cover" /> : <Upload size={20} className="text-gray-600" />}
             </div>
@@ -281,7 +281,7 @@ function MasterForm({
                       className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all border ${
                         active
                           ? 'bg-primary-500/10 border-primary-500/30 text-primary-400'
-                          : 'bg-white/[0.02] border-white/[0.06] text-gray-500 hover:border-white/[0.12]'
+                          : 'bg-white/2 border-white/6 text-gray-500 hover:border-white/12'
                       }`}>
                       {s.name}
                     </button>
@@ -294,14 +294,14 @@ function MasterForm({
           <div className="flex items-center justify-between py-2">
             <span className="text-sm text-white font-medium">Active</span>
             <button type="button" onClick={() => setIsActive(!isActive)}
-              className={`w-11 h-6 rounded-full transition-all ${isActive ? 'bg-primary-500' : 'bg-white/[0.08]'}`}>
-              <div className="w-5 h-5 rounded-full bg-on-fill shadow-sm transition-all" style={{ transform: `translateX(${isActive ? '22px' : '2px'})` }} />
+              className={`w-11 h-6 rounded-full transition-all ${isActive ? 'bg-primary-500' : 'bg-white/8'}`}>
+              <div className="w-5 h-5 rounded-full bg-on-fill shadow-xs transition-all" style={{ transform: `translateX(${isActive ? '22px' : '2px'})` }} />
             </button>
           </div>
         </div>
 
-        <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-white/[0.04]">
-          <button onClick={onClose} className="px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider bg-white/[0.04] border border-white/[0.06] text-gray-400">Cancel</button>
+        <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-white/4">
+          <button onClick={onClose} className="px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider bg-white/4 border border-white/6 text-gray-400">Cancel</button>
           <button onClick={handleSubmit} disabled={saving} className="flex items-center gap-2 rounded-xl px-5 py-2.5 text-xs font-bold uppercase tracking-wider transition-all" style={btnPrimaryStyle}>
             {saving ? <RefreshCw size={14} className="animate-spin" /> : <Save size={14} />}
             {master ? 'Save' : 'Create'}
@@ -393,11 +393,11 @@ function ScheduleEditor({ master, onClose }: { master: Master; onClose: () => vo
   const timeOff = detail?.time_off || []
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-start justify-center pt-[5vh] overflow-y-auto pb-10">
-      <div className="w-full max-w-2xl rounded-2xl border border-white/[0.08] p-6" style={{ background: 'var(--legacy-hero-gradient)' }}>
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-start justify-center pt-[5vh] overflow-y-auto pb-10">
+      <div className="w-full max-w-2xl rounded-2xl border border-white/8 p-6" style={{ background: 'var(--legacy-hero-gradient)' }}>
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-lg font-bold text-white">{master.name} — Schedule & Time-off</h2>
-          <button onClick={onClose} className="p-2 rounded-lg hover:bg-white/[0.06] text-gray-500"><X size={18} /></button>
+          <button onClick={onClose} className="p-2 rounded-lg hover:bg-white/6 text-gray-500"><X size={18} /></button>
         </div>
 
         <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Weekly Hours</h3>
@@ -408,7 +408,7 @@ function ScheduleEditor({ master, onClose }: { master: Master; onClose: () => vo
               <div key={dow} className="flex items-center gap-3">
                 <button onClick={() => toggleDay(dow)}
                   className={`w-16 px-3 py-2 rounded-xl text-xs font-bold transition-all ${
-                    sch ? 'bg-primary-500/15 text-primary-400 border border-primary-500/30' : 'bg-white/[0.03] text-gray-500 border border-white/[0.06]'
+                    sch ? 'bg-primary-500/15 text-primary-400 border border-primary-500/30' : 'bg-white/3 text-gray-500 border border-white/6'
                   }`}>
                   {day}
                 </button>
@@ -433,7 +433,7 @@ function ScheduleEditor({ master, onClose }: { master: Master; onClose: () => vo
           </button>
         </div>
 
-        <hr className="my-6 border-white/[0.06]" />
+        <hr className="my-6 border-white/6" />
 
         <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Time Off</h3>
         <div className="flex items-end gap-2 mb-4">
@@ -456,7 +456,7 @@ function ScheduleEditor({ master, onClose }: { master: Master; onClose: () => vo
         ) : (
           <div className="space-y-1">
             {timeOff.map(off => (
-              <div key={off.id} className="flex items-center gap-3 px-3 py-2 rounded-xl bg-white/[0.02] border border-white/[0.04]">
+              <div key={off.id} className="flex items-center gap-3 px-3 py-2 rounded-xl bg-white/2 border border-white/4">
                 <Clock size={14} className="text-gray-500" />
                 <span className="text-sm text-white font-medium">{off.date}</span>
                 <span className="text-xs text-gray-500 flex-1">{off.reason || 'Time off'}</span>

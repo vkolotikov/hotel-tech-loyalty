@@ -64,7 +64,7 @@ function renderCustomListValue(type: string, v: any): React.ReactNode {
     return (
       <div className="flex flex-wrap gap-1 max-w-[200px]">
         {v.slice(0, 3).map((item, i) => (
-          <span key={i} className="text-[10px] px-1.5 py-0.5 rounded bg-dark-bg border border-dark-border">{item}</span>
+          <span key={i} className="text-[10px] px-1.5 py-0.5 rounded-sm bg-dark-bg border border-dark-border">{item}</span>
         ))}
         {v.length > 3 && <span className="text-[10px] text-t-secondary">+{v.length - 3}</span>}
       </div>
@@ -510,8 +510,8 @@ export function Inquiries() {
   )
 
   const showMice = MICE_TYPES.includes(form.inquiry_type)
-  const filterSel = 'bg-dark-surface border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500'
-  const inp = 'w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500'
+  const filterSel = 'bg-dark-surface border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-hidden focus:ring-2 focus:ring-primary-500'
+  const inp = 'w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-hidden focus:ring-2 focus:ring-primary-500'
 
   return (
     <div className="space-y-3">
@@ -520,7 +520,7 @@ export function Inquiries() {
           Export folded into a ⋯ overflow menu so new users see one clear
           primary action (Add inquiry) instead of four competing buttons. */}
       <div className="flex items-center justify-end gap-2 flex-wrap">
-        <button onClick={() => setShowCreate(true)} className="flex items-center gap-1.5 bg-primary-600 text-on-primary px-3 md:px-4 py-2 rounded-lg text-xs md:text-sm font-semibold hover:bg-primary-700 transition-colors shadow-sm">
+        <button onClick={() => setShowCreate(true)} className="flex items-center gap-1.5 bg-primary-600 text-on-primary px-3 md:px-4 py-2 rounded-lg text-xs md:text-sm font-semibold hover:bg-primary-700 transition-colors shadow-xs">
           <Plus size={15} /> <span className="hidden sm:inline">{t('inquiries.actions.add', 'Add inquiry')}</span><span className="sm:hidden">{t('inquiries.actions.add_short', 'Add')}</span>
         </button>
         <HeaderMenu
@@ -552,7 +552,7 @@ export function Inquiries() {
             <button key={v} onClick={() => setStageGroup(v)}
               className={`px-3 py-1.5 text-xs font-semibold rounded-xl transition-all flex items-center gap-1.5 ${stageGroup === v ? 'text-white' : 'text-gray-500 hover:text-gray-300'}`}
               style={stageGroup === v ? { backgroundImage: `linear-gradient(135deg, var(--tw-gradient-stops))`, boxShadow: '0 6px 14px rgba(0,0,0,0.2)' } : {}}>
-              <span className={stageGroup === v ? `bg-gradient-to-r ${tone} bg-clip-text text-transparent` : ''}>{label}</span>
+              <span className={stageGroup === v ? `bg-linear-to-r ${tone} bg-clip-text text-transparent` : ''}>{label}</span>
               <span className="text-[10px] tabular-nums opacity-70">{stageCounts[v]}</span>
             </button>
           ))}
@@ -605,7 +605,7 @@ export function Inquiries() {
         <div className="flex gap-3 flex-wrap">
           <div className="relative flex-1 max-w-sm">
             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-t-muted" />
-            <input value={search} onChange={e => { setSearch(e.target.value); setPage(1) }} placeholder={t('inquiries.filters.search_placeholder', 'Search guest, company…')} className="w-full bg-panel border border-dark-border rounded-lg pl-9 pr-3 py-2 text-sm text-white placeholder-t-muted focus:outline-none focus:ring-2 focus:ring-primary-500" />
+            <input value={search} onChange={e => { setSearch(e.target.value); setPage(1) }} placeholder={t('inquiries.filters.search_placeholder', 'Search guest, company…')} className="w-full bg-panel border border-dark-border rounded-lg pl-9 pr-3 py-2 text-sm text-white placeholder-t-muted focus:outline-hidden focus:ring-2 focus:ring-primary-500" />
           </div>
           {view === 'list' && (
             <select value={status} onChange={e => { setStatus(e.target.value); setPage(1) }} className={filterSel}>
@@ -719,7 +719,7 @@ export function Inquiries() {
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-dark-border bg-dark-bg/40 sticky top-0 z-10 backdrop-blur-sm">
+              <tr className="border-b border-dark-border bg-dark-bg/40 sticky top-0 z-10 backdrop-blur-xs">
                 {/* Bulk-select column is always rendered so the feature
                     is discoverable without admin opt-in. fieldCfg.list.bulk_select
                     controls visibility-at-rest. */}
@@ -738,7 +738,7 @@ export function Inquiries() {
                       else       inquiries.forEach((i: any) => next.add(i.id))
                       return next
                     })}
-                    className="rounded border-white/20 bg-white/[0.04] cursor-pointer"
+                    className="rounded-sm border-white/20 bg-white/4 cursor-pointer"
                   />
                 </th>
                 <th className="text-left px-3 py-2.5 text-[10.5px] font-bold uppercase tracking-wider text-gray-500 whitespace-nowrap">
@@ -792,7 +792,7 @@ export function Inquiries() {
                 <tr>
                   <td colSpan={20} className="px-4 py-16 text-center">
                     <div className="mx-auto max-w-[420px] flex flex-col items-center gap-3">
-                      <div className="w-14 h-14 rounded-2xl bg-white/[0.03] border border-white/[0.08] flex items-center justify-center">
+                      <div className="w-14 h-14 rounded-2xl bg-white/3 border border-white/8 flex items-center justify-center">
                         <Inbox size={26} className="text-gray-600" />
                       </div>
                       {/* Two-tier copy: the leading line names the state,
@@ -892,7 +892,7 @@ export function Inquiries() {
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
 
                           {/* ─── CUSTOMER ─────────────────────────────────────── */}
-                          <div className="rounded-xl border border-sky-500/15 bg-sky-500/[0.03] p-4">
+                          <div className="rounded-xl border border-sky-500/15 bg-sky-500/3 p-4">
                             <div className="flex items-center justify-between mb-3">
                               <div className="inline-flex items-center gap-2">
                                 <div className="w-6 h-6 rounded-md bg-sky-500/15 border border-sky-500/25 flex items-center justify-center">
@@ -906,7 +906,7 @@ export function Inquiries() {
                                 <button
                                   type="button"
                                   onClick={() => setCustomerDrawerGuestId(inq.guest.id)}
-                                  className="inline-flex items-center gap-1 text-[10.5px] font-semibold text-primary-300 hover:text-primary-200 bg-primary-500/[0.08] hover:bg-primary-500/[0.15] border border-primary-500/25 rounded-md px-2 py-1 transition-colors"
+                                  className="inline-flex items-center gap-1 text-[10.5px] font-semibold text-primary-300 hover:text-primary-200 bg-primary-500/8 hover:bg-primary-500/15 border border-primary-500/25 rounded-md px-2 py-1 transition-colors"
                                 >
                                   <UserCircle2 size={11} /> {t('inquiries.row.expanded.view_full_customer', 'View full customer')}
                                 </button>
@@ -926,12 +926,12 @@ export function Inquiries() {
                                       </span>
                                     )}
                                     {inq.guest.stays_count > 0 && (
-                                      <span className="inline-flex items-center gap-1 text-[10.5px] font-semibold px-2 py-1 rounded-md bg-white/[0.04] border border-white/10 text-gray-200">
+                                      <span className="inline-flex items-center gap-1 text-[10.5px] font-semibold px-2 py-1 rounded-md bg-white/4 border border-white/10 text-gray-200">
                                         {inq.guest.stays_count} {inq.guest.stays_count === 1 ? t('inquiries.row.expanded.stay', 'stay') : t('inquiries.row.expanded.stays', 'stays')}
                                       </span>
                                     )}
                                     {inq.guest.total_spent > 0 && (
-                                      <span className="inline-flex items-center gap-1 text-[10.5px] font-semibold px-2 py-1 rounded-md bg-emerald-500/[0.08] border border-emerald-500/25 text-emerald-300 tabular-nums">
+                                      <span className="inline-flex items-center gap-1 text-[10.5px] font-semibold px-2 py-1 rounded-md bg-emerald-500/8 border border-emerald-500/25 text-emerald-300 tabular-nums">
                                         {settings.currency_symbol}{Number(inq.guest.total_spent).toLocaleString()} {t('inquiries.row.expanded.ltv', 'LTV')}
                                       </span>
                                     )}
@@ -1019,7 +1019,7 @@ export function Inquiries() {
                           </div>
 
                           {/* ─── OPPORTUNITY (+ AI Smart Panel) ──────────────── */}
-                          <div className="rounded-xl border border-primary-500/15 bg-primary-500/[0.025] p-4">
+                          <div className="rounded-xl border border-primary-500/15 bg-primary-500/2.5 p-4">
                             <div className="inline-flex items-center gap-2 mb-3">
                               <div className="w-6 h-6 rounded-md bg-primary-500/15 border border-primary-500/25 flex items-center justify-center">
                                 <TrendingUp size={11} className="text-primary-300" strokeWidth={2.5} />
@@ -1035,14 +1035,14 @@ export function Inquiries() {
                               * Win probability already lives in the row's AI
                               * Signal cell so we don't repeat it here. */}
                             {(inq.ai_brief || inq.ai_suggested_action) && (
-                              <div className="rounded-lg border border-primary-500/25 bg-gradient-to-br from-primary-500/[0.08] to-transparent p-3 mb-3">
+                              <div className="rounded-lg border border-primary-500/25 bg-linear-to-br from-primary-500/8 to-transparent p-3 mb-3">
                                 <div className="flex items-center justify-between gap-2 mb-1.5">
                                   <div className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-primary-300">
                                     <Sparkles size={11} />
                                     {t('inquiries.row.expanded.ai_brief', 'AI Brief')}
                                   </div>
                                   {(inq.ai_going_cold_risk ?? '').toLowerCase() === 'high' && (
-                                    <span className="inline-flex items-center gap-1 text-[9.5px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-red-500/15 border border-red-500/30 text-red-300">
+                                    <span className="inline-flex items-center gap-1 text-[9.5px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-sm bg-red-500/15 border border-red-500/30 text-red-300">
                                       <Flame size={9} /> {t('inquiries.row.expanded.going_cold', 'Going cold')}
                                     </span>
                                   )}
@@ -1125,7 +1125,7 @@ export function Inquiries() {
                           </div>
 
                           {/* ─── NEXT TASK / NOTES ──────────────────────────── */}
-                          <div className="rounded-xl border border-emerald-500/15 bg-emerald-500/[0.025] p-4">
+                          <div className="rounded-xl border border-emerald-500/15 bg-emerald-500/2.5 p-4">
                             <div className="flex items-center justify-between mb-3">
                               <div className="inline-flex items-center gap-2">
                                 <div className="w-6 h-6 rounded-md bg-emerald-500/15 border border-emerald-500/25 flex items-center justify-center">
@@ -1137,7 +1137,7 @@ export function Inquiries() {
                               </div>
                               <button
                                 onClick={() => setTaskDrawer({ inquiryId: inq.id })}
-                                className="text-[10.5px] font-semibold text-emerald-300 hover:text-emerald-200 bg-emerald-500/[0.08] hover:bg-emerald-500/[0.15] border border-emerald-500/25 rounded-md px-2 py-1 inline-flex items-center gap-1 transition-colors"
+                                className="text-[10.5px] font-semibold text-emerald-300 hover:text-emerald-200 bg-emerald-500/8 hover:bg-emerald-500/15 border border-emerald-500/25 rounded-md px-2 py-1 inline-flex items-center gap-1 transition-colors"
                               >
                                 <Plus size={10} /> {t('inquiries.row.expanded.add_task', 'Add task')}
                               </button>
@@ -1159,7 +1159,7 @@ export function Inquiries() {
                                     {inq.next_task_notes}
                                   </div>
                                 )}
-                                <div className="flex items-center gap-2 mt-2.5 pt-2 border-t border-white/[0.06]">
+                                <div className="flex items-center gap-2 mt-2.5 pt-2 border-t border-white/6">
                                   <button
                                     onClick={() => completeMutation.mutate(inq.id)}
                                     className="text-[11px] font-medium text-emerald-400 hover:text-emerald-300 inline-flex items-center gap-1"
@@ -1187,7 +1187,7 @@ export function Inquiries() {
                                 </div>
                               </div>
                             ) : inq.next_task_completed ? (
-                              <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/[0.06] p-3 inline-flex items-center gap-2 text-[12px] text-emerald-300 font-semibold">
+                              <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/6 p-3 inline-flex items-center gap-2 text-[12px] text-emerald-300 font-semibold">
                                 <CheckCircle2 size={13} /> {t('inquiries.row.expanded.task_done', 'Task complete')}
                               </div>
                             ) : (
@@ -1196,7 +1196,7 @@ export function Inquiries() {
                               </div>
                             )}
 
-                            <div className="mt-4 pt-4 border-t border-white/[0.05]">
+                            <div className="mt-4 pt-4 border-t border-white/5">
                               <div className="flex items-center gap-1.5 mb-2">
                                 <FileText size={11} className="text-emerald-400/70" />
                                 <div className="text-[10.5px] uppercase tracking-wider text-emerald-300/80 font-bold">
@@ -1215,7 +1215,7 @@ export function Inquiries() {
                               <button
                                 type="button"
                                 onClick={() => setInquiryDrawerId(inq.id)}
-                                className="mt-3 inline-flex items-center gap-1 text-[11px] font-semibold text-primary-300 hover:text-primary-200 bg-primary-500/[0.06] hover:bg-primary-500/[0.12] border border-primary-500/20 rounded-md px-2 py-1 transition-colors"
+                                className="mt-3 inline-flex items-center gap-1 text-[11px] font-semibold text-primary-300 hover:text-primary-200 bg-primary-500/6 hover:bg-primary-500/12 border border-primary-500/20 rounded-md px-2 py-1 transition-colors"
                               >
                                 <Eye size={11} /> {t('inquiries.row.expanded.open_detail', 'Open full detail')}
                               </button>
@@ -1261,9 +1261,9 @@ export function Inquiries() {
                   e.preventDefault()
                   if (dragging !== null) statusMutation.mutate({ id: dragging, status: col })
                 }}
-                className={`flex-shrink-0 w-[280px] rounded-2xl border flex flex-col transition-all ${isDropTarget ? 'border-primary-400/40 ring-1 ring-primary-400/20' : 'border-white/[0.06]'}`}
+                className={`shrink-0 w-[280px] rounded-2xl border flex flex-col transition-all ${isDropTarget ? 'border-primary-400/40 ring-1 ring-primary-400/20' : 'border-white/6'}`}
                 style={{ background: 'var(--legacy-card-gradient)' }}>
-                <div className="px-3 py-2.5 border-b border-white/[0.06] sticky top-0 z-10"
+                <div className="px-3 py-2.5 border-b border-white/6 sticky top-0 z-10"
                   style={{ background: 'var(--legacy-card-deep)' }}>
                   <div className="flex items-center justify-between gap-2">
                     <span
@@ -1272,7 +1272,7 @@ export function Inquiries() {
                     >
                       {col}
                     </span>
-                    <span className="text-[10px] text-gray-500 font-bold tabular-nums flex-shrink-0">{cards.length}</span>
+                    <span className="text-[10px] text-gray-500 font-bold tabular-nums shrink-0">{cards.length}</span>
                   </div>
                   {columnTotal > 0 && (
                     <div className="mt-1 text-[10px] text-gray-500 tabular-nums">
@@ -1321,7 +1321,7 @@ export function Inquiries() {
                         ? { label: t('inquiries.row.age_fresh', 'Fresh'), cls: 'text-emerald-300/90 bg-emerald-500/10 border-emerald-500/20' }
                         : ((daysSinceContact === null && ageDays >= 7) || (daysSinceContact !== null && daysSinceContact >= 7))
                           ? { label: t('inquiries.row.age_cold', { d: daysSinceContact ?? ageDays, defaultValue: 'Cold {{d}}d' }), cls: 'text-amber-300/90 bg-amber-500/10 border-amber-500/20' }
-                          : { label: t('inquiries.row.age_days', { d: ageDays, defaultValue: '{{d}}d old' }), cls: 'text-gray-500 bg-white/[0.02] border-white/10' }
+                          : { label: t('inquiries.row.age_days', { d: ageDays, defaultValue: '{{d}}d old' }), cls: 'text-gray-500 bg-white/2 border-white/10' }
                     const priorityStripe = inq.priority === 'High'
                       ? 'inset 3px 0 0 #ef4444'
                       : inq.priority === 'Medium'
@@ -1333,7 +1333,7 @@ export function Inquiries() {
                         draggable
                         onDragStart={() => setDragging(inq.id)}
                         onDragEnd={() => setDragging(null)}
-                        className="rounded-xl border border-white/[0.06] bg-white/[0.025] p-3 cursor-grab active:cursor-grabbing hover:border-white/15 hover:bg-white/[0.04] transition-all"
+                        className="rounded-xl border border-white/6 bg-white/2.5 p-3 cursor-grab active:cursor-grabbing hover:border-white/15 hover:bg-white/4 transition-all"
                         style={{
                           opacity: isDragging ? 0.4 : 1,
                           boxShadow: priorityStripe ?? undefined,
@@ -1341,7 +1341,7 @@ export function Inquiries() {
                         <div className="flex items-start gap-2 mb-1.5">
                           {scoreColor && (
                             <span
-                              className={`flex-shrink-0 inline-flex items-center justify-center w-7 h-6 rounded-md text-[10px] font-bold tabular-nums border ${scoreColor.bg} ${scoreColor.text} ${scoreColor.border}`}
+                              className={`shrink-0 inline-flex items-center justify-center w-7 h-6 rounded-md text-[10px] font-bold tabular-nums border ${scoreColor.bg} ${scoreColor.text} ${scoreColor.border}`}
                               title={t('inquiries.score.tooltip', 'AI win probability')}
                             >
                               {score}
@@ -1360,7 +1360,7 @@ export function Inquiries() {
                               </button>
                               {ageChip && (
                                 <span
-                                  className={`flex-shrink-0 inline-flex items-center text-[8px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border ${ageChip.cls}`}
+                                  className={`shrink-0 inline-flex items-center text-[8px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-sm border ${ageChip.cls}`}
                                 >
                                   {ageChip.label}
                                 </span>
@@ -1385,7 +1385,7 @@ export function Inquiries() {
                             <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold ${SOURCE_BADGES[inq.source].cls}`}>{SOURCE_BADGES[inq.source].label}</span>
                           )}
                           {inq.total_value && (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-emerald-500/[0.08] border border-emerald-500/20 text-emerald-300 text-[11px] font-bold tabular-nums ml-auto">
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-emerald-500/8 border border-emerald-500/20 text-emerald-300 text-[11px] font-bold tabular-nums ml-auto">
                               {settings.currency_symbol}{Number(inq.total_value).toLocaleString()}
                             </span>
                           )}
@@ -1652,7 +1652,7 @@ export function Inquiries() {
           next_task_* via PUT /inquiries/{id}; "Clear" wipes them so a
           stale follow-up doesn't keep flagging the row as overdue. */}
       {taskFor && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setTaskFor(null)}>
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center z-50 p-4" onClick={() => setTaskFor(null)}>
           <div className="bg-dark-surface border border-dark-border rounded-2xl w-full max-w-md p-5" onClick={e => e.stopPropagation()}>
             <h2 className="text-lg font-bold text-white mb-1">{taskFor.type ? 'Edit Task' : 'Set Task'}</h2>
             <p className="text-xs text-t-secondary mb-4">Track the next thing to do on this inquiry — call, follow-up email, send proposal, etc.</p>
@@ -1730,10 +1730,10 @@ export function Inquiries() {
               return opts.map(o => (
                 <button key={o.name} onClick={() => statusMutation.mutate({ id: openMenu.id, status: o.name })}
                   disabled={statusMutation.isPending || o.name === current}
-                  className={`w-full text-left px-3 py-1.5 text-xs hover:bg-white/[0.05] disabled:opacity-40 flex items-center gap-2 ${o.name === current ? 'text-emerald-400 font-semibold' : 'text-gray-300'}`}>
+                  className={`w-full text-left px-3 py-1.5 text-xs hover:bg-white/5 disabled:opacity-40 flex items-center gap-2 ${o.name === current ? 'text-emerald-400 font-semibold' : 'text-gray-300'}`}>
                   {o.color
-                    ? <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: o.color }} />
-                    : <span className="w-2 flex-shrink-0" />}
+                    ? <span className="w-2 h-2 rounded-full shrink-0" style={{ background: o.color }} />
+                    : <span className="w-2 shrink-0" />}
                   {o.name === current ? '✓ ' : ''}{o.name}
                 </button>
               ))
@@ -1743,7 +1743,7 @@ export function Inquiries() {
               return (
                 <button key={p} onClick={() => priorityMutation.mutate({ id: openMenu.id, priority: p })}
                   disabled={priorityMutation.isPending || p === inq.priority}
-                  className={`w-full text-left px-3 py-1.5 text-xs hover:bg-white/[0.05] disabled:opacity-40 font-bold ${cls}`}>
+                  className={`w-full text-left px-3 py-1.5 text-xs hover:bg-white/5 disabled:opacity-40 font-bold ${cls}`}>
                   {p === inq.priority && '✓ '}{p}
                 </button>
               )
@@ -1752,7 +1752,7 @@ export function Inquiries() {
               <>
                 {inq.next_task_type && !inq.next_task_completed && (
                   <button onClick={() => { completeMutation.mutate(openMenu.id); setOpenMenu(null) }}
-                    className="w-full text-left px-3 py-2 text-xs flex items-center gap-2 text-gray-300 hover:bg-white/[0.06]">
+                    className="w-full text-left px-3 py-2 text-xs flex items-center gap-2 text-gray-300 hover:bg-white/6">
                     <CheckCircle2 size={12} /> Complete Task
                   </button>
                 )}
@@ -1765,19 +1765,19 @@ export function Inquiries() {
                     })
                     setOpenMenu(null)
                   }}
-                  className="w-full text-left px-3 py-2 text-xs flex items-center gap-2 text-gray-300 hover:bg-white/[0.06]">
+                  className="w-full text-left px-3 py-2 text-xs flex items-center gap-2 text-gray-300 hover:bg-white/6">
                   <AlertCircle size={12} /> {inq.next_task_type ? 'Edit Task' : 'Set Task'}
                 </button>
                 {/* Open the lead in the new left-side drawer instead of
                     navigating to /inquiries/:id (the standalone page is
                     being phased out — the drawer carries the same edits). */}
                 <button onClick={() => { const id = openMenu.id; setOpenMenu(null); setInquiryDrawerId(id) }}
-                  className="w-full text-left px-3 py-2 text-xs flex items-center gap-2 text-gray-300 hover:bg-white/[0.06]">
+                  className="w-full text-left px-3 py-2 text-xs flex items-center gap-2 text-gray-300 hover:bg-white/6">
                   <Eye size={12} /> {t('inquiries.menu.open_lead', 'Open lead details')}
                 </button>
                 {inq.guest?.id && (
                   <button onClick={() => { const gid = inq.guest!.id; setOpenMenu(null); setCustomerDrawerGuestId(gid) }}
-                    className="w-full text-left px-3 py-2 text-xs flex items-center gap-2 text-gray-300 hover:bg-white/[0.06]">
+                    className="w-full text-left px-3 py-2 text-xs flex items-center gap-2 text-gray-300 hover:bg-white/6">
                     <UserCircle2 size={12} /> {t('inquiries.menu.edit_customer', 'Edit customer details')}
                   </button>
                 )}
@@ -1808,7 +1808,7 @@ export function Inquiries() {
           settings; status changes go through the same hook that
           auto-creates a reservation when status flips to Confirmed. */}
       {selected.size > 0 && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 border border-white/10 rounded-2xl shadow-2xl p-3 flex items-center gap-2 backdrop-blur flex-wrap"
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 border border-white/10 rounded-2xl shadow-2xl p-3 flex items-center gap-2 backdrop-blur-sm flex-wrap"
           style={{ background: 'var(--legacy-card)', boxShadow: '0 20px 40px rgba(0,0,0,0.5)' }}>
           <span className="px-3 py-1.5 text-xs font-bold text-white tabular-nums">{selected.size} selected</span>
           <div className="h-5 w-px bg-white/10" />
@@ -1869,7 +1869,7 @@ export function Inquiries() {
           </button>
           <div className="h-5 w-px bg-white/10" />
           <button onClick={() => setSelected(new Set())} title={t('inquiries.bulk.clear_tooltip', 'Clear selection (Esc)')}
-            className="flex items-center gap-1.5 p-1.5 px-2 rounded-lg text-gray-500 hover:text-white hover:bg-white/[0.06]">
+            className="flex items-center gap-1.5 p-1.5 px-2 rounded-lg text-gray-500 hover:text-white hover:bg-white/6">
             <XIcon size={14} />
             <span className="hidden md:inline text-[10px] font-mono uppercase opacity-60">Esc</span>
           </button>
@@ -1895,7 +1895,7 @@ export function Inquiries() {
                   onChange={e => setCaptureText(e.target.value)}
                   rows={8}
                   placeholder="Paste the email or message here..."
-                  className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-t-muted focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none"
+                  className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-t-muted focus:outline-hidden focus:ring-2 focus:ring-primary-500 resize-none"
                 />
                 <div className="flex justify-end gap-3">
                   <button type="button" onClick={() => setShowCapture(false)} className="px-4 py-2 text-sm text-t-soft hover:text-white">Cancel</button>
@@ -2256,7 +2256,7 @@ function GuestPicker({ value, onChange, className }: { value: string; onChange: 
       )}
 
       {creating && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[60] p-4" onClick={() => setCreating(false)}>
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-60 p-4" onClick={() => setCreating(false)}>
           <div className="bg-dark-surface border border-dark-border rounded-xl p-5 w-full max-w-sm" onClick={e => e.stopPropagation()}>
             <h3 className="text-sm font-bold text-white mb-3 flex items-center gap-2">
               <Plus size={14} className="text-accent" /> New guest
@@ -2355,7 +2355,7 @@ function HeaderMenu({
         <div className="absolute right-0 top-full mt-1.5 w-56 rounded-xl border border-dark-border bg-panel-dim shadow-2xl py-1.5 z-30">
           <button
             onClick={() => { onToggleFocus(); setOpen(false) }}
-            className="w-full flex items-center gap-2.5 px-3 py-2 text-xs text-t-secondary hover:bg-white/[0.04] hover:text-white transition-colors"
+            className="w-full flex items-center gap-2.5 px-3 py-2 text-xs text-t-secondary hover:bg-white/4 hover:text-white transition-colors"
           >
             {focusMode ? <EyeOff size={14} className="text-primary-400" /> : <Eye size={14} />}
             <span className="flex-1 text-left">{focusMode ? t('inquiries.focus.exit_label', 'Exit focus mode') : t('inquiries.focus.enter_label', 'Focus mode')}</span>
@@ -2363,7 +2363,7 @@ function HeaderMenu({
           </button>
           <button
             onClick={() => { onCapture(); setOpen(false) }}
-            className="w-full flex items-center gap-2.5 px-3 py-2 text-xs text-t-secondary hover:bg-white/[0.04] hover:text-white transition-colors"
+            className="w-full flex items-center gap-2.5 px-3 py-2 text-xs text-t-secondary hover:bg-white/4 hover:text-white transition-colors"
           >
             <Sparkles size={14} className="text-purple-400" />
             <span className="flex-1 text-left">{t('inquiries.actions.ai_capture', 'AI Capture')}</span>
@@ -2371,7 +2371,7 @@ function HeaderMenu({
           <button
             onClick={() => { onExport(); setOpen(false) }}
             disabled={exporting}
-            className="w-full flex items-center gap-2.5 px-3 py-2 text-xs text-t-secondary hover:bg-white/[0.04] hover:text-white transition-colors disabled:opacity-50"
+            className="w-full flex items-center gap-2.5 px-3 py-2 text-xs text-t-secondary hover:bg-white/4 hover:text-white transition-colors disabled:opacity-50"
           >
             <Download size={14} />
             <span className="flex-1 text-left">{exporting ? t('inquiries.actions.exporting', 'Exporting…') : t('inquiries.actions.export', 'Export Excel')}</span>
@@ -2380,7 +2380,7 @@ function HeaderMenu({
           <Link
             to="/pipeline?tab=insights"
             onClick={() => setOpen(false)}
-            className="w-full flex items-center gap-2.5 px-3 py-2 text-xs text-t-secondary hover:bg-white/[0.04] hover:text-white transition-colors"
+            className="w-full flex items-center gap-2.5 px-3 py-2 text-xs text-t-secondary hover:bg-white/4 hover:text-white transition-colors"
           >
             <Sparkles size={14} className="text-amber-400" />
             <span className="flex-1 text-left">{t('inquiries.quick_stats.insights', 'Insights dashboard')}</span>

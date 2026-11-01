@@ -26,7 +26,7 @@ export function BrandBadge({ brandId }: { brandId: number | null | undefined }) 
 
   return (
     <span
-      className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wide bg-dark-surface2 text-t-secondary"
+      className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-sm text-[10px] font-semibold uppercase tracking-wide bg-dark-surface2 text-t-secondary"
       style={{
         borderLeft: `2px solid ${brand.primary_color ?? '#666'}`,
         paddingLeft: 6,

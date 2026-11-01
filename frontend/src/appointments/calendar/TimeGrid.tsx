@@ -216,7 +216,7 @@ export function TimeGrid({ columns, appointments, now, today, selectedId, onSlot
                   aria-describedby={current?.key === `slot:${i}:${m}` ? 'calendar-keys-hint' : undefined}
                   onFocus={() => setActiveKey(`slot:${i}:${m}`)}
                   aria-label={t('appointments.calendar.book_at', 'Book {{name}} at {{time}}', { name: col.master.name, time: hhmm(m) })}
-                  className="group absolute inset-x-0 rounded text-left text-xs text-a-accent-text hover:bg-a-accent/10 focus-visible:bg-a-accent/10"
+                  className="group absolute inset-x-0 rounded-sm text-left text-xs text-a-accent-text hover:bg-a-accent/10 focus-visible:bg-a-accent/10"
                   style={{ top: (m - startMin) * PX_PER_MIN, height: SLOT_STEP * PX_PER_MIN }}>
                   <span className="px-2 opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100">+ {hhmm(m)}</span>
                 </button>
@@ -257,7 +257,7 @@ export function TimeGrid({ columns, appointments, now, today, selectedId, onSlot
 
               {showNow && (
                 <div data-now-line="" className="absolute inset-x-0 z-10 border-t-2 border-a-now pointer-events-none" style={{ top: (now.minutes - startMin) * PX_PER_MIN }} aria-hidden>
-                  <span className="absolute -left-1.5 -top-[7px] h-3 w-3 rounded-full bg-a-now animate-a-pulse" />
+                  <span className="absolute -left-1.5 top-[-7px] h-3 w-3 rounded-full bg-a-now animate-a-pulse" />
                 </div>
               )}
             </div>

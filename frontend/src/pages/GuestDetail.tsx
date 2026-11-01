@@ -153,12 +153,12 @@ export function GuestDetail() {
               </h1>
               <div className="flex items-center gap-3 mt-1">
                 {g.vip_level && (
-                  <span className="px-2 py-0.5 bg-amber-500/20 text-amber-400 rounded text-xs font-medium">
+                  <span className="px-2 py-0.5 bg-amber-500/20 text-amber-400 rounded-sm text-xs font-medium">
                     {t('guest_detail.vip_prefix', { level: g.vip_level, defaultValue: 'VIP {{level}}' })}
                   </span>
                 )}
                 {g.loyalty_tier && (
-                  <span className="px-2 py-0.5 bg-purple-500/20 text-purple-400 rounded text-xs font-medium">
+                  <span className="px-2 py-0.5 bg-purple-500/20 text-purple-400 rounded-sm text-xs font-medium">
                     {g.loyalty_tier}
                   </span>
                 )}
@@ -379,7 +379,7 @@ function OverviewTab({ guest, editing, form, setForm, saving, onSave }: {
   );
 }
 
-const inp = 'w-full bg-hx-0f0f1a border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-amber-500';
+const inp = 'w-full bg-hx-0f0f1a border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-hidden focus:ring-2 focus:ring-amber-500';
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -417,7 +417,7 @@ function InquiriesTab({ data }: { data: any }) {
         <div key={i} className="bg-dark-surface border border-white/10 rounded-xl p-4">
           <div className="flex justify-between items-start mb-2">
             <h4 className="text-white font-medium">{item.subject || t('guest_detail.inquiry_default', { n: i + 1, defaultValue: 'Inquiry #{{n}}' })}</h4>
-            <span className={'px-2 py-0.5 rounded text-xs ' +
+            <span className={'px-2 py-0.5 rounded-sm text-xs ' +
               (item.status === 'resolved' ? 'bg-green-500/20 text-green-400' :
                item.status === 'pending' ? 'bg-yellow-500/20 text-yellow-400' :
                'bg-gray-500/20 text-gray-400')}>
@@ -466,7 +466,7 @@ function ReservationsTab({ data }: { data: any }) {
               <td className="py-3 text-gray-300">{r.check_out || r.check_out_date || '\u2014'}</td>
               <td className="py-3 text-gray-300">{r.room_type || r.room || '\u2014'}</td>
               <td className="py-3">
-                <span className={'px-2 py-0.5 rounded text-xs ' +
+                <span className={'px-2 py-0.5 rounded-sm text-xs ' +
                   (r.status === 'confirmed' ? 'bg-green-500/20 text-green-400' :
                    r.status === 'cancelled' ? 'bg-red-500/20 text-red-400' :
                    'bg-gray-500/20 text-gray-400')}>

@@ -93,7 +93,7 @@ export function PushEditor({ answer }: { answer: PushAnswer }) {
     <div className="l-cm-message-editor space-y-6">
       <div className="flex flex-wrap items-start gap-x-6 gap-y-3">
         <div className="min-w-0 space-y-2">
-          <h2 className="break-words font-a-display text-3xl font-normal leading-tight text-a-text">{p.name}</h2>
+          <h2 className="wrap-break-word font-a-display text-3xl font-normal leading-tight text-a-text">{p.name}</h2>
           <div className="flex flex-wrap items-center gap-2 text-sm text-a-text-2">
             <StatusBadge status={p.status} />
             {dirty && <span data-unsaved="">{t('loyalty.push.editor.unsaved', 'Changes not saved')}</span>}

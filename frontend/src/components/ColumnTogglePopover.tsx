@@ -179,7 +179,7 @@ export default function ColumnTogglePopover({ settingKey, section, fields }: Col
                   type="button"
                   disabled={f.alwaysOn || saveMutation.isPending}
                   onClick={() => toggle(f.key)}
-                  className={`w-full text-left px-2.5 py-2 rounded-md flex items-start gap-2.5 transition-colors ${f.alwaysOn ? 'cursor-default' : 'hover:bg-white/[0.04] disabled:opacity-60'}`}>
+                  className={`w-full text-left px-2.5 py-2 rounded-md flex items-start gap-2.5 transition-colors ${f.alwaysOn ? 'cursor-default' : 'hover:bg-white/4 disabled:opacity-60'}`}>
                   {/* Switch */}
                   <span
                     className={`relative inline-flex shrink-0 h-4 w-7 mt-0.5 items-center rounded-full transition-colors ${on ? 'bg-primary-500' : 'bg-white/10'} ${f.alwaysOn ? 'opacity-60' : ''}`}

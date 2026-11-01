@@ -209,8 +209,8 @@ export function IndustryMismatchBanner() {
           error). Sits above the main content; Layout already gives the
           main area its own padding so this banner stretches edge-to-
           edge under the topbar. */}
-      <div className="bg-amber-500/[0.08] border-b border-amber-500/30 text-amber-100 px-4 lg:px-6 py-2.5 flex items-center gap-3 text-sm">
-        <AlertTriangle size={16} className="text-amber-400 flex-shrink-0" />
+      <div className="bg-amber-500/8 border-b border-amber-500/30 text-amber-100 px-4 lg:px-6 py-2.5 flex items-center gap-3 text-sm">
+        <AlertTriangle size={16} className="text-amber-400 shrink-0" />
         <span className="flex-1 min-w-0">
           You're on <strong className="text-white">{hostCopy.brand}</strong> but your workspace is
           configured as <strong className="text-white">{orgCopy.brand}</strong>.
@@ -225,7 +225,7 @@ export function IndustryMismatchBanner() {
         <button
           type="button"
           onClick={dismiss}
-          className="text-amber-300 hover:text-white transition-colors p-1 -m-1 rounded"
+          className="text-amber-300 hover:text-white transition-colors p-1 -m-1 rounded-sm"
           aria-label="Dismiss for this session"
           title="Dismiss for this session (will return next time)"
         >
@@ -236,7 +236,7 @@ export function IndustryMismatchBanner() {
       {/* Confirmation modal — only renders once openConfirm has resolved. */}
       {modalOpen && (
         <div
-          className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4"
+          className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4"
           onClick={() => !submitting && setModalOpen(false)}
         >
           <div

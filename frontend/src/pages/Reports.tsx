@@ -143,9 +143,9 @@ function FunnelCard({ months }: { months: number }) {
               return (
                 <div key={s.stage} className="flex items-center gap-3">
                   <span className="w-32 text-xs font-semibold text-t-secondary">{s.stage}</span>
-                  <div className="flex-1 relative h-7 bg-dark-bg rounded">
+                  <div className="flex-1 relative h-7 bg-dark-bg rounded-sm">
                     <div
-                      className="h-full rounded transition-all"
+                      className="h-full rounded-sm transition-all"
                       style={{
                         width: `${pct}%`,
                         background: STAGE_PALETTE[i] ?? COLORS.slate,
@@ -270,7 +270,7 @@ function LostReasonsCard({ months }: { months: number }) {
               {data.reasons.map((r: any, i: number) => (
                 <div key={r.label} className="flex items-center gap-2 text-xs">
                   <span
-                    className="w-2 h-2 rounded-sm flex-shrink-0"
+                    className="w-2 h-2 rounded-xs shrink-0"
                     style={{ background: PIE_PALETTE[i % PIE_PALETTE.length] }}
                   />
                   <span className="text-white flex-1 truncate">{r.label}</span>
@@ -389,7 +389,7 @@ function Pill({ icon, label, color, muted }: { icon?: React.ReactNode; label: an
   const ink = useDataInk()
   return (
     <span
-      className={`flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold tabular-nums ${muted ? '' : 'border'}`}
+      className={`flex items-center gap-1 px-2 py-0.5 rounded-sm text-[10px] font-bold tabular-nums ${muted ? '' : 'border'}`}
       style={{
         color: ink(color),
         background: muted ? 'transparent' : color + '15',

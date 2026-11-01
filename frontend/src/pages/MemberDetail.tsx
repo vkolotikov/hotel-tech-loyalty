@@ -259,17 +259,17 @@ export function MemberDetail() {
       <div className="bg-dark-surface rounded-2xl border border-dark-border overflow-hidden">
         <div className="p-5 md:p-6 flex flex-col gap-5">
           <div className="flex items-start gap-3 md:gap-4">
-            <button onClick={() => navigate('/members')} className="p-2 hover:bg-dark-surface2 rounded-lg transition-colors flex-shrink-0 mt-1">
+            <button onClick={() => navigate('/members')} className="p-2 hover:bg-dark-surface2 rounded-lg transition-colors shrink-0 mt-1">
               <ArrowLeft size={18} className="text-t-soft" />
             </button>
             {user?.avatar_url ? (
               <img
                 src={resolveImage(user.avatar_url)!}
                 alt={user.name}
-                className="w-14 h-14 md:w-16 md:h-16 rounded-full object-cover border-2 border-dark-border flex-shrink-0"
+                className="w-14 h-14 md:w-16 md:h-16 rounded-full object-cover border-2 border-dark-border shrink-0"
               />
             ) : (
-              <div className="w-14 h-14 md:w-16 md:h-16 rounded-full bg-primary-500/20 flex items-center justify-center flex-shrink-0">
+              <div className="w-14 h-14 md:w-16 md:h-16 rounded-full bg-primary-500/20 flex items-center justify-center shrink-0">
                 <span className="text-xl md:text-2xl font-bold text-primary-400">{user?.name?.charAt(0)}</span>
               </div>
             )}
@@ -289,7 +289,7 @@ export function MemberDetail() {
 
             {/* Header action cluster — review, AI, kebab. Kebab hides
                 destructive surface area (deactivate / delete) until needed. */}
-            <div className="flex items-center gap-2 flex-shrink-0">
+            <div className="flex items-center gap-2 shrink-0">
               {member?.id && <SendReviewButton target={{ memberId: member.id }} />}
               {memberDetailCfg.ai_analysis_button && (isAdmin || staff?.can_view_analytics) && (
                 <button
@@ -510,7 +510,7 @@ export function MemberDetail() {
                   placeholder={t('memberDetail.adjust.points_placeholder', 'Points')}
                   value={pointsForm.points}
                   onChange={e => setPointsForm(f => ({ ...f, points: e.target.value }))}
-                  className={`w-full bg-panel border border-dark-border rounded-lg px-3 py-2.5 text-xl font-bold text-center tabular-nums focus:outline-none focus:ring-2 mb-2 ${
+                  className={`w-full bg-panel border border-dark-border rounded-lg px-3 py-2.5 text-xl font-bold text-center tabular-nums focus:outline-hidden focus:ring-2 mb-2 ${
                     pointsMode === 'award' ? 'text-emerald-400 focus:ring-emerald-500' : 'text-red-400 focus:ring-red-500'
                   }`}
                 />
@@ -532,7 +532,7 @@ export function MemberDetail() {
                     : t('memberDetail.adjust.reason_redeem', 'Reason (e.g. Room upgrade)')}
                   value={pointsForm.description}
                   onChange={e => setPointsForm(f => ({ ...f, description: e.target.value }))}
-                  className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-t-muted mb-3 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-t-muted mb-3 focus:outline-hidden focus:ring-2 focus:ring-primary-500"
                 />
                 <button
                   onClick={() => (pointsMode === 'award' ? awardMutation : redeemMutation).mutate()}
@@ -736,7 +736,7 @@ export function MemberDetail() {
                       <Link
                         key={r.id}
                         to={`/bookings/${r.id}`}
-                        className="flex items-center justify-between text-xs bg-dark-surface2 rounded-lg px-3 py-2 hover:bg-white/[0.04] hover:ring-1 hover:ring-primary-500/30 transition cursor-pointer"
+                        className="flex items-center justify-between text-xs bg-dark-surface2 rounded-lg px-3 py-2 hover:bg-white/4 hover:ring-1 hover:ring-primary-500/30 transition cursor-pointer"
                       >
                         <div>
                           <span className="text-white font-medium">{r.property?.name ?? 'Property'}</span>
@@ -767,7 +767,7 @@ export function MemberDetail() {
                       <Link
                         key={inq.id}
                         to={`/inquiries/${inq.id}`}
-                        className="flex items-center justify-between text-xs bg-dark-surface2 rounded-lg px-3 py-2 hover:bg-white/[0.04] hover:ring-1 hover:ring-primary-500/30 transition cursor-pointer"
+                        className="flex items-center justify-between text-xs bg-dark-surface2 rounded-lg px-3 py-2 hover:bg-white/4 hover:ring-1 hover:ring-primary-500/30 transition cursor-pointer"
                       >
                         <div className="flex-1 min-w-0">
                           <span className="text-white font-medium truncate block">{inq.subject || inq.inquiry_type}</span>
@@ -836,23 +836,23 @@ export function MemberDetail() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div>
                     <label className="block text-xs font-medium text-t-secondary mb-1">Name</label>
-                    <input type="text" value={editForm.name} onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))} className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500" />
+                    <input type="text" value={editForm.name} onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))} className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-hidden focus:ring-2 focus:ring-primary-500" />
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-t-secondary mb-1">Email</label>
-                    <input type="email" value={editForm.email} onChange={e => setEditForm(f => ({ ...f, email: e.target.value }))} className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500" />
+                    <input type="email" value={editForm.email} onChange={e => setEditForm(f => ({ ...f, email: e.target.value }))} className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-hidden focus:ring-2 focus:ring-primary-500" />
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-t-secondary mb-1">Phone</label>
-                    <input type="tel" value={editForm.phone} onChange={e => setEditForm(f => ({ ...f, phone: e.target.value }))} className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500" placeholder="+1 234 567 8900" />
+                    <input type="tel" value={editForm.phone} onChange={e => setEditForm(f => ({ ...f, phone: e.target.value }))} className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-hidden focus:ring-2 focus:ring-primary-500" placeholder="+1 234 567 8900" />
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-t-secondary mb-1">Nationality</label>
-                    <input type="text" value={editForm.nationality} onChange={e => setEditForm(f => ({ ...f, nationality: e.target.value }))} className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500" />
+                    <input type="text" value={editForm.nationality} onChange={e => setEditForm(f => ({ ...f, nationality: e.target.value }))} className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-hidden focus:ring-2 focus:ring-primary-500" />
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-t-secondary mb-1">Language</label>
-                    <input type="text" value={editForm.language} onChange={e => setEditForm(f => ({ ...f, language: e.target.value }))} className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500" placeholder="en" />
+                    <input type="text" value={editForm.language} onChange={e => setEditForm(f => ({ ...f, language: e.target.value }))} className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-hidden focus:ring-2 focus:ring-primary-500" placeholder="en" />
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-t-secondary mb-1">Date of Birth</label>
@@ -860,7 +860,7 @@ export function MemberDetail() {
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-t-secondary mb-1">Tier</label>
-                    <select value={editForm.tier_id} onChange={e => setEditForm(f => ({ ...f, tier_id: e.target.value }))} className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500">
+                    <select value={editForm.tier_id} onChange={e => setEditForm(f => ({ ...f, tier_id: e.target.value }))} className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-hidden focus:ring-2 focus:ring-primary-500">
                       {(tiersData?.tiers ?? []).map((t: any) => (
                         <option key={t.id} value={t.id}>{t.name}</option>
                       ))}
@@ -872,7 +872,7 @@ export function MemberDetail() {
                       type="date"
                       value={editForm.tier_override_until}
                       onChange={e => setEditForm(f => ({ ...f, tier_override_until: e.target.value }))}
-                      className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-hidden focus:ring-2 focus:ring-primary-500"
                     />
                   </div>
                 </div>

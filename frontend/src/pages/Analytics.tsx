@@ -406,8 +406,8 @@ export function Analytics() {
           shaped widgets are intentionally hidden. The loyalty side
           (members, points, engagement, etc.) still works for them. */}
       {!isHotelIndustry && (
-        <div className="rounded-xl bg-amber-500/[0.06] border border-amber-500/30 p-4 flex items-start gap-3">
-          <AlertTriangle size={18} className="text-amber-400 mt-0.5 flex-shrink-0" />
+        <div className="rounded-xl bg-amber-500/6 border border-amber-500/30 p-4 flex items-start gap-3">
+          <AlertTriangle size={18} className="text-amber-400 mt-0.5 shrink-0" />
           <div className="flex-1 text-sm">
             <div className="font-semibold text-amber-200 mb-0.5">
               Hotel-specific analytics are hidden on this workspace
@@ -574,7 +574,7 @@ export function Analytics() {
               <div className="flex gap-1 bg-dark-surface2 rounded-lg p-1">
                 {POINTS_RANGES.map(r => (
                   <button key={r.days} onClick={() => setPointsDays(r.days)}
-                    className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${pointsDays === r.days ? 'bg-primary-600 text-on-primary shadow-sm' : 'text-t-secondary hover:text-white'}`}>
+                    className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${pointsDays === r.days ? 'bg-primary-600 text-on-primary shadow-xs' : 'text-t-secondary hover:text-white'}`}>
                     {t(`analytics.ranges.${r.labelKey}`)}
                   </button>
                 ))}
@@ -624,7 +624,7 @@ export function Analytics() {
                     const pct = total > 0 ? Math.round((tier.count / total) * 100) : 0
                     return (
                       <div key={i} className="flex items-center gap-2">
-                        <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: TIER_COLORS[i % TIER_COLORS.length] }} />
+                        <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: TIER_COLORS[i % TIER_COLORS.length] }} />
                         <div className="flex-1">
                           <div className="flex justify-between mb-0.5">
                             <span className="text-xs font-medium text-hx-e0e0e0">{tier.tier}</span>
@@ -666,7 +666,7 @@ export function Analytics() {
               <div className="flex gap-1 bg-dark-surface2 rounded-lg p-1">
                 {GROWTH_RANGES.map(r => (
                   <button key={r.months} onClick={() => setGrowthMonths(r.months)}
-                    className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${growthMonths === r.months ? 'bg-primary-600 text-on-primary shadow-sm' : 'text-t-secondary hover:text-white'}`}>
+                    className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${growthMonths === r.months ? 'bg-primary-600 text-on-primary shadow-xs' : 'text-t-secondary hover:text-white'}`}>
                     {t(`analytics.ranges.${r.labelKey}`)}
                   </button>
                 ))}
@@ -705,7 +705,7 @@ export function Analytics() {
                       <td className="py-3 text-t-muted font-bold">{i + 1}</td>
                       <td className="py-3">
                         <div className="flex items-center gap-3">
-                          <div className="w-7 h-7 rounded-full bg-primary-500/20 flex items-center justify-center flex-shrink-0">
+                          <div className="w-7 h-7 rounded-full bg-primary-500/20 flex items-center justify-center shrink-0">
                             <span className="text-xs font-bold text-primary-400">{m.name?.charAt(0)}</span>
                           </div>
                           <div>
@@ -809,10 +809,10 @@ export function Analytics() {
             if (pct < 20) return null
             return (
               <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4 flex items-start gap-3">
-                <AlertTriangle size={18} className="text-amber-400 flex-shrink-0 mt-0.5" />
+                <AlertTriangle size={18} className="text-amber-400 shrink-0 mt-0.5" />
                 <div className="text-xs text-amber-200/90 leading-relaxed">
                   <div className="font-semibold text-amber-100 mb-1">{pct}% of your visitors land with no Referer header — bucketed as Unknown.</div>
-                  This usually means paid traffic where the ad platform strips the referer (most common: Google Ads without auto-tagging enabled). To attribute these correctly, enable <span className="text-amber-100 font-semibold">Auto-tagging in Google Ads</span> (Settings → Account settings) so every click adds <code className="font-mono bg-amber-500/20 px-1 rounded">?gclid=...</code>. After that, those visitors will land in the Google Ads bucket within minutes.
+                  This usually means paid traffic where the ad platform strips the referer (most common: Google Ads without auto-tagging enabled). To attribute these correctly, enable <span className="text-amber-100 font-semibold">Auto-tagging in Google Ads</span> (Settings → Account settings) so every click adds <code className="font-mono bg-amber-500/20 px-1 rounded-sm">?gclid=...</code>. After that, those visitors will land in the Google Ads bucket within minutes.
                 </div>
               </div>
             )
@@ -953,7 +953,7 @@ export function Analytics() {
               <div className="flex gap-1 bg-dark-surface2 rounded-lg p-1">
                 {POINTS_RANGES.map(r => (
                   <button key={r.days} onClick={() => setPointsDays(r.days)}
-                    className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${pointsDays === r.days ? 'bg-primary-600 text-on-primary shadow-sm' : 'text-t-secondary hover:text-white'}`}>
+                    className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${pointsDays === r.days ? 'bg-primary-600 text-on-primary shadow-xs' : 'text-t-secondary hover:text-white'}`}>
                     {t(`analytics.ranges.${r.labelKey}`)}
                   </button>
                 ))}
@@ -1083,7 +1083,7 @@ export function Analytics() {
                     const pct = total > 0 ? Math.round((e.count / total) * 100) : 0
                     return (
                       <div key={i} className="flex items-center gap-3">
-                        <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: e.color }} />
+                        <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: e.color }} />
                         <div className="flex-1">
                           <div className="flex justify-between mb-0.5">
                             <span className="text-xs font-medium text-hx-e0e0e0">{e.segment}</span>
@@ -1117,7 +1117,7 @@ export function Analytics() {
                     const pct = total > 0 ? Math.round((tier.count / total) * 100) : 0
                     return (
                       <div key={i} className="flex items-center gap-2">
-                        <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: TIER_COLORS[i % TIER_COLORS.length] }} />
+                        <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: TIER_COLORS[i % TIER_COLORS.length] }} />
                         <div className="flex-1">
                           <div className="flex justify-between mb-0.5">
                             <span className="text-xs font-medium text-hx-e0e0e0">{tier.tier}</span>
@@ -1141,7 +1141,7 @@ export function Analytics() {
               <div className="flex gap-1 bg-dark-surface2 rounded-lg p-1">
                 {GROWTH_RANGES.map(r => (
                   <button key={r.months} onClick={() => setGrowthMonths(r.months)}
-                    className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${growthMonths === r.months ? 'bg-primary-600 text-on-primary shadow-sm' : 'text-t-secondary hover:text-white'}`}>
+                    className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${growthMonths === r.months ? 'bg-primary-600 text-on-primary shadow-xs' : 'text-t-secondary hover:text-white'}`}>
                     {t(`analytics.ranges.${r.labelKey}`)}
                   </button>
                 ))}
@@ -1260,7 +1260,7 @@ export function Analytics() {
                         const bg = cell.pct >= 70 ? 'rgba(50,215,75,0.25)' : cell.pct >= 40 ? 'rgba(255,159,10,0.25)' : 'rgba(239,68,68,0.18)'
                         return (
                           <td key={i} className="py-1 text-center">
-                            <div className="inline-block min-w-[44px] px-2 py-1 rounded text-xs font-semibold text-white"
+                            <div className="inline-block min-w-[44px] px-2 py-1 rounded-sm text-xs font-semibold text-white"
                               style={{ backgroundColor: bg }}>{cell.pct}%</div>
                           </td>
                         )
@@ -1496,7 +1496,7 @@ export function Analytics() {
               <div className="flex gap-1 bg-dark-surface2 rounded-lg p-1">
                 {BOOKING_RANGES.map(r => (
                   <button key={r.days} onClick={() => setBookingDays(r.days)}
-                    className={`px-2.5 py-1.5 rounded-md text-xs font-semibold transition-all ${bookingDays === r.days ? 'bg-primary-600 text-on-primary shadow-sm' : 'text-t-secondary hover:text-white'}`}>
+                    className={`px-2.5 py-1.5 rounded-md text-xs font-semibold transition-all ${bookingDays === r.days ? 'bg-primary-600 text-on-primary shadow-xs' : 'text-t-secondary hover:text-white'}`}>
                     {t(`analytics.ranges.${r.labelKey}`)}
                   </button>
                 ))}
@@ -1601,7 +1601,7 @@ export function Analytics() {
                 <div className="flex-1 space-y-2">
                   {(venueUtil ?? []).map((v: any, i: number) => (
                     <div key={v.venue_type} className="flex items-center gap-2">
-                      <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: PIE_COLORS[i % PIE_COLORS.length] }} />
+                      <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: PIE_COLORS[i % PIE_COLORS.length] }} />
                       <span className="text-xs text-hx-e0e0e0 flex-1 capitalize">{v.venue_type}</span>
                       <span className="text-xs text-t-muted">${Number(v.revenue).toLocaleString()}</span>
                     </div>
@@ -1618,7 +1618,7 @@ export function Analytics() {
               <div className="flex gap-1 bg-dark-surface2 rounded-lg p-1">
                 {CRM_PERIOD_OPTIONS.map(p => (
                   <button key={p.value} onClick={() => setCrmPeriod(p.value)}
-                    className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${crmPeriod === p.value ? 'bg-primary-600 text-on-primary shadow-sm' : 'text-t-secondary hover:text-white'}`}>
+                    className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${crmPeriod === p.value ? 'bg-primary-600 text-on-primary shadow-xs' : 'text-t-secondary hover:text-white'}`}>
                     {t(`analytics.periods.${p.labelKey}`)}
                   </button>
                 ))}
@@ -1652,7 +1652,7 @@ export function Analytics() {
                 <div className="flex-1 space-y-2">
                   {(vipDist ?? []).map((v: any, i: number) => (
                     <div key={v.level} className="flex items-center gap-2">
-                      <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: PIE_COLORS[i % PIE_COLORS.length] }} />
+                      <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: PIE_COLORS[i % PIE_COLORS.length] }} />
                       <span className="text-xs text-hx-e0e0e0 flex-1">{v.level}</span>
                       <span className="text-xs font-semibold text-white">{v.count}</span>
                       <span className="text-xs text-t-muted">${Number(v.revenue).toLocaleString()}</span>
@@ -1947,7 +1947,7 @@ export function Analytics() {
                             <span className="text-t-secondary tabular-nums w-5">#{i + 1}</span>
                             <span className="text-white font-medium truncate">{r.source}</span>
                           </span>
-                          <span className="flex items-center gap-3 flex-shrink-0">
+                          <span className="flex items-center gap-3 shrink-0">
                             <span className="text-t-secondary tabular-nums text-[11px]">{r.won}/{r.total}</span>
                             <span className={`font-bold tabular-nums w-12 text-right ${r.win_rate >= 30 ? 'text-emerald-400' : r.win_rate >= 15 ? 'text-amber-400' : 'text-red-400'}`}>
                               {r.win_rate}%
@@ -2002,7 +2002,7 @@ export function Analytics() {
                               <span className="text-t-secondary tabular-nums w-5">#{i + 1}</span>
                               <span className="text-white font-medium truncate">{r.owner}</span>
                             </span>
-                            <span className="flex items-center gap-3 flex-shrink-0">
+                            <span className="flex items-center gap-3 shrink-0">
                               <span className="text-t-secondary tabular-nums text-[11px]">{r.count} {r.count === 1 ? 'deal' : 'deals'}</span>
                               <span className="text-amber-400 font-bold tabular-nums">${Number(r.avg_value).toLocaleString()}</span>
                             </span>
@@ -2215,7 +2215,7 @@ export function Analytics() {
                           <span className="text-white font-medium truncate">{c.name}</span>
                           {c.company && <span className="text-t-secondary truncate">· {c.company}</span>}
                         </span>
-                        <span className="flex items-center gap-3 flex-shrink-0">
+                        <span className="flex items-center gap-3 shrink-0">
                           <span className="text-t-secondary tabular-nums">{c.deals} {c.deals === 1 ? 'deal' : 'deals'}</span>
                           <span className="text-emerald-400 font-bold tabular-nums">${Number(c.revenue).toLocaleString()}</span>
                         </span>

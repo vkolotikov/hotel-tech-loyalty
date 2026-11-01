@@ -123,7 +123,7 @@ function Side({ member, pairKey: key, kept, locale, onKeep }: { member: MemberRo
           <Link to={memberPath(member.id)} className="hover:underline">{member.name || member.email || `#${member.id}`}</Link>
           {kept && <span className="ml-2 text-xs font-semibold text-a-accent-text">{t('loyalty.membership.duplicates.kept', 'Kept')}</span>}
         </span>
-        <span className="block break-words text-a-text-2">{[member.email, member.phone].filter(Boolean).join(' · ')}</span>
+        <span className="block wrap-break-word text-a-text-2">{[member.email, member.phone].filter(Boolean).join(' · ')}</span>
         <span className="block text-a-text-2">
           {[
             member.member_number,

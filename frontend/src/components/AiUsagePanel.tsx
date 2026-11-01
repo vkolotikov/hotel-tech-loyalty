@@ -56,7 +56,7 @@ export function AiUsagePanel() {
 
   if (isLoading || !stats) {
     return (
-      <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-8 text-center text-sm text-gray-400">
+      <div className="rounded-xl border border-white/6 bg-white/2 p-8 text-center text-sm text-gray-400">
         Loading usage…
       </div>
     )
@@ -70,7 +70,7 @@ export function AiUsagePanel() {
       {/* KPI strip — month-to-date snapshot */}
       <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
         {/* Cost */}
-        <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
+        <div className="rounded-xl border border-white/6 bg-white/2 p-4">
           <div className="flex items-center gap-2 text-xs uppercase tracking-wide text-gray-400">
             <Coins size={12} /> Spent this month
           </div>
@@ -83,7 +83,7 @@ export function AiUsagePanel() {
         </div>
 
         {/* Status */}
-        <div className="rounded-xl border border-white/[0.06] p-4" style={{ background: budgetMeta.bg }}>
+        <div className="rounded-xl border border-white/6 p-4" style={{ background: budgetMeta.bg }}>
           <div className="flex items-center gap-2 text-xs uppercase tracking-wide" style={{ color: ink(budgetMeta.color) }}>
             <BudgetIcon size={12} /> Budget status
           </div>
@@ -91,7 +91,7 @@ export function AiUsagePanel() {
             {budgetMeta.label}
           </div>
           {stats.budget.cap_cents != null && (
-            <div className="mt-2 h-1.5 w-full rounded-full bg-white/[0.05] overflow-hidden">
+            <div className="mt-2 h-1.5 w-full rounded-full bg-white/5 overflow-hidden">
               <div className="h-full rounded-full" style={{
                 width: `${Math.min(100, stats.budget.percent ?? 0)}%`,
                 background: budgetMeta.color,
@@ -101,7 +101,7 @@ export function AiUsagePanel() {
         </div>
 
         {/* Calls */}
-        <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
+        <div className="rounded-xl border border-white/6 bg-white/2 p-4">
           <div className="flex items-center gap-2 text-xs uppercase tracking-wide text-gray-400">
             <Activity size={12} /> AI calls
           </div>
@@ -112,7 +112,7 @@ export function AiUsagePanel() {
         </div>
 
         {/* Allowed models */}
-        <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
+        <div className="rounded-xl border border-white/6 bg-white/2 p-4">
           <div className="flex items-center gap-2 text-xs uppercase tracking-wide text-gray-400">
             <Cpu size={12} /> Plan models
           </div>
@@ -127,7 +127,7 @@ export function AiUsagePanel() {
 
       {/* Over-cap banner */}
       {stats.budget.status === 'over' && (
-        <div className="rounded-xl border border-red-500/30 bg-red-500/[0.08] p-4 text-sm text-red-200">
+        <div className="rounded-xl border border-red-500/30 bg-red-500/8 p-4 text-sm text-red-200">
           <div className="flex items-center gap-2 font-medium">
             <AlertTriangle size={14} /> You've hit your plan's monthly AI cap
           </div>
@@ -138,7 +138,7 @@ export function AiUsagePanel() {
         </div>
       )}
       {stats.budget.status === 'warn' && (
-        <div className="rounded-xl border border-amber-500/30 bg-amber-500/[0.08] p-4 text-sm text-amber-200">
+        <div className="rounded-xl border border-amber-500/30 bg-amber-500/8 p-4 text-sm text-amber-200">
           <div className="flex items-center gap-2 font-medium">
             <AlertTriangle size={14} /> Approaching your monthly AI cap
           </div>
@@ -150,13 +150,13 @@ export function AiUsagePanel() {
 
       {/* 30-day sparkline */}
       {series?.data && series.data.length > 0 && (
-        <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
+        <div className="rounded-xl border border-white/6 bg-white/2 p-4">
           <div className="text-xs uppercase tracking-wide text-gray-400 mb-3">Last 30 days</div>
           <div className="flex items-end gap-1 h-20">
             {series.data.map(d => (
               <div
                 key={d.day}
-                className="flex-1 rounded-sm bg-blue-500/40 hover:bg-blue-500/60 transition-colors"
+                className="flex-1 rounded-xs bg-blue-500/40 hover:bg-blue-500/60 transition-colors"
                 style={{ height: `${Math.max(4, (d.cost_cents / seriesPeak) * 100)}%` }}
                 title={`${d.day.slice(0, 10)} · ${dollars(d.cost_cents)} · ${d.calls} calls`}
               />
@@ -167,7 +167,7 @@ export function AiUsagePanel() {
 
       {/* Breakdown — by model + by feature */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
+        <div className="rounded-xl border border-white/6 bg-white/2 p-4">
           <div className="flex items-center gap-2 text-sm font-medium text-white mb-3">
             <Cpu size={14} /> By model
           </div>
@@ -188,7 +188,7 @@ export function AiUsagePanel() {
           )}
         </div>
 
-        <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
+        <div className="rounded-xl border border-white/6 bg-white/2 p-4">
           <div className="flex items-center gap-2 text-sm font-medium text-white mb-3">
             <Layers size={14} /> By feature
           </div>
@@ -212,11 +212,11 @@ export function AiUsagePanel() {
 
       {/* Allowed-models list — only when restricted */}
       {stats.allowed_models && stats.allowed_models.length > 0 && (
-        <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
+        <div className="rounded-xl border border-white/6 bg-white/2 p-4">
           <div className="text-xs uppercase tracking-wide text-gray-400 mb-2">Allowed by your plan</div>
           <div className="flex flex-wrap gap-2">
             {stats.allowed_models.map(m => (
-              <span key={m} className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs bg-white/[0.04] border border-white/[0.06] text-gray-300">
+              <span key={m} className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs bg-white/4 border border-white/6 text-gray-300">
                 <Cpu size={10} /> {m}
               </span>
             ))}

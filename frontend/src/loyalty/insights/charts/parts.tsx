@@ -10,7 +10,7 @@ export function Legend({ series }: { series: { name: string; tone: Tone }[] }) {
     <ul className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-a-text-2" data-legend="">
       {series.map(s => (
         <li key={s.name} className="inline-flex items-center gap-1.5">
-          <span aria-hidden className={`inline-block h-2.5 w-2.5 rounded-sm l-chart-bar-${s.tone}`} />
+          <span aria-hidden className={`inline-block h-2.5 w-2.5 rounded-xs l-chart-bar-${s.tone}`} />
           {s.name}
         </li>
       ))}

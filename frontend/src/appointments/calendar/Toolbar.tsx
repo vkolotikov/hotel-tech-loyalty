@@ -57,7 +57,7 @@ export function Toolbar(p: Props) {
       <button type="button" onClick={p.onPrev} className={`${field} px-2`} aria-label={t('appointments.calendar.previous', 'Previous')}><ChevronLeft size={16} aria-hidden /></button>
       <button type="button" onClick={p.onNext} className={`${field} px-2`} aria-label={t('appointments.calendar.next', 'Next')}><ChevronRight size={16} aria-hidden /></button>
       {/* The week number belongs to the date: they wrap together. */}
-      <div className="flex items-baseline gap-2"><h2 className="font-a-display text-2xl font-normal tracking-tight text-a-text min-w-[11rem]">{label}</h2><span className="font-a-mono text-xs text-a-text-2">{t('appointments.calendar.week', 'Week {{n}}', { n: isoWeek(p.date) })}</span></div>
+      <div className="flex items-baseline gap-2"><h2 className="font-a-display text-2xl font-normal tracking-tight text-a-text min-w-44">{label}</h2><span className="font-a-mono text-xs text-a-text-2">{t('appointments.calendar.week', 'Week {{n}}', { n: isoWeek(p.date) })}</span></div>
       <label className="flex items-center gap-2">
         <span className="sr-only">{t('appointments.calendar.go_to_date', 'Go to date')}</span>
         <input type="date" value={p.date} onChange={(e) => { if (e.target.value) p.onDate(e.target.value) }} className={field} />

@@ -43,7 +43,7 @@ describe('ConflictDialog', () => {
     const backdrop = (html.match(/<div class="(fixed inset-0[^"]*)"/)?.[1] ?? '').split(' ')
     expect(backdrop).toContain('bg-a-scrim/40')
     expect(backdrop.some(c => c.startsWith('bg-a-text'))).toBe(false)
-    expect(backdrop).toContain('!mt-0')
+    expect(backdrop).toContain('mt-0!')
   })
 })
 
@@ -52,7 +52,7 @@ describe('setup sheets', () => {
     // The space-y-5 of the tab gave the fixed sheet a 20 px top margin: the page showed between the top bar and the sheet.
     for (const file of ['TeamEditor.tsx', 'ServiceEditor.tsx']) {
       const source = readFileSync(new URL(`./${file}`, import.meta.url), 'utf8')
-      expect(source, file).toMatch(/className="fixed right-0 top-14 [^"]*!mt-0/)
+      expect(source, file).toMatch(/className="fixed right-0 top-14 [^"]*\bmt-0!/)
     }
   })
 })

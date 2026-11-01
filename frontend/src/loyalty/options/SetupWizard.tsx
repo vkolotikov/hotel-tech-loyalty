@@ -167,7 +167,7 @@ export function Wizard({ answer, start = {} }: { answer: OptionsAnswer; start?: 
           <p className="font-a-mono text-xs uppercase tracking-[0.12em] text-a-text-2">
             {t('loyalty.options.wizard.step_of', 'Step {{n}} of {{total}}', { n: String(index + 1), total: String(STEPS.length) })}
           </p>
-          <h2 id="wizard-step" ref={heading} tabIndex={-1} className="font-a-display text-2xl font-normal leading-snug text-a-text outline-none">
+          <h2 id="wizard-step" ref={heading} tabIndex={-1} className="font-a-display text-2xl font-normal leading-snug text-a-text outline-hidden">
             {stepTitle(t, step)}
           </h2>
         </div>
@@ -301,7 +301,7 @@ function ChoiceCard({ name, value, checked, disabled = false, onChoose, icon: Ic
 }) {
   return (
     <label data-choice={value} data-checked={checked ? '' : undefined}
-      className={`relative flex gap-3 rounded-2xl border p-4 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-a-accent-text ${checked ? 'border-a-accent-text bg-a-accent/10' : 'border-a-border bg-a-surface'} ${disabled ? 'cursor-not-allowed opacity-55' : 'cursor-pointer hover:bg-a-surface-2'}`}>
+      className={`relative flex gap-3 rounded-2xl border p-4 has-focus-visible:ring-2 has-focus-visible:ring-a-accent-text ${checked ? 'border-a-accent-text bg-a-accent/10' : 'border-a-border bg-a-surface'} ${disabled ? 'cursor-not-allowed opacity-55' : 'cursor-pointer hover:bg-a-surface-2'}`}>
       <input type="radio" name={name} value={value} checked={checked} disabled={disabled} onChange={() => onChoose(value)} className="sr-only" />
       <span aria-hidden className={`inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${checked ? 'bg-a-accent text-a-accent-ink' : 'bg-a-surface-2 text-a-text-2'}`}>
         <Icon size={20} />
@@ -347,9 +347,9 @@ export function Choose({ answer, form, keep, choice, ctx, onChange }: {
           const fixed = alwaysOn(way)
           return (
             <label key={way.key} data-tick={way.key} data-checked={wf.on ? '' : undefined}
-              className={`flex gap-3 rounded-2xl border p-4 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-a-accent-text ${fixed ? '' : 'cursor-pointer'} ${wf.on ? 'border-a-accent-text bg-a-accent/10' : 'border-a-border bg-a-surface hover:bg-a-surface-2'}`}>
+              className={`flex gap-3 rounded-2xl border p-4 has-focus-visible:ring-2 has-focus-visible:ring-a-accent-text ${fixed ? '' : 'cursor-pointer'} ${wf.on ? 'border-a-accent-text bg-a-accent/10' : 'border-a-border bg-a-surface hover:bg-a-surface-2'}`}>
               <input type="checkbox" checked={wf.on} disabled={fixed} onChange={(e) => onChange({ ...form, [way.key]: { ...wf, on: e.target.checked } })}
-                className="mt-1 h-4 w-4 shrink-0 rounded border-a-border accent-a-accent-text disabled:opacity-60" />
+                className="mt-1 h-4 w-4 shrink-0 rounded-sm border-a-border accent-a-accent-text disabled:opacity-60" />
               <span className="min-w-0 flex-1 space-y-1">
                 <span className="flex items-center gap-2">
                   <WayIcon way={way.key} on={wf.on} />
@@ -449,7 +449,7 @@ function Done({ outcome, headingRef }: { outcome: SetupOutcome; headingRef: RefO
   }
   return (
     <div data-setup-done="" className="max-w-2xl space-y-4">
-      <h2 ref={headingRef} tabIndex={-1} className="font-a-display text-2xl font-normal leading-snug text-a-text outline-none">
+      <h2 ref={headingRef} tabIndex={-1} className="font-a-display text-2xl font-normal leading-snug text-a-text outline-hidden">
         {t('loyalty.options.wizard.done_title', 'Your programme is set up')}
       </h2>
       <Notice tone="success">{line}</Notice>

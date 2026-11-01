@@ -284,7 +284,7 @@ function History({ memberId, balance, locale }: { memberId: number; balance: num
                 <li key={line.id} data-line={line.id} className={`flex items-center gap-x-4 px-5 py-3 ${line.is_reversed ? 'opacity-70' : ''}`}>
                   <span className={`w-16 shrink-0 text-right font-semibold tabular-nums sm:w-20 ${line.points >= 0 ? 'l-plus' : 'l-minus'}`}>{signedPoints(line.points, locale)}</span>
                   <span className="min-w-0 flex-1">
-                    <span className="block break-words text-sm text-a-text">{line.description || kind}</span>
+                    <span className="block wrap-break-word text-sm text-a-text">{line.description || kind}</span>
                     <span className="block text-xs text-a-text-2">
                       {/* The kind once: in the meta only when the line has a description of its own. */}
                       {[

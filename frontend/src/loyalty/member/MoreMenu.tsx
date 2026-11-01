@@ -9,7 +9,7 @@ import { useState } from 'react'
 import { usePhone } from '../overview/useOverview'
 import { OverviewButton, OverviewDialog } from '../overview/OverviewUI'
 
-const ITEM = 'flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm hover:bg-a-surface-2 focus:bg-a-surface-2 focus:outline-none'
+const ITEM = 'flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm hover:bg-a-surface-2 focus:bg-a-surface-2 focus:outline-hidden'
 const ICONS: Record<MoreItem, LucideIcon> = { welcome: Mail, tier: Layers, deactivate: PowerOff, reactivate: Power, erase: Trash2 }
 
 /**

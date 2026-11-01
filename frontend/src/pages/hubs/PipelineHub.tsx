@@ -126,7 +126,7 @@ export function PipelineHub() {
                 value={homeSearch}
                 onChange={(e) => setHomeSearch(e.target.value)}
                 placeholder="Search pipeline…"
-                className="w-full bg-dark-surface border border-dark-border rounded-lg pl-9 pr-3 py-2 text-sm placeholder-t-secondary outline-none focus:border-primary-500 transition-colors"
+                className="w-full bg-dark-surface border border-dark-border rounded-lg pl-9 pr-3 py-2 text-sm placeholder-t-secondary outline-hidden focus:border-primary-500 transition-colors"
               />
             </div>
 
@@ -146,7 +146,7 @@ export function PipelineHub() {
                 <section key={section.id} className="space-y-3">
                   <div className="flex items-center gap-3">
                     <span
-                      className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+                      className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
                       style={{
                         background: `linear-gradient(135deg, ${tint(section.accent, 0.22)}, ${tint(section.accent, 0.08)})`,
                         border: `1px solid ${tint(section.accent, 0.35)}`,
@@ -158,7 +158,7 @@ export function PipelineHub() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <h2 className="text-base font-bold text-white">{section.label}</h2>
-                        <span className="w-1 h-1 rounded-full flex-shrink-0" style={{ background: section.accent }} />
+                        <span className="w-1 h-1 rounded-full shrink-0" style={{ background: section.accent }} />
                         <span className="text-[10px] uppercase tracking-wider font-bold" style={{ color: section.accent }}>
                           {tileCount}
                         </span>
@@ -188,7 +188,7 @@ export function PipelineHub() {
                           <span aria-hidden className="absolute -right-8 -top-8 w-32 h-32 rounded-full opacity-0 group-hover:opacity-100 transition-opacity blur-2xl pointer-events-none" style={{ background: tint(section.accent, 0.18) }} />
                           <div className="relative flex items-start gap-3">
                             <span
-                              className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 transition-transform group-hover:scale-105"
+                              className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 transition-transform group-hover:scale-105"
                               style={{
                                 background: `linear-gradient(135deg, ${tint(section.accent, 0.18)}, ${tint(section.accent, 0.04)})`,
                                 border: `1px solid ${tint(section.accent, 0.3)}`,
@@ -200,7 +200,7 @@ export function PipelineHub() {
                               <h3 className="text-sm font-semibold text-white">{tile.label}</h3>
                               <p className="text-xs text-t-secondary mt-1 line-clamp-2 leading-relaxed">{tile.desc}</p>
                             </div>
-                            <ChevronRight size={16} className="text-t-secondary transition-all flex-shrink-0 mt-1 group-hover:translate-x-0.5" />
+                            <ChevronRight size={16} className="text-t-secondary transition-all shrink-0 mt-1 group-hover:translate-x-0.5" />
                           </div>
                         </button>
                       )
@@ -223,7 +223,7 @@ export function PipelineHub() {
             </button>
             <span className="text-t-secondary/40">/</span>
             <div className="flex items-center gap-2 min-w-0">
-              {tab && <tab.icon size={14} className="text-t-secondary flex-shrink-0" />}
+              {tab && <tab.icon size={14} className="text-t-secondary shrink-0" />}
               {tab && <h2 className="text-sm font-semibold text-white truncate">{tab.label}</h2>}
               {tab && <span className="hidden md:inline text-xs text-t-secondary truncate">— {tab.desc}</span>}
             </div>

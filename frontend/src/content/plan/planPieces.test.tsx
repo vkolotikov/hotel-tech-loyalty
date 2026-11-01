@@ -79,7 +79,7 @@ describe('PostCardView', () => {
 
   it('fills the open post\'s card with the brand, its secondary text on the ink', () => {
     const out = html(<PostCardView post={post(8, { scheduled_time: '09:00' })} size="month" selected onOpen={noop} />)
-    expect(out).toMatch(/aria-current="true"[^>]*class="[^"]*bg-gradient-to-br from-a-accent to-a-accent-deep text-a-accent-ink/)
+    expect(out).toMatch(/aria-current="true"[^>]*class="[^"]*bg-linear-to-br from-a-accent to-a-accent-deep text-a-accent-ink/)
     expect(out).not.toMatch(/class="[^"]*\bc-card\b/)
     // Final review: at 80 % the ink read 2.9–3.6:1 on the default blue; the time and status take the ink itself.
     expect(out).not.toContain('text-a-accent-ink/80')
@@ -119,7 +119,7 @@ describe('PostCardView', () => {
     const out = html(<PostCardView post={post(3, { scheduled_time: '09:30' })} onOpen={noop} />)
     const words = out.match(/<span class="([^"]*)">Hook 3<\/span>/)?.[1] ?? ''
     expect(words).toContain('line-clamp-6')
-    expect(words).toContain('break-words')
+    expect(words).toContain('wrap-break-word')
     // A block span keeps line-clamp from clamping (it needs -webkit-box).
     expect(words.split(' ')).not.toContain('block')
     expect(out.indexOf('data-status=')).toBeLessThan(out.indexOf('>Hook 3<'))
@@ -128,7 +128,12 @@ describe('PostCardView', () => {
 })
 
 /** The narrowest width a grid insists on, in rem (its root's min-w-[…rem]). */
-const minWidth = (out: string) => Number(out.match(/^<div class="[^"]*\bmin-w-\[(\d+(?:\.\d+)?)rem\]/)?.[1] ?? NaN)
+// Tailwind 4 writes min-w-[42rem] as min-w-2xl (--container-2xl, 42rem).
+const CONTAINER_REM: Record<string, number> = { xl: 36, '2xl': 42, '3xl': 48, '4xl': 56 }
+const minWidth = (out: string) => {
+  const m = out.match(/^<div class="[^"]*\bmin-w-(?:\[(\d+(?:\.\d+)?)rem\]|(\d?xl))(?=[\s"])/)
+  return m ? (m[1] ? Number(m[1]) : CONTAINER_REM[m[2]] ?? NaN) : NaN
+}
 
 describe('the grids beside the tray', () => {
   // At 1440 the page has about 54rem for a grid beside the side panel and the tray, at 1280 about 44rem:

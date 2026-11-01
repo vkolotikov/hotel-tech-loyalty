@@ -231,7 +231,7 @@ function BatchPanel({ batch, step, preview, driving, stopped, cancelling, cancel
             <p className="text-sm text-a-text-2">{t('loyalty.membership.import.points', 'Opening balances: {{points}} points in all, written to each member’s history.', { points: n(preview.points) })}</p>
           )}
           {preview && preview.columns_ignored.length > 0 && (
-            <p className="break-words text-sm text-a-text-2">{t('loyalty.membership.import.ignored', 'Left out: {{columns}}.', { columns: preview.columns_ignored.join(', ') })}</p>
+            <p className="wrap-break-word text-sm text-a-text-2">{t('loyalty.membership.import.ignored', 'Left out: {{columns}}.', { columns: preview.columns_ignored.join(', ') })}</p>
           )}
           {preview && preview.sample.length > 0 && (
             <div className="space-y-1.5">

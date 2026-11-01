@@ -51,13 +51,13 @@ export function Dialog({ title, onClose, busy = false, children }: { title: stri
   return (
     // !m-0: a dialog opened inside a `space-y-*` list would take that list's top margin and leave a strip of the page
     // above the scrim uncovered.
-    <div className="fixed inset-0 z-50 !m-0 grid place-items-center bg-a-scrim/50 p-4 animate-a-fade">
+    <div className="fixed inset-0 z-50 m-0! grid place-items-center bg-a-scrim/50 p-4 animate-a-fade">
       <div ref={box} role="dialog" aria-modal="true" aria-labelledby={titleId} tabIndex={-1}
-        className="max-h-[calc(100vh-2rem)] w-full max-w-lg overflow-y-auto rounded-2xl border border-a-border bg-a-surface p-5 shadow-a-lg outline-none animate-a-pop">
+        className="max-h-[calc(100vh-2rem)] w-full max-w-lg overflow-y-auto rounded-2xl border border-a-border bg-a-surface p-5 shadow-a-lg outline-hidden animate-a-pop">
         <div className="mb-4 flex items-start justify-between gap-3">
           <h2 id={titleId} className="font-a-display text-xl font-normal text-a-text">{title}</h2>
           <button type="button" onClick={onClose} disabled={busy} aria-label={t('workspace.common.close', 'Close')}
-            className="rounded p-1.5 text-a-text-2 hover:text-a-text disabled:opacity-50">
+            className="rounded-sm p-1.5 text-a-text-2 hover:text-a-text disabled:opacity-50">
             <X size={18} aria-hidden />
           </button>
         </div>

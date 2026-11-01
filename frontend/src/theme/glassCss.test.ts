@@ -138,17 +138,18 @@ describe('glass.css', () => {
   })
 })
 
-/** index.css up to its first @tailwind directive: the only imports the build keeps. */
+/** index.css up to Tailwind's utilities import: the stylesheets that come before the utilities, as in v3. */
 function leadingIndexCss(): string {
   const clean = indexCss.replace(/\/\*[\s\S]*?\*\//g, '')
-  const at = clean.indexOf('@tailwind')
-  expect(at, 'index.css has a @tailwind directive').toBeGreaterThan(0)
+  const at = clean.indexOf("@import 'tailwindcss/utilities.css'")
+  expect(at, 'index.css imports the Tailwind utilities').toBeGreaterThan(0)
   return clean.slice(0, at)
 }
 
 describe('index.css imports', () => {
-  it('loads no Google Fonts stylesheet app-wide (a leading import would reach login, the portal and Appointments)', () => {
-    expect(leadingIndexCss()).not.toContain('fonts.googleapis.com')
+  it('loads no Google Fonts stylesheet app-wide (an import would reach login, the portal and Appointments)', () => {
+    // Tailwind 4 inlines and hoists every @import wherever it stands, so none may name Google Fonts.
+    expect(indexCss.replace(/\/\*[\s\S]*?\*\//g, '')).not.toMatch(/@import[^;]*fonts\.googleapis\.com/)
   })
 
   it('imports the Glass stylesheets where the build keeps them', () => {

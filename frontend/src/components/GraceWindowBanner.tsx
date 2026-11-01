@@ -75,7 +75,7 @@ export default function GraceWindowBanner() {
   return (
     <div className="border-b border-primary-500/30 bg-primary-500/10 px-4 py-2.5">
       <div className="max-w-7xl mx-auto flex items-center gap-3 text-[13px]">
-        <AlertCircle size={16} className="text-primary-400 flex-shrink-0" aria-hidden="true" />
+        <AlertCircle size={16} className="text-primary-400 shrink-0" aria-hidden="true" />
         <div className="flex-1 text-t-primary min-w-0">
           <span className="font-medium">Heads up:</span>{' '}
           Email Campaigns, Reviews, Engagement Hub, Wallet config and Chatbot Setup
@@ -92,7 +92,7 @@ export default function GraceWindowBanner() {
           onClick={handleDismiss}
           type="button"
           aria-label="Dismiss notice"
-          className="w-7 h-7 rounded-full flex items-center justify-center text-t-secondary hover:text-white hover:bg-white/[0.06] transition-colors flex-shrink-0"
+          className="w-7 h-7 rounded-full flex items-center justify-center text-t-secondary hover:text-white hover:bg-white/6 transition-colors shrink-0"
         >
           <X size={14} aria-hidden="true" />
         </button>

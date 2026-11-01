@@ -38,7 +38,7 @@ export function VerdictCard({ view, children }: { view: VerdictView; children?: 
           <Icon size={30} strokeWidth={2.75} aria-hidden />
         </span>
         <div className="min-w-0">
-          <p className="font-a-display text-3xl leading-tight sm:text-4xl">{say(view.headline)}</p>
+          <p className="font-a-display text-3xl leading-tight sm:text-4xl sm:leading-10">{say(view.headline)}</p>
           {view.reason && <p className="mt-0.5 text-base font-semibold sm:text-lg">{say(view.reason)}</p>}
         </div>
       </div>

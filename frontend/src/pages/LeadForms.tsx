@@ -121,7 +121,7 @@ export function LeadForms() {
           <h1 className="text-2xl font-bold text-white">Lead-capture forms</h1>
           <p className="text-sm text-t-secondary mt-0.5 max-w-2xl">
             Build forms for your website that send leads straight into the CRM. Embed via iframe — no website changes
-            beyond a single <code className="text-accent font-mono text-xs px-1 py-0.5 rounded bg-dark-surface">&lt;iframe&gt;</code> snippet.
+            beyond a single <code className="text-accent font-mono text-xs px-1 py-0.5 rounded-sm bg-dark-surface">&lt;iframe&gt;</code> snippet.
           </p>
         </div>
         <button
@@ -272,7 +272,7 @@ function CreateModal({ name, onChange, onCancel, onCreate, busy }: {
   busy: boolean
 }) {
   return (
-    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={onCancel}>
+    <div className="fixed inset-0 bg-black/70 backdrop-blur-xs z-50 flex items-center justify-center p-4" onClick={onCancel}>
       <div className="bg-dark-surface border border-dark-border rounded-xl p-5 w-full max-w-md" onClick={e => e.stopPropagation()}>
         <h2 className="text-lg font-bold text-white mb-1">New lead-capture form</h2>
         <p className="text-xs text-t-secondary mb-4">Pick a memorable name. You'll configure fields and design after creating.</p>
@@ -282,7 +282,7 @@ function CreateModal({ name, onChange, onCancel, onCreate, busy }: {
           onChange={e => onChange(e.target.value)}
           placeholder='e.g. "Contact us", "Request a quote", "Wedding inquiry"'
           onKeyDown={e => { if (e.key === 'Enter' && name.trim()) onCreate() }}
-          className="w-full bg-dark-bg border border-dark-border rounded-md px-3 py-2 text-sm outline-none focus:border-accent mb-4"
+          className="w-full bg-dark-bg border border-dark-border rounded-md px-3 py-2 text-sm outline-hidden focus:border-accent mb-4"
         />
         <div className="flex justify-end gap-2">
           <button onClick={onCancel} className="px-4 py-2 text-sm text-t-secondary hover:text-white">Cancel</button>
@@ -358,7 +358,7 @@ function FormEditor({ formId, onClose }: { formId: number; onClose: () => void }
   })
 
   return (
-    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex justify-end" onClick={onClose}>
+    <div className="fixed inset-0 bg-black/70 backdrop-blur-xs z-50 flex justify-end" onClick={onClose}>
       <div
         className="bg-dark-surface border-l border-dark-border w-full max-w-2xl h-full flex flex-col"
         onClick={e => e.stopPropagation()}
@@ -368,7 +368,7 @@ function FormEditor({ formId, onClose }: { formId: number; onClose: () => void }
             <h2 className="text-base font-bold text-white truncate">{form?.name ?? 'Loading…'}</h2>
             {form && <p className="text-[11px] text-t-secondary mt-0.5 truncate">/form/{form.embed_key}</p>}
           </div>
-          <button onClick={onClose} className="p-1.5 rounded hover:bg-dark-surface2 text-t-secondary hover:text-white">
+          <button onClick={onClose} className="p-1.5 rounded-sm hover:bg-dark-surface2 text-t-secondary hover:text-white">
             <X size={16} />
           </button>
         </div>
@@ -523,7 +523,7 @@ function FieldRow({ field, isFirst, isLast, onChange, onMoveUp, onMoveDown, onDe
 
         <button
           onClick={() => onChange({ enabled: !field.enabled })}
-          className={`w-9 h-5 rounded-full p-0.5 flex-shrink-0 transition ${field.enabled ? 'bg-emerald-500/80' : 'bg-dark-surface2'}`}
+          className={`w-9 h-5 rounded-full p-0.5 shrink-0 transition ${field.enabled ? 'bg-emerald-500/80' : 'bg-dark-surface2'}`}
           title={field.enabled ? 'Disable field' : 'Enable field'}
         >
           <div className={`w-4 h-4 rounded-full bg-on-fill transition-transform ${field.enabled ? 'translate-x-4' : ''}`} />
@@ -534,7 +534,7 @@ function FieldRow({ field, isFirst, isLast, onChange, onMoveUp, onMoveDown, onDe
             <input
               value={field.label}
               onChange={e => onChange({ label: e.target.value })}
-              className="w-full bg-dark-surface border border-dark-border rounded px-2 py-1 text-sm outline-none focus:border-accent"
+              className="w-full bg-dark-surface border border-dark-border rounded-sm px-2 py-1 text-sm outline-hidden focus:border-accent"
             />
           ) : (
             <div className="flex items-center gap-2">
@@ -561,7 +561,7 @@ function FieldRow({ field, isFirst, isLast, onChange, onMoveUp, onMoveDown, onDe
         </label>
         <button
           onClick={() => setExpanded(e => !e)}
-          className="p-1 rounded hover:bg-dark-surface2 text-t-secondary hover:text-white"
+          className="p-1 rounded-sm hover:bg-dark-surface2 text-t-secondary hover:text-white"
           title={expanded ? 'Collapse' : 'Edit details'}
         >
           {expanded ? <ChevronUp size={12} /> : <SettingsIcon size={12} />}
@@ -569,7 +569,7 @@ function FieldRow({ field, isFirst, isLast, onChange, onMoveUp, onMoveDown, onDe
         {onDelete && (
           <button
             onClick={onDelete}
-            className="p-1 rounded hover:bg-red-500/15 text-t-secondary hover:text-red-400"
+            className="p-1 rounded-sm hover:bg-red-500/15 text-t-secondary hover:text-red-400"
             title="Delete field"
           >
             <Trash2 size={12} />
@@ -586,7 +586,7 @@ function FieldRow({ field, isFirst, isLast, onChange, onMoveUp, onMoveDown, onDe
                 <select
                   value={field.type}
                   onChange={e => onChange({ type: e.target.value as FormField['type'] })}
-                  className="w-full bg-dark-bg border border-dark-border rounded px-2 py-1 text-xs outline-none focus:border-accent"
+                  className="w-full bg-dark-bg border border-dark-border rounded-sm px-2 py-1 text-xs outline-hidden focus:border-accent"
                 >
                   {Object.entries(FIELD_TYPE_META).map(([k, m]) => (
                     <option key={k} value={k}>{m.label}</option>
@@ -599,7 +599,7 @@ function FieldRow({ field, isFirst, isLast, onChange, onMoveUp, onMoveDown, onDe
               <input
                 value={field.placeholder ?? ''}
                 onChange={e => onChange({ placeholder: e.target.value })}
-                className="w-full bg-dark-bg border border-dark-border rounded px-2 py-1 text-xs outline-none focus:border-accent"
+                className="w-full bg-dark-bg border border-dark-border rounded-sm px-2 py-1 text-xs outline-hidden focus:border-accent"
               />
             </div>
           </div>
@@ -610,7 +610,7 @@ function FieldRow({ field, isFirst, isLast, onChange, onMoveUp, onMoveDown, onDe
                 value={(field.options ?? []).join('\n')}
                 onChange={e => onChange({ options: e.target.value.split('\n').map(s => s.trim()).filter(Boolean) })}
                 rows={4}
-                className="w-full bg-dark-bg border border-dark-border rounded px-2 py-1.5 text-xs outline-none focus:border-accent resize-none font-mono"
+                className="w-full bg-dark-bg border border-dark-border rounded-sm px-2 py-1.5 text-xs outline-hidden focus:border-accent resize-none font-mono"
               />
             </div>
           )}
@@ -620,7 +620,7 @@ function FieldRow({ field, isFirst, isLast, onChange, onMoveUp, onMoveDown, onDe
               value={field.help_text ?? ''}
               onChange={e => onChange({ help_text: e.target.value })}
               placeholder="Shown under the input."
-              className="w-full bg-dark-bg border border-dark-border rounded px-2 py-1 text-xs outline-none focus:border-accent"
+              className="w-full bg-dark-bg border border-dark-border rounded-sm px-2 py-1 text-xs outline-hidden focus:border-accent"
             />
           </div>
         </div>
@@ -670,7 +670,7 @@ function DesignTab({ form, onUpdate }: { form: LeadForm; onUpdate: (patch: Parti
               type="color"
               value={d.primary_color}
               onChange={e => setDesign({ primary_color: e.target.value })}
-              className="w-10 h-9 rounded border border-dark-border bg-dark-bg cursor-pointer"
+              className="w-10 h-9 rounded-sm border border-dark-border bg-dark-bg cursor-pointer"
             />
             <input
               value={d.primary_color}
@@ -725,7 +725,7 @@ function DesignTab({ form, onUpdate }: { form: LeadForm; onUpdate: (patch: Parti
   )
 }
 
-const inp = 'w-full bg-dark-bg border border-dark-border rounded-md px-2.5 py-1.5 text-sm outline-none focus:border-accent'
+const inp = 'w-full bg-dark-bg border border-dark-border rounded-md px-2.5 py-1.5 text-sm outline-hidden focus:border-accent'
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -827,7 +827,7 @@ function EmbedTab({ formId, form }: { formId: number; form: LeadForm }) {
         ) : (
           <div className="space-y-1.5 max-h-64 overflow-y-auto">
             {subs.data.slice(0, 10).map((s: any) => (
-              <div key={s.id} className="flex items-center justify-between p-2 bg-dark-bg border border-dark-border rounded text-xs">
+              <div key={s.id} className="flex items-center justify-between p-2 bg-dark-bg border border-dark-border rounded-sm text-xs">
                 <div className="min-w-0 flex-1">
                   <p className="text-white font-semibold truncate">
                     {s.guest?.full_name ?? s.payload?.name ?? 'Anonymous'}

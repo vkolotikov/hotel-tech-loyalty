@@ -170,7 +170,7 @@ export function TeamBucketsView({ currentUserId, invalidate }: {
             onChange={(e) => setQuickAdd(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleQuickAdd() } }}
             placeholder="Type a task title and press Enter → Open pool"
-            className="bg-dark-surface border border-dark-border rounded-lg px-3 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-primary-500 w-[280px]"
+            className="bg-dark-surface border border-dark-border rounded-lg px-3 py-2 text-xs text-white placeholder-gray-500 focus:outline-hidden focus:border-primary-500 w-[280px]"
           />
           <button
             onClick={handleQuickAdd}
@@ -191,7 +191,7 @@ export function TeamBucketsView({ currentUserId, invalidate }: {
             sublabel="Anyone can claim"
             count={data.pool.length}
             hours={sumHours(data.pool)}
-            accent="border-cyan-500/40 bg-cyan-500/[0.03]"
+            accent="border-cyan-500/40 bg-cyan-500/3"
             tasks={data.pool}
             isHot={hotCol === 'pool'}
             onDragEnter={() => setHotCol('pool')}
@@ -205,7 +205,7 @@ export function TeamBucketsView({ currentUserId, invalidate }: {
               sublabel="Your bucket"
               count={myBucket.tasks.length}
               hours={sumHours(myBucket.tasks)}
-              accent="border-primary-500/40 bg-primary-500/[0.03]"
+              accent="border-primary-500/40 bg-primary-500/3"
               tasks={myBucket.tasks}
               isHot={hotCol === `me-${myBucket.user_id}`}
               onDragEnter={() => setHotCol(`me-${myBucket.user_id}`)}
@@ -264,8 +264,8 @@ function Column({ id, label, sublabel, count, hours, accent, tasks, isHot, onDra
         if (taskId) onDrop(taskId)
       }}
       className={[
-        'flex-shrink-0 w-[260px] flex flex-col rounded-xl border overflow-hidden transition',
-        isHot ? 'border-primary-500 ring-2 ring-primary-500/30 bg-primary-500/[0.06]' : accent,
+        'shrink-0 w-[260px] flex flex-col rounded-xl border overflow-hidden transition',
+        isHot ? 'border-primary-500 ring-2 ring-primary-500/30 bg-primary-500/6' : accent,
       ].join(' ')}
     >
       <div className="px-3 py-2.5 border-b border-white/5 bg-dark-surface/40">
@@ -274,7 +274,7 @@ function Column({ id, label, sublabel, count, hours, accent, tasks, isHot, onDra
             <div className="text-sm font-semibold text-white truncate" title={label}>{label}</div>
             {sublabel && <div className="text-[10px] text-gray-500 mt-0.5">{sublabel}</div>}
           </div>
-          <div className="flex items-center gap-2 text-[10px] tabular-nums text-gray-500 flex-shrink-0">
+          <div className="flex items-center gap-2 text-[10px] tabular-nums text-gray-500 shrink-0">
             <span><span className="text-white font-semibold">{count}</span> task{count === 1 ? '' : 's'}</span>
             {count > 0 && <span>·</span>}
             {count > 0 && <span>{hours}h</span>}
@@ -308,12 +308,12 @@ function TeamCard({ task }: { task: Task }) {
         e.dataTransfer.setData('taskId', String(task.id))
         e.dataTransfer.setData('sourceDate', '')
       }}
-      className={['bg-white/[0.04] hover:bg-white/[0.07] border border-white/10 rounded-md px-2.5 py-2 cursor-move transition border-l-2', accent].join(' ')}
+      className={['bg-white/4 hover:bg-white/[0.07] border border-white/10 rounded-md px-2.5 py-2 cursor-move transition border-l-2', accent].join(' ')}
     >
       <div className="text-xs font-medium text-white leading-tight" title={task.title}>{task.title}</div>
       <div className="flex items-center gap-1.5 mt-1 text-[10px] text-gray-500">
         {task.task_group && (
-          <span className="px-1 rounded bg-white/5 text-gray-400">{task.task_group}</span>
+          <span className="px-1 rounded-sm bg-white/5 text-gray-400">{task.task_group}</span>
         )}
         {task.priority === 'high' && (
           <span className="flex items-center gap-0.5 text-red-400"><Flag size={9} />high</span>
@@ -321,7 +321,7 @@ function TeamCard({ task }: { task: Task }) {
         {task.duration_minutes && (
           <span className="text-gray-500">{task.duration_minutes}m</span>
         )}
-        {(() => { const b = teamHorizonBadge(task); return b ? <span className={'px-1 rounded ' + (b.over ? 'bg-red-500/20 text-red-300' : 'bg-blue-500/15 text-blue-300')}>{b.label}</span> : null })()}
+        {(() => { const b = teamHorizonBadge(task); return b ? <span className={'px-1 rounded-sm ' + (b.over ? 'bg-red-500/20 text-red-300' : 'bg-blue-500/15 text-blue-300')}>{b.label}</span> : null })()}
       </div>
     </div>
   )

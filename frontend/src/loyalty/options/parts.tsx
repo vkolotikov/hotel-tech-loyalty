@@ -144,7 +144,7 @@ function ChoiceField({ name, label, choices, value, problem, hint, disabled, onC
           const word = named(`loyalty.options.choice.${name}`, words, choice)
           const on = value === choice
           return (
-            <label key={choice} className={`inline-flex cursor-pointer items-center gap-2 rounded-full border px-3.5 py-1.5 text-sm font-medium has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-a-accent-text ${on ? 'border-a-accent-text bg-a-accent/10 text-a-text' : 'border-a-border bg-a-surface text-a-text-2 hover:text-a-text'} ${disabled ? 'cursor-not-allowed opacity-60' : ''}`}>
+            <label key={choice} className={`inline-flex cursor-pointer items-center gap-2 rounded-full border px-3.5 py-1.5 text-sm font-medium has-focus-visible:ring-2 has-focus-visible:ring-a-accent-text ${on ? 'border-a-accent-text bg-a-accent/10 text-a-text' : 'border-a-border bg-a-surface text-a-text-2 hover:text-a-text'} ${disabled ? 'cursor-not-allowed opacity-60' : ''}`}>
               <input type="radio" name={`${id}-${name}`} value={choice} checked={on} disabled={disabled} onChange={() => onChange(choice)} className="sr-only" />
               {word ? t(...word) : choice}
             </label>

@@ -113,7 +113,7 @@ export function PromoteDialog({ pages, onClose, onStarted }: { pages: SitePage[]
         <div>
           <p className="text-sm font-semibold text-a-text">{t('content.promote.dialog.pages', 'Pages chosen: {{count}}', { count: pages.length })}</p>
           <ul className="mt-1 list-disc pl-5 text-sm text-a-text-2">
-            {pages.slice(0, SHOWN).map(p => <li key={p.id} className="break-words">{p.title}</li>)}
+            {pages.slice(0, SHOWN).map(p => <li key={p.id} className="wrap-break-word">{p.title}</li>)}
           </ul>
           {pages.length > SHOWN && <p className="mt-1 text-xs text-a-text-2">{t('content.promote.dialog.more', 'More: {{count}}', { count: pages.length - SHOWN })}</p>}
         </div>

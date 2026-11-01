@@ -51,7 +51,7 @@ export function PushResults({ push: p, options }: { push: Push; options: PushOpt
   return (
     <div className="space-y-6">
       <div className="min-w-0 space-y-2">
-        <h2 className="break-words font-a-display text-3xl font-normal leading-tight text-a-text">{p.name}</h2>
+        <h2 className="wrap-break-word font-a-display text-3xl font-normal leading-tight text-a-text">{p.name}</h2>
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-a-text-2">
           <StatusBadge status={p.status} />
           <span><CategoryName category={p.category} /></span>

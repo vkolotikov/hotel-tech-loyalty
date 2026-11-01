@@ -317,7 +317,7 @@ export function AddInquiryDrawer({ open, onClose, onCreated, properties, setting
           <div className="flex items-start gap-3">
             <button
               onClick={onClose}
-              className="p-1.5 rounded-lg hover:bg-white/[0.06] text-t-secondary hover:text-white transition-colors flex-shrink-0"
+              className="p-1.5 rounded-lg hover:bg-white/6 text-t-secondary hover:text-white transition-colors shrink-0"
               title="Close (Esc)"
             >
               <ArrowLeft size={16} />
@@ -329,7 +329,7 @@ export function AddInquiryDrawer({ open, onClose, onCreated, properties, setting
             </div>
             <button
               onClick={onClose}
-              className="p-1.5 rounded-lg hover:bg-white/[0.06] text-t-secondary hover:text-white transition-colors flex-shrink-0"
+              className="p-1.5 rounded-lg hover:bg-white/6 text-t-secondary hover:text-white transition-colors shrink-0"
               title="Close"
             >
               <X size={16} />
@@ -343,7 +343,7 @@ export function AddInquiryDrawer({ open, onClose, onCreated, properties, setting
           {/* ── Customer ─────────────────────────────────────────── */}
           <Section icon={UserIcon} accent="#22d3ee" title="Customer" subtitle="Who is this lead for?">
             {/* Mode toggle */}
-            <div className="inline-flex p-0.5 rounded-lg bg-white/[0.04] border border-white/10 mb-3 self-start">
+            <div className="inline-flex p-0.5 rounded-lg bg-white/4 border border-white/10 mb-3 self-start">
               {([
                 { v: 'existing' as CustomerMode, label: 'Existing customer', icon: Search },
                 { v: 'new'      as CustomerMode, label: 'New customer',      icon: Plus   },
@@ -363,8 +363,8 @@ export function AddInquiryDrawer({ open, onClose, onCreated, properties, setting
             {customerMode === 'existing' && (
               <div className="space-y-2">
                 {pickedGuestId && pickedGuest ? (
-                  <div className="flex items-center gap-3 p-3 rounded-xl bg-hx-22d3ee/[0.06] border border-hx-22d3ee/25">
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-hx-22d3ee to-hx-0891b2 flex items-center justify-center text-on-fill font-bold text-sm flex-shrink-0">
+                  <div className="flex items-center gap-3 p-3 rounded-xl bg-hx-22d3ee/6 border border-hx-22d3ee/25">
+                    <div className="w-10 h-10 rounded-full bg-linear-to-br from-hx-22d3ee to-hx-0891b2 flex items-center justify-center text-on-fill font-bold text-sm shrink-0">
                       {(pickedGuest.full_name || '?').slice(0, 1).toUpperCase()}
                     </div>
                     <div className="flex-1 min-w-0">
@@ -376,7 +376,7 @@ export function AddInquiryDrawer({ open, onClose, onCreated, properties, setting
                     <button
                       type="button"
                       onClick={() => { setPickedGuestId(''); setSearch(''); setSearchOpen(false) }}
-                      className="p-1.5 rounded-md hover:bg-white/[0.08] text-t-secondary hover:text-white"
+                      className="p-1.5 rounded-md hover:bg-white/8 text-t-secondary hover:text-white"
                       title="Pick a different customer"
                     >
                       <X size={14} />
@@ -391,7 +391,7 @@ export function AddInquiryDrawer({ open, onClose, onCreated, properties, setting
                       onChange={(e) => { setSearch(e.target.value); setSearchOpen(true) }}
                       onFocus={() => setSearchOpen(true)}
                       placeholder="Search by name, email, phone…"
-                      className="w-full bg-panel border border-dark-border rounded-lg pl-9 pr-3 py-2.5 text-sm text-white placeholder-t-secondary focus:outline-none focus:border-hx-22d3ee/50 focus:ring-1 focus:ring-hx-22d3ee/30"
+                      className="w-full bg-panel border border-dark-border rounded-lg pl-9 pr-3 py-2.5 text-sm text-white placeholder-t-secondary focus:outline-hidden focus:border-hx-22d3ee/50 focus:ring-1 focus:ring-hx-22d3ee/30"
                     />
                     {searching && (
                       <Loader2 size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-t-secondary animate-spin" />
@@ -415,9 +415,9 @@ export function AddInquiryDrawer({ open, onClose, onCreated, properties, setting
                             key={g.id}
                             type="button"
                             onClick={() => { setPickedGuestId(String(g.id)); setSearchOpen(false); setSearch('') }}
-                            className="w-full text-left flex items-center gap-3 px-3 py-2.5 hover:bg-white/[0.04] border-b border-white/[0.04] last:border-b-0"
+                            className="w-full text-left flex items-center gap-3 px-3 py-2.5 hover:bg-white/4 border-b border-white/4 last:border-b-0"
                           >
-                            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-hx-22d3ee to-hx-0891b2 flex items-center justify-center text-on-fill font-bold text-xs flex-shrink-0">
+                            <div className="w-8 h-8 rounded-full bg-linear-to-br from-hx-22d3ee to-hx-0891b2 flex items-center justify-center text-on-fill font-bold text-xs shrink-0">
                               {(g.full_name || '?').slice(0, 1).toUpperCase()}
                             </div>
                             <div className="flex-1 min-w-0">
@@ -448,7 +448,7 @@ export function AddInquiryDrawer({ open, onClose, onCreated, properties, setting
                       value={newCustomer.full_name}
                       onChange={(e) => setNewCustomer(c => ({ ...c, full_name: e.target.value }))}
                       placeholder="Jane Doe"
-                      className="w-full bg-panel border border-dark-border rounded-lg pl-9 pr-3 py-2 text-sm text-white placeholder-t-secondary focus:outline-none focus:border-hx-22d3ee/50"
+                      className="w-full bg-panel border border-dark-border rounded-lg pl-9 pr-3 py-2 text-sm text-white placeholder-t-secondary focus:outline-hidden focus:border-hx-22d3ee/50"
                       required
                     />
                   </div>
@@ -459,7 +459,7 @@ export function AddInquiryDrawer({ open, onClose, onCreated, properties, setting
                       value={newCustomer.first_name}
                       onChange={(e) => setNewCustomer(c => ({ ...c, first_name: e.target.value }))}
                       placeholder="Jane"
-                      className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-t-secondary focus:outline-none focus:border-hx-22d3ee/50"
+                      className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-t-secondary focus:outline-hidden focus:border-hx-22d3ee/50"
                     />
                   </Field>
                 )}
@@ -469,7 +469,7 @@ export function AddInquiryDrawer({ open, onClose, onCreated, properties, setting
                       value={newCustomer.last_name}
                       onChange={(e) => setNewCustomer(c => ({ ...c, last_name: e.target.value }))}
                       placeholder="Doe"
-                      className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-t-secondary focus:outline-none focus:border-hx-22d3ee/50"
+                      className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-t-secondary focus:outline-hidden focus:border-hx-22d3ee/50"
                     />
                   </Field>
                 )}
@@ -482,7 +482,7 @@ export function AddInquiryDrawer({ open, onClose, onCreated, properties, setting
                         value={newCustomer.email}
                         onChange={(e) => setNewCustomer(c => ({ ...c, email: e.target.value }))}
                         placeholder="jane@example.com"
-                        className="w-full bg-panel border border-dark-border rounded-lg pl-9 pr-3 py-2 text-sm text-white placeholder-t-secondary focus:outline-none focus:border-hx-22d3ee/50"
+                        className="w-full bg-panel border border-dark-border rounded-lg pl-9 pr-3 py-2 text-sm text-white placeholder-t-secondary focus:outline-hidden focus:border-hx-22d3ee/50"
                       />
                     </div>
                   </Field>
@@ -495,7 +495,7 @@ export function AddInquiryDrawer({ open, onClose, onCreated, properties, setting
                         value={newCustomer.phone}
                         onChange={(e) => setNewCustomer(c => ({ ...c, phone: e.target.value }))}
                         placeholder="+1 555 123 4567"
-                        className="w-full bg-panel border border-dark-border rounded-lg pl-9 pr-3 py-2 text-sm text-white placeholder-t-secondary focus:outline-none focus:border-hx-22d3ee/50"
+                        className="w-full bg-panel border border-dark-border rounded-lg pl-9 pr-3 py-2 text-sm text-white placeholder-t-secondary focus:outline-hidden focus:border-hx-22d3ee/50"
                       />
                     </div>
                   </Field>
@@ -508,7 +508,7 @@ export function AddInquiryDrawer({ open, onClose, onCreated, properties, setting
                         value={newCustomer.company}
                         onChange={(e) => setNewCustomer(c => ({ ...c, company: e.target.value }))}
                         placeholder="Acme Ltd"
-                        className="w-full bg-panel border border-dark-border rounded-lg pl-9 pr-3 py-2 text-sm text-white placeholder-t-secondary focus:outline-none focus:border-hx-22d3ee/50"
+                        className="w-full bg-panel border border-dark-border rounded-lg pl-9 pr-3 py-2 text-sm text-white placeholder-t-secondary focus:outline-hidden focus:border-hx-22d3ee/50"
                       />
                     </div>
                   </Field>
@@ -519,7 +519,7 @@ export function AddInquiryDrawer({ open, onClose, onCreated, properties, setting
                       value={newCustomer.position_title}
                       onChange={(e) => setNewCustomer(c => ({ ...c, position_title: e.target.value }))}
                       placeholder="Director of Sales"
-                      className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-t-secondary focus:outline-none focus:border-hx-22d3ee/50"
+                      className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-t-secondary focus:outline-hidden focus:border-hx-22d3ee/50"
                     />
                   </Field>
                 )}
@@ -528,7 +528,7 @@ export function AddInquiryDrawer({ open, onClose, onCreated, properties, setting
                     <select
                       value={newCustomer.guest_type}
                       onChange={(e) => setNewCustomer(c => ({ ...c, guest_type: e.target.value }))}
-                      className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-hx-22d3ee/50"
+                      className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-hidden focus:border-hx-22d3ee/50"
                     >
                       <option value="">— Select —</option>
                       {(settings as any).guest_types?.map?.((g: string) => <option key={g}>{g}</option>)
@@ -541,7 +541,7 @@ export function AddInquiryDrawer({ open, onClose, onCreated, properties, setting
                     <select
                       value={newCustomer.vip_level}
                       onChange={(e) => setNewCustomer(c => ({ ...c, vip_level: e.target.value }))}
-                      className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-hx-22d3ee/50"
+                      className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-hidden focus:border-hx-22d3ee/50"
                     >
                       <option value="">— Select —</option>
                       {(settings as any).vip_levels?.map?.((v: string) => <option key={v}>{v}</option>)
@@ -554,7 +554,7 @@ export function AddInquiryDrawer({ open, onClose, onCreated, properties, setting
                     <select
                       value={newCustomer.importance}
                       onChange={(e) => setNewCustomer(c => ({ ...c, importance: e.target.value }))}
-                      className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-hx-22d3ee/50"
+                      className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-hidden focus:border-hx-22d3ee/50"
                     >
                       <option value="">— Select —</option>
                       {['Standard', 'Important', 'VIP', 'VVIP'].map(i => <option key={i}>{i}</option>)}
@@ -567,7 +567,7 @@ export function AddInquiryDrawer({ open, onClose, onCreated, properties, setting
                       value={newCustomer.nationality}
                       onChange={(e) => setNewCustomer(c => ({ ...c, nationality: e.target.value }))}
                       placeholder="German"
-                      className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-t-secondary focus:outline-none focus:border-hx-22d3ee/50"
+                      className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-t-secondary focus:outline-hidden focus:border-hx-22d3ee/50"
                     />
                   </Field>
                 )}
@@ -577,7 +577,7 @@ export function AddInquiryDrawer({ open, onClose, onCreated, properties, setting
                       value={newCustomer.country}
                       onChange={(e) => setNewCustomer(c => ({ ...c, country: e.target.value }))}
                       placeholder="Germany"
-                      className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-t-secondary focus:outline-none focus:border-hx-22d3ee/50"
+                      className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-t-secondary focus:outline-hidden focus:border-hx-22d3ee/50"
                     />
                   </Field>
                 )}
@@ -587,7 +587,7 @@ export function AddInquiryDrawer({ open, onClose, onCreated, properties, setting
                       value={newCustomer.city}
                       onChange={(e) => setNewCustomer(c => ({ ...c, city: e.target.value }))}
                       placeholder="Berlin"
-                      className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-t-secondary focus:outline-none focus:border-hx-22d3ee/50"
+                      className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-t-secondary focus:outline-hidden focus:border-hx-22d3ee/50"
                     />
                   </Field>
                 )}
@@ -599,7 +599,7 @@ export function AddInquiryDrawer({ open, onClose, onCreated, properties, setting
                         onChange={(e) => setNewCustomer(c => ({ ...c, notes: e.target.value }))}
                         rows={2}
                         placeholder="Anything useful about this customer…"
-                        className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-t-secondary focus:outline-none focus:border-hx-22d3ee/50 resize-none"
+                        className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-t-secondary focus:outline-hidden focus:border-hx-22d3ee/50 resize-none"
                       />
                     </Field>
                   </div>
@@ -619,7 +619,7 @@ export function AddInquiryDrawer({ open, onClose, onCreated, properties, setting
                 <select
                   value={form.property_id}
                   onChange={(e) => setForm(f => ({ ...f, property_id: e.target.value }))}
-                  className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-hx-3b82f6/50"
+                  className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-hidden focus:border-hx-3b82f6/50"
                   required
                 >
                   <option value="">— Select property —</option>
@@ -631,7 +631,7 @@ export function AddInquiryDrawer({ open, onClose, onCreated, properties, setting
                   <select
                     value={form.inquiry_type}
                     onChange={(e) => setForm(f => ({ ...f, inquiry_type: e.target.value }))}
-                    className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-hx-3b82f6/50"
+                    className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-hidden focus:border-hx-3b82f6/50"
                   >
                     <option value="">— Select —</option>
                     {settings.inquiry_types.map(t => <option key={t}>{t}</option>)}
@@ -644,7 +644,7 @@ export function AddInquiryDrawer({ open, onClose, onCreated, properties, setting
                     type="date"
                     value={form.check_in}
                     onChange={(e) => setForm(f => ({ ...f, check_in: e.target.value }))}
-                    className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-hx-3b82f6/50"
+                    className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-hidden focus:border-hx-3b82f6/50"
                   />
                 </Field>
               )}
@@ -654,7 +654,7 @@ export function AddInquiryDrawer({ open, onClose, onCreated, properties, setting
                     type="date"
                     value={form.check_out}
                     onChange={(e) => setForm(f => ({ ...f, check_out: e.target.value }))}
-                    className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-hx-3b82f6/50"
+                    className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-hidden focus:border-hx-3b82f6/50"
                   />
                 </Field>
               )}
@@ -666,7 +666,7 @@ export function AddInquiryDrawer({ open, onClose, onCreated, properties, setting
                     value={form.num_rooms}
                     onChange={(e) => setForm(f => ({ ...f, num_rooms: e.target.value }))}
                     placeholder="1"
-                    className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-hx-3b82f6/50"
+                    className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-hidden focus:border-hx-3b82f6/50"
                   />
                 </Field>
               )}
@@ -678,7 +678,7 @@ export function AddInquiryDrawer({ open, onClose, onCreated, properties, setting
                     value={form.num_adults}
                     onChange={(e) => setForm(f => ({ ...f, num_adults: e.target.value }))}
                     placeholder="Adults"
-                    className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-t-secondary focus:outline-none focus:border-hx-3b82f6/50"
+                    className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-t-secondary focus:outline-hidden focus:border-hx-3b82f6/50"
                   />
                   <input
                     type="number"
@@ -686,7 +686,7 @@ export function AddInquiryDrawer({ open, onClose, onCreated, properties, setting
                     value={form.num_children}
                     onChange={(e) => setForm(f => ({ ...f, num_children: e.target.value }))}
                     placeholder="Children"
-                    className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-t-secondary focus:outline-none focus:border-hx-3b82f6/50"
+                    className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-t-secondary focus:outline-hidden focus:border-hx-3b82f6/50"
                   />
                 </div>
               </Field>
@@ -702,7 +702,7 @@ export function AddInquiryDrawer({ open, onClose, onCreated, properties, setting
                     value={form.event_name}
                     onChange={(e) => setForm(f => ({ ...f, event_name: e.target.value }))}
                     placeholder="Summer gala"
-                    className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-t-secondary focus:outline-none focus:border-hx-a855f7/50"
+                    className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-t-secondary focus:outline-hidden focus:border-hx-a855f7/50"
                   />
                 </Field>
                 <Field label="Expected pax">
@@ -711,14 +711,14 @@ export function AddInquiryDrawer({ open, onClose, onCreated, properties, setting
                     value={form.event_pax}
                     onChange={(e) => setForm(f => ({ ...f, event_pax: e.target.value }))}
                     placeholder="50"
-                    className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-t-secondary focus:outline-none focus:border-hx-a855f7/50"
+                    className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-t-secondary focus:outline-hidden focus:border-hx-a855f7/50"
                   />
                 </Field>
                 <Field label="Function space">
                   <select
                     value={form.function_space}
                     onChange={(e) => setForm(f => ({ ...f, function_space: e.target.value }))}
-                    className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-hx-a855f7/50"
+                    className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-hidden focus:border-hx-a855f7/50"
                   >
                     <option value="">— Select —</option>
                     {settings.function_spaces.map(s => <option key={s}>{s}</option>)}
@@ -765,7 +765,7 @@ export function AddInquiryDrawer({ open, onClose, onCreated, properties, setting
                     <select
                       value={form.source}
                       onChange={(e) => setForm(f => ({ ...f, source: e.target.value }))}
-                      className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-hx-10b981/50"
+                      className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-hidden focus:border-hx-10b981/50"
                     >
                       <option value="">— None —</option>
                       {settings.lead_sources.map(s => <option key={s}>{s}</option>)}
@@ -777,7 +777,7 @@ export function AddInquiryDrawer({ open, onClose, onCreated, properties, setting
                     <select
                       value={form.room_type_requested}
                       onChange={(e) => setForm(f => ({ ...f, room_type_requested: e.target.value }))}
-                      className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-hx-10b981/50"
+                      className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-hidden focus:border-hx-10b981/50"
                     >
                       <option value="">— Select —</option>
                       {settings.room_types.map(t => <option key={t}>{t}</option>)}
@@ -792,7 +792,7 @@ export function AddInquiryDrawer({ open, onClose, onCreated, properties, setting
                       value={form.rate_offered}
                       onChange={(e) => setForm(f => ({ ...f, rate_offered: e.target.value }))}
                       placeholder="0.00"
-                      className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-t-secondary focus:outline-none focus:border-hx-10b981/50"
+                      className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-t-secondary focus:outline-hidden focus:border-hx-10b981/50"
                     />
                   </Field>
                 )}
@@ -804,7 +804,7 @@ export function AddInquiryDrawer({ open, onClose, onCreated, properties, setting
                       value={form.total_value}
                       onChange={(e) => setForm(f => ({ ...f, total_value: e.target.value }))}
                       placeholder="0.00"
-                      className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-t-secondary focus:outline-none focus:border-hx-10b981/50"
+                      className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-t-secondary focus:outline-hidden focus:border-hx-10b981/50"
                     />
                   </Field>
                 )}
@@ -813,7 +813,7 @@ export function AddInquiryDrawer({ open, onClose, onCreated, properties, setting
                     <select
                       value={form.status}
                       onChange={(e) => setForm(f => ({ ...f, status: e.target.value }))}
-                      className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-hx-10b981/50"
+                      className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-hidden focus:border-hx-10b981/50"
                     >
                       {settings.inquiry_statuses.map(s => <option key={s}>{s}</option>)}
                     </select>
@@ -824,7 +824,7 @@ export function AddInquiryDrawer({ open, onClose, onCreated, properties, setting
                     <select
                       value={form.priority}
                       onChange={(e) => setForm(f => ({ ...f, priority: e.target.value }))}
-                      className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-hx-10b981/50"
+                      className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-hidden focus:border-hx-10b981/50"
                     >
                       {settings.priorities.map(p => <option key={p}>{p}</option>)}
                     </select>
@@ -835,7 +835,7 @@ export function AddInquiryDrawer({ open, onClose, onCreated, properties, setting
                     <select
                       value={form.assigned_to}
                       onChange={(e) => setForm(f => ({ ...f, assigned_to: e.target.value }))}
-                      className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-hx-10b981/50"
+                      className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-hidden focus:border-hx-10b981/50"
                     >
                       <option value="">— Unassigned —</option>
                       {settings.lead_owners.map(o => <option key={o}>{o}</option>)}
@@ -862,7 +862,7 @@ export function AddInquiryDrawer({ open, onClose, onCreated, properties, setting
                     onChange={(e) => setForm(f => ({ ...f, special_requests: e.target.value }))}
                     rows={2}
                     placeholder="Allergies, room preferences, anniversary surprise…"
-                    className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-t-secondary focus:outline-none focus:border-hx-a78bfa/50 resize-none"
+                    className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-t-secondary focus:outline-hidden focus:border-hx-a78bfa/50 resize-none"
                   />
                 </Field>
               )}
@@ -873,7 +873,7 @@ export function AddInquiryDrawer({ open, onClose, onCreated, properties, setting
                     onChange={(e) => setForm(f => ({ ...f, notes: e.target.value }))}
                     rows={2}
                     placeholder="Visible to staff only…"
-                    className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-t-secondary focus:outline-none focus:border-hx-a78bfa/50 resize-none"
+                    className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-t-secondary focus:outline-hidden focus:border-hx-a78bfa/50 resize-none"
                   />
                 </Field>
               )}
@@ -882,15 +882,15 @@ export function AddInquiryDrawer({ open, onClose, onCreated, properties, setting
                 values={form.custom_data}
                 onChange={(next) => setForm(f => ({ ...f, custom_data: next }))}
                 errors={cfErrors}
-                inputClassName="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-t-secondary focus:outline-none focus:border-hx-a78bfa/50"
+                inputClassName="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-t-secondary focus:outline-hidden focus:border-hx-a78bfa/50"
               />
             </div>
           </CollapsibleSection>
 
           {/* Validation hint */}
           {!canSubmit && (
-            <div className="flex items-start gap-2 text-[11px] text-amber-300/90 px-3 py-2 rounded-lg bg-amber-500/[0.06] border border-amber-500/20">
-              <AlertCircle size={13} className="flex-shrink-0 mt-0.5" />
+            <div className="flex items-start gap-2 text-[11px] text-amber-300/90 px-3 py-2 rounded-lg bg-amber-500/6 border border-amber-500/20">
+              <AlertCircle size={13} className="shrink-0 mt-0.5" />
               <span>
                 {!form.property_id && 'Pick a property. '}
                 {customerMode === 'existing' && !pickedGuestId && 'Pick an existing customer or switch to "New". '}
@@ -901,9 +901,9 @@ export function AddInquiryDrawer({ open, onClose, onCreated, properties, setting
         </form>
 
         {/* Footer */}
-        <div className="px-5 py-3 border-t border-white/10 bg-hx-0a0a0a/80 backdrop-blur flex items-center justify-between gap-3">
+        <div className="px-5 py-3 border-t border-white/10 bg-hx-0a0a0a/80 backdrop-blur-sm flex items-center justify-between gap-3">
           <div className="text-[11px] text-t-secondary hidden sm:block">
-            <kbd className="px-1.5 py-0.5 text-[10px] bg-white/[0.06] border border-white/10 rounded">Esc</kbd> to cancel
+            <kbd className="px-1.5 py-0.5 text-[10px] bg-white/6 border border-white/10 rounded-sm">Esc</kbd> to cancel
           </div>
           <div className="flex items-center gap-2 ml-auto">
             <button
@@ -917,7 +917,7 @@ export function AddInquiryDrawer({ open, onClose, onCreated, properties, setting
               type="submit"
               onClick={handleSubmit}
               disabled={!canSubmit || submitting}
-              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-hx-c9a84c to-hx-b8983e hover:from-hx-d4b358 hover:to-hx-c2a247 text-black font-bold text-xs rounded-lg shadow-lg shadow-hx-c9a84c/20 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+              className="flex items-center gap-2 px-4 py-2 bg-linear-to-r from-hx-c9a84c to-hx-b8983e hover:from-hx-d4b358 hover:to-hx-c2a247 text-black font-bold text-xs rounded-lg shadow-lg shadow-hx-c9a84c/20 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
             >
               {submitting ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
               {submitting ? 'Creating…' : 'Create inquiry'}
@@ -943,12 +943,12 @@ function Section({
   const ink = useDataInk()
   return (
     <section
-      className="rounded-2xl border border-white/[0.06] bg-white/[0.015] p-4 flex flex-col"
+      className="rounded-2xl border border-white/6 bg-white/1.5 p-4 flex flex-col"
       style={{ boxShadow: `inset 0 1px 0 ${accent}10` }}
     >
       <div className="flex items-center gap-3 mb-3">
         <span
-          className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+          className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
           style={{
             background: `linear-gradient(135deg, ${accent}28, ${accent}10)`,
             border: `1px solid ${accent}40`,
@@ -980,16 +980,16 @@ function CollapsibleSection({
   const ink = useDataInk()
   return (
     <section
-      className="rounded-2xl border border-white/[0.06] bg-white/[0.015] overflow-hidden"
+      className="rounded-2xl border border-white/6 bg-white/1.5 overflow-hidden"
       style={{ boxShadow: `inset 0 1px 0 ${accent}10` }}
     >
       <button
         type="button"
         onClick={onToggle}
-        className="w-full flex items-center gap-3 p-4 hover:bg-white/[0.02] transition-colors"
+        className="w-full flex items-center gap-3 p-4 hover:bg-white/2 transition-colors"
       >
         <span
-          className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+          className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
           style={{
             background: `linear-gradient(135deg, ${accent}28, ${accent}10)`,
             border: `1px solid ${accent}40`,

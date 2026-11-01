@@ -112,13 +112,13 @@ export function AuditLog() {
               placeholder="Search descriptions..."
               value={search}
               onChange={e => { setSearch(e.target.value); setPage(1) }}
-              className="w-full pl-9 pr-4 py-2 bg-panel border border-dark-border rounded-lg text-sm text-white placeholder-t-muted focus:outline-none focus:ring-2 focus:ring-primary-500"
+              className="w-full pl-9 pr-4 py-2 bg-panel border border-dark-border rounded-lg text-sm text-white placeholder-t-muted focus:outline-hidden focus:ring-2 focus:ring-primary-500"
             />
           </div>
           <select
             value={action}
             onChange={e => { setAction(e.target.value); setPage(1) }}
-            className="bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+            className="bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-hidden focus:ring-2 focus:ring-primary-500"
           >
             <option value="">All Actions</option>
             {(actions ?? []).map((a: string) => (
@@ -128,7 +128,7 @@ export function AuditLog() {
           <select
             value={subjectType}
             onChange={e => { setSubjectType(e.target.value); setPage(1) }}
-            className="bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+            className="bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-hidden focus:ring-2 focus:ring-primary-500"
           >
             <option value="">All Entities</option>
             {(subjectTypes ?? []).map((t: { value: string; label: string }) => (
@@ -139,14 +139,14 @@ export function AuditLog() {
             type="date"
             value={dateFrom}
             onChange={e => { setDateFrom(e.target.value); setPage(1) }}
-            className="bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+            className="bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-hidden focus:ring-2 focus:ring-primary-500"
             placeholder="From"
           />
           <input
             type="date"
             value={dateTo}
             onChange={e => { setDateTo(e.target.value); setPage(1) }}
-            className="bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+            className="bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-hidden focus:ring-2 focus:ring-primary-500"
             placeholder="To"
           />
         </div>
@@ -170,7 +170,7 @@ export function AuditLog() {
                 Array(10).fill(0).map((_, i) => (
                   <tr key={i}>
                     {Array(7).fill(0).map((_, j) => (
-                      <td key={j} className="py-3"><div className="h-4 bg-dark-surface2 rounded animate-pulse w-20" /></td>
+                      <td key={j} className="py-3"><div className="h-4 bg-dark-surface2 rounded-sm animate-pulse w-20" /></td>
                     ))}
                   </tr>
                 ))

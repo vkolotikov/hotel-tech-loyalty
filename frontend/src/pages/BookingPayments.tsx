@@ -43,7 +43,7 @@ export function BookingPayments() {
   const items = data?.data ?? []
   const lastPage = data?.last_page ?? 1
 
-  const selectClass = 'bg-dark-bg border border-white/[0.08] rounded-xl text-sm text-white px-3 py-2.5 focus:outline-none focus:ring-1 focus:ring-emerald-500/40'
+  const selectClass = 'bg-dark-bg border border-white/8 rounded-xl text-sm text-white px-3 py-2.5 focus:outline-hidden focus:ring-1 focus:ring-emerald-500/40'
 
   return (
     <div className="space-y-7">
@@ -55,7 +55,7 @@ export function BookingPayments() {
       </div>
 
       {/* Filters */}
-      <div className="rounded-2xl p-4 border border-white/[0.06] flex flex-wrap items-center gap-3"
+      <div className="rounded-2xl p-4 border border-white/6 flex flex-wrap items-center gap-3"
         style={{ background: 'var(--legacy-card-gradient)', boxShadow: '0 16px 30px rgba(0,0,0,0.18)' }}>
         <div className="relative flex-1 min-w-[200px]">
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
@@ -84,7 +84,7 @@ export function BookingPayments() {
         {isLoading ? (
           <div className="text-center py-12"><div className="w-6 h-6 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto" /></div>
         ) : items.length === 0 ? (
-          <div className="text-center text-gray-600 py-12 rounded-2xl border border-white/[0.06]"
+          <div className="text-center text-gray-600 py-12 rounded-2xl border border-white/6"
             style={{ background: 'var(--legacy-card-gradient)' }}>
             No payment records found.
           </div>
@@ -133,7 +133,7 @@ export function BookingPayments() {
                     </span>
                   )}
                   {b.payment_method && (
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-white/[0.04] text-gray-400 border border-white/[0.06]">
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-white/4 text-gray-400 border border-white/6">
                       {b.payment_method}
                     </span>
                   )}

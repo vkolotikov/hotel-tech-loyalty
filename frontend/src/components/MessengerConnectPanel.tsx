@@ -326,7 +326,7 @@ export function MessengerConnectPanel() {
     <div className="bg-dark-surface border border-dark-border rounded-xl overflow-hidden">
       {/* Header */}
       <div className="flex items-start gap-3 p-4 border-b border-dark-border">
-        <div className="w-10 h-10 rounded-lg bg-blue-500/15 border border-blue-500/30 flex items-center justify-center flex-shrink-0">
+        <div className="w-10 h-10 rounded-lg bg-blue-500/15 border border-blue-500/30 flex items-center justify-center shrink-0">
           <Facebook size={20} className="text-blue-400" />
         </div>
         <div className="flex-1 min-w-0">
@@ -342,7 +342,7 @@ export function MessengerConnectPanel() {
         <button
           onClick={refresh}
           disabled={loading}
-          className="p-1.5 rounded-md text-t-secondary hover:text-white hover:bg-white/[0.04] transition-colors disabled:opacity-50"
+          className="p-1.5 rounded-md text-t-secondary hover:text-white hover:bg-white/4 transition-colors disabled:opacity-50"
           title="Refresh"
         >
           <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
@@ -351,17 +351,17 @@ export function MessengerConnectPanel() {
 
       {/* Not-configured (Meta env credentials missing) */}
       {!loading && config && !config.configured && (
-        <div className="p-4 bg-amber-500/[0.06] border-b border-amber-500/20">
+        <div className="p-4 bg-amber-500/6 border-b border-amber-500/20">
           <div className="flex items-start gap-2 text-xs">
-            <AlertCircle size={14} className="text-amber-400 flex-shrink-0 mt-0.5" />
+            <AlertCircle size={14} className="text-amber-400 shrink-0 mt-0.5" />
             <div>
               <p className="text-amber-200 font-semibold">Server not configured for Messenger yet.</p>
               <p className="text-amber-300/80 mt-1">
                 Your platform owner needs to provision a Meta Developer App and add{' '}
-                <code className="px-1.5 py-0.5 bg-amber-500/[0.10] rounded text-[10px]">META_APP_ID</code>,{' '}
-                <code className="px-1.5 py-0.5 bg-amber-500/[0.10] rounded text-[10px]">META_APP_SECRET</code> and{' '}
-                <code className="px-1.5 py-0.5 bg-amber-500/[0.10] rounded text-[10px]">META_WEBHOOK_VERIFY_TOKEN</code>{' '}
-                to the production environment. See <code className="px-1.5 py-0.5 bg-amber-500/[0.10] rounded text-[10px]">apps/loyalty/MESSENGER_INTEGRATION.md</code> in the codebase for the full setup.
+                <code className="px-1.5 py-0.5 bg-amber-500/10 rounded-sm text-[10px]">META_APP_ID</code>,{' '}
+                <code className="px-1.5 py-0.5 bg-amber-500/10 rounded-sm text-[10px]">META_APP_SECRET</code> and{' '}
+                <code className="px-1.5 py-0.5 bg-amber-500/10 rounded-sm text-[10px]">META_WEBHOOK_VERIFY_TOKEN</code>{' '}
+                to the production environment. See <code className="px-1.5 py-0.5 bg-amber-500/10 rounded-sm text-[10px]">apps/loyalty/MESSENGER_INTEGRATION.md</code> in the codebase for the full setup.
               </p>
             </div>
           </div>
@@ -407,7 +407,7 @@ export function MessengerConnectPanel() {
       {/* Empty state */}
       {!loading && !error && accounts.length === 0 && config?.configured && (
         <div className="p-6 text-center">
-          <div className="w-12 h-12 rounded-2xl bg-blue-500/[0.10] border border-blue-500/25 flex items-center justify-center mx-auto mb-3">
+          <div className="w-12 h-12 rounded-2xl bg-blue-500/10 border border-blue-500/25 flex items-center justify-center mx-auto mb-3">
             <MessageCircle size={20} className="text-blue-400" />
           </div>
           <p className="text-sm font-semibold text-white mb-1">No Facebook Page connected yet</p>
@@ -415,9 +415,9 @@ export function MessengerConnectPanel() {
             Connect your Facebook Page to capture DMs as leads, auto-respond with your AI, or chat as a human agent — all from Engagement.
           </p>
           <ul className="text-[11px] text-t-secondary space-y-1 mb-4 text-left max-w-xs mx-auto">
-            <li className="flex items-center gap-1.5"><CheckCircle2 size={11} className="text-emerald-400 flex-shrink-0" />You stay in control — admin can disconnect anytime</li>
-            <li className="flex items-center gap-1.5"><CheckCircle2 size={11} className="text-emerald-400 flex-shrink-0" />We never see your Facebook password</li>
-            <li className="flex items-center gap-1.5"><CheckCircle2 size={11} className="text-emerald-400 flex-shrink-0" />Tokens encrypted at rest in our database</li>
+            <li className="flex items-center gap-1.5"><CheckCircle2 size={11} className="text-emerald-400 shrink-0" />You stay in control — admin can disconnect anytime</li>
+            <li className="flex items-center gap-1.5"><CheckCircle2 size={11} className="text-emerald-400 shrink-0" />We never see your Facebook password</li>
+            <li className="flex items-center gap-1.5"><CheckCircle2 size={11} className="text-emerald-400 shrink-0" />Tokens encrypted at rest in our database</li>
           </ul>
         </div>
       )}
@@ -475,7 +475,7 @@ function ConnectedRow({
     active:           { label: 'Active',          cls: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30', icon: CheckCircle2 },
     reauth_required:  { label: 'Reconnect needed', cls: 'bg-amber-500/15 text-amber-300 border-amber-500/30',     icon: AlertCircle },
     disconnected:     { label: 'Disconnected',    cls: 'bg-red-500/15 text-red-300 border-red-500/30',            icon: X },
-  }[account.status] ?? { label: account.status, cls: 'bg-white/[0.06] text-gray-300', icon: AlertCircle }
+  }[account.status] ?? { label: account.status, cls: 'bg-white/6 text-gray-300', icon: AlertCircle }
 
   return (
     <div className="p-4 flex items-start gap-3">
@@ -483,11 +483,11 @@ function ConnectedRow({
         <img
           src={account.display_avatar_url}
           alt={`${account.display_name ?? 'Page'} avatar`}
-          className="w-10 h-10 rounded-lg object-cover flex-shrink-0 bg-dark-bg"
+          className="w-10 h-10 rounded-lg object-cover shrink-0 bg-dark-bg"
           onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none' }}
         />
       ) : (
-        <div className="w-10 h-10 rounded-lg bg-blue-500/15 border border-blue-500/30 flex items-center justify-center flex-shrink-0">
+        <div className="w-10 h-10 rounded-lg bg-blue-500/15 border border-blue-500/30 flex items-center justify-center shrink-0">
           <Facebook size={16} className="text-blue-400" />
         </div>
       )}
@@ -495,7 +495,7 @@ function ConnectedRow({
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
           <h4 className="text-sm font-semibold text-white truncate">{account.display_name || `Page ${account.external_id}`}</h4>
-          <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold border ${statusMeta.cls}`}>
+          <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-sm text-[10px] font-bold border ${statusMeta.cls}`}>
             <statusMeta.icon size={9} />
             {statusMeta.label}
           </span>
@@ -513,14 +513,14 @@ function ConnectedRow({
           <span className="text-t-secondary/60">ID {account.external_id}</span>
         </div>
         {account.last_error && (
-          <div className="mt-2 text-[11px] text-red-300 bg-red-500/[0.06] border border-red-500/20 rounded px-2 py-1.5 flex items-start gap-1.5">
-            <AlertCircle size={11} className="flex-shrink-0 mt-0.5" />
-            <span className="break-words">{account.last_error}</span>
+          <div className="mt-2 text-[11px] text-red-300 bg-red-500/6 border border-red-500/20 rounded-sm px-2 py-1.5 flex items-start gap-1.5">
+            <AlertCircle size={11} className="shrink-0 mt-0.5" />
+            <span className="wrap-break-word">{account.last_error}</span>
           </div>
         )}
       </div>
 
-      <div className="flex items-center gap-1 flex-shrink-0">
+      <div className="flex items-center gap-1 shrink-0">
         <button
           onClick={onDiagnose}
           disabled={diagBusy}
@@ -532,7 +532,7 @@ function ConnectedRow({
         </button>
         <button
           onClick={onVerify}
-          className="p-1.5 rounded-md text-t-secondary hover:text-white hover:bg-white/[0.04]"
+          className="p-1.5 rounded-md text-t-secondary hover:text-white hover:bg-white/4"
           title="Verify token health only"
         >
           <RefreshCw size={13} />
@@ -547,7 +547,7 @@ function ConnectedRow({
         )}
         <button
           onClick={onDisconnect}
-          className="p-1.5 rounded-md text-t-secondary hover:text-red-400 hover:bg-red-500/[0.08]"
+          className="p-1.5 rounded-md text-t-secondary hover:text-red-400 hover:bg-red-500/8"
           title="Disconnect"
         >
           <Trash2 size={13} />
@@ -587,7 +587,7 @@ function ConnectedRow({
               return (
                 <div key={c.key} className="bg-dark-bg border border-dark-border rounded-lg p-3">
                   <div className="flex items-start gap-2.5">
-                    <span className={`w-2 h-2 mt-1.5 rounded-full ${meta.dot} flex-shrink-0`} />
+                    <span className={`w-2 h-2 mt-1.5 rounded-full ${meta.dot} shrink-0`} />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <span className="text-[12px] font-semibold text-white">{c.label}</span>
@@ -641,7 +641,7 @@ function PagePickerModal({
   busy: boolean
 }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-xs p-4" onClick={onClose}>
       <div
         className="bg-dark-surface border border-dark-border rounded-2xl w-full max-w-md max-h-[80vh] overflow-hidden flex flex-col"
         onClick={(e) => e.stopPropagation()}
@@ -653,7 +653,7 @@ function PagePickerModal({
               These are the Facebook Pages you can manage with messaging access.
             </p>
           </div>
-          <button onClick={onClose} className="p-1 rounded text-t-secondary hover:text-white hover:bg-white/[0.04]">
+          <button onClick={onClose} className="p-1 rounded-sm text-t-secondary hover:text-white hover:bg-white/4">
             <X size={14} />
           </button>
         </div>
@@ -664,17 +664,17 @@ function PagePickerModal({
               key={p.id}
               disabled={busy || p.already_connected}
               onClick={() => onPick(p)}
-              className="w-full p-3 flex items-center gap-3 border-b border-dark-border hover:bg-white/[0.02] transition-colors text-left disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full p-3 flex items-center gap-3 border-b border-dark-border hover:bg-white/2 transition-colors text-left disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {p.picture_url ? (
                 <img
                   src={p.picture_url}
                   alt={`${p.name} avatar`}
-                  className="w-10 h-10 rounded-lg object-cover flex-shrink-0 bg-dark-bg"
+                  className="w-10 h-10 rounded-lg object-cover shrink-0 bg-dark-bg"
                   onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none' }}
                 />
               ) : (
-                <div className="w-10 h-10 rounded-lg bg-blue-500/15 border border-blue-500/30 flex items-center justify-center flex-shrink-0">
+                <div className="w-10 h-10 rounded-lg bg-blue-500/15 border border-blue-500/30 flex items-center justify-center shrink-0">
                   <Facebook size={16} className="text-blue-400" />
                 </div>
               )}
@@ -687,7 +687,7 @@ function PagePickerModal({
                   <CheckCircle2 size={10} /> Connected
                 </span>
               ) : (
-                <ChevronRight size={14} className="text-t-secondary flex-shrink-0" />
+                <ChevronRight size={14} className="text-t-secondary shrink-0" />
               )}
             </button>
           ))}

@@ -22,8 +22,8 @@ export function MiniMonth({ date, today, locale, onPick }: { date: DateKey; toda
       <div className="flex items-center justify-between mb-2">
         <h2 className="font-a-display text-lg font-normal text-a-text">{formatDate(`${month}-01`, locale, { month: 'long', year: 'numeric' })}</h2>
         <div className="flex gap-1">
-          <button type="button" onClick={() => setMonth(addMonths(month, -1))} className="rounded p-1 text-a-text-2 transition-colors hover:text-a-text" aria-label={t('appointments.calendar.previous_month', 'Previous month')}><ChevronLeft size={16} aria-hidden /></button>
-          <button type="button" onClick={() => setMonth(addMonths(month, 1))} className="rounded p-1 text-a-text-2 transition-colors hover:text-a-text" aria-label={t('appointments.calendar.next_month', 'Next month')}><ChevronRight size={16} aria-hidden /></button>
+          <button type="button" onClick={() => setMonth(addMonths(month, -1))} className="rounded-sm p-1 text-a-text-2 transition-colors hover:text-a-text" aria-label={t('appointments.calendar.previous_month', 'Previous month')}><ChevronLeft size={16} aria-hidden /></button>
+          <button type="button" onClick={() => setMonth(addMonths(month, 1))} className="rounded-sm p-1 text-a-text-2 transition-colors hover:text-a-text" aria-label={t('appointments.calendar.next_month', 'Next month')}><ChevronRight size={16} aria-hidden /></button>
         </div>
       </div>
       <div className="grid grid-cols-7 gap-y-1 text-center text-xs text-a-text-2" aria-hidden>

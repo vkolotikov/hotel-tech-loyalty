@@ -30,14 +30,14 @@ function formatLabel(s: string) {
 
 function Card({ children, className = '' }: { children: React.ReactNode; className?: string }) {
   return (
-    <div className={`rounded-2xl border border-white/[0.06] overflow-hidden ${className}`}
+    <div className={`rounded-2xl border border-white/6 overflow-hidden ${className}`}
       style={{ background: 'var(--legacy-card-gradient)', boxShadow: '0 16px 30px rgba(0,0,0,0.18)' }}>
       {children}
     </div>
   )
 }
 
-const selectClass = 'w-full px-3 py-2.5 bg-dark-surface border border-white/[0.08] rounded-xl text-sm text-white focus:outline-none focus:ring-1 focus:ring-primary-500/40'
+const selectClass = 'w-full px-3 py-2.5 bg-dark-surface border border-white/8 rounded-xl text-sm text-white focus:outline-hidden focus:ring-1 focus:ring-primary-500/40'
 
 export function BookingDetail() {
   const { id } = useParams<{ id: string }>()
@@ -130,7 +130,7 @@ export function BookingDetail() {
           <h1 className="text-2xl font-bold text-white tracking-tight">{b.booking_reference || `#${b.reservation_id}`}</h1>
           <p className="text-sm text-gray-500">{b.apartment_name || t('bookingDetail.header.unknown_unit', 'Unknown unit')}</p>
         </div>
-        <div className="flex items-center gap-2 flex-shrink-0">
+        <div className="flex items-center gap-2 shrink-0">
           {b.guest_app_url && (
             <a href={b.guest_app_url} target="_blank" rel="noopener noreferrer"
               className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-medium text-gray-400 hover:text-white transition-colors"
@@ -173,7 +173,7 @@ export function BookingDetail() {
                     [t('bookingDetail.guest.phone', 'Phone'), b.guest_phone],
                   ].map(([label, val]) => (
                     <div key={label as string} className="flex items-baseline gap-2">
-                      <span className="text-[11px] text-gray-600 w-14 flex-shrink-0">{label}</span>
+                      <span className="text-[11px] text-gray-600 w-14 shrink-0">{label}</span>
                       <span className="text-sm text-white font-medium">{val || '—'}</span>
                     </div>
                   ))}
@@ -196,7 +196,7 @@ export function BookingDetail() {
                     [t('bookingDetail.stay.guests',    'Guests'),    t('bookingDetail.stay.guests_value', { adults: b.adults || 0, children: b.children || 0, defaultValue: '{{adults}} adults, {{children}} children' })],
                   ].map(([label, val]) => (
                     <div key={label as string} className="flex items-baseline gap-2">
-                      <span className="text-[11px] text-gray-600 w-16 flex-shrink-0">{label}</span>
+                      <span className="text-[11px] text-gray-600 w-16 shrink-0">{label}</span>
                       <span className="text-sm text-white font-medium">{val || '—'}</span>
                     </div>
                   ))}
@@ -246,13 +246,13 @@ export function BookingDetail() {
                     visible. */}
                 {Array.isArray(b.price_elements) && b.price_elements.length > 0 && (
                   <div className="mb-5 rounded-xl overflow-hidden" style={{ background: 'var(--legacy-panel-50)', border: `1px solid ${hxWhite(0.04)}` }}>
-                    <div className="px-4 py-2.5 border-b border-white/[0.04] flex items-center gap-2">
+                    <div className="px-4 py-2.5 border-b border-white/4 flex items-center gap-2">
                       <span className="text-[10px] uppercase tracking-wider text-gray-500 font-bold">
                         {t('bookingDetail.financial.breakdown', 'Price breakdown')}
                       </span>
                       <span className="text-[9px] text-gray-600">from Smoobu</span>
                     </div>
-                    <div className="divide-y divide-white/[0.03]">
+                    <div className="divide-y divide-white/3">
                       {[...b.price_elements].sort((a: any, c: any) => (a.sort_order ?? 0) - (c.sort_order ?? 0)).map((line: any) => {
                         const amount = Number(line.amount ?? 0) * Number(line.quantity ?? 1)
                         const isDiscount = String(line.element_type ?? '').toLowerCase().includes('discount') || amount < 0
@@ -378,7 +378,7 @@ export function BookingDetail() {
                 )}
 
                 {b.price_elements?.length > 0 && (
-                  <div className="pt-4 border-t border-white/[0.06]">
+                  <div className="pt-4 border-t border-white/6">
                     <div className="text-[10px] text-gray-500 font-bold uppercase mb-3">{t('bookingDetail.financial.price_breakdown', 'Price Breakdown')}</div>
                     {b.price_elements.map((pe: any) => (
                       <div key={pe.id} className="flex justify-between text-sm py-1.5">
@@ -412,7 +412,7 @@ export function BookingDetail() {
             <div className="flex gap-2 mb-4">
               <input type="text" value={noteBody} onChange={e => setNoteBody(e.target.value)}
                 placeholder={t('bookingDetail.notes.placeholder', 'Add a note…')}
-                className="flex-1 px-4 py-2.5 bg-dark-surface border border-white/[0.06] rounded-xl text-sm text-white placeholder-gray-600 focus:outline-none focus:ring-1 focus:ring-primary-500/40"
+                className="flex-1 px-4 py-2.5 bg-dark-surface border border-white/6 rounded-xl text-sm text-white placeholder-gray-600 focus:outline-hidden focus:ring-1 focus:ring-primary-500/40"
                 onKeyDown={e => { if (e.key === 'Enter' && noteBody.trim()) addNote.mutate() }}
               />
               <button onClick={() => addNote.mutate()} disabled={!noteBody.trim() || addNote.isPending}
@@ -447,13 +447,13 @@ export function BookingDetail() {
                   <div key={s.id} className="flex items-center justify-between rounded-xl p-3 transition-all"
                     style={{ background: 'var(--legacy-panel-50)', border: `1px solid ${hxWhite(0.04)}` }}>
                     <div className="flex items-center gap-2.5 min-w-0">
-                      {s.outcome === 'success' ? <CheckCircle size={15} className="text-emerald-400 flex-shrink-0" /> : <XCircle size={15} className="text-red-400 flex-shrink-0" />}
+                      {s.outcome === 'success' ? <CheckCircle size={15} className="text-emerald-400 shrink-0" /> : <XCircle size={15} className="text-red-400 shrink-0" />}
                       <div className="min-w-0">
                         <div className="text-sm text-white font-medium">{s.guest_name || '—'}</div>
                         <div className="text-[11px] text-gray-500">{s.guest_email || ''}</div>
                       </div>
                     </div>
-                    <div className="text-right flex-shrink-0 ml-3">
+                    <div className="text-right shrink-0 ml-3">
                       {s.gross_total && <div className="text-xs text-white font-semibold tabular-nums">{money(s.gross_total, s.currency)}</div>}
                       <div className="text-[10px] text-gray-600">{new Date(s.created_at).toLocaleString()}</div>
                       {s.failure_code && <div className="text-[10px] text-red-400 mt-0.5">{s.failure_code}</div>}
@@ -553,7 +553,7 @@ export function BookingDetail() {
                   value={retryAmount}
                   onChange={e => setRefundAmount(e.target.value)}
                   placeholder={String(b.price_total ?? '')}
-                  className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white tabular-nums focus:outline-none focus:ring-2 focus:ring-amber-500/40"
+                  className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white tabular-nums focus:outline-hidden focus:ring-2 focus:ring-amber-500/40"
                 />
               </div>
               <div>
@@ -562,7 +562,7 @@ export function BookingDetail() {
                   disabled={!!pendingRefund || refundMutation.isPending}
                   value={retryReason}
                   onChange={e => setRefundReason(e.target.value as any)}
-                  className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-amber-500/40"
+                  className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-hidden focus:ring-2 focus:ring-amber-500/40"
                 >
                   <option value="">{t('bookingDetail.refund.reasons.none', '— No reason —')}</option>
                   <option value="requested_by_customer">{t('bookingDetail.refund.reasons.requested_by_customer', 'Requested by customer')}</option>

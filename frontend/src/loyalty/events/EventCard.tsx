@@ -24,7 +24,7 @@ export function EventCard({ event, theme, locale }: { event: LoyaltyEventRow; th
   return (
     <li data-event={event.id}>
       <Link to={`/loyalty/events/${event.id}`}
-        className="group flex items-stretch gap-4 rounded-2xl border border-a-border bg-a-surface p-4 shadow-a-sm transition-colors hover:border-a-accent-text/40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-a-accent-text">
+        className="group flex items-stretch gap-4 rounded-2xl border border-a-border bg-a-surface p-4 shadow-a-sm transition-colors hover:border-a-accent-text/40 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-a-accent-text">
         <div aria-hidden className={`flex w-14 shrink-0 flex-col items-center justify-center rounded-xl py-2 ${dim ? 'bg-a-surface-2 text-a-text-2' : 'bg-a-accent/10 text-a-accent-text'}`}>
           <span className="text-xs font-semibold uppercase tracking-wide">{block.weekday}</span>
           <span className="font-a-display text-2xl leading-none">{block.day}</span>

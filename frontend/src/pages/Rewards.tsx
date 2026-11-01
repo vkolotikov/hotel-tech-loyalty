@@ -324,7 +324,7 @@ export function Rewards() {
                 </div>
               ) : rewards.map(r => (
                 <div key={r.id} className={`bg-panel-dim border rounded-xl overflow-hidden ${r.is_active ? 'border-dark-border' : 'border-dark-border opacity-60'}`}>
-                  <div className="aspect-[16/10] bg-well flex items-center justify-center">
+                  <div className="aspect-16/10 bg-well flex items-center justify-center">
                     {r.image_url ? (
                       <img src={resolveImage(r.image_url)!} alt={r.name} className="w-full h-full object-cover" />
                     ) : (
@@ -360,9 +360,9 @@ export function Rewards() {
                         {r.is_active ? t('rewards.catalog.active', 'Active') : t('rewards.catalog.hidden', 'Hidden')}
                       </button>
                       <div className="flex gap-1">
-                        <button onClick={() => startEdit(r)} className="p-1.5 rounded hover:bg-dark-surface2 text-t-soft" title={t('rewards.catalog.edit_title', 'Edit')}><Pencil size={13} /></button>
+                        <button onClick={() => startEdit(r)} className="p-1.5 rounded-sm hover:bg-dark-surface2 text-t-soft" title={t('rewards.catalog.edit_title', 'Edit')}><Pencil size={13} /></button>
                         <button onClick={() => confirm(t('rewards.catalog.delete_confirm', { name: r.name, defaultValue: 'Delete "{{name}}"?' })) && deleteMutation.mutate(r.id)}
-                          className="p-1.5 rounded hover:bg-dark-surface2 text-red-400" title={t('rewards.catalog.delete_title', 'Delete')}><Trash2 size={13} /></button>
+                          className="p-1.5 rounded-sm hover:bg-dark-surface2 text-red-400" title={t('rewards.catalog.delete_title', 'Delete')}><Trash2 size={13} /></button>
                       </div>
                     </div>
                   </div>
@@ -435,11 +435,11 @@ export function Rewards() {
                       {r.status === 'pending' && (
                         <div className="flex gap-1 justify-end">
                           <button onClick={() => fulfillMutation.mutate(r.id)}
-                            className="p-1.5 rounded hover:bg-dark-surface2 text-emerald-400" title={t('rewards.redemptions.fulfill_title', 'Mark fulfilled')}>
+                            className="p-1.5 rounded-sm hover:bg-dark-surface2 text-emerald-400" title={t('rewards.redemptions.fulfill_title', 'Mark fulfilled')}>
                             <CheckCircle size={14} />
                           </button>
                           <button onClick={() => confirm(t('rewards.redemptions.cancel_confirm', 'Cancel this redemption? Points will be refunded.')) && cancelMutation.mutate(r.id)}
-                            className="p-1.5 rounded hover:bg-dark-surface2 text-red-400" title={t('rewards.redemptions.cancel_title', 'Cancel + refund')}>
+                            className="p-1.5 rounded-sm hover:bg-dark-surface2 text-red-400" title={t('rewards.redemptions.cancel_title', 'Cancel + refund')}>
                             <XCircle size={14} />
                           </button>
                         </div>

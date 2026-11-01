@@ -68,7 +68,7 @@ export function PostsPage() {
       </PageHeader>
 
       <div role="search" className="flex flex-wrap items-center gap-2">
-        <label className="relative min-w-[12rem] flex-1">
+        <label className="relative min-w-48 flex-1">
           <span className="sr-only">{t('content.posts.search', 'Search posts')}</span>
           <Search size={15} aria-hidden className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-a-text-2" />
           <input type="search" value={typed} maxLength={100} onChange={(e) => setTyped(e.target.value)}

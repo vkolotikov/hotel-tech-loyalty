@@ -115,7 +115,7 @@ export function ChatbotSetup() {
                 value={homeSearch}
                 onChange={(e) => setHomeSearch(e.target.value)}
                 placeholder={t('chatbot_setup.home_search', 'Search chatbot settings…')}
-                className="w-full bg-dark-surface border border-dark-border rounded-lg pl-9 pr-3 py-2 text-sm placeholder-t-secondary outline-none focus:border-primary-500 transition-colors"
+                className="w-full bg-dark-surface border border-dark-border rounded-lg pl-9 pr-3 py-2 text-sm placeholder-t-secondary outline-hidden focus:border-primary-500 transition-colors"
               />
             </div>
 
@@ -143,15 +143,15 @@ export function ChatbotSetup() {
           <div className="flex items-center gap-2 min-w-0">
             <button
               onClick={() => setActive('home')}
-              className="flex items-center gap-1 text-xs text-t-secondary hover:text-white transition-colors px-1.5 py-1 -ml-1.5 rounded-md hover:bg-dark-surface2 flex-shrink-0"
+              className="flex items-center gap-1 text-xs text-t-secondary hover:text-white transition-colors px-1.5 py-1 -ml-1.5 rounded-md hover:bg-dark-surface2 shrink-0"
               title={t('chatbot_setup.back_to_home', 'All chatbot settings')}
             >
               <ArrowLeft size={13} />
               <span className="hidden sm:inline">{t('chatbot_setup.title', 'Chatbot Setup')}</span>
             </button>
-            <span className="text-t-secondary/40 flex-shrink-0">/</span>
+            <span className="text-t-secondary/40 shrink-0">/</span>
             <div className="flex items-center gap-1.5 min-w-0">
-              {tile && <tile.icon size={14} className="text-t-secondary flex-shrink-0" />}
+              {tile && <tile.icon size={14} className="text-t-secondary shrink-0" />}
               {tile && <h2 className="text-base font-semibold text-white truncate">{t(tile.labelKey, tile.label)}</h2>}
             </div>
           </div>
@@ -213,7 +213,7 @@ function Tile({ tile, label, desc, onClick }: { tile: TileDef; label: string; de
       </div>
 
       <div className="relative mt-auto">
-        <h3 className="text-sm sm:text-base font-bold text-white leading-tight">{label}</h3>
+        <h3 className="text-sm sm:text-base font-bold text-white leading-tight sm:leading-6">{label}</h3>
         <p className="text-xs text-t-secondary mt-1 line-clamp-2 leading-relaxed">{desc}</p>
       </div>
     </button>

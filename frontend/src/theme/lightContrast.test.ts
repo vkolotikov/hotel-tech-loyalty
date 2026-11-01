@@ -1,4 +1,4 @@
-import colors from 'tailwindcss/colors'
+import colors from './tailwind3Palette'
 import { describe, expect, it } from 'vitest'
 import { blend, contrast, hexToRgb, shadeScale, type RGB } from './colour'
 import { onColor } from './glass'

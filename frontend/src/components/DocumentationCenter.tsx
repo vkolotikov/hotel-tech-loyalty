@@ -81,7 +81,7 @@ function formatDocContent(text: string): string {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/\*\*(.+?)\*\*/g, '<strong class="text-white font-semibold">$1</strong>')
-    .replace(/`([^`]+)`/g, '<code class="px-1.5 py-0.5 rounded bg-white/[0.06] text-emerald-300 text-[12px] font-mono">$1</code>')
+    .replace(/`([^`]+)`/g, '<code class="px-1.5 py-0.5 rounded-sm bg-white/6 text-emerald-300 text-[12px] font-mono">$1</code>')
     .replace(/\n- /g, '\n• ')
     .replace(/\n/g, '<br/>')
 }
@@ -150,10 +150,10 @@ export function DocumentationCenter() {
   if (isLoading) {
     return (
       <div className="space-y-6">
-        <div className="h-14 bg-white/[0.04] rounded-2xl animate-pulse" />
+        <div className="h-14 bg-white/4 rounded-2xl animate-pulse" />
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {Array(6).fill(0).map((_, i) => (
-            <div key={i} className="h-32 bg-white/[0.04] rounded-2xl animate-pulse" />
+            <div key={i} className="h-32 bg-white/4 rounded-2xl animate-pulse" />
           ))}
         </div>
       </div>
@@ -188,11 +188,11 @@ export function DocumentationCenter() {
               value={search}
               onChange={e => setSearch(e.target.value)}
               placeholder="Search articles, features, FAQ…"
-              className="w-full pl-11 pr-10 py-3 rounded-xl bg-dark-bg/70 backdrop-blur border border-white/[0.08] text-white text-sm placeholder:text-t-secondary outline-none focus:border-emerald-500/40 transition-colors"
+              className="w-full pl-11 pr-10 py-3 rounded-xl bg-dark-bg/70 backdrop-blur-sm border border-white/8 text-white text-sm placeholder:text-t-secondary outline-hidden focus:border-emerald-500/40 transition-colors"
             />
             {search && (
               <button onClick={() => setSearch('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-md hover:bg-white/[0.08] text-t-secondary hover:text-white">
+                className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-md hover:bg-white/8 text-t-secondary hover:text-white">
                 <X size={14} />
               </button>
             )}
@@ -221,12 +221,12 @@ export function DocumentationCenter() {
             {searchResults.slice(0, 8).map((hit, i) => (
               <button key={i}
                 onClick={() => openArticle(hit.slug, hit.articleIdx)}
-                className="w-full text-left flex items-start gap-3 p-4 rounded-xl border border-white/[0.06] hover:border-current transition-all group"
+                className="w-full text-left flex items-start gap-3 p-4 rounded-xl border border-white/6 hover:border-current transition-all group"
                 style={{ ['--tw-text-opacity' as any]: 1, background: 'var(--legacy-well-40)' } as any}
                 onMouseEnter={(e) => { e.currentTarget.style.borderColor = hit.accent }}
                 onMouseLeave={(e) => { e.currentTarget.style.borderColor = '' }}
               >
-                <span className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+                <span className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
                   style={{ background: tint(hit.accent, 0.15), border: `1px solid ${tint(hit.accent, 0.35)}` }}>
                   <FileText size={13} style={{ color: ink(hit.accent) }} />
                 </span>
@@ -241,7 +241,7 @@ export function DocumentationCenter() {
                     {hit.article.content.replace(/\*\*/g, '').slice(0, 200)}…
                   </p>
                 </div>
-                <ChevronRight size={14} className="text-t-secondary group-hover:translate-x-0.5 transition-transform flex-shrink-0 mt-2" />
+                <ChevronRight size={14} className="text-t-secondary group-hover:translate-x-0.5 transition-transform shrink-0 mt-2" />
               </button>
             ))}
           </div>
@@ -249,7 +249,7 @@ export function DocumentationCenter() {
       )}
 
       {q && searchResults.length === 0 && view === 'landing' && (
-        <div className="text-center py-8 px-4 rounded-xl border border-white/[0.06] bg-dark-surface">
+        <div className="text-center py-8 px-4 rounded-xl border border-white/6 bg-dark-surface">
           <p className="text-sm text-t-secondary">No articles match "{search}".</p>
           <p className="text-xs text-t-secondary/70 mt-2">Try a different keyword — or scroll down for FAQ.</p>
         </div>
@@ -272,7 +272,7 @@ export function DocumentationCenter() {
           }`}
         >
           <HelpCircle size={14} /> FAQ
-          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-white/[0.06] text-t-secondary">{faq.length}</span>
+          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-white/6 text-t-secondary">{faq.length}</span>
         </button>
       </div>
 
@@ -300,7 +300,7 @@ export function DocumentationCenter() {
                 <span aria-hidden className="absolute -right-8 -top-8 w-32 h-32 rounded-full opacity-0 group-hover:opacity-100 transition-opacity blur-2xl pointer-events-none"
                   style={{ background: tint(ac, 0.18) }} />
                 <div className="relative flex items-start gap-3">
-                  <span className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 transition-transform group-hover:scale-105"
+                  <span className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 transition-transform group-hover:scale-105"
                     style={{
                       background: `linear-gradient(135deg, ${tint(ac, 0.18)}, ${tint(ac, 0.04)})`,
                       border: `1px solid ${tint(ac, 0.3)}`,
@@ -314,7 +314,7 @@ export function DocumentationCenter() {
                       {section.articles.length} article{section.articles.length === 1 ? '' : 's'}
                     </p>
                   </div>
-                  <ChevronRight size={16} className="text-t-secondary transition-all flex-shrink-0 mt-1 group-hover:translate-x-0.5" />
+                  <ChevronRight size={16} className="text-t-secondary transition-all shrink-0 mt-1 group-hover:translate-x-0.5" />
                 </div>
               </button>
             )
@@ -403,7 +403,7 @@ export function DocumentationCenter() {
                     className="flex items-center gap-2 p-3 rounded-lg border border-dark-border hover:border-current transition-colors text-left"
                     style={{ color: ink(accent) }}
                   >
-                    <ArrowLeft size={14} className="flex-shrink-0" />
+                    <ArrowLeft size={14} className="shrink-0" />
                     <div className="min-w-0">
                       <p className="text-[10px] uppercase tracking-wider font-bold text-t-secondary">Previous</p>
                       <p className="text-xs font-semibold text-white truncate">{activeSection.articles[activeArticleIdx - 1].title}</p>
@@ -419,7 +419,7 @@ export function DocumentationCenter() {
                       <p className="text-[10px] uppercase tracking-wider font-bold text-t-secondary">Next</p>
                       <p className="text-xs font-semibold text-white truncate">{activeSection.articles[activeArticleIdx + 1].title}</p>
                     </div>
-                    <ArrowRight size={14} className="flex-shrink-0" />
+                    <ArrowRight size={14} className="shrink-0" />
                   </button>
                 ) : <span />}
               </div>
@@ -449,11 +449,11 @@ export function DocumentationCenter() {
 
           <div className="space-y-2">
             {filteredFaq.map((item, i) => (
-              <details key={i} className="group rounded-xl border border-dark-border hover:border-white/[0.12] transition-colors overflow-hidden">
-                <summary className="px-5 py-3.5 cursor-pointer hover:bg-white/[0.02] transition-colors flex items-center gap-3 list-none">
-                  <ChevronDown size={14} className="text-t-secondary transition-transform group-open:rotate-180 flex-shrink-0" />
+              <details key={i} className="group rounded-xl border border-dark-border hover:border-white/12 transition-colors overflow-hidden">
+                <summary className="px-5 py-3.5 cursor-pointer hover:bg-white/2 transition-colors flex items-center gap-3 list-none">
+                  <ChevronDown size={14} className="text-t-secondary transition-transform group-open:rotate-180 shrink-0" />
                   <span className="text-sm font-medium text-white flex-1">{item.question}</span>
-                  <span className="ml-auto text-[9px] font-bold uppercase tracking-wider text-t-secondary bg-white/[0.04] px-2 py-0.5 rounded-full flex-shrink-0">
+                  <span className="ml-auto text-[9px] font-bold uppercase tracking-wider text-t-secondary bg-white/4 px-2 py-0.5 rounded-full shrink-0">
                     {item.category}
                   </span>
                 </summary>
@@ -479,7 +479,7 @@ export function DocumentationCenter() {
         <div className="absolute -right-16 -top-16 w-48 h-48 rounded-full blur-3xl pointer-events-none"
           style={{ background: 'rgba(168,85,247,0.16)' }} />
         <div className="relative flex items-start gap-3">
-          <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
             style={{ background: 'rgba(168,85,247,0.18)', border: '1px solid rgba(168,85,247,0.35)' }}>
             <Brain size={18} className="text-purple-300" />
           </div>

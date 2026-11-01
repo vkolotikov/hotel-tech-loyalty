@@ -115,7 +115,7 @@ export function CustomerDuplicates() {
       </div>
 
       <div className="bg-amber-500/5 border border-amber-500/20 rounded-xl p-4 flex items-start gap-3">
-        <AlertCircle size={16} className="text-amber-400 flex-shrink-0 mt-0.5" />
+        <AlertCircle size={16} className="text-amber-400 shrink-0 mt-0.5" />
         <div className="text-xs text-amber-200/90 leading-relaxed">
           <strong className="text-amber-300">Merging is permanent.</strong> The "loser" guest's inquiries,
           reservations, activities, tags, custom-field values, venue bookings, submissions, visitor sessions,
@@ -197,7 +197,7 @@ export function CustomerDuplicates() {
                 onChange={e => setReason(e.target.value)}
                 rows={2}
                 placeholder="e.g. Same person — used different email at front desk"
-                className="w-full bg-dark-surface2 border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500 mb-4"
+                className="w-full bg-dark-surface2 border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-hidden focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500 mb-4"
               />
 
               <div className="flex justify-end gap-2">
@@ -243,16 +243,16 @@ function GuestCard({ guest, role }: { guest: GuestRow; role: string }) {
       </div>
       <div className="flex items-center gap-1.5">
         <span className="text-sm font-semibold text-white truncate">{guest.full_name ?? '—'}</span>
-        {isVip && <Crown size={10} className="text-amber-400 flex-shrink-0" />}
+        {isVip && <Crown size={10} className="text-amber-400 shrink-0" />}
       </div>
       <div className="text-[11px] text-t-secondary truncate mb-2">
         {guest.lifecycle_status && <span className="mr-2">{guest.lifecycle_status}</span>}
         {guest.member_id && <span className="text-blue-400">· loyalty member</span>}
       </div>
-      {guest.email && <div className="text-xs text-gray-300 flex items-center gap-1.5 truncate"><Mail size={10} className="flex-shrink-0" /> {guest.email}</div>}
-      {(guest.phone || guest.mobile) && <div className="text-xs text-gray-300 flex items-center gap-1.5 truncate"><Phone size={10} className="flex-shrink-0" /> {guest.phone || guest.mobile}</div>}
-      {guest.company && <div className="text-xs text-gray-300 flex items-center gap-1.5 truncate"><Briefcase size={10} className="flex-shrink-0" /> {guest.company}</div>}
-      {(guest.city || guest.country) && <div className="text-xs text-gray-300 flex items-center gap-1.5 truncate"><MapPin size={10} className="flex-shrink-0" /> {[guest.city, guest.country].filter(Boolean).join(', ')}</div>}
+      {guest.email && <div className="text-xs text-gray-300 flex items-center gap-1.5 truncate"><Mail size={10} className="shrink-0" /> {guest.email}</div>}
+      {(guest.phone || guest.mobile) && <div className="text-xs text-gray-300 flex items-center gap-1.5 truncate"><Phone size={10} className="shrink-0" /> {guest.phone || guest.mobile}</div>}
+      {guest.company && <div className="text-xs text-gray-300 flex items-center gap-1.5 truncate"><Briefcase size={10} className="shrink-0" /> {guest.company}</div>}
+      {(guest.city || guest.country) && <div className="text-xs text-gray-300 flex items-center gap-1.5 truncate"><MapPin size={10} className="shrink-0" /> {[guest.city, guest.country].filter(Boolean).join(', ')}</div>}
 
       <div className="grid grid-cols-2 gap-2 mt-2 pt-2 border-t border-dark-border text-[11px]">
         <div><span className="text-t-secondary">Stays</span> <span className="text-white font-medium ml-1">{guest.total_stays ?? 0}</span></div>

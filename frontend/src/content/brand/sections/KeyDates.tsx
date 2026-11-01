@@ -71,7 +71,7 @@ export function KeyDatesSection({ brand, canEdit }: { brand: BrandPayload; canEd
             <button type="button" role="switch" aria-checked={marketing} disabled={busy} aria-labelledby="content-keydates-marketing"
               onClick={() => { void save({ marketing_days: !marketing }) }}
               className={`relative h-6 w-11 shrink-0 rounded-full transition ${marketing ? 'bg-a-accent' : 'bg-a-surface-2'}`}>
-              <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-a-surface shadow-a-sm transition ${marketing ? 'left-[1.375rem]' : 'left-0.5'}`} />
+              <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-a-surface shadow-a-sm transition ${marketing ? 'left-5.5' : 'left-0.5'}`} />
             </button>
             <span id="content-keydates-marketing" className="text-sm text-a-text">{w('marketing', 'Marketing and international days')}</span>
           </div>

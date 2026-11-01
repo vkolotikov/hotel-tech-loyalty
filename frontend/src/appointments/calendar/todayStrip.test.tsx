@@ -111,7 +111,7 @@ describe('TodayStrip', () => {
   // At 1280 px with the panel open each of four tiles was 125 px wide, and "$1,234.50" ran out of its tile.
   it('lays its tiles out by its own width, not the screen\'s: four in a row where they fit, else two by two', () => {
     const html = strip({ manager: true })
-    expect(html).toMatch(/^<div class="\[container-type:inline-size\]"><section/)
+    expect(html).toMatch(/^<div class="@container"><section/)
     const section = html.match(/<section[^>]*>/)?.[0] ?? ''
     expect(section).toContain('data-glance=""')
     expect(section).toMatch(/class="[^"]*\bgrid-cols-2\b/)
@@ -126,7 +126,7 @@ describe('TodayStrip', () => {
       const html = strip({ manager })
       const tiles = [...html.matchAll(/<div class="([^"]*\brounded-xl\b[^"]*)"/g)].map(m => m[1])
       expect(tiles).toHaveLength(4)
-      for (const classes of tiles) expect(classes).toContain('[container-type:inline-size]')
+      for (const classes of tiles) expect(classes).toContain('@container')
       const figures = [...html.matchAll(/<p([^>]*)>([^<]*)</g)].filter(m => m[1].includes('font-a-display'))
       expect(figures.map(m => m[2])).toEqual(manager ? ['4', '14:30', money(230.5, 'EUR')] : ['4', '14:30', '1'])
       for (const m of figures) expect(m[1], m[2]).toContain('data-fit=""')

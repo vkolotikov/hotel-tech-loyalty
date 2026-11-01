@@ -74,10 +74,10 @@ export function ApiTokensPanel() {
   }
 
   return (
-    <div className="rounded-2xl border border-white/[0.06] overflow-hidden"
+    <div className="rounded-2xl border border-white/6 overflow-hidden"
       style={{ background: 'var(--legacy-card-gradient)' }}>
-      <div className="px-5 py-3.5 flex items-center gap-3 border-b border-white/[0.04]">
-        <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 bg-amber-500/[0.12]">
+      <div className="px-5 py-3.5 flex items-center gap-3 border-b border-white/4">
+        <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 bg-amber-500/12">
           <Key size={15} className="text-amber-400" />
         </div>
         <div className="flex-1 min-w-0">
@@ -98,7 +98,7 @@ export function ApiTokensPanel() {
 
         {/* New-token form */}
         {creating && (
-          <div className="rounded-lg border border-amber-500/20 bg-amber-500/[0.04] p-3 space-y-2">
+          <div className="rounded-lg border border-amber-500/20 bg-amber-500/4 p-3 space-y-2">
             <label className="block text-[11px] font-semibold text-amber-300 uppercase tracking-wider">Token label</label>
             <div className="flex items-center gap-2">
               <input
@@ -108,7 +108,7 @@ export function ApiTokensPanel() {
                 placeholder="e.g. FDS Card Builder"
                 autoFocus
                 maxLength={80}
-                className="flex-1 px-3 py-2 bg-hx-000000/40 border border-white/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500 text-sm text-white placeholder-gray-600"
+                className="flex-1 px-3 py-2 bg-hx-000000/40 border border-white/10 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500 text-sm text-white placeholder-gray-600"
               />
               <button onClick={() => createMutation.mutate(newLabel.trim())}
                 disabled={!newLabel.trim() || createMutation.isPending}
@@ -129,20 +129,20 @@ export function ApiTokensPanel() {
 
         {/* Just-created token (one-time display) */}
         {justCreated && (
-          <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/[0.05] p-3 space-y-2">
+          <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-3 space-y-2">
             <div className="flex items-start gap-2">
-              <AlertCircle size={14} className="text-amber-400 flex-shrink-0 mt-0.5" />
+              <AlertCircle size={14} className="text-amber-400 shrink-0 mt-0.5" />
               <div className="flex-1 min-w-0">
                 <div className="text-xs font-semibold text-amber-300">Copy this token now</div>
                 <div className="text-[11px] text-gray-400 mt-0.5">It will not be shown again. If you lose it, revoke and create a new one.</div>
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <code className="flex-1 px-2.5 py-2 rounded bg-hx-000000/40 text-emerald-300 font-mono text-[11px] break-all">
+              <code className="flex-1 px-2.5 py-2 rounded-sm bg-hx-000000/40 text-emerald-300 font-mono text-[11px] break-all">
                 {justCreated.token}
               </code>
               <button onClick={copyToken}
-                className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-2 rounded-lg bg-emerald-500/15 text-emerald-300 border border-emerald-500/20 hover:bg-emerald-500/25 transition flex-shrink-0">
+                className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-2 rounded-lg bg-emerald-500/15 text-emerald-300 border border-emerald-500/20 hover:bg-emerald-500/25 transition shrink-0">
                 {copied ? <><Check size={12} /> Copied</> : <><Copy size={12} /> Copy</>}
               </button>
             </div>
@@ -165,7 +165,7 @@ export function ApiTokensPanel() {
         ) : (
           <div className="space-y-1.5">
             {tokens.map(t => (
-              <div key={t.id} className="flex items-center justify-between gap-3 px-3 py-2 rounded-lg border border-white/[0.04] bg-hx-000000/20">
+              <div key={t.id} className="flex items-center justify-between gap-3 px-3 py-2 rounded-lg border border-white/4 bg-hx-000000/20">
                 <div className="flex-1 min-w-0">
                   <div className="text-sm font-medium text-white truncate">{t.label}</div>
                   <div className="text-[10px] text-gray-500 mt-0.5">
@@ -180,7 +180,7 @@ export function ApiTokensPanel() {
                     }
                   }}
                   disabled={revokeMutation.isPending}
-                  className="inline-flex items-center gap-1 text-[11px] text-red-400 hover:text-red-300 hover:bg-red-500/10 px-2 py-1 rounded transition disabled:opacity-40"
+                  className="inline-flex items-center gap-1 text-[11px] text-red-400 hover:text-red-300 hover:bg-red-500/10 px-2 py-1 rounded-sm transition disabled:opacity-40"
                   title="Revoke this token"
                 >
                   <Trash2 size={11} /> Revoke

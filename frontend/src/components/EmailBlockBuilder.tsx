@@ -243,7 +243,7 @@ export function EmailBlockBuilder({ blocks, onChange }: Props) {
                     onClick={(e) => { e.stopPropagation(); move(b.id, -1) }}
                     disabled={i === 0}
                     title="Move up"
-                    className="p-1 rounded hover:bg-dark-surface3 text-t-secondary disabled:opacity-30"
+                    className="p-1 rounded-sm hover:bg-dark-surface3 text-t-secondary disabled:opacity-30"
                   >
                     <ChevronUp size={14} />
                   </button>
@@ -251,14 +251,14 @@ export function EmailBlockBuilder({ blocks, onChange }: Props) {
                     onClick={(e) => { e.stopPropagation(); move(b.id, 1) }}
                     disabled={i === blocks.length - 1}
                     title="Move down"
-                    className="p-1 rounded hover:bg-dark-surface3 text-t-secondary disabled:opacity-30"
+                    className="p-1 rounded-sm hover:bg-dark-surface3 text-t-secondary disabled:opacity-30"
                   >
                     <ChevronDown size={14} />
                   </button>
                   <button
                     onClick={(e) => { e.stopPropagation(); remove(b.id) }}
                     title="Delete block"
-                    className="p-1 rounded hover:bg-red-500/15 text-red-400"
+                    className="p-1 rounded-sm hover:bg-red-500/15 text-red-400"
                   >
                     <Trash2 size={14} />
                   </button>
@@ -407,7 +407,7 @@ function BlockEditor({ block, onChange }: { block: Block; onChange: (patch: Part
 
 /* ─── Small helpers ───────────────────────────────────────────────── */
 
-const inputCls  = 'w-full bg-dark-bg border border-dark-border rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:ring-2 focus:ring-primary-500'
+const inputCls  = 'w-full bg-dark-bg border border-dark-border rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-hidden focus:ring-2 focus:ring-primary-500'
 const selectCls = inputCls
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
@@ -450,7 +450,7 @@ function ColorInput({ value, onChange }: { value: string; onChange: (v: string) 
         type="color"
         value={value}
         onChange={e => onChange(e.target.value)}
-        className="w-8 h-8 rounded border border-dark-border bg-dark-bg cursor-pointer flex-shrink-0"
+        className="w-8 h-8 rounded-sm border border-dark-border bg-dark-bg cursor-pointer shrink-0"
       />
       <input
         type="text"
@@ -510,7 +510,7 @@ function TextWithVars({
             type="button"
             onClick={() => insert(v.token)}
             title={v.token}
-            className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-primary-500/10 text-primary-300 hover:bg-primary-500/20 transition-colors"
+            className="px-1.5 py-0.5 rounded-sm text-[10px] font-mono bg-primary-500/10 text-primary-300 hover:bg-primary-500/20 transition-colors"
           >
             {v.label}
           </button>

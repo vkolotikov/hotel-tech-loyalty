@@ -61,7 +61,7 @@ export function ForYouBell() {
       className="relative inline-flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-full border border-a-border bg-a-surface text-a-text-2 shadow-a-sm hover:text-a-text">
       <Bell size={16} aria-hidden />
       {badge && (
-        <span aria-hidden className="absolute -right-1 -top-1 min-w-[1.125rem] rounded-full bg-a-accent px-1 text-center font-a-mono text-xs leading-[1.125rem] text-a-accent-ink">{badge}</span>
+        <span aria-hidden className="absolute -right-1 -top-1 min-w-4.5 rounded-full bg-a-accent px-1 text-center font-a-mono text-xs leading-4.5 text-a-accent-ink">{badge}</span>
       )}
     </PopMenu>
   )

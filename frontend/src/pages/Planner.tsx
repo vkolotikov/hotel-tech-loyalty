@@ -141,8 +141,8 @@ function addMinutes(timeHHMM: string, minutes: number): string {
   return String(Math.floor(total / 60)).padStart(2, '0') + ':' + String(total % 60).padStart(2, '0')
 }
 
-const inp = 'w-full bg-dark-surface2 border border-dark-border rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-colors'
-const filterSel = 'bg-dark-surface border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-primary-500'
+const inp = 'w-full bg-dark-surface2 border border-dark-border rounded-lg px-3 py-2.5 text-sm text-white focus:outline-hidden focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-colors'
+const filterSel = 'bg-dark-surface border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-hidden focus:border-primary-500'
 
 type Tab = 'day' | 'schedule' | 'month' | 'pool' | 'team' | 'stats'
 type TaskForm = {
@@ -172,13 +172,13 @@ const ProgressBar = memo(({ done, total }: { done: number; total: number }) => {
 /* ─── subtask row ────────────────────────────────────────────────── */
 const SubtaskRow = memo(({ sub, onToggle, onDelete }: { sub: any; onToggle: () => void; onDelete: () => void }) => (
   <div className="flex items-center gap-2.5 group py-1 px-2 rounded-lg hover:bg-dark-surface2/50 transition-colors">
-    <button onClick={onToggle} className="flex-shrink-0 p-0.5">
+    <button onClick={onToggle} className="shrink-0 p-0.5">
       {sub.is_done
         ? <CheckCircle2 size={18} className="text-green-400" />
         : <Circle size={18} className="text-gray-600 hover:text-gray-400" />}
     </button>
     <span className={'flex-1 text-sm ' + (sub.is_done ? 'line-through text-gray-600' : 'text-gray-300')}>{sub.title}</span>
-    <button onClick={onDelete} className="opacity-0 group-hover:opacity-100 p-1 rounded text-gray-600 hover:text-red-400 transition-all">
+    <button onClick={onDelete} className="opacity-0 group-hover:opacity-100 p-1 rounded-sm text-gray-600 hover:text-red-400 transition-all">
       <Trash2 size={14} />
     </button>
   </div>
@@ -194,7 +194,7 @@ function SubtaskInput({ taskId, onAdd }: { taskId: number; onAdd: (taskId: numbe
   return (
     <form className="flex gap-2 mt-2" onSubmit={handleSubmit}>
       <input value={value} onChange={e => setValue(e.target.value)} placeholder="Add a subtask..."
-        className="flex-1 bg-dark-surface2 border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500/30" />
+        className="flex-1 bg-dark-surface2 border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-hidden focus:border-primary-500 focus:ring-1 focus:ring-primary-500/30" />
       <button type="submit" disabled={!value.trim()} className="px-3 py-2 rounded-lg bg-primary-500/10 text-primary-400 hover:bg-primary-500/20 disabled:opacity-30 disabled:cursor-not-allowed transition-colors text-sm font-medium">
         Add
       </button>
@@ -226,19 +226,19 @@ const TaskRow = memo(({
       style={!isExpanded && !task.completed ? { borderLeftColor: groupMeta.color, borderLeftWidth: 3 } : {}}
       className={'rounded-xl border transition-all duration-200 cursor-move ' + (isExpanded ? 'bg-dark-surface border-dark-border shadow-lg' : 'bg-dark-surface2/50 border-transparent hover:border-dark-border/50 hover:bg-dark-surface2')}>
       <div className="flex items-center gap-3 px-4 py-3 cursor-pointer" onClick={onToggleExpand}>
-        <button onClick={e => { e.stopPropagation(); onToggleComplete() }} className="flex-shrink-0 p-1 rounded-lg hover:bg-dark-surface2 transition-colors">
+        <button onClick={e => { e.stopPropagation(); onToggleComplete() }} className="shrink-0 p-1 rounded-lg hover:bg-dark-surface2 transition-colors">
           {task.completed
             ? <CheckCircle2 size={22} className="text-green-400" />
             : <Circle size={22} className="text-gray-600 hover:text-gray-400" />}
         </button>
-        <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+        <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
           style={{ backgroundColor: groupMeta.color + '20', color: ink(groupMeta.color) }}>
           <GroupIcon size={15} />
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <span className={'font-medium text-sm ' + (task.completed ? 'line-through text-gray-600' : 'text-white')}>{task.title}</span>
-            {task.priority === 'High' && <AlertCircle size={14} className="text-red-400 flex-shrink-0" />}
+            {task.priority === 'High' && <AlertCircle size={14} className="text-red-400 shrink-0" />}
             {task.status && <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${STATUS_COLOR[task.status] ?? 'bg-gray-500/15 text-gray-400'}`}>{task.status === 'in_progress' ? 'In Prog' : task.status.charAt(0).toUpperCase() + task.status.slice(1)}</span>}
             {(task.recurring || task.recurring_parent_id) && (
               <span
@@ -267,7 +267,7 @@ const TaskRow = memo(({
             {task.duration_minutes && <span className="text-xs text-gray-600">{task.duration_minutes}m</span>}
           </div>
         </div>
-        <div className="flex items-center gap-1 flex-shrink-0">
+        <div className="flex items-center gap-1 shrink-0">
           {subTotal > 0 && (
             <span className={'flex items-center gap-1 text-xs px-2 py-1 rounded-lg ' + (subDone === subTotal ? 'bg-green-500/10 text-green-400' : 'bg-dark-surface2 text-gray-500')}>
               <ListChecks size={13} /> {subDone}/{subTotal}
@@ -412,13 +412,13 @@ function TaskTemplates({ onCreate }: { onCreate: (title: string, date: string, g
         <div className="flex gap-1.5">
           <button
             onClick={() => setMode('pick')}
-            className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-medium text-gray-400 hover:text-white bg-white/[0.02] hover:bg-white/[0.06] border border-white/5 hover:border-white/15 transition-colors"
+            className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-medium text-gray-400 hover:text-white bg-white/2 hover:bg-white/6 border border-white/5 hover:border-white/15 transition-colors"
           >
             <FileText size={13} /> Templates {templates.length > 0 && <span className="text-[10px] text-gray-500 tabular-nums">({templates.length})</span>}
           </button>
           <button
             onClick={() => setMode('manage')}
-            className="px-3 py-2 rounded-lg text-gray-500 hover:text-white bg-white/[0.02] hover:bg-white/[0.06] border border-white/5 hover:border-white/15 transition-colors text-xs"
+            className="px-3 py-2 rounded-lg text-gray-500 hover:text-white bg-white/2 hover:bg-white/6 border border-white/5 hover:border-white/15 transition-colors text-xs"
             title="Manage templates"
           >
             ⚙
@@ -435,7 +435,7 @@ function TaskTemplates({ onCreate }: { onCreate: (title: string, date: string, g
         <div className="bg-dark-surface border border-dark-border rounded-xl p-3">
           <div className="flex items-center justify-between mb-3">
             <span className="text-xs font-semibold text-white">Pick a template</span>
-            <button onClick={() => setMode('closed')} className="w-6 h-6 rounded hover:bg-white/5 text-gray-400 flex items-center justify-center">
+            <button onClick={() => setMode('closed')} className="w-6 h-6 rounded-sm hover:bg-white/5 text-gray-400 flex items-center justify-center">
               <X size={12} />
             </button>
           </div>
@@ -444,7 +444,7 @@ function TaskTemplates({ onCreate }: { onCreate: (title: string, date: string, g
           ) : templates.length === 0 ? (
             <div className="text-center py-6">
               <p className="text-xs text-gray-500 mb-2">No templates yet — start with our suggestions:</p>
-              <button onClick={seedSuggested} className="text-xs py-1.5 px-3 rounded bg-primary-600 text-on-primary font-medium hover:bg-primary-500">
+              <button onClick={seedSuggested} className="text-xs py-1.5 px-3 rounded-sm bg-primary-600 text-on-primary font-medium hover:bg-primary-500">
                 + Seed {SUGGESTED_TEMPLATES.length} starter templates
               </button>
             </div>
@@ -456,7 +456,7 @@ function TaskTemplates({ onCreate }: { onCreate: (title: string, date: string, g
                 return (
                   <div key={cat}>
                     <div className="flex items-center gap-2 mb-1.5">
-                      <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: accent }} />
+                      <span className="w-2 h-2 rounded-full shrink-0" style={{ background: accent }} />
                       <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: ink(accent) }}>{cat}</span>
                       <span className="text-[10px] text-gray-600 tabular-nums">{tmps.length}</span>
                     </div>
@@ -468,11 +468,11 @@ function TaskTemplates({ onCreate }: { onCreate: (title: string, date: string, g
                             onCreate(t.title, currentDate, t.task_group ?? undefined, t.task_category ?? undefined, t.duration_minutes ?? undefined)
                             setMode('closed')
                           }}
-                          className="w-full text-left bg-white/[0.03] hover:bg-white/[0.06] border border-white/5 hover:border-white/15 rounded-lg px-3 py-2 transition-colors flex items-center justify-between gap-2 group"
+                          className="w-full text-left bg-white/3 hover:bg-white/6 border border-white/5 hover:border-white/15 rounded-lg px-3 py-2 transition-colors flex items-center justify-between gap-2 group"
                         >
                           <span className="text-xs font-medium text-gray-200 group-hover:text-white truncate">{t.name}</span>
                           {t.duration_minutes && (
-                            <span className="text-[10px] text-gray-500 tabular-nums flex-shrink-0">{t.duration_minutes}m</span>
+                            <span className="text-[10px] text-gray-500 tabular-nums shrink-0">{t.duration_minutes}m</span>
                           )}
                         </button>
                       ))}
@@ -489,7 +489,7 @@ function TaskTemplates({ onCreate }: { onCreate: (title: string, date: string, g
         <div className="bg-dark-surface2/50 rounded-lg p-2 border border-dark-border/50">
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-semibold text-gray-400">Manage templates</span>
-            <button onClick={() => { setMode('closed'); setEditing(null) }} className="p-1 rounded text-gray-600 hover:text-white">
+            <button onClick={() => { setMode('closed'); setEditing(null) }} className="p-1 rounded-sm text-gray-600 hover:text-white">
               <X size={12} />
             </button>
           </div>
@@ -503,7 +503,7 @@ function TaskTemplates({ onCreate }: { onCreate: (title: string, date: string, g
                 <div key={cat}>
                   <div className="text-[9px] font-bold uppercase text-gray-500 px-2 py-1">{cat}</div>
                   {tmps.map(t => (
-                    <div key={t.id} className="flex items-center justify-between gap-1 px-2 py-1 text-xs text-gray-400 bg-dark-surface/50 rounded group">
+                    <div key={t.id} className="flex items-center justify-between gap-1 px-2 py-1 text-xs text-gray-400 bg-dark-surface/50 rounded-sm group">
                       <div className="min-w-0 flex-1 truncate">
                         <span>{t.name}</span>
                         {t.duration_minutes && <span className="text-[9px] text-gray-600 ml-2">{t.duration_minutes}m</span>}
@@ -532,7 +532,7 @@ function TaskTemplates({ onCreate }: { onCreate: (title: string, date: string, g
           </div>
           <button
             onClick={() => setMode('add')}
-            className="w-full text-xs py-1.5 rounded bg-primary-600 text-on-primary font-medium hover:bg-primary-500"
+            className="w-full text-xs py-1.5 rounded-sm bg-primary-600 text-on-primary font-medium hover:bg-primary-500"
           >
             + Add new template
           </button>
@@ -573,23 +573,23 @@ function TemplateForm({ initial, onCancel, onSave, busy }: {
     <div className="bg-dark-surface2/50 rounded-lg p-2 border border-dark-border/50 space-y-2">
       <div className="flex items-center justify-between mb-1">
         <span className="text-xs font-semibold text-gray-400">{initial ? 'Edit template' : 'New template'}</span>
-        <button onClick={onCancel} className="p-1 rounded text-gray-600 hover:text-white">
+        <button onClick={onCancel} className="p-1 rounded-sm text-gray-600 hover:text-white">
           <X size={12} />
         </button>
       </div>
-      <input value={name} onChange={e => setName(e.target.value)} placeholder="Template name (e.g. Morning briefing)" className="w-full text-xs bg-dark-surface border border-dark-border rounded px-2 py-1 text-white placeholder-gray-600" />
-      <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Task title (what shows on the task)" className="w-full text-xs bg-dark-surface border border-dark-border rounded px-2 py-1 text-white placeholder-gray-600" />
+      <input value={name} onChange={e => setName(e.target.value)} placeholder="Template name (e.g. Morning briefing)" className="w-full text-xs bg-dark-surface border border-dark-border rounded-sm px-2 py-1 text-white placeholder-gray-600" />
+      <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Task title (what shows on the task)" className="w-full text-xs bg-dark-surface border border-dark-border rounded-sm px-2 py-1 text-white placeholder-gray-600" />
       <div className="grid grid-cols-2 gap-1.5">
-        <input value={category} onChange={e => setCategory(e.target.value)} placeholder="Category" className="text-xs bg-dark-surface border border-dark-border rounded px-2 py-1 text-white placeholder-gray-600" />
-        <input value={taskGroup} onChange={e => setTaskGroup(e.target.value)} placeholder="Group" className="text-xs bg-dark-surface border border-dark-border rounded px-2 py-1 text-white placeholder-gray-600" />
+        <input value={category} onChange={e => setCategory(e.target.value)} placeholder="Category" className="text-xs bg-dark-surface border border-dark-border rounded-sm px-2 py-1 text-white placeholder-gray-600" />
+        <input value={taskGroup} onChange={e => setTaskGroup(e.target.value)} placeholder="Group" className="text-xs bg-dark-surface border border-dark-border rounded-sm px-2 py-1 text-white placeholder-gray-600" />
       </div>
       <div className="grid grid-cols-2 gap-1.5">
-        <select value={priority} onChange={e => setPriority(e.target.value)} className="text-xs bg-dark-surface border border-dark-border rounded px-2 py-1 text-white">
+        <select value={priority} onChange={e => setPriority(e.target.value)} className="text-xs bg-dark-surface border border-dark-border rounded-sm px-2 py-1 text-white">
           <option>Low</option><option>Medium</option><option>High</option><option>Urgent</option>
         </select>
-        <input value={duration} onChange={e => setDuration(e.target.value)} placeholder="Duration (min)" type="number" className="text-xs bg-dark-surface border border-dark-border rounded px-2 py-1 text-white placeholder-gray-600" />
+        <input value={duration} onChange={e => setDuration(e.target.value)} placeholder="Duration (min)" type="number" className="text-xs bg-dark-surface border border-dark-border rounded-sm px-2 py-1 text-white placeholder-gray-600" />
       </div>
-      <textarea value={description} onChange={e => setDescription(e.target.value)} placeholder="Description (optional)" rows={2} className="w-full text-xs bg-dark-surface border border-dark-border rounded px-2 py-1 text-white placeholder-gray-600 resize-none" />
+      <textarea value={description} onChange={e => setDescription(e.target.value)} placeholder="Description (optional)" rows={2} className="w-full text-xs bg-dark-surface border border-dark-border rounded-sm px-2 py-1 text-white placeholder-gray-600 resize-none" />
       <button
         onClick={() => {
           if (!name.trim() || !title.trim()) return
@@ -603,7 +603,7 @@ function TemplateForm({ initial, onCancel, onSave, busy }: {
           })
         }}
         disabled={busy || !name.trim() || !title.trim()}
-        className="w-full text-xs py-1.5 rounded bg-primary-600 text-on-primary font-medium hover:bg-primary-500 disabled:opacity-40"
+        className="w-full text-xs py-1.5 rounded-sm bg-primary-600 text-on-primary font-medium hover:bg-primary-500 disabled:opacity-40"
       >
         {busy ? 'Saving…' : initial ? 'Update' : 'Save template'}
       </button>
@@ -621,7 +621,7 @@ function QuickAdd({ date, onCreate }: { date: string; onCreate: (title: string, 
 
   if (!open) return (
     <button onClick={() => { setOpen(true); setTitle('') }}
-      className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-medium text-gray-400 hover:text-white bg-white/[0.02] hover:bg-white/[0.06] border border-white/5 hover:border-white/15 transition-colors">
+      className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-medium text-gray-400 hover:text-white bg-white/2 hover:bg-white/6 border border-white/5 hover:border-white/15 transition-colors">
       <Plus size={13} /> Add custom task
     </button>
   )
@@ -631,7 +631,7 @@ function QuickAdd({ date, onCreate }: { date: string; onCreate: (title: string, 
       <input ref={ref} value={title} onChange={e => setTitle(e.target.value)}
         onKeyDown={e => { if (e.key === 'Escape') setOpen(false) }}
         placeholder="Task title..."
-        className="flex-1 bg-dark-surface2 border border-primary-500/50 rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:ring-1 focus:ring-primary-500/50" />
+        className="flex-1 bg-dark-surface2 border border-primary-500/50 rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-gray-600 focus:outline-hidden focus:ring-1 focus:ring-primary-500/50" />
       <button type="submit" disabled={!title.trim()} className="px-2.5 py-1.5 rounded-lg bg-primary-600 text-on-primary text-xs font-medium disabled:opacity-40 hover:bg-primary-500 transition-colors">Add</button>
       <button type="button" onClick={() => setOpen(false)} className="p-1.5 rounded-lg text-gray-600 hover:text-white transition-colors"><X size={14} /></button>
     </form>
@@ -726,7 +726,7 @@ function InlineQuickAdd({ onSubmit, onCancel, autoFocus = true }: {
         onKeyDown={e => { if (e.key === 'Escape') { e.preventDefault(); onCancel() } }}
         onBlur={() => { if (!title.trim()) onCancel() }}
         placeholder="Task title…"
-        className="w-full bg-dark-surface border border-primary-500/60 rounded px-1.5 py-1 text-[11px] text-white placeholder-gray-600 focus:outline-none focus:ring-1 focus:ring-primary-500/40"
+        className="w-full bg-dark-surface border border-primary-500/60 rounded-sm px-1.5 py-1 text-[11px] text-white placeholder-gray-600 focus:outline-hidden focus:ring-1 focus:ring-primary-500/40"
       />
     </form>
   )
@@ -775,7 +775,7 @@ function CollapsibleNote({ value, weekStart, placeholder, label, onSave }: {
         <span className={'text-xs truncate flex-1 ' + (value ? 'text-gray-300' : 'text-gray-600 italic')}>
           {value || placeholder}
         </span>
-        <span className="text-[10px] text-gray-600 flex-shrink-0">click to edit</span>
+        <span className="text-[10px] text-gray-600 shrink-0">click to edit</span>
       </button>
     )
   }
@@ -792,7 +792,7 @@ function CollapsibleNote({ value, weekStart, placeholder, label, onSave }: {
         onChange={(e) => setDraft(e.target.value)}
         rows={3}
         placeholder={placeholder}
-        className="w-full bg-dark-surface2 border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-primary-500 resize-none"
+        className="w-full bg-dark-surface2 border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-hidden focus:border-primary-500 resize-none"
       />
       <div className="flex gap-2 justify-end">
         <button
@@ -871,9 +871,9 @@ function TaskPopover({ task, anchor, onClose, onRename, onTogglePriority, onComp
           onChange={e => setTitle(e.target.value)}
           onBlur={() => { if (title.trim() && title.trim() !== task.title) onRename(title.trim()) }}
           onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); (e.currentTarget as HTMLInputElement).blur() } }}
-          className="flex-1 bg-transparent border-b border-dark-border focus:border-primary-500 px-1 py-0.5 text-sm font-medium text-white focus:outline-none"
+          className="flex-1 bg-transparent border-b border-dark-border focus:border-primary-500 px-1 py-0.5 text-sm font-medium text-white focus:outline-hidden"
         />
-        <button onClick={onClose} className="p-1 rounded text-gray-600 hover:text-white"><X size={14} /></button>
+        <button onClick={onClose} className="p-1 rounded-sm text-gray-600 hover:text-white"><X size={14} /></button>
       </div>
 
       <div className="flex items-center gap-1.5 text-[11px] text-gray-500">
@@ -1216,14 +1216,14 @@ function DayTimeline({ tasks, isToday, currentDate, onTaskClick, onCreateAtTime,
               <button
                 onClick={() => onViewModeChange('single')}
                 title="One timeline for the selected scope"
-                className={'flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold transition-colors ' +
+                className={'flex items-center gap-1 px-2 py-0.5 rounded-sm text-[10px] font-semibold transition-colors ' +
                   (renderedMode === 'single' ? 'bg-primary-500 text-on-primary' : 'text-gray-400 hover:text-white')}>
                 <CalendarDays size={10} /> Combined
               </button>
               <button
                 onClick={() => onViewModeChange('team')}
                 title="One column per person — Google Calendar-style team view"
-                className={'flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold transition-colors ' +
+                className={'flex items-center gap-1 px-2 py-0.5 rounded-sm text-[10px] font-semibold transition-colors ' +
                   (renderedMode === 'team' ? 'bg-primary-500 text-on-primary' : 'text-gray-400 hover:text-white')}>
                 <User size={10} /> By person
               </button>
@@ -1263,7 +1263,7 @@ function DayTimeline({ tasks, isToday, currentDate, onTaskClick, onCreateAtTime,
               const isUn = emp === '__unassigned__'
               return (
                 <div key={emp} className="flex-1 px-3 py-2.5 border-l border-dark-border/30 flex items-center gap-2 min-w-0">
-                  <div className={'w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-bold flex-shrink-0 ring-1 ' + (isUn ? 'bg-gray-700/40 text-gray-300 ring-gray-600/40' : 'bg-gradient-to-br from-primary-500/30 to-primary-600/30 text-primary-200 ring-primary-500/40')}>
+                  <div className={'w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-bold shrink-0 ring-1 ' + (isUn ? 'bg-gray-700/40 text-gray-300 ring-gray-600/40' : 'bg-linear-to-br from-primary-500/30 to-primary-600/30 text-primary-200 ring-primary-500/40')}>
                     {initials}
                   </div>
                   <div className="flex flex-col min-w-0 leading-tight">
@@ -1385,7 +1385,7 @@ function DayTimeline({ tasks, isToday, currentDate, onTaskClick, onCreateAtTime,
             <div className="absolute left-0 right-0 z-30 pointer-events-none" style={{ top: nowTop }}>
               <div className="flex items-center">
                 <span
-                  className="text-right text-[10px] font-bold text-on-fill bg-red-500 px-1.5 py-0.5 rounded shadow-[0_2px_6px_rgba(239,68,68,0.5)] mr-1"
+                  className="text-right text-[10px] font-bold text-on-fill bg-red-500 px-1.5 py-0.5 rounded-sm shadow-[0_2px_6px_rgba(239,68,68,0.5)] mr-1"
                   style={{ width: TIME_LABEL_WIDTH - 4 }}>
                   {to12h(`${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`)}
                 </span>
@@ -1496,7 +1496,7 @@ function DayTimeline({ tasks, isToday, currentDate, onTaskClick, onCreateAtTime,
                   {/* Time range — bright color, matches sample's
                       "9:00 – 10:00" header. Drops AM/PM since the
                       column already groups by day. */}
-                  <span className="text-[10.5px] font-medium tabular-nums flex-shrink-0 pr-7 leading-none" style={{ color: ink(meta.color), filter: light ? 'none' : 'brightness(1.5)' }}>
+                  <span className="text-[10.5px] font-medium tabular-nums shrink-0 pr-7 leading-none" style={{ color: ink(meta.color), filter: light ? 'none' : 'brightness(1.5)' }}>
                     {to12hNoSuffix(startLabel)}{duration ? ` – ${to12hNoSuffix(endLabel)}` : ''}
                   </span>
                   {/* Title — bright white, with right-padding so the
@@ -1529,7 +1529,7 @@ function DayTimeline({ tasks, isToday, currentDate, onTaskClick, onCreateAtTime,
                       vertically beneath, only when set, so the corner
                       stays uncluttered. */}
                   <span
-                    className="absolute top-2 right-2 inline-flex items-center justify-center w-5 h-5 rounded-full flex-shrink-0"
+                    className="absolute top-2 right-2 inline-flex items-center justify-center w-5 h-5 rounded-full shrink-0"
                     style={{ background: meta.color + 'cc', boxShadow: `0 1px 4px ${meta.color}55` }}
                     title={task.task_group || 'Task'}>
                     <Icon size={11} className="text-on-fill" />
@@ -1541,7 +1541,7 @@ function DayTimeline({ tasks, isToday, currentDate, onTaskClick, onCreateAtTime,
                   {(task.priority === 'High' || (task.recurring || task.recurring_parent_id) || STATUS_META[task.status]) && (
                     <div className="absolute top-8 right-2 flex flex-col items-end gap-0.5">
                       {task.priority === 'High' && (
-                        <span className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-red-500/80 flex-shrink-0" title="High priority">
+                        <span className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-red-500/80 shrink-0" title="High priority">
                           <Flag size={8} className="text-on-fill" />
                         </span>
                       )}
@@ -1555,7 +1555,7 @@ function DayTimeline({ tasks, isToday, currentDate, onTaskClick, onCreateAtTime,
                         if (!sm) return null
                         const SIcon = sm.icon
                         return (
-                          <span className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full flex-shrink-0"
+                          <span className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full shrink-0"
                             style={{ background: sm.color }} title={sm.label}>
                             <SIcon size={8} className="text-on-fill" />
                           </span>
@@ -2217,7 +2217,7 @@ export function Planner() {
           {tab !== 'stats' && tab !== 'team' && tab !== 'pool' && (
             <button
               onClick={() => openCreate(tab === 'day' ? currentDate : today)}
-              className="md:hidden flex items-center gap-1.5 text-sm font-medium text-on-primary bg-primary-600 hover:bg-primary-500 px-3 py-2 rounded-lg transition-colors flex-shrink-0"
+              className="md:hidden flex items-center gap-1.5 text-sm font-medium text-on-primary bg-primary-600 hover:bg-primary-500 px-3 py-2 rounded-lg transition-colors shrink-0"
             >
               <Plus size={16} /> {t('planner.actions.add', 'Add')}
             </button>
@@ -2389,7 +2389,7 @@ export function Planner() {
                         {k.sublabel}
                       </p>
                     </div>
-                    <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
+                    <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
                       style={{ background: k.bg, border: `1px solid ${k.border}` }}>
                       <KIcon size={16} style={{ color: ink(k.accent) }} />
                     </div>
@@ -2587,7 +2587,7 @@ export function Planner() {
                 // below stay in the same viewport.
                 <div className="flex items-center justify-between gap-4 bg-dark-surface border border-dark-border rounded-xl px-4 py-3 flex-wrap">
                   <div className="flex items-center gap-3 min-w-0 flex-1">
-                    <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+                    <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
                       style={{
                         background: 'linear-gradient(135deg, rgba(201,168,76,0.18), rgba(201,168,76,0.04))',
                         border: '1px solid rgba(201,168,76,0.3)',
@@ -2601,7 +2601,7 @@ export function Planner() {
                       </div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2 flex-shrink-0">
+                  <div className="flex items-center gap-2 shrink-0">
                     <button onClick={() => openCreate(currentDate)}
                       className="inline-flex items-center gap-1.5 bg-primary-500 hover:bg-primary-400 text-on-primary font-bold px-3 py-1.5 rounded-lg text-xs transition-colors">
                       <Plus size={12} /> {t('planner.empty.create_first', 'Create your first task')}
@@ -2665,7 +2665,7 @@ export function Planner() {
                     <div key={name} className="min-w-0">
                       <div className="flex items-center justify-between mb-0.5 gap-2">
                         <span className="text-xs text-gray-300 truncate">{name}</span>
-                        <span className="text-[10px] text-gray-500 tabular-nums flex-shrink-0">{d.done}/{d.total}</span>
+                        <span className="text-[10px] text-gray-500 tabular-nums shrink-0">{d.done}/{d.total}</span>
                       </div>
                       <ProgressBar done={d.done} total={d.total} />
                     </div>
@@ -2709,8 +2709,8 @@ export function Planner() {
               know how to populate it. Without this, a fresh org sees an
               eerie one-row table and nothing about how to fix it. */}
           {scheduleEmployees.length === 1 && scheduleEmployees[0] === 'Unassigned' && tasks.length === 0 && (
-            <div className="bg-gradient-to-br from-primary-500/10 via-primary-500/[0.04] to-transparent border border-primary-500/30 rounded-xl p-5 flex items-start gap-3">
-              <div className="w-10 h-10 rounded-lg bg-primary-500/20 border border-primary-500/30 flex items-center justify-center flex-shrink-0">
+            <div className="bg-linear-to-br from-primary-500/10 via-primary-500/4 to-transparent border border-primary-500/30 rounded-xl p-5 flex items-start gap-3">
+              <div className="w-10 h-10 rounded-lg bg-primary-500/20 border border-primary-500/30 flex items-center justify-center shrink-0">
                 <User size={18} className="text-primary-400" />
               </div>
               <div className="flex-1 min-w-0">
@@ -2721,7 +2721,7 @@ export function Planner() {
               </div>
               {/* Settings → Team is mounted as a tab inside /settings,
                   not a standalone route. `/team` 404'd in production. */}
-              <a href="/settings?tab=team" className="px-3 py-1.5 bg-primary-500 hover:bg-primary-400 text-on-primary text-xs font-bold rounded-md flex-shrink-0">
+              <a href="/settings?tab=team" className="px-3 py-1.5 bg-primary-500 hover:bg-primary-400 text-on-primary text-xs font-bold rounded-md shrink-0">
                 Add staff
               </a>
             </div>
@@ -2778,7 +2778,7 @@ export function Planner() {
                       the chips when scrolled. */}
                   <div className="sticky left-0 z-10 bg-dark-surface px-4 py-3 flex flex-col gap-2 border-r border-dark-border/30">
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary-500/30 to-primary-700/30 flex items-center justify-center text-xs font-bold text-primary-400 flex-shrink-0">
+                      <div className="w-8 h-8 rounded-full bg-linear-to-br from-primary-500/30 to-primary-700/30 flex items-center justify-center text-xs font-bold text-primary-400 shrink-0">
                         {emp.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()}
                       </div>
                       <div className="min-w-0 flex-1">
@@ -2917,7 +2917,7 @@ export function Planner() {
                                       </div>
                                     )}
                                     <div className={'flex items-start gap-1 mt-0.5 min-w-0 ' + (task.completed ? 'text-gray-600' : 'text-white')}>
-                                      <Icon size={10} className="mt-0.5 flex-shrink-0" style={{ color: ink(meta.color), opacity: task.completed ? 0.5 : 1 }} />
+                                      <Icon size={10} className="mt-0.5 shrink-0" style={{ color: ink(meta.color), opacity: task.completed ? 0.5 : 1 }} />
                                       <span className={'text-xs truncate flex-1 min-w-0 ' + (task.completed ? 'line-through' : '')}>
                                         {task.title}
                                       </span>
@@ -2942,7 +2942,7 @@ export function Planner() {
                               })()}
                               <button
                                 onClick={e => { e.stopPropagation(); completeMutation.mutate(task.id) }}
-                                className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 p-0.5 rounded transition-all hover:bg-dark-surface"
+                                className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 p-0.5 rounded-sm transition-all hover:bg-dark-surface"
                                 title={task.completed ? 'Mark undone' : 'Mark done'}>
                                 {task.completed
                                   ? <CheckCircle2 size={14} className="text-green-400" />
@@ -2959,7 +2959,7 @@ export function Planner() {
                               false now in the Schedule cell path. */}
                           <button
                             onClick={() => openCreate(dateStr, emp === 'Unassigned' ? undefined : emp)}
-                            className={'w-full flex items-center justify-center rounded text-gray-700 hover:text-primary-400 transition-colors ' +
+                            className={'w-full flex items-center justify-center rounded-sm text-gray-700 hover:text-primary-400 transition-colors ' +
                               (cellTasks.length === 0 ? 'min-h-[56px] border border-dashed border-dark-border/30 hover:border-primary-500/40' : 'py-1')}>
                             <Plus size={cellTasks.length === 0 ? 16 : 12} className={cellTasks.length === 0 ? 'opacity-0 group-hover:opacity-100' : ''} />
                           </button>
@@ -2978,7 +2978,7 @@ export function Planner() {
               return (
                 <div className="grid border-b border-dark-border/50 min-w-[760px]" style={{ gridTemplateColumns: '180px repeat(7, minmax(0, 1fr))' }}>
                   <div className="px-4 py-3 flex items-center gap-3 border-r border-dark-border/30">
-                    <div className="w-8 h-8 rounded-full bg-gray-700/30 flex items-center justify-center text-xs font-bold text-gray-500 flex-shrink-0">?</div>
+                    <div className="w-8 h-8 rounded-full bg-gray-700/30 flex items-center justify-center text-xs font-bold text-gray-500 shrink-0">?</div>
                     <span className="text-sm font-medium text-gray-500 italic">{t('planner.actions.unassigned', 'Unassigned')}</span>
                   </div>
                   {weekDates.map((date) => {
@@ -3034,7 +3034,7 @@ export function Planner() {
                                       </div>
                                     )}
                                     <div className={'flex items-start gap-1 mt-0.5 ' + (task.completed ? 'text-gray-600' : 'text-white')}>
-                                      <Icon size={10} className="mt-0.5 flex-shrink-0" style={{ color: ink(meta.color), opacity: task.completed ? 0.5 : 1 }} />
+                                      <Icon size={10} className="mt-0.5 shrink-0" style={{ color: ink(meta.color), opacity: task.completed ? 0.5 : 1 }} />
                                       <span className={'text-xs truncate flex-1 ' + (task.completed ? 'line-through' : '')}>{task.title}</span>
                                     </div>
                                   </button>
@@ -3042,7 +3042,7 @@ export function Planner() {
                               })()}
                               <button
                                 onClick={e => { e.stopPropagation(); completeMutation.mutate(task.id) }}
-                                className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 p-0.5 rounded transition-all hover:bg-dark-surface"
+                                className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 p-0.5 rounded-sm transition-all hover:bg-dark-surface"
                                 title={task.completed ? 'Mark undone' : 'Mark done'}>
                                 {task.completed
                                   ? <CheckCircle2 size={14} className="text-green-400" />
@@ -3056,7 +3056,7 @@ export function Planner() {
                               employee so the user can pick later. */}
                           <button
                             onClick={() => openCreate(dateStr)}
-                            className={'w-full flex items-center justify-center rounded text-gray-700 hover:text-primary-400 transition-colors ' +
+                            className={'w-full flex items-center justify-center rounded-sm text-gray-700 hover:text-primary-400 transition-colors ' +
                               (cellTasks.length === 0 ? 'min-h-[56px] border border-dashed border-dark-border/20 hover:border-primary-500/40' : 'py-1')}>
                             <Plus size={cellTasks.length === 0 ? 16 : 12} />
                           </button>
@@ -3108,7 +3108,7 @@ export function Planner() {
               <div key={wi} className="grid grid-cols-7 gap-1.5 mb-1.5 min-w-[760px]">
                 {week.map((date, di) => {
                   const isWeekend = di >= 5
-                  if (!date) return <div key={di} className="min-h-[132px] rounded-xl bg-dark-surface2/[0.05] border border-transparent" />
+                  if (!date) return <div key={di} className="min-h-[132px] rounded-xl bg-dark-surface2/5 border border-transparent" />
                   const dateStr = fmtDate(date)
                   const dayTasks = (tasks as any[]).filter((t: any) => (t.task_date ?? '').slice(0, 10) === dateStr)
                   const total = dayTasks.length
@@ -3149,21 +3149,21 @@ export function Planner() {
                       className={'min-h-[132px] rounded-xl border p-2 flex flex-col transition-all group/cell ' +
                         (isDropTarget ? 'border-primary-500 bg-primary-500/15 ring-2 ring-primary-500/40' :
                           (isToday ? 'border-primary-500/60 bg-primary-500/[0.07]' :
-                            (isWeekend ? 'border-dark-border/40 bg-dark-surface2/[0.10] hover:bg-dark-surface2/25' : 'border-dark-border/40 bg-dark-surface2/20 hover:bg-dark-surface2/40') + ' hover:border-primary-500/30'))}>
+                            (isWeekend ? 'border-dark-border/40 bg-dark-surface2/10 hover:bg-dark-surface2/25' : 'border-dark-border/40 bg-dark-surface2/20 hover:bg-dark-surface2/40') + ' hover:border-primary-500/30'))}>
                       {/* header: date · completion · quick-add */}
                       <div className="flex items-center justify-between mb-1">
                         <span className={'text-xs font-bold flex items-center justify-center ' + (isToday ? 'text-on-primary bg-primary-500 w-6 h-6 rounded-full' : (isWeekend ? 'text-gray-500' : 'text-gray-300'))}>{date.getDate()}</span>
                         <div className="flex items-center gap-1">
                           {total > 0 && <span className={'text-[9px] font-semibold tabular-nums ' + (allDone ? 'text-green-400' : 'text-gray-500')}>{done}/{total}</span>}
                           <button onClick={(e) => { e.stopPropagation(); setQuickAddCell(cellId) }}
-                            className="opacity-0 group-hover/cell:opacity-100 transition-opacity p-0.5 rounded hover:bg-primary-500/20 text-gray-500 hover:text-primary-400"
+                            className="opacity-0 group-hover/cell:opacity-100 transition-opacity p-0.5 rounded-sm hover:bg-primary-500/20 text-gray-500 hover:text-primary-400"
                             title={t('planner.actions.quick_add', 'Quick add')}>
                             <Plus size={11} />
                           </button>
                         </div>
                       </div>
                       {total > 0 && (
-                        <div className="h-1 rounded-full bg-white/[0.06] mb-1.5 overflow-hidden">
+                        <div className="h-1 rounded-full bg-white/6 mb-1.5 overflow-hidden">
                           <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: allDone ? '#10b981' : '#c9a84c' }} />
                         </div>
                       )}
@@ -3180,7 +3180,7 @@ export function Planner() {
                         <button onClick={openDay}
                           className="flex items-center gap-1.5 rounded-md px-1.5 py-1.5 text-left w-full hover:bg-green-500/10 transition-colors"
                           style={{ background: 'rgba(16,185,129,0.08)' }}>
-                          <CheckCircle2 size={13} className="text-green-500 flex-shrink-0" />
+                          <CheckCircle2 size={13} className="text-green-500 shrink-0" />
                           <span className="text-[11px] text-green-300/90 font-medium">All {total} done</span>
                         </button>
                       ) : (
@@ -3202,11 +3202,11 @@ export function Planner() {
                                 style={{ background: meta.color + '1f' }}
                                 title={t.title}>
                                 {t.completed
-                                  ? <CheckCircle2 size={11} className="text-green-500/80 flex-shrink-0" />
-                                  : <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: meta.color }} />}
+                                  ? <CheckCircle2 size={11} className="text-green-500/80 shrink-0" />
+                                  : <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: meta.color }} />}
                                 <span className={'text-[11px] truncate flex-1 min-w-0 ' + (t.completed ? 'text-gray-500' : 'text-gray-100')}>{t.title}</span>
-                                {highP && !t.completed && <Flag size={9} className="text-red-400 flex-shrink-0" />}
-                                {t.start_time && <span className="text-[9px] text-gray-500 font-mono flex-shrink-0">{String(t.start_time).slice(0, 5)}</span>}
+                                {highP && !t.completed && <Flag size={9} className="text-red-400 shrink-0" />}
+                                {t.start_time && <span className="text-[9px] text-gray-500 font-mono shrink-0">{String(t.start_time).slice(0, 5)}</span>}
                               </div>
                             )
                           })}
@@ -3307,7 +3307,7 @@ export function Planner() {
 
       {/* ═══ COPY MODAL ═══ */}
       {copyTarget && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setCopyTarget(null)}>
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center z-50 p-4" onClick={() => setCopyTarget(null)}>
           <div className="bg-dark-surface border border-dark-border rounded-2xl w-full max-w-sm p-6" onClick={e => e.stopPropagation()}>
             <h2 className="text-lg font-semibold text-white mb-4">{t('planner.duplicate_modal.title', 'Duplicate Task')}</h2>
             <form onSubmit={e => { e.preventDefault(); const fd = new FormData(e.target as HTMLFormElement); copyMutation.mutate({ id: copyTarget.taskId, task_date: fd.get('task_date'), employee_name: fd.get('employee_name') ?? '' }) }} className="space-y-4">
@@ -3330,10 +3330,10 @@ export function Planner() {
           fit. The user accepts the whole plan with Apply; nothing
           mutates until then. */}
       {autoPlan && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setAutoPlan(null)}>
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center z-50 p-4" onClick={() => setAutoPlan(null)}>
           <div className="bg-dark-surface border border-dark-border rounded-2xl w-full max-w-lg p-6 max-h-[80vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
             <div className="flex items-start gap-3 mb-4">
-              <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
                 style={{ background: 'rgba(168,85,247,0.15)', border: '1px solid rgba(168,85,247,0.35)' }}>
                 <Sparkles size={18} className="text-purple-300" />
               </div>
@@ -3358,14 +3358,14 @@ export function Planner() {
                     <div key={p.task_id}
                       className="flex items-center gap-3 px-3 py-2 rounded-lg border"
                       style={{ borderColor: meta.color + '40', background: meta.color + '10' }}>
-                      <span className="text-xs font-mono font-bold flex-shrink-0" style={{ color: ink(meta.color), minWidth: 50 }}>
+                      <span className="text-xs font-mono font-bold shrink-0" style={{ color: ink(meta.color), minWidth: 50 }}>
                         {p.start_time}
                       </span>
-                      <Icon size={14} style={{ color: ink(meta.color) }} className="flex-shrink-0" />
+                      <Icon size={14} style={{ color: ink(meta.color) }} className="shrink-0" />
                       <span className="flex-1 text-sm text-white truncate">{p.title}</span>
-                      <span className="text-[10px] text-gray-400 flex-shrink-0">{p.duration_minutes}m</span>
+                      <span className="text-[10px] text-gray-400 shrink-0">{p.duration_minutes}m</span>
                       {p.priority === 'High' && (
-                        <Flag size={11} className="text-red-400 flex-shrink-0" />
+                        <Flag size={11} className="text-red-400 shrink-0" />
                       )}
                     </div>
                   )
@@ -3404,7 +3404,7 @@ export function Planner() {
       )}
 
       {moveTarget && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setMoveTarget(null)}>
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center z-50 p-4" onClick={() => setMoveTarget(null)}>
           <div className="bg-dark-surface border border-dark-border rounded-2xl w-full max-w-sm p-6" onClick={e => e.stopPropagation()}>
             <h2 className="text-lg font-semibold text-white mb-4">{t('planner.move_modal.title', 'Move Task')}</h2>
             <form onSubmit={e => { e.preventDefault(); const fd = new FormData(e.target as HTMLFormElement); moveMutation.mutate({ id: moveTarget.taskId, task_date: fd.get('task_date'), employee_name: fd.get('employee_name') || undefined }) }} className="space-y-4">
@@ -3477,7 +3477,7 @@ export function Planner() {
         const prefTasks = empPref?.tasks ?? []
 
         return (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex justify-end" onClick={close}>
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-xs z-50 flex justify-end" onClick={close}>
           <div className="bg-dark-surface border-l border-dark-border w-full max-w-md h-full flex flex-col" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between p-4 border-b border-dark-border">
               <div className="flex items-center gap-2">
@@ -3491,7 +3491,7 @@ export function Planner() {
                   </span>
                 )}
               </div>
-              <button onClick={close} className="p-1.5 rounded hover:bg-dark-surface2 text-gray-500 hover:text-white"><X size={16} /></button>
+              <button onClick={close} className="p-1.5 rounded-sm hover:bg-dark-surface2 text-gray-500 hover:text-white"><X size={16} /></button>
             </div>
 
             <form onSubmit={e => { e.preventDefault(); handleSubmit() }} className="flex-1 overflow-y-auto p-4 space-y-4">
@@ -3579,7 +3579,7 @@ export function Planner() {
                           <div className="flex flex-wrap gap-1 p-1.5 bg-dark-surface2/30">
                             {items.map(t => (
                               <button type="button" key={t.id} onClick={() => applyTemplate(t)}
-                                className="px-2 py-0.5 rounded bg-dark-surface border border-dark-border text-[11px] text-gray-300 hover:bg-primary-500/15 hover:border-primary-500/40 hover:text-primary-300 transition-all">
+                                className="px-2 py-0.5 rounded-sm bg-dark-surface border border-dark-border text-[11px] text-gray-300 hover:bg-primary-500/15 hover:border-primary-500/40 hover:text-primary-300 transition-all">
                                 {t.name}
                                 {t.duration_minutes ? <span className="ml-1 text-gray-600">{t.duration_minutes}m</span> : null}
                               </button>
@@ -3598,7 +3598,7 @@ export function Planner() {
                 <input required value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
                   placeholder={t('planner.drawer.title_placeholder', 'What needs to be done?')}
                   autoFocus={!editTask}
-                  className="w-full bg-dark-bg border border-dark-border rounded-md px-3 py-2 text-sm placeholder-gray-600 outline-none focus:border-primary-500" />
+                  className="w-full bg-dark-bg border border-dark-border rounded-md px-3 py-2 text-sm placeholder-gray-600 outline-hidden focus:border-primary-500" />
               </div>
 
               {/* Assign + Priority chip rows */}
@@ -3606,7 +3606,7 @@ export function Planner() {
                 <div>
                   <label className="flex items-center gap-1.5 text-[10px] uppercase tracking-wide font-bold text-gray-500 mb-1.5"><User size={11} /> Assign to</label>
                   <select value={form.employee_name} onChange={e => setForm(f => ({ ...f, employee_name: e.target.value }))}
-                    className="w-full bg-dark-bg border border-dark-border rounded-md px-3 py-2 text-sm outline-none focus:border-primary-500">
+                    className="w-full bg-dark-bg border border-dark-border rounded-md px-3 py-2 text-sm outline-hidden focus:border-primary-500">
                     <option value="">{t('planner.drawer.unassigned_option', 'Unassigned')}</option>
                     {myName && <option value={myName}>{myName} (me)</option>}
                     {assignableEmployees.filter((e: string) => e !== myName).map((emp: string) => <option key={emp}>{emp}</option>)}
@@ -3655,7 +3655,7 @@ export function Planner() {
                   </div>
                   {poolHorizon === 'day' && (
                     <input type="date" required value={poolDue} onChange={e => setPoolDue(e.target.value)}
-                      className="w-full mt-2 bg-dark-bg border border-dark-border rounded-md px-3 py-2 text-sm outline-none focus:border-primary-500" />
+                      className="w-full mt-2 bg-dark-bg border border-dark-border rounded-md px-3 py-2 text-sm outline-hidden focus:border-primary-500" />
                   )}
                   <p className="text-[11px] text-gray-600 mt-1.5">
                     Pool tasks stay unscheduled &amp; unassigned until someone claims them. {poolHorizon === 'week' ? 'Tagged for this week.' : poolHorizon === 'day' ? 'Tagged for the chosen day.' : 'No deadline.'}
@@ -3667,17 +3667,17 @@ export function Planner() {
                   <Calendar size={11} /> Date {backlogMode && <span className="normal-case font-normal text-gray-600">· optional</span>}
                 </label>
                 <input type="date" required={!backlogMode} value={form.task_date} onChange={e => setForm(f => ({ ...f, task_date: e.target.value }))}
-                  className="w-full bg-dark-bg border border-dark-border rounded-md px-3 py-2 text-sm outline-none focus:border-primary-500" />
+                  className="w-full bg-dark-bg border border-dark-border rounded-md px-3 py-2 text-sm outline-hidden focus:border-primary-500" />
                 <div className="flex gap-1.5 mt-2 flex-wrap items-center">
                   {[{ off: 0, lbl: 'Today' }, { off: 1, lbl: 'Tomorrow' }, { off: 2, lbl: 'In 2 days' }, { off: 7, lbl: 'Next week' }].map(d => (
                     <button key={d.lbl} type="button" onClick={() => setDateQuick(d.off)}
-                      className="text-[11px] px-2 py-1 rounded bg-dark-bg border border-dark-border text-gray-500 hover:text-white hover:border-dark-border/80">
+                      className="text-[11px] px-2 py-1 rounded-sm bg-dark-bg border border-dark-border text-gray-500 hover:text-white hover:border-dark-border/80">
                       {d.lbl}
                     </button>
                   ))}
                   {backlogMode && form.task_date && (
                     <button type="button" onClick={() => setForm(f => ({ ...f, task_date: '' }))}
-                      className="text-[11px] px-2 py-1 rounded text-gray-500 hover:text-white">Clear (keep in backlog)</button>
+                      className="text-[11px] px-2 py-1 rounded-sm text-gray-500 hover:text-white">Clear (keep in backlog)</button>
                   )}
                 </div>
                 {backlogMode && !form.task_date && (
@@ -3697,7 +3697,7 @@ export function Planner() {
                     const active = form.start_time && form.start_time.slice(0, 5) === t
                     return (
                       <button key={t} type="button" onClick={() => setStartTime(t)}
-                        className={'px-1.5 py-1 rounded text-[11px] font-mono tabular-nums transition-colors ' +
+                        className={'px-1.5 py-1 rounded-sm text-[11px] font-mono tabular-nums transition-colors ' +
                           (active ? 'bg-primary-500 text-on-primary' : 'text-gray-400 hover:bg-dark-surface2 hover:text-white')}>
                         {t}
                       </button>
@@ -3744,7 +3744,7 @@ export function Planner() {
                       value={form.duration_minutes || ''}
                       onChange={e => { const v = e.target.value; if (v === '') { setForm(f => ({ ...f, duration_minutes: '', end_time: '' })) } else { setDuration(Math.max(1, Number(v))) } }}
                       placeholder="min"
-                      className="w-16 bg-transparent text-center text-xs text-white tabular-nums outline-none py-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
+                      className="w-16 bg-transparent text-center text-xs text-white tabular-nums outline-hidden py-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
                     <button type="button" title="+15 min"
                       onClick={() => setDuration((Number(form.duration_minutes) || 0) + 15)}
                       className="px-2 py-1 text-gray-400 hover:text-white hover:bg-dark-surface2">+</button>
@@ -3785,7 +3785,7 @@ export function Planner() {
                     <label className="text-[10px] uppercase tracking-wide font-bold text-gray-500 mb-1 block">{t('planner.drawer.repeat_until_label', 'Repeat until (optional)')}</label>
                     <input type="date" value={form.recurring_end_date || ''}
                       onChange={e => setForm(f => ({ ...f, recurring_end_date: e.target.value }))}
-                      className="w-full bg-dark-bg border border-dark-border rounded-md px-3 py-2 text-sm outline-none focus:border-primary-500" />
+                      className="w-full bg-dark-bg border border-dark-border rounded-md px-3 py-2 text-sm outline-hidden focus:border-primary-500" />
                   </div>
                 )}
               </div>
@@ -3796,7 +3796,7 @@ export function Planner() {
                 <label className="text-[10px] uppercase tracking-wide font-bold text-gray-500 mb-1.5 block">Notes (optional)</label>
                 <textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
                   rows={3} placeholder={t('planner.drawer.description_placeholder', 'Anything the staff picking this up should know.')}
-                  className="w-full bg-dark-bg border border-dark-border rounded-md px-3 py-2 text-sm placeholder-gray-600 outline-none focus:border-primary-500 resize-none" />
+                  className="w-full bg-dark-bg border border-dark-border rounded-md px-3 py-2 text-sm placeholder-gray-600 outline-hidden focus:border-primary-500 resize-none" />
               </div>
 
               {/* Status — collapsed in edit mode only since new tasks default to "todo" */}
@@ -3888,7 +3888,7 @@ export function Planner() {
                   <div className="text-sm font-semibold text-white truncate">{dayPopover.label}</div>
                   <div className="text-[11px] text-gray-500">{doneN} of {dayTasks.length} done{dayTasks.length - doneN > 0 ? ` · ${dayTasks.length - doneN} open` : ''}</div>
                 </div>
-                <div className="flex items-center gap-1 flex-shrink-0">
+                <div className="flex items-center gap-1 shrink-0">
                   <button onClick={() => { setCurrentDate(dstr); setTab('day'); setDayPopover(null) }}
                     className="text-[11px] font-medium px-2 py-1 rounded-md text-primary-300 hover:bg-primary-500/15 transition-colors" title="Open full day view">Open day</button>
                   <button onClick={() => setDayPopover(null)} className="p-1 rounded-md text-gray-500 hover:text-white hover:bg-white/5"><X size={15} /></button>
@@ -3902,16 +3902,16 @@ export function Planner() {
                   const meta = getGroupMeta(t.task_group)
                   const highP = String(t.priority ?? '').toLowerCase() === 'high'
                   return (
-                    <div key={t.id} className="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-white/[0.05] transition-colors"
+                    <div key={t.id} className="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-white/5 transition-colors"
                       style={{ background: meta.color + '12' }}>
-                      <button onClick={() => completeMutation.mutate(t.id)} className="flex-shrink-0" title={t.completed ? 'Mark open' : 'Mark done'}>
+                      <button onClick={() => completeMutation.mutate(t.id)} className="shrink-0" title={t.completed ? 'Mark open' : 'Mark done'}>
                         {t.completed ? <CheckCircle2 size={16} className="text-green-500" /> : <Circle size={16} className="text-gray-600 hover:text-primary-400" />}
                       </button>
-                      <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: meta.color }} />
+                      <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: meta.color }} />
                       <button onClick={(e) => { setTaskPopover({ task: t, anchor: (e.currentTarget as HTMLElement).getBoundingClientRect() }); setDayPopover(null) }}
                         className={'flex-1 min-w-0 text-left text-xs truncate ' + (t.completed ? 'text-gray-500 line-through' : 'text-gray-100')} title={t.title}>{t.title}</button>
-                      {highP && !t.completed && <Flag size={11} className="text-red-400 flex-shrink-0" />}
-                      {t.start_time && <span className="text-[10px] text-gray-500 font-mono flex-shrink-0">{String(t.start_time).slice(0, 5)}</span>}
+                      {highP && !t.completed && <Flag size={11} className="text-red-400 shrink-0" />}
+                      {t.start_time && <span className="text-[10px] text-gray-500 font-mono shrink-0">{String(t.start_time).slice(0, 5)}</span>}
                     </div>
                   )
                 })}
@@ -3930,7 +3930,7 @@ export function Planner() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={() => setRecurringDelete(null)}>
           <div className="bg-dark-surface border border-dark-border rounded-xl p-5 max-w-md w-full" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-start gap-3 mb-4">
-              <div className="w-10 h-10 rounded-lg bg-red-500/15 border border-red-500/30 flex items-center justify-center flex-shrink-0">
+              <div className="w-10 h-10 rounded-lg bg-red-500/15 border border-red-500/30 flex items-center justify-center shrink-0">
                 <Trash2 size={18} className="text-red-400" />
               </div>
               <div className="min-w-0 flex-1">
@@ -3968,7 +3968,7 @@ export function Planner() {
             </div>
             <button
               onClick={() => setRecurringDelete(null)}
-              className="w-full mt-3 px-3 py-2 rounded-lg bg-white/[0.03] hover:bg-white/[0.06] text-xs text-gray-400"
+              className="w-full mt-3 px-3 py-2 rounded-lg bg-white/3 hover:bg-white/6 text-xs text-gray-400"
             >
               Cancel — keep everything
             </button>

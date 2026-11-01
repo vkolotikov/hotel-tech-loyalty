@@ -106,7 +106,7 @@ export function AppointmentView({ booking: b, zone, locale, saving, error, outco
 
       <section className="rounded-xl border border-a-border bg-a-surface-2/50 p-3.5 text-sm">
         <div className="flex items-start justify-between gap-3">
-          <span className="min-w-0 break-words text-a-text">{[b.client.phone, b.client.email].filter(Boolean).join(' · ') || t('appointments.client.no_contact', 'No contact details')}</span>
+          <span className="min-w-0 wrap-break-word text-a-text">{[b.client.phone, b.client.email].filter(Boolean).join(' · ') || t('appointments.client.no_contact', 'No contact details')}</span>
           {b.client.id !== null && <Link to={`/appointments/clients/${b.client.id}`} className="shrink-0 text-a-accent-text font-semibold underline-offset-2 hover:underline">{t('appointments.client.open_profile', 'Open profile')}</Link>}
         </div>
         {b.client.id === null && <p className="mt-1 text-xs text-a-text-2">{t('appointments.client.unlinked', 'This booking is not linked to a client record.')}</p>}

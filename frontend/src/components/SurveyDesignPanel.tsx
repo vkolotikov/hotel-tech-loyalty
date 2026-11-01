@@ -25,7 +25,7 @@ const PRESETS: { key: string; label: string; from: string; to: string }[] = [
   { key: 'midnight', label: 'Midnight', from: '#0f172a', to: '#334155' },
 ]
 
-const inputCls = 'w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500/40 placeholder:text-hx-444444'
+const inputCls = 'w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-hidden focus:ring-2 focus:ring-primary-500/40 placeholder:text-hx-444444'
 
 function Section({ title, icon, children }: { title: string; icon?: React.ReactNode; children: React.ReactNode }) {
   return (
@@ -50,8 +50,8 @@ function Switch({ checked, onChange, label }: { checked: boolean; onChange: (v: 
   return (
     <button type="button" role="switch" aria-checked={checked} onClick={() => onChange(!checked)}
       className="flex items-center gap-3 text-left group">
-      <span className={`relative w-10 h-[22px] rounded-full transition-colors flex-shrink-0 ${checked ? 'bg-primary-500' : 'bg-white/[0.09] border border-dark-border'}`}>
-        <span className={`absolute left-0 top-[2px] w-[18px] h-[18px] rounded-full bg-on-fill shadow transition-transform ${checked ? 'translate-x-[20px]' : 'translate-x-[2px]'}`} />
+      <span className={`relative w-10 h-[22px] rounded-full transition-colors shrink-0 ${checked ? 'bg-primary-500' : 'bg-white/9 border border-dark-border'}`}>
+        <span className={`absolute left-0 top-[2px] w-[18px] h-[18px] rounded-full bg-on-fill shadow-sm transition-transform ${checked ? 'translate-x-[20px]' : 'translate-x-[2px]'}`} />
       </span>
       <span className="text-sm text-hx-c8c8cc group-hover:text-white transition-colors">{label}</span>
     </button>
@@ -63,7 +63,7 @@ function ColorField({ label, value, onChange }: { label: string; value: string; 
   return (
     <L label={label}>
       <div className="flex items-center gap-2">
-        <label className="relative w-9 h-9 rounded-lg overflow-hidden border border-dark-border cursor-pointer flex-shrink-0"
+        <label className="relative w-9 h-9 rounded-lg overflow-hidden border border-dark-border cursor-pointer shrink-0"
           style={{ background: value }}>
           <input type="color" value={value} onChange={e => onChange(e.target.value)}
             className="absolute inset-0 opacity-0 cursor-pointer" />
@@ -334,15 +334,15 @@ export function SurveyAnalyticsPanel({ formId }: { formId: number }) {
           <div className="flex items-end gap-[3px] h-24">
             {data.series.map(s => (
               <div key={s.date} className="flex-1 flex flex-col justify-end gap-[2px]" title={`${s.date} — ${s.views} views, ${s.submissions} responses`}>
-                <div className="w-full rounded-sm bg-primary-500/30" style={{ height: `${(s.views / maxDay) * 100}%`, minHeight: s.views ? 2 : 0 }} />
-                <div className="w-full rounded-sm bg-primary-400" style={{ height: `${(s.submissions / maxDay) * 100}%`, minHeight: s.submissions ? 2 : 0 }} />
+                <div className="w-full rounded-xs bg-primary-500/30" style={{ height: `${(s.views / maxDay) * 100}%`, minHeight: s.views ? 2 : 0 }} />
+                <div className="w-full rounded-xs bg-primary-400" style={{ height: `${(s.submissions / maxDay) * 100}%`, minHeight: s.submissions ? 2 : 0 }} />
               </div>
             ))}
           </div>
         )}
         <div className="flex gap-4 mt-2 text-[10px] text-t-muted">
-          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-primary-500/30 inline-block" /> Views</span>
-          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-primary-400 inline-block" /> Responses</span>
+          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-xs bg-primary-500/30 inline-block" /> Views</span>
+          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-xs bg-primary-400 inline-block" /> Responses</span>
         </div>
       </div>
 
@@ -386,8 +386,8 @@ export function SurveyAnalyticsPanel({ formId }: { formId: number }) {
                 {Object.entries(q.distribution).map(([k, n]) => (
                   <div key={k} className="flex items-center gap-2 text-xs">
                     <span className="w-24 truncate text-t-soft" title={k}>{k}</span>
-                    <div className="flex-1 h-4 bg-white/[0.04] rounded overflow-hidden">
-                      <div className="h-full bg-primary-500/70 rounded" style={{ width: `${(n / total) * 100}%` }} />
+                    <div className="flex-1 h-4 bg-white/4 rounded-sm overflow-hidden">
+                      <div className="h-full bg-primary-500/70 rounded-sm" style={{ width: `${(n / total) * 100}%` }} />
                     </div>
                     <span className="w-10 text-right text-white font-semibold tabular-nums">{n}</span>
                   </div>
@@ -398,7 +398,7 @@ export function SurveyAnalyticsPanel({ formId }: { formId: number }) {
               q.latest.length === 0
                 ? <p className="text-xs text-t-muted">No text answers yet.</p>
                 : <ul className="space-y-1.5">{q.latest.map((txt, i) => (
-                    <li key={i} className="text-xs text-hx-c0c0c0 bg-white/[0.03] border border-dark-border rounded-lg px-3 py-2">“{txt}”</li>
+                    <li key={i} className="text-xs text-hx-c0c0c0 bg-white/3 border border-dark-border rounded-lg px-3 py-2">“{txt}”</li>
                   ))}</ul>
             )}
             {q.distribution && total === 0 && !q.latest && (

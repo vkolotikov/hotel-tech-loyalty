@@ -86,7 +86,7 @@ function IndustryPicker({
               key={id}
               type="button"
               onClick={() => onPick(id)}
-              className="group text-left p-4 rounded-xl border border-white/[0.10] bg-slate-950/40 hover:border-blue-500/40 hover:bg-blue-500/[0.04] transition"
+              className="group text-left p-4 rounded-xl border border-white/10 bg-slate-950/40 hover:border-blue-500/40 hover:bg-blue-500/4 transition"
             >
               <div className="flex items-start gap-3">
                 <span className="text-2xl leading-none mt-0.5">{INDUSTRY_ICONS[id]}</span>
@@ -162,7 +162,7 @@ function BrandMark({ onClick, compact = false, brand = 'HexaTech', monogram = 'H
 
   return (
     <Wrapper onClick={onClick} className="relative z-10 inline-flex items-center gap-3 text-left">
-      <span className="w-9 h-9 rounded-[10px] flex items-center justify-center font-bold text-[13px] tracking-wide bg-gradient-to-br from-blue-500 to-sky-500 shadow-lg shadow-blue-500/30">{monogram}</span>
+      <span className="w-9 h-9 rounded-[10px] flex items-center justify-center font-bold text-[13px] tracking-wide bg-linear-to-br from-blue-500 to-sky-500 shadow-lg shadow-blue-500/30">{monogram}</span>
       <span className="text-[17px] font-semibold">{brand}</span>
     </Wrapper>
   )
@@ -216,17 +216,17 @@ function InlineLangPicker({ i18n }: { i18n: any }) {
         type="button"
         onClick={() => setOpen(o => !o)}
         title={`Language: ${current.label}`}
-        className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-slate-950/50 border border-white/[0.08] hover:border-white/20 text-xs text-slate-300 transition"
+        className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-slate-950/50 border border-white/8 hover:border-white/20 text-xs text-slate-300 transition"
       >
         <Globe size={13} className="text-slate-400" />
-        <span className="inline-flex items-center justify-center min-w-[26px] h-5 px-1.5 rounded text-[10px] font-bold uppercase tracking-wider bg-blue-500/15 text-blue-300 border border-blue-500/30">
+        <span className="inline-flex items-center justify-center min-w-[26px] h-5 px-1.5 rounded-sm text-[10px] font-bold uppercase tracking-wider bg-blue-500/15 text-blue-300 border border-blue-500/30">
           {current.code}
         </span>
         <span className="hidden sm:inline text-[11px] text-slate-300">{current.label}</span>
         <ChevronDown size={12} className={'text-slate-500 transition-transform ' + (open ? 'rotate-180' : '')} />
       </button>
       {open && (
-        <div className="absolute top-full right-0 mt-1.5 min-w-[190px] rounded-lg border border-white/[0.08] bg-slate-900/95 backdrop-blur-md shadow-xl py-1 z-50">
+        <div className="absolute top-full right-0 mt-1.5 min-w-[190px] rounded-lg border border-white/8 bg-slate-900/95 backdrop-blur-md shadow-xl py-1 z-50">
           {SUPPORTED_LANGUAGES.map((l: { code: LangCode; label: string; flag: string }) => {
             const isActive = l.code === current.code
             return (
@@ -235,16 +235,16 @@ function InlineLangPicker({ i18n }: { i18n: any }) {
                 type="button"
                 onClick={() => { i18n.changeLanguage(l.code); setOpen(false) }}
                 className={'flex items-center gap-2.5 w-full px-2.5 py-1.5 text-sm transition-colors ' +
-                  (isActive ? 'bg-blue-500/10 text-white' : 'text-slate-300 hover:bg-white/[0.04] hover:text-white')}
+                  (isActive ? 'bg-blue-500/10 text-white' : 'text-slate-300 hover:bg-white/4 hover:text-white')}
               >
-                <span className={'inline-flex items-center justify-center min-w-[28px] h-5 px-1.5 rounded text-[10px] font-bold uppercase tracking-wider border ' +
+                <span className={'inline-flex items-center justify-center min-w-[28px] h-5 px-1.5 rounded-sm text-[10px] font-bold uppercase tracking-wider border ' +
                   (isActive
                     ? 'bg-blue-500/20 text-blue-300 border-blue-500/40'
-                    : 'bg-slate-800 text-slate-400 border-white/[0.08]')}>
+                    : 'bg-slate-800 text-slate-400 border-white/8')}>
                   {l.code}
                 </span>
                 <span className="flex-1 text-left">{l.label}</span>
-                {isActive && <Check size={13} className="text-blue-400 flex-shrink-0" />}
+                {isActive && <Check size={13} className="text-blue-400 shrink-0" />}
               </button>
             )
           })}
@@ -675,10 +675,10 @@ export function Login() {
   // ─── Verify View ────────────────────────────────────────────────────────────
   if (view === 'verify') {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-hx-0d0d0d via-hx-111118 to-hx-0d0d0d flex items-center justify-center p-4">
+      <div className="min-h-screen bg-linear-to-br from-hx-0d0d0d via-hx-111118 to-hx-0d0d0d flex items-center justify-center p-4">
         <div className="w-full max-w-md">
           <div className="text-center mb-8">
-            <div className={`w-16 h-16 mx-auto mb-4 rounded-2xl flex items-center justify-center shadow-lg transition-all duration-500 ${verified ? 'bg-green-500 shadow-green-500/20' : 'bg-gradient-to-br from-primary-500 to-primary-700 shadow-primary-500/20'}`}>
+            <div className={`w-16 h-16 mx-auto mb-4 rounded-2xl flex items-center justify-center shadow-lg transition-all duration-500 ${verified ? 'bg-green-500 shadow-green-500/20' : 'bg-linear-to-br from-primary-500 to-primary-700 shadow-primary-500/20'}`}>
               {verified ? <Check size={32} className="text-white" /> : <ShieldCheck size={32} className="text-white" />}
             </div>
             <h1 className="text-2xl font-bold text-white">
@@ -695,7 +695,7 @@ export function Login() {
           </div>
 
           {!verified && (
-            <div className="bg-hx-141419 rounded-2xl border border-white/[0.06] p-8">
+            <div className="bg-hx-141419 rounded-2xl border border-white/6 p-8">
               {error && (
                 <div className="bg-red-500/10 border border-red-500/20 text-red-400 px-4 py-3 rounded-lg mb-6 text-sm">
                   {error}
@@ -718,7 +718,7 @@ export function Login() {
                     // accepted — edits during either fired extra verify-code
                     // POSTs that burned brute-force attempts.
                     disabled={loading || verified}
-                    className="w-11 h-12 sm:w-12 sm:h-14 text-center text-xl sm:text-2xl font-bold bg-hx-1e1e24 border border-white/[0.08] rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all disabled:opacity-60"
+                    className="w-11 h-12 sm:w-12 sm:h-14 text-center text-xl sm:text-2xl font-bold bg-hx-1e1e24 border border-white/8 rounded-xl text-white focus:outline-hidden focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all disabled:opacity-60"
                     autoFocus={i === 0}
                   />
                 ))}
@@ -745,7 +745,7 @@ export function Login() {
                 </button>
               </div>
 
-              <div className="mt-6 pt-4 border-t border-white/[0.06] text-center">
+              <div className="mt-6 pt-4 border-t border-white/6 text-center">
                 <button
                   onClick={() => { setView('trial'); setError(''); setCodeDigits(['', '', '', '', '', '']); setVerified(false); navigate('/register') }}
                   className="text-sm text-gray-500 hover:text-gray-400"
@@ -803,7 +803,7 @@ export function Login() {
   return (
     <div className="min-h-screen grid lg:grid-cols-[1.05fr_1fr] bg-hx-060b1e text-white">
       {/* ─── Hero ──────────────────────────────────────────────── */}
-      <aside className="relative overflow-hidden hidden lg:flex flex-col justify-between p-14 border-r border-white/[0.06]"
+      <aside className="relative overflow-hidden hidden lg:flex flex-col justify-between p-14 border-r border-white/6"
         style={{
           background:
             'radial-gradient(1200px 600px at 10% 0%, rgba(59,130,246,0.35), transparent 60%),' +
@@ -839,7 +839,7 @@ export function Login() {
           <span className="inline-block text-[11px] font-medium tracking-[0.08em] uppercase px-3 py-1.5 rounded-full bg-blue-500/10 text-blue-300 border border-blue-500/25 mb-6">
             {t('auth.hero.badge', 'AI-native service business suite')}
           </span>
-          <h2 className="text-[42px] leading-[1.1] tracking-tight font-semibold mb-4 bg-gradient-to-b from-white to-slate-300 bg-clip-text text-transparent">
+          <h2 className="text-[42px] leading-[1.1] tracking-tight font-semibold mb-4 bg-linear-to-b from-white to-slate-300 bg-clip-text text-transparent">
             {heroTitle}
           </h2>
           <p className="text-[16px] leading-[1.55] text-slate-400 max-w-[460px] mb-7">{heroSubtitle}</p>
@@ -885,7 +885,7 @@ export function Login() {
           />
         </div>
 
-        <div className={`w-full mx-auto rounded-2xl border border-white/[0.08] sm:bg-slate-900/50 sm:backdrop-blur-md p-6 sm:p-9 sm:shadow-[0_20px_60px_-20px_rgba(0,0,0,0.5)] ${isTrial ? 'max-w-[440px] lg:max-w-[940px]' : 'max-w-[440px]'}`}>
+        <div className={`w-full mx-auto rounded-2xl border border-white/8 sm:bg-slate-900/50 sm:backdrop-blur-md p-6 sm:p-9 sm:shadow-[0_20px_60px_-20px_rgba(0,0,0,0.5)] ${isTrial ? 'max-w-[440px] lg:max-w-[940px]' : 'max-w-[440px]'}`}>
           <div className="flex items-start justify-between gap-3 mb-6">
             <div className="min-w-0">
               {(isForgot || isReset) && (
@@ -920,7 +920,7 @@ export function Login() {
                     <input
                       type="email" value={email} onChange={e => setEmail(e.target.value)}
                       autoFocus required placeholder={t('auth.common.email_placeholder', 'you@company.com')}
-                      className="w-full pl-9 pr-4 py-2.5 bg-slate-950/60 border border-white/[0.12] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 text-sm text-white placeholder-slate-600 transition"
+                      className="w-full pl-9 pr-4 py-2.5 bg-slate-950/60 border border-white/12 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 text-sm text-white placeholder-slate-600 transition"
                     />
                   </div>
                 </div>
@@ -935,7 +935,7 @@ export function Login() {
                     <input
                       type={showPassword ? 'text' : 'password'} value={password} onChange={e => setPassword(e.target.value)}
                       required placeholder={t('auth.login.password', 'Password')}
-                      className="w-full pl-9 pr-10 py-2.5 bg-slate-950/60 border border-white/[0.12] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 text-sm text-white placeholder-slate-600 transition"
+                      className="w-full pl-9 pr-10 py-2.5 bg-slate-950/60 border border-white/12 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 text-sm text-white placeholder-slate-600 transition"
                     />
                     <button type="button" tabIndex={-1} onClick={() => setShowPassword(s => !s)}
                       aria-label={showPassword ? 'Hide password' : 'Show password'}
@@ -945,7 +945,7 @@ export function Login() {
                   </div>
                 </div>
                 <button type="submit" disabled={loading}
-                  className="w-full py-3 rounded-lg text-sm font-medium text-on-fill bg-gradient-to-br from-blue-500 to-blue-600 hover:from-blue-400 hover:to-blue-500 transition disabled:opacity-60 shadow-lg shadow-blue-500/25">
+                  className="w-full py-3 rounded-lg text-sm font-medium text-on-fill bg-linear-to-br from-blue-500 to-blue-600 hover:from-blue-400 hover:to-blue-500 transition disabled:opacity-60 shadow-lg shadow-blue-500/25">
                   {loading ? t('auth.login.submitting', 'Signing in…') : t('auth.login.submit', 'Sign in')}
                 </button>
               </form>
@@ -974,7 +974,7 @@ export function Login() {
                   reading localStorage in the render path lagged behind
                   the persist-on-effect cycle. */}
               {pickedViaPicker && (
-                <div className="flex items-center justify-between text-xs mb-3 px-3 py-2 rounded-lg bg-blue-500/[0.08] border border-blue-500/20 text-blue-200">
+                <div className="flex items-center justify-between text-xs mb-3 px-3 py-2 rounded-lg bg-blue-500/8 border border-blue-500/20 text-blue-200">
                   <span>{t('auth.register.configuring_for', 'Configuring for')} <strong>{industryCopy.brand}</strong></span>
                   <button
                     type="button"
@@ -995,7 +995,7 @@ export function Login() {
                     <div className="relative">
                       <User size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
                       <input type="text" value={name} onChange={e => setName(e.target.value)} required placeholder={t('auth.register.name_placeholder', 'John Smith')}
-                        className="w-full pl-9 pr-4 py-2.5 bg-slate-950/60 border border-white/[0.12] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 text-sm text-white placeholder-slate-600 transition" />
+                        className="w-full pl-9 pr-4 py-2.5 bg-slate-950/60 border border-white/12 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 text-sm text-white placeholder-slate-600 transition" />
                     </div>
                   </div>
                   <div>
@@ -1003,7 +1003,7 @@ export function Login() {
                     <div className="relative">
                       <Building2 size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
                       <input type="text" value={hotelName} onChange={e => setHotelName(e.target.value)} required placeholder={industryCopy.orgPlaceholder}
-                        className="w-full pl-9 pr-4 py-2.5 bg-slate-950/60 border border-white/[0.12] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 text-sm text-white placeholder-slate-600 transition" />
+                        className="w-full pl-9 pr-4 py-2.5 bg-slate-950/60 border border-white/12 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 text-sm text-white placeholder-slate-600 transition" />
                     </div>
                   </div>
                 </div>
@@ -1013,7 +1013,7 @@ export function Login() {
                     <div className="relative">
                       <Mail size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
                       <input type="email" value={email} onChange={e => setEmail(e.target.value.trim().toLowerCase())} required placeholder={t('auth.common.email_placeholder', 'you@company.com')}
-                        className="w-full pl-9 pr-4 py-2.5 bg-slate-950/60 border border-white/[0.12] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 text-sm text-white placeholder-slate-600 transition" />
+                        className="w-full pl-9 pr-4 py-2.5 bg-slate-950/60 border border-white/12 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 text-sm text-white placeholder-slate-600 transition" />
                     </div>
                   </div>
                   <div>
@@ -1021,7 +1021,7 @@ export function Login() {
                     <div className="relative">
                       <Phone size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
                       <input type="tel" value={phone} onChange={e => setPhone(e.target.value)} required placeholder={t('auth.register.phone_placeholder', '+1 234 567 8900')}
-                        className="w-full pl-9 pr-4 py-2.5 bg-slate-950/60 border border-white/[0.12] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 text-sm text-white placeholder-slate-600 transition" />
+                        className="w-full pl-9 pr-4 py-2.5 bg-slate-950/60 border border-white/12 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 text-sm text-white placeholder-slate-600 transition" />
                     </div>
                   </div>
                 </div>
@@ -1031,7 +1031,7 @@ export function Login() {
                     <Lock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
                     <input type={showPassword ? 'text' : 'password'} value={password} onChange={e => setPassword(e.target.value)}
                       required minLength={8} placeholder={t('auth.common.password_placeholder', 'At least 8 characters')}
-                      className="w-full pl-9 pr-10 py-2.5 bg-slate-950/60 border border-white/[0.12] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 text-sm text-white placeholder-slate-600 transition" />
+                      className="w-full pl-9 pr-10 py-2.5 bg-slate-950/60 border border-white/12 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 text-sm text-white placeholder-slate-600 transition" />
                     <button type="button" tabIndex={-1} onClick={() => setShowPassword(s => !s)}
                       aria-label={showPassword ? 'Hide password' : 'Show password'}
                       className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-slate-500 hover:text-white hover:bg-white/5 rounded-md transition">
@@ -1061,12 +1061,12 @@ export function Login() {
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                     {plans.length === 0
                       ? [0, 1, 2].map((i) => (
-                          <div key={i} className="rounded-xl border border-white/[0.08] bg-slate-950/50 p-4 animate-pulse">
-                            <div className="h-4 w-20 bg-white/10 rounded" />
-                            <div className="h-6 w-24 bg-white/10 rounded mt-3" />
+                          <div key={i} className="rounded-xl border border-white/8 bg-slate-950/50 p-4 animate-pulse">
+                            <div className="h-4 w-20 bg-white/10 rounded-sm" />
+                            <div className="h-6 w-24 bg-white/10 rounded-sm mt-3" />
                             <div className="space-y-2 mt-4">
                               {Array.from({ length: 6 }).map((_, j) => (
-                                <div key={j} className="h-3 w-full bg-white/5 rounded" />
+                                <div key={j} className="h-3 w-full bg-white/5 rounded-sm" />
                               ))}
                             </div>
                           </div>
@@ -1098,10 +1098,10 @@ export function Login() {
                               className={
                                 'relative rounded-xl border p-4 text-left transition-all flex flex-col ' +
                                 (isSelected
-                                  ? 'border-blue-500 bg-blue-500/[0.06] ring-1 ring-blue-500/30'
+                                  ? 'border-blue-500 bg-blue-500/6 ring-1 ring-blue-500/30'
                                   : isPopular
-                                    ? 'border-blue-500/30 bg-blue-500/[0.02] hover:border-blue-500/60'
-                                    : 'border-white/[0.08] bg-slate-950/50 hover:border-white/25')
+                                    ? 'border-blue-500/30 bg-blue-500/2 hover:border-blue-500/60'
+                                    : 'border-white/8 bg-slate-950/50 hover:border-white/25')
                               }
                             >
                               {isPopular && !isSelected && (
@@ -1170,7 +1170,7 @@ export function Login() {
                                 )}
                               </div>
 
-                              <div className="text-[10px] text-slate-500 text-center pt-2 border-t border-white/[0.05]">
+                              <div className="text-[10px] text-slate-500 text-center pt-2 border-t border-white/5">
                                 {t('auth.plans.trial_included', { days: p.trialDays, defaultValue: '{{days}}-day free trial included' })}
                               </div>
                             </button>
@@ -1180,7 +1180,7 @@ export function Login() {
                 </div>
 
                 <button type="submit" disabled={loading}
-                  className="w-full py-3 rounded-lg text-sm font-medium text-on-fill bg-gradient-to-br from-blue-500 to-blue-600 hover:from-blue-400 hover:to-blue-500 transition disabled:opacity-60 shadow-lg shadow-blue-500/25 flex items-center justify-center gap-2">
+                  className="w-full py-3 rounded-lg text-sm font-medium text-on-fill bg-linear-to-br from-blue-500 to-blue-600 hover:from-blue-400 hover:to-blue-500 transition disabled:opacity-60 shadow-lg shadow-blue-500/25 flex items-center justify-center gap-2">
                   {loading ? 'Sending code…' : (<><ShieldCheck size={16} /> {t('auth.register.submit', 'Verify Email & Start Trial')}</>)}
                 </button>
                 <p className="text-[11px] text-slate-500 text-center">{t('auth.register.verification_hint', "We'll send a verification code to your email. No credit card required.")}</p>
@@ -1201,11 +1201,11 @@ export function Login() {
                   <div className="relative">
                     <Mail size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
                     <input type="email" value={email} onChange={e => setEmail(e.target.value)} autoFocus required placeholder={t('auth.common.email_placeholder', 'you@company.com')}
-                      className="w-full pl-9 pr-4 py-2.5 bg-slate-950/60 border border-white/[0.12] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 text-sm text-white placeholder-slate-600 transition" />
+                      className="w-full pl-9 pr-4 py-2.5 bg-slate-950/60 border border-white/12 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 text-sm text-white placeholder-slate-600 transition" />
                   </div>
                 </div>
                 <button type="submit" disabled={loading}
-                  className="w-full py-3 rounded-lg text-sm font-medium text-on-fill bg-gradient-to-br from-blue-500 to-blue-600 hover:from-blue-400 hover:to-blue-500 transition disabled:opacity-60 shadow-lg shadow-blue-500/25">
+                  className="w-full py-3 rounded-lg text-sm font-medium text-on-fill bg-linear-to-br from-blue-500 to-blue-600 hover:from-blue-400 hover:to-blue-500 transition disabled:opacity-60 shadow-lg shadow-blue-500/25">
                   {loading ? 'Sending…' : 'Send reset code'}
                 </button>
               </form>
@@ -1238,7 +1238,7 @@ export function Login() {
                     <label className="block text-[13px] font-medium text-slate-300 mb-1.5">Reset code</label>
                     <input type="text" value={resetCode} onChange={e => setResetCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
                       required maxLength={6} inputMode="numeric" placeholder="123456" autoFocus
-                      className="w-full px-4 py-2.5 bg-slate-950/60 border border-white/[0.12] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 text-center text-lg tracking-[0.4em] font-mono text-white placeholder-slate-600 transition" />
+                      className="w-full px-4 py-2.5 bg-slate-950/60 border border-white/12 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 text-center text-lg tracking-[0.4em] font-mono text-white placeholder-slate-600 transition" />
                   </div>
                   <div>
                     <label className="block text-[13px] font-medium text-slate-300 mb-1.5">New password</label>
@@ -1246,7 +1246,7 @@ export function Login() {
                       <Lock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
                       <input type={showPassword ? 'text' : 'password'} value={resetPassword} onChange={e => setResetPassword(e.target.value)}
                         required minLength={8} placeholder={t('auth.common.password_placeholder', 'At least 8 characters')}
-                        className="w-full pl-9 pr-10 py-2.5 bg-slate-950/60 border border-white/[0.12] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 text-sm text-white placeholder-slate-600 transition" />
+                        className="w-full pl-9 pr-10 py-2.5 bg-slate-950/60 border border-white/12 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 text-sm text-white placeholder-slate-600 transition" />
                       <button type="button" tabIndex={-1} onClick={() => setShowPassword(s => !s)}
                         aria-label={showPassword ? 'Hide password' : 'Show password'}
                         className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-slate-500 hover:text-white hover:bg-white/5 rounded-md transition">
@@ -1260,11 +1260,11 @@ export function Login() {
                       <Lock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
                       <input type={showPassword ? 'text' : 'password'} value={resetConfirm} onChange={e => setResetConfirm(e.target.value)}
                         required minLength={8} placeholder={t('auth.reset.repeat_placeholder', 'Repeat your new password')}
-                        className="w-full pl-9 pr-4 py-2.5 bg-slate-950/60 border border-white/[0.12] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 text-sm text-white placeholder-slate-600 transition" />
+                        className="w-full pl-9 pr-4 py-2.5 bg-slate-950/60 border border-white/12 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 text-sm text-white placeholder-slate-600 transition" />
                     </div>
                   </div>
                   <button type="submit" disabled={loading}
-                    className="w-full py-3 rounded-lg text-sm font-medium text-on-fill bg-gradient-to-br from-blue-500 to-blue-600 hover:from-blue-400 hover:to-blue-500 transition disabled:opacity-60 shadow-lg shadow-blue-500/25">
+                    className="w-full py-3 rounded-lg text-sm font-medium text-on-fill bg-linear-to-br from-blue-500 to-blue-600 hover:from-blue-400 hover:to-blue-500 transition disabled:opacity-60 shadow-lg shadow-blue-500/25">
                     {loading ? 'Updating…' : 'Update password'}
                   </button>
                 </form>

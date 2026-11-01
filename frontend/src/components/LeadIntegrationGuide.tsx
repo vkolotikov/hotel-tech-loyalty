@@ -179,9 +179,9 @@ ${web}
   ]
 
   return (
-    <div className="rounded-lg border border-white/[0.06] bg-hx-000000/20 overflow-hidden">
-      <div className="px-4 py-3 flex items-center gap-2.5 border-b border-white/[0.04]">
-        <BookOpen size={14} className="text-emerald-400 flex-shrink-0" />
+    <div className="rounded-lg border border-white/6 bg-hx-000000/20 overflow-hidden">
+      <div className="px-4 py-3 flex items-center gap-2.5 border-b border-white/4">
+        <BookOpen size={14} className="text-emerald-400 shrink-0" />
         <div className="flex-1 min-w-0">
           <div className="text-xs font-semibold text-white">Connect your website forms</div>
           <div className="text-[11px] text-gray-500">Copy a ready-to-use snippet — or the whole guide for a developer / AI.</div>
@@ -196,7 +196,7 @@ ${web}
             value={token}
             onChange={e => setToken(e.target.value)}
             placeholder="Paste a token to bake it into the snippets — otherwise they show YOUR_API_TOKEN"
-            className="w-full px-3 py-2 bg-hx-000000/40 border border-white/10 rounded-lg text-[12px] text-white placeholder-gray-600 font-mono outline-none focus:border-emerald-500/50"
+            className="w-full px-3 py-2 bg-hx-000000/40 border border-white/10 rounded-lg text-[12px] text-white placeholder-gray-600 font-mono outline-hidden focus:border-emerald-500/50"
           />
           {token.trim() && (
             <p className="mt-1 text-[10px] text-amber-400/80">The token is only inserted into the text you copy — it isn't stored or sent anywhere.</p>
@@ -205,7 +205,7 @@ ${web}
 
         {/* Brand id reference */}
         {brands.length > 0 && (
-          <div className="rounded-lg border border-white/[0.04] bg-hx-000000/30 p-3">
+          <div className="rounded-lg border border-white/4 bg-hx-000000/30 p-3">
             <div className="text-[10px] uppercase tracking-wider text-gray-500 mb-1.5">Brand IDs (use as <code className="text-emerald-300">brand_id</code>)</div>
             <div className="flex flex-wrap gap-1.5">
               {brands.map(b => (
@@ -223,7 +223,7 @@ ${web}
           {TABS.map(t => (
             <button key={t.key} onClick={() => setTab(t.key)}
               className={`rounded-lg px-2.5 py-1.5 text-[11px] font-medium transition ${
-                tab === t.key ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/25' : 'bg-hx-000000/30 text-gray-400 border border-white/[0.06] hover:text-white'
+                tab === t.key ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/25' : 'bg-hx-000000/30 text-gray-400 border border-white/6 hover:text-white'
               }`}>
               {t.key === 'guide' && <Sparkles size={11} className="inline mr-1 -mt-0.5" />}
               {t.label}
@@ -238,7 +238,7 @@ ${web}
         </div>
 
         {/* Snippet */}
-        <pre className="max-h-72 overflow-auto rounded-lg border border-white/[0.06] bg-hx-000000/40 p-3 text-[11px] leading-relaxed text-gray-300 font-mono whitespace-pre-wrap break-words">{snippet}</pre>
+        <pre className="max-h-72 overflow-auto rounded-lg border border-white/6 bg-hx-000000/40 p-3 text-[11px] leading-relaxed text-gray-300 font-mono whitespace-pre-wrap wrap-break-word">{snippet}</pre>
       </div>
     </div>
   )

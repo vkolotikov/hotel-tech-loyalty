@@ -40,7 +40,7 @@ export function Check({ label, hint, checked, onChange }: { label: string; hint?
   return (
     <div className="flex items-start gap-2.5">
       <input id={id} type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} aria-describedby={hint ? `${id}-hint` : undefined}
-        className="mt-0.5 h-4 w-4 shrink-0 rounded border-a-border accent-a-accent-text" />
+        className="mt-0.5 h-4 w-4 shrink-0 rounded-sm border-a-border accent-a-accent-text" />
       <div className="min-w-0">
         <label htmlFor={id} className="block text-sm font-medium text-a-text">{label}</label>
         {hint && <p id={`${id}-hint`} className="text-xs text-a-text-2">{hint}</p>}

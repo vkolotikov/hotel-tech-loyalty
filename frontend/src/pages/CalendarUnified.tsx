@@ -250,9 +250,9 @@ export default function CalendarUnified() {
           </p>
         </div>
         <div className="flex items-center gap-3 flex-wrap">
-          <div className="flex rounded-xl border border-white/[0.06] overflow-hidden bg-dark-surface">
+          <div className="flex rounded-xl border border-white/6 overflow-hidden bg-dark-surface">
             {(['day', 'week', 'month'] as const).map(v => (
-              <button key={v} onClick={() => setView(v)} className={'flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium transition-all ' + (view === v ? 'bg-white/[0.1] text-white' : 'text-gray-500 hover:text-white')}>
+              <button key={v} onClick={() => setView(v)} className={'flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium transition-all ' + (view === v ? 'bg-white/10 text-white' : 'text-gray-500 hover:text-white')}>
                 {v === 'day' ? <CalendarDays size={14} /> : v === 'week' ? <CalendarRange size={14} /> : <Calendar size={14} />}
                 {v.charAt(0).toUpperCase() + v.slice(1)}
               </button>
@@ -308,12 +308,12 @@ export default function CalendarUnified() {
 
       {/* Month grid */}
       {view === 'month' && (
-        <div className="rounded-2xl border border-white/[0.06] overflow-hidden"
+        <div className="rounded-2xl border border-white/6 overflow-hidden"
           style={{ background: 'var(--legacy-card-gradient)' }}>
           {/* Weekday axis */}
-          <div className="grid grid-cols-7 border-b border-white/[0.06]">
+          <div className="grid grid-cols-7 border-b border-white/6">
             {weekdays.map(w => (
-              <div key={w} className="py-2 text-center text-[10px] font-bold uppercase tracking-wider text-gray-500 border-r border-white/[0.04] last:border-r-0">
+              <div key={w} className="py-2 text-center text-[10px] font-bold uppercase tracking-wider text-gray-500 border-r border-white/4 last:border-r-0">
                 {w}
               </div>
             ))}
@@ -330,7 +330,7 @@ export default function CalendarUnified() {
               const more = list.length - visibleChips.length
               return (
                 <button key={d} onClick={() => list.length > 0 && setSelectedDay(d)}
-                  className="text-left border-r border-b border-white/[0.04] last:border-r-0 p-2 min-h-[118px] transition-colors hover:bg-white/[0.02] focus:outline-none"
+                  className="text-left border-r border-b border-white/4 last:border-r-0 p-2 min-h-[118px] transition-colors hover:bg-white/2 focus:outline-hidden"
                   style={{
                     background: isToday ? 'rgba(116,200,149,0.05)' : isWe && inMonth ? 'rgba(217,143,69,0.02)' : 'transparent',
                     opacity: inMonth ? 1 : 0.35,
@@ -341,7 +341,7 @@ export default function CalendarUnified() {
                       {dayNumber(d)}
                     </span>
                     {list.length > 0 && (
-                      <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-white/[0.04] text-gray-400">
+                      <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-white/4 text-gray-400">
                         {list.length}
                       </span>
                     )}
@@ -374,13 +374,13 @@ export default function CalendarUnified() {
       {view === 'week' && (() => {
         const weekDates = weekKeys(cursor)
         return (
-          <div className="rounded-2xl border border-white/[0.06] overflow-hidden"
+          <div className="rounded-2xl border border-white/6 overflow-hidden"
             style={{ background: 'var(--legacy-card-gradient)' }}>
-            <div className="grid grid-cols-7 border-b border-white/[0.06]">
+            <div className="grid grid-cols-7 border-b border-white/6">
               {weekDates.map((d, i) => {
                 const isToday = d === today
                 return (
-                  <div key={i} className="py-3 px-2 text-center border-r border-white/[0.04] last:border-r-0">
+                  <div key={i} className="py-3 px-2 text-center border-r border-white/4 last:border-r-0">
                     <div className="text-[10px] font-bold uppercase tracking-wider text-gray-500">{weekdays[i]}</div>
                     <div className={`text-sm font-bold mt-1 ${isToday ? 'text-emerald-400' : 'text-gray-400'}`}>{dayNumber(d)}</div>
                   </div>
@@ -393,7 +393,7 @@ export default function CalendarUnified() {
                 const isToday = dateStr === today
                 const list = byDay.get(dateStr) || []
                 return (
-                  <div key={i} className="border-r border-white/[0.04] last:border-r-0 p-2 min-h-[300px]"
+                  <div key={i} className="border-r border-white/4 last:border-r-0 p-2 min-h-[300px]"
                     style={{ background: isToday ? 'rgba(116,200,149,0.05)' : 'transparent' }}>
                     <div className="space-y-1.5">
                       {list.map(ev => {
@@ -425,7 +425,7 @@ export default function CalendarUnified() {
           <div className="space-y-4">
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
               <div className="lg:col-span-2 space-y-3">
-                <div className="rounded-xl border border-white/[0.06] p-4"
+                <div className="rounded-xl border border-white/6 p-4"
                   style={{ background: 'var(--legacy-card-gradient)' }}>
                   <h2 className="font-semibold text-white mb-2">{dayEvents.length} item{dayEvents.length !== 1 ? 's' : ''}</h2>
                   <div className="space-y-2">
@@ -437,7 +437,7 @@ export default function CalendarUnified() {
                         const Icon = s.Icon
                         return (
                           <Link key={ev.key} to={ev.href}
-                            className="block rounded-lg border border-white/[0.08] p-3 transition-all hover:border-white/[0.16] hover:bg-white/[0.02]">
+                            className="block rounded-lg border border-white/8 p-3 transition-all hover:border-white/16 hover:bg-white/2">
                             <div className="flex items-start justify-between mb-2">
                               <div className="flex items-center gap-2">
                                 <Icon size={13} style={{ color: ink(s.accent) }} />
@@ -469,16 +469,16 @@ export default function CalendarUnified() {
 
       {/* Day drawer */}
       {selectedDay && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-start justify-end" onClick={() => setSelectedDay(null)}>
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-start justify-end" onClick={() => setSelectedDay(null)}>
           <div onClick={e => e.stopPropagation()}
-            className="w-full max-w-md h-full overflow-y-auto border-l border-white/[0.08] p-6"
+            className="w-full max-w-md h-full overflow-y-auto border-l border-white/8 p-6"
             style={{ background: 'var(--legacy-card-gradient-deep)' }}>
             <div className="flex items-center justify-between mb-6">
               <div>
                 <h2 className="text-lg font-bold text-white">{formatDayKey(selectedDay, undefined, { weekday: 'long', day: 'numeric', month: 'long' })}</h2>
                 <p className="text-xs text-gray-500 mt-0.5">{selectedEvents.length} item{selectedEvents.length === 1 ? '' : 's'}</p>
               </div>
-              <button onClick={() => setSelectedDay(null)} className="p-2 rounded-lg hover:bg-white/[0.06] text-gray-500">
+              <button onClick={() => setSelectedDay(null)} className="p-2 rounded-lg hover:bg-white/6 text-gray-500">
                 <X size={18} />
               </button>
             </div>
@@ -489,7 +489,7 @@ export default function CalendarUnified() {
                 const Icon = s.Icon
                 return (
                   <Link key={ev.key} to={ev.href}
-                    className="block rounded-xl border border-white/[0.08] p-4 transition-all hover:border-white/[0.16] hover:bg-white/[0.02]">
+                    className="block rounded-xl border border-white/8 p-4 transition-all hover:border-white/16 hover:bg-white/2">
                     <div className="flex items-start justify-between mb-2">
                       <div className="flex items-center gap-2">
                         <Icon size={14} style={{ color: ink(s.accent) }} />

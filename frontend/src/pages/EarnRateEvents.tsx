@@ -273,9 +273,9 @@ export function EarnRateEvents() {
                       </div>
                     </div>
                     <div className="flex gap-1">
-                      <button onClick={() => startEdit(e)} className="p-1.5 rounded hover:bg-dark-surface3 text-t-soft" title={t('common.edit', 'Edit')} aria-label={t('common.edit', 'Edit')}><Pencil size={13} /></button>
+                      <button onClick={() => startEdit(e)} className="p-1.5 rounded-sm hover:bg-dark-surface3 text-t-soft" title={t('common.edit', 'Edit')} aria-label={t('common.edit', 'Edit')}><Pencil size={13} /></button>
                       <button onClick={() => confirm(t('boostEvents.delete_confirm', { name: e.name, defaultValue: 'Delete "{{name}}"?' })) && deleteMutation.mutate(e.id)}
-                        className="p-1.5 rounded hover:bg-dark-surface3 text-red-400" title={t('common.delete', 'Delete')} aria-label={t('common.delete', 'Delete')}><Trash2 size={13} /></button>
+                        className="p-1.5 rounded-sm hover:bg-dark-surface3 text-red-400" title={t('common.delete', 'Delete')} aria-label={t('common.delete', 'Delete')}><Trash2 size={13} /></button>
                     </div>
                   </div>
                 ))}

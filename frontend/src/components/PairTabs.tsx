@@ -38,7 +38,7 @@ export function PairTabs({ tabs }: { tabs: Tab[] }) {
             } : { color: hx('t', '#8e8e93') }}>
             {tab.label}
             {typeof tab.count === 'number' && (
-              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${active ? 'bg-white/20' : 'bg-white/[0.04]'}`}>
+              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${active ? 'bg-white/20' : 'bg-white/4'}`}>
                 {tab.count}
               </span>
             )}

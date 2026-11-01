@@ -120,7 +120,7 @@ export function PostFormFields({ form, onChange, platforms, statuses, pillars, a
       <FieldBox label={t('content.panel.hook_label', 'Post hook')} caps invalid={invalid.includes('hook')}>
         <textarea value={form.hook} rows={hookRows(form.hook)} maxLength={500} onChange={(e) => set('hook', e.target.value)} aria-invalid={bad('hook')}
           placeholder={t('content.panel.hook_placeholder', 'Write the first line people see')}
-          className={`block w-full resize-none rounded-lg border bg-transparent py-1 c-hook font-a-display text-[26px] leading-tight text-a-text [field-sizing:content] placeholder:text-a-text-2 ${invalid.includes('hook') ? 'border-a-danger px-2' : 'border-transparent px-0 focus:px-2'}`} />
+          className={`block w-full resize-none rounded-lg border bg-transparent py-1 c-hook font-a-display text-[26px] leading-tight text-a-text field-sizing-content placeholder:text-a-text-2 ${invalid.includes('hook') ? 'border-a-danger px-2' : 'border-transparent px-0 focus:px-2'}`} />
       </FieldBox>
       <div className="grid grid-cols-2 gap-3">
         <FieldBox label={t('content.panel.fields.date', 'Date')} invalid={invalid.includes('scheduled_date')}

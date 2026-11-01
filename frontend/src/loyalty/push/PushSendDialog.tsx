@@ -71,7 +71,7 @@ export function PushSendDialog({ push, onClose }: { push: Push; onClose: () => v
     <Dialog title={t('loyalty.push.send.title', 'Send this push message')} onClose={onClose} busy={busy}>
       <div className="space-y-4 text-sm text-a-text">
         <div className="space-y-0.5">
-          <p className="break-words font-medium">{push.title}</p>
+          <p className="wrap-break-word font-medium">{push.title}</p>
           <p className="text-a-text-2"><CategoryName category={push.category} /></p>
         </div>
         <WhenChoice mode={mode} at={at} timeZone={timeZone} problem={later ? timeProblemOf(at, timeZone, tried, scheduleFailure) : null}

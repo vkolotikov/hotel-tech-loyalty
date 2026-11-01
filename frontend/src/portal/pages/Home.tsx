@@ -53,7 +53,7 @@ export function Home() {
       {/* Release 7: the stamp card and cashback credit, each when the venue uses it — side by side where there is room,
           one filling the row when the other is not there. */}
       {member && capabilities.loyalty && (
-        <div className="flex flex-wrap gap-3 empty:hidden [&>*]:grow [&>*]:basis-72">
+        <div className="flex flex-wrap gap-3 empty:hidden *:grow *:basis-72">
           <StampCard />
           <CreditBalance />
         </div>

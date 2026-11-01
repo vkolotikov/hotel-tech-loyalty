@@ -121,10 +121,10 @@ function PresetPicker() {
   const currentLabel = data.presets.find(p => p.is_current)?.label ?? 'Custom'
 
   return (
-    <div className="bg-gradient-to-br from-amber-500/10 via-purple-500/[0.05] to-cyan-500/10 border border-amber-500/30 rounded-xl p-4">
+    <div className="bg-linear-to-br from-amber-500/10 via-purple-500/5 to-cyan-500/10 border border-amber-500/30 rounded-xl p-4">
       <div className="flex items-start justify-between mb-3 gap-3 flex-wrap">
         <div className="flex items-start gap-2.5">
-          <div className="w-9 h-9 rounded-lg bg-amber-500/15 border border-amber-500/40 flex items-center justify-center flex-shrink-0">
+          <div className="w-9 h-9 rounded-lg bg-amber-500/15 border border-amber-500/40 flex items-center justify-center shrink-0">
             <Zap size={16} className="text-amber-300" />
           </div>
           <div>
@@ -151,8 +151,8 @@ function PresetPicker() {
               onClick={() => setConfirming(p)}
               className={`text-left rounded-lg border p-2.5 transition group ${
                 p.is_current
-                  ? 'border-amber-500/50 bg-amber-500/[0.06] cursor-default'
-                  : 'border-dark-border bg-dark-bg hover:border-amber-500/40 hover:bg-amber-500/[0.04]'
+                  ? 'border-amber-500/50 bg-amber-500/6 cursor-default'
+                  : 'border-dark-border bg-dark-bg hover:border-amber-500/40 hover:bg-amber-500/4'
               }`}
             >
               <div className="flex items-center gap-2 mb-1">
@@ -162,7 +162,7 @@ function PresetPicker() {
                   <Icon size={13} className={p.is_current ? 'text-amber-300' : 'text-purple-300'} />
                 </div>
                 <p className="text-sm font-bold text-white truncate flex-1">{p.label}</p>
-                {p.is_current && <CheckCircle2 size={13} className="text-amber-400 flex-shrink-0" />}
+                {p.is_current && <CheckCircle2 size={13} className="text-amber-400 shrink-0" />}
               </div>
               <p className="text-[10px] text-gray-500 leading-snug line-clamp-2 min-h-[24px]">{p.description}</p>
               <div className="flex items-center gap-2 mt-1.5 text-[9px] text-gray-500 uppercase tracking-wide font-bold">
@@ -197,7 +197,7 @@ function ConfirmModal({ preset, isCurrent, onCancel, onConfirm, applying }: {
 }) {
   const Icon = PRESET_ICONS[preset.icon] ?? Briefcase
   return (
-    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={applying ? undefined : onCancel}>
+    <div className="fixed inset-0 bg-black/70 backdrop-blur-xs z-50 flex items-center justify-center p-4" onClick={applying ? undefined : onCancel}>
       <div className="bg-dark-surface border border-dark-border rounded-xl p-5 w-full max-w-md shadow-2xl" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2.5">
@@ -206,7 +206,7 @@ function ConfirmModal({ preset, isCurrent, onCancel, onConfirm, applying }: {
             </div>
             <h3 className="text-lg font-bold text-white">Apply {preset.label}?</h3>
           </div>
-          <button onClick={onCancel} disabled={applying} className="p-1.5 rounded hover:bg-dark-surface2 text-gray-500 hover:text-white"><X size={16} /></button>
+          <button onClick={onCancel} disabled={applying} className="p-1.5 rounded-sm hover:bg-dark-surface2 text-gray-500 hover:text-white"><X size={16} /></button>
         </div>
 
         <p className="text-sm text-gray-400 mb-4">
@@ -221,9 +221,9 @@ function ConfirmModal({ preset, isCurrent, onCancel, onConfirm, applying }: {
           <ChangeRow label={`+${preset.template_count} starter templates`} accent />
         </div>
 
-        <div className="bg-blue-500/[0.04] border border-blue-500/20 rounded-lg p-3 mb-4">
+        <div className="bg-blue-500/4 border border-blue-500/20 rounded-lg p-3 mb-4">
           <div className="flex items-start gap-2">
-            <Info size={13} className="text-blue-300 flex-shrink-0 mt-0.5" />
+            <Info size={13} className="text-blue-300 shrink-0 mt-0.5" />
             <div className="text-[11px] text-blue-100/90 leading-relaxed">
               <p className="font-bold text-blue-200 mb-0.5">Your groups and tasks stay</p>
               Groups you already have keep their place, icon and colour; nothing is removed. Existing
@@ -246,7 +246,7 @@ function ConfirmModal({ preset, isCurrent, onCancel, onConfirm, applying }: {
 function ChangeRow({ label, accent }: { label: string; accent?: boolean }) {
   return (
     <div className="flex items-start gap-2 text-xs">
-      <CheckCircle2 size={12} className={'mt-0.5 flex-shrink-0 ' + (accent ? 'text-purple-300' : 'text-emerald-400')} />
+      <CheckCircle2 size={12} className={'mt-0.5 shrink-0 ' + (accent ? 'text-purple-300' : 'text-emerald-400')} />
       <span className="text-white">{label}</span>
     </div>
   )
@@ -366,7 +366,7 @@ function GroupsEditor() {
                 <button
                   onClick={() => setPickerOpen(open ? null : idx)}
                   title="Change icon / color"
-                  className="w-8 h-8 rounded-md flex items-center justify-center flex-shrink-0 hover:ring-2 hover:ring-primary-500/40 transition"
+                  className="w-8 h-8 rounded-md flex items-center justify-center shrink-0 hover:ring-2 hover:ring-primary-500/40 transition"
                   style={{ backgroundColor: color + '25', color: ink(color) }}>
                   <Icon size={14} />
                 </button>
@@ -379,18 +379,18 @@ function GroupsEditor() {
                       if (e.key === 'Enter') renameGroup(idx, (e.target as HTMLInputElement).value)
                       if (e.key === 'Escape') setEditingIdx(null)
                     }}
-                    className="flex-1 bg-transparent border-b border-primary-500 text-sm text-white px-1 outline-none"
+                    className="flex-1 bg-transparent border-b border-primary-500 text-sm text-white px-1 outline-hidden"
                   />
                 ) : (
                   <span className="flex-1 text-sm text-white">{entry.name}</span>
                 )}
                 <div className="flex items-center gap-0.5 text-gray-500">
                   <button onClick={() => move(idx, -1)} disabled={idx === 0}
-                    className="p-1 rounded hover:bg-dark-surface2 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed text-xs">▲</button>
+                    className="p-1 rounded-sm hover:bg-dark-surface2 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed text-xs">▲</button>
                   <button onClick={() => move(idx, 1)} disabled={idx === entries.length - 1}
-                    className="p-1 rounded hover:bg-dark-surface2 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed text-xs">▼</button>
-                  <button onClick={() => setEditingIdx(idx)} className="p-1 rounded hover:bg-dark-surface2 hover:text-white"><Edit2 size={12} /></button>
-                  <button onClick={() => removeGroup(entry.name)} className="p-1 rounded hover:bg-red-500/15 hover:text-red-400"><Trash2 size={12} /></button>
+                    className="p-1 rounded-sm hover:bg-dark-surface2 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed text-xs">▼</button>
+                  <button onClick={() => setEditingIdx(idx)} className="p-1 rounded-sm hover:bg-dark-surface2 hover:text-white"><Edit2 size={12} /></button>
+                  <button onClick={() => removeGroup(entry.name)} className="p-1 rounded-sm hover:bg-red-500/15 hover:text-red-400"><Trash2 size={12} /></button>
                 </div>
               </div>
               {open && (
@@ -415,7 +415,7 @@ function GroupsEditor() {
           value={adding}
           onChange={e => setAdding(e.target.value)}
           placeholder="Add a new group (e.g. Concierge)"
-          className="flex-1 bg-dark-bg border border-dark-border rounded-md px-3 py-1.5 text-sm text-white placeholder-gray-600 outline-none focus:border-primary-500"
+          className="flex-1 bg-dark-bg border border-dark-border rounded-md px-3 py-1.5 text-sm text-white placeholder-gray-600 outline-hidden focus:border-primary-500"
         />
         <button type="submit" disabled={!adding.trim() || save.isPending}
           className="bg-primary-500 hover:bg-primary-400 text-on-primary font-bold rounded-md px-3 py-1.5 text-sm disabled:opacity-50 flex items-center gap-1.5">
@@ -461,7 +461,7 @@ function MissingGroupsNotice() {
     setSkipped(s => (s.includes(name) ? s.filter(x => x !== name) : [...s, name]))
 
   return (
-    <div className="bg-amber-500/[0.06] border border-amber-500/30 rounded-lg p-3 mb-3">
+    <div className="bg-amber-500/6 border border-amber-500/30 rounded-lg p-3 mb-3">
       <p className="text-xs font-bold text-amber-200">Groups your tasks still use are missing from this list</p>
       <p className="text-[11px] text-gray-400 mt-0.5">
         Tasks tied to them don't show under any tab. Restore puts the selected groups back at the top, with the
@@ -650,7 +650,7 @@ function ChannelsEditor() {
                 <button
                   onClick={() => setPickerOpen(open ? null : idx)}
                   title="Change icon / color"
-                  className="w-8 h-8 rounded-md flex items-center justify-center flex-shrink-0 hover:ring-2 hover:ring-primary-500/40 transition"
+                  className="w-8 h-8 rounded-md flex items-center justify-center shrink-0 hover:ring-2 hover:ring-primary-500/40 transition"
                   style={{ backgroundColor: c.color + '25', color: ink(c.color) }}>
                   <Icon size={14} />
                 </button>
@@ -663,21 +663,21 @@ function ChannelsEditor() {
                       if (e.key === 'Enter') renameChannel(idx, (e.target as HTMLInputElement).value)
                       if (e.key === 'Escape') setEditingIdx(null)
                     }}
-                    className="flex-1 bg-transparent border-b border-primary-500 text-sm text-white px-1 outline-none"
+                    className="flex-1 bg-transparent border-b border-primary-500 text-sm text-white px-1 outline-hidden"
                   />
                 ) : (
                   <span className="flex-1 text-sm text-white">{c.label}</span>
                 )}
-                <span className="text-[10px] text-gray-600 font-mono px-1.5 py-0.5 bg-dark-surface2 rounded border border-dark-border" title="Stable key (used in task_category)">
+                <span className="text-[10px] text-gray-600 font-mono px-1.5 py-0.5 bg-dark-surface2 rounded-sm border border-dark-border" title="Stable key (used in task_category)">
                   {c.key}
                 </span>
                 <div className="flex items-center gap-0.5 text-gray-500">
                   <button onClick={() => move(idx, -1)} disabled={idx === 0}
-                    className="p-1 rounded hover:bg-dark-surface2 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed text-xs">▲</button>
+                    className="p-1 rounded-sm hover:bg-dark-surface2 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed text-xs">▲</button>
                   <button onClick={() => move(idx, 1)} disabled={idx === channels.length - 1}
-                    className="p-1 rounded hover:bg-dark-surface2 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed text-xs">▼</button>
-                  <button onClick={() => setEditingIdx(idx)} className="p-1 rounded hover:bg-dark-surface2 hover:text-white"><Edit2 size={12} /></button>
-                  <button onClick={() => removeChannel(c.key)} className="p-1 rounded hover:bg-red-500/15 hover:text-red-400"><Trash2 size={12} /></button>
+                    className="p-1 rounded-sm hover:bg-dark-surface2 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed text-xs">▼</button>
+                  <button onClick={() => setEditingIdx(idx)} className="p-1 rounded-sm hover:bg-dark-surface2 hover:text-white"><Edit2 size={12} /></button>
+                  <button onClick={() => removeChannel(c.key)} className="p-1 rounded-sm hover:bg-red-500/15 hover:text-red-400"><Trash2 size={12} /></button>
                 </div>
               </div>
               {groupNames.length > 0 && (
@@ -721,7 +721,7 @@ function ChannelsEditor() {
           value={adding}
           onChange={e => setAdding(e.target.value)}
           placeholder="Add a new task (e.g. Cold call, Site visit)"
-          className="flex-1 bg-dark-bg border border-dark-border rounded-md px-3 py-1.5 text-sm text-white placeholder-gray-600 outline-none focus:border-primary-500"
+          className="flex-1 bg-dark-bg border border-dark-border rounded-md px-3 py-1.5 text-sm text-white placeholder-gray-600 outline-hidden focus:border-primary-500"
         />
         <button type="submit" disabled={!adding.trim() || save.isPending}
           className="bg-primary-500 hover:bg-primary-400 text-on-primary font-bold rounded-md px-3 py-1.5 text-sm disabled:opacity-50 flex items-center gap-1.5">
@@ -799,7 +799,7 @@ function EmployeesEditor() {
             return (
               <div key={emp} className="bg-dark-bg border border-dark-border rounded-md">
                 <button onClick={() => setExpanded(open ? null : emp)} className="w-full flex items-center gap-2 px-2.5 py-2 text-left">
-                  <span className="w-7 h-7 rounded-full bg-primary-500/15 text-primary-300 flex items-center justify-center text-xs font-bold flex-shrink-0">{emp.charAt(0).toUpperCase()}</span>
+                  <span className="w-7 h-7 rounded-full bg-primary-500/15 text-primary-300 flex items-center justify-center text-xs font-bold shrink-0">{emp.charAt(0).toUpperCase()}</span>
                   <span className="flex-1 text-sm text-white">{emp}</span>
                   {count > 0 && <span className="text-[10px] text-amber-300/80">{count} preferred</span>}
                   {open ? <ChevronUp size={13} className="text-gray-500" /> : <ChevronDown size={13} className="text-gray-500" />}
@@ -887,13 +887,13 @@ function WorkdayEditor() {
           Hours per day
           <input key={'h' + hoursPerDay} type="number" min={1} max={24} step={0.5} defaultValue={hoursPerDay}
             onBlur={e => { const v = Math.max(1, Math.min(24, Number(e.target.value) || 8)); if (v !== hoursPerDay) save.mutate({ key: 'planner_work_hours_per_day', value: v }) }}
-            className="mt-1 block w-24 bg-dark-bg border border-dark-border rounded-md px-3 py-1.5 text-sm text-white outline-none focus:border-primary-500" />
+            className="mt-1 block w-24 bg-dark-bg border border-dark-border rounded-md px-3 py-1.5 text-sm text-white outline-hidden focus:border-primary-500" />
         </label>
         <label className="text-[11px] text-gray-400">
           Work days / week
           <input key={'d' + daysPerWeek} type="number" min={1} max={7} step={1} defaultValue={daysPerWeek}
             onBlur={e => { const v = Math.max(1, Math.min(7, Number(e.target.value) || 5)); if (v !== daysPerWeek) save.mutate({ key: 'planner_work_days_per_week', value: v }) }}
-            className="mt-1 block w-24 bg-dark-bg border border-dark-border rounded-md px-3 py-1.5 text-sm text-white outline-none focus:border-primary-500" />
+            className="mt-1 block w-24 bg-dark-bg border border-dark-border rounded-md px-3 py-1.5 text-sm text-white outline-hidden focus:border-primary-500" />
         </label>
         <div className="text-[11px] text-gray-500 pb-1.5">Weekly target: <span className="text-white font-semibold text-sm">{hoursPerDay * daysPerWeek}h</span></div>
       </div>
@@ -958,7 +958,7 @@ function TemplatesEditor() {
                   return (
                     <div key={t.id} className="flex items-center gap-2 bg-dark-bg border border-dark-border rounded-md px-2.5 py-1.5">
                       {Icon && (
-                        <div className="w-7 h-7 rounded-md flex items-center justify-center flex-shrink-0" style={{ backgroundColor: meta!.color + '25', color: ink(meta!.color) }}>
+                        <div className="w-7 h-7 rounded-md flex items-center justify-center shrink-0" style={{ backgroundColor: meta!.color + '25', color: ink(meta!.color) }}>
                           <Icon size={13} />
                         </div>
                       )}
@@ -970,9 +970,9 @@ function TemplatesEditor() {
                           {t.priority && t.priority !== 'Normal' && <span>· {t.priority}</span>}
                         </div>
                       </div>
-                      <button onClick={() => setEditing(t)} className="p-1 rounded text-gray-500 hover:bg-dark-surface2 hover:text-white"><Edit2 size={12} /></button>
+                      <button onClick={() => setEditing(t)} className="p-1 rounded-sm text-gray-500 hover:bg-dark-surface2 hover:text-white"><Edit2 size={12} /></button>
                       <button onClick={() => { if (confirm(`Delete template "${t.name}"?`)) del.mutate(t.id) }}
-                        className="p-1 rounded text-gray-500 hover:bg-red-500/15 hover:text-red-400"><Trash2 size={12} /></button>
+                        className="p-1 rounded-sm text-gray-500 hover:bg-red-500/15 hover:text-red-400"><Trash2 size={12} /></button>
                     </div>
                   )
                 })}
@@ -1033,11 +1033,11 @@ function TemplateForm({ initial, onClose }: { initial: Template | null; onClose:
   })
 
   return (
-    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={onClose}>
+    <div className="fixed inset-0 bg-black/70 backdrop-blur-xs z-50 flex items-center justify-center p-4" onClick={onClose}>
       <div className="bg-dark-surface border border-dark-border rounded-xl w-full max-w-md shadow-2xl" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between p-4 border-b border-dark-border">
           <h3 className="text-lg font-bold text-white">{initial ? 'Edit template' : 'New template'}</h3>
-          <button onClick={onClose} className="p-1.5 rounded hover:bg-dark-surface2 text-gray-500 hover:text-white"><X size={16} /></button>
+          <button onClick={onClose} className="p-1.5 rounded-sm hover:bg-dark-surface2 text-gray-500 hover:text-white"><X size={16} /></button>
         </div>
 
         <form onSubmit={e => { e.preventDefault(); save.mutate() }} className="p-4 space-y-3">
@@ -1045,14 +1045,14 @@ function TemplateForm({ initial, onClose }: { initial: Template | null; onClose:
             <label className="text-[10px] uppercase tracking-wide font-bold text-gray-500 mb-1 block">Template name</label>
             <input required value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
               placeholder="e.g. Morning briefing"
-              className="w-full bg-dark-bg border border-dark-border rounded-md px-3 py-2 text-sm text-white outline-none focus:border-primary-500" />
+              className="w-full bg-dark-bg border border-dark-border rounded-md px-3 py-2 text-sm text-white outline-hidden focus:border-primary-500" />
           </div>
 
           <div>
             <label className="text-[10px] uppercase tracking-wide font-bold text-gray-500 mb-1 block">Task title (pre-filled)</label>
             <input required value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
               placeholder="What the task is called when applied"
-              className="w-full bg-dark-bg border border-dark-border rounded-md px-3 py-2 text-sm text-white outline-none focus:border-primary-500" />
+              className="w-full bg-dark-bg border border-dark-border rounded-md px-3 py-2 text-sm text-white outline-hidden focus:border-primary-500" />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
@@ -1060,12 +1060,12 @@ function TemplateForm({ initial, onClose }: { initial: Template | null; onClose:
               <label className="text-[10px] uppercase tracking-wide font-bold text-gray-500 mb-1 block">Category</label>
               <input value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))}
                 placeholder="General"
-                className="w-full bg-dark-bg border border-dark-border rounded-md px-3 py-2 text-sm text-white outline-none focus:border-primary-500" />
+                className="w-full bg-dark-bg border border-dark-border rounded-md px-3 py-2 text-sm text-white outline-hidden focus:border-primary-500" />
             </div>
             <div>
               <label className="text-[10px] uppercase tracking-wide font-bold text-gray-500 mb-1 block">Group</label>
               <select value={form.task_group} onChange={e => setForm(f => ({ ...f, task_group: e.target.value }))}
-                className="w-full bg-dark-bg border border-dark-border rounded-md px-3 py-2 text-sm text-white outline-none focus:border-primary-500">
+                className="w-full bg-dark-bg border border-dark-border rounded-md px-3 py-2 text-sm text-white outline-hidden focus:border-primary-500">
                 <option value="">— None —</option>
                 {groups.map(g => <option key={g}>{g}</option>)}
               </select>
@@ -1076,7 +1076,7 @@ function TemplateForm({ initial, onClose }: { initial: Template | null; onClose:
             <div>
               <label className="text-[10px] uppercase tracking-wide font-bold text-gray-500 mb-1 block">Priority</label>
               <select value={form.priority} onChange={e => setForm(f => ({ ...f, priority: e.target.value }))}
-                className="w-full bg-dark-bg border border-dark-border rounded-md px-3 py-2 text-sm text-white outline-none focus:border-primary-500">
+                className="w-full bg-dark-bg border border-dark-border rounded-md px-3 py-2 text-sm text-white outline-hidden focus:border-primary-500">
                 {['Low', 'Normal', 'High'].map(p => <option key={p}>{p}</option>)}
               </select>
             </div>
@@ -1084,7 +1084,7 @@ function TemplateForm({ initial, onClose }: { initial: Template | null; onClose:
               <label className="text-[10px] uppercase tracking-wide font-bold text-gray-500 mb-1 block">Duration (min)</label>
               <input type="number" min="1" value={form.duration_minutes} onChange={e => setForm(f => ({ ...f, duration_minutes: e.target.value }))}
                 placeholder="30"
-                className="w-full bg-dark-bg border border-dark-border rounded-md px-3 py-2 text-sm text-white outline-none focus:border-primary-500" />
+                className="w-full bg-dark-bg border border-dark-border rounded-md px-3 py-2 text-sm text-white outline-hidden focus:border-primary-500" />
             </div>
           </div>
 
@@ -1092,7 +1092,7 @@ function TemplateForm({ initial, onClose }: { initial: Template | null; onClose:
             <label className="text-[10px] uppercase tracking-wide font-bold text-gray-500 mb-1 block">Description (optional)</label>
             <textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} rows={2}
               placeholder="Pre-filled task description"
-              className="w-full bg-dark-bg border border-dark-border rounded-md px-3 py-2 text-sm text-white outline-none focus:border-primary-500 resize-none" />
+              className="w-full bg-dark-bg border border-dark-border rounded-md px-3 py-2 text-sm text-white outline-hidden focus:border-primary-500 resize-none" />
           </div>
 
           <div className="flex justify-end gap-2 pt-2 border-t border-dark-border">
