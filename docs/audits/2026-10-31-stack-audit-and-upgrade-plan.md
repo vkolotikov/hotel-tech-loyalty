@@ -476,12 +476,16 @@ checks. Laravel 13 keeps security fixes until about March 2028, so there is no p
     bundle in `public/spa` and the old one gone, `composer audit` 0 and production npm audit 0 on its lock. The live
     site cannot be reached from the cloud session: the owner checks Laravel Cloud's deploy and the loyalty sign-in.
     The owner confirmed both applications work and sign in after it.
-  - **Second step, on the same branch (`eef4275`), waiting for the owner's go-ahead to deploy:** CI for
+  - **Second step, deployed 1 Nov on the owner's go-ahead (`main` `9c179fa` → `eef4275`; verified by content, CI on
+    `main` green, 4 jobs):** CI for
     `hotel-tech-saas` (audits; PHP 8.5 with the tests on PostgreSQL 18 and SQLite; the SPA on Node 22 and 24, lint
     against a baseline), green; the SPA on ESLint 10 (Cloud's build warned ESLint 9 is deprecated) and TypeScript 6,
     which also found a real bug (the dashboard's hook order for a super admin; fixed); Symfony 7.4 → 8.1 with
     `php ^8.4` (only the 16 Symfony components change). Record: that repository's
-    `docs/2026-11-01-security-update.md`. Then: stripe-php in Stripe test mode.
+    `docs/2026-11-01-security-update.md`. Owner's settings left: quote the Laravel Cloud environment variable that
+    bash cannot source (the build's ".env could not be fully sourced" warning), and drop the redundant
+    `&& cp -r dist ../public/spa` from the Cloud build command (`build:prod` already syncs `public/spa`). Then:
+    stripe-php in Stripe test mode.
 
 ---
 
