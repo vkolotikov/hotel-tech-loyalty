@@ -44,13 +44,15 @@ export function WeekGrid({ plans, today, locale, selectedId, dropDate, fillingKe
 }) {
   const { t } = useTranslation()
   return (
-    <div className="grid min-h-full min-w-2xl grid-cols-7 divide-x divide-a-border">
+    // A rule on the left of every day but the first, as Tailwind 3's divide-x drew it: v4's divide-x draws it on the
+    // right of every day but the last, which moves each later day's content a pixel to the left.
+    <div className="grid min-h-full min-w-2xl grid-cols-7">
       {plans.map((day, index) => {
         const adds = onAdd !== undefined && canAdd(day.date, today)
         return (
           <section key={day.date} data-drop-date={day.date} aria-labelledby={`day-${day.date}`}
             onClick={adds ? (e) => { if (clickAdds(e.target as Element)) onAdd(day.date, 'post') } : undefined}
-            className={`group flex min-w-0 flex-col gap-2 p-2 transition-colors ${dropDate === day.date ? 'bg-a-accent/10' : ''}`}>
+            className={`group flex min-w-0 flex-col gap-2 border-l border-a-border p-2 transition-colors first:border-l-0 ${dropDate === day.date ? 'bg-a-accent/10' : ''}`}>
             <h3 id={`day-${day.date}`} aria-current={day.date === today ? 'date' : undefined} className="flex items-baseline gap-1.5 px-1 pb-1">
               <span className="font-a-mono text-xs uppercase tracking-[0.12em] text-a-text-2">{formatDate(day.date, locale, { weekday: 'short' })}</span>
               <span className={day.date === today

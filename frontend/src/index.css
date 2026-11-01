@@ -62,7 +62,8 @@
   --text-2xl--line-height: 2rem;
   --text-3xl--line-height: 2.25rem;
   --text-4xl--line-height: 2.5rem;
-  /* v4 changed the drop-shadow scale's values; drop-shadow-lg keeps v3's. */
+  /* v4 changed the drop-shadow scale's values; drop-shadow-lg keeps v3's two
+     shadows (a drop-shadow-<colour> class reads them from here). */
   --drop-shadow-lg: 0 10px 8px rgb(0 0 0 / 0.04), 0 4px 3px rgb(0 0 0 / 0.1);
 }
 
@@ -106,6 +107,14 @@
   & > :first-child {
     --tw-space-x-reverse: v3;
   }
+}
+
+/* drop-shadow-lg as in v3. v4 writes `drop-shadow(var(--drop-shadow-lg))`,
+   which holds one shadow only: with v3's two (above) the filter is invalid
+   and the element loses its shadow (the sign-in page's logo). One
+   drop-shadow() per shadow, as v3 wrote it. */
+@utility drop-shadow-lg {
+  --tw-drop-shadow: drop-shadow(0 10px 8px rgb(0 0 0 / 0.04)) drop-shadow(0 4px 3px rgb(0 0 0 / 0.1));
 }
 
 /* Gradients blend as in v3 (owner, 2026-11-01). v3 wrote a plain
