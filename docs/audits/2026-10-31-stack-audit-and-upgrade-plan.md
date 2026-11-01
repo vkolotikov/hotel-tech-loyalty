@@ -55,7 +55,7 @@ screenshots.
 | Payments | Stripe (stays, appointments, refunds, disputes) | Stripe |
 | AI | OpenAI (`openai-php/laravel`, chat, realtime voice, transcription, images); Anthropic PHP SDK (Content Planner) | OpenAI, Anthropic |
 | Other services | Twilio (per-venue SMS), Expo push, Meta Graph API v25, Smoobu (PMS), Apple/Google Wallet | — |
-| Web front end | React 19.3 · TypeScript 5.9 · Vite 8 · Tailwind 3.4 · React Router 7 · TanStack Query 5 · Zustand 5 · i18next 26 (5 locales) · Stripe.js · Vitest 5 · Playwright 1.64 | Built by Laravel Cloud from `frontend/` |
+| Web front end | React 19.3 · TypeScript 5.9 · Vite 8 · Tailwind 3.4 (4.3 since 1 Nov) · React Router 7 · TanStack Query 5 · Zustand 5 · i18next 26 (5 locales) · Stripe.js · Vitest 5 · Playwright 1.64 | Built by Laravel Cloud from `frontend/` |
 | Staff app, members' app | Expo SDK 58 · React Native 0.88.1 · React 19.3 · TypeScript 7 · expo-router · Stripe React Native 0.81 | EAS builds, app stores |
 | SaaS platform (`saas-app`) | Next.js 16.2.1 · React 19.2.4 · NextAuth v5 beta 30 · Prisma 7.5 · Tailwind 4 · shadcn/Base UI · Stripe Node 20 · Resend · Turborepo | DigitalOcean App Platform (Docker `node:22-alpine`), PostgreSQL 16 |
 
@@ -444,7 +444,8 @@ checks. Laravel 13 keeps security fixes until about March 2028, so there is no p
   - Screenshots: 235 compared with the TypeScript 6 build at 1440 and phone width. Only three differ, and those three
     differ just as much between two runs of the unchanged build (an animation's timing), so no design change.
 - **Next in phase 5:** Tailwind 4 waits for the owner's decision on old browsers (step 3). Node 24 for the build
-  (step 4) is a Laravel Cloud setting, and CI already runs the SPA on Node 24.
+  (step 4) is a Laravel Cloud setting, and CI already runs the SPA on Node 24. *(1 Nov: step 3 is done and deployed,
+  below.)*
 
 
 ### 1 November 2026: the live SaaS is `hotel-tech-saas`, and its security update (owner: "do next")
@@ -581,6 +582,10 @@ ChatGPT connection works; the chat widget should offer fewer, current models tha
       Main CSS: 437 kB raw (+37%), 52 kB gzip (+26%).
     - **Found on the way (not Tailwind):** model-bound admin routes answered 404. The fix is in the same deploy (see
       the handoff).
+  - **Deployed 1 Nov 2026: production `08027a1`** (record in `docs/loyalty-workspace.md` "Deploying"). Left for the
+    owner:
+    - a look in Safari on an iPhone and in Firefox;
+    - whether the newly working `/12` tints stay (each is one class to delete).
   - Stripe library upgrades wait for the owner's test keys ("will test later").
 
 ---

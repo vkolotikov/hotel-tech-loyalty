@@ -863,6 +863,28 @@ files on disk): run them one after the other.
 
 ## Deploying
 
+- Tailwind 4 and admin model bindings (owner, 2026-11-01): production **08027a1** on **915f9c6** (source patch
+  **1c2ceaed2**, the SPA build **c455efd18**, a test fix **08027a130**). Feature source **91a9631** on
+  `claude/stack-audit-upgrade-plan-9hdkkv`. 286 paths (13 added, 272 changed, 1 deleted: `frontend/postcss.config.js`).
+  - **The admin SPA on Tailwind 4.3** through `@tailwindcss/vite`, with Tailwind 3's look kept: the owner's decisions,
+    the trial's compatibility layer, and v3's form-control font longhands (WebKit's date fields).
+  - **Screenshot checks:** every route on seeded demo data, before and after, 748 screens and about 1,980 captures per
+    run (`frontend/e2e/full-coverage/`).
+    - Chromium: the only changes are the chatbot chips (a `/12` tint that v3 ignored) and one chart label's
+      wrapping, which also varies between two v3 runs.
+    - WebKit: the same, plus capture races that both builds show.
+  - **Admin routes with a model parameter** (`{inquiry}`, `{pipeline}`, `{task}`…) answered 404 for the organisation's
+    own rows. `bootstrap/app.php` now resolves them after `TenantMiddleware`; `RouteBindingTenantTest` pins it.
+  - **One flaky test** (`NotificationServiceSendTest`'s `sent_at` to the second) now freezes the clock.
+  - No migration.
+  - Parity: every listed file and the whole source equal the tip.
+  - Artifact: PHP 8.5.12, **78 scopes, 7,300 passed / 16 skipped / 0 failed**; frontend tsc, **5,790 tests / 399
+    files**. The fresh build is byte-identical (every asset hash) to the screenshot-tested one.
+  - CI on the tip green (8 jobs; the first run's only failure was that flaky test).
+  - Verified by content on `origin/main`: the whole source, the deletion, and the bundle (`tailwindcss v4.3.3`, the
+    date-field rule). The live host is not reachable from the cloud container.
+  - The next source delta starts at **91a9631**.
+
 - Chat widget models (owner, 2026-11-01): production **915f9c6** on **eb52525**, feature source **19a565b** on
   `claude/stack-audit-upgrade-plan-9hdkkv`. 21 paths (4 added, 17 changed, none deleted): the short current model list
   (`frontend/src/lib/aiModels.ts`: GPT-5.6 Terra / Luna / GPT-5.5, Claude Haiku 5.5 / Sonnet 5.5, Gemini 3.5
