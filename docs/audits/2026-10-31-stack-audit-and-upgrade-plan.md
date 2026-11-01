@@ -544,6 +544,17 @@ ChatGPT connection works; the chat widget should offer fewer, current models tha
   - **Not covered yet:** the screenshot suite covers only the loyalty workspace. The full admin in Glass, Classic and
     Clean light, the portal, the appointments, content and landing editors, login, and Safari and Firefox are not
     covered. A safe release needs those screenshots before and after (about 2–4 days on top of the trial).
+  - **Owner, 1 Nov: go ahead.** The trial branch is pushed (`origin/wip/tailwind4-trial`). Decisions:
+    - gradients keep v3's look (sRGB);
+    - the 7 `leading-*` cases keep v3's look;
+    - `pl-13` takes v4's padding;
+    - the Google Fonts `@import` stays dropped.
+  - **Release work** on that branch, before the deploy recipe:
+    - merge today's changes;
+    - before/after screenshots of every route on real demo data (seeded PostgreSQL), at 1440 and phone width, in
+      every admin style;
+    - Firefox and WebKit if they can be installed here.
+  - Stripe library upgrades wait for the owner's test keys ("will test later").
 
 ---
 
