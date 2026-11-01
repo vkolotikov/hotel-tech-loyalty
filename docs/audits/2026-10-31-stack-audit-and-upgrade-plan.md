@@ -522,8 +522,28 @@ ChatGPT connection works; the chat widget should offer fewer, current models tha
   which nothing reads at runtime (the real values are `OPENAI_MODEL`, default `gpt-4o`, and `ANTHROPIC_MODEL`,
   default `claude-sonnet-5`). `CrmAiService` still calls Claude directly on API version 2023-06-01 (no sampling
   settings; its tool loop would need rebuilding for the SDK).
-- **Tailwind 4:** a trial runs in a separate worktree first (about 8,400 bare `border`, 1,230 `space-*`, 660 `ring`
-  and 390 `outline-none` uses change meaning in v4); its result decides how the move is released.
+- **Tailwind 4 trial** (local branch `wip/tailwind4-trial`, three commits on `b333c82`, not pushed, not deployed):
+  - The official upgrade tool plus the upgrade guide's compatibility CSS is **not safe on its own**: 67 of 235
+    screenshots changed, and Glass (the default admin style) lost its fonts and its popover and modal surfaces.
+  - The trial adds what keeps v3's look:
+    - v3's colour palette pinned (v4's `tailwindcss/colors` is oklch, which the Glass and Clean light builders cannot
+      read);
+    - v3's cascade order (only the theme variables and preflight in layers);
+    - v3's `space-x/y` selector and line heights, plus table-cell and form-field defaults;
+    - an explicit `@source` (v4 would otherwise also scan the committed `frontend/dist`);
+    - the Vite plugin instead of PostCSS, which otherwise drops all 17 self-hosted fonts.
+  - The tool's false positives were undone by hand: API values such as `'outline'`, `'ring'` and `'rounded'`, and two
+    English sentences.
+  - **Results:** tsc, the 5,780 frontend tests and lint pass. The loyalty screenshot suite matches v3 within its noise
+    floor. Main CSS is 37% larger raw (25% gzip): `color-mix` blocks with fallbacks for opacity on the JS-config colours.
+  - **Left to decide:**
+    - gradients now blend in oklab (`/srgb` restores v3);
+    - 7 `leading-*` cases that v3 ignored;
+    - `pl-13` in `NewCustomerDrawer`, which v3 ignored;
+    - whether the Google Fonts `@import` that v3's build always dropped stays dropped.
+  - **Not covered yet:** the screenshot suite covers only the loyalty workspace. The full admin in Glass, Classic and
+    Clean light, the portal, the appointments, content and landing editors, login, and Safari and Firefox are not
+    covered. A safe release needs those screenshots before and after (about 2–4 days on top of the trial).
 
 ---
 
