@@ -92,7 +92,7 @@ class ChatbotConfigController extends Controller
      *
      * Strategy by provider:
      *   openai    → GET /v1/models, look for the id in the data array
-     *   anthropic → POST /v1/messages with a 1-token "ping" (cheapest valid call)
+     *   anthropic → GET /v1/models/{id} through the SDK (no tokens spent)
      *   google    → GET /v1beta/models/{id}
      *
      * Returns `available: true` only when we got a definitive yes. Network
@@ -152,26 +152,28 @@ class ChatbotConfigController extends Controller
         }
 
         try {
-            // Anthropic doesn't expose a public /models endpoint; use a
-            // 1-token messages call as a cheap reachability check. A 200
-            // means the model id was accepted; a 404 means it wasn't.
-            $response = \Illuminate\Support\Facades\Http::withHeaders([
-                'x-api-key'         => $apiKey,
-                'anthropic-version' => '2023-06-01',
-                'content-type'      => 'application/json',
-            ])->timeout(15)->post('https://api.anthropic.com/v1/messages', [
-                'model'      => $model,
-                'max_tokens' => 1,
-                'messages'   => [['role' => 'user', 'content' => 'ping']],
-            ]);
+            // GET /v1/models/{id} (SDK, API version 2026-10-21): answers for
+            // this key without spending tokens, and says whether the model is
+            // active, deprecated or retired. A 404 means the id is unknown.
+            $info = \App\Services\Ai\AnthropicSdk::client((string) $apiKey, 15)->models->retrieve($model);
+            $lifecycle = $info->lifecycle ?? 'active';
 
-            if ($response->successful()) {
-                return response()->json(['available' => true, 'message' => 'Available']);
+            if ($lifecycle === 'retired') {
+                return response()->json(['available' => false, 'message' => 'Retired by Anthropic — choose a current model']);
             }
-            $err = $response->json('error.message') ?? substr($response->body(), 0, 200);
+            if ($lifecycle === 'deprecated') {
+                $retires = ($info->retiresAt ?? null)?->format('Y-m-d');
+                return response()->json([
+                    'available' => true,
+                    'message'   => 'Available, but deprecated' . ($retires ? " (retires {$retires})" : '') . ' — consider switching',
+                ]);
+            }
+
+            return response()->json(['available' => true, 'message' => 'Available']);
+        } catch (\Anthropic\Core\Exceptions\APIStatusException $e) {
             return response()->json([
                 'available' => false,
-                'message'   => "HTTP {$response->status()}: {$err}",
+                'message'   => "HTTP {$e->status}: " . \App\Services\Ai\AnthropicSdk::errorDetail($e),
             ]);
         } catch (\Throwable $e) {
             return response()->json(['available' => false, 'message' => 'Probe failed: ' . $e->getMessage()]);

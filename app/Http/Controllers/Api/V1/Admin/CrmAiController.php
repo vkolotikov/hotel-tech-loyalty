@@ -34,16 +34,19 @@ class CrmAiController extends Controller
             $checks["db_error"] = $e->getMessage();
         }
 
-        // 4. HTTP outbound check
+        // 4. HTTP outbound check — a tiny message through the official SDK
+        // (API version 2026-10-21, bearer key; no sampling settings).
         try {
-            $r = \Illuminate\Support\Facades\Http::timeout(10)
-                ->withHeaders(["x-api-key" => $apiKey, "anthropic-version" => "2023-06-01", "content-type" => "application/json"])
-                ->post("https://api.anthropic.com/v1/messages", [
-                    "model" => config("services.anthropic.model", "claude-sonnet-5"), "max_tokens" => 5,
-                    "messages" => [["role" => "user", "content" => "Say hi"]],
-                ]);
-            $checks["api_status"] = $r->status();
-            $checks["api_body_preview"] = substr($r->body(), 0, 200);
+            $message = \App\Services\Ai\AnthropicSdk::client((string) $apiKey, 10)->messages->create(
+                model: (string) config("services.anthropic.model", "claude-sonnet-5"),
+                maxTokens: 16,
+                messages: [["role" => "user", "content" => "Say hi"]],
+            );
+            $checks["api_status"] = 200;
+            $checks["api_body_preview"] = mb_substr(\App\Services\Ai\AnthropicSdk::text($message), 0, 200);
+        } catch (\Anthropic\Core\Exceptions\APIStatusException $e) {
+            $checks["api_status"] = $e->status;
+            $checks["api_body_preview"] = mb_substr(\App\Services\Ai\AnthropicSdk::errorDetail($e), 0, 200);
         } catch (\Throwable $e) {
             $checks["api_reachable"] = false;
             $checks["api_error"] = $e->getMessage();

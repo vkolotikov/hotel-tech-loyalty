@@ -25,6 +25,12 @@ export interface ModelCapabilities {
   responsesApi?: boolean
   /** Recommended default reasoning_effort when none configured. */
   defaultReasoningEffort?: 'none' | 'low' | 'medium' | 'high' | 'xhigh'
+  /**
+   * The server sends the venue's temperature setting to this model (a
+   * reasoning model only with reasoning_effort `none`). Absent = the model
+   * keeps its own, and the page hides the slider.
+   */
+  temperature?: boolean
 }
 
 export interface ModelEntry {
@@ -49,79 +55,65 @@ export interface ProviderEntry {
   label: string
   /** Picked when user switches provider; should be a known-good GA model. */
   defaultModel: string
+  /**
+   * Whether a saved model that is no longer listed still receives the
+   * temperature setting from the server (the same rule as DispatchesAiChat).
+   */
+  olderModelsTakeTemperature: boolean
   models: ModelEntry[]
 }
 
 // ── OpenAI ──────────────────────────────────────────────────────────────
-// Only models we have actually shipped support for via dispatchOpenAi() in
-// DispatchesAiChat.php. Pricing/spec details intentionally NOT encoded here
-// (they change too often and aren't load-bearing for routing).
+// A short list on purpose (owner, 2026-11-01): fast, current models that
+// hold a natural guest conversation. A venue whose saved model is no longer
+// listed keeps it — the server dispatches whatever is stored, and the page
+// shows it as an older model (see `isListedModel`).
+// Every gpt-5.x model routes through the Responses API (DispatchesAiChat.php
+// matches the `gpt-5` prefix); temperature reaches them only with reasoning
+// effort `none`.
 const openai: ProviderEntry = {
   id: 'openai',
   label: 'OpenAI',
-  defaultModel: 'gpt-4.1',
+  defaultModel: 'gpt-5.6-terra',
+  olderModelsTakeTemperature: true,
   models: [
-    // gpt-5.x models route through the Responses API per OpenAI's official
-    // guidance — Chat Completions is the wrong endpoint for these models
-    // and was the cause of "some models don't work correctly" reports.
-    { id: 'gpt-5.5',      label: 'GPT-5.5',      blurb: 'Newest — efficient reasoning, polished tone, Responses-API native',
-      capabilities: { reasoning: true, verbosity: true, vision: true, structuredOutputs: true, toolUse: true, streaming: true, responsesApi: true, defaultReasoningEffort: 'medium' }, recommended: true },
-    { id: 'gpt-5.4-pro',  label: 'GPT-5.4 Pro',  blurb: 'Top-tier reasoning, best for luxury sales',
-      capabilities: { reasoning: true, verbosity: true, vision: true, structuredOutputs: true, toolUse: true, streaming: true, responsesApi: true, defaultReasoningEffort: 'low' } },
-    { id: 'gpt-5.4',      label: 'GPT-5.4',      blurb: 'Flagship GPT-5.4',
-      capabilities: { reasoning: true, verbosity: true, vision: true, structuredOutputs: true, toolUse: true, streaming: true, responsesApi: true, defaultReasoningEffort: 'low' } },
-    { id: 'gpt-5',        label: 'GPT-5',        blurb: 'GPT-5 alias',
-      capabilities: { reasoning: true, verbosity: true, vision: true, structuredOutputs: true, toolUse: true, streaming: true, responsesApi: true, defaultReasoningEffort: 'low' } },
-    { id: 'gpt-5-mini',   label: 'GPT-5 Mini',   blurb: 'Faster, cheaper GPT-5',
-      capabilities: { reasoning: true, verbosity: true, vision: true, structuredOutputs: true, toolUse: true, streaming: true, responsesApi: true, defaultReasoningEffort: 'low' } },
-    { id: 'gpt-5-nano',   label: 'GPT-5 Nano',   blurb: 'Fastest GPT-5 — low latency',
-      capabilities: { reasoning: true, verbosity: true, vision: true, structuredOutputs: true, toolUse: true, streaming: true, responsesApi: true, defaultReasoningEffort: 'none' } },
-    { id: 'gpt-4.1',      label: 'GPT-4.1',      blurb: 'Stable workhorse for hospitality',
-      capabilities: { vision: true, structuredOutputs: true, toolUse: true, streaming: true } },
-    { id: 'gpt-4.1-mini', label: 'GPT-4.1 Mini', blurb: 'Fast & affordable',
-      capabilities: { vision: true, structuredOutputs: true, toolUse: true, streaming: true } },
-    { id: 'gpt-4.1-nano', label: 'GPT-4.1 Nano', blurb: 'Fastest GPT-4.1',
-      capabilities: { vision: true, structuredOutputs: true, toolUse: true, streaming: true } },
-    { id: 'gpt-4o',       label: 'GPT-4o',       blurb: 'Multimodal omni',
-      capabilities: { vision: true, structuredOutputs: true, toolUse: true, streaming: true } },
-    { id: 'gpt-4o-mini',  label: 'GPT-4o Mini',  blurb: 'Lightweight 4o',
-      capabilities: { vision: true, structuredOutputs: true, toolUse: true, streaming: true } },
-    { id: 'o3',           label: 'o3',           blurb: 'Deep reasoning — slow',
-      capabilities: { reasoning: true, structuredOutputs: true, streaming: true } },
-    { id: 'o4-mini',      label: 'o4-mini',      blurb: 'Fast reasoning',
-      capabilities: { reasoning: true, structuredOutputs: true, streaming: true } },
+    { id: 'gpt-5.6-terra', label: 'GPT-5.6 Terra', blurb: 'Balanced: natural replies at a good speed',
+      capabilities: { reasoning: true, verbosity: true, vision: true, structuredOutputs: true, toolUse: true, streaming: true, responsesApi: true, defaultReasoningEffort: 'low', temperature: true }, recommended: true },
+    { id: 'gpt-5.6-luna',  label: 'GPT-5.6 Luna',  blurb: 'Fastest and cheapest, for busy chats',
+      capabilities: { reasoning: true, verbosity: true, vision: true, structuredOutputs: true, toolUse: true, streaming: true, responsesApi: true, defaultReasoningEffort: 'low', temperature: true } },
+    { id: 'gpt-5.5',       label: 'GPT-5.5',       blurb: 'Most capable, but slower',
+      capabilities: { reasoning: true, verbosity: true, vision: true, structuredOutputs: true, toolUse: true, streaming: true, responsesApi: true, defaultReasoningEffort: 'medium', temperature: true } },
   ],
 }
 
 // ── Anthropic ───────────────────────────────────────────────────────────
+// Claude chooses its own sampling: the server never sends temperature or
+// top_p to any Claude model (API version 2026-10-21 refuses them), and asks
+// for effort `low` where the model accepts it.
 const anthropic: ProviderEntry = {
   id: 'anthropic',
   label: 'Anthropic (Claude)',
-  defaultModel: 'claude-opus-4-6',
+  defaultModel: 'claude-haiku-5-5',
+  olderModelsTakeTemperature: false,
   models: [
-    { id: 'claude-opus-4-6',           label: 'Claude Opus 4.6',   blurb: 'Most intelligent Claude',
+    { id: 'claude-haiku-5-5',  label: 'Claude Haiku 5.5',  blurb: 'Fastest Claude, quick natural replies',
       capabilities: { vision: true, toolUse: true, streaming: true }, recommended: true },
-    { id: 'claude-sonnet-4-6',         label: 'Claude Sonnet 4.6', blurb: 'Balanced speed & quality',
-      capabilities: { vision: true, toolUse: true, streaming: true } },
-    { id: 'claude-haiku-4-5-20251001', label: 'Claude Haiku 4.5',  blurb: 'Fastest & cheapest',
+    { id: 'claude-sonnet-5-5', label: 'Claude Sonnet 5.5', blurb: 'Smarter, still quick',
       capabilities: { vision: true, toolUse: true, streaming: true } },
   ],
 }
 
 // ── Google Gemini ───────────────────────────────────────────────────────
+// Gemini 3 and later keep their default temperature (Google's advice), so the
+// server does not send the setting to them; older saved Gemini 2.x still get it.
 const google: ProviderEntry = {
   id: 'google',
   label: 'Google (Gemini)',
-  defaultModel: 'gemini-2.5-pro',
+  defaultModel: 'gemini-3.5-flash-lite',
+  olderModelsTakeTemperature: true,
   models: [
-    { id: 'gemini-2.5-pro',                       label: 'Gemini 2.5 Pro',        blurb: 'Best Gemini reasoning',
+    { id: 'gemini-3.5-flash-lite', label: 'Gemini 3.5 Flash-Lite', blurb: 'Fast and low-cost',
       capabilities: { vision: true, structuredOutputs: true, toolUse: true, streaming: true }, recommended: true },
-    { id: 'gemini-2.5-flash',                     label: 'Gemini 2.5 Flash',      blurb: 'Fast & cost-effective',
-      capabilities: { vision: true, structuredOutputs: true, streaming: true } },
-    { id: 'gemini-2.5-flash-lite-preview-06-17',  label: 'Gemini 2.5 Flash Lite', blurb: 'Lowest latency',
-      capabilities: { streaming: true }, preview: true },
-    { id: 'gemini-2.0-flash',                     label: 'Gemini 2.0 Flash',      blurb: 'Previous-gen fast',
-      capabilities: { streaming: true } },
   ],
 }
 
@@ -140,6 +132,24 @@ export function findModel(id: string | null | undefined): ModelEntry | null {
 /** Find the provider entry by id. */
 export function findProvider(id: string | null | undefined): ProviderEntry | null {
   return AI_PROVIDERS.find(p => p.id === id) ?? null
+}
+
+/** Whether the model is one of the provider's listed (current) models. */
+export function isListedModel(providerId: string | null | undefined, modelId: string | null | undefined): boolean {
+  if (!modelId) return false
+  return !!findProvider(providerId)?.models.some(m => m.id === modelId)
+}
+
+/**
+ * Whether the server sends the temperature setting with this model. A listed
+ * model says so in its capabilities; a saved older model follows its
+ * provider's rule.
+ */
+export function takesTemperature(providerId: string | null | undefined, modelId: string | null | undefined): boolean {
+  const provider = findProvider(providerId)
+  const listed = provider?.models.find(m => m.id === modelId)
+  if (listed) return !!listed.capabilities.temperature
+  return provider?.olderModelsTakeTemperature ?? true
 }
 
 /** Format a model dropdown label including the ★ flag and short blurb. */

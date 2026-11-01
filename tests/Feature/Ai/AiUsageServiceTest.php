@@ -110,6 +110,30 @@ class AiUsageServiceTest extends TestCase
         $this->assertSame(0, $row->cost_cents);
     }
 
+    public function test_the_chat_widgets_new_models_are_priced(): void
+    {
+        // Owner 2026-11-01: the model list's new entries are priced, so a
+        // venue on one of them is not recorded at zero. Gemini 3.5 Flash-Lite
+        // is a marked estimate (see MODEL_PRICING).
+        $org = OrganizationFactory::new()->create();
+        app()->instance('current_organization_id', $org->id);
+
+        // 1M tokens in + 1M out, in cents: input + output price per MTok × 100.
+        $expected = [
+            'claude-haiku-5-5'      => 60,    // $0.10 + $0.50
+            'claude-sonnet-5-5'     => 1200,  // $2 + $10
+            'gpt-5.6-terra'         => 1400,  // $2 + $12
+            'gpt-5.6-luna'          => 140,   // $0.20 + $1.20
+            'gemini-3.5-flash-lite' => 350,   // estimate: $0.50 + $3
+        ];
+        foreach ($expected as $model => $cents) {
+            $this->service->recordUsage(orgId: $org->id, model: $model, inputTokens: 1_000_000, outputTokens: 1_000_000, feature: 'website_chatbot');
+            $row = AiUsageLog::withoutGlobalScopes()->latest('id')->first();
+            $this->assertSame($model, $row->model);
+            $this->assertSame($cents, $row->cost_cents, "{$model} must be priced");
+        }
+    }
+
     public function test_record_usage_uses_ceiling_so_sub_cent_costs_round_up(): void
     {
         $org = OrganizationFactory::new()->create();
