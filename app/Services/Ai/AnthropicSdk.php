@@ -44,7 +44,7 @@ final class AnthropicSdk
             return false;
         }
         $major = (int) $m[2];
-        $minor = isset($m[3]) && $m[3] !== '' ? (int) $m[3] : 0;
+        $minor = isset($m[3]) ? (int) $m[3] : 0;
 
         if ($major >= 5) {
             return true;
