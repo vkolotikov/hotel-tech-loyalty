@@ -6,11 +6,14 @@ use App\Http\Middleware\SaasAuthMiddleware;
 use App\Http\Middleware\TenantMiddleware;
 use App\Models\Organization;
 use App\Models\User;
+use App\Scopes\TenantScope;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Routing\Router;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Reflector;
 use Laravel\Sanctum\Sanctum;
 use Tests\Concerns\SetsUpMinimalSchema;
 use Tests\TestCase;
@@ -85,6 +88,27 @@ class RouteBindingTenantTest extends TestCase
             }
         }
         $this->assertGreaterThan(100, $checked);
+    }
+
+    /** A route that binds an organisation's model must have the organisation at all (1 Nov 2026: 36 such parameters). */
+    public function test_every_route_binding_a_tenant_model_sets_the_organisation(): void
+    {
+        $router = app(Router::class);
+        $bound = 0;
+        foreach ($router->getRoutes() as $route) {
+            foreach ($route->signatureParameters(['subClass' => Model::class]) as $parameter) {
+                $class = Reflector::getParameterClassName($parameter);
+                if (!in_array($parameter->getName(), $route->parameterNames(), true)
+                    || !array_key_exists(TenantScope::class, (new $class)->getGlobalScopes())) {
+                    continue;
+                }
+                $bound++;
+                $names = array_map(fn ($m) => is_string($m) ? explode(':', $m, 2)[0] : get_class($m), $router->gatherRouteMiddleware($route));
+                $this->assertContains(TenantMiddleware::class, $names,
+                    "{$route->uri()}: {$class} is found through TenantScope, which finds nothing without the organisation");
+            }
+        }
+        $this->assertGreaterThanOrEqual(30, $bound);
     }
 
     public function test_a_bound_admin_route_finds_the_organisations_own_row_and_never_another_organisations(): void
