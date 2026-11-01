@@ -31,7 +31,7 @@ export const EARN_WORDS = {
   levels: 'Member levels', purchases: 'Eligible purchases', eligible: 'Completed bookings and desk purchases when enabled',
   sharedRate: 'This base rate is shared across your program. Booking and desk earning are switched on separately.',
   advanced: 'How earning is calculated', show: 'Show', hide: 'Hide', advancedLine: 'Review rounding and the modifiers used by your program.',
-  calculation: 'The final award is rounded-sm down to whole points after the applicable level, outlet, benefit and promotion multipliers. Overlapping boosts use the highest matching boost.',
+  calculation: 'The final award is rounded down to whole points after the applicable level, outlet, benefit and promotion multipliers. Overlapping boosts use the highest matching boost.',
   desk: 'Purchases entered by staff', deskLine: 'Keep desk purchases connected to their existing earning rules.', deskLink: 'View desk purchase settings →',
   memberExample: 'MEMBER EXAMPLE', seeEarn: 'See what members earn', amount: 'Eligible purchase amount', points: '{{n}} points',
   equation: '{{amount}} × {{rate}} points per {{unit}}', illustrative: 'Base earning · example only', baseRate: 'Base rate',

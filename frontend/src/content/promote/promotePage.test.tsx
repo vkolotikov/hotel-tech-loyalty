@@ -129,7 +129,7 @@ describe('the Promote page (spec 2026-10-20 §5)', () => {
     expect(line(done, true)).toContain('href="/content"')
     // Final review (6-2): a failure naming a long title wraps on a phone.
     const failed: PromotionRun = { ...done, pages: [...done.pages, { page_id: 3, title: 'A'.repeat(80), status: 'failed', posts_wanted: 2, posts_made: 0, error: 'ai_failed' }] }
-    expect(line(failed, true)).toMatch(/<li[^>]*class="[^"]*break-words[^"]*">A{80}: The AI could not write these posts\.<\/li>/)
+    expect(line(failed, true)).toMatch(/<li[^>]*class="[^"]*wrap-break-word[^"]*">A{80}: The AI could not write these posts\.<\/li>/)
     expect(render(payload([page()]), true, done)).toContain('Promotion posts added to your plan as drafts: 4')
   })
 

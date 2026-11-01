@@ -1,13 +1,33 @@
-@import './portal/theme/portal.css' layer(base);
-@import './workspace/theme/workspace.css' layer(base);
-@import './appointments/theme/appointments.css' layer(base);
-@import './content/theme/content.css' layer(base);
-@import './loyalty/theme/loyalty.css' layer(base);
-@import './theme/legacySurfaces.css' layer(base);
-@import './theme/glass.css' layer(base);
-@import './theme/light.css' layer(base);
+/* ════════════════════════════════════════════════════════════════════════
+   Tailwind 4, with Tailwind 3's cascade. v3 wrote everything as plain,
+   unlayered CSS, so a rule won by specificity, then by order: these
+   stylesheets first, then preflight, then the utilities, then the rules
+   below, then each lazy page's stylesheet. v4's default (@import
+   'tailwindcss') puts its CSS in cascade layers, and unlayered CSS then beats
+   every utility whatever its specificity, while any of our CSS put in a layer
+   loses to every utility (Glass's popover and modal surfaces, its header,
+   the workspaces' variant classes). So only the theme variables and the
+   preflight reset are layered here (as base-level CSS was below everything in
+   v3); the utilities stay unlayered, in v3's place in the order.
+   ════════════════════════════════════════════════════════════════════════ */
+@layer theme, base, components, utilities;
+@import 'tailwindcss/theme.css' layer(theme);
+@import 'tailwindcss/preflight.css' layer(base);
 
-@import 'tailwindcss';
+@import './portal/theme/portal.css';
+@import './workspace/theme/workspace.css';
+@import './appointments/theme/appointments.css';
+@import './content/theme/content.css';
+@import './loyalty/theme/loyalty.css';
+@import './theme/legacySurfaces.css';
+@import './theme/glass.css';
+@import './theme/light.css';
+
+/* Only the app's own sources: v4 otherwise scans every file git does not
+   ignore, including the committed dist/ bundles (old class names) and e2e/. */
+@import 'tailwindcss/utilities.css' source(none);
+@source '../index.html';
+@source './**/*.{js,ts,jsx,tsx}';
 
 /* NOTE (2026-10-08): the Google Fonts @import for the Settings → Branding
    preset faces (Cormorant Garamond, EB Garamond, Playfair Display, Lora,
@@ -31,10 +51,62 @@
   --default-ring-width: 3px;
   /* A ring with no colour class was blue-500 at 50% in v3, currentcolor in v4. */
   --default-ring-color: rgb(59 130 246 / 0.5);
+  /* v3's text sizes set a fixed line height (text-sm: 1.25rem); v4 sets a
+     ratio (calc(1.25 / 0.875)), which a child whose font size comes from our
+     own CSS (inputs at 16px on phones, the workspaces' classes) multiplies. */
+  --text-xs--line-height: 1rem;
+  --text-sm--line-height: 1.25rem;
+  --text-base--line-height: 1.5rem;
+  --text-lg--line-height: 1.75rem;
+  --text-xl--line-height: 1.75rem;
+  --text-2xl--line-height: 2rem;
+  --text-3xl--line-height: 2.25rem;
+  --text-4xl--line-height: 2.5rem;
+  /* v4 changed the drop-shadow scale's values; drop-shadow-lg keeps v3's. */
+  --drop-shadow-lg: 0 10px 8px rgb(0 0 0 / 0.04), 0 4px 3px rgb(0 0 0 / 0.1);
 }
 
 /* v3's hover applied on touch screens too; v4 wraps it in @media (hover: hover). */
 @custom-variant hover (&:hover);
+
+/* space-y / space-x as in v3. v3 put the gap on every child that follows a
+   shown sibling (`> :not([hidden]) ~ :not([hidden])`, three classes'
+   specificity), so a child's own margin class, or an element reset such as
+   overview.css's `[data-loyalty][data-overview] p { margin: 0 }`, could not
+   undo it. v4 puts it below every child but the last, at zero specificity
+   (`:where(...)`), so both of those win over it. These rules restore v3's,
+   which then win over v4's on every later child; on the first child v4's rule
+   is switched off (an invalid --tw-space-*-reverse makes its margins invalid
+   at computed-value time), so that child keeps its own margins, as in v3. */
+@utility space-y-* {
+  & > :not([hidden]) ~ :not([hidden]) {
+    margin-top: --spacing(--value(number));
+    margin-top: --value([length]);
+    margin-bottom: 0;
+  }
+  & > :first-child {
+    --tw-space-y-reverse: v3;
+  }
+}
+@utility -space-y-* {
+  & > :not([hidden]) ~ :not([hidden]) {
+    margin-top: calc(--spacing(--value(number)) * -1);
+    margin-bottom: 0;
+  }
+  & > :first-child {
+    --tw-space-y-reverse: v3;
+  }
+}
+@utility space-x-* {
+  & > :not([hidden]) ~ :not([hidden]) {
+    margin-left: --spacing(--value(number));
+    margin-left: --value([length]);
+    margin-right: 0;
+  }
+  & > :first-child {
+    --tw-space-x-reverse: v3;
+  }
+}
 
 @layer base {
   /* Default border colour: gray-200 in v3, currentcolor in v4. */
@@ -61,6 +133,65 @@
   /* v4's reset takes the browser's centring margin off <dialog>. */
   dialog {
     margin: auto;
+  }
+
+  /* v4's reset zeroes every element's padding; v3 left table cells the
+     browser's 1px (a table without padding classes was 2px a row taller). */
+  td,
+  th {
+    padding: revert-layer;
+  }
+
+  /* v4's reset also makes every form control transparent and square; v3 did
+     that to buttons only, so a field with no bg-* class kept the browser's
+     white field (revert-layer: back to the browser's own value). */
+  input,
+  select,
+  optgroup,
+  textarea {
+    background-color: revert-layer;
+    border-radius: revert-layer;
+  }
+  /* v3 left the file button native (a button look, the page's font). */
+  ::file-selector-button {
+    all: revert-layer;
+    -webkit-appearance: button;
+    font: inherit;
+  }
+  /* v3 kept search fields as plain text fields (no native clear button). */
+  [type='search'] {
+    -webkit-appearance: textfield;
+    outline-offset: -2px;
+  }
+  button,
+  select {
+    text-transform: none;
+  }
+  /* v4 trims date and time fields (no field padding, a 1lh value box, an
+     inline-flex edit box): 2px lower than v3, which left them to the browser. */
+  ::-webkit-date-and-time-value {
+    min-height: revert-layer;
+    text-align: revert-layer;
+  }
+  ::-webkit-datetime-edit {
+    display: revert-layer;
+  }
+  ::-webkit-datetime-edit-fields-wrapper {
+    padding: revert-layer;
+  }
+  ::-webkit-datetime-edit,
+  ::-webkit-datetime-edit-year-field,
+  ::-webkit-datetime-edit-month-field,
+  ::-webkit-datetime-edit-day-field,
+  ::-webkit-datetime-edit-hour-field,
+  ::-webkit-datetime-edit-minute-field,
+  ::-webkit-datetime-edit-second-field,
+  ::-webkit-datetime-edit-millisecond-field,
+  ::-webkit-datetime-edit-meridiem-field {
+    padding-block: revert-layer;
+  }
+  ::-webkit-calendar-picker-indicator {
+    line-height: revert-layer;
   }
 }
 
@@ -100,6 +231,10 @@ input[type="week"] {
    No data-mood = neutral default (Inter, standard radii) — same as
    pre-2026-06-13 behaviour for orgs that haven't picked a preset.
    ════════════════════════════════════════════════════════════════════════ */
+/* In the base layer, like the Glass and Clean light variable blocks that
+   replace them (tailwind.config.js plugins): an unlayered :root here would
+   beat those layered blocks. */
+@layer base {
 :root {
   --theme-font-body: 'Inter', system-ui, sans-serif;
   --theme-font-display: 'Inter', system-ui, sans-serif;
@@ -189,6 +324,7 @@ input[type="week"] {
   --theme-radius-tight: 4px;
   --theme-radius-base: 8px;
   --theme-radius-card: 10px;
+}
 }
 
 body {

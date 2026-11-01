@@ -159,13 +159,13 @@ describe('TeamEditor — the calendar colour (spec 5.3)', () => {
       expect(classes).toEqual(expect.arrayContaining(['has-checked:ring-2', 'has-checked:ring-offset-2', 'has-checked:ring-a-accent-text', ...focus]))
       expect(classes).toContain('has-checked:ring-offset-a-surface') // the gap around the selected swatch is the panel's own colour, not white, in the dark theme
       // The ring reaches 4 px out (offset 2 + width 2): the outline starts beyond it.
-      const offset = Number(classes.find(c => c.startsWith('has-[:focus-visible]:outline-offset-'))?.match(/(\d+)(?:px\])?$/)?.[1])
+      const offset = Number(classes.find(c => c.startsWith('has-focus-visible:outline-offset-'))?.match(/(\d+)(?:px\])?$/)?.[1])
       expect(offset).toBeGreaterThan(4)
-      expect(classes.some(c => c.startsWith('has-focus-visible:ring-3'))).toBe(false)
+      expect(classes.some(c => c.startsWith('has-focus-visible:ring'))).toBe(false)
     }
     const auto = choices[0]?.match(/^<label[^>]*class="([^"]*)"/)?.[1]?.split(/\s+/) ?? []
     expect(auto).toEqual(expect.arrayContaining(['has-checked:border-a-accent-text', 'has-checked:ring-a-accent-text', ...focus, 'has-focus-visible:outline-offset-2']))
-    expect(auto.some(c => c.startsWith('has-focus-visible:ring-3'))).toBe(false)
+    expect(auto.some(c => c.startsWith('has-focus-visible:ring'))).toBe(false)
   })
 
   it('checks Automatic when the member has no stored colour, and the stored colour when they have one', () => {

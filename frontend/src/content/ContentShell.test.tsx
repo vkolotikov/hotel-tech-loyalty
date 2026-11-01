@@ -127,7 +127,7 @@ describe('ContentShell', () => {
     expect(bar).toMatch(/<div class="hidden min-w-0 sm:flex">\s*<nav aria-label="Breadcrumb"/)
     expect(html).toMatch(/data-phone-crumb="" class="[^"]*\bsm:hidden\b[^"]*">\s*<nav aria-label="Breadcrumb"/)
     expect(html.indexOf('data-phone-crumb')).toBeLessThan(html.indexOf('data-phone-row'))
-    expect(bar).toMatch(/aria-label="Find a post or action"[^>]*class="[^"]*\bsm:min-w-\[10rem\]/)
+    expect(bar).toMatch(/aria-label="Find a post or action"[^>]*class="[^"]*\bsm:min-w-40\b/)
   })
 
   // Release 7a (spec 2026-10-21 §7.1, Review Focus 3–4): from 1280 px the page makes room for the open panel, and gets it back.
