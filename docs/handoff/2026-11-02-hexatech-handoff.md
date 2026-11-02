@@ -3,9 +3,41 @@
 Read this first, then `2026-10-31-hexatech-handoff.md` (production, the native apps, the stack upgrade, cloud container
 notes). AGENTS.md and CLAUDE.md still apply.
 
+## Second round (2 Nov, late): packages, yearly, Team, SMS
+
+The owner asked: "make yearly plan 15% cheaper per month, and make 3 packages with different features and members …
+we can make this price as standard and make one cheaper option and one expensive. And do all your recommendations and
+next steps". The runbook `docs/plan-modules.md` was rewritten for it; the prices and limits are its first two tables.
+
+- **Packages.** Loyalty Lite 49 €, Standard 85 €, Pro 149 €; Content Lite 39 €, Standard 85 €, Pro 149 € a month.
+  Yearly is 12 months less 15 % (`PlanModules::yearlyAmount()`). Limits (members, team, locations), campaigns, push,
+  Wallet/NFC and Content's monthly AI allowance (`ai_monthly_cost_cents`) are enforced by code that already existed
+  (`PlanLimitGuard`, `feature:` middleware, `ContentAiGate`). The limits are Claude's proposal for the owner to confirm.
+- **Plan slugs.** Standard is the bare name, the others `module_tier`, pairs joined by `-`
+  (`loyalty_pro-content_lite`). 15 module plans in all.
+- **This application** (branch commits `ae44145`, `5fa48f5`, `70683d9`):
+  - sign-up pages pick a package, monthly or yearly; Plan & products changes a package, removes a product from a
+    plan of two, pays monthly or yearly; a smaller package is refused while the organisation is over its limits
+    (`over_limit`);
+  - `/account/team` (Team) for organisations on modules, on the full admin's team endpoints (AccessMap `admin/team`
+    is now product `account`);
+  - Loyalty's SMS page connects the venue's Twilio account (`PUT admin/loyalty/sms/connection`), token encrypted,
+    never answered or audited;
+  - CI's PostgreSQL red fixed: the 4 `ContactsFeedTest` tests are in `tests/pgsql-known-failures.txt` with their
+    reason in `docs/loyalty-workspace.md`.
+- **Billing** (`hotel-tech-saas`, local branch, still not pushed): a second commit `ddb4cf1` with migration
+  `2026_11_02_130000_add_module_packages` (the 15 plans, hidden and unpriced, the feature rows) and
+  `stripe:sync --module-plans`. The patch file `docs/billing/2026-11-02-hotel-tech-saas-module-plans.patch` now holds
+  both commits; `git am` applies them on `main` (checked). Its `tests/Feature/ModulePlansTest.php`: 20 passed, 3 live
+  Stripe tests skipped.
+- **To go live (owner):** apply and deploy the billing patch, then run once there
+  `php artisan stripe:sync --module-plans --publish`. That replaces the first round's `--plan=…` step.
+- **Still not built:** combinations with Appointments (billing plans and an Appointments price needed); switching a
+  paid plan between monthly and yearly is left to Stripe's customer portal.
+
 ## Production
 
-Latest: **05ffcc8** (2 Nov evening, the owner's "deploy for me"): the plan modules below. It is source patch
+Previous: **05ffcc8** (2 Nov evening, the owner's "deploy for me"): the plan modules below. It is source patch
 **1b3949a** (this branch at 7f5baf1 on `main` 3618ead; 64 files, no deletions, no migration) plus its SPA build.
 Before the push: tree parity with the branch; on the artifact, `tsc -b`, 402 Vitest files and 5818 tests passed;
 the scoped PHP suite gave 7321 passed, 23 skipped and 39 failed, which are this container's environment failures and
@@ -57,18 +89,21 @@ own workspace. The runbook is `docs/plan-modules.md`.
   3. ~~Deploy this branch~~: done, `main` = 05ffcc8 (above). For the record, the file list was this branch's commits since
      `origin/main` `3618ead`; there is no migration on this side.
   Until step 2, the new sign-up pages say the product cannot be bought online yet.
-- **Assumptions to confirm (owner):**
-  - monthly billing only (no yearly price);
-  - the plans' features and limits (runbook, "Billing handover");
-  - "Loyalty + Content" at 170 €;
+- **Assumptions to confirm (owner)** (the second round above replaced yearly, the packages and their limits; removing
+  a product, Team and SMS are built now):
+  - "Loyalty + Content" at the sum of the two packages (170 € for two Standards);
   - Appointments-plan staff may now pay for and restart their plan on Plan & products;
   - a signed-out visit to `/loyalty…` or `/content…` now shows that product's own sign-in page.
-- **Not built (runbook, "Known limits"):**
-  - removing a product online;
-  - combinations with Appointments (they need billing plans);
-  - team invitations and SMS setup in the workspaces (still full admin only).
+- **Not built (runbook, "Known limits"):** combinations with Appointments (they need billing plans).
 
 ## Checks run (2 Nov, this container)
+
+Second round, on the branch at `70683d9`: the scoped PHP suite 7331 passed, 23 skipped, 39 failed (the same environment
+scopes and counts as the base: Admin 2, Appointments 7, Crm 4, LoyaltyWorkspace 9, Settings 7, Wallet 2, Unit/Services
+8); Larastan no errors; `tsc -b` clean; Vitest 403 files, 5827 tests passed; lint passes against the baseline;
+screenshots of the package picker, Plan & products and Team at 1440 and 390.
+
+First round:
 
 - **PHP 8.5.12** (official `php:8.5-cli` image through Docker), with this application's scoped suite (`scripts/test-php.sh`):
   - every new test passes;
