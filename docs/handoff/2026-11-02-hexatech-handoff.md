@@ -21,6 +21,9 @@ billing publishes the plans, that page says the product cannot be bought online 
 are missing from `tests/pgsql-known-failures.txt`. The fix: list them there with their reason in
 `docs/loyalty-workspace.md`, or let the test skip on PostgreSQL.
 
+CI on 05ffcc8 (run 32): green on all three SQLite shards, both SPA jobs, Larastan and the audit. On PostgreSQL 7365
+tests ran (29 more than on 3618ead); every new one passes. The only failures are the same 4 `ContactsFeedTest` ones.
+
 The billing half is **not deployed**: this session was refused push access to `hotel-tech-saas` twice.
 
 ## New: HexaTech Loyalty and Content sold on their own (owner, 2 Nov)
