@@ -48,6 +48,7 @@ class ContactsFeedTest extends TestCase
         }
         DB::table('chat_conversations')->insert(['id' => 10, 'organization_id' => 1, 'brand_id' => 23, 'inquiry_id' => 1]);
         DB::table('chat_conversations')->insert(['id' => 11, 'organization_id' => 1, 'brand_id' => 42, 'inquiry_id' => 1]);
+        DB::table('chat_conversations')->insert(['id' => 12, 'organization_id' => 1, 'brand_id' => 23]);
         foreach ([10, 11] as $id) {
             DB::table('chat_messages')->insert(['id' => $id, 'organization_id' => 1,
                 'conversation_id' => $id, 'sender_type' => 'visitor', 'content' => 'Conversation '.$id]);
@@ -92,6 +93,7 @@ class ContactsFeedTest extends TestCase
         $this->assertCount(1, $messages);
         $this->assertSame('guest:1', $messages[0]['contact_external_id']);
         $this->assertSame('Conversation 10', $messages[0]['data']['content']);
+        $this->assertSame(['10'], array_column(array_values(array_filter($history, fn ($r) => $r['type'] === 'conversations')), 'external_id'));
         $this->assertSame(['1', '3'], array_column(array_values(array_filter($history, fn ($r) => $r['type'] === 'activities')), 'external_id'));
         $this->assertSame(4, DB::table('guests')->count());
     }

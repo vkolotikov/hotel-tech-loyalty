@@ -81,7 +81,13 @@ class ContactsFeed
 
     private function conversations(int $org, int $brand): Builder
     {
-        return DB::table('chat_conversations')->where('organization_id', $org)->where('brand_id', $brand);
+        return DB::table('chat_conversations')->where('organization_id', $org)->where('brand_id', $brand)
+            ->where(fn (Builder $q) => $q->whereNotNull('inquiry_id')
+                ->orWhereIn('visitor_id', $this->visitors($org, $brand)->whereNotNull('guest_id')->select('id'))
+                ->orWhere(fn (Builder $notes) => $notes->whereNotNull('agent_notes')->where('agent_notes', '<>', ''))
+                ->orWhereExists(fn (Builder $messages) => $messages->selectRaw('1')->from('chat_messages')
+                    ->where('chat_messages.organization_id', $org)->whereColumn('conversation_id', 'chat_conversations.id')
+                    ->whereIn('sender_type', ['visitor', 'agent', 'ai'])));
     }
 
     private function query(string $type, int $org, int $brand): Builder
