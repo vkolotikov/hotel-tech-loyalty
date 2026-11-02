@@ -163,7 +163,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        node: ['22', '24']
+        # Laravel Cloud builds on Node 24 and moves to 26 (owner, 2 Nov 2026); both are tested.
+        node: ['24', '26']
     defaults:
       run:
         working-directory: frontend
