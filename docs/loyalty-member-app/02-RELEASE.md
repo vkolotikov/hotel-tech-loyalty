@@ -116,3 +116,26 @@ More → Bookings → Book (an appointment, paid at the venue), More → Profile
    (`config/apps.php`). For a later release, raise `MEMBER_APP_LATEST_VERSION` (and `MEMBER_APP_MIN_VERSION` to make
    it compulsory), then redeploy.
 3. Record the release (date, build numbers, submission ids) in `docs/loyalty-member-app/00-PLAN.md`.
+
+## Build record
+
+**2026-11-02** (from `feature/loyalty-member-app`, EAS as the `hoteltechai` robot user, Developer role):
+
+- iPhone 2.0.0 build **19**: finished (`https://expo.dev/accounts/hoteltechai/projects/hotel-loyalty/builds/1cde298f-0590-470d-8f65-1d67f7ad934b`),
+  signed with the existing distribution certificate and profile (both valid to 2027-05-01). Not yet on TestFlight:
+  `eas submit` needs an App Store Connect API key on EAS, which cannot be set up non-interactively (owner, §0.5).
+- Android 2.0.0 version code **24**: finished (`https://expo.dev/accounts/hoteltechai/projects/hotel-loyalty/builds/0e33845d-4327-48b6-aa5f-56368e1e1caf`),
+  signed with the existing upload keystore. Not yet on Play: needs a Google service account key on EAS.
+- Three things the first builds found, all fixed in `app.json` and checked by a local `expo prebuild` (build 18 and
+  version codes 22 and 23 are the failed attempts):
+  1. iOS `pod install`: stripe-react-native 0.81 fetches stripe-ios through Swift Package Manager, which needs
+     dynamic frameworks. The Stripe plugin's own option `disableSPM: true` puts `$StripeDisableSPM = true` in the
+     Podfile, so stripe-ios comes from CocoaPods and nothing else links differently. Stripe calls that path
+     deprecated: a later stripe-react-native may need `useFrameworks: "dynamic"` (expo-build-properties) instead.
+  2. Android lint: Stripe's compileOnly push-provisioning library lists Google's private Tap and Pay SDK as a
+     runtime dependency, which lint tries to fetch. `plugins/withoutStripePushProvisioning.js` excludes
+     `play-services-tapandpay` in `android/build.gradle`.
+  3. Android R8: Stripe's code refers to the absent push-provisioning classes; the same plugin adds
+     `-dontwarn com.stripe.android.pushProvisioning.**` to `android/app/proguard-rules.pro`. The app never adds a
+     card to Google Wallet, so neither library is packaged either way.
+- expo 58.0.22, expo-dev-client 58.0.18, expo-router 58.0.29, TypeScript ~6.0.3 (`expo install --check` clean).
