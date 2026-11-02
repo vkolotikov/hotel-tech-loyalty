@@ -100,12 +100,12 @@ Plan and progress: `docs/audits/2026-10-31-stack-audit-and-upgrade-plan.md` (§6
   unused (owner). Its second step (CI, ESLint 10 and TypeScript 6 with a dashboard hook-order fix, Symfony 8.1)
   is deployed too (`main` = `eef4275`, CI green on `main`). Plan §8.
 
-- **Done 2 Nov: the Stripe upgrades** (plan §6 step 4g; §8 "step 4g"). Loyalty deployed (**3618ead75**); the SaaS on
-  its branch, waiting for the owner's go-ahead (`main` fast-forwards to the branch tip). Live checks in Stripe test mode
+- **Done 2 Nov: the Stripe upgrades** (plan §6 step 4g; §8 "step 4g"). Loyalty deployed (**3618ead75**); the SaaS deployed
+  on the owner's go-ahead (`main` **91bd84d**). Live checks in Stripe test mode
   need `STRIPE_TEST_SECRET` (an `sk_test_` key) in the environment: loyalty `tests/Feature/Stripe/LiveTestModeTest.php`
   (SQLite in memory only), SaaS `tests/Feature/StripeBillingTest.php`. Webhooks are tested with events signed by a local
-  secret. Still open: completing a 3-D Secure challenge in a browser needs `testmode-acs.stripe.com` in the network
-  allowance (the challenge page lives there); Stripe's docs site (`docs.stripe.com`) is not reachable either.
+  secret. `testmode-acs.stripe.com` (the 3-D Secure test challenge page) is allowed since 2 Nov and the challenge was
+  completed in the browser, approved and failed. Stripe's docs site (`docs.stripe.com`) is still not reachable.
 
 ## Cloud container notes (Linux)
 

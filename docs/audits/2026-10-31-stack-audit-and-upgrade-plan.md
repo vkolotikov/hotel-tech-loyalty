@@ -630,11 +630,14 @@ of the test API itself.
     decline, 3-D Secure, refunds and a replay, `charge.refunded` and a lost dispute through the webhook with locally
     signed events, the capture command, a combination refunded room by room), identical fields and values on dahlia
     and endive; `ApiVersionTest` (new); in a real browser, the portal's appointment and stay payments, a decline, a
-    cancelled 3-D Secure challenge, and the stay and services widgets end to end. Completing a 3-D Secure challenge in
-    the browser was not possible: its page is on `testmode-acs.stripe.com`, which the session's network refuses.
+    cancelled 3-D Secure challenge, and the stay and services widgets end to end. After the owner allowed
+    `testmode-acs.stripe.com`, the 3-D Secure challenge (card 4000 0027 6000 3184) was completed too: approved in the
+    portal (appointment confirmed, card held, `requires_capture`), failed in the portal (the portal's authentication
+    sentence, nothing booked, `payment_intent_authentication_failure`), and approved on the stay widget (confirmed,
+    captured, row paid).
   - Suites: SQLite **7,334 passed / 16 skipped / 0 failed** (baseline 7,322 + 12 new); PostgreSQL only known
     failures; frontend 5,790; Larastan clean; lint; CI green (8 jobs).
-- **hotel-tech-saas** (branch `claude/stack-audit-upgrade-plan-9hdkkv`, **not deployed: the owner approves**):
+- **hotel-tech-saas** (deployed on the owner's go-ahead: `main` `eef4275` → **`91bd84d`**, the tested branch tip):
   stripe-php 20.3.2 → **22.1.0**, `App\Support\StripeApi` pins 2026-10-28.endive. **Its checkout would have broken
   without a code change**: the new version refuses `payment_method_types` on a Checkout Session; it now sends
   `allowed_payment_method_types: ['card']`. The webhook reads a subscription's period and an invoice's subscription in
