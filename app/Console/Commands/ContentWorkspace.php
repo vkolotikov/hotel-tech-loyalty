@@ -62,8 +62,16 @@ class ContentWorkspace extends Command
 
             return self::FAILURE;
         }
-        if ($this->option('on') && $org->appointmentsOnly()) {
-            $this->error(sprintf('org %d (%s) is on the Appointments plan: HexaTech Content is not part of it.', $org->id, $org->name));
+        if ($this->option('on') && !$org->holdsModule('content')) {
+            $this->error($org->appointmentsOnly()
+                ? sprintf('org %d (%s) is on the Appointments plan: HexaTech Content is not part of it.', $org->id, $org->name)
+                : sprintf('org %d (%s) is on modules without HexaTech Content (%s): it is not part of its plan.', $org->id, $org->name, implode(', ', $org->planModules() ?? [])));
+
+            return self::FAILURE;
+        }
+
+        if ($this->option('off') && in_array('content', $org->planModules() ?? [], true)) {
+            $this->error(sprintf('org %d (%s) bought HexaTech Content on its own: the workspace is its plan and cannot be switched off. Run workspace:appointments <organisation id> --not-only first if it should be a full customer.', $org->id, $org->name));
 
             return self::FAILURE;
         }

@@ -50,8 +50,8 @@ class GuestMemberLinkService
      */
     public function ensureMemberForGuest(Guest $guest): ?LoyaltyMember
     {
-        // The Appointments plan has no programme: a client stays a client (Part C).
-        if (Organization::isAppointmentsOnly((int) $guest->organization_id)) {
+        // Without the Loyalty module there is no programme: a client stays a client (Part C; modules 2026-11-02).
+        if (Organization::lacksModule((int) $guest->organization_id, 'loyalty')) {
             return null;
         }
 

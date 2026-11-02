@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\PlanModules;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
@@ -327,13 +328,15 @@ class Organization extends Model
     // ─── Workspaces ────────────────────────────────────────────
     // Product experiences beside the full admin; the appointments workspace
     // is the first. HexaTech Content (`/content`, spec 2026-10-14) is the
-    // second, HexaTech Loyalty (`/loyalty`, spec 2026-10-21) the third; neither is part of the Appointments plan.
+    // second, HexaTech Loyalty (`/loyalty`, spec 2026-10-21) the third.
     // Each has a default for an organisation that never set
     // anything (WORKSPACE_DEFAULTS): the owner ruled on 2026-10-01 that every
     // organisation has the appointments workspace, signing in to the full
     // admin as before, unless an operator switches it off. What an operator
     // sets lives under settings.workspaces — a column no tenant endpoint and
     // no billing sync writes (`php artisan workspace:appointments`).
+    // An organisation on modules (planModules(), owner 2026-11-02) has the
+    // workspaces it bought and nothing else.
 
     /** Every workspace there is, and whether an organisation that never set anything has it. */
     public const WORKSPACE_DEFAULTS = ['appointments' => true, 'content' => true, 'loyalty' => true];
@@ -344,13 +347,12 @@ class Organization extends Model
     /** @return array{enabled: bool, landing: bool} */
     public function workspace(string $name): array
     {
-        // The Appointments plan IS the workspace: always on, and where its staff land.
-        if ($name === 'appointments' && $this->appointmentsOnly()) {
-            return ['enabled' => true, 'landing' => true];
-        }
-        // The Appointments plan holds the appointments workspace and nothing else (spec 2026-10-14 §6.3).
-        if ($name !== 'appointments' && $this->appointmentsOnly()) {
-            return ['enabled' => false, 'landing' => false];
+        // On modules the workspaces bought are always on, nothing else is, and staff land on one of them.
+        $modules = $this->planModules();
+        if ($modules !== null) {
+            return in_array($name, $modules, true)
+                ? ['enabled' => true, 'landing' => $this->landingModule($modules) === $name]
+                : ['enabled' => false, 'landing' => false];
         }
 
         $row = (array) data_get($this->settings ?? [], "workspaces.{$name}", []);
@@ -403,12 +405,15 @@ class Organization extends Model
      * What a staff user's sign-in answer carries: the enabled workspaces,
      * null when there are none. For the appointments workspace it also
      * says whether the venue has an active service — the full admin shows
-     * its way into the workspace only where something can be booked.
+     * its way into the workspace only where something can be booked — and
+     * `only`: the organisation is on modules (no full admin). The other
+     * workspaces carry `only: true` on modules and no `only` otherwise.
      *
      * @return array<string, array{landing: bool, has_services?: bool, only?: bool}>|null
      */
     public function workspacesPayload(): ?array
     {
+        $onModules = $this->planModules() !== null;
         $out = [];
         foreach (array_keys(self::WORKSPACE_DEFAULTS) as $name) {
             $workspace = $this->workspace($name);
@@ -421,40 +426,103 @@ class Organization extends Model
                     ->where('organization_id', $this->id)
                     ->where('is_active', true)
                     ->exists();
-                $out[$name]['only'] = $this->appointmentsOnly();
+                $out[$name]['only'] = $onModules;
+            } elseif ($onModules) {
+                $out[$name]['only'] = true;
             }
         }
 
         return $out ?: null;
     }
 
-    // ─── The Appointments plan (Part C) ────────────────────────
-    // A cheaper plan with only the appointments workspace and the public
-    // booking page: its staff reach nothing else (the `admin.access`
-    // middleware answers 403 not_in_plan), they sign in to the workspace,
-    // and loyalty is off whatever tiers exist.
+    // ─── Modules: workspaces bought on their own ───────────────
+    // The Appointments plan (Part C, 2026-10-02) was the first: only the
+    // appointments workspace and the public booking page. HexaTech Loyalty
+    // and HexaTech Content are sold the same way (owner, 2026-11-02), and a
+    // customer may hold several (App\Support\PlanModules). Its staff reach
+    // only those workspaces and their own account (the `admin.access`
+    // middleware answers 403 not_in_plan), they sign in to one of them, and
+    // what a missing module would do stays off: without Loyalty there is no
+    // programme whatever tiers exist, without Content no morning email.
 
     /**
-     * Whether this organisation is on the Appointments plan. An operator's
-     * mark decides first (`workspace:appointments --only` / `--not-only`);
-     * otherwise billing's product list: `appointments` and nothing outside
-     * APPOINTMENTS_PLAN_PRODUCTS; when that list is empty (billing could not
-     * be reached, or a legacy organisation), the plan slug.
+     * The modules this organisation bought, in PlanModules order, or null
+     * for a full customer (the full admin and every workspace). An
+     * operator's appointments mark decides first (`workspace:appointments
+     * --only` is the Appointments plan, `--not-only` a full customer
+     * whatever billing says); otherwise billing's product list
+     * (PlanModules::fromProducts); when that list is empty (billing could
+     * not be reached, or a legacy organisation), the plan slug.
+     *
+     * @return list<string>|null
      */
-    public function appointmentsOnly(): bool
+    public function planModules(): ?array
     {
         $mark = $this->appointmentsOnlyMark();
         if ($mark !== null) {
-            return $mark;
+            return $mark ? ['appointments'] : null;
         }
 
         $products = (array) ($this->entitled_products ?: []);
         if ($products !== []) {
-            return in_array('appointments', $products, true)
-                && array_diff($products, self::APPOINTMENTS_PLAN_PRODUCTS) === [];
+            return PlanModules::fromProducts($products);
         }
 
-        return $this->plan_slug === 'appointments';
+        return PlanModules::fromPlanSlug($this->plan_slug);
+    }
+
+    /** Whether the organisation has this product area at all: every one for a full customer, the bought ones on modules. */
+    public function holdsModule(string $module): bool
+    {
+        $modules = $this->planModules();
+
+        return $modules === null || in_array($module, $modules, true);
+    }
+
+    /** For callers that hold only an id: true when an organisation on modules did not buy this one (loyalty off, guest enrolment, member sign-up). */
+    public static function lacksModule(?int $orgId, string $module): bool
+    {
+        if (!$orgId) {
+            return false;
+        }
+        $org = self::withoutGlobalScopes()->find($orgId);
+
+        return $org !== null && !$org->holdsModule($module);
+    }
+
+    /** For the access map: the modules an organisation is limited to, null for a full customer (or no organisation). */
+    public static function modulesOf(?int $orgId): ?array
+    {
+        return $orgId ? self::withoutGlobalScopes()->find($orgId)?->planModules() : null;
+    }
+
+    /**
+     * Where staff of an organisation on modules land: the workspace an
+     * operator chose (`--landing`) when it is one of them, else the first
+     * in PlanModules order.
+     *
+     * @param  list<string>  $modules
+     */
+    private function landingModule(array $modules): string
+    {
+        foreach ($modules as $module) {
+            if (data_get($this->settings ?? [], "workspaces.{$module}.landing") === true) {
+                return $module;
+            }
+        }
+
+        return $modules[0];
+    }
+
+    /**
+     * Whether this organisation is on the Appointments plan alone (the
+     * appointments workspace and nothing else). Several commands and the
+     * full admin's "Open in HexaTech Appointments" read it; who may reach
+     * what is planModules().
+     */
+    public function appointmentsOnly(): bool
+    {
+        return $this->planModules() === ['appointments'];
     }
 
     /** 'operator' when an operator's mark decides, 'plan' when billing makes it appointments-only, null otherwise. */
@@ -467,7 +535,7 @@ class Organization extends Model
         return $this->appointmentsOnly() ? 'plan' : null;
     }
 
-    /** For callers that hold only an id: the loyalty switch, guest enrolment, member sign-up, the access map. */
+    /** For callers that hold only an id. */
     public static function isAppointmentsOnly(?int $orgId): bool
     {
         return $orgId ? (bool) self::withoutGlobalScopes()->find($orgId)?->appointmentsOnly() : false;

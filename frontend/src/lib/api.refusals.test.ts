@@ -3,8 +3,9 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 /**
  * The shared API client's answer to the two refusals of Part C, for every
  * page: a deactivated account is signed out and told why; a session that
- * signed in before its organisation moved to the Appointments plan is
- * marked appointments-only and taken to the workspace (planning ruling R2).
+ * signed in before its organisation moved onto modules is taken to its
+ * workspace (planning ruling R2): the one the sign-in answer now names, or
+ * the Appointments plan when that answer cannot be read.
  */
 const store = vi.hoisted(() => ({
   state: { user: { id: 3, user_type: 'staff', workspaces: { appointments: { landing: false, has_services: true, only: false } } } as Record<string, unknown> | null },
@@ -56,6 +57,16 @@ describe('the shared API client', () => {
     expect(logoutAndRedirect).not.toHaveBeenCalled()
   })
 
+  it('takes a session that predates a Loyalty-only plan to HexaTech Loyalty, as the sign-in answer now says', async () => {
+    store.state = { user: { id: 3, user_type: 'staff', workspaces: { content: { landing: false } } } }
+    const me = vi.spyOn(api, 'get').mockResolvedValueOnce({ data: { id: 3, user_type: 'staff', workspaces: { loyalty: { landing: true, only: true } } } })
+    await expect(onError(refused('not_in_plan'))).rejects.toBeTruthy()
+    await vi.waitFor(() => expect(location.href).toBe('/loyalty'))
+    expect(me).toHaveBeenCalledWith('/v1/auth/me')
+    expect(store.state?.user).toMatchObject({ workspaces: { loyalty: { only: true } } })
+    me.mockRestore()
+  })
+
   it('does not answer a 401 from the sign-out call itself with another sign-out', async () => {
     await expect(onError({ response: { status: 401, data: {} }, config: { url: '/v1/auth/logout' } })).rejects.toBeTruthy()
     await settle()
@@ -64,6 +75,10 @@ describe('the shared API client', () => {
 
   it('never reloads the workspace itself, and leaves every other refusal to the page', async () => {
     location.pathname = '/appointments/clients'
+    await expect(onError(refused('not_in_plan'))).rejects.toBeTruthy()
+    location.pathname = '/loyalty/members'
+    await expect(onError(refused('not_in_plan'))).rejects.toBeTruthy()
+    location.pathname = '/account/products'
     await expect(onError(refused('not_in_plan'))).rejects.toBeTruthy()
     location.pathname = '/members'
     await expect(onError(refused('not_allowed'))).rejects.toBeTruthy()

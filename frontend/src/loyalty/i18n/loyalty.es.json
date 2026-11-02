@@ -304,7 +304,8 @@
     "programme_off_manager": "El programa aún no tiene ningún nivel activo, así que los miembros no lo ven en la app ni en el portal. Añada o active un nivel en Programa.",
     "programme_off_staff": "El programa aún no está en marcha: su responsable todavía no ha configurado sus niveles.",
     "subscription_required": "La suscripción de su organización no está activa, así que HexaTech Loyalty no puede abrirse. Sus miembros y sus puntos no han cambiado. Un administrador puede restablecer el acceso en Facturación, en el admin completo.",
-    "switched_off": "HexaTech Loyalty se ha desactivado para su organización. Sus miembros y sus puntos no han cambiado."
+    "switched_off": "HexaTech Loyalty se ha desactivado para su organización. Sus miembros y sus puntos no han cambiado.",
+    "lapsed": "Su plan de HexaTech no está activo. Reactívelo en Plan y productos; sus socios y sus puntos se conservan."
   },
   "shortcuts": {
     "find": "Buscar un miembro",

@@ -85,7 +85,7 @@ class AppointmentsWorkspace extends Command
 
             return self::FAILURE;
         }
-        if ($this->option('off') && $org->appointmentsOnly()) {
+        if ($this->option('off') && in_array('appointments', $org->planModules() ?? [], true)) {
             $this->error(sprintf(
                 'org %d (%s) is on the Appointments plan (%s): the workspace is all it has and cannot be switched off. Run --not-only first if it should have the full admin.',
                 $org->id,

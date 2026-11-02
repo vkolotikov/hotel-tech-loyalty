@@ -1,4 +1,4 @@
-import { showsWorkspaceLink, type LandingUser } from '../../workspace/lib/landing'
+import { moduleHome, showsWorkspaceLink, type LandingUser } from '../../workspace/lib/landing'
 
 // The generic half lives in the shared core; its old importers keep importing it from here.
 export { landingPath, loginPath, loginPathAfterExpiry, safeRedirect } from '../../workspace/lib/landing'
@@ -15,20 +15,21 @@ export function showsAppointmentsLink(user: LandingUser | null | undefined): boo
 }
 
 /**
- * Staff of an organisation on the Appointments plan: the workspace is all
- * they have, no full admin (Part C). The server refuses the rest of the
- * admin API (`not_in_plan`); this keeps the screens from asking.
+ * Staff of an organisation on modules that holds Appointments (the
+ * Appointments plan, alone or with Loyalty or Content): no full admin
+ * (Part C). The server refuses the rest of the admin API (`not_in_plan`);
+ * this keeps the screens from asking.
  */
 export function isAppointmentsOnly(user: LandingUser | null | undefined): boolean {
   return user?.user_type !== 'member' && user?.workspaces?.appointments?.only === true
 }
 
-/** Where the full admin sends a user it does not serve; null for everyone it does. */
+/** Where the full admin sends a user it does not serve (any organisation on modules): its workspace; null for everyone it does. */
 export function fullAdminRedirect(user: LandingUser | null | undefined): string | null {
-  return isAppointmentsOnly(user) ? '/appointments' : null
+  return moduleHome(user)
 }
 
-/** The same user, known from now on to be appointments-only: a session that signed in before the plan changed. */
+/** The same user, known from now on to be appointments-only: a session that signed in before the plan changed and whose sign-in answer could not be read again. */
 export function withAppointmentsOnly<T extends LandingUser>(user: T): T {
   return {
     ...user,

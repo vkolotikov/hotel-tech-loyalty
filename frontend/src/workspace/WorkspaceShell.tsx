@@ -1,7 +1,8 @@
 import { useLayoutEffect, type CSSProperties, type MouseEvent, type ReactNode } from 'react'
 import { Link, NavLink } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { Globe, LayoutGrid, LogOut, Menu, PanelLeftClose, PanelLeftOpen, type LucideIcon } from 'lucide-react'
+import { ArrowRightLeft, CreditCard, Globe, LayoutGrid, LogOut, Menu, PanelLeftClose, PanelLeftOpen, type LucideIcon } from 'lucide-react'
+import type { ModuleLink } from './lib/useModuleLinks'
 import { logoutAndRedirect } from '../lib/logout'
 import { firstLetter } from './lib/firstLetter'
 import { leave } from './lib/leave'
@@ -37,7 +38,7 @@ export interface WorkspaceNavItem {
  * <html data-shell="<workspace>"> from the first paint, so the full admin's
  * mood typography stays out.
  */
-export function WorkspaceShell({ workspace, look, accent, card, initial, organization, product, person, nav, fullAdmin, header, overlays, onLeave, variant, railLabel, footer, phoneMenu, crumbs, children }: {
+export function WorkspaceShell({ workspace, look, accent, card, initial, organization, product, person, nav, fullAdmin, moduleLinks, header, overlays, onLeave, variant, railLabel, footer, phoneMenu, crumbs, children }: {
   /** The workspace's name: its root attribute (`data-appointments`) and its <html> mark. */
   workspace: string
   look: LiveLook
@@ -54,6 +55,8 @@ export function WorkspaceShell({ workspace, look, accent, card, initial, organiz
   nav: WorkspaceNavItem[]
   /** Where "Full admin" goes, or null where there is no full admin (the Appointments plan). */
   fullAdmin: string | null
+  /** On modules (owner 2026-11-02): the other workspaces bought and Plan & products, after where Full admin would be. */
+  moduleLinks?: ModuleLink[]
   header: ReactNode
   /** Asked before "Full admin" and Sign out leave the workspace; false stays (unsaved work). */
   onLeave?: () => boolean
@@ -127,6 +130,13 @@ export function WorkspaceShell({ workspace, look, accent, card, initial, organiz
               <LayoutGrid size={16} aria-hidden className="shrink-0" /><span className={slim ? 'sr-only' : ''}>{t('workspace.shell.full_admin', 'Full admin')}</span>
             </Link>
           )}
+          {moduleLinks?.map(link => (
+            <Link key={link.to} to={link.to} onClick={toFullAdmin} data-tip={slim ? link.label : undefined} data-module-link=""
+              className={`relative flex min-h-10 items-center gap-3 rounded-xl px-3 text-sm text-a-side-text-2 transition-colors hover:bg-a-side-2/60 hover:text-a-side-text ${slim ? 'justify-center' : ''}`}>
+              {link.to === '/account/products' ? <CreditCard size={16} aria-hidden className="shrink-0" /> : <ArrowRightLeft size={16} aria-hidden className="shrink-0" />}
+              <span className={slim ? 'sr-only' : ''}>{link.label}</span>
+            </Link>
+          ))}
           {!slim && <div className="px-1">{language('w-full rounded-lg bg-a-side-2 text-a-side-text text-sm px-2 py-1.5 border border-a-side-2')}</div>}
           {/* Slim: a globe with the real picker laid over it, transparent. The select keeps its "Language" name and opens on click and on the keyboard; its own focus ring is invisible at zero opacity, so the wrapper draws one. The opened list is drawn from the select's own colours, not the wrapper's, hence the explicit bg and text. */}
           {slim && (
@@ -198,6 +208,11 @@ export function WorkspaceShell({ workspace, look, accent, card, initial, organiz
                   <LayoutGrid size={16} aria-hidden /> {t('workspace.shell.full_admin', 'Full admin')}
                 </Link>
               )}
+              {moduleLinks?.map(link => (
+                <Link key={link.to} to={link.to} onClick={toFullAdmin} data-module-link="" className="flex items-center gap-3 rounded-lg px-2 py-2 text-sm text-a-text hover:bg-a-surface-2">
+                  {link.to === '/account/products' ? <CreditCard size={16} aria-hidden /> : <ArrowRightLeft size={16} aria-hidden />} {link.label}
+                </Link>
+              ))}
               <div className="px-2 py-1">
                 {language('w-full rounded-md border border-a-border bg-a-surface px-2 py-1.5 text-sm text-a-text')}
               </div>

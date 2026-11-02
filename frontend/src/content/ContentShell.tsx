@@ -17,6 +17,7 @@ import { findActions, postOf } from './find/findItems'
 import { failureOf } from './lib/api'
 import { APP_NAME } from './lib/constants'
 import { fullAdminPath } from './lib/links'
+import { useModuleLinks } from '../workspace/lib/useModuleLinks'
 import { loadBrandPaint, rememberBrandPaint, useLook } from './lib/look'
 import { onShortcuts } from './lib/shortcuts'
 import { usePanel } from './panel/PanelProvider'
@@ -111,6 +112,9 @@ export function ContentShell({ children }: { children: ReactNode }) {
   const findLabel = t('content.shell.find', 'Find a post or action')
   const modKey = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform ?? '') ? '⌘' : 'Ctrl'
   const canManage = Boolean(data?.staff.can_manage)
+  // On modules (owner 2026-11-02): no full admin; the other workspaces bought and Plan & products instead.
+  const modules = useModuleLinks('content')
+  const fullAdmin = modules.onModules ? null : fullAdminPath(canManage)
   const setUp = data?.profile?.setup_completed === true
   // Another brand drops the open post: the panel asks first (spec §6.7).
   const chooseBrand = (id: number) => { if (data && id > 0 && id !== data.brand?.id && close()) switchBrand(id) }
@@ -119,7 +123,7 @@ export function ContentShell({ children }: { children: ReactNode }) {
   // Find: what it offers (the pages this person sees above), and what each choice does.
   const slim = look.rail === 'slim'
   const foot = {
-    look, fullAdmin: fullAdminPath(canManage), person: data?.staff.name, role: data?.staff.role ?? null, onLeave: panel.guard,
+    look, fullAdmin, moduleLinks: modules.links, person: data?.staff.name, role: data?.staff.role ?? null, onLeave: panel.guard,
     onShortcuts: () => { if (ready) setHelpOpen(true) }, onFind: () => { if (ready) setFindOpen(true) },
   }
   const findList = findActions({
@@ -150,7 +154,8 @@ export function ContentShell({ children }: { children: ReactNode }) {
     <WorkspaceShell workspace="content" look={look} accent={accent} card={card} initial={initial}
       organization={data?.organization.name} product={data?.name ?? APP_NAME} person={data?.staff.name}
       nav={nav}
-      fullAdmin={fullAdminPath(canManage)}
+      fullAdmin={fullAdmin}
+      moduleLinks={modules.links}
       onLeave={panel.guard}
       // The owner's side panel (spec 2026-10-21 §4.1): the areas as cards, and Settings, Help & resources and the person.
       variant="cards" railLabel={t('content.shell.workspace', 'Workspace')}
@@ -185,11 +190,13 @@ export function ContentShell({ children }: { children: ReactNode }) {
         <div className="max-w-xl space-y-3 p-6">
           <Notice tone="warning">
             {lapsed
-              ? t('content.shell.subscription_required', "Your organisation's subscription is not active, so HexaTech Content cannot open. Your posts are unchanged. An administrator can restore access under Billing in the full admin.")
+              ? (modules.onModules
+                ? t('content.shell.subscription_required_plan', 'Your HexaTech plan is not active, so HexaTech Content cannot open. Your posts are unchanged. Start it again in Plan & products.')
+                : t('content.shell.subscription_required', "Your organisation's subscription is not active, so HexaTech Content cannot open. Your posts are unchanged. An administrator can restore access under Billing in the full admin."))
               : t('content.shell.switched_off', 'HexaTech Content has been switched off for your organisation. Your posts are unchanged.')}
           </Notice>
-          <Link to="/" className="inline-flex rounded-lg border border-a-border bg-a-surface px-3.5 py-2 text-sm font-semibold text-a-text">
-            {t('content.shell.open_full_admin', 'Open the full admin')}
+          <Link to={modules.onModules ? '/account/products' : '/'} className="inline-flex rounded-lg border border-a-border bg-a-surface px-3.5 py-2 text-sm font-semibold text-a-text">
+            {modules.onModules ? t('workspace.shell.plan', 'Plan & products') : t('content.shell.open_full_admin', 'Open the full admin')}
           </Link>
         </div>
       )}

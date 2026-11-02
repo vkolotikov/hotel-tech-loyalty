@@ -18,7 +18,7 @@
     "find": "Buscar una publicación o acción",
     "brand": "Marca",
     "switched_off": "HexaTech Content se ha desactivado para tu organización. Tus publicaciones no han cambiado.",
-    "subscription_required": "La suscripción de tu organización no está activa, así que HexaTech Content no puede abrirse. Tus publicaciones no han cambiado. Un administrador puede restablecer el acceso en Facturación, en el admin completo.",
+    "subscription_required": "La suscripción de tu organización no está activa, así que HexaTech Content no puede abrirse. Tus publicaciones no han cambiado. Un administrador puede restablecer el acceso en Facturación, en el admin completo.", "subscription_required_plan": "Su plan de HexaTech no está activo, por lo que HexaTech Content no puede abrirse. Sus publicaciones se conservan. Reactívelo en Plan y productos.",
     "open_full_admin": "Abrir el admin completo",
     "budget_warn": "Se ha usado el {{percent}} % del presupuesto de IA de este mes.",
     "budget_over": "El presupuesto de IA de este mes se ha agotado. Las acciones de IA quedan en pausa hasta el mes que viene; puedes seguir escribiendo a mano.",

@@ -17,6 +17,7 @@ import { fullAdminPathFor } from './lib/landing'
 import { loadBrand, rememberBrand, useLook } from './lib/look'
 import { onShortcuts } from './lib/shortcuts'
 import { useAppointmentsOnly } from './lib/useAppointmentsOnly'
+import { useModuleLinks } from '../workspace/lib/useModuleLinks'
 import { useVocab } from './lib/vocab'
 import { ChecklistBanner } from './setup/Checklist'
 import { AppointmentsShortcuts } from './ui/AppointmentsShortcuts'
@@ -37,6 +38,8 @@ export function AppointmentsShell({ children }: { children: ReactNode }) {
   const { pathname } = useLocation()
   const { data, isLoading, isError, error, refetch } = useAppointments()
   const appointmentsOnly = useAppointmentsOnly()
+  // On modules (owner 2026-11-02): no full admin; the other workspaces bought and Plan & products instead.
+  const modules = useModuleLinks('appointments')
   const [findOpen, setFindOpen] = useState(false)
   const [helpOpen, setHelpOpen] = useState(false)
   // The side panel, and with it "collapse the menu", exists from 1024 px (lg).
@@ -127,7 +130,8 @@ export function AppointmentsShell({ children }: { children: ReactNode }) {
       organization={data?.organization.name} product={data?.name ?? APP_NAME} person={data?.staff.name}
       nav={nav}
       // "Full admin" opens the same tool there (the calendar, the client list); anything else, the dashboard. None on the Appointments plan.
-      fullAdmin={appointmentsOnly ? null : fullAdminPathFor(pathname)}
+      fullAdmin={appointmentsOnly || modules.onModules ? null : fullAdminPathFor(pathname)}
+      moduleLinks={modules.links}
       header={<>
         <div className="hidden md:block min-w-0">
           <div className="text-sm font-semibold truncate">{data?.organization.name}</div>
@@ -159,9 +163,14 @@ export function AppointmentsShell({ children }: { children: ReactNode }) {
                 : t('appointments.shell.subscription_required', 'Your organisation\'s subscription is not active, so the workspace cannot open. Your bookings are unchanged. An administrator can restore access under Billing in the full admin.'))
               : t('appointments.shell.switched_off', 'The appointments workspace has been switched off for your organisation. Your bookings are unchanged and remain in the full admin.')}
           </Notice>
-          {!appointmentsOnly && (
+          {!appointmentsOnly && !modules.onModules && (
             <Link to="/" className="inline-flex rounded-lg border border-a-border bg-a-surface px-3.5 py-2 text-sm font-semibold text-a-text">
               {t('appointments.shell.open_full_admin', 'Open the full admin')}
+            </Link>
+          )}
+          {modules.onModules && (
+            <Link to="/account/products" className="inline-flex rounded-lg border border-a-border bg-a-surface px-3.5 py-2 text-sm font-semibold text-a-text">
+              {t('workspace.shell.plan', 'Plan & products')}
             </Link>
           )}
         </div>

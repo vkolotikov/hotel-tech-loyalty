@@ -1,0 +1,501 @@
+From ee8d9693748d627a4843703bb734bb913e7736af Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Mon, 2 Nov 2026 17:01:45 +0000
+Subject: [PATCH] Module plans: HexaTech Loyalty and Content on their own, 85
+ EUR each
+
+The owner (2026-11-02): customers buy one product at a lower price and add
+the others later. The loyalty application (hotel-tech-loyalty,
+App\Support\PlanModules) gives an organisation whose plan holds only these
+products the matching workspaces, and adds a product by moving the
+subscription to the plan of the larger set through change-plan (Stripe
+prorates the one price).
+
+- Migration: product `content`; plans `loyalty` (8500), `content` (8500)
+  and `loyalty-content` (17000), EUR, monthly only, 7-day trial, their
+  products and features. Created hidden and without Stripe prices, so
+  nobody signs up for or moves to one before it can be charged.
+- stripe:sync --plan=<slug>... --publish: price only the named plans,
+  then make each public once it has its monthly price.
+- SubscriptionService::changePlan refuses to move a Stripe-charged
+  subscription to a plan with no price for the interval (before, the
+  local plan changed while Stripe kept charging the old price).
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01AxwcUtCyKcb2iqVsRaGXp5
+---
+ app/Console/Commands/StripeSync.php           |  25 ++-
+ app/Services/SubscriptionService.php          |  41 +++--
+ .../2026_11_02_120000_add_module_plans.php    | 173 ++++++++++++++++++
+ tests/Feature/ModulePlansTest.php             | 171 +++++++++++++++++
+ 4 files changed, 389 insertions(+), 21 deletions(-)
+ create mode 100644 database/migrations/2026_11_02_120000_add_module_plans.php
+ create mode 100644 tests/Feature/ModulePlansTest.php
+
+diff --git a/app/Console/Commands/StripeSync.php b/app/Console/Commands/StripeSync.php
+index 81e308c..82613a9 100644
+--- a/app/Console/Commands/StripeSync.php
++++ b/app/Console/Commands/StripeSync.php
+@@ -8,7 +8,10 @@
+ 
+ class StripeSync extends Command
+ {
+-    protected $signature = 'stripe:sync {--force : Recreate prices even if they exist (use when amounts changed)}';
++    protected $signature = 'stripe:sync
++                            {--force : Recreate prices even if they exist (use when amounts changed)}
++                            {--plan=* : Only these plan slugs (e.g. --plan=loyalty --plan=content --plan=loyalty-content)}
++                            {--publish : After syncing, make each of these plans public once it has its monthly price}';
+     protected $description = 'Create/update Stripe products and prices for all plans, then save price IDs back to DB';
+ 
+     public function handle(): int
+@@ -20,13 +23,19 @@ public function handle(): int
+         }
+ 
+         $stripe = StripeApi::client($secret);
+-        $plans = Plan::where('isActive', true)->orderBy('sortOrder')->get();
++        $only = array_values(array_filter((array) $this->option('plan')));
++        $plans = Plan::where('isActive', true)
++            ->when($only !== [], fn ($q) => $q->whereIn('slug', $only))
++            ->orderBy('sortOrder')->get();
+         $force = $this->option('force');
+ 
+         if ($plans->isEmpty()) {
+-            $this->warn('No active plans found. Run db:seed first.');
++            $this->warn($only !== [] ? 'None of these plans is active: ' . implode(', ', $only) : 'No active plans found. Run db:seed first.');
+             return 1;
+         }
++        if ($only !== [] && ($missing = array_diff($only, $plans->pluck('slug')->all())) !== []) {
++            $this->warn('Not found or not active, skipped: ' . implode(', ', $missing));
++        }
+ 
+         foreach ($plans as $plan) {
+             $this->info("Processing plan: {$plan->name} ({$plan->slug})");
+@@ -126,6 +135,16 @@ public function handle(): int
+                 $this->info("  Created yearly price: {$yearlyPrice->id} ({$plan->yearlyAmount} cents {$currency})");
+             }
+ 
++            // --publish: a plan becomes sellable (sign-up, change-plan) only once Stripe can charge it monthly.
++            if ($this->option('publish')) {
++                if ($plan->monthlyPriceId) {
++                    $plan->isPublic = true;
++                    $this->info('  Published: customers can now choose this plan.');
++                } else {
++                    $this->warn('  Not published: the plan has no monthly price.');
++                }
++            }
++
+             $plan->save();
+             $this->info("  Saved price IDs to DB.");
+         }
+diff --git a/app/Services/SubscriptionService.php b/app/Services/SubscriptionService.php
+index 5522fc3..53c8ae5 100644
+--- a/app/Services/SubscriptionService.php
++++ b/app/Services/SubscriptionService.php
+@@ -109,25 +109,30 @@ public function changePlan(Subscription $subscription, Plan $newPlan, ?string $i
+                 $stripe = StripeApi::client();
+                 $newPriceId = $interval === 'YEARLY' ? $newPlan->yearlyPriceId : $newPlan->monthlyPriceId;
+ 
+-                if ($newPriceId) {
+-                    $stripeSub = $stripe->subscriptions->retrieve($subscription->stripeSubscriptionId);
+-                    $itemId = $stripeSub->items->data[0]->id ?? null;
+-
+-                    if ($itemId) {
+-                        $stripe->subscriptions->update($subscription->stripeSubscriptionId, [
+-                            'items' => [[
+-                                'id'    => $itemId,
+-                                'price' => $newPriceId,
+-                            ]],
+-                            'proration_behavior' => 'create_prorations',
+-                            'metadata' => [
+-                                'plan_id'   => $newPlan->id,
+-                                'plan_slug' => $newPlan->slug,
+-                                'interval'  => $interval,
+-                            ],
+-                        ]);
+-                    }
++                // A subscription Stripe charges must move to the new plan's own price. Without one the local plan
++                // would change while Stripe kept charging the old price: a product given away (2026-11-02).
++                if (!$newPriceId) {
++                    throw new \RuntimeException("Plan {$newPlan->slug} has no Stripe price for {$interval} billing");
+                 }
++
++                $stripeSub = $stripe->subscriptions->retrieve($subscription->stripeSubscriptionId);
++                $itemId = $stripeSub->items->data[0]->id ?? null;
++                if (!$itemId) {
++                    throw new \RuntimeException("Stripe subscription {$subscription->stripeSubscriptionId} has no item to move to {$newPlan->slug}");
++                }
++
++                $stripe->subscriptions->update($subscription->stripeSubscriptionId, [
++                    'items' => [[
++                        'id'    => $itemId,
++                        'price' => $newPriceId,
++                    ]],
++                    'proration_behavior' => 'create_prorations',
++                    'metadata' => [
++                        'plan_id'   => $newPlan->id,
++                        'plan_slug' => $newPlan->slug,
++                        'interval'  => $interval,
++                    ],
++                ]);
+             } catch (\Throwable $e) {
+                 Log::error('SubscriptionService: Stripe plan change failed', [
+                     'sub_id' => $subscription->id,
+diff --git a/database/migrations/2026_11_02_120000_add_module_plans.php b/database/migrations/2026_11_02_120000_add_module_plans.php
+new file mode 100644
+index 0000000..aa1b1c4
+--- /dev/null
++++ b/database/migrations/2026_11_02_120000_add_module_plans.php
+@@ -0,0 +1,173 @@
++<?php
++
++use Illuminate\Database\Migrations\Migration;
++use Illuminate\Support\Facades\DB;
++
++/**
++ * HexaTech Loyalty and HexaTech Content sold on their own (owner, 2026-11-02): 85 EUR a month each, both together
++ * 170 EUR, monthly, with the usual 7-day trial. The loyalty application (hotel-tech-loyalty, App\Support\PlanModules)
++ * gives an organisation whose plan holds only these products the matching workspaces and nothing else, and adds a
++ * product by moving the subscription to the plan of the larger set (change-plan, which Stripe prorates):
++ *
++ *   loyalty          → product loyalty            8 500 cents
++ *   content          → product content            8 500 cents
++ *   loyalty-content  → products loyalty, content 17 000 cents
++ *
++ * The plans are created HIDDEN (isPublic false) and without Stripe prices: a customer can neither sign up for one nor
++ * be moved to one until it can be charged. To sell them, once, in this application's environment:
++ *
++ *   php artisan stripe:sync --plan=loyalty --plan=content --plan=loyalty-content --publish
++ *
++ * (creates each plan's monthly Stripe price, saves it, then makes the plan public). No yearly price: yearlyAmount 0.
++ *
++ * Adds the product `content` (HexaTech Content, the AI social media planner), and `loyalty` where a database lacks
++ * the seeder's. Idempotent: a row that exists — a plan
++ * the owner already edited, a feature value set by hand — is left as it is.
++ */
++return new class extends Migration {
++    private function id(): string
++    {
++        return 'c' . base_convert((string) intval(microtime(true) * 1000), 10, 36) . bin2hex(random_bytes(8));
++    }
++
++    public function up(): void
++    {
++        $now = now();
++
++        // `loyalty` is the seeder's (DatabaseSeeder); made here only where a database lacks it.
++        DB::table('products')->insertOrIgnore([
++            'id'          => $this->id(),
++            'name'        => 'Loyalty',
++            'slug'        => 'loyalty',
++            'description' => 'Points-based loyalty program with rewards, tiers, and member portal',
++            'category'    => 'marketing',
++            'baseUrl'     => 'https://loyalty.hotel-tech.ai/login?token=',
++            'isActive'    => true,
++            'sortOrder'   => 3,
++            'createdAt'   => $now,
++            'updatedAt'   => $now,
++        ]);
++        DB::table('products')->insertOrIgnore([
++            'id'          => $this->id(),
++            'name'        => 'Content',
++            'slug'        => 'content',
++            'description' => 'HexaTech Content: AI social media planner with ideas, captions, images and a content calendar',
++            'category'    => 'marketing',
++            'baseUrl'     => 'https://app.hexa-tech.uk/content',
++            'isActive'    => true,
++            'sortOrder'   => 7,
++            'createdAt'   => $now,
++            'updatedAt'   => $now,
++        ]);
++        $products = DB::table('products')->whereIn('slug', ['loyalty', 'content'])->pluck('id', 'slug');
++
++        $plans = [
++            'loyalty' => [
++                'name'          => 'HexaTech Loyalty',
++                'description'   => 'HexaTech Loyalty on its own: members, tiers, points and stamps, rewards and offers, the member app and wallet cards, email, push and SMS campaigns.',
++                'monthlyAmount' => 8500,
++                'sortOrder'     => 10,
++                'products'      => ['loyalty'],
++            ],
++            'content' => [
++                'name'          => 'HexaTech Content',
++                'description'   => 'HexaTech Content on its own: the AI social media planner with ideas, captions, images, a content calendar and team approvals.',
++                'monthlyAmount' => 8500,
++                'sortOrder'     => 11,
++                'products'      => ['content'],
++            ],
++            'loyalty-content' => [
++                'name'          => 'HexaTech Loyalty + Content',
++                'description'   => 'HexaTech Loyalty and HexaTech Content together.',
++                'monthlyAmount' => 17000,
++                'sortOrder'     => 12,
++                'products'      => ['loyalty', 'content'],
++            ],
++        ];
++
++        foreach ($plans as $slug => $plan) {
++            DB::table('plans')->insertOrIgnore([
++                'id'             => $this->id(),
++                'name'           => $plan['name'],
++                'slug'           => $slug,
++                'description'    => $plan['description'],
++                'isBundle'       => count($plan['products']) > 1,
++                'monthlyPriceId' => null,
++                'yearlyPriceId'  => null,
++                'monthlyAmount'  => $plan['monthlyAmount'],
++                'yearlyAmount'   => 0,
++                'currency'       => 'eur',
++                'isActive'       => true,
++                'isPublic'       => false,
++                'trialDays'      => 7,
++                'sortOrder'      => $plan['sortOrder'],
++                'metadata'       => json_encode(['modules' => $plan['products'], 'sold_alone' => true]),
++                'createdAt'      => $now,
++                'updatedAt'      => $now,
++            ]);
++            $planId = DB::table('plans')->where('slug', $slug)->value('id');
++
++            foreach ($plan['products'] as $productSlug) {
++                if (!isset($products[$productSlug])) {
++                    continue;
++                }
++                DB::table('plan_products')->insertOrIgnore([
++                    'id'        => $this->id(),
++                    'planId'    => $planId,
++                    'productId' => $products[$productSlug],
++                ]);
++            }
++
++            // What the plan grants, as the loyalty application's fallback does (PlanModules::features): every
++            // feature there is, off unless the plan's products turn it on, limits the largest of its products'.
++            $features = DB::table('features')->pluck('id', 'key');
++            foreach ($this->featureValues($plan['products']) as $key => $value) {
++                if (!isset($features[$key])) {
++                    continue;
++                }
++                DB::table('plan_features')->insertOrIgnore([
++                    'id'        => $this->id(),
++                    'planId'    => $planId,
++                    'featureId' => $features[$key],
++                    'value'     => $value,
++                ]);
++            }
++        }
++    }
++
++    /** @return array<string, string> */
++    private function featureValues(array $products): array
++    {
++        $off = [
++            'ai_insights', 'ai_avatars', 'custom_branding', 'api_access', 'push_notifications', 'mobile_app', 'nfc_cards',
++            'time_management', 'admin_ai', 'brands', 'landing_pages', 'campaigns', 'reviews', 'engagement', 'wallet', 'chatbot',
++        ];
++        $values = array_fill_keys($off, 'false') + ['priority_support' => 'email'];
++        $byProduct = [
++            'loyalty' => [
++                'max_team_members' => '5', 'max_guests' => '2000', 'max_properties' => '1', 'max_loyalty_members' => '2000',
++                'push_notifications' => 'true', 'mobile_app' => 'true', 'nfc_cards' => 'true', 'campaigns' => 'true', 'wallet' => 'true',
++            ],
++            'content' => [
++                'max_team_members' => '5', 'max_guests' => '1000', 'max_properties' => '1', 'max_loyalty_members' => '0',
++            ],
++        ];
++        foreach ($products as $product) {
++            foreach ($byProduct[$product] ?? [] as $key => $value) {
++                if (str_starts_with($key, 'max_')) {
++                    $values[$key] = isset($values[$key]) ? (string) max((int) $values[$key], (int) $value) : $value;
++                } elseif ($value === 'true') {
++                    $values[$key] = 'true';
++                }
++            }
++        }
++
++        return $values;
++    }
++
++    public function down(): void
++    {
++        // Leaves the plans in place: an organisation may already be subscribed to one. Hide a plan in the
++        // super admin's Plans page instead.
++    }
++};
+diff --git a/tests/Feature/ModulePlansTest.php b/tests/Feature/ModulePlansTest.php
+new file mode 100644
+index 0000000..880055c
+--- /dev/null
++++ b/tests/Feature/ModulePlansTest.php
+@@ -0,0 +1,171 @@
++<?php
++
++namespace Tests\Feature;
++
++use App\Models\Organization;
++use App\Models\Plan;
++use App\Models\PlanFeature;
++use App\Models\Subscription;
++use App\Services\SubscriptionService;
++use Illuminate\Foundation\Testing\DatabaseTransactions;
++use Illuminate\Support\Facades\DB;
++use Stripe\ApiRequestor;
++use Stripe\HttpClient\ClientInterface;
++use Tests\TestCase;
++
++/**
++ * HexaTech Loyalty and Content sold on their own (owner 2026-11-02; migration 2026_11_02_120000_add_module_plans):
++ * the plans the loyalty application moves a subscription between, hidden until Stripe can charge them, published by
++ * `stripe:sync --plan=… --publish`, and a plan change that never leaves Stripe charging the old price.
++ *
++ * Offline: a recording HTTP client answers Stripe. PostgreSQL only, like the other database tests here.
++ */
++class ModulePlansTest extends TestCase
++{
++    use DatabaseTransactions;
++
++    private ?object $previousHttpClient = null;
++
++    protected function setUp(): void
++    {
++        parent::setUp();
++        if (DB::connection()->getDriverName() !== 'pgsql') {
++            $this->markTestSkipped('The SaaS schema is PostgreSQL-only; run with DB_CONNECTION=pgsql.');
++        }
++        config(['services.stripe.secret' => 'sk_test_offline_placeholder']);
++        $this->previousHttpClient = ApiRequestor::httpClient();
++    }
++
++    protected function tearDown(): void
++    {
++        ApiRequestor::setHttpClient($this->previousHttpClient);
++        parent::tearDown();
++    }
++
++    private function recorder(array $answers): object
++    {
++        $client = new class($answers) implements ClientInterface {
++            public array $requests = [];
++            public function __construct(private array $answers) {}
++            public function request($method, $absUrl, $headers, $params, $hasFile, $apiMode = 'v1', $maxNetworkRetries = null)
++            {
++                $this->requests[] = compact('method', 'absUrl', 'params');
++                return [json_encode(array_shift($this->answers)), 200, []];
++            }
++        };
++        ApiRequestor::setHttpClient($client);
++
++        return $client;
++    }
++
++    private function productsOf(string $slug): array
++    {
++        return Plan::where('slug', $slug)->firstOrFail()->planProducts()->with('product')->get()->pluck('product.slug')->sort()->values()->all();
++    }
++
++    private function feature(string $slug, string $key): ?string
++    {
++        $plan = Plan::where('slug', $slug)->firstOrFail();
++
++        return PlanFeature::where('planId', $plan->id)->whereHas('feature', fn ($q) => $q->where('key', $key))->value('value');
++    }
++
++    public function test_the_module_plans_exist_hidden_in_euros_with_their_products(): void
++    {
++        $this->assertTrue(DB::table('products')->where('slug', 'content')->where('isActive', true)->exists());
++
++        foreach (['loyalty' => 8500, 'content' => 8500, 'loyalty-content' => 17000] as $slug => $amount) {
++            $plan = Plan::where('slug', $slug)->firstOrFail();
++            $this->assertSame([$amount, 0, 'eur', 7, true, false], [$plan->monthlyAmount, $plan->yearlyAmount, $plan->currency, $plan->trialDays, $plan->isActive, $plan->isPublic], $slug);
++            $this->assertNull($plan->monthlyPriceId, "{$slug} has no Stripe price until stripe:sync makes one");
++        }
++        $this->assertSame(['loyalty'], $this->productsOf('loyalty'));
++        $this->assertSame(['content'], $this->productsOf('content'));
++        $this->assertSame(['content', 'loyalty'], $this->productsOf('loyalty-content'));
++
++        // Not in the public list a sign-up or a plan change reads, until published.
++        $listed = collect($this->getJson('/api/billing/plans')->assertOk()->json('plans'))->pluck('slug');
++        $this->assertNotContains('loyalty', $listed);
++        $this->assertNotContains('loyalty-content', $listed);
++    }
++
++    public function test_the_module_plans_grant_what_their_products_do(): void
++    {
++        if (!DB::table('features')->where('key', 'campaigns')->exists()) {
++            $this->markTestSkipped('This database has no feature rows (the seeder makes them).');
++        }
++        $this->assertSame('true', $this->feature('loyalty', 'campaigns'));
++        $this->assertSame('false', $this->feature('content', 'campaigns'));
++        $this->assertSame('true', $this->feature('loyalty-content', 'campaigns'));
++        $this->assertSame('false', $this->feature('loyalty-content', 'landing_pages'));
++    }
++
++    public function test_stripe_sync_prices_only_the_named_plans_and_publishes_them(): void
++    {
++        $growth = Plan::updateOrCreate(['slug' => 'growth'], ['name' => 'Growth', 'monthlyAmount' => 26900, 'yearlyAmount' => 269000, 'isActive' => true, 'isPublic' => true]);
++        $growthPrice = $growth->monthlyPriceId;
++        $http = $this->recorder([
++            ['object' => 'search_result', 'data' => [], 'has_more' => false, 'url' => '/v1/products/search'],
++            ['id' => 'prod_loyalty_test', 'object' => 'product'],
++            ['id' => 'price_loyalty_monthly_test', 'object' => 'price'],
++        ]);
++
++        $this->artisan('stripe:sync', ['--plan' => ['loyalty'], '--publish' => true])
++            ->expectsOutputToContain('Published')->assertSuccessful();
++
++        $plan = Plan::where('slug', 'loyalty')->firstOrFail();
++        $this->assertSame(['price_loyalty_monthly_test', null, true], [$plan->monthlyPriceId, $plan->yearlyPriceId, $plan->isPublic]);
++        $price = collect($http->requests)->first(fn ($r) => str_ends_with($r['absUrl'], '/v1/prices'));
++        $this->assertSame(8500, (int) $price['params']['unit_amount']);
++        $this->assertSame('eur', $price['params']['currency']);
++        $this->assertSame('month', $price['params']['recurring']['interval']);
++        $this->assertCount(3, $http->requests, 'one search, one product, one monthly price: no yearly price, no other plan');
++        $this->assertSame($growthPrice, $growth->fresh()->monthlyPriceId);
++        $this->assertFalse(Plan::where('slug', 'content')->value('isPublic'));
++    }
++
++    public function test_a_charged_subscription_never_moves_to_a_plan_without_a_price(): void
++    {
++        $org = Organization::create(['name' => 'Module Cafe', 'slug' => 'module-cafe-' . uniqid()]);
++        $from = Plan::where('slug', 'loyalty')->firstOrFail();
++        $from->update(['monthlyPriceId' => 'price_loyalty_test']);
++        $to = Plan::where('slug', 'loyalty-content')->firstOrFail();
++        $sub = Subscription::create(['organizationId' => $org->id, 'planId' => $from->id, 'status' => 'ACTIVE',
++            'stripeSubscriptionId' => 'sub_module_test_' . uniqid(), 'billingInterval' => 'MONTHLY',
++            'currentPeriodStart' => now(), 'currentPeriodEnd' => now()->addMonth()]);
++        $http = $this->recorder([]);
++
++        try {
++            app(SubscriptionService::class)->changePlan($sub, $to, 'MONTHLY');
++            $this->fail('A plan change with no Stripe price must be refused.');
++        } catch (\RuntimeException $e) {
++            $this->assertStringContainsString('no Stripe price', $e->getMessage());
++        }
++        $this->assertSame($from->id, $sub->fresh()->planId);
++        $this->assertSame([], $http->requests, 'Stripe was not asked');
++    }
++
++    public function test_a_charged_subscription_moves_to_the_larger_plans_price_prorated(): void
++    {
++        $org = Organization::create(['name' => 'Module Cafe', 'slug' => 'module-cafe-' . uniqid()]);
++        $from = Plan::where('slug', 'loyalty')->firstOrFail();
++        $to = Plan::where('slug', 'loyalty-content')->firstOrFail();
++        $to->update(['monthlyPriceId' => 'price_loyalty_content_test']);
++        $stripeId = 'sub_module_test_' . uniqid();
++        $sub = Subscription::create(['organizationId' => $org->id, 'planId' => $from->id, 'status' => 'ACTIVE',
++            'stripeSubscriptionId' => $stripeId, 'billingInterval' => 'MONTHLY',
++            'currentPeriodStart' => now(), 'currentPeriodEnd' => now()->addMonth()]);
++        $http = $this->recorder([
++            ['id' => $stripeId, 'object' => 'subscription', 'items' => ['object' => 'list', 'data' => [['id' => 'si_module_test', 'object' => 'subscription_item']]]],
++            ['id' => $stripeId, 'object' => 'subscription'],
++        ]);
++
++        app(SubscriptionService::class)->changePlan($sub, $to, 'MONTHLY');
++
++        $this->assertSame($to->id, $sub->fresh()->planId);
++        $update = $http->requests[1]['params'];
++        $this->assertSame([['id' => 'si_module_test', 'price' => 'price_loyalty_content_test']], $update['items']);
++        $this->assertSame('create_prorations', $update['proration_behavior']);
++        $this->assertSame('loyalty-content', $update['metadata']['plan_slug']);
++    }
++}
+-- 
+2.43.0
+

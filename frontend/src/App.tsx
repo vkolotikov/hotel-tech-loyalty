@@ -15,6 +15,7 @@ import { fullAdminRedirect } from './appointments/lib/landing'
 
 // Eager: Login (entry point) + Dashboard (most visited) + Setup (first-run)
 import { Login } from './pages/Login'
+import { SIGNUP_PRODUCTS } from './pages/productSignup'
 import { Activate } from './pages/Activate'
 import { Dashboard } from './pages/Dashboard'
 import { Setup } from './pages/Setup'
@@ -65,6 +66,7 @@ const ReviewFormBuilder = lazy(() => import('./pages/ReviewFormBuilder').then(m 
 const ReviewDetail = lazy(() => import('./pages/ReviewDetail').then(m => ({ default: m.ReviewDetail })))
 const Settings = lazy(() => import('./pages/Settings').then(m => ({ default: m.Settings })))
 const AccountConnections = lazy(() => import('./pages/AccountConnections').then(m => ({ default: m.AccountConnections })))
+const AccountProducts = lazy(() => import('./pages/AccountProducts').then(m => ({ default: m.AccountProducts })))
 const Properties = lazy(() => import('./pages/Properties').then(m => ({ default: m.Properties })))
 const Brands = lazy(() => import('./pages/Brands').then(m => ({ default: m.Brands })))
 const GuestDetail = lazy(() => import('./pages/GuestDetail').then(m => ({ default: m.GuestDetail })))
@@ -261,6 +263,14 @@ export default function App() {
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/account/connections" element={<ChunkErrorBoundary><Suspense fallback={<PageLoader />}><AccountConnections /></Suspense></ChunkErrorBoundary>} />
+          {/* Plan & products: an organisation on modules sees what it holds, adds a product, pays (owner 2026-11-02). */}
+          <Route path="/account/products" element={<ChunkErrorBoundary><Suspense fallback={<PageLoader />}><AccountProducts /></Suspense></ChunkErrorBoundary>} />
+
+          {/* HexaTech Loyalty's and HexaTech Content's own sign-in and sign-up pages (owner 2026-11-02). More specific
+              than the workspaces' /loyalty/* and /content/*, so the router picks them first. */}
+          {SIGNUP_PRODUCTS.flatMap(product => (['login', 'register', 'forgot-password', 'reset-password'] as const).map(view => (
+            <Route key={`${product}-${view}`} path={`/${product}/${view}`} element={<Login product={product} />} />
+          )))}
 
           {/* Public member entry points. Outside the portal guard: nobody
               signing up or claiming an account has a session yet. */}

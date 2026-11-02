@@ -275,6 +275,49 @@
     "common": {
       "email_placeholder": "you@company.com",
       "password_placeholder": "At least 8 characters"
+    },
+    "product": {
+      "loyalty": {
+        "badge": "Loyalty programme for service businesses",
+        "hero": "Turn first visits into regulars.",
+        "hero_sub": "Points, tiers, rewards and a member app in your colours, run from one workspace, for hotels, salons, clinics, restaurants and more.",
+        "bullet_1": "Points, tiers, stamps and rewards your guests understand",
+        "bullet_2": "A member app and wallet cards with your brand",
+        "bullet_3": "Email, push and SMS campaigns that bring them back",
+        "login_subtitle": "Sign in to HexaTech Loyalty",
+        "register_title": "Start your HexaTech Loyalty trial",
+        "trial_banner": "Your trial includes everything in HexaTech Loyalty.",
+        "included_1": "Members, tiers, points and stamp cards",
+        "included_2": "Rewards, offers and member benefits",
+        "included_3": "Your own member app and wallet cards",
+        "included_4": "Email, push and SMS campaigns",
+        "included_5": "Desk scanning, events and insights",
+        "tab_title": "HexaTech Loyalty — Sign in"
+      },
+      "content": {
+        "badge": "AI social media planner",
+        "hero": "Plan a month of social posts in an afternoon.",
+        "hero_sub": "An AI content planner that knows your brand: ideas, captions, images and a calendar your team approves.",
+        "bullet_1": "A content calendar built around your goals and key dates",
+        "bullet_2": "AI captions and images in your brand voice",
+        "bullet_3": "Drafts, approvals and a morning email for the team",
+        "login_subtitle": "Sign in to HexaTech Content",
+        "register_title": "Start your HexaTech Content trial",
+        "trial_banner": "Your trial includes everything in HexaTech Content.",
+        "included_1": "A content calendar built around your goals",
+        "included_2": "AI post ideas and captions in your brand voice",
+        "included_3": "AI images and visual briefs",
+        "included_4": "Drafts, approvals and a team inbox",
+        "included_5": "A morning email with the day's posts",
+        "tab_title": "HexaTech Content — Sign in"
+      },
+      "per_month": "per month",
+      "trial": "{{days}}-day free trial, no card needed",
+      "add_later": "Need {{other}} too? Add it any time from Plan & products for {{price}} more a month.",
+      "unavailable": "{{product}} cannot be bought online yet. Please contact HexaTech and we will set it up for you.",
+      "full_suite": "Looking for the full HexaTech suite?",
+      "see_plans": "See all plans",
+      "included": "What's included"
     }
   },
   "dashboard": {
@@ -3448,6 +3491,52 @@
       "payment": "Payment",
       "refund": "Refund",
       "correction": "Correction"
+    }
+  },
+  "account": {
+    "products": {
+      "title": "Plan & products",
+      "back": "Back to your workspace",
+      "your_plan": "Your plan",
+      "per_month": "a month",
+      "products": "Products",
+      "included": "In your plan",
+      "open": "Open",
+      "add": "Add",
+      "add_for": "Add for {{price}} a month",
+      "ask": "Ask an owner or a manager to add it",
+      "inactive": "Start your plan again first, then add it",
+      "unavailable": "Not available online yet. Contact HexaTech to add it.",
+      "confirm": "Add {{product}}? Your plan becomes {{plan}} at {{price}} a month.",
+      "confirm_trial": "It is included in your free trial; you pay the new price once you activate.",
+      "confirm_paid": "You pay only the difference for the rest of this month, on your next invoice.",
+      "confirm_add": "Add {{product}}",
+      "cancel": "Not now",
+      "working": "One moment…",
+      "added_paid": "{{product}} is added. Your next invoice includes the difference for the rest of this month.",
+      "added_trial": "{{product}} is added and ready to use.",
+      "activate": "Add a card and activate",
+      "portal": "Card and invoices",
+      "restart": "Start again",
+      "restarted": "Your plan has started again.",
+      "paid": "Thank you. Your payment card is saved and your plan is active.",
+      "canceled": "Checkout was cancelled. Nothing was charged.",
+      "failed": "That did not work. Nothing was changed. Please try again.",
+      "managers_only": "Only an owner or a manager can change the plan.",
+      "everything_title": "Your plan includes every product",
+      "everything_body": "Plan changes, your card and invoices are in Billing in the full admin.",
+      "open_billing": "Open Billing",
+      "status": {
+        "trial": "Free trial until {{date}}",
+        "active": "Active",
+        "overdue": "Payment overdue: update your card to keep access",
+        "ended": "Ended: start your plan again to use your workspace"
+      },
+      "blurb": {
+        "appointments": "Calendar, online booking and client records",
+        "loyalty": "Points, tiers, rewards, a member app and campaigns",
+        "content": "AI social media planner: ideas, captions, images and a calendar"
+      }
     }
   }
 }

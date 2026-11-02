@@ -1,6 +1,6 @@
 import axios from 'axios'
 import { withAppointmentsOnly } from '../appointments/lib/landing'
-import { loginPathAfterExpiry } from '../workspace/lib/landing'
+import { loginPathAfterExpiry, moduleHome } from '../workspace/lib/landing'
 import { ACCESS_OFF_LOGIN, refusalOf } from './accessOff'
 import { authSession } from './authSession'
 
@@ -104,19 +104,25 @@ api.interceptors.response.use(
       }
     }
     // Part C. A deactivated account is signed out and told why. A session that signed in before its organisation
-    // moved to the Appointments plan is marked appointments-only and taken to the workspace (never from inside it).
+    // moved onto modules (the Appointments plan, Loyalty or Content on their own) learns what it holds now from the
+    // sign-in answer and is taken to its workspace — never from inside a workspace or the account pages. When that
+    // answer cannot be read, the Appointments plan it always assumed.
     const refusal = refusalOf(error)
     if (refusal === 'staff_inactive') {
       import('./logout').then(({ logoutAndRedirect }) => {
         if (authSession.check(error.config?.authSessionVersion)) void logoutAndRedirect(ACCESS_OFF_LOGIN)
       })
     }
-    if (refusal === 'not_in_plan' && !/^\/appointments(\/|$)/.test(window.location.pathname)) {
-      import('../stores/authStore').then(({ useAuthStore }) => {
+    if (refusal === 'not_in_plan' && !/^\/(appointments|content|loyalty|account)(\/|$)/.test(window.location.pathname)) {
+      import('../stores/authStore').then(async ({ useAuthStore }) => {
+        if (!authSession.check(error.config?.authSessionVersion)) return
+        const fresh: Record<string, unknown> | null = await api.get('/v1/auth/me').then(r => r.data ?? null, () => null)
         if (!authSession.check(error.config?.authSessionVersion)) return
         const { user } = useAuthStore.getState()
-        if (user) useAuthStore.setState({ user: withAppointmentsOnly(user) })
-        window.location.href = `${APP_BASE}/appointments`
+        if (!user) return
+        const next = fresh && moduleHome(fresh) ? { ...user, ...fresh, id: user.id } : withAppointmentsOnly(user)
+        useAuthStore.setState({ user: next })
+        window.location.href = `${APP_BASE}${moduleHome(next) ?? '/appointments'}`
       })
     }
     if (error.response?.status === 403 &&

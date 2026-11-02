@@ -254,6 +254,10 @@ self-service (plan and payment changes go through HexaTech).
 
 ## Admin access map (every organisation)
 
+Since 2026-11-02 HexaTech Loyalty and Content are sold the same way: an organisation on modules reaches `account` and
+the products of the modules it bought (`docs/plan-modules.md`). The Appointments plan's rule below is that rule for
+`['appointments']`.
+
 `App\Support\AdminAccess\AccessMap` says who may call each staff route. Each key is a URI template without
 `api/v1/`, matched on whole segments, and the longest key wins. A key gives:
 

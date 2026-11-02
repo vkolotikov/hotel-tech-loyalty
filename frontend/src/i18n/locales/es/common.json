@@ -275,6 +275,49 @@
     "common": {
       "email_placeholder": "nombre@empresa.com",
       "password_placeholder": "Mínimo 8 caracteres"
+    },
+    "product": {
+      "loyalty": {
+        "badge": "Programa de fidelización para negocios de servicios",
+        "hero": "Convierta las primeras visitas en clientes habituales.",
+        "hero_sub": "Puntos, niveles, recompensas y una app para socios con sus colores, gestionados desde un solo espacio, para hoteles, salones, clínicas, restaurantes y más.",
+        "bullet_1": "Puntos, niveles, sellos y recompensas que sus clientes entienden",
+        "bullet_2": "Una app para socios y tarjetas de Wallet con su marca",
+        "bullet_3": "Campañas de email, push y SMS que les hacen volver",
+        "login_subtitle": "Inicie sesión en HexaTech Loyalty",
+        "register_title": "Empiece su prueba de HexaTech Loyalty",
+        "trial_banner": "Su prueba incluye todo HexaTech Loyalty.",
+        "included_1": "Socios, niveles, puntos y tarjetas de sellos",
+        "included_2": "Recompensas, ofertas y ventajas para socios",
+        "included_3": "Su propia app para socios y tarjetas de Wallet",
+        "included_4": "Campañas de email, push y SMS",
+        "included_5": "Escaneo en recepción, eventos y estadísticas",
+        "tab_title": "HexaTech Loyalty — Iniciar sesión"
+      },
+      "content": {
+        "badge": "Planificador de redes sociales con IA",
+        "hero": "Planifique un mes de publicaciones en una tarde.",
+        "hero_sub": "Un planificador de contenido con IA que conoce su marca: ideas, textos, imágenes y un calendario que su equipo aprueba.",
+        "bullet_1": "Un calendario de contenido en torno a sus objetivos y fechas clave",
+        "bullet_2": "Textos e imágenes con IA en la voz de su marca",
+        "bullet_3": "Borradores, aprobaciones y un email matutino para el equipo",
+        "login_subtitle": "Inicie sesión en HexaTech Content",
+        "register_title": "Empiece su prueba de HexaTech Content",
+        "trial_banner": "Su prueba incluye todo HexaTech Content.",
+        "included_1": "Un calendario de contenido en torno a sus objetivos",
+        "included_2": "Ideas de publicaciones y textos con IA en la voz de su marca",
+        "included_3": "Imágenes con IA y briefs visuales",
+        "included_4": "Borradores, aprobaciones y una bandeja de entrada del equipo",
+        "included_5": "Un email matutino con las publicaciones del día",
+        "tab_title": "HexaTech Content — Iniciar sesión"
+      },
+      "per_month": "al mes",
+      "trial": "Prueba gratuita de {{days}} días, sin tarjeta",
+      "add_later": "¿También necesita {{other}}? Añádalo cuando quiera desde Plan y productos por {{price}} más al mes.",
+      "unavailable": "{{product}} aún no se puede comprar en línea. Contacte con HexaTech y lo configuraremos por usted.",
+      "full_suite": "¿Busca la suite completa de HexaTech?",
+      "see_plans": "Ver todos los planes",
+      "included": "Qué incluye"
     }
   },
   "dashboard": {
@@ -3404,6 +3447,52 @@
       "payment": "Pago",
       "refund": "Devolución",
       "correction": "Corrección"
+    }
+  },
+  "account": {
+    "products": {
+      "title": "Plan y productos",
+      "back": "Volver a su espacio",
+      "your_plan": "Su plan",
+      "per_month": "al mes",
+      "products": "Productos",
+      "included": "En su plan",
+      "open": "Abrir",
+      "add": "Añadir",
+      "add_for": "Añadir por {{price}} al mes",
+      "ask": "Pida a un propietario o gerente que lo añada",
+      "inactive": "Reactive primero su plan y después añádalo",
+      "unavailable": "Aún no disponible en línea. Contacte con HexaTech para añadirlo.",
+      "confirm": "¿Añadir {{product}}? Su plan pasa a ser {{plan}} por {{price}} al mes.",
+      "confirm_trial": "Está incluido en su prueba gratuita; pagará el nuevo precio cuando active el plan.",
+      "confirm_paid": "Solo paga la diferencia por el resto del mes, en su próxima factura.",
+      "confirm_add": "Añadir {{product}}",
+      "cancel": "Ahora no",
+      "working": "Un momento…",
+      "added_paid": "{{product}} se ha añadido. Su próxima factura incluye la diferencia por el resto del mes.",
+      "added_trial": "{{product}} se ha añadido y está listo para usar.",
+      "activate": "Añadir una tarjeta y activar",
+      "portal": "Tarjeta y facturas",
+      "restart": "Reactivar",
+      "restarted": "Su plan vuelve a estar activo.",
+      "paid": "Gracias. Su tarjeta está guardada y su plan está activo.",
+      "canceled": "Se canceló el pago. No se ha cobrado nada.",
+      "failed": "No ha funcionado. No se ha cambiado nada. Inténtelo de nuevo.",
+      "managers_only": "Solo un propietario o gerente puede cambiar el plan.",
+      "everything_title": "Su plan incluye todos los productos",
+      "everything_body": "Los cambios de plan, su tarjeta y sus facturas están en Facturación, en la administración completa.",
+      "open_billing": "Abrir Facturación",
+      "status": {
+        "trial": "Prueba gratuita hasta el {{date}}",
+        "active": "Activo",
+        "overdue": "Pago vencido: actualice su tarjeta para mantener el acceso",
+        "ended": "Finalizado: reactive su plan para usar su espacio"
+      },
+      "blurb": {
+        "appointments": "Agenda, reservas en línea y fichas de clientes",
+        "loyalty": "Puntos, niveles, recompensas, una app para socios y campañas",
+        "content": "Planificador de redes sociales con IA: ideas, textos, imágenes y calendario"
+      }
     }
   }
 }
