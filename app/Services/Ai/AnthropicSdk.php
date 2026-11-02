@@ -18,15 +18,16 @@ use Anthropic\Messages\TextBlock;
 final class AnthropicSdk
 {
     /**
-     * A client that makes one attempt per call (the caller owns retries) and
-     * gives up after $timeoutSeconds.
+     * A client that gives up on an attempt after $timeoutSeconds. By default it makes one attempt per call (the caller
+     * owns retries); with $maxRetries the SDK retries 408, 409, 429, 5xx and connection failures itself, with backoff
+     * and the response's Retry-After.
      */
-    public static function client(string $apiKey, int $timeoutSeconds): Client
+    public static function client(string $apiKey, int $timeoutSeconds, int $maxRetries = 0): Client
     {
         return new Client(
             apiKey: $apiKey,
             requestOptions: [
-                'maxRetries'  => 0,
+                'maxRetries'  => $maxRetries,
                 'timeout'     => (float) $timeoutSeconds,
                 'transporter' => new LaravelHttpTransport($timeoutSeconds),
             ],
@@ -51,6 +52,25 @@ final class AnthropicSdk
         }
 
         return $major === 4 && $minor >= 6 && in_array($m[1], ['opus', 'sonnet'], true);
+    }
+
+    /**
+     * Whether the model accepts a forced `tool_choice` (`tool` or `any`). Claude Fable 5.1, Mythos 5.1, Opus 5.5 and
+     * Sonnet 5.5 answer 400 to it; the 4.x models, the 5.0 models and Haiku 5.5 accept it. A later model is assumed
+     * not to (asking for the tool in the prompt works on every model). A name that is not a Claude model id is left
+     * as the caller wrote it.
+     */
+    public static function takesForcedToolChoice(string $model): bool
+    {
+        if (!preg_match('/^claude-([a-z]+)-(\d+)(?:-(\d{1,2}))?(?=-|$)/', $model, $m)) {
+            return true;
+        }
+        $major = (int) $m[2];
+        $minor = isset($m[3]) ? (int) $m[3] : 0;
+
+        return $major < 5
+            || ($major === 5 && $minor === 0)
+            || ($major === 5 && $minor === 5 && $m[1] === 'haiku');
     }
 
     /**

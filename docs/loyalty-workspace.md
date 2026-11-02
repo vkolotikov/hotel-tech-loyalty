@@ -863,6 +863,24 @@ files on disk): run them one after the other.
 
 ## Deploying
 
+- Level editor on phones, binding test widened (stack plan follow-ups, 2026-11-01): production **b67ed20** on
+  **08027a1** (source patch **39d87b13e** plus the SPA build). Feature source **8db4787** on
+  `claude/stack-audit-upgrade-plan-9hdkkv`. 5 paths (2 code, 3 records), none deleted.
+  - **The fix:** the loyalty level form's first row (`.l-rd-basics-row`) uses `minmax(0,1fr)` columns. At 390px it had
+    been 399px wide and the page scrolled sideways; the browser suite's "edit-level no horizontal overflow at 390"
+    check had failed since before Tailwind 4.
+  - **The test:** `RouteBindingTenantTest` also requires every route that binds a `TenantScope` model to have the
+    organisation (a scan found 36, all fine).
+  - **Checks:**
+    - parity: the whole source equals the tip;
+    - artifact: PHP 8.5.12, **78 scopes, 7,301 passed / 16 skipped / 0 failed**; frontend tsc, **5,790 tests / 399
+      files**;
+    - the CSS differs from 08027a1's only by the two rules;
+    - the whole loyalty browser suite passes on a production build;
+    - CI on the tip green (8 jobs).
+  - Verified by content on `origin/main`.
+  - The next source delta starts at **8db4787**.
+
 - Tailwind 4 and admin model bindings (owner, 2026-11-01): production **08027a1** on **915f9c6** (source patch
   **1c2ceaed2**, the SPA build **c455efd18**, a test fix **08027a130**). Feature source **91a9631** on
   `claude/stack-audit-upgrade-plan-9hdkkv`. 286 paths (13 added, 272 changed, 1 deleted: `frontend/postcss.config.js`).

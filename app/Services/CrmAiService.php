@@ -11,7 +11,13 @@ use App\Models\LoyaltyTier;
 use App\Models\Property;
 use App\Models\Reservation;
 use App\Models\SpecialOffer;
-use Illuminate\Support\Facades\Http;
+use Anthropic\Client;
+use Anthropic\Core\Exceptions\APIStatusException;
+use Anthropic\Messages\Message;
+use Anthropic\Messages\TextBlock;
+use Anthropic\Messages\ToolUseBlock;
+use App\Services\Ai\AnthropicSdk;
+use Illuminate\Http\Client\ConnectionException;
 
 class CrmAiService
 {
@@ -57,24 +63,9 @@ class CrmAiService
 
             if (!$hasToolUse) return ['response' => $this->extractText($res['content']), 'actions' => $actions];
 
-            // Sanitize the assistant content before round 2. Anthropic's
-            // tool_use blocks must have `input` as a JSON object, even when
-            // it's empty -- but PHP's json_decode parses `{}` as an empty
-            // array which re-encodes as `[]` (JSON array), tripping the
-            // validator with "messages.N.content[K].input: Input should be
-            // an object". Force empty/numeric tool inputs back to stdClass
-            // so they serialize as `{}`.
-            $cleanContent = array_map(function ($block) {
-                if (($block['type'] ?? '') === 'tool_use') {
-                    $input = $block['input'] ?? [];
-                    if (!is_array($input) || empty($input) || array_is_list($input)) {
-                        $block['input'] = (object) (is_array($input) ? $input : []);
-                    }
-                }
-                return $block;
-            }, $res['content']);
-
-            $messages[] = ['role' => 'assistant', 'content' => $cleanContent];
+            // The assistant turn goes back as the SDK's own blocks: thinking blocks keep their signatures, and an
+            // empty tool input is sent as {} (the raw call had to rebuild it, PHP decodes {} as an empty array).
+            $messages[] = ['role' => 'assistant', 'content' => $res['message']->content];
             $messages[] = ['role' => 'user',      'content' => $toolResults];
         }
 
@@ -558,62 +549,91 @@ class CrmAiService
             throw new \App\Exceptions\AiModelNotAllowed($this->model, $allowed);
         }
 
-        $body = ['model' => $this->model, 'max_tokens' => 4096, 'system' => $system, 'messages' => $messages];
-        if ($tools)      $body['tools']       = $tools;
-        if ($toolChoice) $body['tool_choice']  = $toolChoice;
-
-        $maxAttempts = 3;
-        $lastError   = null;
-
-        for ($attempt = 1; $attempt <= $maxAttempts; $attempt++) {
-            try {
-                $response = Http::timeout(90)->withHeaders([
-                    'x-api-key' => $this->apiKey, 'anthropic-version' => '2023-06-01', 'content-type' => 'application/json',
-                ])->post('https://api.anthropic.com/v1/messages', $body);
-            } catch (\Throwable $e) {
-                \Log::warning('CrmAi HTTP attempt failed', ['attempt' => $attempt, 'error' => $e->getMessage()]);
-                $lastError = 'AI service unreachable: ' . $e->getMessage();
-                if ($attempt < $maxAttempts) { usleep($attempt * 500_000); continue; }
-                return ['content' => [['type' => 'text', 'text' => $lastError]]];
-            }
-
-            if ($response->successful()) {
-                $json = $response->json() ?? ['content' => [['type' => 'text', 'text' => 'Empty response from AI service.']]];
-
-                // Record usage for billing + plan-cap enforcement. Anthropic
-                // returns usage.input_tokens / usage.output_tokens. Wrapped
-                // in app()-resolution so this service can still be used in
-                // contexts where the container isn't bound.
-                $orgId = app()->bound('current_organization_id') ? (int) app('current_organization_id') : null;
-                if ($orgId) {
-                    app(\App\Services\AiUsageService::class)->recordUsage(
-                        orgId:        $orgId,
-                        model:        $this->model,
-                        inputTokens:  (int) ($json['usage']['input_tokens']  ?? 0),
-                        outputTokens: (int) ($json['usage']['output_tokens'] ?? 0),
-                        feature:      'crm_chat',
-                    );
-                }
-                return $json;
-            }
-
-            $status = $response->status();
-            // Retry on 429 (rate-limit), 500 (server error), 529 (overloaded)
-            if (in_array($status, [429, 500, 529]) && $attempt < $maxAttempts) {
-                $delay = $status === 429
-                    ? (int) ($response->header('retry-after') ?: $attempt * 2)
-                    : $attempt;
-                \Log::warning('CrmAi retryable error', ['attempt' => $attempt, 'status' => $status, 'delay' => $delay]);
-                sleep($delay);
-                continue;
-            }
-
-            $bodyPreview = substr($response->body(), 0, 500);
-            \Log::warning('CrmAi non-2xx', ['status' => $status, 'body' => $bodyPreview]);
-            return ['content' => [['type' => 'text', 'text' => 'API error ' . $status . ': ' . $bodyPreview]]];
+        // Claude Fable 5.1, Opus 5.5 and Sonnet 5.5 refuse a forced tool choice (400). On those the extraction asks
+        // for its tool in the system prompt instead, and a reply without the call is asked for once more.
+        $askedTool = null;
+        $askedInPrompt = false;
+        if (in_array($toolChoice['type'] ?? null, ['tool', 'any'], true) && !AnthropicSdk::takesForcedToolChoice($this->model)) {
+            $askedInPrompt = true;
+            $askedTool = $toolChoice['name'] ?? null;
+            $system .= $askedTool
+                ? "\n\nAnswer only by calling the {$askedTool} tool, once, with what you found."
+                : "\n\nAnswer only by calling one of the tools, once.";
+            $toolChoice = ['type' => 'auto'];
         }
 
-        return ['content' => [['type' => 'text', 'text' => $lastError ?? 'AI call failed after retries.']]];
+        $params = ['model' => $this->model, 'maxTokens' => 4096, 'system' => $system, 'messages' => $messages];
+        if ($tools)      $params['tools']      = $tools;
+        if ($toolChoice) $params['toolChoice'] = $toolChoice;
+
+        // Three attempts in all: the SDK retries 408, 409, 429 (after its Retry-After), 5xx and connection failures.
+        $client = AnthropicSdk::client($this->apiKey, 90, maxRetries: 2);
+        $tries  = $askedInPrompt ? 2 : 1;
+
+        for ($try = 1; $try <= $tries; $try++) {
+            try {
+                $message = $this->send($client, $params);
+            } catch (APIStatusException $e) {
+                $detail = AnthropicSdk::errorDetail($e);
+                \Log::warning('CrmAi non-2xx', ['status' => $e->status, 'body' => $detail]);
+                return ['content' => [['type' => 'text', 'text' => 'API error ' . $e->status . ': ' . $detail]]];
+            } catch (\Throwable $e) {
+                // As before: no failure of the call reaches the admin chat or the widget's lead capture as a 500.
+                \Log::warning('CrmAi call failed', ['error' => $e->getMessage(), 'class' => $e::class]);
+                return ['content' => [['type' => 'text', 'text' => 'AI service unreachable: ' . $e->getMessage()]]];
+            }
+
+            // Record usage for billing + plan-cap enforcement. Wrapped in
+            // app()-resolution so this service can still be used in contexts
+            // where the container isn't bound.
+            $orgId = app()->bound('current_organization_id') ? (int) app('current_organization_id') : null;
+            if ($orgId) {
+                app(\App\Services\AiUsageService::class)->recordUsage(
+                    orgId:        $orgId,
+                    model:        $this->model,
+                    inputTokens:  (int) $message->usage->inputTokens,
+                    outputTokens: (int) $message->usage->outputTokens,
+                    feature:      'crm_chat',
+                );
+            }
+
+            $content = array_map(fn ($block) => $this->blockArray($block), $message->content);
+            $called  = array_filter($content, fn ($b) => $b['type'] === 'tool_use' && ($askedTool === null || $b['name'] === $askedTool));
+            if ($called || $try === $tries) {
+                return ['content' => $content, 'message' => $message];
+            }
+        }
+
+        return ['content' => [['type' => 'text', 'text' => 'AI call failed after retries.']]];
+    }
+
+    /**
+     * One Messages call. A dropped connection is tried again, three attempts in all (Laravel's connection error is not
+     * the PSR-18 one the SDK retries itself; the SDK retries the HTTP statuses).
+     */
+    private function send(Client $client, array $params): Message
+    {
+        for ($attempt = 1; ; $attempt++) {
+            try {
+                return $client->messages->create(...$params);
+            } catch (ConnectionException $e) {
+                \Log::warning('CrmAi HTTP attempt failed', ['attempt' => $attempt, 'error' => $e->getMessage()]);
+                if ($attempt >= 3) {
+                    throw $e;
+                }
+                usleep($attempt * 500_000);
+            }
+        }
+    }
+
+    /** One reply block in the array shape the callers read (type, text, id, name, input). */
+    private function blockArray(object $block): array
+    {
+        return match (true) {
+            $block instanceof TextBlock    => ['type' => 'text', 'text' => $block->text],
+            $block instanceof ToolUseBlock => ['type' => 'tool_use', 'id' => $block->id, 'name' => $block->name, 'input' => (array) $block->input],
+            default                        => ['type' => (string) ($block->type ?? 'unknown')],
+        };
     }
 
     /* ────────── Helpers ────────── */

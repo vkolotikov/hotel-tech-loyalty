@@ -6,9 +6,9 @@ environment). AGENTS.md and CLAUDE.md still apply.
 
 ## Production
 
-Latest: **08027a1** (1 Nov: the admin SPA on Tailwind 4.3 with Tailwind 3's look, checked by screenshots of every
-route in Chromium and WebKit; admin routes with a model parameter such as the inquiry page no longer answer 404; next
-source-patch baseline **91a9631**). Before it, **915f9c6** (the chat widget's short current model list, Claude on the
+Latest: **b67ed20** (1 Nov: the loyalty level editor fits phones; the binding test covers every route; next source-patch
+baseline **8db4787**). Before it, **08027a1** (1 Nov: the admin SPA on Tailwind 4.3 with Tailwind 3's look, checked by screenshots of every
+route in Chromium and WebKit; admin routes with a model parameter such as the inquiry page no longer answer 404). Before it, **915f9c6** (the chat widget's short current model list, Claude on the
 SDK at API 2026-10-21 with no temperature). Before it, **eb52525** (the empty permission tables dropped; PHP
 8.5 everywhere, `composer.json` `^8.5`). Before it, **38b0f24** (31 Oct night: permissions package removed, its tables kept; SPA on TypeScript 6 and lucide-react
 1.66; next source-patch baseline **85e80c5**). Before it, **b7dfa6a** (permissions package 8 and the planner manager
