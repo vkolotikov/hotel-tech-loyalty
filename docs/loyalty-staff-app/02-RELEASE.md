@@ -96,3 +96,17 @@ NFC needs a venue's physical card; the camera reads a member's QR code from the 
    link differs from the default, `STAFF_APP_ANDROID_URL`; then redeploy. `STAFF_APP_MIN_VERSION` and
    `STAFF_APP_LATEST_VERSION` stay `1.0.0` until the next release.
 3. Record the release (date, build numbers, submission ids) in `docs/loyalty-staff-app/00-PLAN.md`.
+
+## Build record
+
+**2026-11-02** (from `feature/loyalty-member-app`, EAS as the `hoteltechai` robot user, Developer role):
+
+- Expo project created: `@hoteltechai/hexatech-loyalty-staff`, id `aacc3c67-7f27-487d-842b-4fe6b923034b` (in
+  `app.json`). Its dashboard picture could not be set by the robot user; upload the icon on expo.dev if wanted.
+- Android 1.0.0 version code **2**: finished (`https://expo.dev/accounts/hoteltechai/projects/hexatech-loyalty-staff/builds/9524ada0-d35a-4f4e-bc9e-2a3435bd42a8`),
+  with a new upload keystore EAS created and keeps. The Play app does not exist yet; Google takes a new app's first
+  upload only through Play Console, by hand (download the `.aab` from the build page).
+- iPhone: not built. EAS cannot create the distribution profile for `uk.hexatech.loyalty.staff` without an Apple
+  sign-in ("Distribution Certificate is not validated for non-interactive builds"): the owner runs
+  `npx eas-cli credentials -p ios` once in `apps/loyalty-staff` (§0.4), then the build runs from here.
+- expo 58.0.22, expo-dev-client 58.0.18, expo-router 58.0.29, TypeScript ~6.0.3 (`expo install --check` clean).
