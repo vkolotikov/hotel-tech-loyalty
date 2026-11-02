@@ -87,7 +87,7 @@
           "disableSPM": true
         }
       ],
-      "./plugins/withoutTapAndPay"
+      "./plugins/withoutStripePushProvisioning"
     ],
     "experiments": {
       "typedRoutes": false
