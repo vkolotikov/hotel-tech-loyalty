@@ -62,6 +62,6 @@ class SmsConnectionController extends Controller
     {
         $row = HotelSetting::where('key', $key)->first();
 
-        return trim((string) ($row?->value ?? '')) !== '';
+        return trim((string) ($row->value ?? '')) !== '';
     }
 }

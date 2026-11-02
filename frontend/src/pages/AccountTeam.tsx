@@ -67,7 +67,7 @@ export function AccountTeam() {
     if (sent) { setName(''); setEmail(''); setRole('staff') }
   }
 
-  const FIELD = 'w-full rounded-lg border border-hx-bdc7ce bg-white px-3 py-2 text-sm text-hx-1b2a34'
+  const FIELD = 'w-full rounded-lg border border-hx-bdc7ce bg-hx-eaeef2 px-3 py-2 text-sm text-hx-1b2a34'
   const BUTTON = 'inline-flex min-h-10 items-center gap-2 rounded-lg bg-hx-0e1a24 px-4 text-sm font-medium text-hx-f4f6f8 disabled:opacity-60'
   const QUIET = 'inline-flex min-h-9 items-center gap-2 rounded-lg border border-hx-0e1a24/20 px-3 text-sm font-medium disabled:opacity-60'
 
