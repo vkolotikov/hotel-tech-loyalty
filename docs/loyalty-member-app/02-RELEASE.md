@@ -92,15 +92,21 @@ objectionable content: 4+ / Everyone). Links:
 | Privacy policy | https://app.hexa-tech.uk/privacy |
 | Terms | https://app.hexa-tech.uk/terms |
 | Data deletion (Play) | https://app.hexa-tech.uk/data-deletion |
-| Support | the owner's support address or page |
+| Support | https://hexa-tech.uk/about-us (published HexaTech contact details) |
 
 Screenshots: `store/screenshots/ios-6.9` (iPhone 6.9", 1320×2868), `ipad-13` (iPad 13", 2064×2752; the app supports
 iPad), `play-phone` (1080×2160). They are the app's own screens rendered from its web preview against test data.
 
+`store.config.js` reads the five-language source file and the English iPhone/iPad screenshots for EAS Metadata.
+Run `npx -y eas-cli@latest metadata:push --non-interactive` from this app to update the editable Apple draft using
+the existing EAS Apple credential. It selects version 2.0.0 and manual release; it does not submit for review.
+Reviewer credentials stay in the console, not this config. The Android submit profile targets internal testing and
+sets `changesNotSentForReview: true`; production rollout remains a separate owner decision.
+
 ### App Store: App Privacy
 
-Data used to track you: **none** (no advertising or analytics SDK, no tracking). Data linked to the member, all used
-for **App Functionality**:
+Data used to track you: **none** (no advertising or cross-app tracking). Data linked to the member, used for
+**App Functionality**, with Stripe Product Interaction also used for **Analytics**:
 
 | Category | Types | Why |
 |---|---|---|
@@ -109,9 +115,11 @@ for **App Functionality**:
 | Purchases | Purchase History | Bookings, redeemed rewards, points history |
 | Financial Info | Payment Info | Cards entered in Stripe's payment sheet go straight to Stripe; HexaTech never sees the number |
 | User Content | Other User Content | Notes and requests on a booking |
+| Usage Data | Product Interaction | Stripe payment-component usage for App Functionality and Analytics; may be linked to identity; not tracking |
 
-Before answering, read Stripe's own "App privacy details" page for its iOS SDK and add any further type it lists
-(Stripe collects some device data for fraud prevention). The camera reads QR codes on the phone and stores nothing; Face
+Stripe's [mobile SDK privacy details](https://support.stripe.com/questions/stripe-mobile-sdk-privacy-details), checked
+2026-11-02, explicitly include Product Interaction for analytics and fraud prevention. The current Stripe initialization
+uses the SDK defaults, so do not declare that the app collects no analytics at all. The camera reads QR codes on the phone and stores nothing; Face
 ID is the phone's own and the app never sees it. Neither is collected data. The privacy page doesn't mention either; one
 sentence there would make that explicit.
 
@@ -121,6 +129,8 @@ sentence there would make that explicit.
   IDs), Financial info (purchase history, payment info via Stripe), App activity (other user-generated content: booking
   notes), Device or other IDs (the push token).
 - All for App functionality and Account management; name and email required, phone optional.
+- Include Stripe payment-component interactions under App activity / App interactions, with Analytics and fraud
+  prevention purposes where applicable. Check the final disclosure against the current SDK and actual payment flow.
 - Encrypted in transit: yes. Members can delete their account in the app (Profile → Delete account) and by the
   data-deletion page above.
 
@@ -195,3 +205,23 @@ More → Bookings → Book (an appointment, paid at the venue), More → Profile
 - Play Console: the existing production listing is named **Hexa Loyalty**, package `com.hotelloyalty.app`, account
   FDS Cards ltd. New Android push-capable build and Play upload are still pending at this commit. No iOS rebuild,
   review submission, production rollout or Laravel Cloud deploy was performed.
+
+**2026-11-02, Android build and store setup (Codex):**
+
+- Source commit `ee46c0c34` pushed to `feature/loyalty-member-app`; staff-only copy `48770c8ba` pushed to its independent
+  branch with exact staff-file parity. Main remains untouched.
+- Android **2.0.0 / version code 25** finished successfully:
+  `https://expo.dev/accounts/hoteltechai/projects/hotel-loyalty/builds/8038e20d-f716-4833-b37b-eed95ba04f39`.
+  Downloaded `HexaTech-Loyalty-2.0.0-25.aab` to the workstation user's Downloads folder. The AAB contains the correct
+  package, Firebase project, sender ID and `google_app_id` resource. No iOS rebuild was started.
+- Owner approved a dedicated `hexatech-play-submit@hotel-loyalty-app-1414d.iam.gserviceaccount.com` identity and JSON key.
+  Google Play Android Developer API is enabled. Play Console shows the account Active, with four app-scoped permissions
+  on only `com.hotelloyalty.app` and `uk.hexatech.loyalty.staff`: app information, automatically included app quality,
+  testing releases, and tester/track management. No production, finance or account-wide permissions were selected.
+  EAS confirmed the Play submission key assignment to both apps. The key remains outside git.
+- Updated the Apple draft to **2.0.0** and synced all five language texts with EAS Metadata, using the prepared source.
+  English screenshots are uploading/processing at this checkpoint. Build selection and final console checks remain.
+  Store config sets manual release and keeps reviewer credentials out of source.
+- Scheduled members **internal testing** upload of version code 25 with `changesNotSentForReview: true`:
+  `https://expo.dev/accounts/hoteltechai/projects/hotel-loyalty/submissions/50426361-d349-4594-9adb-e3e998941a5e`.
+  Scheduling is confirmed; final Play upload outcome must still be checked.

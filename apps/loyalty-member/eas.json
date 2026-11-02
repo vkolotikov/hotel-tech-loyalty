@@ -41,11 +41,13 @@
   "submit": {
     "production": {
       "ios": {
+        "metadataPath": "store.config.js",
         "ascAppId": "6765608479",
         "appleTeamId": "HNWSAQ5CQ9"
       },
       "android": {
-        "track": "internal"
+        "track": "internal",
+        "changesNotSentForReview": true
       }
     }
   }

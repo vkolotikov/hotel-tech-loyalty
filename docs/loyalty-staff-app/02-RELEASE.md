@@ -77,10 +77,16 @@ alert reaching the phone), the lock, five languages.
 
 Paste from `store/listing.json` per language. Category **Business**; age rating 4+ / Everyone (no objectionable
 content). Links: privacy https://app.hexa-tech.uk/privacy, terms https://app.hexa-tech.uk/terms, data deletion (Play)
-https://app.hexa-tech.uk/data-deletion, support: the owner's address or page.
+https://app.hexa-tech.uk/data-deletion, support: https://hexa-tech.uk/about-us (published HexaTech contact details).
 
 Screenshots: `store/screenshots/ios-6.9` (1320×2868), `ipad-13` (2064×2752; the app supports iPad as a desk tablet),
 `play-phone` (1080×2160), rendered from the app's web preview against test data.
+
+`store.config.js` reads the five-language source file and English iPhone/iPad screenshots for EAS Metadata.
+Run `npx -y eas-cli@latest metadata:push --non-interactive` from this app to update the editable Apple draft using
+the existing EAS Apple credential. It selects version 1.0.0, Business and manual release; it does not submit for review.
+Reviewer credentials stay in the console, not this config. The Android submit profile targets internal testing and
+sets `changesNotSentForReview: true`; the owner still performs the first Play AAB upload.
 
 ### App Store: App Privacy
 
@@ -175,3 +181,21 @@ NFC needs a venue's physical card; the camera reads a member's QR code from the 
   declarations. The old staff listing uses `com.hotelloyalty.staff` and was left alone. New Android build, first manual
   Play upload and physical push testing remain pending at this commit. No iOS rebuild, review submission, production
   rollout or Laravel Cloud deploy was performed.
+
+**2026-11-02, Android build and store setup (Codex):**
+
+- Source commit `ee46c0c34` pushed to `feature/loyalty-member-app`; staff-only copy `48770c8ba` pushed to its independent
+  branch with exact staff-file parity. Main remains untouched.
+- Android **1.0.0 / version code 3** finished successfully:
+  `https://expo.dev/accounts/hoteltechai/projects/hexatech-loyalty-staff/builds/2b108395-90fb-4913-86de-103b77feef5f`.
+  Downloaded `HexaTech-Staff-1.0.0-3.aab` to the workstation user's Downloads folder. Inspected the AAB itself: correct
+  package, Firebase project, sender ID and `google_app_id` resource are present. Physical push delivery is still untested.
+- The owner completed the legal declarations and created Play app **HexaTech Staff**, id `4973001253686610054`, package
+  `uk.hexatech.loyalty.staff`. Its internal testing release draft is prepared; owner was asked to perform its first upload.
+  `https://play.google.com/console/u/0/developers/7195613243489270668/app/4973001253686610054/app-dashboard`.
+- Owner approved dedicated `hexatech-play-submit@hotel-loyalty-app-1414d.iam.gserviceaccount.com` and its JSON key.
+  Google Play Android Developer API is enabled. Play shows Active with app information/app quality, testing releases
+  and tester/track management on only the two current packages. No production, finance or account-wide access.
+  EAS confirmed this key's staff Play submission assignment; FCM continues to use the separate Firebase key.
+- EAS Metadata synced all five Apple language texts, Business category, version 1.0.0 and manual release. English
+  screenshots are uploading/processing at this checkpoint. Review credentials remain owner-entered in the console.
