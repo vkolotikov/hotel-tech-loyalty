@@ -129,7 +129,7 @@ final class AccessMap
         'admin/search'                          => ['staff',              'staff',              'admin'],         // Global search
         'admin/settings'                        => ['staff',              'manager',            'admin'],         // Settings (menu: manager); screens read display settings, secrets are masked
         'admin/setup'                           => ['staff',              'staff',              'admin'],         // First-run wizard: shown to any staff member until it is done
-        'admin/team'                            => ['staff',              'manager',            'admin'],         // Team (Settings, manager); the Planner lists team members for everyone
+        'admin/team'                            => ['staff',              'manager',            'account'],       // Team (Settings, manager); the Planner lists team members for everyone. Account: an organisation on modules manages its team at /account/team (2026-11-02)
 
         // ── Bookings, rooms and services
         'admin/booking-extras'                  => ['staff',              'manager',            'booking'],       // Room extras (menu: manager)

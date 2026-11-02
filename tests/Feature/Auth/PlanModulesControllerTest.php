@@ -71,10 +71,11 @@ class PlanModulesControllerTest extends TestCase
         ]);
     }
 
-    private function plan(string $slug, int $amount, ?string $price = null): array
+    private function plan(string $slug, int $amount, ?string $price = null, ?string $yearlyPrice = null, array $features = []): array
     {
-        return ['id' => "plan-{$slug}", 'slug' => $slug, 'name' => $slug, 'monthlyAmount' => $amount, 'currency' => 'eur',
-            'trialDays' => 7, 'isActive' => true, 'monthlyPriceId' => $price];
+        return ['id' => "plan-{$slug}", 'slug' => $slug, 'name' => $slug, 'monthlyAmount' => $amount, 'yearlyAmount' => (int) round($amount * 12 * 0.85),
+            'currency' => 'eur', 'trialDays' => 7, 'isActive' => true, 'monthlyPriceId' => $price, 'yearlyPriceId' => $yearlyPrice,
+            'planFeatures' => array_map(fn ($k) => ['feature' => ['key' => $k], 'value' => $features[$k]], array_keys($features))];
     }
 
     private function manager(): static
@@ -86,19 +87,26 @@ class PlanModulesControllerTest extends TestCase
     {
         $plans = collect($this->getJson('/api/v1/modules')->assertOk()->json('plans'))->keyBy('slug');
 
-        $this->assertSame(['loyalty', 'content', 'loyalty-content'], $plans->keys()->all());
-        $this->assertSame([8500, 'eur', true, 'built_in'], [$plans['loyalty']['monthly_amount'], $plans['loyalty']['currency'], $plans['loyalty']['available'], $plans['loyalty']['source']]);
-        $this->assertSame(8500, $plans['content']['monthly_amount']);
+        // Each product in three packages, then every pair of packages: 3 + 3 + 9.
+        $this->assertCount(15, $plans);
+        $this->assertSame(['loyalty_lite', 'loyalty', 'loyalty_pro', 'content_lite', 'content', 'content_pro'], $plans->keys()->take(6)->all());
+        $this->assertSame([8500, 86700, 'eur', true, 'built_in'], [$plans['loyalty']['monthly_amount'], $plans['loyalty']['yearly_amount'], $plans['loyalty']['currency'], $plans['loyalty']['available'], $plans['loyalty']['source']]);
+        $this->assertSame([4900, 14900, 3900], [$plans['loyalty_lite']['monthly_amount'], $plans['loyalty_pro']['monthly_amount'], $plans['content_lite']['monthly_amount']]);
         $this->assertSame(17000, $plans['loyalty-content']['monthly_amount']);
+        $this->assertSame(['loyalty' => 'pro', 'content' => 'lite'], $plans['loyalty_pro-content_lite']['packages']);
+        $this->assertSame('500', $plans['loyalty_lite']['features']['max_loyalty_members']);
+        $this->assertSame(15, $this->getJson('/api/v1/modules')->json('yearly_discount_percent'));
     }
 
     public function test_the_catalogue_shows_what_billing_sells_and_only_module_plans(): void
     {
-        $this->withBilling([$this->plan('loyalty', 8900), $this->plan('growth', 26900), $this->plan('content-loyalty', 1)], []);
+        $this->withBilling([$this->plan('loyalty', 8900, null, null, ['max_loyalty_members' => '3000']), $this->plan('growth', 26900), $this->plan('content-loyalty', 1)], []);
 
         $plans = collect($this->getJson('/api/v1/modules')->assertOk()->json('plans'))->keyBy('slug');
-        $this->assertSame(['loyalty', 'content', 'loyalty-content'], $plans->keys()->all(), 'no full plan, no non-canonical slug');
-        $this->assertSame([8900, true, 'billing'], [$plans['loyalty']['monthly_amount'], $plans['loyalty']['available'], $plans['loyalty']['source']]);
+        $this->assertCount(15, $plans, 'no full plan, no non-canonical slug');
+        $this->assertArrayNotHasKey('growth', $plans->all());
+        $this->assertSame([8900, 90780, true, 'billing'], [$plans['loyalty']['monthly_amount'], $plans['loyalty']['yearly_amount'], $plans['loyalty']['available'], $plans['loyalty']['source']]);
+        $this->assertSame(['max_loyalty_members' => '3000'], $plans['loyalty']['features'], 'billing\'s features');
         $this->assertFalse($plans['content']['available'], 'billing was read and does not sell it');
     }
 
@@ -118,12 +126,21 @@ class PlanModulesControllerTest extends TestCase
         $this->assertSame(['loyalty'], $state['modules']);
         $this->assertSame('loyalty', $state['landing']);
         $this->assertTrue($state['can_manage']);
-        $this->assertSame(['slug' => 'loyalty', 'monthly_amount' => 8500, 'currency' => 'eur'], $state['plan']);
+        $this->assertSame(['loyalty' => 'standard'], $state['packages']);
+        $this->assertSame(['loyalty', 8500, 86700, 'eur'], [$state['plan']['slug'], $state['plan']['monthly_amount'], $state['plan']['yearly_amount'], $state['plan']['currency']]);
+        $this->assertSame(15, $state['yearly_discount_percent']);
         $products = collect($state['products'])->keyBy('key');
-        $this->assertTrue($products['loyalty']['held']);
+        $this->assertSame([true, 'standard', false], [$products['loyalty']['held'], $products['loyalty']['package'], $products['loyalty']['can_remove']]);
+        $change = collect($products['loyalty']['options'])->keyBy('package');
+        $this->assertSame(['lite', 'pro'], $change->keys()->all(), 'the other packages');
+        $this->assertSame(['loyalty_pro', true, 14900, 6400], [$change['pro']['plan_slug'], $change['pro']['available'], $change['pro']['monthly_amount'], $change['pro']['extra_monthly_amount']]);
+        $this->assertSame(-3600, $change['lite']['extra_monthly_amount']);
         $this->assertFalse($products['content']['held']);
-        $this->assertSame(['loyalty-content', true, 17000, 8500], [$products['content']['plan_slug'], $products['content']['available'], $products['content']['monthly_amount'], $products['content']['extra_monthly_amount']]);
-        $this->assertFalse($products['appointments']['available'], 'no built-in price and no billing plan for Appointments with Loyalty');
+        $add = collect($products['content']['options'])->keyBy('package');
+        $this->assertSame(['lite', 'standard', 'pro'], $add->keys()->all());
+        $this->assertSame(['loyalty-content', true, 17000, 8500], [$add['standard']['plan_slug'], $add['standard']['available'], $add['standard']['monthly_amount'], $add['standard']['extra_monthly_amount']]);
+        $this->assertSame(['loyalty-content_lite', 3900], [$add['lite']['plan_slug'], $add['lite']['extra_monthly_amount']]);
+        $this->assertFalse($products['appointments']['options'][0]['available'], 'no built-in price and no billing plan for Appointments with Loyalty');
     }
 
     public function test_a_full_customer_is_told_its_plan_has_everything(): void
@@ -139,7 +156,7 @@ class PlanModulesControllerTest extends TestCase
     public function test_without_billing_adding_a_product_changes_the_organisations_own_plan(): void
     {
         $this->manager()->postJson('/api/v1/auth/modules/add', ['module' => 'content'])->assertOk()
-            ->assertJsonPath('added', 'content')->assertJsonPath('modules', ['loyalty', 'content']);
+            ->assertJsonPath('done', 'added')->assertJsonPath('module', 'content')->assertJsonPath('modules', ['loyalty', 'content']);
 
         $org = $this->org->fresh();
         $this->assertSame('loyalty-content', $org->plan_slug);
@@ -149,6 +166,65 @@ class PlanModulesControllerTest extends TestCase
         $this->assertDatabaseHas('audit_logs', ['action' => 'plan.module_added']);
 
         $this->manager()->postJson('/api/v1/auth/modules/add', ['module' => 'content'])->assertStatus(422)->assertJsonPath('error', 'already_held');
+    }
+
+    public function test_without_billing_a_package_changes_and_a_product_comes_off(): void
+    {
+        $this->manager()->postJson('/api/v1/auth/modules/add', ['module' => 'content', 'package' => 'lite'])->assertOk();
+        $this->assertSame('loyalty-content_lite', $this->org->fresh()->plan_slug);
+        $this->assertSame(['loyalty' => 'standard', 'content' => 'lite'], $this->org->fresh()->planTiers());
+
+        $this->manager()->postJson('/api/v1/auth/modules/package', ['module' => 'loyalty', 'package' => 'pro'])->assertOk()
+            ->assertJsonPath('done', 'package')->assertJsonPath('packages', ['loyalty' => 'pro', 'content' => 'lite']);
+        $this->assertSame('10000', $this->org->fresh()->plan_features['max_loyalty_members']);
+        $this->manager()->postJson('/api/v1/auth/modules/package', ['module' => 'loyalty', 'package' => 'pro'])->assertStatus(422)->assertJsonPath('error', 'same_package');
+        $this->manager()->postJson('/api/v1/auth/modules/package', ['module' => 'appointments', 'package' => 'pro'])->assertStatus(422)->assertJsonPath('error', 'no_such_package');
+
+        $this->manager()->postJson('/api/v1/auth/modules/remove', ['module' => 'content'])->assertOk()->assertJsonPath('modules', ['loyalty']);
+        $org = $this->org->fresh();
+        $this->assertSame(['loyalty_pro', ['loyalty']], [$org->plan_slug, $org->entitled_products]);
+        $this->assertFalse($org->workspaceEnabled('content'));
+        $this->manager()->postJson('/api/v1/auth/modules/remove', ['module' => 'loyalty'])->assertStatus(422)->assertJsonPath('error', 'last_product');
+        $this->assertDatabaseHas('audit_logs', ['action' => 'plan.module_removed']);
+        $this->assertDatabaseHas('audit_logs', ['action' => 'plan.module_package']);
+    }
+
+    public function test_a_smaller_package_is_refused_when_the_organisation_has_more_than_it_allows(): void
+    {
+        foreach (range(1, 3) as $i) {
+            $this->staffUser($this->org, ['role' => 'staff']);
+        }
+        $this->manager()->postJson('/api/v1/auth/modules/package', ['module' => 'loyalty', 'package' => 'lite'])->assertStatus(422)
+            ->assertJsonPath('error', 'over_limit')->assertJsonPath('limit_key', 'max_team_members')->assertJsonPath('limit', 2);
+        $this->assertSame('loyalty', $this->org->fresh()->plan_slug);
+    }
+
+    public function test_a_trial_on_a_yearly_subscription_changes_package_on_the_yearly_price(): void
+    {
+        $this->withBilling([$this->plan('loyalty', 8500, 'price_l', 'price_l_y'), $this->plan('loyalty_pro', 14900, 'price_lp', 'price_lp_y', ['max_loyalty_members' => '10000'])],
+            [['id' => 'sub-1', 'status' => 'ACTIVE', 'stripeSubscriptionId' => 'sub_stripe_1', 'billingInterval' => 'YEARLY']]);
+
+        $this->manager()->postJson('/api/v1/auth/modules/package', ['module' => 'loyalty', 'package' => 'pro'])->assertOk()->assertJsonPath('charged', 'prorated');
+        Http::assertSent(fn (ClientRequest $r) => $r->url() === self::SAAS . '/billing/change-plan' && $r['planId'] === 'plan-loyalty_pro' && $r['interval'] === 'YEARLY');
+    }
+
+    public function test_paying_yearly_needs_the_plans_yearly_price(): void
+    {
+        config(['app.url' => 'https://app.test']);
+        $this->withBilling([$this->plan('loyalty', 8500, 'price_l')], [['id' => 'sub-1', 'status' => 'TRIALING']]);
+        $this->manager()->postJson('/api/v1/auth/modules/activate', ['interval' => 'YEARLY'])->assertStatus(422)->assertJsonPath('error', 'not_available');
+        Http::assertNotSent(fn (ClientRequest $r) => str_ends_with($r->url(), '/billing/activate'));
+    }
+
+    public function test_paying_yearly_asks_billing_for_the_yearly_checkout(): void
+    {
+        config(['app.url' => 'https://app.test']);
+        $this->withBilling([$this->plan('loyalty', 8500, 'price_l', 'price_l_y')], [['id' => 'sub-1', 'status' => 'TRIALING']]);
+        Http::fake([self::SAAS . '/billing/activate' => Http::response(['checkoutUrl' => 'https://checkout.stripe.test/c/1'], 200)]);
+
+        $this->manager()->postJson('/api/v1/auth/modules/activate', ['interval' => 'YEARLY'])->assertOk()->assertJsonPath('checkoutUrl', 'https://checkout.stripe.test/c/1');
+        Http::assertSent(fn (ClientRequest $r) => $r->url() === self::SAAS . '/billing/activate' && $r['interval'] === 'YEARLY' && $r['planSlug'] === 'loyalty'
+            && $r['successUrl'] === 'https://app.test/account/products?success=1');
     }
 
     public function test_a_trial_moves_to_the_larger_plan_in_billing(): void

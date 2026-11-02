@@ -1460,7 +1460,7 @@ class AuthController extends Controller
 
         try {
             $planLabel = $signupModules !== null && $planSlug !== 'appointments'
-                ? 'HexaTech ' . implode(' + ', array_map('ucfirst', $signupModules))
+                ? \App\Support\PlanModules::planName(\App\Support\PlanModules::selectionFromPlanSlug($planSlug) ?? $signupModules)
                 : ucfirst($planSlug);
             // Pre-fix this read `config('app.frontend_url', config('app.url', ...))`
             // — `frontend_url` isn't a defined config key so it was always null,
@@ -2037,10 +2037,10 @@ class AuthController extends Controller
      */
     private function getTrialFeatures(string $planSlug): array
     {
-        // A module plan grants what its modules do (PlanModules::features); the Appointments plan keeps the default below.
-        $modules = \App\Support\PlanModules::fromPlanSlug($planSlug);
-        if ($modules !== null && $planSlug !== 'appointments') {
-            return \App\Support\PlanModules::features($modules);
+        // A module plan grants what its packages do (PlanModules::features); the Appointments plan keeps the default below.
+        $selection = \App\Support\PlanModules::selectionFromPlanSlug($planSlug);
+        if ($selection !== null && $planSlug !== 'appointments') {
+            return \App\Support\PlanModules::features($selection);
         }
 
         return match ($planSlug) {

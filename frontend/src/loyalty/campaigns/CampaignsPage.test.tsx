@@ -4,6 +4,8 @@ import { MemoryRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
 vi.mock('react-i18next', () => ({
+  // The SMS setup reads the sign-in store (useModuleLinks), whose module sets up i18n.
+  initReactI18next: { type: '3rdParty', init: () => {} },
   useTranslation: () => ({
     t: (key: string, fallback?: string | Record<string, unknown>, vars?: Record<string, unknown>) => {
       const text = typeof fallback === 'string' ? fallback : key

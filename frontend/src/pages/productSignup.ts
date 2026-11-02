@@ -14,13 +14,24 @@ export const SIGNUP_PRODUCTS: readonly SignupProduct[] = ['loyalty', 'content']
 
 export type AuthView = 'login' | 'register' | 'forgot-password' | 'reset-password'
 
+/** A product's packages, cheapest first (App\Support\PlanModules::TIERS); Standard is the default. */
+export type PackageKey = 'lite' | 'standard' | 'pro'
+export const PACKAGES: readonly PackageKey[] = ['lite', 'standard', 'pro']
+export const PACKAGE_NAMES: Record<PackageKey, string> = { lite: 'Lite', standard: 'Standard', pro: 'Pro' }
+
 /** One row of GET /v1/modules. */
 export interface ModulePlan {
   slug: string
   modules: string[]
+  /** module => package, e.g. { loyalty: 'pro' } */
+  packages?: Partial<Record<string, PackageKey>>
   monthly_amount: number | null
+  /** A year's price, 15 % less a month than monthly; null when billing has none. */
+  yearly_amount?: number | null
   currency: string
   trial_days: number
+  /** What the plan grants, as billing stores it: limits as numbers in strings, switches as 'true' / 'false'. */
+  features?: Record<string, string>
   available: boolean
 }
 
@@ -53,20 +64,82 @@ export function formatMonthly(amount: number | null | undefined, currency: strin
   const zeroDecimal = ['jpy', 'krw', 'vnd', 'clp', 'isk', 'huf'].includes(currency.toLowerCase())
   const value = zeroDecimal ? amount : amount / 100
   try {
+    const whole = Number.isInteger(value)
     return new Intl.NumberFormat(locale || 'en', {
-      style: 'currency', currency: currency.toUpperCase(), maximumFractionDigits: Number.isInteger(value) ? 0 : 2,
+      style: 'currency', currency: currency.toUpperCase(), minimumFractionDigits: whole ? 0 : 2, maximumFractionDigits: whole ? 0 : 2,
     }).format(value)
   } catch {
     return `${value} ${currency.toUpperCase()}`
   }
 }
 
-/** The catalogue row for one product alone, and the one for it with the other product. */
-export function plansFor(plans: ModulePlan[], product: SignupProduct): { alone: ModulePlan | null; other: SignupProduct; together: ModulePlan | null } {
+/** A plan's slug for one product in one package: `loyalty`, `loyalty_pro` (the server's PlanModules::planSlug). */
+export function packageSlug(product: SignupProduct, pkg: PackageKey): string {
+  return pkg === 'standard' ? product : `${product}_${pkg}`
+}
+
+/** The product's three packages from the catalogue, cheapest first (a package the catalogue lacks is left out), and the other product. */
+export function packagesFor(plans: ModulePlan[], product: SignupProduct): { packages: { key: PackageKey; plan: ModulePlan }[]; other: SignupProduct } {
   const other: SignupProduct = product === 'loyalty' ? 'content' : 'loyalty'
-  const alone = plans.find(p => p.slug === product) ?? null
-  const together = plans.find(p => p.modules.length === 2 && p.modules.includes(product) && p.modules.includes(other)) ?? null
-  return { alone, other, together }
+  const packages = PACKAGES.flatMap(key => {
+    const plan = plans.find(p => p.slug === packageSlug(product, key))
+    return plan ? [{ key, plan }] : []
+  })
+  return { packages, other }
+}
+
+/** What a price reads as for an interval: a month's price, and for yearly the month it works out at and the year. */
+export function priceFor(plan: Pick<ModulePlan, 'monthly_amount' | 'yearly_amount' | 'currency'>, interval: 'monthly' | 'yearly', locale: string): { perMonth: string | null; perYear: string | null } {
+  if (interval === 'yearly' && plan.yearly_amount != null) {
+    return { perMonth: formatMonthly(Math.round(plan.yearly_amount / 12), plan.currency, locale), perYear: formatMonthly(plan.yearly_amount, plan.currency, locale) }
+  }
+  return { perMonth: formatMonthly(plan.monthly_amount, plan.currency, locale), perYear: null }
+}
+
+/** A plan limit as the server reads it: a positive whole number, or null for none (PlanLimitGuard). */
+export function limitOf(features: Record<string, string> | undefined, key: string): number | null {
+  const raw = (features?.[key] ?? '').trim()
+  return /^\d+$/.test(raw) && Number(raw) > 0 ? Number(raw) : null
+}
+
+const on = (features: Record<string, string> | undefined, key: string) => ['true', '1', 'yes'].includes((features?.[key] ?? '').toLowerCase())
+
+export interface PackageLine { text: string; included: boolean }
+
+/**
+ * A package's lines, read from what the server says the plan grants. `lite` is the product's Lite package's
+ * features, so Content's AI allowance reads as a multiple of the smallest.
+ */
+export function packageLines(product: SignupProduct, features: Record<string, string> | undefined, lite: Record<string, string> | undefined, t: TFunction, locale: string): PackageLine[] {
+  const n = (value: number) => value.toLocaleString(locale || 'en')
+  const members = limitOf(features, 'max_loyalty_members')
+  const staff = limitOf(features, 'max_team_members')
+  const places = limitOf(features, 'max_properties')
+  const lines: PackageLine[] = []
+  if (product === 'loyalty') {
+    lines.push({ text: members ? t('auth.product.line.members', { n: n(members), defaultValue: 'Up to {{n}} members' }) : t('auth.product.line.members_any', 'Unlimited members'), included: true })
+    lines.push({ text: t('auth.product.line.loyalty_core', 'Points, tiers, stamps, rewards and offers'), included: true })
+    lines.push({ text: t('auth.product.line.member_app', 'Member app, portal and desk scanning'), included: true })
+    lines.push({ text: t('auth.product.line.campaigns', 'Email and SMS campaigns'), included: on(features, 'campaigns') })
+    lines.push({ text: t('auth.product.line.push', 'Push messages to the member app'), included: on(features, 'push_notifications') })
+    lines.push({ text: t('auth.product.line.wallet', 'Apple and Google Wallet cards, NFC cards'), included: on(features, 'wallet') })
+  } else {
+    const budget = limitOf(features, 'ai_monthly_cost_cents')
+    const base = limitOf(lite, 'ai_monthly_cost_cents')
+    const times = budget && base ? Math.round((budget / base) * 10) / 10 : null
+    lines.push({ text: t('auth.product.line.content_core', 'Content calendar, AI ideas, captions and images'), included: true })
+    lines.push({
+      text: times && times > 1
+        ? t('auth.product.line.ai_times', { x: n(times), defaultValue: '{{x}}× the monthly AI allowance of Lite' })
+        : t('auth.product.line.ai_base', 'A monthly AI allowance for a few posts a week'),
+      included: true,
+    })
+    lines.push({ text: t('auth.product.line.approvals', 'Drafts, approvals and a morning email for the team'), included: true })
+  }
+  if (staff) lines.push({ text: t('auth.product.line.staff', { n: n(staff), defaultValue: '{{n}} team members' }), included: true })
+  if (places && places > 1) lines.push({ text: t('auth.product.line.places', { n: n(places), defaultValue: '{{n}} locations' }), included: true })
+  lines.push({ text: t('auth.product.line.priority', 'Priority support'), included: (features?.priority_support ?? '') === 'priority' })
+  return lines
 }
 
 export interface ProductCopy {
@@ -79,7 +152,6 @@ export interface ProductCopy {
   loginSubtitle: string
   registerTitle: string
   trialBanner: string
-  included: string[]
   tabTitle: string
 }
 
@@ -100,13 +172,6 @@ export function productCopy(product: SignupProduct, t: TFunction): ProductCopy {
       loginSubtitle: t('auth.product.loyalty.login_subtitle', 'Sign in to HexaTech Loyalty'),
       registerTitle: t('auth.product.loyalty.register_title', 'Start your HexaTech Loyalty trial'),
       trialBanner: t('auth.product.loyalty.trial_banner', 'Your trial includes everything in HexaTech Loyalty.'),
-      included: [
-        t('auth.product.loyalty.included_1', 'Members, tiers, points and stamp cards'),
-        t('auth.product.loyalty.included_2', 'Rewards, offers and member benefits'),
-        t('auth.product.loyalty.included_3', 'Your own member app and wallet cards'),
-        t('auth.product.loyalty.included_4', 'Email, push and SMS campaigns'),
-        t('auth.product.loyalty.included_5', 'Desk scanning, events and insights'),
-      ],
       tabTitle: t('auth.product.loyalty.tab_title', 'HexaTech Loyalty — Sign in'),
     }
   }
@@ -124,13 +189,6 @@ export function productCopy(product: SignupProduct, t: TFunction): ProductCopy {
     loginSubtitle: t('auth.product.content.login_subtitle', 'Sign in to HexaTech Content'),
     registerTitle: t('auth.product.content.register_title', 'Start your HexaTech Content trial'),
     trialBanner: t('auth.product.content.trial_banner', 'Your trial includes everything in HexaTech Content.'),
-    included: [
-      t('auth.product.content.included_1', 'A content calendar built around your goals'),
-      t('auth.product.content.included_2', 'AI post ideas and captions in your brand voice'),
-      t('auth.product.content.included_3', 'AI images and visual briefs'),
-      t('auth.product.content.included_4', 'Drafts, approvals and a team inbox'),
-      t('auth.product.content.included_5', "A morning email with the day's posts"),
-    ],
     tabTitle: t('auth.product.content.tab_title', 'HexaTech Content — Sign in'),
   }
 }
@@ -140,10 +198,13 @@ export function sharedProductWords(t: TFunction) {
   return {
     perMonth: t('auth.product.per_month', 'per month'),
     trial: (days: number) => t('auth.product.trial', { days, defaultValue: '{{days}}-day free trial, no card needed' }),
-    addLater: (other: string, price: string) => t('auth.product.add_later', { other, price, defaultValue: 'Need {{other}} too? Add it any time from Plan & products for {{price}} more a month.' }),
+    addLater: (other: string, price: string) => t('auth.product.add_later', { other, price, defaultValue: 'Need {{other}} too? Add it any time from Plan & products, from {{price}} more a month.' }),
     unavailable: (product: string) => t('auth.product.unavailable', { product, defaultValue: '{{product}} cannot be bought online yet. Please contact HexaTech and we will set it up for you.' }),
+    choosePackage: t('auth.product.choose_package', 'Choose your package'),
+    billing: t('auth.product.billing', 'Billing period'),
+    save: t('auth.product.save', { percent: 15, defaultValue: 'Save {{percent}}%' }),
+    billedYearly: (price: string) => t('auth.product.billed_yearly', { price, defaultValue: '{{price}} billed yearly' }),
     fullSuite: t('auth.product.full_suite', 'Looking for the full HexaTech suite?'),
     seePlans: t('auth.product.see_plans', 'See all plans'),
-    included: t('auth.product.included', "What's included"),
   }
 }

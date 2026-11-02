@@ -67,6 +67,7 @@ const ReviewDetail = lazy(() => import('./pages/ReviewDetail').then(m => ({ defa
 const Settings = lazy(() => import('./pages/Settings').then(m => ({ default: m.Settings })))
 const AccountConnections = lazy(() => import('./pages/AccountConnections').then(m => ({ default: m.AccountConnections })))
 const AccountProducts = lazy(() => import('./pages/AccountProducts').then(m => ({ default: m.AccountProducts })))
+const AccountTeam = lazy(() => import('./pages/AccountTeam').then(m => ({ default: m.AccountTeam })))
 const Properties = lazy(() => import('./pages/Properties').then(m => ({ default: m.Properties })))
 const Brands = lazy(() => import('./pages/Brands').then(m => ({ default: m.Brands })))
 const GuestDetail = lazy(() => import('./pages/GuestDetail').then(m => ({ default: m.GuestDetail })))
@@ -265,6 +266,8 @@ export default function App() {
           <Route path="/account/connections" element={<ChunkErrorBoundary><Suspense fallback={<PageLoader />}><AccountConnections /></Suspense></ChunkErrorBoundary>} />
           {/* Plan & products: an organisation on modules sees what it holds, adds a product, pays (owner 2026-11-02). */}
           <Route path="/account/products" element={<ChunkErrorBoundary><Suspense fallback={<PageLoader />}><AccountProducts /></Suspense></ChunkErrorBoundary>} />
+          {/* Team: an organisation on modules invites and switches off its staff here (it has no full admin). */}
+          <Route path="/account/team" element={<ChunkErrorBoundary><Suspense fallback={<PageLoader />}><AccountTeam /></Suspense></ChunkErrorBoundary>} />
 
           {/* HexaTech Loyalty's and HexaTech Content's own sign-in and sign-up pages (owner 2026-11-02). More specific
               than the workspaces' /loyalty/* and /content/*, so the router picks them first. */}

@@ -27,7 +27,7 @@ const FROM_CONTENT: Record<string, string> = {
  * Words the shared frame has of its own, from no workspace: the phone menu's "More areas" (Loyalty release 2 §3), and
  * "Plan & products" in Settings for an organisation on modules (owner 2026-11-02).
  */
-const OWN = new Set(['shell.more_areas', 'shell.plan'])
+const OWN = new Set(['shell.more_areas', 'shell.plan', 'shell.team'])
 function at(json: unknown, key: string): unknown {
   return key.split('.').reduce<unknown>((n, p) => (n && typeof n === 'object' ? (n as Record<string, unknown>)[p] : undefined), json)
 }

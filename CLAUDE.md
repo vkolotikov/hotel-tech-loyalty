@@ -282,15 +282,19 @@ or add the next dated one, at the end of a session.
 
 ## Modules: workspaces sold on their own
 
-- HexaTech Loyalty and Content at 85 € a month each, beside the Appointments plan (owner 2026-11-02; runbook
-  `docs/plan-modules.md`). What an organisation bought is `Organization::planModules()` only (null = full customer);
-  "is this area off" is `holdsModule()` / `lacksModule()`, never a new reading of products or the plan slug. Module
-  knowledge (products, slugs, fallback prices and features) lives in `App\Support\PlanModules`.
+- HexaTech Loyalty and Content each in three packages (Lite, Standard at 85 €, Pro), 15 % less a month paid yearly,
+  beside the Appointments plan (owner 2026-11-02; runbook `docs/plan-modules.md`). What an organisation bought is
+  `Organization::planModules()` only (null = full customer), each module's package `planTiers()`; "is this area off"
+  is `holdsModule()` / `lacksModule()`, never a new reading of products or the plan slug. Module knowledge (products,
+  packages, slugs, fallback prices and features) lives in `App\Support\PlanModules`, and the billing migration
+  `2026_11_02_130000_add_module_packages` mirrors it: a change to one is a change to both.
 - Prices are billing's: the SPA shows only what `GET /v1/modules` or `GET /v1/auth/modules` answer, never a price of
-  its own. A product is added only through `PlanModulesController::add` (billing `change-plan`), never by sending an
-  amount, and a card-paid subscription moves only to a plan with its own Stripe price.
+  its own. A plan changes only through `PlanModulesController` (add, package, remove; billing `change-plan`), never by
+  sending an amount, and a card-paid subscription moves only to a plan with its own Stripe price for its interval.
 - A page an organisation on modules needs outside its workspaces lives under `/account/*` (outside the workspaces and
-  the subscription check); its API under `auth/modules` (AccessMap product `account`).
+  the subscription check): Plan & products (`auth/modules`) and Team (the full admin's `admin/team`), both AccessMap
+  product `account`. A package change never leaves an organisation holding more members or active staff than the new
+  package allows (`over_limit`).
 
 ## Appointments-workspace code rules
 
