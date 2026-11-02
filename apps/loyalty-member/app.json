@@ -86,7 +86,8 @@
           "enableGooglePay": false,
           "disableSPM": true
         }
-      ]
+      ],
+      "./plugins/withoutTapAndPay"
     ],
     "experiments": {
       "typedRoutes": false
