@@ -5,9 +5,23 @@ notes). AGENTS.md and CLAUDE.md still apply.
 
 ## Production
 
-Unchanged by this session: **33d4f74** (2 Nov, the CRM assistant on the official SDK) is still the latest deploy. The
-work below is **not deployed**, for two reasons: this container cannot reach `app.hexa-tech.uk`, so the recipe's last
-step (verify by content) cannot run here; and its billing half could not be pushed to `hotel-tech-saas`.
+Latest: **05ffcc8** (2 Nov evening, the owner's "deploy for me"): the plan modules below. It is source patch
+**1b3949a** (this branch at 7f5baf1 on `main` 3618ead; 64 files, no deletions, no migration) plus its SPA build.
+Before the push: tree parity with the branch; on the artifact, `tsc -b`, 402 Vitest files and 5818 tests passed;
+the scoped PHP suite gave 7321 passed, 23 skipped and 39 failed, which are this container's environment failures and
+the same as on `main`. The next source-patch baseline is **7f5baf1**.
+
+**Not checked by content:** this container cannot reach `app.hexa-tech.uk`. The owner should check two things: the
+live admin bundle (`https://app.hexa-tech.uk/` → `/spa/assets/index-*.js`) has a string only the new source has (e.g.
+`Plan & products`), and `https://app.hexa-tech.uk/loyalty/register` shows "Start your HexaTech Loyalty trial". Until
+billing publishes the plans, that page says the product cannot be bought online yet: this is expected.
+
+**CI on `main` was red before this deploy, and the cause is unrelated.** On 3618ead, four
+`Tests\Feature\Integration\ContactsFeedTest` tests fail on PostgreSQL. They assert the SQLite `:memory:` database and
+are missing from `tests/pgsql-known-failures.txt`. The fix: list them there with their reason in
+`docs/loyalty-workspace.md`, or let the test skip on PostgreSQL.
+
+The billing half is **not deployed**: this session was refused push access to `hotel-tech-saas` twice.
 
 ## New: HexaTech Loyalty and Content sold on their own (owner, 2 Nov)
 
@@ -37,7 +51,7 @@ own workspace. The runbook is `docs/plan-modules.md`.
 - **To go live (owner):**
   1. Apply and deploy the billing patch.
   2. Run `php artisan stripe:sync --plan=loyalty --plan=content --plan=loyalty-content --publish` there.
-  3. Deploy this branch by the recipe (`docs/landing-page-builder.md` §6). The file list is this branch's commits since
+  3. ~~Deploy this branch~~: done, `main` = 05ffcc8 (above). For the record, the file list was this branch's commits since
      `origin/main` `3618ead`; there is no migration on this side.
   Until step 2, the new sign-up pages say the product cannot be bought online yet.
 - **Assumptions to confirm (owner):**
