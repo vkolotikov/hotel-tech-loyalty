@@ -1,13 +1,17 @@
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { ExternalLink } from 'lucide-react'
+import { useModuleLinks } from '../../workspace/lib/useModuleLinks'
 import { Button } from '../../workspace/ui/Button'
 import { Notice } from '../../workspace/ui/Notice'
 import { Skeleton } from '../../workspace/ui/Skeleton'
 import { failureOf, type ApiFailure } from '../lib/api'
 import { refusalKey } from '../lib/errors'
 import { points } from '../lib/format'
-import { ToneBadge } from '../ui/formParts'
+import { FormField, ToneBadge } from '../ui/formParts'
+import { smsApi } from './api'
 import { ERRORS } from './errors'
 import { FULL_ADMIN_INTEGRATIONS, statusTone, twilioCode, twilioSteps } from './smsMath'
 import type { SmsLength, TwilioReadiness } from './types'
@@ -62,17 +66,32 @@ export function ReasonText({ reason }: { reason: string }) {
 }
 
 /**
- * Where the venue's Twilio account is set and what it still lacks: SMS goes only through the venue's own account,
- * which a super admin enters in the full admin's Settings → Integrations.
+ * Where the venue's Twilio account is set and what it still lacks: SMS goes only through the venue's own account.
+ * A manager enters it here (2026-11-02; PUT sms/connection, the same rows as the full admin's Settings → Integrations,
+ * the token never shown back), or in the full admin where the organisation has one.
  */
 export function TwilioSetup({ twilio }: { twilio: TwilioReadiness }) {
   const { t } = useTranslation()
+  const client = useQueryClient()
+  const { onModules } = useModuleLinks('loyalty')
   const steps = twilioSteps(twilio)
+  const [sid, setSid] = useState('')
+  const [token, setToken] = useState('')
+  const [from, setFrom] = useState(twilio.from ?? '')
+  const tokenStored = !twilio.missing.includes('auth_token')
+  const save = useMutation({
+    mutationFn: () => smsApi.connect({ account_sid: sid.trim(), auth_token: token, phone_number: from.trim() }),
+    onSuccess: () => { setToken(''); void client.invalidateQueries({ queryKey: ['loyalty', 'sms'] }) },
+  })
+  const failed = save.isError ? failureOf(save.error) : null
+  const INPUT = 'w-full rounded-lg border border-a-border bg-a-surface px-3 py-2 text-sm text-a-text'
   return (
     <div className="max-w-2xl space-y-2" data-twilio-setup="">
       <Notice tone="info">
         <p className="font-medium">{t('loyalty.sms.setup.title', 'SMS goes out through the venue’s own Twilio account, which is not set up yet.')}</p>
-        <p className="mt-1">{t('loyalty.sms.setup.where', 'A super admin enters it in the full admin: Settings → Integrations → Twilio. It needs the Account SID, the Auth Token and the number SMS are sent from (with + and the country code), or a Messaging Service SID in its place.')}</p>
+        <p className="mt-1">{onModules
+          ? t('loyalty.sms.setup.where_here', 'Enter it below: the Account SID, the Auth Token and the number SMS are sent from (with + and the country code), or a Messaging Service SID in its place.')
+          : t('loyalty.sms.setup.where', 'A super admin enters it in the full admin: Settings → Integrations → Twilio. It needs the Account SID, the Auth Token and the number SMS are sent from (with + and the country code), or a Messaging Service SID in its place.')}</p>
         {steps.length > 0 && (
           <ul className="mt-1 list-disc space-y-0.5 pl-5">
             {steps.map(s => (
@@ -82,9 +101,28 @@ export function TwilioSetup({ twilio }: { twilio: TwilioReadiness }) {
         )}
         <p className="mt-1">{t('loyalty.sms.setup.billing', 'Twilio bills the venue for every SMS part sent.')}</p>
       </Notice>
-      <Link to={FULL_ADMIN_INTEGRATIONS} className="inline-flex items-center gap-1.5 rounded-full px-3 py-2 text-sm font-semibold text-a-accent-text hover:bg-a-accent/10">
-        {t('loyalty.sms.setup.open', 'Open Settings → Integrations in the full admin')}<ExternalLink size={14} aria-hidden />
-      </Link>
+      <form data-twilio-form="" className="space-y-3 rounded-xl border border-a-border bg-a-surface p-4" onSubmit={e => { e.preventDefault(); save.mutate() }}>
+        <p className="text-sm font-medium text-a-text">{t('loyalty.sms.connect.title', 'Connect your Twilio account')}</p>
+        <FormField label={t('loyalty.sms.setting.account_sid', SETTING_WORDS.account_sid)}>
+          <input className={INPUT} value={sid} onChange={e => setSid(e.target.value)} required autoComplete="off" spellCheck={false} />
+        </FormField>
+        <FormField label={t('loyalty.sms.setting.auth_token', SETTING_WORDS.auth_token)} hint={tokenStored ? t('loyalty.sms.connect.token_kept', 'Saved. Leave it empty to keep it.') : undefined}>
+          <input className={INPUT} type="password" value={token} onChange={e => setToken(e.target.value)} required={!tokenStored} autoComplete="new-password" />
+        </FormField>
+        <FormField label={t('loyalty.sms.setting.phone_number', SETTING_WORDS.phone_number)} hint={t('loyalty.sms.connect.from_hint', 'With + and the country code, or a Messaging Service SID.')}>
+          <input className={INPUT} value={from} onChange={e => setFrom(e.target.value)} required autoComplete="off" />
+        </FormField>
+        {failed && <Notice tone="danger">{failed.code === 'wrong_sender'
+          ? t('loyalty.sms.connect.wrong_sender', 'Enter the number SMS are sent from with + and the country code, or a Messaging Service SID.')
+          : t('loyalty.sms.connect.failed', 'The account could not be saved. Check the details and try again.')}</Notice>}
+        {save.isSuccess && <Notice tone="success">{t('loyalty.sms.connect.saved', 'Saved.')}</Notice>}
+        <Button type="submit" loading={save.isPending}>{t('loyalty.sms.connect.save', 'Save the Twilio account')}</Button>
+      </form>
+      {!onModules && (
+        <Link to={FULL_ADMIN_INTEGRATIONS} className="inline-flex items-center gap-1.5 rounded-full px-3 py-2 text-sm font-semibold text-a-accent-text hover:bg-a-accent/10">
+          {t('loyalty.sms.setup.open', 'Open Settings → Integrations in the full admin')}<ExternalLink size={14} aria-hidden />
+        </Link>
+      )}
     </div>
   )
 }

@@ -171,6 +171,18 @@ class PlanModulesAccessTest extends TestCase
         $this->assertSame('not_allowed', json_decode($refused->getContent(), true)['error']);
     }
 
+    public function test_an_organisation_on_modules_manages_its_own_team(): void
+    {
+        $this->onProducts(['loyalty']);
+        $staff = $this->staffUser($this->org, ['role' => 'staff']);
+
+        $this->assertPassed($this->decide($this->staff, 'GET', 'api/v1/admin/team'));
+        $this->assertPassed($this->decide($this->staff, 'POST', 'api/v1/admin/team/invite'));
+        $this->assertPassed($this->decide($staff, 'GET', 'api/v1/admin/team'));
+        $refused = $this->decide($staff, 'POST', 'api/v1/admin/team/invite');
+        $this->assertSame('not_allowed', json_decode($refused->getContent(), true)['error']);
+    }
+
     public function test_without_the_loyalty_module_there_is_no_programme(): void
     {
         LoyaltyTier::withoutGlobalScopes()->where('organization_id', $this->org->id)->update(['is_active' => true]);

@@ -11,7 +11,14 @@
 #
 # 6 LeadIntakeApiTest tests: a destructive migration suite that runs only on its own database,
 # hexa_leadintake_test, and refuses any other (CI runs it there in a separate step, where it must pass).
+#
+# 4 ContactsFeedTest tests (2026-11-02): the suite builds its own tables and refuses any database but SQLite's
+# :memory:, so it never runs against a real one; the SQLite shards run it, where it must pass.
 Tests\Feature\Admin\MemberImportEndpointsTest::test_preview_reports_what_a_commit_would_do_and_keeps_a_pending_batch
+Tests\Feature\Integration\ContactsFeedTest::test_every_page_enforces_brand_and_tenant_even_with_conflicting_request_context
+Tests\Feature\Integration\ContactsFeedTest::test_feed_requires_its_own_token_and_has_no_write_method
+Tests\Feature\Integration\ContactsFeedTest::test_invalid_email_is_retained_in_source_profile_but_not_copied_as_a_contact_address
+Tests\Feature\Integration\ContactsFeedTest::test_tampered_and_cross_brand_cursors_are_rejected
 Tests\Feature\Landing\ArdeaAestheticsRenderTest::test_a_fixed_price_prints_bare_and_no_price_prints_nothing
 Tests\Feature\Landing\EmberTableRenderTest::test_a_menu_with_no_price_and_no_window_prints_no_value_column
 Tests\Feature\Landing\EmberTableRenderTest::test_a_menu_with_no_price_shows_its_own_service_window_in_its_place

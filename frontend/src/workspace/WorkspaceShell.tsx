@@ -1,7 +1,7 @@
 import { useLayoutEffect, type CSSProperties, type MouseEvent, type ReactNode } from 'react'
 import { Link, NavLink } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { ArrowRightLeft, CreditCard, Globe, LayoutGrid, LogOut, Menu, PanelLeftClose, PanelLeftOpen, type LucideIcon } from 'lucide-react'
+import { ArrowRightLeft, Users, CreditCard, Globe, LayoutGrid, LogOut, Menu, PanelLeftClose, PanelLeftOpen, type LucideIcon } from 'lucide-react'
 import type { ModuleLink } from './lib/useModuleLinks'
 import { logoutAndRedirect } from '../lib/logout'
 import { firstLetter } from './lib/firstLetter'
@@ -133,7 +133,7 @@ export function WorkspaceShell({ workspace, look, accent, card, initial, organiz
           {moduleLinks?.map(link => (
             <Link key={link.to} to={link.to} onClick={toFullAdmin} data-tip={slim ? link.label : undefined} data-module-link=""
               className={`relative flex min-h-10 items-center gap-3 rounded-xl px-3 text-sm text-a-side-text-2 transition-colors hover:bg-a-side-2/60 hover:text-a-side-text ${slim ? 'justify-center' : ''}`}>
-              {link.to === '/account/products' ? <CreditCard size={16} aria-hidden className="shrink-0" /> : <ArrowRightLeft size={16} aria-hidden className="shrink-0" />}
+              {link.to === '/account/products' ? <CreditCard size={16} aria-hidden className="shrink-0" /> : link.to === '/account/team' ? <Users size={16} aria-hidden className="shrink-0" /> : <ArrowRightLeft size={16} aria-hidden className="shrink-0" />}
               <span className={slim ? 'sr-only' : ''}>{link.label}</span>
             </Link>
           ))}
@@ -210,7 +210,7 @@ export function WorkspaceShell({ workspace, look, accent, card, initial, organiz
               )}
               {moduleLinks?.map(link => (
                 <Link key={link.to} to={link.to} onClick={toFullAdmin} data-module-link="" className="flex items-center gap-3 rounded-lg px-2 py-2 text-sm text-a-text hover:bg-a-surface-2">
-                  {link.to === '/account/products' ? <CreditCard size={16} aria-hidden /> : <ArrowRightLeft size={16} aria-hidden />} {link.label}
+                  {link.to === '/account/products' ? <CreditCard size={16} aria-hidden /> : link.to === '/account/team' ? <Users size={16} aria-hidden /> : <ArrowRightLeft size={16} aria-hidden />} {link.label}
                 </Link>
               ))}
               <div className="px-2 py-1">

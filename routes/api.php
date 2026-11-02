@@ -1539,6 +1539,8 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
                     Route::post('campaigns/{id}/unschedule', [\App\Http\Controllers\Api\V1\Admin\Loyalty\CampaignController::class, 'unschedule'])->whereNumber('id');
                     // Release 4 §5 (R4-4): SMS campaigns through the venue's own Twilio account, with the plan's `campaigns` feature
                     Route::get('sms', [\App\Http\Controllers\Api\V1\Admin\Loyalty\SmsController::class, 'index']);
+                    // The venue's Twilio account, from the workspace (2026-11-02: an organisation on modules has no full admin).
+                    Route::put('sms/connection', [\App\Http\Controllers\Api\V1\Admin\Loyalty\SmsConnectionController::class, 'update']);
                     Route::post('sms', [\App\Http\Controllers\Api\V1\Admin\Loyalty\SmsController::class, 'store']);
                     Route::get('sms/{id}', [\App\Http\Controllers\Api\V1\Admin\Loyalty\SmsController::class, 'show'])->whereNumber('id');
                     Route::put('sms/{id}', [\App\Http\Controllers\Api\V1\Admin\Loyalty\SmsController::class, 'update'])->whereNumber('id');

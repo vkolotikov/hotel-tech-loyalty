@@ -155,6 +155,7 @@ export function AccountProducts() {
           </Link>
           <h1 className="mt-5 text-2xl font-semibold tracking-tight sm:text-3xl">{t('account.products.title', 'Plan & products')}</h1>
           <p className="mt-2 wrap-break-word text-sm text-hx-c1cdd4">{state?.organization.name ?? user.email}</p>
+          {state?.on_modules && <Link to="/account/team" className="mt-3 inline-flex min-h-10 items-center text-sm text-hx-c1cdd4 underline hover:text-white">{t('workspace.shell.team', 'Team')}</Link>}
         </div>
       </header>
 

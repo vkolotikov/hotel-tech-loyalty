@@ -3535,6 +3535,37 @@
       "confirm_remove_button": "Retirer {{product}}",
       "more_a_month": "+{{price}} par mois",
       "less_a_month": "−{{price}} par mois"
+    },
+    "team": {
+      "title": "Équipe",
+      "subtitle": "Qui peut se connecter à vos espaces.",
+      "invite_title": "Inviter un collègue",
+      "name": "Nom",
+      "email": "E-mail",
+      "role_label": "Rôle",
+      "roles_hint": "Les responsables modifient les réglages, l’offre et l’équipe ; le personnel fait le travail quotidien.",
+      "invite": "Envoyer l’invitation",
+      "invited": "Invitation envoyée à {{email}}.",
+      "managers_only": "Seul un propriétaire ou un responsable peut modifier l’équipe.",
+      "members": "Membres de l’équipe",
+      "you": "(vous)",
+      "invited_state": "invitation envoyée",
+      "off": "désactivé",
+      "resend": "Renvoyer",
+      "resent": "Invitation renvoyée.",
+      "make_staff": "Passer en personnel",
+      "make_manager": "Passer responsable",
+      "role_changed": "Rôle modifié.",
+      "switch_on": "Réactiver",
+      "switch_off": "Désactiver",
+      "switched_on": "La connexion est de nouveau possible.",
+      "switched_off": "La connexion n’est plus possible.",
+      "limit": "Votre formule n’a plus de place pour un membre d’équipe. Choisissez une formule plus grande, ou désactivez d’abord quelqu’un.",
+      "role": {
+        "owner": "Propriétaire",
+        "manager": "Responsable",
+        "staff": "Personnel"
+      }
     }
   }
 }

@@ -3579,6 +3579,37 @@
       "confirm_remove_button": "Remove {{product}}",
       "more_a_month": "+{{price}} a month",
       "less_a_month": "−{{price}} a month"
+    },
+    "team": {
+      "title": "Team",
+      "subtitle": "Who can sign in to your workspaces.",
+      "invite_title": "Invite a colleague",
+      "name": "Name",
+      "email": "Email",
+      "role_label": "Role",
+      "roles_hint": "Managers can change settings, the plan and the team; staff do the daily work.",
+      "invite": "Send invitation",
+      "invited": "Invitation sent to {{email}}.",
+      "managers_only": "Only an owner or a manager can change the team.",
+      "members": "Team members",
+      "you": "(you)",
+      "invited_state": "invitation sent",
+      "off": "switched off",
+      "resend": "Send again",
+      "resent": "Invitation sent again.",
+      "make_staff": "Make staff",
+      "make_manager": "Make manager",
+      "role_changed": "Role changed.",
+      "switch_on": "Switch on",
+      "switch_off": "Switch off",
+      "switched_on": "They can sign in again.",
+      "switched_off": "They can no longer sign in.",
+      "limit": "Your package has no room for another team member. Choose a larger package, or switch someone off first.",
+      "role": {
+        "owner": "Owner",
+        "manager": "Manager",
+        "staff": "Staff"
+      }
     }
   }
 }

@@ -2,7 +2,7 @@ import type { QueryClient } from '@tanstack/react-query'
 import { api } from '../../lib/api'
 import { loyaltyUrl, watched } from '../lib/api'
 import type { SegmentChoice } from '../push/types'
-import type { SmsAnswer, SmsAudience, SmsBody, SmsPage } from './types'
+import type { SmsAnswer, SmsAudience, SmsBody, SmsPage, TwilioReadiness } from './types'
 
 /** SMS campaigns' calls (spec 2026-10-22 release 4 §5), and the segments they are sent to. */
 export const smsApi = {
@@ -20,6 +20,9 @@ export const smsApi = {
   cancel: (id: number): Promise<SmsAnswer> => watched(api.post(loyaltyUrl(`sms/${id}/cancel`))),
   duplicate: (id: number, name: string): Promise<SmsAnswer> => watched(api.post(loyaltyUrl(`sms/${id}/duplicate`), { name })),
   segments: (): Promise<{ segments: SegmentChoice[] }> => watched(api.get(loyaltyUrl('segments'))),
+  /** The venue's Twilio account (2026-11-02); an empty token keeps the stored one, and none is ever answered. */
+  connect: (body: { account_sid: string; auth_token: string; phone_number: string }): Promise<{ twilio: TwilioReadiness }> =>
+    watched(api.put(loyaltyUrl('sms/connection'), body)),
 }
 
 /** The segments list is the one Campaigns reads (the same call, the same key), so a saved segment shows here too. */

@@ -23,8 +23,8 @@ const WORKSPACE_PAGE = /^\/(appointments|content|loyalty)(\/|$)/
 /** The server's order of the modules (App\Support\PlanModules): where staff land when nothing else says. */
 const MODULE_ORDER: readonly WorkspaceName[] = ['appointments', 'loyalty', 'content']
 
-/** The account pages an organisation on modules keeps beside its workspaces (Plan & products, connections). */
-const ACCOUNT_PAGE = /^\/account\/(products|connections)(\/|\?|$)/
+/** The account pages an organisation on modules keeps beside its workspaces (Plan & products, Team, connections). */
+const ACCOUNT_PAGE = /^\/account\/(products|team|connections)(\/|\?|$)/
 
 const pageOf = (name: WorkspaceName) => new RegExp(`^/${name}(/|\\?|$)`)
 

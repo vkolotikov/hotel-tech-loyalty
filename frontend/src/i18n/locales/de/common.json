@@ -3535,6 +3535,37 @@
       "confirm_remove_button": "{{product}} entfernen",
       "more_a_month": "+{{price}} im Monat",
       "less_a_month": "−{{price}} im Monat"
+    },
+    "team": {
+      "title": "Team",
+      "subtitle": "Wer sich in Ihren Arbeitsbereichen anmelden kann.",
+      "invite_title": "Kollegin oder Kollegen einladen",
+      "name": "Name",
+      "email": "E-Mail",
+      "role_label": "Rolle",
+      "roles_hint": "Die Leitung ändert Einstellungen, Tarif und Team; Mitarbeitende erledigen die tägliche Arbeit.",
+      "invite": "Einladung senden",
+      "invited": "Einladung an {{email}} gesendet.",
+      "managers_only": "Nur Inhaber oder die Leitung können das Team ändern.",
+      "members": "Teammitglieder",
+      "you": "(Sie)",
+      "invited_state": "Einladung gesendet",
+      "off": "deaktiviert",
+      "resend": "Erneut senden",
+      "resent": "Einladung erneut gesendet.",
+      "make_staff": "Zu Mitarbeitenden machen",
+      "make_manager": "Zur Leitung machen",
+      "role_changed": "Rolle geändert.",
+      "switch_on": "Aktivieren",
+      "switch_off": "Deaktivieren",
+      "switched_on": "Die Anmeldung ist wieder möglich.",
+      "switched_off": "Die Anmeldung ist nicht mehr möglich.",
+      "limit": "Ihr Paket hat keinen Platz für ein weiteres Teammitglied. Wählen Sie ein größeres Paket oder deaktivieren Sie zuerst jemanden.",
+      "role": {
+        "owner": "Inhaber",
+        "manager": "Leitung",
+        "staff": "Mitarbeitende"
+      }
     }
   }
 }

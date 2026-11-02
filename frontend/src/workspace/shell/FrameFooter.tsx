@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { ArrowRightLeft, BookOpen, ChevronsUpDown, CreditCard, Keyboard, LayoutGrid, LifeBuoy, LogOut, PanelLeftClose, PanelLeftOpen, Search, Settings } from 'lucide-react'
+import { ArrowRightLeft, Users, BookOpen, ChevronsUpDown, CreditCard, Keyboard, LayoutGrid, LifeBuoy, LogOut, PanelLeftClose, PanelLeftOpen, Search, Settings } from 'lucide-react'
 import { logoutAndRedirect } from '../../lib/logout'
 import { firstLetter } from '../lib/firstLetter'
 import { leave } from '../lib/leave'
@@ -50,6 +50,7 @@ export function SettingsPanel({ look, fullAdmin, onLeave, settings, moduleLinks 
         <Link key={link.to} to={link.to} onClick={(e) => leave(onLeave, () => {}, e)} className={ITEM} data-module-link="">
           {link.to === '/account/products'
             ? <CreditCard size={16} aria-hidden className="shrink-0 text-a-text-2" />
+            : link.to === '/account/team' ? <Users size={16} aria-hidden className="shrink-0 text-a-text-2" />
             : <ArrowRightLeft size={16} aria-hidden className="shrink-0 text-a-text-2" />}
           {link.label}
         </Link>

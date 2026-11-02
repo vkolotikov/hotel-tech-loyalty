@@ -309,7 +309,8 @@
     "title": "SMS gehen über das eigene Twilio-Konto des Hauses hinaus, das noch nicht eingerichtet ist.",
     "where": "Ein Super-Admin trägt es im vollen Admin ein: Einstellungen → Integrationen → Twilio. Nötig sind die Account SID, das Auth Token und die Nummer, von der die SMS gehen (mit + und Landesvorwahl), oder an ihrer Stelle eine Messaging Service SID.",
     "billing": "Twilio berechnet dem Haus jeden gesendeten SMS-Teil.",
-    "open": "Einstellungen → Integrationen im vollen Admin öffnen"
+    "open": "Einstellungen → Integrationen im vollen Admin öffnen",
+    "where_here": "Geben Sie es unten ein: die Account SID, den Auth Token und die Nummer, von der SMS gesendet werden (mit + und Ländervorwahl), oder stattdessen eine Messaging Service SID."
   },
   "length": {
     "line": "{{chars}} von {{max}} Zeichen · {{segments}} SMS (je bis zu {{per}} Zeichen) · {{alphabet}}",
@@ -324,5 +325,14 @@
     "s2_line": "Kurz und klar: eine Nachricht, ein Gedanke.",
     "s3_title": "Empfänger wählen und senden",
     "s3_line": "Ein Segment von Mitgliedern, die SMS zugestimmt haben, jetzt oder zu einer gewählten Zeit."
+  },
+  "connect": {
+    "title": "Twilio-Konto verbinden",
+    "token_kept": "Gespeichert. Leer lassen, um ihn zu behalten.",
+    "from_hint": "Mit + und Ländervorwahl oder eine Messaging Service SID.",
+    "wrong_sender": "Geben Sie die Absendernummer mit + und Ländervorwahl oder eine Messaging Service SID ein.",
+    "failed": "Das Konto konnte nicht gespeichert werden. Prüfen Sie die Angaben und versuchen Sie es erneut.",
+    "saved": "Gespeichert.",
+    "save": "Twilio-Konto speichern"
   }
 }

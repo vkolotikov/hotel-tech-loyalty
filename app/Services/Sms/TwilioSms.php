@@ -31,7 +31,7 @@ class TwilioSms
      * What an Account SID and a Messaging Service SID look like: `AC` or `MG` and letters and digits. Only the shape is
      * checked here, to catch a value pasted into the wrong field; whether the account exists is Twilio's to say.
      */
-    private const ACCOUNT_SID = '/^AC[0-9A-Za-z]{10,64}$/';
+    public const ACCOUNT_SID = '/^AC[0-9A-Za-z]{10,64}$/';
     private const SERVICE_SID = '/^MG[0-9A-Za-z]{10,64}$/';
 
     /** Twilio's error code for a number that replied STOP: it will not take messages to it until the member replies START. */

@@ -309,7 +309,8 @@
     "title": "Les SMS partent par le compte Twilio de l’établissement, qui n’est pas encore configuré.",
     "where": "Un super administrateur le saisit dans l’administration complète : Paramètres → Intégrations → Twilio. Il faut l’Account SID, l’Auth Token et le numéro d’envoi des SMS (avec + et l’indicatif du pays), ou à sa place un Messaging Service SID.",
     "billing": "Twilio facture à l’établissement chaque partie de SMS envoyée.",
-    "open": "Ouvrir Paramètres → Intégrations dans l’administration complète"
+    "open": "Ouvrir Paramètres → Intégrations dans l’administration complète",
+    "where_here": "Saisissez-le ci-dessous : l’Account SID, l’Auth Token et le numéro d’envoi des SMS (avec + et l’indicatif du pays), ou à la place un Messaging Service SID."
   },
   "length": {
     "line": "{{chars}} sur {{max}} caractères · {{segments}} SMS (jusqu’à {{per}} caractères chacun) · {{alphabet}}",
@@ -324,5 +325,14 @@
     "s2_line": "Court et clair : un message, une idée.",
     "s3_title": "Choisissez qui le reçoit et envoyez",
     "s3_line": "Un segment de membres qui ont accepté les SMS, maintenant ou à l’heure choisie."
+  },
+  "connect": {
+    "title": "Connectez votre compte Twilio",
+    "token_kept": "Enregistré. Laissez vide pour le conserver.",
+    "from_hint": "Avec + et l’indicatif du pays, ou un Messaging Service SID.",
+    "wrong_sender": "Saisissez le numéro d’envoi avec + et l’indicatif du pays, ou un Messaging Service SID.",
+    "failed": "Le compte n’a pas pu être enregistré. Vérifiez les informations et réessayez.",
+    "saved": "Enregistré.",
+    "save": "Enregistrer le compte Twilio"
   }
 }

@@ -3535,6 +3535,37 @@
       "confirm_remove_button": "Quitar {{product}}",
       "more_a_month": "+{{price}} al mes",
       "less_a_month": "−{{price}} al mes"
+    },
+    "team": {
+      "title": "Equipo",
+      "subtitle": "Quién puede iniciar sesión en sus espacios.",
+      "invite_title": "Invitar a un colega",
+      "name": "Nombre",
+      "email": "Email",
+      "role_label": "Rol",
+      "roles_hint": "Los gerentes cambian los ajustes, el plan y el equipo; el personal hace el trabajo diario.",
+      "invite": "Enviar invitación",
+      "invited": "Invitación enviada a {{email}}.",
+      "managers_only": "Solo un propietario o gerente puede cambiar el equipo.",
+      "members": "Miembros del equipo",
+      "you": "(usted)",
+      "invited_state": "invitación enviada",
+      "off": "desactivado",
+      "resend": "Enviar de nuevo",
+      "resent": "Invitación enviada de nuevo.",
+      "make_staff": "Pasar a personal",
+      "make_manager": "Pasar a gerente",
+      "role_changed": "Rol cambiado.",
+      "switch_on": "Activar",
+      "switch_off": "Desactivar",
+      "switched_on": "Ya puede volver a iniciar sesión.",
+      "switched_off": "Ya no puede iniciar sesión.",
+      "limit": "Su paquete no tiene sitio para otro miembro del equipo. Elija un paquete mayor o desactive primero a alguien.",
+      "role": {
+        "owner": "Propietario",
+        "manager": "Gerente",
+        "staff": "Personal"
+      }
     }
   }
 }

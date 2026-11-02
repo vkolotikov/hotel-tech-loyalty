@@ -309,7 +309,8 @@
     "title": "Los SMS se envían a través de la cuenta de Twilio del establecimiento, que aún no está configurada.",
     "where": "Un superadministrador la introduce en el panel completo: Ajustes → Integraciones → Twilio. Necesita el Account SID, el Auth Token y el número desde el que se envían los SMS (con + y el prefijo del país), o en su lugar un Messaging Service SID.",
     "billing": "Twilio factura al establecimiento cada parte de SMS enviada.",
-    "open": "Abrir Ajustes → Integraciones en el panel completo"
+    "open": "Abrir Ajustes → Integraciones en el panel completo",
+    "where_here": "Introdúzcala abajo: el Account SID, el Auth Token y el número desde el que se envían los SMS (con + y el prefijo del país), o en su lugar un Messaging Service SID."
   },
   "length": {
     "line": "{{chars}} de {{max}} caracteres · {{segments}} SMS (hasta {{per}} caracteres cada uno) · {{alphabet}}",
@@ -324,5 +325,14 @@
     "s2_line": "Corto y claro: un mensaje, una idea.",
     "s3_title": "Elija quién lo recibe y envíe",
     "s3_line": "Un segmento de miembros que aceptaron SMS, ahora o a la hora que elija."
+  },
+  "connect": {
+    "title": "Conecte su cuenta de Twilio",
+    "token_kept": "Guardado. Déjelo vacío para conservarlo.",
+    "from_hint": "Con + y el prefijo del país, o un Messaging Service SID.",
+    "wrong_sender": "Introduzca el número de envío con + y el prefijo del país, o un Messaging Service SID.",
+    "failed": "No se pudo guardar la cuenta. Revise los datos e inténtelo de nuevo.",
+    "saved": "Guardado.",
+    "save": "Guardar la cuenta de Twilio"
   }
 }
