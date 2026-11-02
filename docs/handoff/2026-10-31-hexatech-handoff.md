@@ -6,7 +6,10 @@ environment). AGENTS.md and CLAUDE.md still apply.
 
 ## Production
 
-Latest: **33d4f74** (2 Nov: the CRM assistant's Claude calls through the official SDK at API version 2026-10-21, a forced
+Latest: **3618ead75** (2 Nov: Stripe step 4g, stripe-php 22.1 with the API version pinned to 2026-10-28.endive,
+Stripe.js 10 and react-stripe-js 7 in the portal, `@types/node` 26; source patch **b0be11e61** plus the SPA build, on top
+of `main` **f2191c5eb**, whose two CRM-export commits (Contacts feed, from another source) are not on this branch and
+stay; next source-patch baseline **b4244a5**; Laravel Cloud builds on Node 26 since 2 Nov). Before it, **33d4f74** (2 Nov: the CRM assistant's Claude calls through the official SDK at API version 2026-10-21, a forced
 tool choice only where the model takes it; next source-patch baseline **1bea54f**). Before it, **b67ed20** (1 Nov: the
 loyalty level editor fits phones; the binding test covers every route). Before it, **08027a1** (1 Nov: the admin SPA on Tailwind 4.3 with Tailwind 3's look, checked by screenshots of every
 route in Chromium and WebKit; admin routes with a model parameter such as the inquiry page no longer answer 404). Before it, **915f9c6** (the chat widget's short current model list, Claude on the
@@ -97,17 +100,12 @@ Plan and progress: `docs/audits/2026-10-31-stack-audit-and-upgrade-plan.md` (§6
   unused (owner). Its second step (CI, ESLint 10 and TypeScript 6 with a dashboard hook-order fix, Symfony 8.1)
   is deployed too (`main` = `eef4275`, CI green on `main`). Plan §8.
 
-- **Next: the Stripe upgrades** (plan §6 step 4g for this app: stripe-php 20 → 22, Stripe.js 9 → 10,
-  react-stripe-js 6 → 7; and stripe-php 20 → current in `hotel-tech-saas`). They need, in the cloud environment's
-  settings (owner, 2 Nov):
-  - environment variables `STRIPE_TEST_SECRET` (`sk_test_…`) and `STRIPE_TEST_PUBLISHABLE` (`pk_test_…`), test mode
-    only, never a live key. They are read from the environment and never printed or written to a file;
-  - network access to `api.stripe.com` (server calls) and `js.stripe.com`, `hooks.stripe.com`, `m.stripe.network`,
-    `r.stripe.com` (the payment pages in a browser, including 3-D Secure test challenges). On 2 Nov every Stripe host
-    was refused here.
-
-  Both take effect in a new session. Webhooks are tested with events this app signs itself (no Stripe CLI, no
-  webhook secret from the dashboard).
+- **Done 2 Nov: the Stripe upgrades** (plan §6 step 4g; §8 "step 4g"). Loyalty deployed (**3618ead75**); the SaaS on
+  its branch, waiting for the owner's go-ahead (`main` fast-forwards to the branch tip). Live checks in Stripe test mode
+  need `STRIPE_TEST_SECRET` (an `sk_test_` key) in the environment: loyalty `tests/Feature/Stripe/LiveTestModeTest.php`
+  (SQLite in memory only), SaaS `tests/Feature/StripeBillingTest.php`. Webhooks are tested with events signed by a local
+  secret. Still open: completing a 3-D Secure challenge in a browser needs `testmode-acs.stripe.com` in the network
+  allowance (the challenge page lives there); Stripe's docs site (`docs.stripe.com`) is not reachable either.
 
 ## Cloud container notes (Linux)
 

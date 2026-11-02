@@ -609,6 +609,41 @@ ChatGPT connection works; the chat widget should offer fewer, current models tha
   - one real chat round trip over a socket against a local mock.
 - **No call in `app/` sends API version 2023-06-01 any more.**
 
+### 2 November 2026: step 4g, the Stripe upgrades, both apps (owner: "do the Stripe upgrades, test in test mode")
+
+Done in Stripe test mode only, with the owner's test keys read from the environment (never written anywhere).
+Stripe's documentation site is not reachable from the cloud session; the migration notes came from stripe-php's own
+changelog (every API change per release, breaking ones marked), the type definitions of Stripe.js 9 and 10, and probes
+of the test API itself.
+
+- **hotel-tech-loyalty** (deployed, production **3618ead75**; record in `docs/loyalty-workspace.md` "Deploying"):
+  - stripe-php 20.0.0 → **22.1.0**; every client from `StripeService::makeClient()` on
+    **`StripeService::API_VERSION = 2026-10-28.endive`** (was the library's own 2026-03-25.dahlia). The endive
+    release's breaking changes do not touch this app (it never sends `payment_method_types`).
+  - Found on the way: newer stripe-php raises a `Stripe-Notice` response header as a PHP warning, and Laravel turns
+    that into an exception after Stripe has answered. `makeClient()` sets `STRIPE_SUPPRESS_NOTICES=true` unless the
+    environment names it.
+  - Portal: @stripe/stripe-js 9.17 → **10.2** (loads `js.stripe.com/endive/stripe.js`), @stripe/react-stripe-js 6.12 →
+    **7.0.1**; what they removed (Payment Request Button, `paymentMethodTypes`) is not used. The widgets load
+    `js.stripe.com/v3` themselves and did not change.
+  - Checks: `tests/Feature/Stripe/LiveTestModeTest.php` (new, live in test mode through the app's own code: intents,
+    decline, 3-D Secure, refunds and a replay, `charge.refunded` and a lost dispute through the webhook with locally
+    signed events, the capture command, a combination refunded room by room), identical fields and values on dahlia
+    and endive; `ApiVersionTest` (new); in a real browser, the portal's appointment and stay payments, a decline, a
+    cancelled 3-D Secure challenge, and the stay and services widgets end to end. Completing a 3-D Secure challenge in
+    the browser was not possible: its page is on `testmode-acs.stripe.com`, which the session's network refuses.
+  - Suites: SQLite **7,334 passed / 16 skipped / 0 failed** (baseline 7,322 + 12 new); PostgreSQL only known
+    failures; frontend 5,790; Larastan clean; lint; CI green (8 jobs).
+- **hotel-tech-saas** (branch `claude/stack-audit-upgrade-plan-9hdkkv`, **not deployed: the owner approves**):
+  stripe-php 20.3.2 → **22.1.0**, `App\Support\StripeApi` pins 2026-10-28.endive. **Its checkout would have broken
+  without a code change**: the new version refuses `payment_method_types` on a Checkout Session; it now sends
+  `allowed_payment_method_types: ['card']`. The webhook reads a subscription's period and an invoice's subscription in
+  both the older and the current shape (a current-shape event answered 500 before). Checked live in test mode:
+  checkout, the billing portal, a real subscription and invoice through signed webhook events. Record: that
+  repository's `docs/2026-11-02-stripe-upgrade.md`.
+- **Node:** the owner confirmed both apps built on Node 24 in Laravel Cloud and switched both to **Node 26** on 2 Nov;
+  CI checks 24 and 26, `@types/node` is ^26.6.6 in both SPAs. Phase 5 step 4 is done.
+
 
 ---
 

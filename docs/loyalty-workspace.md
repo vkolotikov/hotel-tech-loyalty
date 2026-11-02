@@ -863,6 +863,24 @@ files on disk): run them one after the other.
 
 ## Deploying
 
+- Stripe libraries, API version pinned (stack plan step 4g, owner 2026-11-02): production **3618ead75** on
+  **f2191c5eb** (source patch **b0be11e61** plus the SPA build). Feature source **b4244a5** on
+  `claude/stack-audit-upgrade-plan-9hdkkv`. 12 paths (2 added, 10 changed), none deleted. `main` carried two CRM-export
+  commits (Contacts feed) that are not on the feature branch; none of the 12 paths differed there, and they stay.
+  - **The change:** stripe-php 20.0.0 → 22.1.0, every client from `StripeService::makeClient()` on API version
+    **2026-10-28.endive** (was the library's own 2026-03-25.dahlia), Stripe notices kept out of PHP's error handler;
+    the portal on @stripe/stripe-js 10.2 and @stripe/react-stripe-js 7.0.1; `@types/node` ^26.6.6. Widgets unchanged.
+    Runbook: `docs/member-portal.md` "Stripe library and API version". No migration.
+  - **Checks:**
+    - parity: the 12 paths equal the tip;
+    - artifact: PHP 8.5.12, **78 scopes, 7,338 passed / 16 skipped / 0 failed** (the live Stripe test-mode checks
+      included); frontend tsc, **5,790 tests / 399 files**; the fresh build's portal bundle loads Stripe.js `endive`;
+    - on the feature tip: PostgreSQL only known failures, Larastan clean, lint, CI green (8 jobs);
+    - Stripe test mode, server and browser: see the plan's §8 "step 4g".
+  - Verified by content on `origin/main`. The live site cannot be reached from the cloud session: the owner checks
+    Laravel Cloud's deploy, that its build log says Node v26, and one portal payment.
+  - The next source delta starts at **b4244a5**.
+
 - CRM assistant on the Anthropic SDK (stack plan follow-up, owner "do next", 2026-11-02): production **33d4f74** on
   **b67ed20**, a source patch only (the fresh SPA build is identical to main's). Feature source **1bea54f** on
   `claude/stack-audit-upgrade-plan-9hdkkv`. 7 paths (1 added, 6 changed), none deleted.
