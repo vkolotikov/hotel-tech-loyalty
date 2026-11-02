@@ -313,11 +313,31 @@
       },
       "per_month": "al mes",
       "trial": "Prueba gratuita de {{days}} días, sin tarjeta",
-      "add_later": "¿También necesita {{other}}? Añádalo cuando quiera desde Plan y productos por {{price}} más al mes.",
+      "add_later": "¿También necesita {{other}}? Añádalo cuando quiera desde Plan y productos, desde {{price}} más al mes.",
       "unavailable": "{{product}} aún no se puede comprar en línea. Contacte con HexaTech y lo configuraremos por usted.",
       "full_suite": "¿Busca la suite completa de HexaTech?",
       "see_plans": "Ver todos los planes",
-      "included": "Qué incluye"
+      "included": "Qué incluye",
+      "choose_package": "Elija su paquete",
+      "billing": "Periodo de facturación",
+      "save": "Ahorre un {{percent}} %",
+      "billed_yearly": "{{price}} facturados al año",
+      "line": {
+        "members": "Hasta {{n}} socios",
+        "members_any": "Socios ilimitados",
+        "loyalty_core": "Puntos, niveles, sellos, recompensas y ofertas",
+        "member_app": "App para socios, portal y escaneo en recepción",
+        "campaigns": "Campañas de email y SMS",
+        "push": "Mensajes push a la app para socios",
+        "wallet": "Tarjetas de Apple y Google Wallet, tarjetas NFC",
+        "content_core": "Calendario de contenido, ideas, textos e imágenes con IA",
+        "ai_times": "{{x}}× la asignación mensual de IA de Lite",
+        "ai_base": "Una asignación mensual de IA para algunas publicaciones a la semana",
+        "approvals": "Borradores, aprobaciones y un email matutino para el equipo",
+        "staff": "{{n}} miembros del equipo",
+        "places": "{{n}} ubicaciones",
+        "priority": "Soporte prioritario"
+      }
     }
   },
   "dashboard": {
@@ -3492,7 +3512,29 @@
         "appointments": "Agenda, reservas en línea y fichas de clientes",
         "loyalty": "Puntos, niveles, recompensas, una app para socios y campañas",
         "content": "Planificador de redes sociales con IA: ideas, textos, imágenes y calendario"
-      }
+      },
+      "over_limit_team": "Este paquete permite {{limit}} miembros del equipo y usted tiene {{count}} activos. Elija un paquete mayor o desactive algunos primero.",
+      "over_limit_members": "Este paquete permite {{limit}} socios y usted tiene {{count}}. Elija un paquete mayor.",
+      "removed": "{{product}} ya no está en su plan. Sus datos se conservan si lo añade de nuevo.",
+      "changed_paid": "Hecho: {{product}}. Su próxima factura ajusta la diferencia por el resto del periodo.",
+      "changed_trial": "Hecho: {{product}}.",
+      "or_yearly": "o {{price}} al año ({{save}})",
+      "pay_yearly": "Pagar al año: {{price}} ({{save}})",
+      "pay_monthly": "Pagar al mes: {{price}}",
+      "package": "Paquete: {{name}}",
+      "change_package": "Cambiar de paquete",
+      "remove": "Quitar",
+      "add_from": "Añadir desde {{price}} al mes",
+      "choose_add": "¿Añadir {{product}} con qué paquete?",
+      "choose_change": "¿A qué paquete desea cambiar?",
+      "not_online": "aún no disponible en línea",
+      "confirm_plan": "Su plan pasa a ser {{plan}} por {{price}} al mes.",
+      "confirm_paid_any": "Solo paga o recibe como crédito la diferencia por el resto del periodo, en su próxima factura.",
+      "confirm_button": "Confirmar",
+      "confirm_remove": "¿Quitar {{product}}? Su equipo pierde ese espacio al instante. No se borra nada: si lo añade de nuevo, todo sigue ahí.",
+      "confirm_remove_button": "Quitar {{product}}",
+      "more_a_month": "+{{price}} al mes",
+      "less_a_month": "−{{price}} al mes"
     }
   }
 }

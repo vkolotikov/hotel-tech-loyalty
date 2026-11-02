@@ -346,6 +346,8 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
             // own; owner 2026-11-02): AccessMap `auth/modules`, product `account`, changes by owners and managers.
             Route::get('modules',           [\App\Http\Controllers\Api\V1\Auth\PlanModulesController::class, 'show'])->middleware('admin.access');
             Route::post('modules/add',      [\App\Http\Controllers\Api\V1\Auth\PlanModulesController::class, 'add'])->middleware(['throttle:20,1,modules-add', 'admin.access']);
+            Route::post('modules/package',  [\App\Http\Controllers\Api\V1\Auth\PlanModulesController::class, 'package'])->middleware(['throttle:20,1,modules-package', 'admin.access']);
+            Route::post('modules/remove',   [\App\Http\Controllers\Api\V1\Auth\PlanModulesController::class, 'remove'])->middleware(['throttle:20,1,modules-remove', 'admin.access']);
             Route::post('modules/activate', [\App\Http\Controllers\Api\V1\Auth\PlanModulesController::class, 'activate'])->middleware(['throttle:30,1,modules-activate', 'admin.access']);
             Route::post('modules/portal',   [\App\Http\Controllers\Api\V1\Auth\PlanModulesController::class, 'portal'])->middleware(['throttle:30,1,modules-portal', 'admin.access']);
             Route::post('modules/refresh',  [\App\Http\Controllers\Api\V1\Auth\PlanModulesController::class, 'refresh'])->middleware(['throttle:60,1,modules-refresh', 'admin.access']);

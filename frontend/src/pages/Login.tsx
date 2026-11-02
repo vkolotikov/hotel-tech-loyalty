@@ -14,7 +14,7 @@ import { localisedIndustryCopy, PICKER_INDUSTRIES, type IndustryCopy } from '../
 import { landingPath, safeRedirect } from '../appointments/lib/landing'
 import { AccessOffNotice } from '../components/AccessOffNotice'
 import { sessionBoundTask } from '../lib/sessionBoundTask'
-import { authPath, formatMonthly, plansFor, productCopy, productHome, sharedProductWords, viewFromPath, type ModulePlan, type ProductCopy, type SignupProduct } from './productSignup'
+import { authPath, PACKAGE_NAMES, packageLines, packageSlug, packagesFor, priceFor, productCopy, productHome, sharedProductWords, viewFromPath, type ModulePlan, type PackageKey, type ProductCopy, type SignupProduct } from './productSignup'
 
 /**
  * Industry Platform Plan Phase 2 — registration captures industry at
@@ -255,36 +255,83 @@ function InlineLangPicker({ i18n }: { i18n: any }) {
   )
 }
 
-/** A product's page: the one product, its price from the server, what it includes, and that the other can be added later. */
-function ProductCard({ words, shared, price, trialDays, loading, other, otherExtra, unavailable }: {
+/**
+ * A product's page: its three packages with the server's prices and what each grants, monthly or yearly (15 % less a
+ * month), Standard picked first; and that the other product can be added later.
+ */
+function PackagePicker({ product, words, shared, plans, loading, chosen, onChoose, interval, onInterval, other, otherFrom, unavailable }: {
+  product: SignupProduct
   words: ProductCopy
   shared: ReturnType<typeof sharedProductWords>
-  price: string | null
-  trialDays: number | null
+  plans: { key: PackageKey; plan: ModulePlan }[]
   loading: boolean
+  chosen: PackageKey
+  onChoose: (key: PackageKey) => void
+  interval: 'monthly' | 'yearly'
+  onInterval: (interval: 'monthly' | 'yearly') => void
   other: string | null
-  otherExtra: string | null
+  otherFrom: string | null
   unavailable: boolean
 }) {
+  const { t, i18n } = useTranslation()
+  const lite = plans.find(p => p.key === 'lite')?.plan.features
+  const yearlyOffered = plans.some(p => p.plan.yearly_amount != null)
   return (
-    <div data-product-card="" className="rounded-xl border border-blue-500/40 bg-blue-500/6 p-4">
-      <div className="flex items-baseline justify-between gap-3">
-        <div className="font-semibold text-white text-sm">{words.brand}</div>
-        {loading
-          ? <div className="h-6 w-20 bg-white/10 rounded-sm animate-pulse" />
-          : price && <div><span className="text-xl font-bold text-white">{price}</span> <span className="text-slate-400 text-xs">{shared.perMonth}</span></div>}
+    <div data-package-picker="" className="space-y-3">
+      <div className="flex items-center justify-between gap-3">
+        <label className="block text-[13px] font-medium text-slate-300">{shared.choosePackage}</label>
+        {yearlyOffered && (
+          <div className="flex items-center gap-2" role="group" aria-label={shared.billing}>
+            <button type="button" onClick={() => onInterval('monthly')} aria-pressed={interval === 'monthly'}
+              className={'text-xs ' + (interval === 'monthly' ? 'text-white' : 'text-slate-500')}>{t('auth.plans.monthly', 'Monthly')}</button>
+            <button type="button" onClick={() => onInterval(interval === 'monthly' ? 'yearly' : 'monthly')} aria-label={shared.billing}
+              className={'relative w-10 h-5 rounded-full transition-colors ' + (interval === 'yearly' ? 'bg-blue-600' : 'bg-white/10')}>
+              <div className={'absolute left-0 top-0.5 w-4 h-4 rounded-full bg-on-fill transition-transform ' + (interval === 'yearly' ? 'translate-x-5' : 'translate-x-0.5')} />
+            </button>
+            <button type="button" onClick={() => onInterval('yearly')} aria-pressed={interval === 'yearly'}
+              className={'text-xs ' + (interval === 'yearly' ? 'text-white' : 'text-slate-500')}>
+              {t('auth.plans.yearly', 'Yearly')} <span className="text-green-400 text-[10px]">{shared.save}</span>
+            </button>
+          </div>
+        )}
       </div>
-      {trialDays != null && <div className="text-xs text-green-400 mt-1">{shared.trial(trialDays)}</div>}
-      <div className="text-[12px] font-medium text-slate-300 mt-3 mb-1.5">{shared.included}</div>
-      <ul className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1">
-        {words.included.map(item => (
-          <li key={item} className="flex items-start gap-1.5 text-[12px] text-slate-300">
-            <Check size={12} className="text-green-400 shrink-0 mt-0.5" />{item}
-          </li>
-        ))}
-      </ul>
-      {other && otherExtra && <p className="text-[12px] text-slate-400 mt-3 pt-3 border-t border-white/8">{shared.addLater(other, otherExtra)}</p>}
-      {unavailable && <p className="text-[12px] text-amber-300 mt-3 pt-3 border-t border-white/8">{shared.unavailable(words.brand)}</p>}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        {loading
+          ? [0, 1, 2].map(i => <div key={i} className="h-56 rounded-xl border border-white/8 bg-slate-950/50 animate-pulse" />)
+          : plans.map(({ key, plan }) => {
+              const selected = chosen === key
+              const price = priceFor(plan, interval, i18n.language)
+              return (
+                <button key={key} type="button" onClick={() => onChoose(key)} aria-pressed={selected} data-package={key}
+                  className={'relative rounded-xl border p-4 text-left transition-all flex flex-col ' + (selected
+                    ? 'border-blue-500 bg-blue-500/6 ring-1 ring-blue-500/30'
+                    : key === 'standard' ? 'border-blue-500/30 hover:border-blue-500/60' : 'border-white/8 bg-slate-950/50 hover:border-white/25')}>
+                  {key === 'standard' && !selected && (
+                    <div className="absolute -top-2 left-1/2 -translate-x-1/2 bg-blue-500 text-on-fill text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">{t('auth.plans.most_popular', 'Most Popular')}</div>
+                  )}
+                  {selected && (
+                    <div className="absolute -top-2 left-1/2 -translate-x-1/2 bg-blue-500 text-on-fill text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider inline-flex items-center gap-1"><Check size={10} /> {t('auth.plans.selected', 'Selected')}</div>
+                  )}
+                  <div className="font-semibold text-white text-sm">{words.brand} {PACKAGE_NAMES[key]}</div>
+                  <div className="mt-1.5">
+                    <span className="text-xl font-bold text-white">{price.perMonth ?? '—'}</span>
+                    <span className="text-slate-400 text-[11px] whitespace-nowrap"> {shared.perMonth}</span>
+                  </div>
+                  <div className="text-[11px] text-slate-400 min-h-4">{price.perYear ? shared.billedYearly(price.perYear) : ''}</div>
+                  <ul className="space-y-1 mt-3 flex-1">
+                    {packageLines(product, plan.features, lite, t, i18n.language).map(line => (
+                      <li key={line.text} className={'flex items-start gap-1.5 text-[11px] ' + (line.included ? 'text-slate-300' : 'text-slate-500 line-through opacity-60')}>
+                        {line.included ? <Check size={10} className="text-green-400 shrink-0 mt-0.5" /> : <X size={10} className="text-slate-500 shrink-0 mt-0.5" />}{line.text}
+                      </li>
+                    ))}
+                  </ul>
+                  <div className="text-[10px] text-slate-500 text-center pt-2 mt-2 border-t border-white/5">{shared.trial(plan.trial_days)}</div>
+                </button>
+              )
+            })}
+      </div>
+      {other && otherFrom && <p className="text-[12px] text-slate-400">{shared.addLater(other, otherFrom)}</p>}
+      {unavailable && <p className="text-[12px] text-amber-300">{shared.unavailable(words.brand)}</p>}
     </div>
   )
 }
@@ -412,10 +459,16 @@ export function Login({ product }: { product?: SignupProduct } = {}) {
   const productWords = product ? productCopy(product, t) : null
   const productTabTitle = productWords?.tabTitle
   const shared = sharedProductWords(t)
-  const productPlans = product && modulePlans ? plansFor(modulePlans, product) : null
-  const productPrice = productPlans?.alone ? formatMonthly(productPlans.alone.monthly_amount, productPlans.alone.currency, i18n.language) : null
+  // A product's page: its packages from the catalogue; Standard picked first (the owner's 85 € package).
+  const [chosenPackage, setChosenPackage] = useState<PackageKey>('standard')
+  const productPlans = product && modulePlans ? packagesFor(modulePlans, product) : null
+  const chosenPlan = productPlans?.packages.find(p => p.key === chosenPackage)?.plan ?? null
+  // The other product's cheapest package, for "add it later from …".
+  const otherFrom = productPlans && modulePlans
+    ? (() => { const cheapest = packagesFor(modulePlans, productPlans.other).packages[0]?.plan; return cheapest ? priceFor(cheapest, billingInterval, i18n.language).perMonth : null })()
+    : null
   // Billing was read and does not sell this product yet: no trial to start here.
-  const productUnavailable = productPlans?.alone?.available === false
+  const productUnavailable = chosenPlan?.available === false
   // Show the umbrella picker only when the user is on the trial view AND
   // we don't have an industry from hostname or localStorage yet.
   const needsPicker = pickedIndustry === null
@@ -623,7 +676,7 @@ export function Login({ product }: { product?: SignupProduct } = {}) {
         password,
         hotel_name: hotelName,
         // A product's page starts a trial of that product alone (its plan slug is the product's name).
-        plan: product ?? selectedPlan,
+        plan: product ? packageSlug(product, chosenPackage) : selectedPlan,
         billing_interval: billingInterval,
         // Persist signup language as the new user's preference so they
         // land in the admin in the right locale on first sign-in.
@@ -1105,15 +1158,18 @@ export function Login({ product }: { product?: SignupProduct } = {}) {
                 </div>
 
                 {product && productWords ? (
-                  <ProductCard
+                  <PackagePicker
+                    product={product}
                     words={productWords}
                     shared={shared}
-                    price={productPrice}
-                    trialDays={productPlans?.alone?.trial_days ?? null}
+                    plans={productPlans?.packages ?? []}
                     loading={modulePlans === null}
+                    chosen={chosenPackage}
+                    onChoose={setChosenPackage}
+                    interval={billingInterval}
+                    onInterval={setBillingInterval}
                     other={productPlans ? productCopy(productPlans.other, t).brand : null}
-                    otherExtra={productPlans?.together && productPlans.alone && productPlans.together.monthly_amount != null && productPlans.alone.monthly_amount != null && productPlans.together.available
-                      ? formatMonthly(productPlans.together.monthly_amount - productPlans.alone.monthly_amount, productPlans.together.currency, i18n.language) : null}
+                    otherFrom={otherFrom}
                     unavailable={productUnavailable}
                   />
                 ) : (

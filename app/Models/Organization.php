@@ -471,6 +471,24 @@ class Organization extends Model
         return PlanModules::fromPlanSlug($this->plan_slug);
     }
 
+    /**
+     * The package of each module bought (module => lite|standard|pro), from the plan slug: `loyalty_pro-content` is
+     * Loyalty Pro and Content Standard. A module whose slug names no package (the Appointments plan, a legacy slug)
+     * is Standard. Empty for a full customer.
+     *
+     * @return array<string, string>
+     */
+    public function planTiers(): array
+    {
+        $modules = $this->planModules();
+        if ($modules === null) {
+            return [];
+        }
+        $fromSlug = PlanModules::selectionFromPlanSlug($this->plan_slug) ?? [];
+
+        return PlanModules::selection(array_combine($modules, array_map(fn (string $m) => $fromSlug[$m] ?? PlanModules::DEFAULT_TIER, $modules)));
+    }
+
     /** Whether the organisation has this product area at all: every one for a full customer, the bought ones on modules. */
     public function holdsModule(string $module): bool
     {

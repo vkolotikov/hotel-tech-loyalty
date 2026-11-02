@@ -313,11 +313,31 @@
       },
       "per_month": "par mois",
       "trial": "Essai gratuit de {{days}} jours, sans carte",
-      "add_later": "Besoin de {{other}} aussi ? Ajoutez-le à tout moment depuis Offre et produits pour {{price}} de plus par mois.",
+      "add_later": "Besoin de {{other}} aussi ? Ajoutez-le à tout moment depuis Offre et produits, à partir de {{price}} de plus par mois.",
       "unavailable": "{{product}} ne peut pas encore être acheté en ligne. Contactez HexaTech, nous le mettrons en place pour vous.",
       "full_suite": "Vous cherchez la suite HexaTech complète ?",
       "see_plans": "Voir toutes les offres",
-      "included": "Ce qui est inclus"
+      "included": "Ce qui est inclus",
+      "choose_package": "Choisissez votre formule",
+      "billing": "Période de facturation",
+      "save": "{{percent}} % d’économie",
+      "billed_yearly": "{{price}} facturés à l’année",
+      "line": {
+        "members": "Jusqu’à {{n}} membres",
+        "members_any": "Membres illimités",
+        "loyalty_core": "Points, niveaux, tampons, récompenses et offres",
+        "member_app": "Application membre, portail et scan à l’accueil",
+        "campaigns": "Campagnes e-mail et SMS",
+        "push": "Notifications push vers l’application membre",
+        "wallet": "Cartes Apple et Google Wallet, cartes NFC",
+        "content_core": "Calendrier éditorial, idées, légendes et images IA",
+        "ai_times": "{{x}}× l’allocation IA mensuelle de Lite",
+        "ai_base": "Une allocation IA mensuelle pour quelques publications par semaine",
+        "approvals": "Brouillons, validations et un e-mail du matin pour l’équipe",
+        "staff": "{{n}} membres d’équipe",
+        "places": "{{n}} établissements",
+        "priority": "Support prioritaire"
+      }
     }
   },
   "dashboard": {
@@ -3492,7 +3512,29 @@
         "appointments": "Agenda, réservation en ligne et fiches clients",
         "loyalty": "Points, niveaux, récompenses, une application membre et des campagnes",
         "content": "Planificateur IA pour les réseaux sociaux : idées, légendes, images et calendrier"
-      }
+      },
+      "over_limit_team": "Cette formule permet {{limit}} membres d’équipe et vous en avez {{count}} actifs. Choisissez une formule plus grande, ou désactivez-en d’abord.",
+      "over_limit_members": "Cette formule permet {{limit}} membres et vous en avez {{count}}. Choisissez une formule plus grande.",
+      "removed": "{{product}} ne fait plus partie de votre offre. Ses données sont conservées si vous l’ajoutez à nouveau.",
+      "changed_paid": "C’est fait : {{product}}. Votre prochaine facture régularise la différence pour le reste de la période.",
+      "changed_trial": "C’est fait : {{product}}.",
+      "or_yearly": "ou {{price}} par an ({{save}})",
+      "pay_yearly": "Payer à l’année : {{price}} ({{save}})",
+      "pay_monthly": "Payer au mois : {{price}}",
+      "package": "Formule : {{name}}",
+      "change_package": "Changer de formule",
+      "remove": "Retirer",
+      "add_from": "Ajouter à partir de {{price}} par mois",
+      "choose_add": "Ajouter {{product}} avec quelle formule ?",
+      "choose_change": "Passer à quelle formule ?",
+      "not_online": "pas encore en ligne",
+      "confirm_plan": "Votre offre devient {{plan}} à {{price}} par mois.",
+      "confirm_paid_any": "Vous payez ou êtes crédité uniquement de la différence pour le reste de la période, sur votre prochaine facture.",
+      "confirm_button": "Confirmer",
+      "confirm_remove": "Retirer {{product}} ? Votre équipe perd cet espace immédiatement. Rien n’est supprimé : ajoutez-le à nouveau et tout est là.",
+      "confirm_remove_button": "Retirer {{product}}",
+      "more_a_month": "+{{price}} par mois",
+      "less_a_month": "−{{price}} par mois"
     }
   }
 }

@@ -19,16 +19,19 @@ vi.mock('../lib/api', () => ({ api: { get: vi.fn(() => new Promise(() => {})), p
 
 afterEach(() => { auth.token = 'test-session' })
 
+const opt = (pkg: 'lite' | 'standard' | 'pro', amount: number, extra: number, available = true) =>
+  ({ package: pkg, plan_slug: `p_${pkg}`, available, monthly_amount: amount, yearly_amount: Math.round(amount * 12 * 0.85), extra_monthly_amount: extra, currency: 'eur', features: {} })
+
 const loyaltyOnly: ModulesState = {
-  organization: { name: 'Loyal Cafe' }, on_modules: true, modules: ['loyalty'], landing: 'loyalty',
-  plan: { slug: 'loyalty', monthly_amount: 8500, currency: 'eur' },
+  organization: { name: 'Loyal Cafe' }, on_modules: true, modules: ['loyalty'], packages: { loyalty: 'standard' }, landing: 'loyalty',
+  plan: { slug: 'loyalty', monthly_amount: 8500, yearly_amount: 86700, currency: 'eur' },
   subscription: { status: 'TRIALING', active: true, plan_slug: 'loyalty', trial_end: '2026-11-09T12:00:00Z', period_end: null },
   products: [
-    { key: 'appointments', held: false, plan_slug: 'appointments-loyalty', available: false, monthly_amount: null, extra_monthly_amount: null, currency: 'eur' },
-    { key: 'loyalty', held: true },
-    { key: 'content', held: false, plan_slug: 'loyalty-content', available: true, monthly_amount: 17000, extra_monthly_amount: 8500, currency: 'eur' },
+    { key: 'appointments', held: false, package: null, can_remove: false, options: [opt('standard', 0, 0, false)] },
+    { key: 'loyalty', held: true, package: 'standard', can_remove: false, options: [opt('lite', 4900, -3600), opt('pro', 14900, 6400)] },
+    { key: 'content', held: false, package: null, can_remove: false, options: [opt('lite', 12400, 3900), opt('standard', 17000, 8500), opt('pro', 23400, 14900)] },
   ],
-  can_manage: true, billing_available: true,
+  can_manage: true, billing_available: true, yearly_discount_percent: 15,
 }
 
 function render(data: ModulesState | undefined) {
@@ -51,8 +54,12 @@ describe('Plan & products', () => {
     expect(html).toContain('HexaTech Loyalty')
     expect(html).toContain('€85')
     expect(html).toContain('Free trial until')
-    expect(html).toContain('Add a card and activate')
-    expect(html).toContain('Add for €85 a month')
+    expect(html).toContain('Pay monthly: €85')
+    expect(html).toContain('Pay yearly: €867 (Save 15%)')
+    expect(html).toContain('or €867 a year (Save 15%)')
+    expect(html).toContain('Package: Standard')
+    expect(html).toContain('Change package')
+    expect(html).toContain('Add from €39 a month')
     expect(html).toContain('Not available online yet')
     expect(html).toContain('href="/loyalty"')
   })
@@ -61,13 +68,14 @@ describe('Plan & products', () => {
     const html = render({ ...loyaltyOnly, can_manage: false })
     expect(html).toContain('Ask an owner or a manager to add it')
     expect(html).toContain('Only an owner or a manager can change the plan.')
-    expect(html).not.toContain('Add a card and activate')
-    expect(html).not.toContain('Add for €85 a month')
+    expect(html).not.toContain('Pay monthly')
+    expect(html).not.toContain('Change package')
+    expect(html).not.toContain('Add from €39 a month')
   })
 
   it('sends a full customer to Billing in the full admin', () => {
     const html = render({ ...loyaltyOnly, on_modules: false, modules: ['appointments', 'loyalty', 'content'], plan: null,
-      products: loyaltyOnly.products.map(p => ({ key: p.key, held: true })) })
+      packages: {}, products: loyaltyOnly.products.map(p => ({ key: p.key, held: true })) })
     expect(html).toContain('Your plan includes every product')
     expect(html).toContain('href="/billing"')
   })
