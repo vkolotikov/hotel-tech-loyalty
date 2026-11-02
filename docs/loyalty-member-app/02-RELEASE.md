@@ -122,8 +122,11 @@ More → Bookings → Book (an appointment, paid at the venue), More → Profile
 **2026-11-02** (from `feature/loyalty-member-app`, EAS as the `hoteltechai` robot user, Developer role):
 
 - iPhone 2.0.0 build **19**: finished (`https://expo.dev/accounts/hoteltechai/projects/hotel-loyalty/builds/1cde298f-0590-470d-8f65-1d67f7ad934b`),
-  signed with the existing distribution certificate and profile (both valid to 2027-05-01). Not yet on TestFlight:
-  `eas submit` needs an App Store Connect API key on EAS, which cannot be set up non-interactively (owner, §0.5).
+  signed with the existing distribution certificate and profile (both valid to 2027-05-01). **Uploaded to App Store
+  Connect** the same day (`https://expo.dev/accounts/hoteltechai/projects/hotel-loyalty/submissions/f5a02565-d0a0-4d8a-8c70-56ccb54332cb`)
+  with the App Store Connect API key `S7Y8H6Q477` ("[Expo] EAS Submit …", role Admin), which the owner generated in
+  `eas credentials` and assigned to both apps; EAS's automatic TestFlight group was refused by Apple (403), so the
+  internal testing group is made by hand in App Store Connect.
 - Android 2.0.0 version code **24**: finished (`https://expo.dev/accounts/hoteltechai/projects/hotel-loyalty/builds/0e33845d-4327-48b6-aa5f-56368e1e1caf`),
   signed with the existing upload keystore. Not yet on Play: needs a Google service account key on EAS.
 - Three things the first builds found, all fixed in `app.json` and checked by a local `expo prebuild` (build 18 and
