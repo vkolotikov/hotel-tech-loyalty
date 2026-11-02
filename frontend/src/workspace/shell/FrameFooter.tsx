@@ -1,10 +1,11 @@
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { BookOpen, ChevronsUpDown, Keyboard, LayoutGrid, LifeBuoy, LogOut, PanelLeftClose, PanelLeftOpen, Search, Settings } from 'lucide-react'
+import { ArrowRightLeft, BookOpen, ChevronsUpDown, CreditCard, Keyboard, LayoutGrid, LifeBuoy, LogOut, PanelLeftClose, PanelLeftOpen, Search, Settings } from 'lucide-react'
 import { logoutAndRedirect } from '../../lib/logout'
 import { firstLetter } from '../lib/firstLetter'
 import { leave } from '../lib/leave'
 import type { LiveLook } from '../lib/look'
+import type { ModuleLink } from '../lib/useModuleLinks'
 import { LanguageSelect } from '../ui/LanguageSelect'
 import { ThemeSwitch } from '../ui/ThemeSwitch'
 import { roleLabelKey } from './shellMath'
@@ -25,13 +26,15 @@ interface FootProps {
   guide?: { to: string; label: string }
   /** Optional full settings page; quick preferences remain available. */
   settings?: { to: string; label: string; onSelect?: () => void }
+  /** On modules (owner 2026-11-02), in place of Full admin: the other workspaces bought, then Plan & products (useModuleLinks). */
+  moduleLinks?: ModuleLink[]
 }
 
 const ITEM = 'flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-sm text-a-text hover:bg-a-surface-2 focus-visible:bg-a-surface-2'
 const SELECT = 'w-full rounded-md border border-a-border bg-a-surface px-2 py-1.5 text-sm text-a-text'
 
 /** Settings, opened (spec 2026-10-21 §4.1): Light / Dark / Auto, the language, and Full admin where there is one. */
-export function SettingsPanel({ look, fullAdmin, onLeave, settings }: Pick<FootProps, 'look' | 'fullAdmin' | 'onLeave' | 'settings'>) {
+export function SettingsPanel({ look, fullAdmin, onLeave, settings, moduleLinks }: Pick<FootProps, 'look' | 'fullAdmin' | 'onLeave' | 'settings' | 'moduleLinks'>) {
   const { t } = useTranslation()
   return (
     <div className={`space-y-2 p-1 ${settings ? 'l-quick-settings' : ''}`}>
@@ -43,6 +46,14 @@ export function SettingsPanel({ look, fullAdmin, onLeave, settings }: Pick<FootP
           <LayoutGrid size={16} aria-hidden className="shrink-0 text-a-text-2" />{t('workspace.shell.full_admin', 'Full admin')}
         </Link>
       )}
+      {moduleLinks?.map(link => (
+        <Link key={link.to} to={link.to} onClick={(e) => leave(onLeave, () => {}, e)} className={ITEM} data-module-link="">
+          {link.to === '/account/products'
+            ? <CreditCard size={16} aria-hidden className="shrink-0 text-a-text-2" />
+            : <ArrowRightLeft size={16} aria-hidden className="shrink-0 text-a-text-2" />}
+          {link.label}
+        </Link>
+      ))}
     </div>
   )
 }
@@ -97,7 +108,7 @@ export function FrameFooter(props: FootProps) {
   return (
     <div data-frame-footer="" className="mt-auto space-y-1 border-t border-a-side-2 pt-4">
       <SideMenu label={t('workspace.shell.settings', 'Settings')} icon={Settings} kind="panel" place={place} slim={slim} buttonClassName={row}>
-        <SettingsPanel look={look} fullAdmin={props.fullAdmin} onLeave={props.onLeave} settings={props.settings} />
+        <SettingsPanel look={look} fullAdmin={props.fullAdmin} onLeave={props.onLeave} settings={props.settings} moduleLinks={props.moduleLinks} />
       </SideMenu>
       <SideMenu label={t('workspace.shell.help', 'Help & resources')} icon={LifeBuoy} kind="menu" place={place} slim={slim} buttonClassName={row}>
         <HelpList onShortcuts={props.onShortcuts} onFind={props.onFind} guide={props.guide} />
@@ -133,7 +144,7 @@ export function PhoneMenu(props: FootProps) {
         <div className="wrap-break-word text-sm font-medium text-a-text">{person}</div>
         <div className="text-xs text-a-text-2">{t(...roleLabelKey(role))}</div>
       </div>
-      <SettingsPanel look={look} fullAdmin={props.fullAdmin} onLeave={props.onLeave} settings={props.settings} />
+      <SettingsPanel look={look} fullAdmin={props.fullAdmin} onLeave={props.onLeave} settings={props.settings} moduleLinks={props.moduleLinks} />
       {props.guide && (
         <Link to={props.guide.to} onClick={(e) => shut(e.currentTarget)} className={ITEM}>
           <BookOpen size={16} aria-hidden className="shrink-0 text-a-text-2" />{props.guide.label}

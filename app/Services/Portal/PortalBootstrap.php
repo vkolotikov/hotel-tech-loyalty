@@ -59,8 +59,8 @@ final class PortalBootstrap
         }
 
         $org = Organization::withoutGlobalScopes()->find($orgId);
-        // The Appointments plan has no programme, whatever tiers its industry presets seeded (Part C).
-        if (!$org || $org->appointmentsOnly()) {
+        // Without the Loyalty module (the Appointments plan, Content alone) there is no programme, whatever tiers its industry presets seeded.
+        if (!$org || !$org->holdsModule('loyalty')) {
             return false;
         }
 

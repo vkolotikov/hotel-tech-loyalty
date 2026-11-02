@@ -71,7 +71,7 @@ final class StaffAlerts
     public static function audience(int $orgId, ?string $flag): Collection
     {
         $org = Organization::withoutGlobalScopes()->find($orgId);
-        if (!$org || !$org->workspaceEnabled('loyalty') || Organization::isAppointmentsOnly($orgId)) {
+        if (!$org || !$org->workspaceEnabled('loyalty') || !$org->holdsModule('loyalty')) {
             return collect();
         }
 

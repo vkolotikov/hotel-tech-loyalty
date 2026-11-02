@@ -14,6 +14,7 @@ import { localisedIndustryCopy, PICKER_INDUSTRIES, type IndustryCopy } from '../
 import { landingPath, safeRedirect } from '../appointments/lib/landing'
 import { AccessOffNotice } from '../components/AccessOffNotice'
 import { sessionBoundTask } from '../lib/sessionBoundTask'
+import { authPath, formatMonthly, plansFor, productCopy, productHome, sharedProductWords, viewFromPath, type ModulePlan, type ProductCopy, type SignupProduct } from './productSignup'
 
 /**
  * Industry Platform Plan Phase 2 — registration captures industry at
@@ -254,6 +255,40 @@ function InlineLangPicker({ i18n }: { i18n: any }) {
   )
 }
 
+/** A product's page: the one product, its price from the server, what it includes, and that the other can be added later. */
+function ProductCard({ words, shared, price, trialDays, loading, other, otherExtra, unavailable }: {
+  words: ProductCopy
+  shared: ReturnType<typeof sharedProductWords>
+  price: string | null
+  trialDays: number | null
+  loading: boolean
+  other: string | null
+  otherExtra: string | null
+  unavailable: boolean
+}) {
+  return (
+    <div data-product-card="" className="rounded-xl border border-blue-500/40 bg-blue-500/6 p-4">
+      <div className="flex items-baseline justify-between gap-3">
+        <div className="font-semibold text-white text-sm">{words.brand}</div>
+        {loading
+          ? <div className="h-6 w-20 bg-white/10 rounded-sm animate-pulse" />
+          : price && <div><span className="text-xl font-bold text-white">{price}</span> <span className="text-slate-400 text-xs">{shared.perMonth}</span></div>}
+      </div>
+      {trialDays != null && <div className="text-xs text-green-400 mt-1">{shared.trial(trialDays)}</div>}
+      <div className="text-[12px] font-medium text-slate-300 mt-3 mb-1.5">{shared.included}</div>
+      <ul className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1">
+        {words.included.map(item => (
+          <li key={item} className="flex items-start gap-1.5 text-[12px] text-slate-300">
+            <Check size={12} className="text-green-400 shrink-0 mt-0.5" />{item}
+          </li>
+        ))}
+      </ul>
+      {other && otherExtra && <p className="text-[12px] text-slate-400 mt-3 pt-3 border-t border-white/8">{shared.addLater(other, otherExtra)}</p>}
+      {unavailable && <p className="text-[12px] text-amber-300 mt-3 pt-3 border-t border-white/8">{shared.unavailable(words.brand)}</p>}
+    </div>
+  )
+}
+
 type View = 'login' | 'trial' | 'verify' | 'forgot' | 'reset'
 type BillingInterval = 'monthly' | 'yearly'
 
@@ -292,14 +327,14 @@ const FALLBACK_PLANS: PlanData[] = [
   },
 ]
 
-const pathToView = (pathname: string): View => {
-  if (pathname.startsWith('/register')) return 'trial'
-  if (pathname.startsWith('/forgot-password')) return 'forgot'
-  if (pathname.startsWith('/reset-password')) return 'reset'
-  return 'login'
-}
+const pathToView = (pathname: string): View => viewFromPath(pathname)
 
-export function Login() {
+/**
+ * The sign-in screen. With `product` it is HexaTech Loyalty's or HexaTech Content's own (owner 2026-11-02:
+ * /loyalty/login, /loyalty/register, /content/…): the product's words and price, a trial of that product alone,
+ * and its staff land in its workspace. Everything else (verification, reset, single sign-on) is the same screen.
+ */
+export function Login({ product }: { product?: SignupProduct } = {}) {
   const location = useLocation()
   const initialHasToken = typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('token')
   const [view, setView] = useState<View>(pathToView(location.pathname))
@@ -312,6 +347,8 @@ export function Login() {
   const [selectedPlan, setSelectedPlan] = useState('growth')
   const [billingInterval, setBillingInterval] = useState<BillingInterval>('monthly')
   const [plans, setPlans] = useState<PlanData[]>([])
+  // A product's page: its catalogue rows from GET /v1/modules (the server's prices), null until they arrive.
+  const [modulePlans, setModulePlans] = useState<ModulePlan[] | null>(null)
   // Mobile plan cards render collapsed (included rows only) — three fully
   // expanded cards put ~1,400px between the form and the submit button.
   const [expandedPlans, setExpandedPlans] = useState<Record<string, boolean>>({})
@@ -372,6 +409,13 @@ export function Login() {
     return readPersistedIndustry() !== null && detectIndustryFromWindow(true) === null
   })
   const industryCopy: IndustryCopy = localisedIndustryCopy(pickedIndustry, t)
+  const productWords = product ? productCopy(product, t) : null
+  const productTabTitle = productWords?.tabTitle
+  const shared = sharedProductWords(t)
+  const productPlans = product && modulePlans ? plansFor(modulePlans, product) : null
+  const productPrice = productPlans?.alone ? formatMonthly(productPlans.alone.monthly_amount, productPlans.alone.currency, i18n.language) : null
+  // Billing was read and does not sell this product yet: no trial to start here.
+  const productUnavailable = productPlans?.alone?.available === false
   // Show the umbrella picker only when the user is on the trial view AND
   // we don't have an industry from hostname or localStorage yet.
   const needsPicker = pickedIndustry === null
@@ -394,9 +438,9 @@ export function Login() {
     // tab title (e.g. "HotelTechAI — Sign in"). Otherwise default to
     // the parent brand on the umbrella + login views so the tab
     // doesn't mis-identify as a sub-brand the visitor never chose.
-    document.title = pickedIndustry ? industryCopy.tabTitle : 'HexaTech — Sign in'
+    document.title = productTabTitle ?? (pickedIndustry ? industryCopy.tabTitle : 'HexaTech — Sign in')
     return () => { document.title = originalTitleRef.current }
-  }, [industryCopy.tabTitle, pickedIndustry])
+  }, [industryCopy.tabTitle, pickedIndustry, productTabTitle])
 
   // Handle SaaS JWT login via URL param. We deliberately use raw fetch here
   // (not the shared axios `api` instance) because its global 401 interceptor
@@ -431,12 +475,18 @@ export function Login() {
       })
   }, [searchParams, setAuth, navigate])
 
-  // Fetch plans on mount — use fallback only if API fails
+  // Fetch plans on mount — use fallback only if API fails. A product's page reads the modules' catalogue instead,
+  // which always answers with a price (billing's, or the built-in one when billing cannot be read).
   useEffect(() => {
+    if (product) {
+      api.get('/v1/modules').then(({ data }) => setModulePlans(Array.isArray(data?.plans) ? data.plans : []))
+        .catch(() => setModulePlans([]))
+      return
+    }
     api.get('/v1/plans').then(({ data }) => {
       setPlans(data.plans?.length ? data.plans : FALLBACK_PLANS)
     }).catch(() => setPlans(FALLBACK_PLANS))
-  }, [])
+  }, [product])
 
   // Countdown timer for resend
   useEffect(() => {
@@ -464,7 +514,7 @@ export function Login() {
       // Before the portal existed, a member who signed in here was bounced
       // straight back by ProtectedRoute's staff-only check. A local
       // `?redirect=` (the appointments workspace sends one) is honoured.
-      navigate(landingPath(data.user, safeRedirect(searchParams.get('redirect'))), { replace: true })
+      navigate(landingPath(data.user, productHome(product, safeRedirect(searchParams.get('redirect')))), { replace: true })
     } catch (err: any) {
       setError(err.response?.data?.message || 'Invalid credentials. Please try again.')
     } finally {
@@ -572,7 +622,8 @@ export function Login() {
         phone,
         password,
         hotel_name: hotelName,
-        plan: selectedPlan,
+        // A product's page starts a trial of that product alone (its plan slug is the product's name).
+        plan: product ?? selectedPlan,
         billing_interval: billingInterval,
         // Persist signup language as the new user's preference so they
         // land in the admin in the right locale on first sign-in.
@@ -588,9 +639,12 @@ export function Login() {
       // last time's industry without an explicit choice.
       persistIndustry(null)
       setAuth(data.token, data.user, data.staff)
-      navigate('/')
+      // The sign-up answer carries the workspaces: a product's new customer lands in its workspace.
+      navigate(landingPath(data.user, productHome(product, '/')))
     } catch (err: any) {
-      setError(err.response?.data?.error || err.response?.data?.message || 'Registration failed. Please try again.')
+      // A refusal with a code (`not_available`) carries its sentence in `message`.
+      const body = err.response?.data
+      setError((body?.message && /^[a-z_]+$/.test(body?.error ?? '') ? body.message : body?.error) || body?.message || 'Registration failed. Please try again.')
       setVerified(false)
       setCodeDigits(['', '', '', '', '', ''])
     } finally {
@@ -605,7 +659,7 @@ export function Login() {
     try {
       await api.post('/v1/auth/forgot-password', { email })
       setResetSent(true)
-      navigate('/reset-password')
+      navigate(authPath(product, 'reset-password'))
     } catch (err: any) {
       setError(err.response?.data?.message || 'Could not send reset code. Please try again.')
     } finally {
@@ -636,7 +690,7 @@ export function Login() {
         setResetConfirm('')
         setResetDone(false)
         setResetSent(false)
-        navigate('/login')
+        navigate(authPath(product, 'login'))
       }, 1800)
     } catch (err: any) {
       setError(err.response?.data?.message || 'Invalid or expired reset code.')
@@ -747,7 +801,7 @@ export function Login() {
 
               <div className="mt-6 pt-4 border-t border-white/6 text-center">
                 <button
-                  onClick={() => { setView('trial'); setError(''); setCodeDigits(['', '', '', '', '', '']); setVerified(false); navigate('/register') }}
+                  onClick={() => { setView('trial'); setError(''); setCodeDigits(['', '', '', '', '', '']); setVerified(false); navigate(authPath(product, 'register')) }}
                   className="text-sm text-gray-500 hover:text-gray-400"
                 >
                   {t('auth.verify.back_to_register', 'Back to registration')}
@@ -772,12 +826,16 @@ export function Login() {
   // reset / umbrella host pre-pick) the copy is HexaTech-generic —
   // service-business framing, not hotel-flavoured, because the
   // umbrella covers hotel + beauty + medical + restaurant + 4 more.
-  const heroTitle = isTrial
+  const heroTitle = productWords && !isForgot && !isReset
+    ? productWords.hero
+    : isTrial
     ? industryCopy.hero
     : isForgot || isReset
       ? t('auth.hero.locked_out_title', 'Locked out? No problem.')
       : t('auth.hero.default_title', 'One platform. More bookings. Stronger loyalty.')
-  const heroSubtitle = isTrial
+  const heroSubtitle = productWords && !isForgot && !isReset
+    ? productWords.heroSub
+    : isTrial
     ? industryCopy.heroSub
     : isForgot
       ? 'Enter your email and we\'ll send a 6-digit reset code. Valid for 15 minutes.'
@@ -786,7 +844,7 @@ export function Login() {
         : 'AI assistants, bookings, CRM, loyalty and analytics — for hotels, salons, clinics, restaurants and more.'
 
   const formTitle = isTrial
-    ? t('auth.register.title', 'Start your free trial')
+    ? (productWords ? productWords.registerTitle : t('auth.register.title', 'Start your free trial'))
     : isForgot
       ? 'Reset your password'
       : isReset
@@ -798,7 +856,7 @@ export function Login() {
       ? 'We\'ll email you a 6-digit code.'
       : isReset
         ? `Code sent to ${email}`
-        : 'Sign in to your HexaTech workspace'
+        : productWords ? productWords.loginSubtitle : 'Sign in to your HexaTech workspace'
 
   return (
     <div className="min-h-screen grid lg:grid-cols-[1.05fr_1fr] bg-hx-060b1e text-white">
@@ -825,19 +883,19 @@ export function Login() {
         <div aria-hidden className="absolute -bottom-36 -right-24 w-[380px] h-[380px] rounded-full blur-[80px] bg-sky-400/30 pointer-events-none" />
 
         <BrandMark
-          onClick={() => navigate('/login')}
+          onClick={() => navigate(authPath(product, 'login'))}
           // When the visitor has explicitly picked an industry (sub-
           // brand domain or umbrella picker), use that sub-brand's
           // name + monogram. Otherwise default to HexaTech / HX so
           // the umbrella + login / forgot / reset views read as the
           // parent brand instead of hotel-flavoured.
-          brand={pickedIndustry ? industryCopy.brand : 'HexaTech'}
-          monogram={pickedIndustry ? INDUSTRY_MONOGRAM[pickedIndustry] : 'HX'}
+          brand={productWords ? productWords.brand : pickedIndustry ? industryCopy.brand : 'HexaTech'}
+          monogram={productWords ? productWords.monogram : pickedIndustry ? INDUSTRY_MONOGRAM[pickedIndustry] : 'HX'}
         />
 
         <div className="relative z-10 max-w-[520px]">
           <span className="inline-block text-[11px] font-medium tracking-[0.08em] uppercase px-3 py-1.5 rounded-full bg-blue-500/10 text-blue-300 border border-blue-500/25 mb-6">
-            {t('auth.hero.badge', 'AI-native service business suite')}
+            {productWords ? productWords.badge : t('auth.hero.badge', 'AI-native service business suite')}
           </span>
           <h2 className="text-[42px] leading-[1.1] tracking-tight font-semibold mb-4 bg-linear-to-b from-white to-slate-300 bg-clip-text text-transparent">
             {heroTitle}
@@ -850,7 +908,9 @@ export function Login() {
                 back to industry-neutral hospitality framing; INDUSTRY_COPY
                 always has 3 bullets per industry to keep the layout
                 visually consistent. */}
-            {(isTrial
+            {(productWords && !isForgot && !isReset
+              ? productWords.bullets
+              : isTrial
               ? industryCopy.heroBullets
               : [
                   'Unified CRM, loyalty and booking engine',
@@ -878,19 +938,19 @@ export function Login() {
       >
         <div className="lg:hidden mb-6 self-start">
           <BrandMark
-            onClick={() => navigate('/login')}
+            onClick={() => navigate(authPath(product, 'login'))}
             compact
-            brand={industryCopy.brand}
-            monogram={pickedIndustry ? INDUSTRY_MONOGRAM[pickedIndustry] : 'HT'}
+            brand={productWords ? productWords.brand : industryCopy.brand}
+            monogram={productWords ? productWords.monogram : pickedIndustry ? INDUSTRY_MONOGRAM[pickedIndustry] : 'HT'}
           />
         </div>
 
-        <div className={`w-full mx-auto rounded-2xl border border-white/8 sm:bg-slate-900/50 sm:backdrop-blur-md p-6 sm:p-9 sm:shadow-[0_20px_60px_-20px_rgba(0,0,0,0.5)] ${isTrial ? 'max-w-[440px] lg:max-w-[940px]' : 'max-w-[440px]'}`}>
+        <div className={`w-full mx-auto rounded-2xl border border-white/8 sm:bg-slate-900/50 sm:backdrop-blur-md p-6 sm:p-9 sm:shadow-[0_20px_60px_-20px_rgba(0,0,0,0.5)] ${isTrial ? (product ? 'max-w-[440px] lg:max-w-[620px]' : 'max-w-[440px] lg:max-w-[940px]') : 'max-w-[440px]'}`}>
           <div className="flex items-start justify-between gap-3 mb-6">
             <div className="min-w-0">
               {(isForgot || isReset) && (
                 <button
-                  onClick={() => { navigate('/login'); setError('') }}
+                  onClick={() => { navigate(authPath(product, 'login')); setError('') }}
                   className="inline-flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-300 mb-3"
                 >
                   <ArrowLeft size={14} /> Back to sign in
@@ -927,7 +987,7 @@ export function Login() {
                 <div>
                   <div className="flex items-baseline justify-between mb-1.5">
                     <label className="block text-[13px] font-medium text-slate-300">{t('auth.login.password', 'Password')}</label>
-                    <button type="button" onClick={() => { navigate('/forgot-password'); setError('') }}
+                    <button type="button" onClick={() => { navigate(authPath(product, 'forgot-password')); setError('') }}
                       className="text-xs text-blue-400 hover:text-blue-300">{t('auth.login.forgot_password', 'Forgot password?')}</button>
                   </div>
                   <div className="relative">
@@ -951,7 +1011,7 @@ export function Login() {
               </form>
               <p className="mt-6 text-center text-sm text-slate-400">
                 {t('auth.login.no_account', "Don't have an account?")}{' '}
-                <button onClick={() => { navigate('/register'); setError('') }} className="text-blue-400 hover:text-blue-300 font-medium">{t('auth.login.create_account', 'Create one')}</button>
+                <button onClick={() => { navigate(authPath(product, 'register')); setError('') }} className="text-blue-400 hover:text-blue-300 font-medium">{t('auth.login.create_account', 'Create one')}</button>
               </p>
             </>
           )}
@@ -960,7 +1020,7 @@ export function Login() {
           {view === 'trial' && needsPicker && (
             <IndustryPicker
               onPick={(id) => { setPickedIndustry(id); setPickedViaPicker(true) }}
-              onCancel={() => { setView('login'); navigate('/login') }}
+              onCancel={() => { setView('login'); navigate(authPath(product, 'login')) }}
             />
           )}
           {view === 'trial' && !needsPicker && (
@@ -985,9 +1045,13 @@ export function Login() {
                   </button>
                 </div>
               )}
-              <div className="bg-green-500/10 border border-green-500/25 text-green-400 text-xs rounded-lg px-3.5 py-2.5 mb-4">
-                <strong className="font-semibold">{t('auth.register.welcome_banner_title', { noun: industryCopy.workspaceNoun, defaultValue: 'Welcome to your new {{noun}}:' })}</strong>{' '}{t('auth.register.welcome_banner_body', 'full access to CRM, Loyalty, Booking engine and AI Chatbot during your trial.')}
-              </div>
+              {productWords ? (
+                <div className="bg-green-500/10 border border-green-500/25 text-green-400 text-xs rounded-lg px-3.5 py-2.5 mb-4">{productWords.trialBanner}</div>
+              ) : (
+                <div className="bg-green-500/10 border border-green-500/25 text-green-400 text-xs rounded-lg px-3.5 py-2.5 mb-4">
+                  <strong className="font-semibold">{t('auth.register.welcome_banner_title', { noun: industryCopy.workspaceNoun, defaultValue: 'Welcome to your new {{noun}}:' })}</strong>{' '}{t('auth.register.welcome_banner_body', 'full access to CRM, Loyalty, Booking engine and AI Chatbot during your trial.')}
+                </div>
+              )}
               <form onSubmit={e => { e.preventDefault(); handleSendCode() }} className="space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
@@ -1040,6 +1104,19 @@ export function Login() {
                   </div>
                 </div>
 
+                {product && productWords ? (
+                  <ProductCard
+                    words={productWords}
+                    shared={shared}
+                    price={productPrice}
+                    trialDays={productPlans?.alone?.trial_days ?? null}
+                    loading={modulePlans === null}
+                    other={productPlans ? productCopy(productPlans.other, t).brand : null}
+                    otherExtra={productPlans?.together && productPlans.alone && productPlans.together.monthly_amount != null && productPlans.alone.monthly_amount != null && productPlans.together.available
+                      ? formatMonthly(productPlans.together.monthly_amount - productPlans.alone.monthly_amount, productPlans.together.currency, i18n.language) : null}
+                    unavailable={productUnavailable}
+                  />
+                ) : (
                 <div>
                   <div className="flex items-center justify-between mb-3">
                     <label className="block text-[13px] font-medium text-slate-300">{t('auth.plans.heading', 'Choose your plan')}</label>
@@ -1178,8 +1255,8 @@ export function Login() {
                         })}
                   </div>
                 </div>
-
-                <button type="submit" disabled={loading}
+                )}
+                <button type="submit" disabled={loading || productUnavailable}
                   className="w-full py-3 rounded-lg text-sm font-medium text-on-fill bg-linear-to-br from-blue-500 to-blue-600 hover:from-blue-400 hover:to-blue-500 transition disabled:opacity-60 shadow-lg shadow-blue-500/25 flex items-center justify-center gap-2">
                   {loading ? 'Sending code…' : (<><ShieldCheck size={16} /> {t('auth.register.submit', 'Verify Email & Start Trial')}</>)}
                 </button>
@@ -1187,8 +1264,14 @@ export function Login() {
               </form>
               <p className="mt-6 text-center text-sm text-slate-400">
                 {t('auth.register.have_account', 'Already have an account?')}{' '}
-                <button onClick={() => { navigate('/login'); setError('') }} className="text-blue-400 hover:text-blue-300 font-medium">{t('auth.register.sign_in', 'Sign in')}</button>
+                <button onClick={() => { navigate(authPath(product, 'login')); setError('') }} className="text-blue-400 hover:text-blue-300 font-medium">{t('auth.register.sign_in', 'Sign in')}</button>
               </p>
+              {product && (
+                <p className="mt-2 text-center text-xs text-slate-500">
+                  {shared.fullSuite}{' '}
+                  <button onClick={() => { navigate('/register'); setError('') }} className="text-blue-400 hover:text-blue-300">{shared.seePlans}</button>
+                </p>
+              )}
             </>
           )}
 
@@ -1211,7 +1294,7 @@ export function Login() {
               </form>
               <p className="mt-6 text-center text-sm text-slate-400">
                 Remembered it?{' '}
-                <button onClick={() => { navigate('/login'); setError('') }} className="text-blue-400 hover:text-blue-300 font-medium">Back to sign in</button>
+                <button onClick={() => { navigate(authPath(product, 'login')); setError('') }} className="text-blue-400 hover:text-blue-300 font-medium">Back to sign in</button>
               </p>
             </>
           )}
@@ -1269,7 +1352,7 @@ export function Login() {
                   </button>
                 </form>
                 <p className="mt-6 text-center text-sm text-slate-400">
-                  <button onClick={() => { navigate('/login'); setError('') }} className="text-blue-400 hover:text-blue-300 font-medium">Back to sign in</button>
+                  <button onClick={() => { navigate(authPath(product, 'login')); setError('') }} className="text-blue-400 hover:text-blue-300 font-medium">Back to sign in</button>
                 </p>
               </>
             )

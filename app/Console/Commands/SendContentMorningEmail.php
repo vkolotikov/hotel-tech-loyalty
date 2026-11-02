@@ -66,7 +66,7 @@ class SendContentMorningEmail extends Command
     private function sendTo(User $user, int $hour, bool $force): bool
     {
         $org = Organization::withoutGlobalScopes()->find($user->organization_id);
-        if (!$org || !$org->workspaceEnabled('content') || $org->appointmentsOnly()) {
+        if (!$org || !$org->workspaceEnabled('content') || !$org->holdsModule('content')) {
             return false;
         }
         // Staff, brands, profiles and posts are tenant-scoped: read under the person's organisation.

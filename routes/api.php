@@ -172,6 +172,8 @@ Route::prefix('v1')->group(function () {
 
     // Public: fetch available plans from SaaS
     Route::get('plans', [AuthController::class, 'plans']);
+    // Public: the workspaces sold on their own and their prices, for /loyalty/register and /content/register.
+    Route::get('modules', [\App\Http\Controllers\Api\V1\Auth\PlanModulesController::class, 'catalogue'])->middleware('throttle:60,1,modules');
 
     // Public: which versions of a native app the server still serves (config/apps.php), before sign-in.
     Route::get('apps/{app}/version', [\App\Http\Controllers\Api\V1\AppVersionController::class, 'show'])
@@ -340,6 +342,13 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
             Route::post('billing/portal',      [AuthController::class, 'billingPortal'])->middleware(['throttle:30,1,billing-portal', 'admin.access']);
             Route::post('billing/refresh',     [AuthController::class, 'billingRefresh'])->middleware(['throttle:60,1,billing-refresh', 'admin.access']);
             Route::post('billing/start-trial', [AuthController::class, 'billingStartTrial'])->middleware(['throttle:30,1,billing-start-trial', 'admin.access']);
+            // Plan & products for an organisation on modules (HexaTech Loyalty, Content, Appointments bought on their
+            // own; owner 2026-11-02): AccessMap `auth/modules`, product `account`, changes by owners and managers.
+            Route::get('modules',           [\App\Http\Controllers\Api\V1\Auth\PlanModulesController::class, 'show'])->middleware('admin.access');
+            Route::post('modules/add',      [\App\Http\Controllers\Api\V1\Auth\PlanModulesController::class, 'add'])->middleware(['throttle:20,1,modules-add', 'admin.access']);
+            Route::post('modules/activate', [\App\Http\Controllers\Api\V1\Auth\PlanModulesController::class, 'activate'])->middleware(['throttle:30,1,modules-activate', 'admin.access']);
+            Route::post('modules/portal',   [\App\Http\Controllers\Api\V1\Auth\PlanModulesController::class, 'portal'])->middleware(['throttle:30,1,modules-portal', 'admin.access']);
+            Route::post('modules/refresh',  [\App\Http\Controllers\Api\V1\Auth\PlanModulesController::class, 'refresh'])->middleware(['throttle:60,1,modules-refresh', 'admin.access']);
             // Industry Platform Plan Phase 2 — POST /v1/auth/apply-industry
             // re-applies a CRM + Planner preset against the caller's org.
             // Throttled hard (5/min) per token; an admin clicking the

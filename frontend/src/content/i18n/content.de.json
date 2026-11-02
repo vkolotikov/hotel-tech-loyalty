@@ -18,7 +18,7 @@
     "find": "Beitrag oder Aktion finden",
     "brand": "Marke",
     "switched_off": "HexaTech Content wurde für Ihre Organisation ausgeschaltet. Ihre Beiträge sind unverändert.",
-    "subscription_required": "Das Abonnement Ihrer Organisation ist nicht aktiv, daher kann HexaTech Content nicht geöffnet werden. Ihre Beiträge sind unverändert. Eine Administratorin oder ein Administrator kann den Zugang unter „Abrechnung“ im vollständigen Admin wiederherstellen.",
+    "subscription_required": "Das Abonnement Ihrer Organisation ist nicht aktiv, daher kann HexaTech Content nicht geöffnet werden. Ihre Beiträge sind unverändert. Eine Administratorin oder ein Administrator kann den Zugang unter „Abrechnung“ im vollständigen Admin wiederherstellen.", "subscription_required_plan": "Ihr HexaTech-Tarif ist nicht aktiv, daher kann HexaTech Content nicht öffnen. Ihre Posts bleiben erhalten. Starten Sie ihn unter „Tarif & Produkte“ neu.",
     "open_full_admin": "Vollständigen Admin öffnen",
     "budget_warn": "Das KI-Budget dieses Monats ist zu {{percent}} % verbraucht.",
     "budget_over": "Das KI-Budget dieses Monats ist aufgebraucht. KI-Aktionen pausieren bis zum nächsten Monat; von Hand schreiben geht weiterhin.",

@@ -12,14 +12,39 @@ export interface LandingUser {
   user_type?: string
   workspaces?: {
     appointments?: { landing?: boolean; has_services?: boolean; only?: boolean }
-    content?: { landing?: boolean }
-    loyalty?: { landing?: boolean }
+    content?: { landing?: boolean; only?: boolean }
+    loyalty?: { landing?: boolean; only?: boolean }
   }
 }
 
 /** A workspace page: /appointments…, /content… or /loyalty… (not /contentious). */
 const WORKSPACE_PAGE = /^\/(appointments|content|loyalty)(\/|$)/
-const APPOINTMENTS_PATH = /^\/appointments(\/|\?|$)/
+
+/** The server's order of the modules (App\Support\PlanModules): where staff land when nothing else says. */
+const MODULE_ORDER: readonly WorkspaceName[] = ['appointments', 'loyalty', 'content']
+
+/** The account pages an organisation on modules keeps beside its workspaces (Plan & products, connections). */
+const ACCOUNT_PAGE = /^\/account\/(products|connections)(\/|\?|$)/
+
+const pageOf = (name: WorkspaceName) => new RegExp(`^/${name}(/|\\?|$)`)
+
+/**
+ * The workspaces an organisation on modules bought (owner 2026-11-02: HexaTech Loyalty, Content or Appointments
+ * on their own, one or several), in the server's order; null for a full customer, a member or before sign-in.
+ * The server marks each of them `only` (Organization::workspacesPayload).
+ */
+export function planModules(user: LandingUser | null | undefined): WorkspaceName[] | null {
+  if (!user || user.user_type === 'member') return null
+  const held = MODULE_ORDER.filter(name => user.workspaces?.[name]?.only === true)
+  return held.length > 0 ? held : null
+}
+
+/** Where staff of an organisation on modules belong: the workspace the server lands them on, else the first. Null for everyone else. */
+export function moduleHome(user: LandingUser | null | undefined): string | null {
+  const held = planModules(user)
+  if (!held) return null
+  return `/${held.find(name => user?.workspaces?.[name]?.landing === true) ?? held[0]}`
+}
 
 /**
  * Whether the full admin shows its way into a workspace (the menu item, the
@@ -38,9 +63,14 @@ export function safeRedirect(raw: string | null): string {
   return raw && raw.startsWith('/') && !raw.startsWith('//') && !raw.startsWith('/\\') ? raw : '/'
 }
 
-/** The sign-in screen, set to bring the visitor back to where they were (see safeRedirect). */
+/**
+ * The sign-in screen, set to bring the visitor back to where they were (see safeRedirect). From HexaTech Loyalty or
+ * Content it is that product's own sign-in page (/loyalty/login, /content/login; owner 2026-11-02): the same
+ * accounts, the product's own look.
+ */
 export function loginPath(location: { pathname: string; search: string }): string {
-  return `/login?redirect=${encodeURIComponent(location.pathname + location.search)}`
+  const product = /^\/(loyalty|content)(\/|$)/.exec(location.pathname)?.[1]
+  return `${product ? `/${product}` : ''}/login?redirect=${encodeURIComponent(location.pathname + location.search)}`
 }
 
 /**
@@ -57,12 +87,14 @@ export function loginPathAfterExpiry(pathname: string, search: string): string {
  * screen would have used anyway ('/' or an explicit ?redirect=): a workspace
  * is chosen only when nothing else was asked for and the organisation chose
  * it (`--landing`; one per organisation); everyone else lands where they
- * always did. On the Appointments plan that workspace is all there is,
- * whatever the link asked for.
+ * always did. On modules (the Appointments plan, Loyalty or Content bought
+ * on their own) the workspaces bought are all there is: a link into one of
+ * them or into the account pages is followed, anything else lands on its home.
  */
 export function landingPath(user: LandingUser | null | undefined, fallback: string): string {
   if (user?.user_type === 'member') return '/portal'
-  if (user?.workspaces?.appointments?.only === true) return APPOINTMENTS_PATH.test(fallback) ? fallback : '/appointments'
+  const held = planModules(user)
+  if (held) return held.some(name => pageOf(name).test(fallback)) || ACCOUNT_PAGE.test(fallback) ? fallback : moduleHome(user)!
   if (fallback === '/' && user?.workspaces?.appointments?.landing === true) return '/appointments'
   if (fallback === '/' && user?.workspaces?.content?.landing === true) return '/content'
   if (fallback === '/' && user?.workspaces?.loyalty?.landing === true) return '/loyalty'

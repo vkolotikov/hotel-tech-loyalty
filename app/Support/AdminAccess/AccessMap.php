@@ -18,10 +18,12 @@ use Illuminate\Routing\Route;
  *   `staff` (any active staff member of the organisation), `manager`
  *   (`super_admin` or `manager`) or a capability column of `staff`
  *   (managers, and staff whose flag is set — as the menu shows those pages).
- * - `product` says what an organisation on the Appointments plan may reach:
- *   `appointments` and `account`. The others (`content`, `admin`, `booking`, `loyalty`,
- *   `crm`, `chat`) are recorded for the day the existing plans are enforced
- *   too; today they enforce nothing for them.
+ * - `product` says what an organisation on modules may reach (owner
+ *   2026-11-02; the Appointments plan was the first): `account` and the
+ *   workspaces it bought — `appointments`, `loyalty`, `content` — see
+ *   productsFor(). The others (`admin`, `booking`, `crm`, `chat`) are the
+ *   full admin's, recorded for the day the existing plans are enforced too;
+ *   a full customer reaches every product.
  *
  * Manager exactly where the menu's page is manager-only. Changes there are
  * manager-only; reads are manager-only only for sensitive data, because
@@ -33,10 +35,25 @@ final class AccessMap
 {
     public const MANAGER_ROLES = ['super_admin', 'manager'];
 
-    /** What an organisation on the Appointments plan may reach (spec §6.2). */
+    /** What an organisation on the Appointments plan may reach (spec §6.2): productsFor(['appointments']). */
     public const PLAN_PRODUCTS = ['appointments', 'account'];
 
+    /** What every organisation on modules may reach, whichever it bought: the caller's own account and billing. */
+    public const MODULE_BASE_PRODUCTS = ['account'];
+
     public const PRODUCTS = ['appointments', 'content', 'account', 'admin', 'booking', 'loyalty', 'crm', 'chat'];
+
+    /**
+     * The products an organisation on these modules may reach: its own account and each module's workspace (a
+     * module's key is its AccessMap product).
+     *
+     * @param  list<string>  $modules
+     * @return list<string>
+     */
+    public static function productsFor(array $modules): array
+    {
+        return array_values(array_unique(array_merge(self::MODULE_BASE_PRODUCTS, array_intersect($modules, self::PRODUCTS))));
+    }
 
     /** @var array{0: string, 1: string, 2: string} */
     public const FALLBACK = ['manager', 'manager', 'admin'];
@@ -189,6 +206,7 @@ final class AccessMap
 
         // ── Staff routes outside /admin
         'auth/billing'                          => ['manager',            'manager',            'admin'],         // Checkout, activation, Stripe portal, refresh, trial (Billing, manager)
+        'auth/modules'                          => ['staff',              'manager',            'account'],       // Plan & products on modules: read by staff, add / pay / card by owners and managers (2026-11-02)
         'auth/apply-industry'                   => ['manager',            'manager',            'admin'],         // Changes the organisation's industry and presets (Settings, manager)
         'integrations/leads'                    => ['staff',              'staff',              'crm'],           // Leads sent with an API token
         'mcp'                                   => ['staff',              'staff',              'admin'],         // The ChatGPT / Claude connector; its tools keep their own checks

@@ -304,7 +304,8 @@
     "programme_off_manager": "The programme has no active tier yet, so members cannot see it in the app or the portal. Add or switch on a tier under Program.",
     "programme_off_staff": "The programme is not running yet: your manager has not set up its tiers.",
     "subscription_required": "Your organisation's subscription is not active, so HexaTech Loyalty cannot open. Your members and their points are unchanged. An administrator can restore access under Billing in the full admin.",
-    "switched_off": "HexaTech Loyalty has been switched off for your organisation. Your members and their points are unchanged."
+    "switched_off": "HexaTech Loyalty has been switched off for your organisation. Your members and their points are unchanged.",
+    "lapsed": "Your HexaTech plan is not active. Start it again in Plan & products; your members and their points are unchanged."
   },
   "shortcuts": {
     "find": "Find a member",

@@ -47,9 +47,12 @@ const SCAN_TARGETS = [
   path.join(SRC_DIR, 'content'),
   path.join(SRC_DIR, 'loyalty'),
   path.join(SRC_DIR, 'components/OpenInAppointments.tsx'),
+  // Loyalty and Content sold on their own (2026-11-02): their sign-in pages and Plan & products.
+  path.join(SRC_DIR, 'pages/productSignup.ts'),
+  path.join(SRC_DIR, 'pages/AccountProducts.tsx'),
 ]
 
-const KEY_PREFIXES = ['landing_pages.', 'reviews.', 'nav.groups.landing_pages', 'nav.items.landing_', 'nav.items.appointments_', 'portal.', 'appointments.', 'workspace.', 'content.', 'loyalty.', 'nav.items.loyalty_']
+const KEY_PREFIXES = ['landing_pages.', 'reviews.', 'nav.groups.landing_pages', 'nav.items.landing_', 'nav.items.appointments_', 'portal.', 'appointments.', 'workspace.', 'content.', 'loyalty.', 'nav.items.loyalty_', 'auth.product.', 'account.products.']
 
 function listSourceFiles(target: string): string[] {
   const stat = fs.statSync(target)

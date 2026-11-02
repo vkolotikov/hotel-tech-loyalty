@@ -275,6 +275,49 @@
     "common": {
       "email_placeholder": "vous@entreprise.com",
       "password_placeholder": "8 caractères minimum"
+    },
+    "product": {
+      "loyalty": {
+        "badge": "Programme de fidélité pour les métiers de service",
+        "hero": "Transformez les premières visites en habitués.",
+        "hero_sub": "Points, niveaux, récompenses et une application membre à vos couleurs, pilotés depuis un seul espace, pour les hôtels, salons, cliniques, restaurants et plus encore.",
+        "bullet_1": "Des points, niveaux, tampons et récompenses que vos clients comprennent",
+        "bullet_2": "Une application membre et des cartes Wallet à votre marque",
+        "bullet_3": "Des campagnes e-mail, push et SMS qui les font revenir",
+        "login_subtitle": "Connexion à HexaTech Loyalty",
+        "register_title": "Commencez votre essai HexaTech Loyalty",
+        "trial_banner": "Votre essai comprend tout HexaTech Loyalty.",
+        "included_1": "Membres, niveaux, points et cartes à tampons",
+        "included_2": "Récompenses, offres et avantages membres",
+        "included_3": "Votre propre application membre et vos cartes Wallet",
+        "included_4": "Campagnes e-mail, push et SMS",
+        "included_5": "Scan à l’accueil, événements et statistiques",
+        "tab_title": "HexaTech Loyalty — Connexion"
+      },
+      "content": {
+        "badge": "Planificateur IA pour les réseaux sociaux",
+        "hero": "Planifiez un mois de publications en un après-midi.",
+        "hero_sub": "Un planificateur de contenu IA qui connaît votre marque : idées, légendes, images et un calendrier que votre équipe valide.",
+        "bullet_1": "Un calendrier éditorial construit autour de vos objectifs et dates clés",
+        "bullet_2": "Des légendes et images IA dans le ton de votre marque",
+        "bullet_3": "Brouillons, validations et un e-mail du matin pour l’équipe",
+        "login_subtitle": "Connexion à HexaTech Content",
+        "register_title": "Commencez votre essai HexaTech Content",
+        "trial_banner": "Votre essai comprend tout HexaTech Content.",
+        "included_1": "Un calendrier éditorial autour de vos objectifs",
+        "included_2": "Idées de publications et légendes IA dans le ton de votre marque",
+        "included_3": "Images IA et briefs visuels",
+        "included_4": "Brouillons, validations et une boîte de réception d’équipe",
+        "included_5": "Un e-mail du matin avec les publications du jour",
+        "tab_title": "HexaTech Content — Connexion"
+      },
+      "per_month": "par mois",
+      "trial": "Essai gratuit de {{days}} jours, sans carte",
+      "add_later": "Besoin de {{other}} aussi ? Ajoutez-le à tout moment depuis Offre et produits pour {{price}} de plus par mois.",
+      "unavailable": "{{product}} ne peut pas encore être acheté en ligne. Contactez HexaTech, nous le mettrons en place pour vous.",
+      "full_suite": "Vous cherchez la suite HexaTech complète ?",
+      "see_plans": "Voir toutes les offres",
+      "included": "Ce qui est inclus"
     }
   },
   "dashboard": {
@@ -3404,6 +3447,52 @@
       "payment": "Paiement",
       "refund": "Remboursement",
       "correction": "Correction"
+    }
+  },
+  "account": {
+    "products": {
+      "title": "Offre et produits",
+      "back": "Retour à votre espace",
+      "your_plan": "Votre offre",
+      "per_month": "par mois",
+      "products": "Produits",
+      "included": "Dans votre offre",
+      "open": "Ouvrir",
+      "add": "Ajouter",
+      "add_for": "Ajouter pour {{price}} par mois",
+      "ask": "Demandez à un propriétaire ou un responsable de l’ajouter",
+      "inactive": "Relancez d’abord votre offre, puis ajoutez-le",
+      "unavailable": "Pas encore disponible en ligne. Contactez HexaTech pour l’ajouter.",
+      "confirm": "Ajouter {{product}} ? Votre offre devient {{plan}} à {{price}} par mois.",
+      "confirm_trial": "C’est inclus dans votre essai gratuit ; vous payez le nouveau prix une fois l’offre activée.",
+      "confirm_paid": "Vous ne payez que la différence pour le reste du mois, sur votre prochaine facture.",
+      "confirm_add": "Ajouter {{product}}",
+      "cancel": "Pas maintenant",
+      "working": "Un instant…",
+      "added_paid": "{{product}} est ajouté. Votre prochaine facture inclut la différence pour le reste du mois.",
+      "added_trial": "{{product}} est ajouté et prêt à l’emploi.",
+      "activate": "Ajouter une carte et activer",
+      "portal": "Carte et factures",
+      "restart": "Relancer",
+      "restarted": "Votre offre a repris.",
+      "paid": "Merci. Votre carte est enregistrée et votre offre est active.",
+      "canceled": "Le paiement a été annulé. Rien n’a été débité.",
+      "failed": "Cela n’a pas fonctionné. Rien n’a été modifié. Veuillez réessayer.",
+      "managers_only": "Seul un propriétaire ou un responsable peut modifier l’offre.",
+      "everything_title": "Votre offre comprend tous les produits",
+      "everything_body": "Les changements d’offre, votre carte et vos factures se trouvent dans Facturation, dans l’administration complète.",
+      "open_billing": "Ouvrir la facturation",
+      "status": {
+        "trial": "Essai gratuit jusqu’au {{date}}",
+        "active": "Active",
+        "overdue": "Paiement en retard : mettez à jour votre carte pour garder l’accès",
+        "ended": "Terminée : relancez votre offre pour utiliser votre espace"
+      },
+      "blurb": {
+        "appointments": "Agenda, réservation en ligne et fiches clients",
+        "loyalty": "Points, niveaux, récompenses, une application membre et des campagnes",
+        "content": "Planificateur IA pour les réseaux sociaux : idées, légendes, images et calendrier"
+      }
     }
   }
 }

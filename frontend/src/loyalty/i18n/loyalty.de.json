@@ -304,7 +304,8 @@
     "programme_off_manager": "Das Programm hat noch keine aktive Stufe, daher sehen Mitglieder es weder in der App noch im Portal. Fügen Sie unter Programm eine Stufe hinzu oder schalten Sie eine ein.",
     "programme_off_staff": "Das Programm läuft noch nicht: Ihre Managerin oder Ihr Manager hat die Stufen noch nicht eingerichtet.",
     "subscription_required": "Das Abonnement Ihrer Organisation ist nicht aktiv, daher kann HexaTech Loyalty nicht geöffnet werden. Ihre Mitglieder und deren Punkte sind unverändert. Eine Administratorin oder ein Administrator kann den Zugang unter „Abrechnung“ im vollständigen Admin wiederherstellen.",
-    "switched_off": "HexaTech Loyalty wurde für Ihre Organisation ausgeschaltet. Ihre Mitglieder und deren Punkte sind unverändert."
+    "switched_off": "HexaTech Loyalty wurde für Ihre Organisation ausgeschaltet. Ihre Mitglieder und deren Punkte sind unverändert.",
+    "lapsed": "Ihr HexaTech-Tarif ist nicht aktiv. Starten Sie ihn unter „Tarif & Produkte“ neu; Ihre Mitglieder und ihre Punkte bleiben erhalten."
   },
   "shortcuts": {
     "find": "Mitglied finden",

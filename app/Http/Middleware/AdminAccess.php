@@ -20,9 +20,10 @@ use Symfony\Component\HttpFoundation\Response;
  *   1. a platform admin passes (the operator escape hatch RequireFeature and
  *      RequireStaffCapability already have);
  *   2. the route's rule comes from AccessMap;
- *   3. an organisation on the Appointments plan reaches only the workspace
- *      and the caller's own account: anything else is 403 not_in_plan, in
- *      every mode;
+ *   3. an organisation on modules (the Appointments plan, HexaTech Loyalty
+ *      or Content bought on their own) reaches only the workspaces it bought
+ *      and the caller's own account (AccessMap::productsFor): anything else
+ *      is 403 not_in_plan, in every mode;
  *   4. the caller needs an active staff row in THIS organisation, else
  *      staff_inactive;
  *   5. the rule for the method (GET/HEAD read, anything else change) must be
@@ -68,7 +69,8 @@ class AdminAccess
         $bound = app()->bound('current_organization_id') ? app('current_organization_id') : null;
         $orgId = $bound ? (int) $bound : null;
 
-        if (!in_array($rule->product, AccessMap::PLAN_PRODUCTS, true) && Organization::isAppointmentsOnly($orgId)) {
+        $modules = Organization::modulesOf($orgId);
+        if ($modules !== null && !in_array($rule->product, AccessMap::productsFor($modules), true)) {
             $this->recorder->record($orgId, (int) $user->id, null, $rule->key, $method, 'not_in_plan', true);
 
             return $this->refusal('not_in_plan', 'not_in_plan');

@@ -63,8 +63,10 @@ class LoyaltyWorkspace extends Command
 
             return self::FAILURE;
         }
-        if ($this->option('on') && $org->appointmentsOnly()) {
-            $this->error(sprintf('org %d (%s) is on the Appointments plan: HexaTech Loyalty is not part of it.', $org->id, $org->name));
+        if ($this->option('on') && !$org->holdsModule('loyalty')) {
+            $this->error($org->appointmentsOnly()
+                ? sprintf('org %d (%s) is on the Appointments plan: HexaTech Loyalty is not part of it.', $org->id, $org->name)
+                : sprintf('org %d (%s) is on modules without HexaTech Loyalty (%s): it is not part of its plan.', $org->id, $org->name, implode(', ', $org->planModules() ?? [])));
 
             return self::FAILURE;
         }

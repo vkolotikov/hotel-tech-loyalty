@@ -101,8 +101,8 @@ class AuthController extends Controller
             app()->instance('current_organization_id', $orgId);
         }
 
-        // The Appointments plan has no programme to join (Part C), whatever tiers exist.
-        if (\App\Models\Organization::isAppointmentsOnly((int) $orgId)) {
+        // Without the Loyalty module there is no programme to join (Part C; modules 2026-11-02), whatever tiers exist.
+        if (\App\Models\Organization::lacksModule((int) $orgId, 'loyalty')) {
             return response()->json([
                 'message' => 'Loyalty program is not configured for this hotel yet. Please contact reception.',
             ], 422);
@@ -978,7 +978,15 @@ class AuthController extends Controller
 
         try {
             $response = Http::timeout(5)->get("{$saasApi}/billing/plans");
-            return response()->json($response->json());
+            $body = $response->json();
+            // The full plan pickers (the umbrella sign-up, the full admin's Billing) keep the plans they always listed:
+            // Loyalty and Content on their own are sold on their own pages (/v1/modules); the Appointments plan stays.
+            if (is_array($body) && is_array($body['plans'] ?? null)) {
+                $body['plans'] = array_values(array_filter($body['plans'], fn ($plan) => !is_array($plan)
+                    || ($plan['slug'] ?? null) === 'appointments'
+                    || \App\Support\PlanModules::fromPlanSlug($plan['slug'] ?? null) === null));
+            }
+            return response()->json($body);
         } catch (\Exception $e) {
             return response()->json(['plans' => [], 'error' => 'Could not fetch plans']);
         }
@@ -1066,10 +1074,15 @@ class AuthController extends Controller
             // instead: same response shape as the success path.
             if ($this->passwordMatches($validated['password'], $existingUser->password)) {
                 $token = $existingUser->createToken('admin')->plainTextToken;
+                $resumedUser = $existingUser->fresh()->toArray();
+                $resumedOrg = \App\Models\Organization::find($existingStaff->organization_id);
+                if ($workspaces = $resumedOrg?->workspacesPayload()) {
+                    $resumedUser['workspaces'] = $workspaces;
+                }
                 return response()->json([
                     'token'      => $token,
                     'saas_token' => null,
-                    'user'       => $existingUser->fresh(),
+                    'user'       => $resumedUser,
                     'staff'      => $existingStaff,
                     'resumed'    => true,
                 ]);
@@ -1081,6 +1094,25 @@ class AuthController extends Controller
         $saasApi = config('services.saas.api_url');
         $saasToken = null;
         $saasOrgId = null;
+
+        // A module plan (HexaTech Loyalty or Content on its own, owner 2026-11-02) must be one billing sells: billing's
+        // register answers an unknown plan with a Growth trial, which would hand a full admin to someone who chose one
+        // product. When billing's plan list cannot be read, signup goes on as it always did (the local trial below).
+        $signupModules = \App\Support\PlanModules::fromPlanSlug($validated['plan'] ?? null);
+        if ($signupModules !== null && $saasApi) {
+            try {
+                $listed = Http::timeout(5)->get("{$saasApi}/billing/plans");
+                if ($listed->successful()
+                    && !collect((array) $listed->json('plans', []))->contains(fn ($p) => is_array($p) && ($p['slug'] ?? null) === $validated['plan'])) {
+                    return response()->json([
+                        'error' => 'not_available',
+                        'message' => 'This product cannot be bought online yet. Please contact HexaTech.',
+                    ], 422);
+                }
+            } catch (\Throwable $e) {
+                report($e);
+            }
+        }
 
         // Step 1: Register on SaaS platform (if configured)
         // SaaS register auto-provisions a trial subscription for the requested plan.
@@ -1427,7 +1459,9 @@ class AuthController extends Controller
         $staff = Staff::withoutGlobalScopes()->where('user_id', $localUser->id)->first();
 
         try {
-            $planLabel = ucfirst($planSlug);
+            $planLabel = $signupModules !== null && $planSlug !== 'appointments'
+                ? 'HexaTech ' . implode(' + ', array_map('ucfirst', $signupModules))
+                : ucfirst($planSlug);
             // Pre-fix this read `config('app.frontend_url', config('app.url', ...))`
             // — `frontend_url` isn't a defined config key so it was always null,
             // and any env where APP_URL defaulted to http://localhost (Laravel's
@@ -1436,6 +1470,10 @@ class AuthController extends Controller
             // billingPortal use — fails closed in prod, falls back to request
             // origin in dev so local testing still works.
             $loginUrl = $this->resolveLoyaltyUrl() ?? 'https://loyalty.hotel-tech.ai';
+            // A module's customers sign in on its own page (/loyalty/login, /content/login).
+            if ($signupModules !== null && in_array($signupModules[0], \App\Support\PlanModules::SOLD_ALONE, true)) {
+                $loginUrl .= '/' . $signupModules[0] . '/login';
+            }
             Mail::to($validated['email'])->queue(new WelcomeTrialMail(
                 userName: $validated['name'],
                 hotelName: $validated['hotel_name'],
@@ -1452,10 +1490,16 @@ class AuthController extends Controller
             report($e);
         }
 
+        // As sign-in does: the workspaces, so a module's new customer lands in its workspace, not the full admin.
+        $userArray = $localUser->fresh()->toArray();
+        if ($workspaces = $org->fresh()->workspacesPayload()) {
+            $userArray['workspaces'] = $workspaces;
+        }
+
         return response()->json([
             'token'      => $sanctumToken,
             'saas_token' => $saasToken,
-            'user'       => $localUser->fresh(),
+            'user'       => $userArray,
             'staff'      => $staff,
             'org_id'     => $saasOrgId ?? $org->id,
             'message'    => 'Trial started! You have ' . $trialDays . ' days to explore.',
@@ -1971,6 +2015,12 @@ class AuthController extends Controller
      */
     private function getPlanProducts(string $planSlug): array
     {
+        // A module plan (`loyalty`, `content`, `loyalty-content`…; App\Support\PlanModules) holds its modules' products.
+        $modules = \App\Support\PlanModules::fromPlanSlug($planSlug);
+        if ($modules !== null && $planSlug !== 'appointments') {
+            return \App\Support\PlanModules::products($modules);
+        }
+
         return match ($planSlug) {
             'starter'    => ['crm', 'loyalty'],
             'growth'     => ['crm', 'loyalty', 'booking', 'chat'],
@@ -1987,6 +2037,12 @@ class AuthController extends Controller
      */
     private function getTrialFeatures(string $planSlug): array
     {
+        // A module plan grants what its modules do (PlanModules::features); the Appointments plan keeps the default below.
+        $modules = \App\Support\PlanModules::fromPlanSlug($planSlug);
+        if ($modules !== null && $planSlug !== 'appointments') {
+            return \App\Support\PlanModules::features($modules);
+        }
+
         return match ($planSlug) {
             'starter' => [
                 'max_team_members'     => '5',
@@ -2095,270 +2151,25 @@ class AuthController extends Controller
         };
     }
 
-    /**
-     * Sync entitlements from SaaS bootstrap endpoint onto the local Organization.
-     */
+    // The link to the billing application lives in SaasBilling (shared with PlanModulesController).
     private function syncEntitlementsFromSaas(Request $request, string $saasToken): void
     {
-        $saasApi = config('services.saas.api_url');
-        $user = $request->user();
-        $org = $user ? \App\Models\Organization::find($user->organization_id) : null;
-        if (!$org || !$saasApi) return;
-
-        try {
-            $bootstrap = Http::withToken($saasToken)->timeout(5)
-                ->get("{$saasApi}/tools/bootstrap");
-
-            if ($bootstrap->successful()) {
-                $data = $bootstrap->json();
-                $sub = $data['subscription'] ?? null;
-                if ($sub) {
-                    $org->plan_slug           = $sub['plan']['slug'] ?? null;
-                    $org->subscription_status = $sub['status'] ?? null;
-                    $org->trial_end           = $sub['trialEnd'] ?? null;
-                    $org->period_end          = $sub['currentPeriodEnd'] ?? null;
-                }
-                $org->entitled_products     = $data['entitled_product_slugs'] ?? [];
-                $org->plan_features         = (array) ($data['features'] ?? []);
-                $org->entitlements_synced_at = now();
-                $org->save();
-            }
-        } catch (\Exception $e) {
-            report($e);
-        }
+        app(\App\Services\Billing\SaasBilling::class)->syncEntitlementsFromSaas($request, $saasToken);
     }
 
-    /**
-     * Get a SaaS JWT for the current user's org.
-     * Tries: (1) existing SaaS JWT on the request, (2) service-to-service token endpoint.
-     *
-     * Negative-cached: when the service-token call fails (timeout, 5xx, etc.)
-     * we set a short-lived "unhealthy" key in the cache so subsequent calls
-     * return null fast instead of every admin request blocking for the full
-     * HTTP timeout. Without this, a slow SaaS makes the loyalty backend feel
-     * frozen for everyone — PHP-FPM children pile up waiting on 5s curls
-     * because the dashboard polls /subscription, which calls this, which
-     * hangs, exhausting the FPM worker pool within seconds.
-     */
     private function getSaasToken(Request $request): ?string
     {
-        // If the request already has a SaaS JWT (user came from SaaS dashboard), use it
-        $authHeader = $request->header('Authorization', '');
-        if ($authHeader && str_starts_with(strtolower($authHeader), 'bearer ')) {
-            $token = trim(substr($authHeader, 7));
-            // Sanctum tokens contain "|" — SaaS JWTs don't
-            if (!str_contains($token, '|')) {
-                return $token;
-            }
-        }
-
-        // Service-to-service: request a short-lived JWT from SaaS using the shared secret
-        $saasApi = config('services.saas.api_url');
-        $user = $request->user();
-        if (!$user || !$saasApi) return null;
-
-        $org = \App\Models\Organization::find($user->organization_id);
-        if (!$org || !$org->saas_org_id) return null;
-
-        $jwtSecret = config('services.saas.jwt_secret', '');
-        if (!$jwtSecret) return null;
-
-        // Fail-fast circuit breaker. Two cache keys:
-        //   saas_token_unhealthy — set for 60s after a confirmed failure.
-        //     Returns null immediately so polling admin tabs don't repeat
-        //     the curl call across the next minute.
-        //   saas_token_inflight — set for 3s when we START the call. Catches
-        //     the concurrent-request race: two admin polls within the same
-        //     2s window otherwise both make the call (both miss the breaker
-        //     because the first hasn't tripped it yet). With this key, the
-        //     second sees an in-flight call and returns null without burning
-        //     a second curl. 3s is the timeout (2s) + a small grace.
-        $cache = \Illuminate\Support\Facades\Cache::store();
-        if ($cache->has('saas_token_unhealthy') || $cache->has('saas_token_inflight')) {
-            return null;
-        }
-
-        $payload = implode('|', [$user->email, $org->saas_org_id]);
-        $signature = hash_hmac('sha256', $payload, $jwtSecret);
-
-        // Mark in-flight before the curl call so concurrent requests bail.
-        $cache->put('saas_token_inflight', 1, 3);
-
-        try {
-            // Tightened from 5s to 2s. The endpoint is a single signed POST
-            // against a Laravel route — when it's healthy it returns in
-            // ~100ms. 2s is well above any real latency floor while keeping
-            // worker-block time bounded under SaaS slowdowns.
-            $response = Http::timeout(2)->connectTimeout(2)
-                ->withHeaders(['X-Service-Signature' => $signature])
-                ->post("{$saasApi}/auth/service-token", [
-                    'email' => $user->email,
-                    'orgId' => $org->saas_org_id,
-                ]);
-
-            $cache->forget('saas_token_inflight');
-
-            if ($response->successful()) {
-                return $response->json('token');
-            }
-
-            // Non-2xx: SaaS is up but rejecting. Don't trip the circuit on
-            // a 401/403 — that's our problem (bad signature / disabled org),
-            // not theirs, and we don't want to mask it. Only trip on 5xx.
-            if ($response->serverError()) {
-                $cache->put('saas_token_unhealthy', 1, 60);
-            }
-        } catch (\Throwable $e) {
-            // Connection-level failure (timeout, DNS, refused). Trip the
-            // breaker so the next 60s of admin requests skip the call.
-            $cache->forget('saas_token_inflight');
-            $cache->put('saas_token_unhealthy', 1, 60);
-            // Log once per breaker window instead of every failed request.
-            // The previous behaviour (report() on every call) produced
-            // duplicate Nightwatch entries for the same outage.
-            \Illuminate\Support\Facades\Log::warning('SaaS service-token call failed — breaker tripped for 60s', [
-                'error' => $e->getMessage(),
-            ]);
-        }
-
-        return null;
+        return app(\App\Services\Billing\SaasBilling::class)->getSaasToken($request);
     }
 
-    /**
-     * Resolve this app's public URL (used for Stripe Checkout return URLs).
-     * Returns null when APP_URL is missing in production — caller decides what
-     * to do; we never silently fall back to the production loyalty domain
-     * from a staging / preview deploy.
-     */
     private function resolveLoyaltyUrl(): ?string
     {
-        $url = trim((string) config('app.url'));
-        if ($url) return rtrim($url, '/');
-
-        // Dev convenience: in non-prod, fall back to the request origin so
-        // local tunneling / preview environments still work without config.
-        if (!app()->environment('production')) {
-            return rtrim(request()->getSchemeAndHttpHost(), '/');
-        }
-        return null;
+        return app(\App\Services\Billing\SaasBilling::class)->resolveLoyaltyUrl();
     }
 
-    /**
-     * Ensure the local organization exists on SaaS.
-     * If it doesn't have a saas_org_id, register the user+org on SaaS
-     * and store the returned IDs. Returns a SaaS JWT on success.
-     *
-     * IMPORTANT: All HTTP calls use very short timeouts (2s connect, 4s total)
-     * because Laravel Cloud kills PHP workers on long requests.
-     */
     private function ensureSaasOrg(Request $request): ?string
     {
-        $user = $request->user();
-        $org = $user ? \App\Models\Organization::find($user->organization_id) : null;
-        if (!$user || !$org) return null;
-
-        $saasApi = config('services.saas.api_url');
-        if (!$saasApi) return null;
-
-        // Already linked — get a token via the normal path
-        if ($org->saas_org_id) {
-            return $this->getSaasToken($request);
-        }
-
-        // Not linked — register on SaaS to create the org there. Use a fresh
-        // random password rather than deriving from app.key + email: that
-        // older scheme meant anyone with APP_KEY could compute every linked
-        // user's SaaS password. The password is never used again after this
-        // call — subsequent loyalty→SaaS auth goes through service-lookup /
-        // service-verify-password which are HMAC-signed.
-        $tempPassword = \Illuminate\Support\Str::random(40);
-
-        try {
-            $response = Http::connectTimeout(2)->timeout(4)->post("{$saasApi}/auth/register", [
-                'name'     => $user->name,
-                'email'    => $user->email,
-                'password' => $tempPassword,
-                'orgName'  => $org->name,
-                'planSlug' => $org->plan_slug ?? 'starter',
-            ]);
-        } catch (\Exception $e) {
-            \Log::error('[ensureSaasOrg] SaaS unreachable', [
-                'url' => "{$saasApi}/auth/register",
-                'error' => $e->getMessage(),
-            ]);
-            return null;
-        }
-
-        // Success — new user registered on SaaS
-        if ($response->successful()) {
-            $data = $response->json();
-            $saasOrgId = $data['organization']['id'] ?? null;
-            $saasToken = $data['token'] ?? null;
-
-            if ($saasOrgId) {
-                $org->saas_org_id = $saasOrgId;
-                $org->save();
-            }
-
-            return $saasToken;
-        }
-
-        // User already exists on SaaS — use service-lookup (HMAC-signed, no password needed)
-        if (in_array($response->status(), [409, 422])) {
-            return $this->serviceLookupSaas($user, $org, $saasApi);
-        }
-
-        \Log::error('[ensureSaasOrg] Registration failed', [
-            'status' => $response->status(),
-            'body' => substr($response->body(), 0, 200),
-        ]);
-        return null;
-    }
-
-    /**
-     * Look up existing user on SaaS using HMAC-signed service call.
-     * No password needed — authenticated via shared JWT secret.
-     */
-    private function serviceLookupSaas($user, $org, string $saasApi): ?string
-    {
-        $jwtSecret = config('services.saas.jwt_secret', '');
-        if (!$jwtSecret) {
-            \Log::error('[serviceLookupSaas] No jwt_secret configured');
-            return null;
-        }
-
-        $signature = hash_hmac('sha256', $user->email, $jwtSecret);
-
-        try {
-            $lookupRes = Http::connectTimeout(2)->timeout(4)
-                ->withHeaders(['X-Service-Signature' => $signature])
-                ->post("{$saasApi}/auth/service-lookup", [
-                    'email' => $user->email,
-                ]);
-        } catch (\Exception $e) {
-            \Log::error('[serviceLookupSaas] SaaS unreachable', ['error' => $e->getMessage()]);
-            return null;
-        }
-
-        if ($lookupRes->successful()) {
-            $data = $lookupRes->json();
-            $saasOrgId = $data['organization']['id'] ?? null;
-            $saasToken = $data['token'] ?? null;
-
-            if ($saasOrgId && !$org->saas_org_id) {
-                $org->saas_org_id = $saasOrgId;
-                $org->save();
-                \Log::error('[serviceLookupSaas] Linked org ' . $org->id . ' → SaaS ' . $saasOrgId);
-            }
-
-            return $saasToken;
-        }
-
-        \Log::error('[serviceLookupSaas] Lookup failed', [
-            'status' => $lookupRes->status(),
-            'body' => substr($lookupRes->body(), 0, 200),
-        ]);
-        return null;
+        return app(\App\Services\Billing\SaasBilling::class)->ensureSaasOrg($request);
     }
 
     /**

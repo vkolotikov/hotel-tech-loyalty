@@ -18,7 +18,7 @@
     "find": "Find a post or action",
     "brand": "Brand",
     "switched_off": "HexaTech Content has been switched off for your organisation. Your posts are unchanged.",
-    "subscription_required": "Your organisation's subscription is not active, so HexaTech Content cannot open. Your posts are unchanged. An administrator can restore access under Billing in the full admin.",
+    "subscription_required": "Your organisation's subscription is not active, so HexaTech Content cannot open. Your posts are unchanged. An administrator can restore access under Billing in the full admin.", "subscription_required_plan": "Your HexaTech plan is not active, so HexaTech Content cannot open. Your posts are unchanged. Start it again in Plan & products.",
     "open_full_admin": "Open the full admin",
     "budget_warn": "This month's AI budget is {{percent}} % used.",
     "budget_over": "This month's AI budget is used up. AI actions are paused until next month; writing by hand still works.",

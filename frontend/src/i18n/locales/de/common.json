@@ -275,6 +275,49 @@
     "common": {
       "email_placeholder": "name@firma.de",
       "password_placeholder": "Mindestens 8 Zeichen"
+    },
+    "product": {
+      "loyalty": {
+        "badge": "Kundenbindungsprogramm für Dienstleister",
+        "hero": "Aus Erstbesuchen werden Stammgäste.",
+        "hero_sub": "Punkte, Stufen, Prämien und eine Mitglieder-App in Ihren Farben, gesteuert aus einem Arbeitsbereich – für Hotels, Salons, Praxen, Restaurants und mehr.",
+        "bullet_1": "Punkte, Stufen, Stempel und Prämien, die Ihre Gäste verstehen",
+        "bullet_2": "Eine Mitglieder-App und Wallet-Karten mit Ihrer Marke",
+        "bullet_3": "E-Mail-, Push- und SMS-Kampagnen, die Gäste zurückbringen",
+        "login_subtitle": "Bei HexaTech Loyalty anmelden",
+        "register_title": "HexaTech Loyalty kostenlos testen",
+        "trial_banner": "Ihr Test enthält alles aus HexaTech Loyalty.",
+        "included_1": "Mitglieder, Stufen, Punkte und Stempelkarten",
+        "included_2": "Prämien, Angebote und Mitgliedervorteile",
+        "included_3": "Ihre eigene Mitglieder-App und Wallet-Karten",
+        "included_4": "E-Mail-, Push- und SMS-Kampagnen",
+        "included_5": "Scannen am Empfang, Events und Auswertungen",
+        "tab_title": "HexaTech Loyalty – Anmelden"
+      },
+      "content": {
+        "badge": "KI-Planer für Social Media",
+        "hero": "Einen Monat Social-Media-Posts an einem Nachmittag planen.",
+        "hero_sub": "Ein KI-Inhaltsplaner, der Ihre Marke kennt: Ideen, Texte, Bilder und ein Kalender, den Ihr Team freigibt.",
+        "bullet_1": "Ein Inhaltskalender rund um Ihre Ziele und wichtige Termine",
+        "bullet_2": "KI-Texte und -Bilder in der Stimme Ihrer Marke",
+        "bullet_3": "Entwürfe, Freigaben und eine Morgen-E-Mail für das Team",
+        "login_subtitle": "Bei HexaTech Content anmelden",
+        "register_title": "HexaTech Content kostenlos testen",
+        "trial_banner": "Ihr Test enthält alles aus HexaTech Content.",
+        "included_1": "Ein Inhaltskalender rund um Ihre Ziele",
+        "included_2": "KI-Ideen und -Texte in der Stimme Ihrer Marke",
+        "included_3": "KI-Bilder und visuelle Briefings",
+        "included_4": "Entwürfe, Freigaben und ein Team-Posteingang",
+        "included_5": "Eine Morgen-E-Mail mit den Posts des Tages",
+        "tab_title": "HexaTech Content – Anmelden"
+      },
+      "per_month": "pro Monat",
+      "trial": "{{days}} Tage kostenlos testen, ohne Karte",
+      "add_later": "Brauchen Sie auch {{other}}? Jederzeit unter „Tarif & Produkte“ für {{price}} mehr im Monat hinzufügen.",
+      "unavailable": "{{product}} kann noch nicht online gekauft werden. Bitte kontaktieren Sie HexaTech, wir richten es für Sie ein.",
+      "full_suite": "Suchen Sie die komplette HexaTech-Suite?",
+      "see_plans": "Alle Tarife ansehen",
+      "included": "Enthalten"
     }
   },
   "dashboard": {
@@ -3404,6 +3447,52 @@
       "payment": "Zahlung",
       "refund": "Erstattung",
       "correction": "Korrektur"
+    }
+  },
+  "account": {
+    "products": {
+      "title": "Tarif & Produkte",
+      "back": "Zurück zum Arbeitsbereich",
+      "your_plan": "Ihr Tarif",
+      "per_month": "pro Monat",
+      "products": "Produkte",
+      "included": "In Ihrem Tarif",
+      "open": "Öffnen",
+      "add": "Hinzufügen",
+      "add_for": "Für {{price}} im Monat hinzufügen",
+      "ask": "Bitten Sie eine Inhaberin, einen Inhaber oder die Leitung, es hinzuzufügen",
+      "inactive": "Starten Sie zuerst Ihren Tarif neu, dann fügen Sie es hinzu",
+      "unavailable": "Noch nicht online erhältlich. Kontaktieren Sie HexaTech.",
+      "confirm": "{{product}} hinzufügen? Ihr Tarif wird zu {{plan}} für {{price}} im Monat.",
+      "confirm_trial": "Im kostenlosen Test ist es enthalten; den neuen Preis zahlen Sie ab der Aktivierung.",
+      "confirm_paid": "Sie zahlen nur die Differenz für den Rest des Monats, mit Ihrer nächsten Rechnung.",
+      "confirm_add": "{{product}} hinzufügen",
+      "cancel": "Nicht jetzt",
+      "working": "Einen Moment…",
+      "added_paid": "{{product}} ist hinzugefügt. Ihre nächste Rechnung enthält die Differenz für den Rest des Monats.",
+      "added_trial": "{{product}} ist hinzugefügt und einsatzbereit.",
+      "activate": "Karte hinzufügen und aktivieren",
+      "portal": "Karte und Rechnungen",
+      "restart": "Neu starten",
+      "restarted": "Ihr Tarif läuft wieder.",
+      "paid": "Danke. Ihre Karte ist gespeichert und Ihr Tarif ist aktiv.",
+      "canceled": "Die Zahlung wurde abgebrochen. Es wurde nichts berechnet.",
+      "failed": "Das hat nicht geklappt. Es wurde nichts geändert. Bitte versuchen Sie es erneut.",
+      "managers_only": "Nur Inhaber oder die Leitung können den Tarif ändern.",
+      "everything_title": "Ihr Tarif enthält alle Produkte",
+      "everything_body": "Tarifwechsel, Karte und Rechnungen finden Sie unter Abrechnung im vollständigen Admin.",
+      "open_billing": "Abrechnung öffnen",
+      "status": {
+        "trial": "Kostenloser Test bis {{date}}",
+        "active": "Aktiv",
+        "overdue": "Zahlung überfällig: Aktualisieren Sie Ihre Karte, um den Zugang zu behalten",
+        "ended": "Beendet: Starten Sie Ihren Tarif neu, um Ihren Arbeitsbereich zu nutzen"
+      },
+      "blurb": {
+        "appointments": "Kalender, Online-Buchung und Kundenakten",
+        "loyalty": "Punkte, Stufen, Prämien, eine Mitglieder-App und Kampagnen",
+        "content": "KI-Planer für Social Media: Ideen, Texte, Bilder und ein Kalender"
+      }
     }
   }
 }
