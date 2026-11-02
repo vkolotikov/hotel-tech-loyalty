@@ -114,4 +114,8 @@ NFC needs a venue's physical card; the camera reads a member's QR code from the 
   provisioning profile `3MHB7GK36R` created. Build 1.0.0 (**2**) started from here
   (`https://expo.dev/accounts/hoteltechai/projects/hexatech-loyalty-staff/builds/fa46634b-6511-4c31-b1d1-fe0b2cb89bd9`).
 - App Store Connect record created by the owner: Apple ID **6829777674** (`eas.json` → `submit.production.ios.ascAppId`).
+- Push key `8WAF9T6SVD` (the team's, shared with Hotel Staff and Hotel Loyalty) and the App Store Connect API key
+  `S7Y8H6Q477` assigned by the owner. Build 2 **uploaded to App Store Connect** the same day
+  (`https://expo.dev/accounts/hoteltechai/projects/hexatech-loyalty-staff/submissions/f84d604f-92ea-46ac-847d-aa226721add1`);
+  the TestFlight internal testing group is made by hand.
 - expo 58.0.22, expo-dev-client 58.0.18, expo-router 58.0.29, TypeScript ~6.0.3 (`expo install --check` clean).
