@@ -97,6 +97,18 @@ Plan and progress: `docs/audits/2026-10-31-stack-audit-and-upgrade-plan.md` (§6
   unused (owner). Its second step (CI, ESLint 10 and TypeScript 6 with a dashboard hook-order fix, Symfony 8.1)
   is deployed too (`main` = `eef4275`, CI green on `main`). Plan §8.
 
+- **Next: the Stripe upgrades** (plan §6 step 4g for this app: stripe-php 20 → 22, Stripe.js 9 → 10,
+  react-stripe-js 6 → 7; and stripe-php 20 → current in `hotel-tech-saas`). They need, in the cloud environment's
+  settings (owner, 2 Nov):
+  - environment variables `STRIPE_TEST_SECRET` (`sk_test_…`) and `STRIPE_TEST_PUBLISHABLE` (`pk_test_…`), test mode
+    only, never a live key. They are read from the environment and never printed or written to a file;
+  - network access to `api.stripe.com` (server calls) and `js.stripe.com`, `hooks.stripe.com`, `m.stripe.network`,
+    `r.stripe.com` (the payment pages in a browser, including 3-D Secure test challenges). On 2 Nov every Stripe host
+    was refused here.
+
+  Both take effect in a new session. Webhooks are tested with events this app signs itself (no Stripe CLI, no
+  webhook secret from the dashboard).
+
 ## Cloud container notes (Linux)
 
 - Expo commands need `EXPO_OFFLINE=1` (the proxy blocks `api.expo.dev`; `docs.expo.dev` is blocked too, so read
