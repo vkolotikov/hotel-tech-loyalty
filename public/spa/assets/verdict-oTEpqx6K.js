@@ -1,0 +1,1 @@
+import{Pn as e}from"./index-MkWlv3XY.js";function t(){let{t}=e();return e=>t(e.key,e.fallback,e.vars)}export{t};
