@@ -38,9 +38,13 @@ export function viewFromPath(pathname: string): 'login' | 'trial' | 'forgot' | '
   return 'login'
 }
 
-/** Where a product's page sends someone who signed in without a ?redirect=: its workspace (landingPath decides what they may reach). */
-export function productHome(product: SignupProduct | null | undefined, redirect: string): string {
-  return product && redirect === '/' ? `/${product}` : redirect
+/**
+ * Where a product's page sends someone who signed in without a ?redirect=: its workspace, when their organisation has
+ * it (landingPath still decides what they may reach). Without a user (before the answer) the workspace is assumed.
+ */
+export function productHome(product: SignupProduct | null | undefined, redirect: string, user?: { workspaces?: Partial<Record<string, unknown>> } | null): string {
+  if (!product || redirect !== '/') return redirect
+  return user && user.workspaces?.[product] == null ? redirect : `/${product}`
 }
 
 /** A monthly price from the catalogue in the visitor's language, e.g. "€85". Null when the server gave none. */

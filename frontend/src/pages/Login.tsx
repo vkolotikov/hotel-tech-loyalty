@@ -514,7 +514,7 @@ export function Login({ product }: { product?: SignupProduct } = {}) {
       // Before the portal existed, a member who signed in here was bounced
       // straight back by ProtectedRoute's staff-only check. A local
       // `?redirect=` (the appointments workspace sends one) is honoured.
-      navigate(landingPath(data.user, productHome(product, safeRedirect(searchParams.get('redirect')))), { replace: true })
+      navigate(landingPath(data.user, productHome(product, safeRedirect(searchParams.get('redirect')), data.user)), { replace: true })
     } catch (err: any) {
       setError(err.response?.data?.message || 'Invalid credentials. Please try again.')
     } finally {
@@ -640,7 +640,7 @@ export function Login({ product }: { product?: SignupProduct } = {}) {
       persistIndustry(null)
       setAuth(data.token, data.user, data.staff)
       // The sign-up answer carries the workspaces: a product's new customer lands in its workspace.
-      navigate(landingPath(data.user, productHome(product, '/')))
+      navigate(landingPath(data.user, productHome(product, '/', data.user)))
     } catch (err: any) {
       // A refusal with a code (`not_available`) carries its sentence in `message`.
       const body = err.response?.data

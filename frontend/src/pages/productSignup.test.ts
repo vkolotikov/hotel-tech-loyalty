@@ -26,6 +26,9 @@ describe('a product\'s own sign-in pages', () => {
     expect(productHome('loyalty', '/')).toBe('/loyalty')
     expect(productHome('loyalty', '/loyalty/members/4')).toBe('/loyalty/members/4')
     expect(productHome(undefined, '/')).toBe('/')
+    expect(productHome('content', '/', { workspaces: { content: { landing: false } } })).toBe('/content')
+    // An organisation without Content lands where it always does.
+    expect(productHome('content', '/', { workspaces: { appointments: { only: true } } })).toBe('/')
   })
 
   it('shows the server\'s price in the visitor\'s language and nothing when it gave none', () => {

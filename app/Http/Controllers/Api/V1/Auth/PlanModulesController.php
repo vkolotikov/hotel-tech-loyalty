@@ -127,9 +127,11 @@ class PlanModulesController extends Controller
 
         $this->billing->syncEntitlementsFromSaas($request, $token);
         $this->forgetCachedStatus($org);
-        $this->audit($request, $org, $module, $fromSlug, $targetSlug, $paid ? 'prorated' : 'trial');
+        // Stripe prorates only a subscription it is charging; one still in its trial pays the new price from the first invoice.
+        $charged = $paid && ($active['status'] ?? '') === 'ACTIVE' ? 'prorated' : 'none';
+        $this->audit($request, $org, $module, $fromSlug, $targetSlug, $charged === 'prorated' ? 'prorated' : 'trial');
 
-        return response()->json(['added' => $module, 'charged' => $paid ? 'prorated' : 'none'] + $this->state($request, $org->fresh()));
+        return response()->json(['added' => $module, 'charged' => $charged] + $this->state($request, $org->fresh()));
     }
 
     /** POST /v1/auth/modules/activate — pay for the current module plan through Stripe Checkout, or start it again. */

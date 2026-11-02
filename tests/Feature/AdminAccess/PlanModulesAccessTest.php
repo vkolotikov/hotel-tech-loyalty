@@ -196,6 +196,8 @@ class PlanModulesAccessTest extends TestCase
         $this->artisan('workspace:loyalty', ['org' => $this->org->id, '--on' => true])
             ->expectsOutputToContain('without HexaTech Loyalty')->assertFailed();
         $this->artisan('workspace:content', ['org' => $this->org->id, '--on' => true])->assertSuccessful();
+        $this->artisan('workspace:content', ['org' => $this->org->id, '--off' => true])
+            ->expectsOutputToContain('cannot be switched off')->assertFailed();
 
         $this->onProducts(['appointments', 'booking', 'loyalty']);
         $this->artisan('workspace:appointments', ['org' => $this->org->id, '--off' => true])->assertFailed();

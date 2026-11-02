@@ -6,7 +6,7 @@ Multi-tenant Laravel 13 + React (Vite, TypeScript) SaaS with four sub-brands. Pr
 `frontend/src/pages/landing`).
 
 Starting a new session, or on another device or agent: the current state, set-up, test baselines, deploy steps and
-open items are in the newest file of `docs/handoff/` (now `docs/handoff/2026-10-31-hexatech-handoff.md`). Update it,
+open items are in the newest file of `docs/handoff/` (now `docs/handoff/2026-11-02-hexatech-handoff.md`). Update it,
 or add the next dated one, at the end of a session.
 
 ## Environment (hard rules, each one has bitten before)
@@ -51,8 +51,9 @@ or add the next dated one, at the end of a session.
 - Every staff endpoint is decided by `App\Support\AdminAccess\AccessMap` (middleware `admin.access`). A new route
   under `/v1/admin` needs a map key with its read rule, change rule and product, mirroring the menu's gate for its
   page; `tests/Feature/AdminAccess/AccessMapTest.php` and `AdminAccessWiringTest.php` fail otherwise.
-- Organisations on the Appointments plan reach only products `appointments` and `account` (runbook:
-  `docs/appointments-workspace.md`).
+- Organisations on modules reach only `account` and the products of the modules they bought — the Appointments plan
+  `appointments`, Loyalty alone `loyalty`, Content alone `content` (`AccessMap::productsFor`; runbooks:
+  `docs/appointments-workspace.md`, `docs/plan-modules.md`).
 - A route parameter that names a model (`{inquiry}`, `{pipeline}`…) is resolved after `SaasAuthMiddleware` and
   `TenantMiddleware` (`bootstrap/app.php` priority list), so its lookup runs under the organisation's `TenantScope`;
   before 2026-11-01 every such admin route answered 404. `RouteBindingTenantTest` pins the order.
@@ -278,6 +279,18 @@ or add the next dated one, at the end of a session.
   `loyalty_members.qr_code_token`). `scripts/test-pg.sh <test database> [paths…]` runs the suites there (release 6);
   the few tests that still fail on PostgreSQL on purpose are listed in `docs/loyalty-workspace.md` — a new failure
   there is new. New test data gives production's NOT NULL columns and never a state the real schema refuses.
+
+## Modules: workspaces sold on their own
+
+- HexaTech Loyalty and Content at 85 € a month each, beside the Appointments plan (owner 2026-11-02; runbook
+  `docs/plan-modules.md`). What an organisation bought is `Organization::planModules()` only (null = full customer);
+  "is this area off" is `holdsModule()` / `lacksModule()`, never a new reading of products or the plan slug. Module
+  knowledge (products, slugs, fallback prices and features) lives in `App\Support\PlanModules`.
+- Prices are billing's: the SPA shows only what `GET /v1/modules` or `GET /v1/auth/modules` answer, never a price of
+  its own. A product is added only through `PlanModulesController::add` (billing `change-plan`), never by sending an
+  amount, and a card-paid subscription moves only to a plan with its own Stripe price.
+- A page an organisation on modules needs outside its workspaces lives under `/account/*` (outside the workspaces and
+  the subscription check); its API under `auth/modules` (AccessMap product `account`).
 
 ## Appointments-workspace code rules
 
