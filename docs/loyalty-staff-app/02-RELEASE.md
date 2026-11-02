@@ -23,12 +23,40 @@ and Face ID texts only; no microphone; NFC entitlement `TAG` only; Android's unu
    Put its Apple id in `eas.json` → `submit.production.ios.ascAppId`.
 4. **Credentials:** the first `eas build` creates the iOS distribution certificate and profile and, when asked, the
    Apple push key (or `npx eas-cli credentials`); it creates and keeps the Android upload keystore. Android push:
-   `npx eas-cli credentials` → Android → Google Service Account → FCM V1, with a Firebase Android app for
-   `uk.hexatech.loyalty.staff`. App Store Connect API key for submitting: `npx eas-cli credentials` → iOS.
+   configure both the Firebase Android file and FCM V1 credential below for `uk.hexatech.loyalty.staff`.
+   App Store Connect API key for submitting: `npx eas-cli credentials` → iOS.
 5. **Create the Play app:** Play Console → Create app "HexaTech Staff", app, free; the first upload fixes the package
    `uk.hexatech.loyalty.staff`. Play App Signing on (the default).
 6. **Check the cards:** iPhones read NTAG, Ultralight and DESFire cards, not MIFARE Classic (Android reads all). Check
    the production cards before promising NFC on iPhone.
+
+### Android push configuration
+
+Use Firebase project **`hotel-loyalty-app-1414d`** (Hotel-Loyalty APP), Android package **`uk.hexatech.loyalty.staff`**.
+Keep the old `com.hoteltech.loyalty` registration unchanged. Download this app's `google-services.json` from Project
+settings → General → Your apps. Keep the file and any service-account JSON key outside the repository. From
+`apps/loyalty-staff`:
+
+```powershell
+npx -y eas-cli@latest env:create --name GOOGLE_SERVICES_JSON --type file --value '<absolute private path to google-services.json>' --environment production --visibility secret --non-interactive
+$env:GOOGLE_SERVICES_JSON = '<absolute private path to google-services.json>'
+npx expo config --type prebuild
+Remove-Item Env:GOOGLE_SERVICES_JSON
+```
+
+`app.config.js` extends `app.json` and supplies `android.googleServicesFile`; the production profile explicitly uses
+the production EAS environment. Secret files are available on the EAS build worker, not downloaded by `eas env:pull`.
+Local config without this variable remains usable for iOS/web; it does not prove Android push is configured. Android
+development/preview builds that need notifications require the same file variable in their own EAS environment.
+
+Separately, assign this Firebase project's service-account key via `npx -y eas-cli@latest credentials -p android`
+→ production → Google Service Account → FCM V1. That key is not `google-services.json` and is not the Play submission
+credential. See [Expo's FCM setup](https://docs.expo.dev/push-notifications/fcm-credentials/).
+
+Before building: `npx tsc --noEmit`, `npx vitest run`, `npx expo install --check`, then resolve the prebuild config
+with the actual private Firebase file. Commit and push first. For this correction run **Android only**:
+`npx -y eas-cli@latest build -p android --profile production --non-interactive`. Keep iOS build 2; no iOS rebuild is
+needed. After installation, verify a request alert reaches an Android phone and opens Requests.
 
 ## 1. Build and submit
 
@@ -119,3 +147,31 @@ NFC needs a venue's physical card; the camera reads a member's QR code from the 
   (`https://expo.dev/accounts/hoteltechai/projects/hexatech-loyalty-staff/submissions/f84d604f-92ea-46ac-847d-aa226721add1`);
   the TestFlight internal testing group is made by hand.
 - expo 58.0.22, expo-dev-client 58.0.18, expo-router 58.0.29, TypeScript ~6.0.3 (`expo install --check` clean).
+
+**2026-11-02, workstation release continuation (Codex):**
+
+- Verified iOS **1.0.0 (2)** is processed in App Store Connect. Created **Internal QA**, added the owner's existing
+  Apple account, and verified the group has **1 tester / 1 build**, build 2 **Ready to Test**, owner **Invited**.
+  Group: `https://appstoreconnect.apple.com/teams/c52a2796-9002-4a39-a576-be011699b6ef/apps/6829777674/testflight/groups/d88de1ab-db9a-4592-a8f7-ba9929f6df88`.
+- EAS still holds the Apple push key, submission key, distribution certificate and active provisioning profile; the
+  certificate/profile expire 2027-05-01. Apple's Free Apps Agreement and Digital Services Act status are Active.
+  Paid Apps Agreement is Pending User Info (bank/tax information), for the owner. Staff's distribution draft is
+  still largely empty and has no build selected; store metadata, Business category and build 2 remain to prepare.
+- Registered **uk.hexatech.loyalty.staff / HexaTech Staff** in Firebase **hotel-loyalty-app-1414d**, alongside the
+  members' correct package and existing old apps. FCM V1 API is enabled; no old app was changed or deleted.
+- Added `app.config.js`, ignored `google-services.json`, and made the production EAS environment explicit. Uploaded
+  the correct Firebase config as project-scoped production **secret file** `GOOGLE_SERVICES_JSON`. Local prebuild
+  config resolves the actual private file, correct package, version and EAS project. Files stay outside git under
+  the workstation user's `HexaTech-release-private` directory.
+- With the owner's explicit confirmation, generated the existing Firebase service account's private key and assigned
+  it to **both current Expo projects for FCM V1**. EAS confirmed the assignment to `uk.hexatech.loyalty.staff`. This
+  is not a Google Play submission credential; that remains unassigned.
+- Checks: TypeScript passes; **22 tests pass**; `expo install --check` passes. Additional `expo lint` had no existing
+  app configuration and auto-installed its preset, then failed its ESLint version detection. Direct ESLint with that
+  temporary preset reported **32 errors / 11 warnings in unchanged app source** (React hooks and import checks).
+  The auto-generated lint config and package changes were removed; no unrelated lint fixes were made. Config syntax,
+  whitespace and ignored-file checks pass. This is not a clean full-app lint baseline.
+- Play Console currently has no `uk.hexatech.loyalty.staff` listing; its creation requires the owner's policy/export
+  declarations. The old staff listing uses `com.hotelloyalty.staff` and was left alone. New Android build, first manual
+  Play upload and physical push testing remain pending at this commit. No iOS rebuild, review submission, production
+  rollout or Laravel Cloud deploy was performed.

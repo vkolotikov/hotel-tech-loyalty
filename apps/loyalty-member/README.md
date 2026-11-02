@@ -97,8 +97,12 @@ Before the first release of 2.0.0:
 1. **Stop the old app's over-the-air updates.** `vkolotikov/hotel-tech-loyalty-mobile` publishes an EAS update on every
    push to its `main` (`.github/workflows/release.yml`). Disable that workflow so the old 1.x installs get nothing new;
    this app has no `expo-updates` at all.
-2. **Push:** the Apple push key is already on the `hoteltechai` account (shared with Hotel Staff). Android needs FCM V1:
-   upload a Firebase service-account key for `com.hotelloyalty.app` with `npx eas-cli credentials`.
+2. **Push:** the Apple push key is already on the `hoteltechai` account (shared with Hotel Staff). Android needs both
+   the Firebase Android app configuration for **`com.hotelloyalty.app`** and an FCM V1 service-account key on EAS.
+   Keep `google-services.json` outside git and upload it as this project's production **file** environment variable
+   `GOOGLE_SERVICES_JSON` (secret visibility). `app.config.js` reads its path into `android.googleServicesFile`.
+   Upload the separate service-account key through `npx -y eas-cli@latest credentials -p android` → production →
+   Google Service Account → FCM V1. Full setup and local verification: the release runbook's Android push section.
 3. **Store texts** in five languages under the new name; the listing, its reviews and its members stay.
 4. **Minimum version:** the server answers `GET /api/v1/apps/member/version` (`MEMBER_APP_*` in Laravel Cloud). Version
    1.x never asks, so the gate only matters from 2.0 on.

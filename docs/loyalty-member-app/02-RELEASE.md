@@ -24,10 +24,38 @@ Face ID texts only; no microphone; Android's unused permissions blocked).
    project, so a build reuses them. Play only accepts an update signed with the same upload key; EAS's stored keystore is
    that key. Check once: `npx eas-cli credentials` (Android → production keystore: the SHA-1 matches the upload key shown
    in Play Console → App integrity).
-4. **Android push (FCM V1):** `npx eas-cli credentials` → Android → Google Service Account → FCM V1, with the Firebase
-   project of `com.hotelloyalty.app`. Without it Android phones get no notifications (iPhones use the Apple key).
+4. **Android push:** configure both the Firebase Android file and the FCM V1 credential below. Without the file the
+   app cannot register with FCM; without the service-account credential EAS cannot deliver Android notifications.
 5. **App Store Connect API key for submitting:** `npx eas-cli credentials` → iOS → App Store Connect API Key (once),
    or answer the prompt on the first `eas submit`.
+
+### Android push configuration
+
+Use Firebase project **`hotel-loyalty-app-1414d`** (Hotel-Loyalty APP), Android package **`com.hotelloyalty.app`**.
+The existing registration `com.hoteltech.loyalty` is a different app; do not use its config or change/delete it.
+Download the correct Android app's `google-services.json` from Project settings → General → Your apps. Keep the
+file outside the repository, including any service-account JSON key. From `apps/loyalty-member`:
+
+```powershell
+npx -y eas-cli@latest env:create --name GOOGLE_SERVICES_JSON --type file --value '<absolute private path to google-services.json>' --environment production --visibility secret --non-interactive
+$env:GOOGLE_SERVICES_JSON = '<absolute private path to google-services.json>'
+npx expo config --type prebuild
+Remove-Item Env:GOOGLE_SERVICES_JSON
+```
+
+`app.config.js` extends `app.json` and supplies `android.googleServicesFile`; the production profile explicitly uses
+the production EAS environment. Secret files are available on the EAS build worker, not downloaded by `eas env:pull`.
+Local config without this variable remains usable for iOS/web; it does not prove Android push is configured. Android
+development/preview builds that need notifications require the same file variable in their own EAS environment.
+
+Separately, assign the same Firebase project's service-account key via `npx -y eas-cli@latest credentials -p android`
+→ production → Google Service Account → FCM V1. That key is not `google-services.json` and is not the Play submission
+credential. See [Expo's FCM setup](https://docs.expo.dev/push-notifications/fcm-credentials/).
+
+Before building: `npx tsc --noEmit`, `npx vitest run`, `npx expo install --check`, then resolve the prebuild config
+with the actual private Firebase file. Commit and push first. For this correction run **Android only**:
+`npx -y eas-cli@latest build -p android --profile production --non-interactive`. Keep iOS build 19; no iOS rebuild is
+needed. After installation, verify a real push reaches an Android phone and opens the inbox.
 
 ## 1. Build and submit
 
@@ -142,3 +170,28 @@ More → Bookings → Book (an appointment, paid at the venue), More → Profile
      `-dontwarn com.stripe.android.pushProvisioning.**` to `android/app/proguard-rules.pro`. The app never adds a
      card to Google Wallet, so neither library is packaged either way.
 - expo 58.0.22, expo-dev-client 58.0.18, expo-router 58.0.29, TypeScript ~6.0.3 (`expo install --check` clean).
+
+**2026-11-02, workstation release continuation (Codex):**
+
+- Verified all recorded builds finished. App Store Connect shows 2.0.0 (19) processed, in existing Internal QA;
+  the owner's account shows it installed on an iPhone. No duplicate group or invitation was created for members.
+- Apple's Free Apps Agreement and Digital Services Act status are Active. Paid Apps Agreement is Pending User Info
+  (bank account/tax information); the owner handles those. The members' distribution draft still says `1.1.0.` and
+  selects old build 3; it needs version 2.0.0, build 19, and the prepared store metadata before review.
+- Firebase audit found `hotel-loyalty-app-1414d` held only old Android package `com.hoteltech.loyalty` plus a web app.
+  Registered **com.hotelloyalty.app / HexaTech Loyalty** alongside them. FCM V1 API is enabled. Kept the old apps intact.
+- Added `app.config.js`, ignored `google-services.json`, and made the production EAS environment explicit. Uploaded
+  the correct Firebase config as project-scoped production **secret file** `GOOGLE_SERVICES_JSON`. Local prebuild
+  config resolves the actual private file, correct package, version and EAS project. Files stay outside git under
+  the workstation user's `HexaTech-release-private` directory.
+- With the owner's explicit confirmation, generated the existing Firebase service account's private key and assigned
+  it to **both current Expo projects for FCM V1**. EAS confirmed the assignment to `com.hotelloyalty.app`. This is not
+  a Google Play submission credential; that remains unassigned.
+- Checks: TypeScript passes; **34 tests pass**; `expo install --check` passes. Additional `expo lint` had no existing
+  app configuration and auto-installed its preset, then failed its ESLint version detection. Direct ESLint with that
+  temporary preset reported **27 errors / 16 warnings in unchanged app source** (React hooks and import checks).
+  The auto-generated lint config and package changes were removed; no unrelated lint fixes were made. Config syntax,
+  whitespace and ignored-file checks pass. This is not a clean full-app lint baseline.
+- Play Console: the existing production listing is named **Hexa Loyalty**, package `com.hotelloyalty.app`, account
+  FDS Cards ltd. New Android push-capable build and Play upload are still pending at this commit. No iOS rebuild,
+  review submission, production rollout or Laravel Cloud deploy was performed.
