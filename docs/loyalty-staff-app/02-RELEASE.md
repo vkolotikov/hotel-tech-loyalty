@@ -106,7 +106,12 @@ NFC needs a venue's physical card; the camera reads a member's QR code from the 
 - Android 1.0.0 version code **2**: finished (`https://expo.dev/accounts/hoteltechai/projects/hexatech-loyalty-staff/builds/9524ada0-d35a-4f4e-bc9e-2a3435bd42a8`),
   with a new upload keystore EAS created and keeps. The Play app does not exist yet; Google takes a new app's first
   upload only through Play Console, by hand (download the `.aab` from the build page).
-- iPhone: not built. EAS cannot create the distribution profile for `uk.hexatech.loyalty.staff` without an Apple
-  sign-in ("Distribution Certificate is not validated for non-interactive builds"): the owner runs
-  `npx eas-cli credentials -p ios` once in `apps/loyalty-staff` (§0.4), then the build runs from here.
+- iPhone: EAS cannot create the distribution profile without an Apple sign-in ("Distribution Certificate is not
+  validated for non-interactive builds"), so the owner ran `npx eas-cli@latest credentials -p ios` in
+  `apps/loyalty-staff` on the workstation. Apple first refused with "PLA Update available" (403) until the latest
+  Program License Agreement was accepted at developer.apple.com/account. Then: bundle id registered with Push
+  Notifications and NFC Tag Reading, the team's distribution certificate reused (serial `5C0025…`, to 2027-05-01),
+  provisioning profile `3MHB7GK36R` created. Build 1.0.0 (**2**) started from here
+  (`https://expo.dev/accounts/hoteltechai/projects/hexatech-loyalty-staff/builds/fa46634b-6511-4c31-b1d1-fe0b2cb89bd9`).
+- App Store Connect record created by the owner: Apple ID **6829777674** (`eas.json` → `submit.production.ios.ascAppId`).
 - expo 58.0.22, expo-dev-client 58.0.18, expo-router 58.0.29, TypeScript ~6.0.3 (`expo install --check` clean).
