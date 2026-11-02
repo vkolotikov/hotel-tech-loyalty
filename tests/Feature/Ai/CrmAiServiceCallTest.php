@@ -14,7 +14,8 @@ use Tests\Concerns\SetsUpMinimalSchema;
 use Tests\TestCase;
 
 /**
- * Locks CrmAiService::call — the admin AI Claude HTTP path.
+ * Locks CrmAiService::call — the admin AI's Claude call (the official SDK
+ * since 1 Nov 2026; CrmAiServiceSdkTest covers what the move changed).
  * Used by the admin AI chat (35+ tools) AND the public chat
  * widget's lead-extraction path. The retry + usage tracking
  * has been the cause of multiple Nightwatch incidents per the
@@ -204,14 +205,17 @@ class CrmAiServiceCallTest extends TestCase
         // throw; returns a text-only content block so the
         // upstream chat() method renders a graceful "AI service
         // unreachable" message to the admin.
-        Http::fake([
-            'api.anthropic.com/*' => Http::response('persistent', 500),
-        ]);
+        // A fresh response per attempt, as on the wire (one fake response object can be read only once).
+        Http::fakeSequence('api.anthropic.com/*')
+            ->push('persistent', 500)
+            ->push('persistent', 500)
+            ->push('persistent', 500);
 
         $result = $this->invoke([['role' => 'user', 'content' => 'x']]);
 
         $this->assertArrayHasKey('content', $result);
         $this->assertSame('text', $result['content'][0]['type']);
+        $this->assertStringContainsString('API error 500', $result['content'][0]['text']);
 
         // 3 attempts total.
         Http::assertSentCount(3);
@@ -342,8 +346,8 @@ class CrmAiServiceCallTest extends TestCase
 
     public function test_request_includes_anthropic_auth_headers(): void
     {
-        // Required Anthropic headers: x-api-key + anthropic-version.
-        // A regression dropping either bombs with 401.
+        // The official SDK (1 Nov 2026): API version 2026-10-21 and the key as a
+        // bearer token, no x-api-key. A regression dropping either bombs with 401.
         Http::fake([
             'api.anthropic.com/*' => Http::response([
                 'content' => [['type' => 'text', 'text' => 'OK']],
@@ -354,8 +358,9 @@ class CrmAiServiceCallTest extends TestCase
         $this->invoke([['role' => 'user', 'content' => 'x']]);
 
         Http::assertSent(function ($request) {
-            return $request->header('x-api-key')[0] === 'sk-ant-test'
-                && $request->header('anthropic-version')[0] === '2023-06-01';
+            return $request->header('Authorization') === ['Bearer sk-ant-test']
+                && $request->header('anthropic-version') === ['2026-10-21']
+                && $request->header('x-api-key') === [];
         });
     }
 }

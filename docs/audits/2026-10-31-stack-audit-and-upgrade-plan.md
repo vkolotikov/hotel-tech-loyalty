@@ -521,8 +521,7 @@ ChatGPT connection works; the chat widget should offer fewer, current models tha
 - **Left as they are (other model lists):** the voice agent (`gpt-realtime-1.5`), images (`gpt-image-1`), the
   Content Planner (`claude-sonnet-5`), the Training page's fine-tuning bases, and the Settings page's model lists,
   which nothing reads at runtime (the real values are `OPENAI_MODEL`, default `gpt-4o`, and `ANTHROPIC_MODEL`,
-  default `claude-sonnet-5`). `CrmAiService` still calls Claude directly on API version 2023-06-01 (no sampling
-  settings; its tool loop would need rebuilding for the SDK).
+  default `claude-sonnet-5`). `CrmAiService` moved to the SDK on 2 Nov (below).
 - **Tailwind 4 trial** (local branch `wip/tailwind4-trial`, three commits on `b333c82`, not pushed, not deployed):
   - The official upgrade tool plus the upgrade guide's compatibility CSS is **not safe on its own**: 67 of 235
     screenshots changed, and Glass (the default admin style) lost its fonts and its popover and modal surfaces.
@@ -587,6 +586,29 @@ ChatGPT connection works; the chat widget should offer fewer, current models tha
     - a look in Safari on an iPhone and in Firefox;
     - whether the newly working `/12` tints stay (each is one class to delete).
   - Stripe library upgrades wait for the owner's test keys ("will test later").
+
+### 2 November 2026: the CRM assistant on the SDK (owner: "do next")
+
+- **What moved:** `CrmAiService` (the admin AI's chat with its 38 tools, and the five extractions, one of them the
+  website chat's lead capture) was the last raw Claude call on API version 2023-06-01. It now goes through
+  `AnthropicSdk::client()`: API version 2026-10-21, the key as a bearer token, no sampling fields.
+- **Unchanged:** the model (`services.anthropic.model`, default `claude-sonnet-5`), `max_tokens` 4096, no thinking or
+  effort setting, the plan gate, the usage records, and the readable fallback texts.
+- **Retries:** three attempts. The SDK retries 408, 409, 429 (after Retry-After) and 5xx; the service itself retries
+  a dropped connection.
+- **Forced tool choice:** Claude Fable 5.1, Mythos 5.1, Opus 5.5 and Sonnet 5.5 refuse it (400), so on one of those
+  the extractions would have failed. On those models the tool is now asked for in the system prompt, and a reply
+  without the call is asked for once more (`AnthropicSdk::takesForcedToolChoice()`). Every other model keeps the
+  forced choice exactly as before.
+- **The chat loop** sends the assistant turn back as the SDK's blocks: thinking signatures kept, an empty tool input
+  sent as `{}`. The hand-written fix for that is gone.
+- **Checks:**
+  - tests: `CrmAiServiceCallTest` (updated: bearer and 2026-10-21) and `CrmAiServiceSdkTest` (new, 21 tests);
+  - the AI, CRM, chatbot and industry-prompt suites;
+  - Larastan on both files;
+  - one real chat round trip over a socket against a local mock.
+- **No call in `app/` sends API version 2023-06-01 any more.**
+
 
 ---
 
