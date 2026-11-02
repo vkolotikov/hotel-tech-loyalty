@@ -301,6 +301,9 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
     });
 
     // ─── External integration API (Sanctum personal access tokens) ──────────
+    Route::get('integrations/contacts-feed', \App\Http\Controllers\Api\V1\Integrations\ContactsFeedController::class)
+        ->middleware('throttle:60,1,contacts-feed');
+
     // For third-party systems (FDS Card Builder, Zapier, custom integrations)
     // pushing leads or other data into the CRM. Auth is the user's personal
     // access token; the token's owner determines which org the data lands in.
