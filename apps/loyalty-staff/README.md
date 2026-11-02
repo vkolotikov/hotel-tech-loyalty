@@ -77,9 +77,15 @@ Push needs three things set up once, all in the owner's accounts:
    `app.json`; commit it. Without it the app shows "Alerts work in the installed app on a phone" and sends nothing.
 2. **iPhone:** an Apple Push Notifications key. `npx eas-cli credentials` → iOS → "Push Notifications: Manage your
    Apple Push Notifications Key" (or answer yes when the first iOS build asks).
-3. **Android:** Firebase Cloud Messaging (FCM V1). Create or reuse a Firebase project with an Android app for
-   `uk.hexatech.loyalty.staff`, then upload its service account key with `npx eas-cli credentials` → Android →
-   "Google Service Account" → "FCM V1". (A `google-services.json` is not needed for Expo's push service.)
+3. **Android:** Firebase Cloud Messaging (FCM V1) needs **both** the Android app configuration and a service-account
+   key. Create or reuse a Firebase project with an Android app for **`uk.hexatech.loyalty.staff`**. Keep its
+   `google-services.json` outside git and upload it as this EAS project's production **file** environment variable
+   `GOOGLE_SERVICES_JSON` (secret visibility). `app.config.js` reads its path into `android.googleServicesFile`.
+   Upload the separate service-account key with `npx -y eas-cli@latest credentials -p android` → production →
+   Google Service Account → FCM V1. Full setup and local verification: the release runbook's Android push section.
+
+The Firebase file must also be supplied for Android development or preview builds that need notifications: create the
+same file variable in their EAS environment, or set `GOOGLE_SERVICES_JSON` to its private path for a local build.
 
 ## Minimum version
 
