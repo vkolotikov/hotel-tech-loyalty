@@ -55,7 +55,7 @@ own workspace. The runbook is `docs/plan-modules.md`.
 
 - **PHP 8.5.12** (official `php:8.5-cli` image through Docker), with this application's scoped suite (`scripts/test-php.sh`):
   - every new test passes;
-  - 41 failures, the same tests on the untouched base. Each needs an extension the image lacks: GD (images), zip
+  - 7321 passed, 23 skipped, 39 failed: the same 39 fail on the untouched base. Each needs an extension the image lacks: GD (images), zip
     (xlsx exports), intl (money formatting in `DepositMessageTest`). On the workstation's WAMP PHP these pass.
 - **Larastan:** no errors.
 - **Frontend:**
