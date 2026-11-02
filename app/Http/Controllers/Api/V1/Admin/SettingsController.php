@@ -754,7 +754,7 @@ class SettingsController extends Controller
         // operator from finding out only when a refund first fails.
         if (($result['success'] ?? false) && $this->isRestrictedKeyByPrefix($key)) {
             try {
-                $stripe = new \Stripe\StripeClient($key);
+                $stripe = \App\Services\StripeService::makeClient($key);
                 $refundsWritable = $this->probeRefundsWriteAccess($stripe);
                 if (!$refundsWritable) {
                     $result['warning'] = [

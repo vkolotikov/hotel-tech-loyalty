@@ -33,12 +33,42 @@ class StripeService
                                 && !empty($this->secretKey);
 
         if ($this->enabled) {
-            $this->client = new \Stripe\StripeClient($this->secretKey);
+            $this->client = self::makeClient($this->secretKey);
         } else {
             $this->client = null;
         }
 
         $this->loadedForOrg = $orgId;
+    }
+
+    /**
+     * The Stripe API version every call this application makes is on (step 4g of the stack plan, 2 Nov 2026).
+     * stripe-php sends the version it was released with unless the client names one; naming it here means a library
+     * upgrade never moves the API version by itself. Moving it is a change of its own: read Stripe's changelog for the
+     * new version and run the test-mode checks in docs/member-portal.md "Stripe library and API version".
+     *
+     * Webhook events are not on this version: Stripe renders each on the version set for the venue's webhook endpoint
+     * in its own Dashboard.
+     */
+    public const API_VERSION = '2026-10-28.endive';
+
+    /**
+     * The one way this application makes a Stripe client: on API_VERSION, and with Stripe's informational notices kept
+     * out of PHP's error handler. Newer stripe-php raises a `Stripe-Notice` response header as an E_USER_WARNING, which
+     * Laravel turns into an exception — a payment Stripe had already taken would then answer as a failure. Stripe lets
+     * an application switch that off with STRIPE_SUPPRESS_NOTICES=true (honoured only outside AI-agent shells); an
+     * explicit setting in the environment is left as it is.
+     */
+    public static function makeClient(string $secretKey): \Stripe\StripeClient
+    {
+        if (getenv('STRIPE_SUPPRESS_NOTICES') === false) {
+            putenv('STRIPE_SUPPRESS_NOTICES=true');
+        }
+
+        return new \Stripe\StripeClient([
+            'api_key'        => $secretKey,
+            'stripe_version' => self::API_VERSION,
+        ]);
     }
 
     public function isEnabled(): bool

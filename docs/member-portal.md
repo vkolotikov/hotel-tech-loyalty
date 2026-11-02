@@ -908,6 +908,34 @@ calls, audit rows and log lines. Five things differ:
 5. An intent id sent without a hold token is refused (`other_hold`, or `not_widget_payment` when the intent
    has no hold token either); a body without a hold token fails validation, so the stage is `validation`.
 
+## Stripe library and API version
+
+Since 2 Nov 2026 (stack plan step 4g): `stripe/stripe-php` 22.1, `@stripe/stripe-js` 10 (it loads
+`https://js.stripe.com/endive/stripe.js`) and `@stripe/react-stripe-js` 7 for the portal. The public widgets load
+`https://js.stripe.com/v3/` themselves and did not change.
+
+- **The API version is named in code**: `StripeService::API_VERSION` (`2026-10-28.endive`), and every Stripe client
+  is made by `StripeService::makeClient()` (`tests/Unit/Stripe/ApiVersionTest.php` refuses any other
+  `new StripeClient`). A library upgrade therefore never moves the API version by itself; that test fails when the
+  library's own version differs from the pin, which is the moment to read Stripe's changelog and move it on purpose.
+- **Webhook events are not on this version**: Stripe renders each event on the version set for the venue's endpoint
+  in its own Dashboard. The handlers read only fields that are the same on 2026-03-25.dahlia and 2026-10-28.endive
+  (Charge `amount_refunded`/`payment_intent`/`refunds`, Dispute `amount`/`status`/`payment_intent`, PaymentIntent
+  `metadata`); a venue's endpoint version needs no change.
+- **Stripe notices**: newer stripe-php (21.3 and 22; not 20.0) raises a `Stripe-Notice` response header (test and
+  sandbox) as a PHP warning, which Laravel turns into an exception — a payment Stripe had taken would answer as a
+  failure. `makeClient()` sets `STRIPE_SUPPRESS_NOTICES=true` unless the environment names it. (Stripe ignores the
+  setting when it detects an AI coding agent's shell, so such a shell can still see a notice as an error; a server
+  never does.)
+- **Checking an upgrade in Stripe test mode**: `tests/Feature/Stripe/LiveTestModeTest.php` runs the money paths
+  against Stripe itself through the application's own code — payment intents (authorise, capture, release), a decline
+  and a 3-D Secure card, refunds partial and full and a replay, `charge.refunded` and a lost dispute through the
+  webhook endpoint with events signed by a local secret, `php artisan bookings:capture-pending-pis`, and a combination's
+  one payment refunded room by room. It runs only with a test key in `STRIPE_TEST_SECRET` and only on SQLite in
+  memory (the key never reaches a disk); otherwise it skips. `STRIPE_LIVE_RECORD=<file path>` writes what Stripe
+  answered, for comparing two versions. On 2 Nov the fields and values the app reads were identical on dahlia
+  (stripe-php 20) and endive (stripe-php 22).
+
 ## After a deploy
 
 - The deploy runs the pending migrations (Laravel Cloud runs `php artisan migrate --force`, see `CLAUDE.md`).
