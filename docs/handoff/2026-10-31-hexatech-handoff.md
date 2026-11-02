@@ -6,8 +6,9 @@ environment). AGENTS.md and CLAUDE.md still apply.
 
 ## Production
 
-Latest: **b67ed20** (1 Nov: the loyalty level editor fits phones; the binding test covers every route; next source-patch
-baseline **8db4787**). Before it, **08027a1** (1 Nov: the admin SPA on Tailwind 4.3 with Tailwind 3's look, checked by screenshots of every
+Latest: **33d4f74** (2 Nov: the CRM assistant's Claude calls through the official SDK at API version 2026-10-21, a forced
+tool choice only where the model takes it; next source-patch baseline **1bea54f**). Before it, **b67ed20** (1 Nov: the
+loyalty level editor fits phones; the binding test covers every route). Before it, **08027a1** (1 Nov: the admin SPA on Tailwind 4.3 with Tailwind 3's look, checked by screenshots of every
 route in Chromium and WebKit; admin routes with a model parameter such as the inquiry page no longer answer 404). Before it, **915f9c6** (the chat widget's short current model list, Claude on the
 SDK at API 2026-10-21 with no temperature). Before it, **eb52525** (the empty permission tables dropped; PHP
 8.5 everywhere, `composer.json` `^8.5`). Before it, **38b0f24** (31 Oct night: permissions package removed, its tables kept; SPA on TypeScript 6 and lucide-react
@@ -95,6 +96,18 @@ Plan and progress: `docs/audits/2026-10-31-stack-audit-and-upgrade-plan.md` (§6
   (`hotel-tech-saas` `main` = `9c179fa`; it deploys from `main` on Laravel Cloud and runs PHP 8.5). `saas-app` is
   unused (owner). Its second step (CI, ESLint 10 and TypeScript 6 with a dashboard hook-order fix, Symfony 8.1)
   is deployed too (`main` = `eef4275`, CI green on `main`). Plan §8.
+
+- **Next: the Stripe upgrades** (plan §6 step 4g for this app: stripe-php 20 → 22, Stripe.js 9 → 10,
+  react-stripe-js 6 → 7; and stripe-php 20 → current in `hotel-tech-saas`). They need, in the cloud environment's
+  settings (owner, 2 Nov):
+  - environment variables `STRIPE_TEST_SECRET` (`sk_test_…`) and `STRIPE_TEST_PUBLISHABLE` (`pk_test_…`), test mode
+    only, never a live key. They are read from the environment and never printed or written to a file;
+  - network access to `api.stripe.com` (server calls) and `js.stripe.com`, `hooks.stripe.com`, `m.stripe.network`,
+    `r.stripe.com` (the payment pages in a browser, including 3-D Secure test challenges). On 2 Nov every Stripe host
+    was refused here.
+
+  Both take effect in a new session. Webhooks are tested with events this app signs itself (no Stripe CLI, no
+  webhook secret from the dashboard).
 
 ## Cloud container notes (Linux)
 
