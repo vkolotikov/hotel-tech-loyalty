@@ -6,8 +6,9 @@ environment). AGENTS.md and CLAUDE.md still apply.
 
 ## Production
 
-Latest: **b67ed20** (1 Nov: the loyalty level editor fits phones; the binding test covers every route; next source-patch
-baseline **8db4787**). Before it, **08027a1** (1 Nov: the admin SPA on Tailwind 4.3 with Tailwind 3's look, checked by screenshots of every
+Latest: **33d4f74** (2 Nov: the CRM assistant's Claude calls through the official SDK at API version 2026-10-21, a forced
+tool choice only where the model takes it; next source-patch baseline **1bea54f**). Before it, **b67ed20** (1 Nov: the
+loyalty level editor fits phones; the binding test covers every route). Before it, **08027a1** (1 Nov: the admin SPA on Tailwind 4.3 with Tailwind 3's look, checked by screenshots of every
 route in Chromium and WebKit; admin routes with a model parameter such as the inquiry page no longer answer 404). Before it, **915f9c6** (the chat widget's short current model list, Claude on the
 SDK at API 2026-10-21 with no temperature). Before it, **eb52525** (the empty permission tables dropped; PHP
 8.5 everywhere, `composer.json` `^8.5`). Before it, **38b0f24** (31 Oct night: permissions package removed, its tables kept; SPA on TypeScript 6 and lucide-react

@@ -863,6 +863,24 @@ files on disk): run them one after the other.
 
 ## Deploying
 
+- CRM assistant on the Anthropic SDK (stack plan follow-up, owner "do next", 2026-11-02): production **33d4f74** on
+  **b67ed20**, a source patch only (the fresh SPA build is identical to main's). Feature source **1bea54f** on
+  `claude/stack-audit-upgrade-plan-9hdkkv`. 7 paths (1 added, 6 changed), none deleted.
+  - **The change:** `CrmAiService` (the admin AI chat and the five extractions, the website chat's lead capture among
+    them) goes through `AnthropicSdk::client()`: API version 2026-10-21, the key as a bearer token, no sampling
+    fields. Model, `max_tokens` and fallback texts are unchanged.
+  - **Retries:** three attempts. The SDK retries the HTTP statuses; the service retries a dropped connection.
+  - **Forced tool choice:** kept where the model takes it. On Fable 5.1, Mythos 5.1, Opus 5.5 and Sonnet 5.5 the tool
+    is asked for in the prompt, with one more attempt.
+  - No call in `app/` sends API version 2023-06-01 any more. No migration.
+  - **Checks:**
+    - parity: the whole source equals the tip;
+    - artifact: PHP 8.5.12, **78 scopes, 7,322 passed / 16 skipped / 0 failed**; frontend **5,790 tests / 399 files**;
+    - CI on the tip green (8 jobs);
+    - one chat round trip over a socket against a local mock.
+  - Verified by content on `origin/main`.
+  - The next source delta starts at **1bea54f**.
+
 - Level editor on phones, binding test widened (stack plan follow-ups, 2026-11-01): production **b67ed20** on
   **08027a1** (source patch **39d87b13e** plus the SPA build). Feature source **8db4787** on
   `claude/stack-audit-upgrade-plan-9hdkkv`. 5 paths (2 code, 3 records), none deleted.
