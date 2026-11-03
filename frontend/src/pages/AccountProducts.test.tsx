@@ -3,7 +3,7 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { MemoryRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import '../i18n'
-import { AccountProducts } from './AccountProducts'
+import { AccountProducts } from './AccountProducts.tsx'
 import type { ModulesState } from './accountProducts'
 
 const auth = vi.hoisted(() => ({
