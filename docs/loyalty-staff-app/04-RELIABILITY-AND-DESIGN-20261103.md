@@ -36,12 +36,14 @@ No backend endpoint, loyalty rule, account permission or real customer's balance
 - Expo export: Android, iOS and web bundles compiled before the final attempt-navigation guard and Home capability gate. The final Android EAS preview compiles source `24a119344`; native build/runtime acceptance is recorded in the handoff after testing.
 - Existing source/store tests retained. No bare PHP tests or backend deployment required.
 - Android EAS preview from final source `24a119344` finished successfully and installed in the Pixel 8 API 35 emulator: [build and download](https://expo.dev/accounts/hoteltechai/projects/hexatech-loyalty-staff/builds/e59809c6-5177-4a43-a443-11b29aded97a). Local APK: `C:\Users\user6399\Downloads\HexaTech-Staff-reliability-preview.apk`.
-- Installed core-preview checks passed for sign-in, combined queue counts, reward confirmation/cancellation, completed reward history, member details, decimal-point rejection, negative-purchase rejection and sign-out/Back navigation. This core binary differs from the final preview only by the Home analytics capability gate. Final-preview UI smoke-check status is in the handoff.
+- Installed core-preview checks passed for sign-in, combined queue counts, reward confirmation/cancellation, completed reward history, member details, decimal-point rejection, negative-purchase rejection and sign-out/Back navigation. This core binary differs from the final preview only by the Home analytics capability gate. The final preview then passed fresh sign-in, Home and Requests checks; Home and the queue both showed the current 2 items (1 reward + 1 benefit). Evidence and limits are in the handoff.
 - Live demo API recheck: 25 reads passed, including staff blocked from the member portal. All 98 tracked Staff files match the standalone Staff release tree by SHA-256.
 
 These checks do not certify physical NFC/QR, Apple biometric prompt behaviour, push delivery, screen readers or large-font layouts. Those need device acceptance before a store update. The preview has the current UI plus reliability fixes; the Figma redesign is a separate approval step.
 
 ## Next after design confirmation
+
+Owner's follow-up supersedes the initial whole-app concept: refine and confirm **Home first**, with a more luxurious Apple-like dark/glass treatment and less copy. The revised Home and motion study are in `05-HOME-DESIGN-20261103.md`. The other layouts and operational additions remain subsequent work.
 
 Implement the compact layout and request detail/search flow, then card disable/replace, basic enrolment/editing and permission-controlled corrections. Add stamps/credit views only when enabled by the server. Keep campaigns, imports/merge, advanced reports and setup on the web. Review the member app next using the same approach.
 

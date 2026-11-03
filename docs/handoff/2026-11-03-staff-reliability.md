@@ -16,7 +16,7 @@ Private demo authorizations and credentials remain as in `2026-11-03-native-apps
 - Standalone Staff source copied by explicit file list to `C:\wamp64\www\hexatech-staff-release-20261102`: commits `07075671a`, `9fde7fe62`, pushed to remote `feature/loyalty-staff-app`. Do not merge native feature history into `main`.
 - Final Android preview: `e59809c6-5177-4a43-a443-11b29aded97a`, source `24a119344`, profile `preview`, production EAS environment (for Firebase file), internal APK. Version remains 1.0.0; this is not a store release.
 - Earlier preview `75e529da-d360-47b2-9e52-e258540a8ba7` was cancelled; `3b6d1f77-4508-4fe5-be74-c38cbd7bbabe` contains `7d2b9e7c1` and is superseded by the final preview. Use only the final build for delivery.
-- Figma design approval requested from the owner; no answer yet. Do not apply the proposed new layouts until reviewed.
+- Owner requested a more luxurious, creative, Apple-like dark treatment with glass, less copy, icons and motion. **Finalize Home first, before other screens.** The earlier concept is not approved for implementation. The revised Home is described below.
 
 ## Android runtime acceptance
 
@@ -34,6 +34,18 @@ Observed in the installed core preview:
 
 Final preview `e59809c6-5177-4a43-a443-11b29aded97a` **finished successfully and installed** over the core preview at approximately 17:06 UTC. Package readback: `uk.hexatech.loyalty.staff`, version 1.0.0, code 3. APK SHA-256: `994CBFC7D9FF6BC27347931B7A95E236DC01901273BD1DBB2C2BF134795502B1`. Download: `https://expo.dev/artifacts/eas/_nUidiZnxgLbSEHcAop0OgQ72KQ-KjujPoaI1NK6iIo.apk`; local file `C:\Users\user6399\Downloads\HexaTech-Staff-reliability-preview.apk`.
 
-Final-preview UI smoke check is pending at this checkpoint: the emulator was minimized and the CUA input guard reported manual input, then refused to activate it, while state reads failed on the minimized window. Asked the owner to restore the Pixel 8 emulator; do not claim the final binary's sign-in was observed until that check is done. The preceding core preview was tested as described above.
+Final-preview UI smoke check **passed after the owner restored the emulator** (approximately 18:11 UTC): fresh Staff sign-in, Home and Requests. Both Home and Requests show the current total 2, matching the visible 1 pending reward + 1 benefit request. The demo data changed between passes; do not confuse the earlier total 3 with the present queue. No successful reward, points or check-in write was made by this smoke check. Evidence: `reliability-20261103/final-home.png` and `final-requests.png`. The emulator was left on Home, signed into the isolated Staff demo.
 
 Live demo API recheck after runtime tests: 25 reads passed, staff blocked from member portal. All 98 tracked Staff app files matched the standalone release tree by SHA-256. No physical biometric, NFC, QR or push-delivery acceptance is implied by these checks; non-manager analytics behavior was inspected in source, not exercised with a live restricted account.
+
+## Home design refinement
+
+Owner's requested scope is now **Home only**. Refined Figma page `12:674` / `Home / Obsidian glass` uses SF Pro for the iPhone UI, Cormorant Garamond for the venue wordmark, graphite surfaces, champagne metal, native iOS glass controls and an editable floating membership-card motif. Primary Scan, two compact actions and one activity row replace the text-heavy dashboard. Other design screens and native layouts were left unchanged.
+
+- Review: `https://www.figma.com/design/HQV6zF7ArPVd7rpdf1UUPr?node-id=13-723`.
+- Motion study: `https://www.figma.com/proto/HQV6zF7ArPVd7rpdf1UUPr?node-id=18-1420&starting-point-node-id=18%3A1420`.
+- Rest `13:723`; arrival `18:1420`; touch `18:1373`; notes `13:857`; component sources `13:682`.
+- Arrival transitions into Home; tapping Scan shows brief touch feedback and returns. This is a Home material/motion study, not camera access, live transactions or a completed navigation prototype. Reactions were read back from Figma; actual prototype playback has not been independently observed.
+- Final composition screenshot visually inspected; editable Home: 113 descendants, 29 text nodes, 13 instances, no image-filled nodes. SF Pro/Cormorant font families asserted; native glass button/tab components and Body/Regular text style verified. Small controls at least 44 high. Reduced motion/transparency behavior is specified for implementation; device/large-text acceptance remains future work.
+- Evidence and material/motion decisions: `docs/loyalty-staff-app/05-HOME-DESIGN-20261103.md`, `design-20261103/home-obsidian-glass.png`.
+- Asked owner to review this concrete Home direction. Await the reply before redesigning the remaining screens or implementing the new layouts.
