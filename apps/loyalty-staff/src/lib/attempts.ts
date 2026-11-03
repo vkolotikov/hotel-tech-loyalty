@@ -31,13 +31,14 @@ export function attemptJournal(store: AttemptStorage = SecureStore) {
         || (value.amount !== null && (!Number.isFinite(value.amount) || value.amount <= 0))) throw new Error('attempt_storage')
       return value
     },
-    async start(scope: string, amount: number | null, note: string): Promise<DeskAttempt> {
+    async start(scope: string, amount: number | null, note: string, resume?: DeskAttempt | null): Promise<DeskAttempt> {
       const active = starting.get(scope)
       if (active) return active
       const work = (async () => {
         const previous = await this.load(scope)
+        if (previous && resume && previous.key !== resume.key) throw new Error('attempt_changed')
         if (previous) return previous
-        const attempt = { key: freshKey(), amount, note }
+        const attempt = resume ?? { key: freshKey(), amount, note }
         // A failed durable write must prevent the network write. Do not use the best-effort prefs store.
         await store.setItemAsync(scope, JSON.stringify(attempt))
         return attempt

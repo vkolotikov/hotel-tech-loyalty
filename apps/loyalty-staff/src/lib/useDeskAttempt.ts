@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { usePreventRemove } from 'expo-router'
 import { useSession } from './session'
 import { useBoot } from './queries'
 import { attemptScope, deskAttempts, outcomeUncertain, type DeskAttempt } from './attempts'
@@ -16,16 +17,20 @@ export function useDeskAttempt(member: number, action: 'award' | 'redeem' | 'che
   const [busy, setBusy] = useState(false)
   const [failure, setFailure] = useState<Key | null>(null)
   const sending = useRef(false)
+  const resume = useRef<DeskAttempt | null>(null)
+  const tokenNow = useSession(s => s.token)
+  usePreventRemove(busy && !!tokenNow)
   const restoreRef = useRef(restore)
   restoreRef.current = restore
   useEffect(() => {
     let current = true
     setLoadedScope(null)
+    resume.current = null
     setPending(false)
     setFailure(null)
     if (scope) void deskAttempts.load(scope).then(attempt => {
       if (!current) return
-      if (attempt) { restoreRef.current(attempt); setPending(true) }
+      if (attempt) { resume.current = attempt; restoreRef.current(attempt); setPending(true) }
       setLoadedScope(scope)
     }).catch(() => { if (current) setFailure('error.attempt_storage') })
     return () => { current = false }
@@ -40,7 +45,8 @@ export function useDeskAttempt(member: number, action: 'award' | 'redeem' | 'che
     let sent = false
     const wasPending = pending
     try {
-      const attempt = await deskAttempts.start(scope, amount, note)
+      const attempt = await deskAttempts.start(scope, amount, note, resume.current)
+      resume.current = attempt
       if (useSession.getState().token !== token) return
       restoreRef.current(attempt)
       sent = true
@@ -49,12 +55,14 @@ export function useDeskAttempt(member: number, action: 'award' | 'redeem' | 'che
       await deskAttempts.finish(scope)
       if (useSession.getState().token !== token) return
       setPending(false)
+      resume.current = null
       return result
     } catch (error) {
       if (useSession.getState().token !== token) return
       const uncertain = sent && (wasPending || outcomeUncertain(error))
       if (sent && !uncertain) {
         try { await deskAttempts.finish(scope) } catch { setPending(true); setFailure('error.attempt_storage'); return }
+        resume.current = null
       }
       setPending(uncertain)
       setFailure(!sent ? 'error.attempt_storage' : uncertain ? 'error.unconfirmed' : errorKey(failureOf(error).code))

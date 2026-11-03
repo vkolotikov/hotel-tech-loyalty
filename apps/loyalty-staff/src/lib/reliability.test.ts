@@ -69,6 +69,12 @@ describe('durable transaction retries', () => {
     expect(second).toEqual(first)
     expect(first.amount).toBe(10)
   })
+  it('never creates a fresh key for a restored form when another response has already cleared storage', async () => {
+    const journal = attemptJournal(memory())
+    const first = await journal.start('scope', 10, 'Visit')
+    await journal.finish('scope')
+    expect(await journal.start('scope', 100, 'Changed', first)).toEqual(first)
+  })
   it('does not generate a new key over damaged stored state', async () => {
     const store = memory()
     await store.setItemAsync('scope', '{broken')

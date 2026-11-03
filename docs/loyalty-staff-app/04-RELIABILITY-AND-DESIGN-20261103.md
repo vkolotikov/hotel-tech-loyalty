@@ -31,7 +31,7 @@ No backend endpoint, loyalty rule, account permission or real customer's balance
 ## Validation
 
 - TypeScript: passed.
-- Vitest: 37 passed across four files, including strict input, totals/pagination de-duplication, durable retry restoration/storage failure/concurrent starts, cold-start/timeout decisions and delayed account responses.
+- Vitest: 38 passed across four files, including strict input, totals/pagination de-duplication, durable retry restoration/storage failure/concurrent starts, late completion after reopening a form, cold-start/timeout decisions and delayed account responses. Navigation is held while a points/check-in request is sending; unresolved attempts may be closed safely and restored.
 - Expo SDK dependency check: up to date.
 - Expo export: Android, iOS and web bundles compiled. Native preview runtime acceptance is recorded in the handoff after the test build.
 - Existing source/store tests retained. No bare PHP tests or backend deployment required.

@@ -6,6 +6,6 @@ Worktree `C:\wamp64\www\hexatech-apps`, branch `feature/staff-reliability-202611
 
 Figma file `HQV6zF7ArPVd7rpdf1UUPr`, session `69cf3a38-3417-47ca-a671-eace288fcac3`. Board `4:186`, core group `4:190`, critical states `4:621`, prototype start `4:851`. Seven editable concepts, visually verified. Native code still uses the previous layout. Do not imply the Figma redesign or future feature controls are implemented.
 
-Checks: TypeScript and 37 Vitest tests passed; Expo dependency check clean; Android/iOS/web bundles exported. Native preview build/runtime status will be appended. No store release or backend deployment in this pass.
+Checks: TypeScript and 38 Vitest tests passed; Expo dependency check clean; Android/iOS/web bundles exported. Native preview build/runtime status will be appended. No store release or backend deployment in this pass.
 
 Private demo authorizations and credentials remain as in `2026-11-03-native-apps-release.md`; never echo them. Android emulator still has the published Staff build until preview installation. Physical iOS, biometric, NFC and push acceptance remain required for release.

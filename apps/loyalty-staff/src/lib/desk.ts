@@ -64,7 +64,7 @@ export function pointsFrom(text: string): number {
 export function purchaseAmount(text: string, currency: string): number | null | 'invalid' {
   const value = text.trim()
   if (!value) return null
-  const decimals = new Intl.NumberFormat('en', { style: 'currency', currency }).resolvedOptions().maximumFractionDigits ?? 2
+  const decimals = Math.min(2, new Intl.NumberFormat('en', { style: 'currency', currency }).resolvedOptions().maximumFractionDigits ?? 2)
   const pattern = decimals === 0 ? /^\d+$/ : new RegExp(`^\\d+(?:[.,]\\d{1,${decimals}})?$`)
   if (!pattern.test(value)) return 'invalid'
   const amount = Number(value.replace(',', '.'))

@@ -114,14 +114,16 @@ would downgrade Expo).
 
 ## Acceptance on phones
 
-1. Sign in, close the app, reopen it: still signed in. Turn the lock on, leave for two minutes, return: Face ID or
-   fingerprint asked.
+1. Sign in, close the app, reopen it: still signed in. With the lock on, a cold launch and returning after two minutes
+   away require Face ID or fingerprint. Sign out or expire the token from a member/form screen: no prior account data remains.
 2. NFC on Android: hold several cards in turn on the Scan tab without pressing anything. On iPhone: press "Tap a
    card", hold the card near the top of the phone.
 3. QR: a member's app code in daylight and in a dim room, and from a printed card.
 4. Typed: a member number with and without dashes, a name, an email.
 5. At a place for some tiers only: one member let in, one refused, with the reason.
 6. Give 50 points and use 20: the member's app shows both, with the reasons.
+   Decimal/negative points are rejected. Lose the response, reopen the form and retry: the same payload/key is used;
+   the operation is not repeated. Failed durable storage prevents sending. Check the activity before entering another operation.
 7. Check in with an amount (desk earn on) and without; a second check-in the same day answers "Already checked in
    today" and adds nothing.
 8. Link a new card to a member, then scan it; scan a card that belongs to someone else (refused).

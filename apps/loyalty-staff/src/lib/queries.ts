@@ -52,4 +52,3 @@ export function afterMemberChange(memberId: number): void {
   void queryClient.invalidateQueries({ queryKey: KEYS.metrics })
   void queryClient.invalidateQueries({ queryKey: KEYS.activity })
 }
-
