@@ -111,11 +111,13 @@ Data used to track you: **none** (no advertising or cross-app tracking). Data li
 | Category | Types | Why |
 |---|---|---|
 | Contact Info | Name, Email Address, Phone Number | The member's account and profile |
+| Contact Info | Physical Address | Stripe PaymentSheet automatically collects billing-address fields required by the payment method |
 | Identifiers | User ID | The membership number and account |
 | Identifiers | Device ID | This phone's notification token, stored against the account to deliver requested notifications |
 | Purchases | Purchase History | Bookings, redeemed rewards, points history |
 | Financial Info | Payment Info | Cards entered in Stripe's payment sheet go straight to Stripe; HexaTech never sees the number |
 | User Content | Other User Content | Notes and requests on a booking |
+| Search History | Search History | Booking availability criteria can be retained in server error logs with the account ID |
 | Usage Data | Product Interaction | Stripe payment-component usage for App Functionality and Analytics; may be linked to identity; not tracking |
 
 Stripe's [mobile SDK privacy details](https://support.stripe.com/questions/stripe-mobile-sdk-privacy-details), checked
@@ -126,12 +128,20 @@ sentence there would make that explicit.
 
 ### Google Play: Data safety
 
-- Collected (not shared; Stripe acts as a service provider): Personal info (name, email address, phone number, user
+- Collected (not shared; Stripe acts as a service provider): Personal info (name, email address, phone number, address, user
   IDs), Financial info (purchase history, payment info via Stripe), App activity (other user-generated content: booking
   notes), Device or other IDs (the push token).
-- All for App functionality and Account management; name and email required, phone optional.
+- Account name, email, phone and user ID are used for App functionality and Account management. Name, email and
+  user ID are required; phone is optional. Other types support their named optional features and App functionality.
+- Billing address and payment information are optional app features: they are collected only when a member chooses
+  an online payment. The installed Stripe SDK defaults to automatic billing-field collection; keep the disclosure
+  even though the HexaTech account form does not ask for an address.
 - Include Stripe payment-component interactions under App activity / App interactions, with Analytics and fraud
   prevention purposes where applicable. Check the final disclosure against the current SDK and actual payment flow.
+- Include App activity / In-app search history: booking availability criteria can be retained in server error logs.
+  This is optional, linked to the account, and used for App functionality. The local help-text filter stays on-device.
+- The previous listing declared Photos or Videos. Version 2.0 only scans QR codes on-device and has no image upload;
+  remove that old declaration when publishing the new binary's privacy update.
 - Encrypted in transit: yes. Members can delete their account in the app (Profile → Delete account) and by the
   data-deletion page above.
 
@@ -281,3 +291,54 @@ More → Bookings → Book (an appointment, paid at the venue), More → Profile
   package inspection confirms `versionName=2.0.0`, `versionCode=26`. Authenticated native UI testing is still pending.
 - Updated source reviewer notes to reflect the actual demo: membership, points, reward and benefit request;
   no bookable demo inventory or real purchases. Credentials remain outside git and in the stores' private review fields.
+
+**2026-11-03, submission audit and testing access (Codex):**
+
+- Rechecked the delivered binaries and the saved-session correction: **41 regression tests pass** and all **25
+  authenticated API reads pass**, including refusal of a staff session. The final store-text change also passes
+  all six existing store-limit tests. This is not a native iPhone acceptance result.
+- Android internal testing: `https://play.google.com/apps/internaltest/4701572602064076698`. The Pixel 8 has
+  version 26 installed, but Play automatic protection refuses a sideload. The owner must join the internal test
+  with the emulator's signed-in Google account and install through Play before native menu testing can continue.
+  Chrome's initial sign-in/Terms step is reserved for the owner. Do not bypass Play protection.
+- iPhone: use the existing TestFlight invitation and select **HexaTech Loyalty 2.0.0 (20)**. Internal QA contains
+  two testers, one installed and one invited; build 20 is unexpired and IN_BETA_TESTING. There is no public
+  TestFlight join URL. A Windows Android emulator cannot verify iOS keychain migration or physical iPhone behaviour.
+- Play listing now uses **HexaTech Loyalty**, all five source-language texts, the current 512px icon, a new
+  1024x500 feature graphic and six actual app captures. Removed obsolete phone/tablet imagery. Icon/feature
+  artwork is labelled AI-assisted; screenshots are not. Source assets/provenance live in `store/play/`.
+  API readback confirms exact title, short-description and full-description parity for all five locales,
+  with one icon, one feature graphic and six phone screenshots. Changes are saved in Publishing overview,
+  not submitted for public review.
+- Backed up the existing Play Data safety form outside git: it previously answered **no data collected**.
+  Replaced it with the audited **11 data types** above; all handling rows validate as complete. Saved the form
+  for review and updated the privacy URL to `https://app.hexa-tech.uk/privacy`. Both privacy and deletion pages
+  return HTTP 200 and contain the expected policy/request content. The public text still uses the older app
+  names and needs a technical-disclosure/branding refresh before final release approval.
+- Play Advertising ID is **No**, matching the actual version 26 APK manifest (no AD_ID permission). Existing
+  target audience is **18 and over**, with Google's optional minor-user block unselected; left unchanged.
+  Existing Play reviewer-access entry is older and still needs the isolated member demo sign-in.
+- Apple age-rating answers were completed for the two new social-media fields (both false). Reviewer contact,
+  demo access and build 20 selection were verified. Updating first-release What's New is refused by Apple in
+  this version state; the five source texts now accurately distinguish valid member sessions from old staff sessions.
+- **Credential replacement pending owner:** an Apple inspection helper logged authentication context while
+  inspecting pricing. Its output is now explicitly allowlisted. Apple API operations are paused until the owner
+  replaces that key, both current EAS assignments are updated, and the old key is revoked. No secret is in git;
+  the private incident follow-up is in the workstation's `HexaTech-release-private` directory.
+- Staff remains in review on both stores. No new native builds or member production rollout was performed during
+  this audit. The later public-policy source-patch deployment is recorded below.
+
+**2026-11-03, public policy and deletion refresh (Codex):**
+
+- Separate source-patch deployment **d9117b475** (source **2f0158565**) updates the public privacy/deletion pages
+  for both current app names, Stripe billing-address/payment-component handling, Expo/APNs/FCM, local QR scanning,
+  the member More → Profile → Delete account route and partial-data requests. Verified the new content live.
+  Existing retention and legal-basis commitments were preserved.
+- Included explicit `.tsx` account-page imports to resolve the Windows build ambiguity. TypeScript, all 5,827
+  frontend tests, scoped Support/Landing/API-authentication PHP suites and production build passed on the deploy
+  artifact. No native source or migration was deployed. Main was updated only through the source-patch worktree.
+- Play member reviewer-access replacement is prepared, with accurate demo limitations and no purchase required;
+  owner password entry followed by Add and Save remains pending. No final member store submission yet.
+- All eleven Apple data categories are now fully configured and saved, no Set Up warnings: linked to accounts,
+  App Functionality, no tracking; Product Interaction also Analytics. The final legal Publish confirmation is
+  open for the owner. Do not describe the revised privacy label as published until the owner completes it.

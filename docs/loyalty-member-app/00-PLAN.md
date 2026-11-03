@@ -5,6 +5,13 @@ Owner, 2026-10-31: "If or when it is done can we develope as well user membershi
 Owner's decisions (2026-10-31): **a new app, published under the existing listing; store name "HexaTech Loyalty";
 each venue's own colours.**
 
+Release status, **2026-11-03**: version **2.0.0**, iOS **20** and Android **26**, is delivered to
+TestFlight Internal QA and Google Play internal testing. The incompatible saved staff-session correction is
+included; 41 regression tests and 25 authenticated API reads pass. Installed native UI and physical iPhone
+acceptance remain pending. The five-language Play listing, current artwork, six screenshots and corrected
+11-type Data safety declaration are saved for review. Public release is not yet submitted. See
+`02-RELEASE.md` and `../handoff/2026-11-03-native-apps-release.md` for the current blockers and testing links.
+
 Status: **phase 1 built** on `feature/loyalty-member-app` in `apps/loyalty-member` (README there): sign-in, join by
 QR or link, the old app's session carried over, Home, the card with its QR code and wallet buttons, Activity, More,
 the venue's accent and heading face, five languages (the portal's own words, shared), push per phone with sign-out

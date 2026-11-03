@@ -1,7 +1,7 @@
 # Native app release continuation — 3 November 2026
 
-This is an app-store handoff, not a Laravel Cloud deployment. Main and the owner's unrelated work were untouched.
-The detailed append-only records are in each app's `02-RELEASE.md`.
+This records the native app submissions and a separate public-policy source-patch deployment. The owner's
+unrelated work was untouched. Detailed append-only records are in each app's `02-RELEASE.md`.
 
 ## Current delivery
 
@@ -71,3 +71,34 @@ fully verified by this agent; do not report all device checks complete.
   indices may lag. Do not output reviewer password fields. Private CLI helpers inspect Apple/EAS/Play without
   printing secrets. The Apple inspection helper must run in the main release worktree's app directory, which has
   dependencies; the staff sync worktree does not have `node_modules`.
+
+## Later audit and public policy deployment
+
+- Member Play listing now matches all five source locales exactly, with the current icon, feature graphic and
+  six actual app captures. The old Data safety answer incorrectly said no data collected; the audited eleven
+  types are saved and all handling rows validate. The privacy URL now points to `app.hexa-tech.uk/privacy`.
+- Apple member privacy now has all eleven categories fully configured with no Set Up warnings. All are linked,
+  for functionality, with no tracking; Product Interaction additionally declares Analytics. The final Publish
+  legal confirmation is open in Chrome tab two and awaits the owner; publication is not yet confirmed.
+- Member reviewer access is prepared in the first Chrome tab, replacing the older entry with the isolated demo.
+  The owner must enter the member password from the private owner sign-in file, then Add and Save. It is not yet
+  confirmed saved. Never print the password or inspect the owner file in UI output.
+- Android testing URL: `https://play.google.com/apps/internaltest/4701572602064076698`. Play protection refuses
+  the sideloaded build 26; the owner must join and install through Play using the emulator's signed-in account.
+  Chrome's first-use Terms step is pending the owner. Do not bypass protection.
+- iPhone uses the existing TestFlight invitation, **2.0.0 (20)**; no public TestFlight join URL exists. Forty-one
+  regression tests and 25 authenticated API reads passed again; this does not establish native iOS acceptance.
+- **Apple credential incident:** a private inspection helper logged authentication context. The helper now
+  allowlists scalar output. Apple API work is paused; owner replacement of the existing key, equivalent EAS
+  assignments for both current apps, then revocation of the exposed key remain pending. Do not reuse the old key
+  or print any credential. Private follow-up is outside git in `HexaTech-release-private`.
+- Public privacy/deletion technical and branding changes deployed separately via source patch **d9117b475**,
+  source **2f0158565**, from `feature/native-app-policy-20261103`. Both public pages verify by content: current
+  app names, billing-address collection by Stripe, payment-component analytics, Expo/APNs/FCM, the member
+  More → Profile deletion route and partial-data requests. Existing retention/legal-basis commitments remain.
+- The artifact also fixes Windows ambiguity between AccountProducts/AccountTeam TS helpers and TSX pages using
+  explicit `.tsx` imports. TypeScript, all **5,827 frontend tests**, scoped Support/Landing/API-authentication
+  PHP checks and production build pass. Live SPA still serves the account-page chunks. No native source or
+  migration rode this deploy. Isolated PHP 8.5.12 NTS CLI was installed; WAMP/PATH were not changed.
+- Source/deploy worktrees: `C:\wamp64\www\hexatech-policy-source-20261103` and
+  `C:\wamp64\www\hexatech-policy-deploy-20261103`; both are separate from the native branches.
