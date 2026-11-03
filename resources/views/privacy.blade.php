@@ -3,8 +3,8 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-    <title>Privacy Policy — Hotel Tech</title>
-    <meta name="description" content="Privacy Policy for Hotel Loyalty, Hotel Staff and the Hotel Tech platform (FDS Cards Ltd).">
+    <title>Privacy Policy — HexaTech</title>
+    <meta name="description" content="Privacy Policy for HexaTech Loyalty, HexaTech Staff, the legacy Hotel Staff app and the HexaTech platform (FDS Cards Ltd).">
     <meta name="robots" content="index, follow">
     <link rel="icon" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='80' font-size='80'>🏨</text></svg>">
     <style>
@@ -110,8 +110,8 @@
     <header>
         <h1>Privacy Policy</h1>
         <p class="meta">
-            <strong>Hotel Tech platform · Hotel Loyalty + Hotel Staff mobile apps</strong><br>
-            Last updated: {{ \Carbon\Carbon::parse('2026-05-01')->format('F j, Y') }} ·
+            <strong>HexaTech platform · HexaTech Loyalty + HexaTech Staff mobile apps</strong><br>
+            Last updated: {{ \Carbon\Carbon::parse('2026-11-03')->format('F j, Y') }} ·
             Effective: {{ \Carbon\Carbon::parse('2026-05-01')->format('F j, Y') }}
         </p>
     </header>
@@ -119,14 +119,15 @@
     <p>
         This Privacy Policy explains how <strong>FDS Cards Ltd</strong> ("we", "us", "our") collects,
         uses, shares and safeguards personal data when you use the
-        <strong>Hotel Loyalty</strong> mobile app, the <strong>Hotel Staff</strong> mobile app, and
-        the related Hotel Tech web platform at <a href="https://loyalty.hotel-tech.ai">loyalty.hotel-tech.ai</a>
+        <strong>HexaTech Loyalty</strong> mobile app (formerly Hotel Loyalty), the <strong>HexaTech Staff</strong>
+        desk app, the legacy <strong>Hotel Staff</strong> mobile app, and the related HexaTech / Hotel Tech web
+        platform at <a href="https://app.hexa-tech.uk">app.hexa-tech.uk</a>
         (together, the "Service"). By using the Service you agree to the practices described below.
     </p>
 
     <div class="callout">
         <strong>TL;DR:</strong> we collect the data needed to run your loyalty membership and your
-        hotel stays — name, email, phone, booking history, points. We do not sell your data, do not
+        bookings — name, email, phone, booking history, points. We do not sell your data, do not
         track you across other apps, do not run advertising SDKs. You can delete your account at any
         time and we'll erase your data within 30 days, except where law requires us to keep it longer
         (e.g. financial records).
@@ -152,9 +153,10 @@
     <table>
         <thead><tr><th>Category</th><th>Examples</th></tr></thead>
         <tbody>
-            <tr><td>Account</td><td>Name, email, phone (optional), password (stored hashed only), profile photo</td></tr>
+            <tr><td>Account</td><td>Name, email, phone (optional), password (stored hashed only); profile photos only in services that provide an upload feature. HexaTech Loyalty 2.0 and HexaTech Staff do not upload photos.</td></tr>
             <tr><td>Membership</td><td>NFC loyalty card UID (used purely as a member identifier), QR member code</td></tr>
             <tr><td>Reservations</td><td>Stay dates, room or service selected, party size, special requests, payment status</td></tr>
+            <tr><td>Payments</td><td>When you choose online payment in HexaTech Loyalty, payment-card details and required billing-address fields are collected directly by Stripe's payment sheet. HexaTech receives payment identifiers and status, not the full card number.</td></tr>
             <tr><td>Communications</td><td>Messages you send to the hotel team via in-app chat, support emails</td></tr>
             <tr><td>Preferences</td><td>Language, push-notification preferences, marketing opt-ins</td></tr>
         </tbody>
@@ -166,11 +168,16 @@
         <tbody>
             <tr><td>Loyalty activity</td><td>Points earned and redeemed, tier progression, redeemed offers</td></tr>
             <tr><td>Stay history</td><td>Past and upcoming bookings, check-in / check-out events</td></tr>
-            <tr><td>Notifications</td><td>Apple Push Notification token (member app only) so we can send reminders</td></tr>
+            <tr><td>Notifications</td><td>Device push-notification tokens for member messages and staff request alerts, delivered through Expo, Apple APNs and Google FCM when notifications are enabled</td></tr>
             <tr><td>Technical</td><td>IP address (for rate-limiting and abuse prevention), user agent, app version</td></tr>
-            <tr><td>Diagnostics</td><td>Server-side error logs (no third-party crash analytics SDKs are bundled)</td></tr>
+            <tr><td>Diagnostics and searches</td><td>Server-side error logs may include the request URL and account identifier, including booking availability criteria or staff search terms when a request fails. No third-party crash analytics SDK is bundled in the current native apps.</td></tr>
+            <tr><td>Payment-component activity</td><td>Stripe collects interactions with its payment components for payment functionality, analytics and fraud prevention. This is not used for cross-app advertising tracking.</td></tr>
         </tbody>
     </table>
+
+    <p>In HexaTech Loyalty and HexaTech Staff, camera access scans QR codes on the device; camera images are not
+        uploaded. Optional Face ID or fingerprint protection is handled by your device. The apps do not receive
+        your face or fingerprint data.</p>
 
     <h3>2.3 What we do NOT collect</h3>
     <ul>
@@ -232,7 +239,7 @@
             </tr>
             <tr>
                 <td>Stripe Payments Europe Ltd</td>
-                <td>Process payments you make through the Service</td>
+                <td>Process payments, collect required billing details, analyse payment-component interactions and prevent payment fraud</td>
                 <td>EU (Ireland)</td>
             </tr>
             <tr>
@@ -244,6 +251,11 @@
                 <td>Anthropic, PBC</td>
                 <td>Power the staff-side admin assistant. Member personal data is sent only when a staff user explicitly queries that member's record.</td>
                 <td>US (Standard Contractual Clauses)</td>
+            </tr>
+            <tr>
+                <td>Expo</td>
+                <td>Route the current native apps' push notifications to Apple APNs or Google FCM</td>
+                <td>See <a href="https://expo.dev/privacy">Expo's privacy policy</a></td>
             </tr>
             <tr>
                 <td>Apple Inc. / Google LLC</td>
@@ -299,8 +311,9 @@
         We will respond within one calendar month.
     </p>
     <p>
-        You can also delete your account directly from inside the Hotel Loyalty mobile app:
-        <em>Profile → Account → Delete Account</em>.
+        You can also delete your member account directly in HexaTech Loyalty:
+        <em>More → Profile → Delete account</em>. For a request outside the app, including a request about specific
+        data, follow our <a href="/data-deletion">data-deletion instructions</a>.
     </p>
 
     <h2>7. Security</h2>
@@ -329,9 +342,9 @@
 
     <h2>10. Tracking transparency (Apple ATT)</h2>
     <p>
-        Neither app uses Apple's App Tracking Transparency framework because we do not track you
-        across other apps or websites. Both apps declare "Data Not Used to Track You" on their App
-        Store privacy nutrition label.
+        HexaTech Loyalty and HexaTech Staff do not track you across other apps or websites and do not request
+        Apple's App Tracking Transparency permission. Their App Store privacy disclosures describe data used
+        for app functionality, with Stripe payment-component analytics also disclosed for HexaTech Loyalty.
     </p>
 
     <h2>11. Changes to this Policy</h2>
@@ -351,7 +364,7 @@
     <footer>
         <p>
             FDS Cards Ltd ·
-            <a href="https://loyalty.hotel-tech.ai">loyalty.hotel-tech.ai</a> ·
+            <a href="https://app.hexa-tech.uk">app.hexa-tech.uk</a> ·
             <a href="mailto:vitaly@fds-cards.co.uk">vitaly@fds-cards.co.uk</a>
         </p>
     </footer>

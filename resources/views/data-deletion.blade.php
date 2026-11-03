@@ -3,8 +3,8 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-    <title>Data Deletion Instructions — Hotel Tech</title>
-    <meta name="description" content="How to request deletion of your personal data from the Hotel Tech platform (FDS Cards Ltd).">
+    <title>Data Deletion Instructions — HexaTech</title>
+    <meta name="description" content="How to delete your HexaTech Loyalty or HexaTech Staff account and request deletion of personal data from FDS Cards Ltd.">
     <meta name="robots" content="index, follow">
     <link rel="icon" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='80' font-size='80'>🏨</text></svg>">
     <style>
@@ -89,12 +89,21 @@
 <div class="container">
     <header>
         <h1>Data Deletion Instructions</h1>
-        <p class="muted">How to request deletion of your personal data from the Hotel Tech platform.<br>Last updated: 30 May 2026</p>
+        <p class="muted">How to request deletion of your personal data from the HexaTech platform.<br>Last updated: 3 November 2026</p>
     </header>
 
-    <p>FDS Cards Ltd ("Hotel Tech", "we") operates the Hotel Tech platform, including the Hotel Tech Loyalty admin (<a href="https://loyalty.hotel-tech.ai">loyalty.hotel-tech.ai</a>), the Hotel Loyalty member mobile app, the Hotel Staff app, and integrations with third-party services including Facebook Messenger. This page explains how individuals can request deletion of personal data that we hold about them.</p>
+    <p>FDS Cards Ltd ("HexaTech", "Hotel Tech", "we") operates the platform at <a href="https://app.hexa-tech.uk">app.hexa-tech.uk</a>, including HexaTech Loyalty (formerly Hotel Loyalty), HexaTech Staff, the legacy Hotel Staff app, and integrations with third-party services including Facebook Messenger. This page explains how individuals can request deletion of personal data that we hold about them.</p>
 
     <p>For background on what data we collect and why, please read our <a href="/privacy">Privacy Policy</a>.</p>
+
+    <h2>Delete a mobile app account</h2>
+    <p>In <strong>HexaTech Loyalty</strong>, open <strong>More → Profile → Delete account</strong> and follow the
+        confirmation steps. You can also request deletion by email below without reinstalling or signing in to the app.</p>
+    <p>For <strong>HexaTech Staff</strong>, use the email request below to request deletion of your staff account.
+        Identify the venue or organisation so we can locate the correct account. Removing a staff account does not
+        delete the organisation's other members, staff or business records.</p>
+    <p>To request deletion of specific personal data while keeping your account, describe the data in your email.
+        The identity-verification steps and retention exceptions below apply to these requests too.</p>
 
     <h2>Who is this page for?</h2>
     <p>There are two categories of individuals whose data may be held in our systems, and each has a different deletion path:</p>
@@ -102,7 +111,7 @@
     <h3>1. End users (hotel guests, app members, lead form submitters)</h3>
     <p>If you interacted with a hotel that uses our platform — for example, you joined their loyalty program, made a booking through their widget, chatted with their AI assistant, submitted a lead form, sent a Facebook Messenger message to their Page, or downloaded their member app — your personal data is processed by us as a <strong>data processor</strong> on behalf of that hotel (the <strong>data controller</strong>).</p>
     <p><strong>To request deletion, contact the hotel directly first.</strong> They control your data and can usually action the deletion immediately from their admin tools.</p>
-    <p>If the hotel cannot be reached or does not respond within a reasonable time (typically 30 days), you may contact us directly using the form below and we will:</p>
+    <p>If the hotel cannot be reached or does not respond within a reasonable time (typically 30 days), you may contact us directly using the email instructions below and we will:</p>
     <ul>
         <li>Verify your identity using the contact details on file (email or phone).</li>
         <li>Notify the controlling hotel of your request.</li>
