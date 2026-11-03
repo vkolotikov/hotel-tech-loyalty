@@ -49,3 +49,15 @@ Owner's requested scope is now **Home only**. Refined Figma page `12:674` / `Hom
 - Final composition screenshot visually inspected; editable Home: 113 descendants, 29 text nodes, 13 instances, no image-filled nodes. SF Pro/Cormorant font families asserted; native glass button/tab components and Body/Regular text style verified. Small controls at least 44 high. Reduced motion/transparency behavior is specified for implementation; device/large-text acceptance remains future work.
 - Evidence and material/motion decisions: `docs/loyalty-staff-app/05-HOME-DESIGN-20261103.md`, `design-20261103/home-obsidian-glass.png`.
 - Asked owner to review this concrete Home direction. Await the reply before redesigning the remaining screens or implementing the new layouts.
+
+## Reference-led Eclipse Home (latest design review)
+
+The owner subsequently supplied a luminous black/gold/glass reference and asked for **Home only and element guidelines**, with animation later in code. Eclipse is the current proposal; preserve the earlier Quiet luxury and Obsidian pages.
+
+- [Home](https://www.figma.com/design/HQV6zF7ArPVd7rpdf1UUPr?node-id=27-932) and [element guide](https://www.figma.com/design/HQV6zF7ArPVd7rpdf1UUPr?node-id=28-771).
+- Page `23:674`; Home `27:932`; guide `28:771`; sources `27:798`. Same Figma file/session as above.
+- Large luminous Scan control, four tiles (Members, Requests, Activity, More), four labelled dock destinations, minimal copy. The Activity shortcut relocates existing permission-gated Home data in a future implementation; there is no existing separate native Activity route.
+- Reusable Scan and tile states, native iOS profile/dock sources, colour/type/spacing/material guidelines, motion timing and reduced-motion/transparency requirements. Static Figma proposal; animations are intentionally deferred.
+- Complete Home and guide screenshots passed visual review. Home contains 100 editable descendants and no image-filled UI. Component properties, styles and token bindings verified; all 24 new variables have scopes/code syntax.
+- Report: `docs/loyalty-staff-app/06-ECLIPSE-HOME-20261103.md`; evidence: `design-20261103/home-eclipse.png`, `home-eclipse-guidelines.png`.
+- Await Home design feedback before applying layouts or designing the remaining screens. No app code, backend deployment or store submission in this pass.
