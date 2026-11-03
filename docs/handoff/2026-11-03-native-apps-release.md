@@ -14,7 +14,7 @@ The detailed append-only records are in each app's `02-RELEASE.md`.
   types. All eight are now published, linked to users for App Functionality, no tracking, with no setup warnings.
 - **Staff Android 1.0.0 (3): production submission accepted**, app `4973001253686610054`, package
   `uk.hexatech.loyalty.staff`. Google shows **Changes in review** after sending 15 changes on 3 November at about
-  10:44 UTC. Quick automated checks are still running at this checkpoint; changes advance when checks succeed.
+  10:44 UTC. Automated quick checks have completed; Google explicitly confirms **Your changes are now in review**.
   Owner explicitly selected **all supported countries**: 177 named countries/regions plus Rest of world (178).
   Managed publishing is off, so approval can publish the full rollout automatically. It is not yet confirmed live.
   All 11 setup tasks, eight-type Data safety, IARC ratings, 18+ target audience, verified reviewer access, Business

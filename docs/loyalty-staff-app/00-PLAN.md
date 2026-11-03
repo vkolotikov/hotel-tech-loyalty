@@ -77,7 +77,7 @@ modern, luxury, poverfull, easy to use nice design".
 - iOS **1.0.0 (2)** submitted and **Waiting for Review**; submission
   `1e91c8e9-d6c2-402a-9f15-b35bf8e1074d`. Manual release stays enabled for the unlisted-distribution request after approval.
 - Android **1.0.0 (3)** production submission accepted on 3 November, approximately 10:44 UTC. Google shows
-  **Changes in review**, with quick checks running. Owner selected all supported countries (178 entries including
+  **Changes in review**; automated quick checks have completed. Owner selected all supported countries (178 entries including
   Rest of world). Managed publishing is off: approval can publish the full rollout. Internal testing remains available.
 - All five Play listings, images and required app-content forms are complete. Apple privacy was corrected after the
   source audit: all eight collected-data types are published, linked for App Functionality, with no tracking.

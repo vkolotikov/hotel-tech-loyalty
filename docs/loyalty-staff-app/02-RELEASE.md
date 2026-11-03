@@ -322,3 +322,6 @@ NFC needs a venue's physical card; the camera reads a member's QR code from the 
   `completed` describes the requested full rollout and does not establish review approval or public availability.
   The empty inspection edit was removed without committing any API change. Production access was not added to the
   testing service account; submission was through the owner's authorized Play Console session.
+- Final verification the same session: automated quick checks completed, the running-check banner disappeared and
+  Google explicitly states **Your changes are now in review. We may find additional issues when reviewing your app.**
+  No additional pending action or pre-review issue is shown. Approval and public availability remain pending.
