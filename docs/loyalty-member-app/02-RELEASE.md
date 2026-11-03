@@ -112,6 +112,7 @@ Data used to track you: **none** (no advertising or cross-app tracking). Data li
 |---|---|---|
 | Contact Info | Name, Email Address, Phone Number | The member's account and profile |
 | Identifiers | User ID | The membership number and account |
+| Identifiers | Device ID | This phone's notification token, stored against the account to deliver requested notifications |
 | Purchases | Purchase History | Bookings, redeemed rewards, points history |
 | Financial Info | Payment Info | Cards entered in Stripe's payment sheet go straight to Stripe; HexaTech never sees the number |
 | User Content | Other User Content | Notes and requests on a booking |
@@ -225,3 +226,17 @@ More → Bookings → Book (an appointment, paid at the venue), More → Profile
 - Scheduled members **internal testing** upload of version code 25 with `changesNotSentForReview: true`:
   `https://expo.dev/accounts/hoteltechai/projects/hotel-loyalty/submissions/50426361-d349-4594-9adb-e3e998941a5e`.
   Scheduling is confirmed; final Play upload outcome must still be checked.
+
+**2026-11-02 completion, verified again 2026-11-03 (Codex):**
+
+- The Play internal submission above succeeded; version code **25** was verified in Play Console on 2 November.
+  On 3 November the Play API also returned its generated, signed APK for local emulator testing.
+- Apple draft **2.0.0** selects valid build **19**. All five locales have descriptions. All **12** English screenshots
+  (six iPhone, six iPad) are now **COMPLETE**, with no processing errors. The version remains **PREPARE_FOR_SUBMISSION**.
+- Added credential-free review notes in `store/review-notes.txt`. The Apple review-information write was refused
+  because contact fields were missing. The owner confirmed demo accounts still need preparation; no demo credentials
+  were created or stored in source. App privacy and Play listing/data-safety completion remain outstanding.
+- On 3 November the owner reported an iOS error immediately after member sign-in and nonworking menu screens.
+  Investigation is in progress: the app's first member request is `GET /api/v1/member/portal`; unauthenticated live
+  checks return 401 as expected. No root cause or correction has yet been verified. Keep this version out of review
+  until the authenticated failure is reproduced, corrected and retested on iOS.

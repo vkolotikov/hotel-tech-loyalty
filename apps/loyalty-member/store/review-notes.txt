@@ -1,0 +1,5 @@
+HexaTech Loyalty is the membership card of a venue that uses HexaTech. Sign in using the demo account supplied separately in the console's App Review Information / App access fields.
+
+Try Card (QR code), Rewards (redeem a reward), More > Bookings > Book (an appointment, paid at the venue), and More > Profile > Delete account. Payments are for real-world venue services, not digital content.
+
+Camera permission is used only to scan QR codes. Face ID or fingerprint protection is optional and handled by the device.
