@@ -32,6 +32,13 @@ next steps". The runbook `docs/plan-modules.md` was rewritten for it; the prices
   Stripe tests skipped.
 - **To go live (owner):** apply and deploy the billing patch, then run once there
   `php artisan stripe:sync --module-plans --publish`. That replaces the first round's `--plan=…` step.
+- **3 Nov, the owner's "do all remaining steps and deploy":** push access to `hotel-tech-saas` was refused a third
+  time by this session's safety check. Checked again instead: the patch applies with `git am` on its `main` 91bd84d
+  and gives exactly the branch's tree (5 files, PHP only, no frontend build); its suite on PostgreSQL 16 gave 20
+  passed and 3 skipped (the live Stripe tests). Either the owner applies it (the commands are in the runbook's
+  "Billing handover"), or a new session started with `hotel-tech-saas` selected deploys it by fast-forwarding `main`
+  to the branch, as that repository's own deploy note says. `stripe:sync` needs the production Stripe key, so the
+  owner runs it in Laravel Cloud either way.
 - **Still not built:** combinations with Appointments (billing plans and an Appointments price needed); switching a
   paid plan between monthly and yearly is left to Stripe's customer portal.
 
@@ -41,7 +48,7 @@ Latest: **94e8c73** (3 Nov, just after midnight UTC): the second round above. It
 branch at f62d526 on `main` 05ffcc8; 54 files, 5 added, 49 changed, no deletions, no migration) plus its SPA build.
 Before the push: the whole tree, builds aside, equal to the branch at f62d526; on the artifact, `tsc -b`, 403 Vitest
 files and 5827 tests passed; the scoped PHP suite gave 7331 passed, 23 skipped, 39 failed, the same 39 test names as on
-the branch (this container's missing extensions). The next source-patch baseline is **f62d526**.
+the branch (this container's missing extensions). The baseline after it was **f62d526** (superseded below).
 
 **Not checked by content** (this container cannot reach `app.hexa-tech.uk`). The owner checks:
 - the live admin bundle (`https://app.hexa-tech.uk/` → `/spa/assets/index-*.js`) has `Choose your package` (in no earlier bundle);
@@ -54,6 +61,10 @@ tests ran, and the 4 `ContactsFeedTest` failures are now known ones. One new fai
 order, which after a long run of rolled-back tests need not be id order. The test assumes the first member goes first.
 With the job reading `orderByDesc('id')` the test fails every time, so the cause is confirmed. The fix is `orderBy('id')`,
 as `SendEmailCampaignChunk` already does; `tests/Feature/Mail` passes on PostgreSQL 16 and SQLite (127 each).
+
+That fix went out as **f766fb7** (source only; the fresh SPA build was identical to 94e8c73's). CI run 34 on it is
+**green on every job, PostgreSQL included**, after runs 31 to 33 were red. The next source-patch baseline is
+**f86b53c**.
 
 Previous: **05ffcc8** (2 Nov evening, the owner's "deploy for me"): the plan modules below. It is source patch
 **1b3949a** (this branch at 7f5baf1 on `main` 3618ead; 64 files, no deletions, no migration) plus its SPA build.
@@ -74,7 +85,7 @@ are missing from `tests/pgsql-known-failures.txt`. The fix: list them there with
 CI on 05ffcc8 (run 32): green on all three SQLite shards, both SPA jobs, Larastan and the audit. On PostgreSQL 7365
 tests ran (29 more than on 3618ead); every new one passes. The only failures are the same 4 `ContactsFeedTest` ones.
 
-The billing half is **not deployed**: this session was refused push access to `hotel-tech-saas` twice.
+The billing half is **not deployed**: this session was refused push access to `hotel-tech-saas` three times (the third on 3 Nov, see above).
 
 ## New: HexaTech Loyalty and Content sold on their own (owner, 2 Nov)
 
