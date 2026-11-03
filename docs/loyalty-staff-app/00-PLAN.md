@@ -76,7 +76,11 @@ modern, luxury, poverfull, easy to use nice design".
 
 - iOS **1.0.0 (2)** submitted and **Waiting for Review**; submission
   `1e91c8e9-d6c2-402a-9f15-b35bf8e1074d`. Manual release stays enabled for the unlisted-distribution request after approval.
-- Android **1.0.0 (3)** available to internal testers; production listing and app-content forms are being completed.
+- Android **1.0.0 (3)** production submission accepted on 3 November, approximately 10:44 UTC. Google shows
+  **Changes in review**, with quick checks running. Owner selected all supported countries (178 entries including
+  Rest of world). Managed publishing is off: approval can publish the full rollout. Internal testing remains available.
+- All five Play listings, images and required app-content forms are complete. Apple privacy was corrected after the
+  source audit: all eight collected-data types are published, linked for App Functionality, with no tracking.
 - Both Firebase production files, FCM V1 credentials and store submission credentials are configured. An isolated
   demo organisation and reviewer staff/member accounts are prepared and their API workflows tested.
 - The detailed chronological status, links and remaining physical-device checks are in `02-RELEASE.md`. The earlier

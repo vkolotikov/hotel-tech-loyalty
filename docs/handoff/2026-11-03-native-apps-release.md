@@ -10,11 +10,16 @@ The detailed append-only records are in each app's `02-RELEASE.md`.
   publication and confirmed content rights. Five language descriptions, ten screenshots, free price, Business
   category, 4+ age rating, contact and verified demo sign-in are saved. Manual release remains enabled: after
   approval request Apple's unlisted distribution, then release. It is not yet publicly available.
-- **Staff Android 1.0.0 (3): internal testing available**, app `4973001253686610054`, package
-  `uk.hexatech.loyalty.staff`. Production setup is in progress. Privacy policy, no ads, private/non-government
-  status, rewards/points financial category, and no health features are saved. Google requires the reviewer sign-in
-  details before its target-audience form. The sign-in form is prepared, with password entry handed to the owner.
-  Data safety, content rating, audience, listing, category/contact and production review are still outstanding.
+  A later source audit added Other User Content, Search History and Other Usage Data to the initial five privacy
+  types. All eight are now published, linked to users for App Functionality, no tracking, with no setup warnings.
+- **Staff Android 1.0.0 (3): production submission accepted**, app `4973001253686610054`, package
+  `uk.hexatech.loyalty.staff`. Google shows **Changes in review** after sending 15 changes on 3 November at about
+  10:44 UTC. Quick automated checks are still running at this checkpoint; changes advance when checks succeed.
+  Owner explicitly selected **all supported countries**: 177 named countries/regions plus Rest of world (178).
+  Managed publishing is off, so approval can publish the full rollout automatically. It is not yet confirmed live.
+  All 11 setup tasks, eight-type Data safety, IARC ratings, 18+ target audience, verified reviewer access, Business
+  category/contact and five-language listing/images are saved. Advertising ID is No, verified against source and
+  the actual build 3 AAB manifest (no AD_ID permission). Internal testing remains available.
 - **HexaTech Loyalty 2.0.0 iOS (20) / Android (26): delivered to testing.** Both EAS submissions are FINISHED:
   iOS `168bb90a-d569-42ca-b23a-14da322be01f`, Android `ae6e8a43-1735-4691-a2ec-664e106265c9`.
   iOS 20 is VALID, selected in the editable 2.0.0 draft and in Internal QA, IN_BETA_TESTING. Android 26 is in Play
@@ -60,8 +65,8 @@ fully verified by this agent; do not report all device checks complete.
 - `C:\wamp64\www\hexatech-staff-release-20261102`: independent staff history, branch
   `feature/loyalty-staff-release-20261102`, pushed to `feature/loyalty-staff-app`. Copy changed staff files and guide,
   then commit once; never merge the histories or push app changes to main.
-- Source and release assets are committed. Last verified remote heads before this handoff:
-  member `071b663aa`, staff `7fd0189af`.
+- Source and release assets are committed. The current continuation adds Play translation-import JSON and records
+  the final store forms, production submission and Apple privacy correction; consult the latest app-branch commits.
 - The native Chrome window is used for store forms through CUA. Refresh the UI before acting; old accessibility
   indices may lag. Do not output reviewer password fields. Private CLI helpers inspect Apple/EAS/Play without
   printing secrets. The Apple inspection helper must run in the main release worktree's app directory, which has

@@ -75,8 +75,9 @@ alert reaching the phone), the lock, five languages.
 
 ## 3. Store listing
 
-Paste from `store/listing.json` per language. Category **Business**; age rating 4+ / Everyone (no objectionable
-content). Links: privacy https://app.hexa-tech.uk/privacy, terms https://app.hexa-tech.uk/terms, data deletion (Play)
+Paste from `store/listing.json` per language. Category **Business**; Apple age rating **4+**. Google's IARC ratings
+include ESRB Everyone, PEGI 3 and USK 16+ (communication risk from private user content). Links: privacy
+https://app.hexa-tech.uk/privacy, terms https://app.hexa-tech.uk/terms, data deletion (Play)
 https://app.hexa-tech.uk/data-deletion, support: https://hexa-tech.uk/about-us (published HexaTech contact details).
 
 Screenshots: `store/screenshots/ios-6.9` (1320×2868), `ipad-13` (2064×2752; the app supports iPad as a desk tablet),
@@ -98,16 +99,32 @@ Data used to track: **none**. Data linked to the person, all for **App Functiona
 | Identifiers | User ID | The staff account; a member's number or card id when the staff member scans or links a card |
 | Identifiers | Device ID | This phone's notification token, stored against the staff account for request alerts |
 | Purchases | Purchase History | An amount the staff member enters to award points for a purchase |
+| User Content | Other User Content | Staff-entered transaction notes and request-decline reasons |
+| Search History | Search History | Member search requests; full query URLs can be retained by server error logs |
+| Usage Data | Other Usage Data | Recorded desk actions, including check-ins, awards and request decisions |
 
 The camera reads QR codes on the phone and stores nothing; NFC reads a card's id only; Face ID is the phone's own.
+The last three types were identified in the 3 November source audit after the initial five-type declaration was
+published. All eight are now configured and published; see the continuation record below.
 
 ### Google Play: Data safety
 
 - Collected (not shared): Personal info (name, email address, user IDs), Financial info (purchase history: amounts
-  entered for points), Device or other IDs (the push token for request alerts).
-- For App functionality and Account management; all required for a staff account.
+  entered for points), Device or other IDs (the push token for request alerts), and App activity (in-app search
+  history, other user-generated content, other actions).
+- Name, email and user IDs: required, App functionality and Account management. The other five types: optional,
+  App functionality. Notifications can be refused; purchase amounts and free-text notes are manually supplied;
+  searching and desk actions are initiated by the user. The app's business actions are recorded server-side.
+- Notes/reasons and search requests also leave the device (`src/lib/api.ts`). Notes/reasons persist; 500-error logs
+  can retain full request URLs including search queries (`bootstrap/app.php`). Do not claim ephemeral processing.
+  These three app-activity types were missing from the initial five-type guide and were added during the source audit.
 - Encrypted in transit: yes. Staff accounts are made and removed by the venue's administrator; deletion requests by
-  the data-deletion page.
+  the data-deletion page. No in-app account creation; outside-app employment/enterprise accounts. No independent
+  MASA security-review badge. Privacy and deletion URLs both returned HTTP 200 on 3 November.
+
+The Google form can be exported/imported as CSV. Preserve its header exactly, UTF-8 without a BOM; answers use
+`TRUE`/`FALSE`. Review the imported preview before saving. See
+[Google's data-safety definitions and CSV format](https://support.google.com/googleplay/android-developer/answer/10787469).
 
 ### Review notes (App Store "App Review Information" and Play "App access")
 
@@ -263,3 +280,45 @@ NFC needs a venue's physical card; the camera reads a member's QR code from the 
   A private owner-only text file contains the demo sign-ins without API tokens. Never put its contents in git/chat.
 - Audience, content rating, data safety, category/contact, full Play listings and production review remain pending
   at this checkpoint. The Staff production release has not been submitted or published.
+
+**2026-11-03, Play setup and privacy audit completion (Codex):**
+
+- Owner entered and saved the isolated Staff reviewer password. Verified Google's saved sign-in details and full
+  demo workflow. Owner accepted the IARC Terms of Use; completed the questionnaire with private staff user-content
+  sharing and server-provided online content disclosed. No objectionable packaged content, public social feed,
+  digital purchases, cash prizes or location sharing. Ratings: ESRB Everyone, PEGI 3, Brazil All ages, USK 16+
+  (increased communication risks), rest of world 3+; Users Interact. Target audience is **18 and over**.
+- Saved Data safety for the eight types described above, including notes/reasons, searches and recorded actions
+  identified by source inspection. Required personal-account fields have App functionality and Account management;
+  five optional types have App functionality. No sharing, no ephemeral-processing claim, encryption in transit,
+  enterprise accounts created outside the app and the data-deletion URL are declared. No independent security badge.
+- Saved Business category, public contact **info@hexa-tech.uk** and **https://hexa-tech.uk/about-us**. All five Play
+  locales (en-GB, de-DE, es-ES, fr-FR, ru-RU) match the source title, short description and full description exactly,
+  verified with a read-only Play API snapshot. Added `store/play/translations.json` for Google's translation importer.
+  One 512x512 icon, one 1024x500 feature graphic and five 1080x2160 phone screenshots are saved; translations inherit
+  English images. The icon/feature exports were labelled AI-assisted in Google's asset declaration; screenshots were
+  not. Google dashboard confirms all **11 app-setup tasks complete**.
+- Apple privacy now publishes **all eight types**, each linked to the user, App Functionality only, no tracking.
+  Added Other User Content, Search History and Other Usage Data through their setup forms; no new legal agreement was
+  presented by this edit flow. Verified eight completed types and no outstanding setup warning. Staff iOS remains
+  **WAITING_FOR_REVIEW**; no withdrawal or new binary was needed.
+- Created a Play production draft from the existing tested **1.0.0 (3)** bundle with release notes in all five
+  languages. Initial validation found only missing country availability. Owner explicitly selected **all supported
+  countries**; country setup and final production submission continue below.
+
+**2026-11-03, Google production submission (Codex):**
+
+- Saved **177 named countries/regions plus Rest of world (178 total)** under the owner's worldwide-release choice.
+  Release validation now says **Ready to release**, with build **3 (1.0.0)** and five-language release notes.
+- Google's pre-review checks required an additional Advertising ID declaration. Verified app source/dependencies
+  and the actual build 3 AAB manifest: no advertising SDK or `com.google.android.gms.permission.AD_ID`. Saved **No**.
+- Sent all **15 changes for review** at approximately **10:44 UTC**. Publishing overview shows **Changes in review**,
+  with automated quick checks still running at this checkpoint (up to 14 minutes displayed). Google will advance the
+  submission when these checks succeed. **Managed publishing is off**, so review approval can publish the full rollout.
+  This is a review submission, not evidence that the public Play listing is already available.
+  `https://play.google.com/console/u/0/developers/7195613243489270668/app/4973001253686610054/publishing`
+- A read-only API snapshot reverified exact source matches for all five locales, one icon, one feature graphic and
+  five phone screenshots. Both production and internal track objects name version code 3; API release status
+  `completed` describes the requested full rollout and does not establish review approval or public availability.
+  The empty inspection edit was removed without committing any API change. Production access was not added to the
+  testing service account; submission was through the owner's authorized Play Console session.
