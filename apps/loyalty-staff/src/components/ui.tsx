@@ -118,6 +118,7 @@ export function Field({ label, hint, problem, style, ...input }: TextInputProps 
       <TextInput
         placeholderTextColor={C.text3}
         selectionColor={C.gold}
+        accessibilityLabel={label}
         {...input}
         style={[styles.input, NO_OUTLINE, problem ? { borderColor: C.danger } : null, style]}
       />
@@ -137,6 +138,7 @@ export function SearchField(props: TextInputProps) {
         autoCorrect={false}
         autoCapitalize="none"
         returnKeyType="search"
+        accessibilityLabel={props.placeholder}
         {...props}
         style={[fonts.body, NO_OUTLINE, { color: C.text, flex: 1, paddingVertical: 0 }]}
       />

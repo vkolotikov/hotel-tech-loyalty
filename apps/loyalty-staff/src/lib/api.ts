@@ -17,10 +17,16 @@ type Query = Record<string, string | number | null | undefined>
 
 let readToken: () => string | null = () => null
 let readLanguage: () => string = () => 'en'
-let onSignedOut: () => void = () => {}
+let onSignedOut: (token: string) => void = () => {}
+const pending = new Set<AbortController>()
+export function cancelSessionRequests(): void {
+  for (const controller of pending) controller.abort()
+  pending.clear()
+}
+const staleSession = () => new ApiError({ status: 401, code: 'unauthenticated', extra: {} })
 
 /** The session tells the client where the token is and what to do when the server no longer accepts it. */
-export function connectSession(options: { token: () => string | null; language: () => string; signedOut: () => void }): void {
+export function connectSession(options: { token: () => string | null; language: () => string; signedOut: (token: string) => void }): void {
   readToken = options.token
   readLanguage = options.language
   onSignedOut = options.signedOut
@@ -45,8 +51,10 @@ function withQuery(path: string, query?: Query): string {
 async function send<T>(method: 'GET' | 'POST' | 'PUT' | 'DELETE', path: string, body?: unknown, query?: Query, asToken?: string): Promise<T> {
   const token = asToken ?? readToken()
   const controller = new AbortController()
+  if (!asToken && token) pending.add(controller)
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS)
   let response: Response
+  let text: string
   try {
     response = await fetch(`${API_BASE}${withQuery(path, query)}`, {
       method,
@@ -59,13 +67,16 @@ async function send<T>(method: 'GET' | 'POST' | 'PUT' | 'DELETE', path: string, 
       body: body === undefined ? undefined : JSON.stringify(body),
       signal: controller.signal,
     })
+    text = await response.text()
   } catch {
+    if (!asToken && token !== readToken()) throw staleSession()
     throw new ApiError(failureFrom(0, null))
   } finally {
     clearTimeout(timer)
+    pending.delete(controller)
   }
 
-  const text = await response.text()
+  if (!asToken && token !== readToken()) throw staleSession()
   let parsed: unknown = null
   try {
     parsed = text ? JSON.parse(text) : null
@@ -75,9 +86,10 @@ async function send<T>(method: 'GET' | 'POST' | 'PUT' | 'DELETE', path: string, 
   if (!response.ok) {
     const failure = failureFrom(response.status, parsed)
     // A token the server no longer knows ends the session; a refused sign-in does not.
-    if (response.status === 401 && token && !asToken) onSignedOut()
+    if (response.status === 401 && token && !asToken) onSignedOut(token)
     throw new ApiError(failure)
   }
+  if (parsed === null) throw new ApiError(failureFrom(502, null))
   return parsed as T
 }
 
@@ -86,11 +98,12 @@ async function send<T>(method: 'GET' | 'POST' | 'PUT' | 'DELETE', path: string, 
  * "Try again" with the attempt's own key, so a retried award or scan never counts twice.
  */
 async function read<T>(path: string, query?: Query): Promise<T> {
+  const token = readToken()
   try {
     return await send<T>('GET', path, undefined, query)
   } catch (error) {
     const status = error instanceof ApiError ? error.failure.status : 0
-    if (status === 0 || status >= 500) return send<T>('GET', path, undefined, query)
+    if (token === readToken() && (status === 0 || status >= 500)) return send<T>('GET', path, undefined, query)
     throw error
   }
 }
@@ -104,6 +117,7 @@ export const api = {
   /** Which versions of this app the server still serves; public, asked before sign-in too. */
   appVersions: (): Promise<AppVersions> => read('/v1/apps/staff/version'),
   bootstrap: (): Promise<Bootstrap> => read(loyaltyPath('bootstrap')),
+  bootstrapFor: (token: string): Promise<Bootstrap> => send('GET', loyaltyPath('bootstrap'), undefined, undefined, token),
   /** This phone, for request alerts: registered after sign-in and on every start, with its language and switch. */
   saveDevice: (device: { token: string; platform: 'ios' | 'android'; language: string; alerts: boolean }): Promise<{ device: { alerts: boolean; language: string } }> =>
     send('PUT', loyaltyPath('devices'), device),
@@ -122,7 +136,19 @@ export const api = {
   scan: (body: { code: string; idempotency_key: string; place_id?: number; event_id?: number }): Promise<ScanAnswer> =>
     send('POST', loyaltyPath('scan'), body),
   places: (): Promise<{ places: PlaceRow[] }> => read(loyaltyPath('places')),
-  eventsToday: (): Promise<{ events: EventRow[] }> => read(loyaltyPath('events'), { when: 'today' }),
+  eventsToday: async (): Promise<{ events: EventRow[] }> => {
+    const token = readToken()
+    const events: EventRow[] = []
+    let page = 1
+    while (true) {
+      if (token !== readToken()) throw staleSession()
+      const result = await read<{ events: EventRow[]; page: number; pages: number }>(loyaltyPath('events'), { when: 'today', page })
+      events.push(...result.events)
+      if (result.page >= result.pages || result.page < page) break
+      page = result.page + 1
+    }
+    return { events: [...new Map(events.map(event => [event.id, event])).values()] }
+  },
 
   award: (id: number, points: number, reason: string, key: string): Promise<PointsAfter> =>
     send('POST', loyaltyPath(`members/${id}/award`), { points, reason, idempotency_key: key }),

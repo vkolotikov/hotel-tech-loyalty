@@ -2,6 +2,15 @@ import type { Key } from './en'
 
 export const ru: Record<Key, string> = {
   'app.name': 'HexaTech Staff',
+  'checkIn.invalidAmount': "Введите положительную сумму с точностью выбранной валюты.",
+  'checkIn.amountRequired': "Сумма покупки",
+  'error.unconfirmed': "Результат не подтверждён. Повторите этот запрос или проверьте историю участника. Не создавайте новую операцию.",
+  'error.attempt_storage': "Не удалось сохранить данные для повтора. Закройте и снова откройте эту форму.",
+  'requests.refreshError': "Не удалось обновить запросы.",
+  'requests.loading': "Загрузка запросов…",
+  'requests.rewardHistory': "История наград",
+  'member.toNextVisits': "Ещё {{needed}} посещений до {{tier}}",
+  'member.toNextSpend': "Ещё {{needed}} покупок до {{tier}}",
 
   'common.retry': 'Попробовать снова',
   'common.cancel': 'Отмена',
@@ -14,7 +23,7 @@ export const ru: Record<Key, string> = {
   'common.offline': 'Нет соединения. Показано то, что было загружено последним.',
 
   'error.network': 'Нет соединения. Проверьте интернет и попробуйте снова.',
-  'error.unknown': 'Что-то пошло не так. Ничего не изменилось; попробуйте снова.',
+  'error.unknown': 'Что-то пошло не так. Попробуйте снова.',
   'error.not_found': 'Не найдено. Возможно, это удалили.',
   'error.unauthenticated': 'Сеанс завершён. Войдите снова.',
   'error.not_allowed': 'У вас нет права на это действие. Обратитесь к менеджеру.',
@@ -238,7 +247,7 @@ export const ru: Record<Key, string> = {
   'more.preferences': 'Параметры',
   'more.language': 'Язык',
   'more.lock': 'Блокировка Face ID или отпечатком',
-  'more.lockLine': 'Спрашивает снова после двух минут отсутствия',
+  'more.lockLine': 'Блокировка при запуске и после двух минут отсутствия',
   'more.lockMissing': 'Сначала настройте на телефоне Face ID, отпечаток или код-пароль.',
   'more.alerts': 'Оповещения о запросах',
   'more.alertsLine': 'Уведомление, когда участник просит привилегию или получает награду',

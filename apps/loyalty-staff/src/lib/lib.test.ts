@@ -46,7 +46,8 @@ describe('the desk', () => {
     expect(balanceAfter('award', 50, 120)).toBe(170)
     expect(balanceAfter('redeem', 50, 120)).toBe(70)
     expect(pointsFrom('1 500')).toBe(1500)
-    expect(pointsFrom('1,500 pts')).toBe(1500)
+    expect(pointsFrom('1,500')).toBe(1500)
+    for (const input of ['1.5', '1,5', '-10', '+10', '1,500 pts', '1e3', '12 34']) expect(pointsFrom(input), input).toBe(0)
     expect(pointsFrom('')).toBe(0)
   })
 

@@ -6,7 +6,7 @@ import { LinearGradient } from 'expo-linear-gradient'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
 import { api } from '../../lib/api'
-import { KEYS, queryClient, useBoot } from '../../lib/queries'
+import { KEYS, queryClient, useBoot, useQueueCounts } from '../../lib/queries'
 import { ago, greeting, number } from '../../lib/format'
 import { useT } from '../../lib/i18n'
 import type { Key } from '../../lib/i18n/en'
@@ -36,6 +36,7 @@ export default function Home() {
   const insets = useSafeAreaInsets()
   const { t, language } = useT()
   const boot = useBoot()
+  const queue = useQueueCounts()
   const metrics = useQuery({ queryKey: KEYS.metrics, queryFn: api.metrics })
   const activity = useQuery({ queryKey: KEYS.activity, queryFn: api.activity })
   const [refreshing, setRefreshing] = useState(false)
@@ -46,13 +47,14 @@ export default function Home() {
       queryClient.invalidateQueries({ queryKey: KEYS.boot }),
       queryClient.invalidateQueries({ queryKey: KEYS.metrics }),
       queryClient.invalidateQueries({ queryKey: KEYS.activity }),
+      queryClient.invalidateQueries({ queryKey: ['requests'] }),
     ])
     setRefreshing(false)
   }, [])
 
   const data = boot.data
   const firstName = data?.staff.name.split(' ')[0] ?? ''
-  const waiting = data?.counts.requests_waiting ?? 0
+  const waiting = queue.data?.open ?? 0
   const known = (metrics.data?.data.items ?? []).filter(item => item.value !== null)
   // Figures sit two to a row, so an odd one out is left off rather than stretched across.
   const figures = known.slice(0, known.length >= 4 ? 4 : 2)
@@ -104,13 +106,14 @@ export default function Home() {
             <Surface style={styles.tile} tint={waiting > 0 ? C.warning : undefined}>
               <IconBadge name="file-tray-full" color={waiting > 0 ? C.warning : C.text2} />
               <Text style={[fonts.bodyStrong, { color: C.text }]}>{t('home.requests')}</Text>
-              <Text style={[fonts.small, { color: waiting > 0 ? C.warning : C.text2 }]}>{waiting > 0 ? t('home.waiting', { n: number(waiting, language) }) : t('home.noneWaiting')}</Text>
+              <Text style={[fonts.small, { color: waiting > 0 ? C.warning : C.text2 }]}>{queue.isError ? t('requests.refreshError') : queue.isPending ? t('requests.loading') : waiting > 0 ? t('home.waiting', { n: number(waiting, language) }) : t('home.noneWaiting')}</Text>
             </Surface>
           </Press>
         </View>
 
         <View>
           <SectionTitle title={t('home.figures')} />
+          {metrics.isError && <Notice text={t('error.unknown')} action={t('common.retry')} onAction={() => { void metrics.refetch() }} />}
           {metrics.isLoading ? (
             <View style={styles.figures}><Shimmer height={96} style={{ flex: 1 }} /><Shimmer height={96} style={{ flex: 1 }} /></View>
           ) : (
@@ -128,6 +131,7 @@ export default function Home() {
 
         <View>
           <SectionTitle title={t('home.activity')} />
+          {activity.isError && <Notice text={t('error.unknown')} action={t('common.retry')} onAction={() => { void activity.refetch() }} />}
           <Surface padding={0} style={{ paddingHorizontal: 16 }}>
             {activity.isLoading && <View style={{ paddingVertical: 16, gap: 10 }}><Shimmer height={44} /><Shimmer height={44} /></View>}
             {activity.data && activity.data.data.items.length === 0 && (

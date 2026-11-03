@@ -2,6 +2,15 @@ import type { Key } from './en'
 
 export const fr: Record<Key, string> = {
   'app.name': 'HexaTech Staff',
+  'checkIn.invalidAmount': "Saisissez un montant positif avec les décimales de la devise.",
+  'checkIn.amountRequired': "Montant dépensé",
+  'error.unconfirmed': "Résultat non confirmé. Réessayez cette demande ou vérifiez l’activité du membre. Ne créez pas une nouvelle transaction.",
+  'error.attempt_storage': "Impossible d’enregistrer les détails de la tentative. Fermez puis rouvrez ce formulaire.",
+  'requests.refreshError': "Impossible d’actualiser les demandes.",
+  'requests.loading': "Chargement des demandes…",
+  'requests.rewardHistory': "Historique des récompenses",
+  'member.toNextVisits': "{{needed}} visites avant {{tier}}",
+  'member.toNextSpend': "{{needed}} de dépenses avant {{tier}}",
 
   'common.retry': 'Réessayer',
   'common.cancel': 'Annuler',
@@ -14,7 +23,7 @@ export const fr: Record<Key, string> = {
   'common.offline': 'Pas de connexion. Affichage des dernières données chargées.',
 
   'error.network': 'Pas de connexion. Vérifiez Internet et réessayez.',
-  'error.unknown': 'Une erreur s’est produite. Rien n’a été modifié ; veuillez réessayer.',
+  'error.unknown': 'Une erreur s’est produite. Veuillez réessayer.',
   'error.not_found': 'Introuvable. Il a peut-être été supprimé.',
   'error.unauthenticated': 'Votre session a expiré. Veuillez vous reconnecter.',
   'error.not_allowed': 'Vous n’avez pas le droit de faire cela. Demandez à un responsable.',
@@ -238,7 +247,7 @@ export const fr: Record<Key, string> = {
   'more.preferences': 'Préférences',
   'more.language': 'Langue',
   'more.lock': 'Verrouiller avec Face ID ou empreinte',
-  'more.lockLine': 'Redemande après deux minutes d’absence',
+  'more.lockLine': 'Verrouillage au lancement et après deux minutes d’absence',
   'more.lockMissing': 'Configurez d’abord Face ID, une empreinte ou un code sur ce téléphone.',
   'more.alerts': 'Alertes de demandes',
   'more.alertsLine': 'Une notification quand un membre demande un avantage ou choisit une récompense',

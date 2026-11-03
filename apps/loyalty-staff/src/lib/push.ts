@@ -26,7 +26,7 @@ function projectId(): string | null {
  * phone's permission when it may still ask; on every start it refreshes the server's "last seen". Never throws: a
  * phone that cannot be reached answers `unavailable` and the app works on without alerts.
  */
-export async function connectAlerts(options: { language: string; alerts: boolean; channelName: string }): Promise<AlertsState> {
+export async function connectAlerts(options: { language: string; alerts: boolean; channelName: string; current: () => boolean }): Promise<AlertsState> {
   const project = projectId()
   if (!Device.isDevice || !project) return 'unavailable'
   try {
@@ -44,6 +44,7 @@ export async function connectAlerts(options: { language: string; alerts: boolean
     if (!permission.granted) return 'blocked'
 
     const token = (await Notifications.getExpoPushTokenAsync({ projectId: project })).data
+    if (!options.current()) return 'unavailable'
     await api.saveDevice({ token, platform: Platform.OS === 'ios' ? 'ios' : 'android', language: options.language, alerts: options.alerts })
     await storage.set(KEY, token)
     return options.alerts ? 'on' : 'off'
@@ -61,7 +62,7 @@ export async function forgetAlerts(authToken: string): Promise<void> {
   } catch {
     // Offline: the server stops alerting a phone it has not seen for sixty days, and whoever signs in next takes it over.
   }
-  await storage.remove(KEY)
+  // The identifier belongs to the device. Keep it so an old logout cannot erase a new account's registration.
 }
 
 /** A tapped request alert (also the one that started the app) opens Requests; one that arrives refreshes the counts. */

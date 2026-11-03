@@ -14,7 +14,7 @@ export const C = {
 
   text: '#f7f4ee',
   text2: '#a5abb8',
-  text3: '#6c7282',
+  text3: '#9ba2b1',
 
   gold: '#c9a84c',
   goldLight: '#e8cf86',

@@ -11,6 +11,7 @@
       "env": { "EXPO_PUBLIC_API_URL": "https://app.hexa-tech.uk/api", "EXPO_PUBLIC_WEB_URL": "https://app.hexa-tech.uk" }
     },
     "preview": {
+      "environment": "production",
       "distribution": "internal",
       "android": { "buildType": "apk" },
       "env": { "EXPO_PUBLIC_API_URL": "https://app.hexa-tech.uk/api", "EXPO_PUBLIC_WEB_URL": "https://app.hexa-tech.uk" }
