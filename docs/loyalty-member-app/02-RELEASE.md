@@ -259,3 +259,11 @@ More → Bookings → Book (an appointment, paid at the venue), More → Profile
   succeed. Booking catalogues correctly return `not_bookable` until demo inventory is configured.
 - This bug requires new member binaries on both platforms; the earlier instruction to avoid an iOS rebuild applied
   to the Firebase-only change. Keep member review paused until the replacement iOS build is tested on a device.
+
+- Fix source **505d8d659** pushed to `feature/loyalty-member-app`. Replacement production builds queued:
+  Android **2.0.0 / 26**, `https://expo.dev/accounts/hoteltechai/projects/hotel-loyalty/builds/9cfb4b4c-1866-4f46-8368-3bd8375860a0`;
+  iOS **2.0.0 (20)**, `https://expo.dev/accounts/hoteltechai/projects/hotel-loyalty/builds/002b73b1-8b73-4a1d-bb2e-3ea0d2d1f159`.
+  Both were still **IN_PROGRESS** when checked on 3 November; no replacement submission yet at this checkpoint.
+- Apple review contact, demo member sign-in and accurate demo notes are now saved and verified by presence checks.
+  The isolated demo has sample points, a reward and a requestable benefit. The staff release guide records the
+  completed live workflow checks. Native device acceptance remains separate from API and automated regression tests.
