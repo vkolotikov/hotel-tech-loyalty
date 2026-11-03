@@ -342,3 +342,7 @@ More → Bookings → Book (an appointment, paid at the venue), More → Profile
 - All eleven Apple data categories are now fully configured and saved, no Set Up warnings: linked to accounts,
   App Functionality, no tracking; Product Interaction also Analytics. The final legal Publish confirmation is
   open for the owner. Do not describe the revised privacy label as published until the owner completes it.
+- Member Play production **26 (2.0.0)** now uses the library bundle and five localized notes from
+  `store/play/release-notes.txt` (288–317 characters each). Preview validates **Ready to release**, no lost device
+  support; saved to Publishing overview, which explicitly requires a separate Send for review action. It has
+  not been submitted. Keep it staged until native acceptance and reviewer-access password entry are complete.

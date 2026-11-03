@@ -1,0 +1,15 @@
+<en-GB>
+Meet HexaTech Loyalty 2.0: your membership card, points, rewards, offers and bookings in one place, with your venue's own style and five languages. Existing member sessions are preserved. If this device previously used a staff account, sign in with your membership account after updating.
+</en-GB>
+<de-DE>
+HexaTech Loyalty 2.0: Mitgliedskarte, Punkte, Prämien, Angebote und Buchungen an einem Ort, im Stil Ihres Hauses und in fünf Sprachen. Bestehende Mitgliedssitzungen bleiben erhalten. Falls auf diesem Gerät zuvor ein Mitarbeiterkonto verwendet wurde, melden Sie sich nach dem Update mit Ihrem Mitgliedskonto an.
+</de-DE>
+<es-ES>
+HexaTech Loyalty 2.0: su tarjeta de socio, puntos, premios, ofertas y reservas en un solo lugar, con el estilo de su establecimiento y cinco idiomas. Se conservan las sesiones de los socios. Si este dispositivo utilizaba una cuenta de personal, inicie sesión con su cuenta de socio después de actualizar.
+</es-ES>
+<fr-FR>
+HexaTech Loyalty 2.0 : votre carte membre, vos points, récompenses, offres et réservations au même endroit, aux couleurs de votre établissement et en cinq langues. Les sessions des membres sont conservées. Si cet appareil utilisait un compte du personnel, connectez-vous avec votre compte membre après la mise à jour.
+</fr-FR>
+<ru-RU>
+HexaTech Loyalty 2.0: карта участника, баллы, награды, предложения и бронирования в одном месте, в стиле вашего заведения и на пяти языках. Сеансы участников сохраняются. Если на устройстве раньше использовалась учётная запись сотрудника, после обновления войдите с учётной записью участника.
+</ru-RU>

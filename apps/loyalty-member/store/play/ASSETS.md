@@ -1,6 +1,7 @@
 # Google Play assets
 
 - `translations.json` is derived from `../listing.json`; five locales and Play text limits checked.
+- `release-notes.txt` contains the five production-release notes (288–317 characters each, below 500).
 - `icon-512.png` is a technical 512×512 export of the app's existing `assets/icon.png`.
 - `feature-1024x500.png` is an AI-generated feature graphic, technically resized to Google's required dimensions.
 - Phone screenshots remain the six existing captures in `../screenshots/play-phone/`. They are not AI-generated.

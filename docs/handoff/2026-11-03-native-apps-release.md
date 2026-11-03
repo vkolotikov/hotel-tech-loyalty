@@ -77,6 +77,9 @@ fully verified by this agent; do not report all device checks complete.
 - Member Play listing now matches all five source locales exactly, with the current icon, feature graphic and
   six actual app captures. The old Data safety answer incorrectly said no data collected; the audited eleven
   types are saved and all handling rows validate. The privacy URL now points to `app.hexa-tech.uk/privacy`.
+- Production release **26 (2.0.0)** is now prepared with five localized release notes, validated **Ready to
+  release**, and saved to Publishing overview. Google explicitly confirmed it still needs sending for review.
+  No device loses support. Do not send until native acceptance and reviewer-access entry are completed.
 - Apple member privacy now has all eleven categories fully configured with no Set Up warnings. All are linked,
   for functionality, with no tracking; Product Interaction additionally declares Analytics. The final Publish
   legal confirmation is open in Chrome tab two and awaits the owner; publication is not yet confirmed.
