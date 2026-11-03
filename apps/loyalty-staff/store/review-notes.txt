@@ -1,0 +1,5 @@
+HexaTech Staff is the desk app for staff at venues using HexaTech. A staff account is required; sign in using the demo account supplied separately in the console's App Review Information / App access fields.
+
+Use Members to find a member, or Scan > Type instead to enter a membership number. The desk can award points, check members in and manage reward requests according to the staff role.
+
+NFC requires a venue physical card; the camera reads a member QR code from HexaTech Loyalty. The app is intended for unlisted distribution; an unlisted distribution request will follow the review process.

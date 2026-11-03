@@ -96,6 +96,7 @@ Data used to track: **none**. Data linked to the person, all for **App Functiona
 |---|---|---|
 | Contact Info | Name, Email Address | The staff member's account |
 | Identifiers | User ID | The staff account; a member's number or card id when the staff member scans or links a card |
+| Identifiers | Device ID | This phone's notification token, stored against the staff account for request alerts |
 | Purchases | Purchase History | An amount the staff member enters to award points for a purchase |
 
 The camera reads QR codes on the phone and stores nothing; NFC reads a card's id only; Face ID is the phone's own.
@@ -199,3 +200,19 @@ NFC needs a venue's physical card; the camera reads a member's QR code from the 
   EAS confirmed this key's staff Play submission assignment; FCM continues to use the separate Firebase key.
 - EAS Metadata synced all five Apple language texts, Business category, version 1.0.0 and manual release. English
   screenshots are uploading/processing at this checkpoint. Review credentials remain owner-entered in the console.
+
+**2026-11-02 completion, verified again 2026-11-03 (Codex):**
+
+- The owner completed the first AAB upload. Internal release **1.0.0 / version code 3** was saved and published to
+  internal testing on 2 November at 18:06; Play showed **Available to internal testers**, **Not reviewed**. The existing
+  Admin tester list was selected and saved. Test link: `https://play.google.com/apps/internaltest/4700822212750987105`.
+- Apple draft **1.0.0** selects valid build **2**, Business category and manual release. All five locales have
+  descriptions. All **10** English screenshots (five iPhone, five iPad) are now **COMPLETE**, with no processing errors.
+  The version remains **PREPARE_FOR_SUBMISSION**; neither store has a new public Staff release yet.
+- Saved credential-free Apple review notes and `demoAccountRequired: true`; kept the same notes in
+  `store/review-notes.txt`. Contact information and demo sign-in fields are incomplete. The owner confirmed demo
+  accounts still need setup. The Apple privacy draft currently contains **Name only**, is incomplete and unpublished.
+  Complete the remaining data types/purposes from this runbook, plus Play listings and data safety, before review.
+- On 3 November the owner confirmed Staff works and explicitly authorised publishing it on Android and iOS.
+  Continue release preparation and submission under that instruction. Owner-entered sign-ins, demo credentials and
+  legal declarations remain necessary; no production rollout or App Review submission has happened yet.
