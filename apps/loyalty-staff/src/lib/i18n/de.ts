@@ -2,6 +2,15 @@ import type { Key } from './en'
 
 export const de: Record<Key, string> = {
   'app.name': 'HexaTech Staff',
+  'checkIn.invalidAmount': "Geben Sie einen positiven Betrag mit den Dezimalstellen der Währung ein.",
+  'checkIn.amountRequired': "Ausgegebener Betrag",
+  'error.unconfirmed': "Das Ergebnis ist unbestätigt. Wiederholen Sie diese Anfrage oder prüfen Sie die Mitgliederaktivität. Erfassen Sie keine neue Transaktion.",
+  'error.attempt_storage': "Die Wiederholungsdaten konnten nicht gespeichert werden. Schließen und öffnen Sie das Formular erneut.",
+  'requests.refreshError': "Anfragen konnten nicht aktualisiert werden.",
+  'requests.loading': "Anfragen werden geladen…",
+  'requests.rewardHistory': "Prämienverlauf",
+  'member.toNextVisits': "{{needed}} Besuche bis {{tier}}",
+  'member.toNextSpend': "{{needed}} Umsatz bis {{tier}}",
 
   'common.retry': 'Erneut versuchen',
   'common.cancel': 'Abbrechen',
@@ -14,7 +23,7 @@ export const de: Record<Key, string> = {
   'common.offline': 'Keine Verbindung. Angezeigt wird der zuletzt geladene Stand.',
 
   'error.network': 'Keine Verbindung. Prüfen Sie das Internet und versuchen Sie es erneut.',
-  'error.unknown': 'Etwas ist schiefgelaufen. Es wurde nichts geändert; bitte versuchen Sie es erneut.',
+  'error.unknown': 'Etwas ist schiefgelaufen. Bitte versuchen Sie es erneut.',
   'error.not_found': 'Nicht gefunden. Es wurde vielleicht entfernt.',
   'error.unauthenticated': 'Ihre Sitzung ist abgelaufen. Bitte melden Sie sich erneut an.',
   'error.not_allowed': 'Dazu sind Sie nicht berechtigt. Fragen Sie einen Manager.',
@@ -238,7 +247,7 @@ export const de: Record<Key, string> = {
   'more.preferences': 'Einstellungen der App',
   'more.language': 'Sprache',
   'more.lock': 'Mit Face ID oder Fingerabdruck sperren',
-  'more.lockLine': 'Fragt nach zwei Minuten Abwesenheit erneut',
+  'more.lockLine': 'Sperrt beim Start und nach zwei Minuten Abwesenheit',
   'more.lockMissing': 'Richten Sie zuerst Face ID, einen Fingerabdruck oder einen Code auf diesem Telefon ein.',
   'more.alerts': 'Mitteilungen zu Anfragen',
   'more.alertsLine': 'Eine Mitteilung, wenn ein Mitglied einen Vorteil anfragt oder eine Prämie einlöst',

@@ -54,8 +54,21 @@ export function balanceAfter(mode: 'award' | 'redeem', points: number, balance: 
 
 /** A whole number from what was typed in the points field ("1 500", "1,500" → 1500), or 0. */
 export function pointsFrom(text: string): number {
-  const digits = text.replace(/[^\d]/g, '')
-  return digits ? Math.min(Number(digits), MAX_POINTS * 10) : 0
+  const value = text.trim()
+  if (!/^(?:\d+|\d{1,3}(?:,\d{3})+|\d{1,3}(?:[ \u00a0\u202f]\d{3})+)$/.test(value)) return 0
+  const points = Number(value.replace(/[, \u00a0\u202f]/g, ''))
+  return Number.isSafeInteger(points) ? points : 0
+}
+
+/** Blank is optional; malformed or over-precise input is never silently changed into a visit. */
+export function purchaseAmount(text: string, currency: string): number | null | 'invalid' {
+  const value = text.trim()
+  if (!value) return null
+  const decimals = new Intl.NumberFormat('en', { style: 'currency', currency }).resolvedOptions().maximumFractionDigits ?? 2
+  const pattern = decimals === 0 ? /^\d+$/ : new RegExp(`^\\d+(?:[.,]\\d{1,${decimals}})?$`)
+  if (!pattern.test(value)) return 'invalid'
+  const amount = Number(value.replace(',', '.'))
+  return Number.isFinite(amount) && amount > 0 && amount <= 1_000_000 ? amount : 'invalid'
 }
 
 /** The sentence a door's verdict is told with: the known reasons by name, any other as a plain refusal. */

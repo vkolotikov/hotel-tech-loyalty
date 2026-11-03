@@ -4,10 +4,9 @@ import { Redirect } from 'expo-router'
 import * as WebBrowser from 'expo-web-browser'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useSession } from '../lib/session'
-import { api, WEB_BASE } from '../lib/api'
+import { WEB_BASE } from '../lib/api'
 import { failureOf } from '../lib/failure'
 import { errorKey } from '../lib/desk'
-import { queryClient, KEYS } from '../lib/queries'
 import { LANGUAGES, LANGUAGE_NAMES, useT } from '../lib/i18n'
 import { usePrefs } from '../lib/prefs'
 import { C, RADIUS, fonts } from '../lib/theme'
@@ -31,6 +30,7 @@ export default function SignIn() {
   if (token && !busy) return <Redirect href="/" />
 
   const submit = async () => {
+    if (busy) return
     if (!email.trim() || !password) return setProblem('signIn.fill')
     setBusy(true)
     setProblem(null)
@@ -38,19 +38,11 @@ export default function SignIn() {
       await useSession.getState().signIn(email, password)
     } catch (error) {
       const failure = failureOf(error)
-      setProblem(failure.code === 'invalid' || failure.status === 422 ? 'signIn.wrong' : errorKey(failure.code))
+      setProblem(failure.code === 'invalid' || failure.status === 422 ? 'signIn.wrong' : failure.status === 403 || failure.status === 402 ? (failure.code === 'workspace_disabled' || failure.code === 'not_in_plan' ? errorKey(failure.code) : 'signIn.noAccess') : errorKey(failure.code))
       setBusy(false)
       return
     }
-    try {
-      queryClient.setQueryData(KEYS.boot, await api.bootstrap())
-      setBusy(false)
-    } catch (error) {
-      const failure = failureOf(error)
-      await useSession.getState().signOut()
-      setProblem(failure.status === 403 || failure.status === 402 ? (failure.code === 'workspace_disabled' || failure.code === 'not_in_plan' ? errorKey(failure.code) : 'signIn.noAccess') : errorKey(failure.code))
-      setBusy(false)
-    }
+    setBusy(false)
   }
 
   return (

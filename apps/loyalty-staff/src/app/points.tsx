@@ -1,12 +1,11 @@
-import { useRef, useState } from 'react'
+import { useState } from 'react'
 import { StyleSheet, Text, TextInput, View } from 'react-native'
 import { router, useLocalSearchParams } from 'expo-router'
 import { useQuery } from '@tanstack/react-query'
 import { api } from '../lib/api'
-import { KEYS, afterMemberChange } from '../lib/queries'
-import { failureOf } from '../lib/failure'
-import { balanceAfter, errorKey, pointsFrom, pointsProblem } from '../lib/desk'
-import { freshKey } from '../lib/ids'
+import { KEYS, afterMemberChange, useBoot } from '../lib/queries'
+import { balanceAfter, pointsFrom, pointsProblem } from '../lib/desk'
+import { useDeskAttempt } from '../lib/useDeskAttempt'
 import { feel } from '../lib/haptics'
 import { number } from '../lib/format'
 import { useT } from '../lib/i18n'
@@ -34,10 +33,11 @@ export default function Points() {
   const [amount, setAmount] = useState('')
   const [reason, setReason] = useState('')
   const [tried, setTried] = useState(false)
-  const [busy, setBusy] = useState(false)
-  const [failure, setFailure] = useState<Key | null>(null)
   const [done, setDone] = useState<{ points: number; balance: number } | null>(null)
-  const attempt = useRef<{ key: string; sig: string } | null>(null)
+  const boot = useBoot()
+  const attempt = useDeskAttempt(id, mode, saved => { setAmount(String(saved.amount ?? '')); setReason(saved.note) })
+  const { busy, failure, pending } = attempt
+  const allowed = !!boot.data?.staff.can[mode]
 
   const balance = detail.data?.member.points ?? 0
   const points = pointsFrom(amount)
@@ -46,26 +46,16 @@ export default function Points() {
 
   const send = async () => {
     setTried(true)
-    if (problem || busy) return
-    const sig = `${mode}|${points}|${reason.trim()}`
-    if (!attempt.current || attempt.current.sig !== sig) attempt.current = { key: freshKey(), sig }
-    setBusy(true)
-    setFailure(null)
-    try {
-      const after = mode === 'award'
-        ? await api.award(id, points, reason.trim(), attempt.current.key)
-        : await api.redeem(id, points, reason.trim(), attempt.current.key)
-      attempt.current = null
+    if ((!pending && problem) || busy || !allowed || !detail.data) return
+    let sentPoints = points
+    const after = await attempt.send(points, reason.trim(), saved => {
+      sentPoints = saved.amount!
+      return mode === 'award' ? api.award(id, sentPoints, saved.note, saved.key) : api.redeem(id, sentPoints, saved.note, saved.key)
+    })
+    if (after) {
       feel.success()
       afterMemberChange(id)
-      setDone({ points, balance: after.member.points })
-    } catch (error) {
-      const code = failureOf(error).code
-      if (code !== 'network') attempt.current = null
-      feel.warning()
-      setFailure(errorKey(code))
-    } finally {
-      setBusy(false)
+      setDone({ points: sentPoints, balance: after.member.points })
     }
   }
 
@@ -87,6 +77,7 @@ export default function Points() {
       <Surface style={{ alignItems: 'center', gap: 14 }}>
         <TextInput
           value={amount}
+          editable={!pending && !busy}
           onChangeText={setAmount}
           keyboardType="number-pad"
           placeholder="0"
@@ -99,7 +90,7 @@ export default function Points() {
         <Text style={[fonts.label, { color: C.text2 }]}>{t('points.amount')}</Text>
         <View style={styles.quick}>
           {QUICK.map(n => (
-            <Press key={n} onPress={() => setAmount(String(n))} style={[styles.chip, points === n && styles.chipOn]}>
+            <Press key={n} disabled={pending || busy} onPress={() => setAmount(String(n))} style={[styles.chip, points === n && styles.chipOn]}>
               <Text style={[fonts.smallStrong, { color: points === n ? C.onGold : C.text }]}>{mode === 'award' ? '+' : '−'}{n}</Text>
             </Press>
           ))}
@@ -112,25 +103,29 @@ export default function Points() {
             const words = t(key)
             const on = reason.trim() === words
             return (
-              <Press key={key} onPress={() => setReason(words)} style={[styles.reason, on && styles.reasonOn]}>
+              <Press key={key} disabled={pending || busy} onPress={() => setReason(words)} style={[styles.reason, on && styles.reasonOn]}>
                 <Text style={[fonts.smallStrong, { color: on ? C.gold : C.text2 }]}>{words}</Text>
               </Press>
             )
           })}
         </View>
-        <Field label={t('points.reason')} hint={t('points.reasonHint')} value={reason} onChangeText={setReason} maxLength={200} />
+        <Field label={t('points.reason')} hint={t('points.reasonHint')} value={reason} onChangeText={setReason} editable={!pending && !busy} maxLength={200} />
       </View>
 
-      {tried && problem && <Notice tone="warning" text={problem === 'points.tooFew' ? t('points.tooFew', { n: number(balance, language) }) : t(problem)} />}
+      {tried && problem && !pending && <Notice tone="warning" text={problem === 'points.tooFew' ? t('points.tooFew', { n: number(balance, language) }) : t(problem)} />}
+      {pending && !failure && <Notice tone="warning" text={t('error.unconfirmed')} />}
+      {boot.data && !allowed && <Notice text={t('error.not_allowed')} />}
+      {detail.isError && <Notice text={t('error.unknown')} action={t('common.retry')} onAction={() => { void detail.refetch() }} />}
       {failure && <Notice text={t(failure)} />}
 
       {points > 0 && !problem && (
         <Text style={[fonts.small, { color: C.text2, textAlign: 'center' }]}>{t('points.balanceAfter', { n: number(balanceAfter(mode, points, balance), language) })}</Text>
       )}
       <GoldButton
-        title={t(mode === 'award' ? 'points.confirmAward' : 'points.confirmRedeem', { n: number(points, language) })}
+        title={pending ? t('common.retry') : t(mode === 'award' ? 'points.confirmAward' : 'points.confirmRedeem', { n: number(points, language) })}
         icon={mode === 'award' ? 'add-circle' : 'remove-circle'}
         busy={busy}
+        disabled={!attempt.ready || !allowed || !detail.data}
         onPress={() => { void send() }}
       />
       <GhostButton title={t('common.cancel')} onPress={() => router.back()} />

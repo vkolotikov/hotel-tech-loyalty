@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { ActivityIndicator, Animated, FlatList, Linking, Modal, Platform, Pressable, StyleSheet, Text, View } from 'react-native'
+import { ActivityIndicator, Animated, FlatList, Linking, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { router, useFocusEffect } from 'expo-router'
 import { useQuery } from '@tanstack/react-query'
 import { CameraView, useCameraPermissions } from 'expo-camera'
@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
 import { api } from '../../lib/api'
 import { failureOf } from '../../lib/failure'
+import { outcomeUncertain } from '../../lib/attempts'
 import { cleanCode, errorKey, keyFor, looksLikeCode, type Unanswered } from '../../lib/desk'
 import { freshKey } from '../../lib/ids'
 import { feel } from '../../lib/haptics'
@@ -76,7 +77,7 @@ export default function Scan() {
     } catch (error) {
       const failure = failureOf(error)
       // An answer came, so the next read of this code is a new scan; only "no answer" keeps the key.
-      if (failure.code !== 'network') unanswered.current = null
+      if (!outcomeUncertain(error)) unanswered.current = null
       feel.warning()
       setProblem(failure.code === 'not_found' ? 'scan.unknown' : errorKey(failure.code))
     } finally {
@@ -84,7 +85,7 @@ export default function Scan() {
     }
   }, [busy, where, show])
 
-  const nfc = useNfc({ listen: focused && !typing && !busy, onCard: uid => { void lookUp(uid) }, prompt: t('scan.nfcHint') })
+  const nfc = useNfc({ listen: focused && !typing && !picking && !busy, onCard: uid => { void lookUp(uid) }, prompt: t('scan.nfcHint') })
   const canScanCamera = Platform.OS !== 'web' && permission?.granted && focused && !typing && !picking
 
   const whereLabel = where.kind === 'desk' ? t('scan.desk') : where.name
@@ -230,6 +231,8 @@ function TypeSheet({ open, where, onClose, onCode, busy, problem }: {
         <View style={styles.grabber} />
         <Text style={[fonts.title, { color: C.text }]}>{t('scan.type')}</Text>
         <SearchField value={q} onChangeText={setQ} placeholder={t('scan.typeHint')} autoFocus onSubmitEditing={() => setAsked(q.trim())} />
+        {found.isError && <Notice text={t('error.unknown')} action={t('common.retry')} onAction={() => { void found.refetch() }} />}
+        {found.isFetching && <ActivityIndicator color={C.gold} />}
         {problem && !busy && <Notice text={t(problem)} />}
         {looksLikeCode(q) && (
           <Row left={<Ionicons name="barcode-outline" size={22} color={C.gold} />} title={t('scan.asCode', { code: cleanCode(q) })} onPress={() => onCode(q)} />
@@ -239,7 +242,7 @@ function TypeSheet({ open, where, onClose, onCode, busy, problem }: {
           keyExtractor={m => String(m.id)}
           keyboardShouldPersistTaps="handled"
           style={{ maxHeight: 360 }}
-          ListEmptyComponent={asked.length >= 2 && found.isFetched ? <Text style={[fonts.body, { color: C.text2, paddingVertical: 16 }]}>{t('scan.noMatch')}</Text> : undefined}
+          ListEmptyComponent={asked.length >= 2 && found.isSuccess ? <Text style={[fonts.body, { color: C.text2, paddingVertical: 16 }]}>{t('scan.noMatch')}</Text> : undefined}
           renderItem={({ item, index }) => {
             const tier = tierOf(boot.data, item.tier_id)
             return (
@@ -277,6 +280,9 @@ function WherePicker({ open, current, onPick, onClose }: { open: boolean; curren
         <View style={styles.grabber} />
         <Text style={[fonts.title, { color: C.text }]}>{t('scan.for')}</Text>
         {(places.isLoading || events.isLoading) && <ActivityIndicator color={C.gold} />}
+        {places.isError && <Notice text={t('error.unknown')} action={t('common.retry')} onAction={() => { void places.refetch() }} />}
+        {events.isError && <Notice text={t('error.unknown')} action={t('common.retry')} onAction={() => { void events.refetch() }} />}
+        <ScrollView style={{ maxHeight: 420 }}>
         {options.map((option, i) => {
           const on = whereKey(option) === whereKey(current)
           const icon = option.kind === 'desk' ? 'storefront-outline' : option.kind === 'place' ? 'location-outline' : 'calendar-outline'
@@ -291,6 +297,7 @@ function WherePicker({ open, current, onPick, onClose }: { open: boolean; curren
             />
           )
         })}
+        </ScrollView>
       </View>
     </Modal>
   )

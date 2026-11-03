@@ -19,7 +19,7 @@ export function MemberActions({ member, boot }: { member: MemberRow; boot: Boots
   const actions: { key: string; icon: IconName; label: Key; color: string; go: () => void }[] = []
   if (can.award && usable) actions.push({ key: 'award', icon: 'add-circle', label: 'result.award', color: C.gold, go: () => router.push({ pathname: '/points', params: { id: String(member.id), mode: 'award' } }) })
   if (can.redeem && usable && member.points > 0) actions.push({ key: 'redeem', icon: 'remove-circle', label: 'result.redeem', color: '#c58cff', go: () => router.push({ pathname: '/points', params: { id: String(member.id), mode: 'redeem' } }) })
-  if (usable && (ways?.checkin || ways?.desk_earn)) actions.push({ key: 'checkin', icon: 'walk', label: 'result.checkIn', color: C.success, go: () => router.push({ pathname: '/check-in', params: { id: String(member.id) } }) })
+  if (can.award && usable && (ways?.checkin || ways?.desk_earn)) actions.push({ key: 'checkin', icon: 'walk', label: 'result.checkIn', color: C.success, go: () => router.push({ pathname: '/check-in', params: { id: String(member.id) } }) })
   if (actions.length === 0) return null
 
   return (

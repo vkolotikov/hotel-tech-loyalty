@@ -9,7 +9,7 @@ import { api } from '../../lib/api'
 import { KEYS, queryClient, tierOf, useBoot } from '../../lib/queries'
 import { failureOf } from '../../lib/failure'
 import { errorKey } from '../../lib/desk'
-import { ago, day, moment, number } from '../../lib/format'
+import { ago, day, moment, money, number } from '../../lib/format'
 import { useT } from '../../lib/i18n'
 import { C, GOLD_GRADIENT, RADIUS, fonts } from '../../lib/theme'
 import { Backdrop, GhostButton, Notice, Press, Row, SectionTitle, Shimmer, Surface } from '../../components/ui'
@@ -74,7 +74,7 @@ export default function MemberPage() {
             <Surface>
               {data.progress.next_tier ? (
                 <>
-                  <Text style={[fonts.bodyStrong, { color: C.text }]}>{t('member.progress', { needed: number(data.progress.needed, language), tier: data.progress.next_tier.name })}</Text>
+                  <Text style={[fonts.bodyStrong, { color: C.text }]}>{t(boot.data.programme.progress_by === 'visits' ? 'member.toNextVisits' : boot.data.programme.progress_by === 'spend' ? 'member.toNextSpend' : 'member.progress', { needed: boot.data.programme.progress_by === 'spend' ? money(data.progress.needed, boot.data.venue.currency, language) : number(data.progress.needed, language), tier: data.progress.next_tier.name })}</Text>
                   <View style={styles.track}>
                     <LinearGradient colors={GOLD_GRADIENT} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={[styles.fill, { width: `${Math.max(4, Math.min(100, data.progress.percent))}%` }]} />
                   </View>
@@ -96,6 +96,8 @@ export default function MemberPage() {
 
             <Surface padding={0} style={{ paddingHorizontal: 16, paddingTop: 12 }}>
               <SectionTitle title={t('member.cards')} />
+              {cards.isPending && <Shimmer height={44} />}
+              {cards.isError && <Notice text={t('error.unknown')} action={t('common.retry')} onAction={() => { void cards.refetch() }} />}
               {(cards.data?.cards ?? []).filter(card => card.is_active).map(card => (
                 <Row key={card.id} left={<Ionicons name="card" size={22} color={C.gold} />} title={card.uid} line={card.linked_at ? day(card.linked_at, language) : null} />
               ))}
@@ -111,7 +113,9 @@ export default function MemberPage() {
 
             <Surface padding={0} style={{ paddingHorizontal: 16, paddingTop: 12 }}>
               <SectionTitle title={t('member.history')} />
-              {lines.length === 0 && history.isFetched && <Text style={[fonts.body, { color: C.text2, paddingBottom: 12 }]}>{t('member.noHistory')}</Text>}
+              {history.isPending && <Shimmer height={44} />}
+              {history.isError && <Notice text={t('error.unknown')} action={t('common.retry')} onAction={() => { void history.refetch() }} />}
+              {lines.length === 0 && history.isSuccess && <Text style={[fonts.body, { color: C.text2, paddingBottom: 12 }]}>{t('member.noHistory')}</Text>}
               {lines.map((line, i) => (
                 <View key={line.id} style={[styles.line, i < lines.length - 1 && styles.lineRule]}>
                   <View style={{ flex: 1, gap: 2 }}>

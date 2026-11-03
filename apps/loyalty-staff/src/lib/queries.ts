@@ -1,14 +1,11 @@
-import { QueryClient, useQuery } from '@tanstack/react-query'
-import { create } from 'zustand'
+import { useQuery } from '@tanstack/react-query'
 import { api } from './api'
 import { useSession } from './session'
-import type { Bootstrap, ScanAnswer, TierRef } from './types'
-
-export const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: { staleTime: 30_000, retry: 0, refetchOnWindowFocus: false },
-  },
-})
+import type { Bootstrap, TierRef } from './types'
+import { queryClient } from './queryClient'
+import { queueCounts } from './queue'
+export { queryClient } from './queryClient'
+export { useScan, whereKey, type ScanWhere } from './scanState'
 
 export const KEYS = {
   boot: ['boot'] as const,
@@ -30,6 +27,17 @@ export function useBoot() {
   return useQuery({ queryKey: KEYS.boot, queryFn: api.bootstrap, enabled: !!token, staleTime: 5 * 60_000 })
 }
 
+export function useQueueCounts() {
+  const token = useSession(s => s.token)
+  return useQuery({
+    queryKey: ['requests', 'counts'], enabled: !!token,
+    queryFn: async () => {
+      const [benefits, rewards] = await Promise.all([api.requests('waiting', 1), api.redemptions('pending', 1)])
+      return queueCounts(benefits.counts, rewards.counts.pending)
+    },
+  })
+}
+
 /** A tier of the programme by its id. */
 export function tierOf(boot: Bootstrap | undefined, id: number | null | undefined): TierRef | null {
   if (!boot || id === null || id === undefined) return null
@@ -45,24 +53,3 @@ export function afterMemberChange(memberId: number): void {
   void queryClient.invalidateQueries({ queryKey: KEYS.activity })
 }
 
-/** Where the desk scans for: the desk itself, a place, or one of today's events. */
-export type ScanWhere = { kind: 'desk' } | { kind: 'place'; id: number; name: string } | { kind: 'event'; id: number; name: string }
-
-export function whereKey(where: ScanWhere): string {
-  return where.kind === 'desk' ? 'desk' : `${where.kind}:${where.id}`
-}
-
-interface ScanState {
-  where: ScanWhere
-  answer: ScanAnswer | null
-  setWhere: (where: ScanWhere) => void
-  show: (answer: ScanAnswer) => void
-}
-
-/** The scan screen's place, and the last answer the result screen shows. */
-export const useScan = create<ScanState>(set => ({
-  where: { kind: 'desk' },
-  answer: null,
-  setWhere: where => set({ where }),
-  show: answer => set({ answer }),
-}))

@@ -1,11 +1,10 @@
-import { useRef, useState } from 'react'
+import { useState } from 'react'
 import { router, useLocalSearchParams } from 'expo-router'
 import { useQuery } from '@tanstack/react-query'
 import { api } from '../lib/api'
 import { KEYS, afterMemberChange, useBoot } from '../lib/queries'
-import { failureOf } from '../lib/failure'
-import { errorKey } from '../lib/desk'
-import { freshKey } from '../lib/ids'
+import { purchaseAmount } from '../lib/desk'
+import { useDeskAttempt } from '../lib/useDeskAttempt'
 import { feel } from '../lib/haptics'
 import { money, number } from '../lib/format'
 import { useT } from '../lib/i18n'
@@ -27,34 +26,25 @@ export default function CheckIn() {
   const detail = useQuery({ queryKey: KEYS.member(id), queryFn: () => api.member(id), enabled: id > 0 })
   const [amount, setAmount] = useState('')
   const [note, setNote] = useState('')
-  const [busy, setBusy] = useState(false)
-  const [failure, setFailure] = useState<Key | null>(null)
+  const [validation, setValidation] = useState<Key | null>(null)
   const [done, setDone] = useState<DeskAnswer | null>(null)
-  const attempt = useRef<{ key: string; sig: string } | null>(null)
+  const attempt = useDeskAttempt(id, 'checkin', saved => { setAmount(saved.amount === null ? '' : String(saved.amount)); setNote(saved.note) })
+  const { busy, failure, pending } = attempt
   const ways = boot.data?.programme.ways
   const currency = boot.data?.venue.currency ?? 'EUR'
-  const spent = Number(amount.replace(',', '.'))
+  const spent = purchaseAmount(amount, currency)
+  const allowed = !!boot.data?.staff.can.award && !!(ways?.checkin || ways?.desk_earn)
 
   const send = async () => {
-    if (busy) return
-    const value = Number.isFinite(spent) && spent > 0 ? Math.round(spent * 100) / 100 : null
-    const sig = `${value}|${note.trim()}`
-    if (!attempt.current || attempt.current.sig !== sig) attempt.current = { key: freshKey(), sig }
-    setBusy(true)
-    setFailure(null)
-    try {
-      const answer = await api.checkIn(id, value, note.trim(), attempt.current.key)
-      attempt.current = null
+    if (busy || !allowed || !detail.data) return
+    setValidation(null)
+    if (spent === 'invalid') return setValidation('checkIn.invalidAmount')
+    if (!pending && spent === null && !ways?.checkin) return setValidation('error.amount_required')
+    const answer = await attempt.send(spent, note.trim(), saved => api.checkIn(id, saved.amount, saved.note, saved.key))
+    if (answer) {
       feel.success()
       afterMemberChange(id)
       setDone(answer)
-    } catch (error) {
-      const code = failureOf(error).code
-      if (code !== 'network') attempt.current = null
-      feel.warning()
-      setFailure(errorKey(code))
-    } finally {
-      setBusy(false)
     }
   }
 
@@ -76,12 +66,16 @@ export default function CheckIn() {
 
   return (
     <Sheet title={t('checkIn.title')} line={detail.data ? `${detail.data.member.name} · ${t('checkIn.line')}` : t('checkIn.line')}>
-      {(ways?.desk_earn || ways?.cashback) && (
-        <Field label={t('checkIn.amount')} value={amount} onChangeText={setAmount} keyboardType="decimal-pad" placeholder={money(0, currency, language)} />
+      {ways?.desk_earn && (
+        <Field label={t(ways.checkin ? 'checkIn.amount' : 'checkIn.amountRequired')} value={amount} onChangeText={setAmount} editable={!pending && !busy} keyboardType="decimal-pad" placeholder={money(0, currency, language)} />
       )}
-      <Field label={t('checkIn.note')} value={note} onChangeText={setNote} maxLength={200} />
+      <Field label={t('checkIn.note')} value={note} onChangeText={setNote} editable={!pending && !busy} maxLength={200} />
+      {validation && <Notice text={t(validation)} />}
+      {pending && !failure && <Notice tone="warning" text={t('error.unconfirmed')} />}
+      {boot.data && !allowed && <Notice text={t('error.not_allowed')} />}
+      {detail.isError && <Notice text={t('error.unknown')} action={t('common.retry')} onAction={() => { void detail.refetch() }} />}
       {failure && <Notice text={t(failure)} />}
-      <GoldButton title={t('checkIn.confirm')} icon="walk" busy={busy} onPress={() => { void send() }} />
+      <GoldButton title={t(pending ? 'common.retry' : 'checkIn.confirm')} icon="walk" busy={busy} disabled={!attempt.ready || !allowed || !detail.data} onPress={() => { void send() }} />
       <GhostButton title={t('common.cancel')} onPress={() => router.back()} />
     </Sheet>
   )

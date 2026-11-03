@@ -1,6 +1,15 @@
 /** English, the master list: every other language has exactly these keys and keeps every {{placeholder}}. */
 export const en = {
   'app.name': 'HexaTech Staff',
+  'checkIn.invalidAmount': "Use a positive amount with the correct currency decimals.",
+  'checkIn.amountRequired': "Amount spent",
+  'error.unconfirmed': "The result is unconfirmed. Retry this same request, or check the member’s activity. Do not enter it again as a new transaction.",
+  'error.attempt_storage': "Could not save the retry details. Close this form and reopen it before continuing.",
+  'requests.refreshError': "Could not refresh requests.",
+  'requests.loading': "Loading requests…",
+  'requests.rewardHistory': "Reward history",
+  'member.toNextVisits': "{{needed}} visits to {{tier}}",
+  'member.toNextSpend': "{{needed}} spent to {{tier}}",
 
   'common.retry': 'Try again',
   'common.cancel': 'Cancel',
@@ -13,7 +22,7 @@ export const en = {
   'common.offline': 'No connection. Showing what was loaded last.',
 
   'error.network': 'No connection. Check the internet and try again.',
-  'error.unknown': 'Something went wrong. Nothing was changed; please try again.',
+  'error.unknown': 'Something went wrong. Please try again.',
   'error.not_found': 'Not found. It may have been removed.',
   'error.unauthenticated': 'Your session has ended. Please sign in again.',
   'error.not_allowed': 'You do not have the right to do this. Ask a manager.',
@@ -237,7 +246,7 @@ export const en = {
   'more.preferences': 'Preferences',
   'more.language': 'Language',
   'more.lock': 'Lock with Face ID or fingerprint',
-  'more.lockLine': 'Asks again after two minutes away',
+  'more.lockLine': 'Locks at launch and after two minutes away',
   'more.lockMissing': 'Set up Face ID, a fingerprint or a passcode on this phone first.',
   'more.alerts': 'Request alerts',
   'more.alertsLine': 'A notification when a member asks for a benefit or claims a reward',

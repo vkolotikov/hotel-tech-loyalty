@@ -3,6 +3,15 @@ import type { Key } from './en'
 /** Spanish addresses staff as usted, as the web workspace does. */
 export const es: Record<Key, string> = {
   'app.name': 'HexaTech Staff',
+  'checkIn.invalidAmount': "Introduzca un importe positivo con los decimales de la moneda.",
+  'checkIn.amountRequired': "Importe gastado",
+  'error.unconfirmed': "Resultado sin confirmar. Reintente esta solicitud o revise la actividad del miembro. No cree otra transacción.",
+  'error.attempt_storage': "No se pudieron guardar los datos del reintento. Cierre y vuelva a abrir este formulario.",
+  'requests.refreshError': "No se pudieron actualizar las solicitudes.",
+  'requests.loading': "Cargando solicitudes…",
+  'requests.rewardHistory': "Historial de recompensas",
+  'member.toNextVisits': "{{needed}} visitas para {{tier}}",
+  'member.toNextSpend': "{{needed}} de gasto para {{tier}}",
 
   'common.retry': 'Intentar de nuevo',
   'common.cancel': 'Cancelar',
@@ -15,7 +24,7 @@ export const es: Record<Key, string> = {
   'common.offline': 'Sin conexión. Se muestra lo último que se cargó.',
 
   'error.network': 'Sin conexión. Compruebe Internet e inténtelo de nuevo.',
-  'error.unknown': 'Algo salió mal. No se cambió nada; inténtelo de nuevo.',
+  'error.unknown': 'Algo salió mal. Inténtelo de nuevo.',
   'error.not_found': 'No encontrado. Puede que se haya eliminado.',
   'error.unauthenticated': 'Su sesión ha terminado. Vuelva a iniciar sesión.',
   'error.not_allowed': 'No tiene permiso para hacer esto. Consulte a un responsable.',
@@ -239,7 +248,7 @@ export const es: Record<Key, string> = {
   'more.preferences': 'Preferencias',
   'more.language': 'Idioma',
   'more.lock': 'Bloquear con Face ID o huella',
-  'more.lockLine': 'Vuelve a pedirlo tras dos minutos fuera',
+  'more.lockLine': 'Se bloquea al iniciar y tras dos minutos fuera',
   'more.lockMissing': 'Configure primero Face ID, una huella o un código en este teléfono.',
   'more.alerts': 'Avisos de solicitudes',
   'more.alertsLine': 'Una notificación cuando un miembro solicita un beneficio o canjea una recompensa',

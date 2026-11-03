@@ -6,24 +6,25 @@ import Constants from 'expo-constants'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
 import { WEB_BASE } from '../../lib/api'
-import { queryClient, useBoot } from '../../lib/queries'
+import { useBoot } from '../../lib/queries'
 import { useSession } from '../../lib/session'
 import { usePrefs } from '../../lib/prefs'
 import { useVersionCheck } from '../../lib/appVersion'
 import { updateUrl } from '../../lib/version'
 import { LANGUAGES, LANGUAGE_NAMES, useT } from '../../lib/i18n'
 import type { Key } from '../../lib/i18n/en'
+import type { Can } from '../../lib/types'
 import { C, RADIUS, TAB_BAR_ROOM, fonts } from '../../lib/theme'
 import { Avatar, Backdrop, GhostButton, IconBadge, Notice, Press, Row, SectionTitle, Surface, type IconName } from '../../components/ui'
 
 /** The workspace pages a phone opens in the browser (the web workspace's own routes). */
-const WEB_PAGES: { path: string; label: Key; icon: IconName; color: string }[] = [
+const WEB_PAGES: { path: string; label: Key; icon: IconName; color: string; permission?: keyof Can }[] = [
   { path: 'program', label: 'more.program', icon: 'trophy-outline', color: C.gold },
   { path: 'rewards', label: 'more.rewards', icon: 'gift-outline', color: '#c58cff' },
   { path: 'events', label: 'more.events', icon: 'calendar-outline', color: C.info },
-  { path: 'campaigns', label: 'more.campaigns', icon: 'megaphone-outline', color: '#ff7eb6' },
-  { path: 'insights', label: 'more.insights', icon: 'stats-chart-outline', color: C.success },
-  { path: 'settings', label: 'more.settings', icon: 'settings-outline', color: C.text2 },
+  { path: 'campaigns', label: 'more.campaigns', icon: 'megaphone-outline', color: '#ff7eb6', permission: 'manage_campaigns' },
+  { path: 'insights', label: 'more.insights', icon: 'stats-chart-outline', color: C.success, permission: 'view_insights' },
+  { path: 'settings', label: 'more.settings', icon: 'settings-outline', color: C.text2, permission: 'manage_program' },
   { path: 'guide', label: 'more.guide', icon: 'book-outline', color: C.goldLight },
 ]
 
@@ -39,6 +40,7 @@ export default function More() {
   const versionState = useVersionCheck(s => s.state)
   const storeUrl = updateUrl(useVersionCheck(s => s.versions), Platform.OS)
   const [lockProblem, setLockProblem] = useState(false)
+  const pages = WEB_PAGES.filter(page => !page.permission || boot.data?.staff.can[page.permission])
 
   const toggleLock = async (on: boolean) => {
     setLockProblem(false)
@@ -54,7 +56,6 @@ export default function More() {
   const signOut = () => {
     const go = async () => {
       await useSession.getState().signOut()
-      queryClient.clear()
     }
     if (Platform.OS === 'web') return void go()
     Alert.alert(t('more.signOut'), t('more.signOutAsk'), [
@@ -80,14 +81,14 @@ export default function More() {
         <View>
           <SectionTitle title={t('more.web')} />
           <Surface padding={0} style={{ paddingHorizontal: 16 }}>
-            {WEB_PAGES.map((page, i) => (
+            {pages.map((page, i) => (
               <Row
                 key={page.path}
                 left={<IconBadge name={page.icon} color={page.color} size={36} />}
                 title={t(page.label)}
                 right={<Ionicons name="open-outline" size={16} color={C.text3} />}
                 onPress={() => { void WebBrowser.openBrowserAsync(`${WEB_BASE}/loyalty/${page.path}`) }}
-                last={i === WEB_PAGES.length - 1}
+                last={i === pages.length - 1}
               />
             ))}
           </Surface>
