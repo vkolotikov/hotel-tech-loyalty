@@ -31,7 +31,7 @@ modern, luxury, poverfull, easy to use nice design".
 | Setup pages | Program, Rewards, Events, Campaigns, Insights, Settings and Guide open the web workspace in the browser from More. The app is the desk; setting up stays on the web |
 | Name and ids | HexaTech Staff; bundle id and package `uk.hexatech.loyalty.staff`; scheme `hexatech-staff` |
 | Publisher | Apple team FDS Cards Ltd (`HNWSAQ5CQ9`); Google Play under the same account as Hotel Staff |
-| Distribution | App Store **unlisted** (link only; Apple grants it on request after review); Google Play internal test, then unlisted or closed |
+| Distribution | App Store **unlisted** (link only; Apple grants it on request after review); Google Play internal test, then production under the owner's 2026-11-03 publishing authorization. Play has no unlisted mode; private distribution requires managed Google Play |
 | Server | `https://app.hexa-tech.uk/api` (`EXPO_PUBLIC_API_URL` in `eas.json`); `loyalty.hotel-tech.ai` is another host of the same backend |
 
 ## What staff can do (version 1)
@@ -71,6 +71,16 @@ modern, luxury, poverfull, easy to use nice design".
 | 5. Stores | **Prepared 2026-10-31** (`02-RELEASE.md`): store texts in five languages (`apps/loyalty-staff/store/listing.json`, limits tested), screenshots, the privacy and data-safety answers, the review notes, the unlisted request; the release config checked by a local prebuild. Left: the Expo project and credentials, the builds, TestFlight and Play internal test, the demo staff login, then release | Owner: accounts, demo login, submitting; agent: the builds once Expo is reachable |
 
 ## Checks before release
+
+### Store progress, 3 November 2026
+
+- iOS **1.0.0 (2)** submitted and **Waiting for Review**; submission
+  `1e91c8e9-d6c2-402a-9f15-b35bf8e1074d`. Manual release stays enabled for the unlisted-distribution request after approval.
+- Android **1.0.0 (3)** available to internal testers; production listing and app-content forms are being completed.
+- Both Firebase production files, FCM V1 credentials and store submission credentials are configured. An isolated
+  demo organisation and reviewer staff/member accounts are prepared and their API workflows tested.
+- The detailed chronological status, links and remaining physical-device checks are in `02-RELEASE.md`. The earlier
+  "What is left" table records the initial implementation handoff; this status supersedes its store-setup entries.
 
 - **The NFC cards' chip type.** iPhones read NTAG, Ultralight and DESFire, not MIFARE Classic; Android reads all of
   them. Check the production cards and the cards you sell.

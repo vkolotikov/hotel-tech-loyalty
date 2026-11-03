@@ -250,3 +250,16 @@ NFC needs a venue's physical card; the camera reads a member's QR code from the 
 - Play's privacy-policy link and no-advertising declaration are saved as draft changes. Other app-content forms,
   listing and production submission remain in progress. Added original-brand Play assets in `store/play/`:
   a 512x512 icon export and 1024x500 feature graphic, visually inspected. These do not require new app binaries.
+
+**2026-11-03, Play app-content preparation (Codex):**
+
+- Saved the Government apps declaration as **No** and Health as **no health features**. Financial features explicitly
+  lists **Rewards, points, frequent flier miles, and other incentives**; selected this because the app awards and
+  redeems loyalty points. Google requires no additional financial or regional health documentation for these answers.
+  The dashboard confirmed **5 of 11** app-setup tasks complete.
+- Google's target-audience form is blocked until Sign-in details (formerly App access) are complete. Prepared the
+  isolated staff review account's label, email and 436-character workflow instructions, with full demo feature
+  access confirmed. Password entry and Add/Save were handed to the owner under the original release instructions.
+  A private owner-only text file contains the demo sign-ins without API tokens. Never put its contents in git/chat.
+- Audience, content rating, data safety, category/contact, full Play listings and production review remain pending
+  at this checkpoint. The Staff production release has not been submitted or published.
