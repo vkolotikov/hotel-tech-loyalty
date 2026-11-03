@@ -394,3 +394,13 @@ More → Bookings → Book (an appointment, paid at the venue), More → Profile
 - Rechecked all **25 authenticated API reads** after the native writes. They pass, the staff session remains refused
   by the member portal, and Staff sees one pending demo benefit request. No new native binary or backend deployment
   was required by this continuation. Apple's member release remains staged pending the physical iPhone result.
+
+**2026-11-03, TestFlight access check (Codex):**
+
+- Owner could not find build 20. API readback confirms it is VALID, unexpired, minimum iOS **16.4**, and
+  **IN_BETA_TESTING**. Existing Internal QA includes build 20 and has access to all builds.
+- App Store Connect's tester row explicitly shows **Installed 2.0.0 (20), Nov 3, 2026** for the owner's existing
+  tester. The browser had been displaying **HexaTech Staff / build 2**; switched to **HexaTech Loyalty** and its
+  Internal QA page. No tester was added or removed, and no invitation or new build was needed.
+- Owner was directed to the member app in TestFlight. This confirms availability/installation telemetry only;
+  the iPhone sign-in and five-menu acceptance result is still pending, so member iOS public review remains staged.

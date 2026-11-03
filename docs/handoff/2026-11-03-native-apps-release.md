@@ -96,6 +96,10 @@ fully verified by this agent; do not report all device checks complete.
   cancellation/re-request pass. The staff API confirms one pending demo request. All 25 authenticated reads pass again.
 - iPhone uses the existing TestFlight invitation, **2.0.0 (20)**; no public TestFlight join URL exists. Forty-one
   regression tests and 25 authenticated API reads passed again; this does not establish native iOS acceptance.
+  Later access audit: build 20 is VALID, unexpired, IN_BETA_TESTING, minimum iOS 16.4, and in Internal QA's builds.
+  App Store Connect now explicitly shows **Installed 2.0.0 (20), Nov 3, 2026** for the owner's existing tester.
+  The open browser had been on Staff's build 2; switched it to Loyalty. No invitation/access change was necessary.
+  Installation telemetry does not prove the reported sign-in/menu issue is resolved on the iPhone; await that result.
 - **Apple credential incident resolved:** the private helper now allowlists scalar output. Owner authorized browser
   replacement with the same role; both Expo assignments and new Apple access were verified before the exposed key
   was revoked. Apple's UI confirms revocation. Do not reuse the old key or print any credential.
