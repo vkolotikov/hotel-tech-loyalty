@@ -216,3 +216,20 @@ NFC needs a venue's physical card; the camera reads a member's QR code from the 
 - On 3 November the owner confirmed Staff works and explicitly authorised publishing it on Android and iOS.
   Continue release preparation and submission under that instruction. Owner-entered sign-ins, demo credentials and
   legal declarations remain necessary; no production rollout or App Review submission has happened yet.
+
+**2026-11-03, reviewer accounts and live acceptance (Codex):**
+
+- Owner authorized creating isolated demo accounts. Created **HexaTech App Review Demo** (organisation 49), with
+  member 549 and a staff manager restricted to that organisation. No existing customer account or membership changed.
+  Generated credentials are held in the workstation user's private release directory, outside git, with a user-only ACL.
+- Tested real member/staff sign-in and **25 authenticated reads** across the apps' home, members, card, history,
+  rewards, offers, requests, programme and booking-history APIs. Confirmed a staff session gets `403 member_only`
+  from the member portal. Demo booking inventories are absent, so booking entry points are disabled as expected.
+- Awarded 500 demo points and repeated the same idempotency key: one ledger line, no duplicate points. Redeemed and
+  fulfilled a demo reward, checked in for 10 points, requested/approved/completed a benefit. Left a second reward
+  redemption and a late-checkout benefit request pending for reviewers. Demo member number: **HL-2026-000493**.
+- Apple review information now has the verified demo staff sign-in, concrete demo steps, and owner-supplied contact
+  Vitalijs Kolotikovs / info@hexa-tech.uk / +44 736 651 0477. The company is FDS Cards Ltd, 25 Cabot Square,
+  Canary Wharf, London E14 4QZ, United Kingdom. Password values were never printed or committed.
+- Staff privacy data types now include all five intended categories. Purpose/linkage/tracking setup and publication
+  are still being completed; do not treat the privacy declaration or store release as finished at this checkpoint.
