@@ -119,7 +119,9 @@ class SendNotificationCampaignChunk implements ShouldQueue
         $identity = $identityService->forOrganization($campaign->organization_id);
         $orgName  = $identity['from_name'] ?: $org?->name;
 
-        $members = LoyaltyMember::whereIn('id', $slice)->with(['user', 'tier'])->get();
+        // In id order, like SendEmailCampaignChunk: PostgreSQL returns an unordered IN list in whatever order its pages
+        // hold the rows, so a cancellation part-way through would otherwise stop at a different member each run.
+        $members = LoyaltyMember::whereIn('id', $slice)->with(['user', 'tier'])->orderBy('id')->get();
 
         foreach ($members as $member) {
             if ($sendPush && $member->expo_push_token) {

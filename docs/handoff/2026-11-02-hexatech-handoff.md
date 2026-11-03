@@ -37,6 +37,24 @@ next steps". The runbook `docs/plan-modules.md` was rewritten for it; the prices
 
 ## Production
 
+Latest: **94e8c73** (3 Nov, just after midnight UTC): the second round above. It is source patch **976ed84** (this
+branch at f62d526 on `main` 05ffcc8; 54 files, 5 added, 49 changed, no deletions, no migration) plus its SPA build.
+Before the push: the whole tree, builds aside, equal to the branch at f62d526; on the artifact, `tsc -b`, 403 Vitest
+files and 5827 tests passed; the scoped PHP suite gave 7331 passed, 23 skipped, 39 failed, the same 39 test names as on
+the branch (this container's missing extensions). The next source-patch baseline is **f62d526**.
+
+**Not checked by content** (this container cannot reach `app.hexa-tech.uk`). The owner checks:
+- the live admin bundle (`https://app.hexa-tech.uk/` → `/spa/assets/index-*.js`) has `Choose your package` (in no earlier bundle);
+- `https://app.hexa-tech.uk/loyalty/register` shows three packages (Lite, Standard, Pro) and a Monthly/Yearly switch.
+
+CI on 94e8c73 (run 33): green on all three SQLite shards, both SPA jobs, Larastan and the audit. On PostgreSQL 7375
+tests ran, and the 4 `ContactsFeedTest` failures are now known ones. One new failure, unrelated to this round:
+`NotificationCampaignPushTest::test_cancellation_during_delivery_stops_new_claims_without_losing_the_completed_count`.
+`SendNotificationCampaignChunk` read its members with an unordered `whereIn`, and PostgreSQL returns those in page
+order, which after a long run of rolled-back tests need not be id order. The test assumes the first member goes first.
+With the job reading `orderByDesc('id')` the test fails every time, so the cause is confirmed. The fix is `orderBy('id')`,
+as `SendEmailCampaignChunk` already does; `tests/Feature/Mail` passes on PostgreSQL 16 and SQLite (127 each).
+
 Previous: **05ffcc8** (2 Nov evening, the owner's "deploy for me"): the plan modules below. It is source patch
 **1b3949a** (this branch at 7f5baf1 on `main` 3618ead; 64 files, no deletions, no migration) plus its SPA build.
 Before the push: tree parity with the branch; on the artifact, `tsc -b`, 402 Vitest files and 5818 tests passed;
