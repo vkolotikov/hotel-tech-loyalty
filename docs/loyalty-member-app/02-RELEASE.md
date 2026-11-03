@@ -267,3 +267,17 @@ More → Bookings → Book (an appointment, paid at the venue), More → Profile
 - Apple review contact, demo member sign-in and accurate demo notes are now saved and verified by presence checks.
   The isolated demo has sample points, a reward and a requestable benefit. The staff release guide records the
   completed live workflow checks. Native device acceptance remains separate from API and automated regression tests.
+
+**2026-11-03, replacement build delivery (Codex):**
+
+- Both replacement builds above are now **FINISHED**. iOS submission
+  `https://expo.dev/accounts/hoteltechai/projects/hotel-loyalty/submissions/168bb90a-d569-42ca-b23a-14da322be01f`
+  and Android submission
+  `https://expo.dev/accounts/hoteltechai/projects/hotel-loyalty/submissions/ae6e8a43-1735-4691-a2ec-664e106265c9`
+  both report **FINISHED** through EAS's submission query.
+- Apple build **20** is **VALID**, selected on the 2.0.0 draft, and assigned to existing **Internal QA**
+  (`5efab3f1-3e12-4793-a462-2d7e0367c73a`), with internal state **IN_BETA_TESTING**. No public member review was submitted.
+- Play generated the signed APK for **26**. It was installed over 25 on the Pixel 8 API 35 emulator;
+  package inspection confirms `versionName=2.0.0`, `versionCode=26`. Authenticated native UI testing is still pending.
+- Updated source reviewer notes to reflect the actual demo: membership, points, reward and benefit request;
+  no bookable demo inventory or real purchases. Credentials remain outside git and in the stores' private review fields.

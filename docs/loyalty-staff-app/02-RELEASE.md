@@ -233,3 +233,20 @@ NFC needs a venue's physical card; the camera reads a member's QR code from the 
   Canary Wharf, London E14 4QZ, United Kingdom. Password values were never printed or committed.
 - Staff privacy data types now include all five intended categories. Purpose/linkage/tracking setup and publication
   are still being completed; do not treat the privacy declaration or store release as finished at this checkpoint.
+
+**2026-11-03, Apple review submission (Codex):**
+
+- Completed all five privacy categories: Name, Email Address, User ID, Device ID, Purchase History; each linked to
+  the user, App Functionality only, no tracking. The owner clicked the legal privacy Publish confirmation; the UI
+  confirmed publication by Vitalijs Kolotikovs.
+- Completed the age-rating questionnaire (including Apple's required social-media fields); Apple shows **4+**.
+  Set the initial price to **Free**, base territory **GBR**, after verifying that no prior price schedule existed.
+- The owner confirmed content rights. The UI initially still showed unset, so the same confirmed answer was saved
+  and visibly verified: the app has the necessary rights to third-party content.
+- Apple validation passed, and **1.0.0 (2)** was submitted for review under the owner's publishing authorization.
+  The UI now shows **Waiting for Review**, with submission
+  `https://appstoreconnect.apple.com/apps/6829777674/distribution/reviewsubmissions/details/1e91c8e9-d6c2-402a-9f15-b35bf8e1074d`.
+  **Manual release remains enabled.** After approval, request unlisted distribution before releasing it publicly.
+- Play's privacy-policy link and no-advertising declaration are saved as draft changes. Other app-content forms,
+  listing and production submission remain in progress. Added original-brand Play assets in `store/play/`:
+  a 512x512 icon export and 1024x500 feature graphic, visually inspected. These do not require new app binaries.
