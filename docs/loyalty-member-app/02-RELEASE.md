@@ -346,3 +346,51 @@ More → Bookings → Book (an appointment, paid at the venue), More → Profile
   `store/play/release-notes.txt` (288–317 characters each). Preview validates **Ready to release**, no lost device
   support; saved to Publishing overview, which explicitly requires a separate Send for review action. It has
   not been submitted. Keep it staged until native acceptance and reviewer-access password entry are complete.
+
+**2026-11-03, owner confirmations and security follow-up (Codex):**
+
+- Owner completed member Play reviewer access and published Apple's eleven-type privacy declaration. Apple UI
+  confirms Published, with all types complete, linked to accounts, no tracking; Product Interaction also Analytics.
+- Owner then explicitly authorized equivalent Apple API-key replacement through the browser. The replacement was
+  assigned to both existing Expo projects and verified before the old exposed key was revoked. Apple UI confirms
+  revocation. No key material was committed or printed by the replacement helpers; use scalar-only API output.
+- CUA emulator text entry pasted an unexpected Android clipboard value into Google search, potentially the shared
+  demo password. Owner was informed and explicitly authorized replacement and direct configuration of both isolated
+  demo sign-ins in Apple, Google Play and the emulator. This overrides the earlier owner-only demo-password entry
+  restriction. Both passwords were changed independently, other demo sessions revoked, old passwords rejected and
+  new identities verified. Both apps' Apple and saved Play reviewer passwords match the new values by private readback.
+- Staff's Play credential update was separately submitted for review. Member's remains saved with the staged release.
+  Apple member is still PREPARE_FOR_SUBMISSION, manual release, selected build 20 VALID, reviewer credentials verified.
+- Internal Android enrollment is confirmed for the emulator's Google account. Play Console shows active 2.0.0
+  Available to internal testers, with the expected selected tester list; API track readback names version 26.
+  The first Play install nevertheless delivered public version 20 / 1.1.0, verified by package inspection. Do not
+  count tests against that installed version as acceptance of the correction. Native acceptance remains in progress.
+- Do not use CUA typeText or paste inside the Android emulator. Use direct key events and verify the destination.
+  All credentials remain in the private release directory and store review fields, never in git or chat.
+
+**2026-11-03, Android native acceptance (Codex):**
+
+- Play test enrollment propagated after the first public-version install. The listing then showed **Internal Beta**
+  and Update. Installed through Play; package inspection confirms **versionCode 26, versionName 2.0.0,
+  installerPackageName com.android.vending** on Pixel 8 API 35. Play protection was not disabled or bypassed.
+- Signed in using the rotated isolated member account. **Home, Card, Rewards, Activity and More all render and
+  navigate without “Something went wrong.”** Home shows the correct demo venue/member, card and points; Card renders
+  the QR. Rewards Benefits, Catalogue, Offers empty state and My codes work. More opens Inbox, Profile and Help;
+  Help expands answers and follows its Home link. Profile's password and guarded account-deletion form are accessible.
+- A native demo redemption succeeded, reduced points **310 to 210**, and appeared in My codes and Activity. Marking
+  the demo inbox read updated More's unread state. Cancelled the isolated late-checkout request and requested it
+  again successfully, leaving a pending request for reviewers. No real booking, purchase or customer data was changed.
+- Existing 41 regression tests and 25 authenticated reads passed earlier in this audit; no native source changed
+  during these device checks. Physical iPhone/keychain migration, NFC, biometrics, push delivery and real payment
+  acceptance are separate. Owner was asked to check **TestFlight 2.0.0 (20)** on the iPhone; that result is pending.
+
+**2026-11-03, member Android production submission (Codex):**
+
+- Following native acceptance and private readback of updated reviewer credentials, sent all **15 changes for
+  review**: production 26 (2.0.0), five-language listing/images and the audited content declarations.
+- Google's automatic quick checks completed successfully. Publishing overview explicitly confirms **Your changes
+  are now in review**. **Managed publishing is off**, so approval can publish the requested full rollout. This is
+  evidence of an accepted review submission, not yet of public 2.0.0 availability.
+- Rechecked all **25 authenticated API reads** after the native writes. They pass, the staff session remains refused
+  by the member portal, and Staff sees one pending demo benefit request. No new native binary or backend deployment
+  was required by this continuation. Apple's member release remains staged pending the physical iPhone result.

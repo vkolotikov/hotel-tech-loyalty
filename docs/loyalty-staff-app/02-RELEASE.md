@@ -325,3 +325,20 @@ NFC needs a venue's physical card; the camera reads a member's QR code from the 
 - Final verification the same session: automated quick checks completed, the running-check banner disappeared and
   Google explicitly states **Your changes are now in review. We may find additional issues when reviewing your app.**
   No additional pending action or pre-review issue is shown. Approval and public availability remain pending.
+
+**2026-11-03, publication and credential follow-up (Codex):**
+
+- Google approved the production release. Publishing overview now says **Last published on 3 November 2026**,
+  and the public listing at `https://play.google.com/store/apps/details?id=uk.hexatech.loyalty.staff` visibly
+  shows **HexaTech Staff**, FDS Cards ltd and **Install**. Android Staff is publicly available.
+- Apple Staff is still **WAITING_FOR_REVIEW**, build 2 VALID, manual release. Unlisted distribution remains the
+  intended step after approval. Do not describe iOS as published.
+- Owner explicitly authorized equivalent Apple API-key rotation through the browser. Both Expo project assignments
+  and Apple API access were verified with the replacement before revoking the exposed key. Revocation was verified
+  in Apple's UI. Credentials and helper scripts remain outside git.
+- An emulator clipboard mismatch may have exposed the shared demo password. Owner explicitly authorized replacing
+  both isolated demo passwords and entering them in both stores and the emulator, overriding the earlier owner-only
+  demo-password entry restriction. Both demo passwords were replaced, other sessions revoked, old-password refusal
+  and new-login identities verified. Both stores' Staff reviewer fields match the replacement by private readback.
+- The Staff Play reviewer-password change was sent separately and now shows **Changes in review**. This does not
+  undo the already published production binary. Apple reviewer access was updated without withdrawing the submission.

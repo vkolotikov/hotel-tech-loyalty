@@ -12,19 +12,21 @@ unrelated work was untouched. Detailed append-only records are in each app's `02
   approval request Apple's unlisted distribution, then release. It is not yet publicly available.
   A later source audit added Other User Content, Search History and Other Usage Data to the initial five privacy
   types. All eight are now published, linked to users for App Functionality, no tracking, with no setup warnings.
-- **Staff Android 1.0.0 (3): production submission accepted**, app `4973001253686610054`, package
-  `uk.hexatech.loyalty.staff`. Google shows **Changes in review** after sending 15 changes on 3 November at about
-  10:44 UTC. Automated quick checks have completed; Google explicitly confirms **Your changes are now in review**.
+- **Staff Android 1.0.0 (3): PUBLISHED**, app `4973001253686610054`, package
+  `uk.hexatech.loyalty.staff`. Google approved the 15-change submission. Publishing overview says **Last published
+  on 3 November 2026**; the public listing shows **HexaTech Staff**, FDS Cards ltd and **Install**.
   Owner explicitly selected **all supported countries**: 177 named countries/regions plus Rest of world (178).
-  Managed publishing is off, so approval can publish the full rollout automatically. It is not yet confirmed live.
+  Managed publishing is off. A later reviewer-password update is separately **in review**; the binary is already live.
   All 11 setup tasks, eight-type Data safety, IARC ratings, 18+ target audience, verified reviewer access, Business
   category/contact and five-language listing/images are saved. Advertising ID is No, verified against source and
   the actual build 3 AAB manifest (no AD_ID permission). Internal testing remains available.
-- **HexaTech Loyalty 2.0.0 iOS (20) / Android (26): delivered to testing.** Both EAS submissions are FINISHED:
+- **HexaTech Loyalty 2.0.0 iOS (20): staged; Android (26): submitted for production review.** Both EAS submissions are FINISHED:
   iOS `168bb90a-d569-42ca-b23a-14da322be01f`, Android `ae6e8a43-1735-4691-a2ec-664e106265c9`.
-  iOS 20 is VALID, selected in the editable 2.0.0 draft and in Internal QA, IN_BETA_TESTING. Android 26 is in Play
-  internal testing; its Play-signed APK was installed over 25 on the Pixel 8 emulator. Member public review has
-  not been submitted. A physical iPhone retest remains necessary.
+  iOS 20 is VALID, selected in the editable 2.0.0 draft and in Internal QA, IN_BETA_TESTING. Apple privacy is published,
+  reviewer credentials verified. Apple public review remains paused for the physical iPhone retest.
+  Android 26 was installed through Play and passed native member acceptance. Sent all 15 member changes for
+  production review; Google's quick checks passed and it explicitly says **Your changes are now in review**.
+  Managed publishing is off, so approval can publish the full rollout automatically.
 
 ## Loyalty sign-in correction
 
@@ -50,8 +52,9 @@ Booking inventory is absent, and the server correctly hides booking entry points
 
 Credentials and API tokens remain outside git under the workstation user's private release directory. A separate
 owner-only `review-sign-ins-owner.txt` contains just the two demo sign-ins, no API tokens. Never print its content.
-The original release instruction reserves password entry and legal declarations for the owner. Do not repeat
-previously completed owner confirmations.
+The owner explicitly authorized replacing both isolated demo passwords and entering the replacements in both
+stores and the emulator after the clipboard incident below. That overrides the earlier owner-only rule for these
+two demo sign-ins. Other sign-ins/2FA and legal declarations remain the owner's. Do not repeat completed confirmations.
 
 Firebase project `hotel-loyalty-app-1414d` is configured for both current packages. EAS production secret files and
 FCM V1 keys are assigned. Play submission uses a separate service account, scoped to these apps with testing
@@ -77,24 +80,30 @@ fully verified by this agent; do not report all device checks complete.
 - Member Play listing now matches all five source locales exactly, with the current icon, feature graphic and
   six actual app captures. The old Data safety answer incorrectly said no data collected; the audited eleven
   types are saved and all handling rows validate. The privacy URL now points to `app.hexa-tech.uk/privacy`.
-- Production release **26 (2.0.0)** is now prepared with five localized release notes, validated **Ready to
-  release**, and saved to Publishing overview. Google explicitly confirmed it still needs sending for review.
-  No device loses support. Do not send until native acceptance and reviewer-access entry are completed.
+- Production release **26 (2.0.0)** has five localized release notes and validated **Ready to release**. After
+  native Android acceptance and reviewer credential readback, all 15 changes were sent for review. Google's
+  Publishing overview shows **Changes in review**; quick checks completed and Google explicitly confirms the review.
 - Apple member privacy now has all eleven categories fully configured with no Set Up warnings. All are linked,
   for functionality, with no tracking; Product Interaction additionally declares Analytics. The final Publish
-  legal confirmation is open in Chrome tab two and awaits the owner; publication is not yet confirmed.
-- Member reviewer access is prepared in the first Chrome tab, replacing the older entry with the isolated demo.
-  The owner must enter the member password from the private owner sign-in file, then Add and Save. It is not yet
-  confirmed saved. Never print the password or inspect the owner file in UI output.
-- Android testing URL: `https://play.google.com/apps/internaltest/4701572602064076698`. Play protection refuses
-  the sideloaded build 26; the owner must join and install through Play using the emulator's signed-in account.
-  Chrome's first-use Terms step is pending the owner. Do not bypass protection.
+  confirmation was completed by the owner; publication was then verified in Apple's UI.
+- Both apps' Apple and Play reviewer passwords now match independent replacement demo passwords by private readback.
+  Old passwords are rejected and other demo sessions were revoked. Never print passwords or inspect the owner file in UI output.
+- Android testing URL: `https://play.google.com/apps/internaltest/4701572602064076698`. Chrome first-use is complete,
+  enrolled account and selected tester list verified. Play initially delivered public 1.1.0 (20); after enrollment
+  propagated it offered Internal Beta 2.0.0. Installed **26** through Play, installer `com.android.vending` verified.
+  No protection was bypassed. Home, Card, Rewards, Activity and More pass, including Inbox, Profile and Help.
+  Native demo redemption reduced points 310 to 210; My codes and Activity reflect it. Inbox mark-read and benefit
+  cancellation/re-request pass. The staff API confirms one pending demo request. All 25 authenticated reads pass again.
 - iPhone uses the existing TestFlight invitation, **2.0.0 (20)**; no public TestFlight join URL exists. Forty-one
   regression tests and 25 authenticated API reads passed again; this does not establish native iOS acceptance.
-- **Apple credential incident:** a private inspection helper logged authentication context. The helper now
-  allowlists scalar output. Apple API work is paused; owner replacement of the existing key, equivalent EAS
-  assignments for both current apps, then revocation of the exposed key remain pending. Do not reuse the old key
-  or print any credential. Private follow-up is outside git in `HexaTech-release-private`.
+- **Apple credential incident resolved:** the private helper now allowlists scalar output. Owner authorized browser
+  replacement with the same role; both Expo assignments and new Apple access were verified before the exposed key
+  was revoked. Apple's UI confirms revocation. Do not reuse the old key or print any credential.
+- **Emulator clipboard incident resolved by rotation:** CUA typeText pasted an unexpected Android clipboard value
+  into search, potentially the shared demo password. Owner was informed and explicitly authorized replacing and
+  configuring both demo sign-ins. Replacements are verified in both stores and the member emulator. Use direct
+  emulator key events only; the on-screen email keyboard's @ key avoids host-layout symbol mismatches. Do not reopen
+  the old search or the owner-only Notepad window. Private follow-up remains outside git.
 - Public privacy/deletion technical and branding changes deployed separately via source patch **d9117b475**,
   source **2f0158565**, from `feature/native-app-policy-20261103`. Both public pages verify by content: current
   app names, billing-address collection by Stripe, payment-component analytics, Expo/APNs/FCM, the member
