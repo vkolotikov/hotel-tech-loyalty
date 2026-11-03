@@ -337,6 +337,38 @@
         "staff": "{{n}} miembros del equipo",
         "places": "{{n}} ubicaciones",
         "priority": "Soporte prioritario"
+      },
+      "signup": {
+        "step": "Paso {{n}} de {{total}}",
+        "account_title": "Empiece su prueba gratuita de {{days}} días",
+        "business_title": "Sobre su negocio",
+        "business_subtitle": "Unos datos para preparar {{product}} para usted.",
+        "back": "Atrás",
+        "start": "Empezar mi prueba gratuita",
+        "sending": "Enviando su código…",
+        "business_name": "Nombre del negocio",
+        "business_placeholder": "p. ej. Seaside Spa",
+        "phone_placeholder": "Número de teléfono",
+        "country_code": "Prefijo del país",
+        "business_type": "Tipo de negocio",
+        "choose_one": "Elija uno",
+        "invalid_email": "Introduzca una dirección de correo válida.",
+        "short_password": "Su contraseña debe tener al menos 8 caracteres.",
+        "show_password": "Mostrar contraseña",
+        "hide_password": "Ocultar contraseña",
+        "industry": {
+          "hotel": "Hotel o alquiler vacacional",
+          "beauty": "Salón, spa o belleza",
+          "medical": "Clínica o consulta médica",
+          "restaurant": "Restaurante, café o bar",
+          "fitness": "Gimnasio o estudio de fitness",
+          "education": "Escuela o formación",
+          "legal": "Despacho de abogados",
+          "real_estate": "Inmobiliaria",
+          "services": "Otros servicios",
+          "other": "Otro"
+        },
+        "continue": "Continuar"
       }
     }
   },

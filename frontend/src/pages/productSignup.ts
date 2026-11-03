@@ -208,3 +208,59 @@ export function sharedProductWords(t: TFunction) {
     seePlans: t('auth.product.see_plans', 'See all plans'),
   }
 }
+
+/**
+ * The two-step trial sign-up's words (owner 2026-11-03: every trial starts on Standard, monthly; two steps only).
+ * Literal keys, so the locale sweep checks every one.
+ */
+export function signupWords(t: TFunction) {
+  return {
+    step: (n: number) => t('auth.product.signup.step', { n, total: 2, defaultValue: 'Step {{n}} of {{total}}' }),
+    accountTitle: (days: number) => t('auth.product.signup.account_title', { days, defaultValue: 'Start your {{days}}-day free trial' }),
+    businessTitle: t('auth.product.signup.business_title', 'About your business'),
+    businessSubtitle: (product: string) => t('auth.product.signup.business_subtitle', { product, defaultValue: 'A few details to set up {{product}} for you.' }),
+    continue: t('auth.product.signup.continue', 'Continue'),
+    back: t('auth.product.signup.back', 'Back'),
+    start: t('auth.product.signup.start', 'Start my free trial'),
+    sending: t('auth.product.signup.sending', 'Sending your code…'),
+    businessName: t('auth.product.signup.business_name', 'Business name'),
+    businessPlaceholder: t('auth.product.signup.business_placeholder', 'e.g. Seaside Spa'),
+    phonePlaceholder: t('auth.product.signup.phone_placeholder', 'Phone number'),
+    countryCode: t('auth.product.signup.country_code', 'Country code'),
+    businessType: t('auth.product.signup.business_type', 'Type of business'),
+    chooseOne: t('auth.product.signup.choose_one', 'Choose one'),
+    invalidEmail: t('auth.product.signup.invalid_email', 'Please enter a valid email address.'),
+    shortPassword: t('auth.product.signup.short_password', 'Your password needs at least 8 characters.'),
+    showPassword: t('auth.product.signup.show_password', 'Show password'),
+    hidePassword: t('auth.product.signup.hide_password', 'Hide password'),
+    industry: {
+      hotel: t('auth.product.signup.industry.hotel', 'Hotel or holiday rental'),
+      beauty: t('auth.product.signup.industry.beauty', 'Salon, spa or beauty'),
+      medical: t('auth.product.signup.industry.medical', 'Clinic or medical practice'),
+      restaurant: t('auth.product.signup.industry.restaurant', 'Restaurant, café or bar'),
+      fitness: t('auth.product.signup.industry.fitness', 'Gym or fitness studio'),
+      education: t('auth.product.signup.industry.education', 'School or training'),
+      legal: t('auth.product.signup.industry.legal', 'Law firm'),
+      real_estate: t('auth.product.signup.industry.real_estate', 'Real estate'),
+      services: t('auth.product.signup.industry.services', 'Other services'),
+      other: t('auth.product.signup.industry.other', 'Something else'),
+    } as Record<string, string>,
+  }
+}
+
+/** What a product's trial asks billing for: always Standard, monthly (owner 2026-11-03); the package is chosen at its end. */
+export function productTrialTerms(product: SignupProduct): { plan: string; billing_interval: 'MONTHLY' } {
+  return { plan: packageSlug(product, 'standard'), billing_interval: 'MONTHLY' }
+}
+
+/** A sign-up email the server will take: something@domain.tld, no spaces. */
+export function looksLikeEmail(email: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())
+}
+
+/** Step 1's check before moving on: the email's form, then the 8-character password minimum. */
+export function accountStepProblem(email: string, password: string): 'email' | 'password' | null {
+  if (!looksLikeEmail(email)) return 'email'
+  if (password.length < 8) return 'password'
+  return null
+}
