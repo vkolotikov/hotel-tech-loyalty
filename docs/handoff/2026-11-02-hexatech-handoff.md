@@ -37,6 +37,16 @@ next steps". The runbook `docs/plan-modules.md` was rewritten for it; the prices
 
 ## Production
 
+Latest: **94e8c73** (3 Nov, just after midnight UTC): the second round above. It is source patch **976ed84** (this
+branch at f62d526 on `main` 05ffcc8; 54 files, 5 added, 49 changed, no deletions, no migration) plus its SPA build.
+Before the push: the whole tree, builds aside, equal to the branch at f62d526; on the artifact, `tsc -b`, 403 Vitest
+files and 5827 tests passed; the scoped PHP suite gave 7331 passed, 23 skipped, 39 failed, the same 39 test names as on
+the branch (this container's missing extensions). The next source-patch baseline is **f62d526**.
+
+**Not checked by content** (this container cannot reach `app.hexa-tech.uk`). The owner checks:
+- the live admin bundle (`https://app.hexa-tech.uk/` → `/spa/assets/index-*.js`) has `Choose your package` (in no earlier bundle);
+- `https://app.hexa-tech.uk/loyalty/register` shows three packages (Lite, Standard, Pro) and a Monthly/Yearly switch.
+
 Previous: **05ffcc8** (2 Nov evening, the owner's "deploy for me"): the plan modules below. It is source patch
 **1b3949a** (this branch at 7f5baf1 on `main` 3618ead; 64 files, no deletions, no migration) plus its SPA build.
 Before the push: tree parity with the branch; on the artifact, `tsc -b`, 402 Vitest files and 5818 tests passed;
