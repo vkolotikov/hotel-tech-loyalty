@@ -3,7 +3,7 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { MemoryRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import '../i18n'
-import { AccountTeam } from './AccountTeam'
+import { AccountTeam } from './AccountTeam.tsx'
 import { inviteRoles, memberState, type TeamList } from './accountTeam'
 
 const auth = vi.hoisted(() => ({
