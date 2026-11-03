@@ -240,3 +240,22 @@ More → Bookings → Book (an appointment, paid at the venue), More → Profile
   Investigation is in progress: the app's first member request is `GET /api/v1/member/portal`; unauthenticated live
   checks return 401 as expected. No root cause or correction has yet been verified. Keep this version out of review
   until the authenticated failure is reproduced, corrected and retested on iOS.
+
+**2026-11-03, saved-session diagnosis and correction (Codex):**
+
+- Production logs and a read-only account check identified an old iOS **staff** session restored from the original
+  app's shared keychain. That account has no membership. The portal correctly returns `403 member_only`; the legacy
+  points-history endpoint then fails on its missing member. Firebase is unrelated to this sign-in failure.
+- The app now forgets an incompatible saved staff session, clears cached member data, and explains the required
+  member account on sign-in in all five languages. Untyped legacy sessions recover on the portal's explicit
+  `member_only` answer. Valid memberships stay signed in; a delayed old response cannot discard a newer session.
+  No real account, membership, staff token or backend source was changed.
+- Checks: **41 tests / 3 files pass**, TypeScript passes, touched-file ESLint passes, and Expo dependencies match
+  SDK 58. Regression tests cover saved staff sessions, untyped legacy sessions, valid members, ordinary access
+  refusals, stale responses, cache clearing and rejection of a staff login response.
+- Owner authorized isolated demo accounts and testing. Demo venue **HexaTech App Review Demo** (organisation 49)
+  was created with two tiers; a real public registration created its member. Credentials are private outside git.
+  Authenticated member home, card, points history, benefits, rewards, offers, inbox, programme and bookings reads
+  succeed. Booking catalogues correctly return `not_bookable` until demo inventory is configured.
+- This bug requires new member binaries on both platforms; the earlier instruction to avoid an iOS rebuild applied
+  to the Firebase-only change. Keep member review paused until the replacement iOS build is tested on a device.

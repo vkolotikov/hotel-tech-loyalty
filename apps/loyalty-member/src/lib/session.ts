@@ -3,6 +3,8 @@ import { Platform } from 'react-native'
 import * as Device from 'expo-device'
 import { api, connectSession } from './api'
 import { storage } from './storage'
+import { queryClient } from './queryClient'
+import { ApiError, failureFrom } from './failure'
 import { forgetPush } from './push'
 import { languageOf, useLanguage } from './i18n'
 import type { SignInAnswer } from './types'
@@ -17,6 +19,7 @@ export interface SessionUser {
   id: number
   name: string
   email: string
+  user_type?: string
 }
 
 interface Session {
@@ -24,11 +27,17 @@ interface Session {
   user: SessionUser | null
   /** True once the stored session (if any) has been read at launch. */
   ready: boolean
+  memberRequired: boolean
   restore: () => Promise<void>
   signIn: (email: string, password: string) => Promise<void>
   /** Signs in with an answer the server already gave (a new member's registration). */
   adopt: (answer: SignInAnswer) => Promise<void>
   signOut: () => Promise<void>
+  rejectNonMember: (token: string) => Promise<void>
+}
+
+async function removeSavedSession(): Promise<void> {
+  await Promise.all([storage.remove(TOKEN), storage.remove(USER), storage.remove(OLD_MEMBER)])
 }
 
 /** How the device names itself in the member's sessions (`personal_access_tokens.name`). */
@@ -41,13 +50,20 @@ export const useSession = create<Session>((set, get) => ({
   token: null,
   user: null,
   ready: false,
+  memberRequired: false,
 
   restore: async () => {
     const [token, userRaw] = await Promise.all([storage.get(TOKEN), storage.get(USER)])
     let user: SessionUser | null = null
     try {
       const parsed = userRaw ? (JSON.parse(userRaw) as Partial<SessionUser>) : null
-      user = parsed && typeof parsed.id === 'number' ? { id: parsed.id, name: String(parsed.name ?? ''), email: String(parsed.email ?? '') } : null
+      if (token && parsed?.user_type && parsed.user_type !== 'member') {
+        await removeSavedSession()
+        queryClient.clear()
+        set({ token: null, user: null, ready: true, memberRequired: true })
+        return
+      }
+      user = parsed && typeof parsed.id === 'number' ? { id: parsed.id, name: String(parsed.name ?? ''), email: String(parsed.email ?? ''), user_type: parsed.user_type } : null
     } catch {
       user = null
     }
@@ -60,17 +76,28 @@ export const useSession = create<Session>((set, get) => ({
   },
 
   adopt: async answer => {
-    const user = { id: answer.user.id, name: answer.user.name, email: answer.user.email }
-    set({ token: answer.token, user })
+    if (answer.user.user_type && answer.user.user_type !== 'member') throw new ApiError(failureFrom(403, { error: 'member_only' }))
+    const user = { id: answer.user.id, name: answer.user.name, email: answer.user.email, user_type: answer.user.user_type }
+    queryClient.clear()
+    set({ token: answer.token, user, memberRequired: false })
     await Promise.all([storage.set(TOKEN, answer.token), storage.set(USER, JSON.stringify(user))])
+  },
+
+  rejectNonMember: async token => {
+    if (get().token !== token) return
+    set({ token: null, user: null, memberRequired: true })
+    queryClient.clear()
+    // Forget only this app's incompatible session. Do not revoke the staff token or change its push settings.
+    await removeSavedSession()
   },
 
   signOut: async () => {
     const token = get().token
     // While the token still works: this phone stops receiving the member's notifications (a few seconds at most).
     if (token) await Promise.race([forgetPush(token), new Promise(done => setTimeout(done, 4000))])
-    set({ token: null, user: null })
-    await Promise.all([storage.remove(TOKEN), storage.remove(USER), storage.remove(OLD_MEMBER)])
+    set({ token: null, user: null, memberRequired: false })
+    queryClient.clear()
+    await removeSavedSession()
     if (token) {
       try {
         await api.signOut(token)
@@ -87,4 +114,5 @@ connectSession({
   signedOut: () => {
     void useSession.getState().signOut()
   },
+  memberRequired: token => useSession.getState().rejectNonMember(token),
 })

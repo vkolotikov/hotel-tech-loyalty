@@ -1,6 +1,7 @@
 import type { Key } from './en'
 
 export const fr: Record<Key, string> = {
+  'error.member_required': 'Votre connexion enregistrée correspond à un compte du personnel. Utilisez HexaTech Staff pour cet accès, ou connectez-vous ici avec votre compte de membre.',
   'brand': 'HexaTech Loyalty',
 
   'signIn.title': 'Bon retour',

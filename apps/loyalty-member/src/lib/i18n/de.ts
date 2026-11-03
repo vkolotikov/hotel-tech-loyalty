@@ -1,6 +1,7 @@
 import type { Key } from './en'
 
 export const de: Record<Key, string> = {
+  'error.member_required': 'Ihre gespeicherte Anmeldung gehört zu einem Mitarbeiterkonto. Nutzen Sie HexaTech Staff für den Mitarbeiterzugang oder melden Sie sich hier mit Ihrem Mitgliedskonto an.',
   'brand': 'HexaTech Loyalty',
 
   'signIn.title': 'Willkommen zurück',

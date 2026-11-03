@@ -1,15 +1,11 @@
 import { useEffect } from 'react'
-import { QueryClient, useQuery } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import { api } from './api'
 import { useSession } from './session'
 import { storage } from './storage'
 import { lookFrom, useLook, type VenueLook } from './theme'
 
-export const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: { staleTime: 30_000, retry: 0, refetchOnWindowFocus: false },
-  },
-})
+export { queryClient } from './queryClient'
 
 export const KEYS = {
   boot: ['boot'] as const,

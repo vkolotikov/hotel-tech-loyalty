@@ -110,7 +110,9 @@ Before the first release of 2.0.0:
 ## Acceptance on phones (phase 1)
 
 1. Install over the old Hotel Loyalty app: still signed in, the venue's colours on the first screen after one load.
-2. Sign out and in; a staff account's email and password are refused here.
+2. Sign out and in; a staff account's email and password are refused here. A staff session saved by the old app
+   returns to sign-in with the member-account explanation, without revoking the staff token. A legacy session without
+   a saved account type gets the same recovery when the portal answers `member_only`.
 3. Join a venue by scanning its sign-up QR code, and by pasting its link: the welcome points arrive.
 4. Card: the QR code reads at the desk (HexaTech Staff scans it); Add to Apple Wallet / Google Wallet.
 5. Home: progress to the next tier in the programme's measure; membership end date where there is one.

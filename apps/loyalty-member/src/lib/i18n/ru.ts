@@ -1,6 +1,7 @@
 import type { Key } from './en'
 
 export const ru: Record<Key, string> = {
+  'error.member_required': 'Сохранённый вход относится к учётной записи сотрудника. Для работы используйте HexaTech Staff или войдите здесь с учётной записью участника программы.',
   'brand': 'HexaTech Loyalty',
 
   'signIn.title': 'С возвращением',

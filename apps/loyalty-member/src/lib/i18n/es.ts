@@ -2,6 +2,7 @@ import type { Key } from './en'
 
 /** Usted, as the portal speaks to members. */
 export const es: Record<Key, string> = {
+  'error.member_required': 'La sesión guardada corresponde a una cuenta del personal. Utilice HexaTech Staff para acceder como personal o inicie sesión aquí con su cuenta de miembro.',
   'brand': 'HexaTech Loyalty',
 
   'signIn.title': 'Bienvenido de nuevo',

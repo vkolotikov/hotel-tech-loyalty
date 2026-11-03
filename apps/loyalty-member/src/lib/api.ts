@@ -23,12 +23,14 @@ type Query = Record<string, string | number | null | undefined>
 let readToken: () => string | null = () => null
 let readLanguage: () => string = () => 'en'
 let onSignedOut: () => void = () => {}
+let onMemberRequired: (token: string) => Promise<void> = async () => {}
 
 /** The session tells the client where the token is and what to do when the server no longer accepts it. */
-export function connectSession(options: { token: () => string | null; language: () => string; signedOut: () => void }): void {
+export function connectSession(options: { token: () => string | null; language: () => string; signedOut: () => void; memberRequired: (token: string) => Promise<void> }): void {
   readToken = options.token
   readLanguage = options.language
   onSignedOut = options.signedOut
+  onMemberRequired = options.memberRequired
 }
 
 function withQuery(path: string, query?: Query): string {
@@ -73,7 +75,11 @@ async function send<T>(method: 'GET' | 'POST' | 'PUT' | 'DELETE', path: string, 
   if (!response.ok) {
     const failure = failureFrom(response.status, parsed)
     // A token the server no longer knows ends the session; a refused sign-in does not.
-    if (response.status === 401 && token && !asToken) onSignedOut()
+    if (token && token === readToken() && !asToken) {
+      if (response.status === 401) onSignedOut()
+      // The old app could keep a staff token in this same keychain. The portal identifies that case explicitly.
+      if (response.status === 403 && failure.code === 'member_only') await onMemberRequired(token)
+    }
     throw new ApiError(failure)
   }
   return parsed as T

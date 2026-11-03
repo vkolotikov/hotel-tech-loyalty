@@ -23,6 +23,7 @@ export default function SignIn() {
   const insets = useSafeAreaInsets()
   const { t, tp, language } = useT()
   const token = useSession(s => s.token)
+  const memberRequired = useSession(s => s.memberRequired)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [busy, setBusy] = useState(false)
@@ -54,6 +55,7 @@ export default function SignIn() {
           </View>
 
           <View style={styles.form}>
+            {memberRequired && !problem && <Notice text={t('error.member_required')} />}
             <Field label={t('signIn.email')} value={email} onChangeText={setEmail} autoCapitalize="none" autoComplete="email" keyboardType="email-address" textContentType="username" returnKeyType="next" />
             <Field label={t('signIn.password')} value={password} onChangeText={setPassword} secureTextEntry autoComplete="password" textContentType="password" returnKeyType="go" onSubmitEditing={() => { void submit() }} />
             {problem && <Notice text={t(problem)} />}

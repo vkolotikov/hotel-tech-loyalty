@@ -75,6 +75,7 @@ export const en = {
   'push.channel': 'Messages from your venue',
 
   'error.network': 'No connection. Check the internet and try again.',
+  'error.member_required': 'Your saved sign-in belongs to a staff account. Use HexaTech Staff for staff access, or sign in here with your venue membership account.',
   'error.invalid': 'That email and password do not match a membership.',
   'error.too_many': 'Too many tries. Please wait a minute and try again.',
   'error.not_found': 'This could not be found.',
