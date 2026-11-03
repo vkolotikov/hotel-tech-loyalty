@@ -37,8 +37,9 @@ export default function Home() {
   const { t, language } = useT()
   const boot = useBoot()
   const queue = useQueueCounts()
-  const metrics = useQuery({ queryKey: KEYS.metrics, queryFn: api.metrics })
-  const activity = useQuery({ queryKey: KEYS.activity, queryFn: api.activity })
+  const canViewInsights = !!boot.data?.staff.can.view_insights
+  const metrics = useQuery({ queryKey: KEYS.metrics, queryFn: api.metrics, enabled: canViewInsights })
+  const activity = useQuery({ queryKey: KEYS.activity, queryFn: api.activity, enabled: canViewInsights })
   const [refreshing, setRefreshing] = useState(false)
 
   const refresh = useCallback(async () => {
@@ -111,7 +112,7 @@ export default function Home() {
           </Press>
         </View>
 
-        <View>
+        {canViewInsights && <View>
           <SectionTitle title={t('home.figures')} />
           {metrics.isError && <Notice text={t('error.unknown')} action={t('common.retry')} onAction={() => { void metrics.refetch() }} />}
           {metrics.isLoading ? (
@@ -127,9 +128,9 @@ export default function Home() {
               ))}
             </View>
           )}
-        </View>
+        </View>}
 
-        <View>
+        {canViewInsights && <View>
           <SectionTitle title={t('home.activity')} />
           {activity.isError && <Notice text={t('error.unknown')} action={t('common.retry')} onAction={() => { void activity.refetch() }} />}
           <Surface padding={0} style={{ paddingHorizontal: 16 }}>
@@ -156,7 +157,7 @@ export default function Home() {
               )
             })}
           </Surface>
-        </View>
+        </View>}
       </ScrollView>
     </Backdrop>
   )
