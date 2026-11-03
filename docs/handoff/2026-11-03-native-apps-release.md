@@ -20,10 +20,13 @@ unrelated work was untouched. Detailed append-only records are in each app's `02
   All 11 setup tasks, eight-type Data safety, IARC ratings, 18+ target audience, verified reviewer access, Business
   category/contact and five-language listing/images are saved. Advertising ID is No, verified against source and
   the actual build 3 AAB manifest (no AD_ID permission). Internal testing remains available.
-- **HexaTech Loyalty 2.0.0 iOS (20): staged; Android (26): submitted for production review.** Both EAS submissions are FINISHED:
+- **HexaTech Loyalty 2.0.0 iOS (20) and Android (26): submitted for production review.** Both EAS submissions are FINISHED:
   iOS `168bb90a-d569-42ca-b23a-14da322be01f`, Android `ae6e8a43-1735-4691-a2ec-664e106265c9`.
   iOS 20 is VALID, selected in the editable 2.0.0 draft and in Internal QA, IN_BETA_TESTING. Apple privacy is published,
-  reviewer credentials verified. Apple public review remains paused for the physical iPhone retest.
+  reviewer credentials verified. Owner confirmed the tester account and reported **all good** after the iPhone
+  TestFlight check. Apple submission `64206424-8806-46cf-9240-6bae2aa0c0e5` was accepted at **15:33 UTC** on
+  3 November and is **WAITING_FOR_REVIEW**. Release type is **AFTER_APPROVAL**, verified by API readback, under the
+  owner's publishing authorization. No further manual release is required for the member app after approval.
   Android 26 was installed through Play and passed native member acceptance. Sent all 15 member changes for
   production review; Google's quick checks passed and it explicitly says **Your changes are now in review**.
   Managed publishing is off, so approval can publish the full rollout automatically.
@@ -99,7 +102,8 @@ fully verified by this agent; do not report all device checks complete.
   Later access audit: build 20 is VALID, unexpired, IN_BETA_TESTING, minimum iOS 16.4, and in Internal QA's builds.
   App Store Connect now explicitly shows **Installed 2.0.0 (20), Nov 3, 2026** for the owner's existing tester.
   The open browser had been on Staff's build 2; switched it to Loyalty. No invitation/access change was necessary.
-  Installation telemetry does not prove the reported sign-in/menu issue is resolved on the iPhone; await that result.
+  Installation telemetry alone was not treated as acceptance. Owner then confirmed the same account and reported
+  **all good** after the TestFlight/iPhone check; member iOS was submitted and automatic release enabled as above.
 - **Apple credential incident resolved:** the private helper now allowlists scalar output. Owner authorized browser
   replacement with the same role; both Expo assignments and new Apple access were verified before the exposed key
   was revoked. Apple's UI confirms revocation. Do not reuse the old key or print any credential.

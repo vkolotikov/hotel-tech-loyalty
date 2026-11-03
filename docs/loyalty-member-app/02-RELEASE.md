@@ -404,3 +404,17 @@ More → Bookings → Book (an appointment, paid at the venue), More → Profile
   Internal QA page. No tester was added or removed, and no invitation or new build was needed.
 - Owner was directed to the member app in TestFlight. This confirms availability/installation telemetry only;
   the iPhone sign-in and five-menu acceptance result is still pending, so member iOS public review remains staged.
+
+**2026-11-03, owner iPhone confirmation and Apple submission (Codex):**
+
+- Owner confirmed the existing tester Apple Account and reported **all good** after the TestFlight/iPhone check.
+  This completed the outstanding owner acceptance step; no new binary was needed.
+- Apple validated **iOS 2.0.0 (20)** as the single Item Ready to Submit. Submitted through App Store Connect under
+  the owner's standing instruction to publish the member app. Submission
+  **64206424-8806-46cf-9240-6bae2aa0c0e5**, submitted **2026-11-03 15:33:50 UTC**, now **WAITING_FOR_REVIEW**.
+- Enabled **AFTER_APPROVAL** release for the member version, matching the authorized publication. API readback
+  verifies version 2.0.0, build 20, WAITING_FOR_REVIEW, automatic release and the matching submission. Staff keeps
+  its separate manual/unlisted-release plan.
+- Google Play's member Publishing overview was refreshed and still explicitly says **Your changes are now in
+  review**; managed publishing is off. Both member platforms can publish following their respective approvals.
+  Store approval and actual public 2.0.0 availability remain pending. Both private reviewer sign-ins are verified.
