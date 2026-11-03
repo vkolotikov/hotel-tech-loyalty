@@ -32,6 +32,13 @@ next steps". The runbook `docs/plan-modules.md` was rewritten for it; the prices
   Stripe tests skipped.
 - **To go live (owner):** apply and deploy the billing patch, then run once there
   `php artisan stripe:sync --module-plans --publish`. That replaces the first round's `--plan=…` step.
+- **3 Nov, the owner's "do all remaining steps and deploy":** push access to `hotel-tech-saas` was refused a third
+  time by this session's safety check. Checked again instead: the patch applies with `git am` on its `main` 91bd84d
+  and gives exactly the branch's tree (5 files, PHP only, no frontend build); its suite on PostgreSQL 16 gave 20
+  passed and 3 skipped (the live Stripe tests). Either the owner applies it (the commands are in the runbook's
+  "Billing handover"), or a new session started with `hotel-tech-saas` selected deploys it by fast-forwarding `main`
+  to the branch, as that repository's own deploy note says. `stripe:sync` needs the production Stripe key, so the
+  owner runs it in Laravel Cloud either way.
 - **Still not built:** combinations with Appointments (billing plans and an Appointments price needed); switching a
   paid plan between monthly and yearly is left to Stripe's customer portal.
 
@@ -78,7 +85,7 @@ are missing from `tests/pgsql-known-failures.txt`. The fix: list them there with
 CI on 05ffcc8 (run 32): green on all three SQLite shards, both SPA jobs, Larastan and the audit. On PostgreSQL 7365
 tests ran (29 more than on 3618ead); every new one passes. The only failures are the same 4 `ContactsFeedTest` ones.
 
-The billing half is **not deployed**: this session was refused push access to `hotel-tech-saas` twice.
+The billing half is **not deployed**: this session was refused push access to `hotel-tech-saas` three times (the third on 3 Nov, see above).
 
 ## New: HexaTech Loyalty and Content sold on their own (owner, 2 Nov)
 

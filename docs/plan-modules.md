@@ -133,11 +133,23 @@ branch `ccr-71f769f3-l5tyv4` of that repository. This session was refused push a
 
 To sell the plans:
 
-1. In a checkout of `hotel-tech-saas` `main`, run
-   `git am <path to hotel-tech-loyalty>/docs/billing/2026-11-02-hotel-tech-saas-module-plans.patch`, then merge and
-   deploy as usual. The deploy runs the two migrations.
-2. In that application's environment, run once: `php artisan stripe:sync --module-plans --publish`.
-3. This application is already deployed. Before step 2, its new pages say the products cannot be bought yet.
+1. In a checkout of `hotel-tech-saas` (checked on 3 Nov: it applies on `main` 91bd84d), run:
+
+   ```
+   git checkout main
+   git pull
+   git am <path to hotel-tech-loyalty>/docs/billing/2026-11-02-hotel-tech-saas-module-plans.patch
+   git push origin main
+   ```
+
+   Laravel Cloud deploys `main`. The two migrations must run before step 2. If that application's deploy commands
+   do not include `php artisan migrate --force`, run it once in its Commands tab.
+2. In Laravel Cloud, in the billing application's Commands tab, run once:
+   `php artisan stripe:sync --module-plans --publish`. It needs that environment's live Stripe key. Each of the
+   15 plans should show `Published: customers can now choose this plan.`, and the run ends with `Stripe sync complete!`.
+   Running it again is safe: it reuses the prices it made.
+3. This application is already deployed. Before step 2, its new pages say the products cannot be bought yet. After
+   it, `/loyalty/register` lists the packages with billing's prices.
 
 ## Known limits (2026-11-02)
 
