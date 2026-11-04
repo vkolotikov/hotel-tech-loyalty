@@ -870,7 +870,8 @@ class AuthController extends Controller
         // fumbled five entries was told "request a new code" — and then the
         // new code ALSO bounced off the still-full counter for 15 minutes,
         // a dead end with no way out from the UI.
-        \Illuminate\Support\Facades\Cache::forget('verify_attempts:' . $validated['email']);
+        // The shared cache (2026-11-04): production's default cache is each container's own, so the limit was per replica.
+        \App\Support\SharedCache::store()->forget('verify_attempts:' . $validated['email']);
 
         // Invalidate old codes
         EmailVerificationCode::where('email', $validated['email'])
@@ -920,7 +921,7 @@ class AuthController extends Controller
 
         // Brute-force protection: max 5 failed attempts per email per 15 minutes
         $attemptKey = 'verify_attempts:' . strtolower($validated['email']);
-        $attempts = (int) \Illuminate\Support\Facades\Cache::get($attemptKey, 0);
+        $attempts = (int) \App\Support\SharedCache::store()->get($attemptKey, 0);
         if ($attempts >= 5) {
             return response()->json(['error' => 'Too many verification attempts. Please request a new code.'], 429);
         }
@@ -940,7 +941,7 @@ class AuthController extends Controller
             ->first();
 
         if (!$record) {
-            \Illuminate\Support\Facades\Cache::put($attemptKey, $attempts + 1, now()->addMinutes(15));
+            \App\Support\SharedCache::store()->put($attemptKey, $attempts + 1, now()->addMinutes(15));
             return response()->json(['error' => 'Invalid verification code.'], 422);
         }
 

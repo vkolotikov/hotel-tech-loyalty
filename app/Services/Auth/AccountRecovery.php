@@ -4,13 +4,39 @@ namespace App\Services\Auth;
 
 use App\Models\EmailVerificationCode;
 use App\Models\User;
+use App\Support\SharedCache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
-/** A recovery code authorizes one identity and one atomic credential change. */
+/**
+ * A recovery code authorizes one identity and one atomic credential change.
+ *
+ * At most FAILURES refused codes per address and purpose an hour (2026-11-04): the routes' limits are per IP, and a
+ * six-digit claim or reset code could otherwise be guessed from many addresses. Counted in the shared cache, after
+ * the transaction (a database cache written inside it would roll back with the refusal).
+ */
 final class AccountRecovery
 {
+    public const FAILURES = 10;
+
     public static function consume(string $email, string $code, string $password, string $purpose, callable $after): mixed
+    {
+        $key = 'recovery-failures:' . $purpose . ':' . sha1($email);
+        $store = SharedCache::store();
+        if ((int) $store->get($key, 0) >= self::FAILURES) {
+            throw ValidationException::withMessages(['code' => 'Too many wrong codes for this address. Try again in an hour.']);
+        }
+
+        try {
+            return self::attempt($email, $code, $password, $purpose, $after);
+        } catch (ValidationException $e) {
+            $store->add($key, 0, now()->addHour());
+            $store->increment($key);
+            throw $e;
+        }
+    }
+
+    private static function attempt(string $email, string $code, string $password, string $purpose, callable $after): mixed
     {
         return DB::transaction(function () use ($email, $code, $password, $purpose, $after) {
             $records = EmailVerificationCode::where('email', $email)->where('code', $code)

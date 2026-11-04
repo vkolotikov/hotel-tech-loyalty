@@ -789,6 +789,32 @@ each closed with a test that fails on the code before the fix.
 - Tests: `ForeignAccountsTest`, `CrmAiRightsTest`, `SwitchedOffMemberTest` (`tests/Feature/LoyaltyWorkspace/`),
   `tests/Feature/Member/MemberChatAccessTest.php`; the notices in `DeskVisitTest` and `EventCheckInTest`.
 
+Second batch, the same day (smaller holes):
+
+- **Pushes carry the platform's Expo access token** (`NotificationService::expo()`, `services.expo.access_token` from
+  `EXPO_ACCESS_TOKEN`). The Settings field `expo_access_token` was stored and tested but never sent, so a project with
+  Expo's "Enhanced push security" on would have every push refused. Set `EXPO_ACCESS_TOKEN` in Laravel Cloud to an
+  access token of the Expo account that owns both apps; empty sends as before. Receipts are read the same way.
+- **A tier notice goes after the commit** (`LoyaltyService::assessTier()`, `DB::afterCommit`): it waited on Expo
+  inside the points write, under the member row's lock, and a write that rolled back still announced the new tier.
+- **A member cancels a benefit request only while it is open**: one conditional update, so staff approving it at the
+  same moment is never overwritten with "cancelled".
+- **Claim and reset codes: ten wrong codes an hour per address** (`Auth\AccountRecovery::FAILURES`, in `SharedCache`,
+  per purpose). The routes' limits are per IP, and a six-digit code could be guessed from many. The sign-up code's five
+  attempts are counted in `SharedCache` too (the default cache is each container's own, so it was five per replica).
+- Tests: `PushPlumbingTest` (`tests/Feature/LoyaltyWorkspace/`), `ClaimAccountTest`'s per-address limit.
+
+Open, the owner's to decide (not changed):
+
+- The CRM assistant's other writing tools (guests, enquiries, reservations, PMS bookings, review invitations) still
+  follow only the route's rule, every staff member of a CRM organisation; points and settings now ask the person's own
+  rights. Whether those should ask the screens' rights too is a product call.
+- The venue's portal switch (`portal_enabled`, `member.only`) closes only `member/portal/*`; the members' app's
+  endpoints stay open when a venue switches its portal off. One switch for both, or two, is the owner's.
+- Production settings to confirm in Laravel Cloud: the scheduler runs on one instance (`loyalty:send-scheduled`,
+  `loyalty:assess-tiers`), queue workers run, and `CACHE_SHARED_STORE` is unset or `database` (the limits above count
+  there; a per-container store would split them).
+
 ## What the workspace does not do
 
 No bulk message from the members list (the full admin's bulk message and segment send keep it); no SMS delivery
@@ -910,6 +936,25 @@ files on disk): run them one after the other.
   redirect outliving its page; an extra or a voice config holding NULL in a NOT NULL column.
 
 ## Deploying
+
+- Security review before the public launch, and members see their points move (owner, 2026-11-04): production
+  **983572728** on **a8b45e629**, source patch **66bc96753** plus its SPA build. Feature source **50abe6993** on
+  `fix/cross-organisation-accounts`. 33 paths (7 added, 26 changed), none deleted, no migration.
+  - **The change:** the section "Security review before the public launch (2026-11-04)" above (its first batch); the
+    member portal's refresh (`docs/member-portal.md`); Symfony routing, yaml, filesystem, http-foundation and
+    http-kernel 8.1.11.
+  - **Checks:**
+    - parity: the whole source tree, builds aside, equals the tip;
+    - artifact: `tsc -b` clean, Vitest 404 files / 5,845 tests; PHP 8.5.12 (this container: no gd, zip, intl) on
+      LoyaltyWorkspace 644 passed, 10 failed (the 10 picture and file tests that need gd and zip, as on main),
+      Member 364, Loyalty 383, Auth 56, AdminAccess 78 passed;
+    - CI on the tip green on all 8 jobs, PostgreSQL included (run 41930983814). Its first runs had found three test
+      fixtures that production's schema refuses and Larastan findings; both fixed on the branch before the deploy.
+  - Verified by content on `origin/main`: the new files, each fix's line, the portal chunk's `refetchInterval:6e4`
+    (absent from a8b45e629's), the five Symfony versions. Not on the live site (this container cannot reach
+    `app.hexa-tech.uk`).
+  - **After it, once:** `php artisan loyalty:foreign-accounts`, then `php artisan loyalty:foreign-accounts --detach`.
+  - The next source delta starts at **50abe6993**.
 
 - CRM assistant on the Anthropic SDK (stack plan follow-up, owner "do next", 2026-11-02): production **33d4f74** on
   **b67ed20**, a source patch only (the fresh SPA build is identical to main's). Feature source **1bea54f** on

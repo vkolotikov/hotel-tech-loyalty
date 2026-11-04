@@ -4,8 +4,10 @@ namespace Tests\Feature\Auth;
 
 use App\Models\EmailVerificationCode;
 use App\Models\User;
+use App\Services\Auth\AccountRecovery;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Validation\ValidationException;
 use Tests\Concerns\SetsUpMinimalSchema;
 use Tests\TestCase;
 
@@ -132,5 +134,39 @@ class ClaimAccountTest extends TestCase
         ])->assertStatus(422);
 
         $this->assertNull($user->fresh()->email_verified_at, 'a wrong code must not verify the email');
+    }
+
+    public function test_after_ten_wrong_codes_for_an_address_even_the_right_one_waits_an_hour(): void
+    {
+        // 2026-11-04: the routes' limits are per IP; a six-digit code could be guessed from many addresses.
+        $user = User::create(['name' => 'Invited Member', 'email' => 'invited3@example.test', 'password' => 'OldPlaceholder1!', 'user_type' => 'member']);
+        EmailVerificationCode::create(['email' => 'invited3@example.test', 'code' => '482913', 'expires_at' => now()->addHours(3)]);
+        $try = fn (string $code) => AccountRecovery::consume('invited3@example.test', $code, 'NewPassword1!', 'claim', fn () => 'claimed');
+
+        for ($i = 0; $i < AccountRecovery::FAILURES; $i++) {
+            try {
+                $try(sprintf('%06d', $i));
+                $this->fail('a wrong code was accepted');
+            } catch (ValidationException) {
+            }
+        }
+        try {
+            $try('482913');
+            $this->fail('the right code was accepted past the limit');
+        } catch (ValidationException $e) {
+            $this->assertStringContainsString('Too many wrong codes', $e->errors()['code'][0]);
+        }
+        $this->assertNull($user->fresh()->email_verified_at);
+
+        // Another purpose and another address keep their own count.
+        try {
+            AccountRecovery::consume('someone@example.test', '000000', 'NewPassword1!', 'claim', fn () => 'claimed');
+        } catch (ValidationException $e) {
+            $this->assertStringNotContainsString('Too many', $e->errors()['code'][0]);
+        }
+
+        $this->travel(61)->minutes();
+        $this->assertSame('claimed', $try('482913'));
+        $this->assertNotNull($user->fresh()->email_verified_at);
     }
 }

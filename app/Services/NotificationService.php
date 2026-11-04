@@ -254,10 +254,7 @@ class NotificationService
         $all = fn (string $error) => array_fill(0, count($messages), ['ok' => false, 'error' => $error, 'ticket' => null]);
 
         try {
-            $response = Http::withHeaders([
-                'Accept'       => 'application/json',
-                'Content-Type' => 'application/json',
-            ])->timeout(30)->post(self::EXPO_URL, array_map(fn (array $m) => [
+            $response = self::expo()->timeout(30)->post(self::EXPO_URL, array_map(fn (array $m) => [
                 'to'    => $m['to'],
                 'sound' => 'default',
                 'title' => $m['title'],
@@ -324,12 +321,26 @@ class NotificationService
         }
     }
 
-    private function sendExpoNotification(string $expoPushToken, string $title, string $body, array $data = []): void
+    /**
+     * Expo's push API as both senders call it. With the platform's Expo access token set (`EXPO_ACCESS_TOKEN`,
+     * `services.expo.access_token`) every send carries it, as Expo requires once a project turns on "Enhanced push
+     * security"; without one the request is the same as before. ExpoReceipts reads receipts through it too (2026-11-04: the token could be stored but was never
+     * sent, so with that switch on every push to the apps would be refused).
+     */
+    public static function expo(): \Illuminate\Http\Client\PendingRequest
     {
-        Http::withHeaders([
+        $request = Http::withHeaders([
             'Accept'       => 'application/json',
             'Content-Type' => 'application/json',
-        ])->post(self::EXPO_URL, [
+        ]);
+        $token = config('services.expo.access_token');
+
+        return is_string($token) && trim($token) !== '' ? $request->withToken(trim($token)) : $request;
+    }
+
+    private function sendExpoNotification(string $expoPushToken, string $title, string $body, array $data = []): void
+    {
+        self::expo()->post(self::EXPO_URL, [
             'to'    => $expoPushToken,
             'sound' => 'default',
             'title' => $title,
