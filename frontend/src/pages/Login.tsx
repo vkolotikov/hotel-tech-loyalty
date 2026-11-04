@@ -14,7 +14,8 @@ import { localisedIndustryCopy, PICKER_INDUSTRIES, type IndustryCopy } from '../
 import { landingPath, safeRedirect } from '../appointments/lib/landing'
 import { AccessOffNotice } from '../components/AccessOffNotice'
 import { sessionBoundTask } from '../lib/sessionBoundTask'
-import { authPath, PACKAGE_NAMES, packageLines, packageSlug, packagesFor, priceFor, productCopy, productHome, sharedProductWords, viewFromPath, type ModulePlan, type PackageKey, type ProductCopy, type SignupProduct } from './productSignup'
+import { accountStepProblem, authPath, packagesFor, productCopy, productHome, productTrialTerms, sharedProductWords, signupWords, viewFromPath, type ModulePlan, type SignupProduct } from './productSignup'
+import { countryName, DIAL_CODES, flagOf, fullPhone, guessCountry } from '../lib/dialCodes'
 
 /**
  * Industry Platform Plan Phase 2 — registration captures industry at
@@ -255,87 +256,6 @@ function InlineLangPicker({ i18n }: { i18n: any }) {
   )
 }
 
-/**
- * A product's page: its three packages with the server's prices and what each grants, monthly or yearly (15 % less a
- * month), Standard picked first; and that the other product can be added later.
- */
-function PackagePicker({ product, words, shared, plans, loading, chosen, onChoose, interval, onInterval, other, otherFrom, unavailable }: {
-  product: SignupProduct
-  words: ProductCopy
-  shared: ReturnType<typeof sharedProductWords>
-  plans: { key: PackageKey; plan: ModulePlan }[]
-  loading: boolean
-  chosen: PackageKey
-  onChoose: (key: PackageKey) => void
-  interval: 'monthly' | 'yearly'
-  onInterval: (interval: 'monthly' | 'yearly') => void
-  other: string | null
-  otherFrom: string | null
-  unavailable: boolean
-}) {
-  const { t, i18n } = useTranslation()
-  const lite = plans.find(p => p.key === 'lite')?.plan.features
-  const yearlyOffered = plans.some(p => p.plan.yearly_amount != null)
-  return (
-    <div data-package-picker="" className="space-y-3">
-      <div className="flex items-center justify-between gap-3">
-        <label className="block text-[13px] font-medium text-slate-300">{shared.choosePackage}</label>
-        {yearlyOffered && (
-          <div className="flex items-center gap-2" role="group" aria-label={shared.billing}>
-            <button type="button" onClick={() => onInterval('monthly')} aria-pressed={interval === 'monthly'}
-              className={'text-xs ' + (interval === 'monthly' ? 'text-white' : 'text-slate-500')}>{t('auth.plans.monthly', 'Monthly')}</button>
-            <button type="button" onClick={() => onInterval(interval === 'monthly' ? 'yearly' : 'monthly')} aria-label={shared.billing}
-              className={'relative w-10 h-5 rounded-full transition-colors ' + (interval === 'yearly' ? 'bg-blue-600' : 'bg-white/10')}>
-              <div className={'absolute left-0 top-0.5 w-4 h-4 rounded-full bg-on-fill transition-transform ' + (interval === 'yearly' ? 'translate-x-5' : 'translate-x-0.5')} />
-            </button>
-            <button type="button" onClick={() => onInterval('yearly')} aria-pressed={interval === 'yearly'}
-              className={'text-xs ' + (interval === 'yearly' ? 'text-white' : 'text-slate-500')}>
-              {t('auth.plans.yearly', 'Yearly')} <span className="text-green-400 text-[10px]">{shared.save}</span>
-            </button>
-          </div>
-        )}
-      </div>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        {loading
-          ? [0, 1, 2].map(i => <div key={i} className="h-56 rounded-xl border border-white/8 bg-slate-950/50 animate-pulse" />)
-          : plans.map(({ key, plan }) => {
-              const selected = chosen === key
-              const price = priceFor(plan, interval, i18n.language)
-              return (
-                <button key={key} type="button" onClick={() => onChoose(key)} aria-pressed={selected} data-package={key}
-                  className={'relative rounded-xl border p-4 text-left transition-all flex flex-col ' + (selected
-                    ? 'border-blue-500 bg-blue-500/6 ring-1 ring-blue-500/30'
-                    : key === 'standard' ? 'border-blue-500/30 hover:border-blue-500/60' : 'border-white/8 bg-slate-950/50 hover:border-white/25')}>
-                  {key === 'standard' && !selected && (
-                    <div className="absolute -top-2 left-1/2 -translate-x-1/2 bg-blue-500 text-on-fill text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">{t('auth.plans.most_popular', 'Most Popular')}</div>
-                  )}
-                  {selected && (
-                    <div className="absolute -top-2 left-1/2 -translate-x-1/2 bg-blue-500 text-on-fill text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider inline-flex items-center gap-1"><Check size={10} /> {t('auth.plans.selected', 'Selected')}</div>
-                  )}
-                  <div className="font-semibold text-white text-sm">{words.brand} {PACKAGE_NAMES[key]}</div>
-                  <div className="mt-1.5">
-                    <span className="text-xl font-bold text-white">{price.perMonth ?? '—'}</span>
-                    <span className="text-slate-400 text-[11px] whitespace-nowrap"> {shared.perMonth}</span>
-                  </div>
-                  <div className="text-[11px] text-slate-400 min-h-4">{price.perYear ? shared.billedYearly(price.perYear) : ''}</div>
-                  <ul className="space-y-1 mt-3 flex-1">
-                    {packageLines(product, plan.features, lite, t, i18n.language).map(line => (
-                      <li key={line.text} className={'flex items-start gap-1.5 text-[11px] ' + (line.included ? 'text-slate-300' : 'text-slate-500 line-through opacity-60')}>
-                        {line.included ? <Check size={10} className="text-green-400 shrink-0 mt-0.5" /> : <X size={10} className="text-slate-500 shrink-0 mt-0.5" />}{line.text}
-                      </li>
-                    ))}
-                  </ul>
-                  <div className="text-[10px] text-slate-500 text-center pt-2 mt-2 border-t border-white/5">{shared.trial(plan.trial_days)}</div>
-                </button>
-              )
-            })}
-      </div>
-      {other && otherFrom && <p className="text-[12px] text-slate-400">{shared.addLater(other, otherFrom)}</p>}
-      {unavailable && <p className="text-[12px] text-amber-300">{shared.unavailable(words.brand)}</p>}
-    </div>
-  )
-}
-
 type View = 'login' | 'trial' | 'verify' | 'forgot' | 'reset'
 type BillingInterval = 'monthly' | 'yearly'
 
@@ -459,14 +379,19 @@ export function Login({ product }: { product?: SignupProduct } = {}) {
   const productWords = product ? productCopy(product, t) : null
   const productTabTitle = productWords?.tabTitle
   const shared = sharedProductWords(t)
-  // A product's page: its packages from the catalogue; Standard picked first (the owner's 85 € package).
-  const [chosenPackage, setChosenPackage] = useState<PackageKey>('standard')
+  const signup = signupWords(t)
+  // A product's page: every trial starts on Standard, monthly (owner 2026-11-03); the customer picks Lite, Standard
+  // or Pro when the trial ends, in billing. The catalogue is still read for the trial's length and whether it is sold.
   const productPlans = product && modulePlans ? packagesFor(modulePlans, product) : null
-  const chosenPlan = productPlans?.packages.find(p => p.key === chosenPackage)?.plan ?? null
-  // The other product's cheapest package, for "add it later from …".
-  const otherFrom = productPlans && modulePlans
-    ? (() => { const cheapest = packagesFor(modulePlans, productPlans.other).packages[0]?.plan; return cheapest ? priceFor(cheapest, billingInterval, i18n.language).perMonth : null })()
-    : null
+  const chosenPlan = productPlans?.packages.find(p => p.key === 'standard')?.plan ?? null
+  const trialDays = chosenPlan?.trial_days || 7
+  // The two steps: 1 the account (email, password), 2 the business. Going back keeps what was typed.
+  const [trialStep, setTrialStep] = useState<1 | 2>(1)
+  const [phoneCountry, setPhoneCountry] = useState(() => guessCountry(typeof navigator !== 'undefined' ? navigator.languages : undefined))
+  // A product's page asks the type of business in step 2 when neither the host nor an earlier visit named one
+  // (it is sent as `industry`, so the workspace is set up as before); fixed at the first render so choosing one
+  // does not hide the field.
+  const [askIndustry] = useState(() => pickedIndustry === null)
   // Billing was read and does not sell this product yet: no trial to start here.
   const productUnavailable = chosenPlan?.available === false
   // Show the umbrella picker only when the user is on the trial view AND
@@ -672,12 +597,12 @@ export function Login({ product }: { product?: SignupProduct } = {}) {
       const { data } = await api.post('/v1/auth/trial', {
         name,
         email,
-        phone,
+        // A product's page has a country-code picker beside the number; the server still takes one string.
+        phone: product ? fullPhone(phoneCountry, phone) : phone,
         password,
         hotel_name: hotelName,
         // A product's page starts a trial of that product alone (its plan slug is the product's name).
-        plan: product ? packageSlug(product, chosenPackage) : selectedPlan,
-        billing_interval: billingInterval,
+        ...(product ? productTrialTerms(product) : { plan: selectedPlan, billing_interval: billingInterval }),
         // Persist signup language as the new user's preference so they
         // land in the admin in the right locale on first sign-in.
         language: i18n.language?.split('-')[0] || 'en',
@@ -863,6 +788,146 @@ export function Login({ product }: { product?: SignupProduct } = {}) {
             </div>
           )}
         </div>
+      </div>
+    )
+  }
+
+  // ─── A product's trial: one centred card in two steps (owner 2026-11-03) ──
+  if (view === 'trial' && product && productWords) {
+    const field = 'w-full px-3.5 py-2.5 bg-slate-950/60 border border-white/12 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 text-sm text-white placeholder-slate-600 transition'
+    const label = 'block text-[13px] font-medium text-slate-300 mb-1.5'
+    const primary = 'w-full py-3 rounded-lg text-sm font-semibold text-on-fill bg-linear-to-br from-blue-500 to-blue-600 hover:from-blue-400 hover:to-blue-500 transition disabled:opacity-60 shadow-lg shadow-blue-500/25'
+    const lang = i18n.language?.split('-')[0] || 'en'
+    const countries = DIAL_CODES
+      .map(d => ({ ...d, name: countryName(d.country, lang) }))
+      .sort((a, b) => a.name.localeCompare(b.name, lang))
+    const dial = DIAL_CODES.find(d => d.country === phoneCountry)?.dial ?? ''
+    const toBusinessStep = (e: React.FormEvent) => {
+      e.preventDefault()
+      const problem = accountStepProblem(email, password)
+      if (problem) { setError(problem === 'email' ? signup.invalidEmail : signup.shortPassword); return }
+      setError('')
+      setTrialStep(2)
+    }
+    return (
+      <div className="relative min-h-screen bg-hx-060b1e text-white flex flex-col items-center px-4 py-6 sm:py-10">
+        <div aria-hidden className="absolute inset-x-0 top-0 h-[520px] pointer-events-none"
+          style={{ background: 'radial-gradient(900px 500px at 50% -10%, rgba(59,130,246,0.22), transparent 65%)' }} />
+        <div className="relative z-10 w-full max-w-[440px] flex justify-end">
+          <InlineLangPicker i18n={i18n} />
+        </div>
+        <div className="relative z-10 mt-2 mb-6 flex justify-center">
+          <BrandMark onClick={() => navigate(authPath(product, 'login'))} compact brand={productWords.brand} monogram={productWords.monogram} />
+        </div>
+
+        <main className="relative z-10 w-full max-w-[440px] rounded-2xl border border-white/8 bg-slate-900/50 sm:backdrop-blur-md p-6 sm:p-8 shadow-[0_20px_60px_-20px_rgba(0,0,0,0.5)]">
+          <div role="progressbar" aria-label={signup.step(trialStep)} aria-valuemin={1} aria-valuemax={2} aria-valuenow={trialStep}
+            data-trial-step={trialStep} className="flex gap-1.5 mb-6">
+            <span className="h-1 flex-1 rounded-full bg-blue-500" />
+            <span className={'h-1 flex-1 rounded-full transition-colors ' + (trialStep === 2 ? 'bg-blue-500' : 'bg-white/10')} />
+          </div>
+
+          {trialStep === 1 ? (
+            <>
+              <div className="text-center mb-6">
+                <h1 className="text-[24px] leading-tight tracking-tight font-semibold text-white mb-1.5">{signup.accountTitle(trialDays)}</h1>
+                <p className="text-sm text-slate-400">{t('auth.register.subtitle', 'No credit card required. Cancel anytime.')}</p>
+              </div>
+              {error && <div role="alert" className="bg-red-500/10 border border-red-500/20 text-red-400 px-4 py-3 rounded-lg mb-4 text-sm">{error}</div>}
+              {productUnavailable && <p className="text-[13px] text-amber-300 mb-4">{shared.unavailable(productWords.brand)}</p>}
+              <form onSubmit={toBusinessStep} noValidate className="space-y-4">
+                <div>
+                  <label htmlFor="trial-email" className={label}>{t('auth.login.email', 'Email')}</label>
+                  <input id="trial-email" name="email" type="email" autoComplete="email" inputMode="email" autoFocus
+                    value={email} onChange={e => setEmail(e.target.value.trim().toLowerCase())}
+                    placeholder={t('auth.common.email_placeholder', 'you@company.com')} className={field} />
+                </div>
+                <div>
+                  <label htmlFor="trial-password" className={label}>{t('auth.login.password', 'Password')}</label>
+                  <div className="relative">
+                    <input id="trial-password" name="password" type={showPassword ? 'text' : 'password'} autoComplete="new-password"
+                      value={password} onChange={e => setPassword(e.target.value)} minLength={8}
+                      placeholder={t('auth.common.password_placeholder', 'At least 8 characters')} className={field + ' pr-10'} />
+                    <button type="button" onClick={() => setShowPassword(s => !s)}
+                      aria-label={showPassword ? signup.hidePassword : signup.showPassword}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-slate-500 hover:text-white hover:bg-white/5 rounded-md transition">
+                      {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
+                  </div>
+                </div>
+                <button type="submit" disabled={productUnavailable} className={primary}>{signup.continue}</button>
+              </form>
+              <p className="mt-6 text-center text-sm text-slate-400">
+                {t('auth.register.have_account', 'Already have an account?')}{' '}
+                <button onClick={() => { navigate(authPath(product, 'login')); setError('') }} className="text-blue-400 hover:text-blue-300 font-medium">{t('auth.register.sign_in', 'Sign in')}</button>
+              </p>
+            </>
+          ) : (
+            <>
+              <div className="text-center mb-6">
+                <h1 className="text-[24px] leading-tight tracking-tight font-semibold text-white mb-1.5">{signup.businessTitle}</h1>
+                <p className="text-sm text-slate-400">{signup.businessSubtitle(productWords.brand)}</p>
+              </div>
+              {error && <div role="alert" className="bg-red-500/10 border border-red-500/20 text-red-400 px-4 py-3 rounded-lg mb-4 text-sm">{error}</div>}
+              <form onSubmit={e => { e.preventDefault(); handleSendCode() }} className="space-y-4">
+                <div>
+                  <label htmlFor="trial-name" className={label}>{t('auth.register.name', 'Your Name')}</label>
+                  <input id="trial-name" name="name" type="text" autoComplete="name" autoFocus required
+                    value={name} onChange={e => setName(e.target.value)}
+                    placeholder={t('auth.register.name_placeholder', 'John Smith')} className={field} />
+                </div>
+                <div>
+                  <label htmlFor="trial-business" className={label}>{signup.businessName}</label>
+                  <input id="trial-business" name="organization" type="text" autoComplete="organization" required
+                    value={hotelName} onChange={e => setHotelName(e.target.value)}
+                    placeholder={signup.businessPlaceholder} className={field} />
+                </div>
+                {askIndustry && (
+                  <div>
+                    <label htmlFor="trial-industry" className={label}>{signup.businessType}</label>
+                    <select id="trial-industry" required value={pickedIndustry ?? ''}
+                      onChange={e => setPickedIndustry((e.target.value || null) as IndustryId | null)}
+                      className={field + ' appearance-none'}>
+                      <option value="" disabled>{signup.chooseOne}</option>
+                      {PICKER_INDUSTRIES.map(id => <option key={id} value={id}>{signup.industry[id] ?? id}</option>)}
+                    </select>
+                  </div>
+                )}
+                <div>
+                  <label htmlFor="trial-phone" className={label}>{t('auth.register.phone', 'Phone')}</label>
+                  <div className="flex gap-2">
+                    <div className="relative shrink-0">
+                      <span aria-hidden className="pointer-events-none absolute inset-0 flex items-center gap-1.5 pl-3 pr-7 text-sm text-white">
+                        <span>{flagOf(phoneCountry)}</span><span>{dial}</span>
+                      </span>
+                      <ChevronDown size={14} aria-hidden className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-slate-500" />
+                      <select aria-label={signup.countryCode} name="tel-country-code" value={phoneCountry}
+                        onChange={e => setPhoneCountry(e.target.value)}
+                        className="h-full w-[108px] appearance-none rounded-lg border border-white/12 bg-slate-950/60 text-transparent focus:outline-hidden focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 cursor-pointer">
+                        {countries.map(c => <option key={c.country} value={c.country} className="text-slate-900">{c.name} ({c.dial})</option>)}
+                      </select>
+                    </div>
+                    <input id="trial-phone" name="tel" type="tel" autoComplete="tel" inputMode="tel" required
+                      value={phone} onChange={e => setPhone(e.target.value)}
+                      placeholder={signup.phonePlaceholder} className={field + ' min-w-0'} />
+                  </div>
+                </div>
+                <button type="submit" disabled={loading || productUnavailable} className={primary + ' flex items-center justify-center gap-2'}>
+                  {loading ? signup.sending : signup.start}
+                </button>
+                <p className="text-[11px] text-slate-500 text-center">{t('auth.register.verification_hint', "We'll send a verification code to your email. No credit card required.")}</p>
+              </form>
+              <button type="button" onClick={() => { setTrialStep(1); setError('') }}
+                className="mt-5 mx-auto flex items-center gap-1.5 text-sm text-slate-400 hover:text-white transition">
+                <ArrowLeft size={14} /> {signup.back}
+              </button>
+            </>
+          )}
+        </main>
+        <p className="relative z-10 mt-6 text-center text-xs text-slate-500">
+          {shared.fullSuite}{' '}
+          <button onClick={() => { navigate('/register'); setError('') }} className="text-blue-400 hover:text-blue-300">{shared.seePlans}</button>
+        </p>
       </div>
     )
   }
@@ -1098,13 +1163,9 @@ export function Login({ product }: { product?: SignupProduct } = {}) {
                   </button>
                 </div>
               )}
-              {productWords ? (
-                <div className="bg-green-500/10 border border-green-500/25 text-green-400 text-xs rounded-lg px-3.5 py-2.5 mb-4">{productWords.trialBanner}</div>
-              ) : (
-                <div className="bg-green-500/10 border border-green-500/25 text-green-400 text-xs rounded-lg px-3.5 py-2.5 mb-4">
-                  <strong className="font-semibold">{t('auth.register.welcome_banner_title', { noun: industryCopy.workspaceNoun, defaultValue: 'Welcome to your new {{noun}}:' })}</strong>{' '}{t('auth.register.welcome_banner_body', 'full access to CRM, Loyalty, Booking engine and AI Chatbot during your trial.')}
-                </div>
-              )}
+              <div className="bg-green-500/10 border border-green-500/25 text-green-400 text-xs rounded-lg px-3.5 py-2.5 mb-4">
+                <strong className="font-semibold">{t('auth.register.welcome_banner_title', { noun: industryCopy.workspaceNoun, defaultValue: 'Welcome to your new {{noun}}:' })}</strong>{' '}{t('auth.register.welcome_banner_body', 'full access to CRM, Loyalty, Booking engine and AI Chatbot during your trial.')}
+              </div>
               <form onSubmit={e => { e.preventDefault(); handleSendCode() }} className="space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
@@ -1157,22 +1218,6 @@ export function Login({ product }: { product?: SignupProduct } = {}) {
                   </div>
                 </div>
 
-                {product && productWords ? (
-                  <PackagePicker
-                    product={product}
-                    words={productWords}
-                    shared={shared}
-                    plans={productPlans?.packages ?? []}
-                    loading={modulePlans === null}
-                    chosen={chosenPackage}
-                    onChoose={setChosenPackage}
-                    interval={billingInterval}
-                    onInterval={setBillingInterval}
-                    other={productPlans ? productCopy(productPlans.other, t).brand : null}
-                    otherFrom={otherFrom}
-                    unavailable={productUnavailable}
-                  />
-                ) : (
                 <div>
                   <div className="flex items-center justify-between mb-3">
                     <label className="block text-[13px] font-medium text-slate-300">{t('auth.plans.heading', 'Choose your plan')}</label>
@@ -1311,8 +1356,7 @@ export function Login({ product }: { product?: SignupProduct } = {}) {
                         })}
                   </div>
                 </div>
-                )}
-                <button type="submit" disabled={loading || productUnavailable}
+                <button type="submit" disabled={loading}
                   className="w-full py-3 rounded-lg text-sm font-medium text-on-fill bg-linear-to-br from-blue-500 to-blue-600 hover:from-blue-400 hover:to-blue-500 transition disabled:opacity-60 shadow-lg shadow-blue-500/25 flex items-center justify-center gap-2">
                   {loading ? 'Sending code…' : (<><ShieldCheck size={16} /> {t('auth.register.submit', 'Verify Email & Start Trial')}</>)}
                 </button>
@@ -1322,12 +1366,6 @@ export function Login({ product }: { product?: SignupProduct } = {}) {
                 {t('auth.register.have_account', 'Already have an account?')}{' '}
                 <button onClick={() => { navigate(authPath(product, 'login')); setError('') }} className="text-blue-400 hover:text-blue-300 font-medium">{t('auth.register.sign_in', 'Sign in')}</button>
               </p>
-              {product && (
-                <p className="mt-2 text-center text-xs text-slate-500">
-                  {shared.fullSuite}{' '}
-                  <button onClick={() => { navigate('/register'); setError('') }} className="text-blue-400 hover:text-blue-300">{shared.seePlans}</button>
-                </p>
-              )}
             </>
           )}
 

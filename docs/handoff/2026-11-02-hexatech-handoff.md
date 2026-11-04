@@ -3,6 +3,19 @@
 Read this first, then `2026-10-31-hexatech-handoff.md` (production, the native apps, the stack upgrade, cloud container
 notes). AGENTS.md and CLAUDE.md still apply.
 
+## 3 Nov: the product sign-up in two steps (PR #2, the owner merges)
+
+The owner asked for a simpler register page "in few steps and centered" (like admin.stan.store/register), "start every
+trial on Standard, two steps only". On branch `feature/trial-register-two-steps`, PR #2 to `main`; this session did
+**not** deploy (the owner deploys this one by merging). `/loyalty/register` and `/content/register` are now one
+centred card: step 1 email and password (checked in `accountStepProblem()`), step 2 name, business name, phone with a
+country-code picker (`frontend/src/lib/dialCodes.ts`, sent as one string by `fullPhone()`), then the email code as
+before. Every product trial asks for Standard, MONTHLY (`productTrialTerms()` in `productSignup.ts`); the package is
+chosen in billing when the trial ends. When neither the host nor an earlier visit names an industry, step 2 asks the
+type of business, so `industry` is still sent. Words: `auth.product.signup.*` in all five locales. The full suite's
+`/register` is unchanged. Screenshots: `docs/screenshots/2026-11-03-trial-register/`. Checks: tsc clean, vitest 5834
+passed; the PR's CI all green.
+
 ## Second round (2 Nov, late): packages, yearly, Team, SMS
 
 The owner asked: "make yearly plan 15% cheaper per month, and make 3 packages with different features and members …

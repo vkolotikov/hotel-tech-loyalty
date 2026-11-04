@@ -337,6 +337,38 @@
         "staff": "{{n}} team members",
         "places": "{{n}} locations",
         "priority": "Priority support"
+      },
+      "signup": {
+        "step": "Step {{n}} of {{total}}",
+        "account_title": "Start your {{days}}-day free trial",
+        "business_title": "About your business",
+        "business_subtitle": "A few details to set up {{product}} for you.",
+        "back": "Back",
+        "start": "Start my free trial",
+        "sending": "Sending your code…",
+        "business_name": "Business name",
+        "business_placeholder": "e.g. Seaside Spa",
+        "phone_placeholder": "Phone number",
+        "country_code": "Country code",
+        "business_type": "Type of business",
+        "choose_one": "Choose one",
+        "invalid_email": "Please enter a valid email address.",
+        "short_password": "Your password needs at least 8 characters.",
+        "show_password": "Show password",
+        "hide_password": "Hide password",
+        "industry": {
+          "hotel": "Hotel or holiday rental",
+          "beauty": "Salon, spa or beauty",
+          "medical": "Clinic or medical practice",
+          "restaurant": "Restaurant, café or bar",
+          "fitness": "Gym or fitness studio",
+          "education": "School or training",
+          "legal": "Law firm",
+          "real_estate": "Real estate",
+          "services": "Other services",
+          "other": "Something else"
+        },
+        "continue": "Continue"
       }
     }
   },
