@@ -89,6 +89,8 @@ function PointsHistory() {
   const [page, setPage] = useState(1)
   const { data, isLoading, isError, refetch, isFetching } = useQuery({
     queryKey: ['portal-activity', page], queryFn: () => portalApi.pointsHistory(page), placeholderData: keepPreviousData,
+    // Lines the desk adds while the member reads: asked again on return to the tab.
+    staleTime: 10_000, refetchOnWindowFocus: true,
   })
   const typeLabel = (type: string) => activityTypeLabel(t, type)
   const locale = resolveLocale(i18n.language)

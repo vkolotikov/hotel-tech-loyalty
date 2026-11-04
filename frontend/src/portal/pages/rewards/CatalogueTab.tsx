@@ -19,7 +19,7 @@ export function CatalogueTab() {
   const [confirming, setConfirming] = useState<Reward | null>(null)
   const [code, setCode] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const { data, isLoading, isError, refetch } = useQuery({ queryKey: ['portal-rewards'], queryFn: portalApi.rewards })
+  const { data, isLoading, isError, refetch } = useQuery({ queryKey: ['portal-rewards'], queryFn: portalApi.rewards, staleTime: 10_000, refetchOnWindowFocus: true })
 
   const redeem = useMutation({
     mutationFn: portalApi.redeem,
