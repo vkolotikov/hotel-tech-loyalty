@@ -197,6 +197,9 @@ final class DeskVisit
         }
 
         $fresh = LoyaltyMember::withoutGlobalScopes()->where('organization_id', $orgId)->with('user')->findOrFail($member->id);
+        if (!$done['replay']) {
+            PointsNotice::earned($fresh, (int) ($done['checkin']?->points ?? 0) + (int) ($done['purchase']?->points ?? 0));
+        }
 
         return [
             'already_today' => (bool) $done['already'],

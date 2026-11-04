@@ -176,6 +176,12 @@ final class EventCheckIn
             $outcome = $this->visits->record($fresh, new Visit(Visit::EVENT, 'loyalty_event_attendance', (int) $done['attendance']->id, null, EventClock::day($done['event']), $by));
             $stamp = $outcome->stamp;
         }
+        if ($done['new'] && $done['line'] !== null && $done['line']->wasRecentlyCreated) {
+            $earner = LoyaltyMember::withoutGlobalScopes()->where('organization_id', $orgId)->with('user')->find($member->id);
+            if ($earner !== null) {
+                \App\Services\Loyalty\Visits\PointsNotice::earned($earner, (int) $done['line']->points);
+            }
+        }
 
         return self::answer($done['verdict'], $done['attendance'], $done['new'], $done['signed_up'], (int) ($done['line']?->points ?? 0), (int) $done['row']->id, $orgId, $stamp);
     }

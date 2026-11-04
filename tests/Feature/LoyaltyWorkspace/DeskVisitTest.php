@@ -299,6 +299,20 @@ class DeskVisitTest extends TestCase
         $this->assertSame(0, ScanEvent::withoutGlobalScopes()->count());
     }
 
+    public function test_the_member_is_told_of_points_earned_at_the_desk_once_per_visit(): void
+    {
+        // 2026-11-04: a check-in or a purchase told the member nothing, so their app kept the old balance.
+        $notices = $this->spy(\App\Services\NotificationService::class);
+        $this->setOptions(['checkin_enabled' => true, 'checkin_points' => 10, 'desk_earn_enabled' => true]);
+
+        $this->checkIn($this->grace->id, ['idempotency_key' => 'tap-1'])->assertOk();
+        $this->checkIn($this->grace->id, ['idempotency_key' => 'tap-1'])->assertOk();
+        $this->checkIn($this->grace->id, ['idempotency_key' => 'tap-2'])->assertOk()->assertJsonPath('already_today', true);
+
+        $notices->shouldHaveReceived('sendPointsEarned')->once()
+            ->withArgs(fn ($member, $points) => (int) $member->id === $this->grace->id && $points === 10 && (int) $member->current_points === 210);
+    }
+
     public function test_staff_read_a_members_stamp_card(): void
     {
         $this->setOptions(['checkin_enabled' => true, 'stamps_enabled' => true, 'stamps_per_card' => 4]);
