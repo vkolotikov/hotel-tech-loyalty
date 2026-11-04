@@ -4,6 +4,7 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 import type { IndustryId } from '../lib/industryHosts'
+import { stepIndex } from './radioKeys'
 
 const ICONS: Record<IndustryId, LucideIcon> = {
   hotel: BedDouble,
@@ -16,16 +17,6 @@ const ICONS: Record<IndustryId, LucideIcon> = {
   real_estate: House,
   services: Briefcase,
   other: LayoutGrid,
-}
-
-/** The tile a key press moves to: arrows step through the list and wrap round, as a radio group does. */
-export function stepIndex(from: number, key: string, count: number): number | null {
-  if (count === 0) return null
-  if (key === 'ArrowRight' || key === 'ArrowDown') return (from + 1) % count
-  if (key === 'ArrowLeft' || key === 'ArrowUp') return (from - 1 + count) % count
-  if (key === 'Home') return 0
-  if (key === 'End') return count - 1
-  return null
 }
 
 /**

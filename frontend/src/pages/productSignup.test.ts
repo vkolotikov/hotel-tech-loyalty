@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import i18n from '../i18n'
 import { authPath, formatMonthly, industryOrder, packageLines, packageSlug, packagesFor, priceFor, productHome, SIGNUP_PRODUCTS, viewFromPath, type ModulePlan } from './productSignup'
 import { PICKER_INDUSTRIES } from '../lib/industryCopy'
-import { stepIndex } from './IndustryTiles'
+import { stepIndex } from './radioKeys'
 import {
   canChangePackage, canRemove, firstPick, orderedProducts, payIntervals, planAction, planName, planStatus, productAction, productName,
   type ModulesState, type PackageOption,
