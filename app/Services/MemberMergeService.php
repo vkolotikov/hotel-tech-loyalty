@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\AuditLog;
 use App\Models\LoyaltyMember;
 use App\Models\User;
+use App\Services\Loyalty\Members\OwnAccount;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
@@ -227,10 +228,15 @@ class MemberMergeService
                 $loser->last_activity_at  ?: $loser->created_at
             );
 
-            // 5) Delete the loser member, then its user row. Nothing names it any more.
+            // 5) Delete the loser member, then its user row. Nothing names it any more. Only an account that is this
+            // organisation's own member account and no other membership names (security review, 2026-11-04): a link
+            // made before then could name another venue's member or a staff login, and deleting that user would also
+            // delete (cascade) the other venue's membership.
             $loserUserId = $loser->user_id;
+            $loserOwnsAccount = OwnAccount::holds($loser);
             $loser->delete();
-            if ($loserUserId) {
+            if ($loserUserId && $loserOwnsAccount
+                && !LoyaltyMember::withoutGlobalScopes()->where('user_id', $loserUserId)->exists()) {
                 DB::table('users')->where('id', $loserUserId)->delete();
             }
 

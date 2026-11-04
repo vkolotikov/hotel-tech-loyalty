@@ -48,6 +48,11 @@ final class MemberDetails
         if (isset($member['tier_id']) && !LoyaltyTier::find($member['tier_id'])) {
             throw new LoyaltyRefused('bad_tier', 'Invalid tier for this organization.', 422);
         }
+        // A membership linked to an account that is not this venue's (a link made before 2026-11-04): its person's
+        // fields belong to that account and are never written from here (`OwnAccount`).
+        if (($user !== [] || $avatar) && $target->user && !OwnAccount::holds($target)) {
+            throw new LoyaltyRefused('account_elsewhere', 'This member signs in with an account of another venue, so its name, email and phone cannot be changed here.', 409);
+        }
         $tierChanged = isset($member['tier_id']) && (int) $member['tier_id'] !== (int) $oldTierId;
         if ($tierChanged) {
             $member['tier_effective_from'] = now()->toDateString();
