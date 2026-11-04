@@ -84,13 +84,13 @@ export const ECLIPSE = {
   dock: ['rgba(59,61,69,0.8)', 'rgba(29,30,37,0.9)', 'rgba(12,16,22,0.96)'] as const,
   // Still smoked-glass faces, with a fine travelling light confined to the rim.
   borderLight: { width: 1.1, halo: '#efbc77', core: '#fff4d8' },
-  ambient: { warm: '#b99566', cool: '#6c85ad' },
+  wallpaper: { scrim: ['rgba(8,11,16,0.18)', 'rgba(8,11,16,0.04)', 'rgba(8,11,16,0.16)'] as const },
   mirror: {
     edge: ['rgba(229,240,255,0)', 'rgba(242,248,255,0.70)', 'rgba(229,240,255,0)'] as const,
     scanShadow: '0 9px 28px -14px rgba(243,197,130,0.32)',
     dockShadow: '0 10px 28px rgba(0,0,0,0.32)',
   },
-  motion: { borderCycle: 10000, ambientHalfCycle: 10000, dockTravel: 320, touchIn: 130, touchOut: 240 },
+  motion: { borderCycle: 10000, dockTravel: 320, touchIn: 130, touchOut: 240 },
   inset: 24, gap: 16, scanRadius: 44, tileRadius: 26, dockRadius: 32, dockHeight: 64,
   // Use Android's system face; SF Pro belongs to the iPhone design, not the Android bundle.
   type: {

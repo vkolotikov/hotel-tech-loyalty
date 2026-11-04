@@ -12,6 +12,7 @@ export const ECLIPSE_ASSETS = {
   activity: require('../../assets/eclipse/activity.png'),
   more: require('../../assets/eclipse/more.png'),
   atmosphere: require('../../assets/eclipse/atmosphere.png'),
+  wallpaper: require('../../assets/eclipse/wallpaper.png'),
   coolRim: require('../../assets/eclipse/cool-rim.png'),
   goldRim: require('../../assets/eclipse/gold-rim.png'),
   dockPool: require('../../assets/eclipse/dock-pool.png'),
@@ -66,7 +67,7 @@ function EclipsePress({ children, label, onPress, reduceMotion, fill = false }: 
   </Pressable>
 }
 
-function BorderLight({ width, height, radius, phase, order }: {
+export function EclipseBorderLight({ width, height, radius, phase, order }: {
   width: number; height: number; radius: number; phase: Animated.Value; order: number
 }) {
   // Sample the rounded perimeter by distance, then let the native driver interpolate it.
@@ -108,23 +109,12 @@ function BorderLight({ width, height, radius, phase, order }: {
   </View>
 }
 
-export function EclipseAtmosphere({ width, animate, solid }: { width: number; animate: boolean; solid: boolean }) {
-  const [light] = useState(() => new Animated.Value(0))
-  useEffect(() => {
-    if (!animate || solid) { light.setValue(0); return }
-    const motion = Animated.loop(Animated.sequence([
-      Animated.timing(light, { toValue: 1, duration: E.motion.ambientHalfCycle, easing: Easing.inOut(Easing.sin), useNativeDriver: true, isInteraction: false }),
-      Animated.timing(light, { toValue: 0, duration: E.motion.ambientHalfCycle, easing: Easing.inOut(Easing.sin), useNativeDriver: true, isInteraction: false }),
-    ]))
-    motion.start()
-    return () => { motion.stop(); light.setValue(0) }
-  }, [animate, solid, light])
+/** The owner's wallpaper is bundled once and stays still; only the control rims move. */
+export function EclipseAtmosphere({ solid }: { solid: boolean }) {
   if (solid) return null
   return <View pointerEvents="none" accessible={false} importantForAccessibility="no-hide-descendants" style={StyleSheet.absoluteFill}>
-    <Image source={ECLIPSE_ASSETS.dockBloom} resizeMode="stretch" style={{ position: 'absolute', left: -width * 0.65, top: width * 0.7, width: width * 1.5, height: width * 1.7, tintColor: E.ambient.cool, opacity: 0.10 }} />
-    <Animated.Image source={ECLIPSE_ASSETS.dockBloom} resizeMode="stretch" style={{ position: 'absolute', right: -width * 0.7, top: width * 0.2, width: width * 1.6, height: width * 1.7, tintColor: E.ambient.warm,
-      opacity: light.interpolate({ inputRange: [0, 1], outputRange: [0.12, 0.20] }),
-    }} />
+    <Image source={ECLIPSE_ASSETS.wallpaper} resizeMode="cover" style={[StyleSheet.absoluteFill, { width: '100%', height: '100%' }]} />
+    <LinearGradient colors={E.wallpaper.scrim} locations={[0, 0.42, 1]} style={StyleSheet.absoluteFill} />
   </View>
 }
 
@@ -140,7 +130,7 @@ export function EclipseSurface({ children, tone = 'quiet', radius = E.tileRadius
         const { width, height } = e.nativeEvent.layout
         if (width > 0 && height > 0) setSize(previous => previous.width === width && previous.height === height ? previous : { width, height })
       } : undefined}>
-      {!solid && borderLight && <BorderLight {...size} radius={radius} {...borderLight} />}
+      {!solid && borderLight && <EclipseBorderLight {...size} radius={radius} {...borderLight} />}
       <View style={{ borderRadius: radius - E.borderLight.width, overflow: 'hidden', backgroundColor: E.bg }}>
       <LinearGradient colors={solid ? [E.surface, E.surface] : colors} locations={solid ? undefined : tone === 'scan' ? E.scanStops : E.tileStops} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={style}>
         {children}

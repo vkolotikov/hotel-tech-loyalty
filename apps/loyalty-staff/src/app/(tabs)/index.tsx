@@ -21,7 +21,6 @@ export default function Home() {
   const queue = useQueueCounts()
   const appearance = useEclipseAppearance()
   const reflection = useEclipseBorderLight(appearance.animate && !appearance.solid)
-  const [width, setWidth] = useState(393)
   const [refreshing, setRefreshing] = useState(false)
   const refresh = useCallback(async () => {
     setRefreshing(true)
@@ -40,8 +39,8 @@ export default function Home() {
     : count ? t('home.waiting', { n: number(count, language) }) : t('home.noneWaiting')
 
   return (
-    <View style={styles.page} onLayout={e => setWidth(e.nativeEvent.layout.width)}>
-      <EclipseAtmosphere width={width} animate={appearance.animate} solid={appearance.solid} />
+    <View style={styles.page}>
+      <EclipseAtmosphere solid={appearance.solid} />
       <ScrollView showsVerticalScrollIndicator={false}
         contentContainerStyle={[styles.content, { paddingTop: insets.top + 24, paddingBottom: insets.bottom + 112 }]}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { void refresh() }} tintColor={E.accent} colors={[E.accent]} progressBackgroundColor={E.surface} />}

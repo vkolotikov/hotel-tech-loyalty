@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Animated, Easing, Image, Pressable, StyleSheet, Text, View } from 'react-native'
 import { LinearGradient } from 'expo-linear-gradient'
 import type { BottomTabBarProps } from 'expo-router/js-tabs'
@@ -6,7 +6,7 @@ import { ECLIPSE as E } from '../lib/theme'
 import { feel } from '../lib/haptics'
 import { useT } from '../lib/i18n'
 import { number } from '../lib/format'
-import { ECLIPSE_ASSETS, EclipseIcon } from './Eclipse'
+import { ECLIPSE_ASSETS, EclipseBorderLight, EclipseIcon, useEclipseBorderLight } from './Eclipse'
 import { useEclipseAppearance } from '../lib/useEclipseAppearance'
 
 const DESTINATIONS = [
@@ -22,11 +22,13 @@ export function TabBar({ state, navigateToTab, insets, waiting, queueState = 're
 }) {
   const { t, language } = useT()
   const appearance = useEclipseAppearance()
+  const borderPhase = useEclipseBorderLight(appearance.animate && !appearance.solid)
+  const [rimSize, setRimSize] = useState({ width: 345.6, height: E.dockHeight })
   const [rowWidth, setRowWidth] = useState(343.4)
   const tabWidth = (rowWidth - 14.4) / 4
   const selected = DESTINATIONS.findIndex(tab => tab.route === state.routes[state.index]?.name)
-  const position = useRef(new Animated.Value(Math.max(0, selected) * tabWidth)).current
-  const visibility = useRef(new Animated.Value(selected < 0 ? 0 : 1)).current
+  const [position] = useState(() => new Animated.Value(Math.max(0, selected) * tabWidth))
+  const [visibility] = useState(() => new Animated.Value(selected < 0 ? 0 : 1))
   useEffect(() => {
     position.stopAnimation(); visibility.stopAnimation()
     const target = Math.max(0, selected) * tabWidth
@@ -46,7 +48,13 @@ export function TabBar({ state, navigateToTab, insets, waiting, queueState = 're
     : waiting > 0 ? t('home.waiting', { n: number(waiting, language) }) : t('home.noneWaiting')
   return (
     <View pointerEvents="box-none" style={[styles.wrap, { bottom: Math.max(insets.bottom, 10) + 14 }]}>
-      <LinearGradient colors={E.rim} locations={[0, 0.35, 0.72, 1]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.rim}>
+      <LinearGradient colors={E.rim} locations={[0, 0.35, 0.72, 1]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.rim}
+        onLayout={e => {
+          const { width, height } = e.nativeEvent.layout
+          if (width > 0 && height > 0) setRimSize(previous => previous.width === width && previous.height === height ? previous : { width, height })
+        }}>
+        {!appearance.solid && <EclipseBorderLight {...rimSize} radius={E.dockRadius} phase={borderPhase} order={2} />}
+        <View style={styles.inner}>
         <LinearGradient colors={appearance.solid ? [E.surface, E.surface] : E.dock} locations={appearance.solid ? undefined : [0, 0.37, 1]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.row} onLayout={e => setRowWidth(e.nativeEvent.layout.width)}>
           <LinearGradient pointerEvents="none" accessible={false} colors={E.mirror.edge} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.topReflection} />
           <Animated.View pointerEvents="none" style={[styles.light, { left: 7.2 + (tabWidth - 82.25) / 2, opacity: visibility, transform: [{ translateX: position }] }]} accessible={false} importantForAccessibility="no-hide-descendants">
@@ -68,6 +76,7 @@ export function TabBar({ state, navigateToTab, insets, waiting, queueState = 're
             )
           })}
         </LinearGradient>
+        </View>
       </LinearGradient>
     </View>
   )
@@ -75,9 +84,10 @@ export function TabBar({ state, navigateToTab, insets, waiting, queueState = 're
 
 const styles = StyleSheet.create({
   wrap: { position: 'absolute', left: E.inset, right: E.inset },
-  rim: { padding: 0.8, borderRadius: E.dockRadius, boxShadow: E.mirror.dockShadow },
-  row: { minHeight: E.dockHeight - 1.6, flexDirection: 'row', paddingHorizontal: 7.2, borderRadius: E.dockRadius - 0.8, overflow: 'hidden' },
-  tab: { flex: 1, minWidth: 48, minHeight: E.dockHeight - 1.6, alignItems: 'center', justifyContent: 'center' },
+  rim: { padding: E.borderLight.width, borderRadius: E.dockRadius, boxShadow: E.mirror.dockShadow, overflow: 'hidden' },
+  inner: { backgroundColor: E.bg, borderRadius: E.dockRadius - E.borderLight.width, overflow: 'hidden' },
+  row: { minHeight: E.dockHeight - 2 * E.borderLight.width, flexDirection: 'row', paddingHorizontal: 7.2 },
+  tab: { flex: 1, minWidth: 48, minHeight: E.dockHeight - 2 * E.borderLight.width, alignItems: 'center', justifyContent: 'center' },
   light: { position: 'absolute', top: 0, width: 82.25, height: 64 },
   topReflection: { position: 'absolute', top: 0, left: 30, right: 30, height: 0.7, opacity: 0.5 },
   pool: { position: 'absolute', width: 114, height: 96, left: -16.8, top: -0.8 },
