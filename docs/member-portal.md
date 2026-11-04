@@ -82,6 +82,13 @@ cancel either kind themselves inside the venue's cancellation window (`## Cancel
   `portalLocales.test.ts` enforce it). Industry nouns come from `useVocab()`.
 - Light first, dark by OS preference; the accent arrives from the server and is written by
   `applyPortalTheme()`; display face per industry from the self-hosted landing fonts.
+- **A member's figures are asked again, never trusted from the first load** (2026-11-04: the owner saw points awarded
+  in the staff app missing from the member's screen; the server had them at once, the screen never asked again). The
+  app-wide client asks nothing on focus, so the portal's own queries say so: the bootstrap (points, level, recent
+  activity, unread count) is fresh for 10 s, asked again on return to the tab and every 60 s while the tab is visible
+  (`PortalProvider.tsx`); the points history and the benefits, catalogue and codes tabs are asked again on return to
+  the tab. A quote or payment intent is never asked again on its own. The members' app does the same with AppState
+  (`apps/loyalty-member/src/lib/queries.ts`).
 
 ## Running it locally
 
