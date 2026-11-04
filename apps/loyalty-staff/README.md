@@ -11,7 +11,7 @@ Expo SDK 58 (React Native 0.88, React 19), Expo Router, TanStack Query, Zustand,
 
 | Path | What |
 |---|---|
-| `src/app/` | Screens (Expo Router). `(tabs)/`: Home, Members, Scan, Requests, More. Sheets: `scanned`, `points`, `check-in`, `link-card`. `member/[id]`, `sign-in` |
+| `src/app/` | Screens (Expo Router). `(tabs)/`: Home, Members, Scan, Requests, More. Desk forms: `scanned`, `points`, `check-in`, `link-card`. `member/[id]`, `cards`, `profile`, `activity`, `sign-in` |
 | `src/components/` | `ui.tsx` (the building blocks), `MemberCard`, `VerdictBanner`, `MemberActions`, `BenefitList`, `TabBar`, `Sheet`, `Done` |
 | `src/lib/theme.ts` | Colours, gradients, fonts, spacing. Every colour and type style comes from here |
 | `src/lib/api.ts` | The one HTTP client: `/v1/admin/loyalty/*` with `brand_id=all`, bearer token, 15 s timeout, one retry for reads |
@@ -69,7 +69,7 @@ The production server is set in `eas.json` (`EXPO_PUBLIC_API_URL`, `EXPO_PUBLIC_
 
 The app registers the phone with the server after sign-in and on every start (`src/lib/push.ts`, `PUT
 /v1/admin/loyalty/devices`), removes it before signing out, and opens Requests when an alert is tapped. More has the
-switch. The server side is `StaffAlerts` (`docs/loyalty-workspace.md` "Request alerts on staff phones").
+switch in older builds; the Eclipse screens place it in Profile. The server side is `StaffAlerts` (`docs/loyalty-workspace.md` "Request alerts on staff phones").
 
 Push needs three things set up once, all in the owner's accounts:
 
@@ -91,7 +91,7 @@ same file variable in their EAS environment, or set `GOOGLE_SERVICES_JSON` to it
 
 At start and on return to the app (at most every 30 minutes) the app asks `GET /api/v1/apps/staff/version` (public,
 `config/apps.php` on the server). Below `min_version` it shows only "Time to update" over every screen, with the
-store link for the phone; below `latest_version` More offers the update. The app's own version is `version` in
+store link for the phone; below `latest_version` Profile offers the update (More in older builds). The app's own version is `version` in
 `app.json`; raise it for every store release.
 
 To retire old versions, set these in Laravel Cloud's environment, then redeploy (a value that is not `x.y.z` counts
@@ -131,6 +131,6 @@ would downgrade Expo).
 10. Switch to each of the five languages; in Airplane mode a screen says "No connection" and offers Retry.
 11. Request alerts: allow notifications at first start; from the member app ask for a benefit and claim a reward —
     a phone signed in as a manager hears both, a desk account without "redeem points" only the benefit; tap one and
-    Requests opens. Switch alerts off in More (nothing arrives), sign out (nothing arrives), sign in again.
+    Requests opens. Switch alerts off in Profile (nothing arrives), sign out (nothing arrives), sign in again.
 12. Minimum version: with `STAFF_APP_MIN_VERSION` above the installed version, the app shows only "Time to update"
     (before sign-in too) and its button opens the store; set it back and "Check again" lets the phone in.
