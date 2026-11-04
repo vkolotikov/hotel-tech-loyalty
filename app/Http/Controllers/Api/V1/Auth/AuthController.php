@@ -993,6 +993,12 @@ class AuthController extends Controller
     }
 
     /**
+     * The industries billing's `POST /auth/register` accepts (hotel-tech-saas AuthController::register, its `industry`
+     * rule). A change there is a change here.
+     */
+    private const BILLING_INDUSTRIES = ['hotel', 'beauty', 'medical', 'restaurant', 'legal', 'real_estate', 'education', 'fitness', 'hospitality'];
+
+    /**
      * POST /v1/auth/trial — Register on SaaS platform, start trial, create local staff user.
      */
     public function startTrial(Request $request): JsonResponse
@@ -1129,7 +1135,11 @@ class AuthController extends Controller
                     // industry choice so the SSO handoff JWT carries
                     // `currentOrgIndustry` for the loyalty middleware to
                     // pick up on first-time org creation.
-                    'industry' => $industry,
+                    // Billing's register takes only the industries in its own rule (BILLING_INDUSTRIES); any other
+                    // (`services`, `other`) 422'd the whole register and left the trial with no billing record
+                    // (3 Nov 2026). It is optional there, so an industry billing does not know is left out; the
+                    // local organisation still gets its own below.
+                    'industry' => in_array($industry, self::BILLING_INDUSTRIES, true) ? $industry : null,
                 ]);
 
                 if ($regResponse->successful()) {
@@ -1139,7 +1149,9 @@ class AuthController extends Controller
                 } else {
                     $body = $regResponse->json();
                     $msg = $body['error'] ?? $body['message'] ?? 'unknown';
-                    report(new \RuntimeException("SaaS register [{$regResponse->status()}]: {$msg}"));
+                    // Name the fields billing refused (names only, never the values sent).
+                    $fields = is_array($body['errors'] ?? null) ? implode(', ', array_keys($body['errors'])) : '';
+                    report(new \RuntimeException("SaaS register [{$regResponse->status()}]: {$msg}" . ($fields !== '' ? " ({$fields})" : '')));
                 }
             } catch (\Exception $e) {
                 report($e);
