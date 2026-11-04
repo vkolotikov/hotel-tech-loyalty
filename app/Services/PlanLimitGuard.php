@@ -32,6 +32,8 @@ class PlanLimitGuard
     public const KEY_PROPERTIES = 'max_properties';
     public const KEY_TEAM       = 'max_team_members';
     public const KEY_GUESTS     = 'max_guests';
+    /** People who can be booked: active team members in Appointments (owner 2026-11-04, Appointments' packages). */
+    public const KEY_BOOKING_STAFF = 'max_booking_staff';
 
     /**
      * Returns null when the new resource is allowed, or a user-facing
@@ -103,6 +105,8 @@ class PlanLimitGuard
                                        ->where('organization_id', $orgId)->count(),
             self::KEY_GUESTS     => \App\Models\Guest::withoutGlobalScope(TenantScope::class)
                                        ->where('organization_id', $orgId)->count(),
+            self::KEY_BOOKING_STAFF => \App\Models\ServiceMaster::withoutGlobalScope(TenantScope::class)
+                                       ->where('organization_id', $orgId)->where('is_active', true)->count(),
             default              => 0,
         };
     }
@@ -114,6 +118,7 @@ class PlanLimitGuard
             self::KEY_PROPERTIES => 'properties',
             self::KEY_TEAM       => 'team members',
             self::KEY_GUESTS     => 'guest profiles',
+            self::KEY_BOOKING_STAFF => 'team members who can be booked',
             default              => 'resources',
         };
         return "Your plan allows up to {$limit} {$resource}. Upgrade your plan to add more, or remove an existing one first.";

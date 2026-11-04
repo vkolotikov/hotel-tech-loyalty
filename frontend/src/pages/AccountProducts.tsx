@@ -68,6 +68,9 @@ export function AccountProducts() {
   const failure = (err: unknown) => {
     const body = (err as { response?: { data?: { message?: string; error?: string; limit?: number; count?: number; limit_key?: string } } })?.response?.data
     if (body?.error === 'over_limit' && body.limit != null && body.count != null) {
+      if (body.limit_key === 'max_booking_staff') {
+        return t('account.products.over_limit_booking', { limit: body.limit, count: body.count, defaultValue: 'This package allows {{limit}} team members who can be booked and you have {{count}} active. Choose a larger package, or switch some off in Setup first.' })
+      }
       return body.limit_key === 'max_team_members'
         ? t('account.products.over_limit_team', { limit: body.limit, count: body.count, defaultValue: 'This package allows {{limit}} team members and you have {{count}} active. Choose a larger package, or switch some off first.' })
         : t('account.products.over_limit_members', { limit: body.limit, count: body.count, defaultValue: 'This package allows {{limit}} members and you have {{count}}. Choose a larger package.' })

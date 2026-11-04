@@ -323,6 +323,7 @@
     "slot_taken": "Diese Zeit ist nicht frei. Bitte wählen Sie eine andere.",
     "stale": "Dieser Termin wurde von jemand anderem geändert. Die aktuellen Angaben werden angezeigt — prüfen Sie sie und versuchen Sie es erneut.",
     "not_allowed": "Das ist für diesen Termin in seinem aktuellen Zustand nicht möglich.",
+    "plan_limit": "Ihr Paket erlaubt {{limit}} buchbare Teammitglieder. Wählen Sie unter Tarif & Produkte ein größeres Paket oder schalten Sie zuerst jemanden aus.",
     "master_not_eligible": "Dieses Teammitglied führt diese Leistung nicht aus.",
     "before_today": "Ein Termin kann nicht auf einen vergangenen Tag gelegt werden.",
     "time_does_not_exist": "Diese Uhrzeit gibt es im Betrieb nicht: In dieser Nacht wird die Uhr umgestellt.",

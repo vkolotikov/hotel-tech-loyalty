@@ -336,7 +336,12 @@
         "approvals": "Borradores, aprobaciones y un email matutino para el equipo",
         "staff": "{{n}} miembros del equipo",
         "places": "{{n}} ubicaciones",
-        "priority": "Soporte prioritario"
+        "priority": "Soporte prioritario",
+        "bookable": "Hasta {{n}} miembros del equipo reservables",
+        "bookable_any": "Miembros del equipo reservables sin límite",
+        "booking_page": "Su propia página de reservas y widget para la web",
+        "booking_core": "Calendario, fichas de clientes, cobros y caja",
+        "sign_ins": "{{n}} accesos del personal"
       },
       "signup": {
         "step": "Paso {{n}} de {{total}}",
@@ -351,24 +356,37 @@
         "phone_placeholder": "Número de teléfono",
         "country_code": "Prefijo del país",
         "business_type": "Tipo de negocio",
-        "choose_one": "Elija uno",
         "invalid_email": "Introduzca una dirección de correo válida.",
         "short_password": "Su contraseña debe tener al menos 8 caracteres.",
         "show_password": "Mostrar contraseña",
         "hide_password": "Ocultar contraseña",
         "industry": {
-          "hotel": "Hotel o alquiler vacacional",
-          "beauty": "Salón, spa o belleza",
-          "medical": "Clínica o consulta médica",
-          "restaurant": "Restaurante, café o bar",
-          "fitness": "Gimnasio o estudio de fitness",
-          "education": "Escuela o formación",
+          "hotel": "Hotel o alquiler",
+          "beauty": "Salón o spa",
+          "medical": "Clínica",
+          "restaurant": "Restaurante o café",
+          "fitness": "Gimnasio o estudio",
+          "education": "Escuela o cursos",
           "legal": "Despacho de abogados",
           "real_estate": "Inmobiliaria",
           "services": "Otros servicios",
           "other": "Otro"
         },
-        "continue": "Continuar"
+        "continue": "Continuar",
+        "industry_hint": "Preparamos su espacio de trabajo para ello. Puede cambiarlo más tarde en Ajustes.",
+        "choose_industry": "Elija el tipo de su negocio."
+      },
+      "appointments": {
+        "badge": "Reservas online para negocios de servicios",
+        "hero": "Que sus clientes reserven solos, de día y de noche.",
+        "hero_sub": "Una página de reservas online, un calendario para todo su equipo y fichas de clientes en un solo espacio, para salones, clínicas, estudios y más.",
+        "bullet_1": "Su propia página de reservas y un widget para su sitio web",
+        "bullet_2": "Un calendario con el horario, las pausas y las ausencias de cada miembro del equipo",
+        "bullet_3": "Fichas de clientes, cobros y caja en recepción",
+        "login_subtitle": "Inicie sesión en HexaTech Appointments",
+        "register_title": "Empiece su prueba de HexaTech Appointments",
+        "trial_banner": "Su prueba incluye todo HexaTech Appointments.",
+        "tab_title": "HexaTech Appointments — Iniciar sesión"
       }
     }
   },
@@ -3566,7 +3584,8 @@
       "confirm_remove": "¿Quitar {{product}}? Su equipo pierde ese espacio al instante. No se borra nada: si lo añade de nuevo, todo sigue ahí.",
       "confirm_remove_button": "Quitar {{product}}",
       "more_a_month": "+{{price}} al mes",
-      "less_a_month": "−{{price}} al mes"
+      "less_a_month": "−{{price}} al mes",
+      "over_limit_booking": "Este paquete permite {{limit}} miembros del equipo reservables y usted tiene {{count}} activos. Elija un paquete mayor o desactive algunos en Configuración primero."
     },
     "team": {
       "title": "Equipo",

@@ -336,7 +336,12 @@
         "approvals": "Drafts, approvals and a morning email for the team",
         "staff": "{{n}} team members",
         "places": "{{n}} locations",
-        "priority": "Priority support"
+        "priority": "Priority support",
+        "bookable": "Up to {{n}} team members clients can book",
+        "bookable_any": "Any number of team members clients can book",
+        "booking_page": "Your own online booking page and website widget",
+        "booking_core": "Calendar, client records, payments and takings",
+        "sign_ins": "{{n}} staff sign-ins"
       },
       "signup": {
         "step": "Step {{n}} of {{total}}",
@@ -351,24 +356,37 @@
         "phone_placeholder": "Phone number",
         "country_code": "Country code",
         "business_type": "Type of business",
-        "choose_one": "Choose one",
         "invalid_email": "Please enter a valid email address.",
         "short_password": "Your password needs at least 8 characters.",
         "show_password": "Show password",
         "hide_password": "Hide password",
         "industry": {
-          "hotel": "Hotel or holiday rental",
-          "beauty": "Salon, spa or beauty",
-          "medical": "Clinic or medical practice",
-          "restaurant": "Restaurant, café or bar",
-          "fitness": "Gym or fitness studio",
-          "education": "School or training",
+          "hotel": "Hotel or rental",
+          "beauty": "Salon or spa",
+          "medical": "Clinic",
+          "restaurant": "Restaurant or café",
+          "fitness": "Gym or studio",
+          "education": "School or courses",
           "legal": "Law firm",
           "real_estate": "Real estate",
           "services": "Other services",
           "other": "Something else"
         },
-        "continue": "Continue"
+        "continue": "Continue",
+        "industry_hint": "We set up your workspace for it. You can change it later in Settings.",
+        "choose_industry": "Please choose your type of business."
+      },
+      "appointments": {
+        "badge": "Online booking for service businesses",
+        "hero": "Let clients book you, day and night.",
+        "hero_sub": "An online booking page, a calendar for your whole team and client records in one workspace, for salons, clinics, studios and more.",
+        "bullet_1": "Your own booking page and a widget for your website",
+        "bullet_2": "A calendar for every team member's hours, breaks and time off",
+        "bullet_3": "Client records, payments and takings at the desk",
+        "login_subtitle": "Sign in to HexaTech Appointments",
+        "register_title": "Start your HexaTech Appointments trial",
+        "trial_banner": "Your trial includes everything in HexaTech Appointments.",
+        "tab_title": "HexaTech Appointments — Sign in"
       }
     }
   },
@@ -3610,7 +3628,8 @@
       "confirm_remove": "Remove {{product}}? Your team loses its workspace at once. Nothing is deleted: add it again and everything is there.",
       "confirm_remove_button": "Remove {{product}}",
       "more_a_month": "+{{price}} a month",
-      "less_a_month": "−{{price}} a month"
+      "less_a_month": "−{{price}} a month",
+      "over_limit_booking": "This package allows {{limit}} team members who can be booked and you have {{count}} active. Choose a larger package, or switch some off in Setup first."
     },
     "team": {
       "title": "Team",

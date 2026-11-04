@@ -14,7 +14,8 @@ import { localisedIndustryCopy, PICKER_INDUSTRIES, type IndustryCopy } from '../
 import { landingPath, safeRedirect } from '../appointments/lib/landing'
 import { AccessOffNotice } from '../components/AccessOffNotice'
 import { sessionBoundTask } from '../lib/sessionBoundTask'
-import { accountStepProblem, authPath, packagesFor, productCopy, productHome, productTrialTerms, sharedProductWords, signupWords, viewFromPath, type ModulePlan, type SignupProduct } from './productSignup'
+import { IndustryTiles } from './IndustryTiles'
+import { accountStepProblem, authPath, industryOrder, packagesFor, productCopy, productHome, productTrialTerms, sharedProductWords, signupWords, viewFromPath, type ModulePlan, type SignupProduct } from './productSignup'
 import { countryName, DIAL_CODES, flagOf, fullPhone, guessCountry } from '../lib/dialCodes'
 
 /**
@@ -392,6 +393,7 @@ export function Login({ product }: { product?: SignupProduct } = {}) {
   // (it is sent as `industry`, so the workspace is set up as before); fixed at the first render so choosing one
   // does not hide the field.
   const [askIndustry] = useState(() => pickedIndustry === null)
+  const [industryMissing, setIndustryMissing] = useState(false)
   // Billing was read and does not sell this product yet: no trial to start here.
   const productUnavailable = chosenPlan?.available === false
   // Show the umbrella picker only when the user is on the trial view AND
@@ -809,6 +811,12 @@ export function Login({ product }: { product?: SignupProduct } = {}) {
       setError('')
       setTrialStep(2)
     }
+    // Step 2: the type of business is a choice of tiles, so the browser's own "required" cannot check it.
+    const submitBusinessStep = (e: React.FormEvent) => {
+      e.preventDefault()
+      if (askIndustry && !pickedIndustry) { setIndustryMissing(true); setError(signup.chooseIndustry); return }
+      handleSendCode()
+    }
     return (
       <div className="relative min-h-screen bg-hx-060b1e text-white flex flex-col items-center px-4 py-6 sm:py-10">
         <div aria-hidden className="absolute inset-x-0 top-0 h-[520px] pointer-events-none"
@@ -869,7 +877,7 @@ export function Login({ product }: { product?: SignupProduct } = {}) {
                 <p className="text-sm text-slate-400">{signup.businessSubtitle(productWords.brand)}</p>
               </div>
               {error && <div role="alert" className="bg-red-500/10 border border-red-500/20 text-red-400 px-4 py-3 rounded-lg mb-4 text-sm">{error}</div>}
-              <form onSubmit={e => { e.preventDefault(); handleSendCode() }} className="space-y-4">
+              <form onSubmit={submitBusinessStep} className="space-y-4">
                 <div>
                   <label htmlFor="trial-name" className={label}>{t('auth.register.name', 'Your Name')}</label>
                   <input id="trial-name" name="name" type="text" autoComplete="name" autoFocus required
@@ -884,13 +892,10 @@ export function Login({ product }: { product?: SignupProduct } = {}) {
                 </div>
                 {askIndustry && (
                   <div>
-                    <label htmlFor="trial-industry" className={label}>{signup.businessType}</label>
-                    <select id="trial-industry" required value={pickedIndustry ?? ''}
-                      onChange={e => setPickedIndustry((e.target.value || null) as IndustryId | null)}
-                      className={field + ' appearance-none'}>
-                      <option value="" disabled>{signup.chooseOne}</option>
-                      {PICKER_INDUSTRIES.map(id => <option key={id} value={id}>{signup.industry[id] ?? id}</option>)}
-                    </select>
+                    <p id="trial-industry-label" className={label + ' mb-0.5'}>{signup.businessType}</p>
+                    <p className="text-[12px] text-slate-500 mb-2">{signup.industryHint}</p>
+                    <IndustryTiles ids={industryOrder(product)} labels={signup.industry} value={pickedIndustry} labelledBy="trial-industry-label"
+                      invalid={industryMissing} onChange={id => { setPickedIndustry(id); setIndustryMissing(false); if (error === signup.chooseIndustry) setError('') }} />
                   </div>
                 )}
                 <div>

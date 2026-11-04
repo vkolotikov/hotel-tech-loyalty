@@ -323,6 +323,7 @@
     "slot_taken": "That time is not free. Choose another.",
     "stale": "This appointment was changed by someone else. The current details are shown — check them and try again.",
     "not_allowed": "That is not possible for this appointment in its current state.",
+    "plan_limit": "Your package allows {{limit}} team members who can be booked. Choose a larger package in Plan & products, or switch someone off first.",
     "master_not_eligible": "This team member does not perform that service.",
     "before_today": "An appointment cannot be placed on a day that has passed.",
     "time_does_not_exist": "That time does not exist at the venue: the clocks change that night.",

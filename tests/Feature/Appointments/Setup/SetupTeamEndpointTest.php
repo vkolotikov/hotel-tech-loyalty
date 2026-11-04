@@ -37,6 +37,31 @@ class SetupTeamEndpointTest extends TestCase
             ->assertStatus(422)->assertJsonValidationErrors('user_id');
     }
 
+    /** Appointments' packages (owner 2026-11-04): `max_booking_staff` caps the active team members who can be booked. */
+    public function test_the_package_caps_the_team_members_who_can_be_booked(): void
+    {
+        $this->org->forceFill(['plan_features' => ['max_booking_staff' => '2']])->save();
+        $active = ServiceMaster::withoutGlobalScopes()->where('organization_id', $this->org->id)->where('is_active', true)->count();
+        $this->assertLessThan(2, $active, 'the fixture leaves room for one more');
+        for ($i = $active; $i < 2; $i++) {
+            $this->asStaff()->postJson($this->api('setup/team'), ['name' => "Member {$i}"])->assertCreated();
+        }
+
+        $this->asStaff()->postJson($this->api('setup/team'), ['name' => 'One too many'])
+            ->assertStatus(402)->assertJsonPath('error', 'plan_limit')->assertJsonPath('limit', 2)->assertJsonPath('limit_key', 'max_booking_staff');
+        $this->assertDatabaseMissing('service_masters', ['name' => 'One too many']);
+
+        // Someone switched off frees a place; switching them back on at the limit is refused.
+        $this->asStaff()->patchJson($this->api("setup/team/{$this->master->id}"), ['is_active' => false])->assertOk();
+        $this->asStaff()->postJson($this->api('setup/team'), ['name' => 'Replacement'])->assertCreated();
+        $this->asStaff()->patchJson($this->api("setup/team/{$this->master->id}"), ['is_active' => true])->assertStatus(402)->assertJsonPath('error', 'plan_limit');
+        $this->asStaff()->patchJson($this->api("setup/team/{$this->master->id}"), ['name' => 'Renamed while off'])->assertOk();
+
+        // A plan with no such limit (every full customer) adds freely.
+        $this->org->forceFill(['plan_features' => []])->save();
+        $this->asStaff()->postJson($this->api('setup/team'), ['name' => 'No limit'])->assertCreated();
+    }
+
     public function test_a_sign_in_from_another_organisation_cannot_be_linked(): void
     {
         $outsider = $this->staffUser($this->otherOrganization(), ['role' => 'staff']);

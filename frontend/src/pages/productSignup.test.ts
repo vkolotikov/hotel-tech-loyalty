@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import i18n from '../i18n'
-import { authPath, formatMonthly, packageLines, packageSlug, packagesFor, priceFor, productHome, viewFromPath, type ModulePlan } from './productSignup'
+import { authPath, formatMonthly, industryOrder, packageLines, packageSlug, packagesFor, priceFor, productHome, SIGNUP_PRODUCTS, viewFromPath, type ModulePlan } from './productSignup'
+import { PICKER_INDUSTRIES } from '../lib/industryCopy'
+import { stepIndex } from './IndustryTiles'
 import {
   canChangePackage, canRemove, firstPick, orderedProducts, payIntervals, planAction, planName, planStatus, productAction, productName,
   type ModulesState, type PackageOption,
@@ -86,6 +88,55 @@ const state = (over: Partial<ModulesState> = {}): ModulesState => ({
     { key: 'content', held: false, package: null, can_remove: false, options: [option('lite'), option('standard'), option('pro')] },
   ],
   can_manage: true, billing_available: true, yearly_discount_percent: 15, ...over,
+})
+
+describe('HexaTech Appointments on its own (owner 2026-11-04)', () => {
+  it('has its own sign-in and sign-up pages, and Standard is its bare name', () => {
+    expect(SIGNUP_PRODUCTS).toContain('appointments')
+    expect(authPath('appointments', 'register')).toBe('/appointments/register')
+    expect(viewFromPath('/appointments/register')).toBe('trial')
+    expect(viewFromPath('/appointments/forgot-password')).toBe('forgot')
+    expect(viewFromPath('/appointments/login')).toBe('login')
+    expect(packageSlug('appointments', 'standard')).toBe('appointments')
+    expect(packageSlug('appointments', 'lite')).toBe('appointments_lite')
+    expect(productHome('appointments', '/', { workspaces: { appointments: { only: true } } })).toBe('/appointments')
+  })
+
+  it('reads its package lines from what the server grants: people who can be booked, then staff sign-ins', () => {
+    const lines = packageLines('appointments', { max_booking_staff: '5', max_team_members: '5', priority_support: 'email' }, undefined, t, 'en')
+    expect(lines.map(l => l.text)).toEqual([
+      'Up to 5 team members clients can book',
+      'Your own online booking page and website widget',
+      'Calendar, client records, payments and takings',
+      '5 staff sign-ins',
+      'Priority support',
+    ])
+    expect(lines.at(-1)?.included).toBe(false)
+    expect(packageLines('appointments', { max_booking_staff: '15', max_team_members: '15', max_properties: '3', priority_support: 'priority' }, undefined, t, 'en').at(-1)?.included).toBe(true)
+  })
+})
+
+describe('the sign-up\'s type of business', () => {
+  it('orders every business type for each product, its likeliest first and "Something else" last', () => {
+    for (const product of SIGNUP_PRODUCTS) {
+      const order = industryOrder(product)
+      expect([...order].sort()).toEqual([...PICKER_INDUSTRIES].sort())
+      expect(order.at(-1)).toBe('other')
+    }
+    expect(industryOrder('appointments')[0]).toBe('beauty')
+    expect(industryOrder('loyalty')[0]).toBe('hotel')
+  })
+
+  it('moves the choice with the arrow keys, round the ends, as one radio group', () => {
+    expect(stepIndex(0, 'ArrowRight', 10)).toBe(1)
+    expect(stepIndex(9, 'ArrowDown', 10)).toBe(0)
+    expect(stepIndex(0, 'ArrowLeft', 10)).toBe(9)
+    expect(stepIndex(4, 'ArrowUp', 10)).toBe(3)
+    expect(stepIndex(4, 'Home', 10)).toBe(0)
+    expect(stepIndex(4, 'End', 10)).toBe(9)
+    expect(stepIndex(4, 'Enter', 10)).toBeNull()
+    expect(stepIndex(0, 'ArrowRight', 0)).toBeNull()
+  })
 })
 
 describe('Plan & products decisions', () => {

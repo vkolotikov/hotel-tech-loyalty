@@ -1,16 +1,18 @@
 import type { TFunction } from 'i18next'
+import type { IndustryId } from '../lib/industryHosts'
 
 /**
- * HexaTech Loyalty and HexaTech Content sold on their own (owner 2026-11-02), each with its own sign-in and sign-up
- * pages beside the full suite's: /loyalty/login, /loyalty/register, /content/login, /content/register (and their
- * forgot / reset password pages). The sign-in screen (Login.tsx) serves them all; this file holds what differs: the
+ * HexaTech Loyalty and HexaTech Content sold on their own (owner 2026-11-02), and HexaTech Appointments since
+ * 2026-11-04, each with its own sign-in and sign-up pages beside the full suite's: /appointments/login,
+ * /appointments/register, /loyalty/login, /loyalty/register, /content/login, /content/register (and their forgot /
+ * reset password pages). The sign-in screen (Login.tsx) serves them all; this file holds what differs: the
  * addresses, the product's words, and reading the price from the server's catalogue (GET /v1/modules) — never a price
  * of its own.
  */
-export type SignupProduct = 'loyalty' | 'content'
+export type SignupProduct = 'appointments' | 'loyalty' | 'content'
 
 /** The products with their own pages: App\Support\PlanModules::SOLD_ALONE on the server, which also prices them. */
-export const SIGNUP_PRODUCTS: readonly SignupProduct[] = ['loyalty', 'content']
+export const SIGNUP_PRODUCTS: readonly SignupProduct[] = ['appointments', 'loyalty', 'content']
 
 export type AuthView = 'login' | 'register' | 'forgot-password' | 'reset-password'
 
@@ -42,7 +44,7 @@ export function authPath(product: SignupProduct | null | undefined, view: AuthVi
 
 /** Which view an address shows: /register and /loyalty/register both start the trial. */
 export function viewFromPath(pathname: string): 'login' | 'trial' | 'forgot' | 'reset' {
-  const rest = pathname.replace(/^\/(loyalty|content)(?=\/)/, '')
+  const rest = pathname.replace(/^\/(appointments|loyalty|content)(?=\/)/, '')
   if (rest.startsWith('/register')) return 'trial'
   if (rest.startsWith('/forgot-password')) return 'forgot'
   if (rest.startsWith('/reset-password')) return 'reset'
@@ -116,7 +118,12 @@ export function packageLines(product: SignupProduct, features: Record<string, st
   const staff = limitOf(features, 'max_team_members')
   const places = limitOf(features, 'max_properties')
   const lines: PackageLine[] = []
-  if (product === 'loyalty') {
+  if (product === 'appointments') {
+    const bookable = limitOf(features, 'max_booking_staff')
+    lines.push({ text: bookable ? t('auth.product.line.bookable', { n: n(bookable), defaultValue: 'Up to {{n}} team members clients can book' }) : t('auth.product.line.bookable_any', 'Any number of team members clients can book'), included: true })
+    lines.push({ text: t('auth.product.line.booking_page', 'Your own online booking page and website widget'), included: true })
+    lines.push({ text: t('auth.product.line.booking_core', 'Calendar, client records, payments and takings'), included: true })
+  } else if (product === 'loyalty') {
     lines.push({ text: members ? t('auth.product.line.members', { n: n(members), defaultValue: 'Up to {{n}} members' }) : t('auth.product.line.members_any', 'Unlimited members'), included: true })
     lines.push({ text: t('auth.product.line.loyalty_core', 'Points, tiers, stamps, rewards and offers'), included: true })
     lines.push({ text: t('auth.product.line.member_app', 'Member app, portal and desk scanning'), included: true })
@@ -136,7 +143,14 @@ export function packageLines(product: SignupProduct, features: Record<string, st
     })
     lines.push({ text: t('auth.product.line.approvals', 'Drafts, approvals and a morning email for the team'), included: true })
   }
-  if (staff) lines.push({ text: t('auth.product.line.staff', { n: n(staff), defaultValue: '{{n}} team members' }), included: true })
+  if (staff) {
+    lines.push({
+      text: product === 'appointments'
+        ? t('auth.product.line.sign_ins', { n: n(staff), defaultValue: '{{n}} staff sign-ins' })
+        : t('auth.product.line.staff', { n: n(staff), defaultValue: '{{n}} team members' }),
+      included: true,
+    })
+  }
   if (places && places > 1) lines.push({ text: t('auth.product.line.places', { n: n(places), defaultValue: '{{n}} locations' }), included: true })
   lines.push({ text: t('auth.product.line.priority', 'Priority support'), included: (features?.priority_support ?? '') === 'priority' })
   return lines
@@ -157,6 +171,24 @@ export interface ProductCopy {
 
 /** Each product's words. Literal keys, so the locale sweep (localeCompleteness.test.ts) checks every one. */
 export function productCopy(product: SignupProduct, t: TFunction): ProductCopy {
+  if (product === 'appointments') {
+    return {
+      brand: 'HexaTech Appointments',
+      monogram: 'HA',
+      badge: t('auth.product.appointments.badge', 'Online booking for service businesses'),
+      hero: t('auth.product.appointments.hero', 'Let clients book you, day and night.'),
+      heroSub: t('auth.product.appointments.hero_sub', 'An online booking page, a calendar for your whole team and client records in one workspace, for salons, clinics, studios and more.'),
+      bullets: [
+        t('auth.product.appointments.bullet_1', 'Your own booking page and a widget for your website'),
+        t('auth.product.appointments.bullet_2', "A calendar for every team member's hours, breaks and time off"),
+        t('auth.product.appointments.bullet_3', 'Client records, payments and takings at the desk'),
+      ],
+      loginSubtitle: t('auth.product.appointments.login_subtitle', 'Sign in to HexaTech Appointments'),
+      registerTitle: t('auth.product.appointments.register_title', 'Start your HexaTech Appointments trial'),
+      trialBanner: t('auth.product.appointments.trial_banner', 'Your trial includes everything in HexaTech Appointments.'),
+      tabTitle: t('auth.product.appointments.tab_title', 'HexaTech Appointments — Sign in'),
+    }
+  }
   if (product === 'loyalty') {
     return {
       brand: 'HexaTech Loyalty',
@@ -228,18 +260,19 @@ export function signupWords(t: TFunction) {
     phonePlaceholder: t('auth.product.signup.phone_placeholder', 'Phone number'),
     countryCode: t('auth.product.signup.country_code', 'Country code'),
     businessType: t('auth.product.signup.business_type', 'Type of business'),
-    chooseOne: t('auth.product.signup.choose_one', 'Choose one'),
+    industryHint: t('auth.product.signup.industry_hint', 'We set up your workspace for it. You can change it later in Settings.'),
+    chooseIndustry: t('auth.product.signup.choose_industry', 'Please choose your type of business.'),
     invalidEmail: t('auth.product.signup.invalid_email', 'Please enter a valid email address.'),
     shortPassword: t('auth.product.signup.short_password', 'Your password needs at least 8 characters.'),
     showPassword: t('auth.product.signup.show_password', 'Show password'),
     hidePassword: t('auth.product.signup.hide_password', 'Hide password'),
     industry: {
-      hotel: t('auth.product.signup.industry.hotel', 'Hotel or holiday rental'),
-      beauty: t('auth.product.signup.industry.beauty', 'Salon, spa or beauty'),
-      medical: t('auth.product.signup.industry.medical', 'Clinic or medical practice'),
-      restaurant: t('auth.product.signup.industry.restaurant', 'Restaurant, café or bar'),
-      fitness: t('auth.product.signup.industry.fitness', 'Gym or fitness studio'),
-      education: t('auth.product.signup.industry.education', 'School or training'),
+      hotel: t('auth.product.signup.industry.hotel', 'Hotel or rental'),
+      beauty: t('auth.product.signup.industry.beauty', 'Salon or spa'),
+      medical: t('auth.product.signup.industry.medical', 'Clinic'),
+      restaurant: t('auth.product.signup.industry.restaurant', 'Restaurant or café'),
+      fitness: t('auth.product.signup.industry.fitness', 'Gym or studio'),
+      education: t('auth.product.signup.industry.education', 'School or courses'),
       legal: t('auth.product.signup.industry.legal', 'Law firm'),
       real_estate: t('auth.product.signup.industry.real_estate', 'Real estate'),
       services: t('auth.product.signup.industry.services', 'Other services'),
@@ -251,6 +284,16 @@ export function signupWords(t: TFunction) {
 /** What a product's trial asks billing for: always Standard, monthly (owner 2026-11-03); the package is chosen at its end. */
 export function productTrialTerms(product: SignupProduct): { plan: string; billing_interval: 'MONTHLY' } {
   return { plan: packageSlug(product, 'standard'), billing_interval: 'MONTHLY' }
+}
+
+/**
+ * The order of the sign-up's business types for a product (owner 2026-11-04): its most likely customers first,
+ * "Something else" always last. Each is a reordering of PICKER_INDUSTRIES (lib/industryCopy), which the test checks.
+ */
+export function industryOrder(product: SignupProduct): IndustryId[] {
+  if (product === 'appointments') return ['beauty', 'medical', 'fitness', 'education', 'services', 'legal', 'real_estate', 'restaurant', 'hotel', 'other']
+  if (product === 'loyalty') return ['hotel', 'beauty', 'restaurant', 'fitness', 'medical', 'education', 'services', 'legal', 'real_estate', 'other']
+  return ['hotel', 'beauty', 'restaurant', 'medical', 'fitness', 'real_estate', 'education', 'legal', 'services', 'other']
 }
 
 /** A sign-up email the server will take: something@domain.tld, no spaces. */

@@ -14,7 +14,7 @@ vi.mock('../stores/authStore', () => {
 })
 vi.mock('../lib/api', () => ({ api: { get: vi.fn(() => new Promise(() => {})), post: vi.fn(), defaults: { baseURL: '' } } }))
 
-const render = (path: string, product?: 'loyalty' | 'content') => renderToStaticMarkup(
+const render = (path: string, product?: 'appointments' | 'loyalty' | 'content') => renderToStaticMarkup(
   <MemoryRouter initialEntries={[path]}><Login product={product} /></MemoryRouter>,
 )
 
@@ -56,6 +56,16 @@ describe('HexaTech Loyalty\'s and Content\'s own sign-in pages (owner 2026-11-02
     expect(html).toContain('Start your 7-day free trial')
     expect(html).toContain('data-trial-step="1"')
     expect(html).not.toContain('Turn first visits into regulars.')
+  })
+
+  it('has HexaTech Appointments\' own sign-in and two-step sign-up (owner 2026-11-04)', () => {
+    const login = render('/appointments/login', 'appointments')
+    expect(login).toContain('Sign in to HexaTech Appointments')
+    expect(login).toContain('Let clients book you, day and night.')
+    const register = render('/appointments/register', 'appointments')
+    expect(register).toContain('Start your 7-day free trial')
+    expect(register).toContain('data-trial-step="1"')
+    expect(register).not.toContain('data-package-picker')
   })
 
   it('leaves the full suite\'s sign-in as it was', () => {

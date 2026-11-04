@@ -1,0 +1,361 @@
+From 32bfc204320071ca781b861b2116ca31f224083e Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Wed, 4 Nov 2026 13:35:50 +0000
+Subject: [PATCH] Appointments sold on its own in Lite, Standard and Pro
+
+Owner 2026-11-04: the booking portal sold like Loyalty and Content, at the
+same prices and trial, with its own packages. A migration adds the feature
+max_booking_staff (team members clients can book: 2, 5, 15), the products
+appointments and booking where a database lacks them, and 21 hidden,
+unpriced plans: appointments_lite / appointments / appointments_pro at
+49 / 85 / 149 EUR a month (15 % less yearly, 7-day trial), and Appointments
+with Loyalty or Content in every pair of packages at the sum of the two.
+An appointments plan that is already sold is left as it is and logged.
+
+Sell them with php artisan stripe:sync --module-plans --publish.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01AxwcUrbmDjGnph8B93vTpQ
+---
+ ...11_04_120000_add_appointments_packages.php | 261 ++++++++++++++++++
+ tests/Feature/ModulePlansTest.php             |  35 ++-
+ 2 files changed, 292 insertions(+), 4 deletions(-)
+ create mode 100644 database/migrations/2026_11_04_120000_add_appointments_packages.php
+
+diff --git a/database/migrations/2026_11_04_120000_add_appointments_packages.php b/database/migrations/2026_11_04_120000_add_appointments_packages.php
+new file mode 100644
+index 0000000..d91d26f
+--- /dev/null
++++ b/database/migrations/2026_11_04_120000_add_appointments_packages.php
+@@ -0,0 +1,261 @@
++<?php
++
++use Illuminate\Database\Migrations\Migration;
++use Illuminate\Support\Facades\DB;
++use Illuminate\Support\Facades\Log;
++
++/**
++ * HexaTech Appointments sold on its own like Loyalty and Content (owner, 2026-11-04: "same prices, you can make your
++ * own packages, same trial period"): Lite, Standard and Pro at Loyalty's prices, 15 % less a month paid yearly, the
++ * 7-day trial. The loyalty application (App\Support\PlanModules) names the plans:
++ *
++ *   appointments_lite 4 900, appointments 8 500, appointments_pro 14 900 (cents a month), and Appointments with
++ *   Loyalty or with Content in every pair of packages (`appointments_lite-loyalty_pro`, `appointments-content`…) at
++ *   the sum of the two. No plan of all three products: that is the full suite.
++ *
++ * The packages differ by the new limit `max_booking_staff` (active team members clients can book: 2, 5, 15), staff
++ * sign-ins (`max_team_members`), locations and support. The plans hold the products `appointments` and `booking`
++ * (the Appointments plan of 2026-10-02), plus the other product's in a pair.
++ *
++ * Like the module plans of 2 November they are HIDDEN and unpriced. Sell them, once, in this application's
++ * environment (it prices every plan whose metadata names modules, and reuses the prices it already made):
++ *
++ *   php artisan stripe:sync --module-plans --publish
++ *
++ * An `appointments` plan that is already sold (public or with a Stripe price, e.g. made by hand in Plans) is left as
++ * its owner set it, and logged. Idempotent otherwise.
++ */
++return new class extends Migration {
++    private const YEARLY_DISCOUNT_PERCENT = 15;
++
++    /** module => package => [monthly cents, features] — App\Support\PlanModules::MODULES in the loyalty application. */
++    private const PACKAGES = [
++        'appointments' => [
++            'lite' => [4900, [
++                'max_team_members' => '2', 'max_booking_staff' => '2', 'max_guests' => '1000', 'max_properties' => '1',
++                'max_loyalty_members' => '0',
++            ]],
++            'standard' => [8500, [
++                'max_team_members' => '5', 'max_booking_staff' => '5', 'max_guests' => '5000', 'max_properties' => '1',
++                'max_loyalty_members' => '0',
++            ]],
++            'pro' => [14900, [
++                'max_team_members' => '15', 'max_booking_staff' => '15', 'max_guests' => '20000', 'max_properties' => '3',
++                'max_loyalty_members' => '0', 'priority_support' => 'priority',
++            ]],
++        ],
++        'loyalty' => [
++            'lite' => [4900, [
++                'max_team_members' => '2', 'max_guests' => '1000', 'max_properties' => '1', 'max_loyalty_members' => '500',
++                'mobile_app' => 'true',
++            ]],
++            'standard' => [8500, [
++                'max_team_members' => '5', 'max_guests' => '5000', 'max_properties' => '1', 'max_loyalty_members' => '2500',
++                'mobile_app' => 'true', 'push_notifications' => 'true', 'campaigns' => 'true', 'wallet' => 'true', 'nfc_cards' => 'true',
++            ]],
++            'pro' => [14900, [
++                'max_team_members' => '15', 'max_guests' => '20000', 'max_properties' => '3', 'max_loyalty_members' => '10000',
++                'mobile_app' => 'true', 'push_notifications' => 'true', 'campaigns' => 'true', 'wallet' => 'true', 'nfc_cards' => 'true',
++                'priority_support' => 'priority',
++            ]],
++        ],
++        'content' => [
++            'lite' => [3900, [
++                'max_team_members' => '2', 'max_guests' => '1000', 'max_properties' => '1', 'max_loyalty_members' => '0',
++                'ai_monthly_cost_cents' => '800',
++            ]],
++            'standard' => [8500, [
++                'max_team_members' => '5', 'max_guests' => '1000', 'max_properties' => '1', 'max_loyalty_members' => '0',
++                'ai_monthly_cost_cents' => '2000',
++            ]],
++            'pro' => [14900, [
++                'max_team_members' => '15', 'max_guests' => '1000', 'max_properties' => '3', 'max_loyalty_members' => '0',
++                'ai_monthly_cost_cents' => '5000', 'priority_support' => 'priority',
++            ]],
++        ],
++    ];
++
++    /** The billing products each module's plan holds — PlanModules::MODULES[…]['products']. */
++    private const PRODUCTS = [
++        'appointments' => ['appointments', 'booking'],
++        'loyalty'      => ['loyalty'],
++        'content'      => ['content'],
++    ];
++
++    /** key => [name, valueType], as DatabaseSeeder names them; max_booking_staff is new here. */
++    private const FEATURE_ROWS = [
++        'max_team_members' => ['Team Members', 'LIMIT'], 'max_guests' => ['Guest Profiles', 'LIMIT'],
++        'max_properties' => ['Properties', 'LIMIT'], 'max_loyalty_members' => ['Loyalty Members', 'LIMIT'],
++        'max_booking_staff' => ['Team members who can be booked', 'LIMIT'],
++        'ai_monthly_cost_cents' => ['Monthly AI allowance (USD cents)', 'LIMIT'],
++        'ai_insights' => ['AI Insights & Chatbot', 'BOOLEAN'], 'ai_avatars' => ['AI Virtual Concierge', 'BOOLEAN'],
++        'custom_branding' => ['Custom Branding & Theme', 'BOOLEAN'], 'api_access' => ['API Access', 'BOOLEAN'],
++        'push_notifications' => ['Push Notifications', 'BOOLEAN'], 'mobile_app' => ['Member Mobile App', 'BOOLEAN'],
++        'nfc_cards' => ['NFC Card Support', 'BOOLEAN'], 'priority_support' => ['Support Level', 'TIER'],
++        'time_management' => ['Time Management Platform', 'BOOLEAN'], 'admin_ai' => ['Staff AI Copilot', 'BOOLEAN'],
++        'brands' => ['Multi-Brand Portfolios', 'BOOLEAN'], 'landing_pages' => ['Landing Page Builder', 'BOOLEAN'],
++        'campaigns' => ['Campaigns', 'BOOLEAN'], 'reviews' => ['Reviews', 'BOOLEAN'], 'engagement' => ['Engagement', 'BOOLEAN'],
++        'wallet' => ['Wallet Passes', 'BOOLEAN'], 'chatbot' => ['AI Chatbot', 'BOOLEAN'],
++    ];
++
++    private const SWITCHES = [
++        'ai_insights', 'ai_avatars', 'custom_branding', 'api_access', 'push_notifications', 'mobile_app', 'nfc_cards',
++        'time_management', 'admin_ai', 'brands', 'landing_pages', 'campaigns', 'reviews', 'engagement', 'wallet', 'chatbot',
++    ];
++
++    private function id(): string
++    {
++        return 'c' . base_convert((string) intval(microtime(true) * 1000), 10, 36) . bin2hex(random_bytes(8));
++    }
++
++    public function up(): void
++    {
++        $now = now();
++
++        foreach (self::FEATURE_ROWS as $key => [$name, $type]) {
++            DB::table('features')->insertOrIgnore([
++                'id' => $this->id(), 'productId' => null, 'key' => $key, 'name' => $name, 'valueType' => $type, 'createdAt' => $now,
++            ]);
++        }
++        $features = DB::table('features')->pluck('id', 'key');
++
++        // `booking` is the seeder's; `appointments` is new to the code here (the plan of 2026-10-02 was made by hand).
++        // Both are made only where a database lacks them.
++        DB::table('products')->insertOrIgnore([
++            'id'          => $this->id(),
++            'name'        => 'Appointments',
++            'slug'        => 'appointments',
++            'description' => 'HexaTech Appointments: online booking, the team calendar and client records for service businesses',
++            'category'    => 'reservations',
++            'baseUrl'     => 'https://app.hexa-tech.uk/appointments',
++            'isActive'    => true,
++            'sortOrder'   => 8,
++            'createdAt'   => $now,
++            'updatedAt'   => $now,
++        ]);
++        DB::table('products')->insertOrIgnore([
++            'id'          => $this->id(),
++            'name'        => 'Booking',
++            'slug'        => 'booking',
++            'description' => 'Glamping and accommodation booking engine with calendar management',
++            'category'    => 'reservations',
++            'baseUrl'     => '/apps/booking',
++            'isActive'    => true,
++            'sortOrder'   => 6,
++            'createdAt'   => $now,
++            'updatedAt'   => $now,
++        ]);
++        $products = DB::table('products')->whereIn('slug', ['appointments', 'booking', 'loyalty', 'content'])->pluck('id', 'slug');
++
++        $sort = 40;
++        foreach ($this->choices() as $choice) {
++            $slug = $this->slug($choice);
++            $monthly = array_sum(array_map(fn ($m, $p) => self::PACKAGES[$m][$p][0], array_keys($choice), $choice));
++            $values = $this->features($choice);
++            $row = [
++                'name'          => $this->name($choice),
++                'description'   => 'HexaTech ' . implode(' and ', array_map(fn ($m, $p) => ucfirst($m) . ' ' . ucfirst($p), array_keys($choice), $choice))
++                    . ' on its own plan; 15 % less a month paid yearly.',
++                'isBundle'      => count($choice) > 1,
++                'monthlyAmount' => $monthly,
++                'yearlyAmount'  => (int) round($monthly * 12 * (100 - self::YEARLY_DISCOUNT_PERCENT) / 100),
++                'currency'      => 'eur',
++                'trialDays'     => 7,
++                'sortOrder'     => $sort++,
++                'metadata'      => json_encode(['modules' => array_keys($choice), 'packages' => $choice, 'sold_alone' => true]),
++                'updatedAt'     => $now,
++            ];
++
++            $existing = DB::table('plans')->where('slug', $slug)->first();
++            if ($existing) {
++                // Only a plan nobody can be on yet takes the packages' terms; one already sold stays as its owner set it.
++                if ($existing->isPublic || $existing->monthlyPriceId || $existing->yearlyPriceId) {
++                    Log::warning('add_appointments_packages: plan already sold, left as it is', ['slug' => $slug]);
++                    continue;
++                }
++                DB::table('plans')->where('id', $existing->id)->update($row);
++                $planId = $existing->id;
++                foreach ($values as $key => $value) {
++                    if (!isset($features[$key])) {
++                        continue;
++                    }
++                    $updated = DB::table('plan_features')->where('planId', $planId)->where('featureId', $features[$key])->update(['value' => $value]);
++                    if ($updated === 0) {
++                        DB::table('plan_features')->insertOrIgnore(['id' => $this->id(), 'planId' => $planId, 'featureId' => $features[$key], 'value' => $value]);
++                    }
++                }
++            } else {
++                $planId = $this->id();
++                DB::table('plans')->insert($row + [
++                    'id' => $planId, 'slug' => $slug, 'monthlyPriceId' => null, 'yearlyPriceId' => null,
++                    'isActive' => true, 'isPublic' => false, 'createdAt' => $now,
++                ]);
++                foreach ($values as $key => $value) {
++                    if (isset($features[$key])) {
++                        DB::table('plan_features')->insertOrIgnore(['id' => $this->id(), 'planId' => $planId, 'featureId' => $features[$key], 'value' => $value]);
++                    }
++                }
++            }
++            foreach (array_keys($choice) as $module) {
++                foreach (self::PRODUCTS[$module] as $product) {
++                    if (isset($products[$product])) {
++                        DB::table('plan_products')->insertOrIgnore(['id' => $this->id(), 'planId' => $planId, 'productId' => $products[$product]]);
++                    }
++                }
++            }
++        }
++    }
++
++    /** Appointments in each package, then with Loyalty and with Content in every pair of packages, in MODULES order. */
++    private function choices(): array
++    {
++        $out = [];
++        foreach (array_keys(self::PACKAGES['appointments']) as $package) {
++            $out[] = ['appointments' => $package];
++        }
++        foreach (['loyalty', 'content'] as $other) {
++            foreach (array_keys(self::PACKAGES['appointments']) as $appointments) {
++                foreach (array_keys(self::PACKAGES[$other]) as $package) {
++                    $out[] = ['appointments' => $appointments, $other => $package];
++                }
++            }
++        }
++
++        return $out;
++    }
++
++    /** The loyalty application's PlanModules::planSlug: Standard is the bare name, products in order with a hyphen. */
++    private function slug(array $choice): string
++    {
++        return implode('-', array_map(fn ($m, $p) => $p === 'standard' ? $m : "{$m}_{$p}", array_keys($choice), $choice));
++    }
++
++    private function name(array $choice): string
++    {
++        return implode(' + ', array_map(fn ($m, $p) => 'HexaTech ' . ucfirst($m) . ($p === 'standard' ? '' : ' ' . ucfirst($p)), array_keys($choice), $choice));
++    }
++
++    /** What a choice grants: every switch off unless a package turns it on, the largest limits, the highest support. */
++    private function features(array $choice): array
++    {
++        $values = array_fill_keys(self::SWITCHES, 'false') + ['priority_support' => 'email'];
++        foreach ($choice as $module => $package) {
++            foreach (self::PACKAGES[$module][$package][1] as $key => $value) {
++                if (str_starts_with($key, 'max_') || $key === 'ai_monthly_cost_cents') {
++                    $values[$key] = isset($values[$key]) ? (string) max((int) $values[$key], (int) $value) : $value;
++                } elseif ($key === 'priority_support') {
++                    $values[$key] = $value === 'priority' ? 'priority' : $values[$key];
++                } elseif ($value === 'true') {
++                    $values[$key] = 'true';
++                }
++            }
++        }
++
++        return $values;
++    }
++
++    public function down(): void
++    {
++        // Leaves the plans in place: an organisation may already be subscribed to one.
++    }
++};
+diff --git a/tests/Feature/ModulePlansTest.php b/tests/Feature/ModulePlansTest.php
+index cca7ace..005de20 100644
+--- a/tests/Feature/ModulePlansTest.php
++++ b/tests/Feature/ModulePlansTest.php
+@@ -84,7 +84,8 @@ public function test_the_module_plans_exist_hidden_in_euros_with_their_products(
+             $this->assertNull($plan->monthlyPriceId, "{$slug} has no Stripe price until stripe:sync makes one");
+         }
+         $this->assertSame(86700, Plan::where('slug', 'loyalty')->value('yearlyAmount'), '85 € a month: 867 € a year');
+-        $this->assertSame(15, Plan::whereNotNull('metadata')->get()->filter(fn ($p) => !empty($p->metadata['modules']))->count());
++        // 15 Loyalty and Content plans, and 21 of Appointments (2026_11_04_120000_add_appointments_packages).
++        $this->assertSame(36, Plan::whereNotNull('metadata')->get()->filter(fn ($p) => !empty($p->metadata['modules']))->count());
+         $this->assertSame(['loyalty'], $this->productsOf('loyalty'));
+         $this->assertSame(['content'], $this->productsOf('content'));
+         $this->assertSame(['content', 'loyalty'], $this->productsOf('loyalty-content'));
+@@ -95,6 +96,32 @@ public function test_the_module_plans_exist_hidden_in_euros_with_their_products(
+         $this->assertNotContains('loyalty-content', $listed);
+     }
+ 
++    /** HexaTech Appointments on its own (owner 2026-11-04): Loyalty's prices, its own packages, the same trial. */
++    public function test_appointments_is_sold_in_three_packages_and_with_each_other_product(): void
++    {
++        $this->assertTrue(DB::table('products')->where('slug', 'appointments')->where('isActive', true)->exists());
++
++        $prices = [
++            'appointments_lite' => 4900, 'appointments' => 8500, 'appointments_pro' => 14900,
++            'appointments-loyalty' => 17000, 'appointments_lite-content_pro' => 19800, 'appointments_pro-loyalty_lite' => 19800,
++        ];
++        foreach ($prices as $slug => $amount) {
++            $plan = Plan::where('slug', $slug)->firstOrFail();
++            $this->assertSame([$amount, (int) round($amount * 12 * 0.85), 'eur', 7, true, false], [$plan->monthlyAmount, $plan->yearlyAmount, $plan->currency, $plan->trialDays, $plan->isActive, $plan->isPublic], $slug);
++            $this->assertNull($plan->monthlyPriceId, "{$slug} has no Stripe price until stripe:sync makes one");
++        }
++        $this->assertSame(['appointments', 'booking'], $this->productsOf('appointments'));
++        $this->assertSame(['appointments', 'booking', 'loyalty'], $this->productsOf('appointments-loyalty'));
++        $this->assertSame(['appointments', 'booking', 'content'], $this->productsOf('appointments_pro-content_lite'));
++        $this->assertSame(['2', '5', '15'], [$this->feature('appointments_lite', 'max_booking_staff'), $this->feature('appointments', 'max_booking_staff'), $this->feature('appointments_pro', 'max_booking_staff')]);
++        $this->assertSame('2', $this->feature('appointments_lite-loyalty_pro', 'max_booking_staff'));
++        $this->assertNull(Plan::where('slug', 'appointments-loyalty-content')->first(), 'all three products is the full suite');
++        $this->assertSame(['appointments' => 'lite', 'loyalty' => 'pro'], Plan::where('slug', 'appointments_lite-loyalty_pro')->firstOrFail()->metadata['packages'] ?? null);
++
++        $listed = collect($this->getJson('/api/billing/plans')->assertOk()->json('plans'))->pluck('slug');
++        $this->assertNotContains('appointments_lite', $listed);
++    }
++
+     public function test_the_module_plans_grant_what_their_products_do(): void
+     {
+         if (!DB::table('features')->where('key', 'campaigns')->exists()) {
+@@ -140,7 +167,7 @@ public function test_stripe_sync_module_plans_prices_every_package_and_nothing_e
+     {
+         Plan::updateOrCreate(['slug' => 'growth'], ['name' => 'Growth', 'monthlyAmount' => 26900, 'yearlyAmount' => 269000, 'isActive' => true, 'isPublic' => true]);
+         $answers = [];
+-        foreach (range(1, 15) as $i) {
++        foreach (range(1, 36) as $i) {
+             $answers[] = ['object' => 'search_result', 'data' => [], 'has_more' => false, 'url' => '/v1/products/search'];
+             $answers[] = ['id' => "prod_module_{$i}", 'object' => 'product'];
+             $answers[] = ['id' => "price_module_{$i}_m", 'object' => 'price'];
+@@ -150,8 +177,8 @@ public function test_stripe_sync_module_plans_prices_every_package_and_nothing_e
+ 
+         $this->artisan('stripe:sync', ['--module-plans' => true, '--publish' => true])->assertSuccessful();
+ 
+-        $this->assertCount(60, $http->requests, '15 plans: search, product, monthly and yearly price each');
+-        $this->assertSame(15, Plan::where('isPublic', true)->whereNotNull('monthlyPriceId')->whereNotNull('yearlyPriceId')->get()
++        $this->assertCount(144, $http->requests, '36 plans: search, product, monthly and yearly price each');
++        $this->assertSame(36, Plan::where('isPublic', true)->whereNotNull('monthlyPriceId')->whereNotNull('yearlyPriceId')->get()
+             ->filter(fn ($p) => !empty($p->metadata['modules']))->count());
+         $this->assertNull(Plan::where('slug', 'growth')->value('monthlyPriceId'), 'a full plan is not touched');
+     }
+-- 
+2.43.0
+

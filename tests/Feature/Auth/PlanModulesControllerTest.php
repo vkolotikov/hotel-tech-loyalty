@@ -87,9 +87,13 @@ class PlanModulesControllerTest extends TestCase
     {
         $plans = collect($this->getJson('/api/v1/modules')->assertOk()->json('plans'))->keyBy('slug');
 
-        // Each product in three packages, then every pair of packages: 3 + 3 + 9.
-        $this->assertCount(15, $plans);
-        $this->assertSame(['loyalty_lite', 'loyalty', 'loyalty_pro', 'content_lite', 'content', 'content_pro'], $plans->keys()->take(6)->all());
+        // Each of the three products in three packages, then every pair of two products' packages: 9 + 3 × 9. No plan
+        // of all three (2026-11-04).
+        $this->assertCount(36, $plans);
+        $this->assertSame(['appointments_lite', 'appointments', 'appointments_pro', 'loyalty_lite', 'loyalty', 'loyalty_pro', 'content_lite', 'content', 'content_pro'], $plans->keys()->take(9)->all());
+        $this->assertSame([4900, 8500, 14900], [$plans['appointments_lite']['monthly_amount'], $plans['appointments']['monthly_amount'], $plans['appointments_pro']['monthly_amount']], 'Appointments at Loyalty\'s prices');
+        $this->assertSame([13400, '2'], [$plans['appointments_lite-loyalty']['monthly_amount'], $plans['appointments_lite-loyalty']['features']['max_booking_staff']]);
+        $this->assertArrayNotHasKey('appointments-loyalty-content', $plans->all());
         $this->assertSame([8500, 86700, 'eur', true, 'built_in'], [$plans['loyalty']['monthly_amount'], $plans['loyalty']['yearly_amount'], $plans['loyalty']['currency'], $plans['loyalty']['available'], $plans['loyalty']['source']]);
         $this->assertSame([4900, 14900, 3900], [$plans['loyalty_lite']['monthly_amount'], $plans['loyalty_pro']['monthly_amount'], $plans['content_lite']['monthly_amount']]);
         $this->assertSame(17000, $plans['loyalty-content']['monthly_amount']);
@@ -103,7 +107,7 @@ class PlanModulesControllerTest extends TestCase
         $this->withBilling([$this->plan('loyalty', 8900, null, null, ['max_loyalty_members' => '3000']), $this->plan('growth', 26900), $this->plan('content-loyalty', 1)], []);
 
         $plans = collect($this->getJson('/api/v1/modules')->assertOk()->json('plans'))->keyBy('slug');
-        $this->assertCount(15, $plans, 'no full plan, no non-canonical slug');
+        $this->assertCount(36, $plans, 'no full plan, no non-canonical slug');
         $this->assertArrayNotHasKey('growth', $plans->all());
         $this->assertSame([8900, 90780, true, 'billing'], [$plans['loyalty']['monthly_amount'], $plans['loyalty']['yearly_amount'], $plans['loyalty']['available'], $plans['loyalty']['source']]);
         $this->assertSame(['max_loyalty_members' => '3000'], $plans['loyalty']['features'], 'billing\'s features');
@@ -140,7 +144,9 @@ class PlanModulesControllerTest extends TestCase
         $this->assertSame(['lite', 'standard', 'pro'], $add->keys()->all());
         $this->assertSame(['loyalty-content', true, 17000, 8500], [$add['standard']['plan_slug'], $add['standard']['available'], $add['standard']['monthly_amount'], $add['standard']['extra_monthly_amount']]);
         $this->assertSame(['loyalty-content_lite', 3900], [$add['lite']['plan_slug'], $add['lite']['extra_monthly_amount']]);
-        $this->assertFalse($products['appointments']['options'][0]['available'], 'no built-in price and no billing plan for Appointments with Loyalty');
+        $appointments = collect($products['appointments']['options'])->keyBy('package');
+        $this->assertSame(['lite', 'standard', 'pro'], $appointments->keys()->all(), 'Appointments added in any of its packages (2026-11-04)');
+        $this->assertSame(['appointments_lite-loyalty', true, 13400, 4900], [$appointments['lite']['plan_slug'], $appointments['lite']['available'], $appointments['lite']['monthly_amount'], $appointments['lite']['extra_monthly_amount']]);
     }
 
     public function test_a_full_customer_is_told_its_plan_has_everything(): void
@@ -178,7 +184,7 @@ class PlanModulesControllerTest extends TestCase
             ->assertJsonPath('done', 'package')->assertJsonPath('packages', ['loyalty' => 'pro', 'content' => 'lite']);
         $this->assertSame('10000', $this->org->fresh()->plan_features['max_loyalty_members']);
         $this->manager()->postJson('/api/v1/auth/modules/package', ['module' => 'loyalty', 'package' => 'pro'])->assertStatus(422)->assertJsonPath('error', 'same_package');
-        $this->manager()->postJson('/api/v1/auth/modules/package', ['module' => 'appointments', 'package' => 'pro'])->assertStatus(422)->assertJsonPath('error', 'no_such_package');
+        $this->manager()->postJson('/api/v1/auth/modules/package', ['module' => 'appointments', 'package' => 'pro'])->assertStatus(422)->assertJsonPath('error', 'not_held');
 
         $this->manager()->postJson('/api/v1/auth/modules/remove', ['module' => 'content'])->assertOk()->assertJsonPath('modules', ['loyalty']);
         $org = $this->org->fresh();
@@ -291,6 +297,21 @@ class PlanModulesControllerTest extends TestCase
         $this->assertSame(['loyalty'], $org->planModules());
         $this->assertSame('loyalty', $org->plan_slug);
         $this->assertSame('TRIALING', $org->subscription_status);
+    }
+
+    /** Appointments sold on its own like Loyalty and Content (owner 2026-11-04): its trial starts on Standard. */
+    public function test_signing_up_for_appointments_alone_lands_in_its_workspace_on_standard(): void
+    {
+        $response = $this->postJson('/api/v1/auth/trial', ['name' => 'New Owner', 'email' => 'salon-owner@example.test', 'phone' => '+44 7700 900123',
+            'hotel_name' => 'Seaside Salon', 'password' => 'NewAccount123!', 'plan' => 'appointments', 'industry' => 'beauty'])->assertCreated();
+
+        $response->assertJsonPath('user.workspaces.appointments.only', true);
+        $this->assertArrayNotHasKey('loyalty', $response->json('user.workspaces'));
+        $org = Organization::findOrFail(User::findOrFail($response->json('user.id'))->organization_id);
+        $this->assertSame(['appointments'], $org->planModules());
+        $this->assertSame(['appointments' => 'standard'], $org->planTiers());
+        $this->assertSame(['appointments', 'TRIALING', '5'], [$org->plan_slug, $org->subscription_status, $org->plan_features['max_booking_staff'] ?? null]);
+        Mail::assertQueued(\App\Mail\WelcomeTrialMail::class, fn ($mail) => str_ends_with($mail->loginUrl, '/appointments/login') && $mail->planName === 'HexaTech Appointments');
     }
 
     /** 4 Nov 2026: billing's register refused `other` and `services` (422), leaving the trial with no billing record. */

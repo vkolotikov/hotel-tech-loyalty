@@ -41,7 +41,7 @@ class PlanModulesTest extends TestCase
         $this->assertSame(['loyalty' => 'lite', 'content' => 'pro'], PlanModules::selectionFromPlanSlug('loyalty_lite-content_pro'));
         $this->assertSame(['appointments' => 'standard', 'loyalty' => 'standard', 'content' => 'standard'], PlanModules::selectionFromPlanSlug('appointments-loyalty-content'));
         $this->assertSame(['loyalty', 'content'], PlanModules::fromPlanSlug('loyalty-content_lite'));
-        foreach (['content-loyalty', 'loyalty-loyalty_pro', 'loyalty_standard', 'loyalty_gold', 'appointments_pro', 'growth', 'starter', 'loyalty-pro', '', null] as $slug) {
+        foreach (['content-loyalty', 'loyalty-loyalty_pro', 'loyalty_standard', 'loyalty_gold', 'appointments_gold', 'growth', 'starter', 'loyalty-pro', '', null] as $slug) {
             $this->assertNull(PlanModules::selectionFromPlanSlug($slug), (string) $slug);
         }
 
@@ -51,7 +51,9 @@ class PlanModulesTest extends TestCase
         $this->assertSame('appointments-content', PlanModules::planSlug(['content', 'appointments']));
         $this->assertSame('HexaTech Loyalty Pro + HexaTech Content', PlanModules::planName(['loyalty' => 'pro', 'content' => 'standard']));
         $this->assertSame(['lite', 'standard', 'pro'], PlanModules::tiers('loyalty'));
-        $this->assertSame(['standard'], PlanModules::tiers('appointments'));
+        $this->assertSame(['lite', 'standard', 'pro'], PlanModules::tiers('appointments'));
+        $this->assertSame(['appointments' => 'pro'], PlanModules::selectionFromPlanSlug('appointments_pro'));
+        $this->assertSame('appointments_lite-loyalty', PlanModules::planSlug(['loyalty' => 'standard', 'appointments' => 'lite']));
     }
 
     public function test_prices_by_package_and_yearly_fifteen_percent_less(): void
@@ -62,7 +64,8 @@ class PlanModulesTest extends TestCase
         $this->assertSame(3900, PlanModules::fallbackMonthlyAmount(['content' => 'lite']));
         $this->assertSame(17000, PlanModules::fallbackMonthlyAmount(['content', 'loyalty']));
         $this->assertSame(18800, PlanModules::fallbackMonthlyAmount(['loyalty' => 'pro', 'content' => 'lite']));
-        $this->assertNull(PlanModules::fallbackMonthlyAmount(['appointments', 'loyalty']), 'Appointments is priced in billing only');
+        $this->assertSame([4900, 8500, 14900], [PlanModules::fallbackMonthlyAmount(['appointments' => 'lite']), PlanModules::fallbackMonthlyAmount(['appointments']), PlanModules::fallbackMonthlyAmount(['appointments' => 'pro'])], 'Appointments at Loyalty\'s prices (owner 2026-11-04)');
+        $this->assertSame(17000, PlanModules::fallbackMonthlyAmount(['appointments', 'loyalty']));
         $this->assertNull(PlanModules::fallbackMonthlyAmount([]));
 
         $this->assertSame(86700, PlanModules::yearlyAmount(8500), '85 € a month: 867 € a year, 72.25 € a month');
@@ -87,6 +90,11 @@ class PlanModulesTest extends TestCase
         $this->assertSame('2000', PlanModules::features(['content'])['ai_monthly_cost_cents']);
         $this->assertSame('5000', PlanModules::features(['content' => 'pro'])['ai_monthly_cost_cents']);
         $this->assertSame('false', PlanModules::features(['content'])['campaigns']);
+
+        $this->assertSame(['2', '2', 'email'], array_map(fn ($k) => PlanModules::features(['appointments' => 'lite'])[$k], ['max_booking_staff', 'max_team_members', 'priority_support']));
+        $this->assertSame(['5', '5', 'email'], array_map(fn ($k) => PlanModules::features(['appointments'])[$k], ['max_booking_staff', 'max_team_members', 'priority_support']));
+        $this->assertSame(['15', '15', 'priority'], array_map(fn ($k) => PlanModules::features(['appointments' => 'pro'])[$k], ['max_booking_staff', 'max_team_members', 'priority_support']));
+        $this->assertSame(['2', '2500', 'true'], array_map(fn ($k) => PlanModules::features(['appointments' => 'lite', 'loyalty' => 'standard'])[$k], ['max_booking_staff', 'max_loyalty_members', 'campaigns']));
 
         $both = PlanModules::features(['loyalty' => 'lite', 'content' => 'pro']);
         $this->assertSame(['500', '15', 'false', '5000', 'priority'], [$both['max_loyalty_members'], $both['max_team_members'], $both['campaigns'], $both['ai_monthly_cost_cents'], $both['priority_support']], 'the largest limit, any switch, the highest support');

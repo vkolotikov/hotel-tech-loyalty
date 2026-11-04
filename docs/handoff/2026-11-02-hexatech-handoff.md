@@ -3,6 +3,24 @@
 Read this first, then `2026-10-31-hexatech-handoff.md` (production, the native apps, the stack upgrade, cloud container
 notes). AGENTS.md and CLAUDE.md still apply.
 
+## 4 Nov: Appointments sold on its own, and the type-of-business tiles (the owner merges)
+
+The owner asked: "improve industry selection, better well designed" and "similar registration for content planner and
+booking portal, same prices, you can make your own packages, same trial period, separate registration page".
+Content already had its page (`/content/register`, the two-step card since PR #2). On branch
+`feature/signup-industry-booking`:
+
+- **Type of business** in step 2 is a grid of tiles (`frontend/src/pages/IndustryTiles.tsx`): icon and short name,
+  one radio group with arrow keys, in each product's order (`industryOrder()`), asked only when the address names no
+  industry; a missing choice is refused with a sentence.
+- **HexaTech Appointments** at `/appointments/register` and `/appointments/login`, in Lite / Standard / Pro at
+  49 / 85 / 149 € (`PlanModules`), packages by the new limit `max_booking_staff` (2 / 5 / 15, checked in
+  `TeamSetup`, kept on a downgrade). The catalogue lists each product alone and every pair (36 plans), never all three.
+- **Billing**: push to `hotel-tech-saas` was refused again, so its half is
+  `docs/billing/2026-11-04-hotel-tech-saas-appointments-packages.patch` (applies on billing `main` 44b3902). Steps:
+  `docs/plan-modules.md`, "Billing handover, 2026-11-04". Until the owner applies it and runs
+  `php artisan stripe:sync --module-plans --publish`, `/appointments/register` says it cannot be bought online yet.
+
 ## 3 Nov: the product sign-up in two steps (PR #2, the owner merges)
 
 The owner asked for a simpler register page "in few steps and centered" (like admin.stan.store/register), "start every

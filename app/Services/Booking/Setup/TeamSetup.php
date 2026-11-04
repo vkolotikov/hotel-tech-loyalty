@@ -3,7 +3,9 @@
 namespace App\Services\Booking\Setup;
 
 use App\Models\ServiceMaster;
+use App\Services\Appointments\AppointmentRefused;
 use App\Services\Appointments\TeamColours;
+use App\Services\PlanLimitGuard;
 use Illuminate\Validation\Rule;
 
 /**
@@ -44,6 +46,9 @@ final class TeamSetup
     public function create(array $data): ServiceMaster
     {
         $orgId = (int) app('current_organization_id');
+        if (!array_key_exists('is_active', $data) || filter_var($data['is_active'], FILTER_VALIDATE_BOOL)) {
+            self::assertRoomToBook();
+        }
         $master = ServiceMaster::create(array_intersect_key($data, array_flip(self::FIELDS)) + [
             'is_active'  => true,
             'sort_order' => (int) ServiceMaster::withoutGlobalScopes()->where('organization_id', $orgId)->max('sort_order') + 1,
@@ -57,12 +62,29 @@ final class TeamSetup
 
     public function update(ServiceMaster $master, array $data): ServiceMaster
     {
+        if (!$master->is_active && array_key_exists('is_active', $data) && filter_var($data['is_active'], FILTER_VALIDATE_BOOL)) {
+            self::assertRoomToBook();
+        }
         $master->update(array_intersect_key($data, array_flip(self::FIELDS)));
         if (array_key_exists('services', $data)) {
             self::syncServices($master, $data['services']);
         }
 
         return $master->fresh();
+    }
+
+    /**
+     * The package's limit on people who can be booked (`max_booking_staff`, Appointments' packages, owner 2026-11-04):
+     * adding one more active team member, or switching one back on, is refused at the limit. No limit in the plan
+     * (every full customer) means none.
+     */
+    private static function assertRoomToBook(): void
+    {
+        $guard = app(PlanLimitGuard::class);
+        if ($guard->check(PlanLimitGuard::KEY_BOOKING_STAFF) !== null) {
+            $limit = $guard->usage(PlanLimitGuard::KEY_BOOKING_STAFF)['limit'];
+            throw new AppointmentRefused('plan_limit', "Your package allows {$limit} team members who can be booked. Choose a larger package in Plan & products, or switch someone off first.", 402, ['limit_key' => PlanLimitGuard::KEY_BOOKING_STAFF, 'limit' => $limit]);
+        }
     }
 
     /** @param list<array{id:int, duration_minutes?:?int, price?:?float}> $services */
