@@ -937,6 +937,25 @@ files on disk): run them one after the other.
 
 ## Deploying
 
+- Security review before the public launch, and members see their points move (owner, 2026-11-04): production
+  **983572728** on **a8b45e629**, source patch **66bc96753** plus its SPA build. Feature source **50abe6993** on
+  `fix/cross-organisation-accounts`. 33 paths (7 added, 26 changed), none deleted, no migration.
+  - **The change:** the section "Security review before the public launch (2026-11-04)" above (its first batch); the
+    member portal's refresh (`docs/member-portal.md`); Symfony routing, yaml, filesystem, http-foundation and
+    http-kernel 8.1.11.
+  - **Checks:**
+    - parity: the whole source tree, builds aside, equals the tip;
+    - artifact: `tsc -b` clean, Vitest 404 files / 5,845 tests; PHP 8.5.12 (this container: no gd, zip, intl) on
+      LoyaltyWorkspace 644 passed, 10 failed (the 10 picture and file tests that need gd and zip, as on main),
+      Member 364, Loyalty 383, Auth 56, AdminAccess 78 passed;
+    - CI on the tip green on all 8 jobs, PostgreSQL included (run 41930983814). Its first runs had found three test
+      fixtures that production's schema refuses and Larastan findings; both fixed on the branch before the deploy.
+  - Verified by content on `origin/main`: the new files, each fix's line, the portal chunk's `refetchInterval:6e4`
+    (absent from a8b45e629's), the five Symfony versions. Not on the live site (this container cannot reach
+    `app.hexa-tech.uk`).
+  - **After it, once:** `php artisan loyalty:foreign-accounts`, then `php artisan loyalty:foreign-accounts --detach`.
+  - The next source delta starts at **50abe6993**.
+
 - CRM assistant on the Anthropic SDK (stack plan follow-up, owner "do next", 2026-11-02): production **33d4f74** on
   **b67ed20**, a source patch only (the fresh SPA build is identical to main's). Feature source **1bea54f** on
   `claude/stack-audit-upgrade-plan-9hdkkv`. 7 paths (1 added, 6 changed), none deleted.
