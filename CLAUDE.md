@@ -272,6 +272,14 @@ or add the next dated one, at the end of a session.
   it begins (door and sign-up alike). A deleted
   member's standing sign-ups are released by `EventSignUp::releaseAll()`. A scan that got no answer is sent again with
   its own key (`scanMath.keyFor`), never a fresh one. Every fact once per screen; a verdict names the member once.
+- Security review (owner 2026-11-04, `docs/loyalty-workspace.md` "Security review before the public launch"): a
+  membership's account is its organisation's own member account (`Loyalty\Members\OwnAccount`) — a guest is linked
+  only to one (`users` has no tenant scope; never look an account up by email alone), and every writer of a member's
+  account (details, erasure, merge) refuses or detaches another's; `php artisan loyalty:foreign-accounts` lists old
+  links, `--detach` repairs them. An AI tool that writes asks the person's own rights (`LoyaltyAccess` for points, a
+  manager for settings) and never answers a secret setting (`SettingRegistry::SECRET_KEYS`). A member endpoint never
+  matches on a member id that may be null; a switched-off member's own spend and earn requests are refused
+  (`MemberStatus::assertActive()`).
 - Testing against PostgreSQL (the SQLite schemas miss NOT NULL columns and indexes production has): build a database
   from every migration, then run a test file with `DB_CONNECTION=pgsql DB_DATABASE=<that database>` (and its host and
   credentials) in the environment — phpunit.xml's `<env>` entries are not forced, and the schema traits skip tables

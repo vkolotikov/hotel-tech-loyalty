@@ -742,6 +742,53 @@ Owner, 2026-10-31: "go ahead with push notifications for new requests" — for t
   phones); no badge count on the app icon.
 - Tests: `tests/Feature/LoyaltyWorkspace/StaffAlertsTest.php` (SQLite and PostgreSQL).
 
+## Security review before the public launch (2026-11-04)
+
+Owner, 2026-11-04: "check … all other potential issues which could be before we launch loyalty public". Four holes,
+each closed with a test that fails on the code before the fix.
+
+- **A membership's account is its organisation's own member account** (`Loyalty\Members\OwnAccount`). `users` has no
+  tenant scope, and every new guest with an email, from any path (the booking widget, the chatbot, an import, staff),
+  is enrolled by `GuestMemberLinkService::ensureMemberForGuest()`. That used to wrap ANY account with the same address
+  in a membership: another venue's member, or a staff login of any organisation, its owner's included. The venue could
+  then change that account's email in Edit details, send a reset and sign in as that person; deleting the member
+  anonymised and signed out the other account; a merge deleted it, and the cascade deleted the other venue's
+  membership with it. Now:
+  - a guest is linked only to this organisation's own member account; any other account with the address leaves the
+    guest a guest (`linkGuestToMember()` too);
+  - `MemberDetails::update()` refuses a member's name, email, phone or photo on an account that is not its own (409
+    `account_elsewhere`); tier, consent and status still change;
+  - `MemberErasure::erase()` first gives such a membership an account of its own (`detach()`), then anonymises that;
+    the other account is not touched;
+  - `MemberMergeService` deletes the loser's account only when it was the loser's own and no other membership names it.
+  - Links made before the fix: `php artisan loyalty:foreign-accounts` lists them (read only, `--org=<organisation id>`
+    for one venue); `php artisan loyalty:foreign-accounts --detach` gives each its own account (named from the venue's
+    own guest record, address `unlinked-member-<member id>@unlinked.local`, no known password). The membership keeps
+    its number, points and history; nobody signs in to it until staff set an address in Edit details (one no other member
+    account has: a member's address is unique across all organisations, `users_email_member_unique`). Run the list
+    after the deploy, then `--detach`.
+- **The CRM assistant asks the person's own rights** (`CrmAiToolset`, `CrmVoiceToolset`). Its routes let every staff
+  member of a CRM organisation in, and its tools wrote with no rights of their own: anyone could have it award or redeem
+  points (up to 100,000 a call by chat, 1,000,000 by voice), read every secret setting raw (Stripe, Twilio, mail, PMS)
+  and change any setting. Points now need `can_award_points` / `can_redeem_points` (`LoyaltyAccess`, as the workspace
+  and the staff app) and are written in the person's name; `get_settings` answers a secret only as `(set)` or
+  `(not set)`; `update_setting` is a manager's and never takes a secret.
+- **The members' chat is the member's own** (`MemberChatController`). A caller without a membership (a staff token)
+  matched every website visitor's chat of the venue (`member_id = null`) on `GET/POST member/chat/{id}/messages`, to
+  read it and to write in it as the visitor; it now answers 404.
+- **A switched-off member spends and earns nothing on their own** (`MemberStatus::assertActive()`): redeeming a reward,
+  claiming an offer and asking for a benefit answer 403 `member_inactive`, as the desk refuses them. Card, points and
+  history stay readable.
+- **Points at the desk and the door are told to the member** (`Loyalty\Visits\PointsNotice`). The owner's report that
+  started the review: points changed in the staff app did not show in the members' app. An Award pushes "You earned N
+  points"; a desk check-in or purchase (`DeskVisit`) and an event check-in (`EventCheckIn`) wrote the points and sent
+  nothing, so the app kept its old balance until it next asked. They now send the same notice after their transaction,
+  once per new line (never for a request sent again); the push also makes the members' app refresh. Redeeming and
+  reversing still send nothing: the members' app and the portal ask again on their own (every 30 s on the app's Home,
+  60 s on the portal, and on return to either).
+- Tests: `ForeignAccountsTest`, `CrmAiRightsTest`, `SwitchedOffMemberTest` (`tests/Feature/LoyaltyWorkspace/`),
+  `tests/Feature/Member/MemberChatAccessTest.php`; the notices in `DeskVisitTest` and `EventCheckInTest`.
+
 ## What the workspace does not do
 
 No bulk message from the members list (the full admin's bulk message and segment send keep it); no SMS delivery
