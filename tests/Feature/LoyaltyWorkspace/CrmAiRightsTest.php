@@ -29,6 +29,12 @@ class CrmAiRightsTest extends TestCase
         }
     }
 
+    /** This organisation's row (PostgreSQL's built database holds other organisations' rows for the same keys). */
+    private function setting(string $key): ?string
+    {
+        return DB::table('hotel_settings')->where('organization_id', $this->org->id)->where('key', $key)->value('value');
+    }
+
     private function receptionist(): \App\Models\User
     {
         return $this->staffUser($this->org, ['role' => 'staff', 'can_award_points' => false, 'can_redeem_points' => false]);
@@ -69,8 +75,8 @@ class CrmAiRightsTest extends TestCase
 
         $this->assertFalse((new CrmAiToolset($this->receptionist()))->executeTool('update_setting', ['key' => 'points_per_currency', 'value' => '50'])['success']);
         $this->assertFalse((new CrmAiToolset($this->manager))->executeTool('update_setting', ['key' => 'stripe_secret_key', 'value' => 'sk_test_other_0000'])['success']);
-        $this->assertSame('2', DB::table('hotel_settings')->where('key', 'points_per_currency')->value('value'));
-        $this->assertSame('sk_test_not_a_real_key_0000', DB::table('hotel_settings')->where('key', 'stripe_secret_key')->value('value'));
+        $this->assertSame('2', $this->setting('points_per_currency'));
+        $this->assertSame('sk_test_not_a_real_key_0000', $this->setting('stripe_secret_key'));
 
         $this->assertTrue((new CrmAiToolset($this->manager))->executeTool('update_setting', ['key' => 'points_per_currency', 'value' => '3'])['success']);
     }

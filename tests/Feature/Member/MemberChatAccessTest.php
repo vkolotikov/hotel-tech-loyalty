@@ -41,7 +41,8 @@ class MemberChatAccessTest extends TestCase
                 $t->unsignedBigInteger('sender_user_id')->nullable();
                 $t->text('content')->nullable();
                 $t->boolean('is_read')->default(false);
-                $t->timestamps();
+                // As production: created_at only.
+                $t->timestamp('created_at')->nullable();
             });
         }
 
@@ -50,7 +51,7 @@ class MemberChatAccessTest extends TestCase
         $this->adasChat = DB::table('chat_conversations')->insertGetId(['organization_id' => $this->org->id, 'member_id' => $this->ada->id,
             'status' => 'active', 'visitor_name' => 'Ada Lovelace', 'created_at' => now(), 'updated_at' => now()]);
         DB::table('chat_messages')->insert(['organization_id' => $this->org->id, 'conversation_id' => $this->visitorChat, 'sender_type' => 'visitor',
-            'content' => 'My card number is private', 'created_at' => now(), 'updated_at' => now()]);
+            'content' => 'My card number is private', 'created_at' => now()]);
     }
 
     public function test_a_caller_without_a_membership_reaches_no_conversation(): void

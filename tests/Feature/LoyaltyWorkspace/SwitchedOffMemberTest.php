@@ -34,7 +34,7 @@ class SwitchedOffMemberTest extends TestCase
         $benefit = BenefitDefinition::create(['name' => 'Welcome drink', 'code' => 'drink', 'category' => 'dining', 'fulfillment_mode' => 'on_request']);
         $this->drink = TierBenefit::create(['tier_id' => $this->tiers['gold']->id, 'benefit_id' => $benefit->id, 'is_active' => true]);
         $this->coffee = Reward::create(['name' => 'Free coffee', 'points_cost' => 100, 'is_active' => true]);
-        $this->offer = SpecialOffer::create(['title' => 'Autumn treat', 'type' => 'bonus_points', 'value' => 50, 'is_active' => true,
+        $this->offer = SpecialOffer::create(['title' => 'Autumn treat', 'description' => 'Fifty points to welcome the season.', 'type' => 'bonus_points', 'value' => 50, 'is_active' => true,
             'start_date' => now()->subDay(), 'end_date' => now()->addMonth()]);
         $this->ada->update(['is_active' => false]);
     }
