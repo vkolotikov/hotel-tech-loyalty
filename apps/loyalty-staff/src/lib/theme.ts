@@ -82,6 +82,17 @@ export const ECLIPSE = {
   attention: ['rgba(181,139,84,0.8)', 'rgba(75,59,42,0.9)', '#222026', 'rgba(51,41,31,0.9)'] as const,
   tileStops: [0, 0.32, 0.7, 1] as const,
   dock: ['rgba(59,61,69,0.8)', 'rgba(29,30,37,0.9)', 'rgba(12,16,22,0.96)'] as const,
+  // Polished glass: a broad silver reflection, one narrow glint and a champagne underside.
+  mirror: {
+    clear: 'rgba(220,235,255,0)',
+    facet: ['rgba(218,233,255,0.008)', 'rgba(218,233,255,0.055)', 'rgba(239,246,255,0.13)', 'rgba(218,233,255,0)'] as const,
+    beam: ['rgba(220,235,255,0)', 'rgba(220,235,255,0.025)', 'rgba(239,246,255,0.17)', 'rgba(255,250,237,0.24)', 'rgba(220,235,255,0)'] as const,
+    touch: ['rgba(238,245,255,0.20)', 'rgba(238,245,255,0.025)', 'rgba(243,197,130,0.12)'] as const,
+    edge: ['rgba(229,240,255,0)', 'rgba(242,248,255,0.70)', 'rgba(229,240,255,0)'] as const,
+    scanShadow: '0 9px 28px -14px rgba(243,197,130,0.32)',
+    dockShadow: '0 10px 28px rgba(0,0,0,0.32)',
+  },
+  motion: { reflectionCycle: 14000, dockTravel: 320, touchIn: 130, touchOut: 240 },
   inset: 24, gap: 16, scanRadius: 44, tileRadius: 26, dockRadius: 32, dockHeight: 64,
   // Use Android's system face; SF Pro belongs to the iPhone design, not the Android bundle.
   type: {

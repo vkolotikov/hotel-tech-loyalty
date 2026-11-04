@@ -11,7 +11,7 @@ import { errorKey } from '../../lib/desk'
 import { ECLIPSE as E } from '../../lib/theme'
 import { useEclipseAppearance } from '../../lib/useEclipseAppearance'
 import { Notice, Press } from '../../components/ui'
-import { EclipseAtmosphere, EclipseScan, EclipseSurface, EclipseTile } from '../../components/Eclipse'
+import { EclipseAtmosphere, EclipseScan, EclipseSurface, EclipseTile, useEclipseReflection } from '../../components/Eclipse'
 
 /** Eclipse Home is a launcher. Counts are live; loyalty actions stay in their existing screens. */
 export default function Home() {
@@ -20,6 +20,7 @@ export default function Home() {
   const boot = useBoot()
   const queue = useQueueCounts()
   const appearance = useEclipseAppearance()
+  const reflection = useEclipseReflection(appearance.animate && !appearance.solid)
   const [width, setWidth] = useState(393)
   const [refreshing, setRefreshing] = useState(false)
   const refresh = useCallback(async () => {
@@ -61,15 +62,15 @@ export default function Home() {
           <Text style={styles.venue}>{boot.data?.organization.name ?? (boot.isPending ? t('common.loading') : '')}</Text>
         </View>
         {boot.isError && <Notice text={t(errorKey(failureOf(boot.error).code))} action={t('common.retry')} onAction={() => { void boot.refetch() }} />}
-        <EclipseScan label={t('home.scan')} onPress={() => router.navigate('/scan')} {...appearance} />
+        <EclipseScan label={t('home.scan')} onPress={() => router.navigate('/scan')} phase={reflection} {...appearance} />
         <View style={styles.grid}>
           <View style={styles.row}>
-            <EclipseTile label={t('tab.members')} icon="members" onPress={() => router.navigate('/members')} {...appearance} />
-            <EclipseTile label={t('tab.requests')} icon="requests" onPress={() => router.navigate('/requests')} badge={badge} busy={queue.isPending} problem={queue.isError} accessibilityLabel={t('tab.requests') + '. ' + requestState} {...appearance} />
+            <EclipseTile label={t('tab.members')} icon="members" onPress={() => router.navigate('/members')} phase={reflection} order={1} {...appearance} />
+            <EclipseTile label={t('tab.requests')} icon="requests" onPress={() => router.navigate('/requests')} badge={badge} busy={queue.isPending} problem={queue.isError} accessibilityLabel={t('tab.requests') + '. ' + requestState} phase={reflection} order={2} {...appearance} />
           </View>
           <View style={styles.row}>
-            {boot.data?.staff.can.view_insights && <EclipseTile label={t('home.activityLink')} icon="activity" onPress={() => router.push('/activity')} {...appearance} />}
-            <EclipseTile label={t('tab.more')} icon="more" onPress={() => router.navigate('/more')} {...appearance} />
+            {boot.data?.staff.can.view_insights && <EclipseTile label={t('home.activityLink')} icon="activity" onPress={() => router.push('/activity')} phase={reflection} order={3} {...appearance} />}
+            <EclipseTile label={t('tab.more')} icon="more" onPress={() => router.navigate('/more')} phase={reflection} order={4} {...appearance} />
           </View>
         </View>
         {queue.isError && <Notice tone="warning" text={t('requests.refreshError')} action={t('common.retry')} onAction={() => { void queue.refetch() }} />}
