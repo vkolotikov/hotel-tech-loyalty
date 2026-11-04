@@ -84,6 +84,32 @@ class CardsTest extends TestCase
         $this->assertSame(1, AuditLog::where('action', 'nfc_card_linked')->count());
     }
 
+    public function test_qr_and_nfc_identify_the_same_member_and_disabling_nfc_preserves_qr(): void
+    {
+        $qr = hash('sha256', 'dual-card-fixture');
+        $this->ada->update(['qr_code_token' => $qr]);
+        $card = $this->link($this->ada->id, '04a2b3c4')->assertCreated()->json('card.id');
+        foreach ([$qr, json_encode(['member_number' => $this->ada->member_number, 'v' => 2]), '04:a2:b3:c4', $qr] as $code) {
+            $this->asStaffMember()->postJson($this->api('scan'), ['code' => $code])->assertOk()->assertJsonPath('member.id', $this->ada->id);
+        }
+        $this->asStaffMember()->postJson($this->api("members/{$this->ada->id}/cards/{$card}/off"))->assertOk();
+        $this->asStaffMember()->postJson($this->api('scan'), ['code' => '04a2b3c4'])->assertNotFound();
+        $this->asStaffMember()->postJson($this->api('scan'), ['code' => $qr])->assertOk()->assertJsonPath('member.id', $this->ada->id);
+        $this->assertSame($qr, $this->ada->fresh()->qr_code_token);
+    }
+
+    public function test_a_desk_retry_reads_and_logs_the_card_once_and_refuses_changed_payload(): void
+    {
+        $this->link($this->ada->id, '04a2b3c4')->assertCreated();
+        $body = ['code' => '04a2b3c4', 'idempotency_key' => 'desk-scan-recovery'];
+        $first = $this->asStaffMember()->postJson($this->api('scan'), $body)->assertOk()->json();
+        $this->asStaffMember()->postJson($this->api('scan'), $body)->assertOk()->assertExactJson($first);
+        $this->assertSame(1, (int) NfcCard::firstOrFail()->scan_count);
+        $this->assertSame(1, \App\Models\ScanEvent::count());
+        $this->asStaffMember()->postJson($this->api('scan'), array_replace($body, ['code' => $this->grace->member_number]))
+            ->assertStatus(409)->assertJsonPath('error', 'key_reused');
+    }
+
     public function test_a_card_another_member_here_has_is_refused_naming_nobody(): void
     {
         $this->card($this->grace->id, '04:A2:B3:C4');
