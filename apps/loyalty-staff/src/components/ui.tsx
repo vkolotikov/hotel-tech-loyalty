@@ -39,16 +39,22 @@ export function Surface({ children, style, tint, padding = 16, glow }: {
 }
 
 /** A pressable that answers the finger: it settles a little and taps back. */
-export function Press({ children, onPress, style, disabled, label, haptic = true }: {
+export function Press({ children, onPress, style, disabled, label, haptic = true, reduceMotion = false, pressedScale = 0.97 }: {
   children: ReactNode
   onPress?: () => void
   style?: StyleProp<ViewStyle>
   disabled?: boolean
   label?: string
   haptic?: boolean
+  reduceMotion?: boolean
+  pressedScale?: number
 }) {
   const scale = useRef(new Animated.Value(1)).current
-  const to = (value: number) => Animated.spring(scale, { toValue: value, useNativeDriver: true, speed: 40, bounciness: 6 }).start()
+  const to = (value: number) => {
+    if (reduceMotion) { scale.setValue(1); return }
+    Animated.spring(scale, { toValue: value, useNativeDriver: true, speed: 40, bounciness: 6 }).start()
+  }
+  useEffect(() => { if (reduceMotion) { scale.stopAnimation(); scale.setValue(1) } }, [reduceMotion, scale])
   // The Pressable is what sits in the parent's row, so it takes the sizing; the inner view fills it.
   const flat = StyleSheet.flatten(style) ?? {}
   const outer: ViewStyle = { flex: flat.flex, flexGrow: flat.flexGrow, flexShrink: flat.flexShrink, flexBasis: flat.flexBasis, alignSelf: flat.alignSelf, width: flat.width }
@@ -58,7 +64,7 @@ export function Press({ children, onPress, style, disabled, label, haptic = true
       accessibilityLabel={label}
       accessibilityState={{ disabled: !!disabled }}
       disabled={disabled}
-      onPressIn={() => to(0.97)}
+      onPressIn={() => to(pressedScale)}
       onPressOut={() => to(1)}
       onPress={() => { if (haptic) feel.tap(); onPress?.() }}
       style={outer}

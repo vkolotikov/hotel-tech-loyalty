@@ -41,7 +41,7 @@ export default function TabsLayout() {
   return (
     <Tabs
       screenOptions={{ headerShown: false, sceneStyle: { backgroundColor: C.bg } }}
-      tabBar={props => <TabBar {...props} waiting={waiting} />}
+      tabBar={props => <TabBar {...props} waiting={waiting} queueState={queue.isError ? 'error' : queue.isPending ? 'loading' : 'ready'} />}
     >
       <Tabs.Screen name="index" />
       <Tabs.Screen name="members" />

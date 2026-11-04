@@ -1,0 +1,12 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="234" height="78" viewBox="0 0 234 78" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="Gold / diffused lower rim" filter="url(#filter0_f_0_158)">
+<ellipse cx="117" cy="39" rx="95" ry="17" fill="#FFC477" fill-opacity="0.45"/>
+</g>
+<defs>
+<filter id="filter0_f_0_158" x="0" y="0" width="234" height="78" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+<feFlood flood-opacity="0" result="BackgroundImageFix"/>
+<feBlend mode="normal" in="SourceGraphic" in2="BackgroundImageFix" result="shape"/>
+<feGaussianBlur stdDeviation="11" result="effect1_foregroundBlur_0_158"/>
+</filter>
+</defs>
+</svg>

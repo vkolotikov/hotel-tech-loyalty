@@ -2,6 +2,12 @@ import type { Key } from './en'
 
 export const ru: Record<Key, string> = {
   'app.name': 'HexaTech Staff',
+  'home.welcome': 'Добро пожаловать',
+  'home.scan': 'Сканировать карту',
+  'home.activityLink': 'Активность',
+  'home.account': 'Аккаунт и настройки',
+  'home.staff': 'ПЕРСОНАЛ',
+  'home.brand': 'HexaTech',
   'checkIn.invalidAmount': "Введите положительную сумму с точностью выбранной валюты.",
   'checkIn.amountRequired': "Сумма покупки",
   'error.unconfirmed': "Результат не подтверждён. Повторите этот запрос или проверьте историю участника. Не создавайте новую операцию.",

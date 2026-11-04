@@ -1,6 +1,12 @@
 /** English, the master list: every other language has exactly these keys and keeps every {{placeholder}}. */
 export const en = {
   'app.name': 'HexaTech Staff',
+  'home.welcome': 'Welcome',
+  'home.scan': 'Scan member',
+  'home.activityLink': 'Activity',
+  'home.account': 'Account and settings',
+  'home.staff': 'STAFF',
+  'home.brand': 'HexaTech',
   'checkIn.invalidAmount': "Use a positive amount with the correct currency decimals.",
   'checkIn.amountRequired': "Amount spent",
   'error.unconfirmed': "The result is unconfirmed. Retry this same request, or check the member’s activity. Do not enter it again as a new transaction.",

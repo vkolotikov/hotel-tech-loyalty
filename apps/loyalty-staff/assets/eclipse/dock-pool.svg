@@ -1,0 +1,12 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="114" height="96" viewBox="0 0 114 96" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="Active / champagne light pool" filter="url(#filter0_f_0_150)">
+<ellipse cx="57" cy="48" rx="39" ry="30" fill="#DC9F58" fill-opacity="0.26"/>
+</g>
+<defs>
+<filter id="filter0_f_0_150" x="0" y="0" width="114" height="96" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+<feFlood flood-opacity="0" result="BackgroundImageFix"/>
+<feBlend mode="normal" in="SourceGraphic" in2="BackgroundImageFix" result="shape"/>
+<feGaussianBlur stdDeviation="9" result="effect1_foregroundBlur_0_150"/>
+</filter>
+</defs>
+</svg>
