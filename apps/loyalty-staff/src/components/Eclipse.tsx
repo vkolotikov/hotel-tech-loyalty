@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { ActivityIndicator, Animated, Easing, Image, Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native'
 import { LinearGradient } from 'expo-linear-gradient'
 import { ECLIPSE as E } from '../lib/theme'
@@ -27,13 +27,13 @@ export function EclipseIcon({ name, size = 30 }: { name: keyof typeof ECLIPSE_AS
   return <Image source={ECLIPSE_ASSETS[name]} style={{ width: size, height: size }} resizeMode="contain" accessible={false} />
 }
 
-/** One native clock moves the same light across Scan and the grid, then rests between passes. */
-export function useEclipseReflection(enabled: boolean) {
-  const phase = useRef(new Animated.Value(0)).current
+/** One native clock carries a small light around the borders; tile faces stay still. */
+export function useEclipseBorderLight(enabled: boolean) {
+  const [phase] = useState(() => new Animated.Value(0))
   useEffect(() => {
     if (!enabled) { phase.setValue(0); return }
     const loop = Animated.loop(Animated.timing(phase, {
-      toValue: 1, duration: E.motion.reflectionCycle, easing: Easing.linear, useNativeDriver: true, isInteraction: false,
+      toValue: 1, duration: E.motion.borderCycle, easing: Easing.linear, useNativeDriver: true, isInteraction: false,
     }))
     loop.start()
     return () => { loop.stop(); phase.setValue(0) }
@@ -41,11 +41,11 @@ export function useEclipseReflection(enabled: boolean) {
   return phase
 }
 
-/** Content stays still while the glass answers the finger. No sensor or JS animation loop. */
+/** A small press response, without tilting or lighting the face of the tile. */
 function EclipsePress({ children, label, onPress, reduceMotion, fill = false }: {
-  children: (press: Animated.Value) => ReactNode; label: string; onPress: () => void; reduceMotion: boolean; fill?: boolean
+  children: ReactNode; label: string; onPress: () => void; reduceMotion: boolean; fill?: boolean
 }) {
-  const press = useRef(new Animated.Value(0)).current
+  const [press] = useState(() => new Animated.Value(0))
   const change = (pressed: boolean) => {
     press.stopAnimation()
     if (reduceMotion) { press.setValue(0); return }
@@ -61,62 +61,91 @@ function EclipsePress({ children, label, onPress, reduceMotion, fill = false }: 
   return <Pressable accessibilityRole="button" accessibilityLabel={label} style={fill ? { flex: 1 } : undefined}
     onPressIn={() => change(true)} onPressOut={() => change(false)} onPress={() => { feel.tap(); onPress() }}>
     <Animated.View style={{ flex: fill ? 1 : undefined, transform: [
-      { perspective: 900 }, { scale: press.interpolate({ inputRange: [0, 1], outputRange: [1, 0.98] }) },
-      { rotateX: press.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '1.4deg'] }) },
-      { rotateY: press.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '-1.2deg'] }) },
-    ] }}>{children(press)}</Animated.View>
+      { scale: press.interpolate({ inputRange: [0, 1], outputRange: [1, 0.99] }) },
+    ] }}>{children}</Animated.View>
   </Pressable>
 }
 
-function MirrorLayers({ width, height, phase, order, press }: {
-  width: number; height: number; phase: Animated.Value; order: number; press: Animated.Value
+function BorderLight({ width, height, radius, phase, order }: {
+  width: number; height: number; radius: number; phase: Animated.Value; order: number
 }) {
-  const start = 0.04 + order * 0.055
-  const end = start + 0.38
+  // Sample the rounded perimeter by distance, then let the native driver interpolate it.
+  // The opaque inner surface masks these lights down to the one-point border.
+  const travel = useMemo(() => {
+    const r = Math.min(radius, width / 2, height / 2)
+    const horizontal = width - 2 * r
+    const vertical = height - 2 * r
+    const corner = Math.PI * r / 2
+    const perimeter = 2 * horizontal + 2 * vertical + 4 * corner
+    const segments = [horizontal, corner, vertical, corner, horizontal, corner, vertical, corner]
+    const at = (progress: number) => {
+      let distance = progress * perimeter
+      let segment = 0
+      while (segment < 7 && distance > segments[segment]) distance -= segments[segment++]
+      if (segment === 0) return [r + distance, 0]
+      if (segment === 2) return [width, r + distance]
+      if (segment === 4) return [width - r - distance, height]
+      if (segment === 6) return [0, height - r - distance]
+      const index = (segment - 1) / 2
+      const angle = -Math.PI / 2 + index * Math.PI / 2 + distance / r
+      const cx = index < 2 ? width - r : r
+      const cy = index === 0 || index === 3 ? r : height - r
+      return [cx + Math.cos(angle) * r, cy + Math.sin(angle) * r]
+    }
+    const inputRange = Array.from({ length: 97 }, (_, i) => i / 96)
+    const points = inputRange.map(at)
+    const position = Animated.modulo(Animated.add(phase, order * 0.19), 1)
+    return [
+      { translateX: position.interpolate({ inputRange, outputRange: points.map(p => p[0]) }) },
+      { translateY: position.interpolate({ inputRange, outputRange: points.map(p => p[1]) }) },
+    ]
+  }, [width, height, radius, order, phase])
   return <View pointerEvents="none" accessible={false} importantForAccessibility="no-hide-descendants" style={StyleSheet.absoluteFill}>
-    <LinearGradient colors={E.mirror.facet} locations={[0, 0.90, 0.975, 1]} start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }}
-      style={{ position: 'absolute', width: width * 3, height: height * 2, left: -width * 0.7, top: -height * 1.3, transform: [{ rotate: '24deg' }] }} />
-    <Animated.View style={{ position: 'absolute', left: 0, top: -height, width: width * 0.75, height: height * 3,
-      opacity: phase.interpolate({ inputRange: [0, start, start + 0.04, end - 0.04, end, 1], outputRange: [0, 0, 1, 1, 0, 0] }),
-      transform: [{ translateX: phase.interpolate({ inputRange: [start, end], outputRange: [-width * 1.5, width * 2.2], extrapolate: 'clamp' }) }, { rotate: '24deg' }],
-    }}>
-      <LinearGradient colors={E.mirror.beam} locations={[0, 0.28, 0.66, 0.7, 1]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={StyleSheet.absoluteFill} />
-    </Animated.View>
-    <Animated.View style={[StyleSheet.absoluteFill, { opacity: press }]}>
-      <LinearGradient colors={E.mirror.touch} locations={[0, 0.55, 1]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} />
+    <Animated.View style={{ position: 'absolute', left: 0, top: 0, transform: travel }}>
+      <Image source={ECLIPSE_ASSETS.dockBloom} resizeMode="stretch" style={{ position: 'absolute', left: -48, top: -48, width: 96, height: 96, tintColor: E.borderLight.halo }} />
+      <Image source={ECLIPSE_ASSETS.dockBloom} resizeMode="stretch" style={{ position: 'absolute', left: -17, top: -17, width: 34, height: 34, tintColor: E.borderLight.core }} />
     </Animated.View>
   </View>
 }
 
 export function EclipseAtmosphere({ width, animate, solid }: { width: number; animate: boolean; solid: boolean }) {
-  const drift = useRef(new Animated.Value(0)).current
+  const [light] = useState(() => new Animated.Value(0))
   useEffect(() => {
-    if (!animate || solid) { drift.setValue(0); return }
+    if (!animate || solid) { light.setValue(0); return }
     const motion = Animated.loop(Animated.sequence([
-      Animated.timing(drift, { toValue: 6, duration: 6000, easing: Easing.inOut(Easing.sin), useNativeDriver: true, isInteraction: false }),
-      Animated.timing(drift, { toValue: -6, duration: 6000, easing: Easing.inOut(Easing.sin), useNativeDriver: true, isInteraction: false }),
+      Animated.timing(light, { toValue: 1, duration: E.motion.ambientHalfCycle, easing: Easing.inOut(Easing.sin), useNativeDriver: true, isInteraction: false }),
+      Animated.timing(light, { toValue: 0, duration: E.motion.ambientHalfCycle, easing: Easing.inOut(Easing.sin), useNativeDriver: true, isInteraction: false }),
     ]))
     motion.start()
-    return () => { motion.stop(); drift.setValue(0) }
-  }, [animate, solid, drift])
+    return () => { motion.stop(); light.setValue(0) }
+  }, [animate, solid, light])
   if (solid) return null
-  return <Animated.Image pointerEvents="none" accessible={false} source={ECLIPSE_ASSETS.atmosphere} resizeMode="contain" style={{ position: 'absolute', top: 0, left: 0, width, height: width * 852 / 393, transform: [{ translateY: drift }] }} />
+  return <View pointerEvents="none" accessible={false} importantForAccessibility="no-hide-descendants" style={StyleSheet.absoluteFill}>
+    <Image source={ECLIPSE_ASSETS.dockBloom} resizeMode="stretch" style={{ position: 'absolute', left: -width * 0.65, top: width * 0.7, width: width * 1.5, height: width * 1.7, tintColor: E.ambient.cool, opacity: 0.10 }} />
+    <Animated.Image source={ECLIPSE_ASSETS.dockBloom} resizeMode="stretch" style={{ position: 'absolute', right: -width * 0.7, top: width * 0.2, width: width * 1.6, height: width * 1.7, tintColor: E.ambient.warm,
+      opacity: light.interpolate({ inputRange: [0, 1], outputRange: [0.12, 0.20] }),
+    }} />
+  </View>
 }
 
-export function EclipseSurface({ children, tone = 'quiet', radius = E.tileRadius, style, solid = false, reflection }: {
+export function EclipseSurface({ children, tone = 'quiet', radius = E.tileRadius, style, solid = false, borderLight }: {
   children: ReactNode; tone?: 'quiet' | 'attention' | 'scan'; radius?: number; style?: StyleProp<ViewStyle>; solid?: boolean;
-  reflection?: { phase: Animated.Value; press: Animated.Value; order: number }
+  borderLight?: { phase: Animated.Value; order: number }
 }) {
   const [size, setSize] = useState({ width: 170, height: 106 })
   const colors = tone === 'scan' ? E.scan : tone === 'attention' ? E.attention : E.tile
   return (
-    <LinearGradient colors={E.rim} locations={[0, 0.35, 0.72, 1]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ borderRadius: radius, padding: 0.8 }}>
-      <LinearGradient colors={solid ? [E.surface, E.surface] : colors} locations={solid ? undefined : tone === 'scan' ? E.scanStops : E.tileStops} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[{ borderRadius: radius - 0.8, overflow: 'hidden' }, style]}
-        onLayout={reflection ? e => { const { width, height } = e.nativeEvent.layout; setSize(previous => previous.width === width && previous.height === height ? previous : { width, height }) } : undefined}>
-        {!solid && reflection && <MirrorLayers {...size} {...reflection} />}
-        {!solid && reflection && <LinearGradient pointerEvents="none" accessible={false} colors={E.mirror.edge} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={{ position: 'absolute', left: radius, right: radius, top: 0, height: 0.7 }} />}
+    <LinearGradient colors={E.rim} locations={[0, 0.35, 0.72, 1]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ borderRadius: radius, padding: E.borderLight.width, overflow: 'hidden' }}
+      onLayout={borderLight ? e => {
+        const { width, height } = e.nativeEvent.layout
+        if (width > 0 && height > 0) setSize(previous => previous.width === width && previous.height === height ? previous : { width, height })
+      } : undefined}>
+      {!solid && borderLight && <BorderLight {...size} radius={radius} {...borderLight} />}
+      <View style={{ borderRadius: radius - E.borderLight.width, overflow: 'hidden', backgroundColor: E.bg }}>
+      <LinearGradient colors={solid ? [E.surface, E.surface] : colors} locations={solid ? undefined : tone === 'scan' ? E.scanStops : E.tileStops} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={style}>
         {children}
       </LinearGradient>
+      </View>
     </LinearGradient>
   )
 }
@@ -126,8 +155,8 @@ export function EclipseScan({ label, onPress, reduceMotion, solid, phase }: {
 }) {
   return (
     <EclipsePress label={label} onPress={onPress} reduceMotion={reduceMotion}>
-      {press => <View style={!solid ? styles.scanShadow : undefined}>
-      <EclipseSurface tone="scan" radius={E.scanRadius} solid={solid} style={styles.scan} reflection={{ phase, press, order: 0 }}>
+      <View style={!solid ? styles.scanShadow : undefined}>
+      <EclipseSurface tone="scan" radius={E.scanRadius} solid={solid} style={styles.scan} borderLight={{ phase, order: 0 }}>
         {!solid && <>
           <Image source={ECLIPSE_ASSETS.coolRim} pointerEvents="none" accessible={false} style={styles.coolRim} />
           <Image source={ECLIPSE_ASSETS.goldRim} pointerEvents="none" accessible={false} style={styles.goldRim} />
@@ -135,7 +164,7 @@ export function EclipseScan({ label, onPress, reduceMotion, solid, phase }: {
         <EclipseIcon name="scan" size={60} />
         <Text style={styles.scanLabel}>{label}</Text>
       </EclipseSurface>
-      </View>}
+      </View>
     </EclipsePress>
   )
 }
@@ -146,13 +175,13 @@ export function EclipseTile({ label, icon, onPress, badge, busy, problem, access
 }) {
   return (
     <EclipsePress fill label={accessibilityLabel ?? label} onPress={onPress} reduceMotion={reduceMotion}>
-      {press => <EclipseSurface solid={solid} tone={badge ? 'attention' : 'quiet'} style={styles.tile} reflection={{ phase, press, order }}>
+      <EclipseSurface solid={solid} tone={badge ? 'attention' : 'quiet'} style={styles.tile} borderLight={{ phase, order }}>
         <EclipseIcon name={icon} />
         <Text style={styles.tileLabel}>{label}</Text>
         {(badge || busy || problem) && <View style={[styles.badge, !badge && styles.badgeQuiet]} accessible={false}>
           {busy ? <ActivityIndicator size={12} color={E.accent} /> : <Text style={[styles.badgeLabel, !badge && { color: E.accent }]}>{problem ? '!' : badge}</Text>}
         </View>}
-      </EclipseSurface>}
+      </EclipseSurface>
     </EclipsePress>
   )
 }

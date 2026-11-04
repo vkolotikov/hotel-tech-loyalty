@@ -11,7 +11,7 @@ import { errorKey } from '../../lib/desk'
 import { ECLIPSE as E } from '../../lib/theme'
 import { useEclipseAppearance } from '../../lib/useEclipseAppearance'
 import { Notice, Press } from '../../components/ui'
-import { EclipseAtmosphere, EclipseScan, EclipseSurface, EclipseTile, useEclipseReflection } from '../../components/Eclipse'
+import { EclipseAtmosphere, EclipseScan, EclipseSurface, EclipseTile, useEclipseBorderLight } from '../../components/Eclipse'
 
 /** Eclipse Home is a launcher. Counts are live; loyalty actions stay in their existing screens. */
 export default function Home() {
@@ -20,7 +20,7 @@ export default function Home() {
   const boot = useBoot()
   const queue = useQueueCounts()
   const appearance = useEclipseAppearance()
-  const reflection = useEclipseReflection(appearance.animate && !appearance.solid)
+  const reflection = useEclipseBorderLight(appearance.animate && !appearance.solid)
   const [width, setWidth] = useState(393)
   const [refreshing, setRefreshing] = useState(false)
   const refresh = useCallback(async () => {

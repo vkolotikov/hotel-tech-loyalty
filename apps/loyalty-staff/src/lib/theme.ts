@@ -75,24 +75,22 @@ export const SHADOW = {
 export const ECLIPSE = {
   bg: '#080b10', surface: '#17191f', text: '#f6f2ea', muted: '#aab1be', accent: '#f3c582', ink: '#1b1711',
   edge: 'rgba(224,234,255,0.85)', quietEdge: 'rgba(212,226,250,0.45)',
-  rim: ['#c7d8ef', '#51545d', '#292d35', '#b99261'] as const,
+  rim: ['#687280', '#343842', '#232831', '#72604a'] as const,
   scan: ['rgba(105,119,143,0.84)', 'rgba(48,52,63,0.98)', '#151820', '#25211d', 'rgba(147,104,62,0.84)'] as const,
   scanStops: [0, 0.2, 0.52, 0.83, 1] as const,
   tile: ['rgba(63,65,73,0.88)', 'rgba(32,35,44,0.94)', '#11151c', 'rgba(48,39,30,0.9)'] as const,
   attention: ['rgba(181,139,84,0.8)', 'rgba(75,59,42,0.9)', '#222026', 'rgba(51,41,31,0.9)'] as const,
   tileStops: [0, 0.32, 0.7, 1] as const,
   dock: ['rgba(59,61,69,0.8)', 'rgba(29,30,37,0.9)', 'rgba(12,16,22,0.96)'] as const,
-  // Polished glass: a broad silver reflection, one narrow glint and a champagne underside.
+  // Still smoked-glass faces, with a fine travelling light confined to the rim.
+  borderLight: { width: 1.1, halo: '#efbc77', core: '#fff4d8' },
+  ambient: { warm: '#b99566', cool: '#6c85ad' },
   mirror: {
-    clear: 'rgba(220,235,255,0)',
-    facet: ['rgba(218,233,255,0.008)', 'rgba(218,233,255,0.055)', 'rgba(239,246,255,0.13)', 'rgba(218,233,255,0)'] as const,
-    beam: ['rgba(220,235,255,0)', 'rgba(220,235,255,0.025)', 'rgba(239,246,255,0.17)', 'rgba(255,250,237,0.24)', 'rgba(220,235,255,0)'] as const,
-    touch: ['rgba(238,245,255,0.20)', 'rgba(238,245,255,0.025)', 'rgba(243,197,130,0.12)'] as const,
     edge: ['rgba(229,240,255,0)', 'rgba(242,248,255,0.70)', 'rgba(229,240,255,0)'] as const,
     scanShadow: '0 9px 28px -14px rgba(243,197,130,0.32)',
     dockShadow: '0 10px 28px rgba(0,0,0,0.32)',
   },
-  motion: { reflectionCycle: 14000, dockTravel: 320, touchIn: 130, touchOut: 240 },
+  motion: { borderCycle: 10000, ambientHalfCycle: 10000, dockTravel: 320, touchIn: 130, touchOut: 240 },
   inset: 24, gap: 16, scanRadius: 44, tileRadius: 26, dockRadius: 32, dockHeight: 64,
   // Use Android's system face; SF Pro belongs to the iPhone design, not the Android bundle.
   type: {
