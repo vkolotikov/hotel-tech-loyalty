@@ -43,4 +43,19 @@ Requests show complete member identity and redemption code before handover. Decl
 
 At 200% system font size, the member identity, list, form fields, Profile and language picker remain readable and scrollable; the points footer remains reachable as the reason field scrolls into view. The member action row exposed an awkward split of “Purchase”. Member actions now stack vertically at font scale 1.4+, or above 1.1 on widths below 360, without shrinking the user's text. This adjustment also covers the scan-result action row. TypeScript and the changed-file Expo ESLint check passed after it.
 
-The emulator's Gboard is configured with a physical-keyboard toolbar/floating keyboard. Floating input can be displayed, but a docked keyboard was not established, so full IME-resize acceptance is still a physical-phone check; do not report it as passed. The original `show_ime_with_hard_keyboard=1` setting is unchanged. English and system font scale 1.0 were restored after the language/large-text checks. Final preview and acceptance of the stacking adjustment follow below.
+The emulator's Gboard initially used stylus handwriting, exposing only its floating toolbar. Temporarily switching off “Use stylus to write in text fields” established a normal docked keyboard. Purchase amount and note, and the points reason, remain reachable; the action footer moves above the numeric and text keyboards, and the points reason scrolls into view automatically. Screenshots record both layouts. The original handwriting setting was restored to on; `show_ime_with_hard_keyboard=1` is unchanged. English and system font scale 1.0 were restored after the language/large-text checks.
+
+The native camera permission flow and camera preview passed in the emulator. Switching to Number stops the camera; searching for the isolated demo member opens that member. This is not a physical QR/NFC, biometric or push-delivery test.
+
+## Final Android artifact
+
+EAS preview [`d291104f-66d5-4c8b-a8ef-44f850da07ab`](https://expo.dev/accounts/hoteltechai/projects/hexatech-loyalty-staff/builds/d291104f-66d5-4c8b-a8ef-44f850da07ab) finished at 13:30:02 UTC on 4 November. Runtime source: `e7e5b6cfdcba57d1ababa44710300745e929789f`. Internal Android APK, production Firebase environment, version 1.0.0 (3).
+
+- [Download APK](https://expo.dev/artifacts/eas/q6qTGC-3pNyXF1v76__ZYEqtXvXexUf8t8DOTwuvEOs.apk)
+- Local copy: `C:\Users\user6399\Downloads\HexaTech-Staff-Eclipse-Screens.apk`
+- Size: 120,315,661 bytes. SHA-256: `2958B22D12EC5A09BA5F58C99D18D350CBAB5F43066D22B6FB316205C57895F2`.
+- Installed successfully with `adb install -r`, preserving the existing isolated demo session.
+
+Final APK acceptance: Home loads the same member/request data; the normal member layout is unchanged. At system font scale 2.0 all four member actions are full-width stacked controls with intact labels, including Purchase. The final [large-text capture](screens-android-20261104/member-large.png) records the fix. Font scale 1.0, normal transition animation scale 1.0, English and the original Gboard handwriting preference are restored. Cold launch on this emulator can take several seconds; these checks are not a physical-device performance measurement.
+
+Native screen evidence: [capture index](screens-android-20261104/README.md). Both previews' filtered runtime logs contain no fatal/JavaScript exception matches during the workflow checks. No live points, purchase, check-in or request-transition write was performed; write transition checks used the browser synthetic API.
