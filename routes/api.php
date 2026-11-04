@@ -1411,6 +1411,7 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
                 Route::get('members', [\App\Http\Controllers\Api\V1\Admin\Loyalty\MemberController::class, 'index']);
                 Route::get('members/{id}', [\App\Http\Controllers\Api\V1\Admin\Loyalty\MemberController::class, 'show'])->whereNumber('id');
                 Route::get('members/{id}/history', [\App\Http\Controllers\Api\V1\Admin\Loyalty\MemberController::class, 'history'])->whereNumber('id');
+                Route::post('members/{id}/attempt-status', \App\Http\Controllers\Api\V1\Admin\Loyalty\AttemptStatusController::class)->whereNumber('id');
                 Route::post('members/{id}/award', [\App\Http\Controllers\Api\V1\Admin\Loyalty\PointsController::class, 'award'])->whereNumber('id');
                 Route::post('members/{id}/redeem', [\App\Http\Controllers\Api\V1\Admin\Loyalty\PointsController::class, 'redeem'])->whereNumber('id');
                 Route::post('members/{id}/history/{line}/reverse', [\App\Http\Controllers\Api\V1\Admin\Loyalty\PointsController::class, 'reverse'])->whereNumber(['id', 'line']);

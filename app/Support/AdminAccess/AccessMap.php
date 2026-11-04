@@ -67,6 +67,7 @@ final class AccessMap
         'admin/loyalty/requests/inbox'           => ['staff',              'manager',            'loyalty'],       // Read-only combined index; existing source endpoints decide every mutation
         'admin/loyalty/devices'                 => ['staff',              'staff',              'loyalty'],       // The caller's own phone in the HexaTech Staff app, for request alerts
         'admin/loyalty/members/{id}/history'    => ['staff',              'manager',            'loyalty'],       // A member's ledger; reversing a line is a manager's correction
+        'admin/loyalty/members/{id}/attempt-status' => ['staff',          'staff',              'loyalty'],       // Read-only recovery of this operator's exact request, including after write rights change
         'admin/loyalty/program'                 => ['staff',              'manager',            'loyalty'],       // Tiers, benefits, boost events (the full admin's Program is manager-only)
         'admin/loyalty/program/boosts/confirm-times' => ['manager',       'manager',            'loyalty'],       // Release 6: "These times are right" for boosts flagged "check the time" (manager)
         'admin/loyalty/rewards'                 => ['staff',              'can_manage_offers',  'loyalty'],       // The rewards catalogue (changes: can_manage_offers, as admin/rewards)

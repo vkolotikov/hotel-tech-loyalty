@@ -62,6 +62,19 @@ class ScanTest extends TestCase
         $this->assertSame(0, (int) $theirs->fresh()->use_count);
     }
 
+    public function test_a_keyed_desk_retry_recovers_the_answer_of_a_single_use_qr(): void
+    {
+        $token = QrToken::create(['member_id' => $this->ada->id, 'token' => str_repeat('f', 64), 'signature' => 'x',
+            'issued_at' => now(), 'expires_at' => now()->addMinutes(30), 'max_uses' => 1]);
+        $body = ['code' => $token->token, 'idempotency_key' => 'single-use-retry'];
+        $first = $this->asStaffMember()->postJson($this->api('scan'), $body)->assertOk()->json();
+        $this->asStaffMember()->postJson($this->api('scan'), $body)->assertOk()->assertExactJson($first);
+        $this->assertSame(1, (int) $token->fresh()->use_count);
+        $this->assertSame(1, ScanEvent::count());
+        $this->asStaffMember()->postJson($this->api('scan'), array_replace($body, ['idempotency_key' => 'another-scan']))
+            ->assertStatus(404)->assertJsonPath('error', 'used_up');
+    }
+
     public function test_an_nfc_card_however_the_reader_spaced_it_and_an_inactive_member(): void
     {
         NfcCard::create(['member_id' => $this->grace->id, 'uid' => '04A2B3C4D5', 'is_active' => true]);

@@ -235,7 +235,7 @@ final class DeskVisit
     }
 
     /** A keyed request as its row keeps it: the key, the amount (two decimals, or `-`) and the note's hash. */
-    private static function requestMark(string $base, ?float $amount, ?string $note): string
+    public static function requestMark(string $base, ?float $amount, ?string $note): string
     {
         return self::keyMark($base) . ' ' . ($amount === null ? '-' : number_format($amount, 2, '.', '')) . ' ' . substr(sha1($note ?? ''), 0, 16);
     }

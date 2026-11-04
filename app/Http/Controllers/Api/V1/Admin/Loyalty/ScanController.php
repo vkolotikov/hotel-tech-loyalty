@@ -6,10 +6,10 @@ use App\Http\Controllers\Controller;
 use App\Models\AccessPlace;
 use App\Models\LoyaltyEvent;
 use App\Services\Loyalty\Access\EventScan;
+use App\Services\Loyalty\Access\DeskScan;
 use App\Services\Loyalty\Access\PlaceScan;
 use App\Services\Loyalty\CardLookup;
 use App\Services\Loyalty\LoyaltyRefused;
-use App\Services\Loyalty\MemberDirectory;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -29,7 +29,7 @@ use Illuminate\Http\Request;
  */
 class ScanController extends Controller
 {
-    public function scan(Request $request, CardLookup $cards, PlaceScan $places, EventScan $events): JsonResponse
+    public function scan(Request $request, CardLookup $cards, PlaceScan $places, EventScan $events, DeskScan $desk): JsonResponse
     {
         $data = $request->validate([
             'code'            => 'required|string|max:2000',
@@ -39,10 +39,9 @@ class ScanController extends Controller
         ]);
 
         if (!isset($data['place_id']) && !isset($data['event_id'])) {
-            $member = $cards->find($data['code'], $request->user());
-            $member->loadMissing('user:id,name,email,phone');
+            $answer = $desk->scan($data['code'], $request->user(), $this->key($request, $data['idempotency_key'] ?? null), $cards);
 
-            return response()->json(['member' => MemberDirectory::row($member)]);
+            return response()->json($answer['body'], $answer['status']);
         }
 
         $key = $this->key($request, $data['idempotency_key'] ?? null);
