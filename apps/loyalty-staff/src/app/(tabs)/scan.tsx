@@ -65,7 +65,7 @@ export default function Scan() {
     <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingTop: insets.top + 20, paddingHorizontal: 24, paddingBottom: TAB_BAR_ROOM, gap: 14 }}>
       <PageHeading title={t('home.scan')} />
       <Row card title={where.kind === 'desk' ? t('scan.desk') : where.name} line={t('scan.for')} left={<IconBadge name="location-outline" color={C.text} />} onPress={blocked ? undefined : () => setPicking(true)} />
-      {pending && <Surface style={{ gap: 12 }}>
+      {pending && !busy && <Surface style={{ gap: 12 }}>
         <Text style={[fonts.heading, { color: C.text }]}>{t('scan.pendingTitle')}</Text>
         <Text style={[fonts.small, { color: C.text2 }]}>{t(problem === 'scan.retryExpired' ? 'scan.retryExpired' : 'scan.unconfirmed')}</Text>
         <GoldButton title={t('common.retry')} icon="refresh-outline" busy={busy} onPress={() => { void lookUp(pending.code, true) }} />

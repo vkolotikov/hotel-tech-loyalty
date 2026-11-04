@@ -1,6 +1,7 @@
 import * as SecureStore from 'expo-secure-store'
 import { freshKey } from './ids'
 import { failureOf } from './failure'
+import type { AttemptStatus } from './api'
 
 export interface DeskAttempt {
   key: string
@@ -11,6 +12,13 @@ export interface AttemptStorage {
   getItemAsync: (key: string) => Promise<string | null>
   setItemAsync: (key: string, value: string) => Promise<void>
   deleteItemAsync: (key: string) => Promise<void>
+}
+/** A malformed successful HTTP response is not proof and must not clear durable recovery. */
+export function recordedAttempt(value: unknown): value is Extract<AttemptStatus, { state: 'recorded' }> {
+  if (!value || typeof value !== 'object') return false
+  const row = value as Record<string, unknown>
+  return row.state === 'recorded' && Number.isSafeInteger(row.reference) && (row.reference as number) > 0
+    && typeof row.reversed === 'boolean' && typeof row.effects_pending === 'boolean'
 }
 /** Intentionally survives logout/restart, scoped to the organisation and operator. No tokens or passwords. */
 export function attemptScope(user: number, org: number, member: number, action: string): string {

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { attemptJournal, attemptScope, outcomeUncertain, type AttemptStorage } from './attempts'
+import { attemptJournal, attemptScope, outcomeUncertain, recordedAttempt, type AttemptStorage } from './attempts'
 import { ApiError, failureFrom } from './failure'
 import { purchaseAmount, deskFlow } from './desk'
 import type { Ways } from './types'
@@ -61,6 +61,11 @@ describe('request coverage', () => {
 })
 
 describe('durable transaction retries', () => {
+  it('clears recovery only for a complete positive server receipt', () => {
+    for (const value of [null, {}, { state: 'unknown' }, { state: 'recorded' }, { state: 'recorded', reference: 0, reversed: false, effects_pending: false }, { state: 'recorded', reference: 3, reversed: 'false', effects_pending: false }]) expect(recordedAttempt(value)).toBe(false)
+    expect(recordedAttempt({ state: 'recorded', reference: 3, reversed: false, effects_pending: true })).toBe(true)
+    expect(recordedAttempt({ state: 'recorded', reference: 3, reversed: true, effects_pending: false })).toBe(true)
+  })
   const memory = (): AttemptStorage => {
     const saved = new Map<string, string>()
     return { getItemAsync: async key => saved.get(key) ?? null, setItemAsync: async (key, value) => { saved.set(key, value) }, deleteItemAsync: async key => { saved.delete(key) } }
