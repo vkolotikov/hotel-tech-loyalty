@@ -804,6 +804,17 @@ Second batch, the same day (smaller holes):
   attempts are counted in `SharedCache` too (the default cache is each container's own, so it was five per replica).
 - Tests: `PushPlumbingTest` (`tests/Feature/LoyaltyWorkspace/`), `ClaimAccountTest`'s per-address limit.
 
+Open, the owner's to decide (not changed):
+
+- The CRM assistant's other writing tools (guests, enquiries, reservations, PMS bookings, review invitations) still
+  follow only the route's rule, every staff member of a CRM organisation; points and settings now ask the person's own
+  rights. Whether those should ask the screens' rights too is a product call.
+- The venue's portal switch (`portal_enabled`, `member.only`) closes only `member/portal/*`; the members' app's
+  endpoints stay open when a venue switches its portal off. One switch for both, or two, is the owner's.
+- Production settings to confirm in Laravel Cloud: the scheduler runs on one instance (`loyalty:send-scheduled`,
+  `loyalty:assess-tiers`), queue workers run, and `CACHE_SHARED_STORE` is unset or `database` (the limits above count
+  there; a per-container store would split them).
+
 ## What the workspace does not do
 
 No bulk message from the members list (the full admin's bulk message and segment send keep it); no SMS delivery

@@ -3,6 +3,42 @@
 Read this first, then `2026-10-31-hexatech-handoff.md` (production, the native apps, the stack upgrade, cloud container
 notes). AGENTS.md and CLAUDE.md still apply.
 
+## 4 Nov (late): points the members' app missed, and the security review before the public launch
+
+The owner: "when I update points in staff app, user app do not update points … can you check this issue and all other
+potential issues which could be before we launch loyalty public". The server always had the new balance; the screens
+never asked again, and desk visits sent no push. Fixed in three places:
+
+- **Members' app** (`feature/loyalty-member-app` **3ddcdc3ec**, on top of the build 20 that is in App Review): figures
+  are asked again on focus, on return to the app, every 30 s on Home, and after any push. It reaches members only in
+  the next store build (21); build 20 does not have it.
+- **Member portal** (deployed, below): the bootstrap is fresh for 10 s, asked again on return to the tab and every 60 s.
+- **Server** (deployed): desk check-ins, purchases and event check-ins push "You earned N points", as an Award does.
+
+The review's fixes, all with tests that fail on the code before (runbook: `docs/loyalty-workspace.md` "Security review
+before the public launch (2026-11-04)"):
+
+1. **Cross-organisation account takeover (the blocker).** A guest created anywhere was wrapped around ANY account with
+   the same address, other venues' members and staff logins included; Edit details, erasure and merge then wrote that
+   account. Fixed through `Loyalty\Members\OwnAccount`. **The owner runs, once, after the deploy:**
+   `php artisan loyalty:foreign-accounts` (lists the links made before) and then
+   `php artisan loyalty:foreign-accounts --detach`.
+2. The CRM assistant's tools ask the person's own rights for points and settings and never answer a secret setting.
+3. The members' chat answers 404 to a staff token (it read and wrote visitors' chats).
+4. A switched-off member's own redeem, offer claim and benefit request are refused (403 `member_inactive`).
+5. Symfony routing, yaml, filesystem, http-foundation and http-kernel 8.1.11 (advisories published 4 Nov; CI's audit
+   refused the lock until then).
+6. Second batch (`fix/pre-launch-batch-2`): pushes carry `EXPO_ACCESS_TOKEN` when set; tier notices after the commit;
+   a benefit request cancelled only while open; ten wrong claim or reset codes an hour per address.
+
+Production: see "Deploying" in `docs/loyalty-workspace.md` for the two deploys of 4 Nov and their checks. **Not checked
+by content on the live site** (this container cannot reach `app.hexa-tech.uk`); checked on `origin/main` instead. The
+owner checks: the portal's Home shows a staff award within a minute without a reload.
+
+**For the owner, not done here:** set `EXPO_ACCESS_TOKEN` in Laravel Cloud if the Expo projects have "Enhanced push
+security" on (or leave it empty); build and submit members' app 21 with the refresh fix; delete the `EXPO_TOKEN` secret
+in the retired `hotel-tech-loyalty-mobile` repository. Decisions still open are listed at the end of the runbook section.
+
 ## 4 Nov: Appointments sold on its own, and the type-of-business tiles (the owner merges)
 
 The owner asked: "improve industry selection, better well designed" and "similar registration for content planner and
