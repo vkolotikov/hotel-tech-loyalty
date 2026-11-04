@@ -264,7 +264,7 @@ export function Segments<T extends string>({ value, items, onChange, iconOnly = 
         const on = item.id === value
         return (
           <Pressable key={item.id} accessibilityRole="tab" accessibilityLabel={item.count ? `${item.label}, ${item.count}` : item.label} accessibilityState={{ selected: on }} onPress={() => { feel.tap(); onChange(item.id) }} style={{ flex: stacked ? undefined : 1, minWidth: 0 }}>
-          <EclipseSurface fill={!stacked} solid={solid} tone={on ? 'attention' : 'quiet'} radius={24} style={[styles.segment, !iconOnly && item.icon ? { minHeight: 72 } : null, stacked && { flexDirection: 'row', minHeight: 54, gap: 10, paddingHorizontal: 14 }]}>
+          <EclipseSurface solid={solid} tone={on ? 'attention' : 'quiet'} radius={24} style={[styles.segment, !iconOnly && item.icon ? { minHeight: 72 } : null, stacked && { flexDirection: 'row', minHeight: 54, gap: 10, paddingHorizontal: 14 }]}>
             {item.icon && <Glyph name={item.icon} size={iconOnly ? 25 : 21} color={on ? C.goldLight : C.text2} />}
             {item.symbol && <Text accessible={false} style={[fonts.segmentSymbol, { color: on ? C.goldLight : C.text2 }]}>{item.symbol}</Text>}
             {(!iconOnly || (!item.icon && !item.symbol)) && <Text style={[fonts.segment, { color: on ? C.text : C.text2, alignSelf: stacked ? undefined : 'stretch', flexShrink: 1 }]}>{item.label}</Text>}
