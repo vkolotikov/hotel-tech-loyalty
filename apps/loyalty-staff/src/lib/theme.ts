@@ -68,6 +68,10 @@ export const fonts = {
   button: { fontSize: 17, lineHeight: 23, fontWeight: '500' as const },
   number: { fontSize: 28, lineHeight: 34, fontVariant: ['tabular-nums' as const] },
   tab: { fontSize: 13, lineHeight: 18 },
+  segment: { fontSize: 13, lineHeight: 18, fontWeight: '500' as const, includeFontPadding: false, textAlignVertical: 'center' as const, textAlign: 'center' as const },
+  segmentSymbol: { fontSize: 21, lineHeight: 26, fontWeight: '500' as const, fontVariant: ['tabular-nums' as const], includeFontPadding: false, textAlignVertical: 'center' as const },
+  segmentCount: { fontSize: 11, lineHeight: 16, fontWeight: '600' as const, includeFontPadding: false, textAlignVertical: 'center' as const },
+  cardNumber: { fontSize: 13, lineHeight: 19, letterSpacing: 1.1, fontVariant: ['tabular-nums' as const] },
 }
 
 export const SHADOW = {
@@ -111,6 +115,26 @@ export const ECLIPSE = {
 /** A tier's colour as the venue set it, or the gold when it has none or an unreadable one. */
 export function tierColor(color: string | null | undefined): string {
   return color && /^#[0-9a-f]{6}$/i.test(color) ? color : C.gold
+}
+
+/** Metallic card finishes follow the venue's tier colour, never a guessed tier rank or translated name. */
+export function memberCardMaterial(color: string | null | undefined, hasTier: boolean) {
+  const metal = hasTier ? tierColor(color) : C.text2
+  const mix = (from: string, to: string, amount: number) => '#' + [1, 3, 5].map(offset => {
+    const a = parseInt(from.slice(offset, offset + 2), 16)
+    const b = parseInt(to.slice(offset, offset + 2), 16)
+    return Math.round(a + (b - a) * amount).toString(16).padStart(2, '0')
+  }).join('')
+  const highlight = mix(metal, C.white, 0.55)
+  return {
+    highlight,
+    rim: [highlight, mix(metal, C.bg, 0.55), mix(metal, C.white, 0.15), highlight] as const,
+    face: [mix(metal, C.bg, 0.58), mix(metal, C.bg, 0.88), mix(metal, C.bg, 0.94), mix(metal, C.bg, 0.69)] as const,
+    solid: mix(metal, C.bg, 0.9),
+    engraving: withAlpha(highlight, 0.16),
+    hairline: withAlpha(highlight, 0.22),
+    sheen: [withAlpha(highlight, 0.13), withAlpha(highlight, 0), withAlpha(highlight, 0.05)] as const,
+  }
 }
 
 /** `#rrggbb` with an alpha (0–1), for washes of a tier's own colour. */

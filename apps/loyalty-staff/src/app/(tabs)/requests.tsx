@@ -97,7 +97,11 @@ export default function Requests() {
   return <Backdrop>
     <View style={{ paddingTop: insets.top + 20, paddingHorizontal: 24, gap: 14 }}>
       <PageHeading title={t('requests.title')} />
-      <Segments<RequestTab> value={tab} onChange={setTab} items={(['waiting', 'approved', 'done'] as RequestTab[]).map(id => ({ id, label: t(`requests.tab.${id}`), count: id === 'done' ? undefined : counts?.[id] }))} />
+      <Segments<RequestTab> value={tab} onChange={setTab} items={[
+        { id: 'waiting', label: t('requests.tab.waiting'), icon: 'time-outline', count: counts?.waiting },
+        { id: 'approved', label: t('requests.tab.approved'), icon: 'shield-checkmark-outline', count: counts?.approved },
+        { id: 'done', label: t('requests.tab.done'), icon: 'checkmark' },
+      ]} />
     </View>
     <FlatList data={rows} keyExtractor={r => `${r.kind}:${r.row.id}`} contentContainerStyle={{ padding: 24, paddingTop: 14, paddingBottom: TAB_BAR_ROOM, gap: 12 }}
       refreshControl={<RefreshControl refreshing={list.isRefetching || (showRewards && rewards.isRefetching)} onRefresh={refreshAll} tintColor={C.gold} />}
