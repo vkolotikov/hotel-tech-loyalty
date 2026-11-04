@@ -937,6 +937,17 @@ files on disk): run them one after the other.
 
 ## Deploying
 
+- Security review, second batch (2026-11-04): production **70d52cbde** on **983572728**, a source patch only (the
+  fresh SPA build is identical to main's). Feature source **12c536293** on `fix/pre-launch-batch-2`. 11 paths (1 added,
+  10 changed), none deleted, no migration: the section's "Second batch" above, and the runbook and handoff entries.
+  - **Checks:** parity, the whole source tree equal to the tip; artifact: `tsc -b`, Vitest 404 files / 5,845 tests;
+    PHP 8.5.12 LoyaltyWorkspace 646 passed with the same 10 picture and file failures, Member 364, Loyalty 383,
+    Auth 57, AdminAccess 78, Booking 591 passed; CI green on all 8 jobs, PostgreSQL included (run 41931008604, on
+    52ca0df5a; the two commits after it are docs only).
+  - Verified by content on `origin/main` (each fix's line); not on the live site.
+  - **After it:** set `EXPO_ACCESS_TOKEN` in Laravel Cloud if the Expo projects use Enhanced push security.
+  - The next source delta starts at **12c536293**.
+
 - Security review before the public launch, and members see their points move (owner, 2026-11-04): production
   **983572728** on **a8b45e629**, source patch **66bc96753** plus its SPA build. Feature source **50abe6993** on
   `fix/cross-organisation-accounts`. 33 paths (7 added, 26 changed), none deleted, no migration.
