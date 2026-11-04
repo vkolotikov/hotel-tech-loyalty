@@ -17,8 +17,8 @@ const Appearance = createContext({ solid: false, reduceMotion: true, animate: fa
 
 export type IconName = keyof typeof Ionicons.glyphMap
 
-/** A browser draws its own focus ring around a text field; the field's border already shows focus. */
-export const NO_OUTLINE: TextStyle = Platform.OS === 'web' ? { outlineWidth: 0 } : {}
+/** Use our focus border and let browser inputs shrink beside their controls on narrow previews. */
+export const NO_OUTLINE: TextStyle = Platform.OS === 'web' ? { outlineWidth: 0, minWidth: 0 } : {}
 
 /** The page's backdrop: deep navy with a faint warm light at the top. */
 export function Backdrop({ children, style }: { children: ReactNode; style?: StyleProp<ViewStyle> }) {
