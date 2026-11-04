@@ -2,6 +2,22 @@ import type { Key } from './en'
 
 /** Spanish addresses staff as usted, as the web workspace does. */
 export const es: Record<Key, string> = {
+  "card.qrTitle": "QR + NFC",
+  "card.together": "Una sola membresía. El QR del socio sigue activo al vincular una tarjeta NFC.",
+  "recovery.check": "Comprobar resultado",
+  "recovery.unknown": "Aún no hay un registro confirmado. Reintente la misma operación o pida a un responsable que revise el historial del socio.",
+  "recovery.checkFailed": "No se pudo comprobar el resultado. Conserve esta operación e inténtelo de nuevo.",
+  "recovery.recorded": "Ya registrado",
+  "recovery.reversed": "Registrado y luego anulado",
+  "recovery.reference": "Referencia {{n}}",
+  "recovery.processing": "Los beneficios de la visita siguen procesándose.",
+  "recovery.viewMember": "Ver socio",
+  "scan.pendingTitle": "Escaneo sin respuesta",
+  "scan.unconfirmed": "El escaneo puede haberse completado. Reinténtelo para recuperar la respuesta.",
+  "scan.retryExpired": "El plazo de reintento ha terminado. Revise el historial de entradas antes de escanear de nuevo.",
+  "scan.review": "Revisar escaneo pendiente",
+  "scan.reviewHint": "Revise el historial de entradas o del evento en el panel web. Cerrar este aviso no anula el escaneo original ni confirma que haya fallado.",
+  "scan.reviewed": "Historial revisado · Nuevo escaneo",
   "profile.lock": "Bloqueo de la app",
   "profile.title": "Perfil",
   "purchase.short": "Compra",

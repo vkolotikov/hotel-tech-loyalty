@@ -2,7 +2,7 @@ import { MemberSummary } from '../components/MemberCard'
 import { Glyph } from '../components/Glyph'
 import { useState } from 'react'
 import { StyleSheet, Text } from 'react-native'
-import { router, useLocalSearchParams } from 'expo-router'
+import { useRouter, useLocalSearchParams } from 'expo-router'
 import { useQuery } from '@tanstack/react-query'
 import { api } from '../lib/api'
 import { KEYS, afterMemberChange, queryClient } from '../lib/queries'
@@ -22,6 +22,7 @@ import { Done } from '../components/Done'
  * one card to one member across every organisation and says when it belongs elsewhere.
  */
 export default function LinkCard() {
+  const router = useRouter()
   const { t } = useT()
   const params = useLocalSearchParams<{ id: string }>()
   const id = Number(params.id)

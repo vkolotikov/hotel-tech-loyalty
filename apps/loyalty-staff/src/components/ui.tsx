@@ -10,7 +10,7 @@ import { feel } from '../lib/haptics'
 import { useDeviceAppearance } from '../lib/useEclipseAppearance'
 import { EclipseAtmosphere, EclipseSurface } from './Eclipse'
 import { Glyph } from './Glyph'
-import { router } from 'expo-router'
+import { useRouter } from 'expo-router'
 import { useT } from '../lib/i18n'
 
 const Appearance = createContext({ solid: false, reduceMotion: true, animate: false })
@@ -91,18 +91,19 @@ export function Press({ children, onPress, style, disabled, label, haptic = true
 }
 
 /** The gold button: the one thing to do next on a screen. */
-export function GoldButton({ title, onPress, icon, busy, disabled, style }: {
+export function GoldButton({ title, onPress, icon, busy, disabled, style, borderLight }: {
   title: string
   onPress: () => void
   icon?: IconName
   busy?: boolean
   disabled?: boolean
   style?: StyleProp<ViewStyle>
+  borderLight?: { phase: Animated.Value; order: number }
 }) {
   const { solid } = useContext(Appearance)
   return (
     <Press onPress={onPress} disabled={disabled || busy} label={title} style={style}>
-      <EclipseSurface fill={!!StyleSheet.flatten(style)?.flex} solid={solid} tone="attention" radius={22} style={styles.button}>
+      <EclipseSurface fill={!!StyleSheet.flatten(style)?.flex} solid={solid} tone="attention" radius={22} style={styles.button} borderLight={borderLight}>
         {busy ? <ActivityIndicator color={C.gold} accessibilityLabel={title} /> : (
           <>
             {icon && <Glyph name={icon} size={24} />}
@@ -298,6 +299,7 @@ export function Row({ left, title, line, right, onPress, last, card = false }: {
 }
 
 export function PageHeading({ title, back = true, profile = true, onBack, disabled }: { title: string; back?: boolean; profile?: boolean; onBack?: () => void; disabled?: boolean }) {
+  const router = useRouter()
   const { t } = useT()
   return <View style={{ gap: 22, marginBottom: 6 }}>
     <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>

@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { Redirect, router } from 'expo-router'
+import { Redirect, useRouter } from 'expo-router'
 import { Tabs } from 'expo-router/js-tabs'
 import { useSession } from '../../lib/session'
 import { usePrefs } from '../../lib/prefs'
@@ -11,6 +11,7 @@ import { TabBar } from '../../components/TabBar'
 
 /** The five places of the app; signed out, the sign-in instead. Signed in, this phone hears request alerts. */
 export default function TabsLayout() {
+  const router = useRouter()
   const token = useSession(s => s.token)
   const queue = useQueueCounts()
   const { t, language } = useT()
@@ -24,7 +25,7 @@ export default function TabsLayout() {
       if (current) usePrefs.getState().setAlertsState(state)
     })
     return () => { current = false }
-  }, [token, loaded, alerts, language])
+  }, [token, loaded, alerts, language, t])
 
   useAlertTaps(
     () => router.navigate('/requests'),

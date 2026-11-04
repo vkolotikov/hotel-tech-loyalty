@@ -1,11 +1,12 @@
 import { View, useWindowDimensions } from 'react-native'
-import { router } from 'expo-router'
+import { useRouter } from 'expo-router'
 import { useT } from '../lib/i18n'
 import type { Bootstrap, MemberRow } from '../lib/types'
 import { GhostButton, GoldButton } from './ui'
 
 /** Server rights and enabled earning methods determine available actions. */
 export function MemberActions({ member, boot }: { member: MemberRow; boot: Bootstrap }) {
+  const router = useRouter()
   const { t } = useT()
   const { width, fontScale } = useWindowDimensions()
   const stacked = fontScale >= 1.4 || (fontScale > 1.1 && width < 360)

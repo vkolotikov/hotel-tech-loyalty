@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react'
 import { FlatList, RefreshControl, Text, View } from 'react-native'
-import { router } from 'expo-router'
+import { useRouter } from 'expo-router'
 import { useInfiniteQuery, useMutation } from '@tanstack/react-query'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { api } from '../../lib/api'
@@ -24,6 +24,7 @@ const STATE_COLOR: Record<string, string> = { pending: C.gold, eligible: C.gold,
 
 /** Compact queue, full identity and code in detail. Approval and provision remain separate server transitions. */
 export default function Requests() {
+  const router = useRouter()
   const insets = useSafeAreaInsets()
   const { t, language } = useT()
   const [tab, setTab] = useState<RequestTab>('waiting')

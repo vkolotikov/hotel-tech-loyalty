@@ -1,6 +1,22 @@
 import type { Key } from './en'
 
 export const fr: Record<Key, string> = {
+  "card.qrTitle": "QR + NFC",
+  "card.together": "Une seule adhésion. Le QR du membre reste actif après l’association d’une carte NFC.",
+  "recovery.check": "Vérifier le résultat",
+  "recovery.unknown": "Aucune opération confirmée pour le moment. Réessayez la même opération ou demandez à un responsable de vérifier l’historique du membre.",
+  "recovery.checkFailed": "Résultat indisponible. Conservez cette opération et réessayez.",
+  "recovery.recorded": "Déjà enregistré",
+  "recovery.reversed": "Enregistré puis annulé",
+  "recovery.reference": "Référence {{n}}",
+  "recovery.processing": "Les avantages de la visite sont en cours de traitement.",
+  "recovery.viewMember": "Voir le membre",
+  "scan.pendingTitle": "Scan sans réponse",
+  "scan.unconfirmed": "Le scan a peut-être abouti. Réessayez pour récupérer sa réponse.",
+  "scan.retryExpired": "Le délai de nouvelle tentative est dépassé. Vérifiez l’historique des entrées avant un nouveau scan.",
+  "scan.review": "Vérifier le scan en attente",
+  "scan.reviewHint": "Vérifiez l’historique des entrées ou de l’événement dans l’espace web. Fermer ce message n’annule pas le scan initial et ne confirme pas son échec.",
+  "scan.reviewed": "Historique vérifié · Nouveau scan",
   "profile.lock": "Verrouillage",
   "profile.title": "Profil",
   "purchase.short": "Achat",

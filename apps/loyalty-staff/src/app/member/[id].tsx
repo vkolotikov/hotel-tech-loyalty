@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native'
-import { router, useLocalSearchParams } from 'expo-router'
+import { useRouter, useLocalSearchParams } from 'expo-router'
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
 import { LinearGradient } from 'expo-linear-gradient'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
@@ -19,6 +19,7 @@ import { BenefitList } from '../../components/BenefitList'
 
 /** A member's page: their card, how far to the next tier, what staff can do, their benefits, cards and history. */
 export default function MemberPage() {
+  const router = useRouter()
   const insets = useSafeAreaInsets()
   const { t, language } = useT()
   const params = useLocalSearchParams<{ id: string }>()

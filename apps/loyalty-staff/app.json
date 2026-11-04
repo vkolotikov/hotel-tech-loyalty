@@ -3,10 +3,10 @@
     "name": "HexaTech Staff",
     "slug": "hexatech-loyalty-staff",
     "owner": "hoteltechai",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "scheme": "hexatech-staff",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/brand-icon.png",
     "userInterfaceStyle": "dark",
     "backgroundColor": "#07090f",
     "ios": {
@@ -23,9 +23,7 @@
       "package": "uk.hexatech.loyalty.staff",
       "adaptiveIcon": {
         "backgroundColor": "#07090f",
-        "foregroundImage": "./assets/android-icon-foreground.png",
-        "backgroundImage": "./assets/android-icon-background.png",
-        "monochromeImage": "./assets/android-icon-monochrome.png"
+        "foregroundImage": "./assets/brand-emblem.png"
       },
       "permissions": [
         "android.permission.NFC",
@@ -43,7 +41,7 @@
       "predictiveBackGestureEnabled": false
     },
     "web": {
-      "favicon": "./assets/favicon.png",
+      "favicon": "./assets/brand-icon.png",
       "bundler": "metro",
       "output": "single"
     },
@@ -56,7 +54,7 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/splash-icon.png",
+          "image": "./assets/brand-emblem.png",
           "imageWidth": 160,
           "resizeMode": "contain",
           "backgroundColor": "#07090f"
