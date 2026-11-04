@@ -90,7 +90,7 @@ export const es: Record<Key, string> = {
 
   'signIn.eyebrow': 'HexaTech Loyalty',
   'signIn.title': 'Bienvenido de nuevo',
-  'signIn.line': 'Inicie sesión con su cuenta de personal para escanear miembros, dar puntos y atender solicitudes.',
+  'signIn.line': 'Inicie sesión para continuar',
   'signIn.email': 'Correo electrónico',
   'signIn.password': 'Contraseña',
   'signIn.submit': 'Iniciar sesión',
@@ -305,10 +305,10 @@ export const es: Record<Key, string> = {
   'update.noLink': 'Pida la nueva versión a su responsable.',
   'update.available': 'Hay una versión más reciente de HexaTech Staff.',
   'more.signOut': 'Cerrar sesión',
-  'more.signOutAsk': '¿Cerrar sesión de HexaTech Staff en este teléfono?',
+  'more.signOutAsk': '¿Cerrar sesión en este teléfono?',
   'more.version': 'Versión {{v}}',
 
-  'lock.title': 'HexaTech Staff está bloqueado',
+  'lock.title': 'Aplicación bloqueada',
   'lock.unlock': 'Desbloquear',
   'lock.prompt': 'Desbloquear HexaTech Staff',
 

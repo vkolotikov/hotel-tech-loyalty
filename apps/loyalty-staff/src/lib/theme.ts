@@ -88,6 +88,8 @@ export const ECLIPSE = {
   scanStops: [0, 0.2, 0.52, 0.83, 1] as const,
   tile: ['rgba(63,65,73,0.88)', 'rgba(32,35,44,0.94)', '#11151c', 'rgba(48,39,30,0.9)'] as const,
   attention: ['rgba(181,139,84,0.8)', 'rgba(75,59,42,0.9)', '#222026', 'rgba(51,41,31,0.9)'] as const,
+  loginButton: ['#f5d5a5', '#9b7948', '#493b2d', '#28252a', '#d9a65d'] as const,
+  loginStops: [0, 0.17, 0.45, 0.78, 1] as const,
   tileStops: [0, 0.32, 0.7, 1] as const,
   dock: ['rgba(59,61,69,0.8)', 'rgba(29,30,37,0.9)', 'rgba(12,16,22,0.96)'] as const,
   // Still smoked-glass faces, with a fine travelling light confined to the rim.
@@ -105,6 +107,8 @@ export const ECLIPSE = {
     brand: { fontSize: 22, lineHeight: 29, fontWeight: '600' as const },
     wordmark: { fontSize: 10, lineHeight: 18, letterSpacing: 4 },
     welcome: { fontSize: 38, lineHeight: 44, fontWeight: '400' as const },
+    loginTitle: { fontSize: 32, lineHeight: 40, fontWeight: '600' as const, letterSpacing: -0.5 },
+    loginSubtitle: { fontSize: 16, lineHeight: 23 },
     secondary: { fontSize: 13, lineHeight: 18 },
     action: { fontSize: 20, lineHeight: 26 },
     tile: { fontSize: 17, lineHeight: 22 },

@@ -89,7 +89,7 @@ export const ru: Record<Key, string> = {
 
   'signIn.eyebrow': 'HexaTech Loyalty',
   'signIn.title': 'С возвращением',
-  'signIn.line': 'Войдите с учётной записью сотрудника, чтобы сканировать участников, начислять баллы и обрабатывать запросы.',
+  'signIn.line': 'Войдите, чтобы продолжить',
   'signIn.email': 'Эл. почта',
   'signIn.password': 'Пароль',
   'signIn.submit': 'Войти',
@@ -304,10 +304,10 @@ export const ru: Record<Key, string> = {
   'update.noLink': 'Попросите у руководителя новую версию.',
   'update.available': 'Доступна новая версия HexaTech Staff.',
   'more.signOut': 'Выйти',
-  'more.signOutAsk': 'Выйти из HexaTech Staff на этом телефоне?',
+  'more.signOutAsk': 'Выйти на этом телефоне?',
   'more.version': 'Версия {{v}}',
 
-  'lock.title': 'HexaTech Staff заблокирован',
+  'lock.title': 'Приложение заблокировано',
   'lock.unlock': 'Разблокировать',
   'lock.prompt': 'Разблокировать HexaTech Staff',
 

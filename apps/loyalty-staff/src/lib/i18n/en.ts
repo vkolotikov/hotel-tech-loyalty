@@ -88,7 +88,7 @@ export const en = {
 
   'signIn.eyebrow': 'HexaTech Loyalty',
   'signIn.title': 'Welcome back',
-  'signIn.line': 'Sign in with your staff account to scan members, give points and look after requests.',
+  'signIn.line': 'Sign in to continue',
   'signIn.email': 'Email',
   'signIn.password': 'Password',
   'signIn.submit': 'Sign in',
@@ -303,10 +303,10 @@ export const en = {
   'update.noLink': 'Ask your manager for the new version.',
   'update.available': 'A newer version of HexaTech Staff is available.',
   'more.signOut': 'Sign out',
-  'more.signOutAsk': 'Sign out of HexaTech Staff on this phone?',
+  'more.signOutAsk': 'Sign out on this phone?',
   'more.version': 'Version {{v}}',
 
-  'lock.title': 'HexaTech Staff is locked',
+  'lock.title': 'App locked',
   'lock.unlock': 'Unlock',
   'lock.prompt': 'Unlock HexaTech Staff',
 
