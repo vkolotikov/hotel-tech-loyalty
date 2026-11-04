@@ -789,6 +789,21 @@ each closed with a test that fails on the code before the fix.
 - Tests: `ForeignAccountsTest`, `CrmAiRightsTest`, `SwitchedOffMemberTest` (`tests/Feature/LoyaltyWorkspace/`),
   `tests/Feature/Member/MemberChatAccessTest.php`; the notices in `DeskVisitTest` and `EventCheckInTest`.
 
+Second batch, the same day (smaller holes):
+
+- **Pushes carry the platform's Expo access token** (`NotificationService::expo()`, `services.expo.access_token` from
+  `EXPO_ACCESS_TOKEN`). The Settings field `expo_access_token` was stored and tested but never sent, so a project with
+  Expo's "Enhanced push security" on would have every push refused. Set `EXPO_ACCESS_TOKEN` in Laravel Cloud to an
+  access token of the Expo account that owns both apps; empty sends as before. Receipts are read the same way.
+- **A tier notice goes after the commit** (`LoyaltyService::assessTier()`, `DB::afterCommit`): it waited on Expo
+  inside the points write, under the member row's lock, and a write that rolled back still announced the new tier.
+- **A member cancels a benefit request only while it is open**: one conditional update, so staff approving it at the
+  same moment is never overwritten with "cancelled".
+- **Claim and reset codes: ten wrong codes an hour per address** (`Auth\AccountRecovery::FAILURES`, in `SharedCache`,
+  per purpose). The routes' limits are per IP, and a six-digit code could be guessed from many. The sign-up code's five
+  attempts are counted in `SharedCache` too (the default cache is each container's own, so it was five per replica).
+- Tests: `PushPlumbingTest` (`tests/Feature/LoyaltyWorkspace/`), `ClaimAccountTest`'s per-address limit.
+
 ## What the workspace does not do
 
 No bulk message from the members list (the full admin's bulk message and segment send keep it); no SMS delivery
