@@ -293,6 +293,45 @@ class PlanModulesControllerTest extends TestCase
         $this->assertSame('TRIALING', $org->subscription_status);
     }
 
+    /** 4 Nov 2026: billing's register refused `other` and `services` (422), leaving the trial with no billing record. */
+    public function test_an_industry_billing_does_not_know_is_left_out_of_billings_register_and_kept_locally(): void
+    {
+        config(['services.saas.api_url' => self::SAAS]);
+        Http::fake([
+            self::SAAS . '/billing/plans' => Http::response(['plans' => [$this->plan('loyalty', 8500)]], 200),
+            self::SAAS . '/auth/register' => fn (ClientRequest $r) => in_array($r['industry'] ?? null, [null, 'hotel', 'beauty', 'medical', 'restaurant', 'legal', 'real_estate', 'education', 'fitness', 'hospitality'], true)
+                // Its own billing organisation per sign-up, as billing makes one for each register.
+                ? Http::response(['token' => 'saas-token', 'organization' => ['id' => 'saas-org-' . $r['email']]], 201)
+                : Http::response(['error' => 'Validation failed', 'errors' => ['industry' => ['The selected industry is invalid.']]], 422),
+            self::SAAS . '/tools/bootstrap' => Http::response(['subscription' => ['status' => 'TRIALING', 'plan' => ['slug' => 'loyalty']], 'entitled_product_slugs' => ['loyalty']], 200),
+        ]);
+
+        foreach (['other' => 'something-else@example.test', 'services' => 'other-services@example.test'] as $industry => $email) {
+            $response = $this->postJson('/api/v1/auth/trial', ['name' => 'New Owner', 'email' => $email, 'phone' => '+44 7700 900123',
+                'hotel_name' => "Studio {$industry}", 'password' => 'NewAccount123!', 'plan' => 'loyalty', 'industry' => $industry])->assertCreated();
+
+            $org = Organization::findOrFail(User::findOrFail($response->json('user.id'))->organization_id);
+            $this->assertSame("saas-org-{$email}", $org->saas_org_id, "the {$industry} trial has its billing record");
+            $this->assertSame($industry, $org->industry);
+        }
+        Http::assertSent(fn (ClientRequest $r) => str_ends_with($r->url(), '/auth/register') && array_key_exists('industry', $r->data()) && $r['industry'] === null);
+    }
+
+    public function test_an_industry_billing_knows_is_still_sent_to_it(): void
+    {
+        config(['services.saas.api_url' => self::SAAS]);
+        Http::fake([
+            self::SAAS . '/billing/plans' => Http::response(['plans' => [$this->plan('loyalty', 8500)]], 200),
+            self::SAAS . '/auth/register' => Http::response(['token' => 'saas-token', 'organization' => ['id' => 'saas-org-spa']], 201),
+            self::SAAS . '/tools/bootstrap' => Http::response(['subscription' => ['status' => 'TRIALING', 'plan' => ['slug' => 'loyalty']], 'entitled_product_slugs' => ['loyalty']], 200),
+        ]);
+
+        $this->postJson('/api/v1/auth/trial', ['name' => 'New Owner', 'email' => 'spa-owner@example.test', 'phone' => '+44 7700 900123',
+            'hotel_name' => 'Seaside Spa', 'password' => 'NewAccount123!', 'plan' => 'loyalty', 'industry' => 'beauty'])->assertCreated();
+
+        Http::assertSent(fn (ClientRequest $r) => str_ends_with($r->url(), '/auth/register') && $r['industry'] === 'beauty' && $r['planSlug'] === 'loyalty');
+    }
+
     public function test_signing_up_for_a_module_billing_does_not_sell_is_refused_before_anything_is_made(): void
     {
         config(['services.saas.api_url' => self::SAAS]);
