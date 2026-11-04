@@ -9,8 +9,8 @@ import { failureOf } from '../../lib/failure'
 import { errorKey } from '../../lib/desk'
 import { number } from '../../lib/format'
 import { useT } from '../../lib/i18n'
-import { C, RADIUS, TAB_BAR_ROOM, fonts, tierColor, withAlpha } from '../../lib/theme'
-import { Avatar, Backdrop, Empty, Notice, Press, Row, SearchField, Shimmer } from '../../components/ui'
+import { C, TAB_BAR_ROOM, fonts, tierColor } from '../../lib/theme'
+import { Avatar, Backdrop, Empty, Notice, PageHeading, Press, Row, SearchField, Shimmer, Surface } from '../../components/ui'
 
 /** Members: search by name, number, email or phone, narrow by tier, newest first; a member opens their page. */
 export default function Members() {
@@ -37,20 +37,20 @@ export default function Members() {
 
   return (
     <Backdrop>
-      <View style={{ paddingTop: insets.top + 16, paddingHorizontal: 20, gap: 14 }}>
-        <View style={styles.head}>
-          <Text style={[fonts.display, { color: C.text }]}>{t('members.title')}</Text>
-          {list.data && <Text style={[fonts.small, { color: C.text2 }]}>{t('members.count', { n: number(total, language) })}</Text>}
-        </View>
+      <View style={{ paddingTop: insets.top + 20, paddingHorizontal: 24, gap: 14 }}>
+        <PageHeading title={t('members.title')} />
+        {list.data && <Text style={[fonts.small, { color: C.text2 }]}>{t('members.count', { n: number(total, language) })}</Text>}
         <SearchField value={q} onChangeText={setQ} placeholder={t('members.search')} />
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
           {[{ id: null as number | null, name: t('members.allTiers'), color: null as string | null }, ...tiers].map(tier => {
             const on = tierId === tier.id
             const tone = tier.id === null ? C.gold : tierColor(tier.color)
             return (
-              <Press key={String(tier.id)} onPress={() => setTierId(tier.id)} style={[styles.chip, on && { backgroundColor: withAlpha(tone, 0.18), borderColor: withAlpha(tone, 0.6) }]}>
+              <Press key={String(tier.id)} onPress={() => setTierId(tier.id)} style={{ minWidth: 82 }}>
+                <Surface padding={12} tint={on ? C.gold : undefined} style={styles.chip}>
                 {tier.id !== null && <View style={[styles.dot, { backgroundColor: tone }]} />}
                 <Text style={[fonts.smallStrong, { color: on ? C.text : C.text2 }]}>{tier.name}</Text>
+                </Surface>
               </Press>
             )
           })}
@@ -61,17 +61,17 @@ export default function Members() {
       <FlatList
         data={members}
         keyExtractor={m => String(m.id)}
-        contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 8, paddingBottom: TAB_BAR_ROOM }}
+        contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 14, gap: 12, paddingBottom: TAB_BAR_ROOM }}
         keyboardShouldPersistTaps="handled"
         refreshControl={<RefreshControl refreshing={list.isRefetching && !list.isFetchingNextPage} onRefresh={() => { void list.refetch() }} tintColor={C.gold} />}
         onEndReached={() => { if (list.hasNextPage && !list.isFetchingNextPage) void list.fetchNextPage() }}
         onEndReachedThreshold={0.4}
-        ListEmptyComponent={list.isLoading ? <View style={{ gap: 10 }}><Shimmer height={64} /><Shimmer height={64} /><Shimmer height={64} /></View> : <Empty icon="people-outline" text={t('members.empty')} />}
+        ListEmptyComponent={list.isLoading ? <View style={{ gap: 10 }}><Shimmer height={64} /><Shimmer height={64} /><Shimmer height={64} /></View> : !list.isError ? <Empty icon="people-outline" text={t('members.empty')} /> : undefined}
         ListFooterComponent={list.isFetchingNextPage ? <ActivityIndicator color={C.gold} style={{ marginVertical: 16 }} /> : undefined}
         renderItem={({ item, index }) => {
           const tier = tierOf(boot.data, item.tier_id)
           return (
-            <Row
+            <Row card
               left={<Avatar name={item.name} color={tier?.color} />}
               title={item.name}
               line={[tier?.name, item.member_number].filter(Boolean).join(' · ')}
@@ -93,6 +93,6 @@ export default function Members() {
 
 const styles = StyleSheet.create({
   head: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between' },
-  chip: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 14, paddingVertical: 9, borderRadius: RADIUS.pill, borderWidth: 1, borderColor: C.hairlineStrong, backgroundColor: C.surface },
+  chip: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, minHeight: 46 },
   dot: { width: 8, height: 8, borderRadius: 4 },
 })

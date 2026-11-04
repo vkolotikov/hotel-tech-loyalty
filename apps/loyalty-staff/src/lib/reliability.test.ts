@@ -1,11 +1,30 @@
 import { describe, expect, it, vi } from 'vitest'
-vi.mock('expo-crypto', () => ({ randomUUID: () => 'test-attempt-key' }))
-vi.mock('expo-secure-store', () => ({}))
 import { attemptJournal, attemptScope, outcomeUncertain, type AttemptStorage } from './attempts'
 import { ApiError, failureFrom } from './failure'
-import { purchaseAmount } from './desk'
+import { purchaseAmount, deskFlow } from './desk'
+import type { Ways } from './types'
 import { queueCounts, uniqueRows } from './queue'
 import { lockAtLaunch, lockOnReturn, LOCK_AFTER_MS } from './lock'
+vi.mock('expo-crypto', () => ({ randomUUID: () => 'test-attempt-key' }))
+vi.mock('expo-secure-store', () => ({}))
+
+describe('separate purchase and visit forms', () => {
+  const ways: Ways = { checkin: true, desk_earn: true, stamps: false, stamps_per_card: 10, checkin_points: 0, cashback: false, cashback_percent: 0, setup_done: true }
+  it('requires an amount for purchases even when visits are enabled', () => {
+    expect(deskFlow('purchase', true, ways, null)).toEqual({ allowed: true, problem: 'error.amount_required' })
+    expect(deskFlow('purchase', true, ways, 'invalid').problem).toBe('checkIn.invalidAmount')
+    expect(deskFlow('purchase', true, ways, 85).problem).toBeNull()
+    expect(deskFlow('visit', true, ways, null).problem).toBeNull()
+  })
+  it('honours the distinct server switches and staff rights', () => {
+    expect(deskFlow('purchase', true, { ...ways, desk_earn: false }, 85).allowed).toBe(false)
+    expect(deskFlow('visit', true, { ...ways, checkin: false }, null).allowed).toBe(false)
+    expect(deskFlow('visit', true, { ...ways, desk_earn: false }, null).allowed).toBe(true)
+    expect(deskFlow('purchase', true, { ...ways, checkin: false }, 85).allowed).toBe(true)
+    expect(deskFlow('purchase', false, ways, 85).allowed).toBe(false)
+    expect(deskFlow('visit', false, ways, null).allowed).toBe(false)
+  })
+})
 
 describe('device lock', () => {
   it('requires unlock on cold launch and after the timeout, never for a signed-out session', () => {

@@ -4,9 +4,6 @@ import { Stack } from 'expo-router'
 import { StatusBar } from 'expo-status-bar'
 import * as SplashScreen from 'expo-splash-screen'
 import * as LocalAuthentication from 'expo-local-authentication'
-import { useFonts } from 'expo-font'
-import { CormorantGaramond_500Medium_Italic, CormorantGaramond_600SemiBold, CormorantGaramond_700Bold } from '@expo-google-fonts/cormorant-garamond'
-import { Inter_400Regular, Inter_600SemiBold, Inter_700Bold } from '@expo-google-fonts/inter'
 import { focusManager, QueryClientProvider } from '@tanstack/react-query'
 import { GestureHandlerRootView } from 'react-native-gesture-handler'
 import { SafeAreaProvider } from 'react-native-safe-area-context'
@@ -23,10 +20,6 @@ import { lockAtLaunch, lockOnReturn } from '../lib/lock'
 SplashScreen.preventAutoHideAsync().catch(() => {})
 
 export default function RootLayout() {
-  const [fontsLoaded] = useFonts({
-    CormorantGaramond_500Medium_Italic, CormorantGaramond_600SemiBold, CormorantGaramond_700Bold,
-    Inter_400Regular, Inter_600SemiBold, Inter_700Bold,
-  })
   const ready = useSession(s => s.ready)
   const token = useSession(s => s.token)
   const prefsLoaded = usePrefs(s => s.loaded)
@@ -41,7 +34,7 @@ export default function RootLayout() {
     return () => listener.remove()
   }, [])
 
-  const loaded = fontsLoaded && ready && prefsLoaded
+  const loaded = ready && prefsLoaded
   useEffect(() => {
     if (loaded) SplashScreen.hideAsync().catch(() => {})
   }, [loaded])
@@ -68,6 +61,8 @@ export default function RootLayout() {
             <Stack.Screen name="(tabs)" />
             <Stack.Screen name="member/[id]" />
             <Stack.Screen name="activity" />
+            <Stack.Screen name="profile" />
+            <Stack.Screen name="cards" />
             <Stack.Screen name="scanned" options={{ presentation: 'modal' }} />
             <Stack.Screen name="points" options={{ presentation: 'modal' }} />
             <Stack.Screen name="check-in" options={{ presentation: 'modal' }} />
@@ -98,6 +93,8 @@ function LockGate() {
   const { t } = useT()
 
   useEffect(() => {
+    // This session boundary deliberately clears the prior account's lock state.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (!signedIn || !lockOn) { setLocked(false); awaySince.current = null }
   }, [signedIn, lockOn])
 
@@ -129,6 +126,8 @@ function LockGate() {
   }
 
   useEffect(() => {
+    // Synchronises the native biometric prompt with the lock; its single-flight ref prevents duplicate prompts.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (locked) void unlock()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [locked])

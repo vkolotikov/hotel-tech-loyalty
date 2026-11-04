@@ -7,6 +7,7 @@ import { feel } from '../lib/haptics'
 /** Exact Figma vectors, rasterised at 3× without changing their paths or filters for Android. */
 export const ECLIPSE_ASSETS = {
   scan: require('../../assets/eclipse/scan.png'),
+  scanFrame: require('../../assets/eclipse/scan-frame.png'),
   members: require('../../assets/eclipse/members.png'),
   requests: require('../../assets/eclipse/requests.png'),
   activity: require('../../assets/eclipse/activity.png'),
@@ -118,21 +119,22 @@ export function EclipseAtmosphere({ solid }: { solid: boolean }) {
   </View>
 }
 
-export function EclipseSurface({ children, tone = 'quiet', radius = E.tileRadius, style, solid = false, borderLight }: {
+export function EclipseSurface({ children, tone = 'quiet', radius = E.tileRadius, style, solid = false, borderLight, fill = false }: {
   children: ReactNode; tone?: 'quiet' | 'attention' | 'scan'; radius?: number; style?: StyleProp<ViewStyle>; solid?: boolean;
   borderLight?: { phase: Animated.Value; order: number }
+  fill?: boolean
 }) {
   const [size, setSize] = useState({ width: 170, height: 106 })
   const colors = tone === 'scan' ? E.scan : tone === 'attention' ? E.attention : E.tile
   return (
-    <LinearGradient colors={E.rim} locations={[0, 0.35, 0.72, 1]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ borderRadius: radius, padding: E.borderLight.width, overflow: 'hidden' }}
+    <LinearGradient colors={E.rim} locations={[0, 0.35, 0.72, 1]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ flex: fill ? 1 : undefined, borderRadius: radius, padding: E.borderLight.width, overflow: 'hidden' }}
       onLayout={borderLight ? e => {
         const { width, height } = e.nativeEvent.layout
         if (width > 0 && height > 0) setSize(previous => previous.width === width && previous.height === height ? previous : { width, height })
       } : undefined}>
       {!solid && borderLight && <EclipseBorderLight {...size} radius={radius} {...borderLight} />}
-      <View style={{ borderRadius: radius - E.borderLight.width, overflow: 'hidden', backgroundColor: E.bg }}>
-      <LinearGradient colors={solid ? [E.surface, E.surface] : colors} locations={solid ? undefined : tone === 'scan' ? E.scanStops : E.tileStops} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={style}>
+      <View style={{ flex: fill ? 1 : undefined, borderRadius: radius - E.borderLight.width, overflow: 'hidden', backgroundColor: E.bg }}>
+      <LinearGradient colors={solid ? [E.surface, E.surface] : colors} locations={solid ? undefined : tone === 'scan' ? E.scanStops : E.tileStops} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[fill && { flex: 1 }, style]}>
         {children}
       </LinearGradient>
       </View>

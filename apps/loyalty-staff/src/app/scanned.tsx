@@ -1,13 +1,12 @@
-import { ScrollView, StyleSheet, Text, View } from 'react-native'
+import { ScrollView } from 'react-native'
 import { router } from 'expo-router'
 import { useQuery } from '@tanstack/react-query'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { Ionicons } from '@expo/vector-icons'
 import { api } from '../lib/api'
 import { KEYS, tierOf, useBoot, useScan } from '../lib/queries'
 import { useT } from '../lib/i18n'
-import { C, fonts } from '../lib/theme'
-import { Backdrop, GhostButton, GoldButton, Press, SectionTitle, Surface } from '../components/ui'
+import { Backdrop, GhostButton, GoldButton, Notice, PageHeading, SectionTitle, Shimmer, Surface } from '../components/ui'
+import { Sheet } from '../components/Sheet'
 import { MemberCard } from '../components/MemberCard'
 import { VerdictBanner } from '../components/VerdictBanner'
 import { MemberActions } from '../components/MemberActions'
@@ -27,7 +26,10 @@ export default function Scanned() {
   const detail = useQuery({ queryKey: KEYS.member(memberId), queryFn: () => api.member(memberId), enabled: !!answer && !answer.benefits })
 
   if (!answer || !boot.data) {
-    return <Backdrop><View style={{ flex: 1 }} /></Backdrop>
+    return <Sheet title={t('scan.result')} footer={<GoldButton title={t('result.next')} icon="scan" onPress={() => router.replace('/scan')} />}>
+      {answer && boot.isPending && <Shimmer height={180} />}
+      {answer && boot.isError && <Notice text={t('error.unknown')} action={t('common.retry')} onAction={() => { void boot.refetch() }} />}
+    </Sheet>
   }
   const member = detail.data?.member ?? answer.member
   const tier = tierOf(boot.data, member.tier_id)
@@ -35,17 +37,14 @@ export default function Scanned() {
 
   return (
     <Backdrop>
-      <ScrollView contentContainerStyle={{ paddingTop: insets.top + 12, paddingBottom: insets.bottom + 24, paddingHorizontal: 20, gap: 18 }}>
-        <View style={styles.bar}>
-          <Press onPress={() => router.back()} label={t('common.close')}>
-            <View style={styles.close}><Ionicons name="close" size={22} color={C.text} /></View>
-          </Press>
-        </View>
+      <ScrollView contentContainerStyle={{ paddingTop: insets.top + 12, paddingBottom: insets.bottom + 24, paddingHorizontal: 24, gap: 18 }}>
+        <PageHeading title={t('scan.result')} profile={false} />
 
         <VerdictBanner answer={answer} />
         <MemberCard member={member} tier={tier} venue={boot.data.organization.name} currency={boot.data.venue.currency} />
         <MemberActions member={member} boot={boot.data} />
 
+        {detail.isError && <Notice text={t('error.unknown')} action={t('common.retry')} onAction={() => { void detail.refetch() }} />}
         <Surface>
           <SectionTitle title={t('result.benefits')} />
           <BenefitList benefits={benefits} />
@@ -53,17 +52,8 @@ export default function Scanned() {
 
         <GoldButton title={t('result.next')} icon="scan" onPress={() => router.back()} />
         <GhostButton title={t('result.profile')} icon="person-circle-outline" onPress={() => router.replace(`/member/${member.id}`)} />
-        {detail.data?.progress.next_tier && (
-          <Text style={[fonts.small, { color: C.text2, textAlign: 'center' }]}>
-            {t('member.progress', { needed: detail.data.progress.needed, tier: detail.data.progress.next_tier.name })}
-          </Text>
-        )}
+
       </ScrollView>
     </Backdrop>
   )
 }
-
-const styles = StyleSheet.create({
-  bar: { flexDirection: 'row', justifyContent: 'flex-end' },
-  close: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: C.surface2, borderWidth: 1, borderColor: C.hairline },
-})

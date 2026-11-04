@@ -50,7 +50,7 @@ export default function Home() {
             <Text style={styles.brandName}>{t('home.brand')}</Text>
             <Text style={styles.wordmark}>{t('home.staff')}</Text>
           </View>
-          <Press label={t('home.account')} onPress={() => router.navigate('/more')} reduceMotion={appearance.reduceMotion} pressedScale={0.98}>
+          <Press label={t('home.account')} onPress={() => router.push('/profile')} reduceMotion={appearance.reduceMotion} pressedScale={0.98}>
             <EclipseSurface radius={24} solid={appearance.solid} style={styles.profile}>
               <Ionicons name="person-outline" size={27} color={E.text} accessible={false} />
             </EclipseSurface>

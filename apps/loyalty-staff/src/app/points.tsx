@@ -1,3 +1,4 @@
+import { MemberSummary } from '../components/MemberCard'
 import { useState } from 'react'
 import { StyleSheet, Text, TextInput, View } from 'react-native'
 import { router, useLocalSearchParams } from 'expo-router'
@@ -11,11 +12,11 @@ import { number } from '../lib/format'
 import { useT } from '../lib/i18n'
 import type { Key } from '../lib/i18n/en'
 import { C, RADIUS, fonts } from '../lib/theme'
-import { Field, GhostButton, GoldButton, NO_OUTLINE, Notice, Press, Surface } from '../components/ui'
+import { Field, GoldButton, NO_OUTLINE, Notice, Press, Surface } from '../components/ui'
 import { Sheet } from '../components/Sheet'
 import { Done } from '../components/Done'
 
-const QUICK = [10, 25, 50, 100, 250]
+const QUICK = [100, 250, 500]
 const AWARD_REASONS: Key[] = ['points.reason.visit', 'points.reason.purchase', 'points.reason.goodwill', 'points.reason.correction']
 const REDEEM_REASONS: Key[] = ['points.reason.reward', 'points.reason.correction']
 
@@ -61,19 +62,25 @@ export default function Points() {
 
   if (done) {
     return (
-      <Sheet title={title}>
+      <Sheet title={title} footer={<GoldButton title={t('common.done')} icon="checkmark" onPress={() => router.back()} />}>
         <Done
           title={t(mode === 'award' ? 'points.doneAward' : 'points.doneRedeem', { n: number(done.points, language) })}
           lines={[`${detail.data?.member.name ?? ''} · ${t('common.points', { n: number(done.balance, language) })}`]}
         />
-        <GoldButton title={t('common.done')} icon="checkmark" onPress={() => router.back()} />
       </Sheet>
     )
   }
 
   const reasons = mode === 'award' ? AWARD_REASONS : REDEEM_REASONS
   return (
-    <Sheet title={title} line={detail.data ? `${detail.data.member.name} · ${t('common.points', { n: number(balance, language) })}` : undefined}>
+    <Sheet title={title} busy={busy} footer={<GoldButton
+        title={pending ? t('common.retry') : points <= 0 ? title : t(mode === 'award' ? 'points.confirmAward' : 'points.confirmRedeem', { n: number(points, language) })}
+        icon={mode === 'award' ? 'add-circle' : 'remove-circle'}
+        busy={busy}
+        disabled={!attempt.ready || !allowed || !detail.data}
+        onPress={() => { void send() }}
+      />}>
+      {detail.data && <MemberSummary member={detail.data.member} />}
       <Surface style={{ alignItems: 'center', gap: 14 }}>
         <TextInput
           value={amount}
@@ -85,7 +92,6 @@ export default function Points() {
           selectionColor={C.gold}
           style={[styles.amount, NO_OUTLINE]}
           accessibilityLabel={t('points.amount')}
-          autoFocus
         />
         <Text style={[fonts.label, { color: C.text2 }]}>{t('points.amount')}</Text>
         <View style={styles.quick}>
@@ -121,24 +127,16 @@ export default function Points() {
       {points > 0 && !problem && (
         <Text style={[fonts.small, { color: C.text2, textAlign: 'center' }]}>{t('points.balanceAfter', { n: number(balanceAfter(mode, points, balance), language) })}</Text>
       )}
-      <GoldButton
-        title={pending ? t('common.retry') : t(mode === 'award' ? 'points.confirmAward' : 'points.confirmRedeem', { n: number(points, language) })}
-        icon={mode === 'award' ? 'add-circle' : 'remove-circle'}
-        busy={busy}
-        disabled={!attempt.ready || !allowed || !detail.data}
-        onPress={() => { void send() }}
-      />
-      <GhostButton title={t('common.cancel')} onPress={() => router.back()} />
     </Sheet>
   )
 }
 
 const styles = StyleSheet.create({
-  amount: { fontFamily: 'CormorantGaramond_700Bold', fontSize: 64, lineHeight: 72, color: C.goldLight, textAlign: 'center', minWidth: 160 },
+  amount: { ...fonts.amount, color: C.text, textAlign: 'center', minWidth: 160, width: '100%' },
   quick: { flexDirection: 'row', gap: 6, alignSelf: 'stretch' },
-  chip: { flex: 1, alignItems: 'center', paddingVertical: 10, borderRadius: RADIUS.pill, backgroundColor: C.surface2, borderWidth: 1, borderColor: C.hairline },
+  chip: { flex: 1, alignItems: 'center', paddingVertical: 14, borderRadius: RADIUS.pill, backgroundColor: C.surface2, borderWidth: 1, borderColor: C.hairline },
   chipOn: { backgroundColor: C.gold, borderColor: C.gold },
   reasons: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  reason: { flexBasis: '47%', flexGrow: 1, alignItems: 'center', paddingVertical: 11, borderRadius: RADIUS.pill, borderWidth: 1, borderColor: C.hairlineStrong },
+  reason: { flexBasis: '47%', flexGrow: 1, alignItems: 'center', paddingVertical: 14, borderRadius: RADIUS.pill, borderWidth: 1, borderColor: C.hairlineStrong },
   reasonOn: { borderColor: C.goldEdge, backgroundColor: C.goldWash },
 })

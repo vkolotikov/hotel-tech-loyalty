@@ -1,0 +1,8 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="Gift">
+<path id="Vector" d="M12 7V21" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" stroke="#F6F2EA"/>
+<path id="Vector_2" d="M20 11V19C20 19.5304 19.7893 20.0391 19.4142 20.4142C19.0391 20.7893 18.5304 21 18 21H6C5.46957 21 4.96086 20.7893 4.58579 20.4142C4.21071 20.0391 4 19.5304 4 19V11" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" stroke="#F6F2EA"/>
+<path id="Vector_3" d="M7.5 7C6.83696 7 6.20107 6.73661 5.73223 6.26777C5.26339 5.79893 5 5.16304 5 4.5C5 3.83696 5.26339 3.20107 5.73223 2.73223C6.20107 2.26339 6.83696 2 7.5 2C8.46469 1.98319 9.41003 2.45126 10.2127 3.34316C11.0154 4.23506 11.6383 5.5094 12 7C12.3617 5.5094 12.9846 4.23506 13.7873 3.34316C14.59 2.45126 15.5353 1.98319 16.5 2C17.163 2 17.7989 2.26339 18.2678 2.73223C18.7366 3.20107 19 3.83696 19 4.5C19 5.16304 18.7366 5.79893 18.2678 6.26777C17.7989 6.73661 17.163 7 16.5 7" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" stroke="#F6F2EA"/>
+<path id="Vector_4" d="M4 7H20C20.5523 7 21 7.44772 21 8V10C21 10.5523 20.5523 11 20 11H4C3.44772 11 3 10.5523 3 10V8C3 7.44772 3.44772 7 4 7Z" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" stroke="#F6F2EA"/>
+</g>
+</svg>

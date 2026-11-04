@@ -1,5 +1,12 @@
 import type { Key } from './i18n/en'
-import type { MemberRow, Verdict } from './types'
+import type { MemberRow, Verdict, Ways } from './types'
+
+/** Form availability only; the server still computes/checks every visit effect and purchase award. */
+export function deskFlow(mode: 'visit' | 'purchase', canAward: boolean, ways: Ways | undefined, amount: number | null | 'invalid'): { allowed: boolean; problem: Key | null } {
+  const allowed = canAward && !!(mode === 'purchase' ? ways?.desk_earn : ways?.checkin)
+  const problem = mode === 'purchase' ? amount === 'invalid' ? 'checkIn.invalidAmount' : amount === null ? 'error.amount_required' : null : null
+  return { allowed, problem }
+}
 
 /**
  * The desk's decisions, kept out of the screens so they can be tested: what a scanned code is, when a retry reuses its
