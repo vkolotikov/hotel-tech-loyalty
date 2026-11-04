@@ -121,4 +121,12 @@ return [
         'graph_version' => env('META_GRAPH_API_VERSION', 'v25.0'),
     ],
 
+    /*
+     * Expo push (2026-11-04): the platform's access token for the HexaTech apps' Expo projects, sent with every push
+     * when set (NotificationService::expo()). Needed once a project turns on "Enhanced push security"; empty = none.
+     */
+    'expo' => [
+        'access_token' => env('EXPO_ACCESS_TOKEN', ''),
+    ],
+
 ];

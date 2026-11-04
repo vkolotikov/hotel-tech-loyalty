@@ -4,7 +4,6 @@ namespace App\Services\Loyalty\Push;
 
 use App\Models\LoyaltyMember;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -115,8 +114,7 @@ final class ExpoReceipts
     private function receipts(array $ids): ?array
     {
         try {
-            $response = Http::withHeaders(['Accept' => 'application/json', 'Content-Type' => 'application/json'])
-                ->timeout(30)->post(self::URL, ['ids' => $ids]);
+            $response = \App\Services\NotificationService::expo()->timeout(30)->post(self::URL, ['ids' => $ids]);
         } catch (\Throwable $e) {
             Log::warning('Expo receipts could not be read', ['error' => class_basename($e)]);
 

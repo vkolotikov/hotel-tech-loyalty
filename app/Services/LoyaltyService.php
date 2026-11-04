@@ -759,15 +759,19 @@ class LoyaltyService
         // were notified; downgrades happened silently and customers lost
         // Gold/Platinum benefits without any signal, which is a known
         // churn trigger.
-        try {
-            if ($isUpgrade) {
-                app(NotificationService::class)->sendTierUpgradeNotification($member, $appropriateTier);
-            } else {
-                app(NotificationService::class)->sendTierDowngradeNotification($member, $appropriateTier);
+        // After the commit (2026-11-04): an assessment usually runs inside a points write, under the member row's lock;
+        // the push waited on Expo there, and a write that rolled back still told the member of a new tier.
+        DB::afterCommit(function () use ($member, $appropriateTier, $isUpgrade) {
+            try {
+                if ($isUpgrade) {
+                    app(NotificationService::class)->sendTierUpgradeNotification($member, $appropriateTier);
+                } else {
+                    app(NotificationService::class)->sendTierDowngradeNotification($member, $appropriateTier);
+                }
+            } catch (\Throwable $e) {
+                \Log::warning('Failed to send tier notification: ' . $e->getMessage());
             }
-        } catch (\Throwable $e) {
-            \Log::warning('Failed to send tier notification: ' . $e->getMessage());
-        }
+        });
 
         return true;
     }
