@@ -82,7 +82,11 @@ export default function Scan() {
     <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingTop: insets.top + 20, paddingHorizontal: 24, paddingBottom: TAB_BAR_ROOM, gap: 14 }}>
       <PageHeading title={t('home.scan')} />
       <Row card title={where.kind === 'desk' ? t('scan.desk') : where.name} line={t('scan.for')} left={<IconBadge name="location-outline" color={C.text} />} onPress={busy ? undefined : () => setPicking(true)} />
-      <Segments<ScanMode> value={mode} onChange={next => { if (!busy) { setMode(next); setProblem(null); setLight(false) } }} items={['qr', 'nfc', 'number'].map(id => ({ id: id as ScanMode, label: t(`scan.mode.${id}` as Key) }))} />
+      <Segments<ScanMode> iconOnly value={mode} onChange={next => { if (!busy) { setMode(next); setProblem(null); setLight(false) } }} items={[
+        { id: 'qr', label: t('scan.mode.qr'), icon: 'qr-code-outline' },
+        { id: 'nfc', label: t('scan.mode.nfc'), icon: 'radio-outline' },
+        { id: 'number', label: t('scan.mode.number'), symbol: '123' },
+      ]} />
       {mode === 'qr' && <>
         <Surface padding={0}>
           <View style={{ height: 230, overflow: 'hidden', borderRadius: 25, alignItems: 'center', justifyContent: 'center' }}>

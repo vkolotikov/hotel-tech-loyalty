@@ -253,20 +253,22 @@ export function Empty({ icon, text }: { icon: IconName; text: string }) {
   )
 }
 
-/** Tabs drawn as one pill with the chosen part lit. */
-export function Segments<T extends string>({ value, items, onChange }: { value: T; items: { id: T; label: string; count?: number }[]; onChange: (id: T) => void }) {
+/** Equal-height tabs, with centred Android type and optional pictograms. */
+export function Segments<T extends string>({ value, items, onChange, iconOnly = false }: { value: T; items: { id: T; label: string; count?: number; icon?: IconName; symbol?: string }[]; onChange: (id: T) => void; iconOnly?: boolean }) {
   const { solid } = useContext(Appearance)
   return (
     <View style={styles.segments} accessibilityRole="tablist">
       {items.map(item => {
         const on = item.id === value
         return (
-          <Pressable key={item.id} accessibilityRole="tab" accessibilityLabel={item.label} accessibilityState={{ selected: on }} onPress={() => { feel.tap(); onChange(item.id) }} style={{ flex: 1 }}>
-          <EclipseSurface solid={solid} tone={on ? 'attention' : 'quiet'} radius={24} style={styles.segment}>
-            <Text style={[fonts.smallStrong, { color: C.text, flexShrink: 1, textAlign: 'center' }]}>{item.label}</Text>
+          <Pressable key={item.id} accessibilityRole="tab" accessibilityLabel={item.count ? `${item.label}, ${item.count}` : item.label} accessibilityState={{ selected: on }} onPress={() => { feel.tap(); onChange(item.id) }} style={{ flex: 1, minWidth: 0 }}>
+          <EclipseSurface fill solid={solid} tone={on ? 'attention' : 'quiet'} radius={24} style={[styles.segment, !iconOnly && item.icon ? { minHeight: 72 } : null]}>
+            {item.icon && <Glyph name={item.icon} size={iconOnly ? 25 : 21} color={on ? C.goldLight : C.text2} />}
+            {item.symbol && <Text accessible={false} style={[fonts.segmentSymbol, { color: on ? C.goldLight : C.text2 }]}>{item.symbol}</Text>}
+            {(!iconOnly || (!item.icon && !item.symbol)) && <Text style={[fonts.segment, { color: on ? C.text : C.text2 }]}>{item.label}</Text>}
             {item.count !== undefined && item.count > 0 && (
               <View style={styles.segmentCount}>
-                <Text style={[fonts.smallStrong, { color: C.gold }]}>{item.count}</Text>
+                <Text style={[fonts.segmentCount, { color: C.gold }]}>{item.count > 99 ? '99+' : item.count}</Text>
               </View>
             )}
           </EclipseSurface></Pressable>
@@ -324,8 +326,8 @@ const styles = StyleSheet.create({
   sectionTitle: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10, marginTop: 6 },
   notice: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 12, borderRadius: RADIUS.md, borderWidth: 1 },
   segments: { flexDirection: 'row', gap: 8 },
-  segment: { flexDirection: 'row', flexWrap: 'wrap', gap: 4, alignItems: 'center', justifyContent: 'center', minHeight: 46, paddingHorizontal: 8, paddingVertical: 10 },
-  segmentCount: { minWidth: 20, paddingHorizontal: 5, height: 20, borderRadius: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: C.goldWash },
+  segment: { gap: 6, alignItems: 'center', justifyContent: 'center', minHeight: 52, paddingHorizontal: 6, paddingVertical: 11 },
+  segmentCount: { position: 'absolute', top: 5, right: 7, minWidth: 18, paddingHorizontal: 4, minHeight: 18, borderRadius: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: C.goldWash },
   row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 16, minHeight: 78 },
   rowLine: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: C.hairlineStrong },
 })

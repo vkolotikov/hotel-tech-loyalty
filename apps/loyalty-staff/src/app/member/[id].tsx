@@ -66,7 +66,7 @@ export default function MemberPage() {
             <MemberCard member={data.member} tier={tier} venue={boot.data.organization.name} currency={boot.data.venue.currency} />
 
             <MemberActions member={data.member} boot={boot.data} />
-            <Segments value={section} onChange={setSection} items={[{ id: 'benefits', label: t('result.benefits') }, { id: 'activity', label: t('home.activityLink') }, { id: 'details', label: t('member.details') }]} />
+            <Segments value={section} onChange={setSection} items={[{ id: 'benefits', label: t('result.benefits'), icon: 'gift-outline' }, { id: 'activity', label: t('home.activityLink'), icon: 'stats-chart-outline' }, { id: 'details', label: t('member.details'), icon: 'person-outline' }]} />
             {section === 'benefits' && <>
 
             <Surface>
