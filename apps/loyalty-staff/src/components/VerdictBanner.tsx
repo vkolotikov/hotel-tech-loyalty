@@ -1,7 +1,7 @@
 import { StyleSheet, Text, View } from 'react-native'
-import { LinearGradient } from 'expo-linear-gradient'
-import { Ionicons } from '@expo/vector-icons'
-import { C, RADIUS, fonts, withAlpha } from '../lib/theme'
+import { C, fonts, withAlpha } from '../lib/theme'
+import { Surface } from './ui'
+import { Glyph } from './Glyph'
 import { verdictKey } from '../lib/desk'
 import { useT } from '../lib/i18n'
 import type { ScanAnswer } from '../lib/types'
@@ -26,20 +26,20 @@ export function VerdictBanner({ answer }: { answer: ScanAnswer }) {
   const where = verdict.place?.name ?? verdict.event?.title
 
   return (
-    <LinearGradient colors={[withAlpha(color, 0.32), withAlpha(color, 0.08)]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[styles.banner, { borderColor: withAlpha(color, 0.5) }]}>
-      <View style={[styles.mark, { backgroundColor: color }]}>
-        <Ionicons name={verdict.granted ? 'checkmark' : 'close'} size={34} color="#0b0e15" />
+    <Surface style={styles.banner}>
+      <View style={[styles.mark, { backgroundColor: withAlpha(color, 0.15) }]}>
+        <Glyph name={verdict.granted ? 'checkmark' : 'close'} size={34} color={color} />
       </View>
-      <View style={{ flex: 1, gap: 4 }}>
+      <View style={{ gap: 8, alignItems: 'center' }}>
         {where ? <Text style={[fonts.label, { color: C.text2 }]} numberOfLines={1}>{where}</Text> : null}
-        <Text style={[fonts.title, { color: C.text }]}>{t(verdictKey(verdict))}</Text>
+        <Text style={[fonts.heading, { color, textAlign: 'center' }]}>{t(verdictKey(verdict))}</Text>
         {lines.map(line => <Text key={line} style={[fonts.small, { color: C.text }]}>{line}</Text>)}
       </View>
-    </LinearGradient>
+    </Surface>
   )
 }
 
 const styles = StyleSheet.create({
-  banner: { flexDirection: 'row', alignItems: 'center', gap: 16, padding: 18, borderRadius: RADIUS.lg, borderWidth: 1 },
-  mark: { width: 58, height: 58, borderRadius: 29, alignItems: 'center', justifyContent: 'center' },
+  banner: { alignItems: 'center', gap: 16, padding: 24, minHeight: 200 },
+  mark: { width: 64, height: 64, borderRadius: 32, alignItems: 'center', justifyContent: 'center' },
 })

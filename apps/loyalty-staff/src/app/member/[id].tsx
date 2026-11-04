@@ -12,7 +12,7 @@ import { errorKey } from '../../lib/desk'
 import { ago, day, moment, money, number } from '../../lib/format'
 import { useT } from '../../lib/i18n'
 import { C, GOLD_GRADIENT, RADIUS, fonts } from '../../lib/theme'
-import { Backdrop, GhostButton, Notice, Press, Row, SectionTitle, Shimmer, Surface } from '../../components/ui'
+import { Backdrop, GhostButton, Notice, PageHeading, Row, SectionTitle, Segments, Shimmer, Surface } from '../../components/ui'
 import { MemberCard } from '../../components/MemberCard'
 import { MemberActions } from '../../components/MemberActions'
 import { BenefitList } from '../../components/BenefitList'
@@ -25,7 +25,6 @@ export default function MemberPage() {
   const id = Number(params.id)
   const boot = useBoot()
   const detail = useQuery({ queryKey: KEYS.member(id), queryFn: () => api.member(id), enabled: id > 0 })
-  const cards = useQuery({ queryKey: KEYS.cards(id), queryFn: () => api.cards(id), enabled: id > 0 })
   const history = useInfiniteQuery({
     queryKey: KEYS.history(id),
     queryFn: ({ pageParam }) => api.history(id, pageParam),
@@ -33,6 +32,7 @@ export default function MemberPage() {
     getNextPageParam: last => (last.page < last.pages ? last.page + 1 : undefined),
     enabled: id > 0,
   })
+  const [section, setSection] = useState<'benefits' | 'activity' | 'details'>('benefits')
   const [refreshing, setRefreshing] = useState(false)
   const refresh = async () => {
     setRefreshing(true)
@@ -52,16 +52,10 @@ export default function MemberPage() {
   return (
     <Backdrop>
       <ScrollView
-        contentContainerStyle={{ paddingTop: insets.top + 8, paddingBottom: insets.bottom + 32, paddingHorizontal: 20, gap: 18 }}
+        contentContainerStyle={{ paddingTop: insets.top + 20, paddingBottom: insets.bottom + 32, paddingHorizontal: 24, gap: 18 }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { void refresh() }} tintColor={C.gold} />}
       >
-        <View style={styles.bar}>
-          <Press onPress={() => router.back()} label={t('common.close')}>
-            <View style={styles.round}><Ionicons name="chevron-back" size={22} color={C.text} /></View>
-          </Press>
-          <Text style={[fonts.label, { color: C.text2 }]}>{t('member.title')}</Text>
-          <View style={{ width: 40 }} />
-        </View>
+        <PageHeading title={t('member.title')} />
 
         {detail.isLoading && <><Shimmer height={210} /><Shimmer height={96} /></>}
         {detail.isError && <Notice text={t(errorKey(failureOf(detail.error).code))} action={t('common.retry')} onAction={() => { void detail.refetch() }} />}
@@ -70,6 +64,14 @@ export default function MemberPage() {
           <>
             {data.member.is_erased && <Notice tone="warning" text={t('member.erased')} />}
             <MemberCard member={data.member} tier={tier} venue={boot.data.organization.name} currency={boot.data.venue.currency} />
+
+            <MemberActions member={data.member} boot={boot.data} />
+            <Segments value={section} onChange={setSection} items={[{ id: 'benefits', label: t('result.benefits') }, { id: 'activity', label: t('home.activityLink') }, { id: 'details', label: t('member.details') }]} />
+            {section === 'benefits' && <>
+
+            <Surface>
+              <BenefitList benefits={data.benefits} />
+            </Surface>
 
             <Surface>
               {data.progress.next_tier ? (
@@ -87,30 +89,8 @@ export default function MemberPage() {
               )}
             </Surface>
 
-            <MemberActions member={data.member} boot={boot.data} />
-
-            <Surface>
-              <SectionTitle title={t('result.benefits')} />
-              <BenefitList benefits={data.benefits} />
-            </Surface>
-
-            <Surface padding={0} style={{ paddingHorizontal: 16, paddingTop: 12 }}>
-              <SectionTitle title={t('member.cards')} />
-              {cards.isPending && <Shimmer height={44} />}
-              {cards.isError && <Notice text={t('error.unknown')} action={t('common.retry')} onAction={() => { void cards.refetch() }} />}
-              {(cards.data?.cards ?? []).filter(card => card.is_active).map(card => (
-                <Row key={card.id} left={<Ionicons name="card" size={22} color={C.gold} />} title={card.uid} line={card.linked_at ? day(card.linked_at, language) : null} />
-              ))}
-              {cards.data && cards.data.cards.filter(card => card.is_active).length === 0 && (
-                <Text style={[fonts.body, { color: C.text2, paddingBottom: 8 }]}>{t('member.noCards')}</Text>
-              )}
-              {!data.member.is_erased && (
-                <View style={{ paddingVertical: 12 }}>
-                  <GhostButton title={t('member.linkCard')} icon="add" tone={C.gold} onPress={() => router.push({ pathname: '/link-card', params: { id: String(id) } })} />
-                </View>
-              )}
-            </Surface>
-
+            </>}
+            {section === 'activity' && <>
             <Surface padding={0} style={{ paddingHorizontal: 16, paddingTop: 12 }}>
               <SectionTitle title={t('member.history')} />
               {history.isPending && <Shimmer height={44} />}
@@ -119,7 +99,7 @@ export default function MemberPage() {
               {lines.map((line, i) => (
                 <View key={line.id} style={[styles.line, i < lines.length - 1 && styles.lineRule]}>
                   <View style={{ flex: 1, gap: 2 }}>
-                    <Text style={[fonts.bodyStrong, { color: line.is_reversed ? C.text3 : C.text }]} numberOfLines={1}>{line.description}</Text>
+                    <Text style={[fonts.bodyStrong, { color: line.is_reversed ? C.text3 : C.text }]} >{line.description}</Text>
                     <Text style={[fonts.small, { color: C.text2 }]} numberOfLines={1}>
                       {[line.at ? moment(line.at, language, timeZone) : null, line.by, line.is_reversed ? t('member.reversed') : null].filter(Boolean).join(' · ')}
                     </Text>
@@ -137,6 +117,9 @@ export default function MemberPage() {
               <View style={{ height: 8 }} />
             </Surface>
 
+            </>}
+            {section === 'details' && <>
+            <Row card title={t('member.cards')} left={<Ionicons name="card-outline" size={24} color={C.gold} />} onPress={() => router.push({ pathname: '/cards', params: { id: String(id) } })} />
             <Surface padding={0} style={{ paddingHorizontal: 16, paddingTop: 12 }}>
               <SectionTitle title={t('member.details')} />
               <Row title={t('member.lifetime')} line={number(data.member.lifetime_points, language)} />
@@ -144,9 +127,10 @@ export default function MemberPage() {
               {data.member.phone ? <Row title={t('member.phone')} line={data.member.phone} /> : null}
               {data.member.joined_at ? <Row title={t('member.joined')} line={day(data.member.joined_at, language)} /> : null}
               {data.member.last_activity_at ? (
-                <Row title={t('member.lastActive')} line={(() => { const when = ago(data.member.last_activity_at, Date.now()); return when ? t(when.key, { n: when.n }) : null })()} last />
+                <Row title={t('member.lastActive')} line={(() => { const when = ago(data.member.last_activity_at, detail.dataUpdatedAt); return when ? t(when.key, { n: when.n }) : null })()} last />
               ) : null}
             </Surface>
+            </>}
           </>
         )}
       </ScrollView>

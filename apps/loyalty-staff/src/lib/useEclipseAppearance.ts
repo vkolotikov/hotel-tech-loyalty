@@ -6,6 +6,12 @@ import * as Battery from 'expo-battery'
 /** Decorative motion stops when Home is hidden, the app is away, or the user reduces motion. */
 export function useEclipseAppearance() {
   const focused = useIsFocused()
+  const appearance = useDeviceAppearance()
+  return { ...appearance, animate: focused && appearance.animate }
+}
+
+/** Also usable by lock/update overlays outside the navigator. */
+export function useDeviceAppearance() {
   const [active, setActive] = useState(AppState.currentState === 'active')
   const [reduceMotion, setReduceMotion] = useState(true)
   const [solid, setSolid] = useState(false)
@@ -21,5 +27,5 @@ export function useEclipseAppearance() {
     const appState = AppState.addEventListener('change', next => setActive(next === 'active'))
     return () => { mounted = false; motion.remove(); transparency?.remove(); appState.remove(); power?.remove() }
   }, [])
-  return { animate: focused && active && !reduceMotion && !lowPower, reduceMotion: reduceMotion || lowPower, solid }
+  return { animate: active && !reduceMotion && !lowPower, reduceMotion: reduceMotion || lowPower, solid }
 }

@@ -1,8 +1,9 @@
+import { MemberSummary } from '../components/MemberCard'
+import { Glyph } from '../components/Glyph'
 import { useState } from 'react'
-import { StyleSheet, Text, View } from 'react-native'
+import { StyleSheet, Text } from 'react-native'
 import { router, useLocalSearchParams } from 'expo-router'
 import { useQuery } from '@tanstack/react-query'
-import { Ionicons } from '@expo/vector-icons'
 import { api } from '../lib/api'
 import { KEYS, afterMemberChange, queryClient } from '../lib/queries'
 import { failureOf } from '../lib/failure'
@@ -12,7 +13,7 @@ import { useNfc } from '../lib/nfc'
 import { useT } from '../lib/i18n'
 import type { Key } from '../lib/i18n/en'
 import { C, fonts } from '../lib/theme'
-import { GhostButton, GoldButton, Notice } from '../components/ui'
+import { GhostButton, GoldButton, Notice, Surface } from '../components/ui'
 import { Sheet } from '../components/Sheet'
 import { Done } from '../components/Done'
 
@@ -61,11 +62,13 @@ export default function LinkCard() {
   }
 
   return (
-    <Sheet title={t('link.title')} line={detail.data?.member.name}>
-      <View style={styles.card}>
-        <Ionicons name="card" size={56} color={C.gold} />
+    <Sheet title={t('link.title')}>
+      {detail.data && <MemberSummary member={detail.data.member} />}
+      {detail.isError && <Notice text={t('error.unknown')} action={t('common.retry')} onAction={() => { void detail.refetch() }} />}
+      <Surface style={styles.card}>
+        <Glyph name="radio-outline" size={48} color={C.gold} />
         <Text style={[fonts.body, { color: C.text, textAlign: 'center' }]}>{t('link.line')}</Text>
-      </View>
+      </Surface>
       {nfc.state === 'none' && <Notice tone="warning" text={t('scan.nfcNone')} />}
       {nfc.state === 'off' && <Notice tone="warning" text={t('scan.nfcOff')} action={t('scan.nfcSettings')} onAction={nfc.openSettings} />}
       {failure && <Notice text={t(failure)} />}
@@ -77,5 +80,5 @@ export default function LinkCard() {
 }
 
 const styles = StyleSheet.create({
-  card: { alignItems: 'center', gap: 16, paddingVertical: 36, borderRadius: 22, borderWidth: 1, borderStyle: 'dashed', borderColor: C.goldEdge, backgroundColor: C.goldWash },
+  card: { alignItems: 'center', gap: 16, paddingVertical: 36 },
 })

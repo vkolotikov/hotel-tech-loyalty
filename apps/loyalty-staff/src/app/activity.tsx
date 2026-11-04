@@ -1,6 +1,5 @@
 import { useCallback, useState } from 'react'
 import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native'
-import { router } from 'expo-router'
 import { useQuery } from '@tanstack/react-query'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
@@ -13,16 +12,16 @@ import { failureOf } from '../lib/failure'
 import { errorKey } from '../lib/desk'
 import { C, fonts } from '../lib/theme'
 import type { ActivityItem, MetricKey } from '../lib/types'
-import { Backdrop, IconBadge, Notice, Press, SectionTitle, Shimmer, Surface, type IconName } from '../components/ui'
+import { Backdrop, IconBadge, Notice, PageHeading, SectionTitle, Shimmer, Surface, type IconName } from '../components/ui'
 
 const ACTIVITY_ICON: Record<ActivityItem['source'], { icon: IconName; color: string }> = {
   points: { icon: 'sparkles', color: C.gold },
-  reward: { icon: 'gift', color: '#c58cff' },
+  reward: { icon: 'gift', color: C.gold },
   visit: { icon: 'walk', color: C.success },
   member: { icon: 'person-add', color: C.info },
   tier: { icon: 'trophy', color: C.goldLight },
-  benefit: { icon: 'ribbon', color: '#ff9f6b' },
-  offer: { icon: 'pricetag', color: '#ff7eb6' },
+  benefit: { icon: 'ribbon', color: C.gold },
+  offer: { icon: 'pricetag', color: C.text2 },
 }
 
 const METRIC_ICON: Partial<Record<MetricKey, IconName>> = {
@@ -59,17 +58,10 @@ export default function Activity() {
   return (
     <Backdrop>
       <ScrollView
-        contentContainerStyle={{ paddingTop: insets.top + 16, paddingBottom: insets.bottom + 24, paddingHorizontal: 20, gap: 22 }}
+        contentContainerStyle={{ paddingTop: insets.top + 16, paddingBottom: insets.bottom + 24, paddingHorizontal: 24, gap: 22 }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { void refresh() }} tintColor={C.gold} />}
       >
-        <View style={styles.header}>
-          <Text style={[fonts.display, { color: C.text, flex: 1 }]}>{t('home.activityLink')}</Text>
-          <Press label={t('common.close')} onPress={() => router.canGoBack() ? router.back() : router.replace('/')}>
-            <View style={{ width: 48, height: 48, alignItems: 'center', justifyContent: 'center' }}>
-              <Ionicons name="close" size={24} color={C.text} />
-            </View>
-          </Press>
-        </View>
+        <PageHeading title={t('home.activityLink')} />
         {boot.isError && <Notice text={t(errorKey(failureOf(boot.error).code))} action={t('common.retry')} onAction={() => { void boot.refetch() }} />}
         {boot.isPending && <Shimmer height={96} />}
         {data && !canViewInsights && <Notice text={t('error.not_allowed')} />}
@@ -101,7 +93,7 @@ export default function Activity() {
             )}
             {(activity.data?.data.items ?? []).slice(0, 8).map((item, i, list) => {
               const look = ACTIVITY_ICON[item.source] ?? ACTIVITY_ICON.points
-              const when = ago(item.at, Date.now())
+              const when = ago(item.at, activity.dataUpdatedAt)
               return (
                 <View key={`${item.source}-${item.id}`} style={[styles.activity, i < list.length - 1 && styles.activityLine]}>
                   <IconBadge name={look.icon} color={look.color} size={36} />

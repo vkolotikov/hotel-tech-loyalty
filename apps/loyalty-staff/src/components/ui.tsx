@@ -1,13 +1,19 @@
-import { useEffect, useRef, type ReactNode } from 'react'
+import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
 import {
-  ActivityIndicator, Animated, Platform, Pressable, StyleSheet, Text, TextInput, View,
+  ActivityIndicator, Animated, Platform, Pressable, StyleSheet, Switch, Text, TextInput, View,
   type StyleProp, type TextInputProps, type TextStyle, type ViewStyle,
 } from 'react-native'
-import { LinearGradient } from 'expo-linear-gradient'
 import { Ionicons } from '@expo/vector-icons'
-import { BACKDROP, C, GOLD_GRADIENT, RADIUS, SHADOW, fonts, readableOn, tierColor, withAlpha } from '../lib/theme'
+import { C, ECLIPSE as E, RADIUS, fonts, readableOn, tierColor, withAlpha } from '../lib/theme'
 import { initials } from '../lib/format'
 import { feel } from '../lib/haptics'
+import { useDeviceAppearance } from '../lib/useEclipseAppearance'
+import { EclipseAtmosphere, EclipseSurface } from './Eclipse'
+import { Glyph } from './Glyph'
+import { router } from 'expo-router'
+import { useT } from '../lib/i18n'
+
+const Appearance = createContext({ solid: false, reduceMotion: true, animate: false })
 
 export type IconName = keyof typeof Ionicons.glyphMap
 
@@ -16,10 +22,14 @@ export const NO_OUTLINE: TextStyle = Platform.OS === 'web' ? { outlineWidth: 0 }
 
 /** The page's backdrop: deep navy with a faint warm light at the top. */
 export function Backdrop({ children, style }: { children: ReactNode; style?: StyleProp<ViewStyle> }) {
+  const appearance = useDeviceAppearance()
   return (
-    <LinearGradient colors={BACKDROP} locations={[0, 0.35, 1]} style={[{ flex: 1 }, style]}>
+    <Appearance.Provider value={appearance}>
+    <View style={[{ flex: 1, backgroundColor: E.bg }, style]}>
+      <EclipseAtmosphere solid={appearance.solid} />
       {children}
-    </LinearGradient>
+    </View>
+    </Appearance.Provider>
   )
 }
 
@@ -31,15 +41,19 @@ export function Surface({ children, style, tint, padding = 16, glow }: {
   padding?: number
   glow?: boolean
 }) {
+  const { solid } = useContext(Appearance)
+  const { flex, flexBasis, flexGrow, flexShrink, width, alignSelf, margin, marginTop, marginBottom, marginHorizontal, ...content } = StyleSheet.flatten(style) ?? {}
   return (
-    <View style={[styles.surface, { padding }, tint ? { backgroundColor: withAlpha(tint, 0.1), borderColor: withAlpha(tint, 0.28) } : null, glow && SHADOW.card, style]}>
+    <View style={{ flex, flexBasis, flexGrow, flexShrink, width, alignSelf, margin, marginTop, marginBottom, marginHorizontal }}>
+    <EclipseSurface solid={solid} tone={tint || glow ? 'attention' : 'quiet'} radius={26} style={[{ padding }, content]}>
       {children}
+    </EclipseSurface>
     </View>
   )
 }
 
 /** A pressable that answers the finger: it settles a little and taps back. */
-export function Press({ children, onPress, style, disabled, label, haptic = true, reduceMotion = false, pressedScale = 0.97 }: {
+export function Press({ children, onPress, style, disabled, label, haptic = true, reduceMotion, pressedScale = 0.99 }: {
   children: ReactNode
   onPress?: () => void
   style?: StyleProp<ViewStyle>
@@ -49,12 +63,14 @@ export function Press({ children, onPress, style, disabled, label, haptic = true
   reduceMotion?: boolean
   pressedScale?: number
 }) {
-  const scale = useRef(new Animated.Value(1)).current
+  const appearance = useContext(Appearance)
+  const reduced = reduceMotion ?? appearance.reduceMotion
+  const [scale] = useState(() => new Animated.Value(1))
   const to = (value: number) => {
-    if (reduceMotion) { scale.setValue(1); return }
+    if (reduced) { scale.setValue(1); return }
     Animated.spring(scale, { toValue: value, useNativeDriver: true, speed: 40, bounciness: 6 }).start()
   }
-  useEffect(() => { if (reduceMotion) { scale.stopAnimation(); scale.setValue(1) } }, [reduceMotion, scale])
+  useEffect(() => { if (reduced) { scale.stopAnimation(); scale.setValue(1) } }, [reduced, scale])
   // The Pressable is what sits in the parent's row, so it takes the sizing; the inner view fills it.
   const flat = StyleSheet.flatten(style) ?? {}
   const outer: ViewStyle = { flex: flat.flex, flexGrow: flat.flexGrow, flexShrink: flat.flexShrink, flexBasis: flat.flexBasis, alignSelf: flat.alignSelf, width: flat.width }
@@ -83,16 +99,17 @@ export function GoldButton({ title, onPress, icon, busy, disabled, style }: {
   disabled?: boolean
   style?: StyleProp<ViewStyle>
 }) {
+  const { solid } = useContext(Appearance)
   return (
     <Press onPress={onPress} disabled={disabled || busy} label={title} style={style}>
-      <LinearGradient colors={GOLD_GRADIENT} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[styles.button, SHADOW.glow]}>
-        {busy ? <ActivityIndicator color={C.onGold} /> : (
+      <EclipseSurface fill={!!StyleSheet.flatten(style)?.flex} solid={solid} tone="attention" radius={22} style={styles.button}>
+        {busy ? <ActivityIndicator color={C.gold} accessibilityLabel={title} /> : (
           <>
-            {icon && <Ionicons name={icon} size={19} color={C.onGold} />}
-            <Text style={[fonts.button, { color: C.onGold }]}>{title}</Text>
+            {icon && <Glyph name={icon} size={24} />}
+            <Text style={[fonts.button, { color: C.text, flexShrink: 1, textAlign: 'center' }]}>{title}</Text>
           </>
         )}
-      </LinearGradient>
+      </EclipseSurface>
     </Press>
   )
 }
@@ -106,18 +123,20 @@ export function GhostButton({ title, onPress, icon, tone = C.text, disabled, sty
   disabled?: boolean
   style?: StyleProp<ViewStyle>
 }) {
+  const { solid } = useContext(Appearance)
   return (
     <Press onPress={onPress} disabled={disabled} label={title} style={style}>
-      <View style={[styles.button, styles.ghost]}>
-        {icon && <Ionicons name={icon} size={18} color={tone} />}
-        <Text style={[fonts.button, { color: tone }]}>{title}</Text>
-      </View>
+      <EclipseSurface fill={!!StyleSheet.flatten(style)?.flex} solid={solid} radius={22} style={styles.button}>
+        {icon && <Glyph name={icon} size={24} color={tone} />}
+        <Text style={[fonts.button, { color: tone, flexShrink: 1, textAlign: 'center' }]}>{title}</Text>
+      </EclipseSurface>
     </Press>
   )
 }
 
 /** A labelled text field. */
 export function Field({ label, hint, problem, style, ...input }: TextInputProps & { label: string; hint?: string; problem?: string | null; style?: StyleProp<TextStyle> }) {
+  const [focused, setFocused] = useState(false)
   return (
     <View style={{ gap: 8 }}>
       <Text style={[fonts.label, { color: C.text2 }]}>{label}</Text>
@@ -126,7 +145,9 @@ export function Field({ label, hint, problem, style, ...input }: TextInputProps 
         selectionColor={C.gold}
         accessibilityLabel={label}
         {...input}
-        style={[styles.input, NO_OUTLINE, problem ? { borderColor: C.danger } : null, style]}
+        onFocus={e => { setFocused(true); input.onFocus?.(e) }}
+        onBlur={e => { setFocused(false); input.onBlur?.(e) }}
+        style={[styles.input, NO_OUTLINE, focused ? { borderColor: C.gold } : null, problem ? { borderColor: C.danger } : null, style]}
       />
       {problem ? <Text style={[fonts.small, { color: C.danger }]}>{problem}</Text> : hint ? <Text style={[fonts.small, { color: C.text3 }]}>{hint}</Text> : null}
     </View>
@@ -137,7 +158,7 @@ export function Field({ label, hint, problem, style, ...input }: TextInputProps 
 export function SearchField(props: TextInputProps) {
   return (
     <View style={styles.search}>
-      <Ionicons name="search" size={18} color={C.text3} />
+      <Glyph name="search" size={24} color={C.text3} />
       <TextInput
         placeholderTextColor={C.text3}
         selectionColor={C.gold}
@@ -167,7 +188,7 @@ export function Avatar({ name, color, size = 44 }: { name: string; color?: strin
   const tone = tierColor(color)
   return (
     <View style={{ width: size, height: size, borderRadius: size / 2, alignItems: 'center', justifyContent: 'center', backgroundColor: withAlpha(tone, 0.14), borderWidth: 1.5, borderColor: withAlpha(tone, 0.55) }}>
-      <Text style={{ fontFamily: 'CormorantGaramond_700Bold', fontSize: size * 0.42, color: tone }}>{initials(name)}</Text>
+      <Text style={[fonts.bodyStrong, { fontSize: size * 0.36, color: tone }]}>{initials(name)}</Text>
     </View>
   )
 }
@@ -176,7 +197,7 @@ export function Avatar({ name, color, size = 44 }: { name: string; color?: strin
 export function IconBadge({ name, color = C.gold, size = 40 }: { name: IconName; color?: string; size?: number }) {
   return (
     <View style={{ width: size, height: size, borderRadius: size * 0.32, alignItems: 'center', justifyContent: 'center', backgroundColor: withAlpha(color, 0.14) }}>
-      <Ionicons name={name} size={size * 0.5} color={color} />
+      <Glyph name={name} size={size * 0.6} color={color} />
     </View>
   )
 }
@@ -208,15 +229,17 @@ export function Notice({ text, tone = 'danger', action, onAction }: { text: stri
 
 /** A soft placeholder while something loads. */
 export function Shimmer({ height, style }: { height: number; style?: StyleProp<ViewStyle> }) {
-  const opacity = useRef(new Animated.Value(0.45)).current
+  const [opacity] = useState(() => new Animated.Value(0.55))
+  const { animate } = useContext(Appearance)
   useEffect(() => {
+    if (!animate) { opacity.setValue(0.55); return }
     const loop = Animated.loop(Animated.sequence([
       Animated.timing(opacity, { toValue: 0.9, duration: 700, useNativeDriver: true }),
       Animated.timing(opacity, { toValue: 0.45, duration: 700, useNativeDriver: true }),
     ]))
     loop.start()
     return () => loop.stop()
-  }, [opacity])
+  }, [opacity, animate])
   return <Animated.View style={[{ height, borderRadius: RADIUS.md, backgroundColor: C.surface2, opacity }, style]} />
 }
 
@@ -232,19 +255,21 @@ export function Empty({ icon, text }: { icon: IconName; text: string }) {
 
 /** Tabs drawn as one pill with the chosen part lit. */
 export function Segments<T extends string>({ value, items, onChange }: { value: T; items: { id: T; label: string; count?: number }[]; onChange: (id: T) => void }) {
+  const { solid } = useContext(Appearance)
   return (
     <View style={styles.segments} accessibilityRole="tablist">
       {items.map(item => {
         const on = item.id === value
         return (
-          <Pressable key={item.id} accessibilityRole="tab" accessibilityState={{ selected: on }} onPress={() => { feel.tap(); onChange(item.id) }} style={[styles.segment, on && styles.segmentOn]}>
-            <Text style={[fonts.smallStrong, { color: on ? C.onGold : C.text2 }]} numberOfLines={1}>{item.label}</Text>
+          <Pressable key={item.id} accessibilityRole="tab" accessibilityLabel={item.label} accessibilityState={{ selected: on }} onPress={() => { feel.tap(); onChange(item.id) }} style={{ flex: 1 }}>
+          <EclipseSurface solid={solid} tone={on ? 'attention' : 'quiet'} radius={24} style={styles.segment}>
+            <Text style={[fonts.smallStrong, { color: C.text, flexShrink: 1, textAlign: 'center' }]}>{item.label}</Text>
             {item.count !== undefined && item.count > 0 && (
-              <View style={[styles.segmentCount, on && { backgroundColor: 'rgba(26,20,6,0.18)' }]}>
-                <Text style={[fonts.smallStrong, { fontSize: 11, color: on ? C.onGold : C.gold }]}>{item.count}</Text>
+              <View style={styles.segmentCount}>
+                <Text style={[fonts.smallStrong, { color: C.gold }]}>{item.count}</Text>
               </View>
             )}
-          </Pressable>
+          </EclipseSurface></Pressable>
         )
       })}
     </View>
@@ -252,34 +277,55 @@ export function Segments<T extends string>({ value, items, onChange }: { value: 
 }
 
 /** A list row: an icon or avatar, a title and its line, and what is at the end. */
-export function Row({ left, title, line, right, onPress, last }: { left?: ReactNode; title: string; line?: string | null; right?: ReactNode; onPress?: () => void; last?: boolean }) {
+export function Row({ left, title, line, right, onPress, last, card = false }: { left?: ReactNode; title: string; line?: string | null; right?: ReactNode; onPress?: () => void; last?: boolean; card?: boolean }) {
   const body = (
-    <View style={[styles.row, !last && styles.rowLine]}>
+    <View style={[styles.row, !last && !card && styles.rowLine]}>
       {left}
       <View style={{ flex: 1, gap: 2 }}>
-        <Text style={[fonts.bodyStrong, { color: C.text }]} numberOfLines={1}>{title}</Text>
-        {line ? <Text style={[fonts.small, { color: C.text2 }]} numberOfLines={1}>{line}</Text> : null}
+        <Text style={[fonts.bodyStrong, { color: C.text }]}>{title}</Text>
+        {line ? <Text style={[fonts.small, { color: C.text2 }]}>{line}</Text> : null}
       </View>
       {right}
-      {onPress && <Ionicons name="chevron-forward" size={16} color={C.text3} />}
+      {onPress && !right && <Glyph name="chevron-forward" size={18} color={C.text3} />}
     </View>
   )
-  return onPress ? <Press onPress={onPress} haptic={false}>{body}</Press> : body
+  const content = card ? <Surface padding={0} style={{ paddingHorizontal: 16 }}>{body}</Surface> : body
+  return onPress ? <Press onPress={onPress} label={[title, line].filter(Boolean).join('. ')} haptic={false}>{content}</Press> : content
+}
+
+export function PageHeading({ title, back = true, profile = true, onBack, disabled }: { title: string; back?: boolean; profile?: boolean; onBack?: () => void; disabled?: boolean }) {
+  const { t } = useT()
+  return <View style={{ gap: 22, marginBottom: 6 }}>
+    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+      {back ? <Press disabled={disabled} label={t('common.close')} onPress={onBack ?? (() => router.canGoBack() ? router.back() : router.replace('/'))}><Surface padding={0}><View style={styles.control}><Glyph name="chevron-back" size={22} /></View></Surface></Press> : <View />}
+      {profile && <Press disabled={disabled} label={t('home.account')} onPress={() => router.push('/profile')}><Surface padding={0}><View style={styles.control}><Glyph name="person-outline" /></View></Surface></Press>}
+    </View>
+    <Text accessibilityRole="header" style={[fonts.display, { color: C.text }]}>{title}</Text>
+  </View>
+}
+
+/** A single labelled switch target spans its whole row, including the copy and icon. */
+export function ToggleRow({ title, line, icon, value, disabled, onChange }: { title: string; line?: string; icon: IconName; value: boolean; disabled?: boolean; onChange: (value: boolean) => void }) {
+  return <Pressable accessibilityRole="switch" accessibilityLabel={title} accessibilityHint={line} accessibilityState={{ checked: value, disabled }} disabled={disabled} onPress={() => onChange(!value)}>
+    <Surface padding={16}><View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 48 }}>
+      <IconBadge name={icon} color={C.text} />
+      <View style={{ flex: 1, gap: 3 }}><Text style={[fonts.bodyStrong, { color: C.text }]}>{title}</Text>{line && <Text style={[fonts.small, { color: C.text2 }]}>{line}</Text>}</View>
+      <View pointerEvents="none" importantForAccessibility="no-hide-descendants"><Switch accessible={false} value={value} disabled={disabled} trackColor={{ true: C.gold, false: C.surface3 }} thumbColor={C.white} /></View>
+    </View></Surface>
+  </Pressable>
 }
 
 const styles = StyleSheet.create({
-  surface: { backgroundColor: C.surface, borderRadius: RADIUS.lg, borderWidth: 1, borderColor: C.hairline },
-  button: { minHeight: 54, borderRadius: RADIUS.md, paddingHorizontal: 20, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 },
-  ghost: { borderWidth: 1, borderColor: C.hairlineStrong, backgroundColor: 'rgba(255,255,255,0.03)' },
-  input: { ...fonts.body, color: C.text, minHeight: 52, borderRadius: RADIUS.md, borderWidth: 1, borderColor: C.hairlineStrong, backgroundColor: C.bgRaised, paddingHorizontal: 16 },
-  search: { flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 50, borderRadius: RADIUS.pill, borderWidth: 1, borderColor: C.hairlineStrong, backgroundColor: C.surface, paddingHorizontal: 18 },
+  control: { width: 45.8, height: 45.8, alignItems: 'center', justifyContent: 'center' },
+  button: { minHeight: 54, paddingHorizontal: 16, paddingVertical: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 },
+  input: { ...fonts.body, color: C.text, minHeight: 56, borderRadius: 18, borderWidth: 1, borderColor: C.hairlineStrong, backgroundColor: C.surface, paddingHorizontal: 16, paddingVertical: 14 },
+  search: { flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 56, borderRadius: 18, borderWidth: 1, borderColor: C.hairlineStrong, backgroundColor: C.surface, paddingHorizontal: 16, paddingVertical: 12 },
   pill: { alignSelf: 'flex-start', paddingHorizontal: 10, paddingVertical: 4, borderRadius: RADIUS.pill, maxWidth: 200 },
   sectionTitle: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10, marginTop: 6 },
   notice: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 12, borderRadius: RADIUS.md, borderWidth: 1 },
-  segments: { flexDirection: 'row', backgroundColor: C.surface, borderRadius: RADIUS.pill, padding: 4, borderWidth: 1, borderColor: C.hairline },
-  segment: { flex: 1, flexDirection: 'row', gap: 6, alignItems: 'center', justifyContent: 'center', minHeight: 40, borderRadius: RADIUS.pill, paddingHorizontal: 8 },
-  segmentOn: { backgroundColor: C.gold },
+  segments: { flexDirection: 'row', gap: 8 },
+  segment: { flexDirection: 'row', flexWrap: 'wrap', gap: 4, alignItems: 'center', justifyContent: 'center', minHeight: 46, paddingHorizontal: 8, paddingVertical: 10 },
   segmentCount: { minWidth: 20, paddingHorizontal: 5, height: 20, borderRadius: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: C.goldWash },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 14 },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 16, minHeight: 78 },
   rowLine: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: C.hairlineStrong },
 })

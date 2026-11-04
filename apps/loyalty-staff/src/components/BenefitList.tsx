@@ -1,5 +1,5 @@
 import { StyleSheet, Text, View } from 'react-native'
-import { Ionicons } from '@expo/vector-icons'
+import { Glyph } from './Glyph'
 import { C, fonts } from '../lib/theme'
 import { useT } from '../lib/i18n'
 import type { BenefitBadge } from '../lib/types'
@@ -12,7 +12,7 @@ export function BenefitList({ benefits }: { benefits: BenefitBadge[] }) {
     <View style={{ gap: 10 }}>
       {benefits.map((benefit, i) => (
         <View key={`${benefit.name}-${i}`} style={styles.item}>
-          <View style={styles.mark}><Ionicons name="ribbon" size={16} color={C.gold} /></View>
+          <View style={styles.mark}><Glyph name="gift" size={24} color={C.gold} /></View>
           <View style={{ flex: 1 }}>
             <Text style={[fonts.bodyStrong, { color: C.text }]}>{benefit.name}</Text>
             {valueOf(benefit) ? <Text style={[fonts.small, { color: C.text2 }]}>{valueOf(benefit)}</Text> : null}
@@ -34,5 +34,5 @@ function valueOf(benefit: BenefitBadge): string | null {
 
 const styles = StyleSheet.create({
   item: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  mark: { width: 32, height: 32, borderRadius: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: C.goldWash },
+  mark: { width: 40, height: 40, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: C.goldWash },
 })

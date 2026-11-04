@@ -4,37 +4,40 @@
  * One dark theme: the desk app is used under bright and dim lights alike, and the dark navy keeps the gold legible.
  */
 export const C = {
-  bg: '#07090f',
-  bgRaised: '#0b0e16',
-  surface: '#10141d',
-  surface2: '#171c28',
-  surface3: '#202636',
+  bg: '#080b10',
+  bgRaised: '#12151b',
+  surface: '#17191f',
+  surface2: '#242831',
+  surface3: '#343842',
   hairline: 'rgba(255,255,255,0.07)',
   hairlineStrong: 'rgba(255,255,255,0.12)',
 
-  text: '#f7f4ee',
-  text2: '#a5abb8',
-  text3: '#9ba2b1',
+  text: '#f6f2ea',
+  text2: '#aab1be',
+  text3: '#aab1be',
 
-  gold: '#c9a84c',
-  goldLight: '#e8cf86',
-  goldDeep: '#9c7c2c',
-  goldWash: 'rgba(201,168,76,0.12)',
-  goldEdge: 'rgba(201,168,76,0.35)',
-  onGold: '#1a1406',
+  gold: '#f3c582',
+  goldLight: '#f5d5a5',
+  goldDeep: '#b58b54',
+  goldWash: 'rgba(243,197,130,0.12)',
+  goldEdge: 'rgba(243,197,130,0.35)',
+  onGold: '#1b1711',
 
-  success: '#3ddc84',
+  success: '#a2cdb3',
   successWash: 'rgba(61,220,132,0.12)',
-  danger: '#ff4d6d',
+  danger: '#efa9a2',
   dangerWash: 'rgba(255,77,109,0.12)',
-  warning: '#ffcf4a',
+  warning: '#f3c582',
   warningWash: 'rgba(255,207,74,0.12)',
-  info: '#5aa8ff',
+  info: '#aac7e8',
   infoWash: 'rgba(90,168,255,0.12)',
+  scrim: 'rgba(0,0,0,0.65)',
+  white: '#ffffff',
+  transparent: 'rgba(0,0,0,0)',
 }
 
 /** The gold of buttons and the active tab: light at the top, deep at the foot, as polished metal. */
-export const GOLD_GRADIENT = ['#efd892', '#c9a84c', '#a88a35'] as const
+export const GOLD_GRADIENT = ['#f5d5a5', '#f3c582', '#b58b54'] as const
 /** The page's backdrop: a faint warm glow at the top fading into the navy. */
 export const BACKDROP = ['#121521', '#0a0c14', '#07090f'] as const
 
@@ -51,19 +54,20 @@ export const TAB_BAR_ROOM = 128
 export const CONTENT_MAX_WIDTH = 640
 
 export const fonts = {
-  display: { fontFamily: 'CormorantGaramond_600SemiBold', fontSize: 34, lineHeight: 38, letterSpacing: -0.3 },
-  title: { fontFamily: 'CormorantGaramond_600SemiBold', fontSize: 26, lineHeight: 30 },
-  heading: { fontFamily: 'CormorantGaramond_600SemiBold', fontSize: 21, lineHeight: 26 },
-  italic: { fontFamily: 'CormorantGaramond_500Medium_Italic', fontSize: 17, lineHeight: 22 },
-  figure: { fontFamily: 'CormorantGaramond_700Bold', fontSize: 40, lineHeight: 44 },
-  body: { fontFamily: 'Inter_400Regular', fontSize: 15, lineHeight: 21 },
-  bodyStrong: { fontFamily: 'Inter_600SemiBold', fontSize: 15, lineHeight: 21 },
-  small: { fontFamily: 'Inter_400Regular', fontSize: 13, lineHeight: 18 },
-  smallStrong: { fontFamily: 'Inter_600SemiBold', fontSize: 13, lineHeight: 18 },
-  label: { fontFamily: 'Inter_600SemiBold', fontSize: 11, letterSpacing: 1.4, textTransform: 'uppercase' as const },
-  button: { fontFamily: 'Inter_700Bold', fontSize: 15, letterSpacing: 0.2 },
-  number: { fontFamily: 'Inter_700Bold', fontSize: 22, lineHeight: 26, fontVariant: ['tabular-nums' as const] },
-  tab: { fontFamily: 'Inter_600SemiBold', fontSize: 10.5, letterSpacing: 0.2 },
+  display: { fontSize: 38, lineHeight: 44, fontWeight: '400' as const, letterSpacing: -0.6 },
+  title: { fontSize: 28, lineHeight: 34, fontWeight: '400' as const },
+  heading: { fontSize: 23, lineHeight: 29, fontWeight: '500' as const },
+  italic: { fontSize: 17, lineHeight: 24 },
+  figure: { fontSize: 38, lineHeight: 46, fontWeight: '400' as const },
+  amount: { fontSize: 48, lineHeight: 60, fontWeight: '400' as const },
+  body: { fontSize: 16, lineHeight: 23 },
+  bodyStrong: { fontSize: 16, lineHeight: 23, fontWeight: '500' as const },
+  small: { fontSize: 13, lineHeight: 18 },
+  smallStrong: { fontSize: 13, lineHeight: 18, fontWeight: '500' as const },
+  label: { fontSize: 13, lineHeight: 18, fontWeight: '500' as const },
+  button: { fontSize: 17, lineHeight: 23, fontWeight: '500' as const },
+  number: { fontSize: 28, lineHeight: 34, fontVariant: ['tabular-nums' as const] },
+  tab: { fontSize: 13, lineHeight: 18 },
 }
 
 export const SHADOW = {
@@ -71,7 +75,7 @@ export const SHADOW = {
   glow: { shadowColor: '#c9a84c', shadowOpacity: 0.45, shadowRadius: 18, shadowOffset: { width: 0, height: 6 }, elevation: 12 },
 }
 
-/** Approved Eclipse Home. Kept separate while the remaining screens are in design review. */
+/** Approved Eclipse materials, shared by Home and every operational screen. */
 export const ECLIPSE = {
   bg: '#080b10', surface: '#17191f', text: '#f6f2ea', muted: '#aab1be', accent: '#f3c582', ink: '#1b1711',
   edge: 'rgba(224,234,255,0.85)', quietEdge: 'rgba(212,226,250,0.45)',
