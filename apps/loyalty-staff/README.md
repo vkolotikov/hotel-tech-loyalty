@@ -127,6 +127,7 @@ would downgrade Expo).
 7. Check in with an amount (desk earn on) and without; a second check-in the same day answers "Already checked in
    today" and adds nothing.
 8. Link a new card to a member, then scan it; scan a card that belongs to someone else (refused).
+   The same member must still resolve by QR. Disable the linked NFC card and verify QR remains usable.
 9. Approve, decline (the member reads the reason) and mark a request as given; hand over a claimed reward.
 10. Switch to each of the five languages; in Airplane mode a screen says "No connection" and offers Retry.
 11. Request alerts: allow notifications at first start; from the member app ask for a benefit and claim a reward —
@@ -134,3 +135,11 @@ would downgrade Expo).
     Requests opens. Switch alerts off in Profile (nothing arrives), sign out (nothing arrives), sign in again.
 12. Minimum version: with `STAFF_APP_MIN_VERSION` above the installed version, the app shows only "Time to update"
     (before sign-in too) and its button opens the store; set it back and "Check again" lets the phone in.
+13. Change Android system text size while Staff is running, then navigate through Home, Requests and Members;
+    navigation must remain bound without a cold restart.
+14. Interrupt a scan, close/reopen Staff and return to Scan: the original desk/place/event and unanswered attempt
+    must restore. Retry reuses its code/key for up to nine minutes. After that, review workspace history before
+    explicitly dismissing the notice; dismissal does not undo or mark the scan failed.
+15. For an unanswered desk operation, **Check result** reads the original receipt without repeating the write.
+    Only a complete matching receipt clears the pending operation. Unknown or failed checks retain it, including
+    after write permissions change. See `docs/loyalty-staff-app/15-RECOVERY-BRANDING-20261104.md`.
