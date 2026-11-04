@@ -30,7 +30,7 @@ export function ReviewStep({ catalogue, state, industry, timezone, onChange, onB
   const [notes, setNotes] = useState(state.notes)
   const body = useMemo(() => quoteBody(state), [state])
   // A price the member is about to accept is always the server's answer for the current selection: never cached.
-  const quote = useQuery({ queryKey: ['book', 'quote', body], queryFn: () => api.quote(body), retry: false, retryOnMount: false, staleTime: 0, gcTime: 0 })
+  const quote = useQuery({ queryKey: ['book', 'quote', body], queryFn: () => api.quote(body), retry: false, retryOnMount: false, staleTime: 0, gcTime: 0, refetchOnWindowFocus: false })
   const code = quote.isError ? serverCodeOf(quote.error) : null
   const windowCode = isWindowCode(code) ? code : null
   const otherError = quote.isError && !windowCode && !(code ?? '').startsWith('coupon_') && code !== 'extra_lead_time'

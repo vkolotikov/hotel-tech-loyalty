@@ -3,6 +3,7 @@ import { router } from 'expo-router'
 import { useQuery } from '@tanstack/react-query'
 import { Ionicons } from '@expo/vector-icons'
 import { api } from '../lib/api'
+import { LIVE_MS } from '../lib/queries'
 import { useT } from '../lib/i18n'
 import { C, fonts } from '../lib/theme'
 import { formatMoney, nextEvent, stampFace, stampReward, stampToGo, whenPhrase } from '../shared/portal'
@@ -14,7 +15,7 @@ import { Press, SectionTitle, Surface } from './ui'
  */
 export function StampCard() {
   const { tp, language } = useT()
-  const stamps = useQuery({ queryKey: ['stamps'], queryFn: api.stamps, staleTime: 60_000 })
+  const stamps = useQuery({ queryKey: ['stamps'], queryFn: api.stamps, staleTime: LIVE_MS })
   const face = stampFace(stamps.data)
   if (!face) return null
   const toGo = stampToGo(face)
@@ -45,7 +46,7 @@ export function StampCard() {
  */
 export function CreditTile() {
   const { tp, language } = useT()
-  const credit = useQuery({ queryKey: ['credit'], queryFn: api.credit, staleTime: 60_000 })
+  const credit = useQuery({ queryKey: ['credit'], queryFn: api.credit, staleTime: LIVE_MS })
   const data = credit.data
   if (!data || !(data.enabled || data.balance > 0)) return null
   const line = data.balance > 0 ? (data.enabled ? tp('portal.credit.at_desk') : tp('portal.credit.off')) : tp('portal.credit.none')

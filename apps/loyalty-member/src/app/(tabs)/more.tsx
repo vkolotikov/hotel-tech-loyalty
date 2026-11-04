@@ -5,7 +5,7 @@ import * as LocalAuthentication from 'expo-local-authentication'
 import Constants from 'expo-constants'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
-import { forgetLook, queryClient, useBoot } from '../../lib/queries'
+import { KEYS, forgetLook, queryClient, useBoot, useRefreshOnFocus } from '../../lib/queries'
 import { useSession } from '../../lib/session'
 import { usePrefs } from '../../lib/prefs'
 import { useVersionCheck } from '../../lib/appVersion'
@@ -20,6 +20,7 @@ export default function More() {
   const insets = useSafeAreaInsets()
   const { t, tp, language } = useT()
   const boot = useBoot()
+  useRefreshOnFocus(MORE_FACTS)
   const user = useSession(s => s.user)
   const lock = usePrefs(s => s.lock)
   const alerts = usePrefs(s => s.alerts)
@@ -163,3 +164,5 @@ const styles = StyleSheet.create({
   switchRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   footer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
 })
+
+const MORE_FACTS = [KEYS.boot] as const

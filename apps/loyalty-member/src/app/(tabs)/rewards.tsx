@@ -5,7 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
 import { api } from '../../lib/api'
 import { failureOf } from '../../lib/failure'
-import { KEYS, queryClient, useBoot } from '../../lib/queries'
+import { KEYS, queryClient, useBoot, useRefreshOnFocus } from '../../lib/queries'
 import { number } from '../../lib/format'
 import { feel } from '../../lib/haptics'
 import { useT } from '../../lib/i18n'
@@ -31,6 +31,7 @@ export default function Rewards() {
   const insets = useSafeAreaInsets()
   const { tp, language } = useT()
   const boot = useBoot()
+  useRefreshOnFocus(REWARDS_FACTS)
   const [tab, setTab] = useState<Tab>('benefits')
   const [note, setNote] = useState<{ tone: 'success' | 'danger'; text: string } | null>(null)
   const [refreshing, setRefreshing] = useState(false)
@@ -295,3 +296,4 @@ const styles = StyleSheet.create({
   code: { fontFamily: 'Inter_700Bold', fontSize: 22, letterSpacing: 2, fontVariant: ['tabular-nums'] },
 })
 
+const REWARDS_FACTS = [KEYS.boot, ['rewards']] as const

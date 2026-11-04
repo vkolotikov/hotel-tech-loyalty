@@ -4,7 +4,7 @@ import { Tabs } from 'expo-router/js-tabs'
 import { useSession } from '../../lib/session'
 import { usePrefs } from '../../lib/prefs'
 import { useT } from '../../lib/i18n'
-import { KEYS, queryClient, useBoot } from '../../lib/queries'
+import { refreshMemberFacts, useBoot } from '../../lib/queries'
 import { connectPush, usePushTaps } from '../../lib/push'
 import { C } from '../../lib/theme'
 import { TabBar } from '../../components/TabBar'
@@ -28,10 +28,8 @@ export default function TabsLayout() {
 
   usePushTaps(
     path => router.navigate(path),
-    () => {
-      void queryClient.invalidateQueries({ queryKey: KEYS.boot })
-      void queryClient.invalidateQueries({ queryKey: ['inbox'] })
-    },
+    // A message from the venue usually means something changed (points, a reward, a booking): read it all again.
+    () => { void refreshMemberFacts() },
   )
 
   if (!token) return <Redirect href="/sign-in" />

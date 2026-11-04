@@ -277,7 +277,7 @@ export function StayReviewStep({ catalogue, state, venueName, onChange, onBack, 
   const { tp, language } = useT()
   const [requests, setRequests] = useState(state.requests)
   const body = useMemo(() => stayQuoteBody(state), [state])
-  const quote = useQuery({ queryKey: ['book', 'stay-quote', body], queryFn: () => api.stayQuote(body), retry: false, retryOnMount: false, staleTime: 0, gcTime: 0 })
+  const quote = useQuery({ queryKey: ['book', 'stay-quote', body], queryFn: () => api.stayQuote(body), retry: false, retryOnMount: false, staleTime: 0, gcTime: 0, refetchOnWindowFocus: false })
   const code = quote.isError ? serverCodeOf(quote.error) : null
   const decision = afterStayQuoteError(code)
   const otherError = quote.isError && decision === null && code !== 'extra_lead_time'

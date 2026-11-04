@@ -63,6 +63,11 @@ in every language as the portal is (usted, Sie, vous, вы); `lib.test.ts` check
   Stripe's payment sheet for the payment intent the server made; the app sends the visit's Idempotency-Key and the
   intent's id, never an amount. While a card is held against a booking not yet confirmed the sheet cannot be closed.
   Apple Pay and Google Pay are off until the owner's merchant id is set (`app.json`, the Stripe plugin).
+- A member's figures are never trusted from the first load (`src/lib/queries.ts`): React Query learns the app's
+  foreground from AppState (`focusManager`), the venue's facts are fresh for 10 s (`LIVE_MS`), each tab asks its stale
+  queries again when shown (`useRefreshOnFocus`), Home asks again every 30 s while shown (`useLiveWhileShown`, also
+  where push does not reach), and a push or a pull to refresh reads every member fact again (`refreshMemberFacts`).
+  A query that makes a hold or a payment intent says `refetchOnWindowFocus: false` itself.
 - A stored picture goes through `Picture` (`mediaUrl()`: `/storage/…` beside the API), which shows nothing rather than
   an empty frame when it cannot load.
 

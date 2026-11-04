@@ -4,7 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { api } from '../../lib/api'
 import { failureOf } from '../../lib/failure'
 import { errorKey } from '../../lib/errors'
-import { KEYS, useBoot } from '../../lib/queries'
+import { KEYS, useBoot, useRefreshOnFocus } from '../../lib/queries'
 import { number } from '../../lib/format'
 import { useT } from '../../lib/i18n'
 import { C, TAB_BAR_ROOM, fonts } from '../../lib/theme'
@@ -17,6 +17,7 @@ export default function ActivityTab() {
   const insets = useSafeAreaInsets()
   const { t, tp, language } = useT()
   const boot = useBoot()
+  useRefreshOnFocus(ACTIVITY_FACTS)
   const history = useInfiniteQuery({
     queryKey: KEYS.history,
     queryFn: ({ pageParam }) => api.pointsHistory(pageParam),
@@ -59,3 +60,5 @@ export default function ActivityTab() {
     </Backdrop>
   )
 }
+
+const ACTIVITY_FACTS = [KEYS.history, KEYS.boot] as const

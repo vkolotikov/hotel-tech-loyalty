@@ -3,7 +3,7 @@ import { Linking, RefreshControl, ScrollView, StyleSheet, Text, View } from 'rea
 import { router } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
-import { KEYS, queryClient, useBoot } from '../../lib/queries'
+import { KEYS, refreshMemberFacts, useBoot, useLiveWhileShown, useRefreshOnFocus } from '../../lib/queries'
 import { failureOf } from '../../lib/failure'
 import { errorKey } from '../../lib/errors'
 import { greeting, number } from '../../lib/format'
@@ -24,11 +24,15 @@ export default function Home() {
   const insets = useSafeAreaInsets()
   const { t, tp, language } = useT()
   const boot = useBoot()
+  // Points, level and the rest change at the desk while the member holds the phone: asked again on return to Home and
+  // every 30 seconds while Home is shown.
+  useRefreshOnFocus(HOME_FACTS)
+  useLiveWhileShown(30_000)
   const [refreshing, setRefreshing] = useState(false)
 
   const refresh = async () => {
     setRefreshing(true)
-    await queryClient.invalidateQueries({ queryKey: KEYS.boot })
+    await refreshMemberFacts()
     setRefreshing(false)
   }
 
@@ -136,6 +140,8 @@ export default function Home() {
     </Backdrop>
   )
 }
+
+const HOME_FACTS = [KEYS.boot, ['bookings'], ['stamps'], ['credit'], ['events']] as const
 
 const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'flex-end', gap: 12 },
