@@ -269,7 +269,7 @@ export function Segments<T extends string>({ value, items, onChange, iconOnly = 
             {item.symbol && <Text accessible={false} style={[fonts.segmentSymbol, { color: on ? C.goldLight : C.text2 }]}>{item.symbol}</Text>}
             {(!iconOnly || (!item.icon && !item.symbol)) && <Text style={[fonts.segment, { color: on ? C.text : C.text2, alignSelf: stacked ? undefined : 'stretch', flexShrink: 1 }]}>{item.label}</Text>}
             {item.count !== undefined && item.count > 0 && (
-              <View style={[styles.segmentCount, stacked && { position: 'relative', top: undefined, right: undefined }]}>
+              <View style={[styles.segmentCount, stacked && { position: 'relative', top: 0, right: 0 }]}>
                 <Text maxFontSizeMultiplier={1.2} style={[fonts.segmentCount, { color: C.gold }]}>{item.count > 99 ? '99+' : item.count}</Text>
               </View>
             )}
