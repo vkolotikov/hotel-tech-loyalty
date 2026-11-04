@@ -1,0 +1,1 @@
+import{In as e}from"./index-BLW1-Eh8.js";function t(){let{t}=e();return e=>t(e.key,e.fallback,e.vars)}export{t};

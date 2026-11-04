@@ -1,1 +1,0 @@
-import{Fn as e}from"./index-CYO6n0n9.js";function t(){let{t}=e();return e=>t(e.key,e.fallback,e.vars)}export{t};
