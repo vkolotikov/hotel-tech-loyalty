@@ -286,7 +286,7 @@ final class PlanModules
 
     /**
      * The monthly price a choice of packages shows when billing cannot be read, in the currency's smallest unit; null
-     * when a package in it has no price here.
+     * for an empty choice. Every package has a price here (Appointments' too, since 2026-11-04).
      *
      * @param  iterable<mixed>  $choice
      */
@@ -298,11 +298,7 @@ final class PlanModules
         }
         $sum = 0;
         foreach ($selection as $module => $tier) {
-            $amount = self::MODULES[$module]['tiers'][$tier]['monthly_amount'];
-            if ($amount === null) {
-                return null;
-            }
-            $sum += $amount;
+            $sum += self::MODULES[$module]['tiers'][$tier]['monthly_amount'];
         }
 
         return $sum;
