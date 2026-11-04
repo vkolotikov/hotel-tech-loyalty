@@ -2,6 +2,12 @@ import type { Key } from './en'
 
 export const de: Record<Key, string> = {
   'app.name': 'HexaTech Staff',
+  'home.welcome': 'Willkommen',
+  'home.scan': 'Karte scannen',
+  'home.activityLink': 'Aktivität',
+  'home.account': 'Konto und Einstellungen',
+  'home.staff': 'TEAM',
+  'home.brand': 'HexaTech',
   'checkIn.invalidAmount': "Geben Sie einen positiven Betrag mit den Dezimalstellen der Währung ein.",
   'checkIn.amountRequired': "Ausgegebener Betrag",
   'error.unconfirmed': "Das Ergebnis ist unbestätigt. Wiederholen Sie diese Anfrage oder prüfen Sie die Mitgliederaktivität. Erfassen Sie keine neue Transaktion.",

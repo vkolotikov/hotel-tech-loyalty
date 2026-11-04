@@ -67,6 +67,7 @@ export default function RootLayout() {
             <Stack.Protected guard={!!token}>
             <Stack.Screen name="(tabs)" />
             <Stack.Screen name="member/[id]" />
+            <Stack.Screen name="activity" />
             <Stack.Screen name="scanned" options={{ presentation: 'modal' }} />
             <Stack.Screen name="points" options={{ presentation: 'modal' }} />
             <Stack.Screen name="check-in" options={{ presentation: 'modal' }} />

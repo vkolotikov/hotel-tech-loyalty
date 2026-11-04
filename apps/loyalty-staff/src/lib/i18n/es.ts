@@ -3,6 +3,12 @@ import type { Key } from './en'
 /** Spanish addresses staff as usted, as the web workspace does. */
 export const es: Record<Key, string> = {
   'app.name': 'HexaTech Staff',
+  'home.welcome': 'Bienvenido',
+  'home.scan': 'Escanear miembro',
+  'home.activityLink': 'Actividad',
+  'home.account': 'Cuenta y ajustes',
+  'home.staff': 'PERSONAL',
+  'home.brand': 'HexaTech',
   'checkIn.invalidAmount': "Introduzca un importe positivo con los decimales de la moneda.",
   'checkIn.amountRequired': "Importe gastado",
   'error.unconfirmed': "Resultado sin confirmar. Reintente esta solicitud o revise la actividad del miembro. No cree otra transacción.",

@@ -71,6 +71,30 @@ export const SHADOW = {
   glow: { shadowColor: '#c9a84c', shadowOpacity: 0.45, shadowRadius: 18, shadowOffset: { width: 0, height: 6 }, elevation: 12 },
 }
 
+/** Approved Eclipse Home. Kept separate while the remaining screens are in design review. */
+export const ECLIPSE = {
+  bg: '#080b10', surface: '#17191f', text: '#f6f2ea', muted: '#aab1be', accent: '#f3c582', ink: '#1b1711',
+  edge: 'rgba(224,234,255,0.85)', quietEdge: 'rgba(212,226,250,0.45)',
+  rim: ['#c7d8ef', '#51545d', '#292d35', '#b99261'] as const,
+  scan: ['rgba(105,119,143,0.84)', 'rgba(48,52,63,0.98)', '#151820', '#25211d', 'rgba(147,104,62,0.84)'] as const,
+  scanStops: [0, 0.2, 0.52, 0.83, 1] as const,
+  tile: ['rgba(63,65,73,0.88)', 'rgba(32,35,44,0.94)', '#11151c', 'rgba(48,39,30,0.9)'] as const,
+  attention: ['rgba(181,139,84,0.8)', 'rgba(75,59,42,0.9)', '#222026', 'rgba(51,41,31,0.9)'] as const,
+  tileStops: [0, 0.32, 0.7, 1] as const,
+  dock: ['rgba(59,61,69,0.8)', 'rgba(29,30,37,0.9)', 'rgba(12,16,22,0.96)'] as const,
+  inset: 24, gap: 16, scanRadius: 44, tileRadius: 26, dockRadius: 32, dockHeight: 64,
+  // Use Android's system face; SF Pro belongs to the iPhone design, not the Android bundle.
+  type: {
+    brand: { fontSize: 22, lineHeight: 29, fontWeight: '600' as const },
+    wordmark: { fontSize: 10, lineHeight: 18, letterSpacing: 4 },
+    welcome: { fontSize: 38, lineHeight: 44, fontWeight: '400' as const },
+    secondary: { fontSize: 13, lineHeight: 18 },
+    action: { fontSize: 20, lineHeight: 26 },
+    tile: { fontSize: 17, lineHeight: 22 },
+    badge: { fontSize: 13, lineHeight: 18, fontWeight: '600' as const },
+  },
+}
+
 /** A tier's colour as the venue set it, or the gold when it has none or an unreadable one. */
 export function tierColor(color: string | null | undefined): string {
   return color && /^#[0-9a-f]{6}$/i.test(color) ? color : C.gold

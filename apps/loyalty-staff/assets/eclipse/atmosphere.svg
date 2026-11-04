@@ -1,0 +1,26 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="393" height="852" viewBox="0 0 393 852" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="Eclipse / atmospheric light" clip-path="url(#clip0_0_180)">
+<g id="Horizon / ambient gold" filter="url(#filter0_f_0_180)">
+<path d="M178 402C231 287 324 226 444 215" stroke-width="36" stroke="#E5A563" stroke-opacity="0.34"/>
+</g>
+<g id="Horizon / warm bloom" filter="url(#filter1_f_0_180)">
+<path d="M178 402C231 287 324 226 444 215" stroke-width="6" stroke="#FFC784" stroke-opacity="0.6"/>
+</g>
+<path id="Horizon / lit edge" d="M178 402C231 287 324 226 444 215" stroke="#FFE7C1" stroke-opacity="0.8"/>
+</g>
+<defs>
+<filter id="filter0_f_0_180" x="126.653" y="162.075" width="353.991" height="282.459" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+<feFlood flood-opacity="0" result="BackgroundImageFix"/>
+<feBlend mode="normal" in="SourceGraphic" in2="BackgroundImageFix" result="shape"/>
+<feGaussianBlur stdDeviation="17.5" result="effect1_foregroundBlur_0_180"/>
+</filter>
+<filter id="filter1_f_0_180" x="167.275" y="204.013" width="284.998" height="207.243" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+<feFlood flood-opacity="0" result="BackgroundImageFix"/>
+<feBlend mode="normal" in="SourceGraphic" in2="BackgroundImageFix" result="shape"/>
+<feGaussianBlur stdDeviation="4" result="effect1_foregroundBlur_0_180"/>
+</filter>
+<clipPath id="clip0_0_180">
+<rect width="393" height="852" fill="white"/>
+</clipPath>
+</defs>
+</svg>
