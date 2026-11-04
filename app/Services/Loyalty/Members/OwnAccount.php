@@ -20,7 +20,7 @@ final class OwnAccount
     {
         $user = $member->relationLoaded('user') ? $member->user : $member->user()->first();
 
-        return $user !== null && self::is($user, (int) $member->organization_id);
+        return $user instanceof User && self::is($user, (int) $member->getAttribute('organization_id'));
     }
 
     /** A member account (never a staff login) of this organisation. */

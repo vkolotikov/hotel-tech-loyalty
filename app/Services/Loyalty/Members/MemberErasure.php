@@ -47,14 +47,15 @@ final class MemberErasure
     public static function detach(LoyaltyMember $member): LoyaltyMember
     {
         // The person's name as this venue holds it (its own guest record), never copied from the other account.
-        $name = Guest::withoutGlobalScopes()->where('organization_id', $member->organization_id)
+        $orgId = (int) $member->getAttribute('organization_id');
+        $name = Guest::withoutGlobalScopes()->where('organization_id', $orgId)
             ->where('member_id', $member->id)->value('full_name');
         $own = User::create([
             'name'            => is_string($name) && trim($name) !== '' ? trim($name) : self::ERASED_NAME,
             'email'           => "unlinked-member-{$member->id}@unlinked.local",
             'password'        => bcrypt(Str::random(40)),
             'user_type'       => 'member',
-            'organization_id' => (int) $member->organization_id,
+            'organization_id' => $orgId,
         ]);
         LoyaltyMember::withoutGlobalScopes()->whereKey($member->id)->update(['user_id' => $own->id]);
         $member->user_id = $own->id;

@@ -28,7 +28,7 @@ class GuestMemberLinkService
 
         // This organisation's member account only: `users` has no tenant scope (security review, 2026-11-04).
         $user = User::where('email', $email)->where('user_type', 'member')
-            ->where('organization_id', $guest->organization_id)->first();
+            ->where('organization_id', $guest->getAttribute('organization_id'))->first();
         if (!$user) return false;
 
         $member = $user->loyaltyMember;
@@ -71,7 +71,8 @@ class GuestMemberLinkService
         // organisation, in a membership here let this venue edit, erase or take over an account that is not its own.
         // Any other account keeps the address, so the guest stays a guest (`OwnAccount`).
         $accounts = User::where('email', $email)->get();
-        $existingUser = $accounts->first(fn (User $u) => OwnAccount::is($u, (int) $guest->organization_id));
+        $orgId = (int) $guest->getAttribute('organization_id');
+        $existingUser = $accounts->first(fn (User $u) => OwnAccount::is($u, $orgId));
         if (!$existingUser && $accounts->isNotEmpty()) {
             return null;
         }
