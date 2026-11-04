@@ -15,7 +15,7 @@ final class AttemptStatus
 {
     public function read(LoyaltyMember $member, User $by, string $action, string $key, ?float $amount, string $note): array
     {
-        $org = (int) $member->organization_id;
+        $org = (int) $member->getAttribute('organization_id');
         $unknown = ['state' => 'unknown'];
         if ($action === 'checkin') {
             $base = "loyalty-desk:{$org}:{$member->id}:{$key}";
@@ -29,7 +29,7 @@ final class AttemptStatus
                 ->where('reference_type', 'scan_event')->where('reference_id', $row->id)->first();
 
             return ['state' => 'recorded', 'reference' => (int) $row->id,
-                'reversed' => $effects?->operation === 'reverse', 'effects_pending' => (bool) ($effects?->pending ?? false)];
+                'reversed' => $effects?->operation === 'reverse', 'effects_pending' => (bool) ($effects->pending ?? false)];
         }
 
         $line = PointsTransaction::withoutGlobalScopes()->where('organization_id', $org)->where('member_id', $member->id)

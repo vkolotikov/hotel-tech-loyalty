@@ -8,6 +8,7 @@ use App\Services\Loyalty\LoyaltyRefused;
 use App\Services\Loyalty\MemberDirectory;
 use App\Support\SharedCache;
 use Illuminate\Contracts\Cache\LockTimeoutException;
+use Illuminate\Contracts\Cache\LockProvider;
 
 /** The desk honours the same short-lived retry contract as the place and event scanners. */
 final class DeskScan
@@ -33,8 +34,12 @@ final class DeskScan
         if (!$replay->keyed()) {
             return $attempt();
         }
+        $store = SharedCache::store()->getStore();
+        if (!$store instanceof LockProvider) {
+            throw new \LogicException('Keyed desk scans require a shared cache with atomic locks.');
+        }
         try {
-            return SharedCache::store()->lock((string) $replay->lockKey(), EventScan::LOCK_SECONDS)
+            return $store->lock((string) $replay->lockKey(), EventScan::LOCK_SECONDS)
                 ->block(max(0, (int) config('loyalty.scan_lock_wait', EventScan::LOCK_WAIT_SECONDS)), $attempt);
         } catch (LockTimeoutException) {
             throw new LoyaltyRefused('in_progress', 'This scan is still being handled. Try again in a moment.', 409);
