@@ -11,7 +11,10 @@ import { errorKey } from '../lib/desk'
 import { LANGUAGES, LANGUAGE_NAMES, useT } from '../lib/i18n'
 import { usePrefs } from '../lib/prefs'
 import { C, RADIUS, fonts } from '../lib/theme'
-import { Backdrop, Field, GoldButton, Notice, NO_OUTLINE, Press, Surface } from '../components/ui'
+import { Backdrop, Field, GoldButton, Notice, NO_OUTLINE, Press } from '../components/ui'
+import { BrandMark } from '../components/BrandMark'
+import { EclipseSurface, useEclipseBorderLight } from '../components/Eclipse'
+import { useEclipseAppearance } from '../lib/useEclipseAppearance'
 import type { Key } from '../lib/i18n/en'
 
 /**
@@ -19,6 +22,8 @@ import type { Key } from '../lib/i18n/en'
  * token, the loyalty bootstrap must answer, so an account without HexaTech Loyalty is told so here, not on an empty home.
  */
 export default function SignIn() {
+  const appearance = useEclipseAppearance()
+  const borderPhase = useEclipseBorderLight(appearance.animate && !appearance.solid)
   const insets = useSafeAreaInsets()
   const { t, language } = useT()
   const token = useSession(s => s.token)
@@ -50,10 +55,10 @@ export default function SignIn() {
     <Backdrop>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={[styles.page, { paddingTop: insets.top + 48, paddingBottom: insets.bottom + 32 }]} keyboardShouldPersistTaps="handled">
+          <BrandMark size={104} />
           <Text accessibilityRole="header" style={[fonts.display, { color: C.text }]}>{t('signIn.submit')}</Text>
-          <Surface style={{ padding: 22, gap: 10 }}><Text style={[fonts.display, { color: C.gold }]}>{t('home.brand')}</Text><Text style={[fonts.small, { color: C.text }]}>{t('home.staff')}</Text></Surface>
 
-          <View style={styles.form}>
+          <EclipseSurface radius={28} solid={appearance.solid} borderLight={{ phase: borderPhase, order: 0 }} style={styles.form}>
             <Field label={t('signIn.email')} value={email} onChangeText={setEmail} autoCapitalize="none" autoComplete="email" keyboardType="email-address" textContentType="username" returnKeyType="next" />
             <View style={{ gap: 8 }}><Text style={[fonts.label, { color: C.text2 }]}>{t('signIn.password')}</Text>
               <View style={styles.password}>
@@ -62,11 +67,11 @@ export default function SignIn() {
               </View>
             </View>
             {problem && <Notice text={t(problem)} />}
-            <GoldButton title={t('signIn.submit')} icon="arrow-forward" busy={busy} onPress={() => { void submit() }} />
+            <GoldButton title={t('signIn.submit')} icon="arrow-forward" busy={busy} onPress={() => { void submit() }} borderLight={{ phase: borderPhase, order: 2 }} />
             <Press onPress={() => { void WebBrowser.openBrowserAsync(`${WEB_BASE}/forgot-password`) }} style={{ alignSelf: 'center', padding: 8 }}>
               <Text style={[fonts.smallStrong, { color: C.gold }]}>{t('signIn.forgot')}</Text>
             </Press>
-          </View>
+          </EclipseSurface>
 
           <View style={styles.languages}>
             {LANGUAGES.map(code => (
@@ -84,9 +89,7 @@ export default function SignIn() {
 const styles = StyleSheet.create({
   page: { paddingHorizontal: 24, gap: 24, flexGrow: 1 },
   password: { flexDirection: 'row', alignItems: 'center', borderRadius: 18, borderWidth: 1, borderColor: C.hairlineStrong, backgroundColor: C.surface },
-  brand: { alignItems: 'center', gap: 12 },
-  mark: { width: 76, height: 76, borderRadius: 20, borderWidth: 1, borderColor: C.goldEdge, marginBottom: 8 },
-  form: { gap: 18 },
+  form: { gap: 18, padding: 20 },
   languages: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 8, marginTop: 'auto' },
   language: { paddingHorizontal: 12, paddingVertical: 14, borderRadius: RADIUS.pill, borderWidth: 1, borderColor: C.hairline },
   languageOn: { borderColor: C.goldEdge, backgroundColor: C.goldWash },

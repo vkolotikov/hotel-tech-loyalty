@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react'
 import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native'
-import { router } from 'expo-router'
+import { useRouter } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
 import { KEYS, queryClient, useBoot, useQueueCounts } from '../../lib/queries'
@@ -11,10 +11,12 @@ import { errorKey } from '../../lib/desk'
 import { ECLIPSE as E } from '../../lib/theme'
 import { useEclipseAppearance } from '../../lib/useEclipseAppearance'
 import { Notice, Press } from '../../components/ui'
+import { BrandMark } from '../../components/BrandMark'
 import { EclipseAtmosphere, EclipseScan, EclipseSurface, EclipseTile, useEclipseBorderLight } from '../../components/Eclipse'
 
 /** Eclipse Home is a launcher. Counts are live; loyalty actions stay in their existing screens. */
 export default function Home() {
+  const router = useRouter()
   const insets = useSafeAreaInsets()
   const { t, language } = useT()
   const boot = useBoot()
@@ -46,10 +48,7 @@ export default function Home() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { void refresh() }} tintColor={E.accent} colors={[E.accent]} progressBackgroundColor={E.surface} />}
       >
         <View style={styles.header}>
-          <View style={styles.brand}>
-            <Text style={styles.brandName}>{t('home.brand')}</Text>
-            <Text style={styles.wordmark}>{t('home.staff')}</Text>
-          </View>
+          <BrandMark />
           <Press label={t('home.account')} onPress={() => router.push('/profile')} reduceMotion={appearance.reduceMotion} pressedScale={0.98}>
             <EclipseSurface radius={24} solid={appearance.solid} style={styles.profile}>
               <Ionicons name="person-outline" size={27} color={E.text} accessible={false} />
@@ -82,9 +81,6 @@ const styles = StyleSheet.create({
   page: { flex: 1, backgroundColor: E.bg, overflow: 'hidden' },
   content: { paddingHorizontal: E.inset, gap: 24 },
   header: { minHeight: 58, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 16 },
-  brand: { gap: 5, flex: 1 },
-  brandName: { ...E.type.brand, color: E.accent },
-  wordmark: { ...E.type.wordmark, color: E.text },
   profile: { width: 46.4, height: 46.4, alignItems: 'center', justifyContent: 'center' },
   greeting: { minHeight: 70, gap: 2 },
   welcome: { ...E.type.welcome, color: E.text },

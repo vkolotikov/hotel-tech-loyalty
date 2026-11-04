@@ -1,7 +1,7 @@
 import { MemberSummary } from '../components/MemberCard'
 import { useState } from 'react'
 import { StyleSheet, Text, TextInput, View } from 'react-native'
-import { router, useLocalSearchParams } from 'expo-router'
+import { useRouter, useLocalSearchParams } from 'expo-router'
 import { useQuery } from '@tanstack/react-query'
 import { api } from '../lib/api'
 import { KEYS, afterMemberChange, useBoot } from '../lib/queries'
@@ -12,7 +12,8 @@ import { number } from '../lib/format'
 import { useT } from '../lib/i18n'
 import type { Key } from '../lib/i18n/en'
 import { C, RADIUS, fonts } from '../lib/theme'
-import { Field, GoldButton, NO_OUTLINE, Notice, Press, Surface } from '../components/ui'
+import { Field, GhostButton, GoldButton, NO_OUTLINE, Notice, Press, Surface } from '../components/ui'
+import { RecoveredAttempt } from '../components/RecoveredAttempt'
 import { Sheet } from '../components/Sheet'
 import { Done } from '../components/Done'
 
@@ -26,6 +27,7 @@ const REDEEM_REASONS: Key[] = ['points.reason.reward', 'points.reason.correction
  * again after a lost connection never counts twice.
  */
 export default function Points() {
+  const router = useRouter()
   const { t, language } = useT()
   const params = useLocalSearchParams<{ id: string; mode: string }>()
   const id = Number(params.id)
@@ -60,6 +62,7 @@ export default function Points() {
     }
   }
 
+  if (attempt.receipt) return <RecoveredAttempt title={title} member={id} receipt={attempt.receipt} />
   if (done) {
     return (
       <Sheet title={title} footer={<GoldButton title={t('common.done')} icon="checkmark" onPress={() => router.back()} />}>
@@ -120,6 +123,7 @@ export default function Points() {
 
       {tried && problem && !pending && <Notice tone="warning" text={problem === 'points.tooFew' ? t('points.tooFew', { n: number(balance, language) }) : t(problem)} />}
       {pending && !failure && <Notice tone="warning" text={t('error.unconfirmed')} />}
+      {pending && <GhostButton title={t('recovery.check')} icon="refresh-outline" disabled={busy} onPress={() => { void attempt.check() }} />}
       {boot.data && !allowed && <Notice text={t('error.not_allowed')} />}
       {detail.isError && <Notice text={t('error.unknown')} action={t('common.retry')} onAction={() => { void detail.refetch() }} />}
       {failure && <Notice text={t(failure)} />}

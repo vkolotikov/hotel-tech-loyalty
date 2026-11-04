@@ -156,6 +156,8 @@ export const api = {
     send('POST', loyaltyPath(`members/${id}/redeem`), { points, reason, idempotency_key: key }),
   checkIn: (id: number, amount: number | null, note: string, key: string): Promise<DeskAnswer> =>
     send('POST', loyaltyPath(`members/${id}/check-in`), { ...(amount ? { amount } : {}), ...(note ? { note } : {}), idempotency_key: key }),
+  attemptStatus: (id: number, action: 'award' | 'redeem' | 'checkin', attempt: { key: string; amount: number | null; note: string }): Promise<AttemptStatus> =>
+    send('POST', loyaltyPath(`members/${id}/attempt-status`), { action, idempotency_key: attempt.key, amount: attempt.amount, note: attempt.note }),
   linkCard: (id: number, uid: string): Promise<{ card: NfcCardRow; linked: boolean }> =>
     send('POST', loyaltyPath(`members/${id}/cards`), { uid }),
 
@@ -167,3 +169,5 @@ export const api = {
   redemptions: (state: 'pending' | 'done', page: number): Promise<RedemptionsPage> => read(loyaltyPath('redemptions'), { state, page }),
   fulfil: (id: number): Promise<unknown> => send('POST', loyaltyPath(`redemptions/${id}/fulfil`)),
 }
+
+export type AttemptStatus = { state: 'unknown' } | { state: 'recorded'; reference: number; reversed: boolean; effects_pending: boolean }

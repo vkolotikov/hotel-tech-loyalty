@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Text } from 'react-native'
-import { router, useLocalSearchParams } from 'expo-router'
+import { useRouter, useLocalSearchParams } from 'expo-router'
 import { useQuery } from '@tanstack/react-query'
 import { api } from '../lib/api'
 import { KEYS, afterMemberChange, useBoot } from '../lib/queries'
@@ -12,13 +12,15 @@ import { useT } from '../lib/i18n'
 import type { Key } from '../lib/i18n/en'
 import type { DeskAnswer } from '../lib/types'
 import { C, fonts } from '../lib/theme'
-import { Field, GoldButton, IconBadge, Notice, Row } from '../components/ui'
+import { Field, GhostButton, GoldButton, IconBadge, Notice, Row } from '../components/ui'
+import { RecoveredAttempt } from '../components/RecoveredAttempt'
 import { Sheet } from '../components/Sheet'
 import { MemberSummary } from '../components/MemberCard'
 import { Done } from '../components/Done'
 
 /** Two presentation flows, one server desk operation and one durable attempt scope. */
 export default function CheckIn() {
+  const router = useRouter()
   const { t, language } = useT()
   const params = useLocalSearchParams<{ id: string; mode?: string }>()
   const id = Number(params.id)
@@ -49,6 +51,7 @@ export default function CheckIn() {
     if (answer) { feel.success(); afterMemberChange(id); setDone(answer) }
   }
 
+  if (attempt.receipt) return <RecoveredAttempt title={title} member={id} receipt={attempt.receipt} />
   if (done) {
     const lines: string[] = [detail.data?.member.name ?? '']
     const gained = done.points.checkin + done.points.purchase
@@ -72,6 +75,7 @@ export default function CheckIn() {
     <Text style={[fonts.small, { color: C.text2 }]}>{t(mode === 'purchase' ? 'purchase.hint' : 'checkIn.shortHint')}</Text>
     {validation && <Notice text={t(validation)} />}
     {pending && !failure && <Notice tone="warning" text={t('error.unconfirmed')} />}
+    {pending && <GhostButton title={t('recovery.check')} icon="refresh-outline" disabled={busy} onPress={() => { void attempt.check() }} />}
     {boot.data && !flow.allowed && <Notice text={t('error.not_allowed')} />}
     {detail.isError && <Notice text={t('error.unknown')} action={t('common.retry')} onAction={() => { void detail.refetch() }} />}
     {failure && <Notice text={t(failure)} />}

@@ -1,5 +1,5 @@
 import { ScrollView } from 'react-native'
-import { router } from 'expo-router'
+import { useRouter } from 'expo-router'
 import { useQuery } from '@tanstack/react-query'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { api } from '../lib/api'
@@ -17,6 +17,7 @@ import { BenefitList } from '../components/BenefitList'
  * the tier's benefits. "Scan the next member" goes straight back to the camera.
  */
 export default function Scanned() {
+  const router = useRouter()
   const insets = useSafeAreaInsets()
   const { t } = useT()
   const boot = useBoot()

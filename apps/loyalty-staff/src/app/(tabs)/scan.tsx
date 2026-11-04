@@ -1,18 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { ActivityIndicator, Linking, Platform, ScrollView, StyleSheet, Text, View } from 'react-native'
-import { router, useFocusEffect } from 'expo-router'
+import { useRouter, useFocusEffect } from 'expo-router'
 import { useQuery } from '@tanstack/react-query'
 import { CameraView, useCameraPermissions } from 'expo-camera'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { api } from '../../lib/api'
-import { failureOf } from '../../lib/failure'
-import { outcomeUncertain } from '../../lib/attempts'
-import { cleanCode, errorKey, keyFor, looksLikeCode, type Unanswered } from '../../lib/desk'
-import { freshKey } from '../../lib/ids'
+import { cleanCode, looksLikeCode } from '../../lib/desk'
+import { useScanAttempt } from '../../lib/useScanAttempt'
 import { feel } from '../../lib/haptics'
 import { useNfc } from '../../lib/nfc'
 import { KEYS, tierOf, useBoot, useScan, whereKey, type ScanWhere } from '../../lib/queries'
-import { useT, type Key } from '../../lib/i18n'
+import { useT } from '../../lib/i18n'
 import { C, TAB_BAR_ROOM, fonts, tierColor } from '../../lib/theme'
 import type { MemberRow } from '../../lib/types'
 import { Avatar, Backdrop, GhostButton, GoldButton, IconBadge, Notice, PageHeading, Pill, Row, SearchField, Segments, Surface } from '../../components/ui'
@@ -24,65 +22,56 @@ type ScanMode = 'qr' | 'nfc' | 'number'
 const SAME_READ_MS = 2500
 
 export default function Scan() {
+  const router = useRouter()
   const insets = useSafeAreaInsets()
   const { t } = useT()
   const { where, setWhere, show } = useScan()
   const [permission, requestPermission] = useCameraPermissions()
   const [focused, setFocused] = useState(false)
   const [mode, setMode] = useState<ScanMode>('qr')
-  const [busy, setBusy] = useState(false)
-  const sending = useRef(false)
-  const [problem, setProblem] = useState<Key | null>(null)
+  const attempt = useScanAttempt()
+  const { busy, pending, problem } = attempt
+  const blocked = busy || !!pending || !attempt.ready
+  const [reviewing, setReviewing] = useState(false)
   const [picking, setPicking] = useState(false)
   const [light, setLight] = useState(false)
   const lastRead = useRef<{ code: string; at: number } | null>(null)
-  const unanswered = useRef<Unanswered | null>(null)
 
   useFocusEffect(useCallback(() => {
     setFocused(true)
-    setProblem(null)
     lastRead.current = null
     return () => setFocused(false)
   }, []))
 
-  const lookUp = useCallback(async (raw: string) => {
+  const lookUp = async (raw: string, retry = false) => {
     const code = cleanCode(raw)
-    if (!code || sending.current) return
+    if (!code || busy || (!retry && blocked)) return
     const now = Date.now()
-    if (lastRead.current?.code === code && now - lastRead.current.at < SAME_READ_MS) return
-    sending.current = true
+    if (!retry && lastRead.current?.code === code && now - lastRead.current.at < SAME_READ_MS) return
     lastRead.current = { code, at: now }
     feel.read()
-    setBusy(true)
-    setProblem(null)
-    const at = whereKey(where)
-    const key = keyFor(code, at, unanswered.current, now, freshKey)
-    unanswered.current = { code, where: at, key, at: now }
-    try {
-      const answer = await api.scan({ code, idempotency_key: key,
-        ...(where.kind === 'place' ? { place_id: where.id } : {}),
-        ...(where.kind === 'event' ? { event_id: where.id } : {}),
-      })
-      unanswered.current = null
+    const answer = await attempt.send(code, where, retry)
+    if (answer) {
       if (answer.verdict && !answer.verdict.granted) feel.warning()
       else feel.success()
       show(answer)
       router.push('/scanned')
-    } catch (error) {
-      const failure = failureOf(error)
-      if (!outcomeUncertain(error)) unanswered.current = null
-      feel.warning()
-      setProblem(failure.code === 'not_found' ? 'scan.unknown' : errorKey(failure.code))
-    } finally { sending.current = false; setBusy(false) }
-  }, [where, show])
+    }
+  }
 
-  const nfc = useNfc({ listen: focused && mode === 'nfc' && !picking && !busy, onCard: uid => { void lookUp(uid) }, prompt: t('scan.nfcHint') })
-  const canCamera = Platform.OS !== 'web' && permission?.granted && focused && mode === 'qr' && !picking
+  const nfc = useNfc({ listen: focused && mode === 'nfc' && !picking && !blocked, onCard: uid => { void lookUp(uid) }, prompt: t('scan.nfcHint') })
+  const canCamera = Platform.OS !== 'web' && permission?.granted && focused && mode === 'qr' && !picking && !blocked
   return <Backdrop>
     <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingTop: insets.top + 20, paddingHorizontal: 24, paddingBottom: TAB_BAR_ROOM, gap: 14 }}>
       <PageHeading title={t('home.scan')} />
-      <Row card title={where.kind === 'desk' ? t('scan.desk') : where.name} line={t('scan.for')} left={<IconBadge name="location-outline" color={C.text} />} onPress={busy ? undefined : () => setPicking(true)} />
-      <Segments<ScanMode> iconOnly value={mode} onChange={next => { if (!busy) { setMode(next); setProblem(null); setLight(false) } }} items={[
+      <Row card title={where.kind === 'desk' ? t('scan.desk') : where.name} line={t('scan.for')} left={<IconBadge name="location-outline" color={C.text} />} onPress={blocked ? undefined : () => setPicking(true)} />
+      {pending && <Surface style={{ gap: 12 }}>
+        <Text style={[fonts.heading, { color: C.text }]}>{t('scan.pendingTitle')}</Text>
+        <Text style={[fonts.small, { color: C.text2 }]}>{t(problem === 'scan.retryExpired' ? 'scan.retryExpired' : 'scan.unconfirmed')}</Text>
+        <GoldButton title={t('common.retry')} icon="refresh-outline" busy={busy} onPress={() => { void lookUp(pending.code, true) }} />
+        <GhostButton title={t('scan.review')} icon="list-outline" disabled={busy} onPress={() => setReviewing(true)} />
+      </Surface>}
+      <Segments<ScanMode> iconOnly value={mode} onChange={next => { if (!blocked) { setMode(next); setLight(false) } }} items={[
         { id: 'qr', label: t('scan.mode.qr'), icon: 'qr-code-outline' },
         { id: 'nfc', label: t('scan.mode.nfc'), icon: 'radio-outline' },
         { id: 'number', label: t('scan.mode.number'), symbol: '123' },
@@ -111,16 +100,22 @@ export default function Scan() {
         {nfc.state === 'ready' && !nfc.continuous && <GoldButton title={t('scan.nfc')} icon="radio-outline" disabled={busy} onPress={() => { void nfc.read() }} />}
         <GhostButton title={t('scan.type')} icon="keypad-outline" disabled={busy} onPress={() => setMode('number')} />
       </>}
-      {mode === 'number' && <MemberLookup where={where} busy={busy} onCode={code => { void lookUp(code) }} />}
+      {mode === 'number' && <MemberLookup where={where} busy={blocked} onCode={code => { void lookUp(code) }} />}
       {busy && <View style={{ alignItems: 'center', gap: 8 }}><ActivityIndicator color={C.gold} /><Text style={[fonts.small, { color: C.text }]}>{t('scan.busy')}</Text></View>}
-      {problem && !busy && <Notice text={t(problem)} />}
+      {problem && !busy && !['scan.unconfirmed', 'scan.retryExpired'].includes(problem) && <Notice text={t(problem)} />}
     </ScrollView>
     <WherePicker open={picking} current={where} onPick={next => { setWhere(next); setPicking(false); lastRead.current = null }} onClose={() => setPicking(false)} />
+    <DetailModal visible={reviewing} title={t('scan.review')} busy={busy} onClose={() => setReviewing(false)}>
+      <Notice tone="warning" text={t('scan.reviewHint')} />
+      <GoldButton title={t('scan.reviewed')} icon="checkmark" busy={busy} onPress={() => { void attempt.dismiss().then(() => { setReviewing(false); lastRead.current = null }) }} />
+      <GhostButton title={t('common.cancel')} disabled={busy} onPress={() => setReviewing(false)} />
+    </DetailModal>
   </Backdrop>
 }
 
 /** Manual lookup shares the same context and scan operation as QR/NFC. */
 function MemberLookup({ where, onCode, busy }: { where: ScanWhere; onCode: (code: string) => void; busy: boolean }) {
+  const router = useRouter()
   const { t } = useT()
   const boot = useBoot()
   const [q, setQ] = useState('')

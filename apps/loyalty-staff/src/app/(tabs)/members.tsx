@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { ActivityIndicator, FlatList, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native'
-import { router } from 'expo-router'
+import { useRouter } from 'expo-router'
 import { useInfiniteQuery } from '@tanstack/react-query'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { api } from '../../lib/api'
@@ -14,6 +14,7 @@ import { Avatar, Backdrop, Empty, Notice, PageHeading, Press, Row, SearchField, 
 
 /** Members: search by name, number, email or phone, narrow by tier, newest first; a member opens their page. */
 export default function Members() {
+  const router = useRouter()
   const insets = useSafeAreaInsets()
   const { t, language } = useT()
   const boot = useBoot()
