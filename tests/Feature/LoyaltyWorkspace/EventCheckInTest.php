@@ -187,6 +187,20 @@ class EventCheckInTest extends TestCase
         $this->checkIn($event, $this->ada->id, ['idempotency_key' => 'door-7'])->assertOk()->assertJsonPath('checked_in', true);
     }
 
+    public function test_the_member_is_told_of_the_events_points_once(): void
+    {
+        $notices = $this->spy(\App\Services\NotificationService::class);
+        $event = $this->openEvent();
+        $this->decides($this->welcome());
+
+        $this->checkIn($event, $this->grace->id, ['idempotency_key' => 'door-1'])->assertOk()->assertJsonPath('points', 50);
+        $this->checkIn($event, $this->grace->id, ['idempotency_key' => 'door-1'])->assertOk();
+        $this->checkIn($event, $this->grace->id, ['idempotency_key' => 'door-2'])->assertOk()->assertJsonPath('checked_in', false);
+
+        $notices->shouldHaveReceived('sendPointsEarned')->once()
+            ->withArgs(fn ($member, $points) => (int) $member->id === $this->grace->id && $points === 50);
+    }
+
     public function test_an_event_that_counts_no_visit_and_gives_no_points_writes_only_the_check_in(): void
     {
         $this->saveOptionsOn('2026-09-01', $this->org->id, ['stamps_enabled' => true], $this->manager);

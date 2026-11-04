@@ -3,6 +3,7 @@
 namespace App\Services\Loyalty\Members;
 
 use App\Models\AuditLog;
+use App\Models\Guest;
 use App\Models\LoyaltyMember;
 use App\Models\NfcCard;
 use App\Models\User;
@@ -37,6 +38,32 @@ final class MemberErasure
         return "deleted-member-{$memberId}@deleted.local";
     }
 
+    /**
+     * Gives a membership whose account is not this organisation's own member account an account of its own (a member
+     * account of the membership's organisation, no password anyone knows, the stub address until a person's is set),
+     * and points the membership at it. The other account is left exactly as it was. Used by erasure and by
+     * `php artisan loyalty:foreign-accounts --detach`.
+     */
+    public static function detach(LoyaltyMember $member): LoyaltyMember
+    {
+        // The person's name as this venue holds it (its own guest record), never copied from the other account.
+        $orgId = (int) $member->getAttribute('organization_id');
+        $name = Guest::withoutGlobalScopes()->where('organization_id', $orgId)
+            ->where('member_id', $member->id)->value('full_name');
+        $own = User::create([
+            'name'            => is_string($name) && trim($name) !== '' ? trim($name) : self::ERASED_NAME,
+            'email'           => "unlinked-member-{$member->id}@unlinked.local",
+            'password'        => bcrypt(Str::random(40)),
+            'user_type'       => 'member',
+            'organization_id' => $orgId,
+        ]);
+        LoyaltyMember::withoutGlobalScopes()->whereKey($member->id)->update(['user_id' => $own->id]);
+        $member->user_id = $own->id;
+        $member->setRelation('user', $own);
+
+        return $member;
+    }
+
     public static function isErased(LoyaltyMember $member): bool
     {
         return $member->user !== null && $member->user->email === self::stubEmail((int) $member->id);
@@ -67,6 +94,12 @@ final class MemberErasure
 
     public function erase(LoyaltyMember $member, User $by): LoyaltyMember
     {
+        // A membership linked to an account that is not this venue's (a link made before 2026-11-04): that account is
+        // another venue's or a staff login, and erasing here must never sign it out or anonymise it. The membership
+        // gets an account of its own, which is what gets anonymised below (`OwnAccount`).
+        if ($member->user && !OwnAccount::holds($member)) {
+            $member = self::detach($member);
+        }
         $user = $member->user;
         $number = $member->member_number;
         $email = $user?->email;

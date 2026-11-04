@@ -13,7 +13,7 @@ import { PageSkeleton } from '../../ui/Skeleton'
 /** The codes a member redeemed — kept, not flashed once in a toast. */
 export function CodesTab() {
   const { t, i18n } = useTranslation()
-  const { data, isLoading, isError, refetch } = useQuery({ queryKey: ['portal-redemptions'], queryFn: portalApi.redemptions })
+  const { data, isLoading, isError, refetch } = useQuery({ queryKey: ['portal-redemptions'], queryFn: portalApi.redemptions, staleTime: 10_000, refetchOnWindowFocus: true })
   if (isLoading) return <PageSkeleton />
   if (isError) return <div className="space-y-3"><Notice tone="danger">{t('portal.common.error', 'Something went wrong. Please try again.')}</Notice><Button variant="secondary" onClick={() => { void refetch() }}>{t('portal.common.retry', 'Try again')}</Button></div>
   const rows = data?.redemptions ?? []

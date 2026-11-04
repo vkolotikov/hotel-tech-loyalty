@@ -58,6 +58,7 @@ class OfferController extends Controller
     public function claim(Request $request, int $offerId): JsonResponse
     {
         $member = $request->user()->loyaltyMember;
+        \App\Services\Loyalty\Members\MemberStatus::assertActive($member);
         $offer = SpecialOffer::active()->findOrFail($offerId);
 
         // tier_ids null/empty = open to every tier; otherwise the member's

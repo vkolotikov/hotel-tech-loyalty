@@ -6,6 +6,7 @@ use App\Models\AuditLog;
 use App\Models\LoyaltyMember;
 use App\Models\User;
 use App\Services\AnalyticsService;
+use App\Services\Loyalty\LoyaltyRefused;
 
 /**
  * Switching a member's account off and on again (spec 2026-10-21 release 2 §4.1): the one writer HexaTech Loyalty's
@@ -17,6 +18,20 @@ use App\Services\AnalyticsService;
  */
 final class MemberStatus
 {
+    /**
+     * A switched-off member's own requests that spend or earn something — redeeming a reward, claiming an offer,
+     * asking for a benefit — are refused, as the desk refuses them (security review, 2026-11-04: before then the app
+     * and the portal still let them). Reading their card, points and history stays open.
+     *
+     * @throws LoyaltyRefused `member_inactive` (403)
+     */
+    public static function assertActive(?LoyaltyMember $member): void
+    {
+        if ($member !== null && !$member->is_active) {
+            throw new LoyaltyRefused('member_inactive', 'This membership is switched off. Please contact the venue.', 403);
+        }
+    }
+
     public function deactivate(LoyaltyMember $member, User $by): LoyaltyMember
     {
         return $this->set($member, false, $by);

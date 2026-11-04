@@ -16,7 +16,7 @@ export function BenefitsTab() {
   const { t, i18n } = useTranslation()
   const qc = useQueryClient()
   const { data: boot } = usePortal()
-  const { data, isLoading, isError, refetch } = useQuery({ queryKey: ['portal-benefits'], queryFn: portalApi.benefits })
+  const { data, isLoading, isError, refetch } = useQuery({ queryKey: ['portal-benefits'], queryFn: portalApi.benefits, staleTime: 10_000, refetchOnWindowFocus: true })
   const invalidate = () => qc.invalidateQueries({ queryKey: ['portal-benefits'] })
 
   const request = useMutation({

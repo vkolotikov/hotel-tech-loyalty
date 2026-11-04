@@ -7,6 +7,7 @@ use App\Models\LoyaltyMember;
 use App\Models\LoyaltyTier;
 use App\Models\Organization;
 use App\Models\User;
+use App\Services\Loyalty\Members\OwnAccount;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
@@ -25,7 +26,9 @@ class GuestMemberLinkService
         $email = Guest::normalizeEmailKey($guest->email);
         if (!$email) return false;
 
-        $user = User::where('email', $email)->where('user_type', 'member')->first();
+        // This organisation's member account only: `users` has no tenant scope (security review, 2026-11-04).
+        $user = User::where('email', $email)->where('user_type', 'member')
+            ->where('organization_id', $guest->getAttribute('organization_id'))->first();
         if (!$user) return false;
 
         $member = $user->loyaltyMember;
@@ -63,8 +66,16 @@ class GuestMemberLinkService
         $email = Guest::normalizeEmailKey($guest->email);
         if (!$email) return null;
 
-        // Existing member for this email — reuse and link.
-        $existingUser = User::where('email', $email)->first();
+        // An account with this address. Only this organisation's own member account is reused (security review,
+        // 2026-11-04): `users` has no tenant scope, and wrapping another venue's member, or a staff login of any
+        // organisation, in a membership here let this venue edit, erase or take over an account that is not its own.
+        // Any other account keeps the address, so the guest stays a guest (`OwnAccount`).
+        $accounts = User::where('email', $email)->get();
+        $orgId = (int) $guest->getAttribute('organization_id');
+        $existingUser = $accounts->first(fn (User $u) => OwnAccount::is($u, $orgId));
+        if (!$existingUser && $accounts->isNotEmpty()) {
+            return null;
+        }
         if ($existingUser) {
             $member = $existingUser->loyaltyMember;
             if ($member) {

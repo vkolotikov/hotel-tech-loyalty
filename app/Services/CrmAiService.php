@@ -25,7 +25,8 @@ class CrmAiService
     private string $model;
     private int $maxRounds = 8;
 
-    public function __construct()
+    /** `$by`: the staff member the chat is for; the toolset asks their rights (CrmAiToolset). */
+    public function __construct(private readonly ?\App\Models\User $by = null)
     {
         $this->apiKey = config('services.anthropic.api_key', '');
         $this->model  = config('services.anthropic.model', 'claude-sonnet-5');
@@ -39,7 +40,7 @@ class CrmAiService
             return ['response' => 'AI not configured — add ANTHROPIC_API_KEY to your .env file.', 'actions' => []];
         }
 
-        $toolset  = new CrmAiToolset();
+        $toolset  = new CrmAiToolset($this->by);
         $system   = $this->buildSystemPrompt();
         $messages = $this->toClaudeMessages($userMessages);
         $tools    = $toolset->getTools();

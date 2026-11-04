@@ -15,7 +15,10 @@ use App\Models\PointsTransaction;
 use App\Models\Property;
 use App\Models\Reservation;
 use App\Models\SpecialOffer;
+use App\Models\User;
 use App\Models\VenueBooking;
+use App\Services\Loyalty\LoyaltyAccess;
+use App\Support\SettingRegistry;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 
@@ -31,6 +34,26 @@ use Illuminate\Support\Facades\Mail;
  */
 class CrmAiToolset
 {
+    /**
+     * The staff member the chat is for (security review, 2026-11-04). The route lets every staff member of a CRM
+     * organisation in; a tool that writes points or settings asks the same rights the screens ask of this person
+     * (`LoyaltyAccess` for points, a manager for settings), and a tool never answers a secret setting's value. Without
+     * a person (no caller passed one) those tools refuse.
+     */
+    public function __construct(private readonly ?User $by = null)
+    {
+    }
+
+    private function may(string $flag): bool
+    {
+        return $this->by !== null && LoyaltyAccess::has($this->by, $flag);
+    }
+
+    private function isManager(): bool
+    {
+        return $this->by !== null && ($this->by->isPlatformAdmin() || LoyaltyAccess::isManager($this->by));
+    }
+
     /* ────────── Tool Definitions ────────── */
 
     public function getTools(): array
@@ -543,6 +566,9 @@ class CrmAiToolset
 
     private function toolAwardPoints(array $in): array
     {
+        if (!$this->may(LoyaltyAccess::AWARD)) {
+            return ['success' => false, 'data' => ['error' => 'Your account may not award points (it needs "can award points").']];
+        }
         $m = LoyaltyMember::find($in['member_id']);
         if (!$m) return ['success' => false, 'data' => ['error' => 'Member not found']];
         $points = min(max($in['points'], 1), 100000);
@@ -550,7 +576,7 @@ class CrmAiToolset
         if (!in_array($type, ['earn', 'bonus', 'adjust'])) $type = 'bonus';
 
         $loyaltyService = app(\App\Services\LoyaltyService::class);
-        $tx = $loyaltyService->awardPoints($m, $points, $in['description'], $type);
+        $tx = $loyaltyService->awardPoints($m, $points, $in['description'], $type, $this->by);
 
         return ['success' => true, 'data' => [
             'transaction_id' => $tx->id,
@@ -563,6 +589,9 @@ class CrmAiToolset
 
     private function toolRedeemPoints(array $in): array
     {
+        if (!$this->may(LoyaltyAccess::REDEEM)) {
+            return ['success' => false, 'data' => ['error' => 'Your account may not redeem points (it needs "can redeem points").']];
+        }
         $m = LoyaltyMember::find($in['member_id']);
         if (!$m) return ['success' => false, 'data' => ['error' => 'Member not found']];
         if ($m->current_points < $in['points']) {
@@ -570,7 +599,7 @@ class CrmAiToolset
         }
 
         $loyaltyService = app(\App\Services\LoyaltyService::class);
-        $tx = $loyaltyService->redeemPoints($m, $in['points'], $in['description']);
+        $tx = $loyaltyService->redeemPoints($m, $in['points'], $in['description'], $this->by);
 
         return ['success' => true, 'data' => [
             'transaction_id' => $tx->id,
@@ -1094,9 +1123,11 @@ class CrmAiToolset
         $settings = $q->orderBy('group')->orderBy('key')
             ->get(['key', 'value', 'type', 'group', 'label', 'description'])
             ->map(function ($s) {
+                // A secret (API keys, tokens, passwords) is never answered: only whether it is set, as Settings shows.
+                $secret = in_array($s->key, SettingRegistry::SECRET_KEYS, true);
                 return [
                     'key'   => $s->key,
-                    'value' => $s->typed_value,
+                    'value' => $secret ? ($s->value ? '(set)' : '(not set)') : $s->typed_value,
                     'group' => $s->group,
                     'label' => $s->label,
                 ];
@@ -1106,6 +1137,13 @@ class CrmAiToolset
 
     private function toolUpdateSetting(array $in): array
     {
+        // As Settings itself: a manager's change (AccessMap `admin/settings`), and never a secret through the chat.
+        if (!$this->isManager()) {
+            return ['success' => false, 'data' => ['error' => 'Only an owner or a manager can change settings.']];
+        }
+        if (in_array($in['key'] ?? null, SettingRegistry::SECRET_KEYS, true)) {
+            return ['success' => false, 'data' => ['error' => 'Secret settings are changed only in Settings.']];
+        }
         $setting = HotelSetting::where('key', $in['key'])->first();
         if (!$setting) return ['success' => false, 'data' => ['error' => "Setting '{$in['key']}' not found"]];
 

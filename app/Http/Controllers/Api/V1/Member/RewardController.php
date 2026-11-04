@@ -78,6 +78,7 @@ class RewardController extends Controller
         if (!$member) {
             return response()->json(['message' => 'No loyalty membership on this account.'], 422);
         }
+        \App\Services\Loyalty\Members\MemberStatus::assertActive($member);
 
         // Lock the reward row for the duration of the transaction so
         // a concurrent redemption can't both pass the stock check.

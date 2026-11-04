@@ -40,7 +40,12 @@ export function PortalProvider({ children }: { children: ReactNode }) {
   const query = useQuery({
     queryKey: ['portal-bootstrap'],
     queryFn: portalApi.bootstrap,
-    staleTime: 60_000,
+    // Points, level and rewards change at the venue's desk while the member has the portal open: asked again when the
+    // member comes back to the tab, and every minute while it is visible (never in a hidden tab). The app-wide client
+    // asks nothing on focus, so the portal says it here.
+    staleTime: 10_000,
+    refetchOnWindowFocus: true,
+    refetchInterval: 60_000,
     retry: (count, error) => {
       const status = (error as { response?: { status?: number } })?.response?.status
       return status !== 403 && status !== 401 && count < 2
