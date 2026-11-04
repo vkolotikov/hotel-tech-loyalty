@@ -64,7 +64,7 @@ class CrmAiController extends Controller
         ]);
 
         try {
-            $result = (new CrmAiService())->chat($request->input('messages'));
+            $result = (new CrmAiService($request->user()))->chat($request->input('messages'));
             return response()->json($result);
         } catch (\Throwable $e) {
             Log::error('CRM AI chat failed: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);

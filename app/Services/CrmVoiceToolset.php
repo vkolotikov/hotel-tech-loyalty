@@ -1373,10 +1373,14 @@ class CrmVoiceToolset
             return ['error' => 'Refusing to award more than 1,000,000 points in a single call. Split into multiple awards if intentional.'];
         }
 
+        // The rights the screens ask (security review, 2026-11-04): the route lets every staff member in.
+        $staff = \App\Models\User::find($userId);
+        if (!$staff || !\App\Services\Loyalty\LoyaltyAccess::has($staff, \App\Services\Loyalty\LoyaltyAccess::AWARD)) {
+            return ['error' => 'Your account may not award points (it needs "can award points").'];
+        }
+
         $member = LoyaltyMember::find($memberId);
         if (!$member) return ['error' => 'Member not found.', 'member_id' => $memberId];
-
-        $staff = \App\Models\User::find($userId);
 
         try {
             $tx = app(\App\Services\LoyaltyService::class)->awardPoints(
@@ -1415,6 +1419,11 @@ class CrmVoiceToolset
             return ['error' => 'member_id, points, description are required and must be positive.'];
         }
 
+        $staff = \App\Models\User::find($userId);
+        if (!$staff || !\App\Services\Loyalty\LoyaltyAccess::has($staff, \App\Services\Loyalty\LoyaltyAccess::REDEEM)) {
+            return ['error' => 'Your account may not redeem points (it needs "can redeem points").'];
+        }
+
         $member = LoyaltyMember::find($memberId);
         if (!$member) return ['error' => 'Member not found.', 'member_id' => $memberId];
 
@@ -1426,8 +1435,6 @@ class CrmVoiceToolset
                 'available' => (int) $member->current_points,
             ];
         }
-
-        $staff = \App\Models\User::find($userId);
 
         try {
             $tx = app(\App\Services\LoyaltyService::class)->redeemPoints(
