@@ -300,7 +300,8 @@ class PlanModulesControllerTest extends TestCase
         Http::fake([
             self::SAAS . '/billing/plans' => Http::response(['plans' => [$this->plan('loyalty', 8500)]], 200),
             self::SAAS . '/auth/register' => fn (ClientRequest $r) => in_array($r['industry'] ?? null, [null, 'hotel', 'beauty', 'medical', 'restaurant', 'legal', 'real_estate', 'education', 'fitness', 'hospitality'], true)
-                ? Http::response(['token' => 'saas-token', 'organization' => ['id' => 'saas-org-new']], 201)
+                // Its own billing organisation per sign-up, as billing makes one for each register.
+                ? Http::response(['token' => 'saas-token', 'organization' => ['id' => 'saas-org-' . $r['email']]], 201)
                 : Http::response(['error' => 'Validation failed', 'errors' => ['industry' => ['The selected industry is invalid.']]], 422),
             self::SAAS . '/tools/bootstrap' => Http::response(['subscription' => ['status' => 'TRIALING', 'plan' => ['slug' => 'loyalty']], 'entitled_product_slugs' => ['loyalty']], 200),
         ]);
@@ -310,7 +311,7 @@ class PlanModulesControllerTest extends TestCase
                 'hotel_name' => "Studio {$industry}", 'password' => 'NewAccount123!', 'plan' => 'loyalty', 'industry' => $industry])->assertCreated();
 
             $org = Organization::findOrFail(User::findOrFail($response->json('user.id'))->organization_id);
-            $this->assertSame('saas-org-new', $org->saas_org_id, "the {$industry} trial has its billing record");
+            $this->assertSame("saas-org-{$email}", $org->saas_org_id, "the {$industry} trial has its billing record");
             $this->assertSame($industry, $org->industry);
         }
         Http::assertSent(fn (ClientRequest $r) => str_ends_with($r->url(), '/auth/register') && array_key_exists('industry', $r->data()) && $r['industry'] === null);
