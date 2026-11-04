@@ -90,9 +90,12 @@ class MemberChatController extends Controller
     {
         $user = $request->user();
         $member = $user->loyaltyMember;
+        // Without a membership (a staff token) `member_id = null` would match every visitor's chat of the venue, to read
+        // and to write in as the visitor (security review, 2026-11-04): such a caller has no conversation here.
+        abort_unless($member !== null, 404);
 
         $conv = ChatConversation::where('organization_id', $user->organization_id)
-            ->where('member_id', $member?->id)
+            ->where('member_id', $member->id)
             ->findOrFail($id);
 
         $query = ChatMessage::where('conversation_id', $conv->id);
@@ -120,9 +123,12 @@ class MemberChatController extends Controller
 
         $user = $request->user();
         $member = $user->loyaltyMember;
+        // Without a membership (a staff token) `member_id = null` would match every visitor's chat of the venue, to read
+        // and to write in as the visitor (security review, 2026-11-04): such a caller has no conversation here.
+        abort_unless($member !== null, 404);
 
         $conv = ChatConversation::where('organization_id', $user->organization_id)
-            ->where('member_id', $member?->id)
+            ->where('member_id', $member->id)
             ->findOrFail($id);
 
         // Reopen if the member is writing to a closed conversation
