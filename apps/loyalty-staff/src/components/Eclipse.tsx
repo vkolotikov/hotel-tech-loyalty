@@ -13,7 +13,7 @@ export const ECLIPSE_ASSETS = {
   activity: require('../../assets/eclipse/activity.png'),
   more: require('../../assets/eclipse/more.png'),
   atmosphere: require('../../assets/eclipse/atmosphere.png'),
-  wallpaper: require('../../assets/eclipse/wallpaper.png'),
+  wallpaper: require('../../assets/eclipse/wallpaper-blue-gold.png'),
   coolRim: require('../../assets/eclipse/cool-rim.png'),
   goldRim: require('../../assets/eclipse/gold-rim.png'),
   dockPool: require('../../assets/eclipse/dock-pool.png'),
@@ -120,12 +120,12 @@ export function EclipseAtmosphere({ solid }: { solid: boolean }) {
 }
 
 export function EclipseSurface({ children, tone = 'quiet', radius = E.tileRadius, style, solid = false, borderLight, fill = false }: {
-  children: ReactNode; tone?: 'quiet' | 'attention' | 'scan'; radius?: number; style?: StyleProp<ViewStyle>; solid?: boolean;
+  children: ReactNode; tone?: 'quiet' | 'attention' | 'scan' | 'login'; radius?: number; style?: StyleProp<ViewStyle>; solid?: boolean;
   borderLight?: { phase: Animated.Value; order: number }
   fill?: boolean
 }) {
   const [size, setSize] = useState({ width: 170, height: 106 })
-  const colors = tone === 'scan' ? E.scan : tone === 'attention' ? E.attention : E.tile
+  const colors = tone === 'scan' ? E.scan : tone === 'attention' ? E.attention : tone === 'login' ? E.loginButton : E.tile
   return (
     <LinearGradient colors={E.rim} locations={[0, 0.35, 0.72, 1]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ flex: fill ? 1 : undefined, borderRadius: radius, padding: E.borderLight.width, overflow: 'hidden' }}
       onLayout={borderLight ? e => {
@@ -134,7 +134,7 @@ export function EclipseSurface({ children, tone = 'quiet', radius = E.tileRadius
       } : undefined}>
       {!solid && borderLight && <EclipseBorderLight {...size} radius={radius} {...borderLight} />}
       <View style={{ flex: fill ? 1 : undefined, borderRadius: radius - E.borderLight.width, overflow: 'hidden', backgroundColor: E.bg }}>
-      <LinearGradient colors={solid ? [E.surface, E.surface] : colors} locations={solid ? undefined : tone === 'scan' ? E.scanStops : E.tileStops} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[fill && { flex: 1 }, style]}>
+      <LinearGradient colors={solid ? [E.surface, E.surface] : colors} locations={solid ? undefined : tone === 'scan' ? E.scanStops : tone === 'login' ? E.loginStops : E.tileStops} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[fill && { flex: 1 }, style]}>
         {children}
       </LinearGradient>
       </View>

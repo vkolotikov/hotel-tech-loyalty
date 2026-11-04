@@ -8,10 +8,9 @@ import { number } from '../../lib/format'
 import { useT } from '../../lib/i18n'
 import { failureOf } from '../../lib/failure'
 import { errorKey } from '../../lib/desk'
-import { ECLIPSE as E } from '../../lib/theme'
+import { ECLIPSE as E, fonts } from '../../lib/theme'
 import { useEclipseAppearance } from '../../lib/useEclipseAppearance'
 import { Notice, Press } from '../../components/ui'
-import { BrandMark } from '../../components/BrandMark'
 import { EclipseAtmosphere, EclipseScan, EclipseSurface, EclipseTile, useEclipseBorderLight } from '../../components/Eclipse'
 
 /** Eclipse Home is a launcher. Counts are live; loyalty actions stay in their existing screens. */
@@ -48,16 +47,12 @@ export default function Home() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { void refresh() }} tintColor={E.accent} colors={[E.accent]} progressBackgroundColor={E.surface} />}
       >
         <View style={styles.header}>
-          <BrandMark />
+          <Text accessibilityRole="header" style={styles.venue}>{boot.data?.organization.name ?? (boot.isPending ? t('common.loading') : t('tab.home'))}</Text>
           <Press label={t('home.account')} onPress={() => router.push('/profile')} reduceMotion={appearance.reduceMotion} pressedScale={0.98}>
             <EclipseSurface radius={24} solid={appearance.solid} style={styles.profile}>
               <Ionicons name="person-outline" size={27} color={E.text} accessible={false} />
             </EclipseSurface>
           </Press>
-        </View>
-        <View style={styles.greeting}>
-          <Text style={styles.welcome}>{t('home.welcome')}</Text>
-          <Text style={styles.venue}>{boot.data?.organization.name ?? (boot.isPending ? t('common.loading') : '')}</Text>
         </View>
         {boot.isError && <Notice text={t(errorKey(failureOf(boot.error).code))} action={t('common.retry')} onAction={() => { void boot.refetch() }} />}
         <EclipseScan label={t('home.scan')} onPress={() => router.navigate('/scan')} phase={reflection} {...appearance} />
@@ -80,11 +75,9 @@ export default function Home() {
 const styles = StyleSheet.create({
   page: { flex: 1, backgroundColor: E.bg, overflow: 'hidden' },
   content: { paddingHorizontal: E.inset, gap: 24 },
-  header: { minHeight: 58, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 16 },
+  header: { minHeight: 70, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 20 },
   profile: { width: 46.4, height: 46.4, alignItems: 'center', justifyContent: 'center' },
-  greeting: { minHeight: 70, gap: 2 },
-  welcome: { ...E.type.welcome, color: E.text },
-  venue: { ...E.type.secondary, color: E.muted },
+  venue: { ...fonts.title, color: E.text, flex: 1 },
   grid: { gap: E.gap },
   row: { flexDirection: 'row', alignItems: 'stretch', gap: E.gap },
 })
