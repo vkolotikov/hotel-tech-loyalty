@@ -323,6 +323,7 @@
     "slot_taken": "Esa hora no está libre. Elija otra.",
     "stale": "Otra persona ha modificado esta cita. Se muestran los datos actuales: revíselos e inténtelo de nuevo.",
     "not_allowed": "Eso no es posible para esta cita en su estado actual.",
+    "plan_limit": "Su paquete permite {{limit}} miembros del equipo reservables. Elija un paquete mayor en Plan y productos, o desactive a alguien primero.",
     "master_not_eligible": "Este miembro del equipo no realiza ese servicio.",
     "before_today": "No se puede poner una cita en un día que ya ha pasado.",
     "time_does_not_exist": "Esa hora no existe en el local: esa noche cambia la hora.",

@@ -323,6 +323,7 @@
     "slot_taken": "Cette heure n'est pas libre. Choisissez-en une autre.",
     "stale": "Ce rendez-vous a été modifié par quelqu'un d'autre. Les informations actuelles sont affichées — vérifiez-les et réessayez.",
     "not_allowed": "Ce n'est pas possible pour ce rendez-vous dans son état actuel.",
+    "plan_limit": "Votre forfait permet {{limit}} membres de l'équipe réservables. Choisissez un forfait plus grand dans Offre et produits, ou désactivez d'abord quelqu'un.",
     "master_not_eligible": "Ce membre de l'équipe ne réalise pas ce service.",
     "before_today": "Un rendez-vous ne peut pas être placé sur un jour passé.",
     "time_does_not_exist": "Cette heure n'existe pas dans l'établissement : l'heure change cette nuit-là.",

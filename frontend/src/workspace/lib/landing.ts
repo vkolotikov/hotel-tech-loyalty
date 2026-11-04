@@ -64,12 +64,12 @@ export function safeRedirect(raw: string | null): string {
 }
 
 /**
- * The sign-in screen, set to bring the visitor back to where they were (see safeRedirect). From HexaTech Loyalty or
- * Content it is that product's own sign-in page (/loyalty/login, /content/login; owner 2026-11-02): the same
- * accounts, the product's own look.
+ * The sign-in screen, set to bring the visitor back to where they were (see safeRedirect). From HexaTech Appointments,
+ * Loyalty or Content it is that product's own sign-in page (/appointments/login, /loyalty/login, /content/login; owner
+ * 2026-11-02, Appointments 2026-11-04): the same accounts, the product's own look.
  */
 export function loginPath(location: { pathname: string; search: string }): string {
-  const product = /^\/(loyalty|content)(\/|$)/.exec(location.pathname)?.[1]
+  const product = /^\/(appointments|loyalty|content)(\/|$)/.exec(location.pathname)?.[1]
   return `${product ? `/${product}` : ''}/login?redirect=${encodeURIComponent(location.pathname + location.search)}`
 }
 

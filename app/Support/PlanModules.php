@@ -4,7 +4,8 @@ namespace App\Support;
 
 /**
  * The workspaces an organisation may buy on their own (owner, 2026-11-02): HexaTech Loyalty and HexaTech Content,
- * each in three packages — Lite, Standard (85 € a month) and Pro — beside the Appointments plan (Part C, 2026-10-02).
+ * each in three packages — Lite, Standard (85 € a month) and Pro — and, since 2026-11-04, HexaTech Appointments in the
+ * same three packages at Loyalty's prices (the Appointments plan of Part C, 2026-10-02, is its Standard).
  * Paid yearly, every package costs 15 % less a month (owner, 2026-11-02). A customer starts with one product and
  * adds the others later, or moves to another package.
  *
@@ -35,15 +36,25 @@ final class PlanModules
      * Every module, in the one order used for plan slugs, for where staff land and for every list people see. A
      * module's key is also its workspace (`/loyalty`…) and the AccessMap product its staff may reach. Each names the
      * billing products its plan holds (the first is the one that says the module is there) and, per package, its
-     * monthly price in cents and what it grants, both used only when billing cannot be read. Appointments is sold as
-     * one package, priced in billing only.
+     * monthly price in cents and what it grants, both used only when billing cannot be read. Appointments' packages
+     * (owner 2026-11-04: "same prices, you can make your own packages") differ by how many people can be booked
+     * (`max_booking_staff`, PlanLimitGuard::KEY_BOOKING_STAFF) and how many sign in (`max_team_members`).
      */
     public const MODULES = [
         'appointments' => [
             'products' => ['appointments', 'booking'],
             'tiers' => [
-                'standard' => ['monthly_amount' => null, 'features' => [
-                    'max_team_members' => '5', 'max_guests' => '1000', 'max_properties' => '1', 'max_loyalty_members' => '500',
+                'lite' => ['monthly_amount' => 4900, 'features' => [
+                    'max_team_members' => '2', 'max_booking_staff' => '2', 'max_guests' => '1000', 'max_properties' => '1',
+                    'max_loyalty_members' => '0',
+                ]],
+                'standard' => ['monthly_amount' => 8500, 'features' => [
+                    'max_team_members' => '5', 'max_booking_staff' => '5', 'max_guests' => '5000', 'max_properties' => '1',
+                    'max_loyalty_members' => '0',
+                ]],
+                'pro' => ['monthly_amount' => 14900, 'features' => [
+                    'max_team_members' => '15', 'max_booking_staff' => '15', 'max_guests' => '20000', 'max_properties' => '3',
+                    'max_loyalty_members' => '0', 'priority_support' => 'priority',
                 ]],
             ],
         ],
@@ -86,8 +97,8 @@ final class PlanModules
         ],
     ];
 
-    /** The modules sold through their own sign-up pages (/loyalty/register, /content/register). */
-    public const SOLD_ALONE = ['loyalty', 'content'];
+    /** The modules sold through their own sign-up pages (/appointments/register, /loyalty/register, /content/register). */
+    public const SOLD_ALONE = ['appointments', 'loyalty', 'content'];
 
     /** The currency and free trial of the modules' plans when billing cannot be read. */
     public const FALLBACK_CURRENCY = 'eur';
@@ -275,7 +286,7 @@ final class PlanModules
 
     /**
      * The monthly price a choice of packages shows when billing cannot be read, in the currency's smallest unit; null
-     * when a package in it has no price here (Appointments is priced in billing only).
+     * for an empty choice. Every package has a price here (Appointments' too, since 2026-11-04).
      *
      * @param  iterable<mixed>  $choice
      */
@@ -287,11 +298,7 @@ final class PlanModules
         }
         $sum = 0;
         foreach ($selection as $module => $tier) {
-            $amount = self::MODULES[$module]['tiers'][$tier]['monthly_amount'];
-            if ($amount === null) {
-                return null;
-            }
-            $sum += $amount;
+            $sum += self::MODULES[$module]['tiers'][$tier]['monthly_amount'];
         }
 
         return $sum;

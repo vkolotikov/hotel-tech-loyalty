@@ -282,12 +282,15 @@ or add the next dated one, at the end of a session.
 
 ## Modules: workspaces sold on their own
 
-- HexaTech Loyalty and Content each in three packages (Lite, Standard at 85 €, Pro), 15 % less a month paid yearly,
-  beside the Appointments plan (owner 2026-11-02; runbook `docs/plan-modules.md`). What an organisation bought is
+- HexaTech Loyalty and Content each in three packages (Lite, Standard at 85 €, Pro), 15 % less a month paid yearly
+  (owner 2026-11-02), and HexaTech Appointments the same way since 2026-11-04 (49/85/149 €, its own sign-up page,
+  packages by `max_booking_staff`); billing sells each product alone and every pair, never all three (runbook
+  `docs/plan-modules.md`). Every product's trial starts on Standard, monthly. What an organisation bought is
   `Organization::planModules()` only (null = full customer), each module's package `planTiers()`; "is this area off"
   is `holdsModule()` / `lacksModule()`, never a new reading of products or the plan slug. Module knowledge (products,
-  packages, slugs, fallback prices and features) lives in `App\Support\PlanModules`, and the billing migration
-  `2026_11_02_130000_add_module_packages` mirrors it: a change to one is a change to both.
+  packages, slugs, fallback prices and features) lives in `App\Support\PlanModules`, and the billing migrations
+  `2026_11_02_130000_add_module_packages` and `2026_11_04_120000_add_appointments_packages` mirror it: a change to
+  one is a change to both.
 - Prices are billing's: the SPA shows only what `GET /v1/modules` or `GET /v1/auth/modules` answer, never a price of
   its own. A plan changes only through `PlanModulesController` (add, package, remove; billing `change-plan`), never by
   sending an amount, and a card-paid subscription moves only to a plan with its own Stripe price for its interval.

@@ -24,8 +24,8 @@ describe('landingPath', () => {
 
 describe('loginPath', () => {
   it('brings a signed-out visitor back to the page they asked for after signing in', () => {
-    expect(loginPath({ pathname: '/appointments/clients/5', search: '' })).toBe('/login?redirect=%2Fappointments%2Fclients%2F5')
-    expect(loginPath({ pathname: '/appointments', search: '?open=12&date=2026-10-06' })).toBe('/login?redirect=%2Fappointments%3Fopen%3D12%26date%3D2026-10-06')
+    expect(loginPath({ pathname: '/appointments/clients/5', search: '' })).toBe('/appointments/login?redirect=%2Fappointments%2Fclients%2F5')
+    expect(loginPath({ pathname: '/appointments', search: '?open=12&date=2026-10-06' })).toBe('/appointments/login?redirect=%2Fappointments%3Fopen%3D12%26date%3D2026-10-06')
   })
 })
 
@@ -61,8 +61,8 @@ describe('showsAppointmentsLink', () => {
 
 describe('loginPathAfterExpiry', () => {
   it('brings someone whose session ran out in the workspace back to the same page', () => {
-    expect(loginPathAfterExpiry('/appointments/clients/14', '')).toBe('/login?redirect=%2Fappointments%2Fclients%2F14')
-    expect(loginPathAfterExpiry('/appointments', '?date=2026-10-21')).toBe('/login?redirect=%2Fappointments%3Fdate%3D2026-10-21')
+    expect(loginPathAfterExpiry('/appointments/clients/14', '')).toBe('/appointments/login?redirect=%2Fappointments%2Fclients%2F14')
+    expect(loginPathAfterExpiry('/appointments', '?date=2026-10-21')).toBe('/appointments/login?redirect=%2Fappointments%3Fdate%3D2026-10-21')
   })
 
   it('leaves every other page as it was: plain sign-in', () => {

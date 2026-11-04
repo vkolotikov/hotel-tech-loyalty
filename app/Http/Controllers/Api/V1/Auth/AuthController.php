@@ -1471,7 +1471,7 @@ class AuthController extends Controller
         $staff = Staff::withoutGlobalScopes()->where('user_id', $localUser->id)->first();
 
         try {
-            $planLabel = $signupModules !== null && $planSlug !== 'appointments'
+            $planLabel = $signupModules !== null
                 ? \App\Support\PlanModules::planName(\App\Support\PlanModules::selectionFromPlanSlug($planSlug) ?? $signupModules)
                 : ucfirst($planSlug);
             // Pre-fix this read `config('app.frontend_url', config('app.url', ...))`
@@ -1482,7 +1482,7 @@ class AuthController extends Controller
             // billingPortal use — fails closed in prod, falls back to request
             // origin in dev so local testing still works.
             $loginUrl = $this->resolveLoyaltyUrl() ?? 'https://loyalty.hotel-tech.ai';
-            // A module's customers sign in on its own page (/loyalty/login, /content/login).
+            // A module's customers sign in on its own page (/appointments/login, /loyalty/login, /content/login).
             if ($signupModules !== null && in_array($signupModules[0], \App\Support\PlanModules::SOLD_ALONE, true)) {
                 $loginUrl .= '/' . $signupModules[0] . '/login';
             }
@@ -2029,7 +2029,7 @@ class AuthController extends Controller
     {
         // A module plan (`loyalty`, `content`, `loyalty-content`…; App\Support\PlanModules) holds its modules' products.
         $modules = \App\Support\PlanModules::fromPlanSlug($planSlug);
-        if ($modules !== null && $planSlug !== 'appointments') {
+        if ($modules !== null) {
             return \App\Support\PlanModules::products($modules);
         }
 
@@ -2037,7 +2037,6 @@ class AuthController extends Controller
             'starter'    => ['crm', 'loyalty'],
             'growth'     => ['crm', 'loyalty', 'booking', 'chat'],
             'enterprise' => ['crm', 'loyalty', 'booking', 'chat'],
-            'appointments' => ['appointments', 'booking'],
             default      => ['crm', 'loyalty'],
         };
     }
@@ -2049,9 +2048,9 @@ class AuthController extends Controller
      */
     private function getTrialFeatures(string $planSlug): array
     {
-        // A module plan grants what its packages do (PlanModules::features); the Appointments plan keeps the default below.
+        // A module plan grants what its packages do (PlanModules::features), Appointments' packages too (2026-11-04).
         $selection = \App\Support\PlanModules::selectionFromPlanSlug($planSlug);
-        if ($selection !== null && $planSlug !== 'appointments') {
+        if ($selection !== null) {
             return \App\Support\PlanModules::features($selection);
         }
 

@@ -239,18 +239,20 @@ An organisation on the **Appointments plan** has the workspace and the public bo
 | Let billing decide again | `php artisan workspace:appointments <org id> --plan-decides` |
 | See who is on it and why | `--status` for one organisation, `--list` for all that differ from the default |
 
-**Billing handover (the owner, in the billing application):**
+**Sold on its own page, in three packages (owner 2026-11-04).** HexaTech Appointments has its own sign-in and
+sign-up pages (`/appointments/login`, `/appointments/register`, the same two-step card as Loyalty and Content) and
+is sold in Lite, Standard and Pro at 49, 85 and 149 € a month, 15 % less a month paid yearly, with the 7-day trial.
+Every trial starts on Standard (the plan slug `appointments`, the Appointments plan above); the owner or a manager
+changes package, adds Loyalty or Content, or pays, in Plan & products (`docs/plan-modules.md`). The packages differ by
+the team members clients can book (`max_booking_staff`: 2, 5, 15), checked by Setup → Team when one is added or
+switched back on (`402 plan_limit`), by staff sign-ins (2, 5, 15), locations and support.
 
-- a product with slug `appointments`;
-- a plan "Appointments" (slug `appointments`) with products `appointments` and `booking`, and its price, trial and
-  limits;
-- the sign-up page lists the plan as soon as billing does;
-- moving an existing customer onto it closes their full admin and stops their loyalty within 5 minutes, or at once
-  through the entitlement webhook;
-- when billing cannot be reached, the plan's fallback products are `appointments` and `booking`.
+**Billing handover:** `docs/plan-modules.md`, "Billing handover, 2026-11-04" (a patch for `hotel-tech-saas` and one
+`stripe:sync` command). When billing cannot be reached, the plan's fallback products are `appointments` and
+`booking`, and its features are the package's (`App\Support\PlanModules`). Moving an existing customer onto it
+closes their full admin and stops their loyalty within 5 minutes, or at once through the entitlement webhook.
 
-**Not on the plan yet:** editing service photos, the gallery and the long description (full admin only); billing
-self-service (plan and payment changes go through HexaTech).
+**Not on the plan yet:** editing service photos, the gallery and the long description (full admin only).
 
 ## Admin access map (every organisation)
 

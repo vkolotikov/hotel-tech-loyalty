@@ -22,7 +22,7 @@ describe('loginPathAfterExpiry', () => {
   it('brings a sign-in that ran out back to the same workspace page, on Loyalty\'s and Content\'s own sign-in pages', () => {
     expect(loginPathAfterExpiry('/content/posts', '?status=draft')).toBe('/content/login?redirect=%2Fcontent%2Fposts%3Fstatus%3Ddraft')
     expect(loginPathAfterExpiry('/content', '')).toBe('/content/login?redirect=%2Fcontent')
-    expect(loginPathAfterExpiry('/appointments/clients', '')).toBe('/login?redirect=%2Fappointments%2Fclients')
+    expect(loginPathAfterExpiry('/appointments/clients', '')).toBe('/appointments/login?redirect=%2Fappointments%2Fclients')
     expect(loginPathAfterExpiry('/loyalty/members/7', '')).toBe('/loyalty/login?redirect=%2Floyalty%2Fmembers%2F7')
   })
 

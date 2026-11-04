@@ -3,8 +3,10 @@
 The owner (2026-11-02): customers buy one product at a lower price and get only that product. Later they add the others,
 or move to another package. HexaTech Loyalty and HexaTech Content are each sold in three packages; Standard is the
 85 € one. Paid yearly, every package costs 15 % less a month. The Appointments plan
-(`docs/appointments-workspace.md`, "Selling Appointments on its own") was the first such plan; the logic covers all
-three products.
+(`docs/appointments-workspace.md`, "Selling Appointments on its own") was the first such plan. Since 2026-11-04
+(owner: "similar registration for the booking portal, same prices, you can make your own packages, same trial
+period, separate registration page") HexaTech Appointments is sold the same way, in three packages at Loyalty's
+prices, from `/appointments/register`. The logic covers all three products.
 
 ## Packages and prices
 
@@ -16,9 +18,12 @@ The prices are in EUR. Yearly is 12 months less 15 %.
 | Loyalty, yearly (a month / a year) | 41.65 / 499.80 | 72.25 / 867 | 126.65 / 1 519.80 |
 | Content, a month | 39 | 85 | 149 |
 | Content, yearly (a month / a year) | 33.15 / 397.80 | 72.25 / 867 | 126.65 / 1 519.80 |
+| Appointments, a month (2026-11-04) | 49 | 85 | 149 |
+| Appointments, yearly (a month / a year) | 41.65 / 499.80 | 72.25 / 867 | 126.65 / 1 519.80 |
 
-Both products together cost the sum of the two packages chosen (for example Loyalty Pro + Content Lite is 188 € a
-month).
+Two products together cost the sum of the two packages chosen (for example Loyalty Pro + Content Lite is 188 € a
+month). Billing sells each product alone and every pair; there is no plan of all three (that is the full suite), so
+Plan & products shows adding a third product as "Not available online yet".
 
 What each package grants is enforced by existing code: the member limit by `PlanLimitGuard` when a member is added,
 the team limit when a colleague is invited, campaigns, push and wallet by the routes' `feature:` middleware, and
@@ -33,7 +38,19 @@ Content's AI allowance by `ContentAiGate` (`ai_monthly_cost_cents`, a monthly AI
 | Monthly AI allowance | — | — | — | 8 $ | 20 $ | 50 $ |
 | Support | email | email | priority | email | email | priority |
 
-These are the owner's prices of 2026-11-02 and Claude's proposed limits. Billing's super admin (Plans) can change any
+| | Appointments Lite | Appointments Standard | Appointments Pro |
+|---|---|---|---|
+| Team members clients can book (`max_booking_staff`) | 2 | 5 | 15 |
+| Staff sign-ins (team members) | 2 | 5 | 15 |
+| Locations | 1 | 1 | 3 |
+| Support | email | email | priority |
+
+The bookable limit is enforced by `TeamSetup` (the workspace's Setup → Team) when a team member is added or switched
+back on: `402 plan_limit` with `limit` and `limit_key`. A smaller package is refused with `over_limit` while more
+team members can be booked than it allows. A plan with no `max_booking_staff` (every full customer) has no limit.
+The full admin's own Services → Masters screen does not check it; an organisation on modules cannot reach it.
+
+These are the owner's prices of 2026-11-02 (Appointments' of 2026-11-04) and Claude's proposed limits. Billing's super admin (Plans) can change any
 of them; the pages show billing's figures. This application's fallback (`App\Support\PlanModules`, used only when
 billing cannot be read) mirrors them.
 
@@ -78,19 +95,19 @@ and `loyalty_pro-content_lite`. Only that spelling is a module plan.
 
 | Address | What it is |
 |---|---|
-| `/loyalty/register`, `/content/register` | Sign-up for that product. The full suite's sign-up screen (email code, industry, trial) with the product's own words and its three packages from `GET /v1/modules`, monthly or yearly, Standard picked first. The trial is of the package chosen. When billing does not sell it yet, the page says so and starts no trial. |
-| `/loyalty/login`, `/content/login` (and `…/forgot-password`, `…/reset-password`) | The same accounts as `/login`. A signed-out visit to `/loyalty…` or `/content…` comes here. |
+| `/appointments/register`, `/loyalty/register`, `/content/register` | Sign-up for that product, one centred card in two steps (2026-11-03): email and password, then name, business name, type of business (tiles, asked only when the address names no industry) and phone with its country code; then the email code. Every trial is of the product's Standard package, monthly; the customer chooses the package in Plan & products. When billing does not sell it yet, the page says so and starts no trial. |
+| `/appointments/login`, `/loyalty/login`, `/content/login` (and `…/forgot-password`, `…/reset-password`) | The same accounts as `/login`. A signed-out visit to `/appointments…`, `/loyalty…` or `/content…` comes here. |
 | `/account/products` | **Plan & products**: the plan and its packages, status, monthly and yearly price. Owners and managers can pay monthly or yearly (trial, or an ended plan), open Card and invoices (paid), add a product in a package, change a product's package, or remove a product from a plan of two. Staff can read it. It sits outside every workspace and outside the subscription check, so a plan that ended can be started again. |
 | `/account/team` | **Team**: invite a colleague as manager or staff, change the role, switch someone off or on, send an invitation again. It uses the full admin's team endpoints (`admin/team`, product `account`), so the package's team limit applies. |
 
-The umbrella `/register` and the full admin's Billing page still list only the full plans and Appointments, because
-`/v1/plans` leaves the module plans to their own pages.
+The umbrella `/register` and the full admin's Billing page still list only the full plans and the Appointments plan
+(Standard), because `/v1/plans` leaves the other module plans to their own pages.
 
 ## The endpoints
 
 | Route | Who | What |
 |---|---|---|
-| `GET /v1/modules` | public | Every module plan with its packages, monthly and yearly amounts, currency, trial, features and `available`. Billing's rows are used where it lists them, and the built-in prices otherwise. `available: false` means billing was read and does not sell that plan. |
+| `GET /v1/modules` | public | Every module plan (each product in each package and every pair: 36) with its packages, monthly and yearly amounts, currency, trial, features and `available`. Billing's rows are used where it lists them, and the built-in prices otherwise. `available: false` means billing was read and does not sell that plan. |
 | `GET /v1/auth/modules` | staff (`auth/modules`, product `account`) | The organisation's modules and packages, plan, subscription status, and for each product the packages it could move to or be added in, with prices. |
 | `POST /v1/auth/modules/add {module, package}` | owner, manager | Adds a product in a package (Standard when none is named). |
 | `POST /v1/auth/modules/package {module, package}` | owner, manager | Moves a product to another package. |
@@ -151,11 +168,37 @@ To sell the plans:
 3. This application is already deployed. Before step 2, its new pages say the products cannot be bought yet. After
    it, `/loyalty/register` lists the packages with billing's prices.
 
-## Known limits (2026-11-02)
+## Billing handover, 2026-11-04: Appointments' packages
 
-- **Appointments with Loyalty or Content** needs billing plans such as `appointments-loyalty` and
-  `appointments-content`, with an Appointments price. The logic already handles them. Until they exist, Plan &
-  products says "Not available online yet".
+`docs/billing/2026-11-04-hotel-tech-saas-appointments-packages.patch`, one commit (checked on 4 Nov: it applies on
+billing `main` 44b3902; this session was refused push access there too). Its migration
+`2026_11_04_120000_add_appointments_packages` adds the feature `max_booking_staff`, the products `appointments` and
+`booking` where a database lacks them, and 21 hidden, unpriced plans: `appointments_lite`, `appointments`,
+`appointments_pro`, and Appointments with Loyalty or Content in every pair of packages. An `appointments` plan that
+is already sold (public or priced, for example made by hand in Plans) is left as it is and logged.
+
+1. In a checkout of `hotel-tech-saas`:
+
+   ```
+   git checkout main
+   git pull
+   git am <path to hotel-tech-loyalty>/docs/billing/2026-11-04-hotel-tech-saas-appointments-packages.patch
+   git push origin main
+   ```
+
+   Laravel Cloud deploys `main` and runs the migration (or run `php artisan migrate --force` in its Commands tab).
+2. In the billing application's Commands tab: `php artisan stripe:sync --module-plans --publish`. It prices and
+   publishes the 21 new plans and reuses the 15 it priced on 3 Nov.
+3. If an `appointments` plan already existed, check it in billing's Plans: price 85 € a month (867 € a year), trial
+   7 days, products `appointments` and `booking`, feature `max_booking_staff` 5. The migration does not change a sold
+   plan.
+
+Until step 2, `/appointments/register` says Appointments cannot be bought online yet (unless an `appointments` plan is
+already public), and adding Appointments in Plan & products says "Not available online yet".
+
+## Known limits (2026-11-02, updated 2026-11-04)
+
+- **All three products** have no billing plan; a customer who wants all three is sent to the full suite.
 - **Changing monthly to yearly on a paid plan** is done in Stripe's customer portal (Card and invoices), where the
   owner's Stripe portal settings allow it. Plan & products asks monthly or yearly only when paying for a trial or
   starting a plan again.
@@ -166,15 +209,16 @@ To sell the plans:
 
 ## Rules the code keeps (and the tests that keep them)
 
-- `tests/Unit/Support/PlanModulesTest.php`: slugs, packages, prices (yearly 15 % less), features.
+- `tests/Unit/Support/PlanModulesTest.php`: slugs, packages, prices (yearly 15 % less), features, Appointments' packages.
+- `tests/Feature/Appointments/Setup/SetupTeamEndpointTest.php`: the bookable team members limit.
 - `tests/Feature/AdminAccess/PlanModulesAccessTest.php`: workspaces, landing, access (Team included), loyalty off
   without the module, the operator's mark, the commands.
-- `tests/Feature/Auth/PlanModulesControllerTest.php`: the catalogue (15 plans), Plan & products, adding in a package,
+- `tests/Feature/Auth/PlanModulesControllerTest.php`: the catalogue (36 plans), Appointments' sign-up, Plan & products, adding in a package,
   changing package, removing, the limit guard, yearly payment, paid and unpriced plans, module sign-up, `/v1/plans`
   filtering.
 - `tests/Feature/LoyaltyWorkspace/SmsConnectionTest.php`: the Twilio account from the workspace; the token is never
   answered or audited.
 - Frontend: `workspace/lib/landing.test.ts`, `lib/api.refusals.test.ts`, `pages/productSignup.test.ts`,
   `pages/AccountProducts.test.tsx`, `pages/AccountTeam.test.tsx` and `pages/Login.product.test.tsx`.
-- Billing: `tests/Feature/ModulePlansTest.php` in `hotel-tech-saas` (PostgreSQL). It covers the 15 plans, the
-  features, `stripe:sync --module-plans` and the change-plan guard.
+- Billing: `tests/Feature/ModulePlansTest.php` in `hotel-tech-saas` (PostgreSQL). It covers the 36 plans (with the
+  2026-11-04 patch), the features, `stripe:sync --module-plans` and the change-plan guard.

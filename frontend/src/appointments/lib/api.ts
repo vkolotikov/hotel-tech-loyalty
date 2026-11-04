@@ -128,6 +128,8 @@ export interface ApiFailure {
   matches?: ClientSummary[]
   /** A refused form's messages by field (Laravel's `errors`). */
   fields?: Record<string, string[]>
+  /** `plan_limit`: the package's limit that was reached (Appointments' packages, 2026-11-04). */
+  limit?: number
 }
 
 /** What went wrong, from an axios error (or anything else that was thrown). Pure: no i18n, no side effects. */
@@ -147,5 +149,6 @@ export function failureOf(error: unknown): ApiFailure {
     current: data.current as AppointmentDetail | undefined,
     matches: data.matches as ClientSummary[] | undefined,
     fields: data.errors && typeof data.errors === 'object' ? (data.errors as Record<string, string[]>) : undefined,
+    limit: typeof data.limit === 'number' ? data.limit : undefined,
   }
 }

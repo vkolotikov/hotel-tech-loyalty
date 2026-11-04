@@ -37,7 +37,7 @@ use Illuminate\Support\Facades\Http;
 class PlanModulesController extends Controller
 {
     /** Limits a smaller package may not go below what the organisation already has. */
-    private const KEPT_LIMITS = [PlanLimitGuard::KEY_MEMBERS, PlanLimitGuard::KEY_TEAM];
+    private const KEPT_LIMITS = [PlanLimitGuard::KEY_MEMBERS, PlanLimitGuard::KEY_TEAM, PlanLimitGuard::KEY_BOOKING_STAFF];
 
     public function __construct(private readonly SaasBilling $billing)
     {
@@ -320,7 +320,11 @@ class PlanModulesController extends Controller
                 $limit = self::limit($features[$key] ?? null);
                 $count = app(PlanLimitGuard::class)->usage($key)['count'];
                 if ($limit !== null && $count > $limit) {
-                    $what = $key === PlanLimitGuard::KEY_MEMBERS ? 'members' : 'active team members';
+                    $what = match ($key) {
+                        PlanLimitGuard::KEY_MEMBERS => 'members',
+                        PlanLimitGuard::KEY_BOOKING_STAFF => 'team members who can be booked',
+                        default => 'active team members',
+                    };
 
                     return response()->json([
                         'error' => 'over_limit', 'limit_key' => $key, 'limit' => $limit, 'count' => $count,
@@ -472,7 +476,9 @@ class PlanModulesController extends Controller
     }
 
     /**
-     * Every choice of packages of the modules sold alone: each product in each package, then both together.
+     * Every choice of packages of the modules sold alone: each product in each package, then every pair. Billing sells
+     * no plan of all three (2026-11-04: Appointments joined Loyalty and Content; three products is the full suite), so
+     * a choice of three is not listed and reads as not available.
      *
      * @return list<array<string, string>>
      */
@@ -491,7 +497,7 @@ class PlanModulesController extends Controller
             $choices = $next;
         }
         foreach ($choices as $choice) {
-            if ($choice !== []) {
+            if ($choice !== [] && count($choice) <= 2) {
                 $out[] = PlanModules::selection($choice);
             }
         }
