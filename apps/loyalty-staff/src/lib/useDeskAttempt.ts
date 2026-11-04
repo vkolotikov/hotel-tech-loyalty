@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { usePreventRemove } from 'expo-router'
 import { useSession } from './session'
 import { useBoot } from './queries'
-import { attemptScope, deskAttempts, outcomeUncertain, type DeskAttempt } from './attempts'
+import { attemptScope, deskAttempts, outcomeUncertain, recordedAttempt, type DeskAttempt } from './attempts'
 import { failureOf } from './failure'
 import { errorKey } from './desk'
 import { api, type AttemptStatus } from './api'
@@ -85,6 +85,7 @@ export function useDeskAttempt(member: number, action: 'award' | 'redeem' | 'che
       const result = await api.attemptStatus(member, action, resume.current)
       if (useSession.getState().token !== token) return
       if (result.state === 'unknown') { setFailure('recovery.unknown'); return }
+      if (!recordedAttempt(result)) throw new Error('invalid_attempt_receipt')
       await deskAttempts.finish(scope)
       if (useSession.getState().token !== token) return
       resume.current = null
