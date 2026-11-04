@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
 import {
-  ActivityIndicator, Animated, Platform, Pressable, StyleSheet, Switch, Text, TextInput, View,
+  ActivityIndicator, Animated, Platform, Pressable, StyleSheet, Switch, Text, TextInput, View, useWindowDimensions,
   type StyleProp, type TextInputProps, type TextStyle, type ViewStyle,
 } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
@@ -256,19 +256,21 @@ export function Empty({ icon, text }: { icon: IconName; text: string }) {
 /** Equal-height tabs, with centred Android type and optional pictograms. */
 export function Segments<T extends string>({ value, items, onChange, iconOnly = false }: { value: T; items: { id: T; label: string; count?: number; icon?: IconName; symbol?: string }[]; onChange: (id: T) => void; iconOnly?: boolean }) {
   const { solid } = useContext(Appearance)
+  const { width, fontScale } = useWindowDimensions()
+  const stacked = !iconOnly && (fontScale >= 1.4 || (width < 360 && items.some(item => item.label.length > 9)))
   return (
-    <View style={styles.segments} accessibilityRole="tablist">
+    <View style={[styles.segments, stacked && { flexDirection: 'column' }]} accessibilityRole="tablist">
       {items.map(item => {
         const on = item.id === value
         return (
-          <Pressable key={item.id} accessibilityRole="tab" accessibilityLabel={item.count ? `${item.label}, ${item.count}` : item.label} accessibilityState={{ selected: on }} onPress={() => { feel.tap(); onChange(item.id) }} style={{ flex: 1, minWidth: 0 }}>
-          <EclipseSurface fill solid={solid} tone={on ? 'attention' : 'quiet'} radius={24} style={[styles.segment, !iconOnly && item.icon ? { minHeight: 72 } : null]}>
+          <Pressable key={item.id} accessibilityRole="tab" accessibilityLabel={item.count ? `${item.label}, ${item.count}` : item.label} accessibilityState={{ selected: on }} onPress={() => { feel.tap(); onChange(item.id) }} style={{ flex: stacked ? undefined : 1, minWidth: 0 }}>
+          <EclipseSurface fill={!stacked} solid={solid} tone={on ? 'attention' : 'quiet'} radius={24} style={[styles.segment, !iconOnly && item.icon ? { minHeight: 72 } : null, stacked && { flexDirection: 'row', minHeight: 54, gap: 10, paddingHorizontal: 14 }]}>
             {item.icon && <Glyph name={item.icon} size={iconOnly ? 25 : 21} color={on ? C.goldLight : C.text2} />}
             {item.symbol && <Text accessible={false} style={[fonts.segmentSymbol, { color: on ? C.goldLight : C.text2 }]}>{item.symbol}</Text>}
-            {(!iconOnly || (!item.icon && !item.symbol)) && <Text style={[fonts.segment, { color: on ? C.text : C.text2 }]}>{item.label}</Text>}
+            {(!iconOnly || (!item.icon && !item.symbol)) && <Text style={[fonts.segment, { color: on ? C.text : C.text2, alignSelf: stacked ? undefined : 'stretch', flexShrink: 1 }]}>{item.label}</Text>}
             {item.count !== undefined && item.count > 0 && (
-              <View style={styles.segmentCount}>
-                <Text style={[fonts.segmentCount, { color: C.gold }]}>{item.count > 99 ? '99+' : item.count}</Text>
+              <View style={[styles.segmentCount, stacked && { position: 'relative', top: 0, right: 0 }]}>
+                <Text maxFontSizeMultiplier={1.2} style={[fonts.segmentCount, { color: C.gold }]}>{item.count > 99 ? '99+' : item.count}</Text>
               </View>
             )}
           </EclipseSurface></Pressable>
