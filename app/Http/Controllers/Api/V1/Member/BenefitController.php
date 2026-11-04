@@ -183,7 +183,15 @@ class BenefitController extends Controller
             ], 422);
         }
 
-        $entitlement->update(['status' => 'cancelled']);
+        // Only while it is still open (2026-11-04): staff approving it at the same moment must not be overwritten
+        // with "cancelled" for a benefit already handed over.
+        $cancelled = BenefitEntitlement::whereKey($entitlement->id)->where('member_id', $member->id)
+            ->whereIn('status', ['pending', 'eligible'])->update(['status' => 'cancelled', 'updated_at' => now()]);
+        if ($cancelled === 0) {
+            return response()->json([
+                'message' => 'That request has already been actioned and can no longer be cancelled.',
+            ], 422);
+        }
 
         return response()->json(['message' => 'Request cancelled.']);
     }
