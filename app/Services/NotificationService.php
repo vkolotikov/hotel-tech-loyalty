@@ -25,6 +25,20 @@ class NotificationService
         ]);
     }
 
+    /**
+     * Points a member used at the desk (2026-11-05: the staff app's Redeem told the member nothing, so their app kept
+     * the old balance until it asked again; the push makes it refresh, as an award's does).
+     */
+    public function sendPointsRedeemed(LoyaltyMember $member, int $points): void
+    {
+        $this->send($member, [
+            'type'  => 'points_redeemed',
+            'title' => "You used {$points} points",
+            'body'  => "Your balance is now {$member->current_points} points.",
+            'data'  => ['points' => $points, 'balance' => $member->current_points],
+        ]);
+    }
+
     public function sendTierUpgradeNotification(LoyaltyMember $member, LoyaltyTier $newTier): void
     {
         $this->send($member, [
@@ -118,6 +132,7 @@ class NotificationService
      */
     public const TYPE_TO_CATEGORY = [
         'points_earned'   => 'points',
+        'points_redeemed' => 'points', // 2026-11-05: points used at the desk, so the member's app shows the new balance
         'points_expiry'   => 'points',
         'stamp_card_full' => 'points', // release 7: a full stamp card is what it gave, like points earned
         'tier_upgrade'    => 'tier',

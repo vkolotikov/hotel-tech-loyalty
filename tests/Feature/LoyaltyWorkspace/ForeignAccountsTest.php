@@ -217,4 +217,26 @@ class ForeignAccountsTest extends TestCase
         $this->assertSame($before, $this->snapshot($owner));
         $this->artisan('loyalty:foreign-accounts')->expectsOutputToContain('No membership')->assertSuccessful();
     }
+
+    public function test_the_deploy_repairs_links_made_before_once_and_audits_each_with_the_old_account(): void
+    {
+        // Owner, 2026-11-05: nothing typed by hand; the migration runs the repair on deploy.
+        $owner = $this->foreignOwner();
+        $member = $this->foreignLinkedMember($owner);
+        $before = $this->snapshot($owner);
+        $migration = require database_path('migrations/2026_11_05_090000_detach_foreign_member_accounts.php');
+
+        $migration->up();
+        $migration->up();
+
+        $member = $member->fresh('user');
+        $this->assertTrue(OwnAccount::holds($member));
+        $this->assertSame($before, $this->snapshot($owner));
+        $this->assertSame((int) $this->ada->user_id, (int) $this->ada->fresh()->user_id);
+        $audits = \App\Models\AuditLog::withoutGlobalScopes()->where('action', 'member.account_detached')->get();
+        $this->assertCount(1, $audits);
+        $this->assertSame([(int) $this->org->id, (int) $member->id], [(int) $audits[0]->organization_id, (int) $audits[0]->subject_id]);
+        $this->assertSame(['user_id' => $owner->id, 'account_type' => 'staff', 'account_organization_id' => (int) $this->elsewhere['org']->id], $audits[0]->old_values);
+        $this->assertSame(['user_id' => (int) $member->user_id], $audits[0]->new_values);
+    }
 }

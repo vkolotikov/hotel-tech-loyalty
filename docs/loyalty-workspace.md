@@ -765,8 +765,11 @@ each closed with a test that fails on the code before the fix.
     for one venue); `php artisan loyalty:foreign-accounts --detach` gives each its own account (named from the venue's
     own guest record, address `unlinked-member-<member id>@unlinked.local`, no known password). The membership keeps
     its number, points and history; nobody signs in to it until staff set an address in Edit details (one no other member
-    account has: a member's address is unique across all organisations, `users_email_member_unique`). Run the list
-    after the deploy, then `--detach`.
+    account has: a member's address is unique across all organisations, `users_email_member_unique`). The migration
+    `2026_11_05_090000_detach_foreign_member_accounts` ran the repair once on deploy (owner, 2026-11-05: nothing typed
+    by hand), each audited `member.account_detached` with the old account id (undo: point `user_id` back); its count
+    is in the deploy's log line `detach_foreign_member_accounts`. Nobody could use such a membership: the members' app
+    and the portal sign in members only, and a member sees only their own venue's membership.
 - **The CRM assistant asks the person's own rights** (`CrmAiToolset`, `CrmVoiceToolset`). Its routes let every staff
   member of a CRM organisation in, and its tools wrote with no rights of their own: anyone could have it award or redeem
   points (up to 100,000 a call by chat, 1,000,000 by voice), read every secret setting raw (Stripe, Twilio, mail, PMS)
@@ -783,9 +786,11 @@ each closed with a test that fails on the code before the fix.
   started the review: points changed in the staff app did not show in the members' app. An Award pushes "You earned N
   points"; a desk check-in or purchase (`DeskVisit`) and an event check-in (`EventCheckIn`) wrote the points and sent
   nothing, so the app kept its old balance until it next asked. They now send the same notice after their transaction,
-  once per new line (never for a request sent again); the push also makes the members' app refresh. Redeeming and
-  reversing still send nothing: the members' app and the portal ask again on their own (every 30 s on the app's Home,
-  60 s on the portal, and on return to either).
+  once per new line (never for a request sent again); the push also makes the members' app refresh. Since 2026-11-05
+  a Redeem at the desk (`Admin\Loyalty\PointsController::redeem()`, the staff app's) sends "You used N points"
+  (`points_redeemed`, the points category) the same way, because the members' app 2.0.0 refreshes on a push but not on
+  its own. A manager's Reverse still sends nothing: the members' app from 2.0.1 and the portal ask again on their own
+  (every 30 s on the app's Home, 60 s on the portal, and on return to either).
 - Tests: `ForeignAccountsTest`, `CrmAiRightsTest`, `SwitchedOffMemberTest` (`tests/Feature/LoyaltyWorkspace/`),
   `tests/Feature/Member/MemberChatAccessTest.php`; the notices in `DeskVisitTest` and `EventCheckInTest`.
 
@@ -793,8 +798,10 @@ Second batch, the same day (smaller holes):
 
 - **Pushes carry the platform's Expo access token** (`NotificationService::expo()`, `services.expo.access_token` from
   `EXPO_ACCESS_TOKEN`). The Settings field `expo_access_token` was stored and tested but never sent, so a project with
-  Expo's "Enhanced push security" on would have every push refused. Set `EXPO_ACCESS_TOKEN` in Laravel Cloud to an
-  access token of the Expo account that owns both apps; empty sends as before. Receipts are read the same way.
+  Expo's "Enhanced push security" on would have every push refused. Empty sends as before; receipts are read the same
+  way. Checked 2026-11-05 through Expo's API: push security is **off** on both projects (`@hoteltechai/hotel-loyalty`,
+  `@hoteltechai/hexatech-loyalty-staff`), so nothing is to be set. Should it be switched on, set `EXPO_ACCESS_TOKEN` in
+  Laravel Cloud first.
 - **A tier notice goes after the commit** (`LoyaltyService::assessTier()`, `DB::afterCommit`): it waited on Expo
   inside the points write, under the member row's lock, and a write that rolled back still announced the new tier.
 - **A member cancels a benefit request only while it is open**: one conditional update, so staff approving it at the
@@ -937,6 +944,17 @@ files on disk): run them one after the other.
 
 ## Deploying
 
+- Security review, second batch (2026-11-04): production **70d52cbde** on **983572728**, a source patch only (the
+  fresh SPA build is identical to main's). Feature source **12c536293** on `fix/pre-launch-batch-2`. 11 paths (1 added,
+  10 changed), none deleted, no migration: the section's "Second batch" above, and the runbook and handoff entries.
+  - **Checks:** parity, the whole source tree equal to the tip; artifact: `tsc -b`, Vitest 404 files / 5,845 tests;
+    PHP 8.5.12 LoyaltyWorkspace 646 passed with the same 10 picture and file failures, Member 364, Loyalty 383,
+    Auth 57, AdminAccess 78, Booking 591 passed; CI green on all 8 jobs, PostgreSQL included (run 41931008604, on
+    52ca0df5a; the two commits after it are docs only).
+  - Verified by content on `origin/main` (each fix's line); not on the live site.
+  - **After it:** nothing (Expo push security is off on both projects, checked 2026-11-05).
+  - The next source delta starts at **12c536293**.
+
 - Security review before the public launch, and members see their points move (owner, 2026-11-04): production
   **983572728** on **a8b45e629**, source patch **66bc96753** plus its SPA build. Feature source **50abe6993** on
   `fix/cross-organisation-accounts`. 33 paths (7 added, 26 changed), none deleted, no migration.
@@ -953,7 +971,7 @@ files on disk): run them one after the other.
   - Verified by content on `origin/main`: the new files, each fix's line, the portal chunk's `refetchInterval:6e4`
     (absent from a8b45e629's), the five Symfony versions. Not on the live site (this container cannot reach
     `app.hexa-tech.uk`).
-  - **After it, once:** `php artisan loyalty:foreign-accounts`, then `php artisan loyalty:foreign-accounts --detach`.
+  - **After it, once:** the repair of links made before (done by the next deploy's migration, 2026-11-05).
   - The next source delta starts at **50abe6993**.
 
 - CRM assistant on the Anthropic SDK (stack plan follow-up, owner "do next", 2026-11-02): production **33d4f74** on

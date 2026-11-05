@@ -10,8 +10,11 @@ potential issues which could be before we launch loyalty public". The server alw
 never asked again, and desk visits sent no push. Fixed in three places:
 
 - **Members' app** (`feature/loyalty-member-app` **3ddcdc3ec**, on top of the build 20 that is in App Review): figures
-  are asked again on focus, on return to the app, every 30 s on Home, and after any push. It reaches members only in
-  the next store build (21); build 20 does not have it.
+  are asked again on focus, on return to the app, every 30 s on Home, and after any push. 2.0.0 (iOS 20, Android 26,
+  both in store review) does not have it, but does refresh on a push, and the server now pushes on every desk award,
+  check-in, purchase and redeem. **2.0.1** (**165e3475b**: iOS 21, Android 27, built on EAS 2026-11-05) carries it,
+  so the reviews in progress were not restarted; it follows 2.0.0 once both stores approve (see the app's
+  `02-RELEASE.md`).
 - **Member portal** (deployed, below): the bootstrap is fresh for 10 s, asked again on return to the tab and every 60 s.
 - **Server** (deployed): desk check-ins, purchases and event check-ins push "You earned N points", as an Award does.
 
@@ -20,9 +23,9 @@ before the public launch (2026-11-04)"):
 
 1. **Cross-organisation account takeover (the blocker).** A guest created anywhere was wrapped around ANY account with
    the same address, other venues' members and staff logins included; Edit details, erasure and merge then wrote that
-   account. Fixed through `Loyalty\Members\OwnAccount`. **The owner runs, once, after the deploy:**
-   `php artisan loyalty:foreign-accounts` (lists the links made before) and then
-   `php artisan loyalty:foreign-accounts --detach`.
+   account. Fixed through `Loyalty\Members\OwnAccount`. The links made before are repaired by the migration
+   `2026_11_05_090000_detach_foreign_member_accounts` on deploy (owner, 2026-11-05: "I do not make any manual
+   activities"), each one audited `member.account_detached`.
 2. The CRM assistant's tools ask the person's own rights for points and settings and never answer a secret setting.
 3. The members' chat answers 404 to a staff token (it read and wrote visitors' chats).
 4. A switched-off member's own redeem, offer claim and benefit request are refused (403 `member_inactive`).
@@ -35,9 +38,11 @@ Production: see "Deploying" in `docs/loyalty-workspace.md` for the two deploys o
 by content on the live site** (this container cannot reach `app.hexa-tech.uk`); checked on `origin/main` instead. The
 owner checks: the portal's Home shows a staff award within a minute without a reload.
 
-**For the owner, not done here:** set `EXPO_ACCESS_TOKEN` in Laravel Cloud if the Expo projects have "Enhanced push
-security" on (or leave it empty); build and submit members' app 21 with the refresh fix; delete the `EXPO_TOKEN` secret
-in the retired `hotel-tech-loyalty-mobile` repository. Decisions still open are listed at the end of the runbook section.
+**For the owner:** nothing to type in Laravel Cloud. The old links are repaired by a migration on deploy; Expo push
+security is off on both projects (checked 2026-11-05), so `EXPO_ACCESS_TOKEN` stays empty. After Apple and Google approve
+2.0.0, members' app 2.0.1 goes to review (on Play an agent can do it with EAS; on the App Store version 2.0.1 is made in
+App Store Connect and build 21 chosen). The retired `hotel-tech-loyalty-mobile` repository's `EXPO_TOKEN` secret is unused
+since its workflow was removed; deleting it is tidy-up only. Decisions still open are at the end of the runbook section.
 
 ## 4 Nov: Appointments sold on its own, and the type-of-business tiles (the owner merges)
 
