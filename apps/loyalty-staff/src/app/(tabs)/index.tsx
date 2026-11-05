@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react'
-import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native'
+import { RefreshControl, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native'
 import { useRouter } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
@@ -8,7 +8,7 @@ import { number } from '../../lib/format'
 import { useT } from '../../lib/i18n'
 import { failureOf } from '../../lib/failure'
 import { errorKey } from '../../lib/desk'
-import { ECLIPSE as E, fonts } from '../../lib/theme'
+import { CONTENT_MAX_WIDTH, ECLIPSE as E, fonts } from '../../lib/theme'
 import { useEclipseAppearance } from '../../lib/useEclipseAppearance'
 import { Notice, Press } from '../../components/ui'
 import { EclipseAtmosphere, EclipseScan, EclipseSurface, EclipseTile, useEclipseBorderLight } from '../../components/Eclipse'
@@ -17,6 +17,9 @@ import { EclipseAtmosphere, EclipseScan, EclipseSurface, EclipseTile, useEclipse
 export default function Home() {
   const router = useRouter()
   const insets = useSafeAreaInsets()
+  const { width, height } = useWindowDimensions()
+  const tileSize = (Math.min(width, CONTENT_MAX_WIDTH) - 2 * E.inset - E.gap) / 2
+  const scanSize = Math.max(168, Math.min(240, height - insets.top - insets.bottom - 112 - 66 - E.gap * 3 - 2 * tileSize))
   const { t, language } = useT()
   const boot = useBoot()
   const queue = useQueueCounts()
@@ -43,7 +46,7 @@ export default function Home() {
     <View style={styles.page}>
       <EclipseAtmosphere solid={appearance.solid} />
       <ScrollView showsVerticalScrollIndicator={false}
-        contentContainerStyle={[styles.content, { paddingTop: insets.top + 24, paddingBottom: insets.bottom + 112 }]}
+        contentContainerStyle={[styles.content, { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 112 }]}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { void refresh() }} tintColor={E.accent} colors={[E.accent]} progressBackgroundColor={E.surface} />}
       >
         <View style={styles.header}>
@@ -55,15 +58,15 @@ export default function Home() {
           </Press>
         </View>
         {boot.isError && <Notice text={t(errorKey(failureOf(boot.error).code))} action={t('common.retry')} onAction={() => { void boot.refetch() }} />}
-        <EclipseScan label={t('home.scan')} onPress={() => router.navigate('/scan')} phase={reflection} {...appearance} />
+        <View style={{ alignSelf: 'center' }}><EclipseScan size={scanSize} label={t('home.scan')} onPress={() => router.navigate('/scan')} phase={reflection} {...appearance} /></View>
         <View style={styles.grid}>
           <View style={styles.row}>
-            <EclipseTile label={t('tab.members')} icon="members" onPress={() => router.navigate('/members')} phase={reflection} order={1} {...appearance} />
-            <EclipseTile label={t('tab.requests')} icon="requests" onPress={() => router.navigate('/requests')} badge={badge} busy={queue.isPending} problem={queue.isError} accessibilityLabel={t('tab.requests') + '. ' + requestState} phase={reflection} order={2} {...appearance} />
+            <EclipseTile size={tileSize} label={t('tab.members')} icon="members" onPress={() => router.navigate('/members')} phase={reflection} order={1} {...appearance} />
+            <EclipseTile size={tileSize} label={t('tab.requests')} icon="requests" onPress={() => router.navigate('/requests')} badge={badge} busy={queue.isPending} problem={queue.isError} accessibilityLabel={t('tab.requests') + '. ' + requestState} phase={reflection} order={2} {...appearance} />
           </View>
           <View style={styles.row}>
-            {boot.data?.staff.can.view_insights && <EclipseTile label={t('home.activityLink')} icon="activity" onPress={() => router.push('/activity')} phase={reflection} order={3} {...appearance} />}
-            <EclipseTile label={t('tab.more')} icon="more" onPress={() => router.navigate('/more')} phase={reflection} order={4} {...appearance} />
+            {boot.data?.staff.can.view_insights && <EclipseTile size={tileSize} label={t('home.activityLink')} icon="activity" onPress={() => router.push('/activity')} phase={reflection} order={3} {...appearance} />}
+            <EclipseTile size={tileSize} label={t('tab.more')} icon="more" onPress={() => router.navigate('/more')} phase={reflection} order={4} {...appearance} />
           </View>
         </View>
         {queue.isError && <Notice tone="warning" text={t('requests.refreshError')} action={t('common.retry')} onAction={() => { void queue.refetch() }} />}
@@ -74,8 +77,8 @@ export default function Home() {
 
 const styles = StyleSheet.create({
   page: { flex: 1, backgroundColor: E.bg, overflow: 'hidden' },
-  content: { paddingHorizontal: E.inset, gap: 24 },
-  header: { minHeight: 70, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 20 },
+  content: { paddingHorizontal: E.inset, gap: E.gap },
+  header: { minHeight: 50, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: E.gap },
   profile: { width: 46.4, height: 46.4, alignItems: 'center', justifyContent: 'center' },
   venue: { ...fonts.title, color: E.text, flex: 1 },
   grid: { gap: E.gap },

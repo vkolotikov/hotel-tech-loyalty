@@ -16,11 +16,11 @@ export const C = {
   text2: '#aab1be',
   text3: '#aab1be',
 
-  gold: '#f3c582',
-  goldLight: '#f5d5a5',
-  goldDeep: '#b58b54',
-  goldWash: 'rgba(243,197,130,0.12)',
-  goldEdge: 'rgba(243,197,130,0.35)',
+  gold: '#f5d28a',
+  goldLight: '#ffe8b6',
+  goldDeep: '#c79e49',
+  goldWash: 'rgba(245,210,138,0.12)',
+  goldEdge: 'rgba(245,210,138,0.48)',
   onGold: '#1b1711',
 
   success: '#a2cdb3',
@@ -37,7 +37,7 @@ export const C = {
 }
 
 /** The gold of buttons and the active tab: light at the top, deep at the foot, as polished metal. */
-export const GOLD_GRADIENT = ['#f5d5a5', '#f3c582', '#b58b54'] as const
+export const GOLD_GRADIENT = ['#ffe8b6', '#f5d28a', '#c79e49'] as const
 /** The page's backdrop: a faint warm glow at the top fading into the navy. */
 export const BACKDROP = ['#121521', '#0a0c14', '#07090f'] as const
 
@@ -81,19 +81,20 @@ export const SHADOW = {
 
 /** Approved Eclipse materials, shared by Home and every operational screen. */
 export const ECLIPSE = {
-  bg: '#080b10', surface: '#17191f', text: '#f6f2ea', muted: '#aab1be', accent: '#f3c582', ink: '#1b1711',
+  bg: '#080b10', surface: '#17191f', text: '#f6f2ea', muted: '#aab1be', accent: '#f5d28a', ink: '#1b1711',
   edge: 'rgba(224,234,255,0.85)', quietEdge: 'rgba(212,226,250,0.45)',
-  rim: ['#687280', '#343842', '#232831', '#72604a'] as const,
-  scan: ['rgba(105,119,143,0.84)', 'rgba(48,52,63,0.98)', '#151820', '#25211d', 'rgba(147,104,62,0.84)'] as const,
+  rim: ['#8495ab', '#343d4c', '#232b38', '#857348'] as const,
+  activeRim: ['#fff0c6', '#d7b36c', '#514738', '#edc679'] as const,
+  scan: ['rgba(105,129,160,0.9)', 'rgba(38,48,63,0.98)', '#121922', '#24221d', 'rgba(210,163,78,0.88)'] as const,
   scanStops: [0, 0.2, 0.52, 0.83, 1] as const,
-  tile: ['rgba(63,65,73,0.88)', 'rgba(32,35,44,0.94)', '#11151c', 'rgba(48,39,30,0.9)'] as const,
-  attention: ['rgba(181,139,84,0.8)', 'rgba(75,59,42,0.9)', '#222026', 'rgba(51,41,31,0.9)'] as const,
-  loginButton: ['#f5d5a5', '#9b7948', '#493b2d', '#28252a', '#d9a65d'] as const,
+  tile: ['rgba(64,77,95,0.9)', 'rgba(28,35,46,0.95)', '#101722', '#1c2027'] as const,
+  attention: ['rgba(231,188,107,0.9)', 'rgba(96,80,50,0.94)', '#25262c', 'rgba(124,102,60,0.92)'] as const,
+  loginButton: ['#ffe8b6', '#b18f50', '#4c412e', '#29272a', '#edc679'] as const,
   loginStops: [0, 0.17, 0.45, 0.78, 1] as const,
   tileStops: [0, 0.32, 0.7, 1] as const,
   dock: ['rgba(59,61,69,0.8)', 'rgba(29,30,37,0.9)', 'rgba(12,16,22,0.96)'] as const,
   // Still smoked-glass faces, with a fine travelling light confined to the rim.
-  borderLight: { width: 1.1, halo: '#efbc77', core: '#fff4d8' },
+  borderLight: { width: 1.1, halo: '#f4cf8b', core: '#fff3d5' },
   wallpaper: { scrim: ['rgba(8,11,16,0.18)', 'rgba(8,11,16,0.04)', 'rgba(8,11,16,0.16)'] as const },
   mirror: {
     edge: ['rgba(229,240,255,0)', 'rgba(242,248,255,0.70)', 'rgba(229,240,255,0)'] as const,
@@ -101,7 +102,7 @@ export const ECLIPSE = {
     dockShadow: '0 10px 28px rgba(0,0,0,0.32)',
   },
   motion: { borderCycle: 10000, dockTravel: 320, touchIn: 130, touchOut: 240 },
-  inset: 24, gap: 16, scanRadius: 44, tileRadius: 26, dockRadius: 32, dockHeight: 64,
+  inset: 20, gap: 12, scanRadius: 40, tileRadius: 24, dockRadius: 30, dockHeight: 64,
   // Use Android's system face; SF Pro belongs to the iPhone design, not the Android bundle.
   type: {
     brand: { fontSize: 22, lineHeight: 29, fontWeight: '600' as const },

@@ -50,7 +50,7 @@ export default function SignIn() {
 
   return <Backdrop>
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
-      <ScrollView contentContainerStyle={[styles.page, { paddingTop: insets.top + 32, paddingBottom: insets.bottom + 20 }]}
+      <ScrollView contentContainerStyle={[styles.page, { paddingTop: insets.top + 24, paddingBottom: insets.bottom + 20 }]}
         keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
         <View style={styles.content}>
           <View style={styles.intro}>
@@ -121,8 +121,8 @@ function LoginField({ children, icon, phase, order, solid }: {
 
 const styles = StyleSheet.create({
   page: { paddingHorizontal: 28, flexGrow: 1, justifyContent: 'center' },
-  content: { width: '100%', maxWidth: 440, alignSelf: 'center', gap: 32 },
-  intro: { alignItems: 'center', gap: 28 },
+  content: { width: '100%', maxWidth: 440, alignSelf: 'center', gap: 28 },
+  intro: { alignItems: 'center', gap: 22 },
   heading: { alignItems: 'center', gap: 4 },
   title: { ...E.type.loginTitle, color: C.text, textAlign: 'center' },
   subtitle: { ...E.type.loginSubtitle, color: C.text2, textAlign: 'center' },

@@ -1,13 +1,12 @@
-import { ScrollView } from 'react-native'
+import { ScrollView, View, useWindowDimensions } from 'react-native'
 import * as WebBrowser from 'expo-web-browser'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { WEB_BASE } from '../../lib/api'
 import { useBoot } from '../../lib/queries'
 import { useT, type Key } from '../../lib/i18n'
 import type { Can } from '../../lib/types'
-import { C, TAB_BAR_ROOM } from '../../lib/theme'
-import { Backdrop, IconBadge, PageHeading, Row, type IconName } from '../../components/ui'
-import { Glyph } from '../../components/Glyph'
+import { ECLIPSE as E, TAB_BAR_ROOM } from '../../lib/theme'
+import { ActionTile, Backdrop, PageHeading, type IconName } from '../../components/ui'
 
 const PAGES: { path: string; label: Key; icon: IconName; permission?: keyof Can }[] = [
   { path: 'program', label: 'more.program', icon: 'shield-checkmark-outline' },
@@ -22,11 +21,15 @@ export default function More() {
   const insets = useSafeAreaInsets()
   const { t } = useT()
   const boot = useBoot()
-  return <Backdrop><ScrollView contentContainerStyle={{ paddingTop: insets.top + 20, paddingHorizontal: 24, paddingBottom: TAB_BAR_ROOM, gap: 12 }}>
+  const { fontScale } = useWindowDimensions()
+  const pages = PAGES.filter(p => !p.permission || boot.data?.staff.can[p.permission])
+  const columns = fontScale >= 1.4 ? 1 : 2
+  return <Backdrop><ScrollView contentContainerStyle={{ paddingTop: insets.top + 16, paddingHorizontal: E.inset, paddingBottom: TAB_BAR_ROOM, gap: E.gap }}>
     <PageHeading title={t('more.title')} />
-    {PAGES.filter(p => !p.permission || boot.data?.staff.can[p.permission]).map(p => <Row card key={p.path} title={t(p.label)}
-      left={<IconBadge name={p.icon} color={C.text} />}
-      right={<Glyph name="open-outline" size={17} color={C.text2} />}
-      onPress={() => { void WebBrowser.openBrowserAsync(`${WEB_BASE}/loyalty/${p.path}`) }} />)}
+    {Array.from({ length: Math.ceil(pages.length / columns) }, (_, row) => <View key={row} style={{ flexDirection: 'row', gap: E.gap }}>
+      {pages.slice(row * columns, (row + 1) * columns).map(p => <ActionTile external style={{ flex: 1 }} key={p.path} title={t(p.label)} icon={p.icon}
+        onPress={() => { void WebBrowser.openBrowserAsync(`${WEB_BASE}/loyalty/${p.path}`) }} />)}
+      {columns === 2 && row * columns + 1 === pages.length && <View style={{ flex: 1 }} />}
+    </View>)}
   </ScrollView></Backdrop>
 }

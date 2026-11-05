@@ -139,6 +139,7 @@ export const es: Record<Key, string> = {
   'scan.title': 'Escanear',
   'scan.for': 'Escaneando para',
   'scan.desk': 'La recepción',
+  'scan.tap': 'Toque para escanear',
   'scan.qrHint': 'Apunte la cámara al código QR del miembro',
   'scan.nfc': 'Acercar una tarjeta',
   'scan.nfcHint': 'Sostenga la tarjeta cerca de la parte superior del teléfono',

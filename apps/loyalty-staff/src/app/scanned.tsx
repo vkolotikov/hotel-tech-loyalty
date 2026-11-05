@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { api } from '../lib/api'
 import { KEYS, tierOf, useBoot, useScan } from '../lib/queries'
 import { useT } from '../lib/i18n'
+import { ECLIPSE as E } from '../lib/theme'
 import { Backdrop, GhostButton, GoldButton, Notice, PageHeading, SectionTitle, Shimmer, Surface } from '../components/ui'
 import { Sheet } from '../components/Sheet'
 import { MemberCard } from '../components/MemberCard'
@@ -38,7 +39,7 @@ export default function Scanned() {
 
   return (
     <Backdrop>
-      <ScrollView contentContainerStyle={{ paddingTop: insets.top + 12, paddingBottom: insets.bottom + 24, paddingHorizontal: 24, gap: 18 }}>
+      <ScrollView contentContainerStyle={{ paddingTop: insets.top + 12, paddingBottom: insets.bottom + 24, paddingHorizontal: E.inset, gap: E.gap }}>
         <PageHeading title={t('scan.result')} profile={false} />
 
         <VerdictBanner answer={answer} />

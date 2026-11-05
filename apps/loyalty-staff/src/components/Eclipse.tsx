@@ -127,7 +127,7 @@ export function EclipseSurface({ children, tone = 'quiet', radius = E.tileRadius
   const [size, setSize] = useState({ width: 170, height: 106 })
   const colors = tone === 'scan' ? E.scan : tone === 'attention' ? E.attention : tone === 'login' ? E.loginButton : E.tile
   return (
-    <LinearGradient colors={E.rim} locations={[0, 0.35, 0.72, 1]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ flex: fill ? 1 : undefined, borderRadius: radius, padding: E.borderLight.width, overflow: 'hidden' }}
+    <LinearGradient colors={tone === 'attention' || tone === 'login' ? E.activeRim : E.rim} locations={[0, 0.35, 0.72, 1]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ flex: fill ? 1 : undefined, borderRadius: radius, padding: E.borderLight.width, overflow: 'hidden' }}
       onLayout={borderLight ? e => {
         const { width, height } = e.nativeEvent.layout
         if (width > 0 && height > 0) setSize(previous => previous.width === width && previous.height === height ? previous : { width, height })
@@ -142,13 +142,13 @@ export function EclipseSurface({ children, tone = 'quiet', radius = E.tileRadius
   )
 }
 
-export function EclipseScan({ label, onPress, reduceMotion, solid, phase }: {
-  label: string; onPress: () => void; reduceMotion: boolean; solid: boolean; phase: Animated.Value
+export function EclipseScan({ label, onPress, reduceMotion, solid, phase, size }: {
+  label: string; onPress: () => void; reduceMotion: boolean; solid: boolean; phase: Animated.Value; size?: number
 }) {
   return (
     <EclipsePress label={label} onPress={onPress} reduceMotion={reduceMotion}>
       <View style={!solid ? styles.scanShadow : undefined}>
-      <EclipseSurface tone="scan" radius={E.scanRadius} solid={solid} style={styles.scan} borderLight={{ phase, order: 0 }}>
+      <EclipseSurface tone="scan" radius={E.scanRadius} solid={solid} style={[styles.scan, size ? { width: size - 2 * E.borderLight.width, minHeight: size - 2 * E.borderLight.width } : null]} borderLight={{ phase, order: 0 }}>
         {!solid && <>
           <Image source={ECLIPSE_ASSETS.coolRim} pointerEvents="none" accessible={false} style={styles.coolRim} />
           <Image source={ECLIPSE_ASSETS.goldRim} pointerEvents="none" accessible={false} style={styles.goldRim} />
@@ -161,13 +161,13 @@ export function EclipseScan({ label, onPress, reduceMotion, solid, phase }: {
   )
 }
 
-export function EclipseTile({ label, icon, onPress, badge, busy, problem, accessibilityLabel, reduceMotion, solid, phase, order }: {
+export function EclipseTile({ label, icon, onPress, badge, busy, problem, accessibilityLabel, reduceMotion, solid, phase, order, size }: {
   label: string; icon: 'members' | 'requests' | 'activity' | 'more'; onPress: () => void; badge?: string;
-  busy?: boolean; problem?: boolean; accessibilityLabel?: string; reduceMotion: boolean; solid: boolean; phase: Animated.Value; order: number
+  busy?: boolean; problem?: boolean; accessibilityLabel?: string; reduceMotion: boolean; solid: boolean; phase: Animated.Value; order: number; size?: number
 }) {
   return (
     <EclipsePress fill label={accessibilityLabel ?? label} onPress={onPress} reduceMotion={reduceMotion}>
-      <EclipseSurface solid={solid} tone={badge ? 'attention' : 'quiet'} style={styles.tile} borderLight={{ phase, order }}>
+      <EclipseSurface fill solid={solid} tone={badge ? 'attention' : 'quiet'} style={[styles.tile, size ? { minHeight: size - 2 * E.borderLight.width } : null]} borderLight={{ phase, order }}>
         <EclipseIcon name={icon} />
         <Text style={styles.tileLabel}>{label}</Text>
         {(badge || busy || problem) && <View style={[styles.badge, !badge && styles.badgeQuiet]} accessible={false}>
@@ -188,5 +188,5 @@ const styles = StyleSheet.create({
   badgeQuiet: { backgroundColor: E.surface },
   badgeLabel: { ...E.type.badge, color: E.ink },
   coolRim: { position: 'absolute', width: 181, height: 62, left: -53, top: -30 },
-  goldRim: { position: 'absolute', width: 234, height: 78, right: -62, bottom: -36 },
+  goldRim: { position: 'absolute', width: 234, height: 78, right: -62, bottom: -36, tintColor: E.accent },
 })

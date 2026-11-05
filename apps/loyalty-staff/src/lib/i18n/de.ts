@@ -138,6 +138,7 @@ export const de: Record<Key, string> = {
   'scan.title': 'Scan',
   'scan.for': 'Scannen für',
   'scan.desk': 'Den Empfang',
+  'scan.tap': 'Zum Scannen tippen',
   'scan.qrHint': 'Richten Sie die Kamera auf den QR-Code des Mitglieds',
   'scan.nfc': 'Karte auflegen',
   'scan.nfcHint': 'Halten Sie die Karte an den oberen Rand des Telefons',

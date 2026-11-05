@@ -11,7 +11,7 @@ import { errorKey } from '../../lib/desk'
 import { ago, moment } from '../../lib/format'
 import { feel } from '../../lib/haptics'
 import { useT, type Key } from '../../lib/i18n'
-import { C, TAB_BAR_ROOM, fonts } from '../../lib/theme'
+import { C, ECLIPSE as E, TAB_BAR_ROOM, fonts } from '../../lib/theme'
 import type { BenefitRequest, Redemption, RequestTab } from '../../lib/types'
 import { Backdrop, Empty, Field, GhostButton, GoldButton, IconBadge, Notice, PageHeading, Pill, Row, Segments, Shimmer, Surface } from '../../components/ui'
 import { DetailModal } from '../../components/Sheet'
@@ -96,7 +96,7 @@ export default function Requests() {
     </> : current.row.state === 'approved' ? <GoldButton title={t('requests.markDone')} icon="gift" busy={act.isPending} onPress={() => send('done')} /> : undefined)
 
   return <Backdrop>
-    <View style={{ paddingTop: insets.top + 20, paddingHorizontal: 24, gap: 14 }}>
+    <View style={{ paddingTop: insets.top + 16, paddingHorizontal: E.inset, gap: E.gap }}>
       <PageHeading title={t('requests.title')} />
       <Segments<RequestTab> value={tab} onChange={setTab} items={[
         { id: 'waiting', label: t('requests.tab.waiting'), icon: 'time-outline', count: counts?.waiting },
@@ -104,7 +104,7 @@ export default function Requests() {
         { id: 'done', label: t('requests.tab.done'), icon: 'checkmark' },
       ]} />
     </View>
-    <FlatList data={rows} keyExtractor={r => `${r.kind}:${r.row.id}`} contentContainerStyle={{ padding: 24, paddingTop: 14, paddingBottom: TAB_BAR_ROOM, gap: 12 }}
+    <FlatList data={rows} keyExtractor={r => `${r.kind}:${r.row.id}`} contentContainerStyle={{ paddingHorizontal: E.inset, paddingTop: E.gap, paddingBottom: TAB_BAR_ROOM, gap: E.gap }}
       refreshControl={<RefreshControl refreshing={list.isRefetching || (showRewards && rewards.isRefetching)} onRefresh={refreshAll} tintColor={C.gold} />}
       ListHeaderComponent={failed || loading ? <View style={{ gap: 10 }}>
         {loading && <Shimmer height={80} />}

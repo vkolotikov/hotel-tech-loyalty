@@ -10,7 +10,7 @@ import { useT } from '../lib/i18n'
 import type { Key } from '../lib/i18n/en'
 import { failureOf } from '../lib/failure'
 import { errorKey } from '../lib/desk'
-import { C, fonts } from '../lib/theme'
+import { C, ECLIPSE as E, fonts } from '../lib/theme'
 import type { ActivityItem, MetricKey } from '../lib/types'
 import { Backdrop, IconBadge, Notice, PageHeading, SectionTitle, Shimmer, Surface, type IconName } from '../components/ui'
 
@@ -58,7 +58,7 @@ export default function Activity() {
   return (
     <Backdrop>
       <ScrollView
-        contentContainerStyle={{ paddingTop: insets.top + 16, paddingBottom: insets.bottom + 24, paddingHorizontal: 24, gap: 22 }}
+        contentContainerStyle={{ paddingTop: insets.top + 16, paddingBottom: insets.bottom + 24, paddingHorizontal: E.inset, gap: E.gap }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { void refresh() }} tintColor={C.gold} />}
       >
         <PageHeading title={t('home.activityLink')} />

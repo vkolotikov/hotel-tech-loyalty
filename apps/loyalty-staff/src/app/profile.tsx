@@ -11,7 +11,7 @@ import { usePrefs } from '../lib/prefs'
 import { useVersionCheck } from '../lib/appVersion'
 import { updateUrl } from '../lib/version'
 import { LANGUAGES, LANGUAGE_NAMES, useT } from '../lib/i18n'
-import { C, RADIUS, fonts } from '../lib/theme'
+import { C, ECLIPSE as E, RADIUS, fonts } from '../lib/theme'
 import { Avatar, Backdrop, GhostButton, Notice, PageHeading, Row, Surface, ToggleRow, IconBadge } from '../components/ui'
 
 /** Profile: who is signed in, the workspace pages on the web, the language, the lock, request alerts, and signing out. */
@@ -57,7 +57,7 @@ export default function Profile() {
 
   return (
     <Backdrop>
-      <ScrollView contentContainerStyle={{ paddingTop: insets.top + 20, paddingBottom: insets.bottom + 24, paddingHorizontal: 24, gap: 20 }}>
+      <ScrollView contentContainerStyle={{ paddingTop: insets.top + 16, paddingBottom: insets.bottom + 24, paddingHorizontal: E.inset, gap: E.gap }}>
         <PageHeading title={t('profile.title')} profile={false} />
 
         <Surface style={styles.me}>
