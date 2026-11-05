@@ -8,7 +8,9 @@ The owner provided **`C:\wamp64\www\Hexa-Tech\apple-video.mp4`**, confirmed **iO
 
 All six requested information sections are now saved in Review Notes (3,743 characters), with iOS 18.7, restored-session launch and absent fresh-login/transaction footage accurately disclosed. Reviewer credentials/contact match; another 25 live demo reads pass. Exact source notes and complete attachment were verified after submission in private credential-free `staff-apple-resubmission-check.json`.
 
-The existing screenshots, translated text, countries and price were retained for the as-is resubmission. No new iPad or latest-OS physical acceptance is claimed. No duplicate build/upload, Laravel deploy, Android submission or member-app changes. Unlisted request narratives are prepared in the authenticated Apple form; required user/business/unmanaged-device rollout counts are awaiting the owner's estimates. The unlisted request is **not yet submitted**; exact draft is `apps/loyalty-staff/store/apple/unlisted-request-20261105.md`. Keep manual release while resolving unlisted distribution.
+The existing screenshots, translated text, countries and price were retained for the as-is resubmission. No new iPad or latest-OS physical acceptance is claimed. No duplicate build/upload, Laravel deploy, Android submission or member-app changes.
+
+**Unlisted request submitted at 19:43 Riga / 17:43 UTC**. Apple confirmed **Thank you for your submission**; no case number was displayed. Owner entered **100 users / 50 businesses** and authorised an estimate for unmanaged devices; **80** was entered and clearly described as a planning estimate. All 153 request-form regions were selected without altering live country availability. No new licence agreement. Exact submitted fields: `apps/loyalty-staff/store/apple/unlisted-request-20261105.md`. Keep manual release until both App Review and unlisted distribution are resolved; neither is approved/public yet.
 
 ## Earlier preparation checkpoint (superseded above)
 
