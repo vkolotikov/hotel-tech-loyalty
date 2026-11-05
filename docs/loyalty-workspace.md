@@ -786,9 +786,11 @@ each closed with a test that fails on the code before the fix.
   started the review: points changed in the staff app did not show in the members' app. An Award pushes "You earned N
   points"; a desk check-in or purchase (`DeskVisit`) and an event check-in (`EventCheckIn`) wrote the points and sent
   nothing, so the app kept its old balance until it next asked. They now send the same notice after their transaction,
-  once per new line (never for a request sent again); the push also makes the members' app refresh. Redeeming and
-  reversing still send nothing: the members' app and the portal ask again on their own (every 30 s on the app's Home,
-  60 s on the portal, and on return to either).
+  once per new line (never for a request sent again); the push also makes the members' app refresh. Since 2026-11-05
+  a Redeem at the desk (`Admin\Loyalty\PointsController::redeem()`, the staff app's) sends "You used N points"
+  (`points_redeemed`, the points category) the same way, because the members' app 2.0.0 refreshes on a push but not on
+  its own. A manager's Reverse still sends nothing: the members' app from 2.0.1 and the portal ask again on their own
+  (every 30 s on the app's Home, 60 s on the portal, and on return to either).
 - Tests: `ForeignAccountsTest`, `CrmAiRightsTest`, `SwitchedOffMemberTest` (`tests/Feature/LoyaltyWorkspace/`),
   `tests/Feature/Member/MemberChatAccessTest.php`; the notices in `DeskVisitTest` and `EventCheckInTest`.
 
@@ -796,8 +798,10 @@ Second batch, the same day (smaller holes):
 
 - **Pushes carry the platform's Expo access token** (`NotificationService::expo()`, `services.expo.access_token` from
   `EXPO_ACCESS_TOKEN`). The Settings field `expo_access_token` was stored and tested but never sent, so a project with
-  Expo's "Enhanced push security" on would have every push refused. Set `EXPO_ACCESS_TOKEN` in Laravel Cloud to an
-  access token of the Expo account that owns both apps; empty sends as before. Receipts are read the same way.
+  Expo's "Enhanced push security" on would have every push refused. Empty sends as before; receipts are read the same
+  way. Checked 2026-11-05 through Expo's API: push security is **off** on both projects (`@hoteltechai/hotel-loyalty`,
+  `@hoteltechai/hexatech-loyalty-staff`), so nothing is to be set. Should it be switched on, set `EXPO_ACCESS_TOKEN` in
+  Laravel Cloud first.
 - **A tier notice goes after the commit** (`LoyaltyService::assessTier()`, `DB::afterCommit`): it waited on Expo
   inside the points write, under the member row's lock, and a write that rolled back still announced the new tier.
 - **A member cancels a benefit request only while it is open**: one conditional update, so staff approving it at the
@@ -948,7 +952,7 @@ files on disk): run them one after the other.
     Auth 57, AdminAccess 78, Booking 591 passed; CI green on all 8 jobs, PostgreSQL included (run 41931008604, on
     52ca0df5a; the two commits after it are docs only).
   - Verified by content on `origin/main` (each fix's line); not on the live site.
-  - **After it:** set `EXPO_ACCESS_TOKEN` in Laravel Cloud if the Expo projects use Enhanced push security.
+  - **After it:** nothing (Expo push security is off on both projects, checked 2026-11-05).
   - The next source delta starts at **12c536293**.
 
 - Security review before the public launch, and members see their points move (owner, 2026-11-04): production
