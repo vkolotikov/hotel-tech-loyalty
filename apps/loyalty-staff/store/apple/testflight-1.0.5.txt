@@ -1,0 +1,7 @@
+HexaTech Staff 1.0.5 (3): current Eclipse design and supplied icon, matching Android.
+
+Use only the isolated Staff reviewer account. Test launch/login, Find, member card/benefits/history, points and visit forms, Requests, Profile/languages, sign out and cold relaunch. Test Face ID, notifications and actual QR/NFC on compatible hardware. Record any failure.
+
+Apple requires a continuous physical iPhone screen recording on the latest public iOS, beginning with launch and showing the normal workflow. Record the device model and iOS version. Capture Home, Find, Member, Requests and More screenshots from this actual build.
+
+Full walkthrough: apps/loyalty-staff/store/apple/recording-checklist.md. TestFlight availability is not App Review approval.
