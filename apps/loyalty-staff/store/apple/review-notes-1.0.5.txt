@@ -1,23 +1,26 @@
-Review evidence (Guideline 2.1)
-Preparation in progress: the physical-device recording requested by App Review has not yet been attached. This draft must not be resubmitted until that recording and device testing are complete.
+Guideline 2.1 response — HexaTech Staff 1.0.5 (3)
 
-Purpose and audience
-HexaTech Staff is a native operational app for authorised employees of venues using the HexaTech loyalty platform. Staff identify members, inspect membership benefits, record visits and eligible purchases, award/use loyalty points, link loyalty cards, and fulfil reward/benefit requests. It replaces manual desk lookups and keeps actions under the venue's server-enforced permissions. It is not the consumer HexaTech Loyalty app or the older Hotel Staff hotel-operations app. We intend unlisted distribution to participating venues' employees, including their personal devices, and will request an unlisted link through Apple's process before release.
+1. Physical-device evidence
+Attached apple-video.mp4 is the owner's 26-second iPhone 13 recording of version 1.0.5. It starts on the iPhone Home Screen, launches Staff with a restored signed-in session, then shows Home, Scan, Members, Requests, Profile and More. The owner confirms iOS 18.7; this is not the latest OS. The recording does not show a fresh login, registration, deletion or a transaction. It shows the owner's venue account; reviewers should use the separate isolated demo below. We are submitting the available evidence with these limitations disclosed.
 
-Access and walkthrough
-Use the staff demo login in the separate Sign-in Information fields. It belongs only to HexaTech App Review Demo; no real customer data or purchases are involved. No registration, invitation, payment, location restriction or physical card is needed to review the main workflows.
-1. Launch and sign in. Home shows desk activity and shortcuts.
-2. Open Find and search for App Review Member or member number HL-2026-000493. Open the member to inspect points, benefits, history and cards.
-3. From the member, Give points or Record visit demonstrates a desk action. Record purchase records a purchase amount for loyalty calculations; it does not charge a payment method. Changes affect only the isolated demo member.
-4. Open Requests to inspect reward redemptions and benefit requests, including completed history. Available pending demo requests can be approved/declined and fulfilled.
-5. Scan supports Number without hardware. QR uses the camera with a member's QR code. NFC requires a compatible physical venue card and an NFC-capable iPhone; it is optional and is not available on iPad. iPad users can use QR or Number.
-6. Open the profile from Home for language, optional biometric lock, request alerts and sign out. More opens the venue's management pages in the system browser; these use a separate web sign-in.
+2. Purpose and audience
+HexaTech Staff is a native desk tool for authorised employees of venues using HexaTech loyalty software. It identifies members, shows points/benefits, records visits and eligible purchases, awards/uses points, links loyalty cards and fulfils reward/benefit requests. It replaces manual desk lookups; the server enforces venue scope and staff permissions. It is separate from the consumer HexaTech Loyalty app. We intend unlisted distribution to participating venues' employees, including personal devices, and will request an unlisted link before release.
 
-Accounts and content
-Staff accounts are created and removed by the employer's administrator outside this app. This app has no account-registration flow. Account/data-removal requests are available at https://app.hexa-tech.uk/data-deletion. Staff-entered transaction notes and request reasons are private business records, scoped to the venue and the relevant member, not a public social feed or anonymous chat. Venue administrators manage staff access; the app has no public posting, public profiles or user discovery.
+3. Access and main features
+Use the staff demo credentials in the separate Sign-in Information fields. They access HexaTech App Review Demo only; no real purchase or customer data is needed. No invitation, location restriction or physical card is needed for the main workflows.
+- Launch and sign in. Home shows desk activity and shortcuts.
+- Open Members and find App Review Member / HL-2026-000493. Open the member for the card, benefits, points, history and linked cards.
+- Give points or Record visit demonstrates a demo desk action. Record purchase records an amount for loyalty calculations; it does not take payment.
+- Requests shows rewards and benefit requests, with pending and completed views. Pending demo items can be approved/declined and fulfilled.
+- Scan > Number works without hardware. QR uses the camera; NFC requires a compatible physical venue card and NFC-capable iPhone. iPad uses QR or Number.
+- Profile has language, optional biometric lock, alerts and sign out. More opens management pages in the system browser, with a separate web sign-in.
+Staff accounts are created/removed by the employer's administrator outside this app. There is no self-registration. Data-removal requests: https://app.hexa-tech.uk/data-deletion. Notes and request reasons are private venue/member business records. There is no public posting, anonymous chat, public profile or user discovery; venue administrators control staff access.
 
-External services and monetisation
-The first-party HTTPS service at app.hexa-tech.uk provides staff authentication, permissions, member data and all loyalty decisions. Expo Push Service and Apple Push Notification service deliver optional staff request alerts. Native Apple camera/Core NFC and LocalAuthentication provide scanning and optional device biometrics; biometric data stays on the device. The app does not use an AI service, advertising network or payment processor for its core desk functionality. The app is free; no in-app digital purchases, subscriptions or paid-content checkout are offered. Venue administrators arrange their business service separately.
+4. External services and purchases
+Our first-party HTTPS backend at app.hexa-tech.uk provides authentication, permissions, member data and loyalty decisions. Expo Push Service and Apple Push Notification service deliver optional alerts. Apple camera, Core NFC and LocalAuthentication provide scanning and device biometrics; biometric data stays on-device. No AI service, advertising network or payment processor is used for core desk functionality. The app is free and offers no in-app digital purchase, subscription or paid-content checkout. Venues arrange their business service separately.
 
-Regions and rights
-The same app functionality is offered across regions. English, German, Spanish, French and Russian are selectable; venue currency/time zone, configured loyalty features and staff permissions may differ by venue, not by App Store territory. This is a loyalty administration tool, not banking, gambling, healthcare or another regulated professional service. It uses the publisher's supplied HexaTech artwork and licensed software dependencies, with no protected third-party entertainment catalogue.
+5. Regions
+Functionality is consistent across regions. English, German, Spanish, French and Russian are selectable. Currency/time zone, enabled loyalty features and permissions vary by venue configuration, not App Store territory.
+
+6. Regulatory/content rights
+This is loyalty administration, not a banking, gambling, healthcare or other regulated professional service. It uses the publisher's supplied HexaTech artwork and licensed software dependencies, with no protected third-party entertainment catalogue.

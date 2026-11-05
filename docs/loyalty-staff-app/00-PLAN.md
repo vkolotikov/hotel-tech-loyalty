@@ -75,7 +75,7 @@ modern, luxury, poverfull, easy to use nice design".
 ### Apple continuation, 5 November 2026
 
 - Owner requests the same current design/functionality on Apple. iOS **1.0.5 (3)** built successfully from the Android 1.0.5 source, uploaded and processed as **VALID**. Existing Internal QA shows **Testing**, with the current tester retained. No new app record or duplicate Android build.
-- Both earlier Apple submissions received **Guideline 2.1 — Information Needed**. The Staff draft is now 1.0.5 with fuller Review Notes and manual release. Resubmission awaits the mandatory **physical-device walkthrough recording**, device testing and replacement Apple screenshots. Owner has iPhone only; tablet support remains.
+- Both earlier Apple submissions received **Guideline 2.1 — Information Needed**. Owner supplied `apple-video.mp4`, confirmed iOS 18.7 and explicitly requested submission as-is. Video is attached/COMPLETE and all six information sections are saved, disclosing the OS/restored-session limitations. **1.0.5 (3) was resubmitted at 19:36 Riga and is WAITING_FOR_REVIEW**. Manual release remains enabled for unlisted distribution; approval/public availability remain pending. Existing screenshots retained; latest-OS/login/iPad acceptance is unverified.
 - Details, actual rejection, artifact checks and resume steps: `19-IOS-RELEASE-20261105.md`; owner instructions: `apps/loyalty-staff/store/apple/recording-checklist.md`.
 
 ### Android update checkpoint, 5 November 2026

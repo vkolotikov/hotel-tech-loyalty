@@ -1,5 +1,7 @@
 # Staff iPhone review evidence
 
+Checkpoint, 5 November 2026 at 19:36 Riga: the owner supplied `apple-video.mp4`, confirmed iOS 18.7 and explicitly requested resubmission as-is. The original recording is attached and 1.0.5 (3) is Waiting for Review. Its latest-OS/fresh-login gaps are disclosed in Review Notes. The checklist below remains the target if Apple requests further evidence; it is not a claim that these checks all passed.
+
 Apple rejected Staff 1.0.0 (2) under Guideline 2.1 because it needs a physical-device walkthrough and fuller review information. The new TestFlight build is 1.0.5 (3). A simulator, Android capture or web preview cannot satisfy the requested physical Apple-device recording.
 
 ## Before recording
