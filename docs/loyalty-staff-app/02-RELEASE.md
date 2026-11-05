@@ -1,5 +1,7 @@
 # HexaTech Staff 1.0 — release runbook
 
+Latest Apple continuation (5 November 2026): **1.0.5 (3)** built from the current Android release source, uploaded and processed as **VALID**; existing Internal QA shows **Testing**. Previous Staff/Loyalty rejections are **Guideline 2.1 information requests**, including a mandatory physical-device recording. Staff's editable version/expanded review notes are prepared, with manual release retained; resubmission awaits accurate device evidence and replacement screenshots. See `19-IOS-RELEASE-20261105.md` and `apps/loyalty-staff/store/apple/recording-checklist.md`.
+
 Latest Android update checkpoint (5 November 2026, 13:24 UTC / 15:24 Europe/Riga): **1.0.5 (4) and three store-image changes were submitted for production review** through the owner's authenticated Playwright browser. By 13:30 UTC, automated quick checks had finished and Publishing overview confirmed **Your changes are now in review** (submission 3). Approval/public availability of 1.0.5 remain pending. The last confirmed public version is 1.0.0 (3). All existing countries are preserved, translated text is unchanged and translations inherit the new English images. Full artifact checks, submission and verification: `18-PLAY-RELEASE-20261105.md`.
 
 The desk app (`apps/loyalty-staff`, branches `feature/loyalty-staff-app` and `feature/loyalty-member-app`, identical
@@ -143,8 +145,8 @@ NFC needs a venue's physical card; the camera reads a member's QR code from the 
 
 ## 4. Release
 
-1. Submit 1.0.0 for review. App Store: request **unlisted distribution** with Apple's Unlisted App Distribution request
-   form (it needs the app's App Store Connect id); once Apple grants it, the app is reachable only by its link. Play:
+1. Submit the complete final version for review, including any evidence Apple requested. App Store: note the intention in Review Notes, then request **unlisted distribution** with Apple's Unlisted App Distribution request
+   form once the app is submitted to App Review (prior approval is not required; beta/prerelease apps are ineligible). The form needs the app's App Store Connect id; once Apple grants it, the app is reachable only by its link. Retain manual release until this is resolved. Play:
    promote the internal release to production (Play has no unlisted mode; a private app needs managed Google Play).
 2. In Laravel Cloud set `STAFF_APP_IOS_URL` to the App Store link (the unlisted link once granted) and, if the Play
    link differs from the default, `STAFF_APP_ANDROID_URL`; then redeploy. `STAFF_APP_MIN_VERSION` and

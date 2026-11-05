@@ -72,6 +72,12 @@ modern, luxury, poverfull, easy to use nice design".
 
 ## Checks before release
 
+### Apple continuation, 5 November 2026
+
+- Owner requests the same current design/functionality on Apple. iOS **1.0.5 (3)** built successfully from the Android 1.0.5 source, uploaded and processed as **VALID**. Existing Internal QA shows **Testing**, with the current tester retained. No new app record or duplicate Android build.
+- Both earlier Apple submissions received **Guideline 2.1 — Information Needed**. The Staff draft is now 1.0.5 with fuller Review Notes and manual release. Resubmission awaits the mandatory **physical-device walkthrough recording**, device testing and replacement Apple screenshots. Owner has iPhone only; tablet support remains.
+- Details, actual rejection, artifact checks and resume steps: `19-IOS-RELEASE-20261105.md`; owner instructions: `apps/loyalty-staff/store/apple/recording-checklist.md`.
+
 ### Android update checkpoint, 5 November 2026
 
 - Owner authorized publishing the redesigned Staff app with the supplied `favicon.jpg` icon and updated Play screenshots.
