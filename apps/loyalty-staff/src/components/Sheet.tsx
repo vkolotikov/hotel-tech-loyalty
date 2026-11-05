@@ -12,7 +12,7 @@ export function Sheet({ title, line, children, footer, onClose, busy = false, pr
   const insets = useSafeAreaInsets()
   return <Backdrop>
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
-      <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingTop: insets.top + 20, paddingHorizontal: E.inset, paddingBottom: 24, gap: 16, flexGrow: 1 }}>
+      <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingTop: insets.top + 16, paddingHorizontal: E.inset, paddingBottom: 24, gap: E.gap, flexGrow: 1 }}>
         <PageHeading title={title} profile={profile} onBack={onClose} disabled={busy} />
         {line ? <Text style={[fonts.small, { color: C.text2 }]}>{line}</Text> : null}
         {children}

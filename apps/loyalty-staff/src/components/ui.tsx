@@ -4,7 +4,7 @@ import {
   type StyleProp, type TextInputProps, type TextStyle, type ViewStyle,
 } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
-import { C, ECLIPSE as E, RADIUS, fonts, readableOn, tierColor, withAlpha } from '../lib/theme'
+import { C, CONTENT_MAX_WIDTH, ECLIPSE as E, RADIUS, fonts, readableOn, tierColor, withAlpha } from '../lib/theme'
 import { initials } from '../lib/format'
 import { feel } from '../lib/haptics'
 import { useDeviceAppearance } from '../lib/useEclipseAppearance'
@@ -45,7 +45,7 @@ export function Surface({ children, style, tint, padding = 16, glow }: {
   const { flex, flexBasis, flexGrow, flexShrink, width, alignSelf, margin, marginTop, marginBottom, marginHorizontal, ...content } = StyleSheet.flatten(style) ?? {}
   return (
     <View style={{ flex, flexBasis, flexGrow, flexShrink, width, alignSelf, margin, marginTop, marginBottom, marginHorizontal }}>
-    <EclipseSurface solid={solid} tone={tint || glow ? 'attention' : 'quiet'} radius={26} style={[{ padding }, content]}>
+    <EclipseSurface solid={solid} tone={tint || glow ? 'attention' : 'quiet'} radius={E.tileRadius} style={[{ padding }, content]}>
       {children}
     </EclipseSurface>
     </View>
@@ -255,18 +255,19 @@ export function Empty({ icon, text }: { icon: IconName; text: string }) {
 }
 
 /** Equal-height tabs, with centred Android type and optional pictograms. */
-export function Segments<T extends string>({ value, items, onChange, iconOnly = false }: { value: T; items: { id: T; label: string; count?: number; icon?: IconName; symbol?: string }[]; onChange: (id: T) => void; iconOnly?: boolean }) {
+export function Segments<T extends string>({ value, items, onChange, iconOnly = false, disabled = false }: { value: T; items: { id: T; label: string; count?: number; icon?: IconName; symbol?: string }[]; onChange: (id: T) => void; iconOnly?: boolean; disabled?: boolean }) {
   const { solid } = useContext(Appearance)
   const { width, fontScale } = useWindowDimensions()
   const stacked = !iconOnly && (fontScale >= 1.4 || (width < 360 && items.some(item => item.label.length > 9)))
+  const tileHeight = Math.min(112, (Math.min(width, CONTENT_MAX_WIDTH) - 2 * E.inset - (items.length - 1) * E.gap) / items.length)
   return (
     <View style={[styles.segments, stacked && { flexDirection: 'column' }]} accessibilityRole="tablist">
       {items.map(item => {
         const on = item.id === value
         return (
-          <Pressable key={item.id} accessibilityRole="tab" accessibilityLabel={item.count ? `${item.label}, ${item.count}` : item.label} accessibilityState={{ selected: on }} onPress={() => { feel.tap(); onChange(item.id) }} style={{ flex: stacked ? undefined : 1, minWidth: 0 }}>
-          <EclipseSurface solid={solid} tone={on ? 'attention' : 'quiet'} radius={24} style={[styles.segment, !iconOnly && item.icon ? { minHeight: 72 } : null, stacked && { flexDirection: 'row', minHeight: 54, gap: 10, paddingHorizontal: 14 }]}>
-            {item.icon && <Glyph name={item.icon} size={iconOnly ? 25 : 21} color={on ? C.goldLight : C.text2} />}
+          <Pressable key={item.id} accessibilityRole="tab" accessibilityLabel={item.count ? `${item.label}, ${item.count}` : item.label} accessibilityState={{ selected: on, disabled }} disabled={disabled} onPress={() => { feel.tap(); onChange(item.id) }} style={{ flex: stacked ? undefined : 1, minWidth: 0, opacity: disabled ? 0.45 : 1 }}>
+          <EclipseSurface fill={!stacked} solid={solid} tone={on ? 'attention' : 'quiet'} radius={E.tileRadius} style={[styles.segment, !iconOnly && (item.icon || item.symbol) ? { minHeight: tileHeight - 2 * E.borderLight.width } : null, stacked && { flexDirection: 'row', minHeight: 54, gap: 10, paddingHorizontal: 14 }]}>
+            {item.icon && <Glyph name={item.icon} size={28} color={on ? C.goldLight : C.text} />}
             {item.symbol && <Text accessible={false} style={[fonts.segmentSymbol, { color: on ? C.goldLight : C.text2 }]}>{item.symbol}</Text>}
             {(!iconOnly || (!item.icon && !item.symbol)) && <Text style={[fonts.segment, { color: on ? C.text : C.text2, alignSelf: stacked ? undefined : 'stretch', flexShrink: 1 }]}>{item.label}</Text>}
             {item.count !== undefined && item.count > 0 && (
@@ -301,13 +302,23 @@ export function Row({ left, title, line, right, onPress, last, card = false }: {
 export function PageHeading({ title, back = true, profile = true, onBack, disabled }: { title: string; back?: boolean; profile?: boolean; onBack?: () => void; disabled?: boolean }) {
   const router = useRouter()
   const { t } = useT()
-  return <View style={{ gap: 22, marginBottom: 6 }}>
-    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-      {back ? <Press disabled={disabled} label={t('common.close')} onPress={onBack ?? (() => router.canGoBack() ? router.back() : router.replace('/'))}><Surface padding={0}><View style={styles.control}><Glyph name="chevron-back" size={22} /></View></Surface></Press> : <View />}
+  return <View style={{ minHeight: 52, flexDirection: 'row', gap: E.gap, alignItems: 'center' }}>
+      {back && <Press disabled={disabled} label={t('common.close')} onPress={onBack ?? (() => router.canGoBack() ? router.back() : router.replace('/'))}><Surface padding={0}><View style={styles.control}><Glyph name="chevron-back" size={22} /></View></Surface></Press>}
+      <Text accessibilityRole="header" style={[fonts.title, { color: C.text, flex: 1 }]}>{title}</Text>
       {profile && <Press disabled={disabled} label={t('home.account')} onPress={() => router.push('/profile')}><Surface padding={0}><View style={styles.control}><Glyph name="person-outline" /></View></Surface></Press>}
-    </View>
-    <Text accessibilityRole="header" style={[fonts.display, { color: C.text }]}>{title}</Text>
   </View>
+}
+
+/** Compact icon-first actions share the same grid and corner treatment as Scan. */
+export function ActionTile({ title, icon, onPress, primary = false, external = false, style }: { title: string; icon: IconName; onPress: () => void; primary?: boolean; external?: boolean; style?: StyleProp<ViewStyle> }) {
+  const { solid } = useContext(Appearance)
+  return <Press label={title} onPress={onPress} style={style}>
+    <EclipseSurface fill solid={solid} tone={primary ? 'attention' : 'quiet'} style={{ minHeight: 104, padding: 14, alignItems: 'center', justifyContent: 'center', gap: 10 }}>
+      {external && <View accessible={false} style={{ position: 'absolute', right: 12, top: 12 }}><Glyph name="open-outline" size={14} color={C.text2} /></View>}
+      <Glyph name={icon} size={28} color={primary ? C.goldLight : C.text} />
+      <Text style={[fonts.button, { color: C.text, textAlign: 'center', alignSelf: 'stretch' }]}>{title}</Text>
+    </EclipseSurface>
+  </Press>
 }
 
 /** A single labelled switch target spans its whole row, including the copy and icon. */
@@ -322,14 +333,14 @@ export function ToggleRow({ title, line, icon, value, disabled, onChange }: { ti
 }
 
 const styles = StyleSheet.create({
-  control: { width: 45.8, height: 45.8, alignItems: 'center', justifyContent: 'center' },
+  control: { width: 42, height: 42, alignItems: 'center', justifyContent: 'center' },
   button: { minHeight: 54, paddingHorizontal: 16, paddingVertical: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 },
   input: { ...fonts.body, color: C.text, minHeight: 56, borderRadius: 18, borderWidth: 1, borderColor: C.hairlineStrong, backgroundColor: C.surface, paddingHorizontal: 16, paddingVertical: 14 },
   search: { flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 56, borderRadius: 18, borderWidth: 1, borderColor: C.hairlineStrong, backgroundColor: C.surface, paddingHorizontal: 16, paddingVertical: 12 },
   pill: { alignSelf: 'flex-start', paddingHorizontal: 10, paddingVertical: 4, borderRadius: RADIUS.pill, maxWidth: 200 },
   sectionTitle: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10, marginTop: 6 },
   notice: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 12, borderRadius: RADIUS.md, borderWidth: 1 },
-  segments: { flexDirection: 'row', gap: 8 },
+  segments: { flexDirection: 'row', alignItems: 'stretch', gap: E.gap },
   segment: { gap: 6, alignItems: 'center', justifyContent: 'center', minHeight: 52, paddingHorizontal: 6, paddingVertical: 11 },
   segmentCount: { position: 'absolute', top: 5, right: 7, minWidth: 18, paddingHorizontal: 4, minHeight: 18, borderRadius: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: C.goldWash },
   row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 16, minHeight: 78 },

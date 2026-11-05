@@ -9,7 +9,7 @@ import { failureOf } from '../../lib/failure'
 import { errorKey } from '../../lib/desk'
 import { number } from '../../lib/format'
 import { useT } from '../../lib/i18n'
-import { C, TAB_BAR_ROOM, fonts, tierColor } from '../../lib/theme'
+import { C, ECLIPSE as E, TAB_BAR_ROOM, fonts, tierColor } from '../../lib/theme'
 import { Avatar, Backdrop, Empty, Notice, PageHeading, Press, Row, SearchField, Shimmer, Surface } from '../../components/ui'
 
 /** Members: search by name, number, email or phone, narrow by tier, newest first; a member opens their page. */
@@ -38,7 +38,7 @@ export default function Members() {
 
   return (
     <Backdrop>
-      <View style={{ paddingTop: insets.top + 20, paddingHorizontal: 24, gap: 14 }}>
+      <View style={{ paddingTop: insets.top + 16, paddingHorizontal: E.inset, gap: E.gap }}>
         <PageHeading title={t('members.title')} />
         {list.data && <Text style={[fonts.small, { color: C.text2 }]}>{t('members.count', { n: number(total, language) })}</Text>}
         <SearchField value={q} onChangeText={setQ} placeholder={t('members.search')} />
@@ -62,7 +62,7 @@ export default function Members() {
       <FlatList
         data={members}
         keyExtractor={m => String(m.id)}
-        contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 14, gap: 12, paddingBottom: TAB_BAR_ROOM }}
+        contentContainerStyle={{ paddingHorizontal: E.inset, paddingTop: 14, gap: 12, paddingBottom: TAB_BAR_ROOM }}
         keyboardShouldPersistTaps="handled"
         refreshControl={<RefreshControl refreshing={list.isRefetching && !list.isFetchingNextPage} onRefresh={() => { void list.refetch() }} tintColor={C.gold} />}
         onEndReached={() => { if (list.hasNextPage && !list.isFetchingNextPage) void list.fetchNextPage() }}

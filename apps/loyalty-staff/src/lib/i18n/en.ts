@@ -137,6 +137,7 @@ export const en = {
   'scan.title': 'Scan',
   'scan.for': 'Scanning for',
   'scan.desk': 'The desk',
+  'scan.tap': 'Tap to scan',
   'scan.qrHint': 'Point the camera at the member’s QR code',
   'scan.nfc': 'Tap a card',
   'scan.nfcHint': 'Hold the card near the top of the phone',

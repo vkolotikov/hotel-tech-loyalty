@@ -33,7 +33,7 @@ const mapped: Partial<Record<Name, keyof typeof assets>> = {
   'storefront-outline': 'place', 'keypad-outline': 'keyboard', search: 'search',
   'calendar-outline': 'calendar', 'mail-outline': 'mail', 'megaphone-outline': 'mail',
   'stats-chart-outline': 'activity', 'settings-outline': 'settings', 'alert-circle': 'alert',
-  'book-outline': 'alert', 'open-outline': 'external', 'radio-outline': 'nfc',
+  'open-outline': 'external', 'radio-outline': 'nfc',
   close: 'close', 'close-circle': 'close', card: 'card', 'card-outline': 'card', eye: 'eye',
   'arrow-forward': 'arrow',
 }

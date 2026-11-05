@@ -11,7 +11,7 @@ import { failureOf } from '../../lib/failure'
 import { errorKey } from '../../lib/desk'
 import { ago, day, moment, money, number } from '../../lib/format'
 import { useT } from '../../lib/i18n'
-import { C, GOLD_GRADIENT, RADIUS, fonts } from '../../lib/theme'
+import { C, ECLIPSE as E, GOLD_GRADIENT, RADIUS, fonts } from '../../lib/theme'
 import { Backdrop, GhostButton, Notice, PageHeading, Row, SectionTitle, Segments, Shimmer, Surface } from '../../components/ui'
 import { MemberCard } from '../../components/MemberCard'
 import { MemberActions } from '../../components/MemberActions'
@@ -53,7 +53,7 @@ export default function MemberPage() {
   return (
     <Backdrop>
       <ScrollView
-        contentContainerStyle={{ paddingTop: insets.top + 20, paddingBottom: insets.bottom + 32, paddingHorizontal: 24, gap: 18 }}
+        contentContainerStyle={{ paddingTop: insets.top + 16, paddingBottom: insets.bottom + 32, paddingHorizontal: E.inset, gap: E.gap }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { void refresh() }} tintColor={C.gold} />}
       >
         <PageHeading title={t('member.title')} />

@@ -138,6 +138,7 @@ export const ru: Record<Key, string> = {
   'scan.title': 'Скан',
   'scan.for': 'Сканирование для',
   'scan.desk': 'Стойка',
+  'scan.tap': 'Нажмите для сканирования',
   'scan.qrHint': 'Наведите камеру на QR-код участника',
   'scan.nfc': 'Приложите карту',
   'scan.nfcHint': 'Поднесите карту к верхней части телефона',
