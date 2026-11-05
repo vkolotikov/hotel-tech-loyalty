@@ -75,9 +75,10 @@ modern, luxury, poverfull, easy to use nice design".
 ### Android update checkpoint, 5 November 2026
 
 - Owner authorized publishing the redesigned Staff app with the supplied `favicon.jpg` icon and updated Play screenshots.
-- **1.0.5 (4)** production AAB is built and uploaded to **internal testing**, independently verified by Play API. Current public production remains **1.0.0 (3)**.
-- New store icon, feature graphic, five native screenshots and five-language release notes are ready in source. Their Play edit could not be committed with the existing testing service account (403); no store images were changed.
-- Production promotion and listing changes await a working authenticated Play Console connection. Desktop/browser helpers are unavailable after the PC interruption; no permissions were expanded. Details and next steps: `18-PLAY-RELEASE-20261105.md`.
+- **1.0.5 (4)** was promoted from the existing internal release and **submitted for production review at 13:24 UTC / 15:24 Europe/Riga on 5 November**. At 13:30 UTC, quick checks had finished and Publishing overview confirmed **Your changes are now in review**, with four changes in submission 3. Approval and public availability remain pending; the last confirmed public release is **1.0.0 (3)**.
+- Updated icon, feature graphic and five native screenshots are saved with exact source hashes and the intended order. Four translated listings inherit English images; all five listing texts are unchanged. Production release notes match the prepared five-language file exactly.
+- Validation is **Ready to release**, full rollout, all targeted countries. Post-submission API verification preserves the exact **177-country list plus Rest of world**. Managed publishing remains off. Production release is `tracks/4697727084661029230/releases/2`; [Publishing overview](https://play.google.com/console/u/0/developers/7195613243489270668/app/4973001253686610054/publishing).
+- The owner authenticated the controllable Playwright browser; no rebuild, duplicate upload, service-account permission expansion, Laravel deployment, member-app change or iOS submission. Details: `18-PLAY-RELEASE-20261105.md`.
 
 ### Store progress, 3 November 2026
 
