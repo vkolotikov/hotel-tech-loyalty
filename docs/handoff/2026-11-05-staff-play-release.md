@@ -1,0 +1,13 @@
+# Staff Play update — 5 November 2026
+
+Active owner instruction: use root `favicon.jpg` for the app icon, deploy a new Staff Android release to Google Play and update store screenshots. The owner also requests using their open desktop browser. All publication authorization is already present; credentials/legal agreements retain the original release boundaries. No iOS or backend deploy is requested.
+
+Source `C:\wamp64\www\hexatech-apps`, branch `feature/staff-play-release-20261105`, runtime `d8cec9e70`; assets commit `115633bd7` plus a clean replacement search capture pending commit. Mirror `C:\wamp64\www\hexatech-staff-release-20261102`, local branch `feature/loyalty-staff-release-20261102`, runtime `80e68de39`, assets `cc8d1381e`, pushed to `feature/loyalty-staff-app`. Never merge this native branch to Laravel main.
+
+Production build **1.0.5 (4)** is in progress: EAS id `deda8509-5b6c-4bc5-8577-875cb36317e8`. Private status/build/worker logs: `C:\Users\user6399\HexaTech-release-private\staff-design\play-105-*`. Run `build:view` into private JSON, print selected metadata only; signed log URLs must not be echoed. Source JPEG copied exactly, new app/adaptive/web/Play icon exports and five fresh Android screenshots ready. Full details: `docs/loyalty-staff-app/18-PLAY-RELEASE-20261105.md`.
+
+45 tests, TypeScript, installed ESLint and Expo dependency check pass. Screenshots are real native 1080×2160 captures from layout-equivalent 1.0.4 using the isolated demo. No points/requests/cards were mutated. Emulator size/demo mode/transition animation restored. Physical QR recognition/NFC still require a real phone as recorded before.
+
+Play production and internal remain **1.0.0 (3)**. Attempted asset edit passed upload hash/count checks but validation/commit returned 403 and the edit was removed: no Play images have changed. Testing service-account permissions were not expanded. Build can still be submitted to internal through the existing Expo assignment when ready; final production promotion/listing change needs the owner's authenticated console.
+
+Desktop/browser tool blocker: `browser access host is unavailable`; native `Computer Use native pipe is unavailable ... (os error 2)`. CUA and Computer Use node/sky retries/resets failed. Separate Chrome DevTools browser page 3 is on Google sign-in, despite owner reporting they signed in; their normal Chrome is a different profile. Owner says use desktop; desktop helper has no connection. Asked owner to restart the desktop chat application and return. Do not access browser credentials or expand permissions as a workaround. Finish build/AAB/upload work independently, then resume UI once desktop connection works.
