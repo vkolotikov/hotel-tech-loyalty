@@ -944,6 +944,20 @@ files on disk): run them one after the other.
 
 ## Deploying
 
+- The old links repaired on deploy, and points used at the desk told to the member (owner, 2026-11-05): production
+  **2cc80c492** on **70d52cbde**, a source patch only (the fresh SPA build is identical to main's). Feature source
+  **8bfb3fead** on `fix/pre-launch-batch-2`. 9 paths (1 added, 8 changed), none deleted, **one migration**
+  (`2026_11_05_090000_detach_foreign_member_accounts`, the repair, run by the deploy; its log line
+  `detach_foreign_member_accounts` appears only when it found a link).
+  - **Checks:** parity, the whole source tree equal to the tip; artifact: PHP 8.5.12 LoyaltyWorkspace 648 passed with
+    the same 10 picture and file failures, Member 364, Loyalty 383, Auth 57, AdminAccess 78; `tsc -b`, Vitest 404
+    files / 5,845 tests, build identical; CI green on all 8 jobs, PostgreSQL included (run 42003976370). The run
+    before it failed once on PostgreSQL in `RefundEventsOnceTest`, untouched here: `RefundOperations::observe()`
+    updates one arbitrary row of two that match (its `first()` leaves `LIMIT 1` on the builder), left for its own fix.
+  - Verified by content on `origin/main` (the migration, the redeem notice, the audited repair); not on the live site.
+  - **After it:** nothing.
+  - The next source delta starts at **8bfb3fead**.
+
 - Security review, second batch (2026-11-04): production **70d52cbde** on **983572728**, a source patch only (the
   fresh SPA build is identical to main's). Feature source **12c536293** on `fix/pre-launch-batch-2`. 11 paths (1 added,
   10 changed), none deleted, no migration: the section's "Second batch" above, and the runbook and handoff entries.
