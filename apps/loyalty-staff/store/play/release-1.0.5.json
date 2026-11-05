@@ -1,0 +1,10 @@
+{
+  "version": "1.0.5",
+  "releaseNotes": [
+    { "language": "en-GB", "text": "A refreshed navy-and-gold design with clearer navigation, compact scan controls and redesigned member cards. Improved recovery for interrupted desk actions. Updated app icon." },
+    { "language": "de-DE", "text": "Neues Design in Dunkelblau und Gold mit klarerer Navigation, kompakten Scan-Steuerelementen und neu gestalteten Mitgliedskarten. Verbesserte Wiederherstellung unterbrochener Vorgänge. Aktualisiertes App-Symbol." },
+    { "language": "es-ES", "text": "Diseño renovado en azul marino y dorado, con navegación más clara, controles de escaneo compactos y tarjetas de socios rediseñadas. Mejor recuperación de operaciones interrumpidas. Icono de la aplicación actualizado." },
+    { "language": "fr-FR", "text": "Un nouveau design bleu nuit et or avec une navigation plus claire, des commandes de lecture compactes et des cartes de membre repensées. Meilleure reprise des opérations interrompues. Icône de l’application mise à jour." },
+    { "language": "ru-RU", "text": "Обновлённый дизайн в тёмно-синих и золотых тонах: удобная навигация, компактные элементы сканирования и новые карты участников. Улучшено восстановление прерванных операций. Обновлён значок приложения." }
+  ]
+}
