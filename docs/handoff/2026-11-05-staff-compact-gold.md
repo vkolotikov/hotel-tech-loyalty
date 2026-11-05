@@ -1,0 +1,19 @@
+# Staff compact gold layout — 5 November 2026
+
+Active owner request: use the original `hexatech_logo_fin.png` unchanged and compact on login, reshape Scan and supporting controls into square/compact tiles, unify spacing and make the accents more golden. No signed-in logo or staff filler copy. The previous blue/gold wallpaper and border-only animation remain.
+
+Source `C:\wamp64\www\hexatech-apps`, branch `feature/staff-compact-gold-20261105`, runtime `94076f18e` (initial design `76a1846e6`). Native mirror `C:\wamp64\www\hexatech-staff-release-20261102`, local branch `feature/loyalty-staff-release-20261102`, runtime `f1c27d784`, pushed as `feature/loyalty-staff-app`. Never merge the native branch into Laravel main. No backend deployment, iOS build or store submission in this pass.
+
+The exact original PNG is now `apps/loyalty-staff/assets/hexatech-logo-original.png`. Source and app asset SHA-256 match: `47E82E9457F644A742B83AFB4974E37E07F35229ABA0F57959F34FB10018B11B`. The visible artwork is fully retained; only its transparent canvas is outside the compact layout window. There was no image generation or editing in this pass.
+
+Shared compact headers, 20-point insets, 12-point gaps and champagne-gold tokens apply throughout the app. Home uses square actions. Scan has a square main control, QR/NFC/Number tiles with labels, a compact context selector and manual search. Focusing search switches to Number; changing mode dismisses the keyboard/torch. Existing permission and pending-scan guards remain. Requests/member tabs and action grids share the treatment, with stacked controls for large or long text. Details: `docs/loyalty-staff-app/17-COMPACT-GOLD-20261105.md`.
+
+TypeScript, changed-file ESLint and all 45 app tests pass. Browser layouts checked at 393 × 852 and 320 × 710; all five login languages and narrow German/Russian/Spanish Requests layouts have no horizontal overflow. Browser navigation checks use synthetic fixtures. Native SecureStore is unavailable on web, so scan/write guards remain blocked there; browser screenshots do not establish native scanner acceptance.
+
+Initial Android preview 1.0.3 preserved the signed-in session and passed camera permission/preview, NFC fallback, manual demo-member lookup and native original-logo checks. Native Requests exposed a flex-fill sizing defect that the browser did not show; the 1.0.4 correction uses intrinsic segment height and a common icon slot. **Do not deliver the initial 1.0.3 build.**
+
+Replacement EAS Android preview **1.0.4 (3)**, build `40f19c73-7b50-4bf2-8918-8fb7e0f4a092`, completed 09:11:54 UTC from source runtime above. Installed on `emulator-5554`, retaining the demo session. Final Home, Requests Waiting/Approved/Done, Scan QR camera preview/NFC fallback/Number and enlarged-text Requests checks pass. Tile and label alignment is now equal on Android. No loyalty data was changed. Hardware NFC tags and actual optical QR recognition remain real-device checks.
+
+Final [Android APK](https://expo.dev/artifacts/eas/kA8XzgyhgxYMqfV4cgJq6UShl19lIyZmG0jy_I3PDRU.apk), also at `C:\Users\user6399\Downloads\HexaTech-Staff-Compact-Gold-1.0.4.apk`. SHA-256: `45D34224D61ACEBBFCC5736363D69C72F82929B037E7D79A985EC260A69E2398`. Superseded 1.0.3 is private diagnostic material, removed from Downloads.
+
+The original 2 GB Android VM suffered ANRs across Staff, Google services, Play Store and System UI. A full cold start of the same Pixel_8_API_35 AVD with `-memory 3072` restored responsiveness without wiping data or editing saved AVD configuration. Final post-cold-boot logs show zero system ANRs and zero inspected ReactNativeJS/AndroidRuntime errors. Emulator is left signed in on Home with font scale and transition animation restored to 1.0. Metro is stopped. Credentials and private build logs remain in `C:\Users\user6399\HexaTech-release-private`; never print them.
