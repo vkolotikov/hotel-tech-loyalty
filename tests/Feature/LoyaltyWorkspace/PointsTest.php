@@ -90,6 +90,22 @@ class PointsTest extends TestCase
         $this->assertSame(1, DB::table('push_notifications')->where('member_id', $this->grace->id)->where('type', 'points_earned')->count());
     }
 
+    public function test_points_used_at_the_desk_are_told_to_the_member_once(): void
+    {
+        // 2026-11-05: the staff app's Redeem told the member nothing, so their app kept the old balance.
+        $this->buildPushSchema();
+        \Illuminate\Support\Facades\Http::fake();
+        $body = ['points' => 50, 'reason' => 'Coffee', 'idempotency_key' => 'redeem-retry'];
+        $this->asStaffMember()->postJson($this->api("members/{$this->grace->id}/redeem"), $body)->assertOk();
+        $this->asStaffMember()->postJson($this->api("members/{$this->grace->id}/redeem"), $body)->assertOk();
+
+        $this->assertSame(150, $this->grace->fresh()->current_points);
+        $kept = DB::table('push_notifications')->where('member_id', $this->grace->id)->where('type', 'points_redeemed')->get();
+        $this->assertCount(1, $kept);
+        $this->assertSame('You used 50 points', $kept[0]->title);
+        $this->assertStringContainsString('150 points', $kept[0]->body);
+    }
+
     public function test_an_organisation_ledger_line_can_be_retried_and_reversed_from_another_brand(): void
     {
         $body = ['points' => 100, 'reason' => 'Welcome', 'idempotency_key' => 'brand-retry'];

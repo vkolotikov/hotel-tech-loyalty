@@ -53,7 +53,7 @@ class PointsController extends Controller
         return response()->json($this->after($member, $line->id));
     }
 
-    public function redeem(Request $request, int $id, LoyaltyService $loyalty, RealtimeEventService $realtime): JsonResponse
+    public function redeem(Request $request, int $id, LoyaltyService $loyalty, NotificationService $notices, RealtimeEventService $realtime): JsonResponse
     {
         LoyaltyAccess::require($request->user(), LoyaltyAccess::REDEEM);
         $data = $this->validated($request);
@@ -76,6 +76,12 @@ class PointsController extends Controller
             throw $e;
         }
         if ($line->wasRecentlyCreated) {
+            // The member hears of it as of an award (2026-11-05), so their app shows the new balance; never a reason to fail.
+            try {
+                $notices->sendPointsRedeemed($member->fresh(), (int) $data['points']);
+            } catch (\Throwable $e) {
+                Log::warning('loyalty workspace: sendPointsRedeemed failed: ' . $e->getMessage());
+            }
             $this->tell($realtime, 'Points Redeemed', "-{$data['points']} pts from " . ($member->user?->name ?? 'member'), $member, $data['points'], 'redeem');
         }
 
