@@ -2,6 +2,22 @@
 
 Owner request: use the supplied root `favicon.jpg` as the app icon, publish the new Android release and update Google Play's screen images. This is Staff only. No Laravel deployment or iOS release is part of this pass.
 
+## Production submission completed
+
+On **5 November 2026 at 13:24 UTC (15:24 Europe/Riga)**, Play Console confirmed **4 changes sent for review** and moved them to **Changes in review**: production **1.0.5 (4)**, app icon, feature graphic and phone screenshots. By **13:30 UTC**, automated quick checks had finished and Publishing overview confirmed **Your changes are now in review** with no blocking issue. Approval/public availability of 1.0.5 are not established; the last confirmed public release is 1.0.0 (3). Managed publishing remains **off**, allowing automatic publication after approval.
+
+- The owner signed in to the controllable Playwright browser. The desktop helper/browser host remained unavailable; Chrome DevTools reported its profile was already in use. This access problem is resolved for the release through Playwright, without accessing browser credential stores or expanding service-account permissions.
+- Promoted the existing internal **1.0.5 / code 4** into production. No new build or binary upload. The existing AAB SHA-256 was rechecked against the build record below.
+- Entered the prepared release notes in all five locales. Google reported **Ready to release**, no loss of supported devices, **100%** rollout, **Available in all targeted countries**. No genuine validation error or new legal agreement was presented.
+- Replaced the English icon, feature graphic and five screenshots, preserving **01-home, 02-find, 03-member, 04-requests, 05-more** order. Visually inspected the saved sequence; every saved SHA-256 matches its source file. The composed feature graphic is AI-labelled, while the unmodified owner icon artwork and actual Android captures are not.
+- Corrected an inheritance issue found by readback: the first UI save copied the old inherited graphics into the four translated listings. Removed those overrides and saved again. Final API data has zero local image overrides for de-DE, es-ES, fr-FR and ru-RU; all inherit the new English images. Every translated title, short description and full description still matches source exactly.
+- Post-submission API verification at **13:25 UTC** confirms production code 4, exact five-language notes, seven English image hashes/order and the unchanged list of **177 named countries plus Rest of world**. API track status `completed` describes full rollout configuration; use Publishing overview to determine review/publication status. All temporary inspection edits were removed without committing API changes.
+- No Laravel deployment, member-app change or iOS submission. Runtime code/assets remain the previously checked commits; this continuation changes release documentation only.
+
+[Submission 3](https://play.google.com/console/u/0/developers/7195613243489270668/app/4973001253686610054/publishing/submission-activity/3/details) independently confirmed **In review** at 13:29 UTC, submitted from Play Console at 15:24 Riga with exactly those four changes. The final 13:30 UTC check confirmed quick checks were finished. [Publishing overview](https://play.google.com/console/u/0/developers/7195613243489270668/app/4973001253686610054/publishing) · [Production release](https://play.google.com/console/u/0/developers/7195613243489270668/app/4973001253686610054/tracks/4697727084661029230/releases/2/review).
+
+Private verification reports: `C:\Users\user6399\HexaTech-release-private\staff-play-105-before-console.json` and `staff-play-105-resume-check.json`. They contain asset hashes, text comparisons and country codes, not credentials.
+
 ## Build and assets
 
 - Source branch `feature/staff-play-release-20261105`; runtime `d8cec9e70`. Native mirror runtime `80e68de39`, pushed to `feature/loyalty-staff-app`. Runtime app files matched between both checkouts.
@@ -11,9 +27,9 @@ Owner request: use the supplied root `favicon.jpg` as the app icon, publish the 
 - Five updated **1080 × 2160, 24-bit PNG** phone screenshots are in `store/screenshots/play-phone`: Home, manual member search, member card/actions, Requests and More. They are actual Android captures of the tested 1.0.4 layout, which is identical in 1.0.5 (only icon/config changed). Android demo mode removed unrelated status notifications; no app content was composited or edited. The first search capture had a floating input-method toolbar and was replaced by a clean capture before delivery. Display size, demo mode and transition animation were restored afterwards.
 - `store/play/feature-1024x500.png` uses the exact supplied logo and concise app text. Five-language release notes are in `store/play/release-1.0.5.json`, each below Google's 500-character limit. Screenshots show only the isolated reviewer organisation/member; no customer data or credentials were used.
 
-## Play and access checkpoint
+## Earlier Play and access checkpoint (before browser submission)
 
-Read-only Play API inspection after submission confirms production remains **1.0.0 / code 3**, while internal testing is now **1.0.5 / code 4**, status `completed`. All five listing texts still match the existing source. Production is publicly released from the earlier approved submission.
+Read-only Play API inspection after the earlier internal submission confirmed production **1.0.0 / code 3**, while internal testing was **1.0.5 / code 4**, status `completed`. All five listing texts still matched the existing source. Production was publicly released from the earlier approved submission.
 
 API edits uploaded the replacement icon, feature graphic and five screenshots and verified each returned SHA-256 and count. Standalone validation returned **403: The caller does not have permission**. A direct commit with `changesNotSentForReview=true` returned 400, saying review is automatic and this parameter must be omitted; a normal commit without the parameter also returned **403**. One transient 503 occurred before uploads and was retried. All uncommitted asset edits were deleted; **the images have not been changed in Play**. Do not claim the assets are staged or published. The existing service account was deliberately granted testing/app-quality access, not production or store-presence editing; no permissions were expanded.
 
@@ -25,4 +41,4 @@ The user's already-open browser and desktop could not be reached: both browser h
 - Google's official bundletool 1.18.3 verifies actual package `uk.hexatech.loyalty.staff`, version `1.0.5`, code `4`, camera/NFC permissions, and no microphone/Advertising ID permission. Packaged project id, Firebase mobile app id and sender id match the private Staff Firebase configuration. The compiled adaptive launcher foreground was extracted and visually checked against the supplied artwork. No runtime credentials were printed.
 - EAS submission `c9b74e65-d3d6-4665-acb7-f69d68de4519` completed successfully to **internal testing**. The Play API independently confirms internal code 4. Existing [internal tester link](https://play.google.com/apps/internaltest/4700822212750987105).
 
-Next: restore an authenticated controllable Play Console, promote code 4 to production with the five release notes, replace English base-listing images (other locales inherit them), review Publishing overview and send the update for review under the owner's explicit publishing request. No further publication permission question is needed. Never describe an internal upload or review submission as public approval/publication.
+The browser listing replacement and production submission described above supersede the earlier access blocker. Next: monitor Google's review outcome; do not rebuild or resubmit code 4. Never describe an internal upload or review submission as public approval/publication.

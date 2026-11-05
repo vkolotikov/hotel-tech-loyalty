@@ -1,6 +1,6 @@
 # HexaTech Staff 1.0 — release runbook
 
-Latest Android update checkpoint (5 November 2026): **1.0.5 (4)** is built and uploaded to internal testing. Public production remains 1.0.0 (3). Updated icon/screenshots and production review submission await the owner's controllable Play Console; the testing API account returns 403 for committing store-image changes. Full artifact checks, assets and resume steps: `18-PLAY-RELEASE-20261105.md`.
+Latest Android update checkpoint (5 November 2026, 13:24 UTC / 15:24 Europe/Riga): **1.0.5 (4) and three store-image changes were submitted for production review** through the owner's authenticated Playwright browser. By 13:30 UTC, automated quick checks had finished and Publishing overview confirmed **Your changes are now in review** (submission 3). Approval/public availability of 1.0.5 remain pending. The last confirmed public version is 1.0.0 (3). All existing countries are preserved, translated text is unchanged and translations inherit the new English images. Full artifact checks, submission and verification: `18-PLAY-RELEASE-20261105.md`.
 
 The desk app (`apps/loyalty-staff`, branches `feature/loyalty-staff-app` and `feature/loyalty-member-app`, identical
 there) ships as a **new listing**: bundle and package `uk.hexatech.loyalty.staff`, Apple team `HNWSAQ5CQ9`, Expo owner
