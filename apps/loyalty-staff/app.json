@@ -3,7 +3,7 @@
     "name": "HexaTech Staff",
     "slug": "hexatech-loyalty-staff",
     "owner": "hoteltechai",
-    "version": "1.0.3",
+    "version": "1.0.4",
     "scheme": "hexatech-staff",
     "orientation": "portrait",
     "icon": "./assets/brand-icon.png",

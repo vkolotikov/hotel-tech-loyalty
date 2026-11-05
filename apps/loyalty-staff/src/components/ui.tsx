@@ -266,9 +266,12 @@ export function Segments<T extends string>({ value, items, onChange, iconOnly = 
         const on = item.id === value
         return (
           <Pressable key={item.id} accessibilityRole="tab" accessibilityLabel={item.count ? `${item.label}, ${item.count}` : item.label} accessibilityState={{ selected: on, disabled }} disabled={disabled} onPress={() => { feel.tap(); onChange(item.id) }} style={{ flex: stacked ? undefined : 1, minWidth: 0, opacity: disabled ? 0.45 : 1 }}>
-          <EclipseSurface fill={!stacked} solid={solid} tone={on ? 'attention' : 'quiet'} radius={E.tileRadius} style={[styles.segment, !iconOnly && (item.icon || item.symbol) ? { minHeight: tileHeight - 2 * E.borderLight.width } : null, stacked && { flexDirection: 'row', minHeight: 54, gap: 10, paddingHorizontal: 14 }]}>
-            {item.icon && <Glyph name={item.icon} size={28} color={on ? C.goldLight : C.text} />}
-            {item.symbol && <Text accessible={false} style={[fonts.segmentSymbol, { color: on ? C.goldLight : C.text2 }]}>{item.symbol}</Text>}
+          {/* Intrinsic height is essential here: flex fill collapses in Android's non-scrolling list header. */}
+          <EclipseSurface solid={solid} tone={on ? 'attention' : 'quiet'} radius={E.tileRadius} style={[styles.segment, !iconOnly && (item.icon || item.symbol) ? { minHeight: tileHeight - 2 * E.borderLight.width } : null, stacked && { flexDirection: 'row', minHeight: 54, gap: 10, paddingHorizontal: 14 }]}>
+            {(item.icon || item.symbol) && <View style={{ minHeight: 32, alignItems: 'center', justifyContent: 'center' }}>
+              {item.icon && <Glyph name={item.icon} size={28} color={on ? C.goldLight : C.text} />}
+              {item.symbol && <Text accessible={false} style={[fonts.segmentSymbol, { color: on ? C.goldLight : C.text2 }]}>{item.symbol}</Text>}
+            </View>}
             {(!iconOnly || (!item.icon && !item.symbol)) && <Text style={[fonts.segment, { color: on ? C.text : C.text2, alignSelf: stacked ? undefined : 'stretch', flexShrink: 1 }]}>{item.label}</Text>}
             {item.count !== undefined && item.count > 0 && (
               <View style={[styles.segmentCount, stacked && { position: 'relative', top: 0, right: 0 }]}>
