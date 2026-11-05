@@ -2,7 +2,7 @@
   "expo": {
     "name": "HexaTech Loyalty",
     "slug": "hotel-loyalty",
-    "version": "2.0.0",
+    "version": "2.0.1",
     "scheme": "hotel-loyalty",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
