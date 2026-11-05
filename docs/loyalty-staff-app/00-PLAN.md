@@ -72,6 +72,13 @@ modern, luxury, poverfull, easy to use nice design".
 
 ## Checks before release
 
+### Android update checkpoint, 5 November 2026
+
+- Owner authorized publishing the redesigned Staff app with the supplied `favicon.jpg` icon and updated Play screenshots.
+- **1.0.5 (4)** production AAB is built and uploaded to **internal testing**, independently verified by Play API. Current public production remains **1.0.0 (3)**.
+- New store icon, feature graphic, five native screenshots and five-language release notes are ready in source. Their Play edit could not be committed with the existing testing service account (403); no store images were changed.
+- Production promotion and listing changes await a working authenticated Play Console connection. Desktop/browser helpers are unavailable after the PC interruption; no permissions were expanded. Details and next steps: `18-PLAY-RELEASE-20261105.md`.
+
 ### Store progress, 3 November 2026
 
 - iOS **1.0.0 (2)** submitted and **Waiting for Review**; submission
