@@ -276,8 +276,9 @@ or add the next dated one, at the end of a session.
   membership's account is its organisation's own member account (`Loyalty\Members\OwnAccount`) — a guest is linked
   only to one (`users` has no tenant scope; never look an account up by email alone), and every writer of a member's
   account (details, erasure, merge) refuses or detaches another's; `php artisan loyalty:foreign-accounts` lists old
-  links, `--detach` repairs them. An AI tool that writes asks the person's own rights (`LoyaltyAccess` for points, a
-  manager for settings) and never answers a secret setting (`SettingRegistry::SECRET_KEYS`). A member endpoint never
+  links, `--detach` repairs them (a migration of 2026-11-05 did it once on deploy, audited `member.account_detached`).
+  An AI tool that writes asks the person's own rights (`LoyaltyAccess` for points, a manager for settings) and never
+  answers a secret setting (`SettingRegistry::SECRET_KEYS`). A member endpoint never
   matches on a member id that may be null; a switched-off member's own spend and earn requests are refused
   (`MemberStatus::assertActive()`).
 - Testing against PostgreSQL (the SQLite schemas miss NOT NULL columns and indexes production has): build a database

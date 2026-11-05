@@ -20,9 +20,9 @@ before the public launch (2026-11-04)"):
 
 1. **Cross-organisation account takeover (the blocker).** A guest created anywhere was wrapped around ANY account with
    the same address, other venues' members and staff logins included; Edit details, erasure and merge then wrote that
-   account. Fixed through `Loyalty\Members\OwnAccount`. **The owner runs, once, after the deploy:**
-   `php artisan loyalty:foreign-accounts` (lists the links made before) and then
-   `php artisan loyalty:foreign-accounts --detach`.
+   account. Fixed through `Loyalty\Members\OwnAccount`. The links made before are repaired by the migration
+   `2026_11_05_090000_detach_foreign_member_accounts` on deploy (owner, 2026-11-05: "I do not make any manual
+   activities"), each one audited `member.account_detached`.
 2. The CRM assistant's tools ask the person's own rights for points and settings and never answer a secret setting.
 3. The members' chat answers 404 to a staff token (it read and wrote visitors' chats).
 4. A switched-off member's own redeem, offer claim and benefit request are refused (403 `member_inactive`).

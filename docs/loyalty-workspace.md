@@ -765,8 +765,11 @@ each closed with a test that fails on the code before the fix.
     for one venue); `php artisan loyalty:foreign-accounts --detach` gives each its own account (named from the venue's
     own guest record, address `unlinked-member-<member id>@unlinked.local`, no known password). The membership keeps
     its number, points and history; nobody signs in to it until staff set an address in Edit details (one no other member
-    account has: a member's address is unique across all organisations, `users_email_member_unique`). Run the list
-    after the deploy, then `--detach`.
+    account has: a member's address is unique across all organisations, `users_email_member_unique`). The migration
+    `2026_11_05_090000_detach_foreign_member_accounts` ran the repair once on deploy (owner, 2026-11-05: nothing typed
+    by hand), each audited `member.account_detached` with the old account id (undo: point `user_id` back); its count
+    is in the deploy's log line `detach_foreign_member_accounts`. Nobody could use such a membership: the members' app
+    and the portal sign in members only, and a member sees only their own venue's membership.
 - **The CRM assistant asks the person's own rights** (`CrmAiToolset`, `CrmVoiceToolset`). Its routes let every staff
   member of a CRM organisation in, and its tools wrote with no rights of their own: anyone could have it award or redeem
   points (up to 100,000 a call by chat, 1,000,000 by voice), read every secret setting raw (Stripe, Twilio, mail, PMS)
@@ -964,7 +967,7 @@ files on disk): run them one after the other.
   - Verified by content on `origin/main`: the new files, each fix's line, the portal chunk's `refetchInterval:6e4`
     (absent from a8b45e629's), the five Symfony versions. Not on the live site (this container cannot reach
     `app.hexa-tech.uk`).
-  - **After it, once:** `php artisan loyalty:foreign-accounts`, then `php artisan loyalty:foreign-accounts --detach`.
+  - **After it, once:** the repair of links made before (done by the next deploy's migration, 2026-11-05).
   - The next source delta starts at **50abe6993**.
 
 - CRM assistant on the Anthropic SDK (stack plan follow-up, owner "do next", 2026-11-02): production **33d4f74** on
