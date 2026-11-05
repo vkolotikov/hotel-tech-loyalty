@@ -418,3 +418,26 @@ More → Bookings → Book (an appointment, paid at the venue), More → Profile
 - Google Play's member Publishing overview was refreshed and still explicitly says **Your changes are now in
   review**; managed publishing is off. Both member platforms can publish following their respective approvals.
   Store approval and actual public 2.0.0 availability remain pending. Both private reviewer sign-ins are verified.
+
+**2026-11-05, 2.0.1 with the refresh fix (Claude, cloud environment, EAS as the `hoteltechai` robot user):**
+
+- Why: the owner found that points changed in the staff app did not show in the members' app. The server had the new
+  balance at once; 2.0.0 never asked again (no refresh on return to the foreground, the bootstrap fresh for a minute).
+  `3ddcdc3ec` makes the app ask again on return to the foreground, every 30 s on Home and after any push. 2.0.0 is in
+  review on both stores without it, so it ships as **2.0.1** (`165e3475b`) and the reviews in progress were not
+  restarted. Until 2.0.1 is out, 2.0.0 still refreshes on a push, and the server now pushes on every desk award,
+  check-in, purchase and redeem (production 70d52cbde and the next deploy).
+- Checks: app `tsc --noEmit`, **41 tests / 3 files** pass.
+- iOS **2.0.1 (21)** finished: `https://expo.dev/accounts/hoteltechai/projects/hotel-loyalty/builds/4334ec8d-8636-4183-a7a0-361e5656ca42`.
+  Uploaded to App Store Connect: `https://expo.dev/accounts/hoteltechai/projects/hotel-loyalty/submissions/efefb0db-6c53-442b-bcfd-e87ea82ea9d7`
+  (FINISHED; EAS's TestFlight group setup was refused by Apple with 403 as before, and Internal QA has access to all
+  builds). Nothing was submitted for review; 2.0.0 (20) stays WAITING_FOR_REVIEW with automatic release.
+- Android **2.0.1 / 27** finished: `https://expo.dev/accounts/hoteltechai/projects/hotel-loyalty/builds/a2739f88-fe58-4039-8b42-4e30e2d908ea`.
+  Not uploaded to Play yet: production 26 is in review and an internal upload would only wait there unsent.
+- Expo push security (checked through Expo's API): **off** for `@hoteltechai/hotel-loyalty` and
+  `@hoteltechai/hexatech-loyalty-staff`, so the server needs no `EXPO_ACCESS_TOKEN`.
+- **Next, once both stores approve 2.0.0:** App Store Connect → HexaTech Loyalty → + Version **2.0.1**, select build
+  **21**, What's New ("Points and rewards update on their own after a change at the venue"), submit. Play:
+  `npx eas-cli submit -p android --id a2739f88-fe58-4039-8b42-4e30e2d908ea --profile production`, then send the
+  internal release to production (or submit with `--track production`). After both are live, raise the server's
+  `MEMBER_APP_LATEST_VERSION` to 2.0.1 so 2.0.0 phones are told an update exists.
