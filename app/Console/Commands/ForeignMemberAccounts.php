@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Models\AuditLog;
 use App\Models\LoyaltyMember;
+use App\Models\User;
 use App\Services\Loyalty\Members\MemberErasure;
 use App\Services\Loyalty\Members\OwnAccount;
 use Illuminate\Console\Command;
@@ -28,7 +29,7 @@ class ForeignMemberAccounts extends Command
 
     protected $description = 'List (and with --detach repair) memberships linked to an account of another organisation or a staff login.';
 
-    /** @return Collection<int, object> one row per membership linked to an account that is not its own */
+    /** @return Collection<int, \stdClass> one row per membership linked to an account that is not its own */
     public static function links(?int $organizationId = null): Collection
     {
         return DB::table('loyalty_members')
@@ -43,14 +44,14 @@ class ForeignMemberAccounts extends Command
     }
 
     /** Gives one listed membership an account of its own and audits it; false when it no longer needs one. */
-    public static function repair(object $row): bool
+    public static function repair(\stdClass $row): bool
     {
         return DB::transaction(function () use ($row) {
             $member = LoyaltyMember::withoutGlobalScopes()->with('user')->lockForUpdate()->find($row->id);
-            if ($member === null || $member->user === null || OwnAccount::holds($member)) {
+            $old = $member?->user;
+            if ($member === null || !$old instanceof User || OwnAccount::holds($member)) {
                 return false;
             }
-            $old = $member->user;
             MemberErasure::detach($member);
             AuditLog::create([
                 'organization_id' => (int) $member->getAttribute('organization_id'),
