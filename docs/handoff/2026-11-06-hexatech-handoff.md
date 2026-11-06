@@ -1,6 +1,14 @@
 # HexaTech handoff — 6 November 2026
 
-Read CLAUDE.md and `2026-11-02-hexatech-handoff.md` for the current application, native apps, environment and outstanding operational work. This session changes the Loyalty workspace Insights filters, Overview and Members presentation.
+Read CLAUDE.md and `2026-11-02-hexatech-handoff.md` for the current application, native apps, environment and outstanding operational work. This session changes the Loyalty workspace Insights filters, Overview, Members and Program presentation.
+
+## Program simplification and Places directory
+
+Owner: use the simplified Program designs, refresh only the Places main page while its other designs/functions remain under review, and consolidate membership benefits under Rewards. Branch `feature/program-simplified-20261106`; production baseline `e576c9085`, source delta from `dd1766e58` including the prior release-record documents. Figma session `68205940-334f-43b6-9ee9-44b55dab8e02`; current PG-B01/02/03/06/07 nodes `295:9118`, `295:9407`, `295:9686`, `295:10623`, `295:10897`; Places PL-01 `326:13875`. See `loyalty-redesign/25-PROGRAM-SIMPLIFICATION-REPORT.md` for exact mapping and adaptations.
+
+Program gains compact coloured levels/details, clearer editors and benefit assignments, a local-filtered boost schedule/preview, and a refined real four-step setup. Membership-benefit catalogue navigation is removed from Program; old URLs redirect to Rewards with filters/selection preserved. Level-specific assignments remain. Places changes cover only the directory and existing actions; real total/active/allowed-today counts replace unsupported entrance/override/hour samples. PL-02–16 and new Places functionality remain outside scope. No backend, dependency, migration, access or earning-rule change.
+
+Development: **5,869 frontend tests / 406 files**, TypeScript, focused lint; browser checks cover 54 Members/Program + 42 Program/Places + 79 Settings/setup + 73 mobile. Initial audit: ten language/theme combinations, five pages and six widths, minimum text contrast **4.84:1 dark / 4.64:1 light**. Screenshots were reviewed and card/preview/icon details refined. Release artifact/live checks are pending; the Members release below remains the current production/source baseline until those pass.
 
 ## Members simplification
 

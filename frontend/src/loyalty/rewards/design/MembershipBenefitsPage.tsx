@@ -24,7 +24,7 @@ import { useRewardWords } from './words'
 
 type Open = { kind: 'edit'; benefit: Benefit | null } | { kind: 'rename' | 'remove' | 'assign'; benefit: Benefit } | { kind: 'assignment'; tier: Tier; current: TierBenefit | null; benefit: Benefit }
 
-export function MembershipBenefitsPage({ programRoute = false }: { programRoute?: boolean }) {
+export function MembershipBenefitsPage() {
   const { t, i18n } = useTranslation(), say = useRewardWords(), boot = useBoot(), client = useQueryClient()
   const query = useQuery({ queryKey: PROGRAM_KEY, queryFn: programApi.program }), data = query.data
   const [open, setOpen] = useState<Open | null>(null), close = () => setOpen(null)
@@ -33,7 +33,7 @@ export function MembershipBenefitsPage({ programRoute = false }: { programRoute?
   const q = params.get('q') ?? '', delivery = params.get('delivery') ?? 'all', level = params.get('level') ?? 'all', status = params.get('status') ?? 'all'
   const manage = boot.staff.can.manage_program
   const unused = data?.advice?.find(a => a.code === 'benefit_unused')
-  const go = (patch: Record<string, string | number>) => { const url = rewardsUrl('benefits', { q, delivery, level, status, selected: params.get('selected'), ...patch }); navigate(programRoute ? url.replace('/loyalty/rewards', '/loyalty/program') : url, { replace: true }) }
+  const go = (patch: Record<string, string | number>) => { const url = rewardsUrl('benefits', { q, delivery, level, status, selected: params.get('selected'), ...patch }); navigate(url, { replace: true }) }
   const assigned = (b: Benefit) => benefitAssignments(b, data?.tiers ?? [])
   const state = (b: Benefit) => !b.is_active ? 'off' : assigned(b).length ? 'active' : 'unassigned'
   const visible = (data?.benefits ?? []).filter(b => b.name.toLocaleLowerCase().includes(q.toLocaleLowerCase()) && (delivery === 'all' || b.fulfillment_mode === delivery) && (level === 'all' || assigned(b).some(a => String(a.tier.id) === level)) && (status === 'all' || state(b) === status))

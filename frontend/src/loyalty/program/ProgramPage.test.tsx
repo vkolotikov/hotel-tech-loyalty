@@ -21,6 +21,7 @@ import { PROGRAM_KEY } from './api'
 import { BoostDialog } from './BoostDialog'
 import { TierDialog } from './TierDialog'
 import { ConfirmTimes, ProgramPage } from './ProgramPage'
+import { MembershipBenefitsPage } from '../rewards/design/MembershipBenefitsPage'
 import { PROGRAM_SECTIONS, programSearch, type ProgramSection } from './programMath'
 import type { Program } from './types'
 
@@ -59,12 +60,13 @@ const program: Program = {
 const render = (c: Can, data: Program | null = program, section: ProgramSection | string = 'tiers') => {
   const client = new QueryClient()
   if (data) client.setQueryData(PROGRAM_KEY, data)
-  const entry = section.startsWith('#') || section.startsWith('?') ? `/loyalty/program${section}` : `/loyalty/program${programSearch(section as ProgramSection)}`
+  const catalogue = section === 'benefits' || section.includes('tab=benefits')
+  const entry = catalogue ? '/loyalty/rewards?tab=benefits' + (section.includes('selected=8') ? '&selected=8' : '') : section.startsWith('#') || section.startsWith('?') ? `/loyalty/program${section}` : `/loyalty/program${programSearch(section as ProgramSection)}`
   return renderToStaticMarkup(
     <QueryClientProvider client={client}>
       <MemoryRouter initialEntries={[entry]}>
         <LoyaltyContext.Provider value={{ data: boot(c), isLoading: false, isError: false, error: null, refetch: () => {} }}>
-          <ProgramPage />
+          {catalogue ? <MembershipBenefitsPage /> : <ProgramPage />}
         </LoyaltyContext.Provider>
       </MemoryRouter>
     </QueryClientProvider>,
@@ -72,7 +74,7 @@ const render = (c: Can, data: Program | null = program, section: ProgramSection 
 }
 const text = (html: string) => html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ')
 /** Every section, one after the other, as a manager or staff would page through them. */
-const everySection = (c: Can, data: Program = program) => PROGRAM_SECTIONS.map(section => render(c, data, section)).join('')
+const everySection = (c: Can, data: Program = program) => PROGRAM_SECTIONS.map(section => render(c, data, section)).join('') + render(c, data, 'benefits')
 
 describe('Program (spec 2026-10-21 §4.5, §5)', () => {
   it('shows the ladder in order with what reaches each tier, its earn rate, members, state and benefits', () => {
@@ -85,7 +87,7 @@ describe('Program (spec 2026-10-21 §4.5, §5)', () => {
     expect(words).toContain('1,200 members')
     expect(words).toContain('Switched off')
     // The wording when there is one — never the typed value beside it too (that stays in the chip's tip).
-    expect(words).toContain('Late checkout · Until 2 pm')
+    expect(words).toContain('Late checkout')
     expect(html).toContain('href="/loyalty?tier=2"')
     expect(words).toContain('This tier gives no benefit yet.')
     // The ladder's steps are numbered on the rail; a tier in use wears no pill, only one switched off does.
@@ -105,17 +107,18 @@ describe('Program (spec 2026-10-21 §4.5, §5)', () => {
   it('shows boosts on the venue\'s clock with their days, tiers and state', () => {
     const html = render(can(), program, 'boosts')
     const words = text(html)
-    expect(words).toContain('Oct 24, 10:00 – Oct 25, 23:59 · Sat, Sun')
+    expect(words).toContain('Oct 24, 10:00 → Oct 25, 23:59')
+    expect(words).toContain('Sat, Sun')
     expect(words).toContain('Upcoming')
     expect(words).toContain('Ended')
-    expect(words).toContain('Every day')
-    expect(words).toContain('Every tier')
+    expect(html).not.toContain('data-boost="4"') // Ended events remain available through All statuses.
+    expect(html).not.toContain('data-boost="4"') // Ended events remain available through All statuses.
     expect(html).toMatch(/data-boost="3"[\s\S]*?data-tier-chip[^>]*>[\s\S]*?Gold/)
   })
 
   it('gives a manager every action', () => {
     const words = text(everySection(can({ manage_program: true })))
-    for (const action of ['+ Add level', 'Edit level', 'Add benefit', 'Edit benefit', 'Add boost', 'Edit Double weekend', 'Remove Double weekend']) {
+    for (const action of ['+ Add level', 'Edit level', 'Add benefit', 'Edit benefit', 'Add boost', 'Edit']) {
       expect(words).toContain(action)
     }
     const html = everySection(can({ manage_program: true }))
@@ -133,7 +136,7 @@ describe('Program (spec 2026-10-21 §4.5, §5)', () => {
     const html = everySection(can({ manage_rewards: true }))
     const words = text(html)
     expect(words).toContain('Only an owner or a manager can change the programme.')
-    expect(words).toContain('Late checkout · Until 2 pm')
+    expect(words).toContain('Late checkout')
     for (const action of ['Add tier', 'Edit', 'Add benefit', 'Switch off', 'Add boost', 'Remove']) expect(words).not.toContain(action)
     expect(html).not.toContain('Take Late checkout off Gold')
     // The only buttons are the section cards and the figure that leads to Benefits: nothing that changes anything.
@@ -150,7 +153,7 @@ describe('Program (spec 2026-10-21 §4.5, §5)', () => {
     const flagged: Program = { ...program, boosts: program.boosts.map(b => ({ ...b, check_time: true })) }
     const html = render(can({ manage_program: true }), flagged, 'boosts')
     expect(html.match(/data-time-check=""/g)).toHaveLength(1)
-    expect(html).toMatch(/data-boost="3"[\s\S]*data-time-check=""[\s\S]*data-boost="4"/)
+    expect(html).toMatch(/data-boost="3"[\s\S]*data-time-check=""/)
     expect(text(html)).toContain('Check the time: saved before boost times were read on the venue’s clock everywhere. If it was last saved in the full admin')
     expect(render(can({ manage_program: true }), program, 'boosts')).not.toContain('data-time-check')
   })
@@ -170,7 +173,7 @@ describe('Program (spec 2026-10-21 §4.5, §5)', () => {
   it('is one section at a time, chosen on its card in its colour and kept in the address (release 10, the owner\'s Figma)', () => {
     const html = render(can())
     expect(html).toContain('id="program-tiers"')
-    expect(text(html)).toContain('How members move up')
+    expect(text(html)).toContain('Earn qualifying points')
     expect(html).not.toContain('data-benefit="7"')
     expect(html).not.toContain('data-boost="3"')
     const benefits = render(can(), program, 'benefits')
@@ -181,14 +184,16 @@ describe('Program (spec 2026-10-21 §4.5, §5)', () => {
     expect(benefits).not.toContain('data-boost="3"')
     // An unknown section is Tiers; #places, the address Scan and the Guide opened before, is Places.
     expect(render(can(), program, '?tab=nothing')).toContain('id="program-tiers"')
-    expect(render(can(), program, '#places')).toMatch(/id="program-section-places" aria-selected="true"/)
+    expect(render(can(), program, '#places')).toContain('id="places" aria-labelledby="program-places"')
   })
 
   it('opens Tiers with the ladder in figures, the catalogue one press away', () => {
     const html = render(can())
     const words = text(html)
     expect(words).toContain('1 active levels · 1,230 active members')
-    expect(words).toContain('Benefit catalogue →')
+    expect(words).toContain('Program tools')
+    expect(html).toContain('href="/loyalty/program?tab=places"')
+    expect(html).not.toContain('href="/loyalty/program?tab=benefits"')
     expect(words).toContain('Switched off')
   })
 

@@ -9,10 +9,10 @@ import type { Benefit, BenefitBody, Boost, BoostBody, BoostState, ProgramOptions
  */
 
 /**
- * Program's sections (release 10, the owner's Figma 163:88): tiers, benefits, places, boosts. The section lives in the
- * address (`?tab=places`); `#places`, the address Scan and the Guide opened before, still opens Places.
+ * Program's sections: tiers, places and boosts. The benefit catalogue lives only in Rewards; ProgramPage redirects
+ * its old bookmarks. The section lives in `?tab=places`; the earlier `#places` address also remains valid.
  */
-export const PROGRAM_SECTIONS = ['tiers', 'benefits', 'places', 'boosts'] as const
+export const PROGRAM_SECTIONS = ['tiers', 'places', 'boosts'] as const
 export type ProgramSection = typeof PROGRAM_SECTIONS[number]
 
 export function programSectionFrom(search: string, hash = ''): ProgramSection {

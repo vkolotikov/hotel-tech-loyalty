@@ -10,7 +10,7 @@ import { failureOf } from '../lib/api'
 import { refusalKey } from '../lib/errors'
 import { useLook } from '../lib/look'
 import { activeTone } from '../program/programMath'
-import { IconButton, SectionHead } from '../program/parts'
+import { IconButton } from '../program/parts'
 import { ConfirmDialog, ToneBadge } from '../ui/formParts'
 import { GetStarted } from '../ui/GetStarted'
 import { TierChip } from '../ui/TierChip'
@@ -19,6 +19,9 @@ import { ERRORS } from './errors'
 import { PlaceDialog } from './PlaceDialog'
 import { removedWords, todayWords, whoMayEnter, type Words } from './placesMath'
 import { PLACES_KEY, afterPlaceChange, placesApi, type Place, type PlacesList } from './placesApi'
+import { PlacesDirectory } from './PlacesDirectory'
+import { useRedesignWords } from '../redesign/words'
+import { OverviewButton } from '../overview/OverviewUI'
 
 /** Which dialog is open, with the place it works on. */
 type Open =
@@ -33,6 +36,7 @@ type Open =
  */
 export function PlacesSection({ manage }: { manage: boolean }) {
   const { t } = useTranslation()
+  const say = useRedesignWords()
   const look = useLook()
   const query = useQuery({ queryKey: PLACES_KEY, queryFn: placesApi.list })
   const [open, setOpen] = useState<Open | null>(null)
@@ -42,15 +46,15 @@ export function PlacesSection({ manage }: { manage: boolean }) {
   const change = manage && (data?.can_change ?? false)
 
   return (
-    <section id="places" aria-labelledby="program-places" className="scroll-mt-20 space-y-3">
-      <SectionHead id="program-places" icon={MapPin} hue="place" title={t('loyalty.places.title', 'Places')}>
+    <section id="places" aria-labelledby="program-places" className="l-pg-places">
+      <header className="l-ov-page-heading"><div><h1 id="program-places">{say('pgPlacesTitle')}</h1><p>{say('pgPlacesLine')}</p></div><div className="l-rd-actions">
         {/* With no place yet, the Get started panel below holds the one action. */}
         {change && (data?.places.length ?? 0) > 0 && (
-          <Button size="sm" onClick={() => { setSaid(null); setOpen({ kind: 'place', place: null }) }}>
+          <OverviewButton primary onClick={() => { setSaid(null); setOpen({ kind: 'place', place: null }) }}>
             <Plus size={15} aria-hidden />{t('loyalty.places.add', 'Add a place')}
-          </Button>
+          </OverviewButton>
         )}
-      </SectionHead>
+      </div></header>
 
       {said && <Notice tone="success">{t(...said)}</Notice>}
       <PlacesBody query={query} change={change} theme={look.resolved} onOpen={(next) => { setSaid(null); setOpen(next) }} />
@@ -111,9 +115,7 @@ function PlacesBody({ query, change, theme, onOpen }: {
     )
   }
   return (
-    <ul aria-label={t('loyalty.places.list', 'Places')} className="grid gap-3 lg:grid-cols-2">
-      {data.places.map(place => <PlaceCard key={place.id} place={place} change={change} theme={theme} onOpen={onOpen} />)}
-    </ul>
+    <PlacesDirectory data={data} change={change} theme={theme} onOpen={onOpen} />
   )
 }
 

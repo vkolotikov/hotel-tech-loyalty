@@ -5,6 +5,7 @@ import { OverviewButton } from '../overview/OverviewUI'
 import { overviewAssets } from '../overview/assets'
 import { useRedesignWords } from '../redesign/words'
 import { tierTextStyle } from '../redesign/designMath'
+import './design/program.css'
 import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
@@ -84,9 +85,8 @@ export function TierBenefitDialog({ tier, current, benefits, options, onClose, i
   const amount = decimalOf(form.value_amount)
   const typed = needsAmount(form.value_type) && amount !== null && VALUE_PHRASE_WORDS[form.value_type] ? t(`loyalty.program.value_phrase.${form.value_type}`, VALUE_PHRASE_WORDS[form.value_type], { amount: amountOf(form.value_type, amount, boot.venue.currency, i18n.language || 'en') }) : ''
   const amountLabel = form.value_type === 'percent_discount' ? say('discount') : t('loyalty.program.tier_benefit.value_amount', 'Amount')
-  return <DesignDialog title={title} wide onClose={onClose} busy={save.isPending}>
+  return <DesignDialog title={title} wide onClose={onClose} busy={save.isPending} className="l-pg-benefit-dialog">
     <form className="l-rd-form" noValidate onSubmit={e => { e.preventDefault(); setTried(true); if (!save.isPending && Object.keys(tierBenefitProblems(form, options)).length === 0) save.mutate() }}>
-      <p>{say('benefitLine', { name: tier.name })}</p>
       {already && <Notice tone="info">{t('loyalty.program.tier_benefit.already', '{{tier}} already gives this benefit: saving changes its wording and value.', { tier: tier.name })}</Notice>}
       <div className="l-rd-benefit-columns">
         <div className="l-rd-form">

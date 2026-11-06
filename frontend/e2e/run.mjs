@@ -10,6 +10,7 @@ await fs.mkdir(out, { recursive: true })
 const specs = {
   overview: ['overview.browser.js'],
   members: ['members-program.browser.js', 'members-program.checks.js'],
+  program: ['program-simplified.browser.js'],
   earn: ['ways-to-earn.browser.js', 'ways-to-earn.interactions.browser.js', 'ways-to-earn.states.browser.js'],
   rewards: ['rewards-benefits.browser.js', 'rewards-benefits.interactions.js', 'rewards-benefits.states.js'],
   events: ['events.browser.js', 'events.interactions.js', 'events.states.js'],
@@ -49,7 +50,13 @@ try {
       page.on('pageerror', error => errors.push(error.message))
       try {
         let answer
-        if (group === 'mobile') {
+        if (group === 'program') {
+          let fixture = await source('members-program.browser.js', dir)
+          fixture = fixture.slice(0, fixture.indexOf('  await page.setViewportSize')) + '\nreturn state;\n}'
+          fixture = fixture.replace("else if(path==='places')body={places:[],options:{tiers}};", "else if(path==='places')body=state.placeData||{places:[],tiers,can_change:!state.limited};")
+          const state = await run(fixture, page)
+          answer = await run(await source(file, dir), page, { state, root: dir, base })
+        } else if (group === 'mobile') {
           let fixture = await source(file + '.browser.js', dir)
           fixture = fixture.slice(0, fixture.indexOf(file === 'overview' ? '  const check=' : '  await page.setViewportSize')) + '\nreturn state;\n}'
           const state = await run(fixture, page)

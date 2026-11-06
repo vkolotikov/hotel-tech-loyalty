@@ -19,6 +19,7 @@ import { LoyaltyContext } from '../LoyaltyProvider'
 import type { Bootstrap, Can } from '../lib/types'
 import { PROGRAM_KEY, removalKey } from './api'
 import { ProgramPage } from './ProgramPage'
+import { MembershipBenefitsPage } from '../rewards/design/MembershipBenefitsPage'
 import { moveTarget, tierRemovalLines } from './programMath'
 import { RemoveBenefit, RemoveTier, RenameDialog } from './RemoveDialogs'
 import type { Benefit, Program, Tier, TierRemoval } from './types'
@@ -148,11 +149,11 @@ describe('Deleting and renaming tiers and benefits (release 11, owner 2026-10-26
     expect(tiers).toMatch(/data-tier-actions=""/)
     expect(tiers).toContain('aria-label="Edit level Silver"')
     expect(tiers).toContain('aria-label="More Silver"') // Rename and Delete are under this menu (browser tested).
-    const benefits = wrap(<ProgramPage />, true, c => c.setQueryData(PROGRAM_KEY, program), '/loyalty/program?tab=benefits')
+    const benefits = wrap(<MembershipBenefitsPage />, true, c => c.setQueryData(PROGRAM_KEY, program), '/loyalty/rewards?tab=benefits')
     expect(text(benefits)).toContain('Edit benefit')
     expect(benefits).toContain('aria-label="More"') // Rename and Delete are in the selected benefit menu; browser tested.
 
-    const staff = wrap(<ProgramPage />, false, c => c.setQueryData(PROGRAM_KEY, program)) + wrap(<ProgramPage />, false, c => c.setQueryData(PROGRAM_KEY, program), '/loyalty/program?tab=benefits')
+    const staff = wrap(<ProgramPage />, false, c => c.setQueryData(PROGRAM_KEY, program)) + wrap(<MembershipBenefitsPage />, false, c => c.setQueryData(PROGRAM_KEY, program), '/loyalty/rewards?tab=benefits')
     expect(staff).not.toContain('data-tier-actions')
     expect(staff).not.toMatch(/Rename|Delete/)
   })

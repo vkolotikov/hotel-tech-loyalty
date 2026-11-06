@@ -230,7 +230,7 @@ describe('Program\'s sections in the address (release 10)', () => {
   })
 
   it('writes Tiers as the bare address and every other section as ?tab=', () => {
-    expect(PROGRAM_SECTIONS.map(programSearch)).toEqual(['', '?tab=benefits', '?tab=places', '?tab=boosts'])
+    expect(PROGRAM_SECTIONS.map(programSearch)).toEqual(['', '?tab=places', '?tab=boosts'])
   })
 })
 

@@ -28,6 +28,9 @@ import { useSettingsWords } from '../settings/words'
 import { OverviewButton, OverviewDialog } from '../overview/OverviewUI'
 import { useLeaveGuard } from '../earn/useLeaveGuard'
 import './setup.css'
+import { useRedesignWords } from '../redesign/words'
+import { programAssets } from '../program/design/assets'
+import './setup-simplified.css'
 
 /** The server's icon name for a preset (LoyaltyPresetService::PRESETS `icon`); one the workspace does not know wears the area's own. */
 const PRESET_ICONS: Record<string, LucideIcon> = {
@@ -49,8 +52,8 @@ export function SetupWizard() {
   const data = query.data
 
   return (
-    <div className="l-ov-page l-rd-page l-gs-page">
-      <header className="l-ov-page-heading"><div><h1>{t('loyalty.redesign.guidedSetup', 'Guided setup')}</h1><p>{t('loyalty.options.wizard.line', 'Four short steps. You can change everything later under Ways to earn.')}</p></div><Link to="/loyalty/guide" className="l-ov-button">{t('loyalty.guide.page.title', 'Guide')}</Link></header>
+    <div className="l-ov-page l-rd-page l-gs-page l-gs-clean">
+      <header className="l-ov-page-heading"><div><h1>{t('loyalty.redesign.guidedSetup', 'Guided setup')}</h1></div><Link to="/loyalty/guide" className="l-ov-button">{t('loyalty.guide.page.title', 'Guide')}</Link></header>
       {query.isError && !data && <LoadFailed error={query.error} onRetry={() => { void query.refetch() }} />}
       {!data && query.isLoading && <Loading />}
       {data && !data.can_change && (
@@ -76,6 +79,7 @@ export function Wizard({ answer, start = {} }: { answer: OptionsAnswer; start?: 
   const { t, i18n } = useTranslation()
   const say = useSay()
   const design = useSettingsWords()
+  const clean = useRedesignWords()
   const guard = useLeaveGuard()
   const locale = i18n.language || 'en'
   const currency = useBoot().venue.currency
@@ -145,8 +149,9 @@ export function Wizard({ answer, start = {} }: { answer: OptionsAnswer; start?: 
 
   return (
     <div className="l-gs-workspace">
-      <section className="l-ov-panel l-gs-progress"><div><h2>{design('draftTitle')}</h2><span>{t('loyalty.options.wizard.step_of', 'Step {{n}} of {{total}}', { n: String(index + 1), total: String(STEPS.length) })}</span></div><p>{design('draftLine')}</p><progress max={STEPS.length} value={index} aria-label={t('loyalty.options.wizard.steps', 'Steps')} /></section>
+      <section className="l-ov-panel l-gs-progress"><div><h2>{t('loyalty.options.wizard.step_of', 'Step {{n}} of {{total}}', { n: String(index + 1), total: String(STEPS.length) })} · {stepTitle(t, step)}</h2></div><p>{design('draftLine')}</p><progress max={STEPS.length} value={index} aria-label={t('loyalty.options.wizard.steps', 'Steps')} /></section>
       <div className="l-gs-columns"><div className="l-gs-main">
+      <section className="l-ov-panel l-gs-starting"><div><small>{clean('pgSetupStartingPoint')}</small>{step !== 'business' && <button type="button" className="l-ov-link" onClick={() => go('business')} disabled={apply.isPending}>{t('loyalty.program.edit', 'Edit')} →</button>}</div><h2>{keep ? t('loyalty.options.wizard.keep', 'Keep my tiers and rewards') : presetOf(answer, choice) ? presetName(t, presetOf(answer, choice)!) : design('draftTitle')}</h2></section>
       <div className="l-ov-panel l-gs-steps">
         <ol aria-label={t('loyalty.options.wizard.steps', 'Steps')}>
           {STEPS.map((s, i) => (
@@ -154,7 +159,7 @@ export function Wizard({ answer, start = {} }: { answer: OptionsAnswer; start?: 
               data-complete={i < index || undefined}>
               <button type="button" disabled={i > index || apply.isPending} onClick={() => go(s)}>
               <span aria-hidden className="font-a-mono text-xs tabular-nums">{i < index ? <Check size={13} /> : i + 1}</span>
-              {t(`loyalty.options.step.${s}`, STEP_WORDS[s])}
+              <span className="l-gs-step-copy"><strong>{t(`loyalty.options.step.${s}`, STEP_WORDS[s])}</strong><small>{stepTitle(t, s)}</small></span><span className="l-gs-step-state"><img src={i < index ? programAssets.activeDot : s === step ? programAssets.upcomingDot : programAssets.entryDot} alt="" />{clean(i < index ? 'pgStepComplete' : s === step ? 'pgStepCurrent' : 'pgStepPending')}</span><span className="l-gs-step-arrow" aria-hidden>→</span>
               </button>
             </li>
           ))}
@@ -164,9 +169,6 @@ export function Wizard({ answer, start = {} }: { answer: OptionsAnswer; start?: 
 
       <form noValidate onSubmit={onNext} aria-labelledby="wizard-step" className="l-ov-panel l-gs-form">
         <div className="space-y-1">
-          <p className="font-a-mono text-xs uppercase tracking-[0.12em] text-a-text-2">
-            {t('loyalty.options.wizard.step_of', 'Step {{n}} of {{total}}', { n: String(index + 1), total: String(STEPS.length) })}
-          </p>
           <h2 id="wizard-step" ref={heading} tabIndex={-1} className="font-a-display text-2xl font-normal leading-snug text-a-text outline-hidden">
             {stepTitle(t, step)}
           </h2>
