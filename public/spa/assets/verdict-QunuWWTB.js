@@ -1,0 +1,1 @@
+import{In as e}from"./index-DQGV-mlk.js";function t(){let{t}=e();return e=>t(e.key,e.fallback,e.vars)}export{t};
