@@ -114,7 +114,8 @@ describe('the Membership card on a member’s page', () => {
     const html = render(can(true), detail({ valid_until: '2027-12-08', membership_state: 'active' }))
     expect(html).toContain('data-state="fulfilled"')
     expect(html.match(/data-state=/g)).toHaveLength(1)
-    expect(html).toMatch(/l-rd-profile-identity[\s\S]*?Gold · Active/)
+    expect(text(html)).toContain('Gold Active')
+    expect(html).toContain('l-mb-status-active')
   })
 
   it('is read-only for staff who are not managers', () => {
@@ -147,11 +148,11 @@ describe('the way to the next tier, in the programme’s terms', () => {
   it('shows "3 more visits to Gold", "€120 more to Gold" and the points as before', () => {
     const visits = text(render(can(false), detail({}, { qualifying: 1, next_tier: { ...gold, floor: 4 }, needed: 3, percent: 25, by: 'visits' })))
     expect(visits).toContain('3 more visits to Gold')
-    expect(visits).toContain('1 visit counted towards the tiers.')
+    expect(visits).toContain('1 of 4 qualifying visits')
 
     const spend = text(render(can(false), detail({}, { qualifying: 80, next_tier: { ...gold, floor: 200 }, needed: 120, percent: 40, by: 'spend' })))
     expect(spend).toContain('€120 more to Gold')
-    expect(spend).toContain('€80 spent towards the tiers.')
+    expect(spend).toContain('€80 of €200 qualifying spend')
 
     expect(text(render(can(false), detail({}, { qualifying: 200, next_tier: gold, needed: 800, percent: 20 })))).toContain('800 more to reach Gold')
   })

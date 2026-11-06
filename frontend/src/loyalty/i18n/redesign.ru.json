@@ -36,7 +36,7 @@
   "allActivity": "Все операции",
   "fullHistory": "Вся история →",
   "recentHistory": "Показать недавнюю историю",
-  "requestsWaiting": "Запросов к обработке: {{n}}",
+  "requestsWaiting": "Ожидают: {{n}}",
   "openRequest": "Открыть запрос →",
   "noRequests": "Нет запросов к обработке.",
   "awardLine": "Добавьте баллы на доступный баланс участника.",
@@ -114,5 +114,9 @@
   "benefitDetails": "Подробнее о привилегии →",
   "previewEmpty": "Выберите привилегию для предпросмотра.",
   "noLevel": "Нет уровня",
-  "detailsUnavailable": "Дополнительные сведения не указаны."
+  "detailsUnavailable": "Дополнительные сведения не указаны.",
+  "directory": "Список участников",
+  "avgBalance": "Средний баланс",
+  "spendablePoints": "Доступные баллы",
+  "editShort": "Изменить"
 }

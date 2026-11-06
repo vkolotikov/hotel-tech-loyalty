@@ -29,4 +29,10 @@ OV-B3's sample “step 3 of 4” is not live state supplied by Overview. Its exi
 
 Development: 5,852 frontend tests, TypeScript, focused Overview ESLint, 19 Overview browser scenarios and 73 mobile checks passed. Ten language/theme combinations fit six widths (320, 390, 768, 1024, 1280 and 1440). Desktop, compact, mobile, light-theme and first-setup screenshots were reviewed and the initial setup typography was refined to match OV-B2.
 
-Artifact verification and live content evidence are recorded in `../handoff/2026-11-06-hexatech-handoff.md` after release. Private evidence is under `C:/wamp64/tmp/overview-clean-*20261106*`; no customer writes or provider deliveries are exercised.
+Production **3a1f51908b7da42ad854f846154850f8f1551f02**, source patch **972ff5c7d** from feature source and next source-patch baseline **5cbfc823cd9251323d11212d9fe879820e8a03d4**. Thirty-two allowlisted source/asset/documentation files, no deletions; whole source parity passed.
+
+The isolated artifact passed **5,852 frontend tests / 404 files**, TypeScript, focused lint, fresh build, **19 Overview scenarios + 73 mobile checks + 10 language/theme combinations across six widths**, and the recipe's **2,042 PHP tests / three scopes** with no skips/failures. PHP/query source is unchanged. Final compiled screenshots were reviewed, including the refined OV-B2 setup typography and native-sized icons.
+
+Live content verified **6 November, 14:30 Riga / 12:30:51 UTC**: entry `index-Di5Zn79H.js`, Loyalty `LoyaltyApp-1qP910E1.js`, Overview `OverviewPage-DFmfBbeG.js`, stylesheet `OverviewPage-CpGm_uas.css`. New classes/copy and CSS are served, all five Overview reads retain 401 authentication, no temporary Figma URLs remain, fonts/landing continuity pass. Signed-in production browser inspection remains unavailable; the compiled fixture checks are isolated from customer data.
+
+Private evidence is under `C:/wamp64/tmp/overview-clean-*20261106*`; the full evidence list and CI status are in `../handoff/2026-11-06-hexatech-handoff.md`. No customer writes or provider deliveries were exercised. Task previews and the disposable deployment checkout are removed; existing user assets and stopped PostgreSQL folders are preserved.

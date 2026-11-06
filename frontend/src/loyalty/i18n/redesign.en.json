@@ -36,7 +36,7 @@
   "allActivity": "All activity",
   "fullHistory": "View full history →",
   "recentHistory": "Show recent history",
-  "requestsWaiting": "{{n}} requests needing action",
+  "requestsWaiting": "{{n}} waiting",
   "openRequest": "Open request →",
   "noRequests": "No requests need action.",
   "awardLine": "Add points to this member’s spendable balance.",
@@ -114,5 +114,9 @@
   "benefitDetails": "Benefit details →",
   "previewEmpty": "Choose a benefit to preview it.",
   "noLevel": "No level",
-  "detailsUnavailable": "No further details provided."
+  "detailsUnavailable": "No further details provided.",
+  "directory": "Directory",
+  "avgBalance": "Avg. balance",
+  "spendablePoints": "Spendable points",
+  "editShort": "Edit"
 }

@@ -16,6 +16,7 @@ import { UsbReader } from '../scan/UsbReader'
 import { useWebNfc } from '../scan/useWebNfc'
 import { CARD, CardHead } from './CardHead'
 import { cardActions } from './memberMath'
+import { memberAssets } from '../members/assets'
 
 const INPUT = 'w-full rounded-xl border border-a-border bg-a-surface px-4 py-3 font-a-mono text-base text-a-text'
 
@@ -25,7 +26,7 @@ const INPUT = 'w-full rounded-xl border border-a-border bg-a-surface px-4 py-3 f
  * off" with a confirmation, for whoever may edit the member (every staff member; the server decides). Linking does
  * not change the member's QR code or wallet pass.
  */
-export function NfcCards({ member, locale, timeZone }: { member: { id: number; name: string; is_erased: boolean }; locale: string; timeZone: string }) {
+export function NfcCards({ member, locale, timeZone, redesigned = false }: { member: { id: number; name: string; is_erased: boolean }; locale: string; timeZone: string; redesigned?: boolean }) {
   const { t } = useTranslation()
   const query = useQuery({ queryKey: cardsKey(member.id), queryFn: () => cardsApi.list(member.id) })
   const actions = cardActions(member)
@@ -35,8 +36,8 @@ export function NfcCards({ member, locale, timeZone }: { member: { id: number; n
 
   return (
     <section aria-labelledby="cards-title" className={CARD}>
-      <CardHead id="cards-title" icon={Nfc} title={t('loyalty.member.cards_title', 'NFC cards')}>
-        {actions.link && (
+      <CardHead id="cards-title" icon={Nfc} asset={redesigned ? memberAssets.card : undefined} title={t('loyalty.member.cards_title', 'NFC cards')}>
+        {!redesigned && actions.link && (
           <Button size="sm" variant="secondary" onClick={() => { setDone(null); setDialog('link') }}><Plus size={15} aria-hidden />{t('loyalty.member.cards_link', 'Link NFC card')}</Button>
         )}
       </CardHead>
@@ -46,6 +47,7 @@ export function NfcCards({ member, locale, timeZone }: { member: { id: number; n
       {query.isError && <Notice tone="danger">{t(...errorKey('load', failureOf(query.error)))}</Notice>}
       {!query.data && query.isLoading && <Skeleton className="h-12" />}
       {query.data && cards.length === 0 && <p className="text-sm text-a-text-2">{t('loyalty.member.cards_none', 'No NFC card is linked to this member.')}</p>}
+      {redesigned && actions.link && <div className="l-mb-nfc-action"><Button size="sm" variant="secondary" className="l-ov-button" onClick={() => { setDone(null); setDialog('link') }}>{t('loyalty.member.cards_link', 'Link NFC card')}</Button></div>}
       {cards.length > 0 && (
         <ul className="-mx-5 divide-y divide-a-border">
           {cards.map(card => (

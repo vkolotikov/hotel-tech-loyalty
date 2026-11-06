@@ -1,6 +1,14 @@
 # HexaTech handoff — 6 November 2026
 
-Read CLAUDE.md and `2026-11-02-hexatech-handoff.md` for the current application, native apps, environment and outstanding operational work. This session changes the Loyalty workspace Insights filters and Overview presentation.
+Read CLAUDE.md and `2026-11-02-hexatech-handoff.md` for the current application, native apps, environment and outstanding operational work. This session changes the Loyalty workspace Insights filters, Overview and Members presentation.
+
+## Members simplification
+
+Owner: simplify Members using the updated Figma design and its added contrasting colours. Branch `feature/members-simplified-20261106`; production baseline `3a1f51908`, source delta from `5cbfc823c` including the previous release-record documents. Current frames: MB-B1 directory `277:8616`, MB-B2 profile `277:8893`, MB-B3 award `277:9078`, all inspected in current Figma session `b0c866de-223d-43cd-a05d-154fe7af272b`. See `loyalty-redesign/24-MEMBERS-SIMPLIFICATION-REPORT.md`.
+
+Four tinted summary cards, grouped directory filters, zebra/hover rows and explicit status badges improve scanning. Compact profiles separate spendable points from qualification; benefits/request notices, history and details use exact local icons and shorter copy. Desktop points windows retain validation, idempotency and balance preview; financial details/full history retain complete information. Opaque local status/tier palettes meet 4.5:1 text contrast across both themes and custom tier swatches. All five locales and dedicated mobile review flows remain supported. No PHP/API/database/dependency change.
+
+Development checks: **5,859 frontend tests / 405 files**, TypeScript, focused lint, **54 Members/Program browser checks + 73 dedicated mobile checks**, and **10 language/theme combinations at six widths (320–1440px)** passed. Rendered status/tier/option/hover text measured at least **4.99:1 dark / 5.77:1 light**; both themes' directory/profile/points-window screenshots were reviewed. Tablet chip containment and truncated email hover text were refined after screenshot review. Release artifact and live evidence are pending below; the previous Overview release remains the current production/source baseline until those gates pass.
 
 ## Overview simplification
 
@@ -8,7 +16,13 @@ Owner requested less copy, icons and a cleaner Overview, using the updated Figma
 
 The review notice moves first; the summary becomes four compact program facts and an explicitly illustrative member card. Metrics, requests and activity gain exact local design icons, shorter copy and header actions. First setup is simplified; all five languages and existing data/permission/workflow behavior remain. No PHP/API/database/dependency change. Development checks: **5,852 frontend tests**, TypeScript, focused lint, **19 Overview scenarios + 73 mobile checks**, **10 language/theme combinations across six widths**.
 
-Artifact and production verification will be recorded after the isolated release checks.
+Production **3a1f51908b7da42ad854f846154850f8f1551f02**, source patch **972ff5c7d5730ce084c81c71170d892972dc9d1c** from feature source **5cbfc823cd9251323d11212d9fe879820e8a03d4**, plus its fresh SPA build. **Next source-patch baseline: 5cbfc823c**, superseding the Insights baselines below. Thirty-two allowlisted frontend/asset/documentation files, no source deletions; whole application source parity passed. Later release-record commits are not the baseline.
+
+Artifact checks: **5,852 frontend tests / 404 files**, TypeScript, focused Overview ESLint, fresh build, **19 Overview browser scenarios + 73 dedicated mobile checks**, and **10 language/theme combinations at six widths**. Compiled desktop, first-setup, compact, mobile and light-theme screenshots were reviewed against the current Figma frames. The recipe's three PHP scopes passed: **2,042 passed / zero skipped or failed** (Unit/Support 189, Unit/Landing 118, Feature/Landing 1,735). PHP/query source is byte-identical to the prior same-day production baseline, whose full sweep and completed CI were green; no PostgreSQL rerun was needed.
+
+Live content verified **6 November 2026, 14:30 Europe/Riga (12:30:51 UTC)**: `index-Di5Zn79H.js`, `LoyaltyApp-1qP910E1.js`, `OverviewPage-DFmfBbeG.js`, stylesheet `OverviewPage-CpGm_uas.css`. New page/fact classes, sample-balance wording, Key metrics and scoped stylesheet marker are present. No temporary Figma asset URLs are in the served code. All five Overview reads retain their 401 authentication boundary. Fonts, public landing stylesheet continuity and retired-file 404 passed at 12:31 UTC. Signed-in production UI inspection remains unavailable as documented below; browser validation uses intercepted local APIs and blocks external traffic.
+
+Evidence: `C:/wamp64/tmp/overview-clean-artifact-{php,vitest,build}-20261106.log`, `overview-clean-compiled-20261106/`, `overview-clean-locales-20261106/`, `overview-clean-live-20261106.json`, `overview-clean-continuity-20261106.json`, and the corresponding verification scripts. Both task previews are stopped and the release checkout/dependency junction are removed. User assets and the stopped PostgreSQL folders remain untouched. Post-deploy CI was in progress at 14:31 Riga: https://github.com/vkolotikov/hotel-tech-loyalty/actions/runs/42217656615.
 
 ## Insights filters
 

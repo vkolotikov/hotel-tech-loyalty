@@ -36,7 +36,11 @@ import { ProfileBenefits } from '../redesign/ProfileBenefits'
 import { useRedesignWords } from '../redesign/words'
 import { OverviewButton } from '../overview/OverviewUI'
 import { initials } from '../members/membersQuery'
-import memberDiagonal from '../redesign/assets/member-diagonal.svg'
+import { MemberStatus, MemberTierChip } from '../members/presentation'
+import { memberAssets } from '../members/assets'
+import { memberPaintStyle } from '../members/memberPaint'
+import '../members/members-design.css'
+import { useLook } from '../lib/look'
 import { usePhone } from '../overview/useOverview'
 import { MobileTitle, MobileTile } from '../mobile/MobileUI'
 import { mobileIcons } from '../mobile/assets'
@@ -104,6 +108,7 @@ function Member({ detail, locale }: { detail: MemberDetail; locale: string }) {
   const [dialog, setDialog] = useState<Open | null>(null)
   const phone = usePhone()
   const mobile = useMobileWords()
+  const look = useLook()
   const [params, setParams] = useSearchParams()
   const view = params.get('view')
   const mobileView = (value: string | null) => { const next = new URLSearchParams(params); if (value) next.set('view', value); else next.delete('view'); setParams(next) }
@@ -144,7 +149,7 @@ function Member({ detail, locale }: { detail: MemberDetail; locale: string }) {
   }
 
   return (
-    <div className={`l-ov-page l-rd-page l-rd-profile-page ${phone ? 'l-mw-page l-mw-member' : ''}`}>
+    <div className={`l-ov-page l-rd-page l-rd-profile-page ${phone ? 'l-mw-page l-mw-member' : 'l-mb-profile'}`} style={memberPaintStyle(look.resolved)}>
       {phone ? <>
         {welcome.isSuccess && <Notice tone="success">{t('loyalty.membership.page.welcome_sent', 'The welcome email is on its way to {{email}}, with a new code to set a password.', { email: welcome.data.sent_to })}</Notice>}
         {welcomeFailure && <Notice tone="danger">{t(...refusalKey('loyalty.membership', MEMBERSHIP_ERRORS, 'welcome', welcomeFailure), { minutes: waitMinutes(welcomeFailure.extra.retry_after) })}</Notice>}
@@ -161,18 +166,14 @@ function Member({ detail, locale }: { detail: MemberDetail; locale: string }) {
           <div className="l-mw-member-more"><MoreMenu items={more} fullAdmin={fullAdminMemberPath(member.id)} onPick={pick} /><OverviewButton onClick={() => mobileView('history')}>{mobile('memberHistory')}</OverviewButton></div>
         </>}
       </> : <>
-      <Link to="/loyalty" className="inline-flex items-center gap-1 text-sm text-a-text-2 hover:text-a-text">
-        <ArrowLeft size={15} aria-hidden />{t('loyalty.member.back', 'All members')}
-      </Link>
-
       <header className="l-rd-profile-header">
-        <img className="l-rd-member-diagonal" src={memberDiagonal} alt="" />
+        <Link to="/loyalty" className="l-mb-back" aria-label={t('loyalty.member.back', 'All members')} title={t('loyalty.member.back', 'All members')}><ArrowLeft size={20} aria-hidden /></Link>
         <span className="l-rd-avatar l-rd-profile-avatar" aria-hidden>{initials(member.name || member.email || '')}</span>
-        <div className="l-rd-profile-identity"><h1>{member.name || member.email || `#${member.id}`}</h1><small>{say('profileIdentity', { level: tier?.name ?? say('noLevel'), state: say(!member.is_active ? 'off' : member.membership_state ?? 'active'), number: member.member_number ?? member.id })}</small></div>
+        <div className="l-rd-profile-identity"><h1>{member.name || member.email || `#${member.id}`}</h1><div className="l-mb-profile-tags"><MemberTierChip tier={tier} /><MemberStatus pill state={!member.is_active ? 'off' : member.membership_state ?? 'active'} /><small>{member.member_number ?? member.id}</small></div></div>
         <div className="l-rd-actions">
-          {actions.award && <OverviewButton primary onClick={() => setDialog('award')}>{t('loyalty.member.award', 'Award points')}</OverviewButton>}
-          {actions.redeem && <OverviewButton onClick={() => setDialog('redeem')}>{t('loyalty.member.redeem', 'Redeem points')}</OverviewButton>}
-          {own.card && <OverviewButton onClick={() => setDialog('card')}>{say('viewCard')}</OverviewButton>}
+          {actions.award && <OverviewButton primary onClick={() => setDialog('award')}><img src={memberAssets.award} alt="" />{t('loyalty.member.award', 'Award points')}</OverviewButton>}
+          {actions.redeem && <OverviewButton onClick={() => setDialog('redeem')}><img src={memberAssets.redeem} alt="" />{t('loyalty.member.redeem', 'Redeem points')}</OverviewButton>}
+          {own.card && <OverviewButton onClick={() => setDialog('card')}><img src={memberAssets.viewCard} alt="" />{say('viewCard')}</OverviewButton>}
           <MoreMenu items={more} fullAdmin={fullAdminMemberPath(member.id)} onPick={pick} />
         </div>
       </header>
@@ -185,24 +186,24 @@ function Member({ detail, locale }: { detail: MemberDetail; locale: string }) {
       )}
 
       <div className="l-rd-profile-metrics">
-        <section className="l-rd-balance" aria-labelledby="points-title"><span id="points-title">{say('pointsBalance')}</span><strong>{points(member.points, locale)}</strong><small>{say('available')}</small><small>{say('lifetime', { n: points(member.lifetime_points, locale) })}</small></section>
-        <section className="l-ov-panel l-rd-progress"><ProgressBlock progress={progress} locale={locale} currency={boot.venue.currency} /></section>
+        <section className="l-rd-balance" aria-labelledby="points-title"><span id="points-title">{say('spendablePoints')}</span><strong>{points(member.points, locale)}</strong><small>{say('lifetime', { n: points(member.lifetime_points, locale) })}</small><span className="l-mb-balance-icon"><img src={memberAssets.points} alt="" /></span></section>
+        <section className="l-ov-panel l-rd-progress"><ProgressBlock simplified currentTier={tier?.name} progress={progress} locale={locale} currency={boot.venue.currency} /></section>
       </div>
       <div className="l-rd-profile-columns">
         <div className="l-rd-profile-main">
           <ProfileBenefits detail={detail} />
           <div className="empty:hidden"><VisitsPanel member={member} locale={locale} timeZone={timeZone} /></div>
           <div className="empty:hidden"><CreditPanel member={member} locale={locale} timeZone={timeZone} /></div>
-          <History memberId={member.id} balance={member.points} locale={locale} />
+          <History simplified memberId={member.id} balance={member.points} locale={locale} />
         </div>
         <div className="l-rd-profile-aside">
           <DetailsCard member={member} locale={locale} timeZone={timeZone} redesigned onEdit={own.edit ? () => setDialog('details') : undefined} />
-          <NfcCards member={member} locale={locale} timeZone={timeZone} />
+          <NfcCards redesigned member={member} locale={locale} timeZone={timeZone} />
         </div>
       </div>
 
       </>}
-      {(dialog === 'award' || dialog === 'redeem') && <PointsDialog mode={dialog} memberId={member.id} name={member.name} balance={member.points} memberNumber={member.member_number} level={tier?.name} onClose={() => setDialog(null)} />}
+      {(dialog === 'award' || dialog === 'redeem') && <PointsDialog mode={dialog} memberId={member.id} name={member.name} balance={member.points} memberNumber={member.member_number} level={tier?.name} levelColor={tier?.color} onClose={() => setDialog(null)} />}
       {dialog === 'details' && <EditDetailsDialog member={member} languages={detail.options.languages} onClose={() => setDialog(null)} />}
       {dialog === 'card' && <CardDialog memberId={member.id} onClose={() => setDialog(null)} />}
       {dialog === 'tier' && <ChangeTierDialog member={member} onClose={() => setDialog(null)} />}
@@ -217,7 +218,7 @@ function Member({ detail, locale }: { detail: MemberDetail; locale: string }) {
  * reach Gold", "3 more visits to Gold", "€120 more to Gold"; what the member has on a measure other than points; and
  * the bar. The numbers and the measure are the server's (an answer without `by` reads as points, as before).
  */
-function ProgressBlock({ progress, locale, currency }: { progress: ProgressIn; locale: string; currency: string }) {
+function ProgressBlock({ progress, locale, currency, simplified = false, currentTier }: { progress: ProgressIn; locale: string; currency: string; simplified?: boolean; currentTier?: string }) {
   const { t } = useTranslation()
   const say = useRedesignWords()
   const line = progressLine(progress)
@@ -239,6 +240,7 @@ function ProgressBlock({ progress, locale, currency }: { progress: ProgressIn; l
     }
   })()
 
+  if (simplified) return <div data-progress-by={line.by} className="l-mb-progress-body"><div className="l-mb-progress-head"><h2><img src={memberAssets.progress} alt="" />{progress.next_tier ? say('progress', { name: progress.next_tier.name }) : say('qualification')}</h2>{currentTier && progress.next_tier && <span className="l-ov-badge">{currentTier} → {progress.next_tier.name}</span>}</div>{progress.next_tier && <div role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress.percent} aria-label={t('loyalty.member.progress_label', 'Progress to {{tier}}', { tier: progress.next_tier.name })} className="l-rd-progress-track"><div className="l-rd-progress-fill" style={{ width: `${progress.percent}%` }} /></div>}<div className="l-mb-progress-counts">{progress.next_tier && <p>{say(line.by === 'visits' ? 'qualifyingVisits' : line.by === 'spend' ? 'qualifyingSpend' : 'qualifying', { current: line.by === 'spend' ? money(progress.qualifying, currency, locale) : points(progress.qualifying, locale), target: line.by === 'spend' ? money(progress.next_tier.floor ?? progress.next_tier.min_points, currency, locale) : points(progress.next_tier.floor ?? progress.next_tier.min_points, locale) })}</p>}<p>{sentence}</p></div>{!progress.next_tier && sofar && <p>{sofar}</p>}</div>
   return (
     <div data-progress-by={line.by} className="space-y-1.5"><h2>{progress.next_tier ? say('progress', { name: progress.next_tier.name }) : say('qualification')}</h2>{progress.next_tier && <p>{say(line.by === 'visits' ? 'qualifyingVisits' : line.by === 'spend' ? 'qualifyingSpend' : 'qualifying', { current: line.by === 'spend' ? money(progress.qualifying, currency, locale) : points(progress.qualifying, locale), target: line.by === 'spend' ? money(progress.next_tier.floor ?? progress.next_tier.min_points, currency, locale) : points(progress.next_tier.floor ?? progress.next_tier.min_points, locale) })}</p>}
       {sofar && <p className="text-sm text-a-text-2">{sofar}</p>}
@@ -255,7 +257,7 @@ function ProgressBlock({ progress, locale, currency }: { progress: ProgressIn; l
 }
 
 /** The whole points history, newest first, 25 a page; Reverse for a manager on a line that can be reversed. */
-function History({ memberId, balance, locale }: { memberId: number; balance: number; locale: string }) {
+function History({ memberId, balance, locale, simplified = false }: { memberId: number; balance: number; locale: string; simplified?: boolean }) {
   const { t } = useTranslation()
   const boot = useBoot()
   const api = useApi()
@@ -269,7 +271,7 @@ function History({ memberId, balance, locale }: { memberId: number; balance: num
 
   return (
     <section aria-labelledby="history-title" className="l-ov-panel l-rd-history">
-      <div className="l-rd-card-head"><CardHead id="history-title" icon={HistoryIcon} title={t('loyalty.history.title', 'Points history')} /><select aria-label={say('allActivity')} value={type} onChange={e => { setType(e.target.value); setPage(1) }}><option value="all">{say('allActivity')}</option>{Object.entries(LINE_TYPE_WORDS).filter(([key]) => key !== 'other').map(([key, word]) => <option key={key} value={key}>{t(`loyalty.history.type.${key}`, word)}</option>)}</select></div>
+      <div className="l-rd-card-head"><CardHead id="history-title" icon={HistoryIcon} asset={simplified ? memberAssets.activityPoints : undefined} title={t('loyalty.history.title', 'Points history')} /><select aria-label={say('allActivity')} value={type} onChange={e => { setType(e.target.value); setPage(1) }}><option value="all">{say('allActivity')}</option>{Object.entries(LINE_TYPE_WORDS).filter(([key]) => key !== 'other').map(([key, word]) => <option key={key} value={key}>{t(`loyalty.history.type.${key}`, word)}</option>)}</select></div>
       {query.isError && <div className="px-5 pb-5"><Notice tone="danger">{t(...errorKey('load', failureOf(query.error)))}</Notice><OverviewButton onClick={() => { void query.refetch() }}>{t('loyalty.common.retry', 'Try again')}</OverviewButton></div>}
       {!data && query.isLoading && <div className="px-5 pb-5"><Skeleton className="h-40" /></div>}
       {data && data.lines.length === 0 && <p className="px-5 pb-5 text-sm text-a-text-2">{t('loyalty.history.none', 'No points yet.')}</p>}
@@ -290,12 +292,13 @@ function History({ memberId, balance, locale }: { memberId: number; balance: num
                       {[
                         line.description ? kind : null,
                         when(line.at, locale, boot.venue.timezone),
-                        line.by ? t('loyalty.history.by', 'by {{name}}', { name: line.by }) : null,
-                        line.balance_after !== null ? t('loyalty.history.balance_after', 'balance {{points}}', { points: points(line.balance_after, locale) }) : null,
+                        line.by && (!simplified || expanded) ? t('loyalty.history.by', 'by {{name}}', { name: line.by }) : null,
+                        line.balance_after !== null && (!simplified || expanded) ? t('loyalty.history.balance_after', 'balance {{points}}', { points: points(line.balance_after, locale) }) : null,
                       ].filter(Boolean).join(' · ')}
                       {line.is_reversed && <> · <strong className="font-semibold">{t('loyalty.history.reversed', 'Reversed')}</strong></>}
                     </span>
                   </span>
+                  {simplified && <span className="l-mb-history-icon" data-tone={line.points >= 0 ? 'green' : 'cyan'}><img src={line.type === 'bonus' ? memberAssets.historyGift : line.type === 'redeem' ? memberAssets.gift : line.type === 'earn' ? memberAssets.historyPurchase : memberAssets.activityPoints} alt="" /></span>}
                   {offersReverse(line, boot.staff.can) && (
                     <button type="button" data-reverse={line.id} aria-label={reverse} title={reverse} onClick={() => setReversing(line)}
                       className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-a-accent-text hover:bg-a-accent/10 sm:h-9 sm:w-9">

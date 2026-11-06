@@ -4,6 +4,10 @@ import { useTranslation } from 'react-i18next'
 import { Field } from '../../workspace/ui/Field'
 import { Notice } from '../../workspace/ui/Notice'
 import { useApi } from '../LoyaltyProvider'
+import { useLook } from '../lib/look'
+import { MemberTierChip } from '../members/presentation'
+import { memberPaintStyle } from '../members/memberPaint'
+import '../members/members-design.css'
 import { failureOf, newPressKey } from '../lib/api'
 import { errorKey } from '../lib/errors'
 import { useFirstFocus } from '../lib/useFirstFocus'
@@ -25,7 +29,7 @@ const INPUT = 'w-full rounded-lg border border-a-border bg-a-surface px-3 py-2 t
  * Award or redeem points (spec 2026-10-21 §4.3): the points, a reason, and the balance the member will have — checked
  * before sending, then by the server. One key per opening of the dialog: a retry after a lost answer writes nothing new.
  */
-export function PointsDialog({ mode, memberId, name, balance, onClose, memberNumber, level, inline = false, onBusyChange }: { mode: PointsMode; memberId: number; name: string; balance: number; onClose: () => void; memberNumber?: string | null; level?: string; inline?: boolean; onBusyChange?: (busy: boolean) => void }) {
+export function PointsDialog({ mode, memberId, name, balance, onClose, memberNumber, level, levelColor, inline = false, onBusyChange }: { mode: PointsMode; memberId: number; name: string; balance: number; onClose: () => void; memberNumber?: string | null; level?: string; levelColor?: string | null; inline?: boolean; onBusyChange?: (busy: boolean) => void }) {
   const { t, i18n } = useTranslation()
   const locale = i18n.language || 'en'
   const api = useApi()
@@ -37,6 +41,8 @@ export function PointsDialog({ mode, memberId, name, balance, onClose, memberNum
   const [reason, setReason] = useState('')
   const [tried, setTried] = useState(false)
   const phone = usePhone()
+  const look = useLook()
+  const simplified = !phone && !inline
   const mobile = useMobileWords()
   const [review, setReview] = useState(false)
   const first = useFirstFocus<HTMLInputElement>()
@@ -59,17 +65,17 @@ export function PointsDialog({ mode, memberId, name, balance, onClose, memberNum
   const title = mode === 'award' ? t('loyalty.member.award', 'Award points') : t('loyalty.member.redeem', 'Redeem points')
 
   const form = (
-      <form className="l-rd-form l-rd-points-form" noValidate onSubmit={(e) => {
+      <form className="l-rd-form l-rd-points-form" style={simplified ? memberPaintStyle(look.resolved) : undefined} noValidate onSubmit={(e) => {
         e.preventDefault()
         setTried(true)
         if (problem === null && !save.isPending) { if (phone && !inline) setReview(true); else { onBusyChange?.(true); save.mutate() } }
       }}>
-        <p>{say(mode === 'award' ? 'awardLine' : 'redeemLine')}</p>
-        {!inline && <div className="l-rd-person-inset"><span className="l-rd-avatar" aria-hidden>{initials(name)}</span><span><strong>{name}</strong><small>{[level, memberNumber].filter(Boolean).join(' · ')}</small>{phone && <small>{say('currentBalance')}: {t('loyalty.common.points_count', '{{points}} pts', { points: points(balance, locale) })}</small>}</span></div>}
+        {!simplified && <p>{say(mode === 'award' ? 'awardLine' : 'redeemLine')}</p>}
+        {!inline && <div className="l-rd-person-inset"><span className="l-rd-avatar" aria-hidden>{initials(name)}</span>{simplified ? <><strong>{name}</strong>{level && <MemberTierChip tier={{ name: level, color: levelColor ?? null }} />}<span className="l-mb-person-number">{memberNumber}</span></> : <span><strong>{name}</strong><small>{[level, memberNumber].filter(Boolean).join(' · ')}</small>{phone && <small>{say('currentBalance')}: {t('loyalty.common.points_count', '{{points}} pts', { points: points(balance, locale) })}</small>}</span>}</div>}
         <div className={phone && !inline ? 'l-mw-panel l-mw-points-fields' : 'l-mw-points-desktop-fields'}>
         <div><span className="l-rd-label">{say(mode === 'award' ? 'pointsAdd' : 'pointsUse')}</span><NumberControl label={say(mode === 'award' ? 'pointsAdd' : 'pointsUse')} value={typed} onValue={setTyped} min={1} max={100000} inputRef={first} disabled={save.isPending} invalid={tried && (problem === 'points' || problem === 'too_many' || problem === 'over_balance')} /></div>
         <div className="l-rd-quick-add"><small>{say('quickAdd')}</small>{[50, 100, 250].map(n => <OverviewButton key={n} type="button" disabled={save.isPending} onClick={() => setTyped(steppedValue(typed, n, 1, 100000))}>+{n}</OverviewButton>)}</div>
-        <small>{say('stepHint')}</small>
+        {!simplified && <small>{say('stepHint')}</small>}
         <Field label={t('loyalty.member.reason', 'Reason')} hint={t('loyalty.member.reason_hint', 'Shows in the member’s history and the app.')}>
           <input type="text" aria-label={t('loyalty.member.reason', 'Reason')} disabled={save.isPending} value={reason} maxLength={200} onChange={(e) => setReason(e.target.value)} className={INPUT}
             placeholder={mode === 'award' ? t('loyalty.member.reason_award_example', 'e.g. Welcome back') : t('loyalty.member.reason_redeem_example', 'e.g. Free coffee')}
@@ -78,7 +84,7 @@ export function PointsDialog({ mode, memberId, name, balance, onClose, memberNum
         </div>
 
         {phone && !inline ? <div className="l-mw-panel l-mw-points-result" data-after=""><strong>{points(balance, locale)} {mode === 'award' ? '+' : '−'} {points(Number(typed) || 0, locale)} = {after === null ? '—' : t('loyalty.common.points_count', '{{points}} pts', { points: points(after, locale) })}</strong><small>{mobile('provisional')}</small></div> : <div className="l-rd-balance-preview" data-after=""><div><small>{say('currentBalance')}</small><strong>{t('loyalty.common.points_count', '{{points}} pts', { points: points(balance, locale) })}</strong></div><div><small>{say(mode === 'award' ? 'pointsAdd' : 'pointsUse')}</small><strong>{after === null ? '—' : `${mode === 'award' ? '+' : '−'}${points(Number(typed), locale)}`}</strong></div><div><small>{say('newBalance')}</small><strong>{after === null ? '—' : t('loyalty.common.points_count', '{{points}} pts', { points: points(after, locale) })}</strong></div></div>}
-        <small>{say('levelRules')}</small>
+        {simplified ? <details className="l-mb-points-help"><summary>{say('qualification')}</summary><small>{say('levelRules')}</small></details> : <small>{say('levelRules')}</small>}
 
         {tried && problem !== null && (
           <Notice tone="warning">{t(`loyalty.member.problem.${problem}`, POINTS_PROBLEM_WORDS[problem], { balance: points(balance, locale) })}</Notice>
@@ -95,7 +101,7 @@ export function PointsDialog({ mode, memberId, name, balance, onClose, memberNum
         </div>
       </form>
   )
-  return inline ? form : <DesignDialog title={phone && mode === 'redeem' ? mobile('deduct') : title} className={phone ? 'l-mw-full-form l-mw-points' : ''} onClose={onClose} busy={save.isPending}>{form}
+  return inline ? form : <DesignDialog title={phone && mode === 'redeem' ? mobile('deduct') : title} className={phone ? 'l-mw-full-form l-mw-points' : 'l-mb-points-dialog'} onClose={onClose} busy={save.isPending}>{form}
     {review && <OverviewDialog kind="form" className="l-mw-sheet" title={mobile(mode === 'award' ? 'reviewAward' : 'reviewDeduct', { n: points(Number(typed), locale) })} busy={save.isPending} onClose={() => setReview(false)}><p>{name} · {level}</p><p>{reason}</p><strong>{points(balance, locale)} {mode === 'award' ? '+' : '−'} {points(Number(typed), locale)} = {points(after ?? balance, locale)}</strong><p>{mobile('noWrite')}</p>{failure && <Notice tone="danger">{t(...errorKey('points', failure), { balance: points(Number(failure.extra.balance ?? balance), locale) })}</Notice>}<div className="l-mw-sheet-actions"><OverviewButton disabled={save.isPending} onClick={() => setReview(false)}>{t('loyalty.common.cancel', 'Cancel')}</OverviewButton><OverviewButton primary disabled={save.isPending || problem !== null} onClick={() => { onBusyChange?.(true); save.mutate() }}>{mobile(mode === 'award' ? 'confirmAward' : 'confirmDeduct')}</OverviewButton></div></OverviewDialog>}
   </DesignDialog>
 }

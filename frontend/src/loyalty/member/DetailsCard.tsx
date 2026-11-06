@@ -9,6 +9,7 @@ import { ValidityCard } from '../membership/ValidityCard'
 import { useRedesignWords } from '../redesign/words'
 import { usePhone } from '../overview/useOverview'
 import { OverviewButton } from '../overview/OverviewUI'
+import { memberAssets } from '../members/assets'
 
 /**
  * The member's details on their page (spec 2026-10-21 release 2 §4.1): language, nationality, date of birth, marketing
@@ -46,7 +47,7 @@ export function DetailsCard({ member, locale, timeZone, redesigned = false, onEd
       ['last', t('loyalty.members.col_last', 'Last seen'), member.last_activity_at ? day(member.last_activity_at, locale, timeZone) : t('loyalty.member.not_seen', 'Not seen yet')],
     ]
     const renderRows = (items: typeof rows) => <dl className="l-rd-detail-rows">{items.map(([key, label, value]) => <div key={key} data-detail={key} data-contact={key === 'email' || key === 'phone' ? key : undefined}><dt>{label}</dt><dd>{value ?? none}</dd></div>)}</dl>
-    return <section className="l-ov-panel l-rd-details" aria-labelledby="details-title"><div className="l-rd-card-head"><h2 id="details-title">{say('memberDetails')}</h2>{onEdit && <button className="l-ov-link" onClick={onEdit}>{say('editDetails')}</button>}</div>
+    return <section className="l-ov-panel l-rd-details" aria-labelledby="details-title"><div className="l-rd-card-head"><h2 id="details-title"><img src={memberAssets.details} alt="" />{say('memberDetails')}</h2>{onEdit && <button className="l-ov-link" aria-label={say('editDetails')} onClick={onEdit}>{say('editShort')} →</button>}</div>
       {renderRows([...contact, ...rows.filter(([key]) => key !== 'marketing' && key !== 'sms')])}
       <div className="l-rd-compact-validity"><ValidityCard member={member} locale={locale} timeZone={timeZone} /></div>
       {renderRows(rows.filter(([key]) => key === 'marketing' || key === 'sms'))}

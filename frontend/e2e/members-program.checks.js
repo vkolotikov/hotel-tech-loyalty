@@ -9,6 +9,9 @@ async (page) => {
   if(await page.getByRole('dialog').count())await page.keyboard.press('Escape');
   await fixture({fail:null,limited:false,empty:false,writeFail:false});
   await open('/loyalty?state=all');await page.getByRole('table').waitFor();
+  check(await page.locator('.l-mb-figure').count()===4,'Four separate coloured summary cards use the directory figures');
+  check(await page.locator('.l-rd-filters input').evaluate(e=>parseFloat(getComputedStyle(e).paddingLeft)>=40),'Search text clears its icon');
+  check(await page.locator('tbody tr').evaluateAll(es=>getComputedStyle(es[0]).backgroundColor!==getComputedStyle(es[1]).backgroundColor),'Directory rows have distinct alternating surfaces');
   await page.getByRole('searchbox',{name:'Search members'}).fill('Jamie');
   await page.waitForURL(/q=Jamie/);await page.waitForResponse(r=>r.url().includes('members?')&&r.url().includes('q=Jamie'));
   check(await page.locator('tbody tr').count()===1,'Search uses server result and URL');
@@ -57,7 +60,7 @@ async (page) => {
   await page.keyboard.press('Escape');check(await page.getByRole('dialog').count()===1,'Pending write cannot be dismissed');
   await page.getByRole('dialog').waitFor({state:'hidden'});await fixture({slow:false});
   const retried=(await writes()).at(-1);check(retried.payload.idempotency_key===failed.payload.idempotency_key,'Retry retains idempotency key');
-  await page.getByRole('region',{name:'Points balance',exact:true}).getByText('1,000',{exact:true}).waitFor();check(true,'Award refreshes balance');
+  await page.getByRole('region',{name:'Spendable points',exact:true}).getByText('1,000',{exact:true}).waitFor();check(true,'Award refreshes balance');
   await page.getByRole('button',{name:'Redeem points',exact:true}).click();
   await page.getByRole('spinbutton',{name:'Points to use'}).fill('1001');await page.getByRole('textbox',{name:'Reason',exact:true}).fill('Too many');
   const count=(await writes()).length;await page.getByRole('dialog').locator('button[type="submit"]').click();
@@ -93,13 +96,14 @@ async (page) => {
   check(await page.getByRole('button',{name:'+ Add level',exact:true}).count()===1,'Empty program has one create action');
   await open('/loyalty?state=all');await page.getByText('No member matches.',{exact:true}).waitFor();check(true,'Directory empty state');
   await fixture({empty:false,fail:'members'});await open('/loyalty?state=all');await page.getByRole('button',{name:'Try again',exact:true}).waitFor();
-  check(await page.locator('.l-rd-figures').count()===0,'Failed read does not invent summary figures');
+  check(await page.locator('[data-figures]').count()===0,'Failed read does not invent summary figures');
   await fixture({fail:null});await page.getByRole('button',{name:'Try again',exact:true}).click();await page.getByRole('table').waitFor();check(true,'Directory retry recovers');
   for(const width of [1024,390,320]){
     await page.setViewportSize({width,height:900});
     for(const [name,path,ready] of [['members','/loyalty?state=all','Members'],['profile','/loyalty/members/1','Jamie Taylor'],['levels','/loyalty/program','Program'],['edit-level','/loyalty/program?tab=tiers&tier=3','Edit Gold draft level']]){
       await open(path);await page.getByRole('heading',{name:ready,exact:true}).waitFor();
       check(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),name+' no horizontal overflow at '+width);
+      if(name==='members'&&width===1024)check(await page.locator('tbody tr td:nth-child(2)').evaluateAll(cells=>cells.length>0&&cells.every(cell=>cell.querySelector('[data-tier-chip]').getBoundingClientRect().right<=cell.getBoundingClientRect().right-5)),'Tablet tier badges stay inside their column with spacing before points');
       await shot('responsive-'+name+'-'+width);
     }
     await page.getByRole('button',{name:'+ Add benefit',exact:true}).click();await page.getByRole('dialog').waitFor();

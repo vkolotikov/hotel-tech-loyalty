@@ -13,7 +13,7 @@ export const REDESIGN_WORDS = {
   profileIdentity: '{{level}} · {{state}} · ID {{number}}', viewCard: 'View card', benefitsRequests: 'Benefits & requests',
   viewAll: 'View all {{n}} →', details: 'Details →', memberDetails: 'Member details', editDetails: 'Edit details →',
   allActivity: 'All activity', fullHistory: 'View full history →', recentHistory: 'Show recent history',
-  requestsWaiting: '{{n}} requests needing action', openRequest: 'Open request →', noRequests: 'No requests need action.',
+  requestsWaiting: '{{n}} waiting', openRequest: 'Open request →', noRequests: 'No requests need action.',
   awardLine: 'Add points to this member’s spendable balance.', redeemLine: 'Use points from this member’s spendable balance.',
   pointsAdd: 'Points to add', pointsUse: 'Points to use', quickAdd: 'Quick add', stepHint: 'Type an amount, or use − / + to change it by 1 point.',
   decrease: 'Decrease {{label}}', increase: 'Increase {{label}}', currentBalance: 'Current balance', newBalance: 'New balance',
@@ -38,6 +38,10 @@ export const REDESIGN_WORDS = {
   valueDefines: 'The value and scope define the benefit.', deliveryRules: 'Delivery and eligibility follow the benefit’s existing rules.',
   savesImmediately: 'Saves to {{name}} immediately.', addBenefit: 'Add benefit', preview: 'Member preview', benefitDetails: 'Benefit details →',
   previewEmpty: 'Choose a benefit to preview it.', noLevel: 'No level', detailsUnavailable: 'No further details provided.',
+  "directory": "Directory",
+  "avgBalance": "Avg. balance",
+  "spendablePoints": "Spendable points",
+  "editShort": "Edit",
 } as const
 export type RedesignWord = keyof typeof REDESIGN_WORDS
 export function useRedesignWords() {
