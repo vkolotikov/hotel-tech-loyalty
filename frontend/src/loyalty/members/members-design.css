@@ -37,8 +37,9 @@
 [data-loyalty] .l-mb-members-page .l-rd-members-table tbody tr:hover small, [data-loyalty] .l-mb-members-page .l-rd-members-table tbody tr:focus-within small { color: var(--l-ov-secondary); }
 [data-loyalty] .l-mb-members-page .l-rd-pagination { padding-top: 12px; justify-content: flex-end; }
 [data-loyalty] .l-mb-members-page .l-rd-pagination select { margin-right: auto; width: 160px; }
-[data-loyalty][data-redesign] .l-mb-tier [data-tier-chip] { background: var(--l-mb-tier-bg); color: var(--l-mb-tier-text); border: 1px solid color-mix(in srgb,var(--l-mb-tier-swatch) 35%,transparent); }
+[data-loyalty][data-redesign] .l-mb-tier [data-tier-chip] { min-width: 0; width: 84px; max-width: 100%; background: var(--l-mb-tier-bg); color: var(--l-mb-tier-text); border: 1px solid color-mix(in srgb,var(--l-mb-tier-swatch) 35%,transparent); }
 [data-loyalty] .l-mb-tier { display: inline-flex; max-width: 100%; min-width: 0; }
+[data-loyalty] .l-mb-members-page .l-rd-members-table .l-rd-member-identity small { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 [data-loyalty] .l-mb-status { display: inline-flex; align-items: center; gap: 6px; padding: 4px 8px; border-radius: 8px; font-size: 12px; line-height: 18px; }
 [data-loyalty] .l-mb-status img { flex-shrink: 0; }
 [data-loyalty] .l-mb-status-active { color: var(--l-mb-active-text); padding: 0; }

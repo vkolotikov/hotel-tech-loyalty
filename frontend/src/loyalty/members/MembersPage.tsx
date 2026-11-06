@@ -84,7 +84,7 @@ export function MembersPage() {
     const date = formatDate(m.valid_until, locale, { day: 'numeric', month: 'short', year: 'numeric' })
     return <small className="block">{m.membership_state === 'expiring' ? t('loyalty.membership.list.ends', 'Ends {{day}}', { day: date }) : t('loyalty.membership.list.ended', 'Expired {{day}}', { day: date })}</small>
   }
-  const identity = (m: MemberRow) => <Link to={memberPath(m.id)} className="l-rd-member-identity"><span className="l-rd-avatar" aria-hidden>{initials(m.name || m.email || '')}</span><span><strong>{m.name || m.email || `#${m.id}`}</strong><small>{m.email || m.member_number}</small></span></Link>
+  const identity = (m: MemberRow) => <Link to={memberPath(m.id)} className="l-rd-member-identity"><span className="l-rd-avatar" aria-hidden>{initials(m.name || m.email || '')}</span><span><strong>{m.name || m.email || `#${m.id}`}</strong><small title={m.email || m.member_number || undefined}>{m.email || m.member_number}</small></span></Link>
   if (phone) return <div className="l-ov-page l-mw-page l-mw-members">
     <MobileTitle icon={mobileIcons.members}>{t('loyalty.members.title', 'Members')}</MobileTitle>
     <div className="l-mw-tiles">{actions.add && <MobileTile primary icon={mobileIcons.members} title={t('loyalty.membership.list.add', 'Add member')} hint={mobile('createMember')} onClick={() => setAdding(true)} />}<MobileTile icon={mobileIcons.filters} title={mobile('filters')} hint={mobile('levelStatus')} onClick={() => setFiltering(true)} /></div>

@@ -103,6 +103,7 @@ async (page) => {
     for(const [name,path,ready] of [['members','/loyalty?state=all','Members'],['profile','/loyalty/members/1','Jamie Taylor'],['levels','/loyalty/program','Program'],['edit-level','/loyalty/program?tab=tiers&tier=3','Edit Gold draft level']]){
       await open(path);await page.getByRole('heading',{name:ready,exact:true}).waitFor();
       check(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),name+' no horizontal overflow at '+width);
+      if(name==='members'&&width===1024)check(await page.locator('tbody tr td:nth-child(2)').evaluateAll(cells=>cells.length>0&&cells.every(cell=>cell.querySelector('[data-tier-chip]').getBoundingClientRect().right<=cell.getBoundingClientRect().right-5)),'Tablet tier badges stay inside their column with spacing before points');
       await shot('responsive-'+name+'-'+width);
     }
     await page.getByRole('button',{name:'+ Add benefit',exact:true}).click();await page.getByRole('dialog').waitFor();
