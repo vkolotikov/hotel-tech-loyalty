@@ -4,9 +4,29 @@
 [data-loyalty] .l-in-actions .l-ov-button { min-width: 164px; }
 [data-loyalty] .l-in-actions .l-ov-primary { min-width: 184px; }
 [data-loyalty][data-overview] .l-in-page .l-ov-panel { border: 1px solid var(--l-ov-cyan); box-shadow: none; background: linear-gradient(166deg,var(--l-ov-raised),var(--l-ov-bottom) 60%); }
-[data-loyalty] .l-in-filters { display: grid; grid-template-columns: 1.18fr 1.06fr 1fr 1fr; gap: 12px; padding: 16px; }
-[data-loyalty] .l-in-filters > div { min-width: 0; display: flex; flex-direction: column; gap: 8px; }
-[data-loyalty] .l-in-filters .l-ov-button { width: 100%; min-width: 0; justify-content: space-between; padding: 10px 16px; font-size: 13px; font-weight: 400; text-align: left; background: var(--l-ov-recessed); box-shadow: var(--l-ov-inset); }
+[data-loyalty] .l-in-filter-panel { padding: 16px; min-width: 0; }
+[data-loyalty] .l-in-filter-heading, [data-loyalty] .l-in-filter-tools, [data-loyalty] .l-in-filter-toggle { display: flex; gap: 10px; align-items: center; }
+[data-loyalty] .l-in-filter-heading { justify-content: space-between; flex-wrap: wrap; }
+[data-loyalty] .l-in-filter-toggle { background: none; color: var(--l-ov-text); border: 0; padding: 4px 0; min-height: 40px; font: inherit; font-weight: 600; cursor: pointer; }
+[data-loyalty] .l-in-filter-toggle svg { flex-shrink: 0; }
+[data-loyalty] .l-in-filter-toggle[aria-expanded=true] svg:last-child { transform: rotate(180deg); }
+[data-loyalty] .l-in-filter-tools { flex-wrap: wrap; font-size: 12px; color: var(--l-ov-muted); }
+[data-loyalty] .l-in-filter-summary { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px 0 0; font-size: 12px; color: var(--l-ov-secondary); }
+[data-loyalty] .l-in-filter-summary > span { border: 1px solid var(--l-ov-border); border-radius: 20px; padding: 4px 10px; overflow-wrap: anywhere; }
+[data-loyalty] .l-in-filter-panel form:not([hidden]) { display: flex; flex-direction: column; gap: 14px; margin-top: 16px; border-top: 1px solid var(--l-ov-border); padding-top: 16px; }
+[data-loyalty] .l-in-filter-fields { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 14px; }
+[data-loyalty] .l-in-filter-panel label { display: flex; flex-direction: column; gap: 6px; min-width: 0; font-size: 12px; color: var(--l-ov-secondary); }
+[data-loyalty] .l-in-filter-panel select, [data-loyalty] .l-in-filter-panel input { width: 100%; min-width: 0; min-height: 44px; border: 1px solid var(--l-ov-border); border-radius: 10px; padding: 10px 12px; color: var(--l-ov-text); background: var(--l-ov-recessed); font: inherit; font-size: 13px; color-scheme: light; }
+[data-loyalty] .l-in-filter-panel select { cursor: pointer; }
+[data-loyalty][data-theme=dark] .l-in-filter-panel select, [data-loyalty][data-theme=dark] .l-in-filter-panel input { color-scheme: dark; }
+[data-loyalty] .l-in-filter-panel select:focus-visible, [data-loyalty] .l-in-filter-panel input:focus-visible, [data-loyalty] .l-in-filter-panel button:focus-visible { outline: 2px solid var(--l-ov-cyan); outline-offset: 3px; }
+[data-loyalty] .l-in-filter-dates { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 14px; max-width: 640px; }
+[data-loyalty] .l-in-filter-bottom { display: flex; justify-content: space-between; align-items: center; gap: 16px; }
+[data-loyalty] .l-in-filter-bottom > p { color: var(--l-ov-muted); font-size: 12px; line-height: 18px; max-width: 64ch; }
+[data-loyalty] .l-in-filter-bottom > div { display: flex; gap: 10px; flex-shrink: 0; }
+[data-loyalty] .l-in-filter-error { color: var(--l-ov-text); font-size: 13px; border-left: 3px solid var(--l-ov-amber); padding-left: 10px; }
+@media (max-width:1150px) { [data-loyalty] .l-in-filter-fields { grid-template-columns: repeat(2,minmax(0,1fr)); } [data-loyalty] .l-in-filter-bottom { flex-wrap: wrap; } }
+@media (max-width:600px) { [data-loyalty] .l-in-filter-fields, [data-loyalty] .l-in-filter-dates { grid-template-columns: minmax(0,1fr); } [data-loyalty] .l-in-filter-bottom > div { width: 100%; flex-wrap: wrap; } [data-loyalty] .l-in-filter-bottom .l-ov-button { flex: 1; } }
 [data-loyalty] .l-in-context, [data-loyalty] .l-in-footer { display: flex; gap: 12px; justify-content: space-between; align-items: center; color: var(--l-ov-muted); font-size: 12px; line-height: 18px; }
 [data-loyalty] .l-in-context > p { color: var(--l-ov-muted); }
 [data-loyalty] .l-in-context > .l-ov-link { min-height: 18px; }

@@ -11,8 +11,9 @@ import { overviewScope } from '../overview/overviewMath'
 import { OverviewButton, OverviewDialog, OverviewRecovery, OverviewSkeleton } from '../overview/OverviewUI'
 import { DetailedInsights } from './DetailedInsights'
 import { ReportTrend, ReportLevels, ReportPoints } from './ReportCharts'
-import { comparison, reportCsv, reportFilters, shiftDay, validReportRange } from './reportMath'
-import type { InsightsReport, ReportFilters } from './reportTypes'
+import { comparison, reportCsv, reportFilters, reportRequest } from './reportMath'
+import type { InsightsReport } from './reportTypes'
+import { ReportFiltersPanel } from './ReportFiltersPanel'
 import { useReportWords } from './reportWords'
 import './report.css'
 
@@ -27,17 +28,17 @@ export function ReportCard({ title, action, className = '', children }: { title:
 function ReportDashboard() {
   const boot = useBoot(), say = useReportWords(), { t, i18n } = useTranslation()
   const [params, setParams] = useSearchParams(), filters = reportFilters(params.toString(), boot.venue.today)
-  const [modal, setModal] = useState<'filters' | 'definitions' | null>(null)
+  const [modal, setModal] = useState<'definitions' | null>(null)
   const [cohort, setCohort] = useState<{ n: number; total: number; week: number; from: string; to: string } | null>(null)
   const allowed = boot.staff.can.view_insights
   const query = useQuery({ queryKey: ['loyalty', 'insights', 'report', overviewScope(boot), filters],
-    queryFn: ({ signal }): Promise<InsightsReport> => watched(api.get(loyaltyUrl('insights/report'), { params: { ...filters, tier_id: filters.tier_id || undefined }, signal })),
+    queryFn: ({ signal }): Promise<InsightsReport> => watched(api.get(loyaltyUrl('insights/report'), { params: reportRequest(filters), signal })),
     enabled: allowed, retry: (n, e) => ![401, 402, 403, 422].includes(failureOf(e).status) && n < 1 })
   const forbidden = !allowed || [401, 402, 403].includes(failureOf(query.error).status), data = forbidden ? undefined : query.data
   const n = (v: number) => points(v, i18n.language)
   const date = (v: string) => formatDate(v, i18n.language, { day: 'numeric', month: 'short', year: 'numeric' })
   const period = (from: string, to: string) => `${date(from)} – ${date(to)}`
-  const level = boot.programme.tiers.find(x => String(x.id) === filters.tier_id)?.name ?? say('allLevels')
+  const level = filters.tier_id === 'none' ? say('noLevel') : boot.programme.tiers.find(x => String(x.id) === filters.tier_id)?.name ?? say('allLevels')
   const exportReport = () => {
     if (!data || query.isError || query.isFetching) return
     const url = URL.createObjectURL(new Blob([reportCsv(data, level)], { type: 'text/csv;charset=utf-8' }))
@@ -45,7 +46,7 @@ function ReportDashboard() {
   }
   return <div className="l-ov-page l-in-page">
     <header className="l-ov-page-heading"><div><h1>{t('loyalty.insights.title', 'Insights')}</h1><p>{say('line')}</p></div><div className="l-in-actions"><OverviewButton onClick={() => setModal('definitions')}>{say('definitions')}</OverviewButton><OverviewButton primary disabled={!data || query.isFetching || query.isError} onClick={exportReport}>{say('export')}</OverviewButton></div></header>
-    {allowed && <div className="l-ov-panel l-in-filters">{[[say('period'), period(filters.from, filters.to)], [say('compare'), say(filters.compare === 'previous' ? 'previous' : 'none')], [say('place'), say('allPlaces')], [say('level'), level]].map(([label, value]) => <div key={label}><span>{label}</span><OverviewButton aria-label={`${label}: ${value}`} aria-haspopup="dialog" onClick={() => setModal('filters')}>{value}<span aria-hidden>⌄</span></OverviewButton></div>)}</div>}
+    {allowed && <ReportFiltersPanel key={JSON.stringify(filters)} value={filters} options={data?.filter_options} busy={query.isFetching} onApply={next => setParams({ ...next })} />}
     {forbidden && <OverviewRecovery forbidden onRetry={() => { void query.refetch() }} />}
     {!forbidden && query.isError && <OverviewRecovery title={data ? say('stale') : undefined} onRetry={() => { void query.refetch() }} busy={query.isFetching} />}
     {!forbidden && query.isPending && <OverviewSkeleton rows={8} />}
@@ -72,7 +73,6 @@ function ReportDashboard() {
       </ReportCard></div>
       <footer className="l-in-footer"><span>{data.timezone} · {say('snapshot', { date: date(data.snapshot_date) })}</span><Link className="l-ov-link" to="/loyalty/insights?view=detailed">{say('details')} →</Link></footer>
     </>}
-    {modal === 'filters' && <ReportFilterDialog value={filters} onClose={() => setModal(null)} onApply={next => { setParams({ ...next }); setModal(null) }} />}
     {modal === 'definitions' && <ReportDefinitions onClose={() => setModal(null)} />}
     {cohort && <OverviewDialog kind="form" className="l-in-dialog" title={say('cohortDetail')} onClose={() => setCohort(null)}><p>{period(cohort.from, cohort.to)}</p><div className="l-in-definition"><h3>{say('cohortResult', { n: n(cohort.n), total: n(cohort.total), week: cohort.week })}</h3><p>{say('defCohortsText')}</p></div><OverviewButton onClick={() => setCohort(null)}>{say('close')}</OverviewButton></OverviewDialog>}
   </div>
@@ -95,17 +95,6 @@ function ReportTiles({ data: r, onDefinitions }: { data: InsightsReport; onDefin
   return <div className="l-in-tiles">{entries.map(e => { const delta = comparison(e.value, e.prior ?? null, e.rate)
     return <button className="l-in-tile" key={e.key} onClick={onDefinitions}><span>{say(e.key)}</span><strong>{e.value === null ? '—' : e.money ? money(e.value) : n(e.value) + (e.rate ? '%' : '')}</strong><small>{r.previous && <>{delta === null ? say('noBaseline') : say(e.rate ? 'pp' : 'change', { n: signed(delta) })} · </>}{e.hint}</small></button>
   })}</div>
-}
-function ReportFilterDialog({ value, onApply, onClose }: { value: ReportFilters; onApply: (f: ReportFilters) => void; onClose: () => void }) {
-  const [draft, setDraft] = useState(value), boot = useBoot(), say = useReportWords(), valid = validReportRange(draft, boot.venue.today)
-  const change = (key: keyof ReportFilters, value: string) => setDraft(d => ({ ...d, [key]: value }))
-  return <OverviewDialog kind="form" className="l-in-dialog" title={say('filters')} onClose={onClose}><form onSubmit={e => { e.preventDefault(); if (valid) onApply(draft) }}>
-    <p>{say('filterLine')}</p><div className="l-in-date-fields"><label>{say('start')}<input required type="date" max={draft.to} value={draft.from} onChange={e => change('from', e.target.value)} /></label><label>{say('end')}<input required type="date" min={draft.from} max={shiftDay(boot.venue.today, -1)} value={draft.to} onChange={e => change('to', e.target.value)} /></label></div>
-    <label>{say('compare')}<select value={draft.compare} onChange={e => change('compare', e.target.value)}><option value="previous">{say('previous')}</option><option value="none">{say('none')}</option></select></label>
-    <div className="l-in-date-fields"><label>{say('place')}<input value={say('allPlaces')} readOnly aria-describedby="report-scope" /></label><label>{say('level')}<select value={draft.tier_id} onChange={e => change('tier_id', e.target.value)}><option value="">{say('allLevels')}</option>{boot.programme.tiers.map(tier => <option key={tier.id} value={tier.id}>{tier.name}</option>)}</select></label></div>
-    <div className="l-in-definition"><h3>{valid ? say('context', { days: (Date.parse(draft.to) - Date.parse(draft.from)) / 86400000 + 1, zone: boot.venue.timezone }) : say('rangeError')}</h3><p id="report-scope">{say('scope')}</p></div>
-    <div className="l-in-dialog-actions"><OverviewButton type="button" onClick={onClose}>{say('cancel')}</OverviewButton><OverviewButton primary type="submit" disabled={!valid}>{say('apply')}</OverviewButton></div>
-  </form></OverviewDialog>
 }
 function ReportDefinitions({ onClose }: { onClose: () => void }) {
   const say = useReportWords()

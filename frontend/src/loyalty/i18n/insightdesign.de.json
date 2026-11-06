@@ -1,4 +1,9 @@
 {
+  "showFilters": "Filter anzeigen", "hideFilters": "Filter ausblenden", "resetFilters": "Filter zurücksetzen", "appliedFilters": "Angewendete Filter", "unapplied": "Nicht angewendete Änderungen", "discardChanges": "Änderungen verwerfen",
+  "last7": "Letzte 7 Tage", "last28": "Letzte 28 Tage", "last90": "Letzte 90 Tage", "last365": "Letzte 365 Tage", "lastMonth": "Letzter Kalendermonat", "customDates": "Eigener Zeitraum",
+  "memberState": "Mitgliedsstatus", "stateAll": "Alle Mitgliedsstatus", "stateActive": "Aktivierte Mitglieder", "stateInactive": "Deaktivierte Mitglieder",
+  "emailConsent": "E-Mail-Angebote", "consentAll": "Alle E-Mail-Einstellungen", "consentYes": "E-Mail-Angeboten zugestimmt", "consentNo": "E-Mail-Angeboten nicht zugestimmt",
+  "scopeCurrent": "Alle Orte. Stufe, Status und E-Mail-Einstellungen entsprechen den aktuellen Mitgliedsdaten. Der Zeitraum umfasst nur abgeschlossene Tage am Standort.",
   "emptyLevels": "Stufen ohne Mitglieder ({{n}})", "noLevelMembers": "In dieser Momentaufnahme gibt es noch keine Mitglieder.",
   "line": "So entwickelt sich Ihr Programm.",
   "definitions": "Definitionen",

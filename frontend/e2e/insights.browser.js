@@ -28,7 +28,7 @@ async (page) => {
     else if(path==='insights/report'){
       if(state.slow)await new Promise(r=>setTimeout(r,800));
       if(state.fail||state.denied){status=state.denied?403:503;body={error:state.denied?'not_allowed':'unavailable'};}
-      else{body=structuredClone(state.report);const q=url.searchParams;body.from=q.get('from')||body.from;body.to=q.get('to')||body.to;body.days=(Date.parse(body.to)-Date.parse(body.from))/86400000+1;if(q.get('compare')==='none'){body.previous=null;body.comparison=null;body.previous_series=[];}if(q.get('tier_id')){body.tier_id=Number(q.get('tier_id'));body.current.active=120;}}
+      else{body=structuredClone(state.report);const q=url.searchParams;body.from=q.get('from')||body.from;body.to=q.get('to')||body.to;body.days=(Date.parse(body.to)-Date.parse(body.from))/86400000+1;body.state=q.get('state')||'all';body.consent=q.get('consent')||'all';body.filter_options={states:['all','active','inactive'],consents:['all','yes','no']};if(q.get('compare')==='none'){body.previous=null;body.comparison=null;body.previous_series=[];}if(q.get('tier_id')){body.tier_id=Number(q.get('tier_id'));body.current.active=120;}}
     }else if(path==='find')body={members:[]};
     else if(path==='insights')body={period:'30d',bucket:'day',from:'2026-09-29',to:'2026-10-28',timezone:'Europe/Riga',tiles:{members:1248,new_members:84,active_members:612,outstanding:1040000,issued:124800,redeemed:78500,expired:6300,redemption_rate:62.9},growth:[],points:[],redemptions:[],tiers:{rows:[],none:0},movement:{up:0,down:0,lateral:0,flows:[]},expiry:{overdue:{points:0,members:0},months:[]},engagement:{new:0,active:0,at_risk:0,dormant:0},balances:[]};
     else if(path==='insights/money')body=money(24860);
@@ -37,7 +37,7 @@ async (page) => {
     return route.fulfill({status,contentType:'application/json',body:JSON.stringify(body)});
   });
   await page.setViewportSize({width:1440,height:1080});await page.goto(base+'/loyalty/insights');await page.locator('.l-in-tiles').waitFor();await page.evaluate(()=>document.fonts.ready);await page.screenshot({path:root+'render-dashboard.png',fullPage:false});
-  await page.getByRole('button',{name:/^Reporting period:/}).click();await page.locator('dialog[open]').waitFor();await page.locator('dialog[open]').screenshot({path:root+'render-filters.png'});await page.keyboard.press('Escape');
+  await page.locator('.l-in-filter-panel').screenshot({path:root+'render-filters.png'});
   await page.getByRole('button',{name:'Definitions',exact:true}).click();await page.locator('dialog[open]').waitFor();await page.locator('dialog[open]').screenshot({path:root+'render-definitions.png'});await page.keyboard.press('Escape');
   return {screens:3,errors:state.errors};
 }

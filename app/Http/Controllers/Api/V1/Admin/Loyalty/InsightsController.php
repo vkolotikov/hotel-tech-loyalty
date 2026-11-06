@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1\Admin\Loyalty;
 
 use App\Http\Controllers\Controller;
 use App\Services\Loyalty\Insights\InsightsCohorts;
+use App\Services\Loyalty\Insights\InsightsAudience;
 use App\Services\Loyalty\Insights\InsightsMoney;
 use App\Services\Loyalty\Insights\InsightsPeriod;
 use App\Services\Loyalty\Insights\LoyaltyInsights;
@@ -38,13 +39,18 @@ class InsightsController extends Controller
             'to' => ['nullable', 'required_with:from', 'date_format:Y-m-d', 'before_or_equal:' . $last],
             'compare' => ['nullable', Rule::in(['previous', 'none'])],
             'tier_id' => ['nullable', 'integer', Rule::exists('loyalty_tiers', 'id')->where('organization_id', $org)],
+            'without_tier' => ['nullable', 'boolean', Rule::prohibitedIf($request->filled('tier_id'))],
+            'state' => ['nullable', Rule::in(InsightsAudience::STATES)],
+            'consent' => ['nullable', Rule::in(InsightsAudience::CONSENTS)],
         ]);
         $from = $input['from'] ?? InsightsPeriod::addDays($last, -27);
         $to = $input['to'] ?? $last;
         if (InsightsPeriod::daysBetween($from, $to) > 365) {
             throw \Illuminate\Validation\ValidationException::withMessages(['from' => ['Choose a period of at most 366 days.']]);
         }
-        return response()->json((new \App\Services\Loyalty\Insights\InsightsReport($org, isset($input['tier_id']) ? (int) $input['tier_id'] : null))
+        $audience = new InsightsAudience($org, isset($input['tier_id']) ? (int) $input['tier_id'] : null,
+            $input['state'] ?? 'all', $input['consent'] ?? 'all', (bool) ($input['without_tier'] ?? false));
+        return response()->json((new \App\Services\Loyalty\Insights\InsightsReport($org, $audience->tierId, $audience))
             ->get($from, $to, ($input['compare'] ?? 'previous') === 'previous'));
     }
 
