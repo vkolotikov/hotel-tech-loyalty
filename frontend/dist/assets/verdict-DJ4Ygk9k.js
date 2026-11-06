@@ -1,0 +1,1 @@
+import{In as e}from"./index-C2Oh_SjD.js";function t(){let{t}=e();return e=>t(e.key,e.fallback,e.vars)}export{t};
