@@ -1,4 +1,5 @@
 {
+  "comparePrevious": "Comparer à la période précédente",
   "memberFilters": "Filtres des membres", "memberFiltersLine": "Choisissez les membres à inclure dans l’ensemble du rapport.",
   "autoUpdates": "Mise à jour automatique", "updatingReport": "Actualisation du rapport…", "editDates": "Modifier les dates du rapport", "removeFilter": "Supprimer le filtre {{name}}", "resetMembers": "Effacer les filtres des membres", "reportScope": "À propos de ce rapport",
   "customDatesLine": "Choisissez des jours terminés dans le fuseau du lieu. Les dates valides actualisent le rapport automatiquement.", "datesNotApplied": "Le rapport conserve ses anciennes dates jusqu’à ce que la période soit valide.",

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { CalendarDays, ChevronDown, RotateCcw, SlidersHorizontal, X } from 'lucide-react'
+import { ChevronDown, RotateCcw, SlidersHorizontal, X } from 'lucide-react'
 import { formatDate } from '../../workspace/lib/wallClock'
 import { useBoot } from '../LoyaltyProvider'
 import { OverviewDialog } from '../overview/OverviewUI'
@@ -17,7 +17,7 @@ export function ReportFiltersPanel({ value, options, busy, onChange }: {
   value: ReportFilters; options?: InsightsReport['filter_options']; busy: boolean; onChange: (value: Partial<ReportFilters>) => void
 }) {
   const boot = useBoot(), say = useReportWords(), { i18n } = useTranslation()
-  const [window, setWindow] = useState<'members' | 'dates' | null>(null)
+  const [window, setWindow] = useState<'dates' | null>(null)
   const [hidden, setHidden] = useState(() => { try { return localStorage.getItem(preference) === 'true' } catch { return false } })
   const defaults = reportFilters('', boot.venue.today), isDefault = JSON.stringify(value) === JSON.stringify(defaults)
   const date = (day: string) => formatDate(day, i18n.language, { day: 'numeric', month: 'short', year: 'numeric' })
@@ -41,24 +41,18 @@ export function ReportFiltersPanel({ value, options, busy, onChange }: {
       {!isDefault && <button className="l-in-reset" type="button" onClick={() => onChange(defaults)}><RotateCcw size={14} aria-hidden />{say('resetFilters')}</button>}
     </div>
     <div id="report-filter-fields" hidden={hidden} className="l-in-filter-toolbar">
-      <div className="l-in-period-control"><CalendarDays size={18} aria-hidden /><div><label htmlFor="report-period">{say('period')}</label><select id="report-period" value={window === 'dates' ? 'custom' : selectedPreset(value, boot.venue.today)} onChange={e => choosePeriod(e.target.value as ReportPreset)}>{Object.entries(presetWords).map(([key, word]) => <option key={key} value={key}>{say(word)}</option>)}</select></div><button type="button" className="l-in-date-link" aria-label={say('editDates')} onClick={() => setWindow('dates')}>{period}</button></div>
-      <label className="l-in-compare-control">{say('compare')}<select aria-label={say('compare')} value={value.compare} onChange={e => change('compare', e.target.value as ReportFilters['compare'])}><option value="previous">{say('previous')}</option><option value="none">{say('none')}</option></select></label>
-      <button className="l-in-member-filter-button" type="button" aria-haspopup="dialog" onClick={() => setWindow('members')}><SlidersHorizontal size={16} aria-hidden />{say('memberFilters')}{chips.length > 0 && <span>{chips.length}</span>}<ChevronDown size={14} aria-hidden /></button>
+      <label className="l-in-period-control">{say('period')}<select id="report-period" aria-label={say('period')} value={window === 'dates' ? 'custom' : selectedPreset(value, boot.venue.today)} onChange={e => choosePeriod(e.target.value as ReportPreset)}>{Object.entries(presetWords).map(([key, word]) => <option key={key} value={key}>{say(word)}</option>)}</select></label>
+      <label>{say('level')}<select aria-label={say('level')} value={value.tier_id} onChange={e => change('tier_id', e.target.value)}><option value="">{say('allLevels')}</option><option value="none">{say('noLevel')}</option>{boot.programme.tiers.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}</select></label>
+      <label>{say('memberState')}<select aria-label={say('memberState')} disabled={!options} value={value.state} onChange={e => change('state', e.target.value as ReportFilters['state'])}>{(options?.states ?? [value.state]).map(key => <option key={key} value={key}>{say(stateWords[key])}</option>)}</select></label>
+      <label>{say('emailConsent')}<select aria-label={say('emailConsent')} disabled={!options} value={value.consent} onChange={e => change('consent', e.target.value as ReportFilters['consent'])}>{(options?.consents ?? [value.consent]).map(key => <option key={key} value={key}>{say(consentWords[key])}</option>)}</select></label>
+      <label className="l-in-compare-check"><input type="checkbox" checked={value.compare === 'previous'} onChange={e => change('compare', e.target.checked ? 'previous' : 'none')} /><span>{say('comparePrevious')}</span></label>
+      <div className="l-in-filter-footnote"><button type="button" className="l-in-date-link" aria-label={say('editDates')} onClick={() => setWindow('dates')}>{period}</button><span>{say('scopeCurrent')}</span></div>
     </div>
     {(hidden || chips.length > 0) && <div className="l-in-filter-summary" aria-label={say('appliedFilters')}>
       {hidden && <><span>{period}</span><span>{say(value.compare === 'previous' ? 'previous' : 'none')}</span></>}
       {chips.map(chip => <button key={chip.key} type="button" aria-label={say('removeFilter', { name: chip.label })} onClick={() => change(chip.key, chip.clear)}><span>{chip.text}</span><X size={12} aria-hidden /></button>)}
+      {chips.length > 0 && <button type="button" className="l-in-clear-members" onClick={resetMembers}>{say('resetMembers')}</button>}
     </div>}
-    {window === 'members' && <OverviewDialog kind="form" className="l-in-dialog l-in-filter-window" title={say('memberFilters')} onClose={() => setWindow(null)}>
-      <p className="l-in-window-intro">{say('memberFiltersLine')}</p>
-      <div className="l-in-member-fields">
-        <label>{say('level')}<select aria-label={say('level')} value={value.tier_id} onChange={e => change('tier_id', e.target.value)}><option value="">{say('allLevels')}</option><option value="none">{say('noLevel')}</option>{boot.programme.tiers.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}</select></label>
-        <label>{say('memberState')}<select aria-label={say('memberState')} disabled={!options} value={value.state} onChange={e => change('state', e.target.value as ReportFilters['state'])}>{(options?.states ?? [value.state]).map(key => <option key={key} value={key}>{say(stateWords[key])}</option>)}</select></label>
-        <label>{say('emailConsent')}<select aria-label={say('emailConsent')} disabled={!options} value={value.consent} onChange={e => change('consent', e.target.value as ReportFilters['consent'])}>{(options?.consents ?? [value.consent]).map(key => <option key={key} value={key}>{say(consentWords[key])}</option>)}</select></label>
-      </div>
-      <div className="l-in-window-footer"><span role="status">{say(busy ? 'updatingReport' : 'autoUpdates')}</span>{chips.length > 0 && <button type="button" className="l-in-reset" onClick={resetMembers}><RotateCcw size={14} aria-hidden />{say('resetMembers')}</button>}</div>
-      <details className="l-in-filter-about"><summary>{say('reportScope')}</summary><p>{say('scopeCurrent')}</p></details>
-    </OverviewDialog>}
     {window === 'dates' && <ReportDateWindow value={value} onChange={onChange} onClose={() => setWindow(null)} />}
   </section>
 }

@@ -1,4 +1,5 @@
 {
+  "comparePrevious": "Comparar con el período anterior",
   "memberFilters": "Filtros de miembros", "memberFiltersLine": "Elija qué miembros se incluyen en todo el informe.",
   "autoUpdates": "Se actualiza automáticamente", "updatingReport": "Actualizando el informe…", "editDates": "Cambiar las fechas del informe", "removeFilter": "Quitar el filtro {{name}}", "resetMembers": "Borrar filtros de miembros", "reportScope": "Acerca de este informe",
   "customDatesLine": "Elija días completos del lugar. Las fechas válidas actualizan el informe automáticamente.", "datesNotApplied": "El informe conserva las fechas anteriores hasta que el intervalo sea válido.",

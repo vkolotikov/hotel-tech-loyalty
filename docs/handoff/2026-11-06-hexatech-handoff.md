@@ -4,6 +4,17 @@ Read CLAUDE.md and `2026-11-02-hexatech-handoff.md` for the current application,
 
 ## Insights filters
 
+### Follow-up: aligned inline controls
+
+Owner: align controls, replace comparison with a checkbox, and show member filters in the same row. Branch `feature/insights-filter-alignment-20261106` follows production `de0999437`; the source delta starts at `ce4cbcb35` and includes the previous release-record documents.
+
+- Reporting period, membership level, member status and email offers use equal-height native dropdowns in one desktop row, followed by the comparison checkbox. Tablets use two columns; phones stack the fields. The separate member-filter dialog is removed; custom dates retain their focused window.
+- Native options now explicitly use the theme's text and raised-surface colours, fixing the screenshot's light-on-white popup. Checkbox wording is translated in all five bundles. Dates and current-member scope appear below the row.
+- Immediate application, rapid-change merging, retained charts during refresh, export protection, chips, resets, collapse preference and URL history remain in place. Browser checks now exercise the inline fields and row geometry.
+- Only frontend presentation, fixture checks and documentation change. PHP, APIs, dependencies and database source are unchanged.
+
+Verification and production content evidence will be recorded after the isolated release checks.
+
 ### Follow-up: instant filters and compact controls
 
 Owner: make the page more logical and easier to use, improve the filters window/design and apply selections with no Save button. Branch `feature/insights-instant-filters-20261106` follows the first release below; production baseline is `aeda71eeb`. The source delta starts at `4c13cc211` and includes the two subsequent release-record documents.
@@ -14,7 +25,15 @@ Owner: make the page more logical and easier to use, improve the filters window/
 - Rapid filter changes merge with the last selection, because Router transitions can defer renders. The browser regression first reproduced a status selection being lost to the following email choice; all selected fields now survive slow in-flight reads.
 - No PHP, database, API contract, dependency or shared-workspace change. New words are in all five bundles; desktop and mobile windows retain native controls and focus/Escape behavior.
 
-Verification and deployment for this follow-up are recorded at completion. The original release evidence below remains historical.
+Follow-up production **de099943778c0ca7c954af82f95679195f697d86**, source patch **4b5e637632a37adf7206ef9035580d5065180bea** from feature source **ce4cbcb35bdeba633d7a07e673d013e0ce903149**, plus its fresh SPA build. **The next source-patch baseline is now ce4cbcb35**, superseding the first release's baseline below. Fourteen allowlisted frontend/documentation files, no deletions; whole source parity passed. Later release-record commits are not the baseline.
+
+Artifact checks: **7,407 PHP passed / 23 existing skips / 78 scoped runs / zero failed**, **5,849 frontend tests / 404 files**, TypeScript, focused Insights ESLint, fresh build, **90 compiled browser interaction checks** and **10 additional localized member/date-window checks**. The PHP sweep used three separate physical worktrees/vendor copies with the correct OpenSSL configuration; each ran 26 disjoint scopes (4,430 / 927 / 2,050 passing tests). No new PostgreSQL run was needed because the PHP/query tree is byte-identical to the already verified production baseline.
+
+Live content verified **6 November 2026, 11:55 Europe/Riga (09:55:18 UTC)**: `index-BFWYm4Ml.js`, `LoyaltyApp-C1yeKncq.js`, `InsightsPage-CAdBCH7k.js`. The live bundles contain `l-in-filter-toolbar`, `l-in-member-filter-button`, Updates automatically and Clear member filters; the report keeps its 401 authentication boundary. Public landing continuity and retired stylesheet 404 passed. Signed-in production UI inspection remains unavailable as explained below; the compiled checks intercept local fixture APIs and block external traffic.
+
+Evidence: `C:/wamp64/tmp/insights-instant-php-{1,2,3}-20261106.log`, `insights-instant-build-20261106.log`, `insights-instant-compiled-20261106/`, `insights-instant-localized-windows-20261106/` and `verify-insights-instant-live-20261106.cjs`. All five languages' member/date windows fit a 390×844 viewport; desktop 1440 and mobile screenshots were reviewed. The two completed PHP-only checkouts and preview processes were removed/stopped. The deployment checkout is removed after live verification; existing user assets and old stopped PostgreSQL directories below remain untouched.
+
+The original release evidence below remains historical.
 
 ### First release
 
