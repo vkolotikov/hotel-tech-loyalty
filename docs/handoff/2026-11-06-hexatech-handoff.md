@@ -1,6 +1,12 @@
 # HexaTech handoff — 6 November 2026
 
-Read CLAUDE.md and `2026-11-02-hexatech-handoff.md` for the current application, native apps, environment and outstanding operational work. This session changes the Loyalty workspace Insights filters, Overview, Members and Program presentation.
+Read CLAUDE.md and `2026-11-02-hexatech-handoff.md` for the current application, native apps, environment and outstanding operational work. This session changes the Loyalty workspace Insights filters, Overview, Members, Program and Ways to earn presentation.
+
+## Ways to earn simplification
+
+Owner: improve Ways to earn, continuing the simplified Figma design. Branch `feature/earn-simplified-20261106`, production baseline `e7bd314a9`, source delta from `c01daf41a` including the previous release-record documents. Current WE-B01/02/03 nodes: `303:10169`, `303:10436`, `303:10701`; session `f602b928-b0a4-4e68-a196-a6acf1189d0e`. See `loyalty-redesign/26-WAYS-TO-EARN-SIMPLIFICATION-REPORT.md`.
+
+The earning directory groups filters, rates, statuses and actual counts; compact bonus/rules shortcuts replace hero blocks. Purchase, bonus and expiry/qualification editors use shorter copy and cyan/violet/amber accents. All six server methods, API-driven values/bounds, explicit partial saves, unsaved guards, separate bonus/rules drafts, read-only states and historical data remain. No backend/API/earning-engine/Places change. Initial verification: TypeScript, focused lint, 21 earning unit tests, 66 existing browser checks, ten language/theme combinations across four pages and six widths, native artwork geometry and minimum audited text contrast 5.32:1 dark / 4.98:1 light. Final artifact/deployment evidence follows when complete. The preceding Program release CI has completed successfully.
 
 ## Program simplification and Places directory
 
@@ -8,7 +14,15 @@ Owner: use the simplified Program designs, refresh only the Places main page whi
 
 Program gains compact coloured levels/details, clearer editors and benefit assignments, a local-filtered boost schedule/preview, and a refined real four-step setup. Membership-benefit catalogue navigation is removed from Program; old URLs redirect to Rewards with filters/selection preserved. Level-specific assignments remain. Places changes cover only the directory and existing actions; real total/active/allowed-today counts replace unsupported entrance/override/hour samples. PL-02–16 and new Places functionality remain outside scope. No backend, dependency, migration, access or earning-rule change.
 
-Development: **5,869 frontend tests / 406 files**, TypeScript, focused lint; browser checks cover 54 Members/Program + 42 Program/Places + 79 Settings/setup + 73 mobile. Initial audit: ten language/theme combinations, five pages and six widths, minimum text contrast **4.84:1 dark / 4.64:1 light**. Screenshots were reviewed and card/preview/icon details refined. Release artifact/live checks are pending; the Members release below remains the current production/source baseline until those pass.
+Development: **5,869 frontend tests / 406 files**, TypeScript, focused lint; browser checks cover 54 Members/Program + 42 Program/Places + 79 Settings/setup + 73 mobile. Initial audit: ten language/theme combinations, five pages and six widths, minimum text contrast **4.84:1 dark / 4.64:1 light**. Screenshots were reviewed and card/preview/icon details refined.
+
+Production **e7bd314a9a6b524bf3ce1680340fcf9b6ccb9a67**, source patch **d94b23c37b0d2d2fd83338cfa0e534e6951f16ba** from feature source **c01daf41a3c643184b3128ed29255f0cc1b810b0**, plus its fresh SPA build. **Next source-patch baseline: c01daf41a**, superseding the Members/Overview/Insights baselines below. Fifty-one allowlisted paths, no deletions; whole application source parity passed. Later documentation commits are not the baseline.
+
+Artifact checks: **5,869 frontend tests / 406 files**, TypeScript, focused lint, fresh build, **248 compiled browser checks**, ten language/theme combinations across five pages/six widths and native image geometry checks. All **2,042 PHP tests / three scopes** passed with zero skips/failures (189 + 118 + 1,735). Backend source/tests remained byte-identical throughout; the previous Members CI completed successfully. The final browser-harness correction waits for an existing access-details query; runtime build inputs and the fresh compiled tree were unchanged. Compiled screenshots were reviewed.
+
+Live content verified **6 November 2026, 16:46 Riga / 14:46:38 UTC**: `index-g41xOo9I.js`, `LoyaltyApp-BM8W3SDl.js`, `ProgramPage-C5meDzNV.js`, `SetupWizard-BHR2tRoB.js`, shared editor/assignment `GetStarted-9Cof7qUc.js`, stylesheets `GetStarted-DG0mlJJ9.css` and `SetupWizard-DSeToUbZ.css`. New presentation markers and CSS are served; no temporary Figma URLs remain. Program/Places/Options reads retain 401 authentication. Fonts, public landing stylesheet continuity and retired-file 404 passed at 14:46:50 UTC. Signed-in production UI inspection remains unavailable as explained below; interactive verification uses isolated compiled fixtures.
+
+Evidence: `C:/wamp64/tmp/program-simple-artifact-{php,vitest,tsc,lint,build}-20261106.log`, `program-simple-compiled-20261106/`, `program-simple-locales-20261106/`, `program-simple-compiled-{browser,locales}-20261106.log`, `program-simple-live-20261106.json`, `program-simple-continuity-20261106.json`, `program-simple-release-source-20261106.json` and the corresponding scripts. Task previews are stopped; the release checkout, dependency junction and local deploy branch are removed. Shared dependencies, user assets and old stopped PostgreSQL directories remain untouched. Post-deploy CI was in progress at 16:48 Riga: https://github.com/vkolotikov/hotel-tech-loyalty/actions/runs/42236347074; both Node SPA jobs, audit, Larastan and two SQLite shards were already green.
 
 ## Members simplification
 

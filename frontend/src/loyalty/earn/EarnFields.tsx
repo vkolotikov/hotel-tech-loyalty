@@ -35,7 +35,7 @@ function EarnField({ field, way, form, answer, problems, disabled, currency, onC
       step={def.type === 'decimal' ? .01 : 1} disabled={disabled} invalid={Boolean(problem)} aria-describedby={problem ? `${id}-error` : undefined} />
     {problem && <p className="l-earn-error" id={`${id}-error`} role="alert">{problem}</p>}
     {hint && <small>{hint}</small>}
-    {bonus && way.zero_off === field && <><div className="l-earn-quick">{[100, 250, 500].filter(n => n >= (def.min ?? 0) && n <= (def.max ?? Infinity)).map(n => <OverviewButton key={n} type="button" disabled={disabled} onClick={() => onChange(field, String(n))}>{n}</OverviewButton>)}</div><small>{say('pickAmount')}</small></>}
+    {bonus && way.zero_off === field && <div className="l-earn-quick">{[100, 250, 500].filter(n => n >= (def.min ?? 0) && n <= (def.max ?? Infinity)).map(n => <OverviewButton key={n} type="button" aria-pressed={Number(value) === n} disabled={disabled} onClick={() => onChange(field, String(n))}>{n}</OverviewButton>)}</div>}
   </div>
   const choices = CHOICE_WORDS[field] ?? {}
   return <div data-field={field}><FormField label={label} problem={problem} hint={hint ?? undefined}>

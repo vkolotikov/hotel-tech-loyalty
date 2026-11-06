@@ -1,5 +1,7 @@
 # Ways to earn — implementation record
 
+6 November 2026 simplified design follow-up: see [26-WAYS-TO-EARN-SIMPLIFICATION-REPORT.md](26-WAYS-TO-EARN-SIMPLIFICATION-REPORT.md) for current WE-B01–03, real-data adaptations and release evidence. The record below is historical.
+
 Implemented, tested and deployed, 28 October 2026. Branch: `feature/loyalty-ways-to-earn-20261028`.
 Production baseline: `0f59ddab1`; last deployed feature source: `2d6e03d81`.
 

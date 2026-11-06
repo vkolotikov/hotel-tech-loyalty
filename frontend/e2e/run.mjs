@@ -87,6 +87,7 @@ try {
           }
           answer = await run(await source(file, dir), page, extra)
         }
+        if (answer?.error) throw Error(answer.error)
         const failed = answer?.results?.filter(test => test.status !== 'PASS') || []
         if (failed.length || errors.length || answer?.errors?.length || answer?.pageErrors?.length) throw Error(JSON.stringify({ failed, errors, reported: answer?.errors || answer?.pageErrors }))
         const count = Array.isArray(answer) ? answer.length : answer?.checks?.length ?? answer?.passed ?? 0

@@ -22,8 +22,9 @@ import { SharedRules } from './SharedRules'
 import { baseExample, earningUrl, earnLocation, filteredWays, type EarnStatus } from './model'
 import { useLeaveGuard } from './useLeaveGuard'
 import { useEarnWords } from './words'
-import earnIcon from './assets/earn-selected.svg'
+import { EarnIcon, EarnState } from './presentation'
 import './earn.css'
+import './clean.css'
 
 /** WE-01–03: server-described methods and existing partial saves, in the final Figma layout. */
 export function EarnPage() {
@@ -53,22 +54,22 @@ export function EarnPage() {
   if (!data) return <div className="l-ov-page l-rd-page"><h1>{say('title')}</h1><Loading /></div>
   if (state.tab === 'overview') return <OptionsPage />
   if (editor && !bonus && state.tab !== 'rule') return <><EarnEditor key={editor.key} way={editor} answer={data} guard={guard} />{discard}</>
-  return <div className="l-ov-page l-rd-page l-earn-page">
+  return <div className="l-ov-page l-rd-page l-earn-page l-ec-page">
     <div className="l-ov-heading"><div><h1>{say(bonus ? 'bonuses' : state.tab === 'rule' ? 'rules' : 'title')}</h1><p>{say(bonus ? 'bonusLine' : state.tab === 'rule' ? 'sharedRulesLine' : 'line')}</p></div><div className="l-rd-actions">{bonus || state.tab === 'rule' ? <Link className="l-ov-button" to={earningUrl('earn')}>{say('earning')}</Link> : data.can_change && <><Link className="l-ov-button" to="/loyalty/options/setup">{rd('guidedSetup')}</Link><OverviewButton primary onClick={() => setAdding(true)}>{say('add')}</OverviewButton></>}</div></div>
     {!data.can_change && <Notice>{t('loyalty.options.read_only', 'Only an owner or a manager can change these. You see them as they are.')}</Notice>}
     {state.tab === 'rule' ? <><SharedRules answer={data} guard={guard} full />{checks}</> : <>
-      <section className="l-earn-hero"><div><h2>{say(bonus ? 'bonusHero' : 'hero')}</h2><p>{say(bonus ? 'bonusHeroLine' : 'heroLine')}</p></div><small>{say(bonus ? 'activeBonuses' : 'activeMethods', { n: active })}</small></section>
-      {!bonus && <div className="l-earn-filters"><label><span>{say('search')}</span><input value={state.q} placeholder={say('searchHint')} onChange={e => filters({ q: e.target.value })} /></label><label><span>{say('status')}</span><select value={state.status} onChange={e => filters({ status: e.target.value as EarnStatus })}><option value="all">{say('all')}</option><option value="active">{say('active')}</option><option value="off">{say('off')}</option></select></label></div>}
-      <div className="l-earn-columns"><div className="l-earn-side"><section className="l-ov-panel l-earn-list"><div className="l-earn-heading"><h2>{say(bonus ? 'milestone' : 'everyday')}</h2>{!bonus && <small>{say('methods', { n: visible.length })}</small>}</div>
+      <div className="l-earn-columns"><div className="l-earn-side"><section className="l-ov-panel l-earn-list"><div className="l-earn-heading"><div className="l-ec-heading"><EarnIcon kind={bonus ? 'bonus' : 'points'} /><h2>{say(bonus ? 'milestone' : 'everyday')}</h2></div><small>{say(bonus ? 'activeBonusTotal' : 'activeTotal', { active, total: groupWays.length })}</small></div>
+        {!bonus && <div className="l-earn-filters"><label><span>{say('search')}</span><input type="search" value={state.q} placeholder={say('searchHint')} onChange={e => filters({ q: e.target.value })} /></label><label><span>{say('status')}</span><select value={state.status} onChange={e => filters({ status: e.target.value as EarnStatus })}><option value="all">{say('all')}</option><option value="active">{say('active')}</option><option value="off">{say('off')}</option></select></label></div>}
+        <div className="l-ec-columns" aria-hidden="true"><span>{say(bonus ? 'bonusColumn' : 'method')}</span><span>{say(bonus ? 'reward' : 'earnRate')}</span><span>{say('status')}</span></div>
         {visible.map(way => <EarningRow key={way.key} way={way} answer={data} title={title(way)} description={description(way)} sentence={text(way)} selected={selected?.key === way.key} onSelect={() => picked(way)} onOpen={() => guard.go(earningUrl(state.tab, bonus ? { selected: way.key } : { way: way.key }))} />)}
         {!visible.length && <div className="l-earn-empty"><p>{say(groupWays.length ? 'noResults' : 'noMethods')}</p>{groupWays.length > 0 && <OverviewButton onClick={() => filters({ q: '', status: 'all' })}>{say('clear')}</OverviewButton>}</div>}
       </section>{bonus && <><SharedRules answer={data} guard={guard} /><Link className="l-ov-link" to="/loyalty/rewards?tab=referrals">{say('referralActivity')}</Link></>}</div>
-      {selected && (bonus ? <EarnEditor key={selected.key} bonus way={selected} answer={data} guard={guard} /> : <aside className="l-earn-side"><section className="l-ov-panel l-earn-detail"><div className="l-earn-eyebrow"><span className="l-earn-preview-icon"><img src={earnIcon} alt="" /></span>{say('selected')}</div><h2 className="l-earn-detail-title">{title(selected)}</h2>
-        <div className="l-earn-example">{selected.key === 'earn_rate' ? <><strong className="l-earn-big">{say('rate', { n: String(data.options.points_per_currency), unit })}</strong><p>{baseExample('50', String(data.options.points_per_currency)) === null ? say('invalidExample') : say('example', { amount: money(50, currency, locale), n: points(baseExample('50', String(data.options.points_per_currency))!, locale) })}</p></> : <p>{text(selected)}</p>}</div>
-        <dl className="l-earn-facts"><dt>{say('available')}</dt><dd>{say('allLevels')}</dd><dt>{say('status')}</dt><dd>{say((data.not_used ?? []).includes(selected.key) ? 'unused' : isOn(selected, data.options) ? 'active' : 'off')}</dd></dl>
-        {selected.key === 'earn_rate' && <div className="l-earn-divider"><strong>{say('baseExample')}</strong><p>{say('modifiers')}</p></div>}
+      {selected && (bonus ? <EarnEditor key={selected.key} bonus way={selected} answer={data} guard={guard} /> : <aside className="l-earn-side"><section className="l-ov-panel l-earn-detail l-ec-preview"><div className="l-earn-heading"><div className="l-earn-eyebrow"><EarnIcon kind={selected.key} />{say('selected')}</div><EarnState state={(data.not_used ?? []).includes(selected.key) ? 'unused' : isOn(selected, data.options) ? 'active' : 'off'} /></div><h2 className="l-earn-detail-title">{title(selected)}</h2>
+        <div className="l-earn-example">{selected.key === 'earn_rate' ? <><small className="l-ec-base-label">{say('baseRate')}</small><strong className="l-earn-big">{say('rate', { n: String(data.options.points_per_currency), unit })}</strong><p>{baseExample('50', String(data.options.points_per_currency)) === null ? say('invalidExample') : say('example', { amount: money(50, currency, locale), n: points(baseExample('50', String(data.options.points_per_currency))!, locale) })}</p></> : <p>{text(selected)}</p>}</div>
+        <dl className="l-earn-facts"><dt>{say('available')}</dt><dd>{say('allLevels')}</dd></dl>
+        {selected.key === 'earn_rate' && <p>{say('modifiers')}</p>}
         <Link className="l-ov-button l-ov-primary" to={earningUrl(state.tab, { way: selected.key })}>{data.can_change ? say('edit', { name: title(selected) }) : say('viewSettings')}</Link>
-      </section><section className="l-ov-panel l-earn-detail"><h2>{say('extra')}</h2><p>{say('extraLine')}</p><Link className="l-ov-link" to={earningUrl('bonus')}>{say('manageBonuses')}</Link></section><Link className="l-ov-link" to={earningUrl('rule')}>{say('ruleLink')}</Link></aside>)}
+      </section><Link className="l-ov-panel l-ec-shortcut l-ec-violet" to={earningUrl('bonus')}><EarnIcon kind="bonus" /><span><strong>{say('milestone')}</strong><small>{say('extraLine')}</small></span><span aria-hidden="true">→</span></Link><Link className="l-ov-panel l-ec-shortcut l-ec-amber" to={earningUrl('rule')}><EarnIcon kind="rules" /><span><strong>{say('sharedRules')}</strong><small>{say('rulesSummary')}</small></span><span aria-hidden="true">→</span></Link></aside>)}
       </div><footer className="l-earn-foot">{checks}{data.ways.some(w => groupOf(w.key) === 'more') && state.tab !== 'more' && <Link className="l-ov-link" to={earningUrl('more')}>{t('loyalty.options.group.more', 'More')}</Link>}</footer>
     </>}
     <SetupBanner />{discard}
@@ -88,7 +89,7 @@ function EarningRow({ way, answer, title, description, sentence, selected, onSel
   }
   const simple = way.zero_off && groupOf(way.key) === 'bonus' && on ? `+${say('points', { n: points(Number(answer.options[way.zero_off]), i18n.language) })}` : summaries[way.key] ?? sentence
   return <div className={`l-earn-row ${selected ? 'l-earn-selected' : ''}`} data-way={way.key}>
-    <button className="l-earn-row-content" type="button" aria-pressed={selected} onClick={onSelect}><span><strong>{title}</strong><small>{description}</small></span><span><span className="l-ov-link">{simple}</span><small className={on && !unused ? 'l-earn-on' : ''}>{say(unused ? 'unused' : on ? 'active' : 'off')}</small></span></button>
+    <EarnIcon kind={way.key} /><button className="l-earn-row-content" type="button" aria-pressed={selected} onClick={onSelect}><span><strong>{title}</strong><small>{description}</small></span><span className="l-ec-rate">{simple}</span><EarnState state={unused ? 'unused' : on ? 'active' : 'off'} /></button>
     <OverviewButton className="l-earn-open" aria-label={answer.can_change ? say('edit', { name: title }) : `${say('viewSettings')}: ${title}`} onClick={onOpen}>→</OverviewButton>
   </div>
 }

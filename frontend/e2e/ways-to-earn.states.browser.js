@@ -22,6 +22,10 @@ async(page)=>{
     await go('?tab=overview');
     await page.locator('#options-tab-overview').waitFor();checks.push('original checks and member journey remain reachable');
     await go('');
+    ok(await page.locator('.l-earn-list').getByLabel('Search earning rules',{exact:true}).count()===1&&await page.locator('.l-earn-list').getByRole('combobox',{name:'Status',exact:true}).count()===1,'search and status belong to the earning directory');
+    ok(await page.locator('.l-earn-list .l-earn-heading > small').textContent()==='4 active · 6 methods','directory counts actual active and total methods');
+    ok(await page.locator('.l-earn-hero').count()===0&&await page.locator('.l-ec-shortcut').count()===2,'compact bonus and rules shortcuts replace repeated banners');
+    await page.locator('.l-ec-icon img,.l-ec-status img').evaluateAll(async es=>{await Promise.all(es.map(e=>e.decode()));if(es.some(e=>{const r=e.getBoundingClientRect();return !e.naturalWidth||Math.abs(r.width-e.naturalWidth)>1||Math.abs(r.height-e.naturalHeight)>1}))throw Error('Earning artwork geometry');});checks.push('original artwork loads at native dimensions');
     ok(await page.getByRole('link',{name:'Guided setup',exact:true}).getAttribute('href')==='/loyalty/options/setup','existing setup wizard route preserved');
     const future=structuredClone(original);future.ways.push({key:'future_method',fields:[],switch:null,zero_off:null});
     await fixture({answer:future});await go('?tab=more');
@@ -37,7 +41,7 @@ async(page)=>{
       }
     }
     await page.setViewportSize({width:390,height:844});await go('');
-    await page.locator('.l-ov-menu-button').click();await page.getByRole('dialog').waitFor();
+    await page.locator('.l-mw-header').getByRole('button').click();await page.getByRole('dialog').waitFor();
     ok(await page.getByRole('dialog').getByRole('link',{name:'Bonuses',exact:true}).isVisible(),'mobile menu exposes Ways subpages');
     await page.keyboard.press('Escape');
     await page.getByRole('button',{name:'+ Add earning rule',exact:true}).click();await page.getByRole('dialog').waitFor();

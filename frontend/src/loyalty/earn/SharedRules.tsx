@@ -14,6 +14,7 @@ import { earningUrl } from './model'
 import type { EarnGuard } from './useLeaveGuard'
 import { useOptionDraft } from './useOptionDraft'
 import { useEarnWords } from './words'
+import { EarnIcon } from './presentation'
 
 export function SharedRules({ answer, guard, full = false }: { answer: OptionsAnswer; guard: EarnGuard; full?: boolean }) {
   const say = useEarnWords(), oldSay = useSay(), { t, i18n } = useTranslation()
@@ -30,7 +31,7 @@ export function SharedRules({ answer, guard, full = false }: { answer: OptionsAn
   const setMonths = (v: string) => draft.edit('points_expiry', { on: v !== '0', values: { ...expiry.values, points_expiry_months: v } })
   if (!ways.length) return null
   return <form className="l-ov-panel l-earn-shared" noValidate onSubmit={e => { e.preventDefault(); draft.submit() }}>
-    <h2>{say('sharedRules')}</h2><p>{say('sharedRulesLine')}</p>
+    <div className="l-ec-heading"><EarnIcon kind="rules" /><h2>{say('sharedRules')}</h2></div><p>{say('sharedRulesLine')}</p>
     <div className="l-earn-two">
       {expiry && <div><FormField label={say('expiry')} problem={customShown ? undefined : error('points_expiry_months')}><select value={customShown ? 'custom' : value} disabled={disabled} onChange={e => { if (e.target.value === 'custom') { setCustom(true); return }; setCustom(false); setMonths(e.target.value) }}>{presets.map(n => <option key={n} value={n}>{n === 0 ? say('never') : say('months', { n })}</option>)}<option value="custom">{say('custom')}</option></select></FormField>
         {customShown && <FormField label={say('customMonths')} problem={error('points_expiry_months')}><input type="text" inputMode="numeric" value={value} disabled={disabled} onChange={e => setMonths(e.target.value)} /></FormField>}
