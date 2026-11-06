@@ -110,10 +110,11 @@ class ApiVersionTest extends TestCase
             if ($file->getExtension() !== 'php') {
                 continue;
             }
-            $source = file_get_contents($file->getPathname());
+            $path = str_replace('\\', '/', $file->getPathname());
+            $source = file_get_contents($path);
             if (preg_match('/new\s+\\\\?(Stripe\\\\)?StripeClient\s*\(/', $source)
-                && !str_ends_with($file->getPathname(), 'app/Services/StripeService.php')) {
-                $offenders[] = substr($file->getPathname(), strlen($root) - 3);
+                && !str_ends_with($path, 'app/Services/StripeService.php')) {
+                $offenders[] = substr($path, strlen($root) - 3);
             }
         }
         $this->assertSame([], $offenders, 'Make Stripe clients only through StripeService::makeClient().');
