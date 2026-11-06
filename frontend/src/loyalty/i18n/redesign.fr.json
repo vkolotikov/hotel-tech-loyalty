@@ -36,7 +36,7 @@
   "allActivity": "Toutes les activités",
   "fullHistory": "Voir tout l’historique →",
   "recentHistory": "Afficher l’historique récent",
-  "requestsWaiting": "{{n}} demandes à traiter",
+  "requestsWaiting": "{{n}} en attente",
   "openRequest": "Ouvrir la demande →",
   "noRequests": "Aucune demande à traiter.",
   "awardLine": "Ajoutez des points au solde utilisable de ce membre.",
@@ -114,5 +114,9 @@
   "benefitDetails": "Détails de l’avantage →",
   "previewEmpty": "Choisissez un avantage pour l’aperçu.",
   "noLevel": "Aucun niveau",
-  "detailsUnavailable": "Aucune information supplémentaire fournie."
+  "detailsUnavailable": "Aucune information supplémentaire fournie.",
+  "directory": "Répertoire",
+  "avgBalance": "Solde moyen",
+  "spendablePoints": "Points disponibles",
+  "editShort": "Modifier"
 }

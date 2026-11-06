@@ -36,7 +36,7 @@
   "allActivity": "Toda la actividad",
   "fullHistory": "Ver historial completo →",
   "recentHistory": "Mostrar historial reciente",
-  "requestsWaiting": "{{n}} solicitudes pendientes",
+  "requestsWaiting": "{{n}} pendientes",
   "openRequest": "Abrir solicitud →",
   "noRequests": "No hay solicitudes pendientes.",
   "awardLine": "Añada puntos al saldo disponible de este miembro.",
@@ -114,5 +114,9 @@
   "benefitDetails": "Detalles del beneficio →",
   "previewEmpty": "Elija un beneficio para ver la vista previa.",
   "noLevel": "Sin nivel",
-  "detailsUnavailable": "No se han proporcionado más detalles."
+  "detailsUnavailable": "No se han proporcionado más detalles.",
+  "directory": "Directorio",
+  "avgBalance": "Saldo promedio",
+  "spendablePoints": "Puntos disponibles",
+  "editShort": "Editar"
 }

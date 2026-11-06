@@ -15,7 +15,10 @@ import { day, points } from '../lib/format'
 import { memberPath } from '../lib/links'
 import { useLook } from '../lib/look'
 import type { MemberRow, MemberSort } from '../lib/types'
-import { TierChip } from '../ui/TierChip'
+import { MemberStatus, MemberTierChip } from './presentation'
+import { memberAssets } from './assets'
+import { memberPaintStyle } from './memberPaint'
+import './members-design.css'
 import { AddMemberDialog } from '../membership/AddMemberDialog'
 import { membershipApi } from '../membership/api'
 import { ERRORS as MEMBERSHIP_ERRORS } from '../membership/errors'
@@ -93,30 +96,36 @@ export function MembersPage() {
     {(adding || addRequested) && <AddMemberDialog onClose={closeAdd} />}
     {filtering && <MemberFilters value={filters} onApply={apply} onClose={() => setFiltering(false)} />}
   </div>
-  return <div className="l-ov-page l-rd-page">
-    <header className="l-ov-page-heading"><div><h1>{t('loyalty.members.title', 'Members')}</h1><p>{say('membersLine')}</p></div><div className="l-rd-actions">
-      {actions.add && <OverviewButton primary onClick={() => setAdding(true)}>+ {t('loyalty.membership.list.add', 'Add member')}</OverviewButton>}
+  return <div className="l-ov-page l-rd-page l-mb-members-page" style={memberPaintStyle(look.resolved)}>
+    <header className="l-ov-page-heading"><h1>{t('loyalty.members.title', 'Members')}</h1><div className="l-rd-actions">
+      {actions.add && <OverviewButton primary onClick={() => setAdding(true)}><img src={memberAssets.award} alt="" />{t('loyalty.membership.list.add', 'Add member')}</OverviewButton>}
       {actions.tools && <SideMenu kind="menu" place="down-right" named label={t('loyalty.membership.more.label', 'More')} buttonClassName="l-ov-button l-rd-icon-button" listClassName="w-56"
         face={download.isPending ? <Loader2 size={18} aria-hidden className="animate-spin" /> : <MoreHorizontal size={18} aria-hidden />}><ListTools exporting={download.isPending} onExport={() => download.mutate()} /></SideMenu>}
     </div></header>
-    {figures && <div data-figures="" className="l-rd-figures" aria-label={t('loyalty.members.tiles', 'Members in figures')}>
-      <strong>{say('membersTotal', { n: points(figures.total, locale) })}</strong><span>{say('activeCount', { n: points(figures.active, locale) })}</span>
-      <span>{say('joinedCount', { n: points(figures.new_this_month, locale) })}</span><span title={t('loyalty.members.tile.average_note', 'per member')}>{say('average', { n: points(figures.average_points, locale) })}</span>
+    {figures && <div data-figures="" className="l-mb-figures" aria-label={t('loyalty.members.tiles', 'Members in figures')}>
+      {[
+        { tone: 'cyan', value: points(figures.total, locale), label: t('loyalty.overview.members', 'Total members'), icon: memberAssets.members },
+        { tone: 'green', value: points(figures.active, locale), label: t('loyalty.members.tile.active', 'Active members'), icon: null },
+        { tone: 'blue', value: points(figures.new_this_month, locale), label: t('loyalty.members.tile.joined', 'Joined this month'), icon: memberAssets.joined },
+        { tone: 'violet', value: t('loyalty.common.points_count', '{{points}} pts', { points: points(figures.average_points, locale) }), label: say('avgBalance'), icon: memberAssets.average },
+      ].map(item => <div key={item.tone} className="l-mb-figure" data-tone={item.tone}><span className="l-mb-figure-icon" aria-hidden>{item.icon ? <img src={item.icon} alt="" /> : '✓'}</span><div><strong>{item.value}</strong><span>{item.label}</span></div></div>)}
     </div>}
     <StartCard />
     {download.isError && <Notice tone="danger">{t(...refusalKey('loyalty.membership', MEMBERSHIP_ERRORS, 'export', failureOf(download.error)))}</Notice>}
     {(adding || addRequested) && <AddMemberDialog onClose={closeAdd} />}
+    <section className="l-mb-directory-shell" aria-label={say('directory')}>
+    <div className="l-mb-directory-heading"><h2><img src={memberAssets.members} alt="" />{say('directory')}</h2>{page && page.members.length > 0 && <small>{say('showing', { from: points((page.page - 1) * pageSize + 1, locale), to: points((page.page - 1) * pageSize + page.members.length, locale), total: points(page.total, locale) })}</small>}</div>
     <div className="l-rd-filters">
-      <label><span>{t('loyalty.members.search', 'Search members')}</span><input type="search" value={typed} onChange={e => setTyped(e.target.value)} maxLength={100} placeholder={t('loyalty.members.search_hint', 'Name, email, phone or member number')} /></label>
-      <label><span>{say('level')}</span><select value={filters.tier_id ?? ''} onChange={e => apply(withChange(filters, { tier_id: e.target.value ? Number(e.target.value) : null }))}>
+      <label><span>{t('loyalty.members.search', 'Search members')}</span><img src={memberAssets.search} alt="" /><input aria-label={t('loyalty.members.search', 'Search members')} type="search" value={typed} onChange={e => setTyped(e.target.value)} maxLength={100} placeholder={t('loyalty.members.search_hint', 'Name, email, phone or member number')} /></label>
+      <label><span>{say('level')}</span><img src={memberAssets.level} alt="" /><select aria-label={say('level')} value={filters.tier_id ?? ''} onChange={e => apply(withChange(filters, { tier_id: e.target.value ? Number(e.target.value) : null }))}>
         <option value="">{say('allLevels')}</option>{tiers.filter(tier => tier.is_active || tier.id === filters.tier_id).map(tier => <option key={tier.id} value={tier.id}>{tier.name}{figures?.tiers[String(tier.id)] !== undefined ? ` · ${points(figures.tiers[String(tier.id)], locale)}` : ''}</option>)}
       </select></label>
-      <label title={t('loyalty.members.state', 'Show')}><span>{say('membership')}</span><select value={filters.state} onChange={e => apply(withChange(filters, { state: e.target.value as ListState }))}>
+      <label title={t('loyalty.members.state', 'Show')}><span>{say('status')}</span><img src={memberAssets.status} alt="" /><select aria-label={say('status')} value={filters.state} onChange={e => apply(withChange(filters, { state: e.target.value as ListState }))}>
         <option value="all">{say('allStates')}</option><option value="active">{t('loyalty.members.state_active', 'Active')}</option><option value="inactive">{t('loyalty.members.state_inactive', 'Switched off')}</option>
         <option value="expiring">{t('loyalty.membership.list.state.expiring', 'Expiring soon')}{figures?.expiring !== undefined ? ` · ${points(figures.expiring, locale)}` : ''}</option>
         <option value="expired">{t('loyalty.membership.list.state.expired', 'Expired')}{figures?.expired !== undefined ? ` · ${points(figures.expired, locale)}` : ''}</option>
       </select></label>
-      <label title={t('loyalty.members.sort', 'Order')}><span>{say('sort')}</span><select value={filters.sort} onChange={e => apply(withChange(filters, { sort: e.target.value as MemberSort }))}>
+      <label title={t('loyalty.members.sort', 'Order')}><span>{say('sort')}</span><img src={memberAssets.sort} alt="" /><select aria-label={say('sort')} value={filters.sort} onChange={e => apply(withChange(filters, { sort: e.target.value as MemberSort }))}>
         <option value="recent">{t('loyalty.members.sort_recent', 'Newest first')}</option><option value="points">{t('loyalty.members.sort_points', 'Most points')}</option><option value="name">{t('loyalty.members.sort_name', 'Name')}</option><option value="activity">{t('loyalty.members.sort_activity', 'Last seen')}</option>
       </select></label>
     </div>
@@ -125,18 +134,18 @@ export function MembersPage() {
     {page && page.members.length === 0 && <p className="l-ov-panel">{filters.q.trim() || filters.tier_id !== null || filters.state !== 'active' ? t('loyalty.members.none_match', 'No member matches.') : t('loyalty.members.none', 'No members yet. They join from the member app, the portal or the booking widget.')}</p>}
     {page && page.members.length > 0 && <section className="l-rd-directory" aria-busy={query.isFetching}>
       <p className="sr-only" role="status">{t('loyalty.members.count', 'Members: {{count}}', { count: page.total })}</p>
-      <table className="l-rd-members-table"><thead><tr><th scope="col">{t('loyalty.members.col_name', 'Member')}</th><th scope="col">{say('level')}</th><th scope="col">{say('pointsBalance')}</th><th scope="col">{say('membership')}</th><th scope="col">{t('loyalty.members.col_last', 'Last seen')}</th><th scope="col">{t('loyalty.members.col_joined', 'Joined')}</th><th scope="col"><span className="sr-only">{t('loyalty.program.edit', 'Edit')}</span></th></tr></thead>
-        <tbody>{page.members.map(m => <tr key={m.id}><td>{identity(m)}</td><td><TierChip tier={tiers.find(tier => tier.id === m.tier_id) ?? null} theme={look.resolved} size="sm" /></td><td>{points(m.points, locale)}</td><td><span className={`l-rd-status l-rd-status-${status(m)}`} title={m.valid_until ?? undefined}>{say(status(m))}{ends(m)}</span></td><td>{m.last_activity_at ? day(m.last_activity_at, locale, timeZone) : t('loyalty.member.not_seen', 'Not seen yet')}</td><td>{day(m.joined_at, locale, timeZone)}</td><td><Link className="l-ov-link" to={memberPath(m.id)} aria-label={say('openMember', { name: m.name })}>→</Link></td></tr>)}</tbody>
+      <table className="l-rd-members-table"><thead><tr><th scope="col">{t('loyalty.members.col_name', 'Member')}</th><th scope="col">{say('level')}</th><th scope="col">{say('pointsBalance')}</th><th scope="col">{say('status')}</th><th scope="col">{t('loyalty.members.col_last', 'Last seen')}</th><th scope="col">{t('loyalty.members.col_joined', 'Joined')}</th><th scope="col"><span className="sr-only">{t('loyalty.program.edit', 'Edit')}</span></th></tr></thead>
+        <tbody>{page.members.map(m => <tr key={m.id}><td>{identity(m)}</td><td><MemberTierChip tier={tiers.find(tier => tier.id === m.tier_id) ?? null} /></td><td>{points(m.points, locale)}</td><td><span title={m.valid_until ?? undefined}><MemberStatus state={status(m)} />{ends(m)}</span></td><td>{m.last_activity_at ? day(m.last_activity_at, locale, timeZone) : t('loyalty.member.not_seen', 'Not seen yet')}</td><td>{day(m.joined_at, locale, timeZone)}</td><td><Link className="l-ov-link" to={memberPath(m.id)} aria-label={say('openMember', { name: m.name })}>→</Link></td></tr>)}</tbody>
       </table>
-      <ul className="l-rd-member-cards">{page.members.map(m => <li key={m.id}>{identity(m)}<div><TierChip tier={tiers.find(tier => tier.id === m.tier_id) ?? null} theme={look.resolved} size="sm" /><strong>{t('loyalty.common.points_count', '{{points}} pts', { points: points(m.points, locale) })}</strong><span className={`l-rd-status l-rd-status-${status(m)}`}>{say(status(m))}</span></div><small>{t('loyalty.member.joined', 'Joined {{day}}', { day: day(m.joined_at, locale, timeZone) })} · {m.last_activity_at ? t('loyalty.member.last_seen', 'Last seen {{day}}', { day: day(m.last_activity_at, locale, timeZone) }) : t('loyalty.member.not_seen', 'Not seen yet')}</small></li>)}</ul>
-      <div className="l-rd-pagination"><small>{say('showing', { from: points((page.page - 1) * pageSize + 1, locale), to: points((page.page - 1) * pageSize + page.members.length, locale), total: points(page.total, locale) })}</small>
+      <ul className="l-rd-member-cards">{page.members.map(m => <li key={m.id}>{identity(m)}<div><MemberTierChip tier={tiers.find(tier => tier.id === m.tier_id) ?? null} /><strong>{t('loyalty.common.points_count', '{{points}} pts', { points: points(m.points, locale) })}</strong><MemberStatus state={status(m)} /></div><small>{t('loyalty.member.joined', 'Joined {{day}}', { day: day(m.joined_at, locale, timeZone) })} · {m.last_activity_at ? t('loyalty.member.last_seen', 'Last seen {{day}}', { day: day(m.last_activity_at, locale, timeZone) }) : t('loyalty.member.not_seen', 'Not seen yet')}</small></li>)}</ul>
+      <div className="l-rd-pagination">
         <select aria-label={say('pageSize')} value={filters.per_page ?? 10} disabled={query.isFetching} onChange={e => apply(withChange(filters, { per_page: Number(e.target.value) as 10 | 25 | 50 }))}>{[10, 25, 50].map(n => <option key={n} value={n}>{say('perPage', { n })}</option>)}</select>
         <OverviewButton className="l-rd-icon-button" disabled={page.page <= 1 || query.isFetching} aria-label={t('loyalty.common.previous', 'Previous')} onClick={() => apply({ ...filters, page: page.page - 1 })}>‹</OverviewButton>
         <small>{t('loyalty.common.page_of', 'Page {{page}} of {{pages}}', { page: page.page, pages: page.pages })}</small>
         <OverviewButton className="l-rd-icon-button" disabled={page.page >= page.pages || query.isFetching} aria-label={t('loyalty.common.next', 'Next')} onClick={() => apply({ ...filters, page: page.page + 1 })}>›</OverviewButton>
       </div>
     </section>}
-    <small>{say('listHint')}</small>
+    </section>
   </div>
 }
 

@@ -36,7 +36,7 @@
   "allActivity": "Alle Aktivitäten",
   "fullHistory": "Gesamten Verlauf anzeigen →",
   "recentHistory": "Letzten Verlauf anzeigen",
-  "requestsWaiting": "{{n}} Anfragen erfordern eine Aktion",
+  "requestsWaiting": "{{n}} wartend",
   "openRequest": "Anfrage öffnen →",
   "noRequests": "Keine Anfragen zu bearbeiten.",
   "awardLine": "Fügen Sie dem einlösbaren Guthaben dieses Mitglieds Punkte hinzu.",
@@ -114,5 +114,9 @@
   "benefitDetails": "Vorteilsdetails →",
   "previewEmpty": "Wählen Sie einen Vorteil für die Vorschau.",
   "noLevel": "Keine Stufe",
-  "detailsUnavailable": "Keine weiteren Angaben vorhanden."
+  "detailsUnavailable": "Keine weiteren Angaben vorhanden.",
+  "directory": "Verzeichnis",
+  "avgBalance": "Ø Guthaben",
+  "spendablePoints": "Verfügbare Punkte",
+  "editShort": "Bearbeiten"
 }

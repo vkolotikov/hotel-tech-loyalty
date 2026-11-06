@@ -104,7 +104,8 @@ describe('a member’s page, release 2 (§4.1)', () => {
     expect(words).toContain('Award points')
     expect(words).toContain('Redeem points')
     expect(html).toContain('aria-label="More"')
-    expect(words).toContain('Edit details →')
+    expect(words).toContain('Edit →')
+    expect(html).toContain('aria-label="Edit details →"')
     expect(words).toContain('View card')
     // The full admin's link and the manager's actions are items of the closed ⋯ menu.
     expect(words).not.toContain('Open in full admin')
@@ -114,7 +115,8 @@ describe('a member’s page, release 2 (§4.1)', () => {
     const html = render(can({ award: false, redeem: false }), detail())
     expect(text(html)).not.toContain('Award points')
     expect(text(html)).not.toContain('Redeem points')
-    expect(text(html)).toContain('Edit details →')
+    expect(text(html)).toContain('Edit →')
+    expect(html).toContain('aria-label="Edit details →"')
   })
 
   it('a deleted member shows only what stays: the number and the history', () => {

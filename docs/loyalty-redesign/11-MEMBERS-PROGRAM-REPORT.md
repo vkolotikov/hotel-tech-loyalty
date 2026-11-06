@@ -1,5 +1,7 @@
 # Members and Program — implementation record
 
+Members presentation was simplified on 6 November 2026 using MB-B1/B2/B3. See [the current report](24-MEMBERS-SIMPLIFICATION-REPORT.md); the Program implementation and original integration evidence below remain applicable.
+
 Implemented and visually reviewed on 27 October 2026. Release verification is recorded below.
 Branch: `feature/loyalty-members-program-20261027`. Previous production/source: `4c13e2d1f` / `5706903b1`.
 

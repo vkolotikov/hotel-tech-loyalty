@@ -1,6 +1,14 @@
 # HexaTech handoff — 6 November 2026
 
-Read CLAUDE.md and `2026-11-02-hexatech-handoff.md` for the current application, native apps, environment and outstanding operational work. This session changes the Loyalty workspace Insights filters and Overview presentation.
+Read CLAUDE.md and `2026-11-02-hexatech-handoff.md` for the current application, native apps, environment and outstanding operational work. This session changes the Loyalty workspace Insights filters, Overview and Members presentation.
+
+## Members simplification
+
+Owner: simplify Members using the updated Figma design and its added contrasting colours. Branch `feature/members-simplified-20261106`; production baseline `3a1f51908`, source delta from `5cbfc823c` including the previous release-record documents. Current frames: MB-B1 directory `277:8616`, MB-B2 profile `277:8893`, MB-B3 award `277:9078`, all inspected in current Figma session `b0c866de-223d-43cd-a05d-154fe7af272b`. See `loyalty-redesign/24-MEMBERS-SIMPLIFICATION-REPORT.md`.
+
+Four tinted summary cards, grouped directory filters, zebra/hover rows and explicit status badges improve scanning. Compact profiles separate spendable points from qualification; benefits/request notices, history and details use exact local icons and shorter copy. Desktop points windows retain validation, idempotency and balance preview; financial details/full history retain complete information. Opaque local status/tier palettes meet 4.5:1 text contrast across both themes and custom tier swatches. All five locales and dedicated mobile review flows remain supported. No PHP/API/database/dependency change.
+
+Development checks: **5,859 frontend tests / 405 files**, TypeScript, focused lint, **53 Members/Program browser checks + 73 dedicated mobile checks**, and **10 language/theme combinations at six widths (320–1440px)** passed. Rendered status/tier/option/hover text measured at least **4.99:1 dark / 5.77:1 light**; both themes' directory/profile/points-window screenshots were reviewed. Release artifact and live evidence are pending below; the previous Overview release remains the current production/source baseline until those gates pass.
 
 ## Overview simplification
 

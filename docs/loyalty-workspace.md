@@ -1,5 +1,7 @@
 # HexaTech Loyalty — runbook
 
+Members simplification (6 November 2026): current frames are MB-B1 `277:8616`, MB-B2 `277:8893` and MB-B3 `277:9078`. The directory groups search/filters with the table, adds tinted summary cards, zebra rows and explicit status badges. Profiles and desktop points dialogs use shorter copy and exact design icons. Custom tier text and status colours meet 4.5:1 contrast in both themes; native dropdown options have explicit colours. Financial details and history audit metadata remain in Details/full history. Dedicated mobile review flows, permission gates and all writers are unchanged. See `loyalty-redesign/24-MEMBERS-SIMPLIFICATION-REPORT.md` and the current handoff for evidence.
+
 Overview simplification (6 November 2026): the current design is OV-B1 `268:8579`, with first setup `268:8800` and progress reference `268:8991`; the old main frame `29:365` was removed. The page now places review issues first, shows compact program facts, adds metric/activity icons and reduces repeated copy. All real data, permission checks, existing dialogs and workflow links remain. The dedicated mobile Home remains its own composition. Setup progress uses the server's existing checklist, not Figma's sample wizard step. See `loyalty-redesign/23-OVERVIEW-SIMPLIFICATION-REPORT.md` and the current handoff for evidence.
 
 Wallet updates, media recovery and Windows reader (30 October 2026): see `wallet-and-media-operations.md` for

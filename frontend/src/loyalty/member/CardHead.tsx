@@ -5,12 +5,12 @@ import type { LucideIcon } from 'lucide-react'
  * The head of a card on a member's page (release 9): an icon and a short title, and the card's own actions at the end
  * of the row. The title is the card's heading (`id` names it for the section's `aria-labelledby`).
  */
-export function CardHead({ id, icon: Icon, title, children }: { id: string; icon: LucideIcon; title: string; children?: ReactNode }) {
+export function CardHead({ id, icon: Icon, title, children, asset }: { id: string; icon: LucideIcon; title: string; children?: ReactNode; asset?: string }) {
   return (
     <div className="l-rd-card-heading flex flex-wrap items-center justify-between gap-2">
       <h2 id={id} className="flex min-w-0 items-center gap-2.5 text-[15px] font-semibold text-a-text">
         <span aria-hidden className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-a-accent/10 text-a-accent-text">
-          <Icon size={16} />
+          {asset ? <img src={asset} alt="" /> : <Icon size={16} />}
         </span>
         <span className="min-w-0 truncate">{title}</span>
       </h2>
