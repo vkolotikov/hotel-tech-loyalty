@@ -1,4 +1,7 @@
 {
+  "memberFilters": "Mitgliederfilter", "memberFiltersLine": "Wählen Sie, welche Mitglieder im gesamten Bericht berücksichtigt werden.",
+  "autoUpdates": "Wird automatisch aktualisiert", "updatingReport": "Bericht wird aktualisiert…", "editDates": "Berichtszeitraum ändern", "removeFilter": "Filter {{name}} entfernen", "resetMembers": "Mitgliederfilter löschen", "reportScope": "Über diesen Bericht",
+  "customDatesLine": "Wählen Sie abgeschlossene Tage am Standort. Gültige Daten aktualisieren den Bericht automatisch.", "datesNotApplied": "Bis der Zeitraum gültig ist, behält der Bericht seine bisherigen Daten.",
   "showFilters": "Filter anzeigen", "hideFilters": "Filter ausblenden", "resetFilters": "Filter zurücksetzen", "appliedFilters": "Angewendete Filter", "unapplied": "Nicht angewendete Änderungen", "discardChanges": "Änderungen verwerfen",
   "last7": "Letzte 7 Tage", "last28": "Letzte 28 Tage", "last90": "Letzte 90 Tage", "last365": "Letzte 365 Tage", "lastMonth": "Letzter Kalendermonat", "customDates": "Eigener Zeitraum",
   "memberState": "Mitgliedsstatus", "stateAll": "Alle Mitgliedsstatus", "stateActive": "Aktivierte Mitglieder", "stateInactive": "Deaktivierte Mitglieder",

@@ -4,6 +4,20 @@ Read CLAUDE.md and `2026-11-02-hexatech-handoff.md` for the current application,
 
 ## Insights filters
 
+### Follow-up: instant filters and compact controls
+
+Owner: make the page more logical and easier to use, improve the filters window/design and apply selections with no Save button. Branch `feature/insights-instant-filters-20261106` follows the first release below; production baseline is `aeda71eeb`. The source delta starts at `4c13cc211` and includes the two subsequent release-record documents.
+
+- Reporting period and comparison stay in a compact toolbar; member level/status/email preferences move to a focused window. There is no Apply, Save or Discard step. Only active member filters become chips, each removable immediately; member-only reset preserves reporting dates/comparison.
+- Valid dropdown selections update the report and URL immediately. Custom dates wait 350 ms for complete valid input; closing flushes a valid pending change, while an invalid range retains the previous report. Back/Forward resynchronizes open date fields.
+- During refresh, charts remain visible with `aria-busy` and an updating status. Prior data is retained only within the same organisation/staff/permission scope, and export remains disabled until the current response arrives.
+- Rapid filter changes merge with the last selection, because Router transitions can defer renders. The browser regression first reproduced a status selection being lost to the following email choice; all selected fields now survive slow in-flight reads.
+- No PHP, database, API contract, dependency or shared-workspace change. New words are in all five bundles; desktop and mobile windows retain native controls and focus/Escape behavior.
+
+Verification and deployment for this follow-up are recorded at completion. The original release evidence below remains historical.
+
+### First release
+
 Owner: improve `https://loyalty.hotel-tech.ai/loyalty/insights`: controls should act as dropdowns, be easier to use, hideable, and offer more filters.
 
 Feature branch: `feature/insights-filters-current-20261106`, started from current production source `2cc80c492dbc37f482349039d8547fc559633ba4`. The originally open October branch was stale and was not used as a deployment baseline.

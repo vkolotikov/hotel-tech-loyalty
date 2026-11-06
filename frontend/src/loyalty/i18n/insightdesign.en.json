@@ -1,4 +1,7 @@
 {
+  "memberFilters": "Member filters", "memberFiltersLine": "Choose which members to include in every part of the report.",
+  "autoUpdates": "Updates automatically", "updatingReport": "Updating report…", "editDates": "Change report dates", "removeFilter": "Remove {{name}} filter", "resetMembers": "Clear member filters", "reportScope": "About this report",
+  "customDatesLine": "Choose completed venue days. Valid dates update the report automatically.", "datesNotApplied": "The report keeps its previous dates until this range is valid.",
   "showFilters": "Show filters", "hideFilters": "Hide filters", "resetFilters": "Reset filters", "appliedFilters": "Applied filters", "unapplied": "Unapplied changes", "discardChanges": "Discard changes",
   "last7": "Last 7 days", "last28": "Last 28 days", "last90": "Last 90 days", "last365": "Last 365 days", "lastMonth": "Last calendar month", "customDates": "Custom dates",
   "memberState": "Member status", "stateAll": "All member statuses", "stateActive": "Enabled members", "stateInactive": "Switched-off members",

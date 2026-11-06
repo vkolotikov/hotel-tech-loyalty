@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { comparison, csvCell, presetRange, reportFilters, reportRequest, selectedPreset, shiftDay, validReportRange } from './reportMath'
+import { comparison, csvCell, presetRange, reportFilters, reportPlaceholder, reportRequest, selectedPreset, shiftDay, validReportRange } from './reportMath'
 import { LOYALTY_LOCALE_FILES } from '../i18n'
 
 describe('completed-day report', () => {
@@ -28,6 +28,14 @@ describe('completed-day report', () => {
     expect(validReportRange({ ...f, to: '2026-10-28' }, '2026-10-28')).toBe(false)
     expect(validReportRange({ ...f, from: '2026-10-28' }, '2026-10-28')).toBe(false)
     expect(validReportRange({ ...f, from: '2024-01-01' }, '2026-10-28')).toBe(false)
+    expect(validReportRange({ ...f, from: '2026-02-30', to: '2026-03-05' }, '2026-10-28')).toBe(false)
+    expect(validReportRange({ ...f, from: '2026-1' }, '2026-10-28')).toBe(false)
+  })
+  it('keeps charts during a filter refresh but never across organisations, staff or permissions', () => {
+    const previous = { members: 42 }
+    expect(reportPlaceholder(previous, '1:5:analytics', '1:5:analytics')).toBe(previous)
+    for (const scope of ['2:5:analytics', '1:6:analytics', '1:5:restricted']) expect(reportPlaceholder(previous, '1:5:analytics', scope)).toBeUndefined()
+    expect(reportPlaceholder(previous, undefined, '1:5:analytics')).toBeUndefined()
   })
   it('distinguishes relative count changes, percentage points and unavailable baselines', () => {
     expect(comparison(60, 50)).toBe(20)
