@@ -946,6 +946,8 @@ files on disk): run them one after the other.
 
 ## Deploying
 
+- Insights filters, 2026-11-06: production **aeda71eeb**; final feature source and next source-patch baseline **4c13cc211** (`feature/insights-filters-current-20261106`). 22 allowlisted source/documentation/test files on `2cc80c492`, no source deletions; whole source parity passed. Isolated artifact: **7,407 PHP passed / 23 existing skips / 78 scopes**, **5,848 frontend tests**, **12 PostgreSQL report tests / 129 assertions**, **69 compiled browser checks**, TypeScript, lint, Larastan and fresh build. Windows certificate fixtures use the bundled OpenSSL configuration; the only extra source change normalizes an existing test's Windows paths. Live content verified **6 November, 10:57 Europe/Riga**: `index-BxfLTW5P.js`, `LoyaltyApp-Dr_EZecR.js`, `InsightsPage-OiBpnEOL.js`, new filter markers and report authentication. Full record: `handoff/2026-11-06-hexatech-handoff.md`.
+
 - Security review, second batch (2026-11-04): production **70d52cbde** on **983572728**, a source patch only (the
   fresh SPA build is identical to main's). Feature source **12c536293** on `fix/pre-launch-batch-2`. 11 paths (1 added,
   10 changed), none deleted, no migration: the section's "Second batch" above, and the runbook and handoff entries.
