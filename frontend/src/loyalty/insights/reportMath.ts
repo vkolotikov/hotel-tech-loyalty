@@ -1,19 +1,25 @@
 import type { InsightsReport, ReportFilters } from './reportTypes'
 
+function validReportDay(value: string | null): value is string {
+  return !!value && /^\d{4}-\d{2}-\d{2}$/.test(value) && !Number.isNaN(Date.parse(value)) && new Date(value).toISOString().slice(0, 10) === value
+}
+
 export function shiftDay(day: string, n: number): string {
   const d = new Date(day + 'T12:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10)
 }
 export function reportFilters(search: string, today: string): ReportFilters {
   const p = new URLSearchParams(search)
-  const valid = (v: string | null) => v && /^\d{4}-\d{2}-\d{2}$/.test(v) && !Number.isNaN(Date.parse(v)) && new Date(v).toISOString().slice(0, 10) === v
-  const to = valid(p.get('to')) ? p.get('to')! : shiftDay(today, -1)
-  return { from: valid(p.get('from')) ? p.get('from')! : shiftDay(to, -27), to, compare: p.get('compare') === 'none' ? 'none' : 'previous',
+  const to = validReportDay(p.get('to')) ? p.get('to')! : shiftDay(today, -1)
+  return { from: validReportDay(p.get('from')) ? p.get('from')! : shiftDay(to, -27), to, compare: p.get('compare') === 'none' ? 'none' : 'previous',
     tier_id: p.get('tier_id') === 'none' ? 'none' : /^\d+$/.test(p.get('tier_id') ?? '') ? p.get('tier_id')! : '',
     state: p.get('state') === 'active' ? 'active' : p.get('state') === 'inactive' ? 'inactive' : 'all',
     consent: p.get('consent') === 'yes' ? 'yes' : p.get('consent') === 'no' ? 'no' : 'all' }
 }
 export function reportRequest(f: ReportFilters) {
   return { ...f, tier_id: f.tier_id && f.tier_id !== 'none' ? f.tier_id : undefined, without_tier: f.tier_id === 'none' ? 1 : undefined }
+}
+export function reportPlaceholder<T>(previous: T | undefined, previousScope: unknown, currentScope: string): T | undefined {
+  return previousScope === currentScope ? previous : undefined
 }
 export type ReportPreset = '7d' | '28d' | '90d' | 'month' | 'year' | 'custom'
 export function presetRange(preset: Exclude<ReportPreset, 'custom'>, today: string) {
@@ -30,7 +36,7 @@ export function selectedPreset(f: ReportFilters, today: string): ReportPreset {
 }
 export function validReportRange(f: ReportFilters, today: string): boolean {
   const d = (Date.parse(f.to) - Date.parse(f.from)) / 86400000
-  return Number.isFinite(d) && d >= 0 && d <= 365 && f.to < today
+  return validReportDay(f.from) && validReportDay(f.to) && Number.isFinite(d) && d >= 0 && d <= 365 && f.to < today
 }
 export function comparison(current: number | null, previous: number | null, rate = false): number | null {
   if (current === null || previous === null || (!rate && previous === 0)) return null

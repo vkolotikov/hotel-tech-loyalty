@@ -1,4 +1,7 @@
 {
+  "memberFilters": "Filtros de miembros", "memberFiltersLine": "Elija qué miembros se incluyen en todo el informe.",
+  "autoUpdates": "Se actualiza automáticamente", "updatingReport": "Actualizando el informe…", "editDates": "Cambiar las fechas del informe", "removeFilter": "Quitar el filtro {{name}}", "resetMembers": "Borrar filtros de miembros", "reportScope": "Acerca de este informe",
+  "customDatesLine": "Elija días completos del lugar. Las fechas válidas actualizan el informe automáticamente.", "datesNotApplied": "El informe conserva las fechas anteriores hasta que el intervalo sea válido.",
   "showFilters": "Mostrar filtros", "hideFilters": "Ocultar filtros", "resetFilters": "Restablecer filtros", "appliedFilters": "Filtros aplicados", "unapplied": "Cambios sin aplicar", "discardChanges": "Descartar cambios",
   "last7": "Últimos 7 días", "last28": "Últimos 28 días", "last90": "Últimos 90 días", "last365": "Últimos 365 días", "lastMonth": "Mes natural anterior", "customDates": "Fechas personalizadas",
   "memberState": "Estado del miembro", "stateAll": "Todos los estados", "stateActive": "Miembros habilitados", "stateInactive": "Miembros desactivados",

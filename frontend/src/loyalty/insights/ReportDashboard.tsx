@@ -1,5 +1,5 @@
-import { useState, type ReactNode } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
+import { useLayoutEffect, useRef, useState, type ReactNode } from 'react'
+import { Link, useNavigationType, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { api } from '../../lib/api'
@@ -11,8 +11,8 @@ import { overviewScope } from '../overview/overviewMath'
 import { OverviewButton, OverviewDialog, OverviewRecovery, OverviewSkeleton } from '../overview/OverviewUI'
 import { DetailedInsights } from './DetailedInsights'
 import { ReportTrend, ReportLevels, ReportPoints } from './ReportCharts'
-import { comparison, reportCsv, reportFilters, reportRequest } from './reportMath'
-import type { InsightsReport } from './reportTypes'
+import { comparison, reportCsv, reportFilters, reportPlaceholder, reportRequest } from './reportMath'
+import type { InsightsReport, ReportFilters } from './reportTypes'
 import { ReportFiltersPanel } from './ReportFiltersPanel'
 import { useReportWords } from './reportWords'
 import './report.css'
@@ -30,9 +30,30 @@ function ReportDashboard() {
   const [params, setParams] = useSearchParams(), filters = reportFilters(params.toString(), boot.venue.today)
   const [modal, setModal] = useState<'definitions' | null>(null)
   const [cohort, setCohort] = useState<{ n: number; total: number; week: number; from: string; to: string } | null>(null)
-  const allowed = boot.staff.can.view_insights
-  const query = useQuery({ queryKey: ['loyalty', 'insights', 'report', overviewScope(boot), filters],
+  const allowed = boot.staff.can.view_insights, scope = overviewScope(boot)
+  const navigation = useNavigationType()
+  const latestFilters = useRef(filters), requestedSearch = useRef<string | null>(null)
+  const observedLocation = useRef({ search: params.toString(), scope })
+  useLayoutEffect(() => {
+    const search = params.toString(), scopeChanged = observedLocation.current.scope !== scope
+    if (observedLocation.current.search === search && !scopeChanged) return
+    observedLocation.current = { search, scope }
+    if (navigation === 'POP' || scopeChanged || requestedSearch.current === null || requestedSearch.current === search) {
+      latestFilters.current = filters
+      requestedSearch.current = null
+    }
+  }, [params, scope, filters, navigation])
+  // Router transitions can defer a render: merge rapid changes against the last selection, never an old render.
+  const changeFilters = (patch: Partial<ReportFilters>) => {
+    const next = { ...latestFilters.current, ...patch }
+    if (JSON.stringify(next) === JSON.stringify(latestFilters.current)) return
+    latestFilters.current = next
+    requestedSearch.current = new URLSearchParams({ ...next }).toString()
+    setParams({ ...next })
+  }
+  const query = useQuery({ queryKey: ['loyalty', 'insights', 'report', scope, filters],
     queryFn: ({ signal }): Promise<InsightsReport> => watched(api.get(loyaltyUrl('insights/report'), { params: reportRequest(filters), signal })),
+    placeholderData: (previous, previousQuery) => reportPlaceholder(previous, previousQuery?.queryKey[3], scope),
     enabled: allowed, retry: (n, e) => ![401, 402, 403, 422].includes(failureOf(e).status) && n < 1 })
   const forbidden = !allowed || [401, 402, 403].includes(failureOf(query.error).status), data = forbidden ? undefined : query.data
   const n = (v: number) => points(v, i18n.language)
@@ -46,11 +67,11 @@ function ReportDashboard() {
   }
   return <div className="l-ov-page l-in-page">
     <header className="l-ov-page-heading"><div><h1>{t('loyalty.insights.title', 'Insights')}</h1><p>{say('line')}</p></div><div className="l-in-actions"><OverviewButton onClick={() => setModal('definitions')}>{say('definitions')}</OverviewButton><OverviewButton primary disabled={!data || query.isFetching || query.isError} onClick={exportReport}>{say('export')}</OverviewButton></div></header>
-    {allowed && <ReportFiltersPanel key={JSON.stringify(filters)} value={filters} options={data?.filter_options} busy={query.isFetching} onApply={next => setParams({ ...next })} />}
+    {allowed && <ReportFiltersPanel value={filters} options={data?.filter_options} busy={query.isFetching} onChange={changeFilters} />}
     {forbidden && <OverviewRecovery forbidden onRetry={() => { void query.refetch() }} />}
     {!forbidden && query.isError && <OverviewRecovery title={data ? say('stale') : undefined} onRetry={() => { void query.refetch() }} busy={query.isFetching} />}
     {!forbidden && query.isPending && <OverviewSkeleton rows={8} />}
-    {data && <>
+    {data && <div className="l-in-results" aria-busy={query.isFetching}>
       <div className="l-in-context"><p>{say('context', { days: data.days, zone: data.timezone })}{data.comparison && <> · {say('previous')}: {period(data.comparison.from, data.comparison.to)}</>} · {say('updated', { when: when(data.updated_at, i18n.language, data.timezone) ?? '—' })}</p><button onClick={() => { void query.refetch() }} disabled={query.isFetching} className="l-ov-link">{say('refresh')}</button></div>
       {data.current.members === 0 && <p role="status">{say('empty')}</p>}
       <ReportTiles data={data} onDefinitions={() => setModal('definitions')} />
@@ -72,7 +93,7 @@ function ReportDashboard() {
         <Link to="/loyalty/requests?type=redemption&view=open"><strong>{say('claimCount', { n: n(data.current.pending) })}</strong><span>{say('pendingHint')}</span><small>{say('periodClaims')}</small></Link>
       </ReportCard></div>
       <footer className="l-in-footer"><span>{data.timezone} · {say('snapshot', { date: date(data.snapshot_date) })}</span><Link className="l-ov-link" to="/loyalty/insights?view=detailed">{say('details')} →</Link></footer>
-    </>}
+    </div>}
     {modal === 'definitions' && <ReportDefinitions onClose={() => setModal(null)} />}
     {cohort && <OverviewDialog kind="form" className="l-in-dialog" title={say('cohortDetail')} onClose={() => setCohort(null)}><p>{period(cohort.from, cohort.to)}</p><div className="l-in-definition"><h3>{say('cohortResult', { n: n(cohort.n), total: n(cohort.total), week: cohort.week })}</h3><p>{say('defCohortsText')}</p></div><OverviewButton onClick={() => setCohort(null)}>{say('close')}</OverviewButton></OverviewDialog>}
   </div>
