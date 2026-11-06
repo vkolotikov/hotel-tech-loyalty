@@ -13,7 +13,13 @@ Owner: align controls, replace comparison with a checkbox, and show member filte
 - Immediate application, rapid-change merging, retained charts during refresh, export protection, chips, resets, collapse preference and URL history remain in place. Browser checks now exercise the inline fields and row geometry.
 - Only frontend presentation, fixture checks and documentation change. PHP, APIs, dependencies and database source are unchanged.
 
-Verification and production content evidence will be recorded after the isolated release checks.
+Production **863ad5a5550c4242c88f24937390b8dbb8908661**, source patch **a2ed5c6e673be7301590746dc2db8653d428a64e** from feature source **b34f677e76e03a034c46b741fc45491ee4f4456a**, plus its fresh SPA build. **The next source-patch baseline is b34f677e7**, superseding the previous releases' baselines below. Eleven allowlisted frontend/documentation paths, no source deletions; whole source parity passed. Later release-record commits are not the baseline.
+
+Artifact checks: **5,849 frontend tests / 404 files**, TypeScript, focused Insights ESLint, fresh build, **93 compiled browser interaction checks** and **10 language/theme combinations** (desktop/mobile alignment and option text contrast: dark 9.84:1, light 15.65:1). Native open dropdowns in both themes and desktop/mobile screenshots were visually reviewed. The recipe's three backend scopes passed on the isolated artifact: **2,042 passed / zero skipped or failed** (Unit/Support 189, Unit/Landing 118, Feature/Landing 1,735). PHP/query source is identical to the earlier same-day production baseline, whose complete sweep was 7,407 passed / 23 existing skips; that release's GitHub CI also completed successfully. No new PostgreSQL check was needed.
+
+Live content verified **6 November 2026, 13:01 Europe/Riga (11:01:51 UTC)**: `index-D07iBFyy.js`, `LoyaltyApp-BSjBMUUq.js`, `InsightsPage-CAWRoVFL.js`. New checkbox class and wording, automatic-update markers, and the report's 401 authentication boundary passed. Fonts, public landing stylesheet continuity and retired-file 404 passed at 11:02 UTC. Signed-in production browser inspection remains unavailable as explained below; compiled checks use intercepted local fixture APIs and block external traffic.
+
+Evidence: `C:/wamp64/tmp/insights-align-artifact-{php,vitest,build}-20261106.log`, `insights-align-compiled-20261106/`, `insights-aligned-locales-20261106/`, `insights-align-live-20261106.json`, `insights-align-continuity-20261106.json` and their verification scripts. Task previews are stopped; the deployment checkout and dependency junction are removed. User assets and the stopped PostgreSQL directories below remain untouched. Post-deploy CI was in progress at 13:02 Riga: https://github.com/vkolotikov/hotel-tech-loyalty/actions/runs/42206576692.
 
 ### Follow-up: instant filters and compact controls
 
