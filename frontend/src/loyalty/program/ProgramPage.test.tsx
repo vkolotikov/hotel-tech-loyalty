@@ -179,7 +179,7 @@ describe('Program (spec 2026-10-21 §4.5, §5)', () => {
     const benefits = render(can(), program, 'benefits')
     expect(text(benefits)).toContain('Membership benefits')
     expect(benefits).toContain('data-record="benefit-7"')
-    expect(text(benefits)).toContain('Create a benefit once, then choose what each level receives.')
+    expect(text(benefits)).toContain('Manage perks by membership level.')
     expect(benefits).not.toContain('data-tier="1"')
     expect(benefits).not.toContain('data-boost="3"')
     // An unknown section is Tiers; #places, the address Scan and the Guide opened before, is Places.

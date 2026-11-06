@@ -1,5 +1,7 @@
 # Rewards & benefits — implementation and verification
 
+6 November 2026 simplified design follow-up: see [27-REWARDS-SIMPLIFICATION-REPORT.md](27-REWARDS-SIMPLIFICATION-REPORT.md) for current RB-B01–03, benefits adaptations and release evidence. The original implementation record below is historical.
+
 Owner request: 28 October 2026, “make now rewards and benefits”. This extends the original Overview-only milestone. The standing authorization to deploy a finished, verified release applies.
 
 ## Design sources

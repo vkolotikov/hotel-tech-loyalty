@@ -18,6 +18,7 @@ import { PointsRewardsPage } from './design/PointsRewardsPage'
 import { OffersDesignPage } from './design/OffersDesignPage'
 import { MembershipBenefitsPage } from './design/MembershipBenefitsPage'
 import './design/rewards.css'
+import './design/clean.css'
 
 const TAB_ICONS: Record<RewardTab, LucideIcon> = { catalogue: Gift, redemptions: Ticket, offers: Tag, referrals: Users }
 /** Each tab's colour (release 10): rewards amber, codes at the desk teal, offers blue, referrals rose. */

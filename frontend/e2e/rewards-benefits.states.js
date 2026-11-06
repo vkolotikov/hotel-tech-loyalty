@@ -10,6 +10,10 @@ async (page) => {
   const button = name => page.getByRole('button', { name, exact: true });
   const writes = async () => (await fixture()).requests.filter(r => r.method !== 'GET');
   try {
+    await go('');
+    ok(await page.locator('.l-rb-list').getByRole('searchbox', { name: 'Search rewards' }).count() === 1 && await page.locator('.l-rb-list').getByRole('combobox', { name: 'Status', exact: true }).count() === 1, 'catalogue filters belong to their directory');
+    ok(await page.locator('.l-rb-list > header > small').textContent() === '4 active · 6 rewards', 'catalogue count follows actual availability');
+    ok(await page.locator('.l-rb-hero').count() === 0 && await page.locator('.l-rc-shortcut').count() === 2, 'compact benefits and offers shortcuts replace repeated banners');
     await go('?reward=1');
     await page.getByRole('combobox', { name: 'Availability', exact: true }).selectOption('limited');
     await page.getByRole('spinbutton', { name: 'Stock', exact: true }).fill('');
@@ -87,7 +91,16 @@ async (page) => {
         if (width === 1440 || width === 390) await page.screenshot({ path: root + `render-${name}-${width}.png`, fullPage:false });
       }
     }
-    await page.locator('.l-ov-menu-button').click(); await page.getByRole('dialog').waitFor();
+    for (const width of [390, 320]) {
+      await page.setViewportSize({ width, height: 844 }); await go('?tab=offers&selected=1');
+      const more = page.locator('.l-rb-save .l-rb-overflow'), before = (await writes()).length;
+      await more.locator('summary').click();
+      ok(await more.locator(':scope > div').evaluate(e => { const r = e.getBoundingClientRect(); return r.left >= 0 && r.right <= innerWidth + 1; }), `offer overflow actions fit ${width}px`);
+      await more.getByRole('checkbox', { name: 'On', exact: true }).uncheck(); await more.locator('summary').click();
+      await button('Cancel changes').click();
+      ok((await writes()).length === before, `offer overflow change and cancel stay staged at ${width}px`);
+    }
+    await page.locator('.l-mw-header').getByRole('button').click(); await page.getByRole('dialog').waitFor();
     ok(await page.getByRole('dialog').getByRole('link', { name: 'Membership benefits', exact: true }).isVisible(), 'mobile drawer exposes Rewards subpages');
     await page.keyboard.press('Escape');
     await page.setViewportSize({ width: 1440, height: 1080 }); await go('');

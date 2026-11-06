@@ -74,7 +74,14 @@ async (page) => {
     await check('offer draft guards list selection; discard resets the inline form', async () => {
       const writeCount = (await writes()).length;
       await go('?tab=offers&selected=1'); await input('Offer name').fill('Unsaved offer'); await button('Select Weekend stay').click(); await page.getByRole('dialog').waitFor(); await button('Keep editing').click(); assert(await input('Offer name').inputValue() === 'Unsaved offer', 'Offer draft lost');
-      await button('Select Weekend stay').click(); await button('Discard changes').click(); await page.waitForFunction(() => document.querySelector('.l-rb-offer-editor input').value === 'Weekend stay', undefined, { timeout: 8000 }); assert((await writes()).length === writeCount, 'Selection or discard submitted the form');
+      await button('Select Weekend stay').click(); await button('Discard changes').click(); await page.waitForFunction(() => document.querySelector('.l-rb-offer-editor .l-rb-form-panel input').value === 'Weekend stay', undefined, { timeout: 8000 }); assert((await writes()).length === writeCount, 'Selection or discard submitted the form');
+    });
+    await check('search inside the offer list never submits the offer form', async () => {
+      await go('?tab=offers&selected=1'); const before = (await writes()).length;
+      const search = page.getByRole('searchbox', { name: 'Search offers', exact: true });
+      await search.fill('Midweek'); await rows(1); await search.press('Enter');
+      assert((await writes()).length === before, 'Search submitted an offer write');
+      assert(await input('Offer name').inputValue() === 'Midweek reset', 'Search changed the offer draft');
     });
     await check('offer edits preserve brand, tiers, caps, code, featured flag and date-only contract', async () => {
       await go('?tab=offers&selected=1'); await input('Offer name').fill('Offer updated'); await select('Brand').last().selectOption('every'); await select('Kind').selectOption('fixed_amount'); await number('Value').fill('20'); await input('Offer code').fill('fall-20');

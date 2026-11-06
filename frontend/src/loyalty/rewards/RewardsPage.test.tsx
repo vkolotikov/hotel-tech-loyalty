@@ -91,7 +91,7 @@ describe('Rewards (spec 2026-10-21 §4.6)', () => {
     expect(html).toContain('role="tablist"')
     expect(html).toMatch(/id="rewards-tab-redemptions" aria-selected="true"/)
     const offer = render('?tab=offers', can())
-    expect(text(offer)).toContain('Selected offer details')
+    expect(text(offer)).toContain('Offer settings')
     expect(offer).toContain('href="/loyalty/rewards?tab=redemptions"')
     expect(offer).toContain('href="/loyalty/rewards?tab=referrals"')
     expect(text(render('', can()))).toContain('Points rewards')
@@ -107,7 +107,7 @@ describe('Rewards (spec 2026-10-21 §4.6)', () => {
   })
 
   it('filters actual availability including exhausted stock, while preserving legacy filter decisions', () => {
-    expect(text(render('', can()))).toContain('1 available rewards')
+    expect(text(render('', can()))).toContain('1 active · 2 rewards')
     const exhausted = render('?status=soldOut', can())
     expect(exhausted).toContain('Breakfast for two')
     expect(exhausted).not.toContain('Late checkout')
