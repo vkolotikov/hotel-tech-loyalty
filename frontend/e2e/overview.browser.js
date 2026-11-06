@@ -88,14 +88,17 @@ async (page, only = null) => {
   await test('desktop layout, authorized navigation and exact queue links',async()=>{
     await page.setViewportSize({width:1440,height:1080});await open();await loaded();
     const box=await page.locator('.l-ov-sidebar').boundingBox();check(box.width===232,'sidebar must be 232px');
-    const hero=await page.locator('.l-ov-program').boundingBox();check(Math.abs(hero.y-190)<3,'hero vertical alignment');
+    const hero=await page.locator('.l-ov-program').boundingBox(),attention=await page.locator('.l-ov-attention').boundingBox();check(Math.abs(hero.y-246)<3&&attention.y<hero.y,'simplified hierarchy and program alignment');
+    check(await page.locator('.l-ov-clean-facts > div').count()===4,'four compact program facts');
+    check(await page.locator('.l-ov-metric .l-ov-clean-icon img').count()===3,'each metric has its design icon');
+    check(await page.locator('.l-ov-page-heading p').count()===0,'daily heading omits repeated explanatory copy');
     const hrefs=await page.locator('.l-ov-nav a').evaluateAll(nodes=>nodes.map(n=>n.getAttribute('href')));
     for(const path of ['/loyalty','/loyalty/requests','/loyalty/program','/loyalty/options','/loyalty/rewards','/loyalty/events','/loyalty/campaigns','/loyalty/insights','/loyalty/app'])check(hrefs.includes(path),'missing route '+path);
     check(await page.locator('.l-ov-requests a').last().getAttribute('href')==='/loyalty/rewards?tab=redemptions&request=3','exact redemption destination');
     await noOverflow();await shot('desktop-1440');
   });
   await test('desktop details, preview, issues, definitions and both queues; Escape restores focus',async()=>{
-    for(const [label,name]of [['Program details','program'],['Preview member view','preview'],['Review issues','issues'],['About these numbers','definitions'],['View all requests','queues']]){
+    for(const [label,name]of [['Program details','program'],['Member preview','preview'],['Review issues','issues'],['Definitions','definitions'],['All requests','queues']]){
       const button=page.getByRole('button',{name:label,exact:false}).first();await button.click();await page.getByRole('dialog').waitFor();
       if(name==='queues')check(await page.getByRole('dialog').getByRole('link').count()===2,'both queues');
       await shot('desktop-'+name);await page.keyboard.press('Escape');await page.getByRole('dialog').waitFor({state:'hidden'});await page.waitForFunction(el=>el===document.activeElement,await button.elementHandle());check(await button.evaluate(b=>b===document.activeElement),'focus restore '+name);
@@ -148,7 +151,7 @@ async (page, only = null) => {
     reset();state.fail='metrics';state.status=403;await open();await page.getByText('This view is unavailable for your access',{exact:true}).waitFor();check(!await page.locator('.l-ov-metric').getByText('1,248').count(),'denied totals visible');reset();
   });
   await test('empty configuration and membership are distinct from failed reads',async()=>{
-    state.initial=true;await open();await page.getByRole('heading',{name:'Welcome to your loyalty workspace'}).waitFor();check(await page.getByRole('link',{name:'Start setup'}).getAttribute('href')==='/loyalty/options/setup','wizard destination');await shot('first-setup');
+    state.initial=true;await open();await page.getByRole('heading',{name:'Set up your loyalty program'}).waitFor();check(await page.getByRole('link',{name:'Start setup'}).getAttribute('href')==='/loyalty/options/setup','wizard destination');await shot('first-setup');
     state.initial=false;state.empty=true;await open();await page.getByRole('heading',{name:'No members yet'}).waitFor();await shot('no-members');reset();
   });
   await test('offline retains labeled values and search uses the existing member search',async()=>{
@@ -205,7 +208,7 @@ async (page, only = null) => {
     await page.setViewportSize({width:1440,height:1080});state.purchaseOff=true;await open();await loaded();
     check(await page.locator('img').evaluateAll(nodes=>nodes.every(n=>n.complete&&n.naturalWidth>0)),'broken local asset');
     check(await page.evaluate(()=>[400,500,600].every(w=>document.fonts.check(w+' 14px "L Poppins"'))),'Poppins weight missing');
-    await page.getByRole('button',{name:'Preview member view',exact:true}).click();await page.getByRole('dialog').getByText('Purchase earning is off',{exact:true}).waitFor();await page.keyboard.press('Escape');reset();
+    await page.getByRole('button',{name:'Member preview',exact:true}).first().click();await page.getByRole('dialog').getByText('Purchase earning is off',{exact:true}).waitFor();await page.keyboard.press('Escape');reset();
   });
   // Exact queue destinations are asserted above; current Requests/Rewards suites exercise their updated workflows.
   await test('all existing primary routes retain their shell and Overview navigation',async()=>{

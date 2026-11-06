@@ -2,7 +2,9 @@
 
 File key: `d6IGmk3hOoMw0V5rONbI1A`  
 Page: `0:1` / Page 1  
-Target: final Overview set, OV-01–OV-34.
+Current presentation (6 November): [OV-B1 simplified Overview](https://www.figma.com/design/d6IGmk3hOoMw0V5rONbI1A/Untitled?node-id=268-8579), [OV-B2 first setup](https://www.figma.com/design/d6IGmk3hOoMw0V5rONbI1A/Untitled?node-id=268-8800), [OV-B3 progress reference](https://www.figma.com/design/d6IGmk3hOoMw0V5rONbI1A/Untitled?node-id=268-8991). These override the original main presentation below; `29:365` was removed. The earlier set remains historical behavior/detail context. See report 23 for the production data mapping and actual setup-progress semantics.
+
+Original target: Overview set, OV-01–OV-34.
 
 The user will connect Figma directly to Codex in VS Code. Inspect the actual selected nodes; do not use text-only descriptions as a substitute for the available design.
 

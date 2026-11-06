@@ -1,0 +1,78 @@
+/* Simplified Overview, OV-B1/B2. Keep these refinements local to this page. */
+[data-loyalty] .l-ov-clean-page { padding-top: 24px; }
+[data-loyalty] .l-ov-clean-page .l-ov-panel { box-shadow: none; }
+[data-loyalty] .l-ov-clean-page .l-ov-page-heading { min-height: 44px; }
+[data-loyalty] .l-ov-clean-page .l-ov-preview-action { min-width: 176px; padding-inline: 16px; }
+[data-loyalty] .l-ov-clean-icon { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 36px; width: 36px; height: 36px; border-radius: 12px; background: var(--l-ov-recessed); }
+[data-loyalty] .l-ov-clean-icon[data-tone=cyan] { background: color-mix(in srgb,var(--l-ov-cyan) 12%,var(--l-ov-recessed)); }
+[data-loyalty] .l-ov-clean-icon[data-tone=green] { background: var(--l-ov-green-bg); }
+[data-loyalty] .l-ov-clean-icon[data-tone=amber] { background: color-mix(in srgb,var(--l-ov-amber) 12%,var(--l-ov-recessed)); }
+[data-loyalty] .l-ov-clean-icon img { flex-shrink: 0; }
+[data-loyalty] .l-ov-clean-page .l-ov-attention { min-height: 66px; padding: 10px 16px; border-radius: 16px; box-shadow: none; }
+[data-loyalty] .l-ov-clean-page .l-ov-attention[data-warning] { background: color-mix(in srgb,var(--l-ov-amber) 5%,var(--l-ov-recessed)); border-color: color-mix(in srgb,var(--l-ov-amber) 24%,var(--l-ov-border)); }
+[data-loyalty] .l-ov-clean-alert { display: flex; align-items: center; gap: 12px; min-width: 0; }
+[data-loyalty] .l-ov-clean-page .l-ov-attention > .l-ov-button { min-width: 144px; padding-inline: 16px; }
+[data-loyalty] .l-ov-clean-page .l-ov-program { min-height: 172px; padding: 20px; gap: 16px; }
+[data-loyalty] .l-ov-clean-page .l-ov-diagonal { right: 0; }
+[data-loyalty] .l-ov-clean-page .l-ov-program-copy { gap: 16px; }
+[data-loyalty] .l-ov-clean-program-heading { display: flex; justify-content: space-between; align-items: center; gap: 12px; min-height: 44px; }
+[data-loyalty] .l-ov-clean-page .l-ov-program h2 { font-size: 20px; line-height: 30px; font-weight: 600; }
+[data-loyalty] .l-ov-clean-program-heading > .l-ov-link { flex-shrink: 0; }
+[data-loyalty] .l-ov-clean-facts { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 12px; margin: 0; }
+[data-loyalty] .l-ov-clean-facts:has(> div:nth-child(3):last-child) { grid-template-columns: repeat(3,minmax(0,1fr)); }
+[data-loyalty] .l-ov-clean-facts > div { display: flex; flex-direction: column-reverse; gap: 0; padding: 8px 12px; border-radius: 8px; min-width: 0; background: var(--l-ov-side); }
+[data-loyalty] .l-ov-clean-facts dt { color: var(--l-ov-secondary); font-size: 12px; line-height: 18px; }
+[data-loyalty] .l-ov-clean-facts dd { margin: 0; font-size: 20px; font-weight: 600; line-height: 30px; overflow-wrap: anywhere; }
+[data-loyalty] .l-ov-clean-page .l-ov-member-card { width: 312px; flex-basis: 312px; min-height: 128px; gap: 4px; cursor: pointer; }
+[data-loyalty] .l-ov-clean-card-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 24px; }
+[data-loyalty] .l-ov-clean-card-heading > span { min-width: 0; color: var(--l-ov-secondary); overflow-wrap: anywhere; }
+[data-loyalty] .l-ov-clean-card-heading > img { flex-shrink: 0; }
+[data-loyalty] .l-ov-clean-page .l-ov-member-card b { font-size: 32px; line-height: 42px; }
+[data-loyalty] .l-ov-clean-page .l-ov-member-card small { color: var(--l-ov-secondary); }
+[data-loyalty] .l-ov-clean-page .l-ov-glance { gap: 12px; }
+[data-loyalty] .l-ov-clean-page .l-ov-glance-controls { grid-template-columns: 1fr auto minmax(176px,auto); }
+[data-loyalty] .l-ov-clean-page .l-ov-about { gap: 8px; margin-right: 0; }
+[data-loyalty] .l-ov-clean-page .l-ov-metric { min-height: 124px; position: relative; padding-right: 84px; gap: 1px; }
+[data-loyalty] .l-ov-clean-page .l-ov-clean-metric-icon { position: absolute; right: 20px; top: 20px; width: 48px; height: 48px; border-radius: 16px; }
+[data-loyalty] .l-ov-clean-page .l-ov-daily { gap: 16px; }
+[data-loyalty] .l-ov-clean-page .l-ov-daily > section { padding: 20px; }
+[data-loyalty] .l-ov-clean-page .l-ov-section-heading { align-items: center; flex-wrap: wrap; min-height: 40px; gap: 8px 12px; }
+[data-loyalty] .l-ov-clean-section-title { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+[data-loyalty] .l-ov-clean-page .l-ov-requests, [data-loyalty] .l-ov-clean-events { gap: 0; }
+[data-loyalty] .l-ov-clean-request-row { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 54px; padding: 4px 0; border-radius: 8px; color: var(--l-ov-text); }
+[data-loyalty] .l-ov-clean-request-row:hover { background: var(--l-ov-recessed); }
+[data-loyalty] .l-ov-clean-record { flex: 1; min-width: 0; }
+[data-loyalty] .l-ov-clean-time { flex: 0 0 auto; max-width: 84px; color: var(--l-ov-muted); font-size: 12px; line-height: 18px; text-align: right; }
+[data-loyalty] .l-ov-clean-events li { min-height: 54px; padding: 4px 0; border-bottom: 1px solid var(--l-ov-border); }
+[data-loyalty] .l-ov-clean-events li:last-child { border-bottom: 0; }
+[data-loyalty] .l-ov-clean-events li > div { flex: 1; min-width: 0; }
+[data-loyalty] .l-ov-clean-events .l-ov-event-title { font-size: 14px; font-weight: 500; color: var(--l-ov-text); overflow-wrap: anywhere; }
+[data-loyalty] .l-ov-clean-page .l-ov-requests li + li { border-top: 1px solid var(--l-ov-border); }
+[data-loyalty] .l-ov-clean-page .l-ov-setup-choices .l-ov-inset { box-shadow: none; background: var(--l-ov-side); }
+[data-loyalty] .l-ov-clean-page .l-ov-setup-choices .l-ov-clean-icon { width: 56px; height: 56px; flex-basis: 56px; border-radius: 16px; }
+[data-loyalty] .l-ov-clean-page .l-ov-setup-choices h3 { font-size: 20px; line-height: 30px; font-weight: 600; }
+[data-loyalty] .l-ov-clean-page .l-ov-setup-choices p { font-size: 12px; line-height: 18px; }
+[data-loyalty] .l-ov-clean-page .l-ov-first { gap: 16px; padding: 24px; }
+[data-loyalty] .l-ov-clean-page .l-ov-first h2 { font-size: 20px; line-height: 30px; }
+[data-loyalty] .l-ov-clean-page .l-ov-setup-progress { box-shadow: none; }
+[data-loyalty] .l-ov-clean-setup { display: flex; flex-direction: column; gap: 20px; }
+[data-loyalty] .l-ov-clean-setup .l-ov-steps { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 24px; padding: 0; margin: 0; list-style: none; }
+[data-loyalty] .l-ov-clean-setup .l-ov-steps li { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; position: relative; }
+[data-loyalty] .l-ov-clean-setup .l-ov-steps li::before { content: none; }
+[data-loyalty] .l-ov-clean-setup .l-ov-steps li > span { display: grid; place-items: center; width: 38px; height: 38px; border-radius: 50%; background: var(--l-ov-raised); font-size: 14px; }
+[data-loyalty] .l-ov-clean-setup .l-ov-steps li:not(:last-child)::after { content: ''; position: absolute; left: 46px; right: 0; top: 18px; height: 2px; background: var(--l-ov-border); }
+[data-loyalty] .l-ov-clean-preserve { display: flex; gap: 8px; align-items: center; font-size: 12px; line-height: 18px; }
+[data-loyalty][data-theme=light] .l-ov-clean-icon img, [data-loyalty][data-theme=light] .l-ov-clean-card-heading > img, [data-loyalty][data-theme=light] .l-ov-clean-page .l-ov-period > button > img, [data-loyalty][data-theme=light] .l-ov-clean-page .l-ov-about img, [data-loyalty][data-theme=light] .l-ov-clean-preserve img, [data-loyalty][data-theme=light] .l-ov-clean-page .l-ov-preview-action img { filter: brightness(.5); }
+@media (max-width:1279px) {
+  [data-loyalty] .l-ov-clean-program-heading { flex-wrap: wrap; }
+  [data-loyalty] .l-ov-clean-facts { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  [data-loyalty] .l-ov-clean-page .l-ov-member-card { width: 260px; flex-basis: 260px; }
+}
+@media (max-width:1000px) {
+  [data-loyalty] .l-ov-clean-page .l-ov-program { align-items: stretch; flex-direction: column; }
+  [data-loyalty] .l-ov-clean-page .l-ov-member-card { flex-basis: auto; width: 100%; }
+  [data-loyalty] .l-ov-clean-page .l-ov-glance-controls { grid-template-columns: 1fr auto; }
+  [data-loyalty] .l-ov-clean-page .l-ov-period { grid-column: 1 / -1; justify-self: start; }
+  [data-loyalty] .l-ov-clean-page .l-ov-metric { padding-right: 20px; padding-top: 68px; }
+  [data-loyalty] .l-ov-clean-page .l-ov-clean-metric-icon { top: 12px; width: 36px; height: 36px; border-radius: 12px; }
+}

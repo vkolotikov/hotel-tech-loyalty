@@ -1,5 +1,7 @@
 # HexaTech Loyalty — runbook
 
+Overview simplification (6 November 2026): the current design is OV-B1 `268:8579`, with first setup `268:8800` and progress reference `268:8991`; the old main frame `29:365` was removed. The page now places review issues first, shows compact program facts, adds metric/activity icons and reduces repeated copy. All real data, permission checks, existing dialogs and workflow links remain. The dedicated mobile Home remains its own composition. Setup progress uses the server's existing checklist, not Figma's sample wizard step. See `loyalty-redesign/23-OVERVIEW-SIMPLIFICATION-REPORT.md` and the current handoff for evidence.
+
 Wallet updates, media recovery and Windows reader (30 October 2026): see `wallet-and-media-operations.md` for
 the protocol, scheduler, recovery commands and outstanding physical acceptance.
 

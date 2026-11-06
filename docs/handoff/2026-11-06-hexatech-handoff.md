@@ -1,6 +1,14 @@
 # HexaTech handoff — 6 November 2026
 
-Read CLAUDE.md and `2026-11-02-hexatech-handoff.md` for the current application, native apps, environment and outstanding operational work. This session changes the Loyalty workspace Insights filters only.
+Read CLAUDE.md and `2026-11-02-hexatech-handoff.md` for the current application, native apps, environment and outstanding operational work. This session changes the Loyalty workspace Insights filters and Overview presentation.
+
+## Overview simplification
+
+Owner requested less copy, icons and a cleaner Overview, using the updated Figma file. Branch `feature/overview-cleanup-20261106`; production baseline `863ad5a55`, source delta from `b34f677e7` (including the previous release-record documents). Current design is **OV-B1 `268:8579`**, replacing the removed `29:365`; first setup `268:8800`, progress reference `268:8991`, dedicated mobile Home `217:7215`. See `loyalty-redesign/23-OVERVIEW-SIMPLIFICATION-REPORT.md` for the design mapping and progress-state limitation.
+
+The review notice moves first; the summary becomes four compact program facts and an explicitly illustrative member card. Metrics, requests and activity gain exact local design icons, shorter copy and header actions. First setup is simplified; all five languages and existing data/permission/workflow behavior remain. No PHP/API/database/dependency change. Development checks: **5,852 frontend tests**, TypeScript, focused lint, **19 Overview scenarios + 73 mobile checks**, **10 language/theme combinations across six widths**.
+
+Artifact and production verification will be recorded after the isolated release checks.
 
 ## Insights filters
 

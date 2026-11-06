@@ -6,6 +6,7 @@ import { money, points, signedPoints, when } from '../lib/format'
 import { mediaUrl } from '../lib/api'
 import { ADVICE_WORDS } from '../options/words'
 import { overviewAssets as assets } from './assets'
+import { activityIcons } from './cleanAssets'
 import { FILTERS } from './overviewMath'
 import { OverviewBadge, OverviewButton, OverviewRecovery, OverviewSkeleton } from './OverviewUI'
 import { useOverviewWords, type OverviewWord } from './words'
@@ -56,15 +57,15 @@ function DetailGroup({ title, href, action, children }: { title: string; href: s
 }
 function DetailRow({ label, children }: { label: string; children: ReactNode }) { return <div className="l-ov-detail-row"><dt>{label}</dt><dd>{children}</dd></div> }
 
-export function ActivityRows({ items, filter, onClear, detailed = false }: { items: ActivityItem[]; filter: ActivityFilter; onClear: () => void; detailed?: boolean }) {
+export function ActivityRows({ items, filter, onClear, detailed = false, compact = false }: { items: ActivityItem[]; filter: ActivityFilter; onClear: () => void; detailed?: boolean; compact?: boolean }) {
   const say = useOverviewWords()
   const boot = useBoot()
   const { i18n } = useTranslation()
   const locale = i18n.language || 'en'
   if (!items.length) return <div className="l-ov-empty"><h3>{say(filter === 'all' ? 'noActivity' : 'noMatches')}</h3><p>{say('noActivityLine')}</p>{filter !== 'all' && <OverviewButton onClick={onClear}>{say('clearFilter')}</OverviewButton>}</div>
-  return <ul className={`l-ov-events ${detailed ? 'l-ov-events-detailed' : ''}`}>{items.map(item => {
+  return <ul className={`l-ov-events ${detailed ? 'l-ov-events-detailed' : ''} ${compact ? 'l-ov-clean-events' : ''}`}>{items.map(item => {
     const name = item.member ?? say('noName')
     const title = item.source === 'points' ? say((item.amount ?? 0) > 0 ? 'earned' : 'changedPoints', { name, points: (item.amount ?? 0) > 0 ? points(item.amount ?? 0, locale) : signedPoints(item.amount ?? 0, locale) }) : item.source === 'offer' ? say('offerUsed', { name: item.label ?? say('active_offers') }) : item.source === 'reward' ? say('rewardUsed', { name: item.label ?? say('redemption') }) : item.source === 'visit' ? say('visited', { name }) : item.source === 'member' ? say('memberJoined', { name }) : item.source === 'tier' ? say('levelChanged', { name }) : say('delivered', { name: item.label ?? say('benefit') })
-    return <li key={`${item.source}:${item.id}`}><img src={item.source === 'points' ? assets.activityCyan : item.source === 'tier' || item.source === 'visit' ? assets.activityGreen : assets.activityNeutral} alt="" /><div>{detailed ? <Link className="l-ov-event-title" to={item.href}>{title}</Link> : <strong>{title}</strong>}<small>{item.source === 'reward' && item.amount !== null ? `${say('exampleBalance', { points: points(item.amount, locale) })} · ` : item.label && item.source !== 'reward' ? `${item.label} · ` : ''}<time dateTime={item.at}>{when(item.at, locale, boot.venue.timezone)}</time></small></div></li>
+    return <li key={`${item.source}:${item.id}`}>{compact ? <span className="l-ov-clean-icon" data-tone={item.source === 'reward' || item.source === 'tier' ? 'green' : 'cyan'}><img src={activityIcons[item.source]} alt="" /></span> : <img src={item.source === 'points' ? assets.activityCyan : item.source === 'tier' || item.source === 'visit' ? assets.activityGreen : assets.activityNeutral} alt="" />}<div>{detailed || compact ? <Link className="l-ov-event-title" to={item.href}>{title}</Link> : <strong>{title}</strong>}<small>{item.source === 'reward' && item.amount !== null ? say(compact ? 'shortPoints' : 'exampleBalance', { points: points(item.amount, locale) }) : item.label && item.source !== 'reward' ? item.label : ''}{!compact && <>{(item.source === 'reward' && item.amount !== null || item.label && item.source !== 'reward') && ' · '}<time dateTime={item.at}>{when(item.at, locale, boot.venue.timezone)}</time></>}</small></div>{compact && <time className="l-ov-clean-time" dateTime={item.at}>{when(item.at, locale, boot.venue.timezone)}</time>}</li>
   })}</ul>
 }

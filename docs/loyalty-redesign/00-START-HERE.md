@@ -14,7 +14,7 @@ Current milestone: **Implement the new Overview and the shared shell needed for 
 
 > Read `docs/loyalty-redesign/01-CODEX-TASK.md` and all documents it references. Implement the current Overview milestone in our existing application, including the new design, responsive states, interactions and verified data integration. Use the connected Figma plugin to inspect the exact frames in `02-DESIGN-AND-FIGMA.md`; match their typography, palette, gradients, raised controls, spacing and layout. Inspect the repository first, preserve existing features and routes, then continue through implementation and testing. Do not stop at a plan or a static mockup. Follow the scope and acceptance criteria in this package. Complete Overview before starting the later Members redesign. Report implemented work, validation evidence and any specific unresolved dependencies.
 
-Main Figma target: [OV-01 Daily Overview](https://www.figma.com/design/d6IGmk3hOoMw0V5rONbI1A/Untitled?node-id=29-365)  
+Main Figma target (updated 6 November): [OV-B1 Simplified daily Overview](https://www.figma.com/design/d6IGmk3hOoMw0V5rONbI1A/Untitled?node-id=268-8579). See [23-OVERVIEW-SIMPLIFICATION-REPORT.md](23-OVERVIEW-SIMPLIFICATION-REPORT.md) for the current presentation and setup-state mapping. The original `29:365` frame was removed.
 All states: [Overview review index](https://www.figma.com/design/d6IGmk3hOoMw0V5rONbI1A/Untitled?node-id=29-387)  
 Mobile: [OV-24 scrollable viewport](https://www.figma.com/design/d6IGmk3hOoMw0V5rONbI1A/Untitled?node-id=38-2341)
 
