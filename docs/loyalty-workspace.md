@@ -1,5 +1,7 @@
 # HexaTech Loyalty — runbook
 
+Overview simplification (6 November 2026): the current design is OV-B1 `268:8579`, with first setup `268:8800` and progress reference `268:8991`; the old main frame `29:365` was removed. The page now places review issues first, shows compact program facts, adds metric/activity icons and reduces repeated copy. All real data, permission checks, existing dialogs and workflow links remain. The dedicated mobile Home remains its own composition. Setup progress uses the server's existing checklist, not Figma's sample wizard step. See `loyalty-redesign/23-OVERVIEW-SIMPLIFICATION-REPORT.md` and the current handoff for evidence.
+
 Wallet updates, media recovery and Windows reader (30 October 2026): see `wallet-and-media-operations.md` for
 the protocol, scheduler, recovery commands and outstanding physical acceptance.
 
@@ -945,6 +947,8 @@ files on disk): run them one after the other.
   redirect outliving its page; an extra or a voice config holding NULL in a NOT NULL column.
 
 ## Deploying
+
+- Filter alignment follow-up, 2026-11-06: production **863ad5a55**, source patch **a2ed5c6e6** from feature source and **next source-patch baseline b34f677e7** (`feature/insights-filter-alignment-20261106`), 11 allowlisted frontend/documentation paths on `de0999437`; whole source parity passed. Four aligned inline dropdowns, comparison checkbox, native popup contrast fixes and responsive wrapping; automatic selection remains. Artifact: **5,849 frontend tests**, **93 compiled interaction checks + 10 language/theme combinations**, TypeScript, focused ESLint, fresh build and **2,042 PHP passed / three recipe scopes**. PHP/API/database source is identical to the previously fully verified release. Live content verified **13:01 Europe/Riga**: `index-D07iBFyy.js`, `LoyaltyApp-BSjBMUUq.js`, `InsightsPage-CAWRoVFL.js`; new checkbox markers, authentication, fonts and landing continuity passed. Full record: `handoff/2026-11-06-hexatech-handoff.md`.
 
 - Instant filter follow-up, 2026-11-06: production **de0999437**, source patch **4b5e63763** from feature source and next source-patch baseline **ce4cbcb35** (`feature/insights-instant-filters-20261106`), 14 allowlisted frontend/documentation paths on `aeda71eeb`; whole source parity passed. Automatic filter selections, compact date/comparison toolbar, focused member/date windows, removable chips and safe in-flight updates. Artifact: **7,407 PHP passed / 23 existing skips / 78 scopes**, **5,849 frontend tests**, **90 compiled interaction checks + 10 localized-window checks**, TypeScript, focused ESLint and fresh build. Live content verified **11:55 Europe/Riga**: `index-BFWYm4Ml.js`, `LoyaltyApp-C1yeKncq.js`, `InsightsPage-CAdBCH7k.js`; new automatic-filter markers, report authentication and public landing continuity passed. PHP/API/database contracts are unchanged. Full record: `handoff/2026-11-06-hexatech-handoff.md`.
 
