@@ -4,6 +4,17 @@ Read CLAUDE.md and `2026-11-02-hexatech-handoff.md` for the current application,
 
 ## Insights filters
 
+### Follow-up: aligned inline controls
+
+Owner: align controls, replace comparison with a checkbox, and show member filters in the same row. Branch `feature/insights-filter-alignment-20261106` follows production `de0999437`; the source delta starts at `ce4cbcb35` and includes the previous release-record documents.
+
+- Reporting period, membership level, member status and email offers use equal-height native dropdowns in one desktop row, followed by the comparison checkbox. Tablets use two columns; phones stack the fields. The separate member-filter dialog is removed; custom dates retain their focused window.
+- Native options now explicitly use the theme's text and raised-surface colours, fixing the screenshot's light-on-white popup. Checkbox wording is translated in all five bundles. Dates and current-member scope appear below the row.
+- Immediate application, rapid-change merging, retained charts during refresh, export protection, chips, resets, collapse preference and URL history remain in place. Browser checks now exercise the inline fields and row geometry.
+- Only frontend presentation, fixture checks and documentation change. PHP, APIs, dependencies and database source are unchanged.
+
+Verification and production content evidence will be recorded after the isolated release checks.
+
 ### Follow-up: instant filters and compact controls
 
 Owner: make the page more logical and easier to use, improve the filters window/design and apply selections with no Save button. Branch `feature/insights-instant-filters-20261106` follows the first release below; production baseline is `aeda71eeb`. The source delta starts at `4c13cc211` and includes the two subsequent release-record documents.

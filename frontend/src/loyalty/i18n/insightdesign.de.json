@@ -1,4 +1,5 @@
 {
+  "comparePrevious": "Mit vorherigem Zeitraum vergleichen",
   "memberFilters": "Mitgliederfilter", "memberFiltersLine": "Wählen Sie, welche Mitglieder im gesamten Bericht berücksichtigt werden.",
   "autoUpdates": "Wird automatisch aktualisiert", "updatingReport": "Bericht wird aktualisiert…", "editDates": "Berichtszeitraum ändern", "removeFilter": "Filter {{name}} entfernen", "resetMembers": "Mitgliederfilter löschen", "reportScope": "Über diesen Bericht",
   "customDatesLine": "Wählen Sie abgeschlossene Tage am Standort. Gültige Daten aktualisieren den Bericht automatisch.", "datesNotApplied": "Bis der Zeitraum gültig ist, behält der Bericht seine bisherigen Daten.",

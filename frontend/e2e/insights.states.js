@@ -23,24 +23,26 @@ async page => {
   await page.getByLabel('End date',{exact:true}).fill('2026-10-28');await page.locator('#report-range-error').waitFor();await page.waitForTimeout(500);
   ok((await fixture({})).requests.filter(r=>r.path==='insights/report').length===beforeInvalid,'invalid date range sends no report request');
   ok(new URL(page.url()).searchParams.get('to')==='2026-10-14','invalid dates keep the last valid report');await close();
-  await page.getByLabel('Compare with',{exact:true}).selectOption('none');await ready();await button('Member filters').click();await fixture({slow:true});await page.getByLabel('Membership level',{exact:true}).selectOption('2');
+  ok(await page.getByRole('checkbox',{name:'Compare with previous period',exact:true}).isChecked(),'comparison starts checked');
+  await page.getByRole('checkbox',{name:'Compare with previous period',exact:true}).click();await page.waitForFunction(()=>!document.querySelector('.l-in-compare-check input').checked);await ready();await fixture({slow:true});await page.getByLabel('Membership level',{exact:true}).selectOption('2');
   await page.waitForFunction(()=>document.querySelector('.l-in-results')?.getAttribute('aria-busy')==='true');ok(await page.locator('.l-in-tile').count()===8,'old charts stay visible during an automatic refresh');
   await page.getByLabel('Member status',{exact:true}).selectOption('active');await page.getByLabel('Email offers',{exact:true}).selectOption('yes');
   ok(await page.getByLabel('Member status',{exact:true}).isEnabled(),'member choices stay usable while requests are in flight');
   await page.waitForFunction(()=>!document.querySelector('.l-in-previous-line')&&document.querySelector('.l-in-tile')?.textContent.includes('120'));await ready();await fixture({slow:false});
-  ok(await page.locator('dialog[open]').count()===1,'member filter window stays open after automatic changes');ok(await button('Apply filters').count()===0,'member window has no Save or Apply step');await close();
+  ok(await page.locator('dialog[open]').count()===0,'member filters update directly in the row');ok(await button('Apply filters').count()===0,'inline filters have no Save or Apply step');
   ok(new URL(page.url()).searchParams.get('from')==='2026-10-01'&&new URL(page.url()).searchParams.get('tier_id')==='2','date and level filters persist in URL');ok(await page.locator('.l-in-previous-line').count()===0,'no-comparison removes previous chart');ok((await page.locator('.l-in-tile').first().innerText()).includes('120'),'new filters use new response');
   ok(new URL(page.url()).searchParams.get('state')==='active'&&new URL(page.url()).searchParams.get('consent')==='yes','member and consent filters persist in URL');
-  ok(await page.locator('.l-in-filter-summary > button').count()===3,'only the three selected member filters appear as removable chips');
+  ok(await page.locator('.l-in-filter-summary > button[aria-label]').count()===3,'only the three selected member filters appear as removable chips');
   await button('Remove Member status filter').click();await ready();ok(new URL(page.url()).searchParams.get('state')==='all'&&new URL(page.url()).searchParams.get('tier_id')==='2','one click clears a single filter without losing the others');
-  await page.locator('.l-in-member-filter-button').click();await button('Clear member filters').click();await ready();ok(new URL(page.url()).searchParams.get('tier_id')===''&&new URL(page.url()).searchParams.get('from')==='2026-10-01','clear member filters preserves reporting dates');await close();
+  await button('Clear member filters').click();await ready();ok(new URL(page.url()).searchParams.get('tier_id')===''&&new URL(page.url()).searchParams.get('from')==='2026-10-01','clear member filters preserves reporting dates');
   await page.goBack();await ready();ok(new URL(page.url()).searchParams.get('tier_id')==='2','browser Back restores the last filter selection');await button('Reset filters').click();await ready();
   await button('Hide filters').click();ok(await page.locator('#report-filter-fields').isHidden(),'filter controls collapse');ok((await page.locator('.l-in-filter-summary').innerText()).includes('Sep 30'),'collapsed summary retains applied dates');
   await page.reload();await ready();ok(await page.locator('#report-filter-fields').isHidden(),'collapsed preference survives reload');await button('Show filters').click();
   await page.getByLabel('Reporting period',{exact:true}).selectOption('7d');await ready();ok(new URL(page.url()).searchParams.get('from')==='2026-10-21','seven-day preset applies immediately using completed venue days');await button('Reset filters').click();await ready();ok(new URL(page.url()).searchParams.get('from')==='2026-09-30','reset restores default report dates');
   await button('Definitions').click();await page.keyboard.press('Tab');ok(await page.evaluate(()=>document.querySelector('dialog[open]').contains(document.activeElement)),'definitions contain keyboard focus');await close();await page.waitForFunction(()=>document.activeElement?.textContent==='Definitions');ok(true,'definitions restore opener focus');
   const downloadPromise=page.waitForEvent('download');await button('Export report').click();const download=await downloadPromise;await download.saveAs(root+'report-fixture.csv');ok(download.suggestedFilename()==='loyalty-insights-2026-09-30-2026-10-27.csv','export has selected period filename');
-  await button('Member filters').click();await page.getByLabel('Membership level',{exact:true}).selectOption('none');await ready();await close();
+  const noLevelRead=page.waitForResponse(r=>r.url().includes('/insights/report?')&&new URL(r.url()).searchParams.get('without_tier')==='1');
+  await page.getByLabel('Membership level',{exact:true}).selectOption('none');await noLevelRead;await ready();
   const noLevelRequest=(await fixture({})).requests.filter(r=>r.path==='insights/report').at(-1),noLevelQuery=new URLSearchParams(noLevelRequest.query);
   ok(noLevelQuery.get('without_tier')==='1'&&!noLevelQuery.has('tier_id'),'no-level choice sends a separate API flag without an invalid tier ID');
   ok((await page.locator('.l-in-filter-summary').innerText()).includes('No level'),'no-level population is named in summary');await button('Reset filters').click();await ready();
@@ -57,11 +59,11 @@ async page => {
     if(width===390)await page.screenshot({path:root+'render-mobile.png',fullPage:false});
     ok(await page.locator('.l-in-filter-panel').evaluate(e=>e.scrollWidth<=e.clientWidth+1),'filter controls fit '+width+'px');
     if(width===390)await page.locator('.l-in-filter-panel').screenshot({path:root+'render-filters-mobile.png'});
-    for(const kind of ['members','dates']){
-      await (kind==='members'?page.locator('.l-in-member-filter-button'):button('Change report dates')).click();await page.locator('dialog[open]').waitFor();
-      ok(await page.locator('dialog[open]').evaluate(e=>{const r=e.getBoundingClientRect();return r.left>=0&&r.right<=innerWidth+1&&r.height<=innerHeight&&e.scrollWidth<=e.clientWidth+1}),kind+' window fits '+width+'px');
-      if(width===390)await page.locator('dialog[open]').screenshot({path:root+'render-'+kind+'-window-mobile.png'});await close();
-    }
+    if(width>=1280)ok(await page.locator('.l-in-filter-toolbar').evaluate(e=>{const boxes=[...e.querySelectorAll('select')].map(s=>s.getBoundingClientRect()),check=e.querySelector('input[type=checkbox]').getBoundingClientRect();return boxes.length===4&&boxes.every(b=>Math.abs(b.top-boxes[0].top)<1&&b.height===boxes[0].height)&&check.top>=boxes[0].top&&check.bottom<=boxes[0].bottom}),'four dropdowns and comparison checkbox align in one row at '+width+'px');
+    ok(await page.locator('#report-period option').first().evaluate(e=>{const s=getComputedStyle(e);return s.backgroundColor!=='rgba(0, 0, 0, 0)'&&s.color!==s.backgroundColor}),'native dropdown options have explicit readable colors at '+width+'px');
+    await button('Change report dates').click();await page.locator('dialog[open]').waitFor();
+    ok(await page.locator('dialog[open]').evaluate(e=>{const r=e.getBoundingClientRect();return r.left>=0&&r.right<=innerWidth+1&&r.height<=innerHeight&&e.scrollWidth<=e.clientWidth+1}),'dates window fits '+width+'px');
+    if(width===390)await page.locator('dialog[open]').screenshot({path:root+'render-dates-window-mobile.png'});await close();
     await button('Definitions').click();await page.locator('dialog[open]').waitFor();
     ok(await page.locator('dialog[open]').evaluate(e=>{const r=e.getBoundingClientRect();return r.left>=0&&r.right<=innerWidth+1&&r.height<=innerHeight&&e.scrollWidth<=e.clientWidth+1}),'definitions fit '+width+'px');
     if(width===390)await page.locator('dialog[open]').screenshot({path:root+'render-definitions-mobile.png'});await close();

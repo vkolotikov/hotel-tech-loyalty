@@ -1,4 +1,5 @@
 {
+  "comparePrevious": "Compare with previous period",
   "memberFilters": "Member filters", "memberFiltersLine": "Choose which members to include in every part of the report.",
   "autoUpdates": "Updates automatically", "updatingReport": "Updating report…", "editDates": "Change report dates", "removeFilter": "Remove {{name}} filter", "resetMembers": "Clear member filters", "reportScope": "About this report",
   "customDatesLine": "Choose completed venue days. Valid dates update the report automatically.", "datesNotApplied": "The report keeps its previous dates until this range is valid.",
