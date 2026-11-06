@@ -21,7 +21,7 @@ async (page, { state, root, base }) => {
   check(await page.locator('.l-pg-tools a').count()===2,'Program tools are Places and Boosts');
   check(await page.locator('.l-pg-flow .l-pg-icon').count()===3,'Qualification flow has three design icons');
   check(await page.locator('.l-rd-tier-card').count()===3,'All actual levels remain in the ladder');await shot('levels-dark');
-  await page.locator('[data-tier="3"]').getByRole('button',{name:'+1 more benefits',exact:true}).click();check((await page.locator('[data-tier="3"]').innerText()).includes('Until 2 pm')&&(await page.locator('[data-tier="3"]').innerText()).includes('Can enter:'),'Level details retain structured benefit values and access information');
+  await page.locator('[data-tier="3"]').getByRole('button',{name:'+1 more benefits',exact:true}).click();await page.locator('[data-tier-places="3"]').waitFor();check((await page.locator('[data-tier="3"]').innerText()).includes('Until 2 pm')&&(await page.locator('[data-tier="3"]').innerText()).includes('Can enter:'),'Level details retain structured benefit values and access information');
   await open('/loyalty/program?tab=benefits&selected=2&q=discount');await page.waitForURL(u=>u.pathname==='/loyalty/rewards');
   check(new URL(page.url()).searchParams.get('selected')==='2'&&new URL(page.url()).searchParams.get('q')==='discount','Old benefits URL redirects to Rewards with filters and selection');
   await page.getByRole('heading',{name:'Membership benefits',exact:true}).first().waitFor();check(true,'Rewards owns the membership-benefit catalogue');
