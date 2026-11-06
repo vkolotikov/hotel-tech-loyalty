@@ -19,7 +19,10 @@ import { DesignDialog, NumberControl } from '../redesign/DesignUI'
 import { useRedesignWords } from '../redesign/words'
 import { OverviewButton } from '../overview/OverviewUI'
 import { tierTextStyle } from '../redesign/designMath'
-import levelDiagonal from '../redesign/assets/level-diagonal.svg'
+import { programAssets, levelAssets } from './design/assets'
+import { programTierPaint } from './design/programPaint'
+import { useLook } from '../lib/look'
+import './design/program.css'
 
 const INPUT = 'w-full rounded-lg border border-a-border bg-a-surface px-3 py-2 text-sm text-a-text'
 /** What the colour picker shows while the tier has no colour of its own. */
@@ -41,6 +44,7 @@ export function TierDialog({ tier, onClose, page = false, benefits, more, onDirt
   const say = useRedesignWords()
   const locale = i18n.language || 'en'
   const boot = useBoot()
+  const look = useLook()
   const by = boot.programme.progress_by ?? 'points'
   const client = useQueryClient()
   const colourId = useId()
@@ -90,6 +94,7 @@ export function TierDialog({ tier, onClose, page = false, benefits, more, onDirt
   const rate = decimalOf(form.earn_rate)
 
 
+  const paint = programTierPaint(form.color, look.resolved)
   const floor = floorField(by)
   const floorLabel = t(`loyalty.program.tier.${floor}`, by === 'visits' ? 'Visits to reach this tier' : by === 'spend' ? 'Spend to reach this tier' : 'Points to reach it')
   const floorValue = form[floor] ?? ''
@@ -108,7 +113,7 @@ export function TierDialog({ tier, onClose, page = false, benefits, more, onDirt
           </div>
           <FormField label={say('description')} problem={problem('description')}><textarea value={form.description} rows={1} onChange={e => update({ description: e.target.value })} className={INPUT} /></FormField>
         </section>
-        <section className="l-ov-panel l-rd-qualification"><h2>{say('qualificationEarning')}</h2>
+        <section className="l-ov-panel l-rd-qualification"><h2><span className="l-pg-icon"><img src={programAssets.points} alt="" /></span>{say('qualificationEarning')}</h2>
           <div className="l-rd-two-fields"><div><span className="l-rd-label">{floorLabel}</span><NumberControl label={floorLabel} value={floorValue} onValue={value => update({ [floor]: value })} max={by === 'visits' ? MAX_MIN_VISITS : by === 'spend' ? MAX_MIN_SPEND : MAX_MIN_POINTS} step={by === 'spend' ? .01 : 1} invalid={!!problem(floor)} disabled={save.isPending} />{problem(floor) && <p className="text-a-danger">{problem(floor)}</p>}</div>
           <div><span className="l-rd-label">{say('rate')}</span><NumberControl label={say('rate')} value={form.earn_rate} onValue={earn_rate => update({ earn_rate })} step={.01} max={MAX_EARN_RATE} invalid={!!problem('earn_rate')} disabled={save.isPending} />{problem('earn_rate') && <p className="text-a-danger">{problem('earn_rate')}</p>}{example !== null && <small className="l-rd-accent">{say('rateExample', { n: points(example, locale) })}</small>}</div></div>
           {by !== 'points' && <p data-measure={by}>{by === 'visits' ? t('loyalty.program.tier.min_visits_hint', 'One a day counts: appointments, stays, check-ins, purchases and events. Empty: no one moves up to it by visits.') : t('loyalty.program.tier.min_spend_hint', 'In {{currency}}, what members spent at their visits. Empty: no one moves up to it by spend.', { currency: boot.venue.currency })}</p>}
@@ -117,7 +122,7 @@ export function TierDialog({ tier, onClose, page = false, benefits, more, onDirt
         {benefits}
       </div>
       <aside className="l-rd-editor-aside">
-        <section data-member-preview="" className="l-ov-panel l-rd-level-preview" aria-label={say('memberPreview')}><img src={levelDiagonal} alt="" /><span className="l-ov-eyebrow">{say('memberPreview')}</span>
+        <section data-member-preview="" className="l-ov-panel l-rd-level-preview" aria-label={say('memberPreview')}><span className="l-pg-preview-card"><img src={levelAssets[paint.tone].card} alt="" /></span><span className="l-ov-eyebrow">{say('memberPreview')}</span>
           <h2 className="l-rd-tier-text" style={tierTextStyle(form.color)}>{form.name.trim() || t('loyalty.program.tier.preview', 'Preview')}</h2>
           {form.description && <p>{form.description}</p>}<hr />
           {floorValue !== '' && Number.isFinite(Number(floorValue)) && <small>{by === 'spend' ? money(Number(floorValue), boot.venue.currency, locale) : points(Number(floorValue), locale)} · {floorLabel}</small>}
@@ -133,5 +138,5 @@ export function TierDialog({ tier, onClose, page = false, benefits, more, onDirt
   </form>
   const keepEditing = () => { setDiscard(false); setDestination(null) }
   const warning = discard && <DesignDialog title={say('discardTitle')} onClose={keepEditing}><div className="l-rd-form"><p>{say('discardLine')}</p><div className="l-rd-form-foot"><OverviewButton onClick={keepEditing}>{say('keepEditing')}</OverviewButton><OverviewButton primary onClick={() => { if (destination) navigate(destination); else onClose() }}>{say('discard')}</OverviewButton></div></div></DesignDialog>
-  return page ? <div className="l-ov-page l-rd-page"><button className="l-ov-link self-start" onClick={cancel}>{say('allLevelsBack')}</button><header className="l-ov-page-heading"><div><h1>{title}</h1><p>{say('editLine')}</p></div>{more}</header>{content}{warning}</div> : <DesignDialog title={title} wide onClose={cancel} busy={save.isPending}>{content}{warning}</DesignDialog>
+  return page ? <div className="l-ov-page l-rd-page l-pg-editor" style={paint.style}><button className="l-ov-link self-start" onClick={cancel}>{say('allLevelsBack')}</button><header className="l-ov-page-heading"><div><h1>{title}</h1><p>{say('editLine')}</p></div>{more}</header>{content}{warning}</div> : <DesignDialog title={title} wide onClose={cancel} busy={save.isPending}>{content}{warning}</DesignDialog>
 }
