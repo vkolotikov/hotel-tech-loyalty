@@ -31,7 +31,7 @@ Membership benefits now have one catalogue page under Rewards. Program's duplica
 
 Places changes are limited to the directory: tinted summary cards, search/eligible-level/status controls, compact place cards and the existing Scan entry point. Summary values are real total places, active places and allowed scans today. The current API has no entrance hierarchy, override counts or access hours; those Figma sample fields are not invented. Generic location markers reflect the available model. Manage/entries actions open the existing dialogs, and Scan retains its existing context picker and explicit reader activation. No access-rule, entry-history, place writer or scanning behavior changes.
 
-All new words are translated in English, Russian, German, French and Spanish. Scoped CSS composes existing workspace buttons, fields, dialogs and chips. Seventeen new SVG exports retain their original paths and root dimensions; three identical exports reuse existing assets by SHA-256. No temporary Figma URLs are runtime sources. No backend, dependency, database, full-admin or member-portal change.
+All new words are translated in English, Russian, German, French and Spanish. Scoped CSS composes existing workspace buttons, fields, dialogs and chips. Eighteen new SVG exports retain their SVG paths and root dimensions; three identical exports reuse existing assets by SHA-256. No temporary Figma URLs are runtime sources. No backend, dependency, database, full-admin or member-portal change.
 
 ## Verification
 

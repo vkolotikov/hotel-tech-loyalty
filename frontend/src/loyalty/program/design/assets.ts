@@ -13,11 +13,12 @@ import calendar from './assets/d5d9c.svg'
 import entryDot from './assets/91fb1.svg'
 import activeDot from './assets/17fc5.svg'
 import upcomingDot from './assets/6788b.svg'
+import neutralDot from './assets/effe4.svg'
 import liveCalendar from '../../events/design/assets/calendar.svg'
 import pin from './assets/801b0.svg'
 import door from './assets/c12dc.svg'
 import shield from './assets/06abd.svg'
 import tap from './assets/98e04.svg'
 
-export const programAssets = { points, levels, gift, benefit, places, calendar, entryDot, activeDot, upcomingDot, liveCalendar, pin, door, shield, tap }
+export const programAssets = { points, levels, gift, benefit, places, calendar, entryDot, activeDot, upcomingDot, neutralDot, liveCalendar, pin, door, shield, tap }
 export const levelAssets = { bronze: { card: bronzeCard, members: bronzeMembers }, silver: { card: silverCard, members: silverMembers }, gold: { card: goldCard, members: goldMembers } }

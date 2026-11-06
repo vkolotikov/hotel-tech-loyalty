@@ -159,7 +159,7 @@ export function Wizard({ answer, start = {} }: { answer: OptionsAnswer; start?: 
               data-complete={i < index || undefined}>
               <button type="button" disabled={i > index || apply.isPending} onClick={() => go(s)}>
               <span aria-hidden className="font-a-mono text-xs tabular-nums">{i < index ? <Check size={13} /> : i + 1}</span>
-              <span className="l-gs-step-copy"><strong>{t(`loyalty.options.step.${s}`, STEP_WORDS[s])}</strong><small>{stepTitle(t, s)}</small></span><span className="l-gs-step-state"><img src={i < index ? programAssets.activeDot : s === step ? programAssets.upcomingDot : programAssets.entryDot} alt="" />{clean(i < index ? 'pgStepComplete' : s === step ? 'pgStepCurrent' : 'pgStepPending')}</span><span className="l-gs-step-arrow" aria-hidden>→</span>
+              <span className="l-gs-step-copy"><strong>{t(`loyalty.options.step.${s}`, STEP_WORDS[s])}</strong><small>{stepTitle(t, s)}</small></span><span className="l-gs-step-state"><img src={i < index ? programAssets.activeDot : s === step ? programAssets.upcomingDot : programAssets.neutralDot} alt="" />{clean(i < index ? 'pgStepComplete' : s === step ? 'pgStepCurrent' : 'pgStepPending')}</span><span className="l-gs-step-arrow" aria-hidden>→</span>
               </button>
             </li>
           ))}

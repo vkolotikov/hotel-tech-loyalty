@@ -28,7 +28,7 @@ export function BoostDirectory({ program, manage, theme, locale, timeZone, onEdi
   const clear = () => { setQ(''); setStatus('all'); setSort('start') }
   const statePill = (b: Boost) => {
     const state = boostState(b.state)
-    return <span className="l-pg-pill" data-tone={state === 'live' ? 'green' : state === 'upcoming' ? 'cyan' : 'neutral'}><img src={state === 'live' ? programAssets.activeDot : state === 'upcoming' ? programAssets.upcomingDot : programAssets.entryDot} alt="" />{stateName(state)}</span>
+    return <span className="l-pg-pill" data-tone={state === 'live' ? 'green' : state === 'upcoming' ? 'cyan' : 'neutral'}><img src={state === 'live' ? programAssets.activeDot : state === 'upcoming' ? programAssets.upcomingDot : programAssets.neutralDot} alt="" />{stateName(state)}</span>
   }
   return <div className="l-pg-boost-columns">
     <div className="l-pg-boost-main">
