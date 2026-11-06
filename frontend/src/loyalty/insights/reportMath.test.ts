@@ -1,12 +1,26 @@
 import { describe, expect, it } from 'vitest'
-import { comparison, csvCell, reportFilters, shiftDay, validReportRange } from './reportMath'
+import { comparison, csvCell, presetRange, reportFilters, reportRequest, selectedPreset, shiftDay, validReportRange } from './reportMath'
 import { LOYALTY_LOCALE_FILES } from '../i18n'
 
 describe('completed-day report', () => {
   it('uses venue date, preserves URL scope and handles leap days without local timezone conversion', () => {
-    expect(reportFilters('', '2026-10-28')).toEqual({ from: '2026-09-30', to: '2026-10-27', compare: 'previous', tier_id: '' })
+    expect(reportFilters('', '2026-10-28')).toEqual({ from: '2026-09-30', to: '2026-10-27', compare: 'previous', tier_id: '', state: 'all', consent: 'all' })
     expect(shiftDay('2024-03-01', -1)).toBe('2024-02-29')
-    expect(reportFilters('?from=2026-02-30&to=2026-10-27&compare=none&tier_id=9', '2026-10-28')).toEqual({ from: '2026-09-30', to: '2026-10-27', compare: 'none', tier_id: '9' })
+    expect(reportFilters('?from=2026-02-30&to=2026-10-27&compare=none&tier_id=9', '2026-10-28')).toEqual({ from: '2026-09-30', to: '2026-10-27', compare: 'none', tier_id: '9', state: 'all', consent: 'all' })
+  })
+  it('keeps audience selections in bookmarks and maps no-level to a separate validated API filter', () => {
+    const f = reportFilters('tier_id=none&state=inactive&consent=no', '2026-11-06')
+    expect(f).toMatchObject({ tier_id: 'none', state: 'inactive', consent: 'no' })
+    expect(reportRequest(f)).toMatchObject({ tier_id: undefined, without_tier: 1, state: 'inactive', consent: 'no' })
+    expect(reportFilters('state=invalid&consent=invalid', '2026-11-06')).toMatchObject({ state: 'all', consent: 'all' })
+  })
+  it('presets count completed venue days across leap years and calendar boundaries', () => {
+    expect(presetRange('7d', '2024-03-01')).toEqual({ from: '2024-02-23', to: '2024-02-29' })
+    expect(presetRange('month', '2026-01-01')).toEqual({ from: '2025-12-01', to: '2025-12-31' })
+    expect(presetRange('month', '2024-03-10')).toEqual({ from: '2024-02-01', to: '2024-02-29' })
+    expect(selectedPreset(reportFilters('', '2026-11-06'), '2026-11-06')).toBe('28d')
+    expect(selectedPreset(reportFilters('from=2026-10-01&to=2026-10-12', '2026-11-06'), '2026-11-06')).toBe('custom')
+    for (const preset of ['7d', '28d', '90d', 'month', 'year'] as const) expect(validReportRange({ ...reportFilters('', '2024-03-01'), ...presetRange(preset, '2024-03-01') }, '2024-03-01')).toBe(true)
   })
   it('rejects future, reversed and excessive periods', () => {
     const f = reportFilters('', '2026-10-28')

@@ -2,7 +2,6 @@
 
 namespace App\Services\Loyalty\Insights;
 
-use App\Models\LoyaltyMember;
 use App\Models\LoyaltyTier;
 use App\Services\Appointments\VenueClock;
 use Illuminate\Database\Eloquent\Builder;
@@ -10,13 +9,18 @@ use Illuminate\Database\Query\Builder as Query;
 use Illuminate\Support\Facades\DB;
 
 /** Read-only completed-day report. Historical movements and current snapshots are deliberately separate.
- * Population: all current member records in the tenant, optionally on one CURRENT tier, across all places.
+ * Population: current member records in the tenant, filtered by CURRENT tier, status and email consent, across all places.
  * Activity: a non-reversed positive ledger line (except cancellation refunds/expiry), or a redemption debit.
  * Weekly unique counts are never summed to obtain the period's unique count. All SQL is SQLite/Postgres portable.
  */
 final class InsightsReport
 {
-    public function __construct(private readonly int $orgId, private readonly ?int $tierId = null) {}
+    private readonly InsightsAudience $audience;
+
+    public function __construct(private readonly int $orgId, private readonly ?int $tierId = null, ?InsightsAudience $audience = null)
+    {
+        $this->audience = $audience ?? new InsightsAudience($orgId, $tierId);
+    }
 
     public function get(string $from, string $to, bool $compare): array
     {
@@ -44,6 +48,8 @@ final class InsightsReport
         return [
             'from' => $from, 'to' => $to, 'days' => $days, 'timezone' => $zone, 'updated_at' => now()->toISOString(),
             'snapshot_date' => $today, 'tier_id' => $this->tierId,
+            'state' => $this->audience->state, 'consent' => $this->audience->consent,
+            'without_tier' => $this->audience->withoutTier, 'filter_options' => InsightsAudience::options(),
             'comparison' => $previous ? ['from' => $previous->from, 'to' => $previous->to] : null,
             'current' => $current, 'previous' => $prior, 'series' => $this->series($period, $current['money']),
             'previous_series' => $previous ? $this->series($previous, $prior['money']) : [],
@@ -58,8 +64,7 @@ final class InsightsReport
 
     private function members(): Builder
     {
-        return LoyaltyMember::withoutGlobalScopes()->where('organization_id', $this->orgId)
-            ->when($this->tierId !== null, fn ($q) => $q->where('tier_id', $this->tierId));
+        return $this->audience->members();
     }
 
     private function ledger(InsightsPeriod $p): Query
@@ -109,7 +114,7 @@ final class InsightsReport
             'issued' => $issued, 'redeemed' => $redeemed, 'expired' => $expired, 'claims' => $claims,
             'fulfilled' => $fulfilled, 'pending' => (int) ($states['pending'] ?? 0), 'cancelled' => (int) ($states['cancelled'] ?? 0),
             'fulfilment' => $claims ? round($fulfilled / $claims * 100, 1) : null,
-            'money' => InsightsMoney::for($this->orgId, '30d', $p, $this->tierId)];
+            'money' => InsightsMoney::for($this->orgId, '30d', $p, $this->tierId, $this->audience)];
     }
 
     private function week(InsightsPeriod $p, string $start): InsightsPeriod

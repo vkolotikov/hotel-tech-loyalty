@@ -44,7 +44,7 @@ final class InsightsMoney
     ];
 
     /** @return array<string, mixed> */
-    public static function for(int $orgId, string $choice, ?InsightsPeriod $reportPeriod = null, ?int $tierId = null): array
+    public static function for(int $orgId, string $choice, ?InsightsPeriod $reportPeriod = null, ?int $tierId = null, ?InsightsAudience $audience = null): array
     {
         $zone = VenueClock::zone($orgId);
         $period = $reportPeriod ?? InsightsPeriod::of($choice, VenueClock::today($orgId), $zone);
@@ -58,8 +58,9 @@ final class InsightsMoney
             'all'      => 0,
             'other'    => 0,
         ];
-        self::stays($orgId, $period, $currency, $c, $tierId);
-        self::services($orgId, $period, $currency, $c, $tierId);
+        $audience ??= new InsightsAudience($orgId, $tierId);
+        self::stays($orgId, $period, $currency, $c, $audience);
+        self::services($orgId, $period, $currency, $c, $audience);
 
         $stays = array_sum($c['stays']);
         $services = array_sum($c['services']);
@@ -87,19 +88,20 @@ final class InsightsMoney
     }
 
     /** @param array<string, mixed> $c */
-    private static function stays(int $orgId, InsightsPeriod $period, string $currency, array &$c, ?int $tierId = null): void
+    private static function stays(int $orgId, InsightsPeriod $period, string $currency, array &$c, InsightsAudience $audience): void
     {
         $stayCurrency = strtoupper((string) HotelSetting::getValue('booking_currency', 'EUR'));
         $booked = 'COALESCE(booking_mirror.source_created_at, booking_mirror.created_at)';
         $paid = 'COALESCE(booking_mirror.price_paid, 0) - COALESCE(booking_mirror.refunded_amount, 0)';
 
+        [$memberSql, $memberBindings] = self::byMember('booking_mirror', $audience);
         $rows = BookingMirror::query()
             ->where('booking_mirror.organization_id', $orgId)
             ->whereRaw("{$booked} >= ? AND {$booked} < ?", [$period->startUtc(), $period->endUtc()])
             ->whereRaw("{$paid} > 0")
             ->whereRaw("COALESCE(booking_mirror.payment_method, '') <> 'mock'")
             ->addSelect('booking_mirror.raw_json')
-            ->selectRaw("{$booked} AS booked_at, {$paid} AS paid, CASE WHEN " . self::byMember('booking_mirror', $tierId) . ' THEN 1 ELSE 0 END AS by_member', [$orgId, $orgId, $orgId])
+            ->selectRaw("{$booked} AS booked_at, {$paid} AS paid, CASE WHEN " . $memberSql . ' THEN 1 ELSE 0 END AS by_member', $memberBindings)
             ->toBase()->cursor();
 
         foreach ($rows as $row) {
@@ -114,7 +116,7 @@ final class InsightsMoney
     }
 
     /** @param array<string, mixed> $c */
-    private static function services(int $orgId, InsightsPeriod $period, string $currency, array &$c, ?int $tierId = null): void
+    private static function services(int $orgId, InsightsPeriod $period, string $currency, array &$c, InsightsAudience $audience): void
     {
         $inPeriod = fn () => ServiceBooking::query()->withoutGlobalScope(BrandScope::class)
             ->where('service_bookings.organization_id', $orgId)
@@ -126,9 +128,10 @@ final class InsightsMoney
             ->whereIn('service_booking_id', $inPeriod()->select('service_bookings.id'))
             ->orderByDesc('id')->get()->groupBy('service_booking_id');
 
+        [$memberSql, $memberBindings] = self::byMember('service_bookings', $audience);
         $rows = $inPeriod()->orderBy('service_bookings.id')
             ->select(array_map(fn (string $col) => "service_bookings.{$col}", self::SERVICE_COLUMNS))
-            ->selectRaw('CASE WHEN ' . self::byMember('service_bookings', $tierId) . ' THEN 1 ELSE 0 END AS by_member', [$orgId, $orgId, $orgId])
+            ->selectRaw('CASE WHEN ' . $memberSql . ' THEN 1 ELSE 0 END AS by_member', $memberBindings)
             ->cursor();
 
         foreach ($rows as $b) {
@@ -162,16 +165,15 @@ final class InsightsMoney
     }
 
     /**
-     * The row names a member of this organisation, or its guest is linked to one (three bindings: the organisation).
+     * Both direct and guest-linked bookings use the report's member population and bound SQL values.
      */
-    private static function byMember(string $table, ?int $tierId = null): string
+    private static function byMember(string $table, InsightsAudience $audience): array
     {
-        // An integer from the validated, tenant-owned tier selection; bindings above remain the three tenant IDs.
-        $direct = $tierId === null ? '' : ' AND bm.tier_id = ' . (int) $tierId;
-        $guest = $tierId === null ? '' : ' AND bgm.tier_id = ' . (int) $tierId;
-        return "(EXISTS (SELECT 1 FROM loyalty_members bm WHERE bm.id = {$table}.member_id AND bm.organization_id = ?{$direct})"
-            . " OR EXISTS (SELECT 1 FROM guests bg JOIN loyalty_members bgm ON bgm.id = bg.member_id"
-            . " WHERE bg.id = {$table}.guest_id AND bg.organization_id = ? AND bgm.organization_id = ?{$guest}))";
+        $direct = $audience->members('bm')->selectRaw('1')->whereColumn('bm.id', $table . '.member_id');
+        $guest = $audience->members('bgm')->selectRaw('1')->join('guests as bg', 'bg.member_id', '=', 'bgm.id')
+            ->whereColumn('bg.id', $table . '.guest_id')->where('bg.organization_id', $audience->orgId);
+        return ['(EXISTS (' . $direct->toSql() . ') OR EXISTS (' . $guest->toSql() . '))',
+            [...$direct->getBindings(), ...$guest->getBindings()]];
     }
 
     private static function cents(mixed $amount): int

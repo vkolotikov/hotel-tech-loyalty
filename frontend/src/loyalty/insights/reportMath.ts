@@ -7,7 +7,26 @@ export function reportFilters(search: string, today: string): ReportFilters {
   const p = new URLSearchParams(search)
   const valid = (v: string | null) => v && /^\d{4}-\d{2}-\d{2}$/.test(v) && !Number.isNaN(Date.parse(v)) && new Date(v).toISOString().slice(0, 10) === v
   const to = valid(p.get('to')) ? p.get('to')! : shiftDay(today, -1)
-  return { from: valid(p.get('from')) ? p.get('from')! : shiftDay(to, -27), to, compare: p.get('compare') === 'none' ? 'none' : 'previous', tier_id: /^\d+$/.test(p.get('tier_id') ?? '') ? p.get('tier_id')! : '' }
+  return { from: valid(p.get('from')) ? p.get('from')! : shiftDay(to, -27), to, compare: p.get('compare') === 'none' ? 'none' : 'previous',
+    tier_id: p.get('tier_id') === 'none' ? 'none' : /^\d+$/.test(p.get('tier_id') ?? '') ? p.get('tier_id')! : '',
+    state: p.get('state') === 'active' ? 'active' : p.get('state') === 'inactive' ? 'inactive' : 'all',
+    consent: p.get('consent') === 'yes' ? 'yes' : p.get('consent') === 'no' ? 'no' : 'all' }
+}
+export function reportRequest(f: ReportFilters) {
+  return { ...f, tier_id: f.tier_id && f.tier_id !== 'none' ? f.tier_id : undefined, without_tier: f.tier_id === 'none' ? 1 : undefined }
+}
+export type ReportPreset = '7d' | '28d' | '90d' | 'month' | 'year' | 'custom'
+export function presetRange(preset: Exclude<ReportPreset, 'custom'>, today: string) {
+  const to = preset === 'month' ? shiftDay(today.slice(0, 7) + '-01', -1) : shiftDay(today, -1)
+  const from = preset === 'month' ? to.slice(0, 7) + '-01' : preset === 'year' ? shiftDay(to, -364) : shiftDay(to, -(Number.parseInt(preset) - 1))
+  return { from, to }
+}
+export function selectedPreset(f: ReportFilters, today: string): ReportPreset {
+  for (const preset of ['28d', '7d', '90d', 'month', 'year'] as const) {
+    const range = presetRange(preset, today)
+    if (f.from === range.from && f.to === range.to) return preset
+  }
+  return 'custom'
 }
 export function validReportRange(f: ReportFilters, today: string): boolean {
   const d = (Date.parse(f.to) - Date.parse(f.from)) / 86400000
@@ -26,7 +45,8 @@ export function csvCell(value: unknown): string {
 export function reportCsv(r: InsightsReport, level: string): string {
   const rows: unknown[][] = [
     ['HexaTech loyalty report'], ['From', r.from], ['To', r.to], ['Timezone', r.timezone], ['Current membership level', level],
-    ['Place', 'All places'], ['Updated', r.updated_at], ['Snapshot date', r.snapshot_date],
+    ['Place', 'All places'], ['Current member status', r.state ?? 'all'], ['Current email marketing consent', r.consent ?? 'all'],
+    ['Updated', r.updated_at], ['Snapshot date', r.snapshot_date],
     ['Comparison from', r.comparison?.from], ['Comparison to', r.comparison?.to], ['Currency', r.current.money.currency],
     ['Metric', 'Selected period', 'Previous period'],
     ...(['members', 'active', 'new_members', 'participation', 'issued', 'redeemed', 'expired', 'claims', 'fulfilled', 'pending', 'cancelled', 'fulfilment'] as const).map(k => [k, r.current[k], r.previous?.[k]]),

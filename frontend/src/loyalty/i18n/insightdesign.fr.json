@@ -1,4 +1,9 @@
 {
+  "showFilters": "Afficher les filtres", "hideFilters": "Masquer les filtres", "resetFilters": "Réinitialiser les filtres", "appliedFilters": "Filtres appliqués", "unapplied": "Modifications non appliquées", "discardChanges": "Annuler les modifications",
+  "last7": "7 derniers jours", "last28": "28 derniers jours", "last90": "90 derniers jours", "last365": "365 derniers jours", "lastMonth": "Mois civil précédent", "customDates": "Dates personnalisées",
+  "memberState": "Statut du membre", "stateAll": "Tous les statuts", "stateActive": "Membres activés", "stateInactive": "Membres désactivés",
+  "emailConsent": "Offres par e-mail", "consentAll": "Toutes les préférences e-mail", "consentYes": "Offres par e-mail acceptées", "consentNo": "Offres par e-mail non acceptées",
+  "scopeCurrent": "Tous les lieux. Le niveau, le statut et les préférences e-mail sont ceux des membres actuellement. Seuls les jours terminés dans le fuseau du lieu sont inclus.",
   "emptyLevels": "Niveaux sans membres ({{n}})", "noLevelMembers": "Aucun membre dans cet instantané pour le moment.",
   "line": "Suivez les performances de votre programme.",
   "definitions": "Définitions",

@@ -89,6 +89,19 @@ class InsightsMoneyTest extends TestCase
         $this->assertCount(13, $response->json('series'));
     }
 
+    public function test_report_audience_filters_paid_appointments_including_guest_links(): void
+    {
+        $this->ada->forceFill(['is_active' => true, 'marketing_consent' => true])->save();
+        $this->grace->forceFill(['is_active' => false, 'marketing_consent' => false])->save();
+        $this->appointment(['member_id' => $this->ada->id, 'payment_status' => 'paid', 'stripe_payment_intent_id' => 'pi_fixture_report_a'], '2026-10-01 12:00:00');
+        $this->appointment(['guest_id' => $this->guestOf($this->ada->id), 'payment_status' => 'paid', 'stripe_payment_intent_id' => 'pi_fixture_report_b'], '2026-10-01 12:00:00');
+        $this->appointment(['member_id' => $this->grace->id, 'payment_status' => 'paid', 'stripe_payment_intent_id' => 'pi_fixture_report_c'], '2026-10-01 12:00:00');
+        $this->asManager()->getJson($this->api('insights/report?brand_id=all&state=active&consent=yes'))
+            ->assertOk()->assertJsonPath('current.money.members.services.bookings', 2)->assertJsonPath('current.money.members.total', 160);
+        $this->asManager()->getJson($this->api('insights/report?brand_id=all&state=inactive&consent=no'))
+            ->assertOk()->assertJsonPath('current.money.members.services.bookings', 1)->assertJsonPath('current.money.members.total', 80);
+    }
+
     public function test_paid_stays_and_appointments_of_members_in_the_venues_currency_beside_every_bookings(): void
     {
         $ada = $this->ada->id;

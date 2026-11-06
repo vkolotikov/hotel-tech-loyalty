@@ -26,6 +26,8 @@ no longer stretches with them. All report data, routes and interactions are reta
 
 ## Who has it, and the ways in and back
 
+Insights filters (6 November 2026): native inline dropdowns replace the shared filter dialog. The collapsible panel remembers visibility on this device; applied dates and member scope remain visible. Presets use completed venue days (7/28/90/365, last calendar month), with explicit custom dates. Apply commits the draft to the URL; Discard changes and Reset are separate actions. `GET insights/report` additionally accepts `state=all|active|inactive`, `consent=all|yes|no` (current email marketing consent) and `without_tier=1` (mutually exclusive with `tier_id`). Its `filter_options` supplies the status and consent choices. `InsightsAudience` applies the same current-member population to activity, comparisons, levels, rewards, cohorts and direct/guest-linked member sales. Reports still cover all places: no place selector is shown until reliable attribution exists. Defaults and legacy detailed endpoints are unchanged. See `handoff/2026-11-06-hexatech-handoff.md` for verification and deployment.
+
 Dedicated mobile web (29 October 2026): at widths up to 767px, Loyalty uses the Figma Home/Members/Requests/Scan/
 More navigation and compact task screens. Members and requests have separate details, with existing writers behind
 review sheets. More retains secondary tools; Settings prioritises personal preferences and currency. Desktop layouts

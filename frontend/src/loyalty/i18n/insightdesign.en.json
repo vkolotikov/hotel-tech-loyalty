@@ -1,4 +1,9 @@
 {
+  "showFilters": "Show filters", "hideFilters": "Hide filters", "resetFilters": "Reset filters", "appliedFilters": "Applied filters", "unapplied": "Unapplied changes", "discardChanges": "Discard changes",
+  "last7": "Last 7 days", "last28": "Last 28 days", "last90": "Last 90 days", "last365": "Last 365 days", "lastMonth": "Last calendar month", "customDates": "Custom dates",
+  "memberState": "Member status", "stateAll": "All member statuses", "stateActive": "Enabled members", "stateInactive": "Switched-off members",
+  "emailConsent": "Email offers", "consentAll": "All email preferences", "consentYes": "Opted in to email offers", "consentNo": "Not opted in to email offers",
+  "scopeCurrent": "All places. Level, status and email preferences use each member’s current details. Dates include completed venue days only.",
   "emptyLevels": "Levels with no members ({{n}})", "noLevelMembers": "No members in this snapshot yet.",
   "line": "See how your programme is performing.",
   "definitions": "Definitions", "definitionsTitle": "Metric definitions", "definitionsLine": "Know what each number includes.",

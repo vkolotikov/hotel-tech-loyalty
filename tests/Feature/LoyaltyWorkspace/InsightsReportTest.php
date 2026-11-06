@@ -126,4 +126,33 @@ class InsightsReportTest extends TestCase
         $this->ada->forceFill(['is_active' => false])->save();
         $this->report()->assertJsonPath('attention.expiring', 0)->assertJsonPath('attention.quiet', 0)->assertJsonPath('outstanding', 200);
     }
+
+    public function test_audience_filters_apply_to_metrics_comparison_and_direct_and_guest_sales(): void
+    {
+        $this->ada->forceFill(['is_active' => true, 'marketing_consent' => true, 'joined_at' => '2026-09-08 00:00:00'])->save();
+        $this->grace->forceFill(['is_active' => false, 'marketing_consent' => false])->save();
+        $this->line(100, 'earn', '2026-10-01 12:00:00');
+        $this->line(50, 'earn', '2026-08-20 12:00:00');
+        $this->line(200, 'earn', '2026-10-01 12:00:00', ['member_id' => $this->grace->id]);
+        foreach ([[$this->ada->id, 120], [$this->grace->id, 80]] as [$member, $paid]) {
+            $guest = DB::table('guests')->insertGetId(['organization_id' => $this->org->id, 'member_id' => $member,
+                'full_name' => 'Report guest', 'created_at' => now(), 'updated_at' => now()]);
+            foreach ([['member_id' => $member], ['guest_id' => $guest]] as $link) {
+                DB::table('booking_mirror')->insert($link + ['organization_id' => $this->org->id, 'reservation_id' => uniqid('R'),
+                    'price_total' => $paid, 'price_paid' => $paid, 'created_at' => '2026-10-01 12:00:00', 'updated_at' => now()]);
+            }
+        }
+        $this->report('state=active&consent=yes')->assertJsonPath('current.issued', 100)->assertJsonPath('previous.issued', 50)
+            ->assertJsonPath('current.money.members.total', 240)->assertJsonPath('tiers.total', 1)
+            ->assertJsonPath('current.new_members', 1)->assertJsonPath('cohorts.0.members', 1)
+            ->assertJsonPath('state', 'active')->assertJsonPath('consent', 'yes')
+            ->assertJsonPath('filter_options.states', ['all', 'active', 'inactive']);
+        $this->report('state=inactive&consent=no')->assertJsonPath('current.issued', 200)
+            ->assertJsonPath('current.money.members.total', 160)->assertJsonPath('outstanding', 0);
+        $this->report('state=active&consent=no')->assertJsonPath('tiers.total', 0)->assertJsonPath('current.money.members.total', 0);
+        $this->report('without_tier=1')->assertJsonPath('tiers.total', 0)->assertJsonPath('without_tier', true);
+        foreach (['state=anything', 'consent=anything', 'without_tier=invalid', 'without_tier=1&tier_id=' . $this->tiers['gold']->id] as $q) {
+            $this->asManager()->getJson($this->api('insights/report?' . $q))->assertUnprocessable();
+        }
+    }
 }

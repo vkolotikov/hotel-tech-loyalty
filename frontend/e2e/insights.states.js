@@ -14,13 +14,25 @@ async page => {
   await page.locator('.l-in-hit').first().focus();await page.keyboard.press('Enter');await page.locator('.l-in-inspected').waitFor();ok((await page.locator('.l-in-inspected').innerText()).includes('4,000'),'chart is keyboard inspectable');
   await page.locator('.l-in-metric-switch').getByRole('button',{name:'Active members',exact:true}).click();
   await page.locator('.l-in-cell').first().click();await page.getByRole('heading',{name:'Cohort detail',exact:true}).waitFor();ok((await page.locator('dialog').innerText()).includes('11 of 18'),'cohort detail preserves numerator and denominator');await close();
-  await page.getByRole('button',{name:/^Reporting period:/}).click();await page.getByLabel('Start date',{exact:true}).fill('2026-10-01');await page.getByLabel('End date',{exact:true}).fill('2026-10-14');
-  await page.locator('dialog select').first().selectOption('none');await page.locator('dialog select').last().selectOption('2');await button('Apply filters').click();await page.waitForFunction(()=>!document.querySelector('.l-in-previous-line')&&document.querySelector('.l-in-tile')?.textContent.includes('120'));await ready();
+  ok(await page.getByLabel('Reporting period',{exact:true}).getAttribute('aria-haspopup')===null,'report period is a real select, not a dialog button');
+  await page.getByLabel('Reporting period',{exact:true}).selectOption('custom');await page.getByLabel('Start date',{exact:true}).fill('2026-10-01');await page.getByLabel('End date',{exact:true}).fill('2026-10-14');
+  await page.getByLabel('Compare with',{exact:true}).selectOption('none');await page.getByLabel('Membership level',{exact:true}).selectOption('2');
+  await page.getByLabel('Member status',{exact:true}).selectOption('active');await page.getByLabel('Email offers',{exact:true}).selectOption('yes');
+  ok((await page.locator('.l-in-tile').first().innerText()).includes('612'),'draft filters leave applied figures unchanged');
+  await button('Apply filters').click();await page.waitForFunction(()=>!document.querySelector('.l-in-previous-line')&&document.querySelector('.l-in-tile')?.textContent.includes('120'));await ready();
   ok(new URL(page.url()).searchParams.get('from')==='2026-10-01'&&new URL(page.url()).searchParams.get('tier_id')==='2','date and level filters persist in URL');ok(await page.locator('.l-in-previous-line').count()===0,'no-comparison removes previous chart');ok((await page.locator('.l-in-tile').first().innerText()).includes('120'),'new filters use new response');
+  ok(new URL(page.url()).searchParams.get('state')==='active'&&new URL(page.url()).searchParams.get('consent')==='yes','member and consent filters persist in URL');
+  await button('Hide filters').click();ok(await page.locator('#report-filter-fields').isHidden(),'filter controls collapse');ok((await page.locator('.l-in-filter-summary').innerText()).includes('Silver'),'collapsed summary retains applied scope');
+  await page.reload();await ready();ok(await page.locator('#report-filter-fields').isHidden(),'collapsed preference survives reload');await button('Show filters').click();
   await page.goBack();await ready();ok((await page.locator('.l-in-tile').first().innerText()).includes('612'),'browser back restores report scope');
-  await page.getByRole('button',{name:/^Reporting period:/}).click();await page.getByLabel('End date',{exact:true}).fill('2026-10-28');ok(await button('Apply filters').isDisabled(),'today cannot be included as a completed day');await button('Cancel').click();ok(!new URL(page.url()).searchParams.has('to'),'cancel discards unapplied dates');
+  await page.getByLabel('Reporting period',{exact:true}).selectOption('custom');await page.getByLabel('End date',{exact:true}).fill('2026-10-28');ok(await button('Apply filters').isDisabled(),'today cannot be included as a completed day');await button('Discard changes').click();ok(!new URL(page.url()).searchParams.has('to'),'discard leaves applied dates unchanged');
+  await page.getByLabel('Reporting period',{exact:true}).selectOption('7d');await button('Apply filters').click();await ready();ok(new URL(page.url()).searchParams.get('from')==='2026-10-21','seven-day preset uses completed venue days');await button('Reset filters').click();await ready();ok(new URL(page.url()).searchParams.get('from')==='2026-09-30','reset restores default report dates');
   await button('Definitions').click();await page.keyboard.press('Tab');ok(await page.evaluate(()=>document.querySelector('dialog[open]').contains(document.activeElement)),'definitions contain keyboard focus');await close();await page.waitForFunction(()=>document.activeElement?.textContent==='Definitions');ok(true,'definitions restore opener focus');
   const downloadPromise=page.waitForEvent('download');await button('Export report').click();const download=await downloadPromise;await download.saveAs(root+'report-fixture.csv');ok(download.suggestedFilename()==='loyalty-insights-2026-09-30-2026-10-27.csv','export has selected period filename');
+  await page.getByLabel('Membership level',{exact:true}).selectOption('none');await button('Apply filters').click();await ready();
+  const noLevelRequest=(await fixture({})).requests.filter(r=>r.path==='insights/report').at(-1),noLevelQuery=new URLSearchParams(noLevelRequest.query);
+  ok(noLevelQuery.get('without_tier')==='1'&&!noLevelQuery.has('tier_id'),'no-level choice sends a separate API flag without an invalid tier ID');
+  ok((await page.locator('.l-in-filter-summary').innerText()).includes('No level'),'no-level population is named in summary');await button('Reset filters').click();await ready();
   await fixture({fail:true});await button('Refresh').click();await page.getByText('The last refresh failed. Refresh before exporting this report.',{exact:true}).waitFor();ok(await button('Export report').isDisabled(),'stale report cannot be exported');await fixture({fail:false});await button('Try again').click();await ready();ok(true,'refresh failure recovers');
   await fixture({denied:true});await button('Refresh').click();await page.waitForFunction(()=>!document.querySelector('.l-in-tiles'));ok(await button('Export report').isDisabled(),'authorization loss hides cached data and export');await fixture({denied:false});await go();await ready();
   await fixture({limited:true});await go();await page.locator('.l-ov-recovery').waitFor();ok(await page.locator('.l-in-tiles').count()===0,'staff without analytics cannot see report');await fixture({limited:false,fail:true});await go();await page.locator('.l-ov-recovery').waitFor();ok(await page.locator('.l-in-tiles').count()===0,'initial failure is not fake zero data');await fixture({fail:false});await button('Try again').click();await ready();
@@ -32,11 +44,11 @@ async page => {
     await page.waitForFunction(()=>[...document.querySelectorAll('.l-in-trend-svg,.l-in-points-svg')].every(e=>Math.abs(e.getBoundingClientRect().width-e.viewBox.baseVal.width)<1));
     ok(true,'charts retain readable coordinate scale at '+width+'px');
     if(width===390)await page.screenshot({path:root+'render-mobile.png',fullPage:false});
-    for(const name of ['filters','definitions']){
-      await (name==='filters'?page.getByRole('button',{name:/^Reporting period:/}):button('Definitions')).click();await page.locator('dialog[open]').waitFor();
-      ok(await page.locator('dialog[open]').evaluate(e=>{const r=e.getBoundingClientRect();return r.left>=0&&r.right<=innerWidth+1&&r.height<=innerHeight&&e.scrollWidth<=e.clientWidth+1}),name+' fit '+width+'px');
-      if(width===390)await page.locator('dialog[open]').screenshot({path:root+'render-'+name+'-mobile.png'});await close();
-    }
+    ok(await page.locator('.l-in-filter-panel').evaluate(e=>e.scrollWidth<=e.clientWidth+1),'filter controls fit '+width+'px');
+    if(width===390)await page.locator('.l-in-filter-panel').screenshot({path:root+'render-filters-mobile.png'});
+    await button('Definitions').click();await page.locator('dialog[open]').waitFor();
+    ok(await page.locator('dialog[open]').evaluate(e=>{const r=e.getBoundingClientRect();return r.left>=0&&r.right<=innerWidth+1&&r.height<=innerHeight&&e.scrollWidth<=e.clientWidth+1}),'definitions fit '+width+'px');
+    if(width===390)await page.locator('dialog[open]').screenshot({path:root+'render-definitions-mobile.png'});await close();
   }
   await page.setViewportSize({width:1440,height:1080});await page.getByRole('link',{name:'Detailed reports →',exact:true}).click();await page.getByText('Members over time',{exact:true}).waitFor();ok(await page.locator('#insights-at-risk').count()===1,'all original reports remain accessible');await page.getByRole('link',{name:'← Back to dashboard',exact:true}).click();await ready();
   await button('Settings').click();await button('Light').click();await page.locator('[data-theme=light]').waitFor();await close();await page.screenshot({path:root+'render-light.png',fullPage:false,animations:'disabled'});ok(true,'light theme supported');
