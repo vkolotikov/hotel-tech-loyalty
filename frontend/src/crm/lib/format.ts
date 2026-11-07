@@ -63,7 +63,9 @@ export function percent(part: number, total: number): number | null {
 
 /** Up to two initials of a name ("Ada Lovelace" → "AL"), or the first letter of an email; "?" for nobody. */
 export function initials(name: string | null | undefined): string {
-  const words = (name ?? '').trim().split(/[\s@._-]+/).filter(Boolean)
+  const raw = (name ?? '').trim()
+  // An email address: its first letter only ("maria@example.test" → "M").
+  const words = (raw.includes('@') ? raw.slice(0, 1) : raw).split(/[\s._-]+/).filter(Boolean)
   if (words.length === 0) return '?'
   const letters = words.length === 1 ? [...words[0]].slice(0, 1) : [[...words[0]][0], [...words[words.length - 1]][0]]
   return letters.join('').toUpperCase()
