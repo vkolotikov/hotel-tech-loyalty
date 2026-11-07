@@ -5,7 +5,9 @@
     "plan_line": "Su paquete, lo que incluye y los demás productos de HexaTech.",
     "team": "Equipo",
     "team_line": "Invite a compañeros, decida qué puede hacer cada uno, desactive a alguien.",
-    "team_staff": "Vea quién trabaja aquí. Solo un propietario o un responsable puede invitar."
+    "team_staff": "Vea quién trabaja aquí. Solo un propietario o un responsable puede invitar.",
+    "open_team": "Abrir Equipo",
+    "open_plan": "Abrir Plan y productos"
   },
   "canned": {
     "add": "Añadir una respuesta",
@@ -19,7 +21,10 @@
     "saved": "Guardado. La bandeja de entrada ya ofrece estas respuestas.",
     "text": "Texto",
     "text_required": "Escriba la respuesta.",
-    "this": "esta respuesta"
+    "this": "esta respuesta",
+    "count": "{{count}} de {{max}}",
+    "up": "Subir {{name}}",
+    "down": "Bajar {{name}}"
   },
   "deleted": "Eliminado",
   "discard": "Descartar",
@@ -54,9 +59,15 @@
     "task": "Tareas",
     "type": "Tipo de respuesta",
     "type_fixed": "Fijo una vez creado el campo.",
-    "up": "Subir {{name}}"
+    "up": "Subir {{name}}",
+    "card_inquiry": "Campos de leads",
+    "card_guest": "Campos de contactos",
+    "card_company": "Campos de empresas",
+    "card_task": "Campos de tareas",
+    "card_line": "En este orden en el formulario y en la página del registro.",
+    "col_rules": "Reglas"
   },
-  "fix_first": "Algunos campos necesitan revisión antes de guardar.",
+  "fix_first": "Corrija los campos marcados para guardar.",
   "forms": {
     "active": "El formulario acepta envíos",
     "add": "Nuevo formulario",
@@ -127,7 +138,13 @@
     "title": "Título",
     "too_long": "Un texto es más largo de lo permitido.",
     "type": "Tipo de respuesta",
-    "untitled": "Campo sin nombre"
+    "untitled": "Campo sin nombre",
+    "count": "{{live}} de {{total}} activos",
+    "col_form": "Formulario",
+    "col_status": "Estado",
+    "col_sent": "Enviados",
+    "col_last": "Último envío",
+    "never": "Todavía no"
   },
   "line": "Respuestas, pipelines, formularios y campos: cómo trabaja HexaTech CRM para su equipo.",
   "move_down": "Bajar",
@@ -136,6 +153,7 @@
     "add": "Añadir un pipeline",
     "add_stage": "Añadir una etapa",
     "block_deals": "Aún tiene {{count}} leads. Muévalos o ciérrelos primero.",
+    "block_deals_one": "Aún tiene 1 lead. Muévalo o ciérrelo primero.",
     "block_default": "Es el predeterminado para leads nuevos. Haga predeterminado otro pipeline primero.",
     "cannot_delete": "{{name}} aún no se puede eliminar",
     "colour": "Color",
@@ -159,6 +177,7 @@
     "rename": "Renombrar {{name}}",
     "rename_title": "Renombrar el pipeline",
     "stage_deals": "{{count}} leads",
+    "stage_deals_one": "1 lead",
     "stage_delete": "Eliminar {{name}}",
     "stage_delete_title": "¿Eliminar la etapa {{name}}?",
     "stage_down": "Bajar {{name}}",
@@ -166,6 +185,7 @@
     "stage_edit_title": "Editar la etapa",
     "stage_empty": "Ningún lead está en esta etapa.",
     "stage_moves": "Sus {{count}} leads pasan a {{stage}}.",
+    "stage_moves_one": "Su lead pasa a {{stage}}.",
     "stage_name": "Nombre",
     "stage_new_title": "Nueva etapa",
     "stage_placeholder": "p. ej. Oferta enviada",
@@ -174,9 +194,12 @@
     "win_bad": "Un número entero de 0 a 100.",
     "win_hint": "Como referencia; déjelo vacío si no hay.",
     "win_label": "Probabilidad habitual de ganar (%)",
-    "stage_deals_one": "1 lead",
-    "block_deals_one": "Aún tiene 1 lead. Muévalo o ciérrelo primero.",
-    "stage_moves_one": "Su lead pasa a {{stage}}."
+    "stages_of": "Etapas de {{name}}",
+    "col_stage": "Etapa",
+    "col_chance": "Probabilidad",
+    "col_leads": "Leads",
+    "no_chance": "Sin probabilidad indicada",
+    "stage_last": "{{name}} es la única etapa de su tipo y se queda"
   },
   "read_only": "Solo un propietario o un responsable puede cambiar esto. Usted puede consultarlo todo aquí.",
   "reasons": {
@@ -184,6 +207,7 @@
     "delete_line": "Ningún lead lo usa. Se elimina para siempre.",
     "delete_title": "¿Eliminar el motivo {{name}}?",
     "delete_used": "Se usa en {{count}} leads, así que se desactivará en su lugar: esos leads lo conservan.",
+    "delete_used_one": "Se usa en 1 lead, así que se desactivará en su lugar: ese lead lo conserva.",
     "empty": "Aún no hay motivos.",
     "hide": "Desactivar {{name}}",
     "label": "Motivo",
@@ -196,8 +220,7 @@
     "switched_off": "Se usa en leads anteriores, así que se desactivó en lugar de eliminarse.",
     "title": "Por qué se pierden leads",
     "used": "Usado en {{count}} leads",
-    "used_one": "Usado en 1 lead",
-    "delete_used_one": "Se usa en 1 lead, así que se desactivará en su lugar: ese lead lo conserva."
+    "used_one": "Usado en 1 lead"
   },
   "sections": "Secciones",
   "tab": {
@@ -219,5 +242,13 @@
     "textarea": "Varias líneas",
     "url": "Dirección web"
   },
-  "unsaved": "Tiene cambios sin guardar."
+  "unsaved": "Cambios sin guardar",
+  "actions": "Acciones",
+  "caption": {
+    "canned": "Respuestas breves que el equipo inserta en la bandeja de entrada.",
+    "pipelines": "Las etapas de un lead y por qué se pierden leads.",
+    "forms": "Formularios en su sitio web que le envían leads.",
+    "fields": "Sus propios campos en leads, contactos y tareas.",
+    "account": "Su equipo y su plan."
+  }
 }

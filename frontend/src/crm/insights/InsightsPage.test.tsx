@@ -55,7 +55,7 @@ const pipeline: Pipeline = {
   ],
 }
 
-function render(manager: boolean) {
+function render(manager: boolean, tab: 'chat' | 'pipeline' = 'chat') {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } })
   const span = windows(7, new Date())
   qc.setQueryData(['crm', 'insights', 'chat', 7], chat)
@@ -71,7 +71,7 @@ function render(manager: boolean) {
   qc.setQueryData(['crm', 'insights', 'deals'], { top_customers: [{ guest_id: 9, name: 'Bo Berg', company: 'Berg AB', deals: 2, revenue: 4200 }] })
   return renderToStaticMarkup(
     <QueryClientProvider client={qc}>
-      <MemoryRouter initialEntries={['/crm/insights?days=7']}>
+      <MemoryRouter initialEntries={[tab === 'chat' ? '/crm/insights?days=7' : '/crm/insights?days=7&tab=pipeline']}>
         <CrmContext.Provider value={{ data: boot(manager), isLoading: false, isError: false, error: null, refetch: () => {} }}>
           <Routes><Route path="/crm/insights" element={<InsightsPage />} /></Routes>
         </CrmContext.Provider>
@@ -81,10 +81,18 @@ function render(manager: boolean) {
 }
 
 describe('Insights, rendered', () => {
+  it('shows the two sections, the chat first, and the period in the toolbar', () => {
+    const html = render(false)
+    expect(html).toContain('id="crm-insights-section-chat"')
+    expect(html).toContain('id="crm-insights-section-pipeline"')
+    expect(html).toMatch(/id="crm-insights-section-chat"[^>]*aria-selected="true"|aria-selected="true"[^>]*id="crm-insights-section-chat"/)
+    expect(html).toContain('role="tabpanel"')
+    expect(html).toMatch(/aria-pressed="true"[^>]*>7 days/)
+    expect(html).toContain('Each figure against the 7 days before')
+  })
+
   it('shows the chat’s figures against the period before, with the chart as a table for screen readers', () => {
     const html = render(false)
-    expect(html).toContain('aria-pressed="true"')
-    expect(html).toContain('7 days')
     expect(html).toContain('25 % more than the 7 days before')
     expect(html).toContain('5 points more than the 7 days before')
     expect(html).toContain('The busiest was 4 Nov, with 12.')
@@ -92,20 +100,29 @@ describe('Insights, rendered', () => {
     expect(html).toContain('/rooms?lang=de')
     expect(html).toContain('Latvia')
     expect(html).toContain('Busiest around 10:00')
+    expect(html).not.toContain('Your pipeline</h2>')
+  })
+
+  it('labels the hours in the venue’s zone, not UTC', () => {
+    const html = render(false)
+    expect(html).toContain('Europe/Riga')
+    expect(html).toContain('by hour (Europe/Riga)')
+    expect(html).not.toMatch(/UTC/)
   })
 
   it('shows the pipeline: new leads, stages, the win rate, what needs attention and the best customers', () => {
-    const html = render(false)
+    const html = render(false, 'pipeline')
     expect(html).toContain('50 % more than the 7 days before')
     expect(html).toContain('75 %')
     expect(html).toContain('10 leads in Sales: 6 open, 3 won, 1 lost.')
     expect(html).toContain('href="/crm/leads/41"')
     expect(html).toContain('href="/crm/contacts/9"')
     expect(html).not.toContain('Why leads were lost')
+    expect(html).not.toContain('Busiest around')
   })
 
   it('shows managers why leads were lost', () => {
-    expect(render(true)).toContain('Why leads were lost')
+    expect(render(true, 'pipeline')).toContain('Why leads were lost')
   })
 })
 

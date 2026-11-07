@@ -5,7 +5,9 @@
     "plan_line": "Ihr Paket, was es enthält, und die anderen HexaTech-Produkte.",
     "team": "Team",
     "team_line": "Kollegen einladen, festlegen, was jeder darf, jemanden deaktivieren.",
-    "team_staff": "Sehen, wer hier arbeitet. Nur ein Inhaber oder Manager kann Personen einladen."
+    "team_staff": "Sehen, wer hier arbeitet. Nur ein Inhaber oder Manager kann Personen einladen.",
+    "open_team": "Team öffnen",
+    "open_plan": "Plan & Produkte öffnen"
   },
   "canned": {
     "add": "Antwort hinzufügen",
@@ -19,7 +21,10 @@
     "saved": "Gespeichert. Der Posteingang bietet diese Antworten jetzt an.",
     "text": "Text",
     "text_required": "Schreiben Sie die Antwort.",
-    "this": "diese Antwort"
+    "this": "diese Antwort",
+    "count": "{{count}} von {{max}}",
+    "up": "{{name}} nach oben",
+    "down": "{{name}} nach unten"
   },
   "deleted": "Gelöscht",
   "discard": "Verwerfen",
@@ -54,9 +59,15 @@
     "task": "Aufgaben",
     "type": "Art der Antwort",
     "type_fixed": "Nach dem Anlegen fest.",
-    "up": "{{name}} nach oben"
+    "up": "{{name}} nach oben",
+    "card_inquiry": "Felder für Leads",
+    "card_guest": "Felder für Kontakte",
+    "card_company": "Felder für Firmen",
+    "card_task": "Felder für Aufgaben",
+    "card_line": "In dieser Reihenfolge im Formular und auf der Seite des Eintrags.",
+    "col_rules": "Regeln"
   },
-  "fix_first": "Einige Felder brauchen vor dem Speichern noch einen Blick.",
+  "fix_first": "Korrigieren Sie die markierten Felder, um zu speichern.",
   "forms": {
     "active": "Das Formular nimmt Einsendungen an",
     "add": "Neues Formular",
@@ -127,7 +138,13 @@
     "title": "Überschrift",
     "too_long": "Ein Text ist länger als erlaubt.",
     "type": "Art der Antwort",
-    "untitled": "Feld ohne Namen"
+    "untitled": "Feld ohne Namen",
+    "count": "{{live}} von {{total}} live",
+    "col_form": "Formular",
+    "col_status": "Status",
+    "col_sent": "Gesendet",
+    "col_last": "Zuletzt gesendet",
+    "never": "Noch nicht"
   },
   "line": "Antworten, Pipelines, Formulare und Felder: wie HexaTech CRM für Ihr Team arbeitet.",
   "move_down": "Nach unten",
@@ -136,6 +153,7 @@
     "add": "Pipeline hinzufügen",
     "add_stage": "Phase hinzufügen",
     "block_deals": "Sie hat noch {{count}} Leads. Verschieben oder schließen Sie diese zuerst.",
+    "block_deals_one": "Sie hat noch 1 Lead. Verschieben oder schließen Sie ihn zuerst.",
     "block_default": "Sie ist die Standard-Pipeline für neue Leads. Machen Sie zuerst eine andere zum Standard.",
     "cannot_delete": "{{name}} kann noch nicht gelöscht werden",
     "colour": "Farbe",
@@ -159,6 +177,7 @@
     "rename": "{{name}} umbenennen",
     "rename_title": "Pipeline umbenennen",
     "stage_deals": "{{count}} Leads",
+    "stage_deals_one": "1 Lead",
     "stage_delete": "{{name}} löschen",
     "stage_delete_title": "Phase {{name}} löschen?",
     "stage_down": "{{name}} nach unten",
@@ -166,6 +185,7 @@
     "stage_edit_title": "Phase bearbeiten",
     "stage_empty": "Kein Lead ist in dieser Phase.",
     "stage_moves": "Ihre {{count}} Leads wandern nach {{stage}}.",
+    "stage_moves_one": "Ihr Lead wandert nach {{stage}}.",
     "stage_name": "Name",
     "stage_new_title": "Neue Phase",
     "stage_placeholder": "z. B. Angebot gesendet",
@@ -174,9 +194,12 @@
     "win_bad": "Eine ganze Zahl von 0 bis 100.",
     "win_hint": "Zu Ihrer Orientierung; leer lassen für keine.",
     "win_label": "Übliche Gewinnchance (%)",
-    "stage_deals_one": "1 Lead",
-    "block_deals_one": "Sie hat noch 1 Lead. Verschieben oder schließen Sie ihn zuerst.",
-    "stage_moves_one": "Ihr Lead wandert nach {{stage}}."
+    "stages_of": "Phasen von {{name}}",
+    "col_stage": "Phase",
+    "col_chance": "Chance",
+    "col_leads": "Leads",
+    "no_chance": "Keine Chance angegeben",
+    "stage_last": "{{name}} ist die einzige Phase dieser Art und bleibt"
   },
   "read_only": "Nur ein Inhaber oder Manager kann das ändern. Sie können hier alles lesen.",
   "reasons": {
@@ -184,6 +207,7 @@
     "delete_line": "Kein Lead nutzt ihn. Er wird endgültig gelöscht.",
     "delete_title": "Grund {{name}} löschen?",
     "delete_used": "Er wird bei {{count}} Leads verwendet und daher stattdessen ausgeschaltet: Diese Leads behalten ihn.",
+    "delete_used_one": "Er wird bei 1 Lead verwendet und daher stattdessen ausgeschaltet: Dieser Lead behält ihn.",
     "empty": "Noch keine Gründe.",
     "hide": "{{name}} ausschalten",
     "label": "Grund",
@@ -196,8 +220,7 @@
     "switched_off": "Er wird bei früheren Leads verwendet und wurde daher ausgeschaltet statt gelöscht.",
     "title": "Warum Leads verloren gehen",
     "used": "Bei {{count}} Leads verwendet",
-    "used_one": "Bei 1 Lead verwendet",
-    "delete_used_one": "Er wird bei 1 Lead verwendet und daher stattdessen ausgeschaltet: Dieser Lead behält ihn."
+    "used_one": "Bei 1 Lead verwendet"
   },
   "sections": "Bereiche",
   "tab": {
@@ -219,5 +242,13 @@
     "textarea": "Mehrere Zeilen",
     "url": "Webadresse"
   },
-  "unsaved": "Sie haben Änderungen, die noch nicht gespeichert sind."
+  "unsaved": "Ungespeicherte Änderungen",
+  "actions": "Aktionen",
+  "caption": {
+    "canned": "Kurze Antworten, die das Team im Posteingang einfügt.",
+    "pipelines": "Die Phasen eines Leads und warum Leads verloren gehen.",
+    "forms": "Formulare auf Ihrer Website, die Ihnen Leads senden.",
+    "fields": "Eigene Felder für Leads, Kontakte und Aufgaben.",
+    "account": "Ihr Team und Ihr Tarif."
+  }
 }

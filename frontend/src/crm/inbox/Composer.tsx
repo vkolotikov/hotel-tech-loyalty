@@ -112,7 +112,7 @@ export function Composer({ conversationId, status, messages, aiOn, onTakeOver, t
     if (problem) { toast(t(`crm.inbox.upload_error.${problem}`, UPLOAD_ERROR_DEFAULTS[problem]), 'danger'); return }
     upload.mutate(picked)
   }
-  const tool = 'grid h-9 w-9 shrink-0 place-items-center rounded-full text-a-text-2 hover:bg-a-surface-2 hover:text-a-text disabled:opacity-50'
+  const tool = 'grid h-10 w-10 shrink-0 place-items-center rounded-full text-a-text-2 hover:bg-a-surface-2 hover:text-a-text focus-visible:outline-2 focus-visible:outline-a-accent disabled:opacity-50'
 
   return (
     <div className="relative border-t border-a-border bg-a-surface px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3">
@@ -191,44 +191,45 @@ export function Composer({ conversationId, status, messages, aiOn, onTakeOver, t
         </>
       )}
 
-      <div className="flex items-end gap-2">
-        <label className="min-w-0 flex-1">
+      <div className="rounded-2xl border border-a-border bg-a-surface shadow-a-sm transition-colors focus-within:border-a-accent focus-within:ring-2 focus-within:ring-a-accent/25">
+        <label className="block">
           <span className="sr-only">{t('crm.inbox.reply', 'Your reply')}</span>
           <textarea ref={box} value={text} rows={2} maxLength={5000} onChange={e => typed(e.target.value)} onKeyDown={onKey}
             placeholder={dictation.state === 'recording' ? t('crm.inbox.listening', 'Listening… press stop when you are done')
               : dictation.state === 'transcribing' ? t('crm.inbox.transcribing', 'Turning your words into text…')
               : t('crm.inbox.reply_placeholder', 'Write a reply. Enter sends, Shift+Enter starts a new line.')}
-            className={`${CONTROL} max-h-48 min-h-11 resize-y`} />
+            className="block max-h-48 min-h-16 w-full resize-y rounded-t-2xl bg-transparent px-3.5 pb-2 pt-3 text-sm text-a-text placeholder:text-a-text-2 focus:outline-hidden" />
         </label>
-        <Button onClick={submit} disabled={!body} loading={reply.isPending} aria-label={t('crm.inbox.send', 'Send')} className="shrink-0">
-          {!reply.isPending && <Send size={16} aria-hidden />}<span className="hidden sm:inline">{t('crm.inbox.send', 'Send')}</span>
-        </Button>
-      </div>
 
-      <div className="mt-2 flex flex-wrap items-center gap-1">
-        <button type="button" className={tool} aria-label={t('crm.inbox.canned', 'Canned replies')} title={t('crm.inbox.canned', 'Canned replies')}
-          aria-expanded={menu === 'canned'} aria-haspopup="menu" onClick={() => setMenu(m => (m === 'canned' ? null : 'canned'))}><Zap size={17} aria-hidden /></button>
-        <button type="button" className={tool} aria-label={t('crm.inbox.emoji', 'Emoji')} title={t('crm.inbox.emoji', 'Emoji')}
-          aria-expanded={menu === 'emoji'} aria-haspopup="menu" onClick={() => setMenu(m => (m === 'emoji' ? null : 'emoji'))}><Smile size={17} aria-hidden /></button>
-        <input ref={file} type="file" accept={UPLOAD_ACCEPT} className="sr-only" tabIndex={-1} aria-hidden onChange={e => pickFile(e.target.files?.[0])} />
-        <button type="button" className={tool} aria-label={t('crm.inbox.attach', 'Send a file')} title={t('crm.inbox.attach', 'Send a file')}
-          disabled={upload.isPending} onClick={() => file.current?.click()}>
-          {upload.isPending ? <Loader2 size={17} aria-hidden className="animate-spin" /> : <Paperclip size={17} aria-hidden />}
-        </button>
-        {canDictate() && (
-          <button type="button" onClick={dictation.toggle} disabled={dictation.state === 'transcribing'} aria-pressed={dictation.state === 'recording'}
-            aria-label={dictation.state === 'recording' ? t('crm.inbox.mic_stop', 'Stop recording') : t('crm.inbox.mic', 'Dictate the reply')}
-            title={dictation.state === 'recording' ? t('crm.inbox.mic_stop', 'Stop recording') : t('crm.inbox.mic', 'Dictate the reply')}
-            className={`${tool} ${dictation.state === 'recording' ? 'bg-a-danger/12 text-a-danger' : ''}`}>
-            {dictation.state === 'recording' ? <Square size={16} aria-hidden /> : dictation.state === 'transcribing' ? <Loader2 size={17} aria-hidden className="animate-spin" /> : <Mic size={17} aria-hidden />}
+        <div role="group" aria-label={t('crm.inbox.tools', 'Reply tools')} className="flex items-center gap-1 border-t border-a-border px-1.5 py-1.5">
+          <button type="button" className={tool} aria-label={t('crm.inbox.canned', 'Canned replies')} title={t('crm.inbox.canned', 'Canned replies')}
+            aria-expanded={menu === 'canned'} aria-haspopup="menu" onClick={() => setMenu(m => (m === 'canned' ? null : 'canned'))}><Zap size={17} aria-hidden /></button>
+          <button type="button" className={tool} aria-label={t('crm.inbox.emoji', 'Emoji')} title={t('crm.inbox.emoji', 'Emoji')}
+            aria-expanded={menu === 'emoji'} aria-haspopup="menu" onClick={() => setMenu(m => (m === 'emoji' ? null : 'emoji'))}><Smile size={17} aria-hidden /></button>
+          <input ref={file} type="file" accept={UPLOAD_ACCEPT} className="sr-only" tabIndex={-1} aria-hidden onChange={e => pickFile(e.target.files?.[0])} />
+          <button type="button" className={tool} aria-label={t('crm.inbox.attach', 'Send a file')} title={t('crm.inbox.attach', 'Send a file')}
+            disabled={upload.isPending} onClick={() => file.current?.click()}>
+            {upload.isPending ? <Loader2 size={17} aria-hidden className="animate-spin" /> : <Paperclip size={17} aria-hidden />}
           </button>
-        )}
-        {ai.show && (
-          <button type="button" onClick={() => { draft.reset(); setAiOpen(open => !open) }} aria-expanded={aiOpen}
-            className="ml-auto inline-flex min-h-9 items-center gap-1.5 rounded-full crm-ai-soft px-3 text-sm font-semibold">
-            <Sparkles size={15} aria-hidden />{t('crm.inbox.draft', 'Draft a reply with AI')}
-          </button>
-        )}
+          {canDictate() && (
+            <button type="button" onClick={dictation.toggle} disabled={dictation.state === 'transcribing'} aria-pressed={dictation.state === 'recording'}
+              aria-label={dictation.state === 'recording' ? t('crm.inbox.mic_stop', 'Stop recording') : t('crm.inbox.mic', 'Dictate the reply')}
+              title={dictation.state === 'recording' ? t('crm.inbox.mic_stop', 'Stop recording') : t('crm.inbox.mic', 'Dictate the reply')}
+              className={`${tool} ${dictation.state === 'recording' ? 'bg-a-danger/12 text-a-danger' : ''}`}>
+              {dictation.state === 'recording' ? <Square size={16} aria-hidden /> : dictation.state === 'transcribing' ? <Loader2 size={17} aria-hidden className="animate-spin" /> : <Mic size={17} aria-hidden />}
+            </button>
+          )}
+          <span className="min-w-0 flex-1" />
+          {ai.show && (
+            <button type="button" onClick={() => { draft.reset(); setAiOpen(open => !open) }} aria-expanded={aiOpen} title={t('crm.inbox.draft', 'Draft a reply with AI')}
+              className={`inline-flex min-h-10 shrink-0 items-center gap-1.5 rounded-full border crm-ai-border px-3 text-sm font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-a-accent ${aiOpen ? 'crm-ai-fill' : 'crm-ai-soft'}`}>
+              <Sparkles size={15} aria-hidden /><span className="sr-only sm:not-sr-only">{t('crm.inbox.draft', 'Draft a reply with AI')}</span>
+            </button>
+          )}
+          <Button onClick={submit} disabled={!body} loading={reply.isPending} aria-label={t('crm.inbox.send', 'Send')} className="min-h-10 shrink-0">
+            {!reply.isPending && <Send size={16} aria-hidden />}<span className="hidden sm:inline">{t('crm.inbox.send', 'Send')}</span>
+          </Button>
+        </div>
       </div>
     </div>
   )

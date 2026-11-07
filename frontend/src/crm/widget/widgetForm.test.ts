@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import { BUILDERS, builderSteps, shortKey } from './embed'
-import { WIDGET_TABS, pickTab } from './tabs'
+import { WIDGET_TABS, pickTab, withTab } from './tabs'
 import {
-  COLOR_FIELDS, TEXT_LIMITS, applyTemplate, previewColours, sameWidget, setDayOpen, setDayTime, setSuggestion, shade,
-  suggestionSlots, widgetForm, widgetPayload, widgetProblems,
+  COLOR_FIELDS, TEMPLATES, TEXT_LIMITS, applyTemplate, copyToWeekdays, previewColours, sameWidget, setDayOpen, setDayTime,
+  setSuggestion, shade, suggestionSlots, templateSwatch, widgetForm, widgetPayload, widgetProblems,
 } from './widgetForm'
 
 /** The keys ChatWidgetConfigController::update validates (its rules array, by name). */
@@ -74,6 +74,15 @@ describe('opening hours', () => {
     expect(setDayTime(open, 'sat', 'close', '13:00')).toEqual({ sat: [{ open: '09:00', close: '13:00' }] })
     expect(setDayOpen(open, 'sat', false)).toEqual({})
   })
+
+  it('copies Monday\'s hours to Tuesday to Friday and leaves the weekend alone', () => {
+    const hours = { mon: [{ open: '08:00', close: '18:00' }], wed: [{ open: '10:00', close: '12:00' }], sat: [{ open: '10:00', close: '14:00' }] }
+    const next = copyToWeekdays(hours, 'mon')
+    for (const day of ['mon', 'tue', 'wed', 'thu', 'fri'] as const) expect(next[day]).toEqual([{ open: '08:00', close: '18:00' }])
+    expect(next.sat).toEqual([{ open: '10:00', close: '14:00' }])
+    expect(next.sun).toBeUndefined()
+    expect(copyToWeekdays({ tue: [{ open: '09:00', close: '17:00' }] }, 'mon')).toEqual({ tue: [{ open: '09:00', close: '17:00' }] })
+  })
 })
 
 describe('suggested questions', () => {
@@ -94,6 +103,13 @@ describe('templates and the preview', () => {
     expect(applyTemplate({ ...widgetForm(undefined), primary_color: '#123456' }, 'classic').primary_color).toBe('#123456')
   })
 
+  it('draws each template\'s swatch in its own colours, Classic in the current brand colour', () => {
+    expect(templateSwatch('onyx_gold', '#123456')).toEqual({ header: 'linear-gradient(135deg, #c9a84c 0%, #8a6f2d 100%)', background: '#0f0c08', bubble: '#1a1410' })
+    expect(templateSwatch('classic', '#123456')).toEqual({ header: '#123456', background: '#ffffff', bubble: '#f3f4f6' })
+    expect(templateSwatch('classic', 'nope').header).toBe('#c9a84c')
+    for (const id of TEMPLATES) expect(templateSwatch(id, '#123456').header).toBeTruthy()
+  })
+
   it('paints the preview with the chosen colours or the widget\'s defaults', () => {
     const c = previewColours({ ...widgetForm(undefined), primary_color: '#1d4ed8', header_style: 'gradient', header_gradient_end: '', user_bubble_color: '' })
     expect(c.user).toBe('#1d4ed8')
@@ -107,6 +123,8 @@ describe('install', () => {
   it('knows the tabs Get started links to', () => {
     expect(pickTab('install', WIDGET_TABS, 'look')).toBe('install')
     expect(pickTab('x', WIDGET_TABS, 'look')).toBe('look')
+    expect(withTab(new URLSearchParams('a=1'), 'tab', 'install', 'look').toString()).toBe('a=1&tab=install')
+    expect(withTab(new URLSearchParams('tab=install'), 'tab', 'look', 'look').toString()).toBe('')
   })
 
   it('shortens a key for display and keeps a short one', () => {

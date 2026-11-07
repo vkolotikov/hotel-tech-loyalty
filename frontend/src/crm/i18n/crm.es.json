@@ -95,28 +95,42 @@
     "to_do": "Pendiente",
     "widget": {
       "title": "Ponga el chat en su sitio web",
-      "line": "Copie una línea en su sitio; los visitantes podrán escribirle desde cualquier página."
+      "line": "Copie una línea en su sitio; los visitantes podrán escribirle desde cualquier página.",
+      "action": "Obtener el código"
     },
     "assistant": {
       "title": "Dé voz al asistente",
-      "line": "Su nombre, su tono y lo que puede prometer, para que hable como su equipo."
+      "line": "Su nombre, su tono y lo que puede prometer, para que hable como su equipo.",
+      "action": "Definir su voz"
     },
     "knowledge": {
       "title": "Enséñele sus respuestas",
-      "line": "Al menos cinco preguntas y respuestas, o un documento con sus precios y horarios."
+      "line": "Al menos cinco preguntas y respuestas, o un documento con sus precios y horarios.",
+      "action": "Añadir respuestas"
     },
     "reply": {
       "title": "Responda a su primer chat",
-      "line": "Tome un chat del asistente en la bandeja de entrada y responda personalmente."
+      "line": "Tome un chat del asistente en la bandeja de entrada y responda personalmente.",
+      "action": "Abrir la bandeja de entrada"
     },
     "pipeline": {
       "title": "Configure su embudo",
-      "line": "Las etapas por las que pasa un cliente potencial, del primer contacto a ganado."
+      "line": "Las etapas por las que pasa un cliente potencial, del primer contacto a ganado.",
+      "action": "Configurar las etapas"
     },
     "team": {
       "title": "Invite a un colega",
-      "line": "Compartan la bandeja de entrada: todos ven quién responde cada chat."
-    }
+      "line": "Compartan la bandeja de entrada: todos ven quién responde cada chat.",
+      "action": "Invitar a alguien"
+    },
+    "progress_label": "Su progreso",
+    "complete": "Todo está listo. Su chat responde y su embudo hace el seguimiento.",
+    "next_line": "Siguiente: {{step}}",
+    "to_today": "Ir a Hoy",
+    "list_title": "Los pasos",
+    "list_line": "Cada paso se marca solo en cuanto está hecho.",
+    "up_next": "El siguiente",
+    "open": "Abrir"
   },
   "status": {
     "waiting": "En espera",
@@ -131,37 +145,63 @@
     "add_lead": "Añadir un cliente potencial",
     "all_leads": "Todos los clientes potenciales",
     "all_tasks": "Todas las tareas",
-    "chats_title": "Chats esperando respuesta",
-    "due_today": "Hoy",
     "follow_ups": "Seguimientos pendientes",
-    "follow_ups_title": "Seguimientos",
     "last_24h": "En las últimas 24 horas",
     "line": "Lo que le necesita ahora, del chat web y de su embudo.",
     "new_leads": "Nuevos clientes potenciales",
-    "newest": "Los más recientes",
-    "no_chats": "Nadie está esperando",
-    "no_chats_line": "El asistente responde a los visitantes; un chat llega aquí cuando lo pasa a su equipo.",
-    "no_follow_ups": "No hay seguimientos pendientes",
-    "no_follow_ups_line": "Fije un siguiente paso en un cliente potencial y aparecerá aquí ese día.",
-    "no_tasks": "Nada pendiente hoy",
     "nobody": "Sin asignar",
-    "open_chats": "Chats abiertos",
     "open_inbox": "Abrir la bandeja de entrada",
     "open_leads": "{{count}} clientes potenciales abiertos",
     "overdue": "{{count}} vencidos",
-    "overdue_since": "Desde {{day}}",
     "pipeline": "Embudo abierto",
     "setup_line": "{{done}} de {{total}} pasos hechos. Ponga el chat en su sitio, enseñe al asistente y listo.",
     "setup_title": "Termine de configurar HexaTech CRM",
-    "tasks_title": "Sus tareas",
     "title": "Hoy",
-    "unassigned": "{{count}} abiertos sin nadie asignado",
     "waiting": "Esperando respuesta",
     "week_ai": "Cerrados por la IA",
     "week_chats": "Conversaciones",
     "week_leads": "Clientes potenciales del chat",
     "week_title": "El chat web esta semana",
     "your_tasks": "Sus tareas",
-    "open_leads_one": "1 cliente potencial abierto"
+    "open_leads_one": "1 cliente potencial abierto",
+    "greeting": {
+      "morning": "Buenos días, {{name}}",
+      "afternoon": "Buenas tardes, {{name}}",
+      "evening": "Buenas noches, {{name}}"
+    },
+    "setup_go": "Continuar",
+    "figures": "El día de un vistazo",
+    "open_unassigned": "{{open}} chats abiertos · {{unassigned}} sin asignar",
+    "now_title": "Le necesita ahora",
+    "now_line": "Primero los chats en espera, luego lo que está atrasado.",
+    "all_clear": "Todo al día",
+    "all_clear_line": "Nadie espera una respuesta y no hay nada atrasado.",
+    "all_waiting": "Los {{count}} chats en espera",
+    "all_overdue_leads": "Los {{count}} seguimientos atrasados",
+    "all_overdue_tasks": "Las {{count}} tareas atrasadas",
+    "kind_chat": "Esperando respuesta",
+    "kind_follow_up": "Seguimiento atrasado desde el {{day}}",
+    "kind_task": "Tarea atrasada · vencía {{when}}",
+    "schedule_title": "La agenda de hoy",
+    "schedule_line": "Seguimientos y sus tareas de hoy, en la hora del establecimiento.",
+    "no_schedule": "Nada previsto para hoy",
+    "no_schedule_line": "Fije un próximo paso en un cliente potencial o añada una tarea, y aparecerá aquí en su día.",
+    "at_a_time": "A una hora",
+    "during_day": "Durante el día",
+    "all_leads_due": "Todos los seguimientos pendientes",
+    "no_time": "Sin hora fija",
+    "kind_task_today": "Tarea",
+    "kind_follow_up_today": "Seguimiento",
+    "new_title": "Nuevos clientes potenciales",
+    "no_new": "Hoy no hay clientes potenciales nuevos",
+    "no_new_line": "Los clientes potenciales del chat del sitio, de sus formularios y de su equipo aparecen aquí en cuanto llegan.",
+    "all_new": "Los {{count}} clientes potenciales nuevos",
+    "week_line": "Los últimos siete días",
+    "week_more": "Informes",
+    "week_hint": "Chats que el asistente cerró sin que su equipo tuviera que intervenir.",
+    "done_follow_up": "Seguimiento marcado como hecho",
+    "done_task": "Tarea marcada como hecha",
+    "mark_done": "Marcar «{{name}}» como hecho",
+    "done": "Hecho"
   }
 }

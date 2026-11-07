@@ -3,10 +3,11 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import {
-  Activity, ArrowLeft, Check, Mail, MessageCircle, MessageSquare, Pencil, Phone, Plus, StickyNote, Tag, Target, Trash2, UserRound, X,
-  type LucideIcon,
+  Activity, ArrowLeft, Briefcase, Check, Flag, Mail, MapPin, MessageCircle, MessageSquare, Pencil, Phone, Plus, StickyNote, Tag, Target, Trash2,
+  UserRound, X, type LucideIcon,
 } from 'lucide-react'
 import { Button } from '../../workspace/ui/Button'
+import { Dialog } from '../../workspace/ui/Dialog'
 import { Field } from '../../workspace/ui/Field'
 import { Notice } from '../../workspace/ui/Notice'
 import { useBoot } from '../CrmProvider'
@@ -24,8 +25,8 @@ import { QueryState } from '../ui/QueryState'
 import { Tabs } from '../ui/Tabs'
 import { useToast } from '../ui/Toast'
 import {
-  ACTIVITY_TYPES, LEAD_TONE, activityBody, activityKey, displayName, fieldPatch, impactLines, leadState, mailLink, newLeadFor, optionsWith,
-  phoneLink, tagIdsWith, tagIdsWithout, tagNameError, tagsToOffer, type ActivityType, type FieldKey,
+  ACTIVITY_TYPES, KEPT_FIELDS, LEAD_TONE, activityBody, activityKey, displayName, fieldPatch, impactSummary, leadState, mailLink, newLeadFor, optionsWith,
+  phoneLink, tagIdsWith, tagIdsWithout, tagNameError, tagsToOffer, type ActivityType, type FieldKey, type ImpactKey,
 } from './contactsLogic'
 import { StandingPills } from './parts'
 import { CONTACTS, refreshAfterContactChange, useContactLists, useTags } from './queries'
@@ -64,23 +65,34 @@ export function ContactPage() {
   const name = g ? displayName(g) ?? t('crm.common.no_name', 'No name') : t('crm.contacts.contact', 'Contact')
   return (
     <Page title={name} line={g ? ([g.position_title, g.company].filter(Boolean).join(' · ') || t('crm.contacts.contact_line', 'A person you deal with')) : undefined}
+      below={g ? <HeaderFacts guest={g} /> : undefined}
       actions={g ? <HeaderActions guest={g} /> : undefined}>
       <BackLink />
       <QueryState loading={guest.isLoading} error={guest.error} onRetry={() => { void guest.refetch() }}>
         {g && (
-          <div className="grid gap-5 lg:grid-cols-3">
-            <div className="min-w-0 space-y-5 lg:col-span-2">
-              <DetailsCard guest={g} />
-              <TimelineCard id={g.id} />
-            </div>
-            <div className="min-w-0 space-y-5">
-              <TagsCard guest={g} />
-              <LeadsCard id={g.id} />
-            </div>
+          <div className="grid gap-5 lg:grid-cols-5">
+            <div className="min-w-0 lg:col-span-3"><DetailsCard guest={g} /></div>
+            <div className="min-w-0 lg:col-span-2 lg:row-span-2 lg:self-start"><LeadsCard id={g.id} /></div>
+            <div className="min-w-0 lg:col-span-3"><TimelineCard id={g.id} /></div>
           </div>
         )}
       </QueryState>
     </Page>
+  )
+}
+
+/** Under the name: where they stand, when they were added, and their tags (added and removed in place). */
+function HeaderFacts({ guest }: { guest: Guest }) {
+  const { t, i18n } = useTranslation()
+  const lists = useContactLists()
+  return (
+    <div className="space-y-2">
+      <div className="flex flex-wrap items-center gap-2">
+        <StandingPills lifecycle={guest.lifecycle_status} importance={guest.importance} levels={lists.importance} />
+        <span className="text-xs text-a-text-2">{t('crm.contacts.added_ago', 'Added {{when}}', { when: timeAgo(guest.created_at, i18n.language) })}</span>
+      </div>
+      <TagsInline guest={guest} />
+    </div>
   )
 }
 
@@ -119,43 +131,59 @@ function HeaderActions({ guest }: { guest: Guest }) {
     onError: error => toast(errorText(t, error), 'danger'),
   })
   const name = displayName(guest) ?? t('crm.common.no_name', 'No name')
-  const lines = impactLines(impact.data)
-  const button = 'inline-flex items-center gap-2 rounded-full px-4 py-2.5 text-sm font-semibold'
+  const summary = impactSummary(impact.data)
+  const impactWords = (key: ImpactKey, count: number): string => key === 'inquiries' ? t('crm.contacts.impact.inquiries', 'Leads: {{count}}', { count })
+    : key === 'lead_tasks' ? t('crm.contacts.impact.lead_tasks', 'Their leads’ tasks: {{count}}', { count })
+    : key === 'activities' ? t('crm.contacts.impact.activities', 'Timeline entries: {{count}}', { count })
+    : key === 'chats' ? t('crm.contacts.impact.chats', 'Chats in the inbox: {{count}}', { count })
+    : t('crm.contacts.impact.reservations', 'Bookings: {{count}}', { count })
+  const button = 'inline-flex min-h-10 items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-a-accent'
 
   return (
     <>
       <Link to={newLeadFor(guest.id)} className={`${button} bg-a-accent text-a-accent-ink shadow-a-sm hover:bg-a-accent-deep`}>
-        <Target size={15} aria-hidden />{t('crm.contacts.new_lead', 'New lead for this contact')}
+        <Target size={15} aria-hidden />{t('crm.contacts.new_lead_short', 'New lead')}
       </Link>
       {mail && <a href={mail} className={`${button} border border-a-border bg-a-surface text-a-text hover:bg-a-surface-2`}><Mail size={15} aria-hidden />{t('crm.contacts.write', 'Email')}</a>}
       {call && <a href={call} className={`${button} border border-a-border bg-a-surface text-a-text hover:bg-a-surface-2`}><Phone size={15} aria-hidden />{t('crm.contacts.call', 'Call')}</a>}
       {boot.staff.can.delete_records && (
-        <Button variant="secondary" onClick={() => setDeleting(true)} aria-label={t('crm.contacts.delete_named', 'Delete {{name}}', { name })}>
-          <Trash2 size={15} aria-hidden />{t('crm.common.delete', 'Delete')}
-        </Button>
+        <button type="button" onClick={() => setDeleting(true)} aria-label={t('crm.contacts.delete_named', 'Delete {{name}}', { name })} title={t('crm.common.delete', 'Delete')}
+          className={`${button} border border-a-danger/30 bg-a-surface text-a-danger hover:bg-a-danger/12`}>
+          <Trash2 size={15} aria-hidden /><span className="sr-only sm:not-sr-only">{t('crm.common.delete', 'Delete')}</span>
+        </button>
       )}
-      {deleting && (
+      {deleting && summary.blocked !== null && (
+        <Dialog title={t('crm.contacts.delete_title', 'Delete {{name}}?', { name })} onClose={() => setDeleting(false)}>
+          <div className="space-y-4 text-sm text-a-text-2">
+            <Notice tone="warning">{t('crm.contacts.delete_blocked', 'This contact is named on {{count}} venue bookings, so it cannot be deleted. Name someone else on those bookings first.', { count: summary.blocked })}</Notice>
+            <div className="flex justify-end"><Button variant="secondary" onClick={() => setDeleting(false)}>{t('crm.common.close', 'Close')}</Button></div>
+          </div>
+        </Dialog>
+      )}
+      {deleting && summary.blocked === null && (
         <Confirm title={t('crm.contacts.delete_title', 'Delete {{name}}?', { name })} confirm={t('crm.contacts.delete_confirm', 'Delete for good')}
           busy={remove.isPending} onConfirm={() => remove.mutate()} onClose={() => setDeleting(false)}>
           <div className="space-y-2">
             <p>{t('crm.contacts.delete_line', 'The contact is deleted for good. This cannot be undone.')}</p>
             {impact.isLoading && <p role="status">{t('crm.contacts.delete_checking', 'Checking what goes with them…')}</p>}
             {impact.isError && <p>{t('crm.contacts.delete_unknown', 'We could not check what goes with them. Their leads and timeline go too.')}</p>}
-            {lines.length > 0 && (
+            {summary.removes.length > 0 && (
               <>
                 <p className="font-medium text-a-text">{t('crm.contacts.delete_also', 'Deleted with them:')}</p>
                 <ul className="list-disc space-y-0.5 pl-5">
-                  {lines.map(line => (
-                    <li key={line.key}>
-                      {line.key === 'inquiries' ? t('crm.contacts.impact.inquiries', 'Leads: {{count}}', { count: line.count })
-                        : line.key === 'activities' ? t('crm.contacts.impact.activities', 'Timeline entries: {{count}}', { count: line.count })
-                        : t('crm.contacts.impact.reservations', 'Bookings: {{count}}', { count: line.count })}
-                    </li>
-                  ))}
+                  {summary.removes.map(line => <li key={line.key}>{impactWords(line.key, line.count)}</li>)}
                 </ul>
               </>
             )}
-            {impact.data && lines.length === 0 && <p>{t('crm.contacts.delete_nothing', 'Nothing else is linked to them.')}</p>}
+            {summary.kept.length > 0 && (
+              <>
+                <p className="font-medium text-a-text">{t('crm.contacts.delete_kept', 'Kept, no longer linked:')}</p>
+                <ul className="list-disc space-y-0.5 pl-5">
+                  {summary.kept.map(line => <li key={line.key}>{impactWords(line.key, line.count)}</li>)}
+                </ul>
+              </>
+            )}
+            {impact.data && summary.removes.length === 0 && summary.kept.length === 0 && <p>{t('crm.contacts.delete_nothing', 'Nothing else is linked to them.')}</p>}
           </div>
         </Confirm>
       )}
@@ -164,21 +192,16 @@ function HeaderActions({ guest }: { guest: Guest }) {
 }
 
 type Kind = 'text' | 'email' | 'tel' | 'textarea' | 'select'
-const FIELDS: { key: FieldKey; kind: Kind; list?: 'lifecycle' | 'importance' }[] = [
-  { key: 'full_name', kind: 'text' },
-  { key: 'email', kind: 'email' },
-  { key: 'phone', kind: 'tel' },
-  { key: 'mobile', kind: 'tel' },
-  { key: 'company', kind: 'text' },
-  { key: 'position_title', kind: 'text' },
-  { key: 'lifecycle_status', kind: 'select', list: 'lifecycle' },
-  { key: 'importance', kind: 'select', list: 'importance' },
-  { key: 'lead_source', kind: 'text' },
-  { key: 'owner_name', kind: 'text' },
-  { key: 'country', kind: 'text' },
-  { key: 'city', kind: 'text' },
-  { key: 'address', kind: 'textarea' },
-  { key: 'notes', kind: 'textarea' },
+interface FieldDef { key: FieldKey; kind: Kind; list?: 'lifecycle' | 'importance' }
+type GroupKey = 'reach' | 'work' | 'standing' | 'place' | 'notes'
+
+/** The contact's fields in groups of what belongs together, in the order they are read. */
+const GROUPS: { key: GroupKey; icon: LucideIcon; fields: FieldDef[] }[] = [
+  { key: 'reach', icon: UserRound, fields: [{ key: 'full_name', kind: 'text' }, { key: 'email', kind: 'email' }, { key: 'phone', kind: 'tel' }, { key: 'mobile', kind: 'tel' }] },
+  { key: 'work', icon: Briefcase, fields: [{ key: 'company', kind: 'text' }, { key: 'position_title', kind: 'text' }, { key: 'owner_name', kind: 'text' }] },
+  { key: 'standing', icon: Flag, fields: [{ key: 'lifecycle_status', kind: 'select', list: 'lifecycle' }, { key: 'importance', kind: 'select', list: 'importance' }, { key: 'lead_source', kind: 'text' }] },
+  { key: 'place', icon: MapPin, fields: [{ key: 'country', kind: 'text' }, { key: 'city', kind: 'text' }, { key: 'address', kind: 'textarea' }] },
+  { key: 'notes', icon: StickyNote, fields: [{ key: 'notes', kind: 'textarea' }] },
 ]
 
 /** The fields' names, each written out so every word is found and translated. */
@@ -202,24 +225,41 @@ function useFieldLabels(): Record<FieldKey, string> {
   }
 }
 
-/** The contact's details: each field shown, and changed in place with Save or Enter, Cancel or Escape. */
+/** The groups' titles. */
+function useGroupTitles(): Record<GroupKey, string> {
+  const { t } = useTranslation()
+  return {
+    reach: t('crm.contacts.group.reach', 'Contact'),
+    work: t('crm.contacts.group.work', 'Work'),
+    standing: t('crm.contacts.group.standing', 'Standing'),
+    place: t('crm.contacts.group.place', 'Place'),
+    notes: t('crm.contacts.group.notes', 'Notes'),
+  }
+}
+
+/**
+ * The contact's details in groups: each field shown, and changed in place with Save or Enter, Cancel or Escape. An
+ * emptied field is cleared (sent as null); the name, the lifecycle and the importance always keep a value.
+ */
 function DetailsCard({ guest }: { guest: Guest }) {
-  const { t, i18n } = useTranslation()
+  const { t } = useTranslation()
   const qc = useQueryClient()
   const toast = useToast()
   const lists = useContactLists()
   const labels = useFieldLabels()
+  const titles = useGroupTitles()
   const [editing, setEditing] = useState<FieldKey | null>(null)
   const [draft, setDraft] = useState('')
   const [problem, setProblem] = useState<string | null>(null)
 
   const save = useMutation({
-    mutationFn: (body: Partial<Record<FieldKey, string>>) => send<Guest>('put', `guests/${guest.id}`, body),
-    onSuccess: saved => {
-      qc.setQueryData<Guest>([...CONTACTS, 'one', guest.id], old => (old ? { ...old, ...saved, tags: old.tags } : saved))
+    mutationFn: (body: Partial<Record<FieldKey, string | null>>) => send<Guest>('put', `guests/${guest.id}`, body),
+    onSuccess: (saved, body) => {
+      const cleared = Object.values(body).some(v => v === null)
+      qc.setQueryData<Guest>([...CONTACTS, 'one', guest.id], old => (old ? { ...old, ...body, ...saved, tags: old.tags } : saved))
       void qc.invalidateQueries({ queryKey: [...CONTACTS, 'list'] })
       void qc.invalidateQueries({ queryKey: [...CONTACTS, 'facets'] })
-      toast(t('crm.common.saved', 'Saved'))
+      toast(cleared ? t('crm.contacts.cleared', 'Cleared') : t('crm.common.saved', 'Saved'))
       setEditing(null)
     },
     onError: error => setProblem(errorText(t, error)),
@@ -233,76 +273,84 @@ function DetailsCard({ guest }: { guest: Guest }) {
     if (outcome.kind === 'same') return close()
     if (outcome.kind === 'patch') return save.mutate(outcome.body)
     setProblem(outcome.kind === 'required' ? t('crm.contacts.form.required', 'Fill this in.')
-      : outcome.kind === 'cannot_clear' ? t('crm.contacts.cannot_clear', 'A saved value cannot be emptied here. Write the new one instead.')
       : outcome.kind === 'bad_email' ? t('crm.contacts.form.bad_email', 'This does not look like an email address.')
       : t('crm.contacts.form.too_long_max', 'Keep it to {{max}} characters.', { max: outcome.max }))
   }
 
-  return (
-    <Card title={t('crm.contacts.details', 'Details')} icon={UserRound}>
-      <div className="mb-3 flex flex-wrap items-center gap-2">
-        <StandingPills lifecycle={guest.lifecycle_status} importance={guest.importance} levels={lists.importance} />
-        <span className="text-xs text-a-text-2">{t('crm.contacts.added_ago', 'Added {{when}}', { when: timeAgo(guest.created_at, i18n.language) })}</span>
+  const row = (field: FieldDef) => {
+    const label = labels[field.key]
+    const current = value(field.key)
+    if (editing !== field.key) {
+      return (
+        <div key={field.key} className="group flex items-start gap-3 py-2">
+          <dt className="w-24 shrink-0 pt-0.5 text-xs text-a-text-2 sm:w-28">{label}</dt>
+          <dd className="min-w-0 flex-1 whitespace-pre-wrap break-words text-sm text-a-text">
+            {current.trim() !== '' ? current : <span className="text-a-text-2">{t('crm.contacts.not_set', 'Not set')}</span>}
+          </dd>
+          <button type="button" onClick={() => open(field.key)} disabled={editing !== null && save.isPending}
+            className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-a-text-2 hover:bg-a-surface-2 hover:text-a-text focus-visible:outline-2 focus-visible:outline-a-accent"
+            aria-label={t('crm.contacts.edit_field', 'Change {{field}}', { field: label })}>
+            <Pencil size={14} aria-hidden />
+          </button>
+        </div>
+      )
+    }
+    const onKey = (e: KeyboardEvent<HTMLElement>) => {
+      if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); close() }
+      if (e.key === 'Enter' && field.kind !== 'textarea') { e.preventDefault(); commit(field.key) }
+    }
+    const options = field.list ? optionsWith(lists[field.list], current) : []
+    const clearable = !KEPT_FIELDS.includes(field.key)
+    return (
+      <div key={field.key} className="rounded-xl bg-a-surface-2/60 p-2.5">
+        <Field label={label} hint={clearable ? t('crm.contacts.clear_hint', 'Leave it empty and save to clear it.') : undefined}>
+          {field.kind === 'textarea'
+            ? <TextArea rows={3} value={draft} onChange={e => setDraft(e.target.value)} onKeyDown={onKey} autoFocus />
+            : field.kind === 'select'
+              ? (
+                <Select value={draft} onChange={e => setDraft(e.target.value)} onKeyDown={onKey} autoFocus>
+                  {current === '' && <option value="">{t('crm.contacts.not_set', 'Not set')}</option>}
+                  {options.map(v => <option key={v} value={v}>{v}</option>)}
+                </Select>
+              )
+              : <TextInput type={field.kind} value={draft} onChange={e => setDraft(e.target.value)} onKeyDown={onKey} autoFocus autoComplete="off" />}
+        </Field>
+        {problem && <p role="alert" className="mt-1 text-xs text-a-danger">{problem}</p>}
+        <div className="mt-2 flex justify-end gap-2">
+          <Button variant="secondary" size="sm" onClick={close} disabled={save.isPending}><X size={14} aria-hidden />{t('crm.common.cancel', 'Cancel')}</Button>
+          <Button size="sm" onClick={() => commit(field.key)} loading={save.isPending}><Check size={14} aria-hidden />{t('crm.common.save', 'Save')}</Button>
+        </div>
       </div>
-      <dl className="divide-y divide-a-border">
-        {FIELDS.map(field => {
-          const label = labels[field.key]
-          const current = value(field.key)
-          if (editing !== field.key) {
-            return (
-              <div key={field.key} className="flex items-start gap-3 py-2.5">
-                <dt className="w-28 shrink-0 pt-0.5 text-xs text-a-text-2 sm:w-36">{label}</dt>
-                <dd className="min-w-0 flex-1 whitespace-pre-wrap break-words text-sm text-a-text">
-                  {current.trim() !== '' ? current : <span className="text-a-text-2">{t('crm.contacts.not_set', 'Not set')}</span>}
-                </dd>
-                <button type="button" onClick={() => open(field.key)} disabled={editing !== null && save.isPending}
-                  className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-a-text-2 hover:bg-a-surface-2 hover:text-a-text focus-visible:outline-2 focus-visible:outline-a-accent"
-                  aria-label={t('crm.contacts.edit_field', 'Change {{field}}', { field: label })}>
-                  <Pencil size={14} aria-hidden />
-                </button>
-              </div>
-            )
-          }
-          const onKey = (e: KeyboardEvent<HTMLElement>) => {
-            if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); close() }
-            if (e.key === 'Enter' && field.kind !== 'textarea') { e.preventDefault(); commit(field.key) }
-          }
-          const options = field.list ? optionsWith(lists[field.list], current) : []
-          return (
-            <div key={field.key} className="py-2.5">
-              <Field label={label}>
-                {field.kind === 'textarea'
-                  ? <TextArea rows={3} value={draft} onChange={e => setDraft(e.target.value)} onKeyDown={onKey} autoFocus />
-                  : field.kind === 'select'
-                    ? (
-                      <Select value={draft} onChange={e => setDraft(e.target.value)} onKeyDown={onKey} autoFocus>
-                        {current === '' && <option value="">{t('crm.contacts.not_set', 'Not set')}</option>}
-                        {options.map(v => <option key={v} value={v}>{v}</option>)}
-                      </Select>
-                    )
-                    : <TextInput type={field.kind} value={draft} onChange={e => setDraft(e.target.value)} onKeyDown={onKey} autoFocus autoComplete="off" />}
-              </Field>
-              {problem && <p role="alert" className="mt-1 text-xs text-a-danger">{problem}</p>}
-              <div className="mt-2 flex justify-end gap-2">
-                <Button variant="secondary" size="sm" onClick={close} disabled={save.isPending}><X size={14} aria-hidden />{t('crm.common.cancel', 'Cancel')}</Button>
-                <Button size="sm" onClick={() => commit(field.key)} loading={save.isPending}><Check size={14} aria-hidden />{t('crm.common.save', 'Save')}</Button>
-              </div>
-            </div>
-          )
-        })}
-      </dl>
+    )
+  }
+
+  return (
+    <Card title={t('crm.contacts.details', 'Details')} description={t('crm.contacts.details_line', 'Press the pencil to change a field; leave it empty to clear it.')} icon={UserRound} tone="accent">
+      <div className="grid gap-x-6 gap-y-4 md:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
+        {GROUPS.map(group => (
+          <section key={group.key} aria-labelledby={`crm-contact-group-${group.key}`} className={group.key === 'notes' ? 'md:col-span-2 lg:col-span-1 xl:col-span-2' : ''}>
+            <h3 id={`crm-contact-group-${group.key}`} className="mb-1 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-a-text-2">
+              <group.icon size={13} aria-hidden />{titles[group.key]}
+            </h3>
+            <dl className="divide-y divide-a-border border-t border-a-border">
+              {group.fields.map(row)}
+            </dl>
+          </section>
+        ))}
+      </div>
     </Card>
   )
 }
 
-/** The contact's tags: remove one, add one the organisation has, or make a new one and add it. */
-function TagsCard({ guest }: { guest: Guest }) {
+/** The contact's tags under the name: remove one, add one the organisation has, or make a new one and add it. */
+function TagsInline({ guest }: { guest: Guest }) {
   const { t } = useTranslation()
   const qc = useQueryClient()
   const toast = useToast()
   const all = useTags()
   const worn = guest.tags ?? []
   const offer = tagsToOffer(all.data ?? [], worn)
+  const [adding, setAdding] = useState(false)
   const [pick, setPick] = useState('')
   const [name, setName] = useState('')
   const [nameProblem, setNameProblem] = useState<string | null>(null)
@@ -342,48 +390,56 @@ function TagsCard({ guest }: { guest: Guest }) {
   const busy = sync.isPending || create.isPending
 
   return (
-    <Card title={t('crm.contacts.tags', 'Tags')} icon={Tag}>
-      {worn.length === 0
-        ? <p className="text-sm text-a-text-2">{t('crm.contacts.no_tags', 'No tags yet.')}</p>
-        : (
-          <ul className="flex flex-wrap gap-1.5">
-            {worn.map(tag => (
-              <li key={tag.id} className="inline-flex items-center gap-1 rounded-full bg-a-surface-2 py-0.5 pl-2.5 pr-1 text-xs font-medium text-a-text">
-                {tag.name}
-                <button type="button" disabled={busy} onClick={() => sync.mutate(tagIdsWithout(worn, tag.id))}
-                  className="grid h-6 w-6 place-items-center rounded-full text-a-text-2 hover:text-a-danger disabled:opacity-50"
-                  aria-label={t('crm.contacts.remove_tag', 'Remove the tag {{name}}', { name: tag.name })}>
-                  <X size={12} aria-hidden />
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
-      {offer.length > 0 && (
-        <form className="mt-4 flex items-end gap-2" onSubmit={e => { e.preventDefault(); if (pick) sync.mutate(tagIdsWith(worn, Number(pick))) }}>
-          <div className="min-w-0 flex-1">
-            <Field label={t('crm.contacts.add_tag', 'Add a tag')}>
-              <Select value={pick} onChange={e => setPick(e.target.value)}>
-                <option value="">{t('crm.contacts.bulk_pick', 'Choose…')}</option>
-                {offer.map(tag => <option key={tag.id} value={String(tag.id)}>{tag.name}</option>)}
-              </Select>
-            </Field>
-          </div>
-          <Button type="submit" variant="secondary" disabled={!pick || busy}>{t('crm.common.add', 'Add')}</Button>
-        </form>
-      )}
-      <form className="mt-3" onSubmit={e => { e.preventDefault(); makeTag() }}>
-        <div className="flex items-end gap-2">
-          <div className="min-w-0 flex-1">
-            <Field label={t('crm.contacts.new_tag', 'New tag')}>
-              <TextInput value={name} onChange={e => { setName(e.target.value); setNameProblem(null) }} maxLength={80} autoComplete="off" />
-            </Field>
-          </div>
-          <Button type="submit" variant="secondary" disabled={!name.trim() || busy} loading={create.isPending}><Plus size={14} aria-hidden />{t('crm.contacts.create_tag', 'Create')}</Button>
+    <div className="space-y-2">
+      <ul aria-label={t('crm.contacts.tags', 'Tags')} className="flex flex-wrap items-center gap-1.5">
+        <li aria-hidden className="text-a-text-2"><Tag size={14} /></li>
+        {worn.length === 0 && <li className="text-xs text-a-text-2">{t('crm.contacts.no_tags', 'No tags yet.')}</li>}
+        {worn.map(tag => (
+          <li key={tag.id} className="inline-flex items-center gap-1 rounded-full border border-a-border bg-a-surface-2 py-0.5 pl-2.5 pr-1 text-xs font-medium text-a-text">
+            {tag.name}
+            <button type="button" disabled={busy} onClick={() => sync.mutate(tagIdsWithout(worn, tag.id))}
+              className="grid h-6 w-6 place-items-center rounded-full text-a-text-2 hover:text-a-danger focus-visible:outline-2 focus-visible:outline-a-accent disabled:opacity-50"
+              aria-label={t('crm.contacts.remove_tag', 'Remove the tag {{name}}', { name: tag.name })}>
+              <X size={12} aria-hidden />
+            </button>
+          </li>
+        ))}
+        <li>
+          <button type="button" onClick={() => setAdding(open => !open)} aria-expanded={adding}
+            className="inline-flex min-h-7 items-center gap-1 rounded-full border border-dashed border-a-border px-2.5 text-xs font-medium text-a-accent-text hover:border-a-accent/50 focus-visible:outline-2 focus-visible:outline-a-accent">
+            <Plus size={12} aria-hidden />{t('crm.contacts.add_tag', 'Add a tag')}
+          </button>
+        </li>
+      </ul>
+      {adding && (
+        <div className="flex max-w-xl flex-col gap-2 rounded-xl border border-a-border bg-a-surface p-2.5 shadow-a-sm animate-a-pop sm:flex-row sm:items-end">
+          {offer.length > 0 && (
+            <form className="flex min-w-0 flex-1 items-end gap-2" onSubmit={e => { e.preventDefault(); if (pick) sync.mutate(tagIdsWith(worn, Number(pick))) }}>
+              <div className="min-w-0 flex-1">
+                <Field label={t('crm.contacts.pick_tag', 'One you have')}>
+                  <Select value={pick} onChange={e => setPick(e.target.value)}>
+                    <option value="">{t('crm.contacts.bulk_pick', 'Choose…')}</option>
+                    {offer.map(tag => <option key={tag.id} value={String(tag.id)}>{tag.name}</option>)}
+                  </Select>
+                </Field>
+              </div>
+              <Button type="submit" variant="secondary" size="sm" className="min-h-10" disabled={!pick || busy}>{t('crm.common.add', 'Add')}</Button>
+            </form>
+          )}
+          <form className="min-w-0 flex-1" onSubmit={e => { e.preventDefault(); makeTag() }}>
+            <div className="flex items-end gap-2">
+              <div className="min-w-0 flex-1">
+                <Field label={t('crm.contacts.new_tag', 'New tag')}>
+                  <TextInput value={name} onChange={e => { setName(e.target.value); setNameProblem(null) }} maxLength={80} autoComplete="off" />
+                </Field>
+              </div>
+              <Button type="submit" variant="secondary" size="sm" className="min-h-10" disabled={!name.trim() || busy} loading={create.isPending}><Plus size={14} aria-hidden />{t('crm.contacts.create_tag', 'Create')}</Button>
+            </div>
+            {nameProblem && <p role="alert" className="mt-1 text-xs text-a-danger">{nameProblem}</p>}
+          </form>
         </div>
-        {nameProblem && <p role="alert" className="mt-1 text-xs text-a-danger">{nameProblem}</p>}
-      </form>
-    </Card>
+      )}
+    </div>
   )
 }
 
@@ -395,7 +451,7 @@ function LeadsCard({ id }: { id: number }) {
   const leads = useQuery({ queryKey: [...CONTACTS, 'leads', id], queryFn: () => get<{ data: GuestLead[] }>(`guests/${id}/inquiries`) })
   const rows = leads.data?.data ?? []
   return (
-    <Card title={t('crm.contacts.leads', 'Leads')} icon={Target} padded={false}
+    <Card title={t('crm.contacts.leads', 'Leads')} description={t('crm.contacts.leads_line', 'What they asked for, newest first')} icon={Target} tone="progress" padded={false}
       action={<Link to={newLeadFor(id)} className="text-sm font-medium text-a-accent-text hover:underline">{t('crm.contacts.new_lead_short', 'New lead')}</Link>}>
       <div className={rows.length ? '' : 'p-4'}>
         <QueryState loading={leads.isLoading} error={leads.error} onRetry={() => { void leads.refetch() }} rows={2}>
@@ -457,7 +513,7 @@ function TimelineCard({ id }: { id: number }) {
   const labelOf = (kind: string) => t(`crm.contacts.${activityKey(kind)}`, ACTIVITY_FALLBACK[activityKey(kind)])
 
   return (
-    <Card title={t('crm.contacts.timeline', 'Timeline')} icon={Activity}>
+    <Card title={t('crm.contacts.timeline', 'Timeline')} description={t('crm.contacts.timeline_line', 'Every touch with them, newest first')} icon={Activity} tone="neutral">
       <form className="space-y-2" onSubmit={e => { e.preventDefault(); if (body) add.mutate() }}>
         <Tabs label={t('crm.contacts.log_kind', 'What kind of touch')} value={type} onChange={setType}
           items={ACTIVITY_TYPES.map(key => ({ key, label: labelOf(key) }))} />

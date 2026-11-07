@@ -60,23 +60,23 @@ export function LostReasonsCard({ canManage }: { canManage: boolean }) {
   const list = sortedReasons(reasons.data ?? [])
 
   return (
-    <Card title={t('crm.settings.reasons.title', 'Why leads are lost')} icon={X}>
+    <Card title={t('crm.settings.reasons.title', 'Why leads are lost')} icon={X} tone="danger"
+      description={t('crm.settings.reasons.line', 'The choices offered when a lead is marked lost. Reports group lost leads by them.')}>
       <div className="space-y-3">
-        <p className="text-sm text-a-text-2">{t('crm.settings.reasons.line', 'The choices offered when a lead is marked lost. Reports group lost leads by them.')}</p>
         <QueryState loading={reasons.isLoading} error={reasons.error} onRetry={() => { void reasons.refetch() }} rows={3}>
           {list.length === 0 ? (
-            <p className="text-sm text-a-text-2">{t('crm.settings.reasons.empty', 'No reasons yet.')}</p>
+            <p className="rounded-xl border border-dashed border-a-border px-3 py-4 text-center text-sm text-a-text-2">{t('crm.settings.reasons.empty', 'No reasons yet.')}</p>
           ) : (
             <ul className="divide-y divide-a-border rounded-xl border border-a-border">
               {list.map(reason => {
                 const active = reason.is_active ?? true
                 return (
-                  <li key={reason.id} className="flex flex-wrap items-center gap-2 px-3 py-2">
-                    <span className={`min-w-0 flex-1 truncate text-sm ${active ? 'text-a-text' : 'text-a-text-2 line-through'}`}>{reason.label}</span>
+                  <li key={reason.id} className="group flex min-h-12 flex-wrap items-center gap-2 px-3 py-1.5 transition-colors hover:bg-a-surface-2/60">
+                    <span className={`min-w-0 flex-1 basis-full truncate text-sm sm:basis-auto ${active ? 'text-a-text' : 'text-a-text-2 line-through'}`}>{reason.label}</span>
                     {!active && <Pill>{t('crm.settings.reasons.off', 'Off')}</Pill>}
-                    {(reason.inquiries_count ?? 0) > 0 && <span className="text-xs text-a-text-2">{t('crm.settings.reasons.used', 'Used on {{count}} leads', { count: reason.inquiries_count })}</span>}
+                    {(reason.inquiries_count ?? 0) > 0 && <span className="text-xs tabular-nums text-a-text-2">{t('crm.settings.reasons.used', 'Used on {{count}} leads', { count: reason.inquiries_count })}</span>}
                     {canManage && (
-                      <span className="flex shrink-0 items-center">
+                      <span className="ml-auto flex shrink-0 items-center">
                         <IconButton icon={active ? EyeOff : Eye} disabled={toggle.isPending}
                           label={active ? t('crm.settings.reasons.hide', 'Switch off {{name}}', { name: reason.label }) : t('crm.settings.reasons.show', 'Switch on {{name}}', { name: reason.label })}
                           onClick={() => toggle.mutate(reason)} />

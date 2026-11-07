@@ -1,6 +1,7 @@
 import type { QueryClient } from '@tanstack/react-query'
 
 /** The AI assistant area's query keys, and what a write makes stale. */
+export const BEHAVIOUR_KEY = ['crm', 'assistant', 'behaviour'] as const
 export const KNOWLEDGE_KEY = ['crm', 'assistant', 'knowledge'] as const
 export const GAPS_KEY = ['crm', 'assistant', 'gaps'] as const
 export const POPUPS_KEY = ['crm', 'assistant', 'popups'] as const

@@ -94,6 +94,16 @@ describe('VisitorsPage', () => {
     expect(html).toContain('href="/crm/inbox?c=12"')
     expect(html).toContain('href="/crm/contacts/8"')
     expect(html).toContain('On the site now')
+    for (const title of ['How to reach them', 'On the website', 'Chats']) expect(html).toContain(title)
+  })
+
+  it('keeps the controls in one toolbar and the rows in aligned columns, with who is online now', () => {
+    const html = render('/crm/visitors', list)
+    expect(html).toContain('Search by name, email, address or page')
+    expect(html).toContain('Refresh')
+    expect(html).toContain('Last seen')
+    expect(html).toContain('Pages · visits')
+    expect(html).toContain('1 on the site right now')
   })
 
   it('says when nobody is there', () => {

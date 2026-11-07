@@ -8,3 +8,11 @@ export const WIDGET_KEY = ['crm', 'widget', 'config'] as const
 export function pickTab<T extends string>(value: string | null, allowed: readonly T[], fallback: T): T {
   return (allowed as readonly string[]).includes(value ?? '') ? (value as T) : fallback
 }
+
+/** The address after a section was chosen: `?tab=` names it, or is left out for the first one; the rest is kept. */
+export function withTab(prev: URLSearchParams, param: string, next: string, first: string): URLSearchParams {
+  const out = new URLSearchParams(prev)
+  if (next === first) out.delete(param)
+  else out.set(param, next)
+  return out
+}

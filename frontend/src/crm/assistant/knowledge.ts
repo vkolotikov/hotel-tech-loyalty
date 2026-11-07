@@ -1,3 +1,4 @@
+import { failureOf } from '../lib/api'
 import type { Tone as PillTone } from '../ui/StatTile'
 import { orNull, wholeNumber } from './lists'
 import type { DocumentStatus, DraftFaq, KnowledgeCategory, KnowledgeItem } from './types'
@@ -18,7 +19,42 @@ export const KNOWLEDGE_LIMITS = {
   fileBytes: 10 * 1024 * 1024,
 } as const
 
-export const DOCUMENT_TYPES = ['pdf', 'doc', 'docx', 'txt'] as const
+/**
+ * The files the server reads (KnowledgeBaseController::uploadDocument, round 2: `.doc` is refused — nothing could read
+ * its text): PDF with selectable text, Word's .docx, and plain text.
+ */
+export const DOCUMENT_TYPES = ['pdf', 'docx', 'txt'] as const
+
+/** The file picker's filter, from the same list. */
+export const DOCUMENT_ACCEPT = DOCUMENT_TYPES.map(ext => `.${ext}`).join(',')
+
+/** A category filter as the answers' toolbar holds it: every answer, those without a category, or one category. */
+export type CategoryFilter = number | 'none' | null
+
+/** The `<select>` value of a category filter, and back. */
+export function categoryFilterOf(value: string): CategoryFilter {
+  if (value === '') return null
+  if (value === 'none') return 'none'
+  const n = Number(value)
+  return Number.isInteger(n) && n > 0 ? n : null
+}
+
+/** The active filters of the answers' list, as removable chips: the search, then the category. */
+export function activeFilters(search: string, category: CategoryFilter, categories: readonly KnowledgeCategory[]): { key: 'search' | 'category'; value: string }[] {
+  const out: { key: 'search' | 'category'; value: string }[] = []
+  if (search.trim()) out.push({ key: 'search', value: search.trim() })
+  if (category === 'none') out.push({ key: 'category', value: '' })
+  else if (typeof category === 'number') {
+    const name = categories.find(c => c.id === category)?.name
+    if (name) out.push({ key: 'category', value: name })
+  }
+  return out
+}
+
+/** How many answers there are and how many the assistant uses. */
+export function itemCounts(items: readonly KnowledgeItem[]): { total: number; active: number } {
+  return { total: items.length, active: items.filter(i => i.is_active).length }
+}
 
 /** The answers a search and a category leave, in the server's order (priority, then use). */
 export function filterItems(items: readonly KnowledgeItem[], search: string, categoryId: number | 'none' | null): KnowledgeItem[] {
@@ -106,6 +142,12 @@ export const DOCUMENT_TONE: Record<DocumentStatus, PillTone> = {
   processing: 'progress',
   completed: 'success',
   failed: 'danger',
+}
+
+/** Whether the server refused an upload for the file itself (a 422 on `file`: its type or its size). */
+export function uploadRefused(error: unknown): boolean {
+  const failure = failureOf(error)
+  return failure.code === 'invalid' && !!failure.fields?.file
 }
 
 /** Why a chosen file would be refused before it is sent: its type or its size (10 MB). */

@@ -4,7 +4,6 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { Building2, Pencil, Plus, Trash2, Users } from 'lucide-react'
 import { Button } from '../../workspace/ui/Button'
-import { Field } from '../../workspace/ui/Field'
 import { useBoot } from '../CrmProvider'
 import { get, params, send } from '../lib/api'
 import { errorText } from '../lib/errors'
@@ -19,6 +18,7 @@ import { Pill } from '../ui/Pill'
 import { QueryState } from '../ui/QueryState'
 import { SidePanel } from '../ui/SidePanel'
 import { useToast } from '../ui/Toast'
+import { FilterChip, Toolbar } from '../ui/Toolbar'
 import { COMPANY_STATUSES, COMPANY_TONE, LEAD_TONE, PER_PAGE, arg, companyStatusKey, leadState, pageFrom, withParam } from './contactsLogic'
 import { CompanyFormPanel } from './CompanyForm'
 import { Fact } from './parts'
@@ -67,15 +67,21 @@ export function CompaniesTab({ onAdd }: { onAdd: () => void }) {
 
   return (
     <div className="space-y-4">
-      <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_12rem] sm:items-end">
-        <SearchBox label={t('crm.contacts.company_search', 'Search by company, contact or industry')} value={q} onSearch={onSearch} />
-        <Field label={t('crm.contacts.company.status', 'Status')}>
-          <Select value={status} onChange={e => update('cstatus', e.target.value)}>
-            <option value="">{t('crm.common.all', 'All')}</option>
+      <Toolbar chips={narrowed ? <>
+        {q.trim() && <FilterChip label={t('crm.contacts.chip.q', 'Search: {{value}}', { value: q.trim() })} removeLabel={t('crm.contacts.remove_filter', 'Remove the filter')} onRemove={() => onSearch(null)} />}
+        {status && <FilterChip label={t('crm.contacts.chip.status', 'Status: {{value}}', { value: t(`crm.contacts.${companyStatusKey(status)}`, STATUS_FALLBACK[status]) })} removeLabel={t('crm.contacts.remove_filter', 'Remove the filter')} onRemove={() => update('cstatus', null)} />}
+      </> : undefined}>
+        <div className="min-w-0 sm:min-w-56 sm:flex-1">
+          <SearchBox label={t('crm.contacts.company_search', 'Search by company, contact or industry')} value={q} onSearch={onSearch} />
+        </div>
+        <label className="min-w-0 sm:w-44">
+          <span className="sr-only">{t('crm.contacts.company.status', 'Status')}</span>
+          <Select value={status} onChange={e => update('cstatus', e.target.value)} className={status ? 'ring-1 ring-a-accent/60' : ''}>
+            <option value="">{t('crm.contacts.company.status', 'Status')}</option>
             {COMPANY_STATUSES.map(v => <option key={v} value={v}>{t(`crm.contacts.${companyStatusKey(v)}`, STATUS_FALLBACK[v])}</option>)}
           </Select>
-        </Field>
-      </div>
+        </label>
+      </Toolbar>
 
       <QueryState loading={list.isLoading} error={list.error} onRetry={() => { void list.refetch() }}>
         {rows.length === 0 ? (
@@ -88,11 +94,18 @@ export function CompaniesTab({ onAdd }: { onAdd: () => void }) {
           </Card>
         ) : (
           <Card padded={false}>
+            <div aria-hidden className="hidden items-center gap-3 border-b border-a-border bg-a-surface-2/40 px-4 py-2.5 text-xs font-medium text-a-text-2 md:flex">
+              <span className="w-9 shrink-0" />
+              <span className="min-w-0 flex-1">{t('crm.contacts.col_company', 'Company')}</span>
+              <span className="w-40">{t('crm.contacts.company.account_manager', 'Account manager')}</span>
+              <span className="hidden w-32 text-right lg:block">{t('crm.contacts.company.contract', 'Contract')}</span>
+              <span className="w-24 text-right">{t('crm.contacts.company.status', 'Status')}</span>
+            </div>
             <ul className="divide-y divide-a-border">
               {rows.map(row => (
                 <li key={row.id}>
-                  <button type="button" onClick={() => setOpenId(row.id)}
-                    className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-a-surface-2 focus-visible:outline-2 focus-visible:outline-a-accent">
+                  <button type="button" onClick={() => setOpenId(row.id)} aria-current={openId === row.id ? 'true' : undefined}
+                    className={`flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-a-surface-2 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-a-accent ${openId === row.id ? 'bg-a-accent/10' : ''}`}>
                     <span aria-hidden className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-a-surface-2 text-a-text-2"><Building2 size={16} /></span>
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-sm font-medium text-a-text">{row.company_name}</span>
@@ -102,7 +115,7 @@ export function CompaniesTab({ onAdd }: { onAdd: () => void }) {
                     <span className="hidden w-32 text-right text-xs text-a-text-2 lg:block">
                       {row.contract_end ? t('crm.contacts.contract_until', 'Until {{day}}', { day: dayLabel(row.contract_end, lang) }) : ''}
                     </span>
-                    <span className="shrink-0"><CompanyStatus status={row.status} /></span>
+                    <span className="shrink-0 md:w-24 md:text-right"><CompanyStatus status={row.status} /></span>
                   </button>
                 </li>
               ))}

@@ -41,10 +41,15 @@
     "whatsapp_bad": "Nur Ziffern, Leerzeichen, + und Klammern (6 bis 32).",
     "whatsapp_hint": "Mit Ländervorwahl. Zeigt eine WhatsApp-Schaltfläche im Chat; leer blendet sie aus.",
     "zone": "Zeitzone",
-    "zone_default": "Nicht gesetzt (die des Servers)"
+    "zone_default": "Nicht gesetzt (die des Servers)",
+    "lead_line": "Welche Angaben erfragt werden, und wann.",
+    "person_line": "Wege, Ihr Team aus dem Chat zu erreichen.",
+    "privacy_line": "Vor einem Chat, danach und in Ihrem Posteingang.",
+    "hours_card_line": "Wann Ihr Team antwortet und was der Chat in der übrigen Zeit sagt.",
+    "same_weekdays": "Montagszeiten für Dienstag bis Freitag übernehmen"
   },
   "discard": "Verwerfen",
-  "fix_first": "Einige Felder brauchen vor dem Speichern noch einen Blick.",
+  "fix_first": "Korrigieren Sie die markierten Felder, um zu speichern.",
   "icon": {
     "chat": "Chat",
     "message": "Nachricht",
@@ -54,7 +59,7 @@
     "support": "Headset"
   },
   "install": {
-    "api_line": "Für eine eigene Integration können Sie den API-Schlüssel des Widgets ersetzen.",
+    "api_line": "Für eine eigene Integration können Sie den API-Schlüssel des Widgets ersetzen. Der Code Ihrer Website ist davon nicht betroffen.",
     "code_line": "Fügen Sie dies einmal in Ihre Website ein, direkt vor </body>. Der Chat erscheint dann auf jeder Seite.",
     "code_title": "Ihr Code",
     "copy_failed": "Der Browser hat das Kopieren nicht erlaubt. Markieren Sie den Code und kopieren Sie ihn von Hand.",
@@ -63,7 +68,7 @@
     "html_steps": "Fügen Sie den Code auf jeder Seite direkt vor </body> ein, oder einmal in die gemeinsame Fußzeilen-Vorlage.",
     "iframe": "Ihre Website erlaubt keine Skripte? Verwenden Sie stattdessen einen Frame",
     "is_off": "Chat aus",
-    "key_line": "Der Code oben enthält diesen Schlüssel; er ändert sich nie, der Code funktioniert also weiter.",
+    "key_line": "Der Code enthält diesen Schlüssel. Er bleibt gleich, solange Sie ihn nicht ersetzen.",
     "keys_title": "Schlüssel",
     "off": "Der Chat ist unter Aussehen ausgeschaltet, der Code zeigt also noch nichts.",
     "on": "Chat an",
@@ -77,7 +82,22 @@
     "where_title": "Wo Sie ihn einfügen",
     "widget_key": "Widget-Schlüssel",
     "wix_steps": "Einstellungen → Benutzerdefinierter Code → Code hinzufügen: einfügen, „Alle Seiten“ und „Body – Ende“ wählen.",
-    "wordpress_steps": "Nutzen Sie ein Plugin wie „Insert Headers and Footers“ (WPCode): den Code ins Fußzeilen-Feld einfügen und speichern."
+    "wordpress_steps": "Nutzen Sie ein Plugin wie „Insert Headers and Footers“ (WPCode): den Code ins Fußzeilen-Feld einfügen und speichern.",
+    "rotated": "Neuer Widget-Schlüssel erstellt. Fügen Sie jetzt den neuen Code in Ihre Website ein.",
+    "rotated_note": "Der Widget-Schlüssel wurde ersetzt. Bis Sie den Code unten in Ihre Website einfügen, erscheint der Chat dort nicht.",
+    "copy_code": "Code kopieren",
+    "keys_line": "Woran der Code Ihren Chat erkennt.",
+    "copy_key": "Widget-Schlüssel kopieren",
+    "rotate_title": "Schlüssel auf einer anderen Website missbraucht?",
+    "rotate_line": "Ersetzen Sie ihn. Der Code auf Ihrer Website funktioniert dann nicht mehr, bis Sie den neuen einfügen.",
+    "rotate": "Widget-Schlüssel ersetzen",
+    "more": "Weitere Optionen",
+    "more_line": "Der API-Schlüssel für eine eigene Integration.",
+    "where_line": "Wählen Sie, womit Ihre Website gebaut ist.",
+    "builders": "Website-Baukasten",
+    "rotate_confirm_title": "Widget-Schlüssel ersetzen?",
+    "rotate_confirm_warn": "Der Chat verschwindet sofort von Ihrer Website.",
+    "rotate_confirm_line": "Der Code auf Ihrer Website funktioniert nicht mehr, sobald der Schlüssel ersetzt ist. Der Chat erscheint wieder, wenn Sie dort den neuen Code einfügen. Tun Sie das nur, wenn der Schlüssel missbraucht wurde."
   },
   "line": "Der Chat auf Ihrer Website: wie er aussieht, wie er Besucher begrüßt und wie Sie ihn einbauen.",
   "look": {
@@ -87,14 +107,13 @@
     "avatar_alt": "Das Bild des Assistenten",
     "avatar_hint": "Ein quadratisches PNG oder JPG, höchstens 2 MB. Wird beim Hochladen sofort gespeichert.",
     "avatar_saved": "Bild gespeichert.",
-    "avatar_title": "Das Bild des Assistenten",
+    "avatar_title": "Bild und Markenzeile",
     "background": "Chat-Hintergrund",
     "bot_bubble": "Antwortblase",
     "bot_text": "Antworttext",
     "brand": "Hauptfarbe",
     "brand_code": "Code der Hauptfarbe",
     "branding": "Die Zeile",
-    "branding_title": "Markenzeile",
     "colours_hint": "Lassen Sie einen Code leer, um die Farbe der Vorlage zu nutzen.",
     "colours_title": "Kopfzeile und Blasen",
     "company": "Name Ihres Unternehmens",
@@ -138,7 +157,16 @@
     "welcome_title": "Begrüßungsüberschrift",
     "welcome_title_placeholder": "Hallo! Wie können wir helfen?",
     "window": "Fenster",
-    "words_title": "Texte, die Besucher lesen"
+    "words_title": "Texte, die Besucher lesen",
+    "on_line": "Ob der Chat erscheint und wie Ihr Team darin auftritt.",
+    "style_line": "Eine Vorlage zum Start, Ihre Farbe, die Ecke und die Schrift.",
+    "colours_line": "Weitere Optionen: jede Farbe des Chats einzeln.",
+    "launcher_line": "Form, Symbol, Größe und wie sie auffällt.",
+    "words_line": "Die Kopfzeile, die Begrüßung und die erste Nachricht.",
+    "box_title": "Das Nachrichtenfeld",
+    "box_line": "Weitere Optionen: der Text darin und der Hinweis darunter.",
+    "suggestions_line": "Schaltflächen, die ein Besucher antippt, statt zu tippen.",
+    "avatar_line": "Das Bild des Assistenten und die Zeile unter dem Chat."
   },
   "preview": {
     "branding": "Bereitgestellt von Ihrem Unternehmen",
@@ -147,7 +175,8 @@
     "label": "Vorschau des Chats auf Ihrer Website",
     "placeholder": "Nachricht schreiben …",
     "question": "Kann ich für Freitagnachmittag buchen?",
-    "title": "Chatten Sie mit uns"
+    "title": "Chatten Sie mit uns",
+    "line": "Änderungen erscheinen hier, während Sie sie machen."
   },
   "read_only": "Nur ein Inhaber oder Manager kann das Chat-Widget ändern. Sie können hier alles lesen.",
   "saved": "Gespeichert. Ihre Website zeigt die Änderung innerhalb einer Minute.",
@@ -179,12 +208,21 @@
     "onyx_gold": "Onyx-Gold"
   },
   "too_long": "Zu lang: höchstens {{max}} Zeichen.",
-  "unsaved": "Sie haben Änderungen, die noch nicht gespeichert sind. Die Website zeigt sie nach dem Speichern.",
+  "unsaved": "Ungespeicherte Änderungen",
   "window": {
     "bubble": "Blase",
     "classic": "Klassisch",
     "minimal": "Minimal",
     "panel": "Seitenleiste",
     "popup": "Pop-up"
-  }
+  },
+  "caption": {
+    "look": "Farben, die Schaltfläche und die Texte für Besucher.",
+    "behaviour": "Kontaktdaten, Öffnungszeiten, der Weg zu einer Person.",
+    "install": "Der Code für Ihre Website und wohin er gehört."
+  },
+  "state_on": "Auf Ihrer Website sichtbar",
+  "state_off": "Ausgeschaltet",
+  "get_code": "Code holen",
+  "unsaved_line": "Ihre Website zeigt sie nach dem Speichern"
 }

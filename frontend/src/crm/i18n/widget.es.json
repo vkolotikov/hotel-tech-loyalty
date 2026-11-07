@@ -41,10 +41,15 @@
     "whatsapp_bad": "Solo dígitos, espacios, + y paréntesis (de 6 a 32).",
     "whatsapp_hint": "Con el prefijo del país. Muestra un botón de WhatsApp en el chat; vacío lo oculta.",
     "zone": "Zona horaria",
-    "zone_default": "Sin definir (la del servidor)"
+    "zone_default": "Sin definir (la del servidor)",
+    "lead_line": "Qué datos pedir y cuándo.",
+    "person_line": "Formas de contactar con su equipo desde el chat.",
+    "privacy_line": "Antes de un chat, después y en su bandeja de entrada.",
+    "hours_card_line": "Cuándo responde su equipo y qué dice el chat el resto del tiempo.",
+    "same_weekdays": "Usar el horario del lunes de martes a viernes"
   },
   "discard": "Descartar",
-  "fix_first": "Algunos campos necesitan revisión antes de guardar.",
+  "fix_first": "Corrija los campos marcados para guardar.",
   "icon": {
     "chat": "Chat",
     "message": "Mensaje",
@@ -54,7 +59,7 @@
     "support": "Auriculares"
   },
   "install": {
-    "api_line": "Para una integración propia, puede reemplazar la clave API del widget.",
+    "api_line": "Para una integración propia, puede sustituir la clave API del widget. El código de su sitio web no se ve afectado.",
     "code_line": "Pegue esto una vez en su web, justo antes de </body>. El chat aparecerá en todas las páginas.",
     "code_title": "Su código",
     "copy_failed": "El navegador no permitió copiar. Seleccione el código y cópielo a mano.",
@@ -63,7 +68,7 @@
     "html_steps": "Pegue el código justo antes de </body> en cada página, o una vez en la plantilla común del pie.",
     "iframe": "¿Su web no admite scripts? Use un marco en su lugar",
     "is_off": "Chat apagado",
-    "key_line": "El código de arriba contiene esta clave; nunca cambia, así que el código sigue funcionando.",
+    "key_line": "El código contiene esta clave. No cambia a menos que usted la sustituya.",
     "keys_title": "Claves",
     "off": "El chat está desactivado en Aspecto, así que el código aún no muestra nada.",
     "on": "Chat encendido",
@@ -77,7 +82,22 @@
     "where_title": "Dónde pegarlo",
     "widget_key": "Clave del widget",
     "wix_steps": "Configuración → Código personalizado → Añadir código: péguelo, elija «Todas las páginas» y «Body – final».",
-    "wordpress_steps": "Use un plugin como «Insert Headers and Footers» (WPCode): pegue el código en el campo del pie y guarde."
+    "wordpress_steps": "Use un plugin como «Insert Headers and Footers» (WPCode): pegue el código en el campo del pie y guarde.",
+    "rotated": "Nueva clave del widget creada. Pegue ahora el nuevo código en su sitio web.",
+    "rotated_note": "La clave del widget se ha sustituido. Hasta que pegue el código de abajo en su sitio web, el chat no aparecerá allí.",
+    "copy_code": "Copiar el código",
+    "keys_line": "Lo que usa el código para encontrar su chat.",
+    "copy_key": "Copiar la clave del widget",
+    "rotate_title": "¿Clave usada en otro sitio?",
+    "rotate_line": "Sustitúyala. El código de su sitio web deja de funcionar hasta que pegue el nuevo.",
+    "rotate": "Sustituir la clave del widget",
+    "more": "Más opciones",
+    "more_line": "La clave API para una integración propia.",
+    "where_line": "Elija con qué está hecho su sitio web.",
+    "builders": "Creador de sitios web",
+    "rotate_confirm_title": "¿Sustituir la clave del widget?",
+    "rotate_confirm_warn": "El chat desaparece de inmediato de su sitio web.",
+    "rotate_confirm_line": "El código de su sitio web deja de funcionar en cuanto se sustituye la clave. El chat vuelve a aparecer cuando pegue allí el nuevo código. Hágalo solo si la clave se usó indebidamente."
   },
   "line": "El chat de su web: cómo se ve, cómo recibe a los visitantes y cómo ponerlo en su sitio.",
   "look": {
@@ -87,14 +107,13 @@
     "avatar_alt": "La imagen del asistente",
     "avatar_hint": "Un PNG o JPG cuadrado, de 2 MB como máximo. Se guarda en cuanto se sube.",
     "avatar_saved": "Imagen guardada.",
-    "avatar_title": "La imagen del asistente",
+    "avatar_title": "Imagen y línea de marca",
     "background": "Fondo del chat",
     "bot_bubble": "Burbuja de respuesta",
     "bot_text": "Texto de respuesta",
     "brand": "Color principal",
     "brand_code": "Código del color principal",
     "branding": "La línea",
-    "branding_title": "Línea de marca",
     "colours_hint": "Deje un código vacío para usar el color de la plantilla.",
     "colours_title": "Cabecera y burbujas",
     "company": "Nombre de su negocio",
@@ -138,7 +157,16 @@
     "welcome_title": "Título de bienvenida",
     "welcome_title_placeholder": "¡Hola! ¿En qué podemos ayudarle?",
     "window": "Ventana",
-    "words_title": "Textos que leen los visitantes"
+    "words_title": "Textos que leen los visitantes",
+    "on_line": "Si el chat aparece y cómo se muestra su equipo.",
+    "style_line": "Una plantilla de partida, su color, la esquina y la fuente.",
+    "colours_line": "Más opciones: cada color del chat por separado.",
+    "launcher_line": "Su forma, icono, tamaño y cómo llama la atención.",
+    "words_line": "La cabecera, la bienvenida y el primer mensaje.",
+    "box_title": "El cuadro de mensaje",
+    "box_line": "Más opciones: el texto de dentro y la ayuda de debajo.",
+    "suggestions_line": "Botones que un visitante toca en lugar de escribir.",
+    "avatar_line": "La imagen del asistente y la línea bajo el chat."
   },
   "preview": {
     "branding": "Con la tecnología de su negocio",
@@ -147,7 +175,8 @@
     "label": "Vista previa del chat en su web",
     "placeholder": "Escriba un mensaje…",
     "question": "¿Puedo reservar para el viernes por la tarde?",
-    "title": "Chatee con nosotros"
+    "title": "Chatee con nosotros",
+    "line": "Los cambios se ven aquí mientras los hace."
   },
   "read_only": "Solo un propietario o un responsable puede cambiar el widget de chat. Usted puede consultarlo todo aquí.",
   "saved": "Guardado. Su web muestra el cambio en menos de un minuto.",
@@ -179,12 +208,21 @@
     "onyx_gold": "Ónice dorado"
   },
   "too_long": "Demasiado largo: como máximo {{max}} caracteres.",
-  "unsaved": "Tiene cambios sin guardar. La web los muestra después de guardar.",
+  "unsaved": "Cambios sin guardar",
   "window": {
     "bubble": "Burbuja",
     "classic": "Clásico",
     "minimal": "Mínimo",
     "panel": "Panel",
     "popup": "Pop-up"
-  }
+  },
+  "caption": {
+    "look": "Los colores, el botón y los textos que leen los visitantes.",
+    "behaviour": "Datos de contacto, horario, una vía hacia una persona.",
+    "install": "El código para su sitio web y dónde va."
+  },
+  "state_on": "Visible en su sitio web",
+  "state_off": "Desactivado",
+  "get_code": "Obtener el código",
+  "unsaved_line": "su sitio web los muestra al guardar"
 }

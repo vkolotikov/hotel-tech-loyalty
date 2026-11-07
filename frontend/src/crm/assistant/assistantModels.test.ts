@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import type { BotGap } from '../lib/types'
 import { behaviourForm, behaviourPayload, behaviourProblems, behaviourValid, sameBehaviour } from './behaviour'
-import { categoryPayload, categoryValid, fileProblem, filterItems, importPayload, itemForm, itemPayload, itemProblems, pickedDrafts, reviewDrafts, sourceUsable } from './knowledge'
-import { addText, mergeTexts, moveItem, pickTab, removeAt, wholeNumber, ASSISTANT_TABS } from './lists'
+import { DOCUMENT_ACCEPT, activeFilters, categoryFilterOf, categoryPayload, categoryValid, fileProblem, filterItems, importPayload, itemCounts, itemForm, itemPayload, itemProblems, pickedDrafts, reviewDrafts, sourceUsable, uploadRefused } from './knowledge'
+import { addText, mergeTexts, moveItem, pickTab, removeAt, wholeNumber, withTab, ASSISTANT_TABS } from './lists'
 import { activeRules, missingFacts, quickSetupPayload, quickSetupProblems, toggleRule } from './onboarding'
 import { popupForm, popupPayload, popupProblems, triggerTakesValue } from './popups'
-import { afterReply, canTeach, correctionValid, sortGaps, teachPayload, testChatPayload } from './teach'
+import { afterReply, canTeach, correctionValid, sortGaps, starterQuestions, startingAnswer, teachMode, teachOutcome, teachPayload, testChatPayload } from './teach'
 import type { KnowledgeItem, OnboardingState, PopupRule } from './types'
 
 describe('the assistant\'s sections in ?tab=', () => {
@@ -14,6 +14,11 @@ describe('the assistant\'s sections in ?tab=', () => {
     expect(pickTab('teach', ASSISTANT_TABS, 'behaviour')).toBe('teach')
     expect(pickTab('nonsense', ASSISTANT_TABS, 'behaviour')).toBe('behaviour')
     expect(pickTab(null, ASSISTANT_TABS, 'behaviour')).toBe('behaviour')
+  })
+
+  it('names the chosen section in the address, leaves it out for the first, and keeps the rest', () => {
+    expect(withTab(new URLSearchParams('x=1'), 'tab', 'teach', 'behaviour').toString()).toBe('x=1&tab=teach')
+    expect(withTab(new URLSearchParams('tab=teach&x=1'), 'tab', 'behaviour', 'behaviour').toString()).toBe('x=1')
   })
 })
 
@@ -125,10 +130,32 @@ describe('knowledge', () => {
     expect(categoryPayload({ name: ' Prices ', description: '', priority: '3', is_active: false })).toEqual({ name: 'Prices', description: null, priority: 3, is_active: false })
   })
 
-  it('refuses a file of another type or over 10 MB before it is sent', () => {
+  it('refuses a file of another type or over 10 MB before it is sent; the old Word format is no longer read (round 2)', () => {
     expect(fileProblem({ name: 'prices.PDF', size: 1000 })).toBeNull()
+    expect(fileProblem({ name: 'rules.docx', size: 1000 })).toBeNull()
+    expect(fileProblem({ name: 'menu.txt', size: 1000 })).toBeNull()
+    expect(fileProblem({ name: 'old.doc', size: 1000 })).toBe('type')
     expect(fileProblem({ name: 'photo.png', size: 1000 })).toBe('type')
     expect(fileProblem({ name: 'big.docx', size: 11 * 1024 * 1024 })).toBe('size')
+    expect(DOCUMENT_ACCEPT).toBe('.pdf,.docx,.txt')
+  })
+
+  it('reads the server\'s refusal of the file itself, and nothing else, as a refused file', () => {
+    expect(uploadRefused({ response: { status: 422, data: { errors: { file: ['The file must be a file of type: pdf, docx, txt.'] } } } })).toBe(true)
+    expect(uploadRefused({ response: { status: 422, data: { errors: { other: ['x'] } } } })).toBe(false)
+    expect(uploadRefused({ response: { status: 500, data: {} } })).toBe(false)
+  })
+
+  it('turns the category filter into removable chips, and counts the answers in use', () => {
+    const categories = [{ id: 2, name: 'Stay', description: null, priority: 0, sort_order: 0, is_active: true }]
+    expect(categoryFilterOf('')).toBeNull()
+    expect(categoryFilterOf('none')).toBe('none')
+    expect(categoryFilterOf('2')).toBe(2)
+    expect(categoryFilterOf('nonsense')).toBeNull()
+    expect(activeFilters('  wifi ', 2, categories)).toEqual([{ key: 'search', value: 'wifi' }, { key: 'category', value: 'Stay' }])
+    expect(activeFilters('', 'none', categories)).toEqual([{ key: 'category', value: '' }])
+    expect(activeFilters('', 99, categories)).toEqual([])
+    expect(itemCounts([...items, { ...items[0], id: 9, is_active: false }])).toEqual({ total: 4, active: 3 })
   })
 
   it('reviews the AI\'s drafts and imports only the ticked, complete ones (at most 50)', () => {
@@ -176,9 +203,32 @@ describe('teaching the assistant (crm/bot-gaps, chat-inbox feedback)', () => {
     expect(canTeach({ ...gap, teachable: false }, true)).toBe(false)
   })
 
-  it('sends the correction to training, and the comment back only when it is the person\'s own', () => {
-    expect(teachPayload(gap, '  Yes, dogs welcome. ', 'Peter')).toEqual({ rating: 'bad', corrected_answer: 'Yes, dogs welcome.', apply_to_training: true })
-    expect(teachPayload(gap, 'Yes.', 'Maria')).toEqual({ rating: 'bad', corrected_answer: 'Yes.', apply_to_training: true, comment: 'We do, 15 € a night' })
+  it('sends the correction to training, and the comment back only when the person wrote it (by id, not by name)', () => {
+    const mine = { ...gap, rated_by_id: 7 }
+    expect(teachPayload(mine, '  Yes, dogs welcome. ', 8)).toEqual({ rating: 'bad', corrected_answer: 'Yes, dogs welcome.', apply_to_training: true })
+    expect(teachPayload(mine, 'Yes.', 7)).toEqual({ rating: 'bad', corrected_answer: 'Yes.', apply_to_training: true, comment: 'We do, 15 € a night' })
+    // Two people called Maria: the name alone sends nothing back.
+    expect(teachPayload({ ...gap, rated_by_id: null }, 'Yes.', 7)).not.toHaveProperty('comment')
+    expect(teachPayload({ ...gap, rated_by_id: undefined }, 'Yes.', 7)).not.toHaveProperty('comment')
+  })
+
+  it('lets a manager teach, a staff member suggest, and nobody act on an answer without a question', () => {
+    expect(teachMode(gap, true)).toBe('teach')
+    expect(teachMode(gap, false)).toBe('suggest')
+    expect(teachMode({ ...gap, teachable: false }, true)).toBe('none')
+    expect(teachMode({ ...gap, teachable: false }, false)).toBe('none')
+  })
+
+  it('fills the manager\'s answer with a staff member\'s suggestion', () => {
+    expect(startingAnswer({ ...gap, suggested_answer: '  Yes, 15 € a night. ', suggested_by: 'Peter' })).toBe('Yes, 15 € a night.')
+    expect(startingAnswer(gap)).toBe('')
+  })
+
+  it('reads what the server did: taught, kept as a suggestion, or neither', () => {
+    expect(teachOutcome({ applied_to_training: true, suggested: false })).toBe('taught')
+    expect(teachOutcome({ applied_to_training: false, suggested: true })).toBe('suggested')
+    expect(teachOutcome({ applied_to_training: false })).toBe('kept')
+    expect(teachOutcome(null)).toBe('kept')
   })
 
   it('wants a correction of 1 to 5000 characters', () => {
@@ -206,5 +256,10 @@ describe('try it (chatbot-config/test-chat)', () => {
     expect(body.history).toHaveLength(20)
     expect(body.history[0].content).toBe('m5')
     expect(afterReply([], ' Parking? ', 'Yes.')).toEqual([{ role: 'user', content: 'Parking?' }, { role: 'assistant', content: 'Yes.' }])
+  })
+
+  it('offers four starter questions in the person\'s language', () => {
+    const t = ((_: string, d: string) => d) as never
+    expect(starterQuestions(t)).toHaveLength(4)
   })
 })

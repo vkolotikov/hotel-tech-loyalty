@@ -86,6 +86,11 @@ export function activeFilterCount(f: PeopleFilters): number {
   return FILTER_KEYS.filter(k => f[k].trim() !== '').length
 }
 
+/** The filters narrowing the list now, in the toolbar's order, each shown as a chip that removes it. */
+export function activeFilters(f: PeopleFilters): { key: FilterKey; value: string }[] {
+  return FILTER_KEYS.filter(k => f[k].trim() !== '').map(k => ({ key: k, value: f[k].trim() }))
+}
+
 /** The address with one filter set or cleared; any change of filter goes back to the first page. */
 export function withParam(search: URLSearchParams, key: string, value: string | null): URLSearchParams {
   const next = new URLSearchParams(search)
@@ -179,21 +184,25 @@ export function isEmail(value: string): boolean {
 export type FieldOutcome =
   | { kind: 'same' }
   | { kind: 'required' }
-  | { kind: 'cannot_clear' }
   | { kind: 'too_long'; max: number }
   | { kind: 'bad_email' }
-  | { kind: 'patch'; body: Partial<Record<FieldKey, string>> }
+  | { kind: 'patch'; body: Partial<Record<FieldKey, string | null>> }
 
 /**
- * What saving one field does. The name is required; an emptied field cannot be saved, because the server keeps a
- * field it is sent empty (GuestController::update drops empty values so a form cannot wipe one), so the page says so
- * instead of pretending it was cleared.
+ * The fields a contact always has: the name, and the lifecycle and importance (columns with a default, never empty).
+ * Every other field can be emptied.
+ */
+export const KEPT_FIELDS: readonly FieldKey[] = ['full_name', 'lifecycle_status', 'importance']
+
+/**
+ * What saving one field does. An emptied field is sent as null, which clears it (round 2: PUT guests/{id} clears a field
+ * sent as null; an empty string it still ignores); the name, the lifecycle and the importance cannot be emptied.
  */
 export function fieldPatch(key: FieldKey, draft: string, current: string | null | undefined): FieldOutcome {
   const next = draft.trim()
   const was = (current ?? '').trim()
   if (next === was) return { kind: 'same' }
-  if (next === '') return key === 'full_name' ? { kind: 'required' } : { kind: 'cannot_clear' }
+  if (next === '') return KEPT_FIELDS.includes(key) ? { kind: 'required' } : { kind: 'patch', body: { [key]: null } }
   const max = FIELD_MAX[key]
   if (max > 0 && next.length > max) return { kind: 'too_long', max }
   if (key === 'email' && !isEmail(next)) return { kind: 'bad_email' }
@@ -270,12 +279,36 @@ export function tagNameError(name: string, all: GuestTag[]): 'required' | 'too_l
 
 /* ─── Deleting ─────────────────────────────────────────────────────────────────────────────────── */
 
-/** What goes with a contact (GET guests/{id}/delete-impact): each kind of record that has some, in this order. */
-export function impactLines(impact: Partial<DeleteImpact> | undefined): { key: keyof DeleteImpact; count: number }[] {
-  const order: (keyof DeleteImpact)[] = ['inquiries', 'activities', 'reservations']
-  return order
-    .map(key => ({ key, count: Number(impact?.[key] ?? 0) }))
-    .filter(line => Number.isFinite(line.count) && line.count > 0)
+/** What a contact's delete takes with it, in this order, and what stays (unlinked): GuestController::deleteImpact. */
+export const IMPACT_REMOVES = ['inquiries', 'lead_tasks', 'reservations', 'activities'] as const
+export const IMPACT_KEPT = ['chats'] as const
+export type ImpactKey = (typeof IMPACT_REMOVES)[number] | (typeof IMPACT_KEPT)[number]
+
+/**
+ * The delete's preview as the server answers it: the kinds of record deleted with the contact that have some, the kinds
+ * that stay but lose the link, and the venue bookings that block it (null when nothing blocks). Which kind goes and which
+ * stays is the server's word (`removes`, `kept`); an older answer without them reads as the leads, reservations and
+ * timeline going.
+ */
+export function impactSummary(impact: Partial<DeleteImpact> | undefined): {
+  removes: { key: ImpactKey; count: number }[]
+  kept: { key: ImpactKey; count: number }[]
+  blocked: number | null
+} {
+  const read = (key: string) => {
+    const n = Number((impact as Record<string, unknown> | undefined)?.[key] ?? 0)
+    return Number.isFinite(n) && n > 0 ? n : 0
+  }
+  const removing = Array.isArray(impact?.removes) ? impact.removes : ['inquiries', 'reservations', 'activities']
+  const keeping = Array.isArray(impact?.kept) ? impact.kept : []
+  const removes = IMPACT_REMOVES.filter(key => removing.includes(key)).map(key => ({ key, count: read(key) })).filter(line => line.count > 0)
+  const kept = IMPACT_KEPT.filter(key => keeping.includes(key)).map(key => ({ key, count: read(key) })).filter(line => line.count > 0)
+  return { removes, kept, blocked: impact?.blocked ? Math.max(1, read('venue_bookings')) : null }
+}
+
+/** What goes with a contact: each kind of record deleted with it that has some (impactSummary's `removes`). */
+export function impactLines(impact: Partial<DeleteImpact> | undefined): { key: ImpactKey; count: number }[] {
+  return impactSummary(impact).removes
 }
 
 /* ─── Choosing rows, and changing many at once ─────────────────────────────────────────────────── */
@@ -385,6 +418,18 @@ export function mergeBody(pair: DuplicatePair, swapped: boolean, reason: string)
   const { keep, remove } = mergeSides(pair, swapped)
   const why = reason.trim().slice(0, 500)
   return why ? { winner_id: keep.id, loser_id: remove.id, reason: why } : { winner_id: keep.id, loser_id: remove.id }
+}
+
+/**
+ * The sentence for a merge the server refused (GuestMergeController's codes): two contacts of different member
+ * accounts, a contact with itself, a merge that failed and changed nothing; anything else is a plain refusal.
+ */
+export function mergeRefusalKey(code: string): 'refused' | 'same' | 'failed' | 'not_merged' | null {
+  if (code === 'different_members') return 'refused'
+  if (code === 'same_guest') return 'same'
+  if (code === 'merge_failed') return 'failed'
+  if (code === 'merge_refused' || code === 'different_organizations') return 'not_merged'
+  return null
 }
 
 /* ─── Companies ────────────────────────────────────────────────────────────────────────────────── */

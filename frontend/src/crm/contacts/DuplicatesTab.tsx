@@ -17,7 +17,7 @@ import { TextArea } from '../ui/inputs'
 import { Pill } from '../ui/Pill'
 import { QueryState } from '../ui/QueryState'
 import { useToast } from '../ui/Toast'
-import { displayName, mergeBody, mergeSides, reasonKey } from './contactsLogic'
+import { displayName, mergeBody, mergeRefusalKey, mergeSides, reasonKey } from './contactsLogic'
 import { refreshAfterContactChange, useDuplicates } from './queries'
 import type { DuplicateGuest, DuplicatePair } from './types'
 
@@ -111,8 +111,13 @@ function MergeConfirm({ pair, onClose }: { pair: DuplicatePair; onClose: () => v
       onClose()
     },
   })
-  // A merge the server refuses for a reason of its own (422) is said plainly; anything else in the usual words.
-  const refused = merge.isError && failureOf(merge.error).status === 422 && !failureOf(merge.error).fields
+  // A merge the server refuses says why in its code (GuestMergeController); anything else in the usual words.
+  const refusal = merge.isError ? mergeRefusalKey(failureOf(merge.error).code) : null
+  const refusedText = refusal === 'refused' ? t('crm.contacts.duplicates.refused', 'These two cannot be merged: each is linked to a different member account.')
+    : refusal === 'same' ? t('crm.contacts.duplicates.refused_same', 'A contact cannot be merged into itself.')
+    : refusal === 'failed' ? t('crm.contacts.duplicates.refused_failed', 'The merge failed and nothing was changed. Please try again.')
+    : refusal === 'not_merged' ? t('crm.contacts.duplicates.refused_other', 'These two contacts cannot be merged.')
+    : null
 
   return (
     <Confirm title={t('crm.contacts.duplicates.confirm_title', 'Merge these two contacts?')} confirm={t('crm.contacts.duplicates.confirm', 'Merge for good')}
@@ -130,7 +135,7 @@ function MergeConfirm({ pair, onClose }: { pair: DuplicatePair; onClose: () => v
           <TextArea rows={2} maxLength={500} value={reason} onChange={e => setReason(e.target.value)} />
         </Field>
         {merge.isError && (
-          <Notice tone="danger">{refused ? t('crm.contacts.duplicates.refused', 'These two cannot be merged: each is linked to a different member of the loyalty programme.') : errorText(t, merge.error)}</Notice>
+          <Notice tone="danger">{refusedText ?? errorText(t, merge.error)}</Notice>
         )}
       </div>
     </Confirm>

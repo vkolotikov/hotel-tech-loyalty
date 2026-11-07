@@ -11,6 +11,7 @@ import { EmptyState } from '../ui/EmptyState'
 import { Select } from '../ui/inputs'
 import { QueryState } from '../ui/QueryState'
 import { StatTile } from '../ui/StatTile'
+import { TONE_CHIP, type Tone } from '../ui/tones'
 import { BarList, ChangeLine } from './charts'
 import { arg, countChange, lostReasonRows, pickPipeline, pipelineSummary, signalName, stageRows, windows, type Period } from './insightsMath'
 import type { DealAnalytics, LeadKpis, LeadPage, LeadSignals, LostReasonCount, Pipeline, SignalLead } from './types'
@@ -57,8 +58,7 @@ export function PipelineSection({ days, now = new Date() }: { days: Period; now?
   }, { replace: true })
 
   return (
-    <section aria-labelledby="crm-insights-pipeline" className="space-y-4">
-      <h2 id="crm-insights-pipeline" className="font-a-display text-2xl text-a-text">{t('crm.insights.pipeline_title', 'Your pipeline')}</h2>
+    <section aria-label={t('crm.insights.pipeline_title', 'Your pipeline')} className="space-y-4">
 
       <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
         <StatTile icon={UserPlus} tone="accent" label={t('crm.insights.new_leads', 'New leads')}
@@ -73,7 +73,7 @@ export function PipelineSection({ days, now = new Date() }: { days: Period; now?
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <Card title={t('crm.insights.stages', 'Where your leads are')} icon={Filter}
+        <Card title={t('crm.insights.stages', 'Where your leads are')} icon={Filter} tone="progress" description={t('crm.insights.stages_desc', 'Leads in each stage now')}
           action={list.length > 1 && pipeline ? (
             <label className="flex items-center gap-2 text-xs text-a-text-2">
               <span className="sr-only">{t('crm.insights.pipeline', 'Pipeline')}</span>
@@ -100,18 +100,18 @@ export function PipelineSection({ days, now = new Date() }: { days: Period; now?
           </QueryState>
         </Card>
 
-        <Card title={t('crm.insights.attention', 'Needs attention')} icon={AlarmClock} padded={false}>
+        <Card title={t('crm.insights.attention', 'Needs attention')} icon={AlarmClock} tone="pending" description={t('crm.insights.attention_desc', 'Open leads that may slip away')} padded={false}>
           <div className={signals.data ? '' : 'p-4'}>
             <QueryState loading={signals.isLoading} error={signals.error} onRetry={() => { void signals.refetch() }} rows={3}>
               {signals.data && (
                 <ul className="divide-y divide-a-border">
-                  <Signal icon={Snowflake} title={t('crm.insights.cold', 'Going cold')} line={t('crm.insights.cold_line', 'Open, no contact for 7 days or more')}
+                  <Signal icon={Snowflake} tone="progress" title={t('crm.insights.cold', 'Going cold')} line={t('crm.insights.cold_line', 'Open, no contact for 7 days or more')}
                     figure={n(signals.data.cold.count)} sample={signals.data.cold.sample} />
-                  <Signal icon={UserMinus} title={t('crm.insights.unassigned', 'Nobody on it')} line={t('crm.insights.unassigned_line', 'Open for 3 days or more, no owner')}
+                  <Signal icon={UserMinus} tone="pending" title={t('crm.insights.unassigned', 'Nobody on it')} line={t('crm.insights.unassigned_line', 'Open for 3 days or more, no owner')}
                     figure={n(signals.data.unassigned.count)} sample={signals.data.unassigned.sample} />
-                  <Signal icon={AlarmClock} title={t('crm.insights.stuck', 'Stuck')} line={t('crm.insights.stuck_line', 'Not changed for 14 days or more')}
+                  <Signal icon={AlarmClock} tone="danger" title={t('crm.insights.stuck', 'Stuck')} line={t('crm.insights.stuck_line', 'Not changed for 14 days or more')}
                     figure={n(signals.data.stuck.count)} sample={signals.data.stuck.sample} />
-                  <Signal icon={CircleDollarSign} title={t('crm.insights.high_value', 'Biggest open leads')} line={t('crm.insights.high_value_line', 'The five open leads worth most, together')}
+                  <Signal icon={CircleDollarSign} tone="success" title={t('crm.insights.high_value', 'Biggest open leads')} line={t('crm.insights.high_value_line', 'The five open leads worth most, together')}
                     figure={money(signals.data.high_value.total, boot.venue.currency, lang)} sample={signals.data.high_value.sample} />
                 </ul>
               )}
@@ -127,12 +127,12 @@ export function PipelineSection({ days, now = new Date() }: { days: Period; now?
 }
 
 /** One signal: what it means, its figure, and the first few leads in it. */
-function Signal({ icon: Icon, title, line, figure, sample }: { icon: LucideIcon; title: string; line: string; figure: string; sample: SignalLead[] }) {
+function Signal({ icon: Icon, tone = 'neutral', title, line, figure, sample }: { icon: LucideIcon; tone?: Tone; title: string; line: string; figure: string; sample: SignalLead[] }) {
   const { t } = useTranslation()
   return (
     <li className="px-4 py-3">
       <div className="flex items-start gap-3">
-        <span aria-hidden className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-a-surface-2 text-a-text-2"><Icon size={15} /></span>
+        <span aria-hidden className={`grid h-8 w-8 shrink-0 place-items-center rounded-lg ${TONE_CHIP[tone]}`}><Icon size={15} /></span>
         <span className="min-w-0 flex-1">
           <span className="block text-sm font-medium text-a-text">{title}</span>
           <span className="block text-xs text-a-text-2">{line}</span>
@@ -160,13 +160,12 @@ function LostReasons() {
   const reasons = useQuery({ queryKey: [...INSIGHTS, 'lost-reasons'], queryFn: () => get<LostReasonCount[]>('inquiry-lost-reasons-admin'), staleTime: 5 * 60_000 })
   const rows = lostReasonRows(Array.isArray(reasons.data) ? reasons.data : [])
   return (
-    <Card title={t('crm.insights.lost_reasons', 'Why leads were lost')} icon={XCircle}>
+    <Card title={t('crm.insights.lost_reasons', 'Why leads were lost')} icon={XCircle} tone="danger" description={t('crm.insights.lost_desc', 'All time, by the reason chosen')}>
       <QueryState loading={reasons.isLoading} error={reasons.error} onRetry={() => { void reasons.refetch() }} rows={3}>
         {rows.length === 0
           ? <p className="text-sm text-a-text-2">{t('crm.insights.no_lost', 'No lead has been marked lost with a reason yet.')}</p>
           : (
             <>
-              <p className="mb-3 text-sm text-a-text-2">{t('crm.insights.lost_line', 'All time, from the reason chosen when a lead was marked lost.')}</p>
               <BarList label={t('crm.insights.lost_reasons', 'Why leads were lost')}
                 rows={rows.map(r => ({ id: String(r.id), label: r.label, value: r.count, text: countOf(r.count, i18n.language), tone: 'lost' }))} />
             </>
@@ -184,7 +183,7 @@ function BestCustomers() {
   const deals = useQuery({ queryKey: [...INSIGHTS, 'deals'], queryFn: () => get<DealAnalytics>(`deals/analytics${params({ days: 30 })}`), staleTime: 5 * 60_000 })
   const rows = deals.data?.top_customers ?? []
   return (
-    <Card title={t('crm.insights.best_customers', 'Best customers')} icon={Crown} padded={false}>
+    <Card title={t('crm.insights.best_customers', 'Best customers')} icon={Crown} tone="success" description={t('crm.insights.best_desc', 'By the value of their won deals, all time')} padded={false}>
       <div className={rows.length ? '' : 'p-4'}>
         <QueryState loading={deals.isLoading} error={deals.error} onRetry={() => { void deals.refetch() }} rows={3}>
           {rows.length === 0

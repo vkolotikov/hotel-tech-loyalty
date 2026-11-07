@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
   barShare, bucketLabel, busiestHour, changeTone, countChange, countryName, funnelRows, hourRows, labelled, lostReasonRows, periodOf,
-  pickPipeline, pipelineSummary, rate, rateChange, serverChange, shortDay, shortPath, signalName, stageRows, statusRows, trendBuckets, windows,
+  pickPipeline, pipelineSummary, rate, rateChange, sectionOf, serverChange, shortDay, shortPath, signalName, stageRows, statusRows, trendBuckets,
+  windows, zoneLabel,
 } from './insightsMath'
 import type { ChatTrendPoint, Pipeline } from './types'
 
@@ -161,5 +162,20 @@ describe('the pipeline', () => {
     expect(signalName({ id: 1, total_value: null, guest: null })).toBeNull()
     expect(rate(43.5, 'en')).toBe('43.5 %')
     expect(rate(null, 'en')).toBe('—')
+  })
+})
+
+describe('round 2: the sections and the venue’s zone', () => {
+  it('keeps the section from the address, else the default given', () => {
+    expect(sectionOf('pipeline')).toBe('pipeline')
+    expect(sectionOf('chat', 'pipeline')).toBe('chat')
+    expect(sectionOf(null)).toBe('chat')
+    expect(sectionOf('nonsense', 'pipeline')).toBe('pipeline')
+  })
+
+  it('names the venue’s zone for the hour chart', () => {
+    expect(zoneLabel('Europe/Riga')).toBe('Europe/Riga')
+    expect(zoneLabel('America/New_York')).toBe('America/New York')
+    expect(zoneLabel('  ')).toBe('UTC')
   })
 })

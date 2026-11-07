@@ -68,9 +68,13 @@ export type SenderType = 'visitor' | 'ai' | 'agent' | 'system'
 
 export interface Feedback {
   id: number
+  /** Who rated it (the server keeps one rating per person and answer, and shows the latest). */
+  user_id?: number | null
   rating: 'good' | 'bad'
   comment: string | null
   applied_to_training: boolean
+  /** Round 2: a staff member's right answer, kept for a manager to check (nothing is taught until then). */
+  suggested_answer?: string | null
 }
 
 export interface Message {
@@ -143,4 +147,6 @@ export interface Brief {
   generated_at: string | null
   cached: boolean
   error?: string
+  /** Round 2: the failure's code beside the server's sentence (`ai_failed`); the inbox says it in its own words. */
+  code?: string
 }

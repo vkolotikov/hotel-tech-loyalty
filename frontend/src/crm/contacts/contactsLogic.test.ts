@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   BULK_MAX, DEFAULT_LIFECYCLE, EMPTY_COMPANY, EMPTY_CONTACT, activeFilterCount, activityBody, activityKey, allOnPage, bulkBody,
   companyBody, companyErrors, companyFormOf, companyStatusKey, csvWithBom, displayName, exportParams, fieldPatch, filtersFrom,
-  impactLines, importanceTone, leadState, listOr, listParams, mailLink, mergeBody, mergeSides, newContactBody, newContactErrors,
+  activeFilters, impactLines, impactSummary, importanceTone, mergeRefusalKey, leadState, listOr, listParams, mailLink, mergeBody, mergeSides, newContactBody, newContactErrors,
   newLeadFor, optionsWith, pageFrom, phoneLink, reasonKey, segmentFilters, settingList, tagIdsWith, tagIdsWithout, tagNameError,
   tagsToOffer, toggleId, togglePage, withParam, withSegment, withoutFilters,
 } from './contactsLogic'
@@ -95,9 +95,12 @@ describe('editing one field (PUT guests/{id})', () => {
     expect(fieldPatch('city', 'Riga', null)).toEqual({ kind: 'patch', body: { city: 'Riga' } })
   })
 
-  it('keeps the name, and says an emptied field cannot be saved (the server drops empty values)', () => {
+  it('keeps the name, the lifecycle and the importance, and clears any other emptied field with null', () => {
     expect(fieldPatch('full_name', '  ', 'Ada')).toEqual({ kind: 'required' })
-    expect(fieldPatch('phone', '', '+371 2')).toEqual({ kind: 'cannot_clear' })
+    expect(fieldPatch('lifecycle_status', '', 'VIP')).toEqual({ kind: 'required' })
+    expect(fieldPatch('importance', ' ', 'Standard')).toEqual({ kind: 'required' })
+    expect(fieldPatch('phone', '', '+371 2')).toEqual({ kind: 'patch', body: { phone: null } })
+    expect(fieldPatch('notes', '  ', 'Prefers email.')).toEqual({ kind: 'patch', body: { notes: null } })
     expect(fieldPatch('phone', '', null)).toEqual({ kind: 'same' })
   })
 
@@ -249,5 +252,37 @@ describe('odds and ends', () => {
     expect(contactsTab(null)).toBe('people')
     expect(contactsTab('companies')).toBe('companies')
     expect(contactsTab('loyalty')).toBe('people')
+  })
+})
+
+describe('round 2: chips, the delete preview and merge refusals', () => {
+  it('lists the active filters in the toolbar’s order, each as a chip', () => {
+    const f = filtersFrom(new URLSearchParams('lifecycle=VIP&q=%20ada%20&tag=4&company=Acme&sort=oldest'))
+    expect(activeFilters(f)).toEqual([
+      { key: 'q', value: 'ada' }, { key: 'lifecycle', value: 'VIP' }, { key: 'tag', value: '4' }, { key: 'company', value: 'Acme' },
+    ])
+    expect(activeFilters(filtersFrom(new URLSearchParams('sort=oldest')))).toEqual([])
+  })
+
+  it('reads the delete preview as the server answers it: what goes, what stays unlinked, what blocks', () => {
+    const answer = { inquiries: 2, reservations: 1, activities: 5, lead_tasks: 3, chats: 1, venue_bookings: 0, removes: ['inquiries', 'reservations', 'activities', 'lead_tasks'], kept: ['chats', 'member'], blocked: false }
+    expect(impactSummary(answer)).toEqual({
+      removes: [{ key: 'inquiries', count: 2 }, { key: 'lead_tasks', count: 3 }, { key: 'reservations', count: 1 }, { key: 'activities', count: 5 }],
+      kept: [{ key: 'chats', count: 1 }],
+      blocked: null,
+    })
+    expect(impactSummary({ ...answer, blocked: true, venue_bookings: 2 }).blocked).toBe(2)
+    // An older answer without the lists: the leads, reservations and timeline go, nothing is said to stay.
+    expect(impactSummary({ inquiries: 1, reservations: 0, activities: 0 })).toEqual({ removes: [{ key: 'inquiries', count: 1 }], kept: [], blocked: null })
+    expect(impactSummary(undefined)).toEqual({ removes: [], kept: [], blocked: null })
+  })
+
+  it('says a refused merge in its own words, by the server’s code', () => {
+    expect(mergeRefusalKey('different_members')).toBe('refused')
+    expect(mergeRefusalKey('same_guest')).toBe('same')
+    expect(mergeRefusalKey('merge_failed')).toBe('failed')
+    expect(mergeRefusalKey('merge_refused')).toBe('not_merged')
+    expect(mergeRefusalKey('different_organizations')).toBe('not_merged')
+    expect(mergeRefusalKey('network')).toBeNull()
   })
 })

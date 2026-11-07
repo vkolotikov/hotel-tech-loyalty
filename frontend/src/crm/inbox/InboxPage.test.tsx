@@ -7,6 +7,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { CrmContext } from '../CrmProvider'
 import type { Bootstrap } from '../lib/types'
 import { ToastProvider } from '../ui/Toast'
+import { FeedbackDialog } from './FeedbackDialog'
 import { InboxPage } from './InboxPage'
 import { CHANNELS, INTENTS } from './inboxLogic'
 import { inboxKeys } from './inboxQueries'
@@ -125,6 +126,48 @@ describe('InboxPage', () => {
 
   it('says when no conversation is there', () => {
     expect(render('/crm/inbox', { list: { data: [], current_page: 1, last_page: 1, total: 0 } })).toContain('No conversations here')
+  })
+})
+
+describe('the inbox, round 2', () => {
+  it('keeps the list’s controls in one toolbar, with the active filter as a chip', () => {
+    const html = render('/crm/inbox?status=waiting', { status: 'waiting' })
+    expect(html).toContain('Search by name or email')
+    expect(html).toContain('One row per visitor')
+    expect(html).toContain('Status: Waiting')
+    expect(html).toContain('Remove the filter: Status: Waiting')
+  })
+
+  it('groups the thread’s actions and titles the details: Contact, Lead, Assignment, What they want, On the website', () => {
+    const html = render('/crm/inbox?c=12')
+    expect(html).toContain('What to do with this chat')
+    for (const title of ['Contact', 'Lead', 'Assignment', 'What they want', 'On the website']) expect(html).toContain(`>${title}</h3>`)
+    expect(html).toContain('Reply tools')
+    expect(html).toContain('crm-ai-soft')
+  })
+
+  const rated = (manager: boolean) => {
+    const client = new QueryClient()
+    const value = { data: { ...boot, staff: { ...boot.staff, can: { ...boot.staff.can, manage_bot: manager } } }, isLoading: false, isError: false, error: null, refetch: () => {} }
+    return renderToString(
+      <QueryClientProvider client={client}>
+        <CrmContext.Provider value={value}>
+          <ToastProvider><FeedbackDialog message={detail.messages[1]} rating="bad" onClose={() => {}} onSaved={() => {}} /></ToastProvider>
+        </CrmContext.Provider>
+      </QueryClientProvider>,
+    )
+  }
+
+  it('lets a staff member suggest the right answer for a manager to check', () => {
+    const html = rated(false)
+    expect(html).toContain('Suggest the right answer — a manager will check it')
+    expect(html).not.toContain('Teach the assistant this answer')
+  })
+
+  it('lets a manager teach the assistant at once', () => {
+    const html = rated(true)
+    expect(html).toContain('Teach the assistant this answer')
+    expect(html).not.toContain('Suggest the right answer')
   })
 })
 

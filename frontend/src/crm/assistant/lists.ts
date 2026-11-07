@@ -9,6 +9,14 @@ export function pickTab<T extends string>(value: string | null, allowed: readonl
   return (allowed as readonly string[]).includes(value ?? '') ? (value as T) : fallback
 }
 
+/** The address after a section was chosen: `?tab=` names it, or is left out for the first one; the rest is kept. */
+export function withTab(prev: URLSearchParams, param: string, next: string, first: string): URLSearchParams {
+  const out = new URLSearchParams(prev)
+  if (next === first) out.delete(param)
+  else out.set(param, next)
+  return out
+}
+
 /** The list with item `index` moved one place up (-1) or down (+1); unchanged at either end. */
 export function moveItem<T>(list: readonly T[], index: number, dir: -1 | 1): T[] {
   const target = index + dir

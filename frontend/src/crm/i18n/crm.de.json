@@ -95,28 +95,42 @@
     "to_do": "Offen",
     "widget": {
       "title": "Den Chat auf Ihre Website bringen",
-      "line": "Kopieren Sie eine Zeile in Ihre Website; Besucher können Ihnen von jeder Seite schreiben."
+      "line": "Kopieren Sie eine Zeile in Ihre Website; Besucher können Ihnen von jeder Seite schreiben.",
+      "action": "Code holen"
     },
     "assistant": {
       "title": "Dem Assistenten eine Stimme geben",
-      "line": "Sein Name, sein Ton und was er versprechen darf, damit er wie Ihr Team spricht."
+      "line": "Sein Name, sein Ton und was er versprechen darf, damit er wie Ihr Team spricht.",
+      "action": "Stimme festlegen"
     },
     "knowledge": {
       "title": "Ihm Ihre Antworten beibringen",
-      "line": "Mindestens fünf Fragen und Antworten oder ein Dokument mit Ihren Preisen und Zeiten."
+      "line": "Mindestens fünf Fragen und Antworten oder ein Dokument mit Ihren Preisen und Zeiten.",
+      "action": "Antworten hinzufügen"
     },
     "reply": {
       "title": "Ihren ersten Chat beantworten",
-      "line": "Übernehmen Sie im Posteingang einen Chat vom Assistenten und antworten Sie persönlich."
+      "line": "Übernehmen Sie im Posteingang einen Chat vom Assistenten und antworten Sie persönlich.",
+      "action": "Posteingang öffnen"
     },
     "pipeline": {
       "title": "Ihre Pipeline einrichten",
-      "line": "Die Phasen, die ein Lead durchläuft, vom ersten Kontakt bis gewonnen."
+      "line": "Die Phasen, die ein Lead durchläuft, vom ersten Kontakt bis gewonnen.",
+      "action": "Phasen einrichten"
     },
     "team": {
       "title": "Eine Kollegin oder einen Kollegen einladen",
-      "line": "Teilen Sie den Posteingang: Alle sehen, wer welchen Chat beantwortet."
-    }
+      "line": "Teilen Sie den Posteingang: Alle sehen, wer welchen Chat beantwortet.",
+      "action": "Jemanden einladen"
+    },
+    "progress_label": "Ihr Fortschritt",
+    "complete": "Alles ist eingerichtet. Ihr Chat antwortet, und Ihre Pipeline fasst nach.",
+    "next_line": "Als Nächstes: {{step}}",
+    "to_today": "Zu Heute",
+    "list_title": "Die Schritte",
+    "list_line": "Jeder Schritt hakt sich selbst ab, sobald er erledigt ist.",
+    "up_next": "Als Nächstes",
+    "open": "Öffnen"
   },
   "status": {
     "waiting": "Wartet",
@@ -131,37 +145,63 @@
     "add_lead": "Lead hinzufügen",
     "all_leads": "Alle Leads",
     "all_tasks": "Alle Aufgaben",
-    "chats_title": "Chats, die auf Antwort warten",
-    "due_today": "Heute",
     "follow_ups": "Fällige Nachfassaktionen",
-    "follow_ups_title": "Nachfassen",
     "last_24h": "In den letzten 24 Stunden",
     "line": "Was Sie jetzt brauchen, aus dem Website-Chat und Ihrer Pipeline.",
     "new_leads": "Neue Leads",
-    "newest": "Neueste Leads",
-    "no_chats": "Niemand wartet",
-    "no_chats_line": "Der Assistent antwortet Besuchern; ein Chat landet hier, wenn er ihn an Ihr Team übergibt.",
-    "no_follow_ups": "Nichts zum Nachfassen fällig",
-    "no_follow_ups_line": "Legen Sie bei einem Lead einen nächsten Schritt fest, und er erscheint hier an seinem Tag.",
-    "no_tasks": "Heute ist nichts fällig",
     "nobody": "Niemand zugewiesen",
-    "open_chats": "Offene Chats",
     "open_inbox": "Posteingang öffnen",
     "open_leads": "{{count}} offene Leads",
     "overdue": "{{count}} überfällig",
-    "overdue_since": "Seit {{day}}",
     "pipeline": "Offene Pipeline",
     "setup_line": "{{done}} von {{total}} Schritten erledigt. Chat auf die Website bringen, Assistenten anlernen, fertig.",
     "setup_title": "Richten Sie HexaTech CRM fertig ein",
-    "tasks_title": "Ihre Aufgaben",
     "title": "Heute",
-    "unassigned": "{{count}} offen ohne Zuständige",
     "waiting": "Warten auf Antwort",
     "week_ai": "Von der KI abgeschlossen",
     "week_chats": "Gespräche",
     "week_leads": "Leads aus dem Chat",
     "week_title": "Der Website-Chat diese Woche",
     "your_tasks": "Ihre Aufgaben",
-    "open_leads_one": "1 offener Lead"
+    "open_leads_one": "1 offener Lead",
+    "greeting": {
+      "morning": "Guten Morgen, {{name}}",
+      "afternoon": "Guten Tag, {{name}}",
+      "evening": "Guten Abend, {{name}}"
+    },
+    "setup_go": "Weiter",
+    "figures": "Der Tag auf einen Blick",
+    "open_unassigned": "{{open}} offene Chats · {{unassigned}} ohne Zuständige",
+    "now_title": "Braucht Sie jetzt",
+    "now_line": "Wartende Chats zuerst, dann alles Überfällige.",
+    "all_clear": "Alles erledigt",
+    "all_clear_line": "Niemand wartet auf eine Antwort, und nichts ist überfällig.",
+    "all_waiting": "Alle {{count}} wartenden Chats",
+    "all_overdue_leads": "Alle {{count}} überfälligen Nachfassaktionen",
+    "all_overdue_tasks": "Alle {{count}} überfälligen Aufgaben",
+    "kind_chat": "Wartet auf Antwort",
+    "kind_follow_up": "Nachfassen überfällig seit {{day}}",
+    "kind_task": "Aufgabe überfällig · fällig war {{when}}",
+    "schedule_title": "Der Plan für heute",
+    "schedule_line": "Nachfassaktionen und Ihre Aufgaben für heute, in der Zeit des Hauses.",
+    "no_schedule": "Für heute ist nichts geplant",
+    "no_schedule_line": "Legen Sie bei einem Lead einen nächsten Schritt fest oder fügen Sie eine Aufgabe hinzu; an ihrem Tag erscheint sie hier.",
+    "at_a_time": "Zu einer Uhrzeit",
+    "during_day": "Im Laufe des Tages",
+    "all_leads_due": "Alle fälligen Nachfassaktionen",
+    "no_time": "Keine feste Uhrzeit",
+    "kind_task_today": "Aufgabe",
+    "kind_follow_up_today": "Nachfassen",
+    "new_title": "Neue Leads",
+    "no_new": "Heute keine neuen Leads",
+    "no_new_line": "Leads aus dem Website-Chat, Ihren Formularen und Ihrem Team erscheinen hier, sobald sie eintreffen.",
+    "all_new": "Alle {{count}} neuen Leads",
+    "week_line": "Die letzten sieben Tage",
+    "week_more": "Auswertungen",
+    "week_hint": "Chats, die der Assistent abgeschlossen hat, ohne dass Ihr Team eingreifen musste.",
+    "done_follow_up": "Nachfassen als erledigt markiert",
+    "done_task": "Aufgabe als erledigt markiert",
+    "mark_done": "„{{name}}“ als erledigt markieren",
+    "done": "Erledigt"
   }
 }

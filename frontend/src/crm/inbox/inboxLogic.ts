@@ -53,6 +53,12 @@ export function needsAttention(c: Pick<Conversation, 'unread_count' | 'status'>)
   return (c.unread_count ?? 0) > 0 || c.status === 'waiting'
 }
 
+/** How a row of the list shows: its unread count, whether a visitor waits for a person, and whether either holds. */
+export function rowState(c: Pick<Conversation, 'unread_count' | 'status'>): { unread: number; waiting: boolean; urgent: boolean } {
+  const unread = Math.max(0, c.unread_count ?? 0)
+  return { unread, waiting: c.status === 'waiting', urgent: needsAttention(c) }
+}
+
 function instant(iso: string | null | undefined): number {
   const at = iso ? Date.parse(iso) : NaN
   return Number.isNaN(at) ? 0 : at
@@ -372,9 +378,13 @@ export function leadIdOf(answer: unknown, c?: Pick<Conversation, 'inquiry_id'>):
 
 export interface FeedbackForm { rating: 'good' | 'bad'; comment: string; corrected_answer: string; apply_to_training: boolean }
 
-/** Rating an AI answer: from what was saved before, or fresh — a "bad" rating offers to teach the assistant at once. */
-export function feedbackForm(rating: 'good' | 'bad', saved?: Feedback | null): FeedbackForm {
-  return { rating, comment: saved?.comment ?? '', corrected_answer: '', apply_to_training: rating === 'bad' }
+/**
+ * Rating an AI answer: from what was saved before, or fresh — a "bad" rating offers to teach the assistant at once. The
+ * person's own earlier suggestion comes back into the box (`me`: whose rating it is), never someone else's.
+ */
+export function feedbackForm(rating: 'good' | 'bad', saved?: Feedback | null, me?: number): FeedbackForm {
+  const own = saved && me !== undefined && saved.user_id === me ? saved.suggested_answer?.trim() ?? '' : ''
+  return { rating, comment: saved?.comment ?? '', corrected_answer: rating === 'bad' ? own : '', apply_to_training: rating === 'bad' }
 }
 
 /**
@@ -389,6 +399,28 @@ export function feedbackPayload(form: FeedbackForm): { rating: 'good' | 'bad'; c
     corrected_answer: corrected || null,
     apply_to_training: Boolean(corrected) && form.apply_to_training,
   }
+}
+
+/**
+ * Who may teach the assistant: a manager's right answer teaches it at once; a staff member's is kept as a suggestion for
+ * a manager to check (round 2: the server applies `apply_to_training` only for those who manage the bot).
+ */
+export function teachMode(canManageBot: boolean): 'teach' | 'suggest' {
+  return canManageBot ? 'teach' : 'suggest'
+}
+
+export type FeedbackOutcome = 'taught' | 'suggested' | 'not_taught' | 'saved'
+
+/**
+ * What a rating did, from what was sent and what `POST chat-inbox/messages/{id}/feedback` answered: taught
+ * (`applied_to_training`), kept as a suggestion for a manager (`suggested`), not taught although asked (the server found
+ * nothing to teach it with), or simply saved.
+ */
+export function feedbackOutcome(sent: { apply_to_training: boolean }, answer: unknown): FeedbackOutcome {
+  const a = answer && typeof answer === 'object' ? (answer as { applied_to_training?: unknown; suggested?: unknown }) : {}
+  if (a.applied_to_training === true) return 'taught'
+  if (a.suggested === true) return 'suggested'
+  return sent.apply_to_training ? 'not_taught' : 'saved'
 }
 
 // ─── Words the code builds ──────────────────────────────────────────────────

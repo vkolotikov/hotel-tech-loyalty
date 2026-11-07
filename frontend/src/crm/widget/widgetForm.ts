@@ -239,6 +239,21 @@ export function setDayTime(hours: Hours, day: Day, which: 'open' | 'close', valu
   return { ...hours, [day]: [first, ...slots.slice(1)] }
 }
 
+/** The working week, Monday to Friday. */
+export const WEEKDAYS: readonly Day[] = ['mon', 'tue', 'wed', 'thu', 'fri']
+
+/**
+ * "Same hours Monday to Friday": every weekday gets the first opening of `from` (one press instead of five); the
+ * weekend is left as it is. Nothing changes when `from` is closed.
+ */
+export function copyToWeekdays(hours: Hours, from: Day): Hours {
+  const slot = hours[from]?.[0]
+  if (!slot) return hours
+  const next: Hours = { ...hours }
+  for (const day of WEEKDAYS) next[day] = [{ open: slot.open, close: slot.close }]
+  return next
+}
+
 /** The six suggestion boxes' values: the saved ones, then empty boxes. */
 export function suggestionSlots(suggestions: readonly string[]): string[] {
   return Array.from({ length: 6 }, (_, i) => suggestions[i] ?? '')
@@ -269,6 +284,21 @@ export const TEMPLATE_LOOKS: Record<(typeof TEMPLATES)[number], Partial<WidgetFo
 /** The form with a template picked: its look over the current one; the brand colour stays unless the template has one. */
 export function applyTemplate(form: WidgetForm, template: (typeof TEMPLATES)[number]): WidgetForm {
   return { ...form, ...TEMPLATE_LOOKS[template], widget_template: template }
+}
+
+/**
+ * A template's swatch in the picker: its header, its chat's background and its answer bubble — the template's own
+ * colours, or the current brand colour for a template that keeps it (Classic).
+ */
+export function templateSwatch(template: (typeof TEMPLATES)[number], currentPrimary: string): { header: string; background: string; bubble: string } {
+  const look = TEMPLATE_LOOKS[template]
+  const primary = look.primary_color ?? (HEX.test(currentPrimary.trim()) ? currentPrimary.trim() : DEFAULT_PRIMARY)
+  const end = look.header_gradient_end ?? shade(primary, -30)
+  return {
+    header: look.header_style === 'gradient' ? `linear-gradient(135deg, ${primary} 0%, ${end} 100%)` : primary,
+    background: look.chat_bg_color ?? '#ffffff',
+    bubble: look.bot_bubble_color ?? '#f3f4f6',
+  }
 }
 
 /** A colour a shade darker or lighter (-100…100), for the gradient's end when none was chosen. */

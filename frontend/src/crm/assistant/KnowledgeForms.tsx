@@ -16,7 +16,7 @@ import {
   pickedDrafts, reviewDrafts, sourceUsable, type CategoryForm, type ItemForm, type ReviewDraft,
 } from './knowledge'
 import { mergeTexts } from './lists'
-import { CharCount, ChipEditor, Problem } from './parts'
+import { AiButton, CharCount, ChipEditor, Problem } from './parts'
 import { knowledgeChanged } from './queries'
 import type { DraftFaq, KnowledgeCategory, KnowledgeItem } from './types'
 
@@ -44,7 +44,6 @@ export function ItemPanel({ item, categories, onClose }: { item: KnowledgeItem |
       if (fresh.length === 0) say(t('crm.assistant.knowledge.no_keywords', 'The AI had no keywords to suggest.'))
       setForm(f => ({ ...f, keywords: mergeTexts(f.keywords, fresh, KNOWLEDGE_LIMITS.keyword) }))
     },
-    onError: error => say(errorText(t, error), 'danger'),
   })
 
   const submit = () => {
@@ -90,11 +89,11 @@ export function ItemPanel({ item, categories, onClose }: { item: KnowledgeItem |
         <ChipEditor label={t('crm.assistant.knowledge.keywords', 'Keywords')} items={form.keywords} max={KNOWLEDGE_LIMITS.keyword}
           placeholder={t('crm.assistant.knowledge.keyword_placeholder', 'A word visitors use')} onChange={next => set('keywords', next)}
           extra={(
-            <button type="button" onClick={() => suggest.mutate()} disabled={!form.question.trim() || suggest.isPending}
-              className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-semibold crm-ai-soft disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-a-accent">
+            <AiButton size="sm" onClick={() => suggest.mutate()} disabled={!form.question.trim() || suggest.isPending}>
               <Sparkles size={14} aria-hidden />{suggest.isPending ? t('crm.assistant.knowledge.suggesting', 'Suggesting…') : t('crm.assistant.knowledge.suggest', 'Suggest')}
-            </button>
+            </AiButton>
           )} />
+        {suggest.isError && <Notice tone="danger">{errorText(t, suggest.error)}</Notice>}
         <Toggle label={t('crm.assistant.knowledge.active', 'The assistant uses this answer')} checked={form.is_active} onChange={on => set('is_active', on)} />
       </div>
     </SidePanel>
@@ -155,7 +154,6 @@ export function ExtractPanel({ categories, onClose }: { categories: KnowledgeCat
   const extract = useMutation({
     mutationFn: () => send<{ items?: DraftFaq[] }>('post', 'knowledge/extract-faqs', { source_text: source.trim() }),
     onSuccess: data => setDrafts(reviewDrafts(data.items)),
-    onError: error => say(errorText(t, error), 'danger'),
   })
   const add = useMutation({
     mutationFn: () => send<{ created_count: number }>('post', 'knowledge/bulk-import-faqs', importPayload(drafts ?? [], categoryId)),
@@ -177,15 +175,15 @@ export function ExtractPanel({ categories, onClose }: { categories: KnowledgeCat
       ) : (
         <div className="flex flex-wrap justify-end gap-2">
           <Button variant="secondary" onClick={onClose} disabled={extract.isPending}>{t('crm.common.cancel', 'Cancel')}</Button>
-          <button type="button" onClick={() => extract.mutate()} disabled={!sourceUsable(source) || extract.isPending}
-            className="inline-flex items-center gap-2 rounded-full px-4 py-2.5 text-sm font-semibold crm-ai-fill disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-a-accent">
+          <AiButton fill onClick={() => extract.mutate()} disabled={!sourceUsable(source) || extract.isPending}>
             <Sparkles size={15} aria-hidden />{extract.isPending ? t('crm.assistant.knowledge.drafting', 'Drafting…') : t('crm.assistant.knowledge.draft', 'Draft answers')}
-          </button>
+          </AiButton>
         </div>
       )}>
       {drafts === null ? (
         <div className="space-y-4">
           <p className="text-sm text-a-text-2">{t('crm.assistant.knowledge.extract_line', 'Paste your brochure, price list or house rules. The AI drafts questions and answers from it; you check them before anything is added.')}</p>
+          {extract.isError && <Notice tone="danger">{errorText(t, extract.error)}</Notice>}
           <div>
             <Field label={t('crm.assistant.knowledge.source', 'Your text')}>
               <TextArea rows={12} value={source} maxLength={KNOWLEDGE_LIMITS.sourceMax} onChange={e => setSource(e.target.value)} />

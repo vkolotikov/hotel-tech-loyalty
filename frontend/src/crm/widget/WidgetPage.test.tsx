@@ -50,34 +50,56 @@ function render(at: string, data: Partial<Bootstrap> = {}) {
 }
 
 describe('WidgetPage', () => {
-  it('draws the look with a preview in the chosen colour and words', () => {
+  it('shows its three sections as cards and draws the look with a preview in the chosen colour and words', () => {
     const html = render('/crm/widget')
-    for (const label of ['Look', 'Behaviour', 'Install', 'Style', 'Suggested questions']) expect(html).toContain(label)
+    for (const label of ['Look', 'Behaviour', 'Install', 'Style', 'Suggested questions', 'The button that opens the chat', 'Picture and branding']) expect(html).toContain(label)
+    expect(html.match(/role="tab"/g)).toHaveLength(3)
+    expect(html).toContain('aria-labelledby="widget-section-look"')
     expect(html).toContain('Talk to Riga')
     expect(html).toContain('background:#1d4ed8')
     expect(html).toContain('Parking?')
+    expect(html).toContain('Shown on your website')
+    expect(html).toContain('Get the code')
+    expect(html).not.toContain('Unsaved changes')
   })
 
-  it('opens the install section Get started links to, with the server\'s code and the key', () => {
+  it('offers the templates as swatches and folds the separate colours away', () => {
+    const html = render('/crm/widget')
+    expect(html).toContain('Onyx gold')
+    expect(html).toContain('Night concierge')
+    expect(html).toMatch(/aria-pressed="true"[^>]*>(?:(?!<\/button>).)*Classic/)
+    expect(html).toContain('Header and bubbles')
+    expect(html).toContain('aria-expanded="false"')
+  })
+
+  it('opens the install section Get started links to, with the server\'s code, the key and how to replace it', () => {
     const html = render('/crm/widget?tab=install')
     expect(html).toContain('window.HotelChat')
     expect(html).toContain('3f2a9c1e…b81d')
     expect(html).toContain('WordPress')
+    expect(html).toContain('Replace the widget key')
     expect(html).toContain('Make a new API key')
+    expect(html).toContain('Paste the code just before &lt;/body&gt;')
+    expect(html).not.toContain('Get the code')
   })
 
-  it('shows staff the settings read only, without the key\'s replacement', () => {
+  it('shows staff the settings read only, without replacing either key', () => {
     const can = { ...boot.staff.can, manage_widget: false }
     const staff = { staff: { ...boot.staff, role: 'staff', can } }
     expect(render('/crm/widget', staff)).toContain('Only an owner or a manager can change the chat widget')
     expect(render('/crm/widget', staff)).toContain('disabled=""')
-    expect(render('/crm/widget?tab=install', staff)).not.toContain('Make a new API key')
+    // Staff read the folded colours too: they cannot press the (disabled) button that opens them.
+    expect(render('/crm/widget', staff)).toContain('aria-expanded="true"')
+    const install = render('/crm/widget?tab=install', staff)
+    expect(install).not.toContain('Make a new API key')
+    expect(install).not.toContain('Replace the widget key')
   })
 
-  it('lists the opening hours by weekday on the behaviour section', () => {
+  it('lists the opening hours by weekday on the behaviour section, beside contact details and a way to a person', () => {
     const html = render('/crm/widget?tab=behaviour')
     expect(html).toContain('Opening hours')
     expect(html).toContain('Monday')
     expect(html).toContain('Ask for contact details')
+    expect(html).toContain('Talk to a person')
   })
 })

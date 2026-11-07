@@ -4,10 +4,11 @@ import {
   contactPayload, dayKey, displayName, draftInstruction, draftState, feedbackForm, feedbackPayload, filterCounts, hostOf,
   insertText, intentKey, isSafeAttachment, lastMessageId, leadErrors, leadForm, leadIdOf, leadPayload, listPath,
   matchesSearch, mergeMessages, messageBody, needsAttention, pagePath, readConversationId, readStatus, recorderMime,
-  shouldPingTyping, shownConversations, sideOf, sortConversations, statusActions, threadRows, translateTarget,
+  rowState, shouldPingTyping, shownConversations, sideOf, sortConversations, statusActions, teachMode, threadRows, translateTarget, feedbackOutcome,
   visitorHasWritten, webHref, withDraft, UPLOAD_MAX_BYTES,
 } from './inboxLogic'
 import type { Conversation, InboxStats, Message } from './types'
+import { dictationFailure } from './useDictation'
 
 const conv = (over: Partial<Conversation> = {}): Conversation => ({
   id: 1, visitor_id: null, visitor_name: null, visitor_email: null, visitor_phone: null, visitor_country: null, visitor_city: null,
@@ -283,5 +284,42 @@ describe('the forms', () => {
       .toEqual({ rating: 'bad', comment: null, corrected_answer: null, apply_to_training: false })
     expect(feedbackPayload({ rating: 'good', comment: 'ok', corrected_answer: 'left over', apply_to_training: true }))
       .toEqual({ rating: 'good', comment: 'ok', corrected_answer: null, apply_to_training: false })
+  })
+})
+
+describe('round 2: the list rows and teaching', () => {
+  it('shows a row as unread with its count, as waiting, or as neither', () => {
+    expect(rowState(conv({ unread_count: 3 }))).toEqual({ unread: 3, waiting: false, urgent: true })
+    expect(rowState(conv({ status: 'waiting', unread_count: 0 }))).toEqual({ unread: 0, waiting: true, urgent: true })
+    expect(rowState(conv({ unread_count: undefined }))).toEqual({ unread: 0, waiting: false, urgent: false })
+    expect(rowState(conv({ unread_count: -1 })).unread).toBe(0)
+  })
+
+  it('lets a manager teach and a staff member suggest', () => {
+    expect(teachMode(true)).toBe('teach')
+    expect(teachMode(false)).toBe('suggest')
+  })
+
+  it('reads what the feedback endpoint did: taught, kept as a suggestion, not taught, or saved', () => {
+    expect(feedbackOutcome({ apply_to_training: true }, { applied_to_training: true, suggested: false })).toBe('taught')
+    expect(feedbackOutcome({ apply_to_training: true }, { applied_to_training: false, suggested: true })).toBe('suggested')
+    expect(feedbackOutcome({ apply_to_training: true }, { applied_to_training: false, suggested: false })).toBe('not_taught')
+    expect(feedbackOutcome({ apply_to_training: false }, { applied_to_training: false })).toBe('saved')
+    expect(feedbackOutcome({ apply_to_training: false }, null)).toBe('saved')
+  })
+
+  it('brings back the person’s own suggested answer, never someone else’s', () => {
+    const saved = { id: 1, user_id: 4, rating: 'bad' as const, comment: 'Wrong price', applied_to_training: false, suggested_answer: 'It is 90 € a night.' }
+    expect(feedbackForm('bad', saved, 4)).toEqual({ rating: 'bad', comment: 'Wrong price', corrected_answer: 'It is 90 € a night.', apply_to_training: true })
+    expect(feedbackForm('bad', saved, 5).corrected_answer).toBe('')
+    expect(feedbackForm('good', saved, 4).corrected_answer).toBe('')
+  })
+})
+
+describe('dictation', () => {
+  it('says the transcription is off when the server says so, and failed otherwise', () => {
+    expect(dictationFailure({ response: { status: 503, data: { error: 'transcription_unavailable' } } })).toBe('off')
+    expect(dictationFailure({ response: { status: 502, data: { error: 'ai_failed' } } })).toBe('failed')
+    expect(dictationFailure(new Error('offline'))).toBe('failed')
   })
 })

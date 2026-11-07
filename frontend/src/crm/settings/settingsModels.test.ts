@@ -2,13 +2,15 @@ import { describe, expect, it } from 'vitest'
 import { CANNED_LIMITS, canAddReply, cannedList, cannedPayload, cannedProblems, cannedValid, sameCanned } from './canned'
 import { countsByEntity, createPayload, fieldForm, fieldProblems, fieldsOf, optionList, updatePayload, type CustomField } from './customFields'
 import { addCustomField, formDraft, formPatch, formProblems, formUrl, iframeSnippet, isCustom, setField, submitter, type LeadForm } from './leadForms'
-import { SETTINGS_TABS, moveItem, orderChanged, pickTab, reorderIds } from './lists'
+import { SETTINGS_TABS, moveItem, orderChanged, pickTab, reorderIds, withTab } from './lists'
 import { fallbackStage, kindsFor, onlyOfKind, pipelineDeleteBlock, sortedReasons, sortedStages, stageForm, stagePayload, stageProblems, type Pipeline, type Stage } from './pipelines'
 
 describe('settings sections in ?tab=', () => {
   it('knows the tab Get started links to', () => {
     expect(pickTab('pipelines', SETTINGS_TABS, 'canned')).toBe('pipelines')
     expect(pickTab('', SETTINGS_TABS, 'canned')).toBe('canned')
+    expect(withTab(new URLSearchParams(''), 'tab', 'fields', 'canned').toString()).toBe('tab=fields')
+    expect(withTab(new URLSearchParams('tab=fields&q=1'), 'tab', 'canned', 'canned').toString()).toBe('q=1')
   })
 })
 

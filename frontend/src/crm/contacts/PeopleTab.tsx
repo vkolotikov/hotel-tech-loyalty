@@ -2,7 +2,7 @@ import { useCallback, useState } from 'react'
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { Bookmark, Building2, Download, Plus, Trash2, Users, X } from 'lucide-react'
+import { Bookmark, Download, Plus, Trash2, Users, X } from 'lucide-react'
 import { Button } from '../../workspace/ui/Button'
 import { Field } from '../../workspace/ui/Field'
 import { Notice } from '../../workspace/ui/Notice'
@@ -19,11 +19,12 @@ import { Select, TextInput } from '../ui/inputs'
 import { Pager } from '../ui/Pager'
 import { QueryState } from '../ui/QueryState'
 import { useToast } from '../ui/Toast'
+import { FilterChip, Toolbar } from '../ui/Toolbar'
 import { Dialog } from '../../workspace/ui/Dialog'
 import {
-  BULK_FIELDS, BULK_MAX, SORT_KEYS, activeFilterCount, allOnPage, bulkBody, csvWithBom, displayName, exportName, exportParams,
+  BULK_FIELDS, BULK_MAX, SORT_KEYS, activeFilterCount, activeFilters, allOnPage, bulkBody, csvWithBom, displayName, exportName, exportParams,
   filtersFrom, listParams, optionsWith, pageFrom, segmentFilters, toggleId, togglePage, withParam, withSegment, withoutFilters,
-  type BulkField, type PeopleFilters, type SortKey,
+  type BulkField, type FilterKey, type PeopleFilters, type SortKey,
 } from './contactsLogic'
 import { StandingPills } from './parts'
 import { SearchBox } from './SearchBox'
@@ -81,68 +82,72 @@ export function PeopleTab({ onAdd }: { onAdd: () => void }) {
     }
   }
 
+  const chipLabel = (key: FilterKey, value: string): string => {
+    switch (key) {
+      case 'q': return t('crm.contacts.chip.q', 'Search: {{value}}', { value })
+      case 'lifecycle': return t('crm.contacts.chip.lifecycle', 'Lifecycle: {{value}}', { value })
+      case 'importance': return t('crm.contacts.chip.importance', 'Importance: {{value}}', { value })
+      case 'source': return t('crm.contacts.chip.source', 'Source: {{value}}', { value })
+      case 'country': return t('crm.contacts.chip.country', 'Country: {{value}}', { value })
+      case 'tag': return t('crm.contacts.chip.tag', 'Tag: {{value}}', { value: tagName ?? value })
+      case 'company': return t('crm.contacts.chip.company', 'Company: {{value}}', { value })
+    }
+  }
+  const chips = activeFilters(filters)
+  const filterSelect = (key: 'lifecycle' | 'importance' | 'source' | 'country', label: string, options: string[]) => (
+    <label className="min-w-0 sm:w-36">
+      <span className="sr-only">{label}</span>
+      <Select value={filters[key]} onChange={e => update(key, e.target.value)} className={filters[key] ? 'ring-1 ring-a-accent/60' : ''}>
+        <option value="">{label}</option>
+        {optionsWith(options, filters[key]).map(v => <option key={v} value={v}>{v}</option>)}
+      </Select>
+    </label>
+  )
+
   return (
     <div className="space-y-4">
-      <SearchBox label={t('crm.contacts.search', 'Search by name, email, phone or company')} value={filters.q} onSearch={onSearch} />
-
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
-        <Field label={t('crm.contacts.field.lifecycle_status', 'Lifecycle')}>
-          <Select value={filters.lifecycle} onChange={e => update('lifecycle', e.target.value)}>
-            <option value="">{t('crm.common.all', 'All')}</option>
-            {optionsWith(lists.lifecycle, filters.lifecycle).map(v => <option key={v} value={v}>{v}</option>)}
-          </Select>
-        </Field>
-        <Field label={t('crm.contacts.field.importance', 'Importance')}>
-          <Select value={filters.importance} onChange={e => update('importance', e.target.value)}>
-            <option value="">{t('crm.common.all', 'All')}</option>
-            {optionsWith(lists.importance, filters.importance).map(v => <option key={v} value={v}>{v}</option>)}
-          </Select>
-        </Field>
-        <Field label={t('crm.contacts.field.lead_source', 'Source')}>
-          <Select value={filters.source} onChange={e => update('source', e.target.value)}>
-            <option value="">{t('crm.common.all', 'All')}</option>
-            {optionsWith(facets.data?.lead_source ?? [], filters.source).map(v => <option key={v} value={v}>{v}</option>)}
-          </Select>
-        </Field>
-        <Field label={t('crm.contacts.field.country', 'Country')}>
-          <Select value={filters.country} onChange={e => update('country', e.target.value)}>
-            <option value="">{t('crm.common.all', 'All')}</option>
-            {optionsWith(facets.data?.country ?? [], filters.country).map(v => <option key={v} value={v}>{v}</option>)}
-          </Select>
-        </Field>
-        <Field label={t('crm.contacts.tag', 'Tag')}>
-          <Select value={filters.tag} onChange={e => update('tag', e.target.value)}>
-            <option value="">{t('crm.common.all', 'All')}</option>
-            {(tags.data ?? []).map(tag => <option key={tag.id} value={String(tag.id)}>{tag.name}</option>)}
-          </Select>
-        </Field>
-        <Field label={t('crm.contacts.sort', 'Order')}>
-          <Select value={filters.sort} onChange={e => update('sort', e.target.value === 'newest' ? null : e.target.value)}>
-            {SORT_KEYS.map(key => <option key={key} value={key}>{t(`crm.contacts.sorts.${key}`, SORT_FALLBACK[key])}</option>)}
-          </Select>
-        </Field>
-      </div>
+      <Toolbar
+        actions={<>
+          <label className="min-w-0">
+            <span className="sr-only">{t('crm.contacts.sort', 'Order')}</span>
+            <Select value={filters.sort} onChange={e => update('sort', e.target.value === 'newest' ? null : e.target.value)} className="sm:w-44">
+              {SORT_KEYS.map(key => <option key={key} value={key}>{t(`crm.contacts.sorts.${key}`, SORT_FALLBACK[key])}</option>)}
+            </Select>
+          </label>
+          <Button variant="secondary" size="sm" className="min-h-10" onClick={() => { void exportCsv([]) }} loading={exporting && selected.length === 0} disabled={!list.data || list.data.total === 0}>
+            <Download size={14} aria-hidden />{t('crm.contacts.export', 'Export CSV')}
+          </Button>
+        </>}
+        chips={chips.length > 0 ? <>
+          {chips.map(chip => (
+            <FilterChip key={chip.key} label={chipLabel(chip.key, chip.value)} removeLabel={t('crm.contacts.remove_filter', 'Remove the filter')} onRemove={() => update(chip.key, null)} />
+          ))}
+          <button type="button" onClick={() => setSearch(prev => withoutFilters(prev), { replace: true })}
+            className="rounded-full px-2 py-0.5 text-xs font-medium text-a-accent-text hover:underline focus-visible:outline-2 focus-visible:outline-a-accent">
+            {t('crm.contacts.clear_filters', 'Clear filters')}
+          </button>
+        </> : undefined}>
+        <div className="min-w-0 sm:min-w-56 sm:flex-1"><SearchBox label={t('crm.contacts.search', 'Search by name, email, phone or company')} value={filters.q} onSearch={onSearch} /></div>
+        <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
+          {filterSelect('lifecycle', t('crm.contacts.field.lifecycle_status', 'Lifecycle'), lists.lifecycle)}
+          {filterSelect('importance', t('crm.contacts.field.importance', 'Importance'), lists.importance)}
+          {filterSelect('source', t('crm.contacts.field.lead_source', 'Source'), facets.data?.lead_source ?? [])}
+          {filterSelect('country', t('crm.contacts.field.country', 'Country'), facets.data?.country ?? [])}
+          <label className="min-w-0 sm:w-36">
+            <span className="sr-only">{t('crm.contacts.tag', 'Tag')}</span>
+            <Select value={filters.tag} onChange={e => update('tag', e.target.value)} className={filters.tag ? 'ring-1 ring-a-accent/60' : ''}>
+              <option value="">{t('crm.contacts.tag', 'Tag')}</option>
+              {(tags.data ?? []).map(tag => <option key={tag.id} value={String(tag.id)}>{tag.name}</option>)}
+            </Select>
+          </label>
+        </div>
+      </Toolbar>
 
       <SavedViews filters={filters} />
 
-      {filters.company && (
-        <div className="flex flex-wrap items-center gap-2 rounded-xl border border-a-border bg-a-surface-2 px-3 py-2 text-sm text-a-text">
-          <Building2 size={15} aria-hidden className="text-a-text-2" />
-          <span className="min-w-0 flex-1">{t('crm.contacts.at_company', 'People at {{company}}', { company: filters.company })}</span>
-          <Button variant="ghost" size="sm" onClick={() => update('company', null)}><X size={14} aria-hidden />{t('crm.contacts.show_everyone', 'Show everyone')}</Button>
-        </div>
-      )}
-
-      <div className="flex flex-wrap items-center gap-2">
-        <p className="mr-auto text-sm text-a-text-2" aria-live="polite">
-          {list.data ? t('crm.common.total', '{{count}} in all', { count: list.data.total }) : ''}
-          {tagName ? ` · ${tagName}` : ''}
-        </p>
-        {narrowed && <Button variant="ghost" size="sm" onClick={() => setSearch(prev => withoutFilters(prev), { replace: true })}>{t('crm.contacts.clear_filters', 'Clear filters')}</Button>}
-        <Button variant="secondary" size="sm" onClick={() => { void exportCsv([]) }} loading={exporting && selected.length === 0} disabled={!list.data || list.data.total === 0}>
-          <Download size={14} aria-hidden />{t('crm.contacts.export', 'Export CSV')}
-        </Button>
-      </div>
+      <p className="text-sm text-a-text-2" aria-live="polite">
+        {list.data ? t('crm.common.total', '{{count}} in all', { count: list.data.total }) : ''}
+      </p>
 
       {selected.length > 0 && (
         <BulkBar ids={selected} lists={lists} onClear={() => setSelected([])} onExport={() => { void exportCsv(selected) }} exporting={exporting} />
@@ -160,7 +165,7 @@ export function PeopleTab({ onAdd }: { onAdd: () => void }) {
           </Card>
         ) : (
           <Card padded={false}>
-            <div className="flex items-center gap-3 border-b border-a-border px-4 py-2.5">
+            <div className="flex items-center gap-3 border-b border-a-border bg-a-surface-2/40 px-4 py-2.5">
               <input type="checkbox" className="h-4 w-4 accent-a-accent" checked={allOnPage(selected, pageIds)}
                 onChange={() => setSelected(prev => togglePage(prev, pageIds))}
                 aria-label={t('crm.contacts.choose_page', 'Choose every contact on this page')} />
@@ -174,7 +179,7 @@ export function PeopleTab({ onAdd }: { onAdd: () => void }) {
                 const name = displayName(row) ?? t('crm.common.no_name', 'No name')
                 const chosen = selected.includes(row.id)
                 return (
-                  <li key={row.id} className={`flex items-center gap-3 px-4 py-3 ${chosen ? 'bg-a-accent/8' : ''}`}>
+                  <li key={row.id} className={`flex items-center gap-3 px-4 py-3 transition-colors hover:bg-a-surface-2 ${chosen ? 'bg-a-accent/10' : ''}`}>
                     <input type="checkbox" className="h-4 w-4 shrink-0 accent-a-accent" checked={chosen} onChange={() => setSelected(prev => toggleId(prev, row.id))}
                       aria-label={t('crm.contacts.choose', 'Choose {{name}}', { name })} />
                     <Link to={contactPath(row.id)} className="flex min-w-0 flex-1 items-center gap-3 rounded-lg focus-visible:outline-2 focus-visible:outline-a-accent">

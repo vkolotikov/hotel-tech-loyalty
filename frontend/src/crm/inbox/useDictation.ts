@@ -1,8 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { send } from '../lib/api'
+import { failureOf, send } from '../lib/api'
 import { audioFileName, recorderMime } from './inboxLogic'
 
 export type MicState = 'idle' | 'recording' | 'transcribing'
+
+/** Why a transcription failed: switched off for the organisation (503 `transcription_unavailable`), or anything else. */
+export function dictationFailure(error: unknown): 'off' | 'failed' {
+  const { status, code } = failureOf(error)
+  return code === 'transcription_unavailable' || status === 503 ? 'off' : 'failed'
+}
 
 /** Whether this browser can record a reply at all (the mic button shows only then). */
 export function canDictate(): boolean {
@@ -62,10 +68,7 @@ export function useDictation({ onText, onFail }: { onText: (text: string) => voi
             if (text) handlers.current.onText(text)
             else handlers.current.onFail('no_speech')
           })
-          .catch((error: unknown) => {
-            const status = (error as { response?: { status?: number } }).response?.status
-            handlers.current.onFail(status === 503 ? 'off' : 'failed')
-          })
+          .catch((error: unknown) => handlers.current.onFail(dictationFailure(error)))
           .finally(() => { if (live.current) setState('idle') })
       })
       rec.addEventListener('error', () => { release(); if (live.current) setState('idle') })

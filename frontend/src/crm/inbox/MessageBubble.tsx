@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import { Bot, FileText, GraduationCap, Languages, ThumbsDown, ThumbsUp } from 'lucide-react'
+import { Bot, FileText, GraduationCap, Languages, Lightbulb, ThumbsDown, ThumbsUp } from 'lucide-react'
 import { resolveImage } from '../../lib/api'
 import { dateTime } from '../lib/format'
 import { BUBBLE_CLASS, canTranslate, isSafeAttachment, type Side } from './inboxLogic'
@@ -94,7 +94,9 @@ function Rating({ message: m, onRate }: { message: Message; onRate: (rating: 'go
         {saved.rating === 'good'
           ? <span className="inline-flex items-center gap-1 text-a-st-confirmed"><ThumbsUp size={13} aria-hidden />{t('crm.inbox.rated_good', 'Rated good')}</span>
           : <span className="inline-flex items-center gap-1 text-a-danger"><ThumbsDown size={13} aria-hidden />{t('crm.inbox.rated_bad', 'Rated wrong')}</span>}
-        {saved.applied_to_training && <span className="inline-flex items-center gap-1 crm-ai-text"><GraduationCap size={13} aria-hidden />{t('crm.inbox.taught', 'Taught')}</span>}
+        {saved.applied_to_training
+          ? <span className="inline-flex items-center gap-1 crm-ai-text"><GraduationCap size={13} aria-hidden />{t('crm.inbox.taught', 'Taught')}</span>
+          : saved.suggested_answer && <span className="inline-flex items-center gap-1 crm-ai-text" title={t('crm.inbox.suggested_hint', 'A right answer was suggested; a manager will check it.')}><Lightbulb size={13} aria-hidden />{t('crm.inbox.suggested', 'Answer suggested')}</span>}
         <button type="button" onClick={() => onRate(saved.rating)} className="rounded-sm font-medium text-a-accent-text hover:underline">{t('crm.inbox.change_rating', 'Change')}</button>
       </span>
     )

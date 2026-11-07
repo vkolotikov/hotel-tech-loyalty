@@ -5,7 +5,9 @@
     "plan_line": "Your package, what it includes, and the other HexaTech products.",
     "team": "Team",
     "team_line": "Invite colleagues, set what each may do, switch someone off.",
-    "team_staff": "See who works here. Only an owner or a manager can invite people."
+    "team_staff": "See who works here. Only an owner or a manager can invite people.",
+    "open_team": "Open Team",
+    "open_plan": "Open Plan & products"
   },
   "canned": {
     "add": "Add a reply",
@@ -19,7 +21,10 @@
     "saved": "Saved. The inbox offers these replies now.",
     "text": "Text",
     "text_required": "Write the reply.",
-    "this": "this reply"
+    "this": "this reply",
+    "count": "{{count}} of {{max}}",
+    "up": "Move {{name}} up",
+    "down": "Move {{name}} down"
   },
   "deleted": "Deleted",
   "discard": "Discard",
@@ -54,9 +59,15 @@
     "task": "Tasks",
     "type": "Kind of answer",
     "type_fixed": "Fixed once the field is made.",
-    "up": "Move {{name}} up"
+    "up": "Move {{name}} up",
+    "card_inquiry": "Fields on leads",
+    "card_guest": "Fields on contacts",
+    "card_company": "Fields on companies",
+    "card_task": "Fields on tasks",
+    "card_line": "In this order on the add form and the record's page.",
+    "col_rules": "Rules"
   },
-  "fix_first": "Some fields need another look before saving.",
+  "fix_first": "Fix the marked fields to save.",
   "forms": {
     "active": "The form accepts submissions",
     "add": "New form",
@@ -127,7 +138,13 @@
     "title": "Heading",
     "too_long": "A text is longer than allowed.",
     "type": "Kind of answer",
-    "untitled": "Untitled field"
+    "untitled": "Untitled field",
+    "count": "{{live}} of {{total}} live",
+    "col_form": "Form",
+    "col_status": "Status",
+    "col_sent": "Sent",
+    "col_last": "Last sent",
+    "never": "Not yet"
   },
   "line": "Replies, pipelines, forms and fields: how HexaTech CRM works for your team.",
   "move_down": "Move down",
@@ -176,7 +193,13 @@
     "win_label": "Usual chance of winning (%)",
     "stage_deals_one": "1 lead",
     "block_deals_one": "It still has 1 lead. Move or close it first.",
-    "stage_moves_one": "Its lead moves to {{stage}}."
+    "stage_moves_one": "Its lead moves to {{stage}}.",
+    "stages_of": "Stages of {{name}}",
+    "col_stage": "Stage",
+    "col_chance": "Chance",
+    "col_leads": "Leads",
+    "no_chance": "No chance set",
+    "stage_last": "{{name}} is the only stage of its kind and stays"
   },
   "read_only": "Only an owner or a manager can change this. You can read everything here.",
   "reasons": {
@@ -219,5 +242,13 @@
     "textarea": "Several lines",
     "url": "Web address"
   },
-  "unsaved": "You have changes that are not saved yet."
+  "unsaved": "Unsaved changes",
+  "actions": "Actions",
+  "caption": {
+    "canned": "Short answers the team inserts in the inbox.",
+    "pipelines": "The stages of a lead, and why leads are lost.",
+    "forms": "Forms on your website that send you leads.",
+    "fields": "Your own fields on leads, contacts and tasks.",
+    "account": "Your team, and your plan."
+  }
 }

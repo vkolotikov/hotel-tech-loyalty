@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { Bot, Clock, FileText, Globe, Hand, MessagesSquare, MessageSquareText, Filter, Activity, UserPlus } from 'lucide-react'
+import { useBoot } from '../CrmProvider'
 import { get, params } from '../lib/api'
 import { count as countOf } from '../lib/format'
 import { Card } from '../ui/Card'
@@ -10,7 +11,7 @@ import { QueryState } from '../ui/QueryState'
 import { StatTile } from '../ui/StatTile'
 import { BarList, ChangeLine, Columns, Legend } from './charts'
 import {
-  bucketLabel, busiestHour, countChange, countryName, funnelRows, hourRows, rate, rateChange, shortPath, statusRows, trendBuckets,
+  bucketLabel, busiestHour, countChange, countryName, funnelRows, hourRows, rate, rateChange, shortPath, statusRows, trendBuckets, zoneLabel,
   type Period,
 } from './insightsMath'
 import type { ChatAnalytics } from './types'
@@ -24,6 +25,7 @@ const FUNNEL_FALLBACK: Record<string, string> = {
 export function ChatSection({ days }: { days: Period }) {
   const { t, i18n } = useTranslation()
   const lang = i18n.language
+  const boot = useBoot()
   const chat = useQuery({
     queryKey: ['crm', 'insights', 'chat', days],
     queryFn: () => get<ChatAnalytics>(`chatbot/analytics${params({ days })}`),
@@ -32,8 +34,7 @@ export function ChatSection({ days }: { days: Period }) {
   const n = (value: number) => countOf(value, lang)
 
   return (
-    <section aria-labelledby="crm-insights-chat" className="space-y-4">
-      <h2 id="crm-insights-chat" className="font-a-display text-2xl text-a-text">{t('crm.insights.chat_title', 'The website chat')}</h2>
+    <section aria-label={t('crm.insights.chat_title', 'The website chat')} className="space-y-4">
       <QueryState loading={chat.isLoading} error={chat.error} onRetry={() => { void chat.refetch() }}>
         {chat.data && (chat.data.overview.total_conversations === 0 && chat.data.previous_overview.total_conversations === 0
           ? (
@@ -43,13 +44,13 @@ export function ChatSection({ days }: { days: Period }) {
                 action={<Link to="/crm/widget" className="text-sm font-medium text-a-accent-text hover:underline">{t('crm.insights.to_widget', 'Set up the chat widget')}</Link>} />
             </Card>
           )
-          : <ChatBody data={chat.data} days={days} lang={lang} n={n} />)}
+          : <ChatBody data={chat.data} days={days} lang={lang} n={n} zone={zoneLabel(boot.venue.timezone)} />)}
       </QueryState>
     </section>
   )
 }
 
-function ChatBody({ data, days, lang, n }: { data: ChatAnalytics; days: Period; lang: string; n: (v: number) => string }) {
+function ChatBody({ data, days, lang, n, zone }: { data: ChatAnalytics; days: Period; lang: string; n: (v: number) => string; zone: string }) {
   const { t } = useTranslation()
   const now = data.overview
   const before = data.previous_overview
@@ -79,7 +80,8 @@ function ChatBody({ data, days, lang, n }: { data: ChatAnalytics; days: Period; 
           hint={t('crm.insights.lead_rate', '{{rate}} became leads', { rate: rate(now.lead_conversion_rate, lang) })} />
       </div>
 
-      <Card title={weekly ? t('crm.insights.by_week', 'Conversations by week') : t('crm.insights.by_day', 'Conversations by day')} icon={Activity}
+      <Card title={weekly ? t('crm.insights.by_week', 'Conversations by week') : t('crm.insights.by_day', 'Conversations by day')} icon={Activity} tone="accent"
+        description={t('crm.insights.trend_desc', 'Those the assistant closed are in violet')}
         action={<Legend items={[{ name: aiName, tone: 'ai' }, { name: restName, tone: 'accent' }]} />}>
         <p className="mb-3 text-sm text-a-text-2">
           {peak
@@ -97,13 +99,15 @@ function ChatBody({ data, days, lang, n }: { data: ChatAnalytics; days: Period; 
       </Card>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <Card title={t('crm.insights.statuses', 'Where the conversations are now')} icon={MessagesSquare}>
+        <Card title={t('crm.insights.statuses', 'Where the conversations are now')} icon={MessagesSquare} tone="progress"
+          description={t('crm.insights.statuses_desc', 'The state of this period’s conversations today')}>
           {statuses.length === 0
             ? <p className="text-sm text-a-text-2">{t('crm.insights.nothing', 'Nothing in these days.')}</p>
             : <BarList label={t('crm.insights.statuses', 'Where the conversations are now')}
                 rows={statuses.map(s => ({ id: s.key, label: s.known ? t(`crm.status.${s.key}`, STATUS_FALLBACK[s.key]) : s.key, value: s.count, text: n(s.count), tone: s.key === 'resolved' ? 'won' : 'accent' }))} />}
         </Card>
-        <Card title={t('crm.insights.chat_funnel', 'From a conversation to a lead')} icon={Filter}>
+        <Card title={t('crm.insights.chat_funnel', 'From a conversation to a lead')} icon={Filter} tone="success"
+          description={t('crm.insights.funnel_desc', 'How many got to each step, and their share of all')}>
           <BarList label={t('crm.insights.chat_funnel', 'From a conversation to a lead')}
             rows={funnel.map(step => ({
               id: step.stage, label: t(`crm.insights.funnel.${step.stage}`, FUNNEL_FALLBACK[step.stage] ?? step.stage), value: step.count,
@@ -111,13 +115,15 @@ function ChatBody({ data, days, lang, n }: { data: ChatAnalytics; days: Period; 
               tone: step.stage === 'lead_captured' ? 'won' : 'accent',
             }))} />
         </Card>
-        <Card title={t('crm.insights.top_pages', 'Pages where chats start')} icon={FileText}>
+        <Card title={t('crm.insights.top_pages', 'Pages where chats start')} icon={FileText}
+          description={t('crm.insights.pages_desc', 'The page a visitor was on when they wrote')}>
           {data.top_pages.length === 0
             ? <p className="text-sm text-a-text-2">{t('crm.insights.no_pages', 'No page was recorded for these conversations.')}</p>
             : <BarList label={t('crm.insights.top_pages', 'Pages where chats start')}
                 rows={data.top_pages.map(p => ({ id: p.page_url, label: shortPath(p.page_url), title: p.page_url, value: Number(p.count) || 0, text: n(Number(p.count) || 0) }))} />}
         </Card>
-        <Card title={t('crm.insights.countries', 'Where visitors write from')} icon={Globe}>
+        <Card title={t('crm.insights.countries', 'Where visitors write from')} icon={Globe}
+          description={t('crm.insights.countries_desc', 'From each visitor’s internet address')}>
           {data.top_countries.length === 0
             ? <p className="text-sm text-a-text-2">{t('crm.insights.no_countries', 'No country was recorded for these conversations.')}</p>
             : <BarList label={t('crm.insights.countries', 'Where visitors write from')}
@@ -125,13 +131,14 @@ function ChatBody({ data, days, lang, n }: { data: ChatAnalytics; days: Period; 
         </Card>
       </div>
 
-      <Card title={t('crm.insights.hours', 'By hour of the day')} icon={Clock}>
+      <Card title={t('crm.insights.hours', 'By hour of the day')} icon={Clock} tone="pending"
+        description={t('crm.insights.hours_desc', 'In the venue’s time: {{zone}}', { zone })}>
         <p className="mb-3 text-sm text-a-text-2">
           {busiest === null
             ? t('crm.insights.hours_empty', 'No messages in these days.')
-            : t('crm.insights.hours_line', 'Busiest around {{hour}}:00. Hours are in UTC, the server’s clock.', { hour: String(busiest).padStart(2, '0') })}
+            : t('crm.insights.hours_busiest', 'Busiest around {{hour}}:00, the venue’s time. Good hours to have someone on the inbox.', { hour: String(busiest).padStart(2, '0') })}
         </p>
-        <Columns caption={t('crm.insights.hours_caption', 'Conversations with a message, by hour (UTC)')} heading={t('crm.insights.hour', 'Hour')} format={n}
+        <Columns caption={t('crm.insights.hours_caption_zone', 'Conversations with a message, by hour ({{zone}})', { zone })} heading={t('crm.insights.hour', 'Hour')} format={n}
           labels={hours.map(h => h.hour % 6 === 0)}
           columns={hours.map(h => ({ key: String(h.hour), label: h.label, long: `${h.label}:00`, parts: [{ name: t('crm.insights.conversations', 'Conversations'), value: h.count, tone: 'accent' as const }] }))} />
       </Card>

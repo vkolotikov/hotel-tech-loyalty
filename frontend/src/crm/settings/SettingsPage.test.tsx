@@ -61,38 +61,56 @@ function render(at: string, data: Partial<Bootstrap> = {}) {
 const staff = { staff: { ...boot.staff, role: 'staff', can: { ...boot.staff.can, manage_canned: false, manage_pipelines: false, manage_team: false } } }
 
 describe('SettingsPage', () => {
-  it('opens on the canned replies, editable for a manager and read only for staff', () => {
+  it('shows its five sections as cards with captions and opens on the canned replies, editable for a manager and read only for staff', () => {
     const html = render('/crm/settings')
     for (const label of ['Canned replies', 'Pipelines', 'Lead forms', 'Custom fields', 'Account']) expect(html).toContain(label)
+    expect(html.match(/role="tab"/g)).toHaveLength(5)
+    expect(html).toContain('aria-labelledby="settings-section-canned"')
+    expect(html).toContain('Short answers the team inserts in the inbox.')
     expect(html).toContain('value="Opening hours"')
+    expect(html).toContain('aria-label="Move Opening hours down"')
+    expect(html).toContain('1 of 50')
+    expect(html).not.toContain('Unsaved changes')
     const read = render('/crm/settings', staff)
     expect(read).toContain('Opening hours')
     expect(read).not.toContain('value="Opening hours"')
     expect(read).toContain('Only an owner or a manager can change this')
   })
 
-  it('opens the pipelines Get started links to, with stages and their kinds, and the lost reasons', () => {
+  it('opens the pipelines Get started links to, with stages in aligned columns, their kinds, and the lost reasons', () => {
     const html = render('/crm/settings?tab=pipelines')
     expect(html).toContain('Sales')
     expect(html).toContain('Default')
     expect(html).toContain('Confirmed')
     expect(html).toContain('3 leads')
+    expect(html).toContain('What it means')
+    expect(html).toContain('role="columnheader"')
     expect(html).toContain('Too expensive')
     expect(html).toContain('Used on 2 leads')
     expect(html).toContain('aria-label="Move New down"')
-    expect(render('/crm/settings?tab=pipelines', staff)).not.toContain('aria-label="Move New down"')
+    expect(html).toContain('Add a stage')
+    const read = render('/crm/settings?tab=pipelines', staff)
+    expect(read).not.toContain('aria-label="Move New down"')
+    expect(read).not.toContain('Add a stage')
   })
 
-  it('lists lead forms and custom fields', () => {
-    expect(render('/crm/settings?tab=forms')).toContain('Weddings')
+  it('lists lead forms and custom fields as aligned rows with their state', () => {
+    const forms = render('/crm/settings?tab=forms')
+    expect(forms).toContain('Weddings')
+    expect(forms).toContain('Live')
+    expect(forms).toContain('2 sent')
+    expect(forms).toContain('1 of 1 live')
     const fields = render('/crm/settings?tab=fields')
     expect(fields).toContain('Budget')
     expect(fields).toContain('Required')
+    expect(fields).toContain('Fields on leads')
+    expect(fields).toContain('Number')
   })
 
-  it('links to the account\'s own pages', () => {
+  it('links to the account\'s own pages as two cards', () => {
     const html = render('/crm/settings?tab=account')
     expect(html).toContain('href="/account/team"')
     expect(html).toContain('href="/account/products"')
+    expect(html).toContain('Open Plan &amp; products')
   })
 })

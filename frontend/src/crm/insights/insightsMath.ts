@@ -22,12 +22,26 @@ export function periodOf(value: string | null): Period {
   return (PERIODS as readonly number[]).includes(n) ? (n as Period) : 30
 }
 
+/** Insights' two sections, kept in the address (`?tab=`); the given default when it names none we have. */
+export const SECTIONS = ['chat', 'pipeline'] as const
+export type InsightsSection = (typeof SECTIONS)[number]
+
+export function sectionOf(value: string | null, fallback: InsightsSection = 'chat'): InsightsSection {
+  return (SECTIONS as readonly string[]).includes(value ?? '') ? (value as InsightsSection) : fallback
+}
+
+/** The venue's zone as the hour chart names it: "Europe/Riga", "America/New York" (the zone the server now counts in). */
+export function zoneLabel(zone: string): string {
+  return zone.trim().replace(/_/g, ' ') || 'UTC'
+}
+
 const DAY = 86_400_000
 const ymd = (ms: number) => new Date(ms).toISOString().slice(0, 10)
 
 /**
- * The server's windows for a period: today and the `days - 1` before it, in UTC days as the chat analytics count
- * them, and the window of the same length just before it. Leads are counted in the same days (`date_from`/`date_to`).
+ * The leads' windows for a period: today and the `days - 1` before it, and the window of the same length just before
+ * it, in UTC days — the days `inquiries?date_from=&date_to=` compares `created_at` with. (The chat analytics count the
+ * venue's days since round 2; the leads' date filter still reads UTC days, so this follows the filter.)
  */
 export function windows(days: number, now: Date): { from: string; prevFrom: string; prevTo: string } {
   const today = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())
@@ -89,7 +103,7 @@ export function trendBuckets(trend: ChatTrendPoint[]): Bucket[] {
   return out
 }
 
-/** A UTC day as "4 Nov" (the series' days are the server's UTC days). */
+/** A day (`YYYY-MM-DD`, the venue's in the chat series since round 2) as "4 Nov", read as a date, never converted. */
 export function shortDay(day: string, lang: string): string {
   const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(day)
   if (!m) return day

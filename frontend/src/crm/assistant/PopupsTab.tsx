@@ -5,7 +5,7 @@ import { Eye, MousePointerClick, Pencil, Plus, Trash2, Zap } from 'lucide-react'
 import { Button } from '../../workspace/ui/Button'
 import { Field } from '../../workspace/ui/Field'
 import { get, send } from '../lib/api'
-import { count } from '../lib/format'
+import { count, percent } from '../lib/format'
 import { errorText } from '../lib/errors'
 import { Card } from '../ui/Card'
 import { Confirm } from '../ui/Confirm'
@@ -15,7 +15,7 @@ import { Pill } from '../ui/Pill'
 import { QueryState } from '../ui/QueryState'
 import { SidePanel } from '../ui/SidePanel'
 import { useToast } from '../ui/Toast'
-import { CharCount, ChipEditor, Choice, InlineSwitch, Problem, ReadOnlyNote } from './parts'
+import { CharCount, ChipEditor, Choice, IconButton, InlineSwitch, Problem, ReadOnlyNote, SectionIntro } from './parts'
 import {
   POPUP_LIMITS, popupForm, popupPayload, popupProblems, triggerOptions, triggerTakesValue, triggerText, urlMatchOptions,
   visitorOptions, type PopupForm,
@@ -47,50 +47,74 @@ export function PopupsTab({ canManage }: { canManage: boolean }) {
   const visitors = Object.fromEntries(visitorOptions(t).map(o => [o.value, o.label]))
   const matches = Object.fromEntries(urlMatchOptions(t).map(o => [o.value, o.label]))
 
+  const list = rules.data ?? []
+  const addButton = (small: boolean) => (
+    <Button size={small ? 'sm' : 'md'} variant={small ? 'secondary' : 'primary'} onClick={() => setEditing('new')}><Plus size={small ? 14 : 15} aria-hidden />{t('crm.assistant.popups.add', 'Add a pop-up')}</Button>
+  )
+
   return (
     <QueryState loading={rules.isLoading} error={rules.error} onRetry={() => { void rules.refetch() }}>
-      <div className="space-y-3">
-        <div className="flex flex-wrap items-center gap-3">
-          <p className="min-w-0 flex-1 text-sm text-a-text-2">{t('crm.assistant.popups.line', 'Open the chat by itself with a message, on the pages you choose. The rule with the highest priority wins.')}</p>
-          {canManage && <Button onClick={() => setEditing('new')}><Plus size={15} aria-hidden />{t('crm.assistant.popups.add', 'Add a pop-up')}</Button>}
-        </div>
+      <div className="space-y-4">
+        <SectionIntro line={t('crm.assistant.popups.line', 'Open the chat by itself with a message, on the pages you choose. The rule with the highest priority wins.')} />
         {!canManage && <ReadOnlyNote />}
-        <Card padded={false}>
-          {(rules.data ?? []).length === 0 ? (
+        <Card padded={false} title={t('crm.assistant.tab.popups', 'Pop-ups')} icon={Zap} tone="pending"
+          description={list.length > 0 ? t('crm.assistant.popups.count_line', '{{on}} of {{total}} on', { on: list.filter(r => r.is_active).length, total: list.length }) : undefined}
+          action={canManage && list.length > 0 ? addButton(true) : undefined}>
+          {list.length === 0 ? (
             <EmptyState icon={Zap} title={t('crm.assistant.popups.empty', 'No pop-ups yet')}
               line={t('crm.assistant.popups.empty_line', 'e.g. after 20 seconds on your prices page: "Questions about a stay? I can help."')}
-              action={canManage ? <Button onClick={() => setEditing('new')}><Plus size={15} aria-hidden />{t('crm.assistant.popups.add', 'Add a pop-up')}</Button> : undefined} />
+              action={canManage ? addButton(false) : undefined} />
           ) : (
-            <ul className="divide-y divide-a-border">
-              {(rules.data ?? []).map(rule => (
-                <li key={rule.id} className="flex items-start gap-3 px-4 py-3">
-                  <div className="min-w-0 flex-1">
-                    <p className="flex flex-wrap items-center gap-2 text-sm font-medium text-a-text">
-                      {rule.name}
-                      <Pill tone="accent">{triggerText(t, rule.trigger_type, rule.trigger_value)}</Pill>
-                      {!rule.is_active && <Pill tone="danger">{t('crm.assistant.popups.off', 'Off')}</Pill>}
-                    </p>
-                    <p className="mt-0.5 line-clamp-2 text-sm text-a-text-2">{rule.message}</p>
-                    <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-a-text-2">
-                      {rule.url_match_value && <span>{matches[rule.url_match_type ?? 'contains']} “{rule.url_match_value}”</span>}
-                      <span>{visitors[rule.visitor_type ?? 'all']}</span>
-                      <span className="inline-flex items-center gap-1" title={t('crm.assistant.popups.shown', 'Shown')}><Eye size={12} aria-hidden /><span className="sr-only">{t('crm.assistant.popups.shown', 'Shown')}</span>{count(rule.impressions_count ?? 0, i18n.language)}</span>
-                      <span className="inline-flex items-center gap-1" title={t('crm.assistant.popups.clicked', 'Clicked')}><MousePointerClick size={12} aria-hidden /><span className="sr-only">{t('crm.assistant.popups.clicked', 'Clicked')}</span>{count(rule.clicks_count ?? 0, i18n.language)}</span>
-                      <span>{t('crm.assistant.popups.priority_n', 'Priority {{n}}', { n: rule.priority })}</span>
-                    </p>
-                  </div>
-                  {canManage && (
-                    <div className="flex shrink-0 items-center gap-1">
-                      <InlineSwitch label={t('crm.assistant.popups.on_named', '{{name}} is on', { name: rule.name })} checked={rule.is_active} disabled={toggle.isPending} onChange={() => toggle.mutate(rule)} />
-                      <button type="button" onClick={() => setEditing(rule)} aria-label={t('crm.assistant.popups.edit', 'Edit {{name}}', { name: rule.name })}
-                        className="rounded-full p-2 text-a-text-2 hover:bg-a-surface-2 hover:text-a-text focus-visible:outline-2 focus-visible:outline-a-accent"><Pencil size={15} aria-hidden /></button>
-                      <button type="button" onClick={() => setDeleting(rule)} aria-label={t('crm.assistant.popups.delete', 'Delete {{name}}', { name: rule.name })}
-                        className="rounded-full p-2 text-a-text-2 hover:bg-a-surface-2 hover:text-a-danger focus-visible:outline-2 focus-visible:outline-a-accent"><Trash2 size={15} aria-hidden /></button>
+            <div role="table" aria-label={t('crm.assistant.tab.popups', 'Pop-ups')}>
+              <div role="row" className="hidden border-b border-a-border px-4 py-2 text-xs font-medium text-a-text-2 md:grid md:grid-cols-[minmax(0,1fr)_13rem_4.5rem_5.5rem_7.5rem] md:gap-4">
+                <span role="columnheader">{t('crm.assistant.popups.col_popup', 'Pop-up')}</span>
+                <span role="columnheader">{t('crm.assistant.popups.col_when', 'When and where')}</span>
+                <span role="columnheader" className="text-right">{t('crm.assistant.popups.shown', 'Shown')}</span>
+                <span role="columnheader" className="text-right">{t('crm.assistant.popups.clicked', 'Clicked')}</span>
+                <span role="columnheader" className="text-right">{t('crm.assistant.popups.col_on', 'On')}</span>
+              </div>
+              <div className="divide-y divide-a-border">
+                {list.map(rule => {
+                  const rate = percent(rule.clicks_count ?? 0, rule.impressions_count ?? 0)
+                  return (
+                    <div role="row" key={rule.id} className={`group flex flex-col gap-2 px-4 py-3 transition-colors hover:bg-a-surface-2/60 md:grid md:grid-cols-[minmax(0,1fr)_13rem_4.5rem_5.5rem_7.5rem] md:items-center md:gap-4 ${rule.is_active ? '' : 'opacity-75'}`}>
+                      <div role="cell" className="min-w-0">
+                        <p className="flex flex-wrap items-center gap-2">
+                          {canManage
+                            ? <button type="button" onClick={() => setEditing(rule)} className="rounded-sm text-left text-sm font-medium text-a-text hover:text-a-accent-text focus-visible:outline-2 focus-visible:outline-a-accent">{rule.name}</button>
+                            : <span className="text-sm font-medium text-a-text">{rule.name}</span>}
+                          {!rule.is_active && <Pill>{t('crm.assistant.popups.off', 'Off')}</Pill>}
+                        </p>
+                        <p className="mt-0.5 line-clamp-2 text-sm text-a-text-2">{rule.message}</p>
+                      </div>
+                      <div role="cell" className="min-w-0 space-y-1">
+                        <Pill tone="accent">{triggerText(t, rule.trigger_type, rule.trigger_value)}</Pill>
+                        <p className="truncate text-xs text-a-text-2">
+                          {rule.url_match_value ? `${matches[rule.url_match_type ?? 'contains']} “${rule.url_match_value}”` : t('crm.assistant.popups.every_page', 'Every page')}
+                          {' · '}{visitors[rule.visitor_type ?? 'all']}
+                        </p>
+                      </div>
+                      <div role="cell" className="flex items-center gap-1 text-xs text-a-text-2 md:block md:text-right md:text-sm md:tabular-nums md:text-a-text">
+                        <Eye size={12} aria-hidden className="md:hidden" /><span className="sr-only">{t('crm.assistant.popups.shown', 'Shown')}: </span>{count(rule.impressions_count ?? 0, i18n.language)}
+                      </div>
+                      <div role="cell" className="flex items-center gap-1 text-xs text-a-text-2 md:block md:text-right md:text-sm md:tabular-nums md:text-a-text">
+                        <MousePointerClick size={12} aria-hidden className="md:hidden" /><span className="sr-only">{t('crm.assistant.popups.clicked', 'Clicked')}: </span>{count(rule.clicks_count ?? 0, i18n.language)}
+                        {rate !== null && <span className="ml-1 text-xs text-a-text-2">({rate} %)</span>}
+                      </div>
+                      <div role="cell" className="flex items-center justify-end gap-0.5">
+                        {canManage ? (
+                          <>
+                            <InlineSwitch label={t('crm.assistant.popups.on_named', '{{name}} is on', { name: rule.name })} checked={rule.is_active} disabled={toggle.isPending} onChange={() => toggle.mutate(rule)} />
+                            <IconButton icon={Pencil} label={t('crm.assistant.popups.edit', 'Edit {{name}}', { name: rule.name })} onClick={() => setEditing(rule)} />
+                            <IconButton icon={Trash2} danger label={t('crm.assistant.popups.delete', 'Delete {{name}}', { name: rule.name })} onClick={() => setDeleting(rule)} />
+                          </>
+                        ) : <span className="text-xs text-a-text-2">{t('crm.assistant.popups.priority_n', 'Priority {{n}}', { n: rule.priority })}</span>}
+                      </div>
                     </div>
-                  )}
-                </li>
-              ))}
-            </ul>
+                  )
+                })}
+              </div>
+            </div>
           )}
         </Card>
         {editing && <PopupPanel rule={editing === 'new' ? null : editing} onClose={() => setEditing(null)} />}

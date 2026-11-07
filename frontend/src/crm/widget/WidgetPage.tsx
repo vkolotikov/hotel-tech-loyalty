@@ -2,28 +2,33 @@ import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
+import { Code2, MessageCircleMore, Palette } from 'lucide-react'
+import { Button } from '../../workspace/ui/Button'
 import { useBoot } from '../CrmProvider'
 import { get, send } from '../lib/api'
 import { errorText } from '../lib/errors'
 import { Page } from '../ui/Page'
+import { Pill } from '../ui/Pill'
 import { QueryState } from '../ui/QueryState'
-import { Tabs } from '../ui/Tabs'
+import { SectionNav, type Section } from '../ui/SectionNav'
 import { useToast } from '../ui/Toast'
 import { BehaviourTab } from './BehaviourTab'
 import { EMBED_KEY } from './embed'
 import { InstallTab } from './InstallTab'
 import { LookTab } from './LookTab'
 import { ReadOnlyNote, SaveBar } from './parts'
-import { WIDGET_KEY, WIDGET_TABS, pickTab, type WidgetTab } from './tabs'
+import { WIDGET_KEY, WIDGET_TABS, pickTab, withTab, type WidgetTab } from './tabs'
 import { sameWidget, widgetForm, widgetPayload, widgetProblems, type WidgetConfig, type WidgetForm } from './widgetForm'
 
 const TAB_PARAM = 'tab'
+const ID_PREFIX = 'widget-section'
+const PANEL_ID = 'widget-panel'
 
 /**
- * The chat widget (HexaTech CRM, 2026-11-07): how the website chat looks, how it behaves with a visitor, and how to
- * put it on the site — the full admin's widget settings on the same endpoints (widget-config). Look and Behaviour are
- * one form with one Save; Install reads the server's code. The section is kept in `?tab=` (Get started links to
- * `?tab=install`). Changes are a manager's (`staff.can.manage_widget`).
+ * The chat widget (HexaTech CRM; round 2 "structured sections"): how the website chat looks, how it behaves with a
+ * visitor, and how to put it on the site — the full admin's widget settings on the same endpoints (widget-config), as
+ * three sections in `?tab=` (Get started links to `?tab=install`). Look and Behaviour are one form with one save bar;
+ * Install reads the server's code and replaces the key. Changes are a manager's (`staff.can.manage_widget`).
  */
 export function WidgetPage() {
   const { t } = useTranslation()
@@ -53,33 +58,41 @@ export function WidgetPage() {
     onError: error => say(errorText(t, error), 'danger'),
   })
 
-  const choose = (next: WidgetTab) => setParams(prev => {
-    const out = new URLSearchParams(prev)
-    if (next === 'look') out.delete(TAB_PARAM)
-    else out.set(TAB_PARAM, next)
-    return out
-  }, { replace: true })
+  const choose = (next: WidgetTab) => setParams(prev => withTab(prev, TAB_PARAM, next, 'look'), { replace: true })
+
+  const sections: Section<WidgetTab>[] = [
+    { key: 'look', icon: Palette, tone: 'accent', title: t('crm.widget.tab.look', 'Look'), caption: t('crm.widget.caption.look', 'Colours, the launcher and the words visitors read.') },
+    { key: 'behaviour', icon: MessageCircleMore, tone: 'progress', title: t('crm.widget.tab.behaviour', 'Behaviour'), caption: t('crm.widget.caption.behaviour', 'Contact details, opening hours, a way to a person.') },
+    { key: 'install', icon: Code2, tone: 'success', title: t('crm.widget.tab.install', 'Install'), caption: t('crm.widget.caption.install', 'The code for your website, and where it goes.') },
+  ]
 
   return (
     <Page title={t('crm.nav.widget', 'Chat widget')} line={t('crm.widget.line', 'The chat on your website: how it looks, how it greets visitors, and how to put it on your site.')}
-      below={(
-        <Tabs label={t('crm.widget.sections', 'Sections')} value={tab} onChange={choose} items={[
-          { key: 'look', label: t('crm.widget.tab.look', 'Look') },
-          { key: 'behaviour', label: t('crm.widget.tab.behaviour', 'Behaviour') },
-          { key: 'install', label: t('crm.widget.tab.install', 'Install') },
-        ]} />
-      )}>
-      <QueryState loading={query.isLoading} error={query.error} onRetry={() => { void query.refetch() }}>
-        <div className="space-y-5">
-          {!canManage && tab !== 'install' && <ReadOnlyNote />}
-          {tab === 'look' && <LookTab form={form} update={update} problems={problems} canManage={canManage} widgetKey={WIDGET_KEY} />}
-          {tab === 'behaviour' && <BehaviourTab form={form} update={update} problems={problems} canManage={canManage} venueZone={boot.venue.timezone} />}
-          {tab === 'install' && <InstallTab active={saved.is_active} canManage={canManage} />}
-          {canManage && tab !== 'install' && (
-            <SaveBar dirty={dirty} valid={problems.length === 0} busy={save.isPending} onSave={() => save.mutate()} onDiscard={() => setDraft(null)} />
+      actions={query.data ? (
+        <>
+          <Pill tone={saved.is_active ? 'success' : 'neutral'}>
+            <span aria-hidden className={`h-1.5 w-1.5 rounded-full ${saved.is_active ? 'bg-a-st-confirmed' : 'bg-a-text-2'}`} />
+            {saved.is_active ? t('crm.widget.state_on', 'Shown on your website') : t('crm.widget.state_off', 'Switched off')}
+          </Pill>
+          {tab !== 'install' && (
+            <Button variant="secondary" onClick={() => choose('install')}><Code2 size={15} aria-hidden />{t('crm.widget.get_code', 'Get the code')}</Button>
           )}
-        </div>
-      </QueryState>
+        </>
+      ) : undefined}>
+      <SectionNav label={t('crm.widget.sections', 'Sections')} idPrefix={ID_PREFIX} panelId={PANEL_ID} sections={sections} value={tab} onChange={choose} />
+      <div id={PANEL_ID} role="tabpanel" aria-labelledby={`${ID_PREFIX}-${tab}`} className="min-w-0">
+        <QueryState loading={query.isLoading} error={query.error} onRetry={() => { void query.refetch() }}>
+          <div className="space-y-5 animate-a-fade" key={tab}>
+            {!canManage && tab !== 'install' && <ReadOnlyNote />}
+            {tab === 'look' && <LookTab form={form} update={update} problems={problems} canManage={canManage} widgetKey={WIDGET_KEY} />}
+            {tab === 'behaviour' && <BehaviourTab form={form} update={update} problems={problems} canManage={canManage} venueZone={boot.venue.timezone} />}
+            {tab === 'install' && <InstallTab active={saved.is_active} canManage={canManage} />}
+            {canManage && tab !== 'install' && (
+              <SaveBar dirty={dirty} valid={problems.length === 0} busy={save.isPending} onSave={() => save.mutate()} onDiscard={() => setDraft(null)} />
+            )}
+          </div>
+        </QueryState>
+      </div>
     </Page>
   )
 }

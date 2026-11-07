@@ -41,10 +41,15 @@
     "whatsapp_bad": "Uniquement des chiffres, espaces, + et parenthèses (6 à 32).",
     "whatsapp_hint": "Avec l’indicatif du pays. Affiche un bouton WhatsApp dans le chat ; vide, il est masqué.",
     "zone": "Fuseau horaire",
-    "zone_default": "Non défini (celui du serveur)"
+    "zone_default": "Non défini (celui du serveur)",
+    "lead_line": "Quelles coordonnées demander, et quand.",
+    "person_line": "Des moyens de joindre votre équipe depuis le chat.",
+    "privacy_line": "Avant une discussion, après, et dans votre boîte de réception.",
+    "hours_card_line": "Quand votre équipe répond, et ce que dit le chat le reste du temps.",
+    "same_weekdays": "Appliquer les horaires du lundi du mardi au vendredi"
   },
   "discard": "Annuler les changements",
-  "fix_first": "Certains champs sont à revoir avant d’enregistrer.",
+  "fix_first": "Corrigez les champs signalés pour enregistrer.",
   "icon": {
     "chat": "Chat",
     "message": "Message",
@@ -54,7 +59,7 @@
     "support": "Casque"
   },
   "install": {
-    "api_line": "Pour une intégration sur mesure, vous pouvez remplacer la clé API du widget.",
+    "api_line": "Pour une intégration sur mesure, vous pouvez remplacer la clé API du widget. Le code de votre site n’est pas concerné.",
     "code_line": "Collez ceci une fois dans votre site, juste avant </body>. Le chat apparaît alors sur chaque page.",
     "code_title": "Votre code",
     "copy_failed": "Le navigateur n’a pas autorisé la copie. Sélectionnez le code et copiez-le à la main.",
@@ -63,7 +68,7 @@
     "html_steps": "Collez le code juste avant </body> sur chaque page, ou une fois dans le modèle de pied de page commun.",
     "iframe": "Votre site n’accepte pas les scripts ? Utilisez plutôt un cadre",
     "is_off": "Chat désactivé",
-    "key_line": "Le code ci-dessus contient cette clé ; elle ne change jamais, le code continue donc de fonctionner.",
+    "key_line": "Le code contient cette clé. Elle reste la même tant que vous ne la remplacez pas.",
     "keys_title": "Clés",
     "off": "Le chat est désactivé dans Apparence, le code n’affiche donc encore rien.",
     "on": "Chat activé",
@@ -77,7 +82,22 @@
     "where_title": "Où le coller",
     "widget_key": "Clé du widget",
     "wix_steps": "Paramètres → Code personnalisé → Ajouter du code : collez-le, choisissez « Toutes les pages » et « Body – fin ».",
-    "wordpress_steps": "Utilisez une extension comme « Insert Headers and Footers » (WPCode) : collez le code dans le champ du pied de page et enregistrez."
+    "wordpress_steps": "Utilisez une extension comme « Insert Headers and Footers » (WPCode) : collez le code dans le champ du pied de page et enregistrez.",
+    "rotated": "Nouvelle clé du widget créée. Collez maintenant le nouveau code sur votre site.",
+    "rotated_note": "La clé du widget a été remplacée. Tant que vous n’avez pas collé le code ci-dessous sur votre site, le chat n’y apparaît pas.",
+    "copy_code": "Copier le code",
+    "keys_line": "Ce qui permet au code de trouver votre chat.",
+    "copy_key": "Copier la clé du widget",
+    "rotate_title": "Clé utilisée sur un autre site ?",
+    "rotate_line": "Remplacez-la. Le code de votre site cesse alors de fonctionner jusqu’à ce que vous colliez le nouveau.",
+    "rotate": "Remplacer la clé du widget",
+    "more": "Plus d’options",
+    "more_line": "La clé API pour une intégration sur mesure.",
+    "where_line": "Choisissez comment votre site est fait.",
+    "builders": "Créateur de site",
+    "rotate_confirm_title": "Remplacer la clé du widget ?",
+    "rotate_confirm_warn": "Le chat disparaît aussitôt de votre site.",
+    "rotate_confirm_line": "Le code de votre site cesse de fonctionner dès que la clé est remplacée. Le chat réapparaît une fois le nouveau code collé. Ne le faites que si la clé a été détournée."
   },
   "line": "Le chat de votre site : son apparence, son accueil des visiteurs et comment l’installer.",
   "look": {
@@ -87,14 +107,13 @@
     "avatar_alt": "L’image de l’assistant",
     "avatar_hint": "Un PNG ou JPG carré, 2 Mo au plus. Enregistré dès l’import.",
     "avatar_saved": "Image enregistrée.",
-    "avatar_title": "L’image de l’assistant",
+    "avatar_title": "Photo et mention de marque",
     "background": "Fond du chat",
     "bot_bubble": "Bulle de réponse",
     "bot_text": "Texte de réponse",
     "brand": "Couleur principale",
     "brand_code": "Code de la couleur principale",
     "branding": "La ligne",
-    "branding_title": "Ligne de marque",
     "colours_hint": "Laissez un code vide pour utiliser la couleur du modèle.",
     "colours_title": "En-tête et bulles",
     "company": "Nom de votre entreprise",
@@ -138,7 +157,16 @@
     "welcome_title": "Titre d’accueil",
     "welcome_title_placeholder": "Bonjour ! Comment pouvons-nous aider ?",
     "window": "Fenêtre",
-    "words_title": "Les textes que lisent les visiteurs"
+    "words_title": "Les textes que lisent les visiteurs",
+    "on_line": "Si le chat s’affiche, et comment votre équipe y apparaît.",
+    "style_line": "Un modèle de départ, votre couleur, le coin et la police.",
+    "colours_line": "Plus d’options : chaque couleur du chat séparément.",
+    "launcher_line": "Sa forme, son icône, sa taille et comment il attire l’œil.",
+    "words_line": "L’en-tête, l’accueil et le premier message.",
+    "box_title": "La zone de message",
+    "box_line": "Plus d’options : le texte à l’intérieur et l’aide en dessous.",
+    "suggestions_line": "Des boutons qu’un visiteur touche au lieu d’écrire.",
+    "avatar_line": "La photo de l’assistant et la ligne sous le chat."
   },
   "preview": {
     "branding": "Proposé par votre entreprise",
@@ -147,7 +175,8 @@
     "label": "Aperçu du chat sur votre site",
     "placeholder": "Écrivez un message…",
     "question": "Puis-je réserver vendredi après-midi ?",
-    "title": "Discutez avec nous"
+    "title": "Discutez avec nous",
+    "line": "Les modifications s’affichent ici au fur et à mesure."
   },
   "read_only": "Seul un propriétaire ou un manager peut modifier le widget de chat. Vous pouvez tout consulter ici.",
   "saved": "Enregistré. Votre site affiche le changement en moins d’une minute.",
@@ -179,12 +208,21 @@
     "onyx_gold": "Onyx doré"
   },
   "too_long": "Trop long : {{max}} caractères au plus.",
-  "unsaved": "Vous avez des changements non enregistrés. Le site les affiche après l’enregistrement.",
+  "unsaved": "Modifications non enregistrées",
   "window": {
     "bubble": "Bulle",
     "classic": "Classique",
     "minimal": "Minimal",
     "panel": "Panneau",
     "popup": "Pop-up"
-  }
+  },
+  "caption": {
+    "look": "Les couleurs, le bouton et les textes lus par les visiteurs.",
+    "behaviour": "Coordonnées, horaires, un moyen de joindre quelqu’un.",
+    "install": "Le code pour votre site, et où le mettre."
+  },
+  "state_on": "Affiché sur votre site",
+  "state_off": "Désactivé",
+  "get_code": "Obtenir le code",
+  "unsaved_line": "votre site les affiche après l’enregistrement"
 }

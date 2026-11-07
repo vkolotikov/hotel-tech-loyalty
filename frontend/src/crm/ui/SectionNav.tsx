@@ -59,8 +59,9 @@ export function SectionNav<T extends string>({ label, idPrefix, panelId, section
             className={`group flex min-w-0 items-start gap-3 rounded-2xl border p-3 text-left transition-colors focus-visible:outline-2 focus-visible:outline-a-accent sm:p-3.5 ${on ? 'border-a-accent bg-a-accent/10 shadow-a-sm' : 'border-a-border bg-a-surface hover:border-a-text-2/40'}`}>
             <span aria-hidden className={`grid h-9 w-9 shrink-0 place-items-center rounded-xl ${TONE_CHIP[tone]}`}><Icon size={17} /></span>
             <span className="min-w-0 flex-1">
-              <span className="flex items-center gap-2">
-                <span className={`truncate text-sm font-semibold ${on ? 'text-a-text' : 'text-a-text'}`}>{title}</span>
+              <span className="flex items-start gap-2">
+                {/* Two lines before an ellipsis: "Answers to fix" and "Canned replies" fit a 360 px phone's half. */}
+                <span className="line-clamp-2 min-w-0 break-words text-sm font-semibold leading-snug text-a-text">{title}</span>
                 {badge !== undefined && badge !== null && badge !== 0 && (
                   <span className="ml-auto shrink-0 rounded-full bg-a-accent px-1.5 text-center text-xs font-semibold leading-5 text-a-accent-ink">{badge}</span>
                 )}

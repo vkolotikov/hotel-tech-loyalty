@@ -87,11 +87,22 @@ export interface GuestLead {
   created_at: string | null
 }
 
-/** GET guests/{id}/delete-impact: what goes with a contact. */
+/**
+ * GET guests/{id}/delete-impact: what goes with a contact (round 2: what the database really does). The leads,
+ * reservations and timeline go with the contact, and the leads' tasks with them; the leads' chats stay in the inbox,
+ * unlinked; a venue booking naming the contact blocks the delete.
+ */
 export interface DeleteImpact {
   inquiries: number
   reservations: number
   activities: number
+  lead_tasks?: number
+  chats?: number
+  venue_bookings?: number
+  /** The count keys deleted with the contact, and those kept (unlinked). */
+  removes?: string[]
+  kept?: string[]
+  blocked?: boolean
 }
 
 /** One pair of GET guests/duplicates: the older row is suggested as the one kept. */

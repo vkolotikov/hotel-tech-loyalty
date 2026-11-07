@@ -76,6 +76,21 @@ describe('Contacts, rendered', () => {
     expect(html).not.toMatch(/loyalty|points|member/i)
   })
 
+  it('shows the sections as cards with the chosen one marked, and the filters in a toolbar with chips', () => {
+    const at = '/crm/contacts?lifecycle=VIP&company=Analytical%20Engines'
+    const page: Paginated<Guest> = { data: [ada], current_page: 1, last_page: 1, total: 1, per_page: 25 }
+    const html = render(at, qc => {
+      qc.setQueryData(['crm', 'contacts', 'list', listParams(filtersFrom(new URLSearchParams(at.split('?')[1])), 1)], page)
+      qc.setQueryData(['crm', 'contacts', 'duplicates'], { pairs: [{ reason: 'shared_email', winner: {}, loser: {} }] })
+    })
+    expect(html).toMatch(/role="tab"[^>]*id="crm-contacts-section-people"[^>]*aria-selected="true"/)
+    expect(html).toContain('id="crm-contacts-section-duplicates"')
+    expect(html).toContain('role="tabpanel"')
+    expect(html).toContain('Lifecycle: VIP')
+    expect(html).toContain('Company: Analytical Engines')
+    expect(html).toContain('Clear filters')
+  })
+
   it('says how to start when there is nobody yet', () => {
     const html = render('/crm/contacts', qc => {
       qc.setQueryData(['crm', 'contacts', 'list', listParams(filtersFrom(new URLSearchParams()), 1)], { data: [], current_page: 1, last_page: 1, total: 0, per_page: 25 })
@@ -97,6 +112,10 @@ describe('Contacts, rendered', () => {
     expect(html).toContain('Rang about dates')
     expect(html).toContain('Change Email')
     expect(html).toContain('href="/crm/contacts"')
+    for (const group of ['Contact', 'Work', 'Standing', 'Place', 'Notes']) expect(html).toContain(group)
+    expect(html).toContain('Add a tag')
+    expect(html).toContain('Remove the tag Press')
+    expect(html).not.toContain('cannot be emptied')
   })
 
   it('lists companies with their state, and the pairs that look like one person', () => {

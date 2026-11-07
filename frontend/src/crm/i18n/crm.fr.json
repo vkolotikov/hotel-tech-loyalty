@@ -95,28 +95,42 @@
     "to_do": "À faire",
     "widget": {
       "title": "Mettre le chat sur votre site",
-      "line": "Copiez une ligne dans votre site ; les visiteurs peuvent vous écrire depuis chaque page."
+      "line": "Copiez une ligne dans votre site ; les visiteurs peuvent vous écrire depuis chaque page.",
+      "action": "Obtenir le code"
     },
     "assistant": {
       "title": "Donner sa voix à l'assistant",
-      "line": "Son nom, son ton et ce qu'il peut promettre, pour qu'il parle comme votre équipe."
+      "line": "Son nom, son ton et ce qu'il peut promettre, pour qu'il parle comme votre équipe.",
+      "action": "Définir sa voix"
     },
     "knowledge": {
       "title": "Lui apprendre vos réponses",
-      "line": "Au moins cinq questions et réponses, ou un document avec vos prix et horaires."
+      "line": "Au moins cinq questions et réponses, ou un document avec vos prix et horaires.",
+      "action": "Ajouter des réponses"
     },
     "reply": {
       "title": "Répondre à votre premier chat",
-      "line": "Reprenez un chat de l'assistant dans la messagerie et répondez en personne."
+      "line": "Reprenez un chat de l'assistant dans la messagerie et répondez en personne.",
+      "action": "Ouvrir la messagerie"
     },
     "pipeline": {
       "title": "Configurer votre pipeline",
-      "line": "Les étapes d'un prospect, du premier contact jusqu'à gagné."
+      "line": "Les étapes d'un prospect, du premier contact jusqu'à gagné.",
+      "action": "Définir les étapes"
     },
     "team": {
       "title": "Inviter un collègue",
-      "line": "Partagez la messagerie : chacun voit qui répond à quel chat."
-    }
+      "line": "Partagez la messagerie : chacun voit qui répond à quel chat.",
+      "action": "Inviter quelqu’un"
+    },
+    "progress_label": "Votre progression",
+    "complete": "Tout est en place. Votre chat répond et votre pipeline relance.",
+    "next_line": "Ensuite : {{step}}",
+    "to_today": "Aller à Aujourd’hui",
+    "list_title": "Les étapes",
+    "list_line": "Chaque étape se coche d’elle-même une fois faite.",
+    "up_next": "La prochaine",
+    "open": "Ouvrir"
   },
   "status": {
     "waiting": "En attente",
@@ -131,37 +145,63 @@
     "add_lead": "Ajouter un prospect",
     "all_leads": "Tous les prospects",
     "all_tasks": "Toutes les tâches",
-    "chats_title": "Chats en attente de réponse",
-    "due_today": "Aujourd'hui",
     "follow_ups": "Relances dues",
-    "follow_ups_title": "Relances",
     "last_24h": "Dans les dernières 24 heures",
     "line": "Ce qui a besoin de vous maintenant, du chat du site et de votre pipeline.",
     "new_leads": "Nouveaux prospects",
-    "newest": "Derniers prospects",
-    "no_chats": "Personne n'attend",
-    "no_chats_line": "L'assistant répond aux visiteurs ; un chat arrive ici quand il le transmet à votre équipe.",
-    "no_follow_ups": "Aucune relance due",
-    "no_follow_ups_line": "Fixez une prochaine étape sur un prospect et elle apparaît ici le jour venu.",
-    "no_tasks": "Rien à faire aujourd'hui",
     "nobody": "Personne assigné",
-    "open_chats": "Chats ouverts",
     "open_inbox": "Ouvrir la messagerie",
     "open_leads": "{{count}} prospects ouverts",
     "overdue": "{{count}} en retard",
-    "overdue_since": "Depuis {{day}}",
     "pipeline": "Pipeline ouvert",
     "setup_line": "{{done}} étapes sur {{total}} faites. Mettez le chat sur votre site, formez l'assistant, et c'est prêt.",
     "setup_title": "Terminez la configuration de HexaTech CRM",
-    "tasks_title": "Vos tâches",
     "title": "Aujourd'hui",
-    "unassigned": "{{count}} ouverts sans personne assignée",
     "waiting": "En attente de réponse",
     "week_ai": "Clôturés par l'IA",
     "week_chats": "Conversations",
     "week_leads": "Prospects issus du chat",
     "week_title": "Le chat du site cette semaine",
     "your_tasks": "Vos tâches",
-    "open_leads_one": "1 prospect ouvert"
+    "open_leads_one": "1 prospect ouvert",
+    "greeting": {
+      "morning": "Bonjour, {{name}}",
+      "afternoon": "Bon après-midi, {{name}}",
+      "evening": "Bonsoir, {{name}}"
+    },
+    "setup_go": "Continuer",
+    "figures": "La journée en un coup d’œil",
+    "open_unassigned": "{{open}} chats ouverts · {{unassigned}} sans personne",
+    "now_title": "À traiter maintenant",
+    "now_line": "D’abord les chats en attente, puis ce qui est en retard.",
+    "all_clear": "Tout est à jour",
+    "all_clear_line": "Personne n’attend de réponse et rien n’est en retard.",
+    "all_waiting": "Les {{count}} chats en attente",
+    "all_overdue_leads": "Les {{count}} relances en retard",
+    "all_overdue_tasks": "Les {{count}} tâches en retard",
+    "kind_chat": "En attente de réponse",
+    "kind_follow_up": "Relance en retard depuis le {{day}}",
+    "kind_task": "Tâche en retard · prévue {{when}}",
+    "schedule_title": "Le programme du jour",
+    "schedule_line": "Les relances et vos tâches du jour, à l’heure de l’établissement.",
+    "no_schedule": "Rien de prévu aujourd’hui",
+    "no_schedule_line": "Fixez une prochaine étape sur un prospect ou ajoutez une tâche : elle apparaît ici le jour venu.",
+    "at_a_time": "À une heure précise",
+    "during_day": "Dans la journée",
+    "all_leads_due": "Toutes les relances dues",
+    "no_time": "Sans heure fixe",
+    "kind_task_today": "Tâche",
+    "kind_follow_up_today": "Relance",
+    "new_title": "Nouveaux prospects",
+    "no_new": "Pas de nouveau prospect aujourd’hui",
+    "no_new_line": "Les prospects du chat du site, de vos formulaires et de votre équipe apparaissent ici dès leur arrivée.",
+    "all_new": "Les {{count}} nouveaux prospects",
+    "week_line": "Les sept derniers jours",
+    "week_more": "Analyses",
+    "week_hint": "Les chats que l’assistant a clôturés sans que votre équipe intervienne.",
+    "done_follow_up": "Relance marquée comme faite",
+    "done_task": "Tâche marquée comme faite",
+    "mark_done": "Marquer « {{name}} » comme fait",
+    "done": "Fait"
   }
 }

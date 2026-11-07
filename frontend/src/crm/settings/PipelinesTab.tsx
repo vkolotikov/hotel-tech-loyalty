@@ -15,7 +15,7 @@ import { Pill } from '../ui/Pill'
 import { QueryState } from '../ui/QueryState'
 import { useToast } from '../ui/Toast'
 import { reorderIds } from './lists'
-import { Dot, IconButton, Problem, ReadOnlyNote } from './parts'
+import { Dot, IconButton, ListHead, Problem, ReadOnlyNote, SectionIntro } from './parts'
 import {
   KINDS, PIPELINE_LIMITS, STAGE_COLOURS, fallbackStage, kindsFor, onlyOfKind, pipelineDeleteBlock, sortedStages, stageForm,
   stagePayload, stageProblems, type Pipeline, type Stage, type StageForm, type StageKind,
@@ -23,6 +23,7 @@ import {
 import { LostReasonsCard } from './LostReasons'
 
 const PIPELINES_KEY = ['crm', 'settings', 'pipelines'] as const
+const STAGE_COLS = 'md:grid-cols-[minmax(0,1fr)_6.5rem_5rem_4.5rem_9.5rem]'
 
 /** After a change to pipelines or stages: this list, the board, the leads, and the setup step. */
 function pipelinesChanged(qc: QueryClient): void {
@@ -38,24 +39,23 @@ export function PipelinesTab({ canManage }: { canManage: boolean }) {
   const { t } = useTranslation()
   const pipelines = useQuery({ queryKey: PIPELINES_KEY, queryFn: () => get<Pipeline[]>('pipelines') })
   const [creating, setCreating] = useState(false)
+  const list = pipelines.data ?? []
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-wrap items-center gap-3">
-        <p className="min-w-0 flex-1 text-sm text-a-text-2">{t('crm.settings.pipelines.line', 'The stages a lead goes through, from first contact to won or lost.')}</p>
-        {canManage && <Button variant="secondary" onClick={() => setCreating(true)}><Plus size={15} aria-hidden />{t('crm.settings.pipelines.add', 'Add a pipeline')}</Button>}
-      </div>
+      <SectionIntro line={t('crm.settings.pipelines.line', 'The stages a lead goes through, from first contact to won or lost.')}
+        action={canManage && list.length > 0 ? <Button onClick={() => setCreating(true)}><Plus size={15} aria-hidden />{t('crm.settings.pipelines.add', 'Add a pipeline')}</Button> : undefined} />
       {!canManage && <ReadOnlyNote />}
       <QueryState loading={pipelines.isLoading} error={pipelines.error} onRetry={() => { void pipelines.refetch() }}>
-        {(pipelines.data ?? []).length === 0 ? (
+        {list.length === 0 ? (
           <Card>
             <EmptyState icon={Columns3} title={t('crm.settings.pipelines.empty', 'No pipeline yet')}
               line={t('crm.settings.pipelines.empty_line', 'A new pipeline starts with eight stages you can rename, reorder or delete.')}
               action={canManage ? <Button onClick={() => setCreating(true)}><Plus size={15} aria-hidden />{t('crm.settings.pipelines.add', 'Add a pipeline')}</Button> : undefined} />
           </Card>
         ) : (
-          <div className="space-y-4">
-            {(pipelines.data ?? []).map(p => <PipelineCard key={p.id} pipeline={p} canManage={canManage} />)}
+          <div className="space-y-5">
+            {list.map(p => <PipelineCard key={p.id} pipeline={p} canManage={canManage} />)}
           </div>
         )}
       </QueryState>
@@ -110,7 +110,8 @@ function PipelineCard({ pipeline, canManage }: { pipeline: Pipeline; canManage: 
   })
 
   return (
-    <Card padded={false} title={pipeline.name} icon={Columns3}
+    <Card padded={false} title={pipeline.name} icon={Columns3} tone={pipeline.is_default ? 'accent' : 'neutral'}
+      description={[t('crm.settings.pipelines.counts', '{{stages}} stages · {{deals}} leads', { stages: stages.length, deals: pipeline.inquiries_count ?? 0 }), pipeline.description].filter(Boolean).join(' · ')}
       action={(
         <>
           {pipeline.is_default
@@ -120,29 +121,46 @@ function PipelineCard({ pipeline, canManage }: { pipeline: Pipeline; canManage: 
           {canManage && <IconButton icon={Trash2} danger label={t('crm.settings.pipelines.delete', 'Delete {{name}}', { name: pipeline.name })} onClick={() => setDeleting(true)} />}
         </>
       )}>
-      <div className="flex flex-wrap gap-x-3 gap-y-1 border-b border-a-border px-4 py-2 text-xs text-a-text-2">
-        <span>{t('crm.settings.pipelines.counts', '{{stages}} stages · {{deals}} leads', { stages: stages.length, deals: pipeline.inquiries_count ?? 0 })}</span>
-        {pipeline.description && <span>{pipeline.description}</span>}
-      </div>
-      <ol className="divide-y divide-a-border">
-        {stages.map((stage, i) => (
-          <li key={stage.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2.5">
-            <Dot colour={stage.color} />
-            <span className="min-w-0 flex-1 truncate text-sm font-medium text-a-text">{stage.name}</span>
-            <KindPill kind={stage.kind} />
-            {stage.default_win_probability !== null && <span className="text-xs text-a-text-2">{t('crm.settings.pipelines.win', '{{n}} % chance', { n: stage.default_win_probability })}</span>}
-            {(stage.inquiries_count ?? 0) > 0 && <span className="text-xs text-a-text-2">{t('crm.settings.pipelines.stage_deals', '{{count}} leads', { count: stage.inquiries_count })}</span>}
-            {canManage && (
-              <span className="flex shrink-0 items-center">
-                <IconButton icon={ArrowUp} label={t('crm.settings.pipelines.stage_up', 'Move {{name}} up', { name: stage.name })} disabled={i === 0 || reorder.isPending} onClick={() => reorder.mutate(reorderIds(stages, i, -1))} />
-                <IconButton icon={ArrowDown} label={t('crm.settings.pipelines.stage_down', 'Move {{name}} down', { name: stage.name })} disabled={i === stages.length - 1 || reorder.isPending} onClick={() => reorder.mutate(reorderIds(stages, i, 1))} />
-                <IconButton icon={Pencil} label={t('crm.settings.pipelines.stage_edit', 'Edit {{name}}', { name: stage.name })} onClick={() => setEditing(stage)} />
-                <IconButton icon={Trash2} danger label={t('crm.settings.pipelines.stage_delete', 'Delete {{name}}', { name: stage.name })} disabled={onlyOfKind(stages, stage)} onClick={() => setRemoving(stage)} />
+      <div role="table" aria-label={t('crm.settings.pipelines.stages_of', 'Stages of {{name}}', { name: pipeline.name })}>
+        <ListHead cols={STAGE_COLS} columns={[
+          { label: t('crm.settings.pipelines.col_stage', 'Stage') },
+          { label: t('crm.settings.pipelines.kind', 'What it means') },
+          { label: t('crm.settings.pipelines.col_chance', 'Chance'), align: 'right' },
+          { label: t('crm.settings.pipelines.col_leads', 'Leads'), align: 'right' },
+          { label: t('crm.settings.actions', 'Actions'), srOnly: true },
+        ]} />
+        <ol role="rowgroup" className="divide-y divide-a-border">
+          {stages.map((stage, i) => (
+            <li key={stage.id} role="row" className={`group flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2 transition-colors hover:bg-a-surface-2/60 md:grid md:gap-4 ${STAGE_COLS}`}>
+              <span role="cell" className="flex min-w-0 basis-full items-center gap-2.5 md:basis-auto">
+                <span aria-hidden className="hidden w-5 shrink-0 text-right text-xs tabular-nums text-a-text-2 md:inline">{i + 1}</span>
+                <Dot colour={stage.color} />
+                <span className="min-w-0 truncate text-sm font-medium text-a-text">{stage.name}</span>
               </span>
-            )}
-          </li>
-        ))}
-      </ol>
+              <span role="cell"><KindPill kind={stage.kind} /></span>
+              <span role="cell" className="text-xs tabular-nums text-a-text-2 md:text-right md:text-sm md:text-a-text">
+                {stage.default_win_probability !== null
+                  ? <><span className="md:hidden">{t('crm.settings.pipelines.win', '{{n}} % chance', { n: stage.default_win_probability })}</span><span className="hidden md:inline">{stage.default_win_probability} %</span></>
+                  : <span className="hidden md:inline"><span aria-hidden>—</span><span className="sr-only">{t('crm.settings.pipelines.no_chance', 'No chance set')}</span></span>}
+              </span>
+              <span role="cell" className="text-xs tabular-nums text-a-text-2 md:text-right md:text-sm md:text-a-text">
+                <span className={(stage.inquiries_count ?? 0) > 0 ? 'md:hidden' : 'hidden'}>{t('crm.settings.pipelines.stage_deals', '{{count}} leads', { count: stage.inquiries_count ?? 0 })}</span>
+                <span className="hidden md:inline">{stage.inquiries_count ?? 0}</span>
+              </span>
+              <span role="cell" className="ml-auto flex shrink-0 items-center justify-end">
+                {canManage && (
+                  <>
+                    <IconButton icon={ArrowUp} label={t('crm.settings.pipelines.stage_up', 'Move {{name}} up', { name: stage.name })} disabled={i === 0 || reorder.isPending} onClick={() => reorder.mutate(reorderIds(stages, i, -1))} />
+                    <IconButton icon={ArrowDown} label={t('crm.settings.pipelines.stage_down', 'Move {{name}} down', { name: stage.name })} disabled={i === stages.length - 1 || reorder.isPending} onClick={() => reorder.mutate(reorderIds(stages, i, 1))} />
+                    <IconButton icon={Pencil} label={t('crm.settings.pipelines.stage_edit', 'Edit {{name}}', { name: stage.name })} onClick={() => setEditing(stage)} />
+                    <IconButton icon={Trash2} danger label={onlyOfKind(stages, stage) ? t('crm.settings.pipelines.stage_last', '{{name}} is the only stage of its kind and stays', { name: stage.name }) : t('crm.settings.pipelines.stage_delete', 'Delete {{name}}', { name: stage.name })} disabled={onlyOfKind(stages, stage)} onClick={() => setRemoving(stage)} />
+                  </>
+                )}
+              </span>
+            </li>
+          ))}
+        </ol>
+      </div>
       {canManage && (
         <div className="border-t border-a-border px-4 py-2.5">
           <Button variant="ghost" size="sm" onClick={() => setEditing('new')}><Plus size={14} aria-hidden />{t('crm.settings.pipelines.add_stage', 'Add a stage')}</Button>

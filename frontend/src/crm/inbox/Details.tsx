@@ -2,7 +2,7 @@ import { useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { ArrowRight, Download, Globe, Mail, MapPin, Pencil, Phone, RefreshCw, Sparkles, UserPlus } from 'lucide-react'
+import { ArrowRight, Download, FileText, Globe, History, Mail, MapPin, Pencil, Phone, RefreshCw, Sparkles, Target, UserCheck, UserPlus, UserRound, type LucideIcon } from 'lucide-react'
 import { Button } from '../../workspace/ui/Button'
 import { useBoot } from '../CrmProvider'
 import { get, params, send } from '../lib/api'
@@ -11,17 +11,20 @@ import { count, dateTime, timeAgo } from '../lib/format'
 import { conversationPath, leadPath } from '../lib/links'
 import { Pill } from '../ui/Pill'
 import { Select } from '../ui/inputs'
+import { TONE_CHIP, type Tone } from '../ui/tones'
 import { useToast } from '../ui/Toast'
 import { STATUS_TONE, hostOf, intentKey, pagePath, webHref } from './inboxLogic'
 import { inboxKeys, useInboxRefresh } from './inboxQueries'
 import type { Agent, Brief, ConversationDetail } from './types'
 import { INTENT_DEFAULTS, STATUS_DEFAULTS } from './words'
 
-function Section({ title, action, children }: { title: string; action?: ReactNode; children: ReactNode }) {
+/** One titled section of the details: its icon in a tone's chip, its title, an action at the end, then its body. */
+function Section({ title, icon: Icon, tone = 'neutral', action, children }: { title: string; icon: LucideIcon; tone?: Tone; action?: ReactNode; children: ReactNode }) {
   return (
-    <section className="space-y-2 border-b border-a-border px-4 py-4 last:border-b-0">
-      <div className="flex items-center gap-2">
-        <h3 className="min-w-0 flex-1 truncate text-xs font-semibold uppercase tracking-wide text-a-text-2">{title}</h3>
+    <section className="space-y-2.5 border-b border-a-border px-4 py-4 last:border-b-0">
+      <div className="flex min-h-7 items-center gap-2">
+        <span aria-hidden className={`grid h-6 w-6 shrink-0 place-items-center rounded-md ${TONE_CHIP[tone]}`}><Icon size={13} /></span>
+        <h3 className="min-w-0 flex-1 truncate text-sm font-semibold text-a-text">{title}</h3>
         {action}
       </div>
       {children}
@@ -75,7 +78,7 @@ export function Details({ detail, onEditContact, onCaptureLead, onTranscript, tr
 
   return (
     <div className="text-sm">
-      <Section title={t('crm.inbox.contact', 'Contact')}
+      <Section title={t('crm.inbox.contact', 'Contact')} icon={UserRound} tone="accent"
         action={<button type="button" onClick={onEditContact} className="inline-flex items-center gap-1 rounded-sm text-sm font-medium text-a-accent-text hover:underline"><Pencil size={13} aria-hidden />{t('crm.common.edit', 'Edit')}</button>}>
         <ul className="space-y-1.5 text-a-text">
           {c.visitor_email && <li className="flex items-center gap-2"><Mail size={14} aria-hidden className="shrink-0 text-a-text-2" /><a href={`mailto:${c.visitor_email}`} className="truncate hover:underline">{c.visitor_email}</a></li>}
@@ -87,7 +90,7 @@ export function Details({ detail, onEditContact, onCaptureLead, onTranscript, tr
         {c.agent_notes && <p className="whitespace-pre-wrap rounded-xl bg-a-surface-2 px-3 py-2 text-a-text">{c.agent_notes}</p>}
       </Section>
 
-      <Section title={t('crm.inbox.lead', 'Lead')}>
+      <Section title={t('crm.inbox.lead', 'Lead')} icon={Target} tone={c.inquiry_id || c.lead_captured ? 'success' : 'neutral'}>
         {c.inquiry_id
           ? <Link to={leadPath(c.inquiry_id)} className="inline-flex items-center gap-1.5 font-medium text-a-accent-text hover:underline">{t('crm.inbox.open_lead', 'Open the lead')}<ArrowRight size={14} aria-hidden /></Link>
           : c.lead_captured
@@ -95,7 +98,7 @@ export function Details({ detail, onEditContact, onCaptureLead, onTranscript, tr
             : <Button variant="secondary" size="sm" onClick={onCaptureLead}><UserPlus size={14} aria-hidden />{t('crm.inbox.capture_lead', 'Capture as lead')}</Button>}
       </Section>
 
-      <Section title={t('crm.inbox.assignment', 'Who answers')}>
+      <Section title={t('crm.inbox.assignment', 'Assignment')} icon={UserCheck} tone={c.assigned_to ? 'progress' : 'pending'}>
         <label className="block">
           <span className="sr-only">{t('crm.inbox.assign_to', 'Assign to')}</span>
           <Select value={c.assigned_to ?? ''} disabled={assign.isPending || agents.isLoading}
@@ -114,7 +117,7 @@ export function Details({ detail, onEditContact, onCaptureLead, onTranscript, tr
       </Section>
 
       {(intent || boot.features.engagement) && (
-        <Section title={t('crm.inbox.about', 'What they want')}
+        <Section title={t('crm.inbox.about', 'What they want')} icon={Sparkles} tone="ai"
           action={boot.features.engagement && shownBrief ? (
             <button type="button" onClick={() => rebrief.mutate()} disabled={rebrief.isPending} aria-label={t('crm.inbox.brief_again', 'Write the brief again')} title={t('crm.inbox.brief_again', 'Write the brief again')}
               className="grid h-7 w-7 place-items-center rounded-full crm-ai-text hover:bg-a-surface-2 disabled:opacity-60"><RefreshCw size={14} aria-hidden className={rebrief.isPending ? 'animate-spin' : ''} /></button>
@@ -143,7 +146,7 @@ export function Details({ detail, onEditContact, onCaptureLead, onTranscript, tr
         </Section>
       )}
 
-      <Section title={t('crm.inbox.pages', 'On the website')}>
+      <Section title={t('crm.inbox.pages', 'On the website')} icon={Globe}>
         {c.page_url && (
           <p className="flex items-start gap-2 text-a-text">
             <Globe size={14} aria-hidden className="mt-0.5 shrink-0 text-a-text-2" />
@@ -175,7 +178,7 @@ export function Details({ detail, onEditContact, onCaptureLead, onTranscript, tr
       </Section>
 
       {detail.siblings.length > 0 && (
-        <Section title={t('crm.inbox.other_chats', 'Other chats from this visitor')}>
+        <Section title={t('crm.inbox.other_chats', 'Other chats from this visitor')} icon={History}>
           <ul className="space-y-1">
             {detail.siblings.map(s => (
               <li key={s.id}>
@@ -189,7 +192,7 @@ export function Details({ detail, onEditContact, onCaptureLead, onTranscript, tr
         </Section>
       )}
 
-      <Section title={t('crm.inbox.transcript', 'Transcript')}>
+      <Section title={t('crm.inbox.transcript', 'Transcript')} icon={FileText}>
         <Button variant="secondary" size="sm" onClick={onTranscript} loading={transcriptBusy}><Download size={14} aria-hidden />{t('crm.inbox.download', 'Download as text')}</Button>
       </Section>
     </div>

@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { Archive, ArrowLeft, Bot, CheckCircle2, Hand, MoreHorizontal, PanelRight, RotateCcw } from 'lucide-react'
+import { Archive, ArrowLeft, Bot, CheckCircle2, Download, Hand, MoreHorizontal, PanelRight, Pencil, RotateCcw, UserPlus } from 'lucide-react'
 import { Button } from '../../workspace/ui/Button'
 import { Notice } from '../../workspace/ui/Notice'
 import { useBoot } from '../CrmProvider'
@@ -29,9 +29,10 @@ import { ACTION_DEFAULTS, ACTION_DONE_DEFAULTS, CHANNEL_DEFAULTS, STATUS_DEFAULT
 const ACTION_ICON = { resolve: CheckCircle2, archive: Archive, reopen: RotateCcw } as const
 
 /**
- * One conversation: its header with what can be done to it, the thread (polled every few seconds, as the full admin
- * does, through `chat-inbox/{id}/poll`), the reply box, and the details column beside it on a wide screen (a panel
- * otherwise). On a phone it takes the whole screen, with a way back to the list.
+ * One conversation: its header (sticky over the thread) with the main actions grouped — the assistant's switch, the
+ * status's next step, and the rest in "More" —, the thread (polled every few seconds, as the full admin does, through
+ * `chat-inbox/{id}/poll`), the reply box, and the details column beside it on a wide screen (a panel otherwise). On a
+ * phone it takes the whole screen, with a way back to the list.
  */
 export function ConversationView({ id, onBack }: { id: number; onBack: () => void }) {
   const { t, i18n } = useTranslation()
@@ -143,20 +144,23 @@ export function ConversationView({ id, onBack }: { id: number; onBack: () => voi
   const channel = c ? channelKey(c.channel) : null
   const rows = data ? threadRows(data.messages, zone) : []
   const today = boot.venue.today
+  const canLead = Boolean(c && !c.inquiry_id && !c.lead_captured)
 
   const details = data && (
     <Details detail={data} onEditContact={() => setPanel('contact')} onCaptureLead={() => setPanel('lead')}
       onTranscript={() => transcript.mutate()} transcriptBusy={transcript.isPending} />
   )
-  const menuItem = 'flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm text-a-text hover:bg-a-surface-2 disabled:opacity-50'
+  const menuItem = 'flex min-h-10 w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm text-a-text hover:bg-a-surface-2 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-a-accent disabled:opacity-50'
+  const iconButton = 'grid h-10 w-10 shrink-0 place-items-center rounded-full text-a-text-2 hover:bg-a-surface-2 hover:text-a-text focus-visible:outline-2 focus-visible:outline-a-accent'
 
   return (
     <>
       <section aria-label={name || t('crm.inbox.conversation', 'Conversation')}
         className="fixed inset-0 z-40 flex min-h-0 min-w-0 flex-col bg-a-surface md:static md:z-auto">
-        <header className="flex items-center gap-2 border-b border-a-border px-3 py-2.5 pt-[max(0.625rem,env(safe-area-inset-top))] md:pt-2.5">
-          <button ref={back} type="button" onClick={onBack} aria-label={t('crm.inbox.back', 'Back to the conversations')}
-            className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-a-text-2 hover:bg-a-surface-2 hover:text-a-text md:hidden"><ArrowLeft size={18} aria-hidden /></button>
+        <header className="sticky top-0 z-10 flex items-center gap-2 border-b border-a-border bg-a-surface px-3 py-2.5 pt-[max(0.625rem,env(safe-area-inset-top))] md:pt-2.5">
+          <button ref={back} type="button" onClick={onBack} aria-label={t('crm.inbox.back', 'Back to the conversations')} className={`${iconButton} md:hidden`}>
+            <ArrowLeft size={18} aria-hidden />
+          </button>
           {c && <Avatar name={name} tone={toggle?.aiOn ? 'ai' : 'accent'} />}
           <div className="min-w-0 flex-1">
             <h2 className="truncate text-sm font-semibold text-a-text">{name}</h2>
@@ -168,64 +172,79 @@ export function ConversationView({ id, onBack }: { id: number; onBack: () => voi
               </p>
             )}
           </div>
-          {c && toggle && boot.features.chatbot && (
-            <button type="button" onClick={() => ai.mutate(toggle.next)} disabled={ai.isPending}
-              className={`hidden min-h-9 shrink-0 items-center gap-1.5 rounded-full px-3 text-sm font-semibold disabled:opacity-60 sm:inline-flex ${toggle.aiOn ? 'crm-ai-fill' : 'crm-ai-soft'}`}>
-              {toggle.aiOn ? <Hand size={15} aria-hidden /> : <Bot size={15} aria-hidden />}
-              {toggle.action === 'take_over' ? t('crm.inbox.take_over', 'Take over') : t('crm.inbox.hand_back', 'Hand back to AI')}
-            </button>
-          )}
-          {c && actions[0] && (() => {
-            const first = actions[0]
-            const Icon = ACTION_ICON[first.action]
-            return (
-              <Button variant="secondary" size="sm" className="hidden shrink-0 sm:inline-flex" loading={status.isPending} onClick={() => status.mutate(first.next)}>
-                {!status.isPending && <Icon size={15} aria-hidden />}{t(`crm.inbox.action.${first.action}`, ACTION_DEFAULTS[first.action])}
-              </Button>
-            )
-          })()}
+
           {c && (
-            <details ref={more} className="relative shrink-0">
-              <summary aria-label={t('crm.common.more', 'More')} title={t('crm.common.more', 'More')}
-                className="grid h-9 w-9 cursor-pointer list-none place-items-center rounded-full text-a-text-2 hover:bg-a-surface-2 hover:text-a-text [&::-webkit-details-marker]:hidden">
-                <MoreHorizontal size={18} aria-hidden />
-              </summary>
-              <div className="absolute right-0 top-full z-30 mt-1 w-64 space-y-0.5 rounded-2xl border border-a-border bg-a-surface p-1.5 shadow-a-lg animate-a-pop">
-                {toggle && boot.features.chatbot && (
-                  <button type="button" className={`${menuItem} sm:hidden`} disabled={ai.isPending} onClick={() => { closeMore(); ai.mutate(toggle.next) }}>
-                    {toggle.aiOn ? <Hand size={15} aria-hidden /> : <Bot size={15} aria-hidden />}
-                    {toggle.action === 'take_over' ? t('crm.inbox.take_over', 'Take over') : t('crm.inbox.hand_back', 'Hand back to AI')}
-                  </button>
-                )}
-                {actions.map((a, i) => {
-                  const Icon = ACTION_ICON[a.action]
-                  return (
-                    <button key={a.action} type="button" className={`${menuItem} ${i === 0 ? 'sm:hidden' : ''}`} disabled={status.isPending} onClick={() => { closeMore(); status.mutate(a.next) }}>
-                      <Icon size={15} aria-hidden />{t(`crm.inbox.action.${a.action}`, ACTION_DEFAULTS[a.action])}
-                    </button>
-                  )
-                })}
-                <button type="button" className={`${menuItem} md:hidden`} onClick={() => { closeMore(); setPanel('details') }}>
-                  <PanelRight size={15} aria-hidden />{t('crm.inbox.details', 'Details')}
+            <div role="group" aria-label={t('crm.inbox.actions', 'What to do with this chat')} className="flex shrink-0 items-center gap-1.5">
+              {toggle && boot.features.chatbot && (
+                <button type="button" onClick={() => ai.mutate(toggle.next)} disabled={ai.isPending}
+                  className={`hidden min-h-10 shrink-0 items-center gap-1.5 rounded-full px-3.5 text-sm font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-a-accent disabled:opacity-60 sm:inline-flex ${toggle.aiOn ? 'crm-ai-fill' : 'crm-ai-soft'}`}>
+                  {toggle.aiOn ? <Hand size={15} aria-hidden /> : <Bot size={15} aria-hidden />}
+                  {toggle.action === 'take_over' ? t('crm.inbox.take_over', 'Take over') : t('crm.inbox.hand_back', 'Hand back to AI')}
                 </button>
-              </div>
-            </details>
-          )}
-          {c && (
-            <button type="button" onClick={() => setPanel('details')} aria-label={t('crm.inbox.details', 'Details')} title={t('crm.inbox.details', 'Details')}
-              className="hidden h-9 w-9 shrink-0 place-items-center rounded-full text-a-text-2 hover:bg-a-surface-2 hover:text-a-text md:grid xl:hidden"><PanelRight size={18} aria-hidden /></button>
+              )}
+              {actions[0] && (() => {
+                const first = actions[0]
+                const Icon = ACTION_ICON[first.action]
+                return (
+                  <Button variant="secondary" size="sm" className="hidden min-h-10 shrink-0 sm:inline-flex" loading={status.isPending} onClick={() => status.mutate(first.next)}>
+                    {!status.isPending && <Icon size={15} aria-hidden />}{t(`crm.inbox.action.${first.action}`, ACTION_DEFAULTS[first.action])}
+                  </Button>
+                )
+              })()}
+              <details ref={more} className="relative shrink-0">
+                <summary aria-label={t('crm.common.more', 'More')} title={t('crm.common.more', 'More')}
+                  className={`${iconButton} cursor-pointer list-none [&::-webkit-details-marker]:hidden`}>
+                  <MoreHorizontal size={18} aria-hidden />
+                </summary>
+                <div className="absolute right-0 top-full z-30 mt-1 w-64 space-y-0.5 rounded-2xl border border-a-border bg-a-surface p-1.5 shadow-a-lg animate-a-pop">
+                  {toggle && boot.features.chatbot && (
+                    <button type="button" className={`${menuItem} sm:hidden`} disabled={ai.isPending} onClick={() => { closeMore(); ai.mutate(toggle.next) }}>
+                      {toggle.aiOn ? <Hand size={15} aria-hidden /> : <Bot size={15} aria-hidden />}
+                      {toggle.action === 'take_over' ? t('crm.inbox.take_over', 'Take over') : t('crm.inbox.hand_back', 'Hand back to AI')}
+                    </button>
+                  )}
+                  {actions.map((a, i) => {
+                    const Icon = ACTION_ICON[a.action]
+                    return (
+                      <button key={a.action} type="button" className={`${menuItem} ${i === 0 ? 'sm:hidden' : ''}`} disabled={status.isPending} onClick={() => { closeMore(); status.mutate(a.next) }}>
+                        <Icon size={15} aria-hidden />{t(`crm.inbox.action.${a.action}`, ACTION_DEFAULTS[a.action])}
+                      </button>
+                    )
+                  })}
+                  <div role="separator" className="my-1 h-px bg-a-border" />
+                  <button type="button" className={menuItem} onClick={() => { closeMore(); setPanel('contact') }}>
+                    <Pencil size={15} aria-hidden />{t('crm.inbox.contact_title', 'Contact details')}
+                  </button>
+                  {canLead && (
+                    <button type="button" className={menuItem} onClick={() => { closeMore(); setPanel('lead') }}>
+                      <UserPlus size={15} aria-hidden />{t('crm.inbox.capture_lead', 'Capture as lead')}
+                    </button>
+                  )}
+                  <button type="button" className={menuItem} disabled={transcript.isPending} onClick={() => { closeMore(); transcript.mutate() }}>
+                    <Download size={15} aria-hidden />{t('crm.inbox.download', 'Download as text')}
+                  </button>
+                  <button type="button" className={`${menuItem} xl:hidden`} onClick={() => { closeMore(); setPanel('details') }}>
+                    <PanelRight size={15} aria-hidden />{t('crm.inbox.details', 'Details')}
+                  </button>
+                </div>
+              </details>
+              <button type="button" onClick={() => setPanel('details')} aria-label={t('crm.inbox.details', 'Details')} title={t('crm.inbox.details', 'Details')}
+                className={`${iconButton} hidden md:grid xl:hidden`}><PanelRight size={18} aria-hidden /></button>
+            </div>
           )}
         </header>
 
         <div ref={scroller} onScroll={e => { const el = e.currentTarget; nearEnd.current = el.scrollHeight - el.scrollTop - el.clientHeight < 120 }}
-          className="min-h-0 flex-1 overflow-y-auto px-3 pb-4 pt-1 sm:px-5" aria-live="polite" aria-relevant="additions">
-          <div className="pt-3">
+          className="min-h-0 flex-1 overflow-y-auto bg-a-canvas/40 px-3 pb-4 pt-1 sm:px-5" aria-live="polite" aria-relevant="additions">
+          <div className="mx-auto max-w-3xl pt-3">
             <QueryState loading={detail.isLoading} error={detail.error} onRetry={() => { void detail.refetch() }} rows={5}>
               {rows.length === 0 && <p className="py-10 text-center text-sm text-a-text-2">{t('crm.inbox.no_messages', 'No messages yet.')}</p>}
               {rows.map(row => row.kind === 'day'
                 ? (
                   <div key={row.key} className="my-4 flex items-center gap-3 text-xs text-a-text-2" role="separator">
-                    <span className="h-px flex-1 bg-a-border" />{row.day === today ? t('crm.inbox.today', 'Today') : dayLabel(row.day, i18n.language)}<span className="h-px flex-1 bg-a-border" />
+                    <span className="h-px flex-1 bg-a-border" />
+                    <span className="rounded-full border border-a-border bg-a-surface px-2.5 py-0.5">{row.day === today ? t('crm.inbox.today', 'Today') : dayLabel(row.day, i18n.language)}</span>
+                    <span className="h-px flex-1 bg-a-border" />
                   </div>
                 )
                 : row.kind === 'note'

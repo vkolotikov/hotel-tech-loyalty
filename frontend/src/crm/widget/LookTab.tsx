@@ -11,11 +11,11 @@ import { Card } from '../ui/Card'
 import { Select, TextArea, TextInput, Toggle } from '../ui/inputs'
 import { useToast } from '../ui/Toast'
 import { LAUNCHER_ICON } from './icons'
-import { ColourField, Choice, Problem } from './parts'
+import { ColourField, Choice, Disclosure, Problem } from './parts'
 import { WidgetPreview } from './WidgetPreview'
 import {
   DEFAULT_PRIMARY, FONTS, LAUNCHER_ANIMATIONS, LAUNCHER_ICONS, LAUNCHER_SHAPES, TEMPLATES, TEXT_LIMITS, WINDOW_STYLES,
-  applyTemplate, problemOf, setSuggestion, shade, suggestionSlots, type ColorField, type TextField, type WidgetConfig,
+  applyTemplate, problemOf, setSuggestion, shade, suggestionSlots, templateSwatch, type ColorField, type TextField, type WidgetConfig,
   type WidgetForm, type WidgetProblem,
 } from './widgetForm'
 
@@ -107,10 +107,42 @@ export function LookTab({ form, update, problems, canManage, widgetKey }: {
   }
   const avatarSrc = form.assistant_avatar_url ? resolveImage(form.assistant_avatar_url) : null
 
+  const colourFields = (
+    <div className="space-y-4">
+      <Choice label={t('crm.widget.look.header', 'Header')} value={form.header_style} disabled={!canManage} columns="grid-cols-2"
+        onChange={value => update(value === 'gradient' && !form.header_gradient_end ? { header_style: value, header_gradient_end: shade(form.primary_color, -30) } : { header_style: value })}
+        options={[
+          { value: 'solid', label: t('crm.widget.look.solid', 'One colour') },
+          { value: 'gradient', label: t('crm.widget.look.gradient', 'Gradient') },
+        ]} />
+      <div className="grid gap-4 sm:grid-cols-2">
+        {form.header_style === 'gradient' && (
+          <ColourField label={t('crm.widget.look.gradient_end', 'Gradient ends in')} value={form.header_gradient_end} fallback={shade(form.primary_color, -30)} disabled={!canManage}
+            problem={colourProblem('header_gradient_end')} onChange={header_gradient_end => update({ header_gradient_end })} />
+        )}
+        <ColourField label={t('crm.widget.look.header_text', 'Header text')} value={form.header_text_color} fallback="#ffffff" disabled={!canManage}
+          problem={colourProblem('header_text_color')} onChange={header_text_color => update({ header_text_color })} />
+        <ColourField label={t('crm.widget.look.visitor_bubble', 'Visitor\'s bubble')} value={form.user_bubble_color} fallback={form.primary_color} disabled={!canManage}
+          problem={colourProblem('user_bubble_color')} onChange={user_bubble_color => update({ user_bubble_color })} />
+        <ColourField label={t('crm.widget.look.visitor_text', 'Visitor\'s text')} value={form.user_bubble_text} fallback="#ffffff" disabled={!canManage}
+          problem={colourProblem('user_bubble_text')} onChange={user_bubble_text => update({ user_bubble_text })} />
+        <ColourField label={t('crm.widget.look.bot_bubble', 'Answer bubble')} value={form.bot_bubble_color} fallback="#f3f4f6" disabled={!canManage}
+          problem={colourProblem('bot_bubble_color')} onChange={bot_bubble_color => update({ bot_bubble_color })} />
+        <ColourField label={t('crm.widget.look.bot_text', 'Answer text')} value={form.bot_bubble_text} fallback="#1f2937" disabled={!canManage}
+          problem={colourProblem('bot_bubble_text')} onChange={bot_bubble_text => update({ bot_bubble_text })} />
+        <ColourField label={t('crm.widget.look.background', 'Chat background')} value={form.chat_bg_color} fallback="#ffffff" disabled={!canManage}
+          problem={colourProblem('chat_bg_color')} onChange={chat_bg_color => update({ chat_bg_color })} />
+      </div>
+      <p className="text-xs text-a-text-2">{t('crm.widget.look.colours_hint', 'Leave a code empty to use the template\'s colour.')}</p>
+    </div>
+  )
+  const colourTrouble = problems.some(p => p.code === 'colour' && p.field !== 'primary_color')
+
   return (
     <div className="grid gap-5 lg:grid-cols-5">
       <fieldset disabled={!canManage} className="min-w-0 space-y-5 lg:col-span-3">
-        <Card title={t('crm.widget.look.on_title', 'On your website')} icon={Power}>
+        <Card title={t('crm.widget.look.on_title', 'On your website')} icon={Power} tone={form.is_active ? 'success' : 'neutral'}
+          description={t('crm.widget.look.on_line', 'Whether the chat shows, and how your team appears in it.')}>
           <div className="space-y-4">
             <Toggle label={t('crm.widget.look.active', 'The chat shows on your website')} checked={form.is_active} disabled={!canManage}
               hint={t('crm.widget.look.active_hint', 'Switched off, the code stays on your site but shows nothing.')} onChange={on => update({ is_active: on })} />
@@ -123,20 +155,37 @@ export function LookTab({ form, update, problems, canManage, widgetKey }: {
           </div>
         </Card>
 
-        <Card title={t('crm.widget.look.style_title', 'Style')} icon={Palette}>
-          <div className="space-y-4">
-            <Field label={t('crm.widget.look.template', 'Template')} hint={t('crm.widget.look.template_hint', 'Picking one sets its colours, font and launcher; change any of them after.')}>
-              <Select value={form.widget_template} onChange={e => update(applyTemplate(form, e.target.value as WidgetForm['widget_template']))}>
-                {TEMPLATES.map(id => <option key={id} value={id}>{templateNames[id]}</option>)}
-              </Select>
-            </Field>
+        <Card title={t('crm.widget.look.style_title', 'Style')} icon={Palette} tone="accent"
+          description={t('crm.widget.look.style_line', 'A template to start from, your colour, the corner and the font.')}>
+          <div className="space-y-5">
+            <div role="group" aria-label={t('crm.widget.look.template', 'Template')}>
+              <span className="mb-1 block text-xs font-medium text-a-text-2">{t('crm.widget.look.template', 'Template')}</span>
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                {TEMPLATES.map(id => {
+                  const on = form.widget_template === id
+                  const swatch = templateSwatch(id, form.primary_color)
+                  return (
+                    <button key={id} type="button" aria-pressed={on} disabled={!canManage} onClick={() => update(applyTemplate(form, id))}
+                      className={`rounded-xl border p-1.5 text-left transition-colors focus-visible:outline-2 focus-visible:outline-a-accent disabled:opacity-60 ${on ? 'border-a-accent bg-a-accent/10' : 'border-a-border bg-a-surface hover:border-a-text-2/40'}`}>
+                      <span aria-hidden className="block h-12 overflow-hidden rounded-lg border border-a-border" style={{ background: swatch.background }}>
+                        <span className="block h-3.5" style={{ background: swatch.header }} />
+                        <span className="ml-1.5 mt-1.5 block h-2 w-3/5 rounded-full" style={{ background: swatch.bubble }} />
+                        <span className="ml-auto mr-1.5 mt-1 block h-2 w-2/5 rounded-full" style={{ background: swatch.header }} />
+                      </span>
+                      <span className="mt-1.5 block truncate px-0.5 text-xs font-medium text-a-text">{templateNames[id]}</span>
+                    </button>
+                  )
+                })}
+              </div>
+              <p className="mt-1 text-xs text-a-text-2">{t('crm.widget.look.template_hint', 'Picking one sets its colours, font and launcher; change any of them after.')}</p>
+            </div>
             <div>
               <span className="mb-1 block text-xs font-medium text-a-text-2">{t('crm.widget.look.brand', 'Main colour')}</span>
               <div className="mb-2 flex flex-wrap gap-1.5" role="group" aria-label={t('crm.widget.look.brand', 'Main colour')}>
                 {SWATCHES.map(colour => (
                   <button key={colour} type="button" aria-pressed={form.primary_color.toLowerCase() === colour} disabled={!canManage}
                     aria-label={colour} onClick={() => update({ primary_color: colour })}
-                    className={`h-8 w-8 rounded-full border-2 focus-visible:outline-2 focus-visible:outline-a-accent ${form.primary_color.toLowerCase() === colour ? 'border-a-text' : 'border-transparent'}`}
+                    className={`h-9 w-9 rounded-full border-2 focus-visible:outline-2 focus-visible:outline-a-accent ${form.primary_color.toLowerCase() === colour ? 'border-a-text' : 'border-transparent'}`}
                     style={{ background: colour }} />
                 ))}
               </div>
@@ -164,10 +213,15 @@ export function LookTab({ form, update, problems, canManage, widgetKey }: {
                 <input type="range" min={0} max={24} step={1} value={form.border_radius} onChange={e => update({ border_radius: Number(e.target.value) })} className="mt-2 w-full accent-a-accent-text" />
               </Field>
             </div>
+            <Disclosure label={t('crm.widget.look.colours_title', 'Header and bubbles')} open={!canManage || colourTrouble}
+              line={t('crm.widget.look.colours_line', 'More options: each colour of the chat on its own.')}>
+              {colourFields}
+            </Disclosure>
           </div>
         </Card>
 
-        <Card title={t('crm.widget.look.launcher_title', 'The button that opens the chat')} icon={SquareMousePointer}>
+        <Card title={t('crm.widget.look.launcher_title', 'The button that opens the chat')} icon={SquareMousePointer} tone="progress"
+          description={t('crm.widget.look.launcher_line', 'Its shape, icon, size and how it catches the eye.')}>
           <div className="space-y-4">
             <Choice label={t('crm.widget.look.shape', 'Shape')} value={form.launcher_shape} disabled={!canManage} columns="grid-cols-2 sm:grid-cols-4"
               onChange={value => update({ launcher_shape: value })} options={LAUNCHER_SHAPES.map(id => ({ value: id, label: shapeNames[id] }))} />
@@ -190,37 +244,8 @@ export function LookTab({ form, update, problems, canManage, widgetKey }: {
           </div>
         </Card>
 
-        <Card title={t('crm.widget.look.colours_title', 'Header and bubbles')} icon={Palette}>
-          <div className="space-y-4">
-            <Choice label={t('crm.widget.look.header', 'Header')} value={form.header_style} disabled={!canManage} columns="grid-cols-2"
-              onChange={value => update(value === 'gradient' && !form.header_gradient_end ? { header_style: value, header_gradient_end: shade(form.primary_color, -30) } : { header_style: value })}
-              options={[
-                { value: 'solid', label: t('crm.widget.look.solid', 'One colour') },
-                { value: 'gradient', label: t('crm.widget.look.gradient', 'Gradient') },
-              ]} />
-            <div className="grid gap-4 sm:grid-cols-2">
-              {form.header_style === 'gradient' && (
-                <ColourField label={t('crm.widget.look.gradient_end', 'Gradient ends in')} value={form.header_gradient_end} fallback={shade(form.primary_color, -30)} disabled={!canManage}
-                  problem={colourProblem('header_gradient_end')} onChange={header_gradient_end => update({ header_gradient_end })} />
-              )}
-              <ColourField label={t('crm.widget.look.header_text', 'Header text')} value={form.header_text_color} fallback="#ffffff" disabled={!canManage}
-                problem={colourProblem('header_text_color')} onChange={header_text_color => update({ header_text_color })} />
-              <ColourField label={t('crm.widget.look.visitor_bubble', 'Visitor\'s bubble')} value={form.user_bubble_color} fallback={form.primary_color} disabled={!canManage}
-                problem={colourProblem('user_bubble_color')} onChange={user_bubble_color => update({ user_bubble_color })} />
-              <ColourField label={t('crm.widget.look.visitor_text', 'Visitor\'s text')} value={form.user_bubble_text} fallback="#ffffff" disabled={!canManage}
-                problem={colourProblem('user_bubble_text')} onChange={user_bubble_text => update({ user_bubble_text })} />
-              <ColourField label={t('crm.widget.look.bot_bubble', 'Answer bubble')} value={form.bot_bubble_color} fallback="#f3f4f6" disabled={!canManage}
-                problem={colourProblem('bot_bubble_color')} onChange={bot_bubble_color => update({ bot_bubble_color })} />
-              <ColourField label={t('crm.widget.look.bot_text', 'Answer text')} value={form.bot_bubble_text} fallback="#1f2937" disabled={!canManage}
-                problem={colourProblem('bot_bubble_text')} onChange={bot_bubble_text => update({ bot_bubble_text })} />
-              <ColourField label={t('crm.widget.look.background', 'Chat background')} value={form.chat_bg_color} fallback="#ffffff" disabled={!canManage}
-                problem={colourProblem('chat_bg_color')} onChange={chat_bg_color => update({ chat_bg_color })} />
-            </div>
-            <p className="text-xs text-a-text-2">{t('crm.widget.look.colours_hint', 'Leave a code empty to use the template\'s colour.')}</p>
-          </div>
-        </Card>
-
-        <Card title={t('crm.widget.look.words_title', 'Words visitors read')} icon={Type}>
+        <Card title={t('crm.widget.look.words_title', 'Words visitors read')} icon={Type} tone="neutral"
+          description={t('crm.widget.look.words_line', 'The header, the welcome and the first message.')}>
           <div className="space-y-4">
             {textField('company_name', t('crm.widget.look.company', 'Your business name'), '')}
             <div className="grid gap-4 sm:grid-cols-2">
@@ -230,66 +255,76 @@ export function LookTab({ form, update, problems, canManage, widgetKey }: {
             {textField('welcome_title', t('crm.widget.look.welcome_title', 'Welcome heading'), t('crm.widget.look.welcome_title_placeholder', 'Hi! How can we help?'))}
             {textField('welcome_subtitle', t('crm.widget.look.welcome_subtitle', 'Welcome text'), t('crm.widget.look.welcome_subtitle_placeholder', 'Ask about prices, opening hours or a booking.'), true)}
             {textField('welcome_message', t('crm.widget.look.welcome_message', 'First message in the chat'), t('crm.widget.preview.hello', 'Hello! How can I help you today?'), true)}
-            <div className="grid gap-4 sm:grid-cols-2">
-              {textField('input_placeholder', t('crm.widget.look.placeholder', 'Inside the message box'), t('crm.widget.preview.placeholder', 'Type a message…'))}
-              {textField('input_hint_text', t('crm.widget.look.hint', 'Hint under the message box'), t('crm.widget.look.hint_placeholder', 'Press Enter to send'))}
-            </div>
+            <Disclosure label={t('crm.widget.look.box_title', 'The message box')} open={!canManage || !!(form.input_placeholder || form.input_hint_text)}
+              line={t('crm.widget.look.box_line', 'More options: the text inside it and the hint under it.')}>
+              <div className="grid gap-4 sm:grid-cols-2">
+                {textField('input_placeholder', t('crm.widget.look.placeholder', 'Inside the message box'), t('crm.widget.preview.placeholder', 'Type a message…'))}
+                {textField('input_hint_text', t('crm.widget.look.hint', 'Hint under the message box'), t('crm.widget.look.hint_placeholder', 'Press Enter to send'))}
+              </div>
+            </Disclosure>
           </div>
         </Card>
 
-        <Card title={t('crm.widget.look.suggestions_title', 'Suggested questions')} icon={MessageSquareText}>
+        <Card title={t('crm.widget.look.suggestions_title', 'Suggested questions')} icon={MessageSquareText} tone="neutral"
+          description={t('crm.widget.look.suggestions_line', 'Buttons a visitor taps instead of typing.')}>
           <div className="space-y-3">
             <Toggle label={t('crm.widget.look.show_suggestions', 'Show buttons with common questions')} checked={form.show_suggestions} disabled={!canManage}
               hint={t('crm.widget.look.suggestions_hint', 'Up to six, on the welcome screen. A tap sends the question.')} onChange={on => update({ show_suggestions: on })} />
             {form.show_suggestions && (
-              <div className="grid gap-2 sm:grid-cols-2">
+              <ol className="grid gap-2 sm:grid-cols-2">
                 {suggestionSlots(form.suggestions).map((value, i) => (
-                  <label key={i}>
-                    <span className="sr-only">{t('crm.widget.look.suggestion_n', 'Question {{n}}', { n: i + 1 })}</span>
-                    <TextInput value={value} maxLength={120} placeholder={t('crm.widget.look.suggestion_n', 'Question {{n}}', { n: i + 1 })}
-                      onChange={e => update({ suggestions: setSuggestion(form.suggestions, i, e.target.value) })} />
-                  </label>
+                  <li key={i} className="flex items-center gap-2">
+                    <span aria-hidden className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-a-surface-2 text-xs font-semibold text-a-text-2">{i + 1}</span>
+                    <label className="min-w-0 flex-1">
+                      <span className="sr-only">{t('crm.widget.look.suggestion_n', 'Question {{n}}', { n: i + 1 })}</span>
+                      <TextInput value={value} maxLength={120} placeholder={t('crm.widget.look.suggestion_n', 'Question {{n}}', { n: i + 1 })}
+                        onChange={e => update({ suggestions: setSuggestion(form.suggestions, i, e.target.value) })} />
+                    </label>
+                  </li>
                 ))}
-              </div>
+              </ol>
             )}
           </div>
         </Card>
 
-        <Card title={t('crm.widget.look.avatar_title', 'The assistant\'s picture')} icon={ImagePlus}>
-          <div className="flex flex-wrap items-center gap-4">
-            <span className="grid h-16 w-16 shrink-0 place-items-center overflow-hidden rounded-2xl border border-a-border bg-a-surface-2 text-a-text-2">
-              {avatarSrc ? <img src={avatarSrc} alt={t('crm.widget.look.avatar_alt', 'The assistant\'s picture')} className="h-full w-full object-cover" /> : <ImagePlus size={22} aria-hidden />}
-            </span>
-            <div className="min-w-0 flex-1 space-y-2">
-              {canManage && (
-                <div className="flex flex-wrap gap-2">
-                  <Button type="button" size="sm" onClick={() => avatarInput.current?.click()} loading={avatar.isPending}><ImagePlus size={14} aria-hidden />{t('crm.widget.look.upload', 'Upload a picture')}</Button>
-                  {form.assistant_avatar_url && (
-                    <Button type="button" variant="secondary" size="sm" onClick={() => update({ assistant_avatar_url: '' })}><Trash2 size={14} aria-hidden />{t('crm.widget.look.remove', 'Remove')}</Button>
-                  )}
-                  <input ref={avatarInput} type="file" accept="image/png,image/jpeg,image/gif,image/webp" className="sr-only" tabIndex={-1} aria-hidden
-                    onChange={e => { const file = e.target.files?.[0]; if (file) avatar.mutate(file); e.target.value = '' }} />
-                </div>
-              )}
-              <p className="text-xs text-a-text-2">{t('crm.widget.look.avatar_hint', 'A square PNG or JPG, at most 2 MB. Saved as soon as it is uploaded.')}</p>
+        <Card title={t('crm.widget.look.avatar_title', 'Picture and branding')} icon={ImagePlus} tone="neutral"
+          description={t('crm.widget.look.avatar_line', 'The assistant\'s picture, and the line under the chat.')}>
+          <div className="space-y-5">
+            <div className="flex flex-wrap items-center gap-4">
+              <span className="grid h-16 w-16 shrink-0 place-items-center overflow-hidden rounded-2xl border border-a-border bg-a-surface-2 text-a-text-2">
+                {avatarSrc ? <img src={avatarSrc} alt={t('crm.widget.look.avatar_alt', 'The assistant\'s picture')} className="h-full w-full object-cover" /> : <ImagePlus size={22} aria-hidden />}
+              </span>
+              <div className="min-w-0 flex-1 space-y-2">
+                {canManage && (
+                  <div className="flex flex-wrap gap-2">
+                    <Button type="button" size="sm" variant="secondary" onClick={() => avatarInput.current?.click()} loading={avatar.isPending}><ImagePlus size={14} aria-hidden />{t('crm.widget.look.upload', 'Upload a picture')}</Button>
+                    {form.assistant_avatar_url && (
+                      <Button type="button" variant="ghost" size="sm" onClick={() => update({ assistant_avatar_url: '' })}><Trash2 size={14} aria-hidden />{t('crm.widget.look.remove', 'Remove')}</Button>
+                    )}
+                    <input ref={avatarInput} type="file" accept="image/png,image/jpeg,image/gif,image/webp" className="sr-only" tabIndex={-1} aria-hidden
+                      onChange={e => { const file = e.target.files?.[0]; if (file) avatar.mutate(file); e.target.value = '' }} />
+                  </div>
+                )}
+                <p className="text-xs text-a-text-2">{t('crm.widget.look.avatar_hint', 'A square PNG or JPG, at most 2 MB. Saved as soon as it is uploaded.')}</p>
+              </div>
             </div>
-          </div>
-        </Card>
-
-        <Card title={t('crm.widget.look.branding_title', 'Branding line')} icon={Type}>
-          <div className="space-y-3">
-            <Toggle label={t('crm.widget.look.show_branding', 'Show a line under the chat')} checked={form.show_branding} disabled={!canManage} onChange={on => update({ show_branding: on })} />
-            {form.show_branding && textField('branding_text', t('crm.widget.look.branding', 'The line'), t('crm.widget.preview.branding', 'Powered by your business'))}
+            <div className="space-y-3 border-t border-a-border pt-4">
+              <Toggle label={t('crm.widget.look.show_branding', 'Show a line under the chat')} checked={form.show_branding} disabled={!canManage} onChange={on => update({ show_branding: on })} />
+              {form.show_branding && textField('branding_text', t('crm.widget.look.branding', 'The line'), t('crm.widget.preview.branding', 'Powered by your business'))}
+            </div>
           </div>
         </Card>
       </fieldset>
 
-      <div className="lg:col-span-2">
+      <aside className="lg:col-span-2" aria-label={t('crm.widget.preview.heading', 'Preview')}>
         <div className="space-y-2 lg:sticky lg:top-4">
-          <p className="text-xs font-medium text-a-text-2">{t('crm.widget.preview.heading', 'Preview')}</p>
+          <div className="flex items-center gap-2">
+            <p className="text-sm font-semibold text-a-text">{t('crm.widget.preview.heading', 'Preview')}</p>
+            <span className="text-xs text-a-text-2">{t('crm.widget.preview.line', 'Changes show here as you make them.')}</span>
+          </div>
           <WidgetPreview form={form} />
         </div>
-      </div>
+      </aside>
     </div>
   )
 }

@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { ArrowDown, ArrowUp, Copy, ExternalLink, Plus, RefreshCw, Trash2 } from 'lucide-react'
+import { ArrowDown, ArrowUp, Code2, Copy, ExternalLink, ListChecks, Palette, Plus, RefreshCw, Trash2 } from 'lucide-react'
 import { Button } from '../../workspace/ui/Button'
 import { Field } from '../../workspace/ui/Field'
 import { useBoot } from '../CrmProvider'
@@ -14,7 +14,7 @@ import { Confirm } from '../ui/Confirm'
 import { Select, TextArea, TextInput, Toggle } from '../ui/inputs'
 import { QueryState } from '../ui/QueryState'
 import { SidePanel } from '../ui/SidePanel'
-import { Tabs } from '../ui/Tabs'
+import { SectionNav } from '../ui/SectionNav'
 import { useToast } from '../ui/Toast'
 import {
   CUSTOM_TYPES, FORM_LIMITS, addCustomField, formDraft, formPatch, formProblems, formUrl, iframeSnippet, isCustom,
@@ -62,7 +62,7 @@ export function LeadFormEditor({ formId, listKey, onClose }: { formId: number; l
     <SidePanel title={query.data?.name ?? t('crm.settings.forms.editor', 'Lead form')} onClose={onClose}
       footer={current ? (
         <div className="flex flex-wrap items-center justify-end gap-2">
-          {problems.length > 0 && <span className="min-w-0 flex-1 text-xs text-a-danger">{t('crm.settings.fix_first', 'Some fields need another look before saving.')}</span>}
+          {problems.length > 0 && <span className="min-w-0 flex-1 text-xs text-a-danger">{t('crm.settings.fix_first', 'Fix the marked fields to save.')}</span>}
           <Button variant="secondary" onClick={() => setDraft(null)} disabled={!dirty || save.isPending}>{t('crm.settings.discard', 'Discard')}</Button>
           <Button onClick={() => save.mutate()} disabled={!dirty || problems.length > 0} loading={save.isPending}>{t('crm.common.save', 'Save')}</Button>
         </div>
@@ -70,14 +70,17 @@ export function LeadFormEditor({ formId, listKey, onClose }: { formId: number; l
       <QueryState loading={query.isLoading} error={query.error} onRetry={() => { void query.refetch() }}>
         {query.data && current && (
           <div className="space-y-4">
-            <Tabs label={t('crm.settings.forms.sections', 'Form sections')} value={section} onChange={setSection} items={[
-              { key: 'fields', label: t('crm.settings.forms.fields', 'Fields') },
-              { key: 'design', label: t('crm.settings.forms.design', 'Words and look') },
-              { key: 'embed', label: t('crm.settings.forms.embed', 'On your website') },
-            ]} />
-            {section === 'fields' && <FieldsSection draft={current} edit={edit} problems={problems} />}
-            {section === 'design' && <DesignSection draft={current} edit={edit} problems={problems} />}
-            {section === 'embed' && <EmbedSection form={query.data} formKey={key} listKey={listKey} />}
+            <SectionNav compact label={t('crm.settings.forms.sections', 'Form sections')} idPrefix={`lead-form-${formId}`} panelId={`lead-form-${formId}-panel`}
+              value={section} onChange={setSection} sections={[
+                { key: 'fields', icon: ListChecks, tone: 'accent', title: t('crm.settings.forms.fields', 'Fields') },
+                { key: 'design', icon: Palette, tone: 'progress', title: t('crm.settings.forms.design', 'Words and look') },
+                { key: 'embed', icon: Code2, tone: 'success', title: t('crm.settings.forms.embed', 'On your website') },
+              ]} />
+            <div id={`lead-form-${formId}-panel`} role="tabpanel" aria-labelledby={`lead-form-${formId}-${section}`}>
+              {section === 'fields' && <FieldsSection draft={current} edit={edit} problems={problems} />}
+              {section === 'design' && <DesignSection draft={current} edit={edit} problems={problems} />}
+              {section === 'embed' && <EmbedSection form={query.data} formKey={key} listKey={listKey} />}
+            </div>
           </div>
         )}
       </QueryState>
