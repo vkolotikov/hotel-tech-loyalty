@@ -61,7 +61,12 @@ class BootstrapTest extends TestCase
 
         $this->asManager()->getJson($this->crmApi('bootstrap'))->assertOk()
             ->assertJsonPath('features.chatbot', false)
-            ->assertJsonPath('features.engagement', true);
+            ->assertJsonPath('features.engagement', true)
+            ->assertJsonPath('features.admin_ai', false);
+
+        // The AI capture of a lead from pasted text is the plan's `admin_ai` (the CRM's own packages leave it out).
+        $this->org->forceFill(['plan_features' => ['admin_ai' => 'true']])->save();
+        $this->asManager()->getJson($this->crmApi('bootstrap'))->assertOk()->assertJsonPath('features.admin_ai', true);
     }
 
     public function test_the_ai_allowance_is_the_organisations(): void

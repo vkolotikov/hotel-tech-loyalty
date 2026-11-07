@@ -169,10 +169,17 @@ class ChatInboxController extends Controller
             ->orderBy('created_at')
             ->get();
 
-        // Attach feedback for each AI message so the UI can show the existing rating.
+        // Attach feedback for each AI message so the UI can show the existing rating. Each person rates on their own
+        // row, so the reader's own rating is shown when there is one, else the newest anyone gave (2026-11-08: before,
+        // whichever row came last, so a person could see a colleague's rating as theirs).
         $aiMessageIds = $messages->where('sender_type', 'ai')->pluck('id')->all();
+        $readerId = (int) optional($request->user())->id;
         $feedback = $aiMessageIds
-            ? ChatMessageFeedback::whereIn('message_id', $aiMessageIds)->get()->keyBy('message_id')
+            ? ChatMessageFeedback::whereIn('message_id', $aiMessageIds)
+                ->orderByDesc('updated_at')->orderByDesc('id')
+                ->get()
+                ->groupBy('message_id')
+                ->map(fn ($rows) => $rows->firstWhere('user_id', $readerId) ?? $rows->first())
             : collect();
         $messages->each(function ($m) use ($feedback) {
             $m->feedback = $feedback->get($m->id);

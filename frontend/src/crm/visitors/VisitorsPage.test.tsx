@@ -27,7 +27,7 @@ const boot: Bootstrap = {
   organization: { id: 7, name: 'Hotel Aurora', industry: 'hotel' },
   accent: null,
   venue: { timezone: 'Europe/Riga', today: '2026-11-07', currency: 'EUR' },
-  features: { chatbot: true, engagement: false },
+  features: { chatbot: true, engagement: false, admin_ai: false },
   ai: { status: 'under', percent: 20 },
   staff: { id: 4, name: 'Ada', role: 'staff', can: { manage_bot: false, manage_widget: false, manage_pipelines: false, manage_canned: false, manage_team: false, delete_records: true } },
   widget: { key: 'k', active: true },

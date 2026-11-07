@@ -4,7 +4,8 @@ export interface Bootstrap {
   organization: { id: number; name: string; industry: string }
   accent: string | null
   venue: { timezone: string; today: string; currency: string }
-  features: { chatbot: boolean; engagement: boolean }
+  /** What the plan holds; `admin_ai` is the AI capture of a lead from pasted text (`crm-ai/capture-*`, not in the CRM's own packages). */
+  features: { chatbot: boolean; engagement: boolean; admin_ai: boolean }
   ai: { status: 'unlimited' | 'under' | 'warn' | 'over'; percent: number | null }
   staff: {
     id: number

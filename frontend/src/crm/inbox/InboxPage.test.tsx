@@ -29,7 +29,7 @@ const boot: Bootstrap = {
   organization: { id: 7, name: 'Hotel Aurora', industry: 'hotel' },
   accent: '#3b82f6',
   venue: { timezone: 'Europe/Riga', today: '2026-11-07', currency: 'EUR' },
-  features: { chatbot: true, engagement: true },
+  features: { chatbot: true, engagement: true, admin_ai: false },
   ai: { status: 'under', percent: 20 },
   staff: { id: 4, name: 'Ada', role: 'manager', can: { manage_bot: true, manage_widget: true, manage_pipelines: true, manage_canned: true, manage_team: true, delete_records: true } },
   widget: { key: 'k', active: true },
@@ -116,7 +116,7 @@ describe('InboxPage', () => {
   })
 
   it('leaves out the AI draft, the AI button and translation on a plan without them', () => {
-    const html = render('/crm/inbox?c=12', { features: { chatbot: false, engagement: false } })
+    const html = render('/crm/inbox?c=12', { features: { chatbot: false, engagement: false, admin_ai: false } })
     expect(html).not.toContain('Draft a reply with AI')
     expect(html).not.toContain('Take over')
     expect(html).not.toContain('Sum up the chat with AI')

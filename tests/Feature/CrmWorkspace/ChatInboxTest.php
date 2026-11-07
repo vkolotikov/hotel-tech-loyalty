@@ -12,7 +12,7 @@ use Tests\TestCase;
 
 /**
  * The full admin's inbox endpoints the CRM works on (2026-11-08): the stats count the chats the list shows, a
- * transcript signs each team message with its sender, and refusals carry codes (transcription unavailable, a brief
+ * transcript signs each team message with its sender, a thread shows the reader's own rating of an answer, and refusals carry codes (transcription unavailable, a brief
  * the AI could not write).
  */
 class ChatInboxTest extends TestCase
@@ -52,6 +52,20 @@ class ChatInboxTest extends TestCase
 
         $stats = $this->asStaffMember()->getJson($this->adminApi('chat-inbox/stats'))->assertOk()->json();
         $this->assertSame([1, 1, 2, 2, 2], [$stats['active'], $stats['waiting'], $stats['total'], $stats['active_24h'], $stats['unassigned']]);
+    }
+
+    public function test_a_thread_shows_the_readers_own_rating_of_an_answer(): void
+    {
+        $chat = $this->chat([], [['visitor', 'How much?', 10], ['ai', 'It costs 20 €.', 9]]);
+        $answer = (int) DB::table('chat_messages')->where('conversation_id', $chat)->where('sender_type', 'ai')->value('id');
+        foreach ([[$this->manager, 'good', 5], [$this->staffMember, 'bad', 3]] as [$user, $rating, $ago]) {
+            DB::table('chat_message_feedback')->insert(['organization_id' => $this->org->id, 'message_id' => $answer, 'user_id' => $user->id, 'rating' => $rating, 'applied_to_training' => false, 'created_at' => now()->subMinutes($ago), 'updated_at' => now()->subMinutes($ago)]);
+        }
+
+        $rating = fn ($as) => collect($as->getJson($this->adminApi("chat-inbox/{$chat}"))->assertOk()->json('messages'))
+            ->firstWhere('id', $answer)['feedback']['rating'] ?? null;
+        $this->assertSame('good', $rating($this->asManager()), 'the manager sees their own rating, not the newer one');
+        $this->assertSame('bad', $rating($this->asStaffMember()));
     }
 
     public function test_a_transcript_signs_each_team_message_with_its_sender(): void

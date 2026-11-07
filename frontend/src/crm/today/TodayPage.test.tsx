@@ -28,7 +28,7 @@ const boot = (setup: Bootstrap['setup'] = { done: 6, total: 6, complete: true })
   organization: { id: 7, name: 'Villa Riga', industry: 'hotel' },
   accent: null,
   venue: { timezone: ZONE, today: '2026-11-07', currency: 'EUR' },
-  features: { chatbot: true, engagement: true },
+  features: { chatbot: true, engagement: true, admin_ai: false },
   ai: { status: 'under', percent: 10 },
   staff: { id: 3, name: 'Anna Berzina', role: 'staff', can: { manage_bot: false, manage_widget: false, manage_pipelines: false, manage_canned: false, manage_team: false, delete_records: true } },
   widget: null,

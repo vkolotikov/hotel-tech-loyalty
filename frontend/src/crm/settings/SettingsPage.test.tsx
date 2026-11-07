@@ -22,7 +22,7 @@ const boot: Bootstrap = {
   organization: { id: 7, name: 'Hotel Riga', industry: 'hotel' },
   accent: null,
   venue: { timezone: 'Europe/Riga', today: '2026-11-07', currency: 'EUR' },
-  features: { chatbot: true, engagement: true },
+  features: { chatbot: true, engagement: true, admin_ai: false },
   ai: { status: 'under', percent: 10 },
   staff: { id: 1, name: 'Maria', role: 'manager', can: { manage_bot: true, manage_widget: true, manage_pipelines: true, manage_canned: true, manage_team: true, delete_records: true } },
   widget: { key: 'k', active: true },

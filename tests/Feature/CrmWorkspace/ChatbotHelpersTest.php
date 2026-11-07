@@ -48,6 +48,19 @@ class ChatbotHelpersTest extends TestCase
         return DB::table('ai_usage_logs')->where('organization_id', $this->org->id)->where('feature', $feature)->count();
     }
 
+    public function test_the_used_up_allowance_stops_the_ai_capture_before_the_provider_is_asked(): void
+    {
+        $this->org->forceFill(['plan_features' => ['admin_ai' => 'true', 'ai_monthly_cost_cents' => '500']])->save();
+        DB::table('ai_usage_logs')->insert(['organization_id' => $this->org->id, 'model' => 'gpt-4o-mini', 'feature' => 'website_chatbot', 'cost_cents' => 500, 'created_at' => now()]);
+        Http::fake();
+
+        foreach (['capture-lead', 'capture-guest', 'capture-corporate', 'capture-member'] as $path) {
+            $this->asManager()->postJson($this->adminApi("crm-ai/{$path}"), ['text' => 'We are 12 and would like a quote for May.'])
+                ->assertStatus(403)->assertJsonPath('error', 'ai_budget_used_up');
+        }
+        Http::assertNothingSent();
+    }
+
     public function test_the_used_up_allowance_stops_every_helper_before_the_provider_is_asked(): void
     {
         $this->useUpTheAllowance();

@@ -23,7 +23,7 @@ const boot: Bootstrap = {
   organization: { id: 7, name: 'Hotel Riga', industry: 'hotel' },
   accent: null,
   venue: { timezone: 'Europe/Riga', today: '2026-11-07', currency: 'EUR' },
-  features: { chatbot: true, engagement: true },
+  features: { chatbot: true, engagement: true, admin_ai: false },
   ai: { status: 'under', percent: 10 },
   staff: { id: 1, name: 'Maria', role: 'manager', can: { manage_bot: true, manage_widget: true, manage_pipelines: true, manage_canned: true, manage_team: true, delete_records: true } },
   widget: { key: 'k', active: true },
@@ -146,7 +146,7 @@ describe('AssistantPage', () => {
   })
 
   it('says the plan lacks the chatbot instead of showing the sections', () => {
-    const html = render('/crm/assistant?tab=knowledge', { features: { chatbot: false, engagement: true } })
+    const html = render('/crm/assistant?tab=knowledge', { features: { chatbot: false, engagement: true, admin_ai: false } })
     expect(html).toContain('Your plan does not include this')
     expect(html).not.toContain('Answers to fix')
   })

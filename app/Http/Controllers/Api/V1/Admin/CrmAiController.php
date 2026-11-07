@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers\Api\V1\Admin;
 
+use App\Exceptions\AiHelperRefused;
 use App\Http\Controllers\Controller;
+use App\Models\Organization;
 use App\Services\CrmAiService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -82,6 +84,10 @@ class CrmAiController extends Controller
             'text' => 'required|string|max:10000',
         ]);
 
+        // 2026-11-08: the month's AI allowance stops this before the provider is asked, as it stops the widget, the
+        // CRM's drafts and the chatbot set-up's helpers (403 `ai_budget_used_up`).
+        AiHelperRefused::unlessAllowanceLeft(Organization::withoutGlobalScopes()->find((int) $request->user()->organization_id));
+
         try {
             $result = (new CrmAiService())->extractLead($request->input('text'));
             return response()->json($result);
@@ -97,6 +103,10 @@ class CrmAiController extends Controller
             'text' => 'required|string|max:10000',
         ]);
 
+        // 2026-11-08: the month's AI allowance stops this before the provider is asked, as it stops the widget, the
+        // CRM's drafts and the chatbot set-up's helpers (403 `ai_budget_used_up`).
+        AiHelperRefused::unlessAllowanceLeft(Organization::withoutGlobalScopes()->find((int) $request->user()->organization_id));
+
         try {
             $result = (new CrmAiService())->extractMember($request->input('text'));
             return response()->json($result);
@@ -111,6 +121,10 @@ class CrmAiController extends Controller
         $request->validate([
             'text' => 'required|string|max:10000',
         ]);
+
+        // 2026-11-08: the month's AI allowance stops this before the provider is asked, as it stops the widget, the
+        // CRM's drafts and the chatbot set-up's helpers (403 `ai_budget_used_up`).
+        AiHelperRefused::unlessAllowanceLeft(Organization::withoutGlobalScopes()->find((int) $request->user()->organization_id));
 
         try {
             $result = (new CrmAiService())->extractCorporate($request->input('text'));
@@ -133,6 +147,10 @@ class CrmAiController extends Controller
         $request->validate([
             'text' => 'required|string|max:10000',
         ]);
+
+        // 2026-11-08: the month's AI allowance stops this before the provider is asked, as it stops the widget, the
+        // CRM's drafts and the chatbot set-up's helpers (403 `ai_budget_used_up`).
+        AiHelperRefused::unlessAllowanceLeft(Organization::withoutGlobalScopes()->find((int) $request->user()->organization_id));
 
         try {
             $result = (new CrmAiService())->extractGuest($request->input('text'));
