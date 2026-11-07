@@ -16,11 +16,14 @@ describe('the period', () => {
     expect(periodOf(null)).toBe(30)
   })
 
-  it('counts the server’s UTC days: today and the days before it, and the window just before that', () => {
-    // 23:30 in Riga on 7 November is still 7 November in UTC (21:30).
+  it('counts the venue’s days: today and the days before it, and the window just before that', () => {
+    // 23:30 in Riga on 7 November is 21:30 UTC: the 7th either way.
     const now = new Date('2026-11-07T21:30:00Z')
-    expect(windows(7, now)).toEqual({ from: '2026-11-01', prevFrom: '2026-10-25', prevTo: '2026-10-31' })
-    expect(windows(30, now)).toEqual({ from: '2026-10-09', prevFrom: '2026-09-09', prevTo: '2026-10-08' })
+    expect(windows(7, now, 'Europe/Riga')).toEqual({ from: '2026-11-01', prevFrom: '2026-10-25', prevTo: '2026-10-31' })
+    expect(windows(30, now, 'Europe/Riga')).toEqual({ from: '2026-10-09', prevFrom: '2026-09-09', prevTo: '2026-10-08' })
+    // 00:30 in Riga on 8 November is still the 7th in UTC: the venue's day decides.
+    expect(windows(7, new Date('2026-11-07T22:30:00Z'), 'Europe/Riga').from).toBe('2026-11-02')
+    expect(windows(7, new Date('2026-11-07T22:30:00Z')).from).toBe('2026-11-01')
     expect(windows(30, new Date('2026-03-01T00:05:00Z')).from).toBe('2026-01-31')
   })
 })

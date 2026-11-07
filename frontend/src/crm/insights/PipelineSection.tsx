@@ -29,7 +29,7 @@ export function PipelineSection({ days, now = new Date() }: { days: Period; now?
   const lang = i18n.language
   const boot = useBoot()
   const [search, setSearch] = useSearchParams()
-  const span = windows(days, now)
+  const span = windows(days, now, boot.venue.timezone)
   const n = (value: number) => countOf(value, lang)
 
   const fresh = useQuery({

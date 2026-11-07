@@ -57,7 +57,7 @@ const pipeline: Pipeline = {
 
 function render(manager: boolean, tab: 'chat' | 'pipeline' = 'chat') {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } })
-  const span = windows(7, new Date())
+  const span = windows(7, new Date(), 'Europe/Riga')
   qc.setQueryData(['crm', 'insights', 'chat', 7], chat)
   qc.setQueryData(['crm', 'insights', 'new-leads', span.from], { total: 12 })
   qc.setQueryData(['crm', 'insights', 'new-leads-before', span.prevFrom, span.prevTo], { total: 8 })

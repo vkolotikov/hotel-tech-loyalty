@@ -16,6 +16,7 @@ use App\Services\CustomFieldService;
 use App\Services\InquiryAiService;
 use App\Services\RealtimeEventService;
 use App\Services\XlsxWriter;
+use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
 use App\Services\Booking\Setup\OwnRows;
 use Illuminate\Http\Request;
@@ -87,8 +88,7 @@ class InquiryController extends Controller
             if ($v === 'yes') $query->whereHas('guest', $has);
             elseif ($v === 'no') $query->whereDoesntHave('guest', $has);
         }
-        if ($v = $request->get('date_from'))     $query->where('created_at', '>=', $v);
-        if ($v = $request->get('date_to'))       $query->where('created_at', '<=', $v . ' 23:59:59');
+        $this->createdOnVenueDays($query, $request);
         if ($v = $request->get('check_in_from')) $query->where('check_in', '>=', $v);
         if ($v = $request->get('check_in_to'))   $query->where('check_in', '<=', $v);
         if ($request->get('active_only'))        $query->whereNotIn('status', ['Confirmed', 'Lost']);
@@ -222,6 +222,30 @@ class InquiryController extends Controller
 
         return $kind === null ? null : PipelineStage::where('pipeline_id', $pipelineId)
             ->where('kind', $kind)->orderBy('sort_order')->first();
+    }
+
+    /**
+     * `date_from` / `date_to` are the venue's calendar days (2026-11-08; before, UTC's): a lead made at 00:30 in Riga on
+     * the 8th is the 8th's, and `date_to` takes the whole of its day. A value that is not a `Y-m-d` day is ignored.
+     */
+    private function createdOnVenueDays($query, Request $request): void
+    {
+        $orgId = app()->bound('current_organization_id') ? (int) app('current_organization_id') : (int) auth()->user()?->organization_id;
+        $zone = \App\Services\Appointments\VenueClock::zone($orgId);
+        $day = function ($value) use ($zone): ?CarbonImmutable {
+            if (!is_string($value) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $value)) {
+                return null;
+            }
+            $at = CarbonImmutable::createFromFormat('!Y-m-d', $value, $zone);
+
+            return $at && $at->format('Y-m-d') === $value ? $at : null;
+        };
+        if ($from = $day($request->get('date_from'))) {
+            $query->where('created_at', '>=', $from->utc());
+        }
+        if ($to = $day($request->get('date_to'))) {
+            $query->where('created_at', '<', $to->addDay()->utc());
+        }
     }
 
     /** The venue's date today (`Y-m-d`, VenueClock), for the follow-up days. */
@@ -948,8 +972,7 @@ class InquiryController extends Controller
             if ($v === 'yes') $query->whereHas('guest', $has);
             elseif ($v === 'no') $query->whereDoesntHave('guest', $has);
         }
-        if ($v = $request->get('date_from'))     $query->where('created_at', '>=', $v);
-        if ($v = $request->get('date_to'))       $query->where('created_at', '<=', $v . ' 23:59:59');
+        $this->createdOnVenueDays($query, $request);
         if ($v = $request->get('check_in_from')) $query->where('check_in', '>=', $v);
         if ($v = $request->get('check_in_to'))   $query->where('check_in', '<=', $v);
         if ($request->get('active_only'))        $query->whereNotIn('status', ['Confirmed', 'Lost']);

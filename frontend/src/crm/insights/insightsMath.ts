@@ -1,3 +1,4 @@
+import { addDays, venueNow } from '../../workspace/lib/wallClock'
 import { percent } from '../lib/format'
 import type { ChatHourPoint, ChatTrendPoint, LostReasonCount, Pipeline, SignalLead } from './types'
 
@@ -35,18 +36,15 @@ export function zoneLabel(zone: string): string {
   return zone.trim().replace(/_/g, ' ') || 'UTC'
 }
 
-const DAY = 86_400_000
-const ymd = (ms: number) => new Date(ms).toISOString().slice(0, 10)
-
 /**
- * The leads' windows for a period: today and the `days - 1` before it, and the window of the same length just before
- * it, in UTC days — the days `inquiries?date_from=&date_to=` compares `created_at` with. (The chat analytics count the
- * venue's days since round 2; the leads' date filter still reads UTC days, so this follows the filter.)
+ * The leads' windows for a period: the venue's today and the `days - 1` days before it, and the window of the same
+ * length just before it — the venue's days, which `inquiries?date_from=&date_to=` reads since 2026-11-08 (before, UTC
+ * days), as the chat analytics count them.
  */
-export function windows(days: number, now: Date): { from: string; prevFrom: string; prevTo: string } {
-  const today = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())
-  const from = today - (days - 1) * DAY
-  return { from: ymd(from), prevFrom: ymd(from - days * DAY), prevTo: ymd(from - DAY) }
+export function windows(days: number, now: Date, zone = 'UTC'): { from: string; prevFrom: string; prevTo: string } {
+  const today = venueNow(zone, now).date
+  const from = addDays(today, -(days - 1))
+  return { from, prevFrom: addDays(from, -days), prevTo: addDays(from, -1) }
 }
 
 /** How a figure moved against the period before: up, down or level by an amount, or new (nothing before). */

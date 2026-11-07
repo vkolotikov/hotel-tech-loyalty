@@ -145,6 +145,20 @@ class LeadsAndDealsTest extends TestCase
         $this->assertSame(['2026-11-05', 1, 1], [$today['date'], $today['today']['count'], $today['overdue']['count']]);
     }
 
+    public function test_the_created_date_filters_are_the_venues_days(): void
+    {
+        // 00:30 on 5 November in Riga is 22:30 on the 4th in UTC; 23:30 on the 5th in Riga is 21:30 UTC.
+        $early = $this->lead(['created_at' => '2026-11-04 22:30:00'], 'Early on the fifth');
+        $late = $this->lead(['created_at' => '2026-11-05 21:30:00'], 'Late on the fifth');
+        $sixth = $this->lead(['created_at' => '2026-11-05 22:30:00'], 'Early on the sixth');
+
+        $ids = fn (string $query) => collect($this->asStaffMember()->getJson($this->adminApi("inquiries?{$query}"))->assertOk()->json('data'))->pluck('id')->sort()->values()->all();
+        $this->assertSame([$early, $late], $ids('date_from=2026-11-05&date_to=2026-11-05'));
+        $this->assertSame([$sixth], $ids('date_from=2026-11-06'));
+        $this->assertSame([$early, $late], $ids('date_to=2026-11-05'));
+        $this->assertSame([$early, $late, $sixth], $ids('date_from=not-a-day'), 'a value that is not a day is ignored');
+    }
+
     public function test_the_deals_total_counts_deals_only(): void
     {
         $this->lead(['status' => 'Confirmed', 'fulfillment_stage' => 'in_production']);
