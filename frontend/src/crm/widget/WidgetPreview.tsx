@@ -50,7 +50,7 @@ export function WidgetPreview({ form }: { form: WidgetForm }) {
               {form.welcome_message || t('crm.widget.preview.hello', 'Hello! How can I help you today?')}
             </p>
             <p className="ml-auto max-w-[85%] px-3 py-2 text-xs" style={{ background: c.user, color: c.userText, borderRadius: radius }}>
-              {t('crm.widget.preview.question', 'Do you have a table for four on Friday?')}
+              {t('crm.widget.preview.question', 'Can I book for Friday afternoon?')}
             </p>
             {form.show_suggestions && form.suggestions.length > 0 && (
               <div className="flex flex-wrap gap-1.5">

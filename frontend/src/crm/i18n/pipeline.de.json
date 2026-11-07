@@ -64,5 +64,7 @@
   "truncated": "Das Board zeigt die {{count}} zuletzt geänderten Leads. Die anderen finden Sie unter Leads.",
   "view": "Ansicht",
   "which": "Pipeline",
-  "won_hint": "Gewonnene Leads werden zu Deals."
+  "won_hint": "Gewonnene Leads werden zu Deals.",
+  "count_one": "1 Lead",
+  "totals_one": "1 offener Lead im Wert von {{value}}"
 }

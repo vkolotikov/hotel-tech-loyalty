@@ -221,5 +221,11 @@
   "won_done": "Marcado como ganado",
   "won_line": "El lead pasa a la etapa de ganados y se convierte en un negocio.",
   "won_placeholder": "Qué lo decidió",
-  "won_title": "Marcar a {{name}} como ganado"
+  "won_title": "Marcar a {{name}} como ganado",
+  "bulk_delete_title_one": "¿Eliminar 1 lead?",
+  "bulk_deleted_one": "1 lead eliminado",
+  "bulk_updated_one": "1 lead cambiado",
+  "impact_activities_one": "1 entrada del historial",
+  "impact_attachments_one": "1 archivo",
+  "impact_tasks_one": "1 tarea"
 }

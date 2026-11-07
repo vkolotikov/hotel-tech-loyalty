@@ -221,5 +221,11 @@
   "won_done": "Marqué gagné",
   "won_line": "Le lead passe à l’étape gagnée et devient une affaire.",
   "won_placeholder": "Ce qui a fait la différence",
-  "won_title": "Marquer {{name}} comme gagné"
+  "won_title": "Marquer {{name}} comme gagné",
+  "bulk_delete_title_one": "Supprimer 1 lead ?",
+  "bulk_deleted_one": "1 lead supprimé",
+  "bulk_updated_one": "1 lead modifié",
+  "impact_activities_one": "1 entrée de l’historique",
+  "impact_attachments_one": "1 fichier",
+  "impact_tasks_one": "1 tâche"
 }

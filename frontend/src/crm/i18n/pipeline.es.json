@@ -64,5 +64,7 @@
   "truncated": "El tablero muestra los {{count}} leads cambiados más recientemente. Encontrará los demás en Leads.",
   "view": "Vista",
   "which": "Pipeline",
-  "won_hint": "Los leads ganados se convierten en negocios."
+  "won_hint": "Los leads ganados se convierten en negocios.",
+  "count_one": "1 lead",
+  "totals_one": "1 lead abierto por {{value}}"
 }

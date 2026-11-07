@@ -146,7 +146,7 @@
     "hello": "Hallo! Wie kann ich Ihnen heute helfen?",
     "label": "Vorschau des Chats auf Ihrer Website",
     "placeholder": "Nachricht schreiben …",
-    "question": "Haben Sie am Freitag einen Tisch für vier?",
+    "question": "Kann ich für Freitagnachmittag buchen?",
     "title": "Chatten Sie mit uns"
   },
   "read_only": "Nur ein Inhaber oder Manager kann das Chat-Widget ändern. Sie können hier alles lesen.",

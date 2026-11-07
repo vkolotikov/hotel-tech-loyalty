@@ -221,5 +221,11 @@
   "won_done": "Als gewonnen markiert",
   "won_line": "Der Lead kommt in die Gewonnen-Phase und wird zum Deal.",
   "won_placeholder": "Was den Ausschlag gab",
-  "won_title": "{{name}} als gewonnen markieren"
+  "won_title": "{{name}} als gewonnen markieren",
+  "bulk_delete_title_one": "1 Lead löschen?",
+  "bulk_deleted_one": "1 Lead gelöscht",
+  "bulk_updated_one": "1 Lead geändert",
+  "impact_activities_one": "1 Eintrag im Verlauf",
+  "impact_attachments_one": "1 Datei",
+  "impact_tasks_one": "1 Aufgabe"
 }

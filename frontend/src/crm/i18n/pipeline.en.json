@@ -64,5 +64,7 @@
   "truncated": "The board shows the {{count}} most recently changed leads. Find the others in Leads.",
   "view": "View",
   "which": "Pipeline",
-  "won_hint": "Won leads become deals."
+  "won_hint": "Won leads become deals.",
+  "count_one": "1 lead",
+  "totals_one": "1 open lead worth {{value}}"
 }

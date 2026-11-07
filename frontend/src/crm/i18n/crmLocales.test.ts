@@ -54,12 +54,17 @@ describe('HexaTech CRM words', () => {
 
   it('every area file has the same keys in all five languages, and no empty word', () => {
     const areas = [...new Set(Object.keys(files).map(f => /\.\/([a-z]+)\.[a-z]{2}\.json$/.exec(f)?.[1]).filter((a): a is string => !!a))]
+    // A language's plural forms (i18next: `_one`, `_few`, `_many`…) are its own: Russian needs more than English, and a
+    // count-neutral wording ("Лидов: 3") needs none. Each must sit beside the key it is a form of.
+    // A key is a plural form only beside its own key (`rated_many` alone is an ordinary key).
+    const PLURAL = /_(zero|one|two|few|many|other)$/
+    const base = (words: unknown) => leaves(words).filter(key => !(PLURAL.test(key) && readAt(words, key.replace(PLURAL, '')) !== undefined)).sort()
     for (const area of areas) {
-      const english = leaves(files[`./${area}.en.json`]).sort()
+      const english = base(files[`./${area}.en.json`])
       for (const lang of LANGS) {
         const words = files[`./${area}.${lang}.json`]
         expect(words, `${area}.${lang}.json exists`).toBeDefined()
-        expect(leaves(words).sort(), `${area}.${lang}.json keys`).toEqual(english)
+        expect(base(words), `${area}.${lang}.json keys`).toEqual(english)
         const empty = leaves(words).filter(key => String(readAt(words, key) ?? '').trim() === '')
         expect(empty, `${area}.${lang}.json empty words`).toEqual([])
       }
@@ -69,7 +74,8 @@ describe('HexaTech CRM words', () => {
   it('keeps the placeholders of every English word in each translation', () => {
     const holes = (s: unknown) => [...String(s).matchAll(/\{\{\s*(\w+)\s*\}\}/g)].map(m => m[1]).sort()
     for (const file of Object.keys(files).filter(f => f.endsWith('.en.json'))) {
-      for (const key of leaves(files[file])) {
+      // A plural form may leave the count out ("1 lead"); the other placeholders it keeps are checked with its key.
+      for (const key of leaves(files[file]).filter(k => !(/_(zero|one|two|few|many|other)$/.test(k) && readAt(files[file], k.replace(/_(zero|one|two|few|many|other)$/, '')) !== undefined))) {
         for (const lang of LANGS) {
           const other = files[file.replace('.en.json', `.${lang}.json`)]
           expect(holes(readAt(other, key)), `${file} ${key} in ${lang}`).toEqual(holes(readAt(files[file], key)))

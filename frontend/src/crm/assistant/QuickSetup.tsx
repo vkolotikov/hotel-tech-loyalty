@@ -37,9 +37,9 @@ export function QuickSetupCard() {
   if (!state.data || state.data.completed) return null
 
   return (
-    <section className="flex flex-wrap items-center gap-4 rounded-2xl border border-a-border bg-a-surface p-4 shadow-a-sm crm-ai-border">
+    <section className="flex flex-col gap-4 rounded-2xl border border-a-border bg-a-surface p-4 shadow-a-sm crm-ai-border sm:flex-row sm:flex-wrap sm:items-center">
       <span aria-hidden className="grid h-11 w-11 shrink-0 place-items-center rounded-xl crm-ai-soft"><Sparkles size={20} /></span>
-      <div className="min-w-0 flex-1">
+      <div className="min-w-0 flex-1 sm:min-w-64">
         <h2 className="text-sm font-semibold text-a-text">{t('crm.assistant.quick.title', 'Set up the assistant in a minute')}</h2>
         <p className="text-sm text-a-text-2">{t('crm.assistant.quick.line', 'Four short questions. We fill in the rest for your kind of business, and you can change everything later.')}</p>
       </div>

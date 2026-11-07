@@ -221,5 +221,11 @@
   "won_done": "Marked won",
   "won_line": "The lead moves to the won stage and becomes a deal.",
   "won_placeholder": "What sealed it",
-  "won_title": "Mark {{name}} as won"
+  "won_title": "Mark {{name}} as won",
+  "bulk_delete_title_one": "Delete 1 lead?",
+  "bulk_deleted_one": "1 lead deleted",
+  "bulk_updated_one": "1 lead changed",
+  "impact_activities_one": "1 timeline entry",
+  "impact_attachments_one": "1 file",
+  "impact_tasks_one": "1 task"
 }

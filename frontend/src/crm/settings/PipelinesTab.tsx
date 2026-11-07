@@ -152,12 +152,16 @@ function PipelineCard({ pipeline, canManage }: { pipeline: Pipeline; canManage: 
       {renaming && <PipelineDialog pipeline={pipeline} onClose={() => setRenaming(false)} />}
       {editing && <StageDialog pipelineId={pipeline.id} stages={stages} stage={editing === 'new' ? null : editing} onClose={() => setEditing(null)} />}
       {deleting && (block ? (
-        <Confirm title={t('crm.settings.pipelines.cannot_delete', '{{name}} cannot be deleted yet', { name: pipeline.name })} confirm={t('crm.common.close', 'Close')} danger={false}
-          onConfirm={() => setDeleting(false)} onClose={() => setDeleting(false)}>
-          {block === 'default'
-            ? t('crm.settings.pipelines.block_default', 'It is the default for new leads. Make another pipeline the default first.')
-            : t('crm.settings.pipelines.block_deals', 'It still has {{count}} leads. Move or close them first.', { count: pipeline.inquiries_count ?? 0 })}
-        </Confirm>
+        <Dialog title={t('crm.settings.pipelines.cannot_delete', '{{name}} cannot be deleted yet', { name: pipeline.name })} onClose={() => setDeleting(false)}>
+          <div className="space-y-4">
+            <p className="text-sm text-a-text-2">
+              {block === 'default'
+                ? t('crm.settings.pipelines.block_default', 'It is the default for new leads. Make another pipeline the default first.')
+                : t('crm.settings.pipelines.block_deals', 'It still has {{count}} leads. Move or close them first.', { count: pipeline.inquiries_count ?? 0 })}
+            </p>
+            <div className="flex justify-end"><Button variant="secondary" onClick={() => setDeleting(false)}>{t('crm.common.close', 'Close')}</Button></div>
+          </div>
+        </Dialog>
       ) : (
         <Confirm title={t('crm.settings.pipelines.delete_title', 'Delete the pipeline {{name}}?', { name: pipeline.name })} confirm={t('crm.common.delete', 'Delete')}
           busy={remove.isPending} onConfirm={() => remove.mutate()} onClose={() => setDeleting(false)}>

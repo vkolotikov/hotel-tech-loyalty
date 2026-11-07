@@ -173,7 +173,10 @@
     "win": "{{n}} % Chance",
     "win_bad": "Eine ganze Zahl von 0 bis 100.",
     "win_hint": "Zu Ihrer Orientierung; leer lassen für keine.",
-    "win_label": "Übliche Gewinnchance (%)"
+    "win_label": "Übliche Gewinnchance (%)",
+    "stage_deals_one": "1 Lead",
+    "block_deals_one": "Sie hat noch 1 Lead. Verschieben oder schließen Sie ihn zuerst.",
+    "stage_moves_one": "Ihr Lead wandert nach {{stage}}."
   },
   "read_only": "Nur ein Inhaber oder Manager kann das ändern. Sie können hier alles lesen.",
   "reasons": {
@@ -192,7 +195,9 @@
     "show": "{{name}} einschalten",
     "switched_off": "Er wird bei früheren Leads verwendet und wurde daher ausgeschaltet statt gelöscht.",
     "title": "Warum Leads verloren gehen",
-    "used": "Bei {{count}} Leads verwendet"
+    "used": "Bei {{count}} Leads verwendet",
+    "used_one": "Bei 1 Lead verwendet",
+    "delete_used_one": "Er wird bei 1 Lead verwendet und daher stattdessen ausgeschaltet: Dieser Lead behält ihn."
   },
   "sections": "Bereiche",
   "tab": {

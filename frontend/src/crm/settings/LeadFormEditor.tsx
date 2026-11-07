@@ -60,7 +60,7 @@ export function LeadFormEditor({ formId, listKey, onClose }: { formId: number; l
 
   return (
     <SidePanel title={query.data?.name ?? t('crm.settings.forms.editor', 'Lead form')} onClose={onClose}
-      footer={current && section !== 'embed' ? (
+      footer={current ? (
         <div className="flex flex-wrap items-center justify-end gap-2">
           {problems.length > 0 && <span className="min-w-0 flex-1 text-xs text-a-danger">{t('crm.settings.fix_first', 'Some fields need another look before saving.')}</span>}
           <Button variant="secondary" onClick={() => setDraft(null)} disabled={!dirty || save.isPending}>{t('crm.settings.discard', 'Discard')}</Button>

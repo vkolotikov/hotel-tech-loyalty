@@ -64,5 +64,7 @@
   "truncated": "Le tableau montre les {{count}} leads modifiés le plus récemment. Les autres sont dans Leads.",
   "view": "Vue",
   "which": "Pipeline",
-  "won_hint": "Les leads gagnés deviennent des affaires."
+  "won_hint": "Les leads gagnés deviennent des affaires.",
+  "count_one": "1 lead",
+  "totals_one": "1 lead ouvert pour {{value}}"
 }

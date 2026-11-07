@@ -1,19 +1,9 @@
 import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import type { LucideIcon } from 'lucide-react'
+import { TONE_CHIP, type Tone } from './tones'
 
-export type Tone = 'neutral' | 'accent' | 'pending' | 'progress' | 'success' | 'danger' | 'ai'
-
-/** The icon's chip per tone: a 12 % tint of the tone with the tone as ink (the Atelier status tones, the AI's violet). */
-export const TONE_CHIP: Record<Tone, string> = {
-  neutral: 'bg-a-surface-2 text-a-text-2',
-  accent: 'bg-a-accent/12 text-a-accent-text',
-  pending: 'bg-a-st-pending/12 text-a-st-pending',
-  progress: 'bg-a-st-progress/12 text-a-st-progress',
-  success: 'bg-a-st-confirmed/12 text-a-st-confirmed',
-  danger: 'bg-a-danger/12 text-a-danger',
-  ai: 'crm-ai-soft',
-}
+export type { Tone }
 
 /** A figure with its label and a line under it; a link when `to` is set. */
 export function StatTile({ label, value, hint, icon: Icon, tone = 'neutral', to }: {

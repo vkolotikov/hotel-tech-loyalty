@@ -173,7 +173,10 @@
     "win": "{{n}} % chance",
     "win_bad": "A whole number from 0 to 100.",
     "win_hint": "For your reference; leave it empty for none.",
-    "win_label": "Usual chance of winning (%)"
+    "win_label": "Usual chance of winning (%)",
+    "stage_deals_one": "1 lead",
+    "block_deals_one": "It still has 1 lead. Move or close it first.",
+    "stage_moves_one": "Its lead moves to {{stage}}."
   },
   "read_only": "Only an owner or a manager can change this. You can read everything here.",
   "reasons": {
@@ -192,7 +195,9 @@
     "show": "Switch on {{name}}",
     "switched_off": "It is used on past leads, so it was switched off instead of deleted.",
     "title": "Why leads are lost",
-    "used": "Used on {{count}} leads"
+    "used": "Used on {{count}} leads",
+    "used_one": "Used on 1 lead",
+    "delete_used_one": "It is used on 1 lead, so it will be switched off instead: that lead keeps it."
   },
   "sections": "Sections",
   "tab": {

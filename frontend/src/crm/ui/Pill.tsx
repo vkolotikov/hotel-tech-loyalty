@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { TONE_CHIP, type Tone } from './StatTile'
+import { TONE_CHIP, type Tone } from './tones'
 
 /** A short state in its tone: "Waiting", "Won", "AI". */
 export function Pill({ tone = 'neutral', children, title }: { tone?: Tone; children: ReactNode; title?: string }) {

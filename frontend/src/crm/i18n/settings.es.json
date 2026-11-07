@@ -173,7 +173,10 @@
     "win": "{{n}} % de probabilidad",
     "win_bad": "Un número entero de 0 a 100.",
     "win_hint": "Como referencia; déjelo vacío si no hay.",
-    "win_label": "Probabilidad habitual de ganar (%)"
+    "win_label": "Probabilidad habitual de ganar (%)",
+    "stage_deals_one": "1 lead",
+    "block_deals_one": "Aún tiene 1 lead. Muévalo o ciérrelo primero.",
+    "stage_moves_one": "Su lead pasa a {{stage}}."
   },
   "read_only": "Solo un propietario o un responsable puede cambiar esto. Usted puede consultarlo todo aquí.",
   "reasons": {
@@ -192,7 +195,9 @@
     "show": "Activar {{name}}",
     "switched_off": "Se usa en leads anteriores, así que se desactivó en lugar de eliminarse.",
     "title": "Por qué se pierden leads",
-    "used": "Usado en {{count}} leads"
+    "used": "Usado en {{count}} leads",
+    "used_one": "Usado en 1 lead",
+    "delete_used_one": "Se usa en 1 lead, así que se desactivará en su lugar: ese lead lo conserva."
   },
   "sections": "Secciones",
   "tab": {

@@ -146,7 +146,7 @@
     "hello": "Bonjour ! Comment puis-je vous aider aujourd’hui ?",
     "label": "Aperçu du chat sur votre site",
     "placeholder": "Écrivez un message…",
-    "question": "Avez-vous une table pour quatre vendredi ?",
+    "question": "Puis-je réserver vendredi après-midi ?",
     "title": "Discutez avec nous"
   },
   "read_only": "Seul un propriétaire ou un manager peut modifier le widget de chat. Vous pouvez tout consulter ici.",
