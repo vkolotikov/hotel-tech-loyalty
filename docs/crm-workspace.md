@@ -41,7 +41,7 @@ The workspace's own reads live under `/api/v1/admin/crm/`, behind the admin chai
 | `GET today` | what needs a person now (`App\Services\Crm\CrmToday`) | staff |
 | `GET start` | the six setup steps, each done by the data (`CrmSetupProgress`) | staff |
 | `GET bot-gaps` | the assistant's answers rated wrong and not yet taught (`BotGaps`) | staff (AccessMap product `chat`) |
-| `POST conversations/{id}/draft` (`instruction?`) | an AI reply for a person to edit and send (`ReplyDrafter`); `feature:chatbot`, 20 a minute | staff |
+| `POST conversations/{id}/draft` (`instruction?`) | an AI reply for a person to edit and send (`ReplyDrafter`); `feature:chatbot`, 20 a minute in its own bucket (`crm-draft`) | staff |
 
 Everything else the workspace shows is the **full admin's own chat and CRM endpoints**, under their own rules
 (`AccessMap`: `admin/chat-inbox*`, `admin/visitors`, `admin/engagement`, `admin/chatbot*`, `admin/knowledge`,

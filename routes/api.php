@@ -1604,7 +1604,7 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
                 Route::get('start', [\App\Http\Controllers\Api\V1\Admin\Crm\WorkspaceController::class, 'start']);
                 Route::get('bot-gaps', [\App\Http\Controllers\Api\V1\Admin\Crm\AssistantController::class, 'gaps']);
                 Route::post('conversations/{id}/draft', [\App\Http\Controllers\Api\V1\Admin\Crm\AssistantController::class, 'draft'])
-                    ->whereNumber('id')->middleware(['feature:chatbot', 'throttle:20,1']);
+                    ->whereNumber('id')->middleware(['feature:chatbot', 'throttle:20,1,crm-draft']);
             });
 
             // ─── Audit Logs ──────────────────────────────────────────────────
