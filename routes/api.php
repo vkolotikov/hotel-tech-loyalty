@@ -1591,6 +1591,22 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
                 Route::delete('offers/{id}/image', [\App\Http\Controllers\Api\V1\Admin\Loyalty\ImageController::class, 'destroyOffer'])->whereNumber('id');
             });
 
+            // ─── HexaTech CRM workspace ─────────────────────────────────────
+            // The AI chat widget, the live inbox and the CRM as one workspace
+            // (2026-11-07), sold on its own as the `crm` module. Its own reads
+            // are here; everything else it shows is the full admin's chat and
+            // CRM endpoints above, under their own rules. Every organisation
+            // has it unless an operator switched it off
+            // (`php artisan workspace:crm <organisation id> --off`).
+            Route::prefix('crm')->middleware('workspace:crm')->group(function () {
+                Route::get('bootstrap', [\App\Http\Controllers\Api\V1\Admin\Crm\WorkspaceController::class, 'bootstrap']);
+                Route::get('today', [\App\Http\Controllers\Api\V1\Admin\Crm\WorkspaceController::class, 'today']);
+                Route::get('start', [\App\Http\Controllers\Api\V1\Admin\Crm\WorkspaceController::class, 'start']);
+                Route::get('bot-gaps', [\App\Http\Controllers\Api\V1\Admin\Crm\AssistantController::class, 'gaps']);
+                Route::post('conversations/{id}/draft', [\App\Http\Controllers\Api\V1\Admin\Crm\AssistantController::class, 'draft'])
+                    ->whereNumber('id')->middleware(['feature:chatbot', 'throttle:20,1']);
+            });
+
             // ─── Audit Logs ──────────────────────────────────────────────────
             Route::get('audit-logs',                      [AuditLogController::class, 'index']);
             Route::get('operations-status', \App\Http\Controllers\Api\V1\Admin\OperationsStatusController::class)->middleware('throttle:30,1,operations-status');

@@ -328,7 +328,8 @@ class Organization extends Model
     // ─── Workspaces ────────────────────────────────────────────
     // Product experiences beside the full admin; the appointments workspace
     // is the first. HexaTech Content (`/content`, spec 2026-10-14) is the
-    // second, HexaTech Loyalty (`/loyalty`, spec 2026-10-21) the third.
+    // second, HexaTech Loyalty (`/loyalty`, spec 2026-10-21) the third,
+    // HexaTech CRM (`/crm`, 2026-11-07: the AI chat widget and the CRM) the fourth.
     // Each has a default for an organisation that never set
     // anything (WORKSPACE_DEFAULTS): the owner ruled on 2026-10-01 that every
     // organisation has the appointments workspace, signing in to the full
@@ -339,7 +340,7 @@ class Organization extends Model
     // workspaces it bought and nothing else.
 
     /** Every workspace there is, and whether an organisation that never set anything has it. */
-    public const WORKSPACE_DEFAULTS = ['appointments' => true, 'content' => true, 'loyalty' => true];
+    public const WORKSPACE_DEFAULTS = ['appointments' => true, 'content' => true, 'loyalty' => true, 'crm' => true];
 
     /** Products an organisation on the Appointments plan holds (Part C spec §6.1). */
     public const APPOINTMENTS_PLAN_PRODUCTS = ['appointments', 'booking'];
