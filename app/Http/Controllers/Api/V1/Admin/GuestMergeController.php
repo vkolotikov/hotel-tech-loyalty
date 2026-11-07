@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Guest;
 use App\Services\GuestMergeService;
 use Illuminate\Http\JsonResponse;
+use App\Services\Booking\Setup\OwnRows;
 use Illuminate\Http\Request;
 
 /**
@@ -39,8 +40,8 @@ class GuestMergeController extends Controller
     public function merge(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'winner_id' => 'required|integer|exists:guests,id',
-            'loser_id'  => 'required|integer|exists:guests,id|different:winner_id',
+            'winner_id' => ['required', 'integer', OwnRows::rule('guests')],
+            'loser_id'  => ['required', 'integer', OwnRows::rule('guests'), 'different:winner_id'],
             'reason'    => 'nullable|string|max:500',
         ]);
 

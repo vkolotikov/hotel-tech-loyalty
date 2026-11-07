@@ -17,6 +17,7 @@ use App\Services\InquiryAiService;
 use App\Services\RealtimeEventService;
 use App\Services\XlsxWriter;
 use Illuminate\Http\JsonResponse;
+use App\Services\Booking\Setup\OwnRows;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
@@ -117,9 +118,9 @@ class InquiryController extends Controller
     public function store(Request $request): JsonResponse
     {
         $v = $request->validate([
-            'guest_id'             => 'required|integer|exists:guests,id',
-            'corporate_account_id' => 'nullable|integer|exists:corporate_accounts,id',
-            'property_id'          => 'nullable|integer|exists:properties,id',
+            'guest_id'             => ['required', 'integer', OwnRows::rule('guests')],
+            'corporate_account_id' => ['nullable', 'integer', OwnRows::rule('corporate_accounts')],
+            'property_id'          => ['nullable', 'integer', OwnRows::rule('properties')],
             'inquiry_type'         => 'nullable|string|max:50',
             'source'               => 'nullable|string|max:100',
             'check_in'             => 'nullable|date',
@@ -341,8 +342,8 @@ class InquiryController extends Controller
         $inquiry = Inquiry::withoutGlobalScope(\App\Scopes\BrandScope::class)->findOrFail($id);
 
         $v = $request->validate([
-            'corporate_account_id' => 'nullable|integer|exists:corporate_accounts,id',
-            'property_id'          => 'nullable|integer|exists:properties,id',
+            'corporate_account_id' => ['nullable', 'integer', OwnRows::rule('corporate_accounts')],
+            'property_id'          => ['nullable', 'integer', OwnRows::rule('properties')],
             'inquiry_type'         => 'nullable|string|max:50',
             'source'               => 'nullable|string|max:100',
             'check_in'             => 'nullable|date',
@@ -1170,7 +1171,7 @@ class InquiryController extends Controller
     {
         $inquiry = Inquiry::withoutGlobalScope(\App\Scopes\BrandScope::class)->findOrFail($id);
         $validated = $request->validate([
-            'lost_reason_id' => 'required|integer|exists:inquiry_lost_reasons,id',
+            'lost_reason_id' => ['required', 'integer', OwnRows::rule('inquiry_lost_reasons')],
             'note'           => 'nullable|string|max:1000',
         ]);
 

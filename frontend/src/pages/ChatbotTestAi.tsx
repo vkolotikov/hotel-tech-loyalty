@@ -31,7 +31,7 @@ export function ChatbotTestAi() {
       setLastPrompt(data.system_prompt || '')
       setInput('')
     },
-    onError: (e: any) => toast.error(e?.response?.data?.error || t('chatbot_test.toast_failed', 'AI call failed')),
+    onError: (e: any) => toast.error(e?.response?.data?.message || t('chatbot_test.toast_failed', 'AI call failed')),
   })
 
   const handleSend = () => {

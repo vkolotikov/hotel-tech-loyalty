@@ -169,10 +169,14 @@ Fixed on 2026-11-08 (each in the shared controller or service, so the full admin
 - The full admin's Corporate page read its paging from `data.meta`; it now reads the paginator's own `current_page`,
   `last_page`, `total` (`Corporate.tsx`).
 
+- **Another organisation's ids are refused** wherever the CRM links records (`OwnRows::rule`): a lead's contact,
+  company and property; a task's lead, contact and company; a contact's member; the lost reason on a lost lead; bulk
+  and merge contact ids; an email template's member; a lead form's default property (`ForeignIdsTest`).
+- The full admin's chatbot test page and inbox dictation toast the server's sentence (`message`), not its code.
+- Deals' "overdue" is by the venue's day (`LeadsAndDealsTest`).
+
 Still open (found, not changed):
 
-- The full admin's chatbot test page and Chat inbox dictation toast the answer's `error`, which is now a code
-  (`ai_failed`, `transcription_unavailable`); their sentence is in `message`. A full-admin change for the owner.
 - After a rotation the website's own snippet must be replaced (that is the point). Landing pages on our domain read
   the key per request (browsers may hold a page for `landing.cache_ttl`). Production's cache is each container's own
   files, so another container may answer the old key's config read for up to 60 s; every chat request looks the key
@@ -180,11 +184,10 @@ Still open (found, not changed):
 - Tasks the full admin saved before 2026-11-08 hold local digits stored as UTC and keep showing shifted by the
   offset; nothing in a row says which ones they are.
 - Bulk `mark_won` does not create the draft reservation `markWon` creates for a property-linked lead.
-- `DealController::index` `focus=overdue` still compares `next_task_due` with the server's UTC day.
-- Validation names ids without the organisation in several full-admin writes: `POST inquiries`
-  (`guest_id`, `corporate_account_id`, `property_id`), `POST tasks` (`inquiry_id`, `guest_id`,
-  `corporate_account_id`), `PUT guests/{id}` (`member_id`). A row of another organisation can be named; the record
-  written is still this organisation's.
+- Loyalty and booking writes outside the CRM still name ids with a bare `exists:<table>,id` (another organisation's
+  row passes validation): `MemberAdminController` (`member_ids.*`, `member_id`), `EmailCampaignController`
+  (`member_ids.*`), `BenefitAdminController` and `EarnRateEventController` (`property_id`). The CRM's are scoped
+  (below); these are for a loyalty/booking pass with their own tests.
 
 ## Known limits
 

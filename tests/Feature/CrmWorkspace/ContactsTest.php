@@ -167,8 +167,9 @@ class ContactsTest extends TestCase
 
         $other = $this->otherOrganisation();
         $theirs = DB::table('guests')->insertGetId(['organization_id' => $other->id, 'full_name' => 'Elsewhere', 'created_at' => now(), 'updated_at' => now()]);
+        // Another organisation's contact is refused by the validation, before the service (OwnRows; ForeignIdsTest).
         $this->asManager()->postJson($this->adminApi('guests/merge'), ['winner_id' => $a, 'loser_id' => $theirs])
-            ->assertNotFound()->assertJsonPath('error', 'not_found');
+            ->assertStatus(422)->assertJsonValidationErrors(['loser_id']);
     }
 
     private function leadOf(int $guest): int

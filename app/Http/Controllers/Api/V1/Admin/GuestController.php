@@ -14,6 +14,7 @@ use App\Services\CustomFieldService;
 use App\Services\GuestMemberLinkService;
 use App\Services\XlsxWriter;
 use Illuminate\Http\JsonResponse;
+use App\Services\Booking\Setup\OwnRows;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
@@ -116,7 +117,7 @@ class GuestController extends Controller
             'owner_name'         => 'nullable|string|max:150',
             'lifecycle_status'   => 'nullable|string|max:50',
             'importance'         => 'nullable|string|max:30',
-            'member_id'          => 'nullable|integer|exists:loyalty_members,id',
+            'member_id'          => ['nullable', 'integer', OwnRows::rule('loyalty_members')],
             'notes'              => 'nullable|string',
             'custom_data'        => 'nullable|array',
         ]);
@@ -269,7 +270,7 @@ class GuestController extends Controller
             'owner_name'         => 'nullable|string|max:150',
             'lifecycle_status'   => 'nullable|string|max:50',
             'importance'         => 'nullable|string|max:30',
-            'member_id'          => 'nullable|integer|exists:loyalty_members,id',
+            'member_id'          => ['nullable', 'integer', OwnRows::rule('loyalty_members')],
             'notes'              => 'nullable|string',
             'custom_data'        => 'nullable|array',
         ]);
@@ -510,7 +511,7 @@ class GuestController extends Controller
 
         $v = $request->validate([
             'ids'    => 'required|array|min:1|max:500',
-            'ids.*'  => 'integer|exists:guests,id',
+            'ids.*'  => ['integer', OwnRows::rule('guests')],
             'fields' => 'required|array',
         ]);
 
@@ -558,7 +559,7 @@ class GuestController extends Controller
     {
         $v = $request->validate([
             'ids'   => 'required|array|min:1|max:500',
-            'ids.*' => 'integer|exists:guests,id',
+            'ids.*' => ['integer', OwnRows::rule('guests')],
         ]);
 
         $deleted = Guest::whereIn('id', $v['ids'])->delete();

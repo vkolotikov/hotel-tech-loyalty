@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\EmailTemplate;
 use App\Models\LoyaltyMember;
 use Illuminate\Http\JsonResponse;
+use App\Services\Booking\Setup\OwnRows;
 use Illuminate\Http\Request;
 
 class EmailTemplateController extends Controller
@@ -128,7 +129,7 @@ class EmailTemplateController extends Controller
     {
         $data = $request->validate([
             'to'         => 'required|email|max:191',
-            'member_id'  => 'nullable|integer|exists:loyalty_members,id',
+            'member_id'  => ['nullable', 'integer', OwnRows::rule('loyalty_members')],
             'subject'    => 'nullable|string|max:255',
         ]);
 

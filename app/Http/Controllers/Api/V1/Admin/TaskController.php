@@ -8,6 +8,7 @@ use App\Models\Task;
 use App\Services\Appointments\VenueClock;
 use App\Services\CustomFieldService;
 use Illuminate\Http\JsonResponse;
+use App\Services\Booking\Setup\OwnRows;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
@@ -71,9 +72,9 @@ class TaskController extends Controller
     public function store(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'inquiry_id'           => 'nullable|integer|exists:inquiries,id',
-            'guest_id'             => 'nullable|integer|exists:guests,id',
-            'corporate_account_id' => 'nullable|integer|exists:corporate_accounts,id',
+            'inquiry_id'           => ['nullable', 'integer', OwnRows::rule('inquiries')],
+            'guest_id'             => ['nullable', 'integer', OwnRows::rule('guests')],
+            'corporate_account_id' => ['nullable', 'integer', OwnRows::rule('corporate_accounts')],
             'type'                 => 'nullable|string|in:call,email,meeting,whatsapp,sms,video_call,send_proposal,follow_up,site_visit,demo,contract,discovery,custom',
             'title'                => 'required|string|max:200',
             'description'          => 'nullable|string|max:4000',

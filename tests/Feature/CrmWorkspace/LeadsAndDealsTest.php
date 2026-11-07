@@ -155,4 +155,16 @@ class LeadsAndDealsTest extends TestCase
 
         $this->asStaffMember()->getJson($this->adminApi('deals/kpis'))->assertOk()->assertJsonPath('total', 2);
     }
+
+    public function test_an_overdue_deal_is_overdue_by_the_venues_day(): void
+    {
+        // 23:30 UTC on Wednesday is 01:30 on Thursday in Riga: Wednesday's follow-up is overdue there already.
+        $this->travelTo(\Carbon\CarbonImmutable::parse('2026-11-04 23:30:00'));
+        app()->forgetScopedInstances();
+        $late = $this->lead(['status' => 'Confirmed', 'next_task_due' => '2026-11-04']);
+        $this->lead(['status' => 'Confirmed', 'next_task_due' => '2026-11-05']);
+
+        $ids = collect($this->asStaffMember()->getJson($this->adminApi('deals?focus=overdue'))->assertOk()->json('data'))->pluck('id')->all();
+        $this->assertSame([$late], $ids);
+    }
 }

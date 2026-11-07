@@ -79,7 +79,7 @@ class DealController extends Controller
         if ($focus === 'overdue') {
             $query->where('next_task_completed', false)
                   ->whereNotNull('next_task_due')
-                  ->where('next_task_due', '<', now()->toDateString());
+                  ->where('next_task_due', '<', \App\Services\Appointments\VenueClock::today((int) app('current_organization_id')));
         } elseif ($focus === 'high_value') {
             // Top quartile by total_value over open (not completed) deals.
             // Cheap heuristic: anything >= 500 is "high value" — staff can
@@ -294,7 +294,7 @@ class DealController extends Controller
             ->where(fn ($q) => $q->whereNull('fulfillment_stage')->orWhere('fulfillment_stage', '!=', 'completed'))
             ->where('next_task_completed', false)
             ->whereNotNull('next_task_due')
-            ->where('next_task_due', '<', now()->toDateString())
+            ->where('next_task_due', '<', \App\Services\Appointments\VenueClock::today((int) app('current_organization_id')))
             ->count();
 
         return response()->json([

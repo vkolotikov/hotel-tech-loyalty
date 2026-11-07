@@ -115,7 +115,7 @@ export function ChatInbox() {
             toast(t('chat_inbox.toasts.no_speech', 'No speech detected'), { icon: 'ℹ️' })
           }
         } catch (e: any) {
-          toast.error(e?.response?.data?.error || t('chat_inbox.toasts.transcription_failed', 'Transcription failed'))
+          toast.error(e?.response?.data?.message || t('chat_inbox.toasts.transcription_failed', 'Transcription failed'))
         } finally {
           setMicState('idle')
         }
