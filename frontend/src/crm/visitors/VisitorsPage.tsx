@@ -17,7 +17,7 @@ import { SearchInput } from '../ui/inputs'
 import { Tabs } from '../ui/Tabs'
 import type { Visitor, VisitorList } from './types'
 import { VisitorPanel } from './VisitorPanel'
-import { VISITOR_TABS, hasContact, pageLabel, placeOf, presence, readTab, readVisitorId, tabCounts, visitorName, visitorsPath, type VisitorTab } from './visitorsLogic'
+import { VISITOR_PARAM, VISITOR_TABS, hasContact, pageLabel, placeOf, presence, readTab, readVisitorId, tabCounts, visitorName, visitorsPath, type VisitorTab } from './visitorsLogic'
 import { PRESENCE_DEFAULTS, TAB_DEFAULTS } from './words'
 
 /** What was typed, once the person pauses. */
@@ -39,11 +39,12 @@ export function VisitorsPage() {
   const { t, i18n } = useTranslation()
   const lang = i18n.language
   const [search, setSearch] = useSearchParams()
-  const tab = readTab(search.get('tab'))
-  const openId = readVisitorId(search.get('v'))
+  const tab = readTab(search.get(VISITOR_PARAM.tab))
+  const openId = readVisitorId(search.get(VISITOR_PARAM.visitor))
   const [term, setTerm] = useState('')
   const settled = useSettled(term)
   const [page, setPage] = useState(1)
+  const [refreshing, setRefreshing] = useState(false)
 
   const list = useQuery({
     queryKey: ['crm', 'visitors', 'list', tab, settled.trim(), page],
@@ -57,8 +58,8 @@ export function VisitorsPage() {
     edit(next)
     return next
   }, { replace })
-  const pickTab = (next: VisitorTab) => { setPage(1); change(p => { if (next === 'online') p.delete('tab'); else p.set('tab', next) }, true) }
-  const open = (id: number | null) => change(p => { if (id) p.set('v', String(id)); else p.delete('v') })
+  const pickTab = (next: VisitorTab) => { setPage(1); change(p => { if (next === 'online') p.delete(VISITOR_PARAM.tab); else p.set(VISITOR_PARAM.tab, next) }, true) }
+  const open = (id: number | null) => change(p => { if (id) p.set(VISITOR_PARAM.visitor, String(id)); else p.delete(VISITOR_PARAM.visitor) })
 
   const counts = tabCounts(list.data?.stats)
   const tabs = VISITOR_TABS.map(key => ({ key, label: t(`crm.visitors.tab.${key}`, TAB_DEFAULTS[key]), count: counts[key] }))
@@ -67,8 +68,8 @@ export function VisitorsPage() {
 
   return (
     <Page title={t('crm.visitors.title', 'Visitors')} line={t('crm.visitors.line', 'Who is on your website now, what they read, and who left a way to reach them.')}
-      actions={<Button variant="secondary" onClick={() => { void list.refetch() }} loading={list.isFetching && !list.isLoading}>
-        {!(list.isFetching && !list.isLoading) && <RefreshCw size={15} aria-hidden />}{t('crm.visitors.refresh', 'Refresh')}
+      actions={<Button variant="secondary" loading={refreshing} onClick={() => { setRefreshing(true); void list.refetch().finally(() => setRefreshing(false)) }}>
+        {!refreshing && <RefreshCw size={15} aria-hidden />}{t('crm.visitors.refresh', 'Refresh')}
       </Button>}>
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <Tabs label={t('crm.visitors.tabs', 'Show')} items={tabs} value={tab} onChange={pickTab} />

@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { Inbox, Users } from 'lucide-react'
+import { useBoot } from '../CrmProvider'
 import { timeAgo } from '../lib/format'
 import { Avatar } from '../ui/Avatar'
 import { EmptyState } from '../ui/EmptyState'
@@ -82,10 +83,13 @@ export function ConversationList({ rows, loading, error, onRetry, stats, status,
 
 function ConversationRow({ c, open, onOpen, lang }: { c: Conversation; open: boolean; onOpen: () => void; lang: string }) {
   const { t } = useTranslation()
+  const { features } = useBoot()
   const name = displayName(c) ?? t('crm.common.visitor', 'Visitor')
   const channel = channelKey(c.channel)
   const unread = c.unread_count ?? 0
   const urgent = needsAttention(c)
+  const second = [c.visitor_email && c.visitor_email !== name ? c.visitor_email : null, channel ? t(`crm.inbox.channel.${channel}`, CHANNEL_DEFAULTS[channel]) : c.channel]
+    .filter(Boolean).join(' · ')
   return (
     <button type="button" onClick={onOpen} aria-current={open ? 'true' : undefined}
       className={`flex w-full items-start gap-3 border-l-2 bg-a-surface px-3 py-3 text-left transition-colors hover:bg-a-surface-2 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-a-accent ${open ? 'border-l-a-accent bg-a-surface-2' : 'border-l-transparent'}`}>
@@ -98,16 +102,12 @@ function ConversationRow({ c, open, onOpen, lang }: { c: Conversation; open: boo
           <span className={`truncate text-sm text-a-text ${unread > 0 ? 'font-semibold' : 'font-medium'}`}>{name}</span>
           <span className="ml-auto shrink-0 text-xs text-a-text-2">{timeAgo(c.last_message_at, lang)}</span>
         </span>
-        {(c.visitor_email || c.channel) && (
-          <span className="block truncate text-xs text-a-text-2">
-            {c.visitor_email && c.visitor_email !== name ? c.visitor_email : (channel ? t(`crm.inbox.channel.${channel}`, CHANNEL_DEFAULTS[channel]) : c.channel)}
-          </span>
-        )}
+        {second && <span className="block truncate text-xs text-a-text-2">{second}</span>}
         {c.last_message && <span className={`mt-0.5 line-clamp-2 block text-sm ${unread > 0 ? 'text-a-text' : 'text-a-text-2'}`}>{c.last_message}</span>}
         <span className="mt-1.5 flex flex-wrap items-center gap-1.5">
           <Pill tone={STATUS_TONE[c.status]}>{t(`crm.status.${c.status}`, STATUS_DEFAULTS[c.status])}</Pill>
           {unread > 0 && <Pill tone="accent">{t('crm.inbox.unread', '{{count}} new', { count: unread })}</Pill>}
-          {c.ai_enabled !== false && <Pill tone="ai">{t('crm.inbox.ai_answering', 'AI')}</Pill>}
+          {features.chatbot && c.ai_enabled !== false && <Pill tone="ai">{t('crm.inbox.ai_answering', 'AI')}</Pill>}
           {(c.ip_session_count ?? 1) > 1 && (
             <Pill title={t('crm.inbox.sessions', '{{count}} chats from this visitor', { count: c.ip_session_count })}>
               <Users size={12} aria-hidden />{c.ip_session_count}

@@ -224,7 +224,7 @@ export function Composer({ conversationId, status, messages, aiOn, onTakeOver, t
           </button>
         )}
         {ai.show && (
-          <button type="button" onClick={() => setAiOpen(open => !open)} aria-expanded={aiOpen}
+          <button type="button" onClick={() => { draft.reset(); setAiOpen(open => !open) }} aria-expanded={aiOpen}
             className="ml-auto inline-flex min-h-9 items-center gap-1.5 rounded-full crm-ai-soft px-3 text-sm font-semibold">
             <Sparkles size={15} aria-hidden />{t('crm.inbox.draft', 'Draft a reply with AI')}
           </button>

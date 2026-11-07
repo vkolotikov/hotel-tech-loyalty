@@ -8,7 +8,7 @@ import { Page } from '../ui/Page'
 import { Pill } from '../ui/Pill'
 import { ConversationList } from './ConversationList'
 import { ConversationView } from './ConversationView'
-import { listPath, readConversationId, readStatus, shownConversations, type StatusFilter } from './inboxLogic'
+import { INBOX_PARAM, listPath, readConversationId, readStatus, shownConversations, type StatusFilter } from './inboxLogic'
 import { inboxKeys } from './inboxQueries'
 import { chime, rememberSound, shouldChime, soundOn } from './sound'
 import type { Conversation, InboxStats, Page as Paged } from './types'
@@ -37,8 +37,8 @@ function useSettled(value: string, ms = 300): string {
 export function InboxPage() {
   const { t } = useTranslation()
   const [search, setSearch] = useSearchParams()
-  const status = readStatus(search.get('status'))
-  const openId = readConversationId(search.get('c'))
+  const status = readStatus(search.get(INBOX_PARAM.status))
+  const openId = readConversationId(search.get(INBOX_PARAM.conversation))
   const [term, setTerm] = useState('')
   const settled = useSettled(term)
   const [group, setGroup] = useState(loadGroup)
@@ -67,8 +67,8 @@ export function InboxPage() {
     edit(next)
     return next
   }, { replace })
-  const open = (id: number | null) => change(next => { if (id) next.set('c', String(id)); else next.delete('c') })
-  const pickStatus = (next: StatusFilter) => { setPage(1); change(p => { if (next === 'all') p.delete('status'); else p.set('status', next) }, true) }
+  const open = (id: number | null) => change(next => { if (id) next.set(INBOX_PARAM.conversation, String(id)); else next.delete(INBOX_PARAM.conversation) })
+  const pickStatus = (next: StatusFilter) => { setPage(1); change(p => { if (next === 'all') p.delete(INBOX_PARAM.status); else p.set(INBOX_PARAM.status, next) }, true) }
   const typed = (next: string) => { setTerm(next); setPage(1) }
   const grouped = (on: boolean) => { setGroup(on); setPage(1); try { localStorage.setItem(GROUP_KEY, on ? '1' : '0') } catch { /* not remembered */ } }
   const sounded = (on: boolean) => { setSound(on); rememberSound(on) }
@@ -84,7 +84,7 @@ export function InboxPage() {
           {figures.unassigned > 0 && <Pill tone="danger">{t('crm.inbox.unassigned', '{{count}} open with nobody assigned', { count: figures.unassigned })}</Pill>}
         </div>
       ) : undefined}>
-      <div className="grid min-w-0 overflow-hidden md:h-[calc(100dvh-15rem)] md:min-h-[32rem] md:grid-rows-[minmax(0,1fr)] md:grid-cols-[minmax(16rem,20rem)_minmax(0,1fr)] md:rounded-2xl md:border md:border-a-border md:bg-a-surface md:shadow-a-sm xl:grid-cols-[minmax(17rem,21rem)_minmax(0,1fr)_19rem]">
+      <div className="grid min-w-0 md:h-[calc(100dvh-15rem)] md:min-h-[32rem] md:grid-rows-[minmax(0,1fr)] md:grid-cols-[minmax(16rem,20rem)_minmax(0,1fr)] md:rounded-2xl md:border md:border-a-border md:bg-a-surface md:overflow-hidden md:shadow-a-sm xl:grid-cols-[minmax(15rem,18rem)_minmax(0,1fr)_17rem] 2xl:grid-cols-[minmax(17rem,21rem)_minmax(0,1fr)_20rem]">
         <ConversationList className={openId ? 'hidden md:flex' : 'flex'}
           rows={rows} loading={list.isLoading} error={list.error} onRetry={() => { void list.refetch() }}
           stats={stats.data} status={status} onStatus={pickStatus} term={term} onTerm={typed}

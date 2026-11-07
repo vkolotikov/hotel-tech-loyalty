@@ -8,6 +8,9 @@ import type { CannedReply, Conversation, ConvStatus, Feedback, InboxStats, Messa
  * AI button says, and the bodies the chat endpoints take. The server decides everything else.
  */
 
+/** The inbox's address parameters: `?status=` the filter, `?c=` the open conversation (lib/links conversationPath). */
+export const INBOX_PARAM = { status: 'status', conversation: 'c' } as const
+
 export const STATUS_FILTERS = ['all', 'active', 'waiting', 'resolved', 'archived'] as const
 export type StatusFilter = (typeof STATUS_FILTERS)[number]
 

@@ -60,7 +60,26 @@ export function ConversationView({ id, onBack }: { id: number; onBack: () => voi
   const [rating, setRating] = useState<{ message: Message; rating: 'good' | 'bad' } | null>(null)
   const [translations, setTranslations] = useState<Record<string, Translation>>({})
   const more = useRef<HTMLDetailsElement>(null)
+  const back = useRef<HTMLButtonElement>(null)
   const closeMore = () => { if (more.current) more.current.open = false }
+
+  // The "More" menu closes on a click elsewhere and on Escape, giving the focus back to its button.
+  useEffect(() => {
+    const onDown = (e: MouseEvent) => { const el = more.current; if (el?.open && !el.contains(e.target as Node)) el.open = false }
+    const onKey = (e: KeyboardEvent) => {
+      const el = more.current
+      if (e.key === 'Escape' && el?.open) { el.open = false; el.querySelector('summary')?.focus() }
+    }
+    document.addEventListener('mousedown', onDown)
+    document.addEventListener('keydown', onKey)
+    return () => { document.removeEventListener('mousedown', onDown); document.removeEventListener('keydown', onKey) }
+  }, [])
+
+  // On a phone the list gives way to the thread: the focus moves to the way back instead of being lost with the list.
+  useEffect(() => {
+    const active = document.activeElement
+    if (active instanceof HTMLElement && active !== document.body && !active.getClientRects().length) back.current?.focus()
+  }, [])
 
   const status = useMutation({
     mutationFn: (next: ConvStatus) => send('put', `chat-inbox/${id}/status`, { status: next }),
@@ -115,7 +134,6 @@ export function ConversationView({ id, onBack }: { id: number; onBack: () => voi
     const el = scroller.current
     if (el && nearEnd.current) el.scrollTop = el.scrollHeight
   }, [messageCount, typing, loaded])
-  useEffect(() => { nearEnd.current = true }, [id])
 
   const data = detail.data
   const c = data?.conversation
@@ -137,7 +155,7 @@ export function ConversationView({ id, onBack }: { id: number; onBack: () => voi
       <section aria-label={name || t('crm.inbox.conversation', 'Conversation')}
         className="fixed inset-0 z-40 flex min-h-0 min-w-0 flex-col bg-a-surface md:static md:z-auto">
         <header className="flex items-center gap-2 border-b border-a-border px-3 py-2.5 pt-[max(0.625rem,env(safe-area-inset-top))] md:pt-2.5">
-          <button type="button" onClick={onBack} aria-label={t('crm.inbox.back', 'Back to the conversations')}
+          <button ref={back} type="button" onClick={onBack} aria-label={t('crm.inbox.back', 'Back to the conversations')}
             className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-a-text-2 hover:bg-a-surface-2 hover:text-a-text md:hidden"><ArrowLeft size={18} aria-hidden /></button>
           {c && <Avatar name={name} tone={toggle?.aiOn ? 'ai' : 'accent'} />}
           <div className="min-w-0 flex-1">

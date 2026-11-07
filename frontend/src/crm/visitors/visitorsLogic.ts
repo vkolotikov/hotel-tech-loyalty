@@ -6,6 +6,9 @@ import type { Visitor, VisitorStats } from './types'
  * and how a visitor is named and placed. The server decides the rest (VisitorController).
  */
 
+/** The page's address parameters: `?tab=` the chosen tab, `?v=` the visitor open at a glance. */
+export const VISITOR_PARAM = { tab: 'tab', visitor: 'v' } as const
+
 export const VISITOR_TABS = ['online', 'all', 'offline', 'leads'] as const
 export type VisitorTab = (typeof VISITOR_TABS)[number]
 
