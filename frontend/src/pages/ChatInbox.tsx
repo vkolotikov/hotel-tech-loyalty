@@ -306,7 +306,7 @@ export function ChatInbox() {
   })
 
   const transferConv = useMutation({
-    mutationFn: (agentId: number) => api.put(`/v1/admin/chat-inbox/${selectedId}/assign`, { agent_id: agentId }),
+    mutationFn: (agentId: number) => api.put(`/v1/admin/chat-inbox/${selectedId}/assign`, { user_id: agentId }),
     onSuccess: () => { invalidateAll(); setShowTransferMenu(false); toast.success(t('chat_inbox.toasts.transferred', 'Transferred')) },
   })
 

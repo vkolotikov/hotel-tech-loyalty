@@ -26,7 +26,8 @@ const ADMIN_CLASS = /(?:^|[\s'"`{(])(?:hover:|focus:|focus-visible:|active:|disa
 const PORTAL_CLASS = /(?:^|[\s'"`{(])(?:[a-z-]+:)*(?:bg|text|border|ring|divide|placeholder|outline|rounded|shadow|font)-p-[a-z]/
 const FOREIGN_WORKSPACE = /from\s+['"](?:\.\.\/)+(?:appointments|content|loyalty|portal)\//
 const RAW_API = /['"`]\/v1\//
-const API_CALL = /\b(?:get|send)(?:<[^>]*>)?\(\s*(?:'(?:post|put|patch|delete)'\s*,\s*)?[`'"]([a-z-]+)/g
+// The workspace's own get( / send( from lib/api.ts, not a method of something else (searchParams.get('status')).
+const API_CALL = /(?<![.\w])(?:get|send)(?:<[^>]*>)?\(\s*(?:'(?:post|put|patch|delete)'\s*,\s*)?[`'"]([a-z-]+)/g
 
 describe('crm workspace sweep', () => {
   const files = sourceFiles(DIR)
