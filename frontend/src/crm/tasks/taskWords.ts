@@ -31,6 +31,17 @@ export const TASK_ICONS: Record<TaskType, LucideIcon> = {
   follow_up: ChevronRight, custom: ListChecks,
 }
 
+/**
+ * A lead's next step as a person reads it: `next_task_type` holds a task type's code when a task set it ("call",
+ * "follow_up") and whatever a person typed otherwise ("Call back"). A known code is named in the person's language;
+ * anything else is shown as written.
+ */
+export function nextStepWord(t: TFunction, raw: string | null | undefined): string | null {
+  const text = (raw ?? '').trim()
+  if (!text) return null
+  return Object.prototype.hasOwnProperty.call(TASK_ICONS, text) ? taskTypeLabel(t, text) : text
+}
+
 /** A tab's name. */
 export function bucketLabel(t: TFunction, bucket: Bucket): string {
   switch (bucket) {

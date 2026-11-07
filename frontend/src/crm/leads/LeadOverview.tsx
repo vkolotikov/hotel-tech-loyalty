@@ -8,6 +8,7 @@ import { amount, followUp } from './leadLogic'
 import { aiSignal, dueIn, priorityTone, stageSteps } from './listLogic'
 import type { LeadDetail, Stage } from './leadTypes'
 import { coldLabel, dueInLabel, dueInTone, intentLabel, sourceLabel } from './leadWords'
+import { nextStepWord } from '../tasks/taskWords'
 
 /**
  * A lead at a glance (round 2's overview, the top of its page): where it is in the pipeline as a bar of its stages — a
@@ -78,7 +79,7 @@ export function LeadOverview({ lead, stages, priorities, onPick, busy }: { lead:
         <Fact label={t('crm.leads.next_step', 'Next step')}>
           {next ? (
             <span className="block min-w-0">
-              <span className="block truncate text-a-text">{next.type ?? t('crm.leads.next_untitled', 'Follow up')}</span>
+              <span className="block truncate text-a-text">{nextStepWord(t, next.type) ?? t('crm.leads.next_untitled', 'Follow up')}</span>
               {due && <Pill tone={dueInTone(due)}>{dueInLabel(t, due, lang)}</Pill>}
             </span>
           ) : <span className="text-a-text-2">{t('crm.leads.no_next', 'No next step')}</span>}

@@ -23,6 +23,8 @@ import { StatTile } from '../ui/StatTile'
 import { useToast } from '../ui/Toast'
 import { TONE_CHIP, type Tone } from '../ui/tones'
 import { firstName, greetingOf, hasMore, longDay, needsNow, scheduleOf, taskTarget, venueClock, type NowItem, type ScheduleItem } from './todayLogic'
+import { nextStepWord } from '../tasks/taskWords'
+import { sourceLabel } from '../leads/leadWords'
 
 const PRIMARY_LINK = 'inline-flex min-h-11 items-center gap-2 rounded-full bg-a-accent px-4 py-2.5 text-sm font-semibold text-a-accent-ink shadow-a-sm hover:bg-a-accent-deep focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-a-accent'
 const TEXT_LINK = 'inline-flex items-center gap-1 rounded-sm text-sm font-medium text-a-accent-text hover:underline focus-visible:outline-2 focus-visible:outline-a-accent'
@@ -239,7 +241,7 @@ function NowRow({ item, lang, zone, currency, state }: { item: NowItem; lang: st
     const title = `${lead.name ?? t('crm.common.no_name', 'No name')}${lead.company ? ` · ${lead.company}` : ''}`
     return (
       <Row to={leadPath(lead.id)} icon={CalendarClock} tone="danger" title={title}
-        line={lead.task_note ?? lead.task_type ?? lead.status} when={lead.value !== null ? money(lead.value, currency, lang) : undefined}
+        line={lead.task_note ?? nextStepWord(t, lead.task_type) ?? lead.status} when={lead.value !== null ? money(lead.value, currency, lang) : undefined}
         pills={<Pill tone="danger">{t('crm.today.kind_follow_up', 'Follow-up overdue since {{day}}', { day: dayLabel(lead.due, lang) })}</Pill>}
         action={<DoneButton item={{ kind: 'follow_up', id: lead.id }} label={title} state={state} />} />
     )
@@ -316,7 +318,7 @@ function ScheduleRow({ item, lang, currency, state }: { item: ScheduleItem; lang
         <span aria-hidden className={`grid h-8 w-8 shrink-0 place-items-center rounded-lg ${TONE_CHIP.accent}`}><Target size={15} /></span>
         <span className="min-w-0 flex-1">
           <span className="block truncate text-sm font-medium text-a-text">{title}</span>
-          <span className="block truncate text-xs text-a-text-2">{[t('crm.today.kind_follow_up_today', 'Follow-up'), lead.task_note ?? lead.task_type ?? lead.status].filter(Boolean).join(' · ')}</span>
+          <span className="block truncate text-xs text-a-text-2">{[t('crm.today.kind_follow_up_today', 'Follow-up'), lead.task_note ?? nextStepWord(t, lead.task_type) ?? lead.status].filter(Boolean).join(' · ')}</span>
         </span>
         {lead.value !== null && <span className="shrink-0 text-xs tabular-nums text-a-text-2">{money(lead.value, currency, lang)}</span>}
       </Link>
@@ -345,7 +347,7 @@ function NewLeads({ data, lang, currency }: { data: Today; lang: string; currenc
                     <span className="block truncate text-xs text-a-text-2">{[lead.company, timeAgo(lead.created_at, lang)].filter(Boolean).join(' · ')}</span>
                   </span>
                   <span className="flex shrink-0 flex-col items-end gap-1">
-                    {lead.source && <Pill>{lead.source}</Pill>}
+                    {lead.source && <Pill>{sourceLabel(t, lead.source)}</Pill>}
                     {lead.value !== null && <span className="text-xs tabular-nums text-a-text-2">{money(lead.value, currency, lang)}</span>}
                   </span>
                 </Link>

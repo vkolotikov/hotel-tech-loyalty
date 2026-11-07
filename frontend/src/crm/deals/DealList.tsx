@@ -19,6 +19,7 @@ import { ContactLinks } from '../leads/parts'
 import { dueInLabel, dueInTone, sourceLabel } from '../leads/leadWords'
 import { dealItem, FULFILMENT, fulfilmentProgress, isFulfilment, nextFulfilment, stillOwed, type DealColumn, type DealRow } from './dealLogic'
 import { fulfilmentLabel, paymentLabel, paymentTone } from './dealWords'
+import { nextStepWord } from '../tasks/taskWords'
 
 /**
  * The deals as a list: on a wide screen a row per deal under a header row — who, what it is for, the amount (and what
@@ -138,7 +139,7 @@ function NextStep({ deal, lang }: { deal: DealRow; lang: string }) {
   const tone = dueInTone(due)
   return (
     <span className="block min-w-0">
-      <span className="block truncate text-sm text-a-text">{next.type ?? t('crm.deals.next_untitled', 'Follow up')}</span>
+      <span className="block truncate text-sm text-a-text">{nextStepWord(t, next.type) ?? t('crm.deals.next_untitled', 'Follow up')}</span>
       {due && <span className={`block text-xs ${tone === 'danger' ? 'font-medium text-a-danger' : tone === 'pending' ? 'font-medium text-a-st-pending' : 'text-a-text-2'}`}>{dueInLabel(t, due, lang)}</span>}
     </span>
   )
@@ -240,7 +241,7 @@ function DealPeek({ deal, name }: { deal: DealRow; name: string }) {
       </div>
       <div className="min-w-0">
         <p className="mb-1 text-xs font-semibold text-a-text-2">{t('crm.deals.col_next', 'Next step')}</p>
-        <p className="text-sm text-a-text">{deal.next_task_type && !deal.next_task_completed ? deal.next_task_type : t('crm.deals.no_next', 'Nothing planned. Open the deal to add a step.')}</p>
+        <p className="text-sm text-a-text">{deal.next_task_type && !deal.next_task_completed ? nextStepWord(t, deal.next_task_type) : t('crm.deals.no_next', 'Nothing planned. Open the deal to add a step.')}</p>
         {deal.next_task_notes && !deal.next_task_completed && <p className="mt-0.5 line-clamp-3 text-sm text-a-text-2">{deal.next_task_notes}</p>}
         {deal.notes && <p className="mt-2 line-clamp-4 whitespace-pre-wrap text-sm text-a-text">{deal.notes}</p>}
         {ai?.action && <p className="mt-2 text-sm"><span className="crm-ai-text inline-flex items-center gap-1 font-medium"><Sparkles size={13} aria-hidden />{t('crm.deals.ai_next', 'AI:')}</span> <span className="text-a-text">{ai.action}</span></p>}

@@ -18,6 +18,7 @@ import { ActionMenu, type MenuItem } from './Menu'
 import { AiCell, ContactLinks, FreshChip, NextCell, StagePill } from './parts'
 import type { CustomField, LeadRow, Stage } from './leadTypes'
 import { coldLabel, intentLabel, sourceLabel } from './leadWords'
+import { nextStepWord } from '../tasks/taskWords'
 
 /** What a row asks the page to open (a dialog or a form the page holds). */
 export type RowAsk = { kind: 'won' | 'lost' | 'delete' | 'task'; lead: LeadRow }
@@ -26,7 +27,9 @@ export type RowAsk = { kind: 'won' | 'lost' | 'delete' | 'task'; lead: LeadRow }
  * The leads as a list (round 2, as the main platform's Leads table): on a wide screen one row per lead under a header
  * row — who, the stage (changed in place), value, the AI's signal, the next step, owner and source, the touches, a
  * hotel's stay and the organisation's own list fields — with a "…" menu and a row that opens for the AI's brief and the
- * notes; on a phone each lead is a card with what matters. A box chooses it for a bulk change.
+ * notes; on a phone each lead is a card with what matters. A box chooses it for a bulk change. The touches, the stay
+ * and the list fields show from 1536 px: below it they pushed the row's own buttons out of the card beside the side
+ * panel (Show more still says the last touch; the lead's page has the rest).
  */
 export function LeadList({ leads, stages, selected, onSelect, columns, fields, onAsk, now }: {
   leads: LeadRow[]
@@ -60,9 +63,9 @@ export function LeadList({ leads, stages, selected, onSelect, columns, fields, o
               {columns.ai_signal && <th scope="col" className="hidden px-3 py-2.5 font-medium lg:table-cell">{t('crm.leads.col_ai', 'AI signal')}</th>}
               {columns.next_task && <th scope="col" className="px-3 py-2.5 font-medium">{t('crm.leads.col_next', 'Next step')}</th>}
               {columns.owner && <th scope="col" className="hidden px-3 py-2.5 font-medium lg:table-cell">{t('crm.leads.col_owner', 'Owner and source')}</th>}
-              {columns.touches && <th scope="col" className="hidden px-3 py-2.5 font-medium xl:table-cell">{t('crm.leads.col_touches', 'Calls and emails')}</th>}
-              {columns.stay && <th scope="col" className="hidden px-3 py-2.5 font-medium xl:table-cell">{t('crm.leads.col_stay', 'Stay')}</th>}
-              {fields.map(f => <th key={f.key} scope="col" className="hidden px-3 py-2.5 font-medium xl:table-cell">{f.label}</th>)}
+              {columns.touches && <th scope="col" className="hidden px-3 py-2.5 font-medium 2xl:table-cell">{t('crm.leads.col_touches', 'Calls and emails')}</th>}
+              {columns.stay && <th scope="col" className="hidden px-3 py-2.5 font-medium 2xl:table-cell">{t('crm.leads.col_stay', 'Stay')}</th>}
+              {fields.map(f => <th key={f.key} scope="col" className="hidden px-3 py-2.5 font-medium 2xl:table-cell">{f.label}</th>)}
               <th scope="col" className="w-20 py-2.5 pr-3"><span className="sr-only">{t('crm.leads.actions', 'Actions')}</span></th>
             </tr>
           </thead>
@@ -225,7 +228,7 @@ function WideRow({ lead, name, stages, columns, fields, now, priorities, chosen,
         </td>
       )}
       {columns.touches && (
-        <td className="hidden px-3 py-3 text-xs text-a-text-2 xl:table-cell">
+        <td className="hidden px-3 py-3 text-xs text-a-text-2 2xl:table-cell">
           <span className="inline-flex items-center gap-2 tabular-nums">
             <span className="inline-flex items-center gap-1" title={t('crm.leads.calls', 'Calls')}><Phone size={12} aria-hidden />{lead.phone_calls_made ?? 0}</span>
             <span className="inline-flex items-center gap-1" title={t('crm.leads.emails', 'Emails')}><Mail size={12} aria-hidden />{lead.emails_sent ?? 0}</span>
@@ -234,7 +237,7 @@ function WideRow({ lead, name, stages, columns, fields, now, priorities, chosen,
         </td>
       )}
       {columns.stay && (
-        <td className="hidden px-3 py-3 text-xs xl:table-cell">
+        <td className="hidden px-3 py-3 text-xs 2xl:table-cell">
           {dayOf(lead.check_in) || dayOf(lead.check_out) ? (
             <>
               <span className="block whitespace-nowrap text-a-text">{dayLabel(dayOf(lead.check_in), lang) || '—'} → {dayLabel(dayOf(lead.check_out), lang) || '—'}</span>
@@ -245,7 +248,7 @@ function WideRow({ lead, name, stages, columns, fields, now, priorities, chosen,
       )}
       {fields.map(f => {
         const text = customText(f, lead.custom_data?.[f.key], t('crm.common.yes', 'Yes'), t('crm.common.no', 'No'))
-        return <td key={f.key} className="hidden max-w-40 truncate px-3 py-3 text-xs text-a-text xl:table-cell">{text || <span className="text-a-text-2">—</span>}</td>
+        return <td key={f.key} className="hidden max-w-40 truncate px-3 py-3 text-xs text-a-text 2xl:table-cell">{text || <span className="text-a-text-2">—</span>}</td>
       })}
       <td className="py-2 pr-3">
         <span className="flex items-center justify-end gap-0.5">
@@ -281,7 +284,7 @@ function Peek({ lead, name }: { lead: LeadRow; name: string }) {
       </div>
       <div className="min-w-0">
         <p className="mb-1 text-xs font-semibold text-a-text-2">{t('crm.leads.next_step', 'Next step')}</p>
-        <p className="text-sm text-a-text">{lead.next_task_type && !lead.next_task_completed ? lead.next_task_type : t('crm.leads.no_next', 'No next step')}</p>
+        <p className="text-sm text-a-text">{lead.next_task_type && !lead.next_task_completed ? nextStepWord(t, lead.next_task_type) : t('crm.leads.no_next', 'No next step')}</p>
         {lead.next_task_notes && !lead.next_task_completed && <p className="mt-0.5 line-clamp-3 text-sm text-a-text-2">{lead.next_task_notes}</p>}
         <p className="mb-1 mt-3 text-xs font-semibold text-a-text-2">{t('crm.leads.field_notes_short', 'Notes')}</p>
         <p className="line-clamp-4 whitespace-pre-wrap text-sm text-a-text">{lead.notes || <span className="text-a-text-2">{t('crm.leads.no_notes', 'No notes.')}</span>}</p>

@@ -166,6 +166,7 @@
   "unassigned": "{{count}} abiertos sin asignar",
   "unread": "{{count}} nuevos",
   "unread_total": "{{count}} mensajes sin leer",
+  "unread_total_one": "{{count}} mensaje sin leer",
   "upload_error": {
     "too_big": "Ese archivo supera los 8 MB.",
     "wrong_type": "Envíe una imagen, un PDF, un documento de Word o un archivo de texto."

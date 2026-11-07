@@ -5,6 +5,7 @@ import { followUp, stageColor } from './leadLogic'
 import { aiSignal, contactLinks, dueIn, freshness, type AiSignal } from './listLogic'
 import type { LeadRow, Stage } from './leadTypes'
 import { coldLabel, dueInLabel, dueInTone, freshLabel, intentLabel } from './leadWords'
+import { nextStepWord } from '../tasks/taskWords'
 
 /** A stage as a pill with its colour's dot (only a plain hex colour is drawn). */
 export function StagePill({ stage, fallback }: { stage: Stage | null; fallback: string }) {
@@ -84,7 +85,7 @@ export function NextCell({ lead, today, lang, onAdd }: { lead: LeadRow; today: s
     <span className="flex min-w-0 items-start gap-1.5">
       <CalendarClock size={14} aria-hidden className={`mt-0.5 shrink-0 ${tone === 'danger' ? 'text-a-danger' : tone === 'pending' ? 'text-a-st-pending' : 'text-a-text-2'}`} />
       <span className="min-w-0">
-        <span className="block truncate text-sm text-a-text">{next.type ?? t('crm.leads.next_untitled', 'Follow up')}</span>
+        <span className="block truncate text-sm text-a-text">{nextStepWord(t, next.type) ?? t('crm.leads.next_untitled', 'Follow up')}</span>
         {due && <span className={`block text-xs ${tone === 'danger' ? 'font-medium text-a-danger' : tone === 'pending' ? 'font-medium text-a-st-pending' : 'text-a-text-2'}`}>{dueInLabel(t, due, lang)}</span>}
       </span>
     </span>

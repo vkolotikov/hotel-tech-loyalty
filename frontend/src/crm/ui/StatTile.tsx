@@ -18,7 +18,8 @@ export function StatTile({ label, value, hint, icon: Icon, tone = 'neutral', to 
     <>
       <div className="flex items-center gap-2">
         {Icon && <span aria-hidden className={`grid h-8 w-8 shrink-0 place-items-center rounded-lg ${TONE_CHIP[tone]}`}><Icon size={16} /></span>}
-        <span className="min-w-0 truncate text-xs font-medium text-a-text-2">{label}</span>
+        {/* Two lines before an ellipsis: six tiles in a row, or a German label, still say what they count. */}
+        <span className="line-clamp-2 min-w-0 break-words text-xs font-medium leading-snug text-a-text-2">{label}</span>
       </div>
       <p className="mt-2 font-a-display text-3xl leading-none text-a-text">{value}</p>
       {hint && <p className="mt-1.5 text-xs text-a-text-2">{hint}</p>}

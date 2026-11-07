@@ -36,6 +36,7 @@ import { StagePill } from './parts'
 import { SendTemplate } from './SendTemplate'
 import type { LeadDetail, MetaList, Stage } from './leadTypes'
 import { problemText, sourceLabel } from './leadWords'
+import { nextStepWord } from '../tasks/taskWords'
 
 /** The page's sections, for the phone's "jump to" pills (a button that scrolls; no `#` link in the workspace). */
 const SECTIONS = ['next', 'timeline', 'tasks', 'contact', 'details', 'files'] as const
@@ -322,7 +323,7 @@ function NextStepCard({ lead }: { lead: LeadDetail }) {
       ) : next ? (
         <div className="flex flex-wrap items-start gap-3">
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-medium text-a-text">{next.type ?? t('crm.leads.next_untitled', 'Follow up')}</p>
+            <p className="text-sm font-medium text-a-text">{nextStepWord(t, next.type) ?? t('crm.leads.next_untitled', 'Follow up')}</p>
             {next.note && <p className="mt-0.5 whitespace-pre-wrap text-sm text-a-text-2">{next.note}</p>}
             {next.day && (
               <p className="mt-1.5">
