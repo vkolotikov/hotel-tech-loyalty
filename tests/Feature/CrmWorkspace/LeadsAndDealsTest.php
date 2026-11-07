@@ -95,6 +95,17 @@ class LeadsAndDealsTest extends TestCase
         }
     }
 
+    public function test_leads_without_a_value_come_last_in_either_direction(): void
+    {
+        $none = $this->lead(['total_value' => null], 'No value');
+        $small = $this->lead(['total_value' => 100], 'Small');
+        $large = $this->lead(['total_value' => 900], 'Large');
+
+        $ids = fn (string $dir) => collect($this->asStaffMember()->getJson($this->adminApi("inquiries?sort=total_value&dir={$dir}"))->assertOk()->json('data'))->pluck('id')->all();
+        $this->assertSame([$large, $small, $none], $ids('desc'));
+        $this->assertSame([$small, $large, $none], $ids('asc'));
+    }
+
     public function test_bulk_status_changes_move_the_stage_of_the_leads_pipeline(): void
     {
         $a = $this->lead(['pipeline_id' => $this->pipeline, 'pipeline_stage_id' => $this->stages['New']]);

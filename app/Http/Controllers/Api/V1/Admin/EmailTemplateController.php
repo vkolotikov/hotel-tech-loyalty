@@ -135,28 +135,14 @@ class EmailTemplateController extends Controller
 
         $template = EmailTemplate::findOrFail($id);
 
-        // Resolve a member to render against — falls back to any active
-        // member so the template's merge tags don't render as literal {{name}}
-        // when the caller is sending to a CRM contact who isn't a member.
+        // The member it is for, when there is one. Without one the member's tags are left empty (2026-11-08): before,
+        // the first active member's name, email, card number, points and referral code went to whoever `to` was.
         $member = !empty($data['member_id'])
             ? LoyaltyMember::find($data['member_id'])
             : null;
-        if (!$member) {
-            $member = LoyaltyMember::where('is_active', true)->first();
-        }
-        if (!$member) {
-            // No members at all in this org — still allow a raw send by passing
-            // an empty render context. The template will ship with merge tags
-            // unsubstituted, which is preferable to silently 422'ing the staff.
-            $rendered = [
-                'subject' => $data['subject'] ?? $template->subject,
-                'html'    => $template->html_body,
-            ];
-        } else {
-            $rendered = $template->render($member);
-            if (!empty($data['subject'])) {
-                $rendered['subject'] = $data['subject'];
-            }
+        $rendered = $member ? $template->render($member) : $template->renderWithoutMember();
+        if (!empty($data['subject'])) {
+            $rendered['subject'] = $data['subject'];
         }
 
         try {

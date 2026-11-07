@@ -110,7 +110,10 @@ class InquiryController extends Controller
         $allowedSorts = ['created_at','updated_at','check_in','check_out','status','priority','total_value','ai_win_probability','next_task_due','assigned_to','last_contacted_at'];
         $sort = in_array($request->get('sort'), $allowedSorts, true) ? $request->get('sort') : 'created_at';
         $dir  = $request->get('dir') === 'asc' ? 'asc' : 'desc';
-        $query->orderBy($sort, $dir);
+        // Empty values last in either direction, on PostgreSQL (which puts NULLs first when descending) and SQLite
+        // alike (2026-11-08: "largest value first" listed every lead without a value at the top); the id keeps pages
+        // stable among equal values. `$sort` is one of the names above.
+        $query->orderByRaw("{$sort} IS NULL")->orderBy($sort, $dir)->orderBy('id', $dir);
 
         return response()->json($query->paginate($request->get('per_page', 25)));
     }
