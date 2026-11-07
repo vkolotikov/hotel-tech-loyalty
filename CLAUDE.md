@@ -6,7 +6,7 @@ Multi-tenant Laravel 13 + React (Vite, TypeScript) SaaS with four sub-brands. Pr
 `frontend/src/pages/landing`).
 
 Starting a new session, or on another device or agent: the current state, set-up, test baselines, deploy steps and
-open items are in the newest file of `docs/handoff/` (now `docs/handoff/2026-11-02-hexatech-handoff.md`). Update it,
+open items are in the newest file of `docs/handoff/` (now `docs/handoff/2026-11-07-hexatech-handoff.md`). Update it,
 or add the next dated one, at the end of a session.
 
 ## Environment (hard rules, each one has bitten before)
@@ -294,8 +294,8 @@ or add the next dated one, at the end of a session.
 
 - HexaTech Loyalty and Content each in three packages (Lite, Standard at 85 €, Pro), 15 % less a month paid yearly
   (owner 2026-11-02), HexaTech Appointments the same way since 2026-11-04 (49/85/149 €, its own sign-up page,
-  packages by `max_booking_staff`), and HexaTech CRM since 2026-11-07 (49/85/149 €, `/crm/register`, packages by team,
-  contacts and the AI allowance); billing sells each product alone and every pair, never three (runbook
+  packages by `max_booking_staff`), and HexaTech CRM since 2026-11-07 (49/85/149 €, `/crm/register`, packages by team
+  and the AI allowance); billing sells each product alone and every pair, never three (runbook
   `docs/plan-modules.md`). HexaTech CRM's billing product is `crm_chat`, never the full suite's `crm` or `chat`:
   `fromProducts` reads a list of module products only as an organisation on modules, so naming those would turn
   Starter and Growth into module customers. Two products' AI allowances add up (`ai_monthly_cost_cents`). Every

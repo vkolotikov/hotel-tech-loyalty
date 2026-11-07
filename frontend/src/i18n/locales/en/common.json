@@ -345,8 +345,7 @@
         "sign_ins": "{{n}} staff sign-ins",
         "crm_chat": "An AI chat for your website that answers from your knowledge",
         "crm_core": "Live inbox, visitors, leads, pipeline and tasks",
-        "crm_ai_base": "A monthly AI allowance for the assistant and reply drafts",
-        "contacts": "Up to {{n}} contacts"
+        "crm_ai_base": "A monthly AI allowance for the assistant and reply drafts"
       },
       "signup": {
         "step": "Step {{n}} of {{total}}",

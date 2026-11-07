@@ -132,7 +132,6 @@ export function packageLines(product: SignupProduct, features: Record<string, st
     lines.push({ text: t('auth.product.line.push', 'Push messages to the member app'), included: on(features, 'push_notifications') })
     lines.push({ text: t('auth.product.line.wallet', 'Apple and Google Wallet cards, NFC cards'), included: on(features, 'wallet') })
   } else if (product === 'crm') {
-    const contacts = limitOf(features, 'max_guests')
     const budget = limitOf(features, 'ai_monthly_cost_cents')
     const base = limitOf(lite, 'ai_monthly_cost_cents')
     const times = budget && base ? Math.round((budget / base) * 10) / 10 : null
@@ -144,7 +143,6 @@ export function packageLines(product: SignupProduct, features: Record<string, st
         : t('auth.product.line.crm_ai_base', 'A monthly AI allowance for the assistant and reply drafts'),
       included: true,
     })
-    if (contacts) lines.push({ text: t('auth.product.line.contacts', { n: n(contacts), defaultValue: 'Up to {{n}} contacts' }), included: true })
   } else {
     const budget = limitOf(features, 'ai_monthly_cost_cents')
     const base = limitOf(lite, 'ai_monthly_cost_cents')

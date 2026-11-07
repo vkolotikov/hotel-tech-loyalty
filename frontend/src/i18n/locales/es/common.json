@@ -345,8 +345,7 @@
         "sign_ins": "{{n}} accesos del personal",
         "crm_chat": "Un chat con IA para su web que responde con su información",
         "crm_core": "Bandeja en directo, visitantes, clientes potenciales, embudo y tareas",
-        "crm_ai_base": "Un saldo mensual de IA para el asistente y los borradores de respuesta",
-        "contacts": "Hasta {{n}} contactos"
+        "crm_ai_base": "Un saldo mensual de IA para el asistente y los borradores de respuesta"
       },
       "signup": {
         "step": "Paso {{n}} de {{total}}",

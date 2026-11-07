@@ -345,8 +345,7 @@
         "sign_ins": "{{n}} Mitarbeiter-Zugänge",
         "crm_chat": "Ein KI-Chat für Ihre Website, der aus Ihrem Wissen antwortet",
         "crm_core": "Live-Posteingang, Besucher, Leads, Pipeline und Aufgaben",
-        "crm_ai_base": "Ein monatliches KI-Kontingent für den Assistenten und Antwortentwürfe",
-        "contacts": "Bis zu {{n}} Kontakte"
+        "crm_ai_base": "Ein monatliches KI-Kontingent für den Assistenten und Antwortentwürfe"
       },
       "signup": {
         "step": "Schritt {{n}} von {{total}}",

@@ -127,7 +127,7 @@ describe('HexaTech CRM on its own (2026-11-07)', () => {
     expect(productHome('crm', '/')).toBe('/crm')
   })
 
-  it('reads its lines from what the server grants: the chat, the CRM, the AI allowance as a multiple, contacts, team', () => {
+  it('reads its lines from what the server grants: the chat, the CRM, the AI allowance as a multiple, the team', () => {
     const lite = { ai_monthly_cost_cents: '1000', max_guests: '1000', max_team_members: '2' }
     const pro = { ai_monthly_cost_cents: '6000', max_guests: '20000', max_team_members: '15', max_properties: '3', priority_support: 'priority' }
     const proLines = packageLines('crm', pro, lite, t, 'en')
@@ -135,7 +135,6 @@ describe('HexaTech CRM on its own (2026-11-07)', () => {
       'An AI chat for your website that answers from your knowledge',
       'Live inbox, visitors, leads, pipeline and tasks',
       '6× the monthly AI allowance of Lite',
-      'Up to 20,000 contacts',
       '15 team members',
       '3 locations',
       'Priority support',

@@ -102,7 +102,7 @@ final class PlanModules
         // chat widget with its AI assistant and the live inbox, beside leads, the pipeline, contacts and tasks. Its billing
         // product is `crm_chat`, never the full suite's `crm` or `chat`: Starter (`crm`, `loyalty`) and Growth hold those,
         // and naming them here would make every such full customer an organisation on modules (fromProducts). Its
-        // packages differ by team, contacts and the AI allowance the chatbot and the inbox's drafts spend
+        // packages differ by team and the AI allowance the chatbot and the inbox's drafts spend
         // (`ai_monthly_cost_cents`, AiUsageService::budgetStatus, which the widget already stops at).
         'crm' => [
             'name' => 'HexaTech CRM',

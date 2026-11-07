@@ -345,8 +345,7 @@
         "sign_ins": "{{n}} accès pour le personnel",
         "crm_chat": "Un chat IA pour votre site qui répond à partir de vos informations",
         "crm_core": "Messagerie en direct, visiteurs, prospects, pipeline et tâches",
-        "crm_ai_base": "Un crédit IA mensuel pour l'assistant et les brouillons de réponse",
-        "contacts": "Jusqu'à {{n}} contacts"
+        "crm_ai_base": "Un crédit IA mensuel pour l'assistant et les brouillons de réponse"
       },
       "signup": {
         "step": "Étape {{n}} sur {{total}}",

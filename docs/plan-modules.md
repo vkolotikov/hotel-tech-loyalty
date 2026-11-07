@@ -54,7 +54,7 @@ Content's AI allowance by `ContentAiGate` (`ai_monthly_cost_cents`, a monthly AI
 | | CRM Lite | CRM Standard | CRM Pro |
 |---|---|---|---|
 | Team members | 2 | 5 | 15 |
-| Contacts (`max_guests`) | 1 000 | 5 000 | 20 000 |
+| Contacts (`max_guests`, carried but not enforced, as for every product) | 1 000 | 5 000 | 20 000 |
 | Locations | 1 | 1 | 3 |
 | AI chatbot and widget (`chatbot`), live visitors (`engagement`) | yes | yes | yes |
 | Monthly AI allowance (`ai_monthly_cost_cents`) | 10 $ | 25 $ | 60 $ |
