@@ -39,10 +39,27 @@ class BotGapsTest extends TestCase
         $this->assertCount(1, $gaps);
         $this->assertSame([$answer, $chat, 'Maria', 'How much is a consultation?', 'It costs 20 €.', 'Wrong price', true, 1],
             [$gaps[0]['message_id'], $gaps[0]['conversation_id'], $gaps[0]['visitor'], $gaps[0]['question'], $gaps[0]['answer'], $gaps[0]['comment'], $gaps[0]['teachable'], $gaps[0]['ratings']]);
+        $this->assertSame([$this->staffMember->id, null, null], [$gaps[0]['rated_by_id'], $gaps[0]['suggested_answer'], $gaps[0]['suggested_by']]);
 
         // A manager's correction (the inbox's feedback with apply_to_training) takes it off the list for everyone.
         $this->rate($answer, 'bad', applied: true, user: $this->manager->id);
         $this->assertSame([], $this->asStaffMember()->getJson($this->crmApi('bot-gaps'))->assertOk()->json('data'));
+    }
+
+    public function test_the_newest_suggestion_for_an_answer_is_offered_with_its_author(): void
+    {
+        $chat = $this->chat([], [['visitor', 'Do you park cars?', 10], ['ai', 'No parking.', 9]]);
+        $answer = $this->answerOf($chat);
+        $colleague = $this->staffUser($this->org, ['role' => 'staff']);
+        DB::table('chat_message_feedback')->insert([
+            ['organization_id' => $this->org->id, 'message_id' => $answer, 'user_id' => $colleague->id, 'rating' => 'bad', 'comment' => null, 'suggested_answer' => 'Street parking only.', 'applied_to_training' => false, 'created_at' => now()->subHour(), 'updated_at' => now()->subHour()],
+            ['organization_id' => $this->org->id, 'message_id' => $answer, 'user_id' => $this->staffMember->id, 'rating' => 'bad', 'comment' => 'No!', 'suggested_answer' => 'Free parking behind the clinic.', 'applied_to_training' => false, 'created_at' => now()->subMinutes(30), 'updated_at' => now()->subMinutes(30)],
+            ['organization_id' => $this->org->id, 'message_id' => $answer, 'user_id' => $this->manager->id, 'rating' => 'bad', 'comment' => 'Wrong', 'suggested_answer' => null, 'applied_to_training' => false, 'created_at' => now(), 'updated_at' => now()],
+        ]);
+
+        $gap = $this->asManager()->getJson($this->crmApi('bot-gaps'))->assertOk()->json('data.0');
+        $this->assertSame(['Free parking behind the clinic.', $this->staffMember->name, $this->manager->id, 3],
+            [$gap['suggested_answer'], $gap['suggested_by'], $gap['rated_by_id'], $gap['ratings']]);
     }
 
     public function test_good_answers_and_another_organisations_are_not_listed(): void

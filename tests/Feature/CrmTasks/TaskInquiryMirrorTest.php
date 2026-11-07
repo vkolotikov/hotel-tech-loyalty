@@ -92,6 +92,19 @@ class TaskInquiryMirrorTest extends TestCase
             $table->timestamps();
         });
 
+        // The lead's follow-up day is the venue's day of the task (2026-11-08); the venue's zone is read from the
+        // settings (PortalBootstrap::timezone), UTC when none is named.
+        if (!Schema::hasTable('hotel_settings')) Schema::create('hotel_settings', function ($table) {
+            $table->bigIncrements('id');
+            $table->unsignedBigInteger('organization_id')->nullable();
+            $table->unsignedBigInteger('brand_id')->nullable();
+            $table->string('key', 100);
+            $table->text('value')->nullable();
+            $table->string('type', 32)->nullable();
+            $table->string('group', 32)->nullable();
+            $table->timestamps();
+        });
+
         $org = OrganizationFactory::new()->create();
         app()->instance('current_organization_id', $org->id);
         $this->user = User::create([

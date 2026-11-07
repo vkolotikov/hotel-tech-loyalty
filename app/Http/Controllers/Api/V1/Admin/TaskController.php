@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Activity;
 use App\Models\Task;
+use App\Services\Appointments\VenueClock;
 use App\Services\CustomFieldService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -45,7 +46,7 @@ class TaskController extends Controller
         match ($status) {
             'open'      => $query->open()->orderByRaw('due_at IS NULL')->orderBy('due_at'),
             'overdue'   => $query->overdue()->orderBy('due_at'),
-            'due_today' => $query->dueToday()->orderBy('due_at'),
+            'due_today' => $query->dueToday(VenueClock::zone((int) $request->user()->organization_id))->orderBy('due_at'),
             'due_soon'  => $query->whereNull('completed_at')
                                   ->whereBetween('due_at', [now(), now()->addDays(3)])
                                   ->orderBy('due_at'),
@@ -82,6 +83,9 @@ class TaskController extends Controller
         ]);
 
         $data['type']        = $data['type'] ?? 'follow_up';
+        if (array_key_exists('due_at', $data)) {
+            $data['due_at'] = self::trueInstant($data['due_at']);
+        }
         $data['created_by']  = $request->user()->id;
         $data['assigned_to'] = $data['assigned_to'] ?? $request->user()->id;
         $data['custom_data'] = $this->customFields->validate('task', $data['custom_data'] ?? null);
@@ -98,6 +102,21 @@ class TaskController extends Controller
         });
 
         return response()->json($task, 201);
+    }
+
+    /**
+     * `due_at` is an instant, stored in UTC (2026-11-08). A value with an offset (`Z`, `+02:00`) is converted to UTC
+     * before it is saved — the model's datetime cast would otherwise keep its digits and drop the offset, so
+     * `10:00+02:00` came back two hours late. A value without an offset keeps its meaning of before: its digits are
+     * stored as they are (read as UTC).
+     */
+    private static function trueInstant(mixed $value): mixed
+    {
+        if (!is_string($value) || !preg_match('/\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?\s*(?:Z|[+-]\d{2}(?::?\d{2})?)$/i', trim($value))) {
+            return $value;
+        }
+
+        return \Carbon\CarbonImmutable::parse(trim($value))->utc()->format('Y-m-d H:i:s');
     }
 
     /**
@@ -128,7 +147,8 @@ class TaskController extends Controller
 
             $inquiry->forceFill([
                 'next_task_type'      => $title,
-                'next_task_due'       => $next->due_at?->toDateString(),
+                // A lead's follow-up day is the venue's calendar day of the task's instant (2026-11-08).
+                'next_task_due'       => $next->due_at?->copy()->setTimezone(VenueClock::zone((int) $inquiry->organization_id))->toDateString(),
                 'next_task_notes'     => $notes,
                 'next_task_completed' => false,
             ])->save();
@@ -155,6 +175,9 @@ class TaskController extends Controller
 
         if (array_key_exists('custom_data', $data)) {
             $data['custom_data'] = $this->customFields->validate('task', $data['custom_data']);
+        }
+        if (array_key_exists('due_at', $data)) {
+            $data['due_at'] = self::trueInstant($data['due_at']);
         }
 
         DB::transaction(function () use ($task, $data) {

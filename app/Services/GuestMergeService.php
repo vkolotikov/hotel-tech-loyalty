@@ -72,13 +72,14 @@ class GuestMergeService
     public function merge(Guest $winner, Guest $loser, ?int $performedByUserId = null, ?string $reason = null): array
     {
         if ($winner->id === $loser->id) {
-            throw new \InvalidArgumentException('Cannot merge a guest into itself.');
+            throw new \App\Exceptions\GuestMergeRefused('same_guest', 'Cannot merge a guest into itself.');
         }
         if ($winner->organization_id !== $loser->organization_id) {
-            throw new \InvalidArgumentException('Cannot merge guests from different organizations.');
+            throw new \App\Exceptions\GuestMergeRefused('different_organizations', 'Cannot merge guests from different organizations.');
         }
         if ($winner->member_id && $loser->member_id && $winner->member_id !== $loser->member_id) {
-            throw new \InvalidArgumentException(
+            throw new \App\Exceptions\GuestMergeRefused(
+                'different_members',
                 'Both guests are linked to different loyalty members. Merge the members first via Members → Duplicates, then re-run.'
             );
         }

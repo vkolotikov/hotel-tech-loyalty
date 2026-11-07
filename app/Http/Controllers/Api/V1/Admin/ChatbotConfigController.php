@@ -6,13 +6,20 @@ use App\Http\Controllers\Controller;
 use App\Models\Brand;
 use App\Models\ChatbotBehaviorConfig;
 use App\Models\ChatbotModelConfig;
+use App\Exceptions\AiHelperRefused;
+use App\Models\Organization;
+use App\Services\AiUsageService;
 use App\Services\KnowledgeService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class ChatbotConfigController extends Controller
 {
     use \App\Traits\DispatchesAiChat;
+
+    /** The model suggest-keywords asks; its spend is recorded as feature `knowledge_keywords`. */
+    private const KEYWORDS_MODEL = 'gpt-4o-mini';
 
     public function __construct(protected KnowledgeService $knowledge) {}
 
@@ -216,6 +223,9 @@ class ChatbotConfigController extends Controller
         ]);
 
         $orgId = $request->user()->organization_id;
+        // The month's AI allowance stops the test before the provider is asked (2026-11-08); its spend is recorded
+        // by callProvider as feature `chatbot_test`.
+        AiHelperRefused::unlessAllowanceLeft(Organization::withoutGlobalScopes()->find($orgId));
         $brandId = Brand::currentOrDefaultIdForOrg($orgId);
         // BelongsToBrand global scope already filters by current_brand_id
         // when bound — these are explicit so the testChat endpoint behaves
@@ -258,8 +268,12 @@ class ChatbotConfigController extends Controller
 
         try {
             $reply = $this->callProvider($provider, $systemPrompt, $history, $modelName, $temperature, $maxTokens, $extraParams, 'chatbot_test');
+        } catch (\App\Exceptions\AiModelNotAllowed $e) {
+            return response()->json(['error' => 'model_not_allowed', 'message' => 'Your plan does not include the AI model this assistant is set to use.'], 403);
         } catch (\Throwable $e) {
-            return response()->json(['error' => 'AI call failed: ' . $e->getMessage()], 500);
+            // The provider's own words stay in the log.
+            Log::warning('Chatbot test chat failed: ' . $e->getMessage(), ['org_id' => $orgId, 'provider' => $provider, 'model' => $modelName]);
+            throw AiHelperRefused::failed();
         }
 
         return response()->json([
@@ -308,24 +322,40 @@ class ChatbotConfigController extends Controller
             'answer'   => 'nullable|string|max:5000',
         ]);
 
+        $org = Organization::withoutGlobalScopes()->find($request->user()->organization_id);
+        AiHelperRefused::unlessAllowanceLeft($org);
+
         $prompt = "Given this knowledge base entry, return ONLY a JSON array of 5-10 short search keywords (lowercase, single words or 2-word phrases) that visitors might use to find this info. No explanation, just the JSON array.\n\nQuestion: {$request->question}\nAnswer: " . ($request->answer ?? '');
 
         try {
             $response = \OpenAI\Laravel\Facades\OpenAI::chat()->create([
-                'model'       => 'gpt-4o-mini',
+                'model'       => self::KEYWORDS_MODEL,
                 'messages'    => [['role' => 'user', 'content' => $prompt]],
                 'max_tokens'  => 200,
                 'temperature' => 0.3,
             ]);
-            $raw = trim($response->choices[0]->message->content ?? '[]');
-            // Strip markdown fences if the model added them.
-            $raw = preg_replace('/^```(?:json)?\s*|\s*```$/m', '', $raw);
-            $keywords = json_decode($raw, true);
-            if (!is_array($keywords)) $keywords = [];
-            $keywords = array_values(array_filter(array_map('strtolower', array_map('trim', $keywords))));
         } catch (\Throwable $e) {
-            return response()->json(['error' => 'Keyword suggestion failed: ' . $e->getMessage()], 500);
+            // The provider's own words stay in the log.
+            Log::warning('Keyword suggestion failed: ' . $e->getMessage(), ['org_id' => $org?->id]);
+            throw AiHelperRefused::failed();
         }
+
+        if ($org) {
+            app(AiUsageService::class)->recordUsage(
+                orgId: (int) $org->id,
+                model: self::KEYWORDS_MODEL,
+                inputTokens: (int) ($response->usage->promptTokens ?? 0),
+                outputTokens: (int) ($response->usage->completionTokens ?? 0),
+                feature: 'knowledge_keywords',
+            );
+        }
+
+        $raw = trim((string) ($response->choices[0]->message->content ?? '[]'));
+        // Strip markdown fences if the model added them.
+        $raw = preg_replace('/^```(?:json)?\s*|\s*```$/m', '', $raw);
+        $keywords = json_decode((string) $raw, true);
+        if (!is_array($keywords)) $keywords = [];
+        $keywords = array_values(array_filter(array_map('strtolower', array_map('trim', array_filter($keywords, 'is_string')))));
 
         return response()->json(['keywords' => $keywords]);
     }

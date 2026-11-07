@@ -18,7 +18,9 @@ use Carbon\CarbonImmutable;
  *
  * - a chat **waits** while its status is `waiting`: the visitor wrote while the assistant was paused for the
  *   conversation, so nobody answers until a person does (WidgetChatController); **open** chats are `active` or
- *   `waiting` with a message in the last 24 hours (ChatInboxController::stats `active_24h`);
+ *   `waiting` with a message in the last 24 hours (ChatInboxController::stats `active_24h`); every chat figure counts
+ *   only the conversations the inbox lists (ChatConversation::shownInInbox, 2026-11-08: not a widget opened and never
+ *   written in), as the inbox's stats do;
  * - a lead is **open** while its status is neither `Confirmed` nor `Lost` (InquiryController::kpis); its follow-up is
  *   **due** on its `next_task_due` day while `next_task_completed` is false, **overdue** before it — days are the
  *   venue's (VenueClock::today);
@@ -52,11 +54,11 @@ final class CrmToday
     /** @return array<string, mixed> */
     private function chats(): array
     {
-        $waiting = ChatConversation::query()->where('status', 'waiting');
-        $open = ChatConversation::query()
+        $waiting = ChatConversation::query()->shownInInbox()->where('status', 'waiting');
+        $open = ChatConversation::query()->shownInInbox()
             ->whereIn('status', ['active', 'waiting'])
             ->where(fn ($q) => $q->where('last_message_at', '>=', now()->subHours(24))->orWhere('updated_at', '>=', now()->subHours(24)));
-        $unassigned = ChatConversation::query()->whereIn('status', ['active', 'waiting'])->whereNull('assigned_to');
+        $unassigned = ChatConversation::query()->shownInInbox()->whereIn('status', ['active', 'waiting'])->whereNull('assigned_to');
 
         $rows = (clone $waiting)
             ->with('assignedAgent:id,name')

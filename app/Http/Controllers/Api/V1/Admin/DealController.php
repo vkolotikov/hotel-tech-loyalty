@@ -121,8 +121,10 @@ class DealController extends Controller
               ->orWhereHas('pipelineStage', fn ($p) => $p->where('kind', 'won'));
         });
 
-        $total = (clone $base)->whereNotIn('fulfillment_stage', ['completed'])
-            ->orWhereNull('fulfillment_stage')
+        // Deals not yet completed. The "no stage yet" alternative is grouped with its pair (2026-11-08): a bare
+        // orWhereNull() beside the deal condition counted every inquiry without a fulfilment stage as a deal.
+        $total = (clone $base)
+            ->where(fn ($q) => $q->whereNull('fulfillment_stage')->orWhere('fulfillment_stage', '!=', 'completed'))
             ->count();
 
         $byStage = (clone $base)

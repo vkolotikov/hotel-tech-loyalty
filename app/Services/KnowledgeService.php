@@ -2,8 +2,10 @@
 
 namespace App\Services;
 
+use App\Exceptions\AiHelperRefused;
 use App\Models\KnowledgeDocument;
 use App\Models\KnowledgeItem;
+use App\Models\Organization;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 
@@ -343,19 +345,28 @@ class KnowledgeService
      * Q&A pairs the admin can preview before importing into the KB.
      *
      * Returns a list of arrays: [['question' => ..., 'answer' => ..., 'keywords' => [...]]
+     *
+     * 2026-11-08: refused with `ai_budget_used_up` (AiHelperRefused, 403) before the provider is asked once the
+     * organisation's month of AI is spent; the call's spend is recorded as feature `knowledge_faqs`; a provider failure
+     * (or no key) is `ai_failed` (502), with the provider's own text in the log only. An empty list now means the AI
+     * found nothing to ask in the text.
      */
-    public function generateFaqsFromText(string $sourceText, int $maxItems = 12): array
+    public function generateFaqsFromText(string $sourceText, int $maxItems = 12, ?int $orgId = null): array
     {
         $sourceText = trim($sourceText);
         if ($sourceText === '') {
             return [];
         }
 
+        $orgId ??= app()->bound('current_organization_id') ? (int) app('current_organization_id') : null;
+        AiHelperRefused::unlessAllowanceLeft($orgId ? Organization::withoutGlobalScopes()->find($orgId) : null);
+
         $apiKey = config('openai.api_key') ?: env('OPENAI_API_KEY');
         if (!$apiKey) {
             Log::warning('FAQ extraction skipped: no OPENAI_API_KEY configured');
-            return [];
+            throw AiHelperRefused::failed();
         }
+        $model = (string) env('OPENAI_MODEL', 'gpt-4o-mini');
 
         $prompt = "You are creating an FAQ knowledge base for a hotel chatbot. " .
             "Read the source material below and produce up to {$maxItems} concise, factual " .
@@ -368,7 +379,7 @@ class KnowledgeService
             $response = \Illuminate\Support\Facades\Http::withToken($apiKey)
                 ->timeout(60)
                 ->post('https://api.openai.com/v1/chat/completions', [
-                    'model' => env('OPENAI_MODEL', 'gpt-4o-mini'),
+                    'model' => $model,
                     'messages' => [
                         ['role' => 'system', 'content' => 'You output only valid JSON matching the requested schema.'],
                         ['role' => 'user', 'content' => $prompt],
@@ -402,19 +413,34 @@ class KnowledgeService
                     ],
                     'temperature' => 0.3,
                 ]);
-
-            if (!$response->successful()) {
-                Log::warning('FAQ extraction OpenAI call failed', ['status' => $response->status(), 'body' => $response->body()]);
-                return [];
-            }
-
-            $content = $response->json('choices.0.message.content');
-            $parsed = json_decode($content, true);
-            return is_array($parsed['items'] ?? null) ? $parsed['items'] : [];
         } catch (\Throwable $e) {
             Log::error('FAQ extraction crashed: ' . $e->getMessage());
-            return [];
+            throw AiHelperRefused::failed();
         }
+
+        if (!$response->successful()) {
+            Log::warning('FAQ extraction OpenAI call failed', ['status' => $response->status(), 'body' => $response->body()]);
+            throw AiHelperRefused::failed();
+        }
+
+        if ($orgId) {
+            app(AiUsageService::class)->recordUsage(
+                orgId: $orgId,
+                model: $model,
+                inputTokens: (int) $response->json('usage.prompt_tokens', 0),
+                outputTokens: (int) $response->json('usage.completion_tokens', 0),
+                feature: 'knowledge_faqs',
+            );
+        }
+
+        $parsed = json_decode((string) $response->json('choices.0.message.content'), true);
+        if (!is_array($parsed) || !array_key_exists('items', $parsed) || !is_array($parsed['items'])) {
+            Log::warning('FAQ extraction answered no items list', ['org_id' => $orgId]);
+            throw AiHelperRefused::failed();
+        }
+
+        return array_values(array_filter($parsed['items'], fn ($item) => is_array($item)
+            && trim((string) ($item['question'] ?? '')) !== '' && trim((string) ($item['answer'] ?? '')) !== ''));
     }
 
     private function chunkText(string $text, int $chunkSize = 1000): array

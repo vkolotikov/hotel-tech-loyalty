@@ -22,8 +22,10 @@ class TodayTest extends TestCase
     public function test_chats_that_wait_for_a_person_come_first_with_the_visitors_last_words(): void
     {
         $waiting = $this->chat(['status' => 'waiting', 'visitor_name' => 'Maria'], [['visitor', 'Hello', 30], ['ai', 'Hi! How can I help?', 29], ['visitor', 'Can I move my appointment to Friday?', 5]]);
-        $this->chat(['status' => 'active', 'assigned_to' => $this->manager->id]);
+        $this->chat(['status' => 'active', 'assigned_to' => $this->manager->id], [['visitor', 'Is the car park free?', 10]]);
         $this->chat(['status' => 'resolved', 'last_message_at' => now()->subDays(2), 'updated_at' => now()->subDays(2)]);
+        // A widget opened and never written in is no chat, here as in the inbox's list and stats.
+        $this->chat(['status' => 'active'], [['ai', 'Welcome!', 3]]);
 
         $chats = $this->asStaffMember()->getJson($this->crmApi('today'))->assertOk()->json('chats');
 

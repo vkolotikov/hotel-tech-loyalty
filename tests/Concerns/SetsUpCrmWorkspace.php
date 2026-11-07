@@ -51,6 +51,12 @@ trait SetsUpCrmWorkspace
         return rtrim((string) config('app.url'), '/') . '/api/v1/admin/crm/' . ltrim($path, '/');
     }
 
+    /** A full-admin endpoint the workspace calls (`/api/v1/admin/<path>`), on the admin host. */
+    protected function adminApi(string $path): string
+    {
+        return rtrim((string) config('app.url'), '/') . '/api/v1/admin/' . ltrim($path, '/');
+    }
+
     protected function asManager(): static
     {
         return $this->actingAs($this->manager, 'sanctum');
@@ -213,9 +219,13 @@ trait SetsUpCrmWorkspace
                 $t->unsignedBigInteger('user_id');
                 $t->string('rating', 8);
                 $t->text('comment')->nullable();
+                $t->text('suggested_answer')->nullable();
                 $t->boolean('applied_to_training')->default(false);
                 $t->timestamps();
             });
+        }
+        if (!Schema::hasColumn('chat_message_feedback', 'suggested_answer')) {
+            Schema::table('chat_message_feedback', fn (Blueprint $t) => $t->text('suggested_answer')->nullable());
         }
         if (!Schema::hasTable('chat_widget_configs')) {
             Schema::create('chat_widget_configs', function (Blueprint $t) {
@@ -250,6 +260,38 @@ trait SetsUpCrmWorkspace
                 $t->timestamps();
             });
         }
+        if (!Schema::hasTable('chatbot_model_configs')) {
+            Schema::create('chatbot_model_configs', function (Blueprint $t) {
+                $t->bigIncrements('id');
+                $t->unsignedBigInteger('organization_id');
+                $t->unsignedBigInteger('brand_id')->nullable();
+                $t->string('provider', 32)->nullable();
+                $t->string('model_name', 64)->nullable();
+                $t->decimal('temperature', 3, 2)->nullable();
+                $t->integer('max_tokens')->nullable();
+                $t->decimal('top_p', 3, 2)->nullable();
+                $t->decimal('frequency_penalty', 3, 2)->nullable();
+                $t->decimal('presence_penalty', 3, 2)->nullable();
+                $t->text('stop_sequences')->nullable();
+                $t->string('reasoning_effort', 16)->nullable();
+                $t->string('verbosity', 16)->nullable();
+                $t->boolean('is_active')->default(true);
+                $t->timestamps();
+            });
+        }
+        if (!Schema::hasTable('knowledge_categories')) {
+            Schema::create('knowledge_categories', function (Blueprint $t) {
+                $t->bigIncrements('id');
+                $t->unsignedBigInteger('organization_id');
+                $t->unsignedBigInteger('brand_id')->nullable();
+                $t->string('name');
+                $t->text('description')->nullable();
+                $t->integer('priority')->default(0);
+                $t->integer('sort_order')->default(0);
+                $t->boolean('is_active')->default(true);
+                $t->timestamps();
+            });
+        }
         if (!Schema::hasTable('knowledge_items')) {
             Schema::create('knowledge_items', function (Blueprint $t) {
                 $t->bigIncrements('id');
@@ -272,6 +314,9 @@ trait SetsUpCrmWorkspace
                 $t->unsignedBigInteger('brand_id')->nullable();
                 $t->string('file_name')->nullable();
                 $t->string('file_path')->nullable();
+                $t->string('mime_type', 120)->nullable();
+                $t->unsignedBigInteger('size_bytes')->nullable();
+                $t->integer('chunks_count')->default(0);
                 $t->string('processing_status', 32)->nullable();
                 $t->text('extracted_text')->nullable();
                 $t->timestamps();
@@ -339,6 +384,24 @@ trait SetsUpCrmWorkspace
                 $t->string('kind', 16)->default('open');
                 $t->integer('sort_order')->default(0);
                 $t->integer('default_win_probability')->nullable();
+                $t->timestamps();
+            });
+        }
+        if (!Schema::hasTable('audit_logs')) {
+            Schema::create('audit_logs', function (Blueprint $t) {
+                $t->bigIncrements('id');
+                $t->unsignedBigInteger('organization_id')->nullable();
+                $t->unsignedBigInteger('user_id')->nullable();
+                $t->string('causer_type')->nullable();
+                $t->unsignedBigInteger('causer_id')->nullable();
+                $t->string('action')->nullable();
+                $t->string('subject_type')->nullable();
+                $t->unsignedBigInteger('subject_id')->nullable();
+                $t->text('description')->nullable();
+                $t->text('old_values')->nullable();
+                $t->text('new_values')->nullable();
+                $t->string('ip_address')->nullable();
+                $t->string('user_agent')->nullable();
                 $t->timestamps();
             });
         }

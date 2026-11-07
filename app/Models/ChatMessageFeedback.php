@@ -17,6 +17,8 @@ class ChatMessageFeedback extends Model
         'user_id',
         'rating',
         'comment',
+        // A staff member's corrected answer, kept for a manager to check (2026-11-08); only a manager's teaches.
+        'suggested_answer',
         'applied_to_training',
     ];
 

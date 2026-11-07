@@ -100,7 +100,8 @@ bulk tagging (no endpoint), the full admin's field-layout manager and custom-fie
 - **Teach the assistant**: the answers a person rated wrong in the inbox and nobody corrected yet, with the visitor's
   question; a manager writes the right answer, saved through the inbox's own feedback endpoint
   (`chat-inbox/messages/{id}/feedback`, `apply_to_training`), the one writer of the "AI Corrections" knowledge. An answer
-  leaves the list once any person's feedback on it was applied to training.
+  leaves the list once any person's feedback on it was applied to training. A staff member's correction is not taught:
+  the server keeps it as a suggestion (`suggested_answer`, `suggested_by`) for the manager's form (2026-11-08).
 - **The AI allowance in view**: from 80 % of the month's allowance the frame says so; at 100 % it says the assistant
   hands every chat to the team and drafts stop.
 
@@ -116,33 +117,80 @@ bulk tagging (no endpoint), the full admin's field-layout manager and custom-fie
 - **Frontend**: only `a-*` and `crm-*` classes, only the listed areas, nothing from another workspace
   (`crm/tokens.test.ts`); every word in five languages, one file per area (`crm/i18n/crmLocales.test.ts`).
 
-## Server issues found while building it (open, for the owner)
+## Server issues found while building it
 
-Fixed in this release: the full admin's Chat inbox "Transfer to agent" sent `agent_id` where the server takes
-`user_id`, so every transfer answered 422 (`ChatInbox.tsx`). Found, not changed (each is the full admin's behaviour
-too):
+Fixed in the first release: the full admin's Chat inbox "Transfer to agent" sent `agent_id` where the server takes
+`user_id`, so every transfer answered 422 (`ChatInbox.tsx`).
 
-- **Teaching the assistant is open to every staff member on the server.** `chat-inbox/messages/{id}/feedback` with
-  `apply_to_training` writes knowledge under `admin/chat-inbox` (staff may write), while `admin/knowledge` is a
-  manager's. The workspace offers "Answers to fix" to managers; decide whether the server should refuse staff too.
-- `widget-config/regenerate-key` changes only `api_key`, which nothing reads; the embed snippet's `widget_key` never
-  changes, so a public widget key cannot be rotated. The workspace's confirm says the website code is not affected.
-- `chatbot-config/test-chat`, `suggest-keywords` and `knowledge/extract-faqs` call the AI without the month's allowance
-  check, and the last two record no spend; `test-chat` answers 500 with the provider's text on any failure.
-- `TaskController` stores a `due_at` sent with an offset as its digits in UTC (`+02:00` comes back two hours late);
-  the workspace sends UTC instants, the full admin sends offset-less times read as UTC.
-- `InquiryController::index` allows sorts on columns `inquiries` lacks (`value_estimated`, `guest_name`,
-  `win_probability`) and not `total_value`; bulk `set_status` / `mark_won` / `mark_lost` leave `pipeline_stage_id`;
-  `POST inquiries` sets no pipeline; `DealController::kpis` `total` counts every inquiry without a fulfilment stage.
-- Guest tags: `unique:guest_tags,name` and its index ignore the organisation, and `tag_ids.*` is not limited to it.
-- `GuestController::update` drops empty values (a contact's field cannot be emptied); `guests/{id}/delete-impact` says
-  reservations are detached while the database deletes them; chatbot analytics' hours and days are UTC.
-- `.doc` uploads pass validation but have no text extractor.
+Fixed on 2026-11-08 (each in the shared controller or service, so the full admin has the fix too; tests in
+`tests/Feature/CrmWorkspace/`):
+
+- **Teaching the assistant is a manager's.** `chat-inbox/messages/{id}/feedback`: a manager's (or platform admin's,
+  `CrmAccess::isManager`) `apply_to_training` + `corrected_answer` teaches the "AI Corrections" knowledge; a staff
+  member's is kept on their feedback row (`chat_message_feedback.suggested_answer`, migration
+  `2026_11_08_100000`) and answered `applied_to_training: false, suggested: true`; a resend without `comment` keeps the
+  comment. `bot-gaps` items carry `rated_by_id`, `suggested_answer`, `suggested_by` (`TeachTheAssistantTest`,
+  `BotGapsTest`).
+- **The public widget key can be rotated**: `POST widget-config/rotate-widget-key` (manager, `admin/widget-config`)
+  gives the config a new uuid `widget_key`, forgets the old key's cached config and answers the config as
+  `GET widget-config` does; `regenerate-key` (the private `api_key`) is unchanged (`WidgetKeyRotationTest`).
+- **The AI helpers keep the allowance**: `chatbot-config/test-chat`, `suggest-keywords` and `knowledge/extract-faqs`
+  answer 403 `ai_budget_used_up` before the provider is asked, record their spend (`chatbot_test`,
+  `knowledge_keywords`, `knowledge_faqs`) and say a provider failure as 502 `ai_failed`, its text in the log only
+  (`App\Exceptions\AiHelperRefused`; `ChatbotHelpersTest`).
+- **Knowledge documents take no `.doc`** (no extractor): PDF, DOCX and TXT remain (`ChatbotHelpersTest`).
+- **Task times are instants**: `TaskController` converts a `due_at` with an offset to UTC (one without keeps its
+  digits); a lead's `next_task_due` is the venue's day of its next task, and `tasks?status=due_today` the venue's day.
+  The full admin's task drawer (`TaskDrawer.tsx`) now sends the person's local date and time as an ISO instant
+  (`TaskDueInstantTest`).
+- **Leads**: `inquiries` sorts only by real columns (`total_value` and `ai_win_probability` added, the three missing
+  ones gone); bulk `set_status` / `mark_won` / `mark_lost` move `pipeline_stage_id` too (one rule,
+  `InquiryController::stageForStatus`, which `update`, `markWon` and `markLost` use); `POST inquiries` puts a new lead
+  in the default pipeline at its status's stage, else the first open stage; the `task_due` filters, `kpis` and `today`
+  use the venue's day (`LeadsAndDealsTest`).
+- **Deals**: `deals/kpis` `total` counts deals only (`LeadsAndDealsTest`).
+- **Guest tags**: a name is unique within the organisation (validation and the index: migration `2026_11_08_100100`
+  replaces `guest_tags_name_unique` with `guest_tags_org_name_unique` on PostgreSQL), and `tag_ids.*` must be this
+  organisation's (`ContactsTest`).
+- **Contacts**: `PUT guests/{id}` clears a field sent as JSON `null` (columns that may be empty only; not `member_id`
+  or `custom_data`), an empty string is still ignored; `guests` sorts by `full_name`, `last_activity_at`,
+  `total_revenue` (and reads `stays_count` / `last_check_in` as `total_stays` / `last_stay_date`); `delete-impact`
+  says the truth from the foreign keys — leads, reservations and timeline go with the contact (and the leads' tasks),
+  the leads' chats stay unlinked, the member stays, a venue booking blocks the delete (`blocked`) (`ContactsTest`).
+- **Chatbot analytics** count days, hours and weekdays on the venue's clock (`AT TIME ZONE`, `VenueClock::zone`);
+  PostgreSQL SQL, so `ChatbotAnalyticsTest` runs there only (skipped on SQLite).
+- **The inbox's figures match its list**: `chat-inbox/stats` counts only the chats `chat-inbox` lists by default
+  (`ChatConversation::shownInInbox`, which CRM Today's chat figures use too); `resolved_today` is the venue's day
+  (`ChatInboxTest`, `TodayTest`).
+- **Transcripts** sign each team message with its own sender (`sender_user_id`) (`ChatInboxTest`).
+- **Codes**: `chat-inbox/transcribe` 503 is `transcription_unavailable`; a failed brief carries `code: 'ai_failed'`
+  beside its `error` sentence; guest-merge refusals carry `error` (`not_found`, `same_guest`,
+  `different_organizations`, `different_members`, `merge_failed`) (`ChatInboxTest`, `ContactsTest`).
+- The full admin's Corporate page read its paging from `data.meta`; it now reads the paginator's own `current_page`,
+  `last_page`, `total` (`Corporate.tsx`).
+
+Still open (found, not changed):
+
+- The full admin's chatbot test page and Chat inbox dictation toast the answer's `error`, which is now a code
+  (`ai_failed`, `transcription_unavailable`); their sentence is in `message`. A full-admin change for the owner.
+- After a rotation the website's own snippet must be replaced (that is the point). Landing pages on our domain read
+  the key per request (browsers may hold a page for `landing.cache_ttl`). Production's cache is each container's own
+  files, so another container may answer the old key's config read for up to 60 s; every chat request looks the key
+  up in the database and is refused at once.
+- Tasks the full admin saved before 2026-11-08 hold local digits stored as UTC and keep showing shifted by the
+  offset; nothing in a row says which ones they are.
+- Bulk `mark_won` does not create the draft reservation `markWon` creates for a property-linked lead.
+- `DealController::index` `focus=overdue` still compares `next_task_due` with the server's UTC day.
+- Validation names ids without the organisation in several full-admin writes: `POST inquiries`
+  (`guest_id`, `corporate_account_id`, `property_id`), `POST tasks` (`inquiry_id`, `guest_id`,
+  `corporate_account_id`), `PUT guests/{id}` (`member_id`). A row of another organisation can be named; the record
+  written is still this organisation's.
 
 ## Known limits
 
 - The knowledge search the draft uses (`KnowledgeService::searchRelevantItems`) is PostgreSQL SQL (`ILIKE`), as the
   widget's is; the SQLite test stands in for it, `scripts/test-pg.sh` runs the real one.
-- Chatbot analytics (`ChatbotAnalyticsController`) is PostgreSQL SQL too (production's database).
+- Chatbot analytics (`ChatbotAnalyticsController`) is PostgreSQL SQL too (production's database); its test
+  (`ChatbotAnalyticsTest`) runs under `scripts/test-pg.sh` only.
 - Multi-brand organisations: the CRM works on all brands at once (`brand_id=all`); the chatbot's behaviour and the
   widget's look are the default brand's, as in the full admin without a brand chosen.

@@ -51,6 +51,7 @@ class GuestMergeController extends Controller
         $loser  = Guest::find($data['loser_id']);
         if (!$winner || !$loser) {
             return response()->json([
+                'error'   => 'not_found',
                 'message' => 'One or both guests not found in your organization.',
             ], 404);
         }
@@ -63,15 +64,22 @@ class GuestMergeController extends Controller
                 $data['reason'] ?? null,
             );
         } catch (\InvalidArgumentException $e) {
-            return response()->json(['message' => $e->getMessage()], 422);
+            // Refusals carry a code beside the sentence (2026-11-08): same_guest, different_organizations,
+            // different_members.
+            return response()->json([
+                'error'   => $e instanceof \App\Exceptions\GuestMergeRefused ? $e->errorCode : 'merge_refused',
+                'message' => $e->getMessage(),
+            ], 422);
         } catch (\Throwable $e) {
             \Log::error('Guest merge failed', [
                 'winner_id' => $data['winner_id'],
                 'loser_id'  => $data['loser_id'],
                 'error'     => $e->getMessage(),
             ]);
+            // The merge runs in one transaction, so nothing changed; the database's own words stay in the log.
             return response()->json([
-                'message' => 'Merge failed: ' . $e->getMessage(),
+                'error'   => 'merge_failed',
+                'message' => 'The merge failed and nothing was changed. Please try again.',
             ], 500);
         }
 

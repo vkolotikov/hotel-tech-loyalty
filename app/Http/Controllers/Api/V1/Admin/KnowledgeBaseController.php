@@ -159,7 +159,9 @@ class KnowledgeBaseController extends Controller
     public function uploadDocument(Request $request): JsonResponse
     {
         $request->validate([
-            'file' => 'required|file|max:10240|mimes:pdf,doc,docx,txt',
+            // No .doc (2026-11-08): there is no text extractor for it (KnowledgeService::processDocument reads PDF,
+            // DOCX and plain text), so such a document could only ever fail.
+            'file' => 'required|file|max:10240|mimes:pdf,docx,txt',
         ]);
 
         $file = $request->file('file');
@@ -206,15 +208,18 @@ class KnowledgeBaseController extends Controller
             'max_items'   => 'nullable|integer|min:1|max:30',
         ]);
 
+        // Refused with ai_budget_used_up (403) once the month's AI allowance is spent, before the provider is asked;
+        // a provider failure is ai_failed (502). Both are AiHelperRefused, rendered by the handler.
         $items = $this->knowledgeService->generateFaqsFromText(
             $validated['source_text'],
-            $validated['max_items'] ?? 12
+            $validated['max_items'] ?? 12,
+            (int) $request->user()->organization_id,
         );
 
         if (empty($items)) {
             return response()->json([
                 'items'   => [],
-                'message' => 'AI returned no items. Check the OpenAI key or try a longer source text.',
+                'message' => 'The AI found no questions to answer in this text. Try a longer or more detailed text.',
             ], 200);
         }
 

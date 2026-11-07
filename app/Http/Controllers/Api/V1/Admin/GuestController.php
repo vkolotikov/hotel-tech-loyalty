@@ -15,6 +15,7 @@ use App\Services\GuestMemberLinkService;
 use App\Services\XlsxWriter;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -34,8 +35,13 @@ class GuestController extends Controller
         // the UI never exposes (passport_no, id_number, custom_data) and use
         // ordering side-channels to oracle-leak schema or row data. See
         // AUDIT-2026-06-13.md high security finding.
-        $allowedSorts = ['created_at','updated_at','first_name','last_name','email','phone','country','lifecycle_status','importance','stays_count','last_check_in','loyalty_tier','owner_name'];
-        $sort = in_array($request->get('sort'), $allowedSorts, true) ? $request->get('sort') : 'created_at';
+        // Real `guests` columns only (2026-11-08): `stays_count` and `last_check_in` are read as the columns that hold
+        // them (`total_stays`, `last_stay_date`) instead of failing; `full_name`, `last_activity_at` and
+        // `total_revenue` (the CRM's contact list) are allowed.
+        $aliases = ['stays_count' => 'total_stays', 'last_check_in' => 'last_stay_date'];
+        $allowedSorts = ['created_at','updated_at','first_name','last_name','full_name','email','phone','country','lifecycle_status','importance','total_stays','last_stay_date','last_activity_at','total_revenue','loyalty_tier','owner_name'];
+        $asked = $aliases[$request->get('sort')] ?? $request->get('sort');
+        $sort = in_array($asked, $allowedSorts, true) ? $asked : 'created_at';
         $dir  = $request->get('dir') === 'asc' ? 'asc' : 'desc';
         $query->orderBy($sort, $dir);
 
@@ -283,6 +289,15 @@ class GuestController extends Controller
         $v = array_filter($v, fn($val) => $val !== null);
         if ($hasCustom) $v['custom_data'] = $custom;
 
+        // A field sent as JSON `null` clears it (2026-11-08) — only a column that may be empty. An empty string is
+        // still ignored (the full admin's inline editors send '' and rely on that); the framework turns '' into null,
+        // so the request body as sent tells the two apart.
+        foreach ($this->fieldsSentAsNull($request, array_keys($request->all())) as $field) {
+            $v[$field] = null;
+            if ($field === 'email') $v['email_key'] = null;
+            if ($field === 'phone') $v['phone_key'] = null;
+        }
+
         try {
             $guest->update($v);
         } catch (\Throwable $e) {
@@ -296,6 +311,38 @@ class GuestController extends Controller
         }
         return response()->json($guest->fresh());
     }
+
+    /**
+     * The fields of this update a person cleared: present in the JSON body as `null` (not `''`, not left out), and
+     * empty-able. Never the NOT NULL columns, nor `member_id` (a member link is changed through the link service) or
+     * `custom_data` (its own validator decides).
+     *
+     * @param list<string> $present
+     * @return list<string>
+     */
+    private function fieldsSentAsNull(Request $request, array $present): array
+    {
+        if (!$request->isJson()) {
+            return [];
+        }
+        $sent = json_decode((string) $request->getContent(), true);
+        if (!is_array($sent)) {
+            return [];
+        }
+
+        return array_values(array_filter($present, fn ($field) => is_string($field)
+            && in_array($field, self::CLEARABLE_FIELDS, true)
+            && array_key_exists($field, $sent)
+            && $sent[$field] === null));
+    }
+
+    /** The update's fields whose `guests` column may be empty (guest_type, vip_level, the consents, lifecycle_status, importance and full_name may not). */
+    private const CLEARABLE_FIELDS = [
+        'salutation', 'first_name', 'last_name', 'email', 'phone', 'mobile', 'company', 'position_title',
+        'nationality', 'country', 'city', 'address', 'postal_code', 'date_of_birth', 'passport_no', 'id_number',
+        'loyalty_tier', 'loyalty_id', 'preferred_language', 'preferred_room_type', 'preferred_floor',
+        'dietary_preferences', 'special_needs', 'lead_source', 'owner_name', 'notes',
+    ];
 
     public function destroy(int $id): JsonResponse
     {
@@ -318,9 +365,13 @@ class GuestController extends Controller
 
     /**
      * GET /v1/admin/guests/{id}/delete-impact — blast-radius preview
-     * for the confirm-delete modal. Counts linked CRM rows + flags the
-     * loyalty-member link, which the destroy() FK detaches but doesn't
-     * cascade-remove.
+     * for the confirm-delete modal. What the database really does when the contact goes (2026-11-08, read from the
+     * foreign keys): its leads, reservations and timeline entries are DELETED with it (cascade on `guest_id`), and with
+     * the leads their tasks, notes and attachments (cascade on `inquiry_id`); chats linked to those leads stay in the
+     * inbox, unlinked (`chat_conversations.inquiry_id` set null), as do bookings and reviews that named the contact;
+     * the loyalty member it is linked to is not touched; a venue booking that names the contact blocks the delete
+     * (`venue_bookings.guest_id` has no delete rule). The counts keep their keys; `removes`, `kept` and `blocked` say
+     * the rest.
      */
     public function deleteImpact(int $id): JsonResponse
     {
@@ -335,24 +386,44 @@ class GuestController extends Controller
         $inquiries    = $guest->inquiries()->count();
         $reservations = $guest->reservations()->count();
         $activities   = $guest->activities()->count();
+        $leadIds      = $guest->inquiries()->select('id');
+        $leadTasks    = \Illuminate\Support\Facades\Schema::hasTable('tasks')
+            ? \App\Models\Task::whereIn('inquiry_id', $leadIds)->count() : 0;
+        $leadChats    = \App\Models\ChatConversation::whereIn('inquiry_id', $guest->inquiries()->select('id'))->count();
+        $venueBookings = \Illuminate\Support\Facades\Schema::hasTable('venue_bookings')
+            ? \Illuminate\Support\Facades\DB::table('venue_bookings')->where('guest_id', $guest->id)->count() : 0;
 
         $warnings = [];
-        if ($guest->member_id) {
-            $warnings[] = "Linked to loyalty member #{$guest->member_id} — delete will detach but not remove the member.";
+        if ($venueBookings > 0) {
+            $warnings[] = "This customer is named on {$venueBookings} venue booking(s) — the delete is refused until they name someone else or are removed.";
         }
-        if ($reservations > 0) {
-            $hasConfirmed = $guest->reservations()->where('status', 'Confirmed')->exists();
-            $warnings[] = $hasConfirmed
-                ? 'This customer has confirmed reservation(s) — deleting will detach them from this profile.'
-                : 'This customer has linked reservation(s) — deletion will detach them.';
+        if ($inquiries + $reservations + $activities > 0) {
+            $warnings[] = "Deleting also deletes this customer's {$inquiries} lead(s) (with their {$leadTasks} task(s), notes and attachments), "
+                . "{$reservations} reservation(s) and {$activities} timeline entr" . ($activities === 1 ? 'y' : 'ies') . '. This cannot be undone.';
+        }
+        if ($reservations > 0 && $guest->reservations()->where('status', 'Confirmed')->exists()) {
+            $warnings[] = 'This customer has confirmed reservation(s) — deleting removes them too.';
+        }
+        if ($leadChats > 0) {
+            $warnings[] = "{$leadChats} chat(s) stay in the inbox, no longer linked to a lead.";
+        }
+        if ($guest->member_id) {
+            $warnings[] = "Linked to loyalty member #{$guest->member_id} — the member is not removed; only this customer record goes.";
         }
 
         return response()->json([
-            'inquiries'    => $inquiries,
-            'reservations' => $reservations,
-            'activities'   => $activities,
-            'member_id'    => $guest->member_id,
-            'warnings'     => $warnings,
+            'inquiries'      => $inquiries,
+            'reservations'   => $reservations,
+            'activities'     => $activities,
+            'lead_tasks'     => $leadTasks,
+            'chats'          => $leadChats,
+            'venue_bookings' => $venueBookings,
+            'member_id'      => $guest->member_id,
+            // What the delete takes with it, what stays (unlinked), and whether the database refuses it.
+            'removes'        => ['inquiries', 'reservations', 'activities', 'lead_tasks'],
+            'kept'           => ['chats', 'member'],
+            'blocked'        => $venueBookings > 0,
+            'warnings'       => $warnings,
         ]);
     }
 
@@ -385,7 +456,13 @@ class GuestController extends Controller
 
     public function storeTag(Request $request): JsonResponse
     {
-        $v = $request->validate(['name' => 'required|string|max:80|unique:guest_tags,name', 'color' => 'nullable|string|max:7']);
+        // A tag's name is unique within the organisation (2026-11-08), as the (organization_id, name) index says;
+        // another organisation's tag of the same name is no clash.
+        $orgId = (int) $request->user()->organization_id;
+        $v = $request->validate([
+            'name'  => ['required', 'string', 'max:80', Rule::unique('guest_tags', 'name')->where('organization_id', $orgId)],
+            'color' => 'nullable|string|max:7',
+        ]);
         return response()->json(GuestTag::create($v), 201);
     }
 
@@ -397,7 +474,11 @@ class GuestController extends Controller
 
     public function syncTags(Request $request, Guest $guest): JsonResponse
     {
-        $v = $request->validate(['tag_ids' => 'array', 'tag_ids.*' => 'integer|exists:guest_tags,id']);
+        // Only this organisation's tags (2026-11-08): `exists:guest_tags,id` took any organisation's.
+        $v = $request->validate([
+            'tag_ids'   => 'array',
+            'tag_ids.*' => ['integer', Rule::exists('guest_tags', 'id')->where('organization_id', (int) $request->user()->organization_id)],
+        ]);
         $guest->tags()->sync($v['tag_ids'] ?? []);
         return response()->json($guest->tags);
     }
