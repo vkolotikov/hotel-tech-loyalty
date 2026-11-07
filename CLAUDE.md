@@ -333,6 +333,12 @@ or add the next dated one, at the end of a session.
   (`CrmToday`'s docblock); the workspace never computes a figure of its own.
 - Decisions (filters, which actions a status allows, payloads, validation) live in pure functions with tests, because
   the frontend tests render to a string.
+- Round 2 (owner 2026-11-07, "modernise … structured sections … dark theme as a default"): Dark is where a device that
+  never chose starts (`crm/lib/look.ts` passes `start` to the shared look engine; the other workspaces still start
+  Light); the palette is `CRM_SURFACES`, pinned by `crm/theme/crmContrast.test.ts` (a new colour gets its pair there).
+  The side panel is in groups (`crm/shell/nav.ts`: Conversations, Sales, Reports, Set up; the shared frame's
+  `WorkspaceNavItem.section`). A page's main sections are `crm/ui/SectionNav` (kept in `?tab=`), a list's controls a
+  `Toolbar` with `FilterChip`s, content in `Card`s with a description; `Tabs` pills only filter inside a list.
 
 ## Appointments-workspace code rules
 
