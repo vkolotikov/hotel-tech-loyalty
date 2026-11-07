@@ -1,0 +1,160 @@
+{
+  "common": {
+    "cancel": "Annuler",
+    "close": "Fermer",
+    "loading": "Chargement…",
+    "next": "Suivant",
+    "no_name": "Sans nom",
+    "page_failed": "Cette page n'a pas pu s'afficher. Ce que vous avez enregistré est en sécurité.",
+    "page_of": "Page {{page}} sur {{last}}",
+    "pages": "Pages",
+    "previous": "Précédent",
+    "reload": "Recharger la page",
+    "retry": "Réessayer",
+    "total": "{{count}} au total",
+    "visitor": "Visiteur",
+    "save": "Enregistrer",
+    "saved": "Enregistré",
+    "delete": "Supprimer",
+    "edit": "Modifier",
+    "add": "Ajouter",
+    "search": "Rechercher",
+    "all": "Tous",
+    "none": "Aucun",
+    "yes": "Oui",
+    "no": "Non",
+    "copy": "Copier",
+    "copied": "Copié",
+    "back": "Retour",
+    "more": "Plus",
+    "unknown": "Inconnu",
+    "me": "Moi"
+  },
+  "errors": {
+    "feature_locked": "Votre formule ne comprend pas cela. Une formule supérieure, si ; voir Formule et produits.",
+    "unknown": "Une erreur s'est produite. Veuillez réessayer.",
+    "network": "Pas de connexion. Vérifiez Internet et réessayez.",
+    "not_found": "Ceci n'existe plus. Il a peut-être été supprimé.",
+    "not_allowed": "Votre compte ne peut pas faire cela. Demandez à un propriétaire ou à un responsable.",
+    "manager_only": "Seul un propriétaire ou un responsable peut faire cela.",
+    "invalid": "Certains champs sont à revoir.",
+    "too_many": "Trop de tentatives en peu de temps. Attendez une minute et réessayez.",
+    "ai_budget_used_up": "Le crédit IA de ce mois est épuisé. Les brouillons reviennent le mois prochain, ou avec une formule supérieure.",
+    "model_not_allowed": "Votre formule ne comprend pas le modèle d'IA qui rédige les réponses.",
+    "nothing_to_answer": "Le visiteur n'a encore rien écrit à quoi répondre.",
+    "ai_failed": "L'IA n'a pas pu aider pour l'instant. Réessayez dans un moment.",
+    "workspace_disabled": "HexaTech CRM a été désactivé pour votre organisation.",
+    "subscription_required": "Votre formule n'est pas active. Relancez-la dans Formule et produits.",
+    "not_in_plan": "Cela ne fait pas partie de votre formule.",
+    "plan_limit": "Votre formule a atteint sa limite. Une formule supérieure permet davantage."
+  },
+  "find": {
+    "actions": "Actions",
+    "contacts": "Contacts",
+    "go_to": "Aller à",
+    "leads": "Prospects",
+    "new_lead": "Ajouter un prospect",
+    "searching": "Recherche…",
+    "theme_dark": "Passer en sombre",
+    "theme_light": "Passer en clair"
+  },
+  "nav": {
+    "today": "Aujourd'hui",
+    "assistant": "Assistant IA",
+    "contacts": "Contacts",
+    "inbox": "Messagerie",
+    "insights": "Analyses",
+    "leads": "Prospects",
+    "pipeline": "Pipeline",
+    "settings": "Paramètres",
+    "tasks": "Tâches",
+    "visitors": "Visiteurs",
+    "widget": "Widget de chat"
+  },
+  "shell": {
+    "ai_over": "Le crédit IA de ce mois est épuisé : l'assistant transmet chaque chat à votre équipe, et les brouillons s'arrêtent jusqu'au mois prochain.",
+    "ai_warn": "{{percent}} % du crédit IA de ce mois est utilisé.",
+    "find": "Trouver un contact, un prospect ou une action",
+    "lapsed": "L'abonnement de votre organisation n'est pas actif, HexaTech CRM ne peut donc pas s'ouvrir. Vos chats, prospects et contacts restent inchangés.",
+    "lapsed_modules": "Votre formule HexaTech n'est pas active. Relancez-la dans Formule et produits ; vos chats, prospects et contacts restent inchangés.",
+    "not_in_plan": "HexaTech CRM ne fait pas partie de votre formule. Ajoutez-le dans Formule et produits.",
+    "open_full_admin": "Ouvrir l'administration complète",
+    "switched_off": "HexaTech CRM a été désactivé pour votre organisation. Vos chats, prospects et contacts restent inchangés."
+  },
+  "start": {
+    "done": "Fait",
+    "line": "Six étapes vers un chat de site qui répond et un pipeline qui relance.",
+    "progress": "{{done}} sur {{total}} faites",
+    "title": "Bien démarrer",
+    "to_do": "À faire",
+    "widget": {
+      "title": "Mettre le chat sur votre site",
+      "line": "Copiez une ligne dans votre site ; les visiteurs peuvent vous écrire depuis chaque page."
+    },
+    "assistant": {
+      "title": "Donner sa voix à l'assistant",
+      "line": "Son nom, son ton et ce qu'il peut promettre, pour qu'il parle comme votre équipe."
+    },
+    "knowledge": {
+      "title": "Lui apprendre vos réponses",
+      "line": "Au moins cinq questions et réponses, ou un document avec vos prix et horaires."
+    },
+    "reply": {
+      "title": "Répondre à votre premier chat",
+      "line": "Reprenez un chat de l'assistant dans la messagerie et répondez en personne."
+    },
+    "pipeline": {
+      "title": "Configurer votre pipeline",
+      "line": "Les étapes d'un prospect, du premier contact jusqu'à gagné."
+    },
+    "team": {
+      "title": "Inviter un collègue",
+      "line": "Partagez la messagerie : chacun voit qui répond à quel chat."
+    }
+  },
+  "status": {
+    "waiting": "En attente",
+    "active": "Actif",
+    "resolved": "Résolu",
+    "archived": "Archivé",
+    "open": "Ouvert",
+    "won": "Gagné",
+    "lost": "Perdu"
+  },
+  "today": {
+    "add_lead": "Ajouter un prospect",
+    "all_leads": "Tous les prospects",
+    "all_tasks": "Toutes les tâches",
+    "chats_title": "Chats en attente de réponse",
+    "due_today": "Aujourd'hui",
+    "follow_ups": "Relances dues",
+    "follow_ups_title": "Relances",
+    "last_24h": "Dans les dernières 24 heures",
+    "line": "Ce qui a besoin de vous maintenant, du chat du site et de votre pipeline.",
+    "new_leads": "Nouveaux prospects",
+    "newest": "Derniers prospects",
+    "no_chats": "Personne n'attend",
+    "no_chats_line": "L'assistant répond aux visiteurs ; un chat arrive ici quand il le transmet à votre équipe.",
+    "no_follow_ups": "Aucune relance due",
+    "no_follow_ups_line": "Fixez une prochaine étape sur un prospect et elle apparaît ici le jour venu.",
+    "no_tasks": "Rien à faire aujourd'hui",
+    "nobody": "Personne assigné",
+    "open_chats": "Chats ouverts",
+    "open_inbox": "Ouvrir la messagerie",
+    "open_leads": "{{count}} prospects ouverts",
+    "overdue": "{{count}} en retard",
+    "overdue_since": "Depuis {{day}}",
+    "pipeline": "Pipeline ouvert",
+    "setup_line": "{{done}} étapes sur {{total}} faites. Mettez le chat sur votre site, formez l'assistant, et c'est prêt.",
+    "setup_title": "Terminez la configuration de HexaTech CRM",
+    "tasks_title": "Vos tâches",
+    "title": "Aujourd'hui",
+    "unassigned": "{{count}} ouverts sans personne assignée",
+    "waiting": "En attente de réponse",
+    "week_ai": "Clôturés par l'IA",
+    "week_chats": "Conversations",
+    "week_leads": "Prospects issus du chat",
+    "week_title": "Le chat du site cette semaine",
+    "your_tasks": "Vos tâches"
+  }
+}

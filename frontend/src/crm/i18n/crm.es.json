@@ -1,0 +1,160 @@
+{
+  "common": {
+    "cancel": "Cancelar",
+    "close": "Cerrar",
+    "loading": "Cargando…",
+    "next": "Siguiente",
+    "no_name": "Sin nombre",
+    "page_failed": "No se pudo mostrar esta página. Lo que guardó está a salvo.",
+    "page_of": "Página {{page}} de {{last}}",
+    "pages": "Páginas",
+    "previous": "Anterior",
+    "reload": "Recargar la página",
+    "retry": "Intentar de nuevo",
+    "total": "{{count}} en total",
+    "visitor": "Visitante",
+    "save": "Guardar",
+    "saved": "Guardado",
+    "delete": "Eliminar",
+    "edit": "Editar",
+    "add": "Añadir",
+    "search": "Buscar",
+    "all": "Todos",
+    "none": "Ninguno",
+    "yes": "Sí",
+    "no": "No",
+    "copy": "Copiar",
+    "copied": "Copiado",
+    "back": "Volver",
+    "more": "Más",
+    "unknown": "Desconocido",
+    "me": "Yo"
+  },
+  "errors": {
+    "feature_locked": "Su plan no incluye esto. Un paquete mayor sí; consulte Plan y productos.",
+    "unknown": "Algo salió mal. Inténtelo de nuevo.",
+    "network": "Sin conexión. Compruebe internet e inténtelo de nuevo.",
+    "not_found": "Esto ya no está. Puede que se haya eliminado.",
+    "not_allowed": "Su cuenta no puede hacer esto. Consulte a un propietario o a un responsable.",
+    "manager_only": "Solo un propietario o un responsable puede hacer esto.",
+    "invalid": "Algunos campos necesitan revisión.",
+    "too_many": "Demasiados intentos en poco tiempo. Espere un minuto e inténtelo de nuevo.",
+    "ai_budget_used_up": "Se agotó el saldo de IA de este mes. Los borradores vuelven el próximo mes o con un paquete mayor.",
+    "model_not_allowed": "Su plan no incluye el modelo de IA que redacta respuestas.",
+    "nothing_to_answer": "El visitante aún no ha escrito nada que responder.",
+    "ai_failed": "La IA no pudo ayudar ahora. Inténtelo de nuevo en un momento.",
+    "workspace_disabled": "HexaTech CRM se ha desactivado para su organización.",
+    "subscription_required": "Su plan no está activo. Reactívelo en Plan y productos.",
+    "not_in_plan": "Esto no forma parte de su plan.",
+    "plan_limit": "Su paquete llegó a su límite. Un paquete mayor permite más."
+  },
+  "find": {
+    "actions": "Acciones",
+    "contacts": "Contactos",
+    "go_to": "Ir a",
+    "leads": "Clientes potenciales",
+    "new_lead": "Añadir un cliente potencial",
+    "searching": "Buscando…",
+    "theme_dark": "Cambiar a oscuro",
+    "theme_light": "Cambiar a claro"
+  },
+  "nav": {
+    "today": "Hoy",
+    "assistant": "Asistente de IA",
+    "contacts": "Contactos",
+    "inbox": "Bandeja de entrada",
+    "insights": "Análisis",
+    "leads": "Clientes potenciales",
+    "pipeline": "Embudo",
+    "settings": "Ajustes",
+    "tasks": "Tareas",
+    "visitors": "Visitantes",
+    "widget": "Widget de chat"
+  },
+  "shell": {
+    "ai_over": "Se agotó el saldo de IA de este mes: el asistente pasa cada chat a su equipo y los borradores se detienen hasta el próximo mes.",
+    "ai_warn": "Se ha usado el {{percent}} % del saldo de IA de este mes.",
+    "find": "Buscar un contacto, un cliente potencial o una acción",
+    "lapsed": "La suscripción de su organización no está activa, por eso HexaTech CRM no puede abrirse. Sus chats, clientes potenciales y contactos no cambian.",
+    "lapsed_modules": "Su plan de HexaTech no está activo. Reactívelo en Plan y productos; sus chats, clientes potenciales y contactos no cambian.",
+    "not_in_plan": "HexaTech CRM no forma parte de su plan. Añádalo en Plan y productos.",
+    "open_full_admin": "Abrir la administración completa",
+    "switched_off": "HexaTech CRM se ha desactivado para su organización. Sus chats, clientes potenciales y contactos no cambian."
+  },
+  "start": {
+    "done": "Hecho",
+    "line": "Seis pasos para un chat web que responde y un embudo que hace seguimiento.",
+    "progress": "{{done}} de {{total}} hechos",
+    "title": "Primeros pasos",
+    "to_do": "Pendiente",
+    "widget": {
+      "title": "Ponga el chat en su sitio web",
+      "line": "Copie una línea en su sitio; los visitantes podrán escribirle desde cualquier página."
+    },
+    "assistant": {
+      "title": "Dé voz al asistente",
+      "line": "Su nombre, su tono y lo que puede prometer, para que hable como su equipo."
+    },
+    "knowledge": {
+      "title": "Enséñele sus respuestas",
+      "line": "Al menos cinco preguntas y respuestas, o un documento con sus precios y horarios."
+    },
+    "reply": {
+      "title": "Responda a su primer chat",
+      "line": "Tome un chat del asistente en la bandeja de entrada y responda personalmente."
+    },
+    "pipeline": {
+      "title": "Configure su embudo",
+      "line": "Las etapas por las que pasa un cliente potencial, del primer contacto a ganado."
+    },
+    "team": {
+      "title": "Invite a un colega",
+      "line": "Compartan la bandeja de entrada: todos ven quién responde cada chat."
+    }
+  },
+  "status": {
+    "waiting": "En espera",
+    "active": "Activo",
+    "resolved": "Resuelto",
+    "archived": "Archivado",
+    "open": "Abierto",
+    "won": "Ganado",
+    "lost": "Perdido"
+  },
+  "today": {
+    "add_lead": "Añadir un cliente potencial",
+    "all_leads": "Todos los clientes potenciales",
+    "all_tasks": "Todas las tareas",
+    "chats_title": "Chats esperando respuesta",
+    "due_today": "Hoy",
+    "follow_ups": "Seguimientos pendientes",
+    "follow_ups_title": "Seguimientos",
+    "last_24h": "En las últimas 24 horas",
+    "line": "Lo que le necesita ahora, del chat web y de su embudo.",
+    "new_leads": "Nuevos clientes potenciales",
+    "newest": "Los más recientes",
+    "no_chats": "Nadie está esperando",
+    "no_chats_line": "El asistente responde a los visitantes; un chat llega aquí cuando lo pasa a su equipo.",
+    "no_follow_ups": "No hay seguimientos pendientes",
+    "no_follow_ups_line": "Fije un siguiente paso en un cliente potencial y aparecerá aquí ese día.",
+    "no_tasks": "Nada pendiente hoy",
+    "nobody": "Sin asignar",
+    "open_chats": "Chats abiertos",
+    "open_inbox": "Abrir la bandeja de entrada",
+    "open_leads": "{{count}} clientes potenciales abiertos",
+    "overdue": "{{count}} vencidos",
+    "overdue_since": "Desde {{day}}",
+    "pipeline": "Embudo abierto",
+    "setup_line": "{{done}} de {{total}} pasos hechos. Ponga el chat en su sitio, enseñe al asistente y listo.",
+    "setup_title": "Termine de configurar HexaTech CRM",
+    "tasks_title": "Sus tareas",
+    "title": "Hoy",
+    "unassigned": "{{count}} abiertos sin nadie asignado",
+    "waiting": "Esperando respuesta",
+    "week_ai": "Cerrados por la IA",
+    "week_chats": "Conversaciones",
+    "week_leads": "Clientes potenciales del chat",
+    "week_title": "El chat web esta semana",
+    "your_tasks": "Sus tareas"
+  }
+}

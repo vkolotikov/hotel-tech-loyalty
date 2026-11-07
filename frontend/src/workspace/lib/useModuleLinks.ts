@@ -8,6 +8,7 @@ const PRODUCT_NAMES: Record<WorkspaceName, string> = {
   appointments: 'HexaTech Appointments',
   loyalty: 'HexaTech Loyalty',
   content: 'HexaTech Content',
+  crm: 'HexaTech CRM',
 }
 
 export interface ModuleLink { to: string; label: string }

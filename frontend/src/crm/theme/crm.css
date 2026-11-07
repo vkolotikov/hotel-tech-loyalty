@@ -1,0 +1,55 @@
+/*
+ * HexaTech CRM's own rules (2026-11-07). The Atelier fonts, tokens and the rules every workspace shares live in
+ * src/workspace/theme/workspace.css; this file sets CRM's palette over them — the cards frame's navy (accent.ts
+ * NAVY_SURFACES, which crmContrast.test.ts pins) — and the few colours only CRM draws: the AI's violet (the assistant,
+ * drafts, "Teach the assistant") and a chat bubble's fills. Every rule is scoped under [data-crm], which sits beside
+ * [data-workspace] on CRM's root. Values are RGB triplets, read as rgb(var(--…)) like the Atelier tokens.
+ */
+
+[data-crm] {
+  --a-canvas: 244 246 249;
+  --a-surface: 255 255 255;
+  --a-surface-2: 238 242 247;
+  --a-border: 221 227 234;
+  --a-text: 27 36 48;
+  --a-text-2: 84 98 114;
+  --a-side: 28 35 44;
+  --a-side-2: 35 44 58;
+  --a-side-text: 232 238 244;
+  --a-side-text-2: 150 165 185;
+  /* The AI: the same violet for every brand; as text ≥ 4.5:1 on its 12 % tint and on the surface. */
+  --crm-ai: 109 93 214;
+  --crm-ai-ink: 255 255 255;
+  --crm-ai-text: 84 70 190;
+  /* A visitor's bubble and the team's own: the surface-2 grey and the accent's tint (set inline from the brand). */
+  --crm-bubble-visitor: 238 242 247;
+}
+
+[data-crm][data-theme="dark"] {
+  --a-canvas: 32 40 54;
+  --a-surface: 36 44 58;
+  --a-surface-2: 41 48 63;
+  --a-border: 51 62 78;
+  --a-text: 232 238 244;
+  --a-text-2: 150 165 185;
+  --a-side: 28 35 44;
+  --a-side-2: 35 44 58;
+  --a-side-text: 232 238 244;
+  --a-side-text-2: 150 165 185;
+  --crm-ai-text: 178 166 255;
+  --crm-bubble-visitor: 46 55 72;
+}
+
+/* The AI's chip and its button: violet fill with white ink, or violet text on a 12 % tint. */
+[data-crm] .crm-ai-fill { background-color: rgb(var(--crm-ai)); color: rgb(var(--crm-ai-ink)); }
+[data-crm] .crm-ai-soft { background-color: rgb(var(--crm-ai) / 0.12); color: rgb(var(--crm-ai-text)); }
+[data-crm] .crm-ai-text { color: rgb(var(--crm-ai-text)); }
+[data-crm] .crm-ai-border { border-color: rgb(var(--crm-ai) / 0.35); }
+
+/* Chat bubbles: the visitor's on the left in grey, the team's and the assistant's on the right. */
+[data-crm] .crm-bubble-visitor { background-color: rgb(var(--crm-bubble-visitor)); color: rgb(var(--a-text)); }
+[data-crm] .crm-bubble-agent { background-color: rgb(var(--a-accent) / 0.14); color: rgb(var(--a-text)); }
+[data-crm] .crm-bubble-ai { background-color: rgb(var(--crm-ai) / 0.10); color: rgb(var(--a-text)); }
+
+/* A board's column scrolls on its own; the board scrolls sideways on a phone. */
+[data-crm] .crm-board { scrollbar-width: thin; }

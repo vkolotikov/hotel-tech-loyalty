@@ -38,6 +38,8 @@ const AppointmentsRoutes = lazy(() => import('./appointments/AppointmentsApp').t
 const ContentRoutes = lazy(() => import('./content/ContentApp').then(m => ({ default: m.ContentApp })))
 // HexaTech Loyalty (spec 2026-10-21): the loyalty programme as a fourth shell, the same way.
 const LoyaltyRoutes = lazy(() => import('./loyalty/LoyaltyApp').then(m => ({ default: m.LoyaltyApp })))
+// HexaTech CRM (2026-11-07): the AI chat widget, the inbox and the CRM as one workspace, the same way.
+const CrmRoutes = lazy(() => import('./crm/CrmApp').then(m => ({ default: m.CrmApp })))
 const WalletConfig = lazy(() => import('./pages/WalletConfig').then(m => ({ default: m.WalletConfig })))
 
 // Consolidated 4-hub pages. The legacy paths below redirect into
@@ -289,6 +291,8 @@ export default function App() {
           <Route path="/content/*" element={<ChunkErrorBoundary><Suspense fallback={<PageLoader />}><ContentRoutes /></Suspense></ChunkErrorBoundary>} />
           {/* HexaTech Loyalty — same login, a fourth staff shell. */}
           <Route path="/loyalty/*" element={<ChunkErrorBoundary><Suspense fallback={<PageLoader />}><LoyaltyRoutes /></Suspense></ChunkErrorBoundary>} />
+          {/* HexaTech CRM — same login, a fifth staff shell. */}
+          <Route path="/crm/*" element={<ChunkErrorBoundary><Suspense fallback={<PageLoader />}><CrmRoutes /></Suspense></ChunkErrorBoundary>} />
 
           <Route path="/register" element={<Login />} />
           <Route path="/forgot-password" element={<Login />} />
