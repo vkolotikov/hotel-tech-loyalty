@@ -174,6 +174,15 @@ Fixed on 2026-11-08 (each in the shared controller or service, so the full admin
   and merge contact ids; an email template's member; a lead form's default property (`ForeignIdsTest`).
 - The full admin's chatbot test page and inbox dictation toast the server's sentence (`message`), not its code.
 - Deals' "overdue" is by the venue's day (`LeadsAndDealsTest`).
+- **A thread shows the reader's own rating** of each AI answer (`chat-inbox/{id}`), else the newest anyone gave; before,
+  whichever feedback row came last, so a person could see a colleague's rating as theirs (`ChatInboxTest`).
+- **The AI capture keeps the allowance**: `crm-ai/capture-lead`, `-guest`, `-corporate`, `-member` answer 403
+  `ai_budget_used_up` before the provider is asked (`ChatbotHelpersTest`). They stay behind `feature:admin_ai`, which
+  the CRM's own packages leave out: the bootstrap's `features.admin_ai` says whether the plan has it, and Leads offers
+  "A lead from a message" only then (`BootstrapTest`).
+- **The leads' created-date filters are the venue's days**: `inquiries?date_from=&date_to=` and the export, from the
+  day's start to the next day's start in `VenueClock::zone` (before, UTC days, `date_to` ending 23:59:59); Insights'
+  new-leads windows follow (`LeadsAndDealsTest`, `insightsMath.test.ts`).
 
 Still open (found, not changed):
 
@@ -185,9 +194,12 @@ Still open (found, not changed):
   offset; nothing in a row says which ones they are.
 - Bulk `mark_won` does not create the draft reservation `markWon` creates for a property-linked lead.
 - Loyalty and booking writes outside the CRM still name ids with a bare `exists:<table>,id` (another organisation's
-  row passes validation): `MemberAdminController` (`member_ids.*`, `member_id`), `EmailCampaignController`
-  (`member_ids.*`), `BenefitAdminController` and `EarnRateEventController` (`property_id`). The CRM's are scoped
-  (below); these are for a loyalty/booking pass with their own tests.
+  row passes validation): `MemberAdminController` (`member_ids.*`, `member_id`, `tier_id`), `EmailCampaignController`
+  (`member_ids.*`, `segment_id`), `BenefitAdminController` (`tier_id`, `benefit_id`, `property_id`) and
+  `EarnRateEventController` (`tier_ids.*`, `property_id`). The member and transaction ids are read again through
+  `TenantScope` (another organisation's answers 404 or is skipped), so they only tell that such an id exists; a
+  `property_id` is stored as sent. The CRM's are scoped (above); these are for a loyalty/booking pass with their own
+  tests.
 
 ## Known limits
 
