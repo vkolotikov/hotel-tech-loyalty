@@ -229,8 +229,19 @@ already public), and adding Appointments in Plan & products says "Not available 
 holds the patches of 2 and 4 November; this session was again refused push access to `hotel-tech-saas`). Its migration
 `2026_11_07_120000_add_crm_packages` adds the product `crm_chat` ("HexaTech CRM") and 30 hidden, unpriced plans:
 `crm_lite`, `crm`, `crm_pro`, and CRM with Appointments, Loyalty or Content in every pair of packages, at the sum of the
-two, with the two AI allowances added. A plan already sold (public or priced) is left as it is and logged. Its test
-(`tests/Feature/ModulePlansTest.php`, PostgreSQL) now counts 66 module plans.
+two, with the two AI allowances added. A plan already sold (public or priced) is left as it is and logged; a hidden,
+unpriced one under the same slug takes these terms and keeps only CRM's products. Its test
+(`tests/Feature/ModulePlansTest.php`, PostgreSQL 16, checked on a fresh and on a seeded database: 9 passed) counts 66
+module plans; a cross-check found no difference between the 30 plans and `PlanModules` (slug, name, prices, products,
+features).
+
+Before step 1 it is worth one look at billing's database (Laravel Cloud, its database tab): neither query should return
+a row. A sold plan named like a CRM plan would be left as it is, and an inactive `crm_chat` product would stay inactive.
+
+```
+select slug, "isPublic", "monthlyPriceId" from plans where slug ~ '(^|-)crm(_lite|_pro)?$';
+select slug, "isActive" from products where slug = 'crm_chat';
+```
 
 1. In a checkout of `hotel-tech-saas`:
 
