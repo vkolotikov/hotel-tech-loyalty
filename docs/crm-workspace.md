@@ -73,19 +73,23 @@ processed document), `reply` (a person answered a chat), `pipeline` (a pipeline 
 | Get started | `/crm/start` | `crm/start`: the six setup steps |
 | Inbox | `/crm/inbox` (`?c=<conversation>`, `?status=waiting`) | `chat-inbox*`, `engagement/*`: list with the server's counts, the thread (polled), take over / hand back, resolve / archive / reopen, assign, capture as lead, contact, rate an AI answer and teach the right one, translate, the AI brief, canned replies, upload, dictation, transcript, **Draft a reply with AI** |
 | Visitors | `/crm/visitors` (`?v=<visitor>`) | `visitors*`: on the site now, everyone, away, leads; a visitor's pages and chats; start a chat; delete |
-| Leads | `/crm/leads`, `/crm/leads/:id` (`?new=1`, `?due=1`, `?guest=<contact>`) | `inquiries*`, `guests`, `tasks`: list with follow-up tabs, filters, bulk actions, CSV; create; a lead's stage, won / lost with a reason, details, next step, timeline, AI brief and proposal draft, tasks, files, its chat, custom fields, delete with what goes |
-| Pipeline | `/crm/pipeline` (`?p=<pipeline>`, `?tab=won`) | `inquiries`, `pipelines`, `deals/*`: the board (Move to on every card, drag on wide screens), won deals with fulfilment and payment |
+| Leads | `/crm/leads` (`?view=list|board|team`, `?p=<pipeline>`, `?new=1`, `?due=…`, `?guest=<contact>`), `/crm/leads/:id` | `inquiries*`, `guests`, `guests/facets`, `saved-views`, `crm-settings`, `email-templates*`, `crm-ai/capture-lead`, `tasks`: List, Board (drag or Move to) and Team (by owner); search, filters as chips, follow-up pills with counts, saved views shared with the full admin (page key `inquiries`), team-wide column choices and list custom fields; rows with the stage changed in place, AI signal, next step, owner, touches, Show more and a row menu; bulk stage / owner / priority / follow up / won / lost (each through its own `/won` or `/lost`, one reason, at most 100) / delete; CSV; A lead from a message (only with `admin_ai`). A lead's page: overview with a stage bar, next step, timeline (type filter, call length, voice note), tasks, contact, AI brief and proposal, details, stay, custom fields, files, its chat; Send an email from a template; edit the customer; won / lost; delete with what goes |
+| Pipeline | `/crm/pipeline` | redirects: to `/crm/leads?view=board` (keeping `?p=`), `?tab=won` to `/crm/deals` |
+| Deals | `/crm/deals` (`?filter=…`, `?deal=`, `?dsort=`, `?dpage=`) | `deals/*`, `crm-settings` (`deal_fields`): figures that open their step, search, payment and owner filters, step pills, the step and its progress, Next step, payment with Paid in full, columns, CSV |
 | Contacts | `/crm/contacts`, `/crm/contacts/:id` (`?tab=companies|duplicates`) | `guests*`, `corporate-accounts`: people with filters, saved views, bulk changes, CSV; a contact edited in place with tags, leads and timeline; companies; duplicates and merge |
-| Tasks | `/crm/tasks` | `tasks*`: mine / everyone; overdue / today / upcoming / done by the venue's day; add, edit, complete, reopen, delete |
+| Tasks | `/crm/tasks` | `tasks*`: figures; mine / everyone; type; All open (by day), Overdue, Today, Upcoming, Done (by the day done) on the venue's days; add, edit, complete, reopen, delete |
 | AI assistant | `/crm/assistant` (`?tab=behaviour|knowledge|teach|try|popups`) | `chatbot-config/*`, `chatbot-onboarding`, `knowledge/*`, `popup-rules`, `crm/bot-gaps` |
 | Chat widget | `/crm/widget` (`?tab=look|behaviour|install`) | `widget-config*`: the look with a live preview, behaviour, the embed code |
 | Insights | `/crm/insights` (`?days=7|30|90`) | `chatbot/analytics`, `inquiries/*`, `pipelines`, `deals/analytics`: the website chat and the pipeline |
 | Settings | `/crm/settings` (`?tab=canned|pipelines|forms|fields|account`) | `chat-inbox-canned`, `pipelines`, `pipeline-stages`, `inquiry-lost-reasons*`, `lead-forms`, `custom-fields`; Team and Plan & products |
 
 Left out on purpose (the full admin keeps them for a full customer): the AI model choice, chatbot fine-tuning
-(Training: no code reads the model it makes), the voice agent, AI capture of a contact (`crm-ai`), a contact's room
-reservations, `.xlsx` exports (CSV is offered), bulk won / lost (the bulk path writes no stage, reason or timeline),
-bulk tagging (no endpoint), the full admin's field-layout manager and custom-field presets.
+(Training: no code reads the model it makes), the voice agent, AI capture of a member, a company or a contact
+(`crm-ai/capture-member`, `-corporate`, `-guest`), a contact's room reservations, `.xlsx` exports (CSV is offered),
+bulk tagging (no endpoint), the full admin's field-layout manager and custom-field presets, the Leads property filter
+and the hotel-only rate / room type / MICE fields (Deals still shows a room type or an event a lead has), the stage
+groups (they read hotel status names), Focus mode, the Planner's team buckets (`planner/*`; Leads has its own Team
+view), and an email-template editor (a CRM-only organisation is pointed to the full admin).
 
 ## New in HexaTech CRM (beyond the full admin)
 
@@ -104,6 +108,19 @@ bulk tagging (no endpoint), the full admin's field-layout manager and custom-fie
   the server keeps it as a suggestion (`suggested_answer`, `suggested_by`) for the manager's form (2026-11-08).
 - **The AI allowance in view**: from 80 % of the month's allowance the frame says so; at 100 % it says the assistant
   hands every chat to the team and drafts stop.
+
+## Round 2: the frame and the pages (2026-11-07)
+
+- **Dark first**: a device that never chose starts Dark (`crm/lib/look.ts` passes `start` to the shared look engine);
+  the palette is `CRM_SURFACES`, pinned by `crm/theme/crmContrast.test.ts`. Light stays one press away.
+- **Grouped side panel** (`crm/shell/nav.ts`): Today; Conversations (Inbox, Visitors); Sales (Leads, Deals, Contacts,
+  Tasks); Reports (Insights); Set up (AI assistant, Chat widget, Settings).
+- **One page shape**: a header with the page's one main action, figure tiles (`StatTile`), then `SectionNav` cards
+  for the page's main sections (kept in `?tab=`), a `Toolbar` with `FilterChip`s for a list, content in `Card`s with
+  a description; `Tabs` pills only filter inside a list. Wide lists are tables with a header row and become cards on a
+  phone; every page was checked at 1440, 390 and 360 px, Dark and Light.
+- **Decisions in pure functions with tests** (`*Logic.ts`, `listLogic.ts`, `board.ts`, `dealLogic.ts`, `taskLogic.ts`,
+  `insightsMath.ts`), because the frontend tests render to a string.
 
 ## Rules the code keeps (and the tests that keep them)
 
@@ -183,8 +200,23 @@ Fixed on 2026-11-08 (each in the shared controller or service, so the full admin
 - **The leads' created-date filters are the venue's days**: `inquiries?date_from=&date_to=` and the export, from the
   day's start to the next day's start in `VenueClock::zone` (before, UTC days, `date_to` ending 23:59:59); Insights'
   new-leads windows follow (`LeadsAndDealsTest`, `insightsMath.test.ts`).
+- **A template sent to someone who is no member carries no member's details**: `email-templates/{id}/send` without
+  `member_id` filled the member tags from the first active member it found, so a lead received another person's name,
+  email, card number, points and referral code; it now leaves them empty (`EmailTemplate::renderWithoutMember`,
+  `SendTemplateTest`). The CRM also refuses a template with member tags for a contact who is no member and names them.
+- **Leads without a value or AI score sort last** in either direction, on PostgreSQL and SQLite (`LeadsAndDealsTest`).
 
 Still open (found, not changed):
+
+- `PUT crm-settings/{key}` lets any staff member write any key (AccessMap `admin/crm-settings` is staff/staff so
+  everyone can save column choices). The full admin writes about a dozen keys there from pages staff use (Planner,
+  the menu, onboarding, column popovers), so which keys are a manager's is a full-admin decision; the CRM writes
+  only `inquiry_fields` and `deal_fields`.
+- `deals/kpis` `awaiting_payment` counts unpaid deals, while the Deals "Awaiting payment" pill lists the fulfilment
+  step; the pill shows no count until the two agree.
+- The leads list cannot be filtered to "nobody assigned" on the server (Leads' Team view shows them first).
+- `crm-ai/capture-*` and `extractionFailure` put the provider's text in `error` on a 200 `success: false`; the CRM
+  never shows it (our sentence), the full admin still does.
 
 - After a rotation the website's own snippet must be replaced (that is the point). Landing pages on our domain read
   the key per request (browsers may hold a page for `landing.cache_ttl`). Production's cache is each container's own

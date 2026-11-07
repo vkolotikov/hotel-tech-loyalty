@@ -72,9 +72,22 @@ class SendTemplateTest extends TestCase
             });
         }
 
-        // An active member of this organisation, who is not the person written to.
+        if (!Schema::hasTable('loyalty_tiers')) {
+            Schema::create('loyalty_tiers', function (Blueprint $t) {
+                $t->bigIncrements('id');
+                $t->unsignedBigInteger('organization_id');
+                $t->string('name');
+                $t->integer('min_points')->default(0);
+                $t->boolean('is_active')->default(true);
+                $t->timestamps();
+                $t->softDeletes();
+            });
+        }
+
+        // An active member of this organisation, who is not the person written to (production's NOT NULL columns given).
+        $tier = DB::table('loyalty_tiers')->insertGetId(['organization_id' => $this->org->id, 'name' => 'Gold', 'min_points' => 0, 'is_active' => true, 'created_at' => now(), 'updated_at' => now()]);
         $user = DB::table('users')->insertGetId(['organization_id' => $this->org->id, 'name' => 'Alice Member', 'email' => 'alice.member@example.test', 'password' => 'not-a-real-hash', 'created_at' => now(), 'updated_at' => now()]);
-        DB::table('loyalty_members')->insert(['organization_id' => $this->org->id, 'user_id' => $user, 'member_number' => 'GOLD-001', 'current_points' => 1500, 'lifetime_points' => 5200, 'referral_code' => 'REF-ALICE', 'qr_code_token' => 'qr-alice-test', 'is_active' => true, 'created_at' => now(), 'updated_at' => now()]);
+        DB::table('loyalty_members')->insert(['organization_id' => $this->org->id, 'user_id' => $user, 'tier_id' => $tier, 'member_number' => 'GOLD-001', 'current_points' => 1500, 'lifetime_points' => 5200, 'referral_code' => 'REF-ALICE', 'qr_code_token' => 'qr-alice-test', 'is_active' => true, 'created_at' => now(), 'updated_at' => now()]);
 
         $this->template = DB::table('email_templates')->insertGetId([
             'organization_id' => $this->org->id,

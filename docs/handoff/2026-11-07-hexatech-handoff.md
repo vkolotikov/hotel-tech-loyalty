@@ -27,7 +27,42 @@ Please develope this seperate portal. With all existing features and maybe addit
 - **Billing:** `docs/billing/2026-11-07-hotel-tech-saas-crm-packages.patch` (push to `hotel-tech-saas` was refused
   again; read access only). It applies with `git am` on billing `main` 7607211 and gives the branch's tree.
 
+## Round 2 (same day, same branch)
+
+The owner: "Ok, lets do all fixes and do all necessary improvements. Improve and modernize a design as well, make more
+logicaly and easy to use, structured sections. Make sumilar functionality in crm leads and deals like we have in main
+platform leads, also add dark theme and make it as a default theme."
+
+- **Design**: Dark by default (Light one press away), a new palette (`CRM_SURFACES`, contrast-tested), the side panel
+  in groups (Conversations, Sales, Reports, Set up), every page in one shape (figures, section cards, a toolbar with
+  filter chips, content in described cards; tables that become cards on a phone). Rules in CLAUDE.md, "Round 2".
+- **Leads and Deals at the main platform's level**: List / Board / Team; search, filters, saved views shared with the
+  full admin, column choices, custom fields in the list, stage in place, AI signal, row menu, bulk won / lost with a
+  reason, AI capture from a message (plans with `admin_ai` only), send a template, a lead page in sections. A Deals
+  page of its own (`/crm/deals`; `/crm/pipeline` redirects). Tasks by day. The parity table and what was left out on
+  purpose are in `docs/crm-workspace.md` ("The areas").
+- **Server fixes, each with a test** (list in `docs/crm-workspace.md`, "Server issues found while building it"):
+  teaching the assistant is a manager's (staff suggest), the widget key can be rotated, the AI helpers and the AI
+  capture keep the allowance, task times are instants, contact fields can be emptied, guest tags unique per
+  organisation, another organisation's ids refused wherever the CRM links records, the inbox's figures match its
+  list, chatbot analytics and the leads' date filters on the venue's days, empty values sort last, **an email
+  template sent to a lead no longer carries the first active member's name, points and codes** (a privacy leak).
+  Two migrations: `2026_11_08_100000` (a nullable column) and `2026_11_08_100100` (the guest tag index per
+  organisation, PostgreSQL).
+
 ## Checks (this container, 7 Nov)
+
+Round 2 (after its last commit): PHP sweep of every `tests/` directory and top-level file, one run each: **79 runs, all
+green**; PostgreSQL 16 (fresh database from every migration): `CrmWorkspace` 62, `Crm` 268, `CrmTasks` 18, `Chatbot`
+48, `Notifications` 73, `AdminAccess` 85, all passed. Frontend: `tsc -b` clean, **438 Vitest files, 6,448 tests**
+(the CRM's 32 / 569), lint baseline passed (1,398 legacy, none new), `vite build` succeeded (CRM chunk 471 kB). Real
+browser on the seeded demo, every page at 1440 Dark and Light, 390 Dark and 360 Light: no console error, failed
+request, overflow or untranslated key; screenshots read by eye (a table spilling out of its card, raw task codes,
+"chatbot" for Website chat, a cut tile title and "1 unread messages" were found that way and fixed). A fresh device
+opens Dark. The browser must open the dev SPA at `http://localhost:5173` (any other host makes it call `/api` as in
+production).
+
+Round 1:
 
 - PHP sweep, every directory and top-level file of `tests/` one run each: **7,440 passed, 16 skipped, 4 failed** on the
   first pass; all 4 were this work's (3 exact sign-in payloads now naming `crm`, and the draft's rate limit sharing the
@@ -50,8 +85,8 @@ Please develope this seperate portal. With all existing features and maybe addit
 1. **Billing first**: apply the patch to `hotel-tech-saas` `main` and deploy (steps and a two-query pre-check in
    `docs/plan-modules.md`, "Billing handover, 2026-11-07"), then in billing's Commands tab
    `php artisan stripe:sync --module-plans --publish`.
-2. **This application**: merge the branch by the source-patch recipe (`docs/landing-page-builder.md` §6). It has no
-   migration. **Not deployed by this session**: the session's git rules forbid pushing anywhere but its branch without
+2. **This application**: merge the branch by the source-patch recipe (`docs/landing-page-builder.md` §6). It has two
+   small migrations (above). **Not deployed by this session**: the session's git rules forbid pushing anywhere but its branch without
    the owner's word, and the change is large and visible — on deploy every full customer gets `/crm` and a menu entry
    (off per organisation with `workspace:crm <organisation id> --off`). Until step 1, `/crm/register` says the product
    cannot be bought online yet.
@@ -59,11 +94,11 @@ Please develope this seperate portal. With all existing features and maybe addit
 ## Decisions for the owner
 
 - The packages' limits (team 2 / 5 / 15, AI 10 / 25 / 60 $) are Claude's proposal; billing's Plans page can change them.
-- Server issues found, not changed (`docs/crm-workspace.md`, "Server issues found while building it"): staff can teach
-  the assistant through the inbox's feedback endpoint; the widget key cannot be rotated; three AI helpers skip the
-  allowance; task due times with an offset; inquiry sorts and bulk stage changes; **guest tags unique across
-  organisations and `tag_ids.*` not limited to the organisation** (worth fixing soon: a cross-tenant id); contact fields
-  cannot be emptied; `.doc` uploads.
+- Round 1's server issues are fixed (round 2). Still open, for the owner or a later pass (`docs/crm-workspace.md`,
+  "Still open"): any staff member may write any `crm-settings` key (a full-admin access decision); `deals/kpis`
+  `awaiting_payment` and the Deals pill count different things; the loyalty and booking controllers' bare `exists`
+  rules (another organisation's id passes validation; reads stay tenant-scoped); bulk `mark_won` makes no draft
+  reservation; tasks saved before the fix keep their shifted times.
 
 ## Container notes (added this session)
 
