@@ -325,6 +325,11 @@ export function leadState(status: string | null | undefined): 'won' | 'lost' | '
 
 export const LEAD_TONE: Record<'won' | 'lost' | 'open', Tone> = { won: 'success', lost: 'danger', open: 'progress' }
 
+/** The new lead form, told whose lead it is (the Leads page may read `guest`). */
+export function newLeadFor(id: number): string {
+  return `/crm/leads?new=1&guest=${id}`
+}
+
 /** `mailto:` and `tel:` links, or null. A phone keeps its digits and a leading +. */
 export function mailLink(email: string | null | undefined): string | null {
   return email && isEmail(email) ? `mailto:${email.trim()}` : null

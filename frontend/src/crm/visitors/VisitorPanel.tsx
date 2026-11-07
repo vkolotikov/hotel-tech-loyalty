@@ -77,7 +77,12 @@ export function VisitorPanel({ id, onClose }: { id: number; onClose: () => void 
         footer={v ? (
           <div className="flex flex-wrap items-center justify-between gap-2">
             {boot.staff.can.delete_records
-              ? <Button variant="secondary" onClick={() => setAsking(true)} className="text-a-danger"><Trash2 size={15} aria-hidden />{t('crm.common.delete', 'Delete')}</Button>
+              ? (
+                <button type="button" onClick={() => setAsking(true)}
+                  className="inline-flex items-center gap-2 rounded-full border border-a-danger/30 px-4 py-2.5 text-sm font-semibold text-a-danger hover:bg-a-danger/12">
+                  <Trash2 size={15} aria-hidden />{t('crm.common.delete', 'Delete')}
+                </button>
+              )
               : <span />}
             <Button onClick={() => chat.mutate()} loading={chat.isPending}><MessageCircle size={15} aria-hidden />{chats.length ? t('crm.visitors.open_chat', 'Open their chat') : t('crm.visitors.start_chat', 'Start a chat')}</Button>
           </div>
@@ -175,7 +180,7 @@ export function VisitorPanel({ id, onClose }: { id: number; onClose: () => void 
       {asking && v && (
         <Confirm title={t('crm.visitors.delete_title', 'Delete {{name}}?', { name })} confirm={t('crm.visitors.delete_confirm', 'Delete for good')}
           busy={remove.isPending} onConfirm={() => remove.mutate()} onClose={() => setAsking(false)}>
-          <p>{t('crm.visitors.delete_line', 'This removes the visitor with the {{pages}} pages they viewed and their {{chats}} chats and every message in them. It cannot be undone.', { pages: count(pages.length, lang), chats: count(chats.length, lang) })}</p>
+          <p>{t('crm.visitors.delete_line', 'This removes the visitor with the {{pages}} pages they viewed and their {{chats}} chats and every message in them. It cannot be undone.', { pages: count(Math.max(v.page_views_count ?? 0, pages.length), lang), chats: count(chats.length, lang) })}</p>
           {v.guest && <p className="mt-2">{t('crm.visitors.delete_keeps', 'Their contact and any lead stay in your CRM.')}</p>}
           {remove.isError && <div className="mt-3"><Notice tone="danger">{errorText(t, remove.error)}</Notice></div>}
         </Confirm>

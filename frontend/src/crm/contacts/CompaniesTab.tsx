@@ -8,7 +8,7 @@ import { Field } from '../../workspace/ui/Field'
 import { useBoot } from '../CrmProvider'
 import { get, params, send } from '../lib/api'
 import { errorText } from '../lib/errors'
-import { count, dateTime, dayLabel, money, timeAgo } from '../lib/format'
+import { dateTime, dayLabel, money, timeAgo } from '../lib/format'
 import { leadPath } from '../lib/links'
 import { Card } from '../ui/Card'
 import { Confirm } from '../ui/Confirm'
@@ -169,7 +169,7 @@ function CompanyDetailPanel({ id, onClose }: { id: number; onClose: () => void }
                 <div className="rounded-xl border border-a-border p-3">
                   <dt className="text-xs text-a-text-2">{t('crm.contacts.open_pipeline', 'Open pipeline')}</dt>
                   <dd className="mt-1 font-a-display text-2xl text-a-text">{money(c.ltv.open_pipeline_value, currency, lang)}</dd>
-                  <dd className="text-xs text-a-text-2">{t('crm.contacts.open_leads', 'Open leads: {{count}}', { count: count(c.ltv.open_pipeline_count, lang) })}</dd>
+                  <dd className="text-xs text-a-text-2">{t('crm.contacts.open_leads', 'Open leads: {{count}}', { count: c.ltv.open_pipeline_count })}</dd>
                 </div>
                 <div className="rounded-xl border border-a-border p-3">
                   <dt className="text-xs text-a-text-2">{t('crm.contacts.last_contact', 'Last contact')}</dt>

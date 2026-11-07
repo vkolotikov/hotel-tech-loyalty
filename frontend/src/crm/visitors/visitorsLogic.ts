@@ -89,3 +89,12 @@ export function pageLabel(title: string | null | undefined, url: string | null |
 export function webHref(url: string | null | undefined): string | null {
   return url && /^https?:\/\/[^\s]+$/i.test(url.trim()) ? url.trim() : null
 }
+
+/** The site an address belongs to ("www.google.com"), the whole address when it cannot be read. */
+export function hostOf(url: string): string {
+  try {
+    return new URL(url).host || url
+  } catch {
+    return url
+  }
+}
