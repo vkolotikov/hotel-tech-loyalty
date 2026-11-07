@@ -4,7 +4,7 @@ import type { PackageKey } from './productSignup'
  * Plan & products (/account/products, owner 2026-11-02): what the page decides, kept pure so it is tested without a
  * browser. Every figure and every "may" is the server's (GET /v1/auth/modules); the page only places them.
  */
-export type ModuleKey = 'appointments' | 'loyalty' | 'content'
+export type ModuleKey = 'appointments' | 'loyalty' | 'content' | 'crm'
 
 /** One package a product could move to (or be added in), as the server prices it. */
 export interface PackageOption {
@@ -97,9 +97,9 @@ export function orderedProducts(rows: ProductRow[]): ProductRow[] {
 }
 
 /** The workspace each product opens. */
-export const PRODUCT_HOME: Record<ModuleKey, string> = { appointments: '/appointments', loyalty: '/loyalty', content: '/content' }
+export const PRODUCT_HOME: Record<ModuleKey, string> = { appointments: '/appointments', loyalty: '/loyalty', content: '/content', crm: '/crm' }
 
-const MODULE_ORDER: readonly ModuleKey[] = ['appointments', 'loyalty', 'content']
+const MODULE_ORDER: readonly ModuleKey[] = ['appointments', 'loyalty', 'content', 'crm']
 
 /** A product's name with its package: "HexaTech Loyalty Pro" (Standard and Appointments' one package carry no word). */
 export function productName(module: ModuleKey, names: Record<ModuleKey, string>, pkg?: PackageKey | null, packageNames?: Record<PackageKey, string>): string {

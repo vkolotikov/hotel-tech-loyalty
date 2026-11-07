@@ -11,7 +11,7 @@ import {
   ChevronLeft, ChevronRight, ChevronDown,
   BedDouble, CreditCard, Home, Package,
   UserCog, AlertTriangle, Scissors, CalendarDays,
-  Menu, X, MoreHorizontal, Lock, Link2, PenLine, Award,
+  Menu, X, MoreHorizontal, Lock, Link2, PenLine, Award, MessagesSquare,
 } from 'lucide-react'
 import { useAuthStore } from '../stores/authStore'
 import { GlobalSearch } from './GlobalSearch'
@@ -179,6 +179,8 @@ export const navGroups: NavGroup[] = [
       // bookmarks survive — see App.tsx.
       // The way into HexaTech Content (spec 2026-10-14 §6.9): everyone who may open it.
       { path: '/content',   labelKey: 'nav.items.content_workspace', defaultLabel: 'HexaTech Content', icon: PenLine, gate: 'all', workspace: 'content' },
+      // The way into HexaTech CRM (2026-11-07: the AI chat widget, the inbox and the CRM in one workspace): everyone who may open it.
+      { path: '/crm',       labelKey: 'nav.items.crm_workspace', defaultLabel: 'HexaTech CRM', icon: MessagesSquare, gate: 'all', workspace: 'crm' },
       { path: '/leads',    labelKey: 'nav.items.leads',     defaultLabel: 'Leads',     icon: FileText, gate: 'all',   altPaths: ['/contacts', '/pipeline', '/customers', '/guests', '/corporate', '/inquiries', '/lead-forms'] },
       { path: '/deals',     labelKey: 'nav.items.deals',     defaultLabel: 'Deals',     icon: Briefcase, gate: 'all' },
       { path: '/marketing', labelKey: 'nav.items.marketing', defaultLabel: 'Marketing', icon: Bell,     gate: 'admin', altPaths: ['/notifications', '/email-templates', '/reviews'] },

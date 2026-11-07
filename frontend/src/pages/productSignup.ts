@@ -2,17 +2,18 @@ import type { TFunction } from 'i18next'
 import type { IndustryId } from '../lib/industryHosts'
 
 /**
- * HexaTech Loyalty and HexaTech Content sold on their own (owner 2026-11-02), and HexaTech Appointments since
- * 2026-11-04, each with its own sign-in and sign-up pages beside the full suite's: /appointments/login,
- * /appointments/register, /loyalty/login, /loyalty/register, /content/login, /content/register (and their forgot /
+ * HexaTech Loyalty and HexaTech Content sold on their own (owner 2026-11-02), HexaTech Appointments since
+ * 2026-11-04 and HexaTech CRM (the AI chat widget and the CRM) since 2026-11-07, each with its own sign-in and sign-up
+ * pages beside the full suite's: /appointments/login, /appointments/register, /loyalty/login, /loyalty/register,
+ * /content/login, /content/register, /crm/login, /crm/register (and their forgot /
  * reset password pages). The sign-in screen (Login.tsx) serves them all; this file holds what differs: the
  * addresses, the product's words, and reading the price from the server's catalogue (GET /v1/modules) — never a price
  * of its own.
  */
-export type SignupProduct = 'appointments' | 'loyalty' | 'content'
+export type SignupProduct = 'appointments' | 'loyalty' | 'content' | 'crm'
 
 /** The products with their own pages: App\Support\PlanModules::SOLD_ALONE on the server, which also prices them. */
-export const SIGNUP_PRODUCTS: readonly SignupProduct[] = ['appointments', 'loyalty', 'content']
+export const SIGNUP_PRODUCTS: readonly SignupProduct[] = ['appointments', 'loyalty', 'content', 'crm']
 
 export type AuthView = 'login' | 'register' | 'forgot-password' | 'reset-password'
 
@@ -44,7 +45,7 @@ export function authPath(product: SignupProduct | null | undefined, view: AuthVi
 
 /** Which view an address shows: /register and /loyalty/register both start the trial. */
 export function viewFromPath(pathname: string): 'login' | 'trial' | 'forgot' | 'reset' {
-  const rest = pathname.replace(/^\/(appointments|loyalty|content)(?=\/)/, '')
+  const rest = pathname.replace(/^\/(appointments|loyalty|content|crm)(?=\/)/, '')
   if (rest.startsWith('/register')) return 'trial'
   if (rest.startsWith('/forgot-password')) return 'forgot'
   if (rest.startsWith('/reset-password')) return 'reset'
@@ -130,6 +131,20 @@ export function packageLines(product: SignupProduct, features: Record<string, st
     lines.push({ text: t('auth.product.line.campaigns', 'Email and SMS campaigns'), included: on(features, 'campaigns') })
     lines.push({ text: t('auth.product.line.push', 'Push messages to the member app'), included: on(features, 'push_notifications') })
     lines.push({ text: t('auth.product.line.wallet', 'Apple and Google Wallet cards, NFC cards'), included: on(features, 'wallet') })
+  } else if (product === 'crm') {
+    const contacts = limitOf(features, 'max_guests')
+    const budget = limitOf(features, 'ai_monthly_cost_cents')
+    const base = limitOf(lite, 'ai_monthly_cost_cents')
+    const times = budget && base ? Math.round((budget / base) * 10) / 10 : null
+    lines.push({ text: t('auth.product.line.crm_chat', 'An AI chat for your website that answers from your knowledge'), included: true })
+    lines.push({ text: t('auth.product.line.crm_core', 'Live inbox, visitors, leads, pipeline and tasks'), included: true })
+    lines.push({
+      text: times && times > 1
+        ? t('auth.product.line.ai_times', { x: n(times), defaultValue: '{{x}}× the monthly AI allowance of Lite' })
+        : t('auth.product.line.crm_ai_base', 'A monthly AI allowance for the assistant and reply drafts'),
+      included: true,
+    })
+    if (contacts) lines.push({ text: t('auth.product.line.contacts', { n: n(contacts), defaultValue: 'Up to {{n}} contacts' }), included: true })
   } else {
     const budget = limitOf(features, 'ai_monthly_cost_cents')
     const base = limitOf(lite, 'ai_monthly_cost_cents')
@@ -205,6 +220,24 @@ export function productCopy(product: SignupProduct, t: TFunction): ProductCopy {
       registerTitle: t('auth.product.loyalty.register_title', 'Start your HexaTech Loyalty trial'),
       trialBanner: t('auth.product.loyalty.trial_banner', 'Your trial includes everything in HexaTech Loyalty.'),
       tabTitle: t('auth.product.loyalty.tab_title', 'HexaTech Loyalty — Sign in'),
+    }
+  }
+  if (product === 'crm') {
+    return {
+      brand: 'HexaTech CRM',
+      monogram: 'CR',
+      badge: t('auth.product.crm.badge', 'AI website chat and CRM'),
+      hero: t('auth.product.crm.hero', 'Answer every visitor. Follow up every lead.'),
+      heroSub: t('auth.product.crm.hero_sub', 'An AI chat on your website that answers from your own knowledge, a live inbox for your team, and the leads, pipeline and tasks that turn chats into customers.'),
+      bullets: [
+        t('auth.product.crm.bullet_1', 'An AI assistant on your website, day and night, in your words'),
+        t('auth.product.crm.bullet_2', 'One inbox: take over any chat, with AI-drafted replies'),
+        t('auth.product.crm.bullet_3', 'Leads, a pipeline and follow-ups so nobody is forgotten'),
+      ],
+      loginSubtitle: t('auth.product.crm.login_subtitle', 'Sign in to HexaTech CRM'),
+      registerTitle: t('auth.product.crm.register_title', 'Start your HexaTech CRM trial'),
+      trialBanner: t('auth.product.crm.trial_banner', 'Your trial includes everything in HexaTech CRM.'),
+      tabTitle: t('auth.product.crm.tab_title', 'HexaTech CRM — Sign in'),
     }
   }
   return {
@@ -293,6 +326,7 @@ export function productTrialTerms(product: SignupProduct): { plan: string; billi
 export function industryOrder(product: SignupProduct): IndustryId[] {
   if (product === 'appointments') return ['beauty', 'medical', 'fitness', 'education', 'services', 'legal', 'real_estate', 'restaurant', 'hotel', 'other']
   if (product === 'loyalty') return ['hotel', 'beauty', 'restaurant', 'fitness', 'medical', 'education', 'services', 'legal', 'real_estate', 'other']
+  if (product === 'crm') return ['hotel', 'beauty', 'medical', 'real_estate', 'legal', 'services', 'education', 'fitness', 'restaurant', 'other']
   return ['hotel', 'beauty', 'restaurant', 'medical', 'fitness', 'real_estate', 'education', 'legal', 'services', 'other']
 }
 

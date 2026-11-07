@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { landingPath, loginPathAfterExpiry, moduleHome, planModules, showsWorkspaceLink } from './landing'
+import { landingPath, loginPath, loginPathAfterExpiry, moduleHome, planModules, showsWorkspaceLink } from './landing'
 
 const staff = (workspaces: Record<string, unknown> = {}) => ({ user_type: 'staff', workspaces })
 
@@ -81,5 +81,26 @@ describe('modules bought on their own (owner 2026-11-02)', () => {
     expect(landingPath(loyaltyOnly, '/loyaltyx')).toBe('/loyalty')
     expect(landingPath(loyaltyOnly, '/account/products?success=1')).toBe('/account/products?success=1')
     expect(landingPath(both, '/content/posts')).toBe('/content/posts')
+  })
+})
+
+describe('HexaTech CRM, the fourth workspace (2026-11-07)', () => {
+  const crmOnly = staff({ crm: { landing: true, only: true } })
+
+  it('is a module in the server order, last, and lands its staff on /crm', () => {
+    expect(planModules(crmOnly)).toEqual(['crm'])
+    expect(planModules(staff({ crm: { only: true }, loyalty: { landing: true, only: true } }))).toEqual(['loyalty', 'crm'])
+    expect(moduleHome(crmOnly)).toBe('/crm')
+    expect(landingPath(crmOnly, '/engagement')).toBe('/crm')
+    expect(landingPath(crmOnly, '/crm/inbox?c=4')).toBe('/crm/inbox?c=4')
+    expect(landingPath(staff({ crm: { landing: true } }), '/')).toBe('/crm')
+    expect(showsWorkspaceLink(staff({ crm: { landing: false } }), 'crm')).toBe(true)
+  })
+
+  it('has its own sign-in page, and a sign-in that runs out comes back to the same page', () => {
+    expect(loginPath({ pathname: '/crm/leads/3', search: '?tab=notes' })).toBe('/crm/login?redirect=%2Fcrm%2Fleads%2F3%3Ftab%3Dnotes')
+    expect(loginPathAfterExpiry('/crm/inbox', '')).toBe('/crm/login?redirect=%2Fcrm%2Finbox')
+    // The full admin's own CRM pages are not the workspace.
+    expect(loginPathAfterExpiry('/crm-settings', '')).toBe('/login')
   })
 })

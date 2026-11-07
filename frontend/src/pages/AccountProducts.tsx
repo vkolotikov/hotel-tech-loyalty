@@ -42,11 +42,12 @@ export function AccountProducts() {
     enabled: Boolean(token) && user?.user_type === 'staff',
   })
 
-  const names: Record<ModuleKey, string> = { appointments: 'HexaTech Appointments', loyalty: 'HexaTech Loyalty', content: 'HexaTech Content' }
+  const names: Record<ModuleKey, string> = { appointments: 'HexaTech Appointments', loyalty: 'HexaTech Loyalty', content: 'HexaTech Content', crm: 'HexaTech CRM' }
   const blurbs: Record<ModuleKey, string> = {
     appointments: t('account.products.blurb.appointments', 'Calendar, online booking and client records'),
     loyalty: t('account.products.blurb.loyalty', 'Points, tiers, rewards, a member app and campaigns'),
     content: t('account.products.blurb.content', 'AI social media planner: ideas, captions, images and a calendar'),
+    crm: t('account.products.blurb.crm', 'AI website chat, live inbox, leads, pipeline and tasks'),
   }
 
   // Back from Stripe: read billing again once (the address loses its ?success=1).

@@ -116,6 +116,7 @@
       "appointments_workspace": "HexaTech Appointments",
       "appointments_workspace_open": "In HexaTech Appointments öffnen",
       "content_workspace": "HexaTech Content",
+      "crm_workspace": "HexaTech CRM",
       "loyalty_workspace": "HexaTech Loyalty",
       "landing_featured_reviews": "Hervorgehobene Bewertungen"
     }
@@ -341,7 +342,11 @@
         "bookable_any": "Beliebig viele buchbare Teammitglieder",
         "booking_page": "Eigene Online-Buchungsseite und Website-Widget",
         "booking_core": "Kalender, Kundenakten, Zahlungen und Einnahmen",
-        "sign_ins": "{{n}} Mitarbeiter-Zugänge"
+        "sign_ins": "{{n}} Mitarbeiter-Zugänge",
+        "crm_chat": "Ein KI-Chat für Ihre Website, der aus Ihrem Wissen antwortet",
+        "crm_core": "Live-Posteingang, Besucher, Leads, Pipeline und Aufgaben",
+        "crm_ai_base": "Ein monatliches KI-Kontingent für den Assistenten und Antwortentwürfe",
+        "contacts": "Bis zu {{n}} Kontakte"
       },
       "signup": {
         "step": "Schritt {{n}} von {{total}}",
@@ -387,6 +392,18 @@
         "register_title": "Starten Sie Ihre HexaTech Appointments-Testphase",
         "trial_banner": "Ihre Testphase umfasst alles in HexaTech Appointments.",
         "tab_title": "HexaTech Appointments — Anmelden"
+      },
+      "crm": {
+        "badge": "KI-Website-Chat und CRM",
+        "hero": "Jeden Besucher beantworten. Jedem Lead nachgehen.",
+        "hero_sub": "Ein KI-Chat auf Ihrer Website, der aus Ihrem eigenen Wissen antwortet, ein Live-Posteingang für Ihr Team und die Leads, Pipeline und Aufgaben, die aus Chats Kunden machen.",
+        "bullet_1": "Ein KI-Assistent auf Ihrer Website, Tag und Nacht, in Ihren Worten",
+        "bullet_2": "Ein Posteingang: jeden Chat übernehmen, mit KI-Antwortentwürfen",
+        "bullet_3": "Leads, eine Pipeline und Nachfassen, damit niemand vergessen wird",
+        "login_subtitle": "Bei HexaTech CRM anmelden",
+        "register_title": "Ihre HexaTech-CRM-Testphase starten",
+        "trial_banner": "Ihre Testphase umfasst alles in HexaTech CRM.",
+        "tab_title": "HexaTech CRM — Anmelden"
       }
     }
   },
@@ -3561,7 +3578,8 @@
       "blurb": {
         "appointments": "Kalender, Online-Buchung und Kundenakten",
         "loyalty": "Punkte, Stufen, Prämien, eine Mitglieder-App und Kampagnen",
-        "content": "KI-Planer für Social Media: Ideen, Texte, Bilder und ein Kalender"
+        "content": "KI-Planer für Social Media: Ideen, Texte, Bilder und ein Kalender",
+        "crm": "KI-Website-Chat, Live-Posteingang, Leads, Pipeline und Aufgaben"
       },
       "over_limit_team": "Dieses Paket erlaubt {{limit}} Teammitglieder, aktiv sind {{count}}. Wählen Sie ein größeres Paket oder deaktivieren Sie zuerst einige.",
       "over_limit_members": "Dieses Paket erlaubt {{limit}} Mitglieder, Sie haben {{count}}. Wählen Sie ein größeres Paket.",

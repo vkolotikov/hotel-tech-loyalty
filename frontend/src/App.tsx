@@ -135,7 +135,7 @@ function AuthedFloatingAiChat() {
   const { hasFeature } = useSubscription()
   const { pathname } = useLocation()
   // A workspace is a focused product: the full admin's copilot stays out.
-  if (/^\/(appointments|content|loyalty)(\/|$)/.test(pathname)) return null
+  if (/^\/(appointments|content|loyalty|crm)(\/|$)/.test(pathname)) return null
   if (!token) return null
   // Never in the member portal. This is the staff CRM copilot with 35+
   // admin tools behind it; a loyalty member has no business seeing the
