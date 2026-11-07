@@ -65,11 +65,17 @@
     "inbox": "Posteingang",
     "insights": "Einblicke",
     "leads": "Leads",
-    "pipeline": "Pipeline",
     "settings": "Einstellungen",
     "tasks": "Aufgaben",
     "visitors": "Besucher",
-    "widget": "Chat-Widget"
+    "widget": "Chat-Widget",
+    "deals": "Deals",
+    "groups": {
+      "conversations": "Gespräche",
+      "sales": "Vertrieb",
+      "reports": "Berichte",
+      "setup": "Einrichtung"
+    }
   },
   "shell": {
     "ai_over": "Das KI-Kontingent dieses Monats ist aufgebraucht: Der Chat-Assistent übergibt jeden Chat an Ihr Team, und Entwürfe pausieren bis nächsten Monat.",

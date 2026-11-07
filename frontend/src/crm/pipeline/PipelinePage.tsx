@@ -44,7 +44,7 @@ export function PipelinePage() {
     setSp(q, { replace: true })
   }
   return (
-    <Page wide title={t('crm.nav.pipeline', 'Pipeline')} line={t('crm.pipeline.line', 'Open leads by stage. Move a card when the lead moves on.')}
+    <Page wide title={t('crm.pipeline.title', 'Pipeline')} line={t('crm.pipeline.line', 'Open leads by stage. Move a card when the lead moves on.')}
       actions={<Link to="/crm/leads?new=1" className="inline-flex items-center gap-2 rounded-full bg-a-accent px-4 py-2.5 text-sm font-semibold text-a-accent-ink shadow-a-sm hover:bg-a-accent-deep"><UserPlus size={15} aria-hidden />{t('crm.pipeline.add_lead', 'Add a lead')}</Link>}>
       <Tabs label={t('crm.pipeline.view', 'View')} value={tab} onChange={setTab}
         items={[{ key: 'board', label: t('crm.pipeline.tab_board', 'Board') }, { key: 'won', label: t('crm.pipeline.tab_won', 'Won deals') }]} />

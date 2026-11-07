@@ -15,8 +15,11 @@ export type RailSize = 'full' | 'slim'
 export interface Look { theme: ThemePref; rail: RailSize }
 /** The organisation's accent (#rrggbb) and mark (one letter or one emoji) as this device last saw them. */
 export interface Paint { accent: string; initial: string }
-/** Where a workspace keeps its look and its paint in localStorage. */
-export interface LookKeys { look: string; paint: string }
+/**
+ * Where a workspace keeps its look and its paint in localStorage, and — optionally — the look a device that never chose
+ * one starts with (HexaTech CRM starts dark, owner 2026-11-07); without it, DEFAULT_LOOK.
+ */
+export interface LookKeys { look: string; paint: string; start?: Look }
 /** The look as a frame draws and changes it: what useLook answers. */
 export type LiveLook = Look & { resolved: ThemeName; setTheme: (theme: ThemePref) => void; setRail: (rail: RailSize) => void }
 
@@ -26,26 +29,27 @@ const THEMES: readonly string[] = ['light', 'dark', 'auto']
 const RAILS: readonly string[] = ['full', 'slim']
 const QUERY = '(prefers-color-scheme: dark)'
 
-export function parseLook(raw: string | null): Look {
+export function parseLook(raw: string | null, start: Look = DEFAULT_LOOK): Look {
   let value: unknown
   try {
     value = raw ? JSON.parse(raw) : null
   } catch {
     value = null
   }
-  if (!value || typeof value !== 'object' || Array.isArray(value)) return DEFAULT_LOOK
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return start
   const v = value as Record<string, unknown>
   return {
-    theme: typeof v.theme === 'string' && THEMES.includes(v.theme) ? (v.theme as ThemePref) : DEFAULT_LOOK.theme,
-    rail: typeof v.rail === 'string' && RAILS.includes(v.rail) ? (v.rail as RailSize) : DEFAULT_LOOK.rail,
+    theme: typeof v.theme === 'string' && THEMES.includes(v.theme) ? (v.theme as ThemePref) : start.theme,
+    rail: typeof v.rail === 'string' && RAILS.includes(v.rail) ? (v.rail as RailSize) : start.rail,
   }
 }
 
 export function loadLook(keys: LookKeys): Look {
+  const start = keys.start ?? DEFAULT_LOOK
   try {
-    return parseLook(window.localStorage.getItem(keys.look))
+    return parseLook(window.localStorage.getItem(keys.look), start)
   } catch {
-    return DEFAULT_LOOK
+    return start
   }
 }
 

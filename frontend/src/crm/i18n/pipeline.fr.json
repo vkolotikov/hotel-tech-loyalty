@@ -66,5 +66,6 @@
   "which": "Pipeline",
   "won_hint": "Les leads gagnés deviennent des affaires.",
   "count_one": "1 lead",
-  "totals_one": "1 lead ouvert pour {{value}}"
+  "totals_one": "1 lead ouvert pour {{value}}",
+  "title": "Pipeline"
 }

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import {
-  BarChart3, Bot, CheckSquare, Columns3, Contact, Eye, Home, MessageSquareText, MessagesSquare, Search, Settings2, Target,
+  BarChart3, Bot, BriefcaseBusiness, CheckSquare, Contact, Eye, Home, MessageSquareText, MessagesSquare, Search, Settings2, Target,
   type LucideIcon,
 } from 'lucide-react'
 import { WorkspaceShell, type WorkspaceNavItem } from '../workspace/WorkspaceShell'
@@ -11,7 +11,7 @@ import { firstLetter } from '../workspace/lib/firstLetter'
 import { onShortcuts } from '../workspace/lib/shortcuts'
 import { useModuleLinks } from '../workspace/lib/useModuleLinks'
 import { FrameFooter, PhoneMenu } from '../workspace/shell/FrameFooter'
-import { NAVY_SURFACES, accentTokens } from '../workspace/theme/accent'
+import { CRM_SURFACES, accentTokens } from '../workspace/theme/accent'
 import { Button } from '../workspace/ui/Button'
 import { Notice } from '../workspace/ui/Notice'
 import { PageBoundary } from '../workspace/ui/PageBoundary'
@@ -21,14 +21,14 @@ import { CrmFind } from './find/CrmFind'
 import { failureOf } from './lib/api'
 import { APP_NAME, FULL_ADMIN } from './lib/links'
 import { loadBrandPaint, rememberBrandPaint, useLook } from './lib/look'
-import { AREAS, areaOf, countOf, type AreaKey } from './shell/nav'
+import { AREAS, areaOf, countOf, type AreaGroup, type AreaKey } from './shell/nav'
 
 const ICONS: Record<AreaKey, LucideIcon> = {
   today: Home,
   inbox: MessagesSquare,
   visitors: Eye,
   leads: Target,
-  pipeline: Columns3,
+  deals: BriefcaseBusiness,
   contacts: Contact,
   tasks: CheckSquare,
   assistant: Bot,
@@ -39,13 +39,16 @@ const ICONS: Record<AreaKey, LucideIcon> = {
 
 /** The default (English) name of each area, beside its key crm.nav.<area>. */
 const NAV_DEFAULTS: Record<AreaKey, string> = {
-  today: 'Today', inbox: 'Inbox', visitors: 'Visitors', leads: 'Leads', pipeline: 'Pipeline', contacts: 'Contacts',
+  today: 'Today', inbox: 'Inbox', visitors: 'Visitors', leads: 'Leads', deals: 'Deals', contacts: 'Contacts',
   tasks: 'Tasks', assistant: 'AI assistant', widget: 'Chat widget', insights: 'Insights', settings: 'Settings',
 }
 
+/** The groups' default (English) names, beside their keys crm.nav.groups.<group>. */
+const GROUP_DEFAULTS: Record<AreaGroup, string> = { conversations: 'Conversations', sales: 'Sales', reports: 'Reports', setup: 'Set up' }
+
 /**
- * HexaTech CRM on the shared frame (WorkspaceShell), in the cards look Content and Loyalty wear: the areas as cards —
- * Inbox, Leads and Tasks with what waits —, Settings, Help & resources and the person at the foot; in the top bar the
+ * HexaTech CRM on the shared frame (WorkspaceShell): the areas as compact rows in their groups (Conversations, Sales,
+ * Reports, Set up) — Inbox, Leads and Tasks with what waits —, Settings, Help & resources and the person at the foot; in the top bar the
  * organisation's line and Find; and the notices that explain why something is not available. On modules there is no
  * full admin: the other workspaces bought, Team and Plan & products take its place.
  */
@@ -70,7 +73,7 @@ export function CrmShell({ children }: { children: ReactNode }) {
   // While the bootstrap loads, the frame wears the accent and mark this device last saw (lib/look.ts).
   const look = useLook()
   const [remembered] = useState(loadBrandPaint)
-  const accent = accentTokens(data ? data.accent : remembered?.accent, look.resolved, NAVY_SURFACES[look.resolved])
+  const accent = accentTokens(data ? data.accent : remembered?.accent, look.resolved, CRM_SURFACES[look.resolved])
   const initial = data ? firstLetter(data.organization.name, 'H') : (remembered?.initial ?? 'H')
   const known = Boolean(data)
   const brandHex = accent.accent
@@ -106,6 +109,7 @@ export function CrmShell({ children }: { children: ReactNode }) {
     label: t(`crm.nav.${area.key}`, NAV_DEFAULTS[area.key]),
     count: countOf(area.key, data),
     phone: area.phone,
+    section: area.group ? t(`crm.nav.groups.${area.group}`, GROUP_DEFAULTS[area.group]) : undefined,
   }))
   const area = areaOf(pathname)
   const pageName = nav[AREAS.findIndex(a => a.key === area)]?.label ?? ''
@@ -137,7 +141,6 @@ export function CrmShell({ children }: { children: ReactNode }) {
     <WorkspaceShell workspace="crm" look={look} accent={accent} initial={initial}
       organization={data?.organization.name} product={data?.name ?? APP_NAME} person={data?.staff.name}
       nav={nav} fullAdmin={fullAdmin} moduleLinks={modules.links}
-      variant="cards" railLabel={t('workspace.shell.workspace', 'Workspace')}
       footer={<FrameFooter {...foot} />}
       phoneMenu={<PhoneMenu {...foot} />}
       crumbs={crumb && <div className="hidden min-w-0 sm:flex">{crumb}</div>}

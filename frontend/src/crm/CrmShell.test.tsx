@@ -48,11 +48,11 @@ function render(value: Partial<CrmContextValue> = {}, data: Partial<Bootstrap> =
 const refused = (code: string) => ({ response: { status: 403, data: { error: code } } })
 
 describe('CrmShell (2026-11-07)', () => {
-  it('is its own token scope in the cards frame, names the product and the organisation, and draws the page', () => {
+  it('is its own token scope in the frame, names the product and the organisation, and draws the page', () => {
     const html = render()
     expect(html).toContain('data-workspace=""')
     expect(html).toContain('data-crm=""')
-    expect(html).toContain('data-rail-variant="cards"')
+    expect(html).not.toContain('data-rail-variant="cards"')
     expect(html).toContain('HexaTech CRM')
     expect(html).toContain('Harbour Clinic')
     expect(html).toContain('page body')
@@ -60,7 +60,9 @@ describe('CrmShell (2026-11-07)', () => {
 
   it('lists every area, with what waits beside Inbox and Leads and nothing at zero', () => {
     const html = render()
-    for (const area of ['Today', 'Inbox', 'Visitors', 'Leads', 'Pipeline', 'Contacts', 'Tasks', 'AI assistant', 'Chat widget', 'Insights', 'Settings']) expect(html).toContain(area)
+    for (const area of ['Today', 'Inbox', 'Visitors', 'Leads', 'Deals', 'Contacts', 'Tasks', 'AI assistant', 'Chat widget', 'Insights', 'Settings']) expect(html).toContain(area)
+    for (const group of ['Conversations', 'Sales', 'Reports', 'Set up']) expect(html).toContain(group)
+    expect(html.match(/data-nav-section=""/g)?.length).toBe(4)
     expect(html).toMatch(/data-nav-count=""[^>]*>4<\/span>/)
     expect(html).toMatch(/data-nav-count=""[^>]*>2<\/span>/)
     expect(html.match(/data-nav-count=""/g)?.length).toBe(2)

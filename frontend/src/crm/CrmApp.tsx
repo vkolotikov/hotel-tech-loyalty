@@ -18,6 +18,7 @@ const VisitorsPage = lazy(() => import('./visitors/VisitorsPage').then(m => ({ d
 const LeadsPage = lazy(() => import('./leads/LeadsPage').then(m => ({ default: m.LeadsPage })))
 const LeadPage = lazy(() => import('./leads/LeadPage').then(m => ({ default: m.LeadPage })))
 const PipelinePage = lazy(() => import('./pipeline/PipelinePage').then(m => ({ default: m.PipelinePage })))
+const DealsPage = lazy(() => import('./deals/DealsPage').then(m => ({ default: m.DealsPage })))
 const ContactsPage = lazy(() => import('./contacts/ContactsPage').then(m => ({ default: m.ContactsPage })))
 const ContactPage = lazy(() => import('./contacts/ContactPage').then(m => ({ default: m.ContactPage })))
 const TasksPage = lazy(() => import('./tasks/TasksPage').then(m => ({ default: m.TasksPage })))
@@ -61,6 +62,7 @@ export function CrmApp() {
               <Route path="leads" element={<LeadsPage />} />
               <Route path="leads/:id" element={<LeadPage />} />
               <Route path="pipeline" element={<PipelinePage />} />
+              <Route path="deals" element={<DealsPage />} />
               <Route path="contacts" element={<ContactsPage />} />
               <Route path="contacts/:id" element={<ContactPage />} />
               <Route path="tasks" element={<TasksPage />} />

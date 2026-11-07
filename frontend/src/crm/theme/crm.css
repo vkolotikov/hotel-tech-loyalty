@@ -7,37 +7,45 @@
  */
 
 [data-crm] {
-  --a-canvas: 244 246 249;
+  /* Light: a cool set with the ink side panel. CRM_SURFACES (accent.ts) holds the same four; crmContrast.test.ts pins them. */
+  --a-canvas: 243 245 249;
   --a-surface: 255 255 255;
-  --a-surface-2: 238 242 247;
-  --a-border: 221 227 234;
-  --a-text: 27 36 48;
-  --a-text-2: 84 98 114;
-  --a-side: 28 35 44;
-  --a-side-2: 35 44 58;
-  --a-side-text: 232 238 244;
-  --a-side-text-2: 150 165 185;
+  --a-surface-2: 236 240 246;
+  --a-border: 220 226 235;
+  --a-text: 22 30 44;
+  --a-text-2: 82 96 116;
+  --a-side: 12 17 28;
+  --a-side-2: 27 35 52;
+  --a-side-text: 236 240 246;
+  --a-side-text-2: 150 163 184;
   /* The AI: the same violet for every brand; as text ≥ 4.5:1 on its 12 % tint and on the surface. */
   --crm-ai: 109 93 214;
   --crm-ai-ink: 255 255 255;
   --crm-ai-text: 84 70 190;
-  /* A visitor's bubble and the team's own: the surface-2 grey and the accent's tint (set inline from the brand). */
-  --crm-bubble-visitor: 238 242 247;
+  /* A visitor's bubble (the team's own takes the accent's tint, set inline from the brand). */
+  --crm-bubble-visitor: 236 240 246;
+  --a-shadow-sm: 0 1px 2px rgb(12 17 28 / 0.06);
+  --a-shadow: 0 10px 30px rgb(12 17 28 / 0.08);
 }
 
 [data-crm][data-theme="dark"] {
-  --a-canvas: 32 40 54;
-  --a-surface: 36 44 58;
-  --a-surface-2: 41 48 63;
-  --a-border: 51 62 78;
-  --a-text: 232 238 244;
-  --a-text-2: 150 165 185;
-  --a-side: 28 35 44;
-  --a-side-2: 35 44 58;
-  --a-side-text: 232 238 244;
-  --a-side-text-2: 150 165 185;
-  --crm-ai-text: 178 166 255;
-  --crm-bubble-visitor: 46 55 72;
+  /* Dark, the default (owner 2026-11-07): deep ink canvas, raised slate cards, a darker side panel. */
+  --a-canvas: 13 18 28;
+  --a-surface: 21 28 41;
+  --a-surface-2: 28 37 53;
+  --a-border: 44 55 74;
+  --a-text: 236 240 246;
+  --a-text-2: 156 169 190;
+  --a-side: 9 13 21;
+  --a-side-2: 24 32 48;
+  --a-side-text: 236 240 246;
+  --a-side-text-2: 146 160 182;
+  --crm-ai: 124 107 240;
+  --crm-ai-text: 190 180 255;
+  --crm-bubble-visitor: 34 44 62;
+  --a-shadow-sm: 0 1px 2px rgb(0 0 0 / 0.35);
+  --a-shadow: 0 12px 32px rgb(0 0 0 / 0.35);
+  --a-shadow-lg: 0 28px 70px rgb(0 0 0 / 0.5);
 }
 
 /* The AI's chip and its button: violet fill with white ink, or violet text on a 12 % tint. */

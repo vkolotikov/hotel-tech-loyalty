@@ -65,11 +65,17 @@
     "inbox": "Bandeja de entrada",
     "insights": "Análisis",
     "leads": "Clientes potenciales",
-    "pipeline": "Embudo",
     "settings": "Ajustes",
     "tasks": "Tareas",
     "visitors": "Visitantes",
-    "widget": "Widget de chat"
+    "widget": "Widget de chat",
+    "deals": "Negocios",
+    "groups": {
+      "conversations": "Conversaciones",
+      "sales": "Ventas",
+      "reports": "Informes",
+      "setup": "Configuración"
+    }
   },
   "shell": {
     "ai_over": "Se agotó el saldo de IA de este mes: el asistente pasa cada chat a su equipo y los borradores se detienen hasta el próximo mes.",

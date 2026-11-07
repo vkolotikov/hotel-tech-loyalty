@@ -33,7 +33,8 @@ const files = Object.fromEntries(fs.readdirSync(I18N).filter(f => f.endsWith('.j
 const bundles = crmBundles(files)
 const used = [...new Set(sources(DIR).flatMap(file => [...fs.readFileSync(file, 'utf8').matchAll(/\bt\(\s*['"`](crm\.[a-zA-Z0-9_.]+)['"`]/g)].map(m => m[1])))].sort()
 const built = [
-  ...['today', 'inbox', 'visitors', 'leads', 'pipeline', 'contacts', 'tasks', 'assistant', 'widget', 'insights', 'settings'].map(a => `crm.nav.${a}`),
+  ...['today', 'inbox', 'visitors', 'leads', 'deals', 'contacts', 'tasks', 'assistant', 'widget', 'insights', 'settings'].map(a => `crm.nav.${a}`),
+  ...['conversations', 'sales', 'reports', 'setup'].map(g => `crm.nav.groups.${g}`),
   ...['widget', 'assistant', 'knowledge', 'reply', 'pipeline', 'team'].flatMap(s => [`crm.start.${s}.title`, `crm.start.${s}.line`]),
   ...KNOWN_ERRORS.map(code => `crm.errors.${code}`),
   'crm.errors.unknown',

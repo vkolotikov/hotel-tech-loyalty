@@ -65,11 +65,17 @@
     "inbox": "Messagerie",
     "insights": "Analyses",
     "leads": "Prospects",
-    "pipeline": "Pipeline",
     "settings": "Paramètres",
     "tasks": "Tâches",
     "visitors": "Visiteurs",
-    "widget": "Widget de chat"
+    "widget": "Widget de chat",
+    "deals": "Affaires",
+    "groups": {
+      "conversations": "Conversations",
+      "sales": "Ventes",
+      "reports": "Rapports",
+      "setup": "Configuration"
+    }
   },
   "shell": {
     "ai_over": "Le crédit IA de ce mois est épuisé : l'assistant transmet chaque chat à votre équipe, et les brouillons s'arrêtent jusqu'au mois prochain.",
