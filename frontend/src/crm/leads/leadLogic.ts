@@ -469,9 +469,12 @@ export function winTone(probability: number | null | undefined): 'success' | 'pe
   return probability >= 70 ? 'success' : probability >= 40 ? 'pending' : 'danger'
 }
 
-/** Whether a lead has stay details worth a card (hotel leads; other industries leave them empty). */
+/**
+ * Whether a lead has stay details worth a card: its dates, or more than one room. `num_rooms` (and the adults) default
+ * to 1 in the database, so a clinic's or a salon's lead carries them too and they say nothing on their own.
+ */
 export function hasStay(lead: Pick<LeadRow, 'check_in' | 'check_out' | 'num_rooms'>): boolean {
-  return Boolean(dayOf(lead.check_in) || dayOf(lead.check_out) || lead.num_rooms)
+  return Boolean(dayOf(lead.check_in) || dayOf(lead.check_out) || (lead.num_rooms ?? 0) > 1)
 }
 
 /** A file size in the person's units: "820 KB", "2.4 MB". */

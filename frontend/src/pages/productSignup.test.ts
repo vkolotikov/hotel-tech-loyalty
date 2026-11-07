@@ -209,11 +209,12 @@ describe('Plan & products decisions', () => {
   })
 
   it('lists the products held first and names the plan by its packages', () => {
-    const names = { appointments: 'A', loyalty: 'HexaTech Loyalty', content: 'HexaTech Content' }
+    const names = { appointments: 'A', loyalty: 'HexaTech Loyalty', content: 'HexaTech Content', crm: 'HexaTech CRM' }
     const pkgs = { lite: 'Lite', standard: 'Standard', pro: 'Pro' } as const
     expect(orderedProducts(state().products).map(p => p.key)).toEqual(['loyalty', 'appointments', 'content'])
     expect(planName({ content: 'lite', loyalty: 'pro' }, names, pkgs)).toBe('HexaTech Loyalty Pro + HexaTech Content Lite')
     expect(planName(['loyalty', 'content'], names, pkgs)).toBe('HexaTech Loyalty + HexaTech Content')
     expect(productName('loyalty', names, 'standard', pkgs)).toBe('HexaTech Loyalty')
+    expect(planName({ crm: 'pro', content: 'standard' }, names, pkgs)).toBe('HexaTech Content + HexaTech CRM Pro')
   })
 })

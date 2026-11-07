@@ -74,7 +74,8 @@ describe('Pipeline', () => {
     expect(html).toContain('Move to')
     expect(html).toContain('Won leads become deals.')
     expect(html).toContain('>5</span>') // the won column's count from the server
-    expect(html).toContain('<option value="2" selected="">Proposal (1)</option>'.replace(' selected=""', '')) // a phone's stage picker
+    expect(html).toContain('<option value="2">Proposal (1)</option>') // a phone's stage picker, a stage at a time
+    expect(html).toContain('<option value="1" selected="">New (1)</option>')
     expect(html).toContain('Follow-ups due')
   })
 

@@ -13,6 +13,7 @@ import { leadPath } from '../lib/links'
 import { Card } from '../ui/Card'
 import { EmptyState } from '../ui/EmptyState'
 import { Select } from '../ui/inputs'
+import { InlineSelect } from '../leads/InlineSelect'
 import { Page } from '../ui/Page'
 import { Pill } from '../ui/Pill'
 import { QueryState } from '../ui/QueryState'
@@ -117,9 +118,9 @@ function BoardTab() {
               {(pipelines.data?.length ?? 0) > 1 && (
                 <label className="flex items-center gap-2 text-sm text-a-text-2">
                   {t('crm.pipeline.which', 'Pipeline')}
-                  <Select className="w-auto" value={pipeline.id} onChange={e => { const q = new URLSearchParams(sp); q.set('p', e.target.value); setSp(q, { replace: true }); setPhoneStage(null) }}>
+                  <InlineSelect value={pipeline.id} onChange={e => { const q = new URLSearchParams(sp); q.set('p', e.target.value); setSp(q, { replace: true }); setPhoneStage(null) }}>
                     {(pipelines.data ?? []).map((p: Pipeline) => <option key={p.id} value={p.id}>{p.name}</option>)}
-                  </Select>
+                  </InlineSelect>
                 </label>
               )}
               <p className="text-sm text-a-text-2">{t('crm.pipeline.totals', '{{count}} open leads worth {{value}}', { count: totals.count, value: money(totals.value, boot.venue.currency, lang) })}</p>

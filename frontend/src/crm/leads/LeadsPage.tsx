@@ -16,6 +16,7 @@ import { Card } from '../ui/Card'
 import { Confirm } from '../ui/Confirm'
 import { EmptyState } from '../ui/EmptyState'
 import { SearchInput, Select, TextInput } from '../ui/inputs'
+import { InlineSelect } from './InlineSelect'
 import { Page } from '../ui/Page'
 import { Pager } from '../ui/Pager'
 import { Pill } from '../ui/Pill'
@@ -118,9 +119,9 @@ export function LeadsPage() {
           </button>
           <label className="ml-auto flex items-center gap-2 text-sm text-a-text-2">
             <span className="hidden sm:inline">{t('crm.leads.sort', 'Sort')}</span>
-            <Select value={filters.sort} onChange={e => change({ sort: e.target.value as LeadFilters['sort'] })} className="w-auto" aria-label={t('crm.leads.sort', 'Sort')}>
+            <InlineSelect value={filters.sort} onChange={e => change({ sort: e.target.value as LeadFilters['sort'] })} aria-label={t('crm.leads.sort', 'Sort')}>
               {SORT_KEYS.map(s => <option key={s} value={s}>{sortLabel(t, s)}</option>)}
-            </Select>
+            </InlineSelect>
           </label>
         </div>
         <Tabs label={t('crm.leads.follow_ups', 'Follow-ups')} value={filters.due} onChange={value => change({ due: value })}
@@ -311,24 +312,23 @@ function BulkBar({ selected, stages, onDone }: { selected: ReadonlySet<number>; 
     if (value === '') return
     run.mutate({ action, value: value === '__none__' ? '' : value })
   }
-  const select = 'w-auto min-h-9 py-1.5'
 
   return (
     <div className="sticky top-2 z-20 flex flex-wrap items-center gap-2 rounded-2xl border border-a-accent/30 bg-a-surface p-3 shadow-a">
       <span className="text-sm font-semibold text-a-text">{t('crm.leads.bulk_selected', '{{count}} chosen', { count: selected.size })}</span>
-      <Select className={select} defaultValue="" onChange={pick('set_status')} disabled={run.isPending} aria-label={t('crm.leads.bulk_stage', 'Move to a stage')}>
+      <InlineSelect defaultValue="" onChange={pick('set_status')} disabled={run.isPending} aria-label={t('crm.leads.bulk_stage', 'Move to a stage')}>
         <option value="" disabled>{t('crm.leads.bulk_stage', 'Move to a stage')}</option>
         {stages.filter(s => s.kind === 'open').map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
-      </Select>
-      <Select className={select} defaultValue="" onChange={pick('set_assigned_to')} disabled={run.isPending} aria-label={t('crm.leads.bulk_owner', 'Give to')}>
+      </InlineSelect>
+      <InlineSelect defaultValue="" onChange={pick('set_assigned_to')} disabled={run.isPending} aria-label={t('crm.leads.bulk_owner', 'Give to')}>
         <option value="" disabled>{t('crm.leads.bulk_owner', 'Give to')}</option>
         <option value="__none__">{t('crm.leads.owner_none', 'Nobody yet')}</option>
         {owners.map(o => <option key={o} value={o}>{o}</option>)}
-      </Select>
-      <Select className={select} defaultValue="" onChange={pick('set_priority')} disabled={run.isPending} aria-label={t('crm.leads.bulk_priority', 'Set priority')}>
+      </InlineSelect>
+      <InlineSelect defaultValue="" onChange={pick('set_priority')} disabled={run.isPending} aria-label={t('crm.leads.bulk_priority', 'Set priority')}>
         <option value="" disabled>{t('crm.leads.bulk_priority', 'Set priority')}</option>
         {settings.priorities.map(p => <option key={p} value={p}>{p}</option>)}
-      </Select>
+      </InlineSelect>
       <Button variant="secondary" size="sm" onClick={() => run.mutate({ action: 'mark_for_reengagement' })} disabled={run.isPending}>{t('crm.leads.bulk_follow', 'Follow up tomorrow')}</Button>
       <Button variant="secondary" size="sm" onClick={() => setDeleting(true)} disabled={run.isPending}><Trash2 size={14} aria-hidden />{t('crm.common.delete', 'Delete')}</Button>
       <button type="button" onClick={onDone} className="ml-auto inline-flex items-center gap-1 rounded-full px-2 py-1 text-sm text-a-text-2 hover:text-a-text"><X size={14} aria-hidden />{t('crm.leads.bulk_clear', 'Clear the choice')}</button>

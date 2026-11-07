@@ -16,7 +16,8 @@ export function SidePanel({ title, onClose, footer, children }: { title: string;
   useEffect(() => {
     const before = document.activeElement instanceof HTMLElement ? document.activeElement : null
     box.current?.focus()
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') { e.preventDefault(); close.current() } }
+    // A dialog opened from the panel (a Confirm) claims Escape first, in the capture phase: then the panel stays.
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape' && !e.defaultPrevented) { e.preventDefault(); close.current() } }
     window.addEventListener('keydown', onKey)
     return () => {
       window.removeEventListener('keydown', onKey)

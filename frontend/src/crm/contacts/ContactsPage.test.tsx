@@ -99,6 +99,28 @@ describe('Contacts, rendered', () => {
     expect(html).toContain('href="/crm/contacts"')
   })
 
+  it('lists companies with their state, and the pairs that look like one person', () => {
+    const companies = render('/crm/contacts?tab=companies', qc => {
+      qc.setQueryData(['crm', 'contacts', 'companies', { search: '', status: '', page: 1, per_page: 25, sort: 'company_name', dir: 'asc' }], {
+        data: [{ id: 3, company_name: 'Berg AB', industry: 'Retail', contact_person: 'Bo', account_manager: 'Anna', status: 'Active', contract_end: '2027-01-31' }],
+        current_page: 1, last_page: 1, total: 1, per_page: 25,
+      })
+    })
+    expect(companies).toContain('Berg AB')
+    expect(companies).toContain('Retail · Bo')
+    expect(companies).toContain('Active')
+    expect(companies).toContain('Add company')
+
+    const g = (id: number, created: string) => ({ id, full_name: 'Ada L', email: 'ada@example.org', phone: null, mobile: null, company: null, city: null, country: null, lifecycle_status: null, created_at: created, last_activity_at: null })
+    const duplicates = render('/crm/contacts?tab=duplicates', qc => {
+      qc.setQueryData(['crm', 'contacts', 'duplicates'], { pairs: [{ reason: 'shared_email', winner: g(1, '2026-01-01T00:00:00Z'), loser: g(2, '2026-10-01T00:00:00Z') }] })
+    })
+    expect(duplicates).toContain('Same email')
+    expect(duplicates).toContain('Older, kept by default')
+    expect(duplicates).toContain('Review and merge')
+    expect(duplicates).toContain('Merging cannot be undone')
+  })
+
   it('says a contact that cannot exist is not here', () => {
     expect(render('/crm/contacts/abc', () => {})).toContain('This is no longer here')
   })

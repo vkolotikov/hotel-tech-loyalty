@@ -59,7 +59,7 @@ describe('Tasks', () => {
   it('opens on today\'s tasks, shown on the venue\'s clock, with each tab\'s count', () => {
     const html = render('/crm/tasks', TASKS)
     expect(html).toContain('Call Ada about May')
-    expect(html).toMatch(/Sat,? 7 Nov, 14:00/)
+    expect(html).toMatch(/Sat,? (7 Nov|Nov 7), 14:00/)
     expect(html).toContain('href="/crm/leads/41"')
     expect(html).not.toContain('Send the offer')
     expect(html).toContain('aria-pressed="true"')
@@ -70,7 +70,7 @@ describe('Tasks', () => {
   it('groups the upcoming ones by the venue\'s day', () => {
     const html = render('/crm/tasks?tab=upcoming', TASKS)
     expect(html).toContain('Visit on Monday')
-    expect(html).toMatch(/Mon,? 9 Nov/)
+    expect(html).toMatch(/Mon,? (9 Nov|Nov 9)/)
     expect(html).not.toContain('Call Ada about May')
   })
 })

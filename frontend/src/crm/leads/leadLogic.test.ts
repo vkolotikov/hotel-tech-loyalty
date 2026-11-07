@@ -219,6 +219,9 @@ describe('closing, the timeline and contact', () => {
     expect(winTone(null)).toBeNull()
     expect(hasStay({ check_in: null, check_out: null, num_rooms: null })).toBe(false)
     expect(hasStay({ check_in: '2026-12-01T00:00:00.000000Z', check_out: null, num_rooms: null })).toBe(true)
+    // The database's default of one room is no stay.
+    expect(hasStay({ check_in: null, check_out: null, num_rooms: 1 })).toBe(false)
+    expect(hasStay({ check_in: null, check_out: null, num_rooms: 2 })).toBe(true)
     expect(fileSize(2_500_000)).toBe('2.4 MB')
     expect(fileSize(0)).toBe('')
     expect(amount('1250.00')).toBe(1250)

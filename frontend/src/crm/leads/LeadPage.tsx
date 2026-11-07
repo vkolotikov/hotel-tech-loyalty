@@ -13,6 +13,7 @@ import { dayLabel, money, timeAgo } from '../lib/format'
 import { Card } from '../ui/Card'
 import { Confirm } from '../ui/Confirm'
 import { Select, TextArea, TextInput } from '../ui/inputs'
+import { InlineSelect } from './InlineSelect'
 import { Page } from '../ui/Page'
 import { Pill } from '../ui/Pill'
 import { QueryState } from '../ui/QueryState'
@@ -94,11 +95,11 @@ function LeadBody({ lead }: { lead: LeadDetail }) {
         <>
           <label className="flex items-center gap-2">
             <span className="text-sm text-a-text-2">{t('crm.leads.field_stage', 'Stage')}</span>
-            <Select className="w-auto min-w-40" value={stage ? String(stage.id) : ''} disabled={move.isPending || stages.length === 0}
+            <InlineSelect className="min-w-40" value={stage ? String(stage.id) : ''} disabled={move.isPending || stages.length === 0}
               onChange={e => { const target = stages.find(s => String(s.id) === e.target.value); if (target) pickStage(target) }}>
               {!stage && <option value="">{lead.status}</option>}
               {stages.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-            </Select>
+            </InlineSelect>
           </label>
           {kind !== 'won' && <Button variant="secondary" onClick={() => setClosing('won')}><Trophy size={15} aria-hidden />{t('crm.leads.won', 'Won')}</Button>}
           {kind !== 'lost' && <Button variant="secondary" onClick={() => setClosing('lost')}><XCircle size={15} aria-hidden />{t('crm.leads.lost', 'Lost')}</Button>}

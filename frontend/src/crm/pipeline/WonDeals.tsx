@@ -15,6 +15,7 @@ import { leadPath } from '../lib/links'
 import { Card } from '../ui/Card'
 import { EmptyState } from '../ui/EmptyState'
 import { Select, TextInput } from '../ui/inputs'
+import { InlineSelect } from '../leads/InlineSelect'
 import { Pager } from '../ui/Pager'
 import { Pill } from '../ui/Pill'
 import { QueryState } from '../ui/QueryState'
@@ -90,11 +91,11 @@ export function WonDeals() {
           items={DEAL_FILTERS.map(key => ({ key, label: dealFilterLabel(t, key) }))} />
         <label className="ml-auto flex items-center gap-2 text-sm text-a-text-2">
           {t('crm.pipeline.sort', 'Sort')}
-          <Select className="w-auto" value={sort} onChange={e => set({ dsort: e.target.value === 'due_date' ? '' : e.target.value, dpage: '' })}>
+          <InlineSelect value={sort} onChange={e => set({ dsort: e.target.value === 'due_date' ? '' : e.target.value, dpage: '' })}>
             <option value="due_date">{t('crm.pipeline.sort_due', 'Next step soonest')}</option>
             <option value="amount">{t('crm.pipeline.sort_amount', 'Largest first')}</option>
             <option value="created">{t('crm.pipeline.sort_created', 'Newest first')}</option>
-          </Select>
+          </InlineSelect>
         </label>
       </div>
 
@@ -146,11 +147,11 @@ function DealItem({ deal, onPay }: { deal: DealRow; onPay: () => void }) {
       <div className="flex flex-wrap items-center gap-2 md:justify-end">
         <label className="flex items-center gap-2">
           <span className="sr-only">{t('crm.pipeline.deal_step', 'Step')}</span>
-          <Select className="w-auto min-h-9 py-1.5" value={isFulfilment(deal.fulfillment_stage) ? deal.fulfillment_stage : ''} disabled={stage.isPending}
+          <InlineSelect value={isFulfilment(deal.fulfillment_stage) ? deal.fulfillment_stage : ''} disabled={stage.isPending}
             onChange={e => { if (e.target.value) stage.mutate(e.target.value) }}>
             {!isFulfilment(deal.fulfillment_stage) && <option value="" disabled>{fulfilmentLabel(t, null)}</option>}
             {FULFILMENT.map(s => <option key={s} value={s}>{fulfilmentLabel(t, s)}</option>)}
-          </Select>
+          </InlineSelect>
         </label>
         <button type="button" onClick={onPay} className="rounded-full focus-visible:outline-2 focus-visible:outline-a-accent" aria-label={t('crm.pipeline.pay_change', 'Change the payment for {{name}}', { name })}>
           <Pill tone={paymentTone(deal.payment_status)}>{paymentLabel(t, deal.payment_status)}</Pill>
