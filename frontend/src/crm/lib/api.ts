@@ -16,6 +16,8 @@ export const AREAS = [
   // The CRM: leads, deals, pipelines, contacts, tasks and what they share.
   'inquiries', 'inquiry-lost-reasons', 'inquiry-lost-reasons-admin', 'deals', 'pipelines', 'pipeline-stages', 'guests',
   'tasks', 'saved-views', 'custom-fields', 'lead-forms', 'corporate-accounts', 'crm-settings',
+  // Round 2 (the main platform's leads): sending an email template from a lead, and the CRM's AI capture of a lead.
+  'email-templates', 'crm-ai',
 ] as const
 
 export type Area = (typeof AREAS)[number]

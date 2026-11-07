@@ -100,4 +100,8 @@ export interface BotGap {
   rated_at: string | null
   ratings: number
   teachable: boolean
+  /** Round 2: who rated it (to resend their own comment), and a right answer a staff member suggested for a manager. */
+  rated_by_id?: number | null
+  suggested_answer?: string | null
+  suggested_by?: string | null
 }
