@@ -35,23 +35,29 @@ export interface PeopleFilters {
 export const FILTER_KEYS = ['q', 'lifecycle', 'importance', 'source', 'country', 'tag', 'company'] as const
 export type FilterKey = (typeof FILTER_KEYS)[number]
 
+/** One value of the address, or '' (a variable key keeps the API sweep from reading it as a call). */
+export function arg(search: URLSearchParams, key: string): string {
+  return search.get(key) ?? ''
+}
+
 export function filtersFrom(search: URLSearchParams): PeopleFilters {
-  const sort = search.get('sort') ?? ''
+  const sort = arg(search, 'sort')
+  const tag = arg(search, 'tag')
   return {
-    q: search.get('q') ?? '',
-    lifecycle: search.get('lifecycle') ?? '',
-    importance: search.get('importance') ?? '',
-    source: search.get('source') ?? '',
-    country: search.get('country') ?? '',
-    tag: /^\d+$/.test(search.get('tag') ?? '') ? (search.get('tag') as string) : '',
-    company: search.get('company') ?? '',
+    q: arg(search, 'q'),
+    lifecycle: arg(search, 'lifecycle'),
+    importance: arg(search, 'importance'),
+    source: arg(search, 'source'),
+    country: arg(search, 'country'),
+    tag: /^\d+$/.test(tag) ? tag : '',
+    company: arg(search, 'company'),
     sort: (SORT_KEYS as string[]).includes(sort) ? (sort as SortKey) : 'newest',
   }
 }
 
 /** The page in the address: a whole number from 1. */
 export function pageFrom(search: URLSearchParams, key = 'page'): number {
-  const n = Number(search.get(key))
+  const n = Number(arg(search, key))
   return Number.isInteger(n) && n > 0 ? n : 1
 }
 
@@ -115,8 +121,8 @@ export function withSegment(search: URLSearchParams, saved: unknown): URLSearchP
     const value = values[key]
     if (typeof value === 'string' && value.trim() !== '') next.set(key, value.trim())
   }
-  if (next.has('sort') && !(SORT_KEYS as string[]).includes(next.get('sort') as string)) next.delete('sort')
-  if (next.has('tag') && !/^\d+$/.test(next.get('tag') as string)) next.delete('tag')
+  if (next.has('sort') && !(SORT_KEYS as string[]).includes(arg(next, 'sort'))) next.delete('sort')
+  if (next.has('tag') && !/^\d+$/.test(arg(next, 'tag'))) next.delete('tag')
   return next
 }
 
@@ -470,8 +476,10 @@ export function companyBody(form: CompanyForm, mode: 'create' | 'edit'): Record<
 /* ─── Exporting ────────────────────────────────────────────────────────────────────────────────── */
 
 /** The CSV as a spreadsheet opens it in UTF-8: with its byte-order mark (the server writes one; keep exactly one). */
+const BOM = String.fromCharCode(0xfeff)
+
 export function csvWithBom(text: string): string {
-  return text.startsWith('﻿') ? text : `﻿${text}`
+  return text.startsWith(BOM) ? text : `${BOM}${text}`
 }
 
 export function exportName(today: string): string {

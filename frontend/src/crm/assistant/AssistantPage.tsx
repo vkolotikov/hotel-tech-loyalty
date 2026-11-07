@@ -14,6 +14,8 @@ import { GAPS_KEY } from './queries'
 import { TeachTab } from './TeachTab'
 import { TryTab } from './TryTab'
 
+const TAB_PARAM = 'tab'
+
 /**
  * The AI assistant (HexaTech CRM, 2026-11-07): the website chat's assistant, rebuilt from the full admin's chatbot
  * setup on the same endpoints — how it speaks, what it knows, the answers to fix (new), a test chat and the pop-ups.
@@ -24,15 +26,15 @@ export function AssistantPage() {
   const { t } = useTranslation()
   const boot = useBoot()
   const [params, setParams] = useSearchParams()
-  const tab = pickTab(params.get('tab'), ASSISTANT_TABS, 'behaviour')
+  const tab = pickTab(params.get(TAB_PARAM), ASSISTANT_TABS, 'behaviour')
   const canManage = boot.staff.can.manage_bot
   const locked = !boot.features.chatbot
   const gaps = useQuery({ queryKey: GAPS_KEY, queryFn: crmApi.botGaps, enabled: !locked, staleTime: 30_000 })
 
   const choose = (next: AssistantTab) => setParams(prev => {
     const out = new URLSearchParams(prev)
-    if (next === 'behaviour') out.delete('tab')
-    else out.set('tab', next)
+    if (next === 'behaviour') out.delete(TAB_PARAM)
+    else out.set(TAB_PARAM, next)
     return out
   }, { replace: true })
 

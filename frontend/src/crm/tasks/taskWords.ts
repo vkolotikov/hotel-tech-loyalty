@@ -24,14 +24,11 @@ export function taskTypeLabel(t: TFunction, type: string): string {
   }
 }
 
-const ICONS: Record<TaskType, LucideIcon> = {
+/** Each type's icon (looked up where it is drawn, a static map). */
+export const TASK_ICONS: Record<TaskType, LucideIcon> = {
   call: Phone, email: Mail, whatsapp: MessageCircle, sms: MessageSquare, video_call: Video, meeting: CalendarDays,
   site_visit: Building2, demo: Sparkles, send_proposal: FileText, contract: FileSignature, discovery: HelpCircle,
   follow_up: ChevronRight, custom: ListChecks,
-}
-
-export function taskTypeIcon(type: string): LucideIcon {
-  return ICONS[type as TaskType] ?? ListChecks
 }
 
 /** A tab's name. */

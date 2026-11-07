@@ -300,7 +300,7 @@ export function previewColours(form: WidgetForm): { primary: string; header: str
 
 /** The time zones the browser knows, with the saved one first when it is not among them. */
 export function zoneChoices(current: string): string[] {
-  let zones: string[] = []
+  let zones: string[]
   try {
     zones = (Intl as unknown as { supportedValuesOf?: (key: string) => string[] }).supportedValuesOf?.('timeZone') ?? []
   } catch {

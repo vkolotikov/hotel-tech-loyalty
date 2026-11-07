@@ -545,3 +545,37 @@ export function customText(field: CustomField, value: unknown, yes: string, no: 
 export function customErrors(fields: Record<string, string[]> | undefined): string[] {
   return Object.keys(fields ?? {}).filter(k => k.startsWith('custom_data.')).map(k => k.slice('custom_data.'.length))
 }
+
+/* ─── A lead's details ───────────────────────────────────────────────────── */
+
+export interface DetailsDraft { value: string; priority: string; owner: string; source: string; notes: string }
+
+export function detailsDraft(lead: Pick<LeadRow, 'total_value' | 'priority' | 'assigned_to' | 'source'> & { notes?: string | null }): DetailsDraft {
+  const value = amount(lead.total_value)
+  return {
+    value: value === null ? '' : String(value),
+    priority: lead.priority ?? '',
+    owner: lead.assigned_to ?? '',
+    source: lead.source ?? '',
+    notes: lead.notes ?? '',
+  }
+}
+
+/**
+ * `PUT inquiries/{id}` with only what changed (an emptied box clears the value). `problem` when the value is not a
+ * number of zero or more; `body` null when nothing changed.
+ */
+export function detailsPatch(lead: Parameters<typeof detailsDraft>[0], draft: DetailsDraft): { body: Record<string, unknown> | null; problem?: 'number' } {
+  const before = detailsDraft(lead)
+  const body: Record<string, unknown> = {}
+  if (draft.value.trim() !== before.value) {
+    const n = number(draft.value)
+    if (n !== null && (Number.isNaN(n) || n < 0)) return { body: null, problem: 'number' }
+    if (n !== amount(lead.total_value)) body.total_value = n
+  }
+  for (const [key, field] of [['priority', 'priority'], ['assigned_to', 'owner'], ['source', 'source'], ['notes', 'notes']] as const) {
+    const next = draft[field].trim()
+    if (next !== before[field].trim()) body[key] = next || null
+  }
+  return { body: Object.keys(body).length ? body : null }
+}

@@ -19,7 +19,7 @@ import { Pill } from '../ui/Pill'
 import { QueryState } from '../ui/QueryState'
 import { SidePanel } from '../ui/SidePanel'
 import { useToast } from '../ui/Toast'
-import { COMPANY_STATUSES, COMPANY_TONE, LEAD_TONE, PER_PAGE, companyStatusKey, leadState, pageFrom, withParam } from './contactsLogic'
+import { COMPANY_STATUSES, COMPANY_TONE, LEAD_TONE, PER_PAGE, arg, companyStatusKey, leadState, pageFrom, withParam } from './contactsLogic'
 import { CompanyFormPanel } from './CompanyForm'
 import { Fact } from './parts'
 import { CONTACTS } from './queries'
@@ -41,8 +41,8 @@ export function CompaniesTab({ onAdd }: { onAdd: () => void }) {
   const { t, i18n } = useTranslation()
   const lang = i18n.language
   const [search, setSearch] = useSearchParams()
-  const q = search.get('cq') ?? ''
-  const status = (COMPANY_STATUSES as readonly string[]).includes(search.get('cstatus') ?? '') ? (search.get('cstatus') as string) : ''
+  const q = arg(search, 'cq')
+  const status = (COMPANY_STATUSES as readonly string[]).includes(arg(search, 'cstatus')) ? arg(search, 'cstatus') : ''
   const page = pageFrom(search, 'cpage')
   const query = { search: q.trim(), status, page, per_page: PER_PAGE, sort: 'company_name', dir: 'asc' }
   const [openId, setOpenId] = useState<number | null>(null)

@@ -2,7 +2,7 @@ import { useState, type ReactNode } from 'react'
 import { useMutation } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { Check, Pencil, RotateCcw, Trash2 } from 'lucide-react'
+import { Check, ListChecks, Pencil, RotateCcw, Trash2 } from 'lucide-react'
 import { Button } from '../../workspace/ui/Button'
 import { Dialog } from '../../workspace/ui/Dialog'
 import { Field } from '../../workspace/ui/Field'
@@ -15,10 +15,10 @@ import { leadPath } from '../lib/links'
 import { Confirm } from '../ui/Confirm'
 import { TextInput } from '../ui/inputs'
 import { useToast } from '../ui/Toast'
-import { bucketOf, completeBody, dueParts, type Task } from './taskLogic'
+import { bucketOf, completeBody, dueParts, type Task, type TaskType } from './taskLogic'
 import { useTaskChanged } from './taskData'
 import { TaskForm } from './TaskForm'
-import { taskTypeIcon, taskTypeLabel } from './taskWords'
+import { TASK_ICONS, taskTypeLabel } from './taskWords'
 
 /**
  * Tasks as rows, each with what can be done to it: mark it done with an outcome (`complete`), open it again (`reopen`),
@@ -60,7 +60,7 @@ function TaskRow({ task, showLead, onEdit, onComplete, onDelete }: {
   const done = Boolean(task.completed_at)
   const bucket = bucketOf(task, boot.venue.today, zone)
   const due = dueParts(task.due_at, zone)
-  const Icon = taskTypeIcon(task.type)
+  const Icon = TASK_ICONS[task.type as TaskType] ?? ListChecks
 
   const reopen = useMutation({
     mutationFn: () => send<Task>('post', `tasks/${task.id}/reopen`),

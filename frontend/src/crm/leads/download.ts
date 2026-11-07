@@ -4,7 +4,7 @@
  * opens the file as UTF-8.
  */
 export function csvText(text: string): string {
-  return text.startsWith('﻿') ? text : `﻿${text}`
+  return text.startsWith('\uFEFF') ? text : `\uFEFF${text}`
 }
 
 export function downloadText(text: string, filename: string, type: string): void {

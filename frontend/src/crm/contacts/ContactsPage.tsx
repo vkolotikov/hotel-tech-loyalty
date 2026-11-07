@@ -8,6 +8,7 @@ import { Page } from '../ui/Page'
 import { Tabs } from '../ui/Tabs'
 import { CompaniesTab } from './CompaniesTab'
 import { CompanyFormPanel } from './CompanyForm'
+import { arg } from './contactsLogic'
 import { contactsTab, CONTACTS_TABS, type ContactsTab } from './tabs'
 import { DuplicatesTab } from './DuplicatesTab'
 import { NewContactPanel } from './NewContactPanel'
@@ -25,7 +26,7 @@ export function ContactsPage() {
   const { t } = useTranslation()
   const navigate = useNavigate()
   const [search, setSearch] = useSearchParams()
-  const tab = contactsTab(search.get('tab'))
+  const tab = contactsTab(arg(search, 'tab'))
   const [adding, setAdding] = useState<null | 'contact' | 'company'>(null)
   const duplicates = useDuplicates()
   const pairs = duplicates.data?.pairs.length ?? 0

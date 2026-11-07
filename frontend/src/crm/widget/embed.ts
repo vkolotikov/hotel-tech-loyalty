@@ -4,6 +4,8 @@ import type { TFunction } from 'i18next'
  * Putting the chat on a website: what GET widget-config/embed-code answers, the key shortened for display, and where
  * the snippet goes on the common site builders. The snippet itself is always the server's. Pure.
  */
+export const EMBED_KEY = ['crm', 'widget', 'embed'] as const
+
 export interface EmbedCode {
   embed_code: string
   iframe_code: string
