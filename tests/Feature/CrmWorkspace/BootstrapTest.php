@@ -20,7 +20,7 @@ class BootstrapTest extends TestCase
 
     public function test_the_organisation_the_person_their_rights_and_what_waits(): void
     {
-        DB::table('chat_widget_configs')->insert(['organization_id' => $this->org->id, 'widget_key' => 'wk-123', 'is_active' => true, 'created_at' => now(), 'updated_at' => now()]);
+        DB::table('chat_widget_configs')->insert(['organization_id' => $this->org->id, 'widget_key' => '7d0c1f4e-2b1a-4c3d-9e8f-123456789abc', 'api_key' => str_repeat('k', 48), 'is_active' => true, 'created_at' => now(), 'updated_at' => now()]);
         $this->chat(['status' => 'waiting']);
         $this->chat(['status' => 'active']);
         $this->lead(['created_at' => now()->subHours(2)]);
@@ -36,7 +36,7 @@ class BootstrapTest extends TestCase
             ->assertJsonPath('staff.role', 'manager')
             ->assertJsonPath('staff.can.manage_bot', true)
             ->assertJsonPath('staff.can.manage_pipelines', true)
-            ->assertJsonPath('widget.key', 'wk-123')
+            ->assertJsonPath('widget.key', '7d0c1f4e-2b1a-4c3d-9e8f-123456789abc')
             ->assertJsonPath('counts.chats_waiting', 1)
             ->assertJsonPath('counts.leads_new', 1)
             ->assertJsonPath('counts.tasks_due', 1)
@@ -67,7 +67,7 @@ class BootstrapTest extends TestCase
     public function test_the_ai_allowance_is_the_organisations(): void
     {
         $this->org->forceFill(['plan_features' => ['chatbot' => 'true', 'ai_monthly_cost_cents' => '1000']])->save();
-        DB::table('ai_usage_logs')->insert(['organization_id' => $this->org->id, 'model' => 'gpt-4o-mini', 'feature' => 'website_chatbot', 'cost_cents' => 900, 'created_at' => now(), 'updated_at' => now()]);
+        DB::table('ai_usage_logs')->insert(['organization_id' => $this->org->id, 'model' => 'gpt-4o-mini', 'feature' => 'website_chatbot', 'cost_cents' => 900, 'created_at' => now()]);
 
         $this->asManager()->getJson($this->crmApi('bootstrap'))->assertOk()
             ->assertJsonPath('ai.status', 'warn')

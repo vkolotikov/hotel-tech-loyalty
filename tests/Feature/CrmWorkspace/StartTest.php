@@ -37,9 +37,9 @@ class StartTest extends TestCase
     {
         $chat = $this->chat([], [['visitor', 'Hi', 3], ['agent', 'Hello, how can we help?', 2]]);
         DB::table('chatbot_behavior_configs')->insert(['organization_id' => $this->org->id, 'brand_id' => $this->brandId, 'assistant_name' => 'Ava', 'created_at' => now(), 'updated_at' => now()]);
-        DB::table('knowledge_documents')->insert(['organization_id' => $this->org->id, 'file_name' => 'prices.pdf', 'processing_status' => 'completed', 'extracted_text' => 'Prices', 'created_at' => now(), 'updated_at' => now()]);
-        $pipeline = DB::table('pipelines')->insertGetId(['organization_id' => $this->org->id, 'name' => 'Patients', 'is_default' => true, 'created_at' => now(), 'updated_at' => now()]);
-        DB::table('pipeline_stages')->insert(['organization_id' => $this->org->id, 'pipeline_id' => $pipeline, 'name' => 'New', 'kind' => 'open', 'created_at' => now(), 'updated_at' => now()]);
+        DB::table('knowledge_documents')->insert(['organization_id' => $this->org->id, 'file_name' => 'prices.pdf', 'file_path' => 'knowledge/prices.pdf', 'processing_status' => 'completed', 'extracted_text' => 'Prices', 'created_at' => now(), 'updated_at' => now()]);
+        $pipeline = DB::table('pipelines')->insertGetId(['organization_id' => $this->org->id, 'name' => 'Patients', 'slug' => 'patients', 'is_default' => true, 'created_at' => now(), 'updated_at' => now()]);
+        DB::table('pipeline_stages')->insert(['organization_id' => $this->org->id, 'pipeline_id' => $pipeline, 'name' => 'New', 'slug' => 'new', 'kind' => 'open', 'created_at' => now(), 'updated_at' => now()]);
 
         [$steps, $done, $complete] = $this->steps();
 

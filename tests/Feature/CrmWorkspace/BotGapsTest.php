@@ -55,8 +55,8 @@ class BotGapsTest extends TestCase
         $other = Organization::create(['name' => 'Elsewhere', 'slug' => 'else-' . uniqid('', true)]);
         app()->instance('current_organization_id', $prior);
         $theirs = DB::table('chat_conversations')->insertGetId(['organization_id' => $other->id, 'status' => 'active', 'created_at' => now(), 'updated_at' => now()]);
-        $theirAnswer = DB::table('chat_messages')->insertGetId(['organization_id' => $other->id, 'conversation_id' => $theirs, 'sender_type' => 'ai', 'content' => 'Theirs', 'created_at' => now(), 'updated_at' => now()]);
-        DB::table('chat_message_feedback')->insert(['organization_id' => $other->id, 'message_id' => $theirAnswer, 'user_id' => 1, 'rating' => 'bad', 'applied_to_training' => false, 'created_at' => now(), 'updated_at' => now()]);
+        $theirAnswer = DB::table('chat_messages')->insertGetId(['organization_id' => $other->id, 'conversation_id' => $theirs, 'sender_type' => 'ai', 'content' => 'Theirs', 'created_at' => now()]);
+        DB::table('chat_message_feedback')->insert(['organization_id' => $other->id, 'message_id' => $theirAnswer, 'user_id' => $this->manager->id, 'rating' => 'bad', 'applied_to_training' => false, 'created_at' => now(), 'updated_at' => now()]);
 
         $this->assertSame([], $this->asManager()->getJson($this->crmApi('bot-gaps'))->assertOk()->json('data'));
     }

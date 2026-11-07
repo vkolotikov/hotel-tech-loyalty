@@ -73,7 +73,7 @@ class DraftReplyTest extends TestCase
     {
         $fake = OpenAI::fake([]);
         $this->org->forceFill(['plan_features' => ['chatbot' => 'true', 'ai_monthly_cost_cents' => '500']])->save();
-        DB::table('ai_usage_logs')->insert(['organization_id' => $this->org->id, 'model' => 'gpt-4o-mini', 'feature' => 'website_chatbot', 'cost_cents' => 500, 'created_at' => now(), 'updated_at' => now()]);
+        DB::table('ai_usage_logs')->insert(['organization_id' => $this->org->id, 'model' => 'gpt-4o-mini', 'feature' => 'website_chatbot', 'cost_cents' => 500, 'created_at' => now()]);
         $chat = $this->chat([], [['visitor', 'Hello?', 1]]);
 
         $this->asStaffMember()->postJson($this->crmApi("conversations/{$chat}/draft"))->assertStatus(403)->assertJsonPath('error', 'ai_budget_used_up');

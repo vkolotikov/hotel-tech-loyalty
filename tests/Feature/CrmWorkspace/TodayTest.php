@@ -83,7 +83,8 @@ class TodayTest extends TestCase
         $other = Organization::create(['name' => 'Elsewhere', 'slug' => 'else-' . uniqid('', true)]);
         app()->instance('current_organization_id', $prior);
         DB::table('chat_conversations')->insert(['organization_id' => $other->id, 'status' => 'waiting', 'messages_count' => 2, 'created_at' => now(), 'updated_at' => now(), 'last_message_at' => now()]);
-        DB::table('inquiries')->insert(['organization_id' => $other->id, 'status' => 'New', 'next_task_due' => '2026-11-01', 'next_task_completed' => false, 'created_at' => now(), 'updated_at' => now()]);
+        $theirGuest = DB::table('guests')->insertGetId(['organization_id' => $other->id, 'full_name' => 'Someone Else', 'created_at' => now(), 'updated_at' => now()]);
+        DB::table('inquiries')->insert(['organization_id' => $other->id, 'guest_id' => $theirGuest, 'status' => 'New', 'next_task_due' => '2026-11-01', 'next_task_completed' => false, 'created_at' => now(), 'updated_at' => now()]);
 
         $body = $this->asStaffMember()->getJson($this->crmApi('today'))->assertOk()->json();
 

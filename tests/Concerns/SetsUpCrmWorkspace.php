@@ -84,7 +84,6 @@ trait SetsUpCrmWorkspace
                 'content_type'    => 'text',
                 'is_read'         => false,
                 'created_at'      => now()->subMinutes($minutesAgo),
-                'updated_at'      => now()->subMinutes($minutesAgo),
             ]);
         }
 
@@ -202,7 +201,8 @@ trait SetsUpCrmWorkspace
                 $t->string('content_type', 16)->default('text');
                 $t->boolean('is_read')->default(false);
                 $t->text('metadata')->nullable();
-                $t->timestamps();
+                // Production has created_at only.
+                $t->timestamp('created_at')->nullable();
             });
         }
         if (!Schema::hasTable('chat_message_feedback')) {
@@ -271,6 +271,7 @@ trait SetsUpCrmWorkspace
                 $t->unsignedBigInteger('organization_id');
                 $t->unsignedBigInteger('brand_id')->nullable();
                 $t->string('file_name')->nullable();
+                $t->string('file_path')->nullable();
                 $t->string('processing_status', 32)->nullable();
                 $t->text('extracted_text')->nullable();
                 $t->timestamps();
@@ -353,7 +354,8 @@ trait SetsUpCrmWorkspace
                 $t->integer('input_tokens')->default(0);
                 $t->integer('output_tokens')->default(0);
                 $t->integer('cost_cents')->default(0);
-                $t->timestamps();
+                // Production has created_at only.
+                $t->timestamp('created_at')->nullable();
             });
         }
     }
