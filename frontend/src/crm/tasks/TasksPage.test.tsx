@@ -23,7 +23,7 @@ const boot: Bootstrap = {
   organization: { id: 7, name: 'Villa Riga', industry: 'hotel' },
   accent: null,
   venue: { timezone: 'Europe/Riga', today: '2026-11-07', currency: 'EUR' },
-  features: { chatbot: true, engagement: true },
+  features: { chatbot: true, engagement: true, admin_ai: false },
   ai: { status: 'under', percent: 10 },
   staff: { id: 3, name: 'Anna', role: 'staff', can: { manage_bot: false, manage_widget: false, manage_pipelines: false, manage_canned: false, manage_team: false, delete_records: true } },
   widget: null,
@@ -37,7 +37,9 @@ const task = (id: number, title: string, due_at: string | null, extra: Partial<T
 
 function render(at: string, tasks: Task[]) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } })
-  qc.setQueryData(['crm', 'tasks', 'list', tasksQuery({ tab: 'today', who: 'mine', page: 1 }, 3)], { data: tasks, meta: { current_page: 1, last_page: 1, total: tasks.length } })
+  for (const who of ['mine', 'all'] as const) {
+    qc.setQueryData(['crm', 'tasks', 'list', tasksQuery({ tab: 'today', who, page: 1 }, 3)], { data: tasks, meta: { current_page: 1, last_page: 1, total: tasks.length } })
+  }
   return renderToStaticMarkup(
     <QueryClientProvider client={qc}>
       <MemoryRouter initialEntries={[at]}>
@@ -59,7 +61,8 @@ describe('Tasks', () => {
   it('opens on today\'s tasks, shown on the venue\'s clock, with each tab\'s count', () => {
     const html = render('/crm/tasks', TASKS)
     expect(html).toContain('Call Ada about May')
-    expect(html).toMatch(/Sat,? (7 Nov|Nov 7), 14:00/)
+    // Round 2: a due time today reads "Today, 14:00" (the venue's clock), in today's amber.
+    expect(html).toContain('Today, 14:00')
     expect(html).toContain('href="/crm/leads/41"')
     expect(html).not.toContain('Send the offer')
     expect(html).toContain('aria-pressed="true"')
@@ -72,5 +75,21 @@ describe('Tasks', () => {
     expect(html).toContain('Visit on Monday')
     expect(html).toMatch(/Mon,? (9 Nov|Nov 9)/)
     expect(html).not.toContain('Call Ada about May')
+  })
+
+  it('shows every open task by the venue\'s day under "All open", overdue first, with clear due states', () => {
+    const html = render('/crm/tasks?tab=open', TASKS)
+    expect(html.indexOf('Send the offer')).toBeLessThan(html.indexOf('Call Ada about May'))
+    expect(html.indexOf('Call Ada about May')).toBeLessThan(html.indexOf('Visit on Monday'))
+    expect(html).toMatch(/Today, Sat,? (7 Nov|Nov 7)/)
+    expect(html).toMatch(/Overdue since Thu,? (5 Nov|Nov 5), 10:00/)
+    expect(html).toContain('More for: Send the offer')
+    expect(html).toContain('href="/crm/tasks?tab=overdue"')
+  })
+
+  it('narrows the list to one type and keeps whose tasks in the tiles\' links', () => {
+    const html = render('/crm/tasks?who=all&type=email', TASKS)
+    expect(html).toContain('No task matches')
+    expect(html).toContain('href="/crm/tasks?who=all&amp;type=email&amp;tab=overdue"')
   })
 })

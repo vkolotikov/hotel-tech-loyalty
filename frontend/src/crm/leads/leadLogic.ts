@@ -23,19 +23,31 @@ export const isDay = (value: string): boolean => /^\d{4}-\d{2}-\d{2}$/.test(valu
 export type DueFilter = '' | 'now' | 'overdue' | 'today' | 'soon'
 export const DUE_FILTERS: readonly DueFilter[] = ['', 'now', 'overdue', 'today', 'soon']
 
-export type SortKey = 'newest' | 'oldest' | 'follow_up' | 'updated'
-export const SORT_KEYS: readonly SortKey[] = ['newest', 'oldest', 'follow_up', 'updated']
+export type SortKey = 'newest' | 'oldest' | 'follow_up' | 'updated' | 'value' | 'ai' | 'arrival'
+export const SORT_KEYS: readonly SortKey[] = ['newest', 'oldest', 'follow_up', 'updated', 'value', 'ai', 'arrival']
 
 /**
- * The server's sort column and direction for each choice (InquiryController::index's allow-list). No "by value": the
- * allow-list names `value_estimated`, which is not a column of `inquiries`, and leaves `total_value` out.
+ * The server's sort column and direction for each choice (InquiryController::index's allow-list of real columns; round
+ * 2 put `total_value` and `ai_win_probability` on it, so "Largest first" and "Most likely to win" sort on the server).
+ * Arrival is a hotel's (`check_in`).
  */
 export const SORTS: Record<SortKey, { sort: string; dir: 'asc' | 'desc' }> = {
   newest: { sort: 'created_at', dir: 'desc' },
   oldest: { sort: 'created_at', dir: 'asc' },
   follow_up: { sort: 'next_task_due', dir: 'asc' },
   updated: { sort: 'updated_at', dir: 'desc' },
+  value: { sort: 'total_value', dir: 'desc' },
+  ai: { sort: 'ai_win_probability', dir: 'desc' },
+  arrival: { sort: 'check_in', dir: 'asc' },
 }
+
+/** The sorts offered: arrival only to a hotel (other venues' leads have no stay). */
+export function sortChoices(hotel: boolean): SortKey[] {
+  return SORT_KEYS.filter(key => key !== 'arrival' || hotel)
+}
+
+/** Has a phone: any, with a phone or mobile, without one (the server's `has_phone`). */
+export type PhoneFilter = '' | 'yes' | 'no'
 
 export interface LeadFilters {
   q: string
@@ -45,6 +57,13 @@ export interface LeadFilters {
   source: string
   /** '' everyone, 'me' the person signed in, else an owner's name. */
   owner: string
+  /** A priority's name (the organisation's own list). */
+  priority: string
+  /** An enquiry type (`inquiry_type`, a hotel's or an organisation's own list). */
+  type: string
+  /** The contact's country. */
+  country: string
+  phone: PhoneFilter
   /** Created from / to, `YYYY-MM-DD`. */
   from: string
   to: string
@@ -52,7 +71,14 @@ export interface LeadFilters {
   page: number
 }
 
-export const NO_FILTERS: LeadFilters = { q: '', due: '', status: '', source: '', owner: '', from: '', to: '', sort: 'newest', page: 1 }
+export const NO_FILTERS: LeadFilters = {
+  q: '', due: '', status: '', source: '', owner: '', priority: '', type: '', country: '', phone: '', from: '', to: '', sort: 'newest', page: 1,
+}
+
+/** The "Filters" panel's choices, all cleared (search, follow-up and sort stay). */
+export const PANEL_CLEARED: Pick<LeadFilters, 'status' | 'source' | 'owner' | 'priority' | 'type' | 'country' | 'phone' | 'from' | 'to'> = {
+  status: '', source: '', owner: '', priority: '', type: '', country: '', phone: '', from: '', to: '',
+}
 
 /** The filters an address holds. Today's "Follow-ups due" links with `?due=1`, which is "due now". */
 export function readFilters(sp: URLSearchParams): LeadFilters {
@@ -67,6 +93,10 @@ export function readFilters(sp: URLSearchParams): LeadFilters {
     status: read(sp, 'stage'),
     source: read(sp, 'source'),
     owner: read(sp, 'owner'),
+    priority: read(sp, 'priority'),
+    type: read(sp, 'type'),
+    country: read(sp, 'country'),
+    phone: read(sp, 'phone') === 'yes' || read(sp, 'phone') === 'no' ? (read(sp, 'phone') as PhoneFilter) : '',
     from: isDay(from) ? from : '',
     to: isDay(to) ? to : '',
     sort: SORT_KEYS.includes(sort) ? sort : 'newest',
@@ -83,6 +113,10 @@ export function writeFilters(filters: LeadFilters, current: URLSearchParams = ne
   set('stage', filters.status)
   set('source', filters.source)
   set('owner', filters.owner)
+  set('priority', filters.priority)
+  set('type', filters.type)
+  set('country', filters.country)
+  set('phone', filters.phone)
   set('from', filters.from)
   set('to', filters.to)
   set('sort', filters.sort === 'newest' ? '' : filters.sort)
@@ -95,9 +129,10 @@ export function withFilter(filters: LeadFilters, patch: Partial<LeadFilters>): L
   return { ...filters, ...patch, page: 'page' in patch ? (patch.page ?? 1) : 1 }
 }
 
-/** How many of the "Filters" panel's choices are set (stage, source, owner, dates). */
+/** How many of the "Filters" panel's choices are set (stage, source, owner, priority, type, country, phone, dates). */
 export function activeFilterCount(filters: LeadFilters): number {
-  return [filters.status, filters.source, filters.owner, filters.from || filters.to].filter(Boolean).length
+  return [filters.status, filters.source, filters.owner, filters.priority, filters.type, filters.country, filters.phone, filters.from || filters.to]
+    .filter(Boolean).length
 }
 
 export type Query = Record<string, string | number | boolean | null | undefined>
@@ -123,6 +158,10 @@ export function listQuery(filters: LeadFilters, me: string, perPage = 25): Query
     status: filters.status,
     source: filters.source,
     assigned_to: filters.owner === 'me' ? me : filters.owner,
+    priority: filters.priority,
+    inquiry_type: filters.type,
+    country: filters.country,
+    has_phone: filters.phone,
     ...dateRange(filters.from, filters.to),
     task_due: filters.due === 'now' ? '' : filters.due,
     sort: sort.sort,
@@ -260,24 +299,31 @@ export interface LeadDraft {
   email: string
   phone: string
   company: string
+  country: string
   status: string
   source: string
   value: string
   priority: string
   owner: string
+  /** The enquiry type (`inquiry_type`), where the organisation has a list of them. */
+  type: string
   notes: string
   checkIn: string
   checkOut: string
   rooms: string
+  adults: string
+  children: string
+  /** A hotel guest's special requests. */
+  requests: string
   custom: Record<string, unknown>
 }
 
 export const EMPTY_LEAD: LeadDraft = {
-  contact: 'new', guestId: null, name: '', email: '', phone: '', company: '', status: '', source: '', value: '',
-  priority: '', owner: '', notes: '', checkIn: '', checkOut: '', rooms: '', custom: {},
+  contact: 'new', guestId: null, name: '', email: '', phone: '', company: '', country: '', status: '', source: '', value: '',
+  priority: '', owner: '', type: '', notes: '', checkIn: '', checkOut: '', rooms: '', adults: '', children: '', requests: '', custom: {},
 }
 
-export type LeadField = 'name' | 'guest' | 'email' | 'value' | 'checkOut' | 'rooms'
+export type LeadField = 'name' | 'guest' | 'email' | 'value' | 'checkOut' | 'rooms' | 'adults' | 'children'
 export type LeadProblem = 'required' | 'email' | 'number' | 'dates' | 'too_long'
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -302,15 +348,20 @@ export function validateLead(draft: LeadDraft): Partial<Record<LeadField, LeadPr
   const value = number(draft.value)
   if (value !== null && (Number.isNaN(value) || value < 0)) errors.value = 'number'
   if (draft.checkIn && draft.checkOut && isDay(draft.checkIn) && isDay(draft.checkOut) && draft.checkOut < draft.checkIn) errors.checkOut = 'dates'
-  const rooms = number(draft.rooms)
-  if (rooms !== null && (Number.isNaN(rooms) || rooms < 1 || !Number.isInteger(rooms))) errors.rooms = 'number'
+  const whole = (raw: string, min: number): boolean => {
+    const n = number(raw)
+    return n === null || (!Number.isNaN(n) && n >= min && Number.isInteger(n))
+  }
+  if (!whole(draft.rooms, 1)) errors.rooms = 'number'
+  if (!whole(draft.adults, 1)) errors.adults = 'number'
+  if (!whole(draft.children, 0)) errors.children = 'number'
   return errors
 }
 
 /** `POST guests` for a new contact: the name and what was typed, nothing empty. */
 export function guestBody(draft: LeadDraft): Record<string, string> {
   const body: Record<string, string> = { full_name: draft.name.trim() }
-  for (const [key, value] of [['email', draft.email], ['phone', draft.phone], ['company', draft.company]] as const) {
+  for (const [key, value] of [['email', draft.email], ['phone', draft.phone], ['company', draft.company], ['country', draft.country]] as const) {
     if (value.trim()) body[key] = value.trim()
   }
   return body
@@ -324,14 +375,18 @@ export function leadBody(draft: LeadDraft, guestId: number, opts: { stay: boolea
   put('source', draft.source)
   put('priority', draft.priority)
   put('assigned_to', draft.owner)
+  put('inquiry_type', draft.type)
   put('notes', draft.notes)
   const value = number(draft.value)
   if (value !== null && !Number.isNaN(value)) body.total_value = value
   if (opts.stay) {
     if (isDay(draft.checkIn)) body.check_in = draft.checkIn
     if (isDay(draft.checkOut)) body.check_out = draft.checkOut
-    const rooms = number(draft.rooms)
-    if (rooms !== null && !Number.isNaN(rooms)) body.num_rooms = rooms
+    for (const [key, raw] of [['num_rooms', draft.rooms], ['num_adults', draft.adults], ['num_children', draft.children]] as const) {
+      const n = number(raw)
+      if (n !== null && !Number.isNaN(n)) body[key] = n
+    }
+    put('special_requests', draft.requests)
   }
   const custom = customBody(opts.fields, draft.custom)
   if (Object.keys(custom).length > 0) body.custom_data = custom
@@ -438,12 +493,16 @@ export function wonBody(note: string): { note?: string } {
 export type ActivityType = 'note' | 'call' | 'email' | 'meeting'
 export const ACTIVITY_TYPES: readonly ActivityType[] = ['note', 'call', 'email', 'meeting']
 
-/** `POST inquiries/{id}/activities`: something to say (a subject or a body) and nothing beyond the server's limits. */
-export function activityBody(type: ActivityType, subject: string, body: string): { type: ActivityType; subject?: string; body?: string } | null {
+/**
+ * `POST inquiries/{id}/activities`: something to say (a subject or a body) and nothing beyond the server's limits; a
+ * call or meeting may carry how long it took (0 to 1440 minutes).
+ */
+export function activityBody(type: ActivityType, subject: string, body: string, minutes?: number | null): { type: ActivityType; subject?: string; body?: string; duration_minutes?: number } | null {
   const s = subject.trim().slice(0, 200)
   const b = body.trim().slice(0, 8000)
   if (!s && !b) return null
-  return { type, ...(s ? { subject: s } : {}), ...(b ? { body: b } : {}) }
+  const timed = (type === 'call' || type === 'meeting') && typeof minutes === 'number' && Number.isInteger(minutes) && minutes >= 0 && minutes <= 1440
+  return { type, ...(s ? { subject: s } : {}), ...(b ? { body: b } : {}), ...(timed ? { duration_minutes: minutes } : {}) }
 }
 
 export type ContactChannel = 'call' | 'email' | 'sms' | 'whatsapp'
@@ -551,15 +610,16 @@ export function customErrors(fields: Record<string, string[]> | undefined): stri
 
 /* ─── A lead's details ───────────────────────────────────────────────────── */
 
-export interface DetailsDraft { value: string; priority: string; owner: string; source: string; notes: string }
+export interface DetailsDraft { value: string; priority: string; owner: string; source: string; type: string; notes: string }
 
-export function detailsDraft(lead: Pick<LeadRow, 'total_value' | 'priority' | 'assigned_to' | 'source'> & { notes?: string | null }): DetailsDraft {
+export function detailsDraft(lead: Pick<LeadRow, 'total_value' | 'priority' | 'assigned_to' | 'source'> & { notes?: string | null; inquiry_type?: string | null }): DetailsDraft {
   const value = amount(lead.total_value)
   return {
     value: value === null ? '' : String(value),
     priority: lead.priority ?? '',
     owner: lead.assigned_to ?? '',
     source: lead.source ?? '',
+    type: lead.inquiry_type ?? '',
     notes: lead.notes ?? '',
   }
 }
@@ -576,7 +636,7 @@ export function detailsPatch(lead: Parameters<typeof detailsDraft>[0], draft: De
     if (n !== null && (Number.isNaN(n) || n < 0)) return { body: null, problem: 'number' }
     if (n !== amount(lead.total_value)) body.total_value = n
   }
-  for (const [key, field] of [['priority', 'priority'], ['assigned_to', 'owner'], ['source', 'source'], ['notes', 'notes']] as const) {
+  for (const [key, field] of [['priority', 'priority'], ['assigned_to', 'owner'], ['source', 'source'], ['inquiry_type', 'type'], ['notes', 'notes']] as const) {
     const next = draft[field].trim()
     if (next !== before[field].trim()) body[key] = next || null
   }

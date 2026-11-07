@@ -34,26 +34,35 @@ export const isTaskType = (value: string): value is TaskType => (TASK_TYPES as r
 export type Bucket = 'overdue' | 'today' | 'upcoming' | 'done'
 export const BUCKETS: readonly Bucket[] = ['overdue', 'today', 'upcoming', 'done']
 
+/** The list's pills (round 2): every open task by day, then round 1's buckets. */
+export type Tab = 'open' | Bucket
+export const TABS: readonly Tab[] = ['open', 'overdue', 'today', 'upcoming', 'done']
+
 export type Who = 'mine' | 'all'
 
 const read = (sp: URLSearchParams, key: string): string => sp.get(key) ?? ''
 
-/** The tab and the scope an address holds: Today and Mine unless it says otherwise. */
-export function readView(sp: URLSearchParams): { tab: Bucket; who: Who; page: number } {
-  const tab = read(sp, 'tab') as Bucket
+export interface TaskView { tab: Tab; who: Who; page: number; type: TaskType | '' }
+
+/** The tab, the scope and the type an address holds: Today and Mine and any type unless it says otherwise. */
+export function readView(sp: URLSearchParams): TaskView {
+  const tab = read(sp, 'tab') as Tab
   const page = Number(read(sp, 'page'))
+  const type = read(sp, 'type')
   return {
-    tab: BUCKETS.includes(tab) ? tab : 'today',
+    tab: TABS.includes(tab) ? tab : 'today',
     who: read(sp, 'who') === 'all' ? 'all' : 'mine',
     page: Number.isInteger(page) && page > 1 ? page : 1,
+    type: isTaskType(type) ? type : '',
   }
 }
 
-export function writeView(view: { tab: Bucket; who: Who; page: number }, current: URLSearchParams = new URLSearchParams()): URLSearchParams {
+export function writeView(view: { tab: Tab; who: Who; page: number; type?: TaskType | '' }, current: URLSearchParams = new URLSearchParams()): URLSearchParams {
   const next = new URLSearchParams(current)
   if (view.tab === 'today') next.delete('tab'); else next.set('tab', view.tab)
   if (view.who === 'mine') next.delete('who'); else next.set('who', 'all')
   if (view.page > 1) next.set('page', String(view.page)); else next.delete('page')
+  if (view.type) next.set('type', view.type); else next.delete('type')
   return next
 }
 
@@ -66,7 +75,7 @@ export type Query = Record<string, string | number | boolean | null | undefined>
  * `GET tasks`: the open ones in one read (bucketed on the venue's day, which the server's `overdue`/`due_today` do not
  * use), the done ones a page at a time, newest first. Mine is the person's own (`assigned_to` is an account id).
  */
-export function tasksQuery(view: { tab: Bucket; who: Who; page: number }, me: number): Query {
+export function tasksQuery(view: { tab: Tab; who: Who; page: number }, me: number): Query {
   const mine = view.who === 'mine' ? me : undefined
   return view.tab === 'done'
     ? { status: 'completed', assigned_to: mine, page: view.page, per_page: 50 }
@@ -146,6 +155,53 @@ export function groupByDay<T extends Pick<Task, 'id' | 'due_at'>>(tasks: readonl
   return [...groups.entries()]
     .sort(([a], [b]) => (a === '' ? 1 : b === '' ? -1 : a.localeCompare(b)))
     .map(([day, list]) => ({ day: day || null, tasks: list }))
+}
+
+/** The tasks of one type ('' for every type), over what is loaded (the server has no type filter). */
+export function ofType<T extends Pick<Task, 'type'>>(tasks: readonly T[], type: TaskType | ''): T[] {
+  return type ? tasks.filter(task => (isTaskType(task.type) ? task.type : 'custom') === type) : [...tasks]
+}
+
+export type DueState = 'done' | 'overdue' | 'today' | 'tomorrow' | 'later' | 'none'
+
+/** How a task's due time reads on the venue's day: done, overdue, today, tomorrow, later, or no day. */
+export function dueState(task: Pick<Task, 'due_at' | 'completed_at'>, today: string, zone: string): DueState {
+  if (task.completed_at) return 'done'
+  const day = venueDay(task.due_at, zone)
+  if (!day) return 'none'
+  if (day < today) return 'overdue'
+  if (day === today) return 'today'
+  return day === addDays(today, 1) ? 'tomorrow' : 'later'
+}
+
+export interface TaskGroup<T> { key: string; kind: 'overdue' | 'today' | 'tomorrow' | 'day' | 'none'; day: string | null; tasks: T[] }
+
+/**
+ * Every open task by the venue's day (round 2's "All open"): everything overdue in one group first, then today,
+ * tomorrow and each later day, those without a day last. Within a group, soonest first.
+ */
+export function groupOpen<T extends Pick<Task, 'id' | 'due_at' | 'completed_at'>>(tasks: readonly T[], today: string, zone: string): TaskGroup<T>[] {
+  const buckets = splitBuckets(tasks, today, zone)
+  const groups: TaskGroup<T>[] = []
+  if (buckets.overdue.length) groups.push({ key: 'overdue', kind: 'overdue', day: null, tasks: buckets.overdue })
+  if (buckets.today.length) groups.push({ key: 'today', kind: 'today', day: today, tasks: buckets.today })
+  const tomorrow = addDays(today, 1)
+  for (const group of groupByDay(buckets.upcoming, zone)) {
+    if (group.day === null) groups.push({ key: 'none', kind: 'none', day: null, tasks: group.tasks })
+    else groups.push({ key: group.day, kind: group.day === tomorrow ? 'tomorrow' : 'day', day: group.day, tasks: group.tasks })
+  }
+  return groups
+}
+
+/** Done tasks by the venue's day they were done, the latest first. */
+export function groupDone<T extends Pick<Task, 'id' | 'completed_at'>>(tasks: readonly T[], zone: string): { day: string | null; tasks: T[] }[] {
+  const groups = new Map<string, T[]>()
+  const sorted = [...tasks].sort((a, b) => (Date.parse(b.completed_at ?? '') || 0) - (Date.parse(a.completed_at ?? '') || 0) || b.id - a.id)
+  for (const task of sorted) {
+    const key = venueDay(task.completed_at, zone) ?? ''
+    groups.set(key, [...(groups.get(key) ?? []), task])
+  }
+  return [...groups.entries()].map(([day, list]) => ({ day: day || null, tasks: list }))
 }
 
 /** A search over what is loaded: the title, the notes and who it is for. */

@@ -2,7 +2,7 @@ import { useId, useState, type FormEvent } from 'react'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { Search, X } from 'lucide-react'
+import { Search, Sparkles, X } from 'lucide-react'
 import { Button } from '../../workspace/ui/Button'
 import { Field } from '../../workspace/ui/Field'
 import { Notice } from '../../workspace/ui/Notice'
@@ -24,14 +24,17 @@ import {
 import type { GuestHit, LeadDetail, Paginated } from './leadTypes'
 import { problemText, sourceLabel } from './leadWords'
 
-const SERVER_FIELDS: Record<string, LeadField> = { full_name: 'name', email: 'email', guest_id: 'guest', total_value: 'value', check_out: 'checkOut', num_rooms: 'rooms' }
+const SERVER_FIELDS: Record<string, LeadField> = {
+  full_name: 'name', email: 'email', guest_id: 'guest', total_value: 'value', check_out: 'checkOut', num_rooms: 'rooms', num_adults: 'adults', num_children: 'children',
+}
 
 /**
  * Add a lead (the full admin's Add inquiry): a new contact (`POST guests`) or one already known, then the lead
  * (`POST inquiries`) in the default pipeline's first stage unless another is chosen. Stay details only for a hotel;
- * the organisation's own fields when it has some. Opens on `/crm/leads?new=1` (Today and Find link there).
+ * the enquiry type where the organisation has types; its own fields when it has some. Opens on `/crm/leads?new=1`
+ * (Today and Find link there), or filled in by the AI from a pasted message (`initial`).
  */
-export function LeadForm({ presetGuest, onClose }: { presetGuest?: number | null; onClose: () => void }) {
+export function LeadForm({ presetGuest, initial, onClose }: { presetGuest?: number | null; initial?: LeadDraft | null; onClose: () => void }) {
   const { t } = useTranslation()
   const boot = useBoot()
   const navigate = useNavigate()
@@ -46,7 +49,7 @@ export function LeadForm({ presetGuest, onClose }: { presetGuest?: number | null
   const stay = boot.organization.industry === 'hotel'
   const stages = sortedStages(defaultPipeline(pipelines.data)?.stages).filter(s => s.kind === 'open')
 
-  const [draft, setDraft] = useState<LeadDraft>(() => ({
+  const [draft, setDraft] = useState<LeadDraft>(() => initial ?? ({
     ...EMPTY_LEAD,
     contact: presetGuest ? 'existing' : 'new',
     guestId: presetGuest ?? null,
@@ -109,6 +112,7 @@ export function LeadForm({ presetGuest, onClose }: { presetGuest?: number | null
         </div>
       )}>
       <form id={formId} onSubmit={submit} noValidate className="space-y-5">
+        {initial && <Notice tone="info"><span className="inline-flex items-start gap-2"><Sparkles size={15} aria-hidden className="crm-ai-text mt-0.5 shrink-0" />{t('crm.leads.capture_filled', 'Filled in by the AI from the message. Check it before you add the lead.')}</span></Notice>}
         {create.isError && <Notice tone="danger">{errorText(t, create.error)}</Notice>}
         {madeGuest && create.isError && <Notice tone="info">{t('crm.leads.contact_kept', 'The contact was saved; trying again adds only the lead.')}</Notice>}
 
@@ -135,6 +139,9 @@ export function LeadForm({ presetGuest, onClose }: { presetGuest?: number | null
               </Field>
               <Field label={t('crm.leads.field_phone', 'Phone (optional)')}>
                 <TextInput type="tel" value={draft.phone} onChange={e => set({ phone: e.target.value })} maxLength={50} disabled={Boolean(madeGuest)} autoComplete="off" />
+              </Field>
+              <Field label={t('crm.leads.field_country_opt', 'Country (optional)')}>
+                <TextInput value={draft.country} onChange={e => set({ country: e.target.value })} maxLength={100} disabled={Boolean(madeGuest)} autoComplete="off" />
               </Field>
             </div>
           ) : (
@@ -177,6 +184,14 @@ export function LeadForm({ presetGuest, onClose }: { presetGuest?: number | null
                 {owners.map(o => <option key={o} value={o}>{o === boot.staff.name ? t('crm.leads.owner_me', 'Me ({{name}})', { name: o }) : o}</option>)}
               </Select>
             </Field>
+            {(settings.types.length > 0 || draft.type) && (
+              <Field label={t('crm.leads.field_type', 'Type of enquiry')}>
+                <Select value={draft.type} onChange={e => set({ type: e.target.value })}>
+                  <option value="">{t('crm.leads.type_none', 'Not set')}</option>
+                  {[...new Set([...settings.types, ...(draft.type ? [draft.type] : [])])].map(v => <option key={v} value={v}>{v}</option>)}
+                </Select>
+              </Field>
+            )}
           </div>
           <Field label={t('crm.leads.field_notes', 'Notes (optional)')}>
             <TextArea rows={3} value={draft.notes} onChange={e => set({ notes: e.target.value })} placeholder={t('crm.leads.notes_placeholder', 'What they asked for, dates, budget…')} />
@@ -200,7 +215,20 @@ export function LeadForm({ presetGuest, onClose }: { presetGuest?: number | null
                   aria-invalid={problem('rooms') ? true : undefined} />
                 {problem('rooms') && <span className="mt-1 block text-xs text-a-danger">{problem('rooms')}</span>}
               </Field>
+              <Field label={t('crm.leads.adults', 'Adults')}>
+                <TextInput type="number" inputMode="numeric" min={1} step={1} value={draft.adults} onChange={e => set({ adults: e.target.value })}
+                  aria-invalid={problem('adults') ? true : undefined} />
+                {problem('adults') && <span className="mt-1 block text-xs text-a-danger">{problem('adults')}</span>}
+              </Field>
+              <Field label={t('crm.leads.children', 'Children')}>
+                <TextInput type="number" inputMode="numeric" min={0} step={1} value={draft.children} onChange={e => set({ children: e.target.value })}
+                  aria-invalid={problem('children') ? true : undefined} />
+                {problem('children') && <span className="mt-1 block text-xs text-a-danger">{problem('children')}</span>}
+              </Field>
             </div>
+            <Field label={t('crm.leads.requests', 'Special requests (optional)')}>
+              <TextArea rows={2} value={draft.requests} onChange={e => set({ requests: e.target.value })} />
+            </Field>
           </section>
         )}
 

@@ -4,6 +4,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { CrmContext } from '../CrmProvider'
 import type { Bootstrap } from '../lib/types'
+import { boardQuery } from './board'
 import { dueSections, listQuery, readFilters } from './leadLogic'
 import { LeadPage } from './LeadPage'
 import { LeadsPage } from './LeadsPage'
@@ -25,7 +26,7 @@ const boot: Bootstrap = {
   organization: { id: 7, name: 'Studio Lumen', industry: 'beauty' },
   accent: null,
   venue: { timezone: 'Europe/Riga', today: '2026-11-07', currency: 'EUR' },
-  features: { chatbot: true, engagement: true },
+  features: { chatbot: true, engagement: true, admin_ai: false },
   ai: { status: 'under', percent: 10 },
   staff: { id: 3, name: 'Anna', role: 'staff', can: { manage_bot: false, manage_widget: false, manage_pipelines: false, manage_canned: false, manage_team: false, delete_records: true } },
   widget: null,
@@ -50,13 +51,13 @@ const ada: LeadRow = {
 }
 const page = (rows: LeadRow[]): Paginated<LeadRow> => ({ data: rows, current_page: 1, last_page: 1, total: rows.length })
 
-function render(at: string, seed: (qc: QueryClient) => void) {
+function render(at: string, seed: (qc: QueryClient) => void, bootstrap: Bootstrap = boot) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } })
   seed(qc)
   return renderToStaticMarkup(
     <QueryClientProvider client={qc}>
       <MemoryRouter initialEntries={[at]}>
-        <CrmContext.Provider value={{ data: boot, isLoading: false, isError: false, error: null, refetch: () => {} }}>
+        <CrmContext.Provider value={{ data: bootstrap, isLoading: false, isError: false, error: null, refetch: () => {} }}>
           <Routes>
             <Route path="/crm/leads" element={<LeadsPage />} />
             <Route path="/crm/leads/:id" element={<LeadPage />} />
@@ -78,9 +79,69 @@ describe('Leads', () => {
     expect(html).toContain('Analytical Engines')
     expect(html).toContain('Proposal')
     expect(html).toContain('href="/crm/leads/41"')
-    expect(html).toMatch(/Follow up Thu,? (5 Nov|Nov 5)/)
+    // Round 2: the next step and how late it is on the venue's day (5 Nov against 7 Nov).
+    expect(html).toContain('Call back')
+    expect(html).toContain('2 d late')
     expect(html).toContain('€1,250')
-    for (const tool of ['Export CSV', 'Add a lead', 'Due now', 'Filters', 'Select this page']) expect(html).toContain(tool)
+    for (const tool of ['Export CSV', 'Add a lead', 'Due now', 'Filters', 'Select this page', 'Views', 'Columns']) expect(html).toContain(tool)
+    // The plan has no staff AI (the CRM's own packages do not): no "From a message", which would only be refused.
+    expect(html).not.toContain('From a message')
+  })
+
+  it('offers a lead from a pasted message where the plan includes the staff AI', () => {
+    const html = render('/crm/leads', qc => {
+      qc.setQueryData(['crm', 'pipeline', 'pipelines'], pipelines)
+      qc.setQueryData(['crm', 'leads', 'list', listQuery(readFilters(new URLSearchParams('')), 'Anna')], page([ada]))
+    }, { ...boot, features: { ...boot.features, admin_ai: true } })
+    expect(html).toContain('From a message')
+    expect(html).toContain('crm-ai-soft')
+  })
+
+  it('shows the open pipeline\'s figures, a header row, the AI\'s chance and the row\'s menu (round 2)', () => {
+    const html = render('/crm/leads', qc => {
+      qc.setQueryData(['crm', 'pipeline', 'pipelines'], pipelines)
+      qc.setQueryData(['crm', 'leads', 'kpis'], { total: 12, due_today: 2, overdue: 3, estimated_value: 9800, new_this_week: 4, new_delta_pct: 25 })
+      qc.setQueryData(['crm', 'leads', 'list', listQuery(readFilters(new URLSearchParams('')), 'Anna')], page([{ ...ada, ai_win_probability: 72, ai_going_cold_risk: 'high', phone_calls_made: 2 }]))
+    })
+    for (const figure of ['Open leads', '€9,800', 'Follow-ups due', '3 overdue', 'New this week', '+25 % on the week before']) expect(html).toContain(figure)
+    expect(html).toContain('<thead>')
+    expect(html).toContain('AI signal')
+    expect(html).toContain('72 %')
+    expect(html).toContain('More for Ada Lovelace')
+    expect(html).toContain('Change the stage of Ada Lovelace')
+    expect(html).toContain('aria-pressed="true"') // the List view is the one chosen
+    // The follow-up pills carry the server's counts.
+    expect(html).toMatch(/Overdue<span[^>]*>3<\/span>/)
+  })
+
+  it('draws the board as round 1\'s Pipeline did, now under Leads → Board', () => {
+    const html = render('/crm/leads?view=board', qc => {
+      qc.setQueryData(['crm', 'pipeline', 'pipelines'], pipelines)
+      qc.setQueryData(['crm', 'leads', 'board', boardQuery()], page([ada, { ...ada, id: 42, status: 'New', total_value: '100', guest: { id: 13, full_name: 'Grace Hopper' } }]))
+    })
+    expect(html).toContain('crm-board')
+    expect(html).toContain('overflow-x-auto')
+    expect(html).toContain('Ada Lovelace')
+    expect(html).toContain('Grace Hopper')
+    expect(html).toContain('2 open leads worth €1,350')
+    expect(html).toContain('Move to')
+    expect(html).toContain('Won leads become deals.')
+    expect(html).toContain('href="/crm/deals"')
+    expect(html).toContain('<option value="2">Proposal (1)</option>')
+    expect(html).not.toContain('Select this page')
+  })
+
+  it('draws the team: nobody first, then each owner, with "Give to" on every card', () => {
+    const html = render('/crm/leads?view=team', qc => {
+      qc.setQueryData(['crm', 'pipeline', 'pipelines'], pipelines)
+      qc.setQueryData(['crm', 'tasks', 'team'], [{ id: 3, name: 'Anna' }, { id: 4, name: 'Ben' }])
+      qc.setQueryData(['crm', 'leads', 'board', boardQuery()], page([ada, { ...ada, id: 42, assigned_to: null, guest: { id: 13, full_name: 'Grace Hopper' } }]))
+    })
+    expect(html).toContain('Nobody yet')
+    expect(html).toContain('Me (Anna)')
+    expect(html).toContain('Ben')
+    expect(html).toContain('Give to')
+    expect(html.indexOf('Nobody yet')).toBeLessThan(html.indexOf('Me (Anna)'))
   })
 
   it('shows "due now" (Today\'s link) as overdue and today, and opens the form on ?new=1', () => {
@@ -116,5 +177,14 @@ describe('Leads', () => {
     expect(html).toContain('Ready to book a group.')
     expect(html).toContain('72 % likely to win')
     expect(html).toContain('2 calls · 1 emails')
+    // Round 2: the overview's stage bar, the email template, the sections a phone jumps to, the voice note's box.
+    expect(html).toContain('Proposal, where the lead is')
+    expect(html).toContain('Move to New')
+    expect(html).toContain('aria-current="step"')
+    expect(html).toContain('Send an email')
+    expect(html).toContain('On this page')
+    expect(html).toContain('id="lead-timeline"')
+    expect(html).toContain('Ctrl or ⌘ + Enter adds it')
+    expect(html).toContain('More for this lead')
   })
 })

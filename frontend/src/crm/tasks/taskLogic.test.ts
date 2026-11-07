@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
-  bucketOf, completeBody, draftOf, dueParts, groupByDay, quickDates, readView, searchTasks, splitBuckets, taskBody,
-  tasksQuery, validateTask, venueClock, venueDay, wallToInstant, writeView, type Task,
+  bucketOf, completeBody, draftOf, dueParts, dueState, groupByDay, groupDone, groupOpen, ofType, quickDates, readView, searchTasks,
+  splitBuckets, taskBody, tasksQuery, validateTask, venueClock, venueDay, wallToInstant, writeView, type Task,
 } from './taskLogic'
 
 const RIGA = 'Europe/Riga'
@@ -12,8 +12,8 @@ const task = (id: number, due_at: string | null, extra: Partial<Task> = {}): Tas
 
 describe('the tab and scope in the address', () => {
   it('opens on Today and Mine, and writes only what differs', () => {
-    expect(readView(new URLSearchParams(''))).toEqual({ tab: 'today', who: 'mine', page: 1 })
-    expect(readView(new URLSearchParams('tab=done&who=all&page=3'))).toEqual({ tab: 'done', who: 'all', page: 3 })
+    expect(readView(new URLSearchParams(''))).toEqual({ tab: 'today', who: 'mine', page: 1, type: '' })
+    expect(readView(new URLSearchParams('tab=done&who=all&page=3'))).toEqual({ tab: 'done', who: 'all', page: 3, type: '' })
     expect(readView(new URLSearchParams('tab=later&who=x')).tab).toBe('today')
     const sp = writeView({ tab: 'overdue', who: 'all', page: 1 }, new URLSearchParams('page=4&keep=1'))
     expect(sp.toString()).toBe('keep=1&tab=overdue&who=all')
@@ -117,3 +117,47 @@ describe('the task form', () => {
     expect(dueParts('2026-11-07T12:15:00Z', RIGA)).toEqual({ day: '2026-11-07', time: '14:15' })
   })
 })
+
+describe('round 2: every open task by day, types and due states', () => {
+  const today = '2026-11-07'
+  it('reads the All open tab and a type from the address, and writes them back', () => {
+    expect(readView(new URLSearchParams('tab=open&type=call'))).toMatchObject({ tab: 'open', type: 'call' })
+    expect(readView(new URLSearchParams('type=juggling')).type).toBe('')
+    expect(writeView({ tab: 'open', who: 'mine', page: 1, type: 'email' }).toString()).toBe('tab=open&type=email')
+    expect(tasksQuery({ tab: 'open', who: 'mine', page: 1 }, 4)).toEqual({ status: 'open', assigned_to: 4, per_page: 200 })
+  })
+
+  it('keeps one type (an unknown one is Other)', () => {
+    const list = [task(1, null, { type: 'call' }), task(2, null, { type: 'email' }), task(3, null, { type: 'juggling' })]
+    expect(ofType(list, 'call').map(t => t.id)).toEqual([1])
+    expect(ofType(list, 'custom').map(t => t.id)).toEqual([3])
+    expect(ofType(list, '').map(t => t.id)).toEqual([1, 2, 3])
+  })
+
+  it('says how a due time reads on the venue\'s day', () => {
+    expect(dueState(task(1, '2026-11-06T10:00:00Z'), today, RIGA)).toBe('overdue')
+    expect(dueState(task(2, '2026-11-07T10:00:00Z'), today, RIGA)).toBe('today')
+    expect(dueState(task(3, '2026-11-07T22:30:00Z'), today, RIGA)).toBe('tomorrow') // 00:30 on the 8th in Riga
+    expect(dueState(task(4, '2026-11-12T10:00:00Z'), today, RIGA)).toBe('later')
+    expect(dueState(task(5, null), today, RIGA)).toBe('none')
+    expect(dueState(task(6, null, { completed_at: '2026-11-07T10:00:00Z' }), today, RIGA)).toBe('done')
+  })
+
+  it('groups every open task: overdue together, then today, tomorrow, each day, no day last', () => {
+    const groups = groupOpen([
+      task(1, null), task(2, '2026-11-09T08:00:00Z'), task(3, '2026-11-08T08:00:00Z'), task(4, '2026-11-01T08:00:00Z'),
+      task(5, '2026-11-05T08:00:00Z'), task(6, '2026-11-07T08:00:00Z'),
+    ], today, RIGA)
+    expect(groups.map(g => [g.kind, g.day, g.tasks.map(t => t.id)])).toEqual([
+      ['overdue', null, [4, 5]], ['today', today, [6]], ['tomorrow', '2026-11-08', [3]], ['day', '2026-11-09', [2]], ['none', null, [1]],
+    ])
+  })
+
+  it('groups the done ones by the venue\'s day they were done, latest first', () => {
+    const groups = groupDone([
+      task(1, null, { completed_at: '2026-11-05T10:00:00Z' }), task(2, null, { completed_at: '2026-11-07T21:30:00Z' }), task(3, null, { completed_at: '2026-11-07T08:00:00Z' }),
+    ], RIGA)
+    expect(groups.map(g => [g.day, g.tasks.map(t => t.id)])).toEqual([['2026-11-07', [2, 3]], ['2026-11-05', [1]]])
+  })
+})
+

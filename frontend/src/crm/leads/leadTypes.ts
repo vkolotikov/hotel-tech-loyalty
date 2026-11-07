@@ -37,6 +37,11 @@ export interface LeadGuest {
   phone?: string | null
   mobile?: string | null
   country?: string | null
+  nationality?: string | null
+  position_title?: string | null
+  vip_level?: string | null
+  /** The loyalty member this contact is (a template's member fields are filled from them). */
+  member_id?: number | null
 }
 
 /** A row of `GET inquiries` (the paginator's `data`). */
@@ -61,6 +66,17 @@ export interface LeadRow {
   event_name?: string | null
   ai_win_probability?: number | null
   ai_going_cold_risk?: string | null
+  ai_suggested_action?: string | null
+  ai_brief?: string | null
+  ai_intent?: string | null
+  phone_calls_made?: number | null
+  emails_sent?: number | null
+  num_adults?: number | null
+  num_children?: number | null
+  room_type_requested?: string | null
+  event_pax?: number | null
+  notes?: string | null
+  custom_data?: Record<string, unknown> | null
   created_at: string | null
   updated_at?: string | null
   last_contacted_at?: string | null
@@ -73,22 +89,14 @@ export interface Reservation { id: number; confirmation_no: string | null; statu
 /** `GET inquiries/{id}`: the row with its contact, pipeline, stages and last activities. */
 export interface LeadDetail extends LeadRow {
   property_id?: number | null
-  num_adults?: number | null
-  num_children?: number | null
   num_nights?: number | null
   special_requests?: string | null
   notes: string | null
   lost_reason_id?: number | null
   lost_reason?: { id: number; label: string } | null
   pipeline?: { id: number; name: string; stages?: Stage[] } | null
-  custom_data?: Record<string, unknown> | null
-  phone_calls_made?: number | null
-  emails_sent?: number | null
   last_contact_comment?: string | null
-  ai_brief?: string | null
   ai_brief_at?: string | null
-  ai_intent?: string | null
-  ai_suggested_action?: string | null
   reservations?: Reservation[]
 }
 
@@ -210,7 +218,56 @@ export interface LeadKpis {
   overdue: number
   estimated_value: number
   new_this_week: number
+  /** New this week against the week before, in percent (null without a week before). */
+  new_delta_pct?: number | null
 }
+
+/** A person's saved filters (`GET saved-views?page=inquiries`, SavedViewController: their own only). */
+export interface SavedView {
+  id: number
+  name: string
+  page: string
+  filters: Record<string, unknown>
+  is_pinned: boolean
+  sort_order: number
+}
+
+/** An email template (`GET email-templates` answers `{ templates }`). */
+export interface EmailTemplate {
+  id: number
+  name: string
+  subject: string
+  html_body: string
+  category: string | null
+  is_active?: boolean
+}
+
+/** `POST crm-ai/capture-lead`: what the AI read from a pasted message (CrmAiService::extractLead); 200 with `success`. */
+export interface CaptureAnswer {
+  success: boolean
+  error?: string
+  data?: {
+    customer_name?: string | null
+    email?: string | null
+    phone?: string | null
+    company?: string | null
+    country?: string | null
+    inquiry_type?: string | null
+    check_in?: string | null
+    check_out?: string | null
+    num_rooms?: number | string | null
+    num_adults?: number | string | null
+    num_children?: number | string | null
+    total_value?: number | string | null
+    source?: string | null
+    special_requests?: string | null
+    notes?: string | null
+    priority?: string | null
+  }
+}
+
+/** `GET guests/facets`: the distinct values the contacts hold (the country filter). */
+export interface GuestFacets { country?: string[] }
 
 /** A contact as `GET guests?search=` lists it. */
 export interface GuestHit { id: number; full_name: string | null; email?: string | null; phone?: string | null; company?: string | null }

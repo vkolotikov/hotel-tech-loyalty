@@ -4,7 +4,7 @@ import {
   defaultPipeline, detailsDraft, detailsPatch, dueSections, EMPTY_LEAD, exportQuery, fileSize, firstOpenStage, followUp,
   guestBody, hasStay, impactOf, kindOf, leadBody, listQuery, logContactBody, lostBody, missingCustom, moveTo,
   newestConversation, nextStepBody, NO_FILTERS, ownerOptions, pipelineOf, readFilters, resolveStage, settingList,
-  sourceOptions, stageColor, toggled, toggledAll, validateLead, validateNextStep, winTone, withFilter, wonBody, writeFilters,
+  sortChoices, sourceOptions, stageColor, toggled, toggledAll, validateLead, validateNextStep, winTone, withFilter, wonBody, writeFilters,
 } from './leadLogic'
 import type { CustomField, Pipeline, Stage } from './leadTypes'
 
@@ -258,10 +258,45 @@ describe('a lead\'s details', () => {
   const lead = { total_value: '1250.00', priority: 'High', assigned_to: 'Anna', source: 'chatbot', notes: 'Wants May' }
   it('sends only what changed, an emptied box as a cleared value', () => {
     const draft = detailsDraft(lead)
-    expect(draft).toEqual({ value: '1250', priority: 'High', owner: 'Anna', source: 'chatbot', notes: 'Wants May' })
+    expect(draft).toEqual({ value: '1250', priority: 'High', owner: 'Anna', source: 'chatbot', type: '', notes: 'Wants May' })
     expect(detailsPatch(lead, draft)).toEqual({ body: null })
     expect(detailsPatch(lead, { ...draft, value: '', owner: 'Ben' })).toEqual({ body: { total_value: null, assigned_to: 'Ben' } })
     expect(detailsPatch(lead, { ...draft, value: '-1' })).toEqual({ body: null, problem: 'number' })
     expect(detailsPatch(lead, { ...draft, notes: '' })).toEqual({ body: { notes: null } })
   })
 })
+
+describe('round 2: more filters, sorts and form fields', () => {
+  it('reads and writes the priority, type, country and phone filters, and counts them', () => {
+    const f = readFilters(new URLSearchParams('priority=High&type=Wedding&country=Latvia&phone=yes'))
+    expect(f).toMatchObject({ priority: 'High', type: 'Wedding', country: 'Latvia', phone: 'yes' })
+    expect(readFilters(new URLSearchParams('phone=maybe')).phone).toBe('')
+    expect(activeFilterCount(f)).toBe(4)
+    expect(writeFilters(f).toString()).toBe('priority=High&type=Wedding&country=Latvia&phone=yes')
+    expect(listQuery(f, 'Me')).toMatchObject({ priority: 'High', inquiry_type: 'Wedding', country: 'Latvia', has_phone: 'yes' })
+  })
+
+  it('sorts by value and by the AI\'s chance on the server, arrival only at a hotel', () => {
+    expect(listQuery({ ...NO_FILTERS, sort: 'value' }, 'Me')).toMatchObject({ sort: 'total_value', dir: 'desc' })
+    expect(listQuery({ ...NO_FILTERS, sort: 'ai' }, 'Me')).toMatchObject({ sort: 'ai_win_probability', dir: 'desc' })
+    expect(sortChoices(false)).not.toContain('arrival')
+    expect(sortChoices(true)).toContain('arrival')
+  })
+
+  it('sends the type, the country and a hotel\'s party and requests', () => {
+    const draft = { ...EMPTY_LEAD, name: 'Ada', country: ' Latvia ', type: 'Wedding', adults: '2', children: '0', requests: ' Sea view ' }
+    expect(guestBody(draft)).toEqual({ full_name: 'Ada', country: 'Latvia' })
+    expect(leadBody(draft, 1, { stay: true, fields: [] })).toEqual({ guest_id: 1, inquiry_type: 'Wedding', num_adults: 2, num_children: 0, special_requests: 'Sea view' })
+    expect(leadBody(draft, 1, { stay: false, fields: [] })).toEqual({ guest_id: 1, inquiry_type: 'Wedding' })
+    expect(validateLead({ ...draft, adults: '0', children: '-1' })).toEqual({ adults: 'number', children: 'number' })
+  })
+
+  it('changes the type with the other details and records a call\'s length', () => {
+    const lead = { total_value: null, priority: null, assigned_to: null, source: null, notes: null, inquiry_type: 'Wedding' }
+    expect(detailsPatch(lead, { ...detailsDraft(lead), type: '' })).toEqual({ body: { inquiry_type: null } })
+    expect(activityBody('call', 'Rang', '', 12)).toEqual({ type: 'call', subject: 'Rang', duration_minutes: 12 })
+    expect(activityBody('note', '', 'x', 12)).toEqual({ type: 'note', body: 'x' })
+    expect(activityBody('meeting', 'M', '', 2000)).toEqual({ type: 'meeting', subject: 'M' })
+  })
+})
+

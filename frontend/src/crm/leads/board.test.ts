@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import type { LeadRow, Pipeline, Stage } from '../leads/leadTypes'
+import type { LeadRow, Pipeline, Stage } from './leadTypes'
 import {
-  BOARD_LIMIT, boardColumns, boardQuery, dealsQuery, fulfilmentProgress, moveCard, moveTargets, nextFulfilment, onPipeline,
-  openTotals, paymentBody, phoneColumn, pickPipeline, stillOwed, sumValue, withMoved,
+  BOARD_LIMIT, boardColumns, boardQuery, moveCard, moveTargets, onPipeline, openTotals, phoneColumn, pickPipeline, readView,
+  sumValue, withMoved, withView,
 } from './board'
+import { NO_FILTERS } from './leadLogic'
 
 const stage = (id: number, name: string, kind: Stage['kind'], sort: number, extra: Partial<Stage> = {}): Stage => ({ id, name, kind, sort_order: sort, color: null, ...extra })
 const SALES: Pipeline = {
@@ -21,6 +22,26 @@ const lead = (id: number, status: string, extra: Partial<LeadRow> = {}): LeadRow
 describe('which pipeline and which leads', () => {
   it('asks for the open leads, most recently changed first, up to the board\'s limit', () => {
     expect(boardQuery()).toEqual({ active_only: true, sort: 'updated_at', dir: 'desc', per_page: BOARD_LIMIT })
+    // With no filter set it asks exactly what round 1's board asked (the cached board stays the same board).
+    expect(boardQuery(NO_FILTERS, 'Anna')).toEqual(boardQuery())
+  })
+
+  it('narrows the board by the list\'s search and panel filters, never by its follow-up filter, sort or page', () => {
+    const q = boardQuery({ ...NO_FILTERS, q: ' ada ', owner: 'me', priority: 'High', phone: 'yes', due: 'overdue', sort: 'value', page: 3, from: '2026-11-07', to: '2026-11-01' }, 'Anna')
+    expect(q).toEqual({
+      active_only: true, sort: 'updated_at', dir: 'desc', per_page: BOARD_LIMIT,
+      search: 'ada', assigned_to: 'Anna', priority: 'High', has_phone: 'yes', date_from: '2026-11-01', date_to: '2026-11-07',
+    })
+  })
+
+  it('reads the view from the address and drops what belongs to another view', () => {
+    expect(readView(new URLSearchParams(''))).toBe('list')
+    expect(readView(new URLSearchParams('view=team'))).toBe('team')
+    expect(readView(new URLSearchParams('view=nope'))).toBe('list')
+    const board = withView(new URLSearchParams('page=3&due=1&q=ada&p=2'), 'board')
+    expect(board.toString()).toBe('q=ada&p=2&view=board')
+    expect(withView(board, 'team').has('p')).toBe(false)
+    expect(withView(board, 'list').toString()).toBe('q=ada')
   })
 
   it('shows the pipeline the address names, else the default one', () => {
@@ -84,35 +105,5 @@ describe('columns', () => {
     expect(phoneColumn(columns, 8)?.stage.name).toBe('Won')
     expect(phoneColumn(boardColumns(SALES, [], true), null)?.stage.name).toBe('New')
     expect(phoneColumn([], null)).toBeNull()
-  })
-})
-
-describe('won deals', () => {
-  it('asks GET deals as the full admin\'s filters do', () => {
-    expect(dealsQuery('all', 1)).toEqual({ page: 1, per_page: 20, sort: 'due_date' })
-    expect(dealsQuery('design_needed', 2, 'amount')).toEqual({ page: 2, per_page: 20, sort: 'amount', stage: 'design_needed' })
-    expect(dealsQuery('high_value', 1)).toMatchObject({ focus: 'high_value' })
-  })
-
-  it('walks the fulfilment steps in order', () => {
-    expect(nextFulfilment(null)).toBe('payment_pending')
-    expect(nextFulfilment('in_production')).toBe('ready_to_ship')
-    expect(nextFulfilment('completed')).toBeNull()
-    expect(fulfilmentProgress(null)).toEqual({ done: 0, total: 5 })
-    expect(fulfilmentProgress('design_sent')).toEqual({ done: 2, total: 5 })
-    expect(fulfilmentProgress('completed')).toEqual({ done: 5, total: 5 })
-  })
-
-  it('sends a payment state with an amount of zero or more', () => {
-    expect(paymentBody('partial', '120,5')).toEqual({ payment_status: 'partial', paid_amount: 120.5 })
-    expect(paymentBody('paid', '')).toEqual({ payment_status: 'paid' })
-    expect(paymentBody('paid', '-1')).toBeNull()
-    expect(paymentBody('nope', '1')).toBeNull()
-  })
-
-  it('says what is still owed, never below zero', () => {
-    expect(stillOwed('1000.00', '250')).toBe(750)
-    expect(stillOwed(100, 150)).toBe(0)
-    expect(stillOwed(null, 10)).toBeNull()
   })
 })

@@ -1,8 +1,8 @@
-import { useState, type ReactNode } from 'react'
+import { useState } from 'react'
 import { useMutation } from '@tanstack/react-query'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { Check, ListChecks, Pencil, RotateCcw, Trash2 } from 'lucide-react'
+import { Check, ExternalLink, ListChecks, Pencil, RotateCcw, Trash2 } from 'lucide-react'
 import { Button } from '../../workspace/ui/Button'
 import { Dialog } from '../../workspace/ui/Dialog'
 import { Field } from '../../workspace/ui/Field'
@@ -13,16 +13,20 @@ import { errorText } from '../lib/errors'
 import { dateTime, dayLabel } from '../lib/format'
 import { leadPath } from '../lib/links'
 import { Confirm } from '../ui/Confirm'
+import { Pill } from '../ui/Pill'
+import { TONE_CHIP } from '../ui/tones'
+import { ActionMenu, type MenuItem } from '../leads/Menu'
 import { TextInput } from '../ui/inputs'
 import { useToast } from '../ui/Toast'
-import { bucketOf, completeBody, dueParts, type Task, type TaskType } from './taskLogic'
+import { completeBody, dueParts, dueState, type Task, type TaskType } from './taskLogic'
 import { useTaskChanged } from './taskData'
 import { TaskForm } from './TaskForm'
-import { TASK_ICONS, taskTypeLabel } from './taskWords'
+import { dueTone, TASK_ICONS, taskTypeLabel } from './taskWords'
 
 /**
- * Tasks as rows, each with what can be done to it: mark it done with an outcome (`complete`), open it again (`reopen`),
- * change it, delete it (asked first). Used by Tasks and by a lead's page.
+ * Tasks as rows (round 2: a clear due state on each), each with what can be done to it: mark it done with an outcome
+ * (`complete`) in one press, and in its "…" menu open it again (`reopen`), change it, go to its lead, delete it (asked
+ * first). Used by Tasks and by a lead's page.
  */
 export function TaskList({ tasks, showLead = true, leadName }: { tasks: readonly Task[]; showLead?: boolean; leadName?: string | null }) {
   const [editing, setEditing] = useState<Task | null>(null)
@@ -56,11 +60,13 @@ function TaskRow({ task, showLead, onEdit, onComplete, onDelete }: {
   const lang = i18n.language
   const zone = boot.venue.timezone
   const toast = useToast()
+  const navigate = useNavigate()
   const changed = useTaskChanged()
   const done = Boolean(task.completed_at)
-  const bucket = bucketOf(task, boot.venue.today, zone)
+  const state = dueState(task, boot.venue.today, zone)
   const due = dueParts(task.due_at, zone)
   const Icon = TASK_ICONS[task.type as TaskType] ?? ListChecks
+  const tone = dueTone(state)
 
   const reopen = useMutation({
     mutationFn: () => send<Task>('post', `tasks/${task.id}/reopen`),
@@ -68,66 +74,59 @@ function TaskRow({ task, showLead, onEdit, onComplete, onDelete }: {
     onError: e => toast(errorText(t, e), 'danger'),
   })
 
-  const meta: ReactNode[] = []
-  meta.push(<span key="type">{taskTypeLabel(t, task.type)}</span>)
-  if (done && task.completed_at) {
-    meta.push(<span key="done">{t('crm.tasks.done_at', 'Done {{when}}', { when: dateTime(task.completed_at, lang, zone) })}</span>)
-  } else if (due) {
-    const text = `${dayLabel(due.day, lang)}${due.time ? `, ${due.time}` : ''}`
-    meta.push(
-      <span key="due" className={bucket === 'overdue' ? 'font-medium text-a-danger' : bucket === 'today' ? 'font-medium text-a-st-pending' : ''}>
-        {bucket === 'overdue' ? t('crm.tasks.overdue_since', 'Overdue since {{when}}', { when: text }) : text}
-      </span>,
-    )
-  } else {
-    meta.push(<span key="none">{t('crm.tasks.no_due', 'No day set')}</span>)
-  }
-  if (task.assignee) meta.push(<span key="who">{task.assignee.id === boot.staff.id ? t('crm.common.me', 'Me') : task.assignee.name}</span>)
-  if (showLead && task.inquiry_id) {
-    meta.push(<Link key="lead" to={leadPath(task.inquiry_id)} className="font-medium text-a-accent-text hover:underline">{t('crm.tasks.lead_number', 'Lead #{{id}}', { id: task.inquiry_id })}</Link>)
-  }
+  const when = due ? `${state === 'today' ? t('crm.tasks.quick_today', 'Today') : state === 'tomorrow' ? t('crm.tasks.quick_tomorrow', 'Tomorrow') : dayLabel(due.day, lang)}${due.time ? `, ${due.time}` : ''}` : ''
+  const dueText = done && task.completed_at ? t('crm.tasks.done_at', 'Done {{when}}', { when: dateTime(task.completed_at, lang, zone) })
+    : !due ? t('crm.tasks.no_due', 'No day set')
+    : state === 'overdue' ? t('crm.tasks.overdue_since', 'Overdue since {{when}}', { when })
+    : when
+
+  const items: (MenuItem | 'divider')[] = [
+    ...(done
+      ? [{ key: 'reopen', label: t('crm.tasks.reopen', 'Open again'), icon: RotateCcw, onSelect: () => reopen.mutate() }]
+      : [{ key: 'done', label: t('crm.tasks.complete', 'Mark done'), icon: Check, onSelect: onComplete }]),
+    { key: 'edit', label: t('crm.common.edit', 'Edit'), icon: Pencil, onSelect: onEdit },
+    ...(task.inquiry_id ? [{ key: 'lead', label: t('crm.tasks.open_lead', 'Open the lead'), icon: ExternalLink, onSelect: () => navigate(leadPath(task.inquiry_id as number)) }] : []),
+    'divider' as const,
+    { key: 'delete', label: t('crm.common.delete', 'Delete'), icon: Trash2, danger: true, onSelect: onDelete },
+  ]
 
   return (
-    <li className="flex items-start gap-3 px-4 py-3">
+    <li className={`group flex items-start gap-3 px-4 py-3 transition-colors hover:bg-a-surface-2/50 ${state === 'overdue' ? 'border-l-2 border-a-danger' : ''}`}>
       {done ? (
         <button type="button" onClick={() => reopen.mutate()} disabled={reopen.isPending}
           aria-label={t('crm.tasks.reopen_named', 'Open again: {{title}}', { title: task.title })}
-          className="mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-full bg-a-st-confirmed/12 text-a-st-confirmed disabled:opacity-50">
-          <Check size={14} aria-hidden />
+          className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-a-st-confirmed/12 text-a-st-confirmed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-a-accent">
+          <Check size={15} aria-hidden />
         </button>
       ) : (
         <button type="button" onClick={onComplete} aria-label={t('crm.tasks.complete_named', 'Mark done: {{title}}', { title: task.title })}
-          className="mt-0.5 h-6 w-6 shrink-0 rounded-full border-2 border-a-border hover:border-a-st-confirmed focus-visible:outline-2 focus-visible:outline-a-accent" />
+          className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-a-text-2 hover:text-a-st-confirmed focus-visible:outline-2 focus-visible:outline-a-accent">
+          <span aria-hidden className="block h-5 w-5 rounded-full border-2 border-a-border group-hover:border-a-st-confirmed/60" />
+        </button>
       )}
-      <span aria-hidden className={`mt-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-lg ${bucket === 'overdue' ? 'bg-a-danger/12 text-a-danger' : 'bg-a-surface-2 text-a-text-2'}`}>
-        <Icon size={14} />
+      <span aria-hidden className={`mt-0.5 hidden h-8 w-8 shrink-0 place-items-center rounded-lg sm:grid ${TONE_CHIP[tone === 'neutral' ? 'neutral' : tone]}`}>
+        <Icon size={15} />
       </span>
       <div className="min-w-0 flex-1">
-        <button type="button" onClick={onEdit} className={`block max-w-full truncate text-left text-sm font-medium hover:underline ${done ? 'text-a-text-2 line-through' : 'text-a-text'}`}>
+        <button type="button" onClick={onEdit} className={`block max-w-full truncate text-left text-sm font-medium hover:underline focus-visible:outline-2 focus-visible:outline-a-accent ${done ? 'text-a-text-2 line-through' : 'text-a-text'}`}>
           {task.title}
         </button>
         {task.description && <p className="mt-0.5 line-clamp-2 text-sm text-a-text-2">{task.description}</p>}
-        <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-a-text-2">
-          {meta.map((part, i) => <span key={i} className="inline-flex items-center gap-2">{i > 0 && <span aria-hidden>·</span>}{part}</span>)}
+        <p className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-a-text-2">
+          <Pill tone={tone}>{dueText}</Pill>
+          <span>{taskTypeLabel(t, task.type)}</span>
+          {task.assignee && <span aria-hidden>·</span>}
+          {task.assignee && <span>{task.assignee.id === boot.staff.id ? t('crm.common.me', 'Me') : task.assignee.name}</span>}
+          {showLead && task.inquiry_id && (
+            <>
+              <span aria-hidden>·</span>
+              <Link to={leadPath(task.inquiry_id)} className="font-medium text-a-accent-text hover:underline">{t('crm.tasks.lead_number', 'Lead #{{id}}', { id: task.inquiry_id })}</Link>
+            </>
+          )}
         </p>
         {done && task.outcome && <p className="mt-1 text-xs text-a-st-confirmed">{t('crm.tasks.outcome_was', 'Outcome: {{outcome}}', { outcome: task.outcome })}</p>}
       </div>
-      <div className="flex shrink-0 items-center gap-0.5">
-        {done && (
-          <button type="button" onClick={() => reopen.mutate()} disabled={reopen.isPending} title={t('crm.tasks.reopen', 'Open again')}
-            aria-label={t('crm.tasks.reopen_named', 'Open again: {{title}}', { title: task.title })} className="rounded-lg p-2 text-a-text-2 hover:bg-a-surface-2 hover:text-a-text">
-            <RotateCcw size={15} aria-hidden />
-          </button>
-        )}
-        <button type="button" onClick={onEdit} title={t('crm.common.edit', 'Edit')}
-          aria-label={t('crm.tasks.edit_named', 'Change: {{title}}', { title: task.title })} className="rounded-lg p-2 text-a-text-2 hover:bg-a-surface-2 hover:text-a-text">
-          <Pencil size={15} aria-hidden />
-        </button>
-        <button type="button" onClick={onDelete} title={t('crm.common.delete', 'Delete')}
-          aria-label={t('crm.tasks.delete_named', 'Delete: {{title}}', { title: task.title })} className="rounded-lg p-2 text-a-text-2 hover:bg-a-danger/12 hover:text-a-danger">
-          <Trash2 size={15} aria-hidden />
-        </button>
-      </div>
+      <ActionMenu label={t('crm.tasks.menu_named', 'More for: {{title}}', { title: task.title })} items={items} />
     </li>
   )
 }

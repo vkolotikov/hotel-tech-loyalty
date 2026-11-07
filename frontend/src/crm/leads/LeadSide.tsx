@@ -2,15 +2,17 @@ import { useRef, useState } from 'react'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { BedDouble, Copy, FileUp, Mail, MessagesSquare, Paperclip, Phone, Sparkles, Trash2, UserRound, Wand2, ListPlus } from 'lucide-react'
+import { BedDouble, Copy, FileUp, ListChecks, ListPlus, Mail, MessagesSquare, Paperclip, Phone, Sparkles, Trash2, UserRound, Wand2 } from 'lucide-react'
 import { Button } from '../../workspace/ui/Button'
 import { Dialog } from '../../workspace/ui/Dialog'
+import { Field } from '../../workspace/ui/Field'
 import { Notice } from '../../workspace/ui/Notice'
 import { useBoot } from '../CrmProvider'
 import { failureOf, get, send } from '../lib/api'
 import { errorText } from '../lib/errors'
 import { dateTime, dayLabel, timeAgo } from '../lib/format'
 import { contactPath, conversationPath } from '../lib/links'
+import { Avatar } from '../ui/Avatar'
 import { Card } from '../ui/Card'
 import { Confirm } from '../ui/Confirm'
 import { Pill } from '../ui/Pill'
@@ -18,28 +20,87 @@ import { QueryState } from '../ui/QueryState'
 import { useToast } from '../ui/Toast'
 import { CustomFieldInputs, CustomFieldsView } from './CustomFields'
 import { useLeadChanged } from './leadData'
+import { TextInput } from '../ui/inputs'
 import { customBody, customErrors, dayOf, fileSize, missingCustom, newestConversation, winTone } from './leadLogic'
+import { contactDraft, contactPatch, type ContactDraft } from './listLogic'
+import { ContactLinks } from './parts'
 import type { AiBrief, Attachment, ChatHistory, CustomField, LeadDetail, ProposalDraft } from './leadTypes'
 import { coldLabel, intentLabel, senderLabel } from './leadWords'
 import type { ComposerSeed } from './LeadTimeline'
 
-/** Who the lead is: name, company, how to reach them, and their contact page. */
+/**
+ * Who the lead is: name, company, country and how to reach them (one press to write, call or message), their contact
+ * page, and the contact's details changed in place (`PUT guests/{id}`, the full admin's "Edit customer details").
+ */
 export function ContactCard({ lead }: { lead: LeadDetail }) {
   const { t } = useTranslation()
+  const toast = useToast()
+  const changed = useLeadChanged()
   const g = lead.guest
   const phone = g?.phone || g?.mobile
+  const [draft, setDraft] = useState<ContactDraft | null>(null)
+  const [problem, setProblem] = useState<'name' | 'email' | null>(null)
+  const save = useMutation({
+    mutationFn: (body: Record<string, string | null>) => send('put', `guests/${g?.id}`, body),
+    onSuccess: () => { changed(); setDraft(null); toast(t('crm.common.saved', 'Saved')) },
+  })
+  const submit = () => {
+    if (!draft) return
+    const patch = contactPatch(g, draft)
+    setProblem(patch.problem ?? null)
+    if (patch.problem) return
+    if (!patch.body) { setDraft(null); return }
+    save.mutate(patch.body)
+  }
+  const set = (p: Partial<ContactDraft>) => setDraft(d => (d ? { ...d, ...p } : d))
   return (
-    <Card title={t('crm.leads.contact', 'Contact')} icon={UserRound}>
-      <div className="space-y-2 text-sm">
-        <p className="font-medium text-a-text">{g?.full_name || t('crm.common.no_name', 'No name')}</p>
-        {g?.company && <p className="text-a-text-2">{g.company}</p>}
-        {g?.email && <a href={`mailto:${g.email}`} className="flex items-center gap-2 break-all text-a-accent-text hover:underline"><Mail size={14} aria-hidden className="shrink-0" />{g.email}</a>}
-        {phone && <a href={`tel:${phone.replace(/[^\d+]/g, '')}`} className="flex items-center gap-2 text-a-accent-text hover:underline"><Phone size={14} aria-hidden className="shrink-0" />{phone}</a>}
-        {!g?.email && !phone && <p className="text-a-text-2">{t('crm.leads.no_contact', 'No email or phone yet.')}</p>}
-        {lead.guest_id && (
-          <Link to={contactPath(lead.guest_id)} className="inline-block pt-1 font-medium text-a-accent-text hover:underline">{t('crm.leads.open_contact', 'Open the contact')}</Link>
-        )}
-      </div>
+    <Card title={t('crm.leads.contact', 'Contact')} description={t('crm.leads.contact_line', 'Who it is and how to reach them')} icon={UserRound} tone="progress"
+      action={g && !draft ? <Button variant="ghost" size="sm" onClick={() => { setDraft(contactDraft(g)); setProblem(null) }}>{t('crm.common.edit', 'Edit')}</Button> : undefined}>
+      {draft ? (
+        <form className="space-y-3" onSubmit={e => { e.preventDefault(); submit() }}>
+          <Field label={t('crm.leads.field_name', 'Name')}>
+            <TextInput value={draft.name} onChange={e => set({ name: e.target.value })} maxLength={200} aria-invalid={problem === 'name' ? true : undefined} />
+            {problem === 'name' && <span className="mt-1 block text-xs text-a-danger">{t('crm.leads.problem_required', 'This is needed.')}</span>}
+          </Field>
+          <Field label={t('crm.leads.field_company', 'Company (optional)')}>
+            <TextInput value={draft.company} onChange={e => set({ company: e.target.value })} maxLength={200} />
+          </Field>
+          <Field label={t('crm.leads.field_email', 'Email (optional)')}>
+            <TextInput type="email" value={draft.email} onChange={e => set({ email: e.target.value })} maxLength={150} aria-invalid={problem === 'email' ? true : undefined} />
+            {problem === 'email' && <span className="mt-1 block text-xs text-a-danger">{t('crm.leads.problem_email', 'This does not look like an email address.')}</span>}
+          </Field>
+          <Field label={t('crm.leads.field_phone', 'Phone (optional)')}>
+            <TextInput type="tel" value={draft.phone} onChange={e => set({ phone: e.target.value })} maxLength={50} />
+          </Field>
+          <Field label={t('crm.leads.field_country_opt', 'Country (optional)')}>
+            <TextInput value={draft.country} onChange={e => set({ country: e.target.value })} maxLength={100} />
+          </Field>
+          {save.isError && <Notice tone="danger">{errorText(t, save.error)}</Notice>}
+          <div className="flex justify-end gap-2">
+            <Button variant="secondary" size="sm" type="button" onClick={() => setDraft(null)} disabled={save.isPending}>{t('crm.common.cancel', 'Cancel')}</Button>
+            <Button size="sm" type="submit" loading={save.isPending}>{t('crm.common.save', 'Save')}</Button>
+          </div>
+        </form>
+      ) : (
+        <div className="space-y-2 text-sm">
+          <div className="flex items-start gap-3">
+            <Avatar name={g?.full_name || g?.email} />
+            <div className="min-w-0 flex-1">
+              <p className="truncate font-medium text-a-text">{g?.full_name || t('crm.common.no_name', 'No name')}</p>
+              {(g?.company || g?.country) && <p className="truncate text-a-text-2">{[g?.company, g?.country].filter(Boolean).join(' · ')}</p>}
+            </div>
+          </div>
+          {g?.email && <a href={`mailto:${g.email}`} className="flex items-center gap-2 break-all text-a-accent-text hover:underline"><Mail size={14} aria-hidden className="shrink-0" />{g.email}</a>}
+          {phone && <a href={`tel:${phone.replace(/[^\d+]/g, '')}`} className="flex items-center gap-2 text-a-accent-text hover:underline"><Phone size={14} aria-hidden className="shrink-0" />{phone}</a>}
+          {!g?.email && !phone && <p className="text-a-text-2">{t('crm.leads.no_contact', 'No email or phone yet.')}</p>}
+          <div className="flex flex-wrap items-center gap-2 pt-1">
+            <ContactLinks guest={g} name={g?.full_name || t('crm.common.no_name', 'No name')} />
+            {lead.guest_id && (
+              <Link to={contactPath(lead.guest_id)} className="ml-auto inline-block font-medium text-a-accent-text hover:underline">{t('crm.leads.open_contact', 'Open the contact')}</Link>
+            )}
+          </div>
+        </div>
+      )}
     </Card>
   )
 }
@@ -49,10 +110,10 @@ export function ContactCard({ lead }: { lead: LeadDetail }) {
  * want, the chance to win, whether it is going cold and the next step. Shown from what the lead already holds; asked
  * for only when someone presses. And a proposal email drafted for a person to edit (`draft-proposal`); nothing is sent.
  */
-export function AiCard({ lead, onUseDraft }: { lead: LeadDetail; onUseDraft: (seed: Omit<ComposerSeed, 'n'>) => void }) {
+export function AiCard({ lead, onUseDraft, openProposal = false }: { lead: LeadDetail; onUseDraft: (seed: Omit<ComposerSeed, 'n'>) => void; openProposal?: boolean }) {
   const { t, i18n } = useTranslation()
   const changed = useLeadChanged()
-  const [proposing, setProposing] = useState(false)
+  const [proposing, setProposing] = useState(openProposal)
   const brief = useMutation({
     mutationFn: () => send<AiBrief>('post', `inquiries/${lead.id}/ai-brief`, lead.ai_brief ? { force_refresh: true } : {}),
     onSuccess: () => changed(),
@@ -70,8 +131,11 @@ export function AiCard({ lead, onUseDraft }: { lead: LeadDetail; onUseDraft: (se
   return (
     <section className="crm-ai-border min-w-0 rounded-2xl border bg-a-surface shadow-a-sm">
       <div className="flex min-h-12 items-center gap-2 border-b border-a-border px-4 py-2.5">
-        <span aria-hidden className="crm-ai-soft grid h-7 w-7 place-items-center rounded-lg"><Sparkles size={15} /></span>
-        <h2 className="min-w-0 flex-1 truncate text-sm font-semibold text-a-text">{t('crm.leads.ai_title', 'AI brief')}</h2>
+        <span aria-hidden className="crm-ai-soft grid h-7 w-7 shrink-0 place-items-center rounded-lg"><Sparkles size={15} /></span>
+        <div className="min-w-0 flex-1">
+          <h2 className="truncate text-sm font-semibold text-a-text">{t('crm.leads.ai_title', 'AI brief')}</h2>
+          <p className="truncate text-xs text-a-text-2">{t('crm.leads.ai_line', 'Where the lead stands, read by the AI')}</p>
+        </div>
       </div>
       <div className="space-y-3 p-4">
         {shown?.brief ? (
@@ -181,7 +245,7 @@ export function AttachmentsCard({ leadId }: { leadId: number }) {
   })
   const rows = files.data ?? []
   return (
-    <Card title={t('crm.leads.files', 'Files')} icon={Paperclip}
+    <Card title={t('crm.leads.files', 'Files')} description={t('crm.leads.files_line', 'Proposals, contracts and pictures, up to 25 MB')} icon={Paperclip} tone="neutral"
       action={(
         <>
           <input ref={input} type="file" className="sr-only" tabIndex={-1} aria-hidden
@@ -229,7 +293,7 @@ export function ChatCard({ leadId }: { leadId: number }) {
   const last = (newest?.messages ?? []).filter(m => m.content).slice(-3)
   if (!history.isLoading && !history.error && conversations.length === 0) return null
   return (
-    <Card title={t('crm.leads.chat', 'Website chat')} icon={MessagesSquare}
+    <Card title={t('crm.leads.chat', 'Website chat')} description={t('crm.leads.chat_line', 'What they wrote to the website chat')} icon={MessagesSquare} tone="ai"
       action={newest ? <Link to={conversationPath(newest.id)} className="text-sm font-medium text-a-accent-text hover:underline">{t('crm.leads.chat_open', 'Open in the inbox')}</Link> : undefined}>
       <QueryState loading={history.isLoading} error={history.error} onRetry={() => { void history.refetch() }} rows={2}>
         <div className="space-y-2">
@@ -266,7 +330,7 @@ export function StayCard({ lead }: { lead: LeadDetail }) {
     [t('crm.leads.children', 'Children'), lead.num_children ? String(lead.num_children) : ''],
   ]
   return (
-    <Card title={t('crm.leads.stay_title', 'Stay')} icon={BedDouble}>
+    <Card title={t('crm.leads.stay_title', 'Stay')} description={t('crm.leads.stay_line', 'The dates and the party they ask for')} icon={BedDouble} tone="progress">
       <dl className="grid grid-cols-2 gap-x-3 gap-y-2">
         {rows.filter(([, v]) => v).map(([label, value]) => (
           <div key={label}><dt className="text-xs text-a-text-2">{label}</dt><dd className="text-sm text-a-text">{value}</dd></div>
@@ -293,7 +357,7 @@ export function CustomFieldsCard({ lead, fields }: { lead: LeadDetail; fields: r
   })
   const missing = draft ? missingCustom(fields, draft) : []
   return (
-    <Card title={t('crm.leads.more_fields', 'More about the lead')} icon={Sparkles}
+    <Card title={t('crm.leads.more_fields', 'More about the lead')} description={t('crm.leads.more_fields_line', 'Your organisation\'s own fields')} icon={ListChecks} tone="neutral"
       action={!draft ? <Button variant="ghost" size="sm" onClick={() => setDraft({ ...(lead.custom_data ?? {}) })}>{t('crm.common.edit', 'Edit')}</Button> : undefined}>
       {draft ? (
         <form className="space-y-3" onSubmit={e => { e.preventDefault(); setTried(true); if (missing.length === 0) save.mutate(draft) }}>

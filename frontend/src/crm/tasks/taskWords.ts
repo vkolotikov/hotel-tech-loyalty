@@ -3,7 +3,7 @@ import {
   Building2, CalendarDays, ChevronRight, FileSignature, FileText, HelpCircle, ListChecks, Mail, MessageCircle,
   MessageSquare, Phone, Sparkles, Video, type LucideIcon,
 } from 'lucide-react'
-import type { Bucket, TaskType } from './taskLogic'
+import type { Bucket, DueState, Tab, TaskType } from './taskLogic'
 
 /** A task type's name, in the person's language. */
 export function taskTypeLabel(t: TFunction, type: string): string {
@@ -38,6 +38,22 @@ export function bucketLabel(t: TFunction, bucket: Bucket): string {
     case 'today': return t('crm.tasks.tab_today', 'Today')
     case 'upcoming': return t('crm.tasks.tab_upcoming', 'Upcoming')
     default: return t('crm.tasks.tab_done', 'Done')
+  }
+}
+
+/** A pill's name: "All open", then the buckets. */
+export function tabLabel(t: TFunction, tab: Tab): string {
+  return tab === 'open' ? t('crm.tasks.tab_open', 'All open') : bucketLabel(t, tab)
+}
+
+/** A due state's tone: overdue red, today amber, tomorrow violet, the rest quiet. */
+export function dueTone(state: DueState): 'danger' | 'pending' | 'progress' | 'success' | 'neutral' {
+  switch (state) {
+    case 'overdue': return 'danger'
+    case 'today': return 'pending'
+    case 'tomorrow': return 'progress'
+    case 'done': return 'success'
+    default: return 'neutral'
   }
 }
 

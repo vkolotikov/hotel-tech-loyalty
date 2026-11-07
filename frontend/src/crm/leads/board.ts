@@ -1,18 +1,54 @@
-import { amount, defaultPipeline, moveTo, resolveStage, sortedStages, type StageMove } from '../leads/leadLogic'
-import type { LeadRow, Pipeline, Stage } from '../leads/leadTypes'
+import { amount, dateRange, defaultPipeline, moveTo, resolveStage, sortedStages, type LeadFilters, type StageMove } from './leadLogic'
+import type { LeadRow, Pipeline, Stage } from './leadTypes'
 
 /**
- * The Pipeline area's decisions, as pure functions: which pipeline is shown, which leads it holds, one column per
- * stage with its count and value, where a card can move and what moving it does, and the won deals' fulfilment and
- * payment steps (DealController). A lead's stage is read as the Leads area reads it (`resolveStage`).
+ * The Leads board's decisions (round 1's Pipeline, moved into Leads in round 2 as its Board view, `?view=board`), as
+ * pure functions: which pipeline is shown, which leads it holds, one column per stage with its count and value, where a
+ * card can move and what moving it does. A lead's stage is read as the list reads it (`resolveStage`).
  */
 
 /** At most this many open leads are drawn on the board (the most recently changed first). */
 export const BOARD_LIMIT = 200
 
-/** `GET inquiries` for the board: the open leads, most recently changed first. */
-export function boardQuery(): Record<string, string | number | boolean> {
-  return { active_only: true, sort: 'updated_at', dir: 'desc', per_page: BOARD_LIMIT }
+export type View = 'list' | 'board' | 'team'
+export const VIEWS: readonly View[] = ['list', 'board', 'team']
+
+/** The view an address holds (`?view=board|team`), the list otherwise. */
+export function readView(sp: URLSearchParams): View {
+  const v = sp.get('view')
+  return v === 'board' || v === 'team' ? v : 'list'
+}
+
+/** The address for another view: the list's own paging and follow-up filter do not carry over to a board. */
+export function withView(sp: URLSearchParams, view: View): URLSearchParams {
+  const next = new URLSearchParams(sp)
+  if (view === 'list') next.delete('view'); else next.set('view', view)
+  if (view !== 'list') { next.delete('page'); next.delete('due') }
+  if (view !== 'board') next.delete('p')
+  return next
+}
+
+/**
+ * `GET inquiries` for the board and the team: the open leads, most recently changed first, narrowed by the list's
+ * search and panel filters (not its follow-up filter or sort, which belong to the list). With no filter it asks what
+ * round 1's board asked.
+ */
+export function boardQuery(filters?: LeadFilters, me = ''): Record<string, string | number | boolean> {
+  const q: Record<string, string | number | boolean> = { active_only: true, sort: 'updated_at', dir: 'desc', per_page: BOARD_LIMIT }
+  if (!filters) return q
+  const put = (key: string, value: string) => { if (value) q[key] = value }
+  put('search', filters.q.trim())
+  put('status', filters.status)
+  put('source', filters.source)
+  put('assigned_to', filters.owner === 'me' ? me : filters.owner)
+  put('priority', filters.priority)
+  put('inquiry_type', filters.type)
+  put('country', filters.country)
+  put('has_phone', filters.phone)
+  const range = dateRange(filters.from, filters.to)
+  if (range.date_from) q.date_from = range.date_from
+  if (range.date_to) q.date_to = range.date_to
+  return q
 }
 
 /** The pipeline an address names (`?p=<id>`), else the default one. */
@@ -96,57 +132,4 @@ export function phoneColumn(columns: readonly Column[], chosen: number | null): 
     ?? columns.find(c => !c.collapsed)
     ?? columns[0]
     ?? null
-}
-
-/* ─── Won deals: fulfilment and payment (DealController) ─────────────────── */
-
-export const FULFILMENT = ['payment_pending', 'design_needed', 'design_sent', 'in_production', 'ready_to_ship', 'completed'] as const
-export type Fulfilment = (typeof FULFILMENT)[number]
-
-export const PAYMENTS = ['pending', 'invoice_sent', 'partial', 'paid', 'refunded'] as const
-export type Payment = (typeof PAYMENTS)[number]
-
-/** The filters of the won deals' list, as the full admin's Deals page has them (`GET deals`). */
-export const DEAL_FILTERS = ['all', 'payment_pending', 'design_needed', 'in_production', 'overdue', 'high_value'] as const
-export type DealFilter = (typeof DEAL_FILTERS)[number]
-
-export function dealsQuery(filter: DealFilter, page: number, sort: 'due_date' | 'amount' | 'created' = 'due_date'): Record<string, string | number> {
-  const q: Record<string, string | number> = { page, per_page: 20, sort }
-  if (filter === 'payment_pending' || filter === 'design_needed' || filter === 'in_production') q.stage = filter
-  if (filter === 'overdue' || filter === 'high_value') q.focus = filter
-  return q
-}
-
-export const isFulfilment = (v: string | null | undefined): v is Fulfilment => (FULFILMENT as readonly string[]).includes(v ?? '')
-export const isPayment = (v: string | null | undefined): v is Payment => (PAYMENTS as readonly string[]).includes(v ?? '')
-
-/** The next fulfilment step after the current one (the first for a deal that has none), none after completed. */
-export function nextFulfilment(current: string | null | undefined): Fulfilment | null {
-  if (!isFulfilment(current)) return FULFILMENT[0]
-  const i = FULFILMENT.indexOf(current)
-  return i < FULFILMENT.length - 1 ? FULFILMENT[i + 1] : null
-}
-
-/** How far a deal is: steps done of the five before completed (all five once completed). */
-export function fulfilmentProgress(current: string | null | undefined): { done: number; total: number } {
-  const total = FULFILMENT.length - 1
-  if (current === 'completed') return { done: total, total }
-  return { done: isFulfilment(current) ? FULFILMENT.indexOf(current) : 0, total }
-}
-
-/** `PATCH deals/{id}/payment`: the status, and the amount paid when one is typed (zero or more). */
-export function paymentBody(status: string, paid: string): { payment_status: Payment; paid_amount?: number } | null {
-  if (!isPayment(status)) return null
-  const clean = paid.replace(',', '.').trim()
-  if (clean === '') return { payment_status: status }
-  const n = Number(clean)
-  if (!Number.isFinite(n) || n < 0) return null
-  return { payment_status: status, paid_amount: Math.round(n * 100) / 100 }
-}
-
-/** What is still owed on a deal (never below zero), or null when its value is unknown. */
-export function stillOwed(value: string | number | null | undefined, paid: string | number | null | undefined): number | null {
-  const total = amount(value)
-  if (total === null) return null
-  return Math.max(0, Math.round((total - (amount(paid) ?? 0)) * 100) / 100)
 }

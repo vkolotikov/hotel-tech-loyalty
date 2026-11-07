@@ -1,5 +1,8 @@
 import type { TFunction } from 'i18next'
-import type { ActivityType, ContactChannel, DueFilter, LeadProblem, SortKey } from './leadLogic'
+import { dayLabel } from '../lib/format'
+import type { View } from './board'
+import type { ActivityType, ContactChannel, DueFilter, LeadProblem, PhoneFilter, SortKey } from './leadLogic'
+import type { DueIn, Freshness, LeadColumn, TimelineKind } from './listLogic'
 
 /** A lead's source: the system's own in our words, an organisation's own as it wrote it. */
 export function sourceLabel(t: TFunction, source: string | null | undefined): string {
@@ -27,8 +30,68 @@ export function sortLabel(t: TFunction, sort: SortKey): string {
     case 'oldest': return t('crm.leads.sort_oldest', 'Oldest first')
     case 'follow_up': return t('crm.leads.sort_follow_up', 'Follow-up soonest')
     case 'updated': return t('crm.leads.sort_updated', 'Recently changed')
+    case 'value': return t('crm.leads.sort_value', 'Largest value first')
+    case 'ai': return t('crm.leads.sort_ai', 'Most likely to win')
+    case 'arrival': return t('crm.leads.sort_arrival', 'Arrival soonest')
     default: return t('crm.leads.sort_newest', 'Newest first')
   }
+}
+
+export function viewLabel(t: TFunction, view: View): string {
+  switch (view) {
+    case 'board': return t('crm.leads.view_board', 'Board')
+    case 'team': return t('crm.leads.view_team', 'Team')
+    default: return t('crm.leads.view_list', 'List')
+  }
+}
+
+export function columnLabel(t: TFunction, column: LeadColumn): string {
+  switch (column) {
+    case 'value': return t('crm.leads.col_value', 'Value')
+    case 'ai_signal': return t('crm.leads.col_ai', 'AI signal')
+    case 'next_task': return t('crm.leads.col_next', 'Next step')
+    case 'owner': return t('crm.leads.col_owner', 'Owner and source')
+    case 'touches': return t('crm.leads.col_touches', 'Calls and emails')
+    case 'stay': return t('crm.leads.col_stay', 'Stay')
+    default: return t('crm.leads.col_country', 'Country')
+  }
+}
+
+export function phoneLabel(t: TFunction, phone: PhoneFilter): string {
+  switch (phone) {
+    case 'yes': return t('crm.leads.phone_yes', 'With a phone number')
+    case 'no': return t('crm.leads.phone_no', 'Without a phone number')
+    default: return t('crm.leads.phone_any', 'Any')
+  }
+}
+
+/** A lead's freshness chip: new, its age, or cold since the last touch. */
+export function freshLabel(t: TFunction, fresh: Freshness): string {
+  switch (fresh.kind) {
+    case 'fresh': return t('crm.leads.fresh_new', 'New')
+    case 'cold': return t('crm.leads.fresh_cold', 'Cold {{count}} d', { count: fresh.days })
+    default: return t('crm.leads.fresh_age', '{{count}} d old', { count: fresh.days })
+  }
+}
+
+/** When a next step falls: "3 d late", "Today", "Tomorrow", "In 4 d", or its day. */
+export function dueInLabel(t: TFunction, due: DueIn, lang: string): string {
+  switch (due.state) {
+    case 'late': return t('crm.leads.due_late', '{{count}} d late', { count: due.days })
+    case 'today': return t('crm.leads.next_today', 'Today')
+    case 'tomorrow': return t('crm.leads.due_tomorrow', 'Tomorrow')
+    case 'soon': return t('crm.leads.due_in', 'In {{count}} d', { count: due.days })
+    default: return dayLabel(due.day, lang)
+  }
+}
+
+export function dueInTone(due: DueIn | null): 'danger' | 'pending' | 'neutral' {
+  if (!due) return 'neutral'
+  return due.state === 'late' ? 'danger' : due.state === 'today' ? 'pending' : 'neutral'
+}
+
+export function timelineKindLabel(t: TFunction, kind: TimelineKind): string {
+  return kind === '' ? t('crm.common.all', 'All') : activityLabel(t, kind)
 }
 
 export function activityLabel(t: TFunction, type: string): string {
