@@ -65,6 +65,28 @@ always with `brand_id=all` (the CRM is the organisation's); `crm/tokens.test.ts`
 `widget` (a visitor was seen or a chat started), `assistant` (behaviour saved), `knowledge` (5 active answers or a
 processed document), `reply` (a person answered a chat), `pipeline` (a pipeline with stages), `team` (two active staff).
 
+## The areas
+
+| Area | Address | What it does (the full admin's endpoints it uses) |
+|---|---|---|
+| Today | `/crm` | `crm/today`: chats waiting, follow-ups, your tasks, new leads, the open pipeline, the week |
+| Get started | `/crm/start` | `crm/start`: the six setup steps |
+| Inbox | `/crm/inbox` (`?c=<conversation>`, `?status=waiting`) | `chat-inbox*`, `engagement/*`: list with the server's counts, the thread (polled), take over / hand back, resolve / archive / reopen, assign, capture as lead, contact, rate an AI answer and teach the right one, translate, the AI brief, canned replies, upload, dictation, transcript, **Draft a reply with AI** |
+| Visitors | `/crm/visitors` (`?v=<visitor>`) | `visitors*`: on the site now, everyone, away, leads; a visitor's pages and chats; start a chat; delete |
+| Leads | `/crm/leads`, `/crm/leads/:id` (`?new=1`, `?due=1`, `?guest=<contact>`) | `inquiries*`, `guests`, `tasks`: list with follow-up tabs, filters, bulk actions, CSV; create; a lead's stage, won / lost with a reason, details, next step, timeline, AI brief and proposal draft, tasks, files, its chat, custom fields, delete with what goes |
+| Pipeline | `/crm/pipeline` (`?p=<pipeline>`, `?tab=won`) | `inquiries`, `pipelines`, `deals/*`: the board (Move to on every card, drag on wide screens), won deals with fulfilment and payment |
+| Contacts | `/crm/contacts`, `/crm/contacts/:id` (`?tab=companies|duplicates`) | `guests*`, `corporate-accounts`: people with filters, saved views, bulk changes, CSV; a contact edited in place with tags, leads and timeline; companies; duplicates and merge |
+| Tasks | `/crm/tasks` | `tasks*`: mine / everyone; overdue / today / upcoming / done by the venue's day; add, edit, complete, reopen, delete |
+| AI assistant | `/crm/assistant` (`?tab=behaviour|knowledge|teach|try|popups`) | `chatbot-config/*`, `chatbot-onboarding`, `knowledge/*`, `popup-rules`, `crm/bot-gaps` |
+| Chat widget | `/crm/widget` (`?tab=look|behaviour|install`) | `widget-config*`: the look with a live preview, behaviour, the embed code |
+| Insights | `/crm/insights` (`?days=7|30|90`) | `chatbot/analytics`, `inquiries/*`, `pipelines`, `deals/analytics`: the website chat and the pipeline |
+| Settings | `/crm/settings` (`?tab=canned|pipelines|forms|fields|account`) | `chat-inbox-canned`, `pipelines`, `pipeline-stages`, `inquiry-lost-reasons*`, `lead-forms`, `custom-fields`; Team and Plan & products |
+
+Left out on purpose (the full admin keeps them for a full customer): the AI model choice, chatbot fine-tuning
+(Training: no code reads the model it makes), the voice agent, AI capture of a contact (`crm-ai`), a contact's room
+reservations, `.xlsx` exports (CSV is offered), bulk won / lost (the bulk path writes no stage, reason or timeline),
+bulk tagging (no endpoint), the full admin's field-layout manager and custom-field presets.
+
 ## New in HexaTech CRM (beyond the full admin)
 
 - **Today**: one page of what needs a person — chats waiting, follow-ups due, your tasks, new leads, the open
@@ -93,6 +115,29 @@ processed document), `reply` (a person answered a chat), `pipeline` (a pipeline 
 - **Days are the venue's** (`TodayTest`: a lead due today in Riga; a task due at 23:30 Riga is today's).
 - **Frontend**: only `a-*` and `crm-*` classes, only the listed areas, nothing from another workspace
   (`crm/tokens.test.ts`); every word in five languages, one file per area (`crm/i18n/crmLocales.test.ts`).
+
+## Server issues found while building it (open, for the owner)
+
+Fixed in this release: the full admin's Chat inbox "Transfer to agent" sent `agent_id` where the server takes
+`user_id`, so every transfer answered 422 (`ChatInbox.tsx`). Found, not changed (each is the full admin's behaviour
+too):
+
+- **Teaching the assistant is open to every staff member on the server.** `chat-inbox/messages/{id}/feedback` with
+  `apply_to_training` writes knowledge under `admin/chat-inbox` (staff may write), while `admin/knowledge` is a
+  manager's. The workspace offers "Answers to fix" to managers; decide whether the server should refuse staff too.
+- `widget-config/regenerate-key` changes only `api_key`, which nothing reads; the embed snippet's `widget_key` never
+  changes, so a public widget key cannot be rotated. The workspace's confirm says the website code is not affected.
+- `chatbot-config/test-chat`, `suggest-keywords` and `knowledge/extract-faqs` call the AI without the month's allowance
+  check, and the last two record no spend; `test-chat` answers 500 with the provider's text on any failure.
+- `TaskController` stores a `due_at` sent with an offset as its digits in UTC (`+02:00` comes back two hours late);
+  the workspace sends UTC instants, the full admin sends offset-less times read as UTC.
+- `InquiryController::index` allows sorts on columns `inquiries` lacks (`value_estimated`, `guest_name`,
+  `win_probability`) and not `total_value`; bulk `set_status` / `mark_won` / `mark_lost` leave `pipeline_stage_id`;
+  `POST inquiries` sets no pipeline; `DealController::kpis` `total` counts every inquiry without a fulfilment stage.
+- Guest tags: `unique:guest_tags,name` and its index ignore the organisation, and `tag_ids.*` is not limited to it.
+- `GuestController::update` drops empty values (a contact's field cannot be emptied); `guests/{id}/delete-impact` says
+  reservations are detached while the database deletes them; chatbot analytics' hours and days are UTC.
+- `.doc` uploads pass validation but have no text extractor.
 
 ## Known limits
 
