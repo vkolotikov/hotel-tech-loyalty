@@ -96,7 +96,7 @@ out with it (nothing of HexaTech CRM had been deployed before).
    dependency audit had failed since 4 Nov (every test job passed): six advisories in `symfony/http-foundation`,
    `http-kernel` and `routing` 8.1.10. Billing `main` **3214b44** moves the three to 8.1.11 (`composer.lock` only);
    checked before the push: `composer validate`, `composer audit` (none), the tests on PostgreSQL 16 (23 passed, 3
-   skipped) and on SQLite, the production caches build. Run composer in billing with `php85` (the PATH's PHP 8.3
+   skipped) and on SQLite, the production caches build. Billing CI green on 3214b44 (every job: https://github.com/vkolotikov/hotel-tech-saas/actions/runs/42499859041); its npm audit still lists 10 moderate advisories in build tools (`minimatch`), below the CI's `high` bar. Run composer in billing with `php85` (the PATH's PHP 8.3
    cannot resolve its `php ^8.4`). Before the sync, the text was:
    once billing's deployment of 89cf5d2
    has finished, in the billing application's **Commands** tab, `php artisan stripe:sync --module-plans --publish`.
