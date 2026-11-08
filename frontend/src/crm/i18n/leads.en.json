@@ -254,6 +254,7 @@
   "owner_anyone": "Anyone",
   "owner_me": "Me ({{name}})",
   "owner_mine": "Mine",
+  "owner_nobody": "Not assigned",
   "owner_none": "Nobody yet",
   "peek_close": "Show less about {{name}}",
   "peek_no_ai": "The AI has not read this lead yet. Open it to ask for a brief.",

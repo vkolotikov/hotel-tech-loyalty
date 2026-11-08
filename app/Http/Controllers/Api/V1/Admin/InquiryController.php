@@ -79,6 +79,8 @@ class InquiryController extends Controller
         if ($v = $request->get('inquiry_type'))  $query->where('inquiry_type', $v);
         if ($v = $request->get('property_id'))   $query->where('property_id', $v);
         if ($v = $request->get('assigned_to'))   $query->where('assigned_to', $v);
+        // The leads nobody owns yet (2026-11-08; the CRM's "Not assigned"): no name, or an empty one.
+        if ($request->boolean('unassigned'))     $query->where(fn ($q) => $q->whereNull('assigned_to')->orWhere('assigned_to', ''));
         if ($v = $request->get('source'))        $query->where('source', $v);
         if ($v = $request->get('country'))       $query->whereHas('guest', fn ($g) => $g->where('country', $v));
         // has_phone: 'yes' = guest has a phone OR mobile, 'no' = neither.
@@ -856,17 +858,21 @@ class InquiryController extends Controller
             foreach ($validated['ids'] as $id) {
                 $r = Inquiry::lockForUpdate()->find($id);
                 if (!$r) continue;
+                if ($validated['action'] === 'mark_won') {
+                    $this->closeAsWon($r, null, $request->user()?->id);
+                    $updated++;
+                    continue;
+                }
                 $patch = match ($validated['action']) {
                     'set_status'      => ['status' => $validated['value'] ?? $r->status],
                     'set_priority'    => ['priority' => $validated['value'] ?? $r->priority],
                     'set_assigned_to' => ['assigned_to' => $validated['value']],
-                    'mark_won'        => ['status' => 'Confirmed', 'lost_reason_id' => null],
                     'mark_lost'       => ['status' => 'Lost'],
                 };
                 // The stage follows the status, as update(), markWon() and markLost() keep it (2026-11-08): the
                 // status's stage of the lead's own pipeline, the won / lost stage for mark_won / mark_lost.
                 if (isset($patch['status']) && $r->pipeline_id) {
-                    $kind = match ($validated['action']) { 'mark_won' => 'won', 'mark_lost' => 'lost', default => null };
+                    $kind = $validated['action'] === 'mark_lost' ? 'lost' : null;
                     $stage = $this->stageForStatus($r->pipeline_id, $patch['status'], $kind);
                     if ($stage) {
                         $patch['pipeline_stage_id'] = $stage->id;
@@ -966,6 +972,8 @@ class InquiryController extends Controller
         if ($v = $request->get('inquiry_type'))  $query->where('inquiry_type', $v);
         if ($v = $request->get('property_id'))   $query->where('property_id', $v);
         if ($v = $request->get('assigned_to'))   $query->where('assigned_to', $v);
+        // The leads nobody owns yet (2026-11-08; the CRM's "Not assigned"): no name, or an empty one.
+        if ($request->boolean('unassigned'))     $query->where(fn ($q) => $q->whereNull('assigned_to')->orWhere('assigned_to', ''));
         if ($v = $request->get('source'))        $query->where('source', $v);
         if ($v = $request->get('country'))       $query->whereHas('guest', fn ($g) => $g->where('country', $v));
         // has_phone: 'yes' = guest has a phone OR mobile, 'no' = neither.
@@ -1120,9 +1128,29 @@ class InquiryController extends Controller
             'note' => 'nullable|string|max:1000',
         ]);
 
+        $reservation = $this->closeAsWon($inquiry, $request->note, $request->user()?->id);
+
+        return response()->json([
+            'success'     => true,
+            'inquiry'     => $inquiry->fresh()->load(['pipelineStage', 'guest:id,full_name']),
+            'reservation' => $reservation,
+            'message'     => $reservation
+                ? 'Marked won — draft reservation created.'
+                : 'Marked won.',
+        ]);
+    }
+
+    /**
+     * Close a lead as won: the pipeline's won stage, the legacy `status` "Confirmed", no lost reason, a "Marked Won" line
+     * on the timeline, and (with a property and dates) a draft reservation unless one is linked. markWon() and the bulk
+     * `mark_won` both close through here (2026-11-08: before, the bulk action left out the timeline line and the draft
+     * reservation).
+     */
+    private function closeAsWon(Inquiry $inquiry, ?string $note, ?int $userId): ?Reservation
+    {
         $wonStage = $this->stageForStatus($inquiry->pipeline_id, 'Confirmed', 'won');
 
-        $reservation = DB::transaction(function () use ($inquiry, $wonStage, $request) {
+        return DB::transaction(function () use ($inquiry, $wonStage, $note, $userId) {
             $previousStage = $inquiry->pipelineStage?->name ?? $inquiry->status;
 
             $inquiry->forceFill([
@@ -1139,9 +1167,9 @@ class InquiryController extends Controller
                 'subject'    => 'Marked Won',
                 'body'       => trim(
                     "Stage: {$previousStage} → " . ($wonStage?->name ?? 'Confirmed')
-                    . ($request->note ? "\n\n{$request->note}" : '')
+                    . ($note ? "\n\n{$note}" : '')
                 ),
-                'created_by' => $request->user()?->id,
+                'created_by' => $userId,
                 'occurred_at' => now(),
                 'metadata'   => ['kind' => 'won'],
             ]);
@@ -1175,15 +1203,6 @@ class InquiryController extends Controller
 
             return $reservation;
         });
-
-        return response()->json([
-            'success'     => true,
-            'inquiry'     => $inquiry->fresh()->load(['pipelineStage', 'guest:id,full_name']),
-            'reservation' => $reservation,
-            'message'     => $reservation
-                ? 'Marked won — draft reservation created.'
-                : 'Marked won.',
-        ]);
     }
 
     /**

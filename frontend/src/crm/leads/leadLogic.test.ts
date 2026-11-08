@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   activeFields, activeFilterCount, activityBody, amount, bulkBody, customBody, customErrors, customText, dateRange, dayOf,
   defaultPipeline, detailsDraft, detailsPatch, dueSections, EMPTY_LEAD, exportQuery, fileSize, firstOpenStage, followUp,
-  guestBody, hasStay, impactOf, kindOf, leadBody, listQuery, logContactBody, lostBody, missingCustom, moveTo,
+  guestBody, hasStay, impactOf, kindOf, leadBody, listQuery, NOBODY, logContactBody, lostBody, missingCustom, moveTo,
   newestConversation, nextStepBody, NO_FILTERS, ownerOptions, pipelineOf, readFilters, resolveStage, settingList,
   sortChoices, sourceOptions, stageColor, toggled, toggledAll, validateLead, validateNextStep, winTone, withFilter, wonBody, writeFilters,
 } from './leadLogic'
@@ -55,6 +55,9 @@ describe('what GET inquiries is asked', () => {
     const q = listQuery({ ...NO_FILTERS, owner: 'me', sort: 'follow_up', due: 'today', q: '  ada ' }, 'Vitalij K')
     expect(q).toMatchObject({ active_only: true, assigned_to: 'Vitalij K', sort: 'next_task_due', dir: 'asc', task_due: 'today', search: 'ada', page: 1, per_page: 25 })
     expect(listQuery({ ...NO_FILTERS, owner: 'Anna' }, 'Vitalij K').assigned_to).toBe('Anna')
+    // "Not assigned" asks the server for the leads nobody owns, never for a person called so.
+    expect(listQuery({ ...NO_FILTERS, owner: NOBODY }, 'Vitalij K')).toMatchObject({ assigned_to: '', unassigned: 1 })
+    expect(listQuery({ ...NO_FILTERS, owner: 'Anna' }, 'Vitalij K').unassigned).toBe('')
   })
 
   it('reads a created range typed backwards the right way round', () => {

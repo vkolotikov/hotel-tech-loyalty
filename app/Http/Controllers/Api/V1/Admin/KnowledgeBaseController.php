@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1\Admin;
 
+use App\Services\Booking\Setup\OwnRows;
 use App\Http\Controllers\Controller;
 use App\Models\KnowledgeCategory;
 use App\Models\KnowledgeDocument;
@@ -99,7 +100,7 @@ class KnowledgeBaseController extends Controller
     public function storeItem(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'category_id' => 'nullable|exists:knowledge_categories,id',
+            'category_id' => ['nullable', OwnRows::rule('knowledge_categories')],
             'question'    => 'required|string|max:500',
             'answer'      => 'required|string|max:5000',
             'keywords'    => 'nullable|array',
@@ -121,7 +122,7 @@ class KnowledgeBaseController extends Controller
             ->findOrFail($id);
 
         $validated = $request->validate([
-            'category_id' => 'nullable|exists:knowledge_categories,id',
+            'category_id' => ['nullable', OwnRows::rule('knowledge_categories')],
             'question'    => 'nullable|string|max:500',
             'answer'      => 'nullable|string|max:5000',
             'keywords'    => 'nullable|array',
@@ -232,7 +233,7 @@ class KnowledgeBaseController extends Controller
     public function bulkImportFaqs(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'category_id'        => 'nullable|exists:knowledge_categories,id',
+            'category_id'        => ['nullable', OwnRows::rule('knowledge_categories')],
             'items'              => 'required|array|min:1|max:50',
             'items.*.question'   => 'required|string|max:500',
             'items.*.answer'     => 'required|string|max:5000',

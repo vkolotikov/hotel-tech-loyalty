@@ -94,7 +94,7 @@ class ChatWidgetConfig extends Model
     {
         $bust = function (self $config) {
             if ($config->widget_key) {
-                \Illuminate\Support\Facades\Cache::forget('widget:config:' . $config->widget_key);
+                \App\Support\SharedCache::store()->forget('widget:config:' . $config->widget_key);
             }
         };
         static::saved($bust);

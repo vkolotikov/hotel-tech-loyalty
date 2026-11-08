@@ -142,8 +142,9 @@ class ChatWidgetConfigController extends Controller
 
         $old = (string) $config->widget_key;
         $config->update(['widget_key' => Str::uuid()->toString()]);
-        // saved() forgets the NEW key's cached config; the old one would answer for up to a minute.
-        \Illuminate\Support\Facades\Cache::forget('widget:config:' . $old);
+        // saved() forgets the NEW key's cached config; the old one is forgotten here. The cache is the shared one
+        // (2026-11-08), so no other container keeps answering the old key's config.
+        \App\Support\SharedCache::store()->forget('widget:config:' . $old);
 
         \Illuminate\Support\Facades\Log::info('chat_widget.widget_key_rotated', [
             'org_id'    => $config->organization_id,

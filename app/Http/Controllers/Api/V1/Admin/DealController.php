@@ -160,7 +160,10 @@ class DealController extends Controller
 
         return response()->json([
             'total'              => $total,
+            // Deals not paid in full, whatever their step (the full admin's figure, kept as it was).
             'awaiting_payment'   => ['count' => $awaitingPayCount, 'value' => round((float) $awaitingPayValue, 2)],
+            // The step "Awaiting payment" itself (2026-11-08): what `?stage=payment_pending` lists, so its pill can count.
+            'payment_pending'    => $stageRow('payment_pending'),
             'design_needed'      => $stageRow('design_needed'),
             'in_production'      => $stageRow('in_production'),
             'ready_to_ship'      => $stageRow('ready_to_ship'),

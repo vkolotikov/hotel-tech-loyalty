@@ -1,5 +1,5 @@
 import {
-  amount, dayOf, DEFAULT_PRIORITIES, EMPTY_LEAD, isDay, readFilters, resolveStage, sortedStages, SYSTEM_SOURCES,
+  amount, dayOf, DEFAULT_PRIORITIES, EMPTY_LEAD, isDay, NOBODY, readFilters, resolveStage, sortedStages, SYSTEM_SOURCES,
   type LeadDraft, type LeadFilters,
 } from './leadLogic'
 import type { CaptureAnswer, EmailTemplate, LeadRow, SavedView, Stage } from './leadTypes'
@@ -90,7 +90,7 @@ export function viewFilters(f: LeadFilters, me: string): Record<string, unknown>
     country: f.country, phone: f.phone, from: f.from, to: f.to, sort: f.sort === 'newest' ? '' : f.sort,
   }).filter(([, v]) => v))
   return {
-    status: f.status, priority: f.priority, inquiryType: f.type, propertyId: '', assignedTo: f.owner === 'me' ? me : f.owner,
+    status: f.status, priority: f.priority, inquiryType: f.type, propertyId: '', assignedTo: f.owner === 'me' ? me : f.owner === NOBODY ? '' : f.owner,
     source: f.source, taskDue: f.due === 'now' ? '' : f.due, country: f.country, hasPhone: f.phone,
     crm,
   }

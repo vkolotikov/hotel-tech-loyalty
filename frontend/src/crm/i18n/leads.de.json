@@ -254,6 +254,7 @@
   "owner_anyone": "Alle",
   "owner_me": "Ich ({{name}})",
   "owner_mine": "Meine",
+  "owner_nobody": "Nicht zugewiesen",
   "owner_none": "Noch niemand",
   "peek_close": "Weniger zu {{name}} zeigen",
   "peek_no_ai": "Die KI hat diesen Lead noch nicht gelesen. Öffnen Sie ihn, um eine Einschätzung zu erhalten.",

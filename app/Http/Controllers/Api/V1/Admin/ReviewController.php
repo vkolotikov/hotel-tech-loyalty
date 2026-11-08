@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1\Admin;
 
+use App\Services\Booking\Setup\OwnRows;
 use App\Http\Controllers\Controller;
 use App\Models\LandingPage;
 use App\Models\Organization;
@@ -546,9 +547,9 @@ class ReviewController extends Controller
     public function sendInvitation(Request $request, ReviewInvitationService $svc): JsonResponse
     {
         $data = $request->validate([
-            'form_id'     => 'nullable|integer|exists:review_forms,id',
-            'member_id'   => 'nullable|integer|exists:loyalty_members,id',
-            'guest_id'    => 'nullable|integer|exists:guests,id',
+            'form_id'     => ['nullable', 'integer', OwnRows::rule('review_forms')],
+            'member_id'   => ['nullable', 'integer', OwnRows::rule('loyalty_members')],
+            'guest_id'    => ['nullable', 'integer', OwnRows::rule('guests')],
             'email'       => 'nullable|email|max:255',
             'name'        => 'nullable|string|max:255',
             'subject'     => 'nullable|string|max:200',

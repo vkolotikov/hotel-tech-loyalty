@@ -278,11 +278,15 @@ class WidgetChatController extends Controller
      * ChatWidgetConfigController). 60 s upper bound on staleness is
      * acceptable for branding / colour edits — admins seeing a
      * stale colour for a minute is fine.
+     *
+     * The cache is the shared one (SharedCache, 2026-11-08): production's default cache is each container's own
+     * files, so a save (or a key rotation) forgot the entry only in the container that took it, and the others kept
+     * answering the old config for up to 60 s.
      */
     public function getConfig(string $widgetKey): JsonResponse
     {
         $cacheKey = 'widget:config:' . $widgetKey;
-        $payload = \Illuminate\Support\Facades\Cache::remember(
+        $payload = \App\Support\SharedCache::store()->remember(
             $cacheKey,
             60,
             fn () => $this->buildConfigPayload($widgetKey),

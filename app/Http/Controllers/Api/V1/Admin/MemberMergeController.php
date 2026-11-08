@@ -31,8 +31,10 @@ class MemberMergeController extends Controller
     public function merge(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'winner_id' => 'required|integer|exists:loyalty_members,id',
-            'loser_id'  => 'required|integer|exists:loyalty_members,id|different:winner_id',
+            // No `exists` rule: both are read again under the tenant scope below, so another organisation's member
+            // (or none) answers 404, as before (2026-11-08: a bare `exists:` took another organisation's id).
+            'winner_id' => ['required', 'integer'],
+            'loser_id'  => ['required', 'integer', 'different:winner_id'],
             'reason'    => 'nullable|string|max:500',
         ]);
 

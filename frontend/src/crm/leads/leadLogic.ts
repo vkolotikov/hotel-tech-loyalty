@@ -145,6 +145,9 @@ export function dateRange(from: string, to: string): { date_from?: string; date_
   return { ...(a ? { date_from: a } : {}), ...(b ? { date_to: b } : {}) }
 }
 
+/** The owner filter's "Not assigned" (`?owner=_nobody`): the server's `unassigned=1`; never a person's name. */
+export const NOBODY = '_nobody'
+
 /**
  * What `GET inquiries` is asked for a set of filters. Leads are open work only (`active_only`, as the full admin's
  * list: won leads are deals, lost ones stay in Contacts). "Assigned to me" is the person's name: a lead's owner is a
@@ -157,7 +160,8 @@ export function listQuery(filters: LeadFilters, me: string, perPage = 25): Query
     search: filters.q.trim(),
     status: filters.status,
     source: filters.source,
-    assigned_to: filters.owner === 'me' ? me : filters.owner,
+    assigned_to: filters.owner === 'me' ? me : filters.owner === NOBODY ? '' : filters.owner,
+    unassigned: filters.owner === NOBODY ? 1 : '',
     priority: filters.priority,
     inquiry_type: filters.type,
     country: filters.country,

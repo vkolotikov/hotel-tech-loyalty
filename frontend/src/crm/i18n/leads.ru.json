@@ -248,6 +248,7 @@
   "owner_anyone": "Любой",
   "owner_me": "Я ({{name}})",
   "owner_mine": "Мои",
+  "owner_nobody": "Не назначен",
   "owner_none": "Пока никто",
   "peek_close": "Свернуть: {{name}}",
   "peek_no_ai": "ИИ ещё не читал этот лид. Откройте его, чтобы получить сводку.",

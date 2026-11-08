@@ -231,7 +231,7 @@ export function Deals() {
         <div className="inline-flex items-center gap-1 bg-dark-surface border border-dark-border rounded-xl p-1 flex-wrap">
           {([
             { key: 'all' as FilterKey,             label: t('deals.filters.all', 'All'),                     count: kpis?.total ?? 0 },
-            { key: 'payment_pending' as FilterKey, label: t('deals.filters.awaiting_payment', 'Awaiting Payment'), count: kpis?.awaiting_payment?.count ?? 0 },
+            { key: 'payment_pending' as FilterKey, label: t('deals.filters.awaiting_payment', 'Awaiting Payment'), count: kpis?.payment_pending?.count ?? kpis?.awaiting_payment?.count ?? 0 },
             { key: 'design_needed' as FilterKey,   label: t('deals.filters.preparation', 'Preparation'),     count: kpis?.design_needed?.count ?? 0 },
             { key: 'in_production' as FilterKey,   label: t('deals.filters.in_progress', 'In Progress'),     count: kpis?.in_production?.count ?? 0 },
             { key: 'overdue' as FilterKey,         label: t('deals.filters.overdue', 'Overdue'),             count: null, tone: 'red' },

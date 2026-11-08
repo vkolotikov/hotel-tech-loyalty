@@ -68,8 +68,10 @@ describe('the Deals page (round 2)', () => {
   it('counts a filter pill only where the server\'s figure counts exactly that list', () => {
     expect(filterCount('design_needed', KPIS)).toBe(2)
     expect(filterCount('ready_to_ship', KPIS)).toBe(1)
-    // Awaiting payment counts unpaid deals, the filter lists the fulfilment step: no count rather than a wrong one.
+    // `awaiting_payment` counts unpaid deals, the filter lists the fulfilment step: an older server's figures give no
+    // count rather than a wrong one; the step's own `payment_pending` (2026-11-08) is its count.
     expect(filterCount('payment_pending', KPIS)).toBeUndefined()
+    expect(filterCount('payment_pending', { ...KPIS, payment_pending: fig(3) })).toBe(3)
     expect(filterCount('all', KPIS)).toBeUndefined()
     expect(filterCount('design_needed', undefined)).toBeUndefined()
   })

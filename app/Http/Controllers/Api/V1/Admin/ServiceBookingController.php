@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1\Admin;
 
+use App\Services\Booking\Setup\OwnRows;
 use App\Http\Controllers\Controller;
 use App\Models\AuditLog;
 use App\Models\Service;
@@ -482,8 +483,8 @@ class ServiceBookingController extends Controller
     public function store(Request $request, ServiceSchedulingService $scheduler): JsonResponse
     {
         $data = $request->validate([
-            'service_id'        => 'required|integer|exists:services,id',
-            'service_master_id' => 'nullable|integer|exists:service_masters,id',
+            'service_id'        => ['required', 'integer', OwnRows::rule('services')],
+            'service_master_id' => ['nullable', 'integer', OwnRows::rule('service_masters')],
             'customer_name'     => 'required|string|max:200',
             'customer_email'    => 'required|email|max:255',
             'customer_phone'    => 'nullable|string|max:40',
@@ -493,7 +494,7 @@ class ServiceBookingController extends Controller
             'customer_notes'    => 'nullable|string|max:2000',
             'staff_notes'       => 'nullable|string|max:2000',
             'extras'            => 'nullable|array',
-            'extras.*.id'       => 'required_with:extras|integer|exists:service_extras,id',
+            'extras.*.id'       => ['required_with:extras', 'integer', OwnRows::rule('service_extras')],
             'extras.*.quantity' => 'nullable|integer|min:1|max:50',
             'notify_client'     => 'nullable|boolean',
         ]);
@@ -717,8 +718,8 @@ class ServiceBookingController extends Controller
     public function availability(Request $request, ServiceSchedulingService $scheduler): JsonResponse
     {
         $data = $request->validate([
-            'service_id' => 'required|integer|exists:services,id',
-            'master_id'  => 'nullable|integer|exists:service_masters,id',
+            'service_id' => ['required', 'integer', OwnRows::rule('services')],
+            'master_id'  => ['nullable', 'integer', OwnRows::rule('service_masters')],
             'date'       => 'required|date',
         ]);
 

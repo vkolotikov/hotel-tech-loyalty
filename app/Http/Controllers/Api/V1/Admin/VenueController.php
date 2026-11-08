@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1\Admin;
 
+use App\Services\Booking\Setup\OwnRows;
 use App\Http\Controllers\Controller;
 use App\Models\Venue;
 use App\Models\VenueBooking;
@@ -34,7 +35,7 @@ class VenueController extends Controller
         $validated = $request->validate([
             'name'         => 'required|string|max:255',
             'venue_type'   => 'required|string|max:255',
-            'property_id'  => 'required|exists:properties,id',
+            'property_id'  => ['required', OwnRows::rule('properties')],
             'capacity'     => 'nullable|integer',
             'hourly_rate'  => 'nullable|numeric',
             'half_day_rate'=> 'nullable|numeric',
@@ -57,7 +58,7 @@ class VenueController extends Controller
         $validated = $request->validate([
             'name'         => 'sometimes|required|string|max:255',
             'venue_type'   => 'sometimes|required|string|max:255',
-            'property_id'  => 'sometimes|required|exists:properties,id',
+            'property_id'  => ['sometimes', 'required', OwnRows::rule('properties')],
             'capacity'     => 'nullable|integer',
             'hourly_rate'  => 'nullable|numeric',
             'half_day_rate'=> 'nullable|numeric',
@@ -110,12 +111,12 @@ class VenueController extends Controller
     public function storeBooking(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'venue_id'              => 'required|exists:venues,id',
+            'venue_id'              => ['required', OwnRows::rule('venues')],
             'booking_date'          => 'required|date',
             'start_time'            => 'required|date_format:H:i',
             'end_time'              => 'required|date_format:H:i|after:start_time',
-            'guest_id'              => 'nullable|exists:guests,id',
-            'corporate_account_id'  => 'nullable|exists:corporate_accounts,id',
+            'guest_id'              => ['nullable', OwnRows::rule('guests')],
+            'corporate_account_id'  => ['nullable', OwnRows::rule('corporate_accounts')],
             'event_name'            => 'nullable|string|max:255',
             'event_type'            => 'nullable|string|max:255',
             'attendees'             => 'nullable|integer',
@@ -140,12 +141,12 @@ class VenueController extends Controller
     public function updateBooking(Request $request, VenueBooking $venueBooking): JsonResponse
     {
         $validated = $request->validate([
-            'venue_id'              => 'sometimes|required|exists:venues,id',
+            'venue_id'              => ['sometimes', 'required', OwnRows::rule('venues')],
             'booking_date'          => 'sometimes|required|date',
             'start_time'            => 'sometimes|required|date_format:H:i',
             'end_time'              => 'sometimes|required|date_format:H:i',
-            'guest_id'              => 'nullable|exists:guests,id',
-            'corporate_account_id'  => 'nullable|exists:corporate_accounts,id',
+            'guest_id'              => ['nullable', OwnRows::rule('guests')],
+            'corporate_account_id'  => ['nullable', OwnRows::rule('corporate_accounts')],
             'event_name'            => 'nullable|string|max:255',
             'event_type'            => 'nullable|string|max:255',
             'attendees'             => 'nullable|integer',

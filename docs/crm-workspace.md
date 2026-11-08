@@ -73,9 +73,9 @@ processed document), `reply` (a person answered a chat), `pipeline` (a pipeline 
 | Get started | `/crm/start` | `crm/start`: the six setup steps |
 | Inbox | `/crm/inbox` (`?c=<conversation>`, `?status=waiting`) | `chat-inbox*`, `engagement/*`: list with the server's counts, the thread (polled), take over / hand back, resolve / archive / reopen, assign, capture as lead, contact, rate an AI answer and teach the right one, translate, the AI brief, canned replies, upload, dictation, transcript, **Draft a reply with AI** |
 | Visitors | `/crm/visitors` (`?v=<visitor>`) | `visitors*`: on the site now, everyone, away, leads; a visitor's pages and chats; start a chat; delete |
-| Leads | `/crm/leads` (`?view=list|board|team`, `?p=<pipeline>`, `?new=1`, `?due=…`, `?guest=<contact>`), `/crm/leads/:id` | `inquiries*`, `guests`, `guests/facets`, `saved-views`, `crm-settings`, `email-templates*`, `crm-ai/capture-lead`, `tasks`: List, Board (drag or Move to) and Team (by owner); search, filters as chips, follow-up pills with counts, saved views shared with the full admin (page key `inquiries`), team-wide column choices and list custom fields; rows with the stage changed in place, AI signal, next step, owner, touches, Show more and a row menu; bulk stage / owner / priority / follow up / won / lost (each through its own `/won` or `/lost`, one reason, at most 100) / delete; CSV; A lead from a message (only with `admin_ai`). A lead's page: overview with a stage bar, next step, timeline (type filter, call length, voice note), tasks, contact, AI brief and proposal, details, stay, custom fields, files, its chat; Send an email from a template; edit the customer; won / lost; delete with what goes |
+| Leads | `/crm/leads` (`?view=list|board|team`, `?p=<pipeline>`, `?new=1`, `?due=…`, `?guest=<contact>`), `/crm/leads/:id` | `inquiries*`, `guests`, `guests/facets`, `saved-views`, `crm-settings`, `email-templates*`, `crm-ai/capture-lead`, `tasks`: List, Board (drag or Move to) and Team (by owner); search, filters as chips, follow-up pills with counts, saved views shared with the full admin (page key `inquiries`), team-wide column choices and list custom fields; rows with the stage changed in place, AI signal, next step, owner, touches, Show more and a row menu; bulk stage / owner / priority / follow up / won / lost (each through its own `/won` or `/lost`, one reason, at most 100) / delete; CSV; A lead from a message (every staff member, `RequireAiCapture`). A lead's page: overview with a stage bar, next step, timeline (type filter, call length, voice note), tasks, contact, AI brief and proposal, details, stay, custom fields, files, its chat; Send an email from a template; edit the customer; won / lost; delete with what goes |
 | Pipeline | `/crm/pipeline` | redirects: to `/crm/leads?view=board` (keeping `?p=`), `?tab=won` to `/crm/deals` |
-| Deals | `/crm/deals` (`?filter=…`, `?deal=`, `?dsort=`, `?dpage=`) | `deals/*`, `crm-settings` (`deal_fields`): figures that open their step, search, payment and owner filters, step pills, the step and its progress, Next step, payment with Paid in full, columns, CSV |
+| Deals | `/crm/deals` (`?filter=…`, `?deal=`, `?dsort=`, `?dpage=`) | `deals/*`, `crm-settings` (`deal_fields`), `inquiries`, `inquiries/{id}/won`, `crm-ai/capture-lead`: figures that open their step, search, payment and owner filters, step pills with counts (the step's own `payment_pending` figure), the step and its progress, Next step, payment with Paid in full, columns, CSV; Add a deal by hand or From a message (the lead form in its deal mode: the lead, then the server's own `/won`) |
 | Contacts | `/crm/contacts`, `/crm/contacts/:id` (`?tab=companies|duplicates`) | `guests*`, `corporate-accounts`: people with filters, saved views, bulk changes, CSV; a contact edited in place with tags, leads and timeline; companies; duplicates and merge |
 | Tasks | `/crm/tasks` | `tasks*`: figures; mine / everyone; type; All open (by day), Overdue, Today, Upcoming, Done (by the day done) on the venue's days; add, edit, complete, reopen, delete |
 | AI assistant | `/crm/assistant` (`?tab=behaviour|knowledge|teach|try|popups`) | `chatbot-config/*`, `chatbot-onboarding`, `knowledge/*`, `popup-rules`, `crm/bot-gaps` |
@@ -194,9 +194,11 @@ Fixed on 2026-11-08 (each in the shared controller or service, so the full admin
 - **A thread shows the reader's own rating** of each AI answer (`chat-inbox/{id}`), else the newest anyone gave; before,
   whichever feedback row came last, so a person could see a colleague's rating as theirs (`ChatInboxTest`).
 - **The AI capture keeps the allowance**: `crm-ai/capture-lead`, `-guest`, `-corporate`, `-member` answer 403
-  `ai_budget_used_up` before the provider is asked (`ChatbotHelpersTest`). They stay behind `feature:admin_ai`, which
-  the CRM's own packages leave out: the bootstrap's `features.admin_ai` says whether the plan has it, and Leads offers
-  "A lead from a message" only then (`BootstrapTest`).
+  `ai_budget_used_up` before the provider is asked (`ChatbotHelpersTest`). Since 2026-11-08 (owner: "add ai capture in
+  leads and deals for any staff member") they are every staff member's wherever the CRM workspace is on, or the plan
+  has `admin_ai` (`RequireAiCapture`, route middleware `ai.capture`); the rest of `crm-ai/*` (the staff copilot's chat
+  and voice) keeps `feature:admin_ai`. The bootstrap's `features.ai_capture` is the middleware's own answer
+  (`AiCaptureTest`, `BootstrapTest`).
 - **The leads' created-date filters are the venue's days**: `inquiries?date_from=&date_to=` and the export, from the
   day's start to the next day's start in `VenueClock::zone` (before, UTC days, `date_to` ending 23:59:59); Insights'
   new-leads windows follow (`LeadsAndDealsTest`, `insightsMath.test.ts`).
@@ -206,35 +208,44 @@ Fixed on 2026-11-08 (each in the shared controller or service, so the full admin
   `SendTemplateTest`). The CRM also refuses a template with member tags for a contact who is no member and names them.
 - **Leads without a value or AI score sort last** in either direction, on PostgreSQL and SQLite (`LeadsAndDealsTest`).
 
-Still open (found, not changed):
+Round 3 (2026-11-08, the owner: "Do as you suggest"), each with a test:
 
-- `PUT crm-settings/{key}` lets any staff member write any key (AccessMap `admin/crm-settings` is staff/staff so
-  everyone can save column choices). The full admin writes about a dozen keys there from pages staff use (Planner,
-  the menu, onboarding, column popovers), so which keys are a manager's is a full-admin decision; the CRM writes
-  only `inquiry_fields` and `deal_fields`.
-- `deals/kpis` `awaiting_payment` counts unpaid deals, while the Deals "Awaiting payment" pill lists the fulfilment
-  step; the pill shows no count until the two agree.
-- The leads list cannot be filtered to "nobody assigned" on the server (Leads' Team view shows them first).
-- `crm-ai/capture-*` and `extractionFailure` put the provider's text in `error` on a 200 `success: false`; the CRM
-  never shows it (our sentence), the full admin still does.
+- **Bulk won closes each lead as `/won` does** (`InquiryController::closeAsWon`): the won stage, "Confirmed", the
+  "Marked Won" line on the timeline, and a hotel's draft reservation for a lead with a property and dates; before, the
+  bulk action left out the line and the reservation (`LeadsAndDealsTest`).
+- **"Not assigned"**: `inquiries?unassigned=1` (and the export) lists the leads nobody owns; the Leads owner filter
+  offers it (`LeadsAndDealsTest`, `leadLogic.test.ts`).
+- **The Deals "Awaiting payment" pill counts its own step**: `deals/kpis` adds `payment_pending` (the step), beside
+  `awaiting_payment` (deals not paid in full, unchanged); the CRM's pill and the full admin's use it
+  (`LeadsAndDealsTest`, `dealLogic.test.ts`).
+- **A failed capture answers our sentence**: `crm-ai/capture-*` and `extractionFailure` log the provider's text and
+  answer `CrmAiController::CAPTURE_FAILED` or the extraction's own sentence (`AiCaptureTest`).
+- **Every id a staff request names is this organisation's**: the last bare `exists:<table>,id` rules (members, tiers,
+  benefits, segments, points lines, properties, services, masters, extras, review forms, guests, enquiries, companies,
+  venues, knowledge categories, email templates) are `OwnRows::rule()`, tiers and benefits with `whereNull('deleted_at')`;
+  the merge, a member's tier change and a campaign's recipients have no `exists` rule, because each reads the id again
+  under the tenant scope and keeps its own refusal (404, `bad_tier`, `bad_recipients`). `OwnIdsTest` refuses a bare rule
+  anywhere under `app/Http`.
+- **The widget's cached config is shared**: `widget:config:<key>` lives in `SharedCache` (the database in production),
+  so a save or a key rotation forgets it for every container at once, not only the one that took the save
+  (`WidgetKeyRotationTest`).
 
-- After a rotation the website's own snippet must be replaced (that is the point). Landing pages on our domain read
-  the key per request (browsers may hold a page for `landing.cache_ttl`). Production's cache is each container's own
-  files, so another container may answer the old key's config read for up to 60 s; every chat request looks the key
-  up in the database and is refused at once.
+Decided by the owner (2026-11-08):
+
+- Any staff member may write any `crm-settings` key ("Yes it is ok, any can change"); AccessMap `admin/crm-settings`
+  stays staff / staff.
+
+Still open:
+
 - Tasks the full admin saved before 2026-11-08 hold local digits stored as UTC and keep showing shifted by the
-  offset; nothing in a row says which ones they are.
-- Bulk `mark_won` does not create the draft reservation `markWon` creates for a property-linked lead.
-- Loyalty and booking writes outside the CRM still name ids with a bare `exists:<table>,id` (another organisation's
-  row passes validation): `MemberAdminController` (`member_ids.*`, `member_id`, `tier_id`), `EmailCampaignController`
-  (`member_ids.*`, `segment_id`), `BenefitAdminController` (`tier_id`, `benefit_id`, `property_id`) and
-  `EarnRateEventController` (`tier_ids.*`, `property_id`). The member and transaction ids are read again through
-  `TenantScope` (another organisation's answers 404 or is skipped), so they only tell that such an id exists; a
-  `property_id` is stored as sent. The CRM's are scoped (above); these are for a loyalty/booking pass with their own
-  tests.
+  offset; nothing in a row says which ones they are, so no migration can tell them from correct ones. Staff correct
+  them by hand when they meet one.
 
 ## Known limits
 
+- After a widget key rotation the website's own snippet must be replaced (that is the point). Landing pages on our
+  domain read the key per request (browsers may hold a page for `landing.cache_ttl`); every chat request looks the key
+  up in the database and is refused at once.
 - The knowledge search the draft uses (`KnowledgeService::searchRelevantItems`) is PostgreSQL SQL (`ILIKE`), as the
   widget's is; the SQLite test stands in for it, `scripts/test-pg.sh` runs the real one.
 - Chatbot analytics (`ChatbotAnalyticsController`) is PostgreSQL SQL too (production's database); its test

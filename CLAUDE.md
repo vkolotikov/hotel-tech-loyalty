@@ -6,7 +6,7 @@ Multi-tenant Laravel 13 + React (Vite, TypeScript) SaaS with four sub-brands. Pr
 `frontend/src/pages/landing`).
 
 Starting a new session, or on another device or agent: the current state, set-up, test baselines, deploy steps and
-open items are in the newest file of `docs/handoff/` (now `docs/handoff/2026-11-07-hexatech-handoff.md`). Update it,
+open items are in the newest file of `docs/handoff/` (now `docs/handoff/2026-11-08-hexatech-handoff.md`). Update it,
 or add the next dated one, at the end of a session.
 
 ## Environment (hard rules, each one has bitten before)
@@ -58,6 +58,9 @@ or add the next dated one, at the end of a session.
 - A route parameter that names a model (`{inquiry}`, `{pipeline}`…) is resolved after `SaasAuthMiddleware` and
   `TenantMiddleware` (`bootstrap/app.php` priority list), so its lookup runs under the organisation's `TenantScope`;
   before 2026-11-01 every such admin route answered 404. `RouteBindingTenantTest` pins the order.
+- An id a staff request names is validated with `OwnRows::rule('<table>')` (this organisation's rows; tiers and
+  benefits add `->whereNull('deleted_at')`), never a bare `exists:<table>,id`, which takes another organisation's row;
+  `tests/Feature/CrmWorkspace/OwnIdsTest.php` refuses a bare rule anywhere under `app/Http` (2026-11-08).
 
 ## Landing-page code rules
 
@@ -339,6 +342,12 @@ or add the next dated one, at the end of a session.
   The side panel is in groups (`crm/shell/nav.ts`: Conversations, Sales, Reports, Set up; the shared frame's
   `WorkspaceNavItem.section`). A page's main sections are `crm/ui/SectionNav` (kept in `?tab=`), a list's controls a
   `Toolbar` with `FilterChip`s, content in `Card`s with a description; `Tabs` pills only filter inside a list.
+- Round 3 (owner 2026-11-08, "add ai capture in leads and deals for any staff member"): the AI capture
+  (`crm-ai/capture-*`) is behind `ai.capture` (`RequireAiCapture`: the CRM workspace on, or `admin_ai`), not
+  `feature:admin_ai`, which keeps the rest of `crm-ai/*`; the bootstrap's `features.ai_capture` is that middleware's
+  answer. A deal is added through the lead form's deal mode (the lead, then the server's own `inquiries/{id}/won`), and
+  every close as won — one or bulk — goes through `InquiryController::closeAsWon()`. The widget's cached config
+  (`widget:config:<key>`) lives in `SharedCache`.
 
 ## Appointments-workspace code rules
 

@@ -68,6 +68,35 @@ class LeadsAndDealsTest extends TestCase
                 Schema::table('inquiries', $add);
             }
         }
+        foreach ([
+            'num_nights' => fn ($t) => $t->integer('num_nights')->nullable(),
+            'num_rooms' => fn ($t) => $t->integer('num_rooms')->default(1),
+            'num_adults' => fn ($t) => $t->integer('num_adults')->default(1),
+            'num_children' => fn ($t) => $t->integer('num_children')->default(0),
+            'rate_offered' => fn ($t) => $t->decimal('rate_offered', 10, 2)->nullable(),
+            'special_requests' => fn ($t) => $t->text('special_requests')->nullable(),
+        ] as $column => $add) {
+            if (!Schema::hasColumn('inquiries', $column)) {
+                Schema::table('inquiries', $add);
+            }
+        }
+        // The timeline and the draft reservation a lead closed as won gets (production's columns and nullability).
+        if (!Schema::hasTable('activities')) {
+            Schema::create('activities', fn ($t) => [$t->bigIncrements('id'), $t->unsignedBigInteger('organization_id'), $t->unsignedBigInteger('brand_id')->nullable(),
+                $t->unsignedBigInteger('inquiry_id')->nullable(), $t->unsignedBigInteger('guest_id')->nullable(), $t->unsignedBigInteger('corporate_account_id')->nullable(),
+                $t->string('type', 32), $t->string('direction', 16)->nullable(), $t->string('subject')->nullable(), $t->text('body')->nullable(),
+                $t->integer('duration_minutes')->nullable(), $t->text('metadata')->nullable(), $t->unsignedBigInteger('created_by')->nullable(),
+                $t->timestamp('occurred_at')->nullable(), $t->timestamps()]);
+        }
+        if (!Schema::hasTable('reservations')) {
+            Schema::create('reservations', fn ($t) => [$t->bigIncrements('id'), $t->unsignedBigInteger('organization_id')->nullable(), $t->unsignedBigInteger('brand_id')->nullable(),
+                $t->unsignedBigInteger('guest_id'), $t->unsignedBigInteger('inquiry_id')->nullable(), $t->unsignedBigInteger('corporate_account_id')->nullable(),
+                $t->unsignedBigInteger('property_id'), $t->string('confirmation_no', 50)->nullable(), $t->date('check_in'), $t->date('check_out'),
+                $t->integer('num_nights')->nullable(), $t->integer('num_rooms')->default(1), $t->integer('num_adults')->default(1), $t->integer('num_children')->default(0),
+                $t->string('room_type', 100)->nullable(), $t->decimal('rate_per_night', 10, 2)->nullable(), $t->decimal('total_amount', 12, 2)->nullable(),
+                $t->string('payment_status', 30)->default('Pending'), $t->string('status', 30)->default('Confirmed'), $t->string('source', 100)->nullable(),
+                $t->text('special_requests')->nullable(), $t->timestamps()]);
+        }
         if (!Schema::hasTable('properties')) {
             Schema::create('properties', fn ($t) => [$t->bigIncrements('id'), $t->unsignedBigInteger('organization_id')->nullable(), $t->string('name'), $t->string('code')->nullable(), $t->timestamps()]);
         }
@@ -123,6 +152,52 @@ class LeadsAndDealsTest extends TestCase
         $bulk('mark_lost');
         $this->assertSame(['Lost', $this->stages['Gone']], [$this->row($a)->status, (int) $this->row($a)->pipeline_stage_id]);
         $this->assertSame(['Lost', null], [$this->row($loose)->status, $this->row($loose)->pipeline_stage_id], 'a lead without a pipeline keeps none');
+    }
+
+    public function test_bulk_won_closes_each_lead_as_marking_one_won_does(): void
+    {
+        $property = DB::table('properties')->insertGetId(['organization_id' => $this->org->id, 'name' => 'Harbour House', 'code' => 'HBR', 'created_at' => now(), 'updated_at' => now()]);
+        $stay = $this->lead(['pipeline_id' => $this->pipeline, 'pipeline_stage_id' => $this->stages['New'], 'property_id' => $property,
+            'check_in' => '2026-12-01', 'check_out' => '2026-12-04', 'num_nights' => 3, 'total_value' => 600], 'Stay Guest');
+        $plain = $this->lead(['pipeline_id' => $this->pipeline, 'pipeline_stage_id' => $this->stages['Contacted']], 'Plain Lead');
+
+        $this->asStaffMember()->postJson($this->adminApi('inquiries/bulk'), ['ids' => [$stay, $plain], 'action' => 'mark_won'])
+            ->assertOk()->assertJsonPath('updated', 2);
+
+        foreach ([$stay, $plain] as $lead) {
+            $this->assertSame(['Confirmed', $this->stages['Booked']], [$this->row($lead)->status, (int) $this->row($lead)->pipeline_stage_id]);
+            $this->assertSame(1, DB::table('activities')->where('inquiry_id', $lead)->where('subject', 'Marked Won')->count(), 'the timeline says it was won');
+        }
+        // The lead with a property and dates has its draft reservation, as `/won` makes one; the other has none.
+        $this->assertSame(['HBR-' . str_pad((string) $stay, 5, '0', STR_PAD_LEFT), '2026-12-01'],
+            [DB::table('reservations')->where('inquiry_id', $stay)->value('confirmation_no'), substr((string) DB::table('reservations')->where('inquiry_id', $stay)->value('check_in'), 0, 10)]);
+        $this->assertSame(0, DB::table('reservations')->where('inquiry_id', $plain)->count());
+
+        // Won again: no second reservation.
+        $this->asStaffMember()->postJson($this->adminApi('inquiries/bulk'), ['ids' => [$stay], 'action' => 'mark_won'])->assertOk();
+        $this->assertSame(1, DB::table('reservations')->where('inquiry_id', $stay)->count());
+    }
+
+    public function test_the_list_shows_the_leads_nobody_owns(): void
+    {
+        $nobody = $this->lead(['assigned_to' => null], 'Nobody');
+        $empty = $this->lead(['assigned_to' => ''], 'Empty');
+        $this->lead(['assigned_to' => 'Anna'], 'Annas');
+
+        $ids = fn (string $query) => collect($this->asStaffMember()->getJson($this->adminApi("inquiries?{$query}"))->assertOk()->json('data'))->pluck('id')->sort()->values()->all();
+        $this->assertSame([$nobody, $empty], $ids('unassigned=1'));
+        $this->assertCount(3, $ids('unassigned=0'));
+    }
+
+    public function test_the_deals_figures_count_the_awaiting_payment_step_itself(): void
+    {
+        $this->lead(['status' => 'Confirmed', 'fulfillment_stage' => 'payment_pending', 'total_value' => 200, 'payment_status' => 'pending']);
+        $this->lead(['status' => 'Confirmed', 'fulfillment_stage' => 'in_production', 'total_value' => 300, 'payment_status' => 'partial']);
+
+        $kpis = $this->asStaffMember()->getJson($this->adminApi('deals/kpis'))->assertOk()->json();
+        // Not paid in full: both; the step "Awaiting payment", what `?stage=payment_pending` lists: one.
+        $this->assertSame(2, $kpis['awaiting_payment']['count']);
+        $this->assertSame([1, 200], [$kpis['payment_pending']['count'], (int) $kpis['payment_pending']['value']]);
     }
 
     public function test_a_new_lead_goes_into_the_default_pipeline(): void

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1\Admin;
 
+use App\Services\Booking\Setup\OwnRows;
 use App\Http\Controllers\Controller;
 use App\Models\AuditLog;
 use App\Models\LoyaltyMember;
@@ -55,7 +56,7 @@ class MemberAdminController extends Controller
             // password via the standard password-reset flow.
             'password' => 'nullable|string|min:8',
             'phone'    => 'nullable|string|max:20',
-            'tier_id'  => 'nullable|exists:loyalty_tiers,id',
+            'tier_id'  => ['nullable', OwnRows::rule('loyalty_tiers')->whereNull('deleted_at')],
             'nfc_uid'  => 'nullable|string|max:100',
             'send_welcome_email' => 'nullable|boolean',
         ]);
@@ -352,7 +353,9 @@ class MemberAdminController extends Controller
         $validated = $request->validate([
             'is_active'         => 'sometimes|boolean',
             'marketing_consent' => 'sometimes|boolean',
-            'tier_id'           => 'sometimes|exists:loyalty_tiers,id',
+            // No `exists` rule: MemberDetails reads the tier under the tenant scope and answers `bad_tier` ("Invalid
+            // tier for this organization.") for another organisation's or a deleted one, as before (2026-11-08).
+            'tier_id'           => ['sometimes', 'integer'],
             // ISO timestamp; null clears any pending override and lets
             // the next assessTier sweep decide.
             'tier_override_until' => 'sometimes|nullable|date',
@@ -451,7 +454,7 @@ class MemberAdminController extends Controller
     {
         $validated = $request->validate([
             'member_ids'   => 'required|array|min:1|max:500',
-            'member_ids.*' => 'integer|exists:loyalty_members,id',
+            'member_ids.*' => ['integer', OwnRows::rule('loyalty_members')],
             'title'        => 'required|string|max:120',
             'body'         => 'required|string|max:500',
             'send_email'   => 'sometimes|boolean',
@@ -696,7 +699,7 @@ class MemberAdminController extends Controller
         }
 
         $validated = $request->validate([
-            'member_id'       => 'required|exists:loyalty_members,id',
+            'member_id'       => ['required', OwnRows::rule('loyalty_members')],
             'points'          => 'required|integer|min:1|max:100000',
             'description'     => 'required|string|max:255',
             'type'            => 'nullable|in:earn,bonus,adjust',
@@ -759,7 +762,7 @@ class MemberAdminController extends Controller
         }
 
         $validated = $request->validate([
-            'member_id'       => 'required|exists:loyalty_members,id',
+            'member_id'       => ['required', OwnRows::rule('loyalty_members')],
             'points'          => 'required|integer|min:1',
             'description'     => 'required|string|max:255',
             'idempotency_key' => 'nullable|string|max:255',
@@ -797,7 +800,7 @@ class MemberAdminController extends Controller
     public function reverseTransaction(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'transaction_id' => 'required|exists:points_transactions,id',
+            'transaction_id' => ['required', OwnRows::rule('points_transactions')],
             'reason'         => 'required|string|max:255',
         ]);
 

@@ -26,7 +26,10 @@ export interface StageFigure { count: number; value: number }
 /** `GET deals/kpis` (DealController::kpis); `total` is the deals not yet completed. */
 export interface DealKpis {
   total?: number
+  /** Deals not paid in full, whatever their step (the "Not paid in full" tile). */
   awaiting_payment: StageFigure
+  /** The step "Awaiting payment" itself, what its pill lists (since 2026-11-08; absent from an older server). */
+  payment_pending?: StageFigure
   design_needed: StageFigure
   in_production: StageFigure
   ready_to_ship: StageFigure
@@ -123,6 +126,7 @@ export function dealFilterCount(view: DealView): number {
 export function filterCount(filter: DealFilter, kpis: DealKpis | null | undefined): number | undefined {
   if (!kpis) return undefined
   if (filter === 'design_needed' || filter === 'in_production' || filter === 'ready_to_ship') return kpis[filter]?.count
+  if (filter === 'payment_pending') return kpis.payment_pending?.count
   return undefined
 }
 

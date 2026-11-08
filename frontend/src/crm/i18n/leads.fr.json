@@ -254,6 +254,7 @@
   "owner_anyone": "Tout le monde",
   "owner_me": "Moi ({{name}})",
   "owner_mine": "Les miens",
+  "owner_nobody": "Non attribué",
   "owner_none": "Personne encore",
   "peek_close": "Moins sur {{name}}",
   "peek_no_ai": "L'IA n'a pas encore lu ce lead. Ouvrez-le pour demander une synthèse.",

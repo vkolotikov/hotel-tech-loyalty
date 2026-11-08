@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1\Admin;
 
+use App\Services\Booking\Setup\OwnRows;
 use App\Http\Concerns\IndexesResource;
 use App\Http\Controllers\Controller;
 use App\Models\LoyaltyMember;
@@ -187,7 +188,7 @@ class OffersAdminController extends Controller
 
     public function generateAiOffer(Request $request): JsonResponse
     {
-        $validated = $request->validate(['member_id' => 'required|exists:loyalty_members,id']);
+        $validated = $request->validate(['member_id' => ['required', OwnRows::rule('loyalty_members')]]);
         $member = LoyaltyMember::with(['tier', 'bookings', 'user'])->findOrFail($validated['member_id']);
 
         $offerData = $this->openAi->personalizeOffer($member);

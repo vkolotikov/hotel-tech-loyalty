@@ -45,6 +45,28 @@ class WidgetKeyRotationTest extends TestCase
         $this->assertSame($rotated['widget_key'], $this->asManager()->getJson($this->adminApi('widget-config'))->json('widget_key'));
     }
 
+    public function test_the_widgets_config_is_cached_where_every_container_sees_it_forgotten(): void
+    {
+        // Production's default cache is each container's own files; the shared one is the database (2026-11-08).
+        config(['cache.stores.shared_for_test' => ['driver' => 'array'], 'cache.shared' => 'shared_for_test']);
+        $shared = Cache::store('shared_for_test');
+        $shared->put('widget:config:' . $this->oldKey, ['from' => 'the shared cache'], 60);
+
+        // The widget reads its config there…
+        $this->getJson(rtrim((string) config('app.url'), '/') . '/api/v1/widget/' . $this->oldKey . '/config')
+            ->assertOk()->assertExactJson(['from' => 'the shared cache']);
+
+        // …and a rotation forgets it there, for every container.
+        $this->asManager()->postJson($this->adminApi('widget-config/rotate-widget-key'))->assertOk();
+        $this->assertFalse($shared->has('widget:config:' . $this->oldKey), 'the old key answers no cached config anywhere');
+
+        // A save forgets the new key's entry there too (ChatWidgetConfig::saved).
+        $newKey = (string) DB::table('chat_widget_configs')->value('widget_key');
+        $shared->put('widget:config:' . $newKey, ['stale' => true], 60);
+        \App\Models\ChatWidgetConfig::withoutGlobalScopes()->where('widget_key', $newKey)->firstOrFail()->forceFill(['is_active' => true, 'updated_at' => now()->addMinute()])->save();
+        $this->assertFalse($shared->has('widget:config:' . $newKey));
+    }
+
     public function test_a_staff_member_may_not_rotate_it(): void
     {
         $this->asStaffMember()->postJson($this->adminApi('widget-config/rotate-widget-key'))->assertForbidden();

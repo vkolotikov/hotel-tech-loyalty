@@ -15,7 +15,7 @@ import { useTeam } from '../tasks/taskData'
 import { VIEWS, type View } from './board'
 import { InlineSelect } from './InlineSelect'
 import { useColumnSwitch, useGuestFacets, useLeadSettings, useSavedViews } from './leadData'
-import { activeFilterCount, ownerOptions, PANEL_CLEARED, sortChoices, sourceOptions, type LeadFilters, type PhoneFilter } from './leadLogic'
+import { activeFilterCount, NOBODY, ownerOptions, PANEL_CLEARED, sortChoices, sourceOptions, type LeadFilters, type PhoneFilter } from './leadLogic'
 import { activeChips, filtersFromView, hasViewState, leadColumnChoices, orderedViews, viewBody, type LeadColumn } from './listLogic'
 import { Popover } from './Menu'
 import type { SavedView, Stage } from './leadTypes'
@@ -65,7 +65,7 @@ export function LeadsToolbar({ filters, view, stages, columns, onChange, onApply
       case 'due': return dueLabel(t, filters.due)
       case 'status': return t('crm.leads.chip_stage', 'Stage: {{value}}', { value: filters.status })
       case 'source': return t('crm.leads.chip_source', 'From: {{value}}', { value: sourceLabel(t, filters.source) })
-      case 'owner': return filters.owner === 'me' ? t('crm.leads.owner_mine', 'Mine') : t('crm.leads.chip_owner', 'Owner: {{value}}', { value: filters.owner })
+      case 'owner': return filters.owner === 'me' ? t('crm.leads.owner_mine', 'Mine') : filters.owner === NOBODY ? t('crm.leads.owner_nobody', 'Not assigned') : t('crm.leads.chip_owner', 'Owner: {{value}}', { value: filters.owner })
       case 'priority': return t('crm.leads.chip_priority', 'Priority: {{value}}', { value: filters.priority })
       case 'type': return t('crm.leads.chip_type', 'Type: {{value}}', { value: filters.type })
       case 'country': return t('crm.leads.chip_country', 'Country: {{value}}', { value: filters.country })
@@ -244,7 +244,7 @@ function FilterPanel({ filters, stages, onChange, onClear }: { filters: LeadFilt
   const settings = useLeadSettings()
   const team = useTeam()
   const facets = useGuestFacets()
-  const owners = ownerOptions(boot.staff.name, settings.owners, team.data ?? [], filters.owner && filters.owner !== 'me' ? filters.owner : null)
+  const owners = ownerOptions(boot.staff.name, settings.owners, team.data ?? [], filters.owner && filters.owner !== 'me' && filters.owner !== NOBODY ? filters.owner : null)
     .filter(o => o !== boot.staff.name)
   const countries = [...new Set([...(facets.data?.country ?? []), ...(filters.country ? [filters.country] : [])])]
   return (
@@ -265,6 +265,7 @@ function FilterPanel({ filters, stages, onChange, onClear }: { filters: LeadFilt
         <Select value={filters.owner} onChange={e => onChange({ owner: e.target.value })}>
           <option value="">{t('crm.leads.owner_anyone', 'Anyone')}</option>
           <option value="me">{t('crm.leads.owner_mine', 'Mine')}</option>
+          <option value={NOBODY}>{t('crm.leads.owner_nobody', 'Not assigned')}</option>
           {owners.map(o => <option key={o} value={o}>{o}</option>)}
         </Select>
       </Field>
