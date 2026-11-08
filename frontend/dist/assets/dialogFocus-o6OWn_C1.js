@@ -1,0 +1,1 @@
+function e(e,t,n,r){if(e.length===0)return null;let i=e[0],a=e[e.length-1];return r?n&&(t===null||t===i)?a:!n&&t===a?i:null:n?a:i}export{e as t};
