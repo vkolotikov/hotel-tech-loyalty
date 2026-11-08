@@ -70,6 +70,9 @@ out with it (nothing of HexaTech CRM had been deployed before).
   checks that can never fail removed. Typing `Inquiry::guest` showed an old bug: the staff voice assistant's lead
   lookups answered the guest's `name`, a column guests do not have (always empty); they now answer `full_name`.
   Larastan clean locally (`vendor/bin/phpstan analyse`).
+- **Follow-up deploy: production c90cb86** (source patch on a55d1f4, 13 PHP and documentation files of the branch at
+  **5f7d88d**, whole-tree parity; the SPA unchanged, so no build commit). **Next source-patch baseline: 5f7d88d.**
+  Artifact: Larastan 0 findings; `CrmWorkspace` 71, `Crm` 268, `Ai` 101, `Admin` 117, `AdminAccess` 85 passed.
 - The container's network: the live hosts were refused by the Default environment; the owner approved a personal
   environment **HexaTech** (the Default's hosts plus `app.hexa-tech.uk` and `sites.hexa-tech.uk`) and this session moved
   onto it. It has no variables: a session that needs `EXPO_TOKEN` or the Stripe test keys uses the Default.
