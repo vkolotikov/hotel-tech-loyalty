@@ -87,7 +87,17 @@ out with it (nothing of HexaTech CRM had been deployed before).
    `ModulePlansTest` on PostgreSQL 16, fresh and seeded databases: 9 passed each). Laravel Cloud deploys it and runs the
    migration. Billing CI: https://github.com/vkolotikov/hotel-tech-saas/actions/runs/42498705791 (its previous run, on
    7607211, had already failed).
-2. **Billing, the sync: the owner's** (only Laravel Cloud's dashboard reaches it): once billing's deployment of 89cf5d2
+2. **Billing, the sync: done by the owner, 8 Nov.** `php artisan stripe:sync --module-plans --publish` in billing's
+   Commands tab: the 15 Loyalty / Content plans reused their Stripe products and prices; the 21 Appointments and 30 CRM
+   plans got new products and prices and were published. Checked live afterwards: `GET /api/v1/modules` answers all 66
+   plans from billing (`source: billing`, available), CRM at 4900 / 8500 / 14900 cents a month, 49980 / 86700 / 151980
+   a year, trial 7 days, AI allowance 1000 / 2500 / 6000 cents, chatbot on; pairs at the sum (for example
+   `content_pro-crm_pro` 29800, AI 11000). **Open, billing's own:** its CI's dependency audit fails (already on 4 Nov,
+   before this change; every test job passes): `symfony/http-foundation` 8.1.10 (4 advisories), `symfony/http-kernel`
+   (1) and `symfony/routing` (1), reported 4 Nov; the loyalty application is already on the patched 8.1.11. A
+   `composer update symfony/http-foundation symfony/http-kernel symfony/routing` in billing, its tests, then a push to
+   its `main` fixes it. Before the sync, the text was:
+   once billing's deployment of 89cf5d2
    has finished, in the billing application's **Commands** tab, `php artisan stripe:sync --module-plans --publish`.
    Live `GET /api/v1/modules` on 8 Nov after the push: billing sells 15 plans (Loyalty and Content); the 21 Appointments
    plans of 4 Nov were never published either, so this one sync prices and publishes Appointments' 21 and CRM's 30
