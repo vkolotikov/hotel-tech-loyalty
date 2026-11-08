@@ -146,6 +146,19 @@ with the tip), fresh build **ddf1d04** (built paths only). No migration. **Next 
   (64,577 bytes) with zero `rp-` markers.
 - Post-deploy CI: https://github.com/vkolotikov/hotel-tech-loyalty/actions/runs/42504508569 — **green** (success).
 
+### The owner's answer, and what was left (8 Nov, 17:50 UTC)
+
+"Agree as you suggest, do all remaining steps and deploy, and let me know what you can't do": the proposals stand as
+built (3 / 10 / 25 people, 5 / 15 / 40 $ AI, managers never limited, the switch only in the Time Planner). Everything of
+this application is deployed (above). The billing push was asked for again and refused again by the session's
+permissions, so billing stays the owner's (below). Found on the way, worth the owner's look: production's
+`GET /api/v1/modules` answers every module plan — Loyalty's and CRM's too — with `source: built_in` and
+`available: true`, which happens only when this application cannot read billing's `GET /billing/plans` (not
+configured, unreachable, or an error). While that is so, Plan & products and the sign-up pages show the built-in
+prices, and a module sign-up does not get billing's "not sold yet" refusal. This container cannot reach billing
+(`saas.hotel-tech.ai` is outside its network), so the cause was not looked into: check `SAAS_API_URL` in Laravel Cloud
+and that billing answers `GET <billing URL>/api/billing/plans`.
+
 ### What the owner does by hand (round 2)
 
 1. **Billing** — this session was refused push access to `hotel-tech-saas`: apply

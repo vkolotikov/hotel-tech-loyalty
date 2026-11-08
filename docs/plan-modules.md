@@ -280,7 +280,9 @@ available online yet". Full customers have the workspace already (`/crm`, on by 
 ## Billing handover, 2026-11-09: HexaTech Time Planner's packages
 
 `docs/billing/2026-11-09-hotel-tech-saas-time-planner-packages.patch`, one commit (made on billing `main` 3214b44, which
-already holds the patches of 2, 4 and 7 November; this session was refused push access to `hotel-tech-saas`). Checked on
+already holds the patches of 2, 4 and 7 November; this session was refused push access to `hotel-tech-saas`, twice —
+the second time after the owner asked for it, so it is the owner's to apply; on 8 Nov 17:50 UTC it still applied
+cleanly on billing `main` 9ca597d, a later npm-only security commit). Checked on
 PostgreSQL 16, on a fresh and on a seeded database: `ModulePlansTest` 10 passed, billing's whole suite 24 passed and 3
 skipped, the migration run twice leaves 105 plans, and a cross-check of the 105 plans against `PlanModules` (slug, name,
 price, products, features) found no difference. Its migration `2026_11_09_120000_add_time_planner_packages` adds the
