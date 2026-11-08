@@ -900,57 +900,22 @@ class ChatInboxController extends Controller
     public function transcribe(Request $request): JsonResponse
     {
         $request->validate([
-            'audio'    => 'required|file|max:25600|mimes:webm,ogg,oga,mp3,mp4,m4a,wav,mpga,flac',
+            'audio'    => \App\Services\Ai\SpeechToText::RULES,
             'language' => 'nullable|string|max:8',
         ]);
 
-        $apiKey = config('openai.api_key') ?: env('OPENAI_API_KEY');
-        if (!$apiKey) {
-            return response()->json(['error' => 'transcription_unavailable', 'message' => 'Transcription is not configured'], 503);
+        // One rule for every staff recording (App\Services\Ai\SpeechToText, 2026-11-09); the answers stay the inbox's.
+        $failure = null;
+        $result = app(\App\Services\Ai\SpeechToText::class)->transcribe($request->file('audio'), $request->input('language'), $failure);
+        if ($result !== null) {
+            return response()->json($result);
         }
 
-        $file = $request->file('audio');
-        $raw = $request->input('language');
-        $language = null;
-        if ($raw) {
-            $raw = strtolower(trim($raw));
-            if ($raw !== 'auto' && $raw !== '') {
-                $language = substr(explode('-', $raw)[0], 0, 2);
-            }
-        }
-
-        $payload = ['model' => 'gpt-4o-transcribe', 'response_format' => 'json'];
-        if ($language) $payload['language'] = $language;
-
-        try {
-            $response = \Illuminate\Support\Facades\Http::withToken($apiKey)
-                ->timeout(45)
-                ->attach('file', file_get_contents($file->getRealPath()), $file->getClientOriginalName() ?: 'audio.webm')
-                ->post('https://api.openai.com/v1/audio/transcriptions', $payload);
-
-            if (!$response->successful()) {
-                $payload['model'] = 'whisper-1';
-                $response = \Illuminate\Support\Facades\Http::withToken($apiKey)
-                    ->timeout(45)
-                    ->attach('file', file_get_contents($file->getRealPath()), $file->getClientOriginalName() ?: 'audio.webm')
-                    ->post('https://api.openai.com/v1/audio/transcriptions', $payload);
-            }
-
-            if (!$response->successful()) {
-                \Log::warning('Admin transcribe failed', [
-                    'status' => $response->status(),
-                    'body'   => $response->body(),
-                ]);
-                return response()->json(['error' => 'Transcription failed'], 502);
-            }
-
-            return response()->json([
-                'text'     => trim((string) $response->json('text', '')),
-                'language' => $response->json('language'),
-            ]);
-        } catch (\Throwable $e) {
-            \Log::error('Admin transcribe crashed: ' . $e->getMessage());
-            return response()->json(['error' => 'Transcription failed'], 500);
-        }
+        return match ($failure) {
+            'unavailable' => response()->json(['error' => 'transcription_unavailable', 'message' => 'Transcription is not configured'], 503),
+            'failed'      => response()->json(['error' => 'Transcription failed'], 502),
+            default       => response()->json(['error' => 'Transcription failed'], 500),
+        };
     }
+
 }

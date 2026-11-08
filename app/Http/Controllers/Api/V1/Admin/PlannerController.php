@@ -431,7 +431,8 @@ class PlannerController extends Controller
         // replicate() doesn't copy timestamps. We exclude completed +
         // recurring fields so a duplicate isn't accidentally part of
         // the original recurring series.
-        $copy = $taskModel->replicate(['completed', 'recurring', 'recurring_until', 'recurring_parent_id']);
+        // The tracked time is the original's (HexaTech Time Planner, 2026-11-09): a copy starts untimed.
+        $copy = $taskModel->replicate(['completed', 'recurring', 'recurring_until', 'recurring_parent_id', 'started_at', 'actual_minutes']);
         $copy->task_date     = $validated['task_date'];
         $copy->employee_name = $validated['employee_name'] ?? $taskModel->employee_name;
         if (array_key_exists('assigned_to_user_id', $validated)) {
@@ -1067,105 +1068,20 @@ class PlannerController extends Controller
 
     private function hhmmToMin(string $hhmm): int
     {
-        [$h, $m] = array_pad(explode(':', $hhmm), 2, '0');
-        return ((int) $h) * 60 + ((int) $m);
+        return \App\Services\Time\WorkWindow::toMinutes($hhmm);
     }
 
     /**
-     * Industry Platform Plan Phase 5 — resolve the day's work window.
-     *
-     * Precedence:
-     *   1. Explicit request payload (`work_start` / `work_end` HH:MM)
-     *      — preserves the existing API contract.
-     *   2. Org's `crm_settings.business_hours_profile` row — set by the
-     *      Phase 5 backfill migration to `{start:'09:00', end:'18:00'}`
-     *      for every existing org (no silent retiming) and re-written
-     *      by future per-industry default seeders (Phase 5.x for the
-     *      taxonomy + admin UI).
-     *   3. Hardcoded `09:00` / `18:00` fallback — same as before this
-     *      helper existed; only reachable if both the request and the
-     *      crm_settings row are missing or malformed.
-     *
-     * **Forward-compat contract**: business_hours_profile rows MUST
-     * always carry top-level `start` + `end` HH:MM strings, even when
-     * future per-DOW schedules (Tue-Sat) or lunch breaks are added as
-     * sibling keys. These top-level values act as the simple-fallback
-     * window for callers that don't yet understand richer schedules.
-     * The auto-planner / free-slots / suggest-staff endpoints read
-     * these flat keys ONLY today.
-     *
-     * **Tenant binding required**. CrmSetting uses
-     * `BelongsToOrganization` — `current_organization_id` MUST be
-     * bound by tenant middleware before this helper runs. Callers
-     * outside the HTTP request lifecycle (artisan commands, queue
-     * workers) get the explicit-payload-or-hardcoded path so a
-     * console misconfiguration can't silently retime the planner.
+     * The day's work window: the request's `work_start` / `work_end`, else the organisation's
+     * `crm_settings.business_hours_profile`, else 09:00 / 18:00. The rule lives in App\Services\Time\WorkWindow
+     * (2026-11-09), so HexaTech Time Planner reads the same one; see its docblock for the precedence and why a caller
+     * without a bound organisation skips the saved profile.
      *
      * @return array{start:int,end:int}  Minute offsets from 00:00.
      */
     private function resolveWorkWindow(array $data): array
     {
-        $hhmm = '/^\d{2}:\d{2}$/';
-
-        // Tier 1: explicit request payload wins. Already regex-validated
-        // by the parent endpoint's request->validate() — keep treating
-        // it as trusted.
-        $requestStart = $data['work_start'] ?? null;
-        $requestEnd   = $data['work_end']   ?? null;
-
-        // Short-circuit when tenant context is missing. Falling through
-        // to the CrmSetting query under TenantScope's fail-closed
-        // semantics would silently return the hardcoded 09:00/18:00
-        // window with no log signal — a CLI / queue / cron caller would
-        // mis-plan without anyone noticing. Skip straight to tier 3.
-        if (!app()->bound('current_organization_id') || !app('current_organization_id')) {
-            return [
-                'start' => $this->hhmmToMin($requestStart ?: '09:00'),
-                'end'   => $this->hhmmToMin($requestEnd   ?: '18:00'),
-            ];
-        }
-
-        // Tier 2: org's saved profile. JSON-cast row {start,end} read
-        // through the tenant-scoped CrmSetting model. Falls through if
-        // the row is missing, malformed, or has bad-format values.
-        $profileStart = null;
-        $profileEnd   = null;
-        try {
-            $row = \App\Models\CrmSetting::where('key', 'business_hours_profile')->first();
-            $val = $row?->value;
-            if (is_array($val)) {
-                $rawStart = is_string($val['start'] ?? null) ? $val['start'] : null;
-                $rawEnd   = is_string($val['end']   ?? null) ? $val['end']   : null;
-                // Re-validate HH:MM format. An admin who hand-edited
-                // their crm_settings row could leave '9' or '9:00 AM'
-                // — hhmmToMin would silently accept those, producing a
-                // wrong-but-plausible work window. Strict regex matches
-                // the per-request validator (apps/loyalty/backend/.../
-                // PlannerController.php $data['work_start'] regex).
-                $profileStart = ($rawStart !== null && preg_match($hhmm, $rawStart)) ? $rawStart : null;
-                $profileEnd   = ($rawEnd   !== null && preg_match($hhmm, $rawEnd))   ? $rawEnd   : null;
-
-                if (($rawStart !== null && $profileStart === null) || ($rawEnd !== null && $profileEnd === null)) {
-                    \Log::warning('planner.work_window.profile_malformed', [
-                        'org_id' => app('current_organization_id'),
-                        'value'  => $val,
-                    ]);
-                }
-            }
-        } catch (\Throwable $e) {
-            // CrmSetting query failed (table missing in a fresh test env,
-            // transient Postgres hiccup, schema drift). Log so the
-            // fall-through to the hardcoded default isn't silent.
-            \Log::warning('planner.work_window.profile_lookup_failed', [
-                'org_id' => app('current_organization_id'),
-                'error'  => $e->getMessage(),
-            ]);
-        }
-
-        return [
-            'start' => $this->hhmmToMin($requestStart ?: $profileStart ?: '09:00'),
-            'end'   => $this->hhmmToMin($requestEnd   ?: $profileEnd   ?: '18:00'),
-        ];
+        return \App\Services\Time\WorkWindow::resolve($data);
     }
 
     /**

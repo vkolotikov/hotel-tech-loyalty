@@ -62,6 +62,16 @@ export const CRM_SURFACES: Record<ThemeName, { canvas: string; surface: string; 
   dark: { canvas: '#0d121c', surface: '#151c29', surface2: '#1c2535', side: '#090d15' },
 }
 
+/**
+ * HexaTech Time Planner's palette (2026-11-09; Dark is its default, as HexaTech CRM's): a deep blue-slate canvas with
+ * raised cards and a darker side panel in Dark, a cool light set with the same side panel in Light.
+ * time/theme/timeContrast.test.ts proves it equals the [data-time] tokens.
+ */
+export const TIME_SURFACES: Record<ThemeName, { canvas: string; surface: string; surface2: string; side: string }> = {
+  light: { canvas: '#f3f5fa', surface: '#ffffff', surface2: '#ebeff7', side: '#0b1120' },
+  dark: { canvas: '#0b111d', surface: '#141c2b', surface2: '#1b2537', side: '#070b14' },
+}
+
 /** A post card's text and secondary text in Content (`--a-text` and `--c-card-text-2`). */
 const CARD_TEXT: Record<ThemeName, { text: string; text2: string }> = {
   light: { text: '#1b2430', text2: '#546272' },

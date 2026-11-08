@@ -6,7 +6,7 @@
  * (its plan, its pages in the full admin) stay in appointments/lib/landing.ts,
  * which re-exports these.
  */
-export type WorkspaceName = 'appointments' | 'content' | 'loyalty' | 'crm'
+export type WorkspaceName = 'appointments' | 'content' | 'loyalty' | 'crm' | 'time'
 
 export interface LandingUser {
   user_type?: string
@@ -15,11 +15,12 @@ export interface LandingUser {
     content?: { landing?: boolean; only?: boolean }
     loyalty?: { landing?: boolean; only?: boolean }
     crm?: { landing?: boolean; only?: boolean }
+    time?: { landing?: boolean; only?: boolean }
   }
 }
 
 /** A workspace page: /appointments…, /content…, /loyalty… or /crm… (not /contentious, not /crm-settings). */
-const WORKSPACE_PAGE = /^\/(appointments|content|loyalty|crm)(\/|$)/
+const WORKSPACE_PAGE = /^\/(appointments|content|loyalty|crm|time)(\/|$)/
 
 /** The server's order of the modules (App\Support\PlanModules): where staff land when nothing else says. */
 const MODULE_ORDER: readonly WorkspaceName[] = ['appointments', 'loyalty', 'content', 'crm']
@@ -100,5 +101,6 @@ export function landingPath(user: LandingUser | null | undefined, fallback: stri
   if (fallback === '/' && user?.workspaces?.content?.landing === true) return '/content'
   if (fallback === '/' && user?.workspaces?.loyalty?.landing === true) return '/loyalty'
   if (fallback === '/' && user?.workspaces?.crm?.landing === true) return '/crm'
+  if (fallback === '/' && user?.workspaces?.time?.landing === true) return '/time'
   return fallback
 }

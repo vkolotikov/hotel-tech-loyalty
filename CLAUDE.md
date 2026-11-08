@@ -6,7 +6,7 @@ Multi-tenant Laravel 13 + React (Vite, TypeScript) SaaS with four sub-brands. Pr
 `frontend/src/pages/landing`).
 
 Starting a new session, or on another device or agent: the current state, set-up, test baselines, deploy steps and
-open items are in the newest file of `docs/handoff/` (now `docs/handoff/2026-11-08-hexatech-handoff.md`). Update it,
+open items are in the newest file of `docs/handoff/` (now `docs/handoff/2026-11-09-hexatech-handoff.md`). Update it,
 or add the next dated one, at the end of a session.
 
 ## Environment (hard rules, each one has bitten before)
@@ -348,6 +348,28 @@ or add the next dated one, at the end of a session.
   answer. A deal is added through the lead form's deal mode (the lead, then the server's own `inquiries/{id}/won`), and
   every close as won — one or bulk — goes through `InquiryController::closeAsWon()`. The widget's cached config
   (`widget:config:<key>`) lives in `SharedCache`.
+
+## Time-Planner-workspace code rules
+
+- HexaTech Time Planner (`frontend/src/time/`, owner 2026-11-09: the full admin's staff Planner as its own workspace with
+  AI planning, review, capture and voice). Read `docs/time-planner-workspace.md` first. It uses only `a-*` classes and the
+  `time-*` classes of `time/theme/time.css`; every string is `t('time.…')` in all five locales, one bundle per area
+  (`time/i18n/<area>.<lang>.json`); Dark is where a device that never chose starts; the palette is `TIME_SURFACES`.
+- Every call goes through `time/lib/api.ts`, only to its `AREAS` (`time`, `planner`, `crm-settings`, `team`), always
+  with `brand_id=all`. Tasks, subtasks, the backlog, templates and day notes are written only by the full admin's own
+  `planner/*` endpoints; a person's skills only by `team/{id}`; a planner profile only by `PlannerProfiles`; a task's
+  clock only by `TaskClock` (and PlannerTask's saving hook, which stops it on done). The work window is
+  `App\Services\Time\WorkWindow`, which the full admin's planner endpoints read too.
+- `admin/time/*` is behind `workspace:time`, and all but the bootstrap behind `feature:time_management` (it is the
+  Enterprise Planner, not a module; an organisation on modules does not have it). A new route needs its AccessMap key.
+- The AI never writes: a plan (`DayPlanner::merge`) is checked line by line against the day's facts and applied only by
+  a person (`PlanApplier`, which skips what changed); capture drafts are saved by a person; a review's action must name
+  the day's task and a team member. The rules plan whenever the AI cannot be asked. Spend is `time_plan`,
+  `time_review`, `time_capture`; the allowance is asked first. A name without an account is never handed work by a plan.
+- Days and times are the venue's wall clock (`task_date` + `start_time`, `VenueClock`); the frontend's day arithmetic is
+  `time/lib/dates.ts`, never `new Date('YYYY-MM-DD')`. Figures (load, capacity, on time, accuracy, signals) are the
+  server's (`DayBoard`, `TimeInsights`); the workspace only words and draws them. Decisions live in pure functions with
+  tests (`*Logic.ts`, `plan/timeline.ts`).
 
 ## Appointments-workspace code rules
 
