@@ -19,6 +19,7 @@ import { ColourField, INPUT, LoadFailed, Loading, Part } from './parts'
 import type { Wallet, WalletFile } from './types'
 import { UploadDialog } from './UploadDialog'
 import { FILE_LINE_WORDS, FILE_WORDS, MISSING_WORDS, WALLET_COLOUR_WORDS, WALLET_PROBLEM_WORDS } from './words'
+import { WalletRequirements } from './design/WalletRequirements'
 
 /**
  * The wallet pass (release 2 §7): whether Apple's and Google's passes are ready, or exactly what each still lacks;
@@ -78,6 +79,7 @@ export function WalletView({ wallet: w, queryKey = WALLET_KEY }: { wallet: Walle
 
   return (
     <div className="space-y-5">
+      <WalletRequirements />
       <div className="grid gap-3 sm:grid-cols-2">
         <PassCard name={t('loyalty.app.wallet.apple', 'Apple Wallet')} missing={w.apple_missing} />
         <PassCard name={t('loyalty.app.wallet.google', 'Google Wallet')} missing={w.google_missing} />
