@@ -72,6 +72,8 @@ source-patch baseline: 0ac5106** (later documentation commits on the branch are 
   menu's `time_workspace` entry; `/time` and `/time/plan` answer 200; `api/v1/admin/time/bootstrap` and `time/plan`
   answer 401 unauthenticated (before this release the bootstrap was a 404). Landing continuity:
   `https://sites.hexa-tech.uk/hexa-academy` 200, its kit stylesheet (64 kB) with zero `rp-` markers.
+- Post-deploy CI: https://github.com/vkolotikov/hotel-tech-loyalty/actions/runs/42477802749 — **every job green**
+  (Larastan, the SPA on Node 24 and 26, PHP on SQLite in three shards, PHP on PostgreSQL 18, the dependency audit).
 
 ## What the owner does by hand
 
