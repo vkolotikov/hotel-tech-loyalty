@@ -1,5 +1,7 @@
 # HexaTech Staff — unlisted request submitted
 
+Latest Apple verification (8 November 2026, 18:11 Riga): **1.0.5 (3) is READY_FOR_SALE / Ready for Distribution**. Unlisted distribution is confirmed, with **175 Available** countries/regions. Link: https://apps.apple.com/us/app/hexatech-staff/id6829777674 . Initial US/GB web-link checks returned HTTP 404; external download-page propagation remains unverified. No duplicate build, upload or store-setting changes. This supersedes older pending-review statements. See `docs/handoff/2026-11-08-staff-ios-release.md`.
+
 App Review was resubmitted on **5 November 2026 at 19:36 Riga** and is **Waiting for Review**. The separate unlisted request was **submitted at 19:43 Riga / 17:43 UTC** through https://developer.apple.com/contact/request/unlisted-app/. Apple confirmed **"Thank you for your submission. We'll review your request and contact you soon with a status update."** No case/reference number was displayed. Unlisted approval remains pending.
 
 - Developer: FDS Cards ltd, team **HNWSAQ5CQ9**; contact uses the existing Apple account's prefilled name/email.
