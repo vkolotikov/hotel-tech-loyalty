@@ -70,15 +70,39 @@ out with it (nothing of HexaTech CRM had been deployed before).
   checks that can never fail removed. Typing `Inquiry::guest` showed an old bug: the staff voice assistant's lead
   lookups answered the guest's `name`, a column guests do not have (always empty); they now answer `full_name`.
   Larastan clean locally (`vendor/bin/phpstan analyse`).
+- **Follow-up deploy: production c90cb86** (source patch on a55d1f4, 13 PHP and documentation files of the branch at
+  **5f7d88d**, whole-tree parity; the SPA unchanged, so no build commit). **Next source-patch baseline: 5f7d88d.**
+  Artifact: Larastan 0 findings; `CrmWorkspace` 71, `Crm` 268, `Ai` 101, `Admin` 117, `AdminAccess` 85 passed.
+  Post-deploy CI green on every job (Larastan, PHP on SQLite in three shards, PHP on PostgreSQL 18 with only the known
+  failures, the SPA on Node 24 and 26, the dependency audit):
+  https://github.com/vkolotikov/hotel-tech-loyalty/actions/runs/42468285480 (finished 09:58 UTC).
 - The container's network: the live hosts were refused by the Default environment; the owner approved a personal
   environment **HexaTech** (the Default's hosts plus `app.hexa-tech.uk` and `sites.hexa-tech.uk`) and this session moved
   onto it. It has no variables: a session that needs `EXPO_TOKEN` or the Stripe test keys uses the Default.
 
 ## What the owner does by hand
 
-1. **Billing** (this session was refused push access to `hotel-tech-saas` again): apply
-   `docs/billing/2026-11-07-hotel-tech-saas-crm-packages.patch` to billing `main` and push (steps and a two-query
-   pre-check in `docs/plan-modules.md`, "Billing handover, 2026-11-07"); then, in the billing application's Commands
-   tab on Laravel Cloud, `php artisan stripe:sync --module-plans --publish`. Until then `/crm/register` says HexaTech
-   CRM cannot be bought online yet; full customers already have `/crm`.
-2. Optional: an organisation that should not see the CRM yet: `php artisan workspace:crm <organisation id> --off`.
+1. **Billing, the code: done 8 Nov, 16:12 UTC.** At the owner's request this session pushed the CRM packages commit to
+   `hotel-tech-saas` `main` (7607211 → **89cf5d2**, identical to `docs/billing/2026-11-07-hotel-tech-saas-crm-packages.patch`;
+   `ModulePlansTest` on PostgreSQL 16, fresh and seeded databases: 9 passed each). Laravel Cloud deploys it and runs the
+   migration. Billing CI: https://github.com/vkolotikov/hotel-tech-saas/actions/runs/42498705791 (its previous run, on
+   7607211, had already failed).
+2. **Billing, the sync: done by the owner, 8 Nov.** `php artisan stripe:sync --module-plans --publish` in billing's
+   Commands tab: the 15 Loyalty / Content plans reused their Stripe products and prices; the 21 Appointments and 30 CRM
+   plans got new products and prices and were published. Checked live afterwards: `GET /api/v1/modules` answers all 66
+   plans from billing (`source: billing`, available), CRM at 4900 / 8500 / 14900 cents a month, 49980 / 86700 / 151980
+   a year, trial 7 days, AI allowance 1000 / 2500 / 6000 cents, chatbot on; pairs at the sum (for example
+   `content_pro-crm_pro` 29800, AI 11000). **Billing's security update, done 8 Nov at the owner's word:** its CI's
+   dependency audit had failed since 4 Nov (every test job passed): six advisories in `symfony/http-foundation`,
+   `http-kernel` and `routing` 8.1.10. Billing `main` **3214b44** moves the three to 8.1.11 (`composer.lock` only);
+   checked before the push: `composer validate`, `composer audit` (none), the tests on PostgreSQL 16 (23 passed, 3
+   skipped) and on SQLite, the production caches build. Billing CI green on 3214b44 (every job: https://github.com/vkolotikov/hotel-tech-saas/actions/runs/42499859041); its npm audit still lists 10 moderate advisories in build tools (`minimatch`), below the CI's `high` bar. Run composer in billing with `php85` (the PATH's PHP 8.3
+   cannot resolve its `php ^8.4`). Before the sync, the text was:
+   once billing's deployment of 89cf5d2
+   has finished, in the billing application's **Commands** tab, `php artisan stripe:sync --module-plans --publish`.
+   Live `GET /api/v1/modules` on 8 Nov after the push: billing sells 15 plans (Loyalty and Content); the 21 Appointments
+   plans of 4 Nov were never published either, so this one sync prices and publishes Appointments' 21 and CRM's 30
+   together. Afterwards `GET /api/v1/modules` lists 66 plans from billing (`source: billing`), and `/crm/register`
+   offers the three packages. Until then `/crm/register` says HexaTech CRM cannot be bought online yet; full
+   customers already have `/crm`.
+3. Optional: an organisation that should not see the CRM yet: `php artisan workspace:crm <organisation id> --off`.
