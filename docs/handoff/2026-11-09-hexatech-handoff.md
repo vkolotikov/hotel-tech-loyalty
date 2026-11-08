@@ -138,7 +138,13 @@ with the tip), fresh build **ddf1d04** (built paths only). No migration. **Next 
 - Artifact checks (the deploy checkout): the full PHP sweep, 80 runs, **7,539 passed, 0 failed, 24 skipped**; `tsc -b`
   clean; Vitest **454 files / 6,719 tests** passed; `npm run build` succeeded (main's newer `package.json` adds a
   dev-only minimatch override; the checkout used this container's `node_modules`, and Laravel Cloud builds with its own).
-- Live: being verified (bundle by content, CI run 42504508569).
+- Live, verified by content: `https://app.hexa-tech.uk/` serves `index-oaaGWQY2.js` (before: `index-Bitprh8x.js`), which
+  holds the `/time/login` words ("HexaTech Time Planner — Sign in") and loads `TimeApp-BJaOFOdz.js` (`time/settings`,
+  `own_day_only`, no `crm-settings`) and `SettingsPage-CE-8e_JH.js` ("Who plans whose day", `planner_planning_mode`);
+  `/time`, `/time/register` and `/time/login` answer 200; `api/v1/admin/time/settings` answers 401 unauthenticated (a
+  missing route answers 404). Landing continuity: `https://sites.hexa-tech.uk/hexa-academy` 200, its kit stylesheet
+  (64,577 bytes) with zero `rp-` markers.
+- Post-deploy CI: https://github.com/vkolotikov/hotel-tech-loyalty/actions/runs/42504508569 — **green** (success).
 
 ### What the owner does by hand (round 2)
 
