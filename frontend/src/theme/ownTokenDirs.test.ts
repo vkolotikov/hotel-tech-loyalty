@@ -18,7 +18,7 @@ const OWN_LIST = /rel === 'appointments'|\['portal', 'appointments'/
 
 describe('folders the admin sweeps skip', () => {
   it('are the member portal, Appointments, the shared workspace core, Content, Loyalty and CRM', () => {
-    expect([...OWN_TOKEN_DIRS]).toEqual(['portal', 'appointments', 'workspace', 'content', 'loyalty', 'crm'])
+    expect([...OWN_TOKEN_DIRS]).toEqual(['portal', 'appointments', 'workspace', 'content', 'loyalty', 'crm', 'time'])
   })
 
   for (const file of SWEEPS) {

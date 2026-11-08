@@ -164,7 +164,10 @@ final class PlannerCatalogue
         return null;
     }
 
-    /** The organisation's own task label for a key or label written by an AI or a person; null when it has none. */
+    /**
+     * The organisation's own task for a key or label written by an AI or a person, as the full admin stores it in
+     * `planner_tasks.task_category` (the task's key); null when it has none.
+     */
     public function matchChannel(?string $value): ?string
     {
         $value = mb_strtolower(trim((string) $value));
@@ -173,7 +176,7 @@ final class PlannerCatalogue
         }
         foreach ($this->channels() as $channel) {
             if (mb_strtolower($channel['label']) === $value || mb_strtolower($channel['key']) === $value) {
-                return $channel['label'];
+                return $channel['key'];
             }
         }
 

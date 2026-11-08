@@ -1,0 +1,151 @@
+{
+  "ai_state": {
+    "model_not_allowed": "Su plan no incluye el modelo de IA que usa el planificador.",
+    "not_configured": "La IA aún no está configurada para este espacio de trabajo.",
+    "over": "El cupo de IA de este mes está agotado.",
+    "ready": "La IA está lista.",
+    "unknown": "Ahora mismo no se puede consultar a la IA."
+  },
+  "common": {
+    "add": "Añadir",
+    "all": "Todos",
+    "cancel": "Cancelar",
+    "close": "Cerrar",
+    "delete": "Eliminar",
+    "h": "h",
+    "loading": "Cargando…",
+    "min": "min",
+    "page_failed": "No se pudo mostrar esta página. Lo que guardó está a salvo.",
+    "reload": "Recargar la página",
+    "retry": "Reintentar",
+    "save": "Guardar",
+    "saved": "Guardado",
+    "today": "Hoy",
+    "tomorrow": "Mañana"
+  },
+  "errors": {
+    "ai_budget_used_up": "El cupo de IA de este mes está agotado. La IA vuelve el mes que viene, o ya con un paquete mayor.",
+    "ai_failed": "La IA no ha podido ayudar ahora. Inténtelo de nuevo en un momento.",
+    "ai_unavailable": "La IA aún no está configurada para este espacio de trabajo.",
+    "feature_locked": "Su plan no incluye esto; un paquete mayor, sí. Consulte «Plan y productos».",
+    "feature_locked_planner": "Time Planner forma parte del plan Enterprise.",
+    "invalid": "Algo del formulario no es correcto. Revíselo e inténtelo de nuevo.",
+    "invalid_hours": "El día debe terminar después de empezar.",
+    "manager_only": "Solo un responsable puede hacer esto.",
+    "model_not_allowed": "Su plan no incluye el modelo de IA que usa el planificador.",
+    "network": "Sin conexión. Compruebe internet e inténtelo de nuevo.",
+    "no_person": "Esa persona no está en el equipo.",
+    "not_allowed": "No tiene permiso para hacer esto.",
+    "not_found": "Esto ya no está aquí. Puede que se haya eliminado.",
+    "not_in_plan": "HexaTech Time Planner no forma parte de su plan.",
+    "past_day": "No se puede planificar un día que ya pasó.",
+    "subscription_required": "Su suscripción no está activa.",
+    "task_done": "Esta tarea ya está hecha.",
+    "too_many": "Demasiados intentos en poco tiempo. Espere un momento e inténtelo de nuevo.",
+    "transcription_failed": "No se pudo convertir la grabación en texto. Inténtelo de nuevo.",
+    "transcription_unavailable": "La entrada por voz aún no está configurada para este espacio de trabajo.",
+    "unknown": "Algo ha fallado. Inténtelo de nuevo.",
+    "workspace_disabled": "HexaTech Time Planner se ha desactivado para su organización."
+  },
+  "find": {
+    "actions": "Acciones",
+    "capture": "Añadir tareas con IA (texto o voz)",
+    "go_to": "Ir a",
+    "new_task": "Añadir una tarea",
+    "people": "Personas",
+    "plan": "Planificar mi día con IA",
+    "their_day": "Su día",
+    "theme_dark": "Cambiar a tema oscuro",
+    "theme_light": "Cambiar a tema claro"
+  },
+  "horizon": {
+    "day": "Para un día concreto",
+    "general": "En cualquier momento",
+    "week": "Esta semana"
+  },
+  "nav": {
+    "backlog": "Pendientes y bolsa común",
+    "groups": {
+      "people": "Personas",
+      "planning": "Planificación",
+      "reports": "Informes",
+      "setup": "Configuración"
+    },
+    "insights": "Análisis",
+    "plan": "Planificador",
+    "settings": "Ajustes",
+    "team": "Equipo y habilidades",
+    "today": "Mi día"
+  },
+  "priority": {
+    "high": "Alta",
+    "low": "Baja",
+    "normal": "Normal"
+  },
+  "repeat": {
+    "daily": "Cada día",
+    "monthly": "Cada mes",
+    "none": "No se repite",
+    "weekly": "Cada semana"
+  },
+  "shell": {
+    "ai_over": "El cupo de IA de este mes está agotado: los planes se hacen con las reglas, y la captura y las revisiones con IA se detienen hasta el mes que viene.",
+    "ai_warn": "Se ha usado el {{percent}} % del cupo de IA de este mes.",
+    "capture": "Añadir con IA",
+    "find": "Buscar una persona o una acción",
+    "lapsed": "La suscripción de su organización no está activa, así que Time Planner no puede abrirse. Sus tareas siguen igual.",
+    "locked": "Time Planner forma parte del plan Enterprise. Su plan aún no lo incluye; la administración completa le muestra cómo mejorarlo.",
+    "new_task": "Nueva tarea",
+    "not_in_plan": "HexaTech Time Planner no forma parte de su plan.",
+    "open_full_admin": "Abrir la administración completa",
+    "switched_off": "HexaTech Time Planner se ha desactivado para su organización. Sus tareas siguen igual."
+  },
+  "signals": {
+    "light_day": "Plan de {{person}}: {{value}} de {{limit}}; tiene margen.",
+    "low_completion": "Solo se terminó el {{count}} % de las tareas.",
+    "no_break": "{{person}} trabaja {{value}} sin descanso.",
+    "not_working": "{{person}} no trabaja hoy, pero tiene {{count}} tareas.",
+    "not_working_one": "{{person}} no trabaja hoy, pero tiene {{count}} tarea.",
+    "not_working_other": "{{person}} no trabaja hoy, pero tiene {{count}} tareas.",
+    "often_late": "{{person}} solo terminó a tiempo el {{count}} %.",
+    "outside_hours": "{{person}}: «{{task}}» queda fuera de su horario.",
+    "over_capacity": "{{person}} tiene {{value}} en el plan para una jornada de {{limit}}.",
+    "overdue": "{{person}} tiene {{count}} tareas atrasadas de días anteriores.",
+    "overdue_one": "{{person}} tiene {{count}} tarea atrasada de días anteriores.",
+    "overdue_other": "{{person}} tiene {{count}} tareas atrasadas de días anteriores.",
+    "overdue_open": "{{count}} tareas de este periodo siguen abiertas después de su día.",
+    "overdue_open_one": "{{count}} tarea de este periodo sigue abierta después de su día.",
+    "overdue_open_other": "{{count}} tareas de este periodo siguen abiertas después de su día.",
+    "overlap": "{{person}}: «{{task}}» se solapa con «{{other}}».",
+    "overloaded": "{{person}} tuvo planificado el {{count}} % de su tiempo.",
+    "pool_waiting": "{{count}} tareas de la bolsa común llevan más de una semana esperando.",
+    "pool_waiting_one": "{{count}} tarea de la bolsa común lleva más de una semana esperando.",
+    "pool_waiting_other": "{{count}} tareas de la bolsa común llevan más de una semana esperando.",
+    "skill_mismatch": "El tipo de «{{task}}» no figura entre las habilidades de {{person}}.",
+    "slipped": "{{person}}: la tarea «{{task}}» ya debería estar terminada.",
+    "takes_less": "El trabajo de «{{group}}» solo lleva el {{count}} % del tiempo planificado: planifíquelo más corto.",
+    "takes_longer": "El trabajo de «{{group}}» lleva el {{count}} % del tiempo planificado.",
+    "unassigned": "{{count}} tareas de hoy aún no tienen a nadie.",
+    "unassigned_one": "{{count}} tarea de hoy aún no tiene a nadie.",
+    "unassigned_other": "{{count}} tareas de hoy aún no tienen a nadie.",
+    "underused": "{{person}} solo tuvo planificado el {{count}} % de su tiempo.",
+    "unscheduled_high": "«{{task}}» tiene prioridad alta y aún no tiene hora."
+  },
+  "status": {
+    "blocked": "Bloqueada",
+    "done": "Hecha",
+    "in_progress": "En curso",
+    "todo": "Por hacer"
+  },
+  "voice": {
+    "denied": "El micrófono no está permitido. Permítalo en el navegador e inténtelo de nuevo.",
+    "failed": "No se pudo convertir la grabación en texto. Inténtelo de nuevo.",
+    "no_speech": "No se oyó nada. Acerque el teléfono e inténtelo de nuevo.",
+    "off": "La entrada por voz aún no está configurada para este espacio de trabajo.",
+    "speak": "Hablar",
+    "start": "Hablar en lugar de escribir",
+    "stop": "Detener y transcribir",
+    "unsupported": "Este navegador no puede grabar. Escriba el texto o use otro navegador.",
+    "writing": "Transcribiendo…"
+  }
+}

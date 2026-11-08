@@ -54,7 +54,8 @@ final class TimeInsights
             }
             $capacity = 0;
             $ownHours = $p['profile']['work_start'] !== null || $p['profile']['work_end'] !== null;
-            for ($d = $start; $d->lte($end); $d = $d->addDay()) {
+            // A name without an account has no hours the planner knows (DayBoard's rule).
+            for ($d = $start; $p['has_account'] && $d->lte($end); $d = $d->addDay()) {
                 $w = WorkWindow::forPerson($orgWindow, $p['profile'], (int) $d->isoWeekday());
                 $capacity += $w['works'] ? ($ownHours ? $w['capacity'] : min($w['capacity'], $standard)) : 0;
             }

@@ -12,7 +12,8 @@ use Carbon\CarbonImmutable;
  * AI's plan and review start from. Reads only.
  *
  * - A person's capacity is their own hours less their break where their profile sets hours, else the organisation's
- *   window less their break, at most the standard working day (`planner_work_hours_per_day`); 0 on a day off.
+ *   window less their break, at most the standard working day (`planner_work_hours_per_day`); 0 on a day off, and 0
+ *   for a name without an account, whose hours the planner does not know.
  * - Planned minutes count every task of the day, done or not (TaskView::minutes); `tracked` is the time clocked.
  * - Signals are codes with the people and tasks they name; the workspace words them. None is a figure of its own:
  *   each is a comparison of the numbers beside it.
@@ -87,6 +88,10 @@ final class DayBoard
             $window = WorkWindow::forPerson($orgWindow, $person['profile'], $weekday);
             $ownHours = $person['profile']['work_start'] !== null || $person['profile']['work_end'] !== null;
             $capacity = $window['works'] ? ($ownHours ? $window['capacity'] : min($window['capacity'], $standard)) : 0;
+            // A name without an account (an outside cleaner) has no hours the planner knows: no capacity, no load.
+            if (!$person['has_account']) {
+                $capacity = 0;
+            }
             $list = $lane['tasks'];
             if (!$window['works'] && $list === [] && !$person['has_account']) {
                 continue;

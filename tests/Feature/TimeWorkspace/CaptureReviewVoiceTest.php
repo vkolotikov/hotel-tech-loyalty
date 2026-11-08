@@ -25,7 +25,7 @@ class CaptureReviewVoiceTest extends TestCase
     public function test_capture_matches_people_types_tasks_and_days_and_estimates_a_missing_length(): void
     {
         foreach (['2026-11-01', '2026-11-02', '2026-11-03'] as $i => $day) {
-            $this->task(['task_date' => $day, 'task_category' => 'Deep clean', 'duration_minutes' => [80, 90, 100][$i], 'completed' => true, 'status' => 'done']);
+            $this->task(['task_date' => $day, 'task_category' => 'deep_clean', 'duration_minutes' => [80, 90, 100][$i], 'completed' => true, 'status' => 'done']);
         }
         $this->claudeAnswers('save_tasks', ['tasks' => [
             ['title' => 'Deep clean room 204', 'date' => '2026-11-05', 'start_time' => '10:00', 'priority' => 'High', 'task_group' => 'housekeeping', 'task' => 'deep clean', 'person_name' => 'Anna', 'subtasks' => ['Strip beds', 'Steam carpets']],
@@ -38,7 +38,7 @@ class CaptureReviewVoiceTest extends TestCase
             ->assertOk()->json('tasks');
 
         $this->assertCount(2, $tasks);
-        $this->assertSame(['2026-11-05', '10:00', 'High', 'Housekeeping', 'Deep clean', 'u' . $this->anna->id, (int) $this->anna->id, 'Anna Berzina'],
+        $this->assertSame(['2026-11-05', '10:00', 'High', 'Housekeeping', 'deep_clean', 'u' . $this->anna->id, (int) $this->anna->id, 'Anna Berzina'],
             [$tasks[0]['task_date'], $tasks[0]['start_time'], $tasks[0]['priority'], $tasks[0]['task_group'], $tasks[0]['task_category'], $tasks[0]['person'], $tasks[0]['assigned_to_user_id'], $tasks[0]['employee_name']]);
         $this->assertSame([90, true], [$tasks[0]['duration_minutes'], $tasks[0]['estimated']], 'the median of three finished deep cleans');
         $this->assertSame(['Strip beds', 'Steam carpets'], $tasks[0]['subtasks']);

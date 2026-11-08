@@ -1,0 +1,87 @@
+/*
+ * HexaTech Time Planner's own rules (2026-11-09). The Atelier fonts, tokens and the rules every workspace shares live in
+ * src/workspace/theme/workspace.css; this file sets the planner's palette over them (accent.ts TIME_SURFACES, which
+ * timeContrast.test.ts pins) and the few colours only the planner draws: the AI's violet, the timeline's hour lines
+ * and its "now" line, and a load bar's three states. Every rule is scoped under [data-time], which sits beside
+ * [data-workspace] on the planner's root. Values are RGB triplets, read as rgb(var(--…)) like the Atelier tokens.
+ */
+
+[data-time] {
+  --a-canvas: 243 245 250;
+  --a-surface: 255 255 255;
+  --a-surface-2: 235 239 247;
+  --a-border: 218 224 236;
+  --a-text: 20 28 44;
+  --a-text-2: 80 94 116;
+  --a-side: 11 17 32;
+  --a-side-2: 26 34 54;
+  --a-side-text: 236 240 246;
+  --a-side-text-2: 150 163 186;
+  /* The AI: one violet for every brand; as text at least 4.5:1 on its 12 % tint and on every surface. */
+  --time-ai: 109 93 214;
+  --time-ai-ink: 255 255 255;
+  --time-ai-text: 84 70 190;
+  /* The timeline: hour lines, the half-hour's fainter line, and now. */
+  --time-hour: 218 224 236;
+  --time-half: 235 239 247;
+  --time-now: 220 38 38;
+  /* A day's load: room, nearly full, over. */
+  --time-load-ok: 21 128 61;
+  --time-load-high: 180 83 9;
+  --time-load-over: 220 38 38;
+  --a-shadow-sm: 0 1px 2px rgb(11 17 32 / 0.06);
+  --a-shadow: 0 10px 30px rgb(11 17 32 / 0.08);
+}
+
+[data-time][data-theme="dark"] {
+  --a-canvas: 11 17 29;
+  --a-surface: 20 28 43;
+  --a-surface-2: 27 37 55;
+  --a-border: 42 54 76;
+  --a-text: 236 240 247;
+  --a-text-2: 156 170 194;
+  --a-side: 7 11 20;
+  --a-side-2: 22 30 46;
+  --a-side-text: 236 240 247;
+  --a-side-text-2: 146 160 184;
+  --time-ai: 124 107 240;
+  --time-ai-text: 190 180 255;
+  --time-hour: 38 50 72;
+  --time-half: 29 39 58;
+  --time-now: 248 113 113;
+  --time-load-ok: 74 222 128;
+  --time-load-high: 251 191 36;
+  --time-load-over: 248 113 113;
+  --a-shadow-sm: 0 1px 2px rgb(0 0 0 / 0.35);
+  --a-shadow: 0 12px 32px rgb(0 0 0 / 0.35);
+  --a-shadow-lg: 0 28px 70px rgb(0 0 0 / 0.5);
+}
+
+/* The AI's chip and its button: violet fill with white ink, or violet text on a 12 % tint. */
+[data-time] .time-ai-fill { background-color: rgb(var(--time-ai)); color: rgb(var(--time-ai-ink)); }
+[data-time] .time-ai-soft { background-color: rgb(var(--time-ai) / 0.12); color: rgb(var(--time-ai-text)); }
+[data-time] .time-ai-text { color: rgb(var(--time-ai-text)); }
+[data-time] .time-ai-border { border-color: rgb(var(--time-ai) / 0.35); }
+[data-time] .time-ai-glow { box-shadow: 0 0 0 1px rgb(var(--time-ai) / 0.35), 0 8px 28px rgb(var(--time-ai) / 0.18); }
+
+/* The timeline's hour and half-hour lines, drawn as a background so a long day costs no elements. */
+[data-time] .time-hours {
+  background-image:
+    linear-gradient(to bottom, rgb(var(--time-hour)) 1px, transparent 1px),
+    linear-gradient(to bottom, rgb(var(--time-half)) 1px, transparent 1px);
+  background-size: 100% var(--time-hour-px, 64px), 100% var(--time-hour-px, 64px);
+  background-position: 0 0, 0 calc(var(--time-hour-px, 64px) / 2);
+}
+[data-time] .time-now { background-color: rgb(var(--time-now)); }
+[data-time] .time-now-text { color: rgb(var(--time-now)); }
+[data-time] .time-off-hours { background-color: rgb(var(--a-surface-2) / 0.6); }
+
+/* A load bar's fill. */
+[data-time] .time-load-ok { background-color: rgb(var(--time-load-ok)); }
+[data-time] .time-load-high { background-color: rgb(var(--time-load-high)); }
+[data-time] .time-load-over { background-color: rgb(var(--time-load-over)); }
+
+/* A task block on the timeline: its type's colour as a left edge and a light wash, set inline from the settings. */
+[data-time] .time-block { border-left-width: 3px; }
+[data-time] .time-drop { outline: 2px dashed rgb(var(--a-accent) / 0.6); outline-offset: -2px; }
+[data-time] .time-scroll { scrollbar-width: thin; }

@@ -40,6 +40,7 @@ class DayBoardTest extends TestCase
         $this->assertSame('11:00', collect($anna['tasks'])->firstWhere('id', $byAccount)['end_time']);
         $this->assertSame([$outside], array_column($this->lane($board, 'n:Outside Cleaner')['tasks'], 'id'));
         $this->assertFalse($this->lane($board, 'n:Outside Cleaner')['listed']);
+        $this->assertSame([0, null], [$this->lane($board, 'n:Outside Cleaner')['capacity_minutes'], $this->lane($board, 'n:Outside Cleaner')['load_pct']], 'a name without an account has no hours the planner knows');
         $this->assertSame([$nobody], array_column($board['unassigned'], 'id'));
         $this->assertNotContains('Not ours', collect($board['people'])->flatMap(fn ($p) => array_column($p['tasks'], 'title'))->all());
         $this->assertSame('12:00', $board['now'], 'the venue is in Riga: 10:00 UTC is 12:00 there');
