@@ -1,8 +1,14 @@
 {
+  "add": "Añadir el deal",
+  "added": "Deal añadido",
   "ai_next": "IA:",
   "any_owner": "Cualquiera",
   "any_payment": "Cualquier pago",
   "balance": "Pendiente de pago",
+  "capture": "Desde un mensaje",
+  "capture_filled": "Rellenado por la IA a partir del mensaje. Revíselo antes de añadir el deal.",
+  "capture_line": "Pegue un correo, un WhatsApp o sus notas de una llamada. La IA rellena el formulario del deal; usted lo revisa y lo añade.",
+  "capture_title": "Un deal a partir de un mensaje",
   "chip_owner": "Responsable: {{value}}",
   "chip_payment": "Pago: {{value}}",
   "chip_remove": "Quitar",
@@ -42,6 +48,9 @@
   "kpi_unpaid": "Sin pagar del todo",
   "line": "Leads ganados, seguidos hasta el trabajo hecho y el dinero cobrado.",
   "more": "Más",
+  "new": "Añadir un deal",
+  "new_note": "Se añade como ganado; después usted lo lleva aquí por sus pasos y su pago.",
+  "new_title": "Añadir un deal",
   "next_done": "Hecho",
   "next_untitled": "Hacer seguimiento",
   "no_next": "Nada previsto. Abra el negocio para añadir un paso.",
@@ -81,6 +90,8 @@
   "step_next": "Pasar a {{step}}",
   "step_next_named": "Pasar {{name}} a {{step}}",
   "step_of": "El paso de {{name}}",
+  "the_deal": "El deal",
   "total": "Valor del negocio",
-  "which": "Qué negocios"
+  "which": "Qué negocios",
+  "won_kept": "El lead quedó guardado pero aún no está ganado; al volver a intentarlo solo se marca como ganado."
 }

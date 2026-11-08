@@ -24,7 +24,7 @@ const boot: Bootstrap = {
   organization: { id: 7, name: 'Villa Riga', industry: 'hotel' },
   accent: null,
   venue: { timezone: 'Europe/Riga', today: '2026-11-07', currency: 'EUR' },
-  features: { chatbot: true, engagement: true, admin_ai: false },
+  features: { chatbot: true, engagement: true, ai_capture: true },
   ai: { status: 'under', percent: 10 },
   staff: { id: 3, name: 'Anna', role: 'staff', can: { manage_bot: false, manage_widget: false, manage_pipelines: false, manage_canned: false, manage_team: false, delete_records: true } },
   widget: null,
@@ -80,5 +80,14 @@ describe('Deals', () => {
     expect(html).toContain('Columns')
     expect(html).toContain('No deal here')
     expect(html).toContain('Show every deal')
+  })
+
+  it('adds a deal by hand or from a pasted message, for every staff member (owner 2026-11-08)', () => {
+    const html = render('/crm/deals', qc => {
+      qc.setQueryData(['crm', 'deals', 'list', dealsQuery('all', 1, 'due_date', { q: '', payment: '', owner: '' })], { data: [], current_page: 1, last_page: 1, total: 0 })
+    })
+    expect(html).toContain('Add a deal')
+    expect(html).toContain('From a message')
+    expect(html).toContain('crm-ai-soft')
   })
 })

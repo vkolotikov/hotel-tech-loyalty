@@ -106,8 +106,8 @@ export function LeadsPage() {
     <Page wide title={t('crm.nav.leads', 'Leads')} line={t('crm.leads.line', 'Every open enquiry, from the website chat and everywhere else.')}
       actions={(
         <>
-          {/* The AI capture is the staff AI's (`feature:admin_ai`); a plan without it would only be refused. */}
-          {boot.features.admin_ai && (
+          {/* The AI capture is every staff member's (the server's `ai_capture`, the same answer its route gives). */}
+          {boot.features.ai_capture && (
             <button type="button" onClick={() => setCapturing(true)}
               className="crm-ai-soft inline-flex min-h-11 items-center gap-2 rounded-full px-4 text-sm font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-a-accent">
               <Sparkles size={15} aria-hidden />{t('crm.leads.capture', 'From a message')}

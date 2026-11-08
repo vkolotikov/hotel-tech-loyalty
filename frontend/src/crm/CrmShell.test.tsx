@@ -25,7 +25,7 @@ const boot: Bootstrap = {
   organization: { id: 9, name: 'Harbour Clinic', industry: 'medical' },
   accent: '#0e7490',
   venue: { timezone: 'Europe/Riga', today: '2026-11-04', currency: 'EUR' },
-  features: { chatbot: true, engagement: true, admin_ai: false },
+  features: { chatbot: true, engagement: true, ai_capture: true },
   ai: { status: 'under', percent: 12 },
   staff: { id: 3, name: 'Maria Ozola', role: 'manager', can: { manage_bot: true, manage_widget: true, manage_pipelines: true, manage_canned: true, manage_team: true, delete_records: true } },
   widget: { key: 'wk-1', active: true },

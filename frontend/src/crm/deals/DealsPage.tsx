@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { CheckCircle2, Columns3, CreditCard, Download, PackageCheck, PlayCircle, Settings2, Trophy } from 'lucide-react'
+import { CheckCircle2, Columns3, CreditCard, Download, PackageCheck, PlayCircle, Plus, Settings2, Sparkles, Trophy } from 'lucide-react'
 import { Button } from '../../workspace/ui/Button'
 import { useBoot } from '../CrmProvider'
 import { get, params } from '../lib/api'
@@ -19,10 +19,12 @@ import { Tabs } from '../ui/Tabs'
 import { FilterChip, Toolbar } from '../ui/Toolbar'
 import { useToast } from '../ui/Toast'
 import { useTeam } from '../tasks/taskData'
+import { CaptureDialog } from '../leads/CaptureDialog'
 import { downloadText } from '../leads/download'
 import { InlineSelect } from '../leads/InlineSelect'
 import { useColumnSwitch, useCrmSettings, useLeadSettings } from '../leads/leadData'
-import { ownerOptions } from '../leads/leadLogic'
+import { LeadForm } from '../leads/LeadForm'
+import { ownerOptions, type LeadDraft } from '../leads/leadLogic'
 import { Popover } from '../leads/Menu'
 import { DealList } from './DealList'
 import { PaymentDialog } from './PaymentDialog'
@@ -40,6 +42,8 @@ const BUTTON = 'inline-flex min-h-10 items-center gap-1.5 rounded-full border bo
  * payment, preparation, review, in progress, ready, completed (`PATCH deals/{id}/stage`) — and its payment (`PATCH
  * deals/{id}/payment`, what is still owed); the figures per step (`deals/kpis`, a tile opens its step), quick filters,
  * a search, the payment state and the owner, three sorts, the columns the full admin's switch keeps, and the CSV.
+ * A deal is added here by hand or from a pasted message read by the AI (owner 2026-11-08): the lead form in its deal
+ * mode, which closes the new lead as won through the server's own `/won`.
  */
 export function DealsPage() {
   const { t, i18n } = useTranslation()
@@ -54,6 +58,10 @@ export function DealsPage() {
   const columns = dealColumns(settings.data)
   const [paying, setPaying] = useState<DealRow | null>(null)
   const [exporting, setExporting] = useState(false)
+  const [adding, setAdding] = useState(false)
+  const [capturing, setCapturing] = useState(false)
+  const [captured, setCaptured] = useState<LeadDraft | null>(null)
+  const closeForm = () => { setAdding(false); setCaptured(null) }
 
   const set = (patch: Partial<DealView>) => setSp(writeDealView(withDealView(view, patch), sp), { replace: true })
   const query = dealsQuery(view.filter, view.page, view.sort, { q: view.q, payment: view.payment, owner: view.owner })
@@ -90,7 +98,19 @@ export function DealsPage() {
   const k = kpis.data
 
   return (
-    <Page wide title={t('crm.nav.deals', 'Deals')} line={t('crm.deals.line', 'Won leads, followed through to the work done and the money in.')}>
+    <Page wide title={t('crm.nav.deals', 'Deals')} line={t('crm.deals.line', 'Won leads, followed through to the work done and the money in.')}
+      actions={(
+        <>
+          {/* The AI capture is every staff member's (the server's `ai_capture`, the same answer its route gives). */}
+          {boot.features.ai_capture && (
+            <button type="button" onClick={() => setCapturing(true)}
+              className="crm-ai-soft inline-flex min-h-11 items-center gap-2 rounded-full px-4 text-sm font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-a-accent">
+              <Sparkles size={15} aria-hidden />{t('crm.deals.capture', 'From a message')}
+            </button>
+          )}
+          <Button onClick={() => setAdding(true)} className="min-h-11"><Plus size={15} aria-hidden />{t('crm.deals.new', 'Add a deal')}</Button>
+        </>
+      )}>
       {k && (
         <section aria-label={t('crm.deals.figures', 'Deals at a glance')} className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
           {typeof k.total === 'number' && <StatTile icon={Trophy} tone="accent" label={t('crm.deals.kpi_active', 'Deals in progress')} value={count(k.total, lang)} hint={t('crm.deals.kpi_active_hint', 'Won, not completed yet')} />}
@@ -162,6 +182,8 @@ export function DealsPage() {
       </Card>
       {deals.data && <Pager page={deals.data.current_page} last={deals.data.last_page} total={deals.data.total} onPage={page => set({ page })} />}
       {paying && <PaymentDialog deal={paying} onClose={() => setPaying(null)} />}
+      {adding && <LeadForm deal initial={captured} onClose={closeForm} />}
+      {capturing && <CaptureDialog deal onClose={() => setCapturing(false)} onRead={draft => { setCapturing(false); setCaptured(draft); setAdding(true) }} />}
     </Page>
   )
 }

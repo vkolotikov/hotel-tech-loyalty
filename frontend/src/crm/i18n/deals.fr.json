@@ -1,8 +1,14 @@
 {
+  "add": "Ajouter le deal",
+  "added": "Deal ajouté",
   "ai_next": "IA :",
   "any_owner": "Tout le monde",
   "any_payment": "Tous les paiements",
   "balance": "Reste à payer",
+  "capture": "Depuis un message",
+  "capture_filled": "Rempli par l’IA à partir du message. Vérifiez-le avant d’ajouter le deal.",
+  "capture_line": "Collez un e-mail, un WhatsApp ou vos notes d’un appel. L’IA remplit le formulaire du deal ; vous le vérifiez et l’ajoutez.",
+  "capture_title": "Un deal à partir d’un message",
   "chip_owner": "Responsable : {{value}}",
   "chip_payment": "Paiement : {{value}}",
   "chip_remove": "Retirer",
@@ -42,6 +48,9 @@
   "kpi_unpaid": "Pas entièrement payé",
   "line": "Les leads gagnés, suivis jusqu'au travail fait et à l'argent encaissé.",
   "more": "Plus",
+  "new": "Ajouter un deal",
+  "new_note": "Il est ajouté comme gagné ; vous le suivez ensuite ici, étape par étape, jusqu’au paiement.",
+  "new_title": "Ajouter un deal",
   "next_done": "Fait",
   "next_untitled": "Relancer",
   "no_next": "Rien de prévu. Ouvrez l'affaire pour ajouter une étape.",
@@ -81,6 +90,8 @@
   "step_next": "Passer à {{step}}",
   "step_next_named": "Faire passer {{name}} à {{step}}",
   "step_of": "L'étape de {{name}}",
+  "the_deal": "Le deal",
   "total": "Valeur de l'affaire",
-  "which": "Quelles affaires"
+  "which": "Quelles affaires",
+  "won_kept": "Le lead est enregistré mais pas encore gagné ; un nouvel essai le marque seulement comme gagné."
 }

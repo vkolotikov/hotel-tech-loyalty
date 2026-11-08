@@ -13,6 +13,12 @@ use Illuminate\Support\Facades\Log;
 class CrmAiController extends Controller
 {
     /**
+     * What a failed capture answers (2026-11-08): our sentence, never the provider's text, which is logged instead.
+     * The CRM shows its own translated sentence; the full admin shows this one.
+     */
+    public const CAPTURE_FAILED = 'The AI could not read this message just now. Please try again in a moment.';
+
+    /**
      * Diagnostic endpoint — check AI service configuration.
      * GET /api/v1/admin/crm-ai/diagnose
      */
@@ -93,7 +99,7 @@ class CrmAiController extends Controller
             return response()->json($result);
         } catch (\Throwable $e) {
             Log::error('CRM AI capture-lead failed: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
-            return response()->json(['success' => false, 'error' => 'AI service error: ' . $e->getMessage()]);
+            return response()->json(['success' => false, 'error' => self::CAPTURE_FAILED]);
         }
     }
 
@@ -112,7 +118,7 @@ class CrmAiController extends Controller
             return response()->json($result);
         } catch (\Throwable $e) {
             Log::error('CRM AI capture-member failed: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
-            return response()->json(['success' => false, 'error' => 'AI service error: ' . $e->getMessage()]);
+            return response()->json(['success' => false, 'error' => self::CAPTURE_FAILED]);
         }
     }
 
@@ -131,7 +137,7 @@ class CrmAiController extends Controller
             return response()->json($result);
         } catch (\Throwable $e) {
             Log::error('CRM AI capture-corporate failed: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
-            return response()->json(['success' => false, 'error' => 'AI service error: ' . $e->getMessage()]);
+            return response()->json(['success' => false, 'error' => self::CAPTURE_FAILED]);
         }
     }
 
@@ -157,7 +163,7 @@ class CrmAiController extends Controller
             return response()->json($result);
         } catch (\Throwable $e) {
             Log::error('CRM AI capture-guest failed: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
-            return response()->json(['success' => false, 'error' => 'AI service error: ' . $e->getMessage()]);
+            return response()->json(['success' => false, 'error' => self::CAPTURE_FAILED]);
         }
     }
 

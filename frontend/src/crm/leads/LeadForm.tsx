@@ -33,8 +33,12 @@ const SERVER_FIELDS: Record<string, LeadField> = {
  * (`POST inquiries`) in the default pipeline's first stage unless another is chosen. Stay details only for a hotel;
  * the enquiry type where the organisation has types; its own fields when it has some. Opens on `/crm/leads?new=1`
  * (Today and Find link there), or filled in by the AI from a pasted message (`initial`).
+ *
+ * From Deals (`deal`, owner 2026-11-08): the same form adds a deal — the lead, then `POST inquiries/{id}/won`, the
+ * server's own close as won (the won stage, "Confirmed", the timeline line, a hotel's draft reservation). A lead made
+ * by a try whose close failed is closed again on the next try, never made twice.
  */
-export function LeadForm({ presetGuest, initial, onClose }: { presetGuest?: number | null; initial?: LeadDraft | null; onClose: () => void }) {
+export function LeadForm({ presetGuest, initial, deal = false, onClose }: { presetGuest?: number | null; initial?: LeadDraft | null; deal?: boolean; onClose: () => void }) {
   const { t } = useTranslation()
   const boot = useBoot()
   const navigate = useNavigate()
@@ -58,6 +62,8 @@ export function LeadForm({ presetGuest, initial, onClose }: { presetGuest?: numb
   const [guestName, setGuestName] = useState<string | null>(null)
   /** A contact made by an earlier try whose lead failed: used again, never made twice. */
   const [madeGuest, setMadeGuest] = useState<number | null>(null)
+  /** A deal's lead made by an earlier try whose close as won failed: closed again, never made twice. */
+  const [madeLead, setMadeLead] = useState<LeadDetail | null>(null)
   const [tried, setTried] = useState(false)
   const set = (patch: Partial<LeadDraft>) => setDraft(d => ({ ...d, ...patch }))
 
@@ -74,17 +80,25 @@ export function LeadForm({ presetGuest, initial, onClose }: { presetGuest?: numb
 
   const create = useMutation({
     mutationFn: async () => {
-      let guestId = draft.contact === 'existing' ? draft.guestId : madeGuest
-      if (!guestId) {
-        const guest = await send<{ id: number }>('post', 'guests', guestBody(draft))
-        guestId = guest.id
-        setMadeGuest(guest.id)
+      let lead = madeLead
+      if (!lead) {
+        let guestId = draft.contact === 'existing' ? draft.guestId : madeGuest
+        if (!guestId) {
+          const guest = await send<{ id: number }>('post', 'guests', guestBody(draft))
+          guestId = guest.id
+          setMadeGuest(guest.id)
+        }
+        lead = await send<LeadDetail>('post', 'inquiries', leadBody({ ...draft, status }, guestId, { stay, fields }))
       }
-      return send<LeadDetail>('post', 'inquiries', leadBody({ ...draft, status }, guestId, { stay, fields }))
+      if (deal) {
+        setMadeLead(lead)
+        await send('post', `inquiries/${lead.id}/won`, {})
+      }
+      return lead
     },
     onSuccess: lead => {
       changed()
-      toast(t('crm.leads.added', 'Lead added'))
+      toast(deal ? t('crm.deals.added', 'Deal added') : t('crm.leads.added', 'Lead added'))
       onClose()
       navigate(leadPath(lead.id))
     },
@@ -104,17 +118,20 @@ export function LeadForm({ presetGuest, initial, onClose }: { presetGuest?: numb
   const pickedName = guestName ?? preset.data?.full_name ?? null
 
   return (
-    <SidePanel title={t('crm.leads.new_title', 'Add a lead')} onClose={onClose}
+    <SidePanel title={deal ? t('crm.deals.new_title', 'Add a deal') : t('crm.leads.new_title', 'Add a lead')} onClose={onClose}
       footer={(
         <div className="flex flex-wrap justify-end gap-2">
           <Button variant="secondary" type="button" onClick={onClose} disabled={create.isPending}>{t('crm.common.cancel', 'Cancel')}</Button>
-          <Button type="submit" form={formId} loading={create.isPending}>{t('crm.leads.add', 'Add the lead')}</Button>
+          <Button type="submit" form={formId} loading={create.isPending}>{deal ? t('crm.deals.add', 'Add the deal') : t('crm.leads.add', 'Add the lead')}</Button>
         </div>
       )}>
       <form id={formId} onSubmit={submit} noValidate className="space-y-5">
-        {initial && <Notice tone="info"><span className="inline-flex items-start gap-2"><Sparkles size={15} aria-hidden className="crm-ai-text mt-0.5 shrink-0" />{t('crm.leads.capture_filled', 'Filled in by the AI from the message. Check it before you add the lead.')}</span></Notice>}
+        {initial && <Notice tone="info"><span className="inline-flex items-start gap-2"><Sparkles size={15} aria-hidden className="crm-ai-text mt-0.5 shrink-0" />{deal
+          ? t('crm.deals.capture_filled', 'Filled in by the AI from the message. Check it before you add the deal.')
+          : t('crm.leads.capture_filled', 'Filled in by the AI from the message. Check it before you add the lead.')}</span></Notice>}
         {create.isError && <Notice tone="danger">{errorText(t, create.error)}</Notice>}
-        {madeGuest && create.isError && <Notice tone="info">{t('crm.leads.contact_kept', 'The contact was saved; trying again adds only the lead.')}</Notice>}
+        {madeLead && create.isError ? <Notice tone="info">{t('crm.deals.won_kept', 'The lead was saved but is not won yet; trying again only marks it won.')}</Notice>
+          : madeGuest && create.isError && <Notice tone="info">{t('crm.leads.contact_kept', 'The contact was saved; trying again adds only the lead.')}</Notice>}
 
         <section className="space-y-3">
           <h3 className="text-sm font-semibold text-a-text">{t('crm.leads.contact', 'Contact')}</h3>
@@ -153,14 +170,17 @@ export function LeadForm({ presetGuest, initial, onClose }: { presetGuest?: numb
         </section>
 
         <section className="space-y-3">
-          <h3 className="text-sm font-semibold text-a-text">{t('crm.leads.the_lead', 'The lead')}</h3>
+          <h3 className="text-sm font-semibold text-a-text">{deal ? t('crm.deals.the_deal', 'The deal') : t('crm.leads.the_lead', 'The lead')}</h3>
+          {deal && <p className="text-xs text-a-text-2">{t('crm.deals.new_note', 'It is added as won; you then take it through its steps and its payment here.')}</p>}
           <div className="grid gap-3 sm:grid-cols-2">
-            <Field label={t('crm.leads.field_stage', 'Stage')}>
-              <Select value={status} onChange={e => set({ status: e.target.value })}>
-                {stages.length === 0 && <option value="">{t('crm.leads.stage_default', 'First stage')}</option>}
-                {stages.map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
-              </Select>
-            </Field>
+            {!deal && (
+              <Field label={t('crm.leads.field_stage', 'Stage')}>
+                <Select value={status} onChange={e => set({ status: e.target.value })}>
+                  {stages.length === 0 && <option value="">{t('crm.leads.stage_default', 'First stage')}</option>}
+                  {stages.map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
+                </Select>
+              </Field>
+            )}
             <Field label={t('crm.leads.field_source', 'Where it came from')}>
               <Select value={draft.source} onChange={e => set({ source: e.target.value })}>
                 <option value="">{sourceLabel(t, '')}</option>

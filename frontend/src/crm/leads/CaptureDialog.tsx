@@ -16,10 +16,11 @@ import { captureText, draftFromCapture } from './listLogic'
 import type { CaptureAnswer } from './leadTypes'
 
 /**
- * A lead from a pasted message (the main platform's AI capture, `POST crm-ai/capture-lead`): the AI reads an email, a
- * WhatsApp or a phone note and fills in the lead form; nothing is saved until the person checks the form and adds it.
+ * A lead (or, from Deals, a deal) from a pasted message (the main platform's AI capture, `POST crm-ai/capture-lead`):
+ * the AI reads an email, a WhatsApp or a phone note and fills in the form; nothing is saved until the person checks the
+ * form and adds it.
  */
-export function CaptureDialog({ onClose, onRead }: { onClose: () => void; onRead: (draft: LeadDraft) => void }) {
+export function CaptureDialog({ deal = false, onClose, onRead }: { deal?: boolean; onClose: () => void; onRead: (draft: LeadDraft) => void }) {
   const { t } = useTranslation()
   const boot = useBoot()
   const settings = useLeadSettings()
@@ -46,9 +47,11 @@ export function CaptureDialog({ onClose, onRead }: { onClose: () => void; onRead
   })
   const locked = read.isError && failureOf(read.error).code === 'feature_locked'
   return (
-    <Dialog title={t('crm.leads.capture_title', 'A lead from a message')} onClose={onClose} busy={read.isPending}>
+    <Dialog title={deal ? t('crm.deals.capture_title', 'A deal from a message') : t('crm.leads.capture_title', 'A lead from a message')} onClose={onClose} busy={read.isPending}>
       <form className="space-y-4" onSubmit={e => { e.preventDefault(); setEmpty(false); setFailed(false); if (body) read.mutate() }}>
-        <p className="text-sm text-a-text-2">{t('crm.leads.capture_line', 'Paste an email, a WhatsApp or your notes from a call. The AI fills in the lead form; you check it and add it.')}</p>
+        <p className="text-sm text-a-text-2">{deal
+          ? t('crm.deals.capture_line', 'Paste an email, a WhatsApp or your notes from a call. The AI fills in the deal form; you check it and add it.')
+          : t('crm.leads.capture_line', 'Paste an email, a WhatsApp or your notes from a call. The AI fills in the lead form; you check it and add it.')}</p>
         {locked ? <FeatureLocked /> : read.isError && <Notice tone="danger">{errorText(t, read.error)}</Notice>}
         {failed && <Notice tone="danger">{t('crm.errors.ai_failed', 'The AI could not help just now. Please try again in a moment.')}</Notice>}
         {empty && <Notice tone="warning">{t('crm.leads.capture_none', 'The AI could not find a lead in this text. Add more of the message, or fill in the form yourself.')}</Notice>}

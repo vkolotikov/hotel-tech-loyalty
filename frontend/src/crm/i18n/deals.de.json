@@ -1,8 +1,14 @@
 {
+  "add": "Deal anlegen",
+  "added": "Deal angelegt",
   "ai_next": "KI:",
   "any_owner": "Alle",
   "any_payment": "Jede Zahlung",
   "balance": "Noch zu zahlen",
+  "capture": "Aus einer Nachricht",
+  "capture_filled": "Von der KI aus der Nachricht ausgefüllt. Prüfen Sie es, bevor Sie den Deal hinzufügen.",
+  "capture_line": "Fügen Sie eine E-Mail, eine WhatsApp-Nachricht oder Ihre Notizen zu einem Anruf ein. Die KI füllt das Deal-Formular aus; Sie prüfen es und fügen es hinzu.",
+  "capture_title": "Ein Deal aus einer Nachricht",
   "chip_owner": "Zuständig: {{value}}",
   "chip_payment": "Zahlung: {{value}}",
   "chip_remove": "Entfernen",
@@ -42,6 +48,9 @@
   "kpi_unpaid": "Nicht voll bezahlt",
   "line": "Gewonnene Leads, begleitet bis die Arbeit getan und das Geld da ist.",
   "more": "Mehr",
+  "new": "Deal hinzufügen",
+  "new_note": "Er wird als gewonnen angelegt; danach führen Sie ihn hier durch seine Schritte und seine Zahlung.",
+  "new_title": "Deal hinzufügen",
   "next_done": "Erledigt",
   "next_untitled": "Nachfassen",
   "no_next": "Nichts geplant. Öffnen Sie den Deal, um einen Schritt hinzuzufügen.",
@@ -81,6 +90,8 @@
   "step_next": "Weiter zu {{step}}",
   "step_next_named": "{{name}} weiter zu {{step}}",
   "step_of": "Der Schritt von {{name}}",
+  "the_deal": "Der Deal",
   "total": "Deal-Wert",
-  "which": "Welche Deals"
+  "which": "Welche Deals",
+  "won_kept": "Der Lead ist gespeichert, aber noch nicht gewonnen; ein neuer Versuch markiert ihn nur als gewonnen."
 }

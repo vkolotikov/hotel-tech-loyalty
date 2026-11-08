@@ -26,7 +26,7 @@ const boot: Bootstrap = {
   organization: { id: 7, name: 'Studio Lumen', industry: 'beauty' },
   accent: null,
   venue: { timezone: 'Europe/Riga', today: '2026-11-07', currency: 'EUR' },
-  features: { chatbot: true, engagement: true, admin_ai: false },
+  features: { chatbot: true, engagement: true, ai_capture: true },
   ai: { status: 'under', percent: 10 },
   staff: { id: 3, name: 'Anna', role: 'staff', can: { manage_bot: false, manage_widget: false, manage_pipelines: false, manage_canned: false, manage_team: false, delete_records: true } },
   widget: null,
@@ -84,17 +84,17 @@ describe('Leads', () => {
     expect(html).toContain('2 d late')
     expect(html).toContain('€1,250')
     for (const tool of ['Export CSV', 'Add a lead', 'Due now', 'Filters', 'Select this page', 'Views', 'Columns']) expect(html).toContain(tool)
-    // The plan has no staff AI (the CRM's own packages do not): no "From a message", which would only be refused.
-    expect(html).not.toContain('From a message')
+    // The AI capture is every staff member's, without the staff AI (owner 2026-11-08).
+    expect(html).toContain('From a message')
+    expect(html).toContain('crm-ai-soft')
   })
 
-  it('offers a lead from a pasted message where the plan includes the staff AI', () => {
+  it('offers no lead from a pasted message where the server says the capture would be refused', () => {
     const html = render('/crm/leads', qc => {
       qc.setQueryData(['crm', 'pipeline', 'pipelines'], pipelines)
       qc.setQueryData(['crm', 'leads', 'list', listQuery(readFilters(new URLSearchParams('')), 'Anna')], page([ada]))
-    }, { ...boot, features: { ...boot.features, admin_ai: true } })
-    expect(html).toContain('From a message')
-    expect(html).toContain('crm-ai-soft')
+    }, { ...boot, features: { ...boot.features, ai_capture: false } })
+    expect(html).not.toContain('From a message')
   })
 
   it('shows the open pipeline\'s figures, a header row, the AI\'s chance and the row\'s menu (round 2)', () => {

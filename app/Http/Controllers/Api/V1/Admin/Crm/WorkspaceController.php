@@ -51,12 +51,13 @@ class WorkspaceController extends Controller
                 'currency' => PortalBootstrap::currency($org),
             ],
             // What the plan holds: the chatbot's setup and the knowledge base answer 402 `feature_locked` without
-            // `chatbot`, the live visitor feed without `engagement`, the AI capture of a lead from pasted text
-            // (`crm-ai/capture-*`) without `admin_ai` (routes/api.php; the CRM's own packages leave it out).
+            // `chatbot`, the live visitor feed without `engagement`. The AI capture of a lead from pasted text
+            // (`crm-ai/capture-*`) is every CRM staff member's (RequireAiCapture, owner 2026-11-08); `ai_capture`
+            // is that middleware's own answer, so the button and the route agree.
             'features'     => [
                 'chatbot'    => $platform || $org->hasFeature('chatbot'),
                 'engagement' => $platform || $org->hasFeature('engagement'),
-                'admin_ai'   => $platform || $org->hasFeature('admin_ai'),
+                'ai_capture' => \App\Http\Middleware\RequireAiCapture::allows($org, $user),
             ],
             // The month's AI allowance (the widget's assistant and the inbox's drafts spend it).
             'ai'           => ['status' => $budget['status'], 'percent' => $budget['percent']],

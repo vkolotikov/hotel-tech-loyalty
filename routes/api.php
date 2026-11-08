@@ -1633,6 +1633,12 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
                 Route::post('crm-ai/voice-tool',              [CrmAiController::class, 'executeVoiceTool']);
                 // Ship 9 — voice usage billing.
                 Route::post('crm-ai/voice-usage',             [CrmAiController::class, 'recordVoiceUsage']);
+            });
+
+            // The AI capture (a pasted message read into a form a person checks): every staff member of an
+            // organisation with the CRM workspace on, as well as a plan with `admin_ai` (owner, 2026-11-08;
+            // RequireAiCapture). The month's AI allowance still stops it (CrmAiController).
+            Route::middleware('ai.capture')->group(function () {
                 Route::post('crm-ai/capture-lead',            [CrmAiController::class, 'captureLead']);
                 Route::post('crm-ai/capture-member',          [CrmAiController::class, 'captureMember']);
                 Route::post('crm-ai/capture-corporate',       [CrmAiController::class, 'captureCorporate']);

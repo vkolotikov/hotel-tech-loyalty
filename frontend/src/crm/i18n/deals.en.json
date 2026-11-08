@@ -1,8 +1,14 @@
 {
+  "add": "Add the deal",
+  "added": "Deal added",
   "ai_next": "AI:",
   "any_owner": "Anyone",
   "any_payment": "Any payment",
   "balance": "Still to pay",
+  "capture": "From a message",
+  "capture_filled": "Filled in by the AI from the message. Check it before you add the deal.",
+  "capture_line": "Paste an email, a WhatsApp or your notes from a call. The AI fills in the deal form; you check it and add it.",
+  "capture_title": "A deal from a message",
   "chip_owner": "Owner: {{value}}",
   "chip_payment": "Payment: {{value}}",
   "chip_remove": "Remove",
@@ -42,6 +48,9 @@
   "kpi_unpaid": "Not paid in full",
   "line": "Won leads, followed through to the work done and the money in.",
   "more": "More",
+  "new": "Add a deal",
+  "new_note": "It is added as won; you then take it through its steps and its payment here.",
+  "new_title": "Add a deal",
   "next_done": "Done",
   "next_untitled": "Follow up",
   "no_next": "Nothing planned. Open the deal to add a step.",
@@ -81,6 +90,8 @@
   "step_next": "Move on to {{step}}",
   "step_next_named": "Move {{name}} on to {{step}}",
   "step_of": "The step of {{name}}",
+  "the_deal": "The deal",
   "total": "Deal value",
-  "which": "Which deals"
+  "which": "Which deals",
+  "won_kept": "The lead was saved but is not won yet; trying again only marks it won."
 }
