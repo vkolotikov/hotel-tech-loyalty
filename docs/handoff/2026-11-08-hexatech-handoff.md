@@ -92,11 +92,12 @@ out with it (nothing of HexaTech CRM had been deployed before).
    plans got new products and prices and were published. Checked live afterwards: `GET /api/v1/modules` answers all 66
    plans from billing (`source: billing`, available), CRM at 4900 / 8500 / 14900 cents a month, 49980 / 86700 / 151980
    a year, trial 7 days, AI allowance 1000 / 2500 / 6000 cents, chatbot on; pairs at the sum (for example
-   `content_pro-crm_pro` 29800, AI 11000). **Open, billing's own:** its CI's dependency audit fails (already on 4 Nov,
-   before this change; every test job passes): `symfony/http-foundation` 8.1.10 (4 advisories), `symfony/http-kernel`
-   (1) and `symfony/routing` (1), reported 4 Nov; the loyalty application is already on the patched 8.1.11. A
-   `composer update symfony/http-foundation symfony/http-kernel symfony/routing` in billing, its tests, then a push to
-   its `main` fixes it. Before the sync, the text was:
+   `content_pro-crm_pro` 29800, AI 11000). **Billing's security update, done 8 Nov at the owner's word:** its CI's
+   dependency audit had failed since 4 Nov (every test job passed): six advisories in `symfony/http-foundation`,
+   `http-kernel` and `routing` 8.1.10. Billing `main` **3214b44** moves the three to 8.1.11 (`composer.lock` only);
+   checked before the push: `composer validate`, `composer audit` (none), the tests on PostgreSQL 16 (23 passed, 3
+   skipped) and on SQLite, the production caches build. Run composer in billing with `php85` (the PATH's PHP 8.3
+   cannot resolve its `php ^8.4`). Before the sync, the text was:
    once billing's deployment of 89cf5d2
    has finished, in the billing application's **Commands** tab, `php artisan stripe:sync --module-plans --publish`.
    Live `GET /api/v1/modules` on 8 Nov after the push: billing sells 15 plans (Loyalty and Content); the 21 Appointments
