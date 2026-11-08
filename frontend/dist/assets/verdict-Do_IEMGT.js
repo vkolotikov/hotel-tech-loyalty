@@ -1,1 +1,0 @@
-import{Rn as e}from"./index-oKMXsaDq.js";function t(){let{t}=e();return e=>t(e.key,e.fallback,e.vars)}export{t};
