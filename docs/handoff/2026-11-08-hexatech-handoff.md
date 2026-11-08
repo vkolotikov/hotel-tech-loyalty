@@ -82,9 +82,16 @@ out with it (nothing of HexaTech CRM had been deployed before).
 
 ## What the owner does by hand
 
-1. **Billing** (this session was refused push access to `hotel-tech-saas` again): apply
-   `docs/billing/2026-11-07-hotel-tech-saas-crm-packages.patch` to billing `main` and push (steps and a two-query
-   pre-check in `docs/plan-modules.md`, "Billing handover, 2026-11-07"); then, in the billing application's Commands
-   tab on Laravel Cloud, `php artisan stripe:sync --module-plans --publish`. Until then `/crm/register` says HexaTech
-   CRM cannot be bought online yet; full customers already have `/crm`.
-2. Optional: an organisation that should not see the CRM yet: `php artisan workspace:crm <organisation id> --off`.
+1. **Billing, the code: done 8 Nov, 16:12 UTC.** At the owner's request this session pushed the CRM packages commit to
+   `hotel-tech-saas` `main` (7607211 → **89cf5d2**, identical to `docs/billing/2026-11-07-hotel-tech-saas-crm-packages.patch`;
+   `ModulePlansTest` on PostgreSQL 16, fresh and seeded databases: 9 passed each). Laravel Cloud deploys it and runs the
+   migration. Billing CI: https://github.com/vkolotikov/hotel-tech-saas/actions/runs/42498705791 (its previous run, on
+   7607211, had already failed).
+2. **Billing, the sync: the owner's** (only Laravel Cloud's dashboard reaches it): once billing's deployment of 89cf5d2
+   has finished, in the billing application's **Commands** tab, `php artisan stripe:sync --module-plans --publish`.
+   Live `GET /api/v1/modules` on 8 Nov after the push: billing sells 15 plans (Loyalty and Content); the 21 Appointments
+   plans of 4 Nov were never published either, so this one sync prices and publishes Appointments' 21 and CRM's 30
+   together. Afterwards `GET /api/v1/modules` lists 66 plans from billing (`source: billing`), and `/crm/register`
+   offers the three packages. Until then `/crm/register` says HexaTech CRM cannot be bought online yet; full
+   customers already have `/crm`.
+3. Optional: an organisation that should not see the CRM yet: `php artisan workspace:crm <organisation id> --off`.
