@@ -297,17 +297,20 @@ or add the next dated one, at the end of a session.
 
 - HexaTech Loyalty and Content each in three packages (Lite, Standard at 85 €, Pro), 15 % less a month paid yearly
   (owner 2026-11-02), HexaTech Appointments the same way since 2026-11-04 (49/85/149 €, its own sign-up page,
-  packages by `max_booking_staff`), and HexaTech CRM since 2026-11-07 (49/85/149 €, `/crm/register`, packages by team
-  and the AI allowance); billing sells each product alone and every pair, never three (runbook
-  `docs/plan-modules.md`). HexaTech CRM's billing product is `crm_chat`, never the full suite's `crm` or `chat`:
+  packages by `max_booking_staff`), HexaTech CRM since 2026-11-07 (49/85/149 €, `/crm/register`, packages by team
+  and the AI allowance) and HexaTech Time Planner since 2026-11-09 (49/85/149 €, `/time/register`, packages by team and
+  the AI allowance, every one with `time_management`; Enterprise keeps it as before); billing sells each product alone
+  and every pair, never three (runbook `docs/plan-modules.md`). HexaTech CRM's billing product is `crm_chat`, never the full suite's `crm` or `chat`:
   `fromProducts` reads a list of module products only as an organisation on modules, so naming those would turn
-  Starter and Growth into module customers. Two products' AI allowances add up (`ai_monthly_cost_cents`). Every
+  Starter and Growth into module customers; the Time Planner's is `time_planner`. Two products' AI allowances add up
+  (`ai_monthly_cost_cents`). Every
   product's trial starts on Standard, monthly. What an organisation bought is `Organization::planModules()` only
   (null = full customer), each module's package `planTiers()`; "is this area off" is `holdsModule()` /
   `lacksModule()`, never a new reading of products or the plan slug. Module knowledge (products, packages, slugs,
   fallback prices and features) lives in `App\Support\PlanModules`, and the billing migrations
-  `2026_11_02_130000_add_module_packages`, `2026_11_04_120000_add_appointments_packages` and
-  `2026_11_07_120000_add_crm_packages` mirror it: a change to one is a change to both.
+  `2026_11_02_130000_add_module_packages`, `2026_11_04_120000_add_appointments_packages`,
+  `2026_11_07_120000_add_crm_packages` and `2026_11_09_120000_add_time_planner_packages` mirror it: a change to one is a
+  change to both.
 - Prices are billing's: the SPA shows only what `GET /v1/modules` or `GET /v1/auth/modules` answer, never a price of
   its own. A plan changes only through `PlanModulesController` (add, package, remove; billing `change-plan`), never by
   sending an amount, and a card-paid subscription moves only to a plan with its own Stripe price for its interval.
@@ -355,13 +358,22 @@ or add the next dated one, at the end of a session.
   AI planning, review, capture and voice). Read `docs/time-planner-workspace.md` first. It uses only `a-*` classes and the
   `time-*` classes of `time/theme/time.css`; every string is `t('time.…')` in all five locales, one bundle per area
   (`time/i18n/<area>.<lang>.json`); Dark is where a device that never chose starts; the palette is `TIME_SURFACES`.
-- Every call goes through `time/lib/api.ts`, only to its `AREAS` (`time`, `planner`, `crm-settings`, `team`), always
-  with `brand_id=all`. Tasks, subtasks, the backlog, templates and day notes are written only by the full admin's own
-  `planner/*` endpoints; a person's skills only by `team/{id}`; a planner profile only by `PlannerProfiles`; a task's
-  clock only by `TaskClock` (and PlannerTask's saving hook, which stops it on done). The work window is
+- Every call goes through `time/lib/api.ts`, only to its `AREAS` (`time`, `planner`, `team`), always with
+  `brand_id=all`. Tasks, subtasks, the backlog, templates and day notes are written only by the full admin's own
+  `planner/*` endpoints; the planner's settings only through the workspace's `time/settings` (the same `crm_settings`
+  rows, only the planner's keys, a manager's change — never `crm-settings`, which a Time-only organisation cannot
+  reach); a person's skills only by `team/{id}`; a planner profile only by `PlannerProfiles`; a task's clock only by
+  `TaskClock` (and PlannerTask's saving hook, which stops it on done). The work window is
   `App\Services\Time\WorkWindow`, which the full admin's planner endpoints read too.
-- `admin/time/*` is behind `workspace:time`, and all but the bootstrap behind `feature:time_management` (it is the
-  Enterprise Planner, not a module; an organisation on modules does not have it). A new route needs its AccessMap key.
+- `admin/time/*` is behind `workspace:time`, and all but the bootstrap behind `feature:time_management`. Since
+  2026-11-09 it is also sold as the `time` module (billing product `time_planner`, every package with `time_management`);
+  AccessMap product `time` covers `admin/time*` and `admin/planner*`. A new route needs its AccessMap key.
+- Who may put work on whose day is the organisation's planning mode (owner 2026-11-09), decided only by
+  `App\Services\Time\PlanningMode` on the server: `team` (the default, as before) or `own` (a staff member changes only
+  their own and unassigned tasks and gives work only to themselves; managers always may). Every writer of a planner task
+  — the full admin's `PlannerController` and the workspace's plan, apply, clock, review and capture — asks it; a new one
+  asks it too. The setting `planner_planning_mode` is written only by `PUT admin/time/settings/…` (a manager's,
+  audited). The workspace only hides what it would refuse (`time/lib/rights.ts`, from `staff.can.plan_team`).
 - The AI never writes: a plan (`DayPlanner::merge`) is checked line by line against the day's facts and applied only by
   a person (`PlanApplier`, which skips what changed); capture drafts are saved by a person; a review's action must name
   the day's task and a team member. The rules plan whenever the AI cannot be asked. Spend is `time_plan`,

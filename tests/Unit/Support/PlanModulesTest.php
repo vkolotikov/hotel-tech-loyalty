@@ -30,6 +30,10 @@ class PlanModulesTest extends TestCase
             [['crm_chat', 'loyalty'], ['loyalty', 'crm']],
             [['crm_chat', 'crm'], null],
             [['crm_chat', 'chat'], null],
+            // HexaTech Time Planner (2026-11-09) has its own product too; Enterprise keeps it through time_management.
+            [['time_planner'], ['time']],
+            [['time_planner', 'crm_chat'], ['crm', 'time']],
+            [['time_planner', 'crm'], null],
             // Names no module.
             [['booking'], null],
             [[], null],
@@ -67,6 +71,13 @@ class PlanModulesTest extends TestCase
         $this->assertSame('HexaTech CRM Pro', PlanModules::planName(['crm' => 'pro']));
         $this->assertSame('HexaTech Content + HexaTech CRM', PlanModules::planName(['crm', 'content']));
         $this->assertSame(['crm_chat'], PlanModules::products(['crm']));
+
+        // HexaTech Time Planner, the fifth, comes after CRM.
+        $this->assertSame(['time' => 'pro'], PlanModules::selectionFromPlanSlug('time_pro'));
+        $this->assertSame('crm-time_lite', PlanModules::planSlug(['time' => 'lite', 'crm' => 'standard']));
+        $this->assertNull(PlanModules::selectionFromPlanSlug('time-loyalty'), 'not in module order');
+        $this->assertSame('HexaTech Loyalty + HexaTech Time Planner Pro', PlanModules::planName(['time' => 'pro', 'loyalty' => 'standard']));
+        $this->assertSame(['time_planner'], PlanModules::products(['time']));
     }
 
     public function test_prices_by_package_and_yearly_fifteen_percent_less(): void
@@ -116,6 +127,15 @@ class PlanModulesTest extends TestCase
         // One AI allowance per organisation: Content's and CRM's add up; a CRM package never adds Loyalty's campaigns.
         $this->assertSame('7500', PlanModules::features(['content' => 'pro', 'crm' => 'standard'])['ai_monthly_cost_cents']);
         $this->assertSame('false', PlanModules::features(['loyalty' => 'lite', 'crm' => 'pro'])['campaigns']);
+
+        // Every Time Planner package carries the planner's switch; they differ by team and AI allowance.
+        $time = array_map(fn (string $t) => PlanModules::features(['time' => $t]), PlanModules::TIERS);
+        $this->assertSame(['true', 'true', 'true'], array_column($time, 'time_management'));
+        $this->assertSame(['3', '10', '25'], array_column($time, 'max_team_members'));
+        $this->assertSame(['500', '1500', '4000'], array_column($time, 'ai_monthly_cost_cents'));
+        $this->assertSame('priority', $time[2]['priority_support']);
+        $this->assertSame('false', PlanModules::features(['crm'])['time_management'], 'no other module adds the planner');
+        $this->assertSame('3500', PlanModules::features(['content' => 'standard', 'time' => 'standard'])['ai_monthly_cost_cents'], 'the allowances add up');
 
         $both = PlanModules::features(['loyalty' => 'lite', 'content' => 'pro']);
         $this->assertSame(['500', '15', 'false', '5000', 'priority'], [$both['max_loyalty_members'], $both['max_team_members'], $both['campaigns'], $both['ai_monthly_cost_cents'], $both['priority_support']], 'the largest limit, any switch, the highest support');

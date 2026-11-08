@@ -41,7 +41,8 @@ export function SectionNav<T extends string>({ label, idPrefix, panelId, section
   compact?: boolean
 }) {
   const keys = sections.map(s => s.key)
-  const cols = sections.length >= 5 ? 'lg:grid-cols-5' : sections.length === 4 ? 'lg:grid-cols-4' : sections.length === 3 ? 'lg:grid-cols-3' : 'lg:grid-cols-2'
+  // Six read best as two rows of three; five or more otherwise in one row.
+  const cols = sections.length === 6 ? 'lg:grid-cols-3' : sections.length >= 5 ? 'lg:grid-cols-5' : sections.length === 4 ? 'lg:grid-cols-4' : sections.length === 3 ? 'lg:grid-cols-3' : 'lg:grid-cols-2'
   const onKey = (e: KeyboardEvent<HTMLButtonElement>) => {
     const next = sectionAfter(keys, value, e.key)
     if (!next) return

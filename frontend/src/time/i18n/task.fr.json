@@ -21,6 +21,7 @@
   "finished": "Terminé, bravo !",
   "horizon": "À faire pour quand",
   "length": "Durée",
+  "locked": "{{name}} planifie cette tâche. Dans ce planning, chacun planifie sa propre journée ; vous pouvez la copier dans la vôtre.",
   "mark_done": "Marquer comme terminée",
   "minutes": "Minutes",
   "new": "Nouvelle tâche",

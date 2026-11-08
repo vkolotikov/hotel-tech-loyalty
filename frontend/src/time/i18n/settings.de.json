@@ -13,6 +13,7 @@
   "caption": {
     "account": "Team & Fähigkeiten und die vollständige Verwaltung",
     "day": "Zeiten des Betriebs und die Standardarbeitszeit",
+    "planning": "Alle für das Team oder jede Person ihren Tag",
     "tasks": "Woraus jeder Aufgabentyp besteht",
     "templates": "Fertige Aufgaben als Ausgangspunkt",
     "types": "Die Arten von Arbeit, mit Symbolen und Farben"
@@ -45,7 +46,21 @@
   "line": "Die Einstellungen des Planers, gemeinsam mit dem Planer der vollständigen Verwaltung.",
   "move_down": "Nach unten verschieben: {{name}}",
   "move_up": "Nach oben verschieben: {{name}}",
-  "read_only": "Nur eine Führungskraft kann den Arbeitstag, die Typen und die Aufgaben ändern; hier können Sie sie ansehen. Vorlagen gehören allen.",
+  "planning": {
+    "chosen": "Aktiv",
+    "line": "Wählen Sie, wie Ihr Team arbeitet. Dieselbe Regel gilt im Planer des vollständigen Admins.",
+    "own_1": "Eine fremde Aufgabe öffnet sich schreibgeschützt; sie lässt sich in den eigenen Tag kopieren",
+    "own_2": "Führungskräfte planen weiterhin für alle",
+    "own_line": "Alle legen nur eigene Aufgaben an, verschieben und erledigen nur diese und nehmen Arbeit aus dem offenen Pool.",
+    "own_title": "Jede Person plant ihren eigenen Tag",
+    "seen": "In beiden Fällen sehen alle die Tage des ganzen Teams, und nur eine Führungskraft ändert diese Einstellung.",
+    "team_1": "Aufgaben aller zuweisen, verschieben und abschließen",
+    "team_2": "Den Tag einer Kollegin, eines Kollegen oder des ganzen Teams mit KI planen",
+    "team_line": "Alle können Aufgaben in den Tag von Kolleginnen und Kollegen legen, Arbeit übergeben und den Tag des Teams planen.",
+    "team_title": "Das ganze Team plant gemeinsam",
+    "title": "Wer plant wessen Tag"
+  },
+  "read_only": "Nur eine Führungskraft kann den Arbeitstag, wer plant, die Typen und die Aufgaben ändern; hier können Sie sie ansehen. Vorlagen gehören allen.",
   "remove": "Entfernen",
   "remove_named": "Entfernen: {{name}}",
   "save_changes": "Änderungen speichern",
@@ -53,6 +68,7 @@
   "tab": {
     "account": "Konto",
     "day": "Arbeitstag",
+    "planning": "Wer plant",
     "tasks": "Aufgaben",
     "templates": "Vorlagen",
     "types": "Aufgabentypen"

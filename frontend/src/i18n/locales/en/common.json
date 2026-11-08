@@ -346,7 +346,11 @@
         "sign_ins": "{{n}} staff sign-ins",
         "crm_chat": "An AI chat for your website that answers from your knowledge",
         "crm_core": "Live inbox, visitors, leads, pipeline and tasks",
-        "crm_ai_base": "A monthly AI allowance for the assistant and reply drafts"
+        "crm_ai_base": "A monthly AI allowance for the assistant and reply drafts",
+        "time_core": "Day and week planner for the whole team, backlog and open pool",
+        "time_ai": "AI plans each day from skills, hours and experience",
+        "time_capture": "Tasks from a message or a voice note, reviews and insights",
+        "time_ai_base": "A monthly AI allowance for plans, reviews and capture"
       },
       "signup": {
         "step": "Step {{n}} of {{total}}",
@@ -404,6 +408,18 @@
         "register_title": "Start your HexaTech CRM trial",
         "trial_banner": "Your trial includes everything in HexaTech CRM.",
         "tab_title": "HexaTech CRM — Sign in"
+      },
+      "time": {
+        "badge": "AI planner for your team’s day",
+        "hero": "Every day planned. Nobody overloaded.",
+        "hero_sub": "A planner for the whole team where the AI fits each day to people’s skills, hours and experience, captures tasks from a message or a voice note and shows where the time really goes.",
+        "bullet_1": "Plan the day or the week by person, with drag and drop",
+        "bullet_2": "AI plans, reviews and captures tasks, even by voice",
+        "bullet_3": "Everyone plans for the team, or each their own day: you choose",
+        "login_subtitle": "Sign in to HexaTech Time Planner",
+        "register_title": "Start your HexaTech Time Planner trial",
+        "trial_banner": "Your trial includes everything in HexaTech Time Planner.",
+        "tab_title": "HexaTech Time Planner — Sign in"
       }
     }
   },
@@ -3623,7 +3639,8 @@
         "appointments": "Calendar, online booking and client records",
         "loyalty": "Points, tiers, rewards, a member app and campaigns",
         "content": "AI social media planner: ideas, captions, images and a calendar",
-        "crm": "AI website chat, live inbox, leads, pipeline and tasks"
+        "crm": "AI website chat, live inbox, leads, pipeline and tasks",
+        "time": "AI day planner for the team: plans, reviews, voice capture"
       },
       "over_limit_team": "This package allows {{limit}} team members and you have {{count}} active. Choose a larger package, or switch some off first.",
       "over_limit_members": "This package allows {{limit}} members and you have {{count}}. Choose a larger package.",

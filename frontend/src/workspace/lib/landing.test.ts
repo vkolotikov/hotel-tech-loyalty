@@ -94,6 +94,10 @@ describe('HexaTech CRM, the fourth workspace (2026-11-07)', () => {
     expect(landingPath(crmOnly, '/engagement')).toBe('/crm')
     expect(landingPath(crmOnly, '/crm/inbox?c=4')).toBe('/crm/inbox?c=4')
     expect(landingPath(staff({ crm: { landing: true } }), '/')).toBe('/crm')
+    // HexaTech Time Planner, sold on its own since 2026-11-09, comes after CRM and has its own sign-in page.
+    expect(planModules(staff({ time: { only: true }, crm: { landing: true, only: true } }))).toEqual(['crm', 'time'])
+    expect(landingPath(staff({ time: { landing: true } }), '/')).toBe('/time')
+    expect(loginPath({ pathname: '/time/plan', search: '?view=week' })).toBe('/time/login?redirect=%2Ftime%2Fplan%3Fview%3Dweek')
     expect(showsWorkspaceLink(staff({ crm: { landing: false } }), 'crm')).toBe(true)
   })
 

@@ -3,6 +3,7 @@
   "add_one": "Añadir {{count}} tarea",
   "add_other": "Añadir {{count}} tareas",
   "back": "Volver al texto",
+  "colleague_named": "«{{name}}» planifica su propio día: quédese la tarea usted o déjela sin asignar",
   "estimated": "estimada",
   "found": "Revise cada tarea. Desmarque lo que no deba añadirse.",
   "keep": "Añadir esta tarea",

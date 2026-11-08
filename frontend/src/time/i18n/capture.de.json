@@ -3,6 +3,7 @@
   "add_one": "{{count}} Aufgabe hinzufügen",
   "add_other": "{{count}} Aufgaben hinzufügen",
   "back": "Zurück zum Text",
+  "colleague_named": "„{{name}}“ plant den eigenen Tag: behalten Sie die Aufgabe selbst oder für niemanden",
   "estimated": "geschätzt",
   "found": "Prüfen Sie jede Aufgabe. Entfernen Sie das Häkchen bei allem, was nicht hinzugefügt werden soll.",
   "keep": "Diese Aufgabe hinzufügen",

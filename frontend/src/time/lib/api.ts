@@ -4,11 +4,12 @@ import type { ApplyResult, Board, Bootstrap, CaptureDraft, Insights, Person, Pla
 /**
  * Every call HexaTech Time Planner makes goes through here (2026-11-09). Its own reads and AI live under
  * `/v1/admin/time/…`, behind `workspace:time` (and the plan's `time_management`); tasks, the backlog, templates and day
- * notes are the full admin's own `planner/*` endpoints, the planner's lists its `crm-settings`, a person's skills its
- * `team/{id}` — whose rules (AccessMap) stay theirs. Only the areas in AREAS may be called; tokens.test.ts refuses any
+ * notes are the full admin's own `planner/*` endpoints, a person's skills its `team/{id}` — whose rules (AccessMap)
+ * stay theirs; the planner's settings are the workspace's `time/settings` (the full admin's rows, so an organisation
+ * that bought only the Time Planner never needs the CRM's settings area). Only the areas in AREAS may be called; tokens.test.ts refuses any
  * other API path in this folder.
  */
-export const AREAS = ['time', 'planner', 'crm-settings', 'team'] as const
+export const AREAS = ['time', 'planner', 'team'] as const
 
 export type Area = (typeof AREAS)[number]
 

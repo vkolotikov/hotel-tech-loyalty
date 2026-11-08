@@ -21,6 +21,7 @@
   "finished": "Done — well done",
   "horizon": "When it should be done",
   "length": "How long",
+  "locked": "{{name}} plans this task. In this planner everyone plans their own day; you can copy it to yours.",
   "mark_done": "Mark done",
   "minutes": "Minutes",
   "new": "New task",

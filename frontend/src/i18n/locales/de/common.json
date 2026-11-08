@@ -346,7 +346,11 @@
         "sign_ins": "{{n}} Mitarbeiter-Zugänge",
         "crm_chat": "Ein KI-Chat für Ihre Website, der aus Ihrem Wissen antwortet",
         "crm_core": "Live-Posteingang, Besucher, Leads, Pipeline und Aufgaben",
-        "crm_ai_base": "Ein monatliches KI-Kontingent für den Assistenten und Antwortentwürfe"
+        "crm_ai_base": "Ein monatliches KI-Kontingent für den Assistenten und Antwortentwürfe",
+        "time_core": "Tages- und Wochenplaner für das ganze Team, Backlog und offener Pool",
+        "time_ai": "KI plant jeden Tag nach Fähigkeiten, Arbeitszeiten und Erfahrung",
+        "time_capture": "Aufgaben aus Nachricht oder Sprachnotiz, Auswertungen und Einblicke",
+        "time_ai_base": "Ein monatliches KI-Kontingent für Pläne, Auswertungen und Erfassung"
       },
       "signup": {
         "step": "Schritt {{n}} von {{total}}",
@@ -404,6 +408,18 @@
         "register_title": "Ihre HexaTech-CRM-Testphase starten",
         "trial_banner": "Ihre Testphase umfasst alles in HexaTech CRM.",
         "tab_title": "HexaTech CRM — Anmelden"
+      },
+      "time": {
+        "badge": "KI-Planer für den Tag Ihres Teams",
+        "hero": "Jeder Tag geplant. Niemand überlastet.",
+        "hero_sub": "Ein Planer für das ganze Team: Die KI passt jeden Tag an Fähigkeiten, Arbeitszeiten und Erfahrung an, erfasst Aufgaben aus einer Nachricht oder Sprachnotiz und zeigt, wohin die Zeit wirklich geht.",
+        "bullet_1": "Tag oder Woche pro Person planen, per Drag-and-drop",
+        "bullet_2": "KI plant, bewertet und erfasst Aufgaben, sogar per Sprache",
+        "bullet_3": "Alle planen für das Team oder jede Person ihren Tag: Sie entscheiden",
+        "login_subtitle": "Bei HexaTech Time Planner anmelden",
+        "register_title": "Starten Sie Ihre Testphase von HexaTech Time Planner",
+        "trial_banner": "Ihre Testphase umfasst alles in HexaTech Time Planner.",
+        "tab_title": "HexaTech Time Planner — Anmelden"
       }
     }
   },
@@ -3579,7 +3595,8 @@
         "appointments": "Kalender, Online-Buchung und Kundenakten",
         "loyalty": "Punkte, Stufen, Prämien, eine Mitglieder-App und Kampagnen",
         "content": "KI-Planer für Social Media: Ideen, Texte, Bilder und ein Kalender",
-        "crm": "KI-Website-Chat, Live-Posteingang, Leads, Pipeline und Aufgaben"
+        "crm": "KI-Website-Chat, Live-Posteingang, Leads, Pipeline und Aufgaben",
+        "time": "KI-Tagesplaner für das Team: Pläne, Auswertungen, Spracheingabe"
       },
       "over_limit_team": "Dieses Paket erlaubt {{limit}} Teammitglieder, aktiv sind {{count}}. Wählen Sie ein größeres Paket oder deaktivieren Sie zuerst einige.",
       "over_limit_members": "Dieses Paket erlaubt {{limit}} Mitglieder, Sie haben {{count}}. Wählen Sie ein größeres Paket.",

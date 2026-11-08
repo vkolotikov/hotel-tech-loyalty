@@ -7,12 +7,19 @@ use App\Models\PlannerDayNote;
 use App\Models\PlannerSubtask;
 use App\Models\PlannerTask;
 use App\Models\PlannerTemplate;
+use App\Services\Time\PlanningMode;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
+/**
+ * The staff Planner's endpoints, shared by the full admin's Planner page and HexaTech Time Planner. Who may put work on
+ * whose day is the organisation's planning mode (PlanningMode, 2026-11-09): in `team` mode anyone's, in `own` mode a
+ * staff member changes only their own and unassigned tasks and assigns only to themselves (managers always may); every
+ * writer below asks it before it writes.
+ */
 class PlannerController extends Controller
 {
     /** Hard cap on how many child tasks a recurring series can spawn. */
@@ -73,6 +80,7 @@ class PlannerController extends Controller
             'pool_due_date'        => 'nullable|date|required_if:pool_horizon,day',
         ]);
 
+        PlanningMode::assertMayAssign($request->user(), $validated['assigned_to_user_id'] ?? null, $validated['employee_name'] ?? null);
         $validated['status'] = $validated['status'] ?? 'todo';
 
         // Normalise recurring=none → null so the column stays clean.
@@ -135,6 +143,7 @@ class PlannerController extends Controller
             'pool_due_date'        => 'nullable|date|required_if:pool_horizon,day',
         ]);
 
+        PlanningMode::assertMayUpdate($request->user(), $taskModel, $validated);
         $validated = $this->normalisePoolHorizon($validated);
 
         $taskModel->update($validated);
@@ -163,21 +172,25 @@ class PlannerController extends Controller
     public function destroyTask(Request $request, int $task): JsonResponse
     {
         $taskModel = $this->resolveTask($task);
+        $user = $request->user();
+        PlanningMode::assertMayChange($user, $taskModel);
+        $others = PlanningMode::mayPlanOthers($user);
         $scope = $request->get('scope', 'just_this'); // just_this | all_future | whole_series
 
         if ($scope === 'all_future' && ($taskModel->recurring_parent_id || $taskModel->recurring)) {
             $parentId = $taskModel->recurring_parent_id ?? $taskModel->id;
-            PlannerTask::where('id', $parentId)
-                ->orWhere('recurring_parent_id', $parentId)
-                ->where('task_date', '>=', $taskModel->task_date)
+            // Grouped as before (the parent, or a later occurrence); in `own` mode only the occurrences this person may change.
+            PlannerTask::where(fn ($q) => $q->where('id', $parentId)
+                ->orWhere(fn ($r) => $r->where('recurring_parent_id', $parentId)->where('task_date', '>=', $taskModel->task_date)))
+                ->when(!$others, fn ($q) => PlanningMode::onlyChangeable($q, $user))
                 ->delete();
             return response()->json(['message' => 'Future occurrences deleted']);
         }
 
         if ($scope === 'whole_series' && ($taskModel->recurring_parent_id || $taskModel->recurring)) {
             $parentId = $taskModel->recurring_parent_id ?? $taskModel->id;
-            PlannerTask::where('id', $parentId)
-                ->orWhere('recurring_parent_id', $parentId)
+            PlannerTask::where(fn ($q) => $q->where('id', $parentId)->orWhere('recurring_parent_id', $parentId))
+                ->when(!$others, fn ($q) => PlanningMode::onlyChangeable($q, $user))
                 ->delete();
             return response()->json(['message' => 'Whole series deleted']);
         }
@@ -198,6 +211,8 @@ class PlannerController extends Controller
             'assigned_to_user_id'  => ['nullable','integer', Rule::exists('users','id')->where('organization_id', $request->user()->organization_id)],
             'start_time'           => 'nullable|date_format:H:i',
         ]);
+
+        PlanningMode::assertMayUpdate($request->user(), $taskModel, $validated);
 
         // When unscheduling (task_date=null), also clear start_time —
         // a backlog task with a leftover start_time would re-render at a
@@ -439,6 +454,8 @@ class PlannerController extends Controller
             $copy->assigned_to_user_id = $validated['assigned_to_user_id'];
         }
         $copy->completed = false;
+        // The copy is new work on someone's day: in `own` mode only on the person's own, or nobody's.
+        PlanningMode::assertMayAssign($request->user(), $copy->assigned_to_user_id, $copy->employee_name);
         $copy->save();
 
         foreach ($taskModel->subtasks as $sub) {
@@ -452,9 +469,10 @@ class PlannerController extends Controller
         return response()->json($copy->load('subtasks'), 201);
     }
 
-    public function toggleComplete(int $task): JsonResponse
+    public function toggleComplete(Request $request, int $task): JsonResponse
     {
         $taskModel = $this->resolveTask($task);
+        PlanningMode::assertMayChange($request->user(), $taskModel);
         $newCompleted = !$taskModel->completed;
         $taskModel->update([
             'completed' => $newCompleted,
@@ -469,6 +487,7 @@ class PlannerController extends Controller
         $validated = $request->validate([
             'status' => 'required|string|in:todo,in_progress,blocked,done',
         ]);
+        PlanningMode::assertMayChange($request->user(), $taskModel);
         $taskModel->update([
             'status'    => $validated['status'],
             'completed' => $validated['status'] === 'done',
@@ -493,11 +512,21 @@ class PlannerController extends Controller
             'value'  => 'nullable|string|max:200',
         ]);
 
+        $user = $request->user();
+        if ($validated['action'] === 'reassign_employee') {
+            PlanningMode::assertMayAssign($user, null, $validated['value'] ?? null);
+        }
+        $others = PlanningMode::mayPlanOthers($user);
+
         $count = 0;
-        DB::transaction(function () use ($validated, &$count) {
+        DB::transaction(function () use ($validated, $user, $others, &$count) {
             foreach ($validated['ids'] as $id) {
                 $t = PlannerTask::lockForUpdate()->find($id);
                 if (!$t) continue;
+                // `own` mode: one task that is someone else's refuses the whole action (the transaction rolls back).
+                if (!$others) {
+                    PlanningMode::assertMayChange($user, $t);
+                }
 
                 $patch = match ($validated['action']) {
                     'mark_done'         => ['completed' => true,  'status' => 'done'],
@@ -530,6 +559,7 @@ class PlannerController extends Controller
     public function storeSubtask(Request $request, int $task): JsonResponse
     {
         $taskModel = $this->resolveTask($task);
+        PlanningMode::assertMayChange($request->user(), $taskModel);
         $validated = $request->validate(['title' => 'required|string|max:200']);
         $subtask = PlannerSubtask::create([
             'task_id'    => $taskModel->id,
@@ -539,18 +569,29 @@ class PlannerController extends Controller
         return response()->json($subtask, 201);
     }
 
-    public function toggleSubtask(int $subtask): JsonResponse
+    public function toggleSubtask(Request $request, int $subtask): JsonResponse
     {
         $subtaskModel = $this->resolveSubtask($subtask);
+        $this->assertMayChangeParent($request, $subtaskModel);
         $subtaskModel->update(['is_done' => !$subtaskModel->is_done]);
         return response()->json($subtaskModel);
     }
 
-    public function destroySubtask(int $subtask): JsonResponse
+    public function destroySubtask(Request $request, int $subtask): JsonResponse
     {
         $subtaskModel = $this->resolveSubtask($subtask);
+        $this->assertMayChangeParent($request, $subtaskModel);
         $subtaskModel->delete();
         return response()->json(['message' => 'Subtask deleted']);
+    }
+
+    /** A subtask is changed as its task is (PlanningMode). */
+    private function assertMayChangeParent(Request $request, PlannerSubtask $subtask): void
+    {
+        $parent = PlannerTask::find($subtask->task_id);
+        if ($parent) {
+            PlanningMode::assertMayChange($request->user(), $parent);
+        }
     }
 
     /* ─── Day notes ────────────────────────────────────────────── */
@@ -1044,11 +1085,13 @@ class PlannerController extends Controller
 
         $applied = 0;
         $skipped = 0;
+        $user = $request->user();
 
-        DB::transaction(function () use ($data, &$applied, &$skipped) {
+        DB::transaction(function () use ($data, $user, &$applied, &$skipped) {
             foreach ($data['proposals'] as $p) {
                 $task = PlannerTask::find($p['task_id']);
-                if (!$task || $task->start_time !== null) {
+                // In `own` mode a colleague's task is skipped, as one scheduled meanwhile is.
+                if (!$task || $task->start_time !== null || !PlanningMode::mayChange($user, $task)) {
                     // Task vanished, or someone scheduled it
                     // between preview + apply.
                     $skipped++;

@@ -13,6 +13,7 @@
   "caption": {
     "account": "Equipo y habilidades, y la administración completa",
     "day": "El horario del establecimiento y la jornada estándar",
+    "planning": "Todos para el equipo, o cada uno su día",
     "tasks": "En qué consiste cada tipo de trabajo",
     "templates": "Tareas ya preparadas para empezar",
     "types": "Los tipos de trabajo, con iconos y colores"
@@ -45,7 +46,21 @@
   "line": "Los ajustes del planificador, compartidos con el planificador de la administración completa.",
   "move_down": "Bajar: {{name}}",
   "move_up": "Subir: {{name}}",
-  "read_only": "Solo un responsable puede cambiar la jornada laboral, los tipos y las tareas; aquí puede verlos. Las plantillas son de todos.",
+  "planning": {
+    "chosen": "En uso",
+    "line": "Elija cómo trabaja su equipo. La misma regla se aplica en el Planificador de la administración completa.",
+    "own_1": "La tarea de un compañero se abre solo para lectura; se puede copiar al propio día",
+    "own_2": "Los responsables siguen planificando para cualquiera",
+    "own_line": "Cada persona añade, mueve y termina solo sus propias tareas, y toma trabajo de la bolsa abierta.",
+    "own_title": "Cada persona planifica su propio día",
+    "seen": "En ambos casos todos ven los días de todo el equipo, y solo un responsable cambia este ajuste.",
+    "team_1": "Asignar, mover y terminar las tareas de cualquiera",
+    "team_2": "Planificar con IA el día de un compañero o de todo el equipo",
+    "team_line": "Cualquiera puede añadir una tarea al día de un compañero, pasar trabajo y planificar el día del equipo.",
+    "team_title": "Todo el equipo planifica junto",
+    "title": "Quién planifica el día de quién"
+  },
+  "read_only": "Solo un responsable puede cambiar la jornada laboral, quién planifica, los tipos y las tareas; aquí puede verlos. Las plantillas son de todos.",
   "remove": "Quitar",
   "remove_named": "Quitar: {{name}}",
   "save_changes": "Guardar los cambios",
@@ -53,6 +68,7 @@
   "tab": {
     "account": "Cuenta",
     "day": "Jornada laboral",
+    "planning": "Quién planifica",
     "tasks": "Tareas",
     "templates": "Plantillas",
     "types": "Tipos de tarea"

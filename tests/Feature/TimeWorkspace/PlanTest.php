@@ -80,11 +80,18 @@ class PlanTest extends TestCase
         $this->assertSame('rules', $this->line($plan, $open)['source']);
     }
 
-    public function test_planning_someone_else_or_the_team_is_a_managers_and_a_past_day_cannot_be_planned(): void
+    public function test_planning_someone_else_or_the_team_follows_the_planning_mode_and_a_past_day_cannot_be_planned(): void
     {
         $this->task(['title' => 'Something']);
-        $this->asStaffMember()->postJson($this->timeApi('plan'), ['date' => '2026-11-04', 'scope' => 'team'])->assertStatus(403)->assertJsonPath('error', 'manager_only');
+        // `team` (the default): anyone plans a colleague's day or the team's.
+        $this->asStaffMember()->postJson($this->timeApi('plan'), ['date' => '2026-11-04', 'scope' => 'team', 'use_ai' => false])->assertOk();
+        $this->asStaffMember()->postJson($this->timeApi('plan'), ['date' => '2026-11-04', 'scope' => 'person', 'person' => 'u' . $this->anna->id, 'use_ai' => false])->assertOk();
+        // `own`: only one's own day, but a manager's is still anyone's.
+        $this->setting('planner_planning_mode', 'own');
+        $this->asStaffMember()->postJson($this->timeApi('plan'), ['date' => '2026-11-04', 'scope' => 'team'])->assertStatus(403)->assertJsonPath('error', 'own_day_only');
         $this->asStaffMember()->postJson($this->timeApi('plan'), ['date' => '2026-11-04', 'scope' => 'person', 'person' => 'u' . $this->anna->id])->assertStatus(403);
+        $this->asStaffMember()->postJson($this->timeApi('plan'), ['date' => '2026-11-04', 'scope' => 'me', 'use_ai' => false])->assertOk();
+        $this->asManager()->postJson($this->timeApi('plan'), ['date' => '2026-11-04', 'scope' => 'team', 'use_ai' => false])->assertOk();
         $this->asManager()->postJson($this->timeApi('plan'), ['date' => '2026-11-03', 'scope' => 'me'])->assertStatus(422)->assertJsonPath('error', 'past_day');
         $this->asManager()->postJson($this->timeApi('plan'), ['date' => '2026-11-04', 'scope' => 'person', 'person' => 'u999999'])->assertStatus(422)->assertJsonPath('error', 'no_person');
     }
@@ -157,6 +164,8 @@ class PlanTest extends TestCase
 
     public function test_applying_writes_what_was_accepted_and_skips_what_changed_or_is_not_yours(): void
     {
+        // A staff member who plans only their own day (`own`).
+        $this->setting('planner_planning_mode', 'own');
         $me = $this->staffMember;
         $mine = $this->task(['assigned_to_user_id' => $me->id, 'duration_minutes' => 30]);
         $pool = $this->task(['task_date' => null, 'title' => 'Pool task']);

@@ -19,7 +19,7 @@ vi.mock('react-i18next', () => ({
 vi.mock('../../lib/api', () => ({ api: {} }))
 
 const can = { plan_team: true, edit_people: true, team_buckets: true, manage_settings: true, manage_templates: true }
-const boot = (manager: boolean): Bootstrap => ({
+const boot = (manager: boolean, mode?: 'team' | 'own'): Bootstrap => ({
   name: 'HexaTech Time Planner',
   organization: { id: 7, name: 'Villa Riga', industry: 'hotel' },
   accent: null,
@@ -35,6 +35,7 @@ const boot = (manager: boolean): Bootstrap => ({
       { key: 'call', label: 'Call', icon: 'phone', color: '#22d3ee', groups: [] },
       { key: 'old_task', label: 'Old task', icon: 'phone', color: '#22d3ee', groups: ['Gone type'] },
     ],
+    ...(mode ? { planning_mode: mode } : {}),
   },
   counts: { today_open: 0, overdue: 0, pool: 0 },
 })
@@ -48,13 +49,13 @@ const TEMPLATES = [
   template(2, { name: 'Linen count', task_group: 'Housekeeping', task_category: 'room_check', duration_minutes: 45 }),
 ]
 
-function render(path: string, manager = true) {
+function render(path: string, manager = true, mode?: 'team' | 'own') {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } })
   qc.setQueryData(['time', 'templates'], TEMPLATES)
   return renderToStaticMarkup(
     <QueryClientProvider client={qc}>
       <MemoryRouter initialEntries={[path]}>
-        <TimeContext.Provider value={{ data: boot(manager), isLoading: false, isError: false, error: null, refetch: () => {} }}>
+        <TimeContext.Provider value={{ data: boot(manager, mode), isLoading: false, isError: false, error: null, refetch: () => {} }}>
           <Routes><Route path="/time/settings" element={<SettingsPage />} /></Routes>
         </TimeContext.Provider>
       </MemoryRouter>
@@ -76,7 +77,7 @@ describe('Settings', () => {
     expect(html).not.toContain('Only a manager can change')
     expect(html).not.toContain('You have unsaved changes.') // nothing changed yet
     // The other sections stay mounted, hidden.
-    expect(html.match(/<div hidden="">/g)?.length).toBe(4)
+    expect(html.match(/<div hidden="">/g)?.length).toBe(5)
   })
 
   it('lists the task types with their looks and every way to change them', () => {
@@ -117,9 +118,27 @@ describe('Settings', () => {
     expect(html).toContain('href="/settings?tab=team"')
   })
 
+  it('offers the two ways of planning, the one in use marked, and saves only a manager\'s choice', () => {
+    const html = render('/time/settings?tab=planning')
+    expect(html).toContain('data-section="planning"')
+    expect(html).toContain('Who plans whose day')
+    expect(html).toContain('role="radiogroup"')
+    // No choice made yet: the whole team plans together, as the planner always did.
+    expect(html).toMatch(/role="radio" aria-checked="true"[^>]*>.*The whole team plans together/)
+    expect(html).toMatch(/role="radio" aria-checked="false"[^>]*>.*Each person plans their own day/)
+    expect(html).toContain('Managers still plan for anyone')
+    expect(html).not.toMatch(/role="radio"[^>]*disabled=""/)
+
+    const own = render('/time/settings?tab=planning', true, 'own')
+    expect(own).toMatch(/role="radio" aria-checked="true"[^>]*>.*Each person plans their own day/)
+
+    const staff = render('/time/settings?tab=planning', false, 'own')
+    expect(staff.match(/role="radio" aria-checked="(true|false)" disabled=""/g)?.length).toBe(2)
+  })
+
   it('shows staff the settings read-only, with templates still theirs', () => {
     const html = render('/time/settings?tab=types', false)
-    expect(html).toContain('Only a manager can change the working day, the types and the tasks; you can see them here.')
+    expect(html).toContain('Only a manager can change the working day, who plans, the types and the tasks; you can see them here.')
     expect(html).not.toContain('aria-label="A new type"')
     expect(html).not.toContain('aria-label="Remove: Housekeeping"')
     expect(html).toMatch(/<input disabled=""[^>]*value="Housekeeping"/)

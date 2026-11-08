@@ -4,7 +4,7 @@ import type { Bootstrap, ChannelDef, GroupDef, Template } from '../lib/types'
 
 /**
  * Settings' decisions, kept pure because the page tests render to a string (2026-11-09). The planner's settings are the
- * full admin's own `crm-settings` rows and `planner/templates`, written in the full admin's shapes (its Settings →
+ * full admin's own `crm_settings` rows (the workspace's `time/settings`) and `planner/templates`, written in the full admin's shapes (its Settings →
  * Planner, components/PlannerSettings.tsx): the working day (`business_hours_profile` {start, end},
  * `planner_work_hours_per_day`, `planner_work_days_per_week`), the task types (`planner_groups` [{name, icon, color}])
  * and the tasks each type offers (`planner_channels` [{key, label, icon, color, groups}]). The server reads them
@@ -13,11 +13,23 @@ import type { Bootstrap, ChannelDef, GroupDef, Template } from '../lib/types'
 
 /* ─── The page's sections ────────────────────────────────────────── */
 
-export const SETTINGS_TABS = ['day', 'types', 'tasks', 'templates', 'account'] as const
+export const SETTINGS_TABS = ['day', 'planning', 'types', 'tasks', 'templates', 'account'] as const
 export type SettingsTab = (typeof SETTINGS_TABS)[number]
 
 export function settingsTabOf(value: string | null | undefined): SettingsTab {
   return (SETTINGS_TABS as readonly string[]).includes(value ?? '') ? (value as SettingsTab) : 'day'
+}
+
+/**
+ * Who may put work on whose day (owner 2026-11-09), the server's `planner_planning_mode` (PlanningMode): `team` — anyone
+ * plans for anyone, as the planner always was — or `own` — each person plans only their own day (managers still plan
+ * for anyone). The first is where an organisation that never chose is.
+ */
+export const PLANNING_MODES = ['team', 'own'] as const
+export type PlanningModeKey = (typeof PLANNING_MODES)[number]
+
+export function planningModeOf(value: unknown): PlanningModeKey {
+  return value === 'own' ? 'own' : 'team'
 }
 
 /** The address with the section in it (none for the first). */

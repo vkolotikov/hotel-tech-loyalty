@@ -84,8 +84,61 @@ source-patch baseline: 0ac5106** (later documentation commits on the branch are 
 3. To check the AI for real: production has the Anthropic and OpenAI keys the CRM uses; in the workspace, "Plan my day
    with AI" should answer with an AI summary (`source: ai`) and the microphone should write a voice note down.
 
+## Round 2: sold as a module, and who plans whose day
+
+The owner: "Make it a module sold separately like CRM and also includes in enterprise plan, lets make an option in
+settings, for some companies all team can add to others in some companies only each user can plan their day, lets make 2
+options which can be configured in settings of planner. after done, please deploy".
+
+- **The module** (`docs/plan-modules.md`): `PlanModules::MODULES['time']`, billing product `time_planner`, Lite /
+  Standard / Pro at CRM's prices (49 / 85 / 149 €, 15 % less yearly), alone and in every pair (105 module plans now);
+  every package carries `time_management`, and they differ by team (3 / 10 / 25 — Claude's proposal, the owner may
+  change them in billing's Plans) and the AI allowance (5 / 15 / 40 $). `/time/register`, `/time/login`, Plan &
+  products, landing on `/time`. AccessMap product `time` (`admin/time*`, `admin/planner*`, `admin/planner-presets`);
+  the workspace's settings moved off `crm-settings` onto its own `admin/time/settings` (the same rows, the planner's keys
+  only, a manager's change), so a Time-only organisation needs nothing of the CRM. Enterprise keeps it as before;
+  `workspace:time` refuses to switch it off for an organisation that bought it and on for one on other modules.
+- **The planning mode** (`docs/time-planner-workspace.md`, "Who plans whose day"): Settings → Who plans, two options —
+  *The whole team plans together* (`team`, the default: as the planner always was) and *Each person plans their own
+  day* (`own`: a staff member adds, changes, moves, clocks, finishes and deletes only their own and unassigned tasks,
+  gives work only to themselves, plans only their own day; everyone still sees the team's days). **Managers plan for
+  anyone in both modes** (they are the ones who choose it). One server rule, `App\Services\Time\PlanningMode`, asked by
+  the full admin's `PlannerController` and every Time Planner writer; refusal 403 `own_day_only`. In `team` mode staff
+  may now also plan a colleague's or the team's day with AI in the workspace (it was a manager's) — that is what "all
+  team can add to others" asks.
+
+### Decisions for the owner (round 2)
+
+- The team limits (3 / 10 / 25) and AI allowances (5 / 15 / 40 $) are proposals; prices are "like CRM".
+- Managers are never limited by the planning mode. If a company wants managers held to their own day too, that is a
+  third option, not built.
+- The option lives in the Time Planner's Settings; the full admin's Planner obeys it but has no switch of its own.
+
+### Checks (round 2)
+
+- PHP: new `tests/Feature/TimeWorkspace/PlanningModeTest.php` (10), `SettingsTest.php` (4),
+  `tests/Feature/AdminAccess/TimeModuleAccessTest.php` (6); updated `PlanTest`, `GateAndBootstrapTest`,
+  `PlanModulesTest`, `PlanModulesControllerTest` (105 plans). PostgreSQL 16 (`hexa_test`): TimeWorkspace 48, Planner 59,
+  AdminAccess 91, Auth 60 passed. Larastan: no errors.
+- Frontend: `tsc -b` clean; Vitest 454 files / 6,718 tests; lint baseline passed (1,398 legacy, none new).
+- Real browser (the Riga demo): Settings → Who plans at 1440 and 390, Dark and Light; in `own` mode as a staff member
+  the Planner hides "Plan the team with AI", a colleague's task opens read-only (dimmed, Close only, the reason said,
+  copy to one's own day kept), the people list is oneself; the API refuses a staff member's change of the setting (403);
+  `/time/login` and `/time/register` render in English and Russian with no overflow.
+- Billing (`hotel-tech-saas`, PostgreSQL 16, fresh and seeded): `ModulePlansTest` 10 passed, the whole suite 24 passed /
+  3 skipped, the migration idempotent, the 105 plans identical to `PlanModules`.
+
+### What the owner does by hand (round 2)
+
+1. **Billing** — this session was refused push access to `hotel-tech-saas`: apply
+   `docs/billing/2026-11-09-hotel-tech-saas-time-planner-packages.patch` on billing `main` and push (Laravel Cloud runs
+   the migration), then in billing's Commands tab `php artisan stripe:sync --module-plans --publish`. Steps and two
+   checking queries: `docs/plan-modules.md`, "Billing handover, 2026-11-09". Until then `/time/register` says the Time
+   Planner cannot be bought online yet; Enterprise customers have it already.
+2. Nothing else: every organisation starts in `team` mode, exactly as before.
+
 ## Left open
 
 - The full admin's own Planner does not show clocked time; its Stats count planned minutes as before.
 - Renaming a task type does not rename it on tasks, templates or preferences (as in the full admin).
-- Selling the Time Planner on its own (packages and prices) is the owner's decision; nothing of billing changed.
+- Selling the Time Planner on its own: built (round 2); billing's patch waits for the owner (above).

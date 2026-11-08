@@ -11,12 +11,14 @@ use App\Support\AdminAccess\AccessMap;
  * (`admin/planner*`, every staff member's, as its menu is everyone's) and its own (`admin/time*`); the few decisions
  * that are a manager's are the full admin's own:
  *
- * - planning someone else's day, or the whole team's, with the AI or the rules (`plan_team`), and its apply;
+ * - putting work on someone else's day — adding, assigning, moving, and planning a colleague's or the team's day with the
+ *   AI or the rules (`plan_team`): everyone's in the organisation's `team` planning mode, a manager's in `own` mode
+ *   (PlanningMode, the server's rule for the full admin's planner endpoints too);
  * - a person's planner profile (`edit_people`) and their skills, which only the full admin's `PUT team/{id}` writes
  *   (AccessMap `admin/team`: changes a manager's);
  * - the team's backlog buckets (`planner/backlog?scope=team`, refused to staff by PlannerController);
- * - the planner's settings (`manage_settings`): the full admin keeps them on its Settings page, a manager's menu; the
- *   `crm-settings` endpoint itself stays every staff member's (owner 2026-11-08), so this only hides the controls.
+ * - the planner's settings (`manage_settings`), the workspace's own `PUT admin/time/settings/{key}` (AccessMap: a
+ *   manager's change), among them the planning mode.
  *
  * forBootstrap() answers those rules so the workspace can hide what the server would refuse; the server decides.
  */
@@ -47,7 +49,7 @@ final class TimeAccess
         $manager = self::isManager($user);
 
         return [
-            'plan_team'        => $manager,
+            'plan_team'        => $manager || PlanningMode::current() === PlanningMode::TEAM,
             'edit_people'      => $manager,
             'team_buckets'     => $manager,
             'manage_settings'  => $manager,

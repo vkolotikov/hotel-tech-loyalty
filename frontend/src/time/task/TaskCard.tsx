@@ -6,6 +6,7 @@ import { timeApi } from '../lib/api'
 import { errorText } from '../lib/errors'
 import { dayLabel, duration } from '../lib/format'
 import { useRefresh } from '../lib/queries'
+import { mayChange, rightsOf } from '../lib/rights'
 import { plannerApi } from '../lib/tasks'
 import type { Task } from '../lib/types'
 import { useToast } from '../ui/Toast'
@@ -38,7 +39,8 @@ export function useTaskActions() {
 
 /**
  * One task in a list (My day, the backlog, a lane): its tick, title, time, length, type, steps and clock, and a press to
- * open it. `compact` drops the second line.
+ * open it. `compact` drops the second line. A colleague's task in the `own` planning mode shows its tick without a press
+ * and no clock (PlanningMode refuses both).
  */
 export function TaskCard({ task, onOpen, showDay = false, compact = false, actions }: {
   task: Task
@@ -52,11 +54,12 @@ export function TaskCard({ task, onOpen, showDay = false, compact = false, actio
   const { toggle, clock } = useTaskActions()
   const units = { h: t('time.common.h', 'h'), min: t('time.common.min', 'min') }
   const high = task.priority_rank === 0
+  const changeable = mayChange(rightsOf(useBoot()), task)
 
   return (
     <div className={`group flex min-w-0 items-start gap-3 rounded-xl border border-a-border bg-a-surface px-3 py-2.5 shadow-a-sm transition-colors hover:border-a-text-2/40 ${task.done ? 'opacity-70' : ''}`}
       style={{ borderLeftColor: color, borderLeftWidth: 3 }}>
-      <button type="button" onClick={() => toggle.mutate(task)} disabled={toggle.isPending}
+      <button type="button" onClick={() => toggle.mutate(task)} disabled={toggle.isPending || !changeable}
         aria-label={task.done ? t('time.task.undo_done', 'Mark not done') : t('time.task.mark_done', 'Mark done')}
         className="mt-0.5 shrink-0 text-a-text-2 hover:text-a-st-confirmed">
         {task.done ? <CheckCircle2 size={19} aria-hidden className="text-a-st-confirmed" /> : <Circle size={19} aria-hidden />}
@@ -83,7 +86,7 @@ export function TaskCard({ task, onOpen, showDay = false, compact = false, actio
       </button>
       <div className="flex shrink-0 items-center gap-1">
         {actions}
-        {!task.done && (task.running ? (
+        {!task.done && changeable && (task.running ? (
           <>
             <button type="button" onClick={() => clock.mutate({ task, action: 'pause' })} aria-label={t('time.task.pause', 'Pause')}
               className="inline-flex h-8 items-center gap-1 rounded-full bg-a-st-progress/12 px-2.5 text-xs font-semibold text-a-st-progress">
