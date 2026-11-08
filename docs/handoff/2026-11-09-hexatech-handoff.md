@@ -128,6 +128,18 @@ options which can be configured in settings of planner. after done, please deplo
 - Billing (`hotel-tech-saas`, PostgreSQL 16, fresh and seeded): `ModulePlansTest` 10 passed, the whole suite 24 passed /
   3 skipped, the migration idempotent, the 105 plans identical to `PlanModules`.
 
+### Deploy (round 2)
+
+Production **ddf1d04**, by the source-patch recipe on `origin/main` 08e2225 (which had moved on since this session's first
+deploy: another session's delivery-availability release; none of its files overlap this one's): source patch
+**9e51421** (the branch from **0ac5106** to **3ced302**, 71 files: 10 added, 61 changed, none deleted; per-file parity
+with the tip), fresh build **ddf1d04** (built paths only). No migration. **Next source-patch baseline: 3ced302.**
+
+- Artifact checks (the deploy checkout): the full PHP sweep, 80 runs, **7,539 passed, 0 failed, 24 skipped**; `tsc -b`
+  clean; Vitest **454 files / 6,719 tests** passed; `npm run build` succeeded (main's newer `package.json` adds a
+  dev-only minimatch override; the checkout used this container's `node_modules`, and Laravel Cloud builds with its own).
+- Live: being verified (bundle by content, CI run 42504508569).
+
 ### What the owner does by hand (round 2)
 
 1. **Billing** — this session was refused push access to `hotel-tech-saas`: apply
