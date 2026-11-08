@@ -89,7 +89,7 @@ final class BotGaps
                 'answer'          => mb_substr((string) $answer->content, 0, 2000),
                 'comment'         => $newest->comment ? mb_substr((string) $newest->comment, 0, 1000) : null,
                 'rated_by'        => $newest->user?->name,
-                'rated_by_id'     => $newest->user_id !== null ? (int) $newest->user_id : null,
+                'rated_by_id'     => (int) $newest->user_id ?: null,
                 'rated_at'        => $newest->updated_at?->toIso8601String(),
                 'ratings'         => $ratings->count(),
                 'suggested_answer' => $suggestion ? mb_substr((string) $suggestion->suggested_answer, 0, 10000) : null,

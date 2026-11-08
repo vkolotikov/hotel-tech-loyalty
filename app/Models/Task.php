@@ -42,6 +42,7 @@ class Task extends Model
         'custom_data'    => 'array',
     ];
 
+    /** @return BelongsTo<Inquiry, $this> */
     public function inquiry(): BelongsTo
     {
         return $this->belongsTo(Inquiry::class);

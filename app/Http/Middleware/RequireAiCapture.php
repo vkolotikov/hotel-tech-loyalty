@@ -6,7 +6,6 @@ use App\Models\Organization;
 use App\Models\User;
 use Closure;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
@@ -29,7 +28,7 @@ class RequireAiCapture
     /** Whether this organisation may use the AI capture (the CRM's bootstrap reads the same answer). */
     public static function allows(?Organization $org, ?User $user = null): bool
     {
-        if ($user && method_exists($user, 'isPlatformAdmin') && $user->isPlatformAdmin()) {
+        if ($user && $user->isPlatformAdmin()) {
             return true;
         }
         if (!$org) {
@@ -41,12 +40,15 @@ class RequireAiCapture
 
     public function handle(Request $request, Closure $next): Response
     {
-        $user = Auth::user();
-        if ($user && method_exists($user, 'isPlatformAdmin') && $user->isPlatformAdmin()) {
+        $user = $request->user();
+        if (!$user instanceof User) {
+            return response()->json(['error' => 'No organization context', 'code' => 'no_org'], 403);
+        }
+        if ($user->isPlatformAdmin()) {
             return $next($request);
         }
 
-        $org = $user?->organization;
+        $org = $user->organization_id ? Organization::withoutGlobalScopes()->find((int) $user->organization_id) : null;
         if (!$org) {
             return response()->json(['error' => 'No organization context', 'code' => 'no_org'], 403);
         }

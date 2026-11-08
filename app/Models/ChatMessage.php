@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Traits\BelongsToOrganization;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class ChatMessage extends Model
 {
@@ -54,7 +55,8 @@ class ChatMessage extends Model
         return $this->belongsTo(ChatConversation::class, 'conversation_id');
     }
 
-    public function senderUser()
+    /** @return BelongsTo<User, $this> */
+    public function senderUser(): BelongsTo
     {
         return $this->belongsTo(User::class, 'sender_user_id');
     }

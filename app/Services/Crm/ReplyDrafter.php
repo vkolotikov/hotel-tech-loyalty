@@ -39,7 +39,7 @@ final class ReplyDrafter
         if (!$this->usage->isModelAllowed($org, self::MODEL)) {
             throw new CrmRefused('model_not_allowed', 'Your plan does not include the AI model that drafts replies.', 403);
         }
-        if (($this->usage->budgetStatus($org)['status'] ?? null) === 'over') {
+        if ($this->usage->budgetStatus($org)['status'] === 'over') {
             throw new CrmRefused('ai_budget_used_up', "This month's AI allowance is used up. Drafts are back next month, or with a larger package.", 403);
         }
 

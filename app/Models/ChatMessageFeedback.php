@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Traits\BelongsToOrganization;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class ChatMessageFeedback extends Model
 {
@@ -31,7 +32,8 @@ class ChatMessageFeedback extends Model
         return $this->belongsTo(ChatMessage::class, 'message_id');
     }
 
-    public function user()
+    /** @return BelongsTo<User, $this> */
+    public function user(): BelongsTo
     {
         return $this->belongsTo(User::class, 'user_id');
     }

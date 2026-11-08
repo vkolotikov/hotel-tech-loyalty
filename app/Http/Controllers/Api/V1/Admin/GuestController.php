@@ -331,8 +331,7 @@ class GuestController extends Controller
             return [];
         }
 
-        return array_values(array_filter($present, fn ($field) => is_string($field)
-            && in_array($field, self::CLEARABLE_FIELDS, true)
+        return array_values(array_filter($present, fn (string $field) => in_array($field, self::CLEARABLE_FIELDS, true)
             && array_key_exists($field, $sent)
             && $sent[$field] === null));
     }

@@ -9,6 +9,10 @@ use App\Scopes\BrandScope;
 use App\Traits\BelongsToBrand;
 use App\Traits\BelongsToOrganization;
 
+/**
+ * @property int $organization_id
+ * @property int|null $brand_id
+ */
 class Inquiry extends Model
 {
     use BelongsToOrganization, BelongsToBrand;
@@ -87,6 +91,7 @@ class Inquiry extends Model
         'external_submitted_at'     => 'datetime',
     ];
 
+    /** @return BelongsTo<Guest, $this> */
     public function guest(): BelongsTo
     {
         return $this->belongsTo(Guest::class);
@@ -135,6 +140,7 @@ class Inquiry extends Model
         return $this->belongsTo(Property::class);
     }
 
+    /** @return HasMany<Reservation, $this> */
     public function reservations(): HasMany
     {
         return $this->hasMany(Reservation::class);
