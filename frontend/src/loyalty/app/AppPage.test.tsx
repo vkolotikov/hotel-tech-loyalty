@@ -6,8 +6,8 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key: string, fallback?: string | Record<string, unknown>, vars?: Record<string, unknown>) => {
-      const text = typeof fallback === 'string' ? fallback : key
-      return text.replace(/\{\{(\w+)\}\}/g, (_, name) => String((vars ?? {})[name] ?? ''))
+      const text = typeof fallback === 'string' ? fallback : String(fallback?.defaultValue ?? key)
+      return text.replace(/\{\{(\w+)\}\}/g, (_, name) => String((vars ?? (typeof fallback === 'object' ? fallback : {}))[name] ?? ''))
     },
     i18n: { language: 'en' },
   }),
@@ -81,7 +81,7 @@ describe('Card & app (release 2 §7)', () => {
   it('shows the two tabs, the address\'s selected and the only tab stop', () => {
     const html = render('?tab=app', manager)
     // Release 10: each tab is a card in its colour with a line of what it holds.
-    expect(html).toMatch(/role="tab" id="app-tab-app" aria-selected="true"[^>]*tabindex="0"[^>]*data-hue="tier"[\s\S]*?<span>Member app<\/span>[\s\S]*?The member app’s colours and logo/)
+    expect(html).toMatch(/role="tab" id="app-tab-app" aria-selected="true"[^>]*tabindex="0"[^>]*data-hue="tier"[\s\S]*?<span>Member app<\/span>[\s\S]*?On hold/)
     expect(html).toMatch(/role="tab" id="app-tab-wallet" aria-selected="false"[^>]*tabindex="-1"[^>]*data-hue="gift"[\s\S]*?<span>Wallet pass<\/span>[\s\S]*?The card in Apple and Google Wallet/)
     expect(render('', manager)).toMatch(/id="app-tab-wallet" aria-selected="true"/)
   })
@@ -118,34 +118,23 @@ describe('Card & app (release 2 §7)', () => {
     expect(html).not.toContain('type="password"')
   })
 
-  it('shows the presets, the chosen one pressed, every colour, the styles and the logo', () => {
+  it('parks disconnected design controls even at an old appearance bookmark', () => {
     const html = render('?tab=app', manager)
     const words = text(html)
-    expect(html).toMatch(/aria-pressed="true" data-preset="gold_classic"/)
-    expect(html).toMatch(/aria-pressed="false" data-preset="royal_sapphire"/)
-    expect(words).toContain('Gold Classic Warm gold on near black.')
-    expect(html.match(/data-colour=""/g)).toHaveLength(11)
-    for (const label of ['Accent', 'Quiet text', 'Second surface', 'Information']) expect(words).toContain(label)
-    expect(html).toContain('value="#c9a84c"')
-    expect(html).toMatch(/aria-pressed="true"[^>]*>Glass</)
-    expect(html).toMatch(/aria-pressed="true"[^>]*>Outline</)
-    expect(html).toMatch(/aria-pressed="true"[^>]*>Bold</)
-    expect(words).toContain('20 px')
-    expect(html).toMatch(/<img src="\/storage\/org-1\/logos\/logo.png" alt="The venue’s logo" loading="lazy"/)
-    expect(words).toContain('Replace logo')
-    expect(words).not.toContain('Not saved yet.')
+    expect(words).toContain('Member app designer On hold')
+    expect(words).toContain('Desktop designer On hold')
+    expect(words).toContain('portal’s venue accent and heading font')
+    expect(html).not.toContain('data-colour')
+    expect(html).not.toContain('<form')
+    expect(html).not.toContain('Save appearance')
   })
 
-  it('draws the phone preview with the form\'s colours: a glass card, an outlined button, the top tier and the logo', () => {
-    const html = render('?tab=app', manager)
-    const svg = html.slice(html.indexOf('data-preview'))
-    expect(svg).toContain('fill="#0d0d0d"')
-    expect(svg).toMatch(/rx="20" fill="#c9a84c" fill-opacity="0.15" stroke="#c9a84c" stroke-opacity="0.3"/)
-    expect(svg).toMatch(/rx="14" fill="none" fill-opacity="0" stroke="#c9a84c" stroke-width="2"/)
-    expect(svg).toContain('Gold member')
-    expect(svg).toContain('href="/storage/org-1/logos/logo.png"')
-    expect(svg).toContain('Lumière Spa')
-    expect(html).toMatch(/role="img" aria-labelledby="[^"]+"/)
+  it('distinguishes saving credentials from provider approval and explains who connects them', () => {
+    const words = text(render('?tab=wallet', manager))
+    expect(words).toContain('An organisation owner or authorised manager')
+    expect(words).toContain('Members then add their own card')
+    expect(words).toContain('Uploading files alone does not confirm provider approval or delivery')
+    expect(words).toContain('publishing access')
   })
 })
 

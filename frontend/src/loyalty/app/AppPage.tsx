@@ -6,12 +6,11 @@ import { PageHeader } from '../../workspace/ui/PageHeader'
 import { useBoot } from '../LoyaltyProvider'
 import { APP_TABS, appAccess, tabFrom, type AppTab } from './appMath'
 import { CurrencyTab } from './CurrencyTab'
-import { LookTab } from './LookTab'
 import { WalletTab } from './WalletTab'
 import { TAB_CAPTION_WORDS, TAB_WORDS } from './words'
 import { SectionCards } from '../ui/SectionCards'
 import type { Hue } from '../ui/sections'
-import { CardAppPage } from './design/CardAppPage'
+import { AppDesignAvailability, CardAppPage } from './design/CardAppPage'
 import { useCardWords } from './design/words'
 
 const TAB_ICONS: Record<AppTab, LucideIcon> = { wallet: CreditCard, app: Smartphone, currency: Coins }
@@ -31,7 +30,7 @@ export function AppPage() {
 }
 
 function AppSettings() {
-  const { t } = useTranslation()
+  const { t } = useTranslation(), say = useCardWords()
   const boot = useBoot()
   const location = useLocation()
   const navigate = useNavigate()
@@ -53,17 +52,17 @@ function AppSettings() {
 
   return (
     <div className="space-y-5 px-4 py-6 lg:px-6">
-      <PageHeader stacked title={title} line={t('loyalty.app.line', 'The card members keep in their phone’s wallet, and how the member app looks.')} />
+      <PageHeader stacked title={title} line={say('availabilityLine')} />
 
       <SectionCards label={t('loyalty.app.tabs', 'Card and app areas')} idPrefix="app-tab" panelId="app-panel" value={tab} onChange={go}
         items={APP_TABS.map(name => ({
           id: name, icon: TAB_ICONS[name], hue: TAB_HUE[name],
           title: t(`loyalty.app.tab.${name}`, TAB_WORDS[name]),
-          caption: t(`loyalty.app.tab_caption.${name}`, TAB_CAPTION_WORDS[name]),
+          caption: name === 'app' ? say('onHold') : t(`loyalty.app.tab_caption.${name}`, TAB_CAPTION_WORDS[name]),
         }))} />
 
       <div id="app-panel" role="tabpanel" aria-labelledby={`app-tab-${tab}`} className="space-y-5">
-        {tab === 'wallet' ? <WalletTab wallet={access.wallet} /> : tab === 'currency' ? <CurrencyTab /> : <LookTab />}
+        {tab === 'wallet' ? <WalletTab wallet={access.wallet} /> : tab === 'currency' ? <CurrencyTab /> : <AppDesignAvailability />}
       </div>
     </div>
   )
