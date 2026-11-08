@@ -30,18 +30,49 @@ This session finishes HexaTech CRM (round 3) and deploys it. Runbooks: `docs/crm
 
 ## Checks (this container, 8 Nov, before the deploy)
 
-- PHP sweep, every `tests/Feature` and `tests/Unit` directory and top-level file, one run each: the only failures were
-  three `tests/Feature/Admin` tests that pinned the refusals of the merge, the member tier change and the campaign send;
-  those endpoints keep their old answers (see above) and the directory passes again (119). Final numbers below.
+- PHP sweep, every `tests/Feature` and `tests/Unit` directory and top-level file, one run each (79 runs): 7,489 passed,
+  17 skipped, 3 failed — three `tests/Feature/Admin` tests that pinned the refusals of the merge, the member tier change
+  and the campaign send; those endpoints keep their old answers (see above) and the directory passes again (117).
+  The suites that call them (`AdminAccess`, `CrmWorkspace`, `LoyaltyWorkspace`, `Mail`, `Middleware`) passed again after.
 - Frontend: `tsc -b` clean; **438 Vitest files, 6,449 tests** passed; lint baseline passed (1,398 legacy, none new).
 - Real browser on the local demo, as a staff member, 1440 Dark and Light and 390 Dark: Deals shows From a message and
   Add a deal; a deal added by hand opens as won and is listed in Deals; From a message says our sentence when the AI
   cannot be reached; Leads' "Not assigned" lists the unowned lead; no console error, failed request or overflow.
 
-## Deploy
+## Deploy (8 Nov, 09:12 UTC)
 
-By the source-patch recipe (`docs/landing-page-builder.md` §6), from `origin/main` f828dbf (the branch's own base, so
-the source delta is the branch's whole diff, built assets excluded). Results are recorded below once it is out.
+Production **a55d1f4**, by the source-patch recipe (`docs/landing-page-builder.md` §6) on `origin/main` f828dbf: source
+patch **0c345ac** (359 files of the branch at **25610e2**, 284 added, 75 changed, none deleted; whole-tree parity with
+the tip, built paths aside), fresh build **a55d1f4** (`frontend/dist`, `public/spa`, `resources/spa-shell` only). **Next
+source-patch baseline: 25610e2** (later documentation commits on the branch are not the baseline). Rounds 1 and 2 went
+out with it (nothing of HexaTech CRM had been deployed before).
+
+- Artifact checks (the deploy checkout, before the push): PHP `CrmWorkspace` 71 (+1 skipped), `AdminAccess` 85, `Admin`
+  117, `Crm` 268, `Widget` 75, `Chatbot` 48, `Auth` 57 (+3 skipped), `Unit/Support` 189, all passed; `tsc -b` clean;
+  Vitest 438 files / 6,449 tests passed; `npm run build` succeeded.
+- Branch checks: the full PHP sweep (79 runs, 7,492 passed and 17 skipped once the three `Admin` tests above were
+  answered); PostgreSQL 16 (`hexa_crm_r2_test`, every migration): `CrmWorkspace` 72, `Admin` 117, `Crm` 268, `Widget` 75,
+  `Booking` 597, `Knowledge` 24, `LoyaltyWorkspace` 661, `Notifications` 73, `Reviews` 10 passed; `Loyalty` 377 passed and
+  6 failed, all six of the documented "test states production cannot hold" (`docs/loyalty-workspace.md`: a member with
+  no tier, no user or no referral code; an assessment with no old tier), in services this release does not touch.
+- Live, verified by content: `https://app.hexa-tech.uk/` serves `index-Bid0an0a.js` (the previous release served
+  `index-DjwDxAMD.js`), which loads `CrmApp-Ce96hZ70.js`; `DealsPage-CyxukW4-.js` holds `crm.deals.new` and `ai_capture`,
+  `LeadForm-DdPNfU23.js` "A deal from a message" and the `/won` call, `LeadsPage-CbPkubQO.js` the `_nobody` / `unassigned`
+  filter; `/crm/login` and `/crm/register` answer 200; `api/v1/admin/crm/bootstrap` and `crm-ai/capture-lead` answer 401
+  unauthenticated (the routes exist; before this release the first was a 404). Landing continuity:
+  `https://sites.hexa-tech.uk/hexa-academy` 200, its kit stylesheet with zero `rp-` markers.
+- Post-deploy CI: https://github.com/vkolotikov/hotel-tech-loyalty/actions/runs/42466176460 — every test job green
+  (PHP on SQLite in three shards, PHP on PostgreSQL 18 with only the known failures, the SPA on Node 24 and 26, the
+  dependency audit); **Larastan failed with 33 new findings**, all in this release's code. Fixed at the cause in a
+  follow-up (below): relation methods with their related model typed (`ChatMessage::senderUser`,
+  `ChatMessageFeedback::user`, `ChatConversation::assignedAgent`, `Inquiry::guest` / `reservations`, `Task::inquiry`),
+  `Inquiry`'s `organization_id` / `brand_id` documented, `RequireAiCapture` reads the organisation as a typed model,
+  checks that can never fail removed. Typing `Inquiry::guest` showed an old bug: the staff voice assistant's lead
+  lookups answered the guest's `name`, a column guests do not have (always empty); they now answer `full_name`.
+  Larastan clean locally (`vendor/bin/phpstan analyse`).
+- The container's network: the live hosts were refused by the Default environment; the owner approved a personal
+  environment **HexaTech** (the Default's hosts plus `app.hexa-tech.uk` and `sites.hexa-tech.uk`) and this session moved
+  onto it. It has no variables: a session that needs `EXPO_TOKEN` or the Stripe test keys uses the Default.
 
 ## What the owner does by hand
 

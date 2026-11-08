@@ -633,7 +633,7 @@ class CrmVoiceToolset
                     'check_out'           => $i->check_out instanceof \Carbon\Carbon ? $i->check_out->toDateString() : $i->check_out,
                     'guest'               => $i->guest ? [
                         'id'      => $i->guest->id,
-                        'name'    => $i->guest->name,
+                        'name'    => $i->guest->full_name,
                         'email'   => $i->guest->email,
                         'phone'   => $i->guest->phone,
                         'company' => $i->guest->company,
@@ -1542,7 +1542,7 @@ class CrmVoiceToolset
             'check_out'           => $i->check_out instanceof \Carbon\Carbon ? $i->check_out->toDateString() : $i->check_out,
             'guest'               => $i->guest ? [
                 'id'      => $i->guest->id,
-                'name'    => $i->guest->name,
+                'name'    => $i->guest->full_name,
                 'email'   => $i->guest->email,
                 'phone'   => $i->guest->phone,
                 'company' => $i->guest->company,

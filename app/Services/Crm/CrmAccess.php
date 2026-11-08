@@ -24,7 +24,7 @@ final class CrmAccess
 
     public static function isManager(User $user): bool
     {
-        if (method_exists($user, 'isPlatformAdmin') && $user->isPlatformAdmin()) {
+        if ($user->isPlatformAdmin()) {
             return true;
         }
 

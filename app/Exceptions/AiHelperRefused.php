@@ -38,7 +38,7 @@ final class AiHelperRefused extends \DomainException
     /** Refuses before any provider call once the organisation's month of AI is used up. */
     public static function unlessAllowanceLeft(?Organization $org): void
     {
-        if ((app(AiUsageService::class)->budgetStatus($org)['status'] ?? null) === 'over') {
+        if (app(AiUsageService::class)->budgetStatus($org)['status'] === 'over') {
             throw new self('ai_budget_used_up', "This month's AI allowance is used up. The AI helpers are back next month, or with a larger package.", 403);
         }
     }

@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Traits\BelongsToBrand;
 use App\Traits\BelongsToOrganization;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class ChatConversation extends Model
 {
@@ -73,7 +74,8 @@ class ChatConversation extends Model
         return $this->belongsTo(LoyaltyMember::class, 'member_id');
     }
 
-    public function assignedAgent()
+    /** @return BelongsTo<User, $this> */
+    public function assignedAgent(): BelongsTo
     {
         return $this->belongsTo(User::class, 'assigned_to');
     }
