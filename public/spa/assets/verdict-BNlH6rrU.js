@@ -1,0 +1,1 @@
+import{Rn as e}from"./index-CoeyZR9v.js";function t(){let{t}=e();return e=>t(e.key,e.fallback,e.vars)}export{t};
