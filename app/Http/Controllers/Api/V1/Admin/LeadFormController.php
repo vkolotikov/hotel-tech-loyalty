@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\LeadForm;
 use Illuminate\Http\JsonResponse;
+use App\Services\Booking\Setup\OwnRows;
 use Illuminate\Http\Request;
 
 /**
@@ -60,7 +61,7 @@ class LeadFormController extends Controller
             'description'           => 'sometimes|nullable|string|max:500',
             'default_source'        => 'sometimes|nullable|string|max:100',
             'default_inquiry_type'  => 'sometimes|nullable|string|max:50',
-            'default_property_id'   => 'sometimes|nullable|integer|exists:properties,id',
+            'default_property_id'   => ['sometimes', 'nullable', 'integer', OwnRows::rule('properties')],
             'default_assigned_to'   => 'sometimes|nullable|string|max:150',
             'fields'                => 'sometimes|array',
             'design'                => 'sometimes|array',

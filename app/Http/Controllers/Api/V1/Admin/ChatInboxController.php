@@ -39,17 +39,7 @@ class ChatInboxController extends Controller
         // opts in via ?include_empty=1, when searching, or when a filter is
         // applied that implies intent.
         if (!$request->boolean('include_empty') && !$request->filled('search')) {
-            $query->where(function ($q) {
-                $q->whereExists(function ($sub) {
-                    $sub->select(DB::raw(1))
-                        ->from('chat_messages')
-                        ->whereColumn('chat_messages.conversation_id', 'chat_conversations.id')
-                        ->where('chat_messages.sender_type', 'visitor');
-                })
-                ->orWhereNotNull('visitor_email')
-                ->orWhereNotNull('visitor_phone')
-                ->orWhere('lead_captured', true);
-            });
+            $query->shownInInbox();
         }
 
         // Filter by status. Accept 'closed' as an alias for resolved+archived
@@ -179,10 +169,17 @@ class ChatInboxController extends Controller
             ->orderBy('created_at')
             ->get();
 
-        // Attach feedback for each AI message so the UI can show the existing rating.
+        // Attach feedback for each AI message so the UI can show the existing rating. Each person rates on their own
+        // row, so the reader's own rating is shown when there is one, else the newest anyone gave (2026-11-08: before,
+        // whichever row came last, so a person could see a colleague's rating as theirs).
         $aiMessageIds = $messages->where('sender_type', 'ai')->pluck('id')->all();
+        $readerId = (int) optional($request->user())->id;
         $feedback = $aiMessageIds
-            ? ChatMessageFeedback::whereIn('message_id', $aiMessageIds)->get()->keyBy('message_id')
+            ? ChatMessageFeedback::whereIn('message_id', $aiMessageIds)
+                ->orderByDesc('updated_at')->orderByDesc('id')
+                ->get()
+                ->groupBy('message_id')
+                ->map(fn ($rows) => $rows->firstWhere('user_id', $readerId) ?? $rows->first())
             : collect();
         $messages->each(function ($m) use ($feedback) {
             $m->feedback = $feedback->get($m->id);
@@ -240,6 +237,12 @@ class ChatInboxController extends Controller
     /**
      * Submit thumbs up/down feedback on an AI message and optionally save the
      * correction to the knowledge base so the AI learns from it.
+     *
+     * Teaching is a manager's (2026-11-08), as `admin/knowledge` is: a manager's (or a platform admin's)
+     * `apply_to_training` with a `corrected_answer` writes the "AI Corrections" knowledge item. A staff member's is
+     * kept on their own feedback row as `suggested_answer` for a manager to check (HexaTech CRM's "Teach the
+     * assistant", BotGaps), and the answer says `applied_to_training: false, suggested: true`. Sending the feedback
+     * again without `comment` keeps the caller's earlier comment.
      */
     public function submitFeedback(Request $request, int $messageId): JsonResponse
     {
@@ -258,20 +261,32 @@ class ChatInboxController extends Controller
             ->where('id', $message->conversation_id)
             ->firstOrFail();
 
+        $wantsTeaching = !empty($validated['apply_to_training']) && trim((string) ($validated['corrected_answer'] ?? '')) !== '';
+        $teaches = $wantsTeaching && \App\Services\Crm\CrmAccess::isManager($request->user());
+
+        $values = [
+            'organization_id'     => $orgId,
+            'rating'              => $validated['rating'],
+            'applied_to_training' => false,
+        ];
+        // A resend without a comment (a rating change, a suggestion) keeps the comment written before.
+        if ($request->exists('comment')) {
+            $values['comment'] = $validated['comment'] ?? null;
+        }
+        // Only a staff member's correction is kept as a suggestion; a manager's is taught below.
+        if ($wantsTeaching && !$teaches) {
+            $values['suggested_answer'] = $validated['corrected_answer'];
+        }
+
         $feedback = ChatMessageFeedback::updateOrCreate(
             ['message_id' => $messageId, 'user_id' => $request->user()->id],
-            [
-                'organization_id'    => $orgId,
-                'rating'             => $validated['rating'],
-                'comment'            => $validated['comment'] ?? null,
-                'applied_to_training' => false,
-            ]
+            $values
         );
 
         // If they want to teach the AI: find the visitor question that triggered
         // this AI reply and store it as a knowledge item so future similar
         // questions get the corrected answer.
-        if (!empty($validated['apply_to_training']) && !empty($validated['corrected_answer'])) {
+        if ($teaches) {
             try {
                 // Get the visitor message immediately preceding this AI message.
                 $question = ChatMessage::where('conversation_id', $conv->id)
@@ -304,7 +319,12 @@ class ChatInboxController extends Controller
             }
         }
 
-        return response()->json($feedback->fresh());
+        $saved = $feedback->fresh();
+
+        return response()->json($saved->toArray() + [
+            // True when this request kept a staff member's corrected answer as a suggestion (nothing was taught).
+            'suggested' => $wantsTeaching && !$teaches,
+        ]);
     }
 
     /**
@@ -528,8 +548,11 @@ class ChatInboxController extends Controller
             ->findOrFail($id);
 
         $messages = ChatMessage::where('conversation_id', $id)
+            ->with('senderUser:id,name')
             ->orderBy('id')
             ->get();
+        // Each team message is signed by the person who sent it (2026-11-08), not by whoever answers the chat now.
+        $agentName = fn (ChatMessage $m) => $m->senderUser?->name ?: ($m->sender_user_id ? 'Agent' : ($conversation->active_agent_name ?: 'Agent'));
 
         $format = $request->input('format', 'text');
         $visitor = $conversation->visitor_name ?: 'Visitor';
@@ -540,7 +563,7 @@ class ChatInboxController extends Controller
             foreach ($messages as $m) {
                 $who = match ($m->sender_type) {
                     'visitor' => htmlspecialchars($visitor),
-                    'agent'   => htmlspecialchars($conversation->active_agent_name ?: 'Agent'),
+                    'agent'   => htmlspecialchars($agentName($m)),
                     'ai'      => 'AI Assistant',
                     'system'  => 'System',
                     default   => ucfirst($m->sender_type),
@@ -567,7 +590,7 @@ class ChatInboxController extends Controller
         foreach ($messages as $m) {
             $who = match ($m->sender_type) {
                 'visitor' => $visitor,
-                'agent'   => $conversation->active_agent_name ?: 'Agent',
+                'agent'   => $agentName($m),
                 'ai'      => 'AI',
                 'system'  => 'System',
                 default   => ucfirst($m->sender_type),
@@ -707,16 +730,19 @@ class ChatInboxController extends Controller
     public function stats(Request $request): JsonResponse
     {
         $orgId = $request->user()->organization_id;
+        // Every count is of the conversations the list shows by default (2026-11-08): a widget opened and never
+        // written in is not a chat, so the figures match the list beside them.
+        $shown = fn () => ChatConversation::where('organization_id', $orgId)->shownInInbox();
 
         // Single grouped query for per-status counts — was 4+ separate counts
-        $statusCounts = ChatConversation::where('organization_id', $orgId)
+        $statusCounts = $shown()
             ->selectRaw('status, COUNT(*) as total')
             ->groupBy('status')
             ->pluck('total', 'status');
 
         // Active conversations that have actually had a message in the last 24h —
         // excludes abandoned widget-open rows and AI-only chatter.
-        $active24h = ChatConversation::where('organization_id', $orgId)
+        $active24h = $shown()
             ->whereIn('status', ['active', 'waiting'])
             ->where(function ($q) {
                 $q->where('last_message_at', '>=', now()->subHours(24))
@@ -733,14 +759,15 @@ class ChatInboxController extends Controller
             ->where('chat_messages.is_read', false)
             ->count();
 
-        $unassigned = ChatConversation::where('organization_id', $orgId)
+        $unassigned = $shown()
             ->whereIn('status', ['active', 'waiting'])
             ->whereNull('assigned_to')
             ->count();
 
-        $resolvedToday = ChatConversation::where('organization_id', $orgId)
+        // "Today" is the venue's day.
+        $resolvedToday = $shown()
             ->where('status', 'resolved')
-            ->where('updated_at', '>=', today())
+            ->where('updated_at', '>=', \Carbon\CarbonImmutable::now(\App\Services\Appointments\VenueClock::zone((int) $orgId))->startOfDay()->utc())
             ->count();
 
         $active   = (int) ($statusCounts['active']   ?? 0);
@@ -879,7 +906,7 @@ class ChatInboxController extends Controller
 
         $apiKey = config('openai.api_key') ?: env('OPENAI_API_KEY');
         if (!$apiKey) {
-            return response()->json(['error' => 'Transcription is not configured'], 503);
+            return response()->json(['error' => 'transcription_unavailable', 'message' => 'Transcription is not configured'], 503);
         }
 
         $file = $request->file('audio');

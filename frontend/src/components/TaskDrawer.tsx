@@ -101,11 +101,15 @@ function splitDueAt(dueAt: string | null): { date: string; slot: string } {
   return { date: fmtDateInput(d), slot: `${pad(d.getHours())}:${pad(d.getMinutes())}` }
 }
 
-/** Combine a date + slot back into a local datetime-local string. */
+/**
+ * Combine a date + slot (the person's own clock) into the instant it names, as ISO UTC. The server stores `due_at`
+ * as an instant and answers it as one, which splitDueAt reads back on the same local clock — sending the bare local
+ * digits made the server read them as UTC, so every saved time moved by the person's offset.
+ */
 function joinDueAt(date: string, slot: string): string | null {
   if (!date) return null
-  if (!slot) return `${date}T00:00`
-  return `${date}T${slot}`
+  const local = new Date(`${date}T${slot || '00:00'}`)
+  return isNaN(local.getTime()) ? null : local.toISOString()
 }
 
 export function TaskDrawer({ task, defaultInquiryId, onClose, onSaved }: Props) {

@@ -25,6 +25,11 @@ class PlanModulesTest extends TestCase
             [['crm', 'loyalty', 'booking', 'chat'], null],
             [['appointments', 'crm'], null],
             [['content', 'chat'], null],
+            // HexaTech CRM (2026-11-07) has its own product: the full suite's `crm` and `chat` never name it.
+            [['crm_chat'], ['crm']],
+            [['crm_chat', 'loyalty'], ['loyalty', 'crm']],
+            [['crm_chat', 'crm'], null],
+            [['crm_chat', 'chat'], null],
             // Names no module.
             [['booking'], null],
             [[], null],
@@ -54,6 +59,14 @@ class PlanModulesTest extends TestCase
         $this->assertSame(['lite', 'standard', 'pro'], PlanModules::tiers('appointments'));
         $this->assertSame(['appointments' => 'pro'], PlanModules::selectionFromPlanSlug('appointments_pro'));
         $this->assertSame('appointments_lite-loyalty', PlanModules::planSlug(['loyalty' => 'standard', 'appointments' => 'lite']));
+
+        // HexaTech CRM, the fourth module, comes last in every slug and its name keeps its capitals.
+        $this->assertSame(['crm' => 'lite'], PlanModules::selectionFromPlanSlug('crm_lite'));
+        $this->assertSame('loyalty_pro-crm', PlanModules::planSlug(['crm' => 'standard', 'loyalty' => 'pro']));
+        $this->assertNull(PlanModules::selectionFromPlanSlug('crm-loyalty'), 'not in module order');
+        $this->assertSame('HexaTech CRM Pro', PlanModules::planName(['crm' => 'pro']));
+        $this->assertSame('HexaTech Content + HexaTech CRM', PlanModules::planName(['crm', 'content']));
+        $this->assertSame(['crm_chat'], PlanModules::products(['crm']));
     }
 
     public function test_prices_by_package_and_yearly_fifteen_percent_less(): void
@@ -95,6 +108,14 @@ class PlanModulesTest extends TestCase
         $this->assertSame(['5', '5', 'email'], array_map(fn ($k) => PlanModules::features(['appointments'])[$k], ['max_booking_staff', 'max_team_members', 'priority_support']));
         $this->assertSame(['15', '15', 'priority'], array_map(fn ($k) => PlanModules::features(['appointments' => 'pro'])[$k], ['max_booking_staff', 'max_team_members', 'priority_support']));
         $this->assertSame(['2', '2500', 'true'], array_map(fn ($k) => PlanModules::features(['appointments' => 'lite', 'loyalty' => 'standard'])[$k], ['max_booking_staff', 'max_loyalty_members', 'campaigns']));
+
+        $crm = PlanModules::features(['crm' => 'lite']);
+        $this->assertSame(['2', 'true', 'true', '1000', 'false', '0'], [$crm['max_team_members'], $crm['chatbot'], $crm['engagement'], $crm['ai_monthly_cost_cents'], $crm['campaigns'], $crm['max_loyalty_members']]);
+        $this->assertSame(['5', '5000', '2500'], array_map(fn ($k) => PlanModules::features(['crm'])[$k], ['max_team_members', 'max_guests', 'ai_monthly_cost_cents']));
+        $this->assertSame(['15', '20000', '6000', 'priority'], array_map(fn ($k) => PlanModules::features(['crm' => 'pro'])[$k], ['max_team_members', 'max_guests', 'ai_monthly_cost_cents', 'priority_support']));
+        // One AI allowance per organisation: Content's and CRM's add up; a CRM package never adds Loyalty's campaigns.
+        $this->assertSame('7500', PlanModules::features(['content' => 'pro', 'crm' => 'standard'])['ai_monthly_cost_cents']);
+        $this->assertSame('false', PlanModules::features(['loyalty' => 'lite', 'crm' => 'pro'])['campaigns']);
 
         $both = PlanModules::features(['loyalty' => 'lite', 'content' => 'pro']);
         $this->assertSame(['500', '15', 'false', '5000', 'priority'], [$both['max_loyalty_members'], $both['max_team_members'], $both['campaigns'], $both['ai_monthly_cost_cents'], $both['priority_support']], 'the largest limit, any switch, the highest support');

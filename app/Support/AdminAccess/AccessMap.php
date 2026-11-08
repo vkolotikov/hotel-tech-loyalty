@@ -21,9 +21,10 @@ use Illuminate\Routing\Route;
  * - `product` says what an organisation on modules may reach (owner
  *   2026-11-02; the Appointments plan was the first): `account` and the
  *   workspaces it bought — `appointments`, `loyalty`, `content` — see
- *   productsFor(). The others (`admin`, `booking`, `crm`, `chat`) are the
- *   full admin's, recorded for the day the existing plans are enforced too;
- *   a full customer reaches every product.
+ *   productsFor(). HexaTech CRM (2026-11-07) reaches `crm` and `chat`, the
+ *   areas its workspace works on (MODULE_PRODUCTS). The others (`admin`,
+ *   `booking`) are the full admin's, recorded for the day the existing plans
+ *   are enforced too; a full customer reaches every product.
  *
  * Manager exactly where the menu's page is manager-only. Changes there are
  * manager-only; reads are manager-only only for sensitive data, because
@@ -52,8 +53,22 @@ final class AccessMap
      */
     public static function productsFor(array $modules): array
     {
-        return array_values(array_unique(array_merge(self::MODULE_BASE_PRODUCTS, array_intersect($modules, self::PRODUCTS))));
+        $products = [];
+        foreach ($modules as $module) {
+            array_push($products, ...(self::MODULE_PRODUCTS[$module] ?? [$module]));
+        }
+
+        return array_values(array_unique(array_merge(self::MODULE_BASE_PRODUCTS, array_intersect($products, self::PRODUCTS))));
     }
+
+    /**
+     * A module whose workspace works on more than its own product: HexaTech CRM's inbox, chatbot and widget are the
+     * `chat` endpoints, its leads, pipeline, contacts and tasks the `crm` ones (owner 2026-11-07: one portal for both).
+     * Every other module reaches the product of its own name.
+     *
+     * @var array<string, list<string>>
+     */
+    public const MODULE_PRODUCTS = ['crm' => ['crm', 'chat']];
 
     /** @var array{0: string, 1: string, 2: string} */
     public const FALLBACK = ['manager', 'manager', 'admin'];
@@ -63,6 +78,8 @@ final class AccessMap
         // ── The workspace (Setup keeps its own manager rule, SetupAccess)
         'admin/appointments'                    => ['staff',              'staff',              'appointments'],  // The workspace; Setup keeps its own manager rule (SetupAccess)
         'admin/content'                         => ['staff',              'staff',              'content'],       // HexaTech Content; brand, strategy and whole-calendar AI keep their own manager rule (ContentAccess)
+        'admin/crm'                             => ['staff',              'staff',              'crm'],           // HexaTech CRM (2026-11-07): bootstrap, Today, setup steps, the inbox's AI draft; reads only but the draft
+        'admin/crm/bot-gaps'                    => ['staff',              'manager',            'chat'],           // HexaTech CRM: answers the chatbot got wrong (read by everyone; answering teaches the bot: manager, as admin/knowledge)
         'admin/loyalty'                         => ['staff',              'staff',              'loyalty'],       // HexaTech Loyalty; award and redeem keep their capabilities (LoyaltyAccess)
         'admin/loyalty/requests/inbox'           => ['staff',              'manager',            'loyalty'],       // Read-only combined index; existing source endpoints decide every mutation
         'admin/loyalty/devices'                 => ['staff',              'staff',              'loyalty'],       // The caller's own phone in the HexaTech Staff app, for request alerts

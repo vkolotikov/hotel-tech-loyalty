@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Api\V1\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\ChatConversation;
 use App\Models\ChatMessage;
+use App\Services\Appointments\VenueClock;
+use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -14,13 +16,19 @@ class ChatbotAnalyticsController extends Controller
     public function index(Request $request): JsonResponse
     {
         $orgId = $request->user()->organization_id;
-        $days  = min((int) ($request->days ?? 30), 365);
-        $from  = now()->subDays($days - 1)->startOfDay();
+        $days  = max(1, min((int) ($request->days ?? 30), 365));
+        // Days and hours are the venue's (2026-11-08): the window starts at the venue's midnight, and every DATE() /
+        // hour / weekday below reads the stored UTC instant on the venue's clock. Timestamps are stored in UTC
+        // (`timestamp without time zone`), so `(col AT TIME ZONE 'UTC') AT TIME ZONE <zone>` is the venue's wall clock.
+        $zone  = self::zoneOf((int) $orgId);
+        $venueNow = CarbonImmutable::now($zone);
+        $from  = $venueNow->subDays($days - 1)->startOfDay()->utc();
+        $local = fn (string $column) => self::onVenueClock($column, $zone);
         // Previous-period window of equal length, ending the instant
         // the current window begins. Used for delta computation on
         // every overview KPI + an overlay line on the trend chart.
-        $prevFrom = (clone $from)->subDays($days);
-        $prevTo   = (clone $from)->subSecond();
+        $prevFrom = $venueNow->subDays($days - 1)->startOfDay()->subDays($days)->utc();
+        $prevTo   = $from->subSecond();
 
         // ── Overview KPIs (current period) ───────────────────────────────────
         $overview = $this->computeOverview($orgId, $from, null);
@@ -37,31 +45,32 @@ class ChatbotAnalyticsController extends Controller
         // Three series per day: total conversations, engaged
         // conversations (visitor sent ≥1 message), AI-resolved count.
         // Plus the previous-period total for the comparison overlay.
+        $createdDay = 'DATE(' . $local('created_at') . ')';
         $trendRows = ChatConversation::where('organization_id', $orgId)
             ->where('created_at', '>=', $from)
             ->select(
-                DB::raw("DATE(created_at) as date"),
+                DB::raw("{$createdDay}::text as date"),
                 DB::raw('COUNT(*) as count'),
                 DB::raw("SUM(CASE WHEN messages_count > 0 THEN 1 ELSE 0 END) as engaged_count"),
                 DB::raw("SUM(CASE WHEN status = 'resolved' AND assigned_to IS NULL THEN 1 ELSE 0 END) as ai_resolved_count")
             )
-            ->groupBy(DB::raw('DATE(created_at)'))
+            ->groupBy(DB::raw($createdDay))
             ->orderBy('date')
             ->get()
             ->keyBy('date');
 
         $prevTrendRows = ChatConversation::where('organization_id', $orgId)
             ->whereBetween('created_at', [$prevFrom, $prevTo])
-            ->select(DB::raw("DATE(created_at) as date"), DB::raw('COUNT(*) as count'))
-            ->groupBy(DB::raw('DATE(created_at)'))
+            ->select(DB::raw("{$createdDay}::text as date"), DB::raw('COUNT(*) as count'))
+            ->groupBy(DB::raw($createdDay))
             ->orderBy('date')
             ->get()
             ->keyBy('date');
 
         $trend = [];
         for ($i = $days - 1; $i >= 0; $i--) {
-            $date    = now()->subDays($i)->format('Y-m-d');
-            $prevDate = now()->subDays($i + $days)->format('Y-m-d');
+            $date    = $venueNow->subDays($i)->format('Y-m-d');
+            $prevDate = $venueNow->subDays($i + $days)->format('Y-m-d');
             $row = $trendRows[$date] ?? null;
             // $dayTotal, NOT $total: this loop used to assign to $total, which
             // is the PERIOD total read from $overview above. After the loop it
@@ -124,17 +133,18 @@ class ChatbotAnalyticsController extends Controller
         // 1) conversations  = distinct conversation_id touched per hour
         // 2) visitors       = distinct visitor_id touched per hour
         // 3) replies        = visitor-typed messages per hour
+        $messageHour = 'EXTRACT(HOUR FROM ' . $local('chat_messages.created_at') . ')::int';
         $hourlyRaw = ChatMessage::join('chat_conversations', 'chat_messages.conversation_id', '=', 'chat_conversations.id')
             ->where('chat_conversations.organization_id', $orgId)
             ->where('chat_messages.created_at', '>=', $from)
             ->selectRaw("
-                EXTRACT(HOUR FROM chat_messages.created_at)::int AS hour,
+                {$messageHour} AS hour,
                 COUNT(DISTINCT chat_conversations.id) AS conversations,
                 COUNT(DISTINCT chat_conversations.visitor_id) AS visitors,
                 SUM(CASE WHEN chat_messages.sender_type = 'visitor' THEN 1 ELSE 0 END) AS replies
             ")
-            ->groupByRaw('EXTRACT(HOUR FROM chat_messages.created_at)::int')
-            ->orderByRaw('EXTRACT(HOUR FROM chat_messages.created_at)::int')
+            ->groupByRaw($messageHour)
+            ->orderByRaw($messageHour)
             ->get()
             ->keyBy('hour');
 
@@ -156,16 +166,17 @@ class ChatbotAnalyticsController extends Controller
         // ── Weekday distribution (Mon-Sun) ───────────────────────────────────
         // Three series per day mirroring the hourly chart:
         //   conversations / visitors / replies.
+        $messageWeekday = 'EXTRACT(DOW FROM ' . $local('chat_messages.created_at') . ')::int';
         $weekdayRows = ChatMessage::join('chat_conversations', 'chat_messages.conversation_id', '=', 'chat_conversations.id')
             ->where('chat_conversations.organization_id', $orgId)
             ->where('chat_messages.created_at', '>=', $from)
             ->selectRaw("
-                EXTRACT(DOW FROM chat_messages.created_at)::int AS dow,
+                {$messageWeekday} AS dow,
                 COUNT(DISTINCT chat_conversations.id) AS conversations,
                 COUNT(DISTINCT chat_conversations.visitor_id) AS visitors,
                 SUM(CASE WHEN chat_messages.sender_type = 'visitor' THEN 1 ELSE 0 END) AS replies
             ")
-            ->groupByRaw('EXTRACT(DOW FROM chat_messages.created_at)::int')
+            ->groupByRaw($messageWeekday)
             ->get()
             ->keyBy('dow');
 
@@ -263,6 +274,23 @@ class ChatbotAnalyticsController extends Controller
             'funnel'              => $funnel,
             'length_distribution' => $lengthDistribution,
         ]);
+    }
+
+    /** The venue's zone (VenueClock), a name PostgreSQL knows: anything else counts as UTC. */
+    private static function zoneOf(int $orgId): string
+    {
+        $zone = VenueClock::zone($orgId);
+
+        return in_array($zone, \DateTimeZone::listIdentifiers(), true) ? $zone : 'UTC';
+    }
+
+    /**
+     * A stored UTC timestamp column read on the venue's clock. The zone is written into the SQL as a quoted literal
+     * (a name from the IANA list only, see zoneOf), so the same expression can stand in SELECT and GROUP BY.
+     */
+    private static function onVenueClock(string $column, string $zone): string
+    {
+        return "(({$column}) AT TIME ZONE 'UTC') AT TIME ZONE " . DB::getPdo()->quote($zone);
     }
 
     /**

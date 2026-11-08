@@ -899,6 +899,7 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
             Route::get('widget-config',                       [ChatWidgetConfigController::class, 'show']);
             Route::put('widget-config',                       [ChatWidgetConfigController::class, 'update']);
             Route::post('widget-config/regenerate-key',       [ChatWidgetConfigController::class, 'regenerateKey']);
+            Route::post('widget-config/rotate-widget-key',    [ChatWidgetConfigController::class, 'rotateWidgetKey']);
             Route::post('widget-config/upload-avatar',        [ChatWidgetConfigController::class, 'uploadAvatar']);
             Route::get('widget-config/embed-code',            [ChatWidgetConfigController::class, 'embedCode']);
 
@@ -1591,6 +1592,22 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
                 Route::delete('offers/{id}/image', [\App\Http\Controllers\Api\V1\Admin\Loyalty\ImageController::class, 'destroyOffer'])->whereNumber('id');
             });
 
+            // ─── HexaTech CRM workspace ─────────────────────────────────────
+            // The AI chat widget, the live inbox and the CRM as one workspace
+            // (2026-11-07), sold on its own as the `crm` module. Its own reads
+            // are here; everything else it shows is the full admin's chat and
+            // CRM endpoints above, under their own rules. Every organisation
+            // has it unless an operator switched it off
+            // (`php artisan workspace:crm <organisation id> --off`).
+            Route::prefix('crm')->middleware('workspace:crm')->group(function () {
+                Route::get('bootstrap', [\App\Http\Controllers\Api\V1\Admin\Crm\WorkspaceController::class, 'bootstrap']);
+                Route::get('today', [\App\Http\Controllers\Api\V1\Admin\Crm\WorkspaceController::class, 'today']);
+                Route::get('start', [\App\Http\Controllers\Api\V1\Admin\Crm\WorkspaceController::class, 'start']);
+                Route::get('bot-gaps', [\App\Http\Controllers\Api\V1\Admin\Crm\AssistantController::class, 'gaps']);
+                Route::post('conversations/{id}/draft', [\App\Http\Controllers\Api\V1\Admin\Crm\AssistantController::class, 'draft'])
+                    ->whereNumber('id')->middleware(['feature:chatbot', 'throttle:20,1,crm-draft']);
+            });
+
             // ─── Audit Logs ──────────────────────────────────────────────────
             Route::get('audit-logs',                      [AuditLogController::class, 'index']);
             Route::get('operations-status', \App\Http\Controllers\Api\V1\Admin\OperationsStatusController::class)->middleware('throttle:30,1,operations-status');
@@ -1616,6 +1633,12 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
                 Route::post('crm-ai/voice-tool',              [CrmAiController::class, 'executeVoiceTool']);
                 // Ship 9 — voice usage billing.
                 Route::post('crm-ai/voice-usage',             [CrmAiController::class, 'recordVoiceUsage']);
+            });
+
+            // The AI capture (a pasted message read into a form a person checks): every staff member of an
+            // organisation with the CRM workspace on, as well as a plan with `admin_ai` (owner, 2026-11-08;
+            // RequireAiCapture). The month's AI allowance still stops it (CrmAiController).
+            Route::middleware('ai.capture')->group(function () {
                 Route::post('crm-ai/capture-lead',            [CrmAiController::class, 'captureLead']);
                 Route::post('crm-ai/capture-member',          [CrmAiController::class, 'captureMember']);
                 Route::post('crm-ai/capture-corporate',       [CrmAiController::class, 'captureCorporate']);

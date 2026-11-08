@@ -116,6 +116,7 @@
       "appointments_workspace": "HexaTech Appointments",
       "appointments_workspace_open": "Ouvrir dans HexaTech Appointments",
       "content_workspace": "HexaTech Content",
+      "crm_workspace": "HexaTech CRM",
       "loyalty_workspace": "HexaTech Loyalty",
       "landing_featured_reviews": "Avis mis en avant"
     }
@@ -341,7 +342,10 @@
         "bookable_any": "Membres de l'équipe réservables sans limite",
         "booking_page": "Votre page de réservation en ligne et un widget pour votre site",
         "booking_core": "Agenda, fiches clients, paiements et recettes",
-        "sign_ins": "{{n}} accès pour le personnel"
+        "sign_ins": "{{n}} accès pour le personnel",
+        "crm_chat": "Un chat IA pour votre site qui répond à partir de vos informations",
+        "crm_core": "Messagerie en direct, visiteurs, prospects, pipeline et tâches",
+        "crm_ai_base": "Un crédit IA mensuel pour l'assistant et les brouillons de réponse"
       },
       "signup": {
         "step": "Étape {{n}} sur {{total}}",
@@ -387,6 +391,18 @@
         "register_title": "Commencez votre essai de HexaTech Appointments",
         "trial_banner": "Votre essai comprend tout HexaTech Appointments.",
         "tab_title": "HexaTech Appointments — Connexion"
+      },
+      "crm": {
+        "badge": "Chat IA pour site web et CRM",
+        "hero": "Répondez à chaque visiteur. Relancez chaque prospect.",
+        "hero_sub": "Un chat IA sur votre site qui répond à partir de vos propres informations, une messagerie en direct pour votre équipe, et les prospects, le pipeline et les tâches qui transforment les chats en clients.",
+        "bullet_1": "Un assistant IA sur votre site, jour et nuit, avec vos mots",
+        "bullet_2": "Une seule messagerie : reprenez n'importe quel chat, avec des réponses rédigées par l'IA",
+        "bullet_3": "Prospects, pipeline et relances pour n'oublier personne",
+        "login_subtitle": "Se connecter à HexaTech CRM",
+        "register_title": "Commencer votre essai d'HexaTech CRM",
+        "trial_banner": "Votre essai comprend tout HexaTech CRM.",
+        "tab_title": "HexaTech CRM — Connexion"
       }
     }
   },
@@ -3561,7 +3577,8 @@
       "blurb": {
         "appointments": "Agenda, réservation en ligne et fiches clients",
         "loyalty": "Points, niveaux, récompenses, une application membre et des campagnes",
-        "content": "Planificateur IA pour les réseaux sociaux : idées, légendes, images et calendrier"
+        "content": "Planificateur IA pour les réseaux sociaux : idées, légendes, images et calendrier",
+        "crm": "Chat IA pour site web, messagerie en direct, prospects, pipeline et tâches"
       },
       "over_limit_team": "Cette formule permet {{limit}} membres d’équipe et vous en avez {{count}} actifs. Choisissez une formule plus grande, ou désactivez-en d’abord.",
       "over_limit_members": "Cette formule permet {{limit}} membres et vous en avez {{count}}. Choisissez une formule plus grande.",

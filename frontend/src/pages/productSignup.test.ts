@@ -116,6 +116,36 @@ describe('HexaTech Appointments on its own (owner 2026-11-04)', () => {
   })
 })
 
+describe('HexaTech CRM on its own (2026-11-07)', () => {
+  it('has its own sign-in and sign-up pages, and Standard is its bare name', () => {
+    expect(SIGNUP_PRODUCTS).toContain('crm')
+    expect(authPath('crm', 'register')).toBe('/crm/register')
+    expect(viewFromPath('/crm/register')).toBe('trial')
+    expect(viewFromPath('/crm/forgot-password')).toBe('forgot')
+    expect(packageSlug('crm', 'standard')).toBe('crm')
+    expect(packageSlug('crm', 'pro')).toBe('crm_pro')
+    expect(productHome('crm', '/')).toBe('/crm')
+  })
+
+  it('reads its lines from what the server grants: the chat, the CRM, the AI allowance as a multiple, the team', () => {
+    const lite = { ai_monthly_cost_cents: '1000', max_guests: '1000', max_team_members: '2' }
+    const pro = { ai_monthly_cost_cents: '6000', max_guests: '20000', max_team_members: '15', max_properties: '3', priority_support: 'priority' }
+    const proLines = packageLines('crm', pro, lite, t, 'en')
+    expect(proLines.map(l => l.text)).toEqual([
+      'An AI chat for your website that answers from your knowledge',
+      'Live inbox, visitors, leads, pipeline and tasks',
+      '6× the monthly AI allowance of Lite',
+      '15 team members',
+      '3 locations',
+      'Priority support',
+    ])
+    expect(proLines.every(l => l.included)).toBe(true)
+    const liteLines = packageLines('crm', lite, lite, t, 'en')
+    expect(liteLines[2].text).toBe('A monthly AI allowance for the assistant and reply drafts')
+    expect(liteLines.at(-1)).toEqual({ text: 'Priority support', included: false })
+  })
+})
+
 describe('the sign-up\'s type of business', () => {
   it('orders every business type for each product, its likeliest first and "Something else" last', () => {
     for (const product of SIGNUP_PRODUCTS) {
@@ -179,11 +209,12 @@ describe('Plan & products decisions', () => {
   })
 
   it('lists the products held first and names the plan by its packages', () => {
-    const names = { appointments: 'A', loyalty: 'HexaTech Loyalty', content: 'HexaTech Content' }
+    const names = { appointments: 'A', loyalty: 'HexaTech Loyalty', content: 'HexaTech Content', crm: 'HexaTech CRM' }
     const pkgs = { lite: 'Lite', standard: 'Standard', pro: 'Pro' } as const
     expect(orderedProducts(state().products).map(p => p.key)).toEqual(['loyalty', 'appointments', 'content'])
     expect(planName({ content: 'lite', loyalty: 'pro' }, names, pkgs)).toBe('HexaTech Loyalty Pro + HexaTech Content Lite')
     expect(planName(['loyalty', 'content'], names, pkgs)).toBe('HexaTech Loyalty + HexaTech Content')
     expect(productName('loyalty', names, 'standard', pkgs)).toBe('HexaTech Loyalty')
+    expect(planName({ crm: 'pro', content: 'standard' }, names, pkgs)).toBe('HexaTech Content + HexaTech CRM Pro')
   })
 })

@@ -5,18 +5,21 @@ namespace App\Support;
 /**
  * The workspaces an organisation may buy on their own (owner, 2026-11-02): HexaTech Loyalty and HexaTech Content,
  * each in three packages — Lite, Standard (85 € a month) and Pro — and, since 2026-11-04, HexaTech Appointments in the
- * same three packages at Loyalty's prices (the Appointments plan of Part C, 2026-10-02, is its Standard).
+ * same three packages at Loyalty's prices (the Appointments plan of Part C, 2026-10-02, is its Standard), and since
+ * 2026-11-07 HexaTech CRM (the AI chat widget, the inbox and the CRM in one workspace) at the same prices.
  * Paid yearly, every package costs 15 % less a month (owner, 2026-11-02). A customer starts with one product and
  * adds the others later, or moves to another package.
  *
  * Billing has one plan for each choice of packages, named by planSlug(): a product's Standard package is its bare
  * name, the others carry their package (`loyalty`, `loyalty_lite`, `loyalty_pro`), and two products join with a hyphen
- * in MODULES order (`loyalty-content`, `loyalty_pro-content_lite`). Adding a product or changing a package moves the
+ * in MODULES order (`loyalty-content`, `loyalty_pro-content_lite`, `content-crm_lite`). Billing sells each product
+ * alone and every pair, never three. Adding a product or changing a package moves the
  * subscription to that plan (SubscriptionService::changePlan in the billing application), so Stripe prorates the one
  * price.
  *
  * Who is on modules (Organization::planModules()): billing's products are module products only and name at least one
- * module; a product outside them (crm, chat, education, avatar) makes a full customer. With no products, the plan slug.
+ * module; a product outside them (the full suite's crm and chat, education, avatar) makes a full customer — HexaTech
+ * CRM's own product is `crm_chat` for that reason. With no products, the plan slug.
  * Which package of a product an organisation has is its plan slug's (Organization::planTiers()).
  *
  * Prices and features here are only what the pages show when billing cannot be read; billing's plan rows are what is
@@ -95,10 +98,35 @@ final class PlanModules
                 ]],
             ],
         ],
+        // HexaTech CRM (owner 2026-11-07: "AI chat widget + CRM … one portal … sold separately as a module"): the website
+        // chat widget with its AI assistant and the live inbox, beside leads, the pipeline, contacts and tasks. Its billing
+        // product is `crm_chat`, never the full suite's `crm` or `chat`: Starter (`crm`, `loyalty`) and Growth hold those,
+        // and naming them here would make every such full customer an organisation on modules (fromProducts). Its
+        // packages differ by team and the AI allowance the chatbot and the inbox's drafts spend
+        // (`ai_monthly_cost_cents`, AiUsageService::budgetStatus, which the widget already stops at).
+        'crm' => [
+            'name' => 'HexaTech CRM',
+            'products' => ['crm_chat'],
+            'tiers' => [
+                'lite' => ['monthly_amount' => 4900, 'features' => [
+                    'max_team_members' => '2', 'max_guests' => '1000', 'max_properties' => '1', 'max_loyalty_members' => '0',
+                    'chatbot' => 'true', 'engagement' => 'true', 'ai_monthly_cost_cents' => '1000',
+                ]],
+                'standard' => ['monthly_amount' => 8500, 'features' => [
+                    'max_team_members' => '5', 'max_guests' => '5000', 'max_properties' => '1', 'max_loyalty_members' => '0',
+                    'chatbot' => 'true', 'engagement' => 'true', 'ai_monthly_cost_cents' => '2500',
+                ]],
+                'pro' => ['monthly_amount' => 14900, 'features' => [
+                    'max_team_members' => '15', 'max_guests' => '20000', 'max_properties' => '3', 'max_loyalty_members' => '0',
+                    'chatbot' => 'true', 'engagement' => 'true', 'ai_monthly_cost_cents' => '6000',
+                    'priority_support' => 'priority',
+                ]],
+            ],
+        ],
     ];
 
-    /** The modules sold through their own sign-up pages (/appointments/register, /loyalty/register, /content/register). */
-    public const SOLD_ALONE = ['appointments', 'loyalty', 'content'];
+    /** The modules sold through their own sign-up pages (/appointments/register, /loyalty/register, /content/register, /crm/register). */
+    public const SOLD_ALONE = ['appointments', 'loyalty', 'content', 'crm'];
 
     /** The currency and free trial of the modules' plans when billing cannot be read. */
     public const FALLBACK_CURRENCY = 'eur';
@@ -123,6 +151,12 @@ final class PlanModules
     public static function exists(string $module): bool
     {
         return isset(self::MODULES[$module]);
+    }
+
+    /** A module's product name: "HexaTech Loyalty", "HexaTech CRM". */
+    public static function name(string $module): string
+    {
+        return self::MODULES[$module]['name'] ?? 'HexaTech ' . ucfirst($module);
     }
 
     /**
@@ -260,7 +294,7 @@ final class PlanModules
     {
         $names = [];
         foreach (self::selection($choice) as $module => $tier) {
-            $names[] = 'HexaTech ' . ucfirst($module) . ($tier === self::DEFAULT_TIER ? '' : ' ' . ucfirst($tier));
+            $names[] = self::name($module) . ($tier === self::DEFAULT_TIER ? '' : ' ' . ucfirst($tier));
         }
 
         return implode(' + ', $names);
@@ -322,7 +356,10 @@ final class PlanModules
         $out = array_fill_keys(self::SWITCHES, 'false') + ['priority_support' => 'email'];
         foreach (self::selection($choice) as $module => $tier) {
             foreach (self::MODULES[$module]['tiers'][$tier]['features'] as $key => $value) {
-                if (str_starts_with($key, 'max_') || $key === 'ai_monthly_cost_cents') {
+                if ($key === 'ai_monthly_cost_cents') {
+                    // One monthly AI budget for the organisation (AiUsageService): two products that spend AI add theirs.
+                    $out[$key] = isset($out[$key]) ? (string) ((int) $out[$key] + (int) $value) : $value;
+                } elseif (str_starts_with($key, 'max_')) {
                     $out[$key] = isset($out[$key]) ? (string) max((int) $out[$key], (int) $value) : $value;
                 } elseif ($key === 'priority_support') {
                     $out[$key] = array_search($value, self::SUPPORT, true) > array_search($out[$key], self::SUPPORT, true) ? $value : $out[$key];

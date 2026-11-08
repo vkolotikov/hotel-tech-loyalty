@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers\Api\V1\Admin;
 
+use App\Exceptions\AiHelperRefused;
 use App\Http\Controllers\Controller;
+use App\Models\Organization;
 use App\Services\CrmAiService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -10,6 +12,12 @@ use Illuminate\Support\Facades\Log;
 
 class CrmAiController extends Controller
 {
+    /**
+     * What a failed capture answers (2026-11-08): our sentence, never the provider's text, which is logged instead.
+     * The CRM shows its own translated sentence; the full admin shows this one.
+     */
+    public const CAPTURE_FAILED = 'The AI could not read this message just now. Please try again in a moment.';
+
     /**
      * Diagnostic endpoint — check AI service configuration.
      * GET /api/v1/admin/crm-ai/diagnose
@@ -82,12 +90,16 @@ class CrmAiController extends Controller
             'text' => 'required|string|max:10000',
         ]);
 
+        // 2026-11-08: the month's AI allowance stops this before the provider is asked, as it stops the widget, the
+        // CRM's drafts and the chatbot set-up's helpers (403 `ai_budget_used_up`).
+        AiHelperRefused::unlessAllowanceLeft(Organization::withoutGlobalScopes()->find((int) $request->user()->organization_id));
+
         try {
             $result = (new CrmAiService())->extractLead($request->input('text'));
             return response()->json($result);
         } catch (\Throwable $e) {
             Log::error('CRM AI capture-lead failed: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
-            return response()->json(['success' => false, 'error' => 'AI service error: ' . $e->getMessage()]);
+            return response()->json(['success' => false, 'error' => self::CAPTURE_FAILED]);
         }
     }
 
@@ -97,12 +109,16 @@ class CrmAiController extends Controller
             'text' => 'required|string|max:10000',
         ]);
 
+        // 2026-11-08: the month's AI allowance stops this before the provider is asked, as it stops the widget, the
+        // CRM's drafts and the chatbot set-up's helpers (403 `ai_budget_used_up`).
+        AiHelperRefused::unlessAllowanceLeft(Organization::withoutGlobalScopes()->find((int) $request->user()->organization_id));
+
         try {
             $result = (new CrmAiService())->extractMember($request->input('text'));
             return response()->json($result);
         } catch (\Throwable $e) {
             Log::error('CRM AI capture-member failed: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
-            return response()->json(['success' => false, 'error' => 'AI service error: ' . $e->getMessage()]);
+            return response()->json(['success' => false, 'error' => self::CAPTURE_FAILED]);
         }
     }
 
@@ -112,12 +128,16 @@ class CrmAiController extends Controller
             'text' => 'required|string|max:10000',
         ]);
 
+        // 2026-11-08: the month's AI allowance stops this before the provider is asked, as it stops the widget, the
+        // CRM's drafts and the chatbot set-up's helpers (403 `ai_budget_used_up`).
+        AiHelperRefused::unlessAllowanceLeft(Organization::withoutGlobalScopes()->find((int) $request->user()->organization_id));
+
         try {
             $result = (new CrmAiService())->extractCorporate($request->input('text'));
             return response()->json($result);
         } catch (\Throwable $e) {
             Log::error('CRM AI capture-corporate failed: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
-            return response()->json(['success' => false, 'error' => 'AI service error: ' . $e->getMessage()]);
+            return response()->json(['success' => false, 'error' => self::CAPTURE_FAILED]);
         }
     }
 
@@ -134,12 +154,16 @@ class CrmAiController extends Controller
             'text' => 'required|string|max:10000',
         ]);
 
+        // 2026-11-08: the month's AI allowance stops this before the provider is asked, as it stops the widget, the
+        // CRM's drafts and the chatbot set-up's helpers (403 `ai_budget_used_up`).
+        AiHelperRefused::unlessAllowanceLeft(Organization::withoutGlobalScopes()->find((int) $request->user()->organization_id));
+
         try {
             $result = (new CrmAiService())->extractGuest($request->input('text'));
             return response()->json($result);
         } catch (\Throwable $e) {
             Log::error('CRM AI capture-guest failed: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
-            return response()->json(['success' => false, 'error' => 'AI service error: ' . $e->getMessage()]);
+            return response()->json(['success' => false, 'error' => self::CAPTURE_FAILED]);
         }
     }
 

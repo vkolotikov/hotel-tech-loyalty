@@ -124,6 +124,38 @@ class ChatWidgetConfigController extends Controller
     }
 
     /**
+     * POST /v1/admin/widget-config/rotate-widget-key (a manager's, AccessMap `admin/widget-config`; 2026-11-08) —
+     * a new public `widget_key`: the website snippet with the old key stops working at once (the widget resolves its
+     * key from the database on every chat request; the old key's cached config is forgotten here). The answer is the
+     * updated config, the shape `GET widget-config` answers. `regenerate-key` (the private `api_key`) is unchanged.
+     *
+     * Nothing else keeps the key: landing pages and the CRM bootstrap read it from this row on each request, and
+     * every brand has its own row and key.
+     */
+    public function rotateWidgetKey(Request $request): JsonResponse
+    {
+        // The row `GET widget-config` answers (the brand in view, as every widget-config endpoint reads it).
+        $config = ChatWidgetConfig::getForOrg((int) $request->user()->organization_id);
+        if (!$config->exists) {
+            return response()->json(['error' => 'not_found', 'message' => 'No widget configuration found. Save a configuration first.'], 404);
+        }
+
+        $old = (string) $config->widget_key;
+        $config->update(['widget_key' => Str::uuid()->toString()]);
+        // saved() forgets the NEW key's cached config; the old one is forgotten here. The cache is the shared one
+        // (2026-11-08), so no other container keeps answering the old key's config.
+        \App\Support\SharedCache::store()->forget('widget:config:' . $old);
+
+        \Illuminate\Support\Facades\Log::info('chat_widget.widget_key_rotated', [
+            'org_id'    => $config->organization_id,
+            'config_id' => $config->id,
+            'user_id'   => $request->user()->id,
+        ]);
+
+        return response()->json($config->fresh());
+    }
+
+    /**
      * Upload an assistant avatar image.
      *
      * Routes through MediaService so the file lands on the configured

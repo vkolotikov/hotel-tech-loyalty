@@ -114,6 +114,8 @@ class EngagementAiService
                 'generated_at' => $conv->ai_brief_at?->toIso8601String(),
                 'cached'       => false,
                 'error'        => 'Could not generate AI brief — try again in a moment.',
+                // A code beside the sentence (2026-11-08), for a client that says it in its own words.
+                'code'         => 'ai_failed',
             ];
         }
     }

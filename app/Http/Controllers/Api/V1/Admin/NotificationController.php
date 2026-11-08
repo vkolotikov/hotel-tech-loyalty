@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1\Admin;
 
+use App\Services\Booking\Setup\OwnRows;
 use App\Http\Controllers\Controller;
 use App\Models\CampaignRecipient;
 use App\Models\EmailTemplate;
@@ -151,7 +152,7 @@ class NotificationController extends Controller
     public function sendTest(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'email_template_id' => 'nullable|exists:email_templates,id',
+            'email_template_id' => ['nullable', OwnRows::rule('email_templates')],
             'email_subject'     => 'nullable|string|max:255',
             'to_email'          => 'nullable|email',
         ]);
@@ -206,7 +207,7 @@ class NotificationController extends Controller
             'segment_rules'     => 'nullable|array',
             'scheduled_at'      => 'nullable|date',
             'channel'           => 'nullable|in:push,email,both',
-            'email_template_id' => 'nullable|exists:email_templates,id',
+            'email_template_id' => ['nullable', OwnRows::rule('email_templates')],
             'email_subject'     => 'nullable|string|max:255',
         ]);
 

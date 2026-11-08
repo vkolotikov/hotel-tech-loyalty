@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1\Admin;
 
+use App\Services\Booking\Setup\OwnRows;
 use App\Http\Controllers\Controller;
 use App\Mail\BookingConfirmationMail;
 use App\Mail\BookingMembershipMail;
@@ -64,10 +65,10 @@ class ReservationController extends Controller
     public function store(Request $request): JsonResponse
     {
         $v = $request->validate([
-            'guest_id'             => 'required|integer|exists:guests,id',
-            'inquiry_id'           => 'nullable|integer|exists:inquiries,id',
-            'corporate_account_id' => 'nullable|integer|exists:corporate_accounts,id',
-            'property_id'          => 'required|integer|exists:properties,id',
+            'guest_id'             => ['required', 'integer', OwnRows::rule('guests')],
+            'inquiry_id'           => ['nullable', 'integer', OwnRows::rule('inquiries')],
+            'corporate_account_id' => ['nullable', 'integer', OwnRows::rule('corporate_accounts')],
+            'property_id'          => ['required', 'integer', OwnRows::rule('properties')],
             'confirmation_no'      => 'nullable|string|max:50|unique:reservations,confirmation_no',
             'check_in'             => 'required|date',
             'check_out'            => 'required|date|after:check_in',
@@ -234,7 +235,7 @@ class ReservationController extends Controller
     public function update(Request $request, Reservation $reservation): JsonResponse
     {
         $v = $request->validate([
-            'property_id'     => 'nullable|integer|exists:properties,id',
+            'property_id'     => ['nullable', 'integer', OwnRows::rule('properties')],
             'confirmation_no' => 'nullable|string|max:50|unique:reservations,confirmation_no,' . $reservation->id,
             'check_in'        => 'nullable|date',
             'check_out'       => 'nullable|date',

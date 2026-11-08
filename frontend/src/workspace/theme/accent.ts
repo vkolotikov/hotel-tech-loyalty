@@ -52,6 +52,16 @@ export const LOYALTY_SURFACES: Record<ThemeName, { canvas: string; surface: stri
   dark: { canvas: '#182231', surface: '#29384b', surface2: '#1f2c3e', side: '#111b29' },
 }
 
+/**
+ * HexaTech CRM's palette (2026-11-07; Dark is its default): a deep ink canvas with raised slate cards and a darker side
+ * panel in Dark, a cool light set with the same side panel in Light. crm/theme/crmContrast.test.ts proves it equals the
+ * [data-crm] tokens.
+ */
+export const CRM_SURFACES: Record<ThemeName, { canvas: string; surface: string; surface2: string; side: string }> = {
+  light: { canvas: '#f3f5f9', surface: '#ffffff', surface2: '#ecf0f6', side: '#0c111c' },
+  dark: { canvas: '#0d121c', surface: '#151c29', surface2: '#1c2535', side: '#090d15' },
+}
+
 /** A post card's text and secondary text in Content (`--a-text` and `--c-card-text-2`). */
 const CARD_TEXT: Record<ThemeName, { text: string; text2: string }> = {
   light: { text: '#1b2430', text2: '#546272' },

@@ -51,7 +51,7 @@ class PopupRule extends Model
                 ->where('organization_id', $rule->organization_id)
                 ->value('widget_key');
             if ($widgetKey) {
-                \Illuminate\Support\Facades\Cache::forget('widget:config:' . $widgetKey);
+                \App\Support\SharedCache::store()->forget('widget:config:' . $widgetKey);
             }
         };
         static::saved($bust);

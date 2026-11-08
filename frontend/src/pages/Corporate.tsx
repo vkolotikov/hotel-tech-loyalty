@@ -70,7 +70,12 @@ export function Corporate() {
   })
 
   const accounts = data?.data ?? []
-  const meta = data?.meta ?? {}
+  // The server answers Laravel's plain paginator (`current_page`, `last_page`, `total` beside `data`), no `meta`.
+  const meta = {
+    current_page: Number(data?.current_page ?? 1),
+    last_page: Number(data?.last_page ?? 1),
+    total: Number(data?.total ?? 0),
+  }
 
   const toggleSort = (col: string) => {
     if (sort === col) setDir(d => d === 'asc' ? 'desc' : 'asc')

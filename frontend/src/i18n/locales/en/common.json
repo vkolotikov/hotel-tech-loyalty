@@ -116,6 +116,7 @@
       "appointments_workspace": "HexaTech Appointments",
       "appointments_workspace_open": "Open in HexaTech Appointments",
       "content_workspace": "HexaTech Content",
+      "crm_workspace": "HexaTech CRM",
       "loyalty_workspace": "HexaTech Loyalty",
       "landing_featured_reviews": "Featured reviews"
     }
@@ -341,7 +342,10 @@
         "bookable_any": "Any number of team members clients can book",
         "booking_page": "Your own online booking page and website widget",
         "booking_core": "Calendar, client records, payments and takings",
-        "sign_ins": "{{n}} staff sign-ins"
+        "sign_ins": "{{n}} staff sign-ins",
+        "crm_chat": "An AI chat for your website that answers from your knowledge",
+        "crm_core": "Live inbox, visitors, leads, pipeline and tasks",
+        "crm_ai_base": "A monthly AI allowance for the assistant and reply drafts"
       },
       "signup": {
         "step": "Step {{n}} of {{total}}",
@@ -387,6 +391,18 @@
         "register_title": "Start your HexaTech Appointments trial",
         "trial_banner": "Your trial includes everything in HexaTech Appointments.",
         "tab_title": "HexaTech Appointments — Sign in"
+      },
+      "crm": {
+        "badge": "AI website chat and CRM",
+        "hero": "Answer every visitor. Follow up every lead.",
+        "hero_sub": "An AI chat on your website that answers from your own knowledge, a live inbox for your team, and the leads, pipeline and tasks that turn chats into customers.",
+        "bullet_1": "An AI assistant on your website, day and night, in your words",
+        "bullet_2": "One inbox: take over any chat, with AI-drafted replies",
+        "bullet_3": "Leads, a pipeline and follow-ups so nobody is forgotten",
+        "login_subtitle": "Sign in to HexaTech CRM",
+        "register_title": "Start your HexaTech CRM trial",
+        "trial_banner": "Your trial includes everything in HexaTech CRM.",
+        "tab_title": "HexaTech CRM — Sign in"
       }
     }
   },
@@ -3605,7 +3621,8 @@
       "blurb": {
         "appointments": "Calendar, online booking and client records",
         "loyalty": "Points, tiers, rewards, a member app and campaigns",
-        "content": "AI social media planner: ideas, captions, images and a calendar"
+        "content": "AI social media planner: ideas, captions, images and a calendar",
+        "crm": "AI website chat, live inbox, leads, pipeline and tasks"
       },
       "over_limit_team": "This package allows {{limit}} team members and you have {{count}} active. Choose a larger package, or switch some off first.",
       "over_limit_members": "This package allows {{limit}} members and you have {{count}}. Choose a larger package.",

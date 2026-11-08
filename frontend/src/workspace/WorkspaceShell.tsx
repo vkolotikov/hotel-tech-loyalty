@@ -1,4 +1,4 @@
-import { useLayoutEffect, type CSSProperties, type MouseEvent, type ReactNode } from 'react'
+import { Fragment, useLayoutEffect, type CSSProperties, type MouseEvent, type ReactNode } from 'react'
 import { Link, NavLink } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { ArrowRightLeft, Users, CreditCard, Globe, LayoutGrid, LogOut, Menu, PanelLeftClose, PanelLeftOpen, type LucideIcon } from 'lucide-react'
@@ -24,6 +24,11 @@ export interface WorkspaceNavItem {
    * instead (HexaTech Loyalty's eight areas). Unset, the area is in the top bar, as before.
    */
   phone?: boolean
+  /**
+   * The group the area opens in the side panel (HexaTech CRM: "Conversations", "Sales"…): a small heading before the
+   * first area of each group, a rule while the panel is icons only. Unset, no heading — as every workspace had before.
+   */
+  section?: string
 }
 
 /**
@@ -100,8 +105,14 @@ export function WorkspaceShell({ workspace, look, accent, card, initial, organiz
         </div>
         {cards && railLabel && !slim && <p className="-mb-4 px-2 font-a-mono text-xs uppercase tracking-[0.14em] text-a-side-text-2">{railLabel}</p>}
         <nav className={cards ? 'space-y-2' : 'space-y-1'}>
-          {nav.map(({ to, end, icon: Icon, label, count }) => (
-            <NavLink key={to} to={to} end={end} data-tip={slim ? label : undefined}
+          {nav.map(({ to, end, icon: Icon, label, count, section }, index) => (
+            <Fragment key={to}>
+            {section && section !== nav[index - 1]?.section && (
+              slim
+                ? <div aria-hidden data-nav-section="" className="mx-3 !mt-3 border-t border-a-side-2" />
+                : <p data-nav-section="" className="!mt-4 px-3 pb-0.5 font-a-mono text-[12px] uppercase tracking-[0.12em] text-a-side-text-2">{section}</p>
+            )}
+            <NavLink to={to} end={end} data-tip={slim ? label : undefined}
               className={({ isActive }) => cards
                 // The owner's mockup: each area a card; the current one filled with the brand (spec 2026-10-21 §4.1).
                 ? `relative flex min-h-11 items-center gap-3 rounded-[10px] border px-3 text-sm font-medium transition-colors ${slim ? 'justify-center' : ''} ${isActive ? 'border-transparent bg-linear-to-br from-a-accent to-a-accent-deep text-a-accent-ink shadow-a-sm' : 'border-a-side-2 bg-a-side-2 text-a-side-text-2 hover:text-a-side-text'}`
@@ -120,6 +131,7 @@ export function WorkspaceShell({ workspace, look, accent, card, initial, organiz
                 </>
               )}
             </NavLink>
+            </Fragment>
           ))}
         </nav>
         {footer ?? <div className="mt-auto space-y-2 border-t border-a-side-2 pt-4">

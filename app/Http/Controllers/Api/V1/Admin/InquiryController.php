@@ -16,7 +16,9 @@ use App\Services\CustomFieldService;
 use App\Services\InquiryAiService;
 use App\Services\RealtimeEventService;
 use App\Services\XlsxWriter;
+use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
+use App\Services\Booking\Setup\OwnRows;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
@@ -77,6 +79,8 @@ class InquiryController extends Controller
         if ($v = $request->get('inquiry_type'))  $query->where('inquiry_type', $v);
         if ($v = $request->get('property_id'))   $query->where('property_id', $v);
         if ($v = $request->get('assigned_to'))   $query->where('assigned_to', $v);
+        // The leads nobody owns yet (2026-11-08; the CRM's "Not assigned"): no name, or an empty one.
+        if ($request->boolean('unassigned'))     $query->where(fn ($q) => $q->whereNull('assigned_to')->orWhere('assigned_to', ''));
         if ($v = $request->get('source'))        $query->where('source', $v);
         if ($v = $request->get('country'))       $query->whereHas('guest', fn ($g) => $g->where('country', $v));
         // has_phone: 'yes' = guest has a phone OR mobile, 'no' = neither.
@@ -86,26 +90,32 @@ class InquiryController extends Controller
             if ($v === 'yes') $query->whereHas('guest', $has);
             elseif ($v === 'no') $query->whereDoesntHave('guest', $has);
         }
-        if ($v = $request->get('date_from'))     $query->where('created_at', '>=', $v);
-        if ($v = $request->get('date_to'))       $query->where('created_at', '<=', $v . ' 23:59:59');
+        $this->createdOnVenueDays($query, $request);
         if ($v = $request->get('check_in_from')) $query->where('check_in', '>=', $v);
         if ($v = $request->get('check_in_to'))   $query->where('check_in', '<=', $v);
         if ($request->get('active_only'))        $query->whereNotIn('status', ['Confirmed', 'Lost']);
         if ($v = $request->get('task_due')) {
+            // `next_task_due` is a calendar day: "today" is the venue's (2026-11-08), not the server's UTC day.
+            $today = $this->venueToday();
             match ($v) {
-                'today'   => $query->where('next_task_due', now()->toDateString())->where('next_task_completed', false),
-                'overdue' => $query->where('next_task_due', '<', now()->toDateString())->where('next_task_completed', false),
-                'soon'    => $query->whereBetween('next_task_due', [now()->toDateString(), now()->addDays(3)->toDateString()])->where('next_task_completed', false),
+                'today'   => $query->where('next_task_due', $today)->where('next_task_completed', false),
+                'overdue' => $query->where('next_task_due', '<', $today)->where('next_task_completed', false),
+                'soon'    => $query->whereBetween('next_task_due', [$today, self::dayAfter($today, 3)])->where('next_task_completed', false),
                 default   => null,
             };
         }
 
         // Whitelist sort + dir — Eloquent's orderBy() does NOT parameter-bind
         // the column name. See AUDIT-2026-06-13.md high security finding.
-        $allowedSorts = ['created_at','updated_at','guest_name','check_in','check_out','status','priority','value_estimated','win_probability','next_task_due','assigned_to'];
+        // Only real `inquiries` columns (2026-11-08): `guest_name`, `value_estimated` and `win_probability` were not
+        // and answered a database error; the list's Value and AI-signal headers sort by these.
+        $allowedSorts = ['created_at','updated_at','check_in','check_out','status','priority','total_value','ai_win_probability','next_task_due','assigned_to','last_contacted_at'];
         $sort = in_array($request->get('sort'), $allowedSorts, true) ? $request->get('sort') : 'created_at';
         $dir  = $request->get('dir') === 'asc' ? 'asc' : 'desc';
-        $query->orderBy($sort, $dir);
+        // Empty values last in either direction, on PostgreSQL (which puts NULLs first when descending) and SQLite
+        // alike (2026-11-08: "largest value first" listed every lead without a value at the top); the id keeps pages
+        // stable among equal values. `$sort` is one of the names above.
+        $query->orderByRaw("{$sort} IS NULL")->orderBy($sort, $dir)->orderBy('id', $dir);
 
         return response()->json($query->paginate($request->get('per_page', 25)));
     }
@@ -113,9 +123,9 @@ class InquiryController extends Controller
     public function store(Request $request): JsonResponse
     {
         $v = $request->validate([
-            'guest_id'             => 'required|integer|exists:guests,id',
-            'corporate_account_id' => 'nullable|integer|exists:corporate_accounts,id',
-            'property_id'          => 'nullable|integer|exists:properties,id',
+            'guest_id'             => ['required', 'integer', OwnRows::rule('guests')],
+            'corporate_account_id' => ['nullable', 'integer', OwnRows::rule('corporate_accounts')],
+            'property_id'          => ['nullable', 'integer', OwnRows::rule('properties')],
             'inquiry_type'         => 'nullable|string|max:50',
             'source'               => 'nullable|string|max:100',
             'check_in'             => 'nullable|date',
@@ -150,8 +160,13 @@ class InquiryController extends Controller
         // CRM Phase 7 — sanitize custom fields against the active schema.
         $v['custom_data'] = $this->customFields->validate('inquiry', $v['custom_data'] ?? null);
 
-        $inquiry = Inquiry::create($v);
-        $inquiry->load(['guest:id,full_name', 'property:id,name,code']);
+        $inquiry = DB::transaction(function () use ($v) {
+            $inquiry = Inquiry::create($v);
+            $this->placeInDefaultPipeline($inquiry, $v['status'] ?? null);
+
+            return $inquiry;
+        });
+        $inquiry->load(['guest:id,full_name', 'property:id,name,code', 'pipelineStage:id,name,color,kind']);
 
         $this->realtime->dispatch('inquiry', 'New Inquiry',
             ($inquiry->inquiry_type ?? 'Inquiry') . ' from ' . ($inquiry->guest?->full_name ?? 'Unknown'),
@@ -159,6 +174,96 @@ class InquiryController extends Controller
         );
 
         return response()->json($inquiry, 201);
+    }
+
+    /**
+     * A new lead goes into the default pipeline (2026-11-08) — its brand's, else the one for every brand — at the
+     * stage its status names, else the pipeline's first open stage; with no status sent, the status becomes that
+     * stage's name, as the public lead form and the lead-intake API set it. No default pipeline: nothing changes.
+     */
+    private function placeInDefaultPipeline(Inquiry $inquiry, ?string $status): void
+    {
+        $pipeline = \App\Models\Pipeline::query()
+            ->where('is_default', true)
+            ->where(fn ($q) => $q->whereNull('brand_id')->when($inquiry->brand_id, fn ($b) => $b->orWhere('brand_id', $inquiry->brand_id)))
+            ->orderByRaw('CASE WHEN brand_id IS NULL THEN 1 ELSE 0 END')
+            ->orderBy('sort_order')
+            ->orderBy('id')
+            ->first();
+        if (!$pipeline) {
+            return;
+        }
+
+        $hasStatus = $status !== null && trim($status) !== '';
+        $stage = ($hasStatus ? $this->stageForStatus((int) $pipeline->id, $status) : null)
+            ?? PipelineStage::where('pipeline_id', $pipeline->id)->where('kind', 'open')->orderBy('sort_order')->orderBy('id')->first();
+
+        $inquiry->forceFill(array_filter([
+            'pipeline_id'       => $pipeline->id,
+            'pipeline_stage_id' => $stage?->id,
+            'status'            => !$hasStatus && $stage ? $stage->name : null,
+        ], fn ($value) => $value !== null))->save();
+    }
+
+    /**
+     * The stage of $pipelineId a status means, the one rule every status write here keeps status and stage in step
+     * by: with $kind, the pipeline's first stage of that kind (won, lost); otherwise the stage named like the status,
+     * or for `Confirmed` / `Lost` the first won / lost stage. Null when none is found.
+     */
+    private function stageForStatus(?int $pipelineId, ?string $status, ?string $kind = null): ?PipelineStage
+    {
+        if (!$pipelineId) {
+            return null;
+        }
+        if ($kind === null && $status !== null && trim($status) !== '') {
+            $named = PipelineStage::where('pipeline_id', $pipelineId)
+                ->whereRaw('LOWER(name) = ?', [mb_strtolower(trim($status))])
+                ->first();
+            if ($named) {
+                return $named;
+            }
+            $kind = $status === 'Confirmed' ? 'won' : ($status === 'Lost' ? 'lost' : null);
+        }
+
+        return $kind === null ? null : PipelineStage::where('pipeline_id', $pipelineId)
+            ->where('kind', $kind)->orderBy('sort_order')->first();
+    }
+
+    /**
+     * `date_from` / `date_to` are the venue's calendar days (2026-11-08; before, UTC's): a lead made at 00:30 in Riga on
+     * the 8th is the 8th's, and `date_to` takes the whole of its day. A value that is not a `Y-m-d` day is ignored.
+     */
+    private function createdOnVenueDays($query, Request $request): void
+    {
+        $orgId = app()->bound('current_organization_id') ? (int) app('current_organization_id') : (int) auth()->user()?->organization_id;
+        $zone = \App\Services\Appointments\VenueClock::zone($orgId);
+        $day = function ($value) use ($zone): ?CarbonImmutable {
+            if (!is_string($value) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $value)) {
+                return null;
+            }
+            $at = CarbonImmutable::createFromFormat('!Y-m-d', $value, $zone);
+
+            return $at && $at->format('Y-m-d') === $value ? $at : null;
+        };
+        if ($from = $day($request->get('date_from'))) {
+            $query->where('created_at', '>=', $from->utc());
+        }
+        if ($to = $day($request->get('date_to'))) {
+            $query->where('created_at', '<', $to->addDay()->utc());
+        }
+    }
+
+    /** The venue's date today (`Y-m-d`, VenueClock), for the follow-up days. */
+    private function venueToday(): string
+    {
+        $orgId = app()->bound('current_organization_id') ? (int) app('current_organization_id') : (int) auth()->user()?->organization_id;
+
+        return \App\Services\Appointments\VenueClock::today($orgId);
+    }
+
+    private static function dayAfter(string $day, int $days): string
+    {
+        return \Carbon\CarbonImmutable::createFromFormat('!Y-m-d', $day, 'UTC')->addDays($days)->toDateString();
     }
 
     public function show(Inquiry $inquiry): JsonResponse
@@ -266,8 +371,8 @@ class InquiryController extends Controller
         $inquiry = Inquiry::withoutGlobalScope(\App\Scopes\BrandScope::class)->findOrFail($id);
 
         $v = $request->validate([
-            'corporate_account_id' => 'nullable|integer|exists:corporate_accounts,id',
-            'property_id'          => 'nullable|integer|exists:properties,id',
+            'corporate_account_id' => ['nullable', 'integer', OwnRows::rule('corporate_accounts')],
+            'property_id'          => ['nullable', 'integer', OwnRows::rule('properties')],
             'inquiry_type'         => 'nullable|string|max:50',
             'source'               => 'nullable|string|max:100',
             'check_in'             => 'nullable|date',
@@ -317,16 +422,7 @@ class InquiryController extends Controller
         // back to the won/lost stage by kind for the terminal statuses.
         $syncedStage = null;
         if (array_key_exists('status', $v) && $v['status'] !== null && $inquiry->pipeline_id) {
-            $stage = PipelineStage::where('pipeline_id', $inquiry->pipeline_id)
-                ->whereRaw('LOWER(name) = ?', [mb_strtolower(trim($v['status']))])
-                ->first();
-            if (!$stage) {
-                $kind = $v['status'] === 'Confirmed' ? 'won' : ($v['status'] === 'Lost' ? 'lost' : null);
-                if ($kind) {
-                    $stage = PipelineStage::where('pipeline_id', $inquiry->pipeline_id)
-                        ->where('kind', $kind)->orderBy('sort_order')->first();
-                }
-            }
+            $stage = $this->stageForStatus($inquiry->pipeline_id, $v['status']);
             if ($stage && $stage->id !== $inquiry->pipeline_stage_id) {
                 $inquiry->pipeline_stage_id = $stage->id;
                 $inquiry->save();
@@ -491,7 +587,8 @@ class InquiryController extends Controller
      */
     public function kpis(): JsonResponse
     {
-        $todayStr     = now()->toDateString();
+        // Follow-up days are the venue's calendar days (2026-11-08); the periods below are instants.
+        $todayStr     = $this->venueToday();
         $weekAgo      = now()->subDays(7);
         $twoWeeksAgo  = now()->subDays(14);
         $monthAgo     = now()->subDays(30);
@@ -617,8 +714,9 @@ class InquiryController extends Controller
      */
     public function today(): JsonResponse
     {
-        $todayStr = now()->toDateString();
-        $threeDaysOut = now()->addDays(3)->toDateString();
+        // The venue's day (2026-11-08): `next_task_due` is a calendar day; "new leads" stay the last 24 hours.
+        $todayStr = $this->venueToday();
+        $threeDaysOut = self::dayAfter($todayStr, 3);
 
         $base = Inquiry::with(['guest:id,full_name,company,email,phone', 'property:id,name,code'])
             ->whereNotIn('status', ['Confirmed', 'Lost'])
@@ -630,7 +728,7 @@ class InquiryController extends Controller
         $today = (clone $base)->where('next_task_due', $todayStr)
             ->orderBy('next_task_due')->limit(25)->get();
         $soon = (clone $base)
-            ->whereBetween('next_task_due', [now()->addDay()->toDateString(), $threeDaysOut])
+            ->whereBetween('next_task_due', [self::dayAfter($todayStr, 1), $threeDaysOut])
             ->orderBy('next_task_due')->limit(25)->get();
 
         $newLeads = Inquiry::with(['guest:id,full_name,company', 'property:id,name'])
@@ -760,13 +858,26 @@ class InquiryController extends Controller
             foreach ($validated['ids'] as $id) {
                 $r = Inquiry::lockForUpdate()->find($id);
                 if (!$r) continue;
+                if ($validated['action'] === 'mark_won') {
+                    $this->closeAsWon($r, null, $request->user()?->id);
+                    $updated++;
+                    continue;
+                }
                 $patch = match ($validated['action']) {
                     'set_status'      => ['status' => $validated['value'] ?? $r->status],
                     'set_priority'    => ['priority' => $validated['value'] ?? $r->priority],
                     'set_assigned_to' => ['assigned_to' => $validated['value']],
-                    'mark_won'        => ['status' => 'Confirmed'],
                     'mark_lost'       => ['status' => 'Lost'],
                 };
+                // The stage follows the status, as update(), markWon() and markLost() keep it (2026-11-08): the
+                // status's stage of the lead's own pipeline, the won / lost stage for mark_won / mark_lost.
+                if (isset($patch['status']) && $r->pipeline_id) {
+                    $kind = $validated['action'] === 'mark_lost' ? 'lost' : null;
+                    $stage = $this->stageForStatus($r->pipeline_id, $patch['status'], $kind);
+                    if ($stage) {
+                        $patch['pipeline_stage_id'] = $stage->id;
+                    }
+                }
                 // update() (not raw query) so the model's saving hook
                 // still creates a reservation when status flips to Confirmed.
                 $r->update($patch);
@@ -861,6 +972,8 @@ class InquiryController extends Controller
         if ($v = $request->get('inquiry_type'))  $query->where('inquiry_type', $v);
         if ($v = $request->get('property_id'))   $query->where('property_id', $v);
         if ($v = $request->get('assigned_to'))   $query->where('assigned_to', $v);
+        // The leads nobody owns yet (2026-11-08; the CRM's "Not assigned"): no name, or an empty one.
+        if ($request->boolean('unassigned'))     $query->where(fn ($q) => $q->whereNull('assigned_to')->orWhere('assigned_to', ''));
         if ($v = $request->get('source'))        $query->where('source', $v);
         if ($v = $request->get('country'))       $query->whereHas('guest', fn ($g) => $g->where('country', $v));
         // has_phone: 'yes' = guest has a phone OR mobile, 'no' = neither.
@@ -870,8 +983,7 @@ class InquiryController extends Controller
             if ($v === 'yes') $query->whereHas('guest', $has);
             elseif ($v === 'no') $query->whereDoesntHave('guest', $has);
         }
-        if ($v = $request->get('date_from'))     $query->where('created_at', '>=', $v);
-        if ($v = $request->get('date_to'))       $query->where('created_at', '<=', $v . ' 23:59:59');
+        $this->createdOnVenueDays($query, $request);
         if ($v = $request->get('check_in_from')) $query->where('check_in', '>=', $v);
         if ($v = $request->get('check_in_to'))   $query->where('check_in', '<=', $v);
         if ($request->get('active_only'))        $query->whereNotIn('status', ['Confirmed', 'Lost']);
@@ -1016,12 +1128,29 @@ class InquiryController extends Controller
             'note' => 'nullable|string|max:1000',
         ]);
 
-        $wonStage = PipelineStage::where('pipeline_id', $inquiry->pipeline_id)
-            ->where('kind', 'won')
-            ->orderBy('sort_order')
-            ->first();
+        $reservation = $this->closeAsWon($inquiry, $request->note, $request->user()?->id);
 
-        $reservation = DB::transaction(function () use ($inquiry, $wonStage, $request) {
+        return response()->json([
+            'success'     => true,
+            'inquiry'     => $inquiry->fresh()->load(['pipelineStage', 'guest:id,full_name']),
+            'reservation' => $reservation,
+            'message'     => $reservation
+                ? 'Marked won — draft reservation created.'
+                : 'Marked won.',
+        ]);
+    }
+
+    /**
+     * Close a lead as won: the pipeline's won stage, the legacy `status` "Confirmed", no lost reason, a "Marked Won" line
+     * on the timeline, and (with a property and dates) a draft reservation unless one is linked. markWon() and the bulk
+     * `mark_won` both close through here (2026-11-08: before, the bulk action left out the timeline line and the draft
+     * reservation).
+     */
+    private function closeAsWon(Inquiry $inquiry, ?string $note, ?int $userId): ?Reservation
+    {
+        $wonStage = $this->stageForStatus($inquiry->pipeline_id, 'Confirmed', 'won');
+
+        return DB::transaction(function () use ($inquiry, $wonStage, $note, $userId) {
             $previousStage = $inquiry->pipelineStage?->name ?? $inquiry->status;
 
             $inquiry->forceFill([
@@ -1038,9 +1167,9 @@ class InquiryController extends Controller
                 'subject'    => 'Marked Won',
                 'body'       => trim(
                     "Stage: {$previousStage} → " . ($wonStage?->name ?? 'Confirmed')
-                    . ($request->note ? "\n\n{$request->note}" : '')
+                    . ($note ? "\n\n{$note}" : '')
                 ),
-                'created_by' => $request->user()?->id,
+                'created_by' => $userId,
                 'occurred_at' => now(),
                 'metadata'   => ['kind' => 'won'],
             ]);
@@ -1074,15 +1203,6 @@ class InquiryController extends Controller
 
             return $reservation;
         });
-
-        return response()->json([
-            'success'     => true,
-            'inquiry'     => $inquiry->fresh()->load(['pipelineStage', 'guest:id,full_name']),
-            'reservation' => $reservation,
-            'message'     => $reservation
-                ? 'Marked won — draft reservation created.'
-                : 'Marked won.',
-        ]);
     }
 
     /**
@@ -1096,14 +1216,11 @@ class InquiryController extends Controller
     {
         $inquiry = Inquiry::withoutGlobalScope(\App\Scopes\BrandScope::class)->findOrFail($id);
         $validated = $request->validate([
-            'lost_reason_id' => 'required|integer|exists:inquiry_lost_reasons,id',
+            'lost_reason_id' => ['required', 'integer', OwnRows::rule('inquiry_lost_reasons')],
             'note'           => 'nullable|string|max:1000',
         ]);
 
-        $lostStage = PipelineStage::where('pipeline_id', $inquiry->pipeline_id)
-            ->where('kind', 'lost')
-            ->orderBy('sort_order')
-            ->first();
+        $lostStage = $this->stageForStatus($inquiry->pipeline_id, 'Lost', 'lost');
 
         $reason = InquiryLostReason::find($validated['lost_reason_id']);
 

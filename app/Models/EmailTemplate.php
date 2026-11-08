@@ -60,9 +60,40 @@ class EmailTemplate extends Model
             ...$extraTags,
         ];
 
+        return $this->fillTags($replacements);
+    }
+
+    /**
+     * The template for someone who is no member (a lead, a contact; 2026-11-08): the member's own tags are left empty,
+     * never another person's — the venue's name and the year are filled as for a member.
+     *
+     * @return array{subject: string, html: string}
+     */
+    public function renderWithoutMember(array $extraTags = []): array
+    {
+        $replacements = [
+            '{{member_name}}'      => '',
+            '{{first_name}}'       => '',
+            '{{email}}'            => '',
+            '{{member_number}}'    => '',
+            '{{tier_name}}'        => '',
+            '{{points_balance}}'   => '',
+            '{{lifetime_points}}'  => '',
+            '{{referral_code}}'    => '',
+            '{{hotel_name}}'       => HotelSetting::getValue('company_name', 'Hotel Loyalty'),
+            '{{current_year}}'     => date('Y'),
+            ...$extraTags,
+        ];
+
+        return $this->fillTags($replacements);
+    }
+
+    /** @return array{subject: string, html: string} */
+    private function fillTags(array $replacements): array
+    {
         return [
-            'subject' => str_replace(array_keys($replacements), array_values($replacements), $this->subject),
-            'html'    => str_replace(array_keys($replacements), array_values($replacements), $this->html_body),
+            'subject' => str_replace(array_keys($replacements), array_values($replacements), (string) $this->subject),
+            'html'    => str_replace(array_keys($replacements), array_values($replacements), (string) $this->html_body),
         ];
     }
 

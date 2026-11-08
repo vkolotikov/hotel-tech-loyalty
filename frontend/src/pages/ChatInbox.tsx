@@ -115,7 +115,7 @@ export function ChatInbox() {
             toast(t('chat_inbox.toasts.no_speech', 'No speech detected'), { icon: 'ℹ️' })
           }
         } catch (e: any) {
-          toast.error(e?.response?.data?.error || t('chat_inbox.toasts.transcription_failed', 'Transcription failed'))
+          toast.error(e?.response?.data?.message || t('chat_inbox.toasts.transcription_failed', 'Transcription failed'))
         } finally {
           setMicState('idle')
         }
@@ -306,7 +306,7 @@ export function ChatInbox() {
   })
 
   const transferConv = useMutation({
-    mutationFn: (agentId: number) => api.put(`/v1/admin/chat-inbox/${selectedId}/assign`, { agent_id: agentId }),
+    mutationFn: (agentId: number) => api.put(`/v1/admin/chat-inbox/${selectedId}/assign`, { user_id: agentId }),
     onSuccess: () => { invalidateAll(); setShowTransferMenu(false); toast.success(t('chat_inbox.toasts.transferred', 'Transferred')) },
   })
 

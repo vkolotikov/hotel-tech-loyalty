@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1\Admin;
 
+use App\Services\Booking\Setup\OwnRows;
 use App\Http\Controllers\Controller;
 use App\Models\AuditLog;
 use App\Models\EmailCampaign;
@@ -213,7 +214,9 @@ class EmailCampaignController extends Controller
 
         $request->validate([
             'member_ids'   => 'sometimes|array|max:5000',
-            'member_ids.*' => 'integer|exists:loyalty_members,id',
+            // No `exists` rule: CampaignStart counts this organisation's members and answers `bad_recipients` for
+            // any other id, as before (2026-11-08: a bare `exists:` took another organisation's id).
+            'member_ids.*' => ['integer'],
         ]);
 
         try {
@@ -303,7 +306,7 @@ class EmailCampaignController extends Controller
     {
         return $request->validate([
             'name'        => 'required|string|max:120',
-            'segment_id'  => 'sometimes|nullable|integer|exists:member_segments,id',
+            'segment_id'  => ['sometimes', 'nullable', 'integer', OwnRows::rule('member_segments')],
             'subject'     => 'required|string|max:200',
             'body_html'   => 'required|string',
             'body_text'   => 'nullable|string',

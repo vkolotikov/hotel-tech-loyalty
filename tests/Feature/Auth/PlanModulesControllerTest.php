@@ -87,10 +87,15 @@ class PlanModulesControllerTest extends TestCase
     {
         $plans = collect($this->getJson('/api/v1/modules')->assertOk()->json('plans'))->keyBy('slug');
 
-        // Each of the three products in three packages, then every pair of two products' packages: 9 + 3 × 9. No plan
-        // of all three (2026-11-04).
-        $this->assertCount(36, $plans);
-        $this->assertSame(['appointments_lite', 'appointments', 'appointments_pro', 'loyalty_lite', 'loyalty', 'loyalty_pro', 'content_lite', 'content', 'content_pro'], $plans->keys()->take(9)->all());
+        // Each of the four products in three packages, then every pair of two products' packages: 12 + 6 × 9. No plan
+        // of three (2026-11-04; HexaTech CRM the fourth product since 2026-11-07).
+        $this->assertCount(66, $plans);
+        $this->assertSame(['appointments_lite', 'appointments', 'appointments_pro', 'loyalty_lite', 'loyalty', 'loyalty_pro', 'content_lite', 'content', 'content_pro', 'crm_lite', 'crm', 'crm_pro'], $plans->keys()->take(12)->all());
+        $this->assertSame([4900, 8500, 14900], [$plans['crm_lite']['monthly_amount'], $plans['crm']['monthly_amount'], $plans['crm_pro']['monthly_amount']], 'CRM at Loyalty\'s prices');
+        $this->assertSame(['true', 'true', '2500'], [$plans['crm']['features']['chatbot'], $plans['crm']['features']['engagement'], $plans['crm']['features']['ai_monthly_cost_cents']]);
+        $this->assertSame('4500', $plans['content-crm']['features']['ai_monthly_cost_cents'], 'two AI allowances add up');
+        $this->assertSame(['loyalty' => 'standard', 'crm' => 'pro'], $plans['loyalty-crm_pro']['packages']);
+        $this->assertArrayNotHasKey('loyalty-content-crm', $plans->all());
         $this->assertSame([4900, 8500, 14900], [$plans['appointments_lite']['monthly_amount'], $plans['appointments']['monthly_amount'], $plans['appointments_pro']['monthly_amount']], 'Appointments at Loyalty\'s prices');
         $this->assertSame([13400, '2'], [$plans['appointments_lite-loyalty']['monthly_amount'], $plans['appointments_lite-loyalty']['features']['max_booking_staff']]);
         $this->assertArrayNotHasKey('appointments-loyalty-content', $plans->all());
@@ -107,7 +112,7 @@ class PlanModulesControllerTest extends TestCase
         $this->withBilling([$this->plan('loyalty', 8900, null, null, ['max_loyalty_members' => '3000']), $this->plan('growth', 26900), $this->plan('content-loyalty', 1)], []);
 
         $plans = collect($this->getJson('/api/v1/modules')->assertOk()->json('plans'))->keyBy('slug');
-        $this->assertCount(36, $plans, 'no full plan, no non-canonical slug');
+        $this->assertCount(66, $plans, 'no full plan, no non-canonical slug');
         $this->assertArrayNotHasKey('growth', $plans->all());
         $this->assertSame([8900, 90780, true, 'billing'], [$plans['loyalty']['monthly_amount'], $plans['loyalty']['yearly_amount'], $plans['loyalty']['available'], $plans['loyalty']['source']]);
         $this->assertSame(['max_loyalty_members' => '3000'], $plans['loyalty']['features'], 'billing\'s features');

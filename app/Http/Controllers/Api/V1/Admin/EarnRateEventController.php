@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1\Admin;
 
+use App\Services\Booking\Setup\OwnRows;
 use App\Http\Controllers\Controller;
 use App\Models\AuditLog;
 use App\Models\EarnRateEvent;
@@ -101,8 +102,8 @@ class EarnRateEventController extends Controller
             'days_of_week' => 'sometimes|nullable|array',
             'days_of_week.*' => 'integer|min:0|max:6',
             'tier_ids'     => 'sometimes|nullable|array',
-            'tier_ids.*'   => 'integer|exists:loyalty_tiers,id',
-            'property_id'  => 'sometimes|nullable|integer|exists:properties,id',
+            'tier_ids.*'   => ['integer', OwnRows::rule('loyalty_tiers')->whereNull('deleted_at')],
+            'property_id'  => ['sometimes', 'nullable', 'integer', OwnRows::rule('properties')],
             'is_active'    => 'sometimes|boolean',
         ]);
         // Normalise empty arrays to null so the appliesTo() shortcut

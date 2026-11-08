@@ -1,0 +1,63 @@
+/*
+ * HexaTech CRM's own rules (2026-11-07). The Atelier fonts, tokens and the rules every workspace shares live in
+ * src/workspace/theme/workspace.css; this file sets CRM's palette over them — the cards frame's navy (accent.ts
+ * NAVY_SURFACES, which crmContrast.test.ts pins) — and the few colours only CRM draws: the AI's violet (the assistant,
+ * drafts, "Teach the assistant") and a chat bubble's fills. Every rule is scoped under [data-crm], which sits beside
+ * [data-workspace] on CRM's root. Values are RGB triplets, read as rgb(var(--…)) like the Atelier tokens.
+ */
+
+[data-crm] {
+  /* Light: a cool set with the ink side panel. CRM_SURFACES (accent.ts) holds the same four; crmContrast.test.ts pins them. */
+  --a-canvas: 243 245 249;
+  --a-surface: 255 255 255;
+  --a-surface-2: 236 240 246;
+  --a-border: 220 226 235;
+  --a-text: 22 30 44;
+  --a-text-2: 82 96 116;
+  --a-side: 12 17 28;
+  --a-side-2: 27 35 52;
+  --a-side-text: 236 240 246;
+  --a-side-text-2: 150 163 184;
+  /* The AI: the same violet for every brand; as text ≥ 4.5:1 on its 12 % tint and on the surface. */
+  --crm-ai: 109 93 214;
+  --crm-ai-ink: 255 255 255;
+  --crm-ai-text: 84 70 190;
+  /* A visitor's bubble (the team's own takes the accent's tint, set inline from the brand). */
+  --crm-bubble-visitor: 236 240 246;
+  --a-shadow-sm: 0 1px 2px rgb(12 17 28 / 0.06);
+  --a-shadow: 0 10px 30px rgb(12 17 28 / 0.08);
+}
+
+[data-crm][data-theme="dark"] {
+  /* Dark, the default (owner 2026-11-07): deep ink canvas, raised slate cards, a darker side panel. */
+  --a-canvas: 13 18 28;
+  --a-surface: 21 28 41;
+  --a-surface-2: 28 37 53;
+  --a-border: 44 55 74;
+  --a-text: 236 240 246;
+  --a-text-2: 156 169 190;
+  --a-side: 9 13 21;
+  --a-side-2: 24 32 48;
+  --a-side-text: 236 240 246;
+  --a-side-text-2: 146 160 182;
+  --crm-ai: 124 107 240;
+  --crm-ai-text: 190 180 255;
+  --crm-bubble-visitor: 34 44 62;
+  --a-shadow-sm: 0 1px 2px rgb(0 0 0 / 0.35);
+  --a-shadow: 0 12px 32px rgb(0 0 0 / 0.35);
+  --a-shadow-lg: 0 28px 70px rgb(0 0 0 / 0.5);
+}
+
+/* The AI's chip and its button: violet fill with white ink, or violet text on a 12 % tint. */
+[data-crm] .crm-ai-fill { background-color: rgb(var(--crm-ai)); color: rgb(var(--crm-ai-ink)); }
+[data-crm] .crm-ai-soft { background-color: rgb(var(--crm-ai) / 0.12); color: rgb(var(--crm-ai-text)); }
+[data-crm] .crm-ai-text { color: rgb(var(--crm-ai-text)); }
+[data-crm] .crm-ai-border { border-color: rgb(var(--crm-ai) / 0.35); }
+
+/* Chat bubbles: the visitor's on the left in grey, the team's and the assistant's on the right. */
+[data-crm] .crm-bubble-visitor { background-color: rgb(var(--crm-bubble-visitor)); color: rgb(var(--a-text)); }
+[data-crm] .crm-bubble-agent { background-color: rgb(var(--a-accent) / 0.14); color: rgb(var(--a-text)); }
+[data-crm] .crm-bubble-ai { background-color: rgb(var(--crm-ai) / 0.10); color: rgb(var(--a-text)); }
+
+/* A board's column scrolls on its own; the board scrolls sideways on a phone. */
+[data-crm] .crm-board { scrollbar-width: thin; }

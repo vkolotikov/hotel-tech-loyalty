@@ -61,6 +61,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'admin'              => \App\Http\Middleware\AdminMiddleware::class,
             'admin.access'       => \App\Http\Middleware\AdminAccess::class,
             'feature'            => \App\Http\Middleware\RequireFeature::class,
+            'ai.capture'         => \App\Http\Middleware\RequireAiCapture::class,
             'staff.can'          => \App\Http\Middleware\RequireStaffCapability::class,
             'member.only'        => \App\Http\Middleware\MemberOnly::class,
             'workspace'          => \App\Http\Middleware\RequireWorkspace::class,

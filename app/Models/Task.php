@@ -77,9 +77,12 @@ class Task extends Model
             ->where('due_at', '<', now());
     }
 
-    public function scopeDueToday($query)
+    /** Open and due during today, the day of $zone (the venue's, VenueClock::zone; UTC when none is given). */
+    public function scopeDueToday($query, ?string $zone = null)
     {
+        $today = \Carbon\CarbonImmutable::now($zone ?: 'UTC');
+
         return $query->whereNull('completed_at')
-            ->whereBetween('due_at', [now()->startOfDay(), now()->endOfDay()]);
+            ->whereBetween('due_at', [$today->startOfDay()->utc(), $today->endOfDay()->utc()]);
     }
 }

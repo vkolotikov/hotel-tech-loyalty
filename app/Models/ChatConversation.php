@@ -117,6 +117,26 @@ class ChatConversation extends Model
         return $query->whereNull('assigned_to');
     }
 
+    /**
+     * The conversations the inbox lists by default (ChatInboxController::index): the visitor wrote something, left a
+     * way to reach them, or became a lead. A widget opened and never written in is not a chat. The inbox's stats and
+     * HexaTech CRM's Today count the same ones (2026-11-08), so every figure matches the list.
+     */
+    public function scopeShownInInbox($query)
+    {
+        return $query->where(function ($q) {
+            $q->whereExists(function ($sub) {
+                $sub->select(\Illuminate\Support\Facades\DB::raw(1))
+                    ->from('chat_messages')
+                    ->whereColumn('chat_messages.conversation_id', 'chat_conversations.id')
+                    ->where('chat_messages.sender_type', 'visitor');
+            })
+            ->orWhereNotNull('chat_conversations.visitor_email')
+            ->orWhereNotNull('chat_conversations.visitor_phone')
+            ->orWhere('chat_conversations.lead_captured', true);
+        });
+    }
+
     public function getDisplayNameAttribute(): string
     {
         if ($this->member) {

@@ -19,6 +19,7 @@
 @import './appointments/theme/appointments.css';
 @import './content/theme/content.css';
 @import './loyalty/theme/loyalty.css';
+@import './crm/theme/crm.css';
 @import './theme/legacySurfaces.css';
 @import './theme/glass.css';
 @import './theme/light.css';

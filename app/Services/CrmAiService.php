@@ -500,10 +500,9 @@ class CrmAiService
     }
 
     /**
-     * Build a failure result, surfacing the real API/transport error when
-     * call() returned an error text block instead of a tool_use block. This
-     * turns opaque "Could not extract …" messages into diagnosable ones
-     * (e.g. an unavailable model or a rate limit) without leaking internals.
+     * Build a failure result. When call() returned an error text block instead of a tool_use block (an unavailable
+     * model, a rate limit), that text is logged for us to diagnose and the answer keeps our own sentence: the
+     * provider's words never reach the person (2026-11-08; before, they were appended in brackets).
      */
     private function extractionFailure(array $res, string $fallback): array
     {
@@ -511,7 +510,8 @@ class CrmAiService
             if (($block['type'] ?? '') === 'text') {
                 $text = trim((string) ($block['text'] ?? ''));
                 if ($text !== '' && preg_match('/^(API error|AI service|AI call failed|Empty response)/i', $text)) {
-                    return ['success' => false, 'error' => $fallback . ' (' . mb_substr($text, 0, 200) . ')'];
+                    \Illuminate\Support\Facades\Log::warning('CRM AI extraction failed', ['detail' => mb_substr($text, 0, 500)]);
+                    break;
                 }
             }
         }

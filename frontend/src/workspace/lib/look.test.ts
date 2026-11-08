@@ -24,6 +24,9 @@ describe('a workspace look under its own keys', () => {
     expect(loadLook(A)).toEqual({ theme: 'dark', rail: 'slim' })
     expect(loadLook(C)).toEqual({ theme: 'light', rail: 'full' })
     expect(loadLook({ look: 'nobody:look', paint: 'nobody:paint' })).toEqual(DEFAULT_LOOK)
+    // A workspace may start a device elsewhere (HexaTech CRM starts dark); what the person chose still wins.
+    expect(loadLook({ look: 'nobody:look', paint: 'nobody:paint', start: { theme: 'dark', rail: 'full' } })).toEqual({ theme: 'dark', rail: 'full' })
+    expect(loadLook({ ...A, start: { theme: 'light', rail: 'full' } })).toEqual({ theme: 'dark', rail: 'slim' })
   })
 
   it('keeps each workspace\'s paint apart, and writes it only when it changed', () => {

@@ -79,7 +79,7 @@ class DealController extends Controller
         if ($focus === 'overdue') {
             $query->where('next_task_completed', false)
                   ->whereNotNull('next_task_due')
-                  ->where('next_task_due', '<', now()->toDateString());
+                  ->where('next_task_due', '<', \App\Services\Appointments\VenueClock::today((int) app('current_organization_id')));
         } elseif ($focus === 'high_value') {
             // Top quartile by total_value over open (not completed) deals.
             // Cheap heuristic: anything >= 500 is "high value" — staff can
@@ -121,8 +121,10 @@ class DealController extends Controller
               ->orWhereHas('pipelineStage', fn ($p) => $p->where('kind', 'won'));
         });
 
-        $total = (clone $base)->whereNotIn('fulfillment_stage', ['completed'])
-            ->orWhereNull('fulfillment_stage')
+        // Deals not yet completed. The "no stage yet" alternative is grouped with its pair (2026-11-08): a bare
+        // orWhereNull() beside the deal condition counted every inquiry without a fulfilment stage as a deal.
+        $total = (clone $base)
+            ->where(fn ($q) => $q->whereNull('fulfillment_stage')->orWhere('fulfillment_stage', '!=', 'completed'))
             ->count();
 
         $byStage = (clone $base)
@@ -158,7 +160,10 @@ class DealController extends Controller
 
         return response()->json([
             'total'              => $total,
+            // Deals not paid in full, whatever their step (the full admin's figure, kept as it was).
             'awaiting_payment'   => ['count' => $awaitingPayCount, 'value' => round((float) $awaitingPayValue, 2)],
+            // The step "Awaiting payment" itself (2026-11-08): what `?stage=payment_pending` lists, so its pill can count.
+            'payment_pending'    => $stageRow('payment_pending'),
             'design_needed'      => $stageRow('design_needed'),
             'in_production'      => $stageRow('in_production'),
             'ready_to_ship'      => $stageRow('ready_to_ship'),
@@ -292,7 +297,7 @@ class DealController extends Controller
             ->where(fn ($q) => $q->whereNull('fulfillment_stage')->orWhere('fulfillment_stage', '!=', 'completed'))
             ->where('next_task_completed', false)
             ->whereNotNull('next_task_due')
-            ->where('next_task_due', '<', now()->toDateString())
+            ->where('next_task_due', '<', \App\Services\Appointments\VenueClock::today((int) app('current_organization_id')))
             ->count();
 
         return response()->json([

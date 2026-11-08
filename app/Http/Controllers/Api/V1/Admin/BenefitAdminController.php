@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1\Admin;
 
+use App\Services\Booking\Setup\OwnRows;
 use App\Http\Controllers\Controller;
 use App\Models\BenefitDefinition;
 use App\Models\BenefitEntitlement;
@@ -96,9 +97,9 @@ class BenefitAdminController extends Controller
     public function assignTierBenefit(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'tier_id'            => 'required|exists:loyalty_tiers,id',
-            'benefit_id'         => 'required|exists:benefit_definitions,id',
-            'property_id'        => 'nullable|exists:properties,id',
+            'tier_id'            => ['required', OwnRows::rule('loyalty_tiers')->whereNull('deleted_at')],
+            'benefit_id'         => ['required', OwnRows::rule('benefit_definitions')->whereNull('deleted_at')],
+            'property_id'        => ['nullable', OwnRows::rule('properties')],
             'value'              => 'nullable|string|max:255',
             // Typed value: what makes the benefit enforceable rather than
             // a sentence on a screen. `value` stays as the human wording.
