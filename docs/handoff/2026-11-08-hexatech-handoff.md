@@ -106,3 +106,44 @@ out with it (nothing of HexaTech CRM had been deployed before).
    offers the three packages. Until then `/crm/register` says HexaTech CRM cannot be bought online yet; full
    customers already have `/crm`.
 3. Optional: an organisation that should not see the CRM yet: `php artisan workspace:crm <organisation id> --off`.
+
+## Loyalty: delivery setup and app design availability (8 Nov)
+
+Owner asked whether each organisation can send email/SMS/push, whether Card & app can really control client
+designs, and whether wallet accounts need more than uploaded data. Audit and limits:
+`docs/loyalty-redesign/28-DELIVERY-AND-APP-AVAILABILITY.md`.
+
+- Email delivery exists through the platform mail transport/queue. Organisations use the platform From address
+  with their sender name/reply-to. Self-service sending domains/SMTP are **On hold**. SMS already uses each
+  organisation's Twilio account. Push needs native app credentials, registered devices and consent. These setup
+  dependencies are now explicit in Campaigns; a list read no longer implies email/push delivery readiness.
+- The current member app uses the portal bootstrap's venue accent/heading face, not `AppLook`'s separate mobile
+  palette/card settings. The member app and desktop designers are **On hold**, including `?tab=app`. The former
+  desktop view was illustrative; browser/Windows staff app layouts cannot be controlled there. No backend settings
+  or full-admin writers were removed. No native app build was made.
+- Wallet settings/uploads and currency remain. Both wallet entry points explain business-owner/manager setup,
+  Apple Developer signing credentials and Google issuer/publishing/service-account approval. Members add their
+  own cards after setup. Saved credentials mean **Ready to test**, not provider approval or verified delivery.
+- All five locales, both themes, mobile/desktop. No real message or member pass was sent/issued in this task.
+
+Feature: `feature/delivery-readiness-20261108`; **next source-patch baseline 314e52985** (source c60b8b119, refreshed
+with production's minimatch security update). Production release pushed: **08e222562**, source patch **d3ccb385e**
+on **5888c7a8b** and a fresh build. Exactly 25 source paths, whole-source parity excluding the three build roots.
+The earlier local release build 3eb1e71e8 was discarded when main advanced; it was never pushed.
+
+Checks on the separate C: artifact with a physical vendor copy and node_modules junction: pinned PHP 8.5.12,
+OPENSSL_CONF set; **2,042 PHP tests passed**, zero skipped/failed (189 Support, 118 Unit/Landing, 1,735
+Feature/Landing). After the security refresh all PHP inputs were byte-identical to that tested artifact.
+Fresh dependencies resolve minimatch 11.0.5, npm audit zero vulnerabilities. TypeScript and targeted lint clean;
+**453 Vitest files / 6,711 tests passed**, repeated after the dependency refresh; fresh build passed. Browser:
+**46 Card & app + 43 Campaigns checks** on dev and compiled fixtures, then **12 final compiled checks** after the
+dependency refresh. Screenshots reviewed at 1440 and 390; widths 320–1440, languages, permissions, plan gates,
+wallet read errors and retained settings/upload paths covered. Local logs/evidence: `C:/wamp64/tmp/delivery-*20261108*`.
+
+Live verified **16:58 UTC**: entry `index-Bitprh8x.js`; all new design/status/prerequisite markers and scoped styles
+present, referenced chunks 200, wallet/app-look/campaigns/push/SMS unauthenticated reads 401. Public landing still
+serves its Nocturne stylesheet with zero `rp-` markers, retired stylesheet 404, all three Poppins files unchanged.
+CI is still running: https://github.com/vkolotikov/hotel-tech-loyalty/actions/runs/42502244845.
+Provider delivery/approval remains a separate acceptance task: platform
+mail transport/queue/domain, an organisation's approved Twilio sender, native push build/credentials/device, and
+real-device wallet add/update/disable. Credentials were neither printed nor changed.
