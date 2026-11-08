@@ -1,5 +1,7 @@
 # HexaTech Staff — native Android and iOS app for loyalty staff
 
+Latest Apple verification (8 November 2026, 18:11 Riga): **1.0.5 (3) is READY_FOR_SALE / Ready for Distribution**. Unlisted distribution is confirmed, with **175 Available** countries/regions. Link: https://apps.apple.com/us/app/hexatech-staff/id6829777674 . Initial US/GB web-link checks returned HTTP 404; external download-page propagation remains unverified. No duplicate build, upload or store-setting changes. This supersedes older pending-review statements. See `docs/handoff/2026-11-08-staff-ios-release.md`.
+
 Owner, 2026-10-31: "make also separate mobile android and ios app for loyalty, for loyalty software admin who could
 scan membership cards by nfc, qr, manualy, see all benefits points etc." Then, on the plan: "yes go ahead, use the
 new branch and your defaults. Use design more from our previous mobile app not from web mobile figma. Make something
