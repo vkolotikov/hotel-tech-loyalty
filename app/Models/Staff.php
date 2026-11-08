@@ -25,11 +25,14 @@ class Staff extends Model
         'can_view_analytics' => 'boolean',
         'allowed_nav_groups' => 'array',
         'planner_skills' => 'array',
+        // HexaTech Time Planner (2026-11-09): knowledge, hours, days, break. One writer: App\Services\Time\PlannerProfiles.
+        'planner_profile' => 'array',
         'is_active' => 'boolean',
         'last_login_at' => 'datetime',
     ];
 
-    public function user() { return $this->belongsTo(User::class); }
+    /** @return \Illuminate\Database\Eloquent\Relations\BelongsTo<User, $this> */
+    public function user(): \Illuminate\Database\Eloquent\Relations\BelongsTo { return $this->belongsTo(User::class); }
 
     public function isSuperAdmin(): bool { return $this->role === 'super_admin'; }
     public function isManager(): bool { return in_array($this->role, ['super_admin', 'manager']); }

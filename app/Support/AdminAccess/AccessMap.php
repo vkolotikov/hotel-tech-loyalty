@@ -80,6 +80,8 @@ final class AccessMap
         'admin/content'                         => ['staff',              'staff',              'content'],       // HexaTech Content; brand, strategy and whole-calendar AI keep their own manager rule (ContentAccess)
         'admin/crm'                             => ['staff',              'staff',              'crm'],           // HexaTech CRM (2026-11-07): bootstrap, Today, setup steps, the inbox's AI draft; reads only but the draft
         'admin/crm/bot-gaps'                    => ['staff',              'manager',            'chat'],           // HexaTech CRM: answers the chatbot got wrong (read by everyone; answering teaches the bot: manager, as admin/knowledge)
+        'admin/time'                            => ['staff',              'staff',              'admin'],          // HexaTech Time Planner (2026-11-09): the full admin's Planner (menu: everyone) as a workspace; planning others' days is a manager's (TimeAccess)
+        'admin/time/people/{user}'              => ['staff',              'manager',            'admin'],          // A person's planner profile (knowledge, hours, days, break): a manager's, as the team's skills (admin/team)
         'admin/loyalty'                         => ['staff',              'staff',              'loyalty'],       // HexaTech Loyalty; award and redeem keep their capabilities (LoyaltyAccess)
         'admin/loyalty/requests/inbox'           => ['staff',              'manager',            'loyalty'],       // Read-only combined index; existing source endpoints decide every mutation
         'admin/loyalty/devices'                 => ['staff',              'staff',              'loyalty'],       // The caller's own phone in the HexaTech Staff app, for request alerts

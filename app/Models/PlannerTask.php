@@ -35,6 +35,10 @@ class PlannerTask extends Model
         // on-time-vs-late completion analytics. Stamped/cleared by the
         // saving() hook below, never client-set (not in $fillable).
         'completed_at'     => 'datetime',
+        // HexaTech Time Planner (2026-11-09): the time a person really spent, from Start / Pause / Finish
+        // (App\Services\Time\TaskClock). Never client-set (not in $fillable); NULL = nobody timed it.
+        'started_at'       => 'datetime',
+        'actual_minutes'   => 'integer',
     ];
 
     /**
@@ -60,6 +64,12 @@ class PlannerTask extends Model
             if ($isDone) {
                 if (is_null($t->completed_at) && (!$t->exists || $t->isDirty('completed') || $t->isDirty('status'))) {
                     $t->completed_at = now();
+                }
+                // A running clock stops when the task is done, whichever screen marked it (the full admin's tick,
+                // a bulk "mark done", the Time Planner's Finish): the time it ran is added to what was tracked.
+                if (!is_null($t->started_at)) {
+                    $t->actual_minutes = (int) $t->actual_minutes + \App\Services\Time\TaskClock::minutesSince($t->started_at);
+                    $t->started_at = null;
                 }
             } elseif (!is_null($t->completed_at)) {
                 $t->completed_at = null;
