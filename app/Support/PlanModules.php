@@ -6,20 +6,22 @@ namespace App\Support;
  * The workspaces an organisation may buy on their own (owner, 2026-11-02): HexaTech Loyalty and HexaTech Content,
  * each in three packages — Lite, Standard (85 € a month) and Pro — and, since 2026-11-04, HexaTech Appointments in the
  * same three packages at Loyalty's prices (the Appointments plan of Part C, 2026-10-02, is its Standard), and since
- * 2026-11-07 HexaTech CRM (the AI chat widget, the inbox and the CRM in one workspace) at the same prices.
+ * 2026-11-07 HexaTech CRM (the AI chat widget, the inbox and the CRM in one workspace) at the same prices, and since
+ * 2026-11-09 HexaTech Time Planner (the staff planner with its AI) at the same prices again.
  * Paid yearly, every package costs 15 % less a month (owner, 2026-11-02). A customer starts with one product and
  * adds the others later, or moves to another package.
  *
  * Billing has one plan for each choice of packages, named by planSlug(): a product's Standard package is its bare
  * name, the others carry their package (`loyalty`, `loyalty_lite`, `loyalty_pro`), and two products join with a hyphen
- * in MODULES order (`loyalty-content`, `loyalty_pro-content_lite`, `content-crm_lite`). Billing sells each product
+ * in MODULES order (`loyalty-content`, `loyalty_pro-content_lite`, `content-crm_lite`, `crm-time_pro`). Billing sells each product
  * alone and every pair, never three. Adding a product or changing a package moves the
  * subscription to that plan (SubscriptionService::changePlan in the billing application), so Stripe prorates the one
  * price.
  *
  * Who is on modules (Organization::planModules()): billing's products are module products only and name at least one
  * module; a product outside them (the full suite's crm and chat, education, avatar) makes a full customer — HexaTech
- * CRM's own product is `crm_chat` for that reason. With no products, the plan slug.
+ * CRM's own product is `crm_chat` for that reason (and HexaTech Time Planner's `time_planner`). With no products, the
+ * plan slug.
  * Which package of a product an organisation has is its plan slug's (Organization::planTiers()).
  *
  * Prices and features here are only what the pages show when billing cannot be read; billing's plan rows are what is
@@ -123,10 +125,34 @@ final class PlanModules
                 ]],
             ],
         ],
+        // HexaTech Time Planner (owner 2026-11-09: "make it a module sold separately like CRM and also included in the
+        // enterprise plan"): the staff planner with AI planning, review, capture and voice. Its billing product is
+        // `time_planner`; the Enterprise plan keeps it through `time_management` (a full customer's workspace). Every
+        // package carries `time_management` — the switch the full admin's Planner endpoints and the workspace's own are
+        // behind — and they differ by team (`max_team_members`: the people who sign in and plan) and the AI allowance the
+        // plans, reviews and captures spend (`time_plan`, `time_review`, `time_capture`).
+        'time' => [
+            'name' => 'HexaTech Time Planner',
+            'products' => ['time_planner'],
+            'tiers' => [
+                'lite' => ['monthly_amount' => 4900, 'features' => [
+                    'max_team_members' => '3', 'max_guests' => '1000', 'max_properties' => '1', 'max_loyalty_members' => '0',
+                    'time_management' => 'true', 'ai_monthly_cost_cents' => '500',
+                ]],
+                'standard' => ['monthly_amount' => 8500, 'features' => [
+                    'max_team_members' => '10', 'max_guests' => '1000', 'max_properties' => '1', 'max_loyalty_members' => '0',
+                    'time_management' => 'true', 'ai_monthly_cost_cents' => '1500',
+                ]],
+                'pro' => ['monthly_amount' => 14900, 'features' => [
+                    'max_team_members' => '25', 'max_guests' => '1000', 'max_properties' => '3', 'max_loyalty_members' => '0',
+                    'time_management' => 'true', 'ai_monthly_cost_cents' => '4000', 'priority_support' => 'priority',
+                ]],
+            ],
+        ],
     ];
 
-    /** The modules sold through their own sign-up pages (/appointments/register, /loyalty/register, /content/register, /crm/register). */
-    public const SOLD_ALONE = ['appointments', 'loyalty', 'content', 'crm'];
+    /** The modules sold through their own sign-up pages (/appointments/register, /loyalty/register, /content/register, /crm/register, /time/register). */
+    public const SOLD_ALONE = ['appointments', 'loyalty', 'content', 'crm', 'time'];
 
     /** The currency and free trial of the modules' plans when billing cannot be read. */
     public const FALLBACK_CURRENCY = 'eur';

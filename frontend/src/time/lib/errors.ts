@@ -6,7 +6,7 @@ export const KNOWN_ERRORS = [
   'network', 'not_found', 'not_allowed', 'manager_only', 'invalid', 'too_many', 'feature_locked', 'ai_budget_used_up',
   'model_not_allowed', 'ai_failed', 'ai_unavailable', 'workspace_disabled', 'subscription_required', 'not_in_plan',
   'past_day', 'no_person', 'task_done', 'invalid_hours', 'transcription_unavailable', 'transcription_failed',
-  'feature_locked_planner',
+  'feature_locked_planner', 'own_day_only',
 ] as const
 
 /** The i18n key for a failure's sentence. */

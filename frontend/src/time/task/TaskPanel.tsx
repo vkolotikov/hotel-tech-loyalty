@@ -13,8 +13,9 @@ import { addDays, isoWeekday } from '../lib/dates'
 import { errorText } from '../lib/errors'
 import { duration } from '../lib/format'
 import { assignable, usePeople, useRefresh, useTemplates } from '../lib/queries'
+import { choosable, mayChange, mayGive, meOf, rightsOf } from '../lib/rights'
 import {
-  DURATIONS, EMPTY_FORM, PRIORITIES, RECURRING, STATUSES, endOf, formProblem, payloadOf, plannerApi, priorityOf,
+  DURATIONS, EMPTY_FORM, PRIORITIES, RECURRING, STATUSES, assignmentOf, endOf, formProblem, payloadOf, plannerApi, priorityOf,
   type Status, type TaskForm,
 } from '../lib/tasks'
 import type { Task } from '../lib/types'
@@ -62,7 +63,8 @@ function Chip({ on, onClick, children, color }: { on: boolean; onClick: () => vo
  * A task, new or as it is (2026-11-09): every field the full admin's planner keeps — title, type and task, day, start,
  * length, person, priority, status, notes, subtasks, repeats, the pool's horizon — saved through its own endpoints.
  * Help on the way: the team's templates, how long such a task usually takes (time/estimate, from finished ones), and the
- * microphone for the title and the notes.
+ * microphone for the title and the notes. In the `own` planning mode a staff member's list of people is only themselves,
+ * and a colleague's task opens read-only (it can still be copied to one's own day).
  */
 export function TaskPanel({ task, defaults, onClose }: TaskPanelProps) {
   const { t, i18n } = useTranslation()
@@ -70,7 +72,11 @@ export function TaskPanel({ task, defaults, onClose }: TaskPanelProps) {
   const toast = useToast()
   const refresh = useRefresh()
   const creating = !task
-  const [form, setForm] = useState<TaskForm>(() => (task ? formOf(task) : { ...EMPTY_FORM, ...defaults }))
+  const rights = rightsOf(boot)
+  // A new task offered for a colleague (their lane, their page) is one's own when one may plan only one's own day.
+  const [form, setForm] = useState<TaskForm>(() => (task ? formOf(task) : {
+    ...EMPTY_FORM, ...defaults, person: defaults?.person && !mayGive(rights, defaults.person) ? boot.staff.key : defaults?.person ?? '',
+  }))
   const [subtasks, setSubtasks] = useState(task?.subtasks ?? [])
   const [newSub, setNewSub] = useState('')
   const [draftSubs, setDraftSubs] = useState<string[]>([])
@@ -80,8 +86,11 @@ export function TaskPanel({ task, defaults, onClose }: TaskPanelProps) {
   const set = <K extends keyof TaskForm>(key: K, value: TaskForm[K]) => setForm(f => ({ ...f, [key]: value }))
   const units = { h: t('time.common.h', 'h'), min: t('time.common.min', 'min') }
 
-  const people = assignable(usePeople().data?.people)
+  const locked = Boolean(task) && !mayChange(rights, task!)
+  const everyone = assignable(usePeople().data?.people)
+  const people = choosable(rights, everyone, creating ? null : form.person)
   const person = people.find(p => p.key === form.person) ?? null
+  const ownerName = task?.owner ? everyone.find(p => p.key === task.owner)?.name ?? task.employee_name ?? '' : ''
   const templates = useTemplates().data ?? []
   const groups = boot.settings.groups
   const channels = boot.settings.channels.filter(c => c.groups.length === 0 || !form.task_group || c.groups.includes(form.task_group))
@@ -124,7 +133,8 @@ export function TaskPanel({ task, defaults, onClose }: TaskPanelProps) {
     onError: error => toast(errorText(t, error), 'danger'),
   })
   const copy = useMutation({
-    mutationFn: (date: string) => plannerApi.copy(task!.id, { task_date: date }),
+    // A colleague's task is copied to one's own day when one may plan only one's own (PlanningMode).
+    mutationFn: (date: string) => plannerApi.copy(task!.id, { task_date: date, ...(locked ? assignmentOf(meOf(boot)) : {}) }),
     onSuccess: () => { refresh(); toast(t('time.task.copied', 'Copied')); setCopyTo('') },
     onError: error => toast(errorText(t, error), 'danger'),
   })
@@ -163,7 +173,9 @@ export function TaskPanel({ task, defaults, onClose }: TaskPanelProps) {
 
   return (
     <SidePanel title={creating ? t('time.task.new', 'New task') : t('time.task.edit', 'Task')} onClose={onClose}
-      footer={(
+      footer={locked ? (
+        <div className="flex justify-end"><Button variant="secondary" onClick={onClose}>{t('time.common.close', 'Close')}</Button></div>
+      ) : (
         <div className="flex flex-wrap items-center gap-2">
           {!creating && (
             <Button variant="secondary" size="sm" onClick={() => setConfirmDelete(true)} disabled={busy}>
@@ -177,7 +189,10 @@ export function TaskPanel({ task, defaults, onClose }: TaskPanelProps) {
         </div>
       )}>
       <div className="space-y-5">
+        {locked && <Notice tone="info">{t('time.task.locked', '{{name}} plans this task. In this planner everyone plans their own day; you can copy it to yours.', { name: ownerName })}</Notice>}
         {problem && <Notice tone="warning">{problems[problem]}</Notice>}
+        {/* Read-only for a colleague's task in the `own` planning mode: every field and button below is disabled. */}
+        <fieldset disabled={locked} className={`m-0 min-w-0 space-y-5 border-0 p-0 ${locked ? 'opacity-70' : ''}`}>
 
         {creating && templates.length > 0 && (
           <Field label={t('time.task.template', 'Start from a template')}>
@@ -352,6 +367,7 @@ export function TaskPanel({ task, defaults, onClose }: TaskPanelProps) {
             <Button type="submit" variant="secondary" size="sm" disabled={!newSub.trim()}>{t('time.common.add', 'Add')}</Button>
           </form>
         </div>
+        </fieldset>
 
         {!creating && (
           <div className="flex flex-wrap items-center gap-2 rounded-xl border border-a-border bg-a-surface-2 p-3">
@@ -361,7 +377,7 @@ export function TaskPanel({ task, defaults, onClose }: TaskPanelProps) {
             <Button variant="secondary" size="sm" disabled={!copyTo} loading={copy.isPending} onClick={() => copy.mutate(copyTo)}>
               <CalendarDays size={14} aria-hidden />{t('time.task.copy', 'Copy')}
             </Button>
-            {task && !task.done && (
+            {task && !task.done && !locked && (
               <Button variant="ghost" size="sm" className="ml-auto" loading={finish.isPending} onClick={() => finish.mutate()}>
                 <CheckCircle2 size={14} aria-hidden />{t('time.task.mark_done', 'Mark done')}
               </Button>

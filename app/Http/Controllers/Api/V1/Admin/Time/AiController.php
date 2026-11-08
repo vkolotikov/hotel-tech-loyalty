@@ -15,7 +15,7 @@ use App\Services\Time\PlannerAi;
 use App\Services\Time\PlannerCatalogue;
 use App\Services\Time\TaskView;
 use App\Services\Time\Team;
-use App\Services\Time\TimeAccess;
+use App\Services\Time\PlanningMode;
 use App\Services\Time\TimeInsights;
 use App\Services\Time\TimeRefused;
 use App\Services\Time\WorkWindow;
@@ -51,7 +51,6 @@ class AiController extends Controller
         $org = $request->attributes->get('workspace_org');
         $orgId = (int) $org->id;
         $user = $request->user();
-        $manager = TimeAccess::isManager($user);
         $me = 'u' . $user->id;
         $today = VenueClock::today($orgId);
         if ($data['date'] < $today) {
@@ -64,8 +63,9 @@ class AiController extends Controller
             'team'   => array_map(fn ($p) => $p['key'], $team->people()),
             default  => [$me],
         };
-        if ($scopeKeys !== [$me] && !$manager) {
-            throw TimeRefused::managerOnly();
+        // Someone else's day, or the team's: everyone's in `team` mode, a manager's in `own` mode (PlanningMode).
+        if ($scopeKeys !== [$me] && !PlanningMode::mayPlanOthers($user)) {
+            throw PlanningMode::refused();
         }
         foreach ($scopeKeys as $key) {
             if ($team->find($key) === null) {
@@ -128,7 +128,7 @@ class AiController extends Controller
         }
         $user = $request->user();
 
-        return response()->json($applier->apply($user, TimeAccess::isManager($user), $data['date'], $data['lines']));
+        return response()->json($applier->apply($user, PlanningMode::mayPlanOthers($user), $data['date'], $data['lines']));
     }
 
     /** The AI's read of a day (`kind=day`) or a period (`kind=period`), with suggestions it may act on. */
@@ -147,11 +147,17 @@ class AiController extends Controller
         $orgId = (int) $org->id;
         $ai->assertReady($org);
         $only = isset($data['person']) ? [(string) $data['person']] : null;
+        $user = $request->user();
+        $me = 'u' . $user->id;
+        // In `own` mode a staff member's review may change only their own day: its actions name their tasks, the day's
+        // unassigned ones and themselves (PlanningMode); the read itself is anyone's, as the team's days are.
+        $others = PlanningMode::mayPlanOthers($user);
 
         if ($data['kind'] === 'day') {
             $board = $boards->build($orgId, $data['date'], $only);
             $facts = $this->reviewFacts($board);
-            $taskIds = collect($board['people'])->flatMap(fn ($p) => array_column($p['tasks'], 'id'))
+            $taskIds = collect($board['people'])->filter(fn ($p) => $others || $p['key'] === $me)
+                ->flatMap(fn ($p) => array_column($p['tasks'], 'id'))
                 ->merge(array_column($board['unassigned'], 'id'))->all();
         } else {
             $period = $insights->for($orgId, $data['from'], $data['to'], $only[0] ?? null);
@@ -159,7 +165,7 @@ class AiController extends Controller
             $taskIds = [];
         }
         $answer = $ai->review($orgId, $data['kind'], $facts, $data['lang'] ?? 'en');
-        $keys = array_map(fn ($p) => $p['key'], $team->people());
+        $keys = $others ? array_map(fn ($p) => $p['key'], $team->people()) : [$me];
         $answer['suggestions'] = array_map(fn (array $s) => [
             'title'  => mb_substr(trim((string) ($s['title'] ?? '')), 0, 160),
             'detail' => mb_substr(trim((string) ($s['detail'] ?? '')), 0, 400),
@@ -184,6 +190,7 @@ class AiController extends Controller
         $today = VenueClock::today($orgId);
         $day = CarbonImmutable::createFromFormat('!Y-m-d', $today, 'UTC');
         $people = $team->people();
+        $others = PlanningMode::mayPlanOthers($request->user());
 
         $found = $ai->capture($orgId, $data['text'], [
             'today'       => $today,
@@ -207,6 +214,11 @@ class AiController extends Controller
             $group = $catalogue->matchGroup($t['task_group'] ?? null);
             $category = $catalogue->matchChannel($t['task'] ?? null);
             $person = $this->matchPerson($people, $t['person_name'] ?? null);
+            // In `own` mode a staff member's drafts are theirs or nobody's: a colleague the text names is kept as a name only.
+            if ($person !== null && !$others && $person['key'] !== 'u' . $request->user()->id) {
+                $t['person_name'] = $person['name'];
+                $person = null;
+            }
             $minutes = (int) ($t['duration_minutes'] ?? 0);
             $estimate = null;
             if ($minutes < 5 || $minutes > 720) {

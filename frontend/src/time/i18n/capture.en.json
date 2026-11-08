@@ -3,6 +3,7 @@
   "add_one": "Add {{count}} task",
   "add_other": "Add {{count}} tasks",
   "back": "Back to the text",
+  "colleague_named": "“{{name}}” plans their own day: keep it for yourself or for nobody",
   "estimated": "estimated",
   "found": "Check each task. Untick what should not be added.",
   "keep": "Add this task",

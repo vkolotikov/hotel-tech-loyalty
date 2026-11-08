@@ -21,6 +21,7 @@
   "finished": "Hecha, ¡buen trabajo!",
   "horizon": "Cuándo debe hacerse",
   "length": "Duración",
+  "locked": "{{name}} planifica esta tarea. En este planificador cada persona planifica su propio día; puede copiarla al suyo.",
   "mark_done": "Marcar como hecha",
   "minutes": "Minutos",
   "new": "Nueva tarea",

@@ -9,6 +9,7 @@ import { timeApi } from '../lib/api'
 import { errorText } from '../lib/errors'
 import { dayLabel, duration } from '../lib/format'
 import { assignable, usePeople, useRefresh } from '../lib/queries'
+import { choosable, rightsOf } from '../lib/rights'
 import { PRIORITIES, plannerApi } from '../lib/tasks'
 import { Select, TextArea, TextInput } from '../ui/inputs'
 import { SidePanel } from '../ui/SidePanel'
@@ -20,14 +21,16 @@ import { bodyOf, rowsOf, savable, type DraftRow } from './captureLogic'
 /**
  * AI capture (2026-11-09): a message, notes or a voice note become tasks. The AI reads them (time/capture) and matches
  * the team's people, types and tasks; the person checks every line — keeps it or not, changes its day, time, length,
- * person or priority — and only then are the kept ones saved, through the full admin's own `planner/tasks`.
+ * person or priority — and only then are the kept ones saved, through the full admin's own `planner/tasks`. In the `own`
+ * planning mode the server leaves a colleague the text names as a name only, and the list of people is oneself.
  */
 export function CaptureDialog({ onClose, date, initialText = '' }: { onClose: () => void; date?: string; initialText?: string }) {
   const { t, i18n } = useTranslation()
   const boot = useBoot()
   const toast = useToast()
   const refresh = useRefresh()
-  const people = assignable(usePeople().data?.people)
+  const everyone = assignable(usePeople().data?.people)
+  const people = choosable(rightsOf(boot), everyone)
   const [text, setText] = useState(initialText)
   const [rows, setRows] = useState<DraftRow[] | null>(null)
   const lang = (i18n.language || 'en').slice(0, 2)
@@ -121,7 +124,9 @@ export function CaptureDialog({ onClose, date, initialText = '' }: { onClose: ()
                 {row.task_category && <span className="rounded-full bg-a-surface-2 px-2 py-0.5">{boot.settings.channels.find(c => c.key === row.task_category)?.label ?? row.task_category}</span>}
                 {row.subtasks.length > 0 && <span className="rounded-full bg-a-surface-2 px-2 py-0.5">{t('time.capture.steps', '{{count}} step(s)', { count: row.subtasks.length })}</span>}
                 {row.person_named && !row.person && (
-                  <span className="rounded-full bg-a-st-pending/12 px-2 py-0.5 text-a-st-pending">{t('time.capture.unknown_person', '“{{name}}” is not on the team', { name: row.person_named })}</span>
+                  <span className="rounded-full bg-a-st-pending/12 px-2 py-0.5 text-a-st-pending">{everyone.some(p => p.name === row.person_named)
+                    ? t('time.capture.colleague_named', '“{{name}}” plans their own day: keep it for yourself or for nobody', { name: row.person_named })
+                    : t('time.capture.unknown_person', '“{{name}}” is not on the team', { name: row.person_named })}</span>
                 )}
               </div>
               {row.description && <p className="text-xs text-a-text-2">{row.description}</p>}

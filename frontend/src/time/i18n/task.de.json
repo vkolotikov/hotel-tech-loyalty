@@ -21,6 +21,7 @@
   "finished": "Erledigt – gut gemacht",
   "horizon": "Bis wann erledigen",
   "length": "Dauer",
+  "locked": "{{name}} plant diese Aufgabe. In diesem Planer plant jede Person ihren eigenen Tag; Sie können sie in Ihren Tag kopieren.",
   "mark_done": "Als erledigt markieren",
   "minutes": "Minuten",
   "new": "Neue Aufgabe",

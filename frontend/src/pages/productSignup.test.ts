@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import i18n from '../i18n'
-import { authPath, formatMonthly, industryOrder, packageLines, packageSlug, packagesFor, priceFor, productHome, SIGNUP_PRODUCTS, viewFromPath, type ModulePlan } from './productSignup'
+import { authPath, formatMonthly, industryOrder, packageLines, packageSlug, packagesFor, priceFor, productCopy, productHome, SIGNUP_PRODUCTS, viewFromPath, type ModulePlan } from './productSignup'
 import { PICKER_INDUSTRIES } from '../lib/industryCopy'
 import { stepIndex } from './radioKeys'
 import {
@@ -146,6 +146,36 @@ describe('HexaTech CRM on its own (2026-11-07)', () => {
   })
 })
 
+describe('HexaTech Time Planner on its own (2026-11-09)', () => {
+  it('has its own sign-in and sign-up pages, and Standard is its bare name', () => {
+    expect(SIGNUP_PRODUCTS).toEqual(['appointments', 'loyalty', 'content', 'crm', 'time'])
+    expect(authPath('time', 'login')).toBe('/time/login')
+    expect(viewFromPath('/time/register')).toBe('trial')
+    expect(viewFromPath('/time/reset-password')).toBe('reset')
+    expect(packageSlug('time', 'standard')).toBe('time')
+    expect(packageSlug('time', 'lite')).toBe('time_lite')
+    expect(productHome('time', '/')).toBe('/time')
+    expect(productCopy('time', t).brand).toBe('HexaTech Time Planner')
+  })
+
+  it('reads its lines from what the server grants: the planner, the AI, capture, the allowance as a multiple, the team', () => {
+    const lite = { time_management: 'true', ai_monthly_cost_cents: '500', max_team_members: '3' }
+    const pro = { time_management: 'true', ai_monthly_cost_cents: '4000', max_team_members: '25', max_properties: '3', priority_support: 'priority' }
+    expect(packageLines('time', pro, lite, t, 'en').map(l => l.text)).toEqual([
+      'Day and week planner for the whole team, backlog and open pool',
+      'AI plans each day from skills, hours and experience',
+      'Tasks from a message or a voice note, reviews and insights',
+      '8× the monthly AI allowance of Lite',
+      '25 team members',
+      '3 locations',
+      'Priority support',
+    ])
+    const liteLines = packageLines('time', lite, lite, t, 'en')
+    expect(liteLines[3].text).toBe('A monthly AI allowance for plans, reviews and capture')
+    expect(liteLines[4].text).toBe('3 team members')
+  })
+})
+
 describe('the sign-up\'s type of business', () => {
   it('orders every business type for each product, its likeliest first and "Something else" last', () => {
     for (const product of SIGNUP_PRODUCTS) {
@@ -209,12 +239,13 @@ describe('Plan & products decisions', () => {
   })
 
   it('lists the products held first and names the plan by its packages', () => {
-    const names = { appointments: 'A', loyalty: 'HexaTech Loyalty', content: 'HexaTech Content', crm: 'HexaTech CRM' }
+    const names = { appointments: 'A', loyalty: 'HexaTech Loyalty', content: 'HexaTech Content', crm: 'HexaTech CRM', time: 'HexaTech Time Planner' }
     const pkgs = { lite: 'Lite', standard: 'Standard', pro: 'Pro' } as const
     expect(orderedProducts(state().products).map(p => p.key)).toEqual(['loyalty', 'appointments', 'content'])
     expect(planName({ content: 'lite', loyalty: 'pro' }, names, pkgs)).toBe('HexaTech Loyalty Pro + HexaTech Content Lite')
     expect(planName(['loyalty', 'content'], names, pkgs)).toBe('HexaTech Loyalty + HexaTech Content')
     expect(productName('loyalty', names, 'standard', pkgs)).toBe('HexaTech Loyalty')
     expect(planName({ crm: 'pro', content: 'standard' }, names, pkgs)).toBe('HexaTech Content + HexaTech CRM Pro')
+    expect(planName({ time: 'lite', crm: 'standard' }, names, pkgs)).toBe('HexaTech CRM + HexaTech Time Planner Lite')
   })
 })

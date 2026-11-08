@@ -1611,9 +1611,10 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
             // ─── HexaTech Time Planner workspace ────────────────────────────
             // The full admin's staff Planner as its own workspace (2026-11-09), with the AI planning, review, capture
             // and voice on top. Its own endpoints are here; tasks, the backlog, templates and day notes are the full
-            // admin's `planner/*` above, under their own rules. Every organisation has it unless an operator switched
-            // it off (`php artisan workspace:time <organisation id> --off`); like the full admin's Planner it needs the
-            // plan's `time_management` (the bootstrap answers either way, so the workspace can say so).
+            // admin's `planner/*` above, under their own rules. Sold on its own as the `time` module (2026-11-09), and
+            // every full customer has it unless an operator switched it off (`php artisan workspace:time <organisation
+            // id> --off`); like the full admin's Planner it needs the plan's `time_management`, which the Enterprise plan
+            // and every Time Planner package carry (the bootstrap answers either way, so the workspace can say so).
             Route::prefix('time')->middleware('workspace:time')->group(function () {
                 Route::get('bootstrap', [\App\Http\Controllers\Api\V1\Admin\Time\WorkspaceController::class, 'bootstrap']);
                 Route::middleware('feature:time_management')->group(function () {
@@ -1624,6 +1625,9 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
                     Route::get('people', [\App\Http\Controllers\Api\V1\Admin\Time\WorkspaceController::class, 'people']);
                     Route::put('people/{user}', [\App\Http\Controllers\Api\V1\Admin\Time\WorkspaceController::class, 'updatePerson'])->whereNumber('user');
                     Route::get('insights', [\App\Http\Controllers\Api\V1\Admin\Time\WorkspaceController::class, 'insights']);
+                    // The planner's settings without the CRM's settings area (an organisation may have bought the Time Planner alone).
+                    Route::get('settings', [\App\Http\Controllers\Api\V1\Admin\Time\SettingsController::class, 'index']);
+                    Route::put('settings/{key}', [\App\Http\Controllers\Api\V1\Admin\Time\SettingsController::class, 'update'])->where('key', '[a-z_]+');
                     Route::get('estimate', [\App\Http\Controllers\Api\V1\Admin\Time\WorkspaceController::class, 'estimate']);
                     Route::post('tasks/{task}/start', [\App\Http\Controllers\Api\V1\Admin\Time\WorkspaceController::class, 'start'])->whereNumber('task');
                     Route::post('tasks/{task}/pause', [\App\Http\Controllers\Api\V1\Admin\Time\WorkspaceController::class, 'pause'])->whereNumber('task');

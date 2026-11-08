@@ -13,6 +13,7 @@
   "caption": {
     "account": "Team & skills, and the full admin",
     "day": "The venue’s hours and the standard working time",
+    "planning": "Everyone for the team, or each their own day",
     "tasks": "What each type of work consists of",
     "templates": "Ready-made tasks to start from",
     "types": "The kinds of work, with icons and colours"
@@ -45,7 +46,21 @@
   "line": "The planner’s settings, shared with the full admin’s Planner.",
   "move_down": "Move down: {{name}}",
   "move_up": "Move up: {{name}}",
-  "read_only": "Only a manager can change the working day, the types and the tasks; you can see them here. Templates are everyone’s.",
+  "planning": {
+    "chosen": "In use",
+    "line": "Choose how your team works. The same rule holds in the full admin’s Planner.",
+    "own_1": "A colleague’s task opens read-only; it can be copied to one’s own day",
+    "own_2": "Managers still plan for anyone",
+    "own_line": "Everyone adds, moves and finishes only their own tasks, and takes work from the open pool.",
+    "own_title": "Each person plans their own day",
+    "seen": "Either way everyone sees the whole team’s days, and only a manager changes this setting.",
+    "team_1": "Assign, move and finish anyone’s tasks",
+    "team_2": "Plan a colleague’s or the whole team’s day with AI",
+    "team_line": "Anyone can add a task to a colleague’s day, hand work over and plan the team’s day.",
+    "team_title": "The whole team plans together",
+    "title": "Who plans whose day"
+  },
+  "read_only": "Only a manager can change the working day, who plans, the types and the tasks; you can see them here. Templates are everyone’s.",
   "remove": "Remove",
   "remove_named": "Remove: {{name}}",
   "save_changes": "Save changes",
@@ -53,6 +68,7 @@
   "tab": {
     "account": "Account",
     "day": "The working day",
+    "planning": "Who plans",
     "tasks": "Tasks",
     "templates": "Templates",
     "types": "Task types"

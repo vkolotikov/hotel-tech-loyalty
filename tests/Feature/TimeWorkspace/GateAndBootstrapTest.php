@@ -51,12 +51,16 @@ class GateAndBootstrapTest extends TestCase
         $this->asStaffMember()->getJson($this->timeApi('today'))->assertStatus(402)->assertJsonPath('code', 'feature_locked');
     }
 
-    public function test_an_organisation_on_modules_does_not_have_it(): void
+    public function test_an_organisation_on_modules_has_it_when_it_bought_the_time_planner(): void
     {
         $this->org->forceFill(['entitled_products' => ['crm_chat']])->save();
-
         $this->assertFalse($this->org->fresh()->workspaceEnabled('time'));
         $this->asManager()->getJson($this->timeApi('bootstrap'))->assertStatus(403);
+
+        // Sold on its own (2026-11-09): billing's `time_planner` product, its packages carrying `time_management`.
+        $this->org->forceFill(['entitled_products' => ['time_planner'], 'plan_features' => ['time_management' => 'true', 'max_team_members' => '10']])->save();
+        $this->asManager()->getJson($this->timeApi('bootstrap'))->assertOk()->assertJsonPath('features.time_management', true);
+        $this->asStaffMember()->getJson($this->timeApi('today'))->assertOk();
     }
 
     public function test_an_anonymous_caller_and_a_member_never_reach_it(): void
@@ -86,7 +90,9 @@ class GateAndBootstrapTest extends TestCase
             ->assertJsonPath('venue.today', '2026-11-04')
             ->assertJsonPath('features.time_management', true)
             ->assertJsonPath('staff.key', 'u' . $this->staffMember->id)
-            ->assertJsonPath('staff.can.plan_team', false)
+            // The planning mode is `team` until a manager chooses otherwise: everyone may plan for the team.
+            ->assertJsonPath('settings.planning_mode', 'team')
+            ->assertJsonPath('staff.can.plan_team', true)
             ->assertJsonPath('staff.can.edit_people', false)
             ->assertJsonPath('settings.window', ['start' => '08:00', 'end' => '17:00'])
             ->assertJsonPath('settings.minutes_per_day', 450)
@@ -95,6 +101,12 @@ class GateAndBootstrapTest extends TestCase
             ->assertJsonCount(1, 'settings.channels')
             ->assertJsonPath('counts', ['today_open' => 1, 'overdue' => 1, 'pool' => 1]);
 
+        $this->asManager()->getJson($this->timeApi('bootstrap'))->assertOk()->assertJsonPath('staff.can.plan_team', true);
+
+        // `own`: a staff member plans only their own day; a manager still plans anyone's.
+        $this->setting('planner_planning_mode', 'own');
+        $this->asStaffMember()->getJson($this->timeApi('bootstrap'))->assertOk()
+            ->assertJsonPath('settings.planning_mode', 'own')->assertJsonPath('staff.can.plan_team', false);
         $this->asManager()->getJson($this->timeApi('bootstrap'))->assertOk()->assertJsonPath('staff.can.plan_team', true);
     }
 

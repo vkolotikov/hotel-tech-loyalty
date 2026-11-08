@@ -15,6 +15,7 @@ import { errorText } from '../lib/errors'
 import { dayLabel, duration, weekdayName } from '../lib/format'
 import { usePeople, usePersonName, useRefresh } from '../lib/queries'
 import { rankSignals, signalText, signalTone } from '../lib/signals'
+import { mayDrop, mayGive, rightsOf } from '../lib/rights'
 import { assignmentOf, plannerApi } from '../lib/tasks'
 import type { Board, Task, Week } from '../lib/types'
 import { TaskCard, useGroupColor } from '../task/TaskCard'
@@ -77,6 +78,17 @@ export function PlanPage() {
     onSuccess: () => { refresh(); toast(t('time.plan.moved', 'Moved')) },
     onError: error => toast(errorText(t, error), 'danger'),
   })
+  // In the `own` planning mode a staff member moves only their own and unassigned work, and only onto their own lane or
+  // nobody's (PlanningMode); the server refuses the rest, so the page says so before it asks.
+  const rights = rightsOf(boot)
+  const tryMove = (task: Task, date: string, lane: string | null, start?: string | null) => {
+    if (!mayDrop(rights, task, lane === null ? task.owner : lane === NOBODY ? null : lane)) {
+      toast(t('time.errors.own_day_only', 'In this planner everyone plans only their own day. A manager can plan a colleague’s work.'), 'danger')
+      return
+    }
+    move.mutate({ task, date, lane, start })
+  }
+  const laneFor = (lane: string) => (lane === NOBODY ? '' : mayGive(rights, lane) ? lane : boot.staff.key)
 
   const title = q.view === 'week'
     ? t('time.plan.week_of', 'Week of {{day}}', { day: dayLabel(weekStart(q.date), i18n.language) })
@@ -122,13 +134,13 @@ export function PlanPage() {
       </div>
 
       {q.view === 'day'
-        ? <DayView date={q.date} person={q.person} everyone={q.everyone} onMove={(task, lane, start) => move.mutate({ task, date: q.date, lane, start })}
-            onCreate={(lane, start) => openTask(null, { task_date: q.date, start_time: start, person: lane === NOBODY ? '' : lane })}
+        ? <DayView date={q.date} person={q.person} everyone={q.everyone} onMove={(task, lane, start) => tryMove(task, q.date, lane, start)}
+            onCreate={(lane, start) => openTask(null, { task_date: q.date, start_time: start, person: laneFor(lane) })}
             onOpen={task => openTask(task)} onCapture={() => openCapture(q.date)} />
         : <WeekView start={weekStart(q.date)} person={q.person} everyone={q.everyone}
-            onMove={(task, date, lane) => move.mutate({ task, date, lane })}
+            onMove={(task, date, lane) => tryMove(task, date, lane)}
             onOpenDay={date => go({ view: null, date })} onOpen={task => openTask(task)}
-            onCreate={(date, lane) => openTask(null, { task_date: date, person: lane })} />}
+            onCreate={(date, lane) => openTask(null, { task_date: date, person: laneFor(lane) })} />}
 
       {planning && (
         <PlanDialog date={q.date < boot.venue.today ? boot.venue.today : q.date} scope={planning}

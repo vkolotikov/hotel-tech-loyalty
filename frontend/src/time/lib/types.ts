@@ -17,7 +17,15 @@ export interface Bootstrap {
     role: string | null
     can: { plan_team: boolean; edit_people: boolean; team_buckets: boolean; manage_settings: boolean; manage_templates: boolean }
   }
-  settings: { window: { start: string; end: string }; minutes_per_day: number; days_per_week: number; groups: GroupDef[]; channels: ChannelDef[] }
+  settings: {
+    window: { start: string; end: string }
+    minutes_per_day: number
+    days_per_week: number
+    groups: GroupDef[]
+    channels: ChannelDef[]
+    /** Who may put work on whose day (PlanningMode): everyone for everyone, or each their own; `staff.can.plan_team` is mine. */
+    planning_mode?: 'team' | 'own'
+  }
   counts: { today_open: number; overdue: number; pool: number }
 }
 

@@ -15,12 +15,20 @@ synchronised; a task moved in one is moved in the other.
 
 ## Who has it, and the ways in
 
-- **Every organisation not on modules has it** by default (`Organization::WORKSPACE_DEFAULTS['time']`); signing in
-  still opens the full admin. It is **no module**: an organisation on modules (HexaTech Loyalty, Content, Appointments,
-  CRM bought on their own) does not have it, as it has no full admin Planner.
+- **Sold on its own** (owner 2026-11-09: "make it a module sold separately like CRM and also included in the enterprise
+  plan"): the `time` module, billing product `time_planner`, in Lite, Standard and Pro at CRM's prices (49 / 85 / 149 €
+  a month, 15 % less paid yearly), alone or with any one other module; its own sign-up `/time/register` and sign-in
+  `/time/login`; Plan & products adds, changes or removes it. Every package carries `time_management` and they differ
+  by team (`max_team_members` 3 / 10 / 25) and the month's AI allowance (5 / 15 / 40 USD). Packages, prices and the
+  billing patch: `docs/plan-modules.md`. An organisation that bought it reaches `account` and `time` only (AccessMap
+  product `time`: `admin/time*` and the staff Planner's own `admin/planner*`), lands on `/time` and has no full admin.
+- **Every full customer has it** by default (`Organization::WORKSPACE_DEFAULTS['time']`); signing in still opens the
+  full admin. An organisation on other modules (HexaTech Loyalty, Content, Appointments, CRM bought on their own) does
+  not have it until it adds the Time Planner.
 - **The plan decides as in the full admin**: everything but the bootstrap carries `feature:time_management`
-  (Enterprise, like the full admin's Planner). Without it the bootstrap answers `features.time_management: false` and
-  the workspace says the Time Planner is part of the Enterprise plan, with a way back.
+  (the Enterprise plan's, and every Time Planner package's). Without it the bootstrap answers
+  `features.time_management: false` and the workspace says the Time Planner is part of the Enterprise plan, with a way
+  back.
 - The full admin's menu shows **HexaTech Time Planner** in "Operations" beside Planner to everyone whose organisation has
   the workspace (`showsWorkspaceLink(user, 'time')`), locked like the Planner without `time_management`. "Full admin"
   in the workspace opens the full admin's Planner (`/planner`).
@@ -34,13 +42,35 @@ synchronised; a task moved in one is moved in the other.
   | List the organisations that differ from the default | `php artisan workspace:time --list` |
 
   Off deletes nothing: `admin/time/*` answers 403 `workspace_disabled` and `/time` says so with a way back; the full
-  admin's Planner stays as it is.
+  admin's Planner stays as it is. An organisation that bought the Time Planner cannot be switched off (it is its plan),
+  and one on other modules cannot be switched on (it is not in its plan): the command says so.
+
+## Who plans whose day (the planning mode)
+
+The owner (2026-11-09): "for some companies all team can add to others, in some companies only each user can plan their
+day, lets make 2 options which can be configured in settings of planner". One setting of the organisation,
+`crm_settings.planner_planning_mode`, chosen by a manager in Settings → Who plans (`PUT time/settings/planner_planning_mode`,
+audited `planner.planning_mode`):
+
+| Mode | A staff member may | A manager |
+|---|---|---|
+| `team` (the default, the planner as it always was) | add a task to anyone's day, assign, move, clock and finish anyone's work, plan a colleague's or the team's day with the AI or the rules | the same |
+| `own` | add, change, move, clock, finish and delete only their own tasks and the unassigned ones (the pool, the day's work nobody has; taking one is a claim, with the skills rule as before), give work only to themselves or nobody, plan only their own day | plans for anyone |
+
+The rule is the server's, in one place (`App\Services\Time\PlanningMode`), asked by the full admin's own planner
+endpoints (`PlannerController`: create, update, move, copy, complete, status, bulk, subtasks, delete — a series only the
+occurrences one may change — and the full admin's auto-plan apply, which skips a colleague's task) and the workspace's
+(`time/plan` scope, `plan/apply` `not_yours`, a task's clock, the review's actions, the capture, which leaves a named
+colleague as a name only). A refusal is 403 `own_day_only` with a sentence the full admin shows as it is. Everyone still
+sees the whole team's days. The bootstrap answers `settings.planning_mode` and, for this person, `staff.can.plan_team`;
+the workspace hides what would be refused (`time/lib/rights.ts`): a colleague's task opens read-only (it can still be
+copied to one's own day), the people lists are oneself, a drag onto a colleague's lane says why it cannot.
 
 ## How it reaches the server
 
 The workspace's own endpoints live under `/api/v1/admin/time/`, behind the admin chain and `workspace:time`, all but
-`bootstrap` also behind `feature:time_management`. AccessMap: `admin/time` staff / staff (product `admin`, as
-`admin/planner`), `admin/time/people/{user}` staff / manager.
+`bootstrap` also behind `feature:time_management`. AccessMap (product `time`, as `admin/planner*` since 2026-11-09):
+`admin/time` staff / staff, `admin/time/people/{user}` staff / manager, `admin/time/settings` staff / manager.
 
 | Endpoint | What | Who |
 |---|---|---|
@@ -53,17 +83,20 @@ The workspace's own endpoints live under `/api/v1/admin/time/`, behind the admin
 | `PUT people/{user}` | a person's planner profile: knowledge, hours, work days, break (`PlannerProfiles`) | manager |
 | `GET insights?from=&to=&person=` | the period (`TimeInsights`, at most 92 days) and the one before | staff |
 | `GET estimate?title=&task_group=&task_category=` | how long such a task usually takes: the median of finished ones, at least three | staff |
-| `POST tasks/{id}/start|pause|finish` | the task's clock (`TaskClock`) | staff |
-| `POST plan` | a day's plan: `scope` `me` (anyone), `person` or `team` (a manager's); `include_pool`, `include_overdue`, `include_timed`, `use_ai`, `instruction`, `lang`. AI first when it can be asked, the rules otherwise (`source`, `ai_status`). Writes nothing. 20 a minute (`time-plan`) | staff |
-| `POST plan/apply` | writes the lines a person kept (`PlanApplier`) | staff (others' days: manager) |
+| `GET settings` | the planner's settings (the full admin's `crm_settings` rows, only the planner's keys: the day's hours, the standard day, types, tasks, preferences, the planning mode) | staff |
+| `PUT settings/{key}` | one of them, in the full admin's shapes (lists as JSON text, the day's hours as `{start, end}`, the mode `team` or `own`); `employees` and every other key are not written here (404) | manager |
+| `POST tasks/{id}/start|pause|finish` | the task's clock (`TaskClock`; in `own` mode only one's own or nobody's) | staff |
+| `POST plan` | a day's plan: `scope` `me` (anyone), `person` or `team` (anyone in `team` mode, a manager in `own` mode); `include_pool`, `include_overdue`, `include_timed`, `use_ai`, `instruction`, `lang`. AI first when it can be asked, the rules otherwise (`source`, `ai_status`). Writes nothing. 20 a minute (`time-plan`) | staff |
+| `POST plan/apply` | writes the lines a person kept (`PlanApplier`) | staff (others' days: the planning mode) |
 | `POST review` | the AI's read of a `day` or a `period`, with checked actions. 20 a minute (`time-review`) | staff |
 | `POST capture` | tasks from text or a voice note's text, matched to the team (writes nothing). 20 a minute (`time-capture`) | staff |
 | `POST transcribe` | a voice note's text (`SpeechToText`, the inbox's own rule). 30 a minute (`time-voice`) | staff |
 
 Everything else is the **full admin's own endpoints**, under their own rules: `planner/tasks*`, `planner/subtasks*`,
-`planner/backlog`, `planner/tasks/{id}/claim|release`, `planner/templates*`, `planner/day-note`, `crm-settings` (the
-planner's lists and hours), `team/{id}` (a person's skills, a manager's). The frontend may call only the areas listed in
-`frontend/src/time/lib/api.ts` (`AREAS`: `time`, `planner`, `crm-settings`, `team`), always with `brand_id=all`;
+`planner/backlog`, `planner/tasks/{id}/claim|release`, `planner/templates*`, `planner/day-note`, `team/{id}` (a person's
+skills, a manager's). The planner's settings go through the workspace's own `time/settings` (the same rows), so an
+organisation that bought only the Time Planner never needs the CRM's settings area. The frontend may call only the areas
+listed in `frontend/src/time/lib/api.ts` (`AREAS`: `time`, `planner`, `team`), always with `brand_id=all`;
 `time/tokens.test.ts` refuses any other path.
 
 ## The data the planner plans from
@@ -99,7 +132,7 @@ asked the scope's overdue work (30 days) and the pool tasks their skills allow.
   gap; anything else goes back to the rules. A name without an account (an outside cleaner) is never handed work.
 - When the AI cannot be asked (`not_configured`, `over`, `model_not_allowed`) or fails, the rules plan and the answer
   says so. Nothing is written until `plan/apply`, which skips — never forces — a line whose task changed since
-  (`seen`), is done, is someone else's for a staff member, or is past the person's skills.
+  (`seen`), is done, is someone else's for a person who plans only their own day, or is past the person's skills.
 
 ## The AI, and what it costs
 
@@ -119,11 +152,11 @@ asked the scope's overdue work (30 days) and the pool tasks their skills allow.
 | Area | Address | What it does |
 |---|---|---|
 | My day | `/time` | greeting, quick add (type, With AI, Speak), figures, now / up next with Start / Pause / Finish, my day on the clock (press an hour to add, drag to move), without a time, AI briefing, heads-up, overdue (to today), from the pool (Take), my week, the day's note; "Plan my day with AI" |
-| Planner | `/time/plan` (`?date=`, `?view=week`, `?person=`, `?all=1`) | the day as lanes of hours per person (drag to another time or person; drop untimed work on an hour), signals, AI review of the day, the day's note; the week as people × days (drag between cells); "Plan the team with AI" (manager), "Plan my day with AI" |
+| Planner | `/time/plan` (`?date=`, `?view=week`, `?person=`, `?all=1`) | the day as lanes of hours per person (drag to another time or person; drop untimed work on an hour), signals, AI review of the day, the day's note; the week as people × days (drag between cells); "Plan the team with AI" (whoever may plan for others), "Plan my day with AI" |
 | Backlog & pool | `/time/backlog` (`?tab=mine|pool|team`) | my bucket, the open pool by horizon (take, plan for today or tomorrow), the team's buckets (manager) |
 | Team & skills | `/time/team` | each person's hours, days, break, skills, preferred work, knowledge, shown experience and today's load; a manager edits the profile |
 | Insights | `/time/insights` (`?range=`, `?from=`, `?to=`, `?person=`, `?tab=`) | figures with the trend, people, work by type, weekday and hour, days, pool aging, signals, AI review of the period |
-| Settings | `/time/settings` (`?tab=day|types|tasks|templates|account`) | the working day, task types, tasks, templates (shared with the full admin) |
+| Settings | `/time/settings` (`?tab=day|planning|types|tasks|templates|account`) | the working day, who plans whose day (the planning mode), task types, tasks, templates (shared with the full admin) |
 
 Find (⌘K / Ctrl K): add a task, add with AI, plan my day, a person's day, the areas. Keys: N new task, A add with AI,
 P Planner, B Backlog, ? shortcuts.
@@ -138,6 +171,12 @@ P Planner, B Backlog, ? shortcuts.
 - **Another organisation's tasks never show or move** (`DayBoardTest`, `PlanTest`, `ClockAndInsightsTest`).
 - **Days are the venue's** (Riga's 12:00 at 10:00 UTC; on-time judged in the venue's zone) (`DayBoardTest`,
   `ClockAndInsightsTest`).
+- **The planning mode** on the full admin's planner endpoints and the workspace's, a manager's choice, `team` by default
+  (`PlanningModeTest`, `SettingsTest`, `GateAndBootstrapTest`; frontend `time/lib/rights.test.ts`,
+  `settings/SettingsPage.test.tsx`).
+- **The module**: its own product, packages and access (`tests/Feature/AdminAccess/TimeModuleAccessTest.php`,
+  `tests/Unit/Support/PlanModulesTest.php`, `tests/Feature/Auth/PlanModulesControllerTest.php`; frontend
+  `pages/productSignup.test.ts`, `workspace/lib/landing.test.ts`).
 - **Frontend**: only `a-*` and `time-*` classes, only the listed areas, nothing from another workspace
   (`time/tokens.test.ts`); every word in five languages (`time/i18n/timeLocales.test.ts`); palette pinned
   (`time/theme/timeContrast.test.ts`); decisions in pure functions with tests (`*Logic.ts`, `timeline.ts`).
@@ -149,8 +188,14 @@ P Planner, B Backlog, ? shortcuts.
 - `PlannerTask`'s saving hook stops a running clock when a task becomes done.
 - `ChatInboxController::transcribe` calls `App\Services\Ai\SpeechToText` (the same rule and answers, moved).
 - Migration `2026_11_09_100000_add_time_planner_columns` (three nullable columns).
+- 2026-11-09, the module and the planning mode: AccessMap `admin/planner` and `admin/planner-presets` are product `time`
+  (a full customer reaches every product as before); `PlannerController`'s writers ask `PlanningMode` (in `team` mode,
+  the default, nothing changes for anyone).
 
 ## Known limits
+
+- The planning mode is chosen in the Time Planner's Settings only; the full admin's Settings → Planner does not show it
+  (its Planner follows it, and says the server's sentence when a change is refused).
 
 - The full admin's own Planner does not show clocked time yet (its Stats count planned minutes as before).
 - Planning reads at most 60 tasks per plan, a period at most 92 days, overdue work 30 days back.

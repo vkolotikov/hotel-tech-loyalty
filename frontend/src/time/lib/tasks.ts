@@ -106,6 +106,15 @@ export function payloadOf(form: TaskForm, person: PersonRef | null, creating: bo
   return body
 }
 
+/**
+ * A setting's body, written as the full admin writes it: lists as JSON text (its plannerMeta parsers read both), the
+ * work day's hours as an object (the only shape WorkWindow reads), numbers as numbers, the planning mode as its word.
+ */
+export function settingBody(key: string, value: unknown): { value: unknown } {
+  if (key === 'business_hours_profile' || key === 'planner_planning_mode' || typeof value === 'number') return { value }
+  return { value: JSON.stringify(value) }
+}
+
 /* ─── The full admin's endpoints ─────────────────────────────────── */
 
 export const plannerApi = {
@@ -129,14 +138,10 @@ export const plannerApi = {
   removeTemplate: (id: number) => send<unknown>('delete', `planner/templates/${id}`),
   dayNote: (date: string) => get<{ note_text?: string | null } | null>(`planner/day-note${params({ date })}`),
   saveDayNote: (date: string, text: string) => send<unknown>('post', 'planner/day-note', { note_date: date, note_text: text }),
-  settings: () => get<Record<string, unknown>>('crm-settings'),
-  /**
-   * A planner setting, written as the full admin writes it: lists as JSON text (its plannerMeta parsers read both), the
-   * work day's hours as an object, which is the only shape the server reads (WorkWindow).
-   */
-  saveSetting: (key: string, value: unknown) => send<unknown>('put', `crm-settings/${key}`, {
-    value: key === 'business_hours_profile' || typeof value === 'number' ? value : JSON.stringify(value),
-  }),
+  /** The planner's settings: the full admin's own rows, only the planner's keys (the workspace's `time/settings`). */
+  settings: () => get<Record<string, unknown>>('time/settings'),
+  /** A planner setting (a manager's), in the shape settingBody() gives it. */
+  saveSetting: (key: string, value: unknown) => send<unknown>('put', `time/settings/${key}`, settingBody(key, value)),
   /** A person's skills: only the full admin's Team endpoint writes them (a manager's). */
   saveSkills: (staffId: number, skills: string[] | null) => send<unknown>('put', `team/${staffId}`, { planner_skills: skills }),
 }

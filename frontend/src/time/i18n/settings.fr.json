@@ -13,6 +13,7 @@
   "caption": {
     "account": "Équipe et compétences, et l’administration complète",
     "day": "Les horaires de l’établissement et le temps de travail standard",
+    "planning": "Tous pour l’équipe, ou chacun sa journée",
     "tasks": "Ce que comprend chaque type de travail",
     "templates": "Des tâches toutes prêtes pour commencer",
     "types": "Les types de travail, avec icônes et couleurs"
@@ -45,7 +46,21 @@
   "line": "Les paramètres du planificateur, partagés avec le planificateur de l’administration complète.",
   "move_down": "Descendre : {{name}}",
   "move_up": "Monter : {{name}}",
-  "read_only": "Seul un responsable peut modifier la journée de travail, les types et les tâches ; vous pouvez les consulter ici. Les modèles sont à tout le monde.",
+  "planning": {
+    "chosen": "Activé",
+    "line": "Choisissez comment votre équipe travaille. La même règle s’applique dans le Planning de l’administration complète.",
+    "own_1": "La tâche d’un collègue s’ouvre en lecture seule ; on peut la copier dans sa journée",
+    "own_2": "Les responsables planifient toujours pour tout le monde",
+    "own_line": "Chacun ajoute, déplace et termine uniquement ses propres tâches, et prend du travail dans le pool ouvert.",
+    "own_title": "Chacun planifie sa propre journée",
+    "seen": "Dans les deux cas, chacun voit les journées de toute l’équipe, et seul un responsable modifie ce réglage.",
+    "team_1": "Attribuer, déplacer et terminer les tâches de chacun",
+    "team_2": "Planifier avec l’IA la journée d’un collègue ou de toute l’équipe",
+    "team_line": "Chacun peut ajouter une tâche à la journée d’un collègue, confier du travail et planifier la journée de l’équipe.",
+    "team_title": "Toute l’équipe planifie ensemble",
+    "title": "Qui planifie la journée de qui"
+  },
+  "read_only": "Seul un responsable peut modifier la journée de travail, qui planifie, les types et les tâches ; vous pouvez les consulter ici. Les modèles sont à tout le monde.",
   "remove": "Retirer",
   "remove_named": "Retirer : {{name}}",
   "save_changes": "Enregistrer les modifications",
@@ -53,6 +68,7 @@
   "tab": {
     "account": "Compte",
     "day": "Journée de travail",
+    "planning": "Qui planifie",
     "tasks": "Tâches",
     "templates": "Modèles",
     "types": "Types de tâches"

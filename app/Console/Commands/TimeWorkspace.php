@@ -7,13 +7,15 @@ use Illuminate\Console\Command;
 
 /**
  * Switches HexaTech Time Planner (2026-11-09: the full admin's staff Planner as its own workspace, with AI planning) on
- * or off for one organisation. Every organisation has it by default (Organization::WORKSPACE_DEFAULTS), signing in to
+ * or off for one organisation. Every full customer has it by default (Organization::WORKSPACE_DEFAULTS), signing in to
  * the full admin; --off takes one out, --on --landing sends its staff to the Time Planner after signing in (an
  * organisation lands in one workspace only, so this takes the landing from any other), --list shows the organisations
  * that differ from the default.
  *
  * Off deletes nothing: the API answers 403 and /time sends staff back to the full admin, whose Planner stays as it is.
- * It is no module: an organisation on modules does not have it, and its plan still needs `time_management`.
+ * Sold on its own as the `time` module since 2026-11-09: an organisation that bought it has it always (it is its plan,
+ * not to be switched off), one on modules without it cannot be given it here. A full customer's plan still needs
+ * `time_management` (Enterprise).
  */
 class TimeWorkspace extends Command
 {
@@ -31,7 +33,7 @@ class TimeWorkspace extends Command
     {
         if ($this->option('list')) {
             $rows = Organization::query()->orderBy('id')->get()
-                ->filter(fn (Organization $o) => $o->planModules() === null && $o->workspaceIsException('time'))
+                ->filter(fn (Organization $o) => $o->workspaceIsException('time'))
                 ->map(fn (Organization $o) => [
                     $o->id,
                     $o->name,
@@ -41,9 +43,9 @@ class TimeWorkspace extends Command
                 ->values()->all();
 
             if ($rows === []) {
-                $this->line('Every organization not on modules has HexaTech Time Planner on, landing on the full admin.');
+                $this->line('Every full customer has HexaTech Time Planner on, landing on the full admin.');
             } else {
-                $this->line('Every other organization not on modules has HexaTech Time Planner on, landing on the full admin.');
+                $this->line('Every other full customer has HexaTech Time Planner on, landing on the full admin.');
                 $this->table(['id', 'name', 'time planner', 'lands on'], $rows);
             }
 
@@ -61,8 +63,15 @@ class TimeWorkspace extends Command
 
             return self::FAILURE;
         }
-        if ($this->option('on') && $org->planModules() !== null) {
-            $this->error(sprintf('org %d (%s) is on modules (%s): HexaTech Time Planner is not part of its plan.', $org->id, $org->name, implode(', ', $org->planModules())));
+        if ($this->option('on') && !$org->holdsModule('time')) {
+            $this->error($org->appointmentsOnly()
+                ? sprintf('org %d (%s) is on the Appointments plan: HexaTech Time Planner is not part of it.', $org->id, $org->name)
+                : sprintf('org %d (%s) is on modules without HexaTech Time Planner (%s): it is not part of its plan.', $org->id, $org->name, implode(', ', $org->planModules() ?? [])));
+
+            return self::FAILURE;
+        }
+        if ($this->option('off') && in_array('time', $org->planModules() ?? [], true)) {
+            $this->error(sprintf('org %d (%s) bought HexaTech Time Planner on its own: the workspace is its plan and cannot be switched off. Run workspace:appointments <organisation id> --not-only first if it should be a full customer.', $org->id, $org->name));
 
             return self::FAILURE;
         }

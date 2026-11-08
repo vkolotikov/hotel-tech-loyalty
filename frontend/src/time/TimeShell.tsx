@@ -185,7 +185,9 @@ export function TimeShell({ children }: { children: ReactNode }) {
         <div className="max-w-xl space-y-3 p-6">
           <Notice tone="warning">
             {lapsed
-              ? t('time.shell.lapsed', "Your organisation's subscription is not active, so the Time Planner cannot open. Your tasks are unchanged.")
+              ? (modules.onModules
+                ? t('time.shell.lapsed_modules', 'Your HexaTech plan is not active. Start it again in Plan & products; your tasks are unchanged.')
+                : t('time.shell.lapsed', "Your organisation's subscription is not active, so the Time Planner cannot open. Your tasks are unchanged."))
               : notInPlan
                 ? t('time.shell.not_in_plan', 'HexaTech Time Planner is not part of your plan.')
                 : t('time.shell.switched_off', 'HexaTech Time Planner has been switched off for your organisation. Your tasks are unchanged.')}
@@ -198,8 +200,12 @@ export function TimeShell({ children }: { children: ReactNode }) {
 
       {!stopped && locked && (
         <div className="max-w-xl space-y-3 p-6">
-          <Notice tone="warning">{t('time.shell.locked', 'The Time Planner is part of the Enterprise plan. Your plan does not include it yet; the full admin shows how to upgrade.')}</Notice>
-          <Link to="/" className="inline-flex rounded-lg border border-a-border bg-a-surface px-3.5 py-2 text-sm font-semibold text-a-text">{t('time.shell.open_full_admin', 'Open the full admin')}</Link>
+          <Notice tone="warning">{modules.onModules
+            ? t('time.shell.locked_modules', 'Your plan does not include the Time Planner’s planner yet. Plan & products shows what your packages include.')
+            : t('time.shell.locked', 'The Time Planner is part of the Enterprise plan. Your plan does not include it yet; the full admin shows how to upgrade.')}</Notice>
+          <Link to={modules.onModules ? '/account/products' : '/'} className="inline-flex rounded-lg border border-a-border bg-a-surface px-3.5 py-2 text-sm font-semibold text-a-text">
+            {modules.onModules ? t('workspace.shell.plan', 'Plan & products') : t('time.shell.open_full_admin', 'Open the full admin')}
+          </Link>
         </div>
       )}
 

@@ -12,8 +12,8 @@ use Illuminate\Support\Facades\DB;
  *
  * - `changed`: the task was edited since the plan was made (its `updated_at` differs from the plan's `seen`);
  * - `done`: it was finished meanwhile;
- * - `not_yours`: a staff member's plan names someone else, or a task someone else owns (planning others is a
- *   manager's, TimeAccess);
+ * - `not_yours`: the plan names someone else, or a task someone else owns, and this person may plan only their own
+ *   day (the organisation's planning mode is `own` and they are no manager, PlanningMode);
  * - `no_person`: the person is not on the team any more;
  * - `not_allowed`: the person may not take the task's type from the pool (their skills, Team::mayTake);
  * - `not_found`: the task is not this organisation's.
@@ -27,16 +27,17 @@ final class PlanApplier
     }
 
     /**
+     * @param  bool  $others  whether this person may put work on others' days (PlanningMode::mayPlanOthers)
      * @param  list<array{task_id: int, person: string, start_time: string, duration_minutes: int, seen?: ?string}>  $lines
      * @return array{applied: int, skipped: list<array{task_id: int, reason: string}>}
      */
-    public function apply(User $by, bool $manager, string $date, array $lines): array
+    public function apply(User $by, bool $others, string $date, array $lines): array
     {
         $me = 'u' . $by->id;
         $applied = 0;
         $skipped = [];
 
-        DB::transaction(function () use ($lines, $date, $manager, $me, &$applied, &$skipped) {
+        DB::transaction(function () use ($lines, $date, $others, $me, &$applied, &$skipped) {
             foreach ($lines as $line) {
                 $id = (int) $line['task_id'];
                 $task = PlannerTask::query()->lockForUpdate()->find($id);
@@ -58,7 +59,7 @@ final class PlanApplier
                     continue;
                 }
                 $owner = $this->team->ownerKey($task);
-                if (!$manager && ($person['key'] !== $me || ($owner !== null && $owner !== $me))) {
+                if (!$others && ($person['key'] !== $me || ($owner !== null && $owner !== $me))) {
                     $skipped[] = ['task_id' => $id, 'reason' => 'not_yours'];
                     continue;
                 }

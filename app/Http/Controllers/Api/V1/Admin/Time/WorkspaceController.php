@@ -12,11 +12,13 @@ use App\Services\Time\Experience;
 use App\Services\Time\PlannerAi;
 use App\Services\Time\PlannerCatalogue;
 use App\Services\Time\PlannerProfiles;
+use App\Services\Time\PlanningMode;
 use App\Services\Time\TaskClock;
 use App\Services\Time\TaskView;
 use App\Services\Time\Team;
 use App\Services\Time\TimeAccess;
 use App\Services\Time\TimeInsights;
+use App\Services\Time\TimeRefused;
 use App\Services\Time\WorkWindow;
 use App\Support\OrgAccent;
 use Carbon\CarbonImmutable;
@@ -83,6 +85,8 @@ class WorkspaceController extends Controller
                 'days_per_week'   => $catalogue->daysPerWeek(),
                 'groups'          => $catalogue->groups(),
                 'channels'        => $catalogue->channels(),
+                // Who may put work on whose day (PlanningMode): `team` or `own`; `staff.can.plan_team` is this person's answer.
+                'planning_mode'   => PlanningMode::current(),
             ],
             'counts'       => $counts,
         ]);
@@ -292,17 +296,29 @@ class WorkspaceController extends Controller
 
     public function start(Request $request, int $task, TaskClock $clock): JsonResponse
     {
+        $this->assertMayClock($request, $task);
+
         return response()->json($this->view($request, $clock->start($task)));
     }
 
     public function pause(Request $request, int $task, TaskClock $clock): JsonResponse
     {
+        $this->assertMayClock($request, $task);
+
         return response()->json($this->view($request, $clock->pause($task)));
     }
 
     public function finish(Request $request, int $task, TaskClock $clock): JsonResponse
     {
+        $this->assertMayClock($request, $task);
+
         return response()->json($this->view($request, $clock->finish($task)));
+    }
+
+    /** A task's clock is changed as the task is: in `own` mode only one's own or nobody's (PlanningMode). */
+    private function assertMayClock(Request $request, int $task): void
+    {
+        PlanningMode::assertMayChange($request->user(), PlannerTask::query()->find($task) ?? throw TimeRefused::notFound());
     }
 
     /** @return array<string, mixed> */
