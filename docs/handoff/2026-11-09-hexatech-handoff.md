@@ -159,11 +159,16 @@ prices, and a module sign-up does not get billing's "not sold yet" refusal. This
 (`saas.hotel-tech.ai` is outside its network), so the cause was not looked into: check `SAAS_API_URL` in Laravel Cloud
 and that billing answers `GET <billing URL>/api/billing/plans`.
 
+**9 Nov, the owner again ("can you do these steps for me")**: push access was granted on the third request; billing's
+patch is on billing `main` as **41fec6a** (on 9ca597d), pushed after billing's suite passed on PostgreSQL 16 (24
+passed, 3 skipped; `ModulePlansTest` 10 on a seeded database). Laravel Cloud deploys it and runs
+`2026_11_09_120000_add_time_planner_packages`. Left to the owner: `stripe:sync` (step 2 below) and billing's plan list
+being unread in production (above) — this container reaches neither Laravel Cloud nor billing.
+
 ### What the owner does by hand (round 2)
 
-1. **Billing** — this session was refused push access to `hotel-tech-saas`: apply
-   `docs/billing/2026-11-09-hotel-tech-saas-time-planner-packages.patch` on billing `main` and push (Laravel Cloud runs
-   the migration), then in billing's Commands tab `php artisan stripe:sync --module-plans --publish`. Steps and two
+1. **Billing** — the patch is pushed (41fec6a, above). In billing's Commands tab (Laravel Cloud) once the deploy has
+   finished: `php artisan stripe:sync --module-plans --publish`. Steps and two
    checking queries: `docs/plan-modules.md`, "Billing handover, 2026-11-09". Until then `/time/register` says the Time
    Planner cannot be bought online yet; Enterprise customers have it already.
 2. Nothing else: every organisation starts in `team` mode, exactly as before.

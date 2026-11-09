@@ -313,6 +313,10 @@ select slug, "isActive" from products where slug = 'time_planner';
 2. In the billing application's Commands tab: `php artisan stripe:sync --module-plans --publish`. It prices and
    publishes the 39 new plans and reuses the 66 it priced before.
 
+**Step 1 is done** (9 Nov): when the owner asked again, the session was given push access; the commit went onto billing
+`main` 9ca597d as **41fec6a** and was pushed (billing's suite on PostgreSQL 16 first: 24 passed, 3 skipped on a fresh
+database, `ModulePlansTest` 10 passed on a seeded one). Step 2 is the owner's (Laravel Cloud's Commands tab).
+
 Until step 2, `/time/register` says HexaTech Time Planner cannot be bought online yet, and adding it in Plan & products
 says "Not available online yet". Full customers on Enterprise have the workspace already (`/time`), whatever billing
 sells.
