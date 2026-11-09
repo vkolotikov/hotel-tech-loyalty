@@ -23,12 +23,14 @@ use Tests\Feature\Member\MemberEndpointTestCase;
 class PortalBootstrapTest extends MemberEndpointTestCase
 {
     use SmsSchema;
+    use \Tests\Concerns\LoyaltyWorkspace\AppSchema;
 
     private const ENDPOINT = '/api/v1/member/portal';
 
     protected function setUp(): void
     {
         parent::setUp();
+        $this->setUpAppSchema();
         $this->setUpServiceCatalogSchema();
         $this->setUpAvailabilitySchema();
         $this->setUpNotificationSchema();
@@ -188,6 +190,48 @@ class PortalBootstrapTest extends MemberEndpointTestCase
     public function test_it_requires_a_signed_in_member(): void
     {
         $this->getJson(self::ENDPOINT)->assertStatus(401);
+    }
+
+    public function test_wallet_actions_follow_this_organisations_enabled_provider_and_membership(): void
+    {
+        $org = $this->tenant();
+        $org->update(['plan_features' => ['wallet' => true]]);
+        ['token' => $token, 'member' => $member] = $this->member($org);
+        $this->withToken($token)->getJson(self::ENDPOINT)->assertOk()
+            ->assertJsonPath('capabilities.wallets', ['apple' => false, 'google' => false]);
+
+        $config = new \App\Models\WalletConfig(['organization_id' => $org->id, 'is_active' => true,
+            'google_issuer_id' => 'launch-test-issuer', 'google_class_suffix' => 'loyalty']);
+        $config->putFile('google_service_account', 'isolated fixture, never used for issuance')->save();
+        $response = $this->withToken($token)->getJson(self::ENDPOINT)->assertOk()
+            ->assertJsonPath('capabilities.wallets', ['apple' => false, 'google' => true]);
+        $this->assertSame(['apple', 'google'], array_keys($response->json('capabilities.wallets')));
+
+        $config->update(['is_active' => false]);
+        $this->withToken($token)->getJson(self::ENDPOINT)->assertOk()
+            ->assertJsonPath('capabilities.wallets.google', false);
+        $config->update(['is_active' => true]);
+        $member->update(['is_active' => false]);
+        $this->withToken($token)->getJson(self::ENDPOINT)->assertOk()
+            ->assertJsonPath('capabilities.wallets.google', false);
+    }
+
+    public function test_another_organisations_wallet_and_a_missing_plan_never_enable_member_wallet_actions(): void
+    {
+        $org = $this->tenant();
+        $org->update(['plan_features' => ['wallet' => true]]);
+        ['token' => $token] = $this->member($org);
+        $other = $this->tenant('Other launch venue');
+        $config = new \App\Models\WalletConfig(['organization_id' => $other->id, 'is_active' => true,
+            'google_issuer_id' => 'other-test-issuer', 'google_class_suffix' => 'loyalty']);
+        $config->putFile('google_service_account', 'isolated other-tenant fixture')->save();
+        $this->withToken($token)->getJson(self::ENDPOINT)->assertOk()
+            ->assertJsonPath('capabilities.wallets', ['apple' => false, 'google' => false]);
+        $config->organization_id = $org->id;
+        $config->save();
+        $org->update(['plan_features' => ['wallet' => false]]);
+        $this->withToken($token)->getJson(self::ENDPOINT)->assertOk()
+            ->assertJsonPath('capabilities.wallets', ['apple' => false, 'google' => false]);
     }
 
     public function test_a_staff_token_is_refused_with_member_only(): void
