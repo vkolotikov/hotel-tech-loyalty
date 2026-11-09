@@ -71,6 +71,17 @@ class MediaRecoveryPolicyTest extends TestCase
         $this->assertStringContainsString('media_target_mismatch', Artisan::output());
     }
 
+    public function test_failed_preview_reports_no_write_and_hides_provider_details(): void
+    {
+        $client = \Mockery::mock(S3ClientInterface::class);
+        $client->shouldReceive('getBucketVersioning')->once()->andThrow(new \RuntimeException('private fixture credential'));
+        $this->service($client);
+        $this->assertSame(1, Artisan::call('media:recovery-policy'));
+        $output = Artisan::output();
+        $this->assertStringContainsString('No settings were changed', $output);
+        $this->assertStringNotContainsString('private fixture', $output);
+    }
+
     public function test_apply_sets_only_noncurrent_expiration_then_enables_and_reads_back_both_settings(): void
     {
         $client = \Mockery::mock(S3ClientInterface::class);
