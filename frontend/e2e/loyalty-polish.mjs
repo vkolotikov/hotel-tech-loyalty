@@ -6,7 +6,8 @@ import { promisify } from 'node:util'
 import { fileURLToPath } from 'node:url'
 
 // Real, isolated launch database only. Never point this write journey at a customer environment.
-const base = 'http://127.0.0.1:5819'
+const base = process.env.LAUNCH_BASE || 'http://127.0.0.1:5819'
+if (!['127.0.0.1', 'localhost'].includes(new URL(base).hostname)) throw Error('Loopback browser host required')
 if (process.env.DB_DATABASE !== 'loyalty_launch_demo' || process.env.DB_PORT !== '55459' || process.env.MAIL_MAILER !== 'log') throw Error('Isolated rehearsal environment required')
 // A frozen rehearsal clock keeps rate-limit windows open across repeat test runs.
 await promisify(execFile)(process.env.PHP || 'php8.5', [fileURLToPath(new URL('./launch-artisan.php', import.meta.url)), 'cache:clear', '--no-interaction'], { cwd: fileURLToPath(new URL('../../', import.meta.url)), env: process.env, timeout: 60000, windowsHide: true })
