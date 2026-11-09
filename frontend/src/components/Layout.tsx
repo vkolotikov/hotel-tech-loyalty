@@ -103,23 +103,8 @@ interface NavGroup {
 // fix round 1) — see MenuSettings.navGroupParity.test.ts.
 export const navGroups: NavGroup[] = [
   {
-    labelKey: 'nav.groups.overview', defaultLabel: 'Overview',
-    accent: NAV_ACCENT.blue, // blue
-    items: [
-      { path: '/',          labelKey: 'nav.items.dashboard',    defaultLabel: 'Dashboard',   icon: LayoutDashboard, gate: 'all' },
-      // Analytics is plain charts/KPIs (no LLM) so it gates only on the
-      // staff `can_view_analytics` flag, not on the `ai_insights` plan
-      // feature. Previously admins on a plan without the AI feature were
-      // hidden from Analytics even though that page does no AI work.
-      { path: '/analytics', labelKey: 'nav.items.analytics',    defaultLabel: 'Analytics',   icon: BarChart2,       gate: 'can_view_analytics' },
-      // AI Insights does call the LLM (CrmAiService) — the ai_insights
-      // feature flag stays here, so plans without AI don't see it.
-      { path: '/ai',        labelKey: 'nav.items.ai_insights',  defaultLabel: 'AI Insights', icon: Sparkles,        gate: 'can_view_analytics', feature: 'ai_insights' },
-    ],
-  },
-  {
-    // The 2026-11-09 menu (owner: "better menu structure"): the ways into the HexaTech workspaces, which sat one per
-    // group further down, gathered in one launcher under the Dashboard. Each keeps its gates and its `home` — the group
+    // The 2026-11-09 menu (owner: "better menu structure", then "put workspaces more on top"): the ways into the HexaTech
+    // workspaces, which sat one per group further down, gathered in one launcher at the very top. Each keeps its gates and its `home` — the group
     // it used to sit in — so Sidebar Menu's hidden groups, a staff member's allowed groups and the industry still
     // decide it exactly as before; this group can also be hidden whole.
     labelKey: 'nav.groups.workspaces', defaultLabel: 'Workspaces',
@@ -136,6 +121,21 @@ export const navGroups: NavGroup[] = [
       { path: '/content',      labelKey: 'nav.items.content_workspace',      defaultLabel: 'HexaTech Content',      shortKey: 'nav.apps.content',      shortLabel: 'Content',      icon: PenLine,        gate: 'all', workspace: 'content',                     home: 'CRM & Marketing',   tint: NAV_ACCENT.violet },
       // HexaTech Time Planner (2026-11-09): locked like the Planner itself on a plan without time_management.
       { path: '/time',         labelKey: 'nav.items.time_workspace',         defaultLabel: 'HexaTech Time Planner', shortKey: 'nav.apps.time',         shortLabel: 'Time Planner', icon: CalendarClock,  gate: 'all', feature: 'time_management', workspace: 'time', home: 'Operations',        tint: NAV_ACCENT.cyan },
+    ],
+  },
+  {
+    labelKey: 'nav.groups.overview', defaultLabel: 'Overview',
+    accent: NAV_ACCENT.blue, // blue
+    items: [
+      { path: '/',          labelKey: 'nav.items.dashboard',    defaultLabel: 'Dashboard',   icon: LayoutDashboard, gate: 'all' },
+      // Analytics is plain charts/KPIs (no LLM) so it gates only on the
+      // staff `can_view_analytics` flag, not on the `ai_insights` plan
+      // feature. Previously admins on a plan without the AI feature were
+      // hidden from Analytics even though that page does no AI work.
+      { path: '/analytics', labelKey: 'nav.items.analytics',    defaultLabel: 'Analytics',   icon: BarChart2,       gate: 'can_view_analytics' },
+      // AI Insights does call the LLM (CrmAiService) — the ai_insights
+      // feature flag stays here, so plans without AI don't see it.
+      { path: '/ai',        labelKey: 'nav.items.ai_insights',  defaultLabel: 'AI Insights', icon: Sparkles,        gate: 'can_view_analytics', feature: 'ai_insights' },
     ],
   },
   {
