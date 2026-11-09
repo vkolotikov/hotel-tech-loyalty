@@ -4,6 +4,7 @@ namespace Tests\Feature\CrmWorkspace;
 
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Tests\Concerns\SetsUpCrmWorkspace;
 use Tests\TestCase;
 
@@ -25,7 +26,7 @@ class BrandSwitchTest extends TestCase
         parent::setUp();
         $this->setUpCrmWorkspace();
         DB::table('brands')->where('id', $this->brandId)->update(['name' => 'Harbour Clinic', 'is_default' => true]);
-        $this->second = DB::table('brands')->insertGetId(['organization_id' => $this->org->id, 'name' => 'Old Town Studio', 'is_default' => false, 'primary_color' => '#2255aa', 'created_at' => now(), 'updated_at' => now()]);
+        $this->second = DB::table('brands')->insertGetId(['organization_id' => $this->org->id, 'name' => 'Old Town Studio', 'slug' => 'old-town-studio', 'widget_token' => Str::random(40), 'is_default' => false, 'primary_color' => '#2255aa', 'created_at' => now(), 'updated_at' => now()]);
 
         // A waiting chat in each brand.
         $this->chat(['status' => 'waiting', 'brand_id' => $this->brandId]);
@@ -74,7 +75,7 @@ class BrandSwitchTest extends TestCase
     public function test_another_organisations_brand_is_neither_offered_nor_honoured(): void
     {
         $other = \App\Models\Organization::create(['name' => 'Other Clinic', 'slug' => 'other-' . uniqid('', true), 'industry' => 'medical']);
-        $foreign = DB::table('brands')->insertGetId(['organization_id' => $other->id, 'name' => 'Not yours', 'is_default' => false, 'created_at' => now(), 'updated_at' => now()]);
+        $foreign = DB::table('brands')->insertGetId(['organization_id' => $other->id, 'name' => 'Not yours', 'slug' => 'not-yours', 'widget_token' => Str::random(40), 'is_default' => false, 'created_at' => now(), 'updated_at' => now()]);
 
         $boot = $this->boot((string) $foreign);
         $this->assertNotContains('Not yours', array_column($boot['brands'], 'name'));

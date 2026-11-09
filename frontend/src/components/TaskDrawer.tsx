@@ -13,6 +13,7 @@ import {
   type TaskType, type TypeGroup,
 } from '../lib/taskForm'
 import { TASK_ICONS } from '../lib/taskTypeIcons'
+import { useDataInk } from '../theme/hx'
 import { CustomFieldsForm } from './CustomFields'
 
 /**
@@ -112,6 +113,7 @@ function customOf(task: TaskDrawerTask | null): Record<string, unknown> {
 
 export function TaskDrawer({ task, defaultInquiryId, onClose, onSaved }: Props) {
   const { t, i18n } = useTranslation()
+  const ink = useDataInk()
   const isNew = !task
   const [form, setForm] = useState<TaskFormState>(() => formOf(task))
   const [assignee, setAssignee] = useState<number | null>(task?.assigned_to ?? null)
@@ -196,7 +198,7 @@ export function TaskDrawer({ task, defaultInquiryId, onClose, onSaved }: Props) 
                         <button key={type} type="button" role="radio" aria-checked={on} onClick={() => set({ type })}
                           className={`flex flex-col items-center justify-center gap-1 min-h-[58px] px-1 py-2 rounded-md border text-[11px] font-bold text-center leading-tight transition ${on ? 'text-black' : 'text-t-secondary border-dark-border hover:bg-dark-surface2 hover:text-white'}`}
                           style={on ? { background: TYPE_COLORS[type], borderColor: TYPE_COLORS[type] } : undefined}>
-                          <Icon size={15} style={on ? undefined : { color: TYPE_COLORS[type] }} />
+                          <Icon size={15} style={on ? undefined : { color: ink(TYPE_COLORS[type]) }} />
                           {typeLabel(t, type)}
                         </button>
                       )
@@ -378,6 +380,7 @@ function Label({ icon, children }: { icon?: ReactNode; children: ReactNode }) {
 
 function Summary({ form, lang }: { form: TaskFormState; lang: string }) {
   const { t } = useTranslation()
+  const ink = useDataInk()
   const s = summaryOf(form)
   const Icon = TASK_ICONS[s.type]
   const day = s.date ? dayText(s.date, lang) : null
@@ -387,7 +390,7 @@ function Summary({ form, lang }: { form: TaskFormState; lang: string }) {
     : t('taskDrawer.summary.at', { day, time: s.start, defaultValue: '{{day}}, {{time}}' })
   return (
     <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-t-secondary" aria-live="polite">
-      <Icon size={14} style={{ color: TYPE_COLORS[s.type] }} aria-hidden />
+      <Icon size={14} style={{ color: ink(TYPE_COLORS[s.type]) }} aria-hidden />
       <span className="font-semibold text-white">{typeLabel(t, s.type)}</span>
       <span aria-hidden>·</span><span>{when}</span>
       {s.repeat !== 'none' && <><span aria-hidden>·</span><span>{repeatLabel(t, s.repeat)}</span></>}
