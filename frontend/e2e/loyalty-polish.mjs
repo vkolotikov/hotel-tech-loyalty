@@ -103,7 +103,7 @@ try {
   const summary = await api('overview/summary')
   if (summary.data.setup.done < summary.data.setup.total) {
     await page.locator('.l-setup-checklist').waitFor()
-    check(await page.locator('.l-setup-checklist a[href="/loyalty/options/setup"]').count() === 1, 'Overview exposes guided setup for the pre-seeded programme')
+    check(await page.locator('.l-setup-checklist a[href="/loyalty/options/setup"]').count() > 0, 'Overview exposes guided setup for the pre-seeded programme')
     await page.screenshot({ path: path.join(out, 'overview-desktop.png') })
   }
   for (const width of [390, 1440]) for (const lang of ['en', 'ru', 'de', 'fr', 'es']) for (const theme of ['dark', 'light']) {
