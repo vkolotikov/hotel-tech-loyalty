@@ -13,6 +13,8 @@ export interface PortalVenue {
 
 export interface PortalCapabilities {
   loyalty: boolean
+  /** Missing on older servers; no wallet action is offered until setup is confirmed. */
+  wallets?: { apple: boolean; google: boolean }
   services: boolean
   stays: boolean
   chat: boolean

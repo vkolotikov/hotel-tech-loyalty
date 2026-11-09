@@ -4,6 +4,7 @@ import { Wallet } from 'lucide-react'
 import { portalApi, apiMessage } from '../lib/portalApi'
 import { Button } from '../ui/Button'
 import { Notice } from '../ui/Notice'
+import { usePortal } from '../PortalProvider'
 
 /**
  * Apple needs a Safari navigation to a one-time URL (the token never rides
@@ -13,9 +14,12 @@ import { Notice } from '../ui/Notice'
  */
 export function WalletButtons() {
   const { t } = useTranslation()
+  const { data } = usePortal()
   const [busy, setBusy] = useState<'apple' | 'google' | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
   const isApple = typeof navigator !== 'undefined' && /iPhone|iPad|Macintosh/.test(navigator.userAgent)
+  const apple = isApple && data?.capabilities.wallets?.apple === true
+  const google = data?.capabilities.wallets?.google === true
 
   const open = async (which: 'apple' | 'google') => {
     setBusy(which); setNotice(null)
@@ -39,17 +43,18 @@ export function WalletButtons() {
     }
   }
 
+  if (!apple && !google) return null
   return (
     <div className="relative mt-4 space-y-2">
       <div className="flex flex-col sm:flex-row gap-2">
-        {isApple && (
+        {apple && (
           <Button variant="secondary" size="sm" loading={busy === 'apple'} onClick={() => { void open('apple') }}>
             <Wallet size={14} aria-hidden /> {t('portal.home.wallet_apple', 'Add to Apple Wallet')}
           </Button>
         )}
-        <Button variant="secondary" size="sm" loading={busy === 'google'} onClick={() => { void open('google') }}>
+        {google && <Button variant="secondary" size="sm" loading={busy === 'google'} onClick={() => { void open('google') }}>
           <Wallet size={14} aria-hidden /> {t('portal.home.wallet_google', 'Add to Google Wallet')}
-        </Button>
+        </Button>}
       </div>
       {notice && <Notice tone="info">{notice}</Notice>}
     </div>
