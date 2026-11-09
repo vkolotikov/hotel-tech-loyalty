@@ -1,15 +1,17 @@
 {
   "add_ai": "Ajouter avec l’IA",
+  "add_here": "Ajouter une tâche pour {{name}} le {{day}}",
+  "add_unassigned": "Ajouter une tâche sans personne le {{day}}",
   "again": "Modifier et replanifier",
   "ai_failed": "Impossible de joindre l’IA.",
   "ai_over": "Le quota d’IA de ce mois est épuisé.",
   "applied": "{{count}} tâches planifiées",
-  "applied_one": "{{count}} tâche planifiée",
   "applied_many": "{{count}} de tâches planifiées",
+  "applied_one": "{{count}} tâche planifiée",
   "applied_other": "{{count}} tâches planifiées",
   "apply": "Appliquer {{count}} lignes",
-  "apply_one": "Appliquer {{count}} ligne",
   "apply_many": "Appliquer {{count}} de lignes",
+  "apply_one": "Appliquer {{count}} ligne",
   "apply_other": "Appliquer {{count}} lignes",
   "board_hint": "Appuyez sur une heure libre pour ajouter une tâche ; faites glisser une tâche vers une autre heure ou une autre personne, ou une tâche de « Sans horaire » sur la journée.",
   "by_rules": "Planifié selon les règles.",
@@ -96,6 +98,6 @@
   "untimed_none": "Chaque tâche du jour a son horaire.",
   "view": "Vue",
   "week": "Semaine",
-  "week_hint": "Faites glisser une tâche vers un autre jour ou une autre personne ; double-cliquez sur une case pour y en ajouter une ; appuyez sur un jour pour l’ouvrir.",
+  "week_hint": "Faites glisser une tâche vers un autre jour ou une autre personne ; appuyez sur l’espace libre d’une case (ou sur « Ajouter ») pour y en ajouter une ; appuyez sur un jour pour l’ouvrir.",
   "week_of": "Semaine du {{day}}"
 }

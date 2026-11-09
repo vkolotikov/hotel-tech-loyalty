@@ -1,5 +1,7 @@
 {
   "add_ai": "Añadir con IA",
+  "add_here": "Añadir una tarea para {{name}} el {{day}}",
+  "add_unassigned": "Añadir una tarea sin persona el {{day}}",
   "again": "Cambiar y volver a planificar",
   "ai_failed": "No se pudo contactar con la IA.",
   "ai_over": "El cupo de IA de este mes está agotado.",
@@ -94,6 +96,6 @@
   "untimed_none": "Cada tarea del día tiene su hora.",
   "view": "Vista",
   "week": "Semana",
-  "week_hint": "Arrastre una tarea a otro día o persona; haga doble clic en una celda para añadir una ahí; pulse un día para abrirlo.",
+  "week_hint": "Arrastre una tarea a otro día o a otra persona; pulse el espacio libre de una celda (o «Añadir») para añadir una allí; pulse un día para abrirlo.",
   "week_of": "Semana del {{day}}"
 }

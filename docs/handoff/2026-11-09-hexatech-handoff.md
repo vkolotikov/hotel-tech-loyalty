@@ -175,6 +175,28 @@ being unread in production (above) — this container reaches neither Laravel Cl
    Planner cannot be bought online yet; Enterprise customers have it already.
 2. Nothing else: every organisation starts in `team` mode, exactly as before.
 
+## Round 3: adding tasks, the week, and a usability pass (9 Nov)
+
+The owner (after running `stripe:sync`: "plans are published"): "Lets improve task adding options, make it easier to
+add, make something like we have before with icons and when tasks shown after type selection as a grids 2. in week view
+add task on calendar not work with click only with double click please fix. And check other usability and design
+features and do necessary improvements".
+
+- **The task form** has the full admin's drawer's pickers: a grid of types with icons and colours, then the chosen
+  type's tasks as a grid, amber dots for the chosen person's preferred work, templates as an opening list. A picked task
+  fills an empty title; Enter in the title adds; **Add & next** keeps the panel open for the next task of the same day,
+  person and type; "Who" sits under the title (the hints depend on it).
+- **The week**: one press on a cell's empty space adds a task for that person and day (it was a double click); each cell
+  has a "+ Add" (on hover and focus with a mouse, always on a touch screen), the "Nobody yet" row too.
+- **Found in the pass and fixed**: no planned time read "—" ("Planned —", "has room: — planned of 8 h", "— of 8 h" on
+  Team) — now "0 h" (`format.planned`; a capacity that is unknown keeps its dash); Insights said "2 h of 0 h" for a name
+  without an account — now "2 h planned"; an empty "My week" says so; task cards wrap a long title to two lines at every
+  width (the pool's narrow column cut "Steam-clean the…"); the week's hint no longer says "double-click".
+- Checks: Vitest 456 files / 6,727 tests, `tsc -b` clean, lint baseline (1,398 legacy, none new); in a real browser on the
+  Riga demo at 1440 and 390, Dark and Light: the pickers, the template list, Add & next (two tasks saved, the panel kept
+  its type, person and day), Enter to add, one-press add in the week (cell and "+ Add"), no horizontal scroll, no raw
+  key, no failed request. No server change in this round.
+
 ## Left open
 
 - The full admin's own Planner does not show clocked time; its Stats count planned minutes as before.

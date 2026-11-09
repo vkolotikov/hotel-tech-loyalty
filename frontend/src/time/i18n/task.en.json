@@ -1,11 +1,14 @@
 {
   "add": "Add task",
+  "add_next": "Add & next",
+  "add_next_hint": "Add this one and start the next, for the same day and person",
   "add_step": "Add a step",
   "category": "Task",
   "copied": "Copied",
   "copy": "Copy",
   "copy_to": "Copy to another day",
   "created": "Task added",
+  "custom_type": "Custom",
   "day": "Day",
   "delete_future": "This and later repeats",
   "delete_line": "“{{title}}” and its steps go for good.",
@@ -19,9 +22,12 @@
   "estimate_title": "Tasks like this usually take about {{length}} ({{count}} done before).",
   "finish": "Finish",
   "finished": "Done — well done",
+  "fits": "Fits {{name}}",
+  "hide_templates": "Hide templates",
   "horizon": "When it should be done",
   "length": "How long",
   "locked": "{{name}} plans this task. In this planner everyone plans their own day; you can copy it to yours.",
+  "loose_category": "Saved as “{{name}}”",
   "mark_done": "Mark done",
   "minutes": "Minutes",
   "new": "New task",
@@ -31,6 +37,7 @@
   "no_day": "No day yet",
   "no_time": "No time yet",
   "no_type": "None",
+  "no_types": "No task types yet: a manager adds them in Settings → Task types.",
   "nobody": "Nobody yet",
   "notes": "Notes",
   "overdue": "Overdue",
@@ -58,5 +65,6 @@
   "undo_done": "Mark not done",
   "until": "Until",
   "until_hint": "At most 90 times.",
-  "use": "Use it"
+  "use": "Use it",
+  "use_template": "Use a template"
 }

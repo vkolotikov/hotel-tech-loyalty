@@ -1,5 +1,7 @@
 {
   "add_ai": "Mit KI hinzufügen",
+  "add_here": "Aufgabe für {{name}} am {{day}} hinzufügen",
+  "add_unassigned": "Aufgabe ohne Person am {{day}} hinzufügen",
   "again": "Ändern und neu planen",
   "ai_failed": "Die KI war nicht erreichbar.",
   "ai_over": "Das KI-Kontingent dieses Monats ist aufgebraucht.",
@@ -94,6 +96,6 @@
   "untimed_none": "Jede Aufgabe des Tages hat eine Uhrzeit.",
   "view": "Ansicht",
   "week": "Woche",
-  "week_hint": "Ziehen Sie eine Aufgabe auf einen anderen Tag oder eine andere Person; doppelklicken Sie auf eine Zelle, um dort eine hinzuzufügen; tippen Sie auf einen Tag, um ihn zu öffnen.",
+  "week_hint": "Ziehen Sie eine Aufgabe auf einen anderen Tag oder zu einer anderen Person; tippen Sie auf eine freie Stelle einer Zelle (oder auf „Hinzufügen“), um dort eine anzulegen; tippen Sie auf einen Tag, um ihn zu öffnen.",
   "week_of": "Woche vom {{day}}"
 }

@@ -69,6 +69,7 @@
   "planned": "Planned",
   "planned_hint": "the tasks’ planned time",
   "planned_of": "{{planned}} of {{capacity}}",
+  "planned_only": "{{planned}} planned",
   "pool": "In the pool now",
   "pool_d0": "Under a day",
   "pool_d1": "1 to 3 days",

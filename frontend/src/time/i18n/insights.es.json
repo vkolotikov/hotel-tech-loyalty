@@ -69,6 +69,7 @@
   "planned": "Planificado",
   "planned_hint": "el tiempo planificado de las tareas",
   "planned_of": "{{planned}} de {{capacity}}",
+  "planned_only": "{{planned}} planificadas",
   "pool": "Ahora en la bolsa común",
   "pool_d0": "Menos de un día",
   "pool_d1": "De 1 a 3 días",

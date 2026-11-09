@@ -1,5 +1,5 @@
 import type { TFunction } from 'i18next'
-import { duration } from './format'
+import { duration, planned } from './format'
 import type { Signal, Task } from './types'
 
 /**
@@ -57,7 +57,8 @@ export function signalText(
     other: signal.other ? names.task(signal.other)?.title ?? '—' : '—',
     group: signal.group ?? '—',
     count: signal.value ?? 0,
-    value: minutes ? duration(signal.value ?? 0, units) : String(signal.value ?? ''),
+    // A light day's planned time may be none at all: "0 h", not a dash.
+    value: minutes ? (code === 'light_day' ? planned(signal.value ?? 0, units) : duration(signal.value ?? 0, units)) : String(signal.value ?? ''),
     limit: minutes ? duration(signal.limit ?? 0, units) : String(signal.limit ?? ''),
   })
 }
