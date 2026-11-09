@@ -6,7 +6,7 @@ import type { SubscriptionData } from '../hooks/useSubscription'
 
 /**
  * The full admin's way into HexaTech Loyalty (spec 2026-10-21 §6.7): since the 2026-11-09 menu a tile of the
- * Workspaces launcher under the Dashboard, above Members and the hubs that stay, for staff of an organisation that has
+ * Workspaces launcher at the top of the menu, above Members and the hubs that stay, for staff of an organisation that has
  * the workspace (`workspaces.loyalty` from /auth/me); it still hides with "Members & Loyalty". Rendered to a string with the harness of Layout.appointmentsLink.test.tsx.
  */
 

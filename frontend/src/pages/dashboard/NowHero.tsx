@@ -93,11 +93,16 @@ export function NowHero({ pulse, name, canSetPlace, index = 0 }: { pulse: Pulse 
         ) : (
           <div className="flex items-center md:justify-end">
             <p className="dash-sky-soft max-w-xs text-sm">
-              {pulse && !pulse.place
-                ? (canSetPlace
-                  ? <>{t('dashboard.hero.no_place', 'Add your city to a location to see the weather here.')} <Link to="/properties" className="font-semibold underline underline-offset-2">{t('dashboard.hero.add_city', 'Add a city')}</Link></>
-                  : t('dashboard.hero.no_place_staff', 'The weather shows here once a location has its city.'))
-                : pulse ? t('dashboard.hero.no_weather', 'The weather is not available right now.') : ' '}
+              {!pulse || pulse.weather_status === 'off' ? ' '
+                : !pulse.place || pulse.weather_status === 'no_place'
+                  ? (canSetPlace
+                    ? <>{t('dashboard.hero.no_place', 'Add your city to a location to see the weather here.')} <Link to="/properties" className="font-semibold underline underline-offset-2">{t('dashboard.hero.add_city', 'Add a city')}</Link></>
+                    : t('dashboard.hero.no_place_staff', 'The weather shows here once a location has its city.'))
+                  : pulse.weather_status === 'place_not_found'
+                    ? (canSetPlace
+                      ? <>{t('dashboard.hero.not_found', 'We could not find “{{city}}” on the map. Pick the city from the list in Locations.', { city: pulse.place.name })} <Link to="/properties" className="font-semibold underline underline-offset-2">{t('dashboard.hero.open_locations', 'Open Locations')}</Link></>
+                      : t('dashboard.hero.not_found_staff', 'The weather shows here once the location’s city is found on the map.'))
+                    : t('dashboard.hero.no_weather', 'The weather is not available right now.')}
             </p>
           </div>
         )}

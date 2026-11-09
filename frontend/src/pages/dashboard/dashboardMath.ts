@@ -145,7 +145,7 @@ export function ringArcs(parts: { key: string; value: number }[], gap = 0.006): 
 
 // ── The person's own dashboard ──────────────────────────────────────────────────────────────────────────────────────
 
-export const WIDGETS = ['now', 'live', 'kpis', 'trend', 'pipeline', 'schedule', 'loyalty', 'workspaces', 'tasks', 'activity'] as const
+export const WIDGETS = ['now', 'live', 'workspaces', 'kpis', 'trend', 'pipeline', 'schedule', 'loyalty', 'tasks', 'activity'] as const
 export type WidgetId = (typeof WIDGETS)[number]
 
 export interface DashLayout { order: WidgetId[]; hidden: WidgetId[] }

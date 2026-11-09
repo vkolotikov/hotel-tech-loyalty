@@ -531,7 +531,10 @@
       "no_place": "Ajoutez votre ville à un site pour voir la météo ici.",
       "add_city": "Ajouter une ville",
       "no_place_staff": "La météo s’affiche ici dès qu’un site a sa ville.",
-      "no_weather": "La météo n’est pas disponible pour le moment."
+      "no_weather": "La météo n’est pas disponible pour le moment.",
+      "not_found": "« {{city}} » est introuvable sur la carte. Choisissez la ville dans la liste, dans Sites.",
+      "not_found_staff": "La météo s’affiche ici dès que la ville du site est trouvée sur la carte.",
+      "open_locations": "Ouvrir Sites"
     },
     "kpi": {
       "title": "Les {{days}} derniers jours",

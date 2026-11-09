@@ -35,12 +35,13 @@ import './dashboard/dashboard.css'
  * dashboard with grids … KPI, main graphs, maybe weather info, time … really powerful"). A grid of widgets the person
  * may hide and reorder (Customize; kept in this browser):
  *
- *   1. Now — the venue's clock, greeting and weather (dashboard/pulse), and Live now: what waits for a person.
+ *   1. Now — the venue's clock, greeting and weather (dashboard/pulse), and Live now: what waits for a person; then
+ *      the HexaTech workspaces this person may open (the menu's own filtering).
  *   2. Figures — the industry's "today" tiles (dashboard/kpis) and the period's figures with their change and
  *      sparkline (dashboard/trends: 7, 30 or 90 days).
  *   3. The main chart (revenue, bookings, points, leads and chats by day) and the pipeline by stage.
  *   4. Today's schedule (arrivals, departures, services) and members & tiers.
- *   5. The HexaTech workspaces this person may open (the menu's own filtering), follow-ups due, recent activity.
+ *   5. Follow-ups due and recent activity.
  *
  * Every figure is the server's; widgets of a product the organisation does not hold are not offered. Motion — figures
  * counting up, lines drawing, cards rising in — stops for reduced motion (dashboard.css).

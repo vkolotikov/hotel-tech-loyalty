@@ -745,6 +745,8 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
             // Properties & outlets
             Route::get('properties',                           [PropertyAdminController::class, 'index']);
             Route::post('properties',                          [PropertyAdminController::class, 'store']);
+            // The Locations form's city search (2026-11-09, VenuePulse::places): before properties/{id}, which it would match.
+            Route::get('properties/places',                    [\App\Http\Controllers\Api\V1\Admin\PulseController::class, 'places']);
             Route::get('properties/{id}',                      [PropertyAdminController::class, 'show']);
             Route::put('properties/{id}',                      [PropertyAdminController::class, 'update']);
             Route::delete('properties/{id}',                   [PropertyAdminController::class, 'destroy']);

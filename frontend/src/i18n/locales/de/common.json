@@ -531,7 +531,10 @@
       "no_place": "Tragen Sie bei einem Standort die Stadt ein, um hier das Wetter zu sehen.",
       "add_city": "Stadt eintragen",
       "no_place_staff": "Das Wetter erscheint hier, sobald ein Standort seine Stadt hat.",
-      "no_weather": "Das Wetter ist gerade nicht verfügbar."
+      "no_weather": "Das Wetter ist gerade nicht verfügbar.",
+      "not_found": "„{{city}}“ wurde auf der Karte nicht gefunden. Wählen Sie die Stadt unter Standorte aus der Liste.",
+      "not_found_staff": "Das Wetter erscheint hier, sobald die Stadt des Standorts auf der Karte gefunden ist.",
+      "open_locations": "Standorte öffnen"
     },
     "kpi": {
       "title": "Die letzten {{days}} Tage",
