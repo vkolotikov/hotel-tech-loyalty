@@ -456,6 +456,20 @@ compatibility patch and regression fixture are being prepared for source-patch d
 documents can retain their working access after the move. Private ACLs and disguised/credential/zip files remain
 private. MEDIA_DISK remains do; URL apply and cutover remain to be completed.
 
+**Next continuation:** the guarded URL apply updated **159 rows / 159 references**, zero stale/unmapped; six DOCX
+references still await publication. All four local-legacy images (user 109/org 23; widget configs 7/org 16,
+10/org 12, 22/org 35) are absent from production local, DO, Cloud and local project checkouts. Preserve their
+references; original images need re-uploading. DOCX compatibility deployed as **cb7b69fe3**, Cloud **1154**, from
+feature source baseline **65bd74c8c**. Artifact 2,105 PHP tests, full 6,823 frontend tests, TypeScript, lint,
+Larastan and fresh build passed. Fresh production Migration hash matches the Cloud audit. Guarded 209-object
+migration resume is running in the App console.
+
+That deployment erased shared database-cache receipts: Composer's post-install `optimize:clear` also clears the
+default database cache. A minimal follow-up adds `--except=cache`, preserving compiled-cache cleanup and operational
+state. A regression executes the configured command with real database cache; receipt loss reproduced before
+the fix, then passed with an active lock preserved. Verify/deploy by the source-patch recipe, refresh backup and
+restore acceptance, complete six DOCX URLs, switch MEDIA_DISK to media and verify receipts survive the redeploy.
+
 ## Dashboard deploy (9 Nov, 11:53 UTC)
 
 Production **a455e01**, by the source-patch recipe on `origin/main` f275699 (another session's media-recovery release, no

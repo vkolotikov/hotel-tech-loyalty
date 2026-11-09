@@ -4,6 +4,13 @@
 **Date:** 9 November 2026.
 **Decider:** Owner, in this session; 30-day recovery retention approved.
 
+Continuation: DOCX compatibility release **cb7b69fe3**, Cloud deployment **1154**, is live and the App-cluster
+Migration source hash matches `4228a3de7741f89b785872679f2976994f68d43e0a34c53696f619f53eb56235`.
+The fresh console exposed missing database-cache receipts after deployment. The cause is the repository's
+Composer post-install `optimize:clear`, which flushes the default cache (also the shared database cache).
+The minimal follow-up excludes `cache` from that cleanup; a real database-cache regression first reproduced
+receipt loss, then verifies install cleanup preserves receipts and an active lock. Re-verify recovery before cutover.
+
 ## Context
 
 Production uses DigitalOcean Spaces `hotel-tech-assets` in lon1. The owner's complete read-only inventory found
