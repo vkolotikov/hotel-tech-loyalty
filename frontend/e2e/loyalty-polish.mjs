@@ -112,6 +112,8 @@ try {
     await page.goto(base + '/loyalty/options/setup')
     await page.locator('[data-choice="restaurant"]').waitFor()
     check(await page.locator('[data-loyalty][data-overview]').getAttribute('data-theme') === theme, `Requested theme is active: ${theme}`)
+    const localeWords = JSON.parse(await fs.readFile(new URL(`../src/loyalty/i18n/options.${lang}.json`, import.meta.url), 'utf8'))
+    check(await page.getByRole('heading', { name: localeWords.wizard.business_title, exact: true }).count() > 0, `Requested language is active: ${lang}`)
     check(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), `Setup fits ${width}/${lang}/${theme}`)
     if (lang === 'en') await page.screenshot({ path: path.join(out, `setup-${width}-${theme}.png`) })
   }
