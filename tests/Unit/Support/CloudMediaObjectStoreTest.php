@@ -55,6 +55,44 @@ class CloudMediaObjectStoreTest extends TestCase
         } finally { fclose($copy['stream']); }
     }
 
+    public function test_sdk_upload_keeps_the_callers_stream_open_for_backup_publication_and_cleanup(): void
+    {
+        $this->sdk(function ($command, $request) {
+            $this->assertSame('PutObject', $command->getName());
+            $this->assertSame('shared snapshot bytes', (string) $request->getBody());
+            return Create::promiseFor(new Result());
+        });
+        $stream = tmpfile();
+        fwrite($stream, 'shared snapshot bytes'); rewind($stream);
+        try {
+            $objects = new ObjectStore;
+            $objects->put('media', 'org-19/recovery/a.bin', $stream);
+            gc_collect_cycles();
+            $this->assertTrue(is_resource($stream), 'Publishing one copy must not close the caller-owned snapshot.');
+            rewind($stream);
+            $objects->put('media', 'org-19/images/a.png', $stream);
+            gc_collect_cycles();
+            $this->assertTrue(is_resource($stream));
+            rewind($stream);
+            $this->assertSame('shared snapshot bytes', stream_get_contents($stream));
+        } finally { if (is_resource($stream)) fclose($stream); }
+    }
+
+    public function test_failed_sdk_upload_also_keeps_the_callers_stream_available(): void
+    {
+        $this->sdk(fn ($command) => Create::rejectionFor(new S3Exception('unavailable', $command,
+            ['response' => new Response(503), 'code' => 'ServiceUnavailable'])));
+        $stream = tmpfile(); fwrite($stream, 'retryable snapshot'); rewind($stream);
+        try {
+            try { (new ObjectStore)->put('media', 'org-19/images/a.png', $stream); $this->fail('Expected provider failure'); }
+            catch (S3Exception $e) { $this->assertSame(503, $e->getStatusCode()); }
+            unset($e); gc_collect_cycles();
+            $this->assertTrue(is_resource($stream), 'A failed request must not consume ownership of the snapshot.');
+            rewind($stream);
+            $this->assertSame('retryable snapshot', stream_get_contents($stream));
+        } finally { if (is_resource($stream)) fclose($stream); }
+    }
+
     public function test_a_missing_or_inaccessible_bucket_is_never_reported_as_a_missing_object(): void
     {
         $calls = [];

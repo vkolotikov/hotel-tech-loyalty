@@ -376,21 +376,54 @@ Feature `feature/loyalty-cloud-media-20261109`: provider-neutral URL resolution;
 private byte-verified recovery copies and durable manifests; current copies kept, retired copies retained 30 days;
 guarded resumable copy, explicit preparation/backup/restore and reviewed URL migration commands; Cloud health requires
 backup plus recent isolated restore; member avatars use the shared durable writer and save before releasing only
-their owned predecessor. Operations wording updated in five languages. These sources are **not deployed yet**.
+their owned predecessor. Operations wording updated in five languages. Source baseline **6fc522b14** was deployed
+by source patch as **b695fdaa7** after final artifact checks. Live content verified at **13:44 UTC** on both
+loyalty.hotel-tech.ai and app.hexa-tech.uk: `index-P6hPd3aU.js` loads `SystemStatus-DIfxctLq.js` with the new generic
+Media recovery/Cloud backup-and-restore wording, no old native-versioning-only hint. Six sign-in/recovery IDs and
+wallet capability gating remain present. Protected loyalty/member/wallet/operations endpoints answer 401.
+Landing continuity passes: 200 kit page/styles, zero `rp-` markers, retired stylesheet 404, three exact Poppins fonts.
+CI: https://github.com/vkolotikov/hotel-tech-loyalty/actions/runs/42627493492 — **success**, all eight jobs including
+PostgreSQL's known-failure gate passed.
 
 Feature checks so far: required Support/Landing scopes **2,058 passed**, Wallet **27**, member avatar **3**,
 LoyaltyWorkspace **660 passed / one skipped**, **2,748 total / zero failed**. Two additional archive failure/health
 tests and two reference migration tests subsequently passed. Actual SDK transport mock proves no object ACL header,
 If-Match source reads, paginated listing, bounded/no-retry calls and missing-bucket refusal. Static analysis was
 clean before the last small command/reference changes; rerun on final source/artifact. One operations locale render
-test passed. Full artifact checks, PostgreSQL validation and source-patch deployment remain.
+test passed. Final artifact checks are now complete: **2,102 distinct PHP tests** across required and affected scopes,
+**60 PostgreSQL tests**, TypeScript, **464 Vitest files / 6,823 tests**, lint baseline (1,383 legacy diagnostics,
+none new), Larastan and fresh build passed. The exact final artifact completed **74 real-backend browser checks**,
+including multipart avatar upload and actual image retrieval, with zero browser errors or unexpected 5xx responses.
+Source patch has whole-tree source parity with **6fc522b14**, excluding only the three built roots. This remains the
+next source-patch code baseline; subsequent documentation evidence is not a new code release. Artifact source
+commits end at **5c5d8fb35**, build/deploy **b695fdaa7**. No source media was copied or removed by deployment.
 
 The deployment killed the first console (exit 137); a fresh session then disconnected (1006). A later read-only ACL
 inventory was typed into the terminated console and **never ran**. The task browser connector was restarted to filter
 excessive debug output and now awaits renewed Chrome connection consent. Do not claim source ACL classification or
 Cloud recovery acceptance. The earlier native-version policy route is superseded; keep source DO files/settings
 through copy, delta verification, URL checks, cutover and any legacy-link review. New upstream weather/location
-release **f11a4e950** was adopted before artifact parity/deploy.
+release **f11a4e950** was adopted before artifact parity/deploy. Native PC access subsequently returned through
+cua_repl (the standalone node_repl helper still fails). Chrome visibly has an **Allow remote debugging?** modal.
+Stopped only the task-owned debugging connector, but its prompt remained. Owner was asked to close it with Cancel
+so work can continue through direct PC access. Do not act on the permission prompt automatically.
+
+Task-owned loopback API/SPA services and PostgreSQL 18 were stopped after evidence collection. The deployment
+worktree was removed after validating/unlinking its two owned junctions; shared dependencies and private rehearsal
+evidence remain. Next production action, after the owner closes Chrome's prompt: start a fresh App-cluster console,
+confirm active `do` and the verified Cloud bucket identities, then run the **read-only**
+`php artisan media:cloud-migrate` preview. Continue copy/recovery/URL/cutover acceptance from the Cloud architecture
+and operations runbook, preserving DigitalOcean files/settings throughout. Do not treat the code release or empty
+provisioned buckets as completed migration.
+
+**Continuation:** the Chrome prompt closed and direct native controls worked. Fresh App-cluster read confirms
+active disk `do`, database `hotel_loyalty`, new migration command loaded. Complete read-only migration preview:
+**209 objects / 202,034,601 bytes; 202 public / seven private review**. Source ACL reads all succeeded.
+Guarded apply stopped with TypeError after partial copying; a read-only listing saw **one public / three private
+objects**. Guarded diagnostic resume identified Migration.php:66 `fclose`: the SDK closed the caller's snapshot.
+Two new real-SDK tests reproduced the ownership bug, then passed with a retained/detached PSR-7 wrapper in ObjectStore.
+Prepare/deploy this correction by the source-patch recipe before continuing the idempotent migration. No URL or
+active-disk change, no source deletion, and no completed recovery acceptance.
 
 ## Dashboard deploy (9 Nov, 11:53 UTC)
 
