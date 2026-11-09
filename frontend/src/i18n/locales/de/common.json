@@ -761,7 +761,13 @@
       "send_proposal": "Angebot senden",
       "follow_up": "Nachfassen",
       "site_visit": "Vor-Ort-Besuch",
-      "custom": "Eigene"
+      "custom": "Eigene",
+      "whatsapp": "WhatsApp",
+      "sms": "SMS",
+      "video_call": "Videoanruf",
+      "demo": "Demo",
+      "contract": "Vertrag",
+      "discovery": "Bedarfsanalyse"
     },
     "tooltips": {
       "reopen": "Wieder öffnen",
@@ -799,7 +805,13 @@
       "type": "Typ",
       "title": "Titel",
       "notes": "Notizen (optional)",
-      "due": "Fällig"
+      "due": "Fällig",
+      "assignee": "Wer erledigt sie",
+      "date": "Datum",
+      "duration": "Dauer",
+      "priority": "Priorität",
+      "repeat": "Wiederholen",
+      "start_time": "Beginn"
     },
     "placeholders": {
       "title": "Angebot senden · Nach Vor-Ort-Besuch nachfassen · …",
@@ -824,6 +836,71 @@
       "updated": "Aufgabe aktualisiert",
       "title_required": "Titel ist erforderlich",
       "save_failed": "Speichern fehlgeschlagen"
+    },
+    "any_time": "Jederzeit",
+    "assignee_me": "Ich",
+    "ends_at": "Endet um {{time}}",
+    "ends_next_day": "Endet am nächsten Tag um {{time}}",
+    "length_needs_time": "Wählen Sie einen Beginn, um die Dauer festzulegen.",
+    "length_open": "Keine feste Dauer.",
+    "no_inquiry": "Mit keiner Anfrage verknüpft.",
+    "other_time": "Andere Uhrzeit",
+    "repeat_line": "Wenn sie erledigt ist, wird die nächste zur gleichen Uhrzeit angelegt.",
+    "repeat_needs_day": "Wählen Sie einen Tag, um sie zu wiederholen.",
+    "repeat_once": "Einmalig.",
+    "start_needs_day": "Wählen Sie einen Tag, um eine Uhrzeit zu wählen.",
+    "title_hint": "Leer lassen, um „{{title}}“ zu verwenden.",
+    "date_quick": {
+      "today": "Heute",
+      "tomorrow": "Morgen",
+      "in_2_days": "In 2 Tagen",
+      "next_monday": "Nächsten Montag",
+      "none": "Kein Datum",
+      "other": "Anderer Tag"
+    },
+    "groups": {
+      "talk": "Kontakt aufnehmen",
+      "meet": "Treffen",
+      "sell": "Verkauf abschließen",
+      "other": "Sonstiges"
+    },
+    "length": {
+      "minutes": "{{count}} Min.",
+      "hours": "{{count}} Std.",
+      "hours_minutes": "{{hours}} Std. {{minutes}}"
+    },
+    "parts": {
+      "morning": "Vormittag",
+      "afternoon": "Nachmittag",
+      "evening": "Abend"
+    },
+    "priority": {
+      "low": "Niedrig",
+      "normal": "Normal",
+      "high": "Hoch"
+    },
+    "problems": {
+      "title_required": "Geben Sie der Aufgabe einen Titel.",
+      "too_long": "Das ist zu lang."
+    },
+    "repeat": {
+      "none": "Keine Wiederholung",
+      "daily": "Jeden Tag",
+      "weekly": "Jede Woche",
+      "monthly": "Jeden Monat"
+    },
+    "steps": {
+      "what": "Was",
+      "what_line": "Die Art der Aufgabe, ihr Titel und wie dringend sie ist.",
+      "when": "Wann",
+      "when_line": "Nach Ihrer eigenen Uhr.",
+      "who": "Wer und für welchen Lead",
+      "notes": "Notizen"
+    },
+    "summary": {
+      "no_day": "Noch kein Datum",
+      "at": "{{day}}, {{time}}",
+      "range": "{{day}}, {{start}}–{{end}}"
     }
   },
   "planner": {

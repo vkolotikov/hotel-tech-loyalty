@@ -2,7 +2,8 @@ import { useState } from 'react'
 import { useMutation } from '@tanstack/react-query'
 import { Link, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { Check, ExternalLink, ListChecks, Pencil, RotateCcw, Trash2 } from 'lucide-react'
+import { Check, ExternalLink, Flag, ListChecks, Pencil, Repeat as RepeatIcon, RotateCcw, Trash2 } from 'lucide-react'
+import { endsAt, planOf } from '../../lib/taskForm'
 import { Button } from '../../workspace/ui/Button'
 import { Dialog } from '../../workspace/ui/Dialog'
 import { Field } from '../../workspace/ui/Field'
@@ -21,7 +22,7 @@ import { useToast } from '../ui/Toast'
 import { completeBody, dueParts, dueState, type Task, type TaskType } from './taskLogic'
 import { useTaskChanged } from './taskData'
 import { TaskForm } from './TaskForm'
-import { dueTone, TASK_ICONS, taskTypeLabel } from './taskWords'
+import { dueTone, priorityLabel, repeatLabel, TASK_ICONS, taskTypeLabel } from './taskWords'
 
 /**
  * Tasks as rows (round 2: a clear due state on each), each with what can be done to it: mark it done with an outcome
@@ -74,7 +75,10 @@ function TaskRow({ task, showLead, onEdit, onComplete, onDelete }: {
     onError: e => toast(errorText(t, e), 'danger'),
   })
 
-  const when = due ? `${state === 'today' ? t('crm.tasks.quick_today', 'Today') : state === 'tomorrow' ? t('crm.tasks.quick_tomorrow', 'Tomorrow') : dayLabel(due.day, lang)}${due.time ? `, ${due.time}` : ''}` : ''
+  // The plan (2026-11-09): a start and end where it has a length, high priority and the repeat beside the day.
+  const plan = planOf(task)
+  const end = due?.time ? endsAt(due.time, plan.duration) : null
+  const when = due ? `${state === 'today' ? t('crm.tasks.quick_today', 'Today') : state === 'tomorrow' ? t('crm.tasks.quick_tomorrow', 'Tomorrow') : dayLabel(due.day, lang)}${due.time ? `, ${due.time}${end ? `–${end.time}` : ''}` : ''}` : ''
   const dueText = done && task.completed_at ? t('crm.tasks.done_at', 'Done {{when}}', { when: dateTime(task.completed_at, lang, zone) })
     : !due ? t('crm.tasks.no_due', 'No day set')
     : state === 'overdue' ? t('crm.tasks.overdue_since', 'Overdue since {{when}}', { when })
@@ -114,6 +118,8 @@ function TaskRow({ task, showLead, onEdit, onComplete, onDelete }: {
         {task.description && <p className="mt-0.5 line-clamp-2 text-sm text-a-text-2">{task.description}</p>}
         <p className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-a-text-2">
           <Pill tone={tone}>{dueText}</Pill>
+          {plan.priority === 'high' && !done && <span className="inline-flex items-center gap-1 font-medium text-a-danger"><Flag size={12} aria-hidden />{priorityLabel(t, 'high')}</span>}
+          {plan.repeat !== 'none' && <span className="inline-flex items-center gap-1"><RepeatIcon size={12} aria-hidden />{repeatLabel(t, plan.repeat)}</span>}
           <span>{taskTypeLabel(t, task.type)}</span>
           {task.assignee && <span aria-hidden>·</span>}
           {task.assignee && <span>{task.assignee.id === boot.staff.id ? t('crm.common.me', 'Me') : task.assignee.name}</span>}
