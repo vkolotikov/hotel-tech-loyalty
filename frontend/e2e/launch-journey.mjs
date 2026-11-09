@@ -83,6 +83,17 @@ try {
   const memberToken = await memberPage.evaluate(() => localStorage.getItem('auth_token'))
   const initial = await api(memberSession.ctx, memberToken, 'member/portal')
   check(initial.status === 200 && initial.body.venue.name === 'Launch Test Hotel', 'member registers and reaches their own venue portal')
+  result.phase = 'member avatar upload'
+  const avatar = await memberSession.ctx.request.post(base + '/api/v1/member/profile/avatar', {
+    headers: { Accept: 'application/json', Authorization: 'Bearer ' + memberToken },
+    multipart: { avatar: { name: 'launch-avatar.png', mimeType: 'image/png', buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jZioAAAAASUVORK5CYII=', 'base64') } },
+  })
+  const avatarBody = await avatar.json()
+  check(avatar.ok() && /^\/storage\/org-\d+\/avatars\/user-\d+\//.test(avatarBody.avatar_url), 'member avatar uses the shared tenant-owned media writer')
+  const profileWithAvatar = await api(memberSession.ctx, memberToken, 'member/profile')
+  const avatarFile = await memberSession.ctx.request.get(base + avatarBody.avatar_url)
+  check(profileWithAvatar.body.user.avatar_url === avatarBody.avatar_url && avatarFile.ok() && avatarFile.headers()['content-type']?.includes('image/png'), 'saved member avatar and its actual image remain available on a subsequent request')
+  result.phase = 'member public registration'
   const initialPoints = initial.body.member.current_points
   check(Number.isInteger(initialPoints) && initialPoints >= 0, 'registration starts with the server-defined welcome balance')
   const nextTier = initial.body.member.progress.next_tier
