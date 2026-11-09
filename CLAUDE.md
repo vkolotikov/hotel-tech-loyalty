@@ -62,6 +62,21 @@ or add the next dated one, at the end of a session.
   benefits add `->whereNull('deleted_at')`), never a bare `exists:<table>,id`, which takes another organisation's row;
   `tests/Feature/CrmWorkspace/OwnIdsTest.php` refuses a bare rule anywhere under `app/Http` (2026-11-08).
 
+## Full admin menu and dashboards (2026-11-09, `docs/dashboards.md`)
+
+- The menu's decisions are `components/navMenu.ts` (pure, tested). An item that moves to another group keeps a `home`
+  naming the group it came from: hidden groups, a staff member's allowed groups and the industry's hidden groups are
+  asked about the `home`, never silently about the new group. The Workspaces launcher (`layout: 'apps'`) is a container
+  only the organisation can hide whole. A page that offers the menu's ways in reads `useVisibleMenu()`, never a copy.
+- Group accents live in `theme/navAccents.ts`; a new one gets its line in `GLASS_NAV_ACCENT_TEXT` and
+  `LIGHT_NAV_ACCENT_TEXT`. Dashboard colours go through `theme/dashboardPalette.ts` (`ink()`, `fill()`), whose written-out
+  `hx()` calls keep `hxColours.ts` registering them.
+- Every figure on a dashboard is the server's (`dashboard/trends`, `dashboard/kpis`…); the venue's clock, place, weather
+  and currency are `App\Services\Dashboard\VenuePulse` only, reached by each interface at its own `…/pulse` (a workspace
+  calls only its own area). Times are the venue's zone, never the browser's; a dashboard never fails because the weather
+  is unknown. The dashboard stays free of chart libraries (it is the first page after sign-in): its charts are
+  `pages/dashboard/charts.tsx`, and every motion stops for reduced motion.
+
 ## Landing-page code rules
 
 - One source of truth: the server serves the section catalogue; the editor derives from it. No mirrored

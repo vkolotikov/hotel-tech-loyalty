@@ -1,0 +1,72 @@
+/* The workspaces' PulseCard (2026-11-09): the venue's sky by its part of the day, a slow glow drifting across it, the
+   next hours rising in. The same sky in Light and Dark — it is a picture of the outside, with white words on it.
+   Every rule is scoped under [data-workspace]; motion stops for reduced motion. */
+
+[data-workspace] .ws-sky {
+  color: #ffffff;
+  background: linear-gradient(135deg, #1d4ed8 0%, #2b7de9 50%, #4cc3f0 100%);
+  box-shadow: 0 16px 36px -26px rgb(15 23 42 / 0.75);
+  animation: ws-rise 520ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+[data-workspace] .ws-sky[data-phase="dawn"] { background: linear-gradient(135deg, #3b2a6b 0%, #b4507a 52%, #e98d5a 100%); }
+[data-workspace] .ws-sky[data-phase="dusk"] { background: linear-gradient(135deg, #1e1b4b 0%, #6d28d9 50%, #e5604f 100%); }
+[data-workspace] .ws-sky[data-phase="night"] { background: linear-gradient(135deg, #050b1f 0%, #10183a 55%, #1f2a5c 100%); }
+
+[data-workspace] .ws-sky-soft { opacity: 0.82; }
+[data-workspace] .ws-sky-foot {
+  border-top: 1px solid rgb(255 255 255 / 0.14);
+  background: rgb(0 0 0 / 0.14);
+}
+[data-workspace] .ws-hour {
+  background: rgb(255 255 255 / 0.1);
+  animation: ws-rise 420ms ease both;
+}
+[data-workspace] .ws-hour:first-child { background: rgb(255 255 255 / 0.2); }
+[data-workspace] .ws-fact { background: rgb(255 255 255 / 0.14); }
+[data-workspace] .ws-sun-track { background: rgb(255 255 255 / 0.25); }
+[data-workspace] .ws-sun-done { background: #fde68a; }
+
+[data-workspace] .ws-sky-glow {
+  position: absolute;
+  top: -9rem;
+  right: -5rem;
+  width: 22rem;
+  height: 22rem;
+  border-radius: 9999px;
+  background: rgb(255 255 255 / 0.3);
+  filter: blur(56px);
+  opacity: 0.5;
+  pointer-events: none;
+  animation: ws-drift 18s ease-in-out infinite alternate;
+}
+[data-workspace] .ws-sky[data-phase="night"] .ws-sky-glow { background: rgb(129 140 248 / 0.35); }
+[data-workspace] .ws-sky-strip .ws-sky-glow { top: -12rem; }
+
+[data-workspace] .ws-stars {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    radial-gradient(1.5px 1.5px at 14% 24%, rgb(255 255 255 / 0.9), transparent 60%),
+    radial-gradient(1px 1px at 32% 70%, rgb(255 255 255 / 0.7), transparent 60%),
+    radial-gradient(1.5px 1.5px at 52% 16%, rgb(255 255 255 / 0.8), transparent 60%),
+    radial-gradient(1px 1px at 72% 44%, rgb(255 255 255 / 0.6), transparent 60%),
+    radial-gradient(1.5px 1.5px at 86% 20%, rgb(255 255 255 / 0.9), transparent 60%);
+  animation: ws-twinkle 4s ease-in-out infinite alternate;
+}
+
+@keyframes ws-rise {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes ws-drift { to { transform: translate(-4rem, 3rem) scale(1.15); } }
+@keyframes ws-twinkle { from { opacity: 0.55; } to { opacity: 1; } }
+
+@media (prefers-reduced-motion: reduce) {
+  [data-workspace] .ws-sky,
+  [data-workspace] .ws-hour,
+  [data-workspace] .ws-sky-glow,
+  [data-workspace] .ws-stars {
+    animation: none;
+  }
+}
