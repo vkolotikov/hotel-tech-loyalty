@@ -17,6 +17,8 @@ class LoyaltyLaunchAuditTest extends TestCase
 {
     use DatabaseTransactions;
 
+    private string $lastOutput = '';
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -48,7 +50,9 @@ class LoyaltyLaunchAuditTest extends TestCase
     {
         $this->assertSame(0, Artisan::call('loyalty:launch-audit'));
 
-        return json_decode(Artisan::output(), true, flags: JSON_THROW_ON_ERROR);
+        $this->lastOutput = Artisan::output();
+
+        return json_decode($this->lastOutput, true, flags: JSON_THROW_ON_ERROR);
     }
 
     public function test_observations_never_include_credentials_or_claim_an_empty_queue_proves_a_worker(): void
@@ -62,9 +66,9 @@ class LoyaltyLaunchAuditTest extends TestCase
         $this->assertSame('unverified', $report['queue']['worker_liveness']);
         $this->assertSame(0, $report['queue']['backlog']['value']['ready_jobs']);
         $this->assertNull($report['scheduler']['value']['heartbeat_at']);
-        $this->assertStringNotContainsString($secret, Artisan::output());
-        $this->assertStringNotContainsString('private-sender', Artisan::output());
-        $this->assertStringNotContainsString('sender@example.test', Artisan::output());
+        $this->assertStringNotContainsString($secret, $this->lastOutput);
+        $this->assertStringNotContainsString('private-sender', $this->lastOutput);
+        $this->assertStringNotContainsString('sender@example.test', $this->lastOutput);
         $this->assertSame($before, DB::table('jobs')->count());
     }
 
@@ -85,7 +89,7 @@ class LoyaltyLaunchAuditTest extends TestCase
         $this->assertGreaterThanOrEqual(60, $report['scheduler']['value']['heartbeat_age_seconds']);
         $this->assertSame('ok', $report['media_recovery']['value']['status']);
         $this->assertNotNull($report['media_recovery']['value']['last_seen_at']);
-        $this->assertStringNotContainsString('private_bucket_metadata', Artisan::output());
+        $this->assertStringNotContainsString('private_bucket_metadata', $this->lastOutput);
         $this->assertSame(0, DB::table('jobs')->count());
     }
 

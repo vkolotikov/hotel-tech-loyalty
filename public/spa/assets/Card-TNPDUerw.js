@@ -1,1 +1,0 @@
-import{t as e}from"./vendor-react-B90Q-QDl.js";import{Tn as t}from"./index-vVUkq1j_.js";var n=e();function r({children:e,className:r,padding:i=!0}){return(0,n.jsx)(`div`,{className:t(`bg-dark-surface rounded-xl border border-dark-border`,i&&`p-6`,r),children:e})}export{r as t};
