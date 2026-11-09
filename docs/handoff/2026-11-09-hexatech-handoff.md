@@ -357,3 +357,37 @@ dashboards." Runbook: `docs/dashboards.md`; rules in CLAUDE.md ("Full admin menu
   warning remains). Found and fixed that way: the chart's tabs squeezing its title on a phone, the last day label off the
   edge, a seventh figure alone on its row, workspace names cut, light-sky clouds too pale, figures repeated on CRM Today.
 - Not exercised for real: Open-Meteo (this container's network refuses it; tested with recorded answers).
+
+## Cloud media migration preparation (Windows workstation, 9 November)
+
+Owner selected Laravel Cloud rather than provisioning a temporary DigitalOcean administrator key. Complete source
+inventory: **209 objects / 202,034,601 bytes**. Architecture and resource evidence:
+`docs/audits/2026-11-09-cloud-media-architecture.md`; commands: `docs/wallet-and-media-operations.md`.
+
+The owner is using Codex **inside VS Code**. Native Computer Use and browser host are unavailable. Existing Chrome
+was successfully connected through the official Chrome DevTools MCP `--autoConnect` route after the owner enabled
+`chrome://inspect/#remote-debugging` and accepted Chrome's connection consent. Two EU-jurisdiction Cloud buckets
+were created and attached: public disk **media**, private/default **media_private**. Cloud requires the first
+attached disk to be default, so private was attached first. Existing commit **a455e01** redeployed successfully as
+Cloud deployment **1150**, only to load those resource connections. App-cluster safe metadata read saw both Cloud
+disks and **active media still do**. No credentials extracted, no files copied, no source deletion or URL rewrite.
+
+Feature `feature/loyalty-cloud-media-20261109`: provider-neutral URL resolution; R2 ACL-free bounded object I/O;
+private byte-verified recovery copies and durable manifests; current copies kept, retired copies retained 30 days;
+guarded resumable copy, explicit preparation/backup/restore and reviewed URL migration commands; Cloud health requires
+backup plus recent isolated restore; member avatars use the shared durable writer and save before releasing only
+their owned predecessor. Operations wording updated in five languages. These sources are **not deployed yet**.
+
+Feature checks so far: required Support/Landing scopes **2,058 passed**, Wallet **27**, member avatar **3**,
+LoyaltyWorkspace **660 passed / one skipped**, **2,748 total / zero failed**. Two additional archive failure/health
+tests and two reference migration tests subsequently passed. Actual SDK transport mock proves no object ACL header,
+If-Match source reads, paginated listing, bounded/no-retry calls and missing-bucket refusal. Static analysis was
+clean before the last small command/reference changes; rerun on final source/artifact. One operations locale render
+test passed. Full artifact checks, PostgreSQL validation and source-patch deployment remain.
+
+The deployment killed the first console (exit 137); a fresh session then disconnected (1006). A later read-only ACL
+inventory was typed into the terminated console and **never ran**. The task browser connector was restarted to filter
+excessive debug output and now awaits renewed Chrome connection consent. Do not claim source ACL classification or
+Cloud recovery acceptance. The earlier native-version policy route is superseded; keep source DO files/settings
+through copy, delta verification, URL checks, cutover and any legacy-link review. New upstream weather/location
+release **f11a4e950** was fetched during this work and still needs merging before artifact parity/deploy.

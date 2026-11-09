@@ -89,6 +89,7 @@ class MediaRecovery
 
     public function versioning(): string
     {
+        if (MediaService::disk() === config('media.cloud_disk')) return app(\App\Services\Media\Archive::class)->health(MediaService::disk());
         if (config('filesystems.disks.'.MediaService::disk().'.driver') !== 's3') return 'unobserved';
         $answer = $this->client()->getBucketVersioning(['Bucket' => $this->bucket()]);
         return ($answer['Status'] ?? '') === 'Enabled' ? 'ok' : 'attention';
