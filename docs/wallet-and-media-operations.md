@@ -51,6 +51,14 @@ and records an observation for 26 hours; the scheduler runs daily at 04:20 serve
 this check. Local `MEDIA_DISK=public` causes no cloud request. Disabled/suspended versioning is attention,
 missing/stale observations are unobserved. The command does not enable versioning or change retention/costs.
 
+Approved policy operations (9 November 2026): `php artisan media:recovery-policy --noncurrent-days=30` previews the
+configured bucket's versioning and lifecycle without writing. Applying requires `--apply`, explicit retention,
+`--expected-bucket=<verified production bucket>` and `--expected-host=<configured endpoint hostname>`. The command
+refuses unrelated/advanced lifecycle rules and unresolved recovery-copy markers, shares the recovery lock, sets only
+noncurrent expiration, then enables and reads back versioning. A matching policy is idempotent. No credential or
+provider exception text is printed. The owner approved 30-day noncurrent retention for `hotel-tech-assets` in lon1;
+the exact command and outstanding backup/recovery acceptance are in `audits/2026-11-09-media-recovery-plan.md`.
+
 Preview an exact tenant-owned version:
 
 ```text

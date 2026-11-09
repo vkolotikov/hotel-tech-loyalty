@@ -278,4 +278,15 @@ was still running when concurrent CRM round 4 **b20ef451e** superseded the run (
 preserves these Loyalty/auth sources byte-for-byte. Its replacement CI is `42596640691`; do not claim the cancelled
 run completed PostgreSQL. Local affected PostgreSQL checks above passed. Replacement CI passed both Node builds,
 dependency audit and all SQLite shards, but Larastan found `App\\Models\\Task::$custom_data` undefined in the concurrent
-CRM change; PostgreSQL was still running at the last observation. Do not claim combined CI green.
+CRM change; PostgreSQL subsequently passed, leaving only that static finding. Upstream **c69b0db7e** fixes the model
+annotation; adopt that version, not a duplicate local model edit. The guarded `media:recovery-policy` operator command
+is being added for the approved 30-day policy, with explicit bucket/host checks, default preview, shared recovery lock,
+unmanaged-rule refusal, noncurrent-only expiration, provider read-back and idempotence. Nine policy tests plus existing
+Wallet and diagnostic tests pass (**31 total**); static analysis is clean. Deployment/artifact evidence follows.
+
+Owner confirmed the current target through Cloud: disk `do`, `hotel-tech-assets`, `lon1.digitaloceanspaces.com`, region
+lon1; PostgreSQL `hotel_loyalty`. Local storage credentials are unavailable; do not ask for them to be pasted. Existing
+`docs/audits/2026-10-30-restore-rehearsal.md` already proves a seven-day PITR configuration and isolated recovery of
+`hotel_loyalty` on cluster `hotel_tech_loyalty`. Cloud labels its attachment `main`; preserve the application's database
+name override. Only a fresh current-window observation is missing, not a new paid restore. The same report records
+production queue email inbox receipt on 29 October; avoid another send merely to repeat passing evidence.
