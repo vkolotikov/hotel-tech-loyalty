@@ -27,10 +27,11 @@ class CloudMediaMigrationTest extends TestCase
     {
         $png = UploadedFile::fake()->image('a.png', 8, 8)->getContent();
         $files = ['org-19/logos/a.png' => $png, 'org-19/private/member.png' => $png,
-            'org-19/credentials/secret.pem' => 'private bytes', 'org-19/documents/guide.txt' => 'Public guide'];
+            'org-19/credentials/secret.pem' => 'private bytes', 'org-19/documents/guide.txt' => 'Public guide',
+            'org-19/images/ambiguous%20key.png' => $png];
         foreach ($files as $key => $bytes) Storage::disk('do')->put($key, $bytes);
         $plan = $this->migration()->run(false);
-        $this->assertSame(4, $plan['objects']); $this->assertSame(2, $plan['public']); $this->assertSame(2, $plan['private_review']);
+        $this->assertSame(5, $plan['objects']); $this->assertSame(2, $plan['public']); $this->assertSame(3, $plan['private_review']);
         $this->assertSame([], Storage::disk('media')->allFiles());
         $this->assertSame([], Storage::disk('media_private')->allFiles());
         $first = $this->migration()->run(true); $this->assertTrue($first['applied']);
@@ -41,7 +42,7 @@ class CloudMediaMigrationTest extends TestCase
         foreach ($files as $key => $bytes) $this->assertSame($bytes, Storage::disk('do')->get($key));
         $this->assertSame($png, Storage::disk('media')->get('org-19/logos/a.png'));
         $records = array_filter($before, fn ($key) => str_starts_with($key, 'migration/') && str_ends_with($key, '.json'));
-        $this->assertCount(4, $records);
+        $this->assertCount(5, $records);
     }
 
     public function test_destination_conflicts_stop_without_overwriting_either_live_file(): void

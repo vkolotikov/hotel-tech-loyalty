@@ -166,4 +166,14 @@ class CloudMediaArchiveTest extends TestCase
         }
         $this->assertSame([], Storage::disk('media_private')->allFiles());
     }
+
+    public function test_production_refuses_container_local_public_media_before_publishing_or_claiming_health(): void
+    {
+        $this->app->instance('env', 'production');
+        try { MediaService::putRaw('bytes', 'logos', 'png'); $this->fail('Ephemeral public media accepted'); }
+        catch (\RuntimeException $e) { $this->assertSame('media_public_disk_not_durable', $e->getPrevious()?->getMessage()); }
+        $this->assertSame([], Storage::disk('media')->allFiles());
+        $this->assertSame([], Storage::disk('media_private')->allFiles());
+        $this->assertSame('attention', app(Archive::class)->health('media'));
+    }
 }
