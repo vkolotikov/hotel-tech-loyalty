@@ -443,6 +443,19 @@ running in the existing native Cloud Commands console. Next: finish that sweep, 
 apply URLs, then set MEDIA_DISK=media/redeploy and verify persistence/health/deltas. Keep probe until after redeploy.
 No active-disk or DB URL change yet. Legacy avatar is also absent from all 23 project worktrees; original needed.
 
+**Recovery accepted on continuation:** full backup **203 objects / 201,805,975 bytes**, completed 14:35:38 UTC;
+isolated private restore **verified/exit 0** at **14:41:30 UTC**, exact 68-byte SHA match and cleanup, health **ok**,
+marker false. Provider UI explicitly confirms private EU bucket, runtime has no public URL. Public media-domain
+requests for backup payload and manifest both 404. Raw unsigned S3 returns 400/InvalidArgument and unconfigured
+private hostname 530; those errors alone were not treated as privacy proof.
+
+URL preview completed: **159 mapped rows/references**, **six private-review references** (KnowledgeDocument DOCX),
+**four local-legacy references** (one user, three widget configs), zero unmapped. Source review confirmed all seven
+DOCX already public, registered Word MIME, valid OOXML package parts, no macros. A strict DOCX MIME/extension
+compatibility patch and regression fixture are being prepared for source-patch deployment so current knowledge
+documents can retain their working access after the move. Private ACLs and disguised/credential/zip files remain
+private. MEDIA_DISK remains do; URL apply and cutover remain to be completed.
+
 ## Dashboard deploy (9 Nov, 11:53 UTC)
 
 Production **a455e01**, by the source-patch recipe on `origin/main` f275699 (another session's media-recovery release, no
