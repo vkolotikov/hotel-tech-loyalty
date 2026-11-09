@@ -1,1 +1,0 @@
-import{t as e}from"./vendor-react-B90Q-QDl.js";import{i as t}from"./QueryState-CCM6hMJg.js";var n=e();function r({tone:e=`neutral`,children:r,title:i}){return(0,n.jsx)(`span`,{title:i,className:`inline-flex max-w-full items-center gap-1 truncate rounded-full px-2 py-0.5 text-xs font-medium ${t[e]}`,children:r})}export{r as t};

@@ -1,1 +1,0 @@
-import{nr as e}from"./index-Za1d-TXV.js";function t(){let{t}=e();return e=>t(e.key,e.fallback,e.vars)}export{t};
