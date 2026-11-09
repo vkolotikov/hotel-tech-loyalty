@@ -4,8 +4,8 @@
 [data-loyalty] .l-st-mobile-more > summary { display:none; }
 [data-loyalty] .l-mw-points-desktop-fields { display:contents; }
 [data-loyalty] .l-mw-add-desktop-fields { display:grid; gap:20px; }
-[data-loyalty] .l-mw-add-desktop-fields label > span:first-child { margin-bottom:8px; }
-[data-loyalty] .l-mw-add-desktop-fields label + p { margin-top:6px; line-height:1.5; }
+[data-loyalty] :is(.l-mw-add-desktop-fields,.l-mw-add-fields) label > span:first-child { margin-bottom:8px; }
+[data-loyalty] :is(.l-mw-add-desktop-fields,.l-mw-add-fields) label + p { margin-top:6px; line-height:1.5; }
 [data-loyalty] .l-mw-tiles { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
 [data-loyalty] .l-mw-tile { display:flex; flex-direction:column; gap:8px; min-height:118px; padding:16px; text-align:left; border-radius:16px; border:1px solid transparent; border-top-color:var(--l-ov-border); border-left-color:var(--l-ov-border); background:linear-gradient(173deg,var(--l-ov-raised) 28%,var(--l-ov-bottom) 81%); box-shadow:var(--l-ov-shadow); min-width:0; }
 [data-loyalty] .l-mw-tile-icon { display:flex; align-items:flex-start; height:26px; flex-shrink:0; }
@@ -142,7 +142,7 @@
   [data-loyalty][data-overview] .l-mw-points-result strong { color:var(--l-ov-cyan); font-size:20px; line-height:30px; font-weight:600; }
   [data-loyalty][data-overview] .l-mw-sheet-actions { grid-template-columns:1fr; }
   [data-loyalty][data-overview] .l-mw-sheet-actions .l-ov-primary { order:-1; }
-  [data-loyalty][data-overview] .l-mw-add-fields { gap:8px; }
+  [data-loyalty][data-overview] .l-mw-add-fields { gap:16px; }
   [data-loyalty][data-overview] .l-mw-points-fields .l-rd-stepper { background:none; box-shadow:none; padding:0; gap:12px; }
   [data-loyalty][data-overview] .l-mw-points-fields .l-rd-stepper input { background:var(--l-ov-recessed); box-shadow:var(--l-ov-inset); border:1px solid var(--l-ov-border); border-radius:10px; font-size:14px !important; line-height:22px; min-height:48px; }
   [data-loyalty][data-overview] .l-mw-points-fields .l-rd-stepper button { min-width:52px; min-height:48px; font-size:16px; color:var(--l-ov-text); }

@@ -122,6 +122,8 @@ try {
   await page.goto(base + '/loyalty?add=1')
   await page.getByRole('heading', { name: 'Add a member', exact: true }).waitFor()
   check(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), 'Mobile member form stays within the viewport')
+  const mobileGaps = await page.locator('.l-mw-add-fields').evaluate(el => { const boxes = [...el.children].map(x => x.getBoundingClientRect()); return boxes.slice(1).map((b, i) => b.top - boxes[i].bottom) })
+  check(mobileGaps.length >= 2 && mobileGaps.every(gap => gap >= 16), 'Mobile member fields have clear separation')
   await page.screenshot({ path: path.join(out, 'member-mobile.png'), animations: 'disabled' })
   check(result.errors.length === 0, 'No browser runtime errors')
 } catch (error) { result.failure = error.message; result.location = page?.url(); await page?.screenshot({ path: path.join(out, 'failure.png') }); process.exitCode = 1 }
