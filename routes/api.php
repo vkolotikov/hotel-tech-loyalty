@@ -1625,8 +1625,9 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
             // and every Time Planner package carry (the bootstrap answers either way, so the workspace can say so).
             Route::prefix('time')->middleware('workspace:time')->group(function () {
                 Route::get('bootstrap', [\App\Http\Controllers\Api\V1\Admin\Time\WorkspaceController::class, 'bootstrap']);
-                Route::get('pulse', [\App\Http\Controllers\Api\V1\Admin\PulseController::class, 'show']);
                 Route::middleware('feature:time_management')->group(function () {
+                    // The venue's clock and weather for My day's card (2026-11-09, VenuePulse), behind the plan like My day.
+                    Route::get('pulse', [\App\Http\Controllers\Api\V1\Admin\PulseController::class, 'show']);
                     Route::get('today', [\App\Http\Controllers\Api\V1\Admin\Time\WorkspaceController::class, 'today']);
                     Route::get('day', [\App\Http\Controllers\Api\V1\Admin\Time\WorkspaceController::class, 'day']);
                     Route::get('week', [\App\Http\Controllers\Api\V1\Admin\Time\WorkspaceController::class, 'week']);
