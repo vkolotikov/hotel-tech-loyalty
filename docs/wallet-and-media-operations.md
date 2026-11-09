@@ -79,6 +79,11 @@ while Cloud media is inactive. It retains current backups indefinitely and retir
 retirement, checks the live key again under a shared lock, and only deletes validated managed private pairs.
 Storage errors and missing buckets never count as a deleted asset. No rule expires current public objects.
 
+Composer's install cleanup excludes the application cache (`optimize:clear --except=cache`). Production uses the
+database for both the default and shared cache: flushing it during deployment erases recovery receipts and pending
+operation markers. Clear compiled configuration/routes/views independently; never flush shared operational state
+as deployment housekeeping. A regression test runs the configured install command against real database cache.
+
 `php artisan media:verify-cloud --org=<organisation id> --key=<org-prefixed key> --sha256=<exact backup SHA-256>`
 previews one manifest. `--apply` restores only to a new isolated private `_recovery_checks/` key, compares bytes,
 then removes that exact probe. The persisted `ops:cloud-media-recovery-copy` marker blocks another rehearsal after
