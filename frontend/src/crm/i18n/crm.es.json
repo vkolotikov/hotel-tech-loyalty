@@ -85,7 +85,12 @@
     "lapsed_modules": "Su plan de HexaTech no está activo. Reactívelo en Plan y productos; sus chats, clientes potenciales y contactos no cambian.",
     "not_in_plan": "HexaTech CRM no forma parte de su plan. Añádalo en Plan y productos.",
     "open_full_admin": "Abrir la administración completa",
-    "switched_off": "HexaTech CRM se ha desactivado para su organización. Sus chats, clientes potenciales y contactos no cambian."
+    "switched_off": "HexaTech CRM se ha desactivado para su organización. Sus chats, clientes potenciales y contactos no cambian.",
+    "brand_all": "Todas las marcas",
+    "brand_label": "Marca: {{name}}. Elegir otra",
+    "brand_line": "Lo que muestra el CRM: todas las marcas o una de ellas.",
+    "brand_choose": "Elegir una marca",
+    "brand_default": "Principal"
   },
   "start": {
     "done": "Hecho",

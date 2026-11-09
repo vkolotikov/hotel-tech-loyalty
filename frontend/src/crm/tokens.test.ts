@@ -8,7 +8,7 @@ import { AREAS } from './lib/api'
  *  1. Only Atelier `a-*` colour classes (and the `crm-*` classes theme/crm.css defines). An admin class paints the
  *     workspace in the full admin's palette; a portal class reads variables that exist only under [data-portal].
  *  2. Only the API areas lib/api.ts lists: every `/v1/…` path here is `/v1/admin/<area>`, and every call goes through
- *     crmUrl, which names `brand_id=all`.
+ *     crmUrl, which names the chosen `brand_id` (lib/brand.ts; `all` unless one brand is chosen).
  *  3. Nothing from the other workspaces: they share src/workspace, never each other.
  *  4. Every rule of the stylesheet is scoped under [data-crm].
  */

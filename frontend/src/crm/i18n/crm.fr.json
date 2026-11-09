@@ -85,7 +85,12 @@
     "lapsed_modules": "Votre formule HexaTech n'est pas active. Relancez-la dans Formule et produits ; vos chats, prospects et contacts restent inchangés.",
     "not_in_plan": "HexaTech CRM ne fait pas partie de votre formule. Ajoutez-le dans Formule et produits.",
     "open_full_admin": "Ouvrir l'administration complète",
-    "switched_off": "HexaTech CRM a été désactivé pour votre organisation. Vos chats, prospects et contacts restent inchangés."
+    "switched_off": "HexaTech CRM a été désactivé pour votre organisation. Vos chats, prospects et contacts restent inchangés.",
+    "brand_all": "Toutes les marques",
+    "brand_label": "Marque : {{name}}. En choisir une autre",
+    "brand_line": "Ce que montre le CRM : toutes les marques, ou l’une d’elles.",
+    "brand_choose": "Choisir une marque",
+    "brand_default": "Principale"
   },
   "start": {
     "done": "Fait",

@@ -1,4 +1,5 @@
 import { api } from '../../lib/api'
+import { brandParam } from './brand'
 import type { Bootstrap, BotGap, SetupProgress, Today } from './types'
 
 /**
@@ -25,15 +26,16 @@ export type Area = (typeof AREAS)[number]
 const AREA_SET = new Set<string>(AREAS)
 
 /**
- * The address of a call: `/v1/admin/<area>/…`. Every call names `brand_id=all`: the CRM is the organisation's, and the
- * full admin's request hook (src/lib/api.ts) otherwise adds the brand someone last picked there. A staff member
- * restricted to one brand is still held to it by the server.
+ * The address of a call: `/v1/admin/<area>/…`. Every call names its `brand_id`: the brand chosen in the CRM's switcher,
+ * or `all` (lib/brand.ts, 2026-11-09) — never left out, because the full admin's request hook (src/lib/api.ts) would
+ * otherwise add the brand someone last picked there. The server decides what each brand shows, and holds a staff
+ * member restricted to their brands (BrandMiddleware).
  */
 export function crmUrl(path: string): string {
   const clean = path.replace(/^\/+/, '')
   const area = clean.split(/[/?]/)[0]
   if (!AREA_SET.has(area)) throw new Error(`HexaTech CRM does not call /v1/admin/${area}`)
-  return `/v1/admin/${clean}${clean.includes('?') ? '&' : '?'}brand_id=all`
+  return `/v1/admin/${clean}${clean.includes('?') ? '&' : '?'}brand_id=${encodeURIComponent(brandParam())}`
 }
 
 /** Query parameters with nothing empty in them: what the list endpoints take. */
