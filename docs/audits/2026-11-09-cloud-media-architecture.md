@@ -1,6 +1,6 @@
 # ADR: move production media to Laravel Cloud
 
-**Status:** Accepted provider direction; cutover pending implementation and acceptance.
+**Status:** Implementation tested and released; production copy and cutover acceptance pending.
 **Date:** 9 November 2026.
 **Decider:** Owner, in this session; 30-day recovery retention approved.
 
@@ -65,7 +65,7 @@ recovery: an account-wide loss could affect both Cloud buckets.
 ## Action items
 
 1. [x] Provision and inspect both Cloud disks; keep active media on DigitalOcean.
-2. [ ] Implement and test provider-neutral storage, private recovery, resumable guarded copy and reviewed URL updates.
+2. [x] Implement and test provider-neutral storage, private recovery, resumable guarded copy and reviewed URL updates.
 3. [ ] Deploy through the source-patch recipe and inspect real source visibility/classification.
 4. [ ] Copy, reconcile and verify every object; resolve private/unknown references.
 5. [ ] Verify recovery and public/private isolation, switch uploads, test after redeploy and record evidence.
@@ -94,3 +94,36 @@ terminated by the rolling deployment (exit 137); a fresh connection then closed 
 inventory was typed into the terminated session and **did not run**. The browser connector was restarted to remove
 excessive debug output and is waiting for renewed Chrome connection consent. Do not mistake the typed command for
 an inventory result, or the provisioned buckets for an accepted migration.
+
+## Implementation and release evidence
+
+Source baseline **6fc522b14** was transferred by an exact 35-file allowlist into a fresh deployment checkout of
+**f11a4e950**. Whole-source parity passed, excluding only the three built SPA roots. The artifact has a physical
+vendor copy. Build **b695fdaa7** was pushed normally to main after the checks below; it does not activate Cloud
+uploads, rewrite references or copy production media.
+
+At **13:44 UTC**, both portal domains served `index-P6hPd3aU.js` and `SystemStatus-DIfxctLq.js`, containing the
+new Media recovery/Cloud backup-and-restore wording and no obsolete native-versioning-only hint. Existing auth
+form IDs/wallet gating remained present; protected APIs returned 401. Landing continuity (kit CSS with zero `rp-`
+markers, retired CSS 404 and exact font assets) passed. CI run:
+https://github.com/vkolotikov/hotel-tech-loyalty/actions/runs/42627493492 (in progress at recording).
+
+- Required release PHP scopes plus affected suites: **2,102 distinct tests passed** on the final artifact
+  (Support 210, Unit/Landing 118, Feature/Landing 1,735, Wallet 27, member avatars 3, media references 2,
+  Operations status 7). The final guard changes were rechecked in 249 tests; repeats are not added to the total.
+- Fully migrated isolated PostgreSQL 18: **60 tests passed**, including Cloud references, avatars and operational
+  observations. Its fake storage root was separate from the SQLite runs.
+- TypeScript clean; **464 Vitest files / 6,823 tests passed**; lint baseline passed (1,383 legacy diagnostics,
+  none new); Larastan clean with 2 GB memory; fresh production build passed.
+- Exact final artifact, real PostgreSQL/queue/mail capture/browser journey: **74 checks passed**, zero browser
+  errors and unexpected server failures. This includes a real multipart avatar upload and a subsequent actual
+  image download, plus the earlier registration, points, rewards, benefits, consent, campaign and recovery flows.
+  No business API answers were mocked and no production messages were sent by this run.
+- Actual AWS SDK transport tests verify ACL-free R2 writes, conditional source reads, pagination, bounded/no-retry
+  requests and missing-bucket refusal. These are local checks, not live Cloud provider acceptance.
+
+Private local evidence is under `C:/wamp64/tmp/loyalty-cloud-media-*`, outside Git. Production public/private access,
+copy classifications, private restore and cutover still need the real App-cluster checks above. Native PC access
+subsequently returned through cua_repl. The task debugging connector was stopped; Chrome's orphaned **Allow remote
+debugging?** prompt must be closed by the owner before native Cloud controls are usable. No DigitalOcean source
+object or media reference has been changed by the release.
