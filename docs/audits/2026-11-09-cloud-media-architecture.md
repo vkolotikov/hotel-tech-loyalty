@@ -1,6 +1,6 @@
 # ADR: move production media to Laravel Cloud
 
-**Status:** Implementation tested and released; production copy and cutover acceptance pending.
+**Status:** Production copy, recovery and URL migration verified; upload cutover in progress.
 **Date:** 9 November 2026.
 **Decider:** Owner, in this session; 30-day recovery retention approved.
 
@@ -73,8 +73,8 @@ recovery: an account-wide loss could affect both Cloud buckets.
 
 1. [x] Provision and inspect both Cloud disks; keep active media on DigitalOcean.
 2. [x] Implement and test provider-neutral storage, private recovery, resumable guarded copy and reviewed URL updates.
-3. [ ] Deploy through the source-patch recipe and inspect real source visibility/classification.
-4. [ ] Copy, reconcile and verify every object; resolve private/unknown references.
+3. [x] Deploy through the source-patch recipe and inspect real source visibility/classification.
+4. [x] Copy, reconcile and verify every source object; resolve private/unknown references.
 5. [ ] Verify recovery and public/private isolation, switch uploads, test after redeploy and record evidence.
 
 Primary references: [Cloud storage](https://laravel.com/cloud/docs/resources/object-storage),
@@ -202,3 +202,25 @@ this is the same rule already used for PDF/text. A regression fixture generated 
 missing DOCX classification, then passed with strict extension plus detected registered MIME support. Private ACLs,
 disguised files, credential-like names and generic zip archives stay private. Deploy that small compatibility
 correction by the source-patch recipe before the final Word copy and storage cutover.
+
+## Latest production acceptance (15:36 UTC)
+
+- DOCX compatibility is live as **cb7b69fe3 / Cloud 1154**; its source matches feature baseline **65bd74c8c**.
+  Artifact: **2,105 PHP tests**, TypeScript, **464 files / 6,823 frontend tests**, lint, Larastan, fresh build.
+  CI **42642060991** passed all eight jobs, including the PostgreSQL known-failure gate.
+- The resumed guarded copy completed for **209 objects / 202,034,601 bytes**, all **209 source-public**, zero
+  private-review objects. DigitalOcean was not modified. All seven supported Word documents are included.
+- Full private backup: **210 objects / 202,034,669 bytes**, including the controlled PNG, at **15:31:34 UTC**.
+  Isolated private restore passed again at **15:31:35 UTC**, exact bytes/SHA, cleanup complete.
+- Final URL apply: **six rows / six document references**, zero stale, private-review or unmapped references.
+  Together with the first apply, **165 rows / 165 references** moved to Cloud. Recovery health is **ok**.
+- All **six** current Cloud Word URLs were downloaded over HTTPS and matched the actual object SHA and detected
+  registered Word MIME. Complete DO key/size/last-modified inventory was recorded at **15:36:16 UTC**, still
+  **209 objects / 202,034,601 bytes**; its digest is stored under `ops:cloud-media-source-inventory-20261109`.
+- All four legacy local images are pre-existing missing files (user 109/org 23, widget configs 7/org 16,
+  10/org 12 and 22/org 35), absent on production local, DO, Cloud and project-local copies. Preserve references;
+  originals must be uploaded again. These are not missing migration source objects.
+- Cache-preserving cleanup source baseline **b0ecd9479**, exact five-file patch **6e76c7133**, fresh identical
+  build receipt **31c1b568e**, was pushed to main after the production jobs finished. Artifact: **2,067 required
+  PHP tests**, full **6,823** frontend tests, TypeScript, lint, Larastan and Composer validation passed.
+  Verify this deployment preserves the recovery receipts before setting MEDIA_DISK to media.

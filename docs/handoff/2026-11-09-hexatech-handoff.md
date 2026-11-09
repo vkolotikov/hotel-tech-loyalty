@@ -470,6 +470,28 @@ state. A regression executes the configured command with real database cache; re
 the fix, then passed with an active lock preserved. Verify/deploy by the source-patch recipe, refresh backup and
 restore acceptance, complete six DOCX URLs, switch MEDIA_DISK to media and verify receipts survive the redeploy.
 
+**15:36 UTC acceptance:** guarded copy completed, **209 objects / 202,034,601 bytes**, all public, zero private
+review. Full private backup **210 objects / 202,034,669 bytes** (includes controlled PNG) at **15:31:34 UTC**;
+exact private restore/cleanup passed **15:31:35 UTC**. Remaining **six URLs applied**, zero unmapped/stale/private
+review, leaving only the four known missing local images. All six current Word URLs passed real HTTPS byte/MIME
+checks. Recovery health **ok**. DO inventory digest recorded in shared cache at
+`ops:cloud-media-source-inventory-20261109`, counts unchanged; compare after cutover.
+
+The cache fix passed artifact Support **214**, Unit/Landing **118**, Feature/Landing **1,735** (2,067 total), full
+**6,823** frontend tests, TypeScript, lint, Larastan, Composer validation and a fresh identical build. Source patch
+**6e76c7133**, verified build receipt **31c1b568e**, pushed to main. **Next source-patch code baseline: b0ecd9479**;
+this later evidence is not a code baseline. Verify deployed Composer cleanup excludes cache and the accepted
+backup/restore/inventory receipts survived. Then change only MEDIA_DISK from do to media, redeploy, verify active
+disk/source inventory/public probe durability, exercise the default writer, clean exact controlled probes, final
+backup and Operations observation. Keep all DigitalOcean files/settings for legacy links. DOCX CI **42642060991**
+finished successfully in all eight jobs. Active App console is idle; Cloud deployment may end it.
+
+Local cleanup note: the old stream artifact worktree was deregistered and its node_modules junction safely removed,
+but Git hit a Windows long-path deletion error. Automatic approval blocked recursive removal of the remainder
+(only reason: blocked by policy). Leave that task-owned remainder in place; do not bypass the rejection. The current
+artifact remains at `C:/wamp64/www/Hexa-Tech-deploy-cloud-word-20261109`, now on branch
+`deploy/loyalty-cloud-cache-20261109`, with its own physical vendor and the root node_modules junction.
+
 ## Dashboard deploy (9 Nov, 11:53 UTC)
 
 Production **a455e01**, by the source-patch recipe on `origin/main` f275699 (another session's media-recovery release, no
