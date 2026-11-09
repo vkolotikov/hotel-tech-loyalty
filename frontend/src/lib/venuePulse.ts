@@ -7,6 +7,10 @@
 /** What every interface's `…/pulse` answers. Times of the sun and the hours are the venue's wall clock. */
 export interface Pulse {
   timezone: string
+  /** Whose zone the clock is in: the venue's, or for a venue on UTC its location's or the place found's. */
+  timezone_source?: 'venue' | 'location' | 'place'
+  /** Why there is no weather when there is none (VenuePulse). */
+  weather_status?: 'ok' | 'no_place' | 'place_not_found' | 'unavailable' | 'off'
   now: string
   today: string
   currency?: string

@@ -333,3 +333,33 @@ dashboards." Runbook: `docs/dashboards.md`; rules in CLAUDE.md ("Full admin menu
   warning remains). Found and fixed that way: the chart's tabs squeezing its title on a phone, the last day label off the
   edge, a seventh figure alone on its row, workspace names cut, light-sky clouds too pale, figures repeated on CRM Today.
 - Not exercised for real: Open-Meteo (this container's network refuses it; tested with recorded answers).
+
+### Deploy (9 Nov, 11:53 UTC)
+
+Production **a455e01**, by the source-patch recipe on `origin/main` f275699 (another session's media-recovery release, no
+overlapping file): source patch **d0b8b90** (62 files of the branch at 30f4e7d: 25 added, 37 changed, none deleted;
+whole-tree parity with the tip, built paths aside), fresh build **7c15358** (`frontend/dist`, `public/spa`,
+`resources/spa-shell` only), and follow-up **a455e01** (the Time Planner's `pulse` moved behind `time_management`, which
+`GateAndBootstrapTest` requires — found on PostgreSQL before the push). No migration. **Next source-patch baseline:
+9992d5e.**
+
+- Artifact checks (the deploy checkout): the full PHP sweep, 81 runs, **7,578 passed, 0 failed, 25 skipped**; after the
+  follow-up AdminAccess, Dashboard, Security, TimeWorkspace and the route tests again (164 passed, 1 skipped); Larastan no
+  errors; `tsc -b` clean; Vitest **463 files / 6,814 tests**; `npm run build` succeeded (the first bundle grew 35 kB raw,
+  about 10 kB gzipped); the built SPA served like Laravel renders the dashboard and CRM Today with no console error.
+- Live, verified by content: `https://app.hexa-tech.uk/` serves `index-12Wrra6-.js`, holding `loyalty-nav-groups-v2`,
+  `hx-dashboard-layout-v1`, `dashboard/pulse`, `dashboard/trends`, `nav-app-tile` and "Find in menu"; `admin/dashboard/pulse`,
+  `admin/dashboard/trends` and the `pulse` of crm, loyalty, appointments, content and time answer 401 unauthenticated (a
+  missing route answers 404). Landing continuity: `https://sites.hexa-tech.uk/hexa-academy` 200, its kit stylesheet
+  (64,577 bytes) with zero `rp-` markers.
+- Post-deploy CI: https://github.com/vkolotikov/hotel-tech-loyalty/actions/runs/42612548439 (in progress at recording).
+
+### What the owner does by hand
+
+1. Nothing for the release. To see the weather, a location (Locations / Properties) needs its city; otherwise the zone's
+   city is used (Europe/Riga → Riga). A venue on UTC with no city sees the clock alone and, as a manager, "Add a city".
+2. Worth a look once signed in: that the weather shows (Laravel Cloud must reach `api.open-meteo.com` and
+   `geocoding-api.open-meteo.com`; if it cannot, the card shows the clock alone and the log has
+   `dashboard.pulse.weather_unavailable`). `WEATHER_ENABLED=false` in Laravel Cloud switches the weather off.
+3. Everyone's menu starts folded the new way (only Overview, Workspaces and the page's own group open); each person's own
+   opening and closing is kept from then on.

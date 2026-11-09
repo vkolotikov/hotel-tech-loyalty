@@ -531,7 +531,10 @@
       "no_place": "Add your city to a location to see the weather here.",
       "add_city": "Add a city",
       "no_place_staff": "The weather shows here once a location has its city.",
-      "no_weather": "The weather is not available right now."
+      "no_weather": "The weather is not available right now.",
+      "not_found": "We could not find “{{city}}” on the map. Pick the city from the list in Locations.",
+      "not_found_staff": "The weather shows here once the location’s city is found on the map.",
+      "open_locations": "Open Locations"
     },
     "kpi": {
       "title": "The last {{days}} days",

@@ -7,7 +7,7 @@ dashboards."
 
 ## The full admin's menu (`frontend/src/components/Layout.tsx`, `navMenu.ts`)
 
-- **Workspaces** is a group of its own under Overview, drawn as a launcher of tiles: HexaTech Loyalty, Appointments,
+- **Workspaces** is the first group of the menu (above Overview since the owner's "put workspaces more on top"), drawn as a launcher of tiles: HexaTech Loyalty, Appointments,
   CRM, Content and Time Planner. They used to sit one per group further down. Each tile keeps its gates (`product`,
   `feature`, `workspace`) and a `home`: the group it came from (`Members & Loyalty`, `Bookings`, `CRM & Marketing` twice,
   `Operations`). Sidebar Menu's hidden groups, a staff member's allowed groups and the industry's hidden groups are asked
@@ -69,7 +69,17 @@ Reads only:
   failure is remembered for 5 minutes, so a provider that is down costs one short wait. Null whenever unknown — the
   dashboards then show the clock alone. `WEATHER_ENABLED=false` switches it off; `WEATHER_FORECAST_URL` and
   `WEATHER_GEOCODING_URL` override the hosts (`config/services.php`).
-- A manager sees "Add a city" (to Locations) when there is no place.
+- A location's country reads from a code or from its name in eighteen languages (`Latvia`, `Lettland`, `Латвия`); the
+  organisation's own country is never put in its place. A city not found with its country is looked up without it; a
+  miss is kept one hour (key `pulse:place:v2:…`; the first key kept misses 30 days, which is what kept the owner's
+  "Riga, Latvia" without weather on 9 Nov). A venue on UTC takes the clock of its location's zone, else of the place
+  found (`timezone_source`). `weather_status`: `ok`, `no_place`, `place_not_found`, `unavailable` (the log has
+  `dashboard.pulse.weather_unavailable` with the step and the provider's status), `off`.
+- The card says why there is no weather: a manager sees "Add a city" or "We could not find … Pick the city from the list"
+  with the way to Locations.
+- **Locations** (`pages/Properties.tsx`): the city is picked from a search (`CityPicker`, `GET admin/properties/places`,
+  `lib/places.ts`), which fills the city, the country (by its English name) and an empty or UTC time zone; the country is
+  a list; the time zone field suggests the browser's zones. A city typed by hand is still saved as typed.
 
 ## Day-by-day figures (`App\Services\Dashboard\DashboardTrends`)
 

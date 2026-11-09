@@ -531,7 +531,10 @@
       "no_place": "Añada su ciudad a una ubicación para ver aquí el tiempo.",
       "add_city": "Añadir una ciudad",
       "no_place_staff": "El tiempo aparecerá aquí cuando una ubicación tenga su ciudad.",
-      "no_weather": "El tiempo no está disponible ahora mismo."
+      "no_weather": "El tiempo no está disponible ahora mismo.",
+      "not_found": "No encontramos «{{city}}» en el mapa. Elija la ciudad de la lista en Ubicaciones.",
+      "not_found_staff": "El tiempo aparecerá aquí cuando la ciudad de la ubicación se encuentre en el mapa.",
+      "open_locations": "Abrir Ubicaciones"
     },
     "kpi": {
       "title": "Los últimos {{days}} días",

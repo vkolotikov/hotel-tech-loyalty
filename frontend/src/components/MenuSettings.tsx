@@ -39,7 +39,7 @@ interface ToggleableGroup {
 // — the omission that made "Landing pages" unhideable after Task 5 moved it
 // out of "AI Chat" with no entry added here.
 export const TOGGLEABLE: ToggleableGroup[] = [
-  // 2026-11-09: the ways into the HexaTech workspaces, gathered in one launcher under the Dashboard. Each also still
+  // 2026-11-09: the ways into the HexaTech workspaces, gathered in one launcher at the top of the menu. Each also still
   // hides with the group it used to sit in (Loyalty with Members & Loyalty, Appointments with Bookings, CRM and
   // Content with CRM & Marketing, Time Planner with Operations); hiding this hides the launcher whole.
   { label: 'Workspaces',       accent: NAV_ACCENT.teal, icon: LayoutGrid,    description: 'The HexaTech workspaces: Loyalty, Appointments, CRM, Content, Time Planner. Each one also hides with its own group below.' },
