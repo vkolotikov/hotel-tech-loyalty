@@ -265,12 +265,17 @@ worktree and only its dependency junction removed, private evidence retained. Ow
 the same probe processed at 09:45:26, zero ready jobs and failed jobs in the second reading. SMTP configuration
 present, From domain `hotel-tech.ai`. This verifies one worker execution, not continuous monitoring or Cloud mail
 delivery. Owner then ran `media:check-recovery`: fresh status at **09:47:42 UTC is attention**, no recovery marker.
-Versioning is not Enabled. Prepared `docs/audits/2026-11-09-media-recovery-plan.md`; retention/cost choice and database
-backup observations remain pending. Local storage configuration did not match the documented production target;
+Versioning is not Enabled. Prepared `docs/audits/2026-11-09-media-recovery-plan.md`; **owner approved 30-day noncurrent
+retention**. The owner could not find resource details and requested direct inspection. A fresh CUA check found
+native computer pipe and browser access host unavailable; no usable Cloud connector or CLI session was found.
+Reconnection requested. Do not ask for the policy choice again. Database backup observations and verified production
+target/provider access remain pending. Local storage configuration did not match the documented production target;
 inspection refused that path, no provider request/change was made. Physical provider/device acceptance remains
 external and optional channels stay on hold until accepted.
 
 Release CI `42594935207`: Larastan, dependency audit, both Node builds and all three SQLite shards green; PostgreSQL
 was still running when concurrent CRM round 4 **b20ef451e** superseded the run (cancelled, not failed). That release
 preserves these Loyalty/auth sources byte-for-byte. Its replacement CI is `42596640691`; do not claim the cancelled
-run completed PostgreSQL. Local affected PostgreSQL checks above passed. See the current CI run for combined status.
+run completed PostgreSQL. Local affected PostgreSQL checks above passed. Replacement CI passed both Node builds,
+dependency audit and all SQLite shards, but Larastan found `App\\Models\\Task::$custom_data` undefined in the concurrent
+CRM change; PostgreSQL was still running at the last observation. Do not claim combined CI green.

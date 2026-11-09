@@ -1,6 +1,6 @@
 # Proposed production media recovery policy
 
-Status: **prepared, not applied**. At 09:47:42 UTC on 9 November the owner's production check returned `attention`: storage answered the versioning request but did not report `Enabled`. No media recovery rehearsal is recorded. The workstation's storage configuration could not be verified as the documented production target, so the local inspection refused that path and made no provider request or change.
+Status: **30-day policy approved by the owner on 9 November; not applied**. At 09:47:42 UTC the owner's production check returned `attention`: storage answered the versioning request but did not report `Enabled`. No media recovery rehearsal is recorded. The workstation's storage configuration could not be verified as the documented production target, so the local inspection refused that path and made no provider request or change. A fresh browser/computer connection check after the owner's request found both automation connections unavailable. No usable Cloud connector or CLI session was available; reconnection requested. Do not ask for the 30-day choice again.
 
 The last documented production storage is DigitalOcean Spaces (`do`, `hotel-tech-assets`; 29 October acceptance report). Confirm the current Cloud media disk, bucket and endpoint in the authorised operator session before any write. Do not assume workstation settings identify today's production target. Do not share keys or credentials.
 
@@ -25,7 +25,7 @@ DigitalOcean supports versioning through its API rather than its control panel; 
 
 Existing Spaces Standard subscriptions include 250 GiB across buckets; additional storage is $0.02 per GiB/month. For example, 100 GiB of extra retained versions above the allowance would be about $2/month in storage. Actual additional cost depends on existing usage and overwrite volume; neither was available to the agent. [Current provider pricing](https://docs.digitalocean.com/products/spaces/details/pricing/), checked 9 November 2026.
 
-The project runbook requires an agreed policy: “Versioning/retention changes need an agreed storage-cost and retention policy.” See [wallet-and-media-operations.md](../wallet-and-media-operations.md). The owner's launch authorisation covers verification work; this newly specified retention/cost choice is still pending.
+The project runbook requires an agreed policy: “Versioning/retention changes need an agreed storage-cost and retention policy.” See [wallet-and-media-operations.md](../wallet-and-media-operations.md). The owner has now selected 30 days after reviewing the retention/cost explanation. The current production target, existing rules, provider access and database backup observations remain to be verified.
 
 ## Execution and acceptance
 
