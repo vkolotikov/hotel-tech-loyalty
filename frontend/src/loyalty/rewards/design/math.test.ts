@@ -1,12 +1,32 @@
 import { describe, expect, it } from 'vitest'
-import { benefitAssignments, rewardEditorProblems, rewardModes, rewardsUrl, rewardStatus } from './math'
+import { benefitAssignments, offerMatches, offerReadUrl, rewardEditorProblems, rewardModes, rewardsUrl, rewardStatus } from './math'
 import { rewardFormOf } from '../rewardsMath'
-import type { Reward } from '../types'
+import type { Offer, Reward } from '../types'
 import type { Benefit, Tier } from '../../program/types'
 import { REWARD_DESIGN_WORDS } from './words'
 import en from '../../i18n/rewarddesign.en.json'
 
 describe('Rewards design contracts', () => {
+  const offer = { id: 7, title: 'Autumn weekend', code: 'AUTUMN', brand_id: 2, state: 'live' } as Offer
+  it('keeps the saved offer selected when its name, brand or state no longer matches the editor entry filters', () => {
+    const changed = { ...offer, title: 'Winter stay', code: null, brand_id: 3, state: 'off' }
+    const url = new URL(offerReadUrl('?tab=offers&q=Autumn&brand=2&status=current&selected=7&edit=1', changed, 'Other hotel', true), 'https://example.test')
+    expect(url.searchParams.get('selected')).toBe('7')
+    expect(url.searchParams.has('q')).toBe(false)
+    expect(url.searchParams.get('brand')).toBe('all')
+    expect(url.searchParams.get('status')).toBe('all')
+    expect(url.searchParams.has('edit')).toBe(false)
+    expect(url.searchParams.get('saved')).toBe('1')
+  })
+  it('retains matching search, brand and status filters when returning from edit', () => {
+    const url = new URL(offerReadUrl('?q=autumn&brand=2&status=current&edit=1', offer, 'Hotel'), 'https://example.test')
+    expect(url.searchParams.get('q')).toBe('autumn')
+    expect(url.searchParams.get('brand')).toBe('2')
+    expect(url.searchParams.get('status')).toBe('current')
+    expect(url.searchParams.has('saved')).toBe(false)
+    expect(offerMatches(offer, { q: 'hotel', brand: 'all', status: 'live' }, 'Hotel')).toBe(true)
+    expect(offerMatches({ ...offer, brand_id: null }, { q: 'AUTUMN', brand: 'every', status: 'all' }, 'Every brand')).toBe(true)
+  })
   const now = Date.parse('2026-10-28T10:00:00Z')
   const reward = { is_active: true, expires_at: null, stock: null } as Reward
   it('keeps custom stock, limits and expiry invalid while temporarily empty', () => {

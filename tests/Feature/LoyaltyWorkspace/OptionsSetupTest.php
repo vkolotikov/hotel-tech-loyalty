@@ -86,6 +86,8 @@ class OptionsSetupTest extends TestCase
         $this->asManager()->getJson($this->api('options'))->assertOk()
             ->assertJsonPath('options.programme_setup_template', 'hotel_classic')->assertJsonMissingPath('fields.programme_setup_template');
         $this->asManager()->putJson($this->api('options'), ['options' => ['programme_setup_template' => 'restaurant']])->assertUnprocessable();
+        $this->asManager()->postJson($this->api('options/setup'), ['options' => ['checkin_points' => 6]])->assertOk()
+            ->assertJsonPath('options.programme_setup_template', 'hotel_classic')->assertJsonPath('options.checkin_points', 6);
     }
 
     public function test_keeping_the_tiers_needs_no_preset_and_a_venue_without_tiers_must_name_one(): void

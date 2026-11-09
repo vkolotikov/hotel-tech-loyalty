@@ -80,4 +80,22 @@ class CrmAiRightsTest extends TestCase
 
         $this->assertTrue((new CrmAiToolset($this->manager))->executeTool('update_setting', ['key' => 'points_per_currency', 'value' => '3'])['success']);
     }
+
+    public function test_chat_settings_use_programme_validation_and_cannot_restore_a_deleted_reward_reference(): void
+    {
+        $options = \App\Services\Loyalty\Programme\ProgrammeOptions::class;
+        $reward = \App\Models\Reward::create(['name' => 'Unused gift', 'points_cost' => 50]);
+        $options::save($this->org->id, ['stamp_reward_id' => $reward->id], $this->manager);
+        $options::save($this->org->id, ['stamp_reward_id' => null], $this->manager);
+        app(\App\Services\Loyalty\RewardManagement::class)->delete($reward, $this->manager);
+        $options::rememberTemplate($this->org->id, 'restaurant');
+        $tool = new CrmAiToolset($this->manager);
+
+        $this->assertFalse($tool->executeTool('update_setting', ['key' => 'stamp_reward_id', 'value' => $reward->id])['success']);
+        $this->assertNull($options::get($this->org->id, 'stamp_reward_id'));
+        $this->assertFalse($tool->executeTool('update_setting', ['key' => 'programme_setup_template', 'value' => 'beauty'])['success']);
+        $this->assertSame('restaurant', $options::get($this->org->id, 'programme_setup_template'));
+        $this->assertFalse($tool->executeTool('update_setting', ['key' => 'points_per_currency', 'value' => '-5'])['success']);
+        $this->assertSame('2', $this->setting('points_per_currency'));
+    }
 }

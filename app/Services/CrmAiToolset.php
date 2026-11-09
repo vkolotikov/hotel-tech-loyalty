@@ -18,6 +18,7 @@ use App\Models\SpecialOffer;
 use App\Models\User;
 use App\Models\VenueBooking;
 use App\Services\Loyalty\LoyaltyAccess;
+use App\Services\Loyalty\Programme\ProgrammeOptions;
 use App\Support\SettingRegistry;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
@@ -1147,8 +1148,15 @@ class CrmAiToolset
         $setting = HotelSetting::where('key', $in['key'])->first();
         if (!$setting) return ['success' => false, 'data' => ['error' => "Setting '{$in['key']}' not found"]];
 
-        HotelSetting::setValue($in['key'], $in['value']);
-        return ['success' => true, 'data' => ['key' => $in['key'], 'new_value' => $in['value'], 'message' => "Setting '{$in['key']}' updated"]];
+        if (array_key_exists($in['key'], ProgrammeOptions::OPTIONS)) {
+            // The same validation, wizard-only guard and organisation lock as Settings and guided setup.
+            $options = ProgrammeOptions::save((int) $setting->organization_id, [$in['key'] => $in['value']], $this->by);
+            $value = $options[$in['key']];
+        } else {
+            HotelSetting::setValue($in['key'], $in['value']);
+            $value = $in['value'];
+        }
+        return ['success' => true, 'data' => ['key' => $in['key'], 'new_value' => $value, 'message' => "Setting '{$in['key']}' updated"]];
     }
 
     private function toolGetSystemGuide(array $in): array
