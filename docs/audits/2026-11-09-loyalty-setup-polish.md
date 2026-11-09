@@ -4,7 +4,7 @@ Owner request: space the member fields, repair place radios, activate industry t
 
 ## Implementation
 
-- Member form groups use an explicit 20px desktop gap with space between labels, controls and hints. Native radios are excluded from text-input styles.
+- Member form groups use explicit 20px desktop and 16px mobile gaps, with space between labels, controls and hints. Native radios are excluded from text-input styles.
 - Guided setup has compact step navigation. All server-provided industry templates can be selected. Existing organisations start with **Keep current earning rules**; deliberately selecting a template proposes its earning rules for review. Existing tiers, benefits and rewards remain. Empty programmes still use the canonical preset builder. This does not change the global organisation industry or other products.
 - The wizard alone stores `programme_setup_template` through ProgrammeOptions. It is not an editable general option. The chosen template is identified when reopened; saved earning rules remain the starting values. Applying Keep retains the previous template attribution.
 - Overview includes the real server setup checklist on desktop and mobile, including accounts whose registration already seeded tiers. Settings has a permanent Guided setup section. Existing Members first steps remain.
