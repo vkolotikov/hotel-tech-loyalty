@@ -109,7 +109,7 @@ final class DashboardTrends
     /**
      * name => [a fresh query, the date column, the aggregate].
      *
-     * @return array<string, array{0: \Closure(): Builder<\Illuminate\Database\Eloquent\Model>, 1: string, 2: string}>
+     * @return array<string, array{0: \Closure(): Builder<*>, 1: string, 2: string}>
      */
     private function measures(): array
     {
