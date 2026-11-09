@@ -1,6 +1,7 @@
 import { api } from '../../lib/api'
 import { brandParam } from './brand'
 import type { Bootstrap, BotGap, SetupProgress, Today } from './types'
+import type { Pulse } from '../../lib/venuePulse'
 
 /**
  * Every call HexaTech CRM makes goes through here (2026-11-07). The workspace's own reads live under
@@ -112,6 +113,8 @@ export function send<T>(method: 'post' | 'put' | 'patch' | 'delete', path: strin
 export const crmApi = {
   bootstrap: () => api.get<Bootstrap>(crmUrl('crm/bootstrap')).then(r => r.data),
   today: () => get<Today>('crm/today'),
+  /** The venue's clock, place and weather (VenuePulse), for Today's card. */
+  pulse: () => get<Pulse>('crm/pulse'),
   start: () => get<SetupProgress>('crm/start'),
   botGaps: () => get<{ data: BotGap[] }>('crm/bot-gaps').then(r => r.data),
   draft: (conversationId: number, instruction?: string) =>

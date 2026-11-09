@@ -1,7 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
+import { useQuery } from '@tanstack/react-query'
 import { useBoot } from '../LoyaltyProvider'
+import { loyaltyApi } from '../lib/api'
+import { PulseCard } from '../../workspace/pulse/PulseCard'
 import { money, points, when } from '../lib/format'
 import { overviewAssets as assets } from './assets'
 import { cleanAssets, metricIcons } from './cleanAssets'
@@ -42,6 +45,8 @@ function DesktopOverviewPage() {
   const metrics = useOverviewModule('metrics', period)
   const queue = useOverviewModule('queue', period)
   const activity = useOverviewModule('activity', period, filter)
+  // The venue's clock and weather above the overview (2026-11-09); the page stands without it.
+  const pulse = useQuery({ queryKey: ['loyalty', 'pulse'], queryFn: loyaltyApi.pulse, staleTime: 10 * 60_000, refetchInterval: 15 * 60_000, retry: false })
   const s = summary.data?.data
   const c = checks.data?.data
   const m = metrics.data?.data
@@ -72,6 +77,7 @@ function DesktopOverviewPage() {
   const panels = { program: say('programPanel'), preview: say('previewPanel'), issues: say('issuesPanel'), numbers: say('about'), activity: say('activity'), requests: say('requestsPanel') }
   return <div className="l-ov-page l-ov-clean-page">
     {heading}
+    <PulseCard pulse={pulse.data} name={boot.staff.name ? boot.staff.name.trim().split(/\s+/)[0] : null} />
     {!online && <div className="l-ov-inset l-ov-offline" role="status"><strong>{say('offline')}</strong><p>{say('offlineLine')}</p></div>}
     {summary.isError && !s && <OverviewRecovery title={say('unavailableOverview')} busy={summary.isFetching} onRetry={retry(summary)} forbidden={summary.forbidden} />}
     {!s && !summary.isError && <section className="l-ov-panel"><OverviewSkeleton rows={4} /></section>}

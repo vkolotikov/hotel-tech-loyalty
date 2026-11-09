@@ -8,6 +8,7 @@ import {
   PartyPopper, Rocket, Sparkles, Sun, Target, UserPlus,
 } from 'lucide-react'
 import { useBoot } from '../CrmProvider'
+import { PulseCard } from '../../workspace/pulse/PulseCard'
 import { crmApi, send } from '../lib/api'
 import { errorText } from '../lib/errors'
 import { count, dateTime, dayLabel, money, percent, timeAgo } from '../lib/format'
@@ -42,6 +43,8 @@ export function TodayPage() {
   const lang = i18n.language
   const zone = boot.venue.timezone
   const today = useQuery({ queryKey: ['crm', 'today'], queryFn: crmApi.today, staleTime: 20_000, refetchInterval: 60_000 })
+  // The venue's clock and weather for the card at the top (2026-11-09); the page stands without it.
+  const pulse = useQuery({ queryKey: ['crm', 'pulse'], queryFn: crmApi.pulse, staleTime: 10 * 60_000, refetchInterval: 15 * 60_000, retry: false })
   const clock = venueClock(new Date(), zone)
   const name = firstName(boot.staff.name)
   const greeting = greetingOf(clock.hour)
@@ -61,6 +64,7 @@ export function TodayPage() {
       )}
       actions={<Link to="/crm/leads?new=1" className={PRIMARY_LINK}><UserPlus size={15} aria-hidden />{t('crm.today.add_lead', 'Add a lead')}</Link>}>
       {!boot.setup.complete && <SetupBanner done={boot.setup.done} total={boot.setup.total} />}
+      <PulseCard pulse={pulse.data} greet={false} />
       <QueryState loading={today.isLoading} error={today.error} onRetry={() => { void today.refetch() }} rows={5}>
         {today.data && <TodayBody data={today.data} lang={lang} zone={zone} currency={boot.venue.currency} />}
       </QueryState>

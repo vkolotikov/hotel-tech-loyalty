@@ -6,6 +6,7 @@ import type {
   TimelineComment, Variation, VoiceFields, InboxPayload, TeamMember, BioBody, BioPayload,
   PromotionBody, PromotionPreview, PromotionRun, SitePage, SitePayload,
 } from './types'
+import type { Pulse } from '../../lib/venuePulse'
 
 /**
  * Every call HexaTech Content makes, in one place, typed. All of them live
@@ -66,6 +67,8 @@ export function contentApi(brand: number | null) {
   const url = (path: string) => contentUrl(path, brand)
   return {
     bootstrap: (): Promise<Bootstrap> => api.get(url('bootstrap')).then(r => r.data),
+    /** The venue's clock, place and weather (VenuePulse), for the plan's strip. */
+    pulse: (): Promise<Pulse> => watched(api.get(url('pulse'))),
 
     plan: (from: DateKey, to: DateKey): Promise<PlanPayload> => watched(api.get(url('plan'), { params: { from, to } })),
     find: (q: string): Promise<{ posts: PostCard[] }> => watched(api.get(url('find'), { params: { q } })),
