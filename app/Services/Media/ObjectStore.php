@@ -31,8 +31,13 @@ class ObjectStore
         $store = Storage::disk($disk);
         if ($store instanceof AwsS3V3Adapter) {
             $s = $store->getConfig();
-            $store->getClient()->putObject(['Bucket' => $s['bucket'], 'Key' => $key, 'Body' => $body,
-                'ContentType' => $mime, '@http' => ['connect_timeout' => 3, 'timeout' => 60], '@retries' => 0]);
+            // The caller reuses its snapshot for backup/publication and owns its cleanup.
+            // Retain the PSR-7 wrapper, then detach before SDK request destruction can close that resource.
+            $stream = is_resource($body) ? \GuzzleHttp\Psr7\Utils::streamFor($body) : null;
+            try {
+                $store->getClient()->putObject(['Bucket' => $s['bucket'], 'Key' => $key, 'Body' => $stream ?? $body,
+                    'ContentType' => $mime, '@http' => ['connect_timeout' => 3, 'timeout' => 60], '@retries' => 0]);
+            } finally { $stream?->detach(); }
         } elseif (!$store->put($key, $body, ['mimetype' => $mime])) {
             throw new \RuntimeException('media_write_failed');
         }

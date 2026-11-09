@@ -106,7 +106,8 @@ At **13:44 UTC**, both portal domains served `index-P6hPd3aU.js` and `SystemStat
 new Media recovery/Cloud backup-and-restore wording and no obsolete native-versioning-only hint. Existing auth
 form IDs/wallet gating remained present; protected APIs returned 401. Landing continuity (kit CSS with zero `rp-`
 markers, retired CSS 404 and exact font assets) passed. CI run:
-https://github.com/vkolotikov/hotel-tech-loyalty/actions/runs/42627493492 (in progress at recording).
+https://github.com/vkolotikov/hotel-tech-loyalty/actions/runs/42627493492 — all eight jobs passed, including the
+PostgreSQL known-failure gate.
 
 - Required release PHP scopes plus affected suites: **2,102 distinct tests passed** on the final artifact
   (Support 210, Unit/Landing 118, Feature/Landing 1,735, Wallet 27, member avatars 3, media references 2,
@@ -127,3 +128,18 @@ copy classifications, private restore and cutover still need the real App-cluste
 subsequently returned through cua_repl. The task debugging connector was stopped; Chrome's orphaned **Allow remote
 debugging?** prompt must be closed by the owner before native Cloud controls are usable. No DigitalOcean source
 object or media reference has been changed by the release.
+
+## First production copy and stream-ownership correction
+
+Chrome's prompt subsequently closed and native PC controls reached a fresh App-cluster console. A read-only runtime
+check confirmed active disk `do`, database `hotel_loyalty` and the new migration command present. The full migration
+preview succeeded: **209 objects / 202,034,601 bytes**, **202 public / seven private for review**. All source ACL reads
+completed; no administrator Spaces key was needed.
+
+The guarded apply stopped with a TypeError. Read-only destination listing then found **one public object / three
+private objects** (partial, resumable copy). A guarded diagnostic resume located `fclose` at Migration.php:66.
+The SDK's PSR-7 resource wrapper could close the caller-owned snapshot after upload, so final cleanup failed.
+Two regression tests reproduced closed resources on both successful and failed SDK uploads before the fix. The
+writer now retains and detaches its PSR-7 wrapper, preserving the caller's resource for publication and cleanup;
+all six real-SDK transport tests pass locally. A source-patch correction is being prepared. Production migration,
+restore, URL updates and active-disk cutover are still incomplete; source files/settings remain intact.

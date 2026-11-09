@@ -382,7 +382,8 @@ loyalty.hotel-tech.ai and app.hexa-tech.uk: `index-P6hPd3aU.js` loads `SystemSta
 Media recovery/Cloud backup-and-restore wording, no old native-versioning-only hint. Six sign-in/recovery IDs and
 wallet capability gating remain present. Protected loyalty/member/wallet/operations endpoints answer 401.
 Landing continuity passes: 200 kit page/styles, zero `rp-` markers, retired stylesheet 404, three exact Poppins fonts.
-CI: https://github.com/vkolotikov/hotel-tech-loyalty/actions/runs/42627493492 (in progress at recording).
+CI: https://github.com/vkolotikov/hotel-tech-loyalty/actions/runs/42627493492 — **success**, all eight jobs including
+PostgreSQL's known-failure gate passed.
 
 Feature checks so far: required Support/Landing scopes **2,058 passed**, Wallet **27**, member avatar **3**,
 LoyaltyWorkspace **660 passed / one skipped**, **2,748 total / zero failed**. Two additional archive failure/health
@@ -414,6 +415,15 @@ confirm active `do` and the verified Cloud bucket identities, then run the **rea
 `php artisan media:cloud-migrate` preview. Continue copy/recovery/URL/cutover acceptance from the Cloud architecture
 and operations runbook, preserving DigitalOcean files/settings throughout. Do not treat the code release or empty
 provisioned buckets as completed migration.
+
+**Continuation:** the Chrome prompt closed and direct native controls worked. Fresh App-cluster read confirms
+active disk `do`, database `hotel_loyalty`, new migration command loaded. Complete read-only migration preview:
+**209 objects / 202,034,601 bytes; 202 public / seven private review**. Source ACL reads all succeeded.
+Guarded apply stopped with TypeError after partial copying; a read-only listing saw **one public / three private
+objects**. Guarded diagnostic resume identified Migration.php:66 `fclose`: the SDK closed the caller's snapshot.
+Two new real-SDK tests reproduced the ownership bug, then passed with a retained/detached PSR-7 wrapper in ObjectStore.
+Prepare/deploy this correction by the source-patch recipe before continuing the idempotent migration. No URL or
+active-disk change, no source deletion, and no completed recovery acceptance.
 
 ## Dashboard deploy (9 Nov, 11:53 UTC)
 
