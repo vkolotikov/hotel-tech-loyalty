@@ -57,7 +57,8 @@ the period under `hx-dashboard-period-v1`):
 
 `GET` `admin/dashboard/pulse`, and `pulse` under `admin/appointments`, `admin/content`, `admin/loyalty`, `admin/crm` and
 `admin/time` (`PulseController`; each under its area's AccessMap prefix and workspace middleware, so every workspace keeps
-to its own area). Reads only:
+to its own area; the Time Planner's also behind the plan's `time_management`, like every route there but the bootstrap).
+Reads only:
 
 - `timezone`, `now`, `today`: the venue's (`AppointmentClock::zoneFor()`), never the browser's.
 - `currency`: `PortalBootstrap::currency()`.
