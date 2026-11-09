@@ -1,11 +1,14 @@
 {
   "add": "Ajouter la tâche",
+  "add_next": "Ajouter et suivante",
+  "add_next_hint": "Ajouter celle-ci et commencer la suivante, pour le même jour et la même personne",
   "add_step": "Ajouter une étape",
   "category": "Tâche",
   "copied": "Copiée",
   "copy": "Copier",
   "copy_to": "Copier vers un autre jour",
   "created": "Tâche ajoutée",
+  "custom_type": "Autre",
   "day": "Jour",
   "delete_future": "Celle-ci et les suivantes",
   "delete_line": "« {{title}} » et ses étapes seront supprimées définitivement.",
@@ -19,9 +22,12 @@
   "estimate_title": "Les tâches de ce genre prennent en général environ {{length}} ({{count}} déjà faites).",
   "finish": "Terminer",
   "finished": "Terminé, bravo !",
+  "fits": "Convient à {{name}}",
+  "hide_templates": "Masquer les modèles",
   "horizon": "À faire pour quand",
   "length": "Durée",
   "locked": "{{name}} planifie cette tâche. Dans ce planning, chacun planifie sa propre journée ; vous pouvez la copier dans la vôtre.",
+  "loose_category": "Enregistrée comme « {{name}} »",
   "mark_done": "Marquer comme terminée",
   "minutes": "Minutes",
   "new": "Nouvelle tâche",
@@ -31,6 +37,7 @@
   "no_day": "Pas encore de jour",
   "no_time": "Pas encore d’horaire",
   "no_type": "Aucun",
+  "no_types": "Pas encore de types de tâches : un responsable les ajoute dans Paramètres → Types de tâches.",
   "nobody": "Personne pour l’instant",
   "notes": "Notes",
   "overdue": "En retard",
@@ -58,5 +65,6 @@
   "undo_done": "Marquer comme non terminée",
   "until": "Jusqu’au",
   "until_hint": "90 fois au maximum.",
-  "use": "L’utiliser"
+  "use": "L’utiliser",
+  "use_template": "Utiliser un modèle"
 }

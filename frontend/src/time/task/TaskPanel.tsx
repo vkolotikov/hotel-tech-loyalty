@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { CalendarDays, CheckCircle2, Copy, Sparkles, Trash2, X } from 'lucide-react'
+import { CalendarDays, CheckCircle2, ChevronDown, Copy, FileText, Sparkles, Trash2, X } from 'lucide-react'
 import { Button } from '../../workspace/ui/Button'
 import { Field } from '../../workspace/ui/Field'
 import { Notice } from '../../workspace/ui/Notice'
@@ -19,10 +19,13 @@ import {
   type Status, type TaskForm,
 } from '../lib/tasks'
 import type { Task } from '../lib/types'
+import { templateGroups } from '../settings/settingsLogic'
 import { Confirm } from '../ui/Confirm'
 import { Select, TextArea, TextInput } from '../ui/inputs'
 import { SidePanel } from '../ui/SidePanel'
 import { useToast } from '../ui/Toast'
+import { TaskGrid, TypeGrid } from './TaskPickers'
+import { nextForm, taskTiles, typeTiles, withTask, withType } from './taskFormLogic'
 
 export interface TaskPanelProps {
   task?: Task | null
@@ -62,6 +65,9 @@ function Chip({ on, onClick, children, color }: { on: boolean; onClick: () => vo
 /**
  * A task, new or as it is (2026-11-09): every field the full admin's planner keeps — title, type and task, day, start,
  * length, person, priority, status, notes, subtasks, repeats, the pool's horizon — saved through its own endpoints.
+ * The type and the task are picked as the full admin's drawer picks them: a grid of types with their icons, then the
+ * chosen type's tasks as a grid (TaskPickers); a task picked fills an empty title, and "Add & next" keeps the panel
+ * open for the next task of the same day, person and type.
  * Help on the way: the team's templates, how long such a task usually takes (time/estimate, from finished ones), and the
  * microphone for the title and the notes. In the `own` planning mode a staff member's list of people is only themselves,
  * and a colleague's task opens read-only (it can still be copied to one's own day).
@@ -83,6 +89,11 @@ export function TaskPanel({ task, defaults, onClose }: TaskPanelProps) {
   const [problem, setProblem] = useState<string | null>(null)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [copyTo, setCopyTo] = useState('')
+  const [showTemplates, setShowTemplates] = useState(false)
+  // The title the form filled from a task (so another task may replace it); null once the person types their own.
+  const [filled, setFilled] = useState<string | null>(null)
+  const [added, setAdded] = useState(0)
+  const titleRef = useRef<HTMLInputElement>(null)
   const set = <K extends keyof TaskForm>(key: K, value: TaskForm[K]) => setForm(f => ({ ...f, [key]: value }))
   const units = { h: t('time.common.h', 'h'), min: t('time.common.min', 'min') }
 
@@ -93,8 +104,28 @@ export function TaskPanel({ task, defaults, onClose }: TaskPanelProps) {
   const ownerName = task?.owner ? everyone.find(p => p.key === task.owner)?.name ?? task.employee_name ?? '' : ''
   const templates = useTemplates().data ?? []
   const groups = boot.settings.groups
-  const channels = boot.settings.channels.filter(c => c.groups.length === 0 || !form.task_group || c.groups.includes(form.task_group))
+  const allChannels = boot.settings.channels
+  const chosen = everyone.find(p => p.key === form.person) ?? null
+  const types = typeTiles(groups, chosen?.prefers.groups)
+  const tasks = taskTiles(form.task_group, allChannels, chosen?.prefers.tasks)
+  // An older row's own text (not one of the settings' tasks) stays shown as it is.
+  const looseCategory = form.task_category && !allChannels.some(c => c.key === form.task_category) ? form.task_category : null
   const today = boot.venue.today
+
+  // The title takes the focus without scrolling the pickers above it out of view (and again after "Add & next").
+  useEffect(() => {
+    if (!locked) titleRef.current?.focus({ preventScroll: true })
+  }, [locked, added])
+  const pickType = (type: string) => setForm(f => {
+    const next = withType(f, type, allChannels)
+    // A title the form filled from a task the new type does not offer goes with it.
+    return next.task_category === '' && f.task_category !== '' && f.title === filled ? { ...next, title: '' } : next
+  })
+  const pickTask = (tile: { key: string; label: string }) => {
+    const answer = withTask(form, tile, filled)
+    setForm(answer.form)
+    setFilled(answer.filled)
+  }
 
   // How long a task like this usually takes, once there is something to go by and no length chosen.
   const [asked, setAsked] = useState({ group: form.task_group, category: form.task_category, title: form.title })
@@ -109,7 +140,8 @@ export function TaskPanel({ task, defaults, onClose }: TaskPanelProps) {
     staleTime: 5 * 60_000,
   }).data?.estimate
 
-  const save = useMutation({
+  // `again`: "Add & next" (the panel stays open for the next task); read by onSuccess from the call's variables.
+  const save = useMutation<unknown, unknown, { again: boolean }>({
     mutationFn: async () => {
       const body = payloadOf(form, person, creating)
       if (creating) {
@@ -119,7 +151,18 @@ export function TaskPanel({ task, defaults, onClose }: TaskPanelProps) {
       }
       return plannerApi.update(task!.id, body)
     },
-    onSuccess: () => { refresh(); toast(creating ? t('time.task.created', 'Task added') : t('time.task.saved', 'Saved')); onClose() },
+    onSuccess: (_, { again }) => {
+      refresh()
+      toast(creating ? t('time.task.created', 'Task added') : t('time.task.saved', 'Saved'))
+      if (!again) { onClose(); return }
+      // The next task of the same day, person and type.
+      setForm(f => nextForm(EMPTY_FORM, f))
+      setDraftSubs([])
+      setNewSub('')
+      setFilled(null)
+      setProblem(null)
+      setAdded(n => n + 1)
+    },
     onError: error => toast(errorText(t, error), 'danger'),
   })
   const remove = useMutation({
@@ -153,11 +196,11 @@ export function TaskPanel({ task, defaults, onClose }: TaskPanelProps) {
     onError: error => toast(errorText(t, error), 'danger'),
   })
 
-  const submit = () => {
+  const submit = (again = false) => {
     const why = formProblem(form, creating)
     if (why) { setProblem(why); return }
     setProblem(null)
-    save.mutate()
+    save.mutate({ again })
   }
 
   const nextMonday = useMemo(() => addDays(today, 8 - isoWeekday(today)), [today])
@@ -182,9 +225,14 @@ export function TaskPanel({ task, defaults, onClose }: TaskPanelProps) {
               <Trash2 size={14} aria-hidden />{t('time.common.delete', 'Delete')}
             </Button>
           )}
-          <div className="ml-auto flex gap-2">
+          <div className="ml-auto flex flex-wrap justify-end gap-2">
             <Button variant="secondary" onClick={onClose} disabled={busy}>{t('time.common.cancel', 'Cancel')}</Button>
-            <Button onClick={submit} loading={save.isPending}>{creating ? t('time.task.add', 'Add task') : t('time.common.save', 'Save')}</Button>
+            {creating && (
+              <Button variant="secondary" onClick={() => submit(true)} disabled={busy} title={t('time.task.add_next_hint', 'Add this one and start the next, for the same day and person')}>
+                {t('time.task.add_next', 'Add & next')}
+              </Button>
+            )}
+            <Button onClick={() => submit()} loading={save.isPending && !save.variables?.again}>{creating ? t('time.task.add', 'Add task') : t('time.common.save', 'Save')}</Button>
           </div>
         </div>
       )}>
@@ -194,53 +242,76 @@ export function TaskPanel({ task, defaults, onClose }: TaskPanelProps) {
         {/* Read-only for a colleague's task in the `own` planning mode: every field and button below is disabled. */}
         <fieldset disabled={locked} className={`m-0 min-w-0 space-y-5 border-0 p-0 ${locked ? 'opacity-70' : ''}`}>
 
-        {creating && templates.length > 0 && (
-          <Field label={t('time.task.template', 'Start from a template')}>
-            <Select value="" onChange={e => {
-              const tpl = templates.find(x => String(x.id) === e.target.value)
-              if (!tpl) return
-              setForm(f => ({
-                ...f, title: tpl.title, task_group: tpl.task_group ?? '', task_category: tpl.task_category ?? '',
-                priority: priorityOf(tpl.priority), duration_minutes: tpl.duration_minutes ? String(tpl.duration_minutes) : f.duration_minutes,
-                description: tpl.description ?? f.description,
-              }))
-            }}>
-              <option value="">{t('time.task.template_pick', 'Choose a template…')}</option>
-              {templates.map(tpl => <option key={tpl.id} value={tpl.id}>{tpl.name}</option>)}
-            </Select>
-          </Field>
+        <div>
+          <div className="mb-1.5 flex items-center justify-between gap-3">
+            <span className="text-xs font-medium text-a-text-2">{t('time.task.type', 'Type')}</span>
+            {creating && templates.length > 0 && (
+              <button type="button" aria-expanded={showTemplates} onClick={() => setShowTemplates(v => !v)}
+                className="inline-flex items-center gap-1.5 text-xs font-semibold text-a-accent-text hover:underline">
+                <FileText size={13} aria-hidden />
+                {showTemplates ? t('time.task.hide_templates', 'Hide templates') : t('time.task.use_template', 'Use a template')}
+                <ChevronDown size={12} aria-hidden className={`transition-transform ${showTemplates ? 'rotate-180' : ''}`} />
+              </button>
+            )}
+          </div>
+          {creating && showTemplates && (
+            <div className="mb-3 max-h-48 space-y-2 overflow-y-auto rounded-xl border border-a-border bg-a-surface-2/50 p-2.5">
+              {templateGroups(templates).map(group => (
+                <div key={group.category}>
+                  <p className="mb-1 font-a-mono text-xs uppercase tracking-[0.12em] text-a-text-2">{group.category}</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {group.items.map(tpl => (
+                      <button key={tpl.id} type="button"
+                        onClick={() => {
+                          setForm(f => ({
+                            ...f, title: tpl.title, task_group: tpl.task_group ?? '', task_category: tpl.task_category ?? '',
+                            priority: priorityOf(tpl.priority), duration_minutes: tpl.duration_minutes ? String(tpl.duration_minutes) : f.duration_minutes,
+                            description: tpl.description ?? f.description,
+                          }))
+                          setFilled(null)
+                          setShowTemplates(false)
+                        }}
+                        className="inline-flex min-h-8 items-center gap-1.5 rounded-full border border-a-border bg-a-surface px-3 text-xs font-medium text-a-text hover:border-a-accent">
+                        {tpl.name}
+                        {tpl.duration_minutes ? <span className="text-a-text-2">{duration(tpl.duration_minutes, units)}</span> : null}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+          {groups.length > 0
+            ? <TypeGrid tiles={types} value={form.task_group} onPick={pickType} person={chosen?.name} />
+            : <p className="text-xs text-a-text-2">{t('time.task.no_types', 'No task types yet: a manager adds them in Settings → Task types.')}</p>}
+        </div>
+
+        {(tasks.length > 0 || looseCategory) && (
+          <div>
+            <span className="mb-1.5 block text-xs font-medium text-a-text-2">{t('time.task.category', 'Task')}</span>
+            {/* The task's key, as the full admin stores it; an older row's own text is shown as it is. */}
+            {looseCategory && <p className="mb-1.5 text-xs text-a-text-2">{t('time.task.loose_category', 'Saved as “{{name}}”', { name: looseCategory })}</p>}
+            <TaskGrid tiles={tasks} value={form.task_category} onPick={pickTask} person={chosen?.name} />
+          </div>
         )}
 
         <div>
           <span className="mb-1 block text-xs font-medium text-a-text-2">{t('time.task.title', 'Title')}</span>
           <div className="flex items-center gap-2">
-            <TextInput value={form.title} onChange={e => set('title', e.target.value)} maxLength={200} autoFocus
+            <TextInput ref={titleRef} value={form.title} maxLength={200}
+              onChange={e => { set('title', e.target.value); setFilled(null) }}
+              onKeyDown={e => { if (e.key === 'Enter' && !e.nativeEvent.isComposing) { e.preventDefault(); if (!locked) submit() } }}
               aria-label={t('time.task.title', 'Title')} placeholder={t('time.task.title_hint', 'What needs doing?')} />
-            {boot.features.voice && <VoiceButton language={i18n.language} onText={words => set('title', form.title ? `${form.title} ${words}` : words)} />}
+            {boot.features.voice && <VoiceButton language={i18n.language} onText={words => { set('title', form.title ? `${form.title} ${words}` : words); setFilled(null) }} />}
           </div>
         </div>
 
-        {groups.length > 0 && (
-          <div>
-            <span className="mb-1.5 block text-xs font-medium text-a-text-2">{t('time.task.type', 'Type')}</span>
-            <div className="flex flex-wrap gap-1.5" role="group" aria-label={t('time.task.type', 'Type')}>
-              <Chip on={form.task_group === ''} onClick={() => setForm(f => ({ ...f, task_group: '', task_category: '' }))}>{t('time.task.no_type', 'None')}</Chip>
-              {groups.map(g => (
-                <Chip key={g.name} on={form.task_group === g.name} color={g.color} onClick={() => setForm(f => ({ ...f, task_group: g.name, task_category: '' }))}>{g.name}</Chip>
-              ))}
-            </div>
-          </div>
-        )}
-        {channels.length > 0 && (
-          <Field label={t('time.task.category', 'Task')}>
-            <Select value={form.task_category} onChange={e => set('task_category', e.target.value)}>
-              <option value="">{t('time.task.no_category', 'None')}</option>
-              {/* The task's key, as the full admin stores it; an older row's own text stays choosable. */}
-              {form.task_category && !channels.some(c => c.key === form.task_category) && <option value={form.task_category}>{form.task_category}</option>}
-              {channels.map(c => <option key={c.key} value={c.key}>{c.label}</option>)}
-            </Select>
-          </Field>
-        )}
+        <Field label={t('time.task.person', 'Who')}>
+          <Select value={form.person} onChange={e => set('person', e.target.value)}>
+            <option value="">{form.task_date ? t('time.task.nobody', 'Nobody yet') : t('time.task.pool', 'Nobody: the open pool')}</option>
+            {people.map(p => <option key={p.key} value={p.key}>{p.name}{p.has_account ? '' : ` · ${t('time.task.no_account', 'no account')}`}</option>)}
+          </Select>
+        </Field>
 
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
@@ -279,12 +350,6 @@ export function TaskPanel({ task, defaults, onClose }: TaskPanelProps) {
           )}
         </div>
 
-        <Field label={t('time.task.person', 'Who')}>
-          <Select value={form.person} onChange={e => set('person', e.target.value)}>
-            <option value="">{form.task_date ? t('time.task.nobody', 'Nobody yet') : t('time.task.pool', 'Nobody: the open pool')}</option>
-            {people.map(p => <option key={p.key} value={p.key}>{p.name}{p.has_account ? '' : ` · ${t('time.task.no_account', 'no account')}`}</option>)}
-          </Select>
-        </Field>
 
         {!form.task_date && !form.person && (
           <div>

@@ -42,5 +42,6 @@
   "untimed_line": "Give them a time, or let the AI fit them into your day.",
   "untimed_none": "Everything today has its time.",
   "week": "My week",
+  "week_empty": "Nothing planned this week yet. Press a day to plan it.",
   "with_ai": "With AI"
 }

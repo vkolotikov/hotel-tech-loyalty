@@ -14,6 +14,14 @@ export function duration(minutes: number | null | undefined, words: { h: string;
   return m === 0 ? `${h} ${words.h}` : `${h} ${words.h} ${m} ${words.min}`
 }
 
+/**
+ * Planned (or done) time, where none is a real figure: 0 reads "0 h", not the dash `duration` keeps for an unknown
+ * length (a capacity of a name without an account stays "—").
+ */
+export function planned(minutes: number | null | undefined, words: { h: string; min: string } = { h: 'h', min: 'min' }): string {
+  return minutes !== null && minutes !== undefined && Number.isFinite(minutes) && minutes > 0 ? duration(minutes, words) : `0 ${words.h}`
+}
+
 /** Hours with one decimal where it matters: 90 → "1.5", 120 → "2", in the person's number style. */
 export function hours(minutes: number, lang: string): string {
   const value = Math.round((minutes / 60) * 10) / 10

@@ -42,5 +42,6 @@
   "untimed_line": "Geben Sie ihnen eine Uhrzeit oder lassen Sie die KI sie in Ihren Tag einplanen.",
   "untimed_none": "Alles für heute hat eine Uhrzeit.",
   "week": "Meine Woche",
+  "week_empty": "Für diese Woche ist noch nichts geplant. Tippen Sie auf einen Tag, um ihn zu planen.",
   "with_ai": "Mit KI"
 }
