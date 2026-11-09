@@ -57,7 +57,8 @@ or credentials as part of the copy.
 default. `--apply` additionally requires `--expected-source=<source bucket>`, `--expected-source-host=<source host>`,
 `--expected-public=<public bucket>`, `--expected-private=<private bucket>` and `--expected-host=<Cloud endpoint host>`.
 It creates verified private recovery copies and publishes only explicitly public, recognised safe file types;
-private, unknown and credential-like objects remain private for review. Matching destination bytes resume safely;
+private, unknown and credential-like objects remain private for review. Supported DOCX files, like PDF/text, retain
+public access only when both the original ACL and the detected MIME type establish it. Matching destination bytes resume safely;
 conflicting bytes stop instead of overwriting. Checkpoints are private self-contained manifests, never local files.
 The command does not switch MEDIA_DISK or update database URLs.
 

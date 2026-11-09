@@ -55,6 +55,29 @@ class CloudMediaMigrationTest extends TestCase
         $this->assertSame('already here', Storage::disk('media')->get('org-19/readme.txt'));
     }
 
+    public function test_supported_public_word_documents_keep_working_without_publishing_private_or_disguised_files(): void
+    {
+        $path = tempnam(sys_get_temp_dir(), 'cloud_word_');
+        try {
+            $word = new \PhpOffice\PhpWord\PhpWord;
+            $word->addSection()->addText('Public migration fixture');
+            \PhpOffice\PhpWord\IOFactory::createWriter($word, 'Word2007')->save($path);
+            $bytes = file_get_contents($path);
+        } finally { unlink($path); }
+        $files = ['org-19/knowledge-documents/guide.docx' => $bytes,
+            'org-19/private/member.docx' => $bytes, 'org-19/knowledge-documents/renamed.docx' => 'not a Word package',
+            'org-19/knowledge-documents/archive.zip' => $bytes, 'org-19/credentials/secret.docx' => $bytes];
+        foreach ($files as $key => $body) Storage::disk('do')->put($key, $body);
+        $preview = $this->migration()->run(false);
+        $this->assertSame(1, $preview['public']);
+        $this->assertSame(4, $preview['private_review']);
+        $this->assertSame([], Storage::disk('media')->allFiles());
+        $this->migration()->run(true);
+        $this->assertSame(['org-19/knowledge-documents/guide.docx'], Storage::disk('media')->allFiles());
+        $this->assertSame($bytes, Storage::disk('media')->get('org-19/knowledge-documents/guide.docx'));
+        foreach ($files as $key => $body) $this->assertSame($body, Storage::disk('do')->get($key));
+    }
+
     public function test_an_acl_failure_cannot_publish_anything(): void
     {
         Storage::disk('do')->put('org-19/readme.txt', 'source');
