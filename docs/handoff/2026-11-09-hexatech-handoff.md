@@ -202,7 +202,7 @@ features and do necessary improvements".
   Unit/Support 189, Planner 59 passed; `tsc -b` clean; Vitest 456 files / 6,728 tests; `npm run build`. **Next
   source-patch baseline: bc410bd.** Live by content: `index-DGsd2op1.js` → `TimeApp-D-PbTWtw.js` (the week's one-press
   add) → `TaskPanel-B_98YL-O.js` ("Add & next", "Use a template"); `/time`, `/time/plan`, `/time/register` 200;
-  hexa-academy's kit 64,577 bytes, 0 `rp-` markers. CI: https://github.com/vkolotikov/hotel-tech-loyalty/actions/runs/42586076428.
+  hexa-academy's kit 64,577 bytes, 0 `rp-` markers. CI: https://github.com/vkolotikov/hotel-tech-loyalty/actions/runs/42586076428 — **green** (all eight jobs).
 - **Billing is read again and sells the Time Planner**: after the owner's `stripe:sync`, production's `GET
   /api/v1/modules` answers every plan `source: billing` — the 39 Time Planner plans `available: true` at 49 / 85 /
   149 € (yearly 499.80 / 867 / 1,519.80 €), `time_management` on, teams 3 / 10 / 25. The "billing's plan list unread"
