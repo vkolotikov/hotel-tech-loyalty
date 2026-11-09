@@ -1,5 +1,7 @@
 # Member portal (web) — how it is built and checked
 
+Launch rehearsal (9 November 2026): [evidence and remaining gates](audits/2026-11-09-loyalty-launch-rehearsal.md), [isolated real-backend instructions](../frontend/e2e/LAUNCH-REHEARSAL.md). The optional bootstrap flags `capabilities.wallets.apple/google` use the organisation's plan, active provider setup and existing pass eligibility. The web wallet actions are hidden when flags are missing or false; Apple also requires an Apple device. These flags do not replace issuance/provider approval checks. Native apps retain their endpoint contracts.
+
 The member portal is the customer-facing half of the SPA: `/portal/*`, one lazy chunk
 (`frontend/src/portal/`), served on the admin hosts for users with `user_type = member`.
 Spec: `docs/superpowers/specs/2026-09-23-member-portal-v2-design.md`.
@@ -93,7 +95,7 @@ cancel either kind themselves inside the venue's cancellation window (`## Cancel
 ## Running it locally
 
 ```
-cd /c/wamp64/www/<worktree> && /c/wamp64/bin/php/php8.4.20/php.exe artisan serve --host=127.0.0.1 --port=8010
+cd /c/wamp64/www/<worktree> && /c/wamp64/bin/php/php8.5.12-nts/php.exe artisan serve --host=127.0.0.1 --port=8010
 cd frontend && VITE_API_URL=http://127.0.0.1:8010/api npm run dev
 ```
 Open the dev server as **`localhost`**, not `127.0.0.1`: the SPA only uses `VITE_API_URL` when the page's
@@ -123,9 +125,9 @@ on the Laravel host.
 
 ## Checks
 
-- Backend: `php artisan test tests/Feature/Member/` (with the PHP 8.4 binary named in `CLAUDE.md`; portal tests live in `tests/Feature/Member/Portal/`),
+- Backend: `php artisan test tests/Feature/Member/` (with the PHP 8.5 binary named in `CLAUDE.md`; portal tests live in `tests/Feature/Member/Portal/`),
   plus `tests/Feature/Booking/BookingCapabilityTest.php`, `tests/Feature/Pwa/`, `tests/Feature/Mail/`.
-- Frontend: `cd frontend && npx tsc -b && npx vitest run` (3 `plannerMeta` failures are pre-existing).
+- Frontend: `cd frontend && npx tsc -b && npx vitest run` (the suite is green; a failure is new).
 - Eyes first: screenshots at 390 and 1440, light and dark, against spec §4's quality bar.
 
 ## Booking (phase 2)

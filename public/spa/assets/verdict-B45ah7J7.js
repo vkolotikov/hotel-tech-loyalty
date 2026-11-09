@@ -1,1 +1,0 @@
-import{Rn as e}from"./index-CUz-31Dz.js";function t(){let{t}=e();return e=>t(e.key,e.fallback,e.vars)}export{t};

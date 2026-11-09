@@ -226,3 +226,28 @@ Checked before the deploy:
 - Seen in passing, not from this round: the full admin's `components/BrandSwitcher.tsx` logs React's "Cannot update a
   component while rendering a different component" on load, in development builds only.
 
+## Loyalty prelaunch rehearsal (9 November, Windows workstation)
+
+Owner authorised all remaining prelaunch work and test messages to their own contacts. One SMTP test was sent; the
+owner confirmed inbox arrival. No SMS or customer campaign was sent. Detailed evidence and outstanding external
+gates: `docs/audits/2026-11-09-loyalty-launch-rehearsal.md`. Reproduction: `frontend/e2e/LAUNCH-REHEARSAL.md`.
+
+- Fixed sign-in/recovery label and autofill associations. The member portal now hides wallet actions until its own
+  organisation's provider setup, plan and membership eligibility allow them; issuance checks remain authoritative.
+- Added `php artisan loyalty:launch-audit` (safe observations, read-only by default), with an explicit bounded
+  `--queue-probe` option. It sends no messages or provider requests. A processed probe proves one asynchronous job,
+  not continuous worker health. Use Cloud **hotel-tech-loyalty**, not the billing project.
+- Real isolated PostgreSQL 18 staff/member journey: **72 checks**, zero JavaScript errors/server failures, including
+  registration, level upgrade, rewards, benefits, permissions, reversal/deactivation, report reconciliation,
+  captured immediate/scheduled campaigns, worker probe, password reset/session revocation, desktop/mobile.
+- Full SQLite sweep before final additions: **7,538 passed / 25 skipped / zero failed**, 80 scoped runs. Affected
+  wallet scopes rechecked: SQLite **383**, PostgreSQL **322** passed. New diagnostic tests **5** passed on each DB.
+  PostgreSQL critical sweep: **1,330 passed**, the known NOT NULL-conflicting ReferralLink test remains documented.
+- Larastan clean with 2 GB memory. Native member type compatibility checked through a read-only compiler overlay,
+  **41 tests** passed; no native release. Final artifact/frontend evidence follows the release below.
+- User's production status at 11:03:25 Riga: no campaign failures or email/loyalty delays; wallet **Not verified**.
+  Authenticated browser access was stopped by Windows URL verification. Do not bypass it or claim Cloud runtime,
+  media recovery, physical wallet/reader or push acceptance. DNS/provider/device gates remain in the audit report.
+
+Feature: `feature/loyalty-launch-readiness-20261109`, based on fresh main, merged Time Planner round 3 without overlap.
+No migrations. A source-patch release with fresh artifact checks is required; feature build outputs are not deployed.

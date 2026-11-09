@@ -19,6 +19,32 @@ const render = (path: string, product?: 'appointments' | 'loyalty' | 'content') 
 )
 
 describe('HexaTech Loyalty\'s and Content\'s own sign-in pages (owner 2026-11-02)', () => {
+  it('names sign-in fields for assistive technology and password managers on every product', () => {
+    for (const product of [undefined, 'loyalty', 'content', 'appointments'] as const) {
+      const html = render(product ? `/${product}/login` : '/login', product)
+      expect(html).toMatch(/<label for="signin-email"[^>]*>Email<\/label>/)
+      const email = html.match(/<input[^>]*id="signin-email"[^>]*>/i)?.[0]
+      expect(email).toContain('name="email"')
+      expect(email).toMatch(/autocomplete="email"/i)
+      expect(html).toMatch(/<label for="signin-password"[^>]*>Password<\/label>/)
+      const password = html.match(/<input[^>]*id="signin-password"[^>]*>/i)?.[0]
+      expect(password).toContain('name="password"')
+      expect(password).toMatch(/autocomplete="current-password"/i)
+    }
+  })
+
+  it('names account recovery fields and exposes the code and new-password autofill purposes', () => {
+    const forgot = render('/loyalty/forgot-password', 'loyalty')
+    expect(forgot).toContain('for="forgot-email"')
+    expect(forgot).toContain('id="forgot-email"')
+    const reset = render('/loyalty/reset-password', 'loyalty')
+    for (const id of ['reset-code', 'reset-password', 'reset-confirm']) {
+      expect(reset).toContain(`for="${id}"`)
+      expect(reset).toContain(`id="${id}"`)
+    }
+    expect(reset).toMatch(/autocomplete="one-time-code"/i)
+    expect(reset.match(/autocomplete="new-password"/gi)).toHaveLength(2)
+  })
   it('signs in to HexaTech Loyalty in its own words', () => {
     const html = render('/loyalty/login', 'loyalty')
     expect(html).toContain('Sign in to HexaTech Loyalty')
