@@ -161,7 +161,9 @@ and that billing answers `GET <billing URL>/api/billing/plans`.
 
 **9 Nov, the owner again ("can you do these steps for me")**: push access was granted on the third request; billing's
 patch is on billing `main` as **41fec6a** (on 9ca597d), pushed after billing's suite passed on PostgreSQL 16 (24
-passed, 3 skipped; `ModulePlansTest` 10 on a seeded database). Laravel Cloud deploys it and runs
+passed, 3 skipped; `ModulePlansTest` 10 on a seeded database); billing's CI on it is green
+(https://github.com/vkolotikov/hotel-tech-saas/actions/runs/42580761951: PHP on PostgreSQL 18, the SPA on Node 24 and
+26, the dependency audit). Laravel Cloud deploys it and runs
 `2026_11_09_120000_add_time_planner_packages`. Left to the owner: `stripe:sync` (step 2 below) and billing's plan list
 being unread in production (above) — this container reaches neither Laravel Cloud nor billing.
 
