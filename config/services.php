@@ -129,4 +129,14 @@ return [
         'access_token' => env('EXPO_ACCESS_TOKEN', ''),
     ],
 
+    /*
+     * The dashboards' weather (2026-11-09, App\Services\Dashboard\VenuePulse): Open-Meteo, which needs no key. Only a
+     * city's name and its coordinates are sent. WEATHER_ENABLED=false keeps the clock and drops the weather.
+     */
+    'weather' => [
+        'enabled'       => (bool) env('WEATHER_ENABLED', true),
+        'forecast_url'  => env('WEATHER_FORECAST_URL', 'https://api.open-meteo.com/v1/forecast'),
+        'geocoding_url' => env('WEATHER_GEOCODING_URL', 'https://geocoding-api.open-meteo.com/v1/search'),
+    ],
+
 ];

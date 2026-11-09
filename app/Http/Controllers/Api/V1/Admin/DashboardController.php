@@ -16,6 +16,7 @@ use App\Models\ReviewSubmission;
 use App\Models\User;
 use App\Models\Visitor;
 use App\Services\AnalyticsService;
+use App\Services\Dashboard\DashboardTrends;
 use App\Services\OpenAiService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -104,6 +105,15 @@ class DashboardController extends Controller
     public function weekComparison(): JsonResponse
     {
         return response()->json($this->analytics->getWeeklyKpiSummary());
+    }
+
+    /**
+     * Every dashboard tile's and chart's day-by-day figures for the last `days` (7, 14, 30 or 90; otherwise 30), with
+     * each measure's previous period (DashboardTrends).
+     */
+    public function trends(Request $request, DashboardTrends $trends): JsonResponse
+    {
+        return response()->json($trends->for((int) $request->query('days', (string) DashboardTrends::DEFAULT_PERIOD)));
     }
 
     public function bookingTrends(Request $request): JsonResponse
