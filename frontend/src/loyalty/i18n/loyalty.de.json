@@ -312,5 +312,20 @@
     "help": "Diese Liste",
     "on_member": "Auf der Seite eines Mitglieds",
     "scan": "Karte scannen"
+  },
+  "launchpolish": {
+    "firstSteps": "Erste Schritte",
+    "setupSettingsLine": "Überprüfen Sie jederzeit Ihre Branchenvorlage, Sammelregeln und Programmeinstellungen.",
+    "enable": "Aktivieren",
+    "disable": "Deaktivieren",
+    "deleteReward": "Prämie löschen",
+    "deleteBody": "„{{name}}“ löschen? Nur ungenutzte Prämien können gelöscht werden. Prämien mit Einlösungen oder einer Stempelkarten-Verknüpfung können Sie stattdessen deaktivieren.",
+    "confirmDelete": "Löschen",
+    "rewardInUse": "Diese Prämie hat Einlösungen oder ist mit einer Stempelkarte verknüpft. Deaktivieren Sie sie stattdessen.",
+    "actionFailed": "Die Änderung konnte nicht gespeichert werden. Bitte versuchen Sie es erneut.",
+    "templateKeepLine": "Wählen Sie eine Branchenvorlage mit vorgeschlagenen Sammelregeln. Ihre bestehenden Stufen, Vorteile und Prämien bleiben erhalten. Prüfen Sie alle Änderungen vor dem Anwenden.",
+    "lastTemplate": "Zuletzt verwendete Vorlage",
+    "templateReview": "Vorgeschlagene Sammelregeln: {{preset}}. Ihre Stufen, Vorteile und Prämien bleiben erhalten.",
+    "keepRules": "Aktuelle Sammelregeln beibehalten"
   }
 }

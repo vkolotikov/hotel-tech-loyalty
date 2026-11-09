@@ -23,6 +23,7 @@ import { MembersPage } from '../members/MembersPage'
 import { NO_FILTERS } from '../members/membersQuery'
 import { START_KEY, STEP_TO, knownSteps, nextStep, stillToDo, type StartAnswer } from './startMath'
 import { StartCard, StartPage } from './StartPage'
+import { SetupChecklist } from './SetupChecklist'
 
 const can = (manager: boolean): Can => ({ award: true, redeem: true, reverse: manager, manage_program: manager, manage_rewards: false, manage_members: manager, view_insights: false, manage_campaigns: manager, manage_app: manager })
 const boot = (manager: boolean): Bootstrap => ({
@@ -52,6 +53,23 @@ function wrap(children: ReactNode, manager: boolean, data: StartAnswer | null, a
   )
 }
 const text = (html: string) => html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ')
+
+describe('Overview first steps', () => {
+  it('keeps setup accessible after registration has already seeded tiers', () => {
+    const setup = answer({ tiers: true, rewards: true })
+    const html = wrap(<SetupChecklist setup={setup} />, true, setup)
+    expect(html).toContain('href="/loyalty/options/setup"')
+    expect(html).toContain('href="/loyalty/start"')
+    expect(html).toContain('data-done="true"')
+    expect(html).toContain('Set up your tiers')
+  })
+  it('does not offer programme configuration to a reader or after all server steps are complete', () => {
+    const setup = answer()
+    expect(wrap(<SetupChecklist setup={setup} />, false, setup)).toBe('')
+    const complete = answer(Object.fromEntries(setup.steps.map(step => [step.key, true])))
+    expect(wrap(<SetupChecklist setup={complete} />, true, complete)).toBe('')
+  })
+})
 
 describe('"Start here" (release 10, owner 2026-10-26)', () => {
   it('places every step the server has, and each opens a page the workspace has', () => {

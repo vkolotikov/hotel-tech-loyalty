@@ -10,6 +10,7 @@ use App\Services\DiscountService;
 use App\Services\Loyalty\LoyaltyAccess;
 use App\Services\Loyalty\LoyaltyForms;
 use App\Services\Loyalty\LoyaltyRefused;
+use App\Services\Loyalty\RewardManagement;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
@@ -67,6 +68,25 @@ class RewardController extends Controller
         AuditLog::record('reward_updated', $reward, $reward->toArray(), $old, $request->user(), "Reward '{$reward->name}' updated");
 
         return response()->json(['reward' => self::row($reward->fresh()->loadCount(self::counts()))]);
+    }
+
+    public function state(Request $request, int $id, RewardManagement $management): JsonResponse
+    {
+        LoyaltyAccess::require($request->user(), LoyaltyAccess::MANAGE_REWARDS);
+        $data = $request->validate(['is_active' => 'required|boolean']);
+        $reward = Reward::query()->find($id) ?? throw LoyaltyRefused::notFound();
+        $reward = $management->state($reward, (bool) $data['is_active'], $request->user());
+
+        return response()->json(['reward' => self::row($reward->loadCount(self::counts()))]);
+    }
+
+    public function destroy(Request $request, int $id, RewardManagement $management): JsonResponse
+    {
+        LoyaltyAccess::require($request->user(), LoyaltyAccess::MANAGE_REWARDS);
+        $reward = Reward::query()->find($id) ?? throw LoyaltyRefused::notFound();
+        $management->delete($reward, $request->user());
+
+        return response()->json(['success' => true]);
     }
 
     /** @return array<string, mixed> */

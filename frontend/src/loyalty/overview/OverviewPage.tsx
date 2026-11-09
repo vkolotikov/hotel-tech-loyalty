@@ -16,6 +16,7 @@ import { useOnline, useOverviewModule, usePhone } from './useOverview'
 import { useOverviewWords } from './words'
 import type { Panel, Summary } from './types'
 import { MobileHome } from '../mobile/MobileHome'
+import { SetupChecklist } from '../start/SetupChecklist'
 
 export function OverviewPage() {
   const phone = usePhone()
@@ -82,10 +83,10 @@ function DesktopOverviewPage() {
     {summary.isError && !s && <OverviewRecovery title={say('unavailableOverview')} busy={summary.isFetching} onRetry={retry(summary)} forbidden={summary.forbidden} />}
     {!s && !summary.isError && <section className="l-ov-panel"><OverviewSkeleton rows={4} /></section>}
     {initial && <SetupState />}
+    {s?.configured && <SetupChecklist setup={s.setup} />}
     {s?.configured && <>
       {!limited && <>{attention}<ProgramSummary summary={s} onDetails={() => setPanel('program')} onPreview={() => setPanel('preview')} /></>}
       {limited && <><section className="l-ov-panel l-ov-limited"><OverviewBadge>{say('limited')}</OverviewBadge><h2>{say('dailyService')}</h2><p>{say('managedByOwner')}</p></section><div className="l-ov-service-actions">{[['/loyalty', 'findMember'], ['/loyalty/requests', 'review'], ['/loyalty/scan', 'scan']].map(([to, key]) => <Link to={to} className="l-ov-panel" key={to}>{say(key as 'findMember' | 'review' | 'scan')} →</Link>)}</div></>}
-      {boot.staff.can.manage_program && !s.options.programme_setup_completed_at && <section className="l-ov-inset l-ov-setup-progress"><div className="l-ov-clean-alert"><span className="l-ov-clean-icon" data-tone="cyan"><img src={cleanAssets.program} alt="" /></span><strong>{say('setupProgress', { done: s.setup.done, total: s.setup.total })}</strong></div><Link to="/loyalty/start" className="l-ov-link">{say('checklist')} →</Link></section>}
     </>}
     {!initial && !limited && <section className="l-ov-glance" aria-labelledby="overview-glance">
       <div className="l-ov-glance-controls"><h2 id="overview-glance">{say('keyMetrics')}</h2><button className="l-ov-link l-ov-about" onClick={() => setPanel('numbers')}><img src={cleanAssets.help} alt="" />{say('about')}</button>

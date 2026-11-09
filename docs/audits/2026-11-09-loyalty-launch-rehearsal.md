@@ -1,10 +1,11 @@
 # Loyalty launch rehearsal — 9 November 2026
 
-Latest owner direction: **move media to Laravel Cloud**, with the approved 30-day private recovery policy. The
-DigitalOcean temporary-key creation route is superseded; existing source data stays available until migration is
-verified. Migration implementation and cutover are a continuation of the prelaunch work, not yet completed.
+Latest owner direction completed: **media is live on Laravel Cloud**, with the approved 30-day private recovery
+policy. Final acceptance at 16:12 UTC covers all 209 source files, 165 migrated references, a default upload after
+cutover, private restoration and fresh backup/Operations observations. DigitalOcean remains for historical links;
+its temporary-key creation route is superseded. Four pre-existing missing local images still need originals.
 
-The core web journey has been exercised against a real, fully migrated PostgreSQL 18 database with an isolated organisation. Core web sign-off still needs the production runtime and backup observations below. Device/provider acceptance gates enabling those optional features; they can stay on hold for a web pilot. A clean organisation status page or configured credential is not delivery proof.
+The core web journey has been exercised against a real, fully migrated PostgreSQL 18 database with an isolated organisation. Production scheduler, queue, database backup and Cloud media acceptance are recorded below. Owner data and optional provider/device checks remain explicit. A clean organisation status page or configured credential is not delivery proof.
 
 ## Changes from the rehearsal
 
@@ -34,21 +35,22 @@ The core web journey has been exercised against a real, fully migrated PostgreSQ
 | Fresh database backup observation | Owner located the correct cluster and confirmed: “Point-in-time recovery is enabled” with restoration within the last seven days. The application still selects `hotel_loyalty`; Cloud's `main` attachment label is unchanged |
 | Guarded media policy release | Source parity with feature `cc4a29688`; sources `02af77050` / `1b80e5dcc`, fresh build `f275699a4`. Artifact: 2,074 scoped PHP tests, 461 files / 6,760 frontend tests, TypeScript, lint gate (1,393 legacy diagnostics), Larastan and build passed. Actual SDK XML serialization verified without network calls. Owner ran the new command in production; safe diagnostic shows lifecycle inspection blocked by HTTP 403 `AccessDenied`. Owner subsequently selected Cloud migration, superseding the [temporary operator-key procedure](2026-11-09-media-operator-access.md) |
 | Cloud media implementation release | Source baseline `6fc522b14`, exact 35-file source patch on current main, build/deploy `b695fdaa7`. Final artifact: 2,102 distinct required/affected PHP tests, 60 PostgreSQL tests, 464 files / 6,823 frontend tests, TypeScript, lint, Larastan and fresh build passed. Real-backend journey expanded to 74 checks including avatar upload and actual retrieval, zero browser/runtime failures. Live content and landing continuity verified at 13:44 UTC. Both Cloud disks are provisioned, but production copy, private restore, URL review and cutover remain pending; see [Cloud architecture and evidence](2026-11-09-cloud-media-architecture.md) |
+| Final Cloud media acceptance | Production code `31c1b568e`, environment deployment 1156; MEDIA_DISK=media. All 209 files / 202,034,601 bytes copied and backed up, 165 references migrated, six current Word URLs downloaded and SHA/MIME checked. Private restore passed; receipts survived both deployments. A real default upload and its private copy matched; both controlled probes were removed with private revisions retained. Final source digest unchanged, zero remaining migrated/private/unmapped references, Operations media status healthy. Four already-missing local images need originals. Final CI 42646509815 passed all eight jobs; full evidence in the Cloud audit |
 
 Private logs, screenshots and fixture data remain in task directories under `C:/wamp64/tmp/loyalty-launch-*`, outside Git. Do not publish private logs or fixture files. Release-artifact results and production content verification are recorded in the current handoff.
 
-## Production checks still required
+## Owner inputs and optional production checks
 
-1. The owner supplied the production scheduler/shared-cache/queue observations above; no repeat probe is needed for this rehearsal. The 30 October report also records the earlier production queue email receipt. The new November inbox confirmation covers workstation SMTP. Do not repeat transmissions solely to duplicate passing evidence; recheck delivery if the transport configuration changes. Sender authentication headers and relay quota still require provider observations. Authenticated browser automation was initially stopped by URL verification; subsequent reconnection attempts found browser/computer access unavailable.
+1. The owner supplied the production scheduler/shared-cache/queue observations above; no repeat probe is needed for this rehearsal. The 30 October report also records the earlier production queue email receipt. The new November inbox confirmation covers workstation SMTP. Do not repeat transmissions solely to duplicate passing evidence; recheck delivery if the transport configuration changes. Sender authentication headers and relay quota still require provider observations. Native PC access subsequently completed the Cloud migration despite several browser URL-verification interruptions.
 2. Verify actual tenant Twilio credentials/sender and one SMS to the already authorised owner-controlled phone. No SMS was sent in this rehearsal. Keep unavailable channels on hold until configured. A member needs the relevant consent before a campaign send.
 3. Accept member/staff push on real devices with the released native builds and their APNs/FCM configuration. An inbox record does not prove device delivery.
 4. Accept Apple/Google pass issuance, add, update and deactivation on physical devices with approved issuer credentials. Uploaded data alone does not establish issuer approval. The owner reports no issued cards; wallet status remains unverified. Accept the Windows/NFC reader with actual hardware; no smart-card reader was detected on this workstation.
-5. Database retention is confirmed at seven days, with the earlier restore rehearsal accepted. Owner selected the
-   [Cloud migration and 30-day private recovery design](2026-11-09-cloud-media-architecture.md), superseding the DO
-   administrator-key route. Cloud disks and tested migration/recovery commands are deployed. Complete actual copy,
-   public/private isolation, private restoration, reviewed URL updates and upload cutover; none is claimed complete.
-   Native PC access returned, but Chrome's permission modal needs the owner to close it before Cloud work continues.
-6. DNS observations: `hotel-tech.ai` (the test From domain) has one SPF and one DMARC record, default DKIM published, DMARC `p=none` without a reporting address. `hexa-tech.uk` has two DMARC records and needs one valid policy if used as a sending domain. No DNS change was made; provider/DNS access is external to this checkout. Receipt alone does not verify SPF/DKIM alignment.
+5. Database retention is confirmed at seven days, with the earlier isolated restore accepted. The
+   [Cloud migration and 30-day private recovery acceptance](2026-11-09-cloud-media-architecture.md) is complete.
+   Keep the DO source for immutable historical links until a separate consumer/retirement review. Re-upload the four
+   original missing local images: user 109/org 23 and widget configs 7/org 16, 10/org 12, 22/org 35. They were absent
+   before migration on production local, DO, Cloud and the local project copies; no reference was silently cleared.
+6. DNS follow-up, 9 November evening: SiteGround confirms `hotel-tech.ai` DKIM active; SPF and the public DKIM key are published. With the owner's explicit confirmation, removed the short duplicate `hexa-tech.uk` DMARC record, preserving its reporting policy and Zoho SPF/DKIM/MX. Both authoritative nameservers now answer one DMARC record. Received-message authentication headers remain unverified. See [the setup and authentication audit](2026-11-09-loyalty-setup-polish.md).
 
 The full desktop/member-app designers, per-customer SMTP/domain self-service and expanded Places functionality remain on hold as previously agreed. These checks do not release native apps or enable unconfigured providers.
 

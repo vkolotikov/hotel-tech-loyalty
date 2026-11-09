@@ -38,6 +38,7 @@ export function OffersDesignPage() {
   const dateLabel = (date: string | null) => date ? formatDate(date, i18n.language, { day: 'numeric', month: 'short' }) : '—'
   const visible = (data?.offers ?? []).filter(o => `${o.title} ${brandName(o)} ${o.code ?? ''}`.toLocaleLowerCase().includes(q.toLocaleLowerCase()) && (brand === 'all' || (brand === 'every' ? o.brand_id == null : String(o.brand_id) === brand)) && (status === 'all' || status === 'current' ? status === 'all' || ['live', 'upcoming'].includes(o.state) : o.state === status))
   const selected = visible.find(o => String(o.id) === params.get('selected')) ?? visible[0]
+  const editing = manage && (adding || params.get('edit') === '1')
   const selectedParam = params.get('selected')
   // Pin the initial selection so a background refresh cannot replace an unsaved draft with a newer first row.
   useEffect(() => {
@@ -53,13 +54,27 @@ export function OffersDesignPage() {
     {query.isError && <LoadFailed error={query.error} onRetry={() => { void query.refetch() }} />}{!data && query.isLoading && <Loading />}
     {params.get('saved') && <p role="status" className="l-rb-success">{say('saved')}</p>}
     {data && <>
-    {(selected || adding) ? <OfferEditor key={`${adding ? 'new' : selected.id}:${guard.resetVersion}`} offer={adding ? null : selected} options={data.options} guard={guard} list={list} /> : list}<RewardActivityLinks /></>}
+    {editing && (selected || adding) ? <><OverviewButton onClick={() => guard.go(rewardsUrl('offers', { q, brand, status, selected: selected?.id }))}>{t('loyalty.overview.close', 'Close')}</OverviewButton><OfferEditor key={`${adding ? 'new' : selected.id}:${guard.resetVersion}`} offer={adding ? null : selected} options={data.options} guard={guard} list={list} /></> : selected ? <div className="l-rb-columns">{list}<OfferDetails offer={selected} options={data.options} onEdit={manage ? () => go({ selected: selected.id, edit: '1' }) : undefined} /></div> : list}<RewardActivityLinks /></>}
     <RewardLeaveDialog guard={guard} />
   </div>
 }
 
+function OfferDetails({ offer, options, onEdit }: { offer: Offer; options: OfferOptions; onEdit?: () => void }) {
+  const { t, i18n } = useTranslation(), say = useRewardWords(), boot = useBoot()
+  const value = OFFER_VALUE_WORDS[offer.type] ? t(`loyalty.rewards.offer_value.${offer.type}`, OFFER_VALUE_WORDS[offer.type], { value: amountOf(offer.type, offer.value, boot.venue.currency, i18n.language) }) : t(`loyalty.rewards.offer_type.${offer.type}`, OFFER_TYPE_WORDS[offer.type] ?? offer.type)
+  const date = (day: string | null) => day ? formatDate(day, i18n.language, { day: 'numeric', month: 'short', year: 'numeric' }) : say('noEnd')
+  return <aside className="l-ov-panel l-rb-detail l-rc-offer-detail" data-offer-view="read">
+    <div className="l-rb-section-head"><RewardStatus tone={offer.state}>{['live', 'upcoming', 'off', 'ended'].includes(offer.state) ? say(offer.state as 'live' | 'upcoming' | 'off' | 'ended') : offer.state}</RewardStatus>{onEdit && <OverviewButton primary onClick={onEdit}>{t('loyalty.program.edit', 'Edit')}</OverviewButton>}</div>
+    <h2 className="l-rb-title">{offer.title}</h2>
+    {offer.image_url && <img className="l-rb-picture" src={mediaUrl(offer.image_url)} alt={offer.title} loading="lazy" />}
+    <div className="l-rb-preview"><small>{offer.brand_id == null ? t('loyalty.rewards.brand.every', 'Every brand') : options.brands?.list.find(b => b.id === offer.brand_id)?.name ?? boot.organization.name}</small><strong className="l-rb-preview-price">{value}</strong>{offer.code && <p>{say('useCode', { code: offer.code })}</p>}</div>
+    <dl className="l-rb-facts"><dt>{say('starts')}</dt><dd>{date(offer.start_date)}</dd><dt>{say('ends')}</dt><dd>{date(offer.end_date)}</dd><dt>{say('eligibility')}</dt><dd>{offer.tier_ids?.length ? offer.tier_ids.map(id => boot.programme.tiers.find(tier => tier.id === id)?.name ?? String(id)).join(', ') : say('allMembers')}</dd><dt>{t('loyalty.rewards.offer.applies_to', 'Applies to')}</dt><dd>{t(`loyalty.rewards.applies_to.${offer.applies_to}`, APPLIES_TO_WORDS[offer.applies_to] ?? offer.applies_to)}</dd><dt>{say('caps')}</dt><dd>{offer.usage_limit === null ? say('noLimit') : points(offer.usage_limit, i18n.language)}</dd><dt>{say('perMember')}</dt><dd>{offer.per_member_limit === null ? say('noLimit') : points(offer.per_member_limit, i18n.language)}</dd></dl>
+    <div className="l-rb-divider"><strong>{say('terms')}</strong><p className="l-rb-prewrap">{offer.description || say('noTerms')}</p><small>{t('loyalty.rewards.offers.used', 'Used: {{used}}', { used: points(offer.times_used, i18n.language) })}</small></div>
+  </aside>
+}
+
 function OfferEditor({ offer, options, guard, list }: { offer: Offer | null; options: OfferOptions; guard: EarnGuard; list: ReactNode }) {
-  const { t, i18n } = useTranslation(), say = useRewardWords(), boot = useBoot(), client = useQueryClient(), navigate = useNavigate()
+  const { t, i18n } = useTranslation(), say = useRewardWords(), boot = useBoot(), client = useQueryClient(), navigate = useNavigate(), location = useLocation()
   const manage = boot.staff.can.manage_rewards, current = offer?.type ?? null, savedBrand = offer ? offer.brand_id ?? null : undefined
   const [baseline, setBaseline] = useState(() => offerFormOf(offer, options, boot.venue.today))
   const [form, setForm] = useState<OfferForm>(baseline), [tried, setTried] = useState(false)
@@ -76,7 +91,8 @@ function OfferEditor({ offer, options, guard, list }: { offer: Offer | null; opt
       const next = offerFormOf(updated, options, boot.venue.today); setForm(next); setBaseline(next); setBaseBrand(brand); setSaved(true); setTried(false); mark('offer', false)
       client.setQueryData<OffersList>(OFFERS_KEY, old => old ? { ...old, offers: offer ? old.offers.map(o => o.id === updated.id ? updated : o) : [updated, ...old.offers] } : old)
       void client.invalidateQueries({ queryKey: OFFERS_KEY })
-      if (!offer) navigate(rewardsUrl('offers', { selected: updated.id, status: 'all', saved: '1' }))
+      const params = new URLSearchParams(location.search)
+      navigate(rewardsUrl('offers', { q: params.get('q'), brand: params.get('brand'), selected: updated.id, status: params.get('status') ?? 'all', saved: '1' }), { replace: true })
     }, onSettled: end,
   })
   const update = (patch: Partial<OfferForm>) => { setForm(old => ({ ...old, ...patch })); setSaved(false); if (save.isError) save.reset() }

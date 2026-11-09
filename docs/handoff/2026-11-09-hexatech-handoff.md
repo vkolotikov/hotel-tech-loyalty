@@ -5,6 +5,8 @@ names. This session adds **HexaTech Time Planner**, the sixth workspace. Runbook
 
 ## The owner's request
 
+Loyalty continuation, evening 9 November: active source branch `feature/loyalty-setup-polish-20261109` adds clearer guided setup and industry template selection, real Overview first steps, Settings re-entry, member spacing, place radio fixes, compact offers and safe reward enable/disable/delete. Backend controls preserve every redemption and stamp-card reference. See `docs/audits/2026-11-09-loyalty-setup-polish.md`. SiteGround confirms hotel-tech.ai DKIM ACTIVE and SPF published; the owner confirmed removing the short duplicate hexa-tech.uk DMARC record, now verified on both authoritative nameservers while preserving Zoho. Source checks: 126 PHP tests, 140 focused frontend tests, Larastan, TypeScript and 36 real-backend browser checks passed before final artifact preparation. Full release gates and final production evidence follow below when complete. The latest native checkout confirms FCM V1 assignment and staff iOS push entitlements; physical push and Wallet acceptance remain unverified. Previous Cloud media migration below remains complete.
+
 "We do before portals for loyalty, crm and AI chat widget, booking and content planner. Now lets make a separate portal
 for time planner. Use all data which we have before, style, settings, features etc., build a powerful AI powered …
 planner, additional features AI plan and analyse employees day depends on employees knowledge etc., ai capture data, ai
@@ -469,6 +471,65 @@ default database cache. A minimal follow-up adds `--except=cache`, preserving co
 state. A regression executes the configured command with real database cache; receipt loss reproduced before
 the fix, then passed with an active lock preserved. Verify/deploy by the source-patch recipe, refresh backup and
 restore acceptance, complete six DOCX URLs, switch MEDIA_DISK to media and verify receipts survive the redeploy.
+
+**15:36 UTC acceptance:** guarded copy completed, **209 objects / 202,034,601 bytes**, all public, zero private
+review. Full private backup **210 objects / 202,034,669 bytes** (includes controlled PNG) at **15:31:34 UTC**;
+exact private restore/cleanup passed **15:31:35 UTC**. Remaining **six URLs applied**, zero unmapped/stale/private
+review, leaving only the four known missing local images. All six current Word URLs passed real HTTPS byte/MIME
+checks. Recovery health **ok**. DO inventory digest recorded in shared cache at
+`ops:cloud-media-source-inventory-20261109`, counts unchanged; compare after cutover.
+
+The cache fix passed artifact Support **214**, Unit/Landing **118**, Feature/Landing **1,735** (2,067 total), full
+**6,823** frontend tests, TypeScript, lint, Larastan, Composer validation and a fresh identical build. Source patch
+**6e76c7133**, verified build receipt **31c1b568e**, pushed to main. **Next source-patch code baseline: b0ecd9479**;
+this later evidence is not a code baseline. Verify deployed Composer cleanup excludes cache and the accepted
+backup/restore/inventory receipts survived. Then change only MEDIA_DISK from do to media, redeploy, verify active
+disk/source inventory/public probe durability, exercise the default writer, clean exact controlled probes, final
+backup and Operations observation. Keep all DigitalOcean files/settings for legacy links. DOCX CI **42642060991**
+finished successfully in all eight jobs. Active App console is idle; Cloud deployment may end it.
+
+Local cleanup note: the old stream artifact worktree was deregistered and its node_modules junction safely removed,
+but Git hit a Windows long-path deletion error. Automatic approval blocked recursive removal of the remainder
+(only reason: blocked by policy). Leave that task-owned remainder in place; do not bypass the rejection. The current
+artifact remains at `C:/wamp64/www/Hexa-Tech-deploy-cloud-word-20261109`, now on branch
+`deploy/loyalty-cloud-cache-20261109`, with its own physical vendor and the root node_modules junction.
+
+**Cutover live:** cache fix Cloud **1155 / 31c1b568e** preserved the 15:31 backup/restore and 15:36 source-inventory
+receipts (fresh App console at **15:42:23 UTC**). Changed **only MEDIA_DISK=do to MEDIA_DISK=media** in the Cloud UI;
+full editor comparison confirmed every other value unchanged. Deployment **1156 / 31c1b568e**, one configuration
+change, completed. Fresh App console **15:59:24 UTC** confirms active media, database hotel_loyalty, retention 30,
+health ok, no rehearsal marker, all receipts preserved and the complete DO key/size/last-modified digest unchanged
+(209 objects / 202,034,601 bytes).
+
+The default writer (no disk override) passed at **16:00:06 UTC**: new 68-byte PNG, real anonymous HTTPS download,
+exact SHA/bytes and independently matched private recovery payload. The earlier controlled upload also survived
+the redeploy with identical bytes. Receipt `ops:cloud-media-cutover-acceptance-20261109` records that result.
+Both exact controlled public probes were removed through MediaService at **16:02:04 UTC**, with their private
+revisions matched and retired for 30-day retention; receipt `ops:cloud-media-probe-cleanup-20261109`.
+
+Final backup, read-only reviewed-reference audit and Operations observation are running in the existing App console.
+They persist `ops:cloud-media-final-acceptance-20261109` only if all succeed. Read that result before repeating
+long checks after any browser interruption. Never recreate the deleted probes just to repeat passing evidence.
+Public verification at 16:00-16:02 UTC passed on both app hosts; auth/wallet gates and landing continuity passed,
+public recovery payload/manifest both 404. CI **42646509815** passed all eight jobs. No further code release is
+pending; **b0ecd9479** remains the source-patch code baseline. Keep DO files/settings for legacy consumers.
+
+**COMPLETE, 16:12 UTC:** final backup finished **16:08:40 UTC**, **209 objects / 202,034,601 bytes**. Final reference
+preview has zero remaining mapped references, zero private-review/unmapped entries; only the four pre-existing
+missing local images remain for original re-upload. Operations media status and Archive health are **ok**, no
+rehearsal marker. Final receipt `ops:cloud-media-final-acceptance-20261109` was persisted **16:11:58 UTC** and
+extended with a fresh unchanged complete source-inventory comparison at **16:12:37 UTC**. No source file changed.
+The web console disconnected during this run, but the original PHP process remained active; read its persisted
+result instead of repeating the sweep or clearing its lock. Both controlled live probes are already removed,
+their exact private revisions retained for 30 days. Active MEDIA_DISK is media; the Cloud migration is accepted.
+
+The current word/cache deployment artifact was safely removed with Git long-path support after its dependency
+junction was unlinked. Root dependencies and the owner's untracked files remain. Only the earlier stream-artifact
+remainder is left after its blocked cleanup; do not retry that rejected removal. No local rehearsal service or
+database is running. Final docs are source-only evidence; the next code source-patch baseline stays **b0ecd9479**,
+production code **31c1b568e**, environment deployment **1156**. Optional provider/device acceptance and sending-domain
+DNS/provider observations are still listed in `docs/audits/2026-11-09-loyalty-launch-rehearsal.md`; do not represent
+those as completed or enable unconfigured channels. DO retirement is a later review, not a remaining cutover step.
 
 ## Dashboard deploy (9 Nov, 11:53 UTC)
 

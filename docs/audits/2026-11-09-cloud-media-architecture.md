@@ -1,6 +1,6 @@
 # ADR: move production media to Laravel Cloud
 
-**Status:** Implementation tested and released; production copy and cutover acceptance pending.
+**Status:** Cloud media migration accepted at 16:12 UTC; four pre-existing missing local images need originals.
 **Date:** 9 November 2026.
 **Decider:** Owner, in this session; 30-day recovery retention approved.
 
@@ -13,7 +13,7 @@ receipt loss, then verifies install cleanup preserves receipts and an active loc
 
 ## Context
 
-Production uses DigitalOcean Spaces `hotel-tech-assets` in lon1. The owner's complete read-only inventory found
+Production initially used DigitalOcean Spaces `hotel-tech-assets` in lon1. The owner's complete read-only inventory found
 209 objects, 202,034,601 bytes: 139 JPG, 51 PNG, four WebP, seven TXT, one PDF and seven other extensions.
 The public base is `hotel-tech-assets.lon1.cdn.digitaloceanspaces.com`. The existing object-access key cannot read
 bucket lifecycle configuration (403 AccessDenied). No temporary administrator key was reported created.
@@ -73,9 +73,9 @@ recovery: an account-wide loss could affect both Cloud buckets.
 
 1. [x] Provision and inspect both Cloud disks; keep active media on DigitalOcean.
 2. [x] Implement and test provider-neutral storage, private recovery, resumable guarded copy and reviewed URL updates.
-3. [ ] Deploy through the source-patch recipe and inspect real source visibility/classification.
-4. [ ] Copy, reconcile and verify every object; resolve private/unknown references.
-5. [ ] Verify recovery and public/private isolation, switch uploads, test after redeploy and record evidence.
+3. [x] Deploy through the source-patch recipe and inspect real source visibility/classification.
+4. [x] Copy, reconcile and verify every source object; resolve private/unknown references.
+5. [x] Verify recovery and public/private isolation, switch uploads, test after redeploy and record evidence.
 
 Primary references: [Cloud storage](https://laravel.com/cloud/docs/resources/object-storage),
 [R2 S3 compatibility](https://developers.cloudflare.com/r2/api/s3/api/).
@@ -202,3 +202,55 @@ this is the same rule already used for PDF/text. A regression fixture generated 
 missing DOCX classification, then passed with strict extension plus detected registered MIME support. Private ACLs,
 disguised files, credential-like names and generic zip archives stay private. Deploy that small compatibility
 correction by the source-patch recipe before the final Word copy and storage cutover.
+
+## Latest production acceptance (15:36 UTC)
+
+- DOCX compatibility is live as **cb7b69fe3 / Cloud 1154**; its source matches feature baseline **65bd74c8c**.
+  Artifact: **2,105 PHP tests**, TypeScript, **464 files / 6,823 frontend tests**, lint, Larastan, fresh build.
+  CI **42642060991** passed all eight jobs, including the PostgreSQL known-failure gate.
+- The resumed guarded copy completed for **209 objects / 202,034,601 bytes**, all **209 source-public**, zero
+  private-review objects. DigitalOcean was not modified. All seven supported Word documents are included.
+- Full private backup: **210 objects / 202,034,669 bytes**, including the controlled PNG, at **15:31:34 UTC**.
+  Isolated private restore passed again at **15:31:35 UTC**, exact bytes/SHA, cleanup complete.
+- Final URL apply: **six rows / six document references**, zero stale, private-review or unmapped references.
+  Together with the first apply, **165 rows / 165 references** moved to Cloud. Recovery health is **ok**.
+- All **six** current Cloud Word URLs were downloaded over HTTPS and matched the actual object SHA and detected
+  registered Word MIME. Complete DO key/size/last-modified inventory was recorded at **15:36:16 UTC**, still
+  **209 objects / 202,034,601 bytes**; its digest is stored under `ops:cloud-media-source-inventory-20261109`.
+- All four legacy local images are pre-existing missing files (user 109/org 23, widget configs 7/org 16,
+  10/org 12 and 22/org 35), absent on production local, DO, Cloud and project-local copies. Preserve references;
+  originals must be uploaded again. These are not missing migration source objects.
+- Cache-preserving cleanup source baseline **b0ecd9479**, exact five-file patch **6e76c7133**, fresh identical
+  build receipt **31c1b568e**, was pushed to main after the production jobs finished. Artifact: **2,067 required
+  PHP tests**, full **6,823** frontend tests, TypeScript, lint, Larastan and Composer validation passed.
+  Verify this deployment preserves the recovery receipts before setting MEDIA_DISK to media.
+
+## Upload cutover (15:59-16:02 UTC)
+
+Cloud **1155 / 31c1b568e** preserved the accepted receipts. The UI then saved exactly one change, MEDIA_DISK from do
+to media, with all surrounding variables compared unchanged. Cloud **1156 / 31c1b568e** deployed that setting.
+Fresh App runtime confirms active media, original database hotel_loyalty, retention 30, health ok, marker false and
+the complete source inventory digest unchanged. The default writer created a new controlled PNG without a disk
+override: anonymous HTTPS bytes and private payload matched. The earlier controlled PNG survived redeployment.
+Both controlled live probes were subsequently deleted through the shared writer, while their exact private
+revisions remain recoverable for 30 days. Final sweep/reference preview/Operations recording is running; its
+successful result is persisted at `ops:cloud-media-final-acceptance-20261109`. CI **42646509815** is all green.
+
+## Final acceptance (16:12 UTC)
+
+The final process continued after the web console disconnected; its PHP process was observed running, so no
+duplicate backup was started and no lock was cleared. Complete backup finished at **16:08:40 UTC**:
+**209 current public objects / 202,034,601 bytes**. Final reviewed reference audit found **zero remaining mapped
+references, zero private review and zero unmapped references**. The four known absent local images remain recorded
+for re-upload. Operations media observation and recovery health are **ok**, with no unresolved rehearsal marker.
+The complete DO key/size/last-modified inventory was compared again at **16:12:37 UTC** and is unchanged.
+
+Receipt `ops:cloud-media-final-acceptance-20261109` records acceptance at **16:11:58 UTC**, final source comparison,
+backup totals, reference audit, Operations observation and cleanup of both exact controlled probes. New uploads use
+Cloud; all 209 source files and 165 updated references were covered by actual byte verification. The recovery copies
+are private and retired revisions remain for at least 30 days; current revisions are not expired.
+
+No further storage cutover action is required. Keep the DO bucket and settings for historical URLs and unknown
+external consumers until their separate retirement review; the provider-owned CDN cannot be redirected through our
+DNS. Re-upload the four original missing images when available. Neither source deletion nor new provider/device
+enablement was part of this acceptance.

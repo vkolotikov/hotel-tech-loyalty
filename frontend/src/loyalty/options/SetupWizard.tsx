@@ -126,7 +126,7 @@ export function Wizard({ answer, start = {} }: { answer: OptionsAnswer; start?: 
   const problems: Problems = { ...serverProblems(applyFailure, answer), ...(tried ? local : {}) }
 
   const choose = (next: string) => {
-    if (keep || next === choice) return
+    if (next === choice) return
     setChoice(next)
     setForm(recommendedForm(answer, presetOf(answer, next), answer.options))
   }
@@ -149,9 +149,9 @@ export function Wizard({ answer, start = {} }: { answer: OptionsAnswer; start?: 
 
   return (
     <div className="l-gs-workspace">
-      <section className="l-ov-panel l-gs-progress"><div><h2>{t('loyalty.options.wizard.step_of', 'Step {{n}} of {{total}}', { n: String(index + 1), total: String(STEPS.length) })} · {stepTitle(t, step)}</h2></div><p>{design('draftLine')}</p><progress max={STEPS.length} value={index} aria-label={t('loyalty.options.wizard.steps', 'Steps')} /></section>
+      <section className="l-ov-panel l-gs-progress"><div><h2>{t('loyalty.options.wizard.step_of', 'Step {{n}} of {{total}}', { n: String(index + 1), total: String(STEPS.length) })} · {t(`loyalty.options.step.${step}`, STEP_WORDS[step])}</h2></div><p>{design('draftLine')}</p><progress max={STEPS.length} value={index} aria-label={t('loyalty.options.wizard.steps', 'Steps')} /></section>
       <div className="l-gs-columns"><div className="l-gs-main">
-      <section className="l-ov-panel l-gs-starting"><div><small>{clean('pgSetupStartingPoint')}</small>{step !== 'business' && <button type="button" className="l-ov-link" onClick={() => go('business')} disabled={apply.isPending}>{t('loyalty.program.edit', 'Edit')} →</button>}</div><h2>{keep ? t('loyalty.options.wizard.keep', 'Keep my tiers and rewards') : presetOf(answer, choice) ? presetName(t, presetOf(answer, choice)!) : design('draftTitle')}</h2></section>
+      {step !== 'business' && <section className="l-ov-panel l-gs-starting"><div><small>{clean('pgSetupStartingPoint')}</small><button type="button" className="l-ov-link" onClick={() => go('business')} disabled={apply.isPending}>{t('loyalty.program.edit', 'Edit')} →</button></div><h2>{choice === KEEP ? t('loyalty.launchpolish.keepRules', 'Keep current earning rules') : presetOf(answer, choice) ? presetName(t, presetOf(answer, choice)!) : design('draftTitle')}</h2></section>}
       <div className="l-ov-panel l-gs-steps">
         <ol aria-label={t('loyalty.options.wizard.steps', 'Steps')}>
           {STEPS.map((s, i) => (
@@ -263,28 +263,27 @@ export function Business({ answer, choice, keep, onChoose }: { answer: OptionsAn
     <fieldset className="space-y-4">
       <legend className="text-sm text-a-text-2">
         {keep
-          ? t('loyalty.options.wizard.business_keep_line', 'Your programme already has tiers, so it keeps them and its rewards. The next steps choose the ways to earn that go with them.')
+          ? t('loyalty.launchpolish.templateKeepLine', 'Choose an industry template for suggested earning rules. Your existing tiers, benefits and rewards stay as they are. Review every change before applying.')
           : t('loyalty.options.wizard.business_line', 'Choose the closest. It sets up tiers and a first rewards catalogue, which you can change later.')}
       </legend>
       {keep && (
-        <ChoiceCard name="programme-start" value={KEEP} checked onChoose={onChoose} icon={Check}
-          title={t('loyalty.options.wizard.keep', 'Keep my tiers and rewards')}
+        <ChoiceCard name="programme-start" value={KEEP} checked={choice === KEEP} onChoose={onChoose} icon={Check}
+          title={t('loyalty.launchpolish.keepRules', 'Keep current earning rules')}
           line={t('loyalty.options.wizard.keep_line', 'Tiers: {{tiers}}. Rewards in the catalogue: {{rewards}}. Nothing in them changes.', { tiers: String(answer.catalogue.tiers), rewards: String(answer.catalogue.rewards.length) })} />
       )}
-      <details className="l-gs-presets" open={keep ? undefined : true}>
-      <summary hidden={!keep}>{t('loyalty.options.wizard.presets_greyed', 'Starting programmes set up a new venue’s tiers only. They are shown here for reference.')}</summary>
+      <div className="l-gs-presets">
       <div className="grid gap-3 sm:grid-cols-2">
         {answer.presets.map(p => (
-          <ChoiceCard key={p.key} name="programme-start" value={p.key} checked={!keep && choice === p.key} disabled={keep} onChoose={onChoose}
-            icon={PRESET_ICONS[p.icon] ?? Sparkles} title={presetName(t, p)} line={presetLine(t, p)}
-            badge={p.recommended ? t('loyalty.options.wizard.suggested', 'Suggested for your business') : null}
-            detail={[
+          <ChoiceCard key={p.key} name="programme-start" value={p.key} checked={choice === p.key} onChoose={onChoose}
+            icon={PRESET_ICONS[p.icon] ?? Sparkles} title={presetName(t, p)} line={keep ? '' : presetLine(t, p)}
+            badge={answer.options.programme_setup_template === p.key ? t('loyalty.launchpolish.lastTemplate', 'Last used template') : p.recommended ? t('loyalty.options.wizard.suggested', 'Suggested for your business') : null}
+            detail={keep ? [] : [
               t('loyalty.options.wizard.preset_tiers', 'Tiers: {{names}}', { names: p.tier_names.join(', ') }),
               ...(p.sample_rewards.length > 0 ? [t('loyalty.options.wizard.preset_rewards', 'Rewards such as {{names}}', { names: p.sample_rewards.join(', ') })] : []),
             ]} />
         ))}
       </div>
-      </details>
+      </div>
     </fieldset>
   )
 }
@@ -313,8 +312,8 @@ function ChoiceCard({ name, value, checked, disabled = false, onChoose, icon: Ic
           <span className="font-medium text-a-text">{title}</span>
           {badge && <span className="rounded-full bg-a-accent/15 px-2 py-0.5 text-xs font-semibold text-a-accent-text">{badge}</span>}
         </span>
-        <span className="block text-sm text-a-text-2">{line}</span>
-        {detail.map(d => <span key={d} className="block text-xs text-a-text-2">{d}</span>)}
+        {checked && line && <span className="block text-sm text-a-text-2">{line}</span>}
+        {checked && detail.map(d => <span key={d} className="block text-xs text-a-text-2">{d}</span>)}
       </span>
     </label>
   )
@@ -323,7 +322,7 @@ function ChoiceCard({ name, value, checked, disabled = false, onChoose, icon: Ic
 // ─── 2. Choose ────────────────────────────────────────────────────────────
 
 /** Every way to earn as a tick card, pre-ticked from the starting point; a ticked one says what members get. */
-export function Choose({ answer, form, keep, choice, ctx, onChange }: {
+export function Choose({ answer, form, choice, ctx, onChange }: {
   answer: OptionsAnswer
   form: OptionsForm
   keep: boolean
@@ -336,7 +335,7 @@ export function Choose({ answer, form, keep, choice, ctx, onChange }: {
   return (
     <fieldset className="space-y-4">
       <legend className="text-sm text-a-text-2">
-        {keep || !preset
+        {choice === KEEP || !preset
           ? t('loyalty.options.wizard.choose_keep_line', 'Ticked: what your programme uses today. Tick what you want members to have.')
           : t('loyalty.options.wizard.choose_line', 'Ticked: what we suggest for {{preset}}. Tick what you want members to have.', { preset: presetName(t, preset) })}
       </legend>
@@ -406,12 +405,13 @@ export function Configure({ answer, form, problems, ctx, onChange }: {
 export function Review({ answer, form, choice, keep, ctx }: { answer: OptionsAnswer; form: OptionsForm; choice: string; keep: boolean; ctx: Ctx }) {
   const { t } = useTranslation()
   const review = reviewOf(answer, form, answer.options, ctx)
-  const preset = keep ? null : presetOf(answer, choice)
+  const preset = presetOf(answer, choice)
   return (
     <div className="space-y-4">
       <div data-review-start="" className="rounded-2xl border border-a-border bg-a-surface-2 p-4 text-sm text-a-text">
-        {preset
-          ? t('loyalty.options.wizard.review_preset', 'Starts from {{preset}}: the tiers {{tiers}} and a first rewards catalogue.', { preset: presetName(t, preset), tiers: preset.tier_names.join(', ') })
+        {preset && keep
+          ? t('loyalty.launchpolish.templateReview', 'Suggested earning rules: {{preset}}. Your tiers, benefits and rewards stay as they are.', { preset: presetName(t, preset) })
+          : preset ? t('loyalty.options.wizard.review_preset', 'Starts from {{preset}}: the tiers {{tiers}} and a first rewards catalogue.', { preset: presetName(t, preset), tiers: preset.tier_names.join(', ') })
           : t('loyalty.options.wizard.review_keep', 'Your tiers and rewards stay as they are.')}
       </div>
       {review.on.length > 0
