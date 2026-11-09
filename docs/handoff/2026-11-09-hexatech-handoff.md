@@ -492,6 +492,26 @@ but Git hit a Windows long-path deletion error. Automatic approval blocked recur
 artifact remains at `C:/wamp64/www/Hexa-Tech-deploy-cloud-word-20261109`, now on branch
 `deploy/loyalty-cloud-cache-20261109`, with its own physical vendor and the root node_modules junction.
 
+**Cutover live:** cache fix Cloud **1155 / 31c1b568e** preserved the 15:31 backup/restore and 15:36 source-inventory
+receipts (fresh App console at **15:42:23 UTC**). Changed **only MEDIA_DISK=do to MEDIA_DISK=media** in the Cloud UI;
+full editor comparison confirmed every other value unchanged. Deployment **1156 / 31c1b568e**, one configuration
+change, completed. Fresh App console **15:59:24 UTC** confirms active media, database hotel_loyalty, retention 30,
+health ok, no rehearsal marker, all receipts preserved and the complete DO key/size/last-modified digest unchanged
+(209 objects / 202,034,601 bytes).
+
+The default writer (no disk override) passed at **16:00:06 UTC**: new 68-byte PNG, real anonymous HTTPS download,
+exact SHA/bytes and independently matched private recovery payload. The earlier controlled upload also survived
+the redeploy with identical bytes. Receipt `ops:cloud-media-cutover-acceptance-20261109` records that result.
+Both exact controlled public probes were removed through MediaService at **16:02:04 UTC**, with their private
+revisions matched and retired for 30-day retention; receipt `ops:cloud-media-probe-cleanup-20261109`.
+
+Final backup, read-only reviewed-reference audit and Operations observation are running in the existing App console.
+They persist `ops:cloud-media-final-acceptance-20261109` only if all succeed. Read that result before repeating
+long checks after any browser interruption. Never recreate the deleted probes just to repeat passing evidence.
+Public verification at 16:00-16:02 UTC passed on both app hosts; auth/wallet gates and landing continuity passed,
+public recovery payload/manifest both 404. CI **42646509815** passed all eight jobs. No further code release is
+pending; **b0ecd9479** remains the source-patch code baseline. Keep DO files/settings for legacy consumers.
+
 ## Dashboard deploy (9 Nov, 11:53 UTC)
 
 Production **a455e01**, by the source-patch recipe on `origin/main` f275699 (another session's media-recovery release, no

@@ -1,6 +1,6 @@
 # ADR: move production media to Laravel Cloud
 
-**Status:** Production copy, recovery and URL migration verified; upload cutover in progress.
+**Status:** Cloud uploads live; copy/recovery/URLs verified, final reconciliation in progress.
 **Date:** 9 November 2026.
 **Decider:** Owner, in this session; 30-day recovery retention approved.
 
@@ -224,3 +224,14 @@ correction by the source-patch recipe before the final Word copy and storage cut
   build receipt **31c1b568e**, was pushed to main after the production jobs finished. Artifact: **2,067 required
   PHP tests**, full **6,823** frontend tests, TypeScript, lint, Larastan and Composer validation passed.
   Verify this deployment preserves the recovery receipts before setting MEDIA_DISK to media.
+
+## Upload cutover (15:59-16:02 UTC)
+
+Cloud **1155 / 31c1b568e** preserved the accepted receipts. The UI then saved exactly one change, MEDIA_DISK from do
+to media, with all surrounding variables compared unchanged. Cloud **1156 / 31c1b568e** deployed that setting.
+Fresh App runtime confirms active media, original database hotel_loyalty, retention 30, health ok, marker false and
+the complete source inventory digest unchanged. The default writer created a new controlled PNG without a disk
+override: anonymous HTTPS bytes and private payload matched. The earlier controlled PNG survived redeployment.
+Both controlled live probes were subsequently deleted through the shared writer, while their exact private
+revisions remain recoverable for 30 days. Final sweep/reference preview/Operations recording is running; its
+successful result is persisted at `ops:cloud-media-final-acceptance-20261109`. CI **42646509815** is all green.
