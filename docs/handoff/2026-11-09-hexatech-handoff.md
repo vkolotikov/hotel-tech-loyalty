@@ -294,3 +294,27 @@ lon1; PostgreSQL `hotel_loyalty`. Local storage credentials are unavailable; do 
 `hotel_loyalty` on cluster `hotel_tech_loyalty`. Cloud labels its attachment `main`; preserve the application's database
 name override. Only a fresh current-window observation is missing, not a new paid restore. The same report records
 production queue email inbox receipt on 29 October; avoid another send merely to repeat passing evidence.
+
+### Latest production follow-up and owner direction
+
+- Guarded policy release: sources **02af77050 / 1b80e5dcc**, fresh build **f275699a4** on **c69b0db7e**; whole-source
+  parity with feature **cc4a29688** (next source-patch code baseline). Artifact **2,074 PHP tests**, **461 frontend
+  files / 6,760 tests**, TypeScript, lint (1,393 legacy), Larastan and fresh build passed. Actual AWS SDK XML payloads
+  validated with a transport mock. CI **42602197110 is success**, including its PostgreSQL known-failure gate.
+- Owner executed the deployed command. Apply and preview stopped; safe read-only diagnosis returned
+  `GetBucketLifecycleConfiguration`, HTTP **403**, **AccessDenied**. The runtime's limited Spaces key lacks bucket
+  management access. No successful policy application or media byte-recovery check is recorded.
+- Owner found the current Cloud backup section and confirmed **PITR enabled for the last seven days**. This plus
+  the 30 October isolated restore evidence closes the database backup checks for this review.
+- Owner approved a temporary full-access Spaces operator key then questioned the extra provider before reporting
+  a key created. After research, explicitly chose **Move media to Laravel Cloud**. Do not pursue the DigitalOcean
+  admin-key setup for this migration; retain the existing source read connection and data through verification.
+  No key was reported created. If one was created, only that new temporary key needs revocation.
+- Cloud Object Storage is Cloudflare R2: bucket-level visibility (no mixed ACLs), no S3 versioning. Prepare public
+  media plus private 30-day backups and a real restore check, preserving old URLs/source during the copy. Current
+  MediaService uses storePublicly and a DO-specific delete resolver, so a disk toggle alone is unsafe. No Cloud
+  buckets, migration copies, URL rewrites, cutover or source deletion have been performed yet.
+- Browser/Computer Use remains unavailable after the owner's reconnect attempt; DevTools' shared profile is busy.
+  doctl exists but has no authentication; no local DigitalOcean or Laravel Cloud management token is configured.
+  Never request key values in chat. Cloud resource creation may need the owner's dashboard action when the concrete
+  bucket plan is ready. Continue prelaunch work with the selected Cloud media migration.
