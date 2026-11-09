@@ -294,3 +294,42 @@ lon1; PostgreSQL `hotel_loyalty`. Local storage credentials are unavailable; do 
 `hotel_loyalty` on cluster `hotel_tech_loyalty`. Cloud labels its attachment `main`; preserve the application's database
 name override. Only a fresh current-window observation is missing, not a new paid restore. The same report records
 production queue email inbox receipt on 29 October; avoid another send merely to repeat passing evidence.
+
+## The full admin's menu and dashboards for every portal (9 Nov, branch `claude/portal-dashboard-redesign-jpxojc`)
+
+The owner, with screenshots of the full admin's menu and dashboard: "we make all portals for our apps, now need better
+logic for main portal, better menu structure. And I think we need to make more engaging, interesting, maybe animated
+dashboard with grids to all portals, KPI, main graphs, maybe weather info, time or smth, make really powerful
+dashboards." Runbook: `docs/dashboards.md`; rules in CLAUDE.md ("Full admin menu and dashboards").
+
+- **The menu**: the five HexaTech workspaces gathered in a **Workspaces** launcher of tiles under the Dashboard (each still
+  hides with the group it came from: `home`); Scan in Members & Loyalty (still hidden with Operations); groups as an
+  accordion (open: Overview, Workspaces, the page's own group, and whatever the person opened; a fresh storage key) that
+  slides and shows each closed group's page count; **Find in menu**; the one item whose address matches longest is lit
+  (Payments no longer lights Reservations); Brands and Billing have icons of their own. Settings → Sidebar Menu lists
+  Workspaces.
+- **The full admin's dashboard**: a grid of ten widgets the person may hide and reorder (Customize, kept in the browser):
+  the venue's clock, greeting and weather under a sky that follows its part of the day, Live now, the industry's tiles and
+  the period's figures (7/30/90 days) counting up with change and sparkline, a day-by-day chart with tabs, the pipeline as
+  a ring, today's schedule, members & tiers (birthdays, close to the next tier), your workspaces, follow-ups, recent
+  activity. SVG charts of our own (no chart library in the first bundle); motion stops for reduced motion.
+- **Every workspace**: the shared `PulseCard` (clock, weather, next hours, sun) — CRM Today, Time Planner My day, Loyalty
+  Overview, Appointments Insights, and a one-line strip on Content's plan.
+- **Server (reads only, no migration)**: `App\Services\Dashboard\VenuePulse` at `admin/dashboard/pulse` and each
+  workspace's `…/pulse` (zone, day, currency, place = first location's city or the zone's city, Open-Meteo weather cached
+  in SharedCache, failures remembered 5 min); `App\Services\Dashboard\DashboardTrends` at `admin/dashboard/trends`
+  (aligned daily series with the previous period). New config `services.weather` (`WEATHER_ENABLED`, default on).
+
+### Checks (this container, 9 Nov)
+
+- PHP: new `tests/Feature/Dashboard` (VenuePulse 8, DashboardTrends 5) on SQLite and on PostgreSQL 16 (`hexa_test`, every
+  migration: 11 passed, 2 skipped by design — the two cases that need the test's own SQLite tables; a PostgreSQL-only
+  case checks that every measure reads). AdminAccess 91, CrmWorkspace 82 on PostgreSQL. Larastan: no errors.
+- Frontend: `tsc -b` clean; Vitest 463 files / 6,814 tests; lint baseline passed (1,383 legacy, none new — fewer than
+  before, the old dashboard's went with it).
+- Real browser (Vite, every API answer a local fixture): the full admin's dashboard at 1440 and 390 in Glass and Clean
+  light and in Russian, the chart's crosshair, Customize, the menu (open, icon-only, a Bookings page), CRM Today at 1440
+  and 390, Content's plan strip — no horizontal scroll, no raw key, no new console error (the known BrandSwitcher
+  warning remains). Found and fixed that way: the chart's tabs squeezing its title on a phone, the last day label off the
+  edge, a seventh figure alone on its row, workspace names cut, light-sky clouds too pale, figures repeated on CRM Today.
+- Not exercised for real: Open-Meteo (this container's network refuses it; tested with recorded answers).
