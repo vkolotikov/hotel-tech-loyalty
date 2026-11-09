@@ -22,7 +22,7 @@ import type { BrandChoice, Offer, OfferOptions, OffersList } from '../types'
 import { APPLIES_TO_WORDS, OFFER_KIND_NOTE_WORDS, OFFER_PROBLEM_WORDS, OFFER_TYPE_WORDS, OFFER_VALUE_WORDS } from '../words'
 import { RewardActivityLinks, RewardColumns, RewardEmpty, RewardHeading, RewardLeaveDialog, RewardRow } from './RewardUI'
 import { RewardIcon, RewardStatus } from './presentation'
-import { rewardsUrl } from './math'
+import { offerMatches, offerReadUrl, rewardsUrl } from './math'
 import { useRewardWords } from './words'
 
 export function OffersDesignPage() {
@@ -36,9 +36,9 @@ export function OffersDesignPage() {
   }
   const brandName = (offer: Offer) => offer.brand_id == null ? t('loyalty.rewards.brand.every', 'Every brand') : data?.options.brands?.list.find(b => b.id === offer.brand_id)?.name ?? String(offer.brand_id)
   const dateLabel = (date: string | null) => date ? formatDate(date, i18n.language, { day: 'numeric', month: 'short' }) : '—'
-  const visible = (data?.offers ?? []).filter(o => `${o.title} ${brandName(o)} ${o.code ?? ''}`.toLocaleLowerCase().includes(q.toLocaleLowerCase()) && (brand === 'all' || (brand === 'every' ? o.brand_id == null : String(o.brand_id) === brand)) && (status === 'all' || status === 'current' ? status === 'all' || ['live', 'upcoming'].includes(o.state) : o.state === status))
-  const selected = visible.find(o => String(o.id) === params.get('selected')) ?? visible[0]
   const editing = manage && (adding || params.get('edit') === '1')
+  const visible = (data?.offers ?? []).filter(o => offerMatches(o, { q, brand, status }, brandName(o)))
+  const selected = (editing ? data?.offers : visible)?.find(o => String(o.id) === params.get('selected')) ?? visible[0]
   const selectedParam = params.get('selected')
   // Pin the initial selection so a background refresh cannot replace an unsaved draft with a newer first row.
   useEffect(() => {
@@ -54,7 +54,7 @@ export function OffersDesignPage() {
     {query.isError && <LoadFailed error={query.error} onRetry={() => { void query.refetch() }} />}{!data && query.isLoading && <Loading />}
     {params.get('saved') && <p role="status" className="l-rb-success">{say('saved')}</p>}
     {data && <>
-    {editing && (selected || adding) ? <><OverviewButton onClick={() => guard.go(rewardsUrl('offers', { q, brand, status, selected: selected?.id }))}>{t('loyalty.overview.close', 'Close')}</OverviewButton><OfferEditor key={`${adding ? 'new' : selected.id}:${guard.resetVersion}`} offer={adding ? null : selected} options={data.options} guard={guard} list={list} /></> : selected ? <div className="l-rb-columns">{list}<OfferDetails offer={selected} options={data.options} onEdit={manage ? () => go({ selected: selected.id, edit: '1' }) : undefined} /></div> : list}<RewardActivityLinks /></>}
+    {editing && (selected || adding) ? <><OverviewButton onClick={() => guard.go(selected ? offerReadUrl(location.search, selected, brandName(selected)) : rewardsUrl('offers', { q, brand, status }))}>{t('loyalty.overview.close', 'Close')}</OverviewButton><OfferEditor key={`${adding ? 'new' : selected.id}:${guard.resetVersion}`} offer={adding ? null : selected} options={data.options} guard={guard} list={list} /></> : selected ? <div className="l-rb-columns">{list}<OfferDetails offer={selected} options={data.options} onEdit={manage ? () => go({ selected: selected.id, edit: '1' }) : undefined} /></div> : list}<RewardActivityLinks /></>}
     <RewardLeaveDialog guard={guard} />
   </div>
 }
@@ -91,10 +91,15 @@ function OfferEditor({ offer, options, guard, list }: { offer: Offer | null; opt
       const next = offerFormOf(updated, options, boot.venue.today); setForm(next); setBaseline(next); setBaseBrand(brand); setSaved(true); setTried(false); mark('offer', false)
       client.setQueryData<OffersList>(OFFERS_KEY, old => old ? { ...old, offers: offer ? old.offers.map(o => o.id === updated.id ? updated : o) : [updated, ...old.offers] } : old)
       void client.invalidateQueries({ queryKey: OFFERS_KEY })
-      const params = new URLSearchParams(location.search)
-      navigate(rewardsUrl('offers', { q: params.get('q'), brand: params.get('brand'), selected: updated.id, status: params.get('status') ?? 'all', saved: '1' }), { replace: true })
+      navigate(offerReadUrl(location.search, updated, updated.brand_id == null ? t('loyalty.rewards.brand.every', 'Every brand') : options.brands?.list.find(b => b.id === updated.brand_id)?.name ?? String(updated.brand_id), true), { replace: true })
     }, onSettled: end,
   })
+  const cancelEditing = () => {
+    if (guard.busy) return
+    mark('offer', false)
+    const params = new URLSearchParams(location.search)
+    navigate(offer ? offerReadUrl(location.search, offer, offer.brand_id == null ? t('loyalty.rewards.brand.every', 'Every brand') : options.brands?.list.find(b => b.id === offer.brand_id)?.name ?? String(offer.brand_id)) : rewardsUrl('offers', { q: params.get('q'), brand: params.get('brand'), status: params.get('status') }), { replace: true })
+  }
   const update = (patch: Partial<OfferForm>) => { setForm(old => ({ ...old, ...patch })); setSaved(false); if (save.isError) save.reset() }
   const failure = save.isError ? failureOf(save.error) : null
   const problems = { ...(tried ? offerProblems(form, options, current) : {}), ...serverProblems(failure?.fields, OFFER_FIELDS) }
@@ -116,7 +121,7 @@ function OfferEditor({ offer, options, guard, list }: { offer: Offer | null; opt
       <div className="l-rb-divider"><strong>{say('conditions')}</strong><p>{form.description || say('conditionsLine')}</p><button type="button" className="l-ov-link" onClick={() => setDialog('terms')}>{manage ? say('editTerms') : say('terms')}</button></div>
       {failure && <Notice tone="danger">{t(...refusalKey('loyalty.rewards', ERRORS, 'offer', failure))}</Notice>}{saved && <p className="l-rb-success" role="status">{say('saved')}</p>}
       {!offer && <small>{t('loyalty.rewards.picture.after_save_offer', 'You can add a picture once the offer is saved.')}</small>}</aside></div>
-      <footer className="l-ov-panel l-rb-save"><div><strong>{say(dirty ? 'unsavedTitle' : 'offerChanges')}</strong><small>{say('reviewOffer')}</small></div>{manage && <OverviewButton type="button" disabled={guard.busy || !dirty} onClick={() => { setForm(baseline); setBrand(baseBrand); setTried(false); save.reset(); setSaved(false) }}>{say('cancelChanges')}</OverviewButton>}{offer && <details className="l-rb-overflow"><summary className="l-ov-button" aria-label={t('loyalty.membership.more.label', 'More')}>…</summary><div className="l-ov-panel"><fieldset className="l-rb-fields" disabled={!manage || guard.busy}><Check label={t('loyalty.rewards.offer.active', 'On')} checked={form.is_active} onChange={on => update({ is_active: on })} /></fieldset><small>{t('loyalty.rewards.offers.used', 'Used: {{used}}', { used: points(offer.times_used, i18n.language) })}</small>{manage && <button type="button" className="l-ov-link" disabled={guard.busy} onClick={() => setDialog('picture')}>{t('loyalty.rewards.picture.label', 'Picture')} →</button>}</div></details>}{manage && <OverviewButton primary type="submit" disabled={guard.busy}>{t('loyalty.rewards.offer.save', 'Save offer')}</OverviewButton>}</footer>
+      <footer className="l-ov-panel l-rb-save"><div><strong>{say(dirty ? 'unsavedTitle' : 'offerChanges')}</strong><small>{say('reviewOffer')}</small></div>{manage && <OverviewButton type="button" disabled={guard.busy} onClick={cancelEditing}>{say('cancelChanges')}</OverviewButton>}{offer && <details className="l-rb-overflow"><summary className="l-ov-button" aria-label={t('loyalty.membership.more.label', 'More')}>…</summary><div className="l-ov-panel"><fieldset className="l-rb-fields" disabled={!manage || guard.busy}><Check label={t('loyalty.rewards.offer.active', 'On')} checked={form.is_active} onChange={on => update({ is_active: on })} /></fieldset><small>{t('loyalty.rewards.offers.used', 'Used: {{used}}', { used: points(offer.times_used, i18n.language) })}</small>{manage && <button type="button" className="l-ov-link" disabled={guard.busy} onClick={() => setDialog('picture')}>{t('loyalty.rewards.picture.label', 'Picture')} →</button>}</div></details>}{manage && <OverviewButton primary type="submit" disabled={guard.busy}>{t('loyalty.rewards.offer.save', 'Save offer')}</OverviewButton>}</footer>
     {dialog === 'terms' && <DesignDialog title={say('terms')} onClose={() => setDialog(null)} busy={guard.busy}><FormField label={t('loyalty.rewards.offer.description', 'Description')} problem={problem('description')}><textarea rows={5} readOnly={!manage} value={form.description} onChange={e => update({ description: e.target.value })} /></FormField><OverviewButton type="button" onClick={() => setDialog(null)}>{t('loyalty.overview.close', 'Close')}</OverviewButton></DesignDialog>}
     {dialog === 'picture' && offer && manage && <DesignDialog title={t('loyalty.rewards.picture.label', 'Picture')} onClose={() => setDialog(null)} busy={guard.busy}><PictureField owner="offers" id={offer.id} picture={picture} alt={form.title} limits={options.image} onBusyChange={pictureBusy} onChange={url => { setPicture(url); void client.invalidateQueries({ queryKey: OFFERS_KEY }) }} /></DesignDialog>}
   </form>

@@ -6,10 +6,11 @@ Owner request: space the member fields, repair place radios, activate industry t
 
 - Member form groups use an explicit 20px desktop gap with space between labels, controls and hints. Native radios are excluded from text-input styles.
 - Guided setup has compact step navigation. All server-provided industry templates can be selected. Existing organisations start with **Keep current earning rules**; deliberately selecting a template proposes its earning rules for review. Existing tiers, benefits and rewards remain. Empty programmes still use the canonical preset builder. This does not change the global organisation industry or other products.
-- The wizard alone stores `programme_setup_template` through ProgrammeOptions. It is not an editable general option. The chosen template is identified when reopened; saved earning rules remain the starting values.
+- The wizard alone stores `programme_setup_template` through ProgrammeOptions. It is not an editable general option. The chosen template is identified when reopened; saved earning rules remain the starting values. Applying Keep retains the previous template attribution.
 - Overview includes the real server setup checklist on desktop and mobile, including accounts whose registration already seeded tiers. Settings has a permanent Guided setup section. Existing Members first steps remain.
 - Authorised staff can enable/disable or delete a points reward. Both admin interfaces share RewardManagement. Deletion refuses **any** redemption history (including cancelled/fulfilled), or a stamp-card reference. Used rewards can be disabled. Reward-row locks serialise with both redemption writers; the organisation setup lock serialises deletion with programme-option changes. No schema migration or history removal.
-- Offers open with a compact read view and explicit Edit. New offers open the editor. Existing validation, brand preservation and leave guards remain; saving returns to the read view.
+- Offers open with a compact read view and explicit Edit. New offers open the editor. Existing validation, brand preservation and leave guards remain; saving and Cancel return to the read view. Save clears only filters that would hide the saved selection. Editing pins the row even if a background refresh changes its filter eligibility.
+- The independent code review found the CRM AI settings tool bypassed the canonical programme writer. Programme keys now delegate to ProgrammeOptions too, preserving validation, wizard-only fields and the same organisation lock. A regression test first reproduced the deleted-reward reference bypass and then passed with the fix.
 - New copy is present in English, Russian, German, French and Spanish.
 
 ## Email DNS, verified 9 November 2026

@@ -168,6 +168,14 @@ describe('Rewards (spec 2026-10-21 §4.6)', () => {
     expect(html).toContain('href="/loyalty/members/31"')
   })
 
+  it('pins the edited offer even when a background refresh puts it outside the current filters', () => {
+    const selected = offers.offers[0]
+    const html = render(`?tab=offers&q=no_match&selected=${selected.id}&edit=1`, can({ manage_rewards: true }))
+    expect(html).toContain('l-rb-offer-editor')
+    expect(html).toContain(`value="${selected.title}"`)
+    expect(html).not.toContain('data-offer-view="read"')
+  })
+
   it('shows a reward\'s and an offer\'s picture lazily, named by the reward or the offer', () => {
     const html = render('', can())
     expect(html).toMatch(/<img[^>]+src="\/storage\/org-1\/rewards\/breakfast.jpg"[^>]+alt="Breakfast for two"[^>]+loading="lazy"/)

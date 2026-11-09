@@ -1,10 +1,15 @@
 import fs from 'node:fs/promises'
 import path from 'node:path'
 import { chromium } from 'playwright'
+import { execFile } from 'node:child_process'
+import { promisify } from 'node:util'
+import { fileURLToPath } from 'node:url'
 
 // Real, isolated launch database only. Never point this write journey at a customer environment.
 const base = 'http://127.0.0.1:5819'
 if (process.env.DB_DATABASE !== 'loyalty_launch_demo' || process.env.DB_PORT !== '55459' || process.env.MAIL_MAILER !== 'log') throw Error('Isolated rehearsal environment required')
+// A frozen rehearsal clock keeps rate-limit windows open across repeat test runs.
+await promisify(execFile)(process.env.PHP || 'php8.5', [fileURLToPath(new URL('./launch-artisan.php', import.meta.url)), 'cache:clear', '--no-interaction'], { cwd: fileURLToPath(new URL('../../', import.meta.url)), env: process.env, timeout: 60000, windowsHide: true })
 const fixture = JSON.parse(await fs.readFile(process.env.LAUNCH_FIXTURE, 'utf8'))
 const out = path.resolve(process.env.LAUNCH_OUTPUT, '../polish')
 await fs.mkdir(out, { recursive: true })
@@ -65,7 +70,7 @@ try {
   await page.getByRole('dialog').waitFor({ state: 'hidden' })
   check(!(await api('rewards')).rewards.some(r => r.id === reward.id), 'Unused reward deletion persists')
   const offer = (await api('offers', 'POST', { title: 'Polish offer ' + run, description: 'Isolated local offer terms.', type: 'discount', value: 10, code: 'POL' + run.toUpperCase(), applies_to: 'all', start_date: '2026-11-01', end_date: '2026-12-31', is_active: true, is_featured: false })).offer
-  await page.goto(base + '/loyalty/rewards?tab=offers&status=all&selected=' + offer.id)
+  await page.goto(base + '/loyalty/rewards?tab=offers&status=all&selected=' + offer.id + '&q=' + encodeURIComponent(offer.title))
   await page.locator('[data-offer-view=read]').waitFor()
   check(await page.locator('.l-rb-offer-editor').count() === 0, 'Offers open compactly with no expanded editor')
   await page.locator('[data-offer-view=read]').getByRole('button', { name: 'Edit', exact: true }).click()
@@ -75,7 +80,17 @@ try {
   await page.getByRole('button', { name: 'Save offer', exact: true }).click()
   await page.locator('[data-offer-view=read]').waitFor()
   check(await page.getByRole('heading', { name: 'Updated offer ' + run, exact: true }).count() > 0, 'Offer save returns to compact read view')
+  check(!new URL(page.url()).searchParams.has('q') && new URL(page.url()).searchParams.get('selected') === String(offer.id), 'Renaming outside the search keeps the saved offer selected')
   await page.screenshot({ path: path.join(out, 'offer-desktop.png') })
+  await page.locator('[data-offer-view=read]').getByRole('button', { name: 'Edit', exact: true }).click()
+  await page.getByRole('button', { name: 'Cancel changes', exact: true }).click()
+  await page.locator('[data-offer-view=read]').waitFor()
+  check(!new URL(page.url()).searchParams.has('edit'), 'Cancel exits an unchanged offer editor')
+  await page.locator('[data-offer-view=read]').getByRole('button', { name: 'Edit', exact: true }).click()
+  await page.locator('.l-rb-offer-editor input[maxlength="191"]').fill('Cancelled draft ' + run)
+  await page.getByRole('button', { name: 'Cancel changes', exact: true }).click()
+  await page.locator('[data-offer-view=read]').waitFor()
+  check(await page.getByRole('heading', { name: 'Updated offer ' + run, exact: true }).count() > 0, 'Cancel discards the offer draft and exits editing')
   await page.locator('[data-offer-view=read]').getByRole('button', { name: 'Edit', exact: true }).click()
   await page.locator('.l-rb-offer-editor input[maxlength="191"]').fill('Unsaved draft ' + run)
   await page.getByRole('button', { name: 'Close', exact: true }).click()
@@ -97,6 +112,8 @@ try {
     await page.goto(base + '/loyalty/options/setup')
     await page.locator('[data-choice="restaurant"]').waitFor()
     check(await page.locator('[data-loyalty][data-overview]').getAttribute('data-theme') === theme, `Requested theme is active: ${theme}`)
+    const localeWords = JSON.parse(await fs.readFile(new URL(`../src/loyalty/i18n/options.${lang}.json`, import.meta.url), 'utf8'))
+    check(await page.getByRole('heading', { name: localeWords.wizard.business_title, exact: true }).count() > 0, `Requested language is active: ${lang}`)
     check(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), `Setup fits ${width}/${lang}/${theme}`)
     if (lang === 'en') await page.screenshot({ path: path.join(out, `setup-${width}-${theme}.png`) })
   }

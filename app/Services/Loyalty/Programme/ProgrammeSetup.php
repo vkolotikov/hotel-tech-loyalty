@@ -73,7 +73,9 @@ final class ProgrammeSetup
             }
 
             ProgrammeOptions::save($orgId, $options, $by);
-            ProgrammeOptions::rememberTemplate($orgId, $preset);
+            if ($preset !== null) {
+                ProgrammeOptions::rememberTemplate($orgId, $preset);
+            }
             $at = ProgrammeOptions::markSetUp($orgId);
             $after = ProgrammeOptions::for($orgId);
 
