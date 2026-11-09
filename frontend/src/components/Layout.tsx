@@ -47,6 +47,7 @@ import { showsWorkspaceLink, type WorkspaceName } from '../workspace/lib/landing
 import { GLASS_NAV_ACCENT_TEXT } from '../theme/glassTokens'
 import { activeItemOf, isGroupOpen, menuMatches } from './navMenu'
 import './navMenu.css'
+import { VisibleMenuContext } from './visibleMenu'
 import { LIGHT_NAV_ACCENT_TEXT } from '../theme/lightTokens'
 import { NAV_ACCENT } from '../theme/navAccents'
 
@@ -253,6 +254,11 @@ export function canAccess(gate: NavGate, staff: { role: string; can_manage_offer
   return !!staff[gate]
 }
 
+/** A menu item as the side panel shows it: its gates applied, `_locked` when the plan lacks its feature. */
+export type VisibleNavItem = NavItem & { _locked?: true; _lockedFeature?: string; _lapsed?: true }
+export interface VisibleNavGroup extends Omit<NavGroup, 'items'> { items: VisibleNavItem[] }
+
+
 const SIDEBAR_KEY = 'loyalty-sidebar-collapsed'
 // v2 (2026-11-09): only the person's own open/close choices are kept. The first key also held every group the old
 // auto-open had opened, which would have kept the whole menu open for everyone who ever used it.
@@ -421,9 +427,11 @@ export function Layout({ children }: { children: ReactNode }) {
     }
   }, [isMobile, mobileOpen])
 
-  // "Find in menu": typed words narrow every group to its matching items (navMenu.menuMatches); Escape clears it.
-  const [menuQuery, setMenuQuery] = useState('')
-  useEffect(() => { setMenuQuery('') }, [location.pathname])
+  // "Find in menu": typed words narrow every group to its matching items (navMenu.menuMatches); Escape clears it, and
+  // so does opening a page (the words belong to the page they were typed on).
+  const [menuSearch, setMenuSearch] = useState({ path: location.pathname, q: '' })
+  const menuQuery = menuSearch.path === location.pathname ? menuSearch.q : ''
+  const setMenuQuery = (q: string) => setMenuSearch({ path: location.pathname, q })
 
   // Persist group state across reloads so a collapse sticks.
   useEffect(() => {
@@ -1242,7 +1250,7 @@ export function Layout({ children }: { children: ReactNode }) {
                 before mounting children. Brief blank-screen during initial
                 /v1/auth/subscription fetch (one round-trip, ~50ms after
                 first warm cache) but no 403 storm. */}
-            {allowRenderContent ? children : null}
+            {allowRenderContent ? <VisibleMenuContext.Provider value={visibleGroups as VisibleNavGroup[]}>{children}</VisibleMenuContext.Provider> : null}
           </div>
         </main>
       </div>

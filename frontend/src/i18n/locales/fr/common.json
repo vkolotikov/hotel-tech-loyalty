@@ -437,16 +437,10 @@
   },
   "dashboard": {
     "title": "Tableau de bord",
-    "greeting": {
-      "morning": "Bonjour",
-      "afternoon": "Bon après-midi",
-      "evening": "Bonsoir"
-    },
     "actions": {
       "scan_card": "Scanner la carte",
       "send_campaign": "Envoyer une campagne"
     },
-    "needs_attention": "Demande votre attention",
     "all_clear": "Tout est en ordre.",
     "all_clear_sub": "Rien ne vous attend pour le moment.",
     "alerts": {
@@ -467,7 +461,9 @@
       "services": "Services",
       "none_today": "Aucun aujourd'hui.",
       "with": "avec {{name}}",
-      "more": "{{count}} de plus"
+      "more": "{{count}} de plus",
+      "guest": "Client",
+      "events": "{{count}} événements"
     },
     "kpis": {
       "active_members": "Membres actifs",
@@ -479,20 +475,154 @@
       "pipeline": "Pipeline",
       "open_count": "{{count}} ouverts"
     },
-    "quick_access": "Accès rapide",
-    "quick": {
-      "members": "Membres",
-      "bookings": "Réservations",
-      "calendar": "Calendrier",
-      "services": "Services",
-      "inbox": "Messagerie",
-      "offers": "Offres",
-      "analytics": "Analyses",
-      "ai_insights": "Insights IA"
-    },
     "recent_activity": "Activité récente",
     "view_all": "Tout voir",
-    "no_activity": "Aucune activité récente."
+    "no_activity": "Aucune activité récente.",
+    "apps": {
+      "title": "Vos espaces de travail",
+      "loyalty_line": "Membres, points, récompenses et campagnes",
+      "appointments_line": "Le calendrier, les clients et les recettes",
+      "crm_line": "Chat du site, prospects et pipeline",
+      "content_line": "Publications planifiées et écrites avec l’IA",
+      "time_line": "La journée de l’équipe, planifiée avec l’IA"
+    },
+    "chart": {
+      "title": "Jour après jour",
+      "sub": "{{from}} – {{to}}",
+      "revenue": "Chiffre d’affaires",
+      "bookings": "Réservations",
+      "points": "Points",
+      "leads": "Prospects et chats",
+      "leads_line": "Prospects",
+      "chats": "Chats",
+      "stays": "Séjours",
+      "services": "Prestations",
+      "appointments": "Rendez-vous",
+      "earned": "Gagnés",
+      "redeemed": "Échangés",
+      "empty": "Rien sur ces jours pour l’instant."
+    },
+    "customize": {
+      "button": "Personnaliser",
+      "title": "Personnaliser votre tableau de bord",
+      "sub": "Affichez, masquez et ordonnez les widgets. Gardé dans ce navigateur pour vous.",
+      "reset": "Réinitialiser",
+      "close": "Fermer",
+      "up": "Monter {{name}}",
+      "down": "Descendre {{name}}",
+      "none": "Tous les widgets sont masqués. « Personnaliser » les fait revenir."
+    },
+    "hero": {
+      "label": "En ce moment sur place",
+      "morning": "Bonjour",
+      "afternoon": "Bon après-midi",
+      "evening": "Bonsoir",
+      "night": "Bonne nuit",
+      "hello_name": "{{greeting}}, {{name}}",
+      "place_time": "{{place}} · heure locale ({{zone}})",
+      "zone_time": "Heure locale ({{zone}})",
+      "local_time": "Heure locale",
+      "feels_like": "Ressenti {{temp}}",
+      "high_low": "Max {{max}} Min {{min}}",
+      "humidity": "{{value}} % d’humidité",
+      "next_hours": "Les prochaines heures",
+      "now": "Maint.",
+      "sun": "Lever du soleil {{rise}}, coucher {{set}}",
+      "no_place": "Ajoutez votre ville à un site pour voir la météo ici.",
+      "add_city": "Ajouter une ville",
+      "no_place_staff": "La météo s’affiche ici dès qu’un site a sa ville.",
+      "no_weather": "La météo n’est pas disponible pour le moment."
+    },
+    "kpi": {
+      "title": "Les {{days}} derniers jours",
+      "was": "avant {{value}}",
+      "new": "Nouveau",
+      "revenue": "Chiffre d’affaires",
+      "revenue_sub": "Séjours et prestations",
+      "bookings": "Réservations",
+      "bookings_sub": "Séjours réservés",
+      "services": "Rendez-vous",
+      "services_sub": "Au calendrier",
+      "members": "Nouveaux membres",
+      "members_sub": "Inscrits",
+      "points": "Points gagnés",
+      "points_sub": "Par les membres",
+      "leads": "Nouveaux prospects",
+      "leads_sub": "Demandes reçues",
+      "chats": "Chats du site",
+      "chats_sub": "Conversations"
+    },
+    "live": {
+      "title": "En direct",
+      "sub": "Actualisé toutes les 30 secondes",
+      "online": "{{count}} sur le site en ce moment",
+      "online_one": "{{count}} sur le site en ce moment",
+      "online_other": "{{count}} sur le site en ce moment"
+    },
+    "live_label": "En direct",
+    "loyalty": {
+      "title": "Membres et niveaux",
+      "birthdays": "Anniversaires du jour",
+      "no_birthdays": "Aucun anniversaire aujourd’hui.",
+      "close": "Proches du niveau suivant",
+      "to_go": "{{points}} pts avant {{tier}}",
+      "sub": "{{count}} membres actifs",
+      "sub_one": "{{count}} membre actif",
+      "sub_other": "{{count}} membres actifs"
+    },
+    "period": {
+      "label": "Période",
+      "days": "{{count}} j",
+      "days_one": "{{count}} j",
+      "days_other": "{{count}} j"
+    },
+    "pipeline": {
+      "title": "Pipeline",
+      "value": "Valeur",
+      "empty": "Pas encore de prospects.",
+      "sub": "{{count}} prospects par étape",
+      "sub_one": "{{count}} prospect par étape",
+      "sub_other": "{{count}} prospects par étape"
+    },
+    "tasks": {
+      "title": "Relances à faire",
+      "sub": "Les trois prochains jours",
+      "empty": "Rien à faire dans les trois prochains jours.",
+      "late": "En retard",
+      "today": "Aujourd’hui",
+      "overdue": "{{count}} en retard",
+      "overdue_one": "{{count}} en retard",
+      "overdue_other": "{{count}} en retard"
+    },
+    "widgets": {
+      "now": "Heure et météo",
+      "live": "En direct",
+      "kpis": "Chiffres clés",
+      "trend": "Graphique principal",
+      "pipeline": "Pipeline",
+      "schedule": "Programme du jour",
+      "loyalty": "Membres et niveaux",
+      "workspaces": "Vos espaces de travail",
+      "tasks": "Relances à faire",
+      "activity": "Activité récente"
+    },
+    "weather": {
+      "clear": "Ciel dégagé",
+      "mainly_clear": "Plutôt dégagé",
+      "partly_cloudy": "Partiellement nuageux",
+      "overcast": "Couvert",
+      "fog": "Brouillard",
+      "drizzle": "Bruine",
+      "freezing_drizzle": "Bruine verglaçante",
+      "rain": "Pluie",
+      "freezing_rain": "Pluie verglaçante",
+      "snow": "Neige",
+      "showers": "Averses",
+      "snow_showers": "Averses de neige",
+      "thunderstorm": "Orage",
+      "thunder_hail": "Orage avec grêle",
+      "unknown": "Météo"
+    }
   },
   "notifications": {
     "title": "Campagnes de notification",

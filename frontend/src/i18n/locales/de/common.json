@@ -437,16 +437,10 @@
   },
   "dashboard": {
     "title": "Übersicht",
-    "greeting": {
-      "morning": "Guten Morgen",
-      "afternoon": "Guten Tag",
-      "evening": "Guten Abend"
-    },
     "actions": {
       "scan_card": "Karte scannen",
       "send_campaign": "Kampagne senden"
     },
-    "needs_attention": "Benötigt Ihre Aufmerksamkeit",
     "all_clear": "Alles klar.",
     "all_clear_sub": "Im Moment wartet nichts auf Sie.",
     "alerts": {
@@ -467,7 +461,9 @@
       "services": "Dienstleistungen",
       "none_today": "Heute keine.",
       "with": "bei {{name}}",
-      "more": "{{count}} weitere"
+      "more": "{{count}} weitere",
+      "guest": "Gast",
+      "events": "{{count}} Ereignisse"
     },
     "kpis": {
       "active_members": "Aktive Mitglieder",
@@ -479,20 +475,154 @@
       "pipeline": "Pipeline",
       "open_count": "{{count}} offen"
     },
-    "quick_access": "Schnellzugriff",
-    "quick": {
-      "members": "Mitglieder",
-      "bookings": "Buchungen",
-      "calendar": "Kalender",
-      "services": "Dienste",
-      "inbox": "Posteingang",
-      "offers": "Angebote",
-      "analytics": "Analyse",
-      "ai_insights": "KI-Insights"
-    },
     "recent_activity": "Letzte Aktivität",
     "view_all": "Alle anzeigen",
-    "no_activity": "Noch keine aktuelle Aktivität."
+    "no_activity": "Noch keine aktuelle Aktivität.",
+    "apps": {
+      "title": "Ihre Arbeitsbereiche",
+      "loyalty_line": "Mitglieder, Punkte, Prämien und Kampagnen",
+      "appointments_line": "Kalender, Kunden und Einnahmen",
+      "crm_line": "Website-Chat, Leads und die Pipeline",
+      "content_line": "Beiträge, mit KI geplant und geschrieben",
+      "time_line": "Der Tag des Teams, mit KI geplant"
+    },
+    "chart": {
+      "title": "Tag für Tag",
+      "sub": "{{from}} – {{to}}",
+      "revenue": "Umsatz",
+      "bookings": "Buchungen",
+      "points": "Punkte",
+      "leads": "Leads & Chats",
+      "leads_line": "Leads",
+      "chats": "Chats",
+      "stays": "Aufenthalte",
+      "services": "Leistungen",
+      "appointments": "Termine",
+      "earned": "Gesammelt",
+      "redeemed": "Eingelöst",
+      "empty": "In diesen Tagen noch nichts."
+    },
+    "customize": {
+      "button": "Anpassen",
+      "title": "Dashboard anpassen",
+      "sub": "Widgets ein- und ausblenden und ordnen. Für Sie in diesem Browser gespeichert.",
+      "reset": "Zurücksetzen",
+      "close": "Schließen",
+      "up": "{{name}} nach oben",
+      "down": "{{name}} nach unten",
+      "none": "Alle Widgets sind ausgeblendet. „Anpassen“ holt sie zurück."
+    },
+    "hero": {
+      "label": "Jetzt vor Ort",
+      "morning": "Guten Morgen",
+      "afternoon": "Guten Tag",
+      "evening": "Guten Abend",
+      "night": "Gute Nacht",
+      "hello_name": "{{greeting}}, {{name}}",
+      "place_time": "{{place}} · Ortszeit ({{zone}})",
+      "zone_time": "Ortszeit ({{zone}})",
+      "local_time": "Ortszeit",
+      "feels_like": "Gefühlt {{temp}}",
+      "high_low": "H {{max}} T {{min}}",
+      "humidity": "{{value}} % Luftfeuchte",
+      "next_hours": "Die nächsten Stunden",
+      "now": "Jetzt",
+      "sun": "Sonnenaufgang {{rise}}, Sonnenuntergang {{set}}",
+      "no_place": "Tragen Sie bei einem Standort die Stadt ein, um hier das Wetter zu sehen.",
+      "add_city": "Stadt eintragen",
+      "no_place_staff": "Das Wetter erscheint hier, sobald ein Standort seine Stadt hat.",
+      "no_weather": "Das Wetter ist gerade nicht verfügbar."
+    },
+    "kpi": {
+      "title": "Die letzten {{days}} Tage",
+      "was": "vorher {{value}}",
+      "new": "Neu",
+      "revenue": "Umsatz",
+      "revenue_sub": "Aufenthalte und Leistungen",
+      "bookings": "Buchungen",
+      "bookings_sub": "Gebuchte Aufenthalte",
+      "services": "Termine",
+      "services_sub": "Im Kalender",
+      "members": "Neue Mitglieder",
+      "members_sub": "Beigetreten",
+      "points": "Gesammelte Punkte",
+      "points_sub": "Von Mitgliedern",
+      "leads": "Neue Leads",
+      "leads_sub": "Eingegangene Anfragen",
+      "chats": "Website-Chats",
+      "chats_sub": "Gespräche"
+    },
+    "live": {
+      "title": "Jetzt live",
+      "sub": "Aktualisiert alle 30 Sekunden",
+      "online": "{{count}} jetzt auf der Website",
+      "online_one": "{{count}} jetzt auf der Website",
+      "online_other": "{{count}} jetzt auf der Website"
+    },
+    "live_label": "Live",
+    "loyalty": {
+      "title": "Mitglieder & Stufen",
+      "birthdays": "Geburtstage heute",
+      "no_birthdays": "Heute keine Geburtstage.",
+      "close": "Kurz vor der nächsten Stufe",
+      "to_go": "noch {{points}} Pkt. bis {{tier}}",
+      "sub": "{{count}} aktive Mitglieder",
+      "sub_one": "{{count}} aktives Mitglied",
+      "sub_other": "{{count}} aktive Mitglieder"
+    },
+    "period": {
+      "label": "Zeitraum",
+      "days": "{{count}} T.",
+      "days_one": "{{count}} T.",
+      "days_other": "{{count}} T."
+    },
+    "pipeline": {
+      "title": "Pipeline",
+      "value": "Wert",
+      "empty": "Noch keine Leads.",
+      "sub": "{{count}} Leads nach Phase",
+      "sub_one": "{{count}} Lead nach Phase",
+      "sub_other": "{{count}} Leads nach Phase"
+    },
+    "tasks": {
+      "title": "Fällige Nachfassaktionen",
+      "sub": "Die nächsten drei Tage",
+      "empty": "In den nächsten drei Tagen ist nichts fällig.",
+      "late": "Überfällig",
+      "today": "Heute",
+      "overdue": "{{count}} überfällig",
+      "overdue_one": "{{count}} überfällig",
+      "overdue_other": "{{count}} überfällig"
+    },
+    "widgets": {
+      "now": "Uhr & Wetter",
+      "live": "Jetzt live",
+      "kpis": "Kennzahlen",
+      "trend": "Hauptdiagramm",
+      "pipeline": "Pipeline",
+      "schedule": "Heutiger Ablauf",
+      "loyalty": "Mitglieder & Stufen",
+      "workspaces": "Ihre Arbeitsbereiche",
+      "tasks": "Fällige Nachfassaktionen",
+      "activity": "Letzte Aktivitäten"
+    },
+    "weather": {
+      "clear": "Klarer Himmel",
+      "mainly_clear": "Überwiegend klar",
+      "partly_cloudy": "Teilweise bewölkt",
+      "overcast": "Bedeckt",
+      "fog": "Nebel",
+      "drizzle": "Nieselregen",
+      "freezing_drizzle": "Gefrierender Nieselregen",
+      "rain": "Regen",
+      "freezing_rain": "Gefrierender Regen",
+      "snow": "Schnee",
+      "showers": "Regenschauer",
+      "snow_showers": "Schneeschauer",
+      "thunderstorm": "Gewitter",
+      "thunder_hail": "Gewitter mit Hagel",
+      "unknown": "Wetter"
+    }
   },
   "notifications": {
     "title": "Benachrichtigungskampagnen",

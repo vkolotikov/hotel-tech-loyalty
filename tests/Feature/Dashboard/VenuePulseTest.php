@@ -82,6 +82,7 @@ class VenuePulseTest extends TestCase
             ->assertJsonPath('timezone', 'Europe/Riga')
             ->assertJsonPath('today', '2026-11-04')
             ->assertJsonPath('now', '2026-11-04T12:00:00+02:00')
+            ->assertJsonPath('currency', 'EUR')
             ->assertJsonPath('place.name', 'Jūrmala')
             ->assertJsonPath('place.source', 'location')
             // "Latvia" is not a code: the organisation's own country stands in.

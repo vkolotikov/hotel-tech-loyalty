@@ -5,6 +5,7 @@ namespace App\Services\Dashboard;
 use App\Models\Organization;
 use App\Models\Property;
 use App\Services\Portal\AppointmentClock;
+use App\Services\Portal\PortalBootstrap;
 use App\Support\SharedCache;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Http;
@@ -15,7 +16,8 @@ use Illuminate\Support\Facades\Log;
  * place the venue is in, and that place's weather — reads only, the same answer for the full admin and each workspace.
  *
  * - The zone is the venue's own (`AppointmentClock::zoneFor()`, i.e. `PortalBootstrap::timezone()`), never the
- *   browser's: a manager abroad still sees the venue's day.
+ *   browser's: a manager abroad still sees the venue's day. The currency is the venue's too
+ *   (`PortalBootstrap::currency()`, as the workspaces read it), so a dashboard's money reads in it.
  * - The place is the first location (`properties`) with a city — active ones first, then the oldest; otherwise the
  *   city a named zone carries (`Europe/Riga` → Riga). Nothing else is guessed: UTC names no place, so no weather.
  * - The weather is Open-Meteo's (no key, no personal data: only the city's name and coordinates leave the server).
@@ -35,7 +37,7 @@ final class VenuePulse
     private const FAILURE_TTL = 300;     // 5 minutes
 
     /**
-     * @return array{timezone: string, now: string, today: string, place: array{name: string, country: ?string, source: string}|null, weather: array<string, mixed>|null}
+     * @return array{timezone: string, now: string, today: string, currency: string, place: array{name: string, country: ?string, source: string}|null, weather: array<string, mixed>|null}
      */
     public function for(Organization $org): array
     {
@@ -47,6 +49,8 @@ final class VenuePulse
             'timezone' => $zone,
             'now' => $now->toIso8601String(),
             'today' => $now->format('Y-m-d'),
+            // The venue's currency, as the workspaces read it, so a dashboard's money reads in it.
+            'currency' => PortalBootstrap::currency($org),
             'place' => $place,
             'weather' => $place !== null && config('services.weather.enabled', true) ? $this->weather($place, $zone, $now) : null,
         ];
