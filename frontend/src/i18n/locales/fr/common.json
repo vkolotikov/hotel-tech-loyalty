@@ -117,6 +117,7 @@
       "appointments_workspace_open": "Ouvrir dans HexaTech Appointments",
       "content_workspace": "HexaTech Content",
       "crm_workspace": "HexaTech CRM",
+      "time_workspace": "HexaTech Time Planner",
       "loyalty_workspace": "HexaTech Loyalty",
       "landing_featured_reviews": "Avis mis en avant"
     }
@@ -345,7 +346,11 @@
         "sign_ins": "{{n}} accès pour le personnel",
         "crm_chat": "Un chat IA pour votre site qui répond à partir de vos informations",
         "crm_core": "Messagerie en direct, visiteurs, prospects, pipeline et tâches",
-        "crm_ai_base": "Un crédit IA mensuel pour l'assistant et les brouillons de réponse"
+        "crm_ai_base": "Un crédit IA mensuel pour l'assistant et les brouillons de réponse",
+        "time_core": "Planning du jour et de la semaine pour toute l’équipe, backlog et pool ouvert",
+        "time_ai": "L’IA planifie chaque journée selon les compétences, les horaires et l’expérience",
+        "time_capture": "Tâches depuis un message ou une note vocale, analyses et statistiques",
+        "time_ai_base": "Un crédit IA mensuel pour les plannings, analyses et saisies"
       },
       "signup": {
         "step": "Étape {{n}} sur {{total}}",
@@ -403,6 +408,18 @@
         "register_title": "Commencer votre essai d'HexaTech CRM",
         "trial_banner": "Votre essai comprend tout HexaTech CRM.",
         "tab_title": "HexaTech CRM — Connexion"
+      },
+      "time": {
+        "badge": "Planning IA pour la journée de votre équipe",
+        "hero": "Chaque journée planifiée. Personne de surchargé.",
+        "hero_sub": "Un planning pour toute l’équipe : l’IA adapte chaque journée aux compétences, aux horaires et à l’expérience de chacun, saisit les tâches depuis un message ou une note vocale et montre où passe vraiment le temps.",
+        "bullet_1": "Planifiez la journée ou la semaine par personne, par glisser-déposer",
+        "bullet_2": "L’IA planifie, analyse et saisit les tâches, même à la voix",
+        "bullet_3": "Tous planifient pour l’équipe, ou chacun sa journée : à vous de choisir",
+        "login_subtitle": "Connexion à HexaTech Time Planner",
+        "register_title": "Commencez votre essai de HexaTech Time Planner",
+        "trial_banner": "Votre essai comprend tout HexaTech Time Planner.",
+        "tab_title": "HexaTech Time Planner — Connexion"
       }
     }
   },
@@ -3578,7 +3595,8 @@
         "appointments": "Agenda, réservation en ligne et fiches clients",
         "loyalty": "Points, niveaux, récompenses, une application membre et des campagnes",
         "content": "Planificateur IA pour les réseaux sociaux : idées, légendes, images et calendrier",
-        "crm": "Chat IA pour site web, messagerie en direct, prospects, pipeline et tâches"
+        "crm": "Chat IA pour site web, messagerie en direct, prospects, pipeline et tâches",
+        "time": "Planning IA de la journée pour l’équipe : plannings, analyses, saisie vocale"
       },
       "over_limit_team": "Cette formule permet {{limit}} membres d’équipe et vous en avez {{count}} actifs. Choisissez une formule plus grande, ou désactivez-en d’abord.",
       "over_limit_members": "Cette formule permet {{limit}} membres et vous en avez {{count}}. Choisissez une formule plus grande.",

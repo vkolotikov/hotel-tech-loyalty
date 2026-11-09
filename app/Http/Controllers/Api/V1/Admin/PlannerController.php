@@ -7,12 +7,19 @@ use App\Models\PlannerDayNote;
 use App\Models\PlannerSubtask;
 use App\Models\PlannerTask;
 use App\Models\PlannerTemplate;
+use App\Services\Time\PlanningMode;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
+/**
+ * The staff Planner's endpoints, shared by the full admin's Planner page and HexaTech Time Planner. Who may put work on
+ * whose day is the organisation's planning mode (PlanningMode, 2026-11-09): in `team` mode anyone's, in `own` mode a
+ * staff member changes only their own and unassigned tasks and assigns only to themselves (managers always may); every
+ * writer below asks it before it writes.
+ */
 class PlannerController extends Controller
 {
     /** Hard cap on how many child tasks a recurring series can spawn. */
@@ -73,6 +80,7 @@ class PlannerController extends Controller
             'pool_due_date'        => 'nullable|date|required_if:pool_horizon,day',
         ]);
 
+        PlanningMode::assertMayAssign($request->user(), $validated['assigned_to_user_id'] ?? null, $validated['employee_name'] ?? null);
         $validated['status'] = $validated['status'] ?? 'todo';
 
         // Normalise recurring=none → null so the column stays clean.
@@ -135,6 +143,7 @@ class PlannerController extends Controller
             'pool_due_date'        => 'nullable|date|required_if:pool_horizon,day',
         ]);
 
+        PlanningMode::assertMayUpdate($request->user(), $taskModel, $validated);
         $validated = $this->normalisePoolHorizon($validated);
 
         $taskModel->update($validated);
@@ -163,21 +172,25 @@ class PlannerController extends Controller
     public function destroyTask(Request $request, int $task): JsonResponse
     {
         $taskModel = $this->resolveTask($task);
+        $user = $request->user();
+        PlanningMode::assertMayChange($user, $taskModel);
+        $others = PlanningMode::mayPlanOthers($user);
         $scope = $request->get('scope', 'just_this'); // just_this | all_future | whole_series
 
         if ($scope === 'all_future' && ($taskModel->recurring_parent_id || $taskModel->recurring)) {
             $parentId = $taskModel->recurring_parent_id ?? $taskModel->id;
-            PlannerTask::where('id', $parentId)
-                ->orWhere('recurring_parent_id', $parentId)
-                ->where('task_date', '>=', $taskModel->task_date)
+            // Grouped as before (the parent, or a later occurrence); in `own` mode only the occurrences this person may change.
+            PlannerTask::where(fn ($q) => $q->where('id', $parentId)
+                ->orWhere(fn ($r) => $r->where('recurring_parent_id', $parentId)->where('task_date', '>=', $taskModel->task_date)))
+                ->when(!$others, fn ($q) => PlanningMode::onlyChangeable($q, $user))
                 ->delete();
             return response()->json(['message' => 'Future occurrences deleted']);
         }
 
         if ($scope === 'whole_series' && ($taskModel->recurring_parent_id || $taskModel->recurring)) {
             $parentId = $taskModel->recurring_parent_id ?? $taskModel->id;
-            PlannerTask::where('id', $parentId)
-                ->orWhere('recurring_parent_id', $parentId)
+            PlannerTask::where(fn ($q) => $q->where('id', $parentId)->orWhere('recurring_parent_id', $parentId))
+                ->when(!$others, fn ($q) => PlanningMode::onlyChangeable($q, $user))
                 ->delete();
             return response()->json(['message' => 'Whole series deleted']);
         }
@@ -198,6 +211,8 @@ class PlannerController extends Controller
             'assigned_to_user_id'  => ['nullable','integer', Rule::exists('users','id')->where('organization_id', $request->user()->organization_id)],
             'start_time'           => 'nullable|date_format:H:i',
         ]);
+
+        PlanningMode::assertMayUpdate($request->user(), $taskModel, $validated);
 
         // When unscheduling (task_date=null), also clear start_time —
         // a backlog task with a leftover start_time would re-render at a
@@ -431,13 +446,16 @@ class PlannerController extends Controller
         // replicate() doesn't copy timestamps. We exclude completed +
         // recurring fields so a duplicate isn't accidentally part of
         // the original recurring series.
-        $copy = $taskModel->replicate(['completed', 'recurring', 'recurring_until', 'recurring_parent_id']);
+        // The tracked time is the original's (HexaTech Time Planner, 2026-11-09): a copy starts untimed.
+        $copy = $taskModel->replicate(['completed', 'recurring', 'recurring_until', 'recurring_parent_id', 'started_at', 'actual_minutes']);
         $copy->task_date     = $validated['task_date'];
         $copy->employee_name = $validated['employee_name'] ?? $taskModel->employee_name;
         if (array_key_exists('assigned_to_user_id', $validated)) {
             $copy->assigned_to_user_id = $validated['assigned_to_user_id'];
         }
         $copy->completed = false;
+        // The copy is new work on someone's day: in `own` mode only on the person's own, or nobody's.
+        PlanningMode::assertMayAssign($request->user(), $copy->assigned_to_user_id, $copy->employee_name);
         $copy->save();
 
         foreach ($taskModel->subtasks as $sub) {
@@ -451,9 +469,10 @@ class PlannerController extends Controller
         return response()->json($copy->load('subtasks'), 201);
     }
 
-    public function toggleComplete(int $task): JsonResponse
+    public function toggleComplete(Request $request, int $task): JsonResponse
     {
         $taskModel = $this->resolveTask($task);
+        PlanningMode::assertMayChange($request->user(), $taskModel);
         $newCompleted = !$taskModel->completed;
         $taskModel->update([
             'completed' => $newCompleted,
@@ -468,6 +487,7 @@ class PlannerController extends Controller
         $validated = $request->validate([
             'status' => 'required|string|in:todo,in_progress,blocked,done',
         ]);
+        PlanningMode::assertMayChange($request->user(), $taskModel);
         $taskModel->update([
             'status'    => $validated['status'],
             'completed' => $validated['status'] === 'done',
@@ -492,11 +512,21 @@ class PlannerController extends Controller
             'value'  => 'nullable|string|max:200',
         ]);
 
+        $user = $request->user();
+        if ($validated['action'] === 'reassign_employee') {
+            PlanningMode::assertMayAssign($user, null, $validated['value'] ?? null);
+        }
+        $others = PlanningMode::mayPlanOthers($user);
+
         $count = 0;
-        DB::transaction(function () use ($validated, &$count) {
+        DB::transaction(function () use ($validated, $user, $others, &$count) {
             foreach ($validated['ids'] as $id) {
                 $t = PlannerTask::lockForUpdate()->find($id);
                 if (!$t) continue;
+                // `own` mode: one task that is someone else's refuses the whole action (the transaction rolls back).
+                if (!$others) {
+                    PlanningMode::assertMayChange($user, $t);
+                }
 
                 $patch = match ($validated['action']) {
                     'mark_done'         => ['completed' => true,  'status' => 'done'],
@@ -529,6 +559,7 @@ class PlannerController extends Controller
     public function storeSubtask(Request $request, int $task): JsonResponse
     {
         $taskModel = $this->resolveTask($task);
+        PlanningMode::assertMayChange($request->user(), $taskModel);
         $validated = $request->validate(['title' => 'required|string|max:200']);
         $subtask = PlannerSubtask::create([
             'task_id'    => $taskModel->id,
@@ -538,18 +569,29 @@ class PlannerController extends Controller
         return response()->json($subtask, 201);
     }
 
-    public function toggleSubtask(int $subtask): JsonResponse
+    public function toggleSubtask(Request $request, int $subtask): JsonResponse
     {
         $subtaskModel = $this->resolveSubtask($subtask);
+        $this->assertMayChangeParent($request, $subtaskModel);
         $subtaskModel->update(['is_done' => !$subtaskModel->is_done]);
         return response()->json($subtaskModel);
     }
 
-    public function destroySubtask(int $subtask): JsonResponse
+    public function destroySubtask(Request $request, int $subtask): JsonResponse
     {
         $subtaskModel = $this->resolveSubtask($subtask);
+        $this->assertMayChangeParent($request, $subtaskModel);
         $subtaskModel->delete();
         return response()->json(['message' => 'Subtask deleted']);
+    }
+
+    /** A subtask is changed as its task is (PlanningMode). */
+    private function assertMayChangeParent(Request $request, PlannerSubtask $subtask): void
+    {
+        $parent = PlannerTask::find($subtask->task_id);
+        if ($parent) {
+            PlanningMode::assertMayChange($request->user(), $parent);
+        }
     }
 
     /* ─── Day notes ────────────────────────────────────────────── */
@@ -1043,11 +1085,13 @@ class PlannerController extends Controller
 
         $applied = 0;
         $skipped = 0;
+        $user = $request->user();
 
-        DB::transaction(function () use ($data, &$applied, &$skipped) {
+        DB::transaction(function () use ($data, $user, &$applied, &$skipped) {
             foreach ($data['proposals'] as $p) {
                 $task = PlannerTask::find($p['task_id']);
-                if (!$task || $task->start_time !== null) {
+                // In `own` mode a colleague's task is skipped, as one scheduled meanwhile is.
+                if (!$task || $task->start_time !== null || !PlanningMode::mayChange($user, $task)) {
                     // Task vanished, or someone scheduled it
                     // between preview + apply.
                     $skipped++;
@@ -1067,105 +1111,20 @@ class PlannerController extends Controller
 
     private function hhmmToMin(string $hhmm): int
     {
-        [$h, $m] = array_pad(explode(':', $hhmm), 2, '0');
-        return ((int) $h) * 60 + ((int) $m);
+        return \App\Services\Time\WorkWindow::toMinutes($hhmm);
     }
 
     /**
-     * Industry Platform Plan Phase 5 — resolve the day's work window.
-     *
-     * Precedence:
-     *   1. Explicit request payload (`work_start` / `work_end` HH:MM)
-     *      — preserves the existing API contract.
-     *   2. Org's `crm_settings.business_hours_profile` row — set by the
-     *      Phase 5 backfill migration to `{start:'09:00', end:'18:00'}`
-     *      for every existing org (no silent retiming) and re-written
-     *      by future per-industry default seeders (Phase 5.x for the
-     *      taxonomy + admin UI).
-     *   3. Hardcoded `09:00` / `18:00` fallback — same as before this
-     *      helper existed; only reachable if both the request and the
-     *      crm_settings row are missing or malformed.
-     *
-     * **Forward-compat contract**: business_hours_profile rows MUST
-     * always carry top-level `start` + `end` HH:MM strings, even when
-     * future per-DOW schedules (Tue-Sat) or lunch breaks are added as
-     * sibling keys. These top-level values act as the simple-fallback
-     * window for callers that don't yet understand richer schedules.
-     * The auto-planner / free-slots / suggest-staff endpoints read
-     * these flat keys ONLY today.
-     *
-     * **Tenant binding required**. CrmSetting uses
-     * `BelongsToOrganization` — `current_organization_id` MUST be
-     * bound by tenant middleware before this helper runs. Callers
-     * outside the HTTP request lifecycle (artisan commands, queue
-     * workers) get the explicit-payload-or-hardcoded path so a
-     * console misconfiguration can't silently retime the planner.
+     * The day's work window: the request's `work_start` / `work_end`, else the organisation's
+     * `crm_settings.business_hours_profile`, else 09:00 / 18:00. The rule lives in App\Services\Time\WorkWindow
+     * (2026-11-09), so HexaTech Time Planner reads the same one; see its docblock for the precedence and why a caller
+     * without a bound organisation skips the saved profile.
      *
      * @return array{start:int,end:int}  Minute offsets from 00:00.
      */
     private function resolveWorkWindow(array $data): array
     {
-        $hhmm = '/^\d{2}:\d{2}$/';
-
-        // Tier 1: explicit request payload wins. Already regex-validated
-        // by the parent endpoint's request->validate() — keep treating
-        // it as trusted.
-        $requestStart = $data['work_start'] ?? null;
-        $requestEnd   = $data['work_end']   ?? null;
-
-        // Short-circuit when tenant context is missing. Falling through
-        // to the CrmSetting query under TenantScope's fail-closed
-        // semantics would silently return the hardcoded 09:00/18:00
-        // window with no log signal — a CLI / queue / cron caller would
-        // mis-plan without anyone noticing. Skip straight to tier 3.
-        if (!app()->bound('current_organization_id') || !app('current_organization_id')) {
-            return [
-                'start' => $this->hhmmToMin($requestStart ?: '09:00'),
-                'end'   => $this->hhmmToMin($requestEnd   ?: '18:00'),
-            ];
-        }
-
-        // Tier 2: org's saved profile. JSON-cast row {start,end} read
-        // through the tenant-scoped CrmSetting model. Falls through if
-        // the row is missing, malformed, or has bad-format values.
-        $profileStart = null;
-        $profileEnd   = null;
-        try {
-            $row = \App\Models\CrmSetting::where('key', 'business_hours_profile')->first();
-            $val = $row?->value;
-            if (is_array($val)) {
-                $rawStart = is_string($val['start'] ?? null) ? $val['start'] : null;
-                $rawEnd   = is_string($val['end']   ?? null) ? $val['end']   : null;
-                // Re-validate HH:MM format. An admin who hand-edited
-                // their crm_settings row could leave '9' or '9:00 AM'
-                // — hhmmToMin would silently accept those, producing a
-                // wrong-but-plausible work window. Strict regex matches
-                // the per-request validator (apps/loyalty/backend/.../
-                // PlannerController.php $data['work_start'] regex).
-                $profileStart = ($rawStart !== null && preg_match($hhmm, $rawStart)) ? $rawStart : null;
-                $profileEnd   = ($rawEnd   !== null && preg_match($hhmm, $rawEnd))   ? $rawEnd   : null;
-
-                if (($rawStart !== null && $profileStart === null) || ($rawEnd !== null && $profileEnd === null)) {
-                    \Log::warning('planner.work_window.profile_malformed', [
-                        'org_id' => app('current_organization_id'),
-                        'value'  => $val,
-                    ]);
-                }
-            }
-        } catch (\Throwable $e) {
-            // CrmSetting query failed (table missing in a fresh test env,
-            // transient Postgres hiccup, schema drift). Log so the
-            // fall-through to the hardcoded default isn't silent.
-            \Log::warning('planner.work_window.profile_lookup_failed', [
-                'org_id' => app('current_organization_id'),
-                'error'  => $e->getMessage(),
-            ]);
-        }
-
-        return [
-            'start' => $this->hhmmToMin($requestStart ?: $profileStart ?: '09:00'),
-            'end'   => $this->hhmmToMin($requestEnd   ?: $profileEnd   ?: '18:00'),
-        ];
+        return \App\Services\Time\WorkWindow::resolve($data);
     }
 
     /**

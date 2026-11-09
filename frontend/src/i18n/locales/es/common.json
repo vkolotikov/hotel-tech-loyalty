@@ -117,6 +117,7 @@
       "appointments_workspace_open": "Abrir en HexaTech Appointments",
       "content_workspace": "HexaTech Content",
       "crm_workspace": "HexaTech CRM",
+      "time_workspace": "HexaTech Time Planner",
       "loyalty_workspace": "HexaTech Loyalty",
       "landing_featured_reviews": "Reseñas destacadas"
     }
@@ -345,7 +346,11 @@
         "sign_ins": "{{n}} accesos del personal",
         "crm_chat": "Un chat con IA para su web que responde con su información",
         "crm_core": "Bandeja en directo, visitantes, clientes potenciales, embudo y tareas",
-        "crm_ai_base": "Un saldo mensual de IA para el asistente y los borradores de respuesta"
+        "crm_ai_base": "Un saldo mensual de IA para el asistente y los borradores de respuesta",
+        "time_core": "Planificador del día y la semana para todo el equipo, pendientes y bolsa abierta",
+        "time_ai": "La IA planifica cada día según habilidades, horarios y experiencia",
+        "time_capture": "Tareas desde un mensaje o una nota de voz, revisiones y análisis",
+        "time_ai_base": "Una asignación mensual de IA para planes, revisiones y captura"
       },
       "signup": {
         "step": "Paso {{n}} de {{total}}",
@@ -403,6 +408,18 @@
         "register_title": "Comience su prueba de HexaTech CRM",
         "trial_banner": "Su prueba incluye todo HexaTech CRM.",
         "tab_title": "HexaTech CRM — Iniciar sesión"
+      },
+      "time": {
+        "badge": "Planificador con IA para el día de su equipo",
+        "hero": "Cada día planificado. Nadie sobrecargado.",
+        "hero_sub": "Un planificador para todo el equipo: la IA ajusta cada día a las habilidades, horarios y experiencia de cada persona, recoge tareas de un mensaje o una nota de voz y muestra adónde va realmente el tiempo.",
+        "bullet_1": "Planifique el día o la semana por persona, arrastrando y soltando",
+        "bullet_2": "La IA planifica, revisa y recoge tareas, incluso por voz",
+        "bullet_3": "Todos planifican para el equipo, o cada uno su día: usted elige",
+        "login_subtitle": "Inicie sesión en HexaTech Time Planner",
+        "register_title": "Comience su prueba de HexaTech Time Planner",
+        "trial_banner": "Su prueba incluye todo HexaTech Time Planner.",
+        "tab_title": "HexaTech Time Planner — Iniciar sesión"
       }
     }
   },
@@ -3578,7 +3595,8 @@
         "appointments": "Agenda, reservas en línea y fichas de clientes",
         "loyalty": "Puntos, niveles, recompensas, una app para socios y campañas",
         "content": "Planificador de redes sociales con IA: ideas, textos, imágenes y calendario",
-        "crm": "Chat con IA para su web, bandeja en directo, clientes potenciales, embudo y tareas"
+        "crm": "Chat con IA para su web, bandeja en directo, clientes potenciales, embudo y tareas",
+        "time": "Planificador del día con IA para el equipo: planes, revisiones, captura por voz"
       },
       "over_limit_team": "Este paquete permite {{limit}} miembros del equipo y usted tiene {{count}} activos. Elija un paquete mayor o desactive algunos primero.",
       "over_limit_members": "Este paquete permite {{limit}} socios y usted tiene {{count}}. Elija un paquete mayor.",

@@ -2,6 +2,7 @@ import { useId, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
+import { Info } from 'lucide-react'
 import { useBoot } from '../../LoyaltyProvider'
 import { OverviewButton } from '../../overview/OverviewUI'
 import { points } from '../../lib/format'
@@ -41,12 +42,23 @@ export function CampaignChannels({ tab }: { tab: CampaignTab }) {
   const n = (value: number) => points(value, i18n.language)
   const loading = t('loyalty.common.loading', 'Loading…')
   const cards = {
-    campaigns: { state: !boot.features.campaigns ? w('locked') : email.isError ? w('unavailable') : email.data ? w('included') : loading, hint: email.data && !email.isError ? w('campaignCount', { number: n(email.data.all_total ?? email.data.total) }) : w('channelNote') },
+    campaigns: { state: !boot.features.campaigns ? w('locked') : email.isError ? w('unavailable') : email.data ? w('platformEmail') : loading, hint: email.data && !email.isError ? w('campaignCount', { number: n(email.data.all_total ?? email.data.total) }) : w('channelNote') },
     segments: { state: segments.isError ? w('unavailable') : segments.data ? w('saved', { number: n(segments.data.segments.length) }) : loading, hint: w('groups') },
-    push: { state: !boot.features.push ? w('locked') : push.isError ? w('unavailable') : push.data ? w('included') : loading, hint: push.data && !push.isError ? w('campaignCount', { number: n(push.data.all_total ?? push.data.total) }) : w('channelNote') },
+    push: { state: !boot.features.push ? w('locked') : push.isError ? w('unavailable') : push.data ? w('appRequired') : loading, hint: push.data && !push.isError ? w('campaignCount', { number: n(push.data.all_total ?? push.data.total) }) : w('channelNote') },
     sms: { state: !boot.features.campaigns ? w('locked') : sms.isError ? w('unavailable') : sms.data ? w(sms.data.twilio.ready ? 'available' : 'setup') : loading, hint: sms.data?.twilio.ready && !sms.isError ? w('campaignCount', { number: n(sms.data.all_total ?? sms.data.total) }) : w('connect') },
   }
   return <nav className="l-cm-channels" aria-label={t('loyalty.campaigns.tabs', 'Campaigns areas')}>{CAMPAIGN_TABS.map(key => <Link key={key} to={{ pathname: '/loyalty/campaigns', search: searchFor(key) }} className="l-cm-channel" data-channel={key} aria-current={tab === key ? 'page' : undefined}><span>{key === 'campaigns' ? w('email') : key === 'push' ? w('push') : t(`loyalty.campaigns.tab.${key}`, TAB_WORDS[key])}</span><strong>{cards[key].state}</strong><small>{cards[key].hint}</small></Link>)}</nav>
+}
+
+export function ChannelRequirements({ tab }: { tab: CampaignTab }) {
+  const w = useCampaignWords(), boot = useBoot()
+  if (tab === 'segments' || !(tab === 'push' ? boot.features.push : boot.features.campaigns)) return null
+  return <aside className="l-cm-requirements" aria-label={w('deliverySetup')}>
+    <Info size={20} aria-hidden /><div><strong>{w(tab === 'campaigns' ? 'platformEmail' : tab === 'sms' ? 'ownTwilio' : 'appRequired')}</strong>
+      <p>{w(tab === 'campaigns' ? 'emailRequirements' : tab === 'sms' ? 'smsRequirements' : 'pushRequirements')}</p>
+      {tab === 'campaigns' && <details><summary>{w('customSenderHold')}</summary><p>{w('customSenderDetail')}</p></details>}
+    </div>
+  </aside>
 }
 
 export function CampaignFilters({ q, status, onChange }: { q: string; status: string; onChange: (q: string, status: string) => void }) {

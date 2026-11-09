@@ -40,6 +40,8 @@ const ContentRoutes = lazy(() => import('./content/ContentApp').then(m => ({ def
 const LoyaltyRoutes = lazy(() => import('./loyalty/LoyaltyApp').then(m => ({ default: m.LoyaltyApp })))
 // HexaTech CRM (2026-11-07): the AI chat widget, the inbox and the CRM as one workspace, the same way.
 const CrmRoutes = lazy(() => import('./crm/CrmApp').then(m => ({ default: m.CrmApp })))
+// HexaTech Time Planner (2026-11-09): the staff Planner with AI planning as a workspace, the same way.
+const TimeRoutes = lazy(() => import('./time/TimeApp').then(m => ({ default: m.TimeApp })))
 const WalletConfig = lazy(() => import('./pages/WalletConfig').then(m => ({ default: m.WalletConfig })))
 
 // Consolidated 4-hub pages. The legacy paths below redirect into
@@ -135,7 +137,7 @@ function AuthedFloatingAiChat() {
   const { hasFeature } = useSubscription()
   const { pathname } = useLocation()
   // A workspace is a focused product: the full admin's copilot stays out.
-  if (/^\/(appointments|content|loyalty|crm)(\/|$)/.test(pathname)) return null
+  if (/^\/(appointments|content|loyalty|crm|time)(\/|$)/.test(pathname)) return null
   if (!token) return null
   // Never in the member portal. This is the staff CRM copilot with 35+
   // admin tools behind it; a loyalty member has no business seeing the
@@ -293,6 +295,8 @@ export default function App() {
           <Route path="/loyalty/*" element={<ChunkErrorBoundary><Suspense fallback={<PageLoader />}><LoyaltyRoutes /></Suspense></ChunkErrorBoundary>} />
           {/* HexaTech CRM — same login, a fifth staff shell. */}
           <Route path="/crm/*" element={<ChunkErrorBoundary><Suspense fallback={<PageLoader />}><CrmRoutes /></Suspense></ChunkErrorBoundary>} />
+          {/* HexaTech Time Planner — same login, a sixth staff shell. */}
+          <Route path="/time/*" element={<ChunkErrorBoundary><Suspense fallback={<PageLoader />}><TimeRoutes /></Suspense></ChunkErrorBoundary>} />
 
           <Route path="/register" element={<Login />} />
           <Route path="/forgot-password" element={<Login />} />

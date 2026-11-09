@@ -11,7 +11,7 @@ import {
   ChevronLeft, ChevronRight, ChevronDown,
   BedDouble, CreditCard, Home, Package,
   UserCog, AlertTriangle, Scissors, CalendarDays,
-  Menu, X, MoreHorizontal, Lock, Link2, PenLine, Award, MessagesSquare,
+  Menu, X, MoreHorizontal, Lock, Link2, PenLine, Award, MessagesSquare, CalendarClock
 } from 'lucide-react'
 import { useAuthStore } from '../stores/authStore'
 import { GlobalSearch } from './GlobalSearch'
@@ -191,6 +191,9 @@ export const navGroups: NavGroup[] = [
     accent: '#22d3ee', // cyan
     items: [
       { path: '/planner',    labelKey: 'nav.items.planner',    defaultLabel: 'Planner',    icon: ClipboardList, gate: 'all',   feature: 'time_management' },
+      // The way into HexaTech Time Planner (2026-11-09: the Planner with AI planning as a workspace): everyone who may
+      // open it; locked like the Planner itself on a plan without time_management.
+      { path: '/time',       labelKey: 'nav.items.time_workspace', defaultLabel: 'HexaTech Time Planner', icon: CalendarClock, gate: 'all', feature: 'time_management', workspace: 'time' },
       { path: '/brands',     labelKey: 'nav.items.brands',     defaultLabel: 'Brands',     icon: Briefcase,     gate: 'admin', feature: 'brands' },
       { path: '/properties', labelKey: 'nav.items.properties', defaultLabel: 'Properties', icon: Building2,     gate: 'admin', altPaths: ['/venues'] },
       { path: '/scan',       labelKey: 'nav.items.scan',       defaultLabel: 'Scan',       icon: Scan,          gate: 'all' },

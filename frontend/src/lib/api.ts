@@ -113,7 +113,7 @@ api.interceptors.response.use(
         if (authSession.check(error.config?.authSessionVersion)) void logoutAndRedirect(ACCESS_OFF_LOGIN)
       })
     }
-    if (refusal === 'not_in_plan' && !/^\/(appointments|content|loyalty|crm|account)(\/|$)/.test(window.location.pathname)) {
+    if (refusal === 'not_in_plan' && !/^\/(appointments|content|loyalty|crm|time|account)(\/|$)/.test(window.location.pathname)) {
       import('../stores/authStore').then(async ({ useAuthStore }) => {
         if (!authSession.check(error.config?.authSessionVersion)) return
         const fresh: Record<string, unknown> | null = await api.get('/v1/auth/me').then(r => r.data ?? null, () => null)

@@ -57,11 +57,13 @@ renewal, visits, credit and point writers remain available. Place/Event context,
 come from the existing APIs; manual desk lookup is read-only. Five languages and both themes are supported.
 See `docs/loyalty-redesign/18-SCAN-REPORT.md` for design comparison, integration, tests and deployment evidence.
 
-Card & app redesign (28 October, deployed and live verified): `/loyalty/app` now uses the exact CA-01
-appearance editor and member preview, with server-backed palette saves, immediate logo upload and wallet
-readiness. Original `?tab=wallet|app|currency` routes and all advanced controls remain. Automatic app themes
-and anonymous test passes are explicitly unavailable; device testing opens an accurate guide. See
-`docs/loyalty-redesign/17-CARD-APP-REPORT.md` for design, integration, tests and the deployment record.
+Card & app availability (8 November): the member app and desktop designers are **On hold**, including the old
+`?tab=app` bookmark. The current native app uses portal venue accent/heading-face branding, not the separate
+mobile palette editor; the former Desktop view was illustrative. Wallet settings/uploads and currency remain
+available to authorised managers, with provider-account/approval requirements explained. Email and push cards
+state their setup dependencies; SMS retains per-organisation Twilio setup. Own sending-domain/SMTP connections
+are on hold. See `loyalty-redesign/28-DELIVERY-AND-APP-AVAILABILITY.md` for the audit and acceptance limits;
+`loyalty-redesign/17-CARD-APP-REPORT.md` describes the earlier design.
 
 Requests/Insights redesign (28 October, deployed and live verified): `/loyalty/requests` combines benefit
 requests, reward redemptions and referral activity through `GET requests/inbox`. Existing writers and legacy

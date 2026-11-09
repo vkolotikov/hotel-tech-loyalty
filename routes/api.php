@@ -1608,6 +1608,39 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
                     ->whereNumber('id')->middleware(['feature:chatbot', 'throttle:20,1,crm-draft']);
             });
 
+            // ─── HexaTech Time Planner workspace ────────────────────────────
+            // The full admin's staff Planner as its own workspace (2026-11-09), with the AI planning, review, capture
+            // and voice on top. Its own endpoints are here; tasks, the backlog, templates and day notes are the full
+            // admin's `planner/*` above, under their own rules. Sold on its own as the `time` module (2026-11-09), and
+            // every full customer has it unless an operator switched it off (`php artisan workspace:time <organisation
+            // id> --off`); like the full admin's Planner it needs the plan's `time_management`, which the Enterprise plan
+            // and every Time Planner package carry (the bootstrap answers either way, so the workspace can say so).
+            Route::prefix('time')->middleware('workspace:time')->group(function () {
+                Route::get('bootstrap', [\App\Http\Controllers\Api\V1\Admin\Time\WorkspaceController::class, 'bootstrap']);
+                Route::middleware('feature:time_management')->group(function () {
+                    Route::get('today', [\App\Http\Controllers\Api\V1\Admin\Time\WorkspaceController::class, 'today']);
+                    Route::get('day', [\App\Http\Controllers\Api\V1\Admin\Time\WorkspaceController::class, 'day']);
+                    Route::get('week', [\App\Http\Controllers\Api\V1\Admin\Time\WorkspaceController::class, 'week']);
+                    Route::get('backlog', [\App\Http\Controllers\Api\V1\Admin\Time\WorkspaceController::class, 'backlog']);
+                    Route::get('people', [\App\Http\Controllers\Api\V1\Admin\Time\WorkspaceController::class, 'people']);
+                    Route::put('people/{user}', [\App\Http\Controllers\Api\V1\Admin\Time\WorkspaceController::class, 'updatePerson'])->whereNumber('user');
+                    Route::get('insights', [\App\Http\Controllers\Api\V1\Admin\Time\WorkspaceController::class, 'insights']);
+                    // The planner's settings without the CRM's settings area (an organisation may have bought the Time Planner alone).
+                    Route::get('settings', [\App\Http\Controllers\Api\V1\Admin\Time\SettingsController::class, 'index']);
+                    Route::put('settings/{key}', [\App\Http\Controllers\Api\V1\Admin\Time\SettingsController::class, 'update'])->where('key', '[a-z_]+');
+                    Route::get('estimate', [\App\Http\Controllers\Api\V1\Admin\Time\WorkspaceController::class, 'estimate']);
+                    Route::post('tasks/{task}/start', [\App\Http\Controllers\Api\V1\Admin\Time\WorkspaceController::class, 'start'])->whereNumber('task');
+                    Route::post('tasks/{task}/pause', [\App\Http\Controllers\Api\V1\Admin\Time\WorkspaceController::class, 'pause'])->whereNumber('task');
+                    Route::post('tasks/{task}/finish', [\App\Http\Controllers\Api\V1\Admin\Time\WorkspaceController::class, 'finish'])->whereNumber('task');
+                    Route::post('plan/apply', [\App\Http\Controllers\Api\V1\Admin\Time\AiController::class, 'apply']);
+                    // Each AI endpoint counts in its own bucket (NestedThrottleBucketsTest).
+                    Route::post('plan', [\App\Http\Controllers\Api\V1\Admin\Time\AiController::class, 'plan'])->middleware('throttle:20,1,time-plan');
+                    Route::post('review', [\App\Http\Controllers\Api\V1\Admin\Time\AiController::class, 'review'])->middleware('throttle:20,1,time-review');
+                    Route::post('capture', [\App\Http\Controllers\Api\V1\Admin\Time\AiController::class, 'capture'])->middleware('throttle:20,1,time-capture');
+                    Route::post('transcribe', [\App\Http\Controllers\Api\V1\Admin\Time\AiController::class, 'transcribe'])->middleware('throttle:30,1,time-voice');
+                });
+            });
+
             // ─── Audit Logs ──────────────────────────────────────────────────
             Route::get('audit-logs',                      [AuditLogController::class, 'index']);
             Route::get('operations-status', \App\Http\Controllers\Api\V1\Admin\OperationsStatusController::class)->middleware('throttle:30,1,operations-status');
