@@ -1,9 +1,7 @@
 import type { TFunction } from 'i18next'
-import {
-  Building2, CalendarDays, ChevronRight, FileSignature, FileText, HelpCircle, ListChecks, Mail, MessageCircle,
-  MessageSquare, Phone, Sparkles, Video, type LucideIcon,
-} from 'lucide-react'
-import type { Bucket, DueState, Tab, TaskType } from './taskLogic'
+import { TASK_ICONS } from '../../lib/taskTypeIcons'
+import { splitMinutes, type DayPart, type Priority, type QuickDay, type Repeat, type TypeGroup } from '../../lib/taskForm'
+import type { Bucket, DueState, Tab } from './taskLogic'
 
 /** A task type's name, in the person's language. */
 export function taskTypeLabel(t: TFunction, type: string): string {
@@ -24,12 +22,8 @@ export function taskTypeLabel(t: TFunction, type: string): string {
   }
 }
 
-/** Each type's icon (looked up where it is drawn, a static map). */
-export const TASK_ICONS: Record<TaskType, LucideIcon> = {
-  call: Phone, email: Mail, whatsapp: MessageCircle, sms: MessageSquare, video_call: Video, meeting: CalendarDays,
-  site_visit: Building2, demo: Sparkles, send_proposal: FileText, contract: FileSignature, discovery: HelpCircle,
-  follow_up: ChevronRight, custom: ListChecks,
-}
+/** Each type's icon: one map with the full admin's task drawer (`src/lib/taskTypeIcons.ts`). */
+export { TASK_ICONS }
 
 /**
  * A lead's next step as a person reads it: `next_task_type` holds a task type's code when a task set it ("call",
@@ -74,7 +68,62 @@ export function taskProblem(t: TFunction, problem: string | undefined): string |
     case 'required': return t('crm.tasks.problem_required', 'Give the task a title.')
     case 'too_long': return t('crm.tasks.problem_too_long', 'This is too long.')
     case 'invalid': return t('crm.tasks.problem_invalid', 'This is not a valid date or time.')
-    case 'needs_date': return t('crm.tasks.problem_needs_date', 'Pick a day for this time.')
+    case 'needs_date': return t('crm.tasks.problem_needs_date', 'Pick a day first.')
+    case 'needs_time': return t('crm.tasks.problem_needs_time', 'Pick a start time first.')
     default: return undefined
+  }
+}
+
+/* ─── The task form's words (2026-11-09) ─────────────────────────────────── */
+
+/** A group of the type grid. */
+export function groupLabel(t: TFunction, group: TypeGroup): string {
+  switch (group) {
+    case 'talk': return t('crm.tasks.group_talk', 'Get in touch')
+    case 'meet': return t('crm.tasks.group_meet', 'Meet')
+    case 'sell': return t('crm.tasks.group_sell', 'Close the sale')
+    default: return t('crm.tasks.group_other', 'Other')
+  }
+}
+
+export function priorityLabel(t: TFunction, priority: Priority): string {
+  switch (priority) {
+    case 'low': return t('crm.tasks.priority_low', 'Low')
+    case 'high': return t('crm.tasks.priority_high', 'High')
+    default: return t('crm.tasks.priority_normal', 'Normal')
+  }
+}
+
+export function quickDayLabel(t: TFunction, key: QuickDay): string {
+  switch (key) {
+    case 'today': return t('crm.tasks.quick_today', 'Today')
+    case 'tomorrow': return t('crm.tasks.quick_tomorrow', 'Tomorrow')
+    case 'in_2_days': return t('crm.tasks.quick_in_2_days', 'In 2 days')
+    default: return t('crm.tasks.quick_next_monday', 'Next Monday')
+  }
+}
+
+export function partLabel(t: TFunction, part: DayPart): string {
+  switch (part) {
+    case 'morning': return t('crm.tasks.part_morning', 'Morning')
+    case 'afternoon': return t('crm.tasks.part_afternoon', 'Afternoon')
+    default: return t('crm.tasks.part_evening', 'Evening')
+  }
+}
+
+/** A length: "15 min", "1 h", "1 h 30". */
+export function lengthLabel(t: TFunction, total: number): string {
+  const { hours, minutes } = splitMinutes(total)
+  if (hours === 0) return t('crm.tasks.length_minutes', '{{count}} min', { count: minutes })
+  if (minutes === 0) return t('crm.tasks.length_hours', '{{count}} h', { count: hours })
+  return t('crm.tasks.length_hours_minutes', '{{hours}} h {{minutes}}', { hours, minutes })
+}
+
+export function repeatLabel(t: TFunction, repeat: Repeat): string {
+  switch (repeat) {
+    case 'daily': return t('crm.tasks.repeat_daily', 'Every day')
+    case 'weekly': return t('crm.tasks.repeat_weekly', 'Every week')
+    case 'monthly': return t('crm.tasks.repeat_monthly', 'Every month')
+    default: return t('crm.tasks.repeat_none', 'Does not repeat')
   }
 }
