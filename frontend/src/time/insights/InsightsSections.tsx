@@ -79,7 +79,10 @@ export function PeopleSection({ data }: { data: Insights }) {
                     <td className="px-3 py-2.5 text-right tabular-nums text-a-text">{pct(p.on_time_pct)}</td>
                     <td className="px-3 py-2.5">
                       <div className="flex items-center justify-between gap-2 text-xs text-a-text-2">
-                        <span className="tabular-nums">{t('time.insights.planned_of', '{{planned}} of {{capacity}}', { planned: hrs(p.planned_minutes), capacity: hrs(p.capacity_minutes) })}</span>
+                        <span className="tabular-nums">{p.capacity_minutes > 0
+                          ? t('time.insights.planned_of', '{{planned}} of {{capacity}}', { planned: hrs(p.planned_minutes), capacity: hrs(p.capacity_minutes) })
+                          // A name without an account has no known hours: its planned time alone, not "of 0 h".
+                          : t('time.insights.planned_only', '{{planned}} planned', { planned: hrs(p.planned_minutes) })}</span>
                         <span className="font-semibold tabular-nums text-a-text">{pct(p.load_pct)}</span>
                       </div>
                       <div className="mt-1"><LoadBar pct={p.load_pct} label={loadLabel(p)} /></div>
@@ -106,7 +109,9 @@ export function PeopleSection({ data }: { data: Insights }) {
                   <LoadBar pct={p.load_pct} label={loadLabel(p)} />
                   <span className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-a-text-2">
                     <span>{t('time.insights.card_tasks', '{{done}} of {{tasks}} done', { done: p.done, tasks: p.tasks })}</span>
-                    <span>{t('time.insights.card_planned', 'Planned {{planned}} of {{capacity}}', { planned: hrs(p.planned_minutes), capacity: hrs(p.capacity_minutes) })}</span>
+                    <span>{p.capacity_minutes > 0
+                      ? t('time.insights.card_planned', 'Planned {{planned}} of {{capacity}}', { planned: hrs(p.planned_minutes), capacity: hrs(p.capacity_minutes) })
+                      : t('time.insights.planned_only', '{{planned}} planned', { planned: hrs(p.planned_minutes) })}</span>
                     <span>{t('time.insights.card_finished', 'Finished {{pct}}', { pct: pct(p.completion_pct) })}</span>
                     <span>{t('time.insights.card_on_time', 'On time {{pct}}', { pct: pct(p.on_time_pct) })}</span>
                     <span>{t('time.insights.card_clocked', 'Clocked {{clocked}}', { clocked: hrs(p.tracked_minutes) })}</span>

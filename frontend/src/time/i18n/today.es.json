@@ -42,5 +42,6 @@
   "untimed_line": "Asígneles una hora o deje que la IA las encaje en su día.",
   "untimed_none": "Todo lo de hoy tiene su hora.",
   "week": "Mi semana",
+  "week_empty": "Aún no hay nada planificado esta semana. Pulse un día para planificarlo.",
   "with_ai": "Con IA"
 }

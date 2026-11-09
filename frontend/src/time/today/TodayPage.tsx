@@ -11,7 +11,7 @@ import { ReviewCard } from '../ai/ReviewCard'
 import { timeApi } from '../lib/api'
 import { addDays } from '../lib/dates'
 import { errorText } from '../lib/errors'
-import { clockOf, dayLabel, duration, firstName, weekdayName } from '../lib/format'
+import { clockOf, dayLabel, duration, firstName, planned, weekdayName } from '../lib/format'
 import { useRefresh } from '../lib/queries'
 import { rankSignals, signalText, signalTone } from '../lib/signals'
 import { assignmentOf, plannerApi } from '../lib/tasks'
@@ -101,7 +101,7 @@ export function TodayPage() {
             <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
               <StatTile icon={CalendarCheck} tone="success" label={t('time.today.done', 'Done today')} value={`${progress.done}/${progress.total}`}
                 hint={progress.donePct !== null ? t('time.today.done_pct', '{{pct}} % of the day’s tasks', { pct: progress.donePct }) : t('time.today.nothing_yet', 'Nothing planned yet')} />
-              <StatTile icon={Timer} tone="progress" label={t('time.today.planned', 'Planned')} value={duration(me?.planned_minutes ?? 0, units)}
+              <StatTile icon={Timer} tone="progress" label={t('time.today.planned', 'Planned')} value={planned(me?.planned_minutes ?? 0, units)}
                 hint={me ? t('time.today.of_capacity', 'of {{capacity}} ({{pct}} %)', { capacity: duration(me.capacity_minutes, units), pct: me.load_pct ?? 0 }) : undefined} />
               <StatTile icon={AlarmClock} tone={(me?.overdue.length ?? 0) > 0 ? 'danger' : 'neutral'} label={t('time.today.overdue', 'Overdue')} value={me?.overdue.length ?? 0}
                 hint={t('time.today.overdue_hint', 'from the last 30 days')} />
@@ -198,6 +198,10 @@ export function TodayPage() {
                 )}
 
                 <Card title={t('time.today.week', 'My week')} icon={CalendarCheck}>
+                  {/* An empty week says so instead of drawing seven bare bars. */}
+                  {data.week.every(d => d.tasks === 0) && (
+                    <p className="mb-2 text-sm text-a-text-2">{t('time.today.week_empty', 'Nothing planned this week yet. Press a day to plan it.')}</p>
+                  )}
                   <div className="flex items-end gap-2" role="list" aria-label={t('time.today.week', 'My week')}>
                     {data.week.map((d, i) => (
                       <Link key={d.date} role="listitem" to={`/time/plan?date=${d.date}`} className="flex min-w-0 flex-1 flex-col items-center gap-1"

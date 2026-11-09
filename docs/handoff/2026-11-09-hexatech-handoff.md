@@ -128,14 +128,74 @@ options which can be configured in settings of planner. after done, please deplo
 - Billing (`hotel-tech-saas`, PostgreSQL 16, fresh and seeded): `ModulePlansTest` 10 passed, the whole suite 24 passed /
   3 skipped, the migration idempotent, the 105 plans identical to `PlanModules`.
 
+### Deploy (round 2)
+
+Production **ddf1d04**, by the source-patch recipe on `origin/main` 08e2225 (which had moved on since this session's first
+deploy: another session's delivery-availability release; none of its files overlap this one's): source patch
+**9e51421** (the branch from **0ac5106** to **3ced302**, 71 files: 10 added, 61 changed, none deleted; per-file parity
+with the tip), fresh build **ddf1d04** (built paths only). No migration. **Next source-patch baseline: 3ced302.**
+
+- Artifact checks (the deploy checkout): the full PHP sweep, 80 runs, **7,539 passed, 0 failed, 24 skipped**; `tsc -b`
+  clean; Vitest **454 files / 6,719 tests** passed; `npm run build` succeeded (main's newer `package.json` adds a
+  dev-only minimatch override; the checkout used this container's `node_modules`, and Laravel Cloud builds with its own).
+- Live, verified by content: `https://app.hexa-tech.uk/` serves `index-oaaGWQY2.js` (before: `index-Bitprh8x.js`), which
+  holds the `/time/login` words ("HexaTech Time Planner — Sign in") and loads `TimeApp-BJaOFOdz.js` (`time/settings`,
+  `own_day_only`, no `crm-settings`) and `SettingsPage-CE-8e_JH.js` ("Who plans whose day", `planner_planning_mode`);
+  `/time`, `/time/register` and `/time/login` answer 200; `api/v1/admin/time/settings` answers 401 unauthenticated (a
+  missing route answers 404). Landing continuity: `https://sites.hexa-tech.uk/hexa-academy` 200, its kit stylesheet
+  (64,577 bytes) with zero `rp-` markers.
+- Post-deploy CI: https://github.com/vkolotikov/hotel-tech-loyalty/actions/runs/42504508569 — **green** (success).
+
+### The owner's answer, and what was left (8 Nov, 17:50 UTC)
+
+"Agree as you suggest, do all remaining steps and deploy, and let me know what you can't do": the proposals stand as
+built (3 / 10 / 25 people, 5 / 15 / 40 $ AI, managers never limited, the switch only in the Time Planner). Everything of
+this application is deployed (above). The billing push was asked for again and refused again by the session's
+permissions, so billing stays the owner's (below). Found on the way, worth the owner's look: production's
+`GET /api/v1/modules` answers every module plan — Loyalty's and CRM's too — with `source: built_in` and
+`available: true`, which happens only when this application cannot read billing's `GET /billing/plans` (not
+configured, unreachable, or an error). While that is so, Plan & products and the sign-up pages show the built-in
+prices, and a module sign-up does not get billing's "not sold yet" refusal. This container cannot reach billing
+(`saas.hotel-tech.ai` is outside its network), so the cause was not looked into: check `SAAS_API_URL` in Laravel Cloud
+and that billing answers `GET <billing URL>/api/billing/plans`.
+
+**9 Nov, the owner again ("can you do these steps for me")**: push access was granted on the third request; billing's
+patch is on billing `main` as **41fec6a** (on 9ca597d), pushed after billing's suite passed on PostgreSQL 16 (24
+passed, 3 skipped; `ModulePlansTest` 10 on a seeded database); billing's CI on it is green
+(https://github.com/vkolotikov/hotel-tech-saas/actions/runs/42580761951: PHP on PostgreSQL 18, the SPA on Node 24 and
+26, the dependency audit). Laravel Cloud deploys it and runs
+`2026_11_09_120000_add_time_planner_packages`. Left to the owner: `stripe:sync` (step 2 below) and billing's plan list
+being unread in production (above) — this container reaches neither Laravel Cloud nor billing.
+
 ### What the owner does by hand (round 2)
 
-1. **Billing** — this session was refused push access to `hotel-tech-saas`: apply
-   `docs/billing/2026-11-09-hotel-tech-saas-time-planner-packages.patch` on billing `main` and push (Laravel Cloud runs
-   the migration), then in billing's Commands tab `php artisan stripe:sync --module-plans --publish`. Steps and two
+1. **Billing** — the patch is pushed (41fec6a, above). In billing's Commands tab (Laravel Cloud) once the deploy has
+   finished: `php artisan stripe:sync --module-plans --publish`. Steps and two
    checking queries: `docs/plan-modules.md`, "Billing handover, 2026-11-09". Until then `/time/register` says the Time
    Planner cannot be bought online yet; Enterprise customers have it already.
 2. Nothing else: every organisation starts in `team` mode, exactly as before.
+
+## Round 3: adding tasks, the week, and a usability pass (9 Nov)
+
+The owner (after running `stripe:sync`: "plans are published"): "Lets improve task adding options, make it easier to
+add, make something like we have before with icons and when tasks shown after type selection as a grids 2. in week view
+add task on calendar not work with click only with double click please fix. And check other usability and design
+features and do necessary improvements".
+
+- **The task form** has the full admin's drawer's pickers: a grid of types with icons and colours, then the chosen
+  type's tasks as a grid, amber dots for the chosen person's preferred work, templates as an opening list. A picked task
+  fills an empty title; Enter in the title adds; **Add & next** keeps the panel open for the next task of the same day,
+  person and type; "Who" sits under the title (the hints depend on it).
+- **The week**: one press on a cell's empty space adds a task for that person and day (it was a double click); each cell
+  has a "+ Add" (on hover and focus with a mouse, always on a touch screen), the "Nobody yet" row too.
+- **Found in the pass and fixed**: no planned time read "—" ("Planned —", "has room: — planned of 8 h", "— of 8 h" on
+  Team) — now "0 h" (`format.planned`; a capacity that is unknown keeps its dash); Insights said "2 h of 0 h" for a name
+  without an account — now "2 h planned"; an empty "My week" says so; task cards wrap a long title to two lines at every
+  width (the pool's narrow column cut "Steam-clean the…"); the week's hint no longer says "double-click".
+- Checks: Vitest 456 files / 6,727 tests, `tsc -b` clean, lint baseline (1,398 legacy, none new); in a real browser on the
+  Riga demo at 1440 and 390, Dark and Light: the pickers, the template list, Add & next (two tasks saved, the panel kept
+  its type, person and day), Enter to add, one-press add in the week (cell and "+ Add"), no horizontal scroll, no raw
+  key, no failed request. No server change in this round.
 
 ## Left open
 

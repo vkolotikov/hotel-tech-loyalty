@@ -152,11 +152,19 @@ asked the scope's overdue work (30 days) and the pool tasks their skills allow.
 | Area | Address | What it does |
 |---|---|---|
 | My day | `/time` | greeting, quick add (type, With AI, Speak), figures, now / up next with Start / Pause / Finish, my day on the clock (press an hour to add, drag to move), without a time, AI briefing, heads-up, overdue (to today), from the pool (Take), my week, the day's note; "Plan my day with AI" |
-| Planner | `/time/plan` (`?date=`, `?view=week`, `?person=`, `?all=1`) | the day as lanes of hours per person (drag to another time or person; drop untimed work on an hour), signals, AI review of the day, the day's note; the week as people × days (drag between cells); "Plan the team with AI" (whoever may plan for others), "Plan my day with AI" |
+| Planner | `/time/plan` (`?date=`, `?view=week`, `?person=`, `?all=1`) | the day as lanes of hours per person (drag to another time or person; drop untimed work on an hour), signals, AI review of the day, the day's note; the week as people × days (drag between cells; one press on a cell's empty space, or its "+ Add", adds a task for that person and day — always shown on a touch screen); "Plan the team with AI" (whoever may plan for others), "Plan my day with AI" |
 | Backlog & pool | `/time/backlog` (`?tab=mine|pool|team`) | my bucket, the open pool by horizon (take, plan for today or tomorrow), the team's buckets (manager) |
 | Team & skills | `/time/team` | each person's hours, days, break, skills, preferred work, knowledge, shown experience and today's load; a manager edits the profile |
 | Insights | `/time/insights` (`?range=`, `?from=`, `?to=`, `?person=`, `?tab=`) | figures with the trend, people, work by type, weekday and hour, days, pool aging, signals, AI review of the period |
 | Settings | `/time/settings` (`?tab=day|planning|types|tasks|templates|account`) | the working day, who plans whose day (the planning mode), task types, tasks, templates (shared with the full admin) |
+
+**The task form** (`task/TaskPanel.tsx`, 9 Nov round 3, the owner: "make something like we have before with icons, and
+the tasks shown after type selection as a grid"): the full admin's drawer's pickers — the types as a grid of tiles with
+their icons and colours (no type last, "Custom"), then the chosen type's tasks as a grid (a task tagged with types only
+under those, an untagged one under every type), an amber dot on what fits the chosen person (their preferred work), the
+templates as a list that opens above the types (`task/TaskPickers.tsx`, decisions in `task/taskFormLogic.ts`). Then the
+title (focused; a task picked fills an empty one, never one the person typed; Enter adds), who, the day and the rest. "Add
+& next" adds the task and keeps the panel open for the next one of the same day, person and type.
 
 Find (⌘K / Ctrl K): add a task, add with AI, plan my day, a person's day, the areas. Keys: N new task, A add with AI,
 P Planner, B Backlog, ? shortcuts.

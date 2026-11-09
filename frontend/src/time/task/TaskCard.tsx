@@ -67,7 +67,7 @@ export function TaskCard({ task, onOpen, showDay = false, compact = false, actio
       <button type="button" onClick={() => onOpen(task)} className="min-w-0 flex-1 text-left">
         <span className="flex min-w-0 items-center gap-1.5">
           {high && !task.done && <AlertTriangle size={13} aria-label={t('time.priority.high', 'High')} className="shrink-0 text-a-danger" />}
-          <span className={`line-clamp-2 break-words text-sm font-medium sm:line-clamp-1 ${task.done ? 'text-a-text-2 line-through' : 'text-a-text'}`}>{task.title}</span>
+          <span className={`line-clamp-2 break-words text-sm font-medium ${task.done ? 'text-a-text-2 line-through' : 'text-a-text'}`}>{task.title}</span>
         </span>
         {!compact && (
           <span className="mt-0.5 flex flex-wrap items-center gap-x-2.5 gap-y-0.5 text-xs text-a-text-2">

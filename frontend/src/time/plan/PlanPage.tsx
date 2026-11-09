@@ -3,7 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import {
-  AlarmClock, CalendarDays, CalendarRange, ChevronLeft, ChevronRight, CircleDashed, ClipboardList, Gauge, ListChecks, StickyNote, UserX, Users, Wand2,
+  AlarmClock, CalendarDays, CalendarRange, ChevronLeft, ChevronRight, CircleDashed, ClipboardList, Gauge, ListChecks, Plus, StickyNote, UserX, Users, Wand2,
 } from 'lucide-react'
 import { Button } from '../../workspace/ui/Button'
 import { useTimeActions } from '../TimeActions'
@@ -12,7 +12,7 @@ import { ReviewCard } from '../ai/ReviewCard'
 import { timeApi } from '../lib/api'
 import { addDays, weekStart } from '../lib/dates'
 import { errorText } from '../lib/errors'
-import { dayLabel, duration, weekdayName } from '../lib/format'
+import { dayLabel, duration, planned, weekdayName } from '../lib/format'
 import { usePeople, usePersonName, useRefresh } from '../lib/queries'
 import { rankSignals, signalText, signalTone } from '../lib/signals'
 import { mayDrop, mayGive, rightsOf } from '../lib/rights'
@@ -180,7 +180,7 @@ function DayView({ date, person, everyone, onMove, onCreate, onOpen, onCapture }
             <StatTile icon={ListChecks} tone="success" label={t('time.plan.tasks', 'Tasks')} value={`${board.totals.done}/${board.totals.tasks}`} hint={t('time.plan.done_hint', 'done of all')} />
             <StatTile icon={Gauge} tone={loadState(board.totals.load_pct) === 'over' ? 'danger' : 'progress'} label={t('time.plan.team_load', 'Team load')}
               value={board.totals.load_pct !== null ? `${board.totals.load_pct}%` : '—'}
-              hint={t('time.plan.load_of', '{{planned}} of {{capacity}}', { planned: duration(board.totals.planned_minutes, units), capacity: duration(board.totals.capacity_minutes, units) })} />
+              hint={t('time.plan.load_of', '{{planned}} of {{capacity}}', { planned: planned(board.totals.planned_minutes, units), capacity: duration(board.totals.capacity_minutes, units) })} />
             <StatTile icon={UserX} tone={board.totals.unassigned > 0 ? 'pending' : 'neutral'} label={t('time.plan.unassigned', 'Nobody yet')} value={board.totals.unassigned} hint={t('time.plan.unassigned_hint', 'tasks of the day without a person')} />
             <StatTile icon={CircleDashed} tone="neutral" label={t('time.plan.untimed', 'Without a time')} value={untimed.filter(u => !u.task.done).length} hint={t('time.plan.untimed_hint', 'drag them onto the day')} />
             <StatTile icon={AlarmClock} tone={board.totals.overdue > 0 ? 'danger' : 'neutral'} label={t('time.plan.overdue', 'Overdue')} value={board.totals.overdue}
@@ -303,7 +303,7 @@ function WeekView({ start, person, everyone, onMove, onOpenDay, onOpen, onCreate
               <div key={p.key} className="contents">
                 <div className="sticky left-0 z-10 border-b border-r border-a-border bg-a-surface px-3 py-2">
                   <p className="truncate text-sm font-semibold text-a-text">{p.name}</p>
-                  <p className="text-xs text-a-text-2">{duration(p.planned_minutes, units)} / {duration(p.capacity_minutes, units)}{p.load_pct !== null ? ` · ${p.load_pct}%` : ''}</p>
+                  <p className="text-xs text-a-text-2">{planned(p.planned_minutes, units)} / {duration(p.capacity_minutes, units)}{p.load_pct !== null ? ` · ${p.load_pct}%` : ''}</p>
                 </div>
                 {p.days.map(d => {
                   const cell = cellOf(d.tasks)
@@ -312,8 +312,9 @@ function WeekView({ start, person, everyone, onMove, onOpenDay, onOpen, onCreate
                   return (
                     <div key={d.date} role="presentation"
                       onDragOver={e => { e.preventDefault(); setOver(id) }} onDragLeave={() => setOver(null)} onDrop={e => drop(e, d.date, p.key)}
-                      onDoubleClick={() => onCreate(d.date, p.key)}
-                      className={`min-h-24 space-y-1 border-b border-r border-a-border p-1.5 last:border-r-0 ${d.works ? '' : 'time-off-hours'} ${over === id ? 'time-drop' : ''}`}>
+                      // One press on the cell's empty space adds a task for that person and day (a task in it opens instead).
+                      onClick={e => { if (e.target === e.currentTarget) onCreate(d.date, p.key) }}
+                      className={`group/cell flex min-h-24 cursor-pointer flex-col gap-1 border-b border-r border-a-border p-1.5 last:border-r-0 hover:bg-a-surface-2/40 ${d.works ? '' : 'time-off-hours'} ${over === id ? 'time-drop' : ''}`}>
                       {d.works && d.capacity_minutes > 0 && (
                         <span aria-hidden className="block h-1 overflow-hidden rounded-full bg-a-surface-2">
                           <span className={`block h-full time-load-${state === 'none' ? 'ok' : state}`} style={{ width: `${Math.min(100, d.load_pct ?? 0)}%` }} />
@@ -327,7 +328,8 @@ function WeekView({ start, person, everyone, onMove, onOpenDay, onOpen, onCreate
                           {task.start_time ? <span className="font-a-mono text-a-text-2">{task.start_time} </span> : null}{task.title}
                         </button>
                       ))}
-                      {cell.more > 0 && <button type="button" onClick={() => onOpenDay(d.date)} className="text-xs font-semibold text-a-accent-text">+{cell.more}</button>}
+                      {cell.more > 0 && <button type="button" onClick={() => onOpenDay(d.date)} className="self-start text-xs font-semibold text-a-accent-text">+{cell.more}</button>}
+                      <AddInCell label={t('time.plan.add_here', 'Add a task for {{name}} on {{day}}', { name: p.name, day: dayLabel(d.date, i18n.language) })} onClick={() => onCreate(d.date, p.key)} />
                     </div>
                   )
                 })}
@@ -341,23 +343,39 @@ function WeekView({ start, person, everyone, onMove, onOpenDay, onOpen, onCreate
                 const id = `${NOBODY}|${u.date}`
                 return (
                   <div key={u.date} role="presentation" onDragOver={e => { e.preventDefault(); setOver(id) }} onDragLeave={() => setOver(null)} onDrop={e => drop(e, u.date, NOBODY)}
-                    className={`min-h-16 space-y-1 border-r border-a-border p-1.5 last:border-r-0 ${over === id ? 'time-drop' : ''}`}>
+                    onClick={e => { if (e.target === e.currentTarget) onCreate(u.date, NOBODY) }}
+                    className={`group/cell flex min-h-16 cursor-pointer flex-col gap-1 border-r border-a-border p-1.5 last:border-r-0 hover:bg-a-surface-2/40 ${over === id ? 'time-drop' : ''}`}>
                     {cell.shown.map(task => (
                       <button key={task.id} type="button" draggable onDragStart={e => { e.dataTransfer.setData(DRAG, String(task.id)); e.dataTransfer.effectAllowed = 'move' }}
                         onClick={() => onOpen(task)} className="block w-full truncate rounded-md border border-dashed border-a-border px-1.5 py-0.5 text-left text-xs text-a-text">{task.title}</button>
                     ))}
                     {cell.more > 0 && <span className="text-xs text-a-text-2">+{cell.more}</span>}
+                    <AddInCell label={t('time.plan.add_unassigned', 'Add a task for nobody yet on {{day}}', { day: dayLabel(u.date, i18n.language) })} onClick={() => onCreate(u.date, NOBODY)} />
                   </div>
                 )
               })}
             </div>
           </div>
           <p className="flex items-center gap-1.5 border-t border-a-border px-3 py-2 text-xs text-a-text-2">
-            <CalendarRange size={13} aria-hidden />{t('time.plan.week_hint', 'Drag a task to another day or person; double-click a cell to add one there; press a day to open it.')}
+            <CalendarRange size={13} aria-hidden />{t('time.plan.week_hint', 'Drag a task to another day or person; press a cell’s empty space (or its Add) to add one there; press a day to open it.')}
             <CalendarDays size={13} aria-hidden className="ml-auto" />{addDays(start, 6) && dayLabel(addDays(start, 6), i18n.language)}
           </p>
         </div>
       )}
     </QueryState>
+  )
+}
+
+/**
+ * A cell's own "add" press in the week (2026-11-09: one click, not a double click): at the foot of the cell, shown while
+ * the cell is pointed at or focused, and always on a touch screen, where nothing is pointed at.
+ */
+function AddInCell({ label, onClick }: { label: string; onClick: () => void }) {
+  const { t } = useTranslation()
+  return (
+    <button type="button" onClick={onClick} aria-label={label} title={label}
+      className="mt-auto inline-flex items-center gap-1 self-start rounded-md px-1.5 py-0.5 text-xs font-semibold text-a-text-2 opacity-100 hover:bg-a-surface-2 hover:text-a-text focus-visible:opacity-100 pointer-fine:opacity-0 pointer-fine:group-hover/cell:opacity-100">
+      <Plus size={12} aria-hidden />{t('time.common.add', 'Add')}
+    </button>
   )
 }

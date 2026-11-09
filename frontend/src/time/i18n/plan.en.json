@@ -1,5 +1,7 @@
 {
   "add_ai": "Add with AI",
+  "add_here": "Add a task for {{name}} on {{day}}",
+  "add_unassigned": "Add a task for nobody yet on {{day}}",
   "again": "Change and plan again",
   "ai_failed": "The AI could not be reached.",
   "ai_over": "This month's AI allowance is used up.",
@@ -94,6 +96,6 @@
   "untimed_none": "Every task of the day has its time.",
   "view": "View",
   "week": "Week",
-  "week_hint": "Drag a task to another day or person; double-click a cell to add one there; press a day to open it.",
+  "week_hint": "Drag a task to another day or person; press a cell’s empty space (or its Add) to add one there; press a day to open it.",
   "week_of": "Week of {{day}}"
 }

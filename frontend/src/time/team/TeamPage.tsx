@@ -10,7 +10,7 @@ import {
 import { Button } from '../../workspace/ui/Button'
 import { Notice } from '../../workspace/ui/Notice'
 import { useBoot } from '../TimeProvider'
-import { duration, percent, weekdayName } from '../lib/format'
+import { duration, percent, planned as plannedTime, weekdayName } from '../lib/format'
 import { usePeople } from '../lib/queries'
 import type { Person } from '../lib/types'
 import { PlanDialog } from '../plan/PlanDialog'
@@ -186,7 +186,7 @@ function TodayLoad({ person, canPlan, onPlan }: { person: Person; canPlan: boole
   if (!person.today) return <p className={`${box} text-sm text-a-text-2`}>{t('time.team.not_on_board', 'Not on today’s board.')}</p>
   if (!person.today.works) return <p className={`${box} text-sm text-a-text-2`}>{t('time.team.off_today', 'Not working today.')}</p>
   const bar = loadBar(person.today)
-  const planned = duration(person.today.planned_minutes, units)
+  const planned = plannedTime(person.today.planned_minutes, units)
   return (
     <div className={box}>
       <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">

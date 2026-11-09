@@ -1,11 +1,14 @@
 {
   "add": "Añadir tarea",
+  "add_next": "Añadir y otra",
+  "add_next_hint": "Añadir esta y empezar la siguiente, para el mismo día y la misma persona",
   "add_step": "Añadir un paso",
   "category": "Tarea",
   "copied": "Copiada",
   "copy": "Copiar",
   "copy_to": "Copiar a otro día",
   "created": "Tarea añadida",
+  "custom_type": "Otro",
   "day": "Día",
   "delete_future": "Esta y las siguientes repeticiones",
   "delete_line": "«{{title}}» y sus pasos se eliminarán para siempre.",
@@ -19,9 +22,12 @@
   "estimate_title": "Las tareas como esta suelen llevar unos {{length}} ({{count}} hechas antes).",
   "finish": "Terminar",
   "finished": "Hecha, ¡buen trabajo!",
+  "fits": "Encaja con {{name}}",
+  "hide_templates": "Ocultar plantillas",
   "horizon": "Cuándo debe hacerse",
   "length": "Duración",
   "locked": "{{name}} planifica esta tarea. En este planificador cada persona planifica su propio día; puede copiarla al suyo.",
+  "loose_category": "Guardada como «{{name}}»",
   "mark_done": "Marcar como hecha",
   "minutes": "Minutos",
   "new": "Nueva tarea",
@@ -31,6 +37,7 @@
   "no_day": "Aún sin día",
   "no_time": "Aún sin hora",
   "no_type": "Ninguno",
+  "no_types": "Aún no hay tipos de tarea: un responsable los añade en Ajustes → Tipos de tarea.",
   "nobody": "Nadie aún",
   "notes": "Notas",
   "overdue": "Atrasada",
@@ -58,5 +65,6 @@
   "undo_done": "Marcar como no hecha",
   "until": "Hasta",
   "until_hint": "Como máximo 90 veces.",
-  "use": "Usar"
+  "use": "Usar",
+  "use_template": "Usar una plantilla"
 }

@@ -42,5 +42,6 @@
   "untimed_line": "Donnez-leur un horaire, ou laissez l’IA les placer dans votre journée.",
   "untimed_none": "Tout ce qui est prévu aujourd’hui a son horaire.",
   "week": "Ma semaine",
+  "week_empty": "Rien de prévu cette semaine pour l’instant. Appuyez sur un jour pour le planifier.",
   "with_ai": "Avec l’IA"
 }

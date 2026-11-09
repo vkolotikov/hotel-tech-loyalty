@@ -2,7 +2,7 @@ import { useMemo, useState, type CSSProperties, type DragEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { AlertTriangle, CheckCircle2, Timer } from 'lucide-react'
 import { toClock, toMinutes } from '../lib/dates'
-import { duration } from '../lib/format'
+import { duration, planned } from '../lib/format'
 import type { Task } from '../lib/types'
 import { useGroupColor } from '../task/TaskCard'
 import { HOUR_PX, columnsOf, heightOf, loadState, minutesAt, topOf, visibleRange } from './timeline'
@@ -85,7 +85,7 @@ export function DayTimeline({ lanes, now, onOpen, onCreate, onMove, extra = [], 
                 <span className="min-w-0 flex-1 truncate text-sm font-semibold text-a-text">{lane.name}</span>
                 {!lane.works && <span className="shrink-0 rounded-full bg-a-surface-2 px-2 py-0.5 text-xs text-a-text-2">{t('time.plan.off', 'Off')}</span>}
                 {lane.works && lane.load_pct !== undefined && lane.load_pct !== null && (
-                  <span className="flex shrink-0 items-center gap-1.5" title={t('time.plan.load_of', '{{planned}} of {{capacity}}', { planned: duration(lane.planned_minutes ?? 0, units), capacity: duration(lane.capacity_minutes ?? 0, units) })}>
+                  <span className="flex shrink-0 items-center gap-1.5" title={t('time.plan.load_of', '{{planned}} of {{capacity}}', { planned: planned(lane.planned_minutes ?? 0, units), capacity: duration(lane.capacity_minutes ?? 0, units) })}>
                     <span aria-hidden className="h-1.5 w-14 overflow-hidden rounded-full bg-a-surface-2">
                       <span className={`block h-full rounded-full time-load-${state === 'none' ? 'ok' : state}`} style={{ width: `${Math.min(100, lane.load_pct)}%` }} />
                     </span>
