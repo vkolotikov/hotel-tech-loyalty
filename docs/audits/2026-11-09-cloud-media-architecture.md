@@ -143,3 +143,33 @@ Two regression tests reproduced closed resources on both successful and failed S
 writer now retains and detaches its PSR-7 wrapper, preserving the caller's resource for publication and cleanup;
 all six real-SDK transport tests pass locally. A source-patch correction is being prepared. Production migration,
 restore, URL updates and active-disk cutover are still incomplete; source files/settings remain intact.
+
+Correction source baseline **cce6e479c** was transferred as an exact five-file source patch on b695fdaa7 (whole-source
+parity), source commit **6fb748979**, fresh build/deploy **079e7feb1**. The corrected artifact passed **2,104 scoped
+PHP tests**, TypeScript, **464 frontend files / 6,823 tests**, lint baseline and Larastan. Production normalized-LF
+ObjectStore SHA-256 to verify: `f6241ea8c0b02c95d55837bf02f6fc242313088bbf3b7c789e0497dea9c009af`.
+CI: https://github.com/vkolotikov/hotel-tech-loyalty/actions/runs/42632156397 — **success**.
+
+A separate read-only legacy check found one `/storage/` avatar reference. Its file is absent from production local
+public storage, DigitalOcean and Cloud; it is a pre-existing missing image, not a source object lost during this
+copy. No profile row was altered. Production local public storage contains one 14-byte scaffolding file only.
+Check project-local copies before recording that the image needs re-uploading; never silently clear the reference.
+
+## Verified copy and acceptance in progress
+
+Cloud deployment **1153 / 079e7feb1** completed. A fresh App-cluster source hash matches the corrected artifact;
+active media is still `do`. The resumed guarded migration completed successfully for **all 209 objects /
+202,034,601 bytes**, with **202 public / seven kept private for review**. No source file was removed. Database URLs
+and MEDIA_DISK have not yet changed.
+
+Created one controlled 68-byte PNG through the canonical Cloud writer, scoped to organisation 19 under
+`launch-recovery-20261109`. Its receipt is in SharedCache at `ops:cloud-media-launch-20261109` (URL, exact key,
+SHA-256 and byte count only). An anonymous workstation HTTPS GET at **14:29:29 UTC** returned **200 image/png**,
+68 bytes, exactly equal to the fixture; SHA-256 `27b2cc625c2a2fff9ec10d914305fcbeab0d9917f919a20e9e438e291d82145b`.
+The full guarded `media:backup-cloud --prepare ... --apply` sweep is running. Private unsigned denial, isolated
+restore/cleanup, reviewed URL preview/apply, cutover and post-redeploy persistence checks remain. Retain the probe
+until after that redeploy, then remove only its exact controlled public key through the canonical writer and
+reconcile its retained private revision. No member/profile row is changed by the probe.
+
+The missing legacy avatar was also absent from all **23 local project worktrees** (no matching local avatar files).
+Its original image must be uploaded again; no reference was cleared or fabricated.

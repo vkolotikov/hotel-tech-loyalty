@@ -425,6 +425,24 @@ Two new real-SDK tests reproduced the ownership bug, then passed with a retained
 Prepare/deploy this correction by the source-patch recipe before continuing the idempotent migration. No URL or
 active-disk change, no source deletion, and no completed recovery acceptance.
 
+The stream correction has now passed artifact checks and was deployed as **079e7feb1** (source **6fb748979**;
+whole-source parity with feature code baseline **cce6e479c**, next source-patch baseline). Artifact **2,104 PHP tests**,
+TypeScript, **464 / 6,823** frontend tests, lint baseline, Larastan and fresh build passed. Its normalized-LF
+ObjectStore hash is `f6241ea8c0b02c95d55837bf02f6fc242313088bbf3b7c789e0497dea9c009af`; verify in a fresh
+App-cluster console after the rolling deploy before resuming migration. CI run **42632156397** passed all jobs.
+One pre-existing local `/storage/` avatar is absent on production local, DO and Cloud. No profile data was cleared;
+check local project copies before asking for a replacement image. See the Cloud audit for counts and evidence.
+
+**Current production continuation:** Cloud deploy **1153 / 079e7feb1** completed and its fresh App-cluster source
+hash matches the correction. Resumed guarded migration **completed: 209 objects / 202,034,601 bytes; 202 public /
+seven private review**, source intact. Created one controlled 68-byte PNG via the real Cloud writer (no profile row
+change); receipt `SharedCache::store()->get('ops:cloud-media-launch-20261109')` holds URL/key/SHA/bytes. Anonymous
+workstation GET at **14:29:29 UTC** passed, exact bytes/image/png. Full guarded backup preparation is currently
+running in the existing native Cloud Commands console. Next: finish that sweep, perform exact receipt-based
+`media:verify-cloud --apply`, check private unsigned access denial, preview reviewed URLs and resolve counts,
+apply URLs, then set MEDIA_DISK=media/redeploy and verify persistence/health/deltas. Keep probe until after redeploy.
+No active-disk or DB URL change yet. Legacy avatar is also absent from all 23 project worktrees; original needed.
+
 ## Dashboard deploy (9 Nov, 11:53 UTC)
 
 Production **a455e01**, by the source-patch recipe on `origin/main` f275699 (another session's media-recovery release, no
