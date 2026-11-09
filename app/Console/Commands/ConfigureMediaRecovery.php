@@ -60,7 +60,8 @@ class ConfigureMediaRecovery extends Command
         } catch (\Throwable $e) {
             $allowed = ['media_target_mismatch', 'media_lifecycle_review_required', 'media_recovery_cleanup_required', 'media_policy_not_confirmed', 'media_shared_lock_unavailable'];
             $this->error(in_array($e->getMessage(), $allowed, true) ? $e->getMessage()
-                : 'Media policy could not be verified. A setting may be partially applied; read the preview before retrying.');
+                : ($apply ? 'Media policy could not be verified. A setting may be partially applied; read the preview before retrying.'
+                    : 'Media policy could not be inspected. No settings were changed.'));
 
             return self::FAILURE;
         } finally {
