@@ -203,6 +203,29 @@ features and do necessary improvements".
 - Renaming a task type does not rename it on tasks, templates or preferences (as in the full admin).
 - Selling the Time Planner on its own: built (round 2); billing's patch waits for the owner (above).
 
+## HexaTech CRM round 4 and the full admin's task drawer (another session, branch `ccr-3e2c59ed-nvr08a`)
+
+The owner (9 Nov), with a screenshot of the full admin's New task drawer: improve its design and logic, organised in
+clear steps, with the type grid they like; and choose which brand of the organisation the CRM shows. Details:
+`docs/crm-workspace.md`, "Round 4". In short: one task form in four steps for the CRM and the full admin
+(`src/lib/taskForm.ts`); a task's priority, length and repeat are saved at last (migration `2026_11_09_140000`; before,
+they went into `custom_data` and were dropped), and completing a repeating task adds the next one; the drawer's words
+exist in all five languages; a brand switcher in the CRM's header (`Crm\CrmBrands`, `crm/lib/brand.ts`).
+
+Checked before the deploy:
+- All 80 PHP suite runs pass on SQLite.
+- On PostgreSQL, a fresh database built from every migration including `2026_11_09_140000`: CrmWorkspace, Crm,
+  CrmTasks, Admin, Planner and TimeWorkspace pass. `BrandSwitchTest`'s brands needed production's NOT NULL `slug` and
+  `widget_token`.
+- Frontend: `tsc -b` is clean and every vitest test passes.
+- In a browser, on the local demo:
+  - the CRM form (dark, light, phone): a saved task shows its start and end, High and Every week in the list;
+  - the brand switcher: All brands showed 9 open leads, Old Town Studio 3;
+  - the full admin's drawer (Glass, Clean light, phone): the saved row holds `priority`, `duration_minutes` and
+    `recurring_rule`, with `custom_data` empty.
+- Seen in passing, not from this round: the full admin's `components/BrandSwitcher.tsx` logs React's "Cannot update a
+  component while rendering a different component" on load, in development builds only.
+
 ## Loyalty prelaunch rehearsal (9 November, Windows workstation)
 
 Owner authorised all remaining prelaunch work and test messages to their own contacts. One SMTP test was sent; the

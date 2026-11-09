@@ -23,7 +23,13 @@ export interface Bootstrap {
   widget: { key: string; active: boolean } | null
   counts: { chats_waiting: number; leads_new: number; tasks_due: number }
   setup: { done: number; total: number; complete: boolean }
+  /** The brands this person may work in (CrmBrands), whether "All brands" is theirs, and the brand this answer is for. */
+  brands?: CrmBrand[]
+  all_brands?: boolean
+  brand_id?: number | null
 }
+
+export interface CrmBrand { id: number; name: string; is_default: boolean; color: string | null; logo: string | null }
 
 export interface TodayChat {
   id: number

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { BrandSwitcher } from './shell/BrandSwitcher'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import {
@@ -131,7 +132,7 @@ export function CrmShell({ children }: { children: ReactNode }) {
   }
   const crumb = data ? (
     <div className="flex min-w-0 items-center gap-2 text-sm">
-      <span className="truncate text-a-text-2">{data.organization.name}</span>
+      <BrandSwitcher />
       <span aria-hidden className="text-a-text-2">/</span>
       <span className="truncate font-medium text-a-text">{pageName}</span>
     </div>

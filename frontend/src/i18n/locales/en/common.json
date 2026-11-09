@@ -761,7 +761,13 @@
       "send_proposal": "Send proposal",
       "follow_up": "Follow-up",
       "site_visit": "Site visit",
-      "custom": "Custom"
+      "custom": "Custom",
+      "whatsapp": "WhatsApp",
+      "sms": "SMS",
+      "video_call": "Video call",
+      "demo": "Demo",
+      "contract": "Contract",
+      "discovery": "Discovery"
     },
     "tooltips": {
       "reopen": "Reopen",
@@ -799,7 +805,13 @@
       "type": "Type",
       "title": "Title",
       "notes": "Notes (optional)",
-      "due": "Due"
+      "due": "Due",
+      "assignee": "Who does it",
+      "date": "Date",
+      "duration": "Duration",
+      "priority": "Priority",
+      "repeat": "Repeat",
+      "start_time": "Start time"
     },
     "placeholders": {
       "title": "Send proposal · Follow up after site visit · …",
@@ -824,6 +836,71 @@
       "updated": "Task updated",
       "title_required": "Title is required",
       "save_failed": "Save failed"
+    },
+    "any_time": "Any time",
+    "assignee_me": "Me",
+    "ends_at": "Ends at {{time}}",
+    "ends_next_day": "Ends at {{time}} the next day",
+    "length_needs_time": "Pick a start time to choose how long.",
+    "length_open": "No set length.",
+    "no_inquiry": "Not linked to an inquiry.",
+    "other_time": "Other time",
+    "repeat_line": "When it is done, the next one is added at the same time.",
+    "repeat_needs_day": "Pick a day to repeat it.",
+    "repeat_once": "Done once.",
+    "start_needs_day": "Pick a day to choose a time.",
+    "title_hint": "Leave it empty to use “{{title}}”.",
+    "date_quick": {
+      "today": "Today",
+      "tomorrow": "Tomorrow",
+      "in_2_days": "In 2 days",
+      "next_monday": "Next Monday",
+      "none": "No date",
+      "other": "Another day"
+    },
+    "groups": {
+      "talk": "Get in touch",
+      "meet": "Meet",
+      "sell": "Close the sale",
+      "other": "Other"
+    },
+    "length": {
+      "minutes": "{{count}} min",
+      "hours": "{{count}} h",
+      "hours_minutes": "{{hours}} h {{minutes}}"
+    },
+    "parts": {
+      "morning": "Morning",
+      "afternoon": "Afternoon",
+      "evening": "Evening"
+    },
+    "priority": {
+      "low": "Low",
+      "normal": "Normal",
+      "high": "High"
+    },
+    "problems": {
+      "title_required": "Give the task a title.",
+      "too_long": "This is too long."
+    },
+    "repeat": {
+      "none": "Does not repeat",
+      "daily": "Every day",
+      "weekly": "Every week",
+      "monthly": "Every month"
+    },
+    "steps": {
+      "what": "What",
+      "what_line": "The kind of task, its title and how urgent it is.",
+      "when": "When",
+      "when_line": "On your own clock.",
+      "who": "Who and for which lead",
+      "notes": "Notes"
+    },
+    "summary": {
+      "no_day": "No date yet",
+      "at": "{{day}}, {{time}}",
+      "range": "{{day}}, {{start}}–{{end}}"
     }
   },
   "planner": {

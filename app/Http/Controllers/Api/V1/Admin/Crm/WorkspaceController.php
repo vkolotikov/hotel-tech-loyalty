@@ -40,6 +40,7 @@ class WorkspaceController extends Controller
         $widget = ChatWidgetConfig::query()->orderBy('id')->first(['id', 'widget_key', 'is_active']);
         $progress = $setup->for($orgId);
         $platform = method_exists($user, 'isPlatformAdmin') && $user->isPlatformAdmin();
+        $brands = \App\Services\Crm\CrmBrands::for($user);
 
         return response()->json([
             'name'         => self::NAME,
@@ -68,6 +69,11 @@ class WorkspaceController extends Controller
                 'can'  => CrmAccess::forBootstrap($user),
             ],
             'widget'       => $widget ? ['key' => (string) $widget->widget_key, 'active' => (bool) $widget->is_active] : null,
+            // The brands this person may work in (CrmBrands, owner 2026-11-09), whether "All brands" is theirs, and the
+            // brand this request was scoped to (BrandMiddleware; null = all brands): the switcher shows it.
+            'brands'       => $brands['brands'],
+            'all_brands'   => $brands['all'],
+            'brand_id'     => app()->bound('current_brand_id') && app('current_brand_id') !== null ? (int) app('current_brand_id') : null,
             'counts'       => [
                 'chats_waiting' => ChatConversation::query()->where('status', 'waiting')->count(),
                 'leads_new'     => Inquiry::query()->where('created_at', '>=', now()->subDay())->count(),

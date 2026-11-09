@@ -326,7 +326,9 @@ or add the next dated one, at the end of a session.
   `crm/theme/crm.css`; every string is `t('crm.…')` in all five locales, one bundle per area
   (`crm/i18n/<area>.<lang>.json`, registered under `crm.<area>` by the glob in `crm/i18n/index.ts`).
 - Every call goes through `crm/lib/api.ts` (`get`, `send`, `crmApi`), only to the areas its `AREAS` lists, always with
-  `brand_id=all`; `crm/tokens.test.ts` refuses a raw `/v1/` path and any other area. The workspace's own reads are
+  a `brand_id` — the brand chosen in the header's switcher, or `all` (`crm/lib/brand.ts`; what each brand shows is the
+  server's `BrandMiddleware`, the brands offered `Crm\CrmBrands`); `crm/tokens.test.ts` refuses a raw `/v1/` path and
+  any other area. The workspace's own reads are
   `admin/crm/*` (`App\Http\Controllers\Api\V1\Admin\Crm\*`, `App\Services\Crm\*`, behind `workspace:crm`);
   everything else is the full admin's own chat and CRM endpoints under their AccessMap rules — a new rule goes into
   the shared controller or service, never into a copy in the workspace. Rights for hiding controls come from the
@@ -351,6 +353,10 @@ or add the next dated one, at the end of a session.
   answer. A deal is added through the lead form's deal mode (the lead, then the server's own `inquiries/{id}/won`), and
   every close as won — one or bulk — goes through `InquiryController::closeAsWon()`. The widget's cached config
   (`widget:config:<key>`) lives in `SharedCache`.
+- Round 4 (owner 2026-11-09): one task form for the CRM and the full admin's drawer — its rules in `src/lib/taskForm.ts`
+  (pure, tested), each screen in its own palette and bundle. A task's priority, length and repeat are its own fields
+  (`priority`, `duration_minutes`, `recurring_rule`), never `custom_data`, which keeps only the organisation's custom
+  fields; the next task of a repeating one is made only by `TaskController::nextOccurrence()` on completion.
 
 ## Time-Planner-workspace code rules
 

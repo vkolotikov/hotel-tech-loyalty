@@ -761,7 +761,13 @@
       "send_proposal": "Envoyer une proposition",
       "follow_up": "Relance",
       "site_visit": "Visite sur site",
-      "custom": "Personnalisée"
+      "custom": "Personnalisée",
+      "whatsapp": "WhatsApp",
+      "sms": "SMS",
+      "video_call": "Appel vidéo",
+      "demo": "Démo",
+      "contract": "Contrat",
+      "discovery": "Découverte"
     },
     "tooltips": {
       "reopen": "Rouvrir",
@@ -799,7 +805,13 @@
       "type": "Type",
       "title": "Titre",
       "notes": "Notes (facultatives)",
-      "due": "Échéance"
+      "due": "Échéance",
+      "assignee": "Qui s’en charge",
+      "date": "Date",
+      "duration": "Durée",
+      "priority": "Priorité",
+      "repeat": "Répéter",
+      "start_time": "Heure de début"
     },
     "placeholders": {
       "title": "Envoyer une proposition · Relance après visite · …",
@@ -824,6 +836,71 @@
       "updated": "Tâche mise à jour",
       "title_required": "Le titre est obligatoire",
       "save_failed": "Échec de l'enregistrement"
+    },
+    "any_time": "N’importe quand",
+    "assignee_me": "Moi",
+    "ends_at": "Se termine à {{time}}",
+    "ends_next_day": "Se termine le lendemain à {{time}}",
+    "length_needs_time": "Choisissez une heure de début pour fixer la durée.",
+    "length_open": "Pas de durée fixée.",
+    "no_inquiry": "Liée à aucune demande.",
+    "other_time": "Autre heure",
+    "repeat_line": "Une fois faite, la suivante est ajoutée à la même heure.",
+    "repeat_needs_day": "Choisissez un jour pour la répéter.",
+    "repeat_once": "Une seule fois.",
+    "start_needs_day": "Choisissez un jour pour fixer une heure.",
+    "title_hint": "Laissez vide pour utiliser « {{title}} ».",
+    "date_quick": {
+      "today": "Aujourd’hui",
+      "tomorrow": "Demain",
+      "in_2_days": "Dans 2 jours",
+      "next_monday": "Lundi prochain",
+      "none": "Pas de date",
+      "other": "Autre jour"
+    },
+    "groups": {
+      "talk": "Prendre contact",
+      "meet": "Rencontrer",
+      "sell": "Conclure la vente",
+      "other": "Autre"
+    },
+    "length": {
+      "minutes": "{{count}} min",
+      "hours": "{{count}} h",
+      "hours_minutes": "{{hours}} h {{minutes}}"
+    },
+    "parts": {
+      "morning": "Matin",
+      "afternoon": "Après-midi",
+      "evening": "Soir"
+    },
+    "priority": {
+      "low": "Basse",
+      "normal": "Normale",
+      "high": "Haute"
+    },
+    "problems": {
+      "title_required": "Donnez un titre à la tâche.",
+      "too_long": "C’est trop long."
+    },
+    "repeat": {
+      "none": "Ne se répète pas",
+      "daily": "Chaque jour",
+      "weekly": "Chaque semaine",
+      "monthly": "Chaque mois"
+    },
+    "steps": {
+      "what": "Quoi",
+      "what_line": "Le type de tâche, son titre et son urgence.",
+      "when": "Quand",
+      "when_line": "À votre propre heure.",
+      "who": "Qui et pour quel lead",
+      "notes": "Notes"
+    },
+    "summary": {
+      "no_day": "Pas encore de date",
+      "at": "{{day}}, {{time}}",
+      "range": "{{day}}, {{start}}–{{end}}"
     }
   },
   "planner": {
