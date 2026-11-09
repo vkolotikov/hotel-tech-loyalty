@@ -352,7 +352,7 @@ whole-tree parity with the tip, built paths aside), fresh build **7c15358** (`fr
   `admin/dashboard/trends` and the `pulse` of crm, loyalty, appointments, content and time answer 401 unauthenticated (a
   missing route answers 404). Landing continuity: `https://sites.hexa-tech.uk/hexa-academy` 200, its kit stylesheet
   (64,577 bytes) with zero `rp-` markers.
-- Post-deploy CI: https://github.com/vkolotikov/hotel-tech-loyalty/actions/runs/42612548439 (in progress at recording).
+- Post-deploy CI: https://github.com/vkolotikov/hotel-tech-loyalty/actions/runs/42612548439 — **green** (success).
 
 ### What the owner does by hand
 
@@ -363,3 +363,35 @@ whole-tree parity with the tip, built paths aside), fresh build **7c15358** (`fr
    `dashboard.pulse.weather_unavailable`). `WEATHER_ENABLED=false` in Laravel Cloud switches the weather off.
 3. Everyone's menu starts folded the new way (only Overview, Workspaces and the page's own group open); each person's own
    opening and closing is kept from then on.
+
+### Round 2: the weather from a location abroad, a city search, Workspaces on top (9 Nov)
+
+The owner, with screenshots of Locations ("Riga", "Latvia", time zone UTC): "after adding city still not show weather,
+maybe need country and city dropdown selection or smth. 2. put workspaces more on top".
+
+- **The cause** (VenuePulse): a location's country was read only as a two-letter code, so "Latvia" fell back to the
+  organisation's own country; "Riga" was then looked up in that country, not found, and the miss was kept 30 days. Now:
+  a country reads from its name in eighteen languages (ICU: `Latvia`, `Lettland`, `Латвия`…) and never from the
+  organisation; a city not found in its country is looked up without it; a miss is kept one hour, under a new key (the
+  30-day misses are left behind); a venue on UTC takes the clock of its location's zone, else of the place found
+  (`timezone_source`); `weather_status` says why there is no weather, and the card says it in the owner's words, with
+  the way to Locations. Provider errors are logged (`dashboard.pulse.weather_unavailable`, the step and the status).
+- **Locations**: the city is picked from a search (`GET admin/properties/places`, Open-Meteo's places, under
+  `admin/properties`' AccessMap rule) that fills the city, the country and an empty or UTC time zone; the country is a
+  list; the time zone field suggests zones. A city typed by hand is still saved as typed.
+- **Workspaces** is now the menu's first group, above Overview; the dashboard's workspace cards follow its first row.
+- Checks: `tests/Feature/Dashboard` 21 (SQLite) and 20 + 2 skipped (PostgreSQL 16); Larastan clean; Vitest 464 files /
+  6,823 tests; lint baseline (1,383 legacy, none new); in the browser the city search, the pick filling Riga / Latvia /
+  Europe/Riga, the "could not find" card, the menu with Workspaces first.
+
+Deploy (12:35 UTC): production **f11a4e9** on `origin/main` a455e01 — source patch **6d5e733** (22 files of the branch at
+6c5be8e: 3 added, 19 changed, none deleted; whole-tree parity), fresh build **f11a4e9**. No migration. **Next source-patch
+baseline: 6c5be8e.** Artifact: the full PHP sweep, 81 runs, **7,587 passed, 0 failed, 25 skipped**; Larastan no errors;
+`tsc -b`; Vitest 6,823; build. Live by content: `index-YmwWKuDP.js` holds `place_not_found` and "Open Locations", its
+`Properties-BgzV1PEd.js` the city search; `admin/properties/places` answers 401 unauthenticated; landing kit stylesheet
+64,577 bytes, zero `rp-`. Post-deploy CI: https://github.com/vkolotikov/hotel-tech-loyalty/actions/runs/42618275665 (in
+progress at recording).
+
+For the owner: open Locations → edit → type "Rig" in the city field and pick "Riga — Rīga, Latvia" (it also sets the time
+zone to Europe/Riga), then Save and reload the dashboard. If the card then says "The weather is not available right now",
+Laravel Cloud cannot reach Open-Meteo; its log line `dashboard.pulse.weather_unavailable` names the step and the status.
