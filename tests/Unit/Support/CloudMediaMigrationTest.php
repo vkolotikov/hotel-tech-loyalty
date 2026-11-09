@@ -17,7 +17,10 @@ class CloudMediaMigrationTest extends TestCase
         config(['cache.shared' => 'array', 'filesystems.disks.media.url' => 'https://media.example.test']);
         Storage::fake('do'); Storage::fake('media', ['url' => 'https://media.example.test']); Storage::fake('media_private');
         $this->objects = new class extends ObjectStore {
-            public function sourceVisibility(string $disk, string $key): string { return str_contains($key, '/private/') ? 'private' : 'public'; }
+            public function sourceVisibility(string $disk, string $key): string
+            {
+                return str_contains($key, '/private/') || str_ends_with($key, '/member-only.docx') ? 'private' : 'public';
+            }
         };
     }
 
@@ -65,7 +68,7 @@ class CloudMediaMigrationTest extends TestCase
             $bytes = file_get_contents($path);
         } finally { unlink($path); }
         $files = ['org-19/knowledge-documents/guide.docx' => $bytes,
-            'org-19/private/member.docx' => $bytes, 'org-19/knowledge-documents/renamed.docx' => 'not a Word package',
+            'org-19/knowledge-documents/member-only.docx' => $bytes, 'org-19/knowledge-documents/renamed.docx' => 'not a Word package',
             'org-19/knowledge-documents/archive.zip' => $bytes, 'org-19/credentials/secret.docx' => $bytes];
         foreach ($files as $key => $body) Storage::disk('do')->put($key, $body);
         $preview = $this->migration()->run(false);
