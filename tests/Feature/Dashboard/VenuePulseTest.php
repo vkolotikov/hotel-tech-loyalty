@@ -35,6 +35,7 @@ class VenuePulseTest extends TestCase
                 $t->string('code')->nullable();
                 $t->string('city', 100)->nullable();
                 $t->string('country', 100)->nullable();
+                $t->string('timezone', 64)->nullable();
                 $t->boolean('is_active')->default(true);
                 $t->timestamps();
             });
@@ -85,8 +86,9 @@ class VenuePulseTest extends TestCase
             ->assertJsonPath('currency', \App\Services\Portal\PortalBootstrap::currency($this->org))
             ->assertJsonPath('place.name', 'Jūrmala')
             ->assertJsonPath('place.source', 'location')
-            // "Latvia" is not a code: the organisation's own country stands in.
+            // "Latvia" reads as LV.
             ->assertJsonPath('place.country', 'LV')
+            ->assertJsonPath('weather_status', 'ok')
             ->assertJsonPath('weather.current.temp', 6.4)
             ->assertJsonPath('weather.current.code', 61)
             ->assertJsonPath('weather.current.is_day', true)
@@ -181,7 +183,151 @@ class VenuePulseTest extends TestCase
         $this->assertNull(VenuePulse::cityOfZone('UTC'));
         $this->assertNull(VenuePulse::cityOfZone('Etc/GMT+2'));
         $this->assertSame('LV', VenuePulse::countryCode(' lv '));
-        $this->assertNull(VenuePulse::countryCode('Latvia'));
+        $this->assertSame('GB', VenuePulse::countryCode('UK'));
+    }
+
+    public function test_a_country_reads_from_its_name_in_the_venues_languages(): void
+    {
+        foreach (['Latvia', 'latvia', 'Lettland', 'Lettonie', 'Letonia', 'Латвия', 'Latvija'] as $name) {
+            $this->assertSame('LV', VenuePulse::countryCode($name), $name);
+        }
+        $this->assertSame('GB', VenuePulse::countryCode('United Kingdom'));
+        $this->assertSame('GB', VenuePulse::countryCode('England'));
+        $this->assertSame('US', VenuePulse::countryCode('U.S.A.'));
+        $this->assertSame('CI', VenuePulse::countryCode('Côte d’Ivoire'));
+        $this->assertNull(VenuePulse::countryCode('Narnia'));
+        $this->assertNull(VenuePulse::countryCode(''));
+    }
+
+    /**
+     * The owner's case (9 Nov): an organisation registered in another country than its location ("Riga", "Latvia" for a
+     * company in GB). The organisation's country is never put in the location's place.
+     */
+    public function test_a_location_abroad_is_looked_up_in_its_own_country(): void
+    {
+        $this->fakeProvider();
+        DB::table('organizations')->where('id', $this->org->id)->update(['country' => 'GB']);
+        DB::table('properties')->insert(['organization_id' => $this->org->id, 'name' => 'Old Town', 'code' => 'OT', 'city' => 'Riga', 'country' => 'Latvia', 'is_active' => true, 'created_at' => now(), 'updated_at' => now()]);
+
+        $this->asManager()->getJson($this->crmApi('pulse'))->assertOk()
+            ->assertJsonPath('place.country', 'LV')
+            ->assertJsonPath('weather_status', 'ok');
+
+        Http::assertSent(fn (ClientRequest $r) => str_contains($r->url(), 'geocoding-api') && $r['countryCode'] === 'LV');
+        Http::assertNotSent(fn (ClientRequest $r) => str_contains($r->url(), 'geocoding-api') && ($r['countryCode'] ?? null) === 'GB');
+    }
+
+    public function test_a_city_not_found_in_its_country_is_looked_up_without_it(): void
+    {
+        Http::fake(function (ClientRequest $r) {
+            if (str_contains($r->url(), 'geocoding-api')) {
+                return isset($r['countryCode'])
+                    ? Http::response(['generationtime_ms' => 0.3])
+                    : Http::response(['results' => [['name' => 'Jūrmala', 'latitude' => 56.968, 'longitude' => 23.7704, 'country_code' => 'LV', 'timezone' => 'Europe/Riga']]]);
+            }
+
+            return Http::response(['current' => ['temperature_2m' => 4.0, 'weather_code' => 0, 'is_day' => 1]]);
+        });
+        DB::table('properties')->insert(['organization_id' => $this->org->id, 'name' => 'Seaside', 'code' => 'SEA', 'city' => 'Jūrmala', 'country' => 'EE', 'is_active' => true, 'created_at' => now(), 'updated_at' => now()]);
+
+        $this->asManager()->getJson($this->crmApi('pulse'))->assertOk()
+            ->assertJsonPath('weather_status', 'ok')
+            ->assertJsonPath('weather.current.temp', 4);
+    }
+
+    public function test_a_city_nobody_knows_says_so_and_is_asked_again_within_the_hour_only_once(): void
+    {
+        Http::fake(fn (ClientRequest $r) => str_contains($r->url(), 'geocoding-api') ? Http::response(['generationtime_ms' => 0.3]) : Http::response([], 500));
+        DB::table('properties')->insert(['organization_id' => $this->org->id, 'name' => 'Typo', 'code' => 'TY', 'city' => 'Rigga', 'country' => 'LV', 'is_active' => true, 'created_at' => now(), 'updated_at' => now()]);
+
+        $this->asManager()->getJson($this->crmApi('pulse'))->assertOk()
+            ->assertJsonPath('place.name', 'Rigga')
+            ->assertJsonPath('weather', null)
+            ->assertJsonPath('weather_status', 'place_not_found');
+        $this->asManager()->getJson($this->crmApi('pulse'))->assertOk()->assertJsonPath('weather_status', 'place_not_found');
+        // With the country, then without it — once: the second page reads the remembered miss.
+        Http::assertSentCount(2);
+
+        // An hour later it is asked again (the location may have been corrected).
+        $this->travel(61)->minutes();
+        $this->asManager()->getJson($this->crmApi('pulse'))->assertOk();
+        Http::assertSentCount(4);
+    }
+
+    public function test_a_provider_that_cannot_be_reached_is_unavailable_not_unknown(): void
+    {
+        Http::fake(['*' => Http::response('down', 503)]);
+        DB::table('properties')->insert(['organization_id' => $this->org->id, 'name' => 'Old Town', 'code' => 'OT', 'city' => 'Riga', 'country' => 'LV', 'is_active' => true, 'created_at' => now(), 'updated_at' => now()]);
+
+        $this->asManager()->getJson($this->crmApi('pulse'))->assertOk()->assertJsonPath('weather_status', 'unavailable');
+    }
+
+    public function test_a_venue_on_utc_reads_the_clock_of_its_place(): void
+    {
+        $this->fakeProvider();
+        $this->org->forceFill(['timezone' => 'UTC'])->save();
+        app()->forgetScopedInstances();
+        DB::table('properties')->insert(['organization_id' => $this->org->id, 'name' => 'Old Town', 'code' => 'OT', 'city' => 'Riga', 'country' => 'Latvia', 'is_active' => true, 'created_at' => now(), 'updated_at' => now()]);
+
+        // The location names no zone: the city search's (the fake answers without one) leaves UTC…
+        $this->asManager()->getJson($this->crmApi('pulse'))->assertOk()
+            ->assertJsonPath('timezone', 'UTC')
+            ->assertJsonPath('timezone_source', 'venue');
+
+        // …the location's own zone is the clock's.
+        DB::table('properties')->where('organization_id', $this->org->id)->update(['timezone' => 'Europe/Riga']);
+        $this->asManager()->getJson($this->crmApi('pulse'))->assertOk()
+            ->assertJsonPath('timezone', 'Europe/Riga')
+            ->assertJsonPath('timezone_source', 'location')
+            ->assertJsonPath('now', '2026-11-04T12:00:00+02:00');
+    }
+
+    public function test_the_place_found_names_the_clock_when_the_location_does_not(): void
+    {
+        Http::fake([
+            'geocoding-api.open-meteo.com/*' => Http::response(['results' => [['name' => 'Riga', 'latitude' => 56.946, 'longitude' => 24.1059, 'country_code' => 'LV', 'timezone' => 'Europe/Riga']]]),
+            'api.open-meteo.com/*' => Http::response(['current' => ['temperature_2m' => 5.0, 'weather_code' => 3, 'is_day' => 1]]),
+        ]);
+        $this->org->forceFill(['timezone' => 'UTC'])->save();
+        app()->forgetScopedInstances();
+        DB::table('properties')->insert(['organization_id' => $this->org->id, 'name' => 'Old Town', 'code' => 'OT', 'city' => 'Riga', 'country' => 'LV', 'timezone' => 'UTC', 'is_active' => true, 'created_at' => now(), 'updated_at' => now()]);
+
+        $this->asManager()->getJson($this->crmApi('pulse'))->assertOk()
+            ->assertJsonPath('timezone', 'Europe/Riga')
+            ->assertJsonPath('timezone_source', 'place');
+
+        Http::assertSent(fn (ClientRequest $r) => str_contains($r->url(), 'forecast') && $r['timezone'] === 'Europe/Riga');
+    }
+
+    public function test_the_locations_city_search(): void
+    {
+        Http::fake(['geocoding-api.open-meteo.com/*' => Http::response(['results' => [
+            ['name' => 'Riga', 'admin1' => 'Rīga', 'country' => 'Latvia', 'country_code' => 'LV', 'latitude' => 56.946, 'longitude' => 24.10589, 'timezone' => 'Europe/Riga'],
+            ['name' => 'Riga', 'admin1' => 'New York', 'country' => 'United States', 'country_code' => 'US', 'latitude' => 43.0, 'longitude' => -77.9, 'timezone' => 'America/New_York'],
+            ['name' => 'Broken'],
+        ]])]);
+
+        $this->asManager()->getJson($this->adminApi('properties/places?q=Rig&lang=en'))->assertOk()
+            ->assertJsonPath('available', true)
+            ->assertJsonCount(2, 'places')
+            ->assertJsonPath('places.0.name', 'Riga')
+            ->assertJsonPath('places.0.region', 'Rīga')
+            ->assertJsonPath('places.0.country', 'Latvia')
+            ->assertJsonPath('places.0.country_code', 'LV')
+            ->assertJsonPath('places.0.timezone', 'Europe/Riga')
+            ->assertJsonPath('places.1.country_code', 'US');
+        Http::assertSent(fn (ClientRequest $r) => $r['name'] === 'Rig' && (int) $r['count'] === 8);
+
+        $this->asManager()->getJson($this->adminApi('properties/places?q=R'))->assertOk()->assertJsonCount(0, 'places');
+        $this->asManager()->getJson($this->adminApi('properties/places'))->assertStatus(422);
+    }
+
+    public function test_the_city_search_says_when_the_provider_cannot_be_reached(): void
+    {
+        Http::fake(['*' => Http::response('down', 503)]);
+        $this->asManager()->getJson($this->adminApi('properties/places?q=Riga'))->assertOk()
+            ->assertJsonPath('available', false)
+            ->assertJsonCount(0, 'places');
     }
 
     public function test_an_answer_without_a_current_temperature_is_no_weather(): void

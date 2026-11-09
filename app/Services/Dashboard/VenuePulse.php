@@ -20,10 +20,16 @@ use Illuminate\Support\Facades\Log;
  *   (`PortalBootstrap::currency()`, as the workspaces read it), so a dashboard's money reads in it.
  * - The place is the first location (`properties`) with a city — active ones first, then the oldest; otherwise the
  *   city a named zone carries (`Europe/Riga` → Riga). Nothing else is guessed: UTC names no place, so no weather.
- * - The weather is Open-Meteo's (no key, no personal data: only the city's name and coordinates leave the server).
- *   Both answers live in SharedCache (the place for 30 days, the weather for 20 minutes); a failure is remembered for
- *   5 minutes, so a provider that is down costs one short wait, not one per page. The weather is null whenever it is
- *   not known — the dashboards then show the clock alone; a dashboard never fails because of the weather.
+ *   A location's country is free text: a code (`LV`), or a name in English, German, French, Spanish, Russian, Latvian…
+ *   (`Latvia`, `Lettland`, `Латвия`) reads as its code; the organisation's own country is never put in its place
+ *   (a venue abroad is still found). The Locations form fills both from a city search (`places()`).
+ * - When the venue names no zone (UTC), the clock and the forecast follow the place's own zone: the location's when it
+ *   names one, else the one the city search found (`timezone_source`).
+ * - The weather is Open-Meteo's (no key, no personal data: only the city's name and coordinates leave the server). A city
+ *   is looked up with its country, then without it; found places live in SharedCache 30 days, a city the provider does
+ *   not know 1 hour, the weather 20 minutes, and an unreachable provider is remembered for 5 minutes, so it costs one
+ *   short wait, not one per page. `weather_status` says why there is no weather (`no_place`, `place_not_found`,
+ *   `unavailable`, `off`); a dashboard never fails because of the weather.
  */
 final class VenuePulse
 {
@@ -36,28 +42,60 @@ final class VenuePulse
 
     private const FAILURE_TTL = 300;     // 5 minutes
 
+    private const MISS_TTL = 3600;       // 1 hour: a city the provider does not know (perhaps a typo, fixed soon)
+
     /**
-     * @return array{timezone: string, now: string, today: string, currency: string, place: array{name: string, country: ?string, source: string}|null, weather: array<string, mixed>|null}
+     * @return array<string, mixed>
      */
     public function for(Organization $org): array
     {
-        $zone = AppointmentClock::zoneFor((int) $org->id);
+        $venueZone = AppointmentClock::zoneFor((int) $org->id);
+        $place = $this->place($org, $venueZone);
+
+        $status = 'no_place';
+        $coords = null;
+        if ($place !== null && !config('services.weather.enabled', true)) {
+            $status = 'off';
+        } elseif ($place !== null) {
+            $coords = $this->coordinates($place['name'], $place['country']);
+            $status = is_array($coords) ? 'ok' : ($coords === 'not_found' ? 'place_not_found' : 'unavailable');
+        }
+
+        // The clock's zone: the venue's; a venue on UTC (no zone named) reads the place's own.
+        $zone = $venueZone;
+        $zoneSource = 'venue';
+        if ($venueZone === 'UTC') {
+            if (($place['timezone'] ?? null) !== null) {
+                [$zone, $zoneSource] = [$place['timezone'], 'location'];
+            } elseif (is_array($coords) && $coords['timezone'] !== null) {
+                [$zone, $zoneSource] = [$coords['timezone'], 'place'];
+            }
+        }
         $now = CarbonImmutable::now($zone);
-        $place = $this->place($org, $zone);
+
+        $weather = null;
+        if (is_array($coords)) {
+            $weather = $this->weather($coords, $place['country'], $zone, $now);
+            if ($weather === null) {
+                $status = 'unavailable';
+            }
+        }
 
         return [
             'timezone' => $zone,
+            'timezone_source' => $zoneSource,
             'now' => $now->toIso8601String(),
             'today' => $now->format('Y-m-d'),
             // The venue's currency, as the workspaces read it, so a dashboard's money reads in it.
             'currency' => PortalBootstrap::currency($org),
             'place' => $place,
-            'weather' => $place !== null && config('services.weather.enabled', true) ? $this->weather($place, $zone, $now) : null,
+            'weather' => $weather,
+            'weather_status' => $weather !== null ? 'ok' : $status,
         ];
     }
 
     /**
-     * @return array{name: string, country: ?string, source: string}|null
+     * @return array{name: string, country: ?string, source: string, timezone: ?string}|null
      */
     public function place(Organization $org, string $zone): ?array
     {
@@ -67,13 +105,16 @@ final class VenuePulse
             ->where('city', '!=', '')
             ->orderByDesc('is_active')
             ->orderBy('id')
-            ->first(['id', 'city', 'country']);
+            ->first(['id', 'city', 'country', 'timezone']);
 
         if ($property !== null && trim((string) $property->city) !== '') {
+            $own = PortalBootstrap::namedZone($property->timezone);
+
             return [
                 'name' => mb_substr(trim((string) $property->city), 0, 100),
-                'country' => self::countryCode($property->country) ?? self::countryCode($org->country ?? null),
+                'country' => self::countryCode($property->country),
                 'source' => 'location',
+                'timezone' => $own !== null && $own !== 'UTC' ? $own : null,
             ];
         }
 
@@ -82,7 +123,58 @@ final class VenuePulse
             return null;
         }
 
-        return ['name' => $city, 'country' => self::countryCode($org->country ?? null), 'source' => 'timezone'];
+        return ['name' => $city, 'country' => self::countryCode($org->country ?? null), 'source' => 'timezone', 'timezone' => null];
+    }
+
+    /**
+     * Cities matching what was typed, for the Locations form (`GET admin/properties/places`): each with its region,
+     * country (name and code), coordinates and zone, as Open-Meteo knows them. Empty when nothing matches or the provider
+     * cannot be reached (`available` says which).
+     *
+     * @return array{available: bool, places: list<array{name: string, region: ?string, country: ?string, country_code: ?string, latitude: float, longitude: float, timezone: ?string}>}
+     */
+    public function places(string $query, string $language = 'en'): array
+    {
+        $query = trim(mb_substr($query, 0, 80));
+        if (mb_strlen($query) < 2 || !config('services.weather.enabled', true)) {
+            return ['available' => true, 'places' => []];
+        }
+        $language = preg_match('/^[a-z]{2}$/', $language) === 1 ? $language : 'en';
+        $key = 'pulse:places:v2:' . sha1(mb_strtolower($query) . '|' . $language);
+
+        $found = $this->remember($key, self::MISS_TTL, function () use ($query, $language) {
+            $response = Http::acceptJson()->connectTimeout(2)->timeout(4)->get(config('services.weather.geocoding_url'), [
+                'name' => $query, 'count' => 8, 'language' => $language, 'format' => 'json',
+            ]);
+            if (!$response->successful()) {
+                return null;
+            }
+            $rows = $response->json('results');
+
+            return is_array($rows) ? array_values($rows) : [];
+        });
+
+        if (!is_array($found)) {
+            return ['available' => false, 'places' => []];
+        }
+        $places = [];
+        foreach ($found as $row) {
+            if (!is_array($row) || !is_numeric($row['latitude'] ?? null) || !is_numeric($row['longitude'] ?? null) || !is_string($row['name'] ?? null)) {
+                continue;
+            }
+            $zone = PortalBootstrap::namedZone($row['timezone'] ?? null);
+            $places[] = [
+                'name' => $row['name'],
+                'region' => is_string($row['admin1'] ?? null) ? $row['admin1'] : null,
+                'country' => is_string($row['country'] ?? null) ? $row['country'] : null,
+                'country_code' => self::countryCode($row['country_code'] ?? null),
+                'latitude' => round((float) $row['latitude'], 4),
+                'longitude' => round((float) $row['longitude'], 4),
+                'timezone' => $zone !== null && $zone !== 'UTC' ? $zone : null,
+            ];
+        }
+
+        return ['available' => true, 'places' => $places];
     }
 
     /** `Europe/Riga` → `Riga`, `America/Argentina/Buenos_Aires` → `Buenos Aires`; UTC and `Etc/*` name no place. */
@@ -97,25 +189,88 @@ final class VenuePulse
         return $city !== '' ? $city : null;
     }
 
-    /** A two-letter country code, upper-case, or null: a location's country is free text (`Latvia`, `lv`). */
+    /** Names that are not a country's name in any language ICU knows, but mean one. */
+    private const COUNTRY_ALIASES = [
+        'uk' => 'GB', 'england' => 'GB', 'scotland' => 'GB', 'wales' => 'GB', 'northern ireland' => 'GB', 'great britain' => 'GB',
+        'britain' => 'GB', 'usa' => 'US', 'united states of america' => 'US', 'america' => 'US', 'uae' => 'AE', 'holland' => 'NL',
+    ];
+
+    /** The languages whose country names a location may be written in. */
+    private const NAME_LANGUAGES = ['en', 'de', 'fr', 'es', 'ru', 'lv', 'lt', 'et', 'it', 'pt', 'nl', 'pl', 'uk', 'fi', 'sv', 'no', 'da', 'cs'];
+
+    /**
+     * A location's country as a two-letter code, or null: a code (`lv`, `UK` reads as GB) or a country's name in one of
+     * NAME_LANGUAGES (`Latvia`, `Lettland`, `Латвия`, `Latvija`), case, accents and full stops ignored.
+     */
     public static function countryCode(mixed $raw): ?string
     {
-        $value = strtoupper(trim((string) $raw));
+        $value = trim((string) $raw);
+        if ($value === '') {
+            return null;
+        }
+        if (preg_match('/^[A-Za-z]{2}$/', $value) === 1) {
+            $code = strtoupper($value);
 
-        return preg_match('/^[A-Z]{2}$/', $value) === 1 ? $value : null;
+            return $code === 'UK' ? 'GB' : $code;
+        }
+
+        return self::countryNames()[self::fold($value)] ?? null;
+    }
+
+    /** @var array<string, string>|null folded name => code */
+    private static ?array $countryNames = null;
+
+    /** @return array<string, string> */
+    private static function countryNames(): array
+    {
+        if (self::$countryNames !== null) {
+            return self::$countryNames;
+        }
+        $map = [];
+        foreach (self::COUNTRY_ALIASES as $alias => $code) {
+            $map[$alias] = $code;
+        }
+        $codes = [];
+        $bundle = class_exists(\ResourceBundle::class) ? \ResourceBundle::create('en', 'ICUDATA-region') : null;
+        $countries = $bundle?->get('Countries');
+        if ($countries instanceof \ResourceBundle) {
+            foreach ($countries as $code => $unused) {
+                if (is_string($code) && preg_match('/^[A-Z]{2}$/', $code) === 1 && $code !== 'ZZ') {
+                    $codes[] = $code;
+                }
+            }
+        }
+        foreach (self::NAME_LANGUAGES as $language) {
+            foreach ($codes as $code) {
+                $name = \Locale::getDisplayRegion('-' . $code, $language);
+                if (is_string($name) && $name !== '' && $name !== $code) {
+                    $map[self::fold($name)] ??= $code;
+                }
+            }
+        }
+
+        return self::$countryNames = $map;
+    }
+
+    /** Lower case without accents, full stops or doubled spaces: "Côte d’Ivoire" → "cote d’ivoire". */
+    private static function fold(string $text): string
+    {
+        $text = mb_strtolower(trim($text));
+        if (class_exists(\Normalizer::class)) {
+            $decomposed = \Normalizer::normalize($text, \Normalizer::FORM_D);
+            $text = is_string($decomposed) ? (string) preg_replace('/\p{Mn}+/u', '', $decomposed) : $text;
+        }
+
+        return (string) preg_replace('/\s+/u', ' ', str_replace('.', '', $text));
     }
 
     /**
-     * @param  array{name: string, country: ?string, source: string}  $place
+     * @param  array{lat: float, lon: float, country: ?string, timezone: ?string}  $coords
      * @return array<string, mixed>|null
      */
-    private function weather(array $place, string $zone, CarbonImmutable $now): ?array
+    private function weather(array $coords, ?string $placeCountry, string $zone, CarbonImmutable $now): ?array
     {
-        $coords = $this->coordinates($place['name'], $place['country']);
-        if ($coords === null) {
-            return null;
-        }
-        $country = $place['country'] ?? $coords['country'];
+        $country = $placeCountry ?? $coords['country'];
         $imperial = $country !== null && in_array($country, self::IMPERIAL, true);
         $key = sprintf('pulse:weather:%.2f:%.2f:%s:%s', $coords['lat'], $coords['lon'], $zone, $imperial ? 'f' : 'c');
 
@@ -132,7 +287,13 @@ final class VenuePulse
                 'wind_speed_unit' => $imperial ? 'mph' : 'kmh',
             ]);
 
-            return $response->successful() && is_array($response->json('current')) ? $response->json() : null;
+            if (!$response->successful() || !is_array($response->json('current'))) {
+                Log::info('dashboard.pulse.weather_unavailable', ['step' => 'forecast', 'status' => $response->status()]);
+
+                return null;
+            }
+
+            return $response->json();
         });
 
         return is_array($forecast) ? self::shape($forecast, $now, $imperial) : null;
@@ -211,31 +372,72 @@ final class VenuePulse
     }
 
     /**
-     * @return array{lat: float, lon: float, country: ?string}|null
+     * Where a city is: looked up with its country, then without it (a country written in a way nothing reads). An array
+     * when found, `not_found` when the provider knows no such city, null when it could not be asked.
+     *
+     * @return array{lat: float, lon: float, country: ?string, timezone: ?string}|'not_found'|null
      */
-    private function coordinates(string $city, ?string $country): ?array
+    private function coordinates(string $city, ?string $country): array|string|null
     {
-        $key = 'pulse:place:' . sha1(mb_strtolower($city) . '|' . ($country ?? ''));
+        $tries = $country !== null ? [$country, null] : [null];
+        foreach ($tries as $code) {
+            $found = $this->lookUp($city, $code);
+            if ($found !== 'not_found') {
+                return $found;
+            }
+        }
 
-        $found = $this->remember($key, self::PLACE_TTL, function () use ($city, $country) {
+        return 'not_found';
+    }
+
+    /**
+     * @return array{lat: float, lon: float, country: ?string, timezone: ?string}|'not_found'|null
+     */
+    private function lookUp(string $city, ?string $country): array|string|null
+    {
+        // v2 (2026-11-09): the first key remembered a miss for 30 days, which kept a fixed location without weather.
+        $key = 'pulse:place:v2:' . sha1(mb_strtolower($city) . '|' . ($country ?? ''));
+        $store = SharedCache::store();
+        $cached = $store->get($key);
+        if (is_array($cached)) {
+            return $cached;
+        }
+        if ($cached === 'not_found') {
+            return 'not_found';
+        }
+
+        $found = $this->remember($key . ':ask', self::FAILURE_TTL, function () use ($city, $country) {
             $query = ['name' => $city, 'count' => 1, 'language' => 'en', 'format' => 'json'];
             if ($country !== null) {
                 $query['countryCode'] = $country;
             }
             $response = Http::acceptJson()->connectTimeout(2)->timeout(4)->get(config('services.weather.geocoding_url'), $query);
-            $first = $response->successful() ? $response->json('results.0') : null;
-            if (!is_array($first) || !is_numeric($first['latitude'] ?? null) || !is_numeric($first['longitude'] ?? null)) {
-                return false;   // a city the provider does not know: remembered as "no place" for as long as a place
+            if (!$response->successful()) {
+                Log::info('dashboard.pulse.weather_unavailable', ['step' => 'geocoding', 'status' => $response->status()]);
+
+                return null;
             }
+            $first = $response->json('results.0');
+            if (!is_array($first) || !is_numeric($first['latitude'] ?? null) || !is_numeric($first['longitude'] ?? null)) {
+                return 'not_found';
+            }
+            $zone = PortalBootstrap::namedZone($first['timezone'] ?? null);
 
             return [
                 'lat' => round((float) $first['latitude'], 4),
                 'lon' => round((float) $first['longitude'], 4),
                 'country' => self::countryCode($first['country_code'] ?? null),
+                'timezone' => $zone !== null && $zone !== 'UTC' ? $zone : null,
             ];
         });
 
-        return is_array($found) ? $found : null;
+        if (is_array($found)) {
+            $store->put($key, $found, self::PLACE_TTL);
+        } elseif ($found === 'not_found') {
+            $store->put($key, 'not_found', self::MISS_TTL);
+        }
+
+        return $found;
     }
 
     /**
