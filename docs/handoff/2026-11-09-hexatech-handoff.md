@@ -5,6 +5,8 @@ names. This session adds **HexaTech Time Planner**, the sixth workspace. Runbook
 
 ## The owner's request
 
+Loyalty continuation, evening 9 November: active source branch `feature/loyalty-setup-polish-20261109` adds clearer guided setup and industry template selection, real Overview first steps, Settings re-entry, member spacing, place radio fixes, compact offers and safe reward enable/disable/delete. Backend controls preserve every redemption and stamp-card reference. See `docs/audits/2026-11-09-loyalty-setup-polish.md`. SiteGround confirms hotel-tech.ai DKIM ACTIVE and SPF published; the owner confirmed removing the short duplicate hexa-tech.uk DMARC record, now verified on both authoritative nameservers while preserving Zoho. Source checks: 126 PHP tests, 140 focused frontend tests, Larastan, TypeScript and 36 real-backend browser checks passed before final artifact preparation. Full release gates and final production evidence follow below when complete. The latest native checkout confirms FCM V1 assignment and staff iOS push entitlements; physical push and Wallet acceptance remain unverified. Previous Cloud media migration below remains complete.
+
 "We do before portals for loyalty, crm and AI chat widget, booking and content planner. Now lets make a separate portal
 for time planner. Use all data which we have before, style, settings, features etc., build a powerful AI powered …
 planner, additional features AI plan and analyse employees day depends on employees knowledge etc., ai capture data, ai

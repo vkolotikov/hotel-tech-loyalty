@@ -50,7 +50,7 @@ Private logs, screenshots and fixture data remain in task directories under `C:/
    Keep the DO source for immutable historical links until a separate consumer/retirement review. Re-upload the four
    original missing local images: user 109/org 23 and widget configs 7/org 16, 10/org 12, 22/org 35. They were absent
    before migration on production local, DO, Cloud and the local project copies; no reference was silently cleared.
-6. DNS observations: `hotel-tech.ai` (the test From domain) has one SPF and one DMARC record, default DKIM published, DMARC `p=none` without a reporting address. `hexa-tech.uk` has two DMARC records and needs one valid policy if used as a sending domain. No DNS change was made; provider/DNS access is external to this checkout. Receipt alone does not verify SPF/DKIM alignment.
+6. DNS follow-up, 9 November evening: SiteGround confirms `hotel-tech.ai` DKIM active; SPF and the public DKIM key are published. With the owner's explicit confirmation, removed the short duplicate `hexa-tech.uk` DMARC record, preserving its reporting policy and Zoho SPF/DKIM/MX. Both authoritative nameservers now answer one DMARC record. Received-message authentication headers remain unverified. See [the setup and authentication audit](2026-11-09-loyalty-setup-polish.md).
 
 The full desktop/member-app designers, per-customer SMTP/domain self-service and expanded Places functionality remain on hold as previously agreed. These checks do not release native apps or enable unconfigured providers.
 

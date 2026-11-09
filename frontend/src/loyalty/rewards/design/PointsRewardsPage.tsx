@@ -1,8 +1,13 @@
-import { useQuery } from '@tanstack/react-query'
+import { useState } from 'react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useBoot } from '../../LoyaltyProvider'
-import { mediaUrl } from '../../lib/api'
+import { failureOf, mediaUrl } from '../../lib/api'
+import { Notice } from '../../../workspace/ui/Notice'
+import { OverviewButton } from '../../overview/OverviewUI'
+import { DesignDialog } from '../../redesign/DesignUI'
+import type { Reward } from '../types'
 import { amountOf, points, when } from '../../lib/format'
 import { CATALOGUE_KEY, rewardsApi } from '../api'
 import { LoadFailed, Loading } from '../parts'
@@ -37,7 +42,27 @@ export function PointsRewardsPage() {
       {selected && <aside className="l-rb-side"><section className="l-ov-panel l-rb-detail l-rc-reward-detail"><div className="l-rb-section-head"><RewardEyebrow>{say('selectedReward')}</RewardEyebrow><RewardStatus tone={rewardStatus(selected)}>{say(rewardStatus(selected))}</RewardStatus></div><h2 className="l-rb-title">{selected.name}</h2>{selected.image_url && <img className="l-rb-picture" src={mediaUrl(selected.image_url)} alt={selected.name} loading="lazy" />}<div className="l-rb-preview"><strong className="l-rb-big">{t('loyalty.earn.points', '{{n}} points', { n: points(selected.points_cost, i18n.language) })}</strong>{selected.description && <p>{selected.description}</p>}{discount && <p>{t(`loyalty.rewards.discount_phrase.${discount.type}`, DISCOUNT_PHRASE_WORDS[discount.type] ?? '{{amount}}', { amount: amountOf(discount.type, discount.amount, boot.venue.currency, i18n.language) })} · {t(`loyalty.rewards.applies_to.${selected.applies_to}`, APPLIES_TO_WORDS[selected.applies_to] ?? selected.applies_to)}</p>}</div>
       <dl className="l-rb-facts"><dt>{say('who')}</dt><dd>{say('allMembers')}</dd><dt>{say('availability')}</dt><dd>{selected.stock === null ? say('unlimited') : say('stockLeft', { n: points(selected.stock, i18n.language) })}</dd><dt>{say('memberLimit')}</dt><dd>{selected.per_member_limit === null ? say('noLimit') : selected.per_member_limit === 1 ? say('once') : say('limit', { n: selected.per_member_limit })}</dd><dt>{say('validUntil')}</dt><dd>{selected.expires_at ? when(selected.expires_at, i18n.language, boot.venue.timezone) : say('noEnd')}</dd></dl>
       <div className="l-rb-divider"><strong>{say('claimSteps')}</strong><ol><li>{say('claimCost', { n: points(selected.points_cost, i18n.language) })}</li><li>{say('claimCode')}</li></ol></div>
+      {manage && <RewardActions key={selected.id} reward={selected} onRemoved={() => go({ selected: null })} />}
       <div className="l-rb-detail-actions">{manage && <Link className="l-ov-button l-ov-primary" to={rewardsUrl('catalogue', { reward: selected.id })}>{say('editReward')}</Link>}<details className="l-rb-overflow"><summary className="l-ov-button" aria-label={t('loyalty.membership.more.label', 'More')}>…</summary><div className="l-ov-panel"><strong>{say('terms')}</strong><p className="l-rb-prewrap">{selected.terms || say('noTerms')}</p>{selected.category && <p>{t('loyalty.rewards.reward.category', 'Category')}: {selected.category}</p>}<small>{t('loyalty.rewards.catalogue.redeemed', 'Redeemed')}: {points(selected.redeemed, i18n.language)} · {t('loyalty.rewards.catalogue.fulfilled', 'Fulfilled')}: {points(selected.fulfilled, i18n.language)}</small></div></details></div></section><RewardShortcut to="/loyalty/rewards?tab=benefits" title={say('benefits')} caption={say('benefitShortcut')} icon="members" /><RewardShortcut to="/loyalty/rewards?tab=offers" title={say('offers')} caption={say('offerShortcut')} icon="calendar" /></aside>}
       </div><RewardActivityLinks /></>}
+  </div>
+}
+
+function RewardActions({ reward, onRemoved }: { reward: Reward; onRemoved: () => void }) {
+  const { t } = useTranslation(), client = useQueryClient(), [confirm, setConfirm] = useState(false)
+  const action = useMutation({
+    mutationFn: async (kind: 'state' | 'delete') => { if (kind === 'delete') await rewardsApi.deleteReward(reward.id); else await rewardsApi.rewardState(reward.id, !reward.is_active) },
+    onSuccess: (_, kind) => {
+      setConfirm(false)
+      for (const queryKey of [['loyalty', 'rewards'], ['loyalty', 'options'], ['loyalty', 'overview'], ['loyalty', 'start']]) void client.invalidateQueries({ queryKey })
+      if (kind === 'delete') onRemoved()
+    },
+  })
+  const error = action.isError ? failureOf(action.error) : null
+  const notice = error && <Notice tone="danger">{t(error.code === 'reward_in_use' ? 'loyalty.launchpolish.rewardInUse' : 'loyalty.launchpolish.actionFailed')}</Notice>
+  return <div className="l-rb-divider l-rb-management">
+    <div className="l-rb-detail-actions"><OverviewButton disabled={action.isPending} onClick={() => action.mutate('state')}>{t(reward.is_active ? 'loyalty.launchpolish.disable' : 'loyalty.launchpolish.enable')}</OverviewButton><OverviewButton disabled={action.isPending} onClick={() => { action.reset(); setConfirm(true) }}>{t('loyalty.launchpolish.deleteReward')}</OverviewButton></div>
+    {!confirm && notice}
+    {confirm && <DesignDialog title={t('loyalty.launchpolish.deleteReward')} onClose={() => setConfirm(false)} busy={action.isPending}><p>{t('loyalty.launchpolish.deleteBody', { name: reward.name })}</p>{notice}<div className="l-rb-detail-actions"><OverviewButton disabled={action.isPending} onClick={() => setConfirm(false)}>{t('loyalty.overview.close', 'Close')}</OverviewButton><OverviewButton primary disabled={action.isPending} onClick={() => action.mutate('delete')}>{t('loyalty.launchpolish.confirmDelete')}</OverviewButton></div></DesignDialog>}
   </div>
 }

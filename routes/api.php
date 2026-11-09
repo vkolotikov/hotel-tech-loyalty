@@ -1458,6 +1458,8 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
                 Route::get('rewards', [\App\Http\Controllers\Api\V1\Admin\Loyalty\RewardController::class, 'index']);
                 Route::post('rewards', [\App\Http\Controllers\Api\V1\Admin\Loyalty\RewardController::class, 'store']);
                 Route::put('rewards/{id}', [\App\Http\Controllers\Api\V1\Admin\Loyalty\RewardController::class, 'update'])->whereNumber('id');
+                Route::put('rewards/{id}/state', [\App\Http\Controllers\Api\V1\Admin\Loyalty\RewardController::class, 'state'])->whereNumber('id');
+                Route::delete('rewards/{id}', [\App\Http\Controllers\Api\V1\Admin\Loyalty\RewardController::class, 'destroy'])->whereNumber('id');
                 Route::get('redemptions', [\App\Http\Controllers\Api\V1\Admin\Loyalty\RedemptionController::class, 'index']);
                 Route::post('redemptions/{id}/fulfil', [\App\Http\Controllers\Api\V1\Admin\Loyalty\RedemptionController::class, 'fulfil'])->whereNumber('id');
                 Route::post('redemptions/{id}/cancel', [\App\Http\Controllers\Api\V1\Admin\Loyalty\RedemptionController::class, 'cancel'])->whereNumber('id');

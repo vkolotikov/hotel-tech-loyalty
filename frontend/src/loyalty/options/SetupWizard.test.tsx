@@ -70,18 +70,18 @@ describe('the setup wizard (release 7 §1)', () => {
     expect(words).toContain('Suggested for your business')
     expect(words).toContain('Tiers: Welcome, Devotee, Inner Circle')
     expect(words).toContain('Rewards such as Brow Tidy, 10 Off Any Service')
-    expect(words).not.toContain('Keep my tiers and rewards')
+    expect(words).not.toContain('Keep current earning rules')
     expect(html).not.toMatch(/type="radio"[^>]*disabled=""/)
   })
 
-  it('a venue with tiers keeps them, and sees the presets greyed with why', () => {
+  it('an existing venue keeps its programme and can select industry recommendations', () => {
     const html = render(answerFixture())
     const words = text(html)
-    expect(words).toContain('Keep my tiers and rewards')
+    expect(words).toContain('Keep current earning rules')
     expect(words).toContain('Tiers: 3. Rewards in the catalogue: 2. Nothing in them changes.')
-    expect(words).toContain('Starting programmes set up a new venue’s tiers only.')
+    expect(words).toContain('Choose an industry template for suggested earning rules.')
     expect(html).toMatch(/data-choice="keep" data-checked=""/)
-    expect((html.match(/type="radio"[^>]*disabled=""/g) ?? []).length).toBe(2)
+    expect(html).not.toMatch(/type="radio"[^>]*disabled=""/)
   })
 
   it('step 2 ticks every way as the preset suggests, with what members get for the ticked ones', () => {
@@ -126,6 +126,14 @@ describe('the setup wizard (release 7 §1)', () => {
     const words = text(render(answerFixture(), { step: 'review', choice: 'keep', form }))
     expect(words).toContain('Your tiers and rewards stay as they are.')
     expect(words).toContain('Not used: Stamp card, Check-in, Earn at the desk, Cashback credit.')
+  })
+
+  it('an existing programme can review a chosen template without promising a replacement catalogue', () => {
+    const form = recommendedForm(answerFixture(), presetFixture('beauty', true), answerFixture().options)
+    const words = text(render(answerFixture(), { step: 'review', choice: 'beauty', form }))
+    expect(words).toContain('Suggested earning rules: Beauty and spa.')
+    expect(words).toContain('Your tiers, benefits and rewards stay as they are.')
+    expect(words).not.toContain('a first rewards catalogue')
   })
 
   it('warns when nothing is ticked', () => {

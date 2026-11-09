@@ -10,6 +10,8 @@ export const rewardsApi = {
   catalogue: (): Promise<Catalogue> => watched(api.get(loyaltyUrl('rewards'))),
   createReward: (body: RewardBody): Promise<{ reward: Reward }> => watched(api.post(loyaltyUrl('rewards'), body)),
   updateReward: (id: number, body: RewardBody): Promise<{ reward: Reward }> => watched(api.put(loyaltyUrl(`rewards/${id}`), body)),
+  rewardState: (id: number, active: boolean): Promise<{ reward: Reward }> => watched(api.put(loyaltyUrl(`rewards/${id}/state`), { is_active: active })),
+  deleteReward: (id: number): Promise<{ success: boolean }> => watched(api.delete(loyaltyUrl(`rewards/${id}`))),
 
   redemptions: (filter: RedemptionFilter, page: number, request?: number): Promise<RedemptionsPage> =>
     watched(api.get(loyaltyUrl('redemptions'), { params: { state: filter, ...(page > 1 ? { page } : {}), ...(request ? { request } : {}) } })),

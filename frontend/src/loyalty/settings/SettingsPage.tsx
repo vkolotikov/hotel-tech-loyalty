@@ -69,6 +69,7 @@ function SettingsEditor() {
   const failureNotice = failure && <Notice tone="danger">{t(...refusalKey('loyalty.app', ERRORS, 'currency', failureOf(failure)))}</Notice>
   return <div className="l-ov-page l-rd-page l-st-page">
     <header className="l-ov-page-heading"><div><h1>{t('workspace.shell.settings', 'Settings')}</h1><p>{w('line')}</p></div></header>
+    {boot.staff.can.manage_program && <section className="l-ov-panel l-st-panel"><h2>{t('loyalty.redesign.guidedSetup', 'Guided setup')}</h2><p>{t('loyalty.launchpolish.setupSettingsLine')}</p><div className="l-rd-actions"><Link className="l-ov-button l-ov-primary" to="/loyalty/options/setup">{t('loyalty.program.edit', 'Edit')}</Link><Link className="l-ov-link" to="/loyalty/start">{t('loyalty.overview.checklist', 'Open setup checklist')} →</Link></div></section>}
     <div className="l-st-columns">
       <section className="l-ov-panel l-st-panel" aria-labelledby="settings-preferences"><h2 id="settings-preferences">{w('prefs')}</h2><p>{w('prefsLine')}</p>
         <label className="l-st-field"><span>{t('workspace.shell.language', 'Language')}</span><select value={form.language} disabled={busy} onChange={e => update({ language: e.target.value })}>{SUPPORTED_LANGUAGES.map(lang => <option key={lang.code} value={lang.code}>{lang.label}</option>)}</select><small>{w('langHint')}</small></label>
