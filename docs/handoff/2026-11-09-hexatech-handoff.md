@@ -512,6 +512,23 @@ Public verification at 16:00-16:02 UTC passed on both app hosts; auth/wallet gat
 public recovery payload/manifest both 404. CI **42646509815** passed all eight jobs. No further code release is
 pending; **b0ecd9479** remains the source-patch code baseline. Keep DO files/settings for legacy consumers.
 
+**COMPLETE, 16:12 UTC:** final backup finished **16:08:40 UTC**, **209 objects / 202,034,601 bytes**. Final reference
+preview has zero remaining mapped references, zero private-review/unmapped entries; only the four pre-existing
+missing local images remain for original re-upload. Operations media status and Archive health are **ok**, no
+rehearsal marker. Final receipt `ops:cloud-media-final-acceptance-20261109` was persisted **16:11:58 UTC** and
+extended with a fresh unchanged complete source-inventory comparison at **16:12:37 UTC**. No source file changed.
+The web console disconnected during this run, but the original PHP process remained active; read its persisted
+result instead of repeating the sweep or clearing its lock. Both controlled live probes are already removed,
+their exact private revisions retained for 30 days. Active MEDIA_DISK is media; the Cloud migration is accepted.
+
+The current word/cache deployment artifact was safely removed with Git long-path support after its dependency
+junction was unlinked. Root dependencies and the owner's untracked files remain. Only the earlier stream-artifact
+remainder is left after its blocked cleanup; do not retry that rejected removal. No local rehearsal service or
+database is running. Final docs are source-only evidence; the next code source-patch baseline stays **b0ecd9479**,
+production code **31c1b568e**, environment deployment **1156**. Optional provider/device acceptance and sending-domain
+DNS/provider observations are still listed in `docs/audits/2026-11-09-loyalty-launch-rehearsal.md`; do not represent
+those as completed or enable unconfigured channels. DO retirement is a later review, not a remaining cutover step.
+
 ## Dashboard deploy (9 Nov, 11:53 UTC)
 
 Production **a455e01**, by the source-patch recipe on `origin/main` f275699 (another session's media-recovery release, no

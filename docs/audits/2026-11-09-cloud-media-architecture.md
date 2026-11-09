@@ -1,6 +1,6 @@
 # ADR: move production media to Laravel Cloud
 
-**Status:** Cloud uploads live; copy/recovery/URLs verified, final reconciliation in progress.
+**Status:** Cloud media migration accepted at 16:12 UTC; four pre-existing missing local images need originals.
 **Date:** 9 November 2026.
 **Decider:** Owner, in this session; 30-day recovery retention approved.
 
@@ -13,7 +13,7 @@ receipt loss, then verifies install cleanup preserves receipts and an active loc
 
 ## Context
 
-Production uses DigitalOcean Spaces `hotel-tech-assets` in lon1. The owner's complete read-only inventory found
+Production initially used DigitalOcean Spaces `hotel-tech-assets` in lon1. The owner's complete read-only inventory found
 209 objects, 202,034,601 bytes: 139 JPG, 51 PNG, four WebP, seven TXT, one PDF and seven other extensions.
 The public base is `hotel-tech-assets.lon1.cdn.digitaloceanspaces.com`. The existing object-access key cannot read
 bucket lifecycle configuration (403 AccessDenied). No temporary administrator key was reported created.
@@ -75,7 +75,7 @@ recovery: an account-wide loss could affect both Cloud buckets.
 2. [x] Implement and test provider-neutral storage, private recovery, resumable guarded copy and reviewed URL updates.
 3. [x] Deploy through the source-patch recipe and inspect real source visibility/classification.
 4. [x] Copy, reconcile and verify every source object; resolve private/unknown references.
-5. [ ] Verify recovery and public/private isolation, switch uploads, test after redeploy and record evidence.
+5. [x] Verify recovery and public/private isolation, switch uploads, test after redeploy and record evidence.
 
 Primary references: [Cloud storage](https://laravel.com/cloud/docs/resources/object-storage),
 [R2 S3 compatibility](https://developers.cloudflare.com/r2/api/s3/api/).
@@ -235,3 +235,22 @@ override: anonymous HTTPS bytes and private payload matched. The earlier control
 Both controlled live probes were subsequently deleted through the shared writer, while their exact private
 revisions remain recoverable for 30 days. Final sweep/reference preview/Operations recording is running; its
 successful result is persisted at `ops:cloud-media-final-acceptance-20261109`. CI **42646509815** is all green.
+
+## Final acceptance (16:12 UTC)
+
+The final process continued after the web console disconnected; its PHP process was observed running, so no
+duplicate backup was started and no lock was cleared. Complete backup finished at **16:08:40 UTC**:
+**209 current public objects / 202,034,601 bytes**. Final reviewed reference audit found **zero remaining mapped
+references, zero private review and zero unmapped references**. The four known absent local images remain recorded
+for re-upload. Operations media observation and recovery health are **ok**, with no unresolved rehearsal marker.
+The complete DO key/size/last-modified inventory was compared again at **16:12:37 UTC** and is unchanged.
+
+Receipt `ops:cloud-media-final-acceptance-20261109` records acceptance at **16:11:58 UTC**, final source comparison,
+backup totals, reference audit, Operations observation and cleanup of both exact controlled probes. New uploads use
+Cloud; all 209 source files and 165 updated references were covered by actual byte verification. The recovery copies
+are private and retired revisions remain for at least 30 days; current revisions are not expired.
+
+No further storage cutover action is required. Keep the DO bucket and settings for historical URLs and unknown
+external consumers until their separate retirement review; the provider-owned CDN cannot be redirected through our
+DNS. Re-upload the four original missing images when available. Neither source deletion nor new provider/device
+enablement was part of this acceptance.

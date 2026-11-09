@@ -49,9 +49,11 @@ create customer passes or marketing messages merely to test.
 ### Cloud migration (9 November 2026)
 
 Owner selected Laravel Cloud storage and 30-day recovery. Architecture, verified resource identities and actual
-provisioning state: `audits/2026-11-09-cloud-media-architecture.md`. DigitalOcean remains the active source until
-copy, private/public access checks, recovery acceptance and reviewed URL updates pass. Do not remove source objects
-or credentials as part of the copy.
+acceptance: `audits/2026-11-09-cloud-media-architecture.md`. **Production MEDIA_DISK is media**, accepted at 16:12 UTC:
+209 files, 165 migrated references, real default upload and private restore verified, recovery healthy. DigitalOcean
+files/settings remain for historical URLs and external consumers. Four pre-existing missing local images need their
+originals re-uploaded; no available migration source file was lost. Do not undo the cutover or remove source objects
+or credentials as part of routine maintenance. The following steps also document the guarded migration procedure.
 
 `php artisan media:cloud-migrate` reads a complete inventory, source visibility and bytes; it writes no objects by
 default. `--apply` additionally requires `--expected-source=<source bucket>`, `--expected-source-host=<source host>`,
@@ -70,7 +72,8 @@ references separately. Applying additionally requires `--apply --expected-source
 --expected-public=<public bucket>` (one command line), recent backup/restore receipts, and valid live/recovery bytes
 for the mapped public files. Exact URL leaves only; no credentials, audit records, sent messages or broad string
 replacement. Model saves preserve cache hooks, changed rows are rechecked under row locks, and all provider reads
-finish before those row locks. Resolve private/unmapped/local-legacy references before declaring the migration complete.
+finish before those row locks. Resolve references with available source files before acceptance. Record pre-existing
+missing local assets separately for original re-upload; never clear or fabricate them to obtain a clean count.
 
 When MEDIA_DISK is `media`, the shared writer uses ACL-free SDK writes and requires a verified private copy. Member
 avatars use the same writer and save their new reference before releasing an owned predecessor. Legacy DO URLs are
@@ -92,12 +95,14 @@ shared cache to hide an unresolved rehearsal. A successful backup sweep plus a r
 required for a clean Cloud observation. These are application recovery copies, not native R2 versioning or a backup
 outside the Cloud account.
 
-Database backups do not contain object-storage media. `php artisan media:check-recovery` reads bucket versioning
-and records an observation for 26 hours; the scheduler runs daily at 04:20 server time. Platform admins alone see
-this check. Local `MEDIA_DISK=public` causes no cloud request. Disabled/suspended versioning is attention,
-missing/stale observations are unobserved. The command does not enable versioning or change retention/costs.
+Database backups do not contain object-storage media. `php artisan media:check-recovery` checks the active provider:
+Cloud requires recent private backup and restore receipts; legacy S3 reads native versioning. It records an
+observation for 26 hours; the scheduler runs daily at 04:20 server time. Platform admins alone see this check.
+Local MEDIA_DISK=public causes no cloud request. Missing/stale observations are unobserved; incomplete Cloud recovery
+or disabled legacy versioning needs attention. Repeat an exact authorised Cloud restore rehearsal within 30 days
+to keep its acceptance current. The command does not enable versioning or change retention/costs.
 
-Approved policy operations (9 November 2026): `php artisan media:recovery-policy --noncurrent-days=30` previews the
+**Legacy S3 procedure, superseded for current production:** `php artisan media:recovery-policy --noncurrent-days=30` previews the
 configured bucket's versioning and lifecycle without writing. Applying requires `--apply`, explicit retention,
 `--expected-bucket=<verified production bucket>` and `--expected-host=<configured endpoint hostname>`. The command
 refuses unrelated/advanced lifecycle rules and unresolved recovery-copy markers, shares the recovery lock, sets only
