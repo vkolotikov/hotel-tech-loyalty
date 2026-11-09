@@ -33,6 +33,8 @@ class Task extends Model
         'completed_at', 'outcome', 'recurring_rule',
         // CRM Phase 7 — admin-defined custom fields (entity='task').
         'custom_data',
+        // 2026-11-09: low / normal / high (null reads as normal) and the planned length.
+        'priority', 'duration_minutes',
     ];
 
     protected $casts = [
@@ -40,6 +42,7 @@ class Task extends Model
         'completed_at'   => 'datetime',
         'recurring_rule' => 'array',
         'custom_data'    => 'array',
+        'duration_minutes' => 'integer',
     ];
 
     /** @return BelongsTo<Inquiry, $this> */

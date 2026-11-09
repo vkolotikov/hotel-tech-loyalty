@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
-  bucketOf, completeBody, draftOf, dueParts, dueState, groupByDay, groupDone, groupOpen, ofType, quickDates, readView, searchTasks,
+  bucketOf, completeBody, draftOf, dueParts, dueState, groupByDay, groupDone, groupOpen, ofType, readView, searchTasks,
   splitBuckets, taskBody, tasksQuery, validateTask, venueClock, venueDay, wallToInstant, writeView, type Task,
 } from './taskLogic'
 
@@ -103,16 +103,31 @@ describe('the task form', () => {
 
   it('sends the due time as the instant the venue\'s clock reads, the lead only on a new task', () => {
     const draft = { ...draftOf(null, RIGA, { me: 4, inquiryId: 12 }), title: ' Call Ada ', date: '2026-11-07', time: '14:00' }
-    expect(taskBody(draft, RIGA, true)).toEqual({ type: 'follow_up', title: 'Call Ada', description: null, due_at: '2026-11-07T12:00:00.000Z', assigned_to: 4, inquiry_id: 12 })
+    expect(taskBody(draft, RIGA, true)).toEqual({
+      type: 'follow_up', title: 'Call Ada', description: null, due_at: '2026-11-07T12:00:00.000Z', assigned_to: 4, inquiry_id: 12,
+      priority: 'normal', duration_minutes: null, recurring_rule: null,
+    })
     expect(taskBody(draft, RIGA, false)).not.toHaveProperty('inquiry_id')
     expect(taskBody({ ...draft, date: '', time: '' }, RIGA, true).due_at).toBeNull()
     expect(taskBody({ ...draft, time: '' }, RIGA, true).due_at).toBe('2026-11-06T22:00:00.000Z')
   })
 
+  it('reads and sends the plan (priority, length, repeat), the title following the type when none is written', () => {
+    const stored = task(1, '2026-11-07T12:00:00.000000Z', { type: 'call', priority: 'high', duration_minutes: 45, recurring_rule: { freq: 'weekly' } })
+    const draft = draftOf(stored, RIGA, { me: 9 })
+    expect(draft).toMatchObject({ priority: 'high', duration: 45, repeat: 'weekly', time: '14:00' })
+    // A length without a start time, or a repeat without a day, is not kept.
+    expect(draftOf({ ...stored, due_at: '2026-11-06T22:00:00Z' }, RIGA, { me: 9 })).toMatchObject({ time: '', duration: null, repeat: 'weekly' })
+    expect(draftOf({ ...stored, due_at: null }, RIGA, { me: 9 })).toMatchObject({ date: '', duration: null, repeat: 'none' })
+
+    const body = taskBody({ ...draft, title: '' }, RIGA, false, 'Call · Ada Lovelace')
+    expect(body).toMatchObject({ title: 'Call · Ada Lovelace', priority: 'high', duration_minutes: 45, recurring_rule: { freq: 'weekly' } })
+    expect(validateTask({ ...draft, title: '' }, 'Call · Ada Lovelace')).toEqual({})
+  })
+
   it('trims an outcome to the server\'s 60 characters and offers quick days from the venue\'s today', () => {
     expect(completeBody(' ')).toEqual({})
     expect(completeBody('x'.repeat(70)).outcome).toHaveLength(60)
-    expect(quickDates('2026-12-31').map(q => q.date)).toEqual(['2026-12-31', '2027-01-01', '2027-01-07'])
     expect(dueParts('2026-11-06T22:00:00Z', RIGA)).toEqual({ day: '2026-11-07', time: null })
     expect(dueParts('2026-11-07T12:15:00Z', RIGA)).toEqual({ day: '2026-11-07', time: '14:15' })
   })

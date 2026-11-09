@@ -1,4 +1,5 @@
 import { addDays, venueNow } from '../../workspace/lib/wallClock'
+import { EMPTY_TASK_FORM, formProblems, isTaskType, planBody, planOf, titleOf, type FormField, type FormProblem, type TaskFormState, type TaskType } from '../../lib/taskForm'
 
 /**
  * The Tasks area's decisions, as pure functions: which bucket a task is in on the venue's day, what the list asks the
@@ -20,16 +21,14 @@ export interface Task {
   assigned_to: number | null
   assignee?: { id: number; name: string } | null
   inquiry?: { id: number; guest_id: number | null; status: string | null } | null
+  /** The plan (2026-11-09; absent on an older server): low / normal / high, the length, how often it repeats. */
+  priority?: string | null
+  duration_minutes?: number | null
+  recurring_rule?: { freq?: string | null } | null
 }
 
-/** TaskController's `type` rule, in the full admin's order (channels, then sales steps, then the catch-all). */
-export const TASK_TYPES = [
-  'call', 'email', 'whatsapp', 'sms', 'video_call', 'meeting', 'site_visit', 'demo', 'send_proposal', 'contract',
-  'discovery', 'follow_up', 'custom',
-] as const
-export type TaskType = (typeof TASK_TYPES)[number]
-
-export const isTaskType = (value: string): value is TaskType => (TASK_TYPES as readonly string[]).includes(value)
+/** TaskController's `type` rule, one list with the full admin's task drawer (`src/lib/taskForm.ts`). */
+export { TASK_TYPES, isTaskType, type TaskType } from '../../lib/taskForm'
 
 export type Bucket = 'overdue' | 'today' | 'upcoming' | 'done'
 export const BUCKETS: readonly Bucket[] = ['overdue', 'today', 'upcoming', 'done']
@@ -213,13 +212,11 @@ export function searchTasks<T extends Pick<Task, 'title' | 'description' | 'assi
 
 /* ─── The task form ──────────────────────────────────────────────────────── */
 
-export interface TaskDraft {
-  type: TaskType
-  title: string
-  description: string
-  /** The venue's date and time, as typed. */
-  date: string
-  time: string
+/**
+ * The form's state: the shared task form's (`src/lib/taskForm.ts`: type, title, priority, the venue's day and start
+ * time, length, repeat, notes), who does it and the lead it is for.
+ */
+export interface TaskDraft extends TaskFormState {
   assignee: number | null
   inquiryId: number | null
 }
@@ -227,47 +224,50 @@ export interface TaskDraft {
 /** A form's start: a task as the venue's clock shows it, or a new one for the person (and the lead it is opened from). */
 export function draftOf(task: Task | null, zone: string, defaults: { me: number; inquiryId?: number | null; date?: string }): TaskDraft {
   if (!task) {
-    return { type: 'follow_up', title: '', description: '', date: defaults.date ?? '', time: '', assignee: defaults.me, inquiryId: defaults.inquiryId ?? null }
+    return { ...EMPTY_TASK_FORM, date: defaults.date ?? '', assignee: defaults.me, inquiryId: defaults.inquiryId ?? null }
   }
   const clock = venueClock(task.due_at, zone)
+  const date = clock?.date ?? ''
+  const time = clock && clock.time !== '00:00' ? clock.time : ''
+  const plan = planOf(task)
   return {
+    ...EMPTY_TASK_FORM,
+    ...plan,
     type: isTaskType(task.type) ? task.type : 'custom',
     title: task.title,
     description: task.description ?? '',
-    date: clock?.date ?? '',
-    time: clock && clock.time !== '00:00' ? clock.time : '',
+    date,
+    time,
+    // A length needs a start time, a repeat a day (the form's steps).
+    duration: time ? plan.duration : null,
+    repeat: date ? plan.repeat : 'none',
     assignee: task.assigned_to ?? task.assignee?.id ?? null,
     inquiryId: task.inquiry_id,
   }
 }
 
-export type TaskField = 'title' | 'date' | 'time' | 'description'
-export type TaskProblem = 'required' | 'too_long' | 'invalid' | 'needs_date'
+export type TaskField = FormField
+export type TaskProblem = FormProblem
 
-/** What stops the form (the server's rules: a title up to 200, notes up to 4000, a valid date). */
-export function validateTask(draft: TaskDraft): Partial<Record<TaskField, TaskProblem>> {
-  const errors: Partial<Record<TaskField, TaskProblem>> = {}
-  if (!draft.title.trim()) errors.title = 'required'
-  else if (draft.title.trim().length > 200) errors.title = 'too_long'
-  if (draft.description.length > 4000) errors.description = 'too_long'
-  if (draft.date && !/^\d{4}-\d{2}-\d{2}$/.test(draft.date)) errors.date = 'invalid'
-  if (draft.time && !/^\d{2}:\d{2}$/.test(draft.time)) errors.time = 'invalid'
-  else if (draft.time && !draft.date) errors.time = 'needs_date'
-  return errors
+/** What stops the form: the shared form's rules; without a suggestion (`suggestion` empty), a title is required. */
+export function validateTask(draft: TaskDraft, suggestion = ''): Partial<Record<TaskField, TaskProblem>> {
+  return formProblems(draft, suggestion)
 }
 
 /**
  * `POST tasks` / `PUT tasks/{id}`. The due time is the instant at which the venue's clock reads the typed date and
- * time (midnight when only a day is given, as the full admin's form does), sent in UTC, so it reads back as typed. The
- * lead is named only on a new task (the server does not move a task to another lead).
+ * time (midnight when only a day is given, as the full admin's form does), sent in UTC, so it reads back as typed; the
+ * title is the person's, else the type's suggestion; the plan is the server's own fields. The lead is named only on a
+ * new task (the server does not move a task to another lead).
  */
-export function taskBody(draft: TaskDraft, zone: string, isNew: boolean): Record<string, unknown> {
+export function taskBody(draft: TaskDraft, zone: string, isNew: boolean, suggestion = ''): Record<string, unknown> {
   const body: Record<string, unknown> = {
     type: draft.type,
-    title: draft.title.trim(),
+    title: titleOf(draft, suggestion),
     description: draft.description.trim() || null,
     due_at: draft.date ? wallToInstant(draft.date, draft.time || '00:00', zone) : null,
     assigned_to: draft.assignee,
+    ...planBody(draft),
   }
   if (isNew && draft.inquiryId) body.inquiry_id = draft.inquiryId
   return body
@@ -277,15 +277,6 @@ export function taskBody(draft: TaskDraft, zone: string, isNew: boolean): Record
 export function completeBody(outcome: string): { outcome?: string } {
   const clean = outcome.trim().slice(0, 60)
   return clean ? { outcome: clean } : {}
-}
-
-/** The quick dates beside the date box, from the venue's day. */
-export function quickDates(today: string): { key: 'today' | 'tomorrow' | 'next_week'; date: string }[] {
-  return [
-    { key: 'today', date: today },
-    { key: 'tomorrow', date: addDays(today, 1) },
-    { key: 'next_week', date: addDays(today, 7) },
-  ]
 }
 
 /** How a due time reads: the venue's day, and its time unless it is midnight (a day without a time). */

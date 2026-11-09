@@ -51,9 +51,11 @@ const SCAN_TARGETS = [
   path.join(SRC_DIR, 'pages/productSignup.ts'),
   path.join(SRC_DIR, 'pages/AccountProducts.tsx'),
   path.join(SRC_DIR, 'pages/AccountTeam.tsx'),
+  // The full admin's task drawer, redesigned on 2026-11-09 (its words had been in English in every language).
+  path.join(SRC_DIR, 'components/TaskDrawer.tsx'),
 ]
 
-const KEY_PREFIXES = ['landing_pages.', 'reviews.', 'nav.groups.landing_pages', 'nav.items.landing_', 'nav.items.appointments_', 'portal.', 'appointments.', 'workspace.', 'content.', 'loyalty.', 'nav.items.loyalty_', 'auth.product.', 'account.products.', 'account.team.']
+const KEY_PREFIXES = ['landing_pages.', 'reviews.', 'nav.groups.landing_pages', 'nav.items.landing_', 'nav.items.appointments_', 'portal.', 'appointments.', 'workspace.', 'content.', 'loyalty.', 'nav.items.loyalty_', 'auth.product.', 'account.products.', 'account.team.', 'taskDrawer.', 'tasks.types.']
 
 function listSourceFiles(target: string): string[] {
   const stat = fs.statSync(target)

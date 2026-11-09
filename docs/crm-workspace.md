@@ -48,7 +48,8 @@ Everything else the workspace shows is the **full admin's own chat and CRM endpo
 `admin/popup-rules`, `admin/widget-config`, `admin/inquiries*`, `admin/deals`, `admin/pipelines`, `admin/guests`,
 `admin/tasks`…). An organisation on the `crm` module reaches the `crm` and `chat` products for that reason
 (`AccessMap::MODULE_PRODUCTS`). The frontend may call only the areas listed in `frontend/src/crm/lib/api.ts` (`AREAS`),
-always with `brand_id=all` (the CRM is the organisation's); `crm/tokens.test.ts` refuses any other path.
+always with a `brand_id`: the brand chosen in the header's switcher, or `all` (`crm/lib/brand.ts`, since 2026-11-09);
+`crm/tokens.test.ts` refuses any other path.
 
 ### Today's definitions (the full admin's own)
 
@@ -208,6 +209,31 @@ Fixed on 2026-11-08 (each in the shared controller or service, so the full admin
   `SendTemplateTest`). The CRM also refuses a template with member tags for a contact who is no member and names them.
 - **Leads without a value or AI score sort last** in either direction, on PostgreSQL and SQLite (`LeadsAndDealsTest`).
 
+Round 4 (2026-11-09; the owner, with a screenshot of the full admin's New task drawer: "improve design, logic and make
+it easier to use, more structurized well organized… grids types and tasks… an option to select from which organization
+we working and see data"; answered: one form for the CRM and the main app, and the brands inside the organisation):
+
+- **One task form, in four steps**, for HexaTech CRM (`crm/tasks/TaskForm.tsx`) and the full admin's drawer
+  (`components/TaskDrawer.tsx`), on one set of rules (`src/lib/taskForm.ts`, icons `src/lib/taskTypeIcons.ts`): What (the
+  type grid in four groups — get in touch, meet, close the sale, other —; the title the type suggests, with the lead's
+  name in the CRM; priority), When (quick days or the calendar, then a start time by part of the day or any other time,
+  then how long, then how often — each on once the one before is set), Who and the lead, Notes; a summary in the footer.
+  The CRM's times are the venue's clock, the full admin's the person's, as before (`TaskFormTest`-style render tests:
+  `crm/tasks/TaskForm.test.tsx`, `components/TaskDrawer.test.tsx`; the rules: `lib/taskForm.test.ts`).
+- **Priority, length and repeat are saved**: `tasks.priority`, `tasks.duration_minutes` (migration
+  `2026_11_09_140000`) and `recurring_rule` {freq}, accepted by `TaskController` (a repeat needs a day). The full
+  admin's drawer had sent all three inside `custom_data`, which keeps only an organisation's own custom fields
+  (`CustomFieldService::validate`), so none was ever stored, and "Repeat" was never built. **Completing a repeating task
+  adds the next one** on the venue's clock, one step on and ahead of now, once (`TaskController::nextOccurrence`,
+  `TaskPlanTest`). Task rows in both show the end time, high priority and the repeat.
+- **The full admin's drawer words exist in all five languages** (most had been English everywhere); the locale sweep
+  (`i18n/localeCompleteness.test.ts`) now checks `taskDrawer.*` and `tasks.types.*`.
+- **A brand switcher** in the CRM's header, where the organisation's name stood, shown with more than one brand: All
+  brands, or one. The bootstrap lists the brands a person may work in (`App\Services\Crm\CrmBrands`, mirroring
+  `BrandMiddleware`: a staff member assigned to brands sees only those and is not offered All brands) and the brand the
+  request was scoped to (`brand_id`); the choice is kept per device and sent as `brand_id` on every call; a choice that
+  is not the person's falls back to what the server allows (`BrandSwitchTest`, `crm/lib/brand.test.ts`).
+
 Round 3 (2026-11-08, the owner: "Do as you suggest"), each with a test:
 
 - **Bulk won closes each lead as `/won` does** (`InquiryController::closeAsWon`): the won stage, "Confirmed", the
@@ -250,5 +276,6 @@ Still open:
   widget's is; the SQLite test stands in for it, `scripts/test-pg.sh` runs the real one.
 - Chatbot analytics (`ChatbotAnalyticsController`) is PostgreSQL SQL too (production's database); its test
   (`ChatbotAnalyticsTest`) runs under `scripts/test-pg.sh` only.
-- Multi-brand organisations: the CRM works on all brands at once (`brand_id=all`); the chatbot's behaviour and the
-  widget's look are the default brand's, as in the full admin without a brand chosen.
+- Multi-brand organisations: in "All brands" the chatbot's behaviour and the widget's look are the default brand's, as
+  in the full admin without a brand chosen; choose the brand in the switcher to set up another brand's assistant and
+  widget. A record added while one brand is chosen is that brand's (the models' `BelongsToBrand`).

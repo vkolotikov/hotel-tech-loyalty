@@ -81,8 +81,10 @@ class TaskController extends Controller
             'due_at'               => 'nullable|date',
             'assigned_to'          => ['nullable','integer', Rule::exists('users','id')->where('organization_id', $request->user()->organization_id)],
             'custom_data'          => 'nullable|array',
-        ]);
+        ] + self::PLAN_RULES);
 
+        $data = self::normalisePlan($data);
+        self::assertRepeatHasDay($data['recurring_rule'] ?? null, $data['due_at'] ?? null);
         $data['type']        = $data['type'] ?? 'follow_up';
         if (array_key_exists('due_at', $data)) {
             $data['due_at'] = self::trueInstant($data['due_at']);
@@ -103,6 +105,86 @@ class TaskController extends Controller
         });
 
         return response()->json($task, 201);
+    }
+
+    /**
+     * A task's plan beyond its due time (2026-11-09): its priority, its length and how often it repeats. Before, the full
+     * admin's drawer sent these inside `custom_data`, which keeps only the organisation's own custom fields, so none was
+     * ever saved.
+     */
+    private const PLAN_RULES = [
+        'priority'            => 'sometimes|nullable|string|in:low,normal,high',
+        'duration_minutes'    => 'sometimes|nullable|integer|min:5|max:720',
+        'recurring_rule'      => 'sometimes|nullable|array',
+        'recurring_rule.freq' => 'required_with:recurring_rule|string|in:daily,weekly,monthly',
+    ];
+
+    /** Keep only the repeat's frequency (the rest of a sent rule is not ours to store). */
+    private static function normalisePlan(array $data): array
+    {
+        if (array_key_exists('recurring_rule', $data)) {
+            $freq = $data['recurring_rule']['freq'] ?? null;
+            $data['recurring_rule'] = $freq ? ['freq' => $freq] : null;
+        }
+
+        return $data;
+    }
+
+    /** A repeating task needs a day to count from. */
+    private static function assertRepeatHasDay(mixed $rule, mixed $dueAt): void
+    {
+        if (!empty($rule['freq']) && ($dueAt === null || $dueAt === '')) {
+            throw \Illuminate\Validation\ValidationException::withMessages(['recurring_rule' => ['A repeating task needs a day.']]);
+        }
+    }
+
+    /**
+     * The next task of a repeating one, made when it is done (2026-11-09): the same task one step later on the venue's
+     * clock (a day, a week or a month; the same time of day), moved on until it is ahead of now so finishing an overdue
+     * task does not leave its next one overdue too. Made once: the done task keeps the next one's id, and completing it
+     * again after a reopen does not make another while that one still exists.
+     */
+    private function nextOccurrence(Task $task, ?int $by): ?Task
+    {
+        $freq = $task->recurring_rule['freq'] ?? null;
+        if (!$freq || !$task->due_at) {
+            return null;
+        }
+        $made = $task->recurring_rule['next_task_id'] ?? null;
+        if ($made && Task::whereKey($made)->exists()) {
+            return null;
+        }
+
+        $step = fn (\Carbon\CarbonImmutable $at) => match ($freq) {
+            'daily'  => $at->addDay(),
+            'weekly' => $at->addWeek(),
+            default  => $at->addMonthNoOverflow(),
+        };
+        $at = $step(\Carbon\CarbonImmutable::instance($task->due_at)->setTimezone(VenueClock::zone((int) $task->organization_id)));
+        for ($i = 0; $i < 400 && !$at->isFuture(); $i++) {
+            $at = $step($at);
+        }
+
+        $next = Task::create([
+            'organization_id'      => $task->organization_id,
+            'brand_id'             => $task->brand_id,
+            'inquiry_id'           => $task->inquiry_id,
+            'guest_id'             => $task->guest_id,
+            'corporate_account_id' => $task->corporate_account_id,
+            'type'                 => $task->type,
+            'title'                => $task->title,
+            'description'          => $task->description,
+            'due_at'               => $at->utc()->format('Y-m-d H:i:s'),
+            'assigned_to'          => $task->assigned_to,
+            'created_by'           => $by,
+            'priority'             => $task->priority,
+            'duration_minutes'     => $task->duration_minutes,
+            'recurring_rule'       => ['freq' => $freq],
+            'custom_data'          => $task->custom_data,
+        ]);
+        $task->forceFill(['recurring_rule' => ['freq' => $freq, 'next_task_id' => $next->id]])->save();
+
+        return $next;
     }
 
     /**
@@ -172,8 +254,13 @@ class TaskController extends Controller
             'due_at'      => 'sometimes|nullable|date',
             'assigned_to' => ['sometimes','nullable','integer', Rule::exists('users','id')->where('organization_id', $request->user()->organization_id)],
             'custom_data' => 'sometimes|nullable|array',
-        ]);
+        ] + self::PLAN_RULES);
 
+        $data = self::normalisePlan($data);
+        self::assertRepeatHasDay(
+            array_key_exists('recurring_rule', $data) ? $data['recurring_rule'] : $task->recurring_rule,
+            array_key_exists('due_at', $data) ? $data['due_at'] : $task->due_at,
+        );
         if (array_key_exists('custom_data', $data)) {
             $data['custom_data'] = $this->customFields->validate('task', $data['custom_data']);
         }
@@ -205,11 +292,13 @@ class TaskController extends Controller
             'outcome' => 'nullable|string|max:60',
         ]);
 
-        DB::transaction(function () use ($task, $data, $request) {
+        $next = null;
+        DB::transaction(function () use ($task, $data, $request, &$next) {
             $task->forceFill([
                 'completed_at' => now(),
                 'outcome'      => $data['outcome'] ?? null,
             ])->save();
+            $next = $this->nextOccurrence($task, $request->user()?->id);
 
             if ($task->inquiry_id) {
                 Activity::create([
@@ -228,7 +317,9 @@ class TaskController extends Controller
             $task->load(['assignee:id,name', 'inquiry:id,guest_id,status']);
             $this->syncInquiryNextTask($task->inquiry_id);
         });
-        return response()->json($task);
+
+        // A repeating task's next one (null otherwise), beside the done task's own fields.
+        return response()->json($task->toArray() + ['next_task' => $next?->load(['assignee:id,name', 'inquiry:id,guest_id,status'])]);
     }
 
     public function reopen(Task $task): JsonResponse
