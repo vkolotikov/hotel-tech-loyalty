@@ -255,7 +255,7 @@ function presetLine(t: T, p: Preset): string {
 
 /**
  * The starting programmes as large choices (real radio buttons: the arrow keys move between them), the industry's own
- * first and marked. A venue with tiers sees "Keep my tiers and rewards" chosen and the presets greyed, with why.
+ * first and marked. Existing programmes start with their saved earning rules and can choose template suggestions.
  */
 export function Business({ answer, choice, keep, onChoose }: { answer: OptionsAnswer; choice: string; keep: boolean; onChoose: (key: string) => void }) {
   const { t } = useTranslation()
