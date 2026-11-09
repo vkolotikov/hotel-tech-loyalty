@@ -38,9 +38,9 @@ class CloudMediaReferencesTest extends MemberEndpointTestCase
         Storage::disk('do')->put($key, $png);
         Storage::disk('do')->put('org-'.$user->organization_id.'/private/readme.txt', 'private');
         $user->forceFill(['avatar_url' => $old, 'chat_avatar_url' => 'https://legacy.example.test/org-'.$user->organization_id.'/private/readme.txt'])->save();
-        HotelSetting::forceCreate(['organization_id' => $user->organization_id, 'key' => 'company_logo', 'value' => $old, 'type' => 'string']);
+        HotelSetting::forceCreate(['organization_id' => $user->organization_id, 'key' => 'company_logo', 'value' => $old, 'type' => 'string', 'group' => 'general', 'label' => 'Company logo']);
         // A credential-looking setting is excluded even if its value happens to equal an asset URL.
-        HotelSetting::forceCreate(['organization_id' => $user->organization_id, 'key' => 'unrelated_secret', 'value' => $old, 'type' => 'string']);
+        HotelSetting::forceCreate(['organization_id' => $user->organization_id, 'key' => 'unrelated_secret', 'value' => $old, 'type' => 'string', 'group' => 'general', 'label' => 'Other setting']);
         app()->instance('current_organization_id', $user->organization_id);
         $this->assertSame($old, HotelSetting::getValue('company_logo'));
         SharedCache::store()->forever('unrelated-shared-marker', 'keep');
