@@ -15,7 +15,7 @@ let page
 try {
   const ctx = await browser.newContext({ viewport: { width: 1440, height: 1050 } })
   await ctx.route('**/*', route => ['127.0.0.1', 'localhost'].includes(new URL(route.request().url()).hostname) ? route.continue() : route.abort())
-  await ctx.addInitScript(() => { localStorage.setItem('admin_lang', 'en'); localStorage.setItem('loyalty:look', JSON.stringify({ theme: 'dark', rail: 'full' })) })
+  await ctx.addInitScript(() => { if (!localStorage.getItem('admin_lang')) localStorage.setItem('admin_lang', 'en'); if (!localStorage.getItem('loyalty:look')) localStorage.setItem('loyalty:look', JSON.stringify({ theme: 'dark', rail: 'full' })) })
   page = await ctx.newPage()
   page.on('pageerror', e => result.errors.push(e.message))
   await page.goto(base + '/loyalty/login')
@@ -96,6 +96,7 @@ try {
     await page.evaluate(({ lang, theme }) => { localStorage.setItem('admin_lang', lang); localStorage.setItem('loyalty:look', JSON.stringify({ theme, rail: 'full' })) }, { lang, theme })
     await page.goto(base + '/loyalty/options/setup')
     await page.locator('[data-choice="restaurant"]').waitFor()
+    check(await page.locator('[data-loyalty][data-overview]').getAttribute('data-theme') === theme, `Requested theme is active: ${theme}`)
     check(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), `Setup fits ${width}/${lang}/${theme}`)
     if (lang === 'en') await page.screenshot({ path: path.join(out, `setup-${width}-${theme}.png`) })
   }
