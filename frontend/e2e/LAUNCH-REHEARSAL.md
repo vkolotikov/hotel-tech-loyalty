@@ -48,6 +48,11 @@ node frontend/e2e/launch-journey.mjs
 
 The journey creates a new test member on each run. Results and desktop/mobile screenshots go to `LAUNCH_OUTPUT`; logs, fixture passwords, reset codes and queue payloads stay outside Git. A bounded worker drains only this isolated demo's jobs. The controlled clock advances to test completed-day Insights and scheduled sends without editing ledger dates. It never changes the machine clock.
 
+For the avatar check, the task-owned checkout's `public/storage` must link to this rehearsal's
+`$env:LARAVEL_STORAGE_PATH/app/public`. Verify both absolute paths before creating the link; never replace a link or
+directory owned by another checkout. The check uploads a constant tiny PNG through the real member endpoint and
+reads both the saved profile and actual image through HTTP. Local storage acceptance does not establish Cloud recovery.
+
 The checks cover registration, welcome points, tier upgrade, idempotent awards, reward claim/fulfilment, benefit request/approval/completion, permissions, manual card lookup, reversal, deactivation/reactivation, Insights reconciliation, unavailable integrations, email consent, immediate/scheduled campaigns, a harmless queue probe, password recovery/session revocation and responsive rendering. It does **not** prove real SMTP/SMS/push delivery, wallet issuer approval or physical card/device acceptance.
 
 Stop only this task's HTTP/proxy processes and its verified PostgreSQL cluster after finishing. Preserve the private evidence if needed; never add it to Git.

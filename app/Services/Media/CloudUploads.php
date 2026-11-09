@@ -11,6 +11,7 @@ final class CloudUploads
     /** Unique new key only. A private verified recovery copy must exist before a URL is handed to its caller. */
     public function write(string $disk, string $key, array $copy): void
     {
+        $this->assertDurable($disk);
         Mutex::run($this->objects->fingerprint($disk).':'.$key, function () use ($disk, $key, $copy) {
             if ($this->objects->exists($disk, $key)) throw new \RuntimeException('media_key_already_exists');
             $this->archive->capture($disk, $key, $copy);
@@ -22,6 +23,7 @@ final class CloudUploads
 
     public function delete(string $disk, string $key): void
     {
+        $this->assertDurable($disk);
         Mutex::run($this->objects->fingerprint($disk).':'.$key, function () use ($disk, $key) {
             if (!$this->objects->exists($disk, $key)) return;
             $copy = $this->objects->snapshot($disk, $key);
@@ -32,5 +34,10 @@ final class CloudUploads
                 $this->objects->delete($disk, $key);
             } finally { fclose($copy['stream']); }
         });
+    }
+
+    private function assertDurable(string $disk): void
+    {
+        if (!app()->runningUnitTests() && $this->objects->identity($disk)['driver'] !== 's3') throw new \RuntimeException('media_public_disk_not_durable');
     }
 }

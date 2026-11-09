@@ -31,6 +31,7 @@ class Archive
         if ($disk === '' || $disk === config('media.cloud_disk')) throw new \RuntimeException('media_private_disk_invalid');
         $s = Storage::disk($disk)->getConfig();
         if (!empty($s['url'])) throw new \RuntimeException('media_private_disk_has_public_url');
+        if (!app()->runningUnitTests() && $this->objects->identity($disk)['driver'] !== 's3') throw new \RuntimeException('media_private_disk_not_durable');
         return $disk;
     }
 

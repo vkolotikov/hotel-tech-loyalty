@@ -147,4 +147,12 @@ class CloudMediaArchiveTest extends TestCase
         $this->travel(31)->days(); $archive->reconcile('media');
         $this->assertSame('attention', $archive->health('media'));
     }
+
+    public function test_production_refuses_a_container_local_recovery_disk_before_any_write(): void
+    {
+        $this->app->instance('env', 'production');
+        try { app(Archive::class)->privateDisk(); $this->fail('Ephemeral recovery accepted'); }
+        catch (\RuntimeException $e) { $this->assertSame('media_private_disk_not_durable', $e->getMessage()); }
+        $this->assertSame([], Storage::disk('media_private')->allFiles());
+    }
 }
