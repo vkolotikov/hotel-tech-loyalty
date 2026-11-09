@@ -76,6 +76,7 @@ class Migration
 
     private function publishable(string $key, string $mime): bool
     {
+        if (preg_match('/[?#%]/', $key)) return false; // Keep ambiguous legacy URL keys private for review.
         if (preg_match('/(?:^|\/)(?:\.|.*(?:secret|credential|certificate|private|password|passport|wallet))|\.(?:pem|p12|pfx|key|env|html?|json|csv|zip)$/i', $key)) return false;
         if (in_array($mime, ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/avif', 'image/svg+xml', 'image/x-icon', 'image/vnd.microsoft.icon'], true)) return true;
         return strtolower(pathinfo($key, PATHINFO_EXTENSION)) === 'pdf' && $mime === 'application/pdf'

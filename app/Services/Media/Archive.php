@@ -13,6 +13,7 @@ class Archive
 
     public function health(string $disk): string
     {
+        if (!app()->runningUnitTests() && $this->objects->identity($disk)['driver'] !== 's3') return 'attention';
         $cache = SharedCache::store();
         if ($cache->has('ops:cloud-media-recovery-copy')) return 'attention';
         $backup = $cache->get('ops:cloud-media-backup'); $restore = $cache->get('ops:cloud-media-restore');

@@ -149,6 +149,11 @@ class MediaService
         // disk change - which is how every replace-image flow leaked its old file.
         $where = \App\Services\Media\Location::resolve($url);
         if ($where) {
+            $org = app()->bound('current_organization_id') ? (int) app('current_organization_id') : 0;
+            if ($where['disk'] === config('media.cloud_disk') && $org > 0 && !str_starts_with($where['key'], 'org-'.$org.'/')) {
+                Log::warning('media.delete.foreign_or_legacy');
+                return;
+            }
             // Keep legacy provider-owned URLs working throughout the Cloud transition.
             if (static::disk() === config('media.cloud_disk') && $where['disk'] === 'do') return;
             if ($where['disk'] === config('media.cloud_disk')) {

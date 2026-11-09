@@ -155,4 +155,25 @@ class CloudMediaArchiveTest extends TestCase
         catch (\RuntimeException $e) { $this->assertSame('media_private_disk_not_durable', $e->getMessage()); }
         $this->assertSame([], Storage::disk('media_private')->allFiles());
     }
+
+    public function test_a_tenant_cannot_delete_foreign_cloud_media_or_unscoped_legacy_objects(): void
+    {
+        app()->instance('current_organization_id', 19);
+        foreach (['org-20/logos/foreign.png', 'logos/legacy.png'] as $key) {
+            Storage::disk('media')->put($key, 'keep');
+            MediaService::delete('https://media.example.test/'.$key);
+            Storage::disk('media')->assertExists($key);
+        }
+        $this->assertSame([], Storage::disk('media_private')->allFiles());
+    }
+
+    public function test_production_refuses_container_local_public_media_before_publishing_or_claiming_health(): void
+    {
+        $this->app->instance('env', 'production');
+        try { MediaService::putRaw('bytes', 'logos', 'png'); $this->fail('Ephemeral public media accepted'); }
+        catch (\RuntimeException $e) { $this->assertSame('media_public_disk_not_durable', $e->getPrevious()?->getMessage()); }
+        $this->assertSame([], Storage::disk('media')->allFiles());
+        $this->assertSame([], Storage::disk('media_private')->allFiles());
+        $this->assertSame('attention', app(Archive::class)->health('media'));
+    }
 }
