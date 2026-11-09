@@ -227,4 +227,27 @@ gates: `docs/audits/2026-11-09-loyalty-launch-rehearsal.md`. Reproduction: `fron
   media recovery, physical wallet/reader or push acceptance. DNS/provider/device gates remain in the audit report.
 
 Feature: `feature/loyalty-launch-readiness-20261109`, based on fresh main, merged Time Planner round 3 without overlap.
-No migrations. A source-patch release with fresh artifact checks is required; feature build outputs are not deployed.
+No migrations. Release source **a9f22c006**, fresh build **db0673f64** on main **690b2961d**, pushed by the source-patch
+recipe. Exact 22-file allowlist and whole-source parity with feature **1c60c26f7** (next source-patch baseline; later
+documentation is not the baseline). Artifact: **2,369 scoped PHP tests** (the required 2,042 plus 327 affected tests),
+**457 Vitest files / 6,733 tests**, TypeScript, lint baseline (1,398 legacy), Larastan and fresh build all passed.
+The exact artifact's real-backend browser journey passed **72 checks**, zero runtime errors or unexpected 5xx.
+Feature build outputs were not deployed. Live content verified at **09:42:27 UTC / 11:42 Riga** on
+`loyalty.hotel-tech.ai`, then `app.hexa-tech.uk`: `index-BlKjKFiG.js`, `PortalApp-CWPBeOFf.js`, all six new auth input
+IDs and member wallet availability gating present; protected bootstrap/portal/wallet endpoints remain 401.
+After deploy, public landing continuity passed (Nocturne CSS, zero `rp-` markers, retired CSS 404, all three Poppins
+font files with expected bytes). Owned HTTP/proxy services and PostgreSQL cluster stopped; verified release
+worktree and only its dependency junction removed, private evidence retained. Owner's production diagnostic at
+**09:45:26 / 09:46:31 UTC**: scheduler heartbeats 21/27 seconds old, database shared cache and asynchronous queue;
+the same probe processed at 09:45:26, zero ready jobs and failed jobs in the second reading. SMTP configuration
+present, From domain `hotel-tech.ai`. This verifies one worker execution, not continuous monitoring or Cloud mail
+delivery. Owner then ran `media:check-recovery`: fresh status at **09:47:42 UTC is attention**, no recovery marker.
+Versioning is not Enabled. Prepared `docs/audits/2026-11-09-media-recovery-plan.md`; retention/cost choice and database
+backup observations remain pending. Local storage configuration did not match the documented production target;
+inspection refused that path, no provider request/change was made. Physical provider/device acceptance remains
+external and optional channels stay on hold until accepted.
+
+Release CI `42594935207`: Larastan, dependency audit, both Node builds and all three SQLite shards green; PostgreSQL
+was still running when concurrent CRM round 4 **b20ef451e** superseded the run (cancelled, not failed). That release
+preserves these Loyalty/auth sources byte-for-byte. Its replacement CI is `42596640691`; do not claim the cancelled
+run completed PostgreSQL. Local affected PostgreSQL checks above passed. See the current CI run for combined status.
