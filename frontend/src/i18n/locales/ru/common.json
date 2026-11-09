@@ -80,7 +80,8 @@
       "bookings": "Бронирования",
       "crm_marketing": "CRM и маркетинг",
       "operations": "Операции",
-      "system": "Система"
+      "system": "Система",
+      "workspaces": "Рабочие пространства"
     },
     "items": {
       "dashboard": "Главная",
@@ -120,7 +121,18 @@
       "time_workspace": "HexaTech Time Planner",
       "loyalty_workspace": "HexaTech Loyalty",
       "landing_featured_reviews": "Избранные отзывы"
-    }
+    },
+    "apps": {
+      "loyalty": "Лояльность",
+      "appointments": "Записи",
+      "crm": "CRM",
+      "content": "Контент",
+      "time": "Планировщик"
+    },
+    "menu_label": "Главное меню",
+    "find_placeholder": "Найти в меню",
+    "find_label": "Найти страницу в меню",
+    "find_none": "Нет страницы по запросу «{{query}}»."
   },
   "topbar": {
     "search_placeholder": "Поиск участников, гостей, броней…",

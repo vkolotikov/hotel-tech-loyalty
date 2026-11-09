@@ -80,7 +80,8 @@
       "bookings": "Bookings",
       "crm_marketing": "CRM & Marketing",
       "operations": "Operations",
-      "system": "System"
+      "system": "System",
+      "workspaces": "Workspaces"
     },
     "items": {
       "dashboard": "Dashboard",
@@ -120,7 +121,18 @@
       "time_workspace": "HexaTech Time Planner",
       "loyalty_workspace": "HexaTech Loyalty",
       "landing_featured_reviews": "Featured reviews"
-    }
+    },
+    "apps": {
+      "loyalty": "Loyalty",
+      "appointments": "Appointments",
+      "crm": "CRM",
+      "content": "Content",
+      "time": "Time Planner"
+    },
+    "menu_label": "Main menu",
+    "find_placeholder": "Find in menu",
+    "find_label": "Find a page in the menu",
+    "find_none": "No page matches “{{query}}”."
   },
   "topbar": {
     "search_placeholder": "Search members, guests, bookings…",

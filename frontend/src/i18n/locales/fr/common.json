@@ -80,7 +80,8 @@
       "bookings": "Réservations",
       "crm_marketing": "CRM & Marketing",
       "operations": "Opérations",
-      "system": "Système"
+      "system": "Système",
+      "workspaces": "Espaces de travail"
     },
     "items": {
       "dashboard": "Tableau de bord",
@@ -120,7 +121,18 @@
       "time_workspace": "HexaTech Time Planner",
       "loyalty_workspace": "HexaTech Loyalty",
       "landing_featured_reviews": "Avis mis en avant"
-    }
+    },
+    "apps": {
+      "loyalty": "Fidélité",
+      "appointments": "Rendez-vous",
+      "crm": "CRM",
+      "content": "Contenu",
+      "time": "Planning"
+    },
+    "menu_label": "Menu principal",
+    "find_placeholder": "Chercher dans le menu",
+    "find_label": "Chercher une page dans le menu",
+    "find_none": "Aucune page ne correspond à « {{query}} »."
   },
   "topbar": {
     "search_placeholder": "Rechercher membres, clients, réservations…",

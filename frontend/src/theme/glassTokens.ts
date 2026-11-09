@@ -133,6 +133,7 @@ export const GLASS_NAV_ACCENT_TEXT: Record<string, string> = {
   '#f472b6': '#f9a8d4', // pink
   '#22d3ee': '#67e8f9', // cyan
   '#9ca3af': '#d1d5db', // gray
+  '#2dd4bf': '#99f6e4', // teal (Workspaces, 2026-11-09)
 }
 
 /** Tailwind's corner scale in Glass. rounded-xs and rounded-full stay. */
