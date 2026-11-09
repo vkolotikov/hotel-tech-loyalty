@@ -196,6 +196,17 @@ features and do necessary improvements".
   Riga demo at 1440 and 390, Dark and Light: the pickers, the template list, Add & next (two tasks saved, the panel kept
   its type, person and day), Enter to add, one-press add in the week (cell and "+ Add"), no horizontal scroll, no raw
   key, no failed request. No server change in this round.
+- **Deploy**: production **690b296** by the source-patch recipe on `origin/main` ddf1d04: source patch **b775333** (the
+  branch from 3ced302 to **bc410bd**, 37 files: 4 added, 33 changed, none deleted; per-file parity; the PHP side identical
+  to the last artifact, which passed the full sweep), fresh build 690b296. Artifact: TimeWorkspace 48, AdminAccess 91,
+  Unit/Support 189, Planner 59 passed; `tsc -b` clean; Vitest 456 files / 6,728 tests; `npm run build`. **Next
+  source-patch baseline: bc410bd.** Live by content: `index-DGsd2op1.js` → `TimeApp-D-PbTWtw.js` (the week's one-press
+  add) → `TaskPanel-B_98YL-O.js` ("Add & next", "Use a template"); `/time`, `/time/plan`, `/time/register` 200;
+  hexa-academy's kit 64,577 bytes, 0 `rp-` markers. CI: https://github.com/vkolotikov/hotel-tech-loyalty/actions/runs/42586076428.
+- **Billing is read again and sells the Time Planner**: after the owner's `stripe:sync`, production's `GET
+  /api/v1/modules` answers every plan `source: billing` — the 39 Time Planner plans `available: true` at 49 / 85 /
+  149 € (yearly 499.80 / 867 / 1,519.80 €), `time_management` on, teams 3 / 10 / 25. The "billing's plan list unread"
+  note of 8 Nov no longer holds.
 
 ## Left open
 
