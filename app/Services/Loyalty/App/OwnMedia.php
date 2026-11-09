@@ -18,13 +18,8 @@ final class OwnMedia
         if (!is_string($url) || $url === '' || str_contains($url, '..')) {
             return false;
         }
-        $path = "org-{$orgId}/{$folder}/";
-        if (str_starts_with($url, '/storage/' . $path)) {
-            return true;
-        }
-        $cloud = rtrim((string) config('filesystems.disks.do.url'), '/');
-
-        return $cloud !== '' && str_starts_with($url, $cloud . '/' . $path);
+        $where = \App\Services\Media\Location::resolve($url);
+        return $orgId > 0 && $where !== null && str_starts_with($where['key'], "org-{$orgId}/{$folder}/");
     }
 
     /**

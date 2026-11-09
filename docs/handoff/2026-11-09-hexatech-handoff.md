@@ -295,6 +295,30 @@ lon1; PostgreSQL `hotel_loyalty`. Local storage credentials are unavailable; do 
 name override. Only a fresh current-window observation is missing, not a new paid restore. The same report records
 production queue email inbox receipt on 29 October; avoid another send merely to repeat passing evidence.
 
+### Latest production follow-up and owner direction
+
+- Guarded policy release: sources **02af77050 / 1b80e5dcc**, fresh build **f275699a4** on **c69b0db7e**; whole-source
+  parity with feature **cc4a29688** (next source-patch code baseline). Artifact **2,074 PHP tests**, **461 frontend
+  files / 6,760 tests**, TypeScript, lint (1,393 legacy), Larastan and fresh build passed. Actual AWS SDK XML payloads
+  validated with a transport mock. CI **42602197110 is success**, including its PostgreSQL known-failure gate.
+- Owner executed the deployed command. Apply and preview stopped; safe read-only diagnosis returned
+  `GetBucketLifecycleConfiguration`, HTTP **403**, **AccessDenied**. The runtime's limited Spaces key lacks bucket
+  management access. No successful policy application or media byte-recovery check is recorded.
+- Owner found the current Cloud backup section and confirmed **PITR enabled for the last seven days**. This plus
+  the 30 October isolated restore evidence closes the database backup checks for this review.
+- Owner approved a temporary full-access Spaces operator key then questioned the extra provider before reporting
+  a key created. After research, explicitly chose **Move media to Laravel Cloud**. Do not pursue the DigitalOcean
+  admin-key setup for this migration; retain the existing source read connection and data through verification.
+  No key was reported created. If one was created, only that new temporary key needs revocation.
+- Cloud Object Storage is Cloudflare R2: bucket-level visibility (no mixed ACLs), no S3 versioning. Prepare public
+  media plus private 30-day backups and a real restore check, preserving old URLs/source during the copy. Current
+  MediaService uses storePublicly and a DO-specific delete resolver, so a disk toggle alone is unsafe. No Cloud
+  buckets, migration copies, URL rewrites, cutover or source deletion have been performed yet.
+- Browser/Computer Use remains unavailable after the owner's reconnect attempt; DevTools' shared profile is busy.
+  doctl exists but has no authentication; no local DigitalOcean or Laravel Cloud management token is configured.
+  Never request key values in chat. Cloud resource creation may need the owner's dashboard action when the concrete
+  bucket plan is ready. Continue prelaunch work with the selected Cloud media migration.
+
 ## The full admin's menu and dashboards for every portal (9 Nov, branch `claude/portal-dashboard-redesign-jpxojc`)
 
 The owner, with screenshots of the full admin's menu and dashboard: "we make all portals for our apps, now need better
@@ -334,7 +358,41 @@ dashboards." Runbook: `docs/dashboards.md`; rules in CLAUDE.md ("Full admin menu
   edge, a seventh figure alone on its row, workspace names cut, light-sky clouds too pale, figures repeated on CRM Today.
 - Not exercised for real: Open-Meteo (this container's network refuses it; tested with recorded answers).
 
-### Deploy (9 Nov, 11:53 UTC)
+## Cloud media migration preparation (Windows workstation, 9 November)
+
+Owner selected Laravel Cloud rather than provisioning a temporary DigitalOcean administrator key. Complete source
+inventory: **209 objects / 202,034,601 bytes**. Architecture and resource evidence:
+`docs/audits/2026-11-09-cloud-media-architecture.md`; commands: `docs/wallet-and-media-operations.md`.
+
+The owner is using Codex **inside VS Code**. Native Computer Use and browser host are unavailable. Existing Chrome
+was successfully connected through the official Chrome DevTools MCP `--autoConnect` route after the owner enabled
+`chrome://inspect/#remote-debugging` and accepted Chrome's connection consent. Two EU-jurisdiction Cloud buckets
+were created and attached: public disk **media**, private/default **media_private**. Cloud requires the first
+attached disk to be default, so private was attached first. Existing commit **a455e01** redeployed successfully as
+Cloud deployment **1150**, only to load those resource connections. App-cluster safe metadata read saw both Cloud
+disks and **active media still do**. No credentials extracted, no files copied, no source deletion or URL rewrite.
+
+Feature `feature/loyalty-cloud-media-20261109`: provider-neutral URL resolution; R2 ACL-free bounded object I/O;
+private byte-verified recovery copies and durable manifests; current copies kept, retired copies retained 30 days;
+guarded resumable copy, explicit preparation/backup/restore and reviewed URL migration commands; Cloud health requires
+backup plus recent isolated restore; member avatars use the shared durable writer and save before releasing only
+their owned predecessor. Operations wording updated in five languages. These sources are **not deployed yet**.
+
+Feature checks so far: required Support/Landing scopes **2,058 passed**, Wallet **27**, member avatar **3**,
+LoyaltyWorkspace **660 passed / one skipped**, **2,748 total / zero failed**. Two additional archive failure/health
+tests and two reference migration tests subsequently passed. Actual SDK transport mock proves no object ACL header,
+If-Match source reads, paginated listing, bounded/no-retry calls and missing-bucket refusal. Static analysis was
+clean before the last small command/reference changes; rerun on final source/artifact. One operations locale render
+test passed. Full artifact checks, PostgreSQL validation and source-patch deployment remain.
+
+The deployment killed the first console (exit 137); a fresh session then disconnected (1006). A later read-only ACL
+inventory was typed into the terminated console and **never ran**. The task browser connector was restarted to filter
+excessive debug output and now awaits renewed Chrome connection consent. Do not claim source ACL classification or
+Cloud recovery acceptance. The earlier native-version policy route is superseded; keep source DO files/settings
+through copy, delta verification, URL checks, cutover and any legacy-link review. New upstream weather/location
+release **f11a4e950** was adopted before artifact parity/deploy.
+
+## Dashboard deploy (9 Nov, 11:53 UTC)
 
 Production **a455e01**, by the source-patch recipe on `origin/main` f275699 (another session's media-recovery release, no
 overlapping file): source patch **d0b8b90** (62 files of the branch at 30f4e7d: 25 added, 37 changed, none deleted;

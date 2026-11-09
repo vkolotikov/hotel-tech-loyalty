@@ -1,8 +1,16 @@
 # Proposed production media recovery policy
 
+**Latest owner direction:** move media to Laravel Cloud before launch. The 30-day recovery requirement remains;
+implement private backups because Cloudflare R2 does not provide S3 object versioning. The DigitalOcean management-key
+route below is superseded for this migration. Keep the current source and its application read connection until the
+copy, URL checks and recovery test pass. No new temporary key was reported created and no successful DigitalOcean
+policy application is recorded.
+
 Status: **30-day policy approved by the owner on 9 November; not applied**. At 09:47:42 UTC the owner's production check returned `attention`: storage answered the versioning request but did not report `Enabled`. No media recovery rehearsal is recorded. The workstation's storage configuration could not be verified as the documented production target, so the local inspection refused that path and made no provider request or change. A fresh browser/computer connection check after the owner's request found both automation connections unavailable. No usable Cloud connector or CLI session was available; reconnection requested. Do not ask for the 30-day choice again.
 
 The owner has now confirmed the current production target through a read-only Cloud config command: DigitalOcean Spaces disk `do`, bucket `hotel-tech-assets`, endpoint host `lon1.digitaloceanspaces.com`, region `lon1`; PostgreSQL database `hotel_loyalty`. The local provider credentials are unavailable, so configuration must execute through the authorised Cloud session using its existing credentials. No keys or passwords need to be shared.
+
+The deployed guarded command could not inspect lifecycle settings. The safe diagnostic identified **GetBucketLifecycleConfiguration / HTTP 403 / AccessDenied**. Bucket-management operator access is required; [the process-only operator procedure](2026-11-09-media-operator-access.md) keeps the application's limited key unchanged. No successful policy application is recorded. On the same day the owner confirmed current Cloud PITR is enabled for the last **seven days**, closing the current database-retention observation.
 
 ## Proposed choice
 
