@@ -225,6 +225,10 @@ Checked before the deploy:
     `recurring_rule`, with `custom_data` empty.
 - Seen in passing, not from this round: the full admin's `components/BrandSwitcher.tsx` logs React's "Cannot update a
   component while rendering a different component" on load, in development builds only.
+- After the deploy, CI's Larastan job found one new finding: `TaskController::nextOccurrence()` reads
+  `Task::$custom_data`, a column whose migration adds it in a loop that the analyser cannot follow. The model now
+  declares it (`@property`). This shipped as a second, small source patch, and Larastan is clean again. Run
+  `vendor/bin/phpstan analyse` (PHP 8.5, 2 GB of memory) before a deploy: the test sweep does not include it.
 
 ## Loyalty prelaunch rehearsal (9 November, Windows workstation)
 

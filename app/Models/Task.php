@@ -20,6 +20,11 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * Marking complete writes a sibling `Activity(type=task_completed,
  * subject=task.title)` so completed work flows into the timeline
  * without callers needing to remember.
+ *
+ * `custom_data` is declared here because its migration adds it in a loop over table names, which the analyser
+ * cannot follow (2026_05_10_130000_create_custom_fields).
+ *
+ * @property array<string, mixed>|null $custom_data
  */
 class Task extends Model
 {
