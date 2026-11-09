@@ -184,9 +184,6 @@ export const DATA_COLOURS: Record<string, string[]> = {
   'hooks/useRealtimeEvents.tsx': [
     'rgba(251,146,60,0.18)', 'rgba(251,146,60,0.08)', 'rgba(251,146,60,0.5)', 'rgba(0,0,0,0.4)',
   ],
-  'pages/Dashboard.tsx': [
-    '#06b6d4', '#10b981', '#f59e0b', '#a855f7', '#f43f5e', '#3b82f6', '#94a3b8', '#8e8e93', '#c0c0c0', '#ffd700', '#9e9e9e', '#00bcd4', '#ff375f', '#f59e0b', '#a855f7', '#3b82f6', '#06b6d4', '#32d74b', '#8e8e93', '#8e8e93', '#ff375f', '#8e8e93', '#8e8e93', '#9a7ef0', '#9a7ef0', '#9a7ef0', '#3b82f6', '#10b981', '#06b6d4', '#a855f7', '#3b82f6', '#10b981', '#06b6d4', '#9a7ef0', '#f59e0b', '#ec4899', '#a855f7', '#c9a84c',
-  ],
   'components/ui/TierBadge.tsx': [
     '#ffd700', '#c0c0c0', '#e5e4e2', '#b9f2ff', '#333',
   ],

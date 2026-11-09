@@ -28,6 +28,8 @@ const FROM_CONTENT: Record<string, string> = {
  * "Plan & products" in Settings for an organisation on modules (owner 2026-11-02).
  */
 const OWN = new Set(['shell.more_areas', 'shell.plan', 'shell.team'])
+/** Words the shared frame has of its own from the start, never moved: the PulseCard's (2026-11-09). */
+const OWN_AREAS = ['pulse.']
 function at(json: unknown, key: string): unknown {
   return key.split('.').reduce<unknown>((n, p) => (n && typeof n === 'object' ? (n as Record<string, unknown>)[p] : undefined), json)
 }
@@ -63,7 +65,7 @@ describe('workspace bundle', () => {
   it('the words moved without changing: each reads as the Appointments bundle reads the same key', () => {
     for (const locale of LOCALES) {
       const words = appointments(locale)
-      for (const key of flatten(bundle(locale)).filter(k => !(k in FROM_CONTENT) && !OWN.has(k))) expect(at(bundle(locale), key), `${locale}:${key}`).toBe(at(words, key))
+      for (const key of flatten(bundle(locale)).filter(k => !(k in FROM_CONTENT) && !OWN.has(k) && !OWN_AREAS.some(a => k.startsWith(a)))) expect(at(bundle(locale), key), `${locale}:${key}`).toBe(at(words, key))
     }
   })
 

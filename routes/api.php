@@ -578,6 +578,10 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
             Route::get('dashboard/pending-submissions',     [DashboardController::class, 'pendingBookingSubmissions']);
             Route::get('dashboard/live-ops',                [DashboardController::class, 'liveOps']);
             Route::get('dashboard/recent-chats',            [DashboardController::class, 'recentChatActivity']);
+            // The venue's clock, place and weather for the dashboards (2026-11-09, VenuePulse); each workspace has its own `pulse`.
+            Route::get('dashboard/pulse',                   [\App\Http\Controllers\Api\V1\Admin\PulseController::class, 'show']);
+            // Day-by-day figures for every dashboard tile and chart, one request (2026-11-09, DashboardTrends).
+            Route::get('dashboard/trends',                  [DashboardController::class, 'trends']);
 
             Route::post('scan/qr',                [ScanController::class, 'scanQr']);
             Route::post('scan/nfc',               [ScanController::class, 'scanNfc']);
@@ -1281,6 +1285,7 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
             // <id> --off`); `workspace:appointments` then answers 403.
             Route::prefix('appointments')->middleware('workspace:appointments')->group(function () {
                 Route::get('bootstrap', [\App\Http\Controllers\Api\V1\Admin\Appointments\BootstrapController::class, 'show']);
+                Route::get('pulse', [\App\Http\Controllers\Api\V1\Admin\PulseController::class, 'show']);
                 Route::get('calendar',  [\App\Http\Controllers\Api\V1\Admin\Appointments\CalendarController::class, 'calendar']);
                 Route::get('slots',     [\App\Http\Controllers\Api\V1\Admin\Appointments\CalendarController::class, 'slots']);
                 Route::get('clients',      [\App\Http\Controllers\Api\V1\Admin\Appointments\ClientController::class, 'index']);
@@ -1320,6 +1325,7 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
             // every call to exactly one brand.
             Route::prefix('content')->middleware(['workspace:content', 'content.brand'])->group(function () {
                 Route::get('bootstrap', [\App\Http\Controllers\Api\V1\Admin\Content\BootstrapController::class, 'show']);
+                Route::get('pulse', [\App\Http\Controllers\Api\V1\Admin\PulseController::class, 'show']);
                 Route::get('plan', [\App\Http\Controllers\Api\V1\Admin\Content\PlanController::class, 'show']);
                 Route::get('goals', [\App\Http\Controllers\Api\V1\Admin\Content\GoalsController::class, 'show']);
                 Route::get('ideas', [\App\Http\Controllers\Api\V1\Admin\Content\IdeasController::class, 'show']);
@@ -1408,6 +1414,7 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
             Route::prefix('loyalty')->middleware('workspace:loyalty')->group(function () {
                 Route::get('overview/{module}', [\App\Http\Controllers\Api\V1\Admin\Loyalty\OverviewController::class, 'show']);
                 Route::get('bootstrap', [\App\Http\Controllers\Api\V1\Admin\Loyalty\BootstrapController::class, 'show']);
+                Route::get('pulse', [\App\Http\Controllers\Api\V1\Admin\PulseController::class, 'show']);
                 Route::get('find', [\App\Http\Controllers\Api\V1\Admin\Loyalty\MemberController::class, 'find']);
                 Route::get('members', [\App\Http\Controllers\Api\V1\Admin\Loyalty\MemberController::class, 'index']);
                 Route::get('members/{id}', [\App\Http\Controllers\Api\V1\Admin\Loyalty\MemberController::class, 'show'])->whereNumber('id');
@@ -1601,6 +1608,7 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
             // (`php artisan workspace:crm <organisation id> --off`).
             Route::prefix('crm')->middleware('workspace:crm')->group(function () {
                 Route::get('bootstrap', [\App\Http\Controllers\Api\V1\Admin\Crm\WorkspaceController::class, 'bootstrap']);
+                Route::get('pulse', [\App\Http\Controllers\Api\V1\Admin\PulseController::class, 'show']);
                 Route::get('today', [\App\Http\Controllers\Api\V1\Admin\Crm\WorkspaceController::class, 'today']);
                 Route::get('start', [\App\Http\Controllers\Api\V1\Admin\Crm\WorkspaceController::class, 'start']);
                 Route::get('bot-gaps', [\App\Http\Controllers\Api\V1\Admin\Crm\AssistantController::class, 'gaps']);
@@ -1617,6 +1625,7 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
             // and every Time Planner package carry (the bootstrap answers either way, so the workspace can say so).
             Route::prefix('time')->middleware('workspace:time')->group(function () {
                 Route::get('bootstrap', [\App\Http\Controllers\Api\V1\Admin\Time\WorkspaceController::class, 'bootstrap']);
+                Route::get('pulse', [\App\Http\Controllers\Api\V1\Admin\PulseController::class, 'show']);
                 Route::middleware('feature:time_management')->group(function () {
                     Route::get('today', [\App\Http\Controllers\Api\V1\Admin\Time\WorkspaceController::class, 'today']);
                     Route::get('day', [\App\Http\Controllers\Api\V1\Admin\Time\WorkspaceController::class, 'day']);

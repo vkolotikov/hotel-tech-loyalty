@@ -11,7 +11,8 @@ import {
   ChevronLeft, ChevronRight, ChevronDown,
   BedDouble, CreditCard, Home, Package,
   UserCog, AlertTriangle, Scissors, CalendarDays,
-  Menu, X, MoreHorizontal, Lock, Link2, PenLine, Award, MessagesSquare, CalendarClock
+  Menu, X, MoreHorizontal, Lock, Link2, PenLine, Award, MessagesSquare, CalendarClock,
+  Tags, Receipt, Search
 } from 'lucide-react'
 import { useAuthStore } from '../stores/authStore'
 import { GlobalSearch } from './GlobalSearch'
@@ -44,7 +45,11 @@ import { useIndustryHiddenGroups, useIndustryHiddenItems } from '../lib/industry
 import { IndustryMismatchBanner } from './IndustryMismatchBanner'
 import { showsWorkspaceLink, type WorkspaceName } from '../workspace/lib/landing'
 import { GLASS_NAV_ACCENT_TEXT } from '../theme/glassTokens'
+import { activeItemOf, isGroupOpen, menuMatches } from './navMenu'
+import './navMenu.css'
+import { VisibleMenuContext } from './visibleMenu'
 import { LIGHT_NAV_ACCENT_TEXT } from '../theme/lightTokens'
+import { NAV_ACCENT } from '../theme/navAccents'
 
 // gate: 'all' = everyone, 'admin' = super_admin/manager only, or a staff permission key
 export type NavGate = 'all' | 'admin' | 'can_manage_offers' | 'can_view_analytics'
@@ -68,6 +73,16 @@ interface NavItem {
   altPaths?: string[] // sibling routes that should keep this item highlighted (used for PairTabs siblings)
   /** The way into a workspace beside the full admin: shown only where `showsWorkspaceLink()` says so. */
   workspace?: WorkspaceName
+  /**
+   * The group whose switches still decide this item after it moved (2026-11-09 menu): Settings → Sidebar Menu's
+   * hidden groups, a staff member's allowed groups and the industry's hidden groups are asked about this group, as
+   * they were before the item moved. Unset: the item's own group, as always.
+   */
+  home?: string
+  /** An app tile's short name and colour in the Workspaces launcher. */
+  shortKey?: string
+  shortLabel?: string
+  tint?: string
 }
 
 interface NavGroup {
@@ -77,6 +92,8 @@ interface NavGroup {
    *  tinted active-item background. Keeps groups visually distinct
    *  without making the sidebar look cartoony. */
   accent: string
+  /** `apps`: drawn as a launcher of tiles (the Workspaces group) instead of a list. */
+  layout?: 'apps'
   items: NavItem[]
 }
 
@@ -87,7 +104,7 @@ interface NavGroup {
 export const navGroups: NavGroup[] = [
   {
     labelKey: 'nav.groups.overview', defaultLabel: 'Overview',
-    accent: '#60a5fa', // blue
+    accent: NAV_ACCENT.blue, // blue
     items: [
       { path: '/',          labelKey: 'nav.items.dashboard',    defaultLabel: 'Dashboard',   icon: LayoutDashboard, gate: 'all' },
       // Analytics is plain charts/KPIs (no LLM) so it gates only on the
@@ -101,8 +118,29 @@ export const navGroups: NavGroup[] = [
     ],
   },
   {
+    // The 2026-11-09 menu (owner: "better menu structure"): the ways into the HexaTech workspaces, which sat one per
+    // group further down, gathered in one launcher under the Dashboard. Each keeps its gates and its `home` — the group
+    // it used to sit in — so Sidebar Menu's hidden groups, a staff member's allowed groups and the industry still
+    // decide it exactly as before; this group can also be hidden whole.
+    labelKey: 'nav.groups.workspaces', defaultLabel: 'Workspaces',
+    accent: NAV_ACCENT.teal, // teal
+    layout: 'apps',
+    items: [
+      // The way into HexaTech Loyalty (spec 2026-10-21 §6.7): everyone who may open it; the hubs stay in Members & Loyalty.
+      { path: '/loyalty',      labelKey: 'nav.items.loyalty_workspace',      defaultLabel: 'HexaTech Loyalty',      shortKey: 'nav.apps.loyalty',      shortLabel: 'Loyalty',      icon: Award,          gate: 'all', product: 'loyalty', workspace: 'loyalty',      home: 'Members & Loyalty', tint: NAV_ACCENT.amber },
+      // The same service bookings in the calendar-first workspace (owner, 2026-10-11: the left panel is its only way in).
+      { path: '/appointments', labelKey: 'nav.items.appointments_workspace', defaultLabel: 'HexaTech Appointments', shortKey: 'nav.apps.appointments', shortLabel: 'Appointments', icon: CalendarDays,   gate: 'all', product: 'booking', workspace: 'appointments', home: 'Bookings',          tint: NAV_ACCENT.emerald },
+      // HexaTech CRM (2026-11-07: the AI chat widget, the inbox and the CRM in one workspace).
+      { path: '/crm',          labelKey: 'nav.items.crm_workspace',          defaultLabel: 'HexaTech CRM',          shortKey: 'nav.apps.crm',          shortLabel: 'CRM',          icon: MessagesSquare, gate: 'all', workspace: 'crm',                         home: 'CRM & Marketing',   tint: NAV_ACCENT.pink },
+      // HexaTech Content (spec 2026-10-14 §6.9).
+      { path: '/content',      labelKey: 'nav.items.content_workspace',      defaultLabel: 'HexaTech Content',      shortKey: 'nav.apps.content',      shortLabel: 'Content',      icon: PenLine,        gate: 'all', workspace: 'content',                     home: 'CRM & Marketing',   tint: NAV_ACCENT.violet },
+      // HexaTech Time Planner (2026-11-09): locked like the Planner itself on a plan without time_management.
+      { path: '/time',         labelKey: 'nav.items.time_workspace',         defaultLabel: 'HexaTech Time Planner', shortKey: 'nav.apps.time',         shortLabel: 'Time Planner', icon: CalendarClock,  gate: 'all', feature: 'time_management', workspace: 'time', home: 'Operations',        tint: NAV_ACCENT.cyan },
+    ],
+  },
+  {
     labelKey: 'nav.groups.ai_chat', defaultLabel: 'AI Chat',
-    accent: '#a78bfa', // violet
+    accent: NAV_ACCENT.violet, // violet
     items: [
       { path: '/engagement',     labelKey: 'nav.items.engagement',     defaultLabel: 'Engagement',    icon: Inbox, gate: 'all',   product: 'chat', feature: 'engagement',
         altPaths: ['/inbox', '/visitors', '/chat-inbox', '/legacy/visitors'] },
@@ -121,7 +159,7 @@ export const navGroups: NavGroup[] = [
     // landing page can jump straight to the reviews they might feature on
     // it without leaving this group.
     labelKey: 'nav.groups.landing_pages', defaultLabel: 'Landing pages',
-    accent: '#38bdf8', // sky
+    accent: NAV_ACCENT.sky, // sky
     items: [
       { path: '/landing-pages', labelKey: 'nav.items.landing_pages',  defaultLabel: 'Landing Page',      icon: Globe, gate: 'admin', product: 'chat', feature: 'landing_pages' },
       { path: '/reviews',       labelKey: 'nav.items.landing_featured_reviews', defaultLabel: 'Featured reviews', icon: Star,  gate: 'admin', product: 'chat', feature: 'reviews' },
@@ -129,27 +167,24 @@ export const navGroups: NavGroup[] = [
   },
   {
     labelKey: 'nav.groups.members_loyalty', defaultLabel: 'Members & Loyalty',
-    accent: '#fbbf24', // gold
+    accent: NAV_ACCENT.amber, // gold
     items: [
       // 4-hub consolidation. Each hub is a tabbed container — see
       // pages/hubs/* for the per-tab routing. Legacy paths like
       // /tiers, /offers, /referrals etc. still work; they redirect
       // into the right hub tab.
-      // The way into HexaTech Loyalty (spec 2026-10-21 §6.7): everyone who may open it; the hubs below stay as they are.
-      { path: '/loyalty',   labelKey: 'nav.items.loyalty_workspace', defaultLabel: 'HexaTech Loyalty', icon: Award, gate: 'all', product: 'loyalty', workspace: 'loyalty' },
       { path: '/members',   labelKey: 'nav.items.members',   defaultLabel: 'Members',  icon: Users,    gate: 'all',   altPaths: ['/members/duplicates', '/segments'] },
       { path: '/program',   labelKey: 'nav.items.program',   defaultLabel: 'Program',  icon: Crown,    gate: 'admin', product: 'loyalty', altPaths: ['/tiers', '/benefits', '/earn-rate-events'] },
       { path: '/rewards',   labelKey: 'nav.items.rewards',   defaultLabel: 'Rewards',  icon: Gift,     gate: 'admin', product: 'loyalty', altPaths: ['/offers', '/referrals'] },
       { path: '/campaigns', labelKey: 'nav.items.campaigns', defaultLabel: 'Campaigns', icon: Mail,   gate: 'admin', product: 'loyalty', feature: 'campaigns', altPaths: ['/email-campaigns'] },
+      // Scanning a member's card is the desk's loyalty work: listed here since 2026-11-09, still hidden with Operations.
+      { path: '/scan',      labelKey: 'nav.items.scan',      defaultLabel: 'Scan',      icon: Scan,    gate: 'all',   home: 'Operations' },
     ],
   },
   {
     labelKey: 'nav.groups.bookings', defaultLabel: 'Bookings',
-    accent: '#34d399', // emerald
+    accent: NAV_ACCENT.emerald, // emerald
     items: [
-      // The same service bookings in the calendar-first workspace, at its own address. First in Bookings (owner,
-      // 2026-10-11): the left panel is its only way in from the full admin now that the top-bar button is gone.
-      { path: '/appointments',      labelKey: 'nav.items.appointments_workspace', defaultLabel: 'HexaTech Appointments', icon: CalendarDays, gate: 'all', product: 'booking', workspace: 'appointments' },
       // Reservations & Services each surface own resource. The List ↔ Calendar
       // toggle lives inside the page; the dropped /calendar legacy entry was
       // a duplicate of the in-page Timeline view.
@@ -163,7 +198,7 @@ export const navGroups: NavGroup[] = [
   },
   {
     labelKey: 'nav.groups.crm_marketing', defaultLabel: 'CRM & Marketing',
-    accent: '#f472b6', // pink
+    accent: NAV_ACCENT.pink, // pink
     items: [
       // 3-hub consolidation (was 4: Contacts / Pipeline / Campaigns /
       // Reviews). Each hub uses the same grid-home + breadcrumb-leaf
@@ -177,10 +212,6 @@ export const navGroups: NavGroup[] = [
       //
       // Legacy paths redirect into the new hubs with ?tab= so
       // bookmarks survive — see App.tsx.
-      // The way into HexaTech Content (spec 2026-10-14 §6.9): everyone who may open it.
-      { path: '/content',   labelKey: 'nav.items.content_workspace', defaultLabel: 'HexaTech Content', icon: PenLine, gate: 'all', workspace: 'content' },
-      // The way into HexaTech CRM (2026-11-07: the AI chat widget, the inbox and the CRM in one workspace): everyone who may open it.
-      { path: '/crm',       labelKey: 'nav.items.crm_workspace', defaultLabel: 'HexaTech CRM', icon: MessagesSquare, gate: 'all', workspace: 'crm' },
       { path: '/leads',    labelKey: 'nav.items.leads',     defaultLabel: 'Leads',     icon: FileText, gate: 'all',   altPaths: ['/contacts', '/pipeline', '/customers', '/guests', '/corporate', '/inquiries', '/lead-forms'] },
       { path: '/deals',     labelKey: 'nav.items.deals',     defaultLabel: 'Deals',     icon: Briefcase, gate: 'all' },
       { path: '/marketing', labelKey: 'nav.items.marketing', defaultLabel: 'Marketing', icon: Bell,     gate: 'admin', altPaths: ['/notifications', '/email-templates', '/reviews'] },
@@ -188,22 +219,18 @@ export const navGroups: NavGroup[] = [
   },
   {
     labelKey: 'nav.groups.operations', defaultLabel: 'Operations',
-    accent: '#22d3ee', // cyan
+    accent: NAV_ACCENT.cyan, // cyan
     items: [
       { path: '/planner',    labelKey: 'nav.items.planner',    defaultLabel: 'Planner',    icon: ClipboardList, gate: 'all',   feature: 'time_management' },
-      // The way into HexaTech Time Planner (2026-11-09: the Planner with AI planning as a workspace): everyone who may
-      // open it; locked like the Planner itself on a plan without time_management.
-      { path: '/time',       labelKey: 'nav.items.time_workspace', defaultLabel: 'HexaTech Time Planner', icon: CalendarClock, gate: 'all', feature: 'time_management', workspace: 'time' },
-      { path: '/brands',     labelKey: 'nav.items.brands',     defaultLabel: 'Brands',     icon: Briefcase,     gate: 'admin', feature: 'brands' },
+      { path: '/brands',     labelKey: 'nav.items.brands',     defaultLabel: 'Brands',     icon: Tags,          gate: 'admin', feature: 'brands' },
       { path: '/properties', labelKey: 'nav.items.properties', defaultLabel: 'Properties', icon: Building2,     gate: 'admin', altPaths: ['/venues'] },
-      { path: '/scan',       labelKey: 'nav.items.scan',       defaultLabel: 'Scan',       icon: Scan,          gate: 'all' },
     ],
   },
   {
     labelKey: 'nav.groups.system', defaultLabel: 'System',
-    accent: '#9ca3af', // slate
+    accent: NAV_ACCENT.slate, // slate
     items: [
-      { path: '/billing',   labelKey: 'nav.items.billing',    defaultLabel: 'Billing',   icon: CreditCard, gate: 'admin' },
+      { path: '/billing',   labelKey: 'nav.items.billing',    defaultLabel: 'Billing',   icon: Receipt,    gate: 'admin' },
       { path: '/audit-log', labelKey: 'nav.items.audit_log',  defaultLabel: 'Audit Log', icon: ScrollText, gate: 'admin' },
       { path: '/system-status', labelKey: 'nav.items.system_status', defaultLabel: 'System status', icon: AlertTriangle, gate: 'admin' },
       { path: '/settings',  labelKey: 'nav.items.settings',   defaultLabel: 'Settings',  icon: Settings,   gate: 'admin' },
@@ -227,8 +254,15 @@ export function canAccess(gate: NavGate, staff: { role: string; can_manage_offer
   return !!staff[gate]
 }
 
+/** A menu item as the side panel shows it: its gates applied, `_locked` when the plan lacks its feature. */
+export type VisibleNavItem = NavItem & { _locked?: true; _lockedFeature?: string; _lapsed?: true }
+export interface VisibleNavGroup extends Omit<NavGroup, 'items'> { items: VisibleNavItem[] }
+
+
 const SIDEBAR_KEY = 'loyalty-sidebar-collapsed'
-const NAV_GROUPS_KEY = 'loyalty-nav-groups'
+// v2 (2026-11-09): only the person's own open/close choices are kept. The first key also held every group the old
+// auto-open had opened, which would have kept the whole menu open for everyone who ever used it.
+const NAV_GROUPS_KEY = 'loyalty-nav-groups-v2'
 
 export function Layout({ children }: { children: ReactNode }) {
   const { t } = useTranslation()
@@ -255,10 +289,8 @@ export function Layout({ children }: { children: ReactNode }) {
   const industryHiddenGroups = useIndustryHiddenGroups()
   const industryHiddenItems = useIndustryHiddenItems()
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem(SIDEBAR_KEY) === '1')
-  // Persist per-group expand/collapse state. Groups default to OPEN
-  // (missing key = open) — only an explicit `false` means the user
-  // collapsed it. Reading from localStorage on mount means a collapse
-  // sticks across page reloads / navigations.
+  // The person's own open/close choices per group (navMenu.isGroupOpen decides the rest: the Dashboard's group, the
+  // Workspaces launcher and the group of the page one is on open, the others headings). Kept across reloads.
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>(() => {
     try {
       const raw = localStorage.getItem(NAV_GROUPS_KEY)
@@ -395,30 +427,11 @@ export function Layout({ children }: { children: ReactNode }) {
     }
   }, [isMobile, mobileOpen])
 
-  // Auto-expand group containing current page — but ONLY if the user
-  // hasn't explicitly collapsed it. If `prev[label] === false`, the
-  // user clicked to collapse it; respect that intent and leave it
-  // collapsed even when they navigate to a page in that group.
-  // (Previously this effect force-set the active group to `true` on
-  // every navigation, which made the group pop back open every time
-  // the user clicked anywhere — looked like "collapse doesn't stick".)
-  useEffect(() => {
-    for (const group of navGroups) {
-      const match = group.items.some(i => {
-        if (i.path === location.pathname) return true
-        if (i.path !== '/' && location.pathname.startsWith(i.path)) return true
-        return (i.altPaths ?? []).some(p => location.pathname === p || location.pathname.startsWith(p))
-      })
-      if (match) {
-        setExpandedGroups(prev => {
-          if (prev[group.defaultLabel] === false) return prev   // user collapsed → respect
-          if (prev[group.defaultLabel] === true)  return prev   // already open → no-op
-          return { ...prev, [group.defaultLabel]: true }
-        })
-        break
-      }
-    }
-  }, [location.pathname])
+  // "Find in menu": typed words narrow every group to its matching items (navMenu.menuMatches); Escape clears it, and
+  // so does opening a page (the words belong to the page they were typed on).
+  const [menuSearch, setMenuSearch] = useState({ path: location.pathname, q: '' })
+  const menuQuery = menuSearch.path === location.pathname ? menuSearch.q : ''
+  const setMenuQuery = (q: string) => setMenuSearch({ path: location.pathname, q })
 
   // Persist group state across reloads so a collapse sticks.
   useEffect(() => {
@@ -439,15 +452,11 @@ export function Layout({ children }: { children: ReactNode }) {
     localStorage.setItem(SIDEBAR_KEY, next ? '1' : '0')
   }
 
-  const toggleGroup = (label: string) => {
+  // Flips what the person sees: the group's current state comes from isGroupOpen, so the first press on a group that
+  // is open by default closes it (and the reverse), never a press that changes nothing.
+  const toggleGroup = (label: string, isCurrentlyOpen: boolean) => {
     if (displayCollapsed) return
-    setExpandedGroups(prev => {
-      // Default rendered state is OPEN (undefined !== false), so toggling
-      // from `undefined` must produce `false`, not `true` (which would be
-      // a visual no-op and force the user to click twice to collapse).
-      const isCurrentlyOpen = prev[label] !== false
-      return { ...prev, [label]: !isCurrentlyOpen }
-    })
+    setExpandedGroups(prev => ({ ...prev, [label]: !isCurrentlyOpen }))
   }
 
   const { data: settingsData } = useQuery({
@@ -605,24 +614,33 @@ export function Layout({ children }: { children: ReactNode }) {
   const userAllowed = Array.isArray(staff?.allowed_nav_groups) ? staff!.allowed_nav_groups! : null
   const hasPerUserWhitelist = !isAdmin && userAllowed && userAllowed.length > 0
 
+  // Whether a group's three switches let it show: the staff member's allowed groups, the organisation's hidden groups
+  // and the industry's. Asked of each group, and again of each item that moved out of its `home` (2026-11-09 menu), so
+  // a moved item still hides exactly where it hid before.
+  const groupShows = (label: string) => {
+    // Identity stays in English (`defaultLabel`) so the saved
+    // whitelist + hidden-list keys are language-stable. Only the
+    // displayed text comes from i18n / vocabulary.
+    if (ALWAYS_VISIBLE.has(label)) return true
+    if (hasPerUserWhitelist && !userAllowed!.includes(label)) return false
+    if (hiddenNavGroups.includes(label)) return false
+    // Phase 4 — industry hide. Unioned with the org-wide list
+    // above so admin customisations stay in effect; never undone
+    // by industry. Empty array for hotel = no change.
+    if (industryHiddenGroups.includes(label)) return false
+    return true
+  }
+
   const visibleGroups = navGroups
-    .filter(group => {
-      // Identity stays in English (`defaultLabel`) so the saved
-      // whitelist + hidden-list keys are language-stable. Only the
-      // displayed text comes from i18n / vocabulary.
-      if (ALWAYS_VISIBLE.has(group.defaultLabel)) return true
-      if (hasPerUserWhitelist && !userAllowed!.includes(group.defaultLabel)) return false
-      if (hiddenNavGroups.includes(group.defaultLabel)) return false
-      // Phase 4 — industry hide. Unioned with the org-wide list
-      // above so admin customisations stay in effect; never undone
-      // by industry. Empty array for hotel = no change.
-      if (industryHiddenGroups.includes(group.defaultLabel)) return false
-      return true
-    })
+    .filter(group => (
+      // The launcher is a container: each tile answers to its own home group. Only the organisation can hide it whole.
+      group.layout === 'apps' ? !hiddenNavGroups.includes(group.defaultLabel) : groupShows(group.defaultLabel)
+    ))
     .map(group => ({
       ...group,
       items: group.items
         .filter(item => {
+          if (item.home && !groupShows(item.home)) return false
           if (!canAccess(item.gate, staff)) return false
           if (item.product && !hasProduct(item.product)) return false
           // The way into a workspace: wherever the organisation has it (Appointments with services or not, owner 2026-10-06).
@@ -700,6 +718,250 @@ export function Layout({ children }: { children: ReactNode }) {
     }))
     .filter(group => group.items.length > 0)
 
+  // The 2026-11-09 menu's view of the groups: the page's own group, and while "Find in menu" holds words, only the
+  // items they match (in the item's label or its group's), each group with at least one.
+  const activeItem = activeItemOf(visibleGroups, location.pathname)
+  const activeGroup = activeItem?.group ?? null
+  const searching = !displayCollapsed && menuQuery.trim() !== ''
+  const groupLabelOf = (labelKey: string, defaultLabel: string) => vocab(defaultLabel) ?? t(labelKey, defaultLabel)
+  const itemLabelOf = (it: { labelKey: string; defaultLabel: string; shortKey?: string; shortLabel?: string }) =>
+    `${vocab(it.defaultLabel) ?? t(it.labelKey, it.defaultLabel)} ${it.shortKey ? t(it.shortKey, it.shortLabel ?? '') : ''}`
+  const shownGroups = searching
+    ? visibleGroups
+        .map(g => ({ ...g, items: g.items.filter(it => menuMatches(menuQuery, itemLabelOf(it), groupLabelOf(g.labelKey, g.defaultLabel))) }))
+        .filter(g => g.items.length > 0)
+    : visibleGroups
+  // An accent as a translucent wash: "#rrggbb" → rgba with the alpha given (the active item's tint, the dot's glow).
+  const tintOf = (accent: string) => (a: number) => {
+    const hex = accent.replace('#', '')
+    const r = parseInt(hex.slice(0, 2), 16)
+    const g = parseInt(hex.slice(2, 4), 16)
+    const b = parseInt(hex.slice(4, 6), 16)
+    return `rgba(${r},${g},${b},${a})`
+  }
+
+  // A tile of the Workspaces launcher: the workspace's icon in its own colour above its short name ("Loyalty"); the
+  // full name ("HexaTech Loyalty") is its accessible name and tooltip. A workspace the plan locks is the same dead
+  // upgrade button as a locked item (it never navigates; UpgradeFeatureModal answers).
+  const renderAppTile = (it: (typeof visibleGroups)[number]['items'][number]) => {
+    const { path, labelKey: itemLabelKey, defaultLabel: itemDefault, icon: Icon } = it
+    const fullName = vocab(itemDefault) ?? t(itemLabelKey, itemDefault)
+    const short = it.shortKey ? t(it.shortKey, it.shortLabel ?? fullName) : fullName
+    const colour = it.tint ?? NAV_ACCENT.teal
+    const wash = tintOf(colour)
+    const locked = '_locked' in it && it._locked === true
+    const lockedFeature = ('_lockedFeature' in it ? it._lockedFeature : null) as string | null
+    const active = !locked && activeItem?.path === path
+    const style = {
+      '--app-tint': colour,
+      '--app-ink': GLASS_NAV_ACCENT_TEXT[colour] ?? colour,
+      '--app-ink-light': LIGHT_NAV_ACCENT_TEXT[colour] ?? colour,
+      '--app-wash': wash(active ? 0.2 : 0.08),
+      '--app-wash-hover': wash(0.16),
+      '--app-ring': wash(active ? 0.6 : 0),
+    } as CSSProperties
+    const inner = (
+      <>
+        <span className="nav-app-icon flex h-7 w-7 items-center justify-center rounded-lg" style={{ background: wash(0.18) }}>
+          <Icon size={15} aria-hidden="true" />
+        </span>
+        <span className="block w-full truncate text-[11.5px] font-semibold leading-tight text-hx-e0e0e0">{short}</span>
+        {locked && <Lock size={10} className="absolute right-2 top-2 text-primary-400/80" aria-hidden="true" />}
+      </>
+    )
+    const className = clsx('nav-app-tile group relative flex flex-col items-start gap-1.5 rounded-xl px-2.5 py-2 text-left', locked && 'opacity-60')
+    if (locked) {
+      return (
+        <button
+          key={path}
+          type="button"
+          title={t('nav_locked.tooltip_collapsed', '{{label}} — upgrade to unlock', { label: fullName })}
+          aria-label={t('nav_locked.aria_label', '{{label}} — locked, upgrade to unlock', { label: fullName })}
+          onClick={() => {
+            window.dispatchEvent(new CustomEvent('feature:locked', {
+              detail: {
+                feature: lockedFeature,
+                plan: currentPlanLabel,
+                upgradeUrl: null,
+                message: t('nav_locked.dispatch_message', '{{label}} is not included in your current plan.', { label: fullName }),
+              },
+            }))
+          }}
+          className={className}
+          style={style}
+        >
+          {inner}
+        </button>
+      )
+    }
+    return (
+      <Link
+        key={path}
+        to={path}
+        title={fullName}
+        aria-label={fullName}
+        aria-current={active ? 'page' : undefined}
+        onMouseEnter={() => preloadRoute(path)}
+        onFocus={() => preloadRoute(path)}
+        onPointerDown={() => preloadRoute(path)}
+        className={className}
+        data-nav-active={active ? '' : undefined}
+        style={style}
+      >
+        {inner}
+      </Link>
+    )
+  }
+
+
+  // One item of a list group (and of a search's results): a link, the dead upgrade button of a locked feature, or
+  // the dimmed-but-reachable link of a lapsed landing page. `accent` and `tint` are its group's.
+  const renderItem = (it: (typeof visibleGroups)[number]['items'][number], accent: string, tint: (a: number) => string) => {
+    const { path, labelKey: itemLabelKey, defaultLabel: itemDefault, icon: Icon } = it
+    const itemLabel = vocab(itemDefault) ?? t(itemLabelKey, itemDefault)
+    // Task 11: "locked-looking, still reachable" — see the
+    // `_lapsed` map above. Deliberately does NOT suppress
+    // `active`: this tenant can genuinely still be ON the
+    // page, and the sidebar should say so.
+    const lapsed = '_lapsed' in it && it._lapsed === true
+    // Round 2 (M2): LAPSED WINS, and this is the half of that
+    // precedence the map cannot express. A `_locked` item
+    // renders as a <button> below whose only action dispatches
+    // `feature:locked` — it never navigates — so leaving
+    // `locked` true for a lapsed item is what left the
+    // downgraded-but-still-paying tenant with no route to the
+    // Unpublish button at all. `landingNavTreatment` only ever
+    // sets `_lapsed` on a tenant who is genuinely unentitled,
+    // so nothing entitled can reach this branch.
+    const locked = !lapsed && '_locked' in it && it._locked === true
+    const lockedFeature = ('_lockedFeature' in it ? it._lockedFeature : null) as string | null
+    // The one item the page belongs to (navMenu.activeItemOf: the longest matching address wins).
+    const active = !locked && activeItem?.path === path
+    const badge = !locked && path === '/engagement' && chatUnread > 0 ? chatUnread : 0
+
+    // Locked items render as a button (no Link) so React
+    // Router doesn't navigate to a 402-only route. Click
+    // fires the same `feature:locked` event the api.ts
+    // interceptor uses for server-side 402s — the
+    // UpgradeFeatureModal listens to both paths.
+    if (locked) {
+      // Build an accessible name so screen readers
+      // announce the lock state — `title` alone is
+      // inaccessible (many screen readers + mobile
+      // assistive tech ignore it). All three strings
+      // (tooltip, aria-label, dispatch message) flow
+      // through i18n with English defaults so untranslated
+      // locales fall back gracefully.
+      const ariaLabel = t('nav_locked.aria_label', '{{label}} — locked, upgrade to unlock', { label: itemLabel })
+      const tooltipCollapsed = t('nav_locked.tooltip_collapsed', '{{label}} — upgrade to unlock', { label: itemLabel })
+      const tooltipExpanded = t('nav_locked.tooltip_expanded', 'Upgrade to unlock this feature')
+      const dispatchMessage = t('nav_locked.dispatch_message', '{{label}} is not included in your current plan.', { label: itemLabel })
+      return (
+        <button
+          key={path}
+          type="button"
+          title={displayCollapsed ? tooltipCollapsed : tooltipExpanded}
+          aria-label={ariaLabel}
+          onClick={() => {
+            // Pass current plan + a feature-specific
+            // message so the modal can render the
+            // "Your plan: …" line correctly and the
+            // throttle's same-feature key dedupes
+            // server-side 402s arriving moments later.
+            window.dispatchEvent(new CustomEvent('feature:locked', {
+              detail: {
+                feature: lockedFeature,
+                plan: currentPlanLabel,
+                upgradeUrl: null,
+                message: dispatchMessage,
+              },
+            }))
+          }}
+          className={clsx(
+            'w-[calc(100%-12px)] flex items-center gap-2.5 py-2 mx-1.5 rounded-lg transition-colors text-[13px] font-medium relative',
+            displayCollapsed ? 'justify-center px-0' : 'px-3',
+            'text-t-secondary/70 hover:text-white hover:bg-white/4',
+          )}
+        >
+          <Icon size={17} className="shrink-0 opacity-70" aria-hidden="true" />
+          {!displayCollapsed && (
+            <>
+              <span className="truncate flex-1 text-left">{itemLabel}</span>
+              <Lock size={11} className="shrink-0 text-primary-400/80" aria-hidden="true" />
+            </>
+          )}
+          {displayCollapsed && (
+            <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-primary-500/80" aria-hidden="true" />
+          )}
+        </button>
+      )
+    }
+
+    // Task 11 — the lapsed tenant's tooltip/accessible name.
+    // Says both halves out loud: the builder is gone, taking
+    // the page down is not. Written for someone who has just
+    // stopped paying and wants to know whether their page is
+    // still on the internet.
+    // D9: worded conditionally on purpose. The old copy
+    // promised a takedown outright, and for a lapsed tenant
+    // whose page is a draft — or who has already unpublished
+    // — `landingAccessDecision` returns 'redirect' and the
+    // click bounces to the dashboard. "If your page is still
+    // live" is the honest version of the same reassurance.
+    const lapsedTooltip = t('nav_lapsed.tooltip', 'Not in your plan any more — if your page is still live, you can take it offline')
+    const lapsedAria = t('nav_lapsed.aria_label', '{{label}} — not in your plan any more; if your page is still live, you can take it offline', { label: itemLabel })
+
+    return (
+      <Link
+        key={path}
+        to={path}
+        title={lapsed ? lapsedTooltip : (displayCollapsed ? itemLabel : undefined)}
+        aria-label={lapsed ? lapsedAria : undefined}
+        onMouseEnter={() => preloadRoute(path)}
+        onFocus={() => preloadRoute(path)}
+        onPointerDown={() => preloadRoute(path)}
+        className={clsx(
+          'flex items-center gap-2.5 py-2 mx-1.5 rounded-lg transition-colors text-[13px] font-medium relative',
+          displayCollapsed ? 'justify-center px-0' : 'px-3',
+          !active && !lapsed && 'text-t-secondary hover:text-white hover:bg-dark-surface2',
+          // Matches the `_locked` button's own muted treatment
+          // above, so "you do not have this" reads the same
+          // whichever of the two reasons produced it.
+          !active && lapsed && 'text-t-secondary/70 hover:text-white hover:bg-white/4',
+        )}
+        data-nav-active={active ? '' : undefined}
+        style={active ? {
+          background: tint(0.16),
+          // Glass shows the text one shade lighter (theme/glass.css
+          // sets --nav-active-text); Classic keeps the accent.
+          color: `var(--nav-active-text, ${accent})`,
+          boxShadow: `inset 2px 0 0 ${accent}`,
+          '--nav-accent-glass': GLASS_NAV_ACCENT_TEXT[accent] ?? accent,
+          '--nav-accent-light': LIGHT_NAV_ACCENT_TEXT[accent] ?? accent,
+        } as CSSProperties : undefined}
+      >
+        <Icon size={17} className={clsx('shrink-0', lapsed && !active && 'opacity-70')} />
+        {!displayCollapsed && <span className="truncate flex-1">{itemLabel}</span>}
+        {lapsed && (
+          displayCollapsed ? (
+            <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-primary-500/80" aria-hidden="true" />
+          ) : (
+            <Lock size={11} className="shrink-0 text-primary-400/80" aria-hidden="true" />
+          )
+        )}
+        {badge > 0 && (
+          displayCollapsed ? (
+            <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />
+          ) : (
+            <span className="ml-auto bg-red-500 text-on-fill text-[10px] font-bold rounded-full min-w-[18px] h-[18px] px-1.5 flex items-center justify-center">
+              {badge > 99 ? '99+' : badge}
+            </span>
+          )
+        )}
+      </Link>
+    )
+  }
+
   return (
     <div className="hx-shell flex h-screen bg-dark-bg">
       {/* Global Cmd+K search lives in <GlobalSearch /> further down.
@@ -751,204 +1013,75 @@ export function Layout({ children }: { children: ReactNode }) {
           </button>
         </div>
 
-        {/* Nav */}
-        <nav className="flex-1 py-2 overflow-y-auto overflow-x-hidden">
-          {visibleGroups.map(({ labelKey, defaultLabel, items, accent }) => {
-            // Phase 3 fallback chain:
-            //   1. vocab(defaultLabel) — industry-specific EN override
-            //   2. t(labelKey, defaultLabel) — i18n translation chain
-            //
-            // **EN-only first ship**. A Russian beauty admin sees
-            // 'Clients' (English vocab override) instead of the Russian
-            // 'Участники' they'd get for the generic Members label.
-            // RU/DE/FR/ES vocabulary follow-up is Phase 3.x. Hotel orgs
-            // (all languages) are unaffected — VOCABULARY.hotel is
-            // empty, so vocab() returns null and i18n chain wins.
-            //
-            // **defaultLabel is the IDENTITY key for the whitelist
-            // storage** (hiddenNavGroups + allowed_nav_groups). The
-            // `key=`, `expandedGroups`, hidden-list check, and per-user
-            // allowed check all continue to use defaultLabel — vocab is
-            // rendering-only. Switching industry never silently changes
-            // what an org has hidden.
-            const groupLabel = vocab(defaultLabel) ?? t(labelKey, defaultLabel)
-            const isOpen = displayCollapsed || expandedGroups[defaultLabel] !== false // default open
-            // hex8 helper — convert "#rrggbb" to rgba with the supplied alpha.
-            // Used for the active-state tint so each group's highlight
-            // colour reads as a translucent wash of the accent.
-            const tint = (a: number) => {
-              const hex = accent.replace('#', '')
-              const r = parseInt(hex.slice(0, 2), 16)
-              const g = parseInt(hex.slice(2, 4), 16)
-              const b = parseInt(hex.slice(4, 6), 16)
-              return `rgba(${r},${g},${b},${a})`
-            }
+        {/* Nav — the 2026-11-09 menu: "Find in menu", then the groups as an accordion (navMenu.isGroupOpen: the
+            Dashboard's group, the Workspaces launcher and the page's own group open, the rest headings that show how
+            many pages they hold). A closed group keeps its items in the page, inert, so it can open with a slide. */}
+        <nav className="flex-1 py-2 overflow-y-auto overflow-x-hidden" aria-label={t('nav.menu_label', 'Main menu')}>
+          {!displayCollapsed && (
+            <div className="px-2.5 pb-2 pt-0.5">
+              <label className="relative flex items-center">
+                <Search size={13} className="absolute left-2.5 text-t-muted pointer-events-none" aria-hidden="true" />
+                <input
+                  type="search"
+                  value={menuQuery}
+                  onChange={e => setMenuQuery(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Escape') setMenuQuery('') }}
+                  placeholder={t('nav.find_placeholder', 'Find in menu')}
+                  aria-label={t('nav.find_label', 'Find a page in the menu')}
+                  className="nav-find w-full h-8 pl-8 pr-2 rounded-lg bg-dark-surface2 border border-dark-border text-[12px] text-white placeholder:text-t-muted focus:outline-hidden focus:ring-2 focus:ring-primary-400/60 transition-shadow"
+                />
+              </label>
+            </div>
+          )}
+          {searching && shownGroups.length === 0 && (
+            <p className="px-4 py-3 text-xs text-t-muted" role="status">{t('nav.find_none', 'No page matches “{{query}}”.', { query: menuQuery.trim() })}</p>
+          )}
+          {shownGroups.map(({ labelKey, defaultLabel, items, accent, layout }) => {
+            // Phase 3 fallback chain: vocab(defaultLabel) — the industry's English word — then t(labelKey). The
+            // defaultLabel stays the IDENTITY key of the saved hidden_nav_groups / allowed_nav_groups and of the
+            // person's open/close choice; vocabulary is rendering only, so switching industry never changes what an
+            // organisation has hidden.
+            const groupLabel = groupLabelOf(labelKey, defaultLabel)
+            const isOpen = isGroupOpen(defaultLabel, expandedGroups, activeGroup, { iconsOnly: displayCollapsed, searching })
+            const tint = tintOf(accent)
+            const listId = `nav-group-${defaultLabel.toLowerCase().replace(/[^a-z]+/g, '-')}`
+            const holdsActive = activeGroup === defaultLabel
             return (
-              <div key={defaultLabel} className="mb-3 last:mb-1" data-nav-group="" style={{ '--nav-accent-light': LIGHT_NAV_ACCENT_TEXT[accent] ?? accent } as CSSProperties}>
-                {/* Group header — colored dot + bolder label so the
-                    seven sections read as distinct sections at a glance.
-                    Collapsed sidebar shows only a thin accent line. */}
+              <div key={defaultLabel} className="mb-2 last:mb-1" data-nav-group="" style={{ '--nav-accent-light': LIGHT_NAV_ACCENT_TEXT[accent] ?? accent } as CSSProperties}>
+                {/* Group header — coloured dot, the label, how many pages a closed group holds, and the chevron.
+                    The icon-only side panel shows a thin accent line instead. */}
                 {!displayCollapsed ? (
                   <button
-                    onClick={() => toggleGroup(defaultLabel)}
-                    className="flex items-center gap-2 w-full px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.08em] hover:bg-white/2 rounded-lg transition-colors group"
+                    type="button"
+                    onClick={() => toggleGroup(defaultLabel, isOpen)}
+                    aria-expanded={isOpen}
+                    aria-controls={listId}
+                    disabled={searching}
+                    className="flex items-center gap-2 w-full px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.08em] hover:bg-white/2 rounded-lg transition-colors group disabled:cursor-default"
                     style={{ color: `var(--nav-label-text, ${tint(0.9)})` }}
                   >
-                    <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: accent, boxShadow: `0 0 8px ${tint(0.5)}` }} />
+                    <span className={clsx('w-1.5 h-1.5 rounded-full shrink-0', holdsActive && !isOpen && 'nav-dot-live')} style={{ background: accent, boxShadow: `0 0 8px ${tint(0.5)}` }} />
                     <span className="flex-1 text-left">{groupLabel}</span>
-                    <ChevronDown size={11} className={clsx('transition-transform opacity-50 group-hover:opacity-100', isOpen ? '' : '-rotate-90')} />
+                    {!isOpen && (
+                      <span className="text-[10px] font-semibold tabular-nums normal-case tracking-normal text-t-muted" aria-hidden="true">{items.length}</span>
+                    )}
+                    <ChevronDown size={11} className={clsx('transition-transform duration-300 opacity-50 group-hover:opacity-100', isOpen ? '' : '-rotate-90')} />
                   </button>
                 ) : (
                   <div className="h-0.5 mx-3 my-2 rounded-full" style={{ background: tint(0.4) }} />
                 )}
 
-                {/* Group items */}
-                {isOpen && items.map((it) => {
-                  const { path, labelKey: itemLabelKey, defaultLabel: itemDefault, icon: Icon, altPaths } = it
-                  const itemLabel = vocab(itemDefault) ?? t(itemLabelKey, itemDefault)
-                  // Task 11: "locked-looking, still reachable" — see the
-                  // `_lapsed` map above. Deliberately does NOT suppress
-                  // `active`: this tenant can genuinely still be ON the
-                  // page, and the sidebar should say so.
-                  const lapsed = '_lapsed' in it && it._lapsed === true
-                  // Round 2 (M2): LAPSED WINS, and this is the half of that
-                  // precedence the map cannot express. A `_locked` item
-                  // renders as a <button> below whose only action dispatches
-                  // `feature:locked` — it never navigates — so leaving
-                  // `locked` true for a lapsed item is what left the
-                  // downgraded-but-still-paying tenant with no route to the
-                  // Unpublish button at all. `landingNavTreatment` only ever
-                  // sets `_lapsed` on a tenant who is genuinely unentitled,
-                  // so nothing entitled can reach this branch.
-                  const locked = !lapsed && '_locked' in it && it._locked === true
-                  const lockedFeature = ('_lockedFeature' in it ? it._lockedFeature : null) as string | null
-                  const active = !locked && (path === '/'
-                    ? location.pathname === '/'
-                    : (location.pathname.startsWith(path) || (altPaths ?? []).some(p => location.pathname === p || location.pathname.startsWith(p))))
-                  const badge = !locked && path === '/engagement' && chatUnread > 0 ? chatUnread : 0
-
-                  // Locked items render as a button (no Link) so React
-                  // Router doesn't navigate to a 402-only route. Click
-                  // fires the same `feature:locked` event the api.ts
-                  // interceptor uses for server-side 402s — the
-                  // UpgradeFeatureModal listens to both paths.
-                  if (locked) {
-                    // Build an accessible name so screen readers
-                    // announce the lock state — `title` alone is
-                    // inaccessible (many screen readers + mobile
-                    // assistive tech ignore it). All three strings
-                    // (tooltip, aria-label, dispatch message) flow
-                    // through i18n with English defaults so untranslated
-                    // locales fall back gracefully.
-                    const ariaLabel = t('nav_locked.aria_label', '{{label}} — locked, upgrade to unlock', { label: itemLabel })
-                    const tooltipCollapsed = t('nav_locked.tooltip_collapsed', '{{label}} — upgrade to unlock', { label: itemLabel })
-                    const tooltipExpanded = t('nav_locked.tooltip_expanded', 'Upgrade to unlock this feature')
-                    const dispatchMessage = t('nav_locked.dispatch_message', '{{label}} is not included in your current plan.', { label: itemLabel })
-                    return (
-                      <button
-                        key={path}
-                        type="button"
-                        title={displayCollapsed ? tooltipCollapsed : tooltipExpanded}
-                        aria-label={ariaLabel}
-                        onClick={() => {
-                          // Pass current plan + a feature-specific
-                          // message so the modal can render the
-                          // "Your plan: …" line correctly and the
-                          // throttle's same-feature key dedupes
-                          // server-side 402s arriving moments later.
-                          window.dispatchEvent(new CustomEvent('feature:locked', {
-                            detail: {
-                              feature: lockedFeature,
-                              plan: currentPlanLabel,
-                              upgradeUrl: null,
-                              message: dispatchMessage,
-                            },
-                          }))
-                        }}
-                        className={clsx(
-                          'w-[calc(100%-12px)] flex items-center gap-2.5 py-2 mx-1.5 rounded-lg transition-colors text-[13px] font-medium relative',
-                          displayCollapsed ? 'justify-center px-0' : 'px-3',
-                          'text-t-secondary/70 hover:text-white hover:bg-white/4',
-                        )}
-                      >
-                        <Icon size={17} className="shrink-0 opacity-70" aria-hidden="true" />
-                        {!displayCollapsed && (
-                          <>
-                            <span className="truncate flex-1 text-left">{itemLabel}</span>
-                            <Lock size={11} className="shrink-0 text-primary-400/80" aria-hidden="true" />
-                          </>
-                        )}
-                        {displayCollapsed && (
-                          <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-primary-500/80" aria-hidden="true" />
-                        )}
-                      </button>
-                    )
-                  }
-
-                  // Task 11 — the lapsed tenant's tooltip/accessible name.
-                  // Says both halves out loud: the builder is gone, taking
-                  // the page down is not. Written for someone who has just
-                  // stopped paying and wants to know whether their page is
-                  // still on the internet.
-                  // D9: worded conditionally on purpose. The old copy
-                  // promised a takedown outright, and for a lapsed tenant
-                  // whose page is a draft — or who has already unpublished
-                  // — `landingAccessDecision` returns 'redirect' and the
-                  // click bounces to the dashboard. "If your page is still
-                  // live" is the honest version of the same reassurance.
-                  const lapsedTooltip = t('nav_lapsed.tooltip', 'Not in your plan any more — if your page is still live, you can take it offline')
-                  const lapsedAria = t('nav_lapsed.aria_label', '{{label}} — not in your plan any more; if your page is still live, you can take it offline', { label: itemLabel })
-
-                  return (
-                    <Link
-                      key={path}
-                      to={path}
-                      title={lapsed ? lapsedTooltip : (displayCollapsed ? itemLabel : undefined)}
-                      aria-label={lapsed ? lapsedAria : undefined}
-                      onMouseEnter={() => preloadRoute(path)}
-                      onFocus={() => preloadRoute(path)}
-                      onPointerDown={() => preloadRoute(path)}
-                      className={clsx(
-                        'flex items-center gap-2.5 py-2 mx-1.5 rounded-lg transition-colors text-[13px] font-medium relative',
-                        displayCollapsed ? 'justify-center px-0' : 'px-3',
-                        !active && !lapsed && 'text-t-secondary hover:text-white hover:bg-dark-surface2',
-                        // Matches the `_locked` button's own muted treatment
-                        // above, so "you do not have this" reads the same
-                        // whichever of the two reasons produced it.
-                        !active && lapsed && 'text-t-secondary/70 hover:text-white hover:bg-white/4',
-                      )}
-                      data-nav-active={active ? '' : undefined}
-                      style={active ? {
-                        background: tint(0.16),
-                        // Glass shows the text one shade lighter (theme/glass.css
-                        // sets --nav-active-text); Classic keeps the accent.
-                        color: `var(--nav-active-text, ${accent})`,
-                        boxShadow: `inset 2px 0 0 ${accent}`,
-                        '--nav-accent-glass': GLASS_NAV_ACCENT_TEXT[accent] ?? accent,
-                        '--nav-accent-light': LIGHT_NAV_ACCENT_TEXT[accent] ?? accent,
-                      } as CSSProperties : undefined}
-                    >
-                      <Icon size={17} className={clsx('shrink-0', lapsed && !active && 'opacity-70')} />
-                      {!displayCollapsed && <span className="truncate flex-1">{itemLabel}</span>}
-                      {lapsed && (
-                        displayCollapsed ? (
-                          <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-primary-500/80" aria-hidden="true" />
-                        ) : (
-                          <Lock size={11} className="shrink-0 text-primary-400/80" aria-hidden="true" />
-                        )
-                      )}
-                      {badge > 0 && (
-                        displayCollapsed ? (
-                          <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />
-                        ) : (
-                          <span className="ml-auto bg-red-500 text-on-fill text-[10px] font-bold rounded-full min-w-[18px] h-[18px] px-1.5 flex items-center justify-center">
-                            {badge > 99 ? '99+' : badge}
-                          </span>
-                        )
-                      )}
-                    </Link>
-                  )
-                })}
+                <div id={listId} className={clsx('nav-collapse grid', isOpen ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]')}>
+                  <div className="min-h-0 overflow-hidden" inert={!isOpen} data-nav-closed={isOpen ? undefined : ''}>
+                    {layout === 'apps' && !displayCollapsed ? (
+                      <div className="grid grid-cols-2 gap-1.5 px-2.5 pt-1 pb-1.5">
+                        {items.map(it => renderAppTile(it))}
+                      </div>
+                    ) : (
+                      items.map(it => renderItem(it, it.tint ?? accent, it.tint ? tintOf(it.tint) : tint))
+                    )}
+                  </div>
+                </div>
               </div>
             )
           })}
@@ -1117,7 +1250,7 @@ export function Layout({ children }: { children: ReactNode }) {
                 before mounting children. Brief blank-screen during initial
                 /v1/auth/subscription fetch (one round-trip, ~50ms after
                 first warm cache) but no 403 storm. */}
-            {allowRenderContent ? children : null}
+            {allowRenderContent ? <VisibleMenuContext.Provider value={visibleGroups as VisibleNavGroup[]}>{children}</VisibleMenuContext.Provider> : null}
           </div>
         </main>
       </div>

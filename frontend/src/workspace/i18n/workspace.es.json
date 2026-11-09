@@ -41,5 +41,37 @@
     "more_areas": "Más secciones",
     "plan": "Plan y productos",
     "team": "Equipo"
+  },
+  "pulse": {
+    "label": "Ahora en el establecimiento",
+    "morning": "Buenos días",
+    "afternoon": "Buenas tardes",
+    "evening": "Buenas tardes",
+    "night": "Buenas noches",
+    "hello_name": "{{greeting}}, {{name}}",
+    "place_time": "{{place}} · hora local",
+    "zone_time": "Hora local ({{zone}})",
+    "feels_like": "Sensación de {{temp}}",
+    "high_low": "Máx. {{max}} Mín. {{min}}",
+    "next_hours": "Las próximas horas",
+    "now": "Ahora",
+    "sun": "Amanecer {{rise}}, atardecer {{set}}",
+    "weather": {
+      "clear": "Cielo despejado",
+      "mainly_clear": "Mayormente despejado",
+      "partly_cloudy": "Parcialmente nublado",
+      "overcast": "Cubierto",
+      "fog": "Niebla",
+      "drizzle": "Llovizna",
+      "freezing_drizzle": "Llovizna helada",
+      "rain": "Lluvia",
+      "freezing_rain": "Lluvia helada",
+      "snow": "Nieve",
+      "showers": "Chubascos",
+      "snow_showers": "Chubascos de nieve",
+      "thunderstorm": "Tormenta",
+      "thunder_hail": "Tormenta con granizo",
+      "unknown": "Tiempo"
+    }
   }
 }
