@@ -65,4 +65,25 @@ Desktop and mobile screenshots were inspected against the retrieved Figma screen
 journey additionally covered redirects, real rate saves/inheritance, selected-tier values and shared assignment
 entrances. Its distinction from the final 96-check build is retained here.
 
-Deployment and public content verification follow in the release handoff.
+## Deployment and live content
+
+Production main **a5fb150cecd5d599cb0ebf1490c5fbfabfa3a7dc** is deployed from the source-patch worktree.
+**Next source-patch code baseline: f6146efee**; later documentation commits are evidence only.
+
+Both `loyalty.hotel-tech.ai` and `app.hexa-tech.uk` passed all **26 public content/authentication/landing checks**
+on **10 November 2026, 14:43:38 UTC /16:43:38 Europe/Riga**. The new row/artwork structure, compact assignment
+and reward panels, translated earning labels, reserved member search spacing, proportional artwork and full-width
+mobile controls are in the served scripts/styles. The four catalogue endpoints remain authenticated. The Academy
+still serves its original `/landing/nocturne_ritual.css`, with no `rp-` markers.
+
+Served assets include `index-eC8srf67.js`, `LoyaltyApp-DTuZpxEt.js`, `ManagementUI-C4nmwHRk.js`,
+`ProgramPage-DcJAthuP.js`, `EarningPage-eEwnhhEz.js` and `RewardsPage-BoyZosD0.js`.
+Private production evidence: `C:/wamp64/tmp/loyalty-layout-production-20261110.json`.
+
+[CI 42836406359](https://github.com/vkolotikov/hotel-tech-loyalty/actions/runs/42836406359) is still running
+at release handoff: both Node builds, dependency audit, Larastan and SQLite shards 1/2 have passed; SQLite shard 3
+and the full PostgreSQL known-failure gate remain in progress. This is distinct from the completed local artifact gates.
+No production customer record or provider configuration was changed.
+The task-owned HTTP/preview helpers and PostgreSQL cluster are stopped. The clean release worktree was removed
+after verifying its path, branch and main commit and unlinking only its dependency junction. Shared dependencies,
+owner files, private evidence and the earlier cleanup remnant were left in place.

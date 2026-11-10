@@ -83,8 +83,7 @@ export function ProgramPage() {
   const openTier = (tier: Tier | null) => navigate(`/loyalty/program?tab=tiers&tier=${tier?.id ?? 'new'}`)
   const onOpen = (value: Open) => { if (value.kind === 'tier') openTier(value.tier); else setOpen(value) }
   if (new URLSearchParams(location.search).get('tab') === 'benefits') { const next = new URLSearchParams(location.search); next.set('tab', 'benefits'); return <Navigate replace to={{ pathname: '/loyalty/rewards', search: '?' + next.toString() }} /> }
-  if (editorId && section === 'tiers') return <TierEditorPage id={editorId} />
-  if (data && section === 'tiers') return <LevelsPage program={data} manage={manage} />
+  if (data && section === 'tiers') return <><LevelsPage program={data} manage={manage} />{editorId && <TierEditorPage id={editorId} />}</>
 
   return (
     <div className={`${section === 'places' ? 'l-ad-page' : 'l-ov-page'} l-rd-page l-pg-clean-page`}>

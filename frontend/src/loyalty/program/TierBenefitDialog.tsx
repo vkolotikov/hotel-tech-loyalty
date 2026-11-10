@@ -1,10 +1,11 @@
+import { useEditorClose } from '../editors/useEditorClose'
+import { EditorDialog, EditorSection, EditorDisclosure, EditorNote, EditorPreview, EditorArt, EditorFooter } from '../editors/EditorUI'
+import { ManagementFact } from '../management/ManagementUI'
+import { useAdminWords } from '../management/words'
 import { useBoot } from '../LoyaltyProvider'
 import { amountOf } from '../lib/format'
-import { DesignDialog, NumberControl } from '../redesign/DesignUI'
-import { OverviewButton } from '../overview/OverviewUI'
-import { overviewAssets } from '../overview/assets'
+import { NumberControl } from '../redesign/DesignUI'
 import { useRedesignWords } from '../redesign/words'
-import { tierTextStyle } from '../redesign/designMath'
 import './design/program.css'
 import { useState, type ReactNode } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
@@ -21,7 +22,6 @@ import { decimalOf, named } from '../lib/forms'
 import type { Benefit, ProgramOptions, Tier, TierBenefit } from './types'
 import { APPLIES_TO_WORDS, FULFILLMENT_WORDS, TIER_BENEFIT_PROBLEM_WORDS, VALUE_TYPE_WORDS, VALUE_PHRASE_WORDS } from './words'
 
-const INPUT = 'w-full rounded-lg border border-a-border bg-a-surface px-3 py-2 text-sm text-a-text'
 
 /**
  * Give a tier a benefit from the catalogue, or change the one it gives (spec 2026-10-21 §4.5): the wording members
@@ -44,7 +44,6 @@ export function TierBenefitDialog({ tier, current, benefits, options, onClose, i
   const { t, i18n } = useTranslation()
   const say = useRedesignWords()
   const boot = useBoot()
-  const [details, setDetails] = useState(false)
   const client = useQueryClient()
   const firstChoice = useFirstFocus<HTMLSelectElement>()
   const firstWording = useFirstFocus<HTMLTextAreaElement>()
@@ -83,33 +82,27 @@ export function TierBenefitDialog({ tier, current, benefits, options, onClose, i
     : t('loyalty.program.tier_benefit.add_title', 'Add a benefit to {{tier}}', { tier: tier.name })
 
 
+  const close = useEditorClose(form, onClose, save.isPending), admin = useAdminWords()
   if (confirmation) return confirmation
-  if (!choices.length) return <DesignDialog title={title} onClose={onClose}><p>{t('loyalty.program.tier_benefit.empty_catalogue', 'The catalogue has no benefit in use yet. Add one under Benefits first.')}</p></DesignDialog>
+  if (!choices.length) return <EditorDialog area="rewards" title={title} section={admin('perks')} icon="perk" onClose={onClose}><p>{t('loyalty.program.tier_benefit.empty_catalogue', 'The catalogue has no benefit in use yet. Add one under Benefits first.')}</p></EditorDialog>
   const selected = benefits.find(b => String(b.id) === form.benefit_id)
   const amount = decimalOf(form.value_amount)
   const typed = needsAmount(form.value_type) && amount !== null && VALUE_PHRASE_WORDS[form.value_type] ? t(`loyalty.program.value_phrase.${form.value_type}`, VALUE_PHRASE_WORDS[form.value_type], { amount: amountOf(form.value_type, amount, boot.venue.currency, i18n.language || 'en') }) : ''
   const amountLabel = form.value_type === 'percent_discount' ? say('discount') : t('loyalty.program.tier_benefit.value_amount', 'Amount')
-  return <DesignDialog title={title} wide onClose={onClose} busy={save.isPending} className="l-pg-benefit-dialog">
-    <form className="l-rd-form" noValidate onSubmit={e => { e.preventDefault(); setTried(true); if (!save.isPending && Object.keys(tierBenefitProblems(form, options)).length === 0) save.mutate() }}>
+  return <><EditorDialog area="rewards" title={title} section={admin('perks')} icon="level" tone="gold" wide onClose={close.cancel} busy={save.isPending}>
+    <form className="l-editor-form" noValidate onSubmit={e => { e.preventDefault(); setTried(true); if (!save.isPending && Object.keys(tierBenefitProblems(form, options)).length === 0) save.mutate() }}><div className="l-editor-body"><div className="l-editor-columns"><fieldset disabled={save.isPending} className="l-editor-stack">
       {already && <Notice tone="info">{t('loyalty.program.tier_benefit.already', '{{tier}} already gives this benefit: saving changes its wording and value.', { tier: tier.name })}</Notice>}
-      <div className="l-rd-benefit-columns">
-        <div className="l-rd-form">
-          {!current && <FormField label={t('loyalty.program.tier_benefit.benefit', 'Benefit')} problem={problem('benefit_id')}><select ref={firstChoice} value={form.benefit_id} onChange={e => choose(e.target.value)} className={INPUT}><option value="">{t('loyalty.program.tier_benefit.choose', 'Choose a benefit…')}</option>{choices.map(b => <option key={b.id} value={String(b.id)}>{b.name}</option>)}</select></FormField>}
-          <FormField label={say('valueType')} problem={problem('value_type')}><select value={form.value_type} onChange={e => update({ value_type: e.target.value })} className={INPUT}>{options.value_types.map(value => <option key={value} value={value}>{word('loyalty.program.value_type', VALUE_TYPE_WORDS, value)}</option>)}{!options.value_types.includes(form.value_type) && <option value={form.value_type}>{form.value_type}</option>}</select></FormField>
-          <div className="l-rd-benefit-value">
-            {needsAmount(form.value_type) && <div><span className="l-rd-label">{amountLabel}</span><NumberControl label={amountLabel} value={form.value_amount} onValue={value_amount => update({ value_amount })} min={form.value_type === 'points_multiplier' ? 1 : 0} max={form.value_type === 'percent_discount' ? 100 : 1000000} step={form.value_type === 'points_multiplier' || form.value_type === 'fixed_amount' ? .01 : 1} invalid={!!problem('value_amount')} disabled={save.isPending} />{problem('value_amount') && <p className="text-a-danger">{problem('value_amount')}</p>}</div>}
-            <FormField label={t('loyalty.program.tier_benefit.applies_to', 'Applies to')} problem={problem('applies_to')}><select value={form.applies_to} onChange={e => update({ applies_to: e.target.value })} className={INPUT}>{options.applies_to.map(value => <option key={value} value={value}>{word('loyalty.program.applies_to', APPLIES_TO_WORDS, value)}</option>)}{!options.applies_to.includes(form.applies_to) && <option value={form.applies_to}>{form.applies_to}</option>}</select></FormField>
-          </div>
-          <FormField label={say('wording')} problem={problem('value')} hint={say('wordingHint')}><textarea aria-label={say('wording')} ref={current ? firstWording : undefined} value={form.value} rows={2} maxLength={255} onChange={e => update({ value: e.target.value })} className={INPUT} /></FormField>
-        </div>
-        <aside className="l-rd-benefit-preview"><span className="l-ov-eyebrow">{say('preview')}</span><h2 className="l-rd-tier-text" style={tierTextStyle(tier.color)}>{tier.name}</h2><hr /><img src={overviewAssets.gift} alt="" />
-          <h3>{typed || form.value || selected?.name || say('previewEmpty')}</h3>{typed && form.value && <p>{form.value}</p>}{selected && <p>{selected.name}</p>}<small>{word('loyalty.program.applies_to', APPLIES_TO_WORDS, form.applies_to)}</small>
-          {selected && <><button type="button" className="l-ov-link" aria-expanded={details} onClick={() => setDetails(!details)}>{say('benefitDetails')}</button>{details && <div><p>{selected.description || say('detailsUnavailable')}</p>{selected.fulfillment_mode && <small>{word('loyalty.program.fulfillment_mode', FULFILLMENT_WORDS, selected.fulfillment_mode)}</small>}</div>}</>}
-        </aside>
-      </div>
-      <div className="l-ov-inset l-rd-assignment-note"><strong>{say('valueDefines')}</strong><small>{say('deliveryRules')}</small></div>
+      <EditorSection icon="perk" title={selected?.name || t('loyalty.program.tier_benefit.benefit', 'Benefit')}>
+        {!current && <FormField label={t('loyalty.program.tier_benefit.benefit', 'Benefit')} problem={problem('benefit_id')}><select ref={firstChoice} value={form.benefit_id} onChange={e => choose(e.target.value)}><option value="">{t('loyalty.program.tier_benefit.choose', 'Choose a benefit…')}</option>{choices.map(b => <option key={b.id} value={String(b.id)}>{b.name}</option>)}</select></FormField>}
+        <div className="l-editor-two"><FormField label={say('level')}><input readOnly value={tier.name} /></FormField><FormField label={t('loyalty.program.benefit.fulfillment_mode', 'How it is given')}><input readOnly value={selected ? word('loyalty.program.fulfillment_mode', FULFILLMENT_WORDS, selected.fulfillment_mode ?? '') : '—'} /></FormField></div>
+      </EditorSection><EditorSection icon="level" title={say('valueType')}><div className="l-editor-two">
+        <FormField label={say('valueType')} problem={problem('value_type')}><select value={form.value_type} onChange={e => update({ value_type: e.target.value })}>{[...new Set([...options.value_types, form.value_type])].map(value => <option key={value} value={value}>{word('loyalty.program.value_type', VALUE_TYPE_WORDS, value)}</option>)}</select></FormField>
+        {needsAmount(form.value_type) && <FormField label={amountLabel} problem={problem('value_amount')}><NumberControl label={amountLabel} value={form.value_amount} onValue={value_amount => update({ value_amount })} min={form.value_type === 'points_multiplier' ? 1 : 0} max={form.value_type === 'percent_discount' ? 100 : 1000000} step={form.value_type === 'points_multiplier' || form.value_type === 'fixed_amount' ? .01 : 1} invalid={!!problem('value_amount')} disabled={save.isPending} /></FormField>}
+      </div><FormField label={t('loyalty.program.tier_benefit.applies_to', 'Applies to')} problem={problem('applies_to')}><select value={form.applies_to} onChange={e => update({ applies_to: e.target.value })}>{[...new Set([...options.applies_to, form.applies_to])].map(value => <option key={value} value={value}>{word('loyalty.program.applies_to', APPLIES_TO_WORDS, value)}</option>)}</select></FormField></EditorSection>
+      <EditorNote icon="level" title={say('valueDefines')}>{say('deliveryRules')}</EditorNote>
+      <EditorDisclosure title={say('wording')} open={!!problem('value')}><FormField label={say('wording')} problem={problem('value')} hint={say('wordingHint')}><textarea ref={current ? firstWording : undefined} value={form.value} rows={2} maxLength={255} onChange={e => update({ value: e.target.value })} /></FormField>{selected?.description && <p>{selected.description}</p>}</EditorDisclosure>
       {failure && <Notice tone="danger">{t(...refusalKey('loyalty.program', ERRORS, 'tier_benefit', failure))}</Notice>}
-      <div className="l-rd-form-foot">{current && onRemove && <OverviewButton type="button" disabled={save.isPending} onClick={onRemove}>{t('loyalty.program.take_off.confirm', 'Take it off')}</OverviewButton>}<small>{say('savesImmediately', { name: tier.name })}</small><OverviewButton type="button" disabled={save.isPending} onClick={onClose}>{t('loyalty.common.cancel', 'Cancel')}</OverviewButton><OverviewButton primary type="submit" disabled={save.isPending} aria-busy={save.isPending}>{current || already ? t('loyalty.program.tier_benefit.save', 'Save benefit') : say('addBenefit')}</OverviewButton></div>
-    </form>
-  </DesignDialog>
+    </fieldset><EditorPreview tone="gold"><EditorArt kind="perkArt" label={selected?.name || say('preview')} title={typed || form.value || say('previewEmpty')} line={word('loyalty.program.applies_to', APPLIES_TO_WORDS, form.applies_to)} /><ManagementFact icon="bronze" label={say('level')}>{tier.name}</ManagementFact><ManagementFact icon="people" label={t('loyalty.program.benefit.fulfillment_mode', 'How it is given')}>{selected ? word('loyalty.program.fulfillment_mode', FULFILLMENT_WORDS, selected.fulfillment_mode ?? '') : '—'}</ManagementFact><small>{say('savesImmediately', { name: tier.name })}</small></EditorPreview></div></div>
+    <EditorFooter onCancel={close.cancel} busy={save.isPending} dirty={close.dirty} creating={!current} save={current || already ? t('loyalty.program.tier_benefit.save', 'Save benefit') : say('addBenefit')}>{current && onRemove && <button type="button" className="l-ov-link" disabled={save.isPending} onClick={onRemove}>{t('loyalty.program.take_off.confirm', 'Take it off')}</button>}</EditorFooter></form>
+  </EditorDialog>{close.warning}</>
 }

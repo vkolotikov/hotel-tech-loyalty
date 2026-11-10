@@ -1,7 +1,11 @@
+import { useEditorClose } from '../editors/useEditorClose'
 import { useId, useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { Dialog } from '../../workspace/ui/Dialog'
+import { EditorDialog, EditorSection, EditorDisclosure, EditorPreview, EditorArt, EditorFooter, EditorSwitch } from '../editors/EditorUI'
+import { NumberControl } from '../redesign/DesignUI'
+import { ManagementFact } from '../management/ManagementUI'
+import { useAdminWords } from '../management/words'
 import { Notice } from '../../workspace/ui/Notice'
 import { useBoot } from '../LoyaltyProvider'
 import { failureOf } from '../lib/api'
@@ -11,7 +15,7 @@ import { useFirstFocus } from '../lib/useFirstFocus'
 import { TierChip } from '../ui/TierChip'
 import { afterProgramChange, programApi } from './api'
 import { ERRORS } from './errors'
-import { Check, FormField, FormFoot, Toggle } from '../ui/formParts'
+import { FormField, Toggle } from '../ui/formParts'
 import { BOOST_FIELDS, MAX_MULTIPLIER, MIN_MULTIPLIER, WEEK, boostBody, boostFormOf, boostProblems, examplePoints, weekdayName, type BoostForm } from './programMath'
 import { serverProblems, toggled, wallInput } from '../lib/forms'
 import { points } from '../lib/format'
@@ -22,7 +26,6 @@ import { needsTimeCheck } from './programMath'
 import type { Boost, Tier } from './types'
 import { BOOST_PROBLEM_WORDS } from './words'
 
-const INPUT = 'w-full rounded-lg border border-a-border bg-a-surface px-3 py-2 text-sm text-a-text'
 
 /**
  * Add a boost event or change one (spec 2026-10-21 §4.5): a name, the multiplier, when it runs — on the venue's
@@ -64,85 +67,22 @@ export function BoostDialog({ boost, tiers, brands, onClose }: { boost: Boost | 
     return code ? t(`loyalty.program.boost.problem.${code}`, BOOST_PROBLEM_WORDS[code] ?? BOOST_PROBLEM_WORDS.name) : null
   }
   const clock = t('loyalty.program.boost.clock_hint', 'On the venue’s clock ({{zone}}).', { zone })
+  const close = useEditorClose({ form, brand }, onClose, save.isPending), admin = useAdminWords()
   const listProblem = problem('days_of_week') ?? problem('tier_ids')
 
-  return (
-    <Dialog title={boost ? t('loyalty.program.boost.edit_title', 'Change {{name}}', { name: boost.name }) : t('loyalty.program.boost.new_title', 'Add a boost')}
-      onClose={onClose} busy={save.isPending}>
-      <form className="space-y-4" noValidate onSubmit={(e) => {
-        e.preventDefault()
-        setTried(true)
-        if (Object.keys(boostProblems(form)).length === 0) save.mutate()
-      }}>
-        <FormField label={t('loyalty.program.boost.name', 'Name')} problem={problem('name')}>
-          <input ref={first} type="text" value={form.name} maxLength={120} onChange={(e) => update({ name: e.target.value })} className={INPUT}
-            placeholder={t('loyalty.program.boost.name_example', 'e.g. Double points weekend')} />
-        </FormField>
-
-        <BrandField options={brands} value={brand} saved={saved}
-          refused={!!failure?.fields?.brand} onChange={(id) => { setBrand(id); if (save.isError) save.reset() }} />
-
-        <FormField label={t('loyalty.program.boost.multiplier', 'Multiplier')} problem={problem('multiplier')}
-          hint={examplePoints(form.multiplier) !== null
-            // Release 10 (the owner's 163:400): what the multiplier does, in figures, as it is typed.
-            ? t('loyalty.program.boost.multiplier_example', 'From 1 to 10. While it runs, 100 points become {{n}}.', { n: points(examplePoints(form.multiplier) ?? 0, locale) })
-            : t('loyalty.program.boost.multiplier_hint', 'Points earned while it runs are multiplied by this, from 1 to 10.')}>
-          <input type="number" inputMode="decimal" min={MIN_MULTIPLIER} max={MAX_MULTIPLIER} step={0.1} value={form.multiplier}
-            onChange={(e) => update({ multiplier: e.target.value })} className={`${INPUT} sm:w-40`} />
-        </FormField>
-
-        {boost && needsTimeCheck(boost) && (
-          <Notice tone="warning">{t('loyalty.program.time_check.dialog', 'Check these times: this boost was saved before boost times were read on the venue’s clock everywhere. If it was last saved in the full admin, its times may be off by the venue’s difference from UTC. Saving the boost marks them as checked.')}</Notice>
-        )}
-        <div className="grid gap-4 sm:grid-cols-2">
-          <FormField label={t('loyalty.program.boost.starts_at', 'Starts')} hint={clock} problem={problem('starts_at')}>
-            <input type="datetime-local" value={form.starts_at} onChange={(e) => update({ starts_at: wallInput(e.target.value) })} className={INPUT} />
-          </FormField>
-          <FormField label={t('loyalty.program.boost.ends_at', 'Ends')} hint={clock} problem={problem('ends_at')}>
-            <input type="datetime-local" value={form.ends_at} onChange={(e) => update({ ends_at: wallInput(e.target.value) })} className={INPUT} />
-          </FormField>
-        </div>
-
-        <div role="group" aria-labelledby={daysId} className="space-y-1.5">
-          <p id={daysId} className="text-xs font-medium text-a-text-2">{t('loyalty.program.boost.weekdays', 'Weekdays')}</p>
-          <div className="flex flex-wrap gap-1.5">
-            {WEEK.map(day => (
-              <Toggle key={day} on={form.days.includes(day)} onClick={() => update({ days: toggled(form.days, day) })} label={weekdayName(day, locale, 'long')}>
-                {weekdayName(day, locale)}
-              </Toggle>
-            ))}
-          </div>
-          <p className="text-xs text-a-text-2">{t('loyalty.program.boost.weekdays_hint', 'None chosen: every day.')}</p>
-        </div>
-
-        {tiers.length > 0 && (
-          <div role="group" aria-labelledby={tiersId} className="space-y-1.5">
-            <p id={tiersId} className="text-xs font-medium text-a-text-2">{t('loyalty.program.boost.tiers', 'Tiers')}</p>
-            <div className="flex flex-wrap gap-1.5">
-              {tiers.map(tier => (
-                <Toggle key={tier.id} on={form.tiers.includes(tier.id)} onClick={() => update({ tiers: toggled(form.tiers, tier.id) })}>
-                  <TierChip tier={tier} theme={look.resolved} size="sm" />
-                </Toggle>
-              ))}
-            </div>
-            <p className="text-xs text-a-text-2">{t('loyalty.program.boost.tiers_hint', 'None chosen: every tier.')}</p>
-          </div>
-        )}
-        {listProblem && <p className="text-xs font-medium text-a-danger">{listProblem}</p>}
-
-        <FormField label={t('loyalty.program.boost.description', 'Description')} problem={problem('description')}
-          hint={t('loyalty.program.boost.description_hint', 'Optional, up to 500 characters.')}>
-          <textarea value={form.description} rows={2} maxLength={500} onChange={(e) => update({ description: e.target.value })} className={INPUT} />
-        </FormField>
-
-        <Check label={t('loyalty.program.boost.active', 'On')} checked={form.is_active} onChange={(on) => update({ is_active: on })}
-          hint={t('loyalty.program.boost.active_hint', 'Switched off, the boost multiplies nothing, even between its dates.')} />
-
-        {failure && <Notice tone="danger">{t(...refusalKey('loyalty.program', ERRORS, 'boost', failure))}</Notice>}
-
-        <FormFoot cancel={t('loyalty.common.cancel', 'Cancel')} busy={save.isPending} onCancel={onClose}
-          save={boost ? t('loyalty.program.boost.save', 'Save boost') : t('loyalty.program.boost.create', 'Add boost')} />
-      </form>
-    </Dialog>
-  )
+  return <><EditorDialog area="options" title={boost ? t('loyalty.program.boost.edit_title', 'Change {{name}}', { name: boost.name }) : t('loyalty.program.boost.new_title', 'Add a boost')} section={admin('bonuses')} icon="boost" wide onClose={close.cancel} busy={save.isPending}>
+    <form className="l-editor-form" noValidate onSubmit={e => { e.preventDefault(); setTried(true); if (!save.isPending && Object.keys(boostProblems(form)).length === 0) save.mutate() }}><div className="l-editor-body"><div className="l-editor-columns"><fieldset disabled={save.isPending} className="l-editor-stack">
+      <div className="l-editor-two"><FormField label={t('loyalty.program.boost.name', 'Name')} problem={problem('name')}><input ref={first} type="text" value={form.name} maxLength={120} onChange={e => update({ name: e.target.value })} placeholder={t('loyalty.program.boost.name_example', 'e.g. Double points weekend')} /></FormField>
+      <FormField label={t('loyalty.program.boost.multiplier', 'Multiplier')} problem={problem('multiplier')} hint={examplePoints(form.multiplier) !== null ? t('loyalty.program.boost.multiplier_example', 'From 1 to 10. While it runs, 100 points become {{n}}.', { n: points(examplePoints(form.multiplier) ?? 0, locale) }) : undefined}><NumberControl label={t('loyalty.program.boost.multiplier', 'Multiplier')} value={form.multiplier} min={MIN_MULTIPLIER} max={MAX_MULTIPLIER} step={.1} disabled={save.isPending} invalid={!!problem('multiplier')} onValue={multiplier => update({ multiplier })} /></FormField></div>
+      {boost && needsTimeCheck(boost) && <Notice tone="warning">{t('loyalty.program.time_check.dialog', "Check these times: this boost was saved before boost times were read on the venue’s clock everywhere. If it was last saved in the full admin, its times may be off by the venue’s difference from UTC. Saving the boost marks them as checked.")}</Notice>}
+      <EditorSection icon="clock" title={zone}><div className="l-editor-two"><FormField label={t('loyalty.program.boost.starts_at', 'Starts')} problem={problem('starts_at')}><input type="datetime-local" value={form.starts_at} onChange={e => update({ starts_at: wallInput(e.target.value) })} /></FormField><FormField label={t('loyalty.program.boost.ends_at', 'Ends')} problem={problem('ends_at')}><input type="datetime-local" value={form.ends_at} onChange={e => update({ ends_at: wallInput(e.target.value) })} /></FormField></div><small>{clock}</small></EditorSection>
+      <div role="group" aria-labelledby={daysId} className="l-editor-stack"><p id={daysId}>{t('loyalty.program.boost.weekdays', 'Weekdays')}</p><div className="l-editor-choices">{WEEK.map(day => <Toggle key={day} on={form.days.includes(day)} onClick={() => update({ days: toggled(form.days, day) })} label={weekdayName(day, locale, 'long')}>{weekdayName(day, locale)}</Toggle>)}</div><small>{t('loyalty.program.boost.weekdays_hint', 'None chosen: every day.')}</small></div>
+      {tiers.length > 0 && <div role="group" aria-labelledby={tiersId} className="l-editor-stack"><p id={tiersId}>{t('loyalty.program.boost.tiers', 'Tiers')}</p><div className="l-editor-choices">{tiers.map(tier => <Toggle key={tier.id} on={form.tiers.includes(tier.id)} onClick={() => update({ tiers: toggled(form.tiers, tier.id) })}><TierChip tier={tier} theme={look.resolved} size="sm" /></Toggle>)}</div><small>{t('loyalty.program.boost.tiers_hint', 'None chosen: every tier.')}</small></div>}
+      {listProblem && <p role="alert" className="text-a-danger">{listProblem}</p>}
+      <EditorSwitch label={t('loyalty.program.boost.active', 'On')} checked={form.is_active} onChange={is_active => update({ is_active })} hint={t('loyalty.program.boost.active_hint', 'Switched off, the boost multiplies nothing, even between its dates.')} />
+      <EditorDisclosure title={admin('advanced')} open={!!problem('description') || !!failure?.fields?.brand}><BrandField options={brands} value={brand} saved={saved} refused={!!failure?.fields?.brand} onChange={id => { setBrand(id); if (save.isError) save.reset() }} /><FormField label={t('loyalty.program.boost.description', 'Description')} problem={problem('description')} hint={t('loyalty.program.boost.description_hint', 'Optional, up to 500 characters.')}><textarea value={form.description} rows={2} maxLength={500} onChange={e => update({ description: e.target.value })} /></FormField></EditorDisclosure>
+      {failure && <Notice tone="danger">{t(...refusalKey('loyalty.program', ERRORS, 'boost', failure))}</Notice>}
+    </fieldset><EditorPreview><EditorArt kind="earnArt" label={form.name || admin('automaticBoost')} title={examplePoints(form.multiplier) === null ? '—' : admin('pointsShort', { n: points(examplePoints(form.multiplier) ?? 0, locale) })} line={admin('basePointsShort', { n: 100 }) + ' × ' + form.multiplier} /><ManagementFact icon="bonusCalendar" label={admin('when')}>{form.starts_at} – {form.ends_at}<small>{zone}</small></ManagementFact><ManagementFact icon="people" label={admin('who')}>{form.tiers.length ? tiers.filter(tier => form.tiers.includes(tier.id)).map(tier => tier.name).join(', ') : t('loyalty.program.boosts.every_tier', 'Every tier')}</ManagementFact><small>{admin('highestWins')}</small></EditorPreview></div></div>
+    <EditorFooter dirty={close.dirty} creating={!boost} onCancel={close.cancel} busy={save.isPending} save={boost ? t('loyalty.program.boost.save', 'Save boost') : t('loyalty.program.boost.create', 'Add boost')} /></form>
+  </EditorDialog>{close.warning}</>
 }

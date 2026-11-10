@@ -25,7 +25,7 @@ export function TierEditorPage({ id }: { id: string }) {
   const say = useRedesignWords()
   const boot = useBoot()
   const navigate = useNavigate()
-  const close = () => navigate('/loyalty/program?tab=tiers')
+  const close = () => navigate('/loyalty/program?tab=tiers' + (id === 'new' ? '' : '&selected=' + encodeURIComponent(id)))
   const query = useQuery({ queryKey: PROGRAM_KEY, queryFn: programApi.program })
   const [all, setAll] = useState(false)
   const [open, setOpen] = useState<{ kind: 'benefit' | 'take_off'; benefit: TierBenefit | null } | { kind: 'delete' } | null>(null)

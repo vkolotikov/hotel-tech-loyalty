@@ -1,16 +1,19 @@
+import { useEditorClose } from '../editors/useEditorClose'
 import { useId, useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Trash2 } from 'lucide-react'
 import { Button } from '../../workspace/ui/Button'
-import { Dialog } from '../../workspace/ui/Dialog'
+import { EditorDialog, EditorDisclosure, EditorFooter, EditorSwitch } from '../editors/EditorUI'
+import { useEditorWords } from '../editors/words'
+import { useAdminWords } from '../management/words'
 import { Notice } from '../../workspace/ui/Notice'
 import { failureOf, newPressKey } from '../lib/api'
 import { refusalKey } from '../lib/errors'
 import { toggled } from '../lib/forms'
 import { useLook } from '../lib/look'
 import { useFirstFocus } from '../lib/useFirstFocus'
-import { Check, FormField, FormFoot, Toggle } from '../ui/formParts'
+import { FormField, Toggle } from '../ui/formParts'
 import { TierChip } from '../ui/TierChip'
 import { ERRORS } from './errors'
 import { MAX_DESCRIPTION, MAX_NAME, placeBody, placeFormOf, placeProblems, serverPlaceProblems, type PlaceForm } from './placesMath'
@@ -33,7 +36,7 @@ export function PlaceDialog({ place, places, tiers, onClose, onRemove }: {
   onRemove?: (place: Place) => void
 }) {
   const { t } = useTranslation()
-  const look = useLook()
+  const look = useLook(), editor = useEditorWords(), admin = useAdminWords()
   const client = useQueryClient()
   const first = useFirstFocus<HTMLInputElement>()
   const whoId = useId()
@@ -63,14 +66,15 @@ export function PlaceDialog({ place, places, tiers, onClose, onRemove }: {
   const tiersProblem = problem('tier_ids')
   const choose = (admits: Admits) => update({ admits })
 
+  const close = useEditorClose(form, onClose, save.isPending)
   return (
-    <Dialog title={place ? t('loyalty.places.dialog.edit_title', 'Change {{name}}', { name: place.name }) : t('loyalty.places.dialog.new_title', 'Add a place')}
-      onClose={onClose} busy={save.isPending}>
-      <form className="space-y-4" noValidate onSubmit={(e) => {
+    <><EditorDialog area="program" icon="door" section={admin('places')} title={place ? t('loyalty.places.dialog.edit_title', 'Change {{name}}', { name: place.name }) : t('loyalty.places.dialog.new_title', 'Add a place')}
+      onClose={close.cancel} busy={save.isPending}>
+      <form className="l-editor-form" noValidate onSubmit={(e) => {
         e.preventDefault()
         setTried(true)
         if (Object.keys(placeProblems(form, places, place?.id ?? null)).length === 0) save.mutate()
-      }}>
+      }}><div className="l-editor-body"><fieldset disabled={save.isPending} className="l-editor-stack">
         <FormField label={t('loyalty.places.dialog.name', 'Name')} problem={problem('name')}
           hint={t('loyalty.places.dialog.name_hint', 'What staff and members call it, such as Main entrance, VIP lounge or Spa.')}>
           <input ref={first} type="text" value={form.name} maxLength={MAX_NAME} onChange={(e) => update({ name: e.target.value })} className={INPUT}
@@ -101,29 +105,21 @@ export function PlaceDialog({ place, places, tiers, onClose, onRemove }: {
           {tiersProblem && <p id={`${whoId}-problem`} className="pl-6 text-xs font-medium text-a-danger">{tiersProblem}</p>}
         </fieldset>
 
-        <FormField label={t('loyalty.places.dialog.description', 'Description')} problem={problem('description')}
+        <EditorDisclosure title={editor('memberDescription')} open={!!problem('description')}><FormField label={t('loyalty.places.dialog.description', 'Description')} problem={problem('description')}
           hint={t('loyalty.places.dialog.description_hint', 'Optional, up to 300 characters: opening hours, a dress code, what staff should know.')}>
           <textarea value={form.description} rows={2} maxLength={MAX_DESCRIPTION} onChange={(e) => update({ description: e.target.value })} className={INPUT} />
-        </FormField>
+        </FormField></EditorDisclosure>
 
-        <Check label={t('loyalty.places.dialog.active', 'Switched on')} checked={form.is_active} onChange={(on) => update({ is_active: on })}
+        <EditorSwitch label={t('loyalty.places.dialog.active', 'Switched on')} checked={form.is_active} onChange={(on) => update({ is_active: on })}
           hint={t('loyalty.places.dialog.active_hint', 'Switched off, a scan here lets nobody in and the scan screen does not offer it.')} />
 
         {failure && <Notice tone="danger">{t(...refusalKey('loyalty.places', ERRORS, 'place', failure))}</Notice>}
 
-        <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
-          {place && onRemove
-            ? (
-              <Button type="button" variant="ghost" size="sm" onClick={() => onRemove(place)} disabled={save.isPending}>
-                <Trash2 size={14} aria-hidden />{t('loyalty.places.dialog.remove', 'Remove place')}
-              </Button>
-            )
-            : <span />}
-          <FormFoot cancel={t('loyalty.common.cancel', 'Cancel')} busy={save.isPending} onCancel={onClose}
-            save={place ? t('loyalty.places.dialog.save', 'Save place') : t('loyalty.places.dialog.create', 'Add place')} />
-        </div>
+        </fieldset></div><EditorFooter dirty={close.dirty} creating={!place} busy={save.isPending} onCancel={close.cancel} save={place ? t('loyalty.places.dialog.save', 'Save place') : t('loyalty.places.dialog.create', 'Add place')}>
+          {place && onRemove && <Button type="button" variant="ghost" size="sm" onClick={() => onRemove(place)} disabled={save.isPending}><Trash2 size={14} aria-hidden />{t('loyalty.places.dialog.remove', 'Remove place')}</Button>}
+        </EditorFooter>
       </form>
-    </Dialog>
+    </EditorDialog>{close.warning}</>
   )
 }
 
@@ -131,7 +127,7 @@ export function PlaceDialog({ place, places, tiers, onClose, onRemove }: {
 function Choice({ name, checked, onChange, label, hint }: { name: string; checked: boolean; onChange: () => void; label: string; hint: string }) {
   const id = useId()
   return (
-    <div className="flex items-start gap-2.5">
+    <div className="l-editor-choice">
       <input id={id} type="radio" name={name} checked={checked} onChange={onChange} aria-describedby={`${id}-hint`}
         className="mt-0.5 h-4 w-4 shrink-0 border-a-border accent-a-accent-text" />
       <div className="min-w-0">

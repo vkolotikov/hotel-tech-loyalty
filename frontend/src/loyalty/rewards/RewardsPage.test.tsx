@@ -171,9 +171,9 @@ describe('Rewards (spec 2026-10-21 §4.6)', () => {
   it('pins the edited offer even when a background refresh puts it outside the current filters', () => {
     const selected = offers.offers[0]
     const html = render(`?tab=offers&q=no_match&selected=${selected.id}&edit=1`, can({ manage_rewards: true }))
-    expect(html).toContain('l-rb-offer-editor')
+    expect(html).toContain('l-editor-dialog l-editor-wide')
     expect(html).toContain(`value="${selected.title}"`)
-    expect(html).not.toContain('data-offer-view="read"')
+    expect(html).toContain('data-offer-view="read"') // The pinned editor keeps its catalogue behind the modal.
   })
 
   it('shows a reward\'s and an offer\'s picture lazily, named by the reward or the offer', () => {

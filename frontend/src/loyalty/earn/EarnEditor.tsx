@@ -1,12 +1,11 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { Notice } from '../../workspace/ui/Notice'
 import { useBoot } from '../LoyaltyProvider'
 import { money, points } from '../lib/format'
 import { refusalKey } from '../lib/errors'
 import { ERRORS } from '../options/errors'
-import { useSay, wayTitle, wayLine } from '../options/say'
+import { useSay, wayTitle } from '../options/say'
 import { alwaysOn, previewOptions, sentenceOf } from '../options/optionsMath'
 import { OverviewButton } from '../overview/OverviewUI'
 import { FormField } from '../ui/formParts'
@@ -16,7 +15,10 @@ import { baseExample, earningUrl } from './model'
 import { useOptionDraft } from './useOptionDraft'
 import type { EarnGuard } from './useLeaveGuard'
 import { useEarnWords } from './words'
-import { EarnIcon, EarnState } from './presentation'
+import { EditorDialog, EditorFooter, EditorSection, EditorPreview, EditorArt, EditorNote, EditorDisclosure, EditorSwitch } from '../editors/EditorUI'
+import { useEditorWords } from '../editors/words'
+import { useAdminWords } from '../management/words'
+import { ManagementFact } from '../management/ManagementUI'
 
 export function EarnEditor({ way, answer, guard, bonus = false }: { way: Way; answer: OptionsAnswer; guard: EarnGuard; bonus?: boolean }) {
   const { t, i18n } = useTranslation(), say = useEarnWords(), oldSay = useSay(), boot = useBoot()
@@ -26,45 +28,32 @@ export function EarnEditor({ way, answer, guard, bonus = false }: { way: Way; an
   const purchase = way.key === 'earn_rate'
   const title = purchase ? say('purchase') : wayTitle(oldSay, way.key)
   const [amount, setAmount] = useState('50')
-  const [advanced, setAdvanced] = useState(false)
+  const editor = useEditorWords(), admin = useAdminWords()
   const unit = money(1, currency, locale)
   const rate = form.values.points_per_currency ?? String(answer.options.points_per_currency ?? '')
   const example = purchase && draft.valid ? baseExample(amount, rate) : null
   const text = sentenceOf(way.key, previewOptions(way, form, answer.options, answer.fields), { say: oldSay, currency, locale, rewards: answer.catalogue.rewards })
   const disabled = !answer.can_change || draft.busy
-  const status = !alwaysOn(way) && <FormField label={say('status')}><select value={form.on ? 'active' : 'off'} disabled={disabled} onChange={e => draft.edit(way.key, { on: e.target.value === 'active' })}><option value="active">{say('active')}</option><option value="off">{say('off')}</option></select></FormField>
+  const status = !alwaysOn(way) && <EditorSwitch label={title} checked={form.on} disabled={disabled} onChange={on => draft.edit(way.key, { on })} />
   const fields = <EarnFields way={way} form={form} answer={answer} problems={draft.problems} disabled={disabled} currency={currency} bonus={bonus} onChange={(key, value) => draft.edit(way.key, { values: { ...form.values, [key]: value } })} />
   const message = <>{draft.failure && <Notice tone="danger">{t(...refusalKey('loyalty.options', ERRORS, 'save', draft.failure))}</Notice>}{draft.saved && <p role="status" className="l-earn-success">{say('saved')}</p>}</>
-  const memberPreview = <div className="l-earn-example" aria-live="polite"><small>{say('memberSees')}</small>{!form.on ? <strong>{say('noBonus')}</strong> : way.key === 'welcome_bonus' || way.key === 'birthday_bonus' ? <><h2>{say(way.key === 'welcome_bonus' ? 'welcomePreview' : 'birthdayPreview', { n: points(Number(previewOptions(way, form, answer.options, answer.fields)[way.zero_off!] ?? 0), locale) })}</h2><p>{say(way.key === 'welcome_bonus' ? 'thankYou' : 'birthdayThanks')}</p></> : <p>{text}</p>}</div>
-  if (bonus) return <form className="l-ov-panel l-earn-detail l-earn-bonus-editor" noValidate onSubmit={e => { e.preventDefault(); draft.submit() }}>
-    <div className="l-earn-heading"><small className="l-earn-eyebrow">{say(answer.can_change ? 'editBonus' : 'viewSettings')}</small><EarnIcon kind={way.key} /></div><h2 className="l-earn-detail-title">{title}</h2>{status}{fields}
-    {way.key !== 'referrals' && <dl className="l-earn-facts"><dt>{say('awardWhen')}</dt><dd>{say(way.key === 'birthday_bonus' ? 'birthday' : 'joins')}</dd></dl>}
-    {memberPreview}<small>{say('messageNote')}</small>{message}
-    {answer.can_change && <><OverviewButton primary type="submit" disabled={!draft.dirty || draft.busy}>{draft.pending ? say('saving') : say('saveBonus')}</OverviewButton><button type="button" className="l-ov-link l-earn-cancel" disabled={draft.busy || !draft.dirty} onClick={draft.reset}>{say('cancelChanges')}</button></>}
-  </form>
-  return <div className="l-ov-page l-rd-page l-earn-page l-ec-page">
-    <button type="button" className="l-ov-link l-earn-back" disabled={draft.busy} onClick={() => guard.go(earningUrl('earn', { selected: way.key }))}>{say('allBack')}</button>
-    <div className="l-ov-heading"><div><h1>{purchase && answer.can_change ? say('editPurchase') : title}</h1><p>{purchase ? say('editLine') : wayLine(oldSay, way.key)}</p></div><Link className="l-ov-button" to="/loyalty/guide">{t('loyalty.overview.help', 'Help & guide')}</Link></div>
-    {!answer.can_change && <Notice>{t('loyalty.options.read_only', 'Only an owner or a manager can change these. You see them as they are.')}</Notice>}
-    <form noValidate onSubmit={e => { e.preventDefault(); draft.submit() }} className="l-earn-form">
-      <div className="l-earn-columns"><section className="l-ov-panel l-earn-settings">
-        <div className="l-earn-heading"><div className="l-ec-heading"><EarnIcon kind={purchase ? 'points' : way.key} /><h2>{say('settings')}</h2></div><EarnState state={form.on ? 'active' : 'off'} /></div>
-        <FormField label={say('ruleName')}><input value={title} readOnly /></FormField>{status}
-        <div className={purchase ? 'l-earn-rate-fields' : ''}>{fields}{purchase && <div><strong>{say('perUnit', { unit })}</strong><p>{say('currency', { currency })}</p></div>}</div>
-        {purchase && <><div className="l-earn-quick"><small>{say('quick')}</small>{[1, 5, 10].filter(n => n >= (answer.fields.points_per_currency.min ?? 0) && n <= (answer.fields.points_per_currency.max ?? Infinity)).map(n => <OverviewButton key={n} type="button" aria-pressed={Number(rate) === n} disabled={disabled} onClick={() => draft.edit(way.key, { values: { ...form.values, points_per_currency: String(n) } })}>{say(n === 1 ? 'onePoint' : 'points', { n })}</OverviewButton>)}</div><div className="l-earn-two l-earn-divider"><div><span className="l-earn-label">{say('levels')}</span><div className="l-earn-readonly">{say('allLevels')}</div></div><div><span className="l-earn-label">{say('purchases')}</span><div className="l-earn-readonly">{say('eligible')}</div></div></div><p>{say('sharedRate')}</p>
-          <section className="l-earn-inset"><div className="l-earn-heading"><strong>{say('advanced')}</strong><button type="button" className="l-ov-link" aria-expanded={advanced} onClick={() => setAdvanced(!advanced)}>{say(advanced ? 'hide' : 'show')} {advanced ? '⌃' : '⌄'}</button></div><p>{say('advancedLine')}</p>{advanced && <p>{say('calculation')}</p>}</section>
-          <section className="l-earn-tint"><div className="l-ec-heading"><EarnIcon kind="desk_earn" /><strong>{say('desk')}</strong></div><p>{say('deskLine')}</p><Link className="l-ov-link" to={earningUrl('earn', { way: 'desk_earn' })}>{say('deskLink')}</Link></section></>}
-        {!purchase && <div className="l-earn-tint" aria-live="polite"><p>{text}</p>{(answer.not_used ?? []).includes(way.key) && <p>{t('loyalty.options.card.not_used', 'Your venue takes no bookings, so this gives nothing.')}</p>}</div>}
-        {message}
-      </section><aside className="l-earn-side">
-        <section className="l-ov-panel l-earn-detail l-ec-preview"><div className="l-earn-heading"><small className="l-earn-eyebrow">{say('memberExample')}</small><EarnIcon kind={way.key} /></div><h2>{say(purchase ? 'pointsPreview' : 'seeEarn')}</h2>
-          {purchase ? <><FormField label={say('amount')}><input type="text" inputMode="decimal" value={amount} onChange={e => setAmount(e.target.value)} /></FormField>
-            <div className="l-earn-example" aria-live="polite">{example === null ? <p>{say('invalidExample')}</p> : <><strong className="l-earn-big">{say('points', { n: points(example, locale) })}</strong><p>{say('equation', { amount: money(Number(amount.replace(',', '.')), currency, locale), rate, unit })}</p></>}<small>{say('illustrative')}</small></div>
-            <dl className="l-earn-facts"><dt>{say('level')}</dt><dd>{say('baseRate')}</dd><dt>{say('boost')}</dt><dd>{say('noBoost')}</dd></dl><p>{say('finalAmount')}</p></> : <div className="l-earn-example"><p>{text}</p></div>}
-          <Link className="l-ov-link" to="/loyalty/program?tab=tiers">{say('viewLevels')}</Link><Link className="l-ov-link" to="/loyalty/options?tab=bonus">{say('viewBoosts')}</Link>
-        </section><section className="l-ov-panel l-earn-detail l-ec-qualification"><strong>{say('separate')}</strong><p>{say('separateLine')}</p><Link className="l-ov-link" to={earningUrl('rule')}>{say('reviewRules')}</Link></section>
-      </aside></div>
-      <div className="l-earn-save-bar"><div><strong>{say(draft.dirty ? 'unsavedTitle' : 'settings')}</strong><small>{say('historyKept')}</small></div><OverviewButton type="button" disabled={draft.busy} onClick={() => guard.go(earningUrl('earn', { selected: way.key }))}>{t('loyalty.options.card.cancel', 'Cancel')}</OverviewButton>{answer.can_change && <OverviewButton primary type="submit" disabled={!draft.dirty || draft.busy}>{draft.pending ? say('saving') : say('save')}</OverviewButton>}</div>
-    </form>
-  </div>
+  const cancel = () => guard.go(earningUrl(bonus ? 'bonus' : 'earn', { selected: way.key }))
+  const memberPreview = <EditorNote icon={way.key === 'referrals' ? 'people' : 'gift'} title={say('memberSees')}>{!form.on ? say('noBonus') : text}</EditorNote>
+  return <EditorDialog area="options" title={purchase && answer.can_change ? say('editPurchase') : title} section={admin(bonus ? 'bonuses' : 'earning')} icon={bonus ? way.key === 'referrals' ? 'people' : 'gift' : 'coin'} tone={bonus ? 'violet' : 'cyan'} wide={!bonus} onClose={cancel} busy={draft.busy}>
+    <form className="l-editor-form" noValidate onSubmit={e => { e.preventDefault(); draft.submit() }}><div className="l-editor-body"><div className={bonus ? 'l-editor-stack' : 'l-editor-columns'}><div className="l-editor-stack">
+      {!answer.can_change && <Notice>{t('loyalty.options.read_only', 'Only an owner or a manager can change these. You see them as they are.')}</Notice>}
+      <EditorSection icon={bonus ? 'gift' : 'coin'} title={bonus ? title : say('settings')}>
+        {purchase ? <><div className="l-editor-two"><FormField label={say('ruleName')}><input value={title} readOnly /></FormField>{fields}</div><div className="l-earn-quick">{[1, 5, 10].filter(n => n >= (answer.fields.points_per_currency.min ?? 0) && n <= (answer.fields.points_per_currency.max ?? Infinity)).map(n => <OverviewButton key={n} type="button" aria-pressed={Number(rate) === n} disabled={disabled} onClick={() => draft.edit(way.key, { values: { ...form.values, points_per_currency: String(n) } })}>{say(n === 1 ? 'onePoint' : 'points', { n })}</OverviewButton>)}</div></> : fields}
+        {status}
+      </EditorSection>
+      {purchase && <><EditorSection icon="people" title={say('levels')}><div className="l-editor-two"><FormField label={say('levels')}><input value={say('allLevels')} readOnly /></FormField><FormField label={editor('currency')}><input value={say('currency', { currency })} readOnly /></FormField></div><EditorNote title={editor('sharedRate')}>{say('sharedRate')} {say('eligible')}</EditorNote></EditorSection><EditorDisclosure title={say('advanced')}><p>{say('calculation')}</p><p>{say('deskLine')}</p></EditorDisclosure></>}
+      {!purchase && !bonus && <EditorNote title={say('memberSees')}>{text}{(answer.not_used ?? []).includes(way.key) && <p>{t('loyalty.options.card.not_used', 'Your venue takes no bookings, so this gives nothing.')}</p>}</EditorNote>}
+      {bonus && <>{memberPreview}<small>{say('messageNote')}</small></>}
+      {message}
+    </div>{!bonus && <EditorPreview><EditorArt kind="earnArt" label={say('baseRate')} title={purchase ? example === null ? say('invalidExample') : say('points', { n: points(example, locale) }) : title} line={purchase ? say('equation', { amount: money(Number(amount.replace(',', '.')), currency, locale), rate, unit }) : text} />
+      <ManagementFact icon="people" label={admin('whoEarn')}>{say('allLevels')}</ManagementFact><ManagementFact icon="purchase" label={editor('calculation')}>{admin('basePoints')}</ManagementFact>
+      {purchase && <EditorDisclosure title={say('amount')}><FormField label={say('amount')}><input type="text" inputMode="decimal" value={amount} onChange={e => setAmount(e.target.value)} /></FormField></EditorDisclosure>}
+      <small>{say('illustrative')}</small>
+    </EditorPreview>}</div></div><EditorFooter canSave={answer.can_change} onCancel={cancel} busy={draft.busy} dirty={draft.dirty} disabled={!answer.can_change || !draft.dirty} save={draft.pending ? say('saving') : bonus ? say('saveBonus') : say('save')} /></form>
+  </EditorDialog>
 }

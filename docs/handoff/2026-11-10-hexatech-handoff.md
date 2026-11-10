@@ -176,3 +176,50 @@ expansion. See docs/audits/2026-11-10-loyalty-admin-ux.md for detailed evidence.
 loopback services/PostgreSQL are stopped; the clean deploy worktree is removed after provenance and junction checks.
 Shared dependencies, owner files/private evidence and the earlier Cloud-stream remnant remain untouched.
 Physical NFC/card/camera and native/provider delivery still require real device acceptance; no Wallet setup claim.
+
+## Loyalty catalogue layout polish — live
+
+Production main **a5fb150cecd5d599cb0ebf1490c5fbfabfa3a7dc**, from feature source through
+**f6146efeeba0e26f97d5e0873cfa9eb79bba3c72**. **Next source-patch code baseline: f6146efee**;
+later documentation commits are evidence only. Feature branch `feature/loyalty-design-polish-20261110`.
+Exact **32-path** source manifest SHA256:
+`6834682BCF3DF06B476B557A281ABFD07DE4F5A1A2C636812CBD87A50067F6F7`.
+Physical vendor, whole-source parity outside only the three generated paths, fresh build and all required artifact
+gates passed. See [the layout audit](../audits/2026-11-10-loyalty-layout-polish.md).
+
+Fixed the member directory search icon/text overlap caused by the shared input selector's specificity. The seven
+Program, Ways to earn and Rewards catalogues now have aligned headings/rows, compact original artwork, correct
+earning icons, flatter panels, concise configured rates and grouped filters/assignment controls. Places keep actual
+place/access/entry data; no fictional entrance/hours/override controls. Details stack consistently on tablets/phones,
+and selection moves focus to the detail. Five original 17 px perk icons were added unchanged from Figma.
+
+Final verification: **6,905 frontend tests /469 files**, TypeScript/lint, **2,067 scoped PHP tests**
+(Support 214/1590 assertions, Unit Landing 118/1763, Feature Landing 1735/9552). The final tablet refinement also
+passed fresh TypeScript and **418 focused tests** before the final build. **96 compiled real-backend checks** cover
+the seven catalogues at **1440/1280/1024/768/390**, both themes, actual five-language labels, column/asset geometry,
+full-width mobile search, member search clearance/typing, reduced motion, stacked focus and the canonical inactive
+perk assignment editor. No runtime errors. The inactive-assignment regression was reproduced and fixed; its local
+fixture state was restored. The earlier **88-check** journey separately covered existing saves and navigation.
+
+Both production domains passed **26 live content/authentication/landing checks** at **14:43:38 UTC /
+16:43:38 Europe/Riga** on 10 November. Assets: `index-eC8srf67.js`, `LoyaltyApp-DTuZpxEt.js`,
+`ManagementUI-C4nmwHRk.js`, `ProgramPage-DcJAthuP.js`, `EarningPage-eEwnhhEz.js`, `RewardsPage-BoyZosD0.js`.
+Evidence: `C:/wamp64/tmp/loyalty-layout-production-20261110.json`; private rehearsal evidence under
+`C:/wamp64/tmp/loyalty-layout-rehearsal-20261110`. No backend, schema, dependency, native API or provider changes;
+no production customer record writes or messages.
+
+[CI 42836406359](https://github.com/vkolotikov/hotel-tech-loyalty/actions/runs/42836406359) completed successfully.
+All eight jobs passed, including all SQLite shards, PostgreSQL and both Node builds.
+The task-owned loopback services and PostgreSQL cluster are stopped. Shared dependencies and owner files remain.
+The clean release worktree was removed after path/branch/commit validation and unlinking only its dependency
+junction. Private evidence and the earlier cleanup remnant remain untouched.
+
+## Loyalty settings editors — implementation and verification
+
+Branch `feature/loyalty-editor-dialogs-20261110` implements the fourteen popup states from Figma page 392:8135.
+Shared compact/wide native dialogs preserve the catalogue and editor URLs, original vectors, canonical saves,
+permissions, validation, picture writes and venue times. Five translated bundles; both themes; protected changed
+drafts and nested assignment/removal surfaces. No backend/schema changes. Source TypeScript, focused Loyalty tests,
+lint and the 88-check compiled administration journey pass. Dedicated editor acceptance and isolated release
+artifact gates are underway; no editor deployment yet. See [the editor audit](../audits/2026-11-10-loyalty-editors.md).
+Next patch compares source against **f6146efee**, including the preceding release's evidence documentation.

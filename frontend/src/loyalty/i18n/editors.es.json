@@ -1,0 +1,21 @@
+{
+  "example": "Ejemplo",
+  "currency": "Moneda",
+  "calculation": "Cálculo",
+  "discardTitle": "¿Descartar los cambios sin guardar?",
+  "discardLine": "Sus cambios aún no se han guardado.",
+  "draft": "Borrador",
+  "savedSettings": "Ajustes guardados",
+  "levelDetails": "Detalles del nivel",
+  "memberDescription": "Descripción para miembros",
+  "availability": "Disponibilidad, límites y condiciones",
+  "sharedRate": "Tasa de compra compartida",
+  "spendable": "Puntos canjeables",
+  "spendableLine": "La caducidad se aplica al saldo que los miembros pueden canjear.",
+  "assignLater": "Asigne un nivel después de guardar",
+  "assignLaterLine": "Indique qué nivel recibe esta ventaja, su valor y dónde se aplica.",
+  "chooseMethod": "Elija un método de acumulación",
+  "nextStep": "En el siguiente paso podrá configurar la tasa y los requisitos.",
+  "continue": "Continuar",
+  "earningAdd": "Añadir una regla de acumulación"
+}
