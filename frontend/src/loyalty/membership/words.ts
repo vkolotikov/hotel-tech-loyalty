@@ -80,6 +80,8 @@ export const MERGE_MOVES_WORDS: Record<string, string> = {
 
 /** A row an import did not take (ImportProblems on the server). */
 export const IMPORT_PROBLEM_WORDS: Record<string, string> = {
+  bad_valid_from: 'The start date must be written as YYYY-MM-DD.',
+  bad_validity_range: 'The membership starts after its end date.',
   no_email: 'No email address in this row.',
   no_name: 'No name in this row.',
   bad_email: 'The email address is not valid.',
@@ -145,12 +147,15 @@ export const LEFT_WORDS: Record<string, string> = {
 
 /** What stops Set a date (validityMath.ts `dateProblem`). */
 export const VALIDITY_PROBLEM_WORDS: Record<string, string> = {
+  start: 'Choose a valid start date.',
+  range: 'The start date must be on or before the end date.',
   date: 'Choose a day.',
   past: 'Choose today or a later day.',
 }
 
 /** The members list's validity states (release 8: Show → Expiring soon, Expired). */
 export const LIST_STATE_WORDS: Record<string, string> = {
+  scheduled: 'Scheduled',
   expiring: 'Expiring soon',
   expired: 'Expired',
 }

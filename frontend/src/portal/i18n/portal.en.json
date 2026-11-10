@@ -8,6 +8,8 @@
   },
   "shell": { "greeting": "Hello, {{name}}", "membership": "My membership", "menu": "Menu", "portal_off": "The member portal is switched off for this venue. Please contact them directly." },
   "home": {
+    "membership_starts": "Membership starts {{day}}",
+    "membership_from": "Member from {{day}}",
     "balance": "Points balance", "progress_to": "Progress to {{tier}}",
     "lifetime_one": "{{count}} earned all time", "lifetime_few": "{{count}} earned all time", "lifetime_many": "{{count}} earned all time", "lifetime_other": "{{count}} earned all time",
     "points_to_go_one": "{{count}} point to go", "points_to_go_few": "{{count}} points to go", "points_to_go_many": "{{count}} points to go", "points_to_go_other": "{{count}} points to go",
@@ -23,6 +25,8 @@
     "wallet_unavailable": "Wallet passes are not set up for this venue yet.", "wallet_error": "Could not prepare the pass. Please try again."
   },
   "rewards": {
+    "membership_expired": "Your membership has ended. Please contact the team.",
+    "membership_not_started": "Your membership has not started yet.",
     "title": "Rewards", "tab_benefits": "Benefits",
     "you_have_one": "You have {{count}} point", "you_have_few": "You have {{count}} points", "you_have_many": "You have {{count}} points", "you_have_other": "You have {{count}} points", "tab_catalogue": "Catalogue",
     "tab_offers": "Offers", "tab_codes": "My codes",

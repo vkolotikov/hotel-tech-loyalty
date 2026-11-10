@@ -87,6 +87,8 @@
     "past_counts": "{{created}} creados · {{skipped}} omitidas · {{refused}} rechazadas",
     "open": "Abrir",
     "problem": {
+      "bad_validity_range": "La membresía comienza después de su fecha de finalización.",
+      "bad_valid_from": "Escriba la fecha de inicio como AAAA-MM-DD.",
       "no_email": "Esta fila no tiene email.",
       "no_name": "Esta fila no tiene nombre.",
       "bad_email": "El email no es válido.",
@@ -276,6 +278,7 @@
       "credit": "El saldo, sumado al del miembro que se conserva"
     },
     "error": {
+      "membership_period_conflict": "Estos periodos de membresía están separados. Establezca las fechas deseadas antes de fusionarlos.",
       "manager_only": "Solo un propietario o un responsable puede hacer esto.",
       "not_allowed": "Solo un propietario o un responsable puede hacer esto.",
       "no_capability": "Solo un propietario o un responsable puede hacer esto.",
@@ -322,6 +325,7 @@
     "export": "Exportar",
     "add": "Añadir miembro",
     "state": {
+      "scheduled": "Programada",
       "expiring": "Vence pronto",
       "expired": "Vencida"
     },
@@ -394,7 +398,9 @@
     "off_line": "Se niega la entrada sea cual sea la fecha.",
     "problem": {
       "date": "Elija un día.",
-      "past": "Elija hoy o un día posterior."
+      "past": "Elija hoy o un día posterior.",
+      "start": "Seleccione una fecha de inicio válida.",
+      "range": "La fecha de inicio debe ser anterior o igual a la fecha de finalización."
     },
     "set_title": "Válida hasta",
     "set_label": "Último día de la membresía",
@@ -415,7 +421,11 @@
       "key_reused": "Se acaba de hacer otro cambio. La página muestra la fecha de fin actual; inténtelo de nuevo si no es lo que quería.",
       "invalid": "Elija hoy o un día posterior.",
       "unknown": "No se pudo guardar la fecha de fin. No cambió nada; inténtelo de nuevo."
-    }
+    },
+    "starts": "Válida desde el {{day}}",
+    "period_title": "Periodo de membresía",
+    "from_label": "Válida desde (opcional)",
+    "from_hint": "Déjelo vacío para permitir el acceso inmediato. Una fecha futura programa el inicio de la membresía."
   },
   "progress": {
     "visits_sofar_one": "1 visita contada para los niveles.",

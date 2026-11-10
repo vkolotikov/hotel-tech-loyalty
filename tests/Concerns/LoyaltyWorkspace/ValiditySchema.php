@@ -17,7 +17,7 @@ trait ValiditySchema
     protected function buildValiditySchema(): void
     {
         $columns = [
-            'loyalty_members'           => ['membership_valid_until' => 'date', 'membership_reminded_for' => 'date', 'qualifying_visits' => 'visits'],
+            'loyalty_members'           => ['membership_valid_from' => 'date', 'membership_valid_until' => 'date', 'membership_reminded_for' => 'date', 'qualifying_visits' => 'visits'],
             'loyalty_tiers'             => ['min_visits' => 'int'],
             'tier_qualification_counts' => ['visits' => 'visits', 'venue_day' => 'date'],
         ];

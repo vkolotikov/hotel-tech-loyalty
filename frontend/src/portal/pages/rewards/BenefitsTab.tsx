@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { BadgeCheck, Clock, Crown } from 'lucide-react'
 import toast from 'react-hot-toast'
-import { portalApi, apiMessage } from '../../lib/portalApi'
+import { portalApi, apiMessage, apiErrorCode } from '../../lib/portalApi'
 import { usePortal } from '../../PortalProvider'
 import { instantDay } from '../homeMath'
 import { Card } from '../../ui/Card'
@@ -16,13 +16,17 @@ export function BenefitsTab() {
   const { t, i18n } = useTranslation()
   const qc = useQueryClient()
   const { data: boot } = usePortal()
+  const requestError = (error: unknown) => apiErrorCode(error) === 'membership_not_started'
+    ? t('portal.rewards.membership_not_started', 'Your membership has not started yet.')
+    : apiErrorCode(error) === 'membership_expired' ? t('portal.rewards.membership_expired', 'Your membership has ended. Please contact the team.')
+      : apiMessage(error, t('portal.rewards.request_failed', 'Could not send that request'))
   const { data, isLoading, isError, refetch } = useQuery({ queryKey: ['portal-benefits'], queryFn: portalApi.benefits, staleTime: 10_000, refetchOnWindowFocus: true })
   const invalidate = () => qc.invalidateQueries({ queryKey: ['portal-benefits'] })
 
   const request = useMutation({
     mutationFn: portalApi.requestBenefit,
     onSuccess: () => { toast.success(t('portal.rewards.request_sent', 'Requested')); void invalidate() },
-    onError: e => toast.error(apiMessage(e, t('portal.rewards.request_failed', 'Could not send that request'))),
+    onError: e => toast.error(requestError(e)),
   })
   const cancel = useMutation({
     mutationFn: portalApi.cancelBenefitRequest,

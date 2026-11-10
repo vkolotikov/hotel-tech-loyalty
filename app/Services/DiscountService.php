@@ -9,6 +9,7 @@ use App\Models\TierBenefit;
 use App\Services\Booking\BookingScope;
 use App\Services\Booking\CouponResolver;
 use App\Services\Booking\CouponSelection;
+use App\Services\Loyalty\Members\MembershipValidity;
 use Illuminate\Support\Collection;
 
 /**
@@ -52,7 +53,7 @@ class DiscountService
      */
     public function benefitsFor(LoyaltyMember $member, ?int $propertyId = null): Collection
     {
-        if (!$member->tier_id) {
+        if (!$member->tier_id || !MembershipValidity::benefitsAvailable($member)) {
             return collect();
         }
 

@@ -76,7 +76,7 @@ export interface PortalMember {
    *  portal shows the switch only then. */
   sms_consent?: boolean
   /** Release 8: the membership's end date (Y-m-d, or null: no end) and its state. */
-  membership?: { valid_until: string | null; state: 'active' | 'expiring' | 'expired' | 'off' }
+  membership?: { valid_from?: string | null; valid_until: string | null; state: 'active' | 'expiring' | 'expired' | 'off' | 'scheduled' }
 }
 
 /** The categories of NotificationService::CATEGORIES, the keys PUT member/profile `notification_preferences` takes. */

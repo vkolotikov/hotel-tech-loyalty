@@ -14,6 +14,8 @@ final class ImportProblems
 {
     /** The service's sentences, as patterns, and the code each one is. */
     private const PATTERNS = [
+        '/^The membership start date is not a day written YYYY-MM-DD$/' => 'bad_valid_from',
+        '/^The membership start date is after its end date$/' => 'bad_validity_range',
         '/^No email address in this row$/'                => 'no_email',
         '/^No name in this row$/'                         => 'no_name',
         '/^That email address is not valid$/'             => 'bad_email',

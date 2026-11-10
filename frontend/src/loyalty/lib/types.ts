@@ -77,7 +77,8 @@ export interface MemberRow {
   credit_balance?: number
   /** Release 8: the membership's end date (Y-m-d, or null: no end) and its state. */
   valid_until?: string | null
-  membership_state?: 'active' | 'expiring' | 'expired' | 'off'
+  valid_from?: string | null
+  membership_state?: 'active' | 'expiring' | 'expired' | 'off' | 'scheduled'
 }
 
 export interface Figures {

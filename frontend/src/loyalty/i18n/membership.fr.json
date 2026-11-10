@@ -87,6 +87,8 @@
     "past_counts": "{{created}} créés · {{skipped}} passés · {{refused}} refusés",
     "open": "Ouvrir",
     "problem": {
+      "bad_validity_range": "L’adhésion commence après sa date de fin.",
+      "bad_valid_from": "Saisissez la date de début au format AAAA-MM-JJ.",
       "no_email": "Pas d’adresse e-mail sur cette ligne.",
       "no_name": "Pas de nom sur cette ligne.",
       "bad_email": "L’adresse e-mail n’est pas valide.",
@@ -276,6 +278,7 @@
       "credit": "Le crédit, ajouté au solde du membre gardé"
     },
     "error": {
+      "membership_period_conflict": "Ces périodes d’adhésion sont distinctes. Définissez les dates souhaitées avant la fusion.",
       "manager_only": "Seul un propriétaire ou un responsable peut faire cela.",
       "not_allowed": "Seul un propriétaire ou un responsable peut faire cela.",
       "no_capability": "Seul un propriétaire ou un responsable peut faire cela.",
@@ -322,6 +325,7 @@
     "export": "Exporter",
     "add": "Ajouter un membre",
     "state": {
+      "scheduled": "Prévu",
       "expiring": "Expire bientôt",
       "expired": "Expirée"
     },
@@ -394,7 +398,9 @@
     "off_line": "L’entrée est refusée quelle que soit la date.",
     "problem": {
       "date": "Choisissez un jour.",
-      "past": "Choisissez aujourd’hui ou un jour suivant."
+      "past": "Choisissez aujourd’hui ou un jour suivant.",
+      "start": "Choisissez une date de début valide.",
+      "range": "La date de début doit précéder ou correspondre à la date de fin."
     },
     "set_title": "Valable jusqu’au",
     "set_label": "Dernier jour de l’adhésion",
@@ -415,7 +421,11 @@
       "key_reused": "Une autre modification vient d’être faite. La page montre la date de fin actuelle ; réessayez si ce n’est pas ce que vous vouliez.",
       "invalid": "Choisissez aujourd’hui ou un jour suivant.",
       "unknown": "La date de fin n’a pas pu être enregistrée. Rien n’a changé ; veuillez réessayer."
-    }
+    },
+    "starts": "Valable à partir du {{day}}",
+    "period_title": "Période d’adhésion",
+    "from_label": "Valable à partir du (facultatif)",
+    "from_hint": "Laissez vide pour un accès immédiat. Une date future programme le début de l’adhésion."
   },
   "progress": {
     "visits_sofar_one": "1 visite comptée pour les niveaux.",

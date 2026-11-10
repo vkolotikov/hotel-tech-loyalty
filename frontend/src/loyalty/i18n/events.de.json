@@ -225,6 +225,7 @@
   },
   "people": {
     "error": {
+      "membership_not_started": "Die Mitgliedschaft dieses Mitglieds beginnt nach der Veranstaltung.",
       "sign_up_closed": "Diese Veranstaltung nimmt gerade keine Anmeldungen an.",
       "event_full": "Die Veranstaltung ist voll.",
       "tier_not_allowed": "Diese Veranstaltung ist für andere Stufen.",

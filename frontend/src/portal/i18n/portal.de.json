@@ -8,6 +8,8 @@
   },
   "shell": { "greeting": "Hallo, {{name}}", "membership": "Meine Mitgliedschaft", "menu": "Menü", "portal_off": "Das Mitgliederportal ist für dieses Unternehmen deaktiviert. Bitte wenden Sie sich direkt an das Unternehmen." },
   "home": {
+    "membership_starts": "Mitgliedschaft beginnt am {{day}}",
+    "membership_from": "Mitglied seit {{day}}",
     "balance": "Punktestand", "progress_to": "Fortschritt bis {{tier}}",
     "lifetime_one": "{{count}} insgesamt gesammelt", "lifetime_few": "{{count}} insgesamt gesammelt", "lifetime_many": "{{count}} insgesamt gesammelt", "lifetime_other": "{{count}} insgesamt gesammelt",
     "points_to_go_one": "Noch {{count}} Punkt", "points_to_go_few": "Noch {{count}} Punkte", "points_to_go_many": "Noch {{count}} Punkte", "points_to_go_other": "Noch {{count}} Punkte",
@@ -23,6 +25,8 @@
     "wallet_unavailable": "Wallet-Karten sind für dieses Unternehmen noch nicht eingerichtet.", "wallet_error": "Die Karte konnte nicht vorbereitet werden. Bitte versuchen Sie es erneut."
   },
   "rewards": {
+    "membership_expired": "Ihre Mitgliedschaft ist abgelaufen. Bitte kontaktieren Sie das Team.",
+    "membership_not_started": "Diese Mitgliedschaft hat noch nicht begonnen.",
     "title": "Prämien", "tab_benefits": "Vorteile",
     "you_have_one": "Sie haben {{count}} Punkt", "you_have_few": "Sie haben {{count}} Punkte", "you_have_many": "Sie haben {{count}} Punkte", "you_have_other": "Sie haben {{count}} Punkte", "tab_catalogue": "Katalog",
     "tab_offers": "Angebote", "tab_codes": "Meine Codes",

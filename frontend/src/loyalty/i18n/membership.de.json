@@ -87,6 +87,8 @@
     "past_counts": "{{created}} angelegt · {{skipped}} übersprungen · {{refused}} abgelehnt",
     "open": "Öffnen",
     "problem": {
+      "bad_validity_range": "Die Mitgliedschaft beginnt nach ihrem Enddatum.",
+      "bad_valid_from": "Schreiben Sie das Startdatum als JJJJ-MM-TT.",
       "no_email": "Keine E-Mail-Adresse in dieser Zeile.",
       "no_name": "Kein Name in dieser Zeile.",
       "bad_email": "Die E-Mail-Adresse ist ungültig.",
@@ -276,6 +278,7 @@
       "credit": "Das Guthaben, zu dem des bleibenden Mitglieds addiert"
     },
     "error": {
+      "membership_period_conflict": "Diese Mitgliedschaftszeiträume sind getrennt. Legen Sie vor dem Zusammenführen die gewünschten Daten fest.",
       "manager_only": "Das kann nur ein Inhaber oder Manager.",
       "not_allowed": "Das kann nur ein Inhaber oder Manager.",
       "no_capability": "Das kann nur ein Inhaber oder Manager.",
@@ -322,6 +325,7 @@
     "export": "Exportieren",
     "add": "Mitglied hinzufügen",
     "state": {
+      "scheduled": "Geplant",
       "expiring": "Läuft bald ab",
       "expired": "Abgelaufen"
     },
@@ -394,7 +398,9 @@
     "off_line": "Der Zutritt wird unabhängig vom Datum verweigert.",
     "problem": {
       "date": "Wählen Sie einen Tag.",
-      "past": "Wählen Sie heute oder einen späteren Tag."
+      "past": "Wählen Sie heute oder einen späteren Tag.",
+      "start": "Wählen Sie ein gültiges Startdatum.",
+      "range": "Das Startdatum muss vor oder am Enddatum liegen."
     },
     "set_title": "Gültig bis",
     "set_label": "Letzter Tag der Mitgliedschaft",
@@ -415,7 +421,11 @@
       "key_reused": "Gerade wurde eine andere Änderung gemacht. Die Seite zeigt jetzt das aktuelle Enddatum; versuchen Sie es erneut, falls es nicht stimmt.",
       "invalid": "Wählen Sie heute oder einen späteren Tag.",
       "unknown": "Das Enddatum konnte nicht gespeichert werden. Nichts wurde geändert; bitte versuchen Sie es erneut."
-    }
+    },
+    "starts": "Gültig ab {{day}}",
+    "period_title": "Mitgliedschaftszeitraum",
+    "from_label": "Gültig ab (optional)",
+    "from_hint": "Für sofortigen Zugang leer lassen. Ein zukünftiges Datum legt den Beginn der Mitgliedschaft fest."
   },
   "progress": {
     "visits_sofar_one": "1 Besuch zählt für die Stufen.",

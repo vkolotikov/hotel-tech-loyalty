@@ -8,6 +8,8 @@
   },
   "shell": { "greeting": "Bonjour {{name}}", "membership": "Mon adhésion", "menu": "Menu", "portal_off": "L'espace membre est désactivé pour cet établissement. Veuillez le contacter directement." },
   "home": {
+    "membership_starts": "L’adhésion commence le {{day}}",
+    "membership_from": "Membre depuis le {{day}}",
     "balance": "Solde de points", "progress_to": "Progression vers {{tier}}",
     "lifetime_one": "{{count}} gagné au total", "lifetime_few": "{{count}} gagnés au total", "lifetime_many": "{{count}} gagnés au total", "lifetime_other": "{{count}} gagnés au total",
     "points_to_go_one": "Encore {{count}} point", "points_to_go_few": "Encore {{count}} points", "points_to_go_many": "Encore {{count}} points", "points_to_go_other": "Encore {{count}} points",
@@ -23,6 +25,8 @@
     "wallet_unavailable": "Les cartes de portefeuille ne sont pas encore configurées pour cet établissement.", "wallet_error": "Impossible de préparer la carte. Veuillez réessayer."
   },
   "rewards": {
+    "membership_expired": "Votre adhésion a pris fin. Veuillez contacter l’équipe.",
+    "membership_not_started": "Cette adhésion n’a pas encore commencé.",
     "title": "Récompenses", "tab_benefits": "Avantages",
     "you_have_one": "Vous avez {{count}} point", "you_have_few": "Vous avez {{count}} points", "you_have_many": "Vous avez {{count}} points", "you_have_other": "Vous avez {{count}} points", "tab_catalogue": "Catalogue",
     "tab_offers": "Offres", "tab_codes": "Mes codes",

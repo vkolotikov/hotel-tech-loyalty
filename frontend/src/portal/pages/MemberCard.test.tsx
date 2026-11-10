@@ -44,6 +44,11 @@ function render(m: PortalMember) {
 const text = (html: string) => html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ')
 
 describe('the membership on the portal card (release 8 §3)', () => {
+  it('shows when a scheduled membership begins instead of implying it is active now', () => {
+    const html = render(member({ membership: { valid_from: '2027-01-01', valid_until: '2027-12-31', state: 'scheduled' } }))
+    expect(text(html)).toContain('Membership starts 1 Jan 2027')
+    expect(html).toContain('data-membership="scheduled"')
+  })
   it('says until when the membership holds, that it is ending or ended (with renew), and nothing without an end date', () => {
     expect(text(render(member({ membership: { valid_until: '2027-10-03', state: 'active' } })))).toContain('Member until 3 Oct 2027')
     const ending = render(member({ membership: { valid_until: '2026-10-20', state: 'expiring' } }))

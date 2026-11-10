@@ -87,6 +87,8 @@
     "past_counts": "{{created}} created · {{skipped}} passed over · {{refused}} refused",
     "open": "Open",
     "problem": {
+      "bad_validity_range": "The membership starts after its end date.",
+      "bad_valid_from": "The start date must be written as YYYY-MM-DD.",
       "no_email": "No email address in this row.",
       "no_name": "No name in this row.",
       "bad_email": "The email address is not valid.",
@@ -276,6 +278,7 @@
       "credit": "Credit, added to the kept member’s balance"
     },
     "error": {
+      "membership_period_conflict": "These membership periods are separate. Set the intended dates before merging.",
       "manager_only": "Only an owner or a manager can do this.",
       "not_allowed": "Only an owner or a manager can do this.",
       "no_capability": "Only an owner or a manager can do this.",
@@ -322,6 +325,7 @@
     "export": "Export",
     "add": "Add member",
     "state": {
+      "scheduled": "Scheduled",
       "expiring": "Expiring soon",
       "expired": "Expired"
     },
@@ -394,7 +398,9 @@
     "off_line": "Places refuse entry whatever the date.",
     "problem": {
       "date": "Choose a day.",
-      "past": "Choose today or a later day."
+      "past": "Choose today or a later day.",
+      "start": "Choose a valid start date.",
+      "range": "The start date must be on or before the end date."
     },
     "set_title": "Valid until",
     "set_label": "Last day of the membership",
@@ -415,7 +421,11 @@
       "key_reused": "Another change was just made. The page now shows the end date as it is; try again if it is not what you wanted.",
       "invalid": "Choose today or a later day.",
       "unknown": "The end date could not be saved. Nothing was changed; please try again."
-    }
+    },
+    "starts": "Valid from {{day}}",
+    "period_title": "Membership dates",
+    "from_label": "Valid from (optional)",
+    "from_hint": "Leave empty for immediate access. A future date schedules this membership."
   },
   "progress": {
     "visits_sofar_one": "1 visit counted towards the tiers.",

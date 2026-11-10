@@ -1,4 +1,5 @@
 {
+  "scheduled": "Scheduled",
   "membersLine": "Find a member, understand their membership and help them take the next step.",
   "membersTotal": "{{n}} members",
   "activeCount": "{{n}} active",

@@ -29,8 +29,9 @@ export interface EnrolAnswer extends MemberAnswer {
  * was a retry of an earlier press (`replayed`: the first answer, nothing written).
  */
 export interface ValidityAnswer extends MemberAnswer {
+  valid_from?: string | null
   valid_until: string | null
-  state: 'active' | 'expiring' | 'expired' | 'off'
+  state: 'active' | 'expiring' | 'expired' | 'off' | 'scheduled'
   changed: boolean
   replayed: boolean
 }

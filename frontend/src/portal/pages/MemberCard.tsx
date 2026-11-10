@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { CalendarCheck, ChevronRight, CircleAlert, Crown, TrendingUp } from 'lucide-react'
 import { portalApi } from '../lib/portalApi'
-import { resolveLocale } from '../lib/dates'
+import { formatDay, resolveLocale } from '../lib/dates'
 import { counted } from '../lib/plural'
 import type { PortalMember } from '../lib/types'
 import { Card } from '../ui/Card'
@@ -66,6 +66,7 @@ export function MemberCard({ member, loyalty, currency = 'EUR' }: { member: Port
                   <MembershipIcon size={12} aria-hidden />{say(membership)}
                 </span>
               )}
+              {member.membership?.valid_from && member.membership.state !== 'scheduled' && <span className="text-p-text-2">{t('portal.home.membership_from', 'Member from {{day}}', { day: formatDay(member.membership.valid_from, lang) })}</span>}
             </div>
           )}
 
