@@ -133,6 +133,13 @@ try {
  await partner.page.getByRole('button',{name:'Scan and check in',exact:true}).click()
  const manualResponse=await manual
  check(manualResponse.request().postDataJSON().code===qr.code&&(await manualResponse.json()).member.id===next.id,'Physical card reader mode sends explicit identity and resolves the new holder')
+ await partner.page.evaluate(()=>{window.NDEFReader=class extends EventTarget{async scan(){window.__membershipNfc=this}}})
+ await partner.page.getByRole('button',{name:'Tap NFC card',exact:true}).click()
+ await partner.page.waitForFunction(()=>!!window.__membershipNfc)
+ const tapped=partner.page.waitForResponse(r=>new URL(r.url()).pathname.endsWith('/admin/loyalty/partner/scan')&&r.request().method()==='POST')
+ await partner.page.evaluate(({uid,number})=>{const data=new TextEncoder().encode(JSON.stringify({member_number:number,v:2}));window.__membershipNfc.onreading({serialNumber:uid,message:{records:[{recordType:'text',data:new DataView(data.buffer)}]}})},{uid,number:member.member_number})
+ const tappedResponse=await tapped
+ check(tappedResponse.request().postDataJSON().code===qr.code&&(await tappedResponse.json()).member.id===next.id,'Simulated NFC prioritises the registered physical serial over the former member record')
  await call(manager.ctx,token,`admin/loyalty/partners/${partnerId}/state`,'PUT',{is_active:false})
  check((await call(partner.ctx,partnerToken,'admin/loyalty/partner/scan','POST',{code:qr.code,place_id:place.id,idempotency_key:'card-'+run})).status===403,'Deactivation blocks even an earlier successful retry')
  report.phase='menu'
