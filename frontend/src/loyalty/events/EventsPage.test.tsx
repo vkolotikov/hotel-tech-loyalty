@@ -174,6 +174,18 @@ describe('an event’s page', () => {
     expect(html).toContain('data-event-more')
     expect(words).not.toContain('Scan a member')
   })
+
+  it('labels a cancelled registration as cancelled in the attendance row', () => {
+    const event = row()
+    const html = render(<EventPage />, '/loyalty/events/7', c => {
+      seed(event, false)(c)
+      const people = c.getQueryData<EventPeople>(['loyalty', 'event', 7, 'people', 1])!
+      c.setQueryData(['loyalty', 'event', 7, 'people', 1], { ...people, people: [{ ...people.people[1], cancelled_at: '2026-10-03T10:00:00+00:00' }] })
+    })
+    const badge = html.match(/class="l-ec-state"[^>]*>([\s\S]*?)<\/button>/)?.[1] ?? ''
+    expect(text(badge)).toContain('Cancelled')
+    expect(text(badge)).not.toContain('Not checked in')
+  })
 })
 
 describe('the one dialog', () => {
