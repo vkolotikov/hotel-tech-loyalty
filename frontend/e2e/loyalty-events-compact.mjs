@@ -40,7 +40,15 @@ async function geometry(name) {
     const modal = document.querySelector('dialog.l-editor-dialog[open]'), target = modal || document.querySelector('main')
     const controls = [...target.querySelectorAll('input,select,textarea,button')].filter(el => el.getClientRects().length)
     const imgs = [...target.querySelectorAll('.l-ec-icon img')]
+    const heading = !modal && target.querySelector('.l-ad-heading h1'), actions = !modal && target.querySelector('.l-ad-heading .l-ad-actions')
+    let headingClear = true
+    if (heading && actions && actions.children.length) {
+      const range = document.createRange(); range.selectNodeContents(heading)
+      const a = range.getBoundingClientRect(), b = actions.getBoundingClientRect()
+      headingClear = !(a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top)
+    }
     return {
+      headingClear,
       overflow: document.documentElement.scrollWidth <= innerWidth + 1 && target.scrollWidth <= target.clientWidth + 1,
       controls: controls.every(el => el.getBoundingClientRect().width >= (el.matches('input[type="checkbox"],input[type="radio"]') ? 14 : 20)),
       artwork: imgs.every(el => el.complete && el.naturalWidth > 0 && Math.abs(el.getBoundingClientRect().width - el.naturalWidth) < 1 && Math.abs(el.getBoundingClientRect().height - el.naturalHeight) < 1),
