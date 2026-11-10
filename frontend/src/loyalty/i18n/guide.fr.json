@@ -83,9 +83,9 @@
     "move_up_q": "Comment les membres montent-ils de niveau ?",
     "move_up_a": "Automatiquement, selon les points, les visites ou les dépenses — à choisir dans Façons de gagner.",
     "by_hand_q": "Puis-je attribuer un niveau à la main ?",
-    "by_hand_a": "Oui : sur la page du membre, ⋯ → Changer le niveau. Ajoutez une date « Maintenir jusqu’au » pour le garder.",
+    "by_hand_a": "Oui : Membres → Ajouter un membre ou Gérer l’adhésion → Attribué manuellement. Choisissez le niveau et les dates ; ses avantages configurés s’appliquent automatiquement. Aucun paiement à connecter.",
     "end_date_q": "Une adhésion peut-elle finir à une date ?",
-    "end_date_a": "Oui. Fixez-la ou prolongez-la sur la page du membre. Le membre reçoit un rappel deux semaines avant.",
+    "end_date_a": "Oui. Définissez Valable à partir du et Valable jusqu’au dans Adhésion. L’accès commence le premier jour et inclut le dernier, selon le calendrier local de l’établissement.",
     "import_q": "Comment ajouter beaucoup de membres d’un coup ?",
     "import_a": "Membres → ⋯ → Importer, avec un tableur.",
     "run_event_q": "Comment organiser un événement ?",
@@ -103,7 +103,13 @@
     "portal_card_q": "Où est la carte d’un membre ?",
     "portal_card_a": "Dans son portail ou l’appli — et dans Apple ou Google Wallet une fois configuré dans Carte et appli.",
     "rename_delete_q": "Puis-je renommer ou supprimer un niveau ou un avantage ?",
-    "rename_delete_a": "Oui : dans Programme, chacun a « Renommer » et « Supprimer ». Vous voyez d’abord ce qui change : les membres passent au niveau choisi, l’historique garde le nom."
+    "rename_delete_a": "Oui : dans Programme, chacun a « Renommer » et « Supprimer ». Vous voyez d’abord ce qui change : les membres passent au niveau choisi, l’historique garde le nom.",
+    "partners_q": "Comment inviter du personnel partenaire uniquement pour scanner ?",
+    "partners_a": "Réglages → Accès partenaires → Inviter du personnel partenaire. Choisissez les lieux et envoyez l’invitation. Après création du mot de passe, le personnel utilise le scanner partenaire ; la modification des membres et du programme est bloquée.",
+    "reuse_card_q": "Puis-je donner une carte physique à un autre membre ?",
+    "reuse_card_a": "Récupérez la carte, désactivez-la chez l’ancien membre, puis liez son identifiant au nouveau. Le QR de carte suit cet identifiant. Les QR personnels du membre et du portefeuille ne sont pas transférables.",
+    "push_voucher_q": "Puis-je envoyer un bon ou un code de réduction par push ?",
+    "push_voucher_a": "Créez l’offre et le code dans Récompenses → Offres. Dans Campagnes → Push, ajoutez le code et les instructions, choisissez Offres et une audience, vérifiez puis envoyez. Il faut l’application membre installée, l’autorisation push et les identifiants mobiles configurés."
   },
   "demo": {
     "welcome": "Bienvenue",

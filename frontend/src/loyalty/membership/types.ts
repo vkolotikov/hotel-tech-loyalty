@@ -17,6 +17,19 @@ export interface EnrolBody {
   email: string
   phone: string | null
   send_welcome: boolean
+  membership_mode?: 'assigned' | 'earned'
+  tier_id?: number
+  valid_from?: string | null
+  valid_until?: string | null
+}
+
+export interface AssignmentBody {
+  membership_mode: 'assigned' | 'earned'
+  tier_id?: number
+  valid_from: string | null
+  valid_until: string | null
+  confirm_replace: boolean
+  idempotency_key: string
 }
 
 export interface EnrolAnswer extends MemberAnswer {

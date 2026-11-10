@@ -83,9 +83,9 @@
     "move_up_q": "Wie steigen Mitglieder auf?",
     "move_up_a": "Automatisch, nach Punkten, Besuchen oder Umsatz – Sie wählen es unter Sammeln & Prämien.",
     "by_hand_q": "Kann ich eine Stufe von Hand vergeben?",
-    "by_hand_a": "Ja: auf der Seite des Mitglieds ⋯ → Stufe ändern. Mit „Halten bis“ bleibt sie bestehen.",
+    "by_hand_a": "Ja: Mitglieder → Mitglied hinzufügen oder Mitgliedschaft verwalten → Manuell zugewiesen. Wählen Sie Stufe und Daten; die konfigurierten Vorteile gelten automatisch. Eine Zahlungsanbindung ist nicht nötig.",
     "end_date_q": "Kann eine Mitgliedschaft an einem Datum enden?",
-    "end_date_a": "Ja. Legen Sie es auf der Seite des Mitglieds fest oder verlängern Sie es. Mitglieder werden zwei Wochen vorher erinnert.",
+    "end_date_a": "Ja. Legen Sie Gültig ab und Gültig bis unter Mitgliedschaft fest. Der Zugang beginnt am ersten Tag und gilt einschließlich des letzten Tages im lokalen Geschäftskalender.",
     "import_q": "Wie füge ich viele Mitglieder auf einmal hinzu?",
     "import_a": "Mitglieder → ⋯ → Import, mit einer Tabelle.",
     "run_event_q": "Wie führe ich ein Event durch?",
@@ -103,7 +103,13 @@
     "portal_card_q": "Wo ist die Karte eines Mitglieds?",
     "portal_card_a": "Im Portal oder in der App – und in Apple oder Google Wallet, sobald Sie es unter Karte & App eingerichtet haben.",
     "rename_delete_q": "Kann ich eine Stufe oder einen Vorteil umbenennen oder löschen?",
-    "rename_delete_a": "Ja: Unter Programm hat jedes „Umbenennen“ und „Löschen“. Vorher sehen Sie, was sich ändert: Mitglieder wechseln zur gewählten Stufe, der Verlauf behält den Namen."
+    "rename_delete_a": "Ja: Unter Programm hat jedes „Umbenennen“ und „Löschen“. Vorher sehen Sie, was sich ändert: Mitglieder wechseln zur gewählten Stufe, der Verlauf behält den Namen.",
+    "partners_q": "Wie lade ich Partnerpersonal nur zum Scannen ein?",
+    "partners_a": "Einstellungen → Partnerzugang → Partnerpersonal einladen. Wählen Sie die Orte und senden Sie die Einladung. Nach dem Festlegen eines Passworts nutzt das Personal den Partnerscanner; Mitglieder und Programmeinstellungen sind gesperrt.",
+    "reuse_card_q": "Kann ich eine physische Karte einem anderen Mitglied geben?",
+    "reuse_card_a": "Nehmen Sie die Karte zurück, deaktivieren Sie sie beim bisherigen Mitglied und verknüpfen Sie ihre ID beim neuen Mitglied. Der Karten-QR folgt dieser ID. Persönliche Mitglieder- und Wallet-QRs sind nicht übertragbar.",
+    "push_voucher_q": "Kann ich Gutscheine oder Rabattcodes per Push senden?",
+    "push_voucher_a": "Erstellen Sie Angebot und Code unter Prämien → Angebote. Fügen Sie unter Kampagnen → Push Code und Anleitung ein, wählen Sie Angebote und eine Zielgruppe und prüfen und senden Sie die Nachricht. Erforderlich sind die installierte Mitglieder-App, Push-Erlaubnis und konfigurierte mobile Zugangsdaten."
   },
   "demo": {
     "welcome": "Willkommen",

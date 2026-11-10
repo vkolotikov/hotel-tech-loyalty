@@ -41,13 +41,13 @@ Interface: additive `valid_from: ?Y-m-d`, state `scheduled`; `MembershipValidity
 - [ ] Extend admin/member views and five locales. Test date formatting in venue days and old DTO compatibility.
 - [ ] Run existing validity, access, event, merge and portal suites plus new interval tests; commit source.
 
-### Task 2: Purchased package assignment
+### Task 2: Manual package assignment (owner clarification)
 
 Files: new shared `Members/MembershipAssignment.php`, workspace controller/action and assignment form; modify
 MemberEnrolment, MemberDetails, MemberProfile and add-member form, plus focused assignment tests.
 
-Interface: manager-only assignment of an active level, dates, paid/earned mode and external reference. The service
-locks the member and saves all intended fields in one transaction; purchased mode holds the level using tier_locked.
+Interface: manager-only assignment of an active level, dates and assigned/earned mode. No payment data or integration.
+The service locks the member and saves all intended fields in one transaction; assigned mode holds the exact level.
 
 - [ ] Write failing tests for manager rights, own-tier validation, level persistence after bonus/assessment,
       atomic interval refusal, replay and explicit return to earned progression.

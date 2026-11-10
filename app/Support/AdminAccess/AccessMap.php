@@ -113,6 +113,9 @@ final class AccessMap
         'admin/loyalty/push'                    => ['manager',            'manager',            'loyalty'],       // Drafts and sending are manager-only.
         'admin/loyalty/sms'                     => ['manager',            'manager',            'loyalty'],       // Drafts and sending are manager-only.
         'admin/loyalty/members/{id}/cards'      => ['staff',              'staff',              'loyalty'],       // Release 5: a member's NFC cards (link, switch off: every staff member, as Edit details and admin/nfc-cards)
+        'admin/loyalty/members/{id}/membership' => ['manager',            'manager',            'loyalty'],
+        'admin/loyalty/partner'                 => ['staff',              'staff',              'loyalty'],
+        'admin/loyalty/partners'                => ['manager',            'manager',            'loyalty'],
         'admin/loyalty/options'                 => ['staff',              'manager',            'loyalty'],       // Release 7: the programme's options and the setup wizard (changes: manager, as Program)
         'admin/loyalty/start'                   => ['staff',              'manager',            'loyalty'],       // Release 10: "Start here", the setup steps and which are done (reads only)
         'admin/loyalty/members/{id}/check-in'   => ['staff',              'can_award_points',   'loyalty'],       // Release 7: a check-in or a purchase at the desk (it writes points: can_award_points, as Award)

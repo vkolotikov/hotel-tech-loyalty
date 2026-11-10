@@ -84,6 +84,19 @@ class CardsTest extends TestCase
         $this->assertSame(1, AuditLog::where('action', 'nfc_card_linked')->count());
     }
 
+    public function test_a_reusable_card_qr_keeps_its_code_when_the_card_moves_to_a_new_member(): void
+    {
+        $card = $this->link($this->ada->id, '04a2b3c4')->assertCreated()->json('card.id');
+        $before = $this->getJson($this->api("members/{$this->ada->id}/cards/{$card}/qr"))->assertOk()
+            ->assertJsonPath('code', '04a2b3c4')->json('qr_svg');
+        $this->assertStringStartsWith('data:image/svg+xml;base64,', $before);
+        $this->postJson($this->api("members/{$this->ada->id}/cards/{$card}/off"))->assertOk();
+        $this->link($this->grace->id, '04a2b3c4')->assertCreated();
+        $this->getJson($this->api("members/{$this->grace->id}/cards/{$card}/qr"))->assertOk()->assertJsonPath('qr_svg', $before);
+        $this->getJson($this->api("members/{$this->ada->id}/cards/{$card}/qr"))->assertNotFound();
+        $this->postJson($this->api('scan'), ['code' => '04a2b3c4'])->assertOk()->assertJsonPath('member.id', $this->grace->id);
+    }
+
     public function test_qr_and_nfc_identify_the_same_member_and_disabling_nfc_preserves_qr(): void
     {
         $qr = hash('sha256', 'dual-card-fixture');

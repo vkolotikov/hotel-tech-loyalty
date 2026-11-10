@@ -1,6 +1,6 @@
 import type { CSSProperties, ReactNode } from 'react'
 import { useState, useRef, useEffect, useLayoutEffect } from 'react'
-import { Link, useLocation } from 'react-router-dom'
+import { Link, Navigate, useLocation } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { clsx } from 'clsx'
 import {
@@ -962,6 +962,7 @@ export function Layout({ children }: { children: ReactNode }) {
     )
   }
 
+  if (user?.loyalty_scan_only || freshMe?.loyalty_scan_only) return <Navigate to="/loyalty/partner" replace />
   return (
     <div className="hx-shell flex h-screen bg-dark-bg">
       {/* Global Cmd+K search lives in <GlobalSearch /> further down.

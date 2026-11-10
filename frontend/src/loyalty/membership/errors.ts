@@ -79,6 +79,7 @@ export const ERRORS: Record<string, Record<string, string>> = {
     unknown: 'The welcome email could not be sent. Please try again.',
   },
   merge: {
+    membership_assignment_conflict: 'Choose the same intended membership mode and level on both accounts before merging.',
     membership_period_conflict: 'These membership periods are separate. Set the intended dates before merging.',
     manager_only: MANAGERS,
     not_allowed: MANAGERS,

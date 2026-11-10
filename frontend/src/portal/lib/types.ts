@@ -69,6 +69,7 @@ export interface PortalMember {
   member_since: string
   user: { id: number; name: string; email: string; phone: string | null; language: string | null; nationality?: string | null; avatar_url?: string | null; date_of_birth?: string | null }
   benefits: BenefitPreview[]
+  membership_mode?: 'assigned' | 'earned'
   /** Release 4, part A: the kinds of message, as the server reads them (PortalBootstrap::member()). A kind switched
    *  off is not sent at all — no push, no inbox row (NotificationService::send()). */
   notification_preferences?: NotificationPreferences

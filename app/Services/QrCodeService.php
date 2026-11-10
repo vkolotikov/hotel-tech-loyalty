@@ -49,6 +49,12 @@ class QrCodeService
         return $this->buildQrSvg($this->staticQrPayload($memberNumber));
     }
 
+    /** A reusable physical card encodes its stable ID, never a member's personal number or wallet token. */
+    public function cardQrDataUri(string $uid): string
+    {
+        return 'data:image/svg+xml;base64,' . base64_encode($this->buildQrSvg($uid));
+    }
+
     /**
      * Generate a QR code image as base64 PNG (legacy rotating tokens).
      */

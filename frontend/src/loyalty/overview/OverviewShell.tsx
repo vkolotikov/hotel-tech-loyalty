@@ -6,7 +6,7 @@ import { Fragment } from 'react'
 import { groupOf } from '../options/groups'
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { LayoutGrid, Users, Inbox, Crown, Sparkles, Gift, CalendarDays, Mail, BarChart3, CreditCard, ScanLine } from 'lucide-react'
+import { LayoutGrid, Users, Inbox, Crown, Sparkles, Gift, CalendarDays, Mail, BarChart3, CreditCard, ScanLine, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
 import { FrameFooter, PhoneMenu } from '../../workspace/shell/FrameFooter'
 import { markShell } from '../../workspace/lib/shellMark'
 import { accentStyle, accentTokens, LOYALTY_SURFACES } from '../../workspace/theme/accent'
@@ -119,7 +119,7 @@ export function OverviewShell({ children }: { children: ReactNode }) {
   return <OverviewLookContext.Provider value={look}><div data-workspace="" data-loyalty="" data-theme={look.resolved} data-overview="" data-settings={isSettings || undefined} data-scan={isScan || undefined} data-requests={isRequests || undefined} data-redesign={utility || isSettings || isProgram || isMembers || isEarn || isRewards || isEvents || isRequests || isInsights || isCardApp || isScan || isCampaigns || undefined} data-slim={slim || undefined} className="l-overview-frame" style={accentStyle(accentTokens(boot?.accent, look.resolved, LOYALTY_SURFACES[look.resolved]))}>
     <button className="l-ov-skip" onClick={() => main.current?.focus()}>{say('skip')}</button>
     <aside className="l-ov-sidebar" aria-label={say('menu')}>
-      <Link to="/loyalty/overview" className="l-ov-brand"><span className="l-ov-mark"><img src={assets.star} alt="" /></span><span><strong>hexa</strong><small>{say('platform')}</small></span></Link>
+      <div className="l-ov-brand-row"><Link to="/loyalty/overview" className="l-ov-brand"><span className="l-ov-mark"><img src={assets.star} alt="" /></span><span><strong>hexa</strong><small>{say('platform')}</small></span></Link><button type="button" className="l-ov-rail-toggle" onClick={() => look.setRail(slim ? 'full' : 'slim')} aria-expanded={!slim} aria-label={t(slim ? 'workspace.shell.expand' : 'workspace.shell.collapse', slim ? 'Expand menu' : 'Collapse menu')} title={t(slim ? 'workspace.shell.expand' : 'workspace.shell.collapse', slim ? 'Expand menu' : 'Collapse menu')}>{slim ? <PanelLeftOpen size={18} aria-hidden /> : <PanelLeftClose size={18} aria-hidden />}</button></div>
       <div className="l-ov-workspace" title={say('switchInfo')}><strong>{ready ? boot?.organization.name : say('workspace')}</strong><small>{say('workspace')}</small></div>
       {links}
       <div className="l-ov-sidebar-foot"><Link className="l-ov-button" to="/loyalty/scan">{say('scan')}</Link><FrameFooter {...foot} /></div>

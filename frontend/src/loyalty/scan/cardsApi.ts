@@ -21,6 +21,7 @@ export interface LinkAnswer {
 
 /** A member's NFC cards (release 5, spec 2026-10-23 §3): the list, link (the server normalises the ID), switch off. */
 export const cardsApi = {
+  qr: (memberId: number, cardId: number): Promise<{ code: string; qr_svg: string }> => watched(api.get(loyaltyUrl(`members/${memberId}/cards/${cardId}/qr`))),
   list: (memberId: number): Promise<{ cards: NfcCardRow[] }> => watched(api.get(loyaltyUrl(`members/${memberId}/cards`))),
   link: (memberId: number, uid: string): Promise<LinkAnswer> => watched(api.post(loyaltyUrl(`members/${memberId}/cards`), { uid })),
   off: (memberId: number, cardId: number): Promise<{ card: NfcCardRow }> => watched(api.post(loyaltyUrl(`members/${memberId}/cards/${cardId}/off`))),

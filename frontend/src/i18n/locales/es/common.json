@@ -3845,6 +3845,8 @@
       "over_limit_booking": "Este paquete permite {{limit}} miembros del equipo reservables y usted tiene {{count}} activos. Elija un paquete mayor o desactive algunos en Configuración primero."
     },
     "team": {
+      "manage_partner": "Gestionar acceso de socios",
+      "partner": "Socio: solo escaneo",
       "title": "Equipo",
       "subtitle": "Quién puede iniciar sesión en sus espacios.",
       "invite_title": "Invitar a un colega",

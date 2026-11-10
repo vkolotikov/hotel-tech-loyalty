@@ -17,7 +17,7 @@ import { LINE_TYPE_WORDS } from '../lib/words'
 import { Pager } from '../ui/Pager'
 import { membershipApi } from '../membership/api'
 import { CardDialog } from '../membership/CardDialog'
-import { ChangeTierDialog } from '../membership/ChangeTierDialog'
+import { AssignmentDialog as ChangeTierDialog } from '../membership/AssignmentDialog'
 import { EditDetailsDialog } from '../membership/EditDetailsDialog'
 import { EraseDialog } from '../membership/EraseDialog'
 import { ERRORS as MEMBERSHIP_ERRORS } from '../membership/errors'
@@ -187,7 +187,7 @@ function Member({ detail, locale }: { detail: MemberDetail; locale: string }) {
 
       <div className="l-rd-profile-metrics">
         <section className="l-rd-balance" aria-labelledby="points-title"><span id="points-title">{say('spendablePoints')}</span><strong>{points(member.points, locale)}</strong><small>{say('lifetime', { n: points(member.lifetime_points, locale) })}</small><span className="l-mb-balance-icon"><img src={memberAssets.points} alt="" /></span></section>
-        <section className="l-ov-panel l-rd-progress"><ProgressBlock simplified currentTier={tier?.name} progress={progress} locale={locale} currency={boot.venue.currency} /></section>
+        <section className="l-ov-panel l-rd-progress">{member.membership_mode === 'assigned' ? <div className="space-y-2"><p className="text-sm text-a-text-2">{t('loyalty.membership.assignment.assigned', 'Manually assigned')}</p><strong className="text-xl">{tier?.name ?? '—'}</strong><p className="text-sm text-a-text-2">{t('loyalty.membership.assignment.assignedHint', 'Keep the selected level and its benefits until an administrator changes it.')}</p></div> : <ProgressBlock simplified currentTier={tier?.name} progress={progress} locale={locale} currency={boot.venue.currency} />}</section>
       </div>
       <div className="l-rd-profile-columns">
         <div className="l-rd-profile-main">

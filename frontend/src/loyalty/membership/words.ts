@@ -160,8 +160,22 @@ export const LIST_STATE_WORDS: Record<string, string> = {
   expired: 'Expired',
 }
 
+export const ASSIGNMENT_WORDS = {
+  title: 'Assign membership', manage: 'Manage membership', mode: 'How the level is set',
+  assigned: 'Manually assigned', earned: 'Earned progression',
+  assignedHint: 'Keep the selected level and its benefits until an administrator changes it.',
+  earnedHint: 'The programme chooses the level from points, visits or spending.',
+  level: 'Membership package / level', choose: 'Choose an active level',
+  benefits: 'Included benefits', inherits: 'The member receives this level’s active benefits automatically.',
+  noBenefits: 'This level has no benefits configured yet.', reviewBenefits: 'Review the level’s benefits in Rewards & benefits.',
+  datesHint: 'Dates use your business’s local calendar. Leave the end date empty for an ongoing membership.',
+  replace: 'I understand this replaces current access immediately. Access resumes on the chosen start date.',
+  save: 'Save membership', failed: 'The membership could not be saved. Check the fields and try again.',
+} as const
+
 /** The families above by the key prefix they are read under. */
 export const WORD_FAMILIES: Record<string, Record<string, string>> = {
+  assignment: ASSIGNMENT_WORDS,
   more: MORE_WORDS,
   'add.problem': ENROL_PROBLEM_WORDS,
   'details.problem': DETAILS_PROBLEM_WORDS,

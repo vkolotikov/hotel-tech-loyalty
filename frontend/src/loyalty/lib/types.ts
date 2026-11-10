@@ -79,6 +79,7 @@ export interface MemberRow {
   valid_until?: string | null
   valid_from?: string | null
   membership_state?: 'active' | 'expiring' | 'expired' | 'off' | 'scheduled'
+  membership_mode?: 'assigned' | 'earned'
 }
 
 export interface Figures {

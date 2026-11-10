@@ -283,6 +283,12 @@ class MembershipValidity
 
     public static function assertInterval(?string $from, ?string $until): void
     {
+        if ($from !== null && !self::isDay($from)) {
+            throw ValidationException::withMessages(['valid_from' => ['Choose a valid start date.']]);
+        }
+        if ($until !== null && !self::isDay($until)) {
+            throw ValidationException::withMessages(['valid_until' => ['Choose a valid end date.']]);
+        }
         if ($from !== null && $until !== null && $from > $until) {
             throw ValidationException::withMessages(['valid_from' => ['The start date must be on or before the end date.']]);
         }

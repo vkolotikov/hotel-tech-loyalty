@@ -339,7 +339,8 @@ final class PortalBootstrap
         $member->loadMissing(['tier', 'user']);
         $summary = $this->loyalty->getMemberSummary($member);
 
-        $summary['benefits'] = $loyalty
+        $summary['membership_mode'] = $member->membership_mode ?? 'earned';
+        $summary['benefits'] = ($loyalty || $summary['membership_mode'] === 'assigned')
             ? $this->discounts->benefitsFor($member)->map(fn ($tb) => [
                 'id'           => $tb->id,
                 'name'         => $tb->benefit->name,

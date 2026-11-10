@@ -1434,10 +1434,18 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
                 Route::put('devices', [\App\Http\Controllers\Api\V1\Admin\Loyalty\DeviceController::class, 'save']);
                 Route::delete('devices', [\App\Http\Controllers\Api\V1\Admin\Loyalty\DeviceController::class, 'remove']);
                 Route::post('scan', [\App\Http\Controllers\Api\V1\Admin\Loyalty\ScanController::class, 'scan']);
+                Route::get('partner/context', [\App\Http\Controllers\Api\V1\Admin\Loyalty\PartnerScanController::class, 'context']);
+                Route::post('partner/scan', [\App\Http\Controllers\Api\V1\Admin\Loyalty\PartnerScanController::class, 'scan']);
+                Route::get('partners', [\App\Http\Controllers\Api\V1\Admin\Loyalty\PartnerController::class, 'index']);
+                Route::post('partners/invite', [\App\Http\Controllers\Api\V1\Admin\Loyalty\PartnerController::class, 'invite']);
+                Route::put('partners/{id}', [\App\Http\Controllers\Api\V1\Admin\Loyalty\PartnerController::class, 'update'])->whereNumber('id');
+                Route::put('partners/{id}/state', [\App\Http\Controllers\Api\V1\Admin\Loyalty\PartnerController::class, 'state'])->whereNumber('id');
+                Route::post('partners/{id}/resend', [\App\Http\Controllers\Api\V1\Admin\Loyalty\PartnerController::class, 'resend'])->whereNumber('id');
                 // Release 5 (spec 2026-10-23 §3): a member's NFC cards — the list, link, switch off
                 Route::get('members/{id}/cards', [\App\Http\Controllers\Api\V1\Admin\Loyalty\CardsController::class, 'index'])->whereNumber('id');
                 Route::post('members/{id}/cards', [\App\Http\Controllers\Api\V1\Admin\Loyalty\CardsController::class, 'store'])->whereNumber('id');
                 Route::post('members/{id}/cards/{card}/off', [\App\Http\Controllers\Api\V1\Admin\Loyalty\CardsController::class, 'off'])->whereNumber(['id', 'card']);
+                Route::get('members/{id}/cards/{card}/qr', [\App\Http\Controllers\Api\V1\Admin\Loyalty\CardsController::class, 'qr'])->whereNumber(['id', 'card']);
                 Route::get('program', [\App\Http\Controllers\Api\V1\Admin\Loyalty\ProgramController::class, 'show']);
                 Route::post('program/tiers', [\App\Http\Controllers\Api\V1\Admin\Loyalty\ProgramController::class, 'storeTier']);
                 Route::put('program/tiers/{id}', [\App\Http\Controllers\Api\V1\Admin\Loyalty\ProgramController::class, 'updateTier'])->whereNumber('id');
@@ -1491,6 +1499,7 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
                 Route::delete('places/{id}', [\App\Http\Controllers\Api\V1\Admin\Loyalty\PlaceController::class, 'destroy'])->whereNumber('id');
                 Route::get('places/{id}/entries', [\App\Http\Controllers\Api\V1\Admin\Loyalty\PlaceController::class, 'entries'])->whereNumber('id');
                 Route::put('members/{id}/validity', [\App\Http\Controllers\Api\V1\Admin\Loyalty\ValidityController::class, 'update'])->whereNumber('id');
+                Route::put('members/{id}/membership', [\App\Http\Controllers\Api\V1\Admin\Loyalty\MembershipAssignmentController::class, 'update'])->whereNumber('id');
                 Route::get('events', [\App\Http\Controllers\Api\V1\Admin\Loyalty\EventController::class, 'index']);
                 Route::post('events', [\App\Http\Controllers\Api\V1\Admin\Loyalty\EventController::class, 'store']);
                 Route::get('events/{id}', [\App\Http\Controllers\Api\V1\Admin\Loyalty\EventController::class, 'show'])->whereNumber('id');

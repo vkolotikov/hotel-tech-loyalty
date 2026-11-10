@@ -22,6 +22,8 @@ import {
   type Extension, type MembershipState, type Say, type ValidityHeadline,
 } from './validityMath'
 import { EXTEND_WORDS, VALIDITY_PROBLEM_WORDS } from './words'
+import { ASSIGNMENT_WORDS } from './words'
+import { AssignmentDialog } from './AssignmentDialog'
 
 const INPUT = 'w-full rounded-lg border border-a-border bg-a-surface px-3 py-2 text-sm text-a-text'
 const LONG: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'short', year: 'numeric' }
@@ -44,7 +46,7 @@ export function ValidityCard({ member, locale }: { member: Member; locale: strin
   const titleId = useId()
   const choicesId = useId()
   const [choosing, setChoosing] = useState(false)
-  const [dialog, setDialog] = useState<'set' | 'remove' | null>(null)
+  const [dialog, setDialog] = useState<'set' | 'remove' | 'assign' | null>(null)
   const [key, setKey] = useState(() => newPressKey())
   const [done, setDone] = useState<ValidityAnswer | null>(null)
   // The page's member as it stood when the answer came: until it is read again, the card shows the answer.
@@ -87,6 +89,8 @@ export function ValidityCard({ member, locale }: { member: Member; locale: strin
   return (
     <section aria-labelledby={titleId} data-validity={headline.kind} className={CARD}>
       <CardHead id={titleId} icon={CalendarClock} title={t('loyalty.membership.validity.title', 'Membership')} />
+      {member.membership_mode === 'assigned' && <p className="text-sm text-a-text-2">{t('loyalty.membership.assignment.assigned', ASSIGNMENT_WORDS.assigned)}</p>}
+      {change && <Button variant="secondary" onClick={() => setDialog('assign')}>{t('loyalty.membership.assignment.manage', ASSIGNMENT_WORDS.manage)}</Button>}
 
       {/* One line of status: the state's colour and icon on the headline, the time left (or what follows) beside it. */}
       <div className="space-y-1">
@@ -151,6 +155,7 @@ export function ValidityCard({ member, locale }: { member: Member; locale: strin
       {dialog === 'set' && (
         <SetDateDialog member={shown} today={today} pressKey={key} onClose={() => setDialog(null)} onDone={finish} onRefused={refused} />
       )}
+      {dialog === 'assign' && <AssignmentDialog member={member} onClose={() => setDialog(null)} />}
       {dialog === 'remove' && (
         <RemoveDialog member={shown} pressKey={key} onClose={() => setDialog(null)} onDone={finish} onRefused={refused} />
       )}

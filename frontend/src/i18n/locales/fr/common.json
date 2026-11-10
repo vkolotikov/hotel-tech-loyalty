@@ -3845,6 +3845,8 @@
       "over_limit_booking": "Ce forfait permet {{limit}} membres de l'équipe réservables et vous en avez {{count}} actifs. Choisissez un forfait plus grand, ou désactivez-en d'abord dans la Configuration."
     },
     "team": {
+      "manage_partner": "Gérer l’accès partenaires",
+      "partner": "Partenaire : scanner uniquement",
       "title": "Équipe",
       "subtitle": "Qui peut se connecter à vos espaces.",
       "invite_title": "Inviter un collègue",

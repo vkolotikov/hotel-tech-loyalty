@@ -28,7 +28,8 @@ export function MemberCard({ member, loyalty, currency = 'EUR' }: { member: Port
   // Explicit locale, never the host's default (dates.ts explains why): the OS running the server or a dev's machine
   // must never change a member's number formatting.
   const locale = resolveLocale(lang)
-  const chips = loyalty ? benefitChips(member.benefits) : { shown: [], more: 0 }
+  const showMembership = loyalty || member.membership_mode === 'assigned'
+  const chips = showMembership ? benefitChips(member.benefits) : { shown: [], more: 0 }
   const MembershipIcon = membership?.tone === 'muted' ? CalendarCheck : CircleAlert
 
   return (
@@ -46,7 +47,7 @@ export function MemberCard({ member, loyalty, currency = 'EUR' }: { member: Port
                 <p className="font-p-display text-2xl leading-tight text-p-text">{member.name}</p>
               )}
             </div>
-            {loyalty && member.tier && (
+            {showMembership && member.tier && (
               <span data-tier="" className="shrink-0 inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full border border-p-border bg-p-surface-2 text-p-text"
                 style={tone ? { borderColor: tone } : undefined}>
                 <Crown size={12} aria-hidden style={tone ? { color: tone } : undefined} />

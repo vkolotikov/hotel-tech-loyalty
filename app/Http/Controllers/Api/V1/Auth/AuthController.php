@@ -310,6 +310,7 @@ class AuthController extends Controller
             }
         }
         $userArray = $user->toArray();
+        $userArray['loyalty_scan_only'] = \App\Services\Loyalty\Partners\PartnerAccess::authHint($user);
         $userArray['industry'] = $industry;
         $userArray['industry_explicit'] = $industryExplicit;
         // HexaTech's own operators (services.saas.platform_admin_emails), not
@@ -533,6 +534,7 @@ class AuthController extends Controller
 
         $data = [
             'id'        => $user->id,
+            'loyalty_scan_only' => \App\Services\Loyalty\Partners\PartnerAccess::authHint($user),
             'name'      => $user->name,
             'email'     => $user->email,
             'phone'     => $user->phone,
@@ -2335,7 +2337,12 @@ class AuthController extends Controller
                 ]);
                 $member = LoyaltyMember::withoutGlobalScopes()->where('user_id', $user->id)->with('tier')->first();
                 $token = $user->createToken('mobile-app')->plainTextToken;
-                return response()->json(['token' => $token, 'user' => $user, 'member' => $member]);
+                $userData = $user->toArray();
+                $userData['loyalty_scan_only'] = \App\Services\Loyalty\Partners\PartnerAccess::authHint($user);
+                if ($user->isStaff() && \Illuminate\Support\Facades\Schema::hasColumn('staff', 'last_login_at')) {
+                    Staff::where('user_id', $user->id)->where('is_active', true)->update(['last_login_at' => now()]);
+                }
+                return response()->json(['token' => $token, 'user' => $userData, 'member' => $member]);
             });
     }
     /**

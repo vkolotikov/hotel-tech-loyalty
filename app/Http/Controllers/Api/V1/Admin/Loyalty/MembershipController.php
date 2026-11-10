@@ -46,13 +46,21 @@ class MembershipController extends Controller
             'email'        => 'required|email|max:255|unique:users,email',
             'phone'        => 'nullable|string|max:20',
             'send_welcome' => 'sometimes|boolean',
+            'membership_mode' => ['sometimes', Rule::in(\App\Services\Loyalty\Members\MembershipAssignment::MODES)],
+            'tier_id' => 'required_if:membership_mode,assigned|nullable|integer|min:1',
+            'valid_from' => 'sometimes|nullable|string|max:10',
+            'valid_until' => 'sometimes|nullable|string|max:10',
         ]);
+        $assignment = array_intersect_key($data, array_flip(['membership_mode', 'tier_id', 'valid_from', 'valid_until']));
+        if ($assignment !== []) {
+            LoyaltyAccess::requireManager($request->user());
+        }
 
         $result = $enrolment->enrol([
             'name'  => trim($data['name']),
             'email' => trim($data['email']),
             'phone' => self::filled($data['phone'] ?? null),
-        ], $request->user(), $request->boolean('send_welcome', true));
+        ] + $assignment, $request->user(), $request->boolean('send_welcome', true));
 
         return response()->json([
             'member'     => MemberProfile::of($result['member']->fresh(['user'])),
