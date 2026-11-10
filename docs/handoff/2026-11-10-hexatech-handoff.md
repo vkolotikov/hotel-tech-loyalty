@@ -63,3 +63,16 @@ all eight jobs, including the PostgreSQL known-failure gate, confirmed at 08:33 
 The task-owned PHP/preview/PostgreSQL helpers are stopped. The deploy worktree was removed after validating its
 absolute path, clean state and branch, and removing only its node_modules junction first. Root shared dependencies
 and owner untracked files remain. The earlier blocked Cloud-stream cleanup remnant was not touched.
+
+## Expanded guided-setup preview
+
+Current branch `feature/loyalty-setup-preview-20261110` replaces the bounded scrolling sidebar with open sections,
+coloured industry icons and the Join → Earn points → Use rewards journey. Existing catalogue data and canonical
+draft outcome sentences remain authoritative. Review/Apply, permissions and backend/API contracts are unchanged.
+All five locales and reduced-motion preferences are supported. See
+[the preview audit](../audits/2026-11-10-loyalty-setup-preview.md) for design and test evidence.
+
+Source TypeScript, 6,841 frontend tests, lint baseline and the compiled local browser checks passed; the final
+focused Wizard/locale run has 133 passing tests and the final compiled journey has 88 passing checks. Release artifact
+checks and deployment are still pending. Last deployed code baseline remains `d3631e622`; include the later
+evidence-only documentation changes in the source patch so whole-source parity remains exact.

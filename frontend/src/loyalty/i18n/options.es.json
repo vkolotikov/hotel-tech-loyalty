@@ -313,5 +313,24 @@
     "bonus": "Regalos de bienvenida, cumpleaños y por recomendar",
     "rule": "Cómo suben los miembros y cuándo caducan los puntos",
     "more": "Otras formas que ofrece su programa"
+  },
+  "preview": {
+    "title": "Su programa de un vistazo",
+    "template": "Plantilla del sector",
+    "current": "Su programa actual",
+    "currentLine": "Sus niveles, recompensas y reglas de acumulación guardados.",
+    "catalogue": "Niveles y recompensas",
+    "kept": "Se conservan sus niveles y recompensas actuales.",
+    "starting": "Niveles sugeridos e ideas de recompensas. Puede modificarlos más adelante.",
+    "levels": "{{n}} niveles de membresía",
+    "rewards": "{{n}} recompensas",
+    "rewardExamples": "Ejemplos de recompensas:",
+    "noRewards": "Añada su primera recompensa en Recompensas y beneficios.",
+    "journey": "El recorrido del miembro",
+    "join": "Unirse",
+    "earn": "Acumular puntos",
+    "use": "Usar recompensas",
+    "off": "Sin activar: {{ways}}.",
+    "templateLine": "Reglas de acumulación sugeridas. Elija cuáles usar en el siguiente paso."
   }
 }

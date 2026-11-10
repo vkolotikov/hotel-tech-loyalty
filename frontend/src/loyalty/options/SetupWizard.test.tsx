@@ -68,8 +68,11 @@ describe('the setup wizard (release 7 §1)', () => {
     expect(html).toMatch(/data-choice="beauty" data-checked=""/)
     expect(words).toContain('Beauty and spa')
     expect(words).toContain('Suggested for your business')
-    expect(words).toContain('Tiers: Welcome, Devotee, Inner Circle')
-    expect(words).toContain('Rewards such as Brow Tidy, 10 Off Any Service')
+    expect(words).toContain('Welcome')
+    expect(words).toContain('Devotee')
+    expect(words).toContain('Inner Circle')
+    expect(words).toContain('Brow Tidy')
+    expect(words).toContain('10 Off Any Service')
     expect(words).not.toContain('Keep current earning rules')
     expect(html).not.toMatch(/type="radio"[^>]*disabled=""/)
   })
@@ -82,6 +85,37 @@ describe('the setup wizard (release 7 §1)', () => {
     expect(words).toContain('Choose an industry template for suggested earning rules.')
     expect(html).toMatch(/data-choice="keep" data-checked=""/)
     expect(html).not.toMatch(/type="radio"[^>]*disabled=""/)
+  })
+
+  it('explains the selected industry and member outcomes in open, distinct preview sections', () => {
+    const html = render(fresh, { choice: 'beauty' })
+    expect(html).toContain('data-setup-preview=""')
+    expect(html).toContain('data-preview-template="beauty"')
+    for (const group of ['membership', 'earn', 'bonus', 'rule']) expect(html).toContain(`data-preview-group="${group}"`)
+    expect(html).toContain('data-member-journey=""')
+    const preview = html.slice(html.indexOf('<aside'))
+    expect(preview).not.toContain('<details')
+    expect(preview).not.toContain('tabindex="0"')
+    expect(text(preview)).toContain('Brow Tidy')
+    expect(text(preview)).toContain('New members get 100 points when they join.')
+    expect(text(preview)).toContain('Points expire 18 months after they are earned.')
+  })
+
+  it('shows the real existing catalogue when a different industry is selected', () => {
+    const html = render(answerFixture(), { choice: 'beauty' })
+    const preview = html.slice(html.indexOf('<aside'))
+    expect(preview).toContain('data-catalogue="preserved"')
+    expect(text(preview)).toContain('Your existing levels and rewards stay in place.')
+    expect(text(preview)).toContain('Free coffee')
+    expect(text(preview)).not.toContain('Brow Tidy')
+    expect(text(preview)).not.toContain('Inner Circle')
+  })
+
+  it('explains that points never expire when expiry is disabled', () => {
+    const form = recommendedForm(fresh, presetFixture('beauty', true), fresh.options)
+    form.points_expiry.on = false
+    const html = render(fresh, { choice: 'beauty', form })
+    expect(text(html.slice(html.indexOf('<aside')))).toContain('Points never expire.')
   })
 
   it('step 2 ticks every way as the preset suggests, with what members get for the ticked ones', () => {
