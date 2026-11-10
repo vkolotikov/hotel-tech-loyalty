@@ -85,6 +85,28 @@ try {
     check(['earningMethods', 'pointsExpiry', 'whoEarn', 'eligibleSpend', 'completedBookings'].every(key => !words[key].includes('?') && content.includes(words[key])), `${lang}: compact labels render with intact translated characters`)
     if (lang === 'ru') await page.screenshot({ path: path.join(out, 'earning-ru-1440.png'), fullPage: true })
   }
+  await reset()
+  const token = await page.evaluate(() => localStorage.getItem('auth_token'))
+  async function programCall(endpoint, method = 'GET', data) {
+    const response = await ctx.request.fetch(`${base}/api/v1/admin/loyalty/${endpoint}?brand_id=all`, { method, data, headers: { Accept: 'application/json', Authorization: 'Bearer ' + token } })
+    if (!response.ok()) throw Error(`Local program action failed: ${response.status()}`)
+    return response.json()
+  }
+  const program = await programCall('program')
+  const assigned = program.benefits.find(b => program.tiers.some(t => t.benefits.some(tb => tb.benefit_id === b.id)))
+  if (!assigned) throw Error('Run the admin UX fixture journey first to create an assigned perk')
+  try {
+    await programCall(`program/benefits/${assigned.id}`, 'PUT', { is_active: false })
+    await go(`/loyalty/rewards?tab=benefits&selected=${assigned.id}`)
+    const action = page.getByRole('button', { name: 'Manage assignment', exact: true })
+    check(await action.isEnabled(), 'An existing switched-off perk assignment remains editable')
+    await action.click()
+    await page.getByRole('dialog').waitFor()
+    check(await page.getByRole('dialog').count() === 1, 'Inactive perk opens the canonical assignment editor')
+    await page.getByRole('dialog').getByRole('button', { name: 'Cancel', exact: true }).click()
+  } finally {
+    await programCall(`program/benefits/${assigned.id}`, 'PUT', { is_active: assigned.is_active })
+  }
   check(report.errors.length === 0, 'No browser runtime errors')
 } catch (error) {
   const scrub = value => Object.values(fixture.roles).reduce((s, r) => s.replaceAll(r.password, '[redacted]'), String(value))
