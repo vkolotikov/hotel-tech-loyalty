@@ -25,7 +25,9 @@ $env:QUEUE_CONNECTION='database'
 $env:CACHE_DRIVER='database'
 $env:CACHE_STORE='database'
 $env:CACHE_SHARED_STORE='database'
-$env:SESSION_DRIVER='database'
+# Web image reads use the web session middleware; this app has no database sessions table.
+# Keep rehearsal sessions in the isolated storage directory, independently of the database queue/cache.
+$env:SESSION_DRIVER='file'
 $env:MEDIA_DISK='public'
 $env:FILESYSTEM_DISK='public'
 foreach($key in @('SAAS_API_URL','SAAS_PLATFORM_URL','SAAS_JWT_SECRET','PLATFORM_ADMIN_EMAILS','OPENAI_API_KEY','ANTHROPIC_API_KEY','EXPO_ACCESS_TOKEN','STRIPE_SECRET')) {

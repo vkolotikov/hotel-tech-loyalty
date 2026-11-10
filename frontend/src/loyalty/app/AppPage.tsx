@@ -12,6 +12,7 @@ import { SectionCards } from '../ui/SectionCards'
 import type { Hue } from '../ui/sections'
 import { AppDesignAvailability, CardAppPage } from './design/CardAppPage'
 import { useCardWords } from './design/words'
+import { LogoPanel } from './LogoPanel'
 
 const TAB_ICONS: Record<AppTab, LucideIcon> = { wallet: CreditCard, app: Smartphone, currency: Coins }
 /** Each tab's colour (release 10): the wallet card amber, the app blue, the currency green. */
@@ -58,11 +59,11 @@ function AppSettings() {
         items={APP_TABS.map(name => ({
           id: name, icon: TAB_ICONS[name], hue: TAB_HUE[name],
           title: t(`loyalty.app.tab.${name}`, TAB_WORDS[name]),
-          caption: name === 'app' ? say('onHold') : t(`loyalty.app.tab_caption.${name}`, TAB_CAPTION_WORDS[name]),
+          caption: name === 'app' ? t('loyalty.app.logo.tab_caption', 'Logo and design availability') : t(`loyalty.app.tab_caption.${name}`, TAB_CAPTION_WORDS[name]),
         }))} />
 
       <div id="app-panel" role="tabpanel" aria-labelledby={`app-tab-${tab}`} className="space-y-5">
-        {tab === 'wallet' ? <WalletTab wallet={access.wallet} /> : tab === 'currency' ? <CurrencyTab /> : <AppDesignAvailability />}
+        {tab === 'wallet' ? <WalletTab wallet={access.wallet} /> : tab === 'currency' ? <CurrencyTab /> : <><LogoPanel /><AppDesignAvailability /></>}
       </div>
     </div>
   )
