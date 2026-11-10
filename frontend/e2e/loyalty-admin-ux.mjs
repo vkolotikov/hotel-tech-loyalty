@@ -70,9 +70,12 @@ try {
  for(const lang of ['en','ru','de','fr','es']){
   await resetCounters();await page.evaluate(v=>localStorage.setItem('admin_lang',v),lang)
   const words=JSON.parse(await fs.readFile(new URL(`../src/loyalty/i18n/adminux.${lang}.json`,import.meta.url),'utf8'))
+  const rewardWords=JSON.parse(await fs.readFile(new URL(`../src/loyalty/i18n/rewarddesign.${lang}.json`,import.meta.url),'utf8'))
+  const designWords=JSON.parse(await fs.readFile(new URL(`../src/loyalty/i18n/redesign.${lang}.json`,import.meta.url),'utf8'))
+  const titles={levels:words.levels,places:words.places,setup:designWords.guidedSetup,earning:words.earning,bonuses:words.bonuses,rewards:rewardWords.pointsRewards,perks:words.perks,offers:rewardWords.offers}
   for(const [name,url]of Object.entries(screens)){
-   await go(url);const main=await page.locator('main').innerText(),key=({levels:'levels',places:'places',earning:'earning',bonuses:'bonuses',perks:'perks'})[name]
-   check(!main.includes('loyalty.adminux.')&&(!key||main.includes(words[key])),`${lang} ${name} uses the registered translations`)
+   await go(url);const main=await page.locator('main').innerText(),title=await page.locator('main h1').innerText()
+   check(!main.includes('loyalty.adminux.')&&typeof titles[name]==='string'&&title===titles[name],`${lang} ${name} uses the registered translations`)
   }
  }
  check(report.errors.length===0,'Compiled journeys have no browser runtime errors')
