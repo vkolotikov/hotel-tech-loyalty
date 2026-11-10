@@ -135,7 +135,7 @@ try {
   const rewardCard = memberPage.getByRole('heading', { name: 'Launch coffee ' + run, exact: true }).locator('..').locator('..').locator('..')
   await rewardCard.getByRole('button', { name: 'Redeem', exact: true }).click()
   const redeemResponse = memberPage.waitForResponse(response => response.url().includes(`/member/rewards/${created.body.reward.id}/redeem`) && response.request().method() === 'POST')
-  await memberPage.getByRole('dialog').getByRole('button', { name: 'Confirm', exact: true }).click()
+  await memberPage.getByRole('dialog').getByRole('button', { name: 'Redeem', exact: true }).click()
   const redemption = await redeemResponse
   const redemptionBody = await redemption.json()
   check(redemption.status() === 201 && !!redemptionBody.redemption.code, 'member redeems a reward through the real confirmation window')

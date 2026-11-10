@@ -1,0 +1,24 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="153" height="106.25" viewBox="0 0 153 106.25" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="Reward illustration">
+<path id="Vector" d="M14.875 86.4167C42.5 67.2917 93.5 26.2083 140.25 15.5833M17.7083 95.625C51 74.375 100.583 34 148.75 24.0833" stroke-width="0.708333" stroke="#BBAAFF" stroke-opacity="0.22"/>
+<g id="Group">
+<path id="Vector_2" d="M23.6129 47.1928L122.691 26.1331L126.078 42.0687C117.764 43.836 120.268 55.6145 128.582 53.8472L131.969 69.7829L32.8909 90.8426L29.5037 74.907C37.818 73.1397 35.3143 61.3612 27.0001 63.1284L23.6129 47.1928Z" fill="#101A2C" stroke-width="0.708333" stroke="#575987"/>
+<path id="Vector_3" d="M14.077 39.8057L113.155 18.746L116.542 34.6816C108.228 36.4489 110.732 48.2274 119.046 46.4602L122.433 62.3958L23.3551 83.4555L19.9679 67.5199C28.2821 65.7526 25.7785 53.9741 17.4643 55.7413L14.077 39.8057Z" fill="url(#paint0_linear_0_143)" stroke-width="0.708333" stroke="url(#paint1_linear_0_143)"/>
+<path id="Vector_4" d="M77.023 29.3228L77.323 30.7341M85.1229 67.4298L84.8229 66.0184M78.073 34.2626L78.673 37.0853M79.423 40.6137L80.0229 43.4365M80.7729 46.9649L81.3729 49.7876M82.1229 53.3161L82.7229 56.1388M83.4729 59.6672L84.0729 62.49" stroke-width="0.708333" stroke="#F1DEFC" stroke-opacity="0.55"/>
+<path id="Vector_5" d="M41.0745 64.6314C40.8365 64.6358 40.5966 64.6369 40.3551 64.6347C33.8416 54.4327 40.8304 46.4297 56.3243 40.9639C61.3999 54.8111 53.7099 64.3956 41.0745 64.6314ZM40.3551 64.6347L51.5613 49.2179M41.0745 64.6314L41.5935 63.6473M41.0745 64.6314L39.0129 68.5408" stroke-width="1.275" stroke-linecap="round" stroke-linejoin="round" stroke="#FAEEFF"/>
+<path id="Vector_6" d="M91.8941 41.3691L104.366 38.7182M93.0723 46.9119L103.465 44.7029M94.2505 52.4548L102.565 50.6875" stroke-width="0.708333" stroke-linecap="round" stroke="#F1DFFF"/>
+</g>
+<path id="Vector_7" d="M137.417 20.5417V24.7917M137.417 24.7917V29.0417M137.417 24.7917H133.167M137.417 24.7917H141.667M20.5416 70.125V72.9583M20.5416 72.9583V75.7917M20.5416 72.9583H17.7083M20.5416 72.9583H23.3749" stroke-width="0.708333" stroke-linecap="round" stroke="#BBAAFF" stroke-opacity="0.75"/>
+</g>
+<defs>
+<linearGradient id="paint0_linear_0_143" x1="14.1808" y1="36.887" x2="138.292" y2="75.6806" gradientUnits="userSpaceOnUse">
+<stop stop-color="#574675"/>
+<stop offset="0.54" stop-color="#BBAAFF"/>
+<stop offset="1" stop-color="#574675"/>
+</linearGradient>
+<linearGradient id="paint1_linear_0_143" x1="6.97449" y1="26.8322" x2="149.006" y2="88.6106" gradientUnits="userSpaceOnUse">
+<stop stop-color="#E9F4FD"/>
+<stop offset="1" stop-color="#574675"/>
+</linearGradient>
+</defs>
+</svg>

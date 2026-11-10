@@ -237,8 +237,20 @@ Both production domains passed **32 live content/authentication/landing checks**
 `ManagementUI-CM1tfNh2.js`, `ProgramPage-BrrJUjz4.js`, `RewardsPage-CoaOC3aK.js`, `OverviewUI-DrvWgfWP.js`.
 No production customer writes or messages; all save acceptance used the isolated PostgreSQL demo.
 
-[CI 42846286071](https://github.com/vkolotikov/hotel-tech-loyalty/actions/runs/42846286071) remains in progress.
-Both Node builds, audit, Larastan and SQLite shards 1/2 passed; PostgreSQL and shard 3 are pending. Local
+[CI 42846286071](https://github.com/vkolotikov/hotel-tech-loyalty/actions/runs/42846286071) completed successfully (all eight jobs). Local
 artifact gates and live verification are complete. Owned loopback helpers/PostgreSQL are stopped; the clean
 deployment worktree was removed after provenance and junction checks. Shared dependencies, owner files,
 private evidence and the earlier cleanup remnant remain untouched.
+
+
+## Member web portal: Figma 01F (10 November 2026)
+
+Branch feature/member-portal-design-20261110 implements Figma page 414:8135. Four core destinations,
+compact Home/QR, unified Rewards, upcoming/past Bookings, Profile summary/editing and consistent native
+modal panels. Earning/access facts are the new read-only member/portal/programme DTO, using canonical
+ProgrammeOptions and AccessDecision. Existing member API shapes, booking/payment engines and native-shared
+logic/words remain unchanged. See docs/audits/2026-11-10-member-portal-design.md for scope and evidence.
+
+Initial checks: TypeScript, 6926 frontend tests, 307 portal PHP tests and twenty compiled real-backend browser
+checks passed. Release artifact validation and deployment are in progress; the prior production/source
+baseline above remains in force until the live checks pass.

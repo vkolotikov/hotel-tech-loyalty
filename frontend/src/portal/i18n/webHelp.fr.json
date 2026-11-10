@@ -1,0 +1,14 @@
+{
+  "card": "Ouvrez Ma carte en haut ou Agrandir sur l’accueil. Présentez le code QR ou votre numéro de membre.",
+  "wallet": "Ouvrez Ma carte. Si l’établissement le propose, utilisez Add to Apple Wallet ou Add to Google Wallet.",
+  "balance": "Votre solde est sur l’accueil. Tout voir à côté de l’activité récente ouvre tous les mouvements de points.",
+  "spend": "Choisissez une récompense disponible dans Récompenses, puis Échanger. Confirmez pour recevoir un code à présenter.",
+  "benefits": "Récompenses regroupe les avantages de votre niveau. Certains s’appliquent automatiquement, d’autres se demandent avec le bouton prévu.",
+  "offers": "Les offres membres apparaissent avec les autres récompenses. Réclamez une offre disponible pour l’utiliser.",
+  "book": "Choisissez Réserver sur l’accueil ou dans Réservations, sélectionnez la prestation et la date, puis confirmez.",
+  "details": "Dans le profil, choisissez Modifier à côté des informations personnelles. L’établissement peut changer votre e-mail.",
+  "messages": "Ouvrez Notifications dans le profil. Les types désactivés ne sont pas envoyés. Dépliez les canaux pour choisir les moyens de réception.",
+  "delete": "Dans le profil, dépliez Compte et aide, puis choisissez Supprimer le compte.",
+  "sign_up": "Ouvrez Événements depuis l’accueil, les récompenses ou Compte et aide dans le profil. Choisissez S’inscrire. Vous pouvez aussi annuler sur cette page.",
+  "door": "Ouvrez Ma carte en haut. L’équipe scanne le code QR."
+}

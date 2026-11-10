@@ -65,8 +65,7 @@ Cloud assets: `index-DwmWPp35.js`, `LoyaltyApp-B7cT8umh.js`, `EarningPage-DCA8vG
 `ManagementUI-CM1tfNh2.js`, `ProgramPage-BrrJUjz4.js`, `RewardsPage-CoaOC3aK.js`, `OverviewUI-DrvWgfWP.js`.
 Evidence: `C:/wamp64/tmp/loyalty-editors-production-20261110.json`.
 
-[CI 42846286071](https://github.com/vkolotikov/hotel-tech-loyalty/actions/runs/42846286071) is still running.
-Both Node builds, dependency audit, Larastan and SQLite shards 1/2 passed; PostgreSQL and shard 3 are pending.
+[CI 42846286071](https://github.com/vkolotikov/hotel-tech-loyalty/actions/runs/42846286071) completed successfully (all eight jobs).
 All required local artifact gates and live verification passed.
 
 The task-owned loopback services and PostgreSQL cluster are stopped. The clean deployment worktree was

@@ -76,7 +76,7 @@ export function Inbox() {
   const venue = boot?.venue.name ?? ''
 
   return (
-    <div className="space-y-4">
+    <div className="p-panel-page space-y-4">
       <div className="flex items-center justify-between gap-3">
         <h1 className="font-p-display text-2xl">{t('portal.inbox.title', 'Inbox')}</h1>
         {canMarkAllRead(boot?.counts.unread_notifications ?? 0, data) && (
