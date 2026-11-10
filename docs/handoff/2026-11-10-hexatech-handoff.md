@@ -96,3 +96,45 @@ all eight jobs confirmed in the subsequent membership task at 12:16 Europe/Riga.
 Task-owned PHP/preview/PostgreSQL helpers are stopped and the clean deploy worktree has been safely removed after
 unlinking only its dependency junction. Private fixtures/evidence, shared dependencies, owner files and the earlier
 blocked cleanup remnant remain untouched.
+
+## Manual memberships and partner scanning
+
+Owner clarified manual assignment only: existing levels are packages, with their configured benefits; no payment
+integration, payment record or checkout. Add/edit membership exposes assigned/earned mode and inclusive venue
+Valid from/until. Assigned levels resist automatic progression; future replacement of current access requires an
+explicit acknowledgement. Dated/assigned terms bound benefits and preserve that intent on returning to earned mode.
+
+Settings → Partner access invites scan-only staff at selected active places through the canonical Team writer.
+The web scanner at /loyalty/partner permits check-in and identity/level/dates/benefits, with server default-deny on
+other admin endpoints. Revoked places/operators cannot replay earlier successes. Team screens retain restrictions.
+Visible menu collapse/expand persists. Card QR uses an explicit physical HTCARD code and follows off/relink;
+personal Wallet/member codes remain personal. Legacy ambiguous bare-UID prints need one-time Card QR replacement.
+Partner NFC prioritises the serial; older other readers need an explicit code to distinguish legacy personal tokens.
+
+Customer guide: docs/loyalty-memberships-and-partners.md and /loyalty/guide. API contracts and launch-only browser
+journey are documented. Existing push Offers campaigns can carry real offer codes; provider/device delivery and
+native partner-role release remain separate acceptance, alongside physical NFC/camera checks. No live test sends.
+
+Initial production release **7ad63206f** from source through9c68d5a77 is live,33 public content/auth/landing checks
+passed on both hosts. Exact166-path patch, physical vendor, whole-source parity and fresh build. Artifact frontend
+6857tests/465files, TypeScript/lint, scoped PHP gates and70 compiled real-backend browser checks passed. Native member
+compatibility TypeScript/41tests passed in an isolated detached worktree, now removed; owner's native checkout unchanged.
+See docs/audits/2026-11-10-loyalty-membership-partners.md for detailed evidence. CI found12 new type findings; reviewed
+correction **d12ba343f** has0 local Larastan findings and134 affected PHP tests passing. All correction artifact gates
+passed: full Larastan0 (single process to avoid a Windows manifest race), Support214/1590, UnitLanding118/1763,
+FeatureLanding1735/9552, focused134/5535, TypeScript and6857 frontend tests/465 files. A fresh build was byte-identical.
+
+Final production main **e0a466c9cb08f8b6a7fd602c37a7ccd3e20bc74f**, the seven-file reviewed correction on7ad63206f.
+**Next source-patch code baseline:d12ba343f**; later documentation commits are evidence only. Exact166-path manifest
+SHA256527538C6DA1FEA1CF802A6934F527E44E4B218F2383AF7D2DCDFAF07ACEB6253. Whole-source parity passed outside only the
+three generated paths. Both domains passed33 live content/authentication/landing checks again at11:53:17UTC /
+13:53:17 Europe/Riga. Assets:index-B8sFU2dJ.js, LoyaltyApp-j9ztOGRd.js, PartnerScanPage-DNx7yPEm.js,
+PartnersPage-LW0-p85P.js, MemberPage-CYz1iU9L.js. Direct Cloud dashboard inspection failed because computer access
+could not initialise its local kernel assets; content was observed directly over HTTP.
+
+[CI42809033725](https://github.com/vkolotikov/hotel-tech-loyalty/actions/runs/42809033725) completed successfully
+at11:51:53UTC /13:51:53 Europe/Riga, all eight jobs including the PostgreSQL known-failure gate. The initial run's
+type findings are resolved without baseline expansion. Owned loopback helpers are stopped; native compatibility
+and deployment worktrees were removed after path/provenance/cleanliness checks and unlinking their dependency
+junctions. Owner's native checkout, shared dependencies, private fixtures/evidence, untracked assets and earlier
+Cloud-stream remnant remain untouched. No provider keys or Wallet issuer setup changed; real device checks remain.

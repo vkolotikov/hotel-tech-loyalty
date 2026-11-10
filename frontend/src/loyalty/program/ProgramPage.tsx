@@ -1,3 +1,4 @@
+import { TakeOff } from './TakeOff'
 import { useState, type ReactNode } from 'react'
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -42,6 +43,7 @@ import { programAssets, levelAssets } from './design/assets'
 import { programTierPaint } from './design/programPaint'
 import { BoostDirectory } from './design/BoostDirectory'
 import './design/program.css'
+import { LevelsPage } from '../management/LevelsPage'
 
 /** Which dialog is open, with what it works on. */
 type Open =
@@ -82,12 +84,13 @@ export function ProgramPage() {
   const onOpen = (value: Open) => { if (value.kind === 'tier') openTier(value.tier); else setOpen(value) }
   if (new URLSearchParams(location.search).get('tab') === 'benefits') { const next = new URLSearchParams(location.search); next.set('tab', 'benefits'); return <Navigate replace to={{ pathname: '/loyalty/rewards', search: '?' + next.toString() }} /> }
   if (editorId && section === 'tiers') return <TierEditorPage id={editorId} />
+  if (data && section === 'tiers') return <LevelsPage program={data} manage={manage} />
 
   return (
-    <div className="l-ov-page l-rd-page l-pg-clean-page">
-      {section !== 'places' && <header className="l-ov-page-heading"><div><h1>{section === 'tiers' ? t('loyalty.program.title', 'Program') : t('loyalty.program.boosts.title', 'Boost events')}</h1><p>{say(section === 'tiers' ? 'pgLine' : 'pgBoostLine')}</p></div><div className="l-rd-actions">{section === 'tiers' ? <>{manage && <Link className="l-ov-button" to="/loyalty/options/setup">{say('guidedSetup')}</Link>}{manage && !!data?.tiers.length && <OverviewButton primary onClick={() => openTier(null)}>{say('addLevel')}</OverviewButton>}</> : <><Link className="l-ov-button" to="/loyalty/options?tab=rules">{say('qualificationRules')}</Link>{manage && !!data?.boosts.length && <OverviewButton primary onClick={() => setOpen({ kind: 'boost', boost: null })}>+ {t('loyalty.program.boosts.add', 'Add boost')}</OverviewButton>}</>}</div></header>}
+    <div className={`${section === 'places' ? 'l-ad-page' : 'l-ov-page'} l-rd-page l-pg-clean-page`}>
+      {section !== 'places' && <header className="l-ov-page-heading"><div><h1>{section === 'tiers' ? t('loyalty.program.title', 'Program') : t('loyalty.program.boosts.title', 'Boost events')}</h1><p>{say(section === 'tiers' ? 'pgLine' : 'pgBoostLine')}</p></div><div className="l-rd-actions">{section === 'tiers' ? <>{manage && <Link className="l-ov-button" to="/loyalty/program/setup">{say('guidedSetup')}</Link>}{manage && !!data?.tiers.length && <OverviewButton primary onClick={() => openTier(null)}>{say('addLevel')}</OverviewButton>}</> : <><Link className="l-ov-button" to="/loyalty/program?tab=tiers&settings=qualification">{say('qualificationRules')}</Link>{manage && !!data?.boosts.length && <OverviewButton primary onClick={() => setOpen({ kind: 'boost', boost: null })}>+ {t('loyalty.program.boosts.add', 'Add boost')}</OverviewButton>}</>}</div></header>}
       {!manage && <p data-read-only="">{t('loyalty.program.read_only', 'Only an owner or a manager can change the programme.')}</p>}
-      {section === 'tiers' && <section className="l-pg-flow"><div>{[[programAssets.points, say(boot.programme.progress_by === 'visits' ? 'pgEarnVisits' : boot.programme.progress_by === 'spend' ? 'pgEarnSpend' : 'pgEarnPoints')], [programAssets.levels, say('pgReach')], [programAssets.gift, say('pgUnlock')]].map(([icon, label], i) => <span key={label}><span className="l-pg-icon"><img src={icon} alt="" /></span>{label}{i < 2 && <span className="l-pg-flow-arrow" aria-hidden>→</span>}</span>)}</div><Link className="l-ov-link" to="/loyalty/options?tab=rules">{say('qualificationRules')}</Link><small>{say('pgQualNote')}</small></section>}
+      {section === 'tiers' && <section className="l-pg-flow"><div>{[[programAssets.points, say(boot.programme.progress_by === 'visits' ? 'pgEarnVisits' : boot.programme.progress_by === 'spend' ? 'pgEarnSpend' : 'pgEarnPoints')], [programAssets.levels, say('pgReach')], [programAssets.gift, say('pgUnlock')]].map(([icon, label], i) => <span key={label}><span className="l-pg-icon"><img src={icon} alt="" /></span>{label}{i < 2 && <span className="l-pg-flow-arrow" aria-hidden>→</span>}</span>)}</div><Link className="l-ov-link" to="/loyalty/program?tab=tiers&settings=qualification">{say('qualificationRules')}</Link><small>{say('pgQualNote')}</small></section>}
 
       <div id="program-panel" className="space-y-5">
 
@@ -146,7 +149,7 @@ function Tiers({ program, manage, theme, locale, onOpen }: {
     {(program.advice ?? []).filter(a => a.code === 'tiers_share_threshold').map(item => <SharedFigure key={item.params.value} item={item} program={program} manage={manage} locale={locale} onOpen={onOpen} />)}
     <div className="l-rd-levels-head"><h2 id="program-tiers">{say('levels')}</h2><small>{say('levelsCount', { levels: points(program.tiers.filter(tier => tier.is_active).length, locale), members: points(program.tiers.reduce((n, tier) => n + tier.members, 0), locale) })}</small></div>
     <ol className="l-rd-level-grid" aria-label={t('loyalty.program.tiers.ladder', 'The ladder, from the first tier up')}>{program.tiers.map((tier, i) => <TierCard key={tier.id} tier={tier} step={i + 1} last={i === program.tiers.length - 1} manage={manage} theme={theme} locale={locale} onOpen={onOpen} />)}</ol>
-    <section className="l-pg-tools"><h2>{say('pgTools')}</h2><div><Link to="/loyalty/program?tab=places"><span className="l-pg-icon"><img src={programAssets.places} alt="" /></span><span><strong>{say('pgPlacesTitle')}</strong><small>{say('pgPlacesCaption')}</small></span><span aria-hidden>→</span></Link><Link to="/loyalty/program?tab=boosts"><span className="l-pg-icon" data-tone="green"><img src={programAssets.calendar} alt="" /></span><span><strong>{t('loyalty.program.boosts.title', 'Boost events')}</strong><small>{say('pgBoostCaption')}</small></span><span aria-hidden>→</span></Link></div></section>
+    <section className="l-pg-tools"><h2>{say('pgTools')}</h2><div><Link to="/loyalty/program?tab=places"><span className="l-pg-icon"><img src={programAssets.places} alt="" /></span><span><strong>{say('pgPlacesTitle')}</strong><small>{say('pgPlacesCaption')}</small></span><span aria-hidden>→</span></Link><Link to="/loyalty/options?tab=bonus"><span className="l-pg-icon" data-tone="green"><img src={programAssets.calendar} alt="" /></span><span><strong>{t('loyalty.program.boosts.title', 'Boost events')}</strong><small>{say('pgBoostCaption')}</small></span><span aria-hidden>→</span></Link></div></section>
   </section>
 }
 
@@ -221,24 +224,7 @@ function BenefitChip({ tb, tier, manage, locale, onOpen }: { tb: TierBenefit; ti
 }
 
 /** Take a benefit off a tier, once asked: the server switches it off, so the members' history keeps its name. */
-export function TakeOff({ tier, tb, onClose }: { tier: Tier; tb: TierBenefit; onClose: () => void }) {
-  const { t } = useTranslation()
-  const client = useQueryClient()
-  const remove = useMutation({
-    mutationFn: () => programApi.detachBenefit(tier.id, tb.id),
-    onSuccess: () => { afterProgramChange(client, { benefits: true }); onClose() },
-    onError: (error) => { if (failureOf(error).code === 'not_found') afterProgramChange(client, { benefits: true }) },
-  })
-  const failure = remove.isError ? failureOf(remove.error) : null
-  return (
-    <ConfirmDialog title={t('loyalty.program.take_off.title', 'Take {{benefit}} off {{tier}}?', { benefit: tb.name, tier: tier.name })}
-      confirm={t('loyalty.program.take_off.confirm', 'Take it off')} keep={t('loyalty.program.take_off.keep', 'Keep it')}
-      busy={remove.isPending} failure={failure && t(...refusalKey('loyalty.program', ERRORS, 'tier_benefit', failure))}
-      onConfirm={() => remove.mutate()} onClose={onClose}>
-      <p>{t('loyalty.program.take_off.body', 'Members of {{tier}} stop seeing it in the app and the portal. Requests they already made stay as they are.', { tier: tier.name })}</p>
-    </ConfirmDialog>
-  )
-}
+export { TakeOff } from './TakeOff'
 
 /**
  * A check the server found (TierAdvice), as the owner's drafts draw one (163:88): in the waiting colour for a warning,
@@ -471,7 +457,7 @@ export function ConfirmTimes({ boosts, locale, timeZone, onClose }: { boosts: Bo
 }
 
 /** Remove a boost, once asked: points it already gave stay where they are. */
-function RemoveBoost({ boost, onClose }: { boost: Boost; onClose: () => void }) {
+export function RemoveBoost({ boost, onClose }: { boost: Boost; onClose: () => void }) {
   const { t } = useTranslation()
   const client = useQueryClient()
   const remove = useMutation({

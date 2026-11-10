@@ -31,6 +31,7 @@ import { TodayCounts } from './TodayHere'
 import { useToday } from './useToday'
 import { UsbReader } from './UsbReader'
 import { useWebNfc } from './useWebNfc'
+import { physicalCardAttempt } from './preferredReader'
 import {
   answerVerdict, clearsAfter, failureVerdict, goneContext, isDuplicate, nextSeen, soundOf, takesKeyToField, type Seen, type VerdictFacts,
   type VerdictView,
@@ -293,7 +294,7 @@ function DoorScanner({ resolved, nowWall, onGone }: { resolved: Resolved; nowWal
     if (busy.current) { queued.current = attempt; return }
     scan.mutate(attempt)
   }
-  const nfc = useWebNfc(offer)
+  const nfc = useWebNfc(attempt => offer(physicalCardAttempt(attempt)))
 
   // The verdict clears after 4 seconds; its bar drains meanwhile (started a frame after it is drawn full).
   useEffect(() => {
@@ -389,8 +390,8 @@ function DoorScanner({ resolved, nowWall, onGone }: { resolved: Resolved; nowWal
           </div>
           {way === null && (
             <div role="group" aria-label={t('loyalty.scan.ways', 'Ways to scan')} className="flex flex-wrap justify-center gap-3">
-              <WayButton icon={<Camera size={30} aria-hidden />} title={t('loyalty.door.way_camera', 'Start the camera')} onClick={() => chooseWay('camera')} />
               {env.webNfc && <WayButton icon={<Nfc size={30} aria-hidden />} title={t('loyalty.door.way_nfc', 'Tap NFC cards')} onClick={() => chooseWay('nfc')} />}
+              <WayButton icon={<Camera size={30} aria-hidden />} title={t('loyalty.door.way_camera', 'Start the camera')} onClick={() => chooseWay('camera')} />
               {env.webHid && <WayButton icon={<Usb size={30} aria-hidden />} title={t('loyalty.door.way_usb', 'USB reader')} onClick={() => chooseWay('usb')} />}
             </div>
           )}

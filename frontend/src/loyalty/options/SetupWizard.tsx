@@ -1,3 +1,4 @@
+import { useAdminWords } from '../management/words'
 import { useEffect, useRef, useState, type FormEvent, type ReactNode, type RefObject } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -34,7 +35,7 @@ import { programAssets } from '../program/design/assets'
 import './setup-simplified.css'
 
 /**
- * The setup wizard (release 7, spec 2026-10-25 §1), at /loyalty/options/setup: 1. your business — a starting programme,
+ * The setup wizard (release 7, spec 2026-10-25 §1), at /loyalty/program/setup: 1. your business — a starting programme,
  * the industry's own first (a venue that already has tiers keeps them and its rewards); 2. choose — every way to earn,
  * ticked as the starting point suggests (or as the venue uses them today); 3. configure — the ticked ways' numbers;
  * 4. review — what members will get, in sentences, then Apply. Skip at any step. A manager's; anyone else reads why.
@@ -198,7 +199,7 @@ export function Wizard({ answer, start = {} }: { answer: OptionsAnswer; start?: 
             : <Button type="submit">{t('loyalty.options.wizard.next', 'Next')}<ChevronRight size={15} aria-hidden /></Button>}
         </div>
       </form>
-      <section className="l-ov-panel l-gs-optional"><h3>{design('optional')}</h3><div><Link className="l-ov-link" to="/loyalty/program?tab=places">{t('loyalty.places.title', 'Places')} →</Link><Link className="l-ov-link" to="/loyalty/program?tab=boosts">{t('loyalty.program.boosts.title', 'Boost events')} →</Link><Link className="l-ov-link" to="/loyalty/options">{t('loyalty.nav.options', 'Ways to earn')} →</Link></div></section>
+      <section className="l-ov-panel l-gs-optional"><h3>{design('optional')}</h3><div><Link className="l-ov-link" to="/loyalty/program?tab=places">{t('loyalty.places.title', 'Places')} →</Link><Link className="l-ov-link" to="/loyalty/options?tab=bonus">{t('loyalty.program.boosts.title', 'Boost events')} →</Link><Link className="l-ov-link" to="/loyalty/options">{t('loyalty.nav.options', 'Ways to earn')} →</Link></div></section>
       </div>
       {step !== 'review' && <SetupPreview answer={answer} choice={choice} form={form} ctx={ctx} />}
       </div>
@@ -241,7 +242,9 @@ function stepTitle(t: T, step: Step): string {
  * first and marked. Existing programmes start with their saved earning rules and can choose template suggestions.
  */
 export function Business({ answer, choice, keep, onChoose }: { answer: OptionsAnswer; choice: string; keep: boolean; onChoose: (key: string) => void }) {
-  const { t } = useTranslation()
+  const { t } = useTranslation(), admin = useAdminWords()
+  const [browse, setBrowse] = useState(false)
+  const shown = answer.presets.filter(p => browse || p.recommended || p.key === choice || p.is_current)
   return (
     <fieldset className="space-y-4">
       <legend className="text-sm text-a-text-2">
@@ -254,9 +257,10 @@ export function Business({ answer, choice, keep, onChoose }: { answer: OptionsAn
           title={t('loyalty.launchpolish.keepRules', 'Keep current earning rules')}
           line={t('loyalty.options.wizard.keep_line', 'Tiers: {{tiers}}. Rewards in the catalogue: {{rewards}}. Nothing in them changes.', { tiers: String(answer.catalogue.tiers), rewards: String(answer.catalogue.rewards.length) })} />
       )}
+      <div className="l-ad-panel-head"><h3>{admin('startingPoint')}</h3><OverviewButton type="button" aria-expanded={browse} onClick={() => setBrowse(!browse)}>{admin('browseTemplates')}</OverviewButton></div>
       <div className="l-gs-presets">
       <div className="grid gap-3 sm:grid-cols-2">
-        {answer.presets.map(p => (
+        {shown.map(p => (
           <ChoiceCard key={p.key} name="programme-start" value={p.key} checked={choice === p.key} onChoose={onChoose}
             icon={PRESET_ICONS[p.icon] ?? Sparkles} hue={presetHue(p.icon)} title={presetName(t, p)} line=""
             badge={answer.options.programme_setup_template === p.key ? t('loyalty.launchpolish.lastTemplate', 'Last used template') : p.recommended ? t('loyalty.options.wizard.suggested', 'Suggested for your business') : null}

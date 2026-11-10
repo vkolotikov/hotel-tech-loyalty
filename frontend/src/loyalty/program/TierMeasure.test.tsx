@@ -56,7 +56,7 @@ describe('tiers on the programme’s measure', () => {
   it('cards show the visits or the spend that reach each tier, or that none is set', () => {
     const visits = text(wrap('visits', <ProgramPage />, program))
     expect(visits).toContain('10 Visits to reach')
-    expect(visits).toContain('Not set Visits to reach')
+    expect(visits).toContain('Not set')
     expect(visits).not.toContain('Points to reach')
 
     const spend = text(wrap('spend', <ProgramPage />, program))

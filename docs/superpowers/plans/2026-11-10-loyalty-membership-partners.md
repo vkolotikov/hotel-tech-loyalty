@@ -35,11 +35,11 @@ ValidityController, AccessDecision/Verdict, event eligibility, MemberDirectory, 
 Interface: additive `valid_from: ?Y-m-d`, state `scheduled`; `MembershipValidity::startOf($member)` and
 `validOn($member, $venueDay)`; validity PATCH-like updates preserve unspecified boundary.
 
-- [ ] Add failing tests for start/end inclusivity, partial/null edits, reversed intervals and retry-key mismatch.
-- [ ] Run the new PHP test with PHP 8.5; confirm failures show the missing start-date behaviour.
-- [ ] Add column and canonical date logic, then integrate access/event day and benefit eligibility consumers.
-- [ ] Extend admin/member views and five locales. Test date formatting in venue days and old DTO compatibility.
-- [ ] Run existing validity, access, event, merge and portal suites plus new interval tests; commit source.
+- [x] Add failing tests for start/end inclusivity, partial/null edits, reversed intervals and retry-key mismatch.
+- [x] Run the new PHP test with PHP 8.5; confirm failures show the missing start-date behaviour.
+- [x] Add column and canonical date logic, then integrate access/event day and benefit eligibility consumers.
+- [x] Extend admin/member views and five locales. Test date formatting in venue days and old DTO compatibility.
+- [x] Run existing validity, access, event, merge and portal suites plus new interval tests; commit source.
 
 ### Task 2: Manual package assignment (owner clarification)
 
@@ -49,11 +49,11 @@ MemberEnrolment, MemberDetails, MemberProfile and add-member form, plus focused 
 Interface: manager-only assignment of an active level, dates and assigned/earned mode. No payment data or integration.
 The service locks the member and saves all intended fields in one transaction; assigned mode holds the exact level.
 
-- [ ] Write failing tests for manager rights, own-tier validation, level persistence after bonus/assessment,
+- [x] Write failing tests for manager rights, own-tier validation, level persistence after bonus/assessment,
       atomic interval refusal, replay and explicit return to earned progression.
-- [ ] Implement the shared service and additive metadata/route contract; preserve existing member creation callers.
-- [ ] Add compact reviewed assignment UI to new/existing members, using server levels and benefit data.
-- [ ] Verify API and compiled real-backend assignment journey; record no processor payment as verified; commit.
+- [x] Implement the shared service and additive metadata/route contract; preserve existing member creation callers.
+- [x] Add compact reviewed assignment UI to new/existing members, using server levels and benefit data.
+- [x] Verify API and compiled real-backend assignment journey; record no processor payment as verified; commit.
 
 ### Task 3: Partner account boundary and invitations
 
@@ -63,30 +63,30 @@ controller/page; auth/bootstrap/landing DTO additions and explicit route rules; 
 Interface: staff `loyalty_scan_only: bool`, `loyalty_place_ids: list<int>`; explicit partner bootstrap/scan routes.
 Partner invitation calls the canonical team writer, never duplicates user/invite/password implementation.
 
-- [ ] Write failing tests for restricted scan, foreign/empty/revoked places, full-admin alias and other API refusals
+- [x] Write failing tests for restricted scan, foreign/empty/revoked places, full-admin alias and other API refusals
       in both enforcement modes; metadata minimisation and operator-scoped replay.
-- [ ] Implement default-deny restriction, place validation, safe bootstrap and activation/landing behaviour.
-- [ ] Add manager Partner screen and Team preservation, existing invitation flow and web app link.
-- [ ] Add minimal partner scanner reusing CameraScanner/useWebNfc and PlaceScan; no member directory/edit controls.
-- [ ] Verify invitation through local mail capture, activation, scan/check-in and direct API refusal; commit.
+- [x] Implement default-deny restriction, place validation, safe bootstrap and activation/landing behaviour.
+- [x] Add manager Partner screen and Team preservation, existing invitation flow and web app link.
+- [x] Add minimal partner scanner reusing CameraScanner/useWebNfc and PlaceScan; no member directory/edit controls.
+- [x] Verify invitation through local mail capture, activation, scan/check-in and direct API refusal; commit.
 
 ### Task 4: Physical cards, push guide and menu
 
 Files: OverviewShell/overview CSS; linked-card UI and existing card tests; guide page and five locale bundles.
 
-- [ ] Add visible accessible desktop collapse/expand button using the existing persisted rail state.
-- [ ] Verify existing NFC off/relink behaviour and cross-tenant refusal; expose reusable physical-card QR from its UID.
-- [ ] Provide a guide for package levels/benefits, partner invites/places, activation, web app installation,
+- [x] Add visible accessible desktop collapse/expand button using the existing persisted rail state.
+- [x] Verify existing NFC off/relink behaviour and cross-tenant refusal; expose reusable physical-card QR from its UID.
+- [x] Provide a guide for package levels/benefits, partner invites/places, activation, web app installation,
       push Offers campaigns/codes and card reuse. Explain personal QR and device/provider limitations accurately.
-- [ ] Inspect desktop/mobile and all language/theme combinations; use existing APIs where already sufficient.
+- [x] Inspect desktop/mobile and all language/theme combinations; use existing APIs where already sufficient.
 
 ### Task 5: Release
 
-- [ ] Run changed scoped PHP tests on SQLite and migrated isolated PostgreSQL, meaningful real-backend journeys,
+- [x] Run changed scoped PHP tests on SQLite and migrated isolated PostgreSQL, meaningful real-backend journeys,
       full TypeScript/Vitest, lint and shared consumers where touched.
-- [ ] Document additive contracts and reusable local API checks; check the installed Postman CLI capabilities
+- [x] Document additive contracts and reusable local API checks; check the installed Postman CLI capabilities
       without unnecessary workspace publication or credentials.
-- [ ] Source commit and push feature; exact allowlisted deployment worktree with physical vendor, whole-source
+- [x] Source commit and push feature; exact allowlisted deployment worktree with physical vendor, whole-source
       parity, required scoped PHP/frontend checks and fresh artifact build.
-- [ ] Deploy by recipe, verify actual live content/landing/authentication, record CI state and outstanding physical
+- [x] Deploy by recipe, verify actual live content/landing/authentication, record CI state and outstanding physical
       device/provider acceptance, clean only task-owned helpers/worktree, and deliver customer guide.

@@ -64,7 +64,9 @@ describe('the setup wizard (release 7 §1)', () => {
   it('a new venue chooses a starting programme, its industry’s first, chosen and marked', () => {
     const html = render(fresh)
     const words = text(html)
-    expect(html.indexOf('data-choice="beauty"')).toBeLessThan(html.indexOf('data-choice="hotel_classic"'))
+    expect(html).toContain('data-choice="beauty"')
+    expect(html).not.toContain('data-choice="hotel_classic"')
+    expect(words).toContain('Browse templates')
     expect(html).toMatch(/data-choice="beauty" data-checked=""/)
     expect(words).toContain('Beauty and spa')
     expect(words).toContain('Suggested for your business')

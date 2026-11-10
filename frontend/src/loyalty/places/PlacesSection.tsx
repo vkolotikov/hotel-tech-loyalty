@@ -19,8 +19,8 @@ import { ERRORS } from './errors'
 import { PlaceDialog } from './PlaceDialog'
 import { removedWords, todayWords, whoMayEnter, type Words } from './placesMath'
 import { PLACES_KEY, afterPlaceChange, placesApi, type Place, type PlacesList } from './placesApi'
-import { PlacesDirectory } from './PlacesDirectory'
-import { useRedesignWords } from '../redesign/words'
+import { PlacesDirectory } from '../management/PlacesDirectory'
+import { useAdminWords } from '../management/words'
 import { OverviewButton } from '../overview/OverviewUI'
 
 /** Which dialog is open, with the place it works on. */
@@ -36,7 +36,7 @@ type Open =
  */
 export function PlacesSection({ manage }: { manage: boolean }) {
   const { t } = useTranslation()
-  const say = useRedesignWords()
+  const admin = useAdminWords()
   const look = useLook()
   const query = useQuery({ queryKey: PLACES_KEY, queryFn: placesApi.list })
   const [open, setOpen] = useState<Open | null>(null)
@@ -47,7 +47,7 @@ export function PlacesSection({ manage }: { manage: boolean }) {
 
   return (
     <section id="places" aria-labelledby="program-places" className="l-pg-places">
-      <header className="l-ov-page-heading"><div><h1 id="program-places">{say('pgPlacesTitle')}</h1><p>{say('pgPlacesLine')}</p></div><div className="l-rd-actions">
+      <header className="l-ad-heading"><div><h1 id="program-places">{admin('places')}</h1><p>{admin('placesLine')}</p></div><div className="l-rd-actions">
         {/* With no place yet, the Get started panel below holds the one action. */}
         {change && (data?.places.length ?? 0) > 0 && (
           <OverviewButton primary onClick={() => { setSaid(null); setOpen({ kind: 'place', place: null }) }}>

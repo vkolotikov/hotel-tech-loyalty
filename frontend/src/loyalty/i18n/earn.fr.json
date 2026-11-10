@@ -56,7 +56,7 @@
   "advancedLine": "Consultez l’arrondi et les multiplicateurs du programme.",
   "calculation": "Le gain final est arrondi à l’entier inférieur après les multiplicateurs de niveau, de point de vente, d’avantage et de promotion. En cas de promotions simultanées, le multiplicateur applicable le plus élevé est retenu.",
   "desk": "Achats saisis par l’équipe",
-  "deskLine": "Les achats saisis par le personnel suivent leurs propres règles.",
+  "deskLine": "Les achats à l’accueil utilisent le taux commun et une activation séparée.",
   "deskLink": "Paramètres des achats à l’accueil →",
   "memberExample": "EXEMPLE POUR LE MEMBRE",
   "seeEarn": "Voir ce que gagnent les membres",

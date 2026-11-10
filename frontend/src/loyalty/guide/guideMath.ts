@@ -52,7 +52,7 @@ export const FAQ: readonly { id: FaqId; topic: TopicId; to?: string }[] = [
   { id: 'nfc', topic: 'scan' },
   { id: 'partners', topic: 'scan', to: '/loyalty/partners' },
   { id: 'reuse_card', topic: 'scan', to: '/loyalty' },
-  { id: 'move_up', topic: 'members', to: '/loyalty/options' },
+  { id: 'move_up', topic: 'members', to: '/loyalty/program?tab=tiers&settings=qualification' },
   { id: 'by_hand', topic: 'members', to: '/loyalty' },
   { id: 'end_date', topic: 'members', to: '/loyalty' },
   { id: 'import', topic: 'members', to: '/loyalty' },
@@ -63,7 +63,7 @@ export const FAQ: readonly { id: FaqId; topic: TopicId; to?: string }[] = [
   { id: 'give_points', topic: 'rewards', to: '/loyalty/scan' },
   { id: 'redeem', topic: 'rewards', to: '/loyalty/requests' },
   { id: 'push_voucher', topic: 'rewards', to: '/loyalty/campaigns?tab=push' },
-  { id: 'boosts', topic: 'rewards', to: '/loyalty/program?tab=boosts' },
+  { id: 'boosts', topic: 'rewards', to: '/loyalty/options?tab=bonus' },
   { id: 'portal_what', topic: 'portal' },
   { id: 'portal_card', topic: 'portal' },
 ]

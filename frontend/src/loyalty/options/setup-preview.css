@@ -32,3 +32,9 @@
 [data-loyalty] .l-gs-preview-off { color:var(--l-ov-muted); }
 [data-loyalty] .l-gs-preview-note { border-top:1px solid var(--l-ov-border); padding-top:14px; }
 @media (max-width:600px) { [data-loyalty] .l-gs-preview { padding:16px; } }
+[data-loyalty] .l-gs-page.l-gs-clean .l-gs-columns { grid-template-columns: minmax(0,1.545fr) minmax(360px,1fr); }
+[data-loyalty] .l-gs-preview { background:var(--l-ad-panel); }
+[data-loyalty] .l-gs-preview-content { gap:14px; }
+[data-loyalty] .l-gs-preview-section + .l-gs-preview-section { padding-top:12px; }
+[data-loyalty] .l-gs-preview-rules { gap:8px; }
+@media(max-width:1000px) { [data-loyalty] .l-gs-page.l-gs-clean .l-gs-columns { grid-template-columns:minmax(0,1fr); } }

@@ -40,6 +40,7 @@ import { ScanMember } from './design/ScanMember'
 import { ScanDoor } from './design/ScanDoor'
 import { ManualLookup } from './design/ManualLookup'
 import './design/scan.css'
+import { firstReader, physicalCardAttempt } from './preferredReader'
 
 
 /** What the page shows after a scan: the desk's member card, or a verdict at a place or an event (answer or refusal). */
@@ -62,13 +63,13 @@ export function ScanPage() {
   const { t, i18n } = useTranslation()
   const words = useScanWords()
   const [options, setOptions] = useState(false)
-  const [manual, setManual] = useState(false)
-  const [reader, setReader] = useState<ScanMode>(() => typeof window !== 'undefined' && window.matchMedia?.('(max-width: 767px)').matches ? 'nfc' : 'camera')
+  const location = useLocation()
+  const [manual, setManual] = useState(() => new URLSearchParams(location.search).get('method') === 'lookup')
+  const [reader, setReader] = useState<ScanMode>(() => firstReader(detectEnv(), new URLSearchParams(location.search).get('method')))
   const sending = useRef(false)
   const locale = i18n.language || 'en'
   const boot = useBoot()
   const client = useQueryClient()
-  const location = useLocation()
   const navigate = useNavigate()
   const env = useMemo(() => detectEnv(), [])
   const named = contextFromSearch(location.search)
@@ -149,7 +150,7 @@ export function ScanPage() {
     sending.current = true
     scan.mutate({ attempt, context, key: keyFor(attempt.code, contextSearch(context) || 'desk', unanswered.current, Date.now(), newPressKey) })
   }
-  const nfc = useWebNfc(send, true)
+  const nfc = useWebNfc(attempt => send(physicalCardAttempt(attempt)), true)
 
   // Release 9: a membership that ran out, renewed on the spot by a manager (MembershipValidity, as the member page
   // does), then the member scanned again by number so the place decides afresh and records it.
