@@ -29,9 +29,8 @@ export function PointsRewardsPage() {
   const data = query.data, manage = boot.staff.can.manage_rewards, editor = params.get('reward')
   const q = params.get('q') ?? '', status = params.get('status') ?? 'all', selectedId = params.get('selected')
   const go = (patch: Record<string, string | number | null>) => navigate(rewardsUrl('catalogue', { q, status, selected: selectedId, ...patch }), { replace: true })
-  if (editor && data) return <RewardEditorPage key={editor} id={editor} catalogue={data} />
   const rewards = data?.rewards ?? [], visible = rewards.filter(r => `${r.name} ${r.category ?? ''}`.toLocaleLowerCase().includes(q.toLocaleLowerCase()) && (status === 'all' || rewardStatus(r) === status))
-  const selected = visible.find(r => String(r.id) === selectedId) ?? visible[0], discount = selected && rewardDiscount(selected)
+  const selected = (editor && editor !== 'new' ? rewards.find(r => String(r.id) === editor) : visible.find(r => String(r.id) === selectedId)) ?? visible[0], discount = selected && rewardDiscount(selected)
   const allCount = rewards.filter(r => rewardStatus(r) === 'active').length
   return <div className="l-ad-page l-rd-page l-rb-page l-rc-page">
     <RewardHeading title={say('pointsRewards')} line={say('rewardsLine')}><Link className="l-ov-button" to="/loyalty/rewards?tab=redemptions">{t('loyalty.rewards.tab.redemptions', 'Redemptions')}</Link>{manage && data && <Link className="l-ov-button l-ov-primary" to={rewardsUrl('catalogue', { reward: 'new' })}>{say('addReward')}</Link>}</RewardHeading>
@@ -48,6 +47,7 @@ export function PointsRewardsPage() {
       <details className="l-ad-more"><summary>{admin('advanced')}</summary><p>{selected.description}</p><dl className="l-rb-facts"><dt>{say('availability')}</dt><dd>{selected.stock === null ? say('unlimited') : say('stockLeft', { n: points(selected.stock, i18n.language) })}</dd><dt>{say('memberLimit')}</dt><dd>{selected.per_member_limit === null ? say('noLimit') : selected.per_member_limit === 1 ? say('once') : say('limit', { n: selected.per_member_limit })}</dd><dt>{say('validUntil')}</dt><dd>{selected.expires_at ? when(selected.expires_at, i18n.language, boot.venue.timezone) : say('noEnd')}</dd></dl>{manage && <RewardActions key={selected.id} reward={selected} onRemoved={() => go({ selected: null })} />}</details>
       <details className="l-ad-more"><summary>{say('terms')}</summary><p className="l-rb-prewrap">{selected.terms || say('noTerms')}</p>{selected.category && <p>{t('loyalty.rewards.reward.category', 'Category')}: {selected.category}</p>}<small>{t('loyalty.rewards.catalogue.redeemed', 'Redeemed')}: {points(selected.redeemed, i18n.language)} · {t('loyalty.rewards.catalogue.fulfilled', 'Fulfilled')}: {points(selected.fulfilled, i18n.language)}</small></details></section></aside>}
       </div></>}
+    {editor && data && <RewardEditorPage key={editor} id={editor} catalogue={data} />}
   </div>
 }
 

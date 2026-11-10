@@ -1,0 +1,21 @@
+{
+  "example": "Beispiel",
+  "currency": "Währung",
+  "calculation": "Berechnung",
+  "discardTitle": "Ungespeicherte Änderungen verwerfen?",
+  "discardLine": "Ihre Änderungen wurden noch nicht gespeichert.",
+  "draft": "Entwurf",
+  "savedSettings": "Gespeicherte Einstellungen",
+  "levelDetails": "Stufendetails",
+  "memberDescription": "Beschreibung für Mitglieder",
+  "availability": "Verfügbarkeit, Limits & Bedingungen",
+  "sharedRate": "Gemeinsame Sammelrate",
+  "spendable": "Einlösbare Punkte",
+  "spendableLine": "Der Punkteverfall gilt für das einlösbare Guthaben.",
+  "assignLater": "Nach dem Speichern einer Stufe zuweisen",
+  "assignLaterLine": "Legen Sie fest, welche Stufe diesen Vorteil erhält, seinen Wert und seinen Geltungsbereich.",
+  "chooseMethod": "Sammelmethode auswählen",
+  "nextStep": "Im nächsten Schritt legen Sie die Rate und Berechtigung fest.",
+  "continue": "Weiter",
+  "earningAdd": "Sammelregel hinzufügen"
+}

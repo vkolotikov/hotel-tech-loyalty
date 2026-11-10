@@ -1,3 +1,6 @@
+import { useState } from 'react'
+import { EditorDialog, EditorFooter, EditorSection } from '../editors/EditorUI'
+import { useEditorWords } from '../editors/words'
 import { Link, useLocation } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
@@ -31,29 +34,30 @@ import '../earn/clean.css'
 export function EarningPage() {
   const query = useQuery({ queryKey: OPTIONS_KEY, queryFn: optionsApi.options, refetchOnWindowFocus: false })
   const location = useLocation(), say = useEarnWords(), admin = useAdminWords(), rd = useRedesignWords(), { t, i18n } = useTranslation(), oldSay = useSay()
+  const editorWords = useEditorWords(), [adding, setAdding] = useState(false), [method, setMethod] = useState('')
   const boot = useBoot(), guard = useLeaveGuard(), data = query.data
   const state = earnLocation(location.search, data?.ways ?? [])
   const title = (w: Way) => w.key === 'earn_rate' ? say('purchase') : wayTitle(oldSay, w.key)
   const unit = money(1, boot.venue.currency, i18n.language)
   const sentence = (w: Way) => data ? sentenceOf(w.key, data.options, { say: oldSay, currency: boot.venue.currency, locale: i18n.language, rewards: data.catalogue.rewards }) : ''
   const discard = guard.destination && <DesignDialog title={say('discardTitle')} onClose={guard.keep} busy={guard.busy}><p>{say('discardLine')}</p><div className="l-rd-actions"><OverviewButton onClick={guard.keep}>{rd('keepEditing')}</OverviewButton><OverviewButton primary onClick={guard.discard}>{rd('discard')}</OverviewButton></div></DesignDialog>
-  if (new URLSearchParams(location.search).get('settings') === 'points') return <ProgrammeSettings kind="points" />
   if (state.tab === 'more') return <OptionsPage />
   if (!data) return <div className="l-ad-page">{query.isError ? <LoadFailed error={query.error} onRetry={() => { void query.refetch() }} /> : <Loading />}</div>
   const editor = data.ways.find(w => w.key === state.way)
-  if (editor) return <>{state.tab === 'bonus' ? <div className="l-ad-page"><OverviewButton disabled={guard.busy} onClick={() => guard.go(earningUrl('bonus', { selected: editor.key }))}>← {admin('bonuses')}</OverviewButton><EarnEditor key={editor.key} bonus way={editor} answer={data} guard={guard} /></div> : <EarnEditor key={editor.key} way={editor} answer={data} guard={guard} />}{discard}</>
-  if (state.tab === 'bonus') return <BonusBoostsPage answer={data} guard={guard} />
+  const popup = editor && <EarnEditor key={editor.key} bonus={state.tab === 'bonus'} way={editor} answer={data} guard={guard} />
+  if (state.tab === 'bonus') return <><BonusBoostsPage answer={data} guard={guard} />{popup}{discard}</>
   const visible = filteredWays(data, 'earn', state.q, state.status, w => `${title(w)} ${wayLine(oldSay, w.key)}`)
-  const selected = visible.find(w => w.key === state.selected) ?? visible[0]
+  const selected = visible.find(w => w.key === (editor?.key ?? state.selected)) ?? visible[0]
   const inherited = selected && ['points_on_spend', 'desk_earn'].includes(selected.key)
   const status = (w: Way) => (data.not_used ?? []).includes(w.key) ? 'unused' : isOn(w, data.options) ? 'active' : 'off'
   const badge = (w: Way) => <ManagementStatus state={status(w)}>{say(status(w))}</ManagementStatus>
   const methods = data.ways.filter(w => groupOf(w.key) === 'earn')
+  const available = methods.filter(w => !isOn(w, data.options))
   const caption = (w: Way) => admin(w.key === 'points_on_spend' ? 'completedBookings' : w.key === 'check_in' ? 'recordedVisit' : w.key === 'stamp_card' ? 'qualifyingVisit' : w.key === 'desk_earn' ? 'staffPurchase' : 'eligibleSpend')
   const rate = (w: Way) => ['points_on_spend', 'desk_earn'].includes(w.key) ? admin('inheritsPurchase') : w.key === 'earn_rate' ? admin('rateCompact', { n: decimal(Number(data.options.points_per_currency), i18n.language), unit }) : w.key === 'check_in' ? admin('perCheckIn', { n: points(Number(data.options.checkin_points ?? 0), i18n.language) }) : w.key === 'stamp_card' ? admin('stampPerVisit') : admin('cashbackRate', { n: decimal(Number(data.options.cashback_percent ?? 0), i18n.language) })
   const go = (patch: Record<string, string>) => guard.go(earningUrl('earn', { selected: state.selected, q: state.q, status: state.status, ...patch }))
   const example = ruleExample(selected?.key ?? 'earn_rate', data, '50')
-  return <div className="l-ad-page"><ManagementHeading title={admin('earning')} line={admin('earningLine')} />
+  return <div className="l-ad-page"><ManagementHeading title={admin('earning')} line={admin('earningLine')}>{data.can_change && !!available.length && <OverviewButton primary onClick={() => { setMethod(available[0].key); setAdding(true) }}>{editorWords('earningAdd')}</OverviewButton>}</ManagementHeading>
     <div className="l-ad-summary"><ManagementFact icon="boost" label={admin('earningMethods')}><strong>{say('activeMethods', { n: methods.filter(w => status(w) === 'active').length })}</strong></ManagementFact><ManagementFact icon="expiry" label={admin('pointsExpiry')}><strong>{Number(data.options.points_expiry_months) > 0 ? admin('months', { n: Number(data.options.points_expiry_months) }) : admin('never')}</strong></ManagementFact><Link className="l-ov-button" to={POINTS_SETTINGS}>{admin('pointsSettings')}<img src={adminAssets.pen.src} width={15} height={15} alt="" /></Link></div>
     <ManagementColumns><div className="l-ad-stack"><ManagementPanel title={say('everyday')} count={say('methods', { n: methods.length })}>
       <div className="l-ad-filter-tabs">{(['all', 'active', 'off'] as const).map(s => <button type="button" key={s} aria-pressed={state.status === s} onClick={() => go({ status: s })}>{say(s)} <small>{filteredWays(data, 'earn', '', s, title).length}</small></button>)}</div>
@@ -69,6 +73,6 @@ export function EarningPage() {
       {(selected.key === 'earn_rate' || inherited) && <div className="l-ad-inset"><h3>{admin('alsoRate')}</h3><div className="l-ad-trigger-grid">{['points_on_spend', 'desk_earn'].map(key => { const w = methods.find(w => w.key === key); return w && <Link key={key} to={`${EARNING}&selected=${key}`}><ManagementIcon kind={key === 'points_on_spend' ? 'bookingSmall' : 'receipt'} /><span>{admin(key === 'points_on_spend' ? 'bookings' : 'deskPurchases')}<small>{say(status(w))}</small></span></Link> })}</div></div>}
       <details className="l-ad-more"><summary>{admin('advanced')}</summary><p>{sentence(selected)}</p><p>{wayLine(oldSay, selected.key)}</p><Link className="l-ov-link" to={BONUSES}>{admin('bonuses')}</Link><Link className="l-ov-link" to={QUALIFICATION}>{admin('qualification')}</Link></details>
       {!data.can_change && <Link className="l-ov-link" to={earningUrl('earn', { way: selected.key })}>{say('viewSettings')}</Link>}
-    </ManagementSelection>}</ManagementColumns>{discard}
+    </ManagementSelection>}</ManagementColumns>{adding && <EditorDialog area="options" title={editorWords('earningAdd')} section={admin('earning')} icon="coin" onClose={() => setAdding(false)}><form className="l-editor-form" onSubmit={e => { e.preventDefault(); if (!available.some(w => w.key === method)) return; setAdding(false); guard.go(earningUrl('earn', { way: method })) }}><div className="l-editor-body l-editor-stack"><EditorSection icon="coin" title={editorWords('chooseMethod')}><div className="l-editor-stack">{available.map(w => <label key={w.key} className="l-editor-choice"><input type="radio" name="earning-method" value={w.key} checked={method === w.key} onChange={() => setMethod(w.key)} /><span>{title(w)}<small>{caption(w)}</small></span></label>)}</div></EditorSection><small>{editorWords('nextStep')}</small></div><EditorFooter creating onCancel={() => setAdding(false)} save={editorWords('continue')} disabled={!method} /></form></EditorDialog>}{popup}{new URLSearchParams(location.search).get('settings') === 'points' && <ProgrammeSettings kind="points" />}{discard}
   </div>
 }

@@ -1,0 +1,21 @@
+{
+  "example": "Example",
+  "currency": "Currency",
+  "calculation": "Calculation",
+  "discardTitle": "Discard unsaved changes?",
+  "discardLine": "Your changes have not been saved.",
+  "draft": "Draft setup",
+  "savedSettings": "Saved settings",
+  "levelDetails": "Level details",
+  "memberDescription": "Member description",
+  "availability": "Availability, limits & terms",
+  "sharedRate": "Shared purchase rate",
+  "spendable": "Spendable points",
+  "spendableLine": "Points expiry applies to the balance members can redeem.",
+  "assignLater": "Assign to a tier after saving",
+  "assignLaterLine": "Set which tier gets this perk, its value, and where it applies.",
+  "chooseMethod": "Choose an earning method",
+  "nextStep": "You’ll set its rate and eligibility in the next step.",
+  "continue": "Continue",
+  "earningAdd": "Add an earning rule"
+}

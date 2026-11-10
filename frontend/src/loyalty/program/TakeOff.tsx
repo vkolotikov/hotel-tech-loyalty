@@ -17,7 +17,7 @@ export function TakeOff({ tier, tb, onClose, onDone = onClose }: { tier: Tier; t
   })
   const failure = remove.isError ? failureOf(remove.error) : null
   return (
-    <ConfirmDialog title={t('loyalty.program.take_off.title', 'Take {{benefit}} off {{tier}}?', { benefit: tb.name, tier: tier.name })}
+    <ConfirmDialog native title={t('loyalty.program.take_off.title', 'Take {{benefit}} off {{tier}}?', { benefit: tb.name, tier: tier.name })}
       confirm={t('loyalty.program.take_off.confirm', 'Take it off')} keep={t('loyalty.program.take_off.keep', 'Keep it')}
       busy={remove.isPending} failure={failure && t(...refusalKey('loyalty.program', ERRORS, 'tier_benefit', failure))}
       onConfirm={() => remove.mutate()} onClose={onClose}>

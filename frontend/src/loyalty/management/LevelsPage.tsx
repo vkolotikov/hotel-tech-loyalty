@@ -22,7 +22,6 @@ export function LevelsPage({ program, manage }: { program: Program; manage: bool
   const say = useAdminWords(), rd = useRedesignWords(), { t, i18n } = useTranslation(), boot = useBoot()
   const location = useLocation(), navigate = useNavigate(), params = new URLSearchParams(location.search)
   const [assignment, setAssignment] = useState<{ tier: Tier; current: TierBenefit | null } | null>(null)
-  if (params.get('settings') === 'qualification') return <ProgrammeSettings kind="qualification" />
   if (params.has('checks')) return <ProgrammeReadiness program={program} />
   const selected = program.tiers.find(t => String(t.id) === params.get('selected')) ?? program.tiers[0]
   const by = boot.programme.progress_by ?? 'points'
@@ -46,7 +45,7 @@ export function LevelsPage({ program, manage }: { program: Program; manage: bool
       <ul className="l-ad-list">{program.tiers.map((tier, i) => <li key={tier.id} className="l-ad-row" data-record={`tier-${tier.id}`} data-selected={selected?.id === tier.id || undefined}><button type="button" aria-pressed={selected?.id === tier.id} onClick={() => { navigate(`${LEVELS}&selected=${tier.id}`, { replace: true }); focusManagementSelection() }}><span className="l-ad-identity"><ManagementIcon kind={icon(i)} tone={['gold', 'neutral', 'gold', 'violet', 'cyan'][i % 5]} /><span className="l-ad-row-name"><strong>{tier.name}</strong><small>{tier.is_active ? say('tierPosition', { n: i + 1, total: program.tiers.length }) : t('loyalty.program.switched_off', 'Switched off')}</small></span></span><span className="l-ad-threshold" data-kind={thresholds(tier, by).some(x => x.value === null) ? 'missing' : entry(tier) ? 'entry' : undefined}>{entry(tier) ? say('onJoining') : floor(tier)}</span><span className="l-ad-tier-rate">×{decimal(tier.earn_rate, i18n.language)}</span><span className="l-ad-tier-members">{points(tier.members, i18n.language)}</span><img className="l-ad-chevron" src={adminAssets.chevron.src} width={16} height={16} alt="" /></button></li>)}</ul>
       {!program.tiers.length && <p>{t('loyalty.program.get_started.tiers.line', 'A tier is a level members reach, such as Silver or Gold, with its own earn rate and benefits. The programme starts once a tier is in use.')}</p>}
     </ManagementPanel><details className="l-ad-more"><summary>{say('readiness')}</summary><TierChecks program={program} /><Link className="l-ov-link" to={READINESS}>{say('readiness')}</Link></details></div>
-      {selected && <ManagementSelection title={selected.name} heading={say('selectedTier')} status={status(selected)} onEdit={manage ? () => navigate(`${LEVELS}&tier=${selected.id}`) : undefined}>
+      {selected && <ManagementSelection title={selected.name} heading={say('selectedTier')} status={status(selected)} onEdit={manage ? () => navigate(`${LEVELS}&selected=${selected.id}&tier=${selected.id}`) : undefined}>
         <ManagementVisual art="tierCard" tone="gold" label={say('tierPosition', { n: program.tiers.indexOf(selected) + 1, total: program.tiers.length })} title={selected.name} line={<Link to={`/loyalty?tier=${selected.id}`}>{say('membersCount', { n: points(selected.members, i18n.language) })}</Link>} />
         <div className="l-ad-inset l-ad-tier-outcome"><div><small>{say('earnRate')}</small><strong>×{decimal(selected.earn_rate, i18n.language)}</strong></div><div><small>{say('baseExample')}</small><p className="l-ad-conversion">{say('basePointsShort', { n: 100 })}<img src={adminAssets.arrow.src} width={16} height={16} alt="" />{say('pointsShort', { n: points(examplePoints(String(selected.earn_rate)) ?? 100, i18n.language) })}</p></div></div>
         <div className="l-ad-panel-head"><h3>{say('includedPerks')}</h3>{manage && <OverviewButton onClick={() => setAssignment({ tier: selected, current: null })}>+ {say('addPerk')}</OverviewButton>}</div>
@@ -56,6 +55,7 @@ export function LevelsPage({ program, manage }: { program: Program; manage: bool
         {selected.description && <p className="l-ad-muted">{selected.description}</p>}
       </ManagementSelection>}
     </ManagementColumns>
+    {params.get('settings') === 'qualification' && <ProgrammeSettings kind="qualification" />}
     {assignment && <TierAssignmentEditor program={program} tierId={assignment.tier.id} current={assignment.current} onClose={() => setAssignment(null)} />}
   </div>
 }

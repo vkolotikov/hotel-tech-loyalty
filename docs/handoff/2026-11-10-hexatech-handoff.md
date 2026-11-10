@@ -208,9 +208,18 @@ Evidence: `C:/wamp64/tmp/loyalty-layout-production-20261110.json`; private rehea
 `C:/wamp64/tmp/loyalty-layout-rehearsal-20261110`. No backend, schema, dependency, native API or provider changes;
 no production customer record writes or messages.
 
-[CI 42836406359](https://github.com/vkolotikov/hotel-tech-loyalty/actions/runs/42836406359) remains in progress
-at handoff. Both Node builds, dependency audit, Larastan and SQLite shards 1/2 passed; shard 3 and the PostgreSQL
-known-failure gate are pending. Local artifact gates and live verification above are complete.
+[CI 42836406359](https://github.com/vkolotikov/hotel-tech-loyalty/actions/runs/42836406359) completed successfully.
+All eight jobs passed, including all SQLite shards, PostgreSQL and both Node builds.
 The task-owned loopback services and PostgreSQL cluster are stopped. Shared dependencies and owner files remain.
 The clean release worktree was removed after path/branch/commit validation and unlinking only its dependency
 junction. Private evidence and the earlier cleanup remnant remain untouched.
+
+## Loyalty settings editors — implementation and verification
+
+Branch `feature/loyalty-editor-dialogs-20261110` implements the fourteen popup states from Figma page 392:8135.
+Shared compact/wide native dialogs preserve the catalogue and editor URLs, original vectors, canonical saves,
+permissions, validation, picture writes and venue times. Five translated bundles; both themes; protected changed
+drafts and nested assignment/removal surfaces. No backend/schema changes. Source TypeScript, focused Loyalty tests,
+lint and the 88-check compiled administration journey pass. Dedicated editor acceptance and isolated release
+artifact gates are underway; no editor deployment yet. See [the editor audit](../audits/2026-11-10-loyalty-editors.md).
+Next patch compares source against **f6146efee**, including the preceding release's evidence documentation.
