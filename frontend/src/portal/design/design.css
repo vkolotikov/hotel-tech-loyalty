@@ -104,6 +104,8 @@
 .p-member-linework { position:absolute; inset:0; pointer-events:none; }
 .p-member-linework img { max-width:none; }
 .p-member-info { min-width:0; flex:1; position:relative; }
+.p-member-card[data-portal][data-portal-theme="dark"] { --p-danger:255 183 176; }
+.p-card-detail { --p-danger:255 183 176; }
 .p-member-top { display:flex; align-items:center; flex-wrap:wrap; gap:9px; margin-bottom:11px; }
 .p-tier-badge { display:inline-flex; align-items:center; gap:5px; border-radius:7px; padding:5px 9px; background:rgb(var(--p-warning)/.15); color:rgb(var(--p-warning)); font-size:11px; font-weight:600; }
 .p-member-card .p-tier-badge,.p-card-detail .p-tier-badge { color:#f2c987; background:#65485180; }

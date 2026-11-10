@@ -8,6 +8,7 @@ import { describe, expect, it } from 'vitest'
  * "Confirmed" chip — at 4.31:1 on the paper. This pins every tone pair at ≥ 4.5:1 in both modes.
  */
 const css = readFileSync(new URL('./portal.css', import.meta.url), 'utf8')
+const designCss = readFileSync(new URL('../design/design.css', import.meta.url), 'utf8')
 
 function block(selector: string): Record<string, number[]> {
   const start = css.indexOf(selector + ' {')
@@ -31,6 +32,19 @@ const MODES = [
   ['dark (forced)', block('[data-portal][data-portal-theme="dark"]')],
   ['dark (OS preference)', block('[data-portal]:not([data-portal-theme="light"])')],
 ] as const
+
+it('expired membership text stays readable across the blue membership-card gradient', () => {
+  const value = designCss.match(/\.p-member-card\[data-portal\]\[data-portal-theme="dark"\] \{ --p-danger:(\d+) (\d+) (\d+); \}/)
+  expect(value, 'the dark card must override the paper danger tone').not.toBeNull()
+  const foreground = value!.slice(1).map(Number)
+  const gradient = designCss.match(/background:linear-gradient\(57deg,(#[a-f0-9]{6}),(#[a-f0-9]{6})\)/)!
+  expect(gradient).not.toBeNull()
+  for (const hex of gradient.slice(1)) {
+    const background = hex.slice(1).match(/../g)!.map(v => parseInt(v, 16))
+    expect(ratio(foreground, background)).toBeGreaterThanOrEqual(4.5)
+  }
+  expect(designCss).toContain(`.p-card-detail { --p-danger:${foreground.join(' ')}; }`)
+})
 
 describe('portal dark blocks', () => {
   it('the OS-preference dark block and the forced dark block carry the same colours', () => {
