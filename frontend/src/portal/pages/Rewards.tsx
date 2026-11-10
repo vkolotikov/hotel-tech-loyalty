@@ -34,9 +34,10 @@ export function Rewards() {
   const [confirming, setConfirming] = useState<Reward | null>(null)
   const [code, setCode] = useState<string | null>(null)
   const redemptionInFlight = useRef(false)
-  const benefits = useQuery({ queryKey: ['portal-benefits'], queryFn: portalApi.benefits, staleTime: 10_000, refetchOnWindowFocus: true })
-  const rewards = useQuery({ queryKey: ['portal-rewards'], queryFn: portalApi.rewards, staleTime: 10_000, refetchOnWindowFocus: true })
-  const offers = useQuery({ queryKey: ['portal-offers'], queryFn: portalApi.offers, staleTime: 10_000, refetchOnWindowFocus: true })
+  const enabled = !!boot?.capabilities.loyalty && !!boot.member
+  const benefits = useQuery({ queryKey: ['portal-benefits'], queryFn: portalApi.benefits, enabled, staleTime: 10_000, refetchOnWindowFocus: true })
+  const rewards = useQuery({ queryKey: ['portal-rewards'], queryFn: portalApi.rewards, enabled, staleTime: 10_000, refetchOnWindowFocus: true })
+  const offers = useQuery({ queryKey: ['portal-offers'], queryFn: portalApi.offers, enabled, staleTime: 10_000, refetchOnWindowFocus: true })
   const errorMessage = (error: unknown, fallback: string) => {
     const c = apiErrorCode(error)
     return c === 'membership_not_started' || c === 'membership_expired' ? t(`portal.rewards.${c}`) : apiMessage(error, fallback)
@@ -70,6 +71,7 @@ export function Rewards() {
     onError: e => toast.error(errorMessage(e, t('portal.rewards.claim_failed', 'Could not claim that offer'))),
   })
   const balance = rewards.data?.current_points ?? boot?.member?.current_points ?? 0
+  if (!enabled) return <EmptyState title={t('portal.rewards.catalogue_empty', 'No rewards are available right now. Check back soon.')} />
   const items: Item[] = []
   for (const b of benefits.data?.benefits ?? []) {
     const open = b.request

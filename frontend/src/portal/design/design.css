@@ -185,6 +185,10 @@
 .p-reward-grid .p-reward-copy { flex:1; flex-direction:column; align-items:stretch; }
 .p-reward-grid .p-reward-text { flex:1; }
 .p-reward-grid .p-reward-action { margin-top:auto; }
+@media(pointer:coarse) {
+  .p-qr-button,.p-section-heading button,.p-section-heading a,.p-sheet-close,.p-header-bell,.p-nav-link { min-height:44px; }
+  .p-sheet-close,.p-header-bell { min-width:44px; }
+}
 @media(max-width:767px) {
   .p-reward-grid .p-reward-copy { flex-direction:row; align-items:center; }
   .p-reward-grid .p-reward-action { margin-top:0; }

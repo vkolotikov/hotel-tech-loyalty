@@ -38,7 +38,7 @@ export function PortalShell({ children }: { children: ReactNode }) {
           </NavLink>
           <nav className="p-desktop-nav" aria-label={t('portal.shell.menu', 'Menu')}>{links}</nav>
           <div className="p-header-actions">
-            {data?.member && <>
+            {data?.member && !portalOff && <>
               <Button variant="secondary" size="sm" onClick={() => panels.open('card')}><PortalIcon name="qr" />{t('portal.design.my_card', 'My card')}</Button>
               <button type="button" className="p-header-bell" title={t('portal.inbox.title', 'Inbox')} aria-label={t('portal.design.updates', 'Updates')} onClick={() => panels.open('updates')}>
                 <PortalIcon name="bell" />
