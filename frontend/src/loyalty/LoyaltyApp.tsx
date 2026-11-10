@@ -9,6 +9,7 @@ import { LoyaltyProvider } from './LoyaltyProvider'
 import { OverviewShell } from './overview/OverviewShell'
 import { OverviewSkeleton } from './overview/OverviewUI'
 import { ChunkErrorBoundary } from '../components/ChunkErrorBoundary'
+import { legacyDestination } from './management/navigation'
 
 // Phones opening Home should not download the campaign editors, charts or scanner decoder.
 const CampaignCache = lazy(() => import('./campaigns/design/CampaignUI').then(m => ({ default: m.CampaignCache })))
@@ -56,6 +57,8 @@ export function LoyaltyApp() {
   if (!token) return <Navigate to={loginPath(location)} replace />
   if (user?.user_type === 'member') return <Navigate to="/portal" replace />
   if (user?.loyalty_scan_only && location.pathname !== '/loyalty/partner') return <Navigate to="/loyalty/partner" replace />
+  const destination = legacyDestination(location.pathname, location.search, location.hash)
+  if (destination) return <Navigate to={destination} replace />
   if (location.pathname.replace(/\/$/, '') === '/loyalty/partner') return <PageLoad><PartnerScanPage /></PageLoad>
 
   if (location.pathname.replace(/\/$/, '') === '/loyalty/overview') {
@@ -83,6 +86,7 @@ export function LoyaltyApp() {
           <Route path="program" element={<ProgramPage />} />
           <Route path="options" element={<EarnPage />} />
           <Route path="options/setup" element={<SetupWizard />} />
+          <Route path="program/setup" element={<SetupWizard />} />
           <Route path="settings" element={<SettingsPage />} />
           <Route path="partners" element={<PartnersPage />} />
           <Route path="rewards" element={<RewardsPage />} />

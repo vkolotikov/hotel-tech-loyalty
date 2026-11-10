@@ -1,0 +1,882 @@
+[
+  {
+    "key": "tierCard",
+    "screen": "levels",
+    "figma_asset": "imgIllustrationBrushedGoldMembershipCard",
+    "source_file": "levels-c2bc0.svg",
+    "local": "frontend/src/loyalty/management/assets/levels-c2bc0.svg",
+    "sha256": "d156ba40561883b1b68277eca04057059a563aa60aa391079b4404cde1dbc713",
+    "width": 222.0,
+    "height": 156.0
+  },
+  {
+    "key": "bronze",
+    "screen": "levels",
+    "figma_asset": "imgIconBronze",
+    "source_file": "levels-df325.svg",
+    "local": "frontend/src/loyalty/management/assets/levels-df325.svg",
+    "sha256": "55f8487fda61926256796ef242ee3e1cc362c445a1588851072af42bad17dc57",
+    "width": 24.0,
+    "height": 24.0
+  },
+  {
+    "key": "silver",
+    "screen": "levels",
+    "figma_asset": "imgIconSilver",
+    "source_file": "levels-b6cae.svg",
+    "local": "frontend/src/loyalty/management/assets/levels-b6cae.svg",
+    "sha256": "65865de0bb427d783a6ad5b66e18c457c698f91f1209fb96b53f4d349306da32",
+    "width": 24.0,
+    "height": 24.0
+  },
+  {
+    "key": "gold",
+    "screen": "levels",
+    "figma_asset": "imgIconGold",
+    "source_file": "levels-54da2.svg",
+    "local": "frontend/src/loyalty/management/assets/levels-54da2.svg",
+    "sha256": "6d8ee6e134a992c60265980f1f3c972502862167c02e47255c4edca573925024",
+    "width": 24.0,
+    "height": 24.0
+  },
+  {
+    "key": "platinum",
+    "screen": "levels",
+    "figma_asset": "imgIconPlatinum",
+    "source_file": "levels-f1897.svg",
+    "local": "frontend/src/loyalty/management/assets/levels-f1897.svg",
+    "sha256": "773403ab6d24429c7dd11949c630628b06b3ff4813dc2c188380cba424357eda",
+    "width": 24.0,
+    "height": 24.0
+  },
+  {
+    "key": "diamond",
+    "screen": "levels",
+    "figma_asset": "imgIconDiamond",
+    "source_file": "levels-68fa5.svg",
+    "local": "frontend/src/loyalty/management/assets/levels-68fa5.svg",
+    "sha256": "4728cf0cefff0444ae9cedd226b50a1aa41a95bb63e07ba3a490d3490d4f9198",
+    "width": 24.0,
+    "height": 24.0
+  },
+  {
+    "key": "steps",
+    "screen": "levels",
+    "figma_asset": "imgIconSteps",
+    "source_file": "levels-4f575.svg",
+    "local": "frontend/src/loyalty/management/assets/levels-4f575.svg",
+    "sha256": "dbf84ea7e18e2c32657aa87d0d16aa147f656e1e9b5653a536848fc01ff5e386",
+    "width": 22.0,
+    "height": 22.0
+  },
+  {
+    "key": "members",
+    "screen": "levels",
+    "figma_asset": "imgIconMembers",
+    "source_file": "levels-38333.svg",
+    "local": "frontend/src/loyalty/overview/assets/38333.svg",
+    "sha256": "26543803facae927b6ea13712ee81487302df0eb0243c8c7b198f4a5245ffa0d",
+    "width": 20.0,
+    "height": 20.0
+  },
+  {
+    "key": "drink",
+    "screen": "levels",
+    "figma_asset": "imgIconDrink",
+    "source_file": "levels-5b764.svg",
+    "local": "frontend/src/loyalty/management/assets/levels-5b764.svg",
+    "sha256": "3d86289021ecc5564638123fb7a6f6a80ecf6b2927541af337bef4b327a9c66d",
+    "width": 17.0,
+    "height": 17.0
+  },
+  {
+    "key": "clockGold",
+    "screen": "levels",
+    "figma_asset": "imgIconClock",
+    "source_file": "levels-ac3ea.svg",
+    "local": "frontend/src/loyalty/management/assets/levels-ac3ea.svg",
+    "sha256": "82c3cd1c87709e9a2d8fac764de3dcbfdcaef982be10a12072af6d19d110e458",
+    "width": 17.0,
+    "height": 17.0
+  },
+  {
+    "key": "bed",
+    "screen": "levels",
+    "figma_asset": "imgIconBed",
+    "source_file": "levels-adc08.svg",
+    "local": "frontend/src/loyalty/management/assets/levels-adc08.svg",
+    "sha256": "271c3c8dac889f244822ea2217207b8f52f65a05cd46737d711e5a58d6056da4",
+    "width": 17.0,
+    "height": 17.0
+  },
+  {
+    "key": "percent",
+    "screen": "levels",
+    "figma_asset": "imgIconPercent",
+    "source_file": "levels-02192.svg",
+    "local": "frontend/src/loyalty/management/assets/levels-02192.svg",
+    "sha256": "1011f5418481ae9a29a29e0da77e8151e03e18f203dd8ce380700c1066208fcc",
+    "width": 17.0,
+    "height": 17.0
+  },
+  {
+    "key": "sunGold",
+    "screen": "levels",
+    "figma_asset": "imgIconSun",
+    "source_file": "levels-d70c9.svg",
+    "local": "frontend/src/loyalty/management/assets/levels-d70c9.svg",
+    "sha256": "636d5f8825873eca9929260a6532d395c84dd6754baab34c01453c2529c1056a",
+    "width": 17.0,
+    "height": 17.0
+  },
+  {
+    "key": "warning",
+    "screen": "levels",
+    "figma_asset": "imgIconAlert",
+    "source_file": "levels-10e52.svg",
+    "local": "frontend/src/loyalty/management/assets/levels-10e52.svg",
+    "sha256": "9ec76e0832b1be4aa19538c5563b0d1f2352955802405103345dc9533f2c0b76",
+    "width": 15.0,
+    "height": 15.0
+  },
+  {
+    "key": "info",
+    "screen": "levels",
+    "figma_asset": "imgIconInfo",
+    "source_file": "levels-1d823.svg",
+    "local": "frontend/src/loyalty/management/assets/levels-1d823.svg",
+    "sha256": "830a134283065b3ebd4bb1773ceb026fe585c15784f259df84cbfeba706b38d7",
+    "width": 18.0,
+    "height": 18.0
+  },
+  {
+    "key": "arrow",
+    "screen": "levels",
+    "figma_asset": "imgIconArrow",
+    "source_file": "levels-2c0d8.svg",
+    "local": "frontend/src/loyalty/management/assets/levels-2c0d8.svg",
+    "sha256": "74f24167d755d64df813935542506ebd8a17a2d1ae2251fbe16378611f22bea6",
+    "width": 16.0,
+    "height": 16.0
+  },
+  {
+    "key": "chevron",
+    "screen": "levels",
+    "figma_asset": "imgIconChevron",
+    "source_file": "levels-38b74.svg",
+    "local": "frontend/src/loyalty/management/assets/levels-38b74.svg",
+    "sha256": "8b7c36b6e56cde9b79ebfe305b813259093fba538425cd508e590d7f7e091dd0",
+    "width": 16.0,
+    "height": 16.0
+  },
+  {
+    "key": "activeDot",
+    "screen": "levels",
+    "figma_asset": "imgEllipse",
+    "source_file": "levels-17fc5.svg",
+    "local": "frontend/src/loyalty/overview/assets/17fc5.svg",
+    "sha256": "e409dc7b4ef72fb377afc4ab9184704cac65fc03aa5468b6898bd7c57305817f",
+    "width": 5.0,
+    "height": 5.0
+  },
+  {
+    "key": "warningDot",
+    "screen": "levels",
+    "figma_asset": "imgEllipse1",
+    "source_file": "levels-b7fd2.svg",
+    "local": "frontend/src/loyalty/overview/assets/b7fd2.svg",
+    "sha256": "6dd809ea56500f920dd376d39cf31aa7b22dd3eec5e37d7fe4525b14ae0c72cb",
+    "width": 5.0,
+    "height": 5.0
+  },
+  {
+    "key": "accessArt",
+    "screen": "places",
+    "figma_asset": "imgEditableArtworkAccess",
+    "source_file": "places-b04e6.svg",
+    "local": "frontend/src/loyalty/management/assets/places-b04e6.svg",
+    "sha256": "a21e4c4a7342ff64437b0cf25a2a22919a5ec2f431517aaaadf9c9e0cf3a9911",
+    "width": 216.0,
+    "height": 150.0
+  },
+  {
+    "key": "placePin",
+    "screen": "places",
+    "figma_asset": "imgIconPin",
+    "source_file": "places-49f16.svg",
+    "local": "frontend/src/loyalty/management/assets/places-49f16.svg",
+    "sha256": "daf7e2d18c641058eb963e68bcc241ed288273b2f0fe1017eaef84d79ca22877",
+    "width": 22.0,
+    "height": 22.0
+  },
+  {
+    "key": "door",
+    "screen": "places",
+    "figma_asset": "imgIconDoor",
+    "source_file": "places-e05b2.svg",
+    "local": "frontend/src/loyalty/management/assets/places-e05b2.svg",
+    "sha256": "8684d87a670d6c3e1beff6c648c049ce2890db33f84c34efff6523e4c57d334a",
+    "width": 19.0,
+    "height": 19.0
+  },
+  {
+    "key": "leaf",
+    "screen": "places",
+    "figma_asset": "imgIconLeaf",
+    "source_file": "places-ec82d.svg",
+    "local": "frontend/src/loyalty/management/assets/places-ec82d.svg",
+    "sha256": "377221f3762f4fc0e46bf0569dcf9fc155974ba789b36dbb06651bdad8f8e99f",
+    "width": 19.0,
+    "height": 19.0
+  },
+  {
+    "key": "sun",
+    "screen": "places",
+    "figma_asset": "imgIconSun",
+    "source_file": "places-6d57c.svg",
+    "local": "frontend/src/loyalty/management/assets/places-6d57c.svg",
+    "sha256": "18e96c118e93da3ac7127fdc318deb49d8c7aa8b2a81cbb913bc28f46f45b0c7",
+    "width": 19.0,
+    "height": 19.0
+  },
+  {
+    "key": "shield",
+    "screen": "places",
+    "figma_asset": "imgIconShield",
+    "source_file": "places-daa5b.svg",
+    "local": "frontend/src/loyalty/management/assets/places-daa5b.svg",
+    "sha256": "e89b7ad5540971fa1d4977e7d8383a9d6afae4e4760fc6d52bca9bceaf625762",
+    "width": 22.0,
+    "height": 22.0
+  },
+  {
+    "key": "tap",
+    "screen": "places",
+    "figma_asset": "imgIconTap1",
+    "source_file": "places-d82d0.svg",
+    "local": "frontend/src/loyalty/management/assets/places-d82d0.svg",
+    "sha256": "687b9e3aa05c71949aa1081c113514465c6c5b2ea57e0d890156f2e59691427d",
+    "width": 14.0,
+    "height": 14.0
+  },
+  {
+    "key": "qr",
+    "screen": "places",
+    "figma_asset": "imgIconQr",
+    "source_file": "places-36d03.svg",
+    "local": "frontend/src/loyalty/management/assets/places-36d03.svg",
+    "sha256": "548ffe181b8772fc07a1073602190f8a04b9bef5409ee17554e9a37e641ec32e",
+    "width": 14.0,
+    "height": 14.0
+  },
+  {
+    "key": "search",
+    "screen": "places",
+    "figma_asset": "imgIconSearch2",
+    "source_file": "places-e3323.svg",
+    "local": "frontend/src/loyalty/management/assets/places-e3323.svg",
+    "sha256": "0e3383d6b96c017ebe340ddf23881dd3a99750ec2155b5758cc4fbb1bdbc3e58",
+    "width": 14.0,
+    "height": 14.0
+  },
+  {
+    "key": "peopleGold",
+    "screen": "places",
+    "figma_asset": "imgIconPeople",
+    "source_file": "places-071d2.svg",
+    "local": "frontend/src/loyalty/management/assets/places-071d2.svg",
+    "sha256": "5e866cbb81732c0bce25a3e6938488d91c2c018b5a613d136ba3273d6e96c2f7",
+    "width": 17.0,
+    "height": 17.0
+  },
+  {
+    "key": "clock",
+    "screen": "places",
+    "figma_asset": "imgIconClock",
+    "source_file": "places-00be4.svg",
+    "local": "frontend/src/loyalty/management/assets/places-00be4.svg",
+    "sha256": "d57c36aa3a5ec21a3c25d32e789d06550a293b09f44c45608d3a067fa3962205",
+    "width": 17.0,
+    "height": 17.0
+  },
+  {
+    "key": "check",
+    "screen": "places",
+    "figma_asset": "imgIconCheck",
+    "source_file": "places-3a79e.svg",
+    "local": "frontend/src/loyalty/management/assets/places-3a79e.svg",
+    "sha256": "219508dcbed4488fd6c1d248598d2acf486195670457b7a185dba34bafcab107",
+    "width": 17.0,
+    "height": 17.0
+  },
+  {
+    "key": "setupArt",
+    "screen": "setup",
+    "figma_asset": "imgEditableArtworkSetup",
+    "source_file": "setup-69c51.svg",
+    "local": "frontend/src/loyalty/management/assets/setup-69c51.svg",
+    "sha256": "36680c7cb4d0fc94eb70c37c41e5c6e39af1ae9b73446be28510213ac0e32000",
+    "width": 216.0,
+    "height": 150.0
+  },
+  {
+    "key": "card",
+    "screen": "setup",
+    "figma_asset": "imgIconCard1",
+    "source_file": "setup-b3723.svg",
+    "local": "frontend/src/loyalty/management/assets/setup-b3723.svg",
+    "sha256": "db06b64dc6216ba242aacc303ccb199c2556024d4a1b471e1fed3925c121c7b2",
+    "width": 22.0,
+    "height": 22.0
+  },
+  {
+    "key": "medal",
+    "screen": "setup",
+    "figma_asset": "imgIconMedal",
+    "source_file": "setup-26553.svg",
+    "local": "frontend/src/loyalty/management/assets/setup-26553.svg",
+    "sha256": "27c4efa00bc58d0b03195dce80f3086162c675af5ae01c246eedd7e56e78cd91",
+    "width": 22.0,
+    "height": 22.0
+  },
+  {
+    "key": "earnArt",
+    "screen": "earning",
+    "figma_asset": "imgEditableArtworkEarn",
+    "source_file": "earning-a9868.svg",
+    "local": "frontend/src/loyalty/management/assets/earning-a9868.svg",
+    "sha256": "0a07a1349a616e472d28db96b2563e9bf40fd689dc1ec7fb6ce48b0a3c2d9c10",
+    "width": 216.0,
+    "height": 150.0
+  },
+  {
+    "key": "coins",
+    "screen": "earning",
+    "figma_asset": "imgIconCoins",
+    "source_file": "earning-cd48f.svg",
+    "local": "frontend/src/loyalty/management/assets/earning-cd48f.svg",
+    "sha256": "2f6eddd6f4a2f3681190fbc190e2c78c103e0c7c3ecf65644756bcd67a86d7d4",
+    "width": 19.0,
+    "height": 19.0
+  },
+  {
+    "key": "receipt",
+    "screen": "earning",
+    "figma_asset": "imgIconReceipt",
+    "source_file": "earning-bd57c.svg",
+    "local": "frontend/src/loyalty/management/assets/earning-bd57c.svg",
+    "sha256": "e2439cc733811b2acfaaa1e86753ed0d07c2ced34099871ab3bbe280cbd81129",
+    "width": 19.0,
+    "height": 19.0
+  },
+  {
+    "key": "ticket",
+    "screen": "earning",
+    "figma_asset": "imgIconTicket",
+    "source_file": "earning-53008.svg",
+    "local": "frontend/src/loyalty/management/assets/earning-53008.svg",
+    "sha256": "e4811e58bb7c62c69332fde7af09dd5e40ae0cb04e4d6069abf9fce8cd4746a4",
+    "width": 19.0,
+    "height": 19.0
+  },
+  {
+    "key": "pin",
+    "screen": "earning",
+    "figma_asset": "imgIconPin",
+    "source_file": "earning-cb89e.svg",
+    "local": "frontend/src/loyalty/management/assets/earning-cb89e.svg",
+    "sha256": "995c729a9cbce90d0cadd9aac1d0643baac1264235ac5e0b8b2fab74d3d4655c",
+    "width": 19.0,
+    "height": 19.0
+  },
+  {
+    "key": "calendar",
+    "screen": "earning",
+    "figma_asset": "imgIconCalendar",
+    "source_file": "earning-1c335.svg",
+    "local": "frontend/src/loyalty/management/assets/earning-1c335.svg",
+    "sha256": "e3fadcba5b6e6b7a393f36f605de3fe077e64e79e3ab35a51656b4d4b2d050a3",
+    "width": 19.0,
+    "height": 19.0
+  },
+  {
+    "key": "purchase",
+    "screen": "earning",
+    "figma_asset": "imgIconCard",
+    "source_file": "earning-9944b.svg",
+    "local": "frontend/src/loyalty/management/assets/earning-9944b.svg",
+    "sha256": "4be0d28e70eb54634b4dd4895865732283eadebd39d1ec43b2c6e2287e77de58",
+    "width": 19.0,
+    "height": 19.0
+  },
+  {
+    "key": "zap",
+    "screen": "earning",
+    "figma_asset": "imgIconZap",
+    "source_file": "earning-14bc6.svg",
+    "local": "frontend/src/loyalty/management/assets/earning-14bc6.svg",
+    "sha256": "ca1e199f5deb7771beea02e717ff184c82a67320c77eb2e889fb5e6a5109bf6e",
+    "width": 22.0,
+    "height": 22.0
+  },
+  {
+    "key": "expiry",
+    "screen": "earning",
+    "figma_asset": "imgIconClock",
+    "source_file": "earning-3a95e.svg",
+    "local": "frontend/src/loyalty/management/assets/earning-3a95e.svg",
+    "sha256": "d9c91f343dcb40f42a8c466f4ce1a29a328306dc77a46ffb2d3ae17eddf1c280",
+    "width": 22.0,
+    "height": 22.0
+  },
+  {
+    "key": "pen",
+    "screen": "earning",
+    "figma_asset": "imgIconPen",
+    "source_file": "earning-53dcc.svg",
+    "local": "frontend/src/loyalty/management/assets/earning-53dcc.svg",
+    "sha256": "a6cdfd844e35e87f22339b985f84dadeb0fb3380617dafa61cd89f75420190e7",
+    "width": 15.0,
+    "height": 15.0
+  },
+  {
+    "key": "people",
+    "screen": "earning",
+    "figma_asset": "imgIconPeople",
+    "source_file": "earning-7c640.svg",
+    "local": "frontend/src/loyalty/management/assets/earning-7c640.svg",
+    "sha256": "239d58dc79e3714fa28f2efa1f8a10a55338af205725e5a5f77ba2f5c691d4f9",
+    "width": 17.0,
+    "height": 17.0
+  },
+  {
+    "key": "bookingSmall",
+    "screen": "earning",
+    "figma_asset": "imgIconCalendar1",
+    "source_file": "earning-2805d.svg",
+    "local": "frontend/src/loyalty/management/assets/earning-2805d.svg",
+    "sha256": "852a668653f7eecaa9db9aa87e5393a2b652c73f8366e94d15c6c4500122768b",
+    "width": 17.0,
+    "height": 17.0
+  },
+  {
+    "key": "receiptSmall",
+    "screen": "earning",
+    "figma_asset": "imgIconReceipt1",
+    "source_file": "earning-5ba6c.svg",
+    "local": "frontend/src/loyalty/management/assets/earning-5ba6c.svg",
+    "sha256": "fac8bf24f95c7d3b4db396126469b2d1409c7a76667cb3de4867e9b813c361fb",
+    "width": 17.0,
+    "height": 17.0
+  },
+  {
+    "key": "referralArt",
+    "screen": "bonuses",
+    "figma_asset": "imgEditableArtworkReferral",
+    "source_file": "bonuses-9fb38.svg",
+    "local": "frontend/src/loyalty/management/assets/bonuses-9fb38.svg",
+    "sha256": "295040e0ed713ea31a9ed3e7bfbfba5a57e5afcf60d082f5a057974ef8538b0e",
+    "width": 216.0,
+    "height": 150.0
+  },
+  {
+    "key": "referral",
+    "screen": "bonuses",
+    "figma_asset": "imgIconPeople",
+    "source_file": "bonuses-1cdc6.svg",
+    "local": "frontend/src/loyalty/management/assets/bonuses-1cdc6.svg",
+    "sha256": "086b8fbf4898ee27d65163388e7a13b88f8d7b5571a8eb5413770b3ada71528d",
+    "width": 19.0,
+    "height": 19.0
+  },
+  {
+    "key": "birthday",
+    "screen": "bonuses",
+    "figma_asset": "imgIconCake",
+    "source_file": "bonuses-a2752.svg",
+    "local": "frontend/src/loyalty/management/assets/bonuses-a2752.svg",
+    "sha256": "796f442b0cd6ce4e06b3f320ad4b4ce9c0fcd859125608bbafc1c130ef21052b",
+    "width": 19.0,
+    "height": 19.0
+  },
+  {
+    "key": "welcome",
+    "screen": "bonuses",
+    "figma_asset": "imgIconGift",
+    "source_file": "bonuses-e4a9d.svg",
+    "local": "frontend/src/loyalty/management/assets/bonuses-e4a9d.svg",
+    "sha256": "7788243736549461919354220cdcee479bf5f5c560e029b55003a953c7fd0d47",
+    "width": 19.0,
+    "height": 19.0
+  },
+  {
+    "key": "milestone",
+    "screen": "bonuses",
+    "figma_asset": "imgIconGift2",
+    "source_file": "bonuses-8a8d2.svg",
+    "local": "frontend/src/loyalty/management/assets/bonuses-8a8d2.svg",
+    "sha256": "cc440555f71a164b4f1e8ed9cdecd892697b4d85d2e5855190067ab189547a25",
+    "width": 22.0,
+    "height": 22.0
+  },
+  {
+    "key": "boost",
+    "screen": "bonuses",
+    "figma_asset": "imgIconZap",
+    "source_file": "bonuses-14bc6.svg",
+    "local": "frontend/src/loyalty/management/assets/earning-14bc6.svg",
+    "sha256": "ca1e199f5deb7771beea02e717ff184c82a67320c77eb2e889fb5e6a5109bf6e",
+    "width": 22.0,
+    "height": 22.0
+  },
+  {
+    "key": "boostSmall",
+    "screen": "bonuses",
+    "figma_asset": "imgIconZap1",
+    "source_file": "bonuses-fec13.svg",
+    "local": "frontend/src/loyalty/management/assets/bonuses-fec13.svg",
+    "sha256": "ffbe2bf02300007dff716f7b44fd54d6bc1213fbf539c944b510182ce78183b3",
+    "width": 18.0,
+    "height": 18.0
+  },
+  {
+    "key": "bonusCalendar",
+    "screen": "bonuses",
+    "figma_asset": "imgIconCalendar",
+    "source_file": "bonuses-fda0b.svg",
+    "local": "frontend/src/loyalty/management/assets/bonuses-fda0b.svg",
+    "sha256": "a2bb472fc8b414116795dfe1deb44ecd81d03be330a1850f3b8fda350898644c",
+    "width": 18.0,
+    "height": 18.0
+  },
+  {
+    "key": "rewardArt",
+    "screen": "rewards",
+    "figma_asset": "imgEditableArtworkReward",
+    "source_file": "rewards-d5968.svg",
+    "local": "frontend/src/loyalty/management/assets/rewards-d5968.svg",
+    "sha256": "303948cda640047be0bcc07f16a05cf161a5290b973b327ec54cc25af75ccba1",
+    "width": 216.0,
+    "height": 150.0
+  },
+  {
+    "key": "rewardTicket",
+    "screen": "rewards",
+    "figma_asset": "imgIconTicket",
+    "source_file": "rewards-443c2.svg",
+    "local": "frontend/src/loyalty/management/assets/rewards-443c2.svg",
+    "sha256": "9e3bb3ef9ccbecbeab6332c67814f111857277f737403e20599cd85206972d24",
+    "width": 19.0,
+    "height": 19.0
+  },
+  {
+    "key": "rewardCalendar",
+    "screen": "rewards",
+    "figma_asset": "imgIconCalendar",
+    "source_file": "rewards-c39cb.svg",
+    "local": "frontend/src/loyalty/management/assets/rewards-c39cb.svg",
+    "sha256": "175aac3193a1704bdc44c7dd6cdcbc6bddc20d7ebd751575dabd10d628a3e285",
+    "width": 19.0,
+    "height": 19.0
+  },
+  {
+    "key": "rewardPeople",
+    "screen": "rewards",
+    "figma_asset": "imgIconPeople",
+    "source_file": "rewards-022d0.svg",
+    "local": "frontend/src/loyalty/management/assets/rewards-022d0.svg",
+    "sha256": "109b9374525ccb960467df8c44067a2528f1daa4227cf2e60b4f8321c5cb3c06",
+    "width": 19.0,
+    "height": 19.0
+  },
+  {
+    "key": "rewardClock",
+    "screen": "rewards",
+    "figma_asset": "imgIconClock",
+    "source_file": "rewards-366eb.svg",
+    "local": "frontend/src/loyalty/management/assets/rewards-366eb.svg",
+    "sha256": "8ca569cfa0af62ef44960a11aacb1465412c01bd5d54b95583b1dff75d5ddb9f",
+    "width": 19.0,
+    "height": 19.0
+  },
+  {
+    "key": "rewardFile",
+    "screen": "rewards",
+    "figma_asset": "imgIconFile",
+    "source_file": "rewards-156e8.svg",
+    "local": "frontend/src/loyalty/management/assets/rewards-156e8.svg",
+    "sha256": "39f828cd6f1970120bc81261efa26175e3c6aee2f569964d591f7ee18d25fd06",
+    "width": 19.0,
+    "height": 19.0
+  },
+  {
+    "key": "rewardTag",
+    "screen": "rewards",
+    "figma_asset": "imgIconTag",
+    "source_file": "rewards-3bbb3.svg",
+    "local": "frontend/src/loyalty/management/assets/rewards-3bbb3.svg",
+    "sha256": "2faeb4c19ad86a563559e2f200496e8fafdd377ad336f34a3239a01d678ca2d7",
+    "width": 19.0,
+    "height": 19.0
+  },
+  {
+    "key": "rewardBook",
+    "screen": "rewards",
+    "figma_asset": "imgIconBook",
+    "source_file": "rewards-459be.svg",
+    "local": "frontend/src/loyalty/management/assets/rewards-459be.svg",
+    "sha256": "7eb49aa3dcf2c6094b7507adadda349e2717511655df571356992c4b35a61e6c",
+    "width": 19.0,
+    "height": 19.0
+  },
+  {
+    "key": "rewardCalendarAlt",
+    "screen": "rewards",
+    "figma_asset": "imgIconCalendar1",
+    "source_file": "rewards-1c335.svg",
+    "local": "frontend/src/loyalty/management/assets/earning-1c335.svg",
+    "sha256": "e3fadcba5b6e6b7a393f36f605de3fe077e64e79e3ab35a51656b4d4b2d050a3",
+    "width": 19.0,
+    "height": 19.0
+  },
+  {
+    "key": "redeemCoin",
+    "screen": "rewards",
+    "figma_asset": "imgIconCoin",
+    "source_file": "rewards-f6db4.svg",
+    "local": "frontend/src/loyalty/management/assets/rewards-f6db4.svg",
+    "sha256": "00b89c0f761843e735816d222dd898a0569efb4ae79a0dc5402c38d48a7947dc",
+    "width": 19.0,
+    "height": 19.0
+  },
+  {
+    "key": "redeemQr",
+    "screen": "rewards",
+    "figma_asset": "imgIconQr",
+    "source_file": "rewards-fc04f.svg",
+    "local": "frontend/src/loyalty/management/assets/rewards-fc04f.svg",
+    "sha256": "52bb0d8e1ae396ba1d3c3876c7c5a69934b140191a11f548788414df93604893",
+    "width": 19.0,
+    "height": 19.0
+  },
+  {
+    "key": "perkArt",
+    "screen": "perks",
+    "figma_asset": "imgEditableArtworkPerk",
+    "source_file": "perks-ca68b.svg",
+    "local": "frontend/src/loyalty/management/assets/perks-ca68b.svg",
+    "sha256": "b80e4372fe739323e8c5f774e7e00d73490256a0ea6bfa276a52726300175525",
+    "width": 216.0,
+    "height": 150.0
+  },
+  {
+    "key": "perkPeople",
+    "screen": "perks",
+    "figma_asset": "imgIconPeople",
+    "source_file": "perks-720fc.svg",
+    "local": "frontend/src/loyalty/management/assets/perks-720fc.svg",
+    "sha256": "ea9c443c11c525166cf8571c4c63181268248c452d5315c50443f5cdc2d63e99",
+    "width": 19.0,
+    "height": 19.0
+  },
+  {
+    "key": "perkBook",
+    "screen": "perks",
+    "figma_asset": "imgIconBook",
+    "source_file": "perks-459be.svg",
+    "local": "frontend/src/loyalty/management/assets/rewards-459be.svg",
+    "sha256": "7eb49aa3dcf2c6094b7507adadda349e2717511655df571356992c4b35a61e6c",
+    "width": 19.0,
+    "height": 19.0
+  },
+  {
+    "key": "perkSpark",
+    "screen": "perks",
+    "figma_asset": "imgIconSpark",
+    "source_file": "perks-c4790.svg",
+    "local": "frontend/src/loyalty/management/assets/perks-c4790.svg",
+    "sha256": "0887e8bad50e6bfdb826e6988b0c31252a5c874d92281dd7eda90b3f9a3ffd78",
+    "width": 19.0,
+    "height": 19.0
+  },
+  {
+    "key": "perkTag",
+    "screen": "perks",
+    "figma_asset": "imgIconTag",
+    "source_file": "perks-3bbb3.svg",
+    "local": "frontend/src/loyalty/management/assets/rewards-3bbb3.svg",
+    "sha256": "2faeb4c19ad86a563559e2f200496e8fafdd377ad336f34a3239a01d678ca2d7",
+    "width": 19.0,
+    "height": 19.0
+  },
+  {
+    "key": "perkBed",
+    "screen": "perks",
+    "figma_asset": "imgIconBed",
+    "source_file": "perks-83a28.svg",
+    "local": "frontend/src/loyalty/management/assets/perks-83a28.svg",
+    "sha256": "6ef72472a1708d13507408ed16a1682d1476cd7ac376e3c2e0857588d0d7a73a",
+    "width": 19.0,
+    "height": 19.0
+  },
+  {
+    "key": "perkCalendar",
+    "screen": "perks",
+    "figma_asset": "imgIconCalendar",
+    "source_file": "perks-1c335.svg",
+    "local": "frontend/src/loyalty/management/assets/earning-1c335.svg",
+    "sha256": "e3fadcba5b6e6b7a393f36f605de3fe077e64e79e3ab35a51656b4d4b2d050a3",
+    "width": 19.0,
+    "height": 19.0
+  },
+  {
+    "key": "perkCake",
+    "screen": "perks",
+    "figma_asset": "imgIconCake",
+    "source_file": "perks-a2752.svg",
+    "local": "frontend/src/loyalty/management/assets/bonuses-a2752.svg",
+    "sha256": "796f442b0cd6ce4e06b3f320ad4b4ce9c0fcd859125608bbafc1c130ef21052b",
+    "width": 19.0,
+    "height": 19.0
+  },
+  {
+    "key": "perkMedal",
+    "screen": "perks",
+    "figma_asset": "imgIconMedal",
+    "source_file": "perks-0bead.svg",
+    "local": "frontend/src/loyalty/management/assets/perks-0bead.svg",
+    "sha256": "2dd62a1660fc601bb900d33dd732d2a629e8251aaaba7f4b2b380bbf6295e1c9",
+    "width": 17.0,
+    "height": 17.0
+  },
+  {
+    "key": "delivery",
+    "screen": "perks",
+    "figma_asset": "imgIconPeople2",
+    "source_file": "perks-f2b20.svg",
+    "local": "frontend/src/loyalty/management/assets/perks-f2b20.svg",
+    "sha256": "d04cb70226adbacf2a85c47d04dfe71fbedfcdfd1a1f9d2674efe2b278271abf",
+    "width": 17.0,
+    "height": 17.0
+  },
+  {
+    "key": "offerArt",
+    "screen": "offers",
+    "figma_asset": "imgEditableArtworkSpaOfferTicket",
+    "source_file": "offers-e4072.svg",
+    "local": "frontend/src/loyalty/management/assets/offers-e4072.svg",
+    "sha256": "3a74f279ccb19b242789909ae6a9a340d71b4676b4704e26d333c3a5d103ff8e",
+    "width": 216.0,
+    "height": 150.0
+  },
+  {
+    "key": "offerLeaf",
+    "screen": "offers",
+    "figma_asset": "imgIconLeaf",
+    "source_file": "offers-dc6b8.svg",
+    "local": "frontend/src/loyalty/management/assets/offers-dc6b8.svg",
+    "sha256": "73158dc2d31265bd60fba14781bb609eebc53b7e58d094ef6fa6f4b0519236df",
+    "width": 19.0,
+    "height": 19.0
+  },
+  {
+    "key": "offerGift",
+    "screen": "offers",
+    "figma_asset": "imgIconGift",
+    "source_file": "offers-89659.svg",
+    "local": "frontend/src/loyalty/management/assets/offers-89659.svg",
+    "sha256": "a7732895e29c118986babd03d135f21114b20478d36f29e78983b2e826ec4698",
+    "width": 19.0,
+    "height": 19.0
+  },
+  {
+    "key": "offerCake",
+    "screen": "offers",
+    "figma_asset": "imgIconCake",
+    "source_file": "offers-a2752.svg",
+    "local": "frontend/src/loyalty/management/assets/bonuses-a2752.svg",
+    "sha256": "796f442b0cd6ce4e06b3f320ad4b4ce9c0fcd859125608bbafc1c130ef21052b",
+    "width": 19.0,
+    "height": 19.0
+  },
+  {
+    "key": "offerMedal",
+    "screen": "offers",
+    "figma_asset": "imgIconMedal",
+    "source_file": "offers-6afe0.svg",
+    "local": "frontend/src/loyalty/management/assets/offers-6afe0.svg",
+    "sha256": "f563c58e3081fab75913c1887555454c4e2725831cedff6753ec0318e5735f36",
+    "width": 19.0,
+    "height": 19.0
+  },
+  {
+    "key": "offerClock",
+    "screen": "offers",
+    "figma_asset": "imgIconClock",
+    "source_file": "offers-3e21d.svg",
+    "local": "frontend/src/loyalty/management/assets/offers-3e21d.svg",
+    "sha256": "7030a4a237f2987c2cae43af4e6c561e5d883cd8047be60f367520dc6da2b430",
+    "width": 19.0,
+    "height": 19.0
+  },
+  {
+    "key": "offerCalendar",
+    "screen": "offers",
+    "figma_asset": "imgIconCalendar",
+    "source_file": "offers-1c335.svg",
+    "local": "frontend/src/loyalty/management/assets/earning-1c335.svg",
+    "sha256": "e3fadcba5b6e6b7a393f36f605de3fe077e64e79e3ab35a51656b4d4b2d050a3",
+    "width": 19.0,
+    "height": 19.0
+  },
+  {
+    "key": "offerSpark",
+    "screen": "offers",
+    "figma_asset": "imgIconSpark",
+    "source_file": "offers-e1aac.svg",
+    "local": "frontend/src/loyalty/management/assets/offers-e1aac.svg",
+    "sha256": "e75513972b6ad4713223821aae9af6063ba0d6adfdf40e5517ab3ba4948bd6aa",
+    "width": 19.0,
+    "height": 19.0
+  },
+  {
+    "key": "offerTag",
+    "screen": "offers",
+    "figma_asset": "imgIconTag",
+    "source_file": "offers-3bbb3.svg",
+    "local": "frontend/src/loyalty/management/assets/rewards-3bbb3.svg",
+    "sha256": "2faeb4c19ad86a563559e2f200496e8fafdd377ad336f34a3239a01d678ca2d7",
+    "width": 19.0,
+    "height": 19.0
+  },
+  {
+    "key": "lifecycle",
+    "screen": "offers",
+    "figma_asset": "imgLifecycleRail",
+    "source_file": "offers-41a2a.svg",
+    "local": "frontend/src/loyalty/management/assets/offers-41a2a.svg",
+    "sha256": "f6f1a45e8731992ee82b317a3e29a72200235a851f3c4a09982039ca79786a8e",
+    "width": 374.0,
+    "height": 15.0
+  },
+  {
+    "key": "offerPeople",
+    "screen": "offers",
+    "figma_asset": "imgIconPeople",
+    "source_file": "offers-7c640.svg",
+    "local": "frontend/src/loyalty/management/assets/earning-7c640.svg",
+    "sha256": "239d58dc79e3714fa28f2efa1f8a10a55338af205725e5a5f77ba2f5c691d4f9",
+    "width": 17.0,
+    "height": 17.0
+  },
+  {
+    "key": "offerScope",
+    "screen": "offers",
+    "figma_asset": "imgIconCalendar1",
+    "source_file": "offers-b5578.svg",
+    "local": "frontend/src/loyalty/management/assets/offers-b5578.svg",
+    "sha256": "87d9cdf922e06b3e84e73cd55e88852f0ce82a1b4bbaf6fa6d9cae36db095b3c",
+    "width": 17.0,
+    "height": 17.0
+  }
+]
