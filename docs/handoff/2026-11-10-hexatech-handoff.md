@@ -214,12 +214,17 @@ The task-owned loopback services and PostgreSQL cluster are stopped. Shared depe
 The clean release worktree was removed after path/branch/commit validation and unlinking only its dependency
 junction. Private evidence and the earlier cleanup remnant remain untouched.
 
-## Loyalty settings editors — implementation and verification
+## Loyalty settings editors — verified, release prepared
 
 Branch `feature/loyalty-editor-dialogs-20261110` implements the fourteen popup states from Figma page 392:8135.
 Shared compact/wide native dialogs preserve the catalogue and editor URLs, original vectors, canonical saves,
 permissions, validation, picture writes and venue times. Five translated bundles; both themes; protected changed
-drafts and nested assignment/removal surfaces. No backend/schema changes. Source TypeScript, focused Loyalty tests,
-lint and the 88-check compiled administration journey pass. Dedicated editor acceptance and isolated release
-artifact gates are underway; no editor deployment yet. See [the editor audit](../audits/2026-11-10-loyalty-editors.md).
+drafts and nested assignment/removal surfaces. No backend/schema changes. Artifact TypeScript, **6,916 frontend
+tests/469 files**, lint (1,383 legacy diagnostics), and **2,067 required scoped PHP tests** pass. The 88-check
+administration journey and 105 passing editor assertions across rehearsal phases cover desktop/phone/both themes,
+tablet layouts, actual five-language controls, canonical saves, nested draft protection and restored scrolling.
+The required offer description is visible; invalid submissions focus their first field problem. New offer status
+reflects the canonical create behavior. Final CSS also passed 535 focused token/locale checks. The 53-path source
+manifest and whole-source parity are verified. Fresh build and production content checks are next; no editor
+deployment yet. See [the editor audit](../audits/2026-11-10-loyalty-editors.md).
 Next patch compares source against **f6146efee**, including the preceding release's evidence documentation.
