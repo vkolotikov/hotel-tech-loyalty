@@ -110,6 +110,7 @@
   [data-loyalty] .l-ec-page .l-ad-heading { align-items:center; justify-content:space-between; }
   [data-loyalty] .l-ec-page .l-ad-heading > div:first-child { flex:1 1 180px; }
   [data-loyalty] .l-ec-tabs button, [data-loyalty] .l-ec-filters input, [data-loyalty] .l-ec-filters select { min-height:44px; }
+  [data-loyalty][data-overview] .l-ec-page .l-ec-filters input { min-height:44px; }
   [data-loyalty] .l-ec-stats { gap:8px; }
   [data-loyalty] .l-ec-stats > div { padding:12px; }
   [data-loyalty] .l-ec-stats dt { padding:0; }
