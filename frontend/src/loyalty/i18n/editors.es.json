@@ -1,6 +1,8 @@
 {
   "example": "Ejemplo",
   "currency": "Moneda",
+  "memberPreview": "Vista previa del miembro",
+  "editTitle": "Editar {{name}}",
   "calculation": "Cálculo",
   "discardTitle": "¿Descartar los cambios sin guardar?",
   "discardLine": "Sus cambios aún no se han guardado.",

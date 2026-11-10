@@ -1,6 +1,8 @@
 {
   "example": "Exemple",
   "currency": "Devise",
+  "memberPreview": "Aperçu membre",
+  "editTitle": "Modifier {{name}}",
   "calculation": "Calcul",
   "discardTitle": "Abandonner les modifications non enregistrées ?",
   "discardLine": "Vos modifications n’ont pas été enregistrées.",
