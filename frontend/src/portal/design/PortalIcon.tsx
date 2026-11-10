@@ -49,4 +49,3 @@ export type PortalIconName = keyof typeof icons
 export function PortalIcon({ name, tile = false }: { name: PortalIconName; tile?: boolean }) {
   return <span className={tile ? 'p-icon-tile' : 'p-icon'} aria-hidden><picture>{mobile[name] && <source media="(max-width: 767px)" srcSet={mobile[name]} />}<img src={icons[name]} alt="" /></picture></span>
 }
-

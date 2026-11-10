@@ -119,4 +119,3 @@ function InvitePanel() {
     {data?.enabled === false && <p>{t('portal.profile.invite_unavailable', 'Referral links are not available yet.')}</p>}
   </>
 }
-

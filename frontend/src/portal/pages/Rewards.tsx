@@ -138,4 +138,3 @@ function RewardCard({ item: i, compact = false }: { item: Item; compact?: boolea
     <div className="p-reward-copy"><PortalIcon name={i.kind === 'benefit' ? 'rewards' : 'ticket'} tile /><div className="p-reward-text"><h3>{i.title}</h3>{i.body && <p>{i.body}</p>}{i.note && i.note !== i.body && <p className="p-reward-note">{i.note}</p>}{i.terms && <details className="p-reward-terms"><summary>{t('portal.design.details', 'Details')}</summary><p>{i.terms}</p></details>}</div><div className="p-reward-action">{i.action}</div></div>
   </article>
 }
-

@@ -171,4 +171,3 @@ try {
   check(errors.length === 0, 'no browser runtime errors')
   await fs.writeFile(path.join(out, 'result.json'), JSON.stringify({ checks, errors }, null, 2))
 } finally { await browser.close() }
-

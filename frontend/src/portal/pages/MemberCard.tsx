@@ -54,4 +54,3 @@ export function MemberQr() {
   if (!card?.qr_svg && !card?.qr_image) return <div className="p-qr">{isError ? <button type="button" onClick={() => { void refetch() }} className="text-xs">{t('portal.common.retry', 'Try again')}</button> : <span className="text-xs">{t('portal.common.loading', 'Loading…')}</span>}</div>
   return <div className="p-qr" role="img" aria-label={t('portal.design.member_qr', 'Membership QR code')}>{card.qr_svg ? <div dangerouslySetInnerHTML={{ __html: card.qr_svg }} /> : <img src={card.qr_image!} alt="" />}</div>
 }
-
