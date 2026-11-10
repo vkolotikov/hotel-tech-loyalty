@@ -1,0 +1,1 @@
+import{tr as e}from"./index-XF7U4AOU.js";function t(){let{t}=e();return e=>t(e.key,e.fallback,e.vars)}export{t};
