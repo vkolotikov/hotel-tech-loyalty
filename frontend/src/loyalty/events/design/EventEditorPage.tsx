@@ -39,7 +39,14 @@ export function EventEditorPage() {
 export function EventEditor({ event, options, canChange, guard }: { event: LoyaltyEventRow | null; options: EventOptions; canChange: boolean; guard: EarnGuard }) {
   const say = useEventWords(), { t, i18n } = useTranslation(), boot = useBoot(), navigate = useNavigate(), client = useQueryClient()
   const [params] = useSearchParams(), formRef = useRef<HTMLFormElement>(null)
-  const close = () => guard.go(`/loyalty/events${params.size ? `?${params}` : ''}`)
+  const close = () => {
+    const back = new URLSearchParams(params)
+    if (event) {
+      back.set('selected', String(event.id))
+      if (!back.has('tab')) back.set('tab', event.status === 'draft' ? 'drafts' : event.phase === 'ended' ? 'past' : 'upcoming')
+    }
+    guard.go(`/loyalty/events${back.size ? `?${back}` : ''}`)
+  }
   const places = options.places.filter(p => p.is_active || p.id === event?.place?.id)
   const [initial] = useState(() => event ? formOf(event) : newForm(venueNow(boot.venue.timezone), places.length > 0))
   const [form, setForm] = useState(initial), [tried, setTried] = useState(false), [review, setReview] = useState(false), [partial, setPartial] = useState(false)
