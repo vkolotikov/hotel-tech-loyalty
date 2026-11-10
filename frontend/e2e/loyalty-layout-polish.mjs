@@ -34,7 +34,7 @@ try {
   await page.getByRole('button', { name: 'Sign in', exact: true }).click()
   await page.waitForURL(u => !u.pathname.endsWith('/login'))
   const screens = { levels: '/loyalty/program?tab=tiers', places: '/loyalty/program?tab=places', earning: '/loyalty/options?tab=earn', bonuses: '/loyalty/options?tab=bonus', rewards: '/loyalty/rewards', perks: '/loyalty/rewards?tab=benefits', offers: '/loyalty/rewards?tab=offers' }
-  for (const theme of ['dark', 'light']) for (const width of [1440, 1280, 768, 390]) {
+  for (const theme of ['dark', 'light']) for (const width of [1440, 1280, 1024, 768, 390]) {
     await reset()
     await page.setViewportSize({ width, height: 900 })
     await page.evaluate(theme => localStorage.setItem('loyalty:look', JSON.stringify({ theme, rail: 'full' })), theme)
