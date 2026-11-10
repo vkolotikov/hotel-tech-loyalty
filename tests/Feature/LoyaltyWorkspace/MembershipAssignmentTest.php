@@ -149,4 +149,12 @@ class MembershipAssignmentTest extends TestCase
             ->assertOk()->assertJsonPath('member.valid_until', '2026-10-04')->assertJsonPath('member.membership_mode', 'earned');
         $this->assertFalse(\App\Services\Loyalty\Members\MembershipValidity::benefitsAvailable($this->grace->fresh()));
     }
+
+    public function test_saving_earned_mode_does_not_migrate_a_legacy_end_only_membership(): void
+    {
+        DB::table('loyalty_members')->where('id', $this->grace->id)->update(['membership_valid_until' => '2026-10-04']);
+        $this->assertTrue(\App\Services\Loyalty\Members\MembershipValidity::benefitsAvailable($this->grace->fresh()));
+        $this->asManager()->putJson($this->api("members/{$this->grace->id}/membership"), ['membership_mode' => 'earned', 'idempotency_key' => 'legacy-no-op'])->assertOk();
+        $this->assertTrue(\App\Services\Loyalty\Members\MembershipValidity::benefitsAvailable($this->grace->fresh()));
+    }
 }

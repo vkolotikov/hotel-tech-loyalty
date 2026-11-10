@@ -105,7 +105,7 @@ final class MembershipAssignment
     private static function setMode(LoyaltyMember $member, string $mode): void
     {
         $values = ['membership_mode' => $mode, 'tier_locked' => $mode === 'assigned'];
-        if (\Illuminate\Support\Facades\Schema::hasColumn('loyalty_members', 'membership_period_enforced')) $values['membership_period_enforced'] = true;
+        if ($mode === 'assigned' && \Illuminate\Support\Facades\Schema::hasColumn('loyalty_members', 'membership_period_enforced')) $values['membership_period_enforced'] = true;
         $member->forceFill($values)->save();
     }
 }
