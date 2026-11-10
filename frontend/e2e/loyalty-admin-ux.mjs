@@ -26,7 +26,7 @@ async function call(endpoint,method='GET',data,auth=token){
  const body=await response.json();if(response.status()>=400)throw Error(`${method} ${endpoint}: ${response.status()} ${body.error || ''}`);return body
 }
 let token
-async function go(url){await page.goto(base+url);await page.locator('main h1').waitFor();await page.waitForFunction(()=>!document.querySelector('[data-loyalty] main')?.textContent.includes('Loading…'));await page.evaluate(()=>document.fonts.ready);await page.waitForTimeout(150)}
+async function go(url){await page.goto(base+url);await page.locator('main h1').waitFor();await page.waitForFunction(()=>!document.querySelector('main .animate-pulse'));await page.evaluate(()=>document.fonts.ready);await page.waitForTimeout(150)}
 try {
  await resetCounters()
  await page.goto(base+'/loyalty/login');await page.getByLabel('Email',{exact:true}).fill(fixture.roles.manager.email);await page.getByLabel('Password',{exact:true}).fill(fixture.roles.manager.password);await page.getByRole('button',{name:'Sign in',exact:true}).click();await page.waitForURL(u=>!u.pathname.endsWith('/login'))
