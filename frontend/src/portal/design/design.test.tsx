@@ -32,6 +32,8 @@ describe('simplified portal rewards', () => {
     const html = render([reward()])
     for (const text of ['Welcome drink', 'Coffee reward', 'Spring offer', 'Available now', 'My codes']) expect(html).toContain(text)
     expect(html.match(/<article /g)).toHaveLength(3)
+    expect(html).toContain('class="p-reward-mobile-value"><span>100 pts</span>')
+    expect(html).toContain('class="p-reward-mobile-value"><span>15% off</span>')
     expect(html).not.toContain('role="tablist"')
   })
   it('never offers redemption for a server refusal, even when the displayed balance could pay', () => {
