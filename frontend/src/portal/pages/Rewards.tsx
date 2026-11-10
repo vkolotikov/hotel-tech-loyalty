@@ -35,10 +35,11 @@ export function Rewards() {
   const [confirming, setConfirming] = useState<Reward | null>(null)
   const [code, setCode] = useState<string | null>(null)
   const redemptionInFlight = useRef(false)
-  const enabled = !!boot?.capabilities.loyalty && !!boot.member
+  const loyalty = !!boot?.capabilities.loyalty
+  const enabled = !!boot?.member && (loyalty || boot.member.membership_mode === 'assigned')
   const benefits = useQuery({ queryKey: ['portal-benefits'], queryFn: portalApi.benefits, enabled, staleTime: 10_000, refetchOnWindowFocus: true })
-  const rewards = useQuery({ queryKey: ['portal-rewards'], queryFn: portalApi.rewards, enabled, staleTime: 10_000, refetchOnWindowFocus: true })
-  const offers = useQuery({ queryKey: ['portal-offers'], queryFn: portalApi.offers, enabled, staleTime: 10_000, refetchOnWindowFocus: true })
+  const rewards = useQuery({ queryKey: ['portal-rewards'], queryFn: portalApi.rewards, enabled: enabled && loyalty, staleTime: 10_000, refetchOnWindowFocus: true })
+  const offers = useQuery({ queryKey: ['portal-offers'], queryFn: portalApi.offers, enabled: enabled && loyalty, staleTime: 10_000, refetchOnWindowFocus: true })
   const errorMessage = (error: unknown, fallback: string) => {
     const c = apiErrorCode(error)
     return c === 'membership_not_started' || c === 'membership_expired' ? t(`portal.rewards.${c}`) : apiMessage(error, fallback)
@@ -86,14 +87,15 @@ export function Rewards() {
         b.last_fulfilled_at && !open ? t('portal.rewards.last_used', 'Last used {{date}}', { date: instantDay(b.last_fulfilled_at, i18n.language, boot?.venue.timezone) }) : null].filter(Boolean).join(' '),
     })
   }
-  for (const r of rewards.data?.rewards ?? []) {
+  for (const r of loyalty ? rewards.data?.rewards ?? [] : []) {
     const ready = r.can_afford && r.remaining_for_me !== 0 && r.in_stock !== false
     const note = r.remaining_for_me === 0 ? t('portal.rewards.already_claimed', 'Already claimed') : r.in_stock === false ? t('portal.rewards.out_of_stock', 'Out of stock') : !r.can_afford ? counted(t, 'rewards.points_needed', Math.max(1, r.points_cost - balance), i18n.language) : null
     items.push({ key: `reward-${r.id}`, kind: 'reward', title: r.name, body: r.description, image: r.image_url, ready, figure: `${r.points_cost.toLocaleString(i18n.language)} ${t('portal.design.pts', 'pts')}`, note,
       action: ready ? <Button size="sm" onClick={() => { redeem.reset(); setConfirming(r) }}>{t('portal.rewards.redeem', 'Redeem')} <PortalIcon name="arrow" /></Button> : <span className="text-xs text-p-text-2">{note}</span> })
   }
-  const claimedIds = new Set(offers.data?.personalized.map(c => c.offer?.id))
-  for (const o of (offers.data?.general ?? []).filter(o => !claimedIds.has(o.id))) {
+  const offerData = loyalty ? offers.data : undefined
+  const claimedIds = new Set(offerData?.personalized.map(c => c.offer?.id))
+  for (const o of (offerData?.general ?? []).filter(o => !claimedIds.has(o.id))) {
     const full = o.usage_limit != null && (o.times_used ?? 0) >= o.usage_limit
     items.push({ key: `offer-${o.id}`, kind: 'offer', title: o.title, body: o.description, image: o.image_url, ready: !full,
       figure: offerValueLabel(o, t, { currency: boot?.venue.currency, locale: i18n.language }) ?? t('portal.design.member_offer', 'Member offer'), terms: [offerPerkNote(o, t), o.terms_conditions].filter(Boolean).join(' '),
@@ -101,7 +103,7 @@ export function Rewards() {
       action: full ? <span className="text-xs text-p-text-2">{t('portal.rewards.fully_claimed', 'Fully claimed')}</span> : <Button size="sm" variant="secondary" loading={claim.isPending} onClick={() => claim.mutate(o.id)}>{t('portal.rewards.claim', 'Claim offer')}</Button>,
     })
   }
-  for (const c of offers.data?.personalized ?? []) if (c.offer) items.push({
+  for (const c of offerData?.personalized ?? []) if (c.offer) items.push({
     key: `claim-${c.id}`, kind: 'offer', title: c.offer.title, body: c.offer.description, ready: false,
     figure: offerValueLabel(c.offer, t, { currency: boot?.venue.currency, locale: i18n.language }) ?? t('portal.design.member_offer', 'Member offer'),
     note: c.used_at ? paysPointsOnClaim(c.offer) ? t('portal.rewards.points_added_on', 'Points added {{date}}', { date: formatDay(c.used_at, i18n.language) }) : t('portal.rewards.used_on', 'Used {{date}}', { date: formatDay(c.used_at, i18n.language) }) : c.usable_now === false ? t('portal.rewards.offer_membership_unavailable', 'This offer needs an active membership at its required level.') : c.offer.end_date ? t('portal.rewards.valid_until', 'Valid until {{date}}', { date: formatDay(c.offer.end_date, i18n.language) }) : t('portal.rewards.ready_to_use', 'Ready to use — show this at the desk'),
@@ -112,10 +114,10 @@ export function Rewards() {
   const featured = order.flatMap(kind => { const first = items.find(i => i.kind === kind && i.ready); return first ? [first] : [] })
   const featuredIds = new Set(featured.map(i => i.key))
   const more = items.filter(i => !featuredIds.has(i.key))
-  const queryError = benefits.isError || rewards.isError || offers.isError
-  const loading = benefits.isPending || rewards.isPending || offers.isPending
+  const queryError = benefits.isError || (loyalty && (rewards.isError || offers.isError))
+  const loading = benefits.isPending || (loyalty && (rewards.isPending || offers.isPending))
   return <div>
-    <div className="p-page-heading"><h1>{t('portal.rewards.title', 'Rewards')}</h1><div className="p-reward-header-actions"><span className="p-count-badge"><PortalIcon name="coin" />{counted(t, 'rewards.you_have', balance, i18n.language)}</span><Button variant="secondary" size="sm" onClick={() => panels.open('codes')}><PortalIcon name="ticket" />{t('portal.rewards.tab_codes', 'My codes')}</Button></div></div>
+    <div className="p-page-heading"><h1>{t('portal.rewards.title', 'Rewards')}</h1><div className="p-reward-header-actions">{loyalty && <span className="p-count-badge"><PortalIcon name="coin" />{counted(t, 'rewards.you_have', balance, i18n.language)}</span>}<Button variant="secondary" size="sm" onClick={() => panels.open('codes')}><PortalIcon name="ticket" />{t('portal.rewards.tab_codes', 'My codes')}</Button></div></div>
     {queryError && <div className="space-y-2 mb-4"><Notice tone="warning">{t('portal.common.error', 'Something went wrong. Please try again.')}</Notice><Button variant="secondary" size="sm" onClick={() => { void benefits.refetch(); void rewards.refetch(); void offers.refetch() }}>{t('portal.common.retry', 'Try again')}</Button></div>}
     {loading && items.length === 0 && <PageSkeleton />}
     {featured.length > 0 && <section><h2 className="p-section-heading">{t('portal.design.available_now', 'Available now')}</h2><div className="p-reward-grid">{featured.map(item => <RewardCard key={item.key} item={item} />)}</div></section>}
