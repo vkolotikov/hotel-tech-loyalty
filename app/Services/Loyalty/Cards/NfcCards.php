@@ -36,6 +36,9 @@ use Illuminate\Support\Facades\DB;
  */
 final class NfcCards
 {
+    /** Physical card codes must not collide with an older personal Wallet token containing the same UID. */
+    public const SCAN_PREFIX = 'HTCARD:';
+
     /** @return Collection<int, NfcCard> the member's cards, the active ones first, then the newest */
     public function forMember(LoyaltyMember $member): Collection
     {

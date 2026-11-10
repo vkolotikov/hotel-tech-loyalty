@@ -11,6 +11,7 @@
 [data-loyalty] .l-partner-note svg { flex-shrink: 0; color: var(--l-ov-cyan); }
 [data-loyalty] .l-partner-person,[data-loyalty] .l-partner-result { display: grid; gap: 16px; overflow-wrap: anywhere; }
 [data-loyalty] .l-partner-actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+[data-loyalty] .l-partner-actions [aria-pressed="true"] { border-color: var(--l-ov-cyan); background: var(--l-ov-recessed); box-shadow: inset 0 -2px var(--l-ov-cyan); }
 [data-loyalty] .l-partner-place-line { display: flex; gap: 8px; align-items: center; }
 [data-loyalty] .l-partner-verdict { display: flex; gap: 14px; align-items: center; color: var(--l-ov-green); }
 [data-loyalty] .l-partner-result[data-granted="false"] .l-partner-verdict { color: rgb(var(--a-danger)); }
