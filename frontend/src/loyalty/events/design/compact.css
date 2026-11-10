@@ -1,6 +1,6 @@
 /* EV-B01–03, adapted to the shared 01B staff catalogue and editor surfaces. */
 [data-loyalty] .l-ec-page { align-content:start; }
-[data-loyalty] .l-ec-directory { gap:12px; }
+[data-loyalty] .l-ec-directory { gap:12px; grid-template-columns:minmax(0,1fr); }
 [data-loyalty] .l-ec-tabs { display:flex; flex-wrap:wrap; gap:6px; }
 [data-loyalty] .l-ec-tabs button { display:inline-flex; align-items:center; gap:8px; min-height:38px; padding:7px 12px; border:1px solid var(--l-ad-edge); border-radius:8px; background:var(--l-ad-row); color:var(--l-ov-secondary); font-size:12px; line-height:20px; }
 [data-loyalty] .l-ec-tabs button[aria-pressed="true"] { color:var(--l-ov-cyan); border-color:var(--l-ov-cyan); background:color-mix(in srgb,var(--l-ad-row) 88%,var(--l-ov-cyan)); }
@@ -40,7 +40,7 @@
 [data-loyalty] .l-ec-icon[data-kind="waiting"] { background:color-mix(in srgb,var(--l-ov-canvas) 90%,var(--l-ov-amber)); }
 [data-loyalty] .l-ec-icon[data-kind="scan"] { background:var(--l-ov-green-bg); }
 [data-loyalty][data-theme="light"] .l-ec-icon img { filter:brightness(.52); }
-[data-loyalty] .l-ec-detail { gap:12px; scroll-margin-top:16px; }
+[data-loyalty] .l-ec-detail { gap:12px; grid-template-columns:minmax(0,1fr); scroll-margin-top:16px; }
 [data-loyalty] .l-ec-detail-head { display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap; }
 [data-loyalty] .l-ec-eyebrow { display:inline-flex; gap:8px; align-items:center; font-size:11px; line-height:18px; color:var(--l-ov-cyan); }
 [data-loyalty] .l-ec-detail > h2 { font-size:24px; line-height:34px; font-weight:500; overflow-wrap:anywhere; }

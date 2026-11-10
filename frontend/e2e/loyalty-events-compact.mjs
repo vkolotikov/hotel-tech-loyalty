@@ -154,13 +154,17 @@ try {
   for (const lang of ['de', 'es', 'fr', 'ru']) {
     await reset()
     await page.evaluate(lang => localStorage.setItem('admin_lang', lang), lang)
-    await go('/loyalty/events')
-    check(!(await page.locator('main').innerText()).includes('loyalty.'), `${lang}: translated directory renders without missing keys`)
-    await geometry(`directory ${lang} phone`)
-    await go(`/loyalty/events/${draft.id}/edit`)
-    await popup().waitFor()
-    await geometry(`editor ${lang} phone`)
-    await page.keyboard.press('Escape')
+    for (const width of [390, 320]) {
+      await page.setViewportSize({ width, height: 900 })
+      await go('/loyalty/events')
+      check(!(await page.locator('main').innerText()).includes('loyalty.'), `${lang} ${width}px: translated directory renders without missing keys`)
+      await geometry(`directory ${lang} ${width}px`)
+      await go(`/loyalty/events/${draft.id}/edit`)
+      await popup().waitFor()
+      await geometry(`editor ${lang} ${width}px`)
+      await page.keyboard.press('Escape')
+      await popup().waitFor({ state: 'detached' })
+    }
   }
   check(report.errors.length === 0, 'no browser runtime errors')
 } catch (error) {
