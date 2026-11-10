@@ -19,10 +19,12 @@ import { useLeaveGuard } from '../earn/useLeaveGuard'
 import { useEarnWords } from '../earn/words'
 import { ProgrammeSettings } from './ProgrammeSettings'
 import { BonusBoostsPage } from './BonusBoostsPage'
-import { ManagementColumns, ManagementFact, ManagementHeading, ManagementLabels, ManagementPanel, ManagementRow, ManagementSelection, ManagementStatus, ManagementVisual, ManagementOutcome } from './ManagementUI'
+import { ManagementColumns, ManagementFact, ManagementHeading, ManagementIcon, ManagementLabels, ManagementPanel, ManagementRow, ManagementSelection, ManagementStatus, ManagementVisual, ManagementOutcome } from './ManagementUI'
 import { useAdminWords } from './words'
 import { BONUSES, EARNING, POINTS_SETTINGS, QUALIFICATION } from './navigation'
 import { earningIcon } from './earningIcon'
+import { adminAssets } from './assets'
+import { decimal } from '../lib/forms'
 import '../earn/earn.css'
 import '../earn/clean.css'
 
@@ -46,21 +48,27 @@ export function EarningPage() {
   const inherited = selected && ['points_on_spend', 'desk_earn'].includes(selected.key)
   const status = (w: Way) => (data.not_used ?? []).includes(w.key) ? 'unused' : isOn(w, data.options) ? 'active' : 'off'
   const badge = (w: Way) => <ManagementStatus state={status(w)}>{say(status(w))}</ManagementStatus>
+  const methods = data.ways.filter(w => groupOf(w.key) === 'earn')
+  const caption = (w: Way) => admin(w.key === 'points_on_spend' ? 'completedBookings' : w.key === 'check_in' ? 'recordedVisit' : w.key === 'stamp_card' ? 'qualifyingVisit' : w.key === 'desk_earn' ? 'staffPurchase' : 'eligibleSpend')
+  const rate = (w: Way) => ['points_on_spend', 'desk_earn'].includes(w.key) ? admin('inheritsPurchase') : w.key === 'earn_rate' ? admin('rateCompact', { n: decimal(Number(data.options.points_per_currency), i18n.language), unit }) : w.key === 'check_in' ? admin('perCheckIn', { n: points(Number(data.options.checkin_points ?? 0), i18n.language) }) : w.key === 'stamp_card' ? admin('stampPerVisit') : admin('cashbackRate', { n: decimal(Number(data.options.cashback_percent ?? 0), i18n.language) })
   const go = (patch: Record<string, string>) => guard.go(earningUrl('earn', { selected: state.selected, q: state.q, status: state.status, ...patch }))
   const example = ruleExample(selected?.key ?? 'earn_rate', data, '50')
-  return <div className="l-ad-page"><ManagementHeading title={admin('earning')} line={admin('earningLine')}><Link className="l-ov-button" to={POINTS_SETTINGS}>{admin('pointsSettings')}</Link></ManagementHeading>
-    <ManagementColumns><div className="l-ad-stack"><ManagementPanel title={admin('earning')} count={say('activeMethods', { n: data.ways.filter(w => groupOf(w.key) === 'earn' && status(w) === 'active').length })}>
-      <div className="l-ad-filters"><label><span>{say('search')}</span><input type="search" value={state.q} onChange={e => go({ q: e.target.value })} /></label><label><span>{say('status')}</span><select value={state.status} onChange={e => go({ status: e.target.value })}>{['all', 'active', 'off'].map(s => <option key={s} value={s}>{say(s as 'all' | 'active' | 'off')}</option>)}</select></label></div>
-      <ManagementLabels first={say('ruleName')} value={say('memberSees')} status={say('status')} /><ul className="l-ad-list">{visible.map(w => <ManagementRow key={w.key} record={`way-${w.key}`} icon={earningIcon(w.key)} title={title(w)} caption={w.key === 'points_on_spend' || w.key === 'desk_earn' ? admin('inheritsPurchase') : wayLine(oldSay, w.key)} value={sentence(w)} status={badge(w)} selected={selected?.key === w.key} onSelect={() => go({ selected: w.key })} />)}</ul>
+  return <div className="l-ad-page"><ManagementHeading title={admin('earning')} line={admin('earningLine')} />
+    <div className="l-ad-summary"><ManagementFact icon="boost" label={admin('earningMethods')}><strong>{say('activeMethods', { n: methods.filter(w => status(w) === 'active').length })}</strong></ManagementFact><ManagementFact icon="expiry" label={admin('pointsExpiry')}><strong>{Number(data.options.points_expiry_months) > 0 ? admin('months', { n: Number(data.options.points_expiry_months) }) : admin('never')}</strong></ManagementFact><Link className="l-ov-button" to={POINTS_SETTINGS}>{admin('pointsSettings')}<img src={adminAssets.pen.src} width={15} height={15} alt="" /></Link></div>
+    <ManagementColumns><div className="l-ad-stack"><ManagementPanel title={say('everyday')} count={say('methods', { n: methods.length })}>
+      <div className="l-ad-filter-tabs">{(['all', 'active', 'off'] as const).map(s => <button type="button" key={s} aria-pressed={state.status === s} onClick={() => go({ status: s })}>{say(s)} <small>{filteredWays(data, 'earn', '', s, title).length}</small></button>)}</div>
+      <label className="l-ad-search"><img src={adminAssets.search.src} width={14} height={14} alt="" /><input type="search" aria-label={say('search')} placeholder={say('searchHint')} value={state.q} onChange={e => go({ q: e.target.value })} /></label>
+      <ManagementLabels first={admin('method')} value={admin('earnRate')} status={say('status')} /><ul className="l-ad-list">{visible.map(w => <ManagementRow key={w.key} record={`way-${w.key}`} icon={earningIcon(w.key)} tone={w.key === 'cashback' ? 'gold' : ['points_on_spend', 'stamp_card'].includes(w.key) ? 'violet' : w.key === 'check_in' ? 'green' : 'cyan'} title={title(w)} caption={caption(w)} value={rate(w)} status={badge(w)} selected={selected?.key === w.key} onSelect={() => go({ selected: w.key })} />)}</ul>
       {!visible.length && <p>{say(data.ways.some(w => groupOf(w.key) === 'earn') ? 'noResults' : 'noMethods')}</p>}{!visible.length && <OverviewButton onClick={() => go({ q: '', status: 'all' })}>{say('clear')}</OverviewButton>}
-    </ManagementPanel><div className="l-ad-summary"><ManagementFact icon="expiry" label={admin('pointsSettings')}>{sentenceOf('points_expiry', data.options, { say: oldSay, currency: boot.venue.currency, locale: i18n.language, rewards: data.catalogue.rewards })}</ManagementFact><Link className="l-ov-link" to={POINTS_SETTINGS}>{t('loyalty.program.edit', 'Edit')}</Link></div>
+    </ManagementPanel>
       {data.ways.some(w => groupOf(w.key) === 'more') && <details className="l-ad-more"><summary>{admin('advanced')}</summary><Link className="l-ov-link" to="/loyalty/options?tab=more">{t('loyalty.options.group.more', 'More')}</Link></details>}
-    </div>{selected && <ManagementSelection title={title(selected)} status={badge(selected)} onEdit={data.can_change ? () => guard.go(earningUrl('earn', { way: selected.key })) : undefined}>
-      <ManagementVisual art="earnArt" label={say('memberSees')} title={selected.key === 'earn_rate' || inherited ? say('rate', { n: String(data.options.points_per_currency), unit }) : title(selected)} line={inherited ? admin('inheritsPurchase') : sentence(selected)} />
-      <ManagementFact icon="people" label={admin('who')}>{say('allLevels')}</ManagementFact><ManagementFact icon="bookingSmall" label={admin('when')}>{wayLine(oldSay, selected.key)}</ManagementFact>
-      {inherited && <p>{sentence(selected)}</p>}
+    </div>{selected && <ManagementSelection title={title(selected)} heading={admin('selectedRule')} status={badge(selected)} onEdit={data.can_change ? () => guard.go(earningUrl('earn', { way: selected.key })) : undefined}>
+      <ManagementVisual art="earnArt" tone="cyan" label={title(selected)} title={selected.key === 'earn_rate' || inherited ? admin('rateCompact', { n: decimal(Number(data.options.points_per_currency), i18n.language), unit }) : rate(selected)} line={inherited ? admin('inheritsPurchase') : selected.key === 'earn_rate' ? admin('baseEarning') : caption(selected)} />
       {(selected.key === 'earn_rate' || inherited) && <><ManagementOutcome label={admin('baseExample')} from={money(50, boot.venue.currency, i18n.language)} to={example === null ? say('invalidExample') : admin('pointsShort', { n: points(example, i18n.language) })} /><small>{admin('basePoints')}</small>{inherited && <Link className="l-ov-link" to={`${EARNING}&way=earn_rate`}>{admin('sharedRate')}</Link>}</>}
-      {!data.can_change && <Link className="l-ov-link" to={earningUrl('earn', { way: selected.key })}>{say('viewSettings')}</Link>}<Link className="l-ov-link" to={BONUSES}>{admin('bonuses')}</Link><Link className="l-ov-link" to={QUALIFICATION}>{admin('qualification')}</Link>
+      <ManagementFact icon="people" label={admin('whoEarn')}>{say('allLevels')}</ManagementFact>
+      {(selected.key === 'earn_rate' || inherited) && <div className="l-ad-inset"><h3>{admin('alsoRate')}</h3><div className="l-ad-trigger-grid">{['points_on_spend', 'desk_earn'].map(key => { const w = methods.find(w => w.key === key); return w && <Link key={key} to={`${EARNING}&selected=${key}`}><ManagementIcon kind={key === 'points_on_spend' ? 'bookingSmall' : 'receipt'} /><span>{admin(key === 'points_on_spend' ? 'bookings' : 'deskPurchases')}<small>{say(status(w))}</small></span></Link> })}</div></div>}
+      <details className="l-ad-more"><summary>{admin('advanced')}</summary><p>{sentence(selected)}</p><p>{wayLine(oldSay, selected.key)}</p><Link className="l-ov-link" to={BONUSES}>{admin('bonuses')}</Link><Link className="l-ov-link" to={QUALIFICATION}>{admin('qualification')}</Link></details>
+      {!data.can_change && <Link className="l-ov-link" to={earningUrl('earn', { way: selected.key })}>{say('viewSettings')}</Link>}
     </ManagementSelection>}</ManagementColumns>{discard}
   </div>
 }

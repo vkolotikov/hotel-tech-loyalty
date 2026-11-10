@@ -1,5 +1,11 @@
 # HexaTech Loyalty — runbook
 
+Catalogue layout follow-up (10 November 2026): Program, Ways to earn and Rewards use shared aligned row/header
+columns, compact original Figma artwork and grouped assignment/filter controls. The member search reserves its icon
+inset against the general input rule. Both themes and responsive layouts are covered by a compiled real-backend
+geometry/typing regression. No backend, permission or API changes. See
+[the layout audit](audits/2026-11-10-loyalty-layout-polish.md).
+
 Manual memberships and partner access (10 November 2026): [customer setup guide](loyalty-memberships-and-partners.md),
 [API additions](api/loyalty-membership-partners.md) and [verification audit](audits/2026-11-10-loyalty-membership-partners.md).
 Assign an existing level and dates under Members → Manage membership; Settings → Partner access invites staff to

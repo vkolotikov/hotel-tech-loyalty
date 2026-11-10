@@ -23,7 +23,7 @@
 [data-loyalty] .l-mb-members-page .l-rd-filters label > span { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 [data-loyalty] .l-mb-members-page .l-rd-filters label > img { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); pointer-events: none; }
 [data-loyalty][data-overview] .l-mb-members-page .l-rd-filters input, [data-loyalty][data-overview] .l-mb-members-page .l-rd-filters select { width: 100%; min-width: 0; padding-left: 36px; box-shadow: none; border-radius: 12px; color: var(--l-ov-secondary); background: var(--l-ov-side); }
-[data-loyalty][data-overview] .l-mb-members-page .l-rd-filters input { padding-left: 40px; border-color: var(--l-mb-cyan-edge); background: var(--l-mb-cyan-bottom); }
+[data-loyalty][data-overview] .l-rd-page.l-mb-members-page .l-rd-filters input[type="search"] { padding-inline: 40px 12px; border-color: var(--l-mb-cyan-edge); background: var(--l-mb-cyan-bottom); }
 [data-loyalty] .l-mb-members-page select option, [data-loyalty] .l-mb-profile select option, [data-loyalty] .l-mb-points-dialog select option { color: var(--l-ov-text); background: var(--l-ov-raised); }
 [data-loyalty] .l-mb-members-page select, [data-loyalty] .l-mb-profile select { color-scheme: light; }
 [data-loyalty][data-theme=dark] .l-mb-members-page select, [data-loyalty][data-theme=dark] .l-mb-profile select { color-scheme: dark; }

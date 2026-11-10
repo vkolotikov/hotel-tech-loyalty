@@ -50,7 +50,7 @@ try {
  await call('options','PUT',{options:{points_per_currency:1}})
  await page.reload();await page.getByRole('button',{name:'Edit Purchase points',exact:true}).click();await page.getByLabel('Points for each €1 spent',{exact:true}).fill('2.5');await page.getByRole('button',{name:'Save changes',exact:true}).click();await page.getByText('Saved. Your program settings are up to date.',{exact:true}).waitFor()
  check((await call('options')).options.points_per_currency===2.5,'The purchase rate editor saves the single canonical setting')
- for(const key of ['points_on_spend','desk_earn']){await go(`/loyalty/options?tab=earn&selected=${key}`);check((await page.locator('#management-detail').innerText()).includes('2.5 points'),'Inherited '+key+' preview uses the saved purchase rate')}
+ for(const key of ['points_on_spend','desk_earn']){await go(`/loyalty/options?tab=earn&selected=${key}`);check((await page.locator('#management-detail').innerText()).includes('2.5 pts'),'Inherited '+key+' preview uses the saved purchase rate')}
 
  report.phase='assignments'
  await go(`/loyalty/rewards?tab=benefits&selected=${perk.id}`);await page.locator('#management-detail select').selectOption(String(first.id));check((await page.locator('#management-detail').innerText()).includes('5% off'),'Perk preview follows the explicitly selected first tier')
