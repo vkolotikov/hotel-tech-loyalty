@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { MoreHorizontal } from 'lucide-react'
@@ -41,7 +41,7 @@ export function EventView({ event, canChange }: { event: LoyaltyEventRow; canCha
   const [open, setOpen] = useState<null | 'details' | 'add' | 'cancel' | 'delete' | 'publish'>(null), [byName, setByName] = useState(false), [said, setSaid] = useState<CheckInSaid | null>(null)
   const keys = useRef(new Map<number, string>())
   const filters = Object.fromEntries(['q', 'attendance'].flatMap(k => params.get(k) ? [[k, params.get(k)!]] : []))
-  const people = useQuery({ queryKey: [...peopleKey(event.id), page, ...(Object.keys(filters).length ? [filters] : [])], queryFn: () => eventsApi.people(event.id, page, { ...filters, per_page: '10' }) })
+  const people = useQuery({ queryKey: [...peopleKey(event.id), page, ...(Object.keys(filters).length ? [filters] : [])], queryFn: () => eventsApi.people(event.id, page, { ...filters, per_page: '10' }), placeholderData: keepPreviousData })
   const current = people.data?.event ?? event, c = people.data?.counts ?? current.counts
   const can = eventActions(current, canChange, wallNow(venueNow(boot.venue.timezone)))
   const selected = people.data?.people.find(p => String(p.member.id) === params.get('selected')) ?? people.data?.people[0]

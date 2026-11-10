@@ -10,7 +10,7 @@ if (!['127.0.0.1', 'localhost'].includes(new URL(base).hostname) || process.env.
 const fixture = JSON.parse(await fs.readFile(process.env.LAUNCH_FIXTURE, 'utf8'))
 const out = path.resolve(process.env.LAUNCH_OUTPUT, '../events'), report = { checks: [], errors: [], localOnly: true }
 await fs.mkdir(out, { recursive: true })
-const exec = promisify(execFile), probe = process.argv.includes('--probe')
+const exec = promisify(execFile), probe = process.argv.includes('--probe'), functional = process.argv.includes('--functional')
 let run = Date.now().toString(36)
 const reset = () => exec(process.env.PHP, [fileURLToPath(new URL('./launch-artisan.php', import.meta.url)), 'cache:clear', '--no-interaction'], { cwd: fileURLToPath(new URL('../../', import.meta.url)), env: process.env, windowsHide: true })
 const check = (ok, name) => { if (!ok) throw Error(name); report.checks.push(name); console.log('PASS ' + name) }
@@ -89,6 +89,9 @@ try {
   check(await page.locator('.l-ec-state').filter({ hasText: 'Full' }).count() >= 1, 'capacity status reads the real server room count')
   await geometry('desktop directory')
   await page.screenshot({ path: path.join(out, 'directory-dark-1440.png'), fullPage: true })
+  await page.getByLabel('Search events', { exact: true }).fill('')
+  await page.getByLabel('Search events', { exact: true }).pressSequentially('Coffee', { delay: 90 })
+  check(await page.getByLabel('Search events', { exact: true }).evaluate(el => el.value === 'Coffee' && document.activeElement === el), 'event search retains every typed character and keyboard focus while results load')
   await page.getByLabel('Search events', { exact: true }).fill('Coffee masterclass ' + run)
   await page.waitForFunction(() => document.querySelectorAll('.l-ec-row').length === 1 && document.querySelector('.l-ec-row')?.textContent.includes('Coffee masterclass'))
   check(await page.locator('.l-ec-row').count() === 1, 'server search narrows rows before pagination')
@@ -123,6 +126,9 @@ try {
   check((await call(`events/${created.id}`)).event.status === 'published', 'review and publish persist the saved draft')
 
   await go(`/loyalty/events/${event.id}`)
+  await page.getByLabel('Find an attendee', { exact: true }).pressSequentially('Jamie', { delay: 90 })
+  check(await page.getByLabel('Find an attendee', { exact: true }).evaluate(el => el.value === 'Jamie' && document.activeElement === el), 'attendee search retains every typed character and keyboard focus while results load')
+  await page.locator('.l-ec-person').getByRole('button', { name: 'Confirm check-in', exact: true }).waitFor()
   await page.getByRole('button', { name: 'Confirm check-in', exact: true }).click()
   await page.locator('.l-ec-person').getByText('100 points awarded', { exact: true }).waitFor()
   const people = await call(`events/${event.id}/people`)
@@ -133,6 +139,7 @@ try {
   await page.screenshot({ path: path.join(out, 'attendance-dark-1440.png'), fullPage: true })
 
   }
+  if (!functional) {
   for (const theme of ['dark', 'light']) {
     await reset()
     await page.evaluate(theme => localStorage.setItem('loyalty:look', JSON.stringify({ theme, rail: 'full' })), theme)
@@ -166,6 +173,7 @@ try {
       await popup().waitFor({ state: 'detached' })
     }
   }
+  }
   check(report.errors.length === 0, 'no browser runtime errors')
 } catch (error) {
   report.failure = error.message
@@ -173,6 +181,6 @@ try {
   process.exitCode = 1
   console.error('FAIL ' + error.message)
 } finally {
-  await fs.writeFile(path.join(out, probe ? 'probe-report.json' : 'report.json'), JSON.stringify(report, null, 2))
+  await fs.writeFile(path.join(out, functional ? 'functional-report.json' : probe ? 'probe-report.json' : 'report.json'), JSON.stringify(report, null, 2))
   await browser.close()
 }
