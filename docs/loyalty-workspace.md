@@ -178,7 +178,7 @@ staff member restricted to one brand is still held to it by the `brand` middlewa
 | Credit (release 7) | `GET members/{id}/credit?page` (25 a page), `POST members/{id}/credit/spend` (`amount`, `note`, `idempotency_key`), `POST members/{id}/credit/adjust` (`amount`, signed, `reason`, `idempotency_key`) |
 | Places (release 8) | `GET places`, `POST places`, `PUT places/{id}` (`name`, `description`, `admits` all\|tiers, `tier_ids`, `is_active`, `sort_order`, `idempotency_key`), `DELETE places/{id}` (switched off instead once it has entries or an event names it), `GET places/{id}/entries?day=&page=` (50 a page); `POST scan` takes `place_id` or `event_id` |
 | Membership (release 8) | `PUT members/{id}/validity` (`valid_until` Y-m-d\|null, or `extend` 1m\|3m\|6m\|1y; `idempotency_key`); `GET members?state=expiring\|expired` |
-| Events (release 8; design pass 2026-10-28) | `GET events?when=upcoming\|today\|past\|drafts&q=&place_id=&location=&tier_id=&sort=soonest\|latest&page=`, `GET events/options` (places, tiers, tenant custom locations), `POST events`, `GET/PUT/DELETE events/{id}`, `POST events/{id}/publish`, `/cancel` (`reason`), `GET events/{id}/people?q=&attendance=all\|not_checked_in\|checked_in\|walk_in\|cancelled&per_page=5..200&page=`, `POST events/{id}/sign-ups` (`member_id`), `DELETE events/{id}/sign-ups/{memberId}`, `POST events/{id}/check-in` (`member_id`) |
+| Events (release 8; design pass 2026-10-28) | `GET events?when=upcoming\|today\|past\|drafts&q=&place_id=&location=&tier_id=&sort=soonest\|latest&page=`, options in list/detail responses (places and tenant custom locations; tiers from bootstrap), `POST events`, `GET/PUT/DELETE events/{id}`, `POST events/{id}/publish`, `/cancel` (`reason`), `GET events/{id}/people?q=&attendance=all\|not_checked_in\|checked_in\|walk_in\|cancelled&per_page=5..200&page=`, `POST events/{id}/sign-ups` (`member_id`), `DELETE events/{id}/sign-ups/{memberId}`, `POST events/{id}/check-in` (`member_id`) |
 
 Refusals are `{error, message}`; the workspace shows its own words for each code (`lib/errors.ts`,
 `program/errors.ts`, `rewards/errors.ts`), never the server's sentence. Codes: `not_found`, `manager_only`,
@@ -635,7 +635,7 @@ the scan screen, door mode, the member page and list, Program, Ways to earn, Eve
   at the entrance — continuous camera or reader, a duplicate within 3 seconds ignored, the verdict clearing after 4
   seconds, an optional sound, the screen kept awake.
 - **Events** (release 8; design pass 2026-10-28, `events/`): upcoming, past and drafts in the Overview shell,
-  server search/location/level filters, selected event details; full editors at `/events/new` and `/events/:id/edit`
+  server search/location/level filters, selected event details; native popup editors at `/events/new` and `/events/:id/edit`
   with member preview, draft save and review/publish. An event's existing page contains attendance counts,
   searchable/filterable people, actual historical points, confirmation, member profile and signup cancellation.
   Scan and Door mode retain event context; by-name check-in, add a member, edit/publish/cancel/delete remain available.

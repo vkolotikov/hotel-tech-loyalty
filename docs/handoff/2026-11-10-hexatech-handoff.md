@@ -289,7 +289,29 @@ capacity and reward. Add/edit keeps its URLs, grouped fields, preview, guarded d
 Attendance uses matching summary icons and rows with ten people per page. All existing writers, permission,
 scan/door and API contracts remain unchanged. Five translated bundles; original local vectors.
 
-Feature validation: 570 focused frontend checks, changed-file lint and 58 scoped Events PHP tests / 510
-assertions passed. Real-API draft/publish/check-in passed against the task-owned PostgreSQL demo; responsive
-and artifact checks are finishing. See `docs/audits/2026-11-10-loyalty-events-compact.md`. Production/source
-baseline remains **8f12b72ac / 7798337c7** until deployment and live content verification complete.
+Release validation: TypeScript/fresh builds, 6,931 frontend tests / 470 files, lint regression check (1,381
+legacy diagnostics), and 2,125 scoped PHP tests / 13,415 assertions pass. Final focused checks: 571. Compiled
+acceptance: 61 initial real-API journey assertions, 57 final responsive/language/popup checks, 20 further
+320/390px header/filter-target cases in five languages/both themes, and 19 final functional checks after
+the search-focus correction. Both searches retain full character-by-character typing and focus. Original
+vectors, native dialogs, canonical writes, venue times and permissions remain intact; no production customer writes.
+
+Main **eb8047a2389953e09b274e6238b936ae5a19da1b**, final source through
+**88fdf4adb9badade6ae9d4a719501c12a4a1d411**, is live verified at **2026-11-10 20:24:36 UTC / 22:24:36 Riga**.
+Both domains passed 32 live content/auth/landing checks. Next source-patch code baseline: **88fdf4adb**.
+The preceding layout release is `c372c113e`. The guarded 25-path manifest and whole-source parity pass;
+only the three generated areas are excluded. See `docs/audits/2026-11-10-loyalty-events-compact.md`.
+[CI 42894087414](https://github.com/vkolotikov/hotel-tech-loyalty/actions/runs/42894087414) is running.
+The preceding layout CI passed seven jobs; its pending PostgreSQL job was superseded by this final commit.
+Task-owned loopback servers and PostgreSQL are stopped. Private evidence remains outside Git.
+
+The final search correction passes all 6,931 frontend tests, fresh TypeScript/build and lint again, plus a
+19-check compiled functional journey and explicit before/after typing probes. Both `Coffee` and `Jamie`
+retain their full values and focus, where the intermediate build kept only their first character.
+Live assets: `index-Dsr1JbKk.js`, `LoyaltyApp-0JkzOCxX.js`, `EventsPage-DZt8sGDA.js`,
+`EventPage-CObXsH-2.js`, `EventEditorPage-C1QO-SUN.js`. Private final verification:
+`C:/wamp64/tmp/loyalty-events-production-20261110.json`.
+
+The verified Events deployment worktree is removed. Its dependency junction was removed separately after
+checking the exact path, branch, final commit, clean state and physical vendor; shared dependencies remain.
+Owned loopback servers/PostgreSQL are stopped. Owner assets and private evidence remain intact.
