@@ -72,7 +72,16 @@ draft outcome sentences remain authoritative. Review/Apply, permissions and back
 All five locales and reduced-motion preferences are supported. See
 [the preview audit](../audits/2026-11-10-loyalty-setup-preview.md) for design and test evidence.
 
-Source TypeScript, 6,841 frontend tests, lint baseline and the compiled local browser checks passed; the final
-focused Wizard/locale run has 133 passing tests and the final compiled journey has 88 passing checks. Release artifact
-checks and deployment are still pending. Last deployed code baseline remains `d3631e622`; include the later
-evidence-only documentation changes in the source patch so whole-source parity remains exact.
+Source and artifact TypeScript, **6,841 frontend tests**, lint baseline, **2,084 scoped PHP tests** and **88 compiled
+real-backend browser checks** passed. The source-patch worktree has physical vendor; the patch includes the later
+logo evidence-only documentation changes and has exact whole-source parity. No backend/API/schema changed.
+Production commit **1d159b7e631127038928fedc51ee8cb44f981d20**, source patch **2e941bdcd** on main 1d1e2fa6f.
+**Next source-patch code baseline: b1f5082d2**. Later documentation commits are evidence only. Twelve live content
+checks passed on loyalty.hotel-tech.ai at **09:22:54 UTC / 11:22:54 Europe/Riga**, and on app.hexa-tech.uk at
+**09:23:22 UTC / 11:23:22 Europe/Riga**. Assets: index-BiPgZKxi.js, LoyaltyApp-BwPo5MEW.js,
+SetupWizard-BbkMN037.js, SetupWizard-Ch6wI-3S.css. The logo uploader, authentication and landing kit are preserved.
+CI [42789526011](https://github.com/vkolotikov/hotel-tech-loyalty/actions/runs/42789526011) is in progress at 09:24 UTC:
+six jobs passed, SQLite shard 3 and PostgreSQL still running. Do not describe all eight jobs as green without checking.
+Task-owned PHP/preview/PostgreSQL helpers are stopped and the clean deploy worktree has been safely removed after
+unlinking only its dependency junction. Private fixtures/evidence, shared dependencies, owner files and the earlier
+blocked cleanup remnant remain untouched.
