@@ -1,6 +1,8 @@
 {
   "example": "Example",
   "currency": "Currency",
+  "memberPreview": "Member preview",
+  "editTitle": "Edit {{name}}",
   "calculation": "Calculation",
   "discardTitle": "Discard unsaved changes?",
   "discardLine": "Your changes have not been saved.",

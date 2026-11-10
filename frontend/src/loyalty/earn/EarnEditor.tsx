@@ -38,11 +38,11 @@ export function EarnEditor({ way, answer, guard, bonus = false }: { way: Way; an
   const fields = <EarnFields way={way} form={form} answer={answer} problems={draft.problems} disabled={disabled} currency={currency} bonus={bonus} onChange={(key, value) => draft.edit(way.key, { values: { ...form.values, [key]: value } })} />
   const message = <>{draft.failure && <Notice tone="danger">{t(...refusalKey('loyalty.options', ERRORS, 'save', draft.failure))}</Notice>}{draft.saved && <p role="status" className="l-earn-success">{say('saved')}</p>}</>
   const cancel = () => guard.go(earningUrl(bonus ? 'bonus' : 'earn', { selected: way.key }))
-  const memberPreview = <EditorNote icon={way.key === 'referrals' ? 'people' : 'gift'} title={say('memberSees')}>{!form.on ? say('noBonus') : text}</EditorNote>
-  return <EditorDialog area="options" title={purchase && answer.can_change ? say('editPurchase') : title} section={admin(bonus ? 'bonuses' : 'earning')} icon={bonus ? way.key === 'referrals' ? 'people' : 'gift' : 'coin'} tone={bonus ? 'violet' : 'cyan'} wide={!bonus} onClose={cancel} busy={draft.busy}>
+  const memberPreview = <EditorNote icon={way.key === 'referrals' ? 'people' : 'gift'} title={editor('memberPreview')}>{!form.on ? say('noBonus') : text}</EditorNote>
+  return <EditorDialog area="options" title={purchase && answer.can_change ? say('editPurchase') : bonus && answer.can_change ? editor('editTitle', { name: title }) : title} section={admin(bonus ? 'bonuses' : 'earning')} icon={bonus ? way.key === 'referrals' ? 'people' : 'gift' : 'coin'} tone={bonus ? 'violet' : 'cyan'} wide={!bonus} onClose={cancel} busy={draft.busy}>
     <form className="l-editor-form" noValidate onSubmit={e => { e.preventDefault(); draft.submit() }}><div className="l-editor-body"><div className={bonus ? 'l-editor-stack' : 'l-editor-columns'}><div className="l-editor-stack">
       {!answer.can_change && <Notice>{t('loyalty.options.read_only', 'Only an owner or a manager can change these. You see them as they are.')}</Notice>}
-      <EditorSection icon={bonus ? 'gift' : 'coin'} title={bonus ? title : say('settings')}>
+      <EditorSection icon={bonus ? 'gift' : 'coin'} title={bonus ? undefined : say('settings')}>
         {purchase ? <><div className="l-editor-two"><FormField label={say('ruleName')}><input value={title} readOnly /></FormField>{fields}</div><div className="l-earn-quick">{[1, 5, 10].filter(n => n >= (answer.fields.points_per_currency.min ?? 0) && n <= (answer.fields.points_per_currency.max ?? Infinity)).map(n => <OverviewButton key={n} type="button" aria-pressed={Number(rate) === n} disabled={disabled} onClick={() => draft.edit(way.key, { values: { ...form.values, points_per_currency: String(n) } })}>{say(n === 1 ? 'onePoint' : 'points', { n })}</OverviewButton>)}</div></> : fields}
         {status}
       </EditorSection>

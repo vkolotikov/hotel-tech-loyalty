@@ -1,6 +1,8 @@
 {
   "example": "Beispiel",
   "currency": "Währung",
+  "memberPreview": "Mitgliedervorschau",
+  "editTitle": "{{name}} bearbeiten",
   "calculation": "Berechnung",
   "discardTitle": "Ungespeicherte Änderungen verwerfen?",
   "discardLine": "Ihre Änderungen wurden noch nicht gespeichert.",

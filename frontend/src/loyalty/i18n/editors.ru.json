@@ -1,6 +1,8 @@
 {
   "example": "Пример",
   "currency": "Валюта",
+  "memberPreview": "Предпросмотр для участника",
+  "editTitle": "Изменить: {{name}}",
   "calculation": "Расчёт",
   "discardTitle": "Отменить несохранённые изменения?",
   "discardLine": "Ваши изменения ещё не сохранены.",

@@ -4,6 +4,12 @@ import { trapTarget } from '../../workspace/lib/dialogFocus'
 import { overviewAssets } from './assets'
 import { useOverviewWords } from './words'
 
+// Native dialogs can close together (discarding a nested draft). Restore the page once the last one closes,
+// independently of React's cleanup order.
+let openModalCount = 0
+let pageOverflow = ''
+let pageFocus: HTMLElement | null = null
+
 /** Compose the app's button; the scoped class supplies the approved raised/gradient paints. */
 export function OverviewButton({ primary = false, className = '', ...props }: ButtonHTMLAttributes<HTMLButtonElement> & { primary?: boolean; children: ReactNode }) {
   return <Button {...props} variant="secondary" className={`l-ov-button ${primary ? 'l-ov-primary' : ''} ${className}`} />
@@ -21,11 +27,18 @@ export function OverviewDialog({ title, kind = 'drawer', onClose, children, busy
   useEffect(() => {
     const dialog = ref.current
     const before = document.activeElement instanceof HTMLElement ? document.activeElement : null
-    const overflow = document.body.style.overflow
+    if (openModalCount === 0) { pageOverflow = document.body.style.overflow; pageFocus = before }
+    openModalCount += 1
     document.body.style.overflow = 'hidden'
     dialog?.showModal()
     if (focusContent) dialog?.querySelector<HTMLElement>('.l-ov-dialog-body input:not(:disabled):not([readonly]), .l-ov-dialog-body select:not(:disabled), .l-ov-dialog-body textarea:not(:disabled)')?.focus({ preventScroll: true })
-    return () => { dialog?.close(); document.body.style.overflow = overflow; if (before?.isConnected) before.focus({ preventScroll: true }) }
+    return () => {
+      dialog?.close()
+      openModalCount -= 1
+      const target = openModalCount === 0 ? pageFocus : before
+      if (openModalCount === 0) { document.body.style.overflow = pageOverflow; pageFocus = null }
+      if (target?.isConnected) target.focus({ preventScroll: true })
+    }
   }, [focusContent])
   return <dialog ref={ref} className={`l-ov-dialog l-ov-dialog-${kind} ${className}`} aria-labelledby={id}
     onKeyDown={e => {
