@@ -2,12 +2,12 @@
 
 > **For agentic workers:** Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox syntax for tracking.
 
-**Goal:** Give administrators a coherent paid-membership and restricted partner scanning workflow, with temporary
+**Goal:** Give administrators a coherent manual-membership and restricted partner scanning workflow, with temporary
 membership dates, reusable physical cards and an accurate customer configuration guide.
 
 **Architecture:** Reuse MembershipValidity, MemberDetails/Enrolment, TeamController and PlaceScan. Add scan-only
 staff restrictions as an explicit server-side allowlist and a small partner scanner; preserve normal staff and
-installed member/staff API callers. Existing levels are purchased packages, with their real configured benefits.
+installed member/staff API callers. Existing levels are the packages, with their real configured benefits.
 
 **Tech stack:** Laravel 13/PHP 8.5, PostgreSQL/SQLite, React/TypeScript, existing five-locale loyalty UI and scanners.
 
