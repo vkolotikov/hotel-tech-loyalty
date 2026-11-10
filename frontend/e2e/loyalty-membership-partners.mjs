@@ -129,7 +129,7 @@ try {
  check((await call(partner.ctx,partnerToken,'admin/loyalty/partner/scan','POST',{code:qr.code,place_id:place.id,idempotency_key:'card-'+run})).data.member.id===next.id,'Partner scan resolves the reassigned card to the new member')
  await partner.page.evaluate(()=>localStorage.setItem('admin_lang','en'));await partner.page.reload();await partner.page.getByRole('button',{name:'Physical card ID',exact:true}).click()
  await partner.page.getByLabel('Physical card ID', {exact:true}).fill(uid)
- const manual=partner.page.waitForResponse(r=>r.url().endsWith('/admin/loyalty/partner/scan')&&r.request().method()==='POST')
+ const manual=partner.page.waitForResponse(r=>new URL(r.url()).pathname.endsWith('/admin/loyalty/partner/scan')&&r.request().method()==='POST')
  await partner.page.getByRole('button',{name:'Scan and check in',exact:true}).click()
  const manualResponse=await manual
  check(manualResponse.request().postDataJSON().code===qr.code&&(await manualResponse.json()).member.id===next.id,'Physical card reader mode sends explicit identity and resolves the new holder')
