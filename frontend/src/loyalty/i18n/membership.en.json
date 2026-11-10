@@ -503,7 +503,10 @@
     "loadFailed": "The scanner could not load. Check your connection or ask your administrator.",
     "signOut": "Sign out",
     "cancelled": "Cancel",
-    "scanning": "Checking membership…"
+    "scanning": "Checking membership…",
+    "readAs": "Read as",
+    "memberCode": "QR / member code",
+    "cardId": "Physical card ID"
   },
   "reusable": {
     "reuse": "To reuse a returned card, switch it off here, then link its ID on the next member’s page.",

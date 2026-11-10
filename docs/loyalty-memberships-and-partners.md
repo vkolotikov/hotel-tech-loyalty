@@ -50,7 +50,8 @@ award visit points or stamps. Retrying an unanswered request uses the same key a
 
 Camera access needs HTTPS and permission. Phone NFC uses Web NFC in Chrome on compatible Android devices with
 supported NDEF cards. It is not a general reader for every NFC chip. Use camera QR or a keyboard-style reader on
-iPhone/other browsers. USB readers that type the ID work in the code field; this partner screen does not configure
+iPhone/other browsers. For USB readers that type the ID, select **Physical card ID** in the partner scanner; use
+**QR / member code** for personal QR codes. This partner screen does not configure
 or pair specialist USB hardware. See [Chrome's NFC documentation](https://developer.chrome.com/docs/capabilities/nfc).
 
 ## Reuse a returned physical card
@@ -61,8 +62,11 @@ or pair specialist USB hardware. See [Chrome's NFC documentation](https://develo
 4. Scan it and confirm the new name and package. The existing card row is reused and the prior assignment remains
    in the audit log; the new member does not inherit the former member's points, account or history.
 
-**Card QR** on a linked card provides an SVG you can download and print. It encodes the stable physical card ID,
-so that QR follows the card when relinked. An existing QR works this way only if it already encodes that card ID.
+**Card QR** on a linked card provides an SVG you can download and print. It encodes `HTCARD:<card ID>`,
+so that QR follows the card when relinked. The partner scanner uses this explicit physical identity for NFC serials
+and **Physical card ID** input, preserving personal Wallet tokens even when an older token equals the card ID.
+Older full-admin/native NFC readers keep their existing interpretation until updated to send the explicit card code.
+An old QR containing only a bare card ID can collide with a personal Wallet token; replace that print once with Card QR.
 A QR containing a personal member number, app token or Wallet pass remains personal; replace that printed QR once
 with the reusable Card QR. Personal digital cards and login credentials are never reassigned. Static QR/UID cards
 can be copied: staff should check the displayed name against the person when identity matters.

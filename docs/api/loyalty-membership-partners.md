@@ -34,6 +34,12 @@ namespaced by operator. A successful response contains only identity/level/state
 and configured benefits. No contact details, points, history, mutable member links, raw stored scan code or directory.
 Each successful new scan records a place entry; it does not add visit points/stamps.
 
+Reusable physical QR codes contain `HTCARD:<uid>`. This prefix resolves only through the tenant-scoped card lookup,
+normalises the ID and refuses unknown/off cards without personal-token fallback. The partner scanner sends the prefix
+for Web NFC serials and explicit **Physical card ID** input. Bare/JSON/Wallet personal tokens retain their old meaning;
+legacy bare-UID prints can require replacement with Card QR. Existing other readers need to send this explicit prefix
+to distinguish a reused physical card from an older personal Wallet token holding the same UID.
+
 Team's existing endpoints also accept `loyalty_scan_only` and `loyalty_place_ids`. The canonical writer preserves
 existing restrictions when fields are omitted and clears all four capability flags while restricted. Re-inviting
 an existing teammate does not change their role/access. The partner adapter rejects an existing unrestricted

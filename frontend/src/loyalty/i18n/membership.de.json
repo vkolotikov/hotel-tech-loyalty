@@ -503,7 +503,10 @@
     "loadFailed": "Der Scanner konnte nicht geladen werden. Prüfen Sie die Verbindung oder fragen Sie Ihren Administrator.",
     "signOut": "Abmelden",
     "cancelled": "Abbrechen",
-    "scanning": "Mitgliedschaft wird geprüft…"
+    "scanning": "Mitgliedschaft wird geprüft…",
+    "readAs": "Lesen als",
+    "memberCode": "QR / Mitgliedscode",
+    "cardId": "Physische Karten-ID"
   },
   "reusable": {
     "reuse": "Um eine zurückgegebene Karte erneut auszugeben, deaktivieren Sie sie hier und verknüpfen Sie ihre ID beim nächsten Mitglied.",

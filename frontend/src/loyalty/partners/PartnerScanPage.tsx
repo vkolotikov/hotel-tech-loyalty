@@ -26,15 +26,18 @@ export function PartnerScanPage() {
   const { t, i18n } = useTranslation(), w = usePartnerWords(), look = useLook(), auth = useAuthStore()
   const context = useQuery({ queryKey: ['loyalty', 'partner-context', auth.user?.id], queryFn: partnerApi.context, retry: false, refetchInterval: 60_000 })
   const [place, setPlace] = useState(0), [code, setCode] = useState(''), [camera, setCamera] = useState(false)
+  const [physical, setPhysical] = useState(false)
   const pending = useRef(false), attempt = useRef<PartnerScanBody | null>(null)
   const places = context.data?.places ?? [], selected = places.find(row => row.id === place) ?? places[0]
   const scan = useMutation({ mutationFn: partnerApi.scan, onSettled: () => { pending.current = false }, onError: error => {
     if (failureOf(error).status === 403) void context.refetch()
   } })
-  const nfc = useWebNfc(read => submit(read.code), true)
-  function submit(raw: string) {
-    const value = raw.trim()
-    if (!value || !selected || pending.current) return
+  // A returned card can still carry its former holder's NDEF record. Explicit physical identity uses its UID.
+  const nfc = useWebNfc(read => { setPhysical(!!read.card); submit(read.card ?? read.code, !!read.card) }, true)
+  function submit(raw: string, asCard = physical) {
+    const trimmed = raw.trim()
+    if (!trimmed || !selected || pending.current) return
+    const value = asCard && !/^HTCARD:/i.test(trimmed) ? 'HTCARD:' + trimmed : trimmed
     pending.current = true; setCode(value); setCamera(false); nfc.stop()
     const same = attempt.current?.code === value && attempt.current?.place_id === selected.id
     const body = same && scan.isError && failureOf(scan.error).code === 'network' ? attempt.current! : { code: value, place_id: selected.id, idempotency_key: newPressKey() }
@@ -54,10 +57,11 @@ export function PartnerScanPage() {
       {context.isLoading && <p role="status">{w('scanning')}</p>}
       {context.data && !selected && <Notice tone="warning">{w('noAccess')}</Notice>}
       {selected && <section className="l-ov-panel l-partner-controls"><p>{w('scanHint')}</p><FormField label={w('places')}><select value={selected.id} disabled={scan.isPending} onChange={e => { setPlace(Number(e.target.value)); reset() }}>{places.map(row => <option key={row.id} value={row.id}>{row.name}</option>)}</select></FormField>
-        <form onSubmit={e => { e.preventDefault(); submit(code) }}><FormField label={w('code')}><input value={code} autoComplete="off" spellCheck={false} disabled={scan.isPending} maxLength={2048} onChange={e => { setCode(e.target.value); if (!scan.isPending) scan.reset() }} /></FormField><OverviewButton primary type="submit" disabled={scan.isPending || !code.trim()}>{scan.isPending ? w('scanning') : w('scan')}</OverviewButton></form>
-        <div className="l-partner-actions"><OverviewButton disabled={scan.isPending} onClick={() => { reset(); setCamera(true) }}><ScanLine size={18} aria-hidden />{w('camera')}</OverviewButton><OverviewButton disabled={scan.isPending} onClick={nfc.listening ? nfc.stop : () => { setCamera(false); nfc.start() }}><SmartphoneNfc size={18} aria-hidden />{w(nfc.listening ? 'stop' : 'nfc')}</OverviewButton></div><small>{w('nfcHint')}</small>
+        <div className="l-partner-actions" role="group" aria-label={w('readAs')}><OverviewButton aria-pressed={!physical} disabled={scan.isPending} onClick={() => { reset(); setPhysical(false) }}>{w('memberCode')}</OverviewButton><OverviewButton aria-pressed={physical} disabled={scan.isPending} onClick={() => { reset(); setPhysical(true) }}>{w('cardId')}</OverviewButton></div>
+        <form onSubmit={e => { e.preventDefault(); submit(code) }}><FormField label={w(physical ? 'cardId' : 'code')}><input value={code} autoComplete="off" spellCheck={false} disabled={scan.isPending} maxLength={2048} onChange={e => { setCode(e.target.value); if (!scan.isPending) scan.reset() }} /></FormField><OverviewButton primary type="submit" disabled={scan.isPending || !code.trim()}>{scan.isPending ? w('scanning') : w('scan')}</OverviewButton></form>
+        <div className="l-partner-actions"><OverviewButton disabled={scan.isPending} onClick={() => { reset(); setPhysical(false); setCamera(true) }}><ScanLine size={18} aria-hidden />{w('camera')}</OverviewButton><OverviewButton disabled={scan.isPending} onClick={nfc.listening ? nfc.stop : () => { setCamera(false); nfc.start() }}><SmartphoneNfc size={18} aria-hidden />{w(nfc.listening ? 'stop' : 'nfc')}</OverviewButton></div><small>{w('nfcHint')}</small>
         {nfc.trouble && <Notice tone="warning">{w('nfcHint')}</Notice>}
-        {camera && <CameraScanner onCode={submit} onStop={() => setCamera(false)} />}
+        {camera && <CameraScanner onCode={value => submit(value, false)} onStop={() => setCamera(false)} />}
       </section>}
       {problem && <Notice tone="danger">{problem.status === 403 ? w('blocked') : refusal && t(...refusal)}{problem.code === 'network' && <OverviewButton disabled={scan.isPending} onClick={() => submit(code)}>{w('retry')}</OverviewButton>}</Notice>}
       {result && verdict && <section className="l-ov-panel l-partner-result" data-granted={verdict.granted} role="status" aria-live="polite"><div className="l-partner-verdict">{verdict.granted ? <CheckCircle2 size={36} aria-hidden /> : <XCircle size={36} aria-hidden />}<h2>{w(verdict.granted ? 'checked' : 'denied')}</h2></div><h2>{result.member.name}</h2><p>{result.member.member_number} · {verdict.tier?.name}</p>{!verdict.granted && reason && <p>{t(...reason)}</p>}<p className="l-partner-place-line"><MapPin size={16} aria-hidden />{verdict.place?.name}</p>

@@ -120,15 +120,21 @@ try {
  report.phase='card reuse'
  const uid=randomBytes(7).toString('hex'), card=(await call(manager.ctx,token,`admin/loyalty/members/${member.id}/cards`,'POST',{uid})).data.card
  const qr=(await call(manager.ctx,token,`admin/loyalty/members/${member.id}/cards/${card.id}/qr`)).data
- check(qr.code===uid&&qr.qr_svg.startsWith('data:image/svg+xml;base64,'),'Reusable card QR encodes its stable ID')
+ check(qr.code==='HTCARD:'+uid&&qr.qr_svg.startsWith('data:image/svg+xml;base64,'),'Reusable card QR encodes its explicit physical ID')
  const next=(await call(manager.ctx,token,'admin/loyalty/members','POST',{name:'Next member '+run,email:`membership.next.${run}@example.test`,send_welcome:false})).data.member
  await call(manager.ctx,token,`admin/loyalty/members/${member.id}/cards/${card.id}/off`,'POST')
  const linked=await call(manager.ctx,token,`admin/loyalty/members/${next.id}/cards`,'POST',{uid})
  check(linked.status===201&&linked.data.card.id===card.id,'Returned physical card is reused on the same row')
  check((await call(manager.ctx,token,`admin/loyalty/members/${next.id}/cards/${card.id}/qr`)).data.qr_svg===qr.qr_svg,'Printed card QR remains unchanged after reassignment')
- check((await call(partner.ctx,partnerToken,'admin/loyalty/partner/scan','POST',{code:uid,place_id:place.id,idempotency_key:'card-'+run})).data.member.id===next.id,'Partner scan resolves the reassigned card to the new member')
+ check((await call(partner.ctx,partnerToken,'admin/loyalty/partner/scan','POST',{code:qr.code,place_id:place.id,idempotency_key:'card-'+run})).data.member.id===next.id,'Partner scan resolves the reassigned card to the new member')
+ await partner.page.evaluate(()=>localStorage.setItem('admin_lang','en'));await partner.page.reload();await partner.page.getByRole('button',{name:'Physical card ID',exact:true}).click()
+ await partner.page.getByLabel('Physical card ID', {exact:true}).fill(uid)
+ const manual=partner.page.waitForResponse(r=>r.url().endsWith('/admin/loyalty/partner/scan')&&r.request().method()==='POST')
+ await partner.page.getByRole('button',{name:'Scan and check in',exact:true}).click()
+ const manualResponse=await manual
+ check(manualResponse.request().postDataJSON().code===qr.code&&(await manualResponse.json()).member.id===next.id,'Physical card reader mode sends explicit identity and resolves the new holder')
  await call(manager.ctx,token,`admin/loyalty/partners/${partnerId}/state`,'PUT',{is_active:false})
- check((await call(partner.ctx,partnerToken,'admin/loyalty/partner/scan','POST',{code:uid,place_id:place.id,idempotency_key:'card-'+run})).status===403,'Deactivation blocks even an earlier successful retry')
+ check((await call(partner.ctx,partnerToken,'admin/loyalty/partner/scan','POST',{code:qr.code,place_id:place.id,idempotency_key:'card-'+run})).status===403,'Deactivation blocks even an earlier successful retry')
  report.phase='menu'
  await manager.page.goto(base+'/loyalty/overview');await manager.page.getByRole('button',{name:'Collapse menu',exact:true}).click()
  check(await manager.page.locator('[data-loyalty]').getAttribute('data-slim')!==null,'Visible menu icon collapses the rail')

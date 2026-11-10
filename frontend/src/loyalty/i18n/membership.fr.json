@@ -503,7 +503,10 @@
     "loadFailed": "Le scanner n’a pas pu être chargé. Vérifiez la connexion ou contactez votre administrateur.",
     "signOut": "Se déconnecter",
     "cancelled": "Annuler",
-    "scanning": "Vérification de l’adhésion…"
+    "scanning": "Vérification de l’adhésion…",
+    "readAs": "Type de code",
+    "memberCode": "QR / code membre",
+    "cardId": "Identifiant de carte physique"
   },
   "reusable": {
     "reuse": "Pour réattribuer une carte rendue, désactivez-la ici, puis liez son identifiant sur la page du nouveau membre.",

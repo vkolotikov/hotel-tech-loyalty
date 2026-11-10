@@ -93,7 +93,7 @@ function ReusableQrDialog({ memberId, card, onClose }: { memberId: number; card:
   return <Dialog title={t('loyalty.membership.reusable.title', 'Reusable card QR')} onClose={onClose}><div className="space-y-4">
     <p className="text-sm text-a-text-2">{t('loyalty.membership.reusable.hint', 'This QR contains the physical card ID. It follows the card when you relink it. Personal member and wallet QR codes stay with their member.')}</p>
     {query.isError && <Notice tone="danger">{w('loadFailed')}</Notice>}
-    {query.data && <><div data-print-card="" className="flex flex-col items-center gap-3 rounded-xl border border-a-border bg-a-surface p-5"><img src={query.data.qr_svg} width={220} height={220} alt={t('loyalty.membership.reusable.title', 'Reusable card QR')} /><code>{query.data.code}</code></div><a className="inline-flex items-center gap-2 text-a-accent-text" href={query.data.qr_svg} download={`card-${query.data.code}.svg`}><Download size={16} aria-hidden />{t('loyalty.membership.reusable.download', 'Download QR')}</a></>}
+    {query.data && <><div data-print-card="" className="flex flex-col items-center gap-3 rounded-xl border border-a-border bg-a-surface p-5"><img src={query.data.qr_svg} width={220} height={220} alt={t('loyalty.membership.reusable.title', 'Reusable card QR')} /><code>{query.data.code}</code></div><a className="inline-flex items-center gap-2 text-a-accent-text" href={query.data.qr_svg} download={`card-${query.data.code.replace(/[^a-zA-Z0-9-]/g, '-')}.svg`}><Download size={16} aria-hidden />{t('loyalty.membership.reusable.download', 'Download QR')}</a></>}
     <div className="flex justify-end"><Button variant="secondary" onClick={onClose}>{w('cancelled')}</Button></div>
   </div></Dialog>
 }

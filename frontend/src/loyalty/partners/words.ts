@@ -14,6 +14,7 @@ export const WORDS = {
   app: 'Partner scanner', appHint: 'After activation, staff sign in here. Bookmark this page or add it to the phone’s home screen.',
   scan: 'Scan and check in', scanHint: 'Choose your place, then scan the member’s QR code or NFC card.',
   code: 'Member QR or card code', camera: 'Scan QR with camera', nfc: 'Tap NFC card', stop: 'Stop NFC',
+  readAs: 'Read as', memberCode: 'QR / member code', cardId: 'Physical card ID',
   nfcHint: 'Phone NFC needs a compatible Android browser and card. Use QR or a connected reader on other devices.',
   noAccess: 'No places are assigned to you. Ask your administrator.', checked: 'Checked in', denied: 'No access',
   benefits: 'Level benefits', reference: 'Check-in was denied at this place. Benefits are shown for reference.',

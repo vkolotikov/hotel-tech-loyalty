@@ -503,7 +503,10 @@
     "loadFailed": "No se ha podido cargar el escáner. Compruebe la conexión o consulte a su administrador.",
     "signOut": "Cerrar sesión",
     "cancelled": "Cancelar",
-    "scanning": "Comprobando membresía…"
+    "scanning": "Comprobando membresía…",
+    "readAs": "Leer como",
+    "memberCode": "QR / código de miembro",
+    "cardId": "ID de tarjeta física"
   },
   "reusable": {
     "reuse": "Para reutilizar una tarjeta devuelta, desactívela aquí y vincule su ID en la página del siguiente miembro.",
