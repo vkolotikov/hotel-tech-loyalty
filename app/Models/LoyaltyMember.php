@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use App\Traits\BelongsToOrganization;
 
+/** @property \Illuminate\Support\Carbon|null $membership_valid_from */
 class LoyaltyMember extends Model
 {
     use BelongsToOrganization;

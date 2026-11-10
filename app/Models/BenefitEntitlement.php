@@ -78,6 +78,7 @@ class BenefitEntitlement extends Model
     private function assertMembershipBenefits(): void
     {
         // Re-read at use time: an approval can outlive the member's term or a replacement with a future start.
+        /** @var LoyaltyMember $member The member() relation belongs to LoyaltyMember. */
         $member = $this->member()->first() ?? throw \App\Services\Loyalty\LoyaltyRefused::notFound();
         \App\Services\Loyalty\Members\MemberStatus::assertMembershipBenefits($member);
     }

@@ -118,7 +118,7 @@ class MembershipValidity
     /** New dated/assigned memberships have a bounded benefit term; legacy end-only memberships keep desk rules. */
     public static function benefitsAvailable(LoyaltyMember $member): bool
     {
-        $today = VenueClock::today((int) $member->organization_id);
+        $today = VenueClock::today((int) $member->getAttribute('organization_id'));
         $from = self::startOf($member);
         if ((array_key_exists('is_active', $member->getAttributes()) && !$member->is_active) || ($from !== null && $from > $today)) {
             return false;
@@ -314,7 +314,7 @@ class MembershipValidity
     public static function onCreate(LoyaltyMember $member, ?string $validUntil, ?string $validFrom = null): void
     {
         $validUntil = $validUntil === '' ? null : $validUntil;
-        if (($validUntil === null || $validUntil === '') && $validFrom === null) {
+        if ($validUntil === null && $validFrom === null) {
             return;
         }
         self::assertInterval($validFrom, $validUntil);

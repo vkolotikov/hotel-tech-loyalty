@@ -63,12 +63,12 @@ class TeamController extends Controller
     /** The canonical invitation writer also applies the scan-only role boundary. */
     private function partnerRestrictions(array $data, ?Staff $staff = null): array
     {
-        $restricted = (bool) ($data['loyalty_scan_only'] ?? $staff?->loyalty_scan_only ?? false);
+        $restricted = (bool) ($data['loyalty_scan_only'] ?? $staff->loyalty_scan_only ?? false);
         if (!$restricted) { return $data; }
         if (($data['role'] ?? $staff?->role) !== 'staff') {
             throw \Illuminate\Validation\ValidationException::withMessages(['role' => ['Remove scan-only access explicitly before changing the role.']]);
         }
-        $places = $data['loyalty_place_ids'] ?? $staff?->loyalty_place_ids ?? [];
+        $places = $data['loyalty_place_ids'] ?? $staff->loyalty_place_ids ?? [];
         if (!$places) {
             throw \Illuminate\Validation\ValidationException::withMessages(['loyalty_place_ids' => ['Choose at least one active place.']]);
         }
@@ -392,7 +392,7 @@ class TeamController extends Controller
         $after = $staff->fresh()->only($auditableFields);
         $changed = [];
         foreach ($auditableFields as $f) {
-            if (($before[$f] ?? null) !== ($after[$f] ?? null)) {
+            if ($before[$f] !== $after[$f]) {
                 $changed[] = $f;
             }
         }
