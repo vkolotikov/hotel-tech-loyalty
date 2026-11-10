@@ -10,7 +10,7 @@ use Illuminate\Support\Collection;
 /** Explicit server boundary, independent of role/capability report mode. */
 final class PartnerAccess
 {
-    public static function restricted(?Staff $staff): bool { return (bool) ($staff?->loyalty_scan_only ?? false); }
+    public static function restricted(?Staff $staff): bool { return (bool) ($staff->loyalty_scan_only ?? false); }
 
     public static function allowedRoute(string $uri, string $method): bool
     {

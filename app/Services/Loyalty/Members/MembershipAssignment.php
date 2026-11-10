@@ -26,7 +26,7 @@ final class MembershipAssignment
     {
         LoyaltyAccess::requireManager($by);
         $mode = self::checkedMode($data['membership_mode'] ?? null);
-        $orgId = (int) $member->organization_id;
+        $orgId = (int) $member->getAttribute('organization_id');
         $cacheKey = "loyalty-membership:{$orgId}:{$member->id}:" . hash('sha256', $key);
         $wanted = array_intersect_key($data, array_flip(['membership_mode', 'tier_id', 'valid_from', 'valid_until', 'confirm_replace']));
         ksort($wanted);

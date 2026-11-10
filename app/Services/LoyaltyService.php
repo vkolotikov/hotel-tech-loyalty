@@ -571,7 +571,7 @@ class LoyaltyService
         // older model instance. A stale assessment can never replace a newly assigned package.
         return DB::transaction(function () use ($member, $assessedBy, $reason) {
             $current = LoyaltyMember::withoutGlobalScope(\App\Scopes\TenantScope::class)
-                ->where('organization_id', $member->organization_id)->whereKey($member->id)->lockForUpdate()->first();
+                ->where('organization_id', $member->getAttribute('organization_id'))->whereKey($member->id)->lockForUpdate()->first();
             if ($current === null || $current->getAttribute('membership_mode') === 'assigned') {
                 return false;
             }
