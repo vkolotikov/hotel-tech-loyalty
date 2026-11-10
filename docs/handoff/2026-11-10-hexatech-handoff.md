@@ -34,5 +34,32 @@ Shared Google issuer onboarding for other organisations is still a separate impl
 
 Source checks completed: TypeScript, 6,834 tests in 464 frontend files, lint baseline and ten PHP AppLook/Start tests.
 The compiled real-backend logo journey passed 17 checks, including HTTP image delivery, browser decoding and
-desktop/mobile inspection. Private evidence: C:/wamp64/tmp/loyalty-launch-20261109/logo. Release artifact preparation
-and live verification are pending; do not describe the logo fix as deployed yet.
+desktop/mobile inspection. Private evidence: C:/wamp64/tmp/loyalty-launch-20261109/logo.
+
+## Logo fix: deployed and live verified
+
+Production main **1d1e2fa6f5dfc2ba024ad57de3ca5a55e73aa225**, Cloud deployment **1158**, from source patch
+**d47dad2b3** on the previous main d69f4041f. **Next source-patch code baseline: d3631e622**; later documentation
+commits are evidence only. Fourteen exact source/documentation paths, whole-source parity excluding only
+frontend/dist, public/spa and resources/spa-shell; existing separate deploy worktree reused with physical vendor
+and the dependency junction. Fresh artifact build completed. No schema, backend/API or provider credential changes.
+
+Artifact checks: **2,077 PHP tests passed** (Support 214, Unit Landing 118, Feature Landing 1,735, AppLook/Start 10),
+TypeScript, **6,834 frontend tests in 464 files**, lint baseline and the **17-check compiled real-backend journey**.
+The image HTTP response is 200 image/png and Chrome decodes the 160 px test fixture. Existing app designers stay On hold.
+
+Live content verified **10 November 2026, 08:21:57 UTC / 10:21:57 Europe/Riga**: index-DLYGyKeh.js loads
+LoyaltyApp-B2vRuZOz.js and AppPage-CDNOIksf.js with data-logo-editor, upload confirmation and setup-return copy.
+Both logo endpoints still require authentication (401 without a token). The ten prior feature/access/landing
+continuity checks also passed at 08:22:44 UTC against this new build; C:/wamp64/tmp/loyalty-polish-production.json
+now holds that newer continuity result. New release evidence: C:/wamp64/tmp/loyalty-logo-production-20261110.json.
+
+Signed-in acceptance on the owner's PC also confirmed the actual Russian uploader, existing logo image, Replace
+logo button and Back to setup link at /loyalty/app?tab=app. No production logo was changed to prove it. Cloud reports
+1158 Deployed, with build warnings; all fresh build/type/test gates passed. Post-deploy CI
+[42781338768](https://github.com/vkolotikov/hotel-tech-loyalty/actions/runs/42781338768) has seven successful jobs;
+the PostgreSQL job is still running at this recording.
+
+The task-owned PHP/preview/PostgreSQL helpers are stopped. The deploy worktree was removed after validating its
+absolute path, clean state and branch, and removing only its node_modules junction first. Root shared dependencies
+and owner untracked files remain. The earlier blocked Cloud-stream cleanup remnant was not touched.

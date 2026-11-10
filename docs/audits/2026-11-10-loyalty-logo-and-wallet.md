@@ -25,7 +25,10 @@ The image check exposed a rehearsal-only setup error: SESSION_DRIVER=database na
 not have. The helper now stores web sessions in its isolated storage directory with the file driver. Database cache
 and queue stay as before. The production session configuration is unchanged.
 
-Final artifact, live release and image acceptance evidence are recorded in the current handoff when complete.
+Final artifact, live release and image acceptance evidence are recorded in the 10 November handoff: production
+1d1e2fa6f / Cloud 1158, feature source baseline d3631e622. All 17 compiled browser checks passed, including image
+delivery and decoding. Public content/access checks and the signed-in Russian uploader were verified live on the
+owner's PC. The existing saved logo displayed correctly; production branding was not changed during verification.
 
 ## Wallet observations on the owner's PC
 
