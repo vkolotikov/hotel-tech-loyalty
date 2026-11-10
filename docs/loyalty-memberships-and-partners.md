@@ -62,6 +62,9 @@ or pair specialist USB hardware. See [Chrome's NFC documentation](https://develo
 4. Scan it and confirm the new name and package. The existing card row is reused and the prior assignment remains
    in the audit log; the new member does not inherit the former member's points, account or history.
 
+Reassigning a card does not end the former membership. Switch that membership off separately if the person should
+lose access; their personal QR and Wallet codes still identify their own account.
+
 **Card QR** on a linked card provides an SVG you can download and print. It encodes `HTCARD:<card ID>`,
 so that QR follows the card when relinked. The partner scanner uses this explicit physical identity for NFC serials
 and **Physical card ID** input, preserving personal Wallet tokens even when an older token equals the card ID.
