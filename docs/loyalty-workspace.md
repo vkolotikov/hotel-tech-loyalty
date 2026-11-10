@@ -1,5 +1,11 @@
 # HexaTech Loyalty — runbook
 
+Events simplification (10 November 2026): one sidebar Events button; Upcoming, Past and Drafts are page filters.
+The compact directory groups search/location/level filters with date rows and selected details, and add/edit
+uses the common staff popup with a live member preview. Attendance uses matching rows, summary icons and ten
+people per page. Existing API, permissions, lifecycle and scan/door workflows are retained. See
+[the Events audit](audits/2026-11-10-loyalty-events-compact.md).
+
 Catalogue layout follow-up (10 November 2026): Program, Ways to earn and Rewards use shared aligned row/header
 columns, compact original Figma artwork and grouped assignment/filter controls. The member search reserves its icon
 inset against the general input rule. Both themes and responsive layouts are covered by a compiled real-backend

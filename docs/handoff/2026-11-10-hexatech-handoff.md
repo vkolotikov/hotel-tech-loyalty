@@ -254,3 +254,42 @@ logic/words remain unchanged. See docs/audits/2026-11-10-member-portal-design.md
 Initial checks: TypeScript, 6926 frontend tests, 307 portal PHP tests and twenty compiled real-backend browser
 checks passed. Release artifact validation and deployment are in progress; the prior production/source
 baseline above remains in force until the live checks pass.
+
+
+### Member portal release verified
+
+Production main **8f12b72ac068302577708b7de87995772a967301**, source through
+**7798337c7d610a157f3a78f19be203cc968f8b3d**. Next source-patch code baseline: **7798337c7**.
+The guarded 102-path manifest (deletions included) has SHA256
+D5562A17AB4A14EC211BFB96E1111B4BD8A6F4EA79774EEB09D2F1FFFFE2C073. Whole-source parity outside
+the three generated areas passed before and after the fresh artifact build.
+
+Final artifact gates: TypeScript/build, 6928 frontend tests/470 files, lint regression check (1381 legacy
+findings), changed-class PHPStan and 2374 scoped PHP tests/15630 assertions. Compiled browser acceptance: 41
+checks across functional, language/touch and 320/393px reward-value probes. The assigned-membership/points-off
+case, keyboard cycling, pending/double redemption, birthday preservation and contrast have explicit coverage.
+No production customer writes/messages. Original native-shared logic, translations and API shapes remain intact.
+
+Both production domains passed 40 live content/auth/landing checks at 2026-11-10 17:05:47 UTC.
+Cloud assets: index-B9QSxLsN.js, PortalApp-BcRdNP-6.js, PortalApp-BlRTEMfA.css, index-D7h0NFI7.css.
+See docs/audits/2026-11-10-member-portal-design.md and the private evidence paths there.
+CI 42860594743 completed successfully: all eight jobs passed, including PostgreSQL 18.
+
+
+The task-owned loopback proxy/backend and verified PostgreSQL cluster are stopped. The clean deployment
+worktree was removed after checking its exact path, branch, released commit, physical vendor and dependency
+junction target. Shared dependencies, owner assets and private evidence remain intact.
+
+## Compact staff Events (10 November 2026)
+
+Branch `feature/loyalty-events-compact-20261110` adapts simplified Figma EV-B01/02/03 (`312:11225`,
+`312:11495`, `312:11781`) to the common staff catalogue and native popup. One Events sidebar button;
+Upcoming/Past/Drafts filters inside the directory, grouped search, date tiles, aligned rows, selected schedule,
+capacity and reward. Add/edit keeps its URLs, grouped fields, preview, guarded drafts and review/publish.
+Attendance uses matching summary icons and rows with ten people per page. All existing writers, permission,
+scan/door and API contracts remain unchanged. Five translated bundles; original local vectors.
+
+Feature validation: 570 focused frontend checks, changed-file lint and 58 scoped Events PHP tests / 510
+assertions passed. Real-API draft/publish/check-in passed against the task-owned PostgreSQL demo; responsive
+and artifact checks are finishing. See `docs/audits/2026-11-10-loyalty-events-compact.md`. Production/source
+baseline remains **8f12b72ac / 7798337c7** until deployment and live content verification complete.
