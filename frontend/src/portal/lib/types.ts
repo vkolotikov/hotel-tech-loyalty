@@ -69,6 +69,7 @@ export interface PortalMember {
   member_since: string
   user: { id: number; name: string; email: string; phone: string | null; language: string | null; nationality?: string | null; avatar_url?: string | null; date_of_birth?: string | null }
   benefits: BenefitPreview[]
+  membership_mode?: 'assigned' | 'earned'
   /** Release 4, part A: the kinds of message, as the server reads them (PortalBootstrap::member()). A kind switched
    *  off is not sent at all — no push, no inbox row (NotificationService::send()). */
   notification_preferences?: NotificationPreferences
@@ -76,7 +77,7 @@ export interface PortalMember {
    *  portal shows the switch only then. */
   sms_consent?: boolean
   /** Release 8: the membership's end date (Y-m-d, or null: no end) and its state. */
-  membership?: { valid_until: string | null; state: 'active' | 'expiring' | 'expired' | 'off' }
+  membership?: { valid_from?: string | null; valid_until: string | null; state: 'active' | 'expiring' | 'expired' | 'off' | 'scheduled' }
 }
 
 /** The categories of NotificationService::CATEGORIES, the keys PUT member/profile `notification_preferences` takes. */
@@ -200,6 +201,7 @@ export interface Offer {
 export interface Claim {
   id: number
   status: string
+  usable_now?: boolean
   claimed_at?: string | null
   used_at?: string | null
   expires_at?: string | null

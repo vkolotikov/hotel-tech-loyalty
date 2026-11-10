@@ -87,6 +87,8 @@
     "past_counts": "{{created}} angelegt · {{skipped}} übersprungen · {{refused}} abgelehnt",
     "open": "Öffnen",
     "problem": {
+      "bad_validity_range": "Die Mitgliedschaft beginnt nach ihrem Enddatum.",
+      "bad_valid_from": "Schreiben Sie das Startdatum als JJJJ-MM-TT.",
       "no_email": "Keine E-Mail-Adresse in dieser Zeile.",
       "no_name": "Kein Name in dieser Zeile.",
       "bad_email": "Die E-Mail-Adresse ist ungültig.",
@@ -276,6 +278,7 @@
       "credit": "Das Guthaben, zu dem des bleibenden Mitglieds addiert"
     },
     "error": {
+      "membership_period_conflict": "Diese Mitgliedschaftszeiträume sind getrennt. Legen Sie vor dem Zusammenführen die gewünschten Daten fest.",
       "manager_only": "Das kann nur ein Inhaber oder Manager.",
       "not_allowed": "Das kann nur ein Inhaber oder Manager.",
       "no_capability": "Das kann nur ein Inhaber oder Manager.",
@@ -283,7 +286,8 @@
       "not_found": "Eines der beiden ist nicht mehr in Ihrem Programm. Die Liste zeigt die Paare jetzt so, wie sie sind.",
       "invalid": "Sagen Sie in wenigen Worten, warum die beiden eine Person sind.",
       "network": "Keine Verbindung: Es wurde nichts zusammengeführt. Versuchen Sie es erneut.",
-      "unknown": "Die Mitglieder konnten nicht zusammengeführt werden. Es wurde nichts geändert; bitte versuchen Sie es erneut."
+      "unknown": "Die Mitglieder konnten nicht zusammengeführt werden. Es wurde nichts geändert; bitte versuchen Sie es erneut.",
+      "membership_assignment_conflict": "Wählen Sie vor dem Zusammenführen für beide Konten denselben Mitgliedschaftsmodus und dieselbe Stufe."
     }
   },
   "details": {
@@ -322,6 +326,7 @@
     "export": "Exportieren",
     "add": "Mitglied hinzufügen",
     "state": {
+      "scheduled": "Geplant",
       "expiring": "Läuft bald ab",
       "expired": "Abgelaufen"
     },
@@ -394,7 +399,9 @@
     "off_line": "Der Zutritt wird unabhängig vom Datum verweigert.",
     "problem": {
       "date": "Wählen Sie einen Tag.",
-      "past": "Wählen Sie heute oder einen späteren Tag."
+      "past": "Wählen Sie heute oder einen späteren Tag.",
+      "start": "Wählen Sie ein gültiges Startdatum.",
+      "range": "Das Startdatum muss vor oder am Enddatum liegen."
     },
     "set_title": "Gültig bis",
     "set_label": "Letzter Tag der Mitgliedschaft",
@@ -415,7 +422,11 @@
       "key_reused": "Gerade wurde eine andere Änderung gemacht. Die Seite zeigt jetzt das aktuelle Enddatum; versuchen Sie es erneut, falls es nicht stimmt.",
       "invalid": "Wählen Sie heute oder einen späteren Tag.",
       "unknown": "Das Enddatum konnte nicht gespeichert werden. Nichts wurde geändert; bitte versuchen Sie es erneut."
-    }
+    },
+    "starts": "Gültig ab {{day}}",
+    "period_title": "Mitgliedschaftszeitraum",
+    "from_label": "Gültig ab (optional)",
+    "from_hint": "Für sofortigen Zugang leer lassen. Ein zukünftiges Datum legt den Beginn der Mitgliedschaft fest."
   },
   "progress": {
     "visits_sofar_one": "1 Besuch zählt für die Stufen.",
@@ -425,5 +436,80 @@
     "visit_one": "Noch 1 Besuch bis {{tier}}",
     "visits_many": "Noch {{n}} Besuche bis {{tier}}",
     "spend": "Noch {{amount}} bis {{tier}}"
+  },
+  "assignment": {
+    "title": "Mitgliedschaft zuweisen",
+    "manage": "Mitgliedschaft verwalten",
+    "mode": "So wird die Stufe bestimmt",
+    "assigned": "Manuell zugewiesen",
+    "earned": "Erworbener Fortschritt",
+    "assignedHint": "Die gewählte Stufe und ihre Vorteile bleiben bestehen, bis ein Administrator sie ändert.",
+    "earnedHint": "Das Programm bestimmt die Stufe anhand von Punkten, Besuchen oder Ausgaben.",
+    "level": "Mitgliedschaftspaket / Stufe",
+    "choose": "Wählen Sie eine aktive Stufe",
+    "benefits": "Enthaltene Vorteile",
+    "inherits": "Das Mitglied erhält die aktiven Vorteile dieser Stufe automatisch.",
+    "noBenefits": "Für diese Stufe sind noch keine Vorteile eingerichtet.",
+    "reviewBenefits": "Prüfen Sie die Vorteile unter Prämien & Vorteile.",
+    "datesHint": "Die Daten gelten im lokalen Kalender Ihres Unternehmens. Für eine unbefristete Mitgliedschaft lassen Sie das Enddatum leer.",
+    "replace": "Ich verstehe, dass der aktuelle Zugang sofort ersetzt wird. Der Zugang beginnt wieder am gewählten Startdatum.",
+    "save": "Mitgliedschaft speichern",
+    "failed": "Die Mitgliedschaft konnte nicht gespeichert werden. Prüfen Sie die Felder und versuchen Sie es erneut."
+  },
+  "partners": {
+    "title": "Partnerzugang",
+    "line": "Laden Sie Personal zum Scannen von Mitgliedern an ausgewählten Orten ein.",
+    "rights": "Partner können Mitglieder einchecken sowie Stufe und Vorteile sehen. Mitglieder, Stufen, Prämien und Einstellungen können sie nicht ändern.",
+    "invite": "Partnerpersonal einladen",
+    "name": "Name",
+    "email": "E-Mail",
+    "places": "Erlaubte Orte",
+    "choose": "Wählen Sie mindestens einen aktiven Ort.",
+    "noPlaces": "Legen Sie vor der Einladung einen aktiven Ort unter Programm an.",
+    "empty": "Noch kein Partnerpersonal.",
+    "edit": "Orte bearbeiten",
+    "save": "Zugang speichern",
+    "send": "Einladung senden",
+    "active": "Aktiv",
+    "off": "Zugang deaktiviert",
+    "pending": "Einladung ausstehend",
+    "resend": "Einladung erneut senden",
+    "deactivate": "Zugang deaktivieren",
+    "reactivate": "Zugang wiederherstellen",
+    "saved": "Zugang gespeichert.",
+    "sent": "Einladung gesendet. Der Empfänger legt über den Link in der E-Mail ein Passwort fest.",
+    "mailFailed": "Das Konto ist gespeichert, die E-Mail wurde aber nicht gesendet. Senden Sie die Einladung erneut.",
+    "failed": "Speichern fehlgeschlagen. Prüfen Sie Orte und Felder und versuchen Sie es erneut.",
+    "plan": "Das Teamlimit Ihres Tarifs ist erreicht. Ein Inhaber kann den Tarif unter Abrechnung ändern.",
+    "app": "Partnerscanner",
+    "appHint": "Nach der Aktivierung meldet sich das Personal hier an. Speichern Sie diese Seite als Lesezeichen oder auf dem Startbildschirm.",
+    "scan": "Scannen und einchecken",
+    "scanHint": "Wählen Sie Ihren Ort und scannen Sie den QR-Code oder die NFC-Karte des Mitglieds.",
+    "code": "Mitglieder-QR oder Kartencode",
+    "camera": "QR mit Kamera scannen",
+    "nfc": "NFC-Karte antippen",
+    "stop": "NFC stoppen",
+    "nfcHint": "NFC am Telefon erfordert einen kompatiblen Android-Browser und eine Karte. Nutzen Sie sonst QR oder ein angeschlossenes Lesegerät.",
+    "noAccess": "Ihnen sind keine Orte zugewiesen. Fragen Sie Ihren Administrator.",
+    "checked": "Eingecheckt",
+    "denied": "Kein Zugang",
+    "benefits": "Vorteile der Stufe",
+    "reference": "Der Zutritt zu diesem Ort wurde abgelehnt. Die Vorteile dienen zur Information.",
+    "from": "Gültig ab",
+    "until": "Gültig bis",
+    "again": "Nächstes Mitglied scannen",
+    "retry": "Erneut versuchen",
+    "blocked": "Ihr Zugang zu diesem Ort hat sich geändert. Aktualisieren Sie die zugewiesenen Orte.",
+    "loadFailed": "Der Scanner konnte nicht geladen werden. Prüfen Sie die Verbindung oder fragen Sie Ihren Administrator.",
+    "signOut": "Abmelden",
+    "cancelled": "Abbrechen",
+    "scanning": "Mitgliedschaft wird geprüft…"
+  },
+  "reusable": {
+    "reuse": "Um eine zurückgegebene Karte erneut auszugeben, deaktivieren Sie sie hier und verknüpfen Sie ihre ID beim nächsten Mitglied.",
+    "qr": "Karten-QR",
+    "title": "QR für wiederverwendbare Karte",
+    "hint": "Dieser QR enthält die physische Karten-ID und folgt der Karte bei einer neuen Verknüpfung. Persönliche Mitglieder- und Wallet-QRs bleiben beim Mitglied.",
+    "download": "QR herunterladen"
   }
 }

@@ -33,6 +33,9 @@ export const ERRORS = {
     unknown: 'The points could not be reversed. Please try again.',
   },
   requests: {
+    membership_not_started: 'This membership has not started yet. Review its dates on the member’s page.',
+    membership_expired: 'This membership has ended. Renew it before using this benefit.',
+    member_inactive: 'This membership is switched off. A manager can review it on the member’s page.',
     wrong_state: 'Someone else already handled this request. The list now shows it as it is.',
     invalid: 'Say why the request is declined.',
     not_found: 'This request no longer exists.',

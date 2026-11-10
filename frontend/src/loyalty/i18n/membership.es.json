@@ -87,6 +87,8 @@
     "past_counts": "{{created}} creados · {{skipped}} omitidas · {{refused}} rechazadas",
     "open": "Abrir",
     "problem": {
+      "bad_validity_range": "La membresía comienza después de su fecha de finalización.",
+      "bad_valid_from": "Escriba la fecha de inicio como AAAA-MM-DD.",
       "no_email": "Esta fila no tiene email.",
       "no_name": "Esta fila no tiene nombre.",
       "bad_email": "El email no es válido.",
@@ -276,6 +278,7 @@
       "credit": "El saldo, sumado al del miembro que se conserva"
     },
     "error": {
+      "membership_period_conflict": "Estos periodos de membresía están separados. Establezca las fechas deseadas antes de fusionarlos.",
       "manager_only": "Solo un propietario o un responsable puede hacer esto.",
       "not_allowed": "Solo un propietario o un responsable puede hacer esto.",
       "no_capability": "Solo un propietario o un responsable puede hacer esto.",
@@ -283,7 +286,8 @@
       "not_found": "Uno de los dos ya no está en su programa. La lista muestra ahora las parejas tal como están.",
       "invalid": "Diga en pocas palabras por qué los dos son una sola persona.",
       "network": "Sin conexión: no se fusionó nada. Inténtelo de nuevo.",
-      "unknown": "No se pudieron fusionar los miembros. No cambió nada; inténtelo de nuevo."
+      "unknown": "No se pudieron fusionar los miembros. No cambió nada; inténtelo de nuevo.",
+      "membership_assignment_conflict": "Antes de combinar las cuentas, seleccione el mismo modo de membresía y nivel en ambas."
     }
   },
   "details": {
@@ -322,6 +326,7 @@
     "export": "Exportar",
     "add": "Añadir miembro",
     "state": {
+      "scheduled": "Programada",
       "expiring": "Vence pronto",
       "expired": "Vencida"
     },
@@ -394,7 +399,9 @@
     "off_line": "Se niega la entrada sea cual sea la fecha.",
     "problem": {
       "date": "Elija un día.",
-      "past": "Elija hoy o un día posterior."
+      "past": "Elija hoy o un día posterior.",
+      "start": "Seleccione una fecha de inicio válida.",
+      "range": "La fecha de inicio debe ser anterior o igual a la fecha de finalización."
     },
     "set_title": "Válida hasta",
     "set_label": "Último día de la membresía",
@@ -415,7 +422,11 @@
       "key_reused": "Se acaba de hacer otro cambio. La página muestra la fecha de fin actual; inténtelo de nuevo si no es lo que quería.",
       "invalid": "Elija hoy o un día posterior.",
       "unknown": "No se pudo guardar la fecha de fin. No cambió nada; inténtelo de nuevo."
-    }
+    },
+    "starts": "Válida desde el {{day}}",
+    "period_title": "Periodo de membresía",
+    "from_label": "Válida desde (opcional)",
+    "from_hint": "Déjelo vacío para permitir el acceso inmediato. Una fecha futura programa el inicio de la membresía."
   },
   "progress": {
     "visits_sofar_one": "1 visita contada para los niveles.",
@@ -425,5 +436,80 @@
     "visit_one": "1 visita más para {{tier}}",
     "visits_many": "{{n}} visitas más para {{tier}}",
     "spend": "{{amount}} más para {{tier}}"
+  },
+  "assignment": {
+    "title": "Asignar membresía",
+    "manage": "Gestionar membresía",
+    "mode": "Cómo se determina el nivel",
+    "assigned": "Asignado manualmente",
+    "earned": "Progresión obtenida",
+    "assignedHint": "Mantenga el nivel seleccionado y sus beneficios hasta que un administrador lo cambie.",
+    "earnedHint": "El programa determina el nivel según los puntos, las visitas o el gasto.",
+    "level": "Paquete de membresía / nivel",
+    "choose": "Seleccione un nivel activo",
+    "benefits": "Beneficios incluidos",
+    "inherits": "El miembro recibe automáticamente los beneficios activos de este nivel.",
+    "noBenefits": "Este nivel aún no tiene beneficios configurados.",
+    "reviewBenefits": "Revise los beneficios del nivel en Recompensas y beneficios.",
+    "datesHint": "Las fechas siguen el calendario local de su negocio. Deje la fecha de finalización vacía para una membresía indefinida.",
+    "replace": "Entiendo que esto sustituye el acceso actual de inmediato. El acceso se reanuda en la fecha de inicio elegida.",
+    "save": "Guardar membresía",
+    "failed": "No se ha podido guardar la membresía. Revise los campos e inténtelo de nuevo."
+  },
+  "partners": {
+    "title": "Acceso de socios",
+    "line": "Invite a personal a escanear miembros en los lugares seleccionados.",
+    "rights": "Los socios pueden registrar entradas y ver el nivel y los beneficios. No pueden editar miembros, niveles, recompensas ni ajustes.",
+    "invite": "Invitar a personal de un socio",
+    "name": "Nombre",
+    "email": "Correo electrónico",
+    "places": "Lugares permitidos",
+    "choose": "Seleccione al menos un lugar activo.",
+    "noPlaces": "Añada un lugar activo en Programa antes de invitar a socios.",
+    "empty": "Aún no hay personal de socios.",
+    "edit": "Editar lugares",
+    "save": "Guardar acceso",
+    "send": "Enviar invitación",
+    "active": "Activo",
+    "off": "Acceso desactivado",
+    "pending": "Invitación pendiente",
+    "resend": "Reenviar invitación",
+    "deactivate": "Desactivar acceso",
+    "reactivate": "Restaurar acceso",
+    "saved": "Acceso guardado.",
+    "sent": "Invitación enviada. El destinatario establece su contraseña mediante el enlace del correo.",
+    "mailFailed": "La cuenta está guardada, pero no se ha enviado el correo. Reenvíe la invitación.",
+    "failed": "No se ha podido guardar. Revise los lugares y los campos e inténtelo de nuevo.",
+    "plan": "Se ha alcanzado el límite de personal de su plan. Un propietario puede cambiarlo en Facturación.",
+    "app": "Escáner de socios",
+    "appHint": "Tras la activación, el personal inicia sesión aquí. Guarde esta página o añádala a la pantalla de inicio del teléfono.",
+    "scan": "Escanear y registrar entrada",
+    "scanHint": "Seleccione su lugar y escanee el QR o la tarjeta NFC del miembro.",
+    "code": "QR del miembro o código de tarjeta",
+    "camera": "Escanear QR con la cámara",
+    "nfc": "Acercar tarjeta NFC",
+    "stop": "Detener NFC",
+    "nfcHint": "El NFC requiere un navegador Android y una tarjeta compatibles. En otros dispositivos, use QR o un lector conectado.",
+    "noAccess": "No tiene lugares asignados. Consulte a su administrador.",
+    "checked": "Entrada registrada",
+    "denied": "Sin acceso",
+    "benefits": "Beneficios del nivel",
+    "reference": "Se ha denegado la entrada a este lugar. Los beneficios se muestran como referencia.",
+    "from": "Válido desde",
+    "until": "Válido hasta",
+    "again": "Escanear al siguiente miembro",
+    "retry": "Reintentar",
+    "blocked": "Su acceso a este lugar ha cambiado. Actualice sus lugares asignados.",
+    "loadFailed": "No se ha podido cargar el escáner. Compruebe la conexión o consulte a su administrador.",
+    "signOut": "Cerrar sesión",
+    "cancelled": "Cancelar",
+    "scanning": "Comprobando membresía…"
+  },
+  "reusable": {
+    "reuse": "Para reutilizar una tarjeta devuelta, desactívela aquí y vincule su ID en la página del siguiente miembro.",
+    "qr": "QR de tarjeta",
+    "title": "QR de tarjeta reutilizable",
+    "hint": "Este QR contiene el ID de la tarjeta física y la sigue al reasignarla. Los QR personales del miembro y de su cartera permanecen con el miembro.",
+    "download": "Descargar QR"
   }
 }

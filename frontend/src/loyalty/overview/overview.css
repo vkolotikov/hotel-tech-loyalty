@@ -20,6 +20,11 @@
 [data-loyalty] .l-ov-brand { display: flex; gap: 10px; align-items: center; padding-bottom: 16px; border-bottom: 1px solid var(--l-ov-border); }
 [data-loyalty] .l-ov-brand strong { display: block; font-size: 20px; font-weight: 600; line-height: 30px; }
 [data-loyalty] .l-ov-brand small { display: block; font-size: 12px; white-space: nowrap; }
+[data-loyalty] .l-ov-brand-row { display: flex; gap: 8px; align-items: flex-start; }
+[data-loyalty] .l-ov-brand-row .l-ov-brand { min-width: 0; flex: 1; }
+[data-loyalty] .l-ov-rail-toggle { width: 32px; height: 36px; flex-shrink: 0; display: grid; place-items: center; color: var(--l-ov-secondary); border: 1px solid var(--l-ov-border); border-radius: 8px; background: var(--l-ov-raised); cursor: pointer; }
+[data-loyalty][data-slim] .l-ov-brand-row { flex-direction: column; align-items: center; }
+[data-loyalty][data-slim] .l-ov-rail-toggle { width: 36px; }
 [data-loyalty] .l-ov-mark { flex: 0 0 32px; height: 32px; display: grid; place-items: center; border-radius: 8px; border: 1px solid #ffffff30; background: linear-gradient(153deg,#37b6e9,#4b4ced); }
 [data-loyalty] .l-ov-workspace { border-radius: 8px; padding: 12px; background: var(--l-ov-recessed); box-shadow: var(--l-ov-inset); overflow-wrap: anywhere; }
 [data-loyalty] .l-ov-workspace strong { display: block; font-size: 14px; font-weight: 500; }

@@ -3889,6 +3889,8 @@
       "over_limit_booking": "This package allows {{limit}} team members who can be booked and you have {{count}} active. Choose a larger package, or switch some off in Setup first."
     },
     "team": {
+      "manage_partner": "Manage partner access",
+      "partner": "Scan-only partner",
       "title": "Team",
       "subtitle": "Who can sign in to your workspaces.",
       "invite_title": "Invite a colleague",

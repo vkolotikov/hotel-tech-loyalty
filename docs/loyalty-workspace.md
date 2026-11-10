@@ -1,5 +1,14 @@
 # HexaTech Loyalty — runbook
 
+Manual memberships and partner access (10 November 2026): [customer setup guide](loyalty-memberships-and-partners.md),
+[API additions](api/loyalty-membership-partners.md) and [verification audit](audits/2026-11-10-loyalty-membership-partners.md).
+Assign an existing level and dates under Members → Manage membership; Settings → Partner access invites staff to
+scan/check in only at their selected places. These rights are enforced on the server, including access report mode.
+The first distribution is the web scanner `/loyalty/partner`; it does not update installed native staff apps.
+Assigned/start-dated terms restrict level benefits, queued fulfillment, level offers and earning privileges to their
+term; switching back to earned preserves dates. Legacy end-only records retain their previous rules. Physical Card QR
+follows the reusable card ID; personal QR and Wallet credentials stay with their member.
+
 Guided setup preview (10 November 2026): the right side is fully expanded in normal page flow, with coloured
 industry icons, a Join → Earn points → Use rewards journey and separate membership/reward, earning, bonus and rule
 sections. Selecting a template or editing a draft updates the canonical explanation immediately; existing levels

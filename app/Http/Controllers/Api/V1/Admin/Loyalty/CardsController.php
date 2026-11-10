@@ -36,6 +36,15 @@ class CardsController extends Controller
         return response()->json(['card' => NfcCards::row($result['card']), 'linked' => $result['linked']], $result['linked'] ? 201 : 200);
     }
 
+    public function qr(int $id, int $card, NfcCards $cards, \App\Services\QrCodeService $qr): JsonResponse
+    {
+        $member = $this->member($id);
+        $this->notErased($member);
+        $row = $cards->forMember($member)->firstWhere('id', $card) ?? throw LoyaltyRefused::notFound();
+        $code = NfcCards::row($row)['uid'];
+        return response()->json(['code' => $code, 'qr_svg' => $qr->cardQrDataUri($code)]);
+    }
+
     public function off(Request $request, int $id, int $card, NfcCards $cards): JsonResponse
     {
         $member = $this->member($id);

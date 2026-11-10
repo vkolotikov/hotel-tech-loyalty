@@ -225,6 +225,7 @@
   },
   "people": {
     "error": {
+      "membership_not_started": "L’adhésion de ce membre commence après l’événement.",
       "sign_up_closed": "Cet événement ne prend pas d’inscriptions pour le moment.",
       "event_full": "L’événement est complet.",
       "tier_not_allowed": "Cet événement est réservé à d’autres niveaux.",

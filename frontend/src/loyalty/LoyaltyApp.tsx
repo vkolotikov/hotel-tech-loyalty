@@ -34,6 +34,8 @@ const RequestsPage = lazy(() => import('./requests/RequestsPage').then(m => ({ d
 const RewardsPage = lazy(() => import('./rewards/RewardsPage').then(m => ({ default: m.RewardsPage })))
 const DoorPage = lazy(() => import('./scan/DoorPage').then(m => ({ default: m.DoorPage })))
 const ScanPage = lazy(() => import('./scan/ScanPage').then(m => ({ default: m.ScanPage })))
+const PartnersPage = lazy(() => import('./partners/PartnersPage').then(m => ({ default: m.PartnersPage })))
+const PartnerScanPage = lazy(() => import('./partners/PartnerScanPage').then(m => ({ default: m.PartnerScanPage })))
 
 function PageLoad({ children }: { children: ReactNode }) {
   return <ChunkErrorBoundary><Suspense fallback={<OverviewSkeleton />}>{children}</Suspense></ChunkErrorBoundary>
@@ -53,6 +55,8 @@ export function LoyaltyApp() {
   const location = useLocation()
   if (!token) return <Navigate to={loginPath(location)} replace />
   if (user?.user_type === 'member') return <Navigate to="/portal" replace />
+  if (user?.loyalty_scan_only && location.pathname !== '/loyalty/partner') return <Navigate to="/loyalty/partner" replace />
+  if (location.pathname.replace(/\/$/, '') === '/loyalty/partner') return <PageLoad><PartnerScanPage /></PageLoad>
 
   if (location.pathname.replace(/\/$/, '') === '/loyalty/overview') {
     return <LoyaltyProvider><OverviewShell><PageLoad><OverviewPage /></PageLoad></OverviewShell></LoyaltyProvider>
@@ -80,6 +84,7 @@ export function LoyaltyApp() {
           <Route path="options" element={<EarnPage />} />
           <Route path="options/setup" element={<SetupWizard />} />
           <Route path="settings" element={<SettingsPage />} />
+          <Route path="partners" element={<PartnersPage />} />
           <Route path="rewards" element={<RewardsPage />} />
           <Route path="events" element={<EventsPage />} />
           <Route path="events/new" element={<EventEditorPage />} />

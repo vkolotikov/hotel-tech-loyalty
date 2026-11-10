@@ -138,6 +138,7 @@ class MemberMergeService
                 ? [$lockedFirst, $lockedSecond]
                 : [$lockedSecond, $lockedFirst];
             $loserUser = $loser->user;
+            \App\Services\Loyalty\Members\MembershipAssignment::assertMergeCompatible($winner, $loser);
 
             // 1) The pairs that would collide once moved.
             $dropped = [

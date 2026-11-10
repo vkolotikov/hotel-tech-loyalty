@@ -12,7 +12,7 @@ export type FeatureId = 'scan' | 'door' | 'members' | 'tiers' | 'places' | 'even
 export type TopicId = keyof typeof TOPIC_WORDS
 export type FaqId =
   | 'start' | 'roles' | 'look' | 'how_scan' | 'colours' | 'door' | 'expired' | 'nfc' | 'move_up' | 'by_hand' | 'end_date' | 'import' | 'rename_delete'
-  | 'run_event' | 'sign_up' | 'give_points' | 'redeem' | 'boosts' | 'portal_what' | 'portal_card'
+  | 'run_event' | 'sign_up' | 'give_points' | 'redeem' | 'boosts' | 'portal_what' | 'portal_card' | 'partners' | 'reuse_card' | 'push_voucher'
 
 export const STEPS: readonly { id: StepId; to: string }[] = [
   { id: 'tiers', to: '/loyalty/program' },
@@ -50,6 +50,8 @@ export const FAQ: readonly { id: FaqId; topic: TopicId; to?: string }[] = [
   { id: 'door', topic: 'scan', to: '/loyalty/scan' },
   { id: 'expired', topic: 'scan' },
   { id: 'nfc', topic: 'scan' },
+  { id: 'partners', topic: 'scan', to: '/loyalty/partners' },
+  { id: 'reuse_card', topic: 'scan', to: '/loyalty' },
   { id: 'move_up', topic: 'members', to: '/loyalty/options' },
   { id: 'by_hand', topic: 'members', to: '/loyalty' },
   { id: 'end_date', topic: 'members', to: '/loyalty' },
@@ -60,6 +62,7 @@ export const FAQ: readonly { id: FaqId; topic: TopicId; to?: string }[] = [
   { id: 'sign_up', topic: 'events', to: '/loyalty/events' },
   { id: 'give_points', topic: 'rewards', to: '/loyalty/scan' },
   { id: 'redeem', topic: 'rewards', to: '/loyalty/requests' },
+  { id: 'push_voucher', topic: 'rewards', to: '/loyalty/campaigns?tab=push' },
   { id: 'boosts', topic: 'rewards', to: '/loyalty/program?tab=boosts' },
   { id: 'portal_what', topic: 'portal' },
   { id: 'portal_card', topic: 'portal' },

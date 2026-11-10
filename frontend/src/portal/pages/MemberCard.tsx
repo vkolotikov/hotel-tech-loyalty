@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { CalendarCheck, ChevronRight, CircleAlert, Crown, TrendingUp } from 'lucide-react'
 import { portalApi } from '../lib/portalApi'
-import { resolveLocale } from '../lib/dates'
+import { formatDay, resolveLocale } from '../lib/dates'
 import { counted } from '../lib/plural'
 import type { PortalMember } from '../lib/types'
 import { Card } from '../ui/Card'
@@ -28,7 +28,8 @@ export function MemberCard({ member, loyalty, currency = 'EUR' }: { member: Port
   // Explicit locale, never the host's default (dates.ts explains why): the OS running the server or a dev's machine
   // must never change a member's number formatting.
   const locale = resolveLocale(lang)
-  const chips = loyalty ? benefitChips(member.benefits) : { shown: [], more: 0 }
+  const showMembership = loyalty || member.membership_mode === 'assigned'
+  const chips = showMembership ? benefitChips(member.benefits) : { shown: [], more: 0 }
   const MembershipIcon = membership?.tone === 'muted' ? CalendarCheck : CircleAlert
 
   return (
@@ -46,7 +47,7 @@ export function MemberCard({ member, loyalty, currency = 'EUR' }: { member: Port
                 <p className="font-p-display text-2xl leading-tight text-p-text">{member.name}</p>
               )}
             </div>
-            {loyalty && member.tier && (
+            {showMembership && member.tier && (
               <span data-tier="" className="shrink-0 inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full border border-p-border bg-p-surface-2 text-p-text"
                 style={tone ? { borderColor: tone } : undefined}>
                 <Crown size={12} aria-hidden style={tone ? { color: tone } : undefined} />
@@ -55,7 +56,7 @@ export function MemberCard({ member, loyalty, currency = 'EUR' }: { member: Port
             )}
           </div>
 
-          {(loyalty || membership) && (
+          {(showMembership || membership || member.membership?.valid_from) && (
             <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 text-[11px]">
               {loyalty && (
                 <span className="inline-flex items-center gap-1 text-p-text-2 tabular-nums"><TrendingUp size={12} aria-hidden />{counted(t, 'home.lifetime', member.lifetime_points, lang)}</span>
@@ -66,6 +67,7 @@ export function MemberCard({ member, loyalty, currency = 'EUR' }: { member: Port
                   <MembershipIcon size={12} aria-hidden />{say(membership)}
                 </span>
               )}
+              {member.membership?.valid_from && member.membership.state !== 'scheduled' && <span className="text-p-text-2">{t('portal.home.membership_from', 'Member from {{day}}', { day: formatDay(member.membership.valid_from, lang) })}</span>}
             </div>
           )}
 

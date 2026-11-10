@@ -3845,6 +3845,8 @@
       "over_limit_booking": "Dieses Paket erlaubt {{limit}} buchbare Teammitglieder, und Sie haben {{count}} aktive. Wählen Sie ein größeres Paket oder schalten Sie zuerst einige im Setup aus."
     },
     "team": {
+      "manage_partner": "Partnerzugang verwalten",
+      "partner": "Partner nur zum Scannen",
       "title": "Team",
       "subtitle": "Wer sich in Ihren Arbeitsbereichen anmelden kann.",
       "invite_title": "Kollegin oder Kollegen einladen",

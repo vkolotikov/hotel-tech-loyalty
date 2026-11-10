@@ -83,6 +83,7 @@ class ScanAccessTest extends TestCase
             'granted'         => true,
             'reason'          => 'welcome',
             'valid_until'     => '2026-10-10',
+            'valid_from'      => null,
             'expires_in_days' => 5,
             'tier'            => ['id' => $this->tiers['gold']->id, 'name' => 'Gold', 'color' => '#d4a017'],
             'allowed_tiers'   => [],

@@ -8,6 +8,8 @@
   },
   "shell": { "greeting": "Hola, {{name}}", "membership": "Mi membresía", "menu": "Menú", "portal_off": "El portal de miembros está desactivado para este establecimiento. Póngase en contacto con ellos directamente." },
   "home": {
+    "membership_starts": "La membresía comienza el {{day}}",
+    "membership_from": "Miembro desde el {{day}}",
     "balance": "Saldo de puntos", "progress_to": "Progreso hacia {{tier}}",
     "lifetime_one": "{{count}} ganado en total", "lifetime_few": "{{count}} ganados en total", "lifetime_many": "{{count}} ganados en total", "lifetime_other": "{{count}} ganados en total",
     "points_to_go_one": "Falta {{count}} punto", "points_to_go_few": "Faltan {{count}} puntos", "points_to_go_many": "Faltan {{count}} puntos", "points_to_go_other": "Faltan {{count}} puntos",
@@ -23,6 +25,9 @@
     "wallet_unavailable": "Los pases de wallet aún no están configurados para este establecimiento.", "wallet_error": "No se pudo preparar el pase. Inténtelo de nuevo."
   },
   "rewards": {
+    "offer_membership_unavailable": "Esta oferta requiere una membresía activa en el nivel correspondiente.",
+    "membership_expired": "Su membresía ha finalizado. Contacte con el equipo.",
+    "membership_not_started": "Esta membresía aún no ha comenzado.",
     "title": "Recompensas", "tab_benefits": "Beneficios",
     "you_have_one": "Tiene {{count}} punto", "you_have_few": "Tiene {{count}} puntos", "you_have_many": "Tiene {{count}} puntos", "you_have_other": "Tiene {{count}} puntos", "tab_catalogue": "Catálogo",
     "tab_offers": "Ofertas", "tab_codes": "Mis códigos",
@@ -136,6 +141,7 @@
     "claim_failed": "Ese código no funcionó. Revíselo e inténtelo de nuevo.", "already_set_up": "¿Ya está configurado?"
   },
   "book": {
+    "coupon_membership_inactive": "Este código requiere una membresía activa hoy en el nivel correspondiente.",
     "title": "Reservar", "step_service": "Servicio", "step_staff": "Quién", "step_when": "Cuándo", "step_review": "Revisión", "step_pay": "Pago",
     "your_price": "Su precio", "list_price": "Precio estándar", "member_price_note": "{{label}} aplicado", "duration": "{{count}} min",
     "any_staff": "La primera persona disponible", "choose_staff": "Elija con quién", "pick_day": "Elija un día",

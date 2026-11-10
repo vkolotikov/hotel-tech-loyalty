@@ -28,7 +28,7 @@ final class MemberDirectory
     public const FIND_LIMIT = 8;
     public const SORTS = ['recent', 'points', 'name', 'activity'];
     /** `expiring` and `expired` (release 8) are switched-on members by their membership's end date. */
-    public const STATES = ['active', 'inactive', 'all', 'expiring', 'expired'];
+    public const STATES = ['active', 'inactive', 'all', 'expiring', 'expired', 'scheduled'];
 
     /**
      * One page of the list.
@@ -70,7 +70,7 @@ final class MemberDirectory
             $query->where('loyalty_members.tier_id', (int) $filters['tier_id']);
         }
         $state = in_array($filters['state'] ?? null, self::STATES, true) ? $filters['state'] : 'active';
-        if ($state === 'expiring' || $state === 'expired') {
+        if (in_array($state, ['expiring', 'expired', 'scheduled'], true)) {
             $this->byValidity($query->where('loyalty_members.is_active', true), $state);
         } elseif ($state !== 'all') {
             $query->where('loyalty_members.is_active', $state === 'active');
@@ -164,6 +164,14 @@ final class MemberDirectory
         $orgId = (int) app('current_organization_id');
         $today = VenueClock::today($orgId);
         $column = $query->getModel()->getTable() . '.membership_valid_until';
+        $start = $query->getModel()->getTable() . '.membership_valid_from';
+        $hasStart = Schema::hasColumn('loyalty_members', 'membership_valid_from');
+        if ($state === 'scheduled') {
+            return $hasStart ? $query->whereNotNull($start)->where($start, '>', $today) : $query->whereRaw('1 = 0');
+        }
+        if ($hasStart) {
+            $query->where(fn ($q) => $q->whereNull($start)->orWhere($start, '<=', $today));
+        }
         $query->whereNotNull($column);
 
         return $state === 'expired'
@@ -196,13 +204,13 @@ final class MemberDirectory
      * Release 8 (spec 2026-10-25 §3): the membership's end date (Y-m-d, or null: it never ends) and its state —
      * `active`, `expiring` (30 days or fewer left), `expired` or `off` (switched off) — on the venue's clock.
      *
-     * @return array{valid_until: ?string, membership_state: string}
+     * @return array{valid_from: ?string, valid_until: ?string, membership_state: string}
      */
     private static function validity(LoyaltyMember $m): array
     {
         $summary = MembershipValidity::summaryFor($m);
 
-        return ['valid_until' => $summary['valid_until'], 'membership_state' => $summary['state']];
+        return ['valid_from' => $summary['valid_from'], 'valid_until' => $summary['valid_until'], 'membership_state' => $summary['state']];
     }
 
     /** @return Builder<LoyaltyMember> */

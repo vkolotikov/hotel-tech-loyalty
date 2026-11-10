@@ -35,4 +35,32 @@ Visual inspection covers the full desktop layout and English dark/German light p
 text wraps in the page; all preview content stays open. Private screenshots and results are under
 `C:/wamp64/tmp/loyalty-launch-20261109/setup-preview/`.
 
-Artifact validation and production verification will be recorded below once complete.
+## Release artifact
+
+Feature source and next code baseline: `b1f5082d2`. The source patch is `2e941bdcd`, built on main
+`1d1e2fa6f5dfc2ba024ad57de3ca5a55e73aa225` in a separate worktree with physical vendor and a frontend dependency
+junction. Eighteen exact paths include the previous logo release's documentation-only evidence changes.
+Whole-source parity with `b1f5082d2`, excluding only frontend/dist, public/spa and resources/spa-shell, passed
+before and after the fresh production build.
+
+The exact artifact passed TypeScript, **6,841 frontend tests / 464 files**, the lint regression gate
+(1,383 existing diagnostics, no new ones), a fresh production build and **88 compiled real-backend browser checks**.
+PHP scopes passed **2,084 tests**: Support 214, Unit Landing 118, Feature Landing 1,735, Loyalty Options 11 and
+OptionsSetup 6. A parallel startup first hit a Windows package-cache rename lock; the affected suite was rerun
+sequentially and all 1,735 Feature Landing tests passed. No guard, assertion or application behaviour was weakened.
+
+Production commit `1d159b7e631127038928fedc51ee8cb44f981d20` was pushed by the source-patch recipe.
+Live verification passed **12 content checks** at **10 November 2026, 09:22:54 UTC / 11:22:54 Europe/Riga** on
+loyalty.hotel-tech.ai, and the same twelve checks passed at **09:23:22 UTC / 11:23:22 Europe/Riga** on app.hexa-tech.uk.
+Served assets: index-BiPgZKxi.js, LoyaltyApp-BwPo5MEW.js, SetupWizard-BbkMN037.js, SetupWizard-Ch6wI-3S.css
+and AppPage-Ct-qGZNw.js. The actual served code contains the expanded preview, member journey, section/catalogue
+markers, new copy and reduced-motion handling; the stylesheet has no old 380 px bounded preview. Authentication,
+the logo uploader and the academy's kit stylesheet remain intact. Public verification makes no authenticated writes.
+Evidence: `C:/wamp64/tmp/setup-preview-production-20261110.json` and `setup-preview-production-app-20261110.json`.
+
+Independent CI [42789526011](https://github.com/vkolotikov/hotel-tech-loyalty/actions/runs/42789526011) was still
+running at 09:24 UTC: both Node SPA jobs, Larastan, dependency audit and SQLite shards 1/2 passed; SQLite shard 3
+and the PostgreSQL gate were in progress, without a recorded failure. This is distinct from the completed local
+artifact checks above. Task-owned PHP/preview/PostgreSQL helpers were stopped. The clean deploy worktree was removed
+after verifying its exact path, branch and commit and unlinking only its node_modules junction. Shared dependencies,
+private evidence, owner untracked files and the earlier blocked Cloud-stream remnant were preserved.

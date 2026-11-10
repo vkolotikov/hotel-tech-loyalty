@@ -83,9 +83,9 @@
     "move_up_q": "¿Cómo suben de nivel los miembros?",
     "move_up_a": "Automáticamente, por puntos, visitas o gasto — lo elige en Formas de ganar.",
     "by_hand_q": "¿Puedo asignar un nivel a mano?",
-    "by_hand_a": "Sí: en la página del miembro, ⋯ → Cambiar el nivel. Añada una fecha «Mantener hasta» para conservarlo.",
+    "by_hand_a": "Sí: Miembros → Añadir miembro o Gestionar membresía → Asignado manualmente. Seleccione el nivel y las fechas; sus beneficios configurados se aplican automáticamente. No necesita conectar pagos.",
     "end_date_q": "¿Puede una membresía terminar en una fecha?",
-    "end_date_a": "Sí. Fíjela o amplíela en la página del miembro. El miembro recibe un recordatorio dos semanas antes.",
+    "end_date_a": "Sí. Establezca Válido desde y Válido hasta en Membresía. El acceso comienza el primer día e incluye el último, según el calendario local del negocio.",
     "import_q": "¿Cómo añado muchos miembros a la vez?",
     "import_a": "Miembros → ⋯ → Importar, con una hoja de cálculo.",
     "run_event_q": "¿Cómo organizo un evento?",
@@ -103,7 +103,13 @@
     "portal_card_q": "¿Dónde está la tarjeta de un miembro?",
     "portal_card_a": "En su portal o en la app — y en Apple o Google Wallet una vez configurado en Tarjeta y app.",
     "rename_delete_q": "¿Puedo cambiar el nombre de un nivel o un beneficio, o eliminarlo?",
-    "rename_delete_a": "Sí: en Programa, cada uno tiene «Cambiar nombre» y «Eliminar». Primero ve qué cambia: los miembros pasan al nivel que elija y el historial conserva el nombre."
+    "rename_delete_a": "Sí: en Programa, cada uno tiene «Cambiar nombre» y «Eliminar». Primero ve qué cambia: los miembros pasan al nivel que elija y el historial conserva el nombre.",
+    "partners_q": "¿Cómo invito a personal de socios solo para escanear?",
+    "partners_a": "Ajustes → Acceso de socios → Invitar a personal de un socio. Seleccione sus lugares y envíe la invitación. Tras crear una contraseña, el personal usa el escáner de socios; no puede editar miembros ni el programa.",
+    "reuse_card_q": "¿Puedo entregar una tarjeta física a otro miembro?",
+    "reuse_card_a": "Recupere la tarjeta, desactívela en la página del miembro anterior y vincule su ID al nuevo miembro. El QR de tarjeta sigue ese ID. Los QR personales del miembro y de su cartera no son transferibles.",
+    "push_voucher_q": "¿Puedo enviar un vale o código de descuento por push?",
+    "push_voucher_a": "Cree la oferta y el código en Recompensas → Ofertas. En Campañas → Push, añada el código y las instrucciones, seleccione Ofertas y una audiencia, revise y envíe. La entrega requiere la app instalada, permiso push y credenciales móviles configuradas."
   },
   "demo": {
     "welcome": "Bienvenida",

@@ -8,6 +8,8 @@
   },
   "shell": { "greeting": "Здравствуйте, {{name}}", "membership": "Моё членство", "menu": "Меню", "portal_off": "Портал участника отключён для этого заведения. Пожалуйста, свяжитесь с ним напрямую." },
   "home": {
+    "membership_starts": "Членство начнётся {{day}}",
+    "membership_from": "Участник с {{day}}",
     "balance": "Баланс баллов", "progress_to": "Прогресс до уровня {{tier}}",
     "lifetime_one": "Всего заработан {{count}} балл", "lifetime_few": "Всего заработано {{count}} балла", "lifetime_many": "Всего заработано {{count}} баллов", "lifetime_other": "Всего заработано {{count}} балла",
     "points_to_go_one": "Остался {{count}} балл", "points_to_go_few": "Осталось {{count}} балла", "points_to_go_many": "Осталось {{count}} баллов", "points_to_go_other": "Осталось {{count}} балла",
@@ -23,6 +25,9 @@
     "wallet_unavailable": "Карты для кошелька пока не настроены для этого заведения.", "wallet_error": "Не удалось подготовить карту. Попробуйте ещё раз."
   },
   "rewards": {
+    "offer_membership_unavailable": "Для этого предложения нужно действующее членство соответствующего уровня.",
+    "membership_expired": "Ваше членство закончилось. Обратитесь к сотрудникам.",
+    "membership_not_started": "Срок действия членства ещё не начался.",
     "title": "Награды", "tab_benefits": "Привилегии",
     "you_have_one": "У вас {{count}} балл", "you_have_few": "У вас {{count}} балла", "you_have_many": "У вас {{count}} баллов", "you_have_other": "У вас {{count}} балла", "tab_catalogue": "Каталог",
     "tab_offers": "Предложения", "tab_codes": "Мои коды",
@@ -136,6 +141,7 @@
     "claim_failed": "Этот код не подошёл. Проверьте и попробуйте снова.", "already_set_up": "Уже настроено?"
   },
   "book": {
+    "coupon_membership_inactive": "Для этого кода нужно действующее сегодня членство соответствующего уровня.",
     "title": "Записаться", "step_service": "Услуга", "step_staff": "Кто", "step_when": "Когда", "step_review": "Проверка", "step_pay": "Оплата",
     "your_price": "Ваша цена", "list_price": "Обычная цена", "member_price_note": "Применено: {{label}}", "duration": "{{count}} мин",
     "any_staff": "Любой свободный специалист", "choose_staff": "Выберите, с кем вы хотите", "pick_day": "Выберите день",

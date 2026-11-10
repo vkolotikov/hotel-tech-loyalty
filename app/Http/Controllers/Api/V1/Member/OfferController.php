@@ -21,7 +21,7 @@ class OfferController extends Controller
             ->forTier($member->tier_id)
             ->orderByDesc('is_featured')
             ->orderByDesc('created_at')
-            ->get();
+            ->get()->filter(fn (SpecialOffer $offer) => $offer->allowsMembership($member))->values();
 
         // The member's own offers: AI-personalised ones they haven't acted
         // on yet, AND anything they have actually claimed.
@@ -42,7 +42,7 @@ class OfferController extends Controller
             ->with('offer')
             ->orderByRaw('used_at IS NULL DESC')
             ->orderByDesc('claimed_at')
-            ->get();
+            ->get()->each(fn (MemberOffer $claim) => $claim->setAttribute('usable_now', $claim->offer?->allowsMembership($member) ?? false));
 
         return response()->json([
             'general'      => $offers,
@@ -65,6 +65,7 @@ class OfferController extends Controller
         // tier must be one of the listed ones. This was never checked here,
         // so a bronze member could claim a gold-only offer by id.
         $tierIds = array_map('intval', (array) ($offer->tier_ids ?? []));
+        if ($tierIds !== []) \App\Services\Loyalty\Members\MemberStatus::assertMembershipBenefits($member);
         if ($tierIds !== [] && !in_array((int) $member->tier_id, $tierIds, true)) {
             return response()->json(['error' => 'wrong_tier', 'message' => 'This offer is for another membership level.'], 422);
         }

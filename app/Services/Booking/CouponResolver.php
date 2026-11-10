@@ -56,6 +56,7 @@ final class CouponResolver
             if ($tierIds !== [] && !in_array((int) $member->tier_id, $tierIds, true)) {
                 throw new CouponException('coupon_wrong_tier', 'This code is for another membership level.');
             }
+            $this->assertOfferMembership($offer, $member);
 
             $type = $this->moneyType($offer->type);
             if ($type === null) {
@@ -142,6 +143,10 @@ final class CouponResolver
         if ($candidate['source'] === 'offer') {
             $claim = MemberOffer::whereKey($candidate['source_id'])->lockForUpdate()->first();
             if (!$claim || $claim->used_at !== null) throw new CouponException('coupon_used', 'This offer has already been used.');
+            $member = $claim->member()->withoutGlobalScopes()->first();
+            $offer = $claim->offer()->withoutGlobalScopes()->where('organization_id', $member?->organization_id)->first();
+            if (!$member || !$offer) throw new CouponException('coupon_not_found', 'This offer is no longer available.');
+            $this->assertOfferMembership($offer, $member);
             $claim->forceFill(['used_at' => now(), 'status' => 'used', 'used_reference' => $reference])->save();
             return;
         }
@@ -176,6 +181,7 @@ final class CouponResolver
         if ($claim->used_at !== null || $claim->status === 'used') throw new CouponException('coupon_used', 'This offer has already been used.');
         $offer = $claim->offer;
         if (!$offer || !$offer->is_active) throw new CouponException('coupon_expired', 'This offer is no longer available.');
+        $this->assertOfferMembership($offer, $member);
         if (($claim->expires_at && $claim->expires_at->isPast()) || ($offer->end_date && $offer->end_date->endOfDay()->isPast())) {
             throw new CouponException('coupon_expired', 'This offer has expired.');
         }
@@ -206,5 +212,12 @@ final class CouponResolver
         if ($t === DiscountService::PERCENT || $t === 'discount' || str_contains($t, 'percent')) return DiscountService::PERCENT;
         if ($t === DiscountService::FIXED || str_contains($t, 'amount') || str_contains($t, 'fixed')) return DiscountService::FIXED;
         return null;
+    }
+
+    private function assertOfferMembership(SpecialOffer $offer, LoyaltyMember $member): void
+    {
+        if (!$offer->allowsMembership($member)) {
+            throw new CouponException('coupon_membership_inactive', 'This code needs a membership that is active today at its required level.');
+        }
     }
 }

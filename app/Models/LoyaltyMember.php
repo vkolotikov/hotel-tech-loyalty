@@ -25,6 +25,7 @@ class LoyaltyMember extends Model
     ];
 
     protected $casts = [
+        'membership_period_enforced' => 'boolean',
         'is_active' => 'boolean',
         'marketing_consent' => 'boolean',
         'unsubscribed_at' => 'datetime',
@@ -47,6 +48,7 @@ class LoyaltyMember extends Model
         // Release 8: the membership's optional end date (only App\Services\Loyalty\Members\MembershipValidity writes
         // it, never mass-assigned), the end date the reminder went out for, and the visits counted for tier progress.
         'membership_valid_until' => 'date',
+        'membership_valid_from' => 'date',
         'membership_reminded_for' => 'date',
         'qualifying_visits' => 'integer',
     ];

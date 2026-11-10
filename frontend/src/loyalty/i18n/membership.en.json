@@ -87,6 +87,8 @@
     "past_counts": "{{created}} created · {{skipped}} passed over · {{refused}} refused",
     "open": "Open",
     "problem": {
+      "bad_validity_range": "The membership starts after its end date.",
+      "bad_valid_from": "The start date must be written as YYYY-MM-DD.",
       "no_email": "No email address in this row.",
       "no_name": "No name in this row.",
       "bad_email": "The email address is not valid.",
@@ -276,6 +278,7 @@
       "credit": "Credit, added to the kept member’s balance"
     },
     "error": {
+      "membership_period_conflict": "These membership periods are separate. Set the intended dates before merging.",
       "manager_only": "Only an owner or a manager can do this.",
       "not_allowed": "Only an owner or a manager can do this.",
       "no_capability": "Only an owner or a manager can do this.",
@@ -283,7 +286,8 @@
       "not_found": "One of the two is no longer in your programme. The list now shows the pairs as they are.",
       "invalid": "Say why the two are one person, in a few words.",
       "network": "No connection: nothing was merged. Try again.",
-      "unknown": "The members could not be merged. Nothing was changed; please try again."
+      "unknown": "The members could not be merged. Nothing was changed; please try again.",
+      "membership_assignment_conflict": "Choose the same intended membership mode and level on both accounts before merging."
     }
   },
   "details": {
@@ -322,6 +326,7 @@
     "export": "Export",
     "add": "Add member",
     "state": {
+      "scheduled": "Scheduled",
       "expiring": "Expiring soon",
       "expired": "Expired"
     },
@@ -394,7 +399,9 @@
     "off_line": "Places refuse entry whatever the date.",
     "problem": {
       "date": "Choose a day.",
-      "past": "Choose today or a later day."
+      "past": "Choose today or a later day.",
+      "start": "Choose a valid start date.",
+      "range": "The start date must be on or before the end date."
     },
     "set_title": "Valid until",
     "set_label": "Last day of the membership",
@@ -415,7 +422,11 @@
       "key_reused": "Another change was just made. The page now shows the end date as it is; try again if it is not what you wanted.",
       "invalid": "Choose today or a later day.",
       "unknown": "The end date could not be saved. Nothing was changed; please try again."
-    }
+    },
+    "starts": "Valid from {{day}}",
+    "period_title": "Membership dates",
+    "from_label": "Valid from (optional)",
+    "from_hint": "Leave empty for immediate access. A future date schedules this membership."
   },
   "progress": {
     "visits_sofar_one": "1 visit counted towards the tiers.",
@@ -425,5 +436,80 @@
     "visit_one": "1 more visit to {{tier}}",
     "visits_many": "{{n}} more visits to {{tier}}",
     "spend": "{{amount}} more to {{tier}}"
+  },
+  "assignment": {
+    "title": "Assign membership",
+    "manage": "Manage membership",
+    "mode": "How the level is set",
+    "assigned": "Manually assigned",
+    "earned": "Earned progression",
+    "assignedHint": "Keep the selected level and its benefits until an administrator changes it.",
+    "earnedHint": "The programme chooses the level from points, visits or spending.",
+    "level": "Membership package / level",
+    "choose": "Choose an active level",
+    "benefits": "Included benefits",
+    "inherits": "The member receives this level’s active benefits automatically.",
+    "noBenefits": "This level has no benefits configured yet.",
+    "reviewBenefits": "Review the level’s benefits in Rewards & benefits.",
+    "datesHint": "Dates use your business’s local calendar. Leave the end date empty for an ongoing membership.",
+    "replace": "I understand this replaces current access immediately. Access resumes on the chosen start date.",
+    "save": "Save membership",
+    "failed": "The membership could not be saved. Check the fields and try again."
+  },
+  "partners": {
+    "title": "Partner access",
+    "line": "Invite staff to scan members at selected places.",
+    "rights": "Partners can check in members and see their level and benefits. They cannot edit members, levels, rewards or settings.",
+    "invite": "Invite partner staff",
+    "name": "Name",
+    "email": "Email",
+    "places": "Allowed places",
+    "choose": "Choose at least one active place.",
+    "noPlaces": "Add an active place under Program before inviting partners.",
+    "empty": "No partner staff yet.",
+    "edit": "Edit places",
+    "save": "Save access",
+    "send": "Send invitation",
+    "active": "Active",
+    "off": "Access off",
+    "pending": "Invitation pending",
+    "resend": "Resend invitation",
+    "deactivate": "Switch off access",
+    "reactivate": "Restore access",
+    "saved": "Access saved.",
+    "sent": "Invitation sent. The recipient sets their password using the email link.",
+    "mailFailed": "The account is saved, but the invitation email was not sent. Use Resend invitation.",
+    "failed": "That could not be saved. Check the selected places and fields, then try again.",
+    "plan": "Your plan’s team limit has been reached. An owner can change the plan under Billing.",
+    "app": "Partner scanner",
+    "appHint": "After activation, staff sign in here. Bookmark this page or add it to the phone’s home screen.",
+    "scan": "Scan and check in",
+    "scanHint": "Choose your place, then scan the member’s QR code or NFC card.",
+    "code": "Member QR or card code",
+    "camera": "Scan QR with camera",
+    "nfc": "Tap NFC card",
+    "stop": "Stop NFC",
+    "nfcHint": "Phone NFC needs a compatible Android browser and card. Use QR or a connected reader on other devices.",
+    "noAccess": "No places are assigned to you. Ask your administrator.",
+    "checked": "Checked in",
+    "denied": "No access",
+    "benefits": "Level benefits",
+    "reference": "Check-in was denied at this place. Benefits are shown for reference.",
+    "from": "Valid from",
+    "until": "Valid until",
+    "again": "Scan next member",
+    "retry": "Try again",
+    "blocked": "Your access to this place has changed. Refresh your assigned places.",
+    "loadFailed": "The scanner could not load. Check your connection or ask your administrator.",
+    "signOut": "Sign out",
+    "cancelled": "Cancel",
+    "scanning": "Checking membership…"
+  },
+  "reusable": {
+    "reuse": "To reuse a returned card, switch it off here, then link its ID on the next member’s page.",
+    "qr": "Card QR",
+    "title": "Reusable card QR",
+    "hint": "This QR contains the physical card ID. It follows the card when you relink it. Personal member and wallet QR codes stay with their member.",
+    "download": "Download QR"
   }
 }
