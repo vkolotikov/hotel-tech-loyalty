@@ -94,6 +94,14 @@ describe('Program (spec 2026-10-21 §4.5, §5)', () => {
     for (const value of ['Late checkout', 'On request', 'Gold', 'Needs assignment', 'Spa ritual', 'Voucher', 'Switched off']) expect(words).toContain(value)
   })
 
+  it('keeps an existing perk assignment editable after the perk is switched off', () => {
+    const data = { ...program, benefits: program.benefits.map((benefit, index) => index === 0 ? { ...benefit, is_active: false } : benefit) }
+    const html = render(can({ manage_program: true }), data, 'benefits')
+    const action = html.match(/<button\b[^>]*>(?:(?!<\/button>)[\s\S])*?Manage assignment(?:(?!<\/button>)[\s\S])*?<\/button>/)?.[0]
+    expect(action).toBeDefined()
+    expect(action).not.toContain('disabled=""')
+  })
+
 
   it('shows boosts on the venue\'s clock with their days, tiers and state', () => {
     const html = render(can(), program, 'boosts')
