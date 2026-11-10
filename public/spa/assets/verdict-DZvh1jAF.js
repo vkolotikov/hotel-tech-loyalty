@@ -1,0 +1,1 @@
+import{tr as e}from"./index-D-n07zLM.js";function t(){let{t}=e();return e=>t(e.key,e.fallback,e.vars)}export{t};
