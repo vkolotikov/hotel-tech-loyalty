@@ -1,7 +1,7 @@
 {
   "compactLine": "Veranstaltungen planen, Anmeldungen verwalten und Teilnahme erfassen.",
   "directory": "Veranstaltungsübersicht",
-  "eventCount": "{{n}} Veranstaltungen",
+  "eventCount": "Veranstaltungen: {{n}}",
   "eventSchedule": "Veranstaltung / Termin",
   "signups": "Anmeldungen",
   "status": "Status",

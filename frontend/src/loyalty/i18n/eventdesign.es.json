@@ -1,7 +1,7 @@
 {
   "compactLine": "Planifique eventos, gestione inscripciones y registre la asistencia.",
   "directory": "Directorio de eventos",
-  "eventCount": "{{n}} eventos",
+  "eventCount": "Eventos: {{n}}",
   "eventSchedule": "Evento / horario",
   "signups": "Inscripciones",
   "status": "Estado",

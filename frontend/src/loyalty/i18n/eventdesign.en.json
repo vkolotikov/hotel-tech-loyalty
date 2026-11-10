@@ -1,7 +1,7 @@
 {
   "compactLine": "Plan events, manage signups and track attendance.",
   "directory": "Event directory",
-  "eventCount": "{{n}} events",
+  "eventCount": "Events: {{n}}",
   "eventSchedule": "Event / schedule",
   "signups": "Signups",
   "status": "Status",

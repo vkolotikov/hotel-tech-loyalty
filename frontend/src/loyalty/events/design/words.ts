@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next'
 
 export const EVENT_DESIGN_WORDS = {
-  compactLine: 'Plan events, manage signups and track attendance.', directory: 'Event directory', eventCount: '{{n}} events', eventSchedule: 'Event / schedule', signups: 'Signups', status: 'Status', selectedEvent: 'Selected event', checkedInCount: '{{n}} checked in',
+  compactLine: 'Plan events, manage signups and track attendance.', directory: 'Event directory', eventCount: 'Events: {{n}}', eventSchedule: 'Event / schedule', signups: 'Signups', status: 'Status', selectedEvent: 'Selected event', checkedInCount: '{{n}} checked in',
   draft: 'Draft', cancelled: 'Cancelled', ended: 'Ended', onNow: 'On now', detailsSchedule: 'Details & schedule', locationSignup: 'Location & signup', attendanceReward: 'Attendance reward', member: 'Member',
   pointsValue: '{{n}} points', registrationLabel: 'Registration', yes: 'Yes', no: 'No', sort: 'Sort',
   line: 'Bring members together and reward participation.', create: '+ Create event', createTitle: 'Create event',

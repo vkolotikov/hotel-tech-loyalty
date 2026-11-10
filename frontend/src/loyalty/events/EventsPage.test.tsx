@@ -62,7 +62,7 @@ describe('the Events page', () => {
   it('shows each event as a card: the day, the times and where, who, what it gives, the numbers', () => {
     const html = render(<EventsPage />, '/loyalty/events', c => c.setQueryData(['loyalty', 'events', 'upcoming', 1], list([row()], true)))
     const words = text(html)
-    expect(words).toContain('Event directory 1 events')
+    expect(words).toContain('Event directory Events: 1')
     expect(words).toContain('Drafts')
     expect(words).toContain('Create event')
     expect(words).toContain('9 Oct')
