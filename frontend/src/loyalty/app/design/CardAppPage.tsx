@@ -5,6 +5,7 @@ import { OverviewRecovery } from '../../overview/OverviewUI'
 import { WalletConnections } from './WalletConnections'
 import { useCardWords } from './words'
 import './cardApp.css'
+import { LogoPanel } from '../LogoPanel'
 
 /** Only controls connected to a member client are offered as live design tools. */
 export function CardAppPage() {
@@ -12,6 +13,7 @@ export function CardAppPage() {
   return <div className="l-ov-page l-ca-page">
     <header className="l-ov-page-heading"><div><h1>{say('title')}</h1><p>{say('availabilityLine')}</p></div></header>
     {!boot.staff.can.manage_app ? <OverviewRecovery forbidden onRetry={() => {}} /> : <>
+      <LogoPanel />
       <AppDesignAvailability />
       <WalletConnections />
       <p className="l-ca-wallet-note">{say('walletBranding')}</p>

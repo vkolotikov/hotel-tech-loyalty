@@ -51,7 +51,7 @@ const look: LookAnswer = {
   },
 }
 
-const render = (search: string, c: Can, features?: Features) => {
+const render = (search: string, c: Can, features?: Features, detailed = true) => {
   const client = new QueryClient()
   const scope = overviewScope(boot(c, features))
   client.setQueryData([...WALLET_KEY, scope], { wallet })
@@ -59,7 +59,7 @@ const render = (search: string, c: Can, features?: Features) => {
   client.setQueryData([...CURRENCY_KEY, scope], { currency: 'EUR', options: ['EUR', 'GBP', 'USD'] })
   return renderToStaticMarkup(
     <QueryClientProvider client={client}>
-      <MemoryRouter initialEntries={[`/loyalty/app?view=detailed${search.replace('?', '&')}`]}>
+      <MemoryRouter initialEntries={[detailed ? `/loyalty/app?view=detailed${search.replace('?', '&')}` : '/loyalty/app']}>
         <LoyaltyContext.Provider value={{ data: boot(c, features), isLoading: false, isError: false, error: null, refetch: () => {} }}>
           <AppPage />
         </LoyaltyContext.Provider>
@@ -81,7 +81,7 @@ describe('Card & app (release 2 §7)', () => {
   it('shows the two tabs, the address\'s selected and the only tab stop', () => {
     const html = render('?tab=app', manager)
     // Release 10: each tab is a card in its colour with a line of what it holds.
-    expect(html).toMatch(/role="tab" id="app-tab-app" aria-selected="true"[^>]*tabindex="0"[^>]*data-hue="tier"[\s\S]*?<span>Member app<\/span>[\s\S]*?On hold/)
+    expect(html).toMatch(/role="tab" id="app-tab-app" aria-selected="true"[^>]*tabindex="0"[^>]*data-hue="tier"[\s\S]*?<span>Member app<\/span>[\s\S]*?Logo and design availability/)
     expect(html).toMatch(/role="tab" id="app-tab-wallet" aria-selected="false"[^>]*tabindex="-1"[^>]*data-hue="gift"[\s\S]*?<span>Wallet pass<\/span>[\s\S]*?The card in Apple and Google Wallet/)
     expect(render('', manager)).toMatch(/id="app-tab-wallet" aria-selected="true"/)
   })
@@ -127,6 +127,19 @@ describe('Card & app (release 2 §7)', () => {
     expect(html).not.toContain('data-colour')
     expect(html).not.toContain('<form')
     expect(html).not.toContain('Save appearance')
+  })
+
+  it('keeps the setup logo upload available on Card & app and the setup bookmark without a wallet plan', () => {
+    const features = { campaigns: true, wallet: false, push: true }
+    for (const html of [render('?tab=app', manager, features), render('', manager, features, false)]) {
+      expect(text(html)).toContain('Replace logo')
+      expect(html).toContain('type="file"')
+      expect(html).toContain('accept="image/jpeg,image/png,image/webp"')
+      expect(html).toContain('src="/storage/org-1/logos/logo.png"')
+      expect(html).toContain('href="/loyalty/start"')
+      expect(html).not.toContain('Save look')
+    }
+    expect(render('', can(), features, false)).not.toContain('type="file"')
   })
 
   it('distinguishes saving credentials from provider approval and explains who connects them', () => {

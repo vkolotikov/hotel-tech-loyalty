@@ -1,18 +1,17 @@
-import { useId, useRef, useState, type ReactNode } from 'react'
+import { useId, useState, type ReactNode } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { Check as CheckIcon, ImagePlus } from 'lucide-react'
+import { Check as CheckIcon } from 'lucide-react'
 import { Button } from '../../workspace/ui/Button'
 import { Notice } from '../../workspace/ui/Notice'
 import { useBoot } from '../LoyaltyProvider'
 import { overviewScope } from '../overview/overviewMath'
-import { failureOf, mediaUrl } from '../lib/api'
+import { failureOf } from '../lib/api'
 import { refusalKey } from '../lib/errors'
 import { points } from '../lib/format'
 import { named } from '../lib/forms'
 import { Toggle } from '../ui/formParts'
-import { megabytes, pictureProblem } from '../rewards/rewardsMath'
-import { PICTURE_PROBLEM_WORDS } from '../rewards/words'
+import { LogoField } from './LogoPanel'
 import { LOOK_KEY, appApi } from './api'
 import {
   applyPreset, chosenPreset, lookBody, lookChanged, lookFormOf, lookProblems, lookServerProblems, previewPaint, previewTier, type LookForm,
@@ -192,48 +191,5 @@ export function Radius({ value, min, max, problem, onChange }: { value: number; 
         aria-invalid={problem ? true : undefined} className="w-full accent-a-accent-text" />
       {problem && <p className="text-xs font-medium text-a-danger">{problem}</p>}
     </div>
-  )
-}
-
-/**
- * The venue's logo, the same one the full admin's Branding sets (`company_logo`): uploaded or replaced at once, apart
- * from Save; the server deletes the old file when it is ours.
- */
-function LogoField({ logo, limits, queryKey }: { logo: string | null; limits: LookAnswer['options']['logo']; queryKey: readonly unknown[] }) {
-  const { t, i18n } = useTranslation()
-  const locale = i18n.language || 'en'
-  const client = useQueryClient()
-  const input = useRef<HTMLInputElement>(null)
-  const [problem, setProblem] = useState<'type' | 'size' | null>(null)
-  const send = useMutation({
-    mutationFn: (file: File) => appApi.uploadLogo(file),
-    onSuccess: ({ logo_url }) => client.setQueryData<LookAnswer>(queryKey, prev => (prev ? { ...prev, look: { ...prev.look, logo_url } } : prev)),
-  })
-  const vars = { mb: points(megabytes(limits.max_kb), locale), edge: points(limits.max_edge, locale) }
-  const failure = send.isError ? failureOf(send.error) : null
-
-  return (
-    <Part title={t('loyalty.app.logo.title', 'Logo')} line={t('loyalty.app.logo.line', 'Shown in the app and the member portal. It is the same logo as in the full admin’s Branding.')}>
-      <div className="flex flex-wrap items-center gap-4">
-        {logo
-          ? <img src={mediaUrl(logo)} alt={t('loyalty.app.logo.alt', 'The venue’s logo')} loading="lazy" className="h-16 w-16 rounded-xl border border-a-border bg-a-surface-2 object-contain p-1" />
-          : <p className="rounded-xl border border-dashed border-a-border px-4 py-4 text-sm text-a-text-2">{t('loyalty.app.logo.none', 'No logo yet.')}</p>}
-        <input ref={input} type="file" accept={limits.types.join(',')} className="sr-only" tabIndex={-1} aria-hidden onChange={(e) => {
-          const file = e.target.files?.[0]
-          e.target.value = ''
-          if (!file) return
-          const found = pictureProblem(file, limits)
-          setProblem(found)
-          send.reset()
-          if (found === null) send.mutate(file)
-        }} />
-        <Button type="button" variant="secondary" size="sm" loading={send.isPending} onClick={() => input.current?.click()}>
-          <ImagePlus size={14} aria-hidden />{logo ? t('loyalty.app.logo.replace', 'Replace logo') : t('loyalty.app.logo.upload', 'Upload logo')}
-        </Button>
-      </div>
-      <p className="text-xs text-a-text-2">{t('loyalty.app.logo.hint', 'JPEG, PNG or WebP, up to {{mb}} MB. Saved at once.', vars)}</p>
-      {problem && <p className="text-xs font-medium text-a-danger">{t(`loyalty.rewards.picture.problem.${problem}`, PICTURE_PROBLEM_WORDS[problem], vars)}</p>}
-      {failure && <Notice tone="danger">{t(...refusalKey('loyalty.app', ERRORS, 'logo', failure), vars)}</Notice>}
-    </Part>
   )
 }
