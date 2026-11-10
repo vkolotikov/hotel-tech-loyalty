@@ -71,8 +71,8 @@ Production main **8f12b72ac068302577708b7de87995772a967301**, verified live at *
 `C:/wamp64/tmp/member-portal-production-20261110.json`.
 
 Next source-patch code baseline: **7798337c7**. Later evidence documentation is not new product code.
-[CI 42860594743](https://github.com/vkolotikov/hotel-tech-loyalty/actions/runs/42860594743) is still finishing:
-Node 24/26, dependency audit, Larastan and all three SQLite shards passed; the PostgreSQL job remains pending.
+[CI 42860594743](https://github.com/vkolotikov/hotel-tech-loyalty/actions/runs/42860594743) completed successfully:
+all eight jobs passed, including PostgreSQL 18.
 
 
 The task-owned loopback proxy/backend and verified PostgreSQL cluster are stopped. The clean deployment

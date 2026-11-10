@@ -91,8 +91,8 @@ export function LoyaltyApp() {
           <Route path="partners" element={<PartnersPage />} />
           <Route path="rewards" element={<RewardsPage />} />
           <Route path="events" element={<EventsPage />} />
-          <Route path="events/new" element={<EventEditorPage />} />
-          <Route path="events/:id/edit" element={<EventEditorPage />} />
+          <Route path="events/new" element={<><EventsPage /><EventEditorPage /></>} />
+          <Route path="events/:id/edit" element={<><EventsPage /><EventEditorPage /></>} />
           <Route path="events/:id" element={<EventPage />} />
           <Route path="campaigns" element={<CampaignsPage />} />
           <Route path="campaigns/:id" element={<CampaignPage />} />
