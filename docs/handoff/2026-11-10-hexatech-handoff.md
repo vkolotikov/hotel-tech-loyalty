@@ -57,8 +57,8 @@ now holds that newer continuity result. New release evidence: C:/wamp64/tmp/loya
 Signed-in acceptance on the owner's PC also confirmed the actual Russian uploader, existing logo image, Replace
 logo button and Back to setup link at /loyalty/app?tab=app. No production logo was changed to prove it. Cloud reports
 1158 Deployed, with build warnings; all fresh build/type/test gates passed. Post-deploy CI
-[42781338768](https://github.com/vkolotikov/hotel-tech-loyalty/actions/runs/42781338768) has seven successful jobs;
-the PostgreSQL job is still running at this recording.
+[42781338768](https://github.com/vkolotikov/hotel-tech-loyalty/actions/runs/42781338768) completed successfully:
+all eight jobs, including the PostgreSQL known-failure gate, confirmed at 08:33 UTC / 10:33 Europe/Riga.
 
 The task-owned PHP/preview/PostgreSQL helpers are stopped. The deploy worktree was removed after validating its
 absolute path, clean state and branch, and removing only its node_modules junction first. Root shared dependencies
