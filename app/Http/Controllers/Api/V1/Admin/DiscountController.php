@@ -100,6 +100,11 @@ class DiscountController extends Controller
                 // paid at claiming gets them now, once (OfferBonus's key), and
                 // is marked used with them.
                 $offer = \App\Models\SpecialOffer::withoutGlobalScopes()->whereKey($claim->offer_id)->where('organization_id', $orgId)->first();
+                if ($offer && (array) $offer->tier_ids !== []) {
+                    $member = LoyaltyMember::withoutGlobalScopes()->where('organization_id', $orgId)->whereKey($claim->member_id)->firstOrFail();
+                    \App\Services\Loyalty\Members\MemberStatus::assertMembershipBenefits($member);
+                    if (!$offer->allowsMembership($member)) throw new \App\Services\Loyalty\LoyaltyRefused('wrong_tier', 'This offer is for another membership level.', 422);
+                }
                 if (OfferBonus::paysPoints($offer)) {
                     $member = LoyaltyMember::withoutGlobalScopes()->where('organization_id', $orgId)->whereKey($claim->member_id)->firstOrFail();
                     app(OfferBonus::class)->pay($claim, $offer, $member, $staff);

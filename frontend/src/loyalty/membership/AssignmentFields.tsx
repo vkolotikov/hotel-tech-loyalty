@@ -9,19 +9,20 @@ import { Check, FormField } from '../ui/formParts'
 import { VALIDITY_PROBLEM_WORDS } from './words'
 import { useAssignmentWords } from './assignmentWords'
 import { assignmentProblems, type AssignmentForm } from './assignmentMath'
+import type { MemberRow } from '../lib/types'
 
 const INPUT = 'w-full rounded-lg border border-a-border bg-a-surface px-3 py-2 text-sm text-a-text'
 
 /** The same explicit package/date choice for enrolment and later membership changes. */
-export function AssignmentFields({ form, onChange, tried, serverFields, replacesActive = false, disabled = false, showLegend = true }: {
+export function AssignmentFields({ form, onChange, tried, serverFields, replacesActive = false, disabled = false, showLegend = true, original }: {
   form: AssignmentForm; onChange: (patch: Partial<AssignmentForm>) => void; tried: boolean;
-  serverFields?: Record<string, unknown>; replacesActive?: boolean; disabled?: boolean; showLegend?: boolean;
+  serverFields?: Record<string, unknown>; replacesActive?: boolean; disabled?: boolean; showLegend?: boolean; original?: MemberRow;
 }) {
   const boot = useBoot(), { t } = useTranslation(), say = useAssignmentWords(), phrase = useTypedPhrase()
   const tiers = boot.programme.tiers.filter(tier => tier.is_active)
   const programme = useQuery({ queryKey: PROGRAM_KEY, queryFn: programApi.program, enabled: form.membership_mode === 'assigned' })
   const tier = programme.data?.tiers.find(item => String(item.id) === form.tier_id)
-  const problems = tried ? assignmentProblems(form, tiers, boot.venue.today, replacesActive) : {}
+  const problems = tried ? assignmentProblems(form, tiers, boot.venue.today, replacesActive, original) : {}
   const problem = (field: string) => {
     const code = problems[field]
     if (code === 'choose' || serverFields?.tier_id && field === 'tier_id') return say('choose')

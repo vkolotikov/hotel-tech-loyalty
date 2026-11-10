@@ -19,15 +19,15 @@ export function AssignmentDialog({ member, onClose }: { member: MemberRow; onClo
   const [tried, setTried] = useState(false)
   const replacesActive = member.is_active && !['scheduled', 'expired', 'off'].includes(member.membership_state ?? '')
   const save = useMutation({
-    mutationFn: () => membershipApi.assign(member.id, { ...assignmentValues(form), confirm_replace: form.confirm_replace, idempotency_key: key }),
+    mutationFn: () => membershipApi.assign(member.id, { ...assignmentValues(form, member), confirm_replace: form.confirm_replace, idempotency_key: key }),
     onSuccess: () => { afterMemberChange(client, member.id); onClose() },
   })
   const update = (patch: Partial<AssignmentForm>) => { setForm(value => ({ ...value, ...patch })); setKey(newPressKey()); save.reset() }
   const failure = save.isError ? failureOf(save.error) : null
   return <Dialog title={say('title')} onClose={onClose} busy={save.isPending}>
-    <form className="space-y-5" noValidate onSubmit={event => { event.preventDefault(); setTried(true); if (!Object.keys(assignmentProblems(form, boot.programme.tiers, boot.venue.today, replacesActive)).length) save.mutate() }}>
+    <form className="space-y-5" noValidate onSubmit={event => { event.preventDefault(); setTried(true); if (!Object.keys(assignmentProblems(form, boot.programme.tiers, boot.venue.today, replacesActive, member)).length) save.mutate() }}>
       <p className="text-sm text-a-text-2">{member.name}</p>
-      <AssignmentFields form={form} onChange={update} tried={tried} serverFields={failure?.fields} replacesActive={replacesActive} disabled={save.isPending} showLegend={false} />
+      <AssignmentFields form={form} onChange={update} tried={tried} serverFields={failure?.fields} replacesActive={replacesActive} disabled={save.isPending} showLegend={false} original={member} />
       {failure && <Notice tone="danger">{say('failed')}</Notice>}
       <FormFoot cancel={t('loyalty.common.cancel', 'Cancel')} busy={save.isPending} onCancel={onClose} save={say('save')} />
     </form>

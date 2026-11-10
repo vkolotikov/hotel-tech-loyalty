@@ -194,6 +194,9 @@
     "decline_title": "Rechazar: {{benefit}}",
     "done": "Marcar como hecha",
     "error": {
+      "member_inactive": "Esta membresía está desactivada. Un responsable puede revisarla en la página del miembro.",
+      "membership_expired": "Esta membresía ha finalizado. Renuévela antes de utilizar este beneficio.",
+      "membership_not_started": "Esta membresía aún no ha comenzado. Revise las fechas en la página del miembro.",
       "invalid": "Indique por qué se rechaza la solicitud.",
       "network": "Sin conexión: no se guardó nada. Inténtelo de nuevo.",
       "not_found": "Esta solicitud ya no existe.",

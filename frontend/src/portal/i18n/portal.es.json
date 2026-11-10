@@ -25,6 +25,7 @@
     "wallet_unavailable": "Los pases de wallet aún no están configurados para este establecimiento.", "wallet_error": "No se pudo preparar el pase. Inténtelo de nuevo."
   },
   "rewards": {
+    "offer_membership_unavailable": "Esta oferta requiere una membresía activa en el nivel correspondiente.",
     "membership_expired": "Su membresía ha finalizado. Contacte con el equipo.",
     "membership_not_started": "Esta membresía aún no ha comenzado.",
     "title": "Recompensas", "tab_benefits": "Beneficios",
@@ -140,6 +141,7 @@
     "claim_failed": "Ese código no funcionó. Revíselo e inténtelo de nuevo.", "already_set_up": "¿Ya está configurado?"
   },
   "book": {
+    "coupon_membership_inactive": "Este código requiere una membresía activa hoy en el nivel correspondiente.",
     "title": "Reservar", "step_service": "Servicio", "step_staff": "Quién", "step_when": "Cuándo", "step_review": "Revisión", "step_pay": "Pago",
     "your_price": "Su precio", "list_price": "Precio estándar", "member_price_note": "{{label}} aplicado", "duration": "{{count}} min",
     "any_staff": "La primera persona disponible", "choose_staff": "Elija con quién", "pick_day": "Elija un día",

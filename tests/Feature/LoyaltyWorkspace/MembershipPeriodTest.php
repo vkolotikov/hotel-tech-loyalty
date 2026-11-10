@@ -126,4 +126,37 @@ class MembershipPeriodTest extends TestCase
             $this->assertSame('membership_period_conflict', $refused->errorCode);
         }
     }
+
+    public function test_merging_connected_periods_preserves_the_earliest_explicit_start(): void
+    {
+        DB::table('loyalty_members')->where('id', $this->grace->id)->update(['membership_valid_from' => '2026-12-01', 'membership_valid_until' => '2027-12-01']);
+        DB::table('loyalty_members')->where('id', $this->ada->id)->update(['membership_valid_from' => '2026-11-01', 'membership_valid_until' => '2027-11-30']);
+        $winner = $this->grace->fresh();
+        MembershipValidity::keptOnMerge($winner, $this->ada->fresh());
+        $this->assertSame('2026-11-01', MembershipValidity::startOf($winner));
+        $this->assertSame('2027-12-01', MembershipValidity::endOf($winner));
+    }
+
+    public function test_a_queued_benefit_cannot_be_consumed_after_the_membership_term_ends(): void
+    {
+        $benefit = $this->futureBenefit();
+        DB::table('loyalty_members')->where('id', $this->grace->id)->update(['membership_valid_from' => '2026-10-01', 'membership_valid_until' => '2026-10-04']);
+        $request = \App\Models\BenefitEntitlement::create(['member_id' => $this->grace->id, 'benefit_id' => $benefit->benefit_id, 'status' => 'approved']);
+        $this->asManager()->postJson($this->api("requests/{$request->id}/done"))->assertForbidden()->assertJsonPath('error', 'membership_expired');
+        $this->assertSame('approved', $request->fresh()->status);
+        $this->assertNull($request->fresh()->fulfilled_at);
+    }
+
+    public function test_a_shared_benefit_approval_refuses_a_replacement_term_that_has_not_started(): void
+    {
+        $benefit = $this->futureBenefit();
+        $request = \App\Models\BenefitEntitlement::create(['member_id' => $this->grace->id, 'benefit_id' => $benefit->benefit_id, 'status' => 'pending']);
+        try {
+            $request->approve($this->manager);
+            $this->fail('A future membership benefit was approved.');
+        } catch (\App\Services\Loyalty\LoyaltyRefused $refused) {
+            $this->assertSame('membership_not_started', $refused->errorCode);
+        }
+        $this->assertSame('pending', $request->fresh()->status);
+    }
 }

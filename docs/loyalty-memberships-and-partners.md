@@ -14,6 +14,7 @@ online checkout is required.
    current tier benefits. Members may still sign in and read their history.
 5. Save. Points do not change and automatic progression cannot change the assigned level. To return to normal
    progression, choose **Earned progression** in the same form. The programme reassesses their level.
+   Existing dates are preserved when unchanged, including an expired end. Switching progression never renews access.
 
 There is one current membership period. A future period replaces current access immediately; the form asks you to
 acknowledge the gap if the member has access now. To renew without a gap, extend the current end date. This release

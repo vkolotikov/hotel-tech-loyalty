@@ -194,6 +194,9 @@
     "decline_title": "{{benefit}} ablehnen",
     "done": "Als erledigt markieren",
     "error": {
+      "member_inactive": "Diese Mitgliedschaft ist deaktiviert. Ein Manager kann sie auf der Mitgliederseite prüfen.",
+      "membership_expired": "Diese Mitgliedschaft ist abgelaufen. Verlängern Sie sie vor Nutzung des Vorteils.",
+      "membership_not_started": "Diese Mitgliedschaft hat noch nicht begonnen. Prüfen Sie die Daten auf der Mitgliederseite.",
       "invalid": "Geben Sie an, warum die Anfrage abgelehnt wird.",
       "network": "Keine Verbindung: Es wurde nichts gespeichert. Versuchen Sie es erneut.",
       "not_found": "Diese Anfrage gibt es nicht mehr.",

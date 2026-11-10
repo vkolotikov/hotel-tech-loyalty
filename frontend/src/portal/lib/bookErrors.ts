@@ -47,6 +47,7 @@ const BOOK_ERROR_FALLBACK: Record<string, string> = {
   coupon_used: 'That coupon has already been used.',
   coupon_expired: 'That coupon has expired.',
   coupon_wrong_tier: 'That code is for another membership level.',
+  coupon_membership_inactive: 'This code needs a membership that is active today at its required level.',
   coupon_no_capacity: 'That code has been fully claimed.',
   coupon_untyped: 'That reward cannot be used as a coupon.',
   hold_expired: 'This took a little too long. Please check the price again.',

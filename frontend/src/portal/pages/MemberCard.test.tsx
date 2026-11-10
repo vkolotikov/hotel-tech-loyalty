@@ -36,11 +36,17 @@ const member = (more: Partial<PortalMember> = {}): PortalMember => ({
   ...more,
 })
 
-function render(m: PortalMember) {
+function render(m: PortalMember, loyalty = true) {
   const client = new QueryClient()
   client.setQueryData(['portal-card'], { qr_svg: null, qr_image: null })
-  return renderToStaticMarkup(<QueryClientProvider client={client}><MemberCard member={m} loyalty currency="EUR" /></QueryClientProvider>)
+  return renderToStaticMarkup(<QueryClientProvider client={client}><MemberCard member={m} loyalty={loyalty} currency="EUR" /></QueryClientProvider>)
 }
+
+it('shows an ongoing manual membership start at a venue with points off', () => {
+  const html = render(member({ membership_mode: 'assigned', membership: { valid_from: '2026-11-01', valid_until: null, state: 'active' } }), false)
+  expect(html).toContain('Member from')
+  expect(html).toContain('Nov')
+})
 const text = (html: string) => html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ')
 
 describe('the membership on the portal card (release 8 §3)', () => {

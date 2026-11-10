@@ -201,6 +201,7 @@ export interface Offer {
 export interface Claim {
   id: number
   status: string
+  usable_now?: boolean
   claimed_at?: string | null
   used_at?: string | null
   expires_at?: string | null

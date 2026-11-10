@@ -25,6 +25,7 @@
     "wallet_unavailable": "Les cartes de portefeuille ne sont pas encore configurées pour cet établissement.", "wallet_error": "Impossible de préparer la carte. Veuillez réessayer."
   },
   "rewards": {
+    "offer_membership_unavailable": "Cette offre nécessite une adhésion active au niveau requis.",
     "membership_expired": "Votre adhésion a pris fin. Veuillez contacter l’équipe.",
     "membership_not_started": "Cette adhésion n’a pas encore commencé.",
     "title": "Récompenses", "tab_benefits": "Avantages",
@@ -140,6 +141,7 @@
     "claim_failed": "Ce code n'a pas fonctionné. Vérifiez-le et réessayez.", "already_set_up": "Déjà configuré ?"
   },
   "book": {
+    "coupon_membership_inactive": "Ce code nécessite une adhésion active aujourd’hui au niveau requis.",
     "title": "Réserver", "step_service": "Service", "step_staff": "Qui", "step_when": "Quand", "step_review": "Récapitulatif", "step_pay": "Paiement",
     "your_price": "Votre prix", "list_price": "Prix standard", "member_price_note": "{{label}} appliqué", "duration": "{{count}} min",
     "any_staff": "Première personne disponible", "choose_staff": "Choisissez avec qui", "pick_day": "Choisir un jour",

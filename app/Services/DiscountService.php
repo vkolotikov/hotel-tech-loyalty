@@ -233,9 +233,9 @@ class DiscountService
             ->where('status', '!=', 'expired')
             ->with(['offer' => fn ($q) => $q->where('is_active', true)])
             ->get()
-            ->filter(function ($claim) {
+            ->filter(function ($claim) use ($member) {
                 $offer = $claim->offer;
-                if (!$offer) {
+                if (!$offer || !$offer->allowsMembership($member)) {
                     return false;
                 }
                 // Date window, inclusive of the last day.

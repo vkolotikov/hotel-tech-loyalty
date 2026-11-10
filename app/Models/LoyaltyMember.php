@@ -25,6 +25,7 @@ class LoyaltyMember extends Model
     ];
 
     protected $casts = [
+        'membership_period_enforced' => 'boolean',
         'is_active' => 'boolean',
         'marketing_consent' => 'boolean',
         'unsubscribed_at' => 'datetime',

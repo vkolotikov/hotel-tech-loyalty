@@ -443,7 +443,8 @@ class LoyaltyService
             $base = 1.0;
         }
 
-        $earnRate = (float) ($member->tier?->earn_rate ?? 1.0);
+        $earnRate = \App\Services\Loyalty\Members\MembershipValidity::benefitsAvailable($member)
+            ? (float) ($member->tier?->earn_rate ?? 1.0) : 1.0;
 
         // Check outlet override
         if ($outletId) {
@@ -534,7 +535,7 @@ class LoyaltyService
                 ->where('so.organization_id', $member->organization_id)
                 ->where('so.type', 'points_multiplier')
                 ->where('so.is_active', true)
-                ->get(['so.value', 'so.start_date', 'so.end_date', 'mo.expires_at']));
+                ->get(['so.value', 'so.start_date', 'so.end_date', 'so.tier_ids', 'mo.expires_at']));
         } catch (\Throwable) {
             // A database without the offer tables (a narrower test schema): no offer boost.
             return 1.0;
@@ -542,6 +543,9 @@ class LoyaltyService
 
         $best = 1.0;
         foreach ($claims as $claim) {
+            $ids = is_string($claim->tier_ids) ? (array) json_decode($claim->tier_ids, true) : (array) $claim->tier_ids;
+            if ($ids !== [] && (!in_array((int) $member->tier_id, array_map('intval', $ids), true)
+                || !\App\Services\Loyalty\Members\MembershipValidity::benefitsAvailable($member))) continue;
             if ($claim->start_date && \Illuminate\Support\Carbon::parse($claim->start_date)->startOfDay()->isFuture()) {
                 continue;
             }

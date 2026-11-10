@@ -17,7 +17,7 @@ trait ValiditySchema
     protected function buildValiditySchema(): void
     {
         $columns = [
-            'loyalty_members'           => ['membership_valid_from' => 'date', 'membership_valid_until' => 'date', 'membership_reminded_for' => 'date', 'qualifying_visits' => 'visits'],
+            'loyalty_members'           => ['membership_period_enforced' => 'bool', 'membership_valid_from' => 'date', 'membership_valid_until' => 'date', 'membership_reminded_for' => 'date', 'qualifying_visits' => 'visits'],
             'loyalty_tiers'             => ['min_visits' => 'int'],
             'tier_qualification_counts' => ['visits' => 'visits', 'venue_day' => 'date'],
         ];
@@ -31,6 +31,7 @@ trait ValiditySchema
                         continue;
                     }
                     match ($kind) {
+                        'bool'   => $t->boolean($column)->default(false),
                         'date'   => $t->date($column)->nullable(),
                         'int'    => $t->unsignedInteger($column)->nullable(),
                         'visits' => $t->unsignedInteger($column)->default(0),

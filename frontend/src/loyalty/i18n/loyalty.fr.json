@@ -194,6 +194,9 @@
     "decline_title": "Refuser : {{benefit}}",
     "done": "Marquer comme traitée",
     "error": {
+      "member_inactive": "Cette adhésion est désactivée. Un responsable peut la vérifier sur la page du membre.",
+      "membership_expired": "Cette adhésion a pris fin. Renouvelez-la avant d’utiliser cet avantage.",
+      "membership_not_started": "Cette adhésion n’a pas encore commencé. Vérifiez les dates sur la page du membre.",
       "invalid": "Indiquez pourquoi la demande est refusée.",
       "network": "Pas de connexion : rien n’a été enregistré. Réessayez.",
       "not_found": "Cette demande n’existe plus.",

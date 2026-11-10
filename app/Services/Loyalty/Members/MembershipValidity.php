@@ -123,7 +123,7 @@ class MembershipValidity
         if ((array_key_exists('is_active', $member->getAttributes()) && !$member->is_active) || ($from !== null && $from > $today)) {
             return false;
         }
-        $limited = $from !== null || $member->getAttribute('membership_mode') === 'assigned';
+        $limited = $from !== null || $member->getAttribute('membership_mode') === 'assigned' || $member->getAttribute('membership_period_enforced');
 
         return !$limited || self::endOf($member) === null || self::endOf($member) >= $today;
     }
@@ -199,7 +199,8 @@ class MembershipValidity
             $changed = $new !== $old || $newFrom !== $oldFrom;
             if ($changed) {
                 self::write($orgId, (int) $locked->id, ['membership_valid_until' => $new, 'membership_reminded_for' => null]
-                    + ($newFrom !== $oldFrom ? ['membership_valid_from' => $newFrom] : []));
+                    + ($newFrom !== $oldFrom ? ['membership_valid_from' => $newFrom] : [])
+                    + self::periodIntent($newFrom !== null || $oldFrom !== null));
                 AuditLog::create([
                     'organization_id' => $orgId,
                     'causer_type'     => User::class,
@@ -318,7 +319,7 @@ class MembershipValidity
         }
         self::assertInterval($validFrom, $validUntil);
         $values = ['membership_valid_until' => $validUntil, 'membership_reminded_for' => null]
-            + ($validFrom !== null ? ['membership_valid_from' => self::checkedStart($validFrom)] : []);
+            + ($validFrom !== null ? ['membership_valid_from' => self::checkedStart($validFrom)] : []) + self::periodIntent($validFrom !== null);
         self::write((int) $member->organization_id, (int) $member->id, $values);
         $member->setRawAttributes(array_merge($member->getAttributes(), $values), true);
     }
@@ -338,13 +339,24 @@ class MembershipValidity
             || ($b !== null && $aFrom !== null && self::daysBetween($b, $aFrom) > 1)) {
             throw new LoyaltyRefused('membership_period_conflict', 'These membership periods are separate. Choose the intended dates before merging.', 409);
         }
-        if ($b === null || ($a !== null && $a >= $b)) {
-            return;
+        $changes = [];
+        if ($loser->getAttribute('membership_period_enforced')) $changes['membership_period_enforced'] = true;
+        if ($aFrom !== null && $bFrom !== null && $bFrom < $aFrom) {
+            $changes['membership_valid_from'] = $bFrom;
         }
+        if ($b !== null && ($a === null || $a < $b)) {
+            $changes += ['membership_valid_until' => $b, 'membership_reminded_for' => $loser->membership_reminded_for?->toDateString()];
+            if ($a === null && $aFrom === null && $bFrom !== null) $changes['membership_valid_from'] = $bFrom;
+        }
+        if ($changes === []) return;
         // Raw, as write() stores them (a plain Y-m-d): the merge's save writes them as they are.
-        $reminded = $loser->membership_reminded_for?->toDateString();
-        $winner->setRawAttributes(array_merge($winner->getAttributes(), ['membership_valid_until' => $b, 'membership_reminded_for' => $reminded]
-            + ($a === null && $aFrom === null && $bFrom !== null ? ['membership_valid_from' => $bFrom] : [])));
+        $winner->setRawAttributes(array_merge($winner->getAttributes(), $changes));
+    }
+
+    private static function periodIntent(bool $bounded): array
+    {
+        return $bounded && \Illuminate\Support\Facades\Schema::hasColumn('loyalty_members', 'membership_period_enforced')
+            ? ['membership_period_enforced' => true] : [];
     }
 
     /**

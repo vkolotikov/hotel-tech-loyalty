@@ -132,7 +132,7 @@ try {
  report.phase='menu'
  await manager.page.goto(base+'/loyalty/overview');await manager.page.getByRole('button',{name:'Collapse menu',exact:true}).click()
  check(await manager.page.locator('[data-loyalty]').getAttribute('data-slim')!==null,'Visible menu icon collapses the rail')
- await manager.page.reload();check(await manager.page.getByRole('button',{name:'Expand menu',exact:true}).isVisible(),'Collapsed menu persists and keeps its expand icon')
+ await manager.page.reload();await manager.page.getByRole('button',{name:'Expand menu',exact:true}).waitFor();check(await manager.page.locator('[data-loyalty]').getAttribute('data-slim')!==null,'Collapsed menu persists and keeps its expand icon')
  await manager.page.getByRole('button',{name:'Expand menu',exact:true}).click()
  check(report.errors.length===0,'Journey has no browser runtime errors')
  report.phase='complete';await fs.writeFile(path.join(out,'result.json'),JSON.stringify(report,null,2));console.log('Checks: '+report.checks.length)

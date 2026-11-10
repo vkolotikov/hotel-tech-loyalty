@@ -26,8 +26,8 @@ export interface EnrolBody {
 export interface AssignmentBody {
   membership_mode: 'assigned' | 'earned'
   tier_id?: number
-  valid_from: string | null
-  valid_until: string | null
+  valid_from?: string | null
+  valid_until?: string | null
   confirm_replace: boolean
   idempotency_key: string
 }

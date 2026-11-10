@@ -140,4 +140,13 @@ class MembershipAssignmentTest extends TestCase
         $this->assertSame('assigned', $this->grace->fresh()->membership_mode);
         $this->assertTrue((bool) $this->ada->fresh()->is_active);
     }
+
+    public function test_releasing_an_expired_assignment_without_a_start_does_not_renew_its_benefits(): void
+    {
+        $this->asManager()->putJson($this->api("members/{$this->grace->id}/membership"), $this->assignment(['valid_from' => null]))->assertOk();
+        DB::table('loyalty_members')->where('id', $this->grace->id)->update(['membership_valid_until' => '2026-10-04']);
+        $this->putJson($this->api("members/{$this->grace->id}/membership"), ['membership_mode' => 'earned', 'idempotency_key' => 'release-expired'])
+            ->assertOk()->assertJsonPath('member.valid_until', '2026-10-04')->assertJsonPath('member.membership_mode', 'earned');
+        $this->assertFalse(\App\Services\Loyalty\Members\MembershipValidity::benefitsAvailable($this->grace->fresh()));
+    }
 }

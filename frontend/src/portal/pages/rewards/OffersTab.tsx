@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { BadgeCheck, Sparkles } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { usePortal } from '../../PortalProvider'
-import { portalApi, apiMessage } from '../../lib/portalApi'
+import { portalApi, apiMessage, apiErrorCode } from '../../lib/portalApi'
 import { formatDay } from '../../lib/dates'
 import { Card } from '../../ui/Card'
 import { Button } from '../../ui/Button'
@@ -29,7 +29,10 @@ export function OffersTab() {
         void qc.invalidateQueries({ queryKey: ['portal-activity'] })
       }
     },
-    onError: e => toast.error(apiMessage(e, t('portal.rewards.claim_failed', 'Could not claim that offer'))),
+    onError: e => {
+      const code = apiErrorCode(e)
+      toast.error(code === 'membership_not_started' || code === 'membership_expired' ? t(`portal.rewards.${code}`) : apiMessage(e, t('portal.rewards.claim_failed', 'Could not claim that offer')))
+    },
   })
 
   if (isLoading) return <PageSkeleton />
@@ -61,7 +64,7 @@ export function OffersTab() {
                 </div>
                 <p className="mt-3 flex items-center gap-1.5 text-[11px] text-p-text-2">
                   <BadgeCheck size={13} className={used ? '' : 'text-p-success'} aria-hidden />
-                  {used && paysPointsOnClaim(c.offer) ? t('portal.rewards.points_added_on', 'Points added {{date}}', { date: formatDay(c.used_at!, lang) })
+                  {!used && c.usable_now === false ? t('portal.rewards.offer_membership_unavailable', 'This offer needs an active membership at its required level.') : used && paysPointsOnClaim(c.offer) ? t('portal.rewards.points_added_on', 'Points added {{date}}', { date: formatDay(c.used_at!, lang) })
                     : used ? t('portal.rewards.used_on', 'Used {{date}}', { date: formatDay(c.used_at!, lang) })
                     : c.offer?.end_date ? t('portal.rewards.valid_until', 'Valid until {{date}}', { date: formatDay(c.offer.end_date, lang) })
                     : t('portal.rewards.ready_to_use', 'Ready to use — show this at the desk')}

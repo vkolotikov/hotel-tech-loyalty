@@ -40,6 +40,14 @@ class SpecialOffer extends Model
         return $this->hasMany(MemberOffer::class, 'offer_id');
     }
 
+    /** Unrestricted promotions stay independent of the package; level privileges require its current term. */
+    public function allowsMembership(LoyaltyMember $member): bool
+    {
+        $ids = array_map('intval', (array) $this->tier_ids);
+        return $ids === [] || (in_array((int) $member->tier_id, $ids, true)
+            && \App\Services\Loyalty\Members\MembershipValidity::benefitsAvailable($member));
+    }
+
     public function createdBy()
     {
         return $this->belongsTo(User::class, 'created_by');

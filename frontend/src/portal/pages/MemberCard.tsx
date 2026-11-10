@@ -56,7 +56,7 @@ export function MemberCard({ member, loyalty, currency = 'EUR' }: { member: Port
             )}
           </div>
 
-          {(loyalty || membership) && (
+          {(showMembership || membership || member.membership?.valid_from) && (
             <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 text-[11px]">
               {loyalty && (
                 <span className="inline-flex items-center gap-1 text-p-text-2 tabular-nums"><TrendingUp size={12} aria-hidden />{counted(t, 'home.lifetime', member.lifetime_points, lang)}</span>

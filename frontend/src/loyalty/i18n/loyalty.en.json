@@ -194,6 +194,9 @@
     "decline_title": "Decline {{benefit}}",
     "done": "Mark done",
     "error": {
+      "member_inactive": "This membership is switched off. A manager can review it on the member’s page.",
+      "membership_expired": "This membership has ended. Renew it before using this benefit.",
+      "membership_not_started": "This membership has not started yet. Review its dates on the member’s page.",
       "invalid": "Say why the request is declined.",
       "network": "No connection: nothing was saved. Try again.",
       "not_found": "This request no longer exists.",
