@@ -33,6 +33,18 @@ export function Sheet({ open, onClose, title, children, footer, icon, busy = fal
   return (
     <dialog ref={panel} className="p-sheet" aria-labelledby={titleId} aria-modal="true" aria-busy={busy || undefined}
       onCancel={e => { e.preventDefault(); if (!busyRef.current) closeRef.current() }}
+      onKeyDown={e => {
+        // Native modality makes the background inert. Cycle the endpoints explicitly too, so Tab
+        // stays in the panel rather than moving to browser chrome after its final control.
+        if (e.key !== 'Tab' || e.defaultPrevented) return
+        const items = Array.from(e.currentTarget.querySelectorAll<HTMLElement>(
+          'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+        )).filter(item => item.getClientRects().length > 0 && !item.closest('[inert]'))
+        if (!items.length) { e.preventDefault(); e.currentTarget.focus(); return }
+        const first = items[0], last = items[items.length - 1]
+        if (e.shiftKey && (document.activeElement === first || document.activeElement === e.currentTarget)) { e.preventDefault(); last.focus() }
+        else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus() }
+      }}
       onMouseDown={e => {
         if (e.target !== e.currentTarget || busyRef.current) return
         const r = e.currentTarget.getBoundingClientRect()
