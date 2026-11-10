@@ -34,6 +34,8 @@
 .p-reward-text { min-width:0; flex:1; }
 .p-reward-text h3 { font-size:14px; font-weight:600; }
 .p-reward-text > p { font-size:11px; color:rgb(var(--p-text-2)); margin-top:4px; line-height:1.6; }
+.p-reward-text > .p-reward-mobile-value { display:none; }
+.p-reward-mobile-value > span { color:rgb(var(--p-accent-deep)); font-weight:600; }
 .p-reward-action { width:100%; display:flex; justify-content:flex-end; margin-top:5px; }
 .p-reward-action button { min-height:34px; font-size:11px; }
 .p-reward-terms { font-size:11px; color:rgb(var(--p-text-2)); margin-top:5px; }
@@ -43,6 +45,8 @@
 .p-reward-compact .p-reward-copy { flex-wrap:nowrap; }
 .p-reward-compact .p-reward-copy > .p-icon-tile { display:inline-flex; }
 .p-reward-compact .p-reward-action { width:auto; flex-shrink:0; max-width:40%; margin-top:0; }
+.p-reward-compact .p-reward-text > .p-reward-mobile-value { display:block; }
+.p-reward-compact .p-reward-description { display:none; }
 .p-code-ready { padding:20px 14px; border:1px solid rgb(var(--p-accent)/.25); border-radius:11px; background:rgb(var(--p-accent)/.13); }
 .p-bookings-grid { display:grid; grid-template-columns:minmax(0,1.85fr) minmax(0,1fr); gap:20px; align-items:start; }
 .p-booking-card { border:1px solid rgb(var(--p-border)); border-radius:16px; padding:20px; background:linear-gradient(120deg,rgb(var(--p-accent)/.1),rgb(var(--p-surface))); }
@@ -72,7 +76,9 @@
 .p-reward-copy { padding:12px; flex-wrap:nowrap; gap:9px; } .p-reward-copy > .p-icon-tile { display:inline-flex; }
 .p-reward-text h3 { font-size:13px; } .p-reward-text > p { font-size:10px; margin-top:3px; }
 .p-reward-action { width:auto; max-width:37%; flex-shrink:0; margin-top:0; } .p-reward-action button { padding-inline:9px; }
-.p-reward-action .p-icon { display:none; } .p-reward-text > .p-reward-note { display:none; }
+.p-reward-action .p-icon { display:none; }
+.p-reward-text > .p-reward-mobile-value { display:block; }
+.p-reward-description { display:none; }
 .p-booking-card { padding:14px; } .p-booking-card h3 { font-size:15px; } .p-booking-dates { margin-top:15px; gap:8px; } .p-booking-dates > div { padding:10px; } .p-booking-dates strong { font-size:18px; }
 }
 [data-portal].p-portal { min-height:100dvh; background-image:radial-gradient(ellipse at 8% 8%,rgb(var(--p-accent)/.055),transparent 65%); }
