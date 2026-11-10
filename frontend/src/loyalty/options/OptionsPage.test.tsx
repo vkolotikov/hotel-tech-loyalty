@@ -143,7 +143,7 @@ describe('Ways to earn (release 7 §1; tabs and checks, owner 2026-10-26)', () =
     expect((html.match(/role="switch"/g) ?? []).length).toBe(5)
     expect(html).not.toContain('type="submit"')
     expect(text(html)).not.toContain('Not saved yet.')
-    expect(html).toContain('href="/loyalty/options/setup"')
+    expect(html).toContain('href="/loyalty/program/setup"')
     expect(text(html)).not.toContain('You see them as they are.')
   })
 
@@ -152,7 +152,7 @@ describe('Ways to earn (release 7 §1; tabs and checks, owner 2026-10-26)', () =
     const html = tab('bonus', false, data)
     expect(text(html)).toContain('Only an owner or a manager can change these. You see them as they are.')
     expect(html).not.toContain('type="submit"')
-    expect(html).not.toContain('href="/loyalty/options/setup"')
+    expect(html).not.toContain('href="/loyalty/program/setup"')
     expect((html.match(/role="switch"[^>]*disabled=""/g) ?? []).length).toBe(3)
     expect(text(html)).not.toContain('Change')
     expect(text(card(html, 'referrals'))).toContain('250 points')

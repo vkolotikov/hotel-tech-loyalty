@@ -61,7 +61,7 @@ class TierAdviceTest extends TestCase
 
         // By visits: Regular and Friend share 5 visits; Patron has no visits floor; the points floors (all 0) do not count.
         $this->assertSame([['id' => 1, 'name' => 'Regular'], ['id' => 2, 'name' => 'Friend']], TierAdvice::read($tiers, [], [], 'visits')[0]['tiers']);
-        $this->assertCount(1, TierAdvice::read($tiers, [], [], 'visits'));
+        $this->assertCount(1, array_filter(TierAdvice::read($tiers, [], [], 'visits'), fn ($item) => $item['code'] === 'tiers_share_threshold'));
         // By spend: 100 and 100.0 are the same figure.
         $this->assertSame(['value' => 100], TierAdvice::read($tiers, [], [], 'spend')[0]['params']);
         $this->assertSame([['id' => 4, 'name' => 'Big spender'], ['id' => 5, 'name' => 'Spender']], TierAdvice::read($tiers, [], [], 'spend')[0]['tiers']);
@@ -85,5 +85,24 @@ class TierAdviceTest extends TestCase
             'benefits' => [['id' => 11, 'name' => 'Spa ritual'], ['id' => 12, 'name' => 'Welcome drink']],
         ]], TierAdvice::read($tiers, $benefits, $givenBy, 'points'));
         $this->assertSame([], TierAdvice::read($tiers, [$benefits[0], $benefits[3]], $givenBy, 'points'));
+    }
+
+    public function test_missing_thresholds_name_only_progression_tiers_after_the_active_entry_tier(): void
+    {
+        $tiers = [
+            $this->tier(1, 'Old', null, ['is_active' => false]),
+            $this->tier(2, 'Invited', null, ['invitation_only' => true]),
+            $this->tier(3, 'Entry', null),
+            $this->tier(4, 'Silver', 100),
+            $this->tier(5, 'Gold', null),
+        ];
+        $this->assertSame([[
+            'code' => 'tiers_missing_threshold', 'level' => 'warn', 'params' => ['n' => 1],
+            'tiers' => [['id' => 5, 'name' => 'Gold']], 'benefits' => [],
+        ]], TierAdvice::read($tiers, [], [], 'points'));
+        $byVisits = TierAdvice::read($tiers, [], [], 'visits');
+        $this->assertSame([['id' => 4, 'name' => 'Silver'], ['id' => 5, 'name' => 'Gold']], $byVisits[0]['tiers']);
+        $this->assertSame(['n' => 2], $byVisits[0]['params']);
+        $this->assertSame([], TierAdvice::read([$this->tier(1, 'Only entry', null)], [], [], 'spend'));
     }
 }

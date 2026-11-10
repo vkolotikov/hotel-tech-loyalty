@@ -23,14 +23,14 @@ export function ManagementStatus({ state = 'active', children }: { state?: strin
 export function ManagementSelection({ title, status, onEdit, children }: { title: string; status?: ReactNode; onEdit?: () => void; children: ReactNode }) {
   const { t } = useTranslation()
   return <aside className="l-ad-panel l-ad-detail" id="management-detail" tabIndex={-1} aria-label={title}>
-    <header className="l-ad-panel-head"><h2>{title}</h2><div className="l-ad-actions">{status}{onEdit && <OverviewButton type="button" onClick={onEdit}>{t('loyalty.program.edit', 'Edit')}</OverviewButton>}</div></header>{children}
+    <header className="l-ad-panel-head"><h2>{title}</h2><div className="l-ad-actions">{status}{onEdit && <OverviewButton type="button" aria-label={`${t('loyalty.program.edit', 'Edit')} ${title}`} onClick={onEdit}>{t('loyalty.program.edit', 'Edit')}</OverviewButton>}</div></header>{children}
   </aside>
 }
 export function ManagementVisual({ art, label, title, line, tone = 'violet', children }: { art: AdminAsset; label: string; title: ReactNode; line?: ReactNode; tone?: string; children?: ReactNode }) {
   const asset = adminAssets[art]
   return <div className="l-ad-visual" data-tone={tone}><div className="l-ad-visual-copy"><small>{label}</small><strong>{title}</strong>{line && <p>{line}</p>}{children}</div><img src={asset.src} width={asset.width} height={asset.height} alt="" /></div>
 }
-export function ManagementRow({ icon, title, caption, value, status, selected, onSelect, tone }: { icon: AdminAsset; title: string; caption?: ReactNode; value?: ReactNode; status?: ReactNode; selected: boolean; onSelect: () => void; tone?: string }) {
+export function ManagementRow({ icon, title, caption, value, status, selected, onSelect, tone, record }: { icon: AdminAsset; title: string; caption?: ReactNode; value?: ReactNode; status?: ReactNode; selected: boolean; onSelect: () => void; tone?: string; record?: string }) {
   const select = () => {
     onSelect()
     if (typeof window !== 'undefined' && window.matchMedia?.('(max-width: 900px)').matches) requestAnimationFrame(() => {
@@ -38,9 +38,9 @@ export function ManagementRow({ icon, title, caption, value, status, selected, o
       detail?.focus({ preventScroll: true }); detail?.scrollIntoView({ block: 'start', behavior: 'auto' })
     })
   }
-  return <li className="l-ad-row" data-selected={selected || undefined}><button type="button" aria-pressed={selected} onClick={select}><ManagementIcon kind={icon} tone={tone} /><span className="l-ad-row-name"><strong>{title}</strong>{caption && <small>{caption}</small>}</span><span className="l-ad-row-value">{value}</span>{status}<img className="l-ad-chevron" src={adminAssets.chevron.src} width={16} height={16} alt="" /></button></li>
+  return <li className="l-ad-row" data-record={record} data-selected={selected || undefined}><button type="button" aria-pressed={selected} onClick={select}><ManagementIcon kind={icon} tone={tone} /><span className="l-ad-row-name"><strong>{title}</strong>{caption && <small>{caption}</small>}</span><span className="l-ad-row-value">{value}</span>{status}<img className="l-ad-chevron" src={adminAssets.chevron.src} width={16} height={16} alt="" /></button></li>
 }
-export function ManagementLabels({ first, value, status }: { first: string; value: string; status: string }) {
+export function ManagementLabels({ first, value, status }: { first: string; value: ReactNode; status: string }) {
   return <div className="l-ad-labels" aria-hidden><span>{first}</span><span>{value}</span><span>{status}</span><span /></div>
 }
 export function ManagementFact({ icon, label, children }: { icon: AdminAsset; label: string; children: ReactNode }) {

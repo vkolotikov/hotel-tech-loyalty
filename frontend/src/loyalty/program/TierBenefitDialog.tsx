@@ -6,7 +6,7 @@ import { overviewAssets } from '../overview/assets'
 import { useRedesignWords } from '../redesign/words'
 import { tierTextStyle } from '../redesign/designMath'
 import './design/program.css'
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Notice } from '../../workspace/ui/Notice'
@@ -29,13 +29,16 @@ const INPUT = 'w-full rounded-lg border border-a-border bg-a-surface px-3 py-2 t
  * server keeps one per tier and benefit, so choosing one the tier already gives changes that one — the form says so
  * and starts from what is stored.
  */
-export function TierBenefitDialog({ tier, current, benefits, options, onClose, initialBenefitId }: {
+export function TierBenefitDialog({ tier, current, benefits, options, onClose, initialBenefitId, onRemove, confirmation }: {
   tier: Tier
   /** The tier's benefit being changed, or null to add one. */
   current: TierBenefit | null
   benefits: Benefit[]
   options: ProgramOptions
   onClose: () => void
+  onRemove?: () => void
+  /** Replaces the modal content while keeping this editor's draft and validation state mounted. */
+  confirmation?: ReactNode
   initialBenefitId?: number
 }) {
   const { t, i18n } = useTranslation()
@@ -80,6 +83,7 @@ export function TierBenefitDialog({ tier, current, benefits, options, onClose, i
     : t('loyalty.program.tier_benefit.add_title', 'Add a benefit to {{tier}}', { tier: tier.name })
 
 
+  if (confirmation) return confirmation
   if (!choices.length) return <DesignDialog title={title} onClose={onClose}><p>{t('loyalty.program.tier_benefit.empty_catalogue', 'The catalogue has no benefit in use yet. Add one under Benefits first.')}</p></DesignDialog>
   const selected = benefits.find(b => String(b.id) === form.benefit_id)
   const amount = decimalOf(form.value_amount)
@@ -105,7 +109,7 @@ export function TierBenefitDialog({ tier, current, benefits, options, onClose, i
       </div>
       <div className="l-ov-inset l-rd-assignment-note"><strong>{say('valueDefines')}</strong><small>{say('deliveryRules')}</small></div>
       {failure && <Notice tone="danger">{t(...refusalKey('loyalty.program', ERRORS, 'tier_benefit', failure))}</Notice>}
-      <div className="l-rd-form-foot"><small>{say('savesImmediately', { name: tier.name })}</small><OverviewButton type="button" disabled={save.isPending} onClick={onClose}>{t('loyalty.common.cancel', 'Cancel')}</OverviewButton><OverviewButton primary type="submit" disabled={save.isPending} aria-busy={save.isPending}>{current || already ? t('loyalty.program.tier_benefit.save', 'Save benefit') : say('addBenefit')}</OverviewButton></div>
+      <div className="l-rd-form-foot">{current && onRemove && <OverviewButton type="button" disabled={save.isPending} onClick={onRemove}>{t('loyalty.program.take_off.confirm', 'Take it off')}</OverviewButton>}<small>{say('savesImmediately', { name: tier.name })}</small><OverviewButton type="button" disabled={save.isPending} onClick={onClose}>{t('loyalty.common.cancel', 'Cancel')}</OverviewButton><OverviewButton primary type="submit" disabled={save.isPending} aria-busy={save.isPending}>{current || already ? t('loyalty.program.tier_benefit.save', 'Save benefit') : say('addBenefit')}</OverviewButton></div>
     </form>
   </DesignDialog>
 }

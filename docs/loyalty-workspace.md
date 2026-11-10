@@ -1514,3 +1514,45 @@ files on disk): run them one after the other.
 - Campaigns: build a segment, write a draft, send yourself a test; send a real one only to a segment you chose.
 - Card & app: the wallet pass's readiness; the member app's colours (the native app shows them on its next start).
 - Rewards: add a picture to a reward and see it on the catalogue.
+
+## Administration UX pass — 10 November 2026
+
+The eight management screens follow Figma page353:8135, with original local SVGs and a common list/detail layout.
+Asset provenance, hashes, intrinsic dimensions and consumers are in `docs/loyalty-redesign/28-ADMIN-UX-ASSETS.json`.
+These screens keep the same tenant-scoped APIs, saved records and permissions. No payment setup or new migration.
+
+- Program: **Levels & tiers**, **Places & access**. Qualification is in Levels; **Guided setup** and **Readiness checks**
+  are actions there. Setup's canonical address is `/loyalty/program/setup`.
+- Ways to earn: **Earning rules**, **Bonuses & boosts**. **Points settings** in Earning rules owns expiry. The purchase
+  rate is still `points_per_currency`; booking and desk switches are independent. An unavailable/off trigger's example
+  gives zero while showing its configured inherited rate.
+- Rewards & benefits: **Points rewards**, **Tier perks**, **Offers**. Redemptions is linked from Points rewards;
+  referral activity from Bonuses & boosts. Existing activity routes stay valid.
+
+`management/navigation.ts` resolves old rules/rule, expiry, qualification, benefits, boosts, readiness and setup links.
+Selection IDs and applicable filters survive. Direct record editors keep their canonical writers and deletion guards.
+Unknown server ways remain available under advanced More. Do not recreate a benefit catalogue in Program.
+
+`TierAdvice` adds `tiers_missing_threshold`: on the programme's measure, later active non-invitation tiers with a null
+floor are named; the first active non-invitation entry tier is excluded. Existing duplicate floors and unused benefits
+remain canonical server advice. Correction links open the named tier or perk. Perks assigned only to inactive tiers
+still need an active tier; the page uses the server advice and previews the explicitly selected assignment's own value.
+
+`TierAssignmentEditor` is shared by Levels, the tier editor and Tier perks. It composes `TierBenefitDialog` and `TakeOff`.
+Cancelling removal retains the mounted form's unsaved values. Assignment defaults to a real option even when all tiers
+are off. Deletion, detach, points, options, offers and redemption writers have not been duplicated.
+
+Promotion math is unchanged: highest eligible timed boost or claimed offer once, with existing independent tier rate
+and standing tier multiplier. Milestones, automatic schedules and member-claimed offers are separate presentations.
+Offer counts use the returned venue-day state; a reached usage cap is displayed separately. Setup's reward example
+reads the actual redeemable catalogue and effective draft, without inventing a reward cost or enabled booking source.
+
+Places show the real tier access rules and today's granted/refused entries; no entrance/hour model is implied.
+Supported secure Web NFC is preferred and still needs a user press. QR and member lookup are visible fallbacks with
+the place preserved. General NFC keeps NDEF member-record precedence and namespaces the serial fallback as HTCARD.
+The partner scanner's explicit physical-card behavior remains as documented in `loyalty-memberships-and-partners.md`.
+Physical NFC/camera acceptance still requires devices; this release does not configure Wallet issuers or push providers.
+
+Local acceptance: `frontend/e2e/loyalty-admin-ux.mjs` and `loyalty-admin-ux-regression.mjs`, using the isolated launch
+environment in `frontend/e2e/LAUNCH-REHEARSAL.md`. A frozen rehearsal clock also freezes limiter time, so the full
+screenshot runner clears only its disposable demo's cache counters between batches. Production throttles are unchanged.

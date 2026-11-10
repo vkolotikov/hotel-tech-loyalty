@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { benefitAssignments, offerMatches, offerReadUrl, rewardEditorProblems, rewardModes, rewardsUrl, rewardStatus } from './math'
+import { benefitAssignments, benefitState, benefitPreview, offerCounts, offerMatches, offerReadUrl, rewardEditorProblems, rewardModes, rewardsUrl, rewardStatus } from './math'
 import { rewardFormOf } from '../rewardsMath'
 import type { Offer, Reward } from '../types'
 import type { Benefit, Tier } from '../../program/types'
@@ -52,6 +52,19 @@ describe('Rewards design contracts', () => {
     expect(rows[0].tier.id).toBe(2)
     expect(rows[0].value).toMatchObject({ value_amount: 10, applies_to: 'stays' })
     expect(benefitAssignments({ id: 9 } as Benefit, tiers)).toEqual([])
+  })
+  it('requires an active tier and previews exactly the explicitly selected assignment', () => {
+    const benefit = { id: 7, is_active: true } as Benefit
+    const tiers = [{ id: 1, is_active: false, benefits: [{ benefit_id: 7, value_amount: 5 }] }, { id: 2, is_active: true, benefits: [{ benefit_id: 7, value_amount: 15 }] }] as Tier[]
+    expect(benefitState(benefit, tiers.slice(0, 1))).toBe('unassigned')
+    expect(benefitState(benefit, tiers)).toBe('active')
+    expect(benefitState({ ...benefit, is_active: false }, tiers)).toBe('off')
+    expect(benefitPreview(benefit, tiers, 1)?.value.value_amount).toBe(5)
+    expect(benefitPreview(benefit, tiers, 999)).toBeUndefined()
+    expect(benefitPreview(benefit, tiers)?.tier.id).toBe(2)
+  })
+  it('counts the server calendar states without turning exhausted or disabled offers into live ones', () => {
+    expect(offerCounts([offer, { ...offer, state: 'upcoming' }, { ...offer, state: 'off' }, { ...offer, state: 'ended' }])).toEqual({ all: 4, current: 2, live: 1, upcoming: 1, off: 1, ended: 1 })
   })
   it('preserves direct legacy activity routes and safely encodes search values', () => {
     expect(rewardsUrl('catalogue')).toBe('/loyalty/rewards')

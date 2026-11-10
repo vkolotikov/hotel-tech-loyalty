@@ -93,8 +93,8 @@ describe('Rewards (spec 2026-10-21 §4.6)', () => {
     const offer = render('?tab=offers', can())
     expect(offer).toContain('data-offer-view="read"')
     expect(offer).not.toContain('l-rb-offer-editor')
-    expect(offer).toContain('href="/loyalty/rewards?tab=redemptions"')
-    expect(offer).toContain('href="/loyalty/rewards?tab=referrals"')
+    expect(offer).not.toContain('href="/loyalty/rewards?tab=redemptions"')
+    expect(offer).not.toContain('href="/loyalty/rewards?tab=referrals"')
     expect(text(render('', can()))).toContain('Points rewards')
   })
 

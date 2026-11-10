@@ -28,7 +28,7 @@ const MemberPage = lazy(() => import('./member/MemberPage').then(m => ({ default
 const DuplicatesPage = lazy(() => import('./membership/DuplicatesPage').then(m => ({ default: m.DuplicatesPage })))
 const ImportPage = lazy(() => import('./membership/ImportPage').then(m => ({ default: m.ImportPage })))
 const MembersPage = lazy(() => import('./members/MembersPage').then(m => ({ default: m.MembersPage })))
-const EarnPage = lazy(() => import('./earn/EarnPage').then(m => ({ default: m.EarnPage })))
+const EarnPage = lazy(() => import('./management/EarningPage').then(m => ({ default: m.EarningPage })))
 const SetupWizard = lazy(() => import('./options/SetupWizard').then(m => ({ default: m.SetupWizard })))
 const ProgramPage = lazy(() => import('./program/ProgramPage').then(m => ({ default: m.ProgramPage })))
 const RequestsPage = lazy(() => import('./requests/RequestsPage').then(m => ({ default: m.RequestsPage })))

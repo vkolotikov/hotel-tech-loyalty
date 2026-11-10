@@ -5,6 +5,8 @@ namespace Tests\Feature\Loyalty;
 use App\Models\EarnRateEvent;
 use App\Models\MemberOffer;
 use App\Models\SpecialOffer;
+use App\Models\BenefitDefinition;
+use App\Models\TierBenefit;
 use App\Services\Loyalty\Programme\ProgrammeOptions;
 use App\Services\LoyaltyService;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
@@ -113,5 +115,17 @@ class OfferMultiplierEarnTest extends TestCase
 
         $this->assertSame(400, $this->earn());                                                     // 100 x 2 x 1.0 x 2
         $this->assertSame(250, $this->loyalty->pointsForSpend($this->ada->fresh('tier'), 100)); // Gold 1.25, no offer
+    }
+
+    public function test_shared_rate_and_standing_tier_benefit_keep_composing_with_only_the_highest_promotion(): void
+    {
+        ProgrammeOptions::save($this->org->id, ['points_per_currency' => 2.5], $this->manager);
+        $benefit = BenefitDefinition::create(['name' => 'Standing points privilege', 'code' => 'UX_RATE', 'is_active' => true]);
+        TierBenefit::create(['tier_id' => $this->ada->tier_id, 'benefit_id' => $benefit->id, 'value_type' => 'points_multiplier', 'value_amount' => 1.2, 'applies_to' => 'all', 'is_active' => true]);
+        $this->claim($this->offer(2), ['member_id' => $this->ada->id]);
+        $this->boost(3);
+        // 17.35 × shared 2.5 × tier rate 1.25 × highest promotion 3 × standing tier privilege 1.2, floor once.
+        $this->assertSame(195, $this->loyalty->pointsForSpend($this->ada->fresh('tier'), 17.35));
+        $this->assertSame(195, $this->loyalty->calculateEarnedPoints($this->ada->fresh('tier'), 17.35));
     }
 }

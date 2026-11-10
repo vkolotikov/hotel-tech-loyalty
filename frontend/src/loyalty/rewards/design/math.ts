@@ -23,6 +23,18 @@ export function rewardStatus(reward: Reward, now = Date.now()): 'off' | 'ended' 
 export function benefitAssignments(benefit: Benefit, tiers: Tier[]) {
   return tiers.flatMap(tier => tier.benefits.filter(b => b.benefit_id === benefit.id).map(value => ({ tier, value })))
 }
+export function benefitState(benefit: Benefit, tiers: Tier[]): 'off' | 'active' | 'unassigned' {
+  return !benefit.is_active ? 'off' : benefitAssignments(benefit, tiers).some(a => a.tier.is_active) ? 'active' : 'unassigned'
+}
+export function benefitPreview(benefit: Benefit, tiers: Tier[], tierId?: number | null) {
+  const assignments = benefitAssignments(benefit, tiers)
+  return tierId != null ? assignments.find(a => a.tier.id === tierId) : assignments.find(a => a.tier.is_active) ?? assignments[0]
+}
+export function offerCounts(offers: Offer[]): Record<string, number> {
+  const counts: Record<string, number> = { all: offers.length, current: 0, live: 0, upcoming: 0, off: 0, ended: 0 }
+  for (const offer of offers) { if (offer.state in counts) counts[offer.state]++; if (['live', 'upcoming'].includes(offer.state)) counts.current++ }
+  return counts
+}
 
 export interface OfferFilters { q: string; brand: string; status: string }
 

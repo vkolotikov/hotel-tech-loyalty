@@ -131,6 +131,16 @@ class DeskVisitTest extends TestCase
         $this->assertSame(1, Stamp::withoutGlobalScopes()->where('member_id', $this->ada->id)->count());
     }
 
+    public function test_desk_purchases_inherit_a_changed_rate_with_the_booking_trigger_independently_off(): void
+    {
+        $this->setOptions(['points_per_currency' => 3, 'points_on_bookings' => false, 'desk_earn_enabled' => true]);
+        $this->checkIn($this->ada->id, ['amount' => 20, 'idempotency_key' => 'ux-shared-rate-1'])->assertOk()->assertJsonPath('points.purchase', 75);
+        $this->setOptions(['points_per_currency' => 4]);
+        $this->checkIn($this->ada->id, ['amount' => 20, 'idempotency_key' => 'ux-shared-rate-2'])->assertOk()->assertJsonPath('points.purchase', 100);
+        $this->setOptions(['desk_earn_enabled' => false, 'points_on_bookings' => true, 'checkin_enabled' => true]);
+        $this->checkIn($this->ada->id, ['amount' => 20])->assertStatus(409)->assertJsonPath('error', 'desk_earn_off');
+    }
+
     public function test_a_purchase_alone_is_the_days_visit_when_check_in_is_off(): void
     {
         $this->setOptions(['desk_earn_enabled' => true, 'stamps_enabled' => true, 'checkin_points' => 10]);

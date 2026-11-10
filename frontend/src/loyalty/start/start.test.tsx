@@ -58,7 +58,7 @@ describe('Overview first steps', () => {
   it('keeps setup accessible after registration has already seeded tiers', () => {
     const setup = answer({ tiers: true, rewards: true })
     const html = wrap(<SetupChecklist setup={setup} />, true, setup)
-    expect(html).toContain('href="/loyalty/options/setup"')
+    expect(html).toContain('href="/loyalty/program/setup"')
     expect(html).toContain('href="/loyalty/start"')
     expect(html).toContain('data-done="true"')
     expect(html).toContain('Set up your tiers')

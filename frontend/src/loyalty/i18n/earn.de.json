@@ -56,7 +56,7 @@
   "advancedLine": "Prüfen Sie Rundung und Multiplikatoren Ihres Programms.",
   "calculation": "Die endgültige Gutschrift wird nach Anwendung der Stufen-, Standort-, Vorteils- und Aktionsmultiplikatoren auf ganze Punkte abgerundet. Bei überlappenden Aktionen gilt der höchste passende Multiplikator.",
   "desk": "Vom Team erfasste Einkäufe",
-  "deskLine": "Für vom Team erfasste Einkäufe gelten eigene Regeln.",
+  "deskLine": "Käufe am Empfang verwenden den gemeinsamen Punktesatz und einen separaten Schalter.",
   "deskLink": "Einstellungen für Empfangskäufe →",
   "memberExample": "MITGLIEDERBEISPIEL",
   "seeEarn": "So viele Punkte erhalten Mitglieder",
