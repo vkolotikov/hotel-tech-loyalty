@@ -11,7 +11,7 @@
 [data-loyalty] .l-editor-icon { display: inline-flex; width: 34px; height: 34px; flex: 0 0 34px; align-items: center; justify-content: center; border-radius: 8px; background: rgb(106 169 198 / .16); }
 [data-loyalty] .l-editor-heading > .l-editor-icon { grid-area: 1 / 1 / 3 / 2; align-self: center; width: 43px; height: 43px; flex-basis: 43px; background: #3b5067; border-radius: 9px; }
 [data-loyalty] .l-editor-dialog .l-ov-heading-row { grid-area: 2 / 2; margin: 0; padding: 0; gap: 10px; }
-[data-loyalty] .l-editor-dialog .l-ov-heading-row h2 { font-size: 22px; line-height: 31px; font-weight: 600; letter-spacing: -.3px; padding-right: 25px; overflow-wrap: anywhere; }
+[data-loyalty] .l-editor-dialog .l-ov-heading-row h2 { font-size: 22px; line-height: 31px; font-weight: 600; letter-spacing: -.3px; padding-right: 44px; overflow-wrap: anywhere; }
 [data-loyalty] .l-editor-dialog .l-ov-close { position: absolute; right: 20px; top: 21px; width: 34px; min-width: 34px; height: 34px; min-height: 34px; padding: 0; border: 1px solid rgb(159 183 211 / .15); border-radius: 8px; background: rgb(20 30 46 / .28); box-shadow: none; color: var(--le-muted); font-size: 22px; font-weight: 300; }
 [data-loyalty] .l-editor-dialog .l-ov-dialog-body { display: flex; flex-direction: column; padding: 0; min-height: 0; overflow: hidden; }
 [data-loyalty] .l-editor-form { display: flex; flex-direction: column; min-height: 0; width: 100%; }

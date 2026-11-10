@@ -60,9 +60,9 @@ try {
     ['assignment', `/loyalty/rewards?tab=benefits&selected=${perk.id}`, /Manage assignment/, true],
     ['offer', '/loyalty/rewards?tab=offers&offer=new', null, true],
   ]
-  async function open(test) { await go(test[1]); if (test[2]) await page.getByRole('button', { name: test[2] }).click(); await popup().waitFor(); await page.evaluate(() => document.fonts.ready) }
+  async function open(test) { await go(test[1]); if (test[0] === 'assignment') await page.locator('#management-detail select').selectOption(String(tier.id)); if (test[2]) await page.getByRole('button', { name: test[2] }).click(); await popup().waitFor(); await page.evaluate(() => document.fonts.ready) }
   const probe = process.env.EDITORS_PROBE === '1', followup = process.env.EDITORS_FOLLOWUP === '1'
-  const layouts = probe ? [cases[0], cases[5], cases[10], cases[13]] : followup ? [cases[5], cases[7], cases[10], cases[13]] : cases
+  const layouts = process.env.EDITORS_CORE_ONLY === '1' ? [] : probe ? [cases[0], cases[5], cases[10], cases[13]] : followup ? [cases[5], cases[7], cases[10], cases[13]] : cases
   report.phase = 'layouts'
   for (const theme of probe ? ['dark'] : ['dark', 'light']) for (const width of probe ? [1440] : followup ? [768, 390] : [1440, 390]) {
     await reset()
@@ -76,7 +76,7 @@ try {
         const art = images.every(img => img.complete && img.naturalWidth > 0 && Math.abs(img.getBoundingClientRect().width / img.getBoundingClientRect().height - img.naturalWidth / img.naturalHeight) < .03)
         const focus = dialog.contains(document.activeElement)
         const background = document.querySelector('main h1')
-        return { modal: dialog.matches(':modal'), focus, fits: r.left >= 0 && r.right <= innerWidth + 1 && r.top >= 0 && r.bottom <= innerHeight + 1 && body.scrollWidth <= body.clientWidth + 1, footer: footer.bottom <= r.bottom + 1 && footer.top >= r.top, art, width: innerWidth < 760 || Math.abs(r.width - (wide ? 984 : 558)) < 2, background: !!background && getComputedStyle(background).display !== 'none' }
+        return { modal: dialog.matches(':modal'), focus, fits: r.left >= 0 && r.right <= innerWidth + 1 && r.top >= 0 && r.bottom <= innerHeight + 1 && body.scrollWidth <= body.clientWidth + 1, footer: footer.bottom <= r.bottom + 1 && footer.top >= r.top, art, width: Math.abs(r.width - (innerWidth <= 760 ? innerWidth - 24 : Math.min(wide ? 984 : 558, innerWidth - (wide ? 48 : 40)))) < 2, background: !!background && getComputedStyle(background).display !== 'none' }
       }, test[3])
       check(Object.values(geometry).every(Boolean), `${test[0]}: native popup, focus, catalogue, artwork and fixed footer at ${width}px in ${theme}`)
       if (theme === 'dark' || ['purchase', 'reward', 'offer', 'add-place'].includes(test[0])) await page.screenshot({ path: path.join(out, `${test[0]}-${theme}-${width}.png`), fullPage: false })
@@ -129,29 +129,31 @@ try {
   check(report.errors.length === 0, 'Editor journeys have no browser runtime errors')
   }
   if (followup) {
+    if (process.env.EDITORS_LOCALE_ONLY !== '1') {
     report.phase = 'nested-drafts'
     await reset(); await page.setViewportSize({ width: 1440, height: 900 }); await page.evaluate(() => localStorage.setItem('admin_lang', 'en'))
     await open(cases[1]); const parentName = popup().getByLabel('Level name', { exact: true }); await parentName.fill('Kept parent draft')
     await popup().getByText('Included benefits', { exact: true }).first().click()
     await popup().getByRole('button', { name: 'Edit', exact: true }).first().click()
-    await popup().getByLabel('Discount', { exact: true }).fill('17')
+    await popup().getByLabel('Discount (%)', { exact: true }).fill('17')
     await popup().getByRole('button', { name: 'Take it off', exact: true }).click()
     await page.getByRole('dialog').last().getByRole('button', { name: 'Keep it', exact: true }).click()
-    check(await popup().getByLabel('Discount', { exact: true }).inputValue() === '17', 'Keep removal restores the unsaved assignment draft above its parent popup')
+    check(await popup().getByLabel('Discount (%)', { exact: true }).inputValue() === '17', 'Keep removal restores the unsaved assignment draft above its parent popup')
     await popup().getByRole('button', { name: 'Cancel', exact: true }).click()
     await page.getByRole('dialog').last().getByRole('button', { name: 'Discard changes', exact: true }).click()
     check(await popup().getByLabel('Level name', { exact: true }).inputValue() === 'Kept parent draft', 'Closing a child assignment preserves the parent level draft')
     await popup().getByRole('button', { name: 'Cancel', exact: true }).click(); await page.getByRole('dialog').last().getByRole('button', { name: 'Discard changes', exact: true }).click(); await closed()
     check(await page.evaluate(() => document.body.style.overflow !== 'hidden'), 'Closing nested drafts restores page scrolling')
     report.phase = 'remaining-saves'
-    await open(cases[2]); const measure = popup().getByRole('button', { name: 'Visits', exact: true }); await measure.click(); await submit(); await savedOptions()
-    check((await call('options')).options.tier_progress_by === 'visits', 'Qualification popup saves only the server-supported measure')
-    await open(cases[12]); await popup().getByLabel('Discount', { exact: true }).fill('18'); await submit(); await closed()
-    check((await call('program')).tiers.find(t => t.id === tier.id).benefits.some(tb => tb.benefit_id === perk.id && Number(tb.value_amount) === 18), 'Assignment popup saves the selected tier?s own typed value')
+    await open(cases[2]); const nextMeasure = (await call('options')).options.tier_progress_by === 'visits' ? 'points' : 'visits'; const measure = popup().getByRole('button', { name: nextMeasure === 'visits' ? 'Visits' : 'Points', exact: true }); await measure.click(); await submit(); await savedOptions()
+    check((await call('options')).options.tier_progress_by === nextMeasure, 'Qualification popup saves only the server-supported measure')
+    await open(cases[12]); const nextValue = Number(tier.benefits.find(tb => tb.benefit_id === perk.id).value_amount) === 18 ? 19 : 18; await popup().getByLabel('Discount (%)', { exact: true }).fill(String(nextValue)); await submit(); await closed()
+    check((await call('program')).tiers.find(t => t.id === tier.id).benefits.some(tb => tb.benefit_id === perk.id && Number(tb.value_amount) === nextValue), 'Assignment popup saves the selected tier value')
     await open(cases[13]); await popup().getByLabel('Offer name', { exact: true }).fill('Editor offer follow-up ' + Date.now()); await popup().getByLabel('Value', { exact: true }).fill('15'); await submit()
     check(await popup().getByLabel('Description', { exact: true }).evaluate(el => el === document.activeElement && el.getBoundingClientRect().bottom < document.querySelector('.l-editor-footer').getBoundingClientRect().top), 'Invalid offer submission focuses its required visible description')
     await popup().getByLabel('Description', { exact: true }).fill('Eligible member offer with clear conditions.'); await submit(); await closed()
     check((await call('offers')).offers.some(o => o.title.startsWith('Editor offer follow-up')), 'Offer popup saves the canonical offer including its required description')
+    }
     report.phase = 'translated-editors'
     await page.setViewportSize({ width: 390, height: 900 })
     for (const lang of ['ru', 'de', 'fr', 'es']) {
@@ -160,7 +162,7 @@ try {
       for (const test of [cases[5], cases[8], cases[13]]) {
         await open(test)
         const geometry = await popup().evaluate(el => { const r = el.getBoundingClientRect(), header = el.querySelector('.l-ov-dialog-heading').getBoundingClientRect(), eyebrow = el.querySelector('.l-editor-heading > span:last-child').getBoundingClientRect(), body = el.querySelector('.l-editor-body'); return r.left >= 0 && r.right <= innerWidth + 1 && eyebrow.top >= header.top && body.scrollWidth <= body.clientWidth + 1 })
-        check(geometry && (await popup().innerText()).includes(words.memberPreview), `${lang} ${test[0]}: translated controls and unclipped mobile header`)
+        check(geometry && (await popup().textContent()).includes(words.memberPreview), `${lang} ${test[0]}: translated controls and unclipped mobile header`)
       }
     }
     check(report.errors.length === 0, 'Final editor checks have no browser runtime errors')
@@ -171,6 +173,6 @@ try {
   await page.screenshot({ path: path.join(out, 'failure.png'), fullPage: true }).catch(() => {})
   process.exitCode = 1; console.error(report.error)
 } finally {
-  await fs.writeFile(path.join(out, 'result.json'), JSON.stringify(report, null, 2))
+  await fs.writeFile(path.join(out, process.env.EDITORS_FOLLOWUP === '1' ? 'result-followup.json' : process.env.EDITORS_PROBE === '1' ? 'result-probe.json' : 'result.json'), JSON.stringify(report, null, 2))
   await browser.close(); console.log(JSON.stringify({ phase: report.phase, checks: report.checks.length, runtimeErrors: report.errors.length }))
 }
