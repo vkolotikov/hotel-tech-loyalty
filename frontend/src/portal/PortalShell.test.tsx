@@ -64,24 +64,24 @@ describe('PortalShell', () => {
     expect(render({ ...base, capabilities: { ...base.capabilities, loyalty: false } })).not.toContain('href="/portal/rewards"')
   })
 
-  it('links to Book when the venue takes appointments or sells stays, and not otherwise', () => {
-    expect(render(withCaps({ services: true, stays: false }))).toContain('href="/portal/book"')
-    expect(render(withCaps({ services: false, stays: true }))).toContain('href="/portal/book"')
-    expect(render(withCaps({ services: false, stays: false }))).not.toContain('href="/portal/book"')
+  it('keeps booking creation within Home and Bookings instead of adding a fifth primary destination', () => {
+    for (const caps of [{ services: true }, { stays: true }, { services: false, stays: false }]) {
+      expect(render(withCaps(caps))).not.toContain('href="/portal/book"')
+    }
   })
 
-  it('never shows more than one Book item', () => {
+  it('holds the same four destinations on desktop and mobile', () => {
     const html = render(withCaps({ services: true, stays: true }))
-    expect(html.match(/href="\/portal\/book"/g)?.length).toBe(2) // the tab bar and the phone bar
-    expect(html).toContain('grid-cols-5')
+    expect(html.match(/href="\/portal\/bookings"/g)?.length).toBe(2)
+    expect(html).toContain('grid-cols-4')
   })
 
-  it('lays five items out in five columns on phones', () => {
-    expect(render(withCaps({ services: true, loyalty: true }))).toContain('grid-cols-5')
+  it('uses three columns where Rewards is unavailable', () => {
+    expect(render(withCaps({ loyalty: false }))).toContain('grid-cols-3')
   })
 
-  it('badges the bookings tab with the upcoming count', () => {
-    expect(render(base)).toMatch(/href="\/portal\/bookings"[\s\S]*?>2</)
+  it('keeps navigation free of duplicate booking counters', () => {
+    expect(render(base)).toContain('href="/portal/bookings"')
   })
 
   // Release 4, part A: the inbox is the bell in the header, with the unread count on it.
@@ -91,9 +91,9 @@ describe('PortalShell', () => {
 
   it('puts the inbox bell in the header for a member, badged with the unread count', () => {
     const html = render(withMember(3))
-    expect(html.match(/href="\/portal\/inbox"/g)?.length).toBe(1)
-    expect(html).toMatch(/href="\/portal\/inbox"[\s\S]*?data-inbox-badge=""[^>]*>3</)
-    expect(html).toContain('Inbox')
+    expect(html).toContain('aria-label="Updates"')
+    expect(html).toMatch(/data-inbox-badge=""[^>]*>3</)
+    expect(html).toContain('My card')
   })
 
   it('shows the bell without a badge when nothing is unread, and 99+ past ninety-nine', () => {
@@ -102,12 +102,12 @@ describe('PortalShell', () => {
   })
 
   it('has no inbox without a membership row, whose endpoints answer members only', () => {
-    expect(render({ ...base, counts: { unread_notifications: 4, upcoming_bookings: 0 } })).not.toContain('href="/portal/inbox"')
+    expect(render({ ...base, counts: { unread_notifications: 4, upcoming_bookings: 0 } })).not.toContain('aria-label="Updates"')
   })
 
-  it('keeps the phone bar at five items with the inbox in the header', () => {
+  it('keeps four phone destinations with Updates in the header', () => {
     const html = render({ ...withMember(1), capabilities: { ...base.capabilities, services: true, loyalty: true } })
-    expect(html).toContain('grid-cols-5')
+    expect(html).toContain('grid-cols-4')
   })
 
   it('blocks with the error notice and no page when there is no cached data', () => {

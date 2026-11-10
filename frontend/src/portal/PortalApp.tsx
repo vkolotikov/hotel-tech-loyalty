@@ -3,6 +3,8 @@ import { useAuthStore } from '../stores/authStore'
 import { registerPortalLocales } from './i18n'
 import { PortalProvider } from './PortalProvider'
 import { PortalShell } from './PortalShell'
+import { PortalPanels } from './design/PortalPanels'
+import './design/design.css'
 import { Home } from './pages/Home'
 import { Rewards } from './pages/Rewards'
 import { Bookings } from './pages/Bookings'
@@ -30,12 +32,13 @@ export function PortalApp() {
 
   return (
     <PortalProvider>
+      <PortalPanels>
       <PortalShell>
         <Routes>
           <Route index element={<Home />} />
-          <Route path="book" element={<BookEntry />} />
-          <Route path="book/appointment" element={<Book />} />
-          <Route path="book/stay" element={<StayBook />} />
+          <Route path="book" element={<div className="p-flow-page"><BookEntry /></div>} />
+          <Route path="book/appointment" element={<div className="p-flow-page"><Book /></div>} />
+          <Route path="book/stay" element={<div className="p-flow-page"><StayBook /></div>} />
           {/* Release 4, part C: where a bank redirect comes back to (Stripe's return_url). */}
           <Route path="book/return" element={<PayReturn />} />
           <Route path="rewards" element={<Rewards />} />
@@ -52,6 +55,7 @@ export function PortalApp() {
           <Route path="*" element={<Navigate to="/portal" replace />} />
         </Routes>
       </PortalShell>
+      </PortalPanels>
     </PortalProvider>
   )
 }

@@ -1190,3 +1190,22 @@ Since 2 Nov 2026 (stack plan step 4g): `stripe/stripe-php` 22.1, `@stripe/stripe
   a venue that already has any tier row, even an inactive (paused) one.
 - An old mobile app build that still calls `POST member/reservations` gets 404 — that endpoint is
   retired; the app books stays through the widget WebView instead.
+
+
+## Simplified member web portal (10 November 2026)
+
+Figma page 414:8135 supplies the Home, Rewards, Bookings and Profile layouts and their on-demand panels.
+The primary navigation has those four destinations (three without loyalty). Booking creation remains in Home
+and Bookings; Events is reached from Home, Rewards and Profile; Help and security/account actions are in Profile.
+Existing route and reward-tab bookmarks remain valid. Notifications are the Updates bell and Profile's
+Notifications panel. Delivery channels expand within that panel.
+
+The common Sheet uses a native modal dialog with an inert background, unique accessible title, focus return
+and a counted body scroll lock. A pending redemption cannot dismiss its confirmation, and a synchronous guard
+prevents rapid double confirmation. Booking detail/cancellation/payment implementations remain unchanged.
+
+GET member/portal/programme is a member-only, read-only web DTO: an allowlist of ProgrammeOptions earning
+facts, plus active places evaluated by AccessDecision. Never infer admission from a tier in the browser.
+QR and branding remain server data; the original Figma demo QR is never used. New layout strings live in
+i18n/design.*.json, and web navigation Help overrides in i18n/webHelp.*.json. Native-shared words and logic
+retain their existing behaviour. Test/rehearsal and release evidence: docs/audits/2026-11-10-member-portal-design.md.

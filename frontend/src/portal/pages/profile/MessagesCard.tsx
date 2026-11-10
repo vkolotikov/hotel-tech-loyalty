@@ -45,8 +45,8 @@ export function MessagesCard({ member }: { member: PortalMember }) {
   const busy = save.isPending
 
   return (
-    <Card className="p-4" id="messages">
-      <h2 className="text-sm font-semibold">{t('portal.profile.communication', 'Communication')}</h2>
+    <Card className="p-panel-card p-4" id="p-message-preferences">
+      <h2 className="p-communication-heading text-sm font-semibold">{t('portal.profile.communication', 'Communication')}</h2>
 
       <h3 className="text-xs font-semibold text-p-text-2 uppercase tracking-wide mt-4">{t('portal.profile.kinds_title', 'What we tell you about')}</h3>
       <p className="text-[11px] text-p-text-2 mt-1 mb-1 leading-relaxed">{t('portal.profile.kinds_hint', 'A kind you switch off is not sent to you at all: no push on your phone, and nothing in your inbox.')}</p>
@@ -55,7 +55,7 @@ export function MessagesCard({ member }: { member: PortalMember }) {
           checked={prefs[kind]} disabled={busy} onChange={on => save.mutate({ kind, on })} />
       ))}
 
-      <h3 className="text-xs font-semibold text-p-text-2 uppercase tracking-wide mt-4 mb-1">{t('portal.profile.channels_title', 'How we reach you')}</h3>
+      <details className="p-message-channels mt-3"><summary className="text-xs font-semibold text-p-text-2 min-h-9 cursor-pointer">{t('portal.profile.channels_title', 'How we reach you')}</summary>
       <Toggle label={t('portal.profile.push', 'Push notifications')}
         hint={t('portal.profile.push_hint', 'On your phone, through the member app: it needs the app installed and signed in. Without it, messages still wait in your inbox here.')}
         checked={!!member.push_notifications} disabled={busy} onChange={on => save.mutate({ field: 'push_notifications', on })} />
@@ -74,6 +74,7 @@ export function MessagesCard({ member }: { member: PortalMember }) {
             : t('portal.profile.sms_hint', 'Text messages about offers, to {{phone}}. Off until you turn it on.', { phone: member.user.phone ?? '' })}
           checked={sms.on} disabled={busy || sms.disabled} onChange={on => save.mutate({ field: 'sms_consent', on })} />
       )}
+      </details>
 
       <p className="text-[11px] text-p-text-2 pt-2 leading-relaxed">{t('portal.profile.service_messages', "You'll still receive service messages about your account — password resets, booking confirmations and similar — regardless of these settings.")}</p>
     </Card>

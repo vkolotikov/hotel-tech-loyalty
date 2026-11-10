@@ -42,8 +42,32 @@ choices. No schema, backend, dependency, provider or native API changes. No cust
 - The final header-clearance CSS passed **535 focused token/locale tests** and the translated mobile checks.
 - Whole-source parity passed outside only the three generated paths. Source manifest has **53 paths**,
   SHA256 `3EE030B93F1B7135BA824B0681A881F0C66CD04E920B5F3BEAC6F8205D4AAB52`.
-  Fresh release build and production content verification are the remaining release steps.
+  Fresh release build passed, followed by 17 local content/authentication/landing checks and four compiled
+  artifact browser probes. Final artifact header/reward/token/locale checks passed **546 tests**.
 
 Private evidence: `C:/wamp64/tmp/loyalty-editors-rehearsal-20261110`.
 Task-owned cluster: `C:/wamp64/tmp/loyalty-editors-pg-20261110`, loopback port 55459.
 The prior layout release's CI run 42836406359 completed successfully (all eight jobs).
+
+## Live release
+
+Production main **da75a17f564331ad80e822b072a761e8fb0b11f6**, from source through
+**2696a39c21f1ee5aa09646ec2fb4611d96ab37b4**. **Next source-patch baseline: 2696a39c2**;
+subsequent evidence documentation is not new product code.
+
+Both `loyalty.hotel-tech.ai` and `app.hexa-tech.uk` passed **32 live checks** at **15:41:10 UTC /
+17:41:10 Europe/Riga**. Native editor structure, compact/wide scrolling layouts, translated messages,
+the previous member search clearance and catalogue layout, authenticated endpoints and the Academy author
+stylesheet were verified by content. No `rp-` markers in the author stylesheet. Production checks only read;
+all record creates/saves used the isolated PostgreSQL demo.
+
+Cloud assets: `index-DwmWPp35.js`, `LoyaltyApp-B7cT8umh.js`, `EarningPage-DCA8vGSY.js`,
+`ManagementUI-CM1tfNh2.js`, `ProgramPage-BrrJUjz4.js`, `RewardsPage-CoaOC3aK.js`, `OverviewUI-DrvWgfWP.js`.
+Evidence: `C:/wamp64/tmp/loyalty-editors-production-20261110.json`.
+
+[CI 42846286071](https://github.com/vkolotikov/hotel-tech-loyalty/actions/runs/42846286071) completed successfully (all eight jobs).
+All required local artifact gates and live verification passed.
+
+The task-owned loopback services and PostgreSQL cluster are stopped. The clean deployment worktree was
+removed after verifying its absolute path, branch and commit, physical vendor, and dependency junction target.
+Shared dependencies, owner files, private evidence and the earlier cleanup remnant remain untouched.

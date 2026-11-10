@@ -435,6 +435,7 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
         // answer 500 to them) and honours the venue's portal_enabled switch.
         Route::prefix('member/portal')->middleware('member.only')->group(function () {
             Route::get('/', [\App\Http\Controllers\Api\V1\Member\Portal\PortalController::class, 'index']);
+            Route::get('programme', [\App\Http\Controllers\Api\V1\Member\Portal\PortalController::class, 'programme']);
             Route::get('bookings', [\App\Http\Controllers\Api\V1\Member\Portal\PortalBookingController::class, 'index']);
             Route::get('bookings/{kind}/{id}', [\App\Http\Controllers\Api\V1\Member\Portal\PortalBookingController::class, 'show'])
                 ->whereIn('kind', ['service', 'stay'])

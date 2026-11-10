@@ -49,11 +49,12 @@ describe('portal primitives', () => {
     expect(renderToStaticMarkup(<Sheet open={false} onClose={() => {}} title="T">x</Sheet>)).toBe('')
     const html = renderToStaticMarkup(<Sheet open onClose={() => {}} title="Redeem">body</Sheet>)
     // The scrim dims in both modes (--p-scrim, see contrast.test.ts) — never the text colour, which is light in dark mode.
-    expect(html).toContain('bg-p-scrim/')
+    const css = readFileSync(new URL('../design/design.css', import.meta.url), 'utf8')
+    expect(css).toContain('.p-sheet::backdrop { background:rgb(var(--p-scrim)/.55)')
     expect(html).not.toContain('bg-p-text/')
-    expect(html).toContain('role="dialog"')
+    expect(html).toContain('<dialog')
     expect(html).toContain('aria-modal="true"')
-    expect(html).toContain('aria-labelledby="p-sheet-title"')
+    expect(html).toMatch(/aria-labelledby="([^"]+)"[\s\S]*id="\1"/)
     expect(html).toContain('Redeem')
   })
 
@@ -61,8 +62,9 @@ describe('portal primitives', () => {
     // Pages render their sheets inside `space-y-*`; its margin-top outranks
     // a plain class and would push the fixed overlay down the screen.
     const html = renderToStaticMarkup(<Sheet open onClose={() => {}} title="Redeem">body</Sheet>)
-    const overlay = /^<div class="([^"]*)"/.exec(html)?.[1] ?? ''
-    expect(overlay.split(' ')).toEqual(expect.arrayContaining(['fixed', 'inset-0', 'm-0!']))
+    expect(html).toContain('<dialog class="p-sheet"')
+    const css = readFileSync(new URL('../design/design.css', import.meta.url), 'utf8')
+    expect(css).toContain('margin:auto !important')
   })
 
   it('tabs expose the selected one', () => {
