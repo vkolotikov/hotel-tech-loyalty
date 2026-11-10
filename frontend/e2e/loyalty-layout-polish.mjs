@@ -17,7 +17,7 @@ const reset = () => exec(process.env.PHP, [fileURLToPath(new URL('./launch-artis
 const browser = await chromium.launch({ channel: 'chrome', headless: true })
 const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } })
 await ctx.route('**/*', route => ['127.0.0.1', 'localhost'].includes(new URL(route.request().url()).hostname) ? route.continue() : route.abort())
-await ctx.addInitScript(() => { localStorage.setItem('admin_lang', 'en'); if (!localStorage.getItem('loyalty:look')) localStorage.setItem('loyalty:look', JSON.stringify({ theme: 'dark', rail: 'full' })) })
+await ctx.addInitScript(() => { if (!localStorage.getItem('admin_lang')) localStorage.setItem('admin_lang', 'en'); if (!localStorage.getItem('loyalty:look')) localStorage.setItem('loyalty:look', JSON.stringify({ theme: 'dark', rail: 'full' })) })
 const page = await ctx.newPage()
 page.on('pageerror', e => report.errors.push(e.message))
 async function go(url) {
@@ -75,6 +75,16 @@ try {
   await page.emulateMedia({ reducedMotion: 'reduce' })
   await go('/loyalty/options?tab=earn')
   check(await page.locator('.l-ad-row > button').first().evaluate(el => getComputedStyle(el).transitionDuration === '0s'), 'Reduced motion is respected')
+  await reset()
+  await page.setViewportSize({ width: 1440, height: 900 })
+  for (const lang of ['ru', 'de', 'fr', 'es', 'en']) {
+    await page.evaluate(lang => localStorage.setItem('admin_lang', lang), lang)
+    await go('/loyalty/options?tab=earn')
+    const words = JSON.parse(await fs.readFile(new URL(`../src/loyalty/i18n/adminux.${lang}.json`, import.meta.url), 'utf8'))
+    const content = await page.locator('main').innerText()
+    check(['earningMethods', 'pointsExpiry', 'whoEarn', 'eligibleSpend', 'completedBookings'].every(key => !words[key].includes('?') && content.includes(words[key])), `${lang}: compact labels render with intact translated characters`)
+    if (lang === 'ru') await page.screenshot({ path: path.join(out, 'earning-ru-1440.png'), fullPage: true })
+  }
   check(report.errors.length === 0, 'No browser runtime errors')
 } catch (error) {
   const scrub = value => Object.values(fixture.roles).reduce((s, r) => s.replaceAll(r.password, '[redacted]'), String(value))
