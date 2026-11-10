@@ -1,4 +1,4 @@
-import { ManagementVisual } from '../../management/ManagementUI'
+import { ManagementVisual, ManagementFact } from '../../management/ManagementUI'
 import { useAdminWords } from '../../management/words'
 import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -67,14 +67,14 @@ function OfferDetails({ offer, options, onEdit }: { offer: Offer; options: Offer
   const value = OFFER_VALUE_WORDS[offer.type] ? t(`loyalty.rewards.offer_value.${offer.type}`, OFFER_VALUE_WORDS[offer.type], { value: amountOf(offer.type, offer.value, boot.venue.currency, i18n.language) }) : t(`loyalty.rewards.offer_type.${offer.type}`, OFFER_TYPE_WORDS[offer.type] ?? offer.type)
   const date = (day: string | null) => day ? formatDate(day, i18n.language, { day: 'numeric', month: 'short', year: 'numeric' }) : say('noEnd')
   return <aside id="management-detail" tabIndex={-1} className="l-ov-panel l-rb-detail l-rc-offer-detail" data-offer-view="read">
-    <div className="l-rb-section-head"><RewardStatus tone={offer.state}>{['live', 'upcoming', 'off', 'ended'].includes(offer.state) ? say(offer.state as 'live' | 'upcoming' | 'off' | 'ended') : offer.state}</RewardStatus>{onEdit && <OverviewButton onClick={onEdit}>{t('loyalty.program.edit', 'Edit')}</OverviewButton>}</div>
-    <h2 className="l-rb-title">{offer.title}</h2>
+    <div className="l-rb-section-head"><h2 className="l-rb-eyebrow">{admin('selectedOffer')}</h2><RewardStatus tone={offer.state}>{['live', 'upcoming', 'off', 'ended'].includes(offer.state) ? say(offer.state as 'live' | 'upcoming' | 'off' | 'ended') : offer.state}</RewardStatus>{onEdit && <OverviewButton onClick={onEdit}>{t('loyalty.program.edit', 'Edit')}</OverviewButton>}</div>
     {offer.image_url && <img className="l-rb-picture" src={mediaUrl(offer.image_url)} alt={offer.title} loading="lazy" />}
-    <small>{offer.brand_id == null ? t('loyalty.rewards.brand.every', 'Every brand') : options.brands?.list.find(b => b.id === offer.brand_id)?.name ?? boot.organization.name}</small>
-    <ManagementVisual art="offerArt" label={say('offerPreview')} title={value} line={offer.code ? say('useCode', { code: offer.code }) : offer.title} />
+    <ManagementVisual art="offerArt" label={value} title={offer.title} line={offer.code ? say('useCode', { code: offer.code }) : undefined} />
     {offer.usage_limit !== null && offer.times_used >= offer.usage_limit && <p className="l-ad-inset">{admin('limitReached')}</p>}
-    <dl className="l-rb-facts"><dt>{say('starts')}</dt><dd>{date(offer.start_date)}</dd><dt>{say('ends')}</dt><dd>{date(offer.end_date)}</dd><dt>{say('eligibility')}</dt><dd>{offer.tier_ids?.length ? offer.tier_ids.map(id => boot.programme.tiers.find(tier => tier.id === id)?.name ?? String(id)).join(', ') : say('allMembers')}</dd><dt>{t('loyalty.rewards.offer.applies_to', 'Applies to')}</dt><dd>{t(`loyalty.rewards.applies_to.${offer.applies_to}`, APPLIES_TO_WORDS[offer.applies_to] ?? offer.applies_to)}</dd><dt>{say('caps')}</dt><dd>{offer.usage_limit === null ? say('noLimit') : points(offer.usage_limit, i18n.language)}</dd><dt>{say('perMember')}</dt><dd>{offer.per_member_limit === null ? say('noLimit') : points(offer.per_member_limit, i18n.language)}</dd></dl>
-    <details className="l-ad-more"><summary>{admin('advanced')}</summary><strong>{say('terms')}</strong><p className="l-rb-prewrap">{offer.description || say('noTerms')}</p><small>{t('loyalty.rewards.offers.used', 'Used: {{used}}', { used: points(offer.times_used, i18n.language) })}</small></details>
+    <div className="l-ad-inset l-ad-dates"><div><small>{say('starts')}</small><strong>{date(offer.start_date)}</strong></div><div><small>{say('ends')}</small><strong>{date(offer.end_date)}</strong></div></div>
+    <ManagementFact icon="people" label={say('eligibility')}>{offer.tier_ids?.length ? offer.tier_ids.map(id => boot.programme.tiers.find(tier => tier.id === id)?.name ?? String(id)).join(', ') : say('allMembers')}</ManagementFact>
+    <ManagementFact icon="bookingSmall" label={t('loyalty.rewards.offer.applies_to', 'Applies to')}>{t(`loyalty.rewards.applies_to.${offer.applies_to}`, APPLIES_TO_WORDS[offer.applies_to] ?? offer.applies_to)}</ManagementFact>
+    <details className="l-ad-more"><summary>{admin('advanced')}</summary><small>{offer.brand_id == null ? t('loyalty.rewards.brand.every', 'Every brand') : options.brands?.list.find(b => b.id === offer.brand_id)?.name ?? boot.organization.name}</small><dl className="l-rb-facts"><dt>{say('caps')}</dt><dd>{offer.usage_limit === null ? say('noLimit') : points(offer.usage_limit, i18n.language)}</dd><dt>{say('perMember')}</dt><dd>{offer.per_member_limit === null ? say('noLimit') : points(offer.per_member_limit, i18n.language)}</dd></dl><strong>{say('terms')}</strong><p className="l-rb-prewrap">{offer.description || say('noTerms')}</p><small>{t('loyalty.rewards.offers.used', 'Used: {{used}}', { used: points(offer.times_used, i18n.language) })}</small></details>
   </aside>
 }
 

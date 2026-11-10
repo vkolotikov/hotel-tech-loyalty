@@ -49,9 +49,19 @@ import delivery from './assets/perks-f2b20.svg'
 import offerArt from './assets/offers-e4072.svg'
 import offerGift from './assets/offers-89659.svg'
 import offerCalendar from './assets/earning-1c335.svg'
+import perkDrink from './assets/perk-drink.svg'
+import perkClock from './assets/perk-clock.svg'
+import perkBed from './assets/perk-bed.svg'
+import perkPercent from './assets/perk-percent.svg'
+import perkSun from './assets/perk-sun.svg'
 
 /** Original reference vectors; intrinsic geometry is retained. */
 export const adminAssets = {
+  perkDrink: { src: perkDrink, width: 17, height: 17 },
+  perkClock: { src: perkClock, width: 17, height: 17 },
+  perkBed: { src: perkBed, width: 17, height: 17 },
+  perkPercent: { src: perkPercent, width: 17, height: 17 },
+  perkSun: { src: perkSun, width: 17, height: 17 },
   tierCard: { src: tierCard, width: 222, height: 156 },
   bronze: { src: bronze, width: 24, height: 24 },
   silver: { src: silver, width: 24, height: 24 },

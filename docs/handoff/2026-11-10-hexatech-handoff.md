@@ -138,3 +138,41 @@ type findings are resolved without baseline expansion. Owned loopback helpers ar
 and deployment worktrees were removed after path/provenance/cleanliness checks and unlinking their dependency
 junctions. Owner's native checkout, shared dependencies, private fixtures/evidence, untracked assets and earlier
 Cloud-stream remnant remain untouched. No provider keys or Wallet issuer setup changed; real device checks remain.
+
+## Loyalty administration UX: eight-screen pass
+
+Live source-patch main: **54d65439ed50bb76b29e00f4ce02c6dbe646d53d**, from feature source through
+**d443310c1fa5127e2b646b88034e79bbcd8bc097**. **Next source-patch code baseline:d443310c1**; subsequent evidence
+documentation is not new product code. Exact148-path manifest SHA256:
+59D9EBE82E494FA2FAB2976CCE81AEFD881D272A9AC9FD902E4EA10204ED6BDF. Physical vendor, whole-source parity outside only
+the three generated paths, required artifact gates and fresh final build all passed.
+
+Program now owns Levels & tiers / Places & access, with Qualification, Guided setup and Readiness actions. Ways to
+earn owns Earning rules / Bonuses & boosts, with expiry in Points settings. Rewards owns Points rewards / Tier perks /
+Offers, with redemption/referral activity links at their relevant homes. Legacy routes preserve context and redirect.
+All eight screens use original Figma vectors, compact list/detail editing, actual saved previews, both themes and
+five locale bundles. Levels and Tier perks share one assignment editor; Keep preserves an unsaved removal draft.
+Missing thresholds/unassigned perks open the relevant correction. Offer counts use actual server dates/status.
+Setup preview is expanded, groups membership/earning/bonuses/rules, uses draft values and real rewards, and stacks
+cleanly on phones. Places show actual access/totals and supported NFC first, with QR and lookup fallbacks.
+
+One points_per_currency and highest eligible timed/claimed multiplier were already canonical: behavior is pinned,
+not duplicated. Booking/desk triggers remain independent; both existing tier multipliers remain independent.
+Only additive TierAdvice PHP changed. No migrations, payments, new provider configuration or native API changes.
+Manual package assignment and scan-only partner permissions from the preceding release remain intact.
+
+Verification: full frontend6903/469, TypeScript/lint and full Larastan0; source SQLite1289pass/1skip/14624assertions,
+fully migrated PostgreSQL91/847. Artifact Support214/1590, UnitLanding118/1763, FeatureLanding1735/9552 and focused
+loyalty61/540 passed. Compiled real-backend journey88checks covers all8×5actual translated headings,32layouts,
+canonical saves and selected-tier outcomes; final CSS-only setup refinement5checks and assignment cancel/save3checks
+passed after a fresh build. Fresh review and follow-ups:Approve. No live customer messages or record writes.
+
+Both domains passed43live content/authentication/landing checks at13:34:19UTC /15:34:19 Europe/Riga, including final
+setup CSS. Assets:index-CbIyXBwS.js, LoyaltyApp-DrtebpYw.js, ProgramPage-D_KQSk8R.js, EarningPage-BFfIA7oC.js,
+RewardsPage-DR1-LZpf.js, SetupWizard-DWXZ56VA.js, SetupWizard-IY-5OmGT.css. The Academy author stylesheet remains clean.
+[CI42824942684](https://github.com/vkolotikov/hotel-tech-loyalty/actions/runs/42824942684) completed successfully
+at13:51:10UTC /15:51:10 Europe/Riga: all eight jobs passed, including full PostgreSQL and both Node builds. No baseline
+expansion. See docs/audits/2026-11-10-loyalty-admin-ux.md for detailed evidence. Task-owned
+loopback services/PostgreSQL are stopped; the clean deploy worktree is removed after provenance and junction checks.
+Shared dependencies, owner files/private evidence and the earlier Cloud-stream remnant remain untouched.
+Physical NFC/card/camera and native/provider delivery still require real device acceptance; no Wallet setup claim.

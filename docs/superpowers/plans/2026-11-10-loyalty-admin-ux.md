@@ -104,11 +104,14 @@ preference is a pure decision and requests no permission until pressed. Setup pr
 
 ## Task6: Review, release and handoff
 
-- [ ] Run full TypeScript/Vitest/lint/Larastan; scoped changed PHP/shared consumers on SQLite and fully migrated local
+- [x] Run full TypeScript/Vitest/lint/Larastan; scoped changed PHP/shared consumers on SQLite and fully migrated local
       PostgreSQL. Run real-backend navigation/edit/member-outcome journeys with local mail and blocked external sends.
-- [ ] Fresh whole-branch read-only review; resolve material findings with regression evidence, update docs/guide and
+- [x] Fresh whole-branch read-only review; resolve material findings with regression evidence, update docs/guide and
       record the exact source manifest including deletions. Push feature source without built paths.
-- [ ] Source-patch deployment worktree from origin/main, physical vendor, whole-source parity excluding only three
+- [x] Source-patch deployment worktree from origin/main, physical vendor, whole-source parity excluding only three
       generated paths; required scoped PHP/frontend gates, fresh build, deploy and verify actual live content/auth/landing.
-- [ ] Record CI results, screenshots and outstanding physical-device acceptance; update latest handoff and remove
+- [x] Record CI results, screenshots and outstanding physical-device acceptance; update latest handoff and remove
       only provenance-verified task-owned helpers/junctions/worktrees. Summarise the shipped user flows.
+
+Completed: source d443310c1, production54d65439e,43 live content/authentication/landing checks and all eight hosted
+CI42824942684 jobs passed. Audit and latest handoff contain source/artifact/browser evidence and device limits.
