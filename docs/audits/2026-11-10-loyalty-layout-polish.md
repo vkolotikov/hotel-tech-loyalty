@@ -39,4 +39,30 @@ at 1440/1280/768/390, member search clearance and typing, stacked selection focu
 the guarded local launch database, captured mail, and loopback browser traffic. Evidence is outside Git at
 `C:/wamp64/tmp/loyalty-layout-rehearsal-20261110`.
 
-Final artifact checks, deployment and live-content evidence will be recorded below.
+## Final artifact acceptance
+
+Source through **f6146efeeba0e26f97d5e0873cfa9eb79bba3c72**, assembled from `origin/main` in
+`Hexa-Tech-deploy-layout-20261110`, with physical vendor and a dependency junction only for node_modules.
+The exact **32-path** source manifest has SHA256
+`6834682BCF3DF06B476B557A281ABFD07DE4F5A1A2C636812CBD87A50067F6F7`.
+Whole-source parity passes outside frontend/dist, public/spa and resources/spa-shell.
+
+- Artifact frontend: **6,905 tests /469 files**, TypeScript and lint pass. No baseline expansion.
+- Required PHP gates: Support **214 /1590 assertions**, Unit Landing **118 /1763**, Feature Landing
+  **1735 /9552**; **2,067 passed** in total. No backend or dependency changes.
+- Final tablet breakpoint refinement: fresh TypeScript, **418 focused tests**, a fresh Vite build and postbuild.
+  Generated assets are committed only in the release worktree. Build warnings remain the existing font paths,
+  large chunks and mixed static/dynamic import warnings.
+- Final compiled real-backend acceptance: **96 checks**, zero browser runtime errors. All seven catalogues are
+  checked at **1440/1280/1024/768/390**, in dark and light. Column positions, proportional original artwork,
+  usable full-width mobile search, overflow, member icon clearance and typing all pass. Five actual translated
+  label sets, reduced motion and stacked selection focus pass.
+- Final review caught a manager's existing inactive perk assignment being disabled by the compact control.
+  The regression was reproduced (disabled button), fixed, and pinned by the frontend test and two real-backend
+  checks: the action stays enabled and opens the canonical editor. The disposable fixture's original state is restored.
+
+Desktop and mobile screenshots were inspected against the retrieved Figma screenshots. The earlier **88-check**
+journey additionally covered redirects, real rate saves/inheritance, selected-tier values and shared assignment
+entrances. Its distinction from the final 96-check build is retained here.
+
+Deployment and public content verification follow in the release handoff.
