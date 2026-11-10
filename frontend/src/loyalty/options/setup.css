@@ -27,13 +27,6 @@
 [data-loyalty] .l-gs-actions { display: flex; justify-content: space-between; gap: 16px; padding-top: 16px; border-top: 1px solid var(--l-ov-border); }
 [data-loyalty] .l-gs-form button.bg-a-accent { border-radius: 10px; background: var(--l-ov-primary); box-shadow: var(--l-ov-shadow); }
 [data-loyalty] .l-gs-form button.bg-a-surface { border-radius: 10px; background: linear-gradient(175deg,var(--l-ov-raised),var(--l-ov-bottom)); box-shadow: var(--l-ov-shadow); }
-[data-loyalty] .l-gs-preview { display: flex; flex-direction: column; gap: 16px; padding: 20px; min-width: 0; }
-[data-loyalty] .l-gs-preview > small { color: var(--l-ov-cyan); font-size: 12px; }
-[data-loyalty] .l-gs-preview > div { min-width: 0; max-height: 380px; overflow-y: auto; scrollbar-width: thin; }
-[data-loyalty] .l-gs-preview ul { list-style: none; padding: 16px; margin: 0; border-radius: 12px; background: var(--l-rd-emphasis); display: flex; flex-direction: column; gap: 16px; }
-[data-loyalty] .l-gs-preview li + li { border-top: 1px solid var(--l-ov-border); padding-top: 16px; }
-[data-loyalty] .l-gs-preview strong { display: block; font-size: 14px; line-height: 22px; margin-bottom: 8px; }
-[data-loyalty] .l-gs-preview p { font-size: 12px; line-height: 20px; color: var(--l-ov-secondary); overflow-wrap: anywhere; }
 [data-loyalty] .l-gs-optional { padding: 16px; display: flex; flex-direction: column; gap: 8px; }
 [data-loyalty] .l-gs-optional h3 { font-size: 14px; }
 [data-loyalty] .l-gs-optional > div { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 16px; }

@@ -3,8 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import {
-  Briefcase, Building2, Check, ChevronLeft, ChevronRight, Dumbbell, GraduationCap, House, ShoppingBag, Sparkles, Star, Stethoscope,
-  Ticket, Users, Utensils, type LucideIcon,
+  Check, ChevronLeft, ChevronRight, Sparkles, type LucideIcon,
 } from 'lucide-react'
 import { Button } from '../../workspace/ui/Button'
 import { Notice } from '../../workspace/ui/Notice'
@@ -13,7 +12,6 @@ import { useBoot } from '../LoyaltyProvider'
 import { failureOf, newPressKey } from '../lib/api'
 import { refusalKey } from '../lib/errors'
 import { points } from '../lib/format'
-import { named } from '../lib/forms'
 import { ERRORS } from './errors'
 import { OPTIONS_KEY, afterOptionsChange, optionsApi } from './optionsApi'
 import {
@@ -22,8 +20,11 @@ import {
 } from './optionsMath'
 import { LoadFailed, Loading, Sentence, WayFields, WayIcon } from './parts'
 import { useSay, wayLine, wayTitle } from './say'
-import type { OptionsAnswer, Preset, SetupOutcome } from './types'
-import { PRESET_LINE_WORDS, PRESET_WORDS, STEP_WORDS } from './words'
+import type { OptionsAnswer, SetupOutcome } from './types'
+import { STEP_WORDS } from './words'
+import { PRESET_ICONS, presetHue, presetName } from './presetPresentation'
+import type { Hue } from '../ui/sections'
+import { SetupPreview } from './SetupPreview'
 import { useSettingsWords } from '../settings/words'
 import { OverviewButton, OverviewDialog } from '../overview/OverviewUI'
 import { useLeaveGuard } from '../earn/useLeaveGuard'
@@ -31,14 +32,6 @@ import './setup.css'
 import { useRedesignWords } from '../redesign/words'
 import { programAssets } from '../program/design/assets'
 import './setup-simplified.css'
-
-/** The server's icon name for a preset (LoyaltyPresetService::PRESETS `icon`); one the workspace does not know wears the area's own. */
-const PRESET_ICONS: Record<string, LucideIcon> = {
-  'building-2': Building2, sparkles: Sparkles, utensils: Utensils, dumbbell: Dumbbell, stethoscope: Stethoscope, star: Star,
-  'graduation-cap': GraduationCap, briefcase: Briefcase, home: House, 'shopping-bag': ShoppingBag,
-  // Release 8: the general memberships.
-  users: Users, ticket: Ticket,
-}
 
 /**
  * The setup wizard (release 7, spec 2026-10-25 §1), at /loyalty/options/setup: 1. your business — a starting programme,
@@ -207,7 +200,7 @@ export function Wizard({ answer, start = {} }: { answer: OptionsAnswer; start?: 
       </form>
       <section className="l-ov-panel l-gs-optional"><h3>{design('optional')}</h3><div><Link className="l-ov-link" to="/loyalty/program?tab=places">{t('loyalty.places.title', 'Places')} →</Link><Link className="l-ov-link" to="/loyalty/program?tab=boosts">{t('loyalty.program.boosts.title', 'Boost events')} →</Link><Link className="l-ov-link" to="/loyalty/options">{t('loyalty.nav.options', 'Ways to earn')} →</Link></div></section>
       </div>
-      {step !== 'review' && <aside className="l-ov-panel l-gs-preview"><small>{design('preview')}</small><h2>{t('loyalty.options.wizard.review_title', 'What members will get')}</h2><div tabIndex={0} role="region" aria-label={design('preview')}><ul>{reviewOf(answer, form, answer.options, ctx).on.map(line => <li key={line.key}><strong>{wayTitle(ctx.say, line.key)}</strong><p>{line.text}</p></li>)}</ul></div><p>{design('previewHint')}</p></aside>}
+      {step !== 'review' && <SetupPreview answer={answer} choice={choice} form={form} ctx={ctx} />}
       </div>
 
       {asking && (
@@ -241,16 +234,6 @@ function stepTitle(t: T, step: Step): string {
   }
 }
 
-function presetName(t: T, p: Preset): string {
-  const word = named('loyalty.options.preset', PRESET_WORDS, p.key)
-  return word ? t(...word) : p.label
-}
-
-function presetLine(t: T, p: Preset): string {
-  const word = named('loyalty.options.preset_line', PRESET_LINE_WORDS, p.key)
-  return word ? t(...word) : p.description
-}
-
 // ─── 1. Your business ─────────────────────────────────────────────────────
 
 /**
@@ -275,12 +258,9 @@ export function Business({ answer, choice, keep, onChoose }: { answer: OptionsAn
       <div className="grid gap-3 sm:grid-cols-2">
         {answer.presets.map(p => (
           <ChoiceCard key={p.key} name="programme-start" value={p.key} checked={choice === p.key} onChoose={onChoose}
-            icon={PRESET_ICONS[p.icon] ?? Sparkles} title={presetName(t, p)} line={keep ? '' : presetLine(t, p)}
+            icon={PRESET_ICONS[p.icon] ?? Sparkles} hue={presetHue(p.icon)} title={presetName(t, p)} line=""
             badge={answer.options.programme_setup_template === p.key ? t('loyalty.launchpolish.lastTemplate', 'Last used template') : p.recommended ? t('loyalty.options.wizard.suggested', 'Suggested for your business') : null}
-            detail={keep ? [] : [
-              t('loyalty.options.wizard.preset_tiers', 'Tiers: {{names}}', { names: p.tier_names.join(', ') }),
-              ...(p.sample_rewards.length > 0 ? [t('loyalty.options.wizard.preset_rewards', 'Rewards such as {{names}}', { names: p.sample_rewards.join(', ') })] : []),
-            ]} />
+            />
         ))}
       </div>
       </div>
@@ -288,23 +268,23 @@ export function Business({ answer, choice, keep, onChoose }: { answer: OptionsAn
   )
 }
 
-function ChoiceCard({ name, value, checked, disabled = false, onChoose, icon: Icon, title, line, badge = null, detail = [] }: {
+function ChoiceCard({ name, value, checked, disabled = false, onChoose, icon: Icon, hue = 'tier', title, line, badge = null }: {
   name: string
   value: string
   checked: boolean
   disabled?: boolean
   onChoose: (value: string) => void
   icon: LucideIcon
+  hue?: Hue
   title: string
   line: string
   badge?: string | null
-  detail?: string[]
 }) {
   return (
     <label data-choice={value} data-checked={checked ? '' : undefined}
       className={`relative flex gap-3 rounded-2xl border p-4 has-focus-visible:ring-2 has-focus-visible:ring-a-accent-text ${checked ? 'border-a-accent-text bg-a-accent/10' : 'border-a-border bg-a-surface'} ${disabled ? 'cursor-not-allowed opacity-55' : 'cursor-pointer hover:bg-a-surface-2'}`}>
       <input type="radio" name={name} value={value} checked={checked} disabled={disabled} onChange={() => onChoose(value)} className="sr-only" />
-      <span aria-hidden className={`inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${checked ? 'bg-a-accent text-a-accent-ink' : 'bg-a-surface-2 text-a-text-2'}`}>
+      <span aria-hidden data-hue={hue} className="l-hue-tile inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl">
         <Icon size={20} />
       </span>
       <span className="min-w-0 flex-1 space-y-1">
@@ -313,7 +293,6 @@ function ChoiceCard({ name, value, checked, disabled = false, onChoose, icon: Ic
           {badge && <span className="rounded-full bg-a-accent/15 px-2 py-0.5 text-xs font-semibold text-a-accent-text">{badge}</span>}
         </span>
         {checked && line && <span className="block text-sm text-a-text-2">{line}</span>}
-        {checked && detail.map(d => <span key={d} className="block text-xs text-a-text-2">{d}</span>)}
       </span>
     </label>
   )

@@ -1,5 +1,11 @@
 # HexaTech Loyalty — runbook
 
+Guided setup preview (10 November 2026): the right side is fully expanded in normal page flow, with coloured
+industry icons, a Join → Earn points → Use rewards journey and separate membership/reward, earning, bonus and rule
+sections. Selecting a template or editing a draft updates the canonical explanation immediately; existing levels
+and rewards remain the actual catalogue. Review and explicit Apply are unchanged. Five languages, both themes,
+mobile wrapping and reduced motion are covered. See `audits/2026-11-10-loyalty-setup-preview.md` and the current handoff.
+
 Setup and catalogue follow-up (9 November 2026): industry templates are selectable for existing programmes and propose earning rules for explicit review; existing tiers, benefits and rewards are retained. Setup is available from Settings and Overview's real first-steps checklist. Member fields have explicit spacing and native place radios keep their native geometry. Offers default to a compact read view with Edit. RewardManagement owns enable/disable and deletion in both admin interfaces; deletion refuses any redemption history or stamp-card reference. ProgrammeOptions saves and reward deletion share the organisation setup lock. Wizard template metadata cannot be set by a general option update. See [the implementation and email authentication audit](audits/2026-11-09-loyalty-setup-polish.md).
 
 Launch rehearsal (9 November 2026): see [the audit report](audits/2026-11-09-loyalty-launch-rehearsal.md) for real-backend journeys, delivery evidence and outstanding production/device gates. `php artisan loyalty:launch-audit` reads safe platform observations. Its explicit `--queue-probe` queues one harmless infrastructure job at most once per 15 minutes; run the default command afterwards to observe completion. No messages are sent. A processed probe proves one job ran, not continuous worker monitoring. Wallet actions now follow the member bootstrap's provider availability flags.

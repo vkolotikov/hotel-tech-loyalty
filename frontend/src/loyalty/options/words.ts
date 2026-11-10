@@ -220,8 +220,19 @@ export const GROUP_WORDS: Record<string, string> = {
   more: 'More',
 }
 
+export const PREVIEW_WORDS = {
+  title: 'Your programme at a glance', template: 'Industry template', current: 'Your current programme',
+  templateLine: 'Suggested earning rules. Choose what to use in the next step.',
+  currentLine: 'Your saved membership levels, rewards and earning rules.', catalogue: 'Membership & rewards',
+  kept: 'Your existing levels and rewards stay in place.', starting: 'Suggested levels and reward ideas. You can edit them later.',
+  levels: '{{n}} membership levels', rewards: '{{n}} rewards', rewardExamples: 'Reward examples:',
+  noRewards: 'Add your first reward in Rewards & benefits.', journey: 'The member journey',
+  join: 'Join', earn: 'Earn points', use: 'Use rewards', off: 'Not enabled: {{ways}}.',
+} as const
+
 /** The families above by the key prefix they are read under. */
 export const WORD_FAMILIES: Record<string, Record<string, string>> = {
+  preview: PREVIEW_WORDS,
   advice: ADVICE_WORDS,
   fix: FIX_WORDS,
   tab_caption: TAB_CAPTION_WORDS,

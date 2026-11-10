@@ -313,5 +313,24 @@
     "bonus": "Welcome, birthday and referral gifts",
     "rule": "How members move up and when points expire",
     "more": "Other ways your programme offers"
+  },
+  "preview": {
+    "title": "Your programme at a glance",
+    "template": "Industry template",
+    "current": "Your current programme",
+    "currentLine": "Your saved membership levels, rewards and earning rules.",
+    "catalogue": "Membership & rewards",
+    "kept": "Your existing levels and rewards stay in place.",
+    "starting": "Suggested levels and reward ideas. You can edit them later.",
+    "levels": "{{n}} membership levels",
+    "rewards": "{{n}} rewards",
+    "rewardExamples": "Reward examples:",
+    "noRewards": "Add your first reward in Rewards & benefits.",
+    "journey": "The member journey",
+    "join": "Join",
+    "earn": "Earn points",
+    "use": "Use rewards",
+    "off": "Not enabled: {{ways}}.",
+    "templateLine": "Suggested earning rules. Choose what to use in the next step."
   }
 }
