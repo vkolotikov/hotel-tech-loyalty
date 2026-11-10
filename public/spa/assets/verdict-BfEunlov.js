@@ -1,1 +1,0 @@
-import{nr as e}from"./index-FD8ZzbLL.js";function t(){let{t}=e();return e=>t(e.key,e.fallback,e.vars)}export{t};
