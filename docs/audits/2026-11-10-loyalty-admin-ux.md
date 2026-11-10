@@ -86,3 +86,6 @@ and supplied the final job state. The final CI JSON and live probe evidence are 
 The task's loopback PHP/preview helpers and verified PostgreSQL cluster are stopped. The clean deployment worktree
 was removed after exact path, branch, pushed SHA and dependency-junction checks. Shared dependencies, the owner's
 checkout/untracked assets, private evidence and the earlier Cloud-stream cleanup remnant remain untouched.
+Final housekeeping exception: automatic approval review rejected removal of the completed temporary ledger at
+`.superpowers/sdd/2026-11-10-loyalty-admin-ux`, reporting only "blocked by policy". It remains locally; no product,
+deployment, test or permanent evidence work is pending.
