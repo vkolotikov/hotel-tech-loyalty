@@ -40,4 +40,36 @@ not changed. Native app binaries are outside this release.
 Private local evidence: `C:/wamp64/tmp/member-portal-design-rehearsal-20261110/journey/portal-design`.
 Credentials, captured mail, local database and evidence remain outside Git. No production customer writes/messages.
 
-Release artifact gates and live deployment evidence are recorded below after completion.
+## Release artifact and production verification
+
+The clean source-patch artifact matches source **7798337c7d610a157f3a78f19be203cc968f8b3d** outside generated
+`frontend/dist`, `public/spa` and `resources/spa-shell`. The guarded manifest contains **102 paths**, including
+deletions, SHA256 `D5562A17AB4A14EC211BFB96E1111B4BD8A6F4EA79774EEB09D2F1FFFFE2C073`.
+Vendor was copied physically; the only dependency junction points to the source frontend's node_modules.
+
+Final artifact gates passed:
+
+- TypeScript and fresh production build/postbuild.
+- **6,928 frontend tests / 470 files**; lint regression check passed with 1,381 existing findings.
+- Scoped PHP: Support **214 / 1,590 assertions**, Unit Landing **118 / 1,763**, Feature Landing **1,735 / 9,552**,
+  Member Portal **307 / 2,725**. Total **2,374 tests / 15,630 assertions**.
+- PHPStan on the changed PHP classes: no errors. CI's full Larastan and both Node builds also passed.
+- **41 compiled real-backend browser checks** across functional, language/touch and compact-value probes.
+  Keyboard endpoints cycle within dialogs; focus returns; backdrop/Escape work; pending/double redemption
+  is guarded. French saving, blank-birthday preservation and real 44px touch targets pass. Costs, offer values
+  and validity dates remain visible at 320px and 393px without horizontal overflow. Included benefits remain
+  available for assigned memberships with points disabled. Expired-card text clears 4.5:1 across the gradient.
+- **19 local content/auth checks** on the compiled artifact, then **40 live checks** across both production
+  domains and the Academy author stylesheet. Original visible SVG geometry was checked in the touch browser.
+
+The fixed-clock rehearsal accumulated rate limits during repeated runs; only its isolated database cache was
+cleared before the final compact-value probe. No production cache or customer state was changed.
+
+Production main **8f12b72ac068302577708b7de87995772a967301**, verified live at **2026-11-10 17:05:47 UTC**
+(19:05:47 Europe/Riga). Both domains serve `index-B9QSxLsN.js`, `PortalApp-BcRdNP-6.js`,
+`PortalApp-BlRTEMfA.css` and `index-D7h0NFI7.css`. Live evidence:
+`C:/wamp64/tmp/member-portal-production-20261110.json`.
+
+Next source-patch code baseline: **7798337c7**. Later evidence documentation is not new product code.
+[CI 42860594743](https://github.com/vkolotikov/hotel-tech-loyalty/actions/runs/42860594743) is still finishing:
+Node 24/26, dependency audit, Larastan and SQLite shards 1/2 passed; PostgreSQL and SQLite shard 3 remain pending.

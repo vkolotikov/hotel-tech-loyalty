@@ -254,3 +254,24 @@ logic/words remain unchanged. See docs/audits/2026-11-10-member-portal-design.md
 Initial checks: TypeScript, 6926 frontend tests, 307 portal PHP tests and twenty compiled real-backend browser
 checks passed. Release artifact validation and deployment are in progress; the prior production/source
 baseline above remains in force until the live checks pass.
+
+
+### Member portal release verified
+
+Production main **8f12b72ac068302577708b7de87995772a967301**, source through
+**7798337c7d610a157f3a78f19be203cc968f8b3d**. Next source-patch code baseline: **7798337c7**.
+The guarded 102-path manifest (deletions included) has SHA256
+D5562A17AB4A14EC211BFB96E1111B4BD8A6F4EA79774EEB09D2F1FFFFE2C073. Whole-source parity outside
+the three generated areas passed before and after the fresh artifact build.
+
+Final artifact gates: TypeScript/build, 6928 frontend tests/470 files, lint regression check (1381 legacy
+findings), changed-class PHPStan and 2374 scoped PHP tests/15630 assertions. Compiled browser acceptance: 41
+checks across functional, language/touch and 320/393px reward-value probes. The assigned-membership/points-off
+case, keyboard cycling, pending/double redemption, birthday preservation and contrast have explicit coverage.
+No production customer writes/messages. Original native-shared logic, translations and API shapes remain intact.
+
+Both production domains passed 40 live content/auth/landing checks at 2026-11-10 17:05:47 UTC.
+Cloud assets: index-B9QSxLsN.js, PortalApp-BcRdNP-6.js, PortalApp-BlRTEMfA.css, index-D7h0NFI7.css.
+See docs/audits/2026-11-10-member-portal-design.md and the private evidence paths there.
+CI 42860594743 is finishing: both Node builds, audit, Larastan and SQLite shards 1/2 passed;
+PostgreSQL and SQLite shard 3 remain pending. Cleanup status follows after the owned helpers are stopped.
