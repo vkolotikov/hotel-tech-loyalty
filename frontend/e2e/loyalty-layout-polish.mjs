@@ -47,9 +47,12 @@ try {
         const row = document.querySelector('.l-ad-row > button')
         const header = document.querySelector('.l-ad-labels, .l-rc-columns')
         const aligned = !header || !header.getClientRects().length || !row || [...header.children].every((cell, i) => !row.children[i] || Math.abs(cell.getBoundingClientRect().left - row.children[i].getBoundingClientRect().left) < 3)
-        return { fits: document.documentElement.scrollWidth <= innerWidth + 1, goodArt, aligned }
+        const search = document.querySelector('.l-rb-list input[type="search"], .l-ad-filters input[type="search"]')
+        const panel = search?.closest('.l-rb-list, .l-ad-panel')
+        const controls = innerWidth > 600 || !search || search.getBoundingClientRect().width > panel.getBoundingClientRect().width * .7
+        return { fits: document.documentElement.scrollWidth <= innerWidth + 1, goodArt, aligned, controls }
       })
-      check(geometry.fits && geometry.goodArt && geometry.aligned, `${name}: fits, aligned columns and original artwork at ${width}px in ${theme}`)
+      check(geometry.fits && geometry.goodArt && geometry.aligned && geometry.controls, `${name}: fits, aligned columns, usable search and original artwork at ${width}px in ${theme}`)
       if ([1440, 390].includes(width)) await page.screenshot({ path: path.join(out, `${name}-${theme}-${width}.png`), fullPage: true })
     }
     if (width >= 768) {
