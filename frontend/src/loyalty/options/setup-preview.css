@@ -35,6 +35,9 @@
 [data-loyalty] .l-gs-page.l-gs-clean .l-gs-columns { grid-template-columns: minmax(0,1.545fr) minmax(360px,1fr); }
 [data-loyalty] .l-gs-preview { background:var(--l-ad-panel); }
 [data-loyalty] .l-gs-preview-content { gap:14px; }
+[data-loyalty] .l-gs-preview .l-ad-visual-copy { flex:1 1 200px; min-width:min(200px,100%); }
+[data-loyalty] .l-gs-preview .l-ad-visual-copy > strong { font-size:22px; line-height:30px; }
+[data-loyalty] .l-gs-preview .l-ad-visual > img { width:132px; }
 [data-loyalty] .l-gs-preview-section + .l-gs-preview-section { padding-top:12px; }
 [data-loyalty] .l-gs-preview-rules { gap:8px; }
 @media(max-width:1000px) { [data-loyalty] .l-gs-page.l-gs-clean .l-gs-columns { grid-template-columns:minmax(0,1fr); } }
