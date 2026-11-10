@@ -273,5 +273,10 @@ No production customer writes/messages. Original native-shared logic, translatio
 Both production domains passed 40 live content/auth/landing checks at 2026-11-10 17:05:47 UTC.
 Cloud assets: index-B9QSxLsN.js, PortalApp-BcRdNP-6.js, PortalApp-BlRTEMfA.css, index-D7h0NFI7.css.
 See docs/audits/2026-11-10-member-portal-design.md and the private evidence paths there.
-CI 42860594743 is finishing: both Node builds, audit, Larastan and SQLite shards 1/2 passed;
-PostgreSQL and SQLite shard 3 remain pending. Cleanup status follows after the owned helpers are stopped.
+CI 42860594743 is finishing: both Node builds, audit, Larastan and all three SQLite shards passed;
+the PostgreSQL job remains pending.
+
+
+The task-owned loopback proxy/backend and verified PostgreSQL cluster are stopped. The clean deployment
+worktree was removed after checking its exact path, branch, released commit, physical vendor and dependency
+junction target. Shared dependencies, owner assets and private evidence remain intact.

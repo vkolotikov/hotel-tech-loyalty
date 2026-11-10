@@ -72,4 +72,9 @@ Production main **8f12b72ac068302577708b7de87995772a967301**, verified live at *
 
 Next source-patch code baseline: **7798337c7**. Later evidence documentation is not new product code.
 [CI 42860594743](https://github.com/vkolotikov/hotel-tech-loyalty/actions/runs/42860594743) is still finishing:
-Node 24/26, dependency audit, Larastan and SQLite shards 1/2 passed; PostgreSQL and SQLite shard 3 remain pending.
+Node 24/26, dependency audit, Larastan and all three SQLite shards passed; the PostgreSQL job remains pending.
+
+
+The task-owned loopback proxy/backend and verified PostgreSQL cluster are stopped. The clean deployment
+worktree was removed after checking its exact path, branch, released commit, physical vendor and dependency
+junction target. Shared dependencies, owner assets and private evidence remain intact.
