@@ -8,6 +8,7 @@ import { portalApi, apiMessage, apiErrorCode } from '../lib/portalApi'
 import type { Reward } from '../lib/types'
 import { counted } from '../lib/plural'
 import { formatDay } from '../lib/dates'
+import { instantDay } from './homeMath'
 import { PortalIcon } from '../design/PortalIcon'
 import { usePortalPanels } from '../design/panels'
 import { Button } from '../ui/Button'
@@ -81,7 +82,8 @@ export function Rewards() {
       action: open ? <div className="text-xs text-p-text-2"><p>{open.status === 'approved' ? t('portal.rewards.approved', 'Approved — ready when you are') : t('portal.rewards.requested', 'Requested — the venue will confirm')}</p>{(open.status === 'pending' || open.status === 'eligible') && <Button variant="ghost" size="sm" loading={cancel.isPending} onClick={() => cancel.mutate(open.id)}>{t('portal.rewards.cancel_request', 'Cancel request')}</Button>}</div>
         : b.requestable ? <Button size="sm" loading={request.isPending} onClick={() => request.mutate(b.tier_benefit_id)}>{t('portal.rewards.request', 'Request this')}</Button>
           : <Button variant="secondary" size="sm" onClick={() => panels.open('card')}><PortalIcon name="qr" />{t('portal.design.show_card', 'Show card')}</Button>,
-      terms: !b.requestable && !open ? b.fulfillment_mode === 'voucher' ? t('portal.rewards.voucher', 'Issued as a voucher — ask at the desk') : t('portal.rewards.automatic', 'Applied automatically') : null,
+      terms: [!b.requestable && !open && b.fulfillment_mode !== 'on_request' ? b.fulfillment_mode === 'voucher' ? t('portal.rewards.voucher', 'Issued as a voucher — ask at the desk') : t('portal.rewards.automatic', 'Applied automatically') : null,
+        b.last_fulfilled_at && !open ? t('portal.rewards.last_used', 'Last used {{date}}', { date: instantDay(b.last_fulfilled_at, i18n.language, boot?.venue.timezone) }) : null].filter(Boolean).join(' '),
     })
   }
   for (const r of rewards.data?.rewards ?? []) {
@@ -94,7 +96,7 @@ export function Rewards() {
   for (const o of (offers.data?.general ?? []).filter(o => !claimedIds.has(o.id))) {
     const full = o.usage_limit != null && (o.times_used ?? 0) >= o.usage_limit
     items.push({ key: `offer-${o.id}`, kind: 'offer', title: o.title, body: o.description, image: o.image_url, ready: !full,
-      figure: offerValueLabel(o, t, { currency: boot?.venue.currency, locale: i18n.language }) ?? t('portal.design.member_offer', 'Member offer'), terms: o.terms_conditions,
+      figure: offerValueLabel(o, t, { currency: boot?.venue.currency, locale: i18n.language }) ?? t('portal.design.member_offer', 'Member offer'), terms: [offerPerkNote(o, t), o.terms_conditions].filter(Boolean).join(' '),
       note: o.end_date ? t('portal.rewards.ends', 'Ends {{date}}', { date: formatDay(o.end_date, i18n.language) }) : offerPerkNote(o, t),
       action: full ? <span className="text-xs text-p-text-2">{t('portal.rewards.fully_claimed', 'Fully claimed')}</span> : <Button size="sm" variant="secondary" loading={claim.isPending} onClick={() => claim.mutate(o.id)}>{t('portal.rewards.claim', 'Claim offer')}</Button>,
     })
@@ -102,7 +104,8 @@ export function Rewards() {
   for (const c of offers.data?.personalized ?? []) if (c.offer) items.push({
     key: `claim-${c.id}`, kind: 'offer', title: c.offer.title, body: c.offer.description, ready: false,
     figure: offerValueLabel(c.offer, t, { currency: boot?.venue.currency, locale: i18n.language }) ?? t('portal.design.member_offer', 'Member offer'),
-    note: c.used_at ? paysPointsOnClaim(c.offer) ? t('portal.rewards.points_added_on', 'Points added {{date}}', { date: formatDay(c.used_at, i18n.language) }) : t('portal.rewards.used_on', 'Used {{date}}', { date: formatDay(c.used_at, i18n.language) }) : c.usable_now === false ? t('portal.rewards.offer_membership_unavailable', 'This offer needs an active membership at its required level.') : t('portal.rewards.ready_to_use', 'Ready to use — show this at the desk'),
+    note: c.used_at ? paysPointsOnClaim(c.offer) ? t('portal.rewards.points_added_on', 'Points added {{date}}', { date: formatDay(c.used_at, i18n.language) }) : t('portal.rewards.used_on', 'Used {{date}}', { date: formatDay(c.used_at, i18n.language) }) : c.usable_now === false ? t('portal.rewards.offer_membership_unavailable', 'This offer needs an active membership at its required level.') : c.offer.end_date ? t('portal.rewards.valid_until', 'Valid until {{date}}', { date: formatDay(c.offer.end_date, i18n.language) }) : t('portal.rewards.ready_to_use', 'Ready to use — show this at the desk'),
+    terms: offerPerkNote(c.offer, t),
     action: !c.used_at && c.usable_now !== false ? <Button variant="secondary" size="sm" onClick={() => panels.open('card')}>{t('portal.design.show_card', 'Show card')}</Button> : null,
   })
   const order = params.get('tab') === 'catalogue' ? ['reward', 'benefit', 'offer'] : params.get('tab') === 'offers' ? ['offer', 'benefit', 'reward'] : ['benefit', 'reward', 'offer']
