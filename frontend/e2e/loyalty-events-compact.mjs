@@ -135,7 +135,10 @@ try {
         if (name === 'editor') await popup().waitFor()
         await geometry(`${name} ${theme} ${width}px`)
         if (width === 1440 || width === 390) await page.screenshot({ path: path.join(out, `${name}-${theme}-${width}.png`), fullPage: name !== 'editor' })
-        if (name === 'editor') await closeDraft()
+        if (name === 'editor') {
+          await closeDraft()
+          check(new URL(page.url()).searchParams.get('selected') === String(draft.id) && new URL(page.url()).searchParams.get('tab') === 'drafts', `${theme} ${width}px: closing the editor returns to the same draft`)
+        }
       }
     }
   }
