@@ -214,7 +214,7 @@ The task-owned loopback services and PostgreSQL cluster are stopped. Shared depe
 The clean release worktree was removed after path/branch/commit validation and unlinking only its dependency
 junction. Private evidence and the earlier cleanup remnant remain untouched.
 
-## Loyalty settings editors — verified, release prepared
+## Loyalty settings editors — live
 
 Branch `feature/loyalty-editor-dialogs-20261110` implements the fourteen popup states from Figma page 392:8135.
 Shared compact/wide native dialogs preserve the catalogue and editor URLs, original vectors, canonical saves,
@@ -225,6 +225,20 @@ administration journey and 105 passing editor assertions across rehearsal phases
 tablet layouts, actual five-language controls, canonical saves, nested draft protection and restored scrolling.
 The required offer description is visible; invalid submissions focus their first field problem. New offer status
 reflects the canonical create behavior. Final CSS also passed 535 focused token/locale checks. The 53-path source
-manifest and whole-source parity are verified. Fresh build and production content checks are next; no editor
-deployment yet. See [the editor audit](../audits/2026-11-10-loyalty-editors.md).
-Next patch compares source against **f6146efee**, including the preceding release's evidence documentation.
+manifest and whole-source parity are verified. Fresh build and four compiled artifact browser probes passed;
+the final header/reward/token/locale checks passed 546 tests. See [the editor audit](../audits/2026-11-10-loyalty-editors.md).
+
+Production main **da75a17f564331ad80e822b072a761e8fb0b11f6**, from source through
+**2696a39c21f1ee5aa09646ec2fb4611d96ab37b4**. **Next source-patch code baseline: 2696a39c2**;
+later evidence documentation is not new product code. Exact 53-path manifest SHA256
+`3EE030B93F1B7135BA824B0681A881F0C66CD04E920B5F3BEAC6F8205D4AAB52`.
+Both production domains passed **32 live content/authentication/landing checks** at **15:41:10 UTC /
+17:41:10 Europe/Riga**. Assets: `index-DwmWPp35.js`, `LoyaltyApp-B7cT8umh.js`, `EarningPage-DCA8vGSY.js`,
+`ManagementUI-CM1tfNh2.js`, `ProgramPage-BrrJUjz4.js`, `RewardsPage-CoaOC3aK.js`, `OverviewUI-DrvWgfWP.js`.
+No production customer writes or messages; all save acceptance used the isolated PostgreSQL demo.
+
+[CI 42846286071](https://github.com/vkolotikov/hotel-tech-loyalty/actions/runs/42846286071) remains in progress.
+Both Node builds, audit, Larastan and SQLite shards 1/2 passed; PostgreSQL and shard 3 are pending. Local
+artifact gates and live verification are complete. Owned loopback helpers/PostgreSQL are stopped; the clean
+deployment worktree was removed after provenance and junction checks. Shared dependencies, owner files,
+private evidence and the earlier cleanup remnant remain untouched.
