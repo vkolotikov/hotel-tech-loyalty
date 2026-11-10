@@ -12,7 +12,7 @@ final class MemberProgramme
 {
     public function for(LoyaltyMember $member): array
     {
-        $orgId = (int) $member->organization_id;
+        $orgId = (int) $member->getAttribute('organization_id');
         $on = PortalBootstrap::loyaltyOn($orgId);
         $options = $on ? ProgrammeOptions::for($orgId) : [];
         $decision = app(AccessDecision::class);
