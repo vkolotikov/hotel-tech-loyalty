@@ -77,4 +77,8 @@
 [data-loyalty] .l-ad-page .l-rb-filters { gap: 10px; }
 [data-loyalty] .l-ad-page .l-rb-filters label { min-width: 0; }
 [data-loyalty] .l-ad-page .l-rb-filters input, [data-loyalty] .l-ad-page .l-rb-filters select { min-height: 38px; }
+[data-loyalty] .l-ad-page .l-rb-offer-filters { grid-template-columns: minmax(0,1.5fr) minmax(140px,1fr); }
+[data-loyalty] .l-ad-page.l-rc-benefits .l-rb-filters { grid-template-columns: minmax(0,1.5fr) minmax(0,1fr) minmax(0,1fr); }
+[data-loyalty] .l-ad-page.l-rc-benefits .l-rb-filters label:first-child { grid-column: auto; }
 @media (max-width: 900px) { [data-loyalty] .l-ad-page .l-rb-columns { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 600px) { [data-loyalty] .l-ad-page .l-rb-offer-filters, [data-loyalty] .l-ad-page.l-rc-benefits .l-rb-filters { grid-template-columns: minmax(0,1fr); } }
