@@ -75,7 +75,7 @@ function CardPanel() {
     {!!programme.data?.places.length && <section className="mt-4"><h3 className="font-semibold text-sm">{t('portal.design.your_access', 'Your access')}</h3><div className="p-fact-list">{programme.data.places.map(p => <div className="p-fact" key={p.id}>
       <PortalIcon name={p.granted ? 'door' : 'lock'} tile /><div><p>{p.name}</p><small>{p.granted ? p.description || t('portal.design.access_included', 'Included with your membership') : p.reason === 'tier_not_allowed' && p.allowed_tiers.length > 0 ? t('portal.design.tier_access', '{{tiers}} members', { tiers: p.allowed_tiers.join(' · ') }) : t('portal.design.access_unavailable', 'Access currently unavailable')}</small></div><span className={p.granted ? 'text-p-success' : 'text-p-text-2'}>{p.granted ? <PortalIcon name="check" /> : <PortalIcon name="lock" />}</span>
     </div>)}</div></section>}
-    {data?.capabilities.loyalty && <Link to="/portal/rewards?tab=benefits" className="block text-center text-xs text-p-accent-deep mt-4 py-2">{t('portal.rewards.tab_benefits', 'Benefits')} →</Link>}
+    {(data?.capabilities.loyalty || member.membership_mode === 'assigned') && <Link to="/portal/rewards?tab=benefits" className="block text-center text-xs text-p-accent-deep mt-4 py-2">{t('portal.rewards.tab_benefits', 'Benefits')} →</Link>}
   </>
 }
 
