@@ -1,0 +1,1 @@
+import{tr as e}from"./index-D-BM60T4.js";function t(){let{t}=e();return e=>t(e.key,e.fallback,e.vars)}export{t};
