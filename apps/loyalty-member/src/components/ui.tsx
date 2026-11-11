@@ -11,6 +11,7 @@ import { mediaUrl } from '../lib/api'
 import { feel } from '../lib/haptics'
 import { rememberOrigin } from '../lib/motion'
 import { useReducedMotion } from '../lib/useReducedMotion'
+import { MemberIcon } from './MemberIcon'
 
 export type IconName = keyof typeof Ionicons.glyphMap
 
@@ -296,10 +297,10 @@ export function Row({ left, title, line, right, onPress, last }: { left?: ReactN
         {line ? <Text style={[fonts.small, { color: C.text2 }]}>{line}</Text> : null}
       </View>
       {right}
-      {onPress && <Ionicons name="chevron-forward" size={16} color={C.text3} />}
+      {onPress && <MemberIcon name="chevron" size={18} color={C.text3} />}
     </View>
   )
-  return onPress ? <Press onPress={onPress} haptic={false}>{body}</Press> : body
+  return onPress ? <Press onPress={onPress} label={title} haptic={false}>{body}</Press> : body
 }
 
 const styles = StyleSheet.create({

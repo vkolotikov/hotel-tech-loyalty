@@ -1,6 +1,10 @@
 import type { Key } from './en'
 
 export const ru: Record<Key, string> = {
+  "preferences.essential": "Важные сообщения об аккаунте остаются включёнными.",
+  "rewards.ready": "Ваша награда готова",
+  "rewards.showCode": "Покажите этот код в заведении. Он также сохранён в разделе «Мои коды».",
+  "rewards.openVoucher": "Открыть ваучер",
   "balance.credit": "Кредит",
   "events.cancelled": "Регистрация отменена",
   "events.keepPlace": "Оставить моё место",

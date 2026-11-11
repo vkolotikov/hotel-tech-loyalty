@@ -1,7 +1,7 @@
 import { useState } from 'react'
-import { Share, StyleSheet, Text, View } from 'react-native'
+import { Text, View } from 'react-native'
 import { router } from 'expo-router'
-import { useMutation, useQuery } from '@tanstack/react-query'
+import { useIsMutating, useMutation } from '@tanstack/react-query'
 import { api } from '../lib/api'
 import { failureOf } from '../lib/failure'
 import { forgetLook, KEYS, queryClient, useBoot } from '../lib/queries'
@@ -9,11 +9,13 @@ import { useSession } from '../lib/session'
 import { feel } from '../lib/haptics'
 import { useT } from '../lib/i18n'
 import { C, fonts } from '../lib/theme'
-import { applyMessageChange, counted, marketingNeedsEmail, messageBody, messageKinds, preferencesOf, smsSwitch, vocabKey, type ChannelField, type MessageChange } from '../shared/portal'
-import type { MessageKind, PortalBootstrap } from '../lib/types'
-import { Field, GhostButton, GoldButton, Notice, Shimmer, Surface, Toggle } from '../components/ui'
+import type { PortalBootstrap } from '../lib/types'
+import { Field, GhostButton, GoldButton, Notice, Row, Shimmer, Surface } from '../components/ui'
 import { Sheet } from '../components/Sheet'
-import { profileSaved, profileUpdate } from '../lib/loyalty'
+import { profileSaved, profileUpdate, singleFlight } from '../lib/loyalty'
+import { ActionPopup } from '../components/ActionPopup'
+import { MemberIcon } from '../components/MemberIcon'
+import { notify } from '../components/Feedback'
 
 /**
  * The member's own account, as the portal's profile: name and phone, which messages arrive and how (the portal's own
@@ -23,15 +25,20 @@ export default function Profile() {
   const { tp } = useT()
   const boot = useBoot()
   const member = boot.data?.member
+  const [panel, setPanel] = useState<'password' | 'delete' | null>(null)
+  const busy = useIsMutating({ mutationKey: ['member-account'] }) > 0
   return (
-    <Sheet title={tp('portal.profile.title')}>
+    <Sheet title={tp('portal.profile.title')} busy={busy}>
       {!member || !boot.data ? <View style={{ gap: 10 }}><Shimmer height={180} /><Shimmer height={260} /></View> : (
         <>
           <Details key={member.user.id} userId={member.user.id} name={member.user.name} phone={member.user.phone ?? ''} email={member.user.email} birthday={member.user.date_of_birth?.slice(0, 10) ?? ''} />
-          <Messages />
-          {boot.data.capabilities.loyalty && <Invite />}
-          <Password />
-          <DeleteAccount />
+          <Surface padding={0} style={{ paddingHorizontal: 16 }}>
+            <Row left={<MemberIcon name="lock" />} title={tp('portal.profile.password_title')} onPress={() => { if (!busy) setPanel('password') }} />
+            <Row left={<MemberIcon name="alert" color={C.danger} />} title={tp('portal.profile.delete_title')} onPress={() => { if (!busy) setPanel('delete') }} last />
+          </Surface>
+          <ActionPopup visible={!!panel} title={tp(panel === 'password' ? 'portal.profile.password_title' : 'portal.profile.delete_title')} kind={panel === 'delete' ? 'sheet' : 'popup'} busy={busy} onClose={() => setPanel(null)}>
+            {panel === 'password' ? <Password onDone={() => setPanel(null)} /> : <DeleteAccount />}
+          </ActionPopup>
         </>
       )}
     </Sheet>
@@ -54,12 +61,16 @@ function Details({ userId, name: initialName, phone: initialPhone, email, birthd
   const [phone, setPhone] = useState(initialPhone)
   const [birthdayDraft, setBirthday] = useState<string | null>(null)
   const [note, setNote] = useState<{ tone: 'success' | 'danger'; text: string } | null>(null)
+  const [run] = useState(singleFlight)
   const save = useMutation({
+    mutationKey: ['member-account'],
+    onMutate: () => ({ owner: useSession.getState().token }),
     mutationFn: (submitted: ReturnType<typeof profileUpdate>) => api.updateProfile(submitted),
-    onSuccess: (answer, submitted) => {
+    onSuccess: (answer, submitted, context) => {
+      if (context?.owner !== useSession.getState().token) return
       queryClient.setQueryData<PortalBootstrap>(KEYS.boot, before => profileSaved(before, userId, answer.user, submitted))
       setBirthday(null)
-      feel.success(); setNote({ tone: 'success', text: tp('portal.common.saved') })
+      feel.success(); setNote(null); notify(tp('portal.common.saved'))
       void queryClient.invalidateQueries({ queryKey: KEYS.boot })
     },
     onError: error => setNote({ tone: 'danger', text: failureOf(error).message ?? tp('portal.profile.save_failed') }),
@@ -71,108 +82,38 @@ function Details({ userId, name: initialName, phone: initialPhone, email, birthd
       <Field label={tp('portal.profile.phone')} value={phone} onChangeText={setPhone} keyboardType="phone-pad" autoComplete="tel" editable={!save.isPending} />
       <Field label={tp('portal.profile.birthday')} hint="YYYY-MM-DD" value={birthdayDraft ?? initialBirthday} onChangeText={setBirthday} placeholder="YYYY-MM-DD" autoCorrect={false} autoCapitalize="none" maxLength={10} editable={!save.isPending} />
       {note && <Notice tone={note.tone} text={note.text} />}
-      <GoldButton title={tp('portal.common.save')} icon="checkmark" busy={save.isPending} disabled={!name.trim()} onPress={() => save.mutate(profileUpdate(name, phone, birthdayDraft))} />
-    </Section>
-  )
-}
-
-/** Which kinds of message arrive, and by which channel — each switch saved on its own (the server merges it). */
-function Messages() {
-  const { tp } = useT()
-  const boot = useBoot()
-  const [failed, setFailed] = useState(false)
-  const change = useMutation({
-    mutationFn: (next: MessageChange) => api.updateProfile(messageBody(next)),
-    onMutate: next => {
-      setFailed(false)
-      const before = queryClient.getQueryData<PortalBootstrap>(KEYS.boot)
-      queryClient.setQueryData(KEYS.boot, applyMessageChange(before, next))
-      return { before, owner: useSession.getState().token }
-    },
-    onError: (_error, _next, context) => { setFailed(true); if (context?.before && context.owner === useSession.getState().token) queryClient.setQueryData(KEYS.boot, context.before) },
-  })
-  const data = boot.data
-  const member = data?.member
-  if (!data || !member) return null
-  const prefs = preferencesOf(member)
-  const sms = smsSwitch(member)
-  const venue = data.venue.name
-
-  const row = (label: string, hint: string | null, value: boolean, onChange: (on: boolean) => void, disabled = false) => (
-    <View style={styles.row}>
-      <View style={{ flex: 1, gap: 2 }}>
-        <Text style={[fonts.bodyStrong, { color: C.text }]}>{label}</Text>
-        {hint ? <Text style={[fonts.small, { color: C.text2 }]}>{hint}</Text> : null}
-      </View>
-      <Toggle value={value} disabled={disabled} onChange={onChange} label={label} />
-    </View>
-  )
-  const channel = (field: ChannelField, on: boolean) => change.mutate({ field, on })
-
-  return (
-    <>
-      <Section title={tp('portal.profile.kinds_title')}>
-        <Text style={[fonts.small, { color: C.text2 }]}>{tp('portal.profile.kinds_hint')}</Text>
-        {messageKinds({ loyalty: data.capabilities.loyalty || member.membership_mode === 'assigned' }).filter(kind => kind !== 'stays' && (data.capabilities.loyalty || kind === 'tier')).map((kind: MessageKind) => (
-          <View key={kind}>{row(tp(`portal.profile.kind_${kind}`, { noun: tp(vocabKey(data.venue.industry, 'booking_plural')) }), tp(`portal.profile.kind_${kind}_hint`), prefs[kind], on => change.mutate({ kind, on }))}</View>
-        ))}
-      </Section>
-      <Section title={tp('portal.profile.channels_title')}>
-        {row(tp('portal.profile.push'), tp('portal.profile.push_hint'), member.push_notifications, on => channel('push_notifications', on))}
-        {row(tp('portal.profile.email_messages', { venue }), tp('portal.profile.email_messages_hint'), member.email_notifications, on => channel('email_notifications', on))}
-        {row(tp('portal.profile.marketing'), tp('portal.profile.marketing_hint'), member.marketing_consent, on => channel('marketing_consent', on))}
-        {marketingNeedsEmail(member) && <Notice tone="warning" text={tp('portal.profile.marketing_needs_email', { venue })} />}
-        {sms.show && row(tp('portal.profile.sms'), sms.needsPhone ? tp('portal.profile.sms_needs_phone') : tp('portal.profile.sms_hint', { phone: member.user.phone ?? '' }), sms.on, on => channel('sms_consent', on), sms.disabled)}
-        <Text style={[fonts.small, { color: C.text3 }]}>{tp('portal.profile.service_messages')}</Text>
-        {failed && <Notice text={tp('portal.profile.save_failed')} />}
-      </Section>
-    </>
-  )
-}
-
-/** The member's referral link, shared from the phone, and how many friends joined. */
-function Invite() {
-  const { tp, language } = useT()
-  const referral = useQuery({ queryKey: ['referral'], queryFn: api.referral })
-  const link = referral.data?.referral_link
-  return (
-    <Section title={tp('portal.profile.invite_title')}>
-      {referral.isLoading ? <Shimmer height={60} /> : !link ? <Text style={[fonts.small, { color: C.text2 }]}>{tp('portal.profile.invite_unavailable')}</Text> : (
-        <>
-          <Text style={[fonts.small, { color: C.text2 }]}>{tp(referral.data?.reward_on === 'signup' ? 'portal.profile.invite_body' : 'portal.profile.invite_body_first_visit')}</Text>
-          {referral.data?.referral_code ? <Text style={[styles.code, { color: C.goldLight }]} selectable>{referral.data.referral_code}</Text> : null}
-          <GoldButton title={tp('portal.profile.invite_share')} icon="share-social" onPress={() => { void Share.share({ message: link, url: link }) }} />
-          <Text style={[fonts.small, { color: C.text3 }]}>{counted(tp, 'profile.invite_stats', referral.data?.total_referrals ?? 0, language)}</Text>
-        </>
-      )}
+      <GoldButton title={tp('portal.common.save')} busy={save.isPending} disabled={!name.trim()} onPress={() => { void run(() => save.mutateAsync(profileUpdate(name, phone, birthdayDraft))).catch(() => {}) }} />
     </Section>
   )
 }
 
 /** Changing the password signs the member's other devices out (the server's rule). */
-function Password() {
+function Password({ onDone }: { onDone: () => void }) {
   const { tp } = useT()
   const [current, setCurrent] = useState('')
   const [next, setNext] = useState('')
   const [confirm, setConfirm] = useState('')
   const [note, setNote] = useState<{ tone: 'success' | 'danger'; text: string } | null>(null)
+  const [run] = useState(singleFlight)
   const change = useMutation({
+    mutationKey: ['member-account'],
+    onMutate: () => ({ owner: useSession.getState().token }),
     mutationFn: () => api.changePassword({ current_password: current, password: next, password_confirmation: confirm }),
-    onSuccess: () => { feel.success(); setNote({ tone: 'success', text: tp('portal.profile.password_changed') }); setCurrent(''); setNext(''); setConfirm('') },
+    onSuccess: (_answer, _variables, context) => { if (context?.owner !== useSession.getState().token) return; feel.success(); notify(tp('portal.profile.password_changed')); setCurrent(''); setNext(''); setConfirm(''); onDone() },
     onError: error => setNote({ tone: 'danger', text: failureOf(error).message ?? tp('portal.profile.password_failed') }),
   })
   const submit = () => {
     if (next !== confirm) return setNote({ tone: 'danger', text: tp('portal.profile.password_mismatch') })
-    change.mutate()
+    void run(() => change.mutateAsync()).catch(() => {})
   }
   return (
-    <Section title={tp('portal.profile.password_title')}>
+    <View style={{ gap: 14 }}>
       <Field label={tp('portal.profile.password_current')} value={current} onChangeText={setCurrent} secureTextEntry autoComplete="current-password" />
       <Field label={tp('portal.profile.password_new')} hint={tp('portal.profile.password_hint')} value={next} onChangeText={setNext} secureTextEntry autoComplete="new-password" />
       <Field label={tp('portal.profile.password_confirm')} value={confirm} onChangeText={setConfirm} secureTextEntry autoComplete="new-password" />
       {note && <Notice tone={note.tone} text={note.text} />}
-      <GhostButton title={tp('portal.profile.password_change')} icon="key-outline" disabled={!current || next.length < 8 || change.isPending} onPress={submit} />
-    </Section>
+      <GoldButton title={tp('portal.profile.password_change')} busy={change.isPending} disabled={!current || next.length < 8} onPress={submit} />
+    </View>
   )
 }
 
@@ -182,9 +123,13 @@ function DeleteAccount() {
   const [password, setPassword] = useState('')
   const [confirmation, setConfirmation] = useState('')
   const [problem, setProblem] = useState<string | null>(null)
+  const [run] = useState(singleFlight)
   const remove = useMutation({
+    mutationKey: ['member-account'],
+    onMutate: () => ({ owner: useSession.getState().token }),
     mutationFn: () => api.deleteAccount({ password, confirmation }),
-    onSuccess: async () => {
+    onSuccess: async (_answer, _variables, context) => {
+      if (context?.owner !== useSession.getState().token) return
       await useSession.getState().signOut()
       queryClient.clear()
       await forgetLook()
@@ -193,17 +138,13 @@ function DeleteAccount() {
     onError: error => setProblem(failureOf(error).message ?? tp('portal.profile.delete_failed')),
   })
   return (
-    <Section title={tp('portal.profile.delete_title')}>
+    <View style={{ gap: 14 }}>
       <Text style={[fonts.small, { color: C.text2 }]}>{tp('portal.profile.delete_body')}</Text>
       <Field label={tp('portal.profile.delete_password')} value={password} onChangeText={setPassword} secureTextEntry autoComplete="current-password" />
       <Field label={tp('portal.profile.delete_confirm_label')} value={confirmation} onChangeText={setConfirmation} autoCapitalize="characters" autoCorrect={false} />
       {problem && <Notice text={problem} />}
-      <GhostButton title={tp('portal.profile.delete_button')} icon="trash-outline" tone={C.danger} disabled={!password || confirmation !== 'DELETE' || remove.isPending} onPress={() => remove.mutate()} />
-    </Section>
+      <GhostButton title={tp('portal.profile.delete_button')} tone={C.danger} busy={remove.isPending} disabled={!password || confirmation !== 'DELETE'} onPress={() => { void run(() => remove.mutateAsync()).catch(() => {}) }} />
+    </View>
   )
 }
 
-const styles = StyleSheet.create({
-  row: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  code: { fontFamily: 'Inter_700Bold', fontSize: 20, letterSpacing: 2 },
-})

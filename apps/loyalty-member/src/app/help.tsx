@@ -38,7 +38,7 @@ export default function Help() {
   const shown = data ? narrow(query, topic, questions, say) : []
 
   return (
-    <Sheet title={tp('portal.help.title')} line={tp('portal.help.line')}>
+    <Sheet title={tp('portal.help.title')}>
       {!data ? <View style={{ gap: 10 }}><Shimmer height={120} /><Shimmer height={200} /></View> : (
         <>
           {showsSteps(data) && (

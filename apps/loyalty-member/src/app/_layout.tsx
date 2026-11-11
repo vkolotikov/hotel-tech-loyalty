@@ -81,6 +81,7 @@ export default function RootLayout() {
               <Stack.Screen name="inbox" />
               <Stack.Screen name="help" />
               <Stack.Screen name="profile" />
+              <Stack.Screen name="preferences" />
               <Stack.Screen name="activity" options={{ presentation: 'transparentModal', animation: 'none', contentStyle: { backgroundColor: 'transparent' }, gestureEnabled: false }} />
               <Stack.Screen name="programme" options={{ presentation: 'transparentModal', animation: 'none', contentStyle: { backgroundColor: 'transparent' }, gestureEnabled: false }} />
               <Stack.Screen name="bookings" />

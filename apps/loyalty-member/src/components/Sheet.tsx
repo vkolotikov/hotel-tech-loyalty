@@ -22,7 +22,7 @@ export function Sheet({ title, line, children, busy = false, kind = 'page' }: { 
   return (
     <Backdrop>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
-        <ScrollView contentContainerStyle={{ paddingTop: insets.top + 12, paddingBottom: insets.bottom + 24, paddingHorizontal: 20, gap: 18 }} keyboardShouldPersistTaps="handled">
+        <ScrollView contentContainerStyle={{ paddingTop: insets.top + 12, paddingBottom: insets.bottom + 24, paddingHorizontal: 24, gap: 16 }} keyboardShouldPersistTaps="handled">
           {busy ? <View style={styles.head}>
             <View style={{ flex: 1, gap: 4 }}>
               <Text style={[fonts.title, { color: C.text }]}>{title}</Text>

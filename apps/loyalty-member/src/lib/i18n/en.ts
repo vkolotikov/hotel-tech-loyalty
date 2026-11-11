@@ -5,6 +5,10 @@
  * Every key here exists in all five languages with the same placeholders (lib.test.ts).
  */
 export const en = {
+  "preferences.essential": "Essential account messages stay on.",
+  "rewards.ready": "Your reward is ready",
+  "rewards.showCode": "Show this code at the venue. It is also saved in My codes.",
+  "rewards.openVoucher": "Open voucher",
   "balance.credit": "Credit",
   "events.cancelled": "Registration cancelled",
   "events.keepPlace": "Keep my place",

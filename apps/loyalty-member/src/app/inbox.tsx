@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { StyleSheet, Text, View } from 'react-native'
 import { router } from 'expo-router'
 import { useMutation, useQuery } from '@tanstack/react-query'
-import { Ionicons } from '@expo/vector-icons'
 import { api } from '../lib/api'
 import { KEYS, queryClient, useBoot } from '../lib/queries'
 import { useT } from '../lib/i18n'
@@ -14,6 +13,8 @@ import { Sheet } from '../components/Sheet'
 import { offerNotification } from '../lib/loyalty'
 import { VoucherDownload } from '../components/VoucherDownload'
 import { useSession } from '../lib/session'
+import { ActionPopup } from '../components/ActionPopup'
+import { MemberIcon } from '../components/MemberIcon'
 
 /**
  * The inbox: what the venue sent — points, offers, the member's level, bookings, its own messages — newest first.
@@ -25,6 +26,7 @@ export default function Inbox() {
   const [page, setPage] = useState(1)
   const [openId, setOpenId] = useState<number | null>(null)
   const [failed, setFailed] = useState(false)
+  const [downloadBusy, setDownloadBusy] = useState(false)
   const key = ['inbox', page] as const
   const list = useQuery({ queryKey: key, queryFn: () => api.notifications(page) })
 
@@ -66,9 +68,17 @@ export default function Inbox() {
   }
 
   const items = list.data?.data ?? []
+  const selected = items.find(n => n.id === openId)
+  const selectedOffer = selected ? offerNotification(selected) : null
   const timezone = boot.data?.venue.timezone
   return (
     <Sheet title={tp('portal.inbox.title')}>
+      <ActionPopup visible={!!selected} title={selected?.title ?? tp('portal.inbox.title')} kind={selectedOffer ? 'sheet' : 'popup'} busy={downloadBusy} onClose={() => setOpenId(null)}>
+        {!!selected?.body && <Text style={[fonts.body, { color: C.text2 }]}>{selected.body}</Text>}
+        {!!selected && <Text style={[fonts.small, { color: C.text3 }]}>{formatDateTime(selected.sent_at ?? selected.created_at, language, timezone)}</Text>}
+        {selectedOffer && <GhostButton title={tp('portal.rewards.view_offer')} onPress={() => { setOpenId(null); router.navigate('/rewards?tab=offers') }} />}
+        {selectedOffer?.name && <VoucherDownload id={selectedOffer.id} name={selectedOffer.name} onBusyChange={setDownloadBusy} />}
+      </ActionPopup>
       {canMarkAllRead(boot.data?.counts.unread_notifications ?? 0, list.data) && (
         <GhostButton title={tp('portal.inbox.mark_all')} icon="checkmark-done" disabled={readAll.isPending} onPress={() => readAll.mutate()} />
       )}
@@ -83,24 +93,19 @@ export default function Inbox() {
       )}
       {items.map(n => {
         const unread = isUnread(n)
-        const open = openId === n.id
-        const offer = offerNotification(n)
         return (
           <View key={n.id} style={{ gap: 8 }}><Press onPress={() => tap(n)} label={n.title}>
             <Surface tint={unread ? C.info : undefined} style={{ gap: 6 }}>
               <View style={styles.head}>
                 {unread && <View style={[styles.dot, { backgroundColor: C.info }]} accessibilityLabel={tp('portal.inbox.unread')} />}
-                <Text style={[fonts.bodyStrong, { color: C.text, flex: 1 }]} numberOfLines={open ? undefined : 1}>{n.title}</Text>
-                <Ionicons name={open ? 'chevron-up' : 'chevron-down'} size={16} color={C.text3} />
+                <Text style={[fonts.bodyStrong, { color: C.text, flex: 1 }]} numberOfLines={2}>{n.title}</Text>
+                <MemberIcon name="chevron" size={18} color={C.text3} />
               </View>
-              {n.body ? <Text style={[fonts.small, { color: C.text2 }]} numberOfLines={open ? undefined : 2}>{n.body}</Text> : null}
+              {n.body ? <Text style={[fonts.small, { color: C.text2 }]} numberOfLines={2}>{n.body}</Text> : null}
               <Text style={[fonts.small, { color: C.text3 }]}>{formatDateTime(n.sent_at ?? n.created_at, language, timezone)}</Text>
             </Surface>
           </Press>
-          {open && offer && <View style={{ gap: 8 }}>
-            <GhostButton title={tp('portal.rewards.view_offer')} icon="pricetag-outline" onPress={() => router.navigate('/rewards?tab=offers')} />
-            {offer.name && <VoucherDownload id={offer.id} name={offer.name} />}
-          </View>}</View>
+          </View>
         )
       })}
       {list.data && list.data.last_page > 1 && (
@@ -110,7 +115,7 @@ export default function Inbox() {
           <GhostButton title={tp('portal.common.next')} disabled={page >= list.data.last_page || list.isFetching} onPress={() => { setOpenId(null); setPage(p => p + 1) }} style={{ flex: 1 }} />
         </View>
       )}
-      <Press onPress={() => router.push('/profile')} style={{ alignSelf: 'center', padding: 8 }}>
+      <Press onPress={() => router.push('/preferences')} style={{ alignSelf: 'center', padding: 8 }}>
         <Text style={[fonts.smallStrong, { color: C.gold }]}>{tp('portal.inbox.preferences')}</Text>
       </Press>
     </Sheet>

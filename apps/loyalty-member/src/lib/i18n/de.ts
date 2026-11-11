@@ -1,6 +1,10 @@
 import type { Key } from './en'
 
 export const de: Record<Key, string> = {
+  "preferences.essential": "Wichtige Kontonachrichten bleiben aktiviert.",
+  "rewards.ready": "Ihre Prämie ist bereit",
+  "rewards.showCode": "Zeigen Sie diesen Code vor Ort. Er ist auch unter „Meine Codes“ gespeichert.",
+  "rewards.openVoucher": "Gutschein öffnen",
   "balance.credit": "Guthaben",
   "events.cancelled": "Anmeldung storniert",
   "events.keepPlace": "Meinen Platz behalten",

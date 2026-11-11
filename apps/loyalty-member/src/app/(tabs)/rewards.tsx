@@ -1,20 +1,24 @@
 import { useState } from 'react'
-import { Modal, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native'
-import { router, useLocalSearchParams, usePreventRemove } from 'expo-router'
-import { useMutation, useQuery } from '@tanstack/react-query'
+import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native'
+import { useLocalSearchParams, usePreventRemove } from 'expo-router'
+import { useIsMutating, useMutation, useQuery } from '@tanstack/react-query'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { Ionicons } from '@expo/vector-icons'
 import { api } from '../../lib/api'
 import { KEYS, queryClient, useBoot, useRefreshOnFocus } from '../../lib/queries'
 import { number } from '../../lib/format'
 import { feel } from '../../lib/haptics'
 import { useT } from '../../lib/i18n'
+import { useSession } from '../../lib/session'
 import { C, TAB_BAR_ROOM, fonts } from '../../lib/theme'
 import { claimedMessage, counted, formatDay, offerPerkNote, offerValueLabel, paysPointsOnClaim } from '../../shared/portal'
 import { loyaltyFeatures, rewardTab, singleFlight, rewardMessage, type RewardTab } from '../../lib/loyalty'
 import { VoucherDownload } from '../../components/VoucherDownload'
 import type { Benefit, Claim, Offer, Redemption, Reward } from '../../lib/types'
-import { Backdrop, Empty, GhostButton, GoldButton, Notice, Picture, Pill, Segments, Shimmer, Surface } from '../../components/ui'
+import { Backdrop, Empty, GhostButton, GoldButton, Notice, Picture, Pill, Press, Segments, Shimmer, Surface } from '../../components/ui'
+import { ScreenHeader } from '../../components/ScreenHeader'
+import { ActionPopup } from '../../components/ActionPopup'
+import { MemberIcon } from '../../components/MemberIcon'
+import { notify } from '../../components/Feedback'
 
 type Tab = RewardTab
 
@@ -31,7 +35,7 @@ function refreshRewards(): void {
  */
 export default function Rewards() {
   const insets = useSafeAreaInsets()
-  const { tp, language } = useT()
+  const { tp } = useT()
   const boot = useBoot()
   useRefreshOnFocus(REWARDS_FACTS)
   const { tab: requested } = useLocalSearchParams<{ tab?: string }>()
@@ -41,6 +45,7 @@ export default function Rewards() {
   const [note, setNote] = useState<{ tone: 'success' | 'danger'; text: string } | null>(null)
   const [refreshing, setRefreshing] = useState(false)
   const points = boot.data?.member?.current_points ?? 0
+  const busy = useIsMutating({ mutationKey: ['member-rewards'] }) > 0
 
   const refresh = async () => {
     setRefreshing(true)
@@ -51,16 +56,13 @@ export default function Rewards() {
   return (
     <Backdrop>
       <ScrollView
-        contentContainerStyle={{ paddingTop: insets.top + 16, paddingBottom: TAB_BAR_ROOM, paddingHorizontal: 20, gap: 16 }}
+        contentContainerStyle={{ paddingTop: insets.top + 12, paddingBottom: TAB_BAR_ROOM, paddingHorizontal: 24, gap: 16 }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { void refresh() }} tintColor={C.gold} />}
       >
-        <View style={{ gap: 4 }}>
-          <Text style={[fonts.display, { color: C.text }]}>{tp('portal.rewards.title')}</Text>
-          {features.points && <Text style={[fonts.bodyStrong, { color: C.goldLight }]}>{counted(tp, 'rewards.you_have', points, language)}</Text>}
-        </View>
+        <ScreenHeader title={tp('portal.rewards.title')} />
         <Segments<Tab>
           value={tab}
-          onChange={next => { setSelection({ from: requested, value: next }); setNote(null) }}
+          onChange={next => { if (!busy) { setSelection({ from: requested, value: next }); setNote(null) } }}
           items={[
             { id: 'benefits', label: tp('portal.rewards.tab_benefits') },
             ...(features.points ? [{ id: 'catalogue' as const, label: tp('portal.rewards.tab_catalogue') }, { id: 'offers' as const, label: tp('portal.rewards.tab_offers') }] : []),
@@ -72,7 +74,6 @@ export default function Rewards() {
         {tab === 'catalogue' && <Catalogue points={points} onNote={setNote} />}
         {tab === 'offers' && <Offers currency={boot.data?.venue.currency ?? 'EUR'} onNote={setNote} />}
         {tab === 'codes' && <Codes />}
-        {features.events && <GhostButton title={tp('portal.events.title')} icon="ticket-outline" onPress={() => router.push('/events')} />}
       </ScrollView>
     </Backdrop>
   )
@@ -91,17 +92,25 @@ function Failed({ retry }: { retry: () => void }) {
 
 /** The level's benefits; one that needs a person can be asked for, and a waiting request withdrawn. */
 function Benefits({ onNote }: { onNote: OnNote }) {
-  const { tp, language } = useT()
+  const { t, tp, language } = useT()
   const boot = useBoot()
+  const [detailId, setDetailId] = useState<number | null>(null)
+  const [run] = useState(singleFlight)
+  const busy = useIsMutating({ mutationKey: ['member-rewards'] }) > 0
+  usePreventRemove(busy, () => {})
   const list = useQuery({ queryKey: ['rewards', 'benefits'], queryFn: api.benefits })
   const ask = useMutation({
+    mutationKey: ['member-rewards'],
+    onMutate: () => ({ owner: useSession.getState().token }),
     mutationFn: (id: number) => api.requestBenefit(id),
-    onSuccess: () => { feel.success(); onNote({ tone: 'success', text: tp('portal.rewards.request_sent') }); refreshRewards() },
+    onSuccess: (_answer, _id, context) => { if (context?.owner !== useSession.getState().token) return; notify(tp('portal.rewards.request_sent')); refreshRewards() },
     onError: error => { feel.warning(); onNote({ tone: 'danger', text: rewardMessage(error, tp, tp('portal.rewards.request_failed')) }) },
   })
   const withdraw = useMutation({
+    mutationKey: ['member-rewards'],
+    onMutate: () => ({ owner: useSession.getState().token }),
     mutationFn: (id: number) => api.cancelBenefitRequest(id),
-    onSuccess: () => { onNote({ tone: 'success', text: tp('portal.rewards.request_cancelled') }); refreshRewards() },
+    onSuccess: (_answer, _id, context) => { if (context?.owner !== useSession.getState().token) return; notify(tp('portal.rewards.request_cancelled')); refreshRewards() },
     onError: error => onNote({ tone: 'danger', text: rewardMessage(error, tp, tp('portal.rewards.request_failed')) }),
   })
 
@@ -110,30 +119,37 @@ function Benefits({ onNote }: { onNote: OnNote }) {
   const benefits = list.data?.benefits ?? []
   if (benefits.length === 0) return <Empty icon="ribbon-outline" text={tp('portal.rewards.benefits_empty')} />
 
+  const detail = benefits.find(b => b.tier_benefit_id === detailId)
+  const write = (id: number, cancel = false) => { if (!queryClient.isMutating({ mutationKey: ['member-rewards'] })) void run(() => cancel ? withdraw.mutateAsync(id) : ask.mutateAsync(id)).catch(() => {}) }
   return (
     <View style={{ gap: 12 }}>
+      <ActionPopup visible={!!detail} title={detail?.name ?? t('events.details')} busy={busy} onClose={() => setDetailId(null)}>
+        {detail?.display && <Text style={[fonts.bodyStrong, { color: C.gold }]}>{detail.display}</Text>}
+        {detail?.description && <Text style={[fonts.body, { color: C.text2 }]}>{detail.description}</Text>}
+        {detail && !detail.requestable && <Text style={[fonts.small, { color: C.text2 }]}>{tp(detail.fulfillment_mode === 'voucher' ? 'portal.rewards.voucher' : 'portal.rewards.automatic')}</Text>}
+      </ActionPopup>
       {list.data?.tier && <Pill text={tp('portal.rewards.tier_level', { tier: list.data.tier })} />}
       {benefits.map((benefit: Benefit) => {
         const open = benefit.request
         return (
           <Surface key={benefit.tier_benefit_id} style={{ gap: 10 }}>
-            <View style={styles.head}>
-              <View style={[styles.mark, { backgroundColor: C.goldWash }]}><Ionicons name="ribbon" size={18} color={C.gold} /></View>
+            <Press label={benefit.name} onPress={() => setDetailId(benefit.tier_benefit_id)}><View style={styles.head}>
+              <MemberIcon name="shield" color={C.gold} />
               <View style={{ flex: 1, gap: 2 }}>
                 <Text style={[fonts.bodyStrong, { color: C.text }]}>{benefit.name}</Text>
                 {benefit.display ? <Text style={[fonts.small, { color: C.goldLight }]}>{benefit.display}</Text> : null}
               </View>
-            </View>
-            {benefit.description ? <Text style={[fonts.small, { color: C.text2 }]}>{benefit.description}</Text> : null}
+              <MemberIcon name="chevron" size={18} color={C.text2} />
+            </View></Press>
             {open ? (
               <View style={{ gap: 8 }}>
                 <Notice tone={open.status === 'approved' ? 'success' : 'info'} text={open.status === 'approved' ? tp('portal.rewards.approved') : tp('portal.rewards.requested')} />
                 {(open.status === 'pending' || open.status === 'eligible') && (
-                  <GhostButton title={tp('portal.rewards.cancel_request')} disabled={withdraw.isPending} onPress={() => withdraw.mutate(open.id)} />
+                  <GhostButton title={tp('portal.rewards.cancel_request')} disabled={busy} onPress={() => write(open.id, true)} />
                 )}
               </View>
             ) : benefit.requestable ? (
-              <GoldButton title={tp('portal.rewards.request')} icon="hand-right" busy={ask.isPending && ask.variables === benefit.tier_benefit_id} onPress={() => ask.mutate(benefit.tier_benefit_id)} />
+              <GoldButton title={tp('portal.rewards.request')} disabled={busy} busy={ask.isPending && ask.variables === benefit.tier_benefit_id} onPress={() => write(benefit.tier_benefit_id)} />
             ) : (
               <Text style={[fonts.small, { color: C.text3 }]}>{benefit.fulfillment_mode === 'voucher' ? tp('portal.rewards.voucher') : tp('portal.rewards.automatic')}</Text>
             )}
@@ -147,17 +163,20 @@ function Benefits({ onNote }: { onNote: OnNote }) {
 
 /** The points catalogue: what each reward costs, whether the member can have it, and redeeming with a confirmation. */
 function Catalogue({ points, onNote }: { points: number; onNote: OnNote }) {
-  const { tp, language } = useT()
+  const { t, tp, language } = useT()
   const list = useQuery({ queryKey: ['rewards', 'catalogue'], queryFn: api.rewards })
   const [confirming, setConfirming] = useState<Reward | null>(null)
+  const [result, setResult] = useState<Redemption | null>(null)
   const [run] = useState(singleFlight)
   const redeem = useMutation({
+    mutationKey: ['member-rewards'],
+    onMutate: () => ({ owner: useSession.getState().token }),
     mutationFn: (id: number) => api.redeem(id),
-    onSuccess: answer => { setConfirming(null); feel.success(); onNote({ tone: 'success', text: tp('portal.rewards.redeemed', { code: answer.redemption.code }) }); refreshRewards() },
+    onSuccess: (answer, _id, context) => { if (context?.owner !== useSession.getState().token) return; setResult(answer.redemption); feel.success(); refreshRewards() },
     onError: error => { feel.warning(); onNote({ tone: 'danger', text: rewardMessage(error, tp, tp('portal.rewards.redeem_failed')) }); refreshRewards() },
   })
   usePreventRemove(redeem.isPending, () => {})
-  const confirm = (reward: Reward) => { if (!redeem.isPending) { redeem.reset(); setConfirming(reward) } }
+  const confirm = (reward: Reward) => { if (!redeem.isPending) { redeem.reset(); setResult(null); setConfirming(reward) } }
 
   if (list.isLoading) return <Loading />
   if (list.isError) return <Failed retry={() => { void list.refetch() }} />
@@ -167,17 +186,18 @@ function Catalogue({ points, onNote }: { points: number; onNote: OnNote }) {
 
   return (
     <View style={{ gap: 12 }}>
-      <Modal transparent visible={!!confirming} animationType="fade" onRequestClose={() => { if (!redeem.isPending) setConfirming(null) }}>
-        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.75)', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
-          <Surface style={{ width: '100%', maxWidth: 460, gap: 16 }}>
-            <Text accessibilityRole="header" style={[fonts.heading, { color: C.text }]}>{tp('portal.rewards.redeem_title', { name: confirming?.name ?? '' })}</Text>
+      <ActionPopup visible={!!confirming} title={result ? t('rewards.ready') : tp('portal.rewards.redeem_title', { name: confirming?.name ?? '' })} busy={redeem.isPending} onClose={() => setConfirming(null)}>
+          {result ? <>
+            <MemberIcon name="check" size={36} color={C.success} />
+            <Text style={[fonts.bodyStrong, { color: C.text }]}>{confirming?.name}</Text>
+            <Text style={[styles.code, { color: C.gold }]} selectable>{result.code}</Text>
+            <Text style={[fonts.small, { color: C.text2 }]}>{t('rewards.showCode')}</Text>
+          </> : <>
             <Text style={[fonts.body, { color: C.text2 }]}>{counted(tp, 'rewards.redeem_body', confirming?.points_cost ?? 0, language)}</Text>
             {redeem.isError && <Notice text={rewardMessage(redeem.error, tp, tp('portal.rewards.redeem_failed'))} />}
-            <GoldButton title={tp('portal.common.confirm')} busy={redeem.isPending} onPress={() => { const reward = confirming; if (reward) void run(() => redeem.mutateAsync(reward.id)).catch(() => {}) }} />
-            <GhostButton title={tp('portal.common.cancel')} disabled={redeem.isPending} onPress={() => setConfirming(null)} />
-          </Surface>
-        </View>
-      </Modal>
+            <GoldButton title={tp('portal.common.confirm')} busy={redeem.isPending} onPress={() => { const reward = confirming; if (reward && !queryClient.isMutating({ mutationKey: ['member-rewards'] })) void run(() => redeem.mutateAsync(reward.id)).catch(() => {}) }} />
+          </>}
+      </ActionPopup>
       {rewards.map(reward => {
         const limitReached = reward.remaining_for_me === 0
         const outOfStock = reward.in_stock === false
@@ -208,11 +228,18 @@ function Catalogue({ points, onNote }: { points: number; onNote: OnNote }) {
 
 /** The venue's offers: the member's own claimed ones first, then those still to claim. */
 function Offers({ currency, onNote }: { currency: string; onNote: OnNote }) {
-  const { tp, language } = useT()
+  const { t, tp, language } = useT()
+  const [selected, setSelected] = useState<Offer | null>(null)
+  const [downloadBusy, setDownloadBusy] = useState(false)
+  const [run] = useState(singleFlight)
+  const busy = useIsMutating({ mutationKey: ['member-rewards'] }) > 0
+  usePreventRemove(busy || downloadBusy, () => {})
   const list = useQuery({ queryKey: ['rewards', 'offers'], queryFn: api.offers })
   const claim = useMutation({
+    mutationKey: ['member-rewards'],
+    onMutate: () => ({ owner: useSession.getState().token }),
     mutationFn: (id: number) => api.claimOffer(id),
-    onSuccess: reply => { feel.success(); onNote({ tone: 'success', text: claimedMessage(reply, tp, language) }); refreshRewards() },
+    onSuccess: (reply, _id, context) => { if (context?.owner !== useSession.getState().token) return; feel.success(); notify(claimedMessage(reply, tp, language)); refreshRewards() },
     onError: error => { feel.warning(); onNote({ tone: 'danger', text: rewardMessage(error, tp, tp('portal.rewards.claim_failed')) }) },
   })
 
@@ -224,22 +251,27 @@ function Offers({ currency, onNote }: { currency: string; onNote: OnNote }) {
   if (claimed.length === 0 && available.length === 0) return <Empty icon="pricetags-outline" text={tp('portal.rewards.offers_empty')} />
 
   const value = (offer: Offer) => offerValueLabel(offer, tp, { currency, locale: language })
+  const selectedClaim = claimed.find(c => c.offer?.id === selected?.id)
   return (
     <View style={{ gap: 12 }}>
+      <ActionPopup visible={!!selected} title={selected?.title ?? t('events.details')} kind="sheet" busy={downloadBusy || busy} onClose={() => setSelected(null)}>
+        {selected?.description && <Text style={[fonts.body, { color: C.text2 }]}>{selected.description}</Text>}
+        {selected?.terms_conditions && <Text style={[fonts.small, { color: C.text2 }]}>{selected.terms_conditions}</Text>}
+        {selected?.attachment && selectedClaim?.usable_now !== false && <VoucherDownload id={selected.id} name={selected.attachment.name} onBusyChange={setDownloadBusy} />}
+      </ActionPopup>
       {claimed.length > 0 && <Text style={[fonts.label, { color: C.text2 }]}>{tp('portal.rewards.offers_yours')}</Text>}
       {claimed.map(c => (
         <Surface key={`c${c.id}`} tint={C.success} style={{ gap: 6 }}>
-          <View style={styles.head}>
+          <Press label={c.offer!.title} onPress={() => setSelected(c.offer!)}><View style={styles.head}>
             <Text style={[fonts.bodyStrong, { color: C.text, flex: 1 }]}>{c.offer?.title}</Text>
             {c.offer && value(c.offer) ? <Pill text={value(c.offer) ?? ''} color={C.success} /> : null}
-          </View>
+            <MemberIcon name="chevron" size={18} color={C.text2} />
+          </View></Press>
           <Text style={[fonts.small, { color: C.text2 }]}>
             {c.used_at ? tp(paysPointsOnClaim(c.offer!) ? 'portal.rewards.points_added_on' : 'portal.rewards.used_on', { date: formatDay(c.used_at, language) }) : c.usable_now === false ? tp('portal.rewards.offer_membership_unavailable') : (c.offer && offerPerkNote(c.offer, tp)) ?? tp('portal.rewards.ready_to_use')}
           </Text>
-          {c.offer?.description && <Text style={[fonts.small, { color: C.text2 }]}>{c.offer.description}</Text>}
-          {c.offer?.terms_conditions && <Text style={[fonts.small, { color: C.text3 }]}>{c.offer.terms_conditions}</Text>}
           {c.expires_at && !c.used_at ? <Text style={[fonts.small, { color: C.text3 }]}>{tp('portal.rewards.valid_until', { date: formatDay(c.expires_at, language) })}</Text> : null}
-          {c.usable_now !== false && c.offer?.attachment && <VoucherDownload id={c.offer.id} name={c.offer.attachment.name} />}
+          {c.usable_now !== false && c.offer?.attachment && <GhostButton title={t('rewards.openVoucher')} onPress={() => setSelected(c.offer!)} />}
         </Surface>
       ))}
       {available.length > 0 && <Text style={[fonts.label, { color: C.text2 }]}>{tp('portal.rewards.offers_available')}</Text>}
@@ -249,17 +281,17 @@ function Offers({ currency, onNote }: { currency: string; onNote: OnNote }) {
           <Surface key={`o${offer.id}`} padding={0} style={{ overflow: 'hidden' }}>
             <Picture url={offer.image_url} style={styles.picture} />
             <View style={{ padding: 16, gap: 10 }}>
-              <View style={styles.head}>
+              <Press label={offer.title} onPress={() => setSelected(offer)}><View style={styles.head}>
                 <Text style={[fonts.bodyStrong, { color: C.text, flex: 1 }]}>{offer.title}</Text>
                 {value(offer) ? <Pill text={value(offer) ?? ''} /> : null}
-              </View>
-              {offer.description ? <Text style={[fonts.small, { color: C.text2 }]}>{offer.description}</Text> : null}
+                <MemberIcon name="chevron" size={18} color={C.text2} />
+              </View></Press>
+              {offer.description ? <Text style={[fonts.small, { color: C.text2 }]} numberOfLines={2}>{offer.description}</Text> : null}
               {offerPerkNote(offer, tp) ? <Text style={[fonts.small, { color: C.text3 }]}>{offerPerkNote(offer, tp)}</Text> : null}
-              {offer.terms_conditions && <Text style={[fonts.small, { color: C.text3 }]}>{offer.terms_conditions}</Text>}
               {offer.end_date ? <Text style={[fonts.small, { color: C.text3 }]}>{tp('portal.rewards.ends', { date: formatDay(offer.end_date, language) })}</Text> : null}
               {full ? <Text style={[fonts.smallStrong, { color: C.text2 }]}>{tp('portal.rewards.fully_claimed')}</Text>
-                : <GoldButton title={tp('portal.rewards.claim')} icon="pricetag" busy={claim.isPending && claim.variables === offer.id} onPress={() => claim.mutate(offer.id)} />}
-              {offer.attachment && <VoucherDownload id={offer.id} name={offer.attachment.name} />}
+                : <GoldButton title={tp('portal.rewards.claim')} disabled={busy} busy={claim.isPending && claim.variables === offer.id} onPress={() => { if (!queryClient.isMutating({ mutationKey: ['member-rewards'] })) void run(() => claim.mutateAsync(offer.id)).catch(() => {}) }} />}
+              {offer.attachment && <GhostButton title={t('rewards.openVoucher')} onPress={() => setSelected(offer)} />}
             </View>
           </Surface>
         )

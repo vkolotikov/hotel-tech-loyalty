@@ -2,6 +2,10 @@ import type { Key } from './en'
 
 /** Usted, as the portal speaks to members. */
 export const es: Record<Key, string> = {
+  "preferences.essential": "Los mensajes esenciales de la cuenta siguen activados.",
+  "rewards.ready": "Su recompensa está lista",
+  "rewards.showCode": "Muestre este código en el establecimiento. También se guarda en «Mis códigos».",
+  "rewards.openVoucher": "Abrir vale",
   "balance.credit": "Crédito",
   "events.cancelled": "Inscripción cancelada",
   "events.keepPlace": "Conservar mi plaza",
