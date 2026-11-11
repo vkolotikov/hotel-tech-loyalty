@@ -2,7 +2,7 @@ import type { QueryClient } from '@tanstack/react-query'
 import { api } from '../../lib/api'
 import { loyaltyUrl, watched } from '../lib/api'
 import type {
-  Catalogue, Offer, OfferBody, OffersList, Redemption, RedemptionFilter, RedemptionsPage, ReferralsPage, Reward, RewardBody,
+  Catalogue, Offer, OfferBody, OfferAttachment, OfferSendPreview, OffersList, Redemption, RedemptionFilter, RedemptionsPage, ReferralsPage, Reward, RewardBody,
 } from './types'
 
 /** Rewards' calls (spec 2026-10-21 §6.4): the catalogue, redemptions, offers and referrals. */
@@ -19,6 +19,14 @@ export const rewardsApi = {
   cancel: (id: number): Promise<{ redemption: Redemption }> => watched(api.post(loyaltyUrl(`redemptions/${id}/cancel`))),
 
   offers: (): Promise<OffersList> => watched(api.get(loyaltyUrl('offers'))),
+  offerPreview: (id: number, member_ids: number[]): Promise<OfferSendPreview> => watched(api.post(loyaltyUrl(`offers/${id}/send-preview`), { member_ids })),
+  sendOffer: (id: number, member_ids: number[], revision: string, idempotency_key: string): Promise<{ send_id: number; counts: OfferSendPreview['counts']; email_status: string; portal_done: boolean }> => watched(api.post(loyaltyUrl(`offers/${id}/send`), { member_ids, revision, idempotency_key })),
+  uploadAttachment: (id: number, file: File): Promise<{ attachment: OfferAttachment }> => {
+    const form = new FormData(); form.append('attachment', file)
+    return watched(api.post(loyaltyUrl(`offers/${id}/attachment`), form))
+  },
+  removeAttachment: (id: number): Promise<{ attachment: null }> => watched(api.delete(loyaltyUrl(`offers/${id}/attachment`))),
+  downloadAttachment: (id: number): Promise<Blob> => api.get(loyaltyUrl(`offers/${id}/attachment`), { responseType: 'blob' }).then(r => r.data),
   createOffer: (body: OfferBody): Promise<{ offer: Offer }> => watched(api.post(loyaltyUrl('offers'), body)),
   updateOffer: (id: number, body: OfferBody): Promise<{ offer: Offer }> => watched(api.put(loyaltyUrl(`offers/${id}`), body)),
 

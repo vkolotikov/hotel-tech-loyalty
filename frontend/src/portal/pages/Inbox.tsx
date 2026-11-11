@@ -14,6 +14,7 @@ import { EmptyState } from '../ui/EmptyState'
 import { Notice } from '../ui/Notice'
 import { PageSkeleton } from '../ui/Skeleton'
 import { afterReadAll, afterReadOne, canMarkAllRead, isUnread, openNotification } from './inbox/inboxState'
+import { VoucherDownload } from './rewards/VoucherDownload'
 
 const BOOTSTRAP = ['portal-bootstrap'] as const
 const inboxKey = (page: number) => ['portal-inbox', page] as const
@@ -116,7 +117,7 @@ export function InboxRow({ n, isOpen, onOpen }: { n: InboxNotification; isOpen: 
   const { t } = useTranslation()
   const unread = isUnread(n)
   return (
-    <button type="button" onClick={onOpen} aria-expanded={isOpen}
+    <div><button type="button" onClick={onOpen} aria-expanded={isOpen}
       className="w-full text-left px-4 py-3 flex items-start gap-3 hover:bg-p-surface-2 transition-colors">
       <span aria-hidden className={`mt-1.5 w-2 h-2 rounded-full shrink-0 ${unread ? 'bg-p-accent' : 'bg-p-border'}`} />
       <span className="min-w-0 flex-1 block">
@@ -127,6 +128,6 @@ export function InboxRow({ n, isOpen, onOpen }: { n: InboxNotification; isOpen: 
         {n.body && <span className={`block text-sm text-p-text-2 mt-0.5 ${isOpen ? 'whitespace-pre-line' : 'line-clamp-2'}`}>{n.body}</span>}
         <span className="block text-[11px] text-p-text-2 mt-1"><DateTime iso={n.created_at} mode="datetime" /></span>
       </span>
-    </button>
+    </button>{isOpen && n.type === 'new_offer' && typeof n.data?.offer_id === 'number' && <div className="px-9 pb-3"><Link to="/portal/rewards" className="text-sm text-p-accent-deep underline">{t('portal.rewards.view_offer', 'View offer')}</Link>{n.data.attachment && typeof n.data.attachment === 'object' && 'name' in n.data.attachment && typeof n.data.attachment.name === 'string' ? <VoucherDownload id={n.data.offer_id} name={n.data.attachment.name} /> : null}</div>}</div>
   )
 }

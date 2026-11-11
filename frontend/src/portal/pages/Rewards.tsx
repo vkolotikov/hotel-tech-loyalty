@@ -17,6 +17,7 @@ import { Notice } from '../ui/Notice'
 import { PageSkeleton } from '../ui/Skeleton'
 import { EmptyState } from '../ui/EmptyState'
 import { CodesTab } from './rewards/CodesTab'
+import { VoucherDownload } from './rewards/VoucherDownload'
 import { EventsLink } from './events/EventsLink'
 import { claimedMessage, offerPerkNote, offerValueLabel, paysPointsOnClaim } from './rewards/offerLabel'
 import benefitArt from '../design/assets/227e3.svg'
@@ -100,7 +101,7 @@ export function Rewards() {
     items.push({ key: `offer-${o.id}`, kind: 'offer', title: o.title, body: o.description, image: o.image_url, ready: !full,
       figure: offerValueLabel(o, t, { currency: boot?.venue.currency, locale: i18n.language }) ?? t('portal.design.member_offer', 'Member offer'), terms: [offerPerkNote(o, t), o.terms_conditions].filter(Boolean).join(' '),
       note: o.end_date ? t('portal.rewards.ends', 'Ends {{date}}', { date: formatDay(o.end_date, i18n.language) }) : offerPerkNote(o, t),
-      action: full ? <span className="text-xs text-p-text-2">{t('portal.rewards.fully_claimed', 'Fully claimed')}</span> : <Button size="sm" variant="secondary" loading={claim.isPending} onClick={() => claim.mutate(o.id)}>{t('portal.rewards.claim', 'Claim offer')}</Button>,
+      action: <div className="space-y-2">{full ? <span className="text-xs text-p-text-2">{t('portal.rewards.fully_claimed', 'Fully claimed')}</span> : <Button size="sm" variant="secondary" loading={claim.isPending} onClick={() => claim.mutate(o.id)}>{t('portal.rewards.claim', 'Claim offer')}</Button>}{o.attachment && <VoucherDownload id={o.id} name={o.attachment.name} />}</div>,
     })
   }
   for (const c of offerData?.personalized ?? []) if (c.offer) items.push({
@@ -108,7 +109,7 @@ export function Rewards() {
     figure: offerValueLabel(c.offer, t, { currency: boot?.venue.currency, locale: i18n.language }) ?? t('portal.design.member_offer', 'Member offer'),
     note: c.used_at ? paysPointsOnClaim(c.offer) ? t('portal.rewards.points_added_on', 'Points added {{date}}', { date: formatDay(c.used_at, i18n.language) }) : t('portal.rewards.used_on', 'Used {{date}}', { date: formatDay(c.used_at, i18n.language) }) : c.usable_now === false ? t('portal.rewards.offer_membership_unavailable', 'This offer needs an active membership at its required level.') : c.offer.end_date ? t('portal.rewards.valid_until', 'Valid until {{date}}', { date: formatDay(c.offer.end_date, i18n.language) }) : t('portal.rewards.ready_to_use', 'Ready to use — show this at the desk'),
     terms: offerPerkNote(c.offer, t),
-    action: !c.used_at && c.usable_now !== false ? <Button variant="secondary" size="sm" onClick={() => panels.open('card')}>{t('portal.design.show_card', 'Show card')}</Button> : null,
+    action: <div className="space-y-2">{!c.used_at && c.usable_now !== false && <Button variant="secondary" size="sm" onClick={() => panels.open('card')}>{t('portal.design.show_card', 'Show card')}</Button>}{c.usable_now !== false && c.offer.attachment && <VoucherDownload id={c.offer.id} name={c.offer.attachment.name} />}</div>,
   })
   const order = params.get('tab') === 'catalogue' ? ['reward', 'benefit', 'offer'] : params.get('tab') === 'offers' ? ['offer', 'benefit', 'reward'] : ['benefit', 'reward', 'offer']
   const featured = order.flatMap(kind => { const first = items.find(i => i.kind === kind && i.ready); return first ? [first] : [] })

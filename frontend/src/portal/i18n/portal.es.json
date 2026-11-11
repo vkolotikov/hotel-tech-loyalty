@@ -25,6 +25,7 @@
     "wallet_unavailable": "Los pases de wallet aún no están configurados para este establecimiento.", "wallet_error": "No se pudo preparar el pase. Inténtelo de nuevo."
   },
   "rewards": {
+    "download_voucher": "Descargar cupón", "voucher_unavailable": "Este cupón no está disponible. Contacte con el equipo.", "view_offer": "Ver oferta",
     "offer_membership_unavailable": "Esta oferta requiere una membresía activa en el nivel correspondiente.",
     "membership_expired": "Su membresía ha finalizado. Contacte con el equipo.",
     "membership_not_started": "Esta membresía aún no ha comenzado.",

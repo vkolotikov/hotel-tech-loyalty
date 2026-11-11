@@ -434,6 +434,7 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
         // member.only refuses staff tokens at the door (several member routes
         // answer 500 to them) and honours the venue's portal_enabled switch.
         Route::prefix('member/portal')->middleware('member.only')->group(function () {
+            Route::get('offers/{id}/attachment', [\App\Http\Controllers\Api\V1\Admin\Loyalty\OfferFileController::class, 'member'])->whereNumber('id');
             Route::get('/', [\App\Http\Controllers\Api\V1\Member\Portal\PortalController::class, 'index']);
             Route::get('programme', [\App\Http\Controllers\Api\V1\Member\Portal\PortalController::class, 'programme']);
             Route::get('bookings', [\App\Http\Controllers\Api\V1\Member\Portal\PortalBookingController::class, 'index']);
@@ -1475,6 +1476,11 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
                 Route::get('offers', [\App\Http\Controllers\Api\V1\Admin\Loyalty\OfferController::class, 'index']);
                 Route::post('offers', [\App\Http\Controllers\Api\V1\Admin\Loyalty\OfferController::class, 'store']);
                 Route::put('offers/{id}', [\App\Http\Controllers\Api\V1\Admin\Loyalty\OfferController::class, 'update'])->whereNumber('id');
+                Route::get('offers/{id}/attachment', [\App\Http\Controllers\Api\V1\Admin\Loyalty\OfferFileController::class, 'show'])->whereNumber('id');
+                Route::post('offers/{id}/attachment', [\App\Http\Controllers\Api\V1\Admin\Loyalty\OfferFileController::class, 'store'])->whereNumber('id');
+                Route::delete('offers/{id}/attachment', [\App\Http\Controllers\Api\V1\Admin\Loyalty\OfferFileController::class, 'destroy'])->whereNumber('id');
+                Route::post('offers/{id}/send-preview', [\App\Http\Controllers\Api\V1\Admin\Loyalty\OfferSendController::class, 'preview'])->whereNumber('id');
+                Route::post('offers/{id}/send', [\App\Http\Controllers\Api\V1\Admin\Loyalty\OfferSendController::class, 'store'])->whereNumber('id');
                 Route::get('referrals', [\App\Http\Controllers\Api\V1\Admin\Loyalty\ReferralController::class, 'index']);
 
                 // ── Release 7 (spec 2026-10-25): ways to earn and reward

@@ -178,7 +178,7 @@ staff member restricted to one brand is still held to it by the `brand` middlewa
 | Credit (release 7) | `GET members/{id}/credit?page` (25 a page), `POST members/{id}/credit/spend` (`amount`, `note`, `idempotency_key`), `POST members/{id}/credit/adjust` (`amount`, signed, `reason`, `idempotency_key`) |
 | Places (release 8) | `GET places`, `POST places`, `PUT places/{id}` (`name`, `description`, `admits` all\|tiers, `tier_ids`, `is_active`, `sort_order`, `idempotency_key`), `DELETE places/{id}` (switched off instead once it has entries or an event names it), `GET places/{id}/entries?day=&page=` (50 a page); `POST scan` takes `place_id` or `event_id` |
 | Membership (release 8) | `PUT members/{id}/validity` (`valid_until` Y-m-d\|null, or `extend` 1m\|3m\|6m\|1y; `idempotency_key`); `GET members?state=expiring\|expired` |
-| Events (release 8; design pass 2026-10-28) | `GET events?when=upcoming\|today\|past\|drafts&q=&place_id=&location=&tier_id=&sort=soonest\|latest&page=`, `GET events/options` (places, tiers, tenant custom locations), `POST events`, `GET/PUT/DELETE events/{id}`, `POST events/{id}/publish`, `/cancel` (`reason`), `GET events/{id}/people?q=&attendance=all\|not_checked_in\|checked_in\|walk_in\|cancelled&per_page=5..200&page=`, `POST events/{id}/sign-ups` (`member_id`), `DELETE events/{id}/sign-ups/{memberId}`, `POST events/{id}/check-in` (`member_id`) |
+| Events (release 8; design pass 2026-10-28) | `GET events?when=upcoming\|today\|past\|drafts&q=&place_id=&location=&tier_id=&sort=soonest\|latest&page=`, options in list/detail responses (places and tenant custom locations; tiers from bootstrap), `POST events`, `GET/PUT/DELETE events/{id}`, `POST events/{id}/publish`, `/cancel` (`reason`), `GET events/{id}/people?q=&attendance=all\|not_checked_in\|checked_in\|walk_in\|cancelled&per_page=5..200&page=`, `POST events/{id}/sign-ups` (`member_id`), `DELETE events/{id}/sign-ups/{memberId}`, `POST events/{id}/check-in` (`member_id`) |
 
 Refusals are `{error, message}`; the workspace shows its own words for each code (`lib/errors.ts`,
 `program/errors.ts`, `rewards/errors.ts`), never the server's sentence. Codes: `not_found`, `manager_only`,
@@ -635,7 +635,7 @@ the scan screen, door mode, the member page and list, Program, Ways to earn, Eve
   at the entrance — continuous camera or reader, a duplicate within 3 seconds ignored, the verdict clearing after 4
   seconds, an optional sound, the screen kept awake.
 - **Events** (release 8; design pass 2026-10-28, `events/`): upcoming, past and drafts in the Overview shell,
-  server search/location/level filters, selected event details; full editors at `/events/new` and `/events/:id/edit`
+  server search/location/level filters, selected event details; native popup editors at `/events/new` and `/events/:id/edit`
   with member preview, draft save and review/publish. An event's existing page contains attendance counts,
   searchable/filterable people, actual historical points, confirmation, member profile and signup cancellation.
   Scan and Door mode retain event context; by-name check-in, add a member, edit/publish/cancel/delete remain available.
@@ -1526,6 +1526,14 @@ files on disk): run them one after the other.
 - Campaigns: build a segment, write a draft, send yourself a test; send a real one only to a segment you chose.
 - Card & app: the wallet pass's readiness; the member app's colours (the native app shows them on its next start).
 - Rewards: add a picture to a reward and see it on the catalogue.
+
+## Personal offers and voucher files — 11 November 2026
+
+Offers may use the programme/level audience or an explicit nonempty list of individual members. Selected-member offers clear the tier restriction and remain private even when members are removed or erased. Canonical eligibility also protects claims, coupon codes, desk usage and earning multipliers. Recipient pivots move and deduplicate during a member merge.
+
+After saving, staff with manage-offer permission may upload one PDF/JPEG/PNG/WebP up to 5 MiB. Actual MIME and image dimensions are checked; bytes live in the database, and authenticated download checks current eligibility. The Send popup chooses individuals without a segment, previews current saved content and email/portal reach, then explicitly confirms both channels. Saving never sends or claims. Marketing consent/suppression and offer-message preferences still apply.
+
+`OfferDelivery` persists a tenant/idempotency-key outbox before handing its immutable campaign to `CampaignStart`. `SendEmailCampaignChunk` alone sends email, attaches the saved snapshot and rechecks current eligibility. `NotificationService::keep` alone writes portal inbox messages, once per send. Generic campaign editing/reset/start cannot alter an offer outbox; duplicates drop the offer pointer. Additive member API metadata exposes no recipient list or file bytes. New endpoints: staff `offers/{id}/attachment`, `send-preview`, `send`; member `member/portal/offers/{id}/attachment`.
 
 ## Administration UX pass — 10 November 2026
 

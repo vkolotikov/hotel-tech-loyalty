@@ -52,6 +52,8 @@ final class CouponResolver
                 throw new CouponException('coupon_not_found', 'We do not recognise that code.');
             }
 
+            if (!$offer->allowsRecipient($member)) throw new CouponException('coupon_not_found', 'We do not recognise that code.');
+
             $tierIds = array_map('intval', (array) ($offer->tier_ids ?? []));
             if ($tierIds !== [] && !in_array((int) $member->tier_id, $tierIds, true)) {
                 throw new CouponException('coupon_wrong_tier', 'This code is for another membership level.');
@@ -216,6 +218,7 @@ final class CouponResolver
 
     private function assertOfferMembership(SpecialOffer $offer, LoyaltyMember $member): void
     {
+        if (!$offer->allowsRecipient($member)) throw new CouponException('coupon_not_found', 'We do not recognise that code.');
         if (!$offer->allowsMembership($member)) {
             throw new CouponException('coupon_membership_inactive', 'This code needs a membership that is active today at its required level.');
         }

@@ -25,6 +25,7 @@
     "wallet_unavailable": "Les cartes de portefeuille ne sont pas encore configurées pour cet établissement.", "wallet_error": "Impossible de préparer la carte. Veuillez réessayer."
   },
   "rewards": {
+    "download_voucher": "Télécharger le bon", "voucher_unavailable": "Ce bon n’est pas disponible. Veuillez contacter l’équipe.", "view_offer": "Voir l’offre",
     "offer_membership_unavailable": "Cette offre nécessite une adhésion active au niveau requis.",
     "membership_expired": "Votre adhésion a pris fin. Veuillez contacter l’équipe.",
     "membership_not_started": "Cette adhésion n’a pas encore commencé.",

@@ -186,6 +186,7 @@ export interface Redemption {
 }
 
 export interface Offer {
+  attachment?: { name: string; mime: string; bytes: number } | null
   id: number
   title: string
   description?: string | null
