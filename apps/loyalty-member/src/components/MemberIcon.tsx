@@ -1,7 +1,7 @@
-import { useId } from 'react'
-import { Asset } from 'expo-asset'
-import Svg, { Defs, Mask, Rect, SvgUri } from 'react-native-svg'
+import { useEffect, useId, useState } from 'react'
+import Svg, { Defs, Mask, Rect, SvgXml } from 'react-native-svg'
 import { C } from '../lib/theme'
+import { memberSvgXml } from '../lib/memberSvg'
 
 const sources = {
   home: require('../../assets/eclipse/dock-home.svg'),
@@ -36,9 +36,16 @@ export type MemberIconName = keyof typeof sources
 /** Exact Staff/Figma SVG geometry. A mask applies the venue tint without editing the asset's paths or bytes. */
 export function MemberIcon({ name, size = 24, color = C.text }: { name: MemberIconName; size?: number; color?: string }) {
   const id = `member-icon-${useId().replace(/[^a-zA-Z0-9]/g, '')}`
-  const uri = Asset.fromModule(sources[name]).uri
+  const source = sources[name]
+  const [loaded, setLoaded] = useState<{ source: number; xml: string } | null>(null)
+  useEffect(() => {
+    let live = true
+    void memberSvgXml(source).then(xml => { if (live) setLoaded({ source, xml }) }).catch(() => { if (live) setLoaded(null) })
+    return () => { live = false }
+  }, [source])
+  const xml = loaded && loaded.source === source ? loaded.xml : null
   return <Svg width={size} height={size} viewBox="0 0 28 28" accessible={false}>
-    <Defs><Mask id={id} x="0" y="0" width="28" height="28" maskUnits="userSpaceOnUse"><SvgUri uri={uri} x={2} y={2} width={24} height={24} /></Mask></Defs>
+    <Defs><Mask id={id} x="0" y="0" width="28" height="28" maskUnits="userSpaceOnUse">{xml && <SvgXml xml={xml} x={2} y={2} width={24} height={24} />}</Mask></Defs>
     <Rect width={28} height={28} fill={color} mask={`url(#${id})`} />
   </Svg>
 }

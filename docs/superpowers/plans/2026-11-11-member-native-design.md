@@ -1,6 +1,8 @@
 # Members App Contextual Design Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+Implementation status: complete. Final independent review finding corrected with a failing-to-passing Android SVG regression; TypeScript/71 tests, 266 isolated browser checks, SDK compatibility and Android/iOS/web exports verified. Source stays on the existing feature branch; signed builds and physical-device QA remain release work.
+
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Refine Figma interactions, then implement the approved luxury member screens, contextual popups and confirmed loyalty feedback in the existing app.
 
@@ -38,12 +40,12 @@
 
 **Interfaces:** `popupPlacement(window, insets, measuredHeight, kind, origin?)` returns a clamped rectangle; `rememberOrigin(rect)` / `takeOrigin()` supply a recent trigger rectangle. `advanceFeedback(previous, snapshot)` returns `{ ledger, feedback }` using session owner, activity watermark and independently initialized event/stamp observations. `ActionPopup` consumes `visible`, `onClose`, `title`, `busy`, `kind`, `children`; it supports local modals and embedded route panels. `notify(message, tone?)` shows short nonblocking feedback. `ScreenHeader` and `MemberIcon` reuse the Figma asset/style slots.
 
-- [ ] Write placement tests for 393/320 px, tablet, keyboard-height windows and missing/off-screen anchors; write feedback tests for initialization, account change, repeated/reordered/older IDs, new earned points, reversal, initial versus new check-in and stamp updates.
-- [ ] Run the two new Vitest files and observe the missing implementation failures.
-- [ ] Implement helpers and existing-dependency UI: 240 ms control-origin expansion, 160 ms exit, 650 ms confirmed balance transition, one-time points/check feedback, no motion with Reduce Motion. Use actual native system chrome.
-- [ ] Apply Figma navy/glass/Manrope + Inter defaults, preserving server venue overrides; bundle unchanged wallpaper/SVG assets. Existing primitives remain the shared entry point for forms, buttons and cards.
-- [ ] Run targeted tests and TypeScript. Expected: pass. Inspect native/web export asset geometry during Task 4.
-- [ ] Commit the foundation with a co-author trailer.
+- [x] Write placement tests for 393/320 px, tablet, keyboard-height windows and missing/off-screen anchors; write feedback tests for initialization, account change, repeated/reordered/older IDs, new earned points, reversal, initial versus new check-in and stamp updates.
+- [x] Run the two new Vitest files and observe the missing implementation failures.
+- [x] Implement helpers and existing-dependency UI: 240 ms control-origin expansion, 160 ms exit, 650 ms confirmed balance transition, one-time points/check feedback, no motion with Reduce Motion. Use actual native system chrome.
+- [x] Apply Figma navy/glass/Manrope + Inter defaults, preserving server venue overrides; bundle unchanged wallpaper/SVG assets. Existing primitives remain the shared entry point for forms, buttons and cards.
+- [x] Run targeted tests and TypeScript. Expected: pass. Inspect native/web export asset geometry during Task 4.
+- [x] Commit the foundation with a co-author trailer.
 
 ### Task 2: Home, Card, Events and balances
 
@@ -51,12 +53,12 @@
 
 **Interfaces:** consumes Task 1 primitives/feedback. `/events` resolves to the enabled Events tab; `/activity` opens balances without being a main tab. `EventList` serves the tab and `NextEventCard` uses the same canonical `actionOf(event)` logic. API shapes are unchanged.
 
-- [ ] Keep Card central and render the owner's icon-only floating dock. Events visibility depends on events/attended history, independently of points.
-- [ ] Match the compact Figma Home/Card: venue header, identity/dates, separate balance and QR targets, Benefits/Offers shortcuts, direct next-event reservation and optional details.
-- [ ] Add upcoming/registered/attended filters; reserve once, show server state and feedback, confirm cancellation in a popup. Never create check-in or point-award mutations.
-- [ ] Put points history, stamps and credit in one contextual balance panel; keep pagination/refresh and capability gates. Present programme/access in a longer sheet.
-- [ ] Run native unit tests/TypeScript; verify routes and safe disabled states with fixtures in Task 4. Expected: no missing route or duplicate write.
-- [ ] Commit these screens with a co-author trailer.
+- [x] Keep Card central and render the owner's icon-only floating dock. Events visibility depends on events/attended history, independently of points.
+- [x] Match the compact Figma Home/Card: venue header, identity/dates, separate balance and QR targets, Benefits/Offers shortcuts, direct next-event reservation and optional details.
+- [x] Add upcoming/registered/attended filters; reserve once, show server state and feedback, confirm cancellation in a popup. Never create check-in or point-award mutations.
+- [x] Put points history, stamps and credit in one contextual balance panel; keep pagination/refresh and capability gates. Present programme/access in a longer sheet.
+- [x] Run native unit tests/TypeScript; verify routes and safe disabled states with fixtures in Task 4. Expected: no missing route or duplicate write.
+- [x] Commit these screens with a co-author trailer.
 
 ### Task 3: Rewards and account journeys
 
@@ -64,13 +66,13 @@
 
 **Interfaces:** consumes Task 1 popup/notification/header components and Task 2 destinations; uses existing benefits/rewards/offers/profile/referral APIs only. Actual preference categories are offers, points and tier; no unsupported Events/News switches are invented.
 
-- [ ] Make benefit requests direct, keep optional details compact and use one-flight guards and confirmed feedback.
-- [ ] Replace the old redemption modal with the contextual popup; retain cost confirmation and busy blocking, then show the returned code in the same popup.
-- [ ] Open private vouchers in a larger sheet; terms are optional, native sharing remains authenticated and cancellations clean temporary files.
-- [ ] Make More a compact menu; consolidate local/device and server message preferences, with a short language popup. Share configured referral links directly, explain unavailable referrals.
-- [ ] Keep Profile details focused; open password/deletion controls on demand. Preserve birthday omission and session-safe saves. Apply shared styling to Inbox, Help and joining/sign-in without changing authentication.
-- [ ] Add required app-specific strings in five languages. Run tests/TypeScript and the lint regression gate. Expected: pass with no new lint diagnostics.
-- [ ] Commit the journeys with a co-author trailer.
+- [x] Make benefit requests direct, keep optional details compact and use one-flight guards and confirmed feedback.
+- [x] Replace the old redemption modal with the contextual popup; retain cost confirmation and busy blocking, then show the returned code in the same popup.
+- [x] Open private vouchers in a larger sheet; terms are optional, native sharing remains authenticated and cancellations clean temporary files.
+- [x] Make More a compact menu; consolidate local/device and server message preferences, with a short language popup. Share configured referral links directly, explain unavailable referrals.
+- [x] Keep Profile details focused; open password/deletion controls on demand. Preserve birthday omission and session-safe saves. Apply shared styling to Inbox, Help and joining/sign-in without changing authentication.
+- [x] Add required app-specific strings in five languages. Run tests/TypeScript and the lint regression gate. Expected: pass with no new lint diagnostics.
+- [x] Commit the journeys with a co-author trailer.
 
 ### Task 4: Integration, visual validation and handoff
 
@@ -78,8 +80,8 @@
 
 **Interfaces:** consumes all previous tasks. Fixtures remain isolated and abort non-fixture external requests.
 
-- [ ] Exercise current acceptance coverage, adapting selectors only where the approved route/UI changed; add meaningful busy/dismissal, server-award deduplication, account reset, capability and reduced-motion checks.
-- [ ] Export Android/iOS/web; run native TypeScript/tests, installed ESLint regression comparison and Expo dependency check. Shared portal tests run if any shared file changes. Expected: no new failures or dependency mismatch.
-- [ ] Visually inspect Home, popup, Events, Rewards and Preferences at the main phone size plus narrow/tablet/long-language examples. Confirm every selected local asset exists and its rendered slot is correct; no temporary Figma URLs or demo QR enters the runtime.
-- [ ] Get a fresh whole-change review; fix material findings and rerun relevant checks. Record actual evidence and remaining physical-device limits.
-- [ ] Update the native Figma spec and release handoff, commit/push this feature branch only. Do not upload a duplicate binary or merge native code into Laravel main.
+- [x] Exercise current acceptance coverage, adapting selectors only where the approved route/UI changed; add meaningful busy/dismissal, server-award deduplication, account reset, capability and reduced-motion checks.
+- [x] Export Android/iOS/web; run native TypeScript/tests, installed ESLint regression comparison and Expo dependency check. Shared portal tests run if any shared file changes. Expected: no new failures or dependency mismatch.
+- [x] Visually inspect Home, popup, Events, Rewards and Preferences at the main phone size plus narrow/tablet/long-language examples. Confirm every selected local asset exists and its rendered slot is correct; no temporary Figma URLs or demo QR enters the runtime.
+- [x] Get a fresh whole-change review; fix material findings and rerun relevant checks. Record actual evidence and remaining physical-device limits.
+- [x] Update the native Figma spec and release handoff, commit/push this feature branch only. Do not upload a duplicate binary or merge native code into Laravel main.

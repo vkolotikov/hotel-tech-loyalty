@@ -14,13 +14,13 @@ This is a source implementation. Existing signed testing builds **iOS 22 / Andro
 - Reward confirmation changes into the actual returned code in the same popup. Codes remain available in My codes. Benefits and event registration use synchronous one-flight guards, canonical server state and retry/refusal messages.
 - More is a compact menu. Profile focuses on details and optional birthday, with password/deletion controls opened on demand. Preferences combines language, device lock, device notification permission and the real server categories **offers / points / tier**. Delivery-channel choices expand on request. Language and message switches apply without a separate Save step. Referral sharing uses only the configured server link.
 
-The exact original Staff wallpaper and 26 selected SVG files are bundled locally. SVG paths/bytes were preserved; a mask applies the current venue colour. Expo Asset resolves the same files on native and web. Default headings use Manrope; real venue accent/display-face overrides remain supported. Five languages, old session keys, account-scoped caches, private voucher authorization/cleanup, QR/Wallet gating and refresh behavior are preserved. Appointment/accommodation routes continue to redirect.
+The exact original Staff wallpaper and 26 selected SVG files are bundled locally. SVG paths/bytes were preserved; a mask applies the current venue colour. Native SVGs are copied from Android resources to a genuine cache file with Expo Asset, read with Expo FileSystem and rendered with SvgXml; the web resolver reads the same asset bytes. Copies and reads are shared across repeated icons, and failures can retry. Default headings use Manrope; real venue accent/display-face overrides remain supported. Five languages, old session keys, account-scoped caches, private voucher authorization/cleanup, QR/Wallet gating and refresh behavior are preserved. Appointment/accommodation routes continue to redirect.
 
 Figma keeps the existing page and primary frame IDs. Four trigger-entry frames are **505:13045 / 505:13064 / 505:13079 / 505:13096**; the actual two-second motion timeline is **505:13165**. Its MP4 was rendered and four phases inspected. The prototype is still illustrative; its demo QR and sample records never enter runtime data.
 
 ## Verification
 
-- Native TypeScript and **68 tests** pass (56 existing plus 12 popup/feedback tests).
+- Native TypeScript and **71 tests** pass (56 existing, 12 popup/feedback and three packaged-SVG loader tests).
 - Android, iOS and web Expo exports pass; native Hermes bundles and local artwork are present. SDK 58 maintenance versions were aligned using `expo install --fix`; `expo install --check` reports dependencies up to date. No native project folders were generated.
 - ESLint regression comparison: **zero added diagnostics**, **16 existing errors / 16 warnings** remain (baseline was 26 errors / 16 warnings). This is a regression gate, not a clean-lint claim.
 - **266 isolated browser checks**: 227 acceptance/layout checks, seven account/Inbox checks, 21 contextual interaction checks, three points-freshness checks, six check-in/stamp checks and two historical-Events checks. API responses are demo fixtures; non-fixture external requests are aborted. No production member transaction is used for QA.
@@ -28,6 +28,8 @@ Figma keeps the existing page and primary frame IDs. Four trigger-entry frames a
 - Regression tests were observed failing before correcting (1) the disabled-Events/history loading redirect and (2) a stale award replay on late Home navigation. The SVG loader's web crash was reproduced before switching to the universal asset resolver.
 
 Runtime/shared behavior uses the existing portal contracts; no shared portal or backend source changed in this design pass. Browser previews and exports are not physical-device, camera, Wallet, push-provider or store-media acceptance. Before release, build fresh signed members binaries, test supported iPhone/iPad/Android devices and native sheets/keyboard/gestures/VoiceOver, capture real screenshots and the members-app walkthrough, reconcile the members-app Apple rejection and review optional-birthday privacy declarations. Staff's approval/video is not members-app evidence.
+
+A fresh independent whole-change review found one Important Android asset-loading defect, with no Critical or Minor findings. A dimensioned, colonless packaged-resource regression was observed failing with the old fetch path; the resource-copy/FileSystem reader, shared-read and retry tests then passed, as did the 71-test suite. No additional review finding remains open. Signed-device validation remains a release checkpoint.
 
 ## Repeat fixture checks
 
