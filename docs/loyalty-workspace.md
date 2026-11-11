@@ -688,7 +688,7 @@ the scan screen, door mode, the member page and list, Program, Ways to earn, Eve
   with the venue's lowest and highest tiers (nothing is sent); the questions by topic, one or two sentences each. It
   reads nothing beyond the bootstrap. Words in `i18n/guide.<lang>.json` (`guide/words.ts`); a new question is an entry
   in `FAQ` (`guideMath.ts`) and its `_q`/`_a` in all five bundles. `guide.test.tsx` checks every link the Guide opens
-  against the routes in `LoyaltyApp.tsx`, so a renamed page fails it. The motion (`animate-a-sweep`, `animate-a-float`,
+  against the routes in `LoyaltyApp.tsx`, so a renamed page fails it. The 11 November refresh adds four translated, keyboard-expandable task walkthroughs (offers/vouchers, Events, programme setup, member portal), search over their steps, announced result counts and a reset action. New offer FAQs distinguish eligibility from notification recipients and explain delivery exclusions. `walkMath.ts` holds pure matching and permission metadata; task shortcuts respect management rights. Existing scan practice remains read-only. The motion (`animate-a-sweep`, `animate-a-float`,
   in `tailwind.config.js`) is stilled under reduced motion like the rest.
 - **Release 10, the frame from the owner's Figma** (`docs/superpowers/specs/2026-10-26-loyalty-release-10-design.md`;
   Figma file `5MtOVFZKvXk5x0mJ8Trm6g`, page Prototype): "easy to manage … for non-experienced users … sections a bit
