@@ -28,3 +28,13 @@ Android **2.1.0 (28)** is built, its actual AAB inspected, and EAS upload **7561
 Apple's existing **2.0.0** store-version record is still **REJECTED**; this work delivers **2.1 to TestFlight only**. Before public resubmission, reconcile that members-app review message, test all supported device families, capture current native screens/video and check birthday privacy declarations. The detailed audit has artifact paths/hashes and exact evidence. No new build is needed for later docs/e2e/lint-script commits. Owned browser preview/server stopped; only pre-existing untracked Staff dependency artifacts remain in the worktree.
 
 The read-only Apple browser check returned to sign-in. API access still verifies build/group/state, but the actual rejection reason requires fresh owner browser authentication. Do not assign Staff's rejection reason or approval to this app. No 2.1 public review was attempted.
+
+## Figma-first luxury design
+
+The owner then requested a new members-app concept in their existing Figma file, guided by the Staff scanner reference. Delivered on new page **437:8135 — 01G · Members app — Luxury**: **54 editable layouts**, four feedback overlays, reusable components, working toggle variants and **376 persisted linked actions**, with four prototype starting points. Existing Figma product/web pages were preserved.
+
+[Review the everyday screens](https://www.figma.com/design/d6IGmk3hOoMw0V5rONbI1A/Untitled?node-id=440-8279) · [Open the prototype](https://www.figma.com/proto/d6IGmk3hOoMw0V5rONbI1A/Untitled?node-id=440-8280&starting-point-node-id=440%3A8280). The native Figma handoff spec is **460:12607**. Scope, provenance and checks: `docs/loyalty-member-app/04-FIGMA-DESIGN-20261111.md`.
+
+Original Staff wallpaper/SVG icons and the current member app mark were reused. Main phone plus 320 px/Android/iPad examples cover loyalty and enabled event registration, account controls and availability/membership states. Final inspected preview is `C:/Users/user6399/Downloads/HexaTech-Loyalty-Figma-Concept-20261111.png`; it is a concept, not native store media. No clipping, unresolved destinations, custom-font mismatch or placeholder labels in the audit. The QR is explicitly demo-only and rendered using editable geometry.
+
+This design task made no native runtime/build/store or Laravel changes. Review the Figma concept before implementing it; existing server/capability/session/refresh safeguards and five languages must be preserved.
