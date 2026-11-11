@@ -64,8 +64,7 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint src",
     "test": "vitest run",
-    "export:web": "expo export --platform web",
-    "lint": "expo lint"
+    "export:web": "expo export --platform web"
   },
   "private": true
 }

@@ -114,7 +114,23 @@ Before the first release of 2.0.0:
 4. **Minimum version:** the server answers `GET /api/v1/apps/member/version` (`MEMBER_APP_*` in Laravel Cloud). Version
    1.x never asks, so the gate only matters from 2.0 on.
 
-## Acceptance on phones (phase 1)
+## Acceptance on phones (2.1.0)
+
+Use `store/testflight-2.1.0.txt` for this release's testing instructions. Test Android and both supported Apple device families (iPhone/iPad) with isolated member data:
+
+1. Upgrade from the installed members app; sign in/out, join using a venue link/QR, verify the desk can scan the member card.
+2. Membership start/end and assigned benefits, including a venue with points disabled; programme/access details use the venue's current decisions.
+3. Redeem after confirming once; open codes, offer terms and authenticated PDF/image vouchers from Offers and Inbox. Save/share/cancel on the actual OS sheet.
+4. Register/cancel an enabled event; check full/cancelled/refused states and attended history. Disabled events expose no registration action.
+5. Profile/birthday save and refresh, message switches, account change, password and deletion; all five languages, offline recovery and device lock.
+6. Where configured, receive a push and open Inbox; verify Apple/Google Wallet on the corresponding physical device.
+7. Appointment/accommodation entry points and legacy booking links return to loyalty Home.
+
+Record the tested device/OS and results. Current native screenshots, optional birthday privacy declarations and a members-app physical walkthrough are required before public review. Browser fixtures and the Staff recording do not supply those checks.
+
+The phase lists below document earlier releases and include deferred booking scope.
+
+## Historical acceptance on phones (phase 1)
 
 1. Install over the old Hotel Loyalty app: still signed in, the venue's colours on the first screen after one load.
 2. Sign out and in; a staff account's email and password are refused here. A staff session saved by the old app
@@ -125,7 +141,7 @@ Before the first release of 2.0.0:
 5. Home: progress to the next tier in the programme's measure; membership end date where there is one.
 6. Five languages; Airplane mode shows "No connection"; the lock; notifications switch.
 
-## Acceptance on phones (phase 3)
+## Historical acceptance on phones (phase 3)
 
 1. Book an appointment at a venue that takes cards: service, person, time, review (member price, a coupon), pay with
    the payment sheet (a test card; one that asks for 3-D Secure too); the booking opens with "You're booked".
@@ -138,7 +154,7 @@ Before the first release of 2.0.0:
    (add-ons, requests, a coupon, "to reserve on your card at the next step"), pay with the sheet; the stay opens with
    "You're booked". Let the hold lapse on Pay: back to Review for a fresh price, nothing taken.
 
-## Acceptance on phones (phase 2)
+## Historical acceptance on phones (phase 2)
 
 1. Rewards: a benefit request is sent and cancelled; a reward is redeemed (its code under My codes, the points gone);
    an offer is claimed; a reward the member cannot afford says how many points are missing.

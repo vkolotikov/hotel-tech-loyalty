@@ -31,33 +31,33 @@
 
 Files: `src/lib/loyalty.ts`, its decision tests, Home/Card/Rewards/More/Help, route guards, `MemberCard.tsx`, `queries.ts`, `format.ts`.
 
-- [ ] Baseline native typecheck/tests on latest shared portal; record existing lint.
-- [ ] Test points-off assigned membership, missing Wallet flags, excluded booking routes and event capability changes.
-- [ ] Implement pure feature decisions and consistent navigation; preserve real QR/session/refresh behaviour.
-- [ ] Run focused tests/typecheck and inspect browser layouts.
+- [x] Baseline native typecheck/tests on latest shared portal; record existing lint.
+- [x] Test points-off assigned membership, missing Wallet flags, excluded booking routes and event capability changes.
+- [x] Implement pure feature decisions and consistent navigation; preserve real QR/session/refresh behaviour.
+- [x] Run focused tests/typecheck and inspect browser layouts.
 
 ### 2. Programme and enabled event registration
 
 Files: `src/app/programme.tsx`, API/types, shared programme DTO; existing `events.tsx` and `Programme.tsx`.
 
-- [ ] Add and test the existing programme API contract, with earning/access facts rendered verbatim from server decisions.
-- [ ] Add programme links; ensure event entry/sign-up/cancel/refusals refresh appropriate caches and obey capability.
-- [ ] Verify scheduled/expired membership and full/cancelled/enabled event fixtures in browser.
+- [x] Add and test the existing programme API contract, with earning/access facts rendered verbatim from server decisions.
+- [x] Add programme links; ensure event entry/sign-up/cancel/refusals refresh appropriate caches and obey capability.
+- [x] Verify membership states and enabled/disabled event registration/history with decision tests and browser fixtures.
 
 ### 3. Rewards, personal vouchers and inbox
 
 Files: `src/app/(tabs)/rewards.tsx`, `src/app/inbox.tsx`, `components/VoucherDownload.tsx`, `lib/voucher.ts`/`.web.ts`, API binary handling, five-language metadata and app copy.
 
-- [ ] Test authenticated attachment success/refusal, safe filenames, inbox offer metadata, stale cache/pagination and redemption races.
-- [ ] Implement temporary native sharing and web blob download with SDK-compatible dependencies.
-- [ ] Render offer terms, eligibility and points-paid-on-claim history; guard redemption confirmation and refresh failures.
-- [ ] Verify downloaded original bytes, no bearer token in URLs, locale parity and native typecheck.
+- [x] Test authenticated attachment success/refusal, safe filenames, inbox offer metadata, retained refresh/pagination and redemption races.
+- [x] Implement temporary native sharing and web blob download with SDK-compatible dependencies.
+- [x] Render offer terms, eligibility and points-paid-on-claim history; guard redemption confirmation and refresh failures.
+- [x] Verify downloaded original bytes, no bearer token in URLs, locale parity and native typecheck.
 
 ### 4. Acceptance and release records
 
 - [x] Run native typecheck/tests/lint, dependency check, web export, shared portal regression tests and browser acceptance.
 - [x] Review branch diff, update plan/audit/handoff and version/store metadata; record physical-device limits.
-- [ ] Commit and push the feature branch. Do not merge the native app into Laravel main or claim a store release before an actual build/submission.
+- [x] Commit and push the feature branch. Do not merge the native app into Laravel main or claim a store release before an actual build/submission.
 
 ## Execution record
 
@@ -66,3 +66,5 @@ Files: `src/app/(tabs)/rewards.tsx`, `src/app/inbox.tsx`, `components/VoucherDow
 - Fresh builder/code reviews found birthday draft and late-account cache issues. Regressions pass; profile responses scope to originating user ID and inbox/message callbacks to the originating token. Reviewer recheck reports no remaining P1/P2.
 - Source checks are complete: native TypeScript/56 tests, shared frontend TypeScript/720 tests, 38 SQLite backend contract tests, 146 fixture browser checks and Android/iOS/web exports. Lint adds zero findings against the native baseline.
 - Ruling: prepare fresh signed testing binaries as a separate checkpoint because FileSystem/Sharing adds native modules. Existing EAS account is authenticated; read-only history confirms latest builds are still 2.0.1 (iOS 21, Android 27), so no 2.1 duplicate exists. Inspect the filtered archive before uploading; do not submit to public review or claim physical acceptance.
+- Additional browser smoke: seven checks confirm birthday save/refresh, late cross-account profile responses, omitted untouched birthday, Inbox read state and Offers navigation. Combined fixture acceptance: **153 checks**.
+- A final package-script audit removed a duplicate `lint` key that would otherwise override the direct installed ESLint command with Expo's misdetecting wrapper. This tooling correction does not change the built native runtime.

@@ -1,6 +1,6 @@
 # HexaTech Loyalty 2.0 — release runbook
 
-Latest preparation (11 November 2026): **2.1.0 loyalty-only source is ready**, including enabled event registration, memberships/access, personal vouchers and profile safeguards. See `03-LOYALTY-REFRESH-20261111.md` for validation and remaining store/device steps. Signed-build/upload/public status must be checked separately. Historical 2.0 booking screenshots are excluded from `store.config.js`; capture current native screens and review optional birthday privacy declarations before submission. The records below are historical unless explicitly stated otherwise.
+Latest preparation (11 November 2026): **2.1.0 loyalty-only source is ready**, including enabled event registration, memberships/access, personal vouchers and profile safeguards. **iOS 2.1.0 (22) is verified available in TestFlight Internal QA**, with current testing notes. Android/testing details and exact evidence are in `03-LOYALTY-REFRESH-20261111.md`. No 2.1 public review/release has been sent. Historical 2.0 booking screenshots are excluded from `store.config.js`; capture current native screens and review optional birthday privacy declarations before submission. The records below are historical unless explicitly stated otherwise.
 
 The members' app (`apps/loyalty-member`, branch `feature/loyalty-member-app`) ships as **version 2.0.0 of the existing
 Hotel Loyalty listing**: App Store app `6765608479` (bundle `com.hotelloyalty.app`, team `HNWSAQ5CQ9`), Google Play

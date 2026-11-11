@@ -20,7 +20,7 @@ async (page) => {
   const event = {id:5,title:'Members evening',description:'Reserve your place at our members evening.',starts_at:'2026-12-01T18:30',ends_at:'2026-12-01T20:30',where:'Members lounge',points:20,sign_up:true,walk_ins:false,capacity:10,room_left:5,my:'none',checked_in:false,can_sign_up:true,why_not:null,can_cancel:false};
   const reward = {id:3,name:'Coffee for two',description:'Enjoy two coffees at the desk.',points_cost:100,can_afford:true,claimed_by_me:0,remaining_for_me:2,in_stock:true};
   const log = [];
-  const state = { boot, event, log, offer, redemptionCount:0 };
+  const state = { boot, event, log, offer, redemptionCount:0, profileDelay:0 };
   await page.route('**/*', async route => {
     const url = new URL(route.request().url());
     if (url.hostname === '127.0.0.1' && url.pathname === '/__fixture') {
@@ -30,6 +30,7 @@ async (page) => {
       if (patch.user) Object.assign(boot.member.user,patch.user);
       if (patch.event) Object.assign(event,patch.event);
       if (patch.clearLog) log.length=0;
+      if (patch.profileDelay !== undefined) state.profileDelay=patch.profileDelay;
       return route.fulfill({json:{log,redemptionCount:state.redemptionCount}});
     }
     if (url.hostname === '127.0.0.1' || url.hostname === 'localhost') return route.continue();
@@ -56,7 +57,12 @@ async (page) => {
     if (p === '/v1/member/portal/events/5/sign-up') {event.my=method==='DELETE'?'none':'signed_up';event.can_sign_up=method==='DELETE';event.can_cancel=method!=='DELETE';return reply({event});}
     if (p === '/v1/member/notifications') return reply({data:[{id:4,type:'new_offer',title:'Your private voucher',body:'A voucher has arrived for your next visit.',data:{offer_id:12,attachment:offer.attachment},read_at:null,created_at:'2026-11-11T10:00:00Z'}],current_page:1,last_page:1,total:1});
     if (p.includes('/notifications/') || p === '/v1/auth/push-token') return reply({ok:true});
-    if (p === '/v1/member/profile') {Object.assign(boot.member.user,route.request().postDataJSON());return reply({ok:true});}
+    if (p === '/v1/member/profile') {
+      const user={...boot.member.user,...route.request().postDataJSON()};
+      if(state.profileDelay) await new Promise(r=>setTimeout(r,state.profileDelay));
+      if(boot.member.user.id===user.id) Object.assign(boot.member.user,user);
+      return reply({user});
+    }
     if (p === '/v1/member/referral') return reply({enabled:true,reward_on:'first_visit',referral_link:null,total_referrals:0,rewarded_referrals:0});
     if (p === '/v1/member/points/history') return reply({data:[],current_page:1,last_page:1,total:0});
     return route.fulfill({status:404,json:{message:'Fixture endpoint not defined'},headers:{'access-control-allow-origin':'*'}});
