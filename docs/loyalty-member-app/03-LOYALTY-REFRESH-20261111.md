@@ -36,3 +36,12 @@ Private/local evidence: `C:/wamp64/tmp/member-browser-acceptance-20261111.json`,
 2.1.0 source, metadata and validation are prepared. A new signed binary is required for the added FileSystem/Sharing modules; no OTA update is used. Store rollout is a separate checkpoint: inspect existing builds before scheduling to avoid duplicates; use current native screenshots, physical-device acceptance and a members-app walkthrough before review. The Staff recording must not be reused as members-app evidence. Do not report source/Hermes export success as TestFlight availability or public release.
 
 Birthday is optional linked personal data sent by Profile. Before store submission, include it in Apple's Other Data Types (App Functionality; review any actual promotion/personalization uses) and Google's Personal info / Other info, with optional collection. Keep declarations covering still-distributed older versions; do not remove booking/payment disclosures blindly. See [Apple's data definitions](https://developer.apple.com/app-store/app-privacy-details/) and [Google's definitions](https://support.google.com/googleplay/android-developer/answer/10787469). No live privacy form was changed in this source task.
+
+## Signed testing builds scheduled
+
+Source **89ce29029b5991894ee2fa764de4d17ef16d4336** is pushed. Verified EAS archive: 19 native routes, **309 runtime/shared files with exact hash parity**, no private environment/key files; upload 7.9 MB. An initial archive inspection caught an over-broad root exclusion before upload; root exclusions were anchored and the corrected archive was verified. No failed/duplicate build was scheduled for that inspection.
+
+- Android **2.1.0 (28)**: `8718e5cc-453e-41e7-992f-53023fe07e57`.
+- iOS **2.1.0 (22)**: `9c68c074-5c34-42d0-bfcb-0e16773eafa8`.
+
+Both were NEW immediately after scheduling. Verify exact build IDs and artifact contents before test-store upload. These are testing preparations, not public review or release. Raw EAS JSON/logs are in the private release directory and may contain signed URLs; never print them wholesale.

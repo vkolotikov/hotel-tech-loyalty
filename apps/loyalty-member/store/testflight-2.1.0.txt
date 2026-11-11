@@ -1,0 +1,11 @@
+HexaTech Loyalty 2.1.0 focuses on membership, benefits, rewards and enabled event registration.
+
+Please check:
+- Sign in with a member account; existing sessions remain supported.
+- Card QR, membership dates, assigned benefits and programme/access details.
+- Reward confirmation, codes and personal offers. Open/save a private PDF/image voucher from Offers and Inbox.
+- Where Events is enabled, sign up, cancel when allowed and view attended history.
+- Profile/birthday edits, messages, language, device lock and account deletion using isolated test data.
+- Wallet and push only where the venue/provider and physical device support them.
+
+Appointment and accommodation booking are excluded from this release. Please report your device/OS and the exact steps for any issue. Browser/unit verification does not replace testing the native sharing, camera, Wallet and push flows on a physical device.
