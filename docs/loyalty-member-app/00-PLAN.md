@@ -1,6 +1,6 @@
 # HexaTech members' app — plan
 
-Current members refresh (11 November 2026): **2.1.0 loyalty-only**, with enabled event booking/registration, is implemented and source-verified on `feature/member-loyalty-refresh-20261111`. Full details: `03-LOYALTY-REFRESH-20261111.md`. Appointment/stay routes are deferred. Store/device release remains a separate checkpoint.
+Current members refresh (11 November 2026): **2.1.0 loyalty-only**, with enabled event booking/registration, is implemented and verified on `feature/member-loyalty-refresh-20261111`. Signed **iOS (22)** is in TestFlight Internal QA and **Android (28)** is on Play internal testing. Full details: `03-LOYALTY-REFRESH-20261111.md`. Appointment/stay routes are deferred. Physical-device acceptance and public store review/release remain separate checkpoints.
 
 Owner, 2026-10-31: "If or when it is done can we develope as well user membership app or improve existing one."
 

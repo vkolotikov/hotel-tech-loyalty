@@ -6,17 +6,25 @@ Owner clarified loyalty-only scope with enabled event booking/registration; appo
 
 TypeScript/56 native tests, shared frontend TypeScript/720 portal tests, 38 in-memory backend contract tests, **153 fixture-browser checks** (146 acceptance + seven account/Inbox smoke checks) and Android/iOS/web exports pass. ESLint regression gate adds zero diagnostics (26 legacy errors/16 warnings remain). The duplicate lint script was removed and the installed command verified. No physical-device/provider acceptance is claimed. Full audit and exact evidence: `docs/loyalty-member-app/03-LOYALTY-REFRESH-20261111.md`.
 
-2.1.0 source is prepared; signed build/testing and store review/public release must be verified separately. Current native screenshots, privacy updates for optional birthday collection and a members-app physical walkthrough are release requirements. Historical booking screenshots are excluded from automatic metadata sync; Staff's video is not members-app evidence. No Laravel deployment or production customer messages/data writes.
+**2.1.0 testing delivery is complete:** iOS **(22)** is in TestFlight Internal QA, Android **(28)** is on Play internal testing; both actual artifacts and testing notes are verified. No 2.1 public review/release was sent. Current native screenshots, privacy review for optional birthday collection and a members-app physical walkthrough are release requirements. Historical booking screenshots are excluded from automatic metadata sync; Staff's video is not members-app evidence. No Laravel deployment or production customer messages/data writes.
 
-## Signed testing builds scheduled
+## Signed testing builds
 
 Source **89ce29029b5991894ee2fa764de4d17ef16d4336** is pushed. Verified EAS archive: 19 native routes, **309 runtime/shared files with exact hash parity**, no private environment/key files; upload 7.9 MB. An initial archive inspection caught an over-broad root exclusion before upload; root exclusions were anchored and the corrected archive was verified. No failed/duplicate build was scheduled for that inspection.
 
 - Android **2.1.0 (28)**: `8718e5cc-453e-41e7-992f-53023fe07e57`.
 - iOS **2.1.0 (22)**: `9c68c074-5c34-42d0-bfcb-0e16773eafa8`.
 
-Both were NEW immediately after scheduling. Verify exact build IDs and artifact contents before test-store upload. These are testing preparations, not public review or release. Raw EAS JSON/logs are in the private release directory and may contain signed URLs; never print them wholesale.
+Both are FINISHED. Artifact identities, signing, permissions, native modules and icons were inspected before the testing uploads below. Runtime/shared source remains identical to the compiled commit. Raw EAS JSON/logs are in the private release directory and may contain signed URLs; never print them wholesale.
 
 ## iOS testing update
 
 iOS **2.1.0 (22)** is built, its actual IPA inspected, and EAS upload **803fbaa3-a8d1-4b43-be22-e11769e6e76f** finished. ASC build **d6d8f57c-894b-42a6-8abf-429225b77536** is **VALID / IN_BETA_TESTING** in the existing **Internal QA** group with two testers. English testing notes were saved and verified. The correct packaged icon, identity, production signing/APNs, FileSystem/Sharing, iPhone/iPad support and no microphone/tracking/debug permission were checked. Minimum iOS 16.4. Artifact/hash/evidence are in the detailed audit. No public App Review or external beta submission was sent.
+
+## Android testing update and next release checkpoint
+
+Android **2.1.0 (28)** is built, its actual AAB inspected, and EAS upload **75615949-c9c2-4a88-a8d4-dc16935fe6c0** is FINISHED. Google readback confirms **internal / completed / 28**, exact uploaded/local artifact SHA-256 parity and five-language release notes. Production track was unchanged (still code 26 / 2.0.0 in API readback). No permissions were expanded. Use the existing test entry https://play.google.com/apps/internaltest/4701572602064076698 with an allowed tester account; install through Play, not a protection-bypassing sideload.
+
+Apple's existing **2.0.0** store-version record is still **REJECTED**; this work delivers **2.1 to TestFlight only**. Before public resubmission, reconcile that members-app review message, test all supported device families, capture current native screens/video and check birthday privacy declarations. The detailed audit has artifact paths/hashes and exact evidence. No new build is needed for later docs/e2e/lint-script commits. Owned browser preview/server stopped; only pre-existing untracked Staff dependency artifacts remain in the worktree.
+
+The read-only Apple browser check returned to sign-in. API access still verifies build/group/state, but the actual rejection reason requires fresh owner browser authentication. Do not assign Staff's rejection reason or approval to this app. No 2.1 public review was attempted.

@@ -4,6 +4,8 @@
 
 The owner requested all necessary members-app updates after the recent loyalty-platform improvements, then clarified: loyalty only, with booking/registration for events when enabled. The implementation prepares **HexaTech Loyalty 2.1.0**, existing bundle **com.hotelloyalty.app**, Apple app **6765608479**, Expo project **865bfb65-5e82-4b4d-b3b4-dc55e9b9ef17**. Staff and Laravel production were not changed.
 
+**Latest delivery:** iOS **2.1.0 (22)** is verified in TestFlight Internal QA; Android **2.1.0 (28)** is verified on Play internal testing. Both actual signed artifacts were inspected. Current native device acceptance, store media, birthday privacy review and a members-app walkthrough remain required before public review. No 2.1 public store review/release was sent.
+
 Platform baseline: **80b229347** (current deployed 10-11 November source). Native baseline: **origin/feature/loyalty-member-app at 662ce3686**, including the 2.0.1 desk/foreground refresh fixes. The existing isolated checkout `C:/wamp64/www/hexatech-apps` is on **feature/member-loyalty-refresh-20261111**. Do not merge this native app branch into Laravel main.
 
 ## Implemented
@@ -39,14 +41,14 @@ Private/local evidence: `C:/wamp64/tmp/member-browser-acceptance-20261111.json`,
 
 Birthday is optional linked personal data sent by Profile. Before store submission, include it in Apple's Other Data Types (App Functionality; review any actual promotion/personalization uses) and Google's Personal info / Other info, with optional collection. Keep declarations covering still-distributed older versions; do not remove booking/payment disclosures blindly. See [Apple's data definitions](https://developer.apple.com/app-store/app-privacy-details/) and [Google's definitions](https://support.google.com/googleplay/android-developer/answer/10787469). No live privacy form was changed in this source task.
 
-## Signed testing builds scheduled
+## Signed testing builds
 
 Source **89ce29029b5991894ee2fa764de4d17ef16d4336** is pushed. Verified EAS archive: 19 native routes, **309 runtime/shared files with exact hash parity**, no private environment/key files; upload 7.9 MB. An initial archive inspection caught an over-broad root exclusion before upload; root exclusions were anchored and the corrected archive was verified. No failed/duplicate build was scheduled for that inspection.
 
 - Android **2.1.0 (28)**: `8718e5cc-453e-41e7-992f-53023fe07e57`.
 - iOS **2.1.0 (22)**: `9c68c074-5c34-42d0-bfcb-0e16773eafa8`.
 
-Both were NEW immediately after scheduling. Verify exact build IDs and artifact contents before test-store upload. These are testing preparations, not public review or release. Raw EAS JSON/logs are in the private release directory and may contain signed URLs; never print them wholesale.
+Both builds finished and the exact artifacts were inspected before testing uploads, as recorded below. Raw EAS JSON/logs are in the private release directory and may contain signed URLs; never print them wholesale. Runtime/shared source files are unchanged from the compiled source commit; later commits add evidence, testing instructions and the lint-script correction.
 
 ## iOS testing delivery verified
 
@@ -57,3 +59,17 @@ Artifact: `C:/Users/user6399/Downloads/HexaTech-Loyalty-2.1.0-22.ipa`, 42,452,89
 EAS submission **803fbaa3-a8d1-4b43-be22-e11769e6e76f** is FINISHED. App Store Connect build **d6d8f57c-894b-42a6-8abf-429225b77536** is **VALID / IN_BETA_TESTING**, present in the existing **Internal QA** group (two existing testers, all-builds access). English testing notes from `store/testflight-2.1.0.txt` were saved and read back with exact parity. No new testers or external beta submission were created. **This is TestFlight availability, not App Store review or public release.**
 
 Testing rollout safeguards: no automatic public release, no server minimum-version change, no customer demo-data mutations. Stop further rollout if sign-in/card, account isolation, event registration or private voucher handling fails on a device; correct the issue and produce a higher-numbered testing build before continuing. Current native screenshots/privacy/walkthrough and supported-device acceptance remain public-review gates.
+
+## Android testing delivery verified
+
+Android EAS build **8718e5cc-453e-41e7-992f-53023fe07e57** finished. The AAB confirms package **com.hotelloyalty.app**, label **HexaTech Loyalty**, **2.1.0 / 28**, minimum SDK 24 / target SDK 36, release signing and no debug flag. `jarsigner -verify` succeeds. Camera/biometric/notification permissions are present; blocked microphone, overlay and external-storage permissions are absent. No new permission names appear compared with the Play-distributed version 26 APK (its Play licensing permission is not in the upload AAB). Firebase project/resources match, stable FileSystem/Sharing registration names and methods are in DEX, and the extracted icon was visually checked. The first module-inspection heuristic used Kotlin class names renamed by release minification; it was corrected using the installed SDK's stable module names/methods, without changing or rebuilding the app.
+
+Artifact: `C:/Users/user6399/Downloads/HexaTech-Loyalty-2.1.0-28.aab`, 102,695,977 bytes; SHA-256 **bc4a3cd72d3e9740cf033c500286fb831a52e4ca4cf231139e7228dccfb92f74**. Detailed safe checks: private `member-210-android-artifact-check.json`.
+
+EAS submission **75615949-c9c2-4a88-a8d4-dc16935fe6c0** is **FINISHED**. Google API readback confirms internal release **2.1.0**, **completed**, code **28**, and the uploaded bundle's SHA-256 exactly matches the inspected local artifact. The prepared release notes are saved/read back in **en-GB, ru-RU, de-DE, fr-FR, es-ES**. The API rejected `changesNotSentForReview` for its automatic internal commit; only the internal notes were changed, the production track was checked unchanged, and `ERROR_IF_IN_REVIEW` protected any concurrent review. Failed and verification edits were deleted. No permissions were expanded, no second binary was uploaded, and no production-track update was made.
+
+Existing Android test entry: https://play.google.com/apps/internaltest/4701572602064076698 (requires an allowed tester account). Install through Play; do not bypass Play automatic protection with a sideload. Play production-track readback remains code **26 / 2.0.0**; this is a track readback, not a new verification of its public listing availability. Apple still has an existing **2.0.0 / REJECTED** version record; **2.1 is TestFlight only** and no new App Review version was submitted. Retrieve/reconcile the actual members-app rejection message before future public resubmission; do not treat Staff approval as members-app approval.
+
+The read-only App Store Connect browser check redirected to Apple sign-in; the detailed review message could not be read in this session. The API establishes the rejected state, not its cause. Fresh owner authentication is needed to inspect that message before public resubmission. No authentication or publication confirmation was requested for this completed testing delivery, and no credentials/browser stores were inspected.
+
+Final safe evidence: private `member-210-testflight-status.json`, `member-210-testflight-notes-check.json`, `member-210-play-status.json`, `member-210-play-notes-check.json`; repeatable fixture scripts and all source/docs are pushed on **feature/member-loyalty-refresh-20261111**. The owned local preview tab/server were closed. Staff artifacts and the owner's original checkout were not changed.
