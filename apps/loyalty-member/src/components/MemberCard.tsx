@@ -1,96 +1,57 @@
-import { StyleSheet, Text, View } from 'react-native'
+import { Image, StyleSheet, Text, View } from 'react-native'
 import { LinearGradient } from 'expo-linear-gradient'
-import { Ionicons } from '@expo/vector-icons'
-import { C, RADIUS, SHADOW, fonts, tierColor, withAlpha } from '../lib/theme'
-import { number, spacedNumber } from '../lib/format'
+import { C, RADIUS, SHADOW, fonts } from '../lib/theme'
 import { useT } from '../lib/i18n'
-import { counted, formatDay, membershipPhrase, tierTone, toGoPhrase, type CardProgress } from '../shared/portal'
+import { counted, membershipPhrase, toGoPhrase, type CardProgress } from '../shared/portal'
 import type { PortalMember } from '../lib/types'
-import { Pill } from './ui'
+import { Picture, Press } from './ui'
+import { MemberIcon } from './MemberIcon'
+import { AnimatedBalance, PointsArrival } from './Feedback'
 
-/** `rgb(r g b)` from the portal's `tierTone()` as `#rrggbb`, so the card's washes can take an alpha. */
-function hexOf(rgb: string | null): string | null {
-  const m = /^rgb\((\d+) (\d+) (\d+)\)$/.exec(rgb ?? '')
-  return m ? `#${[m[1], m[2], m[3]].map(v => Number(v).toString(16).padStart(2, '0')).join('')}` : null
-}
-
-/**
- * The membership as a card in the hand: the venue, the tier in its own colour (lightened where it would vanish on the
- * dark card, as the portal does), the member's name and number, the points large, and the way to the next tier in the
- * programme's own measure (points, visits or spend). Shaped like a real card and lit by the tier, so a glance tells it.
- */
-export function MemberCard({ member, venue, currency, points = true }: { member: PortalMember; venue: string; currency: string; points?: boolean }) {
-  const { tp, language } = useT()
-  const tone = hexOf(tierTone(member.tier?.color_hex)) ?? tierColor(member.tier?.color_hex)
-  const progress = member.progress as CardProgress
-  const toGo = toGoPhrase(progress, currency, language)
-  const toGoText = toGo ? tp(toGo.key, toGo.fallback, toGo.options) : progress.next_tier ? counted(tp, 'home.points_to_go', progress.points_needed, language) : null
+/** Identity, server validity and two separate actions; the whole card is never a nested button. */
+export function MemberCard({ member, venue, logo, currency, points = true, onCard, onBalance }: {
+  member: PortalMember; venue: string; logo?: string | null; currency: string; points?: boolean; onCard?: () => void; onBalance?: () => void
+}) {
+  const { t, tp, language } = useT()
   const membership = membershipPhrase(member.membership, language)
+  const progress = member.progress as CardProgress
+  const remaining = toGoPhrase(progress, currency, language)
+  const next = remaining ? tp(remaining.key, remaining.fallback, remaining.options) : progress.next_tier ? counted(tp, 'home.points_to_go', progress.points_needed, language) : null
   const percent = Math.max(0, Math.min(100, progress.percentage ?? 0))
-
-  return (
-    <View style={[styles.wrap, SHADOW.card, { borderColor: withAlpha(tone, 0.45) }]}>
-      <LinearGradient colors={[withAlpha(tone, 0.5), '#1a1f2c', '#0c0f17']} locations={[0, 0.5, 1]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.card}>
-        <LinearGradient
-          colors={['rgba(255,255,255,0)', 'rgba(255,255,255,0.07)', 'rgba(255,255,255,0)']}
-          start={{ x: 0, y: 0.2 }}
-          end={{ x: 1, y: 0.8 }}
-          style={styles.sheen}
-          pointerEvents="none"
-        />
-        <View style={styles.top}>
-          <Text style={[fonts.label, { color: C.text, opacity: 0.85, flex: 1 }]} numberOfLines={1}>{venue}</Text>
-          {member.tier && <Pill text={member.tier.name} color={tone} solid />}
+  return <View style={[styles.wrap, SHADOW.card, { borderColor: C.goldEdge }]}>
+    <LinearGradient colors={['#344359', '#131d2a', C.goldDeep]} locations={[0, .4, 1]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.card}>
+      <View style={styles.top}>
+        <Picture url={logo} style={styles.mark} fallback={<Image source={require('../../assets/icon.png')} style={styles.mark} accessible={false} />} />
+        <Text style={[fonts.bodyStrong, { color: C.text, flex: 1 }]}>{venue}</Text>
+        {member.tier && <Text style={[fonts.small, { color: C.gold }]}>{member.tier.name}</Text>}
+      </View>
+      <Text style={[fonts.heading, { color: C.text }]}>{member.name}</Text>
+      {membership && <Text style={[fonts.small, { color: membership.tone === 'danger' ? C.danger : membership.tone === 'warning' ? C.warning : C.text2 }]}>{tp(membership.key, membership.fallback, membership.options)}</Text>}
+      {member.membership?.state === 'off' && <Text style={[fonts.small, { color: C.danger }]}>{tp('portal.design.membership_off')}</Text>}
+      {points && <Press label={t('balance.title')} onPress={onBalance} haptic={false}>
+        <View style={styles.balance}>
+          <AnimatedBalance value={member.current_points} language={language} />
+          <Text style={[fonts.small, { color: C.text2, flex: 1 }]}>{tp('portal.common.points')}</Text>
+          <PointsArrival />
         </View>
-
-        <View style={{ gap: 4 }}>
-          <Text style={[fonts.title, { color: C.text }]} numberOfLines={1}>{member.name}</Text>
-          <View style={styles.numberRow}>
-            <Ionicons name="card-outline" size={14} color={C.text2} />
-            <Text style={[fonts.smallStrong, { color: C.text2, letterSpacing: 1.2 }]}>{spacedNumber(member.member_number)}</Text>
-          </View>
-        </View>
-
-        <View style={{ gap: 10 }}>
-          <View style={styles.bottom}>
-            {points && <View>
-              <Text style={[fonts.label, { color: C.text2, fontSize: 10 }]}>{tp('portal.home.balance')}</Text>
-              <Text style={[fonts.figure, { color: C.goldLight }]}>{number(member.current_points, language)}</Text>
-            </View>}
-            {membership && (
-              <Text style={[fonts.small, { color: membership.tone === 'danger' ? C.danger : membership.tone === 'warning' ? C.warning : C.text2, textAlign: 'right', flexShrink: 1 }]}>
-                {tp(membership.key, membership.fallback, membership.options)}
-              </Text>
-            )}
-          </View>
-
-          {member.membership?.state === 'off' && <Text style={[fonts.small, { color: C.danger }]}>{tp('portal.design.membership_off')}</Text>}
-          {member.membership?.valid_from && member.membership.state !== 'scheduled' && <Text style={[fonts.small, { color: C.text2 }]}>{tp('portal.home.membership_from', { day: formatDay(member.membership.valid_from, language) })}</Text>}
-          {points && member.membership_mode !== 'assigned' && progress.next_tier && (
-            <View style={{ gap: 6 }}>
-              <View style={styles.track}>
-                <View style={[styles.fill, { width: `${percent}%`, backgroundColor: tone }]} />
-              </View>
-              <View style={styles.progressRow}>
-                <Text style={[fonts.small, { color: C.text2 }]} numberOfLines={1}>{tp('portal.home.progress_to', { tier: progress.next_tier.name })}</Text>
-                {toGoText && <Text style={[fonts.smallStrong, { color: C.text }]} numberOfLines={1}>{toGoText}</Text>}
-              </View>
-            </View>
-          )}
-        </View>
-      </LinearGradient>
-    </View>
-  )
+      </Press>}
+      {points && member.membership_mode !== 'assigned' && progress.next_tier && <View style={{ gap: 6 }}>
+        <View style={styles.track}><View style={{ width: (percent + '%') as `${number}%`, height: 3, borderRadius: 2, backgroundColor: C.gold }} /></View>
+        <Text style={[fonts.small, { color: C.text2 }]}>{[tp('portal.home.progress_to', { tier: progress.next_tier.name }), next].filter(Boolean).join(' · ')}</Text>
+      </View>}
+      <Press onPress={onCard} label={t('home.showCard')} haptic={false}>
+        <View style={styles.show}><Text style={[fonts.bodyStrong, { color: C.gold, flex: 1 }]}>{t('home.showCard')}</Text><MemberIcon name="card" color={C.gold} /></View>
+      </Press>
+    </LinearGradient>
+  </View>
 }
 
 const styles = StyleSheet.create({
-  wrap: { borderRadius: RADIUS.xl, borderWidth: 1, overflow: 'hidden' },
-  card: { padding: 22, gap: 18, minHeight: 210, justifyContent: 'space-between' },
-  sheen: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
-  top: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  numberRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  bottom: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', gap: 12 },
-  track: { height: 6, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.1)', overflow: 'hidden' },
-  fill: { height: 6, borderRadius: 3 },
-  progressRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 12 },
+  wrap: { borderRadius: RADIUS.lg, borderWidth: 1, overflow: 'hidden' },
+  card: { paddingHorizontal: 20, paddingVertical: 18, gap: 11 },
+  top: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  mark: { width: 30, height: 30, borderRadius: 8 },
+  balance: { minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: 8, position: 'relative' },
+  show: { minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: 8 },
+  track: { height: 3, borderRadius: 2, backgroundColor: 'rgba(255,255,255,.15)', overflow: 'hidden' },
 })

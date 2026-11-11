@@ -2,6 +2,9 @@ import type { Key } from './en'
 
 /** Usted, as the portal speaks to members. */
 export const es: Record<Key, string> = {
+  "balance.credit": "Crédito",
+  "events.cancelled": "Inscripción cancelada",
+  "events.keepPlace": "Conservar mi plaza",
   "feedback.points": "+{{n}} puntos",
   "feedback.checkin": "Visita confirmada",
   "feedback.stamp": "Tarjeta de sellos actualizada",

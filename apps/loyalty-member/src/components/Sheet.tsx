@@ -6,21 +6,24 @@ import { Ionicons } from '@expo/vector-icons'
 import { C, fonts } from '../lib/theme'
 import { useT } from '../lib/i18n'
 import { Backdrop, Press } from './ui'
+import { ActionPopup } from './ActionPopup'
+import { ScreenHeader } from './ScreenHeader'
 
 /**
  * A modal screen's frame: its title, a close button, and the form scrolling above the keyboard. While `busy` (a
  * cancellation or a payment in flight) the sheet cannot be closed, by its button, a swipe or the phone's Back: the
  * member stays to see what happened to their money.
  */
-export function Sheet({ title, line, children, busy = false }: { title: string; line?: string; children: ReactNode; busy?: boolean }) {
+export function Sheet({ title, line, children, busy = false, kind = 'page' }: { title: string; line?: string; children: ReactNode; busy?: boolean; kind?: 'page' | 'popup' | 'sheet' }) {
   const insets = useSafeAreaInsets()
   const { tp } = useT()
   usePreventRemove(busy, () => {})
+  if (kind !== 'page') return <ActionPopup visible embedded title={title} kind={kind} busy={busy} onClose={() => router.back()}>{line ? <Text style={[fonts.small, { color: C.text2 }]}>{line}</Text> : null}{children}</ActionPopup>
   return (
     <Backdrop>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={{ paddingTop: insets.top + 12, paddingBottom: insets.bottom + 24, paddingHorizontal: 20, gap: 18 }} keyboardShouldPersistTaps="handled">
-          <View style={styles.head}>
+          {busy ? <View style={styles.head}>
             <View style={{ flex: 1, gap: 4 }}>
               <Text style={[fonts.title, { color: C.text }]}>{title}</Text>
               {line ? <Text style={[fonts.small, { color: C.text2 }]}>{line}</Text> : null}
@@ -28,7 +31,7 @@ export function Sheet({ title, line, children, busy = false }: { title: string; 
             <Press onPress={() => router.back()} label={tp('portal.common.close')} disabled={busy}>
               <View style={[styles.close, busy && { opacity: 0.4 }]}><Ionicons name="close" size={22} color={C.text} /></View>
             </Press>
-          </View>
+          </View> : <><ScreenHeader title={title} back inbox={false} />{line ? <Text style={[fonts.small, { color: C.text2 }]}>{line}</Text> : null}</>}
           {children}
         </ScrollView>
       </KeyboardAvoidingView>

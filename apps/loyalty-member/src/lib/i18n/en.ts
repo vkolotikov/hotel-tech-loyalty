@@ -5,6 +5,9 @@
  * Every key here exists in all five languages with the same placeholders (lib.test.ts).
  */
 export const en = {
+  "balance.credit": "Credit",
+  "events.cancelled": "Registration cancelled",
+  "events.keepPlace": "Keep my place",
 "feedback.points": "+{{n}} points",
 "feedback.checkin": "Check-in recorded",
 "feedback.stamp": "Stamp card updated",

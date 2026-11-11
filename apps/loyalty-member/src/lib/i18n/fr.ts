@@ -1,6 +1,9 @@
 import type { Key } from './en'
 
 export const fr: Record<Key, string> = {
+  "balance.credit": "Crédit",
+  "events.cancelled": "Inscription annulée",
+  "events.keepPlace": "Garder ma place",
   "feedback.points": "+{{n}} points",
   "feedback.checkin": "Visite confirmée",
   "feedback.stamp": "Carte de fidélité mise à jour",

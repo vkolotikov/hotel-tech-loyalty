@@ -1,5 +1,5 @@
 import { useId } from 'react'
-import { Image } from 'react-native'
+import { Asset } from 'expo-asset'
 import Svg, { Defs, Mask, Rect, SvgUri } from 'react-native-svg'
 import { C } from '../lib/theme'
 
@@ -36,7 +36,7 @@ export type MemberIconName = keyof typeof sources
 /** Exact Staff/Figma SVG geometry. A mask applies the venue tint without editing the asset's paths or bytes. */
 export function MemberIcon({ name, size = 24, color = C.text }: { name: MemberIconName; size?: number; color?: string }) {
   const id = `member-icon-${useId().replace(/[^a-zA-Z0-9]/g, '')}`
-  const uri = Image.resolveAssetSource(sources[name])?.uri ?? null
+  const uri = Asset.fromModule(sources[name]).uri
   return <Svg width={size} height={size} viewBox="0 0 28 28" accessible={false}>
     <Defs><Mask id={id} x="0" y="0" width="28" height="28" maskUnits="userSpaceOnUse"><SvgUri uri={uri} x={2} y={2} width={24} height={24} /></Mask></Defs>
     <Rect width={28} height={28} fill={color} mask={`url(#${id})`} />

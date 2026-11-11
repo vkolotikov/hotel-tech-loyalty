@@ -9,6 +9,9 @@ import { connectPush, usePushTaps } from '../../lib/push'
 import { C } from '../../lib/theme'
 import { TabBar } from '../../components/TabBar'
 import { loyaltyFeatures } from '../../lib/loyalty'
+import { useQuery } from '@tanstack/react-query'
+import { api } from '../../lib/api'
+import { LoyaltyFeedbackBridge } from '../../components/Feedback'
 
 /** The five places of the app; signed out, the sign-in instead. Signed in, this phone receives the venue's messages. */
 export default function TabsLayout() {
@@ -17,6 +20,7 @@ export default function TabsLayout() {
   const { t } = useT()
   const loaded = usePrefs(s => s.loaded)
   const alerts = usePrefs(s => s.alerts)
+  const events = useQuery({ queryKey: ['events'], queryFn: api.events, enabled: !!token && !!boot.data?.member, staleTime: 10_000 })
 
   useEffect(() => {
     if (!token || !loaded) return
@@ -37,17 +41,17 @@ export default function TabsLayout() {
 
   const unread = boot.data?.counts.unread_notifications ?? 0
   return (
-    <Tabs
+    <><LoyaltyFeedbackBridge /><Tabs
       screenOptions={{ headerShown: false, sceneStyle: { backgroundColor: C.bg } }}
       tabBar={props => <TabBar {...props} unread={unread} />}
     >
       <Tabs.Screen name="index" />
       <Tabs.Screen name="rewards" />
       <Tabs.Screen name="card" />
-      <Tabs.Protected guard={loyaltyFeatures(boot.data).points} redirectTo="/">
-        <Tabs.Screen name="activity" />
+      <Tabs.Protected guard={!boot.data || loyaltyFeatures(boot.data).events || !!events.data?.attended.length} redirectTo="/">
+        <Tabs.Screen name="events" />
       </Tabs.Protected>
       <Tabs.Screen name="more" />
-    </Tabs>
+    </Tabs></>
   )
 }

@@ -14,7 +14,7 @@ export default function Programme() {
   const boot = useBoot()
   const q = useQuery({ queryKey: KEYS.programme, queryFn: api.programme, enabled: !!boot.data?.member, staleTime: LIVE_MS })
   const e = boot.data?.capabilities.loyalty ? q.data?.earning : null
-  return <Sheet title={tp('portal.help.how')}>
+  return <Sheet title={tp('portal.help.how')} kind="sheet">
     {q.isLoading && <Shimmer height={200} />}
     {q.isError && <Notice text={tp('portal.common.error')} action={tp('portal.common.retry')} onAction={() => { void q.refetch() }} />}
     {e && <Surface style={{ gap: 16 }}>

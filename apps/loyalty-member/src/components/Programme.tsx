@@ -1,19 +1,19 @@
 import { StyleSheet, Text, View } from 'react-native'
-import { router } from 'expo-router'
 import { useQuery } from '@tanstack/react-query'
 import { Ionicons } from '@expo/vector-icons'
 import { api } from '../lib/api'
 import { LIVE_MS } from '../lib/queries'
 import { useT } from '../lib/i18n'
 import { C, fonts } from '../lib/theme'
-import { formatMoney, nextEvent, stampFace, stampReward, stampToGo, whenPhrase } from '../shared/portal'
-import { Press, SectionTitle, Surface } from './ui'
+import { formatMoney, nextEvent, stampFace, stampReward, stampToGo } from '../shared/portal'
+import { SectionTitle, Surface } from './ui'
+import { MemberEvent } from './EventList'
 
 /**
  * The stamp card, as the portal's: a dot per stamp of the current card, how many visits to the reward and what it is.
  * Nothing at a venue without a stamp card (the server says `enabled: false`).
  */
-export function StampCard() {
+export function StampCard({ compact = false }: { compact?: boolean }) {
   const { tp, language } = useT()
   const stamps = useQuery({ queryKey: ['stamps'], queryFn: api.stamps, staleTime: LIVE_MS })
   const face = stampFace(stamps.data)
@@ -22,7 +22,7 @@ export function StampCard() {
   const reward = stampReward(face, language)
   return (
     <View>
-      <SectionTitle title={tp('portal.stamps.title')} />
+      {!compact && <SectionTitle title={tp('portal.stamps.title')} />}
       <Surface style={{ gap: 14 }}>
         <Text style={[fonts.bodyStrong, { color: C.text }]}>{tp('portal.stamps.label', { have: face.count, needed: face.needed })}</Text>
         <View style={styles.dots}>
@@ -63,27 +63,10 @@ export function CreditTile() {
 
 /** Home's event, as the portal's: the next one the member signed up for, else the next one open to them. */
 export function NextEventCard() {
-  const { tp, language } = useT()
   const events = useQuery({ queryKey: ['events'], queryFn: api.events, staleTime: LIVE_MS })
   const next = nextEvent(events.data)
   if (!next) return null
-  const when = whenPhrase(next.event, language)
-  return (
-    <View>
-      <SectionTitle title={next.mine ? tp('portal.events.your_next') : tp('portal.events.next_up')} action={tp('portal.events.see_all')} onAction={() => router.push('/events')} />
-      <Press onPress={() => router.push('/events')} label={next.event.title}>
-        <Surface tint={C.info} style={styles.credit}>
-          <View style={[styles.creditMark, { backgroundColor: C.infoWash }]}><Ionicons name="ticket-outline" size={20} color={C.info} /></View>
-          <View style={{ flex: 1, gap: 2 }}>
-            <Text style={[fonts.bodyStrong, { color: C.text }]} numberOfLines={1}>{next.event.title}</Text>
-            <Text style={[fonts.small, { color: C.text2 }]}>{tp(when.key, when.fallback, when.options)}</Text>
-            {next.mine && <Text style={[fonts.smallStrong, { color: C.success }]}>{tp('portal.events.signed_up')}</Text>}
-          </View>
-          <Ionicons name="chevron-forward" size={18} color={C.text3} />
-        </Surface>
-      </Press>
-    </View>
-  )
+  return <MemberEvent event={next.event} compact />
 }
 
 const styles = StyleSheet.create({

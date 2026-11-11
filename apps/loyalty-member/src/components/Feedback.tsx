@@ -4,7 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useQuery } from '@tanstack/react-query'
 import { create } from 'zustand'
 import { api } from '../lib/api'
-import { LIVE_MS, useBoot } from '../lib/queries'
+import { KEYS, LIVE_MS, queryClient, useBoot } from '../lib/queries'
 import { useSession } from '../lib/session'
 import { useReducedMotion } from '../lib/useReducedMotion'
 import { useT, type Language } from '../lib/i18n'
@@ -55,6 +55,7 @@ export function LoyaltyFeedbackBridge() {
     if (event.kind !== 'points' && Date.now() - lastAwardAt < 1800) return
     lastAwardAt = Date.now()
     useFeedback.setState({ award: { owner: token, event, id: ++sequence } })
+    void queryClient.invalidateQueries({ queryKey: KEYS.history })
     const text = event.kind === 'points' ? t('feedback.points', { n: number(event.points ?? 0, language) }) : event.kind === 'checkin' ? t('feedback.checkin') : t(event.completed ? 'feedback.stampComplete' : 'feedback.stamp')
     feel.success()
     notify(text)

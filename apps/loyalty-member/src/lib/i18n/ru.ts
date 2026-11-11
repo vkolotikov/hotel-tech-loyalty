@@ -1,6 +1,9 @@
 import type { Key } from './en'
 
 export const ru: Record<Key, string> = {
+  "balance.credit": "Кредит",
+  "events.cancelled": "Регистрация отменена",
+  "events.keepPlace": "Оставить моё место",
   "feedback.points": "+{{n}} баллов",
   "feedback.checkin": "Посещение подтверждено",
   "feedback.stamp": "Карта отметок обновлена",
