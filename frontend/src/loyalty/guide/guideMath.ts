@@ -12,6 +12,7 @@ export type FeatureId = 'scan' | 'door' | 'members' | 'tiers' | 'places' | 'even
 export type TopicId = keyof typeof TOPIC_WORDS
 export type FaqId =
   | 'start' | 'roles' | 'look' | 'how_scan' | 'colours' | 'door' | 'expired' | 'nfc' | 'move_up' | 'by_hand' | 'end_date' | 'import' | 'rename_delete'
+  | 'offer_send' | 'offer_private' | 'offer_missing'
   | 'run_event' | 'sign_up' | 'give_points' | 'redeem' | 'boosts' | 'portal_what' | 'portal_card' | 'partners' | 'reuse_card' | 'push_voucher'
 
 export const STEPS: readonly { id: StepId; to: string }[] = [
@@ -60,6 +61,9 @@ export const FAQ: readonly { id: FaqId; topic: TopicId; to?: string }[] = [
   { id: 'rename_delete', topic: 'members', to: '/loyalty/program' },
   { id: 'run_event', topic: 'events', to: '/loyalty/events' },
   { id: 'sign_up', topic: 'events', to: '/loyalty/events' },
+  { id: 'offer_send', topic: 'rewards', to: '/loyalty/rewards?tab=offers' },
+  { id: 'offer_private', topic: 'rewards', to: '/loyalty/rewards?tab=offers' },
+  { id: 'offer_missing', topic: 'rewards', to: '/loyalty/rewards?tab=offers' },
   { id: 'give_points', topic: 'rewards', to: '/loyalty/scan' },
   { id: 'redeem', topic: 'rewards', to: '/loyalty/requests' },
   { id: 'push_voucher', topic: 'rewards', to: '/loyalty/campaigns?tab=push' },

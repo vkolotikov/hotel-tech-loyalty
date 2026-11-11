@@ -12,6 +12,7 @@ import { demoAnswer, demoTiers, SCENARIOS } from './demo'
 import { GuidePage } from './GuidePage'
 import { FAQ, FEATURES, STEPS, TOPICS, featuresFor, fold, narrow, type Say } from './guideMath'
 import { DEMO_WORDS, FAQ_WORDS, FEATURE_WORDS } from './words'
+import { WALKS, matchingWalks } from './Walkthroughs'
 
 const can = (more: Partial<Can> = {}): Can => ({
   award: true, redeem: true, reverse: false, manage_program: false, manage_rewards: false, manage_members: false, view_insights: false,
@@ -41,6 +42,17 @@ const text = (html: string) => html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' '
 const english: Say = (_key, fallback) => fallback
 
 describe('the Guide (owner 2026-10-26)', () => {
+  it('finds new workflows by their steps and gives only authorised task shortcuts', () => {
+    expect(matchingWalks('PDF', english).map(w => w.id)).toEqual(['offer'])
+    expect(matchingWalks('check-in', english).map(w => w.id)).toEqual(['event'])
+    expect(matchingWalks('zzzz', english)).toEqual([])
+    expect(narrow('attachment', 'all', FEATURES, english).faq).toEqual([])
+    expect(narrow('PDF', 'all', FEATURES, english).faq).toContain('offer_send')
+    const html = render(<GuidePage />)
+    expect(html.match(/data-guide-walk=/g)).toHaveLength(4)
+    expect(html).not.toContain('href="/loyalty/rewards?tab=offers" class="inline-flex items-center gap-2')
+    for (const w of WALKS) expect(w.to).toMatch(/^\/loyalty\//)
+  })
   it('opens with the search, the quick start in five steps, the features, Try a scan and the questions', () => {
     const html = render(<GuidePage />)
     const words = text(html)
@@ -92,7 +104,7 @@ describe('the Guide (owner 2026-10-26)', () => {
     const app = fs.readFileSync(path.resolve(__dirname, '../LoyaltyApp.tsx'), 'utf8')
     const routes = new Set([...app.matchAll(/path="([^"]+)"/g)].map(m => `/loyalty/${m[1]}`.replace(/\/$/, '')))
     routes.add('/loyalty')
-    for (const to of [...STEPS.map(s => s.to), ...FEATURES.map(f => f.to), ...FAQ.flatMap(f => (f.to ? [f.to] : []))]) {
+    for (const to of [...WALKS.map(s => s.to), ...STEPS.map(s => s.to), ...FEATURES.map(f => f.to), ...FAQ.flatMap(f => (f.to ? [f.to] : []))]) {
       expect(routes, to).toContain(to.split(/[?#]/)[0])
     }
   })
