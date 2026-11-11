@@ -48,7 +48,7 @@ export default function TabsLayout() {
       <Tabs.Screen name="index" />
       <Tabs.Screen name="rewards" />
       <Tabs.Screen name="card" />
-      <Tabs.Protected guard={!boot.data || loyaltyFeatures(boot.data).events || !!events.data?.attended.length} redirectTo="/">
+      <Tabs.Protected guard={!boot.data || loyaltyFeatures(boot.data).events || events.isPending || events.isError || !!events.data?.attended.length} redirectTo="/">
         <Tabs.Screen name="events" />
       </Tabs.Protected>
       <Tabs.Screen name="more" />

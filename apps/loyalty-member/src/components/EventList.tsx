@@ -104,7 +104,8 @@ export function EventList() {
   const insets = useSafeAreaInsets()
   const boot = useBoot()
   const q = useQuery({ queryKey: ['events'], queryFn: api.events, enabled: !!boot.data?.member, staleTime: LIVE_MS })
-  const [tab, setTab] = useState<'upcoming' | 'registered' | 'attended'>('upcoming')
+  const [selection, setTab] = useState<'upcoming' | 'registered' | 'attended' | null>(null)
+  const tab = selection ?? (boot.data?.capabilities.events === false ? 'attended' : 'upcoming')
   useRefreshOnFocus([['events'], ['boot']])
   const upcoming = boot.data?.capabilities.events ? q.data?.upcoming ?? [] : []
   const list = tab === 'registered' ? upcoming.filter(e => e.my === 'signed_up' || e.checked_in) : upcoming

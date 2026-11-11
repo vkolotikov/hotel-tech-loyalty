@@ -20,7 +20,7 @@ async (page) => {
   const event = {id:5,title:'Members evening',description:'Reserve your place at our members evening.',starts_at:'2026-12-01T18:30',ends_at:'2026-12-01T20:30',where:'Members lounge',points:20,sign_up:true,walk_ins:false,capacity:10,room_left:5,my:'none',checked_in:false,can_sign_up:true,why_not:null,can_cancel:false};
   const reward = {id:3,name:'Coffee for two',description:'Enjoy two coffees at the desk.',points_cost:100,can_afford:true,claimed_by_me:0,remaining_for_me:2,in_stock:true};
   const log = [];
-  const state = { boot, event, log, offer, redemptionCount:0, profileDelay:0 };
+  const state = { boot, event, log, offer, redemptionCount:0, profileDelay:0, eventDelay:0, redeemDelay:350, stamps:{enabled:false}, credit:{enabled:false,balance:0,currency:'EUR',lines:[]}, history:[], redemptions:[], notificationRead:false };
   await page.route('**/*', async route => {
     const url = new URL(route.request().url());
     if (url.hostname === '127.0.0.1' && url.pathname === '/__fixture') {
@@ -28,9 +28,15 @@ async (page) => {
       if (patch.capabilities) Object.assign(boot.capabilities,patch.capabilities);
       if (patch.member) Object.assign(boot.member,patch.member);
       if (patch.user) Object.assign(boot.member.user,patch.user);
+      if (patch.venue) Object.assign(boot.venue,patch.venue);
       if (patch.event) Object.assign(event,patch.event);
       if (patch.clearLog) log.length=0;
       if (patch.profileDelay !== undefined) state.profileDelay=patch.profileDelay;
+      if (patch.eventDelay !== undefined) state.eventDelay=patch.eventDelay;
+      if (patch.redeemDelay !== undefined) state.redeemDelay=patch.redeemDelay;
+      if (patch.stamps) state.stamps=patch.stamps;
+      if (patch.credit) state.credit=patch.credit;
+      if (patch.history) state.history=patch.history;
       return route.fulfill({json:{log,redemptionCount:state.redemptionCount}});
     }
     if (url.hostname === '127.0.0.1' || url.hostname === 'localhost') return route.continue();
@@ -49,22 +55,27 @@ async (page) => {
     if (p === '/v1/member/rewards') return reply({rewards:[reward],current_points:boot.member.current_points});
     if (p === '/v1/member/offers') return reply({general:[offer],personalized:[]});
     if (p === '/v1/member/portal/offers/12/attachment') return route.fulfill({contentType:'application/pdf',body:Buffer.from('%PDF-1.4\nOriginal private demo voucher\n%%EOF'),headers:{'access-control-allow-origin':'*'}});
-    if (p === '/v1/member/rewards/3/redeem') {state.redemptionCount++; await new Promise(r=>setTimeout(r,350));boot.member.current_points-=100;return reply({redemption:{code:'DEMO-REWARD-1'},message:'Ready'});}
-    if (p === '/v1/member/my/redemptions') return reply({redemptions:[]});
-    if (p === '/v1/member/portal/stamps') return reply({enabled:false});
-    if (p === '/v1/member/portal/credit') return reply({enabled:false,balance:0,currency:'EUR',lines:[]});
+    if (p === '/v1/member/rewards/3/redeem') {state.redemptionCount++; await new Promise(r=>setTimeout(r,state.redeemDelay));boot.member.current_points-=100;const redemption={id:state.redemptionCount,code:'DEMO-REWARD-'+state.redemptionCount,status:'pending',reward:{name:reward.name},points_spent:100,created_at:'2026-11-11T10:00:00Z'};state.redemptions.push(redemption);return reply({redemption,message:'Ready'});}
+    if (p === '/v1/member/my/redemptions') return reply({redemptions:state.redemptions});
+    if (p === '/v1/member/portal/stamps') return reply(state.stamps);
+    if (p === '/v1/member/portal/credit') return reply(state.credit);
     if (p === '/v1/member/portal/events') return reply({upcoming:boot.capabilities.events ? [event] : [],attended:[{id:2,title:'Summer reception',starts_at:'2026-08-01T18:30',points:10}]});
-    if (p === '/v1/member/portal/events/5/sign-up') {event.my=method==='DELETE'?'none':'signed_up';event.can_sign_up=method==='DELETE';event.can_cancel=method!=='DELETE';return reply({event});}
-    if (p === '/v1/member/notifications') return reply({data:[{id:4,type:'new_offer',title:'Your private voucher',body:'A voucher has arrived for your next visit.',data:{offer_id:12,attachment:offer.attachment},read_at:null,created_at:'2026-11-11T10:00:00Z'}],current_page:1,last_page:1,total:1});
-    if (p.includes('/notifications/') || p === '/v1/auth/push-token') return reply({ok:true});
+    if (p === '/v1/member/portal/events/5/sign-up') {if(state.eventDelay)await new Promise(r=>setTimeout(r,state.eventDelay));event.my=method==='DELETE'?'none':'signed_up';event.can_sign_up=method==='DELETE';event.can_cancel=method!=='DELETE';return reply({event});}
+    if (p === '/v1/member/notifications') return reply({data:[{id:4,type:'new_offer',title:'Your private voucher',body:'A voucher has arrived for your next visit.',data:{offer_id:12,attachment:offer.attachment},read_at:state.notificationRead?'2026-11-11T10:01:00Z':null,created_at:'2026-11-11T10:00:00Z'}],current_page:1,last_page:1,total:1});
+    if (p.includes('/notifications/')) {state.notificationRead=true;boot.counts.unread_notifications=0;return reply({ok:true});}
+    if (p === '/v1/auth/push-token' || p === '/v1/auth/logout' || p === '/v1/member/password' || p === '/v1/member/account') return reply({ok:true});
     if (p === '/v1/member/profile') {
       const user={...boot.member.user,...route.request().postDataJSON()};
       if(state.profileDelay) await new Promise(r=>setTimeout(r,state.profileDelay));
-      if(boot.member.user.id===user.id) Object.assign(boot.member.user,user);
+      if(boot.member.user.id===user.id) {
+        Object.assign(boot.member.user,user);
+        for(const key of ['marketing_consent','email_notifications','push_notifications','sms_consent']) if(Object.hasOwn(user,key))boot.member[key]=user[key];
+        if(user.notification_preferences)boot.member.notification_preferences={...boot.member.notification_preferences,...user.notification_preferences};
+      }
       return reply({user});
     }
     if (p === '/v1/member/referral') return reply({enabled:true,reward_on:'first_visit',referral_link:null,total_referrals:0,rewarded_referrals:0});
-    if (p === '/v1/member/points/history') return reply({data:[],current_page:1,last_page:1,total:0});
+    if (p === '/v1/member/points/history') return reply({data:state.history,current_page:1,last_page:1,total:state.history.length});
     return route.fulfill({status:404,json:{message:'Fixture endpoint not defined'},headers:{'access-control-allow-origin':'*'}});
   });
   await page.setViewportSize({width:393,height:852});

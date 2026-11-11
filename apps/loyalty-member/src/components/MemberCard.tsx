@@ -6,7 +6,7 @@ import { counted, membershipPhrase, toGoPhrase, type CardProgress } from '../sha
 import type { PortalMember } from '../lib/types'
 import { Picture, Press } from './ui'
 import { MemberIcon } from './MemberIcon'
-import { AnimatedBalance, PointsArrival } from './Feedback'
+import { AnimatedBalance, AwardPulse, PointsArrival } from './Feedback'
 
 /** Identity, server validity and two separate actions; the whole card is never a nested button. */
 export function MemberCard({ member, venue, logo, currency, points = true, onCard, onBalance }: {
@@ -43,6 +43,7 @@ export function MemberCard({ member, venue, logo, currency, points = true, onCar
         <View style={styles.show}><Text style={[fonts.bodyStrong, { color: C.gold, flex: 1 }]}>{t('home.showCard')}</Text><MemberIcon name="card" color={C.gold} /></View>
       </Press>
     </LinearGradient>
+    <AwardPulse />
   </View>
 }
 

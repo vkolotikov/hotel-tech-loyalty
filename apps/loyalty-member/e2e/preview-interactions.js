@@ -1,0 +1,63 @@
+async(page)=>{
+  page.setDefaultTimeout(5000);
+  const checks=[], errors=[];
+  page.on('pageerror',e=>errors.push(e.message));
+  const check=(ok,name)=>{if(!ok)throw Error(name);checks.push(name)};
+  const control=patch=>page.evaluate(async patch=>(await fetch('/__fixture',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(patch)})).json(),patch);
+  const go=path=>page.goto('http://127.0.0.1:5837'+path);
+  const popup=page.getByTestId('action-popup');
+  await control({capabilities:{loyalty:true,events:true},member:{current_points:800,recent_activity:[],membership_mode:'earned'},event:{my:'none',checked_in:false,can_sign_up:true,can_cancel:false},redeemDelay:1200,clearLog:true});
+  await go('/');await page.getByRole('button',{name:'Your balances',exact:true}).waitFor();
+  for(const label of ['Home','Rewards','Card','Events','More']){
+    const button=page.getByRole('button',{name:label,exact:true});
+    check((await button.innerText()).trim()==='',label+' dock keeps its accessible name without visible copy');
+  }
+  await page.getByRole('button',{name:'Your balances',exact:true}).click();
+  await popup.waitFor();await page.waitForTimeout(300);
+  const box=await popup.boundingBox();
+  check(box.x>=16 && box.x+box.width<=393 && box.y>=0 && box.y+box.height<=852,'context popup stays inside the phone');
+  await page.getByTestId('popup-backdrop').click({position:{x:1,y:1}});await popup.waitFor({state:'hidden'});checks.push('outside tap closes an idle popup');
+  await go('/rewards?tab=catalogue');await page.getByRole('button',{name:'Redeem',exact:true}).click();
+  await popup.getByRole('button',{name:'Confirm',exact:true}).click();
+  await page.waitForFunction(()=>document.querySelector('[data-testid="action-popup"] [aria-label="Close"]')?.disabled===true);
+  check(await popup.getByRole('button',{name:'Close',exact:true}).isDisabled(),'pending redemption disables Close');
+  await page.keyboard.press('Escape');
+  check(await popup.isVisible(),'pending redemption survives Escape');
+  await popup.getByText(/DEMO-REWARD-/).waitFor();
+  check((await popup.innerText()).includes('Your reward is ready'),'returned reward code replaces confirmation in the same popup');
+  await popup.getByRole('button',{name:'Close',exact:true}).click();await popup.waitFor({state:'hidden'});
+  await go('/profile');
+  check(!await page.getByLabel('Current password',{exact:true}).count(),'Profile hides password inputs until requested');
+  await page.getByRole('button',{name:'Delete account',exact:true}).click();
+  check(await popup.getByRole('button',{name:'Delete my account',exact:true}).isDisabled(),'account deletion retains password and DELETE confirmation');
+  await popup.getByRole('button',{name:'Close',exact:true}).click();
+  await go('/preferences');
+  await page.getByRole('button',{name:'Language',exact:true}).click();
+  await popup.getByRole('button',{name:'Français',exact:true}).click();await popup.waitFor({state:'hidden'});
+  check((await page.locator('body').innerText()).includes('Préférences'),'language applies immediately without Save');
+  await go('/preferences');
+  const offers=page.getByRole('switch',{name:'Offers',exact:true});
+  await offers.click();await page.getByText('Saved',{exact:true}).waitFor();
+  check((await control({})).log.filter(r=>r.path==='/v1/member/profile' && r.body?.notification_preferences?.offers===false).length===1,'message toggle saves one server preference directly');
+  await go('/more');await page.getByRole('button',{name:'Invite a friend',exact:true}).click();
+  check((await page.locator('body').innerText()).includes('not available'),'missing configured referral is explained without a fabricated link');
+
+  await control({stamps:{enabled:true,stamps_per_card:8,reward:{kind:'points',points:100},card:{id:7,number:1,stamps_count:3,stamps_needed:8,completed_at:null,stamps:[]},completed_cards:0},credit:{enabled:true,balance:12.5,currency:'EUR',lines:[]}});
+  await go('/activity');await page.getByRole('tab',{name:'Stamp card',exact:true}).click();
+  check((await popup.innerText()).includes('3 of 8 stamps'),'balance popup shows canonical stamps');
+  await page.getByRole('tab',{name:'Credit',exact:true}).click();
+  check((await popup.innerText()).includes('€12.50'),'balance popup formats canonical credit amount');
+  await popup.getByRole('button',{name:'Close',exact:true}).click();
+  await page.emulateMedia({reducedMotion:'reduce'});
+  await go('/');await page.getByRole('button',{name:'Your balances',exact:true}).click();await popup.waitFor();
+  check(await popup.evaluate(n=>getComputedStyle(n).transform)==='none','Reduce Motion removes popup travel and scaling');
+  await page.setViewportSize({width:768,height:1024});await page.waitForTimeout(100);
+  const tablet=await popup.boundingBox();
+  check(tablet.width<=480 && Math.abs(tablet.x+tablet.width/2-384)<3,'tablet popup is centred and width-limited');
+  await page.setViewportSize({width:320,height:480});await page.waitForTimeout(100);
+  const narrow=await popup.boundingBox();
+  check(narrow.x>=16 && narrow.y>=0 && narrow.x+narrow.width<=320 && narrow.y+narrow.height<=480,'compact-height popup stays in bounds');
+  await page.emulateMedia({reducedMotion:'no-preference'});await page.setViewportSize({width:393,height:852});
+  check(!errors.length,'interaction checks have no browser runtime errors');
+  return {checks:checks.length,names:checks,errors};
+}

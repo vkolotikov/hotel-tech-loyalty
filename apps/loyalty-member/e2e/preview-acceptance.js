@@ -1,4 +1,5 @@
 async (page) => {
+  page.setDefaultTimeout(5000);
   const checks=[],errors=[];
   page.on('pageerror', e=>errors.push(e.message));
   const check=(ok,name)=>{if(!ok)throw Error(name);checks.push(name)};
@@ -13,7 +14,13 @@ async (page) => {
   await page.getByRole('button',{name:'Cancel my sign-up',exact:true}).waitFor();
   check((await text()).includes('You’re signed up'),'event registration state');
   await page.getByRole('button',{name:'Cancel my sign-up',exact:true}).click();
-  await page.getByRole('button',{name:'Sign up',exact:true}).waitFor();checks.push('event cancellation');
+  const popup=page.getByTestId('action-popup');
+  await popup.getByRole('button',{name:'Keep my place',exact:true}).click();
+  await popup.waitFor({state:'hidden'});
+  check((await text()).includes('You’re signed up'),'dismissed cancellation keeps registration');
+  await page.getByRole('button',{name:'Cancel my sign-up',exact:true}).click();
+  await popup.getByRole('button',{name:'Cancel my sign-up',exact:true}).click();
+  await page.getByRole('button',{name:'Sign up',exact:true}).waitFor();checks.push('confirmed event cancellation');
 
   await go('/rewards?tab=catalogue');await page.getByText('Coffee for two',{exact:true}).waitFor();
   await page.getByRole('button',{name:'Redeem',exact:true}).click();
@@ -23,7 +30,8 @@ async (page) => {
   check((await control({})).redemptionCount===1,'double confirmation submits once');
 
   await go('/rewards?tab=offers');await page.getByText('Your personal member voucher',{exact:true}).waitFor();
-  check((await text()).includes('One per member. Show at the desk.'),'offer terms are visible');
+  await page.getByRole('button',{name:'Open voucher',exact:true}).click();
+  check((await popup.innerText()).includes('One per member. Show at the desk.'),'optional offer terms are visible in voucher sheet');
   const promised=page.waitForEvent('download');await page.getByRole('button',{name:'Download voucher',exact:true}).click();
   const file=await promised;check(file.suggestedFilename()==='member-voucher.pdf','authenticated voucher download');
   const downloadedPath=await file.path();
@@ -42,14 +50,15 @@ async (page) => {
   const before=await control({capabilities:{loyalty:false,events:false},member:{membership_mode:'assigned',membership:{state:'scheduled',valid_from:'2026-12-01',valid_until:'2027-12-01'}}});
   check(!before.log.some(r=>/\/portal\/(?:bookings|services|stays)/.test(r.path)),'excluded booking routes issue no booking API calls');
   await go('/');await page.getByText(/Membership starts/).waitFor();
-  check(!(await text()).includes('POINTS BALANCE'),'points-off card hides balance');
-  check((await text()).includes('Members lounge'),'assigned benefits remain on Home');
-  await go('/rewards?tab=catalogue');await page.getByText('Your assigned membership benefit.',{exact:true}).waitFor();
+  check(!await page.getByRole('button',{name:'Your balances',exact:true}).count(),'points-off card hides balance');
+  check(await page.getByRole('button',{name:'Benefits',exact:true}).isVisible(),'assigned benefits remain reachable on Home');
+  await go('/rewards?tab=catalogue');await page.getByRole('button',{name:'Members lounge',exact:true}).click();
+  await popup.getByText('Your assigned membership benefit.',{exact:true}).waitFor();
   check(!await page.getByRole('tab',{name:'Catalogue',exact:true}).count(),'points-off catalogue hidden');
   await go('/events');await page.getByText('Summer reception',{exact:true}).waitFor();
   check(!await page.getByRole('button',{name:'Sign up',exact:true}).count(),'disabled Events have no registration controls');
   checks.push('attended event history remains accessible');
-  await go('/more');await page.getByRole('button',{name:/Events/}).waitFor();checks.push('event history has a navigation entry');
+  await go('/more');await page.getByRole('button',{name:'Events',exact:true}).waitFor();checks.push('event history has a dock entry');
 
   await control({capabilities:{loyalty:true,events:true},member:{membership_mode:'earned',membership:{state:'active',valid_from:'2026-01-01',valid_until:'2027-01-01'}}});
   await go('/profile');const birthday=page.getByPlaceholder('YYYY-MM-DD');await birthday.waitFor();
@@ -68,7 +77,7 @@ async (page) => {
   for(const language of ['en','ru','de','fr','es']){
     for(const width of [320,393]){
       await page.setViewportSize({width,height:852});
-      for(const path of ['/','/card','/programme','/rewards?tab=offers','/events','/help']){
+      for(const path of ['/','/card','/activity','/programme','/rewards?tab=offers','/events','/more','/profile','/preferences','/help']){
         const separator=path.includes('?')?'&':'?';await go(path+separator+'lang='+language);
         await page.waitForTimeout(300);
         const body=await text();

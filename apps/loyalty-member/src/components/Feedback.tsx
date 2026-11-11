@@ -16,7 +16,7 @@ import { MemberIcon } from './MemberIcon'
 
 type Tone = 'success' | 'info'
 interface Notice { owner: string | null; text: string; tone: Tone; id: number }
-interface Award { owner: string; event: LoyaltyFeedback; id: number }
+interface Award { owner: string; event: LoyaltyFeedback; id: number; at: number }
 export const useFeedback = create<{ notice: Notice | null; award: Award | null }>(() => ({ notice: null, award: null }))
 let sequence = 0
 let ledger: FeedbackLedger | null = null
@@ -54,7 +54,7 @@ export function LoyaltyFeedbackBridge() {
     if (!event || AppState.currentState !== 'active') return
     if (event.kind !== 'points' && Date.now() - lastAwardAt < 1800) return
     lastAwardAt = Date.now()
-    useFeedback.setState({ award: { owner: token, event, id: ++sequence } })
+    useFeedback.setState({ award: { owner: token, event, id: ++sequence, at: Date.now() } })
     void queryClient.invalidateQueries({ queryKey: KEYS.history })
     const text = event.kind === 'points' ? t('feedback.points', { n: number(event.points ?? 0, language) }) : event.kind === 'checkin' ? t('feedback.checkin') : t(event.completed ? 'feedback.stampComplete' : 'feedback.stamp')
     feel.success()
@@ -115,14 +115,17 @@ export function AnimatedBalance({ value, language }: { value: number; language: 
 export function PointsArrival() {
   const award = useFeedback(s => s.award)
   const token = useSession(s => s.token)
-  return award?.owner === token && award.event.kind === 'points' ? <Arrival key={award.id} points={award.event.points ?? 0} /> : null
+  return award?.owner === token && award.event.kind === 'points' ? <Arrival key={award.id} award={award} /> : null
 }
 
-function Arrival({ points }: { points: number }) {
+function Arrival({ award }: { award: Award }) {
   const [progress] = useState(() => new Animated.Value(0))
+  const [openedAt] = useState(Date.now)
+  const fresh = openedAt - award.at < 1800
   const reduce = useReducedMotion()
   const { t, language } = useT()
   useEffect(() => {
+    if (!fresh) return
     const animation = Animated.sequence([
       Animated.timing(progress, { toValue: 1, duration: reduce ? 0 : 180, useNativeDriver: true }),
       Animated.delay(650),
@@ -130,11 +133,35 @@ function Arrival({ points }: { points: number }) {
     ])
     animation.start()
     return () => animation.stop()
-  }, [progress, reduce])
+  }, [progress, reduce, fresh])
+  if (!fresh) return null
   return <Animated.View pointerEvents="none" accessible={false} testID="points-arrival" style={[styles.arrival, { borderColor: C.goldEdge, opacity: progress.interpolate({ inputRange: [0, 1, 2], outputRange: [0, 1, 0] }), transform: reduce ? [] : [
     { translateY: progress.interpolate({ inputRange: [0, 1, 2], outputRange: [-8, 0, 30] }) },
     { scale: progress.interpolate({ inputRange: [0, 1, 2], outputRange: [.85, 1, .9] }) },
-  ] }]}><MemberIcon name="check" size={18} color={C.gold} /><Text style={[fonts.smallStrong, { color: C.gold }]}>{t('feedback.points', { n: number(points, language) })}</Text></Animated.View>
+  ] }]}><MemberIcon name="check" size={18} color={C.gold} /><Text style={[fonts.smallStrong, { color: C.gold }]}>{t('feedback.points', { n: number(award.event.points ?? 0, language) })}</Text></Animated.View>
+}
+
+export function AwardPulse() {
+  const award = useFeedback(s => s.award)
+  const token = useSession(s => s.token)
+  return award?.owner === token ? <Pulse key={award.id} award={award} /> : null
+}
+function Pulse({ award }: { award: Award }) {
+  const [openedAt] = useState(Date.now)
+  const [progress] = useState(() => new Animated.Value(0))
+  const reduce = useReducedMotion()
+  const fresh = openedAt - award.at < 1800
+  useEffect(() => {
+    if (!fresh || reduce) return
+    const animation = Animated.sequence([
+      Animated.timing(progress, { toValue: 1, duration: 170, useNativeDriver: true }),
+      Animated.timing(progress, { toValue: 2, duration: 650, useNativeDriver: true }),
+    ])
+    animation.start()
+    return () => { animation.stop(); progress.setValue(0) }
+  }, [fresh, reduce, progress])
+  if (!fresh || reduce) return null
+  return <Animated.View pointerEvents="none" accessible={false} testID="award-pulse" style={[StyleSheet.absoluteFill, { borderRadius: 24, borderWidth: 1.5, borderColor: C.gold, opacity: progress.interpolate({ inputRange: [0, 1, 2], outputRange: [0, .8, 0] }) }]} />
 }
 
 const styles = StyleSheet.create({

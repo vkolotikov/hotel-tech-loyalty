@@ -1,0 +1,36 @@
+# Native members design implementation — 11 November 2026
+
+Source: `feature/member-loyalty-refresh-20261111`, `apps/loyalty-member`, package **com.hotelloyalty.app**, version **2.1.0**. This implements the approved luxury Figma design and the owner's subsequent icon-only navigation, contextual popup and confirmed-points feedback refinements.
+
+This is a source implementation. Existing signed testing builds **iOS 22 / Android 28 predate this design**. No new EAS build, OTA update, store submission, production release or Laravel deployment was performed. Staff and the original application checkout remain outside this source change. Never merge this native branch into Laravel main.
+
+## Design and interaction
+
+- [Everyday screens](https://www.figma.com/design/d6IGmk3hOoMw0V5rONbI1A/Untitled?node-id=440-8279), [main prototype](https://www.figma.com/proto/d6IGmk3hOoMw0V5rONbI1A/Untitled?node-id=440-8280&starting-point-node-id=440%3A8280), [confirmed-points motion preview](https://www.figma.com/design/d6IGmk3hOoMw0V5rONbI1A/Untitled?node-id=505-13165), [native handoff spec](https://www.figma.com/design/d6IGmk3hOoMw0V5rONbI1A/Untitled?node-id=460-12607).
+- Owner's icon-only dock is retained: Home / Rewards / Card / Events / More. Each control keeps its translated accessible name; Card stays central even when Events is unavailable.
+- Home separates balance and QR actions, with direct eligible event registration and Benefits/Offers shortcuts. Repeated introductory copy and duplicate navigation were removed.
+- Short panels grow from the tapped control in 240 ms and close in 160 ms. Balance, benefit details, reward confirmation/code and language use contextual popups. Longer programme, voucher and deletion content uses scrollable sheets. Maximum popup width is 480 px, sheet width 640 px; native safe areas and keyboard reduce available height. Sheets support header drag dismissal. Pending writes block Close, outside tap and Back/Escape; cost/cancellation/deletion confirmations remain.
+- Points count toward the confirmed server balance, a `+points` pill arrives, and the member card pulses once. New staff-confirmed check-ins and stamps get brief accessible feedback. Initial history, reordered/reversed ledger entries and a new account do not celebrate. Expired feedback cannot replay when Home is opened later. No client award or check-in endpoint was added. Feedback is nonblocking, expires after 2.2 seconds (Android accessibility timeout may extend it), and Reduce Motion removes travel/scaling/pulses.
+- Reward confirmation changes into the actual returned code in the same popup. Codes remain available in My codes. Benefits and event registration use synchronous one-flight guards, canonical server state and retry/refusal messages.
+- More is a compact menu. Profile focuses on details and optional birthday, with password/deletion controls opened on demand. Preferences combines language, device lock, device notification permission and the real server categories **offers / points / tier**. Delivery-channel choices expand on request. Language and message switches apply without a separate Save step. Referral sharing uses only the configured server link.
+
+The exact original Staff wallpaper and 26 selected SVG files are bundled locally. SVG paths/bytes were preserved; a mask applies the current venue colour. Expo Asset resolves the same files on native and web. Default headings use Manrope; real venue accent/display-face overrides remain supported. Five languages, old session keys, account-scoped caches, private voucher authorization/cleanup, QR/Wallet gating and refresh behavior are preserved. Appointment/accommodation routes continue to redirect.
+
+Figma keeps the existing page and primary frame IDs. Four trigger-entry frames are **505:13045 / 505:13064 / 505:13079 / 505:13096**; the actual two-second motion timeline is **505:13165**. Its MP4 was rendered and four phases inspected. The prototype is still illustrative; its demo QR and sample records never enter runtime data.
+
+## Verification
+
+- Native TypeScript and **68 tests** pass (56 existing plus 12 popup/feedback tests).
+- Android, iOS and web Expo exports pass; native Hermes bundles and local artwork are present. SDK 58 maintenance versions were aligned using `expo install --fix`; `expo install --check` reports dependencies up to date. No native project folders were generated.
+- ESLint regression comparison: **zero added diagnostics**, **16 existing errors / 16 warnings** remain (baseline was 26 errors / 16 warnings). This is a regression gate, not a clean-lint claim.
+- **266 isolated browser checks**: 227 acceptance/layout checks, seven account/Inbox checks, 21 contextual interaction checks, three points-freshness checks, six check-in/stamp checks and two historical-Events checks. API responses are demo fixtures; non-fixture external requests are aborted. No production member transaction is used for QA.
+- Screens were inspected at 393 × 852, with 320 px/compact-height and iPad-sized/long-language examples. All five languages were checked for unresolved keys and horizontal overflow. Reduce Motion, popup bounds, busy dismissal, reward duplicate protection, birthday omission, delayed account saves, private voucher download, capability gates and signed-out deep links are covered.
+- Regression tests were observed failing before correcting (1) the disabled-Events/history loading redirect and (2) a stale award replay on late Home navigation. The SVG loader's web crash was reproduced before switching to the universal asset resolver.
+
+Runtime/shared behavior uses the existing portal contracts; no shared portal or backend source changed in this design pass. Browser previews and exports are not physical-device, camera, Wallet, push-provider or store-media acceptance. Before release, build fresh signed members binaries, test supported iPhone/iPad/Android devices and native sheets/keyboard/gestures/VoiceOver, capture real screenshots and the members-app walkthrough, reconcile the members-app Apple rejection and review optional-birthday privacy declarations. Staff's approval/video is not members-app evidence.
+
+## Repeat fixture checks
+
+Export the app to a temporary directory, then run `node e2e/serve-preview.cjs <absolute-export-directory> 5837` from the native app. The server binds only to loopback and serves that export. In an isolated Playwright tab, execute `e2e/preview-setup.js` as an async page function to install the authenticated demo fixture, then execute the check files as page functions. Reset with setup before independent suites. No browser credentials or real API tokens are needed. Stop the owned server afterward.
+
+The implementation plan is `docs/superpowers/plans/2026-11-11-member-native-design.md`. Commits remain on the existing feature branch for review and the next testing build.

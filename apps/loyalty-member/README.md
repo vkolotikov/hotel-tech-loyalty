@@ -1,5 +1,7 @@
 # HexaTech Loyalty (the members' app, Android and iOS)
 
+**Luxury design implementation (11 November 2026):** the approved Figma screens now have native source: icon-only dock, contextual popups, direct event registration, reward confirmation/code in one popup, consolidated Preferences and confirmed points/check-in/stamp feedback. See `docs/loyalty-member-app/05-NATIVE-DESIGN-20261111.md` for exact scope and verification. Existing iOS 22 / Android 28 testing binaries **predate this design**; a fresh signed build and device QA are required before release.
+
 **2.1.0 update (11 November 2026):** this release focuses on loyalty and enabled event registration. Appointment/accommodation routes redirect; their source below is deferred/historical. New features include programme/access details, assigned membership dates/benefits, authenticated private vouchers and safer account/reward flows. `docs/loyalty-member-app/03-LOYALTY-REFRESH-20261111.md` records checks and release requirements. New native FileSystem/Sharing modules require a fresh signed binary; source/export validation does not install the update on phones.
 
 The membership in the member's pocket: the card and its QR code for the desk, points and the way to the next tier,
@@ -40,7 +42,7 @@ in every language as the portal is (usted, Sie, vous, вы); `lib.test.ts` check
 
 | Path | What |
 |---|---|
-| `src/app/` | Screens (Expo Router). `(tabs)/`: Home, Rewards (benefits, catalogue, offers, codes), Card (raised), Activity, More. `sign-in`, `join`, and the sheets `inbox`, `events`, `profile` (details, messages, invite, password, delete account), `help`, `bookings`, `booking/[kind]/[id]` (with cancelling), `book` (the chooser), `book/appointment` and `book/stay` |
+| `src/app/` | Screens (Expo Router). `(tabs)/`: Home, Rewards (benefits, catalogue, offers, codes), central Card, enabled/historical Events, More. `activity` is the balance popup/full history; `programme` is a long sheet. `profile` has on-demand password/delete controls; `preferences` owns language/device/message settings. `inbox`, `help`, `sign-in` and `join` remain. Appointment/accommodation routes redirect to Home. |
 | `src/components/book/` | The appointment flow's steps (service, who, when, review with coupons, pay), on the portal's `steps.ts`; `stay.tsx`, the stay flow's (dates on a month grid, rooms and combinations, review, pay), on its `staySteps.ts` |
 | `src/lib/calendar.ts` | The stay dates picker's month grid and taps (the portal uses the browser's own date inputs) |
 | `src/lib/payment.ts` | Stripe's payment sheet for the one intent the server made (`payment.web.ts`: none in the browser preview) |

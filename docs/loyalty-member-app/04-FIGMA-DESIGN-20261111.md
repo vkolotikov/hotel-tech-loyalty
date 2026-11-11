@@ -1,5 +1,7 @@
 # Members app Figma concept — 11 November 2026
 
+**Latest follow-up:** the owner approved implementation after the contextual-popup refinement. Native screens, interaction behavior and verified evidence are recorded in [05-NATIVE-DESIGN-20261111.md](05-NATIVE-DESIGN-20261111.md). Short overlays now grow from their trigger; longer content stays in sheets. The actual confirmed-points animation is [505:13165](https://www.figma.com/design/d6IGmk3hOoMw0V5rONbI1A/Untitled?node-id=505-13165). The historical design-only statements below describe the earlier passes. Existing iOS 22 / Android 28 binaries predate the new native UI.
+
 The owner requested a new members-app design in their existing Figma project before implementation, using the supplied Luxury Staff Member Scanner reference and the existing Staff app's minimal dark/glass/background-image style.
 
 ## Review links
