@@ -10,8 +10,8 @@ import { PlayfairDisplay_500Medium_Italic, PlayfairDisplay_600SemiBold } from '@
 import { Fraunces_500Medium_Italic, Fraunces_600SemiBold } from '@expo-google-fonts/fraunces'
 import { Newsreader_500Medium_Italic, Newsreader_600SemiBold } from '@expo-google-fonts/newsreader'
 import { SpaceGrotesk_500Medium, SpaceGrotesk_600SemiBold } from '@expo-google-fonts/space-grotesk'
-import { Manrope_500Medium, Manrope_700Bold } from '@expo-google-fonts/manrope'
-import { Inter_400Regular, Inter_600SemiBold, Inter_700Bold } from '@expo-google-fonts/inter'
+import { Manrope_500Medium, Manrope_600SemiBold, Manrope_700Bold } from '@expo-google-fonts/manrope'
+import { Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold } from '@expo-google-fonts/inter'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { GestureHandlerRootView } from 'react-native-gesture-handler'
 import { SafeAreaProvider } from 'react-native-safe-area-context'
@@ -23,6 +23,7 @@ import { useT } from '../lib/i18n'
 import { C, CONTENT_MAX_WIDTH, fonts, useLook } from '../lib/theme'
 import { Backdrop, GoldButton } from '../components/ui'
 import { UpdateGate } from '../components/UpdateGate'
+import { FeedbackHost } from '../components/Feedback'
 
 SplashScreen.preventAutoHideAsync().catch(() => {})
 
@@ -37,8 +38,8 @@ export default function RootLayout() {
     Fraunces_500Medium_Italic, Fraunces_600SemiBold,
     Newsreader_500Medium_Italic, Newsreader_600SemiBold,
     SpaceGrotesk_500Medium, SpaceGrotesk_600SemiBold,
-    Manrope_500Medium, Manrope_700Bold,
-    Inter_400Regular, Inter_600SemiBold, Inter_700Bold,
+    Manrope_500Medium, Manrope_600SemiBold, Manrope_700Bold,
+    Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold,
   })
   const ready = useSession(s => s.ready)
   const token = useSession(s => s.token)
@@ -90,6 +91,7 @@ export default function RootLayout() {
               </Stack.Protected>
             </Stack>
           </View>
+          <FeedbackHost />
           <LockGate />
           <UpdateGate />
         </QueryClientProvider>

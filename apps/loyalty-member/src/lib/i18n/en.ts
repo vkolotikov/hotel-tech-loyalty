@@ -5,6 +5,15 @@
  * Every key here exists in all five languages with the same placeholders (lib.test.ts).
  */
 export const en = {
+"feedback.points": "+{{n}} points",
+"feedback.checkin": "Check-in recorded",
+"feedback.stamp": "Stamp card updated",
+"feedback.stampComplete": "Stamp card complete",
+"balance.title": "Your balances",
+"events.details": "Details",
+"events.registeredTab": "Registered",
+"events.cancelTitle": "Cancel registration?",
+"events.cancelBody": "Your place will be offered to another member.",
   'brand': 'HexaTech Loyalty',
 
   'signIn.title': 'Welcome back',

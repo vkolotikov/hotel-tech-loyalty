@@ -2,7 +2,7 @@
  * HexaTech Loyalty's look: deep navy and soft light, with each venue's own accent and heading face (owner,
  * 2026-10-31: "each venue's colours"). The navy, the text and the states are fixed; the accent and the display face
  * are the venue's, from the portal's bootstrap (`venue.accent`, already contrast-checked on the server for a dark
- * page, and `venue.display_face`), with the gold and Cormorant Garamond as the default before a venue is known.
+ * page, and `venue.display_face`), with the Figma gold and Manrope as the default before a venue is known.
  *
  * The accent fields of `C`, `fonts` and `accentGradient()` read the current look when they are read, so they belong
  * in inline styles, never in `StyleSheet.create` (which reads once, at import). The root layout redraws the screens
@@ -19,7 +19,7 @@ export interface VenueLook {
   face: string
 }
 
-export const DEFAULT_LOOK: VenueLook = { accent: '#c9a84c', ink: '#1a1406', deep: '#9c7c2c', face: 'cormorant' }
+export const DEFAULT_LOOK: VenueLook = { accent: '#e0bf7b', ink: '#18140d', deep: '#8d683a', face: 'manrope' }
 
 /** Each display face's loaded font family (`_layout.tsx` loads them all). */
 export const DISPLAY_FAMILIES: Record<string, { regular: string; italic: string }> = {
@@ -28,7 +28,7 @@ export const DISPLAY_FAMILIES: Record<string, { regular: string; italic: string 
   fraunces: { regular: 'Fraunces_600SemiBold', italic: 'Fraunces_500Medium_Italic' },
   newsreader: { regular: 'Newsreader_600SemiBold', italic: 'Newsreader_500Medium_Italic' },
   space: { regular: 'SpaceGrotesk_600SemiBold', italic: 'SpaceGrotesk_500Medium' },
-  manrope: { regular: 'Manrope_700Bold', italic: 'Manrope_500Medium' },
+  manrope: { regular: 'Manrope_600SemiBold', italic: 'Manrope_500Medium' },
 }
 
 const HEX = /^#[0-9a-f]{6}$/i
@@ -82,17 +82,17 @@ function lighten(hex: string, amount: number): string {
 }
 
 export const C = {
-  bg: '#07090f',
-  bgRaised: '#0b0e16',
-  surface: '#10141d',
-  surface2: '#171c28',
-  surface3: '#202636',
-  hairline: 'rgba(255,255,255,0.07)',
-  hairlineStrong: 'rgba(255,255,255,0.12)',
+  bg: '#070d15',
+  bgRaised: '#101925',
+  surface: 'rgba(25,35,48,0.86)',
+  surface2: '#192330',
+  surface3: '#243142',
+  hairline: 'rgba(82,97,118,0.65)',
+  hairlineStrong: '#526176',
 
-  text: '#f7f4ee',
-  text2: '#a5abb8',
-  text3: '#6c7282',
+  text: '#f6f2ea',
+  text2: '#b7c0cc',
+  text3: '#98a5b5',
 
   // The venue's accent (named gold after the default, so the shared components read as before).
   get gold() { return now().accent },
@@ -102,9 +102,9 @@ export const C = {
   get goldEdge() { return withAlpha(now().accent, 0.35) },
   get onGold() { return now().ink },
 
-  success: '#3ddc84',
+  success: '#a0d7bc',
   successWash: 'rgba(61,220,132,0.12)',
-  danger: '#ff4d6d',
+  danger: '#ffb0bb',
   dangerWash: 'rgba(255,77,109,0.12)',
   warning: '#ffcf4a',
   warningWash: 'rgba(255,207,74,0.12)',
@@ -119,13 +119,13 @@ export function accentGradient(): readonly [string, string, string] {
 }
 
 /** The page's backdrop: a faint glow at the top fading into the navy. */
-export const BACKDROP = ['#121521', '#0a0c14', '#07090f'] as const
+export const BACKDROP = ['rgba(7,13,21,0.76)', 'rgba(7,13,21,0.18)', 'rgba(7,13,21,0.45)'] as const
 
-export const RADIUS = { sm: 12, md: 16, lg: 22, xl: 28, pill: 999 }
+export const RADIUS = { sm: 12, md: 18, lg: 24, xl: 28, pill: 999 }
 export const SPACE = { xs: 4, sm: 8, md: 12, lg: 16, xl: 20, xxl: 28 }
 
 /** Bottom padding for a tab screen's scroll content: the tab bar and its raised Card button need the room. */
-export const TAB_BAR_ROOM = 128
+export const TAB_BAR_ROOM = 120
 
 /**
  * The widest the screens grow (iPad, a wide Android tablet): the app is one column of cards, centred, with the navy
@@ -137,22 +137,22 @@ const display = () => DISPLAY_FAMILIES[now().face] ?? DISPLAY_FAMILIES.cormorant
 
 export const fonts = {
   get display() { return { fontFamily: display().regular, fontSize: 34, lineHeight: 40, letterSpacing: -0.3 } },
-  get title() { return { fontFamily: display().regular, fontSize: 26, lineHeight: 31 } },
-  get heading() { return { fontFamily: display().regular, fontSize: 21, lineHeight: 26 } },
+  get title() { return { fontFamily: display().regular, fontSize: 28, lineHeight: 36 } },
+  get heading() { return { fontFamily: display().regular, fontSize: 20, lineHeight: 28 } },
   get italic() { return { fontFamily: display().italic, fontSize: 17, lineHeight: 22 } },
-  get figure() { return { fontFamily: display().regular, fontSize: 40, lineHeight: 46 } },
-  body: { fontFamily: 'Inter_400Regular', fontSize: 15, lineHeight: 21 },
-  bodyStrong: { fontFamily: 'Inter_600SemiBold', fontSize: 15, lineHeight: 21 },
-  small: { fontFamily: 'Inter_400Regular', fontSize: 13, lineHeight: 18 },
-  smallStrong: { fontFamily: 'Inter_600SemiBold', fontSize: 13, lineHeight: 18 },
-  label: { fontFamily: 'Inter_600SemiBold', fontSize: 11, letterSpacing: 1.4, textTransform: 'uppercase' as const },
-  button: { fontFamily: 'Inter_700Bold', fontSize: 15, letterSpacing: 0.2 },
+  get figure() { return { fontFamily: now().face === 'manrope' ? 'Manrope_500Medium' : display().regular, fontSize: 32, lineHeight: 40 } },
+  body: { fontFamily: 'Inter_400Regular', fontSize: 15, lineHeight: 22 },
+  bodyStrong: { fontFamily: 'Inter_600SemiBold', fontSize: 15, lineHeight: 22 },
+  small: { fontFamily: 'Inter_400Regular', fontSize: 13, lineHeight: 19 },
+  smallStrong: { fontFamily: 'Inter_600SemiBold', fontSize: 13, lineHeight: 19 },
+  label: { fontFamily: 'Inter_500Medium', fontSize: 12, lineHeight: 17 },
+  button: { fontFamily: 'Inter_600SemiBold', fontSize: 15, lineHeight: 22 },
   number: { fontFamily: 'Inter_700Bold', fontSize: 22, lineHeight: 26, fontVariant: ['tabular-nums' as const] },
   tab: { fontFamily: 'Inter_600SemiBold', fontSize: 10.5, letterSpacing: 0.2 },
 }
 
 export const SHADOW = {
-  card: { shadowColor: '#000', shadowOpacity: 0.35, shadowRadius: 18, shadowOffset: { width: 0, height: 10 }, elevation: 8 },
+  card: { shadowColor: '#000', shadowOpacity: 0.25, shadowRadius: 20, shadowOffset: { width: 0, height: 8 }, elevation: 8 },
   get glow() { return { shadowColor: now().accent, shadowOpacity: 0.4, shadowRadius: 18, shadowOffset: { width: 0, height: 6 }, elevation: 12 } },
 }
 

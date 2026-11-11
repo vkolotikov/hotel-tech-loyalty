@@ -1,6 +1,15 @@
 import type { Key } from './en'
 
 export const fr: Record<Key, string> = {
+  "feedback.points": "+{{n}} points",
+  "feedback.checkin": "Visite confirmée",
+  "feedback.stamp": "Carte de fidélité mise à jour",
+  "feedback.stampComplete": "Carte de fidélité complète",
+  "balance.title": "Vos soldes",
+  "events.details": "Détails",
+  "events.registeredTab": "Inscriptions",
+  "events.cancelTitle": "Annuler l’inscription ?",
+  "events.cancelBody": "Votre place sera proposée à un autre membre.",
   'error.member_required': 'Votre connexion enregistrée correspond à un compte du personnel. Utilisez HexaTech Staff pour cet accès, ou connectez-vous ici avec votre compte de membre.',
   'brand': 'HexaTech Loyalty',
 

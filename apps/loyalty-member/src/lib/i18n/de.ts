@@ -1,6 +1,15 @@
 import type { Key } from './en'
 
 export const de: Record<Key, string> = {
+  "feedback.points": "+{{n}} Punkte",
+  "feedback.checkin": "Besuch bestätigt",
+  "feedback.stamp": "Stempelkarte aktualisiert",
+  "feedback.stampComplete": "Stempelkarte vollständig",
+  "balance.title": "Ihre Guthaben",
+  "events.details": "Details",
+  "events.registeredTab": "Angemeldet",
+  "events.cancelTitle": "Anmeldung stornieren?",
+  "events.cancelBody": "Ihr Platz wird einem anderen Mitglied angeboten.",
   'error.member_required': 'Ihre gespeicherte Anmeldung gehört zu einem Mitarbeiterkonto. Nutzen Sie HexaTech Staff für den Mitarbeiterzugang oder melden Sie sich hier mit Ihrem Mitgliedskonto an.',
   'brand': 'HexaTech Loyalty',
 

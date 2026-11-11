@@ -1,14 +1,16 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ComponentRef, type ReactNode } from 'react'
 import {
   ActivityIndicator, Animated, Image, Platform, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View,
   type ImageStyle, type StyleProp, type TextInputProps, type TextStyle, type ViewStyle,
 } from 'react-native'
 import { LinearGradient } from 'expo-linear-gradient'
 import { Ionicons } from '@expo/vector-icons'
-import { BACKDROP, C, RADIUS, SHADOW, accentGradient, fonts, readableOn, tierColor, withAlpha } from '../lib/theme'
+import { BACKDROP, C, RADIUS, SHADOW, fonts, readableOn, tierColor, withAlpha } from '../lib/theme'
 import { initials } from '../lib/format'
 import { mediaUrl } from '../lib/api'
 import { feel } from '../lib/haptics'
+import { rememberOrigin } from '../lib/motion'
+import { useReducedMotion } from '../lib/useReducedMotion'
 
 export type IconName = keyof typeof Ionicons.glyphMap
 
@@ -44,9 +46,11 @@ export const NO_OUTLINE: TextStyle = Platform.OS === 'web' ? { outlineWidth: 0 }
 /** The page's backdrop: deep navy with a faint warm light at the top. */
 export function Backdrop({ children, style }: { children: ReactNode; style?: StyleProp<ViewStyle> }) {
   return (
-    <LinearGradient colors={BACKDROP} locations={[0, 0.35, 1]} style={[{ flex: 1 }, style]}>
+    <View style={[{ flex: 1, backgroundColor: C.bg }, style]}>
+      <Image source={require('../../assets/eclipse/wallpaper-blue-gold.png')} resizeMode="cover" style={StyleSheet.absoluteFill} accessible={false} />
+      <LinearGradient colors={[BACKDROP[0], BACKDROP[0], BACKDROP[1], BACKDROP[1], BACKDROP[2]]} locations={[0, .28, .45, .82, 1]} style={StyleSheet.absoluteFill} pointerEvents="none" />
       {children}
-    </LinearGradient>
+    </View>
   )
 }
 
@@ -74,18 +78,21 @@ export function Press({ children, onPress, style, disabled, label, haptic = true
   label?: string
   haptic?: boolean
 }) {
-  const scale = useRef(new Animated.Value(1)).current
-  const to = (value: number) => Animated.spring(scale, { toValue: value, useNativeDriver: true, speed: 40, bounciness: 6 }).start()
+  const [scale] = useState(() => new Animated.Value(1))
+  const ref = useRef<ComponentRef<typeof View>>(null)
+  const reduce = useReducedMotion()
+  const to = (value: number) => { if (reduce) scale.setValue(1); else Animated.timing(scale, { toValue: value, useNativeDriver: true, duration: 90 }).start() }
   // The Pressable is what sits in the parent's row, so it takes the sizing; the inner view fills it.
   const flat = StyleSheet.flatten(style) ?? {}
   const outer: ViewStyle = { flex: flat.flex, flexGrow: flat.flexGrow, flexShrink: flat.flexShrink, flexBasis: flat.flexBasis, alignSelf: flat.alignSelf, width: flat.width }
   return (
     <Pressable
+      ref={ref}
       accessibilityRole="button"
       accessibilityLabel={label}
       accessibilityState={{ disabled: !!disabled }}
       disabled={disabled}
-      onPressIn={() => to(0.97)}
+      onPressIn={() => { to(0.985); ref.current?.measureInWindow((x, y, width, height) => rememberOrigin({ x, y, width, height })) }}
       onPressOut={() => to(1)}
       onPress={() => { if (haptic) feel.tap(); onPress?.() }}
       style={outer}
@@ -106,11 +113,11 @@ export function GoldButton({ title, onPress, icon, busy, disabled, style }: {
 }) {
   return (
     <Press onPress={onPress} disabled={disabled || busy} label={title} style={style}>
-      <LinearGradient colors={accentGradient()} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[styles.button, SHADOW.glow]}>
+      <LinearGradient colors={[C.gold, C.gold]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[styles.button, SHADOW.card]}>
         {busy ? <ActivityIndicator color={C.onGold} /> : (
           <>
             {icon && <Ionicons name={icon} size={19} color={C.onGold} />}
-            <Text style={[fonts.button, { color: C.onGold }]}>{title}</Text>
+            <Text style={[fonts.button, { color: C.onGold, textAlign: 'center', flexShrink: 1 }]}>{title}</Text>
           </>
         )}
       </LinearGradient>
@@ -132,7 +139,7 @@ export function GhostButton({ title, onPress, icon, tone = C.text, disabled, bus
     <Press onPress={onPress} disabled={disabled || busy} label={title} style={style}>
       <View style={[styles.button, styles.ghost, (disabled || busy) && { opacity: 0.6 }]}>
         {busy ? <ActivityIndicator color={tone} /> : icon && <Ionicons name={icon} size={18} color={tone} />}
-        <Text style={[fonts.button, { color: tone }]}>{title}</Text>
+        <Text style={[fonts.button, { color: tone, textAlign: 'center', flexShrink: 1 }]}>{title}</Text>
       </View>
     </Press>
   )
@@ -141,7 +148,8 @@ export function GhostButton({ title, onPress, icon, tone = C.text, disabled, bus
 /** A labelled text field. */
 export function Field({ label, hint, problem, style, ...input }: TextInputProps & { label: string; hint?: string; problem?: string | null; style?: StyleProp<TextStyle> }) {
   return (
-    <View style={{ gap: 8 }}>
+    <View style={{ gap: 6 }}>
+      <View style={styles.field}>
       <Text style={[fonts.label, { color: C.text2 }]}>{label}</Text>
       <TextInput
         placeholderTextColor={C.text3}
@@ -149,6 +157,7 @@ export function Field({ label, hint, problem, style, ...input }: TextInputProps 
         {...input}
         style={[styles.input, NO_OUTLINE, problem ? { borderColor: C.danger } : null, style]}
       />
+      </View>
       {problem ? <Text style={[fonts.small, { color: C.danger }]}>{problem}</Text> : hint ? <Text style={[fonts.small, { color: C.text3 }]}>{hint}</Text> : null}
     </View>
   )
@@ -228,15 +237,17 @@ export function Notice({ text, tone = 'danger', action, onAction }: { text: stri
 
 /** A soft placeholder while something loads. */
 export function Shimmer({ height, style }: { height: number; style?: StyleProp<ViewStyle> }) {
-  const opacity = useRef(new Animated.Value(0.45)).current
+  const [opacity] = useState(() => new Animated.Value(0.45))
+  const reduce = useReducedMotion()
   useEffect(() => {
+    if (reduce) { opacity.setValue(.6); return }
     const loop = Animated.loop(Animated.sequence([
       Animated.timing(opacity, { toValue: 0.9, duration: 700, useNativeDriver: true }),
       Animated.timing(opacity, { toValue: 0.45, duration: 700, useNativeDriver: true }),
     ]))
     loop.start()
     return () => loop.stop()
-  }, [opacity])
+  }, [opacity, reduce])
   return <Animated.View style={[{ height, borderRadius: RADIUS.md, backgroundColor: C.surface2, opacity }, style]} />
 }
 
@@ -281,8 +292,8 @@ export function Row({ left, title, line, right, onPress, last }: { left?: ReactN
     <View style={[styles.row, !last && styles.rowLine]}>
       {left}
       <View style={{ flex: 1, gap: 2 }}>
-        <Text style={[fonts.bodyStrong, { color: C.text }]} numberOfLines={1}>{title}</Text>
-        {line ? <Text style={[fonts.small, { color: C.text2 }]} numberOfLines={1}>{line}</Text> : null}
+        <Text style={[fonts.bodyStrong, { color: C.text }]}>{title}</Text>
+        {line ? <Text style={[fonts.small, { color: C.text2 }]}>{line}</Text> : null}
       </View>
       {right}
       {onPress && <Ionicons name="chevron-forward" size={16} color={C.text3} />}
@@ -293,9 +304,10 @@ export function Row({ left, title, line, right, onPress, last }: { left?: ReactN
 
 const styles = StyleSheet.create({
   surface: { backgroundColor: C.surface, borderRadius: RADIUS.lg, borderWidth: 1, borderColor: C.hairline },
-  button: { minHeight: 54, borderRadius: RADIUS.md, paddingHorizontal: 20, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 },
-  ghost: { borderWidth: 1, borderColor: C.hairlineStrong, backgroundColor: 'rgba(255,255,255,0.03)' },
-  input: { ...fonts.body, color: C.text, minHeight: 52, borderRadius: RADIUS.md, borderWidth: 1, borderColor: C.hairlineStrong, backgroundColor: C.bgRaised, paddingHorizontal: 16 },
+  button: { minHeight: 52, borderRadius: RADIUS.md, paddingHorizontal: 16, paddingVertical: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 },
+  ghost: { borderWidth: 1, borderColor: C.hairline, backgroundColor: C.surface },
+  field: { minHeight: 78, gap: 4, paddingHorizontal: 18, paddingVertical: 12, borderRadius: RADIUS.lg, borderWidth: 1, borderColor: C.hairline, backgroundColor: C.surface },
+  input: { ...fonts.body, color: C.text, minHeight: 30, paddingVertical: 0, paddingHorizontal: 0 },
   search: { flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 50, borderRadius: RADIUS.pill, borderWidth: 1, borderColor: C.hairlineStrong, backgroundColor: C.surface, paddingHorizontal: 18 },
   pill: { alignSelf: 'flex-start', paddingHorizontal: 10, paddingVertical: 4, borderRadius: RADIUS.pill, maxWidth: 200 },
   sectionTitle: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10, marginTop: 6 },

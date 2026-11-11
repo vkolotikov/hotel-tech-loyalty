@@ -1,6 +1,15 @@
 import type { Key } from './en'
 
 export const ru: Record<Key, string> = {
+  "feedback.points": "+{{n}} баллов",
+  "feedback.checkin": "Посещение подтверждено",
+  "feedback.stamp": "Карта отметок обновлена",
+  "feedback.stampComplete": "Карта отметок заполнена",
+  "balance.title": "Ваши балансы",
+  "events.details": "Подробнее",
+  "events.registeredTab": "Мои регистрации",
+  "events.cancelTitle": "Отменить регистрацию?",
+  "events.cancelBody": "Ваше место будет предложено другому участнику.",
   'error.member_required': 'Сохранённый вход относится к учётной записи сотрудника. Для работы используйте HexaTech Staff или войдите здесь с учётной записью участника программы.',
   'brand': 'HexaTech Loyalty',
 

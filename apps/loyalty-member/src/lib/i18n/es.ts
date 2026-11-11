@@ -2,6 +2,15 @@ import type { Key } from './en'
 
 /** Usted, as the portal speaks to members. */
 export const es: Record<Key, string> = {
+  "feedback.points": "+{{n}} puntos",
+  "feedback.checkin": "Visita confirmada",
+  "feedback.stamp": "Tarjeta de sellos actualizada",
+  "feedback.stampComplete": "Tarjeta de sellos completada",
+  "balance.title": "Sus saldos",
+  "events.details": "Detalles",
+  "events.registeredTab": "Inscripciones",
+  "events.cancelTitle": "¿Cancelar la inscripción?",
+  "events.cancelBody": "Su plaza se ofrecerá a otro socio.",
   'error.member_required': 'La sesión guardada corresponde a una cuenta del personal. Utilice HexaTech Staff para acceder como personal o inicie sesión aquí con su cuenta de miembro.',
   'brand': 'HexaTech Loyalty',
 
