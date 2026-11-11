@@ -13,9 +13,15 @@ class OfferSendController extends Controller
 {
     public function preview(Request $request, int $id, OfferDelivery $delivery): \Illuminate\Http\JsonResponse
     {
-        $ids = $this->members($request);
-        $preview = $delivery->preview(SpecialOffer::query()->findOrFail($id), $ids);
-        return response()->json(['revision' => $preview['revision'], 'counts' => $preview['counts'], 'offer' => $preview['offer']]);
+        LoyaltyAccess::require($request->user(), LoyaltyAccess::MANAGE_REWARDS);
+        $mode = $request->validate(['recipient_mode' => 'sometimes|in:selected,all'])['recipient_mode'] ?? 'selected';
+        $offer = SpecialOffer::query()->findOrFail($id);
+        if ($mode === 'all') {
+            $request->validate(['member_ids' => 'prohibited']);
+            $ids = $delivery->eligibleMemberIds($offer);
+        } else $ids = $this->members($request);
+        $preview = $delivery->preview($offer, $ids);
+        return response()->json(['revision' => $preview['revision'], 'member_ids' => $preview['member_ids'], 'counts' => $preview['counts'], 'offer' => $preview['offer']]);
     }
 
     public function store(Request $request, int $id, OfferDelivery $delivery): \Illuminate\Http\JsonResponse

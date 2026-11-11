@@ -74,6 +74,56 @@ class PersonalOffersTest extends TestCase
             'code' => 'CHRISTMAS', 'start_date' => '2026-10-01', 'end_date' => '2026-12-31'];
     }
 
+    public function test_all_member_preview_resolves_only_active_members_in_this_organization_and_sends_the_reviewed_list(): void
+    {
+        \Illuminate\Support\Facades\Queue::fake();
+        $this->ada->update(['marketing_consent' => true, 'email_notifications' => true]);
+        $this->makeMember('Inactive recipient', 'inactive@example.test', ['is_active' => false]);
+        $this->otherOrganization();
+        $id = $this->asManager()->postJson($this->api('offers'), $this->body())->assertCreated()->json('offer.id');
+        $preview = $this->postJson($this->api("offers/$id/send-preview"), ['recipient_mode' => 'all'])
+            ->assertOk()->assertJsonPath('member_ids', [$this->ada->id, $this->grace->id])->assertJsonPath('counts.selected', 2)
+            ->assertJsonPath('counts.portal', 2)->assertJsonPath('counts.email', 1);
+        $this->assertSame(0, DB::table('push_notifications')->whereIn('member_id', [$this->ada->id, $this->grace->id])->count());
+        $later = $this->makeMember('Joined after review', 'later@example.test');
+        $this->postJson($this->api("offers/$id/send"), ['member_ids' => $preview->json('member_ids'), 'revision' => $preview->json('revision'), 'idempotency_key' => 'all-reviewed-1'])->assertOk();
+        $this->assertSame([$this->ada->id, $this->grace->id], \App\Models\SpecialOfferSend::firstOrFail()->portal_ids);
+        $this->assertSame(0, DB::table('push_notifications')->where('member_id', $later->id)->count());
+        \Illuminate\Support\Facades\Queue::assertPushed(\App\Jobs\SendEmailCampaignChunk::class, 1);
+    }
+
+    public function test_all_member_preview_respects_private_recipients_and_an_empty_private_list_stays_empty(): void
+    {
+        $id = $this->asManager()->postJson($this->api('offers'), $this->body(['audience' => 'members', 'member_ids' => [$this->ada->id]]))->assertCreated()->json('offer.id');
+        $this->postJson($this->api("offers/$id/send-preview"), ['recipient_mode' => 'all'])->assertOk()->assertJsonPath('member_ids', [$this->ada->id]);
+        DB::table('special_offer_recipients')->where('offer_id', $id)->delete();
+        $this->postJson($this->api("offers/$id/send-preview"), ['recipient_mode' => 'all'])->assertOk()->assertJsonPath('member_ids', [])->assertJsonPath('counts.portal', 0)->assertJsonPath('counts.email', 0);
+    }
+
+    public function test_all_member_preview_keeps_level_rules_and_requires_explicit_authorized_selection(): void
+    {
+        $id = $this->asManager()->postJson($this->api('offers'), $this->body(['tier_ids' => [$this->tiers['gold']->id]]))->assertCreated()->json('offer.id');
+        $this->postJson($this->api("offers/$id/send-preview"), ['recipient_mode' => 'all'])->assertOk()->assertJsonPath('member_ids', [$this->ada->id]);
+        $this->postJson($this->api("offers/$id/send-preview"), [])->assertUnprocessable();
+        $this->postJson($this->api("offers/$id/send-preview"), ['recipient_mode' => 'all', 'member_ids' => [$this->grace->id]])->assertUnprocessable();
+        $this->asStaffMember()->postJson($this->api("offers/$id/send-preview"), ['recipient_mode' => 'all'])->assertForbidden();
+    }
+
+    public function test_all_member_preview_refuses_more_than_the_shared_campaign_limit(): void
+    {
+        $first = (int) DB::table('users')->max('id') + 100;
+        $password = bcrypt('isolated-test-password');
+        foreach (array_chunk(range($first, $first + 5000), 250) as $chunk) {
+            DB::table('users')->insert(array_map(fn ($id) => ['id' => $id, 'organization_id' => $this->org->id, 'name' => 'Limit member', 'email' => "limit.$id@example.test", 'password' => $password, 'user_type' => 'member', 'created_at' => now(), 'updated_at' => now()], $chunk));
+            DB::table('loyalty_members')->insert(array_map(fn ($id) => ['organization_id' => $this->org->id, 'user_id' => $id, 'tier_id' => $this->tiers['silver']->id,
+                'member_number' => "ALL-$id", 'qr_code_token' => "all-limit-$id", 'referral_code' => 'L'.base_convert($id, 10, 36), 'current_points' => 0, 'lifetime_points' => 0,
+                'is_active' => true, 'joined_at' => now(), 'created_at' => now(), 'updated_at' => now()], $chunk));
+        }
+        $id = $this->asManager()->postJson($this->api('offers'), $this->body())->assertCreated()->json('offer.id');
+        $this->postJson($this->api("offers/$id/send-preview"), ['recipient_mode' => 'all'])->assertUnprocessable()->assertJsonPath('error', 'too_many');
+        $this->assertSame(0, DB::table('special_offer_sends')->where('organization_id', $this->org->id)->count());
+    }
+
     public function test_attachment_is_durable_private_and_validated_by_actual_content(): void
     {
         $id = $this->asManager()->postJson($this->api('offers'), $this->body(['audience' => 'members', 'member_ids' => [$this->ada->id]]))->json('offer.id');

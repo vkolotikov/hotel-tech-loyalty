@@ -174,6 +174,7 @@ export interface OfferBody {
 
 export interface OfferAttachment { name: string; mime: string; bytes: number }
 export interface OfferSendPreview {
+  member_ids: number[]
   offer: Pick<Offer, 'title' | 'description' | 'code' | 'start_date' | 'end_date' | 'attachment'>
   revision: string
   counts: { selected: number; eligible: number; email: number; portal: number; ineligible: number; no_consent: number; unsubscribed: number; no_email: number; suppressed: number; portal_off: number }
