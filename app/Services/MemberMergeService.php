@@ -71,6 +71,7 @@ class MemberMergeService
         'reward_redemptions'   => ['member_id'],
         'benefit_entitlements' => ['member_id'],
         'member_offers'        => ['member_id'],
+        'special_offer_recipients' => ['member_id'],
         'referrals'            => ['referrer_id', 'referee_id'],
         'push_notifications'   => ['member_id'],
         'nfc_cards'            => ['member_id'],
@@ -143,6 +144,7 @@ class MemberMergeService
             // 1) The pairs that would collide once moved.
             $dropped = [
                 'member_offers' => $this->dedupeOffers($winner->id, $loser->id),
+                'special_offer_recipients' => $this->dedupeOfferRecipients($winner->id, $loser->id),
                 'referrals'     => $this->dedupeReferrals($winner->id, $loser->id),
                 'email_campaign_deliveries' => $this->dedupeDeliveries($winner->id, $loser->id),
                 'push_message_deliveries'   => $this->dedupePushDeliveries($winner->id, $loser->id),
@@ -279,6 +281,15 @@ class MemberMergeService
      * Where both members hold the same offer, the row that went furthest stays — used, then claimed, then the
      * winner's — and the other is deleted. @return list<array<string, mixed>> the rows deleted
      */
+    private function dedupeOfferRecipients(int $winnerId, int $loserId): array
+    {
+        if (!Schema::hasTable('special_offer_recipients')) return [];
+        $duplicates = DB::table('special_offer_recipients')->where('member_id', $loserId)
+            ->whereIn('offer_id', DB::table('special_offer_recipients')->where('member_id', $winnerId)->pluck('offer_id'))->get();
+        DB::table('special_offer_recipients')->whereIn('id', $duplicates->pluck('id'))->delete();
+        return $duplicates->map(fn ($row) => (array) $row)->all();
+    }
+
     private function dedupeOffers(int $winnerId, int $loserId): array
     {
         if (!Schema::hasTable('member_offers') || !Schema::hasColumn('member_offers', 'offer_id')) {

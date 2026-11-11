@@ -25,6 +25,7 @@
     "wallet_unavailable": "Wallet-Karten sind für dieses Unternehmen noch nicht eingerichtet.", "wallet_error": "Die Karte konnte nicht vorbereitet werden. Bitte versuchen Sie es erneut."
   },
   "rewards": {
+    "download_voucher": "Gutschein herunterladen", "voucher_unavailable": "Dieser Gutschein ist nicht verfügbar. Bitte wenden Sie sich an das Team.", "view_offer": "Angebot ansehen",
     "offer_membership_unavailable": "Dieses Angebot erfordert eine aktive Mitgliedschaft der vorgesehenen Stufe.",
     "membership_expired": "Ihre Mitgliedschaft ist abgelaufen. Bitte kontaktieren Sie das Team.",
     "membership_not_started": "Diese Mitgliedschaft hat noch nicht begonnen.",

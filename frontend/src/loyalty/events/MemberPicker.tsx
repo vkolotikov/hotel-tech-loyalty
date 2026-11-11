@@ -44,7 +44,7 @@ export function MemberPicker({ label, action, inputRef }: {
       <label htmlFor={id} className="block text-xs font-medium text-a-text-2">{label}</label>
       <div className="relative">
         <Search size={15} aria-hidden className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-a-text-2" />
-        <input id={id} ref={inputRef} type="search" value={query} autoComplete="off" spellCheck={false} onChange={(e) => setQuery(e.target.value)}
+        <input id={id} ref={inputRef} type="search" value={query} autoComplete="off" spellCheck={false} onKeyDown={e => { if (e.key === 'Enter') e.preventDefault() }} onChange={(e) => setQuery(e.target.value)}
           placeholder={t('loyalty.events.picker.placeholder', 'Name, email, phone or member number')}
           className="w-full rounded-lg border border-a-border bg-a-surface py-2 pl-9 pr-3 text-sm text-a-text" />
       </div>

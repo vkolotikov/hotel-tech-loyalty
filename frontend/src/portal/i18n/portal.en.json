@@ -25,6 +25,7 @@
     "wallet_unavailable": "Wallet passes are not set up for this venue yet.", "wallet_error": "Could not prepare the pass. Please try again."
   },
   "rewards": {
+    "download_voucher": "Download voucher", "voucher_unavailable": "This voucher is unavailable. Please contact the team.", "view_offer": "View offer",
     "offer_membership_unavailable": "This offer needs an active membership at its required level.",
     "membership_expired": "Your membership has ended. Please contact the team.",
     "membership_not_started": "Your membership has not started yet.",

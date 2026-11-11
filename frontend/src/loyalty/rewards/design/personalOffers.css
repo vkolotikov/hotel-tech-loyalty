@@ -1,0 +1,15 @@
+[data-loyalty] .l-personal-chips { display:flex; flex-wrap:wrap; gap:6px; max-height:150px; overflow:auto; padding:0; list-style:none; }
+[data-loyalty][data-overview][data-redesign] .l-editor-dialog .l-personal-members input[type="search"] { padding-inline-start:2.25rem; }
+[data-loyalty] .l-personal-file input[type="file"] { display:none; }
+[data-loyalty] .l-personal-chips li { display:flex; align-items:center; gap:8px; border:1px solid rgb(var(--a-border)); border-radius:8px; padding:5px 8px; font-size:12px; background:rgb(var(--a-surface)); }
+[data-loyalty] .l-personal-chips button { display:grid; place-items:center; padding:3px; border-radius:4px; }
+[data-loyalty] .l-personal-chips button:hover { background:rgb(var(--a-surface-2)); }
+[data-loyalty] .l-personal-file { display:grid; gap:10px; border:1px solid rgb(var(--a-border)); border-radius:12px; padding:12px; }
+[data-loyalty] .l-personal-file-heading, [data-loyalty] .l-personal-file-row { display:flex; gap:9px; align-items:center; font-size:12px; }
+[data-loyalty] .l-personal-file-row>div { display:grid; gap:3px; flex:1; min-width:0; }
+[data-loyalty] .l-personal-file-row strong { overflow-wrap:anywhere; }
+[data-loyalty] .l-personal-file small { color:rgb(var(--a-text-2)); font-size:11px; }
+[data-loyalty] .l-personal-counts { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+[data-loyalty] .l-personal-counts>div { display:grid; gap:3px; border:1px solid rgb(var(--a-border)); border-radius:10px; padding:12px; }
+[data-loyalty] .l-personal-counts strong { font-size:23px; }
+[data-loyalty] .l-personal-counts span { font-size:12px; color:rgb(var(--a-text-2)); }

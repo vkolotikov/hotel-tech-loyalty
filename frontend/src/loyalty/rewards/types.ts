@@ -110,6 +110,10 @@ export interface RedemptionsPage extends Paged {
 }
 
 export interface Offer {
+  audience?: 'programme' | 'members'
+  member_ids?: number[]
+  members?: { id: number; name: string }[]
+  attachment?: OfferAttachment | null
   id: number
   /** The brand it runs on (release 4); a change keeps it unless it names another (release 6). */
   brand_id?: number | null
@@ -148,6 +152,8 @@ export interface OffersList {
 }
 
 export interface OfferBody {
+  audience?: 'programme' | 'members'
+  member_ids?: number[]
   title: string
   description: string
   type: string
@@ -164,6 +170,13 @@ export interface OfferBody {
   is_active?: boolean
   /** Release 4: the brand a new offer goes on, sent only when there is a choice; release 6: on a change, another moves it. */
   brand?: number | 'every'
+}
+
+export interface OfferAttachment { name: string; mime: string; bytes: number }
+export interface OfferSendPreview {
+  offer: Pick<Offer, 'title' | 'description' | 'code' | 'start_date' | 'end_date' | 'attachment'>
+  revision: string
+  counts: { selected: number; eligible: number; email: number; portal: number; ineligible: number; no_consent: number; unsubscribed: number; no_email: number; suppressed: number; portal_off: number }
 }
 
 export interface Referral {

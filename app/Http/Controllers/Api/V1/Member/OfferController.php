@@ -21,7 +21,8 @@ class OfferController extends Controller
             ->forTier($member->tier_id)
             ->orderByDesc('is_featured')
             ->orderByDesc('created_at')
-            ->get()->filter(fn (SpecialOffer $offer) => $offer->allowsMembership($member))->values();
+            ->get()->filter(fn (SpecialOffer $offer) => $offer->allowsMembership($member))->values()
+            ->each(fn (SpecialOffer $offer) => $offer->setAttribute('attachment', \App\Services\Loyalty\Offers\OfferFiles::metadata($offer)));
 
         // The member's own offers: AI-personalised ones they haven't acted
         // on yet, AND anything they have actually claimed.
@@ -42,7 +43,12 @@ class OfferController extends Controller
             ->with('offer')
             ->orderByRaw('used_at IS NULL DESC')
             ->orderByDesc('claimed_at')
-            ->get()->each(fn (MemberOffer $claim) => $claim->setAttribute('usable_now', $claim->offer?->allowsMembership($member) ?? false));
+            ->get()->each(function (MemberOffer $claim) use ($member) {
+                $offer = $claim->getRelation('offer');
+                $claim->setAttribute('usable_now', $offer instanceof SpecialOffer && $offer->allowsMembership($member));
+                if ($offer instanceof SpecialOffer && $offer->allowsRecipient($member)) $offer->setAttribute('attachment', \App\Services\Loyalty\Offers\OfferFiles::metadata($offer));
+                elseif ($offer) $claim->setRelation('offer', null);
+            });
 
         return response()->json([
             'general'      => $offers,
@@ -60,6 +66,7 @@ class OfferController extends Controller
         $member = $request->user()->loyaltyMember;
         \App\Services\Loyalty\Members\MemberStatus::assertActive($member);
         $offer = SpecialOffer::active()->findOrFail($offerId);
+        abort_unless($offer->allowsRecipient($member), 404);
 
         // tier_ids null/empty = open to every tier; otherwise the member's
         // tier must be one of the listed ones. This was never checked here,
@@ -81,6 +88,7 @@ class OfferController extends Controller
                 // "4,812 / 100 used". Under load, two claims could also both
                 // read 99 and both proceed.
                 $locked = SpecialOffer::whereKey($offer->id)->lockForUpdate()->firstOrFail();
+                abort_unless($locked->allowsRecipient($member), 404);
 
                 // Release 7: the member's own bonus_points claim, before the
                 // limits (which count it). One held from before release 7, or

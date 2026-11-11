@@ -12,6 +12,7 @@ use App\Services\Loyalty\LoyaltyForms;
 use App\Services\Loyalty\LoyaltyRefused;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
@@ -64,6 +65,9 @@ class OfferController extends Controller
             'applies_to'       => ['nullable', Rule::in(LoyaltyForms::appliesTo())],
             'tier_ids'         => 'nullable|array',
             'tier_ids.*'       => ['integer', OwnRows::rule('loyalty_tiers')->whereNull('deleted_at')],
+            'audience'         => ['sometimes', Rule::in(['programme', 'members'])],
+            'member_ids'       => 'sometimes|array|max:5000',
+            'member_ids.*'     => ['integer', 'distinct', OwnRows::rule('loyalty_members')],
             'start_date'       => 'required|date',
             'end_date'         => 'required|date|after:start_date',
             'usage_limit'      => 'nullable|integer|min:1',
@@ -74,7 +78,17 @@ class OfferController extends Controller
         $this->refuseTakenCode($data['code'] ?? null);
         $data = LoyaltyForms::withBrand($data);
 
-        $offer = SpecialOffer::create(self::columns($data) + ['created_by' => $request->user()->id]);
+        $offer = DB::transaction(function () use ($data, $request) {
+            $ids = $data['member_ids'] ?? [];
+            $columns = self::columns($data);
+            if (($columns['audience'] ?? 'programme') === 'members') {
+                if ($ids === []) throw ValidationException::withMessages(['member_ids' => 'Select at least one member.']);
+                $columns['tier_ids'] = null;
+            }
+            $offer = SpecialOffer::create($columns + ['created_by' => $request->user()->id]);
+            $this->recipients($offer, $ids);
+            return $offer;
+        });
 
         return response()->json(['offer' => self::row($offer->fresh(), VenueClock::today((int) app('current_organization_id')))], 201);
     }
@@ -104,6 +118,9 @@ class OfferController extends Controller
             'applies_to'       => ['sometimes', 'nullable', Rule::in(LoyaltyForms::appliesTo())],
             'tier_ids'         => 'sometimes|nullable|array',
             'tier_ids.*'       => ['integer', OwnRows::rule('loyalty_tiers')->whereNull('deleted_at')],
+            'audience'         => ['sometimes', Rule::in(['programme', 'members'])],
+            'member_ids'       => 'sometimes|array|max:5000',
+            'member_ids.*'     => ['integer', 'distinct', OwnRows::rule('loyalty_members')],
             'start_date'       => array_merge(['sometimes', 'date'], $end ? ['before:' . $end] : []),
             'end_date'         => array_merge(['sometimes', 'date'], $start ? ['after:' . $start] : []),
             'usage_limit'      => 'sometimes|nullable|integer|min:1',
@@ -118,7 +135,19 @@ class OfferController extends Controller
             $this->refuseTakenCode($data['code'], $offer);
         }
 
-        $offer->update(self::columns(LoyaltyForms::withBrand($data)));
+        $offer = DB::transaction(function () use ($offer, $data) {
+            $offer = SpecialOffer::query()->whereKey($offer->id)->lockForUpdate()->firstOrFail();
+            $columns = self::columns(LoyaltyForms::withBrand($data));
+            $audience = $columns['audience'] ?? $offer->getAttribute('audience') ?? 'programme';
+            $ids = $data['member_ids'] ?? $offer->recipientIds();
+            if ($audience === 'members') {
+                if ($ids === []) throw ValidationException::withMessages(['member_ids' => 'Select at least one member.']);
+                $columns['tier_ids'] = null;
+            }
+            $offer->update($columns);
+            if (array_key_exists('audience', $data) || array_key_exists('member_ids', $data)) $this->recipients($offer, $ids);
+            return $offer;
+        });
 
         return response()->json(['offer' => self::row($offer->fresh(), VenueClock::today((int) app('current_organization_id')))]);
     }
@@ -126,6 +155,7 @@ class OfferController extends Controller
     /** @return array<string, mixed> */
     private static function row(SpecialOffer $o, string $today): array
     {
+        $ids = $o->recipientIds();
         return [
             'id'               => (int) $o->id,
             'brand_id'         => $o->brand_id !== null ? (int) $o->brand_id : null,
@@ -136,6 +166,11 @@ class OfferController extends Controller
             'code'             => $o->code,
             'applies_to'       => (string) ($o->applies_to ?? 'all'),
             'tier_ids'         => LoyaltyForms::ints($o->tier_ids),
+            'audience'         => $o->getAttribute('audience') ?? 'programme',
+            'member_ids'       => $ids,
+            'members'          => $ids === [] ? [] : \App\Models\LoyaltyMember::query()->whereIn('id', $ids)->with('user:id,name')->orderBy('id')->get()
+                ->map(fn ($m) => ['id' => (int) $m->id, 'name' => $m->getRelation('user')?->getAttribute('name') ?? $m->member_number])->all(),
+            'attachment'       => \App\Services\Loyalty\Offers\OfferFiles::metadata($o),
             'start_date'       => $o->start_date?->format('Y-m-d'),
             'end_date'         => $o->end_date?->format('Y-m-d'),
             'usage_limit'      => $o->usage_limit !== null ? (int) $o->usage_limit : null,
@@ -168,6 +203,7 @@ class OfferController extends Controller
      */
     private static function columns(array $data): array
     {
+        unset($data['member_ids']);
         if (array_key_exists('applies_to', $data)) {
             $data['applies_to'] ??= 'all';
         }
@@ -176,6 +212,18 @@ class OfferController extends Controller
         }
 
         return $data;
+    }
+
+    private function recipients(SpecialOffer $offer, array $ids): void
+    {
+        // Legacy programme-only edits do not need the new pivot at all.
+        if ($offer->getAttribute('audience') === null) return;
+        DB::table('special_offer_recipients')->where('organization_id', $offer->getAttribute('organization_id'))->where('offer_id', $offer->id)->delete();
+        if ($offer->audience === 'members') foreach (array_chunk($ids, 500) as $chunk) {
+            DB::table('special_offer_recipients')->insert(array_map(fn ($id) => [
+                'organization_id' => $offer->getAttribute('organization_id'), 'offer_id' => $offer->id, 'member_id' => (int) $id,
+            ], $chunk));
+        }
     }
 
     /** Trim the code before validation, so `' welcome10 '` passes the character rule, then upper-case it. */

@@ -94,6 +94,9 @@ final class AccessMap
         'admin/loyalty/program/boosts/confirm-times' => ['manager',       'manager',            'loyalty'],       // Release 6: "These times are right" for boosts flagged "check the time" (manager)
         'admin/loyalty/rewards'                 => ['staff',              'can_manage_offers',  'loyalty'],       // The rewards catalogue (changes: can_manage_offers, as admin/rewards)
         'admin/loyalty/offers'                  => ['staff',              'can_manage_offers',  'loyalty'],       // Offers (changes: can_manage_offers, as admin/offers)
+        'admin/loyalty/offers/{id}/attachment' => ['staff', 'can_manage_offers', 'loyalty'],
+        'admin/loyalty/offers/{id}/send-preview' => ['can_manage_offers', 'can_manage_offers', 'loyalty'],
+        'admin/loyalty/offers/{id}/send' => ['can_manage_offers', 'can_manage_offers', 'loyalty'],
         'admin/loyalty/redemptions'             => ['staff',              'can_redeem_points',  'loyalty'],       // Fulfil or cancel a redemption (can_redeem_points, as the full admin's routes)
         'admin/loyalty/members/{id}/tier'       => ['staff',              'manager',            'loyalty'],       // Release 2: a member's tier is a manager's correction
         'admin/loyalty/members/{id}/deactivate' => ['staff',              'manager',            'loyalty'],       // Deactivate a member (manager)
