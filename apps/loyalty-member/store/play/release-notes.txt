@@ -1,0 +1,15 @@
+<en-GB>
+A focused loyalty experience with membership dates and access details, personal offer vouchers, enabled event registration, clearer reward confirmation and live updates from your venue.
+</en-GB>
+<ru-RU>
+Обновлены сроки членства и доступ, личные ваучеры, запись на доступные события, подтверждение наград и обновление данных вашего заведения.
+</ru-RU>
+<de-DE>
+Mitgliedschaftszeiträume und Zutritt, persönliche Gutscheine, Anmeldungen zu verfügbaren Events, klare Prämienbestätigung und aktuelle Daten Ihres Anbieters.
+</de-DE>
+<fr-FR>
+Dates d’adhésion et accès, bons personnels, inscription aux événements disponibles, confirmation claire des récompenses et données à jour de votre établissement.
+</fr-FR>
+<es-ES>
+Fechas de membresía y acceso, vales personales, inscripción en eventos disponibles, confirmación clara de premios y datos actualizados de su establecimiento.
+</es-ES>

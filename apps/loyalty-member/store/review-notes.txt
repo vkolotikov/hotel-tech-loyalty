@@ -1,0 +1,19 @@
+RELEASE PREPARATION DRAFT: attach a current members-app physical walkthrough and verify the reviewer environment before using these notes for store review. This source update has not been submitted for review.
+
+1. Physical-device walkthrough
+The recording must demonstrate the selected HexaTech Loyalty members build: launch, sign-in, card/QR, benefits, reward confirmation, offers/private voucher, enabled event registration and Profile/account deletion. Registration uses the venue's join QR/link. Record the actual device/OS. HexaTech Staff's video is a different app and must not be attached here.
+
+2. Purpose and audience
+HexaTech Loyalty is for members of customer venues using HexaTech. It puts their membership card, dates, benefits, points where enabled, rewards, personal offers and event registrations in one place, with venue branding. Staff administration is a separate app. Appointment/accommodation booking and payments are excluded from version 2.1.
+
+3. Access and main features
+Use member demo credentials in the console's private Sign-In/App access fields, not a staff account. The isolated venue is HexaTech App Review Demo; sample member HL-2026-000493. Home shows the membership; Card shows its server-issued QR; Rewards provides Benefits, Catalogue, Offers and My codes where enabled. More provides Events/history, programme/access details, Profile, language and Help. Profile supports details, birthday, notifications, password and deletion. Join uses a venue-issued link or QR. No real purchase or sample document upload is required. Before submission, ensure the review venue has a future event and an eligible personal offer/voucher if those flows are demonstrated.
+
+4. External services
+Membership, authentication and eligibility come from the HexaTech HTTPS API at app.hexa-tech.uk. Expo supplies build/push infrastructure; Android delivery uses Firebase/FCM and iOS uses APNs. Optional Apple Wallet and Google Wallet appear only when venue/provider/device support them. Private vouchers use account authorization and the operating system's save/share facilities at the member's request. No AI service or digital purchase is required for core functionality.
+
+5. Regional behaviour
+Membership functionality is consistent across regions. Benefits, events, rewards, currency, venue-local dates and Wallets depend on venue/provider configuration and member eligibility. English, Russian, German, French and Spanish are available. The app does not request location access.
+
+6. Regulated services and content
+The app provides general loyalty functions, not medical advice, regulated financial services or gambling. Venue content is account-scoped. The publisher is FDS Cards Ltd. No protected third-party entertainment catalogue is bundled. Any specific venue authorization requested by App Review must be supplied by the owner rather than inferred from demo data.

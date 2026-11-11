@@ -112,6 +112,12 @@ export interface PortalBootstrap {
   counts: { unread_notifications: number; upcoming_bookings: number }
 }
 
+/** Read-only programme facts and canonical admission decisions, shared with the native members app. */
+export interface MemberProgramme {
+  earning: null | { bookings: boolean; desk: boolean; base_rate: number; checkin: boolean; checkin_points: number; expiry_months: number; birthday_points: number; referrals: boolean }
+  places: { id: number; name: string; description: string | null; granted: boolean; reason: string; allowed_tiers: string[] }[]
+}
+
 export type BookingKind = 'service' | 'stay'
 
 export interface PortalBooking {
