@@ -12,6 +12,8 @@ cancel either kind themselves inside the venue's cancellation window (`## Cancel
 
 ## Backend
 
+Personal offers (11 November 2026): `member/offers` adds optional `attachment: {name, mime, bytes}` metadata. The Rewards cards and expanded new-offer Inbox messages download authenticated blobs from `GET member/portal/offers/{id}/attachment`. Current tenant, active member, offer expiry and recipient eligibility are rechecked for every download. Individually targeted offers remain absent for other members, including guessed codes. Delivery writes the portal inbox through `NotificationService::keep` with offer preferences, and never claims the offer or awards points automatically. See the personal-offers audit and loyalty runbook for the staff workflow and immutable email outbox.
+
 - `GET /api/v1/member/portal` (`Member\Portal\PortalController`) is the shell's one startup call:
   venue identity + accent tokens (`App\Services\Portal\PortalTheme`, contrast-checked by
   `App\Support\Accent`), capabilities (`App\Services\Booking\BookingCapability`), policies,

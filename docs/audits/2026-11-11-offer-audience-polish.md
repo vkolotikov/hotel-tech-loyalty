@@ -1,0 +1,7 @@
+# Offer audience control refinement
+
+The user found individual-member selection and narrowed the request to a small design improvement. This change makes the two existing audience modes visible as native radio tiles. Programme levels use aligned checkbox tiles with consistent spacing; All members is a flat option in the same treatment. Selecting levels and clearing them keeps the existing payload and eligibility rules. The section heading now describes both audience modes accurately. No backend, delivery or membership logic changed.
+
+The staff navy/Poppins editor, shared popup and existing translated copy are retained. Native inputs preserve keyboard support and focus; the whole tile is clickable. Choices stack on small phones and labels wrap in longer languages. Styles are scoped to the offer controls.
+
+Source validation: TypeScript, all 6,941 frontend tests and lint regression checks pass. Real-backend browser acceptance covers all-member/level selection, Space toggling, switching to the member picker, plus five languages in both themes at 390/1440px. Desktop and phone screenshots are reviewed. Private evidence: `C:/wamp64/tmp/personal-offers-rehearsal-20261111/offer-audience-polish/` and `C:/wamp64/tmp/offer-audience-polish-*-20261111.log`. The existing disposable rehearsal database is used; no production members are contacted. Release artifact validation and live verification follow below.

@@ -51,9 +51,9 @@
 
 ## Task 5 — Review, release and evidence
 
-- [ ] Run relevant backend, AccessMap/OwnIds/merge/coupon, frontend, TypeScript/lint and PHPStan checks; fresh-context whole-branch review and address important findings.
-- [ ] Use the source-patch deployment recipe, baseline `88fdf4adb`; required checks and fresh build on the artifact, then content verification on both production domains.
-- [ ] Record audit and 11 November handoff. Stop owned rehearsal helpers and remove only the verified deployment checkout.
+- [x] Run relevant backend, AccessMap/OwnIds/merge/coupon, frontend, TypeScript/lint and PHPStan checks; fresh-context whole-branch review and address important findings.
+- [x] Use the source-patch deployment recipe, baseline `88fdf4adb`; required checks and fresh build on the artifact, then content verification on both production domains.
+- [x] Record audit and 11 November handoff. Stop owned rehearsal helpers and remove only the verified deployment checkout.
 
 ## Rulings
 
@@ -64,3 +64,5 @@
 - Source email campaigns are read-only in ordinary campaign editors/start/reset flows. A clean duplicate drops the offer pointer; cancellation stays possible and retries report a stopped delivery accurately.
 - Browser acceptance uses only the isolated seeded demo; PHPUnit PostgreSQL checks use the separate migrated `personal_offers_test` database. An exploratory run against the seeded demo mixed global fixture counts with browser data; it is not release evidence. The old SQLite-only no-referral-code merge case is documented in the workspace runbook.
 - Native member app directories are absent from this checkout, so their TypeScript/Vitest checks cannot run here. Shared portal changes are additive types and translated copy.
+
+Completion: source efb56e7bc deployed as main 0d3e82cf6; all artifact gates and 30 live checks pass. Owned helpers stopped and verified release checkout removed. Evidence is in the audit and 11 November handoff.
