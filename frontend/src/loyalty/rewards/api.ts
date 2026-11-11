@@ -19,7 +19,7 @@ export const rewardsApi = {
   cancel: (id: number): Promise<{ redemption: Redemption }> => watched(api.post(loyaltyUrl(`redemptions/${id}/cancel`))),
 
   offers: (): Promise<OffersList> => watched(api.get(loyaltyUrl('offers'))),
-  offerPreview: (id: number, member_ids: number[]): Promise<OfferSendPreview> => watched(api.post(loyaltyUrl(`offers/${id}/send-preview`), { member_ids })),
+  offerPreview: (id: number, member_ids: number[], mode: 'selected' | 'all' = 'selected'): Promise<OfferSendPreview> => watched(api.post(loyaltyUrl(`offers/${id}/send-preview`), mode === 'all' ? { recipient_mode: 'all' } : { recipient_mode: 'selected', member_ids })),
   sendOffer: (id: number, member_ids: number[], revision: string, idempotency_key: string): Promise<{ send_id: number; counts: OfferSendPreview['counts']; email_status: string; portal_done: boolean }> => watched(api.post(loyaltyUrl(`offers/${id}/send`), { member_ids, revision, idempotency_key })),
   uploadAttachment: (id: number, file: File): Promise<{ attachment: OfferAttachment }> => {
     const form = new FormData(); form.append('attachment', file)

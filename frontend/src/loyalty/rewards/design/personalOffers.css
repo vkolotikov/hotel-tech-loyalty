@@ -46,3 +46,7 @@
 [data-loyalty] .l-editor-dialog .l-offer-levels .l-offer-all { width:100%; min-height:38px; }
 [data-loyalty] .l-editor-dialog .l-offer-level-option { min-height:38px; padding:8px 9px; }
 @media (max-width:420px) { [data-loyalty] .l-offer-audience { grid-template-columns:minmax(0,1fr); } }
+[data-loyalty] .l-editor-dialog .l-offer-prepare-send { border-color:var(--l-ov-cyan); }
+[data-loyalty] .l-offer-send-review p { max-height:120px; overflow:auto; overflow-wrap:anywhere; }
+[data-loyalty] .l-offer-send-review:focus-visible { outline:2px solid var(--l-ov-cyan); outline-offset:4px; border-radius:8px; }
+@media (max-width:760px) { [data-loyalty] .l-editor-footer > .l-offer-prepare-send { flex-basis:100%; } }

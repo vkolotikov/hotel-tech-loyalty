@@ -1,7 +1,7 @@
 import { EditorDialog, EditorSection, EditorDisclosure, EditorPreview, EditorArt, EditorFooter, EditorSwitch } from '../../editors/EditorUI'
 import { ManagementVisual, ManagementFact } from '../../management/ManagementUI'
 import { useAdminWords } from '../../management/words'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
@@ -45,6 +45,7 @@ export function OffersDesignPage() {
   const visible = (data?.offers ?? []).filter(o => offerMatches(o, { q, brand, status }, brandName(o)))
   const selected = (editing ? data?.offers : visible)?.find(o => String(o.id) === params.get('selected')) ?? visible[0]
   const selectedParam = params.get('selected')
+  const deliveryOffer = params.get('send') === '1' ? data?.offers.find(o => String(o.id) === selectedParam) : undefined
   // Pin the initial selection so a background refresh cannot replace an unsaved draft with a newer first row.
   useEffect(() => {
     if (adding || selectedParam || !selected) return
@@ -55,21 +56,20 @@ export function OffersDesignPage() {
   const filters = <div className="l-rb-filters l-rb-offer-filters"><label><span>{say('searchOffers')}</span><input type="search" value={q} placeholder={say('searchOfferHint')} onKeyDown={e => { if (e.key === 'Enter') e.preventDefault() }} onChange={e => go({ q: e.target.value })} /></label><label><span>{t('loyalty.rewards.brand.label', 'Brand')}</span><select value={brand} onChange={e => go({ brand: e.target.value })}><option value="all">{say('allBrands')}</option><option value="every">{t('loyalty.rewards.brand.every', 'Every brand')}</option>{data?.options.brands?.list.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}</select></label></div>
   const list = <section className="l-ov-panel l-rb-list"><header><div className="l-rc-heading"><RewardIcon kind="calendar" /><h2>{say(status === 'current' ? 'liveUpcoming' : 'yourOffers')}</h2></div><button type="button" className="l-ov-link" onClick={() => go({ status: 'ended' })}>{say('endedOffers')}</button></header>{filters}<div className="l-ad-filter-tabs">{(['current', 'all', 'live', 'upcoming', 'ended', 'off'] as const).map(s => <button key={s} type="button" aria-pressed={status === s} onClick={() => go({ status: s })}>{say(s === 'all' ? 'allStatuses' : s)} <small>{counts[s]}</small></button>)}</div><RewardColumns first={say('offerSchedule')} value={say('value')} /><ul>{visible.map(o => <RewardRow key={o.id} id={`offer-${o.id}`} icon={o.type === 'discount' ? 'amberGift' : o.type === 'fixed_amount' ? 'calendarNeutral' : 'gift'} name={o.title} caption={`${brandName(o)} · ${dateLabel(o.start_date)} – ${dateLabel(o.end_date)}`} value={OFFER_VALUE_WORDS[o.type] ? t(`loyalty.rewards.offer_value.${o.type}`, OFFER_VALUE_WORDS[o.type], { value: amountOf(o.type, o.value, boot.venue.currency, i18n.language) }) : `${t(`loyalty.rewards.offer_type.${o.type}`, OFFER_TYPE_WORDS[o.type] ?? o.type)} · ${points(o.value, i18n.language)}`} status={['live', 'upcoming', 'off', 'ended'].includes(o.state) ? say(o.state as 'live' | 'upcoming' | 'off' | 'ended') : o.state} tone={o.state} selected={!adding && selected?.id === o.id} onSelect={() => go({ selected: o.id })} />)}</ul>{!visible.length && <RewardEmpty empty={!data?.offers.length ? say('emptyOffers') : undefined} onClear={data?.offers.length ? () => go({ q: '', brand: 'all', status: 'all' }) : undefined} />}</section>
   return <div className="l-ad-page l-rd-page l-rb-page l-rc-page l-rc-offers">
-    <RewardHeading title={say('offers')} line={say('offersLine')}><Link className="l-ov-button" to="/loyalty/rewards">{say('pointsRewards')}</Link>{manage && data && <OverviewButton primary onClick={() => guard.go(rewardsUrl('offers', { offer: 'new' }))}>{say('createOffer')}</OverviewButton>}</RewardHeading>
+    <RewardHeading title={say('offers')} line={say('offersLine')}><Link className="l-ov-button" to="/loyalty/rewards">{say('pointsRewards')}</Link>{manage && selected && !editing && <OverviewButton onClick={() => go({ selected: selected.id, send: '1' })}>{t('loyalty.personal.attachAndSend')}</OverviewButton>}{manage && data && <OverviewButton primary onClick={() => guard.go(rewardsUrl('offers', { offer: 'new' }))}>{say('createOffer')}</OverviewButton>}</RewardHeading>
     {!manage && <p data-read-only="">{t('loyalty.rewards.offers.read_only', 'Only staff allowed to manage offers can add or change them.')}</p>}
     {query.isError && <LoadFailed error={query.error} onRetry={() => { void query.refetch() }} />}{!data && query.isLoading && <Loading />}
     {params.get('saved') && <p role="status" className="l-rb-success">{say('saved')}</p>}
     {data && <>
-    {selected ? <div className="l-rb-columns">{list}<OfferDetails offer={selected} options={data.options} key={selected.id} onEdit={manage ? () => go({ selected: selected.id, edit: '1' }) : undefined} /></div> : list}
-    {editing && (selected || adding) && <OfferEditor key={`${adding ? 'new' : selected!.id}:${guard.resetVersion}`} offer={adding ? null : selected!} options={data.options} guard={guard} />}</>}
+    {selected ? <div className="l-rb-columns">{list}<OfferDetails offer={selected} options={data.options} key={selected.id} onSend={manage ? () => go({ selected: selected.id, send: '1' }) : undefined} onEdit={manage ? () => go({ selected: selected.id, edit: '1' }) : undefined} /></div> : list}
+    {editing && (selected || adding) && <OfferEditor key={`${adding ? 'new' : selected!.id}:${guard.resetVersion}`} offer={adding ? null : selected!} options={data.options} guard={guard} />}{manage && !editing && deliveryOffer && <SendOfferDialog key={deliveryOffer.id} offer={deliveryOffer} onClose={() => go({ send: null })} />}</>}
 
     <RewardLeaveDialog guard={guard} />
   </div>
 }
 
-function OfferDetails({ offer, options, onEdit }: { offer: Offer; options: OfferOptions; onEdit?: () => void }) {
+function OfferDetails({ offer, options, onEdit, onSend }: { offer: Offer; options: OfferOptions; onEdit?: () => void; onSend?: () => void }) {
   const { t, i18n } = useTranslation(), say = useRewardWords(), admin = useAdminWords(), boot = useBoot()
-  const [sending, setSending] = useState(false)
   const value = OFFER_VALUE_WORDS[offer.type] ? t(`loyalty.rewards.offer_value.${offer.type}`, OFFER_VALUE_WORDS[offer.type], { value: amountOf(offer.type, offer.value, boot.venue.currency, i18n.language) }) : t(`loyalty.rewards.offer_type.${offer.type}`, OFFER_TYPE_WORDS[offer.type] ?? offer.type)
   const date = (day: string | null) => day ? formatDate(day, i18n.language, { day: 'numeric', month: 'short', year: 'numeric' }) : say('noEnd')
   return <aside id="management-detail" tabIndex={-1} className="l-ov-panel l-rb-detail l-rc-offer-detail" data-offer-view="read">
@@ -81,8 +81,7 @@ function OfferDetails({ offer, options, onEdit }: { offer: Offer; options: Offer
     <ManagementFact icon="people" label={say('eligibility')}>{offer.audience === 'members' ? t('loyalty.personal.selectedCount', { count: offer.member_ids?.length ?? 0 }) : offer.tier_ids?.length ? offer.tier_ids.map(id => boot.programme.tiers.find(tier => tier.id === id)?.name ?? String(id)).join(', ') : say('allMembers')}</ManagementFact>
     <ManagementFact icon="bookingSmall" label={t('loyalty.rewards.offer.applies_to', 'Applies to')}>{t(`loyalty.rewards.applies_to.${offer.applies_to}`, APPLIES_TO_WORDS[offer.applies_to] ?? offer.applies_to)}</ManagementFact>
     <OfferAttachmentTile offer={offer} manage={!!onEdit} />
-    {onEdit && <OverviewButton primary disabled={!['live', 'upcoming'].includes(offer.state)} onClick={() => setSending(true)}>{t('loyalty.personal.send')}</OverviewButton>}
-    {sending && <SendOfferDialog offer={offer} onClose={() => setSending(false)} />}
+    {onSend && <OverviewButton primary onClick={onSend}>{t('loyalty.personal.send')}</OverviewButton>}
     <details className="l-ad-more"><summary>{admin('advanced')}</summary><small>{offer.brand_id == null ? t('loyalty.rewards.brand.every', 'Every brand') : options.brands?.list.find(b => b.id === offer.brand_id)?.name ?? boot.organization.name}</small><dl className="l-rb-facts"><dt>{say('caps')}</dt><dd>{offer.usage_limit === null ? say('noLimit') : points(offer.usage_limit, i18n.language)}</dd><dt>{say('perMember')}</dt><dd>{offer.per_member_limit === null ? say('noLimit') : points(offer.per_member_limit, i18n.language)}</dd></dl><strong>{say('terms')}</strong><p className="l-rb-prewrap">{offer.description || say('noTerms')}</p><small>{t('loyalty.rewards.offers.used', 'Used: {{used}}', { used: points(offer.times_used, i18n.language) })}</small></details>
   </aside>
 }
@@ -93,7 +92,7 @@ function OfferEditor({ offer, options, guard }: { offer: Offer | null; options: 
   const [baseline, setBaseline] = useState(() => offerFormOf(offer, options, boot.venue.today))
   const [audience, setAudience] = useState<'programme' | 'members'>(offer?.audience ?? 'programme')
   const [memberIds, setMemberIds] = useState(offer?.member_ids ?? [])
-  const [memberError, setMemberError] = useState(false)
+  const [memberError, setMemberError] = useState(false), prepareDelivery = useRef(false)
   const [form, setForm] = useState<OfferForm>(baseline), [tried, setTried] = useState(false)
   const [baseBrand, setBaseBrand] = useState(() => initialBrand(options.brands, savedBrand))
   const [brand, setBrand] = useState<BrandChoice>(baseBrand), [picture, setPicture] = useState(offer?.image_url ?? null)
@@ -109,7 +108,9 @@ function OfferEditor({ offer, options, guard }: { offer: Offer | null; options: 
       setAudience(updated.audience ?? 'programme'); setMemberIds(updated.member_ids ?? [])
       client.setQueryData<OffersList>(OFFERS_KEY, old => old ? { ...old, offers: offer ? old.offers.map(o => o.id === updated.id ? updated : o) : [updated, ...old.offers] } : old)
       void client.invalidateQueries({ queryKey: OFFERS_KEY })
-      navigate(offerReadUrl(location.search, updated, updated.brand_id == null ? t('loyalty.rewards.brand.every', 'Every brand') : options.brands?.list.find(b => b.id === updated.brand_id)?.name ?? String(updated.brand_id), true), { replace: true })
+      const target = new URL(offerReadUrl(location.search, updated, updated.brand_id == null ? t('loyalty.rewards.brand.every', 'Every brand') : options.brands?.list.find(b => b.id === updated.brand_id)?.name ?? String(updated.brand_id), true), window.location.origin)
+      if (prepareDelivery.current) target.searchParams.set('send', '1')
+      navigate(target.pathname + target.search, { replace: true })
     }, onSettled: end,
   })
   const cancelEditing = () => {
@@ -121,7 +122,8 @@ function OfferEditor({ offer, options, guard }: { offer: Offer | null; options: 
   const problems = { ...(tried ? offerProblems(form, options, current) : {}), ...serverProblems(failure?.fields, OFFER_FIELDS) }
   const problem = (field: string) => problems[field] ? t(`loyalty.rewards.offer.problem.${problems[field]}`, OFFER_PROBLEM_WORDS[problems[field]] ?? OFFER_PROBLEM_WORDS.title) : null
   const word = (prefix: string, map: Record<string, string>, value: string) => t(`loyalty.rewards.${prefix}.${value}`, map[value] ?? value)
-  const submit = (e: React.FormEvent) => { e.preventDefault(); setTried(true); if (audience === 'members' && memberIds.length === 0) { setMemberError(true); return }; setMemberError(false); const errors = offerProblems(form, options, current); if (manage && !Object.keys(errors).length && begin()) save.mutate() }
+  const attemptSave = (delivery = false) => { setTried(true); if (audience === 'members' && memberIds.length === 0) { setMemberError(true); return }; setMemberError(false); const errors = offerProblems(form, options, current); if (manage && !Object.keys(errors).length && begin()) { prepareDelivery.current = delivery; save.mutate() } }
+  const submit = (e: React.FormEvent) => { e.preventDefault(); attemptSave() }
   const previewValue = Number.isFinite(Number(form.value)) && form.value !== '' ? OFFER_VALUE_WORDS[form.type] ? t(`loyalty.rewards.offer_value.${form.type}`, OFFER_VALUE_WORDS[form.type], { value: amountOf(form.type, Number(form.value), boot.venue.currency, i18n.language) }) : `${word('offer_type', OFFER_TYPE_WORDS, form.type)} · ${form.value}` : word('offer_type', OFFER_TYPE_WORDS, form.type)
   return <><EditorDialog area="rewards" title={offer ? say('offerChanges') : say('newOffer')} section={say('offers')} icon="ticket" tone="violet" wide onClose={cancelEditing} busy={guard.busy}>
     <form className="l-editor-form" noValidate onSubmit={submit}><div className="l-editor-body"><div className="l-editor-columns"><fieldset className="l-editor-stack" disabled={!manage || guard.busy}>
@@ -138,6 +140,7 @@ function OfferEditor({ offer, options, guard }: { offer: Offer | null; options: 
         </div><small>{t('loyalty.personal.afterSave')}</small>
       </EditorSection>
       <FormField label={t('loyalty.rewards.offer.description', 'Description')} problem={problem('description')}><textarea required rows={2} value={form.description} onChange={e => update({ description: e.target.value })} /></FormField>
+      <EditorSection icon="ticket" title={t('loyalty.personal.delivery')}><small>{t('loyalty.personal.prepareHint')}</small>{offer?.attachment && <strong className="l-personal-file-heading">{offer.attachment.name}</strong>}</EditorSection>
       <EditorDisclosure title={t('loyalty.adminux.advanced', 'Advanced settings')} open={['code','usage_limit','per_member_limit','description'].some(key => !!problems[key]) || !!failure?.fields?.brand}>
         <div className="l-editor-two"><FormField label={say('offerCode')} problem={problem('code')}><input value={form.code} maxLength={24} spellCheck={false} onChange={e => update({ code: e.target.value })} /></FormField><BrandField compact options={options.brands} value={brand} saved={savedBrand} refused={!!failure?.fields?.brand} onChange={b => { setBrand(b); save.reset() }} /></div>
         <div className="l-editor-two"><FormField label={say('caps')} problem={problem('usage_limit')}><input type="number" inputMode="numeric" min={1} max={Number.MAX_SAFE_INTEGER} step={1} placeholder={say('noLimit')} value={form.usage_limit} onChange={e => update({ usage_limit: e.target.value })} /></FormField><FormField label={say('perMember')} problem={problem('per_member_limit')}><input type="number" inputMode="numeric" min={1} max={Number.MAX_SAFE_INTEGER} step={1} placeholder={say('noLimit')} value={form.per_member_limit} onChange={e => update({ per_member_limit: e.target.value })} /></FormField></div>
@@ -146,6 +149,6 @@ function OfferEditor({ offer, options, guard }: { offer: Offer | null; options: 
       </EditorDisclosure>{failure && <Notice tone="danger">{t(...refusalKey('loyalty.rewards', ERRORS, 'offer', failure))}</Notice>}
     </fieldset><EditorPreview tone="violet"><EditorArt kind="offerArt" label={say('offerPreview')} title={previewValue} line={form.title} />
       {picture && <img className="l-editor-picture" src={mediaUrl(picture)} alt={form.title} />}<ManagementFact icon="bonusCalendar" label={say('starts')}>{form.start_date} – {form.end_date}<small>{boot.venue.timezone}</small></ManagementFact><ManagementFact icon="people" label={say('eligibility')}>{audience === 'members' ? t('loyalty.personal.selectedCount', { count: memberIds.length }) : form.tiers.length ? form.tiers.map(id => boot.programme.tiers.find(tier => tier.id === id)?.name ?? id).join(', ') : say('allMembers')}</ManagementFact><small>{say('conditionsLine')}</small>
-    </EditorPreview></div></div><EditorFooter onCancel={cancelEditing} busy={guard.busy} dirty={dirty} creating={!offer} disabled={!manage} save={offer ? t('loyalty.rewards.offer.save', 'Save offer') : say('createOffer')} /></form>
+    </EditorPreview></div></div><EditorFooter onCancel={cancelEditing} busy={guard.busy} dirty={dirty} creating={!offer} disabled={!manage} save={offer ? t('loyalty.rewards.offer.save', 'Save offer') : say('createOffer')}><OverviewButton type="button" className="l-offer-prepare-send" disabled={!manage || guard.busy} onClick={() => attemptSave(true)}>{t('loyalty.personal.attachAndSend')}</OverviewButton></EditorFooter></form>
   </EditorDialog>{dialog === 'picture' && offer && manage && <DesignDialog title={t('loyalty.rewards.picture.label', 'Picture')} onClose={() => setDialog(null)} busy={guard.busy}><PictureField owner="offers" id={offer.id} picture={picture} alt={form.title} limits={options.image} onBusyChange={pictureBusy} onChange={url => { setPicture(url); void client.invalidateQueries({ queryKey: OFFERS_KEY }) }} /></DesignDialog>}</>
 }

@@ -7,12 +7,28 @@ use App\Services\Loyalty\Campaigns\{CampaignAudience, CampaignBody, CampaignStar
 use App\Services\Loyalty\LoyaltyRefused;
 use App\Services\NotificationService;
 use App\Support\AdvisoryLock;
-use Illuminate\Support\Facades\DB;
 
 /** A saved offer never sends; this outbox snapshots an explicitly confirmed, individual audience. */
 final class OfferDelivery
 {
     public function __construct(private CampaignAudience $audience, private CampaignStart $campaigns, private NotificationService $notifications) {}
+
+    /** Explicit all-member selection still uses this offer's current eligibility and the shared campaign limit. */
+    public function eligibleMemberIds(SpecialOffer $offer): array
+    {
+        $query = LoyaltyMember::query()->where('organization_id', $offer->getAttribute('organization_id'))->where('is_active', true);
+        if ($offer->getAttribute('audience') === 'members') $query->whereIn('id', $offer->recipientIds());
+        elseif ((array) $offer->tier_ids !== []) $query->whereIn('tier_id', $offer->tier_ids);
+        $ids = [];
+        $query->chunkById(500, function ($members) use ($offer, &$ids) {
+            foreach ($members as $member) {
+                if (!$offer->allowsMembership($member)) continue;
+                $ids[] = (int) $member->id;
+                if (count($ids) > CampaignAudience::LIMIT) throw new LoyaltyRefused('too_many', 'Choose selected members for an offer with more than 5,000 eligible members.');
+            }
+        });
+        return $ids;
+    }
 
     public function preview(SpecialOffer $offer, array $ids): array
     {
@@ -27,8 +43,8 @@ final class OfferDelivery
             'ineligible' => count($ids) - count($allowedIds), 'no_consent' => $email['no_consent'], 'unsubscribed' => $email['unsubscribed'],
             'no_email' => $email['no_email'], 'suppressed' => $email['suppressed'], 'portal_off' => count($allowedIds) - count($portal)];
         $file = OfferFiles::file($offer);
-        $revision = hash('sha256', json_encode([$offer->getAttributes(), $offer->recipientIds(), $file?->sha256, $ids, $email['reached'], $portal], JSON_THROW_ON_ERROR));
-        return ['revision' => $revision, 'counts' => $counts, 'email_ids' => $email['reached'], 'portal_ids' => $portal,
+        $revision = hash('sha256', json_encode([$offer->getAttributes(), $offer->recipientIds(), $file?->getAttributes(), $ids, $email['reached'], $portal], JSON_THROW_ON_ERROR));
+        return ['revision' => $revision, 'member_ids' => $ids, 'counts' => $counts, 'email_ids' => $email['reached'], 'portal_ids' => $portal,
             'offer' => ['title' => $offer->title, 'description' => $offer->description, 'code' => $offer->getAttribute('code'),
                 'start_date' => $offer->start_date->toDateString(), 'end_date' => $offer->end_date->toDateString(), 'attachment' => OfferFiles::metadata($offer)]];
     }
