@@ -8,7 +8,8 @@ import {
 import { PageHeader } from '../../workspace/ui/PageHeader'
 import { useBoot } from '../LoyaltyProvider'
 import { ScanDemo } from './ScanDemo'
-import { Walkthroughs, matchingWalks } from './Walkthroughs'
+import { Walkthroughs } from './Walkthroughs'
+import { matchingWalks } from './walkMath'
 import './guide.css'
 import {
   FAQ, STEPS, TOPICS, faqWords, featureWords, featuresFor, narrow, stepWords, topicWord,

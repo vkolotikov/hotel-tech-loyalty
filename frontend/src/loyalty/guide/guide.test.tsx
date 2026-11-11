@@ -12,7 +12,7 @@ import { demoAnswer, demoTiers, SCENARIOS } from './demo'
 import { GuidePage } from './GuidePage'
 import { FAQ, FEATURES, STEPS, TOPICS, featuresFor, fold, narrow, type Say } from './guideMath'
 import { DEMO_WORDS, FAQ_WORDS, FEATURE_WORDS } from './words'
-import { WALKS, matchingWalks } from './Walkthroughs'
+import { WALKS, matchingWalks } from './walkMath'
 
 const can = (more: Partial<Can> = {}): Can => ({
   award: true, redeem: true, reverse: false, manage_program: false, manage_rewards: false, manage_members: false, view_insights: false,
