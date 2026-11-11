@@ -1,5 +1,5 @@
 [data-loyalty] .l-guide-instructions { display: grid; gap: 1rem; }
 [data-loyalty] .l-guide-instructions li { display: flex; gap: .75rem; align-items: flex-start; font-size: .875rem; line-height: 1.65; }
-[data-loyalty] .l-guide-instructions li > span { display: grid; place-items: center; flex-shrink: 0; width: 1.75rem; height: 1.75rem; border-radius: 50%; color: var(--a-accent-text); border: 1px solid var(--a-border); font-weight: 600; }
-[data-loyalty] .l-guide-walk summary:focus-visible { outline: 2px solid var(--a-accent-text); outline-offset: 3px; border-radius: 1rem; }
+[data-loyalty] .l-guide-instructions li > span { display: grid; place-items: center; flex-shrink: 0; width: 1.75rem; height: 1.75rem; border-radius: 50%; color: rgb(var(--a-accent-text)); border: 1px solid rgb(var(--a-border)); font-weight: 600; }
+[data-loyalty] .l-guide-walk summary:focus-visible { outline: 2px solid rgb(var(--a-accent-text)); outline-offset: 3px; border-radius: 1rem; }
 [data-loyalty] .l-guide-search input[type=search] { padding-inline-start: 2.75rem; }
