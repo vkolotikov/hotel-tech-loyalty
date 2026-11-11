@@ -31,10 +31,20 @@ The read-only Apple browser check returned to sign-in. API access still verifies
 
 ## Figma-first luxury design
 
-The owner then requested a new members-app concept in their existing Figma file, guided by the Staff scanner reference. Delivered on new page **437:8135 — 01G · Members app — Luxury**: **54 editable layouts**, four feedback overlays, reusable components, working toggle variants and **376 persisted linked actions**, with four prototype starting points. Existing Figma product/web pages were preserved.
+The owner then requested a new members-app concept in their existing Figma file, guided by the Staff scanner reference. The first pass on new page **437:8135 — 01G · Members app — Luxury** delivered **54 editable layouts**, four feedback overlays, reusable components, working toggle variants and **376 persisted linked actions**, with four prototype starting points. Existing Figma product/web pages were preserved. The refinement below supersedes that first pass's intermediate-screen sequence.
 
 [Review the everyday screens](https://www.figma.com/design/d6IGmk3hOoMw0V5rONbI1A/Untitled?node-id=440-8279) · [Open the prototype](https://www.figma.com/proto/d6IGmk3hOoMw0V5rONbI1A/Untitled?node-id=440-8280&starting-point-node-id=440%3A8280). The native Figma handoff spec is **460:12607**. Scope, provenance and checks: `docs/loyalty-member-app/04-FIGMA-DESIGN-20261111.md`.
 
 Original Staff wallpaper/SVG icons and the current member app mark were reused. Main phone plus 320 px/Android/iPad examples cover loyalty and enabled event registration, account controls and availability/membership states. Final inspected preview is `C:/Users/user6399/Downloads/HexaTech-Loyalty-Figma-Concept-20261111.png`; it is a concept, not native store media. No clipping, unresolved destinations, custom-font mismatch or placeholder labels in the audit. The QR is explicitly demo-only and rendered using editable geometry.
 
 This design task made no native runtime/build/store or Laravel changes. Review the Figma concept before implementing it; existing server/capability/session/refresh safeguards and five languages must be preserved.
+
+## Fewer-step design refinement
+
+The owner asked to simplify the existing Figma design, shorten copy and add animation. Updated the same page/IDs: direct free-event reservation from Home (**3 → 1 taps**), direct benefit request (**3 → 2** from Home), direct voucher opening, direct invitation sharing and automatic save feedback. The Card remains central; Events replaces Activity in bottom navigation, and balances open in a tabbed sheet. Preferences now combines language, messages and device lock. Three superseded full pages are hidden references with no incoming links.
+
+There are **18 compact bottom-sheet examples**, seven brief feedback examples and two native share references. Point spending, event cancellation and account deletion still require explicit confirmation. Prototype motion uses 240 ms bottom entry, 150 ms local fades/switches, existing 180 ms navigation fades and 1.6-second feedback dismissal. No QR/wallpaper looping motion. Native Reduce Motion, nonblocking accessible feedback, keyboard handling and swipe dismissal are implementation requirements; the prototype uses Close/outside tap.
+
+Final structural verification: **62 roots / 59 visible**, **301 node-linked actions**, **39 bottom-entry transitions**, zero missing destinations, hidden-reference incoming links, product-font/encoding/placeholder errors or unintended text clipping. Empty and populated request/registration states and the final core/sheet/account compositions were inspected. A multiline programme-text height defect was fixed. The native Figma spec **460:12607** was updated and read back; prototype defaults are reset to available/unrequested.
+
+Current flow details and preview paths are in `docs/loyalty-member-app/04-FIGMA-DESIGN-20261111.md`. The simplified preview is `C:/Users/user6399/Downloads/HexaTech-Loyalty-Figma-Simplified-20261111.png`. This pass changes Figma/documentation only; no native tests, builds, public release or Laravel deployment was performed.
