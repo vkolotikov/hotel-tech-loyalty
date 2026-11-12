@@ -1,11 +1,14 @@
-HexaTech Loyalty 2.1.0 focuses on membership, benefits, rewards and enabled event registration.
+HexaTech Loyalty 2.1.0: the new members design, with icon-only navigation, contextual popups and confirmed loyalty feedback.
 
 Please check:
 - Sign in with a member account; existing sessions remain supported.
-- Card QR, membership dates, assigned benefits and programme/access details.
-- Reward confirmation, codes and personal offers. Open/save a private PDF/image voucher from Offers and Inbox.
-- Where Events is enabled, sign up, cancel when allowed and view attended history.
-- Profile/birthday edits, messages, language, device lock and account deletion using isolated test data.
+- Home, Rewards, the central Card, Events and More: check icons and touch targets on iPhone and iPad.
+- Card QR, membership dates, assigned benefits and programme/access details. Open balances for points, stamps and credit where configured.
+- Redeem once after confirming the cost; the returned code should appear in the same popup. Open/save/cancel a private PDF/image voucher from Offers and Inbox.
+- Register directly from Home or Events, confirm cancellation and view attended history. Check full/refused states and points-off memberships.
+- Have staff add points, confirm a check-in or add a stamp using isolated data. The app should refresh and acknowledge the confirmed change once, without replaying old awards.
+- Profile/birthday edits, Preferences, message switches, language, device lock, password and guarded account deletion.
+- Popup Close/outside tap/Back and long-sheet drag dismissal; keyboard layout, larger text, screen reader and Reduce Motion. Pending writes must not submit twice or dismiss early.
 - Wallet and push only where the venue/provider and physical device support them.
 
-Appointment and accommodation booking are excluded from this release. Please report your device/OS and the exact steps for any issue. Browser/unit verification does not replace testing the native sharing, camera, Wallet and push flows on a physical device.
+Please report your device/OS and the exact steps for any issue. Test the installed build on supported physical devices; browser/unit checks do not verify native sharing, camera, biometrics, Wallet or push. Appointment and accommodation booking remain outside this loyalty release.

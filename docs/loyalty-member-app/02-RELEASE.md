@@ -1,5 +1,7 @@
 # HexaTech Loyalty 2.0 — release runbook
 
+**12 November 2026 — latest-design testing builds started:** Android **2.1.0 (29)** and iOS **2.1.0 (23)** are queued from native-design source `257c5e85f`. See [the current build handoff](../handoff/2026-11-12-member-design-builds.md) for exact IDs, archive checks and live delivery status. They are not yet confirmed available to testers at this checkpoint.
+
 Latest delivery (11 November 2026): **2.1.0 loyalty-only is built**, including enabled event registration, memberships/access, personal vouchers and profile safeguards. **iOS 2.1.0 (22) is in TestFlight Internal QA; Android 2.1.0 (28) is on Play internal testing**, with verified testing/release notes. Exact evidence and remaining device/store steps are in `03-LOYALTY-REFRESH-20261111.md`. No 2.1 public review/release has been sent; Apple's existing 2.0.0 record remains REJECTED. Historical booking screenshots are excluded from `store.config.js`; capture current native screens, reconcile the members-app review message and review optional birthday privacy declarations before submission. The records below are historical unless explicitly stated otherwise.
 
 The members' app (`apps/loyalty-member`, branch `feature/loyalty-member-app`) ships as **version 2.0.0 of the existing
