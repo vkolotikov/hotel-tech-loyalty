@@ -7,6 +7,7 @@
   "read_only": "Nur lesen · Zoho Mail",
   "disconnected": "Verbinden Sie Zoho in Contacts erneut, um den Verlauf zu aktualisieren.",
   "empty": "Noch keine E-Mails abgerufen. Aktualisieren Sie, um passende Nachrichten zu suchen.",
+  "no_matches": "Im verbundenen Zoho-Postfach wurden keine passenden E-Mails gefunden.",
   "no_subject": "Kein Betreff",
   "unknown_date": "Datum nicht verfügbar",
   "pages": "E-Mail-Seiten",

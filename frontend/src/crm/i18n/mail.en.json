@@ -7,6 +7,7 @@
   "read_only": "Read-only · Zoho Mail",
   "disconnected": "Reconnect Zoho in Contacts to refresh history.",
   "empty": "No emails fetched yet. Refresh to look for matching messages.",
+  "no_matches": "No matching emails found in the connected Zoho mailbox.",
   "no_subject": "No subject",
   "unknown_date": "Date unavailable",
   "pages": "Email pages",

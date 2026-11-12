@@ -7,6 +7,7 @@
   "read_only": "Solo lectura · Zoho Mail",
   "disconnected": "Vuelva a conectar Zoho en Contacts para actualizar el historial.",
   "empty": "Todavía no se han obtenido correos. Actualice para buscar mensajes coincidentes.",
+  "no_matches": "No se encontraron correos coincidentes en el buzón de Zoho conectado.",
   "no_subject": "Sin asunto",
   "unknown_date": "Fecha no disponible",
   "pages": "Páginas de correo",
