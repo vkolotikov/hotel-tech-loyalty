@@ -67,6 +67,17 @@ the shared pieces and ran every check.
   Vitest: every test passes.
 - Browser, at 1440 Dark and Light and at 390: every page and panel, with no sideways scroll at 390.
 
+## After the deploy
+
+- CI on the release, `f4f18564`: SQLite (all three shards, shard 2 now green), Larastan and the SPA all passed. Two
+  jobs failed for reasons from before this round:
+  - PostgreSQL: `ContactsFeedTest`'s new fifth test (2026-11-12) refuses any database but SQLite's, like its other
+    four, which are already listed. It is now listed in `tests/pgsql-known-failures.txt`.
+  - The dependency audit: `phpseclib/phpseclib` 4.0.1 has advisory GHSA-w3p9-g4p2-h3rr (2026-11-02, a CPU-exhaustion
+    denial of service in key parsing). The lock now has 4.0.3, and only phpseclib changed. Auth, Security, Integration,
+    ChatGpt* (OAuth), Wallet and the intake-token tests pass.
+- Both shipped as a follow-up source patch.
+
 ## Open, for the owner
 
 - **The staff AI copilot** (`crm-ai/chat`, voice) needs `admin_ai` in the CRM packages. That is a pricing decision.
