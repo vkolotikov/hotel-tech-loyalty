@@ -12,7 +12,12 @@ Local evidence: `C:/wamp64/tmp/member-platform-final2-all-20261112/`, `member-pl
 
 ## Testing delivery
 
-Replacement signed builds are not yet started at this checkpoint. After the final UI pass, commit/push the native source, inspect the exact EAS archive, then build once per platform from that frozen source using existing signing credentials. EAS project remains `@hoteltechai/hotel-loyalty` / `865bfb65-5e82-4b4d-b3b4-dc55e9b9ef17`.
+Source is frozen, committed and pushed at **1fbf984fe6c9115fe076495cf86b7b1824ba0cd6**. The EAS archive has **374 matching runtime/shared files**, **2,554 files / 25,086,004 bytes**, no forbidden credentials/dependencies and no backend/Staff files. Exactly one replacement build per platform is **IN_PROGRESS**, reusing existing signing credentials with credential changes frozen:
+
+- Android **2.1.0 / 30**: [19985c32-0637-40d8-9484-a47724995646](https://expo.dev/accounts/hoteltechai/projects/hotel-loyalty/builds/19985c32-0637-40d8-9484-a47724995646).
+- iOS **2.1.0 (24)**: [3474d3e0-5ebc-4520-aa2a-56dce7f1c9f2](https://expo.dev/accounts/hoteltechai/projects/hotel-loyalty/builds/3474d3e0-5ebc-4520-aa2a-56dce7f1c9f2).
+
+Neither replacement is yet verified available to testers at this checkpoint. EAS project remains `@hoteltechai/hotel-loyalty` / `865bfb65-5e82-4b4d-b3b4-dc55e9b9ef17`. Do not build duplicates; finish these exact builds, inspect their actual packages and continue the delivery below.
 
 Private evidence folder for this correction: `C:/Users/user6399/HexaTech-release-private/member-platform-fixes-20261112/`. Raw EAS responses/logs may contain signed URLs; never print them wholesale. Safe helper: `C:/wamp64/tmp/member-eas-platform-20261112.cjs`. Archive: `C:/wamp64/tmp/member-platform-archive-20261112/`; audit helper: `C:/wamp64/tmp/member-platform-archive-audit-20261112.cjs`.
 

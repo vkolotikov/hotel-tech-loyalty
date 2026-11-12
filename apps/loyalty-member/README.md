@@ -1,5 +1,7 @@
 # HexaTech Loyalty (the members' app, Android and iOS)
 
+**Calendar/platform follow-up (12 November 2026):** Events now remains in the dock even without upcoming events/history. Device-lock, notification races/recovery and input accessibility fixes are committed at `1fbf984fe`; TypeScript/95 tests and 282 browser checks pass. Replacement **iOS 24 / Android 30 are building**, not yet confirmed available. [Current handoff](../../docs/handoff/2026-11-12-member-platform-review.md) and [review](../../docs/loyalty-member-app/06-PLATFORM-REVIEW-20261112.md).
+
 **Latest design testing delivery (12 November 2026):** signed **iOS 2.1.0 (23)** is available in TestFlight Internal QA, and **Android 2.1.0 (29)** is completed on Play internal testing. Both packages include the new luxury UI and were inspected; testing notes and store readbacks are verified. See `docs/handoff/2026-11-12-member-design-builds.md`. These replace the earlier testing binaries for design QA; public review/release still requires device acceptance and current store media/privacy checks.
 
 **Luxury design implementation (11 November 2026):** the approved Figma screens now have native source: icon-only dock, contextual popups, direct event registration, reward confirmation/code in one popup, consolidated Preferences and confirmed points/check-in/stamp feedback. See `docs/loyalty-member-app/05-NATIVE-DESIGN-20261111.md` for exact scope and verification. Existing iOS 22 / Android 28 testing binaries **predate this design**; a fresh signed build and device QA are required before release.
