@@ -28,19 +28,23 @@ No runtime code was changed or rebuilt during public submission.
   does not accept a `whatsNew` edit; it was omitted, while descriptions, subtitles, promotional text and keywords were saved.
 - Replaced six historical booking images per device with four current UI captures for iPhone and iPad. All eight
   uploaded images processed to `COMPLETE`, in Home → Card → Benefits → Events order. Other locales inherit the base media.
-- Saved and read back 3,681-character private review notes answering all six information requests. Existing demo
+- Saved and read back private review notes answering all six information requests, currently 3,674 characters after
+  the second-recording update. Existing demo
   credentials/contact fields were preserved. The isolated reviewer account was verified by login/bootstrap, then
   the temporary readiness session was revoked.
-- Attached owner's `loyalty.mp4`; attachment `0eb6ebad-776a-4a67-a3e9-605a9cde0767` processed to `COMPLETE`.
+- At 16:46 Europe/Riga, replaced the earlier recording with the owner's **`loyalty2.mp4`** as requested. Attachment
+  `0a6077f4-552a-46b7-87d5-61481789ce1a` processed to `COMPLETE` and its source checksum matches the provided file.
+  The file has **5,355,906 bytes** and SHA-256 `c7c544359e4e0340a89ad9b29986fcc5a44129db245f32d6ea66af0d8c0c099c`.
+  Apple's API returned a one-attachment validation, so the earlier attachment was replaced after a private backup.
 - Pressed Update Review, then Resubmit to App Review. API and console confirm **WAITING_FOR_REVIEW**, build **25**,
   release type **AFTER_APPROVAL**. Submission: `64206424-8806-46cf-9240-6bae2aa0c0e5`.
 - Public consumer distribution and all **175 available countries/regions** were preserved. No legal agreement was accepted.
 
-**Evidence limits disclosed to Apple:** owner reports iPhone 13 / iOS 18.7. The video is 19.38 seconds and starts
-inside the signed-in app. It does not demonstrate cold launch, registration, login or deletion, and iOS 18.7 is not
-the latest OS. Physical iPad QA has not been performed. A longer recording was requested while independent work
-continued; the existing evidence was submitted honestly. Apple may request fuller/newer-device evidence again.
-Do not describe this submission as approved or publicly available.
+The owner reports **iPhone 13 / iOS 18.7** and authorized use of the newer recording as provided. `loyalty2.mp4`
+runs for **45.32 seconds**, begins at sign-in, and shows sign-in, membership home/balances, Rewards, Events,
+More/Profile and the account-deletion confirmation screen. The revised notes identify this file as the current
+walkthrough and retain the existing physical-device QA disclosures. Apple remains **Waiting for Review** with
+automatic release after approval. The media update is part of the existing queued submission.
 
 ## Google Play
 
@@ -63,8 +67,10 @@ Do not describe this submission as approved or publicly available.
 At **12:18 UTC**, pressed **Submit 14 changes for review**, then **Send changes for review**. The console
 confirmed **14 changes sent for review**. By **12:23 UTC**, automatic quick checks passed and Publishing overview
 confirmed **Your changes are now in review**, with **no unsent changes**. **Managed publishing is off**, so the full rollout publishes automatically after
-approval. This is submitted/pending, not a verified live 2.1.0 listing. Do not infer public availability from the
-API production track's `completed` release status.
+approval. At **16:53 Europe/Riga**, the production console confirms **Active / Latest release 2.1.0 (31)** and
+**Available on Google Play**. Publishing overview reports an app update published on 12 November. The production
+summary shows all **178 targeted countries/regions**, corresponding to the preserved 177-country list plus
+rest-of-world. Private evidence is `google-production-live.json` and `google-production-live.png`.
 
 Final readback verified exact five-language text parity, SHA-256 identity/order of all four Play images and the
 new banner, unchanged icon, empty localized image overrides (inheritance restored), all 177 countries plus

@@ -1,8 +1,8 @@
 # Members calendar and platform review — 12 November 2026
 
 **Later public-release task:** owner-authorized submissions now reuse these exact **25/31** binaries. Apple is
-Waiting for Review; Google's production/listing/privacy submission is in review after successful automatic quick checks.
-Both release after approval, with countries preserved. See [current public-release handoff](2026-11-12-member-public-release.md).
+Waiting for Review with the owner's newer `loyalty2.mp4` recording. Google production confirms version 2.1.0 (31)
+is Available on Google Play. Apple releases after approval, with countries preserved. See [current public-release handoff](2026-11-12-member-public-release.md).
 The internal-only scope and production-26/Apple-rejected states below are historical checkpoints.
 
 **Final source checkpoint:** the additional sign-out/credential ordering, persisted-receipt and delayed-account cleanup corrections are implemented. TypeScript, **101 tests / 11 files** and **284 browser checks / ten scripts** pass; Android/iOS Hermes/web exports pass and lint adds no diagnostics (15 existing errors / 14 warnings). Independent real-four-second reproductions pass on both mocked native platforms, including a later member signing in before/after the handoff. No remaining concrete Important blocker was found in these exact fixes. Final browser evidence: `C:/wamp64/tmp/member-signout-browser-final-20261112.json`; export/lint evidence uses `member-signout-final-*` under that same temp directory.

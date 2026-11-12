@@ -15,9 +15,11 @@ The sample QR encodes an explicitly non-production demo URL; it cannot authentic
 Capture routes are loaded directly, with fonts, data and visible content settled before capturing, to avoid
 sampling a navigation transition. The copy and feature controls are the current app's own components.
 
-The owner's separate physical iPhone recording is `loyalty.mp4` in the original project's root. It is attached
-to App Review privately and is not committed. Device details supplied by the owner: iPhone 13, iOS 18.7.
-It is a 19.38-second signed-in walkthrough; launch, registration, login and deletion are not demonstrated.
-App Review notes disclose those limitations and the absence of physical iPad QA.
+The owner's current physical iPhone recording is `loyalty2.mp4` in the original project's root. It was supplied
+for private App Review use and runs for 45.32 seconds. The owner reports iPhone 13 and iOS 18.7. It begins at
+sign-in and shows membership views, Rewards, Events, More/Profile and the account-deletion confirmation.
+On 12 November at 16:46 Europe/Riga, it replaced the earlier recording in Apple's review attachment slot and
+processed to `COMPLETE`. The review notes describe the current recording and device-QA evidence. The file is
+kept in the private release evidence.
 
 Historical captures outside this version directory show the older booking UI and must not be reused for 2.1.

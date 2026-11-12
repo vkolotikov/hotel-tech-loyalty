@@ -1,8 +1,8 @@
 # HexaTech Loyalty (the members' app, Android and iOS)
 
-**Public release submitted (12 November 2026):** iOS **2.1.0 (25)** is **Waiting for Review**; Android **2.1.0 (31)**,
-listing and privacy changes are **in Google review** after successful automatic quick checks. Both publish after
-approval; neither is verified approved/live. Countries are preserved. See the
+**Public release update (12 November 2026):** Android **2.1.0 (31)** is published and **Available on Google Play**.
+iOS **2.1.0 (25)** is **Waiting for Review**, with the owner's newer `loyalty2.mp4` recording and updated review
+notes. Apple is configured to publish after approval. Countries are preserved. See the
 [current handoff](../../docs/handoff/2026-11-12-member-public-release.md) and
 [release record](../../docs/loyalty-member-app/07-PUBLIC-RELEASE-20261112.md), including the device-video limits.
 Earlier internal-only statements below record historical build tasks.
