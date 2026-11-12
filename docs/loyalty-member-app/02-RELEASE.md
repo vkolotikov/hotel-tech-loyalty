@@ -1,4 +1,11 @@
-# HexaTech Loyalty 2.0 — release runbook
+# HexaTech Loyalty — release runbook
+
+**12 November — public submissions:** the owner authorized publication. **iOS 2.1.0 (25) is Waiting for Review**
+and **Android 2.1.0 (31), listing and data-safety changes are in Google review** (automatic quick checks passed).
+Both are configured to publish after approval; neither is verified approved/live. All existing
+countries were preserved. See [current public-release handoff](../handoff/2026-11-12-member-public-release.md)
+and [the release record](07-PUBLIC-RELEASE-20261112.md) for media, privacy, review-video limits and exact evidence.
+Earlier internal-only statements below describe their original tasks.
 
 **12 November — calendar/platform correction delivered:** **iOS 2.1.0 (25) is verified in TestFlight Internal QA / Android 2.1.0 (31) is completed on Play internal testing**, from `90ab7db2b` after **101 tests and 284 browser checks**, including slow sign-out/account-switch integration. Actual packages, checksum/group status and testing notes are verified. Earlier 24/30 were superseded before delivery. [Current handoff](../handoff/2026-11-12-member-platform-review.md) records exact build/upload IDs and evidence. Public review/release remains a separate device/media/privacy checkpoint.
 

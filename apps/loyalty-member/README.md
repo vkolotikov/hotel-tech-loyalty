@@ -1,5 +1,12 @@
 # HexaTech Loyalty (the members' app, Android and iOS)
 
+**Public release submitted (12 November 2026):** iOS **2.1.0 (25)** is **Waiting for Review**; Android **2.1.0 (31)**,
+listing and privacy changes are **in Google review** after successful automatic quick checks. Both publish after
+approval; neither is verified approved/live. Countries are preserved. See the
+[current handoff](../../docs/handoff/2026-11-12-member-public-release.md) and
+[release record](../../docs/loyalty-member-app/07-PUBLIC-RELEASE-20261112.md), including the device-video limits.
+Earlier internal-only statements below record historical build tasks.
+
 **Calendar/platform follow-up (12 November 2026):** Events stays in the dock without upcoming events/history. Device-lock, notification/sign-out races, account-switch safety and input accessibility fixes pass TypeScript, **101 tests and 284 browser checks**. **iOS 2.1.0 (25) is available in TestFlight Internal QA; Android 2.1.0 (31) is completed on Play internal testing**, from `90ab7db2b`. Actual packages, uploaded checksum/group status and testing notes are verified. Earlier 24/30 were superseded before tester delivery. [Current handoff](../../docs/handoff/2026-11-12-member-platform-review.md) and [review](../../docs/loyalty-member-app/06-PLATFORM-REVIEW-20261112.md). Physical-device acceptance and public release remain separate.
 
 **Latest design testing delivery (12 November 2026):** signed **iOS 2.1.0 (23)** is available in TestFlight Internal QA, and **Android 2.1.0 (29)** is completed on Play internal testing. Both packages include the new luxury UI and were inspected; testing notes and store readbacks are verified. See `docs/handoff/2026-11-12-member-design-builds.md`. These replace the earlier testing binaries for design QA; public review/release still requires device acceptance and current store media/privacy checks.

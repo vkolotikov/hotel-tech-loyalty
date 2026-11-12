@@ -1,5 +1,20 @@
 # Google Play assets
 
+## Current public submission — 12 November 2026
+
+- Use `feature-loyalty-2.1.0-1024x500.png`: the existing banner with **Events** replacing **Bookings**.
+- Use the four ordered captures in `../screenshots/2.1.0/play-phone/`; their provenance is documented there.
+- Keep `icon-512.png`, which matches the packaged members-app icon. Other four listing languages inherit the
+  English base images; preserve their translated text.
+
+The banner was edited with the built-in image generation tool, then exported at 1024 × 500. Prompt:
+“Replace only the final word 'Bookings' with 'Events'. The final lower line must read exactly
+'Card · Points · Rewards · Events'. Preserve the existing HexaTech Loyalty logo, all other text, dark navy
+background, gold and white colours, layout, generous margins and wide 2.048:1 aspect ratio. Do not add any
+phone, screenshot, badge, other graphics or words.” This marketing graphic is AI-edited; the app screens are not.
+
+## Historical 2.0 assets
+
 - `translations.json` is derived from `../listing.json`; five locales and Play text limits checked.
 - `release-notes.txt` contains the five production-release notes (288–317 characters each, below 500).
 - `icon-512.png` is a technical 512×512 export of the app's existing `assets/icon.png`.

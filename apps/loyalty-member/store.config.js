@@ -9,7 +9,8 @@ module.exports = {
   apple: {
     version: expo.version,
     copyright: '2026 FDS Cards Ltd.',
-    release: { automaticRelease: false },
+    // Public publication was authorized on 12 November 2026; release after Apple approval.
+    release: { automaticRelease: true },
     info: Object.fromEntries(Object.entries(languages).map(([language, listing]) => [
       locales[language],
       {
@@ -18,13 +19,14 @@ module.exports = {
         description: listing.description,
         promoText: listing.appStore.promotionalText,
         keywords: listing.appStore.keywords.split(','),
-        ...(listing.appStore.whatsNew ? { releaseNotes: listing.appStore.whatsNew } : {}),
+        // 2.1.0 is the first public-version submission; Apple does not accept What's New for that submission.
+        ...(expo.version !== '2.1.0' && listing.appStore.whatsNew ? { releaseNotes: listing.appStore.whatsNew } : {}),
         marketingUrl: 'https://hexa-tech.uk',
         supportUrl: 'https://hexa-tech.uk/about-us',
         privacyPolicyUrl: 'https://app.hexa-tech.uk/privacy',
         privacyChoicesUrl: 'https://app.hexa-tech.uk/data-deletion',
-        // 2.0 screenshots include booking flows. Replace with current physical-device captures before review.
-        // Do not automatically sync historical screenshots with 2.1 metadata.
+        // Current 2.1 UI captures are in store/screenshots/2.1.0 (see its provenance README).
+        // Uploaded and verified in the stores separately; never sync the historical 2.0 booking images.
       },
     ])),
   },
