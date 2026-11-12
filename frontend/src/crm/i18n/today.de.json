@@ -54,5 +54,10 @@
     "task_completed": "Aufgabe erledigt",
     "file": "Datei",
     "system": "Hinweis"
+  },
+  "hello": {
+    "morning": "Guten Morgen",
+    "afternoon": "Guten Tag",
+    "evening": "Guten Abend"
   }
 }

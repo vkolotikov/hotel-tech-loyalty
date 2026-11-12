@@ -51,8 +51,8 @@ const typing = (target: EventTarget | null): boolean => {
  * a board by stage (`?view=board`, the pipeline `?p=`) or by owner (`?view=team`); the open pipeline's figures (only
  * those worth showing); one toolbar for the search, the filters, the saved views, the columns and the export (Excel or
  * CSV); bulk changes. A lead opens in its panel over the page (`?lead=`); adding one, by hand or from a pasted message
- * read by the AI, is the header's New panel (`?create=lead|capture`), and a contact's "New lead" (`?new=1&guest=`)
- * still opens the form with that contact. The rows are the full admin's (`GET inquiries`, open ones only: a won lead
+ * read by the AI, is the header's New panel (`?create=lead|capture`, with a contact `&guest=`), and an old link to a
+ * contact's "New lead" (`?new=1&guest=`) still opens the form with that contact. The rows are the full admin's (`GET inquiries`, open ones only: a won lead
  * is a deal, a lost one stays a contact). "/" goes to the search, Escape clears the choice.
  */
 export function LeadsPage() {
@@ -73,7 +73,8 @@ export function LeadsPage() {
   const columns = leadColumns(settings.data, hotel)
   const stages = sortedStages(defaultPipeline(pipelines.data)?.stages)
   const kpis = useLeadKpis()
-  // A contact's "New lead" (contactsLogic `newLeadFor`) still comes here with that contact; New is `?create=lead`.
+  // Old links to a contact's "New lead" (`?new=1&guest=`, before round 5) still open the form with that contact here;
+  // a contact's "New lead" now opens the header's New panel (`?create=lead&guest=`, CreateHost), as New does.
   const creating = key(sp, 'new') === '1'
   const presetGuest = Number(key(sp, 'guest')) || null
 

@@ -54,5 +54,10 @@
     "task_completed": "Tarea hecha",
     "file": "Archivo",
     "system": "Actualización"
+  },
+  "hello": {
+    "morning": "Buenos días",
+    "afternoon": "Buenas tardes",
+    "evening": "Buenas noches"
   }
 }

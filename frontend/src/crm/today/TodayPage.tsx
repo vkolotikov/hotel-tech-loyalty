@@ -8,6 +8,7 @@ import {
   PartyPopper, Rocket, Sun, UserPlus, UserX,
 } from 'lucide-react'
 import { Button } from '../../workspace/ui/Button'
+import { useMedia } from '../../workspace/lib/useMedia'
 import { useBoot } from '../CrmProvider'
 import { PulseCard } from '../../workspace/pulse/PulseCard'
 import { crmApi, get, params, send } from '../lib/api'
@@ -54,21 +55,25 @@ export function TodayPage() {
   const today = useQuery({ queryKey: ['crm', 'today'], queryFn: crmApi.today, staleTime: 20_000, refetchInterval: 60_000 })
   // The venue's clock and weather (2026-11-09); the page stands without it.
   const pulse = useQuery({ queryKey: ['crm', 'pulse'], queryFn: crmApi.pulse, staleTime: 10 * 60_000, refetchInterval: 15 * 60_000, retry: false })
-  const name = firstName(boot.staff.name)
+  // A phone greets without the name and leaves adding to the frame's New button, so the title is never cut.
+  const phone = useMedia('(max-width: 639px)')
+  const fullName = firstName(boot.staff.name)
+  const name = phone ? '' : fullName
   const greeting = greetingOf(venueClock(new Date(), zone).hour)
-  const hello = greeting === 'morning' ? t('crm.today.greeting.morning', 'Good morning, {{name}}', { name })
+  const hello = !name
+    ? (greeting === 'morning' ? t('crm.today.hello.morning', 'Good morning') : greeting === 'afternoon' ? t('crm.today.hello.afternoon', 'Good afternoon') : t('crm.today.hello.evening', 'Good evening'))
+    : greeting === 'morning' ? t('crm.today.greeting.morning', 'Good morning, {{name}}', { name })
     : greeting === 'afternoon' ? t('crm.today.greeting.afternoon', 'Good afternoon, {{name}}', { name })
     : t('crm.today.greeting.evening', 'Good evening, {{name}}', { name })
 
   return (
-    <Page icon={Sun} title={name ? hello : t('crm.today.title', 'Today')}
+    <Page icon={Sun} title={fullName ? hello : t('crm.today.title', 'Today')}
       line={t('crm.today.line', 'What needs you now, from the website chat and your pipeline.')}
-      actions={(
-        // A phone has the frame's New button at the top; here the greeting keeps the width.
-        <div className="hidden items-center gap-2 sm:flex">
+      actions={phone ? undefined : (
+        <>
           <IconButton icon={CalendarPlus} label={t('crm.today.add_task', 'Add a task')} onClick={() => records.create('task')} />
           <Button onClick={() => records.create('lead')} className="min-h-10 rounded-full"><UserPlus size={15} aria-hidden />{t('crm.today.add_lead', 'Add a lead')}</Button>
-        </div>
+        </>
       )}>
       {!boot.setup.complete && <SetupBanner done={boot.setup.done} total={boot.setup.total} />}
       <PulseCard pulse={pulse.data} greet={false} variant="strip" />

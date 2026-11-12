@@ -32,7 +32,8 @@ const SERVER_FIELDS: Record<string, LeadField> = {
  * Add a lead (the full admin's Add inquiry): a new contact (`POST guests`) or one already known, then the lead
  * (`POST inquiries`) in the default pipeline's first stage unless another is chosen. Stay details only for a hotel;
  * the enquiry type where the organisation has types; its own fields when it has some. Opens from the header's New and
- * the pages' Add (`?create=lead|deal`, CreateHost), on `/crm/leads?new=1&guest=` (a contact's "New lead"), or filled in
+ * the pages' Add and a contact's "New lead" (`?create=lead|deal`, `&guest=`, CreateHost), on an old link to
+ * `/crm/leads?new=1&guest=`, or filled in
  * by the AI from a pasted message (`initial`). What was made opens in its record panel over the same page (round 5),
  * a deal on its Deal tab.
  *
