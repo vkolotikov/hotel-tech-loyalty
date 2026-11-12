@@ -79,4 +79,42 @@ class CrmMailTest extends TestCase
         $this->asStaffMember()->getJson($url)->assertOk()->assertJsonPath('code', 'crm_contact_review_required');
         $this->asStaffMember()->getJson($url)->assertStatus(502)->assertDontSee('secret provider error');
     }
+
+    public function test_reading_history_does_not_consume_the_zoho_refresh_allowance(): void
+    {
+        $lead = $this->lead(['brand_id' => 23]);
+        $guest = DB::table('inquiries')->where('id', $lead)->value('guest_id');
+        $leadUrl = $this->adminApi('inquiries/'.$lead.'/email-history?brand_id=23');
+        $guestUrl = $this->adminApi('guests/'.$guest.'/email-history?brand_id=23');
+        Http::fake(['contacts.hexa-tech.uk/*' => Http::response(['messages' => [], 'total' => 0])]);
+        $this->asStaffMember();
+        for ($i = 0; $i < 12; $i++) {
+            $this->getJson($i % 2 ? $leadUrl : $guestUrl)->assertOk();
+        }
+        for ($i = 0; $i < 10; $i++) {
+            $this->postJson($i % 2 ? $leadUrl : $guestUrl)->assertOk();
+        }
+        $this->postJson($leadUrl)->assertStatus(429)->assertHeader('Retry-After');
+        $this->getJson($guestUrl)->assertOk();
+        $this->asManager()->postJson($leadUrl)->assertOk();
+        $this->travel(61)->seconds();
+        $this->asStaffMember()->postJson($guestUrl)->assertOk();
+        Http::assertSentCount(25);
+    }
+
+    public function test_history_reads_keep_their_own_limit_across_contact_and_lead_routes(): void
+    {
+        $lead = $this->lead(['brand_id' => 23]);
+        $guest = DB::table('inquiries')->where('id', $lead)->value('guest_id');
+        $leadUrl = $this->adminApi('inquiries/'.$lead.'/email-history?brand_id=23');
+        $guestUrl = $this->adminApi('guests/'.$guest.'/email-history?brand_id=23');
+        Http::fake(['contacts.hexa-tech.uk/*' => Http::response(['messages' => [], 'total' => 0])]);
+        $this->asStaffMember();
+        for ($i = 0; $i < 60; $i++) {
+            $this->getJson($i % 2 ? $leadUrl : $guestUrl)->assertOk();
+        }
+        $this->getJson($leadUrl)->assertStatus(429)->assertHeader('Retry-After');
+        $this->postJson($guestUrl)->assertOk();
+        Http::assertSentCount(61);
+    }
 }

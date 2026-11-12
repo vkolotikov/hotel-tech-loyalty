@@ -1023,10 +1023,10 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
             // Blast-radius preview for the confirm-delete modal. Declared
             // BEFORE the {guest} show binding so the static segment wins
             // the route-matcher race against numeric ids.
-            Route::get('guests/{guest}/email-history', [\App\Http\Controllers\Api\V1\Admin\CrmMailController::class, 'guest'])->whereNumber('guest')->middleware('throttle:60,1');
-            Route::post('guests/{guest}/email-history', [\App\Http\Controllers\Api\V1\Admin\CrmMailController::class, 'guest'])->whereNumber('guest')->middleware('throttle:10,1');
-            Route::get('inquiries/{inquiry}/email-history', [\App\Http\Controllers\Api\V1\Admin\CrmMailController::class, 'inquiry'])->whereNumber('inquiry')->middleware('throttle:60,1');
-            Route::post('inquiries/{inquiry}/email-history', [\App\Http\Controllers\Api\V1\Admin\CrmMailController::class, 'inquiry'])->whereNumber('inquiry')->middleware('throttle:10,1');
+            Route::get('guests/{guest}/email-history', [\App\Http\Controllers\Api\V1\Admin\CrmMailController::class, 'guest'])->whereNumber('guest')->middleware('throttle:60,1,crm-mail-read');
+            Route::post('guests/{guest}/email-history', [\App\Http\Controllers\Api\V1\Admin\CrmMailController::class, 'guest'])->whereNumber('guest')->middleware('throttle:10,1,crm-mail-refresh');
+            Route::get('inquiries/{inquiry}/email-history', [\App\Http\Controllers\Api\V1\Admin\CrmMailController::class, 'inquiry'])->whereNumber('inquiry')->middleware('throttle:60,1,crm-mail-read');
+            Route::post('inquiries/{inquiry}/email-history', [\App\Http\Controllers\Api\V1\Admin\CrmMailController::class, 'inquiry'])->whereNumber('inquiry')->middleware('throttle:10,1,crm-mail-refresh');
             Route::get('guests/{id}/delete-impact',       [GuestController::class, 'deleteImpact']);
             Route::get('guests/{guest}',                  [GuestController::class, 'show']);
             Route::put('guests/{guest}',                  [GuestController::class, 'update'])
