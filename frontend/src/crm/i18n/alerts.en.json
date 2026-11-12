@@ -8,5 +8,6 @@
   "turned_off": "Desktop alerts are off",
   "turned_on": "Desktop alerts are on",
   "waiting": "{{count}} more chats are waiting for a reply",
-  "waiting_one": "A chat is waiting for a reply"
+  "waiting_one": "A chat is waiting for a reply",
+  "open": "Open"
 }

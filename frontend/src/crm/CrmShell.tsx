@@ -19,6 +19,7 @@ import { Notice } from '../workspace/ui/Notice'
 import { PageBoundary } from '../workspace/ui/PageBoundary'
 import { ShortcutsSheet } from '../workspace/ui/ShortcutsSheet'
 import { useCrm } from './CrmProvider'
+import { useCrmAlerts } from './alerts/useCrmAlerts'
 import { CrmFind } from './find/CrmFind'
 import { failureOf } from './lib/api'
 import { APP_NAME, FULL_ADMIN } from './lib/links'
@@ -61,6 +62,8 @@ export function CrmShell({ children }: { children: ReactNode }) {
   const { pathname } = useLocation()
   const navigate = useNavigate()
   const { data, isLoading, isError, error, refetch } = useCrm()
+  // Round 5: chats waiting and new hot leads raise a toast, the tab's title, the favicon's dot and, if allowed, a desktop alert.
+  useCrmAlerts()
   const [findOpen, setFindOpen] = useState(false)
   const [helpOpen, setHelpOpen] = useState(false)
   const main = useRef<HTMLElement>(null)
@@ -172,6 +175,8 @@ export function CrmShell({ children }: { children: ReactNode }) {
               { name: t('crm.nav.tasks', 'Tasks'), keys: [['T']] },
               { name: t('crm.create.lead_new', 'New lead'), keys: [['N']] },
               { name: t('crm.record.step', 'Previous or next record'), keys: [['['], [']']] },
+              { name: t('crm.shell.keys_inbox_step', 'Inbox: next or previous chat'), keys: [['J'], ['K']] },
+              { name: t('crm.shell.keys_inbox_resolve', 'Inbox: resolve the open chat'), keys: [['E']] },
               { name: t('workspace.shortcuts.title', 'Keyboard shortcuts'), keys: [['?']] },
             ],
           }]} />

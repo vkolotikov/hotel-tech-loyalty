@@ -8,5 +8,6 @@
   "turned_off": "Desktop-Hinweise sind aus",
   "turned_on": "Desktop-Hinweise sind an",
   "waiting": "{{count}} weitere Chats warten auf eine Antwort",
-  "waiting_one": "Ein Chat wartet auf eine Antwort"
+  "waiting_one": "Ein Chat wartet auf eine Antwort",
+  "open": "Öffnen"
 }

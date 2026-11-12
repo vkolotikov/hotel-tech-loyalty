@@ -8,5 +8,6 @@
   "turned_off": "Les alertes du bureau sont désactivées",
   "turned_on": "Les alertes du bureau sont activées",
   "waiting": "{{count}} chats de plus attendent une réponse",
-  "waiting_one": "Un chat attend une réponse"
+  "waiting_one": "Un chat attend une réponse",
+  "open": "Ouvrir"
 }

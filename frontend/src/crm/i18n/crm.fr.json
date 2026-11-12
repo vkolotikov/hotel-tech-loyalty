@@ -97,7 +97,9 @@
     "brand_label": "Marque : {{name}}. En choisir une autre",
     "brand_line": "Ce que montre le CRM : toutes les marques, ou l’une d’elles.",
     "brand_choose": "Choisir une marque",
-    "brand_default": "Principale"
+    "brand_default": "Principale",
+    "keys_inbox_step": "Boîte de réception : chat suivant ou précédent",
+    "keys_inbox_resolve": "Boîte de réception : clore le chat ouvert"
   },
   "start": {
     "done": "Fait",

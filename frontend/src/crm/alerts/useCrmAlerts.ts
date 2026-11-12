@@ -98,7 +98,8 @@ function words(alert: Alert, t: Say['t']): string {
 
 function fire(alerts: Alert[], { t, toast, navigate, onInbox }: Say): void {
   const lines = alerts.map(alert => words(alert, t))
-  lines.forEach(line => toast(line))
+  // Round 5: the toast says it in the neutral tone and carries the way there (the inbox's waiting chats, or Visitors).
+  lines.forEach((line, i) => toast(line, 'info', { action: { label: t('crm.alerts.open', 'Open'), to: alertTarget([alerts[i]]) } }))
   if (shouldSound(alerts, { soundOn: soundOn(), onInbox })) chime()
   let focused = true
   try { focused = document.hasFocus() } catch { /* assume looking */ }

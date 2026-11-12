@@ -97,7 +97,9 @@
     "brand_label": "Brand: {{name}}. Choose another",
     "brand_line": "What the CRM shows: every brand, or one of them.",
     "brand_choose": "Choose a brand",
-    "brand_default": "Main"
+    "brand_default": "Main",
+    "keys_inbox_step": "Inbox: next or previous chat",
+    "keys_inbox_resolve": "Inbox: resolve the open chat"
   },
   "start": {
     "done": "Done",

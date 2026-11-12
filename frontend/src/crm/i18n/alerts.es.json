@@ -8,5 +8,6 @@
   "turned_off": "Las alertas de escritorio están desactivadas",
   "turned_on": "Las alertas de escritorio están activadas",
   "waiting": "{{count}} chats más esperan una respuesta",
-  "waiting_one": "Un chat espera una respuesta"
+  "waiting_one": "Un chat espera una respuesta",
+  "open": "Abrir"
 }
