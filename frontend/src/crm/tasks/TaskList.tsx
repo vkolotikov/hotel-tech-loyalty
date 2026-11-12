@@ -121,8 +121,8 @@ function TaskRow({ task, showLead, onEdit, onComplete, onDelete }: {
         </span>
         <span className="min-w-0 flex-1">
           <span className={`block truncate text-sm font-medium ${done ? 'text-a-text-2 line-through' : 'text-a-text'}`}>{task.title}</span>
-          <span className="flex min-w-0 items-center gap-x-2 gap-y-0.5 text-xs text-a-text-2">
-            <span className={`shrink-0 font-medium ${DUE_INK[tone]}`}>{dueText}</span>
+          <span className="flex min-w-0 items-center gap-x-2 gap-y-0.5 overflow-hidden text-xs text-a-text-2">
+            <span className={`min-w-0 truncate font-medium ${DUE_INK[tone]}`}>{dueText}</span>
             {plan.priority === 'high' && !done && <span className="inline-flex shrink-0 items-center gap-0.5 font-medium text-a-danger" title={priorityLabel(t, 'high')}><Flag size={12} aria-hidden /><span className="sr-only">{priorityLabel(t, 'high')}</span></span>}
             {plan.repeat !== 'none' && <span className="inline-flex shrink-0 items-center gap-0.5" title={repeatLabel(t, plan.repeat)}><RepeatIcon size={12} aria-hidden /><span className="sr-only">{repeatLabel(t, plan.repeat)}</span></span>}
             {task.assignee && <span className="hidden shrink-0 sm:inline">· {task.assignee.id === boot.staff.id ? t('crm.common.me', 'Me') : task.assignee.name}</span>}
@@ -132,8 +132,11 @@ function TaskRow({ task, showLead, onEdit, onComplete, onDelete }: {
           </span>
         </span>
       </button>
+      {/* On a phone the lead is in the row's menu, so the title keeps its width. */}
       {showLead && task.inquiry_id && (
-        <IconButton icon={Target} size="sm" label={t('crm.tasks.open_lead', 'Open the lead')} to={records.href('lead', task.inquiry_id)} />
+        <span className="hidden sm:contents">
+          <IconButton icon={Target} size="sm" label={t('crm.tasks.open_lead', 'Open the lead')} to={records.href('lead', task.inquiry_id)} />
+        </span>
       )}
       <ActionMenu label={t('crm.tasks.menu_named', 'More for: {{title}}', { title: task.title })} items={items} />
     </li>

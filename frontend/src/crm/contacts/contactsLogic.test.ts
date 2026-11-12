@@ -4,7 +4,7 @@ import {
   companyValue, contactSubtitle, exportName, isDay, pairsWith, whatsappLink, withVip, activityBody, activityKey, allOnPage, bulkBody,
   companyBody, companyErrors, companyFormOf, companyStatusKey, csvWithBom, displayName, exportParams, fieldPatch, filtersFrom,
   activeFilters, impactLines, impactSummary, importanceTone, mergeRefusalKey, leadState, listOr, listParams, mailLink, mergeBody, mergeSides, newContactBody, newContactErrors,
-  newLeadFor, optionsWith, pageFrom, phoneLink, reasonKey, segmentFilters, settingList, tagIdsWith, tagIdsWithout, tagNameError,
+  optionsWith, pageFrom, phoneLink, reasonKey, segmentFilters, settingList, tagIdsWith, tagIdsWithout, tagNameError,
   tagsToOffer, toggleId, togglePage, withParam, withSegment, withoutFilters,
 } from './contactsLogic'
 import { contactsTab } from './tabs'
@@ -182,7 +182,6 @@ describe('showing a contact', () => {
     expect(mailLink('nope')).toBeNull()
     expect(phoneLink('+371 26 123-456')).toBe('tel:+37126123456')
     expect(phoneLink('12')).toBeNull()
-    expect(newLeadFor(12)).toBe('/crm/leads?new=1&guest=12')
   })
   it('logs a touch only with words, signed by the person', () => {
     expect(activityBody('call', '  ', 'Ann')).toBeNull()

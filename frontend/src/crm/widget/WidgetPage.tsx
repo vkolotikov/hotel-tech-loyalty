@@ -79,10 +79,11 @@ export function WidgetPage() {
         <>
           <Pill tone={saved.is_active ? 'success' : 'neutral'}>
             <span aria-hidden className={`h-1.5 w-1.5 rounded-full ${saved.is_active ? 'bg-a-st-confirmed' : 'bg-a-text-2'}`} />
-            {saved.is_active ? t('crm.widget.state_on', 'Shown on your website') : t('crm.widget.state_off', 'Switched off')}
+            {/* On a phone the dot alone, so the page's title keeps its room. */}
+            <span className="sr-only sm:not-sr-only">{saved.is_active ? t('crm.widget.state_on', 'Shown on your website') : t('crm.widget.state_off', 'Switched off')}</span>
           </Pill>
           {tab !== 'install' && (
-            <Button variant="secondary" size="sm" onClick={() => choose('install')}><Code2 size={15} aria-hidden />{t('crm.widget.get_code', 'Get the code')}</Button>
+            <Button variant="secondary" size="sm" onClick={() => choose('install')}><Code2 size={15} aria-hidden /><span className="sr-only sm:not-sr-only">{t('crm.widget.get_code', 'Get the code')}</span></Button>
           )}
         </>
       ) : undefined}>

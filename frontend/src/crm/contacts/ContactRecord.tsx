@@ -21,7 +21,7 @@ import { useToast } from '../ui/Toast'
 import { RecordEmails } from '../mail/RecordEmails'
 import { ContactActivity, ContactDelete, ContactLeads, TagBadges } from './contactParts'
 import {
-  CONTACT_GROUPS, KEPT_FIELDS, contactSubtitle, displayName, fieldPatch, mailLink, newLeadFor, optionsWith, pairsWith, phoneLink, whatsappLink,
+  CONTACT_GROUPS, KEPT_FIELDS, contactSubtitle, displayName, fieldPatch, mailLink, optionsWith, pairsWith, phoneLink, whatsappLink,
   type FieldKey,
 } from './contactsLogic'
 import { CustomFieldsCard } from './CustomFieldsCard'
@@ -167,6 +167,7 @@ function ContactActions({ guest, onGone, onOpenContact }: { guest: Guest; onGone
   const { t } = useTranslation()
   const boot = useBoot()
   const duplicates = useDuplicates()
+  const records = useRecords()
   const [deleting, setDeleting] = useState(false)
   const [merging, setMerging] = useState<DuplicatePair | null>(null)
   const mail = mailLink(guest.email)
@@ -184,7 +185,7 @@ function ContactActions({ guest, onGone, onOpenContact }: { guest: Guest; onGone
   }
   return (
     <>
-      <Link to={newLeadFor(guest.id)} className={PRIMARY_LINK}><Target size={15} aria-hidden />{t('crm.contacts.new_lead_short', 'New lead')}</Link>
+      <Link to={records.createHref('lead', { guest: guest.id })} className={PRIMARY_LINK}><Target size={15} aria-hidden />{t('crm.contacts.new_lead_short', 'New lead')}</Link>
       {mail && <IconButton icon={Mail} href={mail} label={t('crm.contacts.write', 'Email')} className="border border-a-border" />}
       {call && <IconButton icon={Phone} href={call} label={t('crm.contacts.call', 'Call')} className="border border-a-border" />}
       {chat && (

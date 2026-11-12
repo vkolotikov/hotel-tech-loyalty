@@ -140,6 +140,5 @@
   "tags_tip": "Click a tag to put it where your cursor is. It is filled in when the email is sent.",
   "title": "Email templates",
   "view": "View",
-  "view_edit": "Edit",
-  "view_preview": "Preview"
+  "view_edit": "Edit"
 }

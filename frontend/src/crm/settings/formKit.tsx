@@ -1,4 +1,4 @@
-import { useId, type KeyboardEvent, type ReactNode } from 'react'
+import { useEffect, useId, useRef, type KeyboardEvent, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ArrowRight, type LucideIcon } from 'lucide-react'
 import { Button } from '../../workspace/ui/Button'
@@ -49,19 +49,28 @@ export function SectionedForm<T extends string>({ label, idPrefix, parts, value,
     e.preventDefault()
     go(next)
   }
+  const strip = useRef<HTMLDivElement>(null)
+  // On a phone the list is a strip that scrolls sideways: keep the open part in view (one opened from the address too).
+  useEffect(() => {
+    const el = strip.current
+    const tab = el?.querySelector<HTMLElement>(`[data-part="${value}"]`)
+    if (!el || !tab || el.scrollWidth <= el.clientWidth) return
+    const offset = tab.getBoundingClientRect().left - el.getBoundingClientRect().left
+    if (offset < 0 || offset + tab.offsetWidth > el.clientWidth) el.scrollLeft += offset - 8
+  }, [value])
   const after = neighbours(keys, value).next
   const nextPart = offerNext ? parts.find(p => p.key === after) : undefined
 
   return (
-    <div className={`grid min-w-0 items-start gap-4 lg:grid-cols-[11.5rem_minmax(0,1fr)] ${aside ? 'xl:grid-cols-[12rem_minmax(0,1fr)_minmax(0,20rem)]' : ''}`}>
+    <div className={`grid min-w-0 items-start gap-4 lg:grid-cols-[13rem_minmax(0,1fr)] ${aside ? 'xl:grid-cols-[13rem_minmax(0,1fr)_minmax(0,20rem)]' : ''}`}>
       <div className="min-w-0 lg:sticky lg:top-4">
-        <div role="tablist" aria-label={label}
+        <div ref={strip} role="tablist" aria-label={label}
           className="flex gap-1 overflow-x-auto rounded-xl bg-a-surface-2/60 p-1 [scrollbar-width:none] lg:flex-col lg:overflow-visible lg:rounded-2xl lg:border lg:border-a-border lg:bg-a-surface lg:p-1.5 lg:shadow-a-sm">
           {parts.map(({ key, icon: Icon, title, tone = 'neutral', flagged, badge }) => {
             const on = key === value
             return (
               <button key={key} type="button" role="tab" id={`${idPrefix}-${key}`} aria-selected={on} aria-controls={panelId} tabIndex={on ? 0 : -1}
-                data-part={key} onClick={() => onChange(key)} onKeyDown={onKey}
+                data-part={key} title={title} onClick={() => onChange(key)} onKeyDown={onKey}
                 className={`flex min-h-10 shrink-0 items-center gap-2 rounded-xl px-2 py-1.5 text-left text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-a-accent lg:w-full ${on ? 'bg-a-accent/15 text-a-text' : 'text-a-text-2 hover:bg-a-surface-2 hover:text-a-text'}`}>
                 <span aria-hidden className={`grid h-7 w-7 shrink-0 place-items-center rounded-lg ${TONE_CHIP[tone]}`}><Icon size={15} /></span>
                 <span className="min-w-0 whitespace-nowrap lg:flex-1 lg:truncate">{title}</span>

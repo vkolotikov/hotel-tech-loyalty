@@ -129,15 +129,16 @@ export function TemplateEditor({ template, onClose, onSaved }: { template: Email
       </PartCard>
 
       {(tags.data ?? []).length > 0 && (
-        <div className="sticky top-2 z-10 rounded-2xl border border-a-border bg-a-surface/95 px-3 py-2 shadow-a-sm backdrop-blur">
-          <div role="group" aria-label={t('crm.templates.tags', 'Merge tags')} className="flex flex-wrap items-center gap-1.5">
+        <div className="z-10 rounded-2xl border border-a-border bg-a-surface/95 px-3 py-2 shadow-a-sm backdrop-blur lg:sticky lg:top-2">
+          {/* One sideways strip on a phone; on a wide screen the tags wrap and stay in view while the body is written. */}
+          <div role="group" aria-label={t('crm.templates.tags', 'Merge tags')} className="flex items-center gap-1.5 overflow-x-auto [scrollbar-width:none] sm:flex-wrap sm:overflow-visible">
             <Tags size={15} aria-hidden className="shrink-0 text-a-text-2" />
             <InfoTip text={t('crm.templates.tags_tip', 'Click a tag to put it where your cursor is. It is filled in when the email is sent.')} />
             {(tags.data ?? []).map(entry => (
               <button key={entry.tag} type="button" onMouseDown={e => e.preventDefault()} onClick={() => insertTag(entry.tag)}
                 title={entry.member ? `${entry.description} · ${t('crm.templates.members_tip', 'It uses a member\'s tags, so it goes only to contacts who are loyalty members.')}` : entry.description}
                 aria-label={t('crm.templates.insert_tag', 'Insert {{tag}}', { tag: entry.tag })}
-                className={`inline-flex min-h-8 items-center gap-1 rounded-full border px-2.5 font-a-mono text-xs transition-colors focus-visible:outline-2 focus-visible:outline-a-accent ${entry.member ? 'border-a-st-pending/40 text-a-st-pending hover:bg-a-st-pending/10' : 'border-a-accent/40 text-a-accent-text hover:bg-a-accent/10'}`}>
+                className={`inline-flex min-h-8 shrink-0 items-center gap-1 rounded-full border px-2.5 font-a-mono text-xs transition-colors focus-visible:outline-2 focus-visible:outline-a-accent ${entry.member ? 'border-a-st-pending/40 text-a-st-pending hover:bg-a-st-pending/10' : 'border-a-accent/40 text-a-accent-text hover:bg-a-accent/10'}`}>
                 {entry.member && <Crown size={11} aria-hidden />}{entry.name}
               </button>
             ))}
@@ -151,7 +152,7 @@ export function TemplateEditor({ template, onClose, onSaved }: { template: Email
         <>
           <div className="lg:hidden">
             <Tabs label={t('crm.templates.view', 'View')} value={view} onChange={setView}
-              items={[{ key: 'edit', label: t('crm.templates.view_edit', 'Edit') }, { key: 'preview', label: t('crm.templates.view_preview', 'Preview') }]} />
+              items={[{ key: 'edit', label: t('crm.templates.view_edit', 'Edit') }, { key: 'preview', label: t('crm.templates.live', 'Live preview') }]} />
           </div>
           <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,24rem)] xl:grid-cols-[minmax(0,1fr)_minmax(0,28rem)]">
             <div className={`min-w-0 space-y-3 ${view === 'preview' ? 'hidden lg:block' : ''}`}>

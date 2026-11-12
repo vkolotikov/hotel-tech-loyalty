@@ -553,10 +553,6 @@ export function leadState(status: string | null | undefined): 'won' | 'lost' | '
 
 export const LEAD_TONE: Record<'won' | 'lost' | 'open', Tone> = { won: 'success', lost: 'danger', open: 'progress' }
 
-/** The new lead form, told whose lead it is (the Leads page may read `guest`). */
-export function newLeadFor(id: number): string {
-  return `/crm/leads?new=1&guest=${id}`
-}
 
 /** The VIP levels to choose from: the venue's, with "VIP" (what the full admin's "Mark VIP" and the VIP filter use). */
 export function withVip(levels: string[]): string[] {

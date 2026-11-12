@@ -20,7 +20,7 @@ import { Pill } from '../ui/Pill'
 import { QueryState } from '../ui/QueryState'
 import { useToast } from '../ui/Toast'
 import {
-  ACTIVITY_TYPES, LEAD_TONE, activityBody, activityKey, displayName, impactSummary, leadState, newLeadFor, tagIdsWith, tagIdsWithout, tagNameError,
+  ACTIVITY_TYPES, LEAD_TONE, activityBody, activityKey, displayName, impactSummary, leadState, tagIdsWith, tagIdsWithout, tagNameError,
   tagsToOffer, type ActivityType, type ImpactKey,
 } from './contactsLogic'
 import { PRIMARY_LINK } from './parts'
@@ -204,8 +204,9 @@ export function LeadRow({ id, title, sub, status, value }: { id: number; title: 
 export function ContactLeads({ id, rows, loading, error, onRetry }: { id: number; rows: GuestLead[]; loading: boolean; error: unknown; onRetry: () => void }) {
   const { t, i18n } = useTranslation()
   const lang = i18n.language
+  const records = useRecords()
   const newLead = (
-    <Link to={newLeadFor(id)} className={PRIMARY_LINK}>
+    <Link to={records.createHref('lead', { guest: id })} className={PRIMARY_LINK}>
       <Plus size={15} aria-hidden />{t('crm.contacts.new_lead_short', 'New lead')}
     </Link>
   )

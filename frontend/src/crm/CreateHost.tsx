@@ -29,7 +29,7 @@ export function CreateHost() {
   if (fromMessage && boot.features.ai_capture && !captured) {
     body = <CaptureDialog deal={asDeal} onClose={close} onRead={setCaptured} />
   } else if (kind === 'lead' || kind === 'deal' || fromMessage) {
-    body = <LeadForm deal={asDeal} initial={captured} onClose={close} />
+    body = <LeadForm deal={asDeal} initial={captured} presetGuest={records.presetGuest} onClose={close} />
   } else if (kind === 'contact') {
     body = <NewContactPanel onClose={close} onCreated={guest => records.open('contact', guest.id)} />
   } else if (kind === 'company') {

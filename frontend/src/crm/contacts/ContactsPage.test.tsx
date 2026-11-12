@@ -155,7 +155,7 @@ describe('A contact’s record', () => {
     const html = render('/crm/contacts/12', seedAda)
     expect(html).toContain('Ada Lovelace')
     expect(html).toContain('Analytical Engines · ada@example.org · +371 2000 0000')
-    expect(html).toContain('href="/crm/leads?new=1&amp;guest=12"')
+    expect(html).toContain('href="/crm/contacts/12?create=lead&amp;guest=12"')
     expect(html).toContain('href="mailto:ada@example.org"')
     expect(html).toContain('href="tel:+37120000000"')
     expect(html).toContain('href="https://wa.me/37120000000"')

@@ -64,10 +64,11 @@ export function TodayPage() {
     <Page icon={Sun} title={name ? hello : t('crm.today.title', 'Today')}
       line={t('crm.today.line', 'What needs you now, from the website chat and your pipeline.')}
       actions={(
-        <>
+        // A phone has the frame's New button at the top; here the greeting keeps the width.
+        <div className="hidden items-center gap-2 sm:flex">
           <IconButton icon={CalendarPlus} label={t('crm.today.add_task', 'Add a task')} onClick={() => records.create('task')} />
           <Button onClick={() => records.create('lead')} className="min-h-10 rounded-full"><UserPlus size={15} aria-hidden />{t('crm.today.add_lead', 'Add a lead')}</Button>
-        </>
+        </div>
       )}>
       {!boot.setup.complete && <SetupBanner done={boot.setup.done} total={boot.setup.total} />}
       <PulseCard pulse={pulse.data} greet={false} variant="strip" />
@@ -213,10 +214,11 @@ function NeedsNow({ data, lang, zone, currency }: { data: Today; lang: string; z
           const { icon: Icon, label, tone } = meta[key]
           return (
             <button key={key} type="button" role="tab" id={`crm-need-${key}`} aria-selected={on} aria-controls="crm-need-panel" tabIndex={on ? 0 : -1}
-              onClick={() => choose(key)} onKeyDown={onKey}
+              onClick={() => choose(key)} onKeyDown={onKey} title={label}
               className={`flex min-h-10 shrink-0 items-center gap-2 rounded-xl px-2.5 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-a-accent ${on ? 'bg-a-accent/15 text-a-text' : 'text-a-text-2 hover:bg-a-surface-2 hover:text-a-text'}`}>
               <Icon size={15} aria-hidden />
-              <span className="whitespace-nowrap">{label}</span>
+              {/* On a phone only the chosen tab spells its name; the others are their icon and count (name as tooltip). */}
+              <span className={on ? 'whitespace-nowrap' : 'sr-only sm:not-sr-only sm:whitespace-nowrap'}>{label}</span>
               <span className={`min-w-6 rounded-full px-1.5 text-center text-xs font-semibold leading-5 ${counts[key] > 0 ? TONE_CHIP[tone] : 'bg-a-surface-2 text-a-text-2'}`}>{count(counts[key], lang)}</span>
             </button>
           )

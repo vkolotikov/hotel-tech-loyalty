@@ -49,7 +49,9 @@ export function InsightsPage() {
         items={PERIODS.map(d => ({ key: String(d), label: t('crm.insights.days_short', '{{count}} d', { count: d }) }))} />
 
   return (
-    <Page icon={BarChart3} title={t('crm.nav.insights', 'Insights')} line={t('crm.insights.line', 'How the website chat and your pipeline are doing.')} actions={period}>
+    // The period sits at the header's end on a wide screen and under the title on a phone, so the title keeps its width.
+    <Page icon={BarChart3} title={t('crm.nav.insights', 'Insights')} line={t('crm.insights.line', 'How the website chat and your pipeline are doing.')}
+      actions={<div className="hidden sm:block">{period}</div>} below={<div className="sm:hidden">{period}</div>}>
       <SectionNav label={t('crm.insights.sections', 'Insights sections')} idPrefix={PREFIX} panelId={PANEL} sections={sections} value={tab}
         onChange={next => set('tab', next === fallback ? null : next)} />
 

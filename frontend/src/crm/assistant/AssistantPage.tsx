@@ -61,11 +61,12 @@ export function AssistantPage() {
           {answering !== null && (
             <Pill tone={answering ? 'success' : 'neutral'}>
               <span aria-hidden className={`h-1.5 w-1.5 rounded-full ${answering ? 'bg-a-st-confirmed' : 'bg-a-text-2'}`} />
-              {answering ? t('crm.assistant.state_on', 'Answering visitors') : t('crm.assistant.state_off', 'Switched off')}
+              {/* On a phone the dot alone, so the page's title keeps its room. */}
+              <span className="sr-only sm:not-sr-only">{answering ? t('crm.assistant.state_on', 'Answering visitors') : t('crm.assistant.state_off', 'Switched off')}</span>
             </Pill>
           )}
           {canManage && tab !== 'try' && (
-            <Button variant="secondary" size="sm" onClick={() => choose('try')}><MessagesSquare size={15} aria-hidden />{t('crm.assistant.try_it', 'Try the assistant')}</Button>
+            <Button variant="secondary" size="sm" onClick={() => choose('try')}><MessagesSquare size={15} aria-hidden /><span className="sr-only sm:not-sr-only">{t('crm.assistant.try_it', 'Try the assistant')}</span></Button>
           )}
         </>
       )}>

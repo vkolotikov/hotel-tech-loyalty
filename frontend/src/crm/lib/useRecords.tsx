@@ -1,8 +1,8 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useLocation, useSearchParams } from 'react-router-dom'
 import {
-  createOf, hrefOf, recordOf, withCreate, withRecord, withoutRecord,
-  type CreateKind, type OpenRecord, type RecordKind,
+  createOf, hrefOf, presetGuestOf, recordOf, withCreate, withRecord, withoutRecord,
+  type CreateKind, type CreatePreset, type OpenRecord, type RecordKind,
 } from './records'
 
 /**
@@ -41,12 +41,16 @@ export function useListedRecords(kind: RecordKind): readonly number[] {
 export interface Records {
   current: OpenRecord | null
   creating: CreateKind | null
+  /** The contact the "new" panel was asked for (a lead for them), or null. */
+  presetGuest: number | null
   open: (kind: RecordKind, id: number, tab?: string | null) => void
   /** Moves to another tab of the open record (replaces the address). */
   setTab: (tab: string) => void
   close: () => void
   href: (kind: RecordKind, id: number, tab?: string | null) => string
-  create: (kind: CreateKind | null) => void
+  create: (kind: CreateKind | null, preset?: CreatePreset) => void
+  /** A link to a "new" panel over this page (Ctrl-click still works). */
+  createHref: (kind: CreateKind, preset?: CreatePreset) => string
 }
 
 export function useRecords(): Records {
@@ -55,6 +59,7 @@ export function useRecords(): Records {
   return {
     current: recordOf(search),
     creating: createOf(search),
+    presetGuest: presetGuestOf(search),
     open: (kind, id, tab) => setSearch(prev => withRecord(prev, kind, id, tab)),
     setTab: tab => setSearch(prev => {
       const open = recordOf(prev)
@@ -62,6 +67,7 @@ export function useRecords(): Records {
     }, { replace: true }),
     close: () => setSearch(prev => withoutRecord(prev)),
     href: (kind, id, tab) => hrefOf(pathname, withRecord(search, kind, id, tab)),
-    create: kind => setSearch(prev => withCreate(prev, kind)),
+    create: (kind, preset) => setSearch(prev => withCreate(prev, kind, preset)),
+    createHref: (kind, preset) => hrefOf(pathname, withCreate(search, kind, preset)),
   }
 }

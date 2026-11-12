@@ -37,6 +37,7 @@ export function recordOf(search: URLSearchParams): OpenRecord | null {
 /** The address with this record open (any other record closed, and any "new" panel: what was made opens), on `tab`. */
 export function withRecord(search: URLSearchParams, kind: RecordKind, id: number, tab?: string | null): URLSearchParams {
   const next = withoutRecord(search)
+  if (next.has('create')) next.delete('guest')
   next.delete('create')
   next.set(kind, String(id))
   if (tab) next.set(RECORD_TAB, tab)
@@ -57,12 +58,27 @@ export function createOf(search: URLSearchParams): CreateKind | null {
   return (CREATE_KINDS as readonly string[]).includes(raw ?? '') ? raw as CreateKind : null
 }
 
-/** The address asking to make something (`null`: nothing). */
-export function withCreate(search: URLSearchParams, kind: CreateKind | null): URLSearchParams {
+/** What a "new" panel starts from: a lead or a deal for a contact (`&guest=`). */
+export interface CreatePreset { guest?: number | null }
+
+/** The address asking to make something (`null`: nothing, and no preset). */
+export function withCreate(search: URLSearchParams, kind: CreateKind | null, preset?: CreatePreset): URLSearchParams {
   const next = new URLSearchParams(search)
-  if (kind) next.set('create', kind)
-  else next.delete('create')
+  next.delete('guest')
+  if (!kind) {
+    next.delete('create')
+    return next
+  }
+  next.set('create', kind)
+  const guest = preset?.guest
+  if (guest && Number.isInteger(guest) && guest > 0) next.set('guest', String(guest))
   return next
+}
+
+/** The contact a "new" panel was asked for (`?create=lead&guest=12`), or null. */
+export function presetGuestOf(search: URLSearchParams): number | null {
+  if (!createOf(search)) return null
+  return positive(search.get('guest'))
 }
 
 /** The record before or after `current` in the list it was opened from (none at either end, none when not in it). */

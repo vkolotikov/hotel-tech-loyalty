@@ -140,6 +140,5 @@
   "tags_tip": "Haga clic en una etiqueta para ponerla donde está el cursor. Se rellena al enviar el correo.",
   "title": "Plantillas de correo",
   "view": "Vista",
-  "view_edit": "Editar",
-  "view_preview": "Vista previa"
+  "view_edit": "Editar"
 }

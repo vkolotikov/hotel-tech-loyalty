@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { createOf, hrefOf, recordOf, stepIn, withCreate, withRecord, withoutRecord } from './records'
+import { createOf, hrefOf, presetGuestOf, recordOf, stepIn, withCreate, withRecord, withoutRecord } from './records'
 
 const q = (s: string) => new URLSearchParams(s)
 
@@ -35,6 +35,20 @@ describe('records in the address (round 5)', () => {
     expect(createOf(q('create=member'))).toBeNull()
     expect(withCreate(q('view=list'), 'task').toString()).toBe('view=list&create=task')
     expect(withCreate(q('create=task&x=1'), null).toString()).toBe('x=1')
+  })
+
+  it('a lead for a contact: the preset rides with the panel and leaves with it', () => {
+    const asked = withCreate(q('contact=12'), 'lead', { guest: 12 })
+    expect(asked.toString()).toBe('contact=12&create=lead&guest=12')
+    expect(presetGuestOf(asked)).toBe(12)
+    expect(presetGuestOf(q('guest=12'))).toBeNull()
+    expect(withCreate(q('create=lead&guest=12'), 'task').get('guest')).toBeNull()
+    expect(withCreate(asked, null).toString()).toBe('contact=12')
+    expect(withCreate(q(''), 'lead', { guest: -3 }).get('guest')).toBeNull()
+    // What was made opens: the panel and its preset go, the contact under it is replaced by the lead.
+    expect(withRecord(asked, 'lead', 40).toString()).toBe('lead=40')
+    // The Leads page's own ?new=1&guest= is not a preset of the panel and is left alone.
+    expect(withRecord(q('new=1&guest=5'), 'lead', 40).get('guest')).toBe('5')
   })
 
   it('steps through the list a record was opened from', () => {

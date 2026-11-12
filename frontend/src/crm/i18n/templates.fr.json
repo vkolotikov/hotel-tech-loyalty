@@ -140,6 +140,5 @@
   "tags_tip": "Cliquez sur une balise pour l’insérer à l’emplacement du curseur. Elle est remplie à l’envoi.",
   "title": "Modèles d’e-mail",
   "view": "Vue",
-  "view_edit": "Modifier",
-  "view_preview": "Aperçu"
+  "view_edit": "Modifier"
 }
