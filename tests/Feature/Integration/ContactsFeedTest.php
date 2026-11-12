@@ -60,6 +60,17 @@ class ContactsFeedTest extends TestCase
         }
     }
 
+    public function test_single_guest_lookup_keeps_the_fixed_brand_and_tenant_and_writes_nothing(): void
+    {
+        $url = '/api/v1/integrations/contacts-feed?limit=1&guest_id=';
+        $this->withToken(self::TOKEN)->getJson($url.'1&brand_id=42&organization_id=2')->assertOk()->assertJsonCount(1, 'contacts')->assertJsonPath('contacts.0.external_id', 'guest:1')->assertJsonPath('next_cursor', null);
+        $this->getJson($url.'2')->assertOk()->assertJsonCount(0, 'contacts');
+        $this->getJson($url.'3')->assertOk()->assertJsonCount(0, 'contacts');
+        $this->getJson($url.'99999')->assertOk()->assertJsonCount(0, 'contacts');
+        $this->getJson($url.'1&cursor=anything')->assertUnprocessable();
+        $this->assertSame(4, DB::table('guests')->count());
+    }
+
     public function test_feed_requires_its_own_token_and_has_no_write_method(): void
     {
         $this->getJson('/api/v1/integrations/contacts-feed')->assertUnauthorized();
