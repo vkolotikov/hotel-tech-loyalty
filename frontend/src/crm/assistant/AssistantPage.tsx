@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { BookOpen, GraduationCap, MessagesSquare, SlidersHorizontal, Zap } from 'lucide-react'
+import { BookOpen, Bot, GraduationCap, MessagesSquare, SlidersHorizontal, Zap } from 'lucide-react'
 import { Button } from '../../workspace/ui/Button'
 import { useBoot } from '../CrmProvider'
 import { crmApi, get } from '../lib/api'
@@ -11,7 +11,8 @@ import { FeatureLocked } from '../ui/QueryState'
 import { SectionNav, type Section } from '../ui/SectionNav'
 import { BehaviourTab } from './BehaviourTab'
 import { KnowledgeTab } from './KnowledgeTab'
-import { ASSISTANT_TABS, pickTab, withTab, type AssistantTab } from './lists'
+import { pickPart, withPart, withSection } from '../settings/sectionLogic'
+import { ASSISTANT_TABS, BEHAVIOUR_PARTS, KNOWLEDGE_PARTS, pickTab, type AssistantTab, type BehaviourPart, type KnowledgePart } from './lists'
 import { PopupsTab } from './PopupsTab'
 import { BEHAVIOUR_KEY, GAPS_KEY } from './queries'
 import { TeachTab } from './TeachTab'
@@ -24,9 +25,9 @@ const PANEL_ID = 'assistant-panel'
 
 /**
  * The AI assistant (HexaTech CRM; round 2 "structured sections"): the website chat's assistant, on the full admin's
- * chatbot endpoints — how it behaves, what it knows, the answers to fix (new), a test chat and the pop-ups, as five
- * sections in `?tab=` (Get started links to `?tab=knowledge`). Changes are a manager's (`staff.can.manage_bot`); a plan
- * without the chatbot sees why instead.
+ * chatbot endpoints — how it behaves (and, round 5, the AI model), what it knows, the answers to fix (new), a test chat
+ * and the pop-ups, as five sections in `?tab=` (Get started links to `?tab=knowledge`); Behaviour and Knowledge are in
+ * parts (`?part=`, round 5). Changes are a manager's (`staff.can.manage_bot`); a plan without the chatbot sees why.
  */
 export function AssistantPage() {
   const { t } = useTranslation()
@@ -39,7 +40,10 @@ export function AssistantPage() {
   const behaviour = useQuery({ queryKey: BEHAVIOUR_KEY, queryFn: () => get<BehaviourConfig>('chatbot-config/behavior'), enabled: !locked })
   const answering = behaviour.data ? behaviour.data.is_active !== false : null
 
-  const choose = (next: AssistantTab) => setParams(prev => withTab(prev, TAB_PARAM, next, 'behaviour'), { replace: true })
+  const choose = (next: AssistantTab) => setParams(prev => withSection(prev, next, 'behaviour', TAB_PARAM), { replace: true })
+  const behaviourPart = pickPart(params.get('part'), BEHAVIOUR_PARTS)
+  const knowledgePart = pickPart(params.get('part'), KNOWLEDGE_PARTS)
+  const choosePart = (keys: readonly string[]) => (next: string) => setParams(prev => withPart(prev, keys, next), { replace: true })
 
   const sections: Section<AssistantTab>[] = [
     { key: 'behaviour', icon: SlidersHorizontal, tone: 'ai', title: t('crm.assistant.tab.behaviour', 'Behaviour'), caption: t('crm.assistant.caption.behaviour', 'Who it is, how it talks, when it hands over.') },
@@ -50,7 +54,7 @@ export function AssistantPage() {
   ]
 
   return (
-    <Page title={t('crm.nav.assistant', 'AI assistant')}
+    <Page icon={Bot} title={t('crm.nav.assistant', 'AI assistant')}
       line={t('crm.assistant.line', 'The assistant in your website chat: how it speaks, what it knows, and what to fix.')}
       actions={locked ? undefined : (
         <>
@@ -61,7 +65,7 @@ export function AssistantPage() {
             </Pill>
           )}
           {canManage && tab !== 'try' && (
-            <Button variant="secondary" onClick={() => choose('try')}><MessagesSquare size={15} aria-hidden />{t('crm.assistant.try_it', 'Try the assistant')}</Button>
+            <Button variant="secondary" size="sm" onClick={() => choose('try')}><MessagesSquare size={15} aria-hidden />{t('crm.assistant.try_it', 'Try the assistant')}</Button>
           )}
         </>
       )}>
@@ -69,8 +73,8 @@ export function AssistantPage() {
         <>
           <SectionNav label={t('crm.assistant.sections', 'Sections')} idPrefix={ID_PREFIX} panelId={PANEL_ID} sections={sections} value={tab} onChange={choose} />
           <div id={PANEL_ID} role="tabpanel" aria-labelledby={`${ID_PREFIX}-${tab}`} className="min-w-0 animate-a-fade" key={tab}>
-            {tab === 'behaviour' && <BehaviourTab canManage={canManage} />}
-            {tab === 'knowledge' && <KnowledgeTab canManage={canManage} />}
+            {tab === 'behaviour' && <BehaviourTab canManage={canManage} part={behaviourPart} onPart={choosePart(BEHAVIOUR_PARTS) as (next: BehaviourPart) => void} />}
+            {tab === 'knowledge' && <KnowledgeTab canManage={canManage} part={knowledgePart} onPart={choosePart(KNOWLEDGE_PARTS) as (next: KnowledgePart) => void} />}
             {tab === 'teach' && <TeachTab gaps={gaps} canManage={canManage} />}
             {tab === 'try' && <TryTab canManage={canManage} assistantName={behaviour.data?.assistant_name ?? null} />}
             {tab === 'popups' && <PopupsTab canManage={canManage} />}

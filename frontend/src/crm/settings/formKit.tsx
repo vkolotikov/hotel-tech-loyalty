@@ -25,13 +25,15 @@ export interface FormPart<T extends string> {
  * view (the widget's preview). One tab stop for the list; the arrow keys, Home and End move. The page keeps the open
  * part in its address (`?part=`, sectionLogic.ts). A part with a refused field carries a dot.
  */
-export function SectionedForm<T extends string>({ label, idPrefix, parts, value, onChange, aside, children }: {
+export function SectionedForm<T extends string>({ label, idPrefix, parts, value, onChange, aside, next: offerNext = true, children }: {
   label: string
   idPrefix: string
   parts: FormPart<T>[]
   value: T
   onChange: (next: T) => void
   aside?: ReactNode
+  /** A "Next: …" button at the foot of a part (a form's parts follow one another; a set of lists' do not). */
+  next?: boolean
   children: ReactNode
 }) {
   const { t } = useTranslation()
@@ -48,7 +50,7 @@ export function SectionedForm<T extends string>({ label, idPrefix, parts, value,
     go(next)
   }
   const after = neighbours(keys, value).next
-  const nextPart = parts.find(p => p.key === after)
+  const nextPart = offerNext ? parts.find(p => p.key === after) : undefined
 
   return (
     <div className={`grid min-w-0 items-start gap-4 lg:grid-cols-[11.5rem_minmax(0,1fr)] ${aside ? 'xl:grid-cols-[12rem_minmax(0,1fr)_minmax(0,20rem)]' : ''}`}>

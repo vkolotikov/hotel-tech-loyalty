@@ -1,7 +1,7 @@
 /** Settings' sections and the small list helpers its editors share. Pure: the tests render to a string. */
 
-/** The sections, as `?tab=` names them (Get started links to `pipelines`). */
-export const SETTINGS_TABS = ['canned', 'pipelines', 'forms', 'fields', 'account'] as const
+/** The sections, as `?tab=` names them (Get started links to `pipelines`; round 5 adds the email templates). */
+export const SETTINGS_TABS = ['canned', 'pipelines', 'forms', 'fields', 'templates', 'account'] as const
 export type SettingsTab = (typeof SETTINGS_TABS)[number]
 
 /** The section a `?tab=` names, or the first one when it names none of them. */

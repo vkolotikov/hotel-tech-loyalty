@@ -49,7 +49,7 @@ export function step(state: AlertState, reading: Reading, key: string, own: read
 } {
   let notes = own.filter(n => now - n.at <= OWN_TTL_MS)
   if (state.key !== key) {
-    return { state: { ...START, key, last: { waiting: fresh(reading.waiting), hot: fresh(reading.hot) } }, alerts: [], own: [] }
+    return { state: { ...START, key, last: { waiting: fresh(reading.waiting), hot: fresh(reading.hot) } }, alerts: [], own: notes }
   }
   const alerts: Alert[] = []
   const last: Reading = { ...state.last }

@@ -47,3 +47,9 @@ export function sameCanned(a: readonly CannedReply[], b: readonly CannedReply[])
 export function canAddReply(list: readonly CannedReply[]): boolean {
   return list.length < CANNED_LIMITS.count
 }
+
+/** Which row stays open after row `removed` went: the same reply (one up when it was below), none when it was the one. */
+export function editingAfterRemove(editing: number | null, removed: number): number | null {
+  if (editing === null || editing === removed) return null
+  return editing > removed ? editing - 1 : editing
+}

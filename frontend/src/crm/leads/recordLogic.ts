@@ -89,6 +89,14 @@ export function dealOf(lead: LeadDetail): DealRow {
   }
 }
 
+/** What a row holds of its own (a link, a box, a menu): a press there is that thing's, not "open the lead". */
+const ROW_OWN = 'a,button,input,select,textarea,label,[role="menu"],[role="dialog"]'
+
+/** A press on a row's empty space opens its record; one on a link, a box or a menu of the row does not. */
+export function rowOpens(target: { closest: (selector: string) => unknown } | null, prevented: boolean): boolean {
+  return !prevented && !!target && !target.closest(ROW_OWN)
+}
+
 /** The ids a board shows, column by column (won and lost are drop targets, with no cards), for the panel's previous and next. */
 export function boardOrder(columns: readonly { collapsed: boolean; leads: readonly { id: number }[] }[]): number[] {
   return columns.flatMap(column => (column.collapsed ? [] : column.leads.map(lead => lead.id)))

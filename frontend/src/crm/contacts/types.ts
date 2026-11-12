@@ -53,6 +53,8 @@ export interface Facets {
   lead_source: string[]
   owner_name: string[]
   loyalty_tier: string[]
+  /** Round 5: the guest types the contacts hold (older servers leave it out). */
+  guest_type?: string[]
 }
 
 /** GET guests/tags. */

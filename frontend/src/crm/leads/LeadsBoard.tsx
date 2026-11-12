@@ -2,15 +2,16 @@ import { useState, type ReactNode } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { ArrowRightLeft, Columns3, Trophy, UserRoundCheck, Users, XCircle } from 'lucide-react'
-import { Button } from '../../workspace/ui/Button'
-import { Notice } from '../../workspace/ui/Notice'
+import { ArrowRight, ArrowRightLeft, CalendarClock, Coins, Columns3, Info, Target, Trophy, UserRoundCheck, Users, XCircle } from 'lucide-react'
 import { useBoot } from '../CrmProvider'
 import { get, params, send } from '../lib/api'
 import { errorText } from '../lib/errors'
-import { dayLabel, money } from '../lib/format'
-import { leadPath } from '../lib/links'
+import { count as countText, dayLabel, money } from '../lib/format'
+import { useRecordList, useRecords } from '../lib/useRecords'
+import { Avatar } from '../ui/Avatar'
 import { Card } from '../ui/Card'
+import { InfoTip } from '../ui/InfoTip'
+import { ActionMenu } from '../ui/Menu'
 import { EmptyState } from '../ui/EmptyState'
 import { Select } from '../ui/inputs'
 import { Pill } from '../ui/Pill'
@@ -22,8 +23,10 @@ import { InlineSelect } from './InlineSelect'
 import { LostDialog, WonDialog } from './LeadClose'
 import { useLeadChanged, useLeadSettings, usePipelines } from './leadData'
 import { amount, defaultPipeline, followUp, ownerOptions, resolveStage, sortedStages, stageColor, type LeadFilters } from './leadLogic'
+import { priorityTone } from './listLogic'
 import { ownerColumns, phoneOwner, withOwner, type OwnerColumn } from './listLogic'
 import { AiCell, FreshChip, StagePill } from './parts'
+import { boardOrder, rowOpens } from './recordLogic'
 import type { LeadRow, Paginated, Pipeline, Stage } from './leadTypes'
 
 const read = (sp: URLSearchParams, key: string): string => sp.get(key) ?? ''
@@ -37,9 +40,10 @@ function useBoardLeads(filters: LeadFilters) {
 }
 
 /**
- * The board (round 1's Pipeline, round 2's Leads → Board): one column per stage of the chosen pipeline (`?p=`) with its
- * count and value; a card moves with its "Move to" choices (or dragged, on a large screen), won and lost through their
- * own flows. The phone shows one stage at a time; the board scrolls sideways inside its own frame.
+ * The board (round 1's Pipeline, round 2's Leads → Board; round 5: compact cards that open their lead's panel): one
+ * column per stage of the chosen pipeline (`?p=`) with its count and value; a card moves with its "Move to" menu (or
+ * dragged, on a large screen), won and lost through their own flows. The phone shows one stage at a time; the board
+ * scrolls sideways inside its own frame.
  */
 export function LeadsBoard({ filters, now }: { filters: LeadFilters; now: Date }) {
   const { t, i18n } = useTranslation()
@@ -73,6 +77,8 @@ export function LeadsBoard({ filters, now }: { filters: LeadFilters; now: Date }
   const stages = sortedStages(pipeline?.stages)
   const columns = pipeline ? boardColumns(pipeline, leads.data?.data ?? [], isDefault) : []
   const totals = openTotals(columns)
+  // The panel's previous and next walk the board column by column.
+  useRecordList('lead', boardOrder(columns))
   const drop = (lead: LeadRow, target: Stage) => {
     const action = moveCard(lead, target, stages)
     if (action.kind === 'won' || action.kind === 'lost') setClosing({ kind: action.kind, lead })
@@ -94,20 +100,18 @@ export function LeadsBoard({ filters, now }: { filters: LeadFilters; now: Date }
           <Card><EmptyState icon={Columns3} title={t('crm.pipeline.no_pipeline', 'No pipeline yet')} line={t('crm.pipeline.no_pipeline_line', 'A manager sets up the stages a lead goes through under Settings.')} /></Card>
         ) : (
           <>
-            <div className="flex flex-wrap items-center gap-3">
+            <div className="flex flex-wrap items-center gap-2">
               {(pipelines.data?.length ?? 0) > 1 && (
-                <label className="flex items-center gap-2 text-sm text-a-text-2">
-                  {t('crm.pipeline.which', 'Pipeline')}
+                <label className="flex items-center">
+                  <span className="sr-only">{t('crm.pipeline.which', 'Pipeline')}</span>
                   <InlineSelect value={pipeline.id} onChange={e => { const q = new URLSearchParams(sp); q.set('p', e.target.value); setSp(q, { replace: true }); setPhoneStage(null) }}>
                     {(pipelines.data ?? []).map((p: Pipeline) => <option key={p.id} value={p.id}>{p.name}</option>)}
                   </InlineSelect>
                 </label>
               )}
-              <p className="text-sm text-a-text-2">{t('crm.pipeline.totals', '{{count}} open leads worth {{value}}', { count: totals.count, value: money(totals.value, boot.venue.currency, lang) })}</p>
+              <Totals count={totals.count} value={money(totals.value, boot.venue.currency, lang)} lang={lang} />
+              {(leads.data?.total ?? 0) > BOARD_LIMIT && <Truncated />}
             </div>
-            {(leads.data?.total ?? 0) > BOARD_LIMIT && (
-              <Notice tone="info">{t('crm.pipeline.truncated', 'The board shows the {{count}} most recently changed leads. Find the others in Leads.', { count: BOARD_LIMIT })}</Notice>
-            )}
 
             <div className="crm-board hidden overflow-x-auto pb-2 md:block">
               <div className="flex min-w-max items-start gap-3">
@@ -115,11 +119,11 @@ export function LeadsBoard({ filters, now }: { filters: LeadFilters; now: Date }
                   <section key={column.stage.id} aria-label={column.stage.name}
                     onDragOver={e => { if (dragging !== null) e.preventDefault() }}
                     onDrop={e => { e.preventDefault(); const lead = byId(dragging); setDragging(null); if (lead) drop(lead, column.stage) }}
-                    className={`flex shrink-0 flex-col rounded-2xl border bg-a-surface-2/60 ${column.collapsed ? 'w-52' : 'w-72'} ${dragging !== null ? 'border-a-accent/40' : 'border-a-border'}`}>
+                    className={`flex shrink-0 flex-col rounded-2xl border bg-a-surface-2/60 ${column.collapsed ? 'w-44' : 'w-72'} ${dragging !== null ? 'border-a-accent/40' : 'border-a-border'}`}>
                     <ColumnHead column={column} lang={lang} />
                     <div className="space-y-2 p-2">
                       {column.collapsed ? <ClosedHint column={column} dragging={dragging !== null} />
-                        : column.leads.length === 0 ? <p className="px-2 py-6 text-center text-xs text-a-text-2">{dragging !== null ? t('crm.pipeline.drop_here', 'Drop here') : t('crm.pipeline.column_empty', 'No leads at this stage')}</p>
+                        : column.leads.length === 0 ? <p className="px-2 py-6 text-center text-xs text-a-text-2">{dragging !== null ? t('crm.pipeline.drop_here', 'Drop here') : t('crm.pipeline.column_empty_short', 'None')}</p>
                         : column.leads.map(lead => card(lead, true))}
                     </div>
                   </section>
@@ -129,7 +133,7 @@ export function LeadsBoard({ filters, now }: { filters: LeadFilters; now: Date }
 
             <div className="space-y-3 md:hidden">
               <label className="block">
-                <span className="mb-1 block text-xs font-medium text-a-text-2">{t('crm.pipeline.stage', 'Stage')}</span>
+                <span className="sr-only">{t('crm.pipeline.stage', 'Stage')}</span>
                 <Select value={phone?.stage.id ?? ''} onChange={e => setPhoneStage(Number(e.target.value))}>
                   {columns.map(c => <option key={c.stage.id} value={c.stage.id}>{`${c.stage.name} (${c.count})`}</option>)}
                 </Select>
@@ -154,6 +158,29 @@ export function LeadsBoard({ filters, now }: { filters: LeadFilters; now: Date }
   )
 }
 
+/** The board's open part in two figures: how many leads, what they are worth (said in full to a screen reader). */
+function Totals({ count, value, lang }: { count: number; value: string; lang: string }) {
+  const { t } = useTranslation()
+  const said = t('crm.pipeline.totals', '{{count}} open leads worth {{value}}', { count, value })
+  return (
+    <p className="flex items-center gap-3 text-sm text-a-text" title={said}>
+      <span className="sr-only">{said}</span>
+      <span aria-hidden className="inline-flex items-center gap-1.5"><Target size={14} className="text-a-text-2" />{countText(count, lang)}</span>
+      <span aria-hidden className="inline-flex items-center gap-1.5"><Coins size={14} className="text-a-text-2" />{value}</span>
+    </p>
+  )
+}
+
+/** The board draws at most BOARD_LIMIT leads: said in a line, the rest are in the list. */
+function Truncated() {
+  const { t } = useTranslation()
+  return (
+    <p className="flex items-center gap-1.5 text-xs text-a-text-2">
+      <Info size={13} aria-hidden />{t('crm.pipeline.truncated', 'The board shows the {{count}} most recently changed leads. Find the others in Leads.', { count: BOARD_LIMIT })}
+    </p>
+  )
+}
+
 /**
  * Team (round 2, as the main platform's team buckets): the open leads by who owns them — nobody first, then each owner
  * the organisation names — with each column's count and value. A card is given to someone with "Give to" (or dragged,
@@ -175,6 +202,7 @@ export function LeadsTeam({ filters, now }: { filters: LeadFilters; now: Date })
   const [phoneWho, setPhoneWho] = useState<string | null | undefined>(undefined)
   const owners = ownerOptions(boot.staff.name, settings.owners, team.data ?? [])
   const columns = ownerColumns(leads.data?.data ?? [], owners)
+  useRecordList('lead', columns.flatMap(column => column.leads.map(lead => lead.id)))
 
   const give = useMutation({
     mutationFn: ({ lead, owner }: { lead: LeadRow; owner: string | null }) => send('put', `inquiries/${lead.id}`, { assigned_to: owner }),
@@ -203,8 +231,10 @@ export function LeadsTeam({ filters, now }: { filters: LeadFilters; now: Date })
       action={<GiveTo lead={lead} name={name(lead)} owners={columns.map(c => c.owner)} label={ownerName} onGive={owner => give.mutate({ lead, owner })} busy={give.isPending} />} />
   )
   const head = (column: OwnerColumn) => (
-    <header className="flex items-start gap-2 border-b border-a-border px-3 py-2.5">
-      {column.owner === null ? <Users size={15} aria-hidden className="mt-0.5 shrink-0 text-a-st-pending" /> : <UserRoundCheck size={15} aria-hidden className="mt-0.5 shrink-0 text-a-text-2" />}
+    <header className="flex items-center gap-2 border-b border-a-border px-3 py-2">
+      {column.owner === null
+        ? <span aria-hidden className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-a-st-pending/12 text-a-st-pending"><Users size={14} /></span>
+        : <Avatar name={column.owner} size="sm" />}
       <div className="min-w-0 flex-1">
         <h3 className="truncate text-sm font-semibold text-a-text">{ownerName(column.owner)}</h3>
         <p className="text-xs text-a-text-2">{money(column.value, boot.venue.currency, lang)}</p>
@@ -215,10 +245,11 @@ export function LeadsTeam({ filters, now }: { filters: LeadFilters; now: Date })
 
   return (
     <div className="space-y-3">
-      <p className="text-sm text-a-text-2">{t('crm.pipeline.team_line', 'Who owns each open lead. Give a lead to someone to make it theirs.')}</p>
-      {(leads.data?.total ?? 0) > BOARD_LIMIT && (
-        <Notice tone="info">{t('crm.pipeline.truncated', 'The board shows the {{count}} most recently changed leads. Find the others in Leads.', { count: BOARD_LIMIT })}</Notice>
-      )}
+      <div className="flex flex-wrap items-center gap-2">
+        <p className="flex items-center gap-1.5 text-sm text-a-text"><UserRoundCheck size={14} aria-hidden className="text-a-text-2" />{t('crm.pipeline.team_short', 'By owner')}</p>
+        <InfoTip text={t('crm.pipeline.team_line', 'Who owns each open lead. Give a lead to someone to make it theirs.')} />
+        {(leads.data?.total ?? 0) > BOARD_LIMIT && <Truncated />}
+      </div>
       <QueryState loading={leads.isLoading} error={leads.error} onRetry={() => { void leads.refetch() }}>
         <div className="crm-board hidden overflow-x-auto pb-2 md:block">
           <div className="flex min-w-max items-start gap-3">
@@ -230,7 +261,7 @@ export function LeadsTeam({ filters, now }: { filters: LeadFilters; now: Date })
                 {head(column)}
                 <div className="space-y-2 p-2">
                   {column.leads.length === 0
-                    ? <p className="px-2 py-6 text-center text-xs text-a-text-2">{dragging !== null ? t('crm.pipeline.drop_here', 'Drop here') : t('crm.pipeline.team_empty', 'No open leads')}</p>
+                    ? <p className="px-2 py-6 text-center text-xs text-a-text-2">{dragging !== null ? t('crm.pipeline.drop_here', 'Drop here') : t('crm.pipeline.column_empty_short', 'None')}</p>
                     : column.leads.map(lead => card(lead, true))}
                 </div>
               </section>
@@ -239,7 +270,7 @@ export function LeadsTeam({ filters, now }: { filters: LeadFilters; now: Date })
         </div>
         <div className="space-y-3 md:hidden">
           <label className="block">
-            <span className="mb-1 block text-xs font-medium text-a-text-2">{t('crm.pipeline.team_who', 'Whose leads')}</span>
+            <span className="sr-only">{t('crm.pipeline.team_who', 'Whose leads')}</span>
             <Select value={phone?.owner ?? ''} onChange={e => setPhoneWho(e.target.value || null)}>
               {columns.map(c => <option key={c.owner ?? ''} value={c.owner ?? ''}>{`${ownerName(c.owner)} (${c.count})`}</option>)}
             </Select>
@@ -263,10 +294,10 @@ function ColumnHead({ column, lang }: { column: Column; lang: string }) {
   const boot = useBoot()
   const dot = stageColor(column.stage.color)
   return (
-    <header className="flex items-start gap-2 border-b border-a-border px-3 py-2.5">
-      {dot ? <span aria-hidden className="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: dot }} />
-        : column.stage.kind === 'won' ? <Trophy size={14} aria-hidden className="mt-0.5 shrink-0 text-a-st-confirmed" />
-        : column.stage.kind === 'lost' ? <XCircle size={14} aria-hidden className="mt-0.5 shrink-0 text-a-danger" /> : null}
+    <header className="flex items-center gap-2 border-b border-a-border px-3 py-2">
+      {column.stage.kind === 'won' ? <Trophy size={14} aria-hidden className="shrink-0 text-a-st-confirmed" />
+        : column.stage.kind === 'lost' ? <XCircle size={14} aria-hidden className="shrink-0 text-a-danger" />
+        : dot ? <span aria-hidden className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: dot }} /> : null}
       <div className="min-w-0 flex-1">
         <h3 className="truncate text-sm font-semibold text-a-text">{column.stage.name}</h3>
         {!column.collapsed && <p className="text-xs text-a-text-2">{money(column.value, boot.venue.currency, lang)}</p>}
@@ -279,17 +310,22 @@ function ColumnHead({ column, lang }: { column: Column; lang: string }) {
 function ClosedHint({ column, dragging }: { column: Column; dragging: boolean }) {
   const { t } = useTranslation()
   const won = column.stage.kind === 'won'
+  if (dragging) return <p className="px-2 py-4 text-center text-xs text-a-text-2">{won ? t('crm.pipeline.drop_won', 'Drop to mark it won') : t('crm.pipeline.drop_lost', 'Drop to mark it lost')}</p>
   return (
-    <div className="space-y-2 px-2 py-4 text-center text-xs text-a-text-2">
-      <p>{dragging
-        ? (won ? t('crm.pipeline.drop_won', 'Drop to mark it won') : t('crm.pipeline.drop_lost', 'Drop to mark it lost'))
-        : (won ? t('crm.pipeline.won_hint', 'Won leads become deals.') : t('crm.pipeline.lost_hint', 'Lost leads stay in Contacts.'))}</p>
-      {won && !dragging && <Link to="/crm/deals" className="font-medium text-a-accent-text hover:underline">{t('crm.pipeline.see_won', 'See won deals')}</Link>}
+    <div className="flex items-center justify-center gap-1 px-2 py-3 text-xs text-a-text-2">
+      {won
+        ? <Link to="/crm/deals" className="inline-flex items-center gap-1 font-medium text-a-accent-text hover:underline">{t('crm.pipeline.see_won', 'See won deals')}<ArrowRight size={12} aria-hidden /></Link>
+        : <span>{t('crm.pipeline.lost_short', 'In Contacts')}</span>}
+      <InfoTip align="right" text={won ? t('crm.pipeline.won_hint', 'Won leads become deals.') : t('crm.pipeline.lost_hint', 'Lost leads stay in Contacts.')} />
     </div>
   )
 }
 
-/** A lead on the board or the team: who, how fresh, the value, the follow-up, the owner or the stage, the AI's chance. */
+/**
+ * A lead on the board or the team (round 5: compact, with icons): who, the AI's chance, a move; then how fresh, the
+ * stage (on the team), the value, the follow-up, the priority and the owner (on the board). The name opens its panel,
+ * and so does a press on the card's empty space.
+ */
 function LeadCard({ lead, name, lang, now, stage, action, busy, draggable = false, onDragStart, onDragEnd }: {
   lead: LeadRow
   name: string
@@ -305,85 +341,70 @@ function LeadCard({ lead, name, lang, now, stage, action, busy, draggable = fals
 }) {
   const { t } = useTranslation()
   const boot = useBoot()
+  const records = useRecords()
+  const settings = useLeadSettings()
   const value = amount(lead.total_value)
   const next = followUp(lead, boot.venue.today)
+  const tone = priorityTone(lead.priority, settings.priorities)
   return (
     <article draggable={draggable} onDragStart={e => { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', String(lead.id)); onDragStart?.() }} onDragEnd={onDragEnd}
-      className={`rounded-xl border border-a-border bg-a-surface p-3 shadow-a-sm ${busy ? 'opacity-60' : ''} ${draggable ? 'cursor-grab active:cursor-grabbing' : ''}`}>
-      <div className="flex items-start gap-2">
+      onClick={e => { if (rowOpens(e.target as Element | null, e.defaultPrevented)) records.open('lead', lead.id) }}
+      className={`cursor-pointer rounded-xl border border-a-border bg-a-surface p-2.5 shadow-a-sm transition-colors hover:border-a-accent/40 ${busy ? 'opacity-60' : ''} ${draggable ? 'active:cursor-grabbing' : ''}`}>
+      <div className="flex items-start gap-1.5">
         <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-1.5">
-            <Link to={leadPath(lead.id)} draggable={false} className="truncate text-sm font-medium text-a-text hover:underline">{name}</Link>
-            <FreshChip lead={lead} now={now} />
-          </div>
+          <Link to={records.href('lead', lead.id)} draggable={false} className="block truncate text-sm font-medium text-a-text hover:underline">{name}</Link>
           {lead.guest?.company && <p className="truncate text-xs text-a-text-2">{lead.guest.company}</p>}
         </div>
-        <AiCell lead={lead} compact />
+        <span className="pt-0.5"><AiCell lead={lead} compact /></span>
+        {action}
       </div>
-      <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-a-text-2">
+      <div className="mt-1.5 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs text-a-text-2">
+        <FreshChip lead={lead} now={now} />
         {stage !== undefined && <StagePill stage={stage} fallback={lead.status} />}
-        {value !== null && <span className="font-medium text-a-text">{money(value, boot.venue.currency, lang)}</span>}
+        {value !== null && <span className="inline-flex items-center gap-1 font-medium text-a-text"><Coins size={12} aria-hidden className="text-a-text-2" />{money(value, boot.venue.currency, lang)}</span>}
         {next?.day && (
-          <span className={next.state === 'overdue' ? 'font-medium text-a-danger' : next.state === 'today' ? 'font-medium text-a-st-pending' : ''}>
-            {next.state === 'today' ? t('crm.pipeline.follow_today', 'Follow up today') : dayLabel(next.day, lang)}
+          <span className={`inline-flex items-center gap-1 ${next.state === 'overdue' ? 'font-medium text-a-danger' : next.state === 'today' ? 'font-medium text-a-st-pending' : ''}`}>
+            <CalendarClock size={12} aria-hidden />{next.state === 'today' ? t('crm.pipeline.follow_today_short', 'Today') : dayLabel(next.day, lang)}
           </span>
         )}
-        {stage === undefined && lead.assigned_to && <span className="truncate">{lead.assigned_to}</span>}
-        {lead.priority && stage === undefined && <Pill>{lead.priority}</Pill>}
+        {lead.priority && tone && stage === undefined && <Pill tone={tone}>{lead.priority}</Pill>}
+        {stage === undefined && lead.assigned_to && <span className="ml-auto" title={lead.assigned_to}><Avatar name={lead.assigned_to} size="sm" /><span className="sr-only">{lead.assigned_to}</span></span>}
       </div>
-      <div className="mt-2">{action}</div>
     </article>
   )
 }
 
-/** "Move to": every other stage of the card's pipeline, one press each. */
+const MOVE = 'grid h-8 w-8 shrink-0 place-items-center rounded-lg text-a-text-2 hover:bg-a-surface-2 hover:text-a-text focus-visible:outline-2 focus-visible:outline-a-accent'
+
+/** "Move to": every other stage of the card's pipeline, in a menu. */
 function MoveTo({ lead, name, stages, onMove, busy }: { lead: LeadRow; name: string; stages: Stage[]; onMove: (target: Stage) => void; busy: boolean }) {
   const { t } = useTranslation()
-  const [open, setOpen] = useState(false)
   const targets = moveTargets(lead, stages)
   if (targets.length === 0) return null
+  const label = t('crm.pipeline.move_named', 'Move {{name}} to', { name })
   return (
-    <>
-      <button type="button" aria-expanded={open} onClick={() => setOpen(m => !m)} disabled={busy}
-        className="inline-flex min-h-8 items-center gap-1 rounded-full border border-a-border px-2.5 text-xs font-medium text-a-text-2 hover:text-a-text disabled:opacity-50">
-        <ArrowRightLeft size={13} aria-hidden />{t('crm.pipeline.move_to', 'Move to')}
-      </button>
-      {open && (
-        <ul className="mt-2 flex flex-wrap gap-1.5" aria-label={t('crm.pipeline.move_named', 'Move {{name}} to', { name })}>
-          {targets.map(target => (
-            <li key={target.id}>
-              <Button size="sm" variant={target.kind === 'lost' ? 'danger' : target.kind === 'won' ? 'primary' : 'secondary'} onClick={() => { setOpen(false); onMove(target) }}>
-                {target.name}
-              </Button>
-            </li>
-          ))}
-        </ul>
-      )}
-    </>
+    <span title={t('crm.pipeline.move_to', 'Move to')} className="inline-flex">
+      <ActionMenu label={label} className={MOVE} button={<ArrowRightLeft size={14} aria-hidden />}
+        items={[{ heading: t('crm.pipeline.move_to', 'Move to') }, ...targets.map(target => ({
+          key: `s${target.id}`, label: target.name, disabled: busy, danger: target.kind === 'lost',
+          icon: target.kind === 'won' ? Trophy : target.kind === 'lost' ? XCircle : ArrowRight, onSelect: () => onMove(target),
+        }))]} />
+    </span>
   )
 }
 
-/** "Give to": everyone else who can own a lead, and nobody. */
+/** "Give to": everyone else who can own a lead, and nobody, in a menu. */
 function GiveTo({ lead, name, owners, label, onGive, busy }: { lead: LeadRow; name: string; owners: (string | null)[]; label: (owner: string | null) => string; onGive: (owner: string | null) => void; busy: boolean }) {
   const { t } = useTranslation()
-  const [open, setOpen] = useState(false)
   const now = (lead.assigned_to ?? '').trim().toLowerCase()
   const others = owners.filter(o => (o ?? '').toLowerCase() !== now)
+  if (others.length === 0) return null
   return (
-    <>
-      <button type="button" aria-expanded={open} onClick={() => setOpen(m => !m)} disabled={busy}
-        className="inline-flex min-h-8 items-center gap-1 rounded-full border border-a-border px-2.5 text-xs font-medium text-a-text-2 hover:text-a-text disabled:opacity-50">
-        <UserRoundCheck size={13} aria-hidden />{t('crm.pipeline.give_to', 'Give to')}
-      </button>
-      {open && (
-        <ul className="mt-2 flex flex-wrap gap-1.5" aria-label={t('crm.pipeline.give_named', 'Give {{name}} to', { name })}>
-          {others.map(owner => (
-            <li key={owner ?? ''}>
-              <Button size="sm" variant="secondary" onClick={() => { setOpen(false); onGive(owner) }}>{label(owner)}</Button>
-            </li>
-          ))}
-        </ul>
-      )}
-    </>
+    <span title={t('crm.pipeline.give_to', 'Give to')} className="inline-flex">
+      <ActionMenu label={t('crm.pipeline.give_named', 'Give {{name}} to', { name })} className={MOVE} button={<UserRoundCheck size={14} aria-hidden />}
+        items={[{ heading: t('crm.pipeline.give_to', 'Give to') }, ...others.map(owner => ({
+          key: owner ?? '_nobody', label: label(owner), disabled: busy, icon: owner === null ? Users : UserRoundCheck, onSelect: () => onGive(owner),
+        }))]} />
+    </span>
   )
 }

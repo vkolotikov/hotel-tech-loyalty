@@ -52,7 +52,7 @@ function render(at: string, seed: (qc: QueryClient) => void) {
 }
 
 describe('Deals', () => {
-  it('shows the won deals with their fulfilment step and payment (round 1\'s won deals)', () => {
+  it('shows the won deals with their step in one compact control and their payment; a deal opens on its Deal tab', () => {
     const html = render('/crm/deals', qc => {
       qc.setQueryData(['crm', 'deals', 'list', dealsQuery('all', 1, 'due_date', { q: '', payment: '', owner: '' })], {
         data: [{ ...lead(5, 'Ada Lovelace', '900'), fulfillment_stage: 'in_production', payment_status: 'partial', paid_amount: '300' }],
@@ -60,33 +60,42 @@ describe('Deals', () => {
       })
     })
     expect(html).toContain('Ada Lovelace')
-    expect(html).toContain('<option value="in_production" selected="">In progress</option>')
+    expect(html).toContain('The step of Ada Lovelace: In progress')
+    expect(html).toContain('3 of 5 steps done')
     expect(html).toContain('Partly paid')
     expect(html).toContain('€600 still to pay')
-    expect(html).toContain('€300 paid')
-    expect(html).toContain('Move Ada Lovelace on to Ready')
-    expect(html).toContain('href="/crm/leads/5"')
+    // Round 5: the deal opens in its lead's panel on the Deal tab, over the list; the row's "Show more" is gone.
+    expect(html).toContain('href="/crm/deals?lead=5&amp;rtab=deal"')
+    expect(html).not.toContain('Show more about')
+    expect(html).not.toContain('<select')
   })
 
-  it('shows the figures per step (a tile opens its step), the quick filters with exact counts and the toolbar', () => {
+  it('shows at most four figures that hold something, the step pills with exact counts and the toolbar\'s tools', () => {
     const html = render('/crm/deals?filter=design_needed', qc => {
       qc.setQueryData(['crm', 'deals', 'kpis'], { total: 9, awaiting_payment: fig(4, 3200), design_needed: fig(2, 800), in_production: fig(3, 1500), ready_to_ship: fig(1, 300), completed_month: fig(5, 4100) })
       qc.setQueryData(['crm', 'deals', 'list', dealsQuery('design_needed', 1, 'due_date', { q: '', payment: '', owner: '' })], { data: [], current_page: 1, last_page: 1, total: 0 })
     })
-    for (const text of ['Deals in progress', 'Not paid in full', '€3,200', 'Completed this month', 'href="/crm/deals?filter=in_production"']) expect(html).toContain(text)
+    for (const text of ['Deals in progress', 'Not paid in full', '€3,200', 'Completed this month', 'href="/crm/deals?filter=ready_to_ship"']) expect(html).toContain(text)
     expect(html).toMatch(/Preparation<span[^>]*>2<\/span>/)
-    expect(html).toContain('Any payment')
-    expect(html).toContain('Export CSV')
-    expect(html).toContain('Columns')
+    for (const tool of ['aria-label="Filters"', 'aria-label="Export"', 'aria-label="Columns"', 'Sort: Next step soonest']) expect(html).toContain(tool)
     expect(html).toContain('No deal here')
     expect(html).toContain('Show every deal')
+  })
+
+  it('shows no row of zeros first', () => {
+    const html = render('/crm/deals', qc => {
+      qc.setQueryData(['crm', 'deals', 'kpis'], { total: 0, awaiting_payment: fig(0, 0), design_needed: fig(0, 0), in_production: fig(0, 0), ready_to_ship: fig(0, 0), completed_month: fig(0, 0) })
+      qc.setQueryData(['crm', 'deals', 'list', dealsQuery('all', 1, 'due_date', { q: '', payment: '', owner: '' })], { data: [], current_page: 1, last_page: 1, total: 0 })
+    })
+    expect(html).not.toContain('Deals in progress')
+    expect(html).toContain('No won deals yet')
   })
 
   it('adds a deal by hand or from a pasted message, for every staff member (owner 2026-11-08)', () => {
     const html = render('/crm/deals', qc => {
       qc.setQueryData(['crm', 'deals', 'list', dealsQuery('all', 1, 'due_date', { q: '', payment: '', owner: '' })], { data: [], current_page: 1, last_page: 1, total: 0 })
     })
-    expect(html).toContain('Add a deal')
+    expect(html).toContain('>Add<')
     expect(html).toContain('From a message')
     expect(html).toContain('crm-ai-soft')
   })

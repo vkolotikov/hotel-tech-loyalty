@@ -20,6 +20,8 @@ export const AREAS = [
   'tasks', 'saved-views', 'custom-fields', 'lead-forms', 'corporate-accounts', 'crm-settings',
   // Round 2 (the main platform's leads): sending an email template from a lead, and the CRM's AI capture of a lead.
   'email-templates', 'crm-ai',
+  // Round 5 (Integrations): the Facebook Messenger pages (`integrations/messenger*`, AccessMap product chat, a manager's).
+  'integrations',
 ] as const
 
 export type Area = (typeof AREAS)[number]

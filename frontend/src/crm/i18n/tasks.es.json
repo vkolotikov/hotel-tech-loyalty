@@ -135,5 +135,10 @@
   "unlink_lead": "Quitar el lead",
   "when": "Cuándo",
   "whose": "De quién",
-  "zone_hint": "Con la hora del establecimiento ({{zone}})"
+  "zone_hint": "Con la hora del establecimiento ({{zone}})",
+  "step_more": "Más",
+  "open_named": "Abrir: {{title}}",
+  "add_short": "Añadir",
+  "filters": "Filtros",
+  "gone": "Esta tarea ya no está abierta."
 }

@@ -41,12 +41,12 @@ export function Segmented<T extends string>({ label, items, value, onChange, lab
       {items.map(({ key, label: name, icon: Icon, count, tone }) => {
         const on = key === value
         return (
-          <button key={key} type="button" aria-pressed={on} title={name} onClick={() => onChange(key)}
+          <button key={key} type="button" aria-pressed={on} title={name} aria-label={count ? `${name} ${count}` : name} onClick={() => onChange(key)}
             className={`inline-flex min-h-8 shrink-0 items-center gap-1.5 rounded-lg px-2 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-a-accent ${on ? 'bg-a-accent text-a-accent-ink' : 'text-a-text-2 hover:bg-a-surface-2 hover:text-a-text'}`}>
             <Icon size={15} aria-hidden className="shrink-0" />
-            <span className={labels === 'wide' ? 'sr-only xl:not-sr-only xl:whitespace-nowrap' : 'sr-only'}>{name}</span>
+            {labels === 'wide' && <span aria-hidden className="hidden whitespace-nowrap xl:inline">{name}</span>}
             {count !== undefined && count > 0 && (
-              <span className={`text-xs tabular-nums ${on ? 'text-a-accent-ink' : tone ? `font-semibold ${TONE_INK[tone]}` : 'text-a-text-2'}`}>{count}</span>
+              <span aria-hidden className={`text-xs tabular-nums ${on ? 'text-a-accent-ink' : tone ? `font-semibold ${TONE_INK[tone]}` : 'text-a-text-2'}`}>{count}</span>
             )}
           </button>
         )
@@ -67,11 +67,10 @@ export function IconToggle({ on, onChange, icon: Icon, label, count, tone, disab
   className?: string
 }) {
   return (
-    <button type="button" aria-pressed={on} title={label} disabled={disabled} onClick={() => onChange(!on)}
+    <button type="button" aria-pressed={on} title={label} aria-label={label} disabled={disabled} onClick={() => onChange(!on)}
       className={`inline-flex h-9 min-w-9 shrink-0 items-center justify-center gap-1 rounded-xl border px-2 text-sm transition-colors focus-visible:outline-2 focus-visible:outline-a-accent disabled:cursor-not-allowed disabled:opacity-40 ${on ? 'border-a-accent/40 bg-a-accent/12 text-a-accent-text' : 'border-a-border bg-a-surface text-a-text-2 hover:text-a-text'} ${className}`}>
       <Icon size={16} aria-hidden className="shrink-0" />
-      <span className="sr-only">{label}</span>
-      {count !== undefined && count > 0 && <span className={`text-xs font-semibold tabular-nums ${on ? '' : tone ? TONE_INK[tone] : ''}`}>{count}</span>}
+      {count !== undefined && count > 0 && <span aria-hidden className={`text-xs font-semibold tabular-nums ${on ? '' : tone ? TONE_INK[tone] : ''}`}>{count}</span>}
     </button>
   )
 }

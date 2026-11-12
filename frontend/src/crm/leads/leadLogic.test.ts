@@ -74,11 +74,15 @@ describe('what GET inquiries is asked', () => {
     expect(listQuery({ ...NO_FILTERS, due: 'now' }, 'Me').task_due).toBe('')
   })
 
-  it('exports the same filters as CSV, every page', () => {
+  it('exports the same filters, every page, as the full admin\'s workbook or as CSV (round 5)', () => {
     const q = exportQuery({ ...NO_FILTERS, source: 'chatbot', page: 4 }, 'Me')
-    expect(q).toMatchObject({ format: 'csv', source: 'chatbot', active_only: true })
+    expect(q).toMatchObject({ source: 'chatbot', active_only: true })
+    // The workbook is the export's default: the full admin's call names no format for it.
+    expect(q).not.toHaveProperty('format')
     expect(q).not.toHaveProperty('page')
     expect(q).not.toHaveProperty('per_page')
+    expect(exportQuery({ ...NO_FILTERS, owner: '_nobody' }, 'Me', 'csv')).toMatchObject({ format: 'csv', unassigned: 1, active_only: true })
+    expect(exportQuery({ ...NO_FILTERS, due: 'now' }, 'Me', 'csv').task_due).toBe('')
   })
 })
 

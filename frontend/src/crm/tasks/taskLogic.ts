@@ -25,6 +25,8 @@ export interface Task {
   priority?: string | null
   duration_minutes?: number | null
   recurring_rule?: { freq?: string | null } | null
+  /** The organisation's own task fields (CustomFieldService, entity `task`). */
+  custom_data?: Record<string, unknown> | null
 }
 
 /** TaskController's `type` rule, one list with the full admin's task drawer (`src/lib/taskForm.ts`). */
@@ -56,13 +58,39 @@ export function readView(sp: URLSearchParams): TaskView {
   }
 }
 
+/**
+ * The address of a view. The tab is always written (round 5): an address without one is the person's default, which
+ * opens where the work is (`openingTab`); one that names Today keeps Today even when it is empty.
+ */
 export function writeView(view: { tab: Tab; who: Who; page: number; type?: TaskType | '' }, current: URLSearchParams = new URLSearchParams()): URLSearchParams {
   const next = new URLSearchParams(current)
-  if (view.tab === 'today') next.delete('tab'); else next.set('tab', view.tab)
+  next.set('tab', view.tab)
   if (view.who === 'mine') next.delete('who'); else next.set('who', 'all')
   if (view.page > 1) next.set('page', String(view.page)); else next.delete('page')
   if (view.type) next.set('type', view.type); else next.delete('type')
   return next
+}
+
+/**
+ * The tab a page opens on (round 5, owner 2026-11-12): the one the address names; else Today when it holds work, else
+ * where the work is — overdue first, then upcoming — and Today when nothing is open. Until the open tasks are read, Today.
+ */
+export function openingTab(named: string | null | undefined, counts: Partial<Record<Tab, number>> | null): Tab {
+  if ((TABS as readonly string[]).includes(named ?? '')) return named as Tab
+  if (!counts) return 'today'
+  if ((counts.today ?? 0) > 0) return 'today'
+  if ((counts.overdue ?? 0) > 0) return 'overdue'
+  if ((counts.upcoming ?? 0) > 0) return 'upcoming'
+  return 'today'
+}
+
+/** The custom-field values a stored task holds, without the keys older drawers put there by mistake (2026-11-09). */
+export function storedCustom(task: Pick<Task, 'custom_data'> | null): Record<string, unknown> {
+  const out: Record<string, unknown> = { ...(task?.custom_data ?? {}) }
+  delete out.priority
+  delete out.duration_minutes
+  delete out.recurring
+  return out
 }
 
 /** At most this many open tasks are read at once and sorted into buckets here (the full admin reads 200 too). */

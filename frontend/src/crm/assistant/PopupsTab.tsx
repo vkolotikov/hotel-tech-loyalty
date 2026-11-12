@@ -15,7 +15,7 @@ import { Pill } from '../ui/Pill'
 import { QueryState } from '../ui/QueryState'
 import { SidePanel } from '../ui/SidePanel'
 import { useToast } from '../ui/Toast'
-import { CharCount, ChipEditor, Choice, IconButton, InlineSwitch, Problem, ReadOnlyNote, SectionIntro } from './parts'
+import { CharCount, ChipEditor, Choice, IconButton, InlineSwitch, Problem, ReadOnlyNote } from './parts'
 import {
   POPUP_LIMITS, popupForm, popupPayload, popupProblems, triggerOptions, triggerTakesValue, triggerText, urlMatchOptions,
   visitorOptions, type PopupForm,
@@ -55,10 +55,10 @@ export function PopupsTab({ canManage }: { canManage: boolean }) {
   return (
     <QueryState loading={rules.isLoading} error={rules.error} onRetry={() => { void rules.refetch() }}>
       <div className="space-y-4">
-        <SectionIntro line={t('crm.assistant.popups.line', 'Open the chat by itself with a message, on the pages you choose. The rule with the highest priority wins.')} />
         {!canManage && <ReadOnlyNote />}
         <Card padded={false} title={t('crm.assistant.tab.popups', 'Pop-ups')} icon={Zap} tone="pending"
-          description={list.length > 0 ? t('crm.assistant.popups.count_line', '{{on}} of {{total}} on', { on: list.filter(r => r.is_active).length, total: list.length }) : undefined}
+          description={t('crm.assistant.popups.line', 'Open the chat by itself with a message, on the pages you choose. The rule with the highest priority wins.')}
+          hint={list.length > 0 ? t('crm.assistant.popups.count_line', '{{on}} of {{total}} on', { on: list.filter(r => r.is_active).length, total: list.length }) : undefined}
           action={canManage && list.length > 0 ? addButton(true) : undefined}>
           {list.length === 0 ? (
             <EmptyState icon={Zap} title={t('crm.assistant.popups.empty', 'No pop-ups yet')}

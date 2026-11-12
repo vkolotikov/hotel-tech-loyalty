@@ -135,5 +135,10 @@
   "unlink_lead": "Remove the lead",
   "when": "When",
   "whose": "Whose tasks",
-  "zone_hint": "On the venue's clock ({{zone}})"
+  "zone_hint": "On the venue's clock ({{zone}})",
+  "step_more": "More",
+  "open_named": "Open: {{title}}",
+  "add_short": "Add",
+  "filters": "Filters",
+  "gone": "This task is no longer open."
 }

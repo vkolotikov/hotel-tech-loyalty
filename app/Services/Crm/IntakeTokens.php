@@ -14,8 +14,8 @@ use Laravel\Sanctum\PersonalAccessToken;
  *
  * The full admin's tokens (`admin/api-tokens`, ApiTokenController) are Sanctum tokens with every ability (`*`): Sanctum
  * itself checks no ability on `auth:sanctum` routes, so such a token is its owner's whole session for as long as it
- * lives. A CRM token carries the one ability ABILITY, and admits() — Sanctum's token check, registered in
- * AppServiceProvider — accepts a token naming it only on the intake route; on every other route Sanctum treats it as
+ * lives. A CRM token carries the one ability ABILITY, and admits() — Sanctum's token check, registered by
+ * CrmIntakeTokensServiceProvider — accepts a token naming it only on the intake route; on every other route Sanctum treats it as
  * no token at all (401). Which organisation a lead lands in is the token owner's (LeadIntakeController, TenantMiddleware),
  * and the intake still asks AccessMap (`integrations/leads`: an active staff member, product crm), so switching the
  * owner's access off stops the token too.
@@ -91,7 +91,7 @@ final class IntakeTokens
     /**
      * Whether Sanctum may accept this token for the request being handled: a token naming ABILITY only on the lead
      * intake (whatever else it names, so it fails closed); every other token as before. Asked for every Sanctum token,
-     * on every route (AppServiceProvider).
+     * on every route (CrmIntakeTokensServiceProvider).
      */
     public static function admits(mixed $token): bool
     {

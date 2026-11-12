@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { hasContact, hostOf, pageLabel, pathOf, placeOf, presence, readTab, readVisitorId, tabCounts, visitorName, visitorsPath, webHref } from './visitorsLogic'
+import { feedVisitor, hasContact, hostOf, isFeedTab, pageLabel, pathOf, placeOf, presence, readPanelTab, readTab, readVisitorId, tabCounts, visitorName, visitorsPath, visitorsSource, webHref } from './visitorsLogic'
+import type { FeedRow } from '../inbox/feedLogic'
 
 describe('the Visitors list', () => {
   it('opens on who is on the site now, and keeps a tab from the URL', () => {
@@ -64,5 +65,47 @@ describe('a visitor', () => {
     expect(webHref('https://hotel.example/x')).toBe('https://hotel.example/x')
     expect(webHref('javascript:alert(1)')).toBeNull()
     expect(webHref(null)).toBeNull()
+  })
+})
+
+describe('round 5: the full admin\'s Engagement filters on Visitors', () => {
+  it('keeps a feed tab from the URL only on a plan with the hub', () => {
+    expect(readTab('hot_lead')).toBe('hot_lead')
+    expect(readTab('missed')).toBe('missed')
+    expect(readTab('has_contact', false)).toBe('online')
+    expect(isFeedTab('hot_lead')).toBe(true)
+    expect(isFeedTab('leads')).toBe(false)
+  })
+
+  it('asks the feed for hot leads, a contact or a missed chat, in the server\'s priority order and the window', () => {
+    expect(visitorsSource('hot_lead', '', 1, 'all')).toEqual({ kind: 'feed', path: 'engagement/feed?filter=hot_lead&sort=priority&range=all' })
+    expect(visitorsSource('missed', 'ada', 2, 'week')).toEqual({ kind: 'feed', path: 'engagement/feed?filter=missed&sort=priority&range=week&search=ada&page=2' })
+    expect(visitorsSource('leads', '', 1, 'week')).toEqual({ kind: 'visitors', path: 'visitors?status=all&lead_only=1' })
+  })
+
+  it('counts the feed\'s tabs from its own counts', () => {
+    expect(tabCounts({ online: 1, offline: 2, leads: 3, total: 3 }, { hot_lead: 4, has_contact: 5, missed: 0, priority: 9 }))
+      .toEqual({ online: 1, all: 3, offline: 2, leads: 3, hot_lead: 4, has_contact: 5, missed: 0 })
+    expect(tabCounts(undefined, { hot_lead: 2 })).toEqual({ hot_lead: 2 })
+  })
+
+  it('shows a feed row as a visitor, with the hot-lead flag and what their chat is about', () => {
+    const row: FeedRow = {
+      id: 5, display_name: null, email: 'ada@example.com', phone: null, is_lead: true, is_online: false, country: 'LV', city: 'Rīga',
+      visitor_ip: '10.0.0.1', current_page: null, current_page_title: null, visit_count: 2, page_views_count: 4, messages_count: 3,
+      last_seen_at: '2026-11-07T12:00:00Z', guest_id: 8, guest: { id: 8, name: 'Ada Lovelace' }, is_hot_lead: true, priority_score: 300,
+      conversation: { id: 12, status: 'resolved', last_message_preview: null, last_message_sender: null, last_message_at: null, lead_captured: true, ai_enabled: true, assigned_to: null, unread_admin_count: 0, intent_tag: 'complaint' },
+    }
+    const v = feedVisitor(row)
+    expect(v).toMatchObject({ id: 5, email: 'ada@example.com', is_lead: true, hot: true, intent: 'complaint', guest: { id: 8, full_name: 'Ada Lovelace' } })
+    expect(visitorName(v)).toBe('Ada Lovelace')
+    expect(feedVisitor({ ...row, conversation: null }).intent).toBeNull()
+  })
+
+  it('reads the panel\'s tab strictly', () => {
+    expect(readPanelTab('chats')).toBe('chats')
+    expect(readPanelTab('pages')).toBe('pages')
+    expect(readPanelTab('nope')).toBe('overview')
+    expect(readPanelTab(null)).toBe('overview')
   })
 })

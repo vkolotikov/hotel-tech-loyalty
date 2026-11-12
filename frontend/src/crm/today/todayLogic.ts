@@ -1,10 +1,10 @@
-import { leadPath } from '../lib/links'
 import type { Today, TodayChat, TodayFollowUp, TodayTask } from '../lib/types'
 
 /**
- * Today's decisions, pure for the tests (round 2, 2026-11-07): the greeting by the venue's clock, and how the server's
- * lists (CrmToday) are ordered and grouped — what needs a person now, and what is on today's schedule. Nothing here
- * counts anything the server did not count; it only sorts and groups what `GET crm/today` answered.
+ * Today's decisions, pure for the tests (round 2, 2026-11-07; round 5, owner 2026-11-12, "compact … tabs"): the
+ * greeting by the venue's clock, which figures to show, which tab of "Needs you now" opens, and how the server's lists
+ * (CrmToday) are ordered in each. Nothing here counts anything the server did not count; it only sorts, groups and
+ * picks from what `GET crm/today` answered.
  */
 
 export type Greeting = 'morning' | 'afternoon' | 'evening'
@@ -38,70 +38,119 @@ export function firstName(name: string | null | undefined): string {
   return (name ?? '').trim().split(/\s+/)[0] ?? ''
 }
 
-/** A calendar day (`YYYY-MM-DD`) written out: "Saturday 7 November". Read as a day, never as an instant. */
-export function longDay(ymd: string | null | undefined, lang: string): string {
-  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(ymd ?? '')
-  if (!m) return ''
-  return new Intl.DateTimeFormat(lang, { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC' })
-    .format(new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3]))))
-}
-
 function instant(iso: string | null | undefined): number {
   const at = iso ? Date.parse(iso) : NaN
   return Number.isNaN(at) ? Number.MAX_SAFE_INTEGER : at
 }
 
-export type NowItem =
-  | { kind: 'chat'; key: string; chat: TodayChat }
-  | { kind: 'follow_up'; key: string; lead: TodayFollowUp }
-  | { kind: 'task'; key: string; task: TodayTask }
+/* ─── The figures ────────────────────────────────────────────────────────── */
+
+export type FigureKey = 'open_chats' | 'new_leads' | 'pipeline'
 
 /**
- * "Needs you now", in the order a person should take it: chats where a visitor waits for a reply (the one waiting
- * longest first), then follow-ups that are overdue (the oldest day first), then your overdue tasks (the earliest
- * first). Due-today items are not here: they are on today's schedule.
+ * The figures at the top, in this order, without those at nought (round 5: never a row of zeros first; "Needs you
+ * now" carries the waiting chats, follow-ups and tasks with their counts, so they are not repeated here).
  */
-export function needsNow(data: Pick<Today, 'chats' | 'leads' | 'tasks'>): NowItem[] {
-  const chats = [...data.chats.list].sort((a, b) => instant(a.last_at) - instant(b.last_at) || a.id - b.id)
-  const followUps = data.leads.follow_ups.filter(f => f.overdue)
-    .sort((a, b) => (a.due ?? '9999').localeCompare(b.due ?? '9999') || a.id - b.id)
-  const tasks = data.tasks.list.filter(t => t.overdue).sort((a, b) => instant(a.due_at) - instant(b.due_at) || a.id - b.id)
-  return [
-    ...chats.map(chat => ({ kind: 'chat' as const, key: `chat-${chat.id}`, chat })),
-    ...followUps.map(lead => ({ kind: 'follow_up' as const, key: `lead-${lead.id}`, lead })),
-    ...tasks.map(task => ({ kind: 'task' as const, key: `task-${task.id}`, task })),
-  ]
+export function figuresOf(data: Pick<Today, 'chats' | 'leads' | 'pipeline'>): FigureKey[] {
+  const out: FigureKey[] = []
+  if (data.chats.open > 0) out.push('open_chats')
+  if (data.leads.new > 0) out.push('new_leads')
+  if (data.pipeline.open_count > 0 || data.pipeline.open_value > 0) out.push('pipeline')
+  return out
 }
 
-export type ScheduleItem =
-  | { kind: 'task'; key: string; task: TodayTask; time: string | null }
-  | { kind: 'follow_up'; key: string; lead: TodayFollowUp }
+/* ─── Needs you now ──────────────────────────────────────────────────────── */
 
-/**
- * Today's schedule: your tasks due today at a time, in the order of the clock (the venue's), and then what is due
- * during the day — follow-ups (a lead's next step is a day, not a time) and tasks set for the day without a time
- * (stored at the venue's midnight, as the Tasks page and the full admin save a day).
- */
-export function scheduleOf(data: Pick<Today, 'leads' | 'tasks'>, zone: string): { timed: ScheduleItem[]; allDay: ScheduleItem[] } {
-  const timed: ScheduleItem[] = []
-  const allDay: ScheduleItem[] = []
-  const tasks = data.tasks.list.filter(t => !t.overdue).sort((a, b) => instant(a.due_at) - instant(b.due_at) || a.id - b.id)
-  for (const task of tasks) {
-    const at = task.due_at ? Date.parse(task.due_at) : NaN
-    const time = Number.isNaN(at) ? null : venueClock(new Date(at), zone).time
-    if (time && time !== '00:00') timed.push({ kind: 'task', key: `task-${task.id}`, task, time })
-    else allDay.push({ kind: 'task', key: `task-${task.id}`, task, time: null })
+export const NEED_TABS = ['chats', 'follow_ups', 'tasks'] as const
+export type NeedTab = (typeof NEED_TABS)[number]
+
+/** The address key of the chosen tab. */
+export const NEED_PARAM = 'need'
+
+/** How many rows a tab shows before "Show all" (the server's lists hold up to eight). */
+export const NOW_ROWS = 5
+
+/** Each tab's count: the server's — waiting chats; follow-ups and your tasks due today or overdue. */
+export function needCounts(data: Pick<Today, 'chats' | 'leads' | 'tasks'>): Record<NeedTab, number> {
+  return {
+    chats: data.chats.waiting,
+    follow_ups: data.leads.due_today + data.leads.overdue,
+    tasks: data.tasks.due_today + data.tasks.overdue,
   }
-  for (const lead of data.leads.follow_ups.filter(f => !f.overdue)) allDay.push({ kind: 'follow_up', key: `lead-${lead.id}`, lead })
-  return { timed, allDay }
 }
 
-/** Where a task opens: its lead when it has one, else the Tasks page. */
-export function taskTarget(task: Pick<TodayTask, 'inquiry_id'>): string {
-  return task.inquiry_id ? leadPath(task.inquiry_id) : '/crm/tasks'
+/** The tab the address names; else the first with work, in the order a person should take it; else the chats. */
+export function needTabOf(param: string | null | undefined, counts: Record<NeedTab, number>): NeedTab {
+  if ((NEED_TABS as readonly string[]).includes(param ?? '')) return param as NeedTab
+  return NEED_TABS.find(tab => counts[tab] > 0) ?? 'chats'
 }
 
-/** Whether the server holds more than the list shows (its lists are the first eight): then "See all" links there. */
+/** Waiting chats, the one waiting longest first. */
+export function chatRows(data: Pick<Today, 'chats'>): TodayChat[] {
+  return [...data.chats.list].sort((a, b) => instant(a.last_at) - instant(b.last_at) || a.id - b.id)
+}
+
+/** Follow-ups: the overdue ones first (the oldest day first), then today's. */
+export function followUpRows(data: Pick<Today, 'leads'>): TodayFollowUp[] {
+  const day = (f: TodayFollowUp) => f.due ?? '9999'
+  return [...data.leads.follow_ups].sort((a, b) => Number(b.overdue) - Number(a.overdue) || day(a).localeCompare(day(b)) || a.id - b.id)
+}
+
+export interface TaskRow { task: TodayTask; time: string | null }
+
+/**
+ * Your tasks: the overdue ones first (the earliest first), then today's at a time in the order of the venue's clock,
+ * then today's without a time (a day stored at the venue's midnight, as the Tasks page and the full admin save it).
+ */
+export function taskRows(data: Pick<Today, 'tasks'>, zone: string): TaskRow[] {
+  const timeOf = (task: TodayTask): string | null => {
+    const at = task.due_at ? Date.parse(task.due_at) : NaN
+    if (Number.isNaN(at)) return null
+    const time = venueClock(new Date(at), zone).time
+    return time === '00:00' ? null : time
+  }
+  const rows = data.tasks.list.map(task => ({ task, time: timeOf(task) }))
+  const rank = (r: TaskRow) => (r.task.overdue ? 0 : r.time ? 1 : 2)
+  return rows.sort((a, b) => rank(a) - rank(b) || instant(a.task.due_at) - instant(b.task.due_at) || a.task.id - b.task.id)
+}
+
+/** Whether the server holds more than the rows shown: then "Show all" links to the list. */
 export function hasMore(total: number, shown: number): boolean {
   return total > shown
+}
+
+/* ─── Team activity ──────────────────────────────────────────────────────── */
+
+/** One line of `GET crm/activity` (App\Services\Crm\CrmActivityFeed). */
+export interface ActivityRow {
+  id: number
+  type: string
+  direction: string | null
+  subject: string | null
+  excerpt: string | null
+  duration_minutes: number | null
+  occurred_at: string | null
+  by: { id: number; name: string } | null
+  lead: { id: number; name: string | null; company: string | null; status: string | null } | null
+  contact: { id: number; name: string | null } | null
+  conversation_id: number | null
+}
+
+export interface ActivityPage { data: ActivityRow[]; meta: { current_page: number; last_page: number; total: number } }
+
+export const ACTIVITY_PER_PAGE = 8
+
+/** What a line opens: its lead's record, else its contact's, else its chat in the inbox, else nothing. */
+export function activityTarget(row: Pick<ActivityRow, 'lead' | 'contact' | 'conversation_id'>):
+  { kind: 'lead' | 'contact'; id: number } | { kind: 'chat'; id: number } | null {
+  if (row.lead) return { kind: 'lead', id: row.lead.id }
+  if (row.contact) return { kind: 'contact', id: row.contact.id }
+  if (row.conversation_id) return { kind: 'chat', id: row.conversation_id }
+  return null
+}
+
+/** The next page to ask for, or none when the last one is loaded. */
+export function nextActivityPage(last: Pick<ActivityPage, 'meta'> | undefined): number | undefined {
+  if (!last) return undefined
+  return last.meta.current_page < last.meta.last_page ? last.meta.current_page + 1 : undefined
 }

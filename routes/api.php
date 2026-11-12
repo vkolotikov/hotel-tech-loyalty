@@ -1638,6 +1638,25 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
                 Route::get('bot-gaps', [\App\Http\Controllers\Api\V1\Admin\Crm\AssistantController::class, 'gaps']);
                 Route::post('conversations/{id}/draft', [\App\Http\Controllers\Api\V1\Admin\Crm\AssistantController::class, 'draft'])
                     ->whereNumber('id')->middleware(['feature:chatbot', 'throttle:20,1,crm-draft']);
+                // CRM round 5 (Today and Insights, 2026-11-12): the team's activity (CrmActivityFeed) and the full
+                // admin's sales reports answered by the same code (SalesReports), under the Reports page's AccessMap rule.
+                Route::get('activity', [\App\Http\Controllers\Api\V1\Admin\Crm\ActivityController::class, 'index']);
+                Route::prefix('reports')->group(function () {
+                    Route::get('funnel', [\App\Http\Controllers\Api\V1\Admin\Crm\ReportsController::class, 'funnel']);
+                    Route::get('forecast', [\App\Http\Controllers\Api\V1\Admin\Crm\ReportsController::class, 'forecast']);
+                    Route::get('lost-reasons', [\App\Http\Controllers\Api\V1\Admin\Crm\ReportsController::class, 'lostReasons']);
+                    Route::get('sources', [\App\Http\Controllers\Api\V1\Admin\Crm\ReportsController::class, 'sources']);
+                    Route::get('owners', [\App\Http\Controllers\Api\V1\Admin\Crm\ReportsController::class, 'owners']);
+                    Route::get('companies', [\App\Http\Controllers\Api\V1\Admin\Crm\ReportsController::class, 'companies']);
+                });
+                // CRM round 5 (Integrations, 2026-11-12): lead-intake API tokens (IntakeTokens: they reach only
+                // POST integrations/leads), the emails' sender name and reply-to (SenderSettings), the month's AI spend.
+                Route::get('intake-tokens', [\App\Http\Controllers\Api\V1\Admin\Crm\IntegrationsController::class, 'tokens']);
+                Route::post('intake-tokens', [\App\Http\Controllers\Api\V1\Admin\Crm\IntegrationsController::class, 'createToken'])->middleware('throttle:10,1,crm-intake-tokens');
+                Route::delete('intake-tokens/{id}', [\App\Http\Controllers\Api\V1\Admin\Crm\IntegrationsController::class, 'revokeToken'])->whereNumber('id');
+                Route::get('mail-settings', [\App\Http\Controllers\Api\V1\Admin\Crm\IntegrationsController::class, 'mailSettings']);
+                Route::put('mail-settings', [\App\Http\Controllers\Api\V1\Admin\Crm\IntegrationsController::class, 'updateMailSettings']);
+                Route::get('ai-usage', [\App\Http\Controllers\Api\V1\Admin\Crm\IntegrationsController::class, 'aiUsage']);
             });
 
             // ─── HexaTech Time Planner workspace ────────────────────────────

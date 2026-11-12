@@ -130,13 +130,20 @@ export function Legend({ items }: { items: { name: string; tone: BarTone }[] }) 
 
 const TONE_TEXT = { good: 'text-a-st-confirmed', bad: 'text-a-danger', plain: 'text-a-text-2' } as const
 
-/** A figure's move against the period before, in words with an arrow: "▲ 12 % on the 30 days before". */
+/**
+ * A figure's move against the period before, short (round 5, "minimize copy"): an arrow and the amount ("▲ 12 %"), the
+ * sentence ("12 % more than the 30 days before") as its tooltip and for a screen reader.
+ */
 export function ChangeLine({ change, upIsGood, days }: { change: Change | null; upIsGood: boolean | null; days: number }) {
   const { t } = useTranslation()
-  if (!change) return <span className="text-a-text-2">{t('crm.insights.change.none', 'Nothing to compare with yet')}</span>
+  if (!change) {
+    const words = t('crm.insights.change.none', 'Nothing to compare with yet')
+    return <span className="text-a-text-2" title={words}><span aria-hidden>—</span><span className="sr-only">{words}</span></span>
+  }
   const tone = TONE_TEXT[changeTone(change, upIsGood)]
   if (change.kind === 'new') {
-    return <span className={`inline-flex items-center gap-1 ${tone}`}><Sparkles size={13} aria-hidden />{t('crm.insights.change.new', 'New: none in the {{days}} days before', { days })}</span>
+    const words = t('crm.insights.change.new', 'New: none in the {{days}} days before', { days })
+    return <span className={`inline-flex items-center gap-1 ${tone}`} title={words}><Sparkles size={13} aria-hidden /><span aria-hidden>{t('crm.insights.change.short_new', 'New')}</span><span className="sr-only">{words}</span></span>
   }
   const Icon = change.kind === 'up' ? ArrowUpRight : change.kind === 'down' ? ArrowDownRight : Minus
   const words = change.kind === 'same'
@@ -148,5 +155,11 @@ export function ChangeLine({ change, upIsGood, days }: { change: Change | null; 
       : (change.kind === 'up'
         ? t('crm.insights.change.up', '{{amount}} % more than the {{days}} days before', { amount: change.amount, days })
         : t('crm.insights.change.down', '{{amount}} % less than the {{days}} days before', { amount: change.amount, days }))
-  return <span className={`inline-flex items-center gap-1 ${tone}`}><Icon size={13} aria-hidden />{words}</span>
+  const short = change.kind === 'same' ? null
+    : change.unit === 'points' ? t('crm.insights.change.short_points', '{{amount}} pts', { amount: change.amount }) : `${change.amount} %`
+  return (
+    <span className={`inline-flex items-center gap-1 ${tone}`} title={words}>
+      <Icon size={13} aria-hidden />{short && <span aria-hidden>{short}</span>}<span className="sr-only">{words}</span>
+    </span>
+  )
 }

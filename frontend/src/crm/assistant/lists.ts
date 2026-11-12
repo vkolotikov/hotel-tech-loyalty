@@ -4,6 +4,29 @@
 export const ASSISTANT_TABS = ['behaviour', 'knowledge', 'teach', 'try', 'popups'] as const
 export type AssistantTab = (typeof ASSISTANT_TABS)[number]
 
+/**
+ * Round 5 (owner 2026-11-12: Behaviour was 1,700 px): its parts, as `?part=` names them, and the part each field the
+ * server would refuse is in. Knowledge's parts are its three lists.
+ */
+export const BEHAVIOUR_PARTS = ['basics', 'identity', 'style', 'rules', 'handover', 'model', 'more'] as const
+export type BehaviourPart = (typeof BEHAVIOUR_PARTS)[number]
+
+export const KNOWLEDGE_PARTS = ['answers', 'categories', 'documents'] as const
+export type KnowledgePart = (typeof KNOWLEDGE_PARTS)[number]
+
+export type BehaviourField = 'assistant_name' | 'identity' | 'goal' | 'escalation_policy' | 'fallback_message' | 'custom_instructions' | 'rule' | 'model'
+
+export function behaviourPartOf(field: BehaviourField): BehaviourPart {
+  switch (field) {
+    case 'assistant_name': return 'basics'
+    case 'identity': case 'goal': return 'identity'
+    case 'rule': return 'rules'
+    case 'escalation_policy': case 'fallback_message': return 'handover'
+    case 'model': return 'model'
+    default: return 'more'
+  }
+}
+
 /** The section a `?tab=` names, or the first one when it names none of them. */
 export function pickTab<T extends string>(value: string | null, allowed: readonly T[], fallback: T): T {
   return (allowed as readonly string[]).includes(value ?? '') ? (value as T) : fallback

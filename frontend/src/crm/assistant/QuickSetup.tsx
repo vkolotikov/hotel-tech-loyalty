@@ -8,6 +8,7 @@ import { Notice } from '../../workspace/ui/Notice'
 import { useBoot } from '../CrmProvider'
 import { get, send } from '../lib/api'
 import { errorText } from '../lib/errors'
+import { InfoTip } from '../ui/InfoTip'
 import { TextInput } from '../ui/inputs'
 import { SidePanel } from '../ui/SidePanel'
 import { useToast } from '../ui/Toast'
@@ -37,11 +38,11 @@ export function QuickSetupCard() {
   if (!state.data || state.data.completed) return null
 
   return (
-    <section className="flex flex-col gap-4 rounded-2xl border border-a-border bg-a-surface p-4 shadow-a-sm crm-ai-border sm:flex-row sm:flex-wrap sm:items-center">
-      <span aria-hidden className="grid h-11 w-11 shrink-0 place-items-center rounded-xl crm-ai-soft"><Sparkles size={20} /></span>
-      <div className="min-w-0 flex-1 sm:min-w-64">
+    <section className="flex flex-col gap-3 rounded-2xl border border-a-border bg-a-surface px-4 py-3 shadow-a-sm crm-ai-border sm:flex-row sm:flex-wrap sm:items-center">
+      <span aria-hidden className="grid h-9 w-9 shrink-0 place-items-center rounded-xl crm-ai-soft"><Sparkles size={18} /></span>
+      <div className="flex min-w-0 flex-1 items-center gap-1.5 sm:min-w-64">
         <h2 className="text-sm font-semibold text-a-text">{t('crm.assistant.quick.title', 'Set up the assistant in a minute')}</h2>
-        <p className="text-sm text-a-text-2">{t('crm.assistant.quick.line', 'Four short questions. We fill in the rest for your kind of business, and you can change everything later.')}</p>
+        <InfoTip text={t('crm.assistant.quick.line', 'Four short questions. We fill in the rest for your kind of business, and you can change everything later.')} />
       </div>
       <div className="flex flex-wrap gap-2">
         <Button variant="ghost" size="sm" onClick={() => skip.mutate()} loading={skip.isPending}>{t('crm.assistant.quick.skip', 'Not now')}</Button>
