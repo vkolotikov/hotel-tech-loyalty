@@ -163,11 +163,16 @@ export function DealsPage() {
         </div>
       </Toolbar>
 
-      <div className="flex flex-wrap items-center gap-2">
-        <Tabs label={t('crm.deals.which', 'Which deals')} value={view.filter} onChange={filter => set({ filter })}
-          items={DEAL_FILTERS.map(key => ({ key, label: dealFilterLabel(t, key), count: filterCount(key, k) }))} />
+      <div className="flex items-center gap-2">
+        {/* The step pills scroll sideways on a phone rather than wrap onto more rows. */}
+        <div className="min-w-0 flex-1 overflow-x-auto [scrollbar-width:none]">
+          <div className="w-max">
+            <Tabs label={t('crm.deals.which', 'Which deals')} value={view.filter} onChange={filter => set({ filter })}
+              items={DEAL_FILTERS.map(key => ({ key, label: dealFilterLabel(t, key), count: filterCount(key, k) }))} />
+          </div>
+        </div>
         {deals.data && rows.length > 0 && (
-          <span className="ml-auto text-xs text-a-text-2" aria-live="polite">
+          <span className="shrink-0 text-xs text-a-text-2" aria-live="polite">
             {deals.isFetching && !deals.isLoading ? t('crm.common.loading', 'Loading…') : t('crm.common.total', '{{count}} in all', { count: deals.data.total })}
           </span>
         )}

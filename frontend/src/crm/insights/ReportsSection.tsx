@@ -40,16 +40,21 @@ export function ReportsSection({ months }: { months: ReportMonths }) {
       </Card>
     )
   }
+  // The other reports are asked for once the funnel has answered, so a person without the right is refused once.
   return (
     <section aria-label={t('crm.insights.reports_title', 'Sales reports')} className="space-y-4">
       <FunnelCard months={months} query={funnel} />
-      <div className="grid gap-4 lg:grid-cols-2">
-        <ForecastCard months={months} />
-        <LostCard months={months} />
-        <SourcesCard months={months} />
-        <OwnersCard days={ownerDays(months)} />
-      </div>
-      <CompaniesCard />
+      {!funnel.isLoading && (
+        <>
+          <div className="grid gap-4 lg:grid-cols-2">
+            <ForecastCard months={months} />
+            <LostCard months={months} />
+            <SourcesCard months={months} />
+            <OwnersCard days={ownerDays(months)} />
+          </div>
+          <CompaniesCard />
+        </>
+      )}
     </section>
   )
 }

@@ -7,9 +7,11 @@ import { Check, MoreHorizontal } from 'lucide-react'
  * focus goes back to the button), on a press outside, and on a press of anything in it marked `data-close` (a menu's
  * item, a view applied). The panel keeps to the screen's edge on a phone. Moved from Sales to the shared ui in round 5.
  */
-export function Popover({ label, button, className = '', align = 'right', width = 'w-64', children }: {
+export function Popover({ label, title, button, className = '', align = 'right', width = 'w-64', children }: {
   /** The button's name for a screen reader (its visible content may be only an icon). */
   label: string
+  /** The button's tooltip (round 5: an icon-only button says what it opens). */
+  title?: string
   button: ReactNode
   className?: string
   align?: 'left' | 'right'
@@ -32,7 +34,7 @@ export function Popover({ label, button, className = '', align = 'right', width 
   }
   return (
     <div ref={box} className="relative inline-block" onKeyDown={onKey}>
-      <button ref={trigger} type="button" aria-label={label} aria-expanded={open} aria-controls={open ? id : undefined} onClick={() => setOpen(o => !o)} className={className}>
+      <button ref={trigger} type="button" aria-label={label} title={title} aria-expanded={open} aria-controls={open ? id : undefined} onClick={() => setOpen(o => !o)} className={className}>
         {button}
       </button>
       {open && (
@@ -57,8 +59,10 @@ export interface MenuItem {
 }
 
 /** A list of actions in a popover (a row's "…"): buttons in a menu, the arrow keys move between them. */
-export function ActionMenu({ label, items, icon: Icon = MoreHorizontal, button, className, align = 'right' }: {
+export function ActionMenu({ label, title, items, icon: Icon = MoreHorizontal, button, className, align = 'right' }: {
   label: string
+  /** The button's tooltip. */
+  title?: string
   items: (MenuItem | 'divider' | { heading: string })[]
   icon?: LucideIcon
   button?: ReactNode
@@ -76,7 +80,7 @@ export function ActionMenu({ label, items, icon: Icon = MoreHorizontal, button, 
     buttons[next].focus()
   }
   return (
-    <Popover label={label} align={align} width="w-60"
+    <Popover label={label} title={title} align={align} width="w-60"
       className={className ?? 'grid h-9 w-9 place-items-center rounded-full text-a-text-2 hover:bg-a-surface-2 hover:text-a-text focus-visible:outline-2 focus-visible:outline-a-accent'}
       button={button ?? <Icon size={16} aria-hidden />}>
       {(

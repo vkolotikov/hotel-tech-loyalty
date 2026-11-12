@@ -67,7 +67,9 @@ class ChatbotConfigController extends Controller
 
         // The plan's model list beside the settings (2026-11-12, HexaTech CRM's model choice): null or empty means every
         // model (AiUsageService::isModelAllowed), so a page can mark the models the assistant could not answer with.
-        return response()->json([...$config->toArray(), 'allowed_models' => $this->allowedModels($request->user()->organization)]);
+        $org = $request->user()->organization;
+
+        return response()->json([...$config->toArray(), 'allowed_models' => $this->allowedModels($org instanceof Organization ? $org : null)]);
     }
 
     /** @return list<string>|null */
@@ -101,7 +103,8 @@ class ChatbotConfigController extends Controller
         // venue whose plan changed can still change its other settings.
         if (!empty($validated['model_name'])) {
             $stored = ChatbotModelConfig::withoutGlobalScopes()->where('organization_id', $orgId)->where('brand_id', $brandId)->value('model_name');
-            if ($validated['model_name'] !== $stored && !app(AiUsageService::class)->isModelAllowed($request->user()->organization, $validated['model_name'])) {
+            $org = $request->user()->organization;
+            if ($validated['model_name'] !== $stored && !app(AiUsageService::class)->isModelAllowed($org instanceof Organization ? $org : null, $validated['model_name'])) {
                 return response()->json(['error' => 'model_not_allowed', 'message' => 'Your plan does not include this AI model.'], 403);
             }
         }

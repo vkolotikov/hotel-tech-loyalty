@@ -103,8 +103,21 @@ class TemplatesAndModelTest extends TestCase
     public function test_the_preview_with_a_member_fills_the_tags_from_that_member(): void
     {
         $id = $this->template();
+        if (!Schema::hasTable('loyalty_tiers')) {
+            Schema::create('loyalty_tiers', function (Blueprint $t) {
+                $t->bigIncrements('id');
+                $t->unsignedBigInteger('organization_id');
+                $t->string('name');
+                $t->integer('min_points')->default(0);
+                $t->boolean('is_active')->default(true);
+                $t->timestamps();
+                $t->softDeletes();
+            });
+        }
+        // An active member with production's NOT NULL columns given.
+        $tier = DB::table('loyalty_tiers')->insertGetId(['organization_id' => $this->org->id, 'name' => 'Gold', 'min_points' => 0, 'is_active' => true, 'created_at' => now(), 'updated_at' => now()]);
         $user = DB::table('users')->insertGetId(['organization_id' => $this->org->id, 'name' => 'Alice Member', 'email' => 'alice.member@example.test', 'password' => 'not-a-real-hash', 'created_at' => now(), 'updated_at' => now()]);
-        DB::table('loyalty_members')->insert(['organization_id' => $this->org->id, 'user_id' => $user, 'member_number' => 'M-001', 'qr_code_token' => 'qr-alice-test', 'referral_code' => 'REF-A', 'is_active' => true, 'created_at' => now(), 'updated_at' => now()]);
+        DB::table('loyalty_members')->insert(['organization_id' => $this->org->id, 'user_id' => $user, 'tier_id' => $tier, 'member_number' => 'M-001', 'current_points' => 10, 'lifetime_points' => 10, 'qr_code_token' => 'qr-alice-test', 'referral_code' => 'REF-A', 'is_active' => true, 'created_at' => now(), 'updated_at' => now()]);
 
         $this->asManager()->getJson($this->adminApi("email-templates/{$id}/preview"))
             ->assertOk()->assertJsonPath('member', 'Alice Member')->assertJsonPath('subject', 'Your quote, Alice');

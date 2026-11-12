@@ -143,13 +143,18 @@ function Figures({ kpis, lang, currency }: { kpis: LeadKpis | undefined; lang: s
     <StatRow label={t('crm.leads.figures', 'The open pipeline')} count={shown.length}>
       {shown.includes('open') && <StatTile icon={Target} tone="accent" label={t('crm.leads.kpi_open', 'Open leads')} value={count(kpis.total, lang)} />}
       {shown.includes('value') && <StatTile icon={Coins} tone="success" label={t('crm.leads.kpi_value', 'Open value')} value={money(kpis.estimated_value, currency, lang)} />}
+      {/* A phone keeps two figures, so the list starts on its first screen; the follow-up pills carry the due counts. */}
       {shown.includes('due') && (
-        <StatTile icon={CalendarClock} tone={kpis.overdue > 0 ? 'danger' : 'pending'} label={t('crm.leads.kpi_due', 'Follow-ups due')}
-          value={count(kpis.due_today + kpis.overdue, lang)} hint={kpis.overdue > 0 ? t('crm.leads.kpi_overdue', '{{count}} overdue', { count: kpis.overdue }) : undefined} to="/crm/leads?due=1" />
+        <div className="hidden min-w-0 sm:block">
+          <StatTile icon={CalendarClock} tone={kpis.overdue > 0 ? 'danger' : 'pending'} label={t('crm.leads.kpi_due', 'Follow-ups due')}
+            value={count(kpis.due_today + kpis.overdue, lang)} hint={kpis.overdue > 0 ? t('crm.leads.kpi_overdue', '{{count}} overdue', { count: kpis.overdue }) : undefined} to="/crm/leads?due=1" />
+        </div>
       )}
       {shown.includes('new') && (
-        <StatTile icon={TrendingUp} tone="progress" label={t('crm.leads.kpi_new', 'New this week')} value={count(kpis.new_this_week, lang)}
-          hint={delta === null || delta === 0 ? undefined : t('crm.leads.kpi_new_delta_short', '{{percent}} %', { percent: delta > 0 ? `+${delta}` : String(delta) })} />
+        <div className="hidden min-w-0 sm:block">
+          <StatTile icon={TrendingUp} tone="progress" label={t('crm.leads.kpi_new', 'New this week')} value={count(kpis.new_this_week, lang)}
+            hint={delta === null || delta === 0 ? undefined : t('crm.leads.kpi_new_delta_short', '{{percent}} %', { percent: delta > 0 ? `+${delta}` : String(delta) })} />
+        </div>
       )}
     </StatRow>
   )
@@ -216,11 +221,16 @@ function ListView({ filters, apply, change, stages, columns, kpis, now, onAdd }:
 
   return (
     <div className="space-y-3">
-      <div className="flex flex-wrap items-center gap-2">
-        <Tabs label={t('crm.leads.follow_ups', 'Follow-ups')} value={filters.due} onChange={value => change({ due: value })}
-          items={DUE_FILTERS.map(d => ({ key: d, label: dueLabel(t, d), count: counts[d] }))} />
+      <div className="flex items-center gap-2">
+        {/* The pills scroll sideways on a phone rather than wrap onto a second row. */}
+        <div className="min-w-0 flex-1 overflow-x-auto [scrollbar-width:none]">
+          <div className="w-max">
+            <Tabs label={t('crm.leads.follow_ups', 'Follow-ups')} value={filters.due} onChange={value => change({ due: value })}
+              items={DUE_FILTERS.map(d => ({ key: d, label: dueLabel(t, d), count: counts[d] }))} />
+          </div>
+        </div>
         {sections.length === 0 && list.data && (
-          <span className="ml-auto text-xs text-a-text-2" aria-live="polite">
+          <span className="shrink-0 text-xs text-a-text-2" aria-live="polite">
             {list.isFetching && !list.isLoading ? t('crm.common.loading', 'Loading…') : t('crm.common.total', '{{count}} in all', { count: list.data.total })}
           </span>
         )}
