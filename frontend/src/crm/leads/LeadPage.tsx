@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { RecordEmails } from '../mail/RecordEmails'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { Link, useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
@@ -162,6 +163,7 @@ function LeadBody({ lead }: { lead: LeadDetail }) {
         <div className="min-w-0 space-y-5 lg:col-span-2">
           <div id="lead-next" className="scroll-mt-4"><NextStepCard lead={lead} /></div>
           <div id="lead-timeline" className="scroll-mt-4"><LeadTimeline lead={lead} seed={seed} /></div>
+          <RecordEmails resource="inquiries" id={lead.id} />
           <div id="lead-tasks" className="scroll-mt-4"><LeadTasks lead={lead} name={name} /></div>
         </div>
         <div className="min-w-0 space-y-5">

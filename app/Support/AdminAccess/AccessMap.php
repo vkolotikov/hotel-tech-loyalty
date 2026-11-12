@@ -203,6 +203,8 @@ final class AccessMap
         'admin/deals'                           => ['staff',              'staff',              'crm'],           // Deals (menu: everyone)
         'admin/email-campaigns'                 => ['staff',              'manager',            'crm'],           // Email campaigns (Marketing, manager)
         'admin/email-templates'                 => ['staff',              'manager',            'crm'],           // Email templates (Marketing, manager); sending one is overridden below
+        'admin/guests/{guest}/email-history'     => ['staff',              'staff',              'crm'],
+        'admin/inquiries/{inquiry}/email-history' => ['staff',             'staff',              'crm'],
         'admin/guests'                          => ['staff',              'staff',              'crm'],           // Guests and clients
         'admin/inquiries'                       => ['staff',              'staff',              'crm'],           // Leads (menu: everyone)
         'admin/inquiry-lost-reasons'            => ['staff',              'manager',            'crm'],           // Lost reasons (Pipelines admin)
